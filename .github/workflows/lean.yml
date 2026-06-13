@@ -1,0 +1,38 @@
+name: Lean
+
+on:
+  # Run on every change except those touching only non-Lean files under book/.
+  # Skipping the Lean build is just an optimization, so we err toward running:
+  # '**' includes everything, '!book/**' drops the docs, and '**.lean'
+  # re-includes any Lean files (even under book/).
+  push:
+    branches: [main]
+    paths:
+      - '**'
+      - '!book/**'
+      - '**.lean'
+  pull_request:
+    paths:
+      - '**'
+      - '!book/**'
+      - '**.lean'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  build:
+    name: Build the Zcash formalization
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      # Installs the toolchain from lean-toolchain, fetches the Mathlib olean
+      # cache, and runs `lake build` (defaultTargets = Zcash).
+      - uses: leanprover/lean-action@38fbc41a8c28c4cbaec22d7f7de508ec2e7c0dd9 # v1.5.0
