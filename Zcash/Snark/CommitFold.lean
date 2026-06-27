@@ -9,7 +9,7 @@ witness (`Zcash.Snark.extract_correct`'s hypothesis). The structural fact is tha
 commitment is compatible with one IPA round — folding the witness by `u⁻¹` and the generators by `u`
 sends the parent commitment to the folded one plus the cross terms `L`/`R` the verifier accounts for.
 
-* `commitGen` — the commitment over arbitrary generators (`commit srs = commitGen srs.g`).
+* `commitGen` — the commitment over arbitrary generators (`commit urs = commitGen urs.g`).
 * `commitGen_{add,smul}_{left,gen}` — bilinearity in the witness and in the generators.
 * `commitGen_round` (proven) — one round's commitment fold: `⟨a' , g'⟩ = ⟨a, g⟩ + u·L + u⁻¹·R`, the
   round's completeness. Together with `Zcash.Snark.ipaRelation_unique` (uniqueness under
@@ -21,13 +21,13 @@ namespace Zcash.Snark
 
 variable {F G : Type*} [Field F] [AddCommGroup G] [Module F G]
 
-/-- The commitment over arbitrary generators `g`: `⟨a, g⟩ = Σᵢ aᵢ • gᵢ`. Specialises to the SRS
-commitment: `commit srs = commitGen srs.g`. -/
+/-- The commitment over arbitrary generators `g`: `⟨a, g⟩ = Σᵢ aᵢ • gᵢ`. Specialises to the URS
+commitment: `commit urs = commitGen urs.g`. -/
 def commitGen {n : ℕ} (g : Fin n → G) (a : Fin n → F) : G := ∑ i, a i • g i
 
-/-- The fingerprint/SRS commitment is the generator-commitment at the SRS generators. -/
-theorem commit_eq_commitGen (srs : SRS G) (a : Fin (2 ^ srs.k) → F) :
-    commit srs a = commitGen srs.g a := rfl
+/-- The fingerprint/URS commitment is the generator-commitment at the URS generators. -/
+theorem commit_eq_commitGen (urs : URS G) (a : Fin (2 ^ urs.k) → F) :
+    commit urs a = commitGen urs.g a := rfl
 
 /-- Additivity in the witness. -/
 theorem commitGen_add_left {n : ℕ} (g : Fin n → G) (a a' : Fin n → F) :
@@ -93,7 +93,7 @@ theorem accepting_fold_eq_foldVec {m : ℕ} (gLo gHi : Fin m → G) (aLo aHi a' 
 /-! ## Binding as a discrete-log-relation hardness assumption
 
 The two results below state the trust boundary underlying commitment binding: rather than assuming the
-commitment is binding outright, binding is modelled as a reduction to DLR hardness at the SRS generators.
+commitment is binding outright, binding is modelled as a reduction to DLR hardness at the URS generators.
 They are the seed for migrating the deployed binding to a DLR reduction (extending to the `U`, `W`
 generators), in place of an independence assumption. Discharging the resulting relation against DLR
 hardness — the computational / AGM layer, not in this development — is what would yield unconditional
@@ -101,16 +101,16 @@ binding.
 
 Rather than assuming the commitment is binding outright, the binding reduction models it as a reduction
 to a hardness assumption — the same shape as the binding-signature argument's `relation_of_imbalance`:
-the counterfactual that breaking binding produces a nontrivial discrete-log relation among the SRS
+the counterfactual that breaking binding produces a nontrivial discrete-log relation among the URS
 generators (`relation_of_collision`), against the discrete-log-relation (DLR) hardness assumption — no
 such relation exists on the Vesta generators. `commitmentBinding_iff_no_relation` makes precise that
 `CommitmentBinding` is exactly DLR hardness, so the assumption is the standard, named one, with the
 reduction itself proven. -/
 
-/-- A discrete-log relation among the SRS generators: a coefficient vector the generators send to `0`.
+/-- A discrete-log relation among the URS generators: a coefficient vector the generators send to `0`.
 It is nontrivial when `r ≠ 0`. DLR hardness is the assumption that no nontrivial relation exists. -/
-@[reducible] def DLRelation (srs : SRS G) (r : Fin (2 ^ srs.k) → F) : Prop :=
-  commitGen srs.g r = 0
+@[reducible] def DLRelation (urs : URS G) (r : Fin (2 ^ urs.k) → F) : Prop :=
+  commitGen urs.g r = 0
 
 /-- Additivity over subtraction in the witness. -/
 theorem commitGen_sub {n : ℕ} (g : Fin n → G) (a a' : Fin n → F) :
@@ -118,31 +118,31 @@ theorem commitGen_sub {n : ℕ} (g : Fin n → G) (a a' : Fin n → F) :
   simp only [commitGen, Pi.sub_apply, sub_smul, Finset.sum_sub_distrib]
 
 /-- The binding reduction (counterfactual): a binding collision — two distinct openings of one commitment — yields a
-nontrivial discrete-log relation `a − a'` among the SRS generators. So DLR hardness closes binding,
+nontrivial discrete-log relation `a − a'` among the URS generators. So DLR hardness closes binding,
 exactly as `relation_of_imbalance` closes the binding-signature argument: the collision is reduced to a
 relation the hardness assumption forbids. -/
-theorem relation_of_collision (srs : SRS G) {a a' : Fin (2 ^ srs.k) → F}
-    (hcol : commit srs a = commit srs a') (hne : a ≠ a') :
-    a - a' ≠ 0 ∧ DLRelation srs (a - a') := by
+theorem relation_of_collision (urs : URS G) {a a' : Fin (2 ^ urs.k) → F}
+    (hcol : commit urs a = commit urs a') (hne : a ≠ a') :
+    a - a' ≠ 0 ∧ DLRelation urs (a - a') := by
   refine ⟨sub_ne_zero.mpr hne, ?_⟩
-  show commitGen srs.g (a - a') = 0
+  show commitGen urs.g (a - a') = 0
   rw [commitGen_sub, ← commit_eq_commitGen, ← commit_eq_commitGen, hcol, sub_self]
 
 /-- Binding is exactly DLR hardness. The commitment is binding iff every discrete-log relation among the generators is
 trivial — so assuming DLR hardness is assuming `CommitmentBinding`, and the binding hypothesis used by
 `ipaRelation_unique` / `opening_knowledge_sound` is precisely the standard, named hardness assumption
 (with `relation_of_collision` the proven reduction). -/
-theorem commitmentBinding_iff_no_relation (srs : SRS G) :
-    CommitmentBinding (F := F) srs ↔ ∀ r : Fin (2 ^ srs.k) → F, DLRelation srs r → r = 0 := by
+theorem commitmentBinding_iff_no_relation (urs : URS G) :
+    CommitmentBinding (F := F) urs ↔ ∀ r : Fin (2 ^ urs.k) → F, DLRelation urs r → r = 0 := by
   constructor
   · intro hb r hr
-    have hr' : commitGen srs.g r = 0 := hr
+    have hr' : commitGen urs.g r = 0 := hr
     apply hb
     rw [commit_eq_commitGen, commit_eq_commitGen, hr']
     simp [commitGen]
   · intro hnr a a' hcol
-    have hr : DLRelation srs (a - a') := by
-      show commitGen srs.g (a - a') = 0
+    have hr : DLRelation urs (a - a') := by
+      show commitGen urs.g (a - a') = 0
       rw [commitGen_sub, ← commit_eq_commitGen, ← commit_eq_commitGen, hcol, sub_self]
     exact sub_eq_zero.mp (hnr _ hr)
 

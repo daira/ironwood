@@ -11,7 +11,7 @@ cryptographic core of the halo2 opening.
 
 The IPA proves knowledge of a coefficient vector `a` (a polynomial) behind a commitment `P = ⟨a, G⟩`
 that opens to a value `v` at a point — i.e. `⟨a, b⟩ = v` for the evaluation vector `b = (1, x, x², …)`.
-The fingerprint MSM's `g`-part is this commitment, so the layer is expressed directly over the SRS:
+The fingerprint MSM's `g`-part is this commitment, so the layer is expressed directly over the URS:
 
 * `commit` — `⟨a, G⟩ = Σᵢ aᵢ • gᵢ`, the polynomial commitment (the MSM's `g`-part).
 * `evalVector` / `innerProduct` — `b = (1, x, …, x^{n−1})` and `⟨a, b⟩` (the polynomial at `x`).
@@ -29,10 +29,10 @@ namespace Zcash.Snark
 
 variable {F G : Type*} [Field F] [AddCommGroup G] [Module F G]
 
-/-- The polynomial commitment of a coefficient vector `a` against the SRS generators:
+/-- The polynomial commitment of a coefficient vector `a` against the URS generators:
 `⟨a, G⟩ = Σᵢ aᵢ • gᵢ`. This is the `g`-part of the fingerprint MSM (`Zcash.Snark.Msm.eval`). -/
-def commit (srs : SRS G) (a : Fin (2 ^ srs.k) → F) : G :=
-  ∑ i, a i • srs.g i
+def commit (urs : URS G) (a : Fin (2 ^ urs.k) → F) : G :=
+  ∑ i, a i • urs.g i
 
 /-- The evaluation vector `b = (1, x, x², …, x^{2ᵏ−1})`. The inner product `⟨a, b⟩` is the polynomial
 with coefficients `a` evaluated at `x`. -/
@@ -46,9 +46,9 @@ def innerProduct {n : ℕ} (a b : Fin n → F) : F :=
 /-- The IPA opening relation: the witness `a` is the polynomial committed by `P` (`⟨a, G⟩ = P`) that
 opens to `v` at the point encoded by `b` (`⟨a, b⟩ = v`). The inner-product argument is an argument of
 knowledge for this relation; special soundness produces such an `a` from accepting transcripts. -/
-def IpaRelation (srs : SRS G) (P : G) (b : Fin (2 ^ srs.k) → F) (v : F)
-    (a : Fin (2 ^ srs.k) → F) : Prop :=
-  commit srs a = P ∧ innerProduct a b = v
+def IpaRelation (urs : URS G) (P : G) (b : Fin (2 ^ urs.k) → F) (v : F)
+    (a : Fin (2 ^ urs.k) → F) : Prop :=
+  commit urs a = P ∧ innerProduct a b = v
 
 /-! ## The IPA round fold and its 2-special-soundness extractor
 
@@ -97,7 +97,7 @@ theorem innerProduct_add_left {n : ℕ} (a a' b : Fin n → F) :
 
 /-! ## Commitment binding and knowledge soundness of the opening
 
-The last ingredient is binding: distinct coefficient vectors have distinct commitments (the SRS
+The last ingredient is binding: distinct coefficient vectors have distinct commitments (the URS
 generators are `F`-linearly independent). On the Vesta curve this is the discrete-log-relation
 (DLR) hardness assumption — kept as an explicit hypothesis (project scope), not proved here,
 mirroring how `Zcash/Security/BindingSignature/Balance.lean` records its cryptographic assumptions.
@@ -109,18 +109,18 @@ circuit's gate/permutation/lookup identities — is the Schwartz–Zippel bound
 (`Zcash.Snark.fingerprint_schwartz_zippel`): a violated identity passes the random-point check only with
 probability `≤ d/p`. -/
 
-/-- Commitment binding (the curve assumption, kept explicit): the SRS commitment is injective —
+/-- Commitment binding (the curve assumption, kept explicit): the URS commitment is injective —
 coefficient vectors with equal commitments are equal, i.e. the generators `g` are `F`-linearly
 independent. On Vesta this is the discrete-log-relation (DLR) hardness assumption
 (`commitmentBinding_iff_no_relation`). -/
-@[reducible] def CommitmentBinding (srs : SRS G) : Prop :=
-  Function.Injective (commit (F := F) srs)
+@[reducible] def CommitmentBinding (urs : URS G) : Prop :=
+  Function.Injective (commit (F := F) urs)
 
 /-- Under binding, the IPA opening is unique: two witnesses opening the same commitment to the same
 value are equal. So special-soundness extraction (which yields an opening) pins down the witness. -/
-theorem ipaRelation_unique {srs : SRS G} {P : G} {b : Fin (2 ^ srs.k) → F} {v : F}
-    {a a' : Fin (2 ^ srs.k) → F} (hb : CommitmentBinding (F := F) srs)
-    (h : IpaRelation srs P b v a) (h' : IpaRelation srs P b v a') : a = a' :=
+theorem ipaRelation_unique {urs : URS G} {P : G} {b : Fin (2 ^ urs.k) → F} {v : F}
+    {a a' : Fin (2 ^ urs.k) → F} (hb : CommitmentBinding (F := F) urs)
+    (h : IpaRelation urs P b v a) (h' : IpaRelation urs P b v a') : a = a' :=
   hb (h.1.trans h'.1.symm)
 
 end Zcash.Snark

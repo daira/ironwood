@@ -73,11 +73,11 @@ def accumulateCommitment {k : ℕ} {F G : Type*} [Field F] (pow : F) (c : Commit
   | .msm m => acc.add (m.scale pow)
 
 /-- The group value a commitment reference contributes to the MSM: a point is itself; an MSM is its
-evaluation against the SRS. -/
-def CommitmentRef.eval {F G : Type*} [Field F] [AddCommGroup G] [Module F G] (srs : SRS G) :
-    CommitmentRef srs.k F G → G
+evaluation against the URS. -/
+def CommitmentRef.eval {F G : Type*} [Field F] [AddCommGroup G] [Module F G] (urs : URS G) :
+    CommitmentRef urs.k F G → G
   | .point p => p
-  | .msm m => m.eval srs
+  | .msm m => m.eval urs
 
 /-- The multiopen `x₁` compression (`multiopen/verifier.rs`): for each point set, fold its commitments
 (in processing order) into `Σⱼ x₁ʲ · cⱼ`. `sets` lists, per point set, the commitments grouped into it by

@@ -200,7 +200,7 @@ def assembleFinalMsm {shape : Shape} {F G : Type*} [Field F] (ps : ProofString s
 `eval_ipaFold` over `assembleFinalMsm = ipaFold … (assembleOpening …).1`: the deployed MSM's evaluation is
 the multiopen commitment `(assembleOpening …).1` opened by the IPA — `[-v]` at `g₀`, `[ξ] S`, the per-round
 `[uⱼ⁻¹] Lⱼ + [uⱼ] Rⱼ`, `[-c·b·z] U`, `[-f] W`, and `[-c]` times the folded generators (`computeS`). So the
-deployed accept (`… = 0`) is this verification equation. The SRS is built from `g, w, u`, so its `k` is
+deployed accept (`… = 0`) is this verification equation. The URS is built from `g, w, u`, so its `k` is
 `shape.k` definitionally — no transport needed. This puts `eval_ipaFold` on the soundness path. -/
 theorem eval_assembleFinalMsm {shape : Shape} {F G : Type*} [Field F] [AddCommGroup G] [Module F G]
     (g : Fin (2 ^ shape.k) → G) (w u : G) (ps : ProofString shape F G) (ch : Challenges shape.k F)

@@ -70,13 +70,13 @@ inherits the conditional status of `orchard_verifier_sound_conditional` (assumed
 identity; `accepts` not tied to the fingerprint); see that docstring. The deployed Vesta capstones are
 `orchard_verifier_sound_vesta_opening`/`_constraint` below. -/
 theorem orchard_verifier_sound_vesta_conditional [Fact (HasseBound Vesta.curve)]
-    (srs : SRS VestaG) (hbind : CommitmentBinding (F := Fp) srs)
-    {P : VestaG} {b : Fin (2 ^ srs.k) → Fp} {v : Fp} {circuitSat : (Fin (2 ^ srs.k) → Fp) → Prop}
+    (urs : URS VestaG) (hbind : CommitmentBinding (F := Fp) urs)
+    {P : VestaG} {b : Fin (2 ^ urs.k) → Fp} {v : Fp} {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop}
     {accepts : Prop} (haccepts : accepts)
-    (hextract : ExtractableFromAcceptance srs P b v circuitSat accepts)
-    {S : Prop} (hencodes : ∀ a, SnarkRelation srs P b v circuitSat a → S) :
+    (hextract : ExtractableFromAcceptance urs P b v circuitSat accepts)
+    {S : Prop} (hencodes : ∀ a, SnarkRelation urs P b v circuitSat a → S) :
     S :=
-  orchard_verifier_sound_conditional srs hbind haccepts hextract hencodes
+  orchard_verifier_sound_conditional urs hbind haccepts hextract hencodes
 
 /-- The deployed Orchard verifier is sound over Vesta, with the IPA opening derived.
 `orchard_verifier_sound_deployed_opening` specialised to `SWPoint Vesta.curve`: the bridge `hFS` supplies
@@ -84,15 +84,15 @@ only the special-soundness transcript tree (the minimal Fiat–Shamir assumption
 derived from it (`ipa_soundV`), not assumed. Named assumptions: the rewinding (`hFS`), the circuit side
 (`hcirc`), the Hasse bound (`Fact (HasseBound Vesta.curve)`), and VK-correctness (`hencodes`). -/
 theorem orchard_verifier_sound_vesta_opening [Fact (HasseBound Vesta.curve)] [DecidableEq VestaG] [Inhabited VestaG]
-    {shape : Shape} (srs : SRS VestaG) (hk : shape.k = srs.k) (vk : VerifyingKey shape Fp VestaG)
+    {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp VestaG)
     (ps : ProofString shape Fp VestaG) (ch : Challenges shape.k Fp)
-    {P : VestaG} {b : Fin (2 ^ srs.k) → Fp} {v : Fp} {circuitSat : (Fin (2 ^ srs.k) → Fp) → Prop}
-    (haccepts : DeployedAccepts srs hk vk ps ch)
-    (hFS : FiatShamirTree srs b P v (DeployedAccepts srs hk vk ps ch))
-    (hcirc : ∀ a, IpaRelation srs P b v a → circuitSat a)
-    {S : Prop} (hencodes : ∀ a, SnarkRelation srs P b v circuitSat a → S) :
+    {P : VestaG} {b : Fin (2 ^ urs.k) → Fp} {v : Fp} {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop}
+    (haccepts : DeployedAccepts urs hk vk ps ch)
+    (hFS : FiatShamirTree urs b P v (DeployedAccepts urs hk vk ps ch))
+    (hcirc : ∀ a, IpaRelation urs P b v a → circuitSat a)
+    {S : Prop} (hencodes : ∀ a, SnarkRelation urs P b v circuitSat a → S) :
     S :=
-  orchard_verifier_sound_deployed_opening srs hk vk ps ch haccepts hFS hcirc hencodes
+  orchard_verifier_sound_deployed_opening urs hk vk ps ch haccepts hFS hcirc hencodes
 
 open Polynomial in
 /-- The deployed Orchard verifier is sound over Vesta, opening and constraint both derived.
@@ -102,25 +102,25 @@ open Polynomial in
 Named assumptions: the rewinding (`hFS`), the gate check (`hquot`), the SZ good challenge (`hgood`), the
 Hasse bound (`Fact (HasseBound Vesta.curve)`), and VK-correctness (`hencodes`). -/
 theorem orchard_verifier_sound_vesta_constraint [Fact (HasseBound Vesta.curve)] [DecidableEq VestaG] [Inhabited VestaG]
-    {shape : Shape} (srs : SRS VestaG) (hk : shape.k = srs.k) (vk : VerifyingKey shape Fp VestaG)
+    {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp VestaG)
     (ps : ProofString shape Fp VestaG) (ch : Challenges shape.k Fp)
-    {P : VestaG} {b : Fin (2 ^ srs.k) → Fp} {v : Fp}
+    {P : VestaG} {b : Fin (2 ^ urs.k) → Fp} {v : Fp}
     (fixedCols : ℕ → Polynomial Fp)
-    (decodeAdvice decodeInstance : (Fin (2 ^ srs.k) → Fp) → (ℕ → Polynomial Fp))
+    (decodeAdvice decodeInstance : (Fin (2 ^ urs.k) → Fp) → (ℕ → Polynomial Fp))
     (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp)
-    (haccepts : DeployedAccepts srs hk vk ps ch)
-    (hFS : FiatShamirTree srs b P v (DeployedAccepts srs hk vk ps ch))
-    (hquot : ∀ a, IpaRelation srs P b v a →
+    (haccepts : DeployedAccepts urs hk vk ps ch)
+    (hFS : FiatShamirTree urs b P v (DeployedAccepts urs hk vk ps ch))
+    (hquot : ∀ a, IpaRelation urs P b v a →
       quotientCheck (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates) hpoly deg x)
-    (hgood : ∀ a, IpaRelation srs P b v a →
+    (hgood : ∀ a, IpaRelation urs P b v a →
       combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates ≠ hpoly * (X ^ deg - 1) →
       (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates
         - hpoly * (X ^ deg - 1)).eval x ≠ 0)
     {S : Prop}
-    (hencodes : ∀ a, SnarkRelation srs P b v
+    (hencodes : ∀ a, SnarkRelation urs P b v
       (circuitSatViaGates fixedCols decodeAdvice decodeInstance y gates hpoly deg) a → S) :
     S :=
-  orchard_verifier_sound_deployed_constraint srs hk vk ps ch fixedCols decodeAdvice decodeInstance y gates
+  orchard_verifier_sound_deployed_constraint urs hk vk ps ch fixedCols decodeAdvice decodeInstance y gates
     hpoly deg x haccepts hFS hquot hgood hencodes
 
 end Zcash.Snark

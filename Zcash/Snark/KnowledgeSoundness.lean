@@ -33,13 +33,13 @@ This layer is sound relative to the following, each kept explicit rather than hi
   hash and the random-oracle reduction are not modeled. The capstone's current assumption
   (`ExtractableFromAcceptance`) is in fact stronger — it bundles the IPA knowledge-soundness conclusion,
   not just Fiat–Shamir; narrowing it to "uniform challenges" is open constraint-side work.
-* **Vesta curve order** — the abstract development runs over any `Fp`-module `G`, but `Zcash.Snark.Vesta`
+* **Hasse bound** — the abstract development runs over any `Fp`-module `G`, but `Zcash.Snark.Vesta`
   pins it to the concrete Vesta curve `SWPoint Vesta.curve` (`y² = x³ + 5`), whose group law is proven
-  (mathlib's elliptic-curve group law, via `WeierstrassCurve.Affine.Point`). The sole residual assumption
-  about the group is its order — every point is `p`-torsion (`Fact VestaOrder`, the published Vesta order
-  `p = scalarFieldOrder`), carried exactly like the field modulus `Fact (Nat.Prime p)`. Unlike the field
-  (discharged by a Pratt certificate), the curve order has no point-counting certificate in the library,
-  so it stays an assumption — but axiom-free, as a `Fact` hypothesis.
+  (mathlib's elliptic-curve group law, via `WeierstrassCurve.Affine.Point`). The one residual assumption
+  about the group is Hasse's bound (`Fact (HasseBound Vesta.curve)`); from it the order is *derived*, not
+  assumed (`vestaOrder_of_hasse`, via CompElliptic's `Pasta.Vesta.card_eq` giving `Nat.card VestaG = p`,
+  whence every point is `p`-torsion), carried like the field modulus `Fact (Nat.Prime p)`. Mathlib lacks
+  Hasse's theorem, so it is the irreducible gap — but axiom-free, as a `Fact` hypothesis.
 * **VK-correctness** (Daira's flow) — that the VK's gates encode the intended high-level relation (note
   ownership, value balance, nullifiers) is a separate workstream; this layer proves the verifier sound
   relative to the given VK, ending at "the witness satisfies the VK's constraint system."
@@ -63,9 +63,9 @@ witness `a` (fixing the earlier flaw where the constraint was on free, unrelated
 ("the witness's decoded columns satisfy the `y`-combined gates"). The remaining gap is deriving
 `circuitSat a` for the extracted `a` from the deployed constraint check (`constraint_identity_of_accept`)
 through the multiopen decode. -/
-structure SnarkRelation (srs : SRS G) (P : G) (b : Fin (2 ^ srs.k) → Fp) (v : Fp)
-    (circuitSat : (Fin (2 ^ srs.k) → Fp) → Prop) (a : Fin (2 ^ srs.k) → Fp) : Prop where
-  opens : IpaRelation srs P b v a
+structure SnarkRelation (urs : URS G) (P : G) (b : Fin (2 ^ urs.k) → Fp) (v : Fp)
+    (circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop) (a : Fin (2 ^ urs.k) → Fp) : Prop where
+  opens : IpaRelation urs P b v a
   satisfiesCircuit : circuitSat a
 
 /-- The intended concrete instantiation of `SnarkRelation.circuitSat`: the witness's decoded columns
@@ -106,12 +106,12 @@ unique witness satisfying `SnarkRelation`. Composes `extract_correct` (extractio
 The hypotheses `hcons` and `hsat` are assumed here, not derived from acceptance — deriving them
 (via `accepting_fold_eq` + `commitGen_round`, and `constraint_identity_of_accept` off the `d/p` bad set
 through the multiopen decode) is the open composition work. -/
-theorem knowledge_sound (srs : SRS G) (hbind : CommitmentBinding (F := Fp) srs)
-    {t : Tree Fp srs.k} {a : Fin (2 ^ srs.k) → Fp} (hcons : Consistent t a)
-    {P : G} {b : Fin (2 ^ srs.k) → Fp} {v : Fp} (hopen : IpaRelation srs P b v a)
-    {circuitSat : (Fin (2 ^ srs.k) → Fp) → Prop} (hsat : circuitSat a) :
-    extract t = a ∧ SnarkRelation srs P b v circuitSat a
-      ∧ ∀ a', IpaRelation srs P b v a' → a' = a :=
+theorem knowledge_sound (urs : URS G) (hbind : CommitmentBinding (F := Fp) urs)
+    {t : Tree Fp urs.k} {a : Fin (2 ^ urs.k) → Fp} (hcons : Consistent t a)
+    {P : G} {b : Fin (2 ^ urs.k) → Fp} {v : Fp} (hopen : IpaRelation urs P b v a)
+    {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop} (hsat : circuitSat a) :
+    extract t = a ∧ SnarkRelation urs P b v circuitSat a
+      ∧ ∀ a', IpaRelation urs P b v a' → a' = a :=
   ⟨extract_correct t a hcons, ⟨hopen, hsat⟩, fun _ h' => ipaRelation_unique hbind h' hopen⟩
 
 /-- The residual soundness error of the constraint layer (re-export of `quotientCheck_sound`): a
