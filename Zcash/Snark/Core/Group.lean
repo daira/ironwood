@@ -17,7 +17,7 @@ structure, which the abstract `F`-module already supplies, so the argument stays
 concrete instantiation is available too, conditioned on the Hasse bound: CompElliptic's curve is an
 `AddCommGroup`, and given `Fact (HasseBound Vesta.curve)` its order is `p` (`Pasta.Vesta.card_eq`),
 which makes it a `Module (ZMod p)` (`Zcash.Snark.vestaFpModule`). The Vesta capstones in
-`Zcash.Snark.Vesta` instantiate `G` there with no change to this argument.
+`Zcash.Snark.Soundness.Vesta` instantiate `G` there with no change to this argument.
 -/
 
 namespace Zcash.Snark

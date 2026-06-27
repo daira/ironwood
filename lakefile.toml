@@ -21,9 +21,9 @@ rev = "6c5b1a605df8ed150c3ee242bcd6f355fc973653"
 name = "Zcash"
 
 # The captured Rust<->Lean fingerprint match (`fingerprint_matches`, by `native_decide`) lives in
-# `Zcash.Snark.Fixture`, which the `Zcash` library deliberately does not import (it is large, generated,
-# and slow). This dedicated target keeps it out of `lake build Zcash` for local dev, while plain
+# `Zcash.Snark.Fingerprint.Fixture`, which the `Zcash` library deliberately does not import (it is large,
+# generated, and slow). This dedicated target keeps it out of `lake build Zcash` for local dev, while plain
 # `lake build` (the default targets -- what CI runs) compiles it, so the one empirical check is exercised.
 [[lean_lib]]
 name = "FixtureCheck"
-globs = ["Zcash.Snark.Fixture", "Zcash.Snark.FixtureFiatShamir"]
+globs = ["Zcash.Snark.Fingerprint.Fixture", "Zcash.Snark.Fingerprint.FixtureFiatShamir"]

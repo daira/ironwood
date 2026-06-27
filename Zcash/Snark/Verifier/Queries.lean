@@ -1,6 +1,6 @@
 import Mathlib
-import Zcash.Snark.Verifier
-import Zcash.Snark.ProofString
+import Zcash.Snark.Verifier.Checks
+import Zcash.Snark.Core.ProofString
 
 /-!
 # The verifier's opening queries

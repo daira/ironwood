@@ -1,7 +1,7 @@
 import Mathlib
-import Zcash.Snark.Msm
-import Zcash.Snark.Fingerprint
-import Zcash.Snark.Assemble
+import Zcash.Snark.Core.Msm
+import Zcash.Snark.Fingerprint.SchwartzZippel
+import Zcash.Snark.Verifier.Assemble
 
 /-!
 # The fingerprint match

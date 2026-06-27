@@ -1,5 +1,5 @@
 import Mathlib
-import Zcash.Snark.Group
+import Zcash.Snark.Core.Group
 
 /-!
 # The fingerprint multiscalar multiplication

@@ -1,10 +1,10 @@
 import Mathlib
-import Zcash.Snark.ProofString
-import Zcash.Snark.Challenges
-import Zcash.Snark.Verifier
-import Zcash.Snark.Queries
-import Zcash.Snark.Expressions
-import Zcash.Snark.Ipa
+import Zcash.Snark.Core.ProofString
+import Zcash.Snark.Core.Challenges
+import Zcash.Snark.Verifier.Checks
+import Zcash.Snark.Verifier.Queries
+import Zcash.Snark.Verifier.Expressions
+import Zcash.Snark.Verifier.Ipa
 
 /-!
 # Assembling the fingerprint MSM
@@ -48,11 +48,11 @@ def ColumnRef.resolve {F : Type*} (cr : ColumnRef) (instanceEvals adviceEvals fi
   | .instance i => instanceEvals i
 
 -- TODO(VK-correctness): a `VerifyingKey` value is populated from the halo2 `dump_lean_fixture` capture
--- (`Fixture.lean`) and trusted verbatim — Lean never re-derives the verifying key from the Orchard
+-- (`Fingerprint/Fixture.lean`) and trusted verbatim — Lean never re-derives the verifying key from the Orchard
 -- circuit. So "the dumped `gates`/`omega`/`n`/query layouts are the real circuit's VK" is an assumption,
 -- not a theorem (the input-faithfulness seam). Discharging it means re-running keygen from the circuit
 -- definition and comparing. This is distinct from, and cheaper than, the output-side adequacy gap
--- (Step 4, see `Main.lean`). This is the "VK-correctness" assumption (the §3 input-faithfulness boundary).
+-- (Step 4, see `Soundness/Main.lean`). This is the "VK-correctness" assumption (the §3 input-faithfulness boundary).
 /-- The verifying-key–level circuit structure the assembly needs (halo2 `VerifyingKey` / `ConstraintSystem`).
 `omega` is the domain generator and `n = 2 ^ k` the domain size; `blindingFactors`, `delta`, `chunkLen`
 are the permutation-argument constants. `gates` are the custom-gate polynomials; `instance/advice/fixed

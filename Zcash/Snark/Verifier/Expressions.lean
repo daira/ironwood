@@ -1,5 +1,5 @@
 import Mathlib
-import Zcash.Snark.ProofString
+import Zcash.Snark.Core.ProofString
 
 /-!
 # The vanishing argument's `expected_h_eval`
