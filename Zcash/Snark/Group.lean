@@ -9,12 +9,13 @@ this group. We model the group abstractly as an `F`-module `G` — the only stru
 uses is the `F`-linear combination of group elements (`F = F_p`, the scalar field). The Pasta group law
 is hand-waved; the development never reaches into curve arithmetic.
 
-We keep `G` abstract rather than instantiating it at CompElliptic's concrete Vesta curve
-(`SWPoint Vesta`) on purpose. The MSM needs only the `F`-linear (module) structure, which the abstract
-`F`-module already supplies; and CompElliptic's curve is an `AddCommGroup` but *not* (yet) a
-`Module (ZMod p)` — its prime-order structure (group order `= p`) is not established, and proving it
-is precisely the curve-arithmetic work this project hand-waves. If a `Module (ZMod p)` instance on the
-Vesta curve later lands, `G` can be instantiated there with no change to the fingerprint argument.
+We keep `G` abstract in the fingerprint argument rather than instantiating it at CompElliptic's
+concrete Vesta curve (`SWPoint Vesta.curve`) on purpose: the MSM needs only the `F`-linear (module)
+structure, which the abstract `F`-module already supplies, so the argument stays curve-agnostic. The
+concrete instantiation is available too, conditioned on the Hasse bound: CompElliptic's curve is an
+`AddCommGroup`, and given `Fact (HasseBound Vesta.curve)` its order is `p` (`Pasta.Vesta.card_eq`),
+which makes it a `Module (ZMod p)` (`Zcash.Snark.vestaFpModule`). The Vesta capstones in
+`Zcash.Snark.Vesta` instantiate `G` there with no change to this argument.
 -/
 
 namespace Zcash.Snark
