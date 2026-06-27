@@ -12,10 +12,10 @@ Pallas *scalar* order `PALLAS_SCALAR_CARD` of the value commitment.
 
 `F_p` is where the fingerprint MSM's scalars live. The development stays generic over `[Field F]`;
 this module just pins the instantiation `F_p = ZMod p` and records `|F_p| = p`, the cardinality the
-Schwartz–Zippel bound (`Zcash.Snark.Fingerprint`) divides by. We use `F_p` abstractly; its primality
+Schwartz–Zippel bound (`Zcash.Snark.Fingerprint.SchwartzZippel`) divides by. We use `F_p` abstractly; its primality
 is CompElliptic's certified fact. The Pasta field construction itself is not needed for the soundness
 argument; the one curve-level fact that is — the Vesta group order — is derived from the Hasse bound in
-`Zcash.Snark.Vesta` (via CompElliptic), not assumed.
+`Zcash.Snark.Soundness.Vesta` (via CompElliptic), not assumed.
 -/
 
 namespace Zcash.Snark

@@ -1,5 +1,5 @@
 import Mathlib
-import Zcash.Snark.Soundness
+import Zcash.Snark.Soundness.InnerProduct
 
 /-!
 # The full IPA extractor: composing the round extractor over all `k` rounds

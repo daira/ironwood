@@ -1,8 +1,8 @@
 import Mathlib
-import Zcash.Snark.KnowledgeSoundness
-import Zcash.Snark.Assemble
-import Zcash.Snark.Consistency
-import Zcash.Snark.IpaSoundness
+import Zcash.Snark.Soundness.KnowledgeSoundness
+import Zcash.Snark.Verifier.Assemble
+import Zcash.Snark.Soundness.Consistency
+import Zcash.Snark.Soundness.IpaSoundness
 
 /-!
 # Soundness composition: conditional, and the deployed accept condition
@@ -14,7 +14,7 @@ theorems are named with a `_conditional` suffix to avoid overclaiming: they are 
 soundness. The deployed `_opening` / `_constraint` theorems below derive the IPA opening (via
 `ipa_soundV`) and the gate constraint from the accept, under the Fiat–Shamir bridge `hFS`. (An earlier
 deployed layer that peeled `U`/`W`/`S` was removed; re-expressing binding as a DLR-hardness
-reduction — see `relation_of_collision` in `Zcash.Snark.CommitFold` — is the planned follow-up.)
+reduction — see `relation_of_collision` in `Zcash.Snark.Soundness.CommitFold` — is the planned follow-up.)
 
 ## Assumptions (the conditional family)
 
@@ -33,8 +33,8 @@ reduction — see `relation_of_collision` in `Zcash.Snark.CommitFold` — is the
 
 What is proven lives in the component lemmas (`extract_correct`, `accepting_fold_eq`, `commitGen_round`,
 `quotientCheck_sound`, `ipaRelation_unique`, the binding reduction, `eval_combineGates`); the open work
-is wiring them onto this path. `Zcash.Snark.Vesta` instantiates these at the concrete Vesta curve. See
-`Zcash.Snark.KnowledgeSoundness` for the assumption list.
+is wiring them onto this path. `Zcash.Snark.Soundness.Vesta` instantiates these at the concrete Vesta curve. See
+`Zcash.Snark.Soundness.KnowledgeSoundness` for the assumption list.
 -/
 
 namespace Zcash.Snark
@@ -59,7 +59,7 @@ def ExtractableFromAcceptance (urs : URS G) (P : G) (b : Fin (2 ^ urs.k) → Fp)
 -- "…therefore a valid Orchard action" (note well-formed, value balances, nullifier correctly derived,
 -- spend authorized). Closing it: instantiate `S` to the concrete Orchard statement and prove `hencodes`.
 -- The composition reaches only `SnarkRelation`; this is the output-side dual of the input-side
--- VK-correctness gap (see `Assemble.lean`). Large; not started.
+-- VK-correctness gap (see `Verifier/Assemble.lean`). Large; not started.
 /-- Conditional soundness composition (not completed soundness). From the assumed extraction data
 (`hextract haccepts`, which also yields `circuitSat a`), conclude `S` via `hencodes`.
 

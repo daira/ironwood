@@ -1,7 +1,7 @@
 import Mathlib
-import Zcash.Snark.ProofString
-import Zcash.Snark.Challenges
-import Zcash.Snark.Assemble
+import Zcash.Snark.Core.ProofString
+import Zcash.Snark.Core.Challenges
+import Zcash.Snark.Verifier.Assemble
 
 /-!
 # Fiat-Shamir: the challenge schedule (hash hand-waved)

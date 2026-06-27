@@ -1,6 +1,6 @@
 import Mathlib
-import Zcash.Snark.CommitFold
-import Zcash.Snark.Consistency
+import Zcash.Snark.Soundness.CommitFold
+import Zcash.Snark.Soundness.Consistency
 
 /-!
 # IPA knowledge soundness: the commitment-soundness of one round (3-special)

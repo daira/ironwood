@@ -18,7 +18,7 @@ The verifier reads all sub-proofs' advice, then all sub-proofs' lookups, and so 
 
 `Shape` records the per-circuit counts (read off the verifying key) that fix every vector length;
 `ProofString shape F G` is the proof itself, over a field carrier `F` and a group carrier `G`. Both
-stay generic, so the symbolic verifier (`Zcash.Snark.Verifier`) is field- and group-agnostic; the
+stay generic, so the symbolic verifier (`Zcash.Snark.Verifier.Checks`) is field- and group-agnostic; the
 concrete instantiation is `F = F_p`, `G = E_q`.
 -/
 

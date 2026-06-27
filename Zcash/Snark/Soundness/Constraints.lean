@@ -1,6 +1,6 @@
 import Mathlib
-import Zcash.Snark.Field
-import Zcash.Snark.Expressions
+import Zcash.Snark.Core.Field
+import Zcash.Snark.Verifier.Expressions
 
 /-!
 # The constraint layer: Schwartz–Zippel soundness of the vanishing check

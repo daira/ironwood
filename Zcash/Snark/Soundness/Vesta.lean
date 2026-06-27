@@ -1,12 +1,12 @@
 import Mathlib
-import Zcash.Snark.Main
+import Zcash.Snark.Soundness.Main
 import CompElliptic.Curves.Pasta
 import CompElliptic.Curves.PastaOrder
 
 /-!
 # Vesta instantiation: the verifier group at the deployed curve
 
-The soundness theorems of `Zcash.Snark.Main` are proven for an abstract
+The soundness theorems of `Zcash.Snark.Soundness.Main` are proven for an abstract
 `Fp`-module `G`. Here `G` is pinned to the actual Vesta curve `SWPoint Vesta.curve` (`y² = x³ + 5`),
 whose group law CompElliptic/mathlib have already proven (associativity transported from
 `WeierstrassCurve.Affine.Point`). The deployed Orchard verifier runs over Vesta, so these theorems are

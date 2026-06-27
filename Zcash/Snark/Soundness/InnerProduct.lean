@@ -1,5 +1,5 @@
 import Mathlib
-import Zcash.Snark.Group
+import Zcash.Snark.Core.Group
 
 /-!
 # Knowledge soundness: the polynomial-commitment / inner-product-argument layer

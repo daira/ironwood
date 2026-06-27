@@ -1,4 +1,4 @@
-import Zcash.Snark.Fixture
+import Zcash.Snark.Fingerprint.Fixture
 
 /-!
 # Fiat–Shamir schedule check: the FS-derived fingerprint matches the capture
