@@ -48,10 +48,10 @@ Fiat–Shamir. Honest reading: assume IPA knowledge soundness + FS, not hand-wav
 into the genuine FS step (`accept → ∃ tree`) and the proven extraction — narrowing the residual to
 "challenges are uniform and unpredictable" — is open. It also bundles `circuitSat a` (the extracted
 witness satisfies the circuit); deriving that from the deployed constraint check is likewise open. -/
-def ExtractableFromAcceptance (srs : SRS G) (P : G) (b : Fin (2 ^ srs.k) → Fp) (v : Fp)
-    (circuitSat : (Fin (2 ^ srs.k) → Fp) → Prop) (accepts : Prop) : Prop :=
-  accepts → ∃ (t : Tree Fp srs.k) (a : Fin (2 ^ srs.k) → Fp),
-    Consistent t a ∧ IpaRelation srs P b v a ∧ circuitSat a
+def ExtractableFromAcceptance (urs : URS G) (P : G) (b : Fin (2 ^ urs.k) → Fp) (v : Fp)
+    (circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop) (accepts : Prop) : Prop :=
+  accepts → ∃ (t : Tree Fp urs.k) (a : Fin (2 ^ urs.k) → Fp),
+    Consistent t a ∧ IpaRelation urs P b v a ∧ circuitSat a
 
 -- TODO(semantic adequacy): `hencodes`/`S` below are the seam from circuit-satisfiability to the
 -- high-level Orchard relation. `S` is a free `Prop` and `hencodes` is an assumed hypothesis, so the
@@ -68,26 +68,26 @@ extraction + circuit-satisfaction are assumed (so `accepting_fold_eq` / `extract
 `constraint_identity_of_accept` are off-path); and `hbind`'s binding only feeds the discarded uniqueness
 conjunct. The scaffold for the composition, not the composition — see the module docstring, and the
 deployed `_opening` / `_constraint` theorems below. -/
-theorem orchard_verifier_sound_conditional (srs : SRS G) (hbind : CommitmentBinding (F := Fp) srs)
-    {P : G} {b : Fin (2 ^ srs.k) → Fp} {v : Fp} {circuitSat : (Fin (2 ^ srs.k) → Fp) → Prop}
+theorem orchard_verifier_sound_conditional (urs : URS G) (hbind : CommitmentBinding (F := Fp) urs)
+    {P : G} {b : Fin (2 ^ urs.k) → Fp} {v : Fp} {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop}
     {accepts : Prop} (haccepts : accepts)
-    (hextract : ExtractableFromAcceptance srs P b v circuitSat accepts)
-    {S : Prop} (hencodes : ∀ a, SnarkRelation srs P b v circuitSat a → S) :
+    (hextract : ExtractableFromAcceptance urs P b v circuitSat accepts)
+    {S : Prop} (hencodes : ∀ a, SnarkRelation urs P b v circuitSat a → S) :
     S := by
   obtain ⟨t, a, hcons, hopen, hsat⟩ := hextract haccepts
-  exact hencodes a (knowledge_sound srs hbind hcons hopen hsat).2.1
+  exact hencodes a (knowledge_sound urs hbind hcons hopen hsat).2.1
 
 /-- The deployed verifier's accept condition as a concrete predicate: the rejecting assembled fingerprint
-MSM `assemble? vk ps ch` (the §1 object) evaluates to the group identity against the SRS. This is what
+MSM `assemble? vk ps ch` (the §1 object) evaluates to the group identity against the URS. This is what
 `accepts` should be — the formal object §1 and §2 share. Rejected typed proof data (duplicate
 commitment/point queries, a `multiopenU` count that does not match the derived point sets, missing
 non-last permutation last-evals, or zero inverse denominators) is `False`.
-(`hk` aligns the circuit shape's `k` with the SRS's `k`.) -/
-def DeployedAccepts [DecidableEq G] [Inhabited G] {shape : Shape} (srs : SRS G)
-    (hk : shape.k = srs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
+(`hk` aligns the circuit shape's `k` with the URS's `k`.) -/
+def DeployedAccepts [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
+    (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) : Prop :=
   match assemble? vk ps ch with
-  | some m => (hk ▸ m : Msm srs.k Fp G).eval srs = 0
+  | some m => (hk ▸ m : Msm urs.k Fp G).eval urs = 0
   | none => False
 
 /-! ## `IpaRelation` is derived from the transcript tree, not assumed
@@ -99,13 +99,13 @@ it also absorbs (i) the MSM↔tree structural correspondence (that `assemble.eva
 recursive checks for the proof's actual `P,b,v,L,R`) and (ii) the pinning of free `P,b,v` to the proof.
 The cryptographic opening is genuinely derived; the residual bundle is structural. -/
 
-/-- `IpaAcceptV` over the SRS generators derives `IpaRelation`: the witness `ipa_soundV` extracts opens
-`P` (`commit srs a = commitGen srs.g a`) and gives the inner product (`commitGen b a = ⟨a,b⟩`). The IPA
+/-- `IpaAcceptV` over the URS generators derives `IpaRelation`: the witness `ipa_soundV` extracts opens
+`P` (`commit urs a = commitGen urs.g a`) and gives the inner product (`commitGen b a = ⟨a,b⟩`). The IPA
 opening is derived, not assumed. -/
-theorem ipaRelation_of_acceptV (srs : SRS G) (b : Fin (2 ^ srs.k) → Fp) (P : G) (v : Fp)
-    (t : IpaTreeV Fp G srs.k) (h : IpaAcceptV srs.g b P v t) :
-    ∃ a, IpaRelation srs P b v a := by
-  obtain ⟨a, hP, hv⟩ := ipa_soundV srs.g b P v t h
+theorem ipaRelation_of_acceptV (urs : URS G) (b : Fin (2 ^ urs.k) → Fp) (P : G) (v : Fp)
+    (t : IpaTreeV Fp G urs.k) (h : IpaAcceptV urs.g b P v t) :
+    ∃ a, IpaRelation urs P b v a := by
+  obtain ⟨a, hP, hv⟩ := ipa_soundV urs.g b P v t h
   refine ⟨a, hP, ?_⟩
   have hib : innerProduct a b = commitGen b a := by simp only [innerProduct, commitGen, smul_eq_mul]
   rw [hib]; exact hv
@@ -117,8 +117,8 @@ the blinding-free IPA). The cryptographic opening it feeds is then derived by `i
 (`ipaRelation_of_acceptV`), not assumed. An earlier development discharged (ii) and the flat half of (i)
 via a dedicated deployed layer; that layer was removed pending a DLR-hardness reduction, so for now the
 separation and the structural correspondence are bundled back into this bridge. -/
-def FiatShamirTree (srs : SRS G) (b : Fin (2 ^ srs.k) → Fp) (P : G) (v : Fp) (accepts : Prop) : Prop :=
-  accepts → ∃ t : IpaTreeV Fp G srs.k, IpaAcceptV srs.g b P v t
+def FiatShamirTree (urs : URS G) (b : Fin (2 ^ urs.k) → Fp) (P : G) (v : Fp) (accepts : Prop) : Prop :=
+  accepts → ∃ t : IpaTreeV Fp G urs.k, IpaAcceptV urs.g b P v t
 
 /-- The deployed Orchard verifier is sound, opening derived. From the deployed accept (`assemble.eval = 0`),
 the minimal Fiat–Shamir bridge `hFS` (acceptance yields the transcript tree — the only IPA assumption),
@@ -131,16 +131,16 @@ MSM↔tree correspondence + `P,b,v` pinning (see `FiatShamirTree`), and `hcirc` 
 side, which `orchard_verifier_sound_deployed_constraint` derives from the gate check. Named
 assumptions: the bridge (`hFS`), the constraint side (`hcirc`), and VK-correctness (`hencodes`). -/
 theorem orchard_verifier_sound_deployed_opening [DecidableEq G] [Inhabited G] {shape : Shape}
-    (srs : SRS G) (hk : shape.k = srs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
-    (ch : Challenges shape.k Fp) {P : G} {b : Fin (2 ^ srs.k) → Fp} {v : Fp}
-    {circuitSat : (Fin (2 ^ srs.k) → Fp) → Prop}
-    (haccepts : DeployedAccepts srs hk vk ps ch)
-    (hFS : FiatShamirTree srs b P v (DeployedAccepts srs hk vk ps ch))
-    (hcirc : ∀ a, IpaRelation srs P b v a → circuitSat a)
-    {S : Prop} (hencodes : ∀ a, SnarkRelation srs P b v circuitSat a → S) :
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp) {P : G} {b : Fin (2 ^ urs.k) → Fp} {v : Fp}
+    {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop}
+    (haccepts : DeployedAccepts urs hk vk ps ch)
+    (hFS : FiatShamirTree urs b P v (DeployedAccepts urs hk vk ps ch))
+    (hcirc : ∀ a, IpaRelation urs P b v a → circuitSat a)
+    {S : Prop} (hencodes : ∀ a, SnarkRelation urs P b v circuitSat a → S) :
     S := by
   obtain ⟨t, ht⟩ := hFS haccepts
-  obtain ⟨a, hrel⟩ := ipaRelation_of_acceptV srs b P v t ht
+  obtain ⟨a, hrel⟩ := ipaRelation_of_acceptV urs b P v t ht
   exact hencodes a ⟨hrel, hcirc a hrel⟩
 
 /-! ## `circuitSat` is derived from the verifier's gate check + Schwartz–Zippel
@@ -164,25 +164,25 @@ the special-soundness rewinding tree (`hFS`), the gate point-check (`hquot`), th
 (`hgood`), and VK-correctness (`hencodes`). `hquot`/`hgood` are the constraint-side analog of `hFS` — the
 gate check is part of `assemble.eval = 0` modulo the multiopen decode that ties the opened columns to it. -/
 theorem orchard_verifier_sound_deployed_constraint [DecidableEq G] [Inhabited G] {shape : Shape}
-    (srs : SRS G) (hk : shape.k = srs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
-    (ch : Challenges shape.k Fp) {P : G} {b : Fin (2 ^ srs.k) → Fp} {v : Fp}
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp) {P : G} {b : Fin (2 ^ urs.k) → Fp} {v : Fp}
     (fixedCols : ℕ → Polynomial Fp)
-    (decodeAdvice decodeInstance : (Fin (2 ^ srs.k) → Fp) → (ℕ → Polynomial Fp))
+    (decodeAdvice decodeInstance : (Fin (2 ^ urs.k) → Fp) → (ℕ → Polynomial Fp))
     (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp)
-    (haccepts : DeployedAccepts srs hk vk ps ch)
-    (hFS : FiatShamirTree srs b P v (DeployedAccepts srs hk vk ps ch))
-    (hquot : ∀ a, IpaRelation srs P b v a →
+    (haccepts : DeployedAccepts urs hk vk ps ch)
+    (hFS : FiatShamirTree urs b P v (DeployedAccepts urs hk vk ps ch))
+    (hquot : ∀ a, IpaRelation urs P b v a →
       quotientCheck (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates) hpoly deg x)
-    (hgood : ∀ a, IpaRelation srs P b v a →
+    (hgood : ∀ a, IpaRelation urs P b v a →
       combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates ≠ hpoly * (X ^ deg - 1) →
       (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates
         - hpoly * (X ^ deg - 1)).eval x ≠ 0)
     {S : Prop}
-    (hencodes : ∀ a, SnarkRelation srs P b v
+    (hencodes : ∀ a, SnarkRelation urs P b v
       (circuitSatViaGates fixedCols decodeAdvice decodeInstance y gates hpoly deg) a → S) :
     S := by
   obtain ⟨t, ht⟩ := hFS haccepts
-  obtain ⟨a, hrel⟩ := ipaRelation_of_acceptV srs b P v t ht
+  obtain ⟨a, hrel⟩ := ipaRelation_of_acceptV urs b P v t ht
   have hsat : circuitSatViaGates fixedCols decodeAdvice decodeInstance y gates hpoly deg a :=
     circuitSatViaGates_of_check fixedCols decodeAdvice decodeInstance y gates hpoly deg a x
       (hquot a hrel) (hgood a hrel)

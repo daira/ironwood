@@ -4,7 +4,7 @@ import Mathlib
 # The verifier's challenges
 
 The verifier collapses its check into one multiscalar multiplication — the fingerprint. As a group
-element it is a linear combination of the SRS generators (`g`, `w`, `u`) and the proof's commitment
+element it is a linear combination of the URS generators (`g`, `w`, `u`) and the proof's commitment
 group elements (the bases); its coefficients are field elements assembled from the proof's evaluation
 scalars and the verifier's challenges. So the challenges are among the fingerprint's inputs, entering
 through its coefficients — this module records their values: `θ, β, γ, y, x` (the main verifier),
