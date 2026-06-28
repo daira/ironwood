@@ -98,8 +98,10 @@ Ironwood Book,
 ∃-closed relation Prop would be vacuously true, since relations always exist among the
 generators of a compressing commitment. `NontrivialDLRelation.ofCollision` computes the
 relation from a binding collision, and `.ofIpaOpenings` from two distinct IPA openings of
-one commitment — so opening uniqueness holds up to a computed relation. Discharging the
-relation against DLR hardness — the computational/AGM layer — is outside this
+one commitment — so opening uniqueness holds up to a computed relation. The deployed binding
+reduction extends this to the augmented `(g, U, W)` generators
+(`Zcash.Snark.Soundness.BindingReduction`). Discharging the relation against DLR hardness — the
+computational/AGM layer — is outside this
 development. -/
 
 /-- Additivity over subtraction in the witness. -/
