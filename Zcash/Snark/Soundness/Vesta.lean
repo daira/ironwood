@@ -80,8 +80,8 @@ theorem orchard_verifier_sound_vesta_conditional [Fact (HasseBound Vesta.curve)]
 
 /-- The deployed Orchard verifier is sound over Vesta, with the IPA opening derived.
 `orchard_verifier_sound_deployed_opening` specialised to `SWPoint Vesta.curve`: the bridge `hFS` supplies
-only the special-soundness transcript tree (the minimal Fiat–Shamir assumption), and `IpaRelation` is
-derived from it (`ipa_soundV`), not assumed. Named assumptions: the rewinding (`hFS`), the circuit side
+the special-soundness transcript tree (and, as `FiatShamirTree` notes, the MSM↔tree correspondence and
+`P,b,v` pinning), from which `IpaRelation` is derived (`ipa_soundV`), not assumed. Named assumptions: the rewinding (`hFS`), the circuit side
 (`hcirc`), the Hasse bound (`Fact (HasseBound Vesta.curve)`), and VK-correctness (`hencodes`). -/
 theorem orchard_verifier_sound_vesta_opening [Fact (HasseBound Vesta.curve)] [DecidableEq VestaG] [Inhabited VestaG]
     {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp VestaG)

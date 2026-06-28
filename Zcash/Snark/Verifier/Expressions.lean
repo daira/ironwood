@@ -56,8 +56,9 @@ def compressExprs {F : Type*} [CommRing F] (fixedEvals adviceEvals instanceEvals
     (theta : F) (exprs : List (Expr F)) : F :=
   exprs.foldl (fun acc e => acc * theta + e.eval fixedEvals adviceEvals instanceEvals) (0 : F)
 
-/-- One chunk of the permutation argument's running rule (halo2 `permutation/verifier.rs`, lines
-160–187): `(left − right) · (1 − (l_last + l_blind))`, where `left` folds `eval + β·permEval + γ` over
+/-- One chunk of the permutation argument's running rule (halo2 `permutation/verifier.rs`, the
+running-product term in `Evaluated::expressions`): `(left − right) · (1 − (l_last + l_blind))`, where
+`left` folds `eval + β·permEval + γ` over
 the chunk's `(columnEval, permEval)` pairs starting from `z(ωx)`, and `right` folds `eval + δ_cur + γ`
 over the column evals starting from `z(x)` with `δ_cur` beginning at `β·x·δ^(chunkIndex·chunkLen)` and
 multiplied by `δ` each column. -/

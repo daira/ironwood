@@ -13,17 +13,18 @@ This module composes the verified building blocks into the verifier's MSM assemb
 of halo2 `plonk/verifier.rs`. It is the Lean image of the interactive verifier: a pure function of the
 proof string, the challenges, and the verifying-key–level circuit structure.
 
-The assembly factors into two halves connected by one deferred piece:
+The assembly factors into three stages:
 
 * `assembleQueries` (the upstream) — recompute the vanishing `h` commitment and `expected_h_eval`, then
   build the full ordered list of opening queries (per sub-proof: instance, advice, permutation, lookups;
   then shared: fixed, permutation-common, vanishing).
-* `construct_intermediate_sets` (deferred) — group the flat query list into per-point-set commitment and
-  evaluation data. This is VK-fixed query bookkeeping (it depends on the query layout, not the proof
-  values); it is supplied here as a `MultiopenGrouped` value rather than re-derived, and is the one
-  piece the fingerprint match (`MultiopenGrouped` from the captured run) exercises directly.
-* `assembleFinalMsm` (the downstream) — the multiopen `x₁` compression and `x₄` collapse, then the IPA
-  fold, producing the final MSM.
+* `constructIntermediateSets` — group the flat query list into per-point-set commitment and evaluation
+  data. This is VK-fixed query bookkeeping (it depends on the query layout, not the proof values), and is
+  re-derived in Lean (a re-derivation of halo2 `construct_intermediate_sets`), not supplied: the top-level
+  `assemble` feeds the derived `MultiopenGrouped` to `assembleFinalMsm`, and that derived value is what the
+  `native_decide` fingerprint match exercises.
+* `assembleFinalMsm` (the downstream) — takes the `MultiopenGrouped`, then the multiopen `x₁` compression
+  and `x₄` collapse, then the IPA fold, producing the final MSM.
 
 The verifying-key data (`VerifyingKey`) — gate polynomials, query layouts, fixed/permutation
 commitments, the permutation column/eval chunking, lookup expressions — is circuit-fixed and supplied as
@@ -91,7 +92,7 @@ def finFnG {G : Type*} [Inhabited G] {n : ℕ} (f : Fin n → G) : ℕ → G :=
   fun i => if h : i < n then f ⟨i, h⟩ else default
 
 /-- The `i`-th Lagrange basis polynomial of the size-`n` multiplicative domain, evaluated at `x` (halo2
-`Polynomial::l_i_range`): `(xⁿ − 1) · ωⁱ / (n · (x − ωⁱ))`. -/
+`EvaluationDomain::l_i_range`): `(xⁿ − 1) · ωⁱ / (n · (x − ωⁱ))`. -/
 def lagrangeBasisValue {F : Type*} [Field F] (omega : F) (n : ℕ) (xn x : F) (i : ℤ) : F :=
   (xn - 1) * omega ^ i / ((n : F) * (x - omega ^ i))
 

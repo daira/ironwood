@@ -14,8 +14,9 @@ and the leaves carry the fully-folded scalars.
 * `Tree` — a depth-`k` tree of transcripts: each node carries the two round challenges and two subtrees.
 * `Consistent` — the tree's leaves are the witness folded down each challenge path.
 * `extract` / `extract_correct` — the extractor recovers the witness exactly, by induction on `k`, using
-  `roundExtract_correct` at every node. This is the IPA's special soundness over all rounds (the
-  curve-binding consistency across the tree is `Zcash.Snark.CommitmentBinding`, kept explicit).
+  `roundExtract_correct` at every node. This is the IPA's special soundness over all rounds, and it is
+  binding-free — it takes `Consistent` as a hypothesis. (Deriving that consistency from acceptance is what
+  the explicit `Zcash.Snark.CommitmentBinding` later supplies, in `Zcash.Snark.Soundness.CommitFold`.)
 -/
 
 namespace Zcash.Snark

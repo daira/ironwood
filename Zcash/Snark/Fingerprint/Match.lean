@@ -9,7 +9,8 @@ import Zcash.Snark.Verifier.Assemble
 The cross-check that validates the Lean assembly against the deployed Rust verifier (in place of a
 line-by-line translation proof): run the deployed verifier on a proof, capturing its assembled MSM and
 the challenges it drew; run the Lean `assembleFinalMsm` on the same proof string and challenges; and
-compare the two MSMs. A match means the two assembly *formulas* agree.
+compare the two MSMs. A match means the two assembled MSMs agree coefficient-for-coefficient on this
+proof — not merely as evaluated group elements.
 
 This module provides the match's logical content:
 
@@ -76,9 +77,10 @@ open MvPolynomial Finset Fintype in
 minus the captured one is a polynomial `p` in the proof scalars and challenges; the two MSMs genuinely
 differ in that coefficient exactly when `p ≠ 0`. Then the fraction of challenge/scalar assignments at
 which the coefficient nonetheless agrees — a false match at a uniformly random evaluation — is at most
-`deg p / p_field`. So a single random evaluation detects a mismatch except with probability `≤ d / p`,
-and one random proof validates the assembly up to that bound. This is `fingerprint_schwartz_zippel`
-applied to the coefficient difference. -/
+`deg p / |F_p|`, so a single random evaluation detects a mismatch except with that probability. This is
+`fingerprint_schwartz_zippel` restated for the coefficient-difference setting: `p` is left abstract, *not*
+instantiated at `assemble`'s actual coefficient differences (no degree bound is proved for them), so it is
+not yet a Lean link from "one random proof" to assembly correctness — see the module note above. -/
 theorem fingerprint_match_random_eval_sound {n : ℕ} {p : MvPolynomial (Fin n) Fp} (hp : p ≠ 0) :
     (#{f ∈ piFinset fun _ => (univ : Finset Fp) | eval f p = 0} : ℚ≥0)
         / (scalarFieldOrder : ℚ≥0) ^ n ≤ (p.totalDegree : ℚ≥0) / scalarFieldOrder :=

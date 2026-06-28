@@ -8,8 +8,8 @@ proof, every reference-string generator, and the final multiscalar-multiplicatio
 this group. We model the group abstractly as an `F`-module `G` — the only structure the verifier's MSM
 uses is the `F`-linear combination of group elements (`F = F_p`, the scalar field). The argument uses
 only this abstract module structure and never reaches into the concrete curve arithmetic; where `G` is
-instantiated at the concrete curve (below), the group law is CompElliptic's proven `AddCommGroup`, not an
-assumption.
+instantiated at the concrete curve (in `Zcash.Snark.Soundness.Vesta`; see below), the group law is
+CompElliptic's proven `AddCommGroup`, not an assumption.
 
 We keep `G` abstract in the fingerprint argument rather than instantiating it at CompElliptic's
 concrete Vesta curve (`SWPoint Vesta.curve`) on purpose: the MSM needs only the `F`-linear (module)

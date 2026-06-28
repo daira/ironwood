@@ -19,7 +19,7 @@ The schedule — which proof elements are absorbed before each challenge is sque
 sense in which the deployed verifier is the Fiat-Shamir image of the interactive one
 (`Zcash.Snark.Challenges` as genuine coins): the two differ only in the source of the challenges, and
 `deriveChallenges` is that source. `nonInteractiveFingerprint` is then the deployed verifier's MSM,
-`assembleFinalMsm` at the FS-derived challenges.
+`assemble` at the FS-derived challenges.
 
 ## Assumptions
 
@@ -69,8 +69,10 @@ def absorbLookup {F G : Type*} (e : LookupEval F) : List (TranscriptElt F G) :=
 
 /-- Derive the verifier's challenges by Fiat-Shamir, following the deployed schedule
 (`plonk/verifier.rs` → `multiopen/verifier.rs` → `commitment/verifier.rs`). After each squeeze the
-challenge is appended to the transcript (the deployed transcript reseeds with it), so consecutive
-squeezes differ. `init` is the pre-absorbed prefix (the verifying-key hash and instance commitments). -/
+challenge is appended to the transcript so consecutive squeezes differ — a modeling choice; halo2's
+deployed Blake2b transcript instead separates squeezes with a domain-prefix byte
+(`BLAKE2B_PREFIX_CHALLENGE`) rather than re-absorbing the challenge. `init` is the pre-absorbed prefix
+(the verifying-key hash and instance commitments). -/
 def deriveChallenges {shape : Shape} {F G : Type*} [Zero F] (fs : FiatShamir F G)
     (init : List (TranscriptElt F G)) (ps : ProofString shape F G) : Challenges shape.k F :=
   -- advice commitments → θ
