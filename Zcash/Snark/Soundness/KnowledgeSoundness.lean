@@ -32,7 +32,7 @@ This layer is sound relative to the following, each kept explicit rather than hi
 * **Fiat–Shamir / Blake2b** as a random oracle — challenges are treated as uniform and unpredictable; the
   hash and the random-oracle reduction are not modeled. The capstone's current assumption
   (`ExtractableFromAcceptance`) is in fact stronger — it bundles the IPA knowledge-soundness conclusion,
-  not just Fiat–Shamir; narrowing it to "uniform challenges" is open constraint-side work.
+  not just Fiat–Shamir; narrowing it to "uniform challenges" is open extraction-side work.
 * **Hasse bound** — the abstract development runs over any `Fp`-module `G`, but `Zcash.Snark.Soundness.Vesta`
   pins it to the concrete Vesta curve `SWPoint Vesta.curve` (`y² = x³ + 5`), whose group law is proven
   (mathlib's elliptic-curve group law, via `WeierstrassCurve.Affine.Point`). The one residual assumption

@@ -16,9 +16,11 @@ The fingerprint MSM's `g`-part is this commitment, so the layer is expressed dir
 * `commit` — `⟨a, G⟩ = Σᵢ aᵢ • gᵢ`, the polynomial commitment (the MSM's `g`-part).
 * `evalVector` / `innerProduct` — `b = (1, x, …, x^{n−1})` and `⟨a, b⟩` (the polynomial at `x`).
 * `IpaRelation` — the opening relation `⟨a, G⟩ = P ∧ ⟨a, b⟩ = v` the IPA is an argument of knowledge for.
-* `commit_add` / `commit_smul` — `commit` is `F`-linear; this is the algebra the round extractor folds with.
+* `innerProduct_add_left` — `⟨·, b⟩` is additive in its left argument; together with `commit`'s linearity
+  (`commitGen_add_left` / `commitGen_smul_left` in `Zcash.Snark.Soundness.CommitFold`, via
+  `commit_eq_commitGen`) this is the algebra the round extractor folds with.
 
-The IPA is 2-special-sound per round: from two accepting transcripts that share the round commitments
+The IPA's witness fold is 2-special-sound per round: from two accepting transcripts that share the round commitments
 `(Lⱼ, Rⱼ)` but answer distinct challenges `uⱼ`, the round's witness folds back, and recursing over the
 `k` rounds extracts an `a` satisfying `IpaRelation`. Building that extractor is the next phase; the
 per-round folding rests on the linearity proved here. Curve-group binding stays an explicit assumption —
@@ -83,12 +85,10 @@ theorem roundExtract_correct {m : ℕ} (lo hi : Fin m → F) (u₁ u₂ : F) (h 
   simp only [foldVec]
   abel
 
-/-! ## Inner-product bilinearity and the round's inner-product telescoping
+/-! ## Inner-product left-additivity
 
-The scalar side of the IPA: the inner product is bilinear, and one round telescopes it — with the
-witness folded by `u⁻¹` and the evaluation vector by `u`, the folded inner product is the original
-`⟨lo,blo⟩ + ⟨hi,bhi⟩` plus the two cross terms the verifier accounts for via `L`/`R`. This is the round's
-completeness, complementing the round extractor (`roundExtract_correct`). -/
+The scalar side of the IPA. The fact needed downstream is that the inner product is additive in its left
+argument (`innerProduct_add_left`) — the algebra the round extractor's witness fold rests on. -/
 
 /-- The inner product is additive in its left argument. -/
 theorem innerProduct_add_left {n : ℕ} (a a' b : Fin n → F) :

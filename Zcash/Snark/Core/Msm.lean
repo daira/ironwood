@@ -50,7 +50,7 @@ def scale {k : ℕ} {F G : Type*} [Mul F] (c : F) (m : Msm k F G) : Msm k F G :=
     uScalar := c * m.uScalar
     other := m.other.map fun t => (c * t.1, t.2) }
 
-/-- Add two MSMs coefficientwise (halo2 `add_msm`). -/
+/-- Add two MSMs: the `g`/`w`/`u` coefficients pairwise, the `other` terms concatenated (halo2 `add_msm`). -/
 def add {k : ℕ} {F G : Type*} [Add F] (m₁ m₂ : Msm k F G) : Msm k F G :=
   { gScalars := fun i => m₁.gScalars i + m₂.gScalars i
     wScalar := m₁.wScalar + m₂.wScalar

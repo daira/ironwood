@@ -11,7 +11,8 @@ This module connects the Fiat–Shamir-derived fingerprint (`nonInteractiveFinge
 `deriveChallenges`) to the same captured MSM, modulo one explicit assumption: that the deployed FS schedule
 reproduces the captured challenges. The squeeze (Blake2b) is the random-oracle hand-wave — not modeled in
 Lean — so `deriveChallenges fs init ps = ch` is that named assumption. The schedule's structure (the
-absorb/squeeze order) is auditable directly against `plonk/verifier.rs` in `deriveChallenges`'s definition.
+absorb/squeeze order) is auditable directly against `plonk/verifier.rs`, `multiopen/verifier.rs`, and
+`commitment/verifier.rs` in `deriveChallenges`'s definition.
 -/
 
 namespace Zcash.Snark.Fixture

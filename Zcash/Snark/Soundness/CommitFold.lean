@@ -52,7 +52,7 @@ theorem commitGen_smul_gen {n : ℕ} (c : F) (g : Fin n → G) (a : Fin n → F)
 
 /-- One IPA round's commitment fold (completeness). Folding the witness by `u⁻¹` and the generators by
 `u` sends the parent commitment to the folded commitment plus the two cross terms `⟨aLo, gHi⟩` and
-`⟨aHi, gLo⟩` — exactly the `R`/`L` the verifier accounts for. So the honest witness folds consistently;
+`⟨aHi, gLo⟩` — exactly the `L`/`R` the verifier accounts for. So the honest witness folds consistently;
 with `ipaRelation_unique` (binding), the prover's response must be this fold. -/
 theorem commitGen_round {m : ℕ} (gLo gHi : Fin m → G) (aLo aHi : Fin m → F) {u : F} (hu : u ≠ 0) :
     commitGen (gLo + u • gHi) (aLo + u⁻¹ • aHi)
@@ -130,7 +130,7 @@ theorem relation_of_collision (urs : URS G) {a a' : Fin (2 ^ urs.k) → F}
 
 /-- Binding is exactly DLR hardness. The commitment is binding iff every discrete-log relation among the generators is
 trivial — so assuming DLR hardness is assuming `CommitmentBinding`, and the binding hypothesis used by
-`ipaRelation_unique` / `opening_knowledge_sound` is precisely the standard, named hardness assumption
+`ipaRelation_unique` / `knowledge_sound` is precisely the standard, named hardness assumption
 (with `relation_of_collision` the proven reduction). -/
 theorem commitmentBinding_iff_no_relation (urs : URS G) :
     CommitmentBinding (F := F) urs ↔ ∀ r : Fin (2 ^ urs.k) → F, DLRelation urs r → r = 0 := by

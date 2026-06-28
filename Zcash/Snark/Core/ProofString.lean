@@ -79,8 +79,9 @@ and advice evaluations); `permutationSetEvals` (per-set permutation product eval
 Shared across sub-proofs (read once): `vanishingRandom` (vanishing random-poly commitment); `hPieces`
 (quotient `h(X)` pieces); `fixedEvals` (fixed evaluations); `vanishingRandomEval` (vanishing random-
 poly evaluation); `permutationCommonEvals` (permutation common evaluations); `multiopenQPrime`,
-`multiopenU` (the multiopen `f(X)` commitment and its per-point-set evaluations); and the IPA opening
-`ipaS`, `ipaRounds`, `ipaC`, `ipaF` (the blinded-poly commitment `S`, the `k` round commitments
+`multiopenU` (the multiopen quotient commitment `q'` — halo2's commitment to the multi-point quotient
+polynomial `f(X)` — and the prover's claimed per-point-set quotient evaluations `u`); and the IPA opening
+`ipaS`, `ipaRounds`, `ipaC`, `ipaF` (the blinding-poly commitment `S`, the `k` round commitments
 `(Lⱼ, Rⱼ)`, and the final scalars `c` and `f`). -/
 structure ProofString (shape : Shape) (F G : Type*) where
   adviceCommitments : Fin shape.numProofs → Fin shape.numAdviceColumns → G

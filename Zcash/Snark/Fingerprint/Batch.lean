@@ -11,9 +11,14 @@ is nonzero), the random combination is the identity only with negligible probabi
 The atomic fact is `smul_eq_zero_iff_of_ne_zero`: a random scalar annihilates a nonzero group element
 only when it is `0`. `batch_rlc_card_le` amplifies it to the `N`-fold linear combination `∑ rᵢ • gᵢ`:
 if some `gⱼ ≠ 0`, the combination vanishes for at most `p ^ (N-1)` of the `p ^ N` choices of
-randomness — a `1 / p` fraction, negligible for `p ≈ 2²⁵⁴`. (halo2's deployed combiner folds with
-iterated scaling, a degree-`(N-1)` variant bounded by `(N-1) / p` through the same atomic fact; we
-model the linear-combination form, whose `1 / p` is the cleaner statement of the same soundness.)
+randomness — a `1 / p` fraction, negligible for `p ≈ 2²⁵⁴`.
+
+halo2's deployed combiner folds with iterated scaling, a degree-`(N-1)` variant bounded by
+`(N-1) / p` through the same atomic fact. We model the linear-combination form, whose `1 / p`
+is the cleaner statement of the same soundness. Note that iterated scaling uses a fresh
+*independent* random per fold (`acc.scale(random); acc.add_msm(m)`). This should not be
+confused with folding using powers of a single challenge, which is used elsewhere in the
+argument of knowledge and formalized in `Soundness/Constraints.lean`.
 
 Requires `[NoZeroSMulDivisors Fp G]` — the prime-order property of the verifier group `E_q`.
 -/

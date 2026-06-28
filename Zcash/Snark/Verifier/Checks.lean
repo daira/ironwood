@@ -16,9 +16,10 @@ What this file currently provides:
   `x₄` collapse (`multiopen/verifier.rs`).
 * `lagrangeEval`, `multiopenEval` — the multiopen combined value `v` (the Lagrange interpolation step).
 
-The point-set grouping (`construct_intermediate_sets`) is still taken as input — it is VK-fixed
+The primitives here take the point-set grouping (`construct_intermediate_sets`) as input — it is VK-fixed
 bookkeeping that depends only on the query layout, and supplies the per-set commitment and evaluation
-lists. Everything downstream (the `x₁`/`x₄` folds and the combined value `v`) is computed here.
+lists; it is re-derived in `Verifier/Assemble.lean` (`constructIntermediateSets`). Everything downstream
+(the `x₁`/`x₄` folds and the combined value `v`) is computed here.
 -/
 
 namespace Zcash.Snark
