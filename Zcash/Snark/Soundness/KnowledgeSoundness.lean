@@ -77,7 +77,7 @@ structure SnarkRelation (urs : URS G) (P : G) (b : Fin (2 ^ urs.k) → Fp) (v : 
 satisfy the `y`-combined gates' quotient identity. `decodeAdvice`/`decodeInstance` map the IPA witness to
 the circuit's column polynomials (the multiopen decode — abstract until the assembly is modeled), and
 `combineGates` is the `y`-combination of the gate `Expr`s (`eval_combineGates`). So
-`circuitSat := circuitSatViaGates …` reads "the extracted witness satisfies the circuit's constraints",
+`circuitSat := circuitSatViaGates …` reads "the extracted witness satisfies the circuit's gate constraints",
 and `constraint_identity_of_accept` is what would discharge it from the deployed check. -/
 def circuitSatViaGates {k : ℕ} (fixedCols : ℕ → Polynomial Fp)
     (decodeAdvice decodeInstance : (Fin (2 ^ k) → Fp) → (ℕ → Polynomial Fp))
@@ -88,7 +88,7 @@ def circuitSatViaGates {k : ℕ} (fixedCols : ℕ → Polynomial Fp)
 /-- `circuitSat`, derived from the deployed constraint check (not assumed). With the numerator the gate
 combination `combineGates …`, an accepting quotient check at the challenge `x` plus a good challenge
 (`x` not a root of the constraint difference — its complement the `≤ deg/p` Schwartz–Zippel bad set) gives
-`circuitSatViaGates …`: the witness's decoded columns satisfy the gates. So the circuit-satisfaction
+`circuitSatViaGates …`: the witness's decoded columns satisfy the gates. So the circuit gate-satisfaction
 conjunct of `SnarkRelation` is discharged from acceptance via `constraint_identity_of_accept`, modulo only
 the multiopen decode. -/
 theorem circuitSatViaGates_of_check {k : ℕ} (fixedCols : ℕ → Polynomial Fp)
@@ -103,7 +103,7 @@ theorem circuitSatViaGates_of_check {k : ℕ} (fixedCols : ℕ → Polynomial Fp
     circuitSatViaGates fixedCols decodeAdvice decodeInstance y gates hpoly deg a :=
   constraint_identity_of_accept _ hpoly deg x hcheck hgood
 
-/-- Knowledge soundness (modulo its hypotheses). Given a consistent transcript tree `t` for `a`
+/-- Knowledge soundness (modulo its hypotheses and current modelling gaps). Given a consistent transcript tree `t` for `a`
 (`hcons`), the opening (`hopen`), and circuit-satisfaction of `a` (`hsat`), the extractor recovers the
 unique witness satisfying `SnarkRelation`. Composes `extract_correct` (extraction) and
 `ipaRelation_unique` (uniqueness under DLR hardness).

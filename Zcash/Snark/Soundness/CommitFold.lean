@@ -108,7 +108,8 @@ such relation exists on the Vesta generators. `commitmentBinding_iff_no_relation
 reduction itself proven. -/
 
 /-- A discrete-log relation among the URS generators: a coefficient vector the generators send to `0`.
-It is nontrivial when `r ≠ 0`. DLR hardness is the assumption that no nontrivial relation exists. -/
+It is nontrivial when `r ≠ 0`. DLR hardness is the assumption that no feasible adversary can find a
+nontrivial relation. -/
 @[reducible] def DLRelation (urs : URS G) (r : Fin (2 ^ urs.k) → F) : Prop :=
   commitGen urs.g r = 0
 

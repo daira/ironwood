@@ -20,6 +20,11 @@ polynomial.
 `numerator` and `h` are the polynomials carried by the proof; modeling `numerator` from the specific
 Orchard gate `Expr`s (lifting `Zcash.Snark.Expr` to `Polynomial`) is the remaining connection to the
 assembly — the soundness mechanism (root counting ⇒ `d/p`) is what this establishes.
+
+Scope: what this establishes is **gate** satisfaction — the custom-gate portion of `numerator`. It does
+not connect the permutation and lookup terms to the circuit-level copy and lookup constraints (the
+combinatorial relations those arguments enforce); that is separate (#14). So "circuit satisfaction" on
+this path means gate satisfaction.
 -/
 
 namespace Zcash.Snark

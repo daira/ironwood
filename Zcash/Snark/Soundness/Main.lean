@@ -149,8 +149,8 @@ The constraint side mirrors the opening side. The verifier checks the gate ident
 `x` — a point check (`quotientCheck`, `numerator.eval x = h.eval x · (xⁿ−1)`). `circuitSatViaGates_of_check`
 lifts that point check to the polynomial identity `circuitSatViaGates` (the witness's decoded columns
 satisfy the gates) provided `x` avoids the Schwartz–Zippel bad set (`hgood`). So `circuitSat`, instantiated
-to the concrete `circuitSatViaGates`, is derived from the verifier's actual gate check — no black-box
-`hcirc`. -/
+to the concrete `circuitSatViaGates`, is derived from the verifier's actual gate check rather than taken as
+an opaque hypothesis. -/
 
 open Polynomial in
 /-- The deployed Orchard verifier is sound, opening and constraint both derived. Both conjuncts of
@@ -159,10 +159,10 @@ open Polynomial in
 point check `hquot` at the challenge `x`, lifted to the polynomial identity by Schwartz–Zippel (`hgood`),
 via `circuitSatViaGates_of_check`.
 
-The black-box `hcirc` is gone. What remains are the verifier's actual checks and the standard assumptions:
-the special-soundness rewinding tree (`hFS`), the gate point-check (`hquot`), the SZ good challenge
-(`hgood`), and VK-correctness (`hencodes`). `hquot`/`hgood` are the constraint-side analog of `hFS` — the
-gate check is part of `assemble.eval = 0` modulo the multiopen decode that ties the opened columns to it. -/
+The assumptions are the verifier's actual checks and the standard ones: the special-soundness rewinding
+tree (`hFS`), the gate point-check (`hquot`), the SZ good challenge (`hgood`), and VK-correctness
+(`hencodes`). `hquot`/`hgood` are the constraint-side analog of `hFS` — the gate check is part of
+`assemble.eval = 0` modulo the multiopen decode that ties the opened columns to it. -/
 theorem orchard_verifier_sound_deployed_constraint [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) {P : G} {b : Fin (2 ^ urs.k) → Fp} {v : Fp}
