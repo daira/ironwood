@@ -58,6 +58,13 @@ def absorbPoints2 {F G : Type*} {a b : ℕ} (f : Fin a → Fin b → G) : List (
 def absorbScalars2 {F G : Type*} {a b : ℕ} (f : Fin a → Fin b → F) : List (TranscriptElt F G) :=
   (List.ofFn (fun i => absorbScalars (f i))).flatten
 
+/-- Absorb the lookup permuted commitments in the deployed order (halo2 `read_permuted_commitments`):
+per proof, per lookup, the permuted-input commitment then the permuted-table commitment. -/
+def absorbLookupPermuted {F G : Type*} {a b : ℕ} (input table : Fin a → Fin b → G) :
+    List (TranscriptElt F G) :=
+  (List.ofFn (fun p =>
+    (List.ofFn (fun l => [TranscriptElt.point (input p l), TranscriptElt.point (table p l)])).flatten)).flatten
+
 /-- Absorb a permutation set's evaluations (`eval`, `nextEval`, and `lastEval` when present). -/
 def absorbPermSet {F G : Type*} (e : PermSetEval F) : List (TranscriptElt F G) :=
   [.scalar e.eval, .scalar e.nextEval] ++ (e.lastEval.map TranscriptElt.scalar).toList
@@ -79,7 +86,7 @@ def deriveChallenges {shape : Shape} {F G : Type*} [Zero F] (fs : FiatShamir F G
   let t := init ++ absorbPoints2 ps.adviceCommitments
   let theta := fs.squeeze t
   -- lookup permuted commitments → β, γ
-  let t := t ++ [.scalar theta] ++ absorbPoints2 ps.lookupPermutedInput ++ absorbPoints2 ps.lookupPermutedTable
+  let t := t ++ [.scalar theta] ++ absorbLookupPermuted ps.lookupPermutedInput ps.lookupPermutedTable
   let beta := fs.squeeze t
   let t := t ++ [.scalar beta]
   let gamma := fs.squeeze t
