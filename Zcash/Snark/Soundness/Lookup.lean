@@ -4,11 +4,12 @@ import Zcash.Snark.Soundness.GrandProduct
 /-!
 # Lookup argument soundness
 
-(Towards #14.) The [lookup argument](https://zcash.github.io/halo2/design/proving-system/lookup.html)
-proves multiset inclusion {input} ⊆ {table}. Its soundness combines the grand-product → multiset kernel
-(`GrandProduct.lean`, giving {A′} = {input} and {S′} = {table}) with the **permuted-column run-structure**
-proved here: the verifier's ℓ_0·(A′ − S′) and active·(A′ − S′)·(A′ − A′_prev) constraints force every A′
-value to coincide with some S′ value, which together with the multiset equalities yields {input} ⊆ {table}.
+The [lookup argument](https://zcash.github.io/halo2/design/proving-system/lookup.html) proves that
+every input value occurs in the table — set inclusion {input} ⊆ {table}, ignoring multiplicity. Its
+soundness combines the grand-product → multiset kernel (`GrandProduct.lean`, giving {A′} = {input} and
+{S′} = {table} as multisets) with the **permuted-column run-structure** proved here: the verifier's
+ℓ_0·(A′ − S′) and active·(A′ − S′)·(A′ − A′_prev) constraints force every A′ value to coincide with some
+S′ value, which together with the multiset equalities yields {input} ⊆ {table} as sets.
 
 This file currently provides `run_structure` (the run-structure step over the usable rows); the
 grand-product ⟹ multiset equalities and the final assembly will follow.

@@ -4,9 +4,9 @@ import Zcash.Snark.Soundness.Permutation
 /-!
 # Correctness of the halo2 permutation construction
 
-(Towards #14.) The permutation `σ` that the permutation argument (`Permutation.lean`) operates on is
-*built* by halo2 from the circuit's copy constraints, so that its cycles are exactly the
-equality-constraint classes. This file verifies that construction.
+The permutation `σ` that the permutation argument (`Permutation.lean`) operates on is *built* by halo2
+from the circuit's copy constraints, so that its cycles are exactly the equality-constraint classes.
+This file verifies that construction.
 
 The algorithm is implemented by
 [`Assembly::copy`](https://github.com/zcash/halo2/blob/261faaccd5a30c19bb8468600841a0dac305adf5/halo2_proofs/src/plonk/permutation/keygen.rs#L45-L100)
@@ -38,9 +38,14 @@ enforces equality on exactly the cells the circuit declared equal.
 `value_eq_of_constraints` performs that composition: the verifier-accepting multiset identity for
 `σ = build cs`, together with the copy constraints forcing `x ≡ y`, gives `value x = value y`.
 
-Formalization gap relative to the Halo 2 implementation: the `aux` and `sizes` arrays are not modelled.
-A bug in updating `aux`, or failing to map through `aux` in the same-cycle check, could affect
-soundness. The use of `sizes` is only a performance optimization.
+Formalization gaps relative to the Halo 2 implementation:
+* The `aux` and `sizes` arrays are not modelled. A bug in updating `aux`, or failing to map through
+  `aux` in the same-cycle check, could affect soundness. The use of `sizes` is only a performance
+  optimization.
+* `build` reproduces the cycle *partition* exactly — which is all the copy-constraint soundness needs —
+  but not necessarily halo2's exact *permutation*. The order in which `copy` calls are made determines
+  the order of each cycle up to rotation, and hence the permutation-polynomial commitments in the
+  verifying key; reproducing the deployed commitments would additionally require modelling that order.
 -/
 
 open Equiv Equiv.Perm
@@ -229,9 +234,10 @@ def step (π : Perm α) (ab : α × α) : Perm α :=
 
 /-- Run the algorithm over a list of copy constraints, starting from the identity permutation (every
 cell its own 1-cycle). The halo2 implementation keeps the cycle partition in a disjoint-set structure
-(`aux` / `sizes`) purely to make the `SameCycle` test and the merge efficient; the resulting
-permutation — hence its cycle partition — is exactly this. The order in which constraints are processed
-does not affect the final cycle partition (it is the equivalence closure either way; `build_correct`). -/
+(`aux` / `sizes`) purely to make the `SameCycle` test and the merge efficient. The order in which
+constraints are processed does not affect the final cycle *partition* (it is the equivalence closure
+either way; `build_correct`), though it does affect the exact permutation — see the module docstring's
+formalization gaps. -/
 def build : List (α × α) → Perm α
   | [] => 1
   | ab :: rest => step (build rest) ab

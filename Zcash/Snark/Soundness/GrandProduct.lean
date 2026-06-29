@@ -3,10 +3,10 @@ import Mathlib
 /-!
 # The grand-product → multiset kernel (permutation & lookup soundness)
 
-The shared algebraic core that both halo2's permutation and lookup *argument* soundness reduce to
-(tracking issue #14). Both arguments enforce their relation by a **grand product of factors linear in
-the challenges**, and the soundness step is the same: such a product, equal at the random challenge,
-forces the underlying multiset identity.
+The shared algebraic core that both halo2's permutation and lookup *argument* soundness reduce to.
+Both arguments enforce their relation by a **grand product of factors linear in the challenges**, and
+the soundness step is the same: such a product, equal at the random challenge, forces the underlying
+multiset identity.
 
 This file isolates that core over Mathlib `Polynomial`. Nothing here needs computability. The proof
 leans on Mathlib's roots / unique-factorization theory:

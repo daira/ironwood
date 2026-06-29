@@ -4,7 +4,7 @@ import Zcash.Snark.Soundness.GrandProduct
 /-!
 # Permutation argument soundness
 
-(Towards #14.) The [permutation argument](https://zcash.github.io/halo2/design/proving-system/permutation.html)
+The [permutation argument](https://zcash.github.io/halo2/design/proving-system/permutation.html)
 proves the copy constraints: cells in the same cycle of the permutation `σ` hold equal values.
 
 Its soundness relies on the grand-product → multiset-of-pairs kernel (`GrandProduct.lean`, `prod_pair_inj`,
