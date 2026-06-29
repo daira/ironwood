@@ -67,8 +67,8 @@ theorem perm_values_eq_iff {ι L V : Type*} [Fintype ι] (σ : Equiv.Perm ι)
     obtain ⟨e, _, he⟩ := Multiset.mem_map.mp hmem
     -- `he : (value e, label (σ e)) = (value (σ c), label (σ c))`
     have hee : e = c := σ.injective (hlabel (congrArg Prod.snd he))
-    have hve : value e = value (σ c) := congrArg Prod.fst he
-    rwa [hee] at hve
+    have hval : value e = value (σ c) := congrArg Prod.fst he
+    rwa [hee] at hval
   · intro h
     -- value-invariance rewrites the right pairs to `(value (σ c), label (σ c))` …
     have hRHS : Finset.univ.val.map (fun c => (value c, label (σ c)))

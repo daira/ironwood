@@ -11,6 +11,8 @@ extend-exclude = [
   "target/",
 ]
 
-[default.extend-words]
-# `hae` is a Lean hypothesis name (hypothesis about `a`'s evaluation), not a misspelling of "have".
-hae = "hae"
+[default]
+# Lean proofs use many short hypothesis names (`hae`, `hve`, `hb`, `ih`, etc.) that the spell-checker
+# misreads as typos. Skip identifiers of three or fewer characters rather than whitelisting each one;
+# genuine typos that short are vanishingly rare and not worth the steady stream of false positives.
+extend-ignore-identifiers-re = ["^[A-Za-z0-9_]{1,3}$"]
