@@ -295,7 +295,9 @@ def assembleFinalMsm? {shape : Shape} {F G : Type*} [Field F] (ps : ProofString 
   | none => none
 
 /-- The multiopen inverse factors are defined only when the IPA challenge `x₃` is not one of the opened
-points in any derived point set. -/
+points in any derived point set. In the deployed verifier this case is a panic, not an error return
+(`(x₃ - point).invert().unwrap()` in `multiopen/verifier.rs`); the Lean rejection abstracts that crash —
+both are non-accepting, which is what soundness consumes. -/
 def multiopenPointsAvoidX3 {k : ℕ} {F G : Type*} [DecidableEq F] (x3 : F)
     (grouped : MultiopenGrouped k F G) : Bool :=
   grouped.points.all fun pts => pts.all fun point => decide (x3 ≠ point)
@@ -322,7 +324,13 @@ def proofStringWellFormed {shape : Shape} {F G : Type*} (ps : ProofString shape 
 /-- The deployed verifier MSM assembly with the rejection paths modeled:
 `construct_intermediate_sets` can fail on duplicate commitment/point queries, the number of prover
 `u` evaluations must equal the derived number of point sets, inverse denominators must be nonzero, and
-typed proof fields must follow Halo2's read schedule. -/
+typed proof fields must follow Halo2's read schedule.
+
+Two of these rejections abstract deployed *panics*, not error returns: at `xⁿ = 1` halo2 crashes on
+`(xn - 1).invert().unwrap()` (`vanishing/verifier.rs`), and at `x₃` hitting an opened point on
+`(x₃ - point).invert().unwrap()` (`multiopen/verifier.rs`). Both are negligible-probability challenge
+events and non-accepting either way, which is the property the soundness layer consumes; the model just
+renders "crash" as `none`. -/
 def assemble? {shape : Shape} {F G : Type*} [Field F] [DecidableEq F] [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape F G) (ps : ProofString shape F G) (ch : Challenges shape.k F) :
     Option (Msm shape.k F G) :=
@@ -343,7 +351,12 @@ def assemble? {shape : Shape} {F G : Type*} [Field F] [DecidableEq F] [Decidable
 /-- The full verifier MSM, total form: build the opening queries, derive the multiopen grouping
 (`constructIntermediateSets`), then assemble (`assembleFinalMsm`) — the deployed fingerprint as a
 pure function of `(vk, ps, ch)`. Wraps `assemble?`, returning the zero MSM on the proof data it
-rejects; kept for the algebraic fingerprint lemmas. -/
+rejects; kept for the algebraic fingerprint lemmas.
+
+**Warning:** the zero-MSM fallback *evaluates to `0`* — the accept value. Never define acceptance as
+`(assemble …).eval urs = 0`: on every rejection path that predicate holds vacuously, i.e. the total
+wrapper accepts malformed input. Acceptance must go through `assemble?` (as `DeployedAccepts` does),
+where rejection is `none`. -/
 def assemble {shape : Shape} {F G : Type*} [Field F] [DecidableEq F] [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape F G) (ps : ProofString shape F G) (ch : Challenges shape.k F) :
     Msm shape.k F G :=
