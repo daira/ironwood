@@ -20,10 +20,18 @@ rev = "6c5b1a605df8ed150c3ee242bcd6f355fc973653"
 [[lean_lib]]
 name = "Zcash"
 
-# The captured Rust<->Lean fingerprint match (`fingerprint_matches`, by `native_decide`) lives in
-# `Zcash.Snark.Fingerprint.Fixture`, which the `Zcash` library deliberately does not import (it is large,
-# generated, and slow). This dedicated target keeps it out of `lake build Zcash` for local dev, while plain
-# `lake build` (the default targets -- what CI runs) compiles it, so the one empirical check is exercised.
+# The captured Rust<->Lean fingerprint matches (`fingerprint_matches`, by `native_decide`) live in
+# generated fixture modules, which the `Zcash` library deliberately does not import (they are large,
+# generated, and slow). `FixtureMax` is the one hand-written member: the Lean-side instantiation of the
+# parametric obligations at the consensus-max shape, not a capture. This dedicated target keeps them out
+# of `lake build Zcash` for local dev, while plain `lake build` (the default targets -- what CI runs)
+# compiles them, so the empirical checks are exercised alongside the parametric verifier obligations in
+# `Zcash`.
 [[lean_lib]]
 name = "FixtureCheck"
-globs = ["Zcash.Snark.Fingerprint.Fixture", "Zcash.Snark.Fingerprint.FixtureFiatShamir", "Zcash.Snark.Fingerprint.TrustBoundary"]
+globs = [
+  "Zcash.Snark.Fingerprint.Fixture",
+  "Zcash.Snark.Fingerprint.FixtureFiatShamir",
+  "Zcash.Snark.Fingerprint.TrustBoundary",
+  "Zcash.Snark.Fingerprint.FixtureMax",
+]
