@@ -1,4 +1,4 @@
-import Zcash.Snark.Fingerprint.FixtureFiatShamir2
+import Zcash.Snark.Fixtures.TwoAction.FiatShamir
 
 /-!
 # Negative fixtures for the two-action capture

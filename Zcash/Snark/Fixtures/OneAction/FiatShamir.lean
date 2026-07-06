@@ -1,9 +1,9 @@
-import Zcash.Snark.Fingerprint.Fixture
+import Zcash.Snark.Fixtures.OneAction.Fixture
 
 /-!
 # Fiat–Shamir schedule check for the single-action capture
 
-The single-action analog of `Zcash.Snark.Fingerprint.FixtureFiatShamir2`, on the same design: Blake2b
+The single-action analog of `Zcash.Snark.Fixtures.TwoAction.FiatShamir`, on the same design: Blake2b
 is intentionally taken at the random-oracle boundary; here `capturedFs` acts as a fixture oracle over
 Rust-captured transcript events, returning each captured challenge only when `deriveChallenges`
 presents the captured transcript prefix. This checks the absorb/squeeze order for the typed verifier

@@ -1,4 +1,4 @@
-import Zcash.Snark.Fingerprint.Fixture2
+import Zcash.Snark.Fixtures.TwoAction.Fixture
 
 /-!
 # Shape and VK faithfulness checks for the two-action capture

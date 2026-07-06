@@ -1,4 +1,4 @@
-import Zcash.Snark.Fingerprint.Fixture
+import Zcash.Snark.Fixtures.OneAction.Fixture
 import Mathlib.Util.AssertNoSorry
 
 /-!

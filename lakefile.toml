@@ -20,22 +20,15 @@ rev = "6c5b1a605df8ed150c3ee242bcd6f355fc973653"
 [[lean_lib]]
 name = "Zcash"
 
-# The captured Rust<->Lean fingerprint matches (`fingerprint_matches`, by `native_decide`) live in
-# generated fixture modules, which the `Zcash` library deliberately does not import (they are large,
-# generated, and slow). `FixtureMax` is the one hand-written member: the Lean-side instantiation of the
-# parametric obligations at the consensus-max shape, not a capture. This dedicated target keeps them out
-# of `lake build Zcash` for local dev, while plain `lake build` (the default targets -- what CI runs)
-# compiles them, so the empirical checks are exercised alongside the parametric verifier obligations in
-# `Zcash`.
+# Everything under `Zcash/Snark/Fixtures/` is instance-level: the generated Rust<->Lean captures
+# (per-capture subdirectories like `OneAction`/`TwoAction`, holding the fixture data plus its
+# Fiat-Shamir schedule, faithfulness, and negative checks) and the hand-written consensus-max shape
+# instantiation (`MaxShape`). The `Zcash` library deliberately does not import them (the captures are
+# large, generated, and slow); `Zcash/Snark/Fingerprint/` keeps the reusable match/soundness theory.
+# This dedicated target keeps the fixtures out of `lake build Zcash` for local dev, while plain
+# `lake build` (the default targets -- what CI runs) compiles them, so the empirical checks are
+# exercised alongside the parametric verifier obligations in `Zcash`. New modules under `Fixtures/`
+# are picked up by the glob automatically.
 [[lean_lib]]
 name = "FixtureCheck"
-globs = [
-  "Zcash.Snark.Fingerprint.Fixture",
-  "Zcash.Snark.Fingerprint.FixtureFiatShamir",
-  "Zcash.Snark.Fingerprint.TrustBoundary",
-  "Zcash.Snark.Fingerprint.Fixture2",
-  "Zcash.Snark.Fingerprint.FixtureFaithfulness2",
-  "Zcash.Snark.Fingerprint.FixtureFiatShamir2",
-  "Zcash.Snark.Fingerprint.FixtureNegative2",
-  "Zcash.Snark.Fingerprint.FixtureMax",
-]
+globs = ["Zcash.Snark.Fixtures.+"]

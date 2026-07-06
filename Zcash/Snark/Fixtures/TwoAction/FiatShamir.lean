@@ -1,9 +1,9 @@
-import Zcash.Snark.Fingerprint.Fixture2
+import Zcash.Snark.Fixtures.TwoAction.Fixture
 
 /-!
 # Fiat–Shamir schedule check for the two-action capture
 
-The two-action analog of `Zcash.Snark.Fingerprint.FixtureFiatShamir`, but with the challenge schedule
+The two-action analog of `Zcash.Snark.Fixtures.OneAction.FiatShamir`, but with the challenge schedule
 made concrete for this capture. Blake2b is intentionally taken at the random-oracle boundary; here
 `capturedFs` acts as a fixture oracle over Rust-captured transcript events, returning each captured
 challenge only when `deriveChallenges` presents the captured transcript prefix. This checks the
