@@ -1,33 +1,85 @@
 import Zcash.Snark.Fingerprint.Fixture
 
 /-!
-# Fiat–Shamir schedule check: the FS-derived fingerprint matches the capture
+# Fiat–Shamir schedule check for the single-action capture
 
-The captured fingerprint match (`Zcash.Snark.Fixture.fingerprint_matches`) checks the assembled MSM at the
-captured challenges `ch`. On its own that leaves the Fiat–Shamir schedule unchecked — a wrong
-`deriveChallenges` could not be caught, because the fixture never evaluates it.
+The single-action analog of `Zcash.Snark.Fingerprint.FixtureFiatShamir2`, on the same design: Blake2b
+is intentionally taken at the random-oracle boundary; here `capturedFs` acts as a fixture oracle over
+Rust-captured transcript events, returning each captured challenge only when `deriveChallenges`
+presents the captured transcript prefix. This checks the absorb/squeeze order for the typed verifier
+transcript after Blake2b initialization, and then connects the resulting FS-derived fingerprint
+(`nonInteractiveFingerprint`, i.e. `assemble` at `deriveChallenges`) to the captured single-action MSM.
+The per-sub-proof absorb interleavings are exercised at length 1 here; the two-action fixture
+(`FixtureFiatShamir2`) is the multi-action coverage (zcash/ironwood#17).
 
-This module connects the Fiat–Shamir-derived fingerprint (`nonInteractiveFingerprint`, i.e. `assemble` at
-`deriveChallenges`) to the same captured MSM, modulo one explicit assumption: that the deployed FS schedule
-reproduces the captured challenges. The squeeze (Blake2b) is the random-oracle hand-wave — not modeled in
-Lean — so `deriveChallenges fs init ps = ch` is that named assumption. The schedule's structure (the
-absorb/squeeze order) is auditable directly against `plonk/verifier.rs`, `multiopen/verifier.rs`, and
-`commitment/verifier.rs` in `deriveChallenges`'s definition.
+As with the generated fingerprint fixtures, the Rust capture/dumper boundary is trusted to emit the
+typed proof fields, verifier-key transcript scalar, instance commitments, transcript-event trace, and
+captured challenges corresponding to the deployed transcript; this file does not replay transcript
+bytes.
+
+TODO(zcash/ironwood#24): once the general RO/transcript-ordering work lands, revisit whether this
+fixture oracle should point at that theorem or remain as a concrete regression for the captured proof
+suffix.
 -/
 
 namespace Zcash.Snark.Fixture
 
 open Zcash.Snark
 
-/-- The Fiat–Shamir-derived fingerprint matches the captured MSM, given that the FS schedule
-reproduces the captured challenges (`hch` — the hash-dependent part, unmodeled). This puts
-`deriveChallenges` on the path to the capture: a wrong absorb/squeeze structure no longer escapes
-the fixture. -/
-theorem nonInteractiveFingerprint_matches (fs : FiatShamir Fp G) (init : List (TranscriptElt Fp G))
-    (hch : deriveChallenges fs init ps = ch) :
-    MsmMatch (nonInteractiveFingerprint fs init vk ps) capturedMsm := by
+/-- The challenge values as emitted by the Rust transcript-event capture. -/
+def capturedChallengeValues : List Fp :=
+  capturedScheduleEntries.map Prod.snd
+
+/-- The same challenge values, projected through the generated `ch` record. -/
+def expectedChallengeValues : List Fp :=
+  [ch.theta, ch.beta, ch.gamma, ch.y, ch.x, ch.x1, ch.x2, ch.x3, ch.x4, ch.xi, ch.z]
+    ++ List.ofFn (fun j : Fin shape.k => ch.ipaRound j)
+
+/-- The generated schedule carries the same challenge sequence as the generated `ch` record. -/
+theorem capturedChallengeValues_eq_expected : capturedChallengeValues = expectedChallengeValues := by
+  native_decide
+
+/-- The fallback value used when `deriveChallenges` presents an unexpected transcript prefix. -/
+def missingChallenge : Fp := 0
+
+theorem missingChallenge_not_captured : missingChallenge ∉ capturedChallengeValues := by
+  native_decide
+
+/-- The captured challenges are pairwise distinct, so the schedule check's record equality also detects
+output-field wiring mistakes in `deriveChallenges`: swapping two challenge assignments would equate two
+distinct captured values. -/
+theorem capturedChallengeValues_nodup : capturedChallengeValues.Nodup := by
+  native_decide
+
+/-- Every captured squeeze prefix starts with the generated pre-proof verifier transcript prefix. -/
+def capturedScheduleIncludesInit : Bool :=
+  capturedScheduleEntries.all fun e => decide (e.1.take capturedInit.length = capturedInit)
+
+theorem capturedScheduleIncludesInit_eq_true : capturedScheduleIncludesInit = true := by
+  native_decide
+
+/-- Fixture Fiat-Shamir oracle: returns a captured challenge only at a Rust-captured transcript prefix.
+Unknown prefixes return `missingChallenge`, which is checked above not to be one of the captured
+challenges. -/
+def capturedFs : FiatShamir Fp G := {
+  squeeze := fun t =>
+    match capturedScheduleEntries.find? (fun e => decide (e.1 = t)) with
+    | some e => e.2
+    | none => missingChallenge
+}
+
+/-- Concrete check that the Lean Fiat-Shamir schedule reaches the captured challenges in the captured
+single-action proof. This is the theorem that fails if a proof-derived absorb is reordered or
+omitted. -/
+theorem deriveChallenges_matches_captured_schedule :
+    deriveChallenges capturedFs capturedInit ps = ch := by native_decide
+
+/-- The Fiat-Shamir-derived fingerprint matches the captured single-action MSM under the concrete
+captured schedule oracle above. -/
+theorem nonInteractiveFingerprint_matches :
+    MsmMatch (nonInteractiveFingerprint capturedFs capturedInit vk ps) capturedMsm := by
   unfold nonInteractiveFingerprint
-  rw [hch]
+  rw [deriveChallenges_matches_captured_schedule]
   exact fingerprint_matches
 
 end Zcash.Snark.Fixture
