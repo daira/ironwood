@@ -34,5 +34,6 @@ globs = [
   "Zcash.Snark.Fingerprint.FixtureFiatShamir",
   "Zcash.Snark.Fingerprint.TrustBoundary",
   "Zcash.Snark.Fingerprint.Fixture2",
+  "Zcash.Snark.Fingerprint.FixtureFaithfulness2",
   "Zcash.Snark.Fingerprint.FixtureMax",
 ]
