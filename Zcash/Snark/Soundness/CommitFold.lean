@@ -100,7 +100,7 @@ generators of a compressing commitment. `NontrivialDLRelation.ofCollision` compu
 relation from a binding collision, and `.ofIpaOpenings` from two distinct IPA openings of
 one commitment — so opening uniqueness holds up to a computed relation. The deployed binding
 reduction extends this to the augmented `(g, U, W)` generators
-(`Zcash.Snark.Soundness.BindingReduction`). Discharging the relation against DLR hardness — the
+(`Zcash.Snark.Soundness.Deployed.Binding`). Discharging the relation against DLR hardness — the
 computational/AGM layer — is outside this
 development. -/
 
