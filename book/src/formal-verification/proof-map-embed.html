@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ironwood Soundness · Proof Structure Map</title>
+<style>
+  :root {
+    --bg: #eef1f7;
+    --surface: #ffffff;
+    --surface-2: #f6f8fc;
+    --ink: #16203a;
+    --muted: #5a6784;
+    --line: #d4dbe8;
+    --accent: #0e8fa3;
+    --c-proven: #2f9e63;
+    --c-hyp: #c9861a;
+    --c-floor: #c2503c;
+    --c-incoming: #0e8fa3;
+    --c-object: #7683a0;
+    --shadow: 0 1px 2px rgba(22,32,58,.06), 0 8px 28px rgba(22,32,58,.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0a0f1e; --surface: #111a2e; --surface-2: #0e1728; --ink: #dde5f4;
+      --muted: #8795ae; --line: #263248; --accent: #2cc3d6;
+      --c-proven: #46b979; --c-hyp: #e0a63c; --c-floor: #e0715b; --c-incoming: #2cc3d6; --c-object: #8695b2;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #eef1f7; --surface: #ffffff; --surface-2: #f6f8fc; --ink: #16203a;
+    --muted: #5a6784; --line: #d4dbe8; --accent: #0e8fa3;
+    --c-proven: #2f9e63; --c-hyp: #c9861a; --c-floor: #c2503c; --c-incoming: #0e8fa3; --c-object: #7683a0;
+    --shadow: 0 1px 2px rgba(22,32,58,.06), 0 8px 28px rgba(22,32,58,.08);
+  }
+  :root[data-theme="dark"] {
+    --bg: #0a0f1e; --surface: #111a2e; --surface-2: #0e1728; --ink: #dde5f4;
+    --muted: #8795ae; --line: #263248; --accent: #2cc3d6;
+    --c-proven: #46b979; --c-hyp: #e0a63c; --c-floor: #e0715b; --c-incoming: #2cc3d6; --c-object: #8695b2;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
+
+  header.top {
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid var(--line);
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 22px;
+  }
+  header.top h1 { font-size: 18px; font-weight: 640; margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+  header.top p { margin: 3px 0 0; color: var(--muted); font-size: 13px; max-width: 64ch; }
+  .state {
+    margin-left: auto; align-self: center;
+    font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px;
+    background: var(--surface-2); white-space: nowrap;
+  }
+
+  .layout { display: grid; grid-template-columns: 1fr 336px; gap: 0; }
+  @media (max-width: 1040px) { .layout { grid-template-columns: 1fr; } }
+
+  .stage { min-width: 0; padding: 12px 12px 18px; }
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 6px 12px; }
+  .toolbar .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin-right: 2px; }
+  .chip {
+    font: inherit; font-size: 12.5px; cursor: pointer;
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px;
+    display: inline-flex; align-items: center; gap: 7px; transition: border-color .15s, background .15s;
+  }
+  .chip:hover { border-color: var(--accent); }
+  .chip[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+  .chip .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .chip:focus-visible, .node:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .mapwrap { background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; overflow: auto; box-shadow: var(--shadow); }
+  svg.map { display: block; width: 100%; min-width: 1180px; height: auto; }
+
+  .terr { fill: var(--th); opacity: .5; stroke: var(--ts); stroke-width: 1; stroke-dasharray: 3 5; rx: 16; }
+  .terr-label { font-size: 14px; text-transform: uppercase; letter-spacing: .14em; font-weight: 600; fill: var(--ts); opacity: .95; }
+  .terr-tag { font-family: ui-monospace, monospace; font-size: 12px; fill: var(--ts); opacity: .8; }
+
+  .edge { fill: none; stroke-width: 2; opacity: .26; transition: opacity .15s, stroke-width .15s; }
+  .edge.entails { stroke: var(--ink); }
+  .edge.discharges { stroke: var(--accent); stroke-dasharray: 7 5; }
+  .edge.rests { stroke: var(--c-floor); stroke-dasharray: 1.5 5; stroke-linecap: round; }
+  .edge.hot { opacity: 1; stroke-width: 3; }
+  .edge.dim { opacity: .05; }
+
+  .node { cursor: pointer; }
+  .node rect { transition: opacity .15s; }
+  .node .box { fill: var(--nf); stroke: var(--ns); stroke-width: 1.75; rx: 9; filter: drop-shadow(0 1px 1px rgba(0,0,0,.05)); }
+  .node .label { font-size: 16.5px; fill: var(--ink); dominant-baseline: middle; }
+  .node.goal .box { fill: var(--accent); stroke: var(--accent); }
+  .node.goal .label { fill: #fff; font-weight: 640; }
+  .node.incoming .box { stroke-dasharray: 6 4; }
+  .node.dim { opacity: .2; }
+  .node .anchor { font-size: 11px; fill: var(--muted); dominant-baseline: middle; }
+
+  .rail { border-left: 1px solid var(--line); padding: 14px 18px 26px; min-width: 0; }
+  @media (max-width: 1040px) { .rail { border-left: none; border-top: 1px solid var(--line); } }
+  .rail h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin: 0 0 10px; }
+  .legend { display: grid; gap: 9px; margin-bottom: 20px; }
+  .legend .row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
+  .legend .swatch { width: 26px; height: 0; border-top-width: 3px; border-top-style: solid; flex: none; }
+  .legend .sq { width: 15px; height: 15px; border-radius: 4px; border: 1.75px solid; flex: none; }
+  .legend .muted { color: var(--muted); }
+
+  .detail { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .detail .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; padding: 3px 9px; border-radius: 999px; border: 1px solid; margin-bottom: 10px; }
+  .detail .title { font-family: ui-monospace, monospace; font-size: 15px; font-weight: 600; margin: 0 0 2px; text-wrap: balance; }
+  .detail .anchor { font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted); word-break: break-word; margin-bottom: 12px; }
+  .detail .role { font-size: 13.5px; margin: 0 0 14px; }
+  .detail .conns { display: grid; gap: 7px; }
+  .detail .conns .c { display: flex; gap: 8px; align-items: baseline; font-size: 12.5px; }
+  .detail .conns .verb { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); flex: none; width: 74px; }
+  .detail .conns .to { font-family: ui-monospace, monospace; }
+  .detail .empty { color: var(--muted); font-size: 13px; }
+  .detail .hint { font-size: 12.5px; color: var(--muted); margin: 12px 0 0; }
+  .tag { font-family: ui-monospace, monospace; font-size: 11px; color: var(--accent); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>Ironwood Soundness · Proof Structure Map</h1>
+    <p>How the deployed Orchard SNARK-verifier soundness proof fits together — the theorems, the
+       assumptions they still carry, and what remains outside Lean. Click any node to trace its connections.</p>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="stage">
+    <div class="toolbar" id="filters">
+      <span class="lbl">Show</span>
+      <button class="chip" data-f="all" aria-pressed="true">All</button>
+      <button class="chip" data-f="proven"><span class="dot" style="background:var(--c-proven)"></span>Proven</button>
+      <button class="chip" data-f="hyp"><span class="dot" style="background:var(--c-hyp)"></span>Hypothesis</button>
+      <button class="chip" data-f="floor"><span class="dot" style="background:var(--c-floor)"></span>Out-of-Lean</button>
+      <button class="chip" data-f="incoming"><span class="dot" style="background:var(--c-incoming)"></span>Incoming</button>
+    </div>
+    <div class="mapwrap">
+      <svg class="map" id="map" viewBox="0 0 1920 1090" role="img"
+           aria-label="Connected map of the Ironwood soundness proof structure"></svg>
+    </div>
+  </div>
+
+  <aside class="rail">
+    <h2>Legend</h2>
+    <div class="legend">
+      <div class="row"><span class="swatch" style="border-top-color:var(--ink)"></span><span><b>entails</b> — A &#8658; B in the proof</span></div>
+      <div class="row"><span class="swatch" style="border-top-color:var(--accent);border-top-style:dashed"></span><span><b>discharges</b> — A proves away assumption B</span></div>
+      <div class="row"><span class="swatch" style="border-top-color:var(--c-floor);border-top-style:dotted"></span><span><b>rests on</b> — depends on an out-of-Lean assumption</span></div>
+      <div class="row" style="margin-top:6px"><span class="sq" style="border-color:var(--c-proven);background:color-mix(in srgb,var(--c-proven) 12%,var(--surface))"></span><span>Proven theorem</span></div>
+      <div class="row"><span class="sq" style="border-color:var(--c-hyp);background:color-mix(in srgb,var(--c-hyp) 12%,var(--surface))"></span><span>Hypothesis in statement</span></div>
+      <div class="row"><span class="sq" style="border-color:var(--c-floor);background:color-mix(in srgb,var(--c-floor) 12%,var(--surface))"></span><span>Out-of-Lean idealization</span></div>
+      <div class="row"><span class="sq" style="border-color:var(--c-incoming);background:color-mix(in srgb,var(--c-incoming) 12%,var(--surface));border-style:dashed"></span><span>Incoming (open PR)</span></div>
+      <div class="row"><span class="sq" style="border-color:var(--c-object);background:color-mix(in srgb,var(--c-object) 10%,var(--surface))"></span><span class="muted">Intermediate proposition</span></div>
+    </div>
+
+    <h2>Detail</h2>
+    <div class="detail" id="detail">
+      <p class="empty">Hover or click a node to see what it is, its Lean anchor, and every theorem it connects to.</p>
+      <p class="hint">The spine runs down the left: <span class="mono">accept &#8594; verifier equation &#8594; transcript tree &#8594; peel &#8594; IPA opening &#8594; SnarkRelation</span>. The tinted territories are the machinery that discharges its assumptions.</p>
+    </div>
+  </aside>
+</div>
+
+<script>
+const SVGNS = "http://www.w3.org/2000/svg";
+const COL = c => 130 + c * 236;
+const ROW = r => 96 + r * 116;
+
+const territories = [
+  { id:'fs',   label:'Fiat–Shamir · Random Oracle', cells:[[2,1],[3,1],[2,2],[3,2],[2,3]], h:'#6f7bb0' },
+  { id:'dec',  label:'Multiopen Decode', cells:[[6,4],[7,4],[7,5]],             h:'var(--c-proven)' },
+  { id:'sz',   label:'Schwartz–Zippel', cells:[[6,7],[7,7]],                   h:'var(--c-incoming)' },
+  { id:'agm',  label:'AGM → Discrete Log', cells:[[0,7],[0,8],[1,8]],             h:'#a06fb0' },
+  { id:'floor',label:'The Floor · Out-of-Lean',    cells:[[2,8],[3,8],[4,8],[5,8]],       h:'var(--c-floor)' },
+];
+
+const nodes = [
+  { id:'assemble', c:0,r:0, label:'assemble ▸ MSM', status:'proven',
+    anchor:'Verifier.Assemble.assemble',
+    role:'The whole verifier collapsed into one multi-scalar multiplication — the fingerprint, reproduced line-for-line from halo2.' },
+  { id:'fingerprint', c:1,r:0, label:'fingerprint = Rust', status:'proven',
+    anchor:'Fingerprint.Match.MsmMatch',
+    role:'The assembled MSM is checked against the Rust verifier’s captured MSM; any divergence shows up as a coefficient mismatch. (native_decide trust.)' },
+  { id:'accept', c:0,r:1, label:'accept · MSM = 0', status:'object',
+    anchor:'Main.DeployedAccepts',
+    role:'The concrete accept condition: the assembled MSM evaluates to the group identity. The premise everything hangs from.' },
+  { id:'verifierEq', c:0,r:2, label:'verifier equation', status:'proven',
+    anchor:'Main.deployedAccepts_verifierEq',
+    role:'halo2’s explicit IPA verifier equation, proven to follow from the accept (one direction — the accept also carries the rejection guards).' },
+  { id:'deployedTree', c:0,r:3, label:'deployed tree', status:'object',
+    anchor:'Main.DeployedIpaAcceptV',
+    role:'The deployed IPA transcript tree, still carrying the U/W apparatus the MSM mixes in.' },
+  { id:'peel', c:0,r:4, label:'peel U/W', status:'proven',
+    anchor:'Deployed.IpaPeel.deployed_to_acceptV',
+    role:'Strips the U/W apparatus off the deployed tree, leaving either a clean IPA tree or a discrete-log relation.' },
+  { id:'clean', c:1,r:5, label:'clean tree', status:'object',
+    anchor:'Ipa.Soundness · IpaAcceptV',
+    role:'A clean IPA transcript tree over the URS generators, ready for special-soundness extraction.' },
+  { id:'relation', c:0,r:5, label:'relation (g,U,W)', status:'hyp',
+    anchor:'Deployed.Binding.HasNontrivialRelation',
+    role:'The bad branch of the peel: a nontrivial discrete-log relation on the augmented generators. Vacuous as a proposition at prime order — the force is computational.' },
+  { id:'ipa_soundV', c:1,r:6, label:'ipa_soundV', status:'proven',
+    anchor:'Ipa.Soundness.ipa_soundV',
+    role:'Three-special-soundness rewinding extracts the witness from a clean tree — binding-free.' },
+  { id:'IpaRelation', c:2,r:6, label:'IPA opening', status:'object',
+    anchor:'IpaRelation',
+    role:'The extracted opening: commit a = P and ⟨a,b⟩ = v.' },
+  { id:'knowledge_sound', c:3,r:6, label:'knowledge_sound', status:'proven',
+    anchor:'KnowledgeSoundness.knowledge_sound',
+    role:'The extracted witness together with circuit satisfaction yields the SNARK relation.' },
+  { id:'SnarkRelation', c:4,r:6, label:'SnarkRelation', status:'goal',
+    anchor:'SnarkRelation',
+    role:'The endpoint of the composition: the extracted witness satisfies the circuit gates.' },
+  { id:'capstones', c:4,r:7, label:'Vesta capstones', status:'object',
+    anchor:'Vesta.orchard_verifier_vesta_*',
+    role:'The capstone ladder over the concrete curve: conditional → reductions → forking → deployed / adaptive / rewind, opening and constraint.' },
+  { id:'gateLift', c:5,r:6, label:'gate-check lift', status:'proven',
+    anchor:'KnowledgeSoundness.circuitSatViaGates_of_check',
+    role:'Lifts the verifier’s gate point-check at x to the full polynomial identity — given a good challenge and the real columns.' },
+  { id:'hquot', c:5,r:5, label:'hquot', status:'hyp',
+    anchor:'hquot',
+    role:'The gate/quotient point-check content and the x→x₃ transport. Still an open hypothesis.' },
+  { id:'hgood', c:5,r:7, label:'hgood', status:'hyp',
+    anchor:'hgood',
+    role:'The Schwartz–Zippel good-challenge exclusion. Assumed here; derived by the SZ territory.' },
+  { id:'forking', c:2,r:2, label:'forking (rewind)', status:'hyp',
+    anchor:'Main.FiatShamirForking',
+    role:'Rewinding the random oracle yields three accepting continuations per round at distinct challenges. The irreducible random-oracle floor.' },
+  { id:'treeAssembly', c:2,r:3, label:'tree assembly', status:'proven',
+    anchor:'Main.fiatShamirTree_of_forking',
+    role:'Deterministically assembles the forked transcripts into the deployed IPA tree.' },
+  { id:'FStree', c:3,r:2, label:'FS tree (legacy)', status:'hyp',
+    anchor:'Main.FiatShamirTree',
+    role:'Legacy bridge: verifier equation ⇒ transcript tree. Superseded by, and discharged from, the forking path.' },
+  { id:'hprob', c:3,r:1, label:'hprob', status:'hyp',
+    anchor:'Vesta · forking capstones',
+    role:'The accept probability beats the knowledge error kerr/Nᵏ. The measure-side random-oracle floor.' },
+  { id:'x4batch', c:6,r:4, label:'x₄ power batch', status:'proven',
+    anchor:'Multiopen.Deployed',
+    role:'The verifier’s x₄ multiopen collapse is proved to be the flat power batch the decode consumes.' },
+  { id:'decode', c:7,r:4, label:'decode columns', status:'proven',
+    anchor:'Multiopen.Decode.decodedCols',
+    role:'Recovers the individual column polynomials from the batched multiopen by Vandermonde inversion of rewound openings.' },
+  { id:'member_binding', c:7,r:5, label:'member binding', status:'proven',
+    anchor:'deployed_witness_member_binding',
+    role:'Unbatches each point-set aggregate to the queried member commitments and binds the extracted witness to them.' },
+  { id:'szBadSet', c:6,r:7, label:'SZ bad set', status:'incoming',
+    anchor:'szBadSet',
+    role:'The bad x-values are the roots of the constraint-difference polynomial, bounded by its degree.' },
+  { id:'goodChallenge', c:7,r:7, label:'good challenge', status:'incoming',
+    anchor:'GoodChallenge · _xgood',
+    role:'A uniform RO challenge hits the bad set with probability ≤ d/p, so a good accepting x is derived rather than assumed — no hgood input.' },
+  { id:'adapter', c:0,r:7, label:'fixed-slot', status:'proven',
+    anchor:'AGM.Adapter.FixedSlotEmbedding',
+    role:'Hides a discrete-log challenge in one basis slot fixed before the adversary runs; a found relation hitting that slot yields the discrete log.' },
+  { id:'dlrep', c:0,r:8, label:'discrete log', status:'proven',
+    anchor:'AGM.DiscreteLogRepresentation',
+    role:'The discrete log recovered from a relation that hits the planted slot — the reduction’s output.' },
+  { id:'missesSlot', c:1,r:8, label:'misses slot', status:'object',
+    anchor:'Vesta.RelationMissesSlot',
+    role:'The escape case: the found relation misses the planted slot (bounded probability).' },
+  { id:'agm_dl', c:2,r:7, label:'→ discrete log', status:'proven',
+    anchor:'Vesta.*_agm_dl',
+    role:'Routes each capstone’s relation branch through the fixed-slot adapter: S ∨ discrete log ∨ RelationMissesSlot.' },
+  { id:'DLhard', c:2,r:8, label:'DL-hardness', status:'floor',
+    anchor:'—',
+    role:'Discrete-log hardness on Vesta. A computational assumption, not a Lean theorem.' },
+  { id:'blake2b', c:3,r:8, label:'Blake2b = RO', status:'floor',
+    anchor:'—',
+    role:'Blake2b modeled as a random oracle — the ROM idealization behind the forking argument.' },
+  { id:'vk', c:4,r:8, label:'VK correctness', status:'floor',
+    anchor:'hencodes',
+    role:'The verifying key encodes the intended Orchard statement. The output-side seam; VK derivation in Lean is not started.' },
+  { id:'hasse', c:5,r:8, label:'Vesta order ⇐ Hasse', status:'floor',
+    anchor:'Vesta.vestaOrder_of_hasse',
+    role:'The Vesta group order, proven from the assumed Hasse bound.' },
+];
+
+const edges = [
+  ['fingerprint','assemble','discharges'],
+  ['assemble','accept','entails'],
+  ['accept','verifierEq','entails'],
+  ['verifierEq','deployedTree','entails'],
+  ['verifierEq','forking','entails'],
+  ['forking','treeAssembly','entails'],
+  ['treeAssembly','deployedTree','entails'],
+  ['treeAssembly','FStree','discharges'],
+  ['FStree','deployedTree','entails'],
+  ['forking','hprob','rests'],
+  ['forking','blake2b','rests'],
+  ['deployedTree','peel','entails'],
+  ['peel','clean','entails'],
+  ['peel','relation','entails'],
+  ['clean','ipa_soundV','entails'],
+  ['ipa_soundV','IpaRelation','entails'],
+  ['IpaRelation','knowledge_sound','entails'],
+  ['knowledge_sound','SnarkRelation','entails'],
+  ['gateLift','SnarkRelation','entails'],
+  ['hquot','gateLift','rests'],
+  ['hgood','gateLift','rests'],
+  ['decode','gateLift','discharges'],
+  ['x4batch','decode','entails'],
+  ['member_binding','decode','entails'],
+  ['member_binding','IpaRelation','discharges'],
+  ['szBadSet','hgood','discharges'],
+  ['goodChallenge','hgood','discharges'],
+  ['goodChallenge','szBadSet','entails'],
+  ['SnarkRelation','capstones','entails'],
+  ['capstones','agm_dl','entails'],
+  ['relation','adapter','entails'],
+  ['agm_dl','adapter','entails'],
+  ['adapter','dlrep','entails'],
+  ['adapter','missesSlot','entails'],
+  ['dlrep','DLhard','rests'],
+  ['capstones','vk','rests'],
+  ['capstones','hasse','rests'],
+];
+
+const statusColor = { proven:'--c-proven', hyp:'--c-hyp', floor:'--c-floor', incoming:'--c-incoming', object:'--c-object', goal:'--accent' };
+const statusName  = { proven:'Proven', hyp:'Hypothesis', floor:'Out-of-Lean', incoming:'Incoming', object:'Proposition', goal:'Goal' };
+const verb = { entails:'entails', discharges:'discharges', rests:'rests on' };
+
+const byId = {};
+nodes.forEach(n => {
+  n.cx = COL(n.c); n.cy = ROW(n.r);
+  const ch = n.label.length;
+  n.w = Math.max(126, Math.min(216, ch * 10.2 + 30));
+  n.h = 46;
+  byId[n.id] = n;
+});
+
+const adj = {};
+nodes.forEach(n => adj[n.id] = []);
+edges.forEach((e,i) => {
+  adj[e[0]].push({ i, other:e[1], kind:e[2], dir:'out' });
+  adj[e[1]].push({ i, other:e[0], kind:e[2], dir:'in' });
+});
+
+const svg = document.getElementById('map');
+function el(tag, attrs) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; }
+
+const defs = el('defs', {});
+[['entails','var(--ink)'],['discharges','var(--accent)'],['rests','var(--c-floor)']].forEach(([k,c]) => {
+  const m = el('marker', { id:'ar-'+k, viewBox:'0 0 10 10', refX:'9', refY:'5', markerWidth:'7.5', markerHeight:'7.5', orient:'auto-start-reverse' });
+  m.appendChild(el('path', { d:'M0,0 L10,5 L0,10 z', fill:c }));
+  defs.appendChild(m);
+});
+svg.appendChild(defs);
+
+const terrLayer = el('g', {});
+territories.forEach(t => {
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  t.cells.forEach(([c,r]) => {
+    const cx=COL(c), cy=ROW(r);
+    x0=Math.min(x0,cx-118); y0=Math.min(y0,cy-30);
+    x1=Math.max(x1,cx+118); y1=Math.max(y1,cy+30);
+  });
+  const pad=20;
+  const g = el('g', {});
+  const rect = el('rect', { x:x0-pad, y:y0-pad-14, width:(x1-x0)+pad*2, height:(y1-y0)+pad*2+14, class:'terr' });
+  rect.style.setProperty('--th', `color-mix(in srgb, ${t.h} 10%, var(--surface))`);
+  rect.style.setProperty('--ts', t.h);
+  g.appendChild(rect);
+  const lab = el('text', { x:x0-pad+14, y:y0-pad-14+22, class:'terr-label' });
+  lab.style.setProperty('--ts', t.h);
+  lab.textContent = t.label;
+  g.appendChild(lab);
+  if (t.tag) {
+    const tg = el('text', { x:x1+pad-14, y:y0-pad-14+22, 'text-anchor':'end', class:'terr-tag' });
+    tg.style.setProperty('--ts', t.h);
+    tg.textContent = t.tag;
+    g.appendChild(tg);
+  }
+  terrLayer.appendChild(g);
+});
+svg.appendChild(terrLayer);
+
+function borderPoint(n, tx, ty) {
+  const dx = tx - n.cx, dy = ty - n.cy;
+  if (dx === 0 && dy === 0) return { x:n.cx, y:n.cy };
+  const hw = n.w/2 + 3, hh = n.h/2 + 3;
+  const s = 1 / Math.max(Math.abs(dx)/hw, Math.abs(dy)/hh);
+  return { x:n.cx + dx*s, y:n.cy + dy*s };
+}
+const edgeLayer = el('g', {});
+const edgeEls = edges.map((e) => {
+  const a = byId[e[0]], b = byId[e[1]];
+  const s = borderPoint(a, b.cx, b.cy), t = borderPoint(b, a.cx, a.cy);
+  const mx=(s.x+t.x)/2, my=(s.y+t.y)/2;
+  let nx=t.y-s.y, ny=-(t.x-s.x); const len=Math.hypot(nx,ny)||1;
+  const dist=Math.hypot(t.x-s.x,t.y-s.y); const off=Math.min(46, dist*0.13);
+  const cx=mx+nx/len*off, cy=my+ny/len*off;
+  const p = el('path', { class:'edge '+e[2], d:`M${s.x},${s.y} Q${cx},${cy} ${t.x},${t.y}`, 'marker-end':`url(#ar-${e[2]})` });
+  edgeLayer.appendChild(p);
+  return p;
+});
+svg.appendChild(edgeLayer);
+
+const nodeLayer = el('g', {});
+nodes.forEach(n => {
+  const g = el('g', { class:'node '+n.status, tabindex:'0', role:'button', 'data-id':n.id,
+    'aria-label':`${n.label} — ${statusName[n.status]}` });
+  const cvar = statusColor[n.status];
+  const rect = el('rect', { class:'box', x:n.cx-n.w/2, y:n.cy-n.h/2, width:n.w, height:n.h });
+  if (n.status !== 'goal') {
+    rect.style.setProperty('--nf', `color-mix(in srgb, var(${cvar}) 11%, var(--surface))`);
+    rect.style.setProperty('--ns', `var(${cvar})`);
+  }
+  g.appendChild(rect);
+  const lab = el('text', { class:'label mono', x:n.cx, y:n.cy + (n.tag?-5:0), 'text-anchor':'middle' });
+  lab.textContent = n.label;
+  g.appendChild(lab);
+  if (n.tag) {
+    const tg = el('text', { class:'anchor mono', x:n.cx, y:n.cy+13, 'text-anchor':'middle' });
+    tg.textContent = n.tag;
+    g.appendChild(tg);
+  }
+  nodeLayer.appendChild(g);
+  n._g = g;
+});
+svg.appendChild(nodeLayer);
+
+const detail = document.getElementById('detail');
+let pinned = null, activeFilter = 'all';
+
+function applyFilter() {
+  nodes.forEach(n => {
+    const show = activeFilter === 'all' || n.status === activeFilter;
+    n._g.classList.toggle('dim', !show);
+  });
+  edgeEls.forEach((p,i) => {
+    const [a,b] = edges[i];
+    const show = activeFilter === 'all' || byId[a].status === activeFilter || byId[b].status === activeFilter;
+    p.classList.toggle('dim', !show);
+    p.classList.remove('hot');
+  });
+}
+
+function highlight(id) {
+  const near = new Set([id]);
+  const eidx = new Set();
+  adj[id].forEach(a => { near.add(a.other); eidx.add(a.i); });
+  nodes.forEach(n => n._g.classList.toggle('dim', !near.has(n.id)));
+  edgeEls.forEach((p,i) => { p.classList.toggle('hot', eidx.has(i)); p.classList.toggle('dim', !eidx.has(i)); });
+}
+
+function renderDetail(id) {
+  const n = byId[id];
+  const cvar = statusColor[n.status];
+  const conns = adj[id].map(a => {
+    const v = a.dir === 'out' ? verb[a.kind] : (a.kind==='entails'?'← entails':a.kind==='discharges'?'← discharged by':'← rested on by');
+    return `<div class="c"><span class="verb">${v}</span><span class="to">${byId[a.other].label}</span></div>`;
+  }).join('');
+  detail.innerHTML = `
+    <span class="badge" style="color:var(${cvar});border-color:var(${cvar})">${statusName[n.status]}${n.tag?` · <span class="tag">${n.tag}</span>`:''}</span>
+    <p class="title">${n.label}</p>
+    <p class="anchor">${n.anchor}</p>
+    <p class="role">${n.role}</p>
+    <div class="conns">${conns || '<span class="empty">No connections.</span>'}</div>`;
+}
+
+nodes.forEach(n => {
+  const g = n._g;
+  const enter = () => { if (activeFilter!=='all') return; highlight(n.id); renderDetail(n.id); };
+  const leave = () => {
+    if (activeFilter!=='all') return;
+    if (pinned) { highlight(pinned); renderDetail(pinned); }
+    else { clearHi(); }
+  };
+  g.addEventListener('pointerenter', enter);
+  g.addEventListener('pointerleave', leave);
+  g.addEventListener('focus', enter);
+  g.addEventListener('blur', leave);
+  g.addEventListener('click', (e) => { e.stopPropagation(); pinned = (pinned===n.id)?null:n.id; if(pinned){highlight(pinned);renderDetail(pinned);} else {clearHi();} });
+  g.addEventListener('keydown', (e) => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); g.click(); } });
+});
+
+function clearHi() {
+  nodes.forEach(n => n._g.classList.remove('dim'));
+  edgeEls.forEach(p => { p.classList.remove('hot'); p.classList.remove('dim'); });
+  detail.innerHTML = `<p class="empty">Hover or click a node to see what it is, its Lean anchor, and every theorem it connects to.</p>
+    <p class="hint">The spine runs down the left: <span class="mono">accept → verifier equation → transcript tree → peel → IPA opening → SnarkRelation</span>. The tinted territories are the machinery that discharges its assumptions.</p>`;
+}
+
+svg.addEventListener('click', () => { pinned = null; clearHi(); });
+
+document.getElementById('filters').addEventListener('click', (e) => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  activeFilter = b.dataset.f; pinned = null;
+  document.querySelectorAll('#filters .chip').forEach(c => c.setAttribute('aria-pressed', c===b ? 'true':'false'));
+  if (activeFilter === 'all') clearHi(); else applyFilter();
+});
+
+// Theme sync: the embedding book page posts its active theme (mdBook toggle).
+window.addEventListener('message', (e) => {
+  const t = e.data && e.data.iwtheme;
+  if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t;
+});
+</script>
+</body>
+</html>
