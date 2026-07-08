@@ -35,9 +35,9 @@ structure LookupCommitments (G : Type*) where
   permutedTable : G
 
 /-- Queries for one column family — instance / advice / fixed (halo2 `plonk/verifier.rs`): for each
-layout entry `(columnIndex, rotation)` paired with its claimed evaluation, open the column's commitment
-at `rotate_omega x rotation`. `commitment` resolves a column index to its commitment; `layout` is the
-VK-fixed `(column, rotation)` list, zipped with the read evaluations. -/
+layout entry `(columnIndex, rotation)` paired with its claimed evaluation, open the column's
+commitment at `rotate_omega x rotation`. `commitment` resolves a column index to its commitment;
+`layout` is the VK-fixed `(column, rotation)` list. -/
 def columnQueries {k : ℕ} {F G : Type*} [Field F] (omega x : F) (commitment : ℕ → G)
     (mkId : ℕ → CommitmentId) (layout : List (ℕ × ℤ)) (evals : List F) : List (VerifierQuery k F G) :=
   (layout.zip evals).map fun e =>

@@ -5,26 +5,21 @@ import Zcash.Snark.Soundness.GrandProduct
 # Permutation argument soundness
 
 The [permutation argument](https://zcash.github.io/halo2/design/proving-system/permutation.html)
-proves the copy constraints: cells in the same cycle of the permutation `σ` hold equal values.
+proves the copy constraints: cells the circuit declares equal hold equal values.
 
-Its soundness relies on the grand-product → multiset-of-pairs kernel (`GrandProduct.lean`, `prod_pair_inj`,
-giving `{(value c, label c)} = {(value c, label (σ c))}`), and also on the **structural step** proved here,
-which turns that multiset identity into the per-cell relation `value c = value (σ c)`.
+Each cell has a value and a unique name, and the constraints are encoded as a permutation `σ`
+whose cycles are the groups of cells declared equal. The argument hinges on one multiset
+identity: the `(value, name)` pairs are unchanged when every cell is renamed to the next one in
+its cycle.
 
-Here `label c` is the cell's name `δ^j·ω^i` and `σ` is the permutation built from the cycles of
-copy-constrained cells. Name distinctness — δ-coset disjointness in the keygen — is exactly the
-injectivity of `label` that this step relies on. We do not prove here that the `δ^j·ω^i` encoding
-preserves distinctness.
+This file proves what that identity buys: with names distinct (`label` injective), it holds iff
+values are constant on every cycle — the copy constraints. `perm_values_eq_iff` and
+`value_const_on_sameCycle` are the two halves, composed in `perm_copy_constraints`;
+`prod_pair_inj` (`GrandProduct.lean`) recovers the identity from equal grand products.
 
-The per-cell relation `value c = value (σ c)` (invariance under *one* step of `σ`) is then lifted to
-the full copy-constraint statement — *all cells in a cycle of `σ` are equal* — by
-`value_const_on_sameCycle`, which iterates the one-step invariance over the whole orbit.
-
-This file provides `perm_values_eq_iff` (the structural step) and `value_const_on_sameCycle` (the lift
-to cycles), composed in `perm_copy_constraints`: from the multiset-of-pairs identity, with `label`
-injective, cells in the same σ-cycle hold equal values. What remains for full soundness is the
-grand-product ⟹ multiset identity (telescoping the running product over the usable rows, with the
-boundary / blinding-row rules) feeding the `h` hypothesis, and the final assembly.
+Not proved here: that the `δ^j·ω^i` naming really is injective (keygen's δ-coset disjointness),
+and that the verifier's product check forces the grand products equal — the telescoping step,
+which feeds the `h` hypothesis.
 -/
 
 namespace Zcash.Snark
@@ -37,20 +32,12 @@ theorem univ_val_map_perm {ι : Type*} [Fintype ι] (σ : Equiv.Perm ι) :
     Finset.univ.val.map (⇑σ) = Finset.univ.val := by
   simp
 
-/-- **Structural step for the permutation argument.** Cells `ι` carry a `value` and an injective name
-`label`. The multiset of `(value, label)` pairs is unchanged by permuting the labels through `σ` if and
-only if `value` is constant on each σ-cycle (`value c = value (σ c)` for all `c`) — i.e. the copy
-constraints hold.
-
-The grand-product kernel (`prod_pair_inj`) delivers the multiset equality on the left; `label`
-injectivity (δ-coset name distinctness) is what turns it into the per-cell relation. This is the
-permutation analogue of `Lookup.run_structure`.
-
-* (⟸) value-invariance lets us rewrite each right-hand pair to `(value (σ c), label (σ c))`, which is
-  the left-hand map precomposed with `σ`; reindexing `univ` by the bijection `σ` leaves it unchanged.
-* (⟹) the pair `(value (σ c), label (σ c))` sits in the left multiset (index `σ c`); the equality
-  moves it to the right, where `Multiset.mem_map` yields an index `e` with `label (σ e) = label (σ c)`
-  and `value e = value (σ c)`; injectivity of `label` and of `σ` forces `e = c`. -/
+/-- **Structural step for the permutation argument.** Cells carry a `value` and an injective name
+`label`; the multiset of `(value, label)` pairs is unchanged by permuting the labels through `σ`
+iff every cell's value equals the next one's in its cycle (`value c = value (σ c)`).
+`prod_pair_inj` delivers the multiset equality, `label` injectivity (δ-coset name distinctness)
+turns it into the per-cell relation, and `value_const_on_sameCycle` extends it around whole
+cycles. Both proof directions are stepped through in the body. -/
 theorem perm_values_eq_iff {ι L V : Type*} [Fintype ι] (σ : Equiv.Perm ι)
     {label : ι → L} (hlabel : Function.Injective label) (value : ι → V) :
     Finset.univ.val.map (fun c => (value c, label c))
@@ -98,22 +85,19 @@ theorem value_zpow {ι V : Type*} (σ : Equiv.Perm ι) (value : ι → V)
       intro x
       rw [zpow_sub, zpow_one, Equiv.Perm.mul_apply, ih (σ⁻¹ x), hinv x]
 
-/-- **Values are constant on σ-cycles** — the copy-constraint relation in full.
-
-Given the per-cell one-step invariance `value c = value (σ c)` (e.g. from `perm_values_eq_iff`), any two
-cells in the same cycle of `σ` (`σ.SameCycle c d`, i.e. `d = σⁱ c` for some `i : ℤ`) hold equal values. -/
+/-- **Values are constant on σ-cycles** — the copy-constraint relation in full: given the
+one-step invariance `value c = value (σ c)`, any two cells in the same cycle of `σ` hold equal
+values. -/
 theorem value_const_on_sameCycle {ι V : Type*} (σ : Equiv.Perm ι) (value : ι → V)
     (h : ∀ c, value c = value (σ c)) {c d : ι} (hcd : σ.SameCycle c d) :
     value c = value d := by
   obtain ⟨n, rfl⟩ := hcd
   exact (value_zpow σ value h n c).symm
 
-/-- **Soundness of the permutation argument — structural step lifted to cycles** (modulo the
-grand-product ⟹ multiset-identity step).
-
-This composes `perm_values_eq_iff` with `value_const_on_sameCycle`: from the multiset-of-pairs identity
-delivered by the kernel (`prod_pair_inj`), with `label` injective, any two cells in the same cycle of
-`σ` hold equal values — exactly the copy constraints `σ` encodes. -/
+/-- **Soundness of the permutation argument, structural half** (the step from the product check
+to the multiset identity is separate): from the multiset-of-pairs identity, with `label`
+injective, any two cells in the same cycle of `σ` hold equal values — the copy constraints `σ`
+encodes. Composes `perm_values_eq_iff` with `value_const_on_sameCycle`. -/
 theorem perm_copy_constraints {ι L V : Type*} [Fintype ι] (σ : Equiv.Perm ι)
     {label : ι → L} (hlabel : Function.Injective label) (value : ι → V)
     (h : Finset.univ.val.map (fun c => (value c, label c))

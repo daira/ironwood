@@ -19,12 +19,10 @@ namespace Zcash.Snark.Fixture
 
 open Zcash.Snark
 
-/-- The Fiat–Shamir-derived fingerprint matches the captured MSM, given that the deployed FS schedule
-produces the captured challenges (`hch` — the random-oracle assumption, the one part of FS that depends
-on the unmodeled hash). So the schedule `deriveChallenges` is now on the path to the capture, with its
-hash-dependent output isolated as `hch`: a wrong FS schedule (wrong absorb/squeeze structure) no longer
-trivially escapes the fixture, since `nonInteractiveFingerprint` (which uses the schedule) is what is
-matched. -/
+/-- The Fiat–Shamir-derived fingerprint matches the captured MSM, given that the FS schedule
+reproduces the captured challenges (`hch` — the hash-dependent part, unmodeled). This puts
+`deriveChallenges` on the path to the capture: a wrong absorb/squeeze structure no longer escapes
+the fixture. -/
 theorem nonInteractiveFingerprint_matches (fs : FiatShamir Fp G) (init : List (TranscriptElt Fp G))
     (hch : deriveChallenges fs init ps = ch) :
     MsmMatch (nonInteractiveFingerprint fs init vk ps) capturedMsm := by

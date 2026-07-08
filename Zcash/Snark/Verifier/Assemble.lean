@@ -18,11 +18,9 @@ The assembly factors into three stages:
 * `assembleQueries` (the upstream) — recompute the vanishing `h` commitment and `expected_h_eval`, then
   build the full ordered list of opening queries (per sub-proof: instance, advice, permutation, lookups;
   then shared: fixed, permutation-common, vanishing).
-* `constructIntermediateSets` — group the flat query list into per-point-set commitment and evaluation
-  data. This is VK-fixed query bookkeeping (it depends on the query layout, not the proof values), and is
-  re-derived in Lean (a re-derivation of halo2 `construct_intermediate_sets`), not supplied: the top-level
-  `assemble` feeds the derived `MultiopenGrouped` to `assembleFinalMsm`, and that derived value is what the
-  `native_decide` fingerprint match exercises.
+* `constructIntermediateSets` — group the flat query list into per-point-set commitment and
+  evaluation data: VK-fixed bookkeeping, re-derived in Lean rather than supplied, and exercised
+  by the `native_decide` fingerprint match.
 * `assembleFinalMsm` (the downstream) — takes the `MultiopenGrouped`, then the multiopen `x₁` compression
   and `x₄` collapse, then the IPA fold, producing the final MSM.
 
@@ -48,12 +46,11 @@ def ColumnRef.resolve {F : Type*} (cr : ColumnRef) (instanceEvals adviceEvals fi
   | .fixed i => fixedEvals i
   | .instance i => instanceEvals i
 
--- TODO(VK-correctness): a `VerifyingKey` value is populated from the halo2 `dump_lean_fixture` capture
--- (`Fingerprint/Fixture.lean`) and trusted verbatim — Lean never re-derives the verifying key from the Orchard
--- circuit. So "the dumped `gates`/`omega`/`n`/query layouts are the real circuit's VK" is an assumption,
--- not a theorem (the input-faithfulness seam). Discharging it means re-running keygen from the circuit
--- definition and comparing. This is distinct from, and cheaper than, the output-side adequacy gap
--- (Step 4, see `Soundness/Main.lean`). This is the "VK-correctness" assumption (the §3 input-faithfulness boundary).
+-- TODO(VK-correctness): a `VerifyingKey` value is populated from the halo2 `dump_lean_fixture`
+-- capture (`Fingerprint/Fixture.lean`) and trusted verbatim — Lean never re-derives it from the
+-- Orchard circuit. So "the dumped VK is the real circuit's" is an assumption, not a theorem: the
+-- input-faithfulness boundary. Discharging it means re-running keygen and comparing. Distinct
+-- from the output-side semantic-adequacy gap (see `Soundness/Main.lean`).
 /-- The verifying-key–level circuit structure the assembly needs (halo2 `VerifyingKey` / `ConstraintSystem`).
 `omega` is the domain generator and `n = 2 ^ k` the domain size; `blindingFactors`, `delta`, `chunkLen`
 are the permutation-argument constants. `gates` are the custom-gate polynomials; `instance/advice/fixed
@@ -83,11 +80,10 @@ the verifier uses are always in range). -/
 def finFn {F : Type*} [Zero F] {n : ℕ} (f : Fin n → F) : ℕ → F :=
   fun i => if h : i < n then f ⟨i, h⟩ else 0
 
-/-- View a `Fin n`-indexed family of group elements as a total `ℕ`-indexed function. Out-of-range indices
-return `default`, sound under the same in-range-query invariant as `finFn`. Note this totalization
-collapses out-of-range indices onto `default`: for a fixture carrier like `G := ℕ` (`default = 0`) a
-malformed verifying key with an out-of-range column index would alias the `0` tag rather than error, so
-faithfulness here rests on the VK's query indices being in range. -/
+/-- View a `Fin n`-indexed family of group elements as a total `ℕ`-indexed function (`default`
+out of range), like `finFn`. Caveat: an out-of-range index aliases `default` rather than erroring
+— for the fixture carrier `G := ℕ` that is the `0` tag — so faithfulness rests on the VK's query
+indices being in range. -/
 def finFnG {G : Type*} [Inhabited G] {n : ℕ} (f : Fin n → G) : ℕ → G :=
   fun i => if h : i < n then f ⟨i, h⟩ else default
 
@@ -159,9 +155,9 @@ def assembleQueries {shape : Shape} {F G : Type*} [Field F] [Inhabited G] (vk : 
   let vanishingQ := vanishingQueries x hComm eHEval ps.vanishingRandom ps.vanishingRandomEval
   perProof ++ fixedQ ++ permCommonQ ++ vanishingQ
 
-/-- The multiopen point-set grouping (halo2 `construct_intermediate_sets` output): per point set, the
-queries grouped into it (in processing order) as `(commitment, evaluations at this set's points)`, and
-the set's points. Supplied as input (VK-fixed query bookkeeping). -/
+/-- The multiopen point-set grouping (halo2 `construct_intermediate_sets` output): per point set,
+the queries grouped into it as `(commitment, evaluations at this set's points)`, plus the set's
+points. Derived by `constructIntermediateSets`. -/
 structure MultiopenGrouped (k : ℕ) (F G : Type*) where
   sets : List (List (CommitmentRef k F G × List F))
   points : List (List F)
@@ -201,12 +197,12 @@ def assembleFinalMsm {shape : Shape} {F G : Type*} [Field F] (ps : ProofString s
   ipaFold ch.x3 opened.2 ps.ipaC ps.ipaF ch.xi ch.z (List.ofFn ch.ipaRound) ps.ipaS
     (List.ofFn ps.ipaRounds) opened.1
 
-/-- The assembled fingerprint MSM evaluates to the verifier's IPA verification equation. Composing
-`eval_ipaFold` over `assembleFinalMsm = ipaFold … (assembleOpening …).1`: the deployed MSM's evaluation is
-the multiopen commitment `(assembleOpening …).1` opened by the IPA — `[-v]` at `g₀`, `[ξ] S`, the per-round
-`[uⱼ⁻¹] Lⱼ + [uⱼ] Rⱼ`, `[-c·b·z] U`, `[-f] W`, and `[-c]` times the folded generators (`computeS`). So the
-deployed accept (`… = 0`) is this verification equation. The URS is built from `g, w, u`, so its `k` is
-`shape.k` definitionally — no transport needed. This puts `eval_ipaFold` on the soundness path. -/
+/-- **The assembled fingerprint MSM evaluates to the verifier's IPA verification equation.**
+Composing `eval_ipaFold` over `assembleFinalMsm = ipaFold … (assembleOpening …).1`: the deployed
+MSM's evaluation is the multiopen commitment opened by the IPA, term for term (the closed form is
+the statement) — so the deployed accept (`… = 0`) is this verification equation. The URS is built
+from `g, w, u`, so its `k` is `shape.k` definitionally — no transport needed. This puts
+`eval_ipaFold` on the soundness path. -/
 theorem eval_assembleFinalMsm {shape : Shape} {F G : Type*} [Field F] [AddCommGroup G] [Module F G]
     (g : Fin (2 ^ shape.k) → G) (w u : G) (ps : ProofString shape F G) (ch : Challenges shape.k F)
     (grouped : MultiopenGrouped shape.k F G) :
@@ -224,19 +220,11 @@ theorem eval_assembleFinalMsm {shape : Shape} {F G : Type*} [Field F] [AddCommGr
   simp only [assembleFinalMsm]
   rw [eval_ipaFold]
 
-/-- Re-derivation of halo2 `construct_intermediate_sets` (`poly/multiopen.rs`): group the flat opening
-queries into point sets, producing the `MultiopenGrouped` that `assembleOpening` consumes — so the
-grouping is derived in Lean rather than supplied. Point indices and commitment order follow first
-appearance (insertion order, not field order); within a set, points are ordered by point index. Per
-point set it returns the commitments routed to it, in the accumulate order (reversed commitment order),
-each with its evaluation vector over the set's points, plus the set's points.
-
-Commitments are grouped by their slot identity (`VerifierQuery.commId`), matching halo2's pointer
-identity (`construct_intermediate_sets` keys by `std::ptr::eq`) — so two distinct slots with equal curve
-values stay distinct, which a value-equality key would wrongly merge. The curve value (`CommitmentRef`) is
-still what each group contributes to the MSM. Use `constructIntermediateSets?` for the deployed verifier's
-rejecting behavior; this total helper is the grouping computation after the duplicate-query guard has
-passed. -/
+/-- Re-derivation of halo2 `construct_intermediate_sets` (`poly/multiopen.rs`): group the flat
+opening queries into point sets, producing the `MultiopenGrouped` that `assembleOpening` consumes
+— derived in Lean rather than supplied. Queries are grouped by slot identity (`commId`, halo2's
+pointer identity — see `CommitmentId`); the orderings mirror the Rust and are noted step by step
+in the body. `constructIntermediateSets?` is the rejecting form. -/
 def constructIntermediateSets {k : ℕ} {F G : Type*} [DecidableEq F] [DecidableEq G]
     (queries : List (VerifierQuery k F G)) : MultiopenGrouped k F G :=
   -- distinct points, in first-appearance order; `pointIdx p` is `p`'s index in that order
@@ -270,9 +258,9 @@ def constructIntermediateSets {k : ℕ} {F G : Type*} [DecidableEq F] [Decidable
   let setPoints : List (List F) := setList.map fun s => s.filterMap fun i => points[i]?
   { sets := sets, points := setPoints }
 
-/-- Whether the flat query list contains two queries for the same commitment slot at the same point.
-Halo2 rejects this in `construct_intermediate_sets` (`None`, mapped to `OpeningError`), even if the two
-evaluations happen to be equal. -/
+/-- Whether the flat query list contains two queries for the same commitment slot at the same
+point. Halo2 rejects this (`None`, mapped to `OpeningError`), even when the two evaluations
+agree. -/
 def hasDuplicateCommitmentPoint {k : ℕ} {F G : Type*} [DecidableEq F] :
     List (VerifierQuery k F G) → Bool
   | [] => false
@@ -326,9 +314,8 @@ def permutationLastEvalsWellFormed {shape : Shape} {F G : Type*} (ps : ProofStri
         | some _ => true
         | none => false)).all id)).all id
 
-/-- Typed proof-string well-formedness that affects deployed verifier control flow. Byte-level canonical
-decoding of field elements and curve points is outside this Lean layer; `ProofString` starts after that
-decode. -/
+/-- Typed proof-string well-formedness that affects deployed verifier control flow. Byte-level
+decoding is outside this layer; `ProofString` starts after it. -/
 def proofStringWellFormed {shape : Shape} {F G : Type*} (ps : ProofString shape F G) : Bool :=
   permutationLastEvalsWellFormed ps
 
@@ -353,12 +340,10 @@ def assemble? {shape : Shape} {F G : Type*} [Field F] [DecidableEq F] [Decidable
   else
     none
 
-/-- The full verifier MSM: build the opening queries, re-derive the multiopen grouping
-(`constructIntermediateSets`), then assemble (`assembleFinalMsm`). This is the deployed verifier's
-fingerprint as a pure function of the verifying key, proof string, and challenges — with the
-`construct_intermediate_sets` grouping derived in Lean rather than supplied as input. Malformed typed
-proof data is rejected by `assemble?`; this total wrapper is retained for the algebraic fingerprint lemmas
-and returns the zero MSM on malformed input. -/
+/-- The full verifier MSM, total form: build the opening queries, derive the multiopen grouping
+(`constructIntermediateSets`), then assemble (`assembleFinalMsm`) — the deployed fingerprint as a
+pure function of `(vk, ps, ch)`. Wraps `assemble?`, returning the zero MSM on the proof data it
+rejects; kept for the algebraic fingerprint lemmas. -/
 def assemble {shape : Shape} {F G : Type*} [Field F] [DecidableEq F] [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape F G) (ps : ProofString shape F G) (ch : Challenges shape.k F) :
     Msm shape.k F G :=

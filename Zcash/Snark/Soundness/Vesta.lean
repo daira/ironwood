@@ -37,9 +37,8 @@ open CompElliptic.Curves.Pasta CompElliptic.CurveForms.ShortWeierstrass CompElli
 abbrev VestaG := SWPoint Vesta.curve
 
 /-- The Vesta group order as a proposition: every Vesta point is `p`-torsion, i.e. the group order
-divides `p = scalarFieldOrder`. Derived from the Hasse bound by `vestaOrder_of_hasse` (via
-CompElliptic's `Pasta.Vesta.card_eq`), not assumed; carried as a `Fact` so `vestaFpModule` can
-consume it, with the supplied `Fact` being `Fact (HasseBound Vesta.curve)`. -/
+divides `p = scalarFieldOrder`. Derived from the Hasse bound (`vestaOrder_of_hasse`), not assumed;
+carried as a `Fact` so `vestaFpModule` can consume it. -/
 abbrev VestaOrder : Prop := ∀ P : VestaG, (scalarFieldOrder : ℕ) • P = 0
 
 /-- The Vesta group order, derived from the Hasse bound rather than assumed: given the Hasse bound,
@@ -52,23 +51,20 @@ theorem vestaOrder_of_hasse (hHasse : HasseBound Vesta.curve) : VestaOrder := by
   exact addOrderOf_dvd_iff_nsmul_eq_zero.mp (addOrderOf_dvd_natCard P)
 
 /-- With the Hasse bound in scope, the Vesta order `Fact` — hence the `Fp`-module — is supplied
-automatically. Conditional like `vestaFpModule`: it fires only when the Hasse `Fact` is a hypothesis,
-never globally, so the development stays axiom-free. -/
+automatically. Conditional, like `vestaFpModule`: see the module docstring's Hasse-bound note. -/
 instance factVestaOrder_of_hasse [Fact (HasseBound Vesta.curve)] : Fact VestaOrder :=
   ⟨vestaOrder_of_hasse Fact.out⟩
 
-/-- Given the Vesta group order (`Fact VestaOrder`), the curve is an `Fp`-module: `AddCommGroup.zmodModule`
-on the `p`-torsion. A conditional instance — it fires only when the order `Fact` is in scope, so it adds
-no axiom (the `Fact` is supplied as a hypothesis, never globally). -/
+/-- Given the Vesta group order (`Fact VestaOrder`), the curve is an `Fp`-module
+(`AddCommGroup.zmodModule` on the `p`-torsion). Conditional — it fires only when the order `Fact`
+is in scope; see the module docstring's Hasse-bound note. -/
 noncomputable instance vestaFpModule [h : Fact VestaOrder] : Module Fp VestaG :=
   AddCommGroup.zmodModule h.out
 
-/-- The conditional soundness composition over the concrete Vesta curve:
-`orchard_verifier_sound_conditional` with the abstract `Fp`-module specialised to `SWPoint Vesta.curve`,
-the abstract-curve assumption replaced by `Fact (HasseBound Vesta.curve)` (the order follows). It
-inherits the conditional status of `orchard_verifier_sound_conditional` (assumed extraction + constraint
-identity; `accepts` not tied to the fingerprint); see that docstring. The deployed Vesta capstones are
-`orchard_verifier_sound_vesta_opening`/`_constraint` below. -/
+/-- **Conditional soundness at Vesta.** `orchard_verifier_sound_conditional` specialised to
+`SWPoint Vesta.curve`; the curve assumption is `Fact (HasseBound Vesta.curve)` (the group order,
+hence the `Fp`-module structure, follows). Inherits the conditional status — see that docstring.
+The deployed Vesta capstones are `orchard_verifier_sound_vesta_opening`/`_constraint` below. -/
 theorem orchard_verifier_sound_vesta_conditional [Fact (HasseBound Vesta.curve)]
     (urs : URS VestaG) (hbind : CommitmentBinding (F := Fp) urs)
     {P : VestaG} {b : Fin (2 ^ urs.k) → Fp} {v : Fp} {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop}
@@ -78,11 +74,9 @@ theorem orchard_verifier_sound_vesta_conditional [Fact (HasseBound Vesta.curve)]
     S :=
   orchard_verifier_sound_conditional urs hbind haccepts hextract hencodes
 
-/-- The deployed Orchard verifier is sound over Vesta, with the IPA opening derived.
-`orchard_verifier_sound_deployed_opening` specialised to `SWPoint Vesta.curve`: the bridge `hFS` supplies
-the special-soundness transcript tree (and, as `FiatShamirTree` notes, the MSM↔tree correspondence and
-`P,b,v` pinning), from which `IpaRelation` is derived (`ipa_soundV`), not assumed. Named assumptions: the rewinding (`hFS`), the circuit side
-(`hcirc`), the Hasse bound (`Fact (HasseBound Vesta.curve)`), and VK-correctness (`hencodes`). -/
+/-- **Deployed Vesta soundness, opening derived.** `orchard_verifier_sound_deployed_opening`
+specialised to `SWPoint Vesta.curve`, the curve's `Fp`-module structure supplied by the Hasse
+bound. Same hypotheses as the abstract theorem, plus `Fact (HasseBound Vesta.curve)`. -/
 theorem orchard_verifier_sound_vesta_opening [Fact (HasseBound Vesta.curve)] [DecidableEq VestaG] [Inhabited VestaG]
     {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp VestaG)
     (ps : ProofString shape Fp VestaG) (ch : Challenges shape.k Fp)
@@ -95,12 +89,10 @@ theorem orchard_verifier_sound_vesta_opening [Fact (HasseBound Vesta.curve)] [De
   orchard_verifier_sound_deployed_opening urs hk vk ps ch haccepts hFS hcirc hencodes
 
 open Polynomial in
-/-- The deployed Orchard verifier is sound over Vesta, opening and constraint both derived.
-`orchard_verifier_sound_deployed_constraint` specialised to `SWPoint Vesta.curve`: both conjuncts of
-`SnarkRelation` are derived — `IpaRelation` via `ipa_soundV`, and `circuitSat` (concrete
-`circuitSatViaGates`) from the verifier's gate point-check `hquot` lifted by Schwartz–Zippel (`hgood`).
-Named assumptions: the rewinding (`hFS`), the gate check (`hquot`), the SZ good challenge (`hgood`), the
-Hasse bound (`Fact (HasseBound Vesta.curve)`), and VK-correctness (`hencodes`). -/
+/-- **Deployed Vesta soundness, opening and constraint derived.**
+`orchard_verifier_sound_deployed_constraint` specialised to `SWPoint Vesta.curve`, the curve's
+`Fp`-module structure supplied by the Hasse bound. Same hypotheses as the abstract theorem, plus
+`Fact (HasseBound Vesta.curve)`. -/
 theorem orchard_verifier_sound_vesta_constraint [Fact (HasseBound Vesta.curve)] [DecidableEq VestaG] [Inhabited VestaG]
     {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp VestaG)
     (ps : ProofString shape Fp VestaG) (ch : Challenges shape.k Fp)

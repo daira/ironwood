@@ -4,19 +4,20 @@ import Zcash.Snark.Soundness.InnerProduct
 /-!
 # The full IPA extractor: composing the round extractor over all `k` rounds
 
-`Zcash.Snark.roundExtract_correct` gives 2-special-soundness of one IPA round. This module composes it
-over the `k` rounds to recover the whole witness from a tree of accepting transcripts: at each internal
-node the two distinct round challenges let the round extractor fold the two sub-witnesses back into one,
+`Zcash.Snark.roundExtract_correct` gives 2-special-soundness of one IPA round: two accepting
+transcripts at distinct challenges determine the round's witness. This module composes it over the
+`k` rounds to recover the whole witness from a tree of accepting transcripts: at each internal node
+the two distinct round challenges let the round extractor fold the two sub-witnesses back into one,
 and the leaves carry the fully-folded scalars.
 
 * `loHalf` / `hiHalf` / `append` — split a length-`2^{k+1}` vector into its two halves and reassemble.
 * `roundFold` — one round's fold of a vector (`loHalf + u • hiHalf`), as in `foldVec`.
 * `Tree` — a depth-`k` tree of transcripts: each node carries the two round challenges and two subtrees.
 * `Consistent` — the tree's leaves are the witness folded down each challenge path.
-* `extract` / `extract_correct` — the extractor recovers the witness exactly, by induction on `k`, using
-  `roundExtract_correct` at every node. This is the IPA's special soundness over all rounds, and it is
-  binding-free — it takes `Consistent` as a hypothesis. (Deriving that consistency from acceptance is what
-  the explicit `Zcash.Snark.CommitmentBinding` later supplies, in `Zcash.Snark.Soundness.CommitFold`.)
+* `extract` / `extract_correct` — the extractor recovers the witness exactly, by induction on `k`
+  with `roundExtract_correct` at every node — the IPA's special soundness over all rounds.
+  Binding-free: it takes `Consistent` as a hypothesis (derived from acceptance under binding in
+  `Zcash.Snark.Soundness.CommitFold`).
 -/
 
 namespace Zcash.Snark
@@ -75,7 +76,7 @@ def Consistent [Field F] : {k : ℕ} → Tree F k → (Fin (2 ^ k) → F) → Pr
   | _, .node u₁ u₂ t₁ t₂, a =>
       u₁ ≠ u₂ ∧ Consistent t₁ (roundFold a u₁) ∧ Consistent t₂ (roundFold a u₂)
 
-/-- Full IPA special soundness. From a tree of accepting transcripts consistent with a witness `a`
+/-- **Full IPA special soundness.** From a tree of accepting transcripts consistent with a witness `a`
 (distinct challenges at every node), the extractor recovers exactly `a`. The per-node step is the
 2-special-soundness `roundExtract_correct`; composing over the `k` rounds is this induction. -/
 theorem extract_correct {k : ℕ} (t : Tree F k) (a : Fin (2 ^ k) → F) (h : Consistent t a) :
