@@ -11,3 +11,4 @@
   - [*Orchard-* to *Ironwood-pool* Migration](design/migration.md) <!-- todo -->
 - [Formal Verification](formal-verification.md) <!-- todo -->
   - [Proof Map](formal-verification/proof-map.md)
+  - [Glossary](formal-verification/glossary.md)
