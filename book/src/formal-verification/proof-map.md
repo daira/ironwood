@@ -1,17 +1,18 @@
 # Proof Map
 
-One connected picture: the accept-to-`SnarkRelation` **spine** runs down the left as
-the neutral river; the **territories** around it are the machinery that discharges
-its assumptions. Edges are typed — **entails** (solid), **discharges** (dashed),
-**rests on** (dotted, into the out-of-Lean floor). Click any node to trace its
-connections and read its Lean anchor.
+One connected picture of the verifier-soundness proof. The **spine** runs down the
+left as the neutral river — from an accepting proof to the top-level **verifier
+soundness** capstones; the **territories** around it are the machinery that
+discharges its assumptions. Edges are typed — **entails** (solid), **discharges**
+(dashed), **rests on** (dotted, into the out-of-Lean assumptions). Click any node
+to trace its connections and read its Lean anchor.
 
 <iframe id="proofmap-frame" src="proof-map-embed.html" title="Interactive proof structure map"
   loading="lazy"
   style="width:100%; height:760px; border:1px solid rgba(128,140,170,.35); border-radius:12px; margin:0.6rem 0;">
 </iframe>
 
-[Open the full-width map ↗](proof-map-embed.html)
+[Open the full-width map ↗](proof-map-embed.html) &nbsp;·&nbsp; New to the terms? See the [**Glossary**](glossary.md).
 
 <script>
 // Theme sync: forward the book's active theme (mdBook toggle) to the embedded map iframe.

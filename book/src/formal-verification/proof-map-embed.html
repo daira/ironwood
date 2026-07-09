@@ -87,10 +87,10 @@
   svg.map { display: block; width: 100%; min-width: 1180px; height: auto; }
 
   .terr { fill: var(--th); opacity: .5; stroke: var(--ts); stroke-width: 1; stroke-dasharray: 3 5; rx: 16; }
-  .terr-label { font-size: 14px; text-transform: uppercase; letter-spacing: .14em; font-weight: 600; fill: var(--ts); opacity: .95; }
+  .terr-label { font-size: 15px; text-transform: uppercase; letter-spacing: .14em; font-weight: 700; fill: var(--ts); opacity: 1; }
   .terr-tag { font-family: ui-monospace, monospace; font-size: 12px; fill: var(--ts); opacity: .8; }
 
-  .edge { fill: none; stroke-width: 2; opacity: .26; transition: opacity .15s, stroke-width .15s; }
+  .edge { fill: none; stroke-width: 2; opacity: .55; transition: opacity .15s, stroke-width .15s; }
   .edge.entails { stroke: var(--ink); }
   .edge.discharges { stroke: var(--accent); stroke-dasharray: 7 5; }
   .edge.rests { stroke: var(--c-floor); stroke-dasharray: 1.5 5; stroke-linecap: round; }
@@ -103,7 +103,6 @@
   .node .label { font-size: 16.5px; fill: var(--ink); dominant-baseline: middle; }
   .node.goal .box { fill: var(--accent); stroke: var(--accent); }
   .node.goal .label { fill: #fff; font-weight: 640; }
-  .node.incoming .box { stroke-dasharray: 6 4; }
   .node.dim { opacity: .2; }
   .node .anchor { font-size: 11px; fill: var(--muted); dominant-baseline: middle; }
 
@@ -123,7 +122,9 @@
   .detail .role { font-size: 13.5px; margin: 0 0 14px; }
   .detail .conns { display: grid; gap: 7px; }
   .detail .conns .c { display: flex; gap: 8px; align-items: baseline; font-size: 12.5px; }
-  .detail .conns .verb { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); flex: none; width: 74px; }
+  .detail .conns .verb { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); flex: none; min-width: 100px; white-space: nowrap; }
+  .detail .conns .verb.discharges { color: var(--accent); }
+  .detail .conns .verb.rests { color: var(--c-floor); }
   .detail .conns .to { font-family: ui-monospace, monospace; }
   .detail .empty { color: var(--muted); font-size: 13px; }
   .detail .hint { font-size: 12.5px; color: var(--muted); margin: 12px 0 0; }
@@ -149,7 +150,7 @@
       <button class="chip" data-f="proven"><span class="dot" style="background:var(--c-proven)"></span>Proven</button>
       <button class="chip" data-f="hyp"><span class="dot" style="background:var(--c-hyp)"></span>Hypothesis</button>
       <button class="chip" data-f="floor"><span class="dot" style="background:var(--c-floor)"></span>Out-of-Lean</button>
-      <button class="chip" data-f="incoming"><span class="dot" style="background:var(--c-incoming)"></span>Incoming</button>
+      <button class="chip" data-f="object"><span class="dot" style="background:var(--c-object)"></span>Propositions</button>
     </div>
     <div class="mapwrap">
       <svg class="map" id="map" viewBox="0 0 1920 1090" role="img"
@@ -165,9 +166,9 @@
       <div class="row"><span class="swatch" style="border-top-color:var(--c-floor);border-top-style:dotted"></span><span><b>rests on</b> — depends on an out-of-Lean assumption</span></div>
       <div class="row" style="margin-top:6px"><span class="sq" style="border-color:var(--c-proven);background:color-mix(in srgb,var(--c-proven) 12%,var(--surface))"></span><span>Proven theorem</span></div>
       <div class="row"><span class="sq" style="border-color:var(--c-hyp);background:color-mix(in srgb,var(--c-hyp) 12%,var(--surface))"></span><span>Hypothesis in statement</span></div>
-      <div class="row"><span class="sq" style="border-color:var(--c-floor);background:color-mix(in srgb,var(--c-floor) 12%,var(--surface))"></span><span>Out-of-Lean idealization</span></div>
-      <div class="row"><span class="sq" style="border-color:var(--c-incoming);background:color-mix(in srgb,var(--c-incoming) 12%,var(--surface));border-style:dashed"></span><span>Incoming (open PR)</span></div>
+      <div class="row"><span class="sq" style="border-color:var(--c-floor);background:color-mix(in srgb,var(--c-floor) 12%,var(--surface))"></span><span>Out-of-Lean assumption</span></div>
       <div class="row"><span class="sq" style="border-color:var(--c-object);background:color-mix(in srgb,var(--c-object) 10%,var(--surface))"></span><span class="muted">Intermediate proposition</span></div>
+      <div class="row"><span class="sq" style="border-color:var(--accent);background:var(--accent)"></span><span>Top-level result (verifier soundness)</span></div>
     </div>
 
     <h2>Detail</h2>
@@ -184,107 +185,113 @@ const COL = c => 130 + c * 236;
 const ROW = r => 96 + r * 116;
 
 const territories = [
-  { id:'fs',   label:'Fiat–Shamir · Random Oracle', cells:[[2,1],[3,1],[2,2],[3,2],[2,3]], h:'#6f7bb0' },
+  { id:'faith', label:'Faithfulness',               cells:[[0,0],[1,0]],                   h:'#b0873a' },
+  { id:'ss',    label:'Special Soundness',          cells:[[1,5],[1,6],[2,6]],             h:'#c15f86' },
+  { id:'caps',  label:'Capstones',                 cells:[[3,7],[4,7]],                   h:'#6a5acd', labelSide:'right' },
+  { id:'fs',   label:'Fiat–Shamir · Random Oracle', cells:[[2,1],[3,1],[2,2],[3,2],[2,3]], h:'#6f7bd6' },
   { id:'dec',  label:'Multiopen Decode', cells:[[6,4],[7,4],[7,5]],             h:'var(--c-proven)' },
   { id:'sz',   label:'Schwartz–Zippel', cells:[[6,7],[7,7]],                   h:'var(--c-incoming)' },
-  { id:'agm',  label:'AGM → Discrete Log', cells:[[0,7],[0,8],[1,8]],             h:'#a06fb0' },
-  { id:'floor',label:'The Floor · Out-of-Lean',    cells:[[2,8],[3,8],[4,8],[5,8]],       h:'var(--c-floor)' },
+  { id:'agm',  label:'AGM → Discrete Log', cells:[[0,7],[1,7],[0,8],[1,8]],       h:'#a06fb0' },
+  { id:'floor',label:'Assumptions · outside Lean',    cells:[[2,8],[3,8],[4,8],[5,8]],       h:'var(--c-floor)' },
 ];
 
 const nodes = [
   { id:'assemble', c:0,r:0, label:'assemble ▸ MSM', status:'proven',
     anchor:'Verifier.Assemble.assemble',
     role:'The whole verifier collapsed into one multi-scalar multiplication — the fingerprint, reproduced line-for-line from halo2.' },
-  { id:'fingerprint', c:1,r:0, label:'fingerprint = Rust', status:'proven',
+  { id:'fingerprint', c:1,r:0, label:'faithful to Rust', status:'proven',
     anchor:'Fingerprint.Match.MsmMatch',
-    role:'The assembled MSM is checked against the Rust verifier’s captured MSM; any divergence shows up as a coefficient mismatch. (native_decide trust.)' },
+    role:'Fidelity check: the Lean-assembled MSM is shown equal to the Rust verifier’s captured MSM, so reasoning about assemble is reasoning about the deployed verifier. Backed by real single- and multi-action captures, a Fiat–Shamir schedule check, VK/shape faithfulness, and negative/tamper fixtures. (native_decide trust.)' },
   { id:'accept', c:0,r:1, label:'accept · MSM = 0', status:'object',
     anchor:'Main.DeployedAccepts',
     role:'The concrete accept condition: the assembled MSM evaluates to the group identity. The premise everything hangs from.' },
   { id:'verifierEq', c:0,r:2, label:'verifier equation', status:'proven',
     anchor:'Main.deployedAccepts_verifierEq',
-    role:'halo2’s explicit IPA verifier equation, proven to follow from the accept (one direction — the accept also carries the rejection guards).' },
+    role:'halo2’s explicit IPA verifier equation, recovered from the accept: deployedAccepts_verifierEq unpacks the compact MSM = 0 into the explicit equation the IPA soundness argument consumes. One direction — the accept also carries the rejection guards.' },
   { id:'deployedTree', c:0,r:3, label:'deployed tree', status:'object',
-    anchor:'Main.DeployedIpaAcceptV',
-    role:'The deployed IPA transcript tree, still carrying the U/W apparatus the MSM mixes in.' },
+    anchor:'Deployed.Ipa.DeployedIpaAcceptV',
+    role:'The deployed IPA transcript tree, still carrying the auxiliary U/W terms the MSM mixes in — the fold and blinding generators beyond the main g basis.' },
   { id:'peel', c:0,r:4, label:'peel U/W', status:'proven',
     anchor:'Deployed.IpaPeel.deployed_to_acceptV',
-    role:'Strips the U/W apparatus off the deployed tree, leaving either a clean IPA tree or a discrete-log relation.' },
+    role:'A commitment-binding step: the U/W separation is derived from binding. Strips the auxiliary U and W terms (the fold and blinding generators beyond the main g basis) off the deployed tree, leaving either a clean, g-only IPA tree or — if binding fails — a discrete-log relation on (g, U, W).' },
   { id:'clean', c:1,r:5, label:'clean tree', status:'object',
     anchor:'Ipa.Soundness · IpaAcceptV',
     role:'A clean IPA transcript tree over the URS generators, ready for special-soundness extraction.' },
-  { id:'relation', c:0,r:5, label:'relation (g,U,W)', status:'hyp',
+  { id:'relation', c:0,r:5, label:'relation (g,U,W)', status:'object',
     anchor:'Deployed.Binding.HasNontrivialRelation',
-    role:'The bad branch of the peel: a nontrivial discrete-log relation on the augmented generators. Vacuous as a proposition at prime order — the force is computational.' },
+    role:'The bad branch of the peel: a nontrivial discrete-log relation on the augmented generators (g, U, W). A relation always exists in a prime-order group, so as a statement this branch is trivially true — its real content is the computational claim that no efficient adversary can find one, the DL-hardness the AGM reduction leans on.' },
   { id:'ipa_soundV', c:1,r:6, label:'ipa_soundV', status:'proven',
     anchor:'Ipa.Soundness.ipa_soundV',
-    role:'Three-special-soundness rewinding extracts the witness from a clean tree — binding-free.' },
+    role:'Three-special-soundness extraction: from a transcript tree with three accepting branches at distinct challenges per round, recover the witness — binding-free.' },
   { id:'IpaRelation', c:2,r:6, label:'IPA opening', status:'object',
-    anchor:'IpaRelation',
+    anchor:'Ipa.InnerProduct.IpaRelation',
     role:'The extracted opening: commit a = P and ⟨a,b⟩ = v.' },
-  { id:'knowledge_sound', c:3,r:6, label:'knowledge_sound', status:'proven',
-    anchor:'KnowledgeSoundness.knowledge_sound',
-    role:'The extracted witness together with circuit satisfaction yields the SNARK relation.' },
-  { id:'SnarkRelation', c:4,r:6, label:'SnarkRelation', status:'goal',
-    anchor:'SnarkRelation',
-    role:'The endpoint of the composition: the extracted witness satisfies the circuit gates.' },
-  { id:'capstones', c:4,r:7, label:'Vesta capstones', status:'object',
+  { id:'SnarkRelation', c:3,r:7, label:'SnarkRelation', status:'object',
+    anchor:'KnowledgeSoundness.SnarkRelation',
+    role:'The SNARK relation — literally a Lean structure with two fields, i.e. a conjunction: opens, the IPA opening (from special soundness) ∧ satisfiesCircuit, circuit satisfaction (from the gate-check side). The deployed path pairs the two directly; there is no separate combiner. The decoded rungs use the enriched SnarkRelationWithDecodedColumns, which additionally pins the decoded columns.' },
+  { id:'circuitSat', c:4,r:6, label:'circuit satisfaction', status:'object',
+    anchor:'KnowledgeSoundness.circuitSatViaGates',
+    role:'The circuit-satisfaction half of the SNARK relation: the decoded columns satisfy the y-combined gate/quotient identity. Produced by the gate-check lift, then paired with the IPA opening. Covers the gate identity only — the permutation and lookup arguments’ semantic soundness (grand products ⟹ copy constraints / lookup subset, merged separately on main) is not yet wired into this chain.' },
+  { id:'capstones', c:4,r:7, label:'verifier soundness', status:'goal',
     anchor:'Vesta.orchard_verifier_vesta_*',
-    role:'The capstone ladder over the concrete curve: conditional → reductions → forking → deployed / adaptive / rewind, opening and constraint.' },
+    role:'The base capstone — the top-level orchard_verifier_vesta_* family (in Vesta.lean). An accepting proof yields the SNARK relation, or exposes a discrete-log relation: conditional verifier soundness over the concrete Vesta curve.<br><br>They form a ladder, each rung assuming less than the one before:<br>• conditional — a scaffold over an opaque accept (assumes the extraction and circuit satisfaction); not finished soundness.<br>• reductions — the concrete deployed accept, but still assume the Fiat–Shamir tree bridge and the per-opening hypotheses.<br>• forking — replaces that bridge with the random-oracle forking, so the structural facts are proven rather than assumed.<br>• deployed → adaptive → rewind — how the prover and oracle are modeled inside the forking capstones: a fixed deployed proof string, then an arbitrary prefix-respecting prover, then the accept probability taken over reprogrammed-oracle (rewound) runs.<br><br>Every rung comes in two forms — "opening" (extracts the IPA witness) and "constraint" (also derives circuit satisfaction) — plus orthogonal _agm_dl (relation → discrete log) and _xgood (derives hgood) wrappers.' },
   { id:'gateLift', c:5,r:6, label:'gate-check lift', status:'proven',
     anchor:'KnowledgeSoundness.circuitSatViaGates_of_check',
-    role:'Lifts the verifier’s gate point-check at x to the full polynomial identity — given a good challenge and the real columns.' },
-  { id:'hquot', c:5,r:5, label:'hquot', status:'hyp',
+    role:'Lifts the verifier’s gate point-check at x to the full polynomial identity — circuit satisfaction — given a good challenge and the real columns.' },
+  { id:'hquot', c:5,r:5, label:'quotient check', status:'hyp',
     anchor:'hquot',
-    role:'The gate/quotient point-check content and the x→x₃ transport. Still an open hypothesis.' },
-  { id:'hgood', c:5,r:7, label:'hgood', status:'hyp',
+    role:'The gate/quotient point-check content, and carrying the gate challenge x over to the multiopen evaluation point x₃. Still an open hypothesis.' },
+  { id:'hgood', c:5,r:7, label:'sound challenge', status:'hyp',
     anchor:'hgood',
-    role:'The Schwartz–Zippel good-challenge exclusion. Assumed here; derived by the SZ territory.' },
-  { id:'forking', c:2,r:2, label:'forking (rewind)', status:'hyp',
-    anchor:'Main.FiatShamirForking',
-    role:'Rewinding the random oracle yields three accepting continuations per round at distinct challenges. The irreducible random-oracle floor.' },
+    role:'The challenge avoids the Schwartz–Zippel bad set, so the gate point-check at x implies the full gate identity. Assumed here; derived by the SZ territory.' },
+  { id:'forking', c:2,r:2, label:'forking lemma', status:'proven',
+    anchor:'Forking.Probability.extractable_of_prob',
+    role:'The multi-round forking lemma — an averaging argument, proven: if the accept probability beats the knowledge error kerr/Nᵏ, rewinding the random oracle yields three accepting continuations per round at distinct challenges. What remains is the accept-probability hypothesis and the Blake2b-as-RO idealization it rests on.' },
   { id:'treeAssembly', c:2,r:3, label:'tree assembly', status:'proven',
-    anchor:'Main.fiatShamirTree_of_forking',
+    anchor:'Forking.Assembly.forkAccept_to_acceptV',
     role:'Deterministically assembles the forked transcripts into the deployed IPA tree.' },
-  { id:'FStree', c:3,r:2, label:'FS tree (legacy)', status:'hyp',
-    anchor:'Main.FiatShamirTree',
-    role:'Legacy bridge: verifier equation ⇒ transcript tree. Superseded by, and discharged from, the forking path.' },
-  { id:'hprob', c:3,r:1, label:'hprob', status:'hyp',
-    anchor:'Vesta · forking capstones',
+  { id:'hprob', c:3,r:1, label:'accept probability', status:'hyp',
+    anchor:'hprob · Vesta forking capstones',
     role:'The accept probability beats the knowledge error kerr/Nᵏ. The measure-side random-oracle floor.' },
-  { id:'x4batch', c:6,r:4, label:'x₄ power batch', status:'proven',
-    anchor:'Multiopen.Deployed',
-    role:'The verifier’s x₄ multiopen collapse is proved to be the flat power batch the decode consumes.' },
+  { id:'ordering', c:3,r:2, label:'transcript ordering', status:'proven',
+    anchor:'Forking.Ordering',
+    role:'Round-by-round soundness: each IPA round point sits in the transcript prefix before its challenge is drawn, so later messages cannot bend earlier challenges. The backbone under sound forking, the sealed x₁/x₄ prefixes the decode uses, and the x-fixed-before-sampling the Schwartz–Zippel argument needs.' },
+  { id:'x4batch', c:6,r:4, label:'challenge batch', status:'proven',
+    anchor:'Multiopen.Deployed.deployedCommitment_x4_batch',
+    role:'The verifier folds all the opening claims into one using powers of the challenge x₄; this collapse is proved to be exactly the power-weighted batch the decode inverts.' },
   { id:'decode', c:7,r:4, label:'decode columns', status:'proven',
     anchor:'Multiopen.Decode.decodedCols',
     role:'Recovers the individual column polynomials from the batched multiopen by Vandermonde inversion of rewound openings.' },
-  { id:'member_binding', c:7,r:5, label:'member binding', status:'proven',
+  { id:'member_binding', c:7,r:5, label:'challenge unbatch', status:'proven',
     anchor:'deployed_witness_member_binding',
-    role:'Unbatches each point-set aggregate to the queried member commitments and binds the extracted witness to them.' },
-  { id:'szBadSet', c:6,r:7, label:'SZ bad set', status:'incoming',
-    anchor:'szBadSet',
+    role:'The x₁ layer bundles the commitments queried at each point set into one aggregate; this unbundles them back to the individual queried member commitments (advice, instance, fixed, permutation/lookup products, vanishing) and pins the extracted witness as the explicit two-level (x₄ then x₁) power combination of their column witnesses.' },
+  { id:'szBadSet', c:6,r:7, label:'SZ bad set', status:'proven',
+    anchor:'Constraints.Vanishing.szBadSet',
     role:'The bad x-values are the roots of the constraint-difference polynomial, bounded by its degree.' },
-  { id:'goodChallenge', c:7,r:7, label:'good challenge', status:'incoming',
-    anchor:'GoodChallenge · _xgood',
+  { id:'goodChallenge', c:7,r:7, label:'good challenge', status:'proven',
+    anchor:'GoodChallenge.exists_accepting_good_challenge_quotient · Vesta.*_xgood',
     role:'A uniform RO challenge hits the bad set with probability ≤ d/p, so a good accepting x is derived rather than assumed — no hgood input.' },
   { id:'adapter', c:0,r:7, label:'fixed-slot', status:'proven',
     anchor:'AGM.Adapter.FixedSlotEmbedding',
     role:'Hides a discrete-log challenge in one basis slot fixed before the adversary runs; a found relation hitting that slot yields the discrete log.' },
-  { id:'dlrep', c:0,r:8, label:'discrete log', status:'proven',
-    anchor:'AGM.DiscreteLogRepresentation',
-    role:'The discrete log recovered from a relation that hits the planted slot — the reduction’s output.' },
+  { id:'dlrep', c:0,r:8, label:'DL solution', status:'proven',
+    anchor:'AGM.Adapter.DiscreteLogRepresentation',
+    role:'A solved discrete log, extracted from a relation that hits the planted slot — the reduction’s output. Producing one would break the DL-hardness assumption, which is exactly why finding the relation is assumed infeasible.' },
   { id:'missesSlot', c:1,r:8, label:'misses slot', status:'object',
-    anchor:'Vesta.RelationMissesSlot',
+    anchor:'AGM.Adapter.RelationMissesSlot',
     role:'The escape case: the found relation misses the planted slot (bounded probability).' },
-  { id:'agm_dl', c:2,r:7, label:'→ discrete log', status:'proven',
+  { id:'dlbound', c:1,r:7, label:'DL reduction bound', status:'proven',
+    anchor:'AGM.Probability.relation_prob_le_of_textbookDL',
+    role:'The random-slot accounting: the planted slot is hit with probability at least 1/|basis| of the finder’s, so the probability of finding a relation is bounded by a multiple of the discrete-log advantage. This is where DL-hardness enters as an explicit, priced hypothesis.' },
+  { id:'agm_dl', c:2,r:7, label:'AGM bridge', status:'proven',
     anchor:'Vesta.*_agm_dl',
-    role:'Routes each capstone’s relation branch through the fixed-slot adapter: S ∨ discrete log ∨ RelationMissesSlot.' },
+    role:'The bridge-node capstone — the _agm_dl members (also in Vesta.lean): they route the relation branch of the base capstones through the fixed-slot adapter to a discrete-log solution (S ∨ DL solution ∨ misses-slot).' },
   { id:'DLhard', c:2,r:8, label:'DL-hardness', status:'floor',
-    anchor:'—',
-    role:'Discrete-log hardness on Vesta. A computational assumption, not a Lean theorem.' },
+    anchor:'AGM.Probability.TextbookDLAdvantageLE',
+    role:'Discrete-log hardness on Vesta. The bound is stated in Lean (TextbookDLAdvantageLE); that it actually holds for Vesta is the computational assumption, not a Lean theorem.' },
   { id:'blake2b', c:3,r:8, label:'Blake2b = RO', status:'floor',
-    anchor:'—',
-    role:'Blake2b modeled as a random oracle — the ROM idealization behind the forking argument.' },
+    anchor:'Forking.Oracle · uniformChallenge',
+    role:'Blake2b modeled as a random oracle. The oracle model itself — reprogramming, uniform challenges — is mechanized (Forking.Oracle); identifying the deployed Blake2b transcript with that oracle is the idealization.' },
   { id:'vk', c:4,r:8, label:'VK correctness', status:'floor',
     anchor:'hencodes',
     role:'The verifying key encodes the intended Orchard statement. The output-side seam; VK derivation in Lean is not started.' },
@@ -294,15 +301,14 @@ const nodes = [
 ];
 
 const edges = [
-  ['fingerprint','assemble','discharges'],
+  ['assemble','fingerprint','entails'],
   ['assemble','accept','entails'],
   ['accept','verifierEq','entails'],
-  ['verifierEq','deployedTree','entails'],
   ['verifierEq','forking','entails'],
+  ['ordering','forking','entails'],
+  ['ordering','decode','entails'],
   ['forking','treeAssembly','entails'],
   ['treeAssembly','deployedTree','entails'],
-  ['treeAssembly','FStree','discharges'],
-  ['FStree','deployedTree','entails'],
   ['forking','hprob','rests'],
   ['forking','blake2b','rests'],
   ['deployedTree','peel','entails'],
@@ -310,32 +316,39 @@ const edges = [
   ['peel','relation','entails'],
   ['clean','ipa_soundV','entails'],
   ['ipa_soundV','IpaRelation','entails'],
-  ['IpaRelation','knowledge_sound','entails'],
-  ['knowledge_sound','SnarkRelation','entails'],
-  ['gateLift','SnarkRelation','entails'],
-  ['hquot','gateLift','rests'],
-  ['hgood','gateLift','rests'],
-  ['decode','gateLift','discharges'],
+  ['IpaRelation','SnarkRelation','entails'],
+  ['gateLift','circuitSat','entails'],
+  ['circuitSat','SnarkRelation','entails'],
+  ['gateLift','hquot','rests'],
+  ['gateLift','hgood','rests'],
+  ['decode','gateLift','entails'],
   ['x4batch','decode','entails'],
-  ['member_binding','decode','entails'],
-  ['member_binding','IpaRelation','discharges'],
-  ['szBadSet','hgood','discharges'],
+  ['decode','member_binding','entails'],
+  ['IpaRelation','member_binding','entails'],
+  ['szBadSet','goodChallenge','entails'],
   ['goodChallenge','hgood','discharges'],
-  ['goodChallenge','szBadSet','entails'],
   ['SnarkRelation','capstones','entails'],
   ['capstones','agm_dl','entails'],
   ['relation','adapter','entails'],
-  ['agm_dl','adapter','entails'],
+  ['adapter','agm_dl','entails'],
   ['adapter','dlrep','entails'],
   ['adapter','missesSlot','entails'],
-  ['dlrep','DLhard','rests'],
+  ['adapter','dlbound','entails'],
+  ['dlbound','DLhard','rests'],
   ['capstones','vk','rests'],
   ['capstones','hasse','rests'],
 ];
 
-const statusColor = { proven:'--c-proven', hyp:'--c-hyp', floor:'--c-floor', incoming:'--c-incoming', object:'--c-object', goal:'--accent' };
-const statusName  = { proven:'Proven', hyp:'Hypothesis', floor:'Out-of-Lean', incoming:'Incoming', object:'Proposition', goal:'Goal' };
-const verb = { entails:'entails', discharges:'discharges', rests:'rests on' };
+const statusColor = { proven:'--c-proven', hyp:'--c-hyp', floor:'--c-floor', object:'--c-object', goal:'--accent' };
+const statusName  = { proven:'Proven', hyp:'Hypothesis', floor:'Out-of-Lean assumption', object:'Proposition', goal:'Top-level' };
+const relPhrase = {
+  'out-entails':    ['→', 'entails'],
+  'out-discharges': ['→', 'discharges'],
+  'out-rests':      ['→', 'rests on'],
+  'in-entails':     ['←', 'follows from'],
+  'in-discharges':  ['←', 'discharged by'],
+  'in-rests':       ['←', 'relied on by'],
+};
 
 const byId = {};
 nodes.forEach(n => {
@@ -365,12 +378,17 @@ const defs = el('defs', {});
 svg.appendChild(defs);
 
 const terrLayer = el('g', {});
+const terrLabelLayer = el('g', {});
+const nodeAt = {};
+nodes.forEach(n => { nodeAt[n.c + ',' + n.r] = n; });
 territories.forEach(t => {
   let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
   t.cells.forEach(([c,r]) => {
-    const cx=COL(c), cy=ROW(r);
-    x0=Math.min(x0,cx-118); y0=Math.min(y0,cy-30);
-    x1=Math.max(x1,cx+118); y1=Math.max(y1,cy+30);
+    const n = nodeAt[c + ',' + r];
+    const cx = n ? n.cx : COL(c), cy = n ? n.cy : ROW(r);
+    const hw = n ? n.w/2 : 90, hh = n ? n.h/2 : 23;
+    x0=Math.min(x0,cx-hw); y0=Math.min(y0,cy-hh);
+    x1=Math.max(x1,cx+hw); y1=Math.max(y1,cy+hh);
   });
   const pad=20;
   const g = el('g', {});
@@ -378,15 +396,17 @@ territories.forEach(t => {
   rect.style.setProperty('--th', `color-mix(in srgb, ${t.h} 10%, var(--surface))`);
   rect.style.setProperty('--ts', t.h);
   g.appendChild(rect);
-  const lab = el('text', { x:x0-pad+14, y:y0-pad-14+22, class:'terr-label' });
+  const labX = t.labelSide === 'right' ? x1+pad-14 : x0-pad+14;
+  const lab = el('text', { x:labX, y:y0-pad-14+22, class:'terr-label' });
+  if (t.labelSide === 'right') lab.setAttribute('text-anchor', 'end');
   lab.style.setProperty('--ts', t.h);
   lab.textContent = t.label;
-  g.appendChild(lab);
+  terrLabelLayer.appendChild(lab);
   if (t.tag) {
     const tg = el('text', { x:x1+pad-14, y:y0-pad-14+22, 'text-anchor':'end', class:'terr-tag' });
     tg.style.setProperty('--ts', t.h);
     tg.textContent = t.tag;
-    g.appendChild(tg);
+    terrLabelLayer.appendChild(tg);
   }
   terrLayer.appendChild(g);
 });
@@ -412,6 +432,7 @@ const edgeEls = edges.map((e) => {
   return p;
 });
 svg.appendChild(edgeLayer);
+svg.appendChild(terrLabelLayer);
 
 const nodeLayer = el('g', {});
 nodes.forEach(n => {
@@ -464,10 +485,13 @@ function highlight(id) {
 function renderDetail(id) {
   const n = byId[id];
   const cvar = statusColor[n.status];
-  const conns = adj[id].map(a => {
-    const v = a.dir === 'out' ? verb[a.kind] : (a.kind==='entails'?'← entails':a.kind==='discharges'?'← discharged by':'← rested on by');
-    return `<div class="c"><span class="verb">${v}</span><span class="to">${byId[a.other].label}</span></div>`;
-  }).join('');
+  const conns = adj[id]
+    .slice()
+    .sort((a, b) => (a.dir === b.dir ? 0 : a.dir === 'in' ? -1 : 1))
+    .map(a => {
+      const [arrow, word] = relPhrase[a.dir + '-' + a.kind];
+      return `<div class="c"><span class="verb ${a.kind}">${arrow} ${word}</span><span class="to">${byId[a.other].label}</span></div>`;
+    }).join('');
   detail.innerHTML = `
     <span class="badge" style="color:var(${cvar});border-color:var(${cvar})">${statusName[n.status]}${n.tag?` · <span class="tag">${n.tag}</span>`:''}</span>
     <p class="title">${n.label}</p>
