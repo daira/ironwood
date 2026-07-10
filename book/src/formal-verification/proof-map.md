@@ -1,11 +1,6 @@
 # Proof Map
 
-One connected picture of the verifier-soundness proof. The **spine** runs down the
-left as the neutral river — from an accepting proof to the top-level **verifier
-soundness** capstones; the **territories** around it are the machinery that
-discharges its assumptions. Edges are typed — **entails** (solid), **discharges**
-(dashed), **rests on** (dotted, into the out-of-Lean assumptions). Click any node
-to trace its connections and read its Lean anchor.
+One connected picture of the verifier-soundness proof.
 
 <iframe id="proofmap-frame" src="proof-map-embed.html" title="Interactive proof structure map"
   loading="lazy"
