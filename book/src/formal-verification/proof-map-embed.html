@@ -83,8 +83,8 @@
   .chip .dot { width: 9px; height: 9px; border-radius: 50%; }
   .chip:focus-visible, .node:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  .mapwrap { background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; overflow: auto; box-shadow: var(--shadow); }
-  svg.map { display: block; width: 100%; min-width: 1180px; height: auto; }
+  .mapwrap { background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
+  svg.map { display: block; width: 100%; min-width: 0; height: auto; }
 
   .terr { fill: var(--th); opacity: .5; stroke: var(--ts); stroke-width: 1; stroke-dasharray: 3 5; rx: 16; }
   .terr-label { font-size: 15px; text-transform: uppercase; letter-spacing: .14em; font-weight: 700; fill: var(--ts); opacity: 1; }

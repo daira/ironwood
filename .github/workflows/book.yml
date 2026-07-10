@@ -57,6 +57,13 @@ jobs:
         with:
           tool: mdbook@0.4.52,mdbook-katex@0.9.4,mdbook-mermaid@0.16.2,mdbook-admonish@1.20.0
 
+      - name: Fetch pinned proof-stack source
+        run: git fetch --no-tags origin pull/31/head
+
+      - name: Validate proof journey data
+        run: python3 validate-proof-journey.py
+        working-directory: book
+
       - name: Build Ironwood book
         # Run from within book/ so the todo preprocessor's relative
         # command path resolves.

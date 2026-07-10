@@ -2,12 +2,33 @@
 
 One connected picture of the verifier-soundness proof.
 
-<iframe id="proofmap-frame" src="proof-map-embed.html" title="Interactive proof structure map"
-  loading="lazy"
-  style="width:100%; height:760px; border:1px solid rgba(128,140,170,.35); border-radius:12px; margin:0.6rem 0;">
-</iframe>
+<style>
+.proofmap-shell {
+  position: relative;
+  left: 50%;
+  width: min(1440px, calc(100vw - var(--sidebar-width, 300px) - 5rem));
+  transform: translateX(-50%);
+  margin: 0.6rem 0;
+}
+.proofmap-shell iframe {
+  display: block;
+  width: 100%;
+  height: 900px;
+  border: 1px solid rgba(128,140,170,.35);
+  border-radius: 8px;
+}
+@media (max-width: 1080px) {
+  .proofmap-shell { width: calc(100vw - 1.5rem); }
+}
+</style>
 
-[Open the full-width map ↗](proof-map-embed.html) &nbsp;·&nbsp; New to the terms? See the [**Glossary**](glossary.md).
+<div class="proofmap-shell">
+  <iframe id="proofmap-frame" src="proof-map-embed.html" title="Interactive proof structure map"
+    loading="lazy">
+  </iframe>
+</div>
+
+Watch the [**Proof Journey**](proof-journey.md). &nbsp;·&nbsp; New to the terms? See the [**Glossary**](glossary.md).
 
 <script>
 // Theme sync: forward the book's active theme (mdBook toggle) to the embedded map iframe.
