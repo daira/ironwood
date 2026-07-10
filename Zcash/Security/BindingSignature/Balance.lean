@@ -79,8 +79,7 @@ Under hardness of the discrete-log relation problem, that cannot happen, so the 
 theorem relation_of_imbalance (V R bvk : M) (A B bsk : F)
     (hA : A ≠ 0)
     (hExtract : bvk = bsk • R) (hSum : bvk = A • V + B • R) :
-    A ≠ 0 ∧ A • V + (B - bsk) • R = 0 := by
-  refine ⟨hA, ?_⟩
+    A • V + (B - bsk) • R = 0 := by
   rw [smul_value_eq_smul_rand V R bvk A B bsk hExtract hSum, ← add_smul]
   have hc : (bsk - B) + (B - bsk) = (0 : F) := by ring
   rw [hc, zero_smul]
@@ -98,19 +97,29 @@ theorem imbalance_yields_discrete_log (V R bvk : M) (A B bsk : F) (hA : A ≠ 0)
 /-- A nontrivial `F`-linear (discrete-log) relation between the value base `V` and the randomness
 base `R`: scalars `(a, b)` not both zero with `a • V + b • R = 0`. The content of the binding
 reduction is that imbalance allows constructing such a relation explicitly. -/
-def HasNontrivialRelation (V R : M) : Prop := ∃ a b : F, (a ≠ 0 ∨ b ≠ 0) ∧ a • V + b • R = 0
+structure NontrivialRelation (V R : M) where
+  a : F
+  b : F
+  relation : a • V + b • R = 0
+  nontrivial : a ≠ 0 ∨ b ≠ 0
 
 /-- **Balance reduction (field level).** From RedDSA extractability (`bvk = bsk • R`) and the
 binding-key decomposition (`bvk = A • V + B • R`), with no other cryptographic hypothesis:
 *either* the net value coefficient is zero (`A = 0`, balance modulo the scalar-field order),
 *or* the bundle exhibits a nontrivial discrete-log relation between `V` and `R`. -/
-theorem value_coeff_zero_reduction (V R bvk : M) (A B bsk : F)
-    (hExtract : bvk = bsk • R) (hSum : bvk = A • V + B • R) :
-    A = 0 ∨ HasNontrivialRelation (F := F) V R := by
-  by_cases hA : A = 0
-  · exact Or.inl hA
-  · obtain ⟨hA', hrel⟩ := relation_of_imbalance V R bvk A B bsk hA hExtract hSum
-    exact Or.inr ⟨A, B - bsk, Or.inl hA', hrel⟩
+def value_coeff_zero_reduction (V R bvk : M) (A B bsk : F)
+    (hExtract : bvk = bsk • R) (hSum : bvk = A • V + B • R)
+    (hA : A ≠ 0) : NontrivialRelation (F := F) V R :=
+  let hRel := relation_of_imbalance V R bvk A B bsk hA hExtract hSum
+  { a := A,
+    b := B - bsk,
+    relation := by
+      subst hExtract
+      simp_all
+    nontrivial := by
+      subst hExtract
+      simp_all only [ne_eq, not_false_eq_true, true_or]
+  }
 
 /-! ### Integer balance: range / no-overflow lift
 
