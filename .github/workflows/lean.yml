@@ -59,7 +59,7 @@ jobs:
       # `defaultTargets = ["Zcash", "FixtureCheck"]`. Building `FixtureCheck`
       # elaborates `Zcash.Snark.Fingerprint.Fixture`, whose
       # `fingerprint_matches := by native_decide` compiles and *runs* the Lean
-      # verifier `assemble` on the captured proof: this is the authoritative,
+      # verifier `assemble` on the captured proof. This is the authoritative,
       # whole-path computability check (anything noncomputable on that path
       # fails to compile), and `Zcash.Snark.Fingerprint.TrustBoundary`
       # additionally pins the theorem's sorry-freeness and axiom set.
