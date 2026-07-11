@@ -4,7 +4,7 @@ import Zcash.Snark.Core.Challenges
 import Zcash.Snark.Verifier.Assemble
 
 /-!
-# Fiat-Shamir: the challenge schedule (hash hand-waved)
+# Fiat–Shamir: the challenge schedule (hash hand-waved)
 
 The deployed verifier is non-interactive: each challenge is a hash of the transcript absorbed so far,
 rather than a fresh verifier coin. The hash is Blake2b (`transcript.rs`, personalization
@@ -16,14 +16,14 @@ formalize neither Blake2b nor the random-oracle reduction.
 
 The schedule — which proof elements are absorbed before each challenge is squeezed — transcribed from
 `plonk/verifier.rs`, `multiopen/verifier.rs`, and `commitment/verifier.rs`. This makes precise the
-sense in which the deployed verifier is the Fiat-Shamir image of the interactive one
+sense in which the deployed verifier is the Fiat–Shamir image of the interactive one
 (`Zcash.Snark.Challenges` as genuine coins): the two differ only in the source of the challenges, and
 `deriveChallenges` is that source. `nonInteractiveFingerprint` is then the deployed verifier's MSM,
 `assemble` at the FS-derived challenges.
 
 ## Assumptions
 
-* The Fiat-Shamir assumption (the random-oracle step) — that these hashed challenges carry the
+* The Fiat–Shamir assumption (the random-oracle step) — that these hashed challenges carry the
   interactive verifier's soundness to the non-interactive setting. This is the explicit hand-wave. In
   the fingerprint match the challenges are taken from the captured real transcript, so the match never
   re-derives them and does not depend on this assumption.
@@ -31,13 +31,13 @@ sense in which the deployed verifier is the Fiat-Shamir image of the interactive
 
 namespace Zcash.Snark
 
-/-- An element absorbed into the Fiat-Shamir transcript: a commitment (group point, via `common_point`
+/-- An element absorbed into the Fiat–Shamir transcript: a commitment (group point, via `common_point`
 / `read_point`) or a scalar (via `common_scalar` / `read_scalar`). -/
 inductive TranscriptElt (F G : Type*) where
   | point : G → TranscriptElt F G
   | scalar : F → TranscriptElt F G
 
-/-- The Fiat-Shamir hash, hand-waved: squeezes a field challenge from the transcript absorbed so far.
+/-- The Fiat–Shamir hash, hand-waved: squeezes a field challenge from the transcript absorbed so far.
 In the deployed verifier this is Blake2b; neither it nor the random-oracle reduction is modeled. -/
 structure FiatShamir (F G : Type*) where
   squeeze : List (TranscriptElt F G) → F
@@ -74,12 +74,11 @@ def absorbLookup {F G : Type*} (e : LookupEval F) : List (TranscriptElt F G) :=
   [.scalar e.productEval, .scalar e.productNextEval, .scalar e.permutedInputEval,
    .scalar e.permutedInputInvEval, .scalar e.permutedTableEval]
 
-/-- Derive the verifier's challenges by Fiat-Shamir, following the deployed schedule
-(`plonk/verifier.rs` → `multiopen/verifier.rs` → `commitment/verifier.rs`). After each squeeze the
-challenge is appended to the transcript so consecutive squeezes differ — a modeling choice; halo2's
-deployed Blake2b transcript instead separates squeezes with a domain-prefix byte
-(`BLAKE2B_PREFIX_CHALLENGE`) rather than re-absorbing the challenge. `init` is the pre-absorbed prefix
-(the verifying-key hash and instance commitments). -/
+/-- Derive the verifier's challenges by Fiat–Shamir, following the deployed schedule
+(`plonk/verifier.rs` → `multiopen/verifier.rs` → `commitment/verifier.rs`). Modeling choice: each
+squeezed challenge is re-absorbed so consecutive squeezes differ, where deployed Blake2b instead
+uses a domain-prefix byte (`BLAKE2B_PREFIX_CHALLENGE`). `init` is the pre-absorbed prefix (the
+verifying-key hash and instance commitments). -/
 def deriveChallenges {shape : Shape} {F G : Type*} [Zero F] (fs : FiatShamir F G)
     (init : List (TranscriptElt F G)) (ps : ProofString shape F G) : Challenges shape.k F :=
   -- advice commitments → θ
@@ -128,10 +127,9 @@ def deriveChallenges {shape : Shape} {F G : Type*} [Zero F] (fs : FiatShamir F G
     x1 := x1, x2 := x2, x3 := x3, x4 := x4, xi := xi, z := z,
     ipaRound := fun j => ipaRes.2.getD j.val 0 }
 
-/-- The deployed (non-interactive) verifier's fingerprint MSM: `assemble` at the Fiat-Shamir
-challenges (the multiopen grouping is re-derived in Lean by `constructIntermediateSets`). The
-Fiat-Shamir assumption (the random-oracle step) is what carries the interactive verifier's soundness to
-this non-interactive MSM. -/
+/-- The deployed (non-interactive) verifier's fingerprint MSM: `assemble` at the Fiat–Shamir
+challenges. The Fiat–Shamir assumption (the random-oracle step) is what carries the interactive
+verifier's soundness to this non-interactive MSM. -/
 def nonInteractiveFingerprint {shape : Shape} {F G : Type*} [Field F] [DecidableEq F] [DecidableEq G]
     [Inhabited G] (fs : FiatShamir F G) (init : List (TranscriptElt F G))
     (vk : VerifyingKey shape F G) (ps : ProofString shape F G) : Msm shape.k F G :=

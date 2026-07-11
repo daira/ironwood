@@ -56,12 +56,12 @@ def compressExprs {F : Type*} [CommRing F] (fixedEvals adviceEvals instanceEvals
     (theta : F) (exprs : List (Expr F)) : F :=
   exprs.foldl (fun acc e => acc * theta + e.eval fixedEvals adviceEvals instanceEvals) (0 : F)
 
-/-- One chunk of the permutation argument's running rule (halo2 `permutation/verifier.rs`, the
-running-product term in `Evaluated::expressions`): `(left − right) · (1 − (l_last + l_blind))`, where
-`left` folds `eval + β·permEval + γ` over
-the chunk's `(columnEval, permEval)` pairs starting from `z(ωx)`, and `right` folds `eval + δ_cur + γ`
-over the column evals starting from `z(x)` with `δ_cur` beginning at `β·x·δ^(chunkIndex·chunkLen)` and
-multiplied by `δ` each column. -/
+/-- One chunk's step of the permutation argument's running product `z` (halo2
+`permutation/verifier.rs`): moving down one row, `z` multiplies in each column's factor
+`value + β·name + γ` under the column's own cell name and divides out the same factor under the
+name `σ` assigns it. Over the whole table the two must cancel — the multiset identity that
+`Soundness/Permutation.lean` turns into the copy constraints. Switched off on the last/blinding
+rows. -/
 def permChunkExpression {F : Type*} [Field F] (beta gamma x delta : F) (chunkLen chunkIndex : ℕ)
     (set : PermSetEval F) (pairs : List (F × F)) (lLast lBlind : F) : F :=
   let left := pairs.foldl (fun acc p => acc * (p.1 + beta * p.2 + gamma)) set.nextEval
@@ -70,10 +70,10 @@ def permChunkExpression {F : Type*} [Field F] (beta gamma x delta : F) (chunkLen
     (set.eval, deltaStart)).1
   (left - right) * (1 - (lLast + lBlind))
 
-/-- The permutation argument's constraint values (halo2 `permutation/verifier.rs` `expressions`): the
-first-set rule `l₀·(1 − z₀)`, the last-set rule `(z_l² − z_l)·l_last`, the inter-set rules
-`(zᵢ − z_{i−1}(ω^last x))·l₀`, and the per-chunk running rule. `chunks` pairs each set with its
-`(columnEval, permEval)` list (VK-fixed column→eval layout zipped with the common evals). -/
+/-- The permutation argument's constraint values (halo2 `permutation/verifier.rs` `expressions`):
+the running product must start at `1` and end at `0` or `1`, consecutive sets must chain (each
+set's start equals the previous set's end), and every chunk must satisfy the step rule
+(`permChunkExpression`). `chunks` pairs each set with its `(columnEval, permEval)` list. -/
 def permutationExpressions {F : Type*} [Field F] (sets : List (PermSetEval F))
     (chunks : List (PermSetEval F × List (F × F))) (beta gamma x delta : F) (chunkLen : ℕ)
     (l0 lLast lBlind : F) : List F :=
@@ -83,10 +83,11 @@ def permutationExpressions {F : Type*} [Field F] (sets : List (PermSetEval F))
   ++ ((List.range chunks.length).zip chunks).map
       (fun p => permChunkExpression beta gamma x delta chunkLen p.1 p.2.1 p.2.2 lLast lBlind)
 
-/-- The lookup argument's constraint values (halo2 `lookup/verifier.rs` `expressions`): the first/last
-rules on the product `z`, the product rule
-`(z(ωx)·(a'+β)·(s'+γ) − z·(compress(input)+β)·(compress(table)+γ))·active`, and the two permuted-column
-rules. `active = 1 − (l_last + l_blind)`; `inputExprs`/`tableExprs` are the VK-fixed lookup expressions. -/
+/-- The lookup argument's constraint values (halo2 `lookup/verifier.rs` `expressions`): the running
+product must start at `1` and end at `0` or `1`; its step multiplies in the compressed input/table
+factors and divides out the permuted columns' `(a'+β)·(s'+γ)`; and the permuted columns must
+satisfy the two run-structure rules that `Soundness/Lookup.run_structure` consumes as hypotheses.
+`active = 1 − (l_last + l_blind)` switches rules off on the last/blinding rows. -/
 def lookupExpressions {F : Type*} [Field F] (le : LookupEval F) (inputExprs tableExprs : List (Expr F))
     (fixedEvals adviceEvals instanceEvals : ℕ → F) (theta beta gamma l0 lLast lBlind : F) : List F :=
   let active := 1 - (lLast + lBlind)

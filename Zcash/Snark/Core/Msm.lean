@@ -14,7 +14,8 @@ the linear combination
   `(∑ᵢ gScalarsᵢ • gᵢ) + wScalar • w + uScalar • u + Σ (c • P)`,
 
 and the verifier's verdict is `eval urs m = 0`. This is the exact symbolic combination — the
-polynomial-coefficient form of the fingerprint; a random evaluation of it is a separate soundness tool.
+polynomial-coefficient form of the fingerprint; summarizing it by a random evaluation instead is a
+separate tool (`Zcash.Snark.Fingerprint.SchwartzZippel`).
 
 `zero`, `appendTerm`, `scale`, and `add` are the accumulation operations the verifier builds the MSM
 with (halo2 `MSM::{append_term, scale, add_msm}`). Everything stays generic over `[Field F]` and an
@@ -39,10 +40,10 @@ namespace Msm
 def zero (k : ℕ) (F G : Type*) [Zero F] : Msm k F G :=
   { gScalars := fun _ => 0, wScalar := 0, uScalar := 0, other := [] }
 
-/-- Append a `(scalar, point)` term for a proof commitment (halo2 `append_term`). Unlike halo2's `MSM`,
-this models no container-level dedup — it neither drops identity points nor merges same-base terms. The
-fingerprint compares term lists up to reordering, which is eval-equivalent, so a passing match means the
-captured proof's bases are distinct and non-identity. -/
+/-- Append a `(scalar, point)` term for a proof commitment (halo2 `append_term`). Unlike halo2's
+`MSM`, this models no container-level dedup — it neither drops identity points nor merges
+same-base terms — so a passing fingerprint match additionally certifies that the captured proof's
+bases were distinct and non-identity (otherwise the two term lists could not agree). -/
 def appendTerm {k : ℕ} {F G : Type*} (c : F) (P : G) (m : Msm k F G) : Msm k F G :=
   { m with other := (c, P) :: m.other }
 

@@ -8,6 +8,8 @@ The permutation `σ` that the permutation argument (`Permutation.lean`) operates
 from the circuit's copy constraints, so that its cycles are exactly the equality-constraint classes.
 This file verifies that construction.
 
+## The algorithm
+
 The algorithm is implemented by
 [`Assembly::copy`](https://github.com/zcash/halo2/blob/261faaccd5a30c19bb8468600841a0dac305adf5/halo2_proofs/src/plonk/permutation/keygen.rs#L45-L100)
 in `plonk/permutation/keygen.rs`; its design is described in section
@@ -20,25 +22,24 @@ To add `left ≡ right`:
 * otherwise swap `mapping(left)` and `mapping(right)`, i.e. replace the permutation `π` by
   `π * (left right)`.
 
-We model this as `build`, a fold of `step` over the constraint list starting from the identity. The
-halo2 `aux` / `sizes` arrays are a [disjoint-set](https://en.wikipedia.org/wiki/Disjoint-set_data_structure)
-structure that makes the same-cycle test and the cycle-walk efficient. How the same-cycle test is
-implemented —as long as it is correct— does not affect the resulting permutation, so we model the test
-by `SameCycle` directly. The size comparison (union by size) only chooses which cycle to relabel —a
-performance optimization that also does not affect the resulting permutation— so it is elided.
+We model this as `build`, a fold of `step` over the constraint list starting from the identity.
+The halo2 `aux` / `sizes` arrays are a
+[disjoint-set](https://en.wikipedia.org/wiki/Disjoint-set_data_structure) structure that makes
+the same-cycle test and the cycle-walk efficient; neither how the test is implemented (as long
+as it is correct) nor the union-by-size choice of which cycle to relabel affects the resulting
+permutation, so we model the test by `SameCycle` directly and elide the size comparison.
 
-The mathematical heart is `sameCycle_mul_swap`: composing `π` with the transposition `(a b)` **merges**
-the cycles of `a` and `b` when they are in different cycles (and would **split** a cycle if they were
-already in the same one — which is precisely why the "already in the same cycle" check is essential;
-cf. the design doc's "Broken alternatives"). The main result `build_correct` then says the cycles of the
-built permutation are exactly the equality-constraint classes (the `Relation.EqvGen` closure of the
-constraint pairs). Composed with `Permutation.perm_copy_constraints`, this closes the loop: the verifier
-enforces equality on exactly the cells the circuit declared equal.
+## What is proved
 
-`value_eq_of_constraints` performs that composition: the verifier-accepting multiset identity for
-`σ = build cs`, together with the copy constraints forcing `x ≡ y`, gives `value x = value y`.
+The mathematical heart is `sameCycle_mul_swap`: composing `π` with the transposition `(a b)`
+merges the cycles of `a` and `b` when they lie in different cycles — and would split a cycle if
+they shared one, which is why the same-cycle check above is essential. The main result
+`build_correct` says the cycles of the built permutation are exactly the equality-constraint
+classes (the `Relation.EqvGen` closure of the constraint pairs). Composed with
+`Permutation.perm_copy_constraints` (as `value_eq_of_constraints`), this closes the loop: the
+verifier enforces equality on exactly the cells the circuit declared equal.
 
-Formalization gaps relative to the Halo 2 implementation:
+## Formalization gaps (relative to the Halo 2 implementation)
 * The `aux` and `sizes` arrays are not modelled. A bug in updating `aux`, or failing to map through
   `aux` in the same-cycle check, could affect soundness. The use of `sizes` is only a performance
   optimization.
@@ -233,11 +234,9 @@ def step (π : Perm α) (ab : α × α) : Perm α :=
   if π.SameCycle ab.1 ab.2 then π else π * swap ab.1 ab.2
 
 /-- Run the algorithm over a list of copy constraints, starting from the identity permutation (every
-cell its own 1-cycle). The halo2 implementation keeps the cycle partition in a disjoint-set structure
-(`aux` / `sizes`) purely to make the `SameCycle` test and the merge efficient. The order in which
-constraints are processed does not affect the final cycle *partition* (it is the equivalence closure
-either way; `build_correct`), though it does affect the exact permutation — see the module docstring's
-formalization gaps. -/
+cell its own 1-cycle). Constraint order does not affect the final cycle *partition* — it is the
+equivalence closure either way (`build_correct`) — though it does affect the exact permutation; see
+the module docstring's formalization gaps. -/
 def build : List (α × α) → Perm α
   | [] => 1
   | ab :: rest => step (build rest) ab

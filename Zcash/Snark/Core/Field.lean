@@ -4,29 +4,27 @@ import CompElliptic.Fields.Pasta
 /-!
 # The verifier's scalar field `F_p`
 
-An Orchard proof is a halo2 proof over the Vesta curve (the verifier group `E_q`): commitments are Vesta
-points, and challenges and evaluations are elements of Vesta's scalar field `F_p`. By the Pasta
-construction `F_p = vesta::Scalar = pallas::Base = ZMod p`, where `p = PALLAS_BASE_CARD ≈ 2²⁵⁴`. The
-proof system lives over Vesta, so the field is the Pallas *base* order `PALLAS_BASE_CARD` — not the
-Pallas *scalar* order `PALLAS_SCALAR_CARD` of the value commitment.
+An Orchard proof is a halo2 proof over the Vesta curve (the verifier group `E_q`): commitments are
+Vesta points; challenges and evaluations live in Vesta's scalar field `F_p`. By the Pasta
+construction `F_p = vesta::Scalar = pallas::Base = ZMod p` with `p = PALLAS_BASE_CARD ≈ 2²⁵⁴` —
+the Pallas *base* order, not the Pallas *scalar* order of the value commitment.
 
-`F_p` is where the fingerprint MSM's scalars live. The development stays generic over `[Field F]`;
-this module just pins the instantiation `F_p = ZMod p` and records `|F_p| = p`, the cardinality the
-Schwartz–Zippel bound (`Zcash.Snark.Fingerprint.SchwartzZippel`) divides by. We use `F_p` abstractly; its primality
-is CompElliptic's certified fact. The Pasta field construction itself is not needed for the soundness
-argument; the one curve-level fact that is — the Vesta group order — is derived from the Hasse bound in
-`Zcash.Snark.Soundness.Vesta` (via CompElliptic), not assumed.
+The development stays generic over `[Field F]`; this module pins the instantiation `F_p = ZMod p`
+and records `|F_p| = p` (`card_Fp`), the cardinality the Schwartz–Zippel bound divides by. The
+Pasta construction itself is not needed for soundness; the one curve-level fact that is — the
+Vesta group order — is derived from the Hasse bound in `Zcash.Snark.Soundness.Vesta`, not
+assumed.
 -/
 
 namespace Zcash.Snark
 
-/-- The verifier's scalar field order `p = |E_q|`: the Vesta scalar field order, equal to the Pallas
-base field order `PALLAS_BASE_CARD`. Imported from `CompElliptic.Fields.Pasta`, where it carries a
-machine-checked Lucas/Pratt primality certificate. -/
+/-- The verifier's scalar field order `p = |E_q|` — the Vesta scalar order, equal to the Pallas
+base order `PALLAS_BASE_CARD`. Imported from `CompElliptic.Fields.Pasta` with a machine-checked
+Lucas/Pratt primality certificate. -/
 @[reducible] def scalarFieldOrder : ℕ := CompElliptic.Fields.Pasta.PALLAS_BASE_CARD
 
-/-- The verifier's scalar field `F_p = ZMod p` (the Vesta scalar field). A field, since `p` is prime
-(instance supplied by CompElliptic). -/
+/-- The verifier's scalar field `F_p = ZMod p` (the Vesta scalar field); a field, since `p` is
+prime (CompElliptic's instance). -/
 abbrev Fp := ZMod scalarFieldOrder
 
 instance : Fact (Nat.Prime scalarFieldOrder) :=

@@ -1,7 +1,7 @@
 import Mathlib
 
 /-!
-# The grand-product → multiset kernel (permutation & lookup soundness)
+# The grand-product-to-multiset kernel (permutation & lookup soundness)
 
 The shared algebraic core that both halo2's permutation and lookup *argument* soundness reduce to.
 Both arguments enforce their relation by a **grand product of factors linear in the challenges**, and
@@ -11,22 +11,17 @@ multiset identity.
 This file isolates that core over Mathlib `Polynomial`. Nothing here needs computability. The proof
 leans on Mathlib's roots / unique-factorization theory:
 
-* `prod_X_add_u_inj` (**products can represent multisets**): `∏ (X + uᵢ) = ∏ (X + wᵢ)` over an
-  integral domain ⟹ `{uᵢ} = {wᵢ}`; that is, the function representing multisets as products is
-  injective. A product of linear factors is determined by its roots (`{-uᵢ}`); equal products ⟹
-  equal root multisets ⟹ (negation injective) equal multisets.
-* `card_eval_prod_eq_le` (**univariate Schwartz–Zippel at a point**): for `s ≠ t` over a finite field,
-  the challenges `β` where the *field* products `∏ (xᵢ + β)` collide are roots of the (nonzero, by
-  `prod_X_add_u_inj`) difference polynomial — a "bad set" of size `≤ max |s| |t|`.
-* `prod_pair_inj` (**products can represent multisets of pairs**):
-  `∏ (vᵢ + nᵢ·β + γ) = ∏ (cⱼ + dⱼ·β + γ) ⟹ {(vᵢ,nᵢ)} = {(cⱼ,dⱼ)}`, by running `prod_X_add_u_inj`
-  over `R = F[β]` (variable `γ`) and reading off the two coefficients of each linear factor.
-  This is what the permutation argument needs (matching `(value, name)` *pairs*, not just sums);
-  the lookup argument uses `prod_X_add_u_inj` twice with independent `β`, `γ`.
+* `prod_X_add_u_inj` (**products can represent multisets**): equal products of the monic linear
+  factors `X + uᵢ` force equal multisets `{uᵢ}` — a product is determined by its roots.
+* `card_eval_prod_eq_le` (**univariate Schwartz–Zippel at a point**): for distinct multisets, the
+  challenges where the field products collide form a bad set of size `≤ max |s| |t|`.
+* `prod_pair_inj` (**products can represent multisets of pairs**): the same for factors carrying
+  `(value, name)` pairs, by running the first lemma over `R = F[β]` — what the permutation
+  argument needs; the lookup argument uses `prod_X_add_u_inj` twice with independent `β`, `γ`.
 
 The per-argument wrappers — telescoping the running product over the domain, the boundary / blinding-row
-rules, and (for lookup) the permuted-column structure — build on this and will live alongside in
-`Permutation.lean` / `Lookup.lean`.
+rules, and (for lookup) the permuted-column structure — build on this in `Permutation.lean` /
+`Lookup.lean`, where the structural steps are proven and the telescoping step remains open.
 -/
 
 namespace Zcash.Snark
@@ -59,11 +54,9 @@ theorem natDegree_prod_X_add_u {R : Type*} [CommRing R] [IsDomain R] (m : Multis
   rw [map_X_add_u_eq, natDegree_multiset_prod_X_sub_C_eq_card, Multiset.card_map]
 
 /-- **Multiset-from-product, over an integral domain.**
-Products of the monic linear factors `X + uᵢ` are equal iff the multisets of the `uᵢ` agree.
-The reusable kernel behind both the permutation and lookup soundness arguments.
-
-Idea: over a domain a product of linear factors is determined by its roots, which here are `{-uᵢ}`;
-equal products ⟹ equal root multisets ⟹ (negation is injective) equal multisets. -/
+Products of the monic linear factors `X + uᵢ` are equal iff the multisets of the `uᵢ` agree — the
+reusable kernel behind both the permutation and lookup soundness arguments. Idea: over a domain a
+product is determined by its roots, here `{-uᵢ}`, and negation is injective. -/
 theorem prod_X_add_u_inj {R : Type*} [CommRing R] [IsDomain R] {s t : Multiset R}
     (h : (s.map (fun u => X + C u)).prod = (t.map (fun u => X + C u)).prod) : s = t := by
   have heq : s.map (fun u => -u) = t.map (fun u => -u) := by

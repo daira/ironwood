@@ -3,39 +3,41 @@ import Mathlib
 /-!
 # The proof string as opaque field and group elements
 
-Auditing the verify call graph established that, after canonical decoding, the halo2 verifier consumes
-the proof purely as opaque group elements (Vesta points, `E_q`) and field elements (`F_p`): it reads
-them, squeezes Fiat-Shamir challenges, assembles one MSM, and checks `MSM = identity`, never branching
-on a proof element's value. This module captures that post-decoding proof string as plain data,
-cross-referenced against the reads in `plonk/verifier.rs` (and the sub-argument verifiers). Byte-level
-canonical scalar/point decoding, including rejection of invalid encodings and points at infinity, is
-outside this typed layer.
+After canonical decoding, the halo2 verifier consumes the proof purely as opaque group elements
+(Vesta points, `E_q`) and field elements (`F_p`): it reads them, squeezes Fiat–Shamir challenges,
+assembles one MSM, and checks `MSM = identity`, never branching on a proof element's value
+(established by auditing the verify call graph). This module captures that post-decoding proof
+string as plain data, cross-referenced against the reads in `plonk/verifier.rs`. Byte-level
+decoding — including rejection of invalid encodings and points at infinity — is outside this
+typed layer.
 
-A single Orchard proof covers a whole bundle: `Proof::verify` ([TalDerei/orchard](https://github.com/TalDerei/orchard) `src/circuit.rs`) passes
-all `N` actions' instances to `plonk::verify_proof`, which reads the per-action elements
-`num_proofs = N` times against one shared set of challenges and a single multiopen / IPA opening. So
-the proof string splits into per-sub-proof vectors (indexed by `Fin numProofs`) and shared elements.
-The verifier reads all sub-proofs' advice, then all sub-proofs' lookups, and so on, which
-`Fin numProofs → Fin _ → …` reproduces; the field order below is the read order.
+A single Orchard proof covers a whole bundle: `Proof::verify`
+([TalDerei/orchard](https://github.com/TalDerei/orchard) `src/circuit.rs`) passes all `N` actions'
+instances to `plonk::verify_proof`, which reads the per-action elements `N` times against one
+shared set of challenges and a single multiopen/IPA opening. So the proof string splits into
+per-sub-proof vectors and shared elements; the field order below is the verifier's read order.
 
-`Shape` records the per-circuit counts (read off the verifying key) that fix every vector length;
-`ProofString shape F G` is the proof itself, over a field carrier `F` and a group carrier `G`. Both
-stay generic, so the symbolic verifier (`Zcash.Snark.Verifier.Checks`) is field- and group-agnostic; the
-concrete instantiation is `F = F_p`, `G = E_q`.
+`Shape` records the per-circuit counts that fix every vector length; `ProofString shape F G` is
+the proof itself, generic over the field and group carriers, with concrete instantiation
+`F = F_p`, `G = E_q`.
 -/
 
 namespace Zcash.Snark
 
 /-- Per-circuit element counts, read off the verifying key; they fix every vector length in a
-`ProofString` and the read schedule. Fields: `k` (`log₂` of the domain size, `n = 2 ^ k`, and the IPA
-opening has `k` rounds); `numProofs` (sub-proofs verified together — the bundle's Orchard action
-count, `instances.len()`); `numAdviceColumns` (`vk.cs.num_advice_columns`, `10` for Orchard);
-`numLookups` (`vk.cs.lookups`); `numPermutationSets` (permutation product-commitment chunks,
-`vk.cs.permutation.columns.chunks(cs_degree − 2)`); `numPermutationColumns`
-(`vk.permutation.commitments`, one common eval each); `numQuotientPieces`
-(`vk.domain.get_quotient_poly_degree()`); `numInstanceQueries`, `numAdviceQueries`, `numFixedQueries`
-(`vk.cs.{instance,advice,fixed}_queries`); and `numPointSets` (multi-open point sets, one `u` scalar
-each). -/
+`ProofString` and the read schedule.
+
+* `k` — `log₂` of the domain size (`n = 2 ^ k`); the IPA opening has `k` rounds.
+* `numProofs` — sub-proofs verified together: the bundle's Orchard action count (`instances.len()`).
+* `numAdviceColumns` — `vk.cs.num_advice_columns` (`10` for Orchard).
+* `numLookups` — `vk.cs.lookups`.
+* `numPermutationSets` — permutation product-commitment chunks,
+  `vk.cs.permutation.columns.chunks(cs_degree − 2)`.
+* `numPermutationColumns` — `vk.permutation.commitments`, one common eval each.
+* `numQuotientPieces` — `vk.domain.get_quotient_poly_degree()`.
+* `numInstanceQueries` / `numAdviceQueries` / `numFixedQueries` —
+  `vk.cs.{instance,advice,fixed}_queries`.
+* `numPointSets` — multiopen point sets, one `u` scalar each. -/
 structure Shape where
   k : ℕ
   numProofs : ℕ

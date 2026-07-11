@@ -1,4 +1,16 @@
--- The Orchard SNARK verifier fingerprint.
+-- The Orchard SNARK verifier: transcription and soundness.
+--
+-- Library layout:
+-- * `Core/` — the shared objects: the scalar field `F_p`, the verifier group and URS, the typed
+--   proof string, the challenges, and the fingerprint MSM.
+-- * `Verifier/` — the transcription layer: the deployed halo2 verifier's MSM assembly as a pure
+--   Lean function (queries, expressions, multiopen, IPA fold, Fiat–Shamir schedule).
+-- * `Fingerprint/` — the faithfulness cross-check: the captured-fixture match (`native_decide`,
+--   loaded in the auto-generated `Fixture.lean`) plus the Schwartz–Zippel and batch-RLC bounds.
+-- * `Soundness/` — the soundness argument: IPA special soundness and extraction, binding as a
+--   DLR reduction, the constraint layer, the permutation/lookup kernels, and the composition
+--   (`Soundness/Main.lean`), instantiated at Vesta (`Soundness/Vesta.lean`).
+--
 -- Import modules here that should be built as part of the library.
 
 import Zcash.Snark.Core.Field

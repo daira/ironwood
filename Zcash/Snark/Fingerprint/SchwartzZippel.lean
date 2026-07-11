@@ -11,11 +11,10 @@ the verifier's field `F_p`. (The *realized* fingerprint in this development is t
 coefficient comparison, `Zcash.Snark.Fingerprint.Match`; this random-evaluation variant is not yet
 instantiated at the concrete coefficients — see below.)
 
-For a nonzero polynomial of total degree `d` in `n` variables over `F_p`, the fraction of `F_pⁿ` on
-which it vanishes is at most `d / p` (`p = scalarFieldOrder ≈ 2²⁵⁴`). So a false match between two
-distinct degree-`d` fingerprints occurs with probability `≤ d / p` — negligible for any modest degree
-against `p ≈ 2²⁵⁴`. (Applying this to the concrete fingerprint polynomial — the MSM
-coefficients as a polynomial in the challenges and proof scalars — is the next step.)
+For a nonzero polynomial of total degree `d` in `n` variables over `F_p`, the fraction of `F_pⁿ`
+on which it vanishes is at most `d / p` (`p = scalarFieldOrder ≈ 2²⁵⁴`) — so a false match
+between distinct degree-`d` fingerprints is negligible. (Applying this to the concrete
+fingerprint polynomial remains open; see `Zcash.Snark.Fingerprint.Match`.)
 -/
 
 namespace Zcash.Snark

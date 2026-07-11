@@ -4,9 +4,10 @@ import Zcash.Snark.Core.Group
 /-!
 # Knowledge soundness: the polynomial-commitment / inner-product-argument layer
 
-Steps 1–2 established faithfulness: the deployed verifier collapses to the fingerprint MSM, and the
-Lean assembly reproduces it (the match). This module begins soundness — that an accepting proof implies
-the prover knows a valid witness — via the special soundness of the inner-product argument (IPA), the
+The transcription layer established faithfulness: the deployed verifier collapses to the
+fingerprint MSM, and the Lean assembly reproduces it (the captured match,
+`Zcash.Snark.Fingerprint`). This module begins soundness — that an accepting proof implies the
+prover knows a valid witness — via the special soundness of the inner-product argument (IPA), the
 cryptographic core of the halo2 opening.
 
 The IPA proves knowledge of a coefficient vector `a` (a polynomial) behind a commitment `P = ⟨a, G⟩`
@@ -20,11 +21,12 @@ The fingerprint MSM's `g`-part is this commitment, so the layer is expressed dir
   (`commitGen_add_left` / `commitGen_smul_left` in `Zcash.Snark.Soundness.CommitFold`, via
   `commit_eq_commitGen`) this is the algebra the round extractor folds with.
 
-The IPA's witness fold is 2-special-sound per round: from two accepting transcripts that share the round commitments
-`(Lⱼ, Rⱼ)` but answer distinct challenges `uⱼ`, the round's witness folds back, and recursing over the
-`k` rounds extracts an `a` satisfying `IpaRelation`. Building that extractor is the next phase; the
-per-round folding rests on the linearity proved here. Curve-group binding stays an explicit assumption —
-modelled as discrete-log-relation (DLR) hardness (`commitmentBinding_iff_no_relation`), per project scope.
+The IPA's witness fold is 2-special-sound per round: from two accepting transcripts that share the
+round commitments `(Lⱼ, Rⱼ)` but answer distinct challenges `uⱼ`, the round's witness is uniquely
+recoverable, and recursing over the `k` rounds extracts an `a` satisfying `IpaRelation`. The
+extractor is built in `Zcash.Snark.Soundness.Extraction`; the per-round folding rests on the
+linearity proved here. Curve-group binding stays an explicit assumption — modelled as
+discrete-log-relation (DLR) hardness (`commitmentBinding_iff_no_relation`), per project scope.
 -/
 
 namespace Zcash.Snark
@@ -68,7 +70,7 @@ def foldVec {m : ℕ} (lo hi : Fin m → F) (u : F) : Fin m → F := lo + u • 
 def roundExtract {m : ℕ} (f₁ f₂ : Fin m → F) (u₁ u₂ : F) : (Fin m → F) × (Fin m → F) :=
   (f₁ - u₁ • ((u₁ - u₂)⁻¹ • (f₁ - f₂)), (u₁ - u₂)⁻¹ • (f₁ - f₂))
 
-/-- 2-special soundness of one IPA round: the folded vectors at two distinct challenges `u₁ ≠ u₂`
+/-- **2-special soundness of one IPA round.** The folded vectors at two distinct challenges `u₁ ≠ u₂`
 (produced from the same halves `lo, hi`) determine the halves — `roundExtract` recovers exactly
 `(lo, hi)`. A prover answering two challenges consistently is thus committed to a unique pair that folds
 back to the round witness, the algebraic heart of the IPA's special soundness. -/
@@ -102,21 +104,20 @@ generators are `F`-linearly independent). On the Vesta curve this is the discret
 (DLR) hardness assumption — kept as an explicit hypothesis (project scope), not proved here,
 mirroring how `Zcash/Security/BindingSignature/Balance.lean` records its cryptographic assumptions.
 
-Given binding, the witness the special-soundness extractor produces (`roundExtract_correct` per round,
-composed over the `k` rounds) is the unique opening, so an accepting proof demonstrates knowledge of
-exactly one polynomial. The complementary constraint layer — that the opened polynomials satisfy the
-circuit's gate/permutation/lookup identities — is the Schwartz–Zippel bound
-(`Zcash.Snark.fingerprint_schwartz_zippel`): a violated identity passes the random-point check only with
+Given binding, the witness the special-soundness extractor produces (`roundExtract_correct` per
+round, composed over the `k` rounds) is the unique opening, so an accepting proof demonstrates
+knowledge of exactly one polynomial. The complementary constraint layer — that the opened
+polynomials satisfy the circuit's identities — is the Schwartz–Zippel bound (`quotientCheck_sound`
+in `Soundness/Constraints.lean`): a violated identity passes the random-point check only with
 probability `≤ d/p`. -/
 
-/-- Commitment binding (the curve assumption, kept explicit): the URS commitment is injective —
-coefficient vectors with equal commitments are equal, i.e. the generators `g` are `F`-linearly
-independent. On Vesta this is the discrete-log-relation (DLR) hardness assumption
-(`commitmentBinding_iff_no_relation`). -/
+/-- Commitment binding (the curve assumption, kept explicit): the URS commitment is injective,
+i.e. the generators `g` are `F`-linearly independent. On Vesta this is discrete-log-relation
+(DLR) hardness (`commitmentBinding_iff_no_relation`). -/
 @[reducible] def CommitmentBinding (urs : URS G) : Prop :=
   Function.Injective (commit (F := F) urs)
 
-/-- Under binding, the IPA opening is unique: two witnesses opening the same commitment to the same
+/-- **Under binding, the IPA opening is unique.** Two witnesses opening the same commitment to the same
 value are equal. So special-soundness extraction (which yields an opening) pins down the witness. -/
 theorem ipaRelation_unique {urs : URS G} {P : G} {b : Fin (2 ^ urs.k) → F} {v : F}
     {a a' : Fin (2 ^ urs.k) → F} (hb : CommitmentBinding (F := F) urs)
