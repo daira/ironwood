@@ -44,6 +44,18 @@ The convention:
   witnesses) keep their content as `Prop`s: the breaking pair is bound in the statement
   rather than existentially closed.
 
+The principle's scope is **computational reductions**: it applies wherever the argument is
+that an efficient adversary achieving some effect would thereby violate a computational
+assumption. For that argument to have content, the reduction must be the kind of object an
+adversary's output can be fed through — a computable function producing the break the
+assumption forbids. It is not a constructivism requirement on the development at large.
+`Classical.choice` is used throughout Mathlib and throughout the `Prop`-valued reasoning
+here, and Lean is not intended to support purely constructive proofs. The point is that
+choice must not be what *produces the break data*: a `noncomputable` reduction could
+satisfy its type by using classical choice to "find" the break, proving nothing about
+efficient adversaries. Ordinary theorems, and the `Prop` certificate fields inside break
+structures, remain freely classical.
+
 ## Trust discipline
 
 Following the pattern of CompElliptic's
