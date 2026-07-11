@@ -4,6 +4,7 @@
 import Zcash.Security.BindingSignature.Balance
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
+import Zcash.Security.BindingSignature.TrustBoundary
 import Zcash.Security.Ledger.Merkle
 import Zcash.Security.Ledger.Statement
 import Zcash.Security.Ledger.TrustBoundary

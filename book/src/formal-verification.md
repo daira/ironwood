@@ -28,9 +28,14 @@ The convention adopted in
 * **Break events are structures carrying the breaking data** (the colliding queries, the
   relation coefficients), with `Prop` certificates attached. Examples:
   `RandomOracle.Collision` and `RandomOracle.CollisionUpToSign` (the ±-collision shape produced by
-  coordinate-extractor arguments), `Ledger.HashCollision`, `Ledger.NoteCommitBreak`.
+  coordinate-extractor arguments — and the Merkle tree-hash collision computed by `Merkle.collisionOfWrongLeaf` is a `Collision` directly), `Ledger.NoteCommitBreak`, and
+  `BindingSignature.NontrivialRelation` (the discrete-log relation computed from a
+  non-balancing verifying bundle).
 * **Reductions are plain computable `def`s** producing them, such as
-  `Merkle.collisionOfWrongLeaf` and `noteCommitBreakOfNe`. A structure with data fields
+  `Merkle.collisionOfWrongLeaf`, `noteCommitBreakOfNe`, and the
+  `NontrivialRelation.ofImbalance` family (through to the per-pool Orchard and Sapling
+  bundle capstones, whose balance statements are the contrapositives under discrete-log
+  relation hardness). A structure with data fields
   cannot be inhabited by proof-irrelevant existence, and a plain `def` cannot conjure the
   data from mere existence via choice — the compiler enforces this, so `noncomputable` is
   not permitted for these definitions.
@@ -72,10 +77,12 @@ These boundaries are *checked at build time*, not merely documented:
   `Lean.ofReduceBool`. Pinning it keeps that claim verified rather than remembered, which
   is the point of the discipline: unpinned claims about the trusted base drift silently as
   toolchains change.
-* `Zcash.Security.Ledger.TrustBoundary` pins the break reductions the same way, to `propext`
-  and `Quot.sound` only — in particular no `Classical.choice`, connecting to the
-  breaks-as-computed-data convention above: the break data cannot have been conjured from
-  mere propositional existence.
+* `Zcash.Security.Ledger.TrustBoundary` and
+  `Zcash.Security.BindingSignature.TrustBoundary` pin the break reductions the same way.
+  The ledger reductions rest on `propext` and `Quot.sound` only; the binding-signature
+  relation reductions additionally record `Classical.choice`, entering only through erased
+  `Prop` certificate fields — in both cases the definitions compile as plain `def`s, so the
+  break data cannot have been conjured from mere propositional existence.
 * CI builds both as part of the default targets, and `fingerprint_matches`'s
   `native_decide` compiles and runs the verifier, so anything `noncomputable` on the
   assembled-verifier path fails the build.
