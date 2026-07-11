@@ -25,8 +25,9 @@ The IPA's witness fold is 2-special-sound per round: from two accepting transcri
 round commitments `(Lⱼ, Rⱼ)` but answer distinct challenges `uⱼ`, the round's witness is uniquely
 recoverable, and recursing over the `k` rounds extracts an `a` satisfying `IpaRelation`. The
 extractor is built in `Zcash.Snark.Soundness.Extraction`; the per-round folding rests on the
-linearity proved here. Curve-group binding stays an explicit assumption — modelled as
-discrete-log-relation (DLR) hardness (`commitmentBinding_iff_no_relation`), per project scope.
+linearity proved here. Opening uniqueness holds up to a computed discrete-log relation
+(`NontrivialDLRelation.ofIpaOpenings` in `Zcash.Snark.Soundness.CommitFold`); DLR hardness is
+consumed only at the computational layer.
 -/
 
 namespace Zcash.Snark
@@ -110,18 +111,5 @@ knowledge of exactly one polynomial. The complementary constraint layer — that
 polynomials satisfy the circuit's identities — is the Schwartz–Zippel bound (`quotientCheck_sound`
 in `Soundness/Constraints.lean`): a violated identity passes the random-point check only with
 probability `≤ d/p`. -/
-
-/-- Commitment binding (the curve assumption, kept explicit): the URS commitment is injective,
-i.e. the generators `g` are `F`-linearly independent. On Vesta this is discrete-log-relation
-(DLR) hardness (`commitmentBinding_iff_no_relation`). -/
-@[reducible] def CommitmentBinding (urs : URS G) : Prop :=
-  Function.Injective (commit (F := F) urs)
-
-/-- **Under binding, the IPA opening is unique.** Two witnesses opening the same commitment to the same
-value are equal. So special-soundness extraction (which yields an opening) pins down the witness. -/
-theorem ipaRelation_unique {urs : URS G} {P : G} {b : Fin (2 ^ urs.k) → F} {v : F}
-    {a a' : Fin (2 ^ urs.k) → F} (hb : CommitmentBinding (F := F) urs)
-    (h : IpaRelation urs P b v a) (h' : IpaRelation urs P b v a') : a = a' :=
-  hb (h.1.trans h'.1.symm)
 
 end Zcash.Snark

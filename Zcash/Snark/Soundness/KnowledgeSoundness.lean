@@ -11,24 +11,25 @@ The capstone: an accepting proof demonstrates knowledge of a witness satisfying 
 composes the proven pieces of the soundness layer —
 
 * `extract_correct` — the IPA extractor recovers the witness from an accepting transcript tree;
-* `commitGen_round` + `ipaRelation_unique` — folding preserves the commitment and the opening is unique
-  under binding (so an accepting transcript yields a consistent tree);
+* `commitGen_round` — folding preserves the commitment (so an accepting transcript yields a
+  consistent tree); opening uniqueness holds up to a computed discrete-log relation
+  (`NontrivialDLRelation.ofIpaOpenings`);
 * `quotientCheck_sound` + `Expr.eval_toPoly` — the verifier's gate check, via Schwartz–Zippel, forces the
   committed polynomials to satisfy the circuit's constraint identity (off a `≤ d/p` bad set).
 
 `SnarkRelation` is the relation the SNARK proves (the witness opens the commitment and the committed
 polynomials satisfy the constraint identity); `knowledge_sound` assembles the proven lemmas into "the
-extractor recovers the unique witness satisfying the relation"; `soundness_error` is the residual
-`≤ d/p` Schwartz–Zippel error.
+extractor recovers a witness satisfying the relation, unique up to a computed discrete-log
+relation"; `soundness_error` is the residual `≤ d/p` Schwartz–Zippel error.
 
 ## Assumptions
 
 This layer is sound relative to the following, each kept explicit rather than hidden:
 
-* **DLR hardness** (discrete-log relations on the Vesta generators) — the binding hypothesis
-  `CommitmentBinding`. Modeled as a reduction: `relation_of_collision` proves a binding violation yields
-  a nontrivial relation, and `commitmentBinding_iff_no_relation` proves binding is exactly DLR hardness
-  (the reduction is proven; only the hardness is claimed).
+* **DLR hardness** (discrete-log relations on the Vesta generators) — consumed only at the
+  computational layer: a second distinct opening yields a computed nontrivial relation
+  (`NontrivialDLRelation.ofIpaOpenings`), the object the hardness assumption forbids an
+  efficient adversary to produce.
 * **Fiat–Shamir / Blake2b** as a random oracle — challenges are treated as uniform and unpredictable; the
   hash and the random-oracle reduction are not modeled. The capstone's current assumption
   (`ExtractableFromAcceptance`) is in fact stronger — it bundles the IPA knowledge-soundness conclusion,
@@ -95,18 +96,18 @@ theorem circuitSatViaGates_of_check {k : ℕ} (fixedCols : ℕ → Polynomial Fp
   constraint_identity_of_accept _ hpoly deg x hcheck hgood
 
 /-- **Knowledge soundness**, relative to its named hypotheses: given a consistent transcript tree
-(`hcons`), an opening (`hopen`), and circuit satisfaction (`hsat`), the extractor recovers the
-unique witness satisfying `SnarkRelation` — `extract_correct` for extraction,
-`ipaRelation_unique` (binding) for uniqueness. `hcons` and `hsat` are assumed, not derived from
-acceptance; deriving them (`accepting_fold_eq`, `constraint_identity_of_accept`) is the open
+(`hcons`), an opening (`hopen`), and circuit satisfaction (`hsat`), the extractor recovers a
+witness satisfying `SnarkRelation` — `extract_correct` for extraction. The witness is unique up
+to a computed discrete-log relation: a second distinct opening yields
+`NontrivialDLRelation.ofIpaOpenings`. `hcons` and `hsat` are assumed, not derived from
+acceptance; deriving them (`accepting_fold_eq`, `constraint_identity_of_accept`) is open
 composition work. -/
-theorem knowledge_sound (urs : URS G) (hbind : CommitmentBinding (F := Fp) urs)
+theorem knowledge_sound (urs : URS G)
     {t : Tree Fp urs.k} {a : Fin (2 ^ urs.k) → Fp} (hcons : Consistent t a)
     {P : G} {b : Fin (2 ^ urs.k) → Fp} {v : Fp} (hopen : IpaRelation urs P b v a)
     {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop} (hsat : circuitSat a) :
-    extract t = a ∧ SnarkRelation urs P b v circuitSat a
-      ∧ ∀ a', IpaRelation urs P b v a' → a' = a :=
-  ⟨extract_correct t a hcons, ⟨hopen, hsat⟩, fun _ h' => ipaRelation_unique hbind h' hopen⟩
+    extract t = a ∧ SnarkRelation urs P b v circuitSat a :=
+  ⟨extract_correct t a hcons, ⟨hopen, hsat⟩⟩
 
 /-- The residual soundness error of the constraint layer (re-export of `quotientCheck_sound`): a
 committed-polynomial set that violates the constraint identity is accepted for at most a `deg / |F|`

@@ -52,7 +52,8 @@ theorem commitGen_smul_gen {n : ℕ} (c : F) (g : Fin n → G) (a : Fin n → F)
 /-- **One IPA round's commitment fold (completeness).** Folding the witness by `u⁻¹` and the generators
 by `u` sends the parent commitment to the folded commitment plus the two cross terms `⟨aLo, gHi⟩` and
 `⟨aHi, gLo⟩` — exactly the `L`/`R` the verifier accounts for. So the honest witness folds consistently;
-with `ipaRelation_unique` (binding), the prover's response must be this fold. -/
+a prover response deviating from this fold exhibits a computed discrete-log relation
+(`NontrivialDLRelation.ofIpaOpenings`). -/
 theorem commitGen_round {m : ℕ} (gLo gHi : Fin m → G) (aLo aHi : Fin m → F) {u : F} (hu : u ≠ 0) :
     commitGen (gLo + u • gHi) (aLo + u⁻¹ • aHi)
       = (commitGen gLo aLo + commitGen gHi aHi)
@@ -91,52 +92,47 @@ theorem accepting_fold_eq_foldVec {m : ℕ} (gLo gHi : Fin m → G) (aLo aHi a' 
 The trust boundary underlying commitment binding: rather than assuming the commitment is binding
 outright, binding is modelled as a reduction to discrete-log-relation (DLR) hardness at the URS
 generators — the same shape as the binding-signature argument's `NontrivialRelation.ofImbalance`.
-`relation_of_collision` proves the counterfactual (breaking binding produces a nontrivial
-relation among the generators), and `commitmentBinding_iff_no_relation` makes precise that
-`CommitmentBinding` is exactly DLR hardness — so the assumption is the standard, named one, with
-the reduction itself proven. These results are the seed for migrating the deployed binding to a
-DLR reduction (extending to the `U`, `W` generators), in place of an independence assumption.
-Discharging the relation against DLR hardness — the computational/AGM layer — is outside this
+`NontrivialDLRelation` carries such a relation as data (breaks as computed data — see the
+Ironwood Book,
+<https://zcash.github.io/ironwood/formal-verification.html#breaks-as-computed-data>); an
+∃-closed relation Prop would be vacuously true, since relations always exist among the
+generators of a compressing commitment. `NontrivialDLRelation.ofCollision` computes the
+relation from a binding collision, and `.ofIpaOpenings` from two distinct IPA openings of
+one commitment — so opening uniqueness holds up to a computed relation. Discharging the
+relation against DLR hardness — the computational/AGM layer — is outside this
 development. -/
-
-/-- A discrete-log relation among the URS generators: a coefficient vector the generators send to `0`.
-It is nontrivial when `r ≠ 0`. DLR hardness is the assumption that no feasible adversary can find a
-nontrivial relation. -/
-@[reducible] def DLRelation (urs : URS G) (r : Fin (2 ^ urs.k) → F) : Prop :=
-  commitGen urs.g r = 0
 
 /-- Additivity over subtraction in the witness. -/
 theorem commitGen_sub {n : ℕ} (g : Fin n → G) (a a' : Fin n → F) :
     commitGen g (a - a') = commitGen g a - commitGen g a' := by
   simp only [commitGen, Pi.sub_apply, sub_smul, Finset.sum_sub_distrib]
 
-/-- **The binding reduction (counterfactual).** A binding collision — two distinct openings of one
-commitment — yields a nontrivial discrete-log relation `a − a'` among the URS generators. So DLR hardness
-closes binding, exactly as `NontrivialRelation.ofImbalance` closes the binding-signature argument: the collision
-is reduced to a relation the hardness assumption forbids. -/
-theorem relation_of_collision (urs : URS G) {a a' : Fin (2 ^ urs.k) → F}
-    (hcol : commit urs a = commit urs a') (hne : a ≠ a') :
-    a - a' ≠ 0 ∧ DLRelation urs (a - a') := by
-  refine ⟨sub_ne_zero.mpr hne, ?_⟩
-  show commitGen urs.g (a - a') = 0
-  rw [commitGen_sub, ← commit_eq_commitGen, ← commit_eq_commitGen, hcol, sub_self]
+/-- A nontrivial discrete-log relation among the URS generators, as data: a nonzero coefficient
+vector the generators send to `0`. DLR hardness is the assumption that no feasible adversary can
+find one; the reductions below compute it from the corresponding break. -/
+structure NontrivialDLRelation (urs : URS G) where
+  coeffs : Fin (2 ^ urs.k) → F
+  nontrivial : coeffs ≠ 0
+  relation : commitGen urs.g coeffs = 0
 
-/-- **Binding is exactly DLR hardness.** The commitment is binding iff every discrete-log relation among
-the generators is trivial — so assuming DLR hardness is assuming `CommitmentBinding`, and the binding
-hypothesis used by `ipaRelation_unique` / `knowledge_sound` is precisely the standard, named hardness
-assumption (with `relation_of_collision` the proven reduction). -/
-theorem commitmentBinding_iff_no_relation (urs : URS G) :
-    CommitmentBinding (F := F) urs ↔ ∀ r : Fin (2 ^ urs.k) → F, DLRelation urs r → r = 0 := by
-  constructor
-  · intro hb r hr
-    have hr' : commitGen urs.g r = 0 := hr
-    apply hb
-    rw [commit_eq_commitGen, commit_eq_commitGen, hr']
-    simp [commitGen]
-  · intro hnr a a' hcol
-    have hr : DLRelation urs (a - a') := by
-      show commitGen urs.g (a - a') = 0
-      rw [commitGen_sub, ← commit_eq_commitGen, ← commit_eq_commitGen, hcol, sub_self]
-    exact sub_eq_zero.mp (hnr _ hr)
+/-- **The binding reduction, as a computed relation.** A binding collision — two distinct
+openings of one commitment — yields the nontrivial discrete-log relation `a − a'` among the URS
+generators, exactly as `NontrivialRelation.ofImbalance` closes the binding-signature argument.
+DLR hardness closes binding as the contrapositive: the collision is reduced to a relation the
+hardness assumption forbids. -/
+def NontrivialDLRelation.ofCollision (urs : URS G) {a a' : Fin (2 ^ urs.k) → F}
+    (hcol : commit urs a = commit urs a') (hne : a ≠ a') :
+    NontrivialDLRelation (F := F) urs :=
+  ⟨a - a', sub_ne_zero.mpr hne, by
+    rw [commitGen_sub, ← commit_eq_commitGen, ← commit_eq_commitGen, hcol, sub_self]⟩
+
+/-- **IPA opening uniqueness, up to a computed relation.** Two distinct witnesses opening the
+same commitment to the same value yield a computed nontrivial discrete-log relation among the
+URS generators. Special-soundness extraction therefore pins down the witness up to such a
+relation. -/
+def NontrivialDLRelation.ofIpaOpenings {urs : URS G} {P : G} {b : Fin (2 ^ urs.k) → F} {v : F}
+    {a a' : Fin (2 ^ urs.k) → F} (h : IpaRelation urs P b v a) (h' : IpaRelation urs P b v a')
+    (hne : a ≠ a') : NontrivialDLRelation (F := F) urs :=
+  .ofCollision urs (h.1.trans h'.1.symm) hne
 
 end Zcash.Snark

@@ -32,6 +32,7 @@ import Zcash.Snark.Soundness.Lookup
 import Zcash.Snark.Soundness.Permutation
 import Zcash.Snark.Soundness.PermutationConstruction
 import Zcash.Snark.Soundness.InnerProduct
+import Zcash.Snark.Soundness.TrustBoundary
 import Zcash.Snark.Soundness.Extraction
 import Zcash.Snark.Soundness.Constraints
 import Zcash.Snark.Soundness.CommitFold

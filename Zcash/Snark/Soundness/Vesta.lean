@@ -66,13 +66,13 @@ noncomputable instance vestaFpModule [h : Fact VestaOrder] : Module Fp VestaG :=
 hence the `Fp`-module structure, follows). Inherits the conditional status — see that docstring.
 The deployed Vesta capstones are `orchard_verifier_sound_vesta_opening`/`_constraint` below. -/
 theorem orchard_verifier_sound_vesta_conditional [Fact (HasseBound Vesta.curve)]
-    (urs : URS VestaG) (hbind : CommitmentBinding (F := Fp) urs)
+    (urs : URS VestaG)
     {P : VestaG} {b : Fin (2 ^ urs.k) → Fp} {v : Fp} {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop}
     {accepts : Prop} (haccepts : accepts)
     (hextract : ExtractableFromAcceptance urs P b v circuitSat accepts)
     {S : Prop} (hencodes : ∀ a, SnarkRelation urs P b v circuitSat a → S) :
     S :=
-  orchard_verifier_sound_conditional urs hbind haccepts hextract hencodes
+  orchard_verifier_sound_conditional urs haccepts hextract hencodes
 
 /-- **Deployed Vesta soundness, opening derived.** `orchard_verifier_sound_deployed_opening`
 specialised to `SWPoint Vesta.curve`, the curve's `Fp`-module structure supplied by the Hasse
