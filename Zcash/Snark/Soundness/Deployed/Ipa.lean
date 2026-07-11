@@ -15,15 +15,16 @@ verified in one group equation:
   `P' = P − [v]g₀ + [ξ]S`, `S` a commitment to a random polynomial vanishing at the point. *Not
   modelled here*: the `[ξ]S` term and the value term `[-v]g₀` stay in the verifier equation and
   are folded into the opened commitment by the equation-to-tree bridge (`FiatShamirTree`), not by
-  the binding peel (`deployed_to_acceptV`).
+  the binding peel (`NontrivialRelation.ofDeployedTree`).
 
 This file supplies the binding-free scaffolding for the `U`/`W` part of that apparatus — the tree
 (`DeployedIpaTreeV`, whose nodes carry `U`/`W` data but not `S`), its projection (`projTree`), and
-the deployed accept predicate (`DeployedIpaAcceptV`). The peel (`deployed_to_acceptV`, in
-`Zcash.Snark.Soundness.Deployed.IpaPeel`) separates the combined check into the clean `g`-side
-commitment and `U`-side value checks (the `W`-side blinding identity is discarded) *or* exhibits a
-nontrivial discrete-log relation among `(g, U, W)` — the reduction form (see `The reduction form`
-in `Zcash.Snark.Soundness.Main`), closing the deployed IPA onto `ipa_soundV`.
+the deployed accept predicate (`DeployedIpaAcceptV`). The peel
+(`Zcash.Snark.Soundness.Deployed.IpaPeel`) separates the combined check into the clean `g`-side
+commitment and `U`-side value checks (the `W`-side blinding identity is discarded), closing the
+deployed IPA onto `ipa_soundV`; a check that does not separate *computes* a nontrivial
+discrete-log relation among `(g, U, W)` (`NontrivialRelation.ofDeployedTree` — see
+`The reduction form` in `Zcash.Snark.Soundness.Main`).
 -/
 
 namespace Zcash.Snark
@@ -32,8 +33,11 @@ variable {F G : Type*} [Field F] [AddCommGroup G] [Module F G]
 
 /-- A deployed 3-ary IPA transcript tree: `IpaTreeV` plus, per node, the blinding cross-terms
 `Lw`, `Rw` (the `W`-side of the prover's `L`/`R`) and, at the leaf, the synthetic blinding scalar
-`f`. The `U`/`W` generators and the binding challenge `z` are global (carried in
-`DeployedIpaAcceptV`), matching halo2 — `params.u`, `params.w`, and `z` are fixed across rounds.
+`f` and the `g`-representation `aP` of the folded commitment. `aP` is extraction content the
+bridge supplies as *data* — behind an `∃` it would be unrecoverable (see the
+breaks-as-computed-data convention in `Zcash.Security.RandomOracle`). The `U`/`W` generators and
+the binding challenge `z` are global (carried in `DeployedIpaAcceptV`), matching halo2 —
+`params.u`, `params.w`, and `z` are fixed across rounds.
 
 Label caveat: the names follow `IpaTreeV`'s fold convention, not halo2's read order. With tree
 challenge `û = uⱼ⁻¹` (so `foldGens` matches the deployed generator fold — see `sFun_fold`), a node
@@ -41,14 +45,14 @@ folds `P + û⁻¹•L + û•R = P + uⱼ•L + uⱼ⁻¹•R`; the deployed ch
 so the intended instantiation *swaps* the labels: `L := R_dep`, `R := L_dep` (likewise `Lv`/`Rv`
 and `Lw`/`Rw`). -/
 inductive DeployedIpaTreeV (F G : Type*) : ℕ → Type _ where
-  | leaf : F → F → DeployedIpaTreeV F G 0
+  | leaf : F → F → (Fin (2 ^ 0) → F) → DeployedIpaTreeV F G 0
   | node {d : ℕ} : G → G → F → F → F → F → F → F → F →
       DeployedIpaTreeV F G d → DeployedIpaTreeV F G d → DeployedIpaTreeV F G d → DeployedIpaTreeV F G (d + 1)
 
-/-- Forget the deployed blinding decorations (`Lw`, `Rw`, `f`), recovering the clean `IpaTreeV` that
+/-- Forget the deployed decorations (`Lw`, `Rw`, `f`, `aP`), recovering the clean `IpaTreeV` that
 `ipa_soundV` consumes. -/
 def projTree : {d : ℕ} → DeployedIpaTreeV F G d → IpaTreeV F G d
-  | _, .leaf c _ => .leaf c
+  | _, .leaf c _ _ => .leaf c
   | _, .node L R Lv Rv _ _ u₁ u₂ u₃ t₁ t₂ t₃ =>
       .node L R Lv Rv u₁ u₂ u₃ (projTree t₁) (projTree t₂) (projTree t₃)
 
@@ -59,13 +63,13 @@ vector `b`, the commitment `P` (by `L`,`R`), the value `v` (by `Lv`,`Rv`) and th
 The leaf *reformulates* halo2's folded check as
 `P + [z·v]U + [blind]W = [c]g₀ + [z·c·b₀]U + [f]W` — the value rides on `U` via the challenge `z`
 (sound for `z ≠ 0` under binding), where halo2's literal check bakes the value into `g₀` and keeps
-`[ξ]S`; the faithful flat form is `DeployedIpaVerifierEq`. The leaf demands `P` in its
-`g`-representation `⟨aP, g⟩` — bridge-supplied extraction content, inventoried at
+`[ξ]S`; the faithful flat form is `DeployedIpaVerifierEq`. The leaf pins `P` to the tree's
+`g`-representation data `aP` (`P = ⟨aP, g⟩`) — bridge-supplied extraction content, inventoried at
 `FiatShamirTree`. -/
 def DeployedIpaAcceptV : {d : ℕ} → (Fin (2 ^ d) → G) → (Fin (2 ^ d) → F) → G → G → F → G → F → F →
     DeployedIpaTreeV F G d → Prop
-  | 0, g, b, U, W, z, P, v, blind, .leaf c f =>
-      ∃ aP : Fin (2 ^ 0) → F, P = commitGen g aP ∧
+  | 0, g, b, U, W, z, P, v, blind, .leaf c f aP =>
+      P = commitGen g aP ∧
         commitGen g aP + (z * v) • U + blind • W
           = commitGen g (fun _ => c) + (z * commitGen b (fun _ => c)) • U + f • W
   | _ + 1, g, b, U, W, z, P, v, blind, .node L R Lv Rv Lw Rw u₁ u₂ u₃ t₁ t₂ t₃ =>

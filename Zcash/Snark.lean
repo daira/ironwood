@@ -45,6 +45,7 @@ import Zcash.Snark.Soundness.Deployed.Binding
 import Zcash.Snark.Soundness.Deployed.Fold
 import Zcash.Snark.Soundness.Deployed.Ipa
 import Zcash.Snark.Soundness.Deployed.IpaPeel
+import Zcash.Snark.Soundness.Deployed.TrustBoundary
 import Zcash.Snark.Soundness.Deployed.Verification
 import Zcash.Snark.Soundness.Main
 import Zcash.Snark.Soundness.Vesta

@@ -57,15 +57,16 @@ instance factVestaOrder_of_hasse [Fact (HasseBound Vesta.curve)] : Fact VestaOrd
 
 /-- Given the Vesta group order (`Fact VestaOrder`), the curve is an `Fp`-module
 (`AddCommGroup.zmodModule` on the `p`-torsion). Conditional — it fires only when the order `Fact`
-is in scope; see the module docstring's Hasse-bound note. -/
-noncomputable instance vestaFpModule [h : Fact VestaOrder] : Module Fp VestaG :=
+is in scope; see the module docstring's Hasse-bound note. Computable (curve addition and the
+`ZMod`-action both are), so the break reductions stay plain `def`s at the concrete curve. -/
+instance vestaFpModule [h : Fact VestaOrder] : Module Fp VestaG :=
   AddCommGroup.zmodModule h.out
 
 /-- **Conditional soundness at Vesta.** `orchard_verifier_sound_conditional` specialised to
 `SWPoint Vesta.curve`; the curve assumption is `Fact (HasseBound Vesta.curve)` (the group order,
 hence the `Fp`-module structure, follows). Inherits the conditional status — see that docstring.
-The deployed Vesta capstones are `orchard_verifier_vesta_opening_reduction`/`_constraint_reduction`
-below. -/
+The deployed Vesta capstones are `orchard_verifier_vesta_opening_of_forked`/`_constraint_of_forked`
+below, with `NontrivialRelation.ofUnopenedForkVesta` the computed break. -/
 theorem orchard_verifier_sound_vesta_conditional [Fact (HasseBound Vesta.curve)]
     (urs : URS VestaG)
     {P : VestaG} {b : Fin (2 ^ urs.k) → Fp} {v : Fp} {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop}
@@ -75,44 +76,58 @@ theorem orchard_verifier_sound_vesta_conditional [Fact (HasseBound Vesta.curve)]
     S :=
   orchard_verifier_sound_conditional urs haccepts hextract hencodes
 
-/-- **Deployed opening over Vesta, as a binding reduction.**
-`orchard_verifier_deployed_opening_reduction` specialised to `SWPoint Vesta.curve`: from an
-accepting fingerprint, *either* the SNARK relation holds for the pinned
-`deployedCommitment`/`multiopenValue`, *or* the Vesta generators `(g, U, W)` admit an exhibited
-discrete-log relation (the reduction form — see `Soundness.Main`). Same hypotheses as the
-abstract theorem, plus the Hasse bound; for `hcirc`'s unsatisfiable shape see the section note
-in `Soundness.Main`. -/
-theorem orchard_verifier_vesta_opening_reduction [Fact (HasseBound Vesta.curve)] [DecidableEq VestaG] [Inhabited VestaG]
+/-- **The deployed binding reduction over Vesta, as a computed relation.**
+`NontrivialRelation.ofUnopenedFork` specialised to `SWPoint Vesta.curve`: a forked transcript
+whose projection is not cleanly accepted computes a nontrivial discrete-log relation among the
+Vesta generators `(g, U, W)`, which DLR hardness forbids (the contrapositive reading — see
+`The reduction form` in `Soundness.Main`). -/
+def NontrivialRelation.ofUnopenedForkVesta [Fact (HasseBound Vesta.curve)] [DecidableEq VestaG]
+    [Inhabited VestaG]
+    {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp VestaG)
+    (ps : ProofString shape Fp VestaG) (ch : Challenges shape.k Fp)
+    {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp} (hz : z ≠ 0)
+    (fs : ForkedTranscript urs hk vk ps ch b z blind)
+    (hne : ¬ IpaAcceptV urs.g b (deployedCommitment urs hk vk ps ch) (multiopenValue vk ps ch)
+      (projTree fs.tree)) :
+    NontrivialRelation (F := Fp) urs.g urs.u urs.w :=
+  NontrivialRelation.ofUnopenedFork urs hk vk ps ch hz fs hne
+
+/-- **Deployed opening over Vesta, given a clean fork.**
+`orchard_verifier_deployed_opening_of_forked` specialised to `SWPoint Vesta.curve`: same
+hypotheses as the abstract theorem, plus the Hasse bound. The clean-accept hypothesis is what
+DLR hardness forces (`NontrivialRelation.ofUnopenedForkVesta`); for `hcirc`'s unsatisfiable
+shape see the section note in `Soundness.Main`. -/
+theorem orchard_verifier_vesta_opening_of_forked [Fact (HasseBound Vesta.curve)] [DecidableEq VestaG] [Inhabited VestaG]
     {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp VestaG)
     (ps : ProofString shape Fp VestaG) (ch : Challenges shape.k Fp)
     {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp} {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop}
-    (hz : z ≠ 0)
-    (haccepts : DeployedAccepts urs hk vk ps ch)
-    (hFS : FiatShamirTree urs hk vk ps ch b z blind)
+    (fs : ForkedTranscript urs hk vk ps ch b z blind)
+    (hclean : IpaAcceptV urs.g b (deployedCommitment urs hk vk ps ch) (multiopenValue vk ps ch)
+      (projTree fs.tree))
     (hcirc : ∀ a, IpaRelation urs (deployedCommitment urs hk vk ps ch) b (multiopenValue vk ps ch) a →
       circuitSat a)
     {S : Prop} (hencodes : ∀ a, SnarkRelation urs (deployedCommitment urs hk vk ps ch) b
       (multiopenValue vk ps ch) circuitSat a → S) :
-    S ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w :=
-  orchard_verifier_deployed_opening_reduction urs hk vk ps ch hz haccepts hFS hcirc hencodes
+    S :=
+  orchard_verifier_deployed_opening_of_forked urs hk vk ps ch fs hclean hcirc hencodes
 
 open Polynomial in
-/-- **Deployed opening and constraint over Vesta, as a binding reduction.**
-`orchard_verifier_deployed_constraint_reduction` specialised to `SWPoint Vesta.curve`: the opening
+/-- **Deployed opening and constraint over Vesta, given a clean fork.**
+`orchard_verifier_deployed_constraint_of_forked` specialised to `SWPoint Vesta.curve`: the opening
 for the pinned `deployedCommitment`/`multiopenValue`, and `circuitSat` (concrete
 `circuitSatViaGates`) from the verifier's gate point-check `hquot` lifted by Schwartz–Zippel
-(`hgood`). Same reduction-form conclusion and hypotheses as the abstract theorem, plus the Hasse
-bound; `hquot`/`hgood` share `hcirc`'s unsatisfiable shape (see the section note in
-`Soundness.Main`). -/
-theorem orchard_verifier_vesta_constraint_reduction [Fact (HasseBound Vesta.curve)] [DecidableEq VestaG] [Inhabited VestaG]
+(`hgood`). Same hypotheses as the abstract theorem, plus the Hasse bound; `hquot`/`hgood` share
+`hcirc`'s unsatisfiable shape (see the section note in `Soundness.Main`). -/
+theorem orchard_verifier_vesta_constraint_of_forked [Fact (HasseBound Vesta.curve)] [DecidableEq VestaG] [Inhabited VestaG]
     {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp VestaG)
     (ps : ProofString shape Fp VestaG) (ch : Challenges shape.k Fp)
     {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp}
     (fixedCols : ℕ → Polynomial Fp)
     (decodeAdvice decodeInstance : (Fin (2 ^ urs.k) → Fp) → (ℕ → Polynomial Fp))
-    (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp) (hz : z ≠ 0)
-    (haccepts : DeployedAccepts urs hk vk ps ch)
-    (hFS : FiatShamirTree urs hk vk ps ch b z blind)
+    (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp)
+    (fs : ForkedTranscript urs hk vk ps ch b z blind)
+    (hclean : IpaAcceptV urs.g b (deployedCommitment urs hk vk ps ch) (multiopenValue vk ps ch)
+      (projTree fs.tree))
     (hquot : ∀ a, IpaRelation urs (deployedCommitment urs hk vk ps ch) b (multiopenValue vk ps ch) a →
       quotientCheck (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates) hpoly deg x)
     (hgood : ∀ a, IpaRelation urs (deployedCommitment urs hk vk ps ch) b (multiopenValue vk ps ch) a →
@@ -122,8 +137,8 @@ theorem orchard_verifier_vesta_constraint_reduction [Fact (HasseBound Vesta.curv
     {S : Prop}
     (hencodes : ∀ a, SnarkRelation urs (deployedCommitment urs hk vk ps ch) b (multiopenValue vk ps ch)
       (circuitSatViaGates fixedCols decodeAdvice decodeInstance y gates hpoly deg) a → S) :
-    S ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w :=
-  orchard_verifier_deployed_constraint_reduction urs hk vk ps ch fixedCols decodeAdvice decodeInstance y gates
-    hpoly deg x hz haccepts hFS hquot hgood hencodes
+    S :=
+  orchard_verifier_deployed_constraint_of_forked urs hk vk ps ch fixedCols decodeAdvice
+    decodeInstance y gates hpoly deg x fs hclean hquot hgood hencodes
 
 end Zcash.Snark

@@ -14,38 +14,41 @@ verifier, in two layers:
 
 * the `_conditional` family, over an opaque `accepts : Prop`. The suffix avoids overclaiming:
   these are scaffolds, not finished soundness.
-* the deployed `_reduction` family, over the concrete accept `DeployedAccepts`: the rejecting
-  `assemble?` succeeds and its MSM — the *fingerprint*, the transcribed form of halo2's final
-  verifier check — evaluates to the group identity.
+* the deployed family, over the concrete accept `DeployedAccepts`: the rejecting `assemble?`
+  succeeds and its MSM — the *fingerprint*, the transcribed form of halo2's final verifier
+  check — evaluates to the group identity.
 
 ## The deployed route
 
-Ending at `orchard_verifier_deployed_opening_reduction`/`_constraint_reduction`, the route derives
-the IPA opening and the gate constraint with `P`/`v` *pinned* to the proof's
+The route derives the IPA opening and the gate constraint with `P`/`v` *pinned* to the proof's
 `multiopenCommitment`/`multiopenValue` (read off `(vk, ps, ch)`, not free parameters):
 
 1. `deployedAccepts_verifierEq` (*proven*) — the accept entails halo2's explicit IPA verifier
    equation `DeployedIpaVerifierEq`. Fidelity of that closed form to the Rust is the
    transcription layer (`assembleFinalMsm`/`ipaFold`, checked by the fingerprint), not re-proved
    here.
-2. `FiatShamirTree` (*residual*) — the equation yields a deployed transcript tree opening the
-   pinned `P`/`v`; bundles the Fiat–Shamir forking with the extraction content it supplies
-   (inventory in its docstring).
-3. `deployed_to_acceptV` (*proven*) — the tree peels onto the clean `IpaAcceptV`, *either*
-   cleanly *or* exhibiting a discrete-log relation among `(g, U, W)`.
-4. `ipa_soundV` (*proven*) — the clean tree yields the opening witness.
+2. `FiatShamirTree` (*residual*) — the equation yields a forked transcript
+   (`ForkedTranscript`, as data): the deployed tree opening the pinned `P`/`v`; bundles the
+   Fiat–Shamir forking with the extraction content it supplies (inventory in its docstring).
+   `ForkedTranscript.ofAccepts` composes steps 1–2.
+3. The fork *either* peels cleanly onto `IpaAcceptV` — then `ipa_soundV` extracts the opening
+   witness and `orchard_verifier_deployed_opening_of_forked`/`_constraint_of_forked` conclude
+   `S` — *or* `NontrivialRelation.ofUnopenedFork` (*proven*, via
+   `NontrivialRelation.ofDeployedTree`) computes a discrete-log relation among `(g, U, W)`,
+   which DLR hardness forbids.
 
 ## The reduction form
 
-Commitment binding is load-bearing in the proofs (the peel, `deployed_to_acceptV`), but the
-statements assume no independence of `(g, U, W)`: in a prime-order group a nontrivial relation
-always *exists*, so that assumption would be false. Instead the relation is the *output* — the
-deployed conclusion is `S ∨ HasNontrivialRelation`, exhibiting a discrete-log relation rather
-than asserting soundness outright. At the concrete curve the disjunction is propositionally
-`True`; the content is the constructive extraction over an abstract module (where no relation
-need exist) plus the DLR/AGM hardness layer outside Lean — no feasible adversary can *find* a
-relation. The binding-signature argument makes the same move (`relation_of_imbalance`; see "How
-binding is expressed" in `Zcash.Security.BindingSignature.Balance`).
+Commitment binding is load-bearing in the peel, but the statements assume no independence of
+`(g, U, W)`: in a prime-order group a nontrivial relation always *exists*, so that assumption
+would be false — and a `… ∨ ∃-relation` conclusion would be propositionally `True`. Per the
+breaks-as-computed-data convention (`Zcash.Security.RandomOracle`, and the Ironwood Book's
+formal-verification conventions), the relation is instead *computed*: `NontrivialRelation`
+carries the coefficients as data, the reductions are plain `def`s, and the positive soundness
+statement is the contrapositive under DLR hardness — no efficient adversary can produce what
+`NontrivialRelation.ofUnopenedFork` computes, so the clean opening holds. The binding-signature
+argument makes the same move (`NontrivialRelation.ofImbalance` in
+`Zcash.Security.BindingSignature.Balance`).
 
 ## Assumptions (the conditional family)
 
@@ -152,8 +155,8 @@ theorem deployedAccepts_verifierEq [DecidableEq G] [Inhabited G] {shape : Shape}
 from an accepting IPA transcript tree (`IpaAcceptV`), binding-free, by 3-special soundness. So the
 bridge no longer assumes `IpaRelation`; the MSM↔equation correspondence and the `P`/`v` pinning it
 used to also absorb are discharged (`deployedAccepts_verifierEq`), and the `g`/`U`/`W` separation
-is derived (`deployed_to_acceptV`). What the bridge still absorbs beyond the rewinding is
-inventoried at `FiatShamirTree` below. -/
+is derived — its failure computes a relation (`NontrivialRelation.ofDeployedTree`). What the
+bridge still absorbs beyond the rewinding is inventoried at `FiatShamirTree` below. -/
 
 /-- `IpaAcceptV` over the URS generators derives `IpaRelation`: the witness `ipa_soundV` extracts
 opens `P` and gives the inner product. Derived, not assumed. -/
@@ -173,33 +176,53 @@ abbrev deployedCommitment [DecidableEq G] [Inhabited G] {shape : Shape} (urs : U
     (ch : Challenges shape.k Fp) : G :=
   multiopenCommitment (hk ▸ urs.g) urs.w urs.u vk ps ch
 
+/-- A forked deployed transcript, as data: the tree the Fiat–Shamir forking would produce,
+with its accept certificate, opening the pinned `deployedCommitment`/`multiopenValue` — the
+actual `P`/`v` from `(vk, ps, ch)`, not free parameters. Carried as data rather than behind an
+`∃`, so the peel can *compute* a discrete-log relation from it (see `The reduction form` in the
+module docstring). -/
+structure ForkedTranscript [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
+    (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp) (b : Fin (2 ^ urs.k) → Fp) (z blind : Fp) where
+  tree : DeployedIpaTreeV Fp G urs.k
+  accepts : DeployedIpaAcceptV urs.g b urs.u urs.w z
+    (deployedCommitment urs hk vk ps ch) (multiopenValue vk ps ch) blind tree
+
 /-- The forking bridge — the *residual* assumption. Its premise is halo2's explicit verifier
 equation `DeployedIpaVerifierEq` (which `deployedAccepts_verifierEq` proves the deployed accept
-entails); its conclusion is a deployed transcript tree (`DeployedIpaAcceptV`) opening the pinned
-`deployedCommitment`/`multiopenValue` — the actual `P`/`v` from `(vk, ps, ch)`, not free
-parameters. It bundles the Fiat–Shamir *forking* with the special-soundness *extraction* content
-the forked transcripts would pin by Vandermonde over the augmented `(g, U, W)` basis, here
-arriving as bridge-supplied tree data:
+entails); it produces a `ForkedTranscript`. It bundles the Fiat–Shamir *forking* with the
+special-soundness *extraction* content the forked transcripts would pin by Vandermonde over the
+augmented `(g, U, W)` basis, here arriving as bridge-supplied tree data:
 
 (a) the rewinding producing three accepting continuations per node at distinct nonzero challenges;
 (b) the node-level `L`/`R` ↦ value/blinding decomposition (`Lv`/`Rv`/`Lw`/`Rw` — each round
     point's `(g, U, W)`-representation, which must not depend on `z`);
-(c) the leaf `g`-representation `∃ aP, P = ⟨aP, g⟩` of the folded commitment; and
+(c) the leaf `g`-representation `aP` of the folded commitment (`DeployedIpaTreeV`'s leaf data);
+    and
 (d) the adjusted-commitment step `P' = P − [v]g₀ + [ξ]S`, folding the value term `[-v]g₀` and the
     `S`/`ξ` blinding poly into the commitment the tree opens — this needs a representation of the
     adversary point `S` (ξ-side rewinding or AGM), so it is not a deterministic rewrite.
 
 Deriving (a)–(d) under random-oracle Fiat–Shamir is open. The per-leaf `g`/`U`/`W` separation is
-*derived* (`deployed_to_acceptV`) — but `S`/`ξ` is not peeled, it lives in (d). `b`/`z`/`blind`
-are bridge-mediated (the protocol fixes `b = evalVector urs.k ch.x3`, telescoping at the leaf to
-`b₀ = computeB ch.x3 ·`, and `z = ch.z`); only `P`/`v` are pinned. -/
+*derived* — its failure computes a relation (`NontrivialRelation.ofDeployedTree`) — but `S`/`ξ`
+is not peeled, it lives in (d). `b`/`z`/`blind` are bridge-mediated (the protocol fixes
+`b = evalVector urs.k ch.x3`, telescoping at the leaf to `b₀ = computeB ch.x3 ·`, and
+`z = ch.z`); only `P`/`v` are pinned. -/
 def FiatShamirTree [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
-    (b : Fin (2 ^ urs.k) → Fp) (z blind : Fp) : Prop :=
+    (b : Fin (2 ^ urs.k) → Fp) (z blind : Fp) : Type _ :=
   DeployedIpaVerifierEq (hk ▸ urs.g) urs.w urs.u vk ps ch →
-    ∃ t : DeployedIpaTreeV Fp G urs.k,
-      DeployedIpaAcceptV urs.g b urs.u urs.w z
-        (deployedCommitment urs hk vk ps ch) (multiopenValue vk ps ch) blind t
+    ForkedTranscript urs hk vk ps ch b z blind
+
+/-- The forked transcript of an accepting proof: the bridge applied to the *proven* verifier
+equation (`deployedAccepts_verifierEq`). -/
+def ForkedTranscript.ofAccepts [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
+    (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp) {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp}
+    (haccepts : DeployedAccepts urs hk vk ps ch)
+    (hFS : FiatShamirTree urs hk vk ps ch b z blind) :
+    ForkedTranscript urs hk vk ps ch b z blind :=
+  hFS (deployedAccepts_verifierEq urs hk vk ps ch haccepts)
 
 /-! ## The constraint-side hypotheses are unsatisfiable at a prime-order curve
 
@@ -212,32 +235,43 @@ unsatisfiable for the intended instantiation, not merely undischarged.
 `a`'s own point-check, never the quantified premise. Restating the constraint side over the
 *extracted* witness via the multiopen decode (`batch_open_soundV`) is still open. -/
 
-/-- **Deployed opening, as a binding reduction.** From the deployed accept: the proven
-`deployedAccepts_verifierEq` gives the explicit verifier equation; the forking bridge `hFS` turns
-it into the deployed transcript tree opening the pinned `deployedCommitment`/`multiopenValue`;
-`deployed_to_acceptV` peels the `U`/`W` apparatus onto the clean `IpaAcceptV`; and `ipa_soundV`
-extracts the opening. The conclusion: *either* `S` *or* an exhibited discrete-log relation among
-`(g, U, W)` — the reduction form (see the module docstring). `hcirc` has the unsatisfiable shape
-described in the section note above. Named assumptions: the residual bridge (`hFS`), `z ≠ 0`
-(`hz`), the circuit side (`hcirc`), and VK-correctness (`hencodes`). -/
-theorem orchard_verifier_deployed_opening_reduction [DecidableEq G] [Inhabited G] {shape : Shape}
+/-- **The deployed binding reduction, as a computed relation.** A forked transcript whose
+projection is *not* cleanly accepted computes a nontrivial discrete-log relation among the
+augmented generators — `NontrivialRelation.ofDeployedTree` at the pinned
+`deployedCommitment`/`multiopenValue`. DLR hardness forbids an efficient adversary producing
+one, so the clean accept — the hypothesis of the `_of_forked` theorems below — must hold: the
+contrapositive reading (see `The reduction form` in the module docstring). -/
+def NontrivialRelation.ofUnopenedFork [DecidableEq G] [Inhabited G] {shape : Shape}
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp) {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp} (hz : z ≠ 0)
+    (fs : ForkedTranscript urs hk vk ps ch b z blind)
+    (hne : ¬ IpaAcceptV urs.g b (deployedCommitment urs hk vk ps ch) (multiopenValue vk ps ch)
+      (projTree fs.tree)) :
+    NontrivialRelation (F := Fp) urs.g urs.u urs.w :=
+  NontrivialRelation.ofDeployedTree hz urs.g b (deployedCommitment urs hk vk ps ch)
+    (multiopenValue vk ps ch) blind fs.tree fs.accepts hne
+
+/-- **Deployed opening, given a clean fork.** From a forked transcript whose projection is
+cleanly accepted, `ipa_soundV` extracts the opening witness for the pinned
+`deployedCommitment`/`multiopenValue`; the circuit side (`hcirc`) and VK-correctness
+(`hencodes`) conclude `S`. The clean-accept hypothesis `hclean` is what DLR hardness forces —
+its failure computes a relation (`NontrivialRelation.ofUnopenedFork`). `hcirc` has the
+unsatisfiable shape described in the section note above. -/
+theorem orchard_verifier_deployed_opening_of_forked [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp}
-    {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop} (hz : z ≠ 0)
-    (haccepts : DeployedAccepts urs hk vk ps ch)
-    (hFS : FiatShamirTree urs hk vk ps ch b z blind)
+    {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop}
+    (fs : ForkedTranscript urs hk vk ps ch b z blind)
+    (hclean : IpaAcceptV urs.g b (deployedCommitment urs hk vk ps ch) (multiopenValue vk ps ch)
+      (projTree fs.tree))
     (hcirc : ∀ a, IpaRelation urs (deployedCommitment urs hk vk ps ch) b (multiopenValue vk ps ch) a →
       circuitSat a)
     {S : Prop} (hencodes : ∀ a, SnarkRelation urs (deployedCommitment urs hk vk ps ch) b
       (multiopenValue vk ps ch) circuitSat a → S) :
-    S ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  obtain ⟨t, ht⟩ := hFS (deployedAccepts_verifierEq urs hk vk ps ch haccepts)
-  rcases deployed_to_acceptV hz urs.g b (deployedCommitment urs hk vk ps ch) (multiopenValue vk ps ch)
-    blind t ht with hclean | hrel
-  · obtain ⟨a, hrel'⟩ := ipaRelation_of_acceptV urs b (deployedCommitment urs hk vk ps ch)
-      (multiopenValue vk ps ch) (projTree t) hclean
-    exact Or.inl (hencodes a ⟨hrel', hcirc a hrel'⟩)
-  · exact Or.inr hrel
+    S := by
+  obtain ⟨a, hrel⟩ := ipaRelation_of_acceptV urs b (deployedCommitment urs hk vk ps ch)
+    (multiopenValue vk ps ch) (projTree fs.tree) hclean
+  exact hencodes a ⟨hrel, hcirc a hrel⟩
 
 /-! ## `circuitSat` is derived from the verifier's gate check + Schwartz–Zippel
 
@@ -250,23 +284,22 @@ what `hgood` excludes. So `circuitSat`, instantiated to the concrete `circuitSat
 derived from the verifier's actual gate check rather than taken as an opaque hypothesis. -/
 
 open Polynomial in
-/-- **Deployed opening and constraint, as a binding reduction.** As
-`orchard_verifier_deployed_opening_reduction`, with the circuit side derived too: `circuitSat` —
+/-- **Deployed opening and constraint, given a clean fork.** As
+`orchard_verifier_deployed_opening_of_forked`, with the circuit side derived too: `circuitSat` —
 instantiated to `circuitSatViaGates` — from the verifier's gate point-check `hquot` at the
 challenge `x`, lifted to the polynomial identity by Schwartz–Zippel (`hgood`), via
-`circuitSatViaGates_of_check`. Same reduction-form conclusion (see the module docstring).
-`hquot`/`hgood` share `hcirc`'s unsatisfiable shape (see the section note above): the verifier's
-actual gate check constrains the *claimed* evaluations, not every opening's decode. Named
-assumptions: the residual bridge (`hFS`), `z ≠ 0` (`hz`), the gate point-check (`hquot`), the
-Schwartz–Zippel good challenge (`hgood`), and VK-correctness (`hencodes`). -/
-theorem orchard_verifier_deployed_constraint_reduction [DecidableEq G] [Inhabited G] {shape : Shape}
+`circuitSatViaGates_of_check`. `hquot`/`hgood` share `hcirc`'s unsatisfiable shape (see the
+section note above): the verifier's actual gate check constrains the *claimed* evaluations, not
+every opening's decode. -/
+theorem orchard_verifier_deployed_constraint_of_forked [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp}
     (fixedCols : ℕ → Polynomial Fp)
     (decodeAdvice decodeInstance : (Fin (2 ^ urs.k) → Fp) → (ℕ → Polynomial Fp))
-    (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp) (hz : z ≠ 0)
-    (haccepts : DeployedAccepts urs hk vk ps ch)
-    (hFS : FiatShamirTree urs hk vk ps ch b z blind)
+    (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp)
+    (fs : ForkedTranscript urs hk vk ps ch b z blind)
+    (hclean : IpaAcceptV urs.g b (deployedCommitment urs hk vk ps ch) (multiopenValue vk ps ch)
+      (projTree fs.tree))
     (hquot : ∀ a, IpaRelation urs (deployedCommitment urs hk vk ps ch) b (multiopenValue vk ps ch) a →
       quotientCheck (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates) hpoly deg x)
     (hgood : ∀ a, IpaRelation urs (deployedCommitment urs hk vk ps ch) b (multiopenValue vk ps ch) a →
@@ -276,16 +309,12 @@ theorem orchard_verifier_deployed_constraint_reduction [DecidableEq G] [Inhabite
     {S : Prop}
     (hencodes : ∀ a, SnarkRelation urs (deployedCommitment urs hk vk ps ch) b (multiopenValue vk ps ch)
       (circuitSatViaGates fixedCols decodeAdvice decodeInstance y gates hpoly deg) a → S) :
-    S ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  obtain ⟨t, ht⟩ := hFS (deployedAccepts_verifierEq urs hk vk ps ch haccepts)
-  rcases deployed_to_acceptV hz urs.g b (deployedCommitment urs hk vk ps ch) (multiopenValue vk ps ch)
-    blind t ht with hclean | hrel
-  · obtain ⟨a, hrel'⟩ := ipaRelation_of_acceptV urs b (deployedCommitment urs hk vk ps ch)
-      (multiopenValue vk ps ch) (projTree t) hclean
-    have hsat : circuitSatViaGates fixedCols decodeAdvice decodeInstance y gates hpoly deg a :=
-      circuitSatViaGates_of_check fixedCols decodeAdvice decodeInstance y gates hpoly deg a x
-        (hquot a hrel') (hgood a hrel')
-    exact Or.inl (hencodes a ⟨hrel', hsat⟩)
-  · exact Or.inr hrel
+    S := by
+  obtain ⟨a, hrel⟩ := ipaRelation_of_acceptV urs b (deployedCommitment urs hk vk ps ch)
+    (multiopenValue vk ps ch) (projTree fs.tree) hclean
+  have hsat : circuitSatViaGates fixedCols decodeAdvice decodeInstance y gates hpoly deg a :=
+    circuitSatViaGates_of_check fixedCols decodeAdvice decodeInstance y gates hpoly deg a x
+      (hquot a hrel) (hgood a hrel)
+  exact hencodes a ⟨hrel, hsat⟩
 
 end Zcash.Snark
