@@ -134,6 +134,14 @@ it scale.
   docstrings may keep full paths as cross-module links).
 - **Don't churn clean docstrings.** If it already leads with the claim and is concise, leave it
   (e.g. the Vesta order lemmas). The diff should only touch what the convention improves.
+- **Reference Lean code, not Lean mechanism.** Name the defs and lemmas a claim is about, but not
+  the tactic or kernel machinery that discharges it (`native_decide`, `decide`, `simp`,
+  `Classical.choice`): the reader wants the established fact and its scope, not how Lean checked
+  it — surface a mechanism only when it *is* the claim's content. Verbose mechanism-laden caveats
+  then collapse to one reader-facing clause — the fingerprint glossary entry reads "checked equal
+  to the Rust verifier's captured MSM, for the specific circuit under analysis", not "a
+  `native_decide` match on one selected fixture, an empirical anchor rather than a universal
+  equivalence, with the fixture's group bases opaque tags".
 - Match repo prose style: ~100-char wrap, en dashes, `Fiat–Shamir`, backticked Lean anchors.
 
 ## Docs-only discipline and the adherence audit
