@@ -63,6 +63,7 @@ def NontrivialRelation.ofFoldedGens {k : ℕ} {g : Fin (2 ^ (k + 1)) → G} {U W
       simpa [loHalf] using h0.symm
     · exact Or.inr hαβ
   relation := by
+    show commitGen g (append r.a (u⁻¹ • r.a)) + r.α • U + r.β • W = 0
     have hcg : commitGen g (append r.a (u⁻¹ • r.a)) = commitGen (foldGens g u) r.a := by
       unfold foldGens
       rw [commitGen_append, commitGen_add_gen, commitGen_smul_gen, commitGen_smul_left]
@@ -106,13 +107,13 @@ def NontrivialRelation.ofDeployedTree [DecidableEq F] [DecidableEq G] {U W : G} 
             absurd ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1, h.2.2.2.2.2.1, hc₁, hc₂, hc₃⟩
               hne
           else
-            (NontrivialRelation.ofDeployedTree hz _ _ _ _ _ t₃
-              h.2.2.2.2.2.2.2.2 hc₃).ofFoldedGens u₃
+            NontrivialRelation.ofFoldedGens u₃
+              (NontrivialRelation.ofDeployedTree hz _ _ _ _ _ t₃ h.2.2.2.2.2.2.2.2 hc₃)
         else
-          (NontrivialRelation.ofDeployedTree hz _ _ _ _ _ t₂
-            h.2.2.2.2.2.2.2.1 hc₂).ofFoldedGens u₂
+          NontrivialRelation.ofFoldedGens u₂
+            (NontrivialRelation.ofDeployedTree hz _ _ _ _ _ t₂ h.2.2.2.2.2.2.2.1 hc₂)
       else
-        (NontrivialRelation.ofDeployedTree hz _ _ _ _ _ t₁
-          h.2.2.2.2.2.2.1 hc₁).ofFoldedGens u₁
+        NontrivialRelation.ofFoldedGens u₁
+          (NontrivialRelation.ofDeployedTree hz _ _ _ _ _ t₁ h.2.2.2.2.2.2.1 hc₁)
 
 end Zcash.Snark

@@ -1,0 +1,33 @@
+import Mathlib
+
+/-!
+# Nontrivial linear (discrete-log) relations, as computed data
+
+Shared primitive for the reduction-style security arguments (breaks as computed data — see
+`Zcash.Security.RandomOracle`): a nontrivial `F`-linear relation among a family of generators
+`g : Fin n → G` together with two distinguished generators `U`, `W`, carried as *data* (the
+coefficients) so a reduction can compute it rather than merely assert its existence. In a
+prime-order group such a relation always *exists* propositionally, so an ∃-closed `Prop` would be
+vacuous; the content is that a reduction produces one, discharged against discrete-log-relation
+hardness at the computational layer.
+
+Both crypto layers instantiate this: the binding-signature reduction
+(`Zcash.Security.BindingSignature`) at the value/randomness bases (empty `g`, `U`/`W` the two
+bases), and the deployed-verifier soundness peel (`Zcash.Snark`) at the augmented IPA generators
+(`g` the URS opening generators, `U` inner-product, `W` blinding).
+-/
+
+namespace Zcash
+
+variable {F G : Type*} [Field F] [AddCommGroup G] [Module F G]
+
+/-- A nontrivial `F`-linear (discrete-log) relation among the generators `(g, U, W)`, as data:
+coefficients `(a, α, β)` not all zero that the generators send to `0`. -/
+structure NontrivialRelation {n : ℕ} (g : Fin n → G) (U W : G) where
+  a : Fin n → F
+  α : F
+  β : F
+  nontrivial : a ≠ 0 ∨ α ≠ 0 ∨ β ≠ 0
+  relation : (∑ i, a i • g i) + α • U + β • W = 0
+
+end Zcash

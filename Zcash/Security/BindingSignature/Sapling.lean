@@ -166,6 +166,6 @@ def NontrivialRelation.ofSaplingImbalance {M : Type*} [AddCommGroup M]
     NontrivialRelation (F := ZMod jubjubScalarOrder) V R :=
   have hbound := sapling_natAbs_lt (spends.map Prod.fst) (outputs.map Prod.fst) vBalance
     hOld hNew (by simpa using hnOld) (by simpa using hnNew) hvBalance saplingVSumBound_lt_jubjubScalarOrder
-  .ofBundleIntImbalance V R spends outputs vBalance bsk hne hbound hExtract
+  NontrivialRelation.ofBundleIntImbalance V R spends outputs vBalance bsk hne hbound hExtract
 
 end Zcash.Security.BindingSignature
