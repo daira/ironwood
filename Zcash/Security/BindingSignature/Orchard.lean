@@ -66,7 +66,7 @@ def NontrivialRelation.ofOrchardImbalance {M : Type*} [AddCommGroup M]
     NontrivialRelation (F := ZMod pallasScalarOrder) V R :=
   have hbound := orchard_natAbs_lt (actions.map Prod.fst) vBalance hv (by simpa using hn) hvBalance
     orchardVSumBound_lt_pallasScalarOrder
-  .ofBundleIntImbalance V R actions [] vBalance bsk (by simpa using hne) (by simpa using hbound)
-    hExtract
+  NontrivialRelation.ofBundleIntImbalance V R actions [] vBalance bsk (by simpa using hne)
+    (by simpa using hbound) hExtract
 
 end Zcash.Security.BindingSignature

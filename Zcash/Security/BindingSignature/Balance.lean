@@ -1,4 +1,5 @@
 import Mathlib
+import Zcash.Common.DiscreteLogRelation
 
 /-!
 # Binding-signature balance: shared algebraic core
@@ -80,15 +81,14 @@ theorem imbalance_yields_discrete_log (V R bvk : M) (A B bsk : F) (hA : A ≠ 0)
   rwa [smul_smul, smul_smul, inv_mul_cancel₀ hA, one_smul] at h
 
 /-- A nontrivial `F`-linear (discrete-log) relation between the value base `V` and the randomness
-base `R`, as data: scalars `(a, b)` not both zero with `a • V + b • R = 0`. Such a relation always
-*exists* propositionally in a prime-order group, so an ∃-closed Prop version would be vacuous;
-the content of the binding reduction is that imbalance lets us *compute* one (breaks as
-computed data — see `Zcash.Security.RandomOracle`). -/
-structure NontrivialRelation (V R : M) where
-  a : F
-  b : F
-  nontrivial : a ≠ 0 ∨ b ≠ 0
-  relation : a • V + b • R = 0
+base `R`, as data: scalars not both zero with `· • V + · • R = 0`. The shared
+`Zcash.NontrivialRelation` at the two bases (its generator vector `g` empty, `U`/`W` the bases `V`,
+`R`), so the two coefficients are its `α`/`β`. Such a relation always *exists* propositionally in a
+prime-order group, so an ∃-closed Prop version would be vacuous; the content of the binding
+reduction is that imbalance lets us *compute* one (breaks as computed data — see
+`Zcash.Security.RandomOracle`). -/
+abbrev NontrivialRelation (V R : M) : Type _ :=
+  Zcash.NontrivialRelation (F := F) (Fin.elim0 : Fin 0 → M) V R
 
 /-- **Balance reduction (field level), as a computed relation.** From RedDSA extractability
 (`bvk = bsk • R`), the binding-key decomposition (`bvk = A • V + B • R`), and imbalance
@@ -101,7 +101,8 @@ the decomposition and supply the imbalance hypothesis at the bundle values. -/
 def NontrivialRelation.ofImbalance (V R bvk : M) (A B bsk : F) (hA : A ≠ 0)
     (hExtract : bvk = bsk • R) (hSum : bvk = A • V + B • R) :
     NontrivialRelation (F := F) V R :=
-  ⟨A, B - bsk, Or.inl hA, by
+  ⟨Fin.elim0, A, B - bsk, Or.inr (Or.inl hA), by
+    simp only [Fin.sum_univ_zero, zero_add]
     rw [smul_value_eq_smul_rand V R bvk A B bsk hExtract hSum, ← add_smul]
     have hc : (bsk - B) + (B - bsk) = (0 : F) := by ring
     rw [hc, zero_smul]⟩
@@ -197,7 +198,7 @@ def NontrivialRelation.ofBundleModImbalance (V R : M) (spends outputs : List (F 
     (hne : (spends.map Prod.fst).sum - (outputs.map Prod.fst).sum - vBalance ≠ 0)
     (hExtract : bindingVK V R spends outputs vBalance = bsk • R) :
     NontrivialRelation (F := F) V R :=
-  .ofImbalance V R (bindingVK V R spends outputs vBalance) _ _ bsk hne hExtract
+  NontrivialRelation.ofImbalance V R (bindingVK V R spends outputs vBalance) _ _ bsk hne hExtract
     (bindingVK_decomp V R spends outputs vBalance)
 
 /-- Cast an integer-valued bundle (integer note / net values, field randomness) to a field-valued one,
@@ -238,8 +239,8 @@ def NontrivialRelation.ofBundleIntImbalance {r : ℕ} [Fact (Nat.Prime r)]
     rw [castBundle_fst_sum, castBundle_fst_sum] at hmod
     rw [Int.cast_sub, Int.cast_sub]
     exact hmod
-  .ofBundleModImbalance V R (castBundle spends) (castBundle outputs) (vBalance : ZMod r) bsk
-    hne' hExtract
+  NontrivialRelation.ofBundleModImbalance V R (castBundle spends) (castBundle outputs)
+    (vBalance : ZMod r) bsk hne' hExtract
 
 /-! ### Generic integer-range helpers for the no-overflow lift
 

@@ -123,14 +123,17 @@ it scale.
   On hypothesis-heavy capstones, close with a "Named assumptions: …" ledger mapping prose to the
   binders (`hFS`, `hquot`, `hgood`, `hencodes`); on smaller theorems, naming each binder once in
   the text is enough (short by default).
-- **The last-notch polish.** Once the rules are satisfied, one more pass removes what they don't
-  name: scaffolding openers ("This is the structural fact that…", "Note that…"), tails that
-  restate the lead, double statements of one fact ("injective — vectors with equal commitments
-  are equal, i.e. linearly independent" → pick one), formula parentheticals that restate the
-  displayed Lean statement, and arrow glyphs between prose nouns ("the grand-product ⟹ multiset
-  step" → words). Provenance survives as a trailing clause, not its own sentence; fully-qualified
-  `Zcash.Snark.…` paths shorten to the unambiguous tail in declaration docstrings (module
-  docstrings may keep full paths as cross-module links).
+- **The last-notch polish — every pass ends with it.** After the rules are satisfied and before
+  the verification gates, one dedicated sweep re-reads every touched docstring with a single
+  goal: simpler prose — shorter sentences, fewer clauses, plainer words. Applying it inline
+  while restructuring does not count; the sweep is its own final step. It removes what the rules
+  don't name: scaffolding openers ("This is the structural fact that…", "Note that…"), tails
+  that restate the lead, double statements of one fact ("injective — vectors with equal
+  commitments are equal, i.e. linearly independent" → pick one), formula parentheticals that
+  restate the displayed Lean statement, and arrow glyphs between prose nouns ("the grand-product
+  ⟹ multiset step" → words). Provenance survives as a trailing clause, not its own sentence;
+  fully-qualified `Zcash.Snark.…` paths shorten to the unambiguous tail in declaration
+  docstrings (module docstrings may keep full paths as cross-module links).
 - **Don't churn clean docstrings.** If it already leads with the claim and is concise, leave it
   (e.g. the Vesta order lemmas). The diff should only touch what the convention improves.
 - **Reference Lean code, not Lean mechanism.** Name the defs and lemmas a claim is about, but not
@@ -145,7 +148,8 @@ it scale.
 
 ## Docs-only discipline and the adherence audit
 
-Every pass is comments/prose only — zero proof-term changes. Verify before handing over:
+Every pass is comments/prose only — zero proof-term changes. The last-notch polish sweep (above)
+is the pass's final editing step; only then verify before handing over:
 
 1. **Prose-only diff** — strip comments (`--` lines and nested `/- … -/` blocks) from `HEAD` and
    working versions; the code must be byte-identical. An unbalanced docstring terminator swallows
@@ -204,16 +208,3 @@ not edit by hand"):
   flagged, not guessed.
 - **Report** per file: `fixed (what)` / `compliant (why, per docstring group)` /
   `flagged (needs author input)`.
-
-## Folding a pass into a PR stack
-
-When docstrings live across stacked PRs (e.g. main → #20 → #24 → #28 → #30 → #31), don't apply
-the pass at the top:
-
-- Start from a branch off current `main`, tightening the files as they exist there; then fold
-  each layer's share into that PR's branch, in stack order, after it picks up its rebased base.
-- Each layer's docstrings must describe **that layer's math** (a bridge that still absorbs X at
-  layer N is documented as absorbing X there, even if layer N+2 discharges it).
-- **Converge shared blocks to their final wording at the lowest layer** where they appear
-  (assumption bullets, defs that never change). Upper diffs then only touch prose where their
-  layer actually changes the argument.
