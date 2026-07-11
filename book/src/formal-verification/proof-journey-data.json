@@ -257,7 +257,7 @@
       "chapter": "AGM to discrete log",
       "title": "Price the relation branch",
       "claim": "An explicit algebraic relation either solves the planted discrete log or misses its fixed slot; relation-finding probability is bounded separately.",
-      "summary": "The deterministic fixed-slot adapter is formalized, as is the sampled-basis probability accounting. The forking layer still yields an existential relation, while the probability layer consumes an explicit algebraic-prover witness, so those layers are shown as a seam rather than silently composed.",
+      "summary": "The deterministic fixed-slot adapter is formalized, as is the sampled-basis probability accounting. The forking layer still yields an existential relation, while the probability layer consumes an explicit algebraic-prover witness, so those layers are shown as a gap rather than silently composed.",
       "nodes": [
         "relation",
         "algRel",
@@ -308,8 +308,7 @@
         "x4floor",
         "decode",
         "member_binding",
-        "hprob",
-        "hquot"
+        "hprob"
       ],
       "theorems": [
         {
@@ -350,11 +349,11 @@
       "summary": "The bad-set theorem bounds roots of the constraint-difference polynomial. The xgood capstones spend an accept-measure budget to select a good accepting challenge, removing hgood while keeping the actual quotient-check content in hquot.",
       "nodes": [
         "decode",
-        "hquot",
         "szBadSet",
         "goodChallenge",
         "hgood",
         "gateLift",
+        "hquot",
         "circuitSat"
       ],
       "theorems": [
@@ -433,7 +432,7 @@
       "id": "boundary",
       "chapter": "Trust boundary",
       "title": "Stop at the exact formal boundary",
-      "claim": "The formal chain reaches SnarkRelation and explicit reduction disjunctions; it does not erase the remaining modeling and composition seams.",
+      "claim": "The formal chain reaches SnarkRelation and explicit reduction disjunctions; it does not erase the remaining modeling and composition gaps.",
       "summary": "The final view keeps hypotheses and out-of-Lean assumptions visible. This is the honest endpoint: a large mechanized core with named inputs, probability budgets, computational assumptions, and uncomposed execution semantics rather than an all-green claim of end-to-end verification.",
       "nodes": [
         "capstones",

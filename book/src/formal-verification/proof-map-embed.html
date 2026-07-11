@@ -95,7 +95,7 @@
   .edge.entails { stroke: var(--ink); }
   .edge.discharges { stroke: var(--accent); stroke-dasharray: 7 5; }
   .edge.rests { stroke: var(--c-floor); stroke-dasharray: 1.5 5; stroke-linecap: round; }
-  .edge.seam { stroke: var(--c-hyp); stroke-dasharray: 7 3 1.5 3; }
+  .edge.gap { stroke: var(--c-hyp); stroke-dasharray: 7 3 1.5 3; }
   .edge.hot { opacity: 1; stroke-width: 3; }
   .edge.dim { opacity: .05; }
 
@@ -162,7 +162,7 @@
   .detail .conns .verb { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); flex: none; min-width: 100px; white-space: nowrap; }
   .detail .conns .verb.discharges { color: var(--accent); }
   .detail .conns .verb.rests { color: var(--c-floor); }
-  .detail .conns .verb.seam { color: var(--c-hyp); }
+  .detail .conns .verb.gap { color: var(--c-hyp); }
   .detail .conns .to { font-family: ui-monospace, monospace; }
   .detail .conns .via { font-family: ui-monospace, monospace; font-size: 10.5px; color: var(--muted); opacity: .85; overflow-wrap: anywhere; }
   .detail .empty { color: var(--muted); font-size: 13px; }
@@ -204,8 +204,8 @@
     <div class="legend">
       <div class="row"><span class="swatch" style="border-top-color:var(--ink)"></span><span><b>entails</b> — B follows from A (implication, or the construction A feeds)</span></div>
       <div class="row"><span class="swatch" style="border-top-color:var(--accent);border-top-style:dashed"></span><span><b>discharges</b> — A proves away assumption B</span></div>
-      <div class="row"><span class="swatch" style="border-top-color:var(--c-floor);border-top-style:dotted"></span><span><b>rests on</b> — depends on an assumption (a hypothesis or an out-of-Lean floor)</span></div>
-      <div class="row"><span class="swatch" style="border-top-color:var(--c-hyp);border-top-style:dashed"></span><span><b>seam</b> — an uncomposed gap / modeling assumption</span></div>
+      <div class="row"><span class="swatch" style="border-top-color:var(--c-floor);border-top-style:dotted"></span><span><b>rests on</b> — B is an assumption needed by A (an in-Lean hypothesis, or an out-of-Lean floor)</span></div>
+      <div class="row"><span class="swatch" style="border-top-color:var(--c-hyp);border-top-style:dashed"></span><span><b>gap</b> — A has a gap that would be fixed by B (an uncomposed modeling identification, not a stated assumption)</span></div>
       <div class="row" style="margin-top:6px"><span class="sq" style="border-color:var(--c-proven);background:color-mix(in srgb,var(--c-proven) 12%,var(--surface))"></span><span>Proven theorem</span></div>
       <div class="row"><span class="sq" style="border-color:var(--c-hyp);background:color-mix(in srgb,var(--c-hyp) 12%,var(--surface))"></span><span>Hypothesis in statement</span></div>
       <div class="row"><span class="sq" style="border-color:var(--c-floor);background:color-mix(in srgb,var(--c-floor) 12%,var(--surface))"></span><span>Out-of-Lean assumption</span></div>
@@ -243,7 +243,7 @@ const nodes = [
   { id:'assemble', c:0,r:0, label:'assembled MSM', status:'object',
     anchor:'Verifier.Assemble.assemble',
     role:'The whole verifier collapsed into one multi-scalar multiplication — the fingerprint, reproduced line-for-line from halo2.' },
-  { id:'fingerprint', c:1,r:0, label:'faithful to Rust', status:'proven',
+  { id:'fingerprint', c:1,r:0, label:'pinned to Rust', status:'proven',
     anchor:'Fingerprint.Match.msmMatch_eval',
     role:'The fingerprint match (msmMatch_eval): the Lean-assembled MSM is compared coefficient-for-coefficient against the Rust verifier’s captured MSM, and a match implies equal evaluations. The deployed check is the numeric fixture match (fingerprint_matches, native_decide) — agreement on one captured proof, full stop: an empirical anchor, not a universal equivalence, and the fixture’s group bases are opaque tags, so Vesta-point faithfulness lives in the Rust capture. Backed by a Fiat–Shamir schedule check and VK/shape faithfulness; multi-action and negative/tamper fixtures are incoming (#27).' },
   { id:'accept', c:0,r:1, label:'accepting proof', status:'object',
@@ -258,7 +258,7 @@ const nodes = [
   { id:'peel', c:0,r:4, label:'peel U/W', status:'proven',
     anchor:'Deployed.IpaPeel.deployed_to_acceptV',
     role:'A commitment-binding step (deployed_to_acceptV) doing two separable things: the z≠0 value-on-U strip removes the auxiliary U and W terms (the fold and blinding generators beyond the main g basis), and the binding dichotomy (separate_or_relation) leaves either a clean, g-only IPA tree or — if binding fails — a discrete-log relation, lifted back to the fixed URS basis (relation_of_foldGens) so it lands on the DL-hard generators.' },
-  { id:'clean', c:1,r:5, label:'clean tree', status:'object',
+  { id:'clean', c:1,r:5, label:'clean IPA tree', status:'object',
     anchor:'Ipa.Soundness.IpaAcceptV',
     role:'A clean IPA transcript tree over the URS generators, ready for special-soundness extraction.' },
   { id:'relation', c:0,r:5, label:'relation (g,U,W)', status:'object',
@@ -278,7 +278,7 @@ const nodes = [
     role:'The circuit-satisfaction half of the SNARK relation: the decoded columns satisfy the y-combined gate/quotient identity (circuitSatViaGates). Produced by the gate-check lift, then paired with the IPA opening. Covers the gate identity only — the permutation and lookup arguments’ semantic soundness is separate, in-progress work (#21: structural grand-product/lookup lemmas, with the grand-product telescoping, final lookup assembly, and their Schwartz–Zippel bridge still open) and is not yet wired into this chain.' },
   { id:'capstones', c:3,r:7, label:'verifier soundness', status:'goal',
     anchor:'Vesta.orchard_verifier_vesta_*',
-    role:'The base capstone — the top-level orchard_verifier_vesta_* family (in Vesta.lean). An accepting proof concludes IPA opening ∨ a nontrivial relation exists (a discrete-log relation on (g, U, W)) — conditional verifier soundness over the concrete Vesta curve; the constraint form additionally derives circuit satisfaction (the full SNARK relation).<br><br>They form a ladder, each rung assuming less than the one before:<br>• conditional — a scaffold over an opaque accept (assumes the extraction and circuit satisfaction); not finished soundness.<br>• reductions — the concrete deployed accept, but still assume the Fiat–Shamir tree bridge and the per-opening hypotheses.<br>• forking — replaces that bridge with the random-oracle forking, so the structural facts are proven rather than assumed.<br>• deployed → adaptive → rewind — how the prover and oracle are modeled inside the forking capstones: a fixed deployed proof string, then an arbitrary prefix-respecting prover, then the accept probability taken over reprogrammed-oracle (rewound) runs.<br><br>Each forking rung comes in an "opening" form (extracts the IPA witness) and a "constraint" form (also derives circuit satisfaction and takes hencodes). The wrappers are not a full product: _xgood (derives hgood, at the cost of hprobX) exists on the constraint forms, _x4 (derives hbatch from hcur and hprob4) on the deployed constraint, and _agm_dl (relation → discrete log ∨ misses-slot) across the family — 36 theorems in all.' },
+    role:'The base capstone — the top-level orchard_verifier_vesta_* family (in Vesta.lean). An accepting proof concludes IPA opening ∨ a nontrivial relation exists (a discrete-log relation on (g, U, W)) — conditional verifier soundness over the concrete Vesta curve; the constraint form additionally derives circuit satisfaction (the full SNARK relation).<br><br>They form a ladder, each rung assuming less than the one before:<br>• conditional — a scaffold over an opaque accept (assumes the extraction and circuit satisfaction); not finished soundness.<br>• reductions — the concrete deployed accept, but still assume the Fiat–Shamir tree bridge and the per-opening hypotheses.<br>• forking — replaces that bridge with the random-oracle forking, so the structural facts are proven rather than assumed.<br>• deployed → adaptive → rewind — how the prover and oracle are modeled inside the forking capstones: a fixed deployed proof string, then an arbitrary prefix-respecting prover, then the accept probability taken over reprogrammed-oracle (rewound) runs.<br><br>Each forking rung comes in an "opening" form (extracts the IPA witness) and a "constraint" form (also derives circuit satisfaction and takes hencodes). The wrappers are not a full product: _xgood (derives hgood, at the cost of hprobX) exists on the constraint forms, _x4 (derives hbatch from hcur and hprob4) on the deployed constraint, and _agm_dl (relation → discrete log ∨ soundness loss), the map\'s AGM soundness, across the family — 36 theorems in all.' },
   { id:'gateLift', c:5,r:5, label:'gate-check lift', status:'proven',
     anchor:'KnowledgeSoundness.circuitSatViaGates_of_check',
     role:'Lifts the verifier’s gate point-check at x to the full polynomial identity — circuit satisfaction — given a good challenge and the real columns (circuitSatViaGates_of_check).' },
@@ -306,9 +306,9 @@ const nodes = [
   { id:'hprob', c:2,r:1, label:'accept probability', status:'hyp',
     anchor:'hprob · Vesta forking capstones',
     role:'The accept probability beats the knowledge error kerr/Nᵏ — the hypothesis hprob in the Vesta forking capstones. The measure-side random-oracle floor.' },
-  { id:'ordering', c:3,r:2, label:'transcript ordering', status:'proven',
+  { id:'ordering', c:3,r:2, label:'round-by-round soundness', status:'proven',
     anchor:'Forking.Ordering.roundPoint_mem_roundTranscript',
-    role:'Round-by-round soundness (roundPoint_mem_roundTranscript): each IPA round point sits in the transcript prefix before its challenge is drawn, so later messages cannot bend earlier challenges. The backbone under sound forking, the sealed x₁/x₄ prefixes the decode uses, and the x-fixed-before-sampling the Schwartz–Zippel argument needs.' },
+    role:'The transcript-ordering guarantee (roundPoint_mem_roundTranscript): each IPA round point sits in the transcript prefix before its challenge is drawn, so later messages cannot bend earlier challenges — round-by-round soundness. The backbone under sound forking, the sealed x₁/x₄ prefixes the decode uses, and the x-fixed-before-sampling the Schwartz–Zippel argument needs.' },
   { id:'x4floor', c:6,r:3, label:'batch rewinds', status:'object',
     anchor:'Multiopen.Deployed.deployedMultiopenRewind_of_x4Prob',
     role:'The x₄ forking floor (deployedMultiopenRewind_of_x4Prob): given an accepting honest run, once the accept measure of the x₄-rewound runs beats the pair-count bound, it extracts an injective family of accepting rewound openings — one IPA witness per run — that the decode inverts by Vandermonde. The multiopen analog of the rewind step.' },
@@ -321,10 +321,10 @@ const nodes = [
   { id:'member_binding', c:7,r:4, label:'challenge unbatch', status:'proven',
     anchor:'deployed_witness_member_binding',
     role:'The x₁ layer bundles the commitments queried at each point set into one aggregate (deployed_witness_member_binding); this unbundles them back to the individual queried member commitments (advice, instance, fixed, permutation/lookup products, vanishing) and pins the extracted witness as the explicit two-level (x₄ then x₁) power combination of their column witnesses.' },
-  { id:'szBadSet', c:6,r:6, label:'SZ bad set', status:'proven',
+  { id:'szBadSet', c:7,r:6, label:'SZ bad set', status:'proven',
     anchor:'Constraints.Vanishing.szBadSet_card_le',
     role:'The Schwartz–Zippel count (szBadSet_card_le): the bad x-values are the roots of the constraint-difference polynomial, so at most degree-many are bad — the bound that makes a good challenge findable.' },
-  { id:'goodChallenge', c:7,r:6, label:'good challenge', status:'proven',
+  { id:'goodChallenge', c:6,r:6, label:'good challenge', status:'proven',
     anchor:'GoodChallenge.exists_accepting_good_challenge_quotient · Vesta.*_xgood',
     role:'A uniform RO challenge hits the bad set with probability ≤ d/p, so a good accepting x is derived (exists_accepting_good_challenge_quotient) rather than assumed — no hgood input.' },
   { id:'algRel', c:0,r:6, label:'algebraic relation', status:'object',
@@ -336,15 +336,15 @@ const nodes = [
   { id:'dlrep', c:0,r:8, label:'DL solution', status:'object',
     anchor:'AGM.Adapter.DiscreteLogRepresentation',
     role:'A solved discrete log (DiscreteLogRepresentation), extracted from a relation that hits the planted slot — the reduction’s output. Producing one would break the DL-hardness assumption, which is exactly why finding the relation is assumed infeasible.' },
-  { id:'missesSlot', c:1,r:8, label:'misses slot', status:'object',
+  { id:'missesSlot', c:1,r:8, label:'soundness loss', status:'object',
     anchor:'AGM.Adapter.RelationMissesSlot',
-    role:'The escape case (RelationMissesSlot): a nontrivial relation missing the planted slot. As a proposition it holds trivially at prime order — the bounded quantity is the probability that the adversary returns a relation landing here, which the probability wrapper averages away.' },
+    role:'Soundness loss (RelationMissesSlot): the escape case — a nontrivial relation that misses the planted slot, so the AGM reduction extracts no discrete log. As a proposition it holds trivially at prime order — the bounded quantity is the probability that the adversary returns a relation landing here, which the probability wrapper averages away.' },
   { id:'dlbound', c:1,r:7, label:'DL reduction bound', status:'proven',
     anchor:'AGM.Probability.relation_prob_le_of_textbookDL',
     role:'The random-slot accounting (relation_prob_le_of_textbookDL): the planted slot is hit with probability at least 1/|basis| of the finder’s, so the probability of finding a relation is bounded by a multiple of the discrete-log advantage. This is where DL-hardness enters as an explicit, priced hypothesis. Stated over a sampled basis, not the deployed URS — reading it at the URS is the uniform-basis modeling assumption (issue #15).' },
-  { id:'agm_dl', c:2,r:7, label:'AGM bridge', status:'proven',
+  { id:'agm_dl', c:2,r:7, label:'AGM soundness', status:'proven',
     anchor:'Vesta.*_agm_dl',
-    role:'The bridge-node capstone — the _agm_dl members (also in Vesta.lean). It takes the base capstone\'s IPA opening ∨ a nontrivial relation and routes the relation branch through the fixed-slot adapter, concluding the trichotomy: IPA opening ∨ a discrete-log solution ∨ the relation misses the planted slot. The miss branch is not discharged here — it is bounded only in the separate probability layer (the DL reduction bound, over a sampled basis), where DL-hardness prices it. Like the base capstone, the disjunction is propositionally true at prime order; the content is the deterministic extraction chain.' },
+    role:'AGM soundness — the _agm_dl capstones (also in Vesta.lean), the AGM-model sharpening of the base capstone. It takes the base capstone\'s IPA opening ∨ a nontrivial relation and routes the relation branch through the fixed-slot adapter, concluding the trichotomy: IPA opening ∨ a discrete-log solution ∨ a soundness loss (the relation misses the planted slot). That soundness-loss branch is not discharged here — it is bounded only in the separate probability layer (the DL reduction bound, over a sampled basis), where DL-hardness prices it. Like the base capstone, the disjunction is propositionally true at prime order; the content is the deterministic extraction chain.' },
   { id:'DLhard', c:2,r:8, label:'DL-hardness', status:'floor',
     anchor:'AGM.Probability.TextbookDLAdvantageLE',
     role:'Discrete-log hardness on Vesta. The bound is stated in Lean (TextbookDLAdvantageLE); that it actually holds for Vesta is the computational assumption, not a Lean theorem.' },
@@ -353,10 +353,10 @@ const nodes = [
     role:'Blake2b modeled as a random oracle. The oracle model itself — reprogramming, uniform challenges — is mechanized (Forking.Oracle); identifying the deployed Blake2b transcript with that oracle is the idealization.' },
   { id:'hlrel', c:4,r:8, label:'high-level relation', status:'floor',
     anchor:'hencodes',
-    role:'Semantic adequacy (hencodes): SnarkRelation — the witness satisfies the gates — implies the intended high-level Ironwood statement (note well-formed, values balance, nullifier derived, spend authorized). An assumed hypothesis over a free Prop; the composition otherwise stops at SnarkRelation. The output-side seam. Not started.' },
+    role:'Semantic adequacy (hencodes): SnarkRelation — the witness satisfies the gates — implies the intended high-level Ironwood statement (note well-formed, values balance, nullifier derived, spend authorized). An assumed hypothesis over a free Prop; the composition otherwise stops at SnarkRelation. The output-side gap. Not started.' },
   { id:'vkfaith', c:6,r:8, label:'VK correctness', status:'floor',
     anchor:'Verifier.Assemble',
-    role:'The input-side seam: the verifying key and circuit description fed to the verifier faithfully encode the real deployed Ironwood circuit. Dual to the high-level relation on the output side; VK derivation in Lean is not started.' },
+    role:'The input-side gap: the verifying key and circuit description fed to the verifier faithfully encode the real deployed Ironwood circuit. Dual to the high-level relation on the output side; VK derivation in Lean is not started.' },
   { id:'hasse', c:5,r:8, label:'Vesta order ⇐ Hasse', status:'floor',
     anchor:'HasseBound · Vesta.vestaOrder_of_hasse',
     role:'The Vesta group order, proven from the assumed Hasse bound.' },
@@ -364,7 +364,7 @@ const nodes = [
 
 // Each edge is [from, to, kind, via?] where `via` names the Lean lemma/def that
 // justifies the step (edge-level traceability): the producing theorem for `entails`,
-// the discharging lemma for `discharges`. `rests`/`seam` carry none — a floor or an
+// the discharging lemma for `discharges`. `rests`/`gap` carry none — a floor or an
 // uncomposed modeling gap has no discharging lemma, and that absence is the point.
 const edges = [
   ['assemble','fingerprint','entails','msmMatch_eval'],
@@ -398,13 +398,13 @@ const edges = [
   ['goodChallenge','hgood','discharges','exists_accepting_good_challenge_quotient'],
   ['SnarkRelation','capstones','entails','orchard_verifier_vesta_*'],
   ['capstones','agm_dl','entails','orchard_verifier_vesta_*_agm_dl'],
-  ['relation','algRel','seam'],
+  ['relation','algRel','gap'],
   ['algRel','adapter','entails','FixedSlotEmbedding'],
   ['adapter','dlrep','entails','discreteLogOfBasis_of_relation'],
   ['adapter','missesSlot','entails','RelationMissesSlot'],
   ['adapter','dlbound','entails','relation_prob_le_of_textbookDL'],
   ['dlbound','DLhard','rests'],
-  ['dlbound','agm_dl','seam'],
+  ['dlbound','agm_dl','gap'],
   ['capstones','hlrel','rests'],
   ['capstones','structural','rests'],
   ['capstones','vkfaith','rests'],
@@ -420,8 +420,8 @@ const relPhrase = {
   'in-entails':     ['←', 'follows from'],
   'in-discharges':  ['←', 'discharged by'],
   'in-rests':       ['←', 'relied on by'],
-  'out-seam':       ['⇢', 'seam to'],
-  'in-seam':        ['⇠', 'seam from'],
+  'out-gap':        ['⇢', 'gap fixed by'],
+  'in-gap':         ['⇠', 'fixes gap in'],
 };
 
 const byId = {};
@@ -444,7 +444,7 @@ const svg = document.getElementById('map');
 function el(tag, attrs) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; }
 
 const defs = el('defs', {});
-[['entails','var(--ink)'],['discharges','var(--accent)'],['rests','var(--c-floor)'],['seam','var(--c-hyp)']].forEach(([k,c]) => {
+[['entails','var(--ink)'],['discharges','var(--accent)'],['rests','var(--c-floor)'],['gap','var(--c-hyp)']].forEach(([k,c]) => {
   const m = el('marker', { id:'ar-'+k, viewBox:'0 0 10 10', refX:'9', refY:'5', markerWidth:'7.5', markerHeight:'7.5', orient:'auto-start-reverse' });
   m.appendChild(el('path', { d:'M0,0 L10,5 L0,10 z', fill:c }));
   defs.appendChild(m);

@@ -37,11 +37,11 @@ def validate_graph(errors, map_text):
             fail(errors, f"edge source is not a map node: {source}")
         if target not in node_set:
             fail(errors, f"edge target is not a map node: {target}")
-        if kind not in {"entails", "discharges", "rests", "seam"}:
+        if kind not in {"entails", "discharges", "rests", "gap"}:
             fail(errors, f"unknown edge kind: {kind}")
         if kind in {"entails", "discharges"} and not anchor:
             fail(errors, f"formal edge has no theorem anchor: {source} -> {target}")
-        if kind in {"rests", "seam"} and anchor:
+        if kind in {"rests", "gap"} and anchor:
             fail(errors, f"assumption edge unexpectedly has a theorem anchor: {source} -> {target}")
 
     adjacency = {node_id: [] for node_id in node_ids}
