@@ -123,7 +123,7 @@ it scale.
 - **Keep the honesty formula**: claim → mechanism (with anchors) → one caveat → hypotheses named.
   On hypothesis-heavy capstones, close with a "Named assumptions: …" ledger mapping prose to the
   binders (`hFS`, `hquot`, `hgood`, `hencodes`); on smaller theorems, naming each binder once in
-  the text is enough (rule 10).
+  the text is enough (short by default).
 - **The last-notch polish.** Once the rules are satisfied, one more pass removes what they don't
   name: scaffolding openers ("This is the structural fact that…", "Note that…"), tails that
   restate the lead, double statements of one fact ("injective — vectors with equal commitments
@@ -168,7 +168,7 @@ not edit by hand"):
 
 - **No blanket passes.** The verdict for an unmodified file is a per-docstring justification
   ("all ≤ 4 lines, formula-led, anchors present"), never "looks fine". Well-organised prose is
-  not exempt from rule 11.
+  not exempt from the rule to introduce before use.
 - **Verdicts expire when rules change.** A docstring that passed under an earlier rule set has
   not passed now: every rule added or recalibrated re-opens all previous "compliant" and "keep"
   verdicts, and the next sweep re-judges them against the current rules — an early keep is the
