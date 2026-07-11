@@ -5,7 +5,7 @@ import Zcash.Security.Ledger.Statement
 # Bridging the concrete key-binding layer to the games' `KeyBindingInterface`
 
 The deliberate contact point between Layer A (`Zcash.Security.KeyBinding`: the concrete `Witness`,
-the factored condition `KB = KB₀ ∧ KB_deriv`, and `Break`) and Layer B
+the factored condition `KB = KBOpening ∧ KBDerivation`, and `Break`) and Layer B
 (`Zcash.Security.Ledger.KeyBindingInterface`: the games-facing view). The games see only the
 projections and the `break_of_nk_ne` guarantee; here we discharge that guarantee from Layer A's
 `nk_pinned`.

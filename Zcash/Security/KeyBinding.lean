@@ -10,7 +10,7 @@ to `ivk`. Shared intermediate result under Balance (`nk`-pinning), Spendability 
 Spend authority (`ak`/`qk`-pinning).
 
 Middle-out shape (mirrors `BindingSignature/Balance.lean`): the *deterministic reduction*
-`break ⇒ ±-collision` is the composable core (`break0_scalar_pm` below is its algebraic heart); the
+`break ⇒ ±-collision` is the composable core (`openingBreak_scalar_pm` below is its algebraic heart); the
 probabilistic birthday bound `ε_kb ≤ 3q(q-1)/2r` is a separate (Layer C) concern.
 
 Abstract setting, Pallas-instantiated last via CompElliptic (as in `Balance.lean`): a prime-order
@@ -38,6 +38,10 @@ variable {G F B SK QK : Type*}
 
 /-- `ak = Extract(ak^ℙ)`. -/
 def ak (Extract : G → B) (w : Witness G F B SK QK) : B := Extract w.akP
+
+/-- The Pedersen-scalar map a `Commitivk` opening reduces to: `(ak, nk, rivk) ↦ h ak nk + rivk`.
+A `OpeningBreak` is exhibited as a `±`-collision of this map by `commitCollision`. -/
+def pedersenScalar [Add F] (hfn : B → B → F) (t : B × B × F) : F := hfn t.1 t.2.1 + t.2.2
 
 section Algebra
 variable [AddCommGroup G] [Field F] [Field B] [Module F G] [NoZeroSMulDivisors F G]
@@ -75,25 +79,25 @@ theorem commit_scalar_pm
     · exact sub_eq_zero.mp h1
     · exact absurd h1 hS
 
-/-- `KB₀` — the commitment-opening core of the key-binding condition (what Layer B's
+/-- `KBOpening` — the commitment-opening core of the key-binding condition (what Layer B's
 statement-validity yields): `ivk` opens as `Commitivk` at `(rivk, ak, nk)`, and `ivk ≠ 0`. -/
-def KB0 (Extract : G → B) (S : G) (hfn : B → B → F) (w : Witness G F B SK QK) : Prop :=
+def KBOpening (Extract : G → B) (S : G) (hfn : B → B → F) (w : Witness G F B SK QK) : Prop :=
   w.ivk = Commitivk Extract S hfn w.rivk (ak Extract w) w.nk ∧ w.ivk ≠ 0
 
-/-- `Break₀` — a `Commitivk`-opening collision (produced by Layer B's games layer): two valid `KB₀`
+/-- `OpeningBreak` — a `Commitivk`-opening collision (produced by Layer B's games layer): two valid `KBOpening`
 witnesses with the same `ivk` but differing `(ak, nk, rivk)`. -/
-def Break0 (Extract : G → B) (S : G) (hfn : B → B → F) (w₁ w₂ : Witness G F B SK QK) : Prop :=
-  KB0 Extract S hfn w₁ ∧ KB0 Extract S hfn w₂ ∧ w₁.ivk = w₂.ivk ∧
+def OpeningBreak (Extract : G → B) (S : G) (hfn : B → B → F) (w₁ w₂ : Witness G F B SK QK) : Prop :=
+  KBOpening Extract S hfn w₁ ∧ KBOpening Extract S hfn w₂ ∧ w₁.ivk = w₂.ivk ∧
     (ak Extract w₁, w₁.nk, w₁.rivk) ≠ (ak Extract w₂, w₂.nk, w₂.rivk)
 
-/-- The deterministic reduction (composable core): a `Break₀` exhibits distinct `(ak, nk, rivk)`
+/-- The deterministic reduction (composable core): a `OpeningBreak` exhibits distinct `(ak, nk, rivk)`
 triples whose Pedersen scalars `h(ak,nk) + rivk` are equal or negatives — a ±-collision of the
-commitment's scalar map. Under `KB_deriv` (below) `rivk` is an `H^*` output, turning this into a
+commitment's scalar map. Under `KBDerivation` (below) `rivk` is an `H^*` output, turning this into a
 random-oracle ±-collision that the birthday bound (Layer C) bounds. -/
-theorem break0_scalar_pm
+theorem openingBreak_scalar_pm
     (Extract : G → B) (S : G) (hfn : B → B → F)
     (hExt : ∀ P Q : G, Extract P = Extract Q ↔ P = Q ∨ P = -Q) (hS : S ≠ 0)
-    {w₁ w₂ : Witness G F B SK QK} (hbrk : Break0 Extract S hfn w₁ w₂) :
+    {w₁ w₂ : Witness G F B SK QK} (hbrk : OpeningBreak Extract S hfn w₁ w₂) :
     (ak Extract w₁, w₁.nk, w₁.rivk) ≠ (ak Extract w₂, w₂.nk, w₂.rivk) ∧
     (hfn (ak Extract w₁) w₁.nk + w₁.rivk = hfn (ak Extract w₂) w₂.nk + w₂.rivk ∨
      hfn (ak Extract w₁) w₁.nk + w₁.rivk = -(hfn (ak Extract w₂) w₂.nk + w₂.rivk)) := by
@@ -101,6 +105,22 @@ theorem break0_scalar_pm
   refine ⟨hne, commit_scalar_pm Extract S hfn hExt hS ?_⟩
   -- Commitivk(w₁) = w₁.ivk = w₂.ivk = Commitivk(w₂)
   exact hk₁.1.symm.trans (hivk.trans hk₂.1)
+
+/-- **Breaks as computed data** (per the `RandomOracle` convention): a computable function turning a
+`OpeningBreak` into a `CollisionUpToSign` of the Pedersen-scalar map `pedersenScalar hfn`. The colliding
+queries are the two `(ak, nk, rivk)` triples read off the witnesses; `openingBreak_scalar_pm` supplies the
+distinctness and the ±-equality (both erased `Prop` fields), so the data is genuinely computed, not
+extracted from a proof. The onward reduction to an `H^*` random-oracle collision (via `KBDerivation`,
+where `rivk` is an oracle output) is per-instantiation, as with `NoteCommitBreak`. -/
+def commitCollision
+    (Extract : G → B) (S : G) (hfn : B → B → F)
+    (hExt : ∀ P Q : G, Extract P = Extract Q ↔ P = Q ∨ P = -Q) (hS : S ≠ 0)
+    {w₁ w₂ : Witness G F B SK QK} (hbrk : OpeningBreak Extract S hfn w₁ w₂) :
+    RandomOracle.CollisionUpToSign (pedersenScalar hfn) where
+  q₁ := (ak Extract w₁, w₁.nk, w₁.rivk)
+  q₂ := (ak Extract w₂, w₂.nk, w₂.rivk)
+  ne := (openingBreak_scalar_pm Extract S hfn hExt hS hbrk).1
+  pm := by simpa [pedersenScalar] using (openingBreak_scalar_pm Extract S hfn hExt hS hbrk).2
 
 end Algebra
 
@@ -112,9 +132,9 @@ def BindKeysSk (Ggen : G) (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK 
     (sk : SK) (akP : G) (nk : B) (rivk_ext : F) : Prop :=
   akP = (Hask sk) • Ggen ∧ nk = Hnk sk ∧ rivk_ext = Hrivk_legacy sk
 
-/-- `KB_deriv` — the ZIP 2005 derivation constraints (conjuncts 1–4): the `sk`/`qk` null-structure,
+/-- `KBDerivation` — the ZIP 2005 derivation constraints (conjuncts 1–4): the `sk`/`qk` null-structure,
 the `Hrivk_ext` / `BindKeys^sk` branch constraints, and `rivk ∈ {rivk_ext, Hrivk_int …}`. -/
-def KBderiv (Extract : G → B) (Ggen : G)
+def KBDerivation (Extract : G → B) (Ggen : G)
     (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
     (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
     (w : Witness G F B SK QK) : Prop :=
@@ -128,13 +148,13 @@ end Derivation
 section Full
 variable [AddCommGroup G] [Field F] [Field B] [Module F G]
 
-/-- The full key-binding condition: commitment opening (`KB₀`) and derivation constraints
-(`KB_deriv`). -/
+/-- The full key-binding condition: commitment opening (`KBOpening`) and derivation constraints
+(`KBDerivation`). -/
 def KB (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
     (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
     (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
     (w : Witness G F B SK QK) : Prop :=
-  KB0 Extract S hfn w ∧ KBderiv Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w
+  KBOpening Extract S hfn w ∧ KBDerivation Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w
 
 /-- A full key-binding break (ZIP 2005): two valid witnesses with equal `ivk` differing in some
 component other than the y-sign of `ak^ℙ` (the projection uses `ak = Extract ak^ℙ`, quotienting the
