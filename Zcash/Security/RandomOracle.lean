@@ -13,28 +13,48 @@ until discharged.
 An abstract oracle is any function `O : Q → F` from queries to field outputs; "randomness" enters only
 at the probability layer, so nothing here mentions probability.
 
-The `±`-collision variant `PMCollision` is the shape produced by arguments that pass through the
+## Collisions are data, reductions are functions
+
+For any compressing oracle, collisions *exist* propositionally (pigeonhole), so an ∃-closed
+collision `Prop` is true at every instantiation of interest. Conclusions of the form
+`… ∨ (∃ collision)` and hypotheses of the form `¬ (∃ collision)` are then vacuous or
+unsatisfiable, and proof irrelevance prevents a consumer from recovering the exhibited
+collision from a proof. Collision events are therefore **structures carrying the colliding
+queries as data**, and reductions are **computable functions** producing them. The
+discipline: a plain `def`, never `noncomputable` — choice could conjure the data from mere
+existence. Check with `#print axioms`, which reports the *transitive* axiom dependencies;
+this catches a `sorry` or an unintended axiom hiding in a cited lemma rather than in the
+definition itself, while `Classical.choice` appearing only via erased `Prop` fields is
+harmless. Eyeball for efficiency — the one property Lean cannot express. (This
+"breaks as computed data" convention originated in zcash/ironwood#43.)
+
+The `±`-collision variant `CollisionUpToSign` is the shape produced by arguments that pass through the
 `Extract` coordinate extractor, whose fibers are `{P, -P}`: an `Extract`-equality of two commitments
 yields an equality-or-negation of the underlying scalars. Both key-binding and the nullifier
-(Faerie-Gold) argument bottom out in a `PMCollision`.
+(Faerie-Gold) argument bottom out in a `CollisionUpToSign`.
 -/
 
 namespace Zcash.Security.RandomOracle
 
 variable {Q F : Type*}
 
-/-- A plain collision of an oracle `O`: two distinct queries with equal outputs. -/
-def Collision (O : Q → F) : Prop :=
-  ∃ a b, a ≠ b ∧ O a = O b
+/-- A collision of an oracle `O`, as data: two distinct queries with equal outputs. -/
+structure Collision (O : Q → F) where
+  q₁ : Q
+  q₂ : Q
+  ne : q₁ ≠ q₂
+  eq : O q₁ = O q₂
 
-/-- A `±`-collision of `O`: two distinct queries whose outputs are equal or negatives of each other.
-This is the event exhibited by `Extract`-based reductions (key-binding, nullifier). -/
-def PMCollision [Neg F] (O : Q → F) : Prop :=
-  ∃ a b, a ≠ b ∧ (O a = O b ∨ O a = -O b)
+/-- A `±`-collision of `O`, as data: two distinct queries whose outputs are equal or negatives of
+each other. This is the event exhibited by `Extract`-based reductions (key-binding, nullifier). -/
+structure CollisionUpToSign [Neg F] (O : Q → F) where
+  q₁ : Q
+  q₂ : Q
+  ne : q₁ ≠ q₂
+  pm : O q₁ = O q₂ ∨ O q₁ = -O q₂
 
-/-- Every plain collision is a `±`-collision. -/
-theorem Collision.toPM [Neg F] {O : Q → F} (h : Collision O) : PMCollision O := by
-  obtain ⟨a, b, hab, hEq⟩ := h
-  exact ⟨a, b, hab, Or.inl hEq⟩
+/-- Every collision is a `±`-collision. -/
+def Collision.upToSign [Neg F] {O : Q → F} (c : Collision O) : CollisionUpToSign O :=
+  ⟨c.q₁, c.q₂, c.ne, Or.inl c.eq⟩
 
 end Zcash.Security.RandomOracle
