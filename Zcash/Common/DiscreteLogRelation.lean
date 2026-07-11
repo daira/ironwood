@@ -12,9 +12,8 @@ vacuous; the content is that a reduction produces one, discharged against discre
 hardness at the computational layer.
 
 Both crypto layers instantiate this: the binding-signature reduction
-(`Zcash.Security.BindingSignature`) at the value/randomness bases (empty `g`, `U`/`W` the two
-bases), and the deployed-verifier soundness peel (`Zcash.Snark`) at the augmented IPA generators
-(`g` the URS opening generators, `U` inner-product, `W` blinding).
+(`Zcash.Security.BindingSignature`) and the deployed-verifier soundness peel (`Zcash.Snark`).
+Each use site documents its own reading of the generators.
 -/
 
 namespace Zcash

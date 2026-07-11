@@ -131,11 +131,11 @@ theorem deployed_verification_eq {shape : Shape} (g : Fin (2 ^ shape.k) → G) (
 lets the forking bridge act on halo2's actual IPA equation, with `P`/`v` the pinned
 `multiopenCommitment`/`multiopenValue`.
 
-Totality caveat: the closed form uses Lean's total inverse (`0⁻¹ = 0`), so at a zero round
-challenge the equation is defined although no deployed execution corresponds to it (the Rust
-inverts the round challenges). Harmless for the soundness direction — the capstones consume the
-equation only under `DeployedAccepts` — but the equation is total where halo2 is partial (a
-negligible-probability corner). -/
+Totality note: the closed form uses Lean's total inverse (`0⁻¹ = 0`), and the deployed code
+computes the same thing — halo2 batch-inverts the round challenges with ff's `batch_invert`,
+which leaves a zero challenge at zero — so at `uⱼ = 0` the equation and the Rust agree
+term for term. The corner is faithful in both directions: nothing about acceptance can be
+shown from this form that the deployed verifier would not exhibit. -/
 def DeployedIpaVerifierEq {shape : Shape} [DecidableEq F] [DecidableEq G] [Inhabited G]
     (g : Fin (2 ^ shape.k) → G) (w u : G)
     (vk : VerifyingKey shape F G) (ps : ProofString shape F G) (ch : Challenges shape.k F) : Prop :=

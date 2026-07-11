@@ -18,8 +18,9 @@ verified in one group equation:
   the binding peel (`NontrivialRelation.ofDeployedTree`).
 
 This file supplies the binding-free scaffolding for the `U`/`W` part of that apparatus — the tree
-(`DeployedIpaTreeV`, whose nodes carry `U`/`W` data but not `S`), its projection (`projTree`), and
-the deployed accept predicate (`DeployedIpaAcceptV`). The peel
+(`DeployedIpaTreeV`, whose nodes carry `U`/`W` data but not `S`), its projection (`projTree`), the
+deployed accept predicate (`DeployedIpaAcceptV`), and the accept's satisfiability from an opening
+witness (`deployedIpaAcceptV_of_witness`, the completeness gate). The peel
 (`Zcash.Snark.Soundness.Deployed.IpaPeel`) separates the combined check into the clean `g`-side
 commitment and `U`-side value checks (the `W`-side blinding identity is discarded), closing the
 deployed IPA onto `ipa_soundV`; a check that does not separate *computes* a nontrivial
@@ -80,5 +81,52 @@ def DeployedIpaAcceptV : {d : ℕ} → (Fin (2 ^ d) → G) → (Fin (2 ^ d) → 
           (P + u₂⁻¹ • L + u₂ • R) (v + u₂⁻¹ • Lv + u₂ • Rv) (blind + u₂⁻¹ • Lw + u₂ • Rw) t₂ ∧
         DeployedIpaAcceptV (foldGens g u₃) (foldGens b u₃) U W z
           (P + u₃⁻¹ • L + u₃ • R) (v + u₃⁻¹ • Lv + u₃ • Rv) (blind + u₃⁻¹ • Lw + u₃ • Rw) t₃
+
+/-- One deployed round, honest side: folding the witness by `u` (`foldVec`) against the folded
+generators `foldGens g u` opens the parent commitment plus the cross-terms `[u⁻¹]L + [u]R`. Here
+`L = ⟨loHalf a, hiHalf g⟩` and `R = ⟨hiHalf a, loHalf g⟩` — `commitGen_round` in the tree's fold
+convention. -/
+theorem commitGen_foldGens_foldVec {k : ℕ} (g : Fin (2 ^ (k + 1)) → G)
+    (a : Fin (2 ^ (k + 1)) → F) {u : F} (hu : u ≠ 0) :
+    commitGen (foldGens g u) (foldVec (loHalf a) (hiHalf a) u)
+      = commitGen g a + u⁻¹ • commitGen (hiHalf g) (loHalf a)
+        + u • commitGen (loHalf g) (hiHalf a) := by
+  have h := commitGen_round (loHalf g) (hiHalf g) (loHalf a) (hiHalf a) (inv_ne_zero hu)
+  rw [inv_inv] at h
+  rw [foldGens, foldVec, h, ← commitGen_split]
+
+/-- **The deployed accept is satisfiable from an opening witness (completeness).** For any
+witness `a`, blind, and binding challenge `z`, some deployed tree accepts the commitment
+`⟨a, g⟩` opened to the value `⟨a, b⟩`. The honest construction: cross-terms from the witness
+halves (`commitGen_foldGens_foldVec`), zero blinding cross-terms, one triple of distinct nonzero
+challenges reused at every node. The sanity gate: the accept does not exclude honest executions.
+`ForkedTranscript.nonempty_of_opening` lifts it to the deployed interface. -/
+theorem deployedIpaAcceptV_of_witness (u₁ u₂ u₃ : F)
+    (h12 : u₁ ≠ u₂) (h13 : u₁ ≠ u₃) (h23 : u₂ ≠ u₃)
+    (hu₁ : u₁ ≠ 0) (hu₂ : u₂ ≠ 0) (hu₃ : u₃ ≠ 0) :
+    {d : ℕ} → (g : Fin (2 ^ d) → G) → (b : Fin (2 ^ d) → F) → (U W : G) → (z blind : F) →
+      (a : Fin (2 ^ d) → F) →
+      ∃ t : DeployedIpaTreeV F G d,
+        DeployedIpaAcceptV g b U W z (commitGen g a) (commitGen b a) blind t
+  | 0, g, b, U, W, z, blind, a => by
+      have ha : a = fun _ => a ⟨0, Nat.one_pos⟩ :=
+        funext fun i => congrArg a (Fin.ext (Nat.lt_one_iff.mp i.isLt))
+      exact ⟨.leaf (a ⟨0, Nat.one_pos⟩) blind a, rfl, by rw [← ha]⟩
+  | d + 1, g, b, U, W, z, blind, a => by
+      obtain ⟨t₁, h₁⟩ := deployedIpaAcceptV_of_witness u₁ u₂ u₃ h12 h13 h23 hu₁ hu₂ hu₃
+        (foldGens g u₁) (foldGens b u₁) U W z blind (foldVec (loHalf a) (hiHalf a) u₁)
+      obtain ⟨t₂, h₂⟩ := deployedIpaAcceptV_of_witness u₁ u₂ u₃ h12 h13 h23 hu₁ hu₂ hu₃
+        (foldGens g u₂) (foldGens b u₂) U W z blind (foldVec (loHalf a) (hiHalf a) u₂)
+      obtain ⟨t₃, h₃⟩ := deployedIpaAcceptV_of_witness u₁ u₂ u₃ h12 h13 h23 hu₁ hu₂ hu₃
+        (foldGens g u₃) (foldGens b u₃) U W z blind (foldVec (loHalf a) (hiHalf a) u₃)
+      exact ⟨.node (commitGen (hiHalf g) (loHalf a)) (commitGen (loHalf g) (hiHalf a))
+          (commitGen (hiHalf b) (loHalf a)) (commitGen (loHalf b) (hiHalf a)) 0 0 u₁ u₂ u₃ t₁ t₂ t₃,
+        h12, h13, h23, hu₁, hu₂, hu₃,
+        by rw [smul_zero, smul_zero, add_zero, add_zero, ← commitGen_foldGens_foldVec g a hu₁,
+             ← commitGen_foldGens_foldVec b a hu₁]; exact h₁,
+        by rw [smul_zero, smul_zero, add_zero, add_zero, ← commitGen_foldGens_foldVec g a hu₂,
+             ← commitGen_foldGens_foldVec b a hu₂]; exact h₂,
+        by rw [smul_zero, smul_zero, add_zero, add_zero, ← commitGen_foldGens_foldVec g a hu₃,
+             ← commitGen_foldGens_foldVec b a hu₃]; exact h₃⟩
 
 end Zcash.Snark

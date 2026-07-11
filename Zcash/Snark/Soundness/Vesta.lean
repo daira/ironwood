@@ -87,7 +87,7 @@ def NontrivialRelation.ofUnopenedForkVesta [Fact (HasseBound Vesta.curve)] [Deci
     (ps : ProofString shape Fp VestaG) (ch : Challenges shape.k Fp)
     {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp} (hz : z ≠ 0)
     (fs : ForkedTranscript urs hk vk ps ch b z blind)
-    (hne : ¬ IpaAcceptV urs.g b (deployedCommitment urs hk vk ps ch) (multiopenValue vk ps ch)
+    (hne : ¬ IpaAcceptV urs.g b fs.openedCommitment (multiopenValue vk ps ch)
       (projTree fs.tree)) :
     NontrivialRelation (F := Fp) urs.g urs.u urs.w :=
   NontrivialRelation.ofUnopenedFork urs hk vk ps ch hz fs hne
@@ -102,11 +102,11 @@ theorem orchard_verifier_vesta_opening_of_forked [Fact (HasseBound Vesta.curve)]
     (ps : ProofString shape Fp VestaG) (ch : Challenges shape.k Fp)
     {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp} {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop}
     (fs : ForkedTranscript urs hk vk ps ch b z blind)
-    (hclean : IpaAcceptV urs.g b (deployedCommitment urs hk vk ps ch) (multiopenValue vk ps ch)
+    (hclean : IpaAcceptV urs.g b fs.openedCommitment (multiopenValue vk ps ch)
       (projTree fs.tree))
-    (hcirc : ∀ a, IpaRelation urs (deployedCommitment urs hk vk ps ch) b (multiopenValue vk ps ch) a →
+    (hcirc : ∀ a, IpaRelation urs fs.openedCommitment b (multiopenValue vk ps ch) a →
       circuitSat a)
-    {S : Prop} (hencodes : ∀ a, SnarkRelation urs (deployedCommitment urs hk vk ps ch) b
+    {S : Prop} (hencodes : ∀ a, SnarkRelation urs fs.openedCommitment b
       (multiopenValue vk ps ch) circuitSat a → S) :
     S :=
   orchard_verifier_deployed_opening_of_forked urs hk vk ps ch fs hclean hcirc hencodes
@@ -114,7 +114,7 @@ theorem orchard_verifier_vesta_opening_of_forked [Fact (HasseBound Vesta.curve)]
 open Polynomial in
 /-- **Deployed opening and constraint over Vesta, given a clean fork.**
 `orchard_verifier_deployed_constraint_of_forked` specialised to `SWPoint Vesta.curve`: the opening
-for the pinned `deployedCommitment`/`multiopenValue`, and `circuitSat` (concrete
+for the declared `fs.openedCommitment` and the pinned `multiopenValue`, and `circuitSat` (concrete
 `circuitSatViaGates`) from the verifier's gate point-check `hquot` lifted by Schwartz–Zippel
 (`hgood`). Same hypotheses as the abstract theorem, plus the Hasse bound; `hquot`/`hgood` share
 `hcirc`'s unsatisfiable shape (see the section note in `Soundness.Main`). -/
@@ -126,16 +126,16 @@ theorem orchard_verifier_vesta_constraint_of_forked [Fact (HasseBound Vesta.curv
     (decodeAdvice decodeInstance : (Fin (2 ^ urs.k) → Fp) → (ℕ → Polynomial Fp))
     (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp)
     (fs : ForkedTranscript urs hk vk ps ch b z blind)
-    (hclean : IpaAcceptV urs.g b (deployedCommitment urs hk vk ps ch) (multiopenValue vk ps ch)
+    (hclean : IpaAcceptV urs.g b fs.openedCommitment (multiopenValue vk ps ch)
       (projTree fs.tree))
-    (hquot : ∀ a, IpaRelation urs (deployedCommitment urs hk vk ps ch) b (multiopenValue vk ps ch) a →
+    (hquot : ∀ a, IpaRelation urs fs.openedCommitment b (multiopenValue vk ps ch) a →
       quotientCheck (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates) hpoly deg x)
-    (hgood : ∀ a, IpaRelation urs (deployedCommitment urs hk vk ps ch) b (multiopenValue vk ps ch) a →
+    (hgood : ∀ a, IpaRelation urs fs.openedCommitment b (multiopenValue vk ps ch) a →
       combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates ≠ hpoly * (X ^ deg - 1) →
       (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates
         - hpoly * (X ^ deg - 1)).eval x ≠ 0)
     {S : Prop}
-    (hencodes : ∀ a, SnarkRelation urs (deployedCommitment urs hk vk ps ch) b (multiopenValue vk ps ch)
+    (hencodes : ∀ a, SnarkRelation urs fs.openedCommitment b (multiopenValue vk ps ch)
       (circuitSatViaGates fixedCols decodeAdvice decodeInstance y gates hpoly deg) a → S) :
     S :=
   orchard_verifier_deployed_constraint_of_forked urs hk vk ps ch fixedCols decodeAdvice
