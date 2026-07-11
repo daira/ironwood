@@ -90,7 +90,7 @@ theorem accepting_fold_eq_foldVec {m : ℕ} (gLo gHi : Fin m → G) (aLo aHi a' 
 
 The trust boundary underlying commitment binding: rather than assuming the commitment is binding
 outright, binding is modelled as a reduction to discrete-log-relation (DLR) hardness at the URS
-generators — the same shape as the binding-signature argument's `relation_of_imbalance`.
+generators — the same shape as the binding-signature argument's `NontrivialRelation.ofImbalance`.
 `relation_of_collision` proves the counterfactual (breaking binding produces a nontrivial
 relation among the generators), and `commitmentBinding_iff_no_relation` makes precise that
 `CommitmentBinding` is exactly DLR hardness — so the assumption is the standard, named one, with
@@ -112,7 +112,7 @@ theorem commitGen_sub {n : ℕ} (g : Fin n → G) (a a' : Fin n → F) :
 
 /-- **The binding reduction (counterfactual).** A binding collision — two distinct openings of one
 commitment — yields a nontrivial discrete-log relation `a − a'` among the URS generators. So DLR hardness
-closes binding, exactly as `relation_of_imbalance` closes the binding-signature argument: the collision
+closes binding, exactly as `NontrivialRelation.ofImbalance` closes the binding-signature argument: the collision
 is reduced to a relation the hardness assumption forbids. -/
 theorem relation_of_collision (urs : URS G) {a a' : Fin (2 ^ urs.k) → F}
     (hcol : commit urs a = commit urs a') (hne : a ≠ a') :

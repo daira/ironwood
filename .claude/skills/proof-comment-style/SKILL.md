@@ -34,12 +34,11 @@ it scale.
 5. **Bold role labels on milestones, and only there.** Load-bearing theorems open with a bolded
    role — `**Balance reduction (field level).**`, `**Orchard integer balance reduction
    (§4.14).**`, `**Deployed soundness, opening derived.**` — so a file skims by its milestones.
-   Defs and supporting lemmas stay plain (`HasNontrivialRelation`, `valueCommit`,
+   Defs and supporting lemmas stay plain (`NontrivialRelation`, `valueCommit`,
    `DeployedAccepts`). Don't bold mechanically: a label on everything is a label on nothing.
-6. **Italicised *either*/*or*** when a conclusion is a reduction disjunction
-   (`… = 0 ∨ HasNontrivialRelation V R`): "*either* the bundle balances *or* it exhibits a
-   nontrivial discrete-log relation". (Applies from the `∨`-shaped layers up the stack; the base
-   layer has none.)
+6. **Italicised *either*/*or*** when a docstring states a reduction dichotomy — "*either* the
+   bundle balances *or* an explicit nontrivial relation is computed" — the contrapositive
+   reading of a breaks-as-computed-data reduction (`NontrivialRelation.ofBundleModImbalance`).
 7. **Statement-shape rationale, once.** When a statement's *form* would surprise a reader — a
    reduction where an assumption was expected, a free `Prop` where a concrete relation was
    expected — write the why as a named module-docstring section and point at it. Exemplars:

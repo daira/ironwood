@@ -9,7 +9,7 @@
   - [Transaction Format](design/transaction-format.md)
   - [Action Circuit](design/action-circuit.md)
   - [*Orchard-* to *Ironwood-pool* Migration](design/migration.md) <!-- todo -->
-- [Formal Verification](formal-verification.md) <!-- todo -->
+- [Formal Verification](formal-verification.md)
   - [Proof Journey](formal-verification/proof-journey.md)
   - [Proof Map](formal-verification/proof-map.md)
   - [Glossary](formal-verification/glossary.md)

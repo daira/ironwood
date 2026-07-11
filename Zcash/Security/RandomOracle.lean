@@ -1,0 +1,61 @@
+import Mathlib
+
+/-!
+# Random-oracle collision vocabulary (classical ROM)
+
+Shared Layer-A foundation for the classical-ROM security arguments (key-binding `H^*`, and — reused
+by the Layer-B games — note-commitment / nullifier `H^rcm`). We follow the *deterministic-exhibition*
+style of `BindingSignature/Balance.lean`: a security theorem reduces a break to an **exhibited**
+random-oracle collision, and the probability that such a collision occurs within `q` oracle queries —
+the birthday bound `q(q-1)/(2·|F|)` — is a separate concern (Layer C), carried as a named quantity
+until discharged.
+
+An abstract oracle is any function `O : Q → F` from queries to field outputs; "randomness" enters only
+at the probability layer, so nothing here mentions probability.
+
+## Collisions are data, reductions are functions
+
+For any compressing oracle, collisions *exist* propositionally (pigeonhole), so an ∃-closed
+collision `Prop` is true at every instantiation of interest. Conclusions of the form
+`… ∨ (∃ collision)` and hypotheses of the form `¬ (∃ collision)` are then vacuous or
+unsatisfiable, and proof irrelevance prevents a consumer from recovering the exhibited
+collision from a proof. Collision events are therefore **structures carrying the colliding
+queries as data**, and reductions are **computable functions** producing them. The
+discipline: a plain `def`, never `noncomputable` — choice could conjure the data from mere
+existence. Check with `#print axioms`, which reports the *transitive* axiom dependencies;
+this catches a `sorry` or an unintended axiom hiding in a cited lemma rather than in the
+definition itself, while `Classical.choice` appearing only via erased `Prop` fields is
+harmless. Eyeball for efficiency — the one property Lean cannot express. (The convention is
+documented in the Ironwood Book:
+<https://zcash.github.io/ironwood/formal-verification.html#breaks-as-computed-data>.)
+
+The `±`-collision variant `CollisionUpToSign` is the shape produced by arguments that pass through the
+`Extract` coordinate extractor, whose fibers are `{P, -P}`: an `Extract`-equality of two commitments
+yields an equality-or-negation of the underlying scalars. Both key-binding and the nullifier
+(Faerie-Gold) argument bottom out in a `CollisionUpToSign`.
+-/
+
+namespace Zcash.Security.RandomOracle
+
+variable {Q F : Type*}
+
+/-- A collision of an oracle `O`, as data: two distinct queries with equal outputs. -/
+structure Collision (O : Q → F) where
+  q₁ : Q
+  q₂ : Q
+  ne : q₁ ≠ q₂
+  eq : O q₁ = O q₂
+
+/-- A `±`-collision of `O`, as data: two distinct queries whose outputs are equal or negatives of
+each other. This is the event exhibited by `Extract`-based reductions (key-binding, nullifier). -/
+structure CollisionUpToSign [Neg F] (O : Q → F) where
+  q₁ : Q
+  q₂ : Q
+  ne : q₁ ≠ q₂
+  pm : O q₁ = O q₂ ∨ O q₁ = -O q₂
+
+/-- Every collision is a `±`-collision. -/
+def Collision.upToSign [Neg F] {O : Q → F} (c : Collision O) : CollisionUpToSign O :=
+  ⟨c.q₁, c.q₂, c.ne, Or.inl c.eq⟩
+
+end Zcash.Security.RandomOracle

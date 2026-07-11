@@ -1,7 +1,7 @@
 # Glossary
 
 Coined terms and shorthand used across the [proof map](proof-map.md) and the Lean
-soundness proofs. Anchors point to a module + name under `Zcash/Snark/`.
+development. Anchors point to a module + name under `Zcash/`.
 
 <style>
 .iw-glossary { margin: 1.3rem 0; display: grid; gap: 26px; }
@@ -56,7 +56,7 @@ soundness proofs. Anchors point to a module + name under `Zcash/Snark/`.
 
 <section>
 <div class="grp">Binding &amp; the AGM</div>
-<div class="g"><div class="g-head"><span class="term">HasNontrivialRelation</span><span class="anchor">Deployed.Binding.HasNontrivialRelation</span></div><div class="def">A nontrivial discrete-log relation on <code>(g, U, W)</code>. One always exists at prime order, so the <code>∨</code>-branch is vacuous <em>as a statement</em>; the force is the computational assumption that no efficient adversary can <em>find</em> one.</div></div>
+<div class="g"><div class="g-head"><span class="term">NontrivialRelation</span><span class="anchor">Security.BindingSignature.NontrivialRelation</span></div><div class="def">A nontrivial discrete-log relation, carried as data with its coefficients explicit. One always exists at prime order, so an ∃-closed <code>Prop</code> version (or an <code>∨</code>-branch concluding it) is vacuous <em>as a statement</em>; the reductions <em>compute</em> one from a break, and the force is the computational assumption that no efficient adversary can <em>find</em> one.</div></div>
 <div class="g"><div class="g-head"><span class="term">algebraic relation · gap</span><span class="anchor">AGM.Capstone.deployedAlgebraicRelationWitness</span></div><div class="def">The data-carrying relation witness the discrete-log reduction consumes — an explicit function of the prover's representations, no <code>Classical.choice</code>. Reached from the forking side's <em>existential</em> relation only across a <em>gap</em>: an uncomposed modeling identification (issue #15), drawn on the map as its own edge kind. The other gap reads the sampled-basis probability bound at the deployed URS.</div></div>
 <div class="g"><div class="g-head"><span class="term">fixed-slot</span><span class="anchor">AGM.Adapter.FixedSlotEmbedding</span></div><div class="def">The AGM trick: hide a discrete-log challenge in one basis slot fixed before the adversary runs; a found relation hitting that slot yields the discrete log.</div></div>
 <div class="g"><div class="g-head"><span class="term">DL reduction bound</span><span class="anchor">AGM.Probability.relation_prob_le_of_textbookDL</span></div><div class="def">The random-slot accounting: the planted slot is hit with probability at least <code>1/|basis|</code> of the finder's, so relation-finding probability is bounded by a multiple of the discrete-log advantage — where DL-hardness enters as an explicit, priced hypothesis.</div></div>
@@ -79,6 +79,12 @@ soundness proofs. Anchors point to a module + name under `Zcash/Snark/`.
 <div class="g"><div class="g-head"><span class="term">accept probability</span><span class="anchor">hprob · Soundness/Vesta.lean</span></div><div class="def">The accepting-proof probability beats the knowledge error <code>kerr/Nᵏ</code> — enough for the forking lemma to extract. Carried as the capstone hypothesis <code>hprob</code>; the measure-side random-oracle floor.</div></div>
 <div class="g"><div class="g-head"><span class="term">structural residuals</span><span class="anchor">hz · hg0 · hs · hξ · Soundness/Vesta.lean</span></div><div class="def">The remaining structural capstone hypotheses: <code>z ≠ 0</code> (every rung), <code>g₀ ≠ 0</code> (every forking rung), the S-opening <code>commit s = ipaS</code> (deployed/adaptive/rewind rungs), and value recovery <code>ξ·⟨s,b⟩ = 0</code> (constraint rungs only). Assumed in-Lean, priced rather than discharged.</div></div>
 <div class="g"><div class="g-head"><span class="term">high-level relation · VK correctness</span><span class="anchor">hencodes · Verifier.Assemble</span></div><div class="def">The two gaps the composition does not yet cross: on the output side, <code>hencodes</code> — gate satisfaction (<code>SnarkRelation</code>) implies the intended high-level statement; on the input side, VK correctness — the verifying key fed to the verifier faithfully encodes the real deployed circuit. Both outside Lean; not started.</div></div>
+</section>
+
+<section>
+<div class="grp">Conventions</div>
+<div class="g"><div class="g-head"><span class="term">breaks as computed data</span><span class="anchor">Security.RandomOracle · Security/Ledger · Security/BindingSignature</span></div><div class="def">Break events are structures carrying the breaking data (colliding queries, relation coefficients); the reductions producing them are plain computable <code>def</code>s. An ∃-closed break <code>Prop</code> is vacuously true at the instantiations of interest (relations always exist at prime order; compressing hashes always have collisions), so the content lives in the data, protected by compiler-checked computability and pinned axiom sets. See <a href="../formal-verification.html#breaks-as-computed-data">Breaks as computed data</a>.</div></div>
+<div class="g"><div class="g-head"><span class="term">checked trust boundary</span><span class="anchor">Fingerprint.TrustBoundary · Ledger.TrustBoundary · BindingSignature.TrustBoundary</span></div><div class="def">Build-time pins on what a theorem may rest on: <code>assert_no_sorry</code> over the elaborated dependency graph plus a <code>#guard_msgs</code>-pinned <code>#print axioms</code>, so a stray <code>sorry</code> or a new axiom fails the build instead of silently widening the trusted base. See <a href="../formal-verification.html#trust-discipline">Trust discipline</a>.</div></div>
 </section>
 
 </div>

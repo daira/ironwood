@@ -23,10 +23,13 @@ In a prime-order group, `V` and `R` are *always* discrete-log-related — a nont
 "the only relation is trivial" is *false* in the group setting and must not be used as the
 binding hypothesis. Instead we phrase binding as a reduction:
 
-* `§ Binding reduction` below proves, with no cryptographic hypothesis, that a non-balancing
-  verifying bundle *exhibits* an explicit nontrivial relation between `V` and `R`
-  (`relation_of_imbalance`), or equivalently the discrete log `dlog_R V`
-  (`imbalance_yields_discrete_log`).
+* `§ Binding reduction` below shows, with no cryptographic hypothesis, that a non-balancing
+  verifying bundle *exhibits* an explicit nontrivial relation between `V` and `R`, or
+  equivalently the discrete log `dlog_R V` (`imbalance_yields_discrete_log`).
+  `NontrivialRelation.ofImbalance` outputs the break as computed data
+  <https://zcash.github.io/ironwood/formal-verification.html#breaks-as-computed-data>; an
+  ∃-closed relation Prop would be vacuous, since a relation always exists in a prime-order
+  group.
 
   "The bundle balances" then reduces to the discrete-log relation problem (DLR) — a statement about
   efficient adversaries, supplied by the algebraic group model or a DLR hardness assumption at the
@@ -46,11 +49,6 @@ computational, not algebraic:
   proved (its proof needs a random oracle + forking); supplied as the `hExtract` hypothesis.
 * **DLR hardness** — the assumption the reduction discharges against to conclude actual balance
   (the discrete-log relation problem, tightly equivalent to DL).
-
-## Not yet built
-
-* **The AGM / DLR wrapper** — the computational / AGM layer that consumes `relation_of_imbalance`
-  against DLR hardness.
 -/
 
 namespace Zcash.Security.BindingSignature
@@ -70,24 +68,10 @@ theorem smul_value_eq_smul_rand (V R bvk : M) (A B bsk : F)
 
 /-! ### Binding reduction -/
 
-/-- A non-balancing (`A ≠ 0`) verifying bundle exhibits an explicit nontrivial discrete-log
-relation between the value base `V` and the randomness base `R`: the coefficients `(A, B − bsk)`
-are not both zero (indeed `A ≠ 0`) and `A • V + (B − bsk) • R = 0`.
-
-Such a relation always exists in the group; the content is that imbalance *produces* one.
-Under hardness of the discrete-log relation problem, that cannot happen, so the bundle balances. -/
-theorem relation_of_imbalance (V R bvk : M) (A B bsk : F)
-    (hA : A ≠ 0)
-    (hExtract : bvk = bsk • R) (hSum : bvk = A • V + B • R) :
-    A ≠ 0 ∧ A • V + (B - bsk) • R = 0 := by
-  refine ⟨hA, ?_⟩
-  rw [smul_value_eq_smul_rand V R bvk A B bsk hExtract hSum, ← add_smul]
-  have hc : (bsk - B) + (B - bsk) = (0 : F) := by ring
-  rw [hc, zero_smul]
-
 /-- A non-balancing verifying bundle yields the discrete log of `V` base `R`, namely
-`dlog_R V = A⁻¹ (bsk − B)`. This is just a more explicit way of saying `relation_of_imbalance`;
-it is the latter that is wired into the balance reduction below. -/
+`dlog_R V = A⁻¹ (bsk − B)`. This is a more explicit way of reading the relation computed by
+`NontrivialRelation.ofImbalance`; it is the latter that is wired into the balance reduction
+below. -/
 theorem imbalance_yields_discrete_log (V R bvk : M) (A B bsk : F) (hA : A ≠ 0)
     (hExtract : bvk = bsk • R) (hSum : bvk = A • V + B • R) :
     V = (A⁻¹ * (bsk - B)) • R := by
@@ -96,26 +80,36 @@ theorem imbalance_yields_discrete_log (V R bvk : M) (A B bsk : F) (hA : A ≠ 0)
   rwa [smul_smul, smul_smul, inv_mul_cancel₀ hA, one_smul] at h
 
 /-- A nontrivial `F`-linear (discrete-log) relation between the value base `V` and the randomness
-base `R`: scalars `(a, b)` not both zero with `a • V + b • R = 0`. The content of the binding
-reduction is that imbalance allows constructing such a relation explicitly. -/
-def HasNontrivialRelation (V R : M) : Prop := ∃ a b : F, (a ≠ 0 ∨ b ≠ 0) ∧ a • V + b • R = 0
+base `R`, as data: scalars `(a, b)` not both zero with `a • V + b • R = 0`. Such a relation always
+*exists* propositionally in a prime-order group, so an ∃-closed Prop version would be vacuous;
+the content of the binding reduction is that imbalance lets us *compute* one (breaks as
+computed data — see `Zcash.Security.RandomOracle`). -/
+structure NontrivialRelation (V R : M) where
+  a : F
+  b : F
+  nontrivial : a ≠ 0 ∨ b ≠ 0
+  relation : a • V + b • R = 0
 
-/-- **Balance reduction (field level).** From RedDSA extractability (`bvk = bsk • R`) and the
-binding-key decomposition (`bvk = A • V + B • R`), with no other cryptographic hypothesis:
-*either* the net value coefficient is zero (`A = 0`, balance modulo the scalar-field order),
-*or* the bundle exhibits a nontrivial discrete-log relation between `V` and `R`. -/
-theorem value_coeff_zero_reduction (V R bvk : M) (A B bsk : F)
+/-- **Balance reduction (field level), as a computed relation.** From RedDSA extractability
+(`bvk = bsk • R`), the binding-key decomposition (`bvk = A • V + B • R`), and imbalance
+(`A ≠ 0`), compute the explicit nontrivial relation with coefficients `(A, B − bsk)`. Such a
+relation always exists in the group; the content is that imbalance *produces* one.
+
+This is the algebraic core; the consumer-facing forms are the bundle-level reductions below
+(`ofBundleModImbalance`, `ofBundleIntImbalance`, and the per-pool capstones), which derive
+the decomposition and supply the imbalance hypothesis at the bundle values. -/
+def NontrivialRelation.ofImbalance (V R bvk : M) (A B bsk : F) (hA : A ≠ 0)
     (hExtract : bvk = bsk • R) (hSum : bvk = A • V + B • R) :
-    A = 0 ∨ HasNontrivialRelation (F := F) V R := by
-  by_cases hA : A = 0
-  · exact Or.inl hA
-  · obtain ⟨hA', hrel⟩ := relation_of_imbalance V R bvk A B bsk hA hExtract hSum
-    exact Or.inr ⟨A, B - bsk, Or.inl hA', hrel⟩
+    NontrivialRelation (F := F) V R :=
+  ⟨A, B - bsk, Or.inl hA, by
+    rw [smul_value_eq_smul_rand V R bvk A B bsk hExtract hSum, ← add_smul]
+    have hc : (bsk - B) + (B - bsk) = (0 : F) := by ring
+    rw [hc, zero_smul]⟩
 
 /-! ### Integer balance: range / no-overflow lift
 
-The binding reduction `value_coeff_zero_reduction` concludes `A = 0` in `F = ZMod r`
-(or exhibits a discrete-log relation), i.e. balance *modulo the scalar-field order*.
+The binding reduction concludes `A = 0` in `F = ZMod r` (or computes a discrete-log
+relation via `NontrivialRelation.ofImbalance`), i.e. balance *modulo the scalar-field order*.
 Genuine balance is the integer equation `∑ v_in − ∑ v_out − v_balance = 0`.
 
 That balance modulo the scalar-field order implies integer balance is argued in the second
@@ -130,7 +124,7 @@ so that it works for any signed-64-bit `valueBalance`, which is all the encoding
 The per-pool bounds live in the `Orchard` and `Sapling` modules: `orchard_natAbs_lt` /
 `sapling_natAbs_lt` (with `_v4` / `_v5` corollaries) derive `N.natAbs < r` from the value-type
 range proofs and the field order, producing the `hbound` consumed by
-`bundle_integer_balances_reduction`.
+`NontrivialRelation.ofBundleIntImbalance`.
 The per-pool reasoning is documented there — Orchard's signed net values under the consensus
 rule `n ≤ 2^16 − 1`, and Sapling's unsigned values under the transaction-size limit. -/
 
@@ -194,18 +188,16 @@ theorem bindingVK_decomp (V R : M) (spends outputs : List (F × F)) (vBalance : 
   simp only [sub_smul]
   abel
 
-/-- **Bundle balance reduction (field level).** For a bundle whose binding signature verifies
-(`hExtract`, from RedDSA extractability): *either* the net value balances modulo the scalar-field
-order, *or* the bundle exhibits a nontrivial discrete-log relation between `V` and `R`. There is no
-binding assumption; the decomposition `hSum` is derived by `bindingVK_decomp`. This is not yet
-integer balance — lifting `A = 0` to `∑ v_in = ∑ v_out + v_balance` over ℤ needs the no-overflow
-step `intBalance_eq_zero_of_lt` (applied in `bundle_integer_balances_reduction`); discharging the
-relation branch needs DLR hardness at the computational layer. -/
-theorem bundle_mod_balances_reduction (V R : M) (spends outputs : List (F × F)) (vBalance bsk : F)
+/-- **Bundle balance reduction (field level), as a computed relation.** For a bundle whose
+binding signature verifies (`hExtract`, from RedDSA extractability) and whose net value does
+not balance modulo the scalar-field order, compute the nontrivial relation. There is no
+binding assumption; the decomposition is derived by `bindingVK_decomp`. -/
+def NontrivialRelation.ofBundleModImbalance (V R : M) (spends outputs : List (F × F))
+    (vBalance bsk : F)
+    (hne : (spends.map Prod.fst).sum - (outputs.map Prod.fst).sum - vBalance ≠ 0)
     (hExtract : bindingVK V R spends outputs vBalance = bsk • R) :
-    (spends.map Prod.fst).sum - (outputs.map Prod.fst).sum - vBalance = 0
-      ∨ HasNontrivialRelation (F := F) V R :=
-  value_coeff_zero_reduction V R (bindingVK V R spends outputs vBalance) _ _ bsk hExtract
+    NontrivialRelation (F := F) V R :=
+  .ofImbalance V R (bindingVK V R spends outputs vBalance) _ _ bsk hne hExtract
     (bindingVK_decomp V R spends outputs vBalance)
 
 /-- Cast an integer-valued bundle (integer note / net values, field randomness) to a field-valued one,
@@ -223,31 +215,31 @@ theorem castBundle_fst_sum {r : ℕ} (l : List (ℤ × ZMod r)) :
     simp only [castBundle, List.map_cons, List.sum_cons, Int.cast_add] at ih ⊢
     rw [ih]
 
-/-- **Integer balance reduction** — the second half of the spec §4.13 / §4.14 argument, over a bundle
-whose values are the actual integer note / net values (`ℤ`), with field randomness. Given the no-overflow
-bound `hbound`, this lifts the field-level reduction to ℤ: *either* the bundle balances over ℤ
-(`∑ v_in − ∑ v_out − vBalance = 0`) *or* it exhibits a nontrivial discrete-log relation between `V`
-and `R`. There is no binding assumption — the relation branch is discharged against DLR hardness at
-the computational layer.
+/-- **Integer balance reduction, as a computed relation** — the second half of the spec §4.13 /
+§4.14 argument, over a bundle whose values are the actual integer note / net values (`ℤ`), with
+field randomness. Given the no-overflow bound `hbound` and integer imbalance, compute the
+nontrivial relation. There is no binding assumption — the computed relation is discharged against
+DLR hardness at the computational layer, and "the bundle balances over ℤ" is the contrapositive.
 
 The integer→field cast is derived using `castBundle_fst_sum`; the only added input over the field
 reduction is the no-overflow bound `hbound`, provided by protocol-specific value-type range proofs
 (`BindingSignature.Orchard.orchard_natAbs_lt` and `BindingSignature.Sapling.sapling_natAbs_lt`). -/
-theorem bundle_integer_balances_reduction {r : ℕ} [Fact (Nat.Prime r)]
+def NontrivialRelation.ofBundleIntImbalance {r : ℕ} [Fact (Nat.Prime r)]
     {M : Type*} [AddCommGroup M] [Module (ZMod r) M]
     (V R : M) (spends outputs : List (ℤ × ZMod r)) (vBalance : ℤ) (bsk : ZMod r)
+    (hne : (spends.map Prod.fst).sum - (outputs.map Prod.fst).sum - vBalance ≠ 0)
     (hbound : ((spends.map Prod.fst).sum - (outputs.map Prod.fst).sum - vBalance).natAbs < r)
     (hExtract : bindingVK V R (castBundle spends) (castBundle outputs) (vBalance : ZMod r) = bsk • R) :
-    (spends.map Prod.fst).sum - (outputs.map Prod.fst).sum - vBalance = 0
-      ∨ HasNontrivialRelation (F := ZMod r) V R := by
+    NontrivialRelation (F := ZMod r) V R :=
   haveI : NeZero r := ⟨(Fact.out : Nat.Prime r).pos.ne'⟩
-  rcases bundle_mod_balances_reduction V R (castBundle spends) (castBundle outputs)
-      (vBalance : ZMod r) bsk hExtract with hmod | hrel
-  · refine Or.inl (intBalance_eq_zero_of_lt _ ?_ hbound)
+  have hne' : ((castBundle spends).map Prod.fst).sum - ((castBundle outputs).map Prod.fst).sum
+      - (vBalance : ZMod r) ≠ 0 := fun hmod => by
+    refine hne (intBalance_eq_zero_of_lt _ ?_ hbound)
     rw [castBundle_fst_sum, castBundle_fst_sum] at hmod
     rw [Int.cast_sub, Int.cast_sub]
     exact hmod
-  · exact Or.inr hrel
+  .ofBundleModImbalance V R (castBundle spends) (castBundle outputs) (vBalance : ZMod r) bsk
+    hne' hExtract
 
 /-! ### Generic integer-range helpers for the no-overflow lift
 
