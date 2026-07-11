@@ -25,8 +25,9 @@ discipline: a plain `def`, never `noncomputable` — choice could conjure the da
 existence. Check with `#print axioms`, which reports the *transitive* axiom dependencies;
 this catches a `sorry` or an unintended axiom hiding in a cited lemma rather than in the
 definition itself, while `Classical.choice` appearing only via erased `Prop` fields is
-harmless. Eyeball for efficiency — the one property Lean cannot express. (This
-"breaks as computed data" convention originated in zcash/ironwood#43.)
+harmless. Eyeball for efficiency — the one property Lean cannot express. (The convention is
+documented in the Ironwood Book:
+<https://zcash.github.io/ironwood/formal-verification.html#breaks-as-computed-data>.)
 
 The `±`-collision variant `CollisionUpToSign` is the shape produced by arguments that pass through the
 `Extract` coordinate extractor, whose fibers are `{P, -P}`: an `Extract`-equality of two commitments

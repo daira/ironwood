@@ -24,10 +24,12 @@ In a prime-order group, `V` and `R` are *always* discrete-log-related — a nont
 binding hypothesis. Instead we phrase binding as a reduction:
 
 * `§ Binding reduction` below shows, with no cryptographic hypothesis, that a non-balancing
-  verifying bundle *exhibits* an explicit nontrivial relation between `V` and `R` — computed as
-  data by `NontrivialRelation.ofImbalance` (breaks as computed data, zcash/ironwood#43; an
+  verifying bundle *exhibits* an explicit nontrivial relation between `V` and `R`, or
+  equivalently the discrete log `dlog_R V` (`imbalance_yields_discrete_log`).
+  `NontrivialRelation.ofImbalance` outputs the break as computed data
+  <https://zcash.github.io/ironwood/formal-verification.html#breaks-as-computed-data>; an
   ∃-closed relation Prop would be vacuous, since a relation always exists in a prime-order
-  group) — or equivalently the discrete log `dlog_R V` (`imbalance_yields_discrete_log`).
+  group.
 
   "The bundle balances" then reduces to the discrete-log relation problem (DLR) — a statement about
   efficient adversaries, supplied by the algebraic group model or a DLR hardness assumption at the
@@ -79,9 +81,9 @@ theorem imbalance_yields_discrete_log (V R bvk : M) (A B bsk : F) (hA : A ≠ 0)
 
 /-- A nontrivial `F`-linear (discrete-log) relation between the value base `V` and the randomness
 base `R`, as data: scalars `(a, b)` not both zero with `a • V + b • R = 0`. Such a relation always
-*exists* propositionally in a prime-order group, so an ∃-closed Prop version would be vacuous
-(zcash/ironwood#43); the content of the binding reduction is that imbalance lets us *compute* one
-(breaks as computed data — see `Zcash.Security.RandomOracle`). -/
+*exists* propositionally in a prime-order group, so an ∃-closed Prop version would be vacuous;
+the content of the binding reduction is that imbalance lets us *compute* one (breaks as
+computed data — see `Zcash.Security.RandomOracle`). -/
 structure NontrivialRelation (V R : M) where
   a : F
   b : F

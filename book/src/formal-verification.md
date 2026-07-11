@@ -22,8 +22,7 @@ instantiation of interest. A theorem concluding `property ∨ ∃-break` is then
 hypothesis `¬ ∃-break` is unsatisfiable. Proof irrelevance makes this unrecoverable: even
 when a proof constructs the break honestly, a consumer of the statement cannot extract it.
 
-The convention adopted in
-[zcash/ironwood#43](https://github.com/zcash/ironwood/issues/43):
+The convention:
 
 * **Break events are structures carrying the breaking data** (the colliding queries, the
   relation coefficients), with `Prop` certificates attached. Examples:
