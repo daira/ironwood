@@ -19,8 +19,7 @@ verifier. Its endpoint theorems — the *capstones* — come in two layers:
 The deployed `_opening`/`_constraint` theorems derive the IPA opening (via `ipa_soundV`) and the
 gate constraint from the accept, under the Fiat–Shamir bridge `hFS`. An earlier deployed layer
 that peeled the blinding terms off the transcript (the URS generators `U`, `W` and the blinding
-commitment `S`) was removed; re-expressing binding as a DLR-hardness reduction (see
-`relation_of_collision` in `Zcash.Snark.Soundness.CommitFold`) is the planned follow-up.
+commitment `S`) was removed.
 
 ## Assumptions (the conditional family)
 
@@ -31,11 +30,10 @@ commitment `S`) was removed; re-expressing binding as a DLR-hardness reduction (
   `extract_correct`) are off this path.
 * **Circuit satisfaction assumed.** It also supplies `circuitSat a` rather than deriving it from
   the deployed gate check (`constraint_identity_of_accept` + the multiopen decode).
-* **Binding inert.** `hbind` (DLR hardness) reaches `knowledge_sound` but only feeds its
-  uniqueness conjunct, which this proof discards.
 
 What is proven lives in the component lemmas (`extract_correct`, `accepting_fold_eq`,
-`quotientCheck_sound`, `ipaRelation_unique`, and the binding reduction); the open work is wiring
+`quotientCheck_sound`, and the computed binding reduction `NontrivialDLRelation.ofCollision`);
+the open work is wiring
 them onto this path. `Soundness.Vesta` instantiates the capstones at the concrete curve;
 `Soundness.KnowledgeSoundness` lists the assumptions.
 -/
@@ -65,14 +63,14 @@ def ExtractableFromAcceptance (urs : URS G) (P : G) (b : Fin (2 ^ urs.k) → Fp)
 extraction is assumed (see the module docstring's assumption list); the deployed
 `_opening`/`_constraint` theorems below take the concrete accept and derive what is assumed
 here. -/
-theorem orchard_verifier_sound_conditional (urs : URS G) (hbind : CommitmentBinding (F := Fp) urs)
+theorem orchard_verifier_sound_conditional (urs : URS G)
     {P : G} {b : Fin (2 ^ urs.k) → Fp} {v : Fp} {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop}
     {accepts : Prop} (haccepts : accepts)
     (hextract : ExtractableFromAcceptance urs P b v circuitSat accepts)
     {S : Prop} (hencodes : ∀ a, SnarkRelation urs P b v circuitSat a → S) :
     S := by
   obtain ⟨t, a, hcons, hopen, hsat⟩ := hextract haccepts
-  exact hencodes a (knowledge_sound urs hbind hcons hopen hsat).2.1
+  exact hencodes a (knowledge_sound urs hcons hopen hsat).2
 
 /-- The deployed verifier's accept condition: `assemble? vk ps ch` succeeds and the assembled MSM
 evaluates to the group identity against the URS. Proof data that `assemble?` rejects (duplicate

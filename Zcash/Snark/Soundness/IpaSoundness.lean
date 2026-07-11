@@ -153,7 +153,8 @@ def IpaAccept : {d : ℕ} → (Fin (2 ^ d) → G) → G → IpaTree F G d → Pr
 a witness opening the commitment: `∃ a, commit g a = P`. By induction on the tree: the leaf gives
 `a = const c` directly; a node takes the three sub-witnesses from the IH, pins the parent commitment with
 `ipa_round_commit_sound`, and reassembles via `commitGen_append`. The whole argument uses no binding —
-3-special soundness alone pins the opening. (Binding/DLR enters only for uniqueness, `ipaRelation_unique`.) -/
+3-special soundness alone pins the opening. (Uniqueness holds up to a computed discrete-log
+relation, `NontrivialDLRelation.ofIpaOpenings`.) -/
 theorem ipa_sound : {d : ℕ} → (g : Fin (2 ^ d) → G) → (P : G) → (t : IpaTree F G d) →
     IpaAccept g P t → ∃ a : Fin (2 ^ d) → F, commitGen g a = P
   | 0, g, P, .leaf c, h => ⟨fun _ => c, h.symm⟩
