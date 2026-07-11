@@ -86,26 +86,5 @@ These boundaries are *checked at build time*, not merely documented:
   `native_decide` compiles and runs the verifier, so anything `noncomputable` on the
   assembled-verifier path fails the build.
 
-## Glossary
-
-**breaks as computed data** (`Zcash.Security.RandomOracle`, `Zcash/Security/Ledger/`) —
-Break events are structures carrying the breaking data, and the reductions producing them
-are plain computable `def`s. An ∃-closed break `Prop` is vacuously true at the
-instantiations of interest, so the content lives in the data, protected by compiler-checked
-computability and pinned axiom sets.
-
-**checked trust boundary** (`Zcash.Snark.Fingerprint.TrustBoundary`,
-`Zcash.Security.Ledger.TrustBoundary`) — Build-time pins on what a theorem may rest on:
-`assert_no_sorry` over the elaborated dependency graph, plus a `#guard_msgs`-pinned
-`#print axioms`. A stray `sorry` or a new axiom fails the build instead of silently widening
-the trusted base.
-
-<!-- When formal-verification/glossary.md (zcash/ironwood#38) lands, fold the two entries
-above into it as cards, in its grid format:
-
-<section>
-<div class="grp">Conventions</div>
-<div class="g"><div class="g-head"><span class="term">breaks as computed data</span><span class="anchor">Security.RandomOracle · Security/Ledger</span></div><div class="def">Break events are structures carrying the breaking data (colliding queries, relation coefficients); the reductions producing them are plain computable <code>def</code>s. An ∃-closed break <code>Prop</code> is vacuously true at the instantiations of interest (relations always exist at prime order; compressing hashes always have collisions), so the content lives in the data, protected by compiler-checked computability and pinned axiom sets. See <a href="../formal-verification.html#breaks-as-computed-data">Breaks as computed data</a>.</div></div>
-<div class="g"><div class="g-head"><span class="term">checked trust boundary</span><span class="anchor">Fingerprint.TrustBoundary · Ledger.TrustBoundary</span></div><div class="def">Build-time pins on what a theorem may rest on: <code>assert_no_sorry</code> over the elaborated dependency graph plus a <code>#guard_msgs</code>-pinned <code>#print axioms</code>, so a stray <code>sorry</code> or a new axiom fails the build instead of silently widening the trusted base.</div></div>
-</section>
--->
+Coined terms and shorthand for the development, including the two conventions above, are
+collected in the [glossary](formal-verification/glossary.md).
