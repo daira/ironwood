@@ -3,40 +3,37 @@ import Zcash.Snark.Soundness.CommitFold
 /-!
 # Binding as a discrete-log-relation reduction over the augmented generators
 
-`Zcash.Snark.Soundness.CommitFold` models commitment binding at the URS generators `g` as a reduction to
-discrete-log-relation (DLR) hardness (`relation_of_collision`, `commitmentBinding_iff_no_relation`):
-breaking binding produces a nontrivial relation among the `g`, which DLR hardness forbids.
+`Zcash.Snark.Soundness.CommitFold` models commitment binding at the URS generators `g` as a
+reduction to discrete-log-relation (DLR) hardness (`relation_of_collision`,
+`commitmentBinding_iff_no_relation`). The deployed verifier additionally folds the inner-product
+generator `U` and the blinding generator `W` into one group equation, so soundness there needs
+binding over the *augmented* system `(g, U, W)`. This module extends the reduction:
 
-The deployed verifier additionally folds the inner-product generator `U` and the blinding generator `W`
-into one group equation, so soundness there needs binding over the *augmented* system `(g, U, W)`. This
-module extends the DLR-reduction view to `(g, U, W)`:
+* `HasNontrivialRelation g U W` — a nontrivial discrete-log relation among the augmented
+  generators.
+* `separate_or_relation` — a combined `(g, U, W)`-equation is read off coordinate-wise *or*
+  exhibits such a relation: the augmented analog of `relation_of_collision`, and the step that
+  ties the deployed peel (`Zcash.Snark.Soundness.Deployed.IpaPeel`) to binding rather than to a
+  discarded uniqueness conjunct.
 
-* `HasNontrivialRelation g U W` — a nontrivial discrete-log relation among the augmented generators.
-* `separate_or_relation` — a combined `(g, U, W)`-equation is read off coordinate-wise *or* exhibits such
-  a relation. This is the reduction form of an augmented-independence assumption; unlike that assumption
-  (which is information-theoretically false in a prime-order group, where the generators are always
-  dependent), the reduction is non-vacuous: the relation is its *output*. A relation always *exists* here,
-  so the combined equation separates unless a feasible adversary *finds* one — which DLR hardness forbids.
-
-`separate_or_relation` is the augmented (`g, U, W`) analog of `relation_of_collision`. Wiring the deployed
-binding step through it — a commitment collision yields a nontrivial relation among `(g, U, W)` — is what
-ties the extracted opening to binding, rather than feeding a discarded uniqueness conjunct.
+For why the statements are reductions rather than independence assumptions — and why the
+disjunction is nonetheless vacuous at the concrete curve — see `The reduction form` in
+`Zcash.Snark.Soundness.Main`.
 -/
 
 namespace Zcash.Snark
 
 variable {F G : Type*} [Field F] [AddCommGroup G] [Module F G]
 
-/-- A nontrivial discrete-log relation among the augmented generators `(g, U, W)`: scalars `(a, α, β)`
-not all zero with `⟨a, g⟩ + α • U + β • W = 0`. Such a relation always *exists* in a prime-order group;
-the content of the reduction below is that breaking binding *produces* one, which DLR hardness forbids. -/
+/-- A nontrivial discrete-log relation among the augmented generators `(g, U, W)`: scalars
+`(a, α, β)`, not all zero, with `⟨a, g⟩ + α • U + β • W = 0`. One always exists at a concrete
+curve — see `The reduction form` in `Zcash.Snark.Soundness.Main`. -/
 def HasNontrivialRelation {n : ℕ} (g : Fin n → G) (U W : G) : Prop :=
   ∃ (a : Fin n → F) (α β : F), (a ≠ 0 ∨ α ≠ 0 ∨ β ≠ 0) ∧ commitGen g a + α • U + β • W = 0
 
-/-- **The augmented binding reduction.** Two `(g, U, W)`-combinations equal as group elements *either*
-agree coordinate-wise *or* exhibit a nontrivial discrete-log relation among `(g, U, W)`. This is the
-reduction form of the (information-theoretically false) augmented-independence assumption: rather than
-assuming the coordinates match, it concludes "they match, or here is a DLR witness". -/
+/-- **The augmented binding reduction.** Two `(g, U, W)`-combinations equal as group elements
+*either* agree coordinate-wise *or* exhibit a nontrivial discrete-log relation among `(g, U, W)`
+(the reduction form — see `Soundness.Main`). -/
 theorem separate_or_relation {n : ℕ} (g : Fin n → G) (U W : G)
     (a a' : Fin n → F) (α α' β β' : F)
     (e : commitGen g a + α • U + β • W = commitGen g a' + α' • U + β' • W) :

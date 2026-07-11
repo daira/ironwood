@@ -9,28 +9,43 @@ import Zcash.Snark.Soundness.Deployed.Verification
 /-!
 # Soundness composition: conditional, and the deployed accept condition
 
-This module formalizes the composition that turns IPA knowledge soundness into the SNARK relation, in
-two layers: a `_conditional` family over an opaque `accepts : Prop`, and a `_deployed` family over the
-concrete accept condition `DeployedAccepts` (the rejecting `assemble?` succeeds and its MSM — the §1
-fingerprint — evaluates to the identity). The conditional
-theorems are named with a `_conditional` suffix to avoid overclaiming: they are scaffolds, not finished
-soundness. The deployed `_opening` / `_constraint` theorems below derive the IPA opening (via `ipa_soundV`,
-after peeling the `U`/`W` apparatus) and the gate constraint from the accept, with `P`/`v` **pinned** to
-the proof's `multiopenCommitment`/`multiopenValue`. The accept is **proven** to entail the explicit
-closed-form `DeployedIpaVerifierEq` (`deployedAccepts_verifierEq`, via `Zcash.Snark.Soundness.Deployed.Verification`
-— an implication, the direction soundness consumes; the accept also comprises the rejection guards);
-fidelity of that closed form to halo2's Rust is the §1 transcription (`assembleFinalMsm`/`ipaFold`, checked
-by the fingerprint), not re-proved here. The residual `FiatShamirTree` bridge is the Fiat–Shamir
-forking **plus the special-soundness extraction content**: the node `L`/`R`↦value/blinding decomposition,
-the leaf `g`-representation of the folded commitment, and the adjusted-commitment step
-`P' = P − [v]g₀ + [ξ]S` (folding the value and `S`/`ξ` terms into the opened commitment — which needs a
-representation of the adversary point `S`, so it is not a deterministic rewrite) — all issue #11.
-Commitment binding is load-bearing *in the proof* (the `U`/`W` separation is derived from a discrete-log
-relation reduction, `Zcash.Snark.Soundness.Deployed.IpaPeel`), so the deployed conclusion is
-`SnarkRelation ∨ HasNontrivialRelation` — a *reduction*: it exhibits a discrete-log relation rather than
-asserting soundness outright. A relation always *exists* in a prime-order group, so at the concrete curve this
-disjunction is propositionally `True` and the *statement* is vacuous; the soundness force is the DLR/AGM
-layer — no feasible adversary can *find* the relation, which is not formalized in Lean — not the proposition.
+This module composes IPA knowledge soundness into SNARK-relation soundness for the Orchard
+verifier, in two layers:
+
+* the `_conditional` family, over an opaque `accepts : Prop`. The suffix avoids overclaiming:
+  these are scaffolds, not finished soundness.
+* the deployed `_reduction` family, over the concrete accept `DeployedAccepts`: the rejecting
+  `assemble?` succeeds and its MSM — the *fingerprint*, the transcribed form of halo2's final
+  verifier check — evaluates to the group identity.
+
+## The deployed route
+
+Ending at `orchard_verifier_deployed_opening_reduction`/`_constraint_reduction`, the route derives
+the IPA opening and the gate constraint with `P`/`v` *pinned* to the proof's
+`multiopenCommitment`/`multiopenValue` (read off `(vk, ps, ch)`, not free parameters):
+
+1. `deployedAccepts_verifierEq` (*proven*) — the accept entails halo2's explicit IPA verifier
+   equation `DeployedIpaVerifierEq`. Fidelity of that closed form to the Rust is the
+   transcription layer (`assembleFinalMsm`/`ipaFold`, checked by the fingerprint), not re-proved
+   here.
+2. `FiatShamirTree` (*residual*) — the equation yields a deployed transcript tree opening the
+   pinned `P`/`v`; bundles the Fiat–Shamir forking with the extraction content it supplies
+   (inventory in its docstring).
+3. `deployed_to_acceptV` (*proven*) — the tree peels onto the clean `IpaAcceptV`, *either*
+   cleanly *or* exhibiting a discrete-log relation among `(g, U, W)`.
+4. `ipa_soundV` (*proven*) — the clean tree yields the opening witness.
+
+## The reduction form
+
+Commitment binding is load-bearing in the proofs (the peel, `deployed_to_acceptV`), but the
+statements assume no independence of `(g, U, W)`: in a prime-order group a nontrivial relation
+always *exists*, so that assumption would be false. Instead the relation is the *output* — the
+deployed conclusion is `S ∨ HasNontrivialRelation`, exhibiting a discrete-log relation rather
+than asserting soundness outright. At the concrete curve the disjunction is propositionally
+`True`; the content is the constructive extraction over an abstract module (where no relation
+need exist) plus the DLR/AGM hardness layer outside Lean — no feasible adversary can *find* a
+relation. The binding-signature argument makes the same move (`relation_of_imbalance`; see "How
+binding is expressed" in `Zcash.Security.BindingSignature.Balance`).
 
 ## Assumptions (the conditional family)
 
@@ -94,11 +109,11 @@ def DeployedAccepts [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
   | some m => (hk ▸ m : Msm urs.k Fp G).eval urs = 0
   | none => False
 
-/-- The `urs.k`↔`shape.k` transport, isolated: evaluating the `hk`-transported MSM against `urs` is the same
-as evaluating `m` against the URS rebuilt at `shape.k` with `urs`'s (transported) generators. With `urs`
-free here, `cases urs` + `subst hk` collapses the cast to `rfl`. This lets `deployedAccepts_verifierEq` reach
-the `⟨shape.k, …⟩`-indexed `deployed_verification_eq` without destructuring the URS in place (which would
-tangle the accept hypothesis's own `hk`-cast). -/
+/-- The `urs.k`↔`shape.k` transport, isolated: evaluating the `hk`-transported MSM against `urs`
+is the same as evaluating `m` against the URS rebuilt at `shape.k` with `urs`'s (transported)
+generators. With `urs` free here, `cases urs` + `subst hk` collapses the cast to `rfl`. This lets
+`deployedAccepts_verifierEq` reach the `⟨shape.k, …⟩`-indexed `deployed_verification_eq` without
+destructuring the URS in place (which would tangle the accept hypothesis's own `hk`-cast). -/
 theorem eval_cast {shape : Shape} {urs : URS G} (hk : shape.k = urs.k) (m : Msm shape.k Fp G) :
     (hk ▸ m : Msm urs.k Fp G).eval urs = m.eval ⟨shape.k, hk ▸ urs.g, urs.w, urs.u⟩ := by
   obtain ⟨k, g, w, u⟩ := urs
@@ -106,17 +121,14 @@ theorem eval_cast {shape : Shape} {urs : URS G} (hk : shape.k = urs.k) (m : Msm 
   subst hk
   rfl
 
-/-- Structural faithfulness, **proven** (was assumed by the Fiat–Shamir bridge): the deployed accept
-*entails* halo2's explicit IPA verifier equation. (An implication, not an `Iff` — the accept additionally
-comprises the rejection guards; this is the direction soundness consumes.) From `DeployedAccepts` (the
-rejecting fingerprint `assemble?` succeeds and
-evaluates to the identity), `assemble?_eq_some` identifies the accepted MSM with the non-rejecting
-`assembleFinalMsm`, and `deployed_verification_eq` rewrites its evaluation to the explicit equation — so
-`DeployedIpaVerifierEq` holds for the proof's actual `(vk, ps, ch)`. This discharges the MSM↔equation
-correspondence the bridge used to absorb; the residual bundle in `FiatShamirTree` is the forking and the
-extraction-content data it supplies — the node decomposition, the leaf `g`-representation, and the
-adjusted-commitment step `P' = P − [v]g₀ + [ξ]S` (issue #11). The `urs.k`↔`shape.k`
-transport is `eval_cast`. -/
+/-- **The deployed accept entails the verifier equation.** From `DeployedAccepts`,
+`assemble?_eq_some` identifies the accepted MSM with the non-rejecting `assembleFinalMsm`, and
+`deployed_verification_eq` rewrites its evaluation to the explicit closed form — so
+`DeployedIpaVerifierEq` holds for the proof's actual `(vk, ps, ch)`. An implication, not an `Iff`
+(the accept also comprises the rejection guards) — the direction soundness consumes. This
+discharges the MSM↔equation correspondence the Fiat–Shamir bridge used to absorb; what the bridge
+still supplies is inventoried at `FiatShamirTree`. The `urs.k`↔`shape.k` transport is
+`eval_cast`. -/
 theorem deployedAccepts_verifierEq [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) (h : DeployedAccepts urs hk vk ps ch) :
@@ -136,17 +148,12 @@ theorem deployedAccepts_verifierEq [DecidableEq G] [Inhabited G] {shape : Shape}
 
 /-! ## `IpaRelation` is derived from the transcript tree, not assumed
 
-`Zcash.Snark.ipa_soundV` derives the full opening relation — `commit g a = P` and `⟨a,b⟩ = v` — from an
-accepting IPA transcript tree (`IpaAcceptV`), binding-free, by 3-special soundness. So the bridge no
-longer assumes `IpaRelation`. Honest caveat for `FiatShamirTree` below: beyond the Fiat–Shamir rewinding it
-still absorbs (i) the node-level `L`/`R`↦value/blinding decomposition, (ii) the leaf `g`-representation of
-the folded commitment (`DeployedIpaAcceptV`'s `∃ aP` span condition), and (iii) the
-adjusted-commitment step `P' = P − [v]g₀ + [ξ]S` (folding the value and `S`/`ξ` terms — this needs a
-representation of the adversary point `S`, so it is rewinding- or AGM-content, not a deterministic
-rewrite). (i)–(ii) are what the special-soundness extraction would *derive* from the forked flat equations
-by Vandermonde over the augmented `(g, U, W)` basis; here they arrive as bridge-supplied tree data. The
-MSM↔equation correspondence and the `P`/`v` pinning it used to also absorb are now discharged
-(`deployedAccepts_verifierEq`); the cryptographic opening and the `g`/`U`/`W` separation are derived. -/
+`Zcash.Snark.ipa_soundV` derives the full opening relation — `commit g a = P` and `⟨a,b⟩ = v` —
+from an accepting IPA transcript tree (`IpaAcceptV`), binding-free, by 3-special soundness. So the
+bridge no longer assumes `IpaRelation`; the MSM↔equation correspondence and the `P`/`v` pinning it
+used to also absorb are discharged (`deployedAccepts_verifierEq`), and the `g`/`U`/`W` separation
+is derived (`deployed_to_acceptV`). What the bridge still absorbs beyond the rewinding is
+inventoried at `FiatShamirTree` below. -/
 
 /-- `IpaAcceptV` over the URS generators derives `IpaRelation`: the witness `ipa_soundV` extracts
 opens `P` and gives the inner product. Derived, not assumed. -/
@@ -159,33 +166,33 @@ theorem ipaRelation_of_acceptV (urs : URS G) (b : Fin (2 ^ urs.k) → Fp) (P : G
   rw [hib]; exact hv
 
 /-- The deployed commitment the IPA verifier opens (`multiopenCommitment` with `urs`'s generators
-transported to the proof's `shape.k`): the pinned `P`, read off `(vk, ps, ch)`. Reducible, so it is defeq to
-its body for matching against `DeployedIpaVerifierEq`'s leading term. -/
+transported to the proof's `shape.k`): the pinned `P`, read off `(vk, ps, ch)`. Reducible, so it
+is defeq to its body for matching against `DeployedIpaVerifierEq`'s leading term. -/
 abbrev deployedCommitment [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
     (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) : G :=
   multiopenCommitment (hk ▸ urs.g) urs.w urs.u vk ps ch
 
-/-- The forking bridge — the *residual* assumption. Its premise is halo2's explicit verifier equation
-`DeployedIpaVerifierEq` (which `deployedAccepts_verifierEq` *proves* the deployed
-accept entails), and its conclusion opens the pinned `deployedCommitment`/`multiopenValue` — the actual
-`P`/`v` from `(vk, ps, ch)`, not free parameters. So what this assumes is: the verifier equation holding
-yields a consistent deployed IPA transcript tree (`DeployedIpaAcceptV`, carrying the `U`/`W` apparatus).
-That bundles the Fiat–Shamir **forking** — (a) the rewinding that produces three accepting continuations
-per node at distinct nonzero challenges — with the special-soundness **extraction** content, knowledge the
-forked transcripts would pin by Vandermonde over the augmented `(g, U, W)` basis but that here arrives as
-bridge-supplied tree data: (b) the node-level `L`/`R`↦value/blinding **decomposition**
-(`Lv`/`Rv`/`Lw`/`Rw` — each round point's `(g, U, W)`-representation, which must not depend on `z`);
-(c) the leaf **`g`-representation** `∃ aP, P = ⟨aP, g⟩` of the folded commitment (the span condition
-`DeployedIpaAcceptV`'s leaf demands); and (d) the **adjusted-commitment** step `P' = P − [v]g₀ + [ξ]S`,
-which folds the value term `[-v]g₀` and the `S`/`ξ` blinding-poly `[ξ]S` (both present in
-`DeployedIpaVerifierEq`) into the commitment the tree opens — this needs a representation of the adversary
-point `S` (ξ-side rewinding or AGM), so it is not a deterministic rewrite of the equation. The
-MSM↔equation correspondence is discharged separately
-(`deployedAccepts_verifierEq`), not assumed here; the per-leaf `g`/`U`/`W` separation is *derived*
-(`deployed_to_acceptV`) — but `S`/`ξ` is not peeled, it lives in (d). `b`/`z`/`blind` are bridge-mediated
-(the protocol fixes `b = evalVector urs.k ch.x3` — whose per-round fold telescopes to the leaf
-`b₀ = computeB ch.x3 ·` — and `z = ch.z`); only `P`/`v` are pinned. All of (a)–(d) are issue #11. -/
+/-- The forking bridge — the *residual* assumption. Its premise is halo2's explicit verifier
+equation `DeployedIpaVerifierEq` (which `deployedAccepts_verifierEq` proves the deployed accept
+entails); its conclusion is a deployed transcript tree (`DeployedIpaAcceptV`) opening the pinned
+`deployedCommitment`/`multiopenValue` — the actual `P`/`v` from `(vk, ps, ch)`, not free
+parameters. It bundles the Fiat–Shamir *forking* with the special-soundness *extraction* content
+the forked transcripts would pin by Vandermonde over the augmented `(g, U, W)` basis, here
+arriving as bridge-supplied tree data:
+
+(a) the rewinding producing three accepting continuations per node at distinct nonzero challenges;
+(b) the node-level `L`/`R` ↦ value/blinding decomposition (`Lv`/`Rv`/`Lw`/`Rw` — each round
+    point's `(g, U, W)`-representation, which must not depend on `z`);
+(c) the leaf `g`-representation `∃ aP, P = ⟨aP, g⟩` of the folded commitment; and
+(d) the adjusted-commitment step `P' = P − [v]g₀ + [ξ]S`, folding the value term `[-v]g₀` and the
+    `S`/`ξ` blinding poly into the commitment the tree opens — this needs a representation of the
+    adversary point `S` (ξ-side rewinding or AGM), so it is not a deterministic rewrite.
+
+Deriving (a)–(d) under random-oracle Fiat–Shamir is open. The per-leaf `g`/`U`/`W` separation is
+*derived* (`deployed_to_acceptV`) — but `S`/`ξ` is not peeled, it lives in (d). `b`/`z`/`blind`
+are bridge-mediated (the protocol fixes `b = evalVector urs.k ch.x3`, telescoping at the leaf to
+`b₀ = computeB ch.x3 ·`, and `z = ch.z`); only `P`/`v` are pinned. -/
 def FiatShamirTree [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (b : Fin (2 ^ urs.k) → Fp) (z blind : Fp) : Prop :=
@@ -194,31 +201,25 @@ def FiatShamirTree [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G) (
       DeployedIpaAcceptV urs.g b urs.u urs.w z
         (deployedCommitment urs hk vk ps ch) (multiopenValue vk ps ch) blind t
 
-/-- The deployed Orchard verifier opening, as a binding **reduction**, with `P`/`v` **pinned** to the proof
-(`deployedCommitment`/`multiopenValue` from `(vk, ps, ch)`, not free parameters). From the deployed accept,
-`deployedAccepts_verifierEq` *proves* the explicit `DeployedIpaVerifierEq` form; the forking
-bridge `hFS` turns that equation into the deployed transcript tree opening the pinned commitment (via the
-adjusted-commitment step `P' = P − [v]g₀ + [ξ]S`); `deployed_to_acceptV` peels the `U`/`W` apparatus onto the
-clean `IpaAcceptV` (deriving the per-leaf separation from binding); and `ipa_soundV` extracts the opening.
+/-! ## The constraint-side hypotheses are unsatisfiable at a prime-order curve
 
-The conclusion is `S ∨ HasNontrivialRelation g U W` — a reduction (it exhibits a discrete-log relation
-rather than asserting soundness outright). A relation always *exists* in a prime-order group, so at the
-concrete curve this disjunction is propositionally `True`
-and the theorem is vacuous *as a statement* (provable as `Or.inr` without the hypotheses); its content is
-the constructive extraction plus the assumption that no efficient adversary can *find* the relation (DLR/AGM
-hardness, not formalized in Lean). Commitment binding is load-bearing in the *proof structure*, not the
-Vesta statement.
-Named assumptions: the residual bridge (`hFS`, issue #11), `z ≠ 0`, the circuit side (`hcirc`), and
-VK-correctness (`hencodes`).
+`hcirc` below (and `hquot`/`hgood` in the constraint variant) quantify over *every* mathematical
+opening `a` of the pinned `(P, b, v)`. At a prime-order curve those openings form an affine
+subspace of dimension `≥ 2^k − 2` (two linear conditions on `2^k` coordinates), so any
+`circuitSat` that genuinely reads the witness fails on almost all of it: the hypotheses are
+unsatisfiable for the intended instantiation, not merely undischarged.
+`circuitSatViaGates_of_check` does not help — it derives `circuitSat` for *one* `a` from that
+`a`'s own point-check, never the quantified premise. Restating the constraint side over the
+*extracted* witness via the multiopen decode (`batch_open_soundV`) is still open. -/
 
-Caveat on `hcirc`'s shape: it quantifies over *every* mathematical opening `a` of the pinned `(P, b, v)`.
-At a prime-order curve those openings form an affine subspace of dimension `≥ 2^k − 2` (two linear
-conditions on `2^k` coordinates), so any `circuitSat` that genuinely reads the witness fails on almost
-all of it — the hypothesis is unsatisfiable for the intended instantiation, the `AugmentedBinding`
-failure mode in hypothesis position. `circuitSatViaGates_of_check` does not discharge it: that lemma
-derives `circuitSat` for *one* `a` from that `a`'s own point-check, never the quantified premise.
-The fix is restating the constraint side as a derived fact about the *extracted* witness via the
-multiopen decode — issue #18. -/
+/-- **Deployed opening, as a binding reduction.** From the deployed accept: the proven
+`deployedAccepts_verifierEq` gives the explicit verifier equation; the forking bridge `hFS` turns
+it into the deployed transcript tree opening the pinned `deployedCommitment`/`multiopenValue`;
+`deployed_to_acceptV` peels the `U`/`W` apparatus onto the clean `IpaAcceptV`; and `ipa_soundV`
+extracts the opening. The conclusion: *either* `S` *or* an exhibited discrete-log relation among
+`(g, U, W)` — the reduction form (see the module docstring). `hcirc` has the unsatisfiable shape
+described in the section note above. Named assumptions: the residual bridge (`hFS`), `z ≠ 0`
+(`hz`), the circuit side (`hcirc`), and VK-correctness (`hencodes`). -/
 theorem orchard_verifier_deployed_opening_reduction [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp}
@@ -249,26 +250,15 @@ what `hgood` excludes. So `circuitSat`, instantiated to the concrete `circuitSat
 derived from the verifier's actual gate check rather than taken as an opaque hypothesis. -/
 
 open Polynomial in
-/-- The deployed Orchard verifier opening and constraint, as a binding **reduction**, with `P`/`v` **pinned**
-to the proof (`deployedCommitment`/`multiopenValue`). As `orchard_verifier_deployed_opening_reduction`, with
-the circuit side derived too: `circuitSat` — instantiated to
-`circuitSatViaGates` — from the verifier's quotient/gate point check `hquot` at the challenge `x`, lifted to
-the polynomial identity by Schwartz–Zippel (`hgood`), via `circuitSatViaGates_of_check`. The deployed accept
-reaches the forking bridge through the *proven* `deployedAccepts_verifierEq`. The conclusion is
-`S ∨ HasNontrivialRelation g U W` — a reduction (it exhibits a discrete-log relation, not soundness
-outright); a relation always *exists* at a prime-order curve, so this disjunction is propositionally `True`
-and the theorem is vacuous as a *statement*, the force being the DLR/AGM hardness layer (not formalized in
-Lean) that no adversary can *find* one.
-
-Named assumptions: the residual bridge (`hFS`, issue #11), `z ≠ 0`, the gate point-check (`hquot`), the SZ good
-challenge (`hgood`), and VK-correctness (`hencodes`).
-
-Caveat on the `hquot`/`hgood` shape (as for `hcirc` above): both quantify over *every* mathematical
-opening `a` of the pinned `(P, b, v)` — an affine subspace of dimension `≥ 2^k − 2` at a prime-order
-curve — so for any decode that genuinely reads columns out of `a` they are unsatisfiable, not merely
-undischarged: the verifier's actual gate check constrains the *claimed* evaluations, not every
-opening's decode. Restating them as facts about the *extracted* witness — binding the decode to the
-real columns via `batch_open_soundV` — is issue #18. -/
+/-- **Deployed opening and constraint, as a binding reduction.** As
+`orchard_verifier_deployed_opening_reduction`, with the circuit side derived too: `circuitSat` —
+instantiated to `circuitSatViaGates` — from the verifier's gate point-check `hquot` at the
+challenge `x`, lifted to the polynomial identity by Schwartz–Zippel (`hgood`), via
+`circuitSatViaGates_of_check`. Same reduction-form conclusion (see the module docstring).
+`hquot`/`hgood` share `hcirc`'s unsatisfiable shape (see the section note above): the verifier's
+actual gate check constrains the *claimed* evaluations, not every opening's decode. Named
+assumptions: the residual bridge (`hFS`), `z ≠ 0` (`hz`), the gate point-check (`hquot`), the
+Schwartz–Zippel good challenge (`hgood`), and VK-correctness (`hencodes`). -/
 theorem orchard_verifier_deployed_constraint_reduction [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp}

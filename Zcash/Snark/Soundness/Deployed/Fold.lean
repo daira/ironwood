@@ -4,29 +4,32 @@ import Zcash.Snark.Verifier.Ipa
 /-!
 # The deployed flattened IPA MSM unfolds into the recursive generator fold
 
-`eval_assembleFinalMsm` gives the flattened deployed verification equation; `ipa_soundV` proves soundness of
-the recursive verifier. This module connects their generator terms, so the structural correspondence between
-the flattened MSM and the recursive fold is established here rather than left to the Fiat–Shamir bridge.
+`eval_assembleFinalMsm` gives the flattened deployed verification equation; `ipa_soundV` proves
+soundness of the recursive verifier. This module connects their generator terms, so the structural
+correspondence between the flattened MSM and the recursive fold is established here rather than
+left to the Fiat–Shamir bridge.
 
-The key is the `compute_s` correspondence: the deployed `g`-scalars `computeS u init` halve at each round
-exactly as `commitGen_append` splits a commitment, so `commitGen g (sFun u init)` folds recursively with the
-generator step `loHalf g + uⱼ • hiHalf g`. That step is `Consistency.foldGens` at the inverted challenge
-(`foldGens g (uⱼ⁻¹) = loHalf g + uⱼ • hiHalf g`), which reconciles the deployed `u`-convention with
-`ipa_soundV`'s `u⁻¹`-convention.
+The key is the `compute_s` correspondence: the deployed `g`-scalars `computeS u init` halve at
+each round exactly as `commitGen_append` splits a commitment, so `commitGen g (sFun u init)` folds
+recursively with the generator step `loHalf g + uⱼ • hiHalf g`. That step is `Consistency.foldGens`
+at the inverted challenge (`foldGens g (uⱼ⁻¹) = loHalf g + uⱼ • hiHalf g`), which reconciles the
+deployed `u`-convention with `ipa_soundV`'s `u⁻¹`-convention.
 
 * `computeS_cons` — `computeS (uⱼ :: rest) = computeS rest ++ (computeS rest).map (· * uⱼ)`.
 * `computeS_length` — `|computeS u init| = 2 ^ |u|`.
-* `sFun` — the deployed `g`-scalar vector as a `Fin (2 ^ k) → F` function (`computeS` indexed by `getD`).
-* `foldAll` / `deployed_gterm_foldAll` — the `g`-term of `eval_assembleFinalMsm` is `[-c]·G'₀`, the folded
-  generator.
+* `sFun` — the deployed `g`-scalar vector as a `Fin (2 ^ k) → F` function (`computeS` indexed by
+  `getD`).
+* `foldAll` / `deployed_gterm_foldAll` — the `g`-term of `eval_assembleFinalMsm` is `[-c]·G'₀`,
+  the folded generator.
 -/
 
 namespace Zcash.Snark
 
 variable {F : Type*} [Field F]
 
-/-- The round recursion of `computeS` (in the `foldr` direction): one challenge doubles the vector, the new
-half scaled by `uⱼ`. From `computeS u init = u.reverse.foldl …`, via `reverse_cons` + `foldl_append`. -/
+/-- The round recursion of `computeS` (in the `foldr` direction): one challenge doubles the
+vector, the new half scaled by `uⱼ`. From `computeS u init = u.reverse.foldl …`, via
+`reverse_cons` + `foldl_append`. -/
 theorem computeS_cons (uⱼ : F) (rest : List F) (init : F) :
     computeS (uⱼ :: rest) init = computeS rest init ++ (computeS rest init).map (· * uⱼ) := by
   simp only [computeS, List.reverse_cons, List.foldl_append, List.foldl_cons, List.foldl_nil]
@@ -82,15 +85,16 @@ theorem commitGen_sFun_cons (uⱼ init : F) (rest : List F) (g : Fin (2 ^ (rest.
       = commitGen (loHalf g) (sFun rest init) + uⱼ • commitGen (hiHalf g) (sFun rest init) := by
   rw [sFun, commitGen_append, commitGen_smul_left]
 
-/-- The deployed `s`-vector commitment is one `foldGens` step (at the inverted challenge). This is the
+/-- The deployed `s`-vector commitment is one `foldGens` step (at the inverted challenge) — the
 convention reconciliation: the deployed flattening (`computeS` with `uⱼ`) folds the generators by
-`foldGens g uⱼ⁻¹ = loHalf g + uⱼ • hiHalf g` — exactly `ipa_soundV`'s `foldGens` at `uⱼ⁻¹`. So the deployed
-`g`-term unfolds into the same recursion `ipa_soundV` runs on. -/
+`foldGens g uⱼ⁻¹ = loHalf g + uⱼ • hiHalf g`, exactly `ipa_soundV`'s `foldGens` at `uⱼ⁻¹`. So the
+deployed `g`-term unfolds into the same recursion `ipa_soundV` runs on. -/
 theorem sFun_fold (uⱼ init : F) (rest : List F) (g : Fin (2 ^ (rest.length + 1)) → G) :
     commitGen g (sFun (uⱼ :: rest) init) = commitGen (foldGens g uⱼ⁻¹) (sFun rest init) := by
   rw [commitGen_sFun_cons, foldGens, commitGen_add_gen, commitGen_smul_gen, inv_inv]
 
-/-- The full generator fold: fold `g` by `foldGens` at the inverted challenges down to a single generator. -/
+/-- The full generator fold: fold `g` by `foldGens` at the inverted challenges down to a single
+generator. -/
 def foldAll : (u : List F) → (Fin (2 ^ u.length) → G) → (Fin (2 ^ 0) → G)
   | [], g => g
   | uⱼ :: rest, g => foldAll rest (foldGens g uⱼ⁻¹)
@@ -105,20 +109,20 @@ theorem commitGen_sFun_foldAll (u : List F) (init : F) (g : Fin (2 ^ u.length) �
   | nil => simp [sFun, foldAll, commitGen]
   | cons uⱼ rest ih => rw [sFun_fold, ih, foldAll]
 
-/-- The deployed `g`-scalars are `[-c] G'₀` (faithful to halo2 `Guard::use_challenges` + `compute_g`).
-halo2 sets `G'₀ = ⟨compute_s(u, 1), g⟩` (`compute_g`) and `use_challenges` adds `compute_s(u, -c)` to the
-`g`-scalars; here `eval_assembleFinalMsm`'s `computeS u (-c)` term equals `(-c) •` the folded generator
-`foldAll u g 0` (which is `G'₀ = ⟨compute_s(u,1), g⟩`). So the §1 assembly's generator term is the
-verifier's `[-c] G'₀`. -/
+/-- The deployed `g`-scalars are `[-c] G'₀` (faithful to halo2 `Guard::use_challenges` +
+`compute_g`). halo2 sets `G'₀ = ⟨compute_s(u, 1), g⟩` and `use_challenges` adds `compute_s(u, -c)`
+to the `g`-scalars; here `eval_assembleFinalMsm`'s `computeS u (-c)` term equals `(-c) •` the
+folded generator `foldAll u g 0`. So the assembly's generator term is the verifier's `[-c] G'₀`. -/
 theorem computeS_gterm_foldAll (u : List F) (c : F) (g : Fin (2 ^ u.length) → G) :
     (∑ i, (computeS u (-c)).getD i.val 0 • g i) = (-c) • foldAll u g 0 := by
   rw [gterm_eq, commitGen_sFun_foldAll]
 
 /-- The deployed `computeS` `g`-term from a `Fin m`-indexed challenge family is `[-c]·G'₀` — the
-`List.ofFn`-length↔`m` transport of `computeS_gterm_foldAll`. The assembly indexes its round challenges as
-`ch.ipaRound : Fin shape.k → Fp` and feeds `List.ofFn ch.ipaRound` to `computeS`; this reconciles that list's
-length with `m = shape.k` (`List.length_ofFn`) via `Fin.cast`, so the `computeS` generator term of
-`eval_assembleFinalMsm` is `[-c]` times the folded generator `foldAll = G'₀`. -/
+`List.ofFn`-length↔`m` transport of `computeS_gterm_foldAll`. The assembly indexes its round
+challenges as `ch.ipaRound : Fin shape.k → Fp` and feeds `List.ofFn ch.ipaRound` to `computeS`;
+this reconciles that list's length with `m = shape.k` (`List.length_ofFn`) via `Fin.cast`, so the
+`computeS` generator term of `eval_assembleFinalMsm` is `[-c]` times the folded generator
+`foldAll = G'₀`. -/
 theorem deployed_gterm_foldAll {m : ℕ} (f : Fin m → F) (c : F) (g : Fin (2 ^ m) → G) :
     (∑ i : Fin (2 ^ m), ((computeS (List.ofFn f) (-c)).getD i.val 0) • g i)
       = (-c) • foldAll (List.ofFn f) (fun j => g (Fin.cast (congrArg (2 ^ ·) List.length_ofFn) j)) 0 := by

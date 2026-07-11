@@ -4,23 +4,21 @@ import Zcash.Snark.Soundness.Deployed.Fold
 /-!
 # The deployed accept entails halo2's explicit IPA verifier equation (structural faithfulness)
 
-`eval_assembleFinalMsm` evaluates the assembled fingerprint MSM in closed form; `deployed_gterm_foldAll`
-identifies its `g`-term as `[-c]·G'₀`. This module welds them into halo2's published IPA verification
-equation and ties it to the deployed accept condition, pinning the opened object `P`/`v` to the proof:
+`eval_assembleFinalMsm` evaluates the assembled fingerprint MSM in closed form;
+`deployed_gterm_foldAll` identifies its `g`-term as `[-c]·G'₀`. This module welds them into
+halo2's published IPA verification equation and ties it to the deployed accept condition, pinning
+the opened object `P`/`v` to the proof:
 
 * `multiopenCommitment` / `multiopenValue` — the `P` and `v` halo2's IPA verifier opens, read off the
   multiopen assembly on `(vk, ps, ch)`.
 * `deployed_verification_eq` — `(assembleFinalMsm …).eval` *is* the explicit equation
   `P + [-v]g₀ + [ξ]S + Σ(rounds) + [-c·b·z]U + [-f]W + [-c]G'₀`.
 * `DeployedIpaVerifierEq` — that equation set to the identity.
-* the `…?_eq_some` reconciliation — the deployed accept uses the *rejecting* `assemble?`; when it returns
-  `some m`, `m` is the non-rejecting `assembleFinalMsm`, so the equation transfers.
+* the `…?_eq_some` reconciliation — the deployed accept uses the *rejecting* `assemble?`; when it
+  returns `some m`, `m` is the non-rejecting `assembleFinalMsm`, so the equation transfers.
 
-This discharges the assembly↔equation correspondence separately from the bridge. What the bridge still
-covers is the forking that produces the recursive tree, the node `L`/`R` decomposition, the leaf
-`g`-representation of the folded commitment, and the
-adjusted-commitment step `P' = P − [v]g₀ + [ξ]S` that folds the value and `S`/`ξ` terms into the opened
-commitment (issue #11; see `FiatShamirTree`'s inventory).
+This discharges the assembly↔equation correspondence separately from the bridge; what the bridge
+still covers is inventoried at `FiatShamirTree` (`Zcash.Snark.Soundness.Main`).
 -/
 
 namespace Zcash.Snark
@@ -66,9 +64,9 @@ theorem assembleFinalMsm?_eq_some {shape : Shape} (ps : ProofString shape F G)
       rw [← (Option.some.injEq _ _ |>.mp h), assembleFinalMsm, hopened]
 
 omit [AddCommGroup G] [Module F G] in
-/-- The deployed accept uses the rejecting `assemble?`; when it returns `some m`, `m` is the non-rejecting
-`assembleFinalMsm` over the derived grouping, so `eval_assembleFinalMsm` (hence the verifier equation)
-applies to it. -/
+/-- The deployed accept uses the rejecting `assemble?`; when it returns `some m`, `m` is the
+non-rejecting `assembleFinalMsm` over the derived grouping, so `eval_assembleFinalMsm` (hence the
+verifier equation) applies to it. -/
 theorem assemble?_eq_some {shape : Shape} [DecidableEq F] [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape F G) (ps : ProofString shape F G) (ch : Challenges shape.k F)
     {m : Msm shape.k F G} (h : assemble? vk ps ch = some m) :
@@ -106,10 +104,11 @@ def multiopenValue {shape : Shape} [DecidableEq F] [DecidableEq G] [Inhabited G]
   (assembleOpening ch.x1 ch.x2 ch.x3 ch.x4 ps.multiopenQPrime (List.ofFn ps.multiopenU)
     (constructIntermediateSets (assembleQueries vk ps ch)) (Msm.zero shape.k F G)).2
 
-/-- The deployed fingerprint MSM evaluates to halo2's explicit IPA verifier equation: the multiopen
-commitment, the `[-v]g₀` value term, the `[ξ]S` blinding poly, the round total `Σ([uⱼ⁻¹]Lⱼ+[uⱼ]Rⱼ)`, the
-value-binding `[-c·b·z]U`, the blinding `[-f]W`, and the folded generator `[-c]G'₀` (`G'₀ = foldAll`).
-`eval_assembleFinalMsm` plus `deployed_gterm_foldAll` (the `g`-term is `[-c]·G'₀`). -/
+/-- The deployed fingerprint MSM evaluates to halo2's explicit IPA verifier equation: the
+multiopen commitment, the `[-v]g₀` value term, the `[ξ]S` blinding poly, the round total
+`Σ([uⱼ⁻¹]Lⱼ+[uⱼ]Rⱼ)`, the value-binding `[-c·b·z]U`, the blinding `[-f]W`, and the folded
+generator `[-c]G'₀` (`G'₀ = foldAll`). `eval_assembleFinalMsm` plus `deployed_gterm_foldAll`
+(the `g`-term is `[-c]·G'₀`). -/
 theorem deployed_verification_eq {shape : Shape} (g : Fin (2 ^ shape.k) → G) (w u : G)
     (ps : ProofString shape F G) (ch : Challenges shape.k F)
     (grouped : MultiopenGrouped shape.k F G) :
@@ -128,13 +127,15 @@ theorem deployed_verification_eq {shape : Shape} (g : Fin (2 ^ shape.k) → G) (
   rw [eval_assembleFinalMsm, deployed_gterm_foldAll]
 
 /-- halo2's explicit IPA verifier equation for the deployed proof, set to the group identity. By
-`deployed_verification_eq` this is exactly `(assembleFinalMsm …).eval = 0`. Stating it explicitly lets the
-forking bridge act on halo2's actual IPA equation, with `P`/`v` the pinned `multiopenCommitment`/`Value`.
+`deployed_verification_eq` this is exactly `(assembleFinalMsm …).eval = 0`. Stating it explicitly
+lets the forking bridge act on halo2's actual IPA equation, with `P`/`v` the pinned
+`multiopenCommitment`/`multiopenValue`.
 
-Totality caveat: the closed form uses Lean's total inverse (`0⁻¹ = 0`), so at a zero round challenge the
-equation is defined although no deployed execution corresponds to it (the Rust inverts the round
-challenges). Harmless for the soundness direction — the capstones consume the equation only under
-`DeployedAccepts` — but the equation is total where halo2 is partial (a negligible-probability corner). -/
+Totality caveat: the closed form uses Lean's total inverse (`0⁻¹ = 0`), so at a zero round
+challenge the equation is defined although no deployed execution corresponds to it (the Rust
+inverts the round challenges). Harmless for the soundness direction — the capstones consume the
+equation only under `DeployedAccepts` — but the equation is total where halo2 is partial (a
+negligible-probability corner). -/
 def DeployedIpaVerifierEq {shape : Shape} [DecidableEq F] [DecidableEq G] [Inhabited G]
     (g : Fin (2 ^ shape.k) → G) (w u : G)
     (vk : VerifyingKey shape F G) (ps : ProofString shape F G) (ch : Challenges shape.k F) : Prop :=

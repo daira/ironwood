@@ -4,11 +4,11 @@ import Zcash.Snark.Soundness.Deployed.Binding
 /-!
 # Peeling the deployed IPA onto the clean recursive IPA, as a binding reduction
 
-`Zcash.Snark.Soundness.Deployed.Ipa` modelled halo2's deployed IPA — the clean recursion plus the `U`/`W`
-apparatus (`S`/`ξ` stays in the verifier equation, not the tree) — as `DeployedIpaAcceptV`. This module peels
-that apparatus off onto the clean `IpaAcceptV`, so
-the deployed opening reduces to `ipa_soundV`, expressing commitment binding as a discrete-log-relation (DLR)
-reduction: a leaf collision yields a nontrivial relation among the augmented generators.
+`Zcash.Snark.Soundness.Deployed.Ipa` modelled halo2's deployed IPA — the clean recursion plus the
+`U`/`W` apparatus (`S`/`ξ` stays in the verifier equation, not the tree) — as `DeployedIpaAcceptV`.
+This module peels that apparatus off onto the clean `IpaAcceptV`, so the deployed opening reduces
+to `ipa_soundV`, expressing commitment binding as a discrete-log-relation (DLR) reduction: a leaf
+collision yields a nontrivial relation among the augmented generators.
 
 * `relation_of_foldGens` — a nontrivial relation among the folded generators lifts to one among the
   originals, so the per-round peel reports any relation it finds against the fixed URS generators `g`.
@@ -17,9 +17,9 @@ reduction: a leaf collision yields a nontrivial relation among the augmented gen
 * `deployed_to_acceptV` — recurse the peel over the tree, threading the relation branch: an accepting
   deployed tree yields a clean `IpaAcceptV` transcript *or* a nontrivial relation among `(g, U, W)`.
 
-The `... ∨ HasNontrivialRelation` conclusion is a reduction, not a logical exclusion: a relation always
-*exists* in a prime-order group, so the relation branch is ruled out not by `¬ HasNontrivialRelation` but by
-DLR hardness — no feasible adversary can *find* one — leaving the clean `ipa_soundV` opening.
+The `… ∨ HasNontrivialRelation` conclusion is the reduction form — the relation branch is ruled
+out by DLR hardness outside Lean, not logically; see `The reduction form` in
+`Zcash.Snark.Soundness.Main`.
 -/
 
 namespace Zcash.Snark
@@ -29,7 +29,8 @@ variable {F G : Type*} [Field F] [AddCommGroup G] [Module F G]
 /-- A nontrivial relation among the folded generators lifts to one among the originals. With
 `foldGens g u = loHalf g + u⁻¹ • hiHalf g`, a relation `⟨a', foldGens g u⟩ + α•U + β•W = 0` is, via
 `append a' (u⁻¹ • a')`, a relation `⟨·, g⟩ + α•U + β•W = 0`; it stays nontrivial because
-`loHalf (append a' _) = a'`. So the per-round peel can always report its relation against the fixed `g`. -/
+`loHalf (append a' _) = a'`. So the per-round peel can always report its relation against the
+fixed `g`. -/
 theorem relation_of_foldGens {k : ℕ} (g : Fin (2 ^ (k + 1)) → G) (U W : G) (u : F)
     (h : HasNontrivialRelation (F := F) (foldGens g u) U W) :
     HasNontrivialRelation (F := F) g U W := by
@@ -47,11 +48,11 @@ theorem relation_of_foldGens {k : ℕ} (g : Fin (2 ^ (k + 1)) → G) (U W : G) (
   · rw [hcg]; exact heq
 
 /-- One deployed leaf peels (reduction form). The reformulated leaf relation
-`⟨aP, g⟩ + [z·v]U + [blind]W = [c]g₀ + [z·c·b₀]U + [f]W` (value carried on `U` via `z`; halo2's literal check
-instead uses `g₀`/`[ξ]S`, see `DeployedIpaVerifierEq`) either splits into the clean leaf checks
-`⟨aP, g⟩ = [c]g₀` and `v = c·b₀` (the `W`-side blinding identity discarded), or exhibits a nontrivial
-relation among `(g, U, W)`. `separate_or_relation` gives the coordinate split and `z ≠ 0` cancels the
-`U`-side. -/
+`⟨aP, g⟩ + [z·v]U + [blind]W = [c]g₀ + [z·c·b₀]U + [f]W` (value carried on `U` via `z`; halo2's
+literal check instead uses `g₀`/`[ξ]S`, see `DeployedIpaVerifierEq`) *either* splits into the clean
+leaf checks `⟨aP, g⟩ = [c]g₀` and `v = c·b₀` (the `W`-side blinding identity discarded), *or*
+exhibits a nontrivial relation among `(g, U, W)`. `separate_or_relation` gives the coordinate
+split and `z ≠ 0` cancels the `U`-side. -/
 theorem deployed_leaf_peel {n : ℕ} {g : Fin n → G} {b : Fin n → F} {U W : G} {z : F}
     {aP : Fin n → F} {v blind c f : F} (hz : z ≠ 0)
     (e : commitGen g aP + (z * v) • U + blind • W
@@ -63,11 +64,11 @@ theorem deployed_leaf_peel {n : ℕ} {g : Fin n → G} {b : Fin n → F} {U W : 
   · exact Or.inl ⟨congrArg (commitGen g) ha, mul_left_cancel₀ hz hα⟩
   · exact Or.inr hrel
 
-/-- The deployed recursion peels to the clean `IpaAcceptV`, or exhibits a relation. By induction on the
-tree: each leaf peels via `deployed_leaf_peel`; at a node, if all three subtrees peel cleanly the clean node
-check holds, and any relation a subtree finds (against `foldGens g uᵢ`) lifts to one against `g`
-(`relation_of_foldGens`). Binding enters only as the `HasNontrivialRelation` branch of the disjunction —
-the reduction, not an assumed independence. -/
+/-- The deployed recursion peels to the clean `IpaAcceptV`, *or* exhibits a relation. By induction
+on the tree: each leaf peels via `deployed_leaf_peel`; at a node, if all three subtrees peel
+cleanly the clean node check holds, and any relation a subtree finds (against `foldGens g uᵢ`)
+lifts to one against `g` (`relation_of_foldGens`). Binding enters only as the
+`HasNontrivialRelation` branch (the reduction form — see `Soundness.Main`). -/
 theorem deployed_to_acceptV {U W : G} {z : F} (hz : z ≠ 0) :
     {d : ℕ} → (g : Fin (2 ^ d) → G) → (b : Fin (2 ^ d) → F) → (P : G) → (v blind : F) →
       (t : DeployedIpaTreeV F G d) → DeployedIpaAcceptV g b U W z P v blind t →
