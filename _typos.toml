@@ -15,4 +15,11 @@ extend-exclude = [
 # Lean proofs use many short hypothesis names (`hae`, `hve`, `hb`, `ih`, etc.) that the spell-checker
 # misreads as typos. Skip identifiers of three or fewer characters rather than whitelisting each one;
 # genuine typos that short are vanishingly rare and not worth the steady stream of false positives.
-extend-ignore-identifiers-re = ["^[A-Za-z0-9_]{1,3}$"]
+#
+# Random oracles follow the spec's `H^{name}` convention, rendered in Lean as an `H` prefix (e.g.
+# `Hask` for `H^ask`). Allow an `H` followed by three alphanumeric characters so these aren't misread
+# (`Hask` -> `Hash`, etc.).
+extend-ignore-identifiers-re = [
+  "^[A-Za-z0-9_]{1,3}$",
+  "^H[A-Za-z0-9]{3}$",
+]
