@@ -1,25 +1,24 @@
-import Zcash.Snark.Fixtures.OneAction.Fixture
+import Zcash.Snark.Fixtures.SingleAction.Fixture
 
 /-!
 # Fiat–Shamir schedule check for the single-action capture
 
-The single-action analog of `Zcash.Snark.Fixtures.TwoAction.FiatShamir`, on the same design: Blake2b
+The single-action analog of `Zcash.Snark.Fixtures.MultiAction.FiatShamir`, on the same design: Blake2b
 is intentionally taken at the random-oracle boundary; here `capturedFs` acts as a fixture oracle over
 Rust-captured transcript events, returning each captured challenge only when `deriveChallenges`
 presents the captured transcript prefix. This checks the absorb/squeeze order for the typed verifier
 transcript after Blake2b initialization, and then connects the resulting FS-derived fingerprint
 (`nonInteractiveFingerprint`, i.e. `assemble` at `deriveChallenges`) to the captured single-action MSM.
-The per-sub-proof absorb interleavings are exercised at length 1 here; the two-action fixture
-(`FixtureFiatShamir2`) is the multi-action coverage (zcash/ironwood#17).
+The per-sub-proof absorb interleavings are exercised at length 1 here; the multi-action coverage is
+`Zcash.Snark.Fixtures.MultiAction.FiatShamir`.
 
 As with the generated fingerprint fixtures, the Rust capture/dumper boundary is trusted to emit the
 typed proof fields, verifier-key transcript scalar, instance commitments, transcript-event trace, and
 captured challenges corresponding to the deployed transcript; this file does not replay transcript
 bytes.
 
-TODO(zcash/ironwood#24): once the general RO/transcript-ordering work lands, revisit whether this
-fixture oracle should point at that theorem or remain as a concrete regression for the captured proof
-suffix.
+TODO: once a general transcript-ordering theorem lands, either point this oracle at it or keep it as
+a concrete regression for the captured proof.
 -/
 
 namespace Zcash.Snark.Fixture
@@ -58,7 +57,7 @@ def capturedScheduleIncludesInit : Bool :=
 theorem capturedScheduleIncludesInit_eq_true : capturedScheduleIncludesInit = true := by
   native_decide
 
-/-- Fixture Fiat-Shamir oracle: returns a captured challenge only at a Rust-captured transcript prefix.
+/-- Fixture Fiat–Shamir oracle: returns a captured challenge only at a Rust-captured transcript prefix.
 Unknown prefixes return `missingChallenge`, which is checked above not to be one of the captured
 challenges. -/
 def capturedFs : FiatShamir Fp G := {
@@ -68,13 +67,13 @@ def capturedFs : FiatShamir Fp G := {
     | none => missingChallenge
 }
 
-/-- Concrete check that the Lean Fiat-Shamir schedule reaches the captured challenges in the captured
+/-- Concrete check that the Lean Fiat–Shamir schedule reaches the captured challenges in the captured
 single-action proof. This is the theorem that fails if a proof-derived absorb is reordered or
 omitted. -/
 theorem deriveChallenges_matches_captured_schedule :
     deriveChallenges capturedFs capturedInit ps = ch := by native_decide
 
-/-- The Fiat-Shamir-derived fingerprint matches the captured single-action MSM under the concrete
+/-- The Fiat–Shamir-derived fingerprint matches the captured single-action MSM under the concrete
 captured schedule oracle above. -/
 theorem nonInteractiveFingerprint_matches :
     MsmMatch (nonInteractiveFingerprint capturedFs capturedInit vk ps) capturedMsm := by

@@ -1,4 +1,4 @@
-import Zcash.Snark.Fixtures.OneAction.Fixture
+import Zcash.Snark.Fixtures.SingleAction.Fixture
 import Mathlib.Util.AssertNoSorry
 
 /-!

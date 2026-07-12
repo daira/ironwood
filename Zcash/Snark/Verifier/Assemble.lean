@@ -47,7 +47,7 @@ def ColumnRef.resolve {F : Type*} (cr : ColumnRef) (instanceEvals adviceEvals fi
   | .instance i => instanceEvals i
 
 -- TODO(VK-correctness): a `VerifyingKey` value is populated from the halo2 `dump_lean_fixture`
--- capture (`Fingerprint/Fixture.lean`) and trusted verbatim — Lean never re-derives it from the
+-- capture (`Fixtures/SingleAction/Fixture.lean`) and trusted verbatim — Lean never re-derives it from the
 -- Orchard circuit. So "the dumped VK is the real circuit's" is an assumption, not a theorem: the
 -- input-faithfulness boundary. Discharging it means re-running keygen and comparing. Distinct
 -- from the output-side semantic-adequacy gap (see `Soundness/Main.lean`).

@@ -10,7 +10,7 @@ This is stronger than the Orchard consensus-scoped need: every consensus-valid a
 `N ≤ 2^16 - 1` is one instantiation of the same `shape.numProofs` parameter.
 
 These theorems do not prove byte-for-byte Rust faithfulness; that boundary is still supplied by the
-capture/dumper plus selected fixtures. They make explicit that the Lean-side assembly and Fiat-Shamir
+capture/dumper plus selected fixtures. They make explicit that the Lean-side assembly and Fiat–Shamir
 schedule are not specialized to the current concrete fixtures.
 
 Most obligations here are definitional pins — `rfl`-provable restatements that fail loudly if a
@@ -34,7 +34,7 @@ def Shape.hasConsensusNumProofs (shape : Shape) : Prop :=
   shape.numProofs ≤ orchardConsensusMaxProofs
 
 /-- Flatten one list-producing block over all sub-proofs. This is the parametric shape shared by the
-assembly and Fiat-Shamir schedules: the number of blocks is exactly the ambient `numProofs`. (The
+assembly and Fiat–Shamir schedules: the number of blocks is exactly the ambient `numProofs`. (The
 restatements below also reuse it for the inner per-lookup / per-permutation-set folds, where the index
 runs over lookups or sets rather than sub-proofs.) -/
 def subProofBlocks {α : Type*} {numProofs : ℕ} (block : Fin numProofs → List α) : List α :=
@@ -62,7 +62,7 @@ theorem allExpressions_parametric_numProofs {shape : Shape} {F G : Type*} [Field
         subProofExpressions vk ps ch l0 lLast lBlind p) :=
   rfl
 
-/-- The proof-commitment Fiat-Shamir absorb for a per-sub-proof matrix is generic in the outer
+/-- The proof-commitment Fiat–Shamir absorb for a per-sub-proof matrix is generic in the outer
 `numProofs` index. -/
 theorem absorbPoints2_parametric_numProofs {F G : Type*} {numProofs cols : ℕ}
     (f : Fin numProofs → Fin cols → G) :
@@ -70,7 +70,7 @@ theorem absorbPoints2_parametric_numProofs {F G : Type*} {numProofs cols : ℕ}
       subProofBlocks (fun p : Fin numProofs => absorbPoints (f p)) :=
   rfl
 
-/-- The proof-scalar Fiat-Shamir absorb for a per-sub-proof matrix is generic in the outer `numProofs`
+/-- The proof-scalar Fiat–Shamir absorb for a per-sub-proof matrix is generic in the outer `numProofs`
 index. -/
 theorem absorbScalars2_parametric_numProofs {F G : Type*} {numProofs cols : ℕ}
     (f : Fin numProofs → Fin cols → F) :
@@ -187,12 +187,12 @@ theorem assembleQueries_parametric_numProofs {shape : Shape} {F G : Type*} [Fiel
       perProof ++ fixedQ ++ permCommonQ ++ vanishingQ :=
   rfl
 
-/-- The Fiat-Shamir challenge schedule is generic in `shape.numProofs`. The per-proof absorbs in this
+/-- The Fiat–Shamir challenge schedule is generic in `shape.numProofs`. The per-proof absorbs in this
 schedule are the generic folds exposed by `absorbPoints2_parametric_numProofs`,
 `absorbScalars2_parametric_numProofs`, and `absorbLookupPermuted_parametric_numProofs`.
 The hash output is intentionally outside these parametric lemmas: Blake2b is taken at the
-random-oracle boundary, while concrete fixtures either assume captured challenges (`FixtureFiatShamir`)
-or use a fixture oracle for a captured proof suffix (`FixtureFiatShamir2`). -/
+random-oracle boundary, while the concrete fixtures use a fixture oracle over the captured transcript
+events (`Zcash.Snark.Fixtures.SingleAction.FiatShamir`, `Zcash.Snark.Fixtures.MultiAction.FiatShamir`). -/
 theorem deriveChallenges_parametric_numProofs {shape : Shape} {F G : Type*} [Zero F]
     (fs : FiatShamir F G) (init : List (TranscriptElt F G)) (ps : ProofString shape F G) :
     deriveChallenges fs init ps =

@@ -1,4 +1,4 @@
-import Zcash.Snark.Fixtures.TwoAction.Fixture
+import Zcash.Snark.Fixtures.MultiAction.Fixture
 
 /-!
 # Shape and VK faithfulness checks for the two-action capture
