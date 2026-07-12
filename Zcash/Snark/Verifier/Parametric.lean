@@ -23,7 +23,12 @@ commitment slots, so the multiopen grouping can never merge commitments across s
 namespace Zcash.Snark
 
 /-- Orchard's consensus maximum number of actions, hence the maximum `numProofs` for the Orchard
-bundle proof verified by this model. -/
+bundle proof verified by this model.
+
+The bound is a consensus rule, not an encoding artifact: `nActionsOrchard` is a `compactSize` (which
+admits values up to `2^64 - 1`), but the Zcash Protocol Specification §7.1.2 "Transaction Consensus
+Rules" requires `nActionsOrchard < 2^16` (NU5 onward), so `nActionsOrchard ≤ 2^16 - 1 = 65535`. The v5
+transaction format carrying it is defined by ZIP 225. -/
 def orchardConsensusMaxProofs : ℕ := 2^16 - 1
 
 /-- The consensus-scoped subcase of the stronger parametric theorems below. Only the upper bound is
