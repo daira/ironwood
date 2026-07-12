@@ -1,9 +1,9 @@
 import Zcash.Snark.Fixtures.MultiAction.FiatShamir
 
 /-!
-# Negative fixtures for the two-action capture
+# Negative fixtures for the multi-action capture
 
-These adversarial fixtures start from the Rust-captured two-action proof and mutate the typed Lean data
+These adversarial fixtures start from the Rust-captured multi-action proof and mutate the typed Lean data
 to exercise modeled verifier rejection paths. They are not byte-level malformed proof captures: invalid
 encodings and Rust-side decode failures sit below `ProofString`. The point here is concrete
 regression coverage for non-accepting verifier states that the Lean model already exposes through

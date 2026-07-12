@@ -21,7 +21,7 @@ rev = "6c5b1a605df8ed150c3ee242bcd6f355fc973653"
 name = "Zcash"
 
 # Everything under `Zcash/Snark/Fixtures/` is instance-level: the generated Rust<->Lean captures
-# (per-capture subdirectories like `OneAction`/`TwoAction`, holding the fixture data plus its
+# (per-capture subdirectories like `SingleAction`/`MultiAction`, holding the fixture data plus its
 # Fiat-Shamir schedule, faithfulness, and negative checks) and the hand-written consensus-max shape
 # instantiation (`MaxShape`). The `Zcash` library deliberately does not import them (the captures are
 # large, generated, and slow); `Zcash/Snark/Fingerprint/` keeps the reusable match/soundness theory.

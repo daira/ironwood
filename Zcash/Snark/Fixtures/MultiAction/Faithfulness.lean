@@ -1,7 +1,7 @@
 import Zcash.Snark.Fixtures.MultiAction.Fixture
 
 /-!
-# Shape and VK faithfulness checks for the two-action capture
+# Shape and VK faithfulness checks for the multi-action capture
 
 The generated fixture remains the Rust/Lean boundary: Lean does not re-run Orchard key generation or
 prove that the dumped values are the true deployed verifying key. These checks instead make the

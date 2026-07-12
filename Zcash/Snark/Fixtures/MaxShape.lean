@@ -10,7 +10,7 @@ concrete `n`. What is pinned: the per-sub-proof folds elaborate at the captured 
 dimensions for every `n`, so drift in a parametric statement fails to elaborate here.
 
 Not a Rust/Halo2 capture, and no Rust/Lean MSM match: a real max-action fixture would need a
-65,535-action Rust capture, and the single- and two-action captures remain the empirical regressions for
+65,535-action Rust capture, and the single- and multi-action captures remain the empirical regressions for
 that boundary.
 
 Every consensus-valid bundle has `n ≤ orchardConsensusMaxProofs` (see that definition for the protocol
@@ -56,7 +56,7 @@ theorem consensus_max_hasConsensusNumProofs :
     (shape orchardConsensusMaxProofs).hasConsensusNumProofs :=
   shape_hasConsensusNumProofs (Nat.le_refl _)
 
-/-- `allExpressions_parametric_numProofs` at the captured Orchard shape, for every action count `n`,
+/-- `allExpressions_parametric_numProofs` at the captured Orchard shape, for every consensus-valid action count `n`,
 verifying key, proof string, and challenge assignment. -/
 theorem allExpressions_at_captured_shape (n : ℕ) (vk : VerifyingKey (shape n) Fp G)
     (ps : ProofString (shape n) Fp G) (ch : Challenges (shape n).k Fp) (l0 lLast lBlind : Fp) :
@@ -65,7 +65,7 @@ theorem allExpressions_at_captured_shape (n : ℕ) (vk : VerifyingKey (shape n) 
         subProofExpressions vk ps ch l0 lLast lBlind p) :=
   allExpressions_parametric_numProofs vk ps ch l0 lLast lBlind
 
-/-- `assembleQueries_parametric_numProofs` at the captured Orchard shape, for every action count `n`,
+/-- `assembleQueries_parametric_numProofs` at the captured Orchard shape, for every consensus-valid action count `n`,
 verifying key, proof string, and challenge assignment. -/
 theorem assembleQueries_at_captured_shape (n : ℕ) (vk : VerifyingKey (shape n) Fp G)
     (ps : ProofString (shape n) Fp G) (ch : Challenges (shape n).k Fp) :
@@ -89,7 +89,7 @@ theorem assembleQueries_at_captured_shape (n : ℕ) (vk : VerifyingKey (shape n)
       perProof ++ fixedQ ++ permCommonQ ++ vanishingQ :=
   assembleQueries_parametric_numProofs vk ps ch
 
-/-- `deriveChallenges_parametric_numProofs` at the captured Orchard shape, for every action count `n`
+/-- `deriveChallenges_parametric_numProofs` at the captured Orchard shape, for every consensus-valid action count `n`
 and proof string. -/
 theorem deriveChallenges_at_captured_shape (n : ℕ) (fs : FiatShamir Fp G)
     (init : List (TranscriptElt Fp G)) (ps : ProofString (shape n) Fp G) :
@@ -145,7 +145,7 @@ theorem deriveChallenges_at_captured_shape (n : ℕ) (fs : FiatShamir Fp G)
         ipaRound := fun j => ipaRes.2.getD j.val 0 } :=
   deriveChallenges_parametric_numProofs fs init ps
 
-/-- `subProofOpeningQueries_commId_disjoint` at the captured Orchard shape: for every action count `n`,
+/-- `subProofOpeningQueries_commId_disjoint` at the captured Orchard shape: for every consensus-valid action count `n`,
 no two distinct sub-proofs' opening queries share a commitment slot, so the multiopen grouping cannot
 merge across sub-proofs. -/
 theorem commId_disjoint_at_captured_shape (n : ℕ) (vk : VerifyingKey (shape n) Fp G)
