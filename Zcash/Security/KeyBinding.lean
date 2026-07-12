@@ -205,6 +205,40 @@ theorem nk_pinned (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
   refine ⟨h₁, h₂, hivk, fun heq => hne ?_⟩
   simpa using congrArg (fun t => t.2.2.2.1) heq
 
+/-- `ak`-pinning up to y-sign (Spend Authorization's import): two valid witnesses with the same `ivk`
+that do **not** form a key-binding break share the same `ak = Extract ak^ℙ` — i.e. `ak^ℙ` is pinned up
+to its y-sign, matching the protocol's choice to consume `ak` as a single x-coordinate. -/
+theorem ak_pinned (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
+    (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
+    (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
+    {w₁ w₂ : Witness G F B SK QK}
+    (h₁ : KB Extract S hfn Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₁)
+    (h₂ : KB Extract S hfn Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₂)
+    (hivk : w₁.ivk = w₂.ivk)
+    (hnb : ¬ Break Extract S hfn Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₁ w₂) :
+    ak Extract w₁ = ak Extract w₂ := by
+  by_contra hne
+  apply hnb
+  refine ⟨h₁, h₂, hivk, fun heq => hne ?_⟩
+  simpa using congrArg (fun t => t.2.2.1) heq
+
+/-- `qk`-pinning (Spend Authorization's import): two valid witnesses with the same `ivk` that do
+**not** form a key-binding break share the same `qk` (including the `⊥`/`use_qsk` structure — this is
+stronger than the spec's "`qk` determined by `ivk` when `qk ≠ ⊥`"). -/
+theorem qk_pinned (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
+    (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
+    (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
+    {w₁ w₂ : Witness G F B SK QK}
+    (h₁ : KB Extract S hfn Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₁)
+    (h₂ : KB Extract S hfn Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₂)
+    (hivk : w₁.ivk = w₂.ivk)
+    (hnb : ¬ Break Extract S hfn Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₁ w₂) :
+    w₁.qk = w₂.qk := by
+  by_contra hne
+  apply hnb
+  refine ⟨h₁, h₂, hivk, fun heq => hne ?_⟩
+  simpa using congrArg (fun t => t.1) heq
+
 end Full
 
 section Onward
