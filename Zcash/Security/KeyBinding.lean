@@ -2,12 +2,12 @@ import Mathlib
 import Zcash.Security.RandomOracle
 
 /-!
-# Key binding (Orchard / Ironwood) — Layer A
+# Key binding (Orchard / Ironwood)
 
-Formalizes ZIP 2005 §"Security argument for key binding" (`thm-key-binding-rom`) and the `ivk`-pinning
-lemma: a verifying Recovery-Statement witness pins the key components (`ak` up to y-sign, `nk`, `qk`)
-to `ivk`. Shared intermediate result under Balance (`nk`-pinning), Spendability (`PRF^nf`-pinning), and
-Spend authority (`ak`/`qk`-pinning).
+Formalizes the [ZIP 2005 key-binding theorem (ROM)](https://zips.z.cash/zip-2005#thm-key-binding-rom)
+and the `ivk`-pinning lemma: a verifying Recovery-Statement witness pins the key components (`ak` up
+to y-sign, `nk`, `qk`) to `ivk`. Shared intermediate result under Balance (`nk`-pinning), Spendability
+(`PRF^nf`-pinning), and Spend authority (`ak`/`qk`-pinning).
 
 The *deterministic reduction* `OpeningBreak ⇒ CollisionUpToSign` is the composable core;
 `openingBreak_scalar_pm` below is its algebraic heart. The probabilistic birthday bound
@@ -65,7 +65,7 @@ def FinalQuery.eval (Hrivk_legacy : SK → F) (Hrivk_ext : QK → B → B → F)
 section Algebra
 variable [AddCommGroup G] [Field F] [Field B] [Module F G] [NoZeroSMulDivisors F G]
 
-/-- The `ivk` commitment as a Pedersen lift (Layer B request):
+/-- The `ivk` commitment as a Pedersen lift:
 `Commitivk rivk a n = Extract ((h a n + rivk) • S)`, with `h` abstract-but-non-querying and `S` a
 fixed base. Mirrors the `NoteCommit` repair `[H^rcm + f]·R`. -/
 def Commitivk (Extract : G → B) (S : G) (hfn : B → B → F) (rivk : F) (a n : B) : B :=
@@ -99,12 +99,12 @@ theorem commit_scalar_pm
     · exact sub_eq_zero.mp h1
     · exact absurd h1 hS
 
-/-- `KBOpening` — the commitment-opening core of the key-binding condition (what Layer B's
-statement-validity yields): `ivk` opens as `Commitivk` at `(rivk, ak, nk)`, and `ivk ≠ 0`. -/
+/-- `KBOpening` — the commitment-opening core of the key-binding condition (what statement-validity
+yields): `ivk` opens as `Commitivk` at `(rivk, ak, nk)`, and `ivk ≠ 0`. -/
 def KBOpening (Extract : G → B) (S : G) (hfn : B → B → F) (w : Witness G F B SK QK) : Prop :=
   w.ivk = Commitivk Extract S hfn w.rivk (ak Extract w) w.nk ∧ w.ivk ≠ 0
 
-/-- `OpeningBreak` — a `Commitivk`-opening collision (produced by Layer B's games layer): two valid `KBOpening`
+/-- `OpeningBreak` — a `Commitivk`-opening collision (produced by the games layer): two valid `KBOpening`
 witnesses with the same `ivk` but differing `(ak, nk, rivk)`. -/
 def OpeningBreak (Extract : G → B) (S : G) (hfn : B → B → F) (w₁ w₂ : Witness G F B SK QK) : Prop :=
   KBOpening Extract S hfn w₁ ∧ KBOpening Extract S hfn w₂ ∧ w₁.ivk = w₂.ivk ∧
@@ -113,7 +113,7 @@ def OpeningBreak (Extract : G → B) (S : G) (hfn : B → B → F) (w₁ w₂ : 
 /-- The deterministic reduction (composable core): a `OpeningBreak` exhibits distinct `(ak, nk, rivk)`
 triples whose Pedersen scalars `h(ak,nk) + rivk` are equal or negatives — a ±-collision of the
 commitment's scalar map. Under `KBDerivation` (below) `rivk` is an `H^*` output, turning this into a
-random-oracle ±-collision that the birthday bound (Layer C) bounds. -/
+random-oracle ±-collision that the birthday bound then bounds. -/
 theorem openingBreak_scalar_pm
     (Extract : G → B) (S : G) (hfn : B → B → F)
     (hExt : ∀ P Q : G, Extract P = Extract Q ↔ P = Q ∨ P = -Q) (hS : S ≠ 0)
@@ -190,7 +190,7 @@ def Break (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
 
 /-- `nk`-pinning (Balance's import): two valid witnesses with the same `ivk` that do **not** form a
 key-binding break must share the same nullifier key `nk`. (The probability that a break *does* occur
-is the Layer-C birthday bound.) -/
+is the birthday bound.) -/
 theorem nk_pinned (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
     (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
     (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
@@ -261,7 +261,7 @@ structure"): under the derivation constraints, `rivk` is the output of the combi
 the witness's `finalQueryOf`. This is the deterministic bridge from the Pedersen-scalar collision
 (`commitCollision`, over `G(w) = h(ak,nk) + rivk`) to a collision of the actual `H^*` random
 oracles. The birthday bound over the final-query space, and the residual `x₁ = x₂` upstream-collision
-sub-case, are the probabilistic Layer C. -/
+sub-case, are probabilistic. -/
 theorem rivk_eq_finalOracle
     (Extract : G → B) (Ggen : G)
     (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
@@ -290,16 +290,44 @@ end Onward
 section OnwardCollision
 variable [AddCommGroup G] [Field F] [Field B] [Module F G] [NoZeroSMulDivisors F G] [DecidableEq F]
 
-/-- **`H^*` ±-collision — the deterministic core of the birthday step.** Composing the
-commitment-opening ±-collision (`openingBreak_scalar_pm`) with the final-oracle representation
-(`rivk_eq_finalOracle`), an `OpeningBreak` whose witnesses both satisfy the derivation constraints
-yields the ZIP 2005 break equation `G₁ = ±G₂` with the *Final-random-oracle structure* substituted:
-writing `H^* q := (FinalQuery.eval …) q` for the combined final oracle and `qᵢ := finalQueryOf wᵢ`,
-`h(ak₁,nk₁) + H^*(q₁) = ±(h(ak₂,nk₂) + H^*(q₂))`. Each side is thus an `H^*`-output offset by the
-constant shift `h(akᵢ,nkᵢ)` (non-querying `h`, independent of `H^*`'s responses) — exactly the
-quantity the birthday bound bounds. The distinctness of the final queries (`q₁ ≠ q₂`) and the
-residual `x₁ = x₂` sub-cases are the probabilistic Layer C, *not* established here; that is why this
-is the ±-equation rather than a full `CollisionUpToSign` (whose `ne` field is that very residual). -/
+/-- **Same-`ivk` ±-equation over `H^*` — the deterministic core of the birthday step.** Any two
+witnesses satisfying the commitment opening (`KBOpening`) with the *same* `ivk` and both satisfying
+the derivation constraints yield the ZIP 2005 break equation `G₁ = ±G₂` with the *Final-random-oracle
+structure* substituted: writing `H^* q := (FinalQuery.eval …) q` for the combined final oracle and
+`qᵢ := finalQueryOf wᵢ`, `h(ak₁,nk₁) + H^*(q₁) = ±(h(ak₂,nk₂) + H^*(q₂))`. Each side is thus an
+`H^*`-output offset by the constant shift `h(akᵢ,nkᵢ)` (non-querying `h`, independent of `H^*`'s
+responses) — exactly the quantity the birthday bound bounds.
+
+Crucially this needs **only** the two openings and `ivk`-equality, not any distinctness of the
+witnesses: the ±-equation is a property of *every* same-`ivk` pair, and it is the break notions
+(`OpeningBreak`, `Break`) that additionally carry a distinctness witness (`ne`). The distinctness of
+the final queries (`q₁ ≠ q₂`) and the residual `x₁ = x₂` sub-cases remain probabilistic;
+that is why this is the ±-equation rather than a full `CollisionUpToSign` (whose `ne` field is that
+very residual). -/
+theorem sameIvk_finalOracle_pm
+    (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
+    (hExt : ∀ P Q : G, Extract P = Extract Q ↔ P = Q ∨ P = -Q) (hS : S ≠ 0)
+    (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
+    (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
+    {w₁ w₂ : Witness G F B SK QK}
+    (hop₁ : KBOpening Extract S hfn w₁) (hop₂ : KBOpening Extract S hfn w₂)
+    (hivk : w₁.ivk = w₂.ivk)
+    (hd₁ : KBDerivation Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₁)
+    (hd₂ : KBDerivation Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₂) :
+    hfn (ak Extract w₁) w₁.nk + (finalQueryOf Extract w₁).eval Hrivk_legacy Hrivk_ext Hrivk_int =
+      hfn (ak Extract w₂) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int ∨
+    hfn (ak Extract w₁) w₁.nk + (finalQueryOf Extract w₁).eval Hrivk_legacy Hrivk_ext Hrivk_int =
+      -(hfn (ak Extract w₂) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int) := by
+  have hcm : Commitivk Extract S hfn w₁.rivk (ak Extract w₁) w₁.nk
+      = Commitivk Extract S hfn w₂.rivk (ak Extract w₂) w₂.nk :=
+    hop₁.1.symm.trans (hivk.trans hop₂.1)
+  have hpm := commit_scalar_pm Extract S hfn hExt hS hcm
+  rw [rivk_eq_finalOracle Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int hd₁,
+      rivk_eq_finalOracle Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int hd₂] at hpm
+  exact hpm
+
+/-- The `H^*` ±-equation from an `OpeningBreak` (the object the games produce): the same-`ivk`
+core `sameIvk_finalOracle_pm` applied to the break's two openings. -/
 theorem openingBreak_finalOracle_pm
     (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
     (hExt : ∀ P Q : G, Extract P = Extract Q ↔ P = Q ∨ P = -Q) (hS : S ≠ 0)
@@ -312,11 +340,29 @@ theorem openingBreak_finalOracle_pm
     hfn (ak Extract w₁) w₁.nk + (finalQueryOf Extract w₁).eval Hrivk_legacy Hrivk_ext Hrivk_int =
       hfn (ak Extract w₂) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int ∨
     hfn (ak Extract w₁) w₁.nk + (finalQueryOf Extract w₁).eval Hrivk_legacy Hrivk_ext Hrivk_int =
-      -(hfn (ak Extract w₂) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int) := by
-  have hpm := (openingBreak_scalar_pm Extract S hfn hExt hS hbrk).2
-  rw [rivk_eq_finalOracle Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int hd₁,
-      rivk_eq_finalOracle Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int hd₂] at hpm
-  exact hpm
+      -(hfn (ak Extract w₂) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int) :=
+  sameIvk_finalOracle_pm Extract S hfn Ggen hExt hS Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int
+    hbrk.1 hbrk.2.1 hbrk.2.2.1 hd₁ hd₂
+
+/-- The `H^*` ±-equation from a full key-binding `Break` (the ZIP 2005 break event, projection
+`(qk, sk, ak, nk, rivk)` differing) — the entry point for the ZIP 2005 key-binding theorem (ROM)
+bound. Here the derivation constraints are already inside the `Break` (via `KB`); and notably **no**
+`Break → OpeningBreak` "upgrade" is needed, because the ±-equation depends only on the openings and
+`ivk`-equality, never on *how* the projections differ. What the birthday bound then adds is the
+probability that this equation holds for *distinct* final queries (the birthday bound). -/
+theorem break_finalOracle_pm
+    (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
+    (hExt : ∀ P Q : G, Extract P = Extract Q ↔ P = Q ∨ P = -Q) (hS : S ≠ 0)
+    (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
+    (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
+    {w₁ w₂ : Witness G F B SK QK}
+    (hbrk : Break Extract S hfn Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₁ w₂) :
+    hfn (ak Extract w₁) w₁.nk + (finalQueryOf Extract w₁).eval Hrivk_legacy Hrivk_ext Hrivk_int =
+      hfn (ak Extract w₂) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int ∨
+    hfn (ak Extract w₁) w₁.nk + (finalQueryOf Extract w₁).eval Hrivk_legacy Hrivk_ext Hrivk_int =
+      -(hfn (ak Extract w₂) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int) :=
+  sameIvk_finalOracle_pm Extract S hfn Ggen hExt hS Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int
+    hbrk.1.1 hbrk.2.1.1 hbrk.2.2.1 hbrk.1.2 hbrk.2.1.2
 
 end OnwardCollision
 

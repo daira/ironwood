@@ -4,10 +4,10 @@ import Zcash.Security.Ledger.Statement
 /-!
 # Bridging the concrete key-binding layer to the games' `KeyBindingInterface`
 
-The deliberate contact point between Layer A (`Zcash.Security.KeyBinding`: the concrete `Witness`,
-the factored condition `KB = KBOpening ∧ KBDerivation`, and `Break`) and Layer B
-(`Zcash.Security.Ledger.KeyBindingInterface`: the games-facing view). The games see only the
-projections and the `break_of_nk_ne` guarantee; here we discharge that guarantee from Layer A's
+The deliberate contact point between the concrete key-binding development
+(`Zcash.Security.KeyBinding`: the `Witness`, the factored condition `KB = KBOpening ∧ KBDerivation`,
+and `Break`) and the games-facing view (`Zcash.Security.Ledger.KeyBindingInterface`). The games see
+only the projections and the `break_of_nk_ne` guarantee; here we discharge that guarantee from
 `nk_pinned`.
 -/
 
@@ -17,7 +17,7 @@ open Zcash.Security.KeyBinding Zcash.Security.Ledger
 
 variable {G F B SK QK : Type*}
 
-/-- Layer A's concrete key-binding witness, viewed through Layer B's `KeyBindingInterface`. -/
+/-- The concrete key-binding witness, viewed through the games' `KeyBindingInterface`. -/
 def KeyBinding.toInterface
     [AddCommGroup G] [Field F] [Field B] [Module F G]
     (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
