@@ -297,10 +297,49 @@ def assembleFinalMsm? {shape : Shape} {F G : Type*} [Field F] (ps : ProofString 
 /-- The multiopen inverse factors are defined only when the IPA challenge `x₃` is not one of the opened
 points in any derived point set. In the deployed verifier this case is a panic, not an error return
 (`(x₃ - point).invert().unwrap()` in `multiopen/verifier.rs`); the Lean rejection abstracts that crash —
-both are non-accepting, which is what soundness consumes. -/
+both are non-accepting, which is what soundness consumes. `card_multiopenPanic_le` bounds the offending
+`x₃`: at most one per opened point, a negligible proportion of challenges. -/
 def multiopenPointsAvoidX3 {k : ℕ} {F G : Type*} [DecidableEq F] (x3 : F)
     (grouped : MultiopenGrouped k F G) : Bool :=
   grouped.points.all fun pts => pts.all fun point => decide (x3 ≠ point)
+
+/-- **Multiopen panic hits a negligible proportion of challenges.** The IPA challenges `x₃` that trigger
+the deployed `(x₃ - point).invert().unwrap()` crash (the `multiopenPointsAvoidX3 = false` case) are
+exactly the opened points, so at most the opened-point count across the derived point sets. Over `F_p`
+that is a `≤ #points / p` fraction (`|F_p| = p ≈ 2²⁵⁴`, `card_Fp`), negligible since the point count is
+polynomial in the circuit size. -/
+theorem card_multiopenPanic_le {k : ℕ} {F G : Type*} [DecidableEq F] [Fintype F]
+    (grouped : MultiopenGrouped k F G) :
+    (Finset.univ.filter (fun x3 : F => multiopenPointsAvoidX3 x3 grouped = false)).card
+      ≤ grouped.points.flatten.length := by
+  -- the panicking `x₃` embed in the flattened list of opened points
+  refine le_trans (Finset.card_le_card ?_) (List.toFinset_card_le _)
+  intro x3 hx3
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hx3
+  rw [List.mem_toFinset]
+  -- an `x₃` that avoided every opened point would not panic, contradicting `avoid = false`
+  by_contra hnot
+  have hAvoid : multiopenPointsAvoidX3 x3 grouped = true := by
+    simp only [multiopenPointsAvoidX3, List.all_eq_true, decide_eq_true_eq]
+    intro pts hpts point hpoint hx
+    exact hnot (List.mem_flatten.mpr ⟨pts, hpts, by rw [hx]; exact hpoint⟩)
+  rw [hAvoid] at hx3
+  exact Bool.noConfusion hx3
+
+/-- **Vanishing panic hits a negligible proportion of challenges.** The evaluation challenges `x` with
+`xⁿ = 1` trigger the deployed `(xⁿ - 1).invert().unwrap()` crash (guarded as `none` in `assemble?`); they
+are the `n`-th roots of unity, at most `n` of them (`n = vk.n`, the domain size). Over `F_p` that is a
+`≤ n / p` fraction, negligible for `p ≈ 2²⁵⁴`. -/
+theorem card_vanishingPanic_le {F : Type*} [Field F] [Fintype F] [DecidableEq F] {n : ℕ}
+    (hn : 0 < n) :
+    (Finset.univ.filter (fun x : F => x ^ n = 1)).card ≤ n := by
+  -- the bad `x` are the roots of `Xⁿ - 1`, at most `n` of them
+  refine le_trans (Finset.card_le_card ?_)
+    (le_trans (Multiset.toFinset_card_le _) (Polynomial.card_nthRoots n 1))
+  intro x hx
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hx
+  rw [Multiset.mem_toFinset, Polynomial.mem_nthRoots hn]
+  exact hx
 
 /-- `permutation_product_last_eval` is read by halo2 for every non-last permutation set and is absent for
 the last set. This checks the typed proof string follows that read schedule. -/
@@ -328,9 +367,9 @@ typed proof fields must follow Halo2's read schedule.
 
 Two of these rejections abstract deployed *panics*, not error returns: at `xⁿ = 1` halo2 crashes on
 `(xn - 1).invert().unwrap()` (`vanishing/verifier.rs`), and at `x₃` hitting an opened point on
-`(x₃ - point).invert().unwrap()` (`multiopen/verifier.rs`). Both are negligible-probability challenge
-events and non-accepting either way, which is the property the soundness layer consumes; the model just
-renders "crash" as `none`. -/
+`(x₃ - point).invert().unwrap()` (`multiopen/verifier.rs`). Both strike a negligible proportion of
+challenges (`card_vanishingPanic_le`, `card_multiopenPanic_le`) and are non-accepting either way, which is
+the property the soundness layer consumes; the model just renders "crash" as `none`. -/
 def assemble? {shape : Shape} {F G : Type*} [Field F] [DecidableEq F] [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape F G) (ps : ProofString shape F G) (ch : Challenges shape.k F) :
     Option (Msm shape.k F G) :=
