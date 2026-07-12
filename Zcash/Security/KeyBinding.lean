@@ -253,4 +253,37 @@ theorem rivk_eq_finalOracle
 
 end Onward
 
+section OnwardCollision
+variable [AddCommGroup G] [Field F] [Field B] [Module F G] [NoZeroSMulDivisors F G] [DecidableEq F]
+
+/-- **`H^*` ±-collision — the deterministic core of the birthday step.** Composing the
+commitment-opening ±-collision (`openingBreak_scalar_pm`) with the final-oracle representation
+(`rivk_eq_finalOracle`), an `OpeningBreak` whose witnesses both satisfy the derivation constraints
+yields the ZIP 2005 break equation `G₁ = ±G₂` with the *Final-random-oracle structure* substituted:
+writing `H^* q := (FinalQuery.eval …) q` for the combined final oracle and `qᵢ := finalQueryOf wᵢ`,
+`h(ak₁,nk₁) + H^*(q₁) = ±(h(ak₂,nk₂) + H^*(q₂))`. Each side is thus an `H^*`-output offset by the
+constant shift `h(akᵢ,nkᵢ)` (non-querying `h`, independent of `H^*`'s responses) — exactly the
+quantity the birthday bound bounds. The distinctness of the final queries (`q₁ ≠ q₂`) and the
+residual `x₁ = x₂` sub-cases are the probabilistic Layer C, *not* established here; that is why this
+is the ±-equation rather than a full `CollisionUpToSign` (whose `ne` field is that very residual). -/
+theorem openingBreak_finalOracle_pm
+    (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
+    (hExt : ∀ P Q : G, Extract P = Extract Q ↔ P = Q ∨ P = -Q) (hS : S ≠ 0)
+    (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
+    (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
+    {w₁ w₂ : Witness G F B SK QK}
+    (hbrk : OpeningBreak Extract S hfn w₁ w₂)
+    (hd₁ : KBDerivation Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₁)
+    (hd₂ : KBDerivation Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₂) :
+    hfn (ak Extract w₁) w₁.nk + (finalQueryOf Extract w₁).eval Hrivk_legacy Hrivk_ext Hrivk_int =
+      hfn (ak Extract w₂) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int ∨
+    hfn (ak Extract w₁) w₁.nk + (finalQueryOf Extract w₁).eval Hrivk_legacy Hrivk_ext Hrivk_int =
+      -(hfn (ak Extract w₂) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int) := by
+  have hpm := (openingBreak_scalar_pm Extract S hfn hExt hS hbrk).2
+  rw [rivk_eq_finalOracle Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int hd₁,
+      rivk_eq_finalOracle Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int hd₂] at hpm
+  exact hpm
+
+end OnwardCollision
+
 end Zcash.Security.KeyBinding
