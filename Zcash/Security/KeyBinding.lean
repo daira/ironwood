@@ -9,14 +9,15 @@ lemma: a verifying Recovery-Statement witness pins the key components (`ak` up t
 to `ivk`. Shared intermediate result under Balance (`nk`-pinning), Spendability (`PRF^nf`-pinning), and
 Spend authority (`ak`/`qk`-pinning).
 
-Middle-out shape (mirrors `BindingSignature/Balance.lean`): the *deterministic reduction*
-`break ⇒ ±-collision` is the composable core (`openingBreak_scalar_pm` below is its algebraic heart); the
-probabilistic birthday bound `ε_kb ≤ 3q(q-1)/2r` is a separate (Layer C) concern.
+The *deterministic reduction* `OpeningBreak ⇒ CollisionUpToSign` is the composable core;
+`openingBreak_scalar_pm` below is its algebraic heart. The probabilistic birthday bound
+`ε_kb ≤ 3q(q-1)/2r` is a separate concern.
 
-Abstract setting, Pallas-instantiated last via CompElliptic (as in `Balance.lean`): a prime-order
-group `G` as an `F`-vector space (`F = ZMod r` the scalar field), a base field `B` (x-coordinates,
-`= ZMod q`), and `Extract : G → B` with the ±-property. `Commitivk` is a Pedersen lift (not opaque),
-per Layer B's request, which is what makes the break reduction *provable*.
+Abstract setting: a prime-order group `G` as an `F`-vector space (`F = ZMod r` the scalar field),
+a base field `B` (x-coordinates, `= ZMod q`), and `Extract : G → B` with the ±-property (`hExt`).
+
+`Commitivk` is required to have the Pedersen structure (not opaque), which is what makes the break
+reduction provable. Pallas is instantiated last via CompElliptic.
 -/
 
 namespace Zcash.Security.KeyBinding
@@ -40,8 +41,26 @@ variable {G F B SK QK : Type*}
 def ak (Extract : G → B) (w : Witness G F B SK QK) : B := Extract w.akP
 
 /-- The Pedersen-scalar map a `Commitivk` opening reduces to: `(ak, nk, rivk) ↦ h ak nk + rivk`.
-A `OpeningBreak` is exhibited as a `±`-collision of this map by `commitCollision`. -/
+An `OpeningBreak` is exhibited as a `CollisionUpToSign` of this map by `commitCollision`. -/
 def pedersenScalar [Add F] (hfn : B → B → F) (t : B × B × F) : F := hfn t.1 t.2.1 + t.2.2
+
+/-- The "final input" to the final `rivk`-derivation random oracle (ZIP 2005 key-binding proof):
+the query at which `rivk` is that oracle's output, selected by the qk/sk branch and the
+external/internal ivk choice. -/
+inductive FinalQuery (QK SK B F : Type*) where
+  /-- qk-branch, external ivk: `rivk = Hrivk_ext qk ak nk`. -/
+  | ext : QK → B → B → FinalQuery QK SK B F
+  /-- sk-branch, external ivk: `rivk = Hrivk_legacy sk`. -/
+  | legacy : SK → FinalQuery QK SK B F
+  /-- internal ivk: `rivk = Hrivk_int rivk_ext ak nk`. -/
+  | int : F → B → B → FinalQuery QK SK B F
+
+/-- The combined final `rivk`-derivation random oracle: dispatch each final query to its oracle. -/
+def FinalQuery.eval (Hrivk_legacy : SK → F) (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F) :
+    FinalQuery QK SK B F → F
+  | .ext qk a n => Hrivk_ext qk a n
+  | .legacy sk => Hrivk_legacy sk
+  | .int re a n => Hrivk_int re a n
 
 section Algebra
 variable [AddCommGroup G] [Field F] [Field B] [Module F G] [NoZeroSMulDivisors F G]
@@ -52,6 +71,7 @@ fixed base. Mirrors the `NoteCommit` repair `[H^rcm + f]·R`. -/
 def Commitivk (Extract : G → B) (S : G) (hfn : B → B → F) (rivk : F) (a n : B) : B :=
   Extract ((hfn a n + rivk) • S)
 
+omit [Field B] in
 /-- Algebraic core: two openings of the same `Commitivk` value force their Pedersen scalars to be
 equal or negatives. Uses the `Extract` ±-property and injectivity of `·•S` for `S ≠ 0` (`G` is an
 `F`-vector space). This is the deterministic content the whole key-binding reduction rests on. -/
@@ -186,5 +206,51 @@ theorem nk_pinned (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
   simpa using congrArg (fun t => t.2.2.2.1) heq
 
 end Full
+
+section Onward
+variable [AddCommGroup G] [Field F] [Field B] [Module F G] [DecidableEq F]
+
+/-- The final query of a witness: which final oracle produces its `rivk`, and at what input.
+Selected by the external/internal ivk choice (`rivk = rivk_ext`?) and then the qk/sk branch. -/
+def finalQueryOf (Extract : G → B) (w : Witness G F B SK QK) : FinalQuery QK SK B F :=
+  if w.rivk = w.rivk_ext then
+    match w.qk, w.sk with
+    | some qk, _ => .ext qk (ak Extract w) w.nk
+    | none, some sk => .legacy sk
+    | none, none => .int w.rivk_ext (ak Extract w) w.nk
+  else
+    .int w.rivk_ext (ak Extract w) w.nk
+
+omit [Field B] in
+/-- **Final-random-oracle representation** (ZIP 2005 key-binding proof, "Final-random-oracle
+structure"): under the derivation constraints, `rivk` is the output of the combined final oracle at
+the witness's `finalQueryOf`. This is the deterministic bridge from the Pedersen-scalar collision
+(`commitCollision`, over `G(w) = h(ak,nk) + rivk`) to a collision of the actual `H^*` random
+oracles. The birthday bound over the final-query space, and the residual `x₁ = x₂` upstream-collision
+sub-case, are the probabilistic Layer C. -/
+theorem rivk_eq_finalOracle
+    (Extract : G → B) (Ggen : G)
+    (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
+    (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
+    {w : Witness G F B SK QK}
+    (hd : KBDerivation Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w) :
+    w.rivk = (finalQueryOf Extract w).eval Hrivk_legacy Hrivk_ext Hrivk_int := by
+  obtain ⟨hxor, hqk, hsk, hrivk⟩ := hd
+  unfold finalQueryOf
+  by_cases hext : w.rivk = w.rivk_ext
+  · rw [if_pos hext]
+    rcases hq : w.qk with _ | qk
+    · rcases hs : w.sk with _ | sk
+      · simp [hq, hs] at hxor
+      · simp only [FinalQuery.eval]
+        obtain ⟨_, _, hrl⟩ := hsk sk hs
+        rw [hext, hrl]
+    · simp only [FinalQuery.eval]
+      rw [hext, hqk qk hq]
+  · rw [if_neg hext]
+    simp only [FinalQuery.eval]
+    exact hrivk.resolve_left hext
+
+end Onward
 
 end Zcash.Security.KeyBinding
