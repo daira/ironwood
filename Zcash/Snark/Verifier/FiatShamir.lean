@@ -36,6 +36,7 @@ namespace Zcash.Snark
 inductive TranscriptElt (F G : Type*) where
   | point : G → TranscriptElt F G
   | scalar : F → TranscriptElt F G
+deriving DecidableEq
 
 /-- The Fiat–Shamir hash, hand-waved: squeezes a field challenge from the transcript absorbed so far.
 In the deployed verifier this is Blake2b; neither it nor the random-oracle reduction is modeled. -/

@@ -6,7 +6,7 @@ import Mathlib.Util.AssertNoSorry
 
 Build-time enforcement of the breaks-as-computed-data discipline (see
 `Zcash.Security.RandomOracle`), following the pattern of
-`Zcash.Snark.Fingerprint.TrustBoundary`. The reductions' computability is already
+`Zcash.Snark.Fixtures.SingleAction.TrustBoundary`. The reductions' computability is already
 compiler-enforced: they are plain `def`s, so a `noncomputable` dependency fails the build.
 What a build does not otherwise pin down is a `sorry` reached through some dependency, or an
 unexpected axiom. Both checks below follow the elaborated dependency graph, so they see

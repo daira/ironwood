@@ -37,5 +37,6 @@ structure Challenges (k : ℕ) (F : Type*) where
   xi : F
   z : F
   ipaRound : Fin k → F
+deriving DecidableEq
 
 end Zcash.Snark

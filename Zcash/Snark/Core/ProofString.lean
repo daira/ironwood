@@ -12,7 +12,7 @@ decoding — including rejection of invalid encodings and points at infinity —
 typed layer.
 
 A single Orchard proof covers a whole bundle: `Proof::verify`
-([TalDerei/orchard](https://github.com/TalDerei/orchard) `src/circuit.rs`) passes all `N` actions'
+([zcash/orchard#531](https://github.com/zcash/orchard/pull/531) `src/circuit.rs`) passes all `N` actions'
 instances to `plonk::verify_proof`, which reads the per-action elements `N` times against one
 shared set of challenges and a single multiopen/IPA opening. So the proof string splits into
 per-sub-proof vectors and shared elements; the field order below is the verifier's read order.
