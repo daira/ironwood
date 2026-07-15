@@ -59,6 +59,16 @@ is in scope; this file installs that fact via `vestaOrder`. Computable (curve ad
 instance vestaFpModule [h : Fact VestaOrder] : Module Fp VestaG :=
   AddCommGroup.zmodModule h.out
 
+/-- **The concrete-to-abstract MSM bridge at Vesta.** `Msm.evalNat_eq_eval` specialised to
+`SWPoint Vesta.curve`: with the Hasse bound in scope (hence the `Fp`-module structure), the
+executable natural-scalar evaluation the concrete fixtures compute (`capturedMsm.evalNat`,
+`(assemble ..).evalNat`) coincides with the module-theoretic `eval` the soundness capstones consume.
+So the fixtures' `evalNat = 0` checks *are* the `eval = 0` acceptance condition of the abstract
+verifier, not merely an analogous computation. -/
+theorem Msm.evalNat_eq_eval_vesta [Fact (HasseBound Vesta.curve)] (urs : URS VestaG)
+    (m : Msm urs.k Fp VestaG) : m.evalNat urs = m.eval urs :=
+  Msm.evalNat_eq_eval urs m
+
 /-- **Conditional soundness at Vesta.** `orchard_verifier_sound_conditional` specialised to
 `SWPoint Vesta.curve`; the Vesta group order (hence the `Fp`-module structure) is supplied by the
 pinned CompElliptic point-count result. Inherits the conditional status — see that docstring.
