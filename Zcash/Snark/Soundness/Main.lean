@@ -313,25 +313,20 @@ def NontrivialRelation.ofUnopenedFork [DecidableEq G] [Inhabited G] {shape : Sha
 cleanly accepted, `ipa_soundV` extracts the opening witness for the declared opening
 `fs.openedCommitment` — the blinded opening of the pinned commitment,
 `deployedCommitment = ⟨a, g⟩ + [pU]u + [pW]w` with `⟨a, b⟩ = multiopenValue`; the circuit side
-(`hcirc`) and VK-correctness (`hencodes`) conclude `S`. The clean-accept hypothesis `hclean` is
-what DLR hardness forces — its failure computes a relation
-(`NontrivialRelation.ofUnopenedFork`). `hcirc` has the unsatisfiable shape described in the
-section note above. -/
+(`hcirc`) and VK-correctness (`hencodes`) conclude `S`. The opening witness `a` and the `IpaRelation`
+certificate `hrel` are supplied by the caller (derived from the clean accept via
+`ipaRelation_of_acceptV`). -/
 theorem orchard_verifier_deployed_opening_of_forked [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp}
-    {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop}
+    (a : Fin (2 ^ urs.k) → Fp) {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop}
     (fs : ForkedTranscript urs hk vk ps ch b z blind)
-    (hclean : IpaAcceptV urs.g b fs.openedCommitment (multiopenValue vk ps ch)
-      (projTree fs.tree))
-    (hcirc : ∀ a, IpaRelation urs fs.openedCommitment b (multiopenValue vk ps ch) a →
-      circuitSat a)
+    (hrel : IpaRelation urs fs.openedCommitment b (multiopenValue vk ps ch) a)
+    (hcirc : circuitSat a)
     {S : Prop} (hencodes : ∀ a, SnarkRelation urs fs.openedCommitment b
       (multiopenValue vk ps ch) circuitSat a → S) :
-    S := by
-  obtain ⟨a, hrel⟩ := ipaRelation_of_acceptV urs b fs.openedCommitment
-    (multiopenValue vk ps ch) (projTree fs.tree) hclean
-  exact hencodes a ⟨hrel, hcirc a hrel⟩
+    S :=
+  hencodes a ⟨hrel, hcirc⟩
 
 /-! ## `circuitSat` is derived from the verifier's gate check + Schwartz–Zippel
 
