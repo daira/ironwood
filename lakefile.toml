@@ -15,7 +15,7 @@ rev = "v4.30.0-rc2"
 [[require]]
 name = "CompElliptic"
 git = "https://github.com/daira/CompElliptic"
-rev = "6c5b1a605df8ed150c3ee242bcd6f355fc973653"
+rev = "f5f420f4b090b9f65be398d82ad29cfd96710aa3"
 
 [[lean_lib]]
 name = "Zcash"

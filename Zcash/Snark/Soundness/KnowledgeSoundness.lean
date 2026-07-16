@@ -34,11 +34,9 @@ This layer is sound relative to the following, each kept explicit rather than hi
   hash and the random-oracle reduction are not modeled. The capstone's current assumption
   (`ExtractableFromAcceptance`) is in fact stronger — it bundles the IPA knowledge-soundness conclusion,
   not just Fiat–Shamir; narrowing it to "uniform challenges" is open extraction-side work.
-* **Hasse bound** — the abstract development runs over any `Fp`-module `G`;
-  `Zcash.Snark.Soundness.Vesta` pins it to the concrete Vesta curve and *derives* the group order
-  from `Fact (HasseBound Vesta.curve)` (`vestaOrder_of_hasse`) — the one residual curve
-  assumption, carried axiom-free as a `Fact` hypothesis since mathlib lacks Hasse's theorem. See
-  that module's docstring.
+* **Vesta group order** — the abstract development runs over any `Fp`-module `G`;
+  `Zcash.Snark.Soundness.Vesta` pins it to the concrete Vesta curve, whose group order is proven
+  with no assumption (`vestaOrder`, from CompElliptic's `Pasta.Vesta.card_eq`).
 * **VK-correctness** (Daira's flow) — that the VK's gates encode the intended high-level relation (note
   ownership, value balance, nullifiers) is a separate workstream; this layer proves the verifier sound
   relative to the given VK, ending at "the witness satisfies the VK's constraint system."
