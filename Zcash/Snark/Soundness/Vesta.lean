@@ -20,13 +20,10 @@ turns the curve into an `Fp`-module and the end-to-end theorems apply verbatim.
 
 ## Assumptions
 
-* **Hasse bound** (`Fact (HasseBound Vesta.curve)`) — the only remaining curve assumption. The Vesta
-  group order is *derived* from it, not assumed (`vestaOrder_of_hasse`): given the Hasse bound,
-  CompElliptic's `Pasta.Vesta.card_eq` proves `Nat.card VestaG = scalarFieldOrder`, whence every point
-  is annihilated by the group order. Carried as a `Fact`, like the field modulus
-  `Fact (Nat.Prime scalarFieldOrder)`; supplied as a hypothesis, never globally, so the development
-  stays axiom-free. Mathlib lacks Hasse's theorem, so it is the irreducible gap (see CompElliptic's
-  `CurveOrder`).
+* **The Vesta group order — no assumption.** CompElliptic's `Pasta.Vesta.card_eq` proves
+  `Nat.card VestaG = scalarFieldOrder` (an elementary point-count bound stands in for Hasse, which
+  Mathlib lacks — see CompElliptic's `CurveOrder`), whence every point is annihilated by the group
+  order (`vestaOrder`).
 -/
 
 namespace Zcash.Snark
@@ -37,37 +34,36 @@ open CompElliptic.Curves.Pasta CompElliptic.CurveForms.ShortWeierstrass CompElli
 abbrev VestaG := SWPoint Vesta.curve
 
 /-- The Vesta group order as a proposition: every Vesta point is `p`-torsion, i.e. the group order
-divides `p = scalarFieldOrder`. Derived from the Hasse bound (`vestaOrder_of_hasse`), not assumed;
-carried as a `Fact` so `vestaFpModule` can consume it. -/
+divides `p = scalarFieldOrder`. Proven unconditionally (`vestaOrder`); carried as a `Fact` so
+`vestaFpModule` can consume it. -/
 abbrev VestaOrder : Prop := ∀ P : VestaG, (scalarFieldOrder : ℕ) • P = 0
 
-/-- The Vesta group order, derived from the Hasse bound rather than assumed: given the Hasse bound,
-CompElliptic's `Pasta.Vesta.card_eq` gives `Nat.card VestaG = scalarFieldOrder`, and a finite group is
-annihilated by its order. -/
-theorem vestaOrder_of_hasse (hHasse : HasseBound Vesta.curve) : VestaOrder := by
+/-- The Vesta group order, unconditionally: CompElliptic's `Pasta.Vesta.card_eq` gives
+`Nat.card VestaG = scalarFieldOrder` with no assumption, and a finite group is annihilated by its
+order. -/
+theorem vestaOrder : VestaOrder := by
   intro P
-  have hcard : Nat.card VestaG = scalarFieldOrder := Vesta.card_eq hHasse
+  have hcard : Nat.card VestaG = scalarFieldOrder := Vesta.card_eq
   rw [← hcard]
   exact addOrderOf_dvd_iff_nsmul_eq_zero.mp (addOrderOf_dvd_natCard P)
 
-/-- With the Hasse bound in scope, the Vesta order `Fact` — hence the `Fp`-module — is supplied
-automatically. Conditional, like `vestaFpModule`: see the module docstring's Hasse-bound note. -/
-instance factVestaOrder_of_hasse [Fact (HasseBound Vesta.curve)] : Fact VestaOrder :=
-  ⟨vestaOrder_of_hasse Fact.out⟩
+/-- The Vesta order `Fact` — hence the `Fp`-module — is supplied unconditionally, from `vestaOrder`
+(CompElliptic pins the order with no assumption). -/
+instance : Fact VestaOrder := ⟨vestaOrder⟩
 
 /-- Given the Vesta group order (`Fact VestaOrder`), the curve is an `Fp`-module
 (`AddCommGroup.zmodModule` on the `p`-torsion). Conditional — it fires only when the order `Fact`
-is in scope; see the module docstring's Hasse-bound note. Computable (curve addition and the
+is in scope (now unconditionally, via `vestaOrder`). Computable (curve addition and the
 `ZMod`-action both are), so the break reductions stay plain `def`s at the concrete curve. -/
 instance vestaFpModule [h : Fact VestaOrder] : Module Fp VestaG :=
   AddCommGroup.zmodModule h.out
 
 /-- **Conditional soundness at Vesta.** `orchard_verifier_sound_conditional` specialised to
-`SWPoint Vesta.curve`; the curve assumption is `Fact (HasseBound Vesta.curve)` (the group order,
-hence the `Fp`-module structure, follows). Inherits the conditional status — see that docstring.
+`SWPoint Vesta.curve`; the Vesta group order (hence the `Fp`-module structure) is pinned
+unconditionally. Inherits the conditional status — see that docstring.
 The deployed Vesta capstones are `orchard_verifier_vesta_opening_of_forked`/`_constraint_of_forked`
 below, with `NontrivialRelation.ofUnopenedForkVesta` the computed break. -/
-theorem orchard_verifier_sound_vesta_conditional [Fact (HasseBound Vesta.curve)]
+theorem orchard_verifier_sound_vesta_conditional
     (urs : URS VestaG)
     {P : VestaG} {b : Fin (2 ^ urs.k) → Fp} {v : Fp} {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop}
     {accepts : Prop} (haccepts : accepts)
@@ -81,7 +77,7 @@ theorem orchard_verifier_sound_vesta_conditional [Fact (HasseBound Vesta.curve)]
 whose projection is not cleanly accepted computes a nontrivial discrete-log relation among the
 Vesta generators `(g, U, W)`, which DLR hardness forbids (the contrapositive reading — see
 `The reduction form` in `Soundness.Main`). -/
-def NontrivialRelation.ofUnopenedForkVesta [Fact (HasseBound Vesta.curve)] [DecidableEq VestaG]
+def NontrivialRelation.ofUnopenedForkVesta [DecidableEq VestaG]
     [Inhabited VestaG]
     {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp VestaG)
     (ps : ProofString shape Fp VestaG) (ch : Challenges shape.k Fp)
@@ -94,10 +90,10 @@ def NontrivialRelation.ofUnopenedForkVesta [Fact (HasseBound Vesta.curve)] [Deci
 
 /-- **Deployed opening over Vesta, given a clean fork.**
 `orchard_verifier_deployed_opening_of_forked` specialised to `SWPoint Vesta.curve`: same
-hypotheses as the abstract theorem, plus the Hasse bound. The clean-accept hypothesis is what
+hypotheses as the abstract theorem (the Vesta order is unconditional). The clean-accept hypothesis is what
 DLR hardness forces (`NontrivialRelation.ofUnopenedForkVesta`); for `hcirc`'s unsatisfiable
 shape see the section note in `Soundness.Main`. -/
-theorem orchard_verifier_vesta_opening_of_forked [Fact (HasseBound Vesta.curve)] [DecidableEq VestaG] [Inhabited VestaG]
+theorem orchard_verifier_vesta_opening_of_forked [DecidableEq VestaG] [Inhabited VestaG]
     {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp VestaG)
     (ps : ProofString shape Fp VestaG) (ch : Challenges shape.k Fp)
     {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp} {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop}
@@ -116,9 +112,9 @@ open Polynomial in
 `orchard_verifier_deployed_constraint_of_forked` specialised to `SWPoint Vesta.curve`: the opening
 for the declared `fs.openedCommitment` and the pinned `multiopenValue`, and `circuitSat` (concrete
 `circuitSatViaGates`) from the verifier's gate point-check `hquot` lifted by Schwartz–Zippel
-(`hgood`). Same hypotheses as the abstract theorem, plus the Hasse bound; `hquot`/`hgood` share
+(`hgood`). Same hypotheses as the abstract theorem (the Vesta order is unconditional); `hquot`/`hgood` share
 `hcirc`'s unsatisfiable shape (see the section note in `Soundness.Main`). -/
-theorem orchard_verifier_vesta_constraint_of_forked [Fact (HasseBound Vesta.curve)] [DecidableEq VestaG] [Inhabited VestaG]
+theorem orchard_verifier_vesta_constraint_of_forked [DecidableEq VestaG] [Inhabited VestaG]
     {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp VestaG)
     (ps : ProofString shape Fp VestaG) (ch : Challenges shape.k Fp)
     {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp}

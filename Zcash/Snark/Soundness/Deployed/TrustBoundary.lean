@@ -13,8 +13,8 @@ dependency, or an unexpected axiom; both checks below follow the elaborated depe
 The pinned sets include `Classical.choice`, entering only through Mathlib lemmas cited by the
 erased `Prop` certificate fields (`nontrivial`/`relation`) — harmless per the convention: had
 choice touched the break *data*, the definitions could not have compiled as plain `def`s. The
-Vesta specialisation additionally pins CompElliptic's `native_decide` facts (the curve order,
-via `vestaOrder_of_hasse`), likewise reached only through `Prop` positions.
+Vesta specialization additionally pins CompElliptic's one `native_decide` fact (the prime-order
+witness `p_nsmul_Gpt` behind the curve order), likewise reached only through `Prop` positions.
 -/
 
 open Zcash.Snark
@@ -54,9 +54,6 @@ Classical.choice, Quot.sound] -/
 /-- info: 'Zcash.Snark.NontrivialRelation.ofUnopenedForkVesta' depends on axioms: [propext,
 Classical.choice,
 Quot.sound,
-CompElliptic.Curves.Pasta.Vesta.Gpt._native.native_decide.ax_1,
-CompElliptic.Curves.Pasta.Vesta.Gpt_ne_zero._native.native_decide.ax_1_1,
-CompElliptic.Curves.Pasta.Vesta.baseCard_nsmul_Gpt._native.native_decide.ax_1_1,
-CompElliptic.Curves.Pasta.Vesta.card_eq._native.native_decide.ax_1_1] -/
+CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt._native.native_decide.ax_1_1] -/
 #guard_msgs (whitespace := lax) in
 #print axioms NontrivialRelation.ofUnopenedForkVesta

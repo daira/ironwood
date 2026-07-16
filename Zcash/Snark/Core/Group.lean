@@ -9,9 +9,9 @@ in this group. We deliberately model it abstractly, as an `F`-module `G` (`F = F
 field): the only structure the verifier's MSM uses is the `F`-linear combination of group elements,
 so the argument stays curve-agnostic and never reaches into concrete curve arithmetic.
 
-The concrete instantiation is available under the Hasse bound: CompElliptic's Vesta curve
+The concrete instantiation is unconditional: CompElliptic's Vesta curve
 (`SWPoint Vesta.curve`) is a proven `AddCommGroup` — not an assumption — and
-`Fact (HasseBound Vesta.curve)` gives its order `p` (`Pasta.Vesta.card_eq`), making it a
+`Pasta.Vesta.card_eq` pins its order `p` with no assumption, making it a
 `Module (ZMod p)` (`vestaFpModule`). The Vesta capstones (`Soundness.Vesta`) instantiate `G`
 there with no change to this argument.
 -/
