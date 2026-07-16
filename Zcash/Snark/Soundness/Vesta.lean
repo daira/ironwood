@@ -90,30 +90,30 @@ def NontrivialRelation.ofUnopenedForkVesta [DecidableEq VestaG]
 
 /-- **Deployed opening over Vesta, given a clean fork.**
 `orchard_verifier_deployed_opening_of_forked` specialised to `SWPoint Vesta.curve`: same
-hypotheses as the abstract theorem (the Vesta order is unconditional). The clean-accept hypothesis is what
-DLR hardness forces (`NontrivialRelation.ofUnopenedForkVesta`); for `hcirc`'s unsatisfiable
-shape see the section note in `Soundness.Main`. -/
+hypotheses as the abstract theorem (the Vesta order is unconditional). The opening witness `a` and
+`IpaRelation` certificate `hrel` are supplied by the caller (derived from the clean accept via
+`ipaRelation_of_acceptV`). -/
 theorem orchard_verifier_vesta_opening_of_forked [DecidableEq VestaG] [Inhabited VestaG]
     {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp VestaG)
     (ps : ProofString shape Fp VestaG) (ch : Challenges shape.k Fp)
-    {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp} {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop}
+    {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp}
+    (a : Fin (2 ^ urs.k) → Fp) {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop}
     (fs : ForkedTranscript urs hk vk ps ch b z blind)
-    (hclean : IpaAcceptV urs.g b fs.openedCommitment (multiopenValue vk ps ch)
-      (projTree fs.tree))
-    (hcirc : ∀ a, IpaRelation urs fs.openedCommitment b (multiopenValue vk ps ch) a →
-      circuitSat a)
+    (hrel : IpaRelation urs fs.openedCommitment b (multiopenValue vk ps ch) a)
+    (hcirc : circuitSat a)
     {S : Prop} (hencodes : ∀ a, SnarkRelation urs fs.openedCommitment b
       (multiopenValue vk ps ch) circuitSat a → S) :
     S :=
-  orchard_verifier_deployed_opening_of_forked urs hk vk ps ch fs hclean hcirc hencodes
+  orchard_verifier_deployed_opening_of_forked urs hk vk ps ch a fs hrel hcirc hencodes
 
 open Polynomial in
 /-- **Deployed opening and constraint over Vesta, given a clean fork.**
 `orchard_verifier_deployed_constraint_of_forked` specialised to `SWPoint Vesta.curve`: the opening
 for the declared `fs.openedCommitment` and the pinned `multiopenValue`, and `circuitSat` (concrete
-`circuitSatViaGates`) from the verifier's gate point-check `hquot` lifted by Schwartz–Zippel
-(`hgood`). Same hypotheses as the abstract theorem (the Vesta order is unconditional); `hquot`/`hgood` share
-`hcirc`'s unsatisfiable shape (see the section note in `Soundness.Main`). -/
+`circuitSatViaGates`) from the verifier's gate point-check `hquot` at the challenge `x`, lifted
+to the polynomial identity by Schwartz–Zippel (`hgood`). The `hquot`/`hgood` checks now constrain
+the single extracted witness `a`. Same hypotheses as the abstract theorem (the Vesta order is
+unconditional). -/
 theorem orchard_verifier_vesta_constraint_of_forked [DecidableEq VestaG] [Inhabited VestaG]
     {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp VestaG)
     (ps : ProofString shape Fp VestaG) (ch : Challenges shape.k Fp)
@@ -121,13 +121,11 @@ theorem orchard_verifier_vesta_constraint_of_forked [DecidableEq VestaG] [Inhabi
     (fixedCols : ℕ → Polynomial Fp)
     (decodeAdvice decodeInstance : (Fin (2 ^ urs.k) → Fp) → (ℕ → Polynomial Fp))
     (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp)
+    (a : Fin (2 ^ urs.k) → Fp)
     (fs : ForkedTranscript urs hk vk ps ch b z blind)
-    (hclean : IpaAcceptV urs.g b fs.openedCommitment (multiopenValue vk ps ch)
-      (projTree fs.tree))
-    (hquot : ∀ a, IpaRelation urs fs.openedCommitment b (multiopenValue vk ps ch) a →
-      quotientCheck (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates) hpoly deg x)
-    (hgood : ∀ a, IpaRelation urs fs.openedCommitment b (multiopenValue vk ps ch) a →
-      combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates ≠ hpoly * (X ^ deg - 1) →
+    (hrel : IpaRelation urs fs.openedCommitment b (multiopenValue vk ps ch) a)
+    (hquot : quotientCheck (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates) hpoly deg x)
+    (hgood : combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates ≠ hpoly * (X ^ deg - 1) →
       (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates
         - hpoly * (X ^ deg - 1)).eval x ≠ 0)
     {S : Prop}
@@ -135,6 +133,6 @@ theorem orchard_verifier_vesta_constraint_of_forked [DecidableEq VestaG] [Inhabi
       (circuitSatViaGates fixedCols decodeAdvice decodeInstance y gates hpoly deg) a → S) :
     S :=
   orchard_verifier_deployed_constraint_of_forked urs hk vk ps ch fixedCols decodeAdvice
-    decodeInstance y gates hpoly deg x fs hclean hquot hgood hencodes
+    decodeInstance y gates hpoly deg x a fs hrel hquot hgood hencodes
 
 end Zcash.Snark
