@@ -343,33 +343,28 @@ open Polynomial in
 `orchard_verifier_deployed_opening_of_forked`, with the circuit side derived too: `circuitSat` —
 instantiated to `circuitSatViaGates` — from the verifier's gate point-check `hquot` at the
 challenge `x`, lifted to the polynomial identity by Schwartz–Zippel (`hgood`), via
-`circuitSatViaGates_of_check`. `hquot`/`hgood` share `hcirc`'s unsatisfiable shape (see the
-section note above): the verifier's actual gate check constrains the *claimed* evaluations, not
-every opening's decode. -/
+`circuitSatViaGates_of_check`. `hquot`/`hgood` now constrain the single extracted witness `a` — lifted to the constraint
+identity by Schwartz–Zippel. The multiopen decode (`batch_open_soundV`), binding
+`decodeAdvice`/`decodeInstance` to the committed columns, is still open. -/
 theorem orchard_verifier_deployed_constraint_of_forked [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp}
     (fixedCols : ℕ → Polynomial Fp)
     (decodeAdvice decodeInstance : (Fin (2 ^ urs.k) → Fp) → (ℕ → Polynomial Fp))
     (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp)
+    (a : Fin (2 ^ urs.k) → Fp)
     (fs : ForkedTranscript urs hk vk ps ch b z blind)
-    (hclean : IpaAcceptV urs.g b fs.openedCommitment (multiopenValue vk ps ch)
-      (projTree fs.tree))
-    (hquot : ∀ a, IpaRelation urs fs.openedCommitment b (multiopenValue vk ps ch) a →
-      quotientCheck (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates) hpoly deg x)
-    (hgood : ∀ a, IpaRelation urs fs.openedCommitment b (multiopenValue vk ps ch) a →
-      combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates ≠ hpoly * (X ^ deg - 1) →
+    (hrel : IpaRelation urs fs.openedCommitment b (multiopenValue vk ps ch) a)
+    (hquot : quotientCheck (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates) hpoly deg x)
+    (hgood : combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates ≠ hpoly * (X ^ deg - 1) →
       (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates
         - hpoly * (X ^ deg - 1)).eval x ≠ 0)
     {S : Prop}
     (hencodes : ∀ a, SnarkRelation urs fs.openedCommitment b (multiopenValue vk ps ch)
       (circuitSatViaGates fixedCols decodeAdvice decodeInstance y gates hpoly deg) a → S) :
     S := by
-  obtain ⟨a, hrel⟩ := ipaRelation_of_acceptV urs b fs.openedCommitment
-    (multiopenValue vk ps ch) (projTree fs.tree) hclean
   have hsat : circuitSatViaGates fixedCols decodeAdvice decodeInstance y gates hpoly deg a :=
-    circuitSatViaGates_of_check fixedCols decodeAdvice decodeInstance y gates hpoly deg a x
-      (hquot a hrel) (hgood a hrel)
+    circuitSatViaGates_of_check fixedCols decodeAdvice decodeInstance y gates hpoly deg a x hquot hgood
   exact hencodes a ⟨hrel, hsat⟩
 
 end Zcash.Snark
