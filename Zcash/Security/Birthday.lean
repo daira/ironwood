@@ -81,12 +81,14 @@ theorem diag_fraction_le :
       ≤ (Fintype.card F : ℚ≥0) / (Fintype.card F) ^ 2 := by gcongr
     _ = 1 / (Fintype.card F : ℚ≥0) := by rw [pow_two, div_mul_eq_div_div, div_self card_ne_zero]
 
+omit [Field F] [DecidableEq F] in
 /-- **Per-pair break bound.** The `±`-collision term (`2/|F|`, `pm_collision_fraction_le`) and the
 residual term (`1/|F|`, `diag_fraction_le`) sum to the `3/|F|` per-pair break bound. -/
 theorem perPair_bound_eq :
     2 / (Fintype.card F : ℚ≥0) + 1 / (Fintype.card F : ℚ≥0) = 3 / (Fintype.card F : ℚ≥0) := by
   rw [← add_div]; norm_num
 
+omit [Field F] [DecidableEq F] in
 /-- **Birthday-bound closed form.** Union-bounding the per-pair break bound `3/|F|` over the
 `C(q,2) = q(q-1)/2` unordered pairs of an adversary's `q` random-oracle queries yields the
 [ZIP 2005 key-binding theorem (ROM)](https://zips.z.cash/zip-2005#thm-key-binding-rom) bound
