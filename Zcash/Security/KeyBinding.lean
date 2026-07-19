@@ -88,10 +88,10 @@ equal or negatives. Uses the `Extract` ±-property and injectivity of `·•S` f
 `F`-vector space). This is the deterministic content the whole key-binding reduction rests on. -/
 theorem commit_scalar_pm
     (Extract : G → B) (S : G) (hfn : B → B → F)
-    (hExt : ∀ P Q : G, Extract P = Extract Q ↔ P = Q ∨ P = -Q) (hS : S ≠ 0)
+    (hExt : ∀ P Q : G, Extract P = Extract Q ↔ EqUpToSign P Q) (hS : S ≠ 0)
     {rivk₁ rivk₂ : F} {ak₁ nk₁ ak₂ nk₂ : B}
     (hcm : Commitivk Extract S hfn rivk₁ ak₁ nk₁ = Commitivk Extract S hfn rivk₂ ak₂ nk₂) :
-    hfn ak₁ nk₁ + rivk₁ = hfn ak₂ nk₂ + rivk₂ ∨ hfn ak₁ nk₁ + rivk₁ = -(hfn ak₂ nk₂ + rivk₂) := by
+    EqUpToSign (hfn ak₁ nk₁ + rivk₁) (hfn ak₂ nk₂ + rivk₂) := by
   unfold Commitivk at hcm
   rw [hExt] at hcm
   rcases hcm with hcm | hcm
@@ -132,7 +132,7 @@ is conditional on the `OpeningBreak` hypothesis, and hardness enters per-instant
 `KBDerivation` (below), where `rivk` is an `H^*` output and the birthday bound applies. -/
 def _root_.Zcash.Security.RandomOracle.CollisionUpToSign.ofOpeningBreak
     (Extract : G → B) (S : G) (hfn : B → B → F)
-    (hExt : ∀ P Q : G, Extract P = Extract Q ↔ P = Q ∨ P = -Q) (hS : S ≠ 0)
+    (hExt : ∀ P Q : G, Extract P = Extract Q ↔ EqUpToSign P Q) (hS : S ≠ 0)
     {w₁ w₂ : Witness G F B SK QK} (hbrk : OpeningBreak Extract S hfn w₁ w₂) :
     RandomOracle.CollisionUpToSign (pedersenScalar hfn) where
   q₁ := (Extract w₁.akP, w₁.nk, w₁.rivk)
@@ -348,7 +348,7 @@ that is why this is the ±-equation rather than a full `CollisionUpToSign` (whos
 very residual). -/
 theorem sameIvk_finalOracle_pm
     (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
-    (hExt : ∀ P Q : G, Extract P = Extract Q ↔ P = Q ∨ P = -Q) (hS : S ≠ 0)
+    (hExt : ∀ P Q : G, Extract P = Extract Q ↔ EqUpToSign P Q) (hS : S ≠ 0)
     (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
     (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
     {w₁ w₂ : Witness G F B SK QK}
@@ -356,10 +356,9 @@ theorem sameIvk_finalOracle_pm
     (hivk : w₁.ivk = w₂.ivk)
     (hd₁ : KBDerivation Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₁)
     (hd₂ : KBDerivation Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₂) :
-    hfn (Extract w₁.akP) w₁.nk + (finalQueryOf Extract w₁).eval Hrivk_legacy Hrivk_ext Hrivk_int =
-      hfn (Extract w₂.akP) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int ∨
-    hfn (Extract w₁.akP) w₁.nk + (finalQueryOf Extract w₁).eval Hrivk_legacy Hrivk_ext Hrivk_int =
-      -(hfn (Extract w₂.akP) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int) := by
+    EqUpToSign
+      (hfn (Extract w₁.akP) w₁.nk + (finalQueryOf Extract w₁).eval Hrivk_legacy Hrivk_ext Hrivk_int)
+      (hfn (Extract w₂.akP) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int) := by
   have hcm : Commitivk Extract S hfn w₁.rivk (Extract w₁.akP) w₁.nk
       = Commitivk Extract S hfn w₂.rivk (Extract w₂.akP) w₂.nk :=
     hop₁.1.symm.trans (hivk.trans hop₂.1)
@@ -372,17 +371,16 @@ theorem sameIvk_finalOracle_pm
 core `sameIvk_finalOracle_pm` applied to the break's two openings. -/
 theorem openingBreak_finalOracle_pm
     (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
-    (hExt : ∀ P Q : G, Extract P = Extract Q ↔ P = Q ∨ P = -Q) (hS : S ≠ 0)
+    (hExt : ∀ P Q : G, Extract P = Extract Q ↔ EqUpToSign P Q) (hS : S ≠ 0)
     (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
     (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
     {w₁ w₂ : Witness G F B SK QK}
     (hbrk : OpeningBreak Extract S hfn w₁ w₂)
     (hd₁ : KBDerivation Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₁)
     (hd₂ : KBDerivation Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₂) :
-    hfn (Extract w₁.akP) w₁.nk + (finalQueryOf Extract w₁).eval Hrivk_legacy Hrivk_ext Hrivk_int =
-      hfn (Extract w₂.akP) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int ∨
-    hfn (Extract w₁.akP) w₁.nk + (finalQueryOf Extract w₁).eval Hrivk_legacy Hrivk_ext Hrivk_int =
-      -(hfn (Extract w₂.akP) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int) :=
+    EqUpToSign
+      (hfn (Extract w₁.akP) w₁.nk + (finalQueryOf Extract w₁).eval Hrivk_legacy Hrivk_ext Hrivk_int)
+      (hfn (Extract w₂.akP) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int) :=
   sameIvk_finalOracle_pm Extract S hfn Ggen hExt hS Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int
     hbrk.1 hbrk.2.1 hbrk.2.2.1 hd₁ hd₂
 
@@ -394,15 +392,14 @@ bound. Here the derivation constraints are already inside the `Break` (via `KB`)
 probability that this equation holds for *distinct* final queries (the birthday bound). -/
 theorem break_finalOracle_pm
     (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
-    (hExt : ∀ P Q : G, Extract P = Extract Q ↔ P = Q ∨ P = -Q) (hS : S ≠ 0)
+    (hExt : ∀ P Q : G, Extract P = Extract Q ↔ EqUpToSign P Q) (hS : S ≠ 0)
     (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
     (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
     {w₁ w₂ : Witness G F B SK QK}
     (hbrk : Break Extract S hfn Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₁ w₂) :
-    hfn (Extract w₁.akP) w₁.nk + (finalQueryOf Extract w₁).eval Hrivk_legacy Hrivk_ext Hrivk_int =
-      hfn (Extract w₂.akP) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int ∨
-    hfn (Extract w₁.akP) w₁.nk + (finalQueryOf Extract w₁).eval Hrivk_legacy Hrivk_ext Hrivk_int =
-      -(hfn (Extract w₂.akP) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int) :=
+    EqUpToSign
+      (hfn (Extract w₁.akP) w₁.nk + (finalQueryOf Extract w₁).eval Hrivk_legacy Hrivk_ext Hrivk_int)
+      (hfn (Extract w₂.akP) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int) :=
   sameIvk_finalOracle_pm Extract S hfn Ggen hExt hS Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int
     hbrk.1.1 hbrk.2.1.1 hbrk.2.2.1 hbrk.1.2 hbrk.2.1.2
 
@@ -538,7 +535,7 @@ shifted oracle at distinct queries has probability at most `3q(q-1)/2r` (`Birthd
 def _root_.Zcash.Security.RandomOracle.CollisionUpToSign.ofBreak
     [DecidableEq QK] [DecidableEq SK] [DecidableEq B]
     (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
-    (hExt : ∀ P Q : G, Extract P = Extract Q ↔ P = Q ∨ P = -Q) (hS : S ≠ 0)
+    (hExt : ∀ P Q : G, Extract P = Extract Q ↔ EqUpToSign P Q) (hS : S ≠ 0)
     (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
     (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
     {w₁ w₂ : Witness G F B SK QK}
