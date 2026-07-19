@@ -12,7 +12,7 @@ Balance (`nk`-pinning), Spendability (`PRF^nf`-pinning), and Spend authority
 
 The *deterministic reduction* `OpeningBreak ⇒ CollisionUpToSign` is the composable core
 (`CollisionUpToSign.ofOpeningBreak`, with `commit_scalar_pm` its algebraic heart). The
-probabilistic birthday bound `ε_kb ≤ 3q(q-1)/2r` is a separate concern.
+probabilistic birthday bound `ε_kb ≤ q(q-1)/r` is a separate concern (`Birthday.lean`).
 
 Abstract setting: a prime-order group `G` as an `F`-vector space (`F = ZMod r` the scalar field),
 a base field `B` (x-coordinates, `= ZMod q`), and `Extract : G → B` with the ±-property (`hExt`).
@@ -531,7 +531,7 @@ combined final oracle at *distinct* queries: the two witnesses' final queries wh
 (the residual case, `residual_of_finalQuery_eq`) the two `rivk_ext`-derivation queries when they
 coincide. What the birthday bound then adds is that inhabiting this event is hard: `hfn` is
 non-querying, so a fixed shift cannot be steered to manufacture collisions, and ±-colliding the
-shifted oracle at distinct queries has probability at most `3q(q-1)/2r` (`Birthday.lean`). -/
+shifted oracle at distinct queries has probability at most `q(q-1)/r` (`Birthday.lean`). -/
 def _root_.Zcash.Security.RandomOracle.CollisionUpToSign.ofBreak
     [DecidableEq QK] [DecidableEq SK] [DecidableEq B]
     (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
@@ -561,6 +561,46 @@ def _root_.Zcash.Security.RandomOracle.CollisionUpToSign.ofBreak
               Hrivk_int hbrk.2.1.2]
         exact break_finalOracle_pm Extract S hfn Ggen hExt hS Hask Hnk Hrivk_legacy Hrivk_ext
           Hrivk_int hbrk }
+
+/-- The non-querying shift alone: `hfn` at the query's key data. `shiftedFinalOracle` is this plus
+the oracle's output (`shiftedFinalOracle_eq_shift_add_eval`). -/
+def shiftOf (Extract : G → B) (Ggen : G) (hfn : B → B → F) (Hask : SK → F) (Hnk : SK → B) :
+    FinalQuery QK SK B F → F
+  | .ext _ ak nk => hfn ak nk
+  | .legacy sk => hfn (Extract ((Hask sk) • Ggen)) (Hnk sk)
+  | .int _ ak nk => hfn ak nk
+
+omit [Field B] [NoZeroSMulDivisors F G] [DecidableEq F] in
+/-- The shifted oracle decomposes as the non-querying shift plus the `H^*` output. -/
+theorem shiftedFinalOracle_eq_shift_add_eval
+    (Extract : G → B) (Ggen : G) (hfn : B → B → F)
+    (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
+    (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
+    (q : FinalQuery QK SK B F) :
+    shiftedFinalOracle Extract Ggen hfn Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int q
+      = shiftOf Extract Ggen hfn Hask Hnk q + q.eval Hrivk_legacy Hrivk_ext Hrivk_int := by
+  cases q <;> rfl
+
+omit [Field B] [NoZeroSMulDivisors F G] in
+/-- **The bridge to the birthday counting**: the pair of `H^*` outputs at a shifted-oracle
+±-collision's queries lies in the shifted ±-collision set that
+`Birthday.card_shifted_pm_collision_le` counts, with the shifts read off the queries. Combined
+with the collision's `ne` field (distinct queries) this is the per-pair event whose fraction the
+birthday layer bounds by `2/|F|`. -/
+theorem collision_mem_shifted_pm [Fintype F]
+    (Extract : G → B) (Ggen : G) (hfn : B → B → F)
+    (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
+    (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
+    (c : RandomOracle.CollisionUpToSign
+      (shiftedFinalOracle Extract Ggen hfn Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int
+        (QK := QK) (SK := SK))) :
+    (c.q₁.eval Hrivk_legacy Hrivk_ext Hrivk_int, c.q₂.eval Hrivk_legacy Hrivk_ext Hrivk_int)
+      ∈ Finset.univ.filter (fun p : F × F =>
+          EqUpToSign (shiftOf Extract Ggen hfn Hask Hnk c.q₁ + p.1)
+            (shiftOf Extract Ggen hfn Hask Hnk c.q₂ + p.2)) := by
+  have hpm := c.pm
+  rw [shiftedFinalOracle_eq_shift_add_eval, shiftedFinalOracle_eq_shift_add_eval] at hpm
+  simpa using hpm
 
 end OnwardCollision
 

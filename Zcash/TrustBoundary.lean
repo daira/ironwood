@@ -43,15 +43,14 @@ assert_axioms Zcash.Security.KeyBinding.residual_of_finalQuery_eq
 assert_axioms Zcash.Security.KeyBinding.nk_pinned
 assert_axioms Zcash.Security.KeyBinding.ak_pinned
 assert_axioms Zcash.Security.KeyBinding.qk_or_sk_pinned
+assert_axioms Zcash.Security.KeyBinding.shiftedFinalOracle_eq_shift_add_eval
+assert_axioms Zcash.Security.KeyBinding.collision_mem_shifted_pm
 assert_axioms Zcash.Security.KeyBinding.toInterface
 
 /-! ## Birthday bound -/
 
-assert_axioms Zcash.Security.Birthday.card_pm_collision_le
-assert_axioms Zcash.Security.Birthday.card_diag_le
-assert_axioms Zcash.Security.Birthday.pm_collision_fraction_le
-assert_axioms Zcash.Security.Birthday.diag_fraction_le
-assert_axioms Zcash.Security.Birthday.perPair_bound_eq
+assert_axioms Zcash.Security.Birthday.card_shifted_pm_collision_le
+assert_axioms Zcash.Security.Birthday.shifted_pm_collision_fraction_le
 assert_axioms Zcash.Security.Birthday.birthday_closed_form
 
 /-! ## Ledger-layer break reductions
