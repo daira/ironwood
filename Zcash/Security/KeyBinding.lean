@@ -256,7 +256,12 @@ def extQueryOf (Extract : G → B) (w : Witness G F B SK QK) : FinalQuery QK SK 
   | .sk sk => .legacy sk
 
 /-- The final query of a witness: which final oracle produces its `rivk`, and at what input.
-Selected by the external/internal ivk choice (`rivk = rivk_ext`?) and then the qk/sk branch. -/
+Selected by the external/internal ivk choice (`rivk = rivk_ext`?) and then the branch.
+The external/internal choice is decoded from the fields, not carried as witness data: at a
+fixpoint `Hrivk_int rivk_ext ak nk = rivk_ext`, an internally-derived witness decodes as
+external — harmless for `rivk_eq_finalOracle` (which holds either way), but the birthday
+accounting must partition query pairs by this decode, not by how the witnesses were
+derived. -/
 def finalQueryOf (Extract : G → B) (w : Witness G F B SK QK) : FinalQuery QK SK B F :=
   if w.rivk = w.rivk_ext then extQueryOf Extract w
   else .int w.rivk_ext (Extract w.akP) w.nk
