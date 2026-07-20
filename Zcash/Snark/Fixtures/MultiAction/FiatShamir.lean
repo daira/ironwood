@@ -1,30 +1,16 @@
 import Zcash.Snark.Fixtures.MultiAction.Fixture
+import Zcash.Snark.Fixtures.ScheduleMarker
 
 /-!
 # Fiat–Shamir schedule check for the multi-action capture
 
-The multi-action analog of `Zcash.Snark.Fixtures.SingleAction.FiatShamir`, but with the challenge schedule
-made concrete for this capture. Blake2b is intentionally taken at the random-oracle boundary; here
-`capturedFs` acts as a fixture oracle over Rust-captured transcript events, returning each captured
-challenge only when `deriveChallenges` presents the captured transcript prefix. This checks the
-absorb/squeeze order for the typed verifier transcript after Blake2b initialization, then connects
-the resulting FS-derived fingerprint (`nonInteractiveFingerprint`, i.e. `assemble` at
-`deriveChallenges`) to the captured multi-action MSM.
+This file checks the deployed absorb/squeeze order against a multi-action Rust capture and then
+matches `nonInteractiveFingerprint` to the captured MSM. `capturedFs` returns a captured challenge
+only at its captured transcript prefix, converted by `markerSchedule` to the model's marker encoding.
 
-With `numProofs = 2` this check reaches the schedule's *per-sub-proof absorb interleavings* — all
-proofs' advice commitments before `θ`, per-proof-per-lookup permuted pairs before `β`/`γ`, per-proof
-evaluation blocks before `x₁`, and so on — which the single-action fixture exercises only at length 1.
-A mis-ordered multi-proof absorb changes the transcript prefix presented to `capturedFs`, so the
-`deriveChallenges_matches_captured_schedule` check fails.
-
-This remains a fixture-oracle check over typed transcript events: generated `capturedInit` contains the
-verifier-key transcript scalar and instance commitment events before the first proof-derived read, and
-generated `capturedScheduleEntries` records the Rust verifier prefixes, including that captured prefix.
-
-As with the generated fingerprint fixtures, the Rust capture/dumper boundary is trusted to emit the
-typed proof fields, verifier-key transcript scalar, instance commitments, transcript-event trace, and
-captured challenges corresponding to the deployed transcript; this file does not replay transcript
-bytes.
+With `numProofs = 2`, the check covers the per-proof absorb order that the single-action fixture cannot
+distinguish. The Rust capture is trusted to provide the typed proof data, transcript events, and
+challenges. This file does not replay transcript bytes.
 
 TODO: once a general transcript-ordering theorem lands, either point this oracle at it or keep it as
 a concrete regression for the captured proof.
@@ -53,10 +39,7 @@ def missingChallenge : Fp := 0
 theorem missingChallenge_not_captured : missingChallenge ∉ capturedChallengeValues := by
   native_decide
 
-/-- The captured challenges are pairwise distinct, so the schedule check's record equality also detects
-output-field wiring mistakes in `deriveChallenges`: swapping two challenge assignments would equate two
-distinct captured values. (Without this, a swap between two accidentally-equal captured challenges
-would pass silently.) -/
+/-- The captured challenges are distinct, so record equality also detects swapped output fields. -/
 theorem capturedChallengeValues_nodup : capturedChallengeValues.Nodup := by
   native_decide
 
@@ -67,18 +50,19 @@ def capturedScheduleIncludesInit : Bool :=
 theorem capturedScheduleIncludesInit_eq_true : capturedScheduleIncludesInit = true := by
   native_decide
 
-/-- Fixture Fiat–Shamir oracle: returns a captured challenge only at a Rust-captured transcript prefix.
-Unknown prefixes return `missingChallenge`, which is checked above not to be one of the captured
-challenges. -/
+/-- The captured schedule converted from challenge re-absorption to challenge-marker encoding. -/
+def markerScheduleEntries : List (List (TranscriptElt Fp G) × Fp) :=
+  markerSchedule capturedScheduleEntries
+
+/-- Return a captured challenge at its recorded prefix and `missingChallenge` elsewhere. -/
 def capturedFs : FiatShamir Fp G := {
   squeeze := fun t =>
-    match capturedScheduleEntries.find? (fun e => decide (e.1 = t)) with
+    match markerScheduleEntries.find? (fun e => decide (e.1 = t)) with
     | some e => e.2
     | none => missingChallenge
 }
 
-/-- Concrete check that the Lean Fiat–Shamir schedule reaches the captured challenges in the captured
-multi-action proof. This is the theorem that fails if a proof-derived absorb is reordered or omitted. -/
+/-- The Lean schedule reaches every captured challenge for the multi-action proof. -/
 theorem deriveChallenges_matches_captured_schedule :
     deriveChallenges capturedFs capturedInit ps = ch := by native_decide
 
