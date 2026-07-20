@@ -191,9 +191,20 @@ structure KB (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
   opening : KBOpening Extract S hfn w
   derivation : KBDerivation Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w
 
-/-- A full key-binding break (ZIP 2005): two valid witnesses with equal `ivk` differing in some
-component other than the y-sign of `ak^ℙ` (the projection uses `ak = Extract ak^ℙ`, quotienting the
-sign). -/
+/-- The break projection of a witness: the components a key-binding break must differ in. Using
+`ak = Extract ak^ℙ` quotients the y-sign of `ak^ℙ`. -/
+structure BreakProj (QK SK B F : Type*) where
+  qk_or_sk : Branch QK SK
+  ak : B
+  nk : B
+  rivk : F
+
+/-- The break projection, read off a witness. -/
+def Witness.breakProj (Extract : G → B) (w : Witness G F B SK QK) : BreakProj QK SK B F :=
+  ⟨w.qk_or_sk, Extract w.akP, w.nk, w.rivk⟩
+
+/-- A full key-binding break (ZIP 2005): two valid witnesses with equal `ivk` and differing
+break projections. -/
 structure Break (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
     (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
     (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
@@ -202,8 +213,7 @@ structure Break (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
   kb₂ : KB Extract S hfn Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₂
   ivk_eq : w₁.ivk = w₂.ivk
   /-- The witnesses differ in the break projection. -/
-  proj_ne : (w₁.qk_or_sk, Extract w₁.akP, w₁.nk, w₁.rivk)
-    ≠ (w₂.qk_or_sk, Extract w₂.akP, w₂.nk, w₂.rivk)
+  proj_ne : w₁.breakProj Extract ≠ w₂.breakProj Extract
 
 /-- `nk`-pinning (Balance's import): two valid witnesses with the same `ivk` that do **not** form a
 key-binding break must share the same nullifier key `nk`. (The probability that a break *does* occur
@@ -220,7 +230,7 @@ theorem nk_pinned (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
   by_contra hne
   apply hnb
   refine ⟨h₁, h₂, hivk, fun heq => hne ?_⟩
-  simpa using congrArg (fun t => t.2.2.1) heq
+  exact congrArg BreakProj.nk heq
 
 /-- `ak`-pinning up to y-sign (Spend Authorization's import): two valid witnesses with the same `ivk`
 that do *not* form a key-binding break share the same `ak = Extract ak^ℙ` — i.e. `ak^ℙ` is pinned up
@@ -237,7 +247,7 @@ theorem ak_pinned (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
   by_contra hne
   apply hnb
   refine ⟨h₁, h₂, hivk, fun heq => hne ?_⟩
-  simpa using congrArg (fun t => t.2.1) heq
+  exact congrArg BreakProj.ak heq
 
 /-- `qk`/`sk`-pinning (Spend Authorization's import): two valid witnesses with the same `ivk` that do
 *not* form a key-binding break share the same branch — the same `qk` or the same `sk`, including
@@ -255,7 +265,7 @@ theorem qk_or_sk_pinned (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen 
   by_contra hne
   apply hnb
   refine ⟨h₁, h₂, hivk, fun heq => hne ?_⟩
-  simpa using congrArg (fun t => t.1) heq
+  exact congrArg BreakProj.qk_or_sk heq
 
 end Full
 
@@ -390,11 +400,10 @@ theorem openingBreak_finalOracle_pm
   sameIvk_finalOracle_pm Extract S hfn Ggen hExt hS Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int
     hbrk.opening₁ hbrk.opening₂ hbrk.ivk_eq hd₁ hd₂
 
-/-- The `H^*` ±-equation from a full key-binding `Break` (projection `(qk_or_sk, ak, nk, rivk)`
-differing). The derivation constraints are already inside the `Break` (via `KB`), and *no*
-`Break → OpeningBreak` upgrade is needed: the equation depends only on the openings and
-`ivk`-equality, never on how the projections differ. `CollisionUpToSign.ofBreak` builds its case
-split on this. -/
+/-- The `H^*` ±-equation from a full key-binding `Break` (break projections differing). The
+derivation constraints are already inside the `Break` (via `KB`), and *no* `Break → OpeningBreak`
+upgrade is needed: the equation depends only on the openings and `ivk`-equality, never on how the
+projections differ. `CollisionUpToSign.ofBreak` builds its case split on this. -/
 theorem break_finalOracle_pm
     (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
     (hExt : ∀ P Q : G, Extract P = Extract Q ↔ P =± Q) (hS : S ≠ 0)
@@ -407,14 +416,13 @@ theorem break_finalOracle_pm
   sameIvk_finalOracle_pm Extract S hfn Ggen hExt hS Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int
     hbrk.kb₁.opening hbrk.kb₂.opening hbrk.ivk_eq hbrk.kb₁.derivation hbrk.kb₂.derivation
 
-/-- The Break projection `(qk_or_sk, ak, nk, rivk)` an *externally-decoded* witness must have, read
-off its `rivk_ext`-derivation query (`proj_eq_projOfQuery`); `.int` is not in `extQueryOf`'s
-image. -/
+/-- The break projection an *externally-decoded* witness must have, read off its
+`rivk_ext`-derivation query (`proj_eq_projOfQuery`); `.int` is not in `extQueryOf`'s image. -/
 def projOfQuery (Extract : G → B) (Ggen : G) (Hask : SK → F) (Hnk : SK → B)
     (Hrivk_legacy : SK → F) (Hrivk_ext : QK → B → B → F) :
-    FinalQuery QK SK B F → Option (Branch QK SK × B × B × F)
-  | .ext qk ak nk => some (.qk qk, ak, nk, Hrivk_ext qk ak nk)
-  | .legacy sk => some (.sk sk, Extract ((Hask sk) • Ggen), Hnk sk, Hrivk_legacy sk)
+    FinalQuery QK SK B F → Option (BreakProj QK SK B F)
+  | .ext qk ak nk => some ⟨.qk qk, ak, nk, Hrivk_ext qk ak nk⟩
+  | .legacy sk => some ⟨.sk sk, Extract ((Hask sk) • Ggen), Hnk sk, Hrivk_legacy sk⟩
   | .int _ _ _ => none
 
 /-- The Branch data of a witness, read off its `rivk_ext`-derivation query
@@ -437,7 +445,7 @@ theorem extQueryOf_ne_int {w : Witness G F B SK QK} (Extract : G → B) (rivk_ex
   rcases hb : w.qk_or_sk with qk | sk <;> simp [extQueryOf, hb]
 
 omit [Field B] [NoZeroSMulDivisors F G] [DecidableEq F] in
-/-- An externally-decoded witness's Break projection is recoverable from its `rivk_ext`-derivation
+/-- An externally-decoded witness's break projection is recoverable from its `rivk_ext`-derivation
 query: the derivation constraints determine every component from the query. -/
 theorem proj_eq_projOfQuery
     (Extract : G → B) (Ggen : G)
@@ -446,10 +454,10 @@ theorem proj_eq_projOfQuery
     {w : Witness G F B SK QK}
     (hd : KBDerivation Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w)
     (hext : w.rivk = w.rivk_ext) :
-    some (w.qk_or_sk, Extract w.akP, w.nk, w.rivk)
+    some (w.breakProj Extract)
       = projOfQuery Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext (extQueryOf Extract w) := by
   obtain ⟨hbc, _⟩ := hd
-  rcases hb : w.qk_or_sk with qk | sk <;> simp only [hb] at hbc <;>
+  rcases hb : w.qk_or_sk with qk | sk <;> simp only [Witness.breakProj, hb] at hbc ⊢ <;>
     simp only [extQueryOf, hb, projOfQuery]
   · rw [hext.trans hbc]
   · obtain ⟨hakP, hnk, hre⟩ := hbc
@@ -524,6 +532,7 @@ theorem residual_of_finalQuery_eq
         have hbr : w₁.qk_or_sk = w₂.qk_or_sk :=
           Option.some_inj.mp ((branch_eq_branchOfQuery (w := w₁) Extract).trans
             ((congrArg branchOfQuery h).trans (branch_eq_branchOfQuery (w := w₂) Extract).symm))
+        simp only [Witness.breakProj]
         rw [hbr, hak, hnk, hrv]
       · rw [shiftedFinalOracle_extQueryOf Extract Ggen hfn Hask Hnk Hrivk_legacy Hrivk_ext
             Hrivk_int hd₁,
