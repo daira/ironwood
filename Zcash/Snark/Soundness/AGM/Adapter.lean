@@ -456,35 +456,16 @@ The logs of every URS generator and `W` over `B` must be known. -/
 def discreteLogOfU_of_augmentedRelation {n : ℕ} (B : G) (g : Fin n → G) (U W : G)
     (gLog : Fin n → F) (wLog : F) (r : AugmentedRelationWitness (F := F) g U W)
     (hg : ∀ i, g i = gLog i • B) (hW : W = wLog • B) (halpha : r.α ≠ 0) :
-    DiscreteLogRepresentation (F := F) B U := by
-  subst W
-  let known : F := relationGLog gLog r.a + r.β * wLog
-  refine ⟨r.α⁻¹ * (-known), ?_⟩
-  have hgpart : commitGen g r.a = relationGLog gLog r.a • B := by
-    calc
-      commitGen g r.a = commitGen (fun i => gLog i • B) r.a := by
-        congr 1
-        funext i
-        exact hg i
-      _ = relationGLog gLog r.a • B := commitGen_of_base_logs B gLog r.a
-  have hknown : commitGen g r.a + r.β • (wLog • B) = known • B := by
-    rw [hgpart]
-    dsimp only [known]
-    rw [add_smul, smul_smul]
-  have hzero : known • B + r.α • U = 0 := by
-    rw [← hknown]
-    simpa [add_assoc, add_left_comm, add_comm] using r.relation
-  have hmul : r.α • U = (-known) • B := by
-    have hzero' : r.α • U + known • B = 0 := by
-      simpa [add_comm] using hzero
-    calc
-      r.α • U = -(known • B) := by
-        exact eq_neg_of_add_eq_zero_left hzero'
-      _ = (-known) • B := by rw [neg_smul]
-  have hscale := congrArg ((fun X : G => (r.α)⁻¹ • X)) hmul
-  have hlog : U = (r.α⁻¹ * (-known)) • B := by
-    simpa [smul_smul, inv_mul_cancel₀ halpha] using hscale
-  exact hlog.symm
+    DiscreteLogRepresentation (F := F) B U :=
+  discreteLogOfAugmentedRelationAtChallenge B g U W (augmentedCoeffs gLog 0 wLog)
+    AugmentedIndex.u r
+    (fun i hi => by
+      rcases i with i | j
+      · simpa [augmentedBasis, augmentedCoeffs] using hg i
+      · fin_cases j
+        · exact absurd rfl hi
+        · simpa [augmentedBasis, augmentedCoeffs] using hW)
+    (by simpa [augmentedCoeffs, AugmentedIndex.u] using halpha)
 
 /-- Recover the discrete log of `W` from an augmented relation with a nonzero `W` coefficient.
 
@@ -492,34 +473,15 @@ The logs of every URS generator and `U` over `B` must be known. -/
 def discreteLogOfW_of_augmentedRelation {n : ℕ} (B : G) (g : Fin n → G) (U W : G)
     (gLog : Fin n → F) (uLog : F) (r : AugmentedRelationWitness (F := F) g U W)
     (hg : ∀ i, g i = gLog i • B) (hU : U = uLog • B) (hbeta : r.β ≠ 0) :
-    DiscreteLogRepresentation (F := F) B W := by
-  subst U
-  let known : F := relationGLog gLog r.a + r.α * uLog
-  refine ⟨r.β⁻¹ * (-known), ?_⟩
-  have hgpart : commitGen g r.a = relationGLog gLog r.a • B := by
-    calc
-      commitGen g r.a = commitGen (fun i => gLog i • B) r.a := by
-        congr 1
-        funext i
-        exact hg i
-      _ = relationGLog gLog r.a • B := commitGen_of_base_logs B gLog r.a
-  have hknown : commitGen g r.a + r.α • (uLog • B) = known • B := by
-    rw [hgpart]
-    dsimp only [known]
-    rw [add_smul, smul_smul]
-  have hzero : known • B + r.β • W = 0 := by
-    rw [← hknown]
-    simpa [add_assoc, add_left_comm, add_comm] using r.relation
-  have hmul : r.β • W = (-known) • B := by
-    have hzero' : r.β • W + known • B = 0 := by
-      simpa [add_comm] using hzero
-    calc
-      r.β • W = -(known • B) := by
-        exact eq_neg_of_add_eq_zero_left hzero'
-      _ = (-known) • B := by rw [neg_smul]
-  have hscale := congrArg ((fun X : G => (r.β)⁻¹ • X)) hmul
-  have hlog : W = (r.β⁻¹ * (-known)) • B := by
-    simpa [smul_smul, inv_mul_cancel₀ hbeta] using hscale
-  exact hlog.symm
+    DiscreteLogRepresentation (F := F) B W :=
+  discreteLogOfAugmentedRelationAtChallenge B g U W (augmentedCoeffs gLog uLog 0)
+    AugmentedIndex.w r
+    (fun i hi => by
+      rcases i with i | j
+      · simpa [augmentedBasis, augmentedCoeffs] using hg i
+      · fin_cases j
+        · simpa [augmentedBasis, augmentedCoeffs] using hU
+        · exact absurd rfl hi)
+    (by simpa [augmentedCoeffs, AugmentedIndex.w] using hbeta)
 
 end Zcash.Snark
