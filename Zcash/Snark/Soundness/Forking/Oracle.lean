@@ -11,10 +11,11 @@ at one query.
 
 This module supplies the random-oracle primitives the forking development is framed with:
 
-* `reprogram` changes the answer at one transcript prefix. Rewinding reruns the prover with that
-  changed answer.
 * `uniformChallenge` and `uniformChallenge_badSet` model a fresh field challenge and its probability
   of landing in a finite bad set.
+
+Reprogramming — the rewinding primitive itself — is `reprogramRounds` in
+`Soundness.Forking.Rewind`, which replaces the whole IPA round vector at once.
 
 ## Challenge-vector distribution
 
@@ -49,24 +50,6 @@ Two scope notes, both part of that floor, not the derived uniformity:
 namespace Zcash.Snark
 
 open scoped ENNReal
-
-variable {F G : Type*}
-
-/-! ## Reprogramming — the rewinding primitive -/
-
-open Classical in
-/-- Change the oracle's answer at `t` to `c`, leaving all other answers unchanged. -/
-noncomputable def reprogram (O : List (TranscriptElt F G) → F) (t : List (TranscriptElt F G)) (c : F) :
-    List (TranscriptElt F G) → F :=
-  fun t' => if t' = t then c else O t'
-
-@[simp] theorem reprogram_self (O : List (TranscriptElt F G) → F) (t : List (TranscriptElt F G)) (c : F) :
-    reprogram O t c t = c := by
-  simp [reprogram]
-
-theorem reprogram_ne {O : List (TranscriptElt F G) → F} {t t' : List (TranscriptElt F G)} {c : F}
-    (h : t' ≠ t) : reprogram O t c t' = O t' := by
-  simp [reprogram, h]
 
 /-! ## The uniform-challenge idealization -/
 
