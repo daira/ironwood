@@ -8,14 +8,16 @@ pp.unicode.fun = true # pretty-prints `fun a ↦ b`
 autoImplicit = false
 
 [[require]]
-name = "mathlib"
-scope = "leanprover-community"
-rev = "v4.30.0-rc2"
-
-[[require]]
 name = "CompElliptic"
 git = "https://github.com/daira/CompElliptic"
 rev = "f5f420f4b090b9f65be398d82ad29cfd96710aa3"
+
+# mathlib last, so that its pinned versions of the common transitive dependencies
+# (batteries, aesop, Qq, proofwidgets, ...) take precedence over CompPoly's.
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "v4.30.0"
 
 [[lean_lib]]
 name = "Zcash"
