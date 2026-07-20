@@ -314,17 +314,22 @@ theorem rivk_eq_finalOracle
     simp only [FinalQuery.eval]
     exact hrivk.resolve_left hext
 
-/-- The *shifted* combined final oracle: `H^*` offset by the non-querying shift `hfn (ak, nk)`,
-which under `KBDerivation` is a function of the query alone (for `.legacy sk`, `ak`/`nk` are
-recovered via `Hask`/`Hnk`). The ±-collision a `Break` computes (`CollisionUpToSign.ofBreak`) is
-of this map — the quantity the birthday bound bounds. -/
+/-- The non-querying shift: `hfn` at the query's key data (for `.legacy sk`, `ak`/`nk` are
+recovered via `Hask`/`Hnk`, so the shift is a function of the query alone). -/
+def shiftOf (Extract : G → B) (Ggen : G) (hfn : B → B → F) (Hask : SK → F) (Hnk : SK → B) :
+    FinalQuery QK SK B F → F
+  | .ext _ ak nk => hfn ak nk
+  | .legacy sk => hfn (Extract ((Hask sk) • Ggen)) (Hnk sk)
+  | .int _ ak nk => hfn ak nk
+
+/-- The *shifted* combined final oracle: the `H^*` output offset by the non-querying shift.
+The ±-collision a `Break` computes (`CollisionUpToSign.ofBreak`) is of this map — the event
+the birthday layer bounds. -/
 def shiftedFinalOracle (Extract : G → B) (Ggen : G) (hfn : B → B → F)
     (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
-    (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F) :
-    FinalQuery QK SK B F → F
-  | .ext qk ak nk => hfn ak nk + Hrivk_ext qk ak nk
-  | .legacy sk => hfn (Extract ((Hask sk) • Ggen)) (Hnk sk) + Hrivk_legacy sk
-  | .int rivk_ext ak nk => hfn ak nk + Hrivk_int rivk_ext ak nk
+    (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
+    (q : FinalQuery QK SK B F) : F :=
+  shiftOf Extract Ggen hfn Hask Hnk q + q.eval Hrivk_legacy Hrivk_ext Hrivk_int
 
 omit [Field B] in
 /-- On a witness's `finalQueryOf`, the shifted oracle is the shift plus the `H^*` output — the form
@@ -344,11 +349,11 @@ theorem shiftedFinalOracle_finalQueryOf
   by_cases hext : w.rivk = w.rivk_ext
   · rw [if_pos hext]
     rcases hb : w.qk_or_sk with qk | sk <;> simp only [hb] at hbc ⊢
-    · simp only [shiftedFinalOracle, FinalQuery.eval]
+    · simp only [shiftedFinalOracle, shiftOf, FinalQuery.eval]
     · obtain ⟨hakP, hnk, _⟩ := hbc
-      simp only [shiftedFinalOracle, FinalQuery.eval, ← hakP, ← hnk]
+      simp only [shiftedFinalOracle, shiftOf, FinalQuery.eval, ← hakP, ← hnk]
   · rw [if_neg hext]
-    simp only [shiftedFinalOracle, FinalQuery.eval]
+    simp only [shiftedFinalOracle, shiftOf, FinalQuery.eval]
 
 end Onward
 
@@ -478,7 +483,7 @@ theorem shiftedFinalOracle_extQueryOf
       = hfn (Extract w.akP) w.nk + w.rivk_ext := by
   obtain ⟨hbc, _⟩ := hd
   rcases hb : w.qk_or_sk with qk | sk <;> simp only [hb] at hbc <;>
-    simp only [extQueryOf, hb, shiftedFinalOracle]
+    simp only [extQueryOf, hb, shiftedFinalOracle, shiftOf, FinalQuery.eval]
   · rw [← hbc]
   · obtain ⟨hakP, hnk, hre⟩ := hbc
     rw [← hakP, ← hnk, ← hre]
@@ -576,25 +581,6 @@ def _root_.Zcash.Security.RandomOracle.CollisionUpToSign.ofBreak
         exact break_finalOracle_pm Extract S hfn Ggen hExt hS Hask Hnk Hrivk_legacy Hrivk_ext
           Hrivk_int hbrk }
 
-/-- The non-querying shift alone: `hfn` at the query's key data. `shiftedFinalOracle` is this plus
-the oracle's output (`shiftedFinalOracle_eq_shift_add_eval`). -/
-def shiftOf (Extract : G → B) (Ggen : G) (hfn : B → B → F) (Hask : SK → F) (Hnk : SK → B) :
-    FinalQuery QK SK B F → F
-  | .ext _ ak nk => hfn ak nk
-  | .legacy sk => hfn (Extract ((Hask sk) • Ggen)) (Hnk sk)
-  | .int _ ak nk => hfn ak nk
-
-omit [Field B] [NoZeroSMulDivisors F G] [DecidableEq F] in
-/-- The shifted oracle decomposes as the non-querying shift plus the `H^*` output. -/
-theorem shiftedFinalOracle_eq_shift_add_eval
-    (Extract : G → B) (Ggen : G) (hfn : B → B → F)
-    (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
-    (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
-    (q : FinalQuery QK SK B F) :
-    shiftedFinalOracle Extract Ggen hfn Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int q
-      = shiftOf Extract Ggen hfn Hask Hnk q + q.eval Hrivk_legacy Hrivk_ext Hrivk_int := by
-  cases q <;> rfl
-
 omit [Field B] [NoZeroSMulDivisors F G] in
 /-- **The bridge to the birthday counting**: the pair of `H^*` outputs at a shifted-oracle
 ±-collision's queries lies in the shifted ±-collision set that
@@ -612,9 +598,7 @@ theorem collision_mem_shifted_pm [Fintype F]
       ∈ Finset.univ.filter (fun p : F × F =>
           shiftOf Extract Ggen hfn Hask Hnk c.q₁ + p.1
             =± shiftOf Extract Ggen hfn Hask Hnk c.q₂ + p.2) := by
-  have hpm := c.pm
-  rw [shiftedFinalOracle_eq_shift_add_eval, shiftedFinalOracle_eq_shift_add_eval] at hpm
-  simpa using hpm
+  simpa [shiftedFinalOracle] using c.pm
 
 end OnwardCollision
 

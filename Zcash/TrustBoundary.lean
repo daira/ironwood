@@ -43,7 +43,6 @@ assert_axioms Zcash.Security.KeyBinding.residual_of_finalQuery_eq
 assert_axioms Zcash.Security.KeyBinding.nk_pinned
 assert_axioms Zcash.Security.KeyBinding.ak_pinned
 assert_axioms Zcash.Security.KeyBinding.qk_or_sk_pinned
-assert_axioms Zcash.Security.KeyBinding.shiftedFinalOracle_eq_shift_add_eval
 assert_axioms Zcash.Security.KeyBinding.collision_mem_shifted_pm
 assert_axioms Zcash.Security.KeyBinding.toInterface
 
