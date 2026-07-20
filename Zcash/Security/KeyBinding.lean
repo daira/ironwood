@@ -18,7 +18,8 @@ Abstract setting: a prime-order group `G` as an `F`-vector space (`F = ZMod r` t
 a base field `B` (x-coordinates, `= ZMod q`), and `Extract : G → B` with the ±-property (`hExt`).
 
 `Commitivk` is required to have the Pedersen structure (not opaque), which is what makes the break
-reduction provable. Pallas is instantiated last via CompElliptic.
+reduction provable. The development is entirely abstract: no Pallas instantiation is included
+(the intended concrete route is via CompElliptic).
 -/
 
 namespace Zcash.Security.KeyBinding
