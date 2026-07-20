@@ -1,5 +1,5 @@
-import Zcash.Security.KeyBindingInstance
-import Zcash.Security.Birthday
+import Zcash.Security.KeyBinding.Instance
+import Zcash.Security.Common.Birthday
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
 import Zcash.Meta.AxiomCheck

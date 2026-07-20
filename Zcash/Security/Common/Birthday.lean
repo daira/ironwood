@@ -1,5 +1,5 @@
 import Mathlib
-import Zcash.Security.RandomOracle
+import Zcash.Security.Common.RandomOracle
 
 /-!
 # Birthday-bound counting for random-oracle ±-collisions

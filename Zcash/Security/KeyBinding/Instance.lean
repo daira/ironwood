@@ -1,4 +1,4 @@
-import Zcash.Security.KeyBinding
+import Zcash.Security.KeyBinding.Basic
 import Zcash.Security.Ledger.Statement
 
 /-!

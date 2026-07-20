@@ -6,7 +6,7 @@ import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
 import Zcash.Security.Ledger.Merkle
 import Zcash.Security.Ledger.Statement
-import Zcash.Security.RandomOracle
-import Zcash.Security.Birthday
-import Zcash.Security.KeyBinding
-import Zcash.Security.KeyBindingInstance
+import Zcash.Security.Common.RandomOracle
+import Zcash.Security.Common.Birthday
+import Zcash.Security.KeyBinding.Basic
+import Zcash.Security.KeyBinding.Instance
