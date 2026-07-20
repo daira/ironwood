@@ -10,7 +10,7 @@ autoImplicit = false
 [[require]]
 name = "CompElliptic"
 git = "https://github.com/daira/CompElliptic"
-rev = "f5f420f4b090b9f65be398d82ad29cfd96710aa3"
+rev = "0eee049f32e1c2bbcb37cb31f89e53f8f52f7d2a"
 
 # mathlib last, so that its pinned versions of the common transitive dependencies
 # (batteries, aesop, Qq, proofwidgets, ...) take precedence over CompPoly's.
