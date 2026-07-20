@@ -1,5 +1,5 @@
 import Mathlib
-import Zcash.Security.RandomOracle
+import Zcash.Security.Common.RandomOracle
 
 /-!
 # Fixed-depth Merkle trees are position-binding, up to an exhibited hash collision

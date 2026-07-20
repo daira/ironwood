@@ -4,3 +4,4 @@
 import Zcash.Common
 import Zcash.Security
 import Zcash.Snark
+import Zcash.TrustBoundary
