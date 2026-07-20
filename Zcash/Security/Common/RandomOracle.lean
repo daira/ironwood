@@ -39,9 +39,11 @@ namespace Zcash.Security.RandomOracle
 
 variable {Q F : Type*}
 
-/-- Equality up to sign: `a = b ∨ a = -b`. The `±`-collision events and the algebraic
-±-equations are stated with this. An `abbrev`, so it is definitionally transparent. -/
+/-- Equality up to sign: `a = b ∨ a = -b`, written `a =± b`. The `±`-collision events and the
+algebraic ±-equations are stated with this. An `abbrev`, so it is definitionally transparent. -/
 abbrev EqUpToSign [Neg F] (a b : F) : Prop := a = b ∨ a = -b
+
+@[inherit_doc] scoped infix:50 " =± " => EqUpToSign
 
 /-- A collision of an oracle `O`, as data: two distinct queries with equal outputs. -/
 structure Collision (O : Q → F) where
@@ -56,7 +58,7 @@ structure CollisionUpToSign [Neg F] (O : Q → F) where
   q₁ : Q
   q₂ : Q
   ne : q₁ ≠ q₂
-  pm : EqUpToSign (O q₁) (O q₂)
+  pm : O q₁ =± O q₂
 
 /-- Every collision is a `±`-collision. -/
 def Collision.upToSign [Neg F] {O : Q → F} (c : Collision O) : CollisionUpToSign O :=

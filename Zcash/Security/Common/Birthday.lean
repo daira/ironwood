@@ -30,9 +30,9 @@ private theorem fintypeCard_ne_zero : (Fintype.card F : ℚ≥0) ≠ 0 := by
 change the count, which is what lets the per-pair bound apply to the *shifted* final oracle
 (`KeyBinding.shiftedFinalOracle`), whose shift is a non-querying function of the query. -/
 theorem card_shifted_pm_collision_le (s₁ s₂ : F) :
-    (univ.filter fun p : F × F => EqUpToSign (s₁ + p.1) (s₂ + p.2)).card
+    (univ.filter fun p : F × F => s₁ + p.1 =± s₂ + p.2).card
       ≤ 2 * Fintype.card F := by
-  have hsub : (univ.filter fun p : F × F => EqUpToSign (s₁ + p.1) (s₂ + p.2)) ⊆
+  have hsub : (univ.filter fun p : F × F => s₁ + p.1 =± s₂ + p.2) ⊆
       (univ.image fun o : F => (s₂ + o - s₁, o)) ∪
         (univ.image fun o : F => (-(s₂ + o) - s₁, o)) := by
     intro p hp
@@ -41,7 +41,7 @@ theorem card_shifted_pm_collision_le (s₁ s₂ : F) :
     rcases hp.2 with h | h
     · exact Or.inl (mem_image.2 ⟨p.2, mem_univ _, Prod.ext (by linear_combination -h) rfl⟩)
     · exact Or.inr (mem_image.2 ⟨p.2, mem_univ _, Prod.ext (by linear_combination -h) rfl⟩)
-  calc (univ.filter fun p : F × F => EqUpToSign (s₁ + p.1) (s₂ + p.2)).card
+  calc (univ.filter fun p : F × F => s₁ + p.1 =± s₂ + p.2).card
       ≤ ((univ.image fun o : F => (s₂ + o - s₁, o)) ∪
           (univ.image fun o : F => (-(s₂ + o) - s₁, o))).card := card_le_card hsub
     _ ≤ (univ.image fun o : F => (s₂ + o - s₁, o)).card
@@ -54,15 +54,14 @@ theorem card_shifted_pm_collision_le (s₁ s₂ : F) :
 `(o₁, o₂) ∈ F × F`, the fraction on which the shifted ±-collision `s₁ + o₁ = ±(s₂ + o₂)` holds is
 at most `2/|F|`. -/
 theorem shifted_pm_collision_fraction_le (s₁ s₂ : F) :
-    ((univ.filter fun p : F × F =>
-        EqUpToSign (s₁ + p.1) (s₂ + p.2)).card : ℚ≥0) / (Fintype.card F : ℚ≥0) ^ 2
+    ((univ.filter fun p : F × F => s₁ + p.1 =± s₂ + p.2).card : ℚ≥0)
+        / (Fintype.card F : ℚ≥0)^2
       ≤ 2 / (Fintype.card F : ℚ≥0) := by
-  have hc : ((univ.filter fun p : F × F =>
-      EqUpToSign (s₁ + p.1) (s₂ + p.2)).card : ℚ≥0)
+  have hc : ((univ.filter fun p : F × F => s₁ + p.1 =± s₂ + p.2).card : ℚ≥0)
       ≤ 2 * (Fintype.card F : ℚ≥0) := by exact_mod_cast card_shifted_pm_collision_le s₁ s₂
-  calc ((univ.filter fun p : F × F =>
-        EqUpToSign (s₁ + p.1) (s₂ + p.2)).card : ℚ≥0) / (Fintype.card F) ^ 2
-      ≤ (2 * (Fintype.card F : ℚ≥0)) / (Fintype.card F) ^ 2 := by gcongr
+  calc ((univ.filter fun p : F × F => s₁ + p.1 =± s₂ + p.2).card : ℚ≥0)
+        / (Fintype.card F)^2
+      ≤ (2 * (Fintype.card F : ℚ≥0)) / (Fintype.card F)^2 := by gcongr
     _ = 2 / (Fintype.card F : ℚ≥0) := by rw [pow_two, mul_div_mul_right _ _ fintypeCard_ne_zero]
 
 omit [Field F] [DecidableEq F] in
