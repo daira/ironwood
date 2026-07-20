@@ -10,9 +10,8 @@ import Zcash.Snark.Soundness.Forking.Ordering
 that changing the oracle at the IPA round prefixes is the same as replacing the round-challenge
 vector.
 
-The probability chain turns acceptance above the knowledge error into a fork certificate and then an
-IPA opening. The remaining integration must derive that acceptance probability from a real
-random-oracle adversary, including query loss. Blake2b-as-random-oracle also remains an assumption.
+This file covers fixed and staged provers. `Soundness.Forking.Adversary` handles arbitrary queries
+and query loss. Identifying Blake2b with the modeled random oracle remains an assumption.
 -/
 
 namespace Zcash.Snark
@@ -99,18 +98,10 @@ theorem roChallenges_reprogramRounds {shape : Shape} (O : List (TranscriptElt Fp
           simp only [preIpaTranscript, List.length_append, List.length_cons, List.length_nil]
           omega)
 
-/-! ## Challenge-vector uniformity: a standalone justification for `hprob`'s measure
+/-! ## Challenge-vector uniformity
 
-`hprob` uses the uniform distribution on IPA challenge vectors. The following theorems derive that
-distribution from a uniform random oracle for a fixed proof:
-
-* `roChallenges_ipaRound_apply` identifies each round challenge with one oracle answer.
-* `roChallenges_ipaRound_uniform` uses distinct prefixes to prove the answers are uniformly distributed.
-
-This theorem is not yet composed into the capstones. It has two limits:
-
-* it samples only the `k` round-prefix queries;
-* it fixes `ps`. Adaptive proofs require the full querying-adversary experiment and its query loss. -/
+For a fixed proof, distinct round prefixes yield a uniform challenge vector. Computed adversaries
+instead use the full query experiment in `Soundness.Forking.Adversary`. -/
 
 /-- Each deployed IPA round challenge is the oracle answer at its round prefix. -/
 theorem roChallenges_ipaRound_apply {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
@@ -147,16 +138,41 @@ theorem kerr_lt_verifierEq_of_deployedAccepts [DecidableEq G] [Inhabited G] {sha
   simp only [Finset.coe_filter, Finset.mem_univ, true_and, Set.mem_setOf_eq] at hχ ⊢
   exact deployedAccepts_verifierEq urs hk vk (psf χ) (chf χ) hχ
 
-/-! ## The deployed forking opening: the value-placement composed end to end
+/-! ## Deployed forking opening
 
-`deployed_forking_tree` opens halo2's adjusted commitment. The unshift and unblinding lemmas convert
-that result to an opening of the multiopen commitment at value `v − ξ·⟨s,b⟩`.
--/
+Unshifting and unblinding convert the forked tree into the multiopen commitment opening. -/
 
-/-- Compute a multiopen IPA opening or nontrivial relation from an explicit valid fork certificate.
+/-- Compute an opening or relation, shifting the value by the declared `U` coefficient. -/
+def deployed_forking_relation_shifted [DecidableEq G] [Inhabited G] (urs : URS G)
+    (b : Fin (2 ^ urs.k) → Fp) (v ξ z vU blind : Fp) (aMulti aDep s : Fin (2 ^ urs.k) → Fp)
+    (cert : DForkCert Fp G urs.k) (hz : z ≠ 0) (hb0 : b 0 = 1)
+    (hP : commit urs aDep = commit urs aMulti - v • urs.g 0 + ξ • commit urs s)
+    (hvalid : DeployedForkValid urs.g b urs.u urs.w z
+        (commit urs aDep + vU • urs.u + blind • urs.w) cert) :
+    (Σ' a, IpaRelation urs (commit urs aMulti) b (v + z⁻¹ * vU - ξ * innerProduct s b) a)
+      ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w :=
+  have hvalid' : DeployedForkValid urs.g b urs.u urs.w z
+      (commit urs aDep + (z * (z⁻¹ * vU)) • urs.u + blind • urs.w) cert := by
+    rwa [mul_inv_cancel_left₀ hz]
+  match deployed_forking_tree hz urs.g b aDep (z⁻¹ * vU) blind cert hvalid' with
+  | .inl ⟨blind', t, ht⟩ =>
+      if hclean : IpaAcceptV urs.g b (commit urs aDep) (z⁻¹ * vU) (projTree t) then
+        match ipaRelation_extract urs b (commit urs aDep) (z⁻¹ * vU) (projTree t) hclean with
+        | ⟨a, ha⟩ =>
+            PSum.inl ⟨_, by
+              have h1 := ipaRelation_unshift_value urs (commit urs aDep + v • urs.g 0) b v
+                (z⁻¹ * vU) a hb0 (by rw [add_sub_cancel_right]; exact ha)
+              have h2 : commit urs aDep + v • urs.g 0 = commit urs aMulti + ξ • commit urs s := by
+                rw [hP]; abel
+              rw [h2] at h1
+              have h3 := ipaRelation_unblind_value urs (commit urs aMulti) b (z⁻¹ * vU + v) ξ s _ h1
+              exact ⟨h3.1, h3.2.trans (by ring)⟩⟩
+      else
+        PSum.inr (NontrivialRelation.ofDeployedTree hz urs.g b (commit urs aDep) (z⁻¹ * vU)
+          blind' t ht hclean)
+  | .inr hrel => PSum.inr hrel
 
-The opening value is `v − ξ·⟨s,b⟩`. The result is computed data; no certificate or witness is chosen
-from an existential proposition. -/
+/-- Compute an opening or relation when the whole commitment has no `U` component. -/
 def deployed_forking_relation [DecidableEq G] [Inhabited G] (urs : URS G)
     (b : Fin (2 ^ urs.k) → Fp) (v ξ z blind : Fp) (aMulti aDep s : Fin (2 ^ urs.k) → Fp)
     (cert : DForkCert Fp G urs.k) (hz : z ≠ 0) (hb0 : b 0 = 1)
@@ -165,28 +181,15 @@ def deployed_forking_relation [DecidableEq G] [Inhabited G] (urs : URS G)
         (commit urs aDep + (z * 0) • urs.u + blind • urs.w) cert) :
     (Σ' a, IpaRelation urs (commit urs aMulti) b (v - ξ * innerProduct s b) a)
       ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w :=
-  match deployed_forking_tree hz urs.g b aDep 0 blind cert hvalid with
-  | .inl ⟨blind', t, ht⟩ =>
-      if hclean : IpaAcceptV urs.g b (commit urs aDep) 0 (projTree t) then
-        match ipaRelation_extract urs b (commit urs aDep) 0 (projTree t) hclean with
-        | ⟨a, ha⟩ =>
-            PSum.inl ⟨_, ipaRelation_unblind_value urs (commit urs aMulti) b v ξ s _
-              (by
-                have h1 := ipaRelation_unshift urs (commit urs aDep + v • urs.g 0) b v a hb0
-                  (by rw [add_sub_cancel_right]; exact ha)
-                have h2 : commit urs aDep + v • urs.g 0 = commit urs aMulti + ξ • commit urs s := by
-                  rw [hP]; abel
-                rw [h2] at h1; exact h1)⟩
-      else
-        PSum.inr (NontrivialRelation.ofDeployedTree hz urs.g b (commit urs aDep) 0 blind' t ht hclean)
+  match deployed_forking_relation_shifted urs b v ξ z (z * 0) blind aMulti aDep s cert
+      hz hb0 hP hvalid with
+  | .inl ⟨a, ha⟩ => PSum.inl ⟨a, ha.1, ha.2.trans (by ring)⟩
   | .inr hrel => PSum.inr hrel
 
-/-! ## Closing the rewinding gap: the forked transcripts are *produced* by the probability
+/-! ## Propositional extraction
 
-If a prover strategy accepts above `kerr`, `extractable_of_prob` gives a challenge tree and
-`proverAccept_forkValid` packages it as a valid fork certificate. The real adversary-to-strategy step
-and Blake2b random-oracle model remain outside this result.
--/
+This legacy path turns high acceptance into a fork certificate. The executable adversary path is in
+`Soundness.Forking.Adversary.Algebraic`. -/
 
 open scoped ENNReal in
 open Classical in
@@ -283,9 +286,8 @@ theorem proverAccept_measure_eq_flatAccept {d : ℕ} {U W : G} {z : Fp} (P : Pro
   rw [hset, uniformOfFintype_measure_inv]
 
 open scoped ENNReal in
-/-- If an abstract prover strategy accepts above the knowledge error, derive an IPA opening or
-nontrivial relation. -/
-noncomputable def deployed_forking_soundness [DecidableEq G] [Inhabited G] (urs : URS G)
+/-- Legacy opening-or-relation result from high acceptance of an abstract prover strategy. -/
+noncomputable def legacy_deployed_forking_soundness [DecidableEq G] [Inhabited G] (urs : URS G)
     (b : Fin (2 ^ urs.k) → Fp) (v ξ z blind : Fp) (aMulti aDep s : Fin (2 ^ urs.k) → Fp)
     (P : Prover Fp G urs.k) (hz : z ≠ 0) (hb0 : b 0 = 1)
     (hP : commit urs aDep = commit urs aMulti - v • urs.g 0 + ξ • commit urs s)
@@ -310,8 +312,9 @@ noncomputable def deployed_forking_soundness [DecidableEq G] [Inhabited G] (urs 
 
 open scoped ENNReal in
 open Classical in
-/-- State abstract forking soundness using the deployed verifier's inverse-challenge fold convention. -/
-noncomputable def deployed_forking_soundness_flat [DecidableEq G] [Inhabited G] (urs : URS G)
+/-- **Legacy propositional capstone.** State abstract forking soundness using the deployed verifier's
+inverse-challenge fold convention. -/
+noncomputable def legacy_deployed_forking_soundness_flat [DecidableEq G] [Inhabited G] (urs : URS G)
     (b : Fin (2 ^ urs.k) → Fp) (v ξ z blind : Fp) (aMulti aDep s : Fin (2 ^ urs.k) → Fp)
     (Q : Prover Fp G urs.k) (hz : z ≠ 0) (hb0 : b 0 = 1)
     (hP : commit urs aDep = commit urs aMulti - v • urs.g 0 + ξ • commit urs s)
@@ -321,7 +324,7 @@ noncomputable def deployed_forking_soundness_flat [DecidableEq G] [Inhabited G] 
               (commit urs aDep + (z * 0) • urs.u + blind • urs.w)))) :
     (∃ a, IpaRelation urs (commit urs aMulti) b (v - ξ * innerProduct s b) a)
       ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  refine deployed_forking_soundness urs b v ξ z blind aMulti aDep s (invProver Q) hz hb0 hP ?_
+  refine legacy_deployed_forking_soundness urs b v ξ z blind aMulti aDep s (invProver Q) hz hb0 hP ?_
   rw [proverAccept_measure_eq_flatAccept (invProver Q) urs.g b
         (commit urs aDep + (z * 0) • urs.u + blind • urs.w), invProver_invProver Q]
   exact hprob
@@ -506,19 +509,19 @@ theorem deployedVerifierEq_iff_flatAccept_adaptive {shape : Shape} [DecidableEq 
     (multiopenCommitment g w u vk ps ch
       + (∑ i, ([-(multiopenValue vk ps ch)].getD i.val 0) • g i) + ch.xi • ps.ipaS) χ).symm
 
-/-! ## The deterministic content of the prover-as-oracle bridge `hbridge` is proven
+/-! ## Prover-to-verifier bridge
 
-`hbridge` identifies an accept event pointwise with `flatAccept Q`; it contains no probability.
-The constant and adaptive bridge theorems above prove its deterministic content for the deployed
-verifier. The remaining integration must show that a real rewound adversary induces such a strategy
-and transfer its acceptance probability with the correct query loss.
+`hbridge` identifies an accept event pointwise with `flatAccept Q`. The constant and adaptive bridge
+theorems above establish this identity for the deployed verifier. The executable adversary path uses
+the corresponding bridge in `Soundness.Forking.Adversary.Algebraic`.
 -/
 
 open scoped ENNReal in
 open Classical in
-/-- Derive the deployed opening from a prover strategy, a pointwise accept-event bridge, and acceptance
-above the knowledge error. -/
-noncomputable def deployed_forking_soundness_of_bridge [DecidableEq G] [Inhabited G] (urs : URS G)
+/-- **Legacy propositional capstone.** Derive the deployed opening from a prover strategy, a pointwise
+accept-event bridge, and acceptance above the knowledge error. -/
+noncomputable def legacy_deployed_forking_soundness_of_bridge [DecidableEq G] [Inhabited G]
+    (urs : URS G)
     (b : Fin (2 ^ urs.k) → Fp) (v ξ z blind : Fp) (aMulti aDep s : Fin (2 ^ urs.k) → Fp)
     (Q : Prover Fp G urs.k) (accepts : (Fin urs.k → Fp) → Prop)
     (hz : z ≠ 0) (hb0 : b 0 = 1)
@@ -529,7 +532,7 @@ noncomputable def deployed_forking_soundness_of_bridge [DecidableEq G] [Inhabite
         < (PMF.uniformOfFintype (Fin urs.k → Fp)).toOuterMeasure (Finset.univ.filter accepts)) :
     (∃ a, IpaRelation urs (commit urs aMulti) b (v - ξ * innerProduct s b) a)
       ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  refine deployed_forking_soundness_flat urs b v ξ z blind aMulti aDep s Q hz hb0 hP ?_
+  refine legacy_deployed_forking_soundness_flat urs b v ξ z blind aMulti aDep s Q hz hb0 hP ?_
   have hset : Finset.univ.filter accepts
       = Finset.univ.filter (flatAccept Q urs.g b urs.u urs.w z
           (commit urs aDep + (z * 0) • urs.u + blind • urs.w)) := by

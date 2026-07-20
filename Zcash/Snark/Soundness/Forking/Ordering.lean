@@ -193,6 +193,81 @@ theorem roundTranscriptFin_injective {k : ℕ} (t₀ : List (TranscriptElt F G))
   rw [roundTranscriptFin_length, roundTranscriptFin_length] at hlen
   exact Fin.ext (by omega)
 
+/-- Split the round-`j` transcript into its earlier prefix and final `[L, R, marker]` block. -/
+theorem roundTranscriptFin_eq_append {k : ℕ} (t₀ : List (TranscriptElt F G))
+    (rounds : Fin k → G × G) (j : Fin k) :
+    roundTranscriptFin t₀ rounds j
+      = (t₀ ++ (((List.finRange k).take j.val).map (fun i =>
+          [TranscriptElt.point (rounds i).1, TranscriptElt.point (rounds i).2,
+            TranscriptElt.challenge])).flatten)
+        ++ [TranscriptElt.point (rounds j).1, TranscriptElt.point (rounds j).2,
+            TranscriptElt.challenge] := by
+  rw [roundTranscriptFin, List.take_succ, List.append_assoc]
+  congr 1
+  rw [List.map_append, List.flatten_append]
+  congr 1
+  rw [List.getElem?_eq_getElem (by simpa using j.isLt)]
+  simp
+
+/-- The pre-block prefix of the round-`j` transcript has length `t₀.length + 3 · j`. -/
+theorem roundTranscriptFin_preBlock_length {k : ℕ} (t₀ : List (TranscriptElt F G))
+    (rounds : Fin k → G × G) (j : Fin k) :
+    (t₀ ++ (((List.finRange k).take j.val).map (fun i =>
+        [TranscriptElt.point (rounds i).1, TranscriptElt.point (rounds i).2,
+          TranscriptElt.challenge])).flatten).length = t₀.length + 3 * j.val := by
+  rw [List.length_append,
+    length_flatten_map_triple (fun i => TranscriptElt.point (rounds i).1)
+      (fun i => TranscriptElt.point (rounds i).2) (fun _ => TranscriptElt.challenge),
+    List.length_take, List.length_finRange]
+  have := j.isLt
+  omega
+
+/-- Round `j`'s `L` point occurs at position `t₀.length + 3j`. -/
+theorem roundTranscriptFin_getElem?_fst {k : ℕ} (t₀ : List (TranscriptElt F G))
+    (rounds : Fin k → G × G) (j : Fin k) :
+    (roundTranscriptFin t₀ rounds j)[t₀.length + 3 * j.val]?
+      = some (TranscriptElt.point (rounds j).1) := by
+  rw [roundTranscriptFin_eq_append,
+    List.getElem?_append_right (le_of_eq (roundTranscriptFin_preBlock_length t₀ rounds j)),
+    roundTranscriptFin_preBlock_length]
+  simp
+
+/-- The round-`j` transcript carries round `j`'s own `R` point at position `t₀.length + 3j + 1`. -/
+theorem roundTranscriptFin_getElem?_snd {k : ℕ} (t₀ : List (TranscriptElt F G))
+    (rounds : Fin k → G × G) (j : Fin k) :
+    (roundTranscriptFin t₀ rounds j)[t₀.length + 3 * j.val + 1]?
+      = some (TranscriptElt.point (rounds j).2) := by
+  rw [roundTranscriptFin_eq_append,
+    List.getElem?_append_right (by rw [roundTranscriptFin_preBlock_length]; omega),
+    roundTranscriptFin_preBlock_length,
+    show t₀.length + 3 * j.val + 1 - (t₀.length + 3 * j.val) = 1 from by omega]
+  simp
+
+/-- For `i ≤ j`, the round-`i` transcript is a prefix of the round-`j` transcript. -/
+theorem roundTranscriptFin_prefix {k : ℕ} (t₀ : List (TranscriptElt F G))
+    (rounds : Fin k → G × G) {i j : Fin k} (hij : i.val ≤ j.val) :
+    roundTranscriptFin t₀ rounds i <+: roundTranscriptFin t₀ rounds j := by
+  rw [roundTranscriptFin, roundTranscriptFin]
+  have h1 : (List.finRange k).take (i.val + 1) <+: (List.finRange k).take (j.val + 1) := by
+    rw [show (List.finRange k).take (i.val + 1)
+        = ((List.finRange k).take (j.val + 1)).take (i.val + 1) from by
+      rw [List.take_take, min_eq_left (by omega)]]
+    exact List.take_prefix _ _
+  obtain ⟨q, hq⟩ := h1.map (fun i =>
+    [TranscriptElt.point (rounds i).1, TranscriptElt.point (rounds i).2,
+      TranscriptElt.challenge])
+  refine ⟨q.flatten, ?_⟩
+  rw [List.append_assoc, ← List.flatten_append, hq]
+
+/-- Truncating a later round transcript at round `i` recovers the round-`i` transcript. -/
+theorem roundTranscriptFin_take {k : ℕ} (t₀ : List (TranscriptElt F G))
+    (rounds : Fin k → G × G) {i j : Fin k} (hij : i.val ≤ j.val) :
+    (roundTranscriptFin t₀ rounds j).take (t₀.length + 3 * (i.val + 1))
+      = roundTranscriptFin t₀ rounds i := by
+  have h := List.prefix_iff_eq_take.mp (roundTranscriptFin_prefix t₀ rounds hij)
+  rw [roundTranscriptFin_length] at h
+  exact h.symm
+
 /-- The `Fin`-indexed round transcript equals the recursive `roundTranscript`. -/
 theorem roundTranscriptFin_eq_roundTranscript {k : ℕ} (t₀ : List (TranscriptElt F G))
     (rounds : Fin k → G × G) (j : Fin k) :

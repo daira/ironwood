@@ -37,7 +37,11 @@ The convention:
   relation hardness). A structure with data fields
   cannot be inhabited by proof-irrelevant existence, and a plain `def` cannot conjure the
   data from mere existence via choice — the compiler enforces this, so `noncomputable` is
-  not permitted for these definitions.
+  not permitted for these definitions. One scoped exception: the arbitrary-domain
+  adversary reduction (`globalReachSet`, `splitFamilyRand`) is `noncomputable`, solely
+  because it materializes a `Fintype` instance for the Vesta curve group
+  (`Fintype.ofFinite`); the witness data those endpoints produce still flows through the
+  same computable relation kernels.
 * Efficiency of a reduction is the one property Lean cannot express; it is established by
   inspection. The constructions here are straight-line manipulations of their inputs.
 * Predicates over *named* witnesses (for example, a key-binding break of two specific
@@ -63,9 +67,12 @@ Following the pattern of CompElliptic's
 distinguishes general theorems from concrete, closed computational facts, and holds them to
 different trust standards.
 
-**General, quantified theorems** (the soundness statements and security reductions) must
-rest only on the standard classical axioms `propext`, `Classical.choice`, and `Quot.sound`.
-No `sorry`, no additional axioms, no compiler trust.
+**General, quantified theorems** (the soundness statements and security reductions) rest, in
+their abstract form over an arbitrary `Fp`-module, only on the standard classical axioms
+`propext`, `Classical.choice`, and `Quot.sound` — no `sorry`, no additional axioms, no compiler
+trust. Instantiated at the concrete Vesta curve they additionally inherit one compiler-trust
+axiom: CompElliptic's curve point-count, a closed computational fact discharged by `native_decide`
+(below). The per-theorem `#print axioms` pins record exactly which endpoints carry it.
 
 **Concrete, closed facts with no free variables** may additionally use `native_decide`
 (which discharges a goal by running compiled native code, adding a compiler-trust axiom) and
@@ -88,6 +95,11 @@ These boundaries are *checked at build time*, not merely documented:
   `Lean.ofReduceBool`. Pinning it keeps that claim verified rather than remembered, which
   is the point of the discipline: unpinned claims about the trusted base drift silently as
   toolchains change.
+* `Zcash.Snark.Soundness.AGM.TrustBoundary`, `Zcash.Snark.Soundness.TrustBoundary`, and
+  `Zcash.Snark.Soundness.Deployed.TrustBoundary` pin the AGM/Fiat–Shamir soundness stack —
+  the executable forking extractor, the knowledge-soundness and binding endpoints across
+  all adversary models, and the DL capstones — with the same `assert_no_sorry` +
+  guarded-`#print axioms` discipline.
 * `Zcash.Security.Ledger.TrustBoundary` and
   `Zcash.Security.BindingSignature.TrustBoundary` pin the break reductions the same way.
   The ledger reductions rest on `propext` and `Quot.sound` only; the binding-signature

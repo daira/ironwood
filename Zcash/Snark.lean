@@ -48,17 +48,9 @@ import Zcash.Snark.Soundness.Deployed.Ipa
 import Zcash.Snark.Soundness.Deployed.IpaPeel
 import Zcash.Snark.Soundness.Deployed.TrustBoundary
 import Zcash.Snark.Soundness.Deployed.Verification
--- The Fiat–Shamir forking development: discharges the forked transcript tree in the random-oracle
--- model, and proves round-by-round soundness by tying each IPA round challenge to the transcript
--- prefix that commits it.
-import Zcash.Snark.Soundness.Forking.Oracle
-import Zcash.Snark.Soundness.Forking.Tree
-import Zcash.Snark.Soundness.Forking.Probability
-import Zcash.Snark.Soundness.Forking.Extractor
-import Zcash.Snark.Soundness.Forking.Assembly
-import Zcash.Snark.Soundness.Forking.Ordering
+-- The reusable Fiat–Shamir forking kernel and its concrete adversary producer.
+import Zcash.Snark.Soundness.Forking
 import Zcash.Snark.Soundness.Main
-import Zcash.Snark.Soundness.Forking.Rewind
 import Zcash.Snark.Soundness.Vesta
 -- AGM binding reduction: consume computed deployed relations through the fixed-slot discrete-log
 -- adapter and representation-carrying algebraic-prover model (#15).

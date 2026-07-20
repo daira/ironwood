@@ -5,9 +5,8 @@ import Zcash.Snark.Soundness.Forking.Rewind
 /-!
 # Deployed AGM opening or relation
 
-`Soundness.AGM.Peel` computes a relation from algebraic prover data. This module connects that result
-to the deployed opening. The result is either a multiopen IPA opening or an explicit relation, with
-no `Classical.choice`.
+`Soundness.AGM.Peel` computes a relation from algebraic prover data. This module returns either a
+multiopen IPA opening or an explicit relation; no coefficients are chosen from an existential.
 
 ## The boundary with the Fiat–Shamir/forking layer
 
@@ -42,6 +41,23 @@ def deployedAlgebraicForkingRelation [DecidableEq G] [Inhabited G] (urs : URS G)
   | PSum.inr hrel =>
       PSum.inr (AugmentedRelationWitness.toAlgebraicRelationWitness hrel)
 
+/-- `deployedAlgebraicForkingRelation` with a declared `U` coefficient `vU`. This shifts the
+opened value by `z⁻¹·vU`. -/
+def deployedAlgebraicForkingRelation_shifted [DecidableEq G] [Inhabited G] (urs : URS G)
+    (b : Fin (2 ^ urs.k) → Fp) (v ξ z vU blind : Fp) (aMulti aDep s : Fin (2 ^ urs.k) → Fp)
+    (cert : AlgebraicDForkCert (F := Fp) (augmentedBasis urs.g urs.u urs.w) urs.k)
+    (hz : z ≠ 0) (hb0 : b 0 = 1)
+    (hP : commit urs aDep = commit urs aMulti - v • urs.g 0 + ξ • commit urs s)
+    (hvalid : DeployedForkValid urs.g b urs.u urs.w z
+      (commit urs aDep + vU • urs.u + blind • urs.w) cert.toDForkCert) :
+    (Σ' a, IpaRelation urs (commit urs aMulti) b (v + z⁻¹ * vU - ξ * innerProduct s b) a)
+      ⊕' AlgebraicRelationWitness (F := Fp) (augmentedBasis urs.g urs.u urs.w) :=
+  match deployed_forking_relation_shifted urs b v ξ z vU blind aMulti aDep s cert.toDForkCert
+      hz hb0 hP hvalid with
+  | PSum.inl hopen => PSum.inl hopen
+  | PSum.inr hrel =>
+      PSum.inr (AugmentedRelationWitness.toAlgebraicRelationWitness hrel)
+
 /-- Run the deployed certificate and then the fixed-slot DL reduction.
 
 The result is an IPA opening, a DL solution, or proof that the returned relation missed the fixed
@@ -63,16 +79,15 @@ def deployedAlgebraicForkingFixedSlot [DecidableEq G] [Inhabited G] (urs : URS G
 
 /-! ## Concrete relation producer for the probability experiment -/
 
-/-- Inputs needed to run the deployed algebraic kernel on one augmented public basis.
-
-The basis determines the URS through `ursOfAugmentedBasis`, so the instance cannot use unrelated
-generators. -/
+/-- Inputs for the deployed algebraic kernel on one augmented basis. `vU` is the commitment's
+declared `U` coefficient; honest proofs have `vU = 0`. -/
 structure DeployedAlgebraicForkingInstance (k : ℕ)
     (basis : AugmentedIndex (2 ^ k) → G) where
   b : Fin (2 ^ k) → Fp
   v : Fp
   ξ : Fp
   z : Fp
+  vU : Fp
   blind : Fp
   aMulti : Fin (2 ^ k) → Fp
   aDep : Fin (2 ^ k) → Fp
@@ -87,25 +102,26 @@ structure DeployedAlgebraicForkingInstance (k : ℕ)
       ξ • commit (ursOfAugmentedBasis k basis) s
   hvalid : DeployedForkValid (ursOfAugmentedBasis k basis).g b
     (ursOfAugmentedBasis k basis).u (ursOfAugmentedBasis k basis).w z
-    (commit (ursOfAugmentedBasis k basis) aDep + (z * 0) • (ursOfAugmentedBasis k basis).u +
+    (commit (ursOfAugmentedBasis k basis) aDep + vU • (ursOfAugmentedBasis k basis).u +
       blind • (ursOfAugmentedBasis k basis).w) cert.toDForkCert
 
 namespace DeployedAlgebraicForkingInstance
 
-/-- The opening branch produced by one deployed algebraic instance. -/
+/-- The opening returned by one deployed instance. Its value is shifted by `z⁻¹·vU`; for an
+honest instance `vU = 0`. -/
 abbrev Opening {k : ℕ} {basis : AugmentedIndex (2 ^ k) → G}
     (x : DeployedAlgebraicForkingInstance (G := G) k basis) : Type _ :=
   Σ' a, IpaRelation (ursOfAugmentedBasis k basis)
     (commit (ursOfAugmentedBasis k basis) x.aMulti) x.b
-    (x.v - x.ξ * innerProduct x.s x.b) a
+    (x.v + x.z⁻¹ * x.vU - x.ξ * innerProduct x.s x.b) a
 
 /-- Run one deployed instance and return its opening or relation on the supplied basis. -/
 def run [DecidableEq G] {k : ℕ} {basis : AugmentedIndex (2 ^ k) → G}
     (x : DeployedAlgebraicForkingInstance (G := G) k basis) :
     x.Opening ⊕' AlgebraicRelationWitness (F := Fp) basis := by
   letI : Inhabited G := ⟨0⟩
-  cases deployedAlgebraicForkingRelation (ursOfAugmentedBasis k basis) x.b x.v x.ξ x.z
-      x.blind x.aMulti x.aDep x.s x.cert x.hz x.hb0 x.hP x.hvalid with
+  cases deployedAlgebraicForkingRelation_shifted (ursOfAugmentedBasis k basis) x.b x.v x.ξ x.z
+      x.vU x.blind x.aMulti x.aDep x.s x.cert x.hz x.hb0 x.hP x.hvalid with
   | inl hopen => exact PSum.inl hopen
   | inr hrel =>
       rw [augmentedBasis_ursOfAugmentedBasis] at hrel
@@ -115,6 +131,47 @@ def run [DecidableEq G] {k : ℕ} {basis : AugmentedIndex (2 ^ k) → G}
 def ProducesRelation [DecidableEq G] {k : ℕ} {basis : AugmentedIndex (2 ^ k) → G}
     (x : DeployedAlgebraicForkingInstance (G := G) k basis) : Prop :=
   ∃ r, x.run = PSum.inr r
+
+/-- Preserve a relation or turn a distinct opening into a commitment-collision relation. -/
+def relationOfRun [DecidableEq G] {k : ℕ} {basis : AugmentedIndex (2 ^ k) → G}
+    (x : DeployedAlgebraicForkingInstance (G := G) k basis)
+    (run : x.Opening ⊕' AlgebraicRelationWitness (F := Fp) basis) :
+    Option (AlgebraicRelationWitness (F := Fp) basis) :=
+  match run with
+  | PSum.inr hrel => some hrel
+  | PSum.inl hopen =>
+      if hne : hopen.1 = x.aMulti then none
+      else
+        some (augmentedBasis_ursOfAugmentedBasis k basis ▸
+          (relationWitnessOfCollision (ursOfAugmentedBasis k basis) hne
+            hopen.2.1).augment (ursOfAugmentedBasis k basis).u (ursOfAugmentedBasis k basis).w)
+
+/-- Return the explicit relation from a relation or distinct-opening branch. -/
+def runRelation [DecidableEq G] {k : ℕ} {basis : AugmentedIndex (2 ^ k) → G}
+    (x : DeployedAlgebraicForkingInstance (G := G) k basis) :
+    Option (AlgebraicRelationWitness (F := Fp) basis) :=
+  x.relationOfRun x.run
+
+/-- A value mismatch makes every kernel outcome yield a relation. -/
+theorem relationOfRun_isSome_of_mismatch [DecidableEq G] {k : ℕ}
+    {basis : AugmentedIndex (2 ^ k) → G}
+    (x : DeployedAlgebraicForkingInstance (G := G) k basis)
+    (run : x.Opening ⊕' AlgebraicRelationWitness (F := Fp) basis)
+    (hmm : innerProduct x.aMulti x.b ≠ x.v + x.z⁻¹ * x.vU - x.ξ * innerProduct x.s x.b) :
+    (x.relationOfRun run).isSome := by
+  cases run with
+  | inr hrel => rfl
+  | inl hopen =>
+      have hne : ¬ hopen.1 = x.aMulti := fun heq => hmm (heq ▸ hopen.2.2)
+      simp only [relationOfRun, dif_neg hne, Option.isSome_some]
+
+/-- A binding mismatch makes `runRelation` return an explicit relation. -/
+theorem runRelation_isSome_of_mismatch [DecidableEq G] {k : ℕ}
+    {basis : AugmentedIndex (2 ^ k) → G}
+    (x : DeployedAlgebraicForkingInstance (G := G) k basis)
+    (hmm : innerProduct x.aMulti x.b ≠ x.v + x.z⁻¹ * x.vU - x.ξ * innerProduct x.s x.b) :
+    x.runRelation.isSome :=
+  relationOfRun_isSome_of_mismatch x x.run hmm
 
 end DeployedAlgebraicForkingInstance
 

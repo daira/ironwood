@@ -112,6 +112,19 @@ inductive DForkCert (F G : Type*) : ℕ → Type _ where
   | node {d : ℕ} : G → G → F → F → F →
       DForkCert F G d → DForkCert F G d → DForkCert F G d → DForkCert F G (d + 1)
 
+/-- The number of accepting leaves stored in a forking certificate: `1` at a leaf, tripled at each
+round. It counts certificate replays, not extraction attempts. -/
+def DForkCert.treeRuns : {d : ℕ} → DForkCert F G d → ℕ
+  | 0, .leaf _ _ => 1
+  | _ + 1, .node _ _ _ _ _ c₁ c₂ c₃ => c₁.treeRuns + c₂.treeRuns + c₃.treeRuns
+
+/-- Every depth-`d` forking certificate stores exactly `3ᵈ` accepting leaves. -/
+theorem DForkCert.treeRuns_eq : {d : ℕ} → (c : DForkCert F G d) → c.treeRuns = 3 ^ d
+  | 0, .leaf _ _ => rfl
+  | _ + 1, .node _ _ _ _ _ c₁ c₂ c₃ => by
+      rw [DForkCert.treeRuns, c₁.treeRuns_eq, c₂.treeRuns_eq, c₃.treeRuns_eq]
+      ring
+
 /-- Every path in a fork certificate satisfies the deployed flat verifier equation. -/
 def DeployedForkValid : {d : ℕ} → (Fin (2 ^ d) → G) → (Fin (2 ^ d) → F) → (U W : G) → (z : F) → G →
     DForkCert F G d → Prop
@@ -190,7 +203,8 @@ def deployed_forking_tree [DecidableEq F] [DecidableEq G] {U W : G} {z : F} (hz 
 `extractable_of_prob` returns only a challenge tree. `Prover` supplies the round points and leaf
 openings chosen along each prefix. `proverAccept_forkValid` combines them into a `DForkCert`.
 
-Connecting a real Fiat–Shamir adversary to this strategy type remains outside this module.
+`Soundness.Forking.Adversary.Recursive` connects an arbitrary querying Fiat–Shamir adversary to the
+explicit certificate path; it does not use this legacy propositional strategy interface.
 -/
 
 /-- A prefix-determined IPA prover strategy with round points and leaf openings. -/

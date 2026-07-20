@@ -32,9 +32,8 @@ proves the operational prover, certificate, and reductions used here.
 `Soundness.AGM.Peel` and `.Capstone` compute an IPA opening or relation.
 `Soundness.AGM.Probability` proves the slot-loss bound, and `.ProbabilityVesta` applies it to Vesta.
 
-The explicit-certificate path is computable. Its assumptions are the AGM, plain-DL hardness, the
-generator random-oracle model for the URS, and the random-oracle execution that produces a fork
-certificate.
+The explicit-certificate path is computable. Its boundary is AGM, plain-DL hardness, ideal random
+oracles, an unproved polynomial AFK call bound, and an external PPT-adversary restriction.
 -/
 
 namespace Zcash.Snark
@@ -428,6 +427,20 @@ def groupRepresentationOfCollision (urs : URS G) {a a' : Fin (2 ^ urs.k) → F}
     (hneq : a ≠ a') (hcollision : commit urs a = commit urs a') :
     GroupRepresentation (F := F) urs.g (0 : G) :=
   (relationWitnessOfCollision urs hneq hcollision).toGroupRepresentation
+
+/-- Extend a relation over `g` to `(g,U,W)` with zero `U` and `W` coefficients for the fixed-slot DL
+reduction. -/
+def AlgebraicRelationWitness.augment {n : ℕ} {g : Fin n → G} (U W : G)
+    (r : AlgebraicRelationWitness (F := F) g) :
+    AlgebraicRelationWitness (F := F) (augmentedBasis g U W) :=
+  AugmentedRelationWitness.toAlgebraicRelationWitness
+    { a := r.coeffs
+      α := 0
+      β := 0
+      nontrivial := Or.inl r.nontrivial
+      relation := by
+        rw [zero_smul, zero_smul, add_zero, add_zero]
+        exact r.relation }
 
 /-- Use a commitment collision to solve DL when its difference hits the fixed challenge slot. -/
 def discreteLogOfCollisionAtChallenge (urs : URS G) (B : G)
