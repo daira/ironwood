@@ -14,7 +14,7 @@
     },
     "fsStack": {
       "label": "PR #56 FS-to-AGM handoff",
-      "ref": "a4ab38c100375e4a36060f0f2868be05803ec2aa",
+      "ref": "ef8d8fdc9526720f583eb46597cbdf6d2ea3a076",
       "fetch": "pull/56/head"
     }
   },
@@ -65,7 +65,7 @@
       "label": "PR #56",
       "title": "Fully adaptive Fiat-Shamir adversary",
       "url": "https://github.com/zcash/ironwood/pull/56",
-      "sha": "456c386",
+      "sha": "ef8d8fd",
       "lane": "stack"
     },
     "27": {
