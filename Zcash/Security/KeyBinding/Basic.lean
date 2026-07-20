@@ -4,22 +4,30 @@ import Zcash.Security.Common.RandomOracle
 /-!
 # Key binding (Orchard / Ironwood)
 
-Formalizes the [ZIP 2005 key-binding theorem (ROM)](https://zips.z.cash/zip-2005#thm-key-binding-rom)
-and the `ivk`-pinning lemma: a verifying Recovery-Statement witness pins the key components (`ak` up
-to y-sign, `nk`, and the `qk`/`sk` branch with its key) to `ivk`. Shared intermediate result under
-Balance (`nk`-pinning), Spendability (`PRF^nf`-pinning), and Spend authority
-(`ak`/`qk_or_sk`-pinning).
+The deterministic layer of the
+[ZIP 2005 key-binding theorem (ROM)](https://zips.z.cash/zip-2005#thm-key-binding-rom): a
+verifying Recovery-Statement witness pins the key components — `ak` up to y-sign, `nk`, and the
+`qk`/`sk` branch with its key — to `ivk`, unless an explicit break event is computed.
 
-The *deterministic reduction* `OpeningBreak ⇒ CollisionUpToSign` is the composable core
-(`CollisionUpToSign.ofOpeningBreak`, with `commit_scalar_pm` its algebraic heart). The
-probabilistic birthday bound `ε_kb ≤ q(q-1)/r` is a separate concern (`Birthday.lean`).
+The route, each step proven here:
+
+1. `commit_scalar_pm` — two openings of one `Commitivk` value force their Pedersen scalars equal
+   or negated; `CollisionUpToSign.ofOpeningBreak` packages this as computed data.
+2. `rivk_eq_finalOracle` — under the derivation constraints, `rivk` is the combined final
+   oracle's output at the witness's decoded query.
+3. `CollisionUpToSign.ofBreak` — a full `Break` computes a ±-collision of the shifted combined
+   oracle at distinct queries; `residual_of_finalQuery_eq` handles coinciding queries.
+4. `nk_pinned` / `ak_pinned` / `qk_or_sk_pinned` — without a break, the components agree
+   (Balance's and Spend Authorization's imports).
+
+The probabilistic side — producing the computed collision is hard — is the birthday bound
+`ε_kb ≤ q(q-1)/r` (`Birthday.lean`). `PRF^nf`-pinning, Spendability's import, is not here yet.
 
 Abstract setting: a prime-order group `G` as an `F`-vector space (`F = ZMod r` the scalar field),
 a base field `B` (x-coordinates, `= ZMod q`), and `Extract : G → B` with the ±-property (`hExt`).
-
 `Commitivk` is required to have the Pedersen structure (not opaque), which is what makes the break
-reduction provable. The development is entirely abstract: no Pallas instantiation is included
-(the intended concrete route is via CompElliptic).
+reduction provable; no Pallas instantiation is included (the intended concrete route is via
+CompElliptic).
 -/
 
 namespace Zcash.Security.KeyBinding
@@ -79,7 +87,7 @@ variable [AddCommGroup G] [Field F] [Field B] [Module F G] [NoZeroSMulDivisors F
 
 /-- The `ivk` commitment as a Pedersen lift:
 `Commitivk rivk ak nk = Extract ((h ak nk + rivk) • S)`, with `h` abstract-but-non-querying and `S`
-a fixed base. Mirrors the `NoteCommit` repair `[H^rcm + f]·R`. -/
+a fixed base. Mirrors the `NoteCommit` repair `(H^rcm + f) • R`. -/
 def Commitivk (Extract : G → B) (S : G) (hfn : B → B → F) (rivk : F) (ak nk : B) : B :=
   Extract ((hfn ak nk + rivk) • S)
 
@@ -120,9 +128,9 @@ def OpeningBreak (Extract : G → B) (S : G) (hfn : B → B → F) (w₁ w₂ : 
 supply the erased `Prop` fields, so the data is genuinely computed, not extracted from a proof.
 
 This is an intermediate certificate, not a break event: `pedersenScalar` is affine in `rivk`, so a
-standalone inhabitant is computable outright and certifies nothing by itself. The security content
-is conditional on the `OpeningBreak` hypothesis, and hardness enters per-instantiation, under
-`KBDerivation` (below), where `rivk` is an `H^*` output and the birthday bound applies. -/
+standalone inhabitant is computable outright. The security content is conditional on the
+`OpeningBreak` hypothesis; hardness enters per-instantiation, where `rivk` is an `H^*` output
+(`KBDerivation`) and the birthday bound applies. -/
 def _root_.Zcash.Security.RandomOracle.CollisionUpToSign.ofOpeningBreak
     (Extract : G → B) (S : G) (hfn : B → B → F)
     (hExt : ∀ P Q : G, Extract P = Extract Q ↔ EqUpToSign P Q) (hS : S ≠ 0)
@@ -202,7 +210,7 @@ theorem nk_pinned (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
   simpa using congrArg (fun t => t.2.2.1) heq
 
 /-- `ak`-pinning up to y-sign (Spend Authorization's import): two valid witnesses with the same `ivk`
-that do **not** form a key-binding break share the same `ak = Extract ak^ℙ` — i.e. `ak^ℙ` is pinned up
+that do *not* form a key-binding break share the same `ak = Extract ak^ℙ` — i.e. `ak^ℙ` is pinned up
 to its y-sign, matching the protocol's choice to consume `ak` as a single x-coordinate. -/
 theorem ak_pinned (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
     (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
@@ -219,7 +227,7 @@ theorem ak_pinned (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
   simpa using congrArg (fun t => t.2.1) heq
 
 /-- `qk`/`sk`-pinning (Spend Authorization's import): two valid witnesses with the same `ivk` that do
-**not** form a key-binding break share the same branch — the same `qk` or the same `sk`, including
+*not* form a key-binding break share the same branch — the same `qk` or the same `sk`, including
 *which* of the two backs the witness. This is stronger than ZIP 2005's former "`qk` determined by
 `ivk` when `qk ≠ ⊥`". -/
 theorem qk_or_sk_pinned (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
@@ -262,10 +270,9 @@ def finalQueryOf (Extract : G → B) (w : Witness G F B SK QK) : FinalQuery QK S
 omit [Field B] in
 /-- **Final-random-oracle representation** (ZIP 2005 key-binding proof, "Final-random-oracle
 structure"): under the derivation constraints, `rivk` is the output of the combined final oracle at
-the witness's `finalQueryOf`. This is the deterministic bridge from the Pedersen-scalar collision
-(`CollisionUpToSign.ofOpeningBreak`, over `G(w) = h(ak,nk) + rivk`) to a collision of the actual
-`H^*` random oracles. The birthday bound over the final-query space, and the residual `x₁ = x₂`
-upstream-collision sub-case, are probabilistic. -/
+the witness's `finalQueryOf`. It bridges the Pedersen-scalar collision
+(`CollisionUpToSign.ofOpeningBreak`) to a collision of the actual `H^*` oracles. What remains
+probabilistic is only the birthday bound over the final-query space. -/
 theorem rivk_eq_finalOracle
     (Extract : G → B) (Ggen : G)
     (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
@@ -325,20 +332,15 @@ end Onward
 section OnwardCollision
 variable [AddCommGroup G] [Field F] [Field B] [Module F G] [NoZeroSMulDivisors F G] [DecidableEq F]
 
-/-- **Same-`ivk` ±-equation over `H^*` — the deterministic core of the birthday step.** Any two
-witnesses satisfying the commitment opening (`KBOpening`) with the *same* `ivk` and both satisfying
-the derivation constraints yield the ZIP 2005 break equation `G₁ = ±G₂` with the *Final-random-oracle
-structure* substituted: writing `H^* q := (FinalQuery.eval ...) q` for the combined final oracle and
-`qᵢ := finalQueryOf wᵢ`, `h(ak₁,nk₁) + H^*(q₁) = ±(h(ak₂,nk₂) + H^*(q₂))`. Each side is thus an
-`H^*`-output offset by the constant shift `h(akᵢ,nkᵢ)` (non-querying `h`, independent of `H^*`'s
-responses) — exactly the quantity the birthday bound bounds.
+/-- **Same-`ivk` ±-equation over `H^*`.** Two witnesses opening the same `ivk` (`KBOpening`), both
+satisfying the derivation constraints, give the ZIP 2005 break equation with the final-oracle
+structure substituted: `h(ak₁,nk₁) + H^*(q₁) = ±(h(ak₂,nk₂) + H^*(q₂))`, where `H^*` is the
+combined final oracle (`FinalQuery.eval`) and `qᵢ = finalQueryOf wᵢ`.
 
-Crucially this needs **only** the two openings and `ivk`-equality, not any distinctness of the
-witnesses: the ±-equation is a property of *every* same-`ivk` pair, and it is the break notions
-(`OpeningBreak`, `Break`) that additionally carry a distinctness witness (`ne`). The distinctness of
-the final queries (`q₁ ≠ q₂`) and the residual `x₁ = x₂` sub-cases remain probabilistic;
-that is why this is the ±-equation rather than a full `CollisionUpToSign` (whose `ne` field is that
-very residual). -/
+No distinctness is needed: the ±-equation holds for *every* same-`ivk` pair, and only the break
+notions (`OpeningBreak`, `Break`) carry a distinctness witness. That is why this is a bare
+equation rather than a full `CollisionUpToSign`; the `ne` field arrives with
+`CollisionUpToSign.ofBreak`'s case split. -/
 theorem sameIvk_finalOracle_pm
     (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
     (hExt : ∀ P Q : G, Extract P = Extract Q ↔ EqUpToSign P Q) (hS : S ≠ 0)
@@ -377,12 +379,11 @@ theorem openingBreak_finalOracle_pm
   sameIvk_finalOracle_pm Extract S hfn Ggen hExt hS Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int
     hbrk.1 hbrk.2.1 hbrk.2.2.1 hd₁ hd₂
 
-/-- The `H^*` ±-equation from a full key-binding `Break` (the ZIP 2005 break event, projection
-`(qk_or_sk, ak, nk, rivk)` differing) — the entry point for the ZIP 2005 key-binding theorem (ROM)
-bound. Here the derivation constraints are already inside the `Break` (via `KB`); and notably **no**
-`Break → OpeningBreak` "upgrade" is needed, because the ±-equation depends only on the openings and
-`ivk`-equality, never on *how* the projections differ. What the birthday bound then adds is the
-probability that this equation holds for *distinct* final queries (the birthday bound). -/
+/-- The `H^*` ±-equation from a full key-binding `Break` (projection `(qk_or_sk, ak, nk, rivk)`
+differing). The derivation constraints are already inside the `Break` (via `KB`), and *no*
+`Break → OpeningBreak` upgrade is needed: the equation depends only on the openings and
+`ivk`-equality, never on how the projections differ. `CollisionUpToSign.ofBreak` builds its case
+split on this. -/
 theorem break_finalOracle_pm
     (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
     (hExt : ∀ P Q : G, Extract P = Extract Q ↔ EqUpToSign P Q) (hS : S ≠ 0)
