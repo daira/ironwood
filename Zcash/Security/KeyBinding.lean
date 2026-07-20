@@ -84,8 +84,9 @@ def Commitivk (Extract : G → B) (S : G) (hfn : B → B → F) (rivk : F) (ak n
 
 omit [Field B] in
 /-- Algebraic core: two openings of the same `Commitivk` value force their Pedersen scalars to be
-equal or negatives. Uses the `Extract` ±-property and injectivity of `·•S` for `S ≠ 0` (`G` is an
-`F`-vector space). This is the deterministic content the whole key-binding reduction rests on. -/
+equal or negatives — the deterministic content the whole key-binding reduction rests on. Proved
+from the `Extract` ±-property and injectivity of `· • S` for `S ≠ 0` (`smul_left_injective`;
+`G` is an `F`-vector space). -/
 theorem commit_scalar_pm
     (Extract : G → B) (S : G) (hfn : B → B → F)
     (hExt : ∀ P Q : G, Extract P = Extract Q ↔ EqUpToSign P Q) (hS : S ≠ 0)
@@ -95,20 +96,11 @@ theorem commit_scalar_pm
   unfold Commitivk at hcm
   rw [hExt] at hcm
   rcases hcm with hcm | hcm
-  · left
-    have h0 : (hfn ak₁ nk₁ + rivk₁ - (hfn ak₂ nk₂ + rivk₂)) • S = 0 := by
-      rw [sub_smul, hcm, sub_self]
-    rcases smul_eq_zero.mp h0 with h1 | h1
-    · exact sub_eq_zero.mp h1
-    · exact absurd h1 hS
-  · right
-    have hcm' : (hfn ak₁ nk₁ + rivk₁) • S = (-(hfn ak₂ nk₂ + rivk₂)) • S := by
-      rw [neg_smul]; exact hcm
-    have h0 : (hfn ak₁ nk₁ + rivk₁ - (-(hfn ak₂ nk₂ + rivk₂))) • S = 0 := by
-      rw [sub_smul, hcm', sub_self]
-    rcases smul_eq_zero.mp h0 with h1 | h1
-    · exact sub_eq_zero.mp h1
-    · exact absurd h1 hS
+  · exact Or.inl (smul_left_injective F hS hcm)
+  · refine Or.inr (smul_left_injective F hS ?_)
+    show (hfn ak₁ nk₁ + rivk₁) • S = (-(hfn ak₂ nk₂ + rivk₂)) • S
+    rw [neg_smul]
+    exact hcm
 
 /-- `KBOpening` — the commitment-opening core of the key-binding condition (what statement-validity
 yields): `ivk` opens as `Commitivk` at `(rivk, ak, nk)`, and `ivk ≠ 0`. -/
