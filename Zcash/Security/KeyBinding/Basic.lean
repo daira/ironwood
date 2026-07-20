@@ -112,15 +112,23 @@ theorem commit_scalar_pm
     exact hcm
 
 /-- `KBOpening` — the commitment-opening core of the key-binding condition (what statement-validity
-yields): `ivk` opens as `Commitivk` at `(rivk, ak, nk)`, and `ivk ≠ 0`. -/
-def KBOpening (Extract : G → B) (S : G) (hfn : B → B → F) (w : Witness G F B SK QK) : Prop :=
-  w.ivk = Commitivk Extract S hfn w.rivk (Extract w.akP) w.nk ∧ w.ivk ≠ 0
+yields). -/
+structure KBOpening (Extract : G → B) (S : G) (hfn : B → B → F)
+    (w : Witness G F B SK QK) : Prop where
+  /-- `ivk` opens as `Commitivk` at `(rivk, ak, nk)`. -/
+  commit : w.ivk = Commitivk Extract S hfn w.rivk (Extract w.akP) w.nk
+  /-- `ivk ≠ 0`. -/
+  nonzero : w.ivk ≠ 0
 
-/-- `OpeningBreak` — a `Commitivk`-opening collision (produced by the games layer): two valid `KBOpening`
-witnesses with the same `ivk` but differing `(ak, nk, rivk)`. -/
-def OpeningBreak (Extract : G → B) (S : G) (hfn : B → B → F) (w₁ w₂ : Witness G F B SK QK) : Prop :=
-  KBOpening Extract S hfn w₁ ∧ KBOpening Extract S hfn w₂ ∧ w₁.ivk = w₂.ivk ∧
-    (Extract w₁.akP, w₁.nk, w₁.rivk) ≠ (Extract w₂.akP, w₂.nk, w₂.rivk)
+/-- `OpeningBreak` — a `Commitivk`-opening collision (produced by the games layer): two valid
+`KBOpening` witnesses with the same `ivk` but differing `(ak, nk, rivk)`. -/
+structure OpeningBreak (Extract : G → B) (S : G) (hfn : B → B → F)
+    (w₁ w₂ : Witness G F B SK QK) : Prop where
+  opening₁ : KBOpening Extract S hfn w₁
+  opening₂ : KBOpening Extract S hfn w₂
+  ivk_eq : w₁.ivk = w₂.ivk
+  /-- The witnesses differ in the opening data. -/
+  proj_ne : (Extract w₁.akP, w₁.nk, w₁.rivk) ≠ (Extract w₂.akP, w₂.nk, w₂.rivk)
 
 /-- The deterministic reduction (composable core), as computed data: an `OpeningBreak` exhibits a
 ±-collision of the Pedersen-scalar map `pedersenScalar hfn`. The colliding queries are the two
@@ -138,12 +146,12 @@ def _root_.Zcash.Security.RandomOracle.CollisionUpToSign.ofOpeningBreak
     RandomOracle.CollisionUpToSign (pedersenScalar hfn) where
   q₁ := (Extract w₁.akP, w₁.nk, w₁.rivk)
   q₂ := (Extract w₂.akP, w₂.nk, w₂.rivk)
-  ne := hbrk.2.2.2
+  ne := hbrk.proj_ne
   pm := by
     -- Commitivk(w₁) = w₁.ivk = w₂.ivk = Commitivk(w₂)
     simpa [pedersenScalar] using
       commit_scalar_pm Extract S hfn hExt hS
-        (hbrk.1.1.symm.trans (hbrk.2.2.1.trans hbrk.2.1.1))
+        (hbrk.opening₁.commit.symm.trans (hbrk.ivk_eq.trans hbrk.opening₂.commit))
 
 end Algebra
 
@@ -151,46 +159,51 @@ section Derivation
 variable [AddCommGroup G] [Field F] [Field B] [Module F G]
 
 /-- `BindKeys^sk` (ZIP 2005): the `sk`-branch derivation constraints. -/
-def BindKeysSk (Ggen : G) (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
-    (sk : SK) (akP : G) (nk : B) (rivk_ext : F) : Prop :=
-  akP = (Hask sk) • Ggen ∧ nk = Hnk sk ∧ rivk_ext = Hrivk_legacy sk
+structure BindKeysSk (Ggen : G) (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
+    (sk : SK) (akP : G) (nk : B) (rivk_ext : F) : Prop where
+  akP_eq : akP = (Hask sk) • Ggen
+  nk_eq : nk = Hnk sk
+  rivk_ext_eq : rivk_ext = Hrivk_legacy sk
 
-/-- `KBDerivation` — the ZIP 2005 derivation constraints: the per-branch `Hrivk_ext` /
-`BindKeys^sk` constraint (the `qk_or_sk` branch structure is enforced by the `Branch` type),
-and `rivk ∈ {rivk_ext, Hrivk_int ...}`. -/
-def KBDerivation (Extract : G → B) (Ggen : G)
+/-- `KBDerivation` — the ZIP 2005 derivation constraints (the `qk_or_sk` branch structure is
+enforced by the `Branch` type). -/
+structure KBDerivation (Extract : G → B) (Ggen : G)
     (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
     (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
-    (w : Witness G F B SK QK) : Prop :=
-  (match w.qk_or_sk with
+    (w : Witness G F B SK QK) : Prop where
+  /-- The per-branch constraint: `Hrivk_ext` on the qk-branch, `BindKeys^sk` on the sk-branch. -/
+  branch : match w.qk_or_sk with
     | .qk qk => w.rivk_ext = Hrivk_ext qk (Extract w.akP) w.nk
-    | .sk sk => BindKeysSk Ggen Hask Hnk Hrivk_legacy sk w.akP w.nk w.rivk_ext) ∧
-  (w.rivk = w.rivk_ext ∨ w.rivk = Hrivk_int w.rivk_ext (Extract w.akP) w.nk)
+    | .sk sk => BindKeysSk Ggen Hask Hnk Hrivk_legacy sk w.akP w.nk w.rivk_ext
+  /-- `rivk ∈ {rivk_ext, Hrivk_int ...}`. -/
+  rivk_choice : w.rivk = w.rivk_ext ∨ w.rivk = Hrivk_int w.rivk_ext (Extract w.akP) w.nk
 
 end Derivation
 
 section Full
 variable [AddCommGroup G] [Field F] [Field B] [Module F G]
 
-/-- The full key-binding condition: commitment opening (`KBOpening`) and derivation constraints
-(`KBDerivation`). -/
-def KB (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
+/-- The full key-binding condition: commitment opening and key derivation constraints. -/
+structure KB (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
     (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
     (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
-    (w : Witness G F B SK QK) : Prop :=
-  KBOpening Extract S hfn w ∧ KBDerivation Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w
+    (w : Witness G F B SK QK) : Prop where
+  opening : KBOpening Extract S hfn w
+  derivation : KBDerivation Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w
 
 /-- A full key-binding break (ZIP 2005): two valid witnesses with equal `ivk` differing in some
 component other than the y-sign of `ak^ℙ` (the projection uses `ak = Extract ak^ℙ`, quotienting the
 sign). -/
-def Break (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
+structure Break (Extract : G → B) (S : G) (hfn : B → B → F) (Ggen : G)
     (Hask : SK → F) (Hnk : SK → B) (Hrivk_legacy : SK → F)
     (Hrivk_ext : QK → B → B → F) (Hrivk_int : F → B → B → F)
-    (w₁ w₂ : Witness G F B SK QK) : Prop :=
-  KB Extract S hfn Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₁ ∧
-  KB Extract S hfn Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₂ ∧
-  w₁.ivk = w₂.ivk ∧
-  (w₁.qk_or_sk, Extract w₁.akP, w₁.nk, w₁.rivk) ≠ (w₂.qk_or_sk, Extract w₂.akP, w₂.nk, w₂.rivk)
+    (w₁ w₂ : Witness G F B SK QK) : Prop where
+  kb₁ : KB Extract S hfn Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₁
+  kb₂ : KB Extract S hfn Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₂
+  ivk_eq : w₁.ivk = w₂.ivk
+  /-- The witnesses differ in the break projection. -/
+  proj_ne : (w₁.qk_or_sk, Extract w₁.akP, w₁.nk, w₁.rivk)
+    ≠ (w₂.qk_or_sk, Extract w₂.akP, w₂.nk, w₂.rivk)
 
 /-- `nk`-pinning (Balance's import): two valid witnesses with the same `ivk` that do **not** form a
 key-binding break must share the same nullifier key `nk`. (The probability that a break *does* occur
@@ -286,7 +299,7 @@ theorem rivk_eq_finalOracle
   · rw [if_pos hext]
     rcases hb : w.qk_or_sk with qk | sk <;> simp only [hb] at hbc ⊢ <;> simp only [FinalQuery.eval]
     · rw [hext, hbc]
-    · rw [hext, hbc.2.2]
+    · rw [hext, hbc.rivk_ext_eq]
   · rw [if_neg hext]
     simp only [FinalQuery.eval]
     exact hrivk.resolve_left hext
@@ -355,7 +368,7 @@ theorem sameIvk_finalOracle_pm
       =± hfn (Extract w₂.akP) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int := by
   have hcm : Commitivk Extract S hfn w₁.rivk (Extract w₁.akP) w₁.nk
       = Commitivk Extract S hfn w₂.rivk (Extract w₂.akP) w₂.nk :=
-    hop₁.1.symm.trans (hivk.trans hop₂.1)
+    hop₁.commit.symm.trans (hivk.trans hop₂.commit)
   have hpm := commit_scalar_pm Extract S hfn hExt hS hcm
   rw [rivk_eq_finalOracle Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int hd₁,
       rivk_eq_finalOracle Extract Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int hd₂] at hpm
@@ -375,7 +388,7 @@ theorem openingBreak_finalOracle_pm
     hfn (Extract w₁.akP) w₁.nk + (finalQueryOf Extract w₁).eval Hrivk_legacy Hrivk_ext Hrivk_int
       =± hfn (Extract w₂.akP) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int :=
   sameIvk_finalOracle_pm Extract S hfn Ggen hExt hS Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int
-    hbrk.1 hbrk.2.1 hbrk.2.2.1 hd₁ hd₂
+    hbrk.opening₁ hbrk.opening₂ hbrk.ivk_eq hd₁ hd₂
 
 /-- The `H^*` ±-equation from a full key-binding `Break` (projection `(qk_or_sk, ak, nk, rivk)`
 differing). The derivation constraints are already inside the `Break` (via `KB`), and *no*
@@ -392,7 +405,7 @@ theorem break_finalOracle_pm
     hfn (Extract w₁.akP) w₁.nk + (finalQueryOf Extract w₁).eval Hrivk_legacy Hrivk_ext Hrivk_int
       =± hfn (Extract w₂.akP) w₂.nk + (finalQueryOf Extract w₂).eval Hrivk_legacy Hrivk_ext Hrivk_int :=
   sameIvk_finalOracle_pm Extract S hfn Ggen hExt hS Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int
-    hbrk.1.1 hbrk.2.1.1 hbrk.2.2.1 hbrk.1.2 hbrk.2.1.2
+    hbrk.kb₁.opening hbrk.kb₂.opening hbrk.ivk_eq hbrk.kb₁.derivation hbrk.kb₂.derivation
 
 /-- The Break projection `(qk_or_sk, ak, nk, rivk)` an *externally-decoded* witness must have, read
 off its `rivk_ext`-derivation query (`proj_eq_projOfQuery`); `.int` is not in `extQueryOf`'s
@@ -504,7 +517,8 @@ theorem residual_of_finalQuery_eq
       simp only [FinalQuery.int.injEq] at hq
       obtain ⟨hre, hak, hnk⟩ := hq
       have hrv : w₁.rivk = w₂.rivk := by
-        rw [hd₁.2.resolve_left hext₁, hd₂.2.resolve_left hext₂, hre, hak, hnk]
+        rw [hd₁.rivk_choice.resolve_left hext₁, hd₂.rivk_choice.resolve_left hext₂, hre, hak,
+          hnk]
       refine ⟨fun h => hne5 ?_, ?_⟩
       · -- equal `extQueryOf`s would equate qk_or_sk, hence the whole projections
         have hbr : w₁.qk_or_sk = w₂.qk_or_sk :=
@@ -547,9 +561,9 @@ def _root_.Zcash.Security.RandomOracle.CollisionUpToSign.ofBreak
       ne := hq
       pm := by
         rw [shiftedFinalOracle_finalQueryOf Extract Ggen hfn Hask Hnk Hrivk_legacy Hrivk_ext
-              Hrivk_int hbrk.1.2,
+              Hrivk_int hbrk.kb₁.derivation,
             shiftedFinalOracle_finalQueryOf Extract Ggen hfn Hask Hnk Hrivk_legacy Hrivk_ext
-              Hrivk_int hbrk.2.1.2]
+              Hrivk_int hbrk.kb₂.derivation]
         exact break_finalOracle_pm Extract S hfn Ggen hExt hS Hask Hnk Hrivk_legacy Hrivk_ext
           Hrivk_int hbrk }
 
