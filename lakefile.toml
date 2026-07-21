@@ -8,6 +8,11 @@ pp.unicode.fun = true # pretty-prints `fun a ↦ b`
 autoImplicit = false
 
 [[require]]
+name = "Clean"
+git = "https://github.com/Verified-zkEVM/clean"
+rev = "4325a48a7be46ee1e873ce2e109990eee5e4b381"
+
+[[require]]
 name = "CompElliptic"
 git = "https://github.com/daira/CompElliptic"
 rev = "0eee049f32e1c2bbcb37cb31f89e53f8f52f7d2a"
