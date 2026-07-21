@@ -29,40 +29,63 @@ So each definition sits on a three-layer stack:
 
 ```mermaid
 flowchart TD
-  KS["Knowledge soundness<br/>(verifier-soundness proof map)"]
-  KS -. hencodes gap .-> STMT["Action statement satisfied<br/>ActionSatisfied · spec §4.17.4"]
-
-  subgraph GAMES["Ledger-model security games"]
+  subgraph GAMES["Ledger-model security games — the capstones"]
     BAL["Balance"]
-    SPEND["Spendability / Spend authority"]
+    SPEND["Spendability"]
+    SPENDAUTH["Spend authority"]
   end
 
-  STMT --> BAL
-  STMT --> SPEND
+  SPEND --> SPENDAUTH
 
-  BS["Binding-signature balance<br/>Zcash/Security/BindingSignature"]
-  KB["Key binding · ZIP 2005 (ROM)<br/>Zcash/Security/KeyBinding"]
+  BAL ---> NCB["Note-commitment binding"]
+  BAL ---> BS["Binding-signature balance<br/>Zcash/Security/BindingSignature"]
+  BAL ---> KB["Key binding · ZIP 2005 (ROM)<br/>Zcash/Security/KeyBinding"]
+  SPEND ---> KB
+  SPEND ---> MERK["Merkle-path binding"]
 
-  BAL --> BS
-  BAL --> KB
-  SPEND --> KB
+  BAL --> SPENDAUTH
 
-  BS -->|non-balancing bundle| NR["NontrivialRelation<br/>V,R discrete-log relation"]
-  BAL -->|wrong note opening| NCB["NoteCommitBreak"]
-  SPEND -->|wrong Merkle path| MC["Merkle collision"]
-  KB -->|two ivk openings| CUS["CollisionUpToSign"]
+  subgraph ASSUMPTIONS["Computational hardness assumptions"]
+    DL[("Discrete log")]
+    CR[("Hash collision resistance")]
+  end
 
-  NR --> DL[("Discrete log<br/>DLR ≡ DL")]
-  NCB -->|Sinsemilla / DLR| DL
-  MC --> RO[("Hash / random-oracle<br/>collision-resistance")]
-  CUS -->|birthday bound| RO
+  subgraph MODELS["Heuristic adversary models"]
+    ROM[("Random oracle")]
+  end
+
+  BS --->|non-balancing bundle computes| NDLR["NontrivialRelation<br/>(V,R) discrete-log relation"]
+  BS --> STMT["Witness or replay evidence<br/>for the Action statement<br/>ActionSatisfied · spec §4.17.4"]
+  KB --> STMT
+  KB --->|conflicting ivk witnesses compute| CUS["CollisionUpToSign<br/>shifted oracle, distinct queries"]
+  NCB -->|wrong note opening computes| NCBK["NoteCommitBreak"]
+  NCB --> STMT
+  MERK --> STMT
+  MERK --->|wrong Merkle path computes| MC["Merkle collision"]
+
+  STMT -. "justified by the extractor;<br/>hencodes gap" .-> KS["Knowledge soundness:<br/>an accepting proof yields a computed<br/>witness or break data"]
+  NCBK --> SDLR["Sinsemilla discrete-log relation"]
+
+  KS --->|AGM heuristic + independent hash-to-curve bases| DL
+  KS -->|"Fiat–Shamir heuristic"| ROM
+  CUS -->|"birthday counting q(q-1)/r,<br/>no assumption"| ROM
+  NDLR --->|"independent hash-to-curve bases"| DL
+  SDLR --->|"independent hash-to-curve bases"| DL
+  MC ---> CR
 ```
 
-The security games do not stand alone: they consume the **Action statement holding on the
-witness** (`ActionSatisfied`), which is exactly what the verifier-soundness proof delivers.
-That edge crosses the `hencodes` gap — "gate satisfaction implies the intended high-level
-statement" — which is [tracked, out-of-Lean, and not yet started](glossary.md). Everything
-below that edge is the subject of this page.
+Every solid arrow reads "rests on"; where an edge carries a label, the label names the
+computed break object flowing along it, or the adversary model or side condition under which
+the reduction holds (the AGM restriction, base independence from hash-to-curve, the birthday
+count). The games are the top-level capstones. The ledger model requires the adversary to
+supply, along with any accepting proof, a **witness or replay evidence** for the Action
+statement (`ActionSatisfied`) — in the replay case the ledger oracle can produce the
+previously supplied witness. Each component argument consumes the statement's satisfaction
+*on that witness*. Knowledge soundness is what justifies the modelling: whenever the ledger
+layer needs a witness, the extractor computes one —or computes break data— from the accepting
+proof. The dashed edge marks that justification, which crosses the `hencodes` gap — "gate
+satisfaction implies the intended high-level statement". The latter is the subject of the
+circuit soundness proof.
 
 ## The definitions
 
