@@ -485,6 +485,18 @@ theorem queries_pair_collision_measure_le {α : Type*} (s : Q → F)
 
 end Generic
 
+/-! ## Averaging a pointwise bound -/
+
+/-- A measure bound that holds for every conditioned slice survives averaging: if each
+component `f a` gives the event measure at most `ε`, so does the mixture `p.bind f`. -/
+theorem toOuterMeasure_bind_le {α β : Type*} (p : PMF α) (f : α → PMF β) (s : Set β)
+    {ε : ℝ≥0∞} (h : ∀ a, (f a).toOuterMeasure s ≤ ε) :
+    (p.bind f).toOuterMeasure s ≤ ε := by
+  rw [PMF.toOuterMeasure_bind_apply]
+  calc ∑' a, p a * (f a).toOuterMeasure s
+      ≤ ∑' a, p a * ε := ENNReal.tsum_le_tsum fun a => mul_le_mul_right (h a) _
+    _ = ε := by rw [ENNReal.tsum_mul_right, PMF.tsum_coe, one_mul]
+
 /-! ## The key-binding capstone -/
 
 section Capstone
@@ -619,6 +631,28 @@ theorem break_measure_le_of_queryBound (Extract : G → B) (S : G) (hfn : B → 
   have h43 : n + 4 - 1 = n + 3 := by omega
   simpa [OracleComp.run_completing, h43] using hbound
 
+
+/-- **Adaptive key-binding bound over adversary randomness and the outer oracles.** The
+pointwise capstone conditions on the adversary's private randomness and the `H^ask`/`H^nk`
+tables; this lifts it to the mixture. The index `ι` bundles everything the pointwise bound
+fixes — private coins and both outer tables, under any joint distribution `p` — and the
+bound is uniform in the slice, so averaging preserves it. -/
+theorem break_measure_le_mixture {ι : Type*} (Extract : G → B) (S : G) (hfn : B → B → F)
+    (Ggen : G) (hExt : ∀ P R : G, Extract P = Extract R ↔ P =± R) (hS : S ≠ 0)
+    (p : PMF ι) (Hask : ι → SK → F) (Hnk : ι → SK → B)
+    {A : ι → OracleComp (FinalQuery QK SK B F) F (Witness G F B SK QK × Witness G F B SK QK)}
+    {n : ℕ} (hQ : ∀ i, (A i).QueryBound n) :
+    ((p.bind fun i => (PMF.uniformOfFintype (FinalQuery QK SK B F → F)).map
+        (Prod.mk i))).toOuterMeasure
+        {x : ι × (FinalQuery QK SK B F → F) |
+          Break Extract S hfn Ggen (Hask x.1) (Hnk x.1)
+            (fun sk => x.2 (.legacy sk)) (fun qk ak nk => x.2 (.ext qk ak nk))
+            (fun rivk_ext ak nk => x.2 (.int rivk_ext ak nk))
+            ((A x.1).run x.2).1 ((A x.1).run x.2).2}
+      ≤ ((n + 4) * (n + 3) : ℕ) / Fintype.card F := by
+  refine toOuterMeasure_bind_le _ _ _ fun i => ?_
+  rw [PMF.toOuterMeasure_map_apply]
+  exact break_measure_le_of_queryBound Extract S hfn Ggen hExt hS (Hask i) (Hnk i) (hQ i)
 
 end Capstone
 
