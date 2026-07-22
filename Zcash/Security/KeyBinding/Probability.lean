@@ -52,6 +52,9 @@ an `OracleComp` from the Fiat–Shamir layer):
 * `uniform_triple_eval` — the triple↔table transport: the three derivation oracles drawn
   independently and uniformly assemble (`FinalQuery.eval`) into exactly the uniform whole
   table.
+* `break_measure_le_mixture` / `break_measure_le_product` — the bound over the full
+  probability space: adversary private randomness (any distribution) and the five oracle
+  tables drawn independently, the tables uniformly; same `(Q+4)·(Q+3)/|F|` bound.
 
 The remaining modelling steps toward the full ZIP 2005 key-binding theorem are tracked in
 issue #68.
@@ -707,6 +710,45 @@ theorem break_measure_le_mixture {ι : Type*} (Extract : G → AK) (S : G) (hfn 
   rw [PMF.toOuterMeasure_map_apply]
   exact break_measure_le_of_queryBound Extract S hfn Ggen hExt hS (Hask i) (Hnk i) (hQ i)
 
+
+/-- **Adaptive key-binding bound over five independent oracle tables** — ZIP 2005's
+probability space in full: the adversary's private randomness (any distribution `p`) and
+the five oracle tables — `H^ask`, `H^nk`, and the three final `rivk`-derivation oracles —
+drawn independently, the tables uniformly. The machine runs on the combined table, and the
+bound is the hypothesis-free `(n+4)·(n+3)/|F|`. -/
+theorem break_measure_le_product {ι : Type*} [Nonempty NK]
+    (Extract : G → AK) (S : G) (hfn : AK → NK → F)
+    (Ggen : G) (hExt : ∀ P R : G, Extract P = Extract R ↔ P =± R) (hS : S ≠ 0)
+    (p : PMF ι)
+    {A : ι → OracleComp (FinalQuery QK SK AK NK F) F
+      (Witness G F AK NK SK QK × Witness G F AK NK SK QK)}
+    {n : ℕ} (hQ : ∀ i, (A i).QueryBound n) :
+    ((p.bind fun i => (PMF.uniformOfFintype (SK → F)).bind fun Hask =>
+        (PMF.uniformOfFintype (SK → NK)).bind fun Hnk =>
+          (PMF.uniformOfFintype (SK → F)).bind fun Hleg =>
+            (PMF.uniformOfFintype (QK → AK → NK → F)).bind fun Hext =>
+              (PMF.uniformOfFintype (F → AK → NK → F)).map fun Hint =>
+                (i, Hask, Hnk, FinalQuery.eval Hleg Hext Hint))).toOuterMeasure
+        {x : ι × (SK → F) × (SK → NK) × (FinalQuery QK SK AK NK F → F) |
+          Break Extract S hfn Ggen x.2.1 x.2.2.1
+            (fun sk => x.2.2.2 (.legacy sk)) (fun qk ak nk => x.2.2.2 (.ext qk ak nk))
+            (fun rivk_ext ak nk => x.2.2.2 (.int rivk_ext ak nk))
+            ((A x.1).run x.2.2.2).1 ((A x.1).run x.2.2.2).2}
+      ≤ ((n + 4) * (n + 3) : ℕ) / Fintype.card F := by
+  refine toOuterMeasure_bind_le _ _ _ fun i => ?_
+  refine toOuterMeasure_bind_le _ _ _ fun Hask => ?_
+  refine toOuterMeasure_bind_le _ _ _ fun Hnk => ?_
+  have htr : ((PMF.uniformOfFintype (SK → F)).bind fun Hleg =>
+        (PMF.uniformOfFintype (QK → AK → NK → F)).bind fun Hext =>
+          (PMF.uniformOfFintype (F → AK → NK → F)).map fun Hint =>
+            (i, Hask, Hnk, FinalQuery.eval Hleg Hext Hint))
+      = (PMF.uniformOfFintype (FinalQuery QK SK AK NK F → F)).map fun O =>
+          (i, Hask, Hnk, O) := by
+    rw [← uniform_triple_eval]
+    simp only [PMF.map_bind, PMF.map_comp]
+    rfl
+  rw [htr, PMF.toOuterMeasure_map_apply]
+  exact break_measure_le_of_queryBound Extract S hfn Ggen hExt hS Hask Hnk (hQ i)
 
 end Capstone
 
