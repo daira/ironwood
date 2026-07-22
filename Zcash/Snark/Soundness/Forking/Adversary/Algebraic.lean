@@ -61,32 +61,32 @@ theorem grindDecode_round {L : ℕ} [Inhabited VestaG] {shape : Shape}
 
 /-- Multiopen values do not depend on the IPA round challenges. -/
 theorem multiopenValue_ipaRound [DecidableEq VestaG]
-    [Inhabited VestaG] {shape : Shape} (vk : VerifyingKey shape Fp VestaG)
+    [Inhabited VestaG] {shape : Shape} (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG)
     (ps : ProofString shape Fp VestaG) (c : Challenges shape.k Fp) (χ : Fin shape.k → Fp) :
-    multiopenValue vk ps {c with ipaRound := χ} = multiopenValue vk ps c := rfl
+    multiopenValue vk instanceCommitment ps {c with ipaRound := χ} = multiopenValue vk instanceCommitment ps c := rfl
 
 /-- Replacing the IPA proof suffix does not change the multiopen value. -/
 theorem multiopenValue_spliceIpa [DecidableEq VestaG]
-    [Inhabited VestaG] {shape : Shape} (vk : VerifyingKey shape Fp VestaG)
+    [Inhabited VestaG] {shape : Shape} (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG)
     (ps : ProofString shape Fp VestaG) (R : Fin shape.k → VestaG × VestaG) (cc ff : Fp)
     (c : Challenges shape.k Fp) :
-    multiopenValue vk (spliceIpa ps R cc ff) c = multiopenValue vk ps c := rfl
+    multiopenValue vk instanceCommitment (spliceIpa ps R cc ff) c = multiopenValue vk instanceCommitment ps c := rfl
 
 /-- Multiopen commitments do not depend on the IPA round challenges. -/
 theorem multiopenCommitment_ipaRound [DecidableEq VestaG]
     [Inhabited VestaG] {shape : Shape} (g : Fin (2 ^ shape.k) → VestaG)
-    (w u : VestaG) (vk : VerifyingKey shape Fp VestaG) (ps : ProofString shape Fp VestaG)
+    (w u : VestaG) (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (ps : ProofString shape Fp VestaG)
     (c : Challenges shape.k Fp) (χ : Fin shape.k → Fp) :
-    multiopenCommitment g w u vk ps {c with ipaRound := χ}
-      = multiopenCommitment g w u vk ps c := rfl
+    multiopenCommitment g w u vk instanceCommitment ps {c with ipaRound := χ}
+      = multiopenCommitment g w u vk instanceCommitment ps c := rfl
 
 /-- Replacing the IPA proof suffix does not change the multiopen commitment. -/
 theorem multiopenCommitment_spliceIpa [DecidableEq VestaG]
     [Inhabited VestaG] {shape : Shape} (g : Fin (2 ^ shape.k) → VestaG)
-    (w u : VestaG) (vk : VerifyingKey shape Fp VestaG) (ps : ProofString shape Fp VestaG)
+    (w u : VestaG) (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (ps : ProofString shape Fp VestaG)
     (R : Fin shape.k → VestaG × VestaG) (cc ff : Fp) (c : Challenges shape.k Fp) :
-    multiopenCommitment g w u vk (spliceIpa ps R cc ff) c
-      = multiopenCommitment g w u vk ps c := rfl
+    multiopenCommitment g w u vk instanceCommitment (spliceIpa ps R cc ff) c
+      = multiopenCommitment g w u vk instanceCommitment ps c := rfl
 
 /-- Every pre-IPA squeeze position is no later than the final one. -/
 private theorem preIpaLen_le_last (shape : Shape) (n₀ : ℕ) (i : Fin 11) :
@@ -199,7 +199,7 @@ end AlgebraicProofString
 /-- An algebraic proof and its aggregate `(g,U,W)` coordinates after transcript assembly. -/
 structure AlgebraicWfProof {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (vk : VerifyingKey shape Fp VestaG) where
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) where
   algebraicProof : AlgebraicProofString shape basis
   wellFormed : PsWellFormed algebraicProof.erase
   aMulti : (Fin 11 → Fp) → Fin (2 ^ shape.k) → Fp
@@ -211,7 +211,7 @@ structure AlgebraicWfProof {shape : Shape}
         multiBlind ν • (ursOfAugmentedBasis shape.k basis).w =
       multiopenCommitment (ursOfAugmentedBasis shape.k basis).g
         (ursOfAugmentedBasis shape.k basis).w (ursOfAugmentedBasis shape.k basis).u
-        vk algebraicProof.erase (chRecord ν (fun _ => 0))
+        vk instanceCommitment algebraicProof.erase (chRecord ν (fun _ => 0))
   s : Fin (2 ^ shape.k) → Fp
   sU : Fp
   sBlind : Fp
@@ -223,12 +223,12 @@ namespace AlgebraicWfProof
 
 /-- The ordinary well-formed proof used by the deployed transcript schedule. -/
 def proof {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
-    {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) : WfProof shape :=
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (p : AlgebraicWfProof basis vk instanceCommitment) : WfProof shape :=
   ⟨p.algebraicProof.erase, p.wellFormed⟩
 
 /-- Representation-carrying IPA round points. -/
 def rounds {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
-    {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) (j : Fin shape.k) :
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (p : AlgebraicWfProof basis vk instanceCommitment) (j : Fin shape.k) :
     AlgebraicPoint (F := Fp) basis × AlgebraicPoint (F := Fp) basis :=
   p.algebraicProof.ipaRounds j
 
@@ -253,15 +253,15 @@ def FullDecode.precomp {T P P' : Type*} {m k : ℕ}
 /-- The algebraic output's pre-IPA squeeze points. -/
 def algebraicFullPrefixesPre {shape : Shape}
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
-    {vk : VerifyingKey shape Fp VestaG} (init : List (TranscriptElt Fp VestaG))
-    (p : AlgebraicWfProof basis vk) :=
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (init : List (TranscriptElt Fp VestaG))
+    (p : AlgebraicWfProof basis vk instanceCommitment) :=
   fullPrefixesPre init p.proof
 
 /-- The algebraic output's IPA round squeeze points. -/
 def algebraicFullPrefixes {shape : Shape}
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
-    {vk : VerifyingKey shape Fp VestaG} (init : List (TranscriptElt Fp VestaG))
-    (p : AlgebraicWfProof basis vk) :=
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (init : List (TranscriptElt Fp VestaG))
+    (p : AlgebraicWfProof basis vk instanceCommitment) :=
   fullPrefixes init p.proof
 
 /-- Equality of one deployed IPA squeeze point fixes the complete pre-IPA transcript. -/
@@ -297,49 +297,49 @@ theorem preIpaTranscript_eq_of_fullPrefix_eq {shape : Shape}
 /-- Acceptance with a carried aggregate opening that mismatches the accepted value. -/
 def fullAlgebraicBindingAttack {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (vk : VerifyingKey shape Fp VestaG) (p : AlgebraicWfProof basis vk)
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (p : AlgebraicWfProof basis vk instanceCommitment)
     (ν : Fin 11 → Fp) (χ : Fin shape.k → Fp) : Prop :=
   DeployedIpaVerifierEq (ursOfAugmentedBasis shape.k basis).g
       (ursOfAugmentedBasis shape.k basis).w (ursOfAugmentedBasis shape.k basis).u
-      vk p.proof.1 (chRecord ν χ) ∧
+      vk instanceCommitment p.proof.1 (chRecord ν χ) ∧
     innerProduct (p.aMulti ν) (evalVector shape.k (ν 7)) ≠
-      multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0)) +
+      multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) +
         (ν 10)⁻¹ * (p.multiU ν + ν 9 * p.sU) -
         ν 9 * innerProduct p.s (evalVector shape.k (ν 7))
 
 /-- The binding attack with the `z ≠ 0` guard required by the fork kernel. -/
 def fullAlgebraicBindingAttackZ {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (vk : VerifyingKey shape Fp VestaG) (p : AlgebraicWfProof basis vk)
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (p : AlgebraicWfProof basis vk instanceCommitment)
     (ν : Fin 11 → Fp) (χ : Fin shape.k → Fp) : Prop :=
-  fullAlgebraicBindingAttack basis vk p ν χ ∧ ν 10 ≠ 0
+  fullAlgebraicBindingAttack basis vk instanceCommitment p ν χ ∧ ν 10 ≠ 0
 
 /-- Plain deployed verifier acceptance, with no folding-challenge guard. `fullAlgebraicAcceptZ` is
 this conjoined with `ν 10 ≠ 0`; the `z = 0` slice is priced separately. -/
 def fullAlgebraicAccept {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (vk : VerifyingKey shape Fp VestaG) (p : AlgebraicWfProof basis vk)
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (p : AlgebraicWfProof basis vk instanceCommitment)
     (ν : Fin 11 → Fp) (χ : Fin shape.k → Fp) : Prop :=
   DeployedIpaVerifierEq (ursOfAugmentedBasis shape.k basis).g
       (ursOfAugmentedBasis shape.k basis).w (ursOfAugmentedBasis shape.k basis).u
-      vk p.proof.1 (chRecord ν χ)
+      vk instanceCommitment p.proof.1 (chRecord ν χ)
 
 /-- Verifier acceptance with the nonzero folding challenge required by extraction. -/
 def fullAlgebraicAcceptZ {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (vk : VerifyingKey shape Fp VestaG) (p : AlgebraicWfProof basis vk)
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (p : AlgebraicWfProof basis vk instanceCommitment)
     (ν : Fin 11 → Fp) (χ : Fin shape.k → Fp) : Prop :=
   DeployedIpaVerifierEq (ursOfAugmentedBasis shape.k basis).g
       (ursOfAugmentedBasis shape.k basis).w (ursOfAugmentedBasis shape.k basis).u
-      vk p.proof.1 (chRecord ν χ) ∧ ν 10 ≠ 0
+      vk instanceCommitment p.proof.1 (chRecord ν χ) ∧ ν 10 ≠ 0
 
 /-- The accepting-transcript test read directly from one oracle table. -/
 def algebraicTableAcceptZ {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (vk : VerifyingKey shape Fp VestaG) (init : List (TranscriptElt Fp VestaG))
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (init : List (TranscriptElt Fp VestaG))
     (O : BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k) → Fp)
-    (p : AlgebraicWfProof basis vk) : Prop :=
-  fullAlgebraicAcceptZ basis vk p
+    (p : AlgebraicWfProof basis vk instanceCommitment) : Prop :=
+  fullAlgebraicAcceptZ basis vk instanceCommitment p
     (fun i => O (algebraicFullPrefixesPre init p i))
     (fun j => O (algebraicFullPrefixes init p j))
 
@@ -347,16 +347,16 @@ def algebraicTableAcceptZ {shape : Shape}
 table and extractor coins determine the returned certificate. -/
 def algebraicForkCertAttempt {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (vk : VerifyingKey shape Fp VestaG) (init : List (TranscriptElt Fp VestaG))
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (init : List (TranscriptElt Fp VestaG))
     (A : OracleComp
       (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k)) Fp
-      (AlgebraicWfProof basis vk))
+      (AlgebraicWfProof basis vk instanceCommitment))
     (O : BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k) → Fp)
     (coins : RecursiveForkCoins Fp shape.k) :
     RecursiveForkAttempt (AlgebraicDForkCert (F := Fp) basis shape.k) :=
   recursiveAlgebraicFork basis shape.k A (algebraicFullPrefixes init)
     (fun p => p.rounds) (fun p => (p.proof.1.ipaC, p.proof.1.ipaF))
-    (algebraicTableAcceptZ basis vk init) (fun O p => by
+    (algebraicTableAcceptZ basis vk instanceCommitment init) (fun O p => by
       unfold algebraicTableAcceptZ fullAlgebraicAcceptZ DeployedIpaVerifierEq
       infer_instance) O coins
 
@@ -364,36 +364,36 @@ def algebraicForkCertAttempt {shape : Shape}
 return a certificate. -/
 noncomputable def algebraicForkCertFailureSet {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (vk : VerifyingKey shape Fp VestaG) (init : List (TranscriptElt Fp VestaG))
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (init : List (TranscriptElt Fp VestaG))
     (A : OracleComp
       (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k)) Fp
-      (AlgebraicWfProof basis vk))
+      (AlgebraicWfProof basis vk instanceCommitment))
     (coins : RecursiveForkCoins Fp shape.k) :
     Set (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k) → Fp) :=
-  {O | fsWinsFull A (fullAlgebraicAcceptZ basis vk)
+  {O | fsWinsFull A (fullAlgebraicAcceptZ basis vk instanceCommitment)
       (algebraicFullPrefixesPre init) (algebraicFullPrefixes init) O ∧
-    ¬ (algebraicForkCertAttempt basis vk init A O coins).output.isSome}
+    ¬ (algebraicForkCertAttempt basis vk instanceCommitment init A O coins).output.isSome}
 
 /-- The concrete recursive certificate producer loses only the bounded-query escape slice. -/
 theorem algebraicForkCertFailure_measure_le {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (vk : VerifyingKey shape Fp VestaG) (init : List (TranscriptElt Fp VestaG))
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (init : List (TranscriptElt Fp VestaG))
     (A : OracleComp
       (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k)) Fp
-      (AlgebraicWfProof basis vk))
+      (AlgebraicWfProof basis vk instanceCommitment))
     (tape : RecursiveForkTape Fp shape.k) {Q : ℕ} (hQ : A.QueryBound Q) :
     (PMF.uniformOfFintype
       (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k) → Fp)).toOuterMeasure
-        (algebraicForkCertFailureSet basis vk init A tape.toCoins)
+        (algebraicForkCertFailureSet basis vk instanceCommitment init A tape.toCoins)
       ≤ (Q + shape.k) * (3 / Fintype.card Fp) := by
   let D : PrefixDecode
       (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k)) shape.k
-      (algebraicFullPrefixes (basis := basis) (vk := vk) init) :=
+      (algebraicFullPrefixes (basis := basis) (vk := vk) (instanceCommitment := instanceCommitment) init) :=
     ((fullDecodeDeployed shape init).precomp
-      (fun p : AlgebraicWfProof basis vk => p.proof)).toPrefixDecode
+      (fun p : AlgebraicWfProof basis vk instanceCommitment => p.proof)).toPrefixDecode
   have h := recursiveForkFailure_measure_le basis shape.k A (algebraicFullPrefixes init)
     (fun p => p.rounds) (fun p => (p.proof.1.ipaC, p.proof.1.ipaF))
-    (algebraicTableAcceptZ basis vk init) (fun O p => by
+    (algebraicTableAcceptZ basis vk instanceCommitment init) (fun O p => by
       unfold algebraicTableAcceptZ fullAlgebraicAcceptZ DeployedIpaVerifierEq
       infer_instance) D tape.toCoins tape.toCoins_complete hQ
   simpa only [recursiveForkFailureSet, algebraicForkCertFailureSet, algebraicForkCertAttempt,
@@ -402,21 +402,21 @@ theorem algebraicForkCertFailure_measure_le {shape : Shape}
 /-- Every certificate returned by the deployed extractor satisfies `DeployedForkValid`. -/
 theorem algebraicForkCertAttempt_valid {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (vk : VerifyingKey shape Fp VestaG) (init : List (TranscriptElt Fp VestaG))
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (init : List (TranscriptElt Fp VestaG))
     (A : OracleComp
       (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k)) Fp
-      (AlgebraicWfProof basis vk))
+      (AlgebraicWfProof basis vk instanceCommitment))
     (O : BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k) → Fp)
     (coins : RecursiveForkCoins Fp shape.k)
     (cert : AlgebraicDForkCert (F := Fp) basis shape.k)
-    (hout : (algebraicForkCertAttempt basis vk init A O coins).output = some cert) :
+    (hout : (algebraicForkCertAttempt basis vk instanceCommitment init A O coins).output = some cert) :
     let p₀ := A.run O
     let ν₀ : Fin 11 → Fp := fun i => O (algebraicFullPrefixesPre init p₀ i)
     let urs := ursOfAugmentedBasis shape.k basis
     DeployedForkValid urs.g (evalVector shape.k (ν₀ 7)) urs.u urs.w (ν₀ 10)
       (commit urs
           (adjustedWitness (p₀.aMulti ν₀) p₀.s
-            (multiopenValue vk p₀.proof.1 (chRecord ν₀ (fun _ => 0))) (ν₀ 9)) +
+            (multiopenValue vk instanceCommitment p₀.proof.1 (chRecord ν₀ (fun _ => 0))) (ν₀ 9)) +
         (p₀.multiU ν₀ + ν₀ 9 * p₀.sU) • urs.u +
         (p₀.multiBlind ν₀ + ν₀ 9 * p₀.sBlind) • urs.w)
       cert.toDForkCert := by
@@ -427,11 +427,11 @@ theorem algebraicForkCertAttempt_valid {shape : Shape}
       (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k))
       11 shape.k (algebraicFullPrefixesPre init) (algebraicFullPrefixes init) :=
     (fullDecodeDeployed shape init).precomp
-      (fun p : AlgebraicWfProof basis vk => p.proof)
+      (fun p : AlgebraicWfProof basis vk instanceCommitment => p.proof)
   let D := FD.toPrefixDecode
   let stable := fun
       (O' : BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k) → Fp)
-      (p' : AlgebraicWfProof basis vk) =>
+      (p' : AlgebraicWfProof basis vk instanceCommitment) =>
     preIpaTranscript init p'.proof.1 = preIpaTranscript init p₀.proof.1 ∧
       ∀ i, O' (algebraicFullPrefixesPre init p' i) = ν₀ i
   have hstable₀ : stable O p₀ := by
@@ -440,7 +440,7 @@ theorem algebraicForkCertAttempt_valid {shape : Shape}
     rfl
   have hstableUpdate : ∀ (m : ℕ) (hm : m < shape.k)
       (O' : BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k) → Fp)
-      (p' : AlgebraicWfProof basis vk) (u : Fp), stable O' p' →
+      (p' : AlgebraicWfProof basis vk instanceCommitment) (u : Fp), stable O' p' →
       let t := algebraicFullPrefixes init p' ⟨m, hm⟩
       let O'' := Function.update O' t u
       let p'' := A.run O''
@@ -477,7 +477,7 @@ theorem algebraicForkCertAttempt_valid {shape : Shape}
     change Function.update O' t u (algebraicFullPrefixesPre init p'' i) = ν₀ i
     rw [Function.update_apply, if_neg hne, hprePoint]
     exact hs.2 i
-  have hdecode : ∀ (p : AlgebraicWfProof basis vk) (j : Fin shape.k),
+  have hdecode : ∀ (p : AlgebraicWfProof basis vk instanceCommitment) (j : Fin shape.k),
       ((p.rounds j).1.point, (p.rounds j).2.point) =
         grindDecode (algebraicFullPrefixes init p j) := by
     intro p j
@@ -485,21 +485,21 @@ theorem algebraicForkCertAttempt_valid {shape : Shape}
   have hreal : AlgebraicForkRealizes basis grindDecode
       (RecursiveRunSuffix shape.k 0 shape.k (by omega) A (algebraicFullPrefixes init)
         (fun p => (p.proof.1.ipaC, p.proof.1.ipaF))
-        (algebraicTableAcceptZ basis vk init) stable Fin.elim0) cert := by
+        (algebraicTableAcceptZ basis vk instanceCommitment init) stable Fin.elim0) cert := by
     apply recursiveAlgebraicForkFrom_realizes basis shape.k A (algebraicFullPrefixes init)
       (fun p => p.rounds) (fun p => (p.proof.1.ipaC, p.proof.1.ipaF))
-      (algebraicTableAcceptZ basis vk init) _ grindDecode D stable hstableUpdate hdecode
+      (algebraicTableAcceptZ basis vk instanceCommitment init) _ grindDecode D stable hstableUpdate hdecode
       0 (by omega) O p₀ coins cert Fin.elim0 rfl hstable₀
     · intro i
       exact Fin.elim0 i
     · simpa only [algebraicForkCertAttempt, recursiveAlgebraicFork] using hout
   have hPwhole : ∀ (chi : Fin shape.k → Fp),
-      (multiopenCommitment urs.g urs.w urs.u vk p₀.proof.1 (chRecord ν₀ chi)
-        + (∑ i, ([-(multiopenValue vk p₀.proof.1 (chRecord ν₀ chi))].getD i.val 0) • urs.g i)
+      (multiopenCommitment urs.g urs.w urs.u vk instanceCommitment p₀.proof.1 (chRecord ν₀ chi)
+        + (∑ i, ([-(multiopenValue vk instanceCommitment p₀.proof.1 (chRecord ν₀ chi))].getD i.val 0) • urs.g i)
         + (chRecord ν₀ chi : Challenges shape.k Fp).xi • p₀.proof.1.ipaS)
       = (commit urs
             (adjustedWitness (p₀.aMulti ν₀) p₀.s
-              (multiopenValue vk p₀.proof.1 (chRecord ν₀ (fun _ => 0))) (ν₀ 9))
+              (multiopenValue vk instanceCommitment p₀.proof.1 (chRecord ν₀ (fun _ => 0))) (ν₀ 9))
           + (p₀.multiU ν₀ + ν₀ 9 * p₀.sU) • urs.u
           + (p₀.multiBlind ν₀ + ν₀ 9 * p₀.sBlind) • urs.w) := by
     intro chi
@@ -512,7 +512,7 @@ theorem algebraicForkCertAttempt_valid {shape : Shape}
       show p₀.algebraicProof.erase.ipaS = p₀.algebraicProof.ipaS.point from rfl,
       ← p₀.ipaS_repr,
       sum_getD_single urs.g
-        (multiopenValue vk p₀.algebraicProof.erase (chRecord ν₀ (fun _ => 0))),
+        (multiopenValue vk instanceCommitment p₀.algebraicProof.erase (chRecord ν₀ (fun _ => 0))),
       commit_adjustedWitness]
     module
   apply AlgebraicForkRealizes.deployedForkValid basis grindDecode urs.u urs.w (ν₀ 10)
@@ -522,7 +522,7 @@ theorem algebraicForkCertAttempt_valid {shape : Shape}
     urs.g (evalVector shape.k (ν₀ 7)) urs.u urs.w (ν₀ 10)
       (commit urs
           (adjustedWitness (p₀.aMulti ν₀) p₀.s
-            (multiopenValue vk p₀.proof.1 (chRecord ν₀ (fun _ => 0))) (ν₀ 9)) +
+            (multiopenValue vk instanceCommitment p₀.proof.1 (chRecord ν₀ (fun _ => 0))) (ν₀ 9)) +
         (p₀.multiU ν₀ + ν₀ 9 * p₀.sU) • urs.u +
         (p₀.multiBlind ν₀ + ν₀ 9 * p₀.sBlind) • urs.w) cs
   have hsplice : p'.proof.1 =
@@ -581,32 +581,32 @@ theorem AlgebraicDForkCert.toCanonicalBasis_toDForkCert {shape : Shape}
 /-- Transport certificate validity to the canonical basis used by the deployed AGM instance. -/
 theorem algebraicForkCertAttempt_valid_canonical {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (vk : VerifyingKey shape Fp VestaG) (init : List (TranscriptElt Fp VestaG))
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (init : List (TranscriptElt Fp VestaG))
     (A : OracleComp
       (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k)) Fp
-      (AlgebraicWfProof basis vk))
+      (AlgebraicWfProof basis vk instanceCommitment))
     (O : BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k) → Fp)
     (coins : RecursiveForkCoins Fp shape.k)
     (cert : AlgebraicDForkCert (F := Fp) basis shape.k)
-    (hout : (algebraicForkCertAttempt basis vk init A O coins).output = some cert) :
+    (hout : (algebraicForkCertAttempt basis vk instanceCommitment init A O coins).output = some cert) :
     let p := A.run O
     let ν : Fin 11 → Fp := fun i => O (algebraicFullPrefixesPre init p i)
     let urs := ursOfAugmentedBasis shape.k basis
     DeployedForkValid urs.g (evalVector shape.k (ν 7)) urs.u urs.w (ν 10)
       (commit urs
           (adjustedWitness (p.aMulti ν) p.s
-            (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+            (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
         (p.multiU ν + ν 9 * p.sU) • urs.u +
         (p.multiBlind ν + ν 9 * p.sBlind) • urs.w)
       cert.toCanonicalBasis.toDForkCert := by
   rw [AlgebraicDForkCert.toCanonicalBasis_toDForkCert]
-  exact algebraicForkCertAttempt_valid basis vk init A O coins cert hout
+  exact algebraicForkCertAttempt_valid basis vk instanceCommitment init A O coins cert hout
 
 /-- Package one checked certificate with the algebraic data from its root FS run. -/
 def deployedAlgebraicInstanceOfCert {shape : Shape}
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
-    {vk : VerifyingKey shape Fp VestaG}
-    (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG}
+    (p : AlgebraicWfProof basis vk instanceCommitment) (ν : Fin 11 → Fp)
     (cert : AlgebraicDForkCert (F := Fp)
       (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
         (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
@@ -616,33 +616,33 @@ def deployedAlgebraicInstanceOfCert {shape : Shape}
       (ursOfAugmentedBasis shape.k basis).w (ν 10)
       (commit (ursOfAugmentedBasis shape.k basis)
           (adjustedWitness (p.aMulti ν) p.s
-            (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+            (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
         (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
         (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
       cert.toDForkCert) :
     DeployedAlgebraicForkingInstance (G := VestaG) shape.k basis :=
   { b := evalVector shape.k (ν 7)
-    v := multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0))
+    v := multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))
     ξ := ν 9
     z := ν 10
     vU := p.multiU ν + ν 9 * p.sU
     blind := p.multiBlind ν + ν 9 * p.sBlind
     aMulti := p.aMulti ν
     aDep := adjustedWitness (p.aMulti ν) p.s
-      (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)
+      (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)
     s := p.s
     cert := cert
     hz := hz
     hb0 := evalVector_zero shape.k (ν 7)
     hP := commit_adjustedWitness (ursOfAugmentedBasis shape.k basis) (p.aMulti ν) p.s
-      (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)
+      (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)
     hvalid := hvalid }
 
 /-- Every checked mismatch instance yields an explicit relation. -/
 theorem deployedAlgebraicInstanceOfCert_runRelation_isSome
     {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
-    {vk : VerifyingKey shape Fp VestaG}
-    (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG}
+    (p : AlgebraicWfProof basis vk instanceCommitment) (ν : Fin 11 → Fp)
     (cert : AlgebraicDForkCert (F := Fp)
       (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
         (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
@@ -652,12 +652,12 @@ theorem deployedAlgebraicInstanceOfCert_runRelation_isSome
       (ursOfAugmentedBasis shape.k basis).w (ν 10)
       (commit (ursOfAugmentedBasis shape.k basis)
           (adjustedWitness (p.aMulti ν) p.s
-            (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+            (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
         (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
         (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
       cert.toDForkCert)
     (hmm : innerProduct (p.aMulti ν) (evalVector shape.k (ν 7)) ≠
-      multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0)) +
+      multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) +
         (ν 10)⁻¹ * (p.multiU ν + ν 9 * p.sU) -
         ν 9 * innerProduct p.s (evalVector shape.k (ν 7))) :
     (deployedAlgebraicInstanceOfCert p ν cert hz hvalid).runRelation.isSome :=
@@ -668,10 +668,10 @@ theorem deployedAlgebraicInstanceOfCert_runRelation_isSome
 Failure to find a valid tree, or `z = 0`, returns `none`. -/
 def computedDeployedAlgebraicInstance {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (vk : VerifyingKey shape Fp VestaG) (init : List (TranscriptElt Fp VestaG))
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (init : List (TranscriptElt Fp VestaG))
     (A : OracleComp
       (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k)) Fp
-      (AlgebraicWfProof basis vk))
+      (AlgebraicWfProof basis vk instanceCommitment))
     (O : BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k) → Fp)
     (coins : RecursiveForkCoins Fp shape.k) :
     RecursiveForkAttempt
@@ -679,23 +679,23 @@ def computedDeployedAlgebraicInstance {shape : Shape}
   let urs := ursOfAugmentedBasis shape.k basis
   let p := A.run O
   let ν : Fin 11 → Fp := fun i => O (algebraicFullPrefixesPre init p i)
-  let certAttempt := algebraicForkCertAttempt basis vk init A O coins
+  let certAttempt := algebraicForkCertAttempt basis vk instanceCommitment init A O coins
   match hcert : certAttempt.output with
   | none => exact { output := none, runs := certAttempt.runs }
   | some cert =>
     if hz : ν 10 ≠ 0 then
       let canonicalCert := cert.toCanonicalBasis
       let b := evalVector shape.k (ν 7)
-      let v := multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0))
+      let v := multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))
       let aDep := adjustedWitness (p.aMulti ν) p.s v (ν 9)
       let vU := p.multiU ν + ν 9 * p.sU
       let blind := p.multiBlind ν + ν 9 * p.sBlind
       have hvalid : DeployedForkValid urs.g b urs.u urs.w (ν 10)
           (commit urs aDep + vU • urs.u + blind • urs.w)
           canonicalCert.toDForkCert := by
-        have hcert' : (algebraicForkCertAttempt basis vk init A O coins).output = some cert := by
+        have hcert' : (algebraicForkCertAttempt basis vk instanceCommitment init A O coins).output = some cert := by
           simpa only [certAttempt] using hcert
-        exact algebraicForkCertAttempt_valid_canonical basis vk init A O coins cert hcert'
+        exact algebraicForkCertAttempt_valid_canonical basis vk instanceCommitment init A O coins cert hcert'
       exact
         { output := some (deployedAlgebraicInstanceOfCert p ν canonicalCert hz hvalid)
           runs := certAttempt.runs }
@@ -705,40 +705,40 @@ def computedDeployedAlgebraicInstance {shape : Shape}
 /-- The computed producer on the finite tape used by the probability experiment. -/
 def computedDeployedAlgebraicInstanceFromTape {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (vk : VerifyingKey shape Fp VestaG) (init : List (TranscriptElt Fp VestaG))
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (init : List (TranscriptElt Fp VestaG))
     (A : OracleComp
       (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k)) Fp
-      (AlgebraicWfProof basis vk))
+      (AlgebraicWfProof basis vk instanceCommitment))
     (O : BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k) → Fp)
     (tape : RecursiveForkTape Fp shape.k) :
     RecursiveForkAttempt
       (DeployedAlgebraicForkingInstance (G := VestaG) shape.k basis) :=
-  computedDeployedAlgebraicInstance basis vk init A O tape.toCoins
+  computedDeployedAlgebraicInstance basis vk instanceCommitment init A O tape.toCoins
 
 /-- Accepting oracle tables on which the certified operational producer returns no AGM instance. -/
 noncomputable def computedAlgebraicInstanceFailureSet {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (vk : VerifyingKey shape Fp VestaG) (init : List (TranscriptElt Fp VestaG))
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (init : List (TranscriptElt Fp VestaG))
     (A : OracleComp
       (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k)) Fp
-      (AlgebraicWfProof basis vk))
+      (AlgebraicWfProof basis vk instanceCommitment))
     (tape : RecursiveForkTape Fp shape.k) :
     Set (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k) → Fp) :=
-  {O | fsWinsFull A (fullAlgebraicAcceptZ basis vk)
+  {O | fsWinsFull A (fullAlgebraicAcceptZ basis vk instanceCommitment)
       (algebraicFullPrefixesPre init) (algebraicFullPrefixes init) O ∧
-    ¬ (computedDeployedAlgebraicInstanceFromTape basis vk init A O tape).output.isSome}
+    ¬ (computedDeployedAlgebraicInstanceFromTape basis vk instanceCommitment init A O tape).output.isSome}
 
 /-- On an accepting run, failure of the checked instance producer implies failure of the raw
 certificate producer. -/
 theorem computedAlgebraicInstanceFailureSet_subset_certFailure {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (vk : VerifyingKey shape Fp VestaG) (init : List (TranscriptElt Fp VestaG))
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (init : List (TranscriptElt Fp VestaG))
     (A : OracleComp
       (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k)) Fp
-      (AlgebraicWfProof basis vk))
+      (AlgebraicWfProof basis vk instanceCommitment))
     (tape : RecursiveForkTape Fp shape.k) :
-    computedAlgebraicInstanceFailureSet basis vk init A tape ⊆
-      algebraicForkCertFailureSet basis vk init A tape.toCoins := by
+    computedAlgebraicInstanceFailureSet basis vk instanceCommitment init A tape ⊆
+      algebraicForkCertFailureSet basis vk instanceCommitment init A tape.toCoins := by
   intro O hfail
   refine ⟨hfail.1, ?_⟩
   intro hsome
@@ -758,33 +758,33 @@ theorem computedAlgebraicInstanceFailureSet_subset_certFailure {shape : Shape}
 certificate extractor itself. -/
 theorem computedAlgebraicInstanceFailure_measure_le {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (vk : VerifyingKey shape Fp VestaG) (init : List (TranscriptElt Fp VestaG))
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (init : List (TranscriptElt Fp VestaG))
     (A : OracleComp
       (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k)) Fp
-      (AlgebraicWfProof basis vk))
+      (AlgebraicWfProof basis vk instanceCommitment))
     (tape : RecursiveForkTape Fp shape.k) {Q : ℕ} (hQ : A.QueryBound Q) :
     (PMF.uniformOfFintype
       (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k) → Fp)).toOuterMeasure
-        (computedAlgebraicInstanceFailureSet basis vk init A tape)
+        (computedAlgebraicInstanceFailureSet basis vk instanceCommitment init A tape)
       ≤ (Q + shape.k) * (3 / Fintype.card Fp) := by
   refine le_trans (MeasureTheory.measure_mono
-    (computedAlgebraicInstanceFailureSet_subset_certFailure basis vk init A tape)) ?_
-  exact algebraicForkCertFailure_measure_le basis vk init A tape hQ
+    (computedAlgebraicInstanceFailureSet_subset_certFailure basis vk instanceCommitment init A tape)) ?_
+  exact algebraicForkCertFailure_measure_le basis vk instanceCommitment init A tape hQ
 
 /-- A computed binding-attack instance always returns an explicit relation. -/
 theorem computedDeployedAlgebraicInstance_runRelation_isSome
     {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (vk : VerifyingKey shape Fp VestaG) (init : List (TranscriptElt Fp VestaG))
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (init : List (TranscriptElt Fp VestaG))
     (A : OracleComp
       (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k)) Fp
-      (AlgebraicWfProof basis vk))
+      (AlgebraicWfProof basis vk instanceCommitment))
     (O : BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k) → Fp)
     (coins : RecursiveForkCoins Fp shape.k)
     {x : DeployedAlgebraicForkingInstance (G := VestaG) shape.k basis}
-    (hwin : fsWinsFull A (fullAlgebraicBindingAttack basis vk)
+    (hwin : fsWinsFull A (fullAlgebraicBindingAttack basis vk instanceCommitment)
       (algebraicFullPrefixesPre init) (algebraicFullPrefixes init) O)
-    (hinst : (computedDeployedAlgebraicInstance basis vk init A O coins).output = some x) :
+    (hinst : (computedDeployedAlgebraicInstance basis vk instanceCommitment init A O coins).output = some x) :
     x.runRelation.isSome := by
   rw [fsWinsFull] at hwin
   unfold computedDeployedAlgebraicInstance at hinst
@@ -804,18 +804,18 @@ theorem computedDeployedAlgebraicInstance_runRelation_isSome
 theorem computedDeployedAlgebraicInstanceFromTape_runRelation_isSome
     {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (vk : VerifyingKey shape Fp VestaG) (init : List (TranscriptElt Fp VestaG))
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (init : List (TranscriptElt Fp VestaG))
     (A : OracleComp
       (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k)) Fp
-      (AlgebraicWfProof basis vk))
+      (AlgebraicWfProof basis vk instanceCommitment))
     (O : BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k) → Fp)
     (tape : RecursiveForkTape Fp shape.k)
     {x : DeployedAlgebraicForkingInstance (G := VestaG) shape.k basis}
-    (hwin : fsWinsFull A (fullAlgebraicBindingAttack basis vk)
+    (hwin : fsWinsFull A (fullAlgebraicBindingAttack basis vk instanceCommitment)
       (algebraicFullPrefixesPre init) (algebraicFullPrefixes init) O)
-    (hinst : (computedDeployedAlgebraicInstanceFromTape basis vk init A O tape).output = some x) :
+    (hinst : (computedDeployedAlgebraicInstanceFromTape basis vk instanceCommitment init A O tape).output = some x) :
     x.runRelation.isSome :=
-  computedDeployedAlgebraicInstance_runRelation_isSome basis vk init A O tape.toCoins hwin hinst
+  computedDeployedAlgebraicInstance_runRelation_isSome basis vk instanceCommitment init A O tape.toCoins hwin hinst
 
 /-! ## Executable knowledge soundness
 
@@ -843,9 +843,10 @@ coin type. -/
 structure ComputedAlgebraicFSFamily (shape : Shape) where
   init : List (TranscriptElt Fp VestaG)
   vk : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) → VerifyingKey shape Fp VestaG
+  instanceCommitment : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) → Fin shape.numProofs → ℕ → VestaG
   adversary : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) → OracleComp
     (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k)) Fp
-    (AlgebraicWfProof basis (vk basis))
+    (AlgebraicWfProof basis (vk basis) (instanceCommitment basis))
   Q : ℕ
   queryBound : ∀ basis, (adversary basis).QueryBound Q
 
@@ -863,7 +864,7 @@ def instanceAttempt (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (coins : family.Coins) :
     RecursiveForkAttempt
       (DeployedAlgebraicForkingInstance (G := VestaG) shape.k basis) :=
-  computedDeployedAlgebraicInstanceFromTape basis (family.vk basis) family.init
+  computedDeployedAlgebraicInstanceFromTape basis (family.vk basis) (family.instanceCommitment basis) family.init
     (family.adversary basis) coins.1 coins.2
 
 /-- Run the produced instance and return its explicit relation. `runRelation` handles both the
@@ -901,7 +902,7 @@ theorem snarkRelation_prob_le_of_textbookDL
 /-- The modeled deployed binding-attack event for one oracle table. -/
 def bindingWin (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (O : family.Coins) : Prop :=
-  fsWinsFull (family.adversary basis) (fullAlgebraicBindingAttack basis (family.vk basis))
+  fsWinsFull (family.adversary basis) (fullAlgebraicBindingAttack basis (family.vk basis) (family.instanceCommitment basis))
     (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) O.1
 
 /-- Binding runs on which the operational producer returns no instance. -/
@@ -918,7 +919,7 @@ theorem failedBinding_measure_le (family : ComputedAlgebraicFSFamily shape)
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) := by
   let acceptFailure : Set family.Coins := {coins |
-    fsWinsFull (family.adversary basis) (fullAlgebraicAcceptZ basis (family.vk basis))
+    fsWinsFull (family.adversary basis) (fullAlgebraicAcceptZ basis (family.vk basis) (family.instanceCommitment basis))
       (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) coins.1 ∧
     ¬ (family.instanceAttempt basis coins).output.isSome}
   let zeroFailure : Set family.Coins := {coins |
@@ -928,22 +929,22 @@ theorem failedBinding_measure_le (family : ComputedAlgebraicFSFamily shape)
   have haccept : (PMF.uniformOfFintype family.Coins).toOuterMeasure acceptFailure ≤
       (family.Q + shape.k) * (3 / Fintype.card Fp) := by
     apply uniformOfFintype_prod_fiber_bound
-      (fun tape => computedAlgebraicInstanceFailureSet basis (family.vk basis) family.init
+      (fun tape => computedAlgebraicInstanceFailureSet basis (family.vk basis) (family.instanceCommitment basis) family.init
         (family.adversary basis) tape)
     intro tape
-    exact computedAlgebraicInstanceFailure_measure_le basis (family.vk basis) family.init
+    exact computedAlgebraicInstanceFailure_measure_le basis (family.vk basis) (family.instanceCommitment basis) family.init
       (family.adversary basis) tape (family.queryBound basis)
   have hzero : (PMF.uniformOfFintype family.Coins).toOuterMeasure zeroFailure ≤
       (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) := by
     apply uniformOfFintype_prod_fiber_bound
       (fun _tape : RecursiveForkTape Fp shape.k =>
         {O | fsWinsFull (family.adversary basis)
-            (fullAlgebraicBindingAttack basis (family.vk basis))
+            (fullAlgebraicBindingAttack basis (family.vk basis) (family.instanceCommitment basis))
             (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) O ∧
           O (algebraicFullPrefixesPre family.init ((family.adversary basis).run O) 10) = 0})
     intro _
     exact fsAdvantageFull_zero_slice_le (family.adversary basis)
-      (fullAlgebraicBindingAttack basis (family.vk basis))
+      (fullAlgebraicBindingAttack basis (family.vk basis) (family.instanceCommitment basis))
       (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) 10
       (family.queryBound basis)
   have hsub : family.failedBinding basis ⊆ acceptFailure ∪ zeroFailure := by
@@ -966,7 +967,7 @@ theorem relationFinder_isSome_of_bindingWin
     (family.relationFinder basis coins).isSome := by
   obtain ⟨x, hx⟩ := Option.isSome_iff_exists.mp hsome
   have hrel := computedDeployedAlgebraicInstanceFromTape_runRelation_isSome basis
-    (family.vk basis) family.init (family.adversary basis) coins.1 coins.2 hwin hx
+    (family.vk basis) (family.instanceCommitment basis) family.init (family.adversary basis) coins.1 coins.2 hwin hx
   unfold relationFinder
   rw [hx]
   exact hrel
@@ -1168,7 +1169,7 @@ def hasCleanOpening (family : ComputedAlgebraicFSFamily shape)
 /-- Nonzero-challenge accepting runs on which the producer returns no instance. -/
 def acceptExtractionFailure (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) : Set family.Coins :=
-  {coins | fsWinsFull (family.adversary basis) (fullAlgebraicAcceptZ basis (family.vk basis))
+  {coins | fsWinsFull (family.adversary basis) (fullAlgebraicAcceptZ basis (family.vk basis) (family.instanceCommitment basis))
       (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) coins.1 ∧
     ¬ (family.instanceAttempt basis coins).output.isSome}
 
@@ -1178,17 +1179,17 @@ theorem acceptExtractionFailure_measure_le (family : ComputedAlgebraicFSFamily s
     (PMF.uniformOfFintype family.Coins).toOuterMeasure (family.acceptExtractionFailure basis)
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) := by
   apply uniformOfFintype_prod_fiber_bound
-    (fun tape => computedAlgebraicInstanceFailureSet basis (family.vk basis) family.init
+    (fun tape => computedAlgebraicInstanceFailureSet basis (family.vk basis) (family.instanceCommitment basis) family.init
       (family.adversary basis) tape)
   intro tape
-  exact computedAlgebraicInstanceFailure_measure_le basis (family.vk basis) family.init
+  exact computedAlgebraicInstanceFailure_measure_le basis (family.vk basis) (family.instanceCommitment basis) family.init
     (family.adversary basis) tape (family.queryBound basis)
 
 /-- Non-relation failures: no instance on a `z ≠ 0` accepting run, or an accepting `z = 0` run. -/
 def snarkNonRelationFailure (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) : Set family.Coins :=
   family.acceptExtractionFailure basis ∪
-    {coins | fsWinsFull (family.adversary basis) (fullAlgebraicAccept basis (family.vk basis))
+    {coins | fsWinsFull (family.adversary basis) (fullAlgebraicAccept basis (family.vk basis) (family.instanceCommitment basis))
         (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) coins.1 ∧
       coins.1 (algebraicFullPrefixesPre family.init
         ((family.adversary basis).run coins.1) 10) = 0}
@@ -1204,12 +1205,12 @@ theorem snarkNonRelationFailure_measure_le (family : ComputedAlgebraicFSFamily s
     (add_le_add (family.acceptExtractionFailure_measure_le basis) ?_)
   apply uniformOfFintype_prod_fiber_bound
     (fun _tape : RecursiveForkTape Fp shape.k =>
-      {O | fsWinsFull (family.adversary basis) (fullAlgebraicAccept basis (family.vk basis))
+      {O | fsWinsFull (family.adversary basis) (fullAlgebraicAccept basis (family.vk basis) (family.instanceCommitment basis))
           (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) O ∧
         O (algebraicFullPrefixesPre family.init ((family.adversary basis).run O) 10) = 0})
   intro _tape
   exact fsAdvantageFull_zero_slice_le (family.adversary basis)
-    (fullAlgebraicAccept basis (family.vk basis))
+    (fullAlgebraicAccept basis (family.vk basis) (family.instanceCommitment basis))
     (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) 10
     (family.queryBound basis)
 
@@ -1221,7 +1222,7 @@ theorem snarkFailure_prob_le_of_textbookDL
     (PMF.uniformOfFintype
         ((AugmentedIndex (2 ^ shape.k) → Fp) × family.Coins)).toOuterMeasure
         {p | fsWinsFull (family.adversary (scalarBasis B p.1))
-              (fullAlgebraicAcceptZ (scalarBasis B p.1) (family.vk (scalarBasis B p.1)))
+              (fullAlgebraicAcceptZ (scalarBasis B p.1) (family.vk (scalarBasis B p.1)) (family.instanceCommitment (scalarBasis B p.1)))
               (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) p.2.1 ∧
             ¬ family.hasCleanOpening (scalarBasis B p.1) p.2}
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
@@ -1230,7 +1231,7 @@ theorem snarkFailure_prob_le_of_textbookDL
   refine le_trans (MeasureTheory.measure_mono
     (show {p : (AugmentedIndex (2 ^ shape.k) → Fp) × family.Coins |
         fsWinsFull (family.adversary (scalarBasis B p.1))
-          (fullAlgebraicAcceptZ (scalarBasis B p.1) (family.vk (scalarBasis B p.1)))
+          (fullAlgebraicAcceptZ (scalarBasis B p.1) (family.vk (scalarBasis B p.1)) (family.instanceCommitment (scalarBasis B p.1)))
           (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) p.2.1 ∧
         ¬ family.hasCleanOpening (scalarBasis B p.1) p.2} ⊆
       {p | p.2 ∈ family.acceptExtractionFailure (scalarBasis B p.1)} ∪
@@ -1263,7 +1264,7 @@ theorem snarkFailure_prob_le_of_textbookDL_full
     (PMF.uniformOfFintype
         ((AugmentedIndex (2 ^ shape.k) → Fp) × family.Coins)).toOuterMeasure
         {p | fsWinsFull (family.adversary (scalarBasis B p.1))
-              (fullAlgebraicAccept (scalarBasis B p.1) (family.vk (scalarBasis B p.1)))
+              (fullAlgebraicAccept (scalarBasis B p.1) (family.vk (scalarBasis B p.1)) (family.instanceCommitment (scalarBasis B p.1)))
               (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) p.2.1 ∧
             ¬ family.hasCleanOpening (scalarBasis B p.1) p.2}
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
@@ -1273,15 +1274,15 @@ theorem snarkFailure_prob_le_of_textbookDL_full
   refine le_trans (MeasureTheory.measure_mono
     (show {p : (AugmentedIndex (2 ^ shape.k) → Fp) × family.Coins |
         fsWinsFull (family.adversary (scalarBasis B p.1))
-          (fullAlgebraicAccept (scalarBasis B p.1) (family.vk (scalarBasis B p.1)))
+          (fullAlgebraicAccept (scalarBasis B p.1) (family.vk (scalarBasis B p.1)) (family.instanceCommitment (scalarBasis B p.1)))
           (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) p.2.1 ∧
         ¬ family.hasCleanOpening (scalarBasis B p.1) p.2} ⊆
       {p | fsWinsFull (family.adversary (scalarBasis B p.1))
-            (fullAlgebraicAcceptZ (scalarBasis B p.1) (family.vk (scalarBasis B p.1)))
+            (fullAlgebraicAcceptZ (scalarBasis B p.1) (family.vk (scalarBasis B p.1)) (family.instanceCommitment (scalarBasis B p.1)))
             (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) p.2.1 ∧
           ¬ family.hasCleanOpening (scalarBasis B p.1) p.2} ∪
       {p | fsWinsFull (family.adversary (scalarBasis B p.1))
-            (fullAlgebraicAccept (scalarBasis B p.1) (family.vk (scalarBasis B p.1)))
+            (fullAlgebraicAccept (scalarBasis B p.1) (family.vk (scalarBasis B p.1)) (family.instanceCommitment (scalarBasis B p.1)))
             (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) p.2.1 ∧
           p.2.1 (algebraicFullPrefixesPre family.init
             ((family.adversary (scalarBasis B p.1)).run p.2.1) 10) = 0} from ?_))
@@ -1295,7 +1296,7 @@ theorem snarkFailure_prob_le_of_textbookDL_full
   · have hzero : (PMF.uniformOfFintype
           ((AugmentedIndex (2 ^ shape.k) → Fp) × family.Coins)).toOuterMeasure
           {p | fsWinsFull (family.adversary (scalarBasis B p.1))
-                (fullAlgebraicAccept (scalarBasis B p.1) (family.vk (scalarBasis B p.1)))
+                (fullAlgebraicAccept (scalarBasis B p.1) (family.vk (scalarBasis B p.1)) (family.instanceCommitment (scalarBasis B p.1)))
                 (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) p.2.1 ∧
               p.2.1 (algebraicFullPrefixesPre family.init
                 ((family.adversary (scalarBasis B p.1)).run p.2.1) 10) = 0}
@@ -1304,7 +1305,7 @@ theorem snarkFailure_prob_le_of_textbookDL_full
         (fun coeffs : AugmentedIndex (2 ^ shape.k) → Fp =>
           {coins : family.Coins |
             fsWinsFull (family.adversary (scalarBasis B coeffs))
-              (fullAlgebraicAccept (scalarBasis B coeffs) (family.vk (scalarBasis B coeffs)))
+              (fullAlgebraicAccept (scalarBasis B coeffs) (family.vk (scalarBasis B coeffs)) (family.instanceCommitment (scalarBasis B coeffs)))
               (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) coins.1 ∧
             coins.1 (algebraicFullPrefixesPre family.init
               ((family.adversary (scalarBasis B coeffs)).run coins.1) 10) = 0})
@@ -1312,13 +1313,13 @@ theorem snarkFailure_prob_le_of_textbookDL_full
       apply uniformOfFintype_prod_fiber_bound
         (fun _tape : RecursiveForkTape Fp shape.k =>
           {O | fsWinsFull (family.adversary (scalarBasis B coeffs))
-              (fullAlgebraicAccept (scalarBasis B coeffs) (family.vk (scalarBasis B coeffs)))
+              (fullAlgebraicAccept (scalarBasis B coeffs) (family.vk (scalarBasis B coeffs)) (family.instanceCommitment (scalarBasis B coeffs)))
               (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) O ∧
             O (algebraicFullPrefixesPre family.init
               ((family.adversary (scalarBasis B coeffs)).run O) 10) = 0})
       intro _tape
       exact fsAdvantageFull_zero_slice_le (family.adversary (scalarBasis B coeffs))
-        (fullAlgebraicAccept (scalarBasis B coeffs) (family.vk (scalarBasis B coeffs)))
+        (fullAlgebraicAccept (scalarBasis B coeffs) (family.vk (scalarBasis B coeffs)) (family.instanceCommitment (scalarBasis B coeffs)))
         (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) 10
         (family.queryBound (scalarBasis B coeffs))
     exact (add_le_add (snarkFailure_prob_le_of_textbookDL B family hDL) hzero).trans_eq
@@ -1328,7 +1329,7 @@ theorem snarkFailure_prob_le_of_textbookDL_full
 coins: plain deployed acceptance with no clean opening. -/
 def snarkFailureEvent (family : ComputedAlgebraicFSFamily shape) :
     Set ((AugmentedIndex (2 ^ shape.k) → VestaG) × family.Coins) :=
-  {q | fsWinsFull (family.adversary q.1) (fullAlgebraicAccept q.1 (family.vk q.1))
+  {q | fsWinsFull (family.adversary q.1) (fullAlgebraicAccept q.1 (family.vk q.1) (family.instanceCommitment q.1))
       (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) q.2.1 ∧
     ¬ family.hasCleanOpening q.1 q.2}
 
@@ -1428,7 +1429,7 @@ theorem reductionEfficient_exists (family : ComputedAlgebraicFSFamily shape) :
 theorem instanceAttempt_runs_eq (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (coins : family.Coins) :
     (family.instanceAttempt basis coins).runs
-      = (algebraicForkCertAttempt basis (family.vk basis) family.init
+      = (algebraicForkCertAttempt basis (family.vk basis) (family.instanceCommitment basis) family.init
           (family.adversary basis) coins.1 coins.2.toCoins).runs := by
   unfold instanceAttempt computedDeployedAlgebraicInstanceFromTape
   simp only [computedDeployedAlgebraicInstance]
@@ -1444,7 +1445,7 @@ theorem reductionEfficient_exponential (family : ComputedAlgebraicFSFamily shape
   exact recursiveAlgebraicFork_oracle_tape_sum_runs_le_unconditional basis shape.k
     (family.adversary basis) (algebraicFullPrefixes family.init) (fun p => p.rounds)
     (fun p => (p.proof.1.ipaC, p.proof.1.ipaF))
-    (algebraicTableAcceptZ basis (family.vk basis) family.init) _
+    (algebraicTableAcceptZ basis (family.vk basis) (family.instanceCommitment basis) family.init) _
 
 /-- Fixed-slot DL hardness at advantage `ε`, as it applies to *one* reduction family with expected
 call bound `R`: if the family's extractor meets the call bound, its two derived solvers have
@@ -1468,7 +1469,7 @@ theorem knowledgeSoundness_under_DL
     (PMF.uniformOfFintype
         ((AugmentedIndex (2 ^ shape.k) → Fp) × family.Coins)).toOuterMeasure
         {p | fsWinsFull (family.adversary (scalarBasis B p.1))
-              (fullAlgebraicAccept (scalarBasis B p.1) (family.vk (scalarBasis B p.1)))
+              (fullAlgebraicAccept (scalarBasis B p.1) (family.vk (scalarBasis B p.1)) (family.instanceCommitment (scalarBasis B p.1)))
               (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) p.2.1 ∧
             ¬ family.hasCleanOpening (scalarBasis B p.1) p.2}
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
@@ -1498,17 +1499,17 @@ Blake2b remains idealized; `truncateTranscript` is only the deployed bounded-tra
 
 /-- Transfer a uniform bounded-transcript binding bound to the reachable-support split. -/
 theorem bindingWin_unbounded_measure_le {shape : Shape}
-    {basis : AugmentedIndex (2 ^ shape.k) → VestaG} {vk : VerifyingKey shape Fp VestaG}
+    {basis : AugmentedIndex (2 ^ shape.k) → VestaG} {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG}
     (init : List (TranscriptElt Fp VestaG))
-    (A : OracleComp (List (TranscriptElt Fp VestaG)) Fp (AlgebraicWfProof basis vk))
+    (A : OracleComp (List (TranscriptElt Fp VestaG)) Fp (AlgebraicWfProof basis vk instanceCommitment))
     {Q : ℕ} (hQ : A.QueryBound Q) {β : ℝ≥0∞}
     (hβ : ∀ A₀ : OracleComp
         (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k)) Fp
-        (AlgebraicWfProof basis vk), A₀.QueryBound Q →
+        (AlgebraicWfProof basis vk instanceCommitment), A₀.QueryBound Q →
       (PMF.uniformOfFintype
           (BTranscript Fp VestaG
             (preIpaLen shape init.length 10 + 3 * shape.k) → Fp)).toOuterMeasure
-        {O | fsWinsFull A₀ (fullAlgebraicBindingAttack basis vk)
+        {O | fsWinsFull A₀ (fullAlgebraicBindingAttack basis vk instanceCommitment)
           (algebraicFullPrefixesPre init) (algebraicFullPrefixes init) O} ≤ β) :
     (PMF.uniformOfFintype
         ((BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k) ⊕
@@ -1519,7 +1520,7 @@ theorem bindingWin_unbounded_measure_le {shape : Shape}
             List (TranscriptElt Fp VestaG))
           (truncateTranscript (preIpaLen shape init.length 10 + 3 * shape.k))
           A.reachSet (Finset.Subset.refl _))
-        (fullAlgebraicBindingAttack basis vk)
+        (fullAlgebraicBindingAttack basis vk instanceCommitment)
         (fun p i => Sum.inl (algebraicFullPrefixesPre init p i))
         (fun p j => Sum.inl (algebraicFullPrefixes init p j)) O'} ≤ β :=
   fsWinsFull_unbounded_measure_le
@@ -1527,7 +1528,7 @@ theorem bindingWin_unbounded_measure_le {shape : Shape}
     (T_D := BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k))
     Subtype.val
     (truncateTranscript (preIpaLen shape init.length 10 + 3 * shape.k))
-    A hQ (fullAlgebraicBindingAttack basis vk)
+    A hQ (fullAlgebraicBindingAttack basis vk instanceCommitment)
     (algebraicFullPrefixesPre init) (algebraicFullPrefixes init) hβ
 
 /-! ## Randomized adversaries
@@ -1538,9 +1539,10 @@ Private coins form a uniform mixture of deterministic adversaries. -/
 structure ComputedAlgebraicFSFamilyRand (shape : Shape) (R : Type*) where
   init : List (TranscriptElt Fp VestaG)
   vk : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) → VerifyingKey shape Fp VestaG
+  instanceCommitment : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) → Fin shape.numProofs → ℕ → VestaG
   adversary : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) → R → OracleComp
     (BTranscript Fp VestaG (preIpaLen shape init.length 10 + 3 * shape.k)) Fp
-    (AlgebraicWfProof basis (vk basis))
+    (AlgebraicWfProof basis (vk basis) (instanceCommitment basis))
   Q : ℕ
   queryBound : ∀ basis r, (adversary basis r).QueryBound Q
 
@@ -1553,6 +1555,7 @@ abbrev determinize (fam : ComputedAlgebraicFSFamilyRand shape R) (r : R) :
     ComputedAlgebraicFSFamily shape :=
   { init := fam.init
     vk := fam.vk
+    instanceCommitment := fam.instanceCommitment
     adversary := fun basis => fam.adversary basis r
     Q := fam.Q
     queryBound := fun basis => fam.queryBound basis r }
@@ -1669,7 +1672,7 @@ theorem snarkFailure_prob_le_of_textbookDL_rand [Fintype R] [Nonempty R]
         {p : ((AugmentedIndex (2 ^ shape.k) → Fp) × fam.Coins) × R |
           fsWinsFull ((fam.determinize p.2).adversary (scalarBasis B p.1.1))
             (fullAlgebraicAccept (scalarBasis B p.1.1)
-              ((fam.determinize p.2).vk (scalarBasis B p.1.1)))
+              ((fam.determinize p.2).vk (scalarBasis B p.1.1)) ((fam.determinize p.2).instanceCommitment (scalarBasis B p.1.1)))
             (algebraicFullPrefixesPre (fam.determinize p.2).init)
             (algebraicFullPrefixes (fam.determinize p.2).init) p.1.2.1 ∧
           ¬ (fam.determinize p.2).hasCleanOpening (scalarBasis B p.1.1) p.1.2}
@@ -1679,7 +1682,7 @@ theorem snarkFailure_prob_le_of_textbookDL_rand [Fintype R] [Nonempty R]
   apply uniformOfFintype_prod_fiber_bound
     (fun r => {q : (AugmentedIndex (2 ^ shape.k) → Fp) × fam.Coins |
       fsWinsFull ((fam.determinize r).adversary (scalarBasis B q.1))
-        (fullAlgebraicAccept (scalarBasis B q.1) ((fam.determinize r).vk (scalarBasis B q.1)))
+        (fullAlgebraicAccept (scalarBasis B q.1) ((fam.determinize r).vk (scalarBasis B q.1)) ((fam.determinize r).instanceCommitment (scalarBasis B q.1)))
         (algebraicFullPrefixesPre (fam.determinize r).init)
         (algebraicFullPrefixes (fam.determinize r).init) q.2.1 ∧
       ¬ (fam.determinize r).hasCleanOpening (scalarBasis B q.1) q.2})
@@ -1703,7 +1706,7 @@ theorem snarkFailure_prob_le_of_foldedTextbookDL_rand [Fintype R] [Nonempty R]
         {p : (AugmentedIndex (2 ^ shape.k) → Fp) × (fam.Coins × R) |
           fsWinsFull ((fam.determinize p.2.2).adversary (scalarBasis B p.1))
             (fullAlgebraicAccept (scalarBasis B p.1)
-              ((fam.determinize p.2.2).vk (scalarBasis B p.1)))
+              ((fam.determinize p.2.2).vk (scalarBasis B p.1)) ((fam.determinize p.2.2).instanceCommitment (scalarBasis B p.1)))
             (algebraicFullPrefixesPre (fam.determinize p.2.2).init)
             (algebraicFullPrefixes (fam.determinize p.2.2).init) p.2.1.1 ∧
           ¬ (fam.determinize p.2.2).hasCleanOpening (scalarBasis B p.1) p.2.1}
@@ -1715,7 +1718,7 @@ theorem snarkFailure_prob_le_of_foldedTextbookDL_rand [Fintype R] [Nonempty R]
     (show {p : (AugmentedIndex (2 ^ shape.k) → Fp) × (fam.Coins × R) |
         fsWinsFull ((fam.determinize p.2.2).adversary (scalarBasis B p.1))
           (fullAlgebraicAccept (scalarBasis B p.1)
-            ((fam.determinize p.2.2).vk (scalarBasis B p.1)))
+            ((fam.determinize p.2.2).vk (scalarBasis B p.1)) ((fam.determinize p.2.2).instanceCommitment (scalarBasis B p.1)))
           (algebraicFullPrefixesPre (fam.determinize p.2.2).init)
           (algebraicFullPrefixes (fam.determinize p.2.2).init) p.2.1.1 ∧
         ¬ (fam.determinize p.2.2).hasCleanOpening (scalarBasis B p.1) p.2.1} ⊆
@@ -1768,8 +1771,9 @@ one private-coin-folded DL solver, not a separate assumption for each junk table
 structure ComputedAlgebraicFSFamilyUnbounded (shape : Shape) where
   init : List (TranscriptElt Fp VestaG)
   vk : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) → VerifyingKey shape Fp VestaG
+  instanceCommitment : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) → Fin shape.numProofs → ℕ → VestaG
   adversary : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) → OracleComp
-    (List (TranscriptElt Fp VestaG)) Fp (AlgebraicWfProof basis (vk basis))
+    (List (TranscriptElt Fp VestaG)) Fp (AlgebraicWfProof basis (vk basis) (instanceCommitment basis))
   Q : ℕ
   queryBound : ∀ basis, (adversary basis).QueryBound Q
 
@@ -1837,6 +1841,7 @@ def splitFamilyRand (family : ComputedAlgebraicFSFamilyUnbounded shape) :
   exact
     { init := family.init
       vk := family.vk
+      instanceCommitment := family.instanceCommitment
       adversary := fun basis junk =>
         ((family.adversary basis).splitDomain
           (Subtype.val : BTranscript Fp VestaG L → List (TranscriptElt Fp VestaG))
@@ -1904,7 +1909,7 @@ theorem snarkFailure_prob_le_of_unbounded_foldedTextbookDL
           (family.splitFamilyRand.Coins × ({t // t ∈ family.globalReachSet} → Fp)) |
         fsWinsFull ((family.splitFamilyRand.determinize p.2.2).adversary (scalarBasis B p.1))
           (fullAlgebraicAccept (scalarBasis B p.1)
-            ((family.splitFamilyRand.determinize p.2.2).vk (scalarBasis B p.1)))
+            ((family.splitFamilyRand.determinize p.2.2).vk (scalarBasis B p.1)) ((family.splitFamilyRand.determinize p.2.2).instanceCommitment (scalarBasis B p.1)))
           (algebraicFullPrefixesPre (family.splitFamilyRand.determinize p.2.2).init)
           (algebraicFullPrefixes (family.splitFamilyRand.determinize p.2.2).init) p.2.1.1 ∧
         ¬ (family.splitFamilyRand.determinize p.2.2).hasCleanOpening (scalarBasis B p.1) p.2.1}
@@ -1923,7 +1928,7 @@ def snarkFailureEventUnbounded (family : ComputedAlgebraicFSFamilyUnbounded shap
     Set ((AugmentedIndex (2 ^ shape.k) → VestaG) ×
       (family.splitFamilyRand.Coins × ({t // t ∈ family.globalReachSet} → Fp))) :=
   {q | fsWinsFull ((family.splitFamilyRand.determinize q.2.2).adversary q.1)
-      (fullAlgebraicAccept q.1 ((family.splitFamilyRand.determinize q.2.2).vk q.1))
+      (fullAlgebraicAccept q.1 ((family.splitFamilyRand.determinize q.2.2).vk q.1) ((family.splitFamilyRand.determinize q.2.2).instanceCommitment q.1))
       (algebraicFullPrefixesPre (family.splitFamilyRand.determinize q.2.2).init)
       (algebraicFullPrefixes (family.splitFamilyRand.determinize q.2.2).init) q.2.1.1 ∧
     ¬ (family.splitFamilyRand.determinize q.2.2).hasCleanOpening q.1 q.2.1}
@@ -2013,8 +2018,9 @@ transcript-list oracle domain. -/
 structure ComputedAlgebraicFSFamilyUnboundedRand (shape : Shape) (R : Type*) where
   init : List (TranscriptElt Fp VestaG)
   vk : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) → VerifyingKey shape Fp VestaG
+  instanceCommitment : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) → Fin shape.numProofs → ℕ → VestaG
   adversary : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) → R → OracleComp
-    (List (TranscriptElt Fp VestaG)) Fp (AlgebraicWfProof basis (vk basis))
+    (List (TranscriptElt Fp VestaG)) Fp (AlgebraicWfProof basis (vk basis) (instanceCommitment basis))
   Q : ℕ
   queryBound : ∀ basis r, (adversary basis r).QueryBound Q
 
@@ -2027,6 +2033,7 @@ def determinize (family : ComputedAlgebraicFSFamilyUnboundedRand shape R) (r : R
     ComputedAlgebraicFSFamilyUnbounded shape :=
   { init := family.init
     vk := family.vk
+    instanceCommitment := family.instanceCommitment
     adversary := fun basis => family.adversary basis r
     Q := family.Q
     queryBound := fun basis => family.queryBound basis r }
@@ -2059,6 +2066,7 @@ def splitFamilyRand [Fintype R]
   exact
     { init := family.init
       vk := family.vk
+      instanceCommitment := family.instanceCommitment
       adversary := fun basis rc =>
         ((family.adversary basis rc.1).splitDomain
           (Subtype.val : BTranscript Fp VestaG L → List (TranscriptElt Fp VestaG))
@@ -2130,7 +2138,7 @@ theorem snarkFailure_prob_le_of_unboundedRand_foldedTextbookDL [Fintype R] [None
             (R × ({t // t ∈ family.globalReachSet} → Fp))) |
         fsWinsFull ((family.splitFamilyRand.determinize p.2.2).adversary (scalarBasis B p.1))
           (fullAlgebraicAccept (scalarBasis B p.1)
-            ((family.splitFamilyRand.determinize p.2.2).vk (scalarBasis B p.1)))
+            ((family.splitFamilyRand.determinize p.2.2).vk (scalarBasis B p.1)) ((family.splitFamilyRand.determinize p.2.2).instanceCommitment (scalarBasis B p.1)))
           (algebraicFullPrefixesPre (family.splitFamilyRand.determinize p.2.2).init)
           (algebraicFullPrefixes (family.splitFamilyRand.determinize p.2.2).init) p.2.1.1 ∧
         ¬ (family.splitFamilyRand.determinize p.2.2).hasCleanOpening (scalarBasis B p.1) p.2.1}
@@ -2149,7 +2157,7 @@ def snarkFailureEventUnboundedRand [Fintype R]
       (family.splitFamilyRand.Coins ×
         (R × ({t // t ∈ family.globalReachSet} → Fp)))) :=
   {q | fsWinsFull ((family.splitFamilyRand.determinize q.2.2).adversary q.1)
-      (fullAlgebraicAccept q.1 ((family.splitFamilyRand.determinize q.2.2).vk q.1))
+      (fullAlgebraicAccept q.1 ((family.splitFamilyRand.determinize q.2.2).vk q.1) ((family.splitFamilyRand.determinize q.2.2).instanceCommitment q.1))
       (algebraicFullPrefixesPre (family.splitFamilyRand.determinize q.2.2).init)
       (algebraicFullPrefixes (family.splitFamilyRand.determinize q.2.2).init) q.2.1.1 ∧
     ¬ (family.splitFamilyRand.determinize q.2.2).hasCleanOpening q.1 q.2.1}
@@ -2338,19 +2346,19 @@ theorem Msm.eval_repr (m : Msm shape.k Fp VestaG)
   module
 
 /-- The multiopen assembly MSM whose evaluation is `multiopenCommitment`. -/
-def multiopenMsm (vk : VerifyingKey shape Fp VestaG)
+def multiopenMsm (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG)
     (ps : ProofString shape Fp VestaG) (ch : Challenges shape.k Fp) :
     Msm shape.k Fp VestaG :=
   (assembleOpening ch.x1 ch.x2 ch.x3 ch.x4 ps.multiopenQPrime (List.ofFn ps.multiopenU)
-    (constructIntermediateSets (assembleQueries vk ps ch)) (Msm.zero shape.k Fp VestaG)).1
+    (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)) (Msm.zero shape.k Fp VestaG)).1
 
 /-- `multiopenCommitment` is the assembly MSM's evaluation. -/
 theorem multiopenCommitment_eq_eval
     (g' : Fin (2 ^ shape.k) → VestaG) (w' u' : VestaG)
-    (vk : VerifyingKey shape Fp VestaG) (ps : ProofString shape Fp VestaG)
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (ps : ProofString shape Fp VestaG)
     (ch : Challenges shape.k Fp) :
-    multiopenCommitment g' w' u' vk ps ch
-      = (multiopenMsm vk ps ch).eval ⟨shape.k, g', w', u'⟩ := by
+    multiopenCommitment g' w' u' vk instanceCommitment ps ch
+      = (multiopenMsm vk instanceCommitment ps ch).eval ⟨shape.k, g', w', u'⟩ := by
   unfold multiopenCommitment multiopenMsm
   rfl
 
@@ -2367,10 +2375,10 @@ attribute [local irreducible] multiopenCommitment Msm.eval
 
 /-- Representations for every point appended by the multiopen assembly. -/
 structure RepresentedMultiopen
-    (vk : VerifyingKey shape Fp VestaG) (ps : ProofString shape Fp VestaG)
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (ps : ProofString shape Fp VestaG)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (ν : Fin 11 → Fp) where
   reps : List (Fp × AlgebraicPoint (F := Fp) basis)
-  covers : (multiopenMsm vk ps (chRecord ν (fun _ => 0))).other
+  covers : (multiopenMsm vk instanceCommitment ps (chRecord ν (fun _ => 0))).other
     = reps.map (fun t => (t.1, t.2.point))
 
 /-- Rebuild a scalar–point list from lookups into a covering list of represented points. -/
@@ -2393,39 +2401,39 @@ private theorem list_eq_map_pmap_lookup {β : Type*} (point : β → VestaG)
 
 /-- Build the represented assembly from a list covering every appended point. -/
 def RepresentedMultiopen.ofCoveredList
-    (vk : VerifyingKey shape Fp VestaG) (ps : ProofString shape Fp VestaG)
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (ps : ProofString shape Fp VestaG)
     (ν : Fin 11 → Fp) (L : List (AlgebraicPoint (F := Fp) basis))
-    (hcover : ∀ pr ∈ (multiopenMsm vk ps (chRecord ν (fun _ => 0))).other,
+    (hcover : ∀ pr ∈ (multiopenMsm vk instanceCommitment ps (chRecord ν (fun _ => 0))).other,
       ∃ ap ∈ L, ap.point = pr.2) :
-    RepresentedMultiopen vk ps basis ν :=
-  have H : ∀ pr ∈ (multiopenMsm vk ps (chRecord ν (fun _ => 0))).other,
+    RepresentedMultiopen vk instanceCommitment ps basis ν :=
+  have H : ∀ pr ∈ (multiopenMsm vk instanceCommitment ps (chRecord ν (fun _ => 0))).other,
       (L.find? (fun ap => ap.point = pr.2)).isSome := by
     intro pr hpr
     rw [List.find?_isSome]
     obtain ⟨ap, hapL, hap⟩ := hcover pr hpr
     exact ⟨ap, hapL, by simp [hap]⟩
-  { reps := (multiopenMsm vk ps (chRecord ν (fun _ => 0))).other.pmap
+  { reps := (multiopenMsm vk instanceCommitment ps (chRecord ν (fun _ => 0))).other.pmap
       (fun pr h => (pr.1, (L.find? (fun ap => ap.point = pr.2)).get h)) H
     covers := list_eq_map_pmap_lookup AlgebraicPoint.point L _ H }
 
 /-- Package represented emitted points and their represented multiopen assembly. -/
-def AlgebraicWfProof.ofRepresented {vk : VerifyingKey shape Fp VestaG}
+def AlgebraicWfProof.ofRepresented {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG}
     (aps : AlgebraicProofString shape basis) (hwf : PsWellFormed aps.erase)
-    (rm : ∀ ν : Fin 11 → Fp, RepresentedMultiopen vk aps.erase basis ν) :
-    AlgebraicWfProof basis vk :=
+    (rm : ∀ ν : Fin 11 → Fp, RepresentedMultiopen vk instanceCommitment aps.erase basis ν) :
+    AlgebraicWfProof basis vk instanceCommitment :=
   { algebraicProof := aps
     wellFormed := hwf
     aMulti := fun ν =>
-      (multiopenMsm vk aps.erase (chRecord ν (fun _ => 0))).gScalars + repsGPart (rm ν).reps
+      (multiopenMsm vk instanceCommitment aps.erase (chRecord ν (fun _ => 0))).gScalars + repsGPart (rm ν).reps
     multiU := fun ν =>
-      (multiopenMsm vk aps.erase (chRecord ν (fun _ => 0))).uScalar + repsU (rm ν).reps
+      (multiopenMsm vk instanceCommitment aps.erase (chRecord ν (fun _ => 0))).uScalar + repsU (rm ν).reps
     multiBlind := fun ν =>
-      (multiopenMsm vk aps.erase (chRecord ν (fun _ => 0))).wScalar + repsW (rm ν).reps
+      (multiopenMsm vk instanceCommitment aps.erase (chRecord ν (fun _ => 0))).wScalar + repsW (rm ν).reps
     multiopen_repr := fun ν =>
-      (Msm.eval_repr (multiopenMsm vk aps.erase (chRecord ν (fun _ => 0)))
+      (Msm.eval_repr (multiopenMsm vk instanceCommitment aps.erase (chRecord ν (fun _ => 0)))
         (rm ν).reps (rm ν).covers).symm.trans
-        ((eval_urs_eta (multiopenMsm vk aps.erase (chRecord ν (fun _ => 0)))).symm.trans
-          (multiopenCommitment_eq_eval _ _ _ vk aps.erase _).symm)
+        ((eval_urs_eta (multiopenMsm vk instanceCommitment aps.erase (chRecord ν (fun _ => 0)))).symm.trans
+          (multiopenCommitment_eq_eval _ _ _ vk instanceCommitment aps.erase _).symm)
     s := aps.ipaS.gPart
     sU := aps.ipaS.coeffs AugmentedIndex.u
     sBlind := aps.ipaS.coeffs AugmentedIndex.w
