@@ -602,12 +602,15 @@ The `#56` clean-opening failure `snarkFailureEvent` is already bounded
 clean-opening failure and inherits the same bound — **conditional on the gate data discharging on
 clean openings** (`hExtract`).
 
-This condition is not removable here: it is the disjoint-halves gap (#67 scope). The deployed gate
-data is produced by the #18 deployed forking floors (`openedMemberDecode_of_x1Prob`/`openedX4Rewind`),
-a *separate* probabilistic account, and **no failure-probability bound exists over the deployed accept
-measures** (`OpenedX1/X2/X3/X4Accept`) — they occur only as measure-lower-bound premises. Removing
-`hExtract` requires bounding the multiopen-decode failure and unioning it with the AGM bound:
-substantive new content, the genuine remaining core of #67's quantitative clause. -/
+The extraction *logic* behind `hExtract` is discharged downstream: the budgeted witness tie
+(`Soundness.VestaBudget.member_relation_or_dlr_of_instance_budgeted`) concludes the extraction from
+a clean opening given the multiopen rewind data, and
+`Soundness.VestaBudget.snarkExtraction_prob_le_of_generatorRO_textbookDL_budgeted` restates this
+bound with `hExtract` reduced to that data-supply obligation through the instance provenance. The
+multiopen failure itself is priced (`Soundness.Multiopen.FloorBudget`,
+`Soundness.Multiopen.BudgetedExtraction.deployed_member_budget`). What keeps the bound conditional
+is the coin–challenge coupling: the supply's inputs live over the multiopen challenge draw, which
+the family's coin space does not range over — see the hand-off note in `Soundness.VestaBudget`. -/
 
 namespace ComputedAlgebraicFSFamily
 
@@ -698,24 +701,5 @@ theorem instanceAttempt_provenance
   · split at h
     · exact ⟨_, _, _, _, _, (Option.some.inj h).symm⟩
     · exact absurd h (by simp)
-
-open scoped ENNReal in
-open Classical in
-/-- **The x₁ single-slot floor failure bound (#67 G7 stage 2).** `uniformOfFintype_accept_below_threshold_le`
-instantiated at the deployed `x₁` accept event: the measure of the `x₁` compression challenges where the
-deployed run accepts yet the `x₁` accept measure sits at or below `t` is `≤ t`. This bounds the failure of
-the derived terminal's `hprob1`/`hprob1p` floors, which are single-slot over the fixed honest `(ps, ch)`.
-The `hx2`/`hprob3`/`hprob4` floors are ∀-quantified over the run structures `X1/X2/X3Run`, which carry NO
-`Fintype` instance, so their failure event is an existential over a non-finite adversarial type — not a
-uniform-measure event this bound (or any single-slot count) can reach. -/
-theorem openedX1_floor_failure_le (urs : URS VestaG) (hk : shape.k = urs.k)
-    (vk : VerifyingKey shape Fp VestaG) (ps : ProofString shape Fp VestaG)
-    (ch : Challenges shape.k Fp) (t : ℝ≥0∞) :
-    (PMF.uniformOfFintype Fp).toOuterMeasure
-        {χv : Fp | OpenedX1Accept urs hk vk ps ch χv ∧
-          (PMF.uniformOfFintype Fp).toOuterMeasure
-              (Finset.univ.filter (OpenedX1Accept urs hk vk ps ch)) ≤ t}
-      ≤ t :=
-  uniformOfFintype_accept_below_threshold_le (OpenedX1Accept urs hk vk ps ch) t
 
 end Zcash.Snark
