@@ -5,6 +5,7 @@ import Zcash.Security.BindingSignature.Sapling
 import Zcash.Meta.AxiomCheck
 import Zcash.Snark.Soundness.CommitFold
 import Zcash.Snark.Soundness.Vesta
+import Zcash.Snark.Soundness.Deployed.ConcreteBounds
 import Zcash.Snark.Soundness.AGM.BindingSignature
 import Zcash.Snark.Soundness.AGM.Capstone
 import Zcash.Snark.Soundness.AGM.ProbabilityVesta
@@ -299,3 +300,15 @@ assert_axioms orchard_deployed_relation_event_prob_le_of_textbookDL +native
 assert_axioms orchard_deployed_relation_prob_eq_of_uniformURS +native
 assert_axioms orchard_deployed_relation_prob_le_of_uniformURS_textbookDL +native
 assert_axioms orchard_deployed_relation_prob_le_of_generatorRO_textbookDL +native
+
+/-! ### Fork-tree knowledge error
+
+The closed form of the fork-tree knowledge error and its evaluation over the deployed Orchard
+parameters. All theorems, so `assert_axioms`: the arithmetic runs on `Nat`/`ℝ≥0∞` and the deployed
+field cardinality comes from `ZMod.card`, so no compiler trust enters here. -/
+
+assert_axioms kerr_mul_card
+assert_axioms kerr_eq
+assert_axioms kerr_div_card
+assert_axioms deployed_forking_knowledge_error
+assert_axioms deployed_forking_knowledge_error_captured
