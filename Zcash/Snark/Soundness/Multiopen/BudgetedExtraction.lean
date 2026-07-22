@@ -65,7 +65,8 @@ reference the same run by construction. -/
 noncomputable def canonicalX2Run [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
     (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) (b : Fin (2 ^ urs.k) → Fp) (χ : Fp) : X2Run shape G :=
-  if h : OpenedX2Accept urs hk vk ps ch b χ then
+  if _ : X2RunAccepts urs hk vk ps ch b χ (honestX2Run ps ch) then honestX2Run ps ch
+  else if h : OpenedX2Accept urs hk vk ps ch b χ then
     (show ∃ r : X2Run shape G, X2RunAccepts urs hk vk ps ch b χ r from h).choose
   else honestX2Run ps ch
 
@@ -75,8 +76,21 @@ theorem canonicalX2Run_accepts [DecidableEq G] [Inhabited G] {shape : Shape} (ur
     (ch : Challenges shape.k Fp) (b : Fin (2 ^ urs.k) → Fp) {χ : Fp}
     (h : OpenedX2Accept urs hk vk ps ch b χ) :
     X2RunAccepts urs hk vk ps ch b χ (canonicalX2Run urs hk vk ps ch b χ) := by
-  rw [canonicalX2Run, dif_pos h]
-  exact (show ∃ r : X2Run shape G, X2RunAccepts urs hk vk ps ch b χ r from h).choose_spec
+  rw [canonicalX2Run]
+  by_cases hh : X2RunAccepts urs hk vk ps ch b χ (honestX2Run ps ch)
+  · rw [dif_pos hh]; exact hh
+  · rw [dif_neg hh, dif_pos h]
+    exact (show ∃ r : X2Run shape G, X2RunAccepts urs hk vk ps ch b χ r from h).choose_spec
+
+/-- **Honest-preferring collapse (`x₂`).** When the honest run witnesses the accept event, the
+canonical `x₂` run *is* the honest run — so at the honest tuple its splice is the identity and the
+inner base collapses to the honest transcript. -/
+theorem canonicalX2Run_honest [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
+    (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp) (b : Fin (2 ^ urs.k) → Fp) {χ : Fp}
+    (hh : X2RunAccepts urs hk vk ps ch b χ (honestX2Run ps ch)) :
+    canonicalX2Run urs hk vk ps ch b χ = honestX2Run ps ch := by
+  rw [canonicalX2Run, dif_pos hh]
 
 /-- The body of `OpenedX3Accept`'s run existential. -/
 def X3RunAccepts [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
@@ -92,7 +106,8 @@ def X3RunAccepts [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
 noncomputable def canonicalX3Run [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
     (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) (b : Fin (2 ^ urs.k) → Fp) (χ : Fp) : X3Run shape G :=
-  if h : OpenedX3Accept urs hk vk ps ch b χ then
+  if _ : X3RunAccepts urs hk vk ps ch b χ (honestX3Run ps ch) then honestX3Run ps ch
+  else if h : OpenedX3Accept urs hk vk ps ch b χ then
     (show ∃ r : X3Run shape G, X3RunAccepts urs hk vk ps ch b χ r from h).choose
   else honestX3Run ps ch
 
@@ -102,8 +117,19 @@ theorem canonicalX3Run_accepts [DecidableEq G] [Inhabited G] {shape : Shape} (ur
     (ch : Challenges shape.k Fp) (b : Fin (2 ^ urs.k) → Fp) {χ : Fp}
     (h : OpenedX3Accept urs hk vk ps ch b χ) :
     X3RunAccepts urs hk vk ps ch b χ (canonicalX3Run urs hk vk ps ch b χ) := by
-  rw [canonicalX3Run, dif_pos h]
-  exact (show ∃ r : X3Run shape G, X3RunAccepts urs hk vk ps ch b χ r from h).choose_spec
+  rw [canonicalX3Run]
+  by_cases hh : X3RunAccepts urs hk vk ps ch b χ (honestX3Run ps ch)
+  · rw [dif_pos hh]; exact hh
+  · rw [dif_neg hh, dif_pos h]
+    exact (show ∃ r : X3Run shape G, X3RunAccepts urs hk vk ps ch b χ r from h).choose_spec
+
+/-- **Honest-preferring collapse (`x₃`).** -/
+theorem canonicalX3Run_honest [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
+    (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp) (b : Fin (2 ^ urs.k) → Fp) {χ : Fp}
+    (hh : X3RunAccepts urs hk vk ps ch b χ (honestX3Run ps ch)) :
+    canonicalX3Run urs hk vk ps ch b χ = honestX3Run ps ch := by
+  rw [canonicalX3Run, dif_pos hh]
 
 /-- The body of `OpenedX1PinnedAccept`'s run existential: run `run` accepts the deployed verifier
 at compression challenge `χv` and carries an opened `x₄` batch at its own interpolation base. -/
@@ -120,7 +146,8 @@ def X1PinnedRunAccepts [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS 
 noncomputable def canonicalX1Run [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
     (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) (χv : Fp) : X1Run shape G :=
-  if h : OpenedX1PinnedAccept urs hk vk ps ch χv then
+  if _ : X1PinnedRunAccepts urs hk vk ps ch χv (honestX1Run ps ch) then honestX1Run ps ch
+  else if h : OpenedX1PinnedAccept urs hk vk ps ch χv then
     (show ∃ run : X1Run shape G, X1PinnedRunAccepts urs hk vk ps ch χv run from h).choose
   else honestX1Run ps ch
 
@@ -129,8 +156,19 @@ theorem canonicalX1Run_accepts [DecidableEq G] [Inhabited G] {shape : Shape} (ur
     (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) {χv : Fp} (h : OpenedX1PinnedAccept urs hk vk ps ch χv) :
     X1PinnedRunAccepts urs hk vk ps ch χv (canonicalX1Run urs hk vk ps ch χv) := by
-  rw [canonicalX1Run, dif_pos h]
-  exact (show ∃ run : X1Run shape G, X1PinnedRunAccepts urs hk vk ps ch χv run from h).choose_spec
+  rw [canonicalX1Run]
+  by_cases hh : X1PinnedRunAccepts urs hk vk ps ch χv (honestX1Run ps ch)
+  · rw [dif_pos hh]; exact hh
+  · rw [dif_neg hh, dif_pos h]
+    exact (show ∃ run : X1Run shape G, X1PinnedRunAccepts urs hk vk ps ch χv run from h).choose_spec
+
+/-- **Honest-preferring collapse (`x₁`).** -/
+theorem canonicalX1Run_honest [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
+    (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp) {χv : Fp}
+    (hh : X1PinnedRunAccepts urs hk vk ps ch χv (honestX1Run ps ch)) :
+    canonicalX1Run urs hk vk ps ch χv = honestX1Run ps ch := by
+  rw [canonicalX1Run, dif_pos hh]
 
 /-! ## The canonical-run grid extraction -/
 
