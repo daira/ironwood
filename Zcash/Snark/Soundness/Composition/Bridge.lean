@@ -37,7 +37,7 @@ namespace Zcash.Snark
 -- binder would be a *different* instance term, forcing the `multiopenCommitment` fold through `whnf`.
 -- Named (not anonymous) to avoid an auto-generated-name collision with the identical
 -- `local instance` in `Forking.Adversary.Provenance` when both are imported into `TrustBoundary`.
-local instance vestaInhabitedCompose67 : Inhabited VestaG := ⟨0⟩
+local instance vestaInhabitedCompositionBridge : Inhabited VestaG := ⟨0⟩
 
 variable {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
 

@@ -18,7 +18,7 @@ This module proves that bound for joint four-challenge events of small measure:
   turns the peeling escapes into blind pointwise escape sets, priced at `(Q + 4) · τ` by
   `escapesDuringC_measure_le'`.
 * **Adaptive escape sets** (`updEsc`, `adaptEsc`, `AdaptiveWeight`): the fixed-set decoder cannot
-  express accept events that read the table (`Soundness.Compose67Prefixes`), so the sections below
+  express accept events that read the table (`Soundness.Composition.Prefixes`), so the sections below
   replace the decoded set with an overwritten-point weight — blind for *every* weight — leaving as
   the one open input the concrete conditional-continuation weights for the multiopen process.
 -/
@@ -289,7 +289,7 @@ end Peel
 
 `PeelDecode` recovers the accept event from the transcript point alone (`stateAt`), which forces
 the event to be determined *before* its level's challenge is answered — and the multiopen accept
-events are not (`exists_multiopenStateAt_iff`, `Soundness.Compose67Prefixes`): `memberBadEvent`
+events are not (`exists_multiopenStateAt_iff`, `Soundness.Composition.Prefixes`): `memberBadEvent`
 reads `ch.x3` and the point-set commitments, absorbed after `x₁` is answered.
 
 `updEsc` replaces the fixed set with a *weight* evaluated on the table with the point's answer
@@ -391,7 +391,7 @@ does the rest.
 
 This is the adaptive replacement for `PeelDecode.landsBelow_measure_le`: same conclusion, but the
 event may depend on the table, which is what the multiopen accept events require
-(`Soundness.Compose67Prefixes`). -/
+(`Soundness.Composition.Prefixes`). -/
 theorem AdaptiveWeight.measure_le {T F : Type*} [Fintype T] [DecidableEq T] [Fintype F]
     [Nonempty F] {α : Type*} {A : OracleComp T F α} {Land : (T → F) → Prop} {τ : ℝ≥0∞}
     (W : AdaptiveWeight T F A Land τ) (hτ : τ ≠ 0) {Q : ℕ} (hQ : A.QueryBound Q) :

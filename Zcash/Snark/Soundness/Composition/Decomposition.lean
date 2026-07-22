@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.Compose67
+import Zcash.Snark.Soundness.Composition.Bridge
 
 /-!
 # The unconditional decomposition of the knowledge-error bound
@@ -30,7 +30,7 @@ open scoped ENNReal
 
 /-- Match `Algebraic.lean`'s `Inhabited VestaG` value, named to avoid the auto-name clash and the
 `whnf` timeouts that a shadowing anonymous instance causes on the composed algebraic-family terms. -/
-local instance vestaInhabitedCompose67Unc : Inhabited VestaG := ⟨0⟩
+local instance vestaInhabitedCompositionDecomp : Inhabited VestaG := ⟨0⟩
 
 namespace ComputedAlgebraicFSFamily
 

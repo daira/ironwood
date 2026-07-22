@@ -1,10 +1,10 @@
-import Zcash.Snark.Soundness.Compose67Forking
-import Zcash.Snark.Soundness.Compose67
+import Zcash.Snark.Soundness.Composition.Residual
+import Zcash.Snark.Soundness.Composition.Bridge
 
 /-!
 # The honest-completeness containment for the composition ladder (`hcont`)
 
-The ladder endpoint (`Soundness.Compose67Assembly`) is unconditional modulo two inputs: the family
+The ladder endpoint (`Soundness.Composition.Assembly`) is unconditional modulo two inputs: the family
 `PeelDecode` and the containment `hcont`. This module discharges `hcont`'s measure side outright
 and reduces its landing side to one non-circular hypothesis:
 
@@ -37,7 +37,7 @@ open Classical
 
 /-- Named `Inhabited VestaG` matching the algebraic family's value, so the VestaG-instance lemmas
 below do not shadow it with an auto-named copy (which tangles `whnf` on `multiopenCommitment`). -/
-local instance vestaInhabitedCompletenessZ8 : Inhabited VestaG := ⟨0⟩
+local instance vestaInhabitedCompleteness : Inhabited VestaG := ⟨0⟩
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 
@@ -338,7 +338,7 @@ theorem deployedAccepts_of_verifierEq [DecidableEq G] [Inhabited G] {shape : Sha
 set_option maxHeartbeats 1000000 in
 /-- **The honest-completeness supply with the shift derived.**
 `honestCompletenessSupply_of_instanceOpening` with `hshift` discharged by
-`shift_eq_zero_of_openings_agree` (`Soundness.Compose67`): the clean opening's witness `o.1` agreeing
+`shift_eq_zero_of_openings_agree` (`Soundness.Composition.Bridge`): the clean opening's witness `o.1` agreeing
 with a batch witness `a₀` that opens the inner product at `multiopenValue` *forces* the shift to
 vanish, so no honest-value-shift hypothesis is carried. The fold challenges are discharged by
 `exists_ipaFoldChallenges`. -/

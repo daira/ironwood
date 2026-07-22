@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.Compose67Unconditional
+import Zcash.Snark.Soundness.Composition.Decomposition
 import Zcash.Snark.Soundness.Multiopen.BudgetedExtraction
 
 /-!
