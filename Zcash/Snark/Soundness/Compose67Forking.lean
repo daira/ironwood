@@ -483,4 +483,216 @@ theorem fibered_slot_floor_le {A B' : Type*} [Fintype A] [Nonempty A]
     hfiber
   convert h using 2
 
+/-- The set-form fibered below-threshold bound: per base, the event is either the accept set itself
+(measure within the base's threshold) or empty. The `memberBadEvent` first part is fibered in this
+shape — the accept set is `memberJointAccept` at the base, whole, not a filtered slot. -/
+theorem fibered_mem_below_threshold_le {A B : Type*} [Fintype A] [Fintype B]
+    [Nonempty A] [Nonempty B] (SA : A → Set B) (t : A → ℝ≥0∞) {T : ℝ≥0∞}
+    (hT : ∀ a, t a ≤ T) :
+    (PMF.uniformOfFintype (A × B)).toOuterMeasure
+        {x : A × B | x.2 ∈ SA x.1 ∧
+          (PMF.uniformOfFintype B).toOuterMeasure (SA x.1) ≤ t x.1}
+      ≤ T := by
+  have hfiber : ∀ a, (PMF.uniformOfFintype B).toOuterMeasure
+      {b : B | b ∈ SA a ∧ (PMF.uniformOfFintype B).toOuterMeasure (SA a) ≤ t a} ≤ T := by
+    intro a
+    by_cases hc : (PMF.uniformOfFintype B).toOuterMeasure (SA a) ≤ t a
+    · have hset : {b : B | b ∈ SA a ∧ (PMF.uniformOfFintype B).toOuterMeasure (SA a) ≤ t a}
+          = SA a := Set.ext fun b => ⟨fun h => h.1, fun h => ⟨h, hc⟩⟩
+      rw [hset]
+      exact le_trans hc (hT a)
+    · have hset : {b : B | b ∈ SA a ∧ (PMF.uniformOfFintype B).toOuterMeasure (SA a) ≤ t a}
+          = (∅ : Set B) := Set.ext fun b => ⟨fun h => absurd h.2 hc, fun h => h.elim⟩
+      rw [hset]
+      simp
+  have h := uniformOfFintype_prod_fiber_bound_right
+    (S := fun a => {b : B | b ∈ SA a ∧ (PMF.uniformOfFintype B).toOuterMeasure (SA a) ≤ t a})
+    hfiber
+  convert h using 2
+
+set_option maxRecDepth 4000 in
+open Classical in
+/-- **The residual bound over the priced union.** The union analogue of
+`residual_le_of_coupling_containment`: the containment now lands in the three-part bad event —
+per-base joint accept within its threshold, or a floor failure at the `x₄` or `x₁` slot — and the
+bound is the sum of the three worst-case prices. At the deployed instantiation the fiber of the
+target set at base `a` is exactly `memberBadEvent` (with `SA` the joint accept, `acc4`/`acc1` the
+honest-base squeeze accepts, and the thresholds the deployed counts), so
+`honest_tuple_mem_memberBadEvent` discharges the containment pointwise from the per-coins supply. -/
+theorem residual_le_of_coupling_containment_union {Ω A : Type*} [Fintype A] [Nonempty A]
+    (μ : PMF Ω) (f : Ω → A × (Fp × Fp × Fp × Fp))
+    (SA : A → Set (Fp × Fp × Fp × Fp)) (t : A → ℝ≥0∞)
+    (acc4 acc1 : A → Fp → Prop) (s4 s1 : A → ℝ≥0∞) {T S4 S1 : ℝ≥0∞}
+    (hT : ∀ a, t a ≤ T) (hS4 : ∀ a, s4 a ≤ S4) (hS1 : ∀ a, s1 a ≤ S1)
+    (R : Set Ω)
+    (hcouple : μ.map f = PMF.uniformOfFintype (A × (Fp × Fp × Fp × Fp)))
+    (hcont : R ⊆ f ⁻¹'
+      ({x : A × (Fp × Fp × Fp × Fp) | x.2 ∈ SA x.1 ∧
+          (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure (SA x.1) ≤ t x.1}
+        ∪ {x : A × (Fp × Fp × Fp × Fp) | acc4 x.1 x.2.2.2.2 ∧
+            (PMF.uniformOfFintype Fp).toOuterMeasure
+              (Finset.univ.filter (acc4 x.1)) ≤ s4 x.1}
+        ∪ {x : A × (Fp × Fp × Fp × Fp) | acc1 x.1 x.2.1 ∧
+            (PMF.uniformOfFintype Fp).toOuterMeasure
+              (Finset.univ.filter (acc1 x.1)) ≤ s1 x.1})) :
+    μ.toOuterMeasure R ≤ T + S4 + S1 := by
+  set BadSet : Set (A × (Fp × Fp × Fp × Fp)) :=
+    {x : A × (Fp × Fp × Fp × Fp) | x.2 ∈ SA x.1 ∧
+        (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure (SA x.1) ≤ t x.1}
+      ∪ {x : A × (Fp × Fp × Fp × Fp) | acc4 x.1 x.2.2.2.2 ∧
+          (PMF.uniformOfFintype Fp).toOuterMeasure
+            (Finset.univ.filter (acc4 x.1)) ≤ s4 x.1}
+      ∪ {x : A × (Fp × Fp × Fp × Fp) | acc1 x.1 x.2.1 ∧
+          (PMF.uniformOfFintype Fp).toOuterMeasure
+            (Finset.univ.filter (acc1 x.1)) ≤ s1 x.1} with hBad
+  calc μ.toOuterMeasure R
+      ≤ μ.toOuterMeasure (f ⁻¹' BadSet) := μ.toOuterMeasure.mono hcont
+    _ = (μ.map f).toOuterMeasure BadSet := (PMF.toOuterMeasure_map_apply f μ BadSet).symm
+    _ = (PMF.uniformOfFintype (A × (Fp × Fp × Fp × Fp))).toOuterMeasure BadSet := by
+        rw [hcouple]
+    _ ≤ T + S4 + S1 := by
+        rw [hBad]
+        refine le_trans (MeasureTheory.measure_union_le _ _) ?_
+        refine add_le_add (le_trans (MeasureTheory.measure_union_le _ _) ?_) ?_
+        · exact add_le_add (fibered_mem_below_threshold_le SA t hT)
+            (fibered_slot_floor_le (B' := Fp × Fp × Fp × Fp) (fun w => w.2.2.2)
+              (fun E => uniformOfFintype_x4_cylinder E) acc4 s4 hS4)
+        · exact fibered_slot_floor_le (B' := Fp × Fp × Fp × Fp) (fun w => w.1)
+            (fun E => uniformOfFintype_fst_cylinder (α := Fp) (β := Fp × Fp × Fp) E) acc1 s1 hS1
+
+/-! ## Structural bounds on the deployed thresholds
+
+The per-base thresholds vary with the base's proof string only through the deployed counts. The
+`x₄` pair count is at most the shape's point-set count (the pair list zips against the fixed-arity
+claimed-evaluation vector), and the point union is at most the query list's length (every grouped
+point is some query's opening point). -/
+
+/-- The deployed `x₄` pair count is at most the shape's point-set arity. -/
+theorem deployedX4PairCount_le_numPointSets {G : Type*} [AddCommGroup G] [Module Fp G]
+    [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
+    deployedX4PairCount vk ps ch ≤ shape.numPointSets := by
+  simp only [deployedX4PairCount, deployedX4Pairs, List.length_zip, List.length_ofFn]
+  exact min_le_right _ _
+
+/-- Members of the first-appearance point fold are opening points of the folded queries. -/
+private theorem mem_dedup_points_foldl {k : ℕ} {F G' : Type*} [DecidableEq F] :
+    ∀ (queries : List (VerifierQuery k F G')) (init : List F) (x : F),
+      x ∈ queries.foldl (fun acc q => if q.point ∈ acc then acc else acc ++ [q.point]) init →
+      x ∈ init ∨ ∃ q ∈ queries, q.point = x := by
+  intro queries
+  induction queries with
+  | nil => intro init x hx; exact Or.inl hx
+  | cons q L ih =>
+      intro init x hx
+      rw [List.foldl_cons] at hx
+      rcases ih _ x hx with hin | ⟨q', hq', hpt⟩
+      · by_cases hq : q.point ∈ init
+        · rw [if_pos hq] at hin
+          exact Or.inl hin
+        · rw [if_neg hq] at hin
+          rcases List.mem_append.mp hin with h | h
+          · exact Or.inl h
+          · exact Or.inr ⟨q, List.mem_cons_self .., (List.mem_singleton.mp h).symm⟩
+      · exact Or.inr ⟨q', List.mem_cons_of_mem _ hq', hpt⟩
+
+/-- Every point of a grouped point set is some query's opening point — the reverse direction of
+`constructIntermediateSets_point_mem`, for cardinality bounds. -/
+theorem constructIntermediateSets_points_getD_mem_queries {k : ℕ} {F G' : Type*}
+    [DecidableEq F] [DecidableEq G'] (queries : List (VerifierQuery k F G')) (si : ℕ)
+    {x : F} (hx : x ∈ (constructIntermediateSets queries).points.getD si []) :
+    ∃ q ∈ queries, q.point = x := by
+  classical
+  have key : ∀ pl ∈ (constructIntermediateSets queries).points, x ∈ pl →
+      ∃ q ∈ queries, q.point = x := by
+    intro pl hpl hxpl
+    simp only [constructIntermediateSets] at hpl
+    obtain ⟨s, hs, rfl⟩ := List.mem_map.mp hpl
+    obtain ⟨i, hi, hix⟩ := List.mem_filterMap.mp hxpl
+    rw [List.getElem?_eq_some_iff] at hix
+    obtain ⟨hilt, rfl⟩ := hix
+    rcases mem_dedup_points_foldl queries [] _ (List.getElem_mem hilt) with h0 | h
+    · exact absurd h0 (List.not_mem_nil)
+    · exact h
+  rcases lt_or_ge si (constructIntermediateSets queries).points.length with hlt | hge
+  · rw [List.getD_eq_getElem _ _ hlt] at hx
+    exact key _ (List.getElem_mem hlt) hx
+  · rw [List.getD_eq_default _ _ hge] at hx
+    exact absurd hx (List.not_mem_nil)
+
+/-- The deployed point union has at most as many points as the verifier has opening queries. -/
+theorem deployedAllPts_card_le {G : Type*} [AddCommGroup G] [Module Fp G]
+    [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
+    (deployedAllPts vk ps ch).card ≤ (assembleQueries vk ps ch).length := by
+  classical
+  have hsub : deployedAllPts vk ps ch
+      ⊆ ((assembleQueries vk ps ch).map (·.point)).toFinset := by
+    intro x hx
+    rw [deployedAllPts, Finset.mem_biUnion] at hx
+    obtain ⟨j, -, hj⟩ := hx
+    rw [deployedSetPts, List.mem_toFinset] at hj
+    obtain ⟨q, hq, hqx⟩ := constructIntermediateSets_points_getD_mem_queries _ j hj
+    rw [List.mem_toFinset, List.mem_map]
+    exact ⟨q, hq, hqx⟩
+  calc (deployedAllPts vk ps ch).card
+      ≤ ((assembleQueries vk ps ch).map (·.point)).toFinset.card := Finset.card_le_card hsub
+    _ ≤ ((assembleQueries vk ps ch).map (·.point)).length := List.toFinset_card_le _
+    _ = (assembleQueries vk ps ch).length := List.length_map ..
+
+set_option maxHeartbeats 1000000 in
+open Classical in
+open ComputedAlgebraicFSFamily in
+/-- **#67: the single-number knowledge-error bound over the priced union, modulo the coupling.**
+`snarkExtraction_prob_le_of_generatorRO_textbookDL_unconditional` with the containment target
+enlarged to the three-part priced bad event, so that the containment hypothesis is dischargeable
+*pointwise from single-transcript supply*: at the deployed instantiation the fiber at base `a` is
+`memberBadEvent`, and `honest_tuple_mem_memberBadEvent` lands every clean-but-not-extracted honest
+tuple there given only deployed acceptance, a Fiat–Shamir tree at the honest IPA base, the per-set
+data, and the unfolding of "not extracted" — no batch, member decode, or measure hypothesis. The
+price is `T + S4 + S1`: the worst-case knowledge budget plus the two slot floor-failure prices
+(for the deployed counts, `deployedX4PairCount_le_numPointSets` and `deployedAllPts_card_le` bound
+the base variation). The remaining hypothesis is `hcouple` — the challenge-uniformity coupling, the
+random-oracle modeling step. -/
+theorem snarkExtraction_prob_le_of_generatorRO_textbookDL_unconditional_priced {shape : Shape}
+    {T' : Type*} [DecidableEq T'] (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex (2 ^ shape.k) → T') (hquery : Function.Injective query)
+    (family : ComputedAlgebraicFSFamily shape) {bound : ℝ≥0∞}
+    (hDL : TextbookDLWithCoinsAdvantageLE B family.snarkRelationFinder bound)
+    (extracted : (AugmentedIndex (2 ^ shape.k) → VestaG) → family.Coins → Prop)
+    {A : Type*} [Fintype A] [Nonempty A]
+    (f : (↥(Set.range query) → VestaG) × family.Coins → A × (Fp × Fp × Fp × Fp))
+    (SA : A → Set (Fp × Fp × Fp × Fp)) (t : A → ℝ≥0∞)
+    (acc4 acc1 : A → Fp → Prop) (s4 s1 : A → ℝ≥0∞) {T S4 S1 : ℝ≥0∞}
+    (hT : ∀ a, t a ≤ T) (hS4 : ∀ a, s4 a ≤ S4) (hS1 : ∀ a, s1 a ≤ S1)
+    (hcouple : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.Coins)).map f
+        = PMF.uniformOfFintype (A × (Fp × Fp × Fp × Fp)))
+    (hcont : ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          family.cleanButNotExtracted extracted)
+        ⊆ f ⁻¹'
+          ({x : A × (Fp × Fp × Fp × Fp) | x.2 ∈ SA x.1 ∧
+              (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure (SA x.1) ≤ t x.1}
+            ∪ {x : A × (Fp × Fp × Fp × Fp) | acc4 x.1 x.2.2.2.2 ∧
+                (PMF.uniformOfFintype Fp).toOuterMeasure
+                  (Finset.univ.filter (acc4 x.1)) ≤ s4 x.1}
+            ∪ {x : A × (Fp × Fp × Fp × Fp) | acc1 x.1 x.2.1 ∧
+                (PMF.uniformOfFintype Fp).toOuterMeasure
+                  (Finset.univ.filter (acc1 x.1)) ≤ s1 x.1})) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          family.snarkExtractionFailureEvent extracted)
+      ≤ ((family.Q + shape.k) * (3 / Fintype.card Fp) +
+          (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
+          Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound)
+        + (T + S4 + S1) := by
+  refine le_trans
+    (snarkExtraction_prob_le_of_generatorRO_textbookDL_decomposed B hB query hquery family hDL
+      extracted) ?_
+  refine add_le_add le_rfl ?_
+  exact residual_le_of_coupling_containment_union
+    (independentProductPMF (orchardGeneratorROSetup query) (PMF.uniformOfFintype family.Coins))
+    f SA t acc4 acc1 s4 s1 hT hS4 hS1 _ hcouple hcont
+
 end Zcash.Snark
