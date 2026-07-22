@@ -71,7 +71,6 @@ assert_axioms Zcash.Security.KeyBinding.CollidesDuring.of_pair
 assert_axioms Zcash.Security.KeyBinding.sum_two_mul_add
 assert_axioms Zcash.Security.KeyBinding.collidesDuring_measure_le
 assert_axioms Zcash.Security.KeyBinding.queries_pair_collision_measure_le
-assert_axioms Zcash.Security.KeyBinding.queries_bind
 assert_computable Zcash.Security.KeyBinding.derivQueries
 assert_axioms Zcash.Security.KeyBinding.break_measure_le_adaptive
 assert_axioms Zcash.Security.KeyBinding.break_measure_le_of_queryBound

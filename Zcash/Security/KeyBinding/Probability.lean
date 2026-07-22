@@ -483,16 +483,6 @@ theorem queries_pair_collision_measure_le {α : Type*} (s : Q → F)
     (OracleComp.dedup_avoidsCache [] A)
   simpa using hmain
 
-omit [Fintype Q] [DecidableEq Q] [Field F] [Fintype F] [DecidableEq F] in
-/-- Queries of a sequenced machine: the first machine's, then the continuation's on its
-output. -/
-theorem queries_bind {α β : Type*} (A : OracleComp Q F α) (f : α → OracleComp Q F β)
-    (O : Q → F) :
-    (A.bind f).queries O = A.queries O ++ ((f (A.run O)).queries O) := by
-  induction A with
-  | pure a => simp [OracleComp.bind, OracleComp.queries]
-  | query t k ih => simp [OracleComp.bind, OracleComp.queries, ih]
-
 end Generic
 
 /-! ## The key-binding capstone -/
@@ -621,13 +611,14 @@ theorem break_measure_le_of_queryBound (Extract : G → B) (S : G) (hfn : B → 
       derivQueries Extract ((A.completing (derivQueries Extract)).run O) i
         ∈ (A.completing (derivQueries Extract)).queries O := by
     intro O i
-    rw [OracleComp.run_completing, OracleComp.completing, queries_bind,
+    rw [OracleComp.run_completing, OracleComp.completing, OracleComp.queries_bind,
       OracleComp.queries_queryList]
     exact List.mem_append.2 (Or.inr (List.mem_ofFn.2 ⟨i, rfl⟩))
   have hbound := break_measure_le_adaptive Extract S hfn Ggen hExt hS Hask Hnk
     (OracleComp.queryBound_completing (derivQueries Extract) hQ) hqueries
   have h43 : n + 4 - 1 = n + 3 := by omega
   simpa [OracleComp.run_completing, h43] using hbound
+
 
 end Capstone
 
