@@ -308,6 +308,32 @@ assert_no_sorry deployed_value_check_node_binding_budgeted
 assert_no_sorry deployed_member_node_binding_budgeted
 assert_no_sorry deployed_member_budget
 
+-- The decode layer (`Soundness.Multiopen.Decode`/`Deployed`): the Vandermonde recovery of the
+-- column witnesses, the deployed x4 collapse proved to be a flat power batch, and the two-level
+-- binding of the extracted witness to the member commitments.
+assert_no_sorry decodedColumnFamily_of_batch_openings
+assert_no_sorry deployedCommitment_x4_batch
+assert_no_sorry multiopenValue_x4_batch
+assert_no_sorry x1_batch_open_soundV
+assert_no_sorry member_binding_of_x1_samples
+assert_no_sorry deployed_witness_member_binding
+assert_no_sorry deployed_witness_two_level
+assert_no_sorry node_binding_of_samples
+-- The good-challenge production (`Soundness.GoodChallenge`): the Schwartz-Zippel exclusion budget
+-- and the pigeonhole that produces an accepting challenge outside the bad set.
+assert_no_sorry uniformChallenge_szBadSet
+assert_no_sorry uniformChallenge_szGoodSet
+assert_no_sorry uniformChallenge_quotient_szBadSet
+assert_no_sorry uniformChallenge_szBadSet_union
+assert_no_sorry exists_accepting_good_challenge
+assert_no_sorry exists_accepting_good_challenge_quotient
+-- The deployed Vesta capstone family: the decoded-column rungs and the terminal, alongside the
+-- derived capstone already pinned below.
+assert_no_sorry orchard_verifier_vesta_decoded_constraint_of_forked_x4
+assert_no_sorry orchard_verifier_vesta_forking_constraint_deployed_x4
+assert_no_sorry orchard_verifier_vesta_member_constraint_deployed_x4
+assert_no_sorry orchard_verifier_vesta_member_constraint_deployed_terminal
+
 -- The budgeted capstone and computed path (`Soundness.VestaBudget`): the derived deployed member
 -- capstone with the run-quantified floors replaced by the joint accept floor, and the computed-path
 -- endpoint with the member decode constructed and `hquot` derived — no extraction-data hypothesis.
