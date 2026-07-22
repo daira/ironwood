@@ -622,16 +622,12 @@ noncomputable def legacy_orchard_verifier_vesta_forking_constraint_adaptive_rewi
 open Polynomial in
 open scoped ENNReal in
 open Classical in
-/-- **Deployed decoded constraint, per fork, batch produced by `x₄` rewinding.** The decoded
-counterpart of `orchard_verifier_vesta_constraint_of_forked`: the circuit is checked on columns
-decoded from the opened `x₄` batch over the deployed aggregates
-(`x4BatchCommitments`/`x4BatchEvals`), not through free `decodeAdvice`/`decodeInstance` functions.
-The batch is derived, not assumed: the fork's clean transcript seeds the honest slot and `hprob4`
-spends the `x₄` accept measure (`openedX4Rewind_of_x4Prob_forked`). `hquot`/`hgood` are *pinned*:
-stated once, for the canonical decode at the transcript's own extracted witness
-(`ipaRelation_extract`) — the satisfiable shape; quantifying them over every opening is vacuous at
-a nontrivial kernel (the scope section of `Soundness.Multiopen.Decode`). The measure hypothesis
-carries the random-oracle uniformity axiom (`Soundness.Forking.Oracle`). -/
+/-- **Deployed decoded constraint, per fork, batch produced by `x₄` rewinding.** The circuit is
+checked on columns decoded from the opened `x₄` batch over the deployed aggregates, not through
+free decode functions; the batch is derived from the fork's clean transcript and the `x₄` accept
+measure (`openedX4Rewind_of_x4Prob_forked`). `hquot`/`hgood` are stated once, for the canonical
+decode at the transcript's own extracted witness — the satisfiable shape (quantifying over every
+opening is vacuous at a nontrivial kernel; see `Multiopen.Decode`'s scope section). -/
 theorem orchard_verifier_vesta_decoded_constraint_of_forked_x4 [DecidableEq VestaG]
     [Inhabited VestaG] {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp VestaG) (ps : ProofString shape Fp VestaG)
@@ -709,21 +705,14 @@ open Classical in
 /-- **Deployed decoded constraint capstone, through the opened commitment, with the
 mismatch-to-DLR split.** *Either* the SNARK relation holds with the circuit checked on columns
 decoded from the deployed `x₄` aggregates, *or* a nontrivial `(g, u, w)` relation exists. The
-statement is the opened commitment `deployedCommitment − pU•u − pW•w`; the batch `pbatch` is
-designated *data* over the fingerprinted grouping's own aggregates, produced upstream at the
-extracted witness by `openedX4Rewind_of_x4Prob` (spending the `x₄` floor), its opening derived, not
-assumed (`OpenedBatchOpenings.ipaRelation_of_x4Current`). `hprob` spends the round-forking floor
-(`legacy_orchard_verifier_vesta_forking_opening_deployed`, its declared-component and
-static-dichotomy caveats unchanged) and enforces the witness tie: the produced opening either
-agrees with the designated one, or the two openings collide on `commit` and the relation is
-computed (`hasNontrivialRelation_of_two_openings`). The measure hypothesis carries the
-random-oracle uniformity axiom (`Soundness.Forking.Oracle`).
+statement is the opened commitment `deployedCommitment − pU•u − pW•w`; the batch is designated
+data produced upstream at the extracted witness, its opening derived; `hprob` spends the
+round-forking floor and enforces the witness tie — the produced opening agrees with the designated
+one, or the two collide and the relation is computed.
 
-Named assumptions: `hU`/`hcommit`/`hs` declare the witness representations the opening rung
-consumes; `hξ` kills the synthetic-blinder value shift; `pbatch`/`hξcur` designate the batch at the
-honest batching challenge; `hquot`/`hgood` state the gate check once, for the canonical decode of
-the designated batch (the gate/`x`→`x₃` transport seam — see `Soundness.Multiopen.Decode`);
-`hencodes` consumes the decoded SNARK relation. -/
+Named assumptions: `hU`/`hcommit`/`hs` declare the witness representations; `hξ` kills the
+synthetic-blinder value shift; `pbatch`/`hξcur` designate the batch; `hquot`/`hgood` state the gate
+check once, for the canonical decode; `hencodes` consumes the decoded SNARK relation. -/
 theorem orchard_verifier_vesta_forking_constraint_deployed_x4 [DecidableEq VestaG]
     [Inhabited VestaG] {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp VestaG) (ps : ProofString shape Fp VestaG)
@@ -788,18 +777,12 @@ open Classical in
 set_option maxHeartbeats 1000000 in
 /-- **Deployed member-column constraint capstone: the gate check on the real circuit columns.**
 *Either* the SNARK relation holds with the circuit checked on the decoded *member* columns — the
-actual queried column commitments' openings, selected per advice/instance index — *or* a
-nontrivial `(g, u, w)` relation exists. The member decodes are produced, not assumed: per point
-set, `openedMemberDecode_of_x1Prob` spends the `x₁` accept measure `hprob1`, the honest slot
-rebuilt from the designated batch `pbatch`. The honest opening is `pbatch` itself
-(`ipaRelation_of_x4Current`): the member constraint follows from it and the gate hypotheses with no
-free augmented `(u, w)` decomposition assumed here — the vanish-or-DLR dichotomy on the `u`/`w`
-components is discharged upstream, where `pbatch` is produced from acceptance (`openedX4Rewind_of_x4Prob`
-and the `x₄`/`x₁` forks). `hquot`/`hgood` state the gate check once, on the produced member polynomials — deriving them from
-the verifier's accepted `assemble.eval = 0` (the claimed-evaluation binding at the rotated points
-and the gate/`x`→`x₃` transport) is the remaining constraint-side work, tracked on the decode
-module's deployed-status section. All measure hypotheses carry the random-oracle uniformity axiom
-(`Soundness.Forking.Oracle`). -/
+actual queried column commitments' openings — *or* a nontrivial `(g, u, w)` relation exists. The
+member decodes are produced per point set by spending the `x₁` accept measure
+(`openedMemberDecode_of_x1Prob`); the honest opening is the designated batch itself. `hquot`/`hgood`
+state the gate check once, on the produced member polynomials; deriving them from the verifier's
+accepted `assemble.eval = 0` is the remaining constraint-side work. Measures carry the usual
+random-oracle uniformity axiom. -/
 theorem orchard_verifier_vesta_member_constraint_deployed_x4 [DecidableEq VestaG]
     [Inhabited VestaG] {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp VestaG) (ps : ProofString shape Fp VestaG)
@@ -893,15 +876,12 @@ open Polynomial in
 open scoped ENNReal in
 open Classical in
 set_option maxHeartbeats 1000000 in
-/-- **Terminal deployed member capstone: `hquot` derived, not assumed.** From per-column claimed
-evaluations — `hfixed`/`hadvice`/`hinstance`, hypotheses here, derived from the forking floors by
-`orchard_verifier_vesta_member_constraint_derived` below — and the gate-fold identity (`hfold`,
-halo2's `expectedHEval`, definitional once `gates` are the deployed `subProofExpressions`),
-`Constraints.quotientCheck_of_claimed` produces `hquot`, threaded into
-`orchard_verifier_vesta_member_constraint_deployed_x4`. This closes the multiopen value check into the
-gate check; once the claimed evaluations are derived, the residual trust surface is the gate
-STRUCTURE `gates = subProofExpressions`, the equivalence fingerprint (zcash/ironwood#11/#13) on the
-same footing as the RO-uniformity axiom. -/
+/-- **Terminal deployed member capstone: `hquot` derived, not assumed.** From the per-column
+claimed evaluations and the gate-fold identity `hfold`, `quotientCheck_of_claimed` produces
+`hquot`, threaded into the member capstone — the multiopen value check closed into the gate check.
+Once the claimed evaluations are derived, the residual trust surface is the gate structure
+`gates = subProofExpressions`: the equivalence fingerprint, on the same footing as the
+RO-uniformity axiom. -/
 theorem orchard_verifier_vesta_member_constraint_deployed_terminal [DecidableEq VestaG]
     [Inhabited VestaG] {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp VestaG) (ps : ProofString shape Fp VestaG)
@@ -997,18 +977,14 @@ open Polynomial in
 open scoped ENNReal in
 open Classical in
 set_option maxHeartbeats 4000000 in
-/-- **Derived deployed member capstone: `hadvice`/`hinstance` produced from the floors (F5).**
-The gate check runs at the deployed opening challenge `ch.x` on the decoded member columns, and the
-columns' claimed evaluations there are *derived*, not assumed: each in-range layout entry is a
-deployed opening query (`advice_query_mem_assembleQueries`), its rotated point is a point of the
-member's set (`deployed_query_point_mem`, F4), and the member node binding from the nested
-`x₁`×`x₂`×`x₃`×`x₄` floors (`deployed_member_node_binding_at_point`, F2/F3) pins the decoded
-column's value there to the deployed claimed evaluation (`deployedClaimedFeed`), on pain of a
-computed `(g, U, W)` relation. The gate fold `hfold` — halo2's `expected_h_eval` identity — is
-stated at exactly those deployed claimed evaluations, the gate-structure fingerprint surface
-(zcash/ironwood#11/#13), and `hgood` is the Schwartz–Zippel surface whose production from the
-deployed `x`-squeeze measure is `hgood_of_xProb`. The residual premises are the forking floors, the
-sample-avoidance floor, and the layout/eval range facts — no per-column value hypothesis remains. -/
+/-- **Derived deployed member capstone: the claimed evaluations produced from the floors.** The
+gate check runs at `ch.x` on the decoded member columns, whose claimed evaluations are *derived*:
+each in-range layout entry is a deployed opening query, its rotated point a point of the member's
+set, and the member node binding pins the decoded column's value there
+(`deployed_member_node_binding_at_point`), on pain of a computed `(g, U, W)` relation. `hfold` is
+stated at exactly those deployed claimed evaluations (the expression-fold fingerprint surface), and
+`hgood`'s production surface is `hgood_of_xProb`. The residual premises are the forking floors,
+sample avoidance, and the layout/eval range facts — no per-column value hypothesis remains. -/
 theorem orchard_verifier_vesta_member_constraint_derived [DecidableEq VestaG]
     [Inhabited VestaG] {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp VestaG) (ps : ProofString shape Fp VestaG)

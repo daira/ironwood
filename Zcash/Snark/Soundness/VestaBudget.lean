@@ -4,38 +4,23 @@ import Zcash.Snark.Soundness.Multiopen.BudgetedExtraction
 /-!
 # The budgeted deployed capstone and the budgeted computed path
 
-`Soundness.Vesta` proves the derived deployed member capstone
-(`orchard_verifier_vesta_member_constraint_derived`), whose extraction floors are universally
-quantified over the splice runs `X1Run`/`X2Run`/`X3Run`; `Soundness.Multiopen.BudgetedExtraction`
-re-proves the member extraction from a single joint accept floor along the canonical rewind path.
-This module joins the two ends:
+The derived capstone (`Soundness.Vesta`) quantifies its extraction floors over every splice run;
+the budgeted extraction (`Multiopen.BudgetedExtraction`) needs one joint accept floor. This module
+joins them:
 
-* `orchard_verifier_vesta_member_constraint_budgeted` — the derived capstone with its seven
-  run-quantified floor premises (`hξ₀p`/`hprob1p`/`hx2`/`hx3anchor`/`hprob3`/`hprob4` and the
-  run-quantified `havoid`) replaced by one joint accept floor `t₁ + (t₂ + t₃ + t₄) <
-  μ(memberJointAccept)` at the honest-base thresholds, plus sample avoidance at the canonical runs
-  only.
-* `member_relation_or_dlr_of_instance_budgeted` / `member_snark_of_instance_budgeted` /
-  `orchard_verifier_sound_vesta_budgeted` — the computed path (`Soundness.Compose67`) routed
-  through the budgeted capstone: the member decode is *constructed*
-  (`openedMemberDecode_of_x1Prob`) and the quotient identity `hquot` is *derived*
-  (`quotientCheck_of_claimed` from the member bindings), so neither is a hypothesis. The premises
-  that remain are acceptance itself (`hacc0`), the two accept-measure floors (`hprob1`, the joint
-  floor `hJ`), sample avoidance at the canonical runs, the gate-structure fingerprint surfaces
-  (`hfold`, `hgood`), the layout identities, and the committed-quotient identity — each an honest
-  trust surface, none of them extraction data.
+* `orchard_verifier_vesta_member_constraint_budgeted` — the capstone with its seven run-quantified
+  floor premises replaced by one joint floor `t₁ + (t₂ + t₃ + t₄) < μ(memberJointAccept)`, plus
+  sample avoidance at the canonical runs only.
+* `member_relation_or_dlr_of_instance_budgeted` and companions — the computed path routed through
+  it: the member decode is *constructed* (`openedMemberDecode_of_x1Prob`) and `hquot` *derived*
+  (`quotientCheck_of_claimed`), so neither is a hypothesis. What remain are acceptance, the two
+  accept floors, sample avoidance, the gate surfaces `hfold`/`hgood`, and the layout identities.
 
-  The layout/committed-quotient identities (`hadviceLayout`/`hinstanceLayout`/`hquotCommitted`) are
-  the halo2 faithfulness boundary — that the VK's declared query layout is the circuit's real column
-  structure and that the quotient is a committed column — not derivable without modeling keygen. They
-  are *fail-safe*, not silently satisfiable: each demands `(deployedSetCommIds …).getD idx d = c`
-  where the default `d` is a `CommitmentId` constructor distinct from the demanded `c`
-  (`vanishingH` vs `adviceCol`/`instanceCol`; `randomPoly` vs `vanishingH`, `Verifier.Checks`), so an
-  out-of-range or mismatched layout makes the premise *false*, never vacuously true.
-
-The `x₁` floor `hprob1` feeds the member-decode construction and is stated at the honest base; it
-follows from the joint floor by the first-coordinate marginal bound, but stays a named hypothesis
-because the statement's decode terms carry its proof.
+The layout/committed-quotient identities are the halo2 faithfulness boundary — the VK's declared
+layout is the circuit's real column structure — and are fail-safe, not silently satisfiable: each
+demands a `getD` value whose default is a different `CommitmentId` constructor, so a mismatched
+layout makes the premise false, never vacuously true. The `x₁` floor `hprob1` follows from the
+joint floor but stays named, because the statement's decode terms carry its proof.
 -/
 
 namespace Zcash.Snark
@@ -51,34 +36,21 @@ open scoped ENNReal in
 open Classical in
 set_option maxHeartbeats 4000000 in
 /-- **Budgeted deployed member capstone: the floor family priced by one joint accept floor.** The
-conclusion of `orchard_verifier_vesta_member_constraint_derived` (`Soundness.Vesta`) — the gate
-check runs at the deployed opening challenge `ch.x` on the decoded member columns, with the
-columns' claimed evaluations *derived* via the member node binding and `hquot` produced by
-`quotientCheck_of_claimed` — from a single joint accept floor per point set:
-`t₁(i) + (t₂ + t₃ + t₄) < μ(memberJointAccept)` at the honest-base thresholds
-(`deployed_member_node_binding_at_point_budgeted`), in place of the derived capstone's seven
-run-quantified floor premises. Sample avoidance (`havoid`) is required only at the canonical runs.
+conclusion of the derived capstone — the gate check at `ch.x` on the decoded member columns, the
+claimed evaluations derived and `hquot` produced — from a single joint accept floor per point set,
+`t₁(i) + (t₂ + t₃ + t₄) < μ(memberJointAccept)`, in place of seven run-quantified floors. `havoid`
+only at the canonical runs.
 
-Named assumptions: `hacc0` (the deployed run accepts), `hprob1` (the honest-base `x₁` accept
-floor, feeding the member-decode construction), `hJ` (the joint accept floor), `havoid`
-(canonical-run sample avoidance), `hfold` (the gate fold at the deployed claimed evaluations — the
-gate-structure fingerprint surface), `hgood` (the Schwartz–Zippel surface *at the fixed* `ch.x`: if
-the gate identity fails as polynomials, its difference is nonzero at `ch.x`), `hadviceLayout`/
-`hinstanceLayout` (VK query-layout identities), `hquotCommitted` (the quotient is a committed
-column), `hencodes` (the member-relation consumer).
+Named assumptions: `hacc0` (acceptance), `hprob1` (the honest-base `x₁` floor, feeding the member
+decode), `hJ` (the joint floor), `havoid`, `hfold` (the gate fold at the deployed claimed
+evaluations), `hgood` (Schwartz–Zippel at the *fixed* `ch.x`), the layout identities, the
+committed-quotient identity, `hencodes`.
 
-`hgood` is irreducible at the *fixed* `ch.x`: proving `ch.x ∉ szBadSet` would require resampling.
-`hgood_of_xProb` (`Soundness.Multiopen.Claimed`) produces the surface only at a *resampled* good
-challenge (the `_xgood` rung `member_constraint_of_relation_and_batch_xgood`,
-`Soundness.Multiopen.Opened`), which the deployed architecture cannot route through here: the decoded
-member columns are pinned at `ch.x`'s rotation points (the deployed query points), so the gate check
-is coupled to `ch.x` and cannot move to a separate challenge without re-running the value binding at
-that challenge's rotations. So `hgood` stays a faithfulness surface at `ch.x`, exactly as the base
-rung's docstring records (`Opened.member_constraint_of_relation_and_batch_xgood`) — but its failure
-over the `x`-squeeze is priced (`hgood_failure_priced`/`hgood_of_good_challenge`, this module), and
-`hfold` decomposes into the vanishing-slot value binding + `ch.x^vk.n ≠ 1` + the sharpened fold
-fingerprint (`vanishing_query_mem_assembleQueries`/`hfold_of_expectedHEval_binding`, this module) —
-see the `hfold`/`hgood` section note at the end of this file. -/
+`hgood` is irreducible at the fixed `ch.x` — the decoded columns are pinned at `ch.x`'s rotation
+points, so the check cannot move to a resampled challenge without re-running the value binding —
+but its failure over the `x`-squeeze is priced (`hgood_failure_priced`), and `hfold` decomposes
+into the vanishing-slot binding, `ch.x^vk.n ≠ 1`, and the fold fingerprint; see the `hfold`/`hgood`
+section note at the end of this file. -/
 theorem orchard_verifier_vesta_member_constraint_budgeted {shape : Shape}
     (urs : URS VestaG) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp VestaG) (ps : ProofString shape Fp VestaG)
@@ -829,15 +801,12 @@ theorem cleanOpening_provenance (family : ComputedAlgebraicFSFamily shape)
 
 open scoped ENNReal in
 open ComputedAlgebraicFSFamily in
-/-- **The knowledge-error bound with the extraction logic discharged.**
-`snarkExtraction_prob_le_of_generatorRO_textbookDL` (`Soundness.Compose67`) with its `hExtract`
-hypothesis reduced through the clean-opening provenance: the supply obligation `hSupply` receives
-the concrete `AlgebraicWfProof`, oracle scalars, certificate, and clean opening behind each
-produced instance — exactly the inputs of the budgeted witness tie
-(`member_relation_or_dlr_of_instance_budgeted`), which concludes the extraction given the
-multiopen rewind data at that instance's base. The bound is the clean-opening bound
-`(Q+k)·3/|Fp| + (Q+1)/|Fp| + |basis|·ε`, verbatim. The residual for a fully unconditional bound
-is the coin–challenge coupling recorded in this section's note. -/
+/-- **The knowledge-error bound with the extraction logic discharged.** The conditional bound with
+`hExtract` reduced through the clean-opening provenance: the supply obligation receives the
+concrete proof, oracle scalars, certificate, and clean opening behind each produced instance —
+exactly the inputs of the budgeted witness tie, which concludes the extraction given the multiopen
+rewind data. The bound is the clean-opening bound, verbatim; the residual is the coin–challenge
+coupling recorded in this section's note. -/
 theorem snarkExtraction_prob_le_of_generatorRO_textbookDL_budgeted {shape : Shape}
     {T : Type*} [DecidableEq T] (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ shape.k) → T) (hquery : Function.Injective query)
@@ -881,27 +850,16 @@ theorem snarkExtraction_prob_le_of_generatorRO_textbookDL_budgeted {shape : Shap
 The two gate-check surfaces of the budgeted capstone decompose further; neither is an opaque
 assumption.
 
-* **`hfold` is a value binding, not a check the verifier skips.** The deployed verifier *computes*
-  the expected quotient evaluation from the full claimed-evaluation expression list — halo2's
-  `expected_h_eval`: `expectedHEval exprs ch.y (ch.x ^ vk.n) = fold(exprs) · (ch.x^vk.n − 1)⁻¹`
-  over `exprs = allExpressions` (gates ++ permutation ++ lookup, all sub-proofs) — and pins the
-  vanishing-`h` opening query at exactly that value (`vanishing_query_mem_assembleQueries`). The
-  member node binding at that slot (`hquotCommitted` routes `hpoly` there) therefore binds
-  `hpoly.eval ch.x` to `expectedHEval …`, and `hfold_of_expectedHEval_binding` turns that binding
-  into the capstone's `hfold` equation given two side conditions: `ch.x ^ vk.n ≠ 1` (root-of-unity
-  avoidance, a `vk.n / p`-priced squeeze exclusion), and the *sharpened* fingerprint `hfp` — the
-  parameter gate fold equals the deployed `allExpressions` fold, the zcash/ironwood#11/#13 surface
-  stated as one explicit equation. The grouping's eval faithfulness at the vanishing slot is now
-  proven here (`vanishing_slot_routed`): `constructIntermediateSets` routes the (unique — no other
-  query carries `CommitmentId.vanishingH`) vanishing query to a member whose point list is `[ch.x]`
-  and whose eval list is `[expectedHEval …]`, so the routed `getD` value *is* `expectedHEval …`.
-  `hfold_of_vanishing_slot_binding` reads `hbind` through that route. Both of its remaining inputs
-  are now settled rather than open: `hxn` is a consequence of acceptance (`deployedAccepts_xn_ne_one`
-  — `assemble?` rejects at `xⁿ = 1`), and `hfp` is the *fixed* zcash/ironwood#11/#13 fingerprint,
-  which `hfp_of_expressions_eq` reduces to a per-instance list equality. `hbind` itself is supplied
-  by `hfold_of_member_budget` from the good branch of `deployed_member_budget`, and
-  `orchard_verifier_vesta_member_constraint_budgeted_hfold_derived` runs the whole composition
-  through the budgeted capstone.
+* **`hfold` is a value binding, not a check the verifier skips.** The deployed verifier computes
+  halo2's `expected_h_eval` — the `ch.y`-fold of `allExpressions` divided by `ch.x^vk.n − 1` — and
+  pins the vanishing-`h` opening query at exactly that value. The grouping routes that query to a
+  member whose point list is `[ch.x]` and whose eval list is `[expectedHEval …]`
+  (`vanishing_slot_routed`); binding `hpoly.eval ch.x` to it gives the capstone's `hfold` equation
+  (`hfold_of_vanishing_slot_binding`, `hfold_of_member_budget`). Its inputs are settled: `hxn`
+  follows from acceptance (`deployedAccepts_xn_ne_one`), `hbind` from the good branch of
+  `deployed_member_budget`, and `hfp` reduces to a per-instance list equality
+  (`hfp_of_expressions_eq`), open only until the permutation and lookup arguments are folded into
+  the constraint model.
 
 * **`hgood`'s failure is Schwartz–Zippel-priced.** For the capstone's difference polynomial the
   failure event of the exact `hgood` implication has uniform-squeeze measure at most
@@ -940,18 +898,12 @@ theorem vanishing_query_mem_assembleQueries {G : Type*} [Inhabited G] {shape : S
   simp only [assembleQueries, vanishingQueries]
   exact List.mem_append.mpr (Or.inr (List.mem_cons_self))
 
-/-- **The vanishing slot's routed member, carrying the verifier-computed evaluation.** Composing
-three in-tree facts: `vanishing_query_mem_assembleQueries` (the vanishing query is in the flat query
-list, at point `ch.x`, with evaluation `expectedHEval …`), `assembleQueries_vanishingH_unique`
-(no other query carries the `vanishingH` slot), and `constructIntermediateSets_unique_comm_routed`
-(a unique-slot query is routed to a single point set, whose point list is the singleton of its
-opening point and whose member records that slot and the singleton evaluation list). So the grouping
-routes the vanishing query to member `m` of point set `i`, `points i = [ch.x]`, the member's recorded
-identity is `vanishingH`, and its recorded evaluation list is `[expectedHEval …]`.
-
-This is the grouping's eval faithfulness at the vanishing slot — the single bookkeeping fact the
-`hfold` derivation was missing, so `hfold_of_vanishing_slot_binding` below now reads the routed value
-rather than assuming it. -/
+/-- **The vanishing slot's routed member carries the verifier-computed evaluation.** The vanishing
+query opens at `ch.x` with evaluation `expectedHEval …` (`vanishing_query_mem_assembleQueries`), no
+other query carries its slot (`assembleQueries_vanishingH_unique`), so the grouping routes it to a
+member of a single point set with `points i = [ch.x]`, identity `vanishingH`, and eval list
+`[expectedHEval …]` (`constructIntermediateSets_unique_comm_routed`) — the eval-faithfulness fact
+the `hfold` derivation reads. -/
 theorem vanishing_slot_routed {G : Type*} [AddCommGroup G] [Module Fp G] [DecidableEq G]
     [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
@@ -987,7 +939,7 @@ theorem vanishing_slot_routed {G : Type*} [AddCommGroup G] [Module Fp G] [Decida
 value binding: if the extracted quotient's evaluation at `ch.x` is the verifier-computed
 `expectedHEval` (`hbind` — supplied by the member node binding at the `hquotCommitted` slot),
 the squeeze avoids the `deg`-th roots of unity (`hxn`), and the parameter gate fold equals the
-deployed expression fold (`hfp` — the zcash/ironwood#11/#13 fingerprint, sharpened to one
+deployed expression fold (`hfp` — the expression-fold fingerprint, sharpened to one
 equation), then `hfold` holds verbatim. Pure field algebra: `expectedHEval` clears its
 `(x^deg − 1)⁻¹` against `hxn`. -/
 theorem hfold_of_expectedHEval_binding {ng : ℕ} (gates : Fin ng → Expr Fp)
@@ -1006,11 +958,9 @@ theorem hfold_of_expectedHEval_binding {ng : ℕ} (gates : Fin ng → Expr Fp)
   rw [hfp, hbind, expectedHEval, mul_assoc,
     inv_mul_cancel₀ (sub_ne_zero.mpr hxn), mul_one]
 
-/-- **The root-of-unity exclusion is a consequence of acceptance, not a priced assumption.**
-`assemble?` returns `none` at `ch.x ^ vk.n = 1` — the deployed verifier panics there on
-`(xⁿ − 1).invert().unwrap()` (halo2 `vanishing/verifier.rs`), which the model renders as a rejection
-— and `DeployedAccepts` is `False` on the `none` branch. So an accepting transcript already has
-`ch.x ^ vk.n ≠ 1`, and `hfold`'s side condition `hxn` needs no separate `vk.n / p` squeeze budget. -/
+/-- Acceptance excludes the roots of unity: `assemble?` returns `none` at `ch.x ^ vk.n = 1` (the
+deployed verifier panics there; the model renders the panic as rejection), and `DeployedAccepts` is
+`False` on the `none` branch. `hfold`'s side condition `hxn` therefore needs no squeeze budget. -/
 theorem deployedAccepts_xn_ne_one {G : Type*} [AddCommGroup G] [Module Fp G] [DecidableEq G]
     [Inhabited G] {shape : Shape} (urs : URS G) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1030,8 +980,7 @@ theorem deployedAccepts_xn_ne_one {G : Type*} [AddCommGroup G] [Module Fp G] [De
 node binding at the `hquotCommitted` slot pins `hpoly.eval ch.x` to the value the grouping recorded
 for the vanishing member, and `vanishing_slot_routed` says that value *is* the verifier-computed
 `expectedHEval`. The two standing side conditions are unchanged and explicit: root-of-unity
-avoidance `hxn` (a `vk.n / p`-priced squeeze exclusion) and the sharpened fingerprint `hfp`
-(zcash/ironwood#11/#13). -/
+avoidance `hxn` (a `vk.n / p`-priced squeeze exclusion) and the sharpened expression-fold fingerprint `hfp`. -/
 theorem hfold_of_vanishing_slot_binding {G : Type*} [AddCommGroup G] [Module Fp G]
     [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1066,22 +1015,14 @@ theorem hfold_of_vanishing_slot_binding {G : Type*} [AddCommGroup G] [Module Fp 
   rfl
 
 set_option maxHeartbeats 1000000 in
-/-- **`hfold` from the budget's good branch — the terminal supply of `hbind`.**
-`deployed_member_budget` (`Soundness.Multiopen.BudgetedExtraction`) ends in a disjunction: either
-the joint accept measure sits inside the four-threshold budget, or *every* decoded member column
-takes its claimed evaluation at every point of its set (or a `(g, u, w)` relation is at hand). This
-theorem consumes the second branch — passed as `hbindAll`, the shape that branch produces — at the
-vanishing slot located by `vanishing_slot_routed`, and concludes the capstone's `hfold` equation.
-
-Everything the derivation needed is now supplied rather than assumed: the routed point list is the
-singleton `[ch.x]` (`hroute`), so the binding at index `0` is a binding at `ch.x`; the routed
-evaluation is the verifier-computed `expectedHEval` (`hevals`); the root-of-unity exclusion comes
-from acceptance (`deployedAccepts_xn_ne_one`). The one input that remains is `hfp`, the sharpened
-zcash/ironwood#11/#13 fingerprint — the gate fold equals the deployed `allExpressions` fold.
-
-`hquot` is `hquotCommitted` at the *routed* slot: the caller must exhibit the extracted quotient as
-the column of the member `vanishing_slot_routed` names, rather than at an arbitrary member recording
-the `vanishingH` identity. -/
+/-- **`hfold` from the budget's good branch.** `deployed_member_budget` ends in a disjunction:
+*either* the joint accept measure sits inside the four-threshold budget, *or* every decoded member
+column takes its claimed evaluation (or a `(g, u, w)` relation is at hand). Consuming the second
+branch (`hbindAll`) at the slot `vanishing_slot_routed` names — point list `[ch.x]` (`hroute`), eval
+list `[expectedHEval …]` (`hevals`), so the index-`0` binding is a binding at `ch.x` — gives the
+capstone's `hfold` equation or the relation. Acceptance supplies the root-of-unity exclusion; the
+one remaining input is the expression-fold fingerprint `hfp`. `hquot` names the extracted quotient
+as the routed member's own column, not an arbitrary member recording the `vanishingH` identity. -/
 theorem hfold_of_member_budget {G : Type*} [AddCommGroup G] [Module Fp G] [DecidableEq G]
     [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
@@ -1165,15 +1106,10 @@ theorem hgood_of_good_challenge (numerator hq : Polynomial Fp) (n : ℕ) {x : Fp
     numerator ≠ hq * (X ^ n - 1) → (numerator - hq * (X ^ n - 1)).eval x ≠ 0 :=
   fun hne => (not_mem_szBadSet.mp hx) (sub_ne_zero.mpr hne)
 
-/-- **The fold fingerprint reduces to list equality.** `hfold`'s remaining premise `hfp` compares
-two `y`-power folds: the parameter gates' evaluated list against the deployed `allExpressions`. The
-fold is a function of the list, so the premise holds as soon as the two *lists* agree — there is
-nothing analytic left in it.
-
-The zcash/ironwood#11/#13 fingerprint is fixed, so for any given circuit this is a syntactic check
-of the gate list against `allExpressions vk ps ch …` at that instance, not an open obligation: with
-`gates` instantiated at the deployed expressions, `hfp` is `rfl`. Callers that already have the list
-identity should go through this lemma rather than restating the fold. -/
+/-- The fold fingerprint reduces to list equality: the `y`-power fold is a function of the list, so
+`hfp` holds once the gate list agrees with the deployed `allExpressions` list. With the fingerprint
+fixed this is a per-instance syntactic check, not an analytic obligation — at the deployed
+expressions it is definitional. -/
 theorem hfp_of_expressions_eq {ng : ℕ} (gates : Fin ng → Expr Fp)
     (fixedClaimed adviceClaimed instanceClaimed : ℕ → Fp) (y : Fp) (exprs : List Fp)
     (h : List.ofFn (fun i : Fin ng =>
@@ -1188,24 +1124,15 @@ open Polynomial in
 open scoped ENNReal in
 open Classical in
 set_option maxHeartbeats 4000000 in
-/-- **The budgeted member capstone with `hfold` derived — the terminal integration.**
-`orchard_verifier_vesta_member_constraint_budgeted` at the deployed instantiation (`y := ch.y`,
-`deg := vk.n`, forced by `hy`/`hdeg`), with its `hfold` premise supplied internally by
-`hfold_of_member_budget` rather than assumed. The pieces fit without adaptation: that lemma is
-generic in the three claimed-evaluation feeds, so it instantiates directly at the capstone's
-`fun n => (fixedCols n).eval ch.x` and the two `deployedClaimedFeed`s, and its conclusion is the
-capstone's `hfold` slot verbatim. Its relation branch merges into the capstone's own
-`HasNontrivialRelation` disjunct, so nothing is lost on that side.
-
-What the caller now supplies in place of `hfold` is the routed vanishing-slot data
-(`vanishing_slot_routed` gives `hroute` and `hevals`), the budget's good branch (`hbindAll`, the
-shape `deployed_member_budget` produces), the quotient at that routed member (`hquot`), and the
-sharpened zcash/ironwood#11/#13 fingerprint (`hfp`). The root-of-unity exclusion is not among them:
-`deployedAccepts_xn_ne_one` reads it off the capstone's own `hacc0`.
-
-`hgood` remains a premise — its failure is priced (`hgood_failure_priced`), but the pricing needs
-the random-oracle coupling that `Soundness.Compose67Prefixes` records as the standing gap, so it
-is not discharged here. -/
+/-- **The budgeted member capstone with `hfold` derived.** The capstone at the deployed
+instantiation (`y := ch.y`, `deg := vk.n`, forced by `hy`/`hdeg`), its `hfold` premise supplied by
+`hfold_of_member_budget`: that lemma is generic in the claimed-evaluation feeds, so it instantiates
+at the capstone's own `deployedClaimedFeed`s, and its relation branch merges into the capstone's
+`HasNontrivialRelation` disjunct. In place of `hfold` the caller supplies the routed vanishing-slot
+data (`hroute`/`hevals`, from `vanishing_slot_routed`), the budget's good branch (`hbindAll`), the
+routed quotient (`hquot`), and the fingerprint (`hfp`); the root-of-unity exclusion is read off
+`hacc0`. `hgood` remains a premise — priced (`hgood_failure_priced`), but its pricing hook needs
+the adaptive coupling (the standing gap in `Soundness.Compose67Prefixes`). -/
 theorem orchard_verifier_vesta_member_constraint_budgeted_hfold_derived {shape : Shape}
     (urs : URS VestaG) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp VestaG) (ps : ProofString shape Fp VestaG)

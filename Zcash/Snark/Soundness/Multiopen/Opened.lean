@@ -442,16 +442,12 @@ theorem openedX2Accept_of_deployedAccepts [DecidableEq G] [Inhabited G] {shape :
 
 open scoped ENNReal in
 open Classical in
-/-- **The `x₄` forking floor through the opened commitment.** If the honest run's opened accept
-event holds and the opened accept measure of the `x₄`-rewound runs beats `pairCount / p`, the
-terminal opened rewinding output exists for any statement `P` sitting at declared components
-`(pU, pW)` of the deployed commitment — over the deployed aggregates. Each rewound run contributes
-its own fork's augmented opening; each opening of `P` seeds the current slot itself, so differing
-declared components across runs are absorbed by the augmented batch, not assumed away. The measure
-hypothesis carries the same random-oracle uniformity axiom as every `hprob`
-(`Soundness.Forking.Oracle`); the runs are the `reprogramX4` reprogramming events
-(`Soundness.Forking.Rewind`); each run's accepting transcript is that run's own round-forking
-output, and `openedX4Accept_of_deployedAccepts` feeds the event from deployed accepts. -/
+/-- **The `x₄` forking floor through the opened commitment.** The honest opened accept plus an
+opened accept measure beating `pairCount / p` produce the terminal opened rewinding output for any
+statement at declared components `(pU, pW)`: each rewound run contributes its own fork's augmented
+opening, so differing declared components are absorbed by the augmented batch, not assumed away.
+The runs are the `reprogramX4` events, under the usual random-oracle uniformity axiom;
+`openedX4Accept_of_deployedAccepts` feeds the event from deployed accepts. -/
 noncomputable def openedX4Rewind_of_x4Prob [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) {b : Fin (2 ^ urs.k) → Fp}
@@ -654,14 +650,11 @@ noncomputable def x1DecodeComp {n : ℕ} (z : Fin n → Fp) (c : Fin n → Fp) :
   fun j => ∑ r, (Matrix.vandermonde z)⁻¹ j r • c r
 
 /-- **The extracted witness bound to the member commitments, through the opened chain.** Augmented
-mirror of `deployed_witness_member_binding`: each `x₁`-rewound run's aggregate witness arrives with
-declared `U`/`W` components (its own opened `x₄` decode), so the member decode runs componentwise —
-the same inverse matrix decodes the witness vectors and both component families. The conclusions:
-each decoded member triple opens its member commitment in augmented form; the honest opened `x₄`
-decode triple at set `i`'s batch position is the `ch.x1`-power combination of the decoded member
-triples; and every run's value equation transports to the decoded members. Per-member claimed
-evaluations at the original rotated points and the gate/`x`→`x₃` transport remain the
-fingerprint-delegated half (`Soundness.Multiopen.Decode`, the deployed-status section). -/
+mirror of `deployed_witness_member_binding`: each run's aggregate witness carries declared `U`/`W`
+components, so the member decode runs componentwise. Each decoded member triple opens its member
+commitment in augmented form, the honest decode triple is the `ch.x1`-power combination of the
+member triples, and every run's value equation transports. Per-member claimed evaluations and the
+gate transport remain with the fingerprint half (`Multiopen.Decode`). -/
 theorem opened_witness_member_binding [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1106,15 +1099,11 @@ open Polynomial in
 open scoped ENNReal in
 open Classical in
 set_option maxHeartbeats 1000000 in
-/-- The member-column endpoint with the good challenge *derived*, not assumed: the fixed gate-check
-point `x` and its `hgood` are replaced by an accept event `accX` whose uniform measure beats the
-vanishing-check budget `max (deg numerator) (deg hpoly + deg) / p`; the good challenge is produced
-at the pinned member decode by `exists_accepting_good_challenge_quotient`
-(`Soundness.GoodChallenge`), so `hgood` is gone from this signature. The measure hypothesis carries
-the random-oracle uniformity axiom (`Soundness.Forking.Oracle`). No deployed capstone consumes this
-form yet: the derived capstone (`orchard_verifier_vesta_member_constraint_derived`,
-`Soundness.Vesta`) pins the deployed `x` and takes `hgood` there, with `hgood_of_xProb` as its
-production surface — this rung is the endpoint that consumes the `x`-squeeze measure directly. -/
+/-- The member-column endpoint with the good challenge *derived*, not assumed: `hgood` is replaced
+by an accept event whose measure beats the vanishing-check budget, and the good challenge is
+produced at the pinned member decode (`exists_accepting_good_challenge_quotient`,
+`Soundness.GoodChallenge`). No deployed capstone consumes this form yet — the derived capstone pins
+the deployed `x` and takes `hgood` there. -/
 theorem member_constraint_of_relation_and_batch_xgood [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)

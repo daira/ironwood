@@ -65,10 +65,10 @@ import Zcash.Snark.Soundness.Multiopen.RPoly
 import Zcash.Snark.Soundness.Multiopen.Claimed
 import Zcash.Snark.Soundness.Multiopen.DecodeFixture
 import Zcash.Snark.Soundness.Vesta
--- Concrete fork-tree knowledge error over the deployed Orchard parameters (#25).
+-- Concrete fork-tree knowledge error over the deployed Orchard parameters.
 import Zcash.Snark.Soundness.Deployed.ConcreteBounds
 -- AGM binding reduction: consume computed deployed relations through the fixed-slot discrete-log
--- adapter and representation-carrying algebraic-prover model (#15).
+-- adapter and representation-carrying algebraic-prover model.
 import Zcash.Snark.Soundness.AGM.Adapter
 import Zcash.Snark.Soundness.AGM.Probability
 import Zcash.Snark.Soundness.AGM.ProbabilityVesta

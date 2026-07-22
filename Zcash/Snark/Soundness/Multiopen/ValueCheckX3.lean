@@ -28,14 +28,11 @@ open Classical
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 
 /-- **The deployed multiopen value check for one point set's aggregate, from the `x₃` floor.**
-`claimedEval_of_x3Prob` instantiated at the deployed grouping: the decoded `x₄`-slot aggregate
-column for point set `j` (`openedDecodedCols pbatch` at batch position `count − 1 − j`), given the
-per-accepting-run consistency `hconsistent` (the column reproduces the claimed interpolation
-`lagrangeEval χ points evals` at every accepting `x₃`-rewind `χ`) and an `OpenedX3Accept` measure
-beating `(|points| − 1) / p`, takes its claimed evaluation at each rotated set point. The consistency
-premise is the fixed-`q′` commitment-binding hook (`openedDecodedCols_top_eval_x3`): `q′` is absorbed
-before `x₃`, so the aggregate is a single fixed polynomial across the rewound family, and the value
-check pins it to the `r`-interpolant — the node binding, with no vanishing assumed. -/
+`claimedEval_of_x3Prob` at the deployed grouping: given the per-run consistency `hconsistent` and
+an `OpenedX3Accept` measure beating `(|points| − 1) / p`, the decoded `x₄`-slot aggregate for point
+set `j` takes its claimed evaluation at each rotated set point. The consistency premise is the
+fixed-`q′` hook (`openedDecodedCols_top_eval_x3`): `q′` is absorbed before `x₃`, so the aggregate
+is one fixed polynomial across the rewound family. -/
 theorem deployed_aggregate_node_binding_of_x3consistency [DecidableEq G] [Inhabited G]
     {shape : Shape} (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -104,17 +101,12 @@ theorem hasNontrivialRelation_of_two_augmented_openings (urs : URS G)
     rw [← h0]
     abel
 
-/-- **The rewound run's decoded aggregate value at χ (discharge steps 2+3).** From an
-`OpenedX3Accept` at base `evalVector urs.k χ` — the base the accepting `x₃`-rewound run's IPA opens
-over, since its own interpolation challenge is `χ` — plus that run's `x₄`-rewind accept measure,
-`openedX4Rewind_of_x4Prob_forked` (fed the run's own accepting tree as its current-slot event and the
-per-rewind `IpaRelation` from `openedX3_relation_of_accept`) produces an `OpenedBatchOpenings` for the
-rewound run over base `evalVector urs.k χ`; `openedDecodedCols_eval_x3` then fires (the base matches
-the run's `x₃ = χ`), pinning the run's decoded `x₄`-slot aggregate at `χ` to its claimed set
-evaluation. The base is χ-dependent — resolving the apparent base-vector mismatch entirely at the use
-site, no signature change: the honest `pbatch` (base `evalVector ch.x3`) only *defines* the aggregate
-polynomial, whose value at `χ` is base-free. The nested `x₄` measure is a genuine floor, quantified
-over the run (`∀ r`) since the run is existential in the accept. -/
+/-- **The rewound run's decoded aggregate value at `χ`.** From an `OpenedX3Accept` at base
+`evalVector urs.k χ` plus that run's `x₄`-rewind accept measure, the rewound run gets its own
+`OpenedBatchOpenings` and `openedDecodedCols_eval_x3` pins its decoded aggregate at `χ` to its
+claimed set evaluation. The base is `χ`-dependent, resolved at the use site: the honest batch only
+*defines* the aggregate polynomial, whose value at `χ` is base-free. The nested `x₄` measure is a
+genuine floor, quantified over the run. -/
 theorem openedX3_rewound_aggregate_value [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) {χ : Fp} (j : ℕ)
@@ -185,15 +177,12 @@ theorem openedX3_agg_binding [DecidableEq G] [Inhabited G] {shape : Shape}
   · exact Or.inl (by simp only [openedDecodedCols, heq])
   · exact Or.inr hdlr
 
-/-- **Per-χ consistency, reduced to the inner `x₂` consistency (discharge steps 2-4 combined).**
-Composing the rewound aggregate value (steps 2-3) with the binding (step 4): at an accepting
-`x₃`-rewind `χ`, the honest aggregate `col_j` evaluates at `χ` to the rewound run's claimed set
-evaluation, which the inner-`x₂` consistency `hx2cons` (the run's claimed set eval equals the
-`r`-interpolation `lagrangeEval χ points evals`) identifies with the deployed `r`-value — the
-per-χ `hconsistent` for `deployed_aggregate_node_binding_of_x3consistency`, or a `HasNontrivialRelation`.
-The `hx2cons` premise is the innermost fork — the rewound run's claimed set evaluation pinned to
-its interpolation; `hx2cons_slot_eq_multiopenU` identifies the slot and why its discharge is an
-open obligation, with `claimedCombined_of_x2Prob` stating the separation structure it takes. -/
+/-- **Per-`χ` consistency, reduced to the inner `x₂` consistency.** At an accepting `x₃`-rewind
+`χ`, the honest aggregate evaluates at `χ` to the rewound run's claimed set evaluation, which the
+inner consistency `hx2cons` identifies with the deployed `r`-value — the per-`χ` premise of
+`deployed_aggregate_node_binding_of_x3consistency`, or a `HasNontrivialRelation`. `hx2cons` is the
+innermost fork; `hx2cons_slot_eq_multiopenU` identifies the slot, `claimedCombined_of_x2Prob` the
+separation structure its discharge takes. -/
 theorem openedX3_perχ_consistency [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) {χ : Fp} (j : ℕ)
@@ -223,15 +212,8 @@ theorem openedX3_perχ_consistency [DecidableEq G] [Inhabited G] {shape : Shape}
 set_option maxHeartbeats 1000000 in
 /-- The deployed `x₃` value check closed to the inner `x₂` consistency — the *aggregate route*,
 superseded by the fixed-`q′` chain (`deployed_value_check_node_binding` below) and retained as the
-record of why that route was taken instead. Assembling
-the per-χ consistency (`openedX3_perχ_consistency`) over the `x₃`-rewind family: *either* the honest
-`x₄`-slot aggregate for point set `j` takes its claimed interpolation at each rotated set point (the
-node binding, via `claimedEval_of_x3Prob` at the χ-dependent accept), *or* a nontrivial `(g, U, W)`
-relation exists. Classical case split on whether the per-χ consistency holds for every accepting
-`x₃`-rewind: if it does, the `x₃` floor pins the aggregate to the `r`-polynomial; if it fails at some
-`χ`, the per-χ dichotomy there yields the relation. The inner `x₂`
-consistency `hx2cons` is this route's open obligation (see `hx2cons_slot_eq_multiopenU`); the live
-chain avoids it by anchoring on the fixed `q′` across `x₃`-rewinds. -/
+record of why that route was taken instead: its inner consistency `hx2cons` is an open obligation,
+which the live chain avoids by anchoring on the fixed `q′` across `x₃`-rewinds. -/
 theorem deployed_aggregate_node_binding_or_dlr [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -332,14 +314,10 @@ theorem prod_inv_range_getD_eq_toFinset {l : List Fp} (hnd : l.Nodup) (χ : Fp) 
   rw [← prod_range_getD_eq_toFinset hnd χ, ← Finset.prod_inv_distrib]
 
 /-- **`hsamp` from the value-check power form (reversed convention).** The per-`x₂`-value multiopen
-value identity in exactly the shape `node_binding_of_samples` consumes, with the set index reversed
-(`ζʲ` pairs with `sets.reverse.getD j`, resolving the power/index convention gap between the deployed
-`multiopenEval` and the abstract value check). Given the run's opening `qv = multiopenEval ζ χ sets`
-and, per reversed index `j`, the field identifications — the decoded aggregate value `(col j).eval χ`
-is the claimed set eval `(sets.reverse.getD j).2.2`, `(r j).eval χ` is the interpolation, and the
-set's point list is `Nodup` with `toFinset = pts j` — the value expands to
-`∑ⱼ ζʲ (colⱼ − rⱼ)(χ)·(∏ p∈pts j, (χ − p))⁻¹`. Pure algebra over `multiopenEval_powerForm` and
-`prod_inv_range_getD_eq_toFinset`; this is the `hsamp` premise of `node_binding_of_samples`. -/
+identity in exactly the shape `node_binding_of_samples` consumes, set index reversed (`ζʲ` pairs
+with `sets.reverse.getD j`, resolving the power/index convention gap): given the run's opening and
+the field identifications, the value expands to `∑ⱼ ζʲ (colⱼ − rⱼ)(χ)·(∏ p∈pts j, (χ − p))⁻¹`.
+Pure algebra over `multiopenEval_powerForm`. -/
 theorem hsamp_of_multiopenEval_reversed {numSets : ℕ}
     (sets : List (List Fp × List Fp × Fp)) (hlen : sets.length = numSets)
     (col r : Fin numSets → Polynomial Fp) (pts : Fin numSets → Finset Fp)
@@ -357,16 +335,12 @@ theorem hsamp_of_multiopenEval_reversed {numSets : ℕ}
   rw [eval_sub, hu j, hr j, ← hpts j, ← prod_inv_range_getD_eq_toFinset (hnd j) χ]
   ring
 
-/-- **Node binding from a grid of run openings (F3 step-4 assembly).** Composing
-`hsamp_of_multiopenEval_reversed` with `node_binding_of_samples`: at each grid point `(s, t)` an
-`x₂`-value `ζ s` and interpolation challenge `χ s t`, the run's opening exposes the quotient column's
-value as `multiopenEval (ζ s) (χ s t) (sets s t)` (`hopen`), and the reversed field identifications
-(`hnd`/`hpts`/`hu`/`hr`) turn that into the per-`x₂` `hsamp` shape. Given enough distinct `ζ`
-(injective) and `χ s` samples, the cleared-denominator Schwartz–Zippel core forces, at each set
-point, the aggregate column to take its interpolated value: `(col j₀).eval p = (r j₀).eval p`. This
-is the deployed value check reduced to its openings + field identifications — no vanishing assumed;
-the remaining obligation is to supply `hopen`/`hu` from acceptance (the nested `x₂`×`x₃` grid) and the
-deployed field identifications. -/
+/-- **Node binding from a grid of run openings.** Composing `hsamp_of_multiopenEval_reversed` with
+`node_binding_of_samples`: given enough distinct `ζ` and per-`ζ` interpolation samples `χ`, with
+each grid opening exposing the quotient column's value as `multiopenEval`, the cleared-denominator
+core forces each aggregate column to take its interpolated value at every set point. The remaining
+obligation is supplying the openings and value bindings from acceptance — the nested `x₂`×`x₃`
+grid. -/
 theorem node_binding_of_grid_openings {numSets : ℕ}
     (allPts : Finset Fp) (pts : Fin numSets → Finset Fp) (hsub : ∀ j, pts j ⊆ allPts)
     (col r qCol : Fin numSets → Polynomial Fp)
@@ -525,16 +499,13 @@ theorem deployedSetsForEval_reverse_getD_u [DecidableEq G] [Inhabited G] {shape 
   exact key
 
 set_option maxHeartbeats 1000000 in
-/-- **The deployed value-check node binding, reduced to the grid openings (F3 instantiation).**
-`node_binding_of_grid_openings` instantiated at the deployed grouping with the reversed indexing
-`multiopenEval`'s `x₂`-power convention needs: `pts j := deployedSetPts (numSets − 1 − j)`,
-`col j := openedDecodedCols pbatch ⟨j⟩`, `r j` the interpolant of set `numSets − 1 − j`'s points and
-evals. The structural field identifications (`hnd`/`hpts`/`hr`) are discharged from the reversed
-value-check-set lemmas + `lagrangePoly_eval`; what remains as premises is exactly the measure-based
-grid — the run openings `hopen`, the per-grid `col = u` bindings `hu`, the sample injectivity and
-distinctness — together with the grouping-fixity field agreements `hsetpts`/`hsetevals` (the grid
-runs' value-check sets share the honest grouping's points/evals). This is the deployed value check
-with everything except the nested `x₂`×`x₃` accept-measure extraction discharged. -/
+/-- **The deployed value-check node binding, reduced to the grid openings.**
+`node_binding_of_grid_openings` at the deployed grouping, with the reversed indexing
+`multiopenEval` needs; the structural field identifications are discharged from the reversed
+value-check-set lemmas and `lagrangePoly_eval`. What remains as premises is exactly the
+measure-based grid — run openings, per-grid value bindings, sample injectivity — plus the
+grouping-fixity agreements: the deployed value check with everything except the nested `x₂`×`x₃`
+accept-measure extraction discharged. -/
 theorem deployed_node_binding_of_grid [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -748,15 +719,11 @@ theorem openedX2X3_agg_binding [DecidableEq G] [Inhabited G] {shape : Shape}
   · exact Or.inr hdlr
 
 set_option maxHeartbeats 1000000 in
-/-- **The `q′` (top-slot) column is fixed across `x₃`-rewinds (grid `qCol` `t`-independence lever).**
-The top slot (index `count`) of `x4BatchCommitments` is the quotient commitment `q′`, which is
-*absorbed before `x₃`* (`x3Run_qPrime`), so it agrees between the honest batch and any `x₃`-rewound
-run's batch. Both decodes are augmented openings of that shared `q′`, so
-`hasNontrivialRelation_of_two_augmented_openings` forces the decoded `q′` columns equal — or exhibits
-a nontrivial relation. This is what makes the grid's `qCol s` well-defined independent of the
-`x₃`-sample `t`: across the x₃-family (at a fixed `x₂`-rewind) the decoded `q′` column is one fixed
-polynomial. (Unlike the aggregate slots, `q′` is *not* fixed across `x₂`-rewinds — it is re-sent —
-so this fixity is x₃-only, which is exactly the `t`-direction.) -/
+/-- **The `q′` (top-slot) column is fixed across `x₃`-rewinds.** `q′` is absorbed before `x₃`
+(`x3Run_qPrime`), so the honest batch and any `x₃`-rewound run's batch decode a shared commitment,
+and `hasNontrivialRelation_of_two_augmented_openings` forces the decoded columns equal — or
+exhibits a relation. This makes the grid's quotient column well-defined across the `x₃`-family.
+(`q′` is re-sent across `x₂`-rewinds, so the fixity is `x₃`-only.) -/
 theorem openedX3_qprime_binding [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) (r : X3Run shape G) {χ : Fp}
@@ -971,7 +938,7 @@ theorem coProd_natDegree_le (all pts : Finset Fp) :
     (coProd all pts).natDegree ≤ all.card :=
   le_trans (vanishingProd_natDegree_le _) (Finset.card_le_card Finset.sdiff_subset)
 
-/-- **The grid's uniform degree bound (stage B).** The cleared-denominator combination that
+/-- **The grid's uniform degree bound.** The cleared-denominator combination that
 `node_binding_of_grid_openings`'s `hdeg` measures — `qCol·D − ∑ⱼ ζʲ·((colⱼ − rⱼ)·Wⱼ)` — has
 `natDegree ≤ N + |allPts|` whenever the quotient column and the per-set differences are bounded by
 `N`: the products add at most `|allPts|` (the vanishing/complementary factors), and the sum and
@@ -996,28 +963,15 @@ theorem grid_hdeg_bound {numSets : ℕ} (allPts : Finset Fp) (pts : Fin numSets 
       _ ≤ N + allPts.card := add_le_add (hcr j) (coProd_natDegree_le _ _)
 
 set_option maxHeartbeats 2000000 in
-/-- **The deployed multiopen value check from the nested `x₂`×`x₃`×`x₄` floors (F3 capstone).**
-*Either* the honest `x₄`-slot aggregate column for point set `count − 1 − j₀` takes its claimed
-interpolation at each of that set's points, *or* a nontrivial `(g, U, W)` relation exists. Everything
-is produced from the accept floors — no per-run consistency, no vanishing, and no grid openings are
-assumed:
-
-* the `x₂` floor (`hζ₀`/`hprob2`) yields `count` distinct set-separation samples `ζ` with accepting
-  `x₂`-rewound runs (`OpenedX2Accept`, the `reprogramX2` events);
-* at each `x₂`-rewound base, the `x₃` floor (`hx3anchor`/`hprob3`) yields `d + 1` distinct
-  interpolation samples, and per grid point the nested `x₄` floor (`hprob4`) decodes that run's
-  batch (`openedX3_rewound_batch_eval`);
-* the fixed-`q′` binding across the inner `x₃`-family (`openedX3_qprime_binding_pair`) makes the
-  quotient column per `x₂`-sample well-defined, and the doubly-rewound aggregate binding
-  (`openedX2X3_agg_binding`) ties every grid decode to the honest aggregate — each on pain of a
-  computed `HasNontrivialRelation`;
-* the cleared-denominator core (`deployed_node_binding_of_grid` ← `node_binding_of_samples`)
-  separates the per-set contributions and pins the aggregate at every set point.
-
-The measure hypotheses carry the random-oracle uniformity axiom (`Soundness.Forking.Oracle`), and
-`havoid` is the standard sample-avoidance floor (the finitely many nodes are hit with negligible
-probability). This discharges the `hconsistent`/`hx2cons` chain end-to-end: the deployed value
-check, from acceptance. -/
+/-- **The deployed multiopen value check from the nested `x₂`×`x₃`×`x₄` floors.** *Either* the
+honest `x₄`-slot aggregate for point set `count − 1 − j₀` takes its claimed interpolation at each
+of its points, *or* a nontrivial `(g, U, W)` relation exists — everything produced from the accept
+floors, with no per-run consistency, no vanishing, and no grid openings assumed. The `x₂` floor
+yields the set-separation samples, the `x₃` floor the interpolation samples per base, the nested
+`x₄` floor decodes each run's batch; the fixed-`q′` and doubly-rewound aggregate bindings tie every
+grid decode to the honest aggregate on pain of a computed relation, and the cleared-denominator
+core separates the sets. Measures carry the usual random-oracle uniformity axiom; `havoid` is the
+standard sample-avoidance floor. This discharges `hconsistent`/`hx2cons` end-to-end. -/
 theorem deployed_value_check_node_binding [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1228,7 +1182,7 @@ theorem deployed_value_check_node_binding [DecidableEq G] [Inhabited G] {shape :
 
 /-! ## F2: the `x₁` member un-batch -/
 
-/-- **The compression fold's evaluation accumulator, generically (F2 stage A).** Over the raw fold
+/-- **The compression fold's evaluation accumulator, generically.** Over the raw fold
 state (accumulator `ev`, running power `pw`): each member `m` contributes its claimed-eval list
 scaled by the running `x₁`-power, so the folded entry at any in-range point index is the starting
 entry plus `pw` times the `x₁`-power fold of the members' claimed evaluations at that index. The
@@ -1327,7 +1281,7 @@ theorem x1Run_setPts [DecidableEq G] [Inhabited G] {shape : Shape}
     deployedSetPts vk (r.spliced ps) (r.challenges ch ξ) k = deployedSetPts vk ps ch k := by
   simp only [deployedSetPts, x1Run_assembleQueries]
 
-/-! ### `deployedAllPts` splice-invariance (option-(b) stage 4a)
+/-! ### `deployedAllPts` splice-invariance
 
 The union of all deployed point sets — whose cardinality is the `x₃` (`hprob3`) threshold in the
 derived terminal — is built entirely from `constructIntermediateSets (assembleQueries vk ps ch)`
@@ -1400,7 +1354,7 @@ theorem deployedSetsForEval_x1_getD_fields [DecidableEq G] [Inhabited G] {shape 
     rfl
 
 set_option maxHeartbeats 4000000 in
-/-- **The `x₁`-rewound aggregate opens the `ξ`-fold of the decoded member columns (F2 stage B).**
+/-- **The `x₁`-rewound aggregate opens the `ξ`-fold of the decoded member columns.**
 An `x₁`-rewound run's decoded `x₄`-slot aggregate for point set `i` and the `ξ`-power combination
 of a member decode's columns are two augmented openings of the *same* group element: the run's
 `x₄`-slot commitment is the `ξ`-power fold of the routed member commitments (`deployedX4Qs_getD_eval`
@@ -1475,7 +1429,7 @@ theorem openedX1_agg_member_binding [DecidableEq G] [Inhabited G] {shape : Shape
   · exact Or.inr hdlr
 
 set_option maxHeartbeats 4000000 in
-/-- **Eval form of the `x₁` aggregate↔member binding (F2 stage B).** The `x₁`-rewound run's decoded
+/-- **Eval form of the `x₁` aggregate↔member binding.** The `x₁`-rewound run's decoded
 aggregate polynomial for set `i` evaluates anywhere to the `ξ`-power fold of the member column
 polynomials' values — or a nontrivial relation exists. The `x₁` un-batch equates this against the
 compressed claimed evaluations at each set point. -/
@@ -1533,25 +1487,14 @@ def OpenedX1PinnedAccept [DecidableEq G] [Inhabited G] {shape : Shape} (urs : UR
       (x4BatchEvals vk (run.spliced ps) (run.challenges ch χv)) aR pUR pWR)
 
 set_option maxHeartbeats 4000000 in
-/-- **The deployed member-column node binding, from the nested `x₁`×`x₂`×`x₃`×`x₄` floors (F2
-capstone).** *Either* each decoded member column of point set `i` takes its claimed evaluation at
-each of the set's points, *or* a nontrivial `(g, U, W)` relation exists. The `x₁` un-batch of the
-deployed value check, produced from the accept floors:
-
-* the `x₁` floor (`hξ₀`/`hprob1`) yields `|members|` distinct compression samples with accepting
-  runs carrying opened `x₄` batches at their own interpolation bases (`OpenedX1PinnedAccept`, the
-  `reprogramX1` events);
-* at each `x₁`-rewound base, the deployed value check (`deployed_value_check_node_binding` — the
-  nested `x₂`/`x₃`/`x₄` floors `hx2`/`hx3anchor`/`hprob3`/`hprob4`/`havoid`, instantiated at that
-  base) pins the run's aggregate to the interpolant of the `ξ`-compressed claimed evaluations
-  (`deployedSetsForEval_x1_getD_fields`/`compressSet_snd_getD`);
-* the run's aggregate is simultaneously the `ξ`-power fold of the decoded member columns
-  (`openedX1_agg_member_eval`), each on pain of a computed relation;
-* equating the two folds at the distinct samples separates the members
-  (`member_binding_of_x1_samples`).
-
-The `hql` premise is the structural one-eval-per-set-point bookkeeping of the grouping. This is the
-witness → real-columns binding of zcash/ironwood#18, member by member, point by point. -/
+/-- **The deployed member-column node binding, from the nested `x₁`×`x₂`×`x₃`×`x₄` floors.**
+*Either* each decoded member column of point set `i` takes its claimed evaluation at each of the
+set's points, *or* a nontrivial `(g, U, W)` relation exists. The `x₁` floor yields the compression
+samples; at each `x₁`-rewound base the deployed value check pins the run's aggregate to the
+interpolant of the `ξ`-compressed claimed evaluations; each run's aggregate is simultaneously the
+`ξ`-power fold of the decoded member columns; equating the folds at distinct samples separates the
+members (`member_binding_of_x1_samples`). `hql` is the grouping's one-eval-per-set-point
+bookkeeping. The extracted-witness-to-real-columns binding, member by member, point by point. -/
 theorem deployed_member_node_binding [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1780,7 +1723,7 @@ theorem instance_query_mem_assembleQueries [DecidableEq G] [Inhabited G] {shape 
 /-- The deployed claimed evaluation feed: entry `n` is member `memIdx n` of point set `setIdx n`'s
 claimed evaluation at its layout's rotated opening point (located in the set's point list by
 `idxOf`), `0` out of range. This is the concrete `adviceClaimed`/`instanceClaimed` the derived
-terminal states its gate fold (`hfold`, the zcash/ironwood#11/#13 fingerprint surface) at. -/
+terminal states its gate fold (`hfold`, the expression-fold fingerprint surface) at. -/
 noncomputable def deployedClaimedFeed [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     {num : ℕ} (setIdx : Fin num → ℕ)
@@ -1796,7 +1739,7 @@ noncomputable def deployedClaimedFeed [DecidableEq G] [Inhabited G] {shape : Sha
     else 0
 
 set_option maxHeartbeats 4000000 in
-/-- **The member node binding at a located set point (F5 stage B).** `deployed_member_node_binding`
+/-- **The member node binding at a located set point.** `deployed_member_node_binding`
 with the point membership supplied instead of a positional index and the `hql` bookkeeping
 discharged (`deployedSetQueries_eval_length`): each decoded member column takes its claimed
 evaluation at any point of its set — located by `idxOf` — or a nontrivial `(g, U, W)` relation

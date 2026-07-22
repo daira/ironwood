@@ -530,7 +530,7 @@ theorem rotBindB_pinned_opening_discharged : True := by
   have := rotBindOpenedBatch.ipaRelation_of_x4Current (by decide)
   trivial
 
-/-! ## Regression guards for the halo2-faithfulness fixes (PR #30)
+/-! ## Regression guards for the halo2-faithfulness fixes
 
 Concrete guards that would break if the rotation feed or the multiopen value-separation floor
 regressed. -/

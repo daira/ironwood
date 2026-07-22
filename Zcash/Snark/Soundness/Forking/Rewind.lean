@@ -129,7 +129,7 @@ theorem roChallenges_ipaRound_uniform [DecidableEq G] {shape : Shape}
 
 /-! ## Redrawing the batching challenge is reprogramming at the `x₄` squeeze
 
-The multiopen rewinding (`Soundness.Multiopen.Decode`, issue #18's note) forks on the batching
+The multiopen rewinding (`Soundness.Multiopen.Decode`) forks on the batching
 challenge: redraw `x₄`, re-run, and collect accepting runs at distinct values. `reprogramX4` is the
 one-point analogue of `reprogramRounds` at the sealed `x₄` prefix (`preX4Transcript`,
 `deriveChallenges_x4_eq`), and its pointwise apply lemmas (`reprogramX4_apply_x4`/`_short`/`_long`)
@@ -140,7 +140,7 @@ moves. Both halves of what the `{ch with x4 := ξ}` runs then owe the terminal c
 over the fingerprinted grouping's aggregates (`deployedCommitment_x4_batch`/`multiopenValue_x4_batch`),
 and the accept-probability step is the single-squeeze counting floor
 (`exists_injective_accepting_of_measure`, consumed by `deployedMultiopenRewind_of_x4Prob`) — the same
-seam shape the round-forking ladder carries, extending the issue-#23 ordering treatment to the
+seam shape the round-forking ladder carries, extending the IPA-round ordering treatment to the
 multiopen squeeze points. -/
 
 open Classical in
@@ -186,7 +186,7 @@ theorem reprogramX4_apply_long {shape : Shape} (O : List (TranscriptElt Fp G) �
     reprogramX4 O init ps ξ t = O t :=
   reprogramX4_apply_length O init ps ξ ht.ne'
 
-/-! **From the pointwise reprogramming to the challenge-level identity (issue #18's note).** The
+/-! **From the pointwise reprogramming to the challenge-level identity.** The
 lemmas above pin `reprogramX4`'s behaviour at every squeeze input: it answers `ξ` at the `x₄` prefix
 (`reprogramX4_apply_x4`) and leaves every other input at `O` (`reprogramX4_apply_short`/`_long`,
 since the pre-`x₄` squeeze inputs are strictly shorter than the `x₄` prefix and the `ξ`/`z`/IPA-round
@@ -194,7 +194,7 @@ inputs strictly longer — `preIpaTranscript_length_eq_preX4`, `roundTranscriptF
 the squeeze seals `deriveChallenges_x{3,4}_eq`, these give, field by field, that running the deployed
 schedule under `reprogramX4` reproduces the honest run with `x₄` replaced by `ξ` — i.e. the
 `{ch with x4 := ξ}` events the multiopen rewinding ranges over are oracle-reprogramming events, the
-multiopen-squeeze analogue of `roChallenges_reprogramRounds` for the IPA rounds (issue #23).
+multiopen-squeeze analogue of `roChallenges_reprogramRounds` for the IPA rounds.
 
 Packaging this as a single `Challenges`-record equality (as `roChallenges_reprogramRounds` does) is
 left implicit: each field projection forces whnf of the entire `deriveChallenges` record, and unlike
@@ -361,7 +361,7 @@ theorem reprogramX2_apply_long {shape : Shape} (O : List (TranscriptElt Fp G) �
 
 /-! ## Redrawing the gate-check challenge is reprogramming at the `x` squeeze
 
-The good-challenge derivation (issue #12, `Soundness.GoodChallenge` and the `_xgood` capstone rungs)
+The good-challenge derivation (`Soundness.GoodChallenge` and the `_xgood` capstone rungs)
 spends an accept measure over the vanishing-check challenge `x`. The runs it ranges over are
 reprogramming events at the sealed `x` prefix (`preXTranscript`, `deriveChallenges_x_eq` —
 `Soundness.Forking.Ordering`): everything the Schwartz–Zippel difference polynomial is built from —

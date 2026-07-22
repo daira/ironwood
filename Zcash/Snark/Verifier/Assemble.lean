@@ -161,14 +161,10 @@ def assembleQueries {shape : Shape} {F G : Type*} [Field F] [Inhabited G] (vk : 
   perProof ++ fixedQ ++ permCommonQ ++ vanishingQ
 
 /-- The multiopen point-set grouping (halo2 `construct_intermediate_sets` output): per point set,
-the queries grouped into it as `(commitment, evaluations at this set's points)`, plus the set's
-points, plus — mirroring halo2's `CommitmentData` retaining its commitment identity
-(`poly/multiopen.rs`: `CommitmentData { commitment: T, .. }`, identity by pointer equality, here
-the `CommitmentId` slot) — the routed members' slot identities, positionally aligned with `sets`
-(`ids[i][m]` is the identity of the member `sets[i][m]`; both are projections of one routed list,
-`constructIntermediateSets_sets_ids_aligned`). The identity is what ties a decoded member back to
-the verifying key's query layout (which column, which rotation). Derived by
-`constructIntermediateSets`. -/
+the routed queries as `(commitment, evaluations)`, the set's points, and the routed members' slot
+identities, positionally aligned with `sets` (`constructIntermediateSets_sets_ids_aligned`) —
+mirroring halo2's `CommitmentData`, which retains commitment identity. The identity is what ties a
+decoded member back to the verifying key's query layout. Derived by `constructIntermediateSets`. -/
 structure MultiopenGrouped (k : ℕ) (F G : Type*) where
   sets : List (List (CommitmentRef k F G × List F))
   ids : List (List CommitmentId)

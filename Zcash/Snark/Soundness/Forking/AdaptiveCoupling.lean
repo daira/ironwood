@@ -3,36 +3,24 @@ import Zcash.Snark.Soundness.Forking.Adversary.Algebraic
 /-!
 # The adaptive random-oracle coupling for the multiopen challenges
 
-The multiopen budget (`Soundness.Multiopen.BudgetedExtraction`) prices its events over the joint
-uniform draw of the four fresh challenges `(x₁, x₂, x₃, x₄)`. The computed adversary, however,
-*reads* those challenges from its oracle table at transcript prefixes of its own output
-(`computedDeployedAlgebraicInstance`: `ν i = O (algebraicFullPrefixesPre init (A.run O) i)`), and a
-`Q`-query machine can grind — steer its committed prefixes toward favourable answers. So the honest
-coupling between the coin draw and the challenge draw is *not* a distribution equality: it is a
-query-loss bound, exactly as in the `(Q+k)·3/|F|` and `(Q+1)/|F|` terms of the existing AGM
-composition.
+The multiopen budget prices its events over the joint uniform draw of the four fresh challenges
+`(x₁, x₂, x₃, x₄)`. The computed adversary *reads* those challenges from its oracle table at
+prefixes of its own output, and a `Q`-query machine can grind — steer its committed prefixes toward
+favourable answers. So the coupling between the coin draw and the challenge draw is not a
+distribution equality but a query-loss bound, like the `(Q+k)·3/|F|` terms of the AGM composition.
 
-This module proves that bound for *joint four-challenge events of small measure*:
+This module proves that bound for joint four-challenge events of small measure:
 
-* **The peeling ladder** (`peelG1`–`peelG4`, `peelEsc`, `peel_decomposition`): a point of a set
-  `σ ⊆ F⁴` of measure at most `s ≤ τ⁴` always exposes one coordinate lying in an escape set of
-  measure at most `τ`, determined by the *earlier* coordinates alone. This is the standard
-  multi-level forking degradation (the `k`-th-root loss), made pointwise and constructive.
-* **The decoded escape composition** (`PeelDecode`, `PeelDecode.landsBelow_measure_le`): mirroring
-  `StagedDecode` (`Forking.Adversary.OracleComp`), a transcript decoder turns the peeling escapes
-  into blind pointwise escape sets for the query experiment, and `escapesDuringC_measure_le'`
-  prices the landing event at `(Q + 4) · τ`.
-* **The family instantiation** (`ComputedAlgebraicFSFamily.multiopen_landsBelow_measure_le`): the
-  four multiopen squeeze prefixes of the computed algebraic family are the `Fin 11` pre-IPA points
-  `5,6,7,8` (`θ β γ y x x₁ x₂ x₃ x₄ ξ z`), so the bound applies to the family's adversary with its
-  declared query budget.
-
-The remaining concrete input is the transcript decoder itself (`PeelDecode`'s `stateAt`): decoding
-the accept event's base data back out of a squeeze prefix. Its `Fin 11`-chain half is the in-tree
-`fullDecodeDeployed` pattern (take-prefixes at the fixed `preIpaLen` positions), and the coherence
-it needs is the `x₁`-level analogue of the proven `preIpaTranscript_inj` (`Forking.Adversary.PreIpa`
-"Injective absorb encoding"). This module keeps the decoder abstract, as the in-tree
-`StagedDecode`/`PrefixDecode` compositions do.
+* **The peeling ladder** (`peelEsc`, `peel_decomposition`): a point of a set of measure `≤ τ⁴`
+  always exposes one coordinate lying in an escape set of measure `≤ τ` determined by the earlier
+  coordinates — the standard multi-level forking loss, made pointwise.
+* **The decoded escape composition** (`PeelDecode.landsBelow_measure_le`): a transcript decoder
+  turns the peeling escapes into blind pointwise escape sets, priced at `(Q + 4) · τ` by
+  `escapesDuringC_measure_le'`.
+* **Adaptive escape sets** (`updEsc`, `adaptEsc`, `AdaptiveWeight`): the fixed-set decoder cannot
+  express accept events that read the table (`Soundness.Compose67Prefixes`), so the sections below
+  replace the decoded set with an overwritten-point weight — blind for *every* weight — leaving as
+  the one open input the concrete conditional-continuation weights for the multiopen process.
 -/
 
 namespace Zcash.Snark
@@ -299,25 +287,18 @@ end Peel
 
 /-! ## Adaptive escape sets: overwriting the point instead of decoding it
 
-`PeelDecode` pins the joint accept event as a set `σ` recovered from the transcript point alone
-(`stateAt`), which forces the event to be determined *before* its level's challenge is answered. The
-multiopen accept events are not so determined: `memberBadEvent` reads `ch.x3` and the multiopen
-commitments, which the transcript absorbs at squeeze positions `7` and `8` — after `x₁` is answered
-at `5` — so a prover steering its post-`x₁` commitments moves the event while the level-0 prefix
-stands still. `exists_multiopenStateAt_iff` (`Soundness.Compose67Prefixes`) states that obstruction
-as an iff, so it is the whole decode-side content and not an artefact of one instantiation.
+`PeelDecode` recovers the accept event from the transcript point alone (`stateAt`), which forces
+the event to be determined *before* its level's challenge is answered — and the multiopen accept
+events are not (`exists_multiopenStateAt_iff`, `Soundness.Compose67Prefixes`): `memberBadEvent`
+reads `ch.x3` and the point-set commitments, absorbed after `x₁` is answered.
 
-The primitive below is the shape the adaptive replacement needs. Instead of decoding a fixed set,
-threshold a *weight* evaluated on the table with the point's answer **overwritten** by the candidate.
-Overwriting is what buys blindness: the escape set never reads `O t`, because it replaces it. That
-leaves the weight free to depend on the entire adaptive continuation — rerunning the adversary
-included — which is precisely what a fixed-set decode cannot express.
-
-What remains for the full adaptive ladder, on top of this: the per-level averaging bound (Markov at
-one squeeze: a weight averaging at most `τ * τ` over a uniform answer puts at most `τ` of the mass
-above `τ`), and the adaptive analogue of `peel_decomposition` — a landing run exposes one read
-inside its level's escape, with the levels' weights being conditional continuation measures rather
-than the fixed-set fibers `peelG1`–`peelG4`. -/
+`updEsc` replaces the fixed set with a *weight* evaluated on the table with the point's answer
+**overwritten** by the candidate. Overwriting buys blindness — the escape set never reads `O t`,
+because it replaces it — so the weight is free to depend on the whole adaptive continuation,
+rerunning the adversary included. `updEsc_measure_le` supplies the per-level measure bound from an
+averaging premise, `adaptEsc` below carries the ladder logic over arbitrary weights, and
+`AdaptiveWeight` packages what remains: the concrete conditional-continuation weights for the
+multiopen process. -/
 
 /-- The escape set of a weight `g` at threshold `τ`: the answers `v` at `t` whose *overwritten*
 table `O[t ↦ v]` carries weight at least `τ`. -/
@@ -388,19 +369,12 @@ theorem mem_updEsc_self {T F : Type*} [DecidableEq T] (g : T → (T → F) → �
     (t : T) (O : T → F) : O t ∈ updEsc g τ t O ↔ τ ≤ g t O := by
   simp only [updEsc, Set.mem_setOf_eq, Function.update_eq_self]
 
-/-- **What a weight has to satisfy for the adaptive coupling.** Two properties, and nothing else:
-
-* `avg` — at every point, the weight averages at most `τ * τ` over a uniform answer there (stated as
-  a sum, to avoid dividing). This is the per-level obligation; `updEsc_measure_le` turns it into the
-  escape-set measure bound.
-* `lands` — every table in the event escapes. By `mem_updEsc_self` this is the concrete requirement
-  that a landing run queries some point whose weight has already reached `τ`.
-
-Packaging them makes the residual of the adaptive coupling a single construction: exhibit a weight
-with these two properties for the multiopen process, and `AdaptiveWeight.measure_le` delivers the
-query-loss bound. The blindness that a fixed-set decode cannot supply is free here — `updEsc` is
-blind at its own point for *every* weight, so `wt` may rerun the adversary on the overwritten
-table. -/
+/-- **What a weight has to satisfy for the adaptive coupling** — two properties, and nothing else:
+`avg`, the weight averages at most `τ * τ` over a uniform answer at each point (as a sum, to avoid
+dividing); and `lands`, every table in the event queries some already-heavy point
+(`mem_updEsc_self`). Exhibit a weight with both for the multiopen process and
+`AdaptiveWeight.measure_le` delivers the query-loss bound — blindness is free, since `updEsc` is
+blind at its own point for *every* weight. -/
 structure AdaptiveWeight (T F : Type*) [DecidableEq T] {α : Type*} (A : OracleComp T F α)
     (Land : (T → F) → Prop) (τ : ℝ≥0∞) [Fintype F] where
   /-- The weight assigned to a transcript point on a table. -/
@@ -447,14 +421,11 @@ def adaptEsc {F : Type*} (G1 : ℝ≥0∞) (G2 : F → ℝ≥0∞) (G3 : F → F
   | _ + 4, _, _, _ => ∅
 
 /-- **The ladder decomposition over abstract weights.** Given the top gate `G1 ≤ τ` and a point of
-the leaf, some coordinate lies in its level's escape set: walk down the levels, and the first gate
-that holds exposes the escape, with the leaf itself as the last resort.
-
-This is `peel_decomposition`'s combinatorial content with no measure theory in it. Instantiating
-`G1`–`G4` at the fibers of a fixed `σ` recovers the existing ladder — where `G1 ≤ τ` is supplied by
-`peelG1_mul_le` from the `τ⁴` budget. Instantiating them at conditional continuation measures is
-what the adaptive coupling needs; there the same `G1 ≤ τ` obligation is the analogue of
-`peelG1_mul_le`, and it is the piece that still needs the resampling account. -/
+the leaf, some coordinate lies in its level's escape set — walk down the levels, and the first gate
+that holds exposes the escape. `peel_decomposition`'s combinatorial content with no measure theory:
+the fixed-set fibers recover the existing ladder, and conditional continuation measures are what
+the adaptive coupling needs (their top gate is the analogue of `peelG1_mul_le`, the piece that
+still needs the resampling account). -/
 theorem adapt_decomposition {F : Type*} {G1 : ℝ≥0∞} {G2 : F → ℝ≥0∞} {G3 : F → F → ℝ≥0∞}
     {G4 : F → F → F → ℝ≥0∞} {leaf : F → F → F → Set F} {τ : ℝ≥0∞} {a b c d : F}
     (hG1 : G1 ≤ τ) (hleaf : d ∈ leaf a b c) :

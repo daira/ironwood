@@ -1,68 +1,43 @@
 import Zcash.Snark.Soundness.Compose67Assembly
 
 /-!
-# The concrete multiopen prefixes for the #67 ladder
+# The concrete multiopen prefixes for the composition ladder
 
-`snarkExtraction_prob_le_of_generatorRO_textbookDL_ladder` (`Soundness.Compose67Assembly`) takes an
-abstract `prefixes : ∀ basis, AlgebraicWfProof … → Fin 4 → BTranscript …`. This module pins the
-concrete choice: the four multiopen challenge squeeze points `x₁,x₂,x₃,x₄`, which the family reads
-from the oracle table at `algebraicFullPrefixesPre` indices `5,6,7,8` (the `chRecord` layout,
-`Soundness.Forking.Adversary.PreIpa`). `algebraicTableAcceptZ` (`…Algebraic`) sets the challenge
-vector to `fun i => O (algebraicFullPrefixesPre init p i)`, so on any table the ladder's
-`prefixReads` at these points are *definitionally* the four multiopen challenge fields of the record
-squeezed from that table — the "lands" side of the ladder's `hcont`.
+The ladder endpoint (`Soundness.Compose67Assembly`) needs to know where the four multiopen
+challenges live in the transcript. This module pins them: the four squeeze points `x₁,x₂,x₃,x₄`,
+with the ladder's reads at those points being exactly the multiopen challenges the verifier uses
+(`multiopenPrefixReads_eq`).
 
 ## The ladder decode at these prefixes
 
-The module then builds the ladder's `PeelDecode` at those prefixes. Its *chain* half is discharged
-outright, following the in-tree `fullDecodeDeployed` pattern (`Soundness.Forking.Adversary.Algebraic`):
-`levelOf` reads the level off the prefix length (the four pre-IPA lengths `l₅ < l₆ < l₇ < l₈` are
-distinct, `multiopenLen_lt`), and `chainAt` is `List.take` at the earlier length, which lands on the
-earlier squeeze point because the eleven squeeze points are prefixes of one another
-(`preIpaSqueezePoints_prefix`).
+The decode's *chain* half is discharged outright, following `fullDecodeDeployed`
+(`Forking.Adversary.Algebraic`): `multiopenLevelOf` reads the level off the prefix length (the four
+lengths are distinct, `multiopenLen_lt`), and `multiopenChainAt` truncates to the earlier length,
+landing on the earlier squeeze point.
 
-Its *state* half is not a free choice: `stateAt` must return `accept p` at **every** level, `0`
+Its *state* half is not a free choice: `stateAt` must return `accept p` at every level, `0`
 included, so it must recover the accept event from the `x₁`-level prefix alone.
-`exists_multiopenStateAt_iff` proves this is exactly the level-0 factorisation condition
+`exists_multiopenStateAt_iff` proves this is exactly the level-0 factorisation
 
   `multiopenPrefixes … p 0 = multiopenPrefixes … q 0 → accept p = accept q`,
 
-and `multiopenPeelDecode_of_factors` builds the decode from it, feeding
-`snarkExtraction_prob_le_of_generatorRO_textbookDL_multiopen` — the ladder endpoint at the concrete
-prefixes, whose only decode-side input is that one condition.
+and `multiopenPeelDecode_of_factors` builds the decode from it, feeding the concrete ladder
+endpoint.
 
-The condition is where the multiopen adaptivity is paid for, and the `memberBadEvent` family of
-accept events (`Soundness.Compose67Forking`) does **not** satisfy it: that event reads the honest
-`ch.x3` and the point-set commitments, which the transcript absorbs at squeeze positions `7` and `8`
-— *after* `x₁` is answered at position `5`. So a prover steering its post-`x₁` commitments moves the
-accept event while the level-0 prefix stands still. Closing `#67` through this ladder therefore needs
-either an accept event pinned before `x₁` (a strictly pre-`x₁` bad event) or a decode whose escape
-sets may read the table off their own point; the present `PeelDecode` interface admits neither, and
-that — not the chain bookkeeping — is the standing gap.
-`Forking.AdaptiveCoupling` takes the second route: `updEsc` is blind by *overwriting* its own point
-rather than by decoding it, so its weight may rerun the adversary, and `adaptEsc` carries the ladder
-logic over arbitrary weights. What is still missing there is the concrete conditional-continuation
-weights for this process and their top gate.
+`memberBadEvent` (`Soundness.Compose67Forking`) does **not** satisfy the factorisation: it reads
+`ch.x3` and the point-set commitments, absorbed at squeeze positions `7` and `8` — after `x₁` is
+answered at `5` — so a prover steering its post-`x₁` commitments moves the accept event while the
+level-0 prefix stands still. Closing the composition therefore needs a decode whose escape sets may
+read the table off their own point; `Forking.AdaptiveCoupling` builds exactly that (`updEsc`, blind
+by overwriting), with the concrete conditional-continuation weights still to come.
 
 ## Scheduled for deletion
 
-Three declarations here are tied to the *current* `PeelDecode` interface and are to be removed once
-that adaptive coupling replaces it — deliberately, rather than left to rot:
-
-* `exists_multiopenStateAt_iff`,
-* `multiopenPeelDecode_of_factors`,
-* `snarkExtraction_prob_le_of_generatorRO_textbookDL_multiopen`.
-
-They are retained for now for one reason: the iff is what *proves* the redesign necessary. Without
-it, "the fixed-set decode cannot express these accept events" is an assertion rather than a theorem,
-and the endpoint is what shows the ladder is reachable the moment a decode exists. When `stateAt` is
-replaced by a table-reading escape, the iff becomes a statement about an interface that no longer
-exists and should go with it.
-
-The chain half — `multiopenIdx`, `multiopenLen_lt`/`_le`, `multiopenPrefixes_length`,
-`multiopenChainAt(_prefixes)`, `multiopenLevelOf(_prefixes)`, `multiopenChainAt_ne` — is *not* on
-that list. It is transcript geometry, independent of both the accept event and the constraint model,
-and the adaptive coupling needs it unchanged.
+`exists_multiopenStateAt_iff`, `multiopenPeelDecode_of_factors`, and the endpoint
+`snarkExtraction_prob_le_of_generatorRO_textbookDL_multiopen` are tied to the current `PeelDecode`
+interface and go when the adaptive coupling replaces it. They are retained until then because the
+iff is what *proves* the redesign necessary. The chain half is not on that list: it is transcript
+geometry, independent of the accept event, and the adaptive coupling needs it unchanged.
 -/
 
 namespace Zcash.Snark
@@ -251,7 +226,7 @@ Forward: two outputs sharing their `x₁`-level prefix get the same decoded stat
 accept event. Backward: the level-0 chain point of any squeeze prefix is that prefix's own level-0
 prefix (`multiopenChainAt_prefixes` at `i = 0`), so choosing an output with the observed level-0
 prefix and reading its accept event is well defined by the factorisation. This isolates the whole
-decode-side content of the `#67` ladder in one condition. -/
+decode-side content of the composition ladder in one condition. -/
 theorem exists_multiopenStateAt_iff (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
     (accept : AlgebraicWfProof basis (family.vk basis) → Set (Fp × Fp × Fp × Fp)) :
@@ -300,10 +275,10 @@ noncomputable def multiopenPeelDecode_of_factors (family : ComputedAlgebraicFSFa
 
 set_option maxHeartbeats 1000000 in
 open ComputedAlgebraicFSFamily in
-/-- **#67 at the concrete multiopen prefixes.**
+/-- **The ladder endpoint at the concrete multiopen prefixes.**
 `snarkExtraction_prob_le_of_generatorRO_textbookDL_ladder` (`Soundness.Compose67Assembly`) with
 `prefixes := multiopenPrefixes` and its `PeelDecode` supplied by
-`multiopenPeelDecode_of_factors`: the knowledge-error probability is at most the `#56` clean-opening
+`multiopenPeelDecode_of_factors`: the knowledge-error probability is at most the clean-opening
 bound plus the adaptive-coupling term `(Q+4)·τ`, and the decode input has collapsed from a whole
 `PeelDecode` to the single level-0 factorisation `hfac`. The landing input `hcont` is unchanged (its
 `prefixReads` side is `multiopenPrefixReads_eq`, the honest challenge tuple). -/
