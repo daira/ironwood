@@ -29,7 +29,27 @@ Two facts assembled here from `Compose67Forking`:
 The one remaining input, `HonestCompletenessSupply`, is the standard AGM-completeness bridge: a
 family clean opening yields deployed acceptance and a Fiat–Shamir tree at the honest base. It is
 non-circular (it mentions neither `extracted` nor any measure) and is the sole residual on the
-landing side of `#67`. -/
+landing side of `#67`.
+
+## Discharging the supply from a clean opening
+
+The final section reduces that bridge to the two facts a clean opening genuinely does not carry:
+
+* the **IPA fold-challenge facts** are discharged outright — `exists_ipaFoldChallenges` exhibits
+  `1, 2, 3` as three distinct nonzero elements of `Fp` (a prime field of order `≈ 2²⁵⁴`);
+* **deployed acceptance** is reduced from the `DeployedAccepts` MSM form to the family's own accept
+  predicate `DeployedIpaVerifierEq` (`fullAlgebraicAccept`) by `deployedAccepts_of_verifierEq`, the
+  converse of `deployedAccepts_verifierEq` (`Soundness.Main`) modulo the assembly being defined —
+  `assemble? vk ps ch = some m`, which is the reader's well-formedness check on the proof string,
+  not a soundness assumption;
+* the **value shift** is discharged by `shift_eq_zero_of_openings_agree` (`Soundness.Compose67`) on
+  the witness tie, so `honestCompletenessSupply_of_openings_agree` carries no `hshift`.
+
+`honestCompletenessSupply_of_cleanOpening` packages all three: from the clean opening's provenance
+data plus a witness tie and the family's acceptance, it produces the supply with the fold challenges
+and the shift discharged. What no single accepting run supplies is the witness tie itself — the
+deployed batch that ties `o.1` to a batch witness is a *rewinding* product, priced by
+`deployed_member_budget` — which is exactly the residual the ladder's `hcont` is there to pay for. -/
 
 namespace Zcash.Snark
 
@@ -281,5 +301,297 @@ theorem honestCompletenessSupply_of_instanceOpening {shape : Shape}
     (forkedTranscript_nonempty_of_instanceOpening p ν cert hz hvalid o hshift
       u₁ u₂ u₃ h12 h13 h23 hu₁ hu₂ hu₃ 0)
     hacc
+
+/-! ## Discharging the supply's standing inputs
+
+The fold-challenge facts, deployed acceptance, and the value shift, in turn. -/
+
+/-- Distinct nonzero naturals below the field order stay distinct in `Fp`: the cast is injective
+below the modulus (`ZMod.val_cast_of_lt`). -/
+theorem natCast_ne_of_lt_scalarFieldOrder {a b : ℕ} (ha : a < scalarFieldOrder)
+    (hb : b < scalarFieldOrder) (hab : a ≠ b) : (a : Fp) ≠ (b : Fp) := by
+  intro hEq
+  exact hab (((ZMod.val_cast_of_lt ha).symm.trans (congrArg ZMod.val hEq)).trans
+    (ZMod.val_cast_of_lt hb))
+
+/-- **The IPA fold-challenge facts, discharged.** `ForkedTranscript.nonempty_of_opening` needs three
+pairwise-distinct nonzero fold challenges; `Fp` is a prime field of order `≈ 2²⁵⁴`, so `1, 2, 3`
+serve. This removes the six field side conditions carried by
+`forkedTranscript_nonempty_of_instanceOpening`. -/
+theorem exists_ipaFoldChallenges :
+    ∃ u₁ u₂ u₃ : Fp, u₁ ≠ u₂ ∧ u₁ ≠ u₃ ∧ u₂ ≠ u₃ ∧ u₁ ≠ 0 ∧ u₂ ≠ 0 ∧ u₃ ≠ 0 := by
+  have hlt : ∀ n : ℕ, n ≤ 3 → n < scalarFieldOrder := by
+    intro n hn
+    have : (3 : ℕ) < scalarFieldOrder := by
+      simp only [scalarFieldOrder, CompElliptic.Fields.Pasta.PALLAS_BASE_CARD]
+      norm_num
+    omega
+  have key : ∀ a b : ℕ, a ≤ 3 → b ≤ 3 → a ≠ b → (a : Fp) ≠ (b : Fp) := fun a b ha hb hab =>
+    natCast_ne_of_lt_scalarFieldOrder (hlt a ha) (hlt b hb) hab
+  refine ⟨((1 : ℕ) : Fp), ((2 : ℕ) : Fp), ((3 : ℕ) : Fp),
+    key 1 2 (by norm_num) (by norm_num) (by norm_num),
+    key 1 3 (by norm_num) (by norm_num) (by norm_num),
+    key 2 3 (by norm_num) (by norm_num) (by norm_num), ?_, ?_, ?_⟩
+  · simpa using key 1 0 (by norm_num) (by norm_num) (by norm_num)
+  · simpa using key 2 0 (by norm_num) (by norm_num) (by norm_num)
+  · simpa using key 3 0 (by norm_num) (by norm_num) (by norm_num)
+
+/-- **Deployed acceptance from the deployed verifier equation.** The converse of
+`deployedAccepts_verifierEq` (`Soundness.Main`), modulo the assembly being defined: `assemble?`
+returns `some m` exactly when the reader's proof-string well-formedness check passes, and on that
+branch `m` *is* the assembled final MSM (`assemble?_eq_some`), whose evaluation
+`deployed_verification_eq` rewrites to the explicit halo2 verifier equation. So the family's accept
+predicate `fullAlgebraicAccept` (a `DeployedIpaVerifierEq`) yields the `DeployedAccepts` that
+`honest_tuple_mem_memberBadEvent` consumes. -/
+theorem deployedAccepts_of_verifierEq [DecidableEq G] [Inhabited G] {shape : Shape}
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+    (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    {m : Msm shape.k Fp G} (hm : assemble? vk ps ch = some m)
+    (h : DeployedIpaVerifierEq (hk ▸ urs.g) urs.w urs.u vk ps ch) :
+    DeployedAccepts urs hk vk ps ch := by
+  unfold DeployedAccepts
+  rw [hm]
+  simp only []
+  rw [eval_cast hk m, assemble?_eq_some vk ps ch hm,
+    deployed_verification_eq (hk ▸ urs.g) urs.w urs.u ps ch
+      (constructIntermediateSets (assembleQueries vk ps ch))]
+  exact h
+
+set_option maxHeartbeats 1000000 in
+/-- **The honest-completeness supply with the shift derived.**
+`honestCompletenessSupply_of_instanceOpening` with `hshift` discharged by
+`shift_eq_zero_of_openings_agree` (`Soundness.Compose67`): the clean opening's witness `o.1` agreeing
+with a batch witness `a₀` that opens the inner product at `multiopenValue` *forces* the shift to
+vanish, so no honest-value-shift hypothesis is carried. The fold challenges are discharged by
+`exists_ipaFoldChallenges`. -/
+theorem honestCompletenessSupply_of_openings_agree {shape : Shape}
+    {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)
+    (cert : AlgebraicDForkCert (F := Fp)
+      (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
+        (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
+    (hz : ν 10 ≠ 0)
+    (hvalid : DeployedForkValid (ursOfAugmentedBasis shape.k basis).g
+      (evalVector shape.k (ν 7)) (ursOfAugmentedBasis shape.k basis).u
+      (ursOfAugmentedBasis shape.k basis).w (ν 10)
+      (commit (ursOfAugmentedBasis shape.k basis)
+          (adjustedWitness (p.aMulti ν) p.s
+            (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+        (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
+        (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
+      cert.toDForkCert)
+    (o : (deployedAlgebraicInstanceOfCert p ν cert hz hvalid).Opening)
+    {a₀ : Fin (2 ^ shape.k) → Fp}
+    (hval₀ : innerProduct a₀ (evalVector shape.k (ν 7))
+      = multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0)))
+    (hae : o.1 = a₀)
+    (hacc : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+      (chRecord ν (fun _ => 0))) :
+    HonestCompletenessSupply (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+      (chRecord ν (fun _ => 0)) := by
+  obtain ⟨u₁, u₂, u₃, h12, h13, h23, hu₁, hu₂, hu₃⟩ := exists_ipaFoldChallenges
+  exact honestCompletenessSupply_of_instanceOpening p ν cert hz hvalid o
+    (shift_eq_zero_of_openings_agree p ν cert hz hvalid o hval₀ hae)
+    u₁ u₂ u₃ h12 h13 h23 hu₁ hu₂ hu₃ hacc
+
+set_option maxHeartbeats 1000000 in
+/-- **The honest-completeness supply from a family clean opening.** `cleanOpening_provenance`
+(`Soundness.VestaBudget`) exposes the `AlgebraicWfProof`, oracle scalars, certificate, and clean
+opening behind a produced instance; this theorem turns that data into the supply, with the fold
+challenges and the value shift discharged and deployed acceptance reduced to the family's own accept
+predicate. The two premises left are the ones a single accepting run does not carry: the witness tie
+`hae` (a rewinding product, priced by `deployed_member_budget`) and the assembly being defined. -/
+theorem honestCompletenessSupply_of_cleanOpening {shape : Shape}
+    {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)
+    (cert : AlgebraicDForkCert (F := Fp)
+      (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
+        (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
+    (hz : ν 10 ≠ 0)
+    (hvalid : DeployedForkValid (ursOfAugmentedBasis shape.k basis).g
+      (evalVector shape.k (ν 7)) (ursOfAugmentedBasis shape.k basis).u
+      (ursOfAugmentedBasis shape.k basis).w (ν 10)
+      (commit (ursOfAugmentedBasis shape.k basis)
+          (adjustedWitness (p.aMulti ν) p.s
+            (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+        (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
+        (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
+      cert.toDForkCert)
+    (o : (deployedAlgebraicInstanceOfCert p ν cert hz hvalid).Opening)
+    {a₀ : Fin (2 ^ shape.k) → Fp}
+    (hval₀ : innerProduct a₀ (evalVector shape.k (ν 7))
+      = multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0)))
+    (hae : o.1 = a₀)
+    {m : Msm shape.k Fp VestaG}
+    (hm : assemble? vk p.proof.1 (chRecord ν (fun _ => 0)) = some m)
+    (hverify : fullAlgebraicAccept basis vk p ν (fun _ => 0)) :
+    HonestCompletenessSupply (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+      (chRecord ν (fun _ => 0)) :=
+  honestCompletenessSupply_of_openings_agree p ν cert hz hvalid o hval₀ hae
+    (deployedAccepts_of_verifierEq (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+      (chRecord ν (fun _ => 0)) hm hverify)
+
+/-! ### Acceptance through `assemble?`
+
+`fullAlgebraicAccept` is a `DeployedIpaVerifierEq`, which is strictly weaker than `DeployedAccepts`:
+it asserts the verifier's MSM equation but does not exclude the *rejection* paths. `assemble?`
+returns `none` on a malformed proof string, at `ch.x ^ vk.n = 1`, on duplicate commitment/point
+queries, and when `x₃` hits an opened point — two of which abstract deployed panics — and
+`DeployedAccepts` is `False` on every one of them. So a run can satisfy the family's accept
+predicate while the deployed verifier never reaches a decision.
+
+Taking the deployed decision as the family's acceptance closes that gap by construction, and removes
+the `assemble? = some m` side condition that `deployedAccepts_of_verifierEq` has to carry. The
+definition is additive: it implies the predicate the family uses today
+(`fullAlgebraicAccept_of_deployed`), so a family instantiated at it inherits everything proved about
+the weaker one. -/
+
+/-- The family's accept predicate strengthened to the deployed decision: the verifier reaches a
+decision *and* accepts. -/
+def fullAlgebraicAcceptDeployed {shape : Shape}
+    (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
+    (vk : VerifyingKey shape Fp VestaG) (p : AlgebraicWfProof basis vk)
+    (ν : Fin 11 → Fp) (χ : Fin shape.k → Fp) : Prop :=
+  DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1 (chRecord ν χ)
+
+/-- The strengthened acceptance implies the one the family currently uses, so nothing proved about
+`fullAlgebraicAccept` is lost by moving to it (`deployedAccepts_verifierEq`, `Soundness.Main`). -/
+theorem fullAlgebraicAccept_of_deployed {shape : Shape}
+    (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
+    (vk : VerifyingKey shape Fp VestaG) (p : AlgebraicWfProof basis vk)
+    (ν : Fin 11 → Fp) (χ : Fin shape.k → Fp)
+    (h : fullAlgebraicAcceptDeployed basis vk p ν χ) :
+    fullAlgebraicAccept basis vk p ν χ :=
+  deployedAccepts_verifierEq (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+    (chRecord ν χ) h
+
+/-- The knowledge-error event at the *deployed decision*: full deployed acceptance — the verifier
+reaches a decision and accepts — with no SNARK extraction. Same shape as
+`snarkExtractionFailureEvent`, with `fullAlgebraicAcceptDeployed` in place of the verifier-equation
+predicate, so the rejection paths are excluded by construction. -/
+def snarkExtractionFailureEventDeployed {shape : Shape}
+    (family : ComputedAlgebraicFSFamily shape)
+    (extracted : (AugmentedIndex (2 ^ shape.k) → VestaG) → family.Coins → Prop) :
+    Set ((AugmentedIndex (2 ^ shape.k) → VestaG) × family.Coins) :=
+  {q | fsWinsFull (family.adversary q.1) (fullAlgebraicAcceptDeployed q.1 (family.vk q.1))
+      (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) q.2.1 ∧
+    ¬ extracted q.1 q.2}
+
+/-- Deployed acceptance is the stronger event, so its knowledge-error event sits inside the one the
+family's existing bounds are stated over. -/
+theorem snarkExtractionFailureEventDeployed_subset {shape : Shape}
+    (family : ComputedAlgebraicFSFamily shape)
+    (extracted : (AugmentedIndex (2 ^ shape.k) → VestaG) → family.Coins → Prop) :
+    snarkExtractionFailureEventDeployed family extracted
+      ⊆ family.snarkExtractionFailureEvent extracted := by
+  rintro q ⟨hacc, hnex⟩
+  exact ⟨fullAlgebraicAccept_of_deployed q.1 (family.vk q.1)
+    ((family.adversary q.1).run q.2.1) _ _ hacc, hnex⟩
+
+open scoped ENNReal in
+/-- **Every knowledge-error bound transfers to deployed acceptance.** Because deployed acceptance
+implies the verifier-equation predicate, the deployed failure event is contained in the one the
+existing endpoints bound, and outer-measure monotonicity carries any such bound across verbatim.
+
+This is what makes the acceptance change usable without restating the family: the endpoints stay as
+they are, and the bound is *read* at the deployed decision — where a verifier panic is non-accepting
+— rather than at the weaker predicate. -/
+theorem snarkExtractionFailureEventDeployed_measure_le {shape : Shape} {T : Type*} [DecidableEq T]
+    (query : AugmentedIndex (2 ^ shape.k) → T)
+    (family : ComputedAlgebraicFSFamily shape)
+    (extracted : (AugmentedIndex (2 ^ shape.k) → VestaG) → family.Coins → Prop)
+    {bound : ℝ≥0∞}
+    (h : (independentProductPMF (orchardGeneratorROSetup query)
+        (PMF.uniformOfFintype family.Coins)).toOuterMeasure
+          ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+            family.snarkExtractionFailureEvent extracted) ≤ bound) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          snarkExtractionFailureEventDeployed family extracted) ≤ bound :=
+  le_trans (MeasureTheory.measure_mono
+    (Set.preimage_mono (snarkExtractionFailureEventDeployed_subset family extracted))) h
+
+set_option maxHeartbeats 1000000 in
+/-- **The honest-completeness supply from a clean opening, with no `assemble?` premise.**
+`honestCompletenessSupply_of_cleanOpening` with acceptance taken as the deployed decision: because
+`fullAlgebraicAcceptDeployed` *is* `DeployedAccepts`, the rejection-path side condition disappears
+rather than being assumed. The remaining premises are the clean opening's provenance data and the
+witness tie — and `honestCompletenessSupply_or_relation` discharges the tie into the standard
+agree-or-collide disjunction. -/
+theorem honestCompletenessSupply_of_cleanOpening_deployed {shape : Shape}
+    {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)
+    (cert : AlgebraicDForkCert (F := Fp)
+      (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
+        (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
+    (hz : ν 10 ≠ 0)
+    (hvalid : DeployedForkValid (ursOfAugmentedBasis shape.k basis).g
+      (evalVector shape.k (ν 7)) (ursOfAugmentedBasis shape.k basis).u
+      (ursOfAugmentedBasis shape.k basis).w (ν 10)
+      (commit (ursOfAugmentedBasis shape.k basis)
+          (adjustedWitness (p.aMulti ν) p.s
+            (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+        (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
+        (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
+      cert.toDForkCert)
+    (o : (deployedAlgebraicInstanceOfCert p ν cert hz hvalid).Opening)
+    {a₀ : Fin (2 ^ shape.k) → Fp}
+    (hval₀ : innerProduct a₀ (evalVector shape.k (ν 7))
+      = multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0)))
+    (hae : o.1 = a₀)
+    (hverify : fullAlgebraicAcceptDeployed basis vk p ν (fun _ => 0)) :
+    HonestCompletenessSupply (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+      (chRecord ν (fun _ => 0)) :=
+  honestCompletenessSupply_of_openings_agree p ν cert hz hvalid o hval₀ hae hverify
+
+set_option maxHeartbeats 1000000 in
+/-- **The supply, or binding breaks — the witness tie discharged into the standard disjunction.**
+The clean opening `o` and the deployed batch witness `a₀` commit to the *same* group element: `o`
+by `opening_commit_deployed_of_instance` (no shift hypothesis needed), `a₀` by the batch's own
+opening equation `hcommit₀`. So *either* the two witnesses agree — and
+`honestCompletenessSupply_of_openings_agree` produces the supply, its value shift forced — *or* they
+are two distinct openings of one commitment, which is a nontrivial `(g, u, w)` relation
+(`hasNontrivialRelation_of_two_openings`).
+
+This is the same either-agree-or-collide split `member_relation_or_dlr_of_instance`
+(`Soundness.Compose67`) uses for the witness tie, so the tie stops being a premise: the caller
+supplies the batch's commitment and value equations, both of which `OpenedBatchOpenings` carries,
+and takes the relation branch as a win exactly as the rest of the composition does. -/
+theorem honestCompletenessSupply_or_relation {shape : Shape}
+    {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)
+    (cert : AlgebraicDForkCert (F := Fp)
+      (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
+        (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
+    (hz : ν 10 ≠ 0)
+    (hvalid : DeployedForkValid (ursOfAugmentedBasis shape.k basis).g
+      (evalVector shape.k (ν 7)) (ursOfAugmentedBasis shape.k basis).u
+      (ursOfAugmentedBasis shape.k basis).w (ν 10)
+      (commit (ursOfAugmentedBasis shape.k basis)
+          (adjustedWitness (p.aMulti ν) p.s
+            (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+        (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
+        (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
+      cert.toDForkCert)
+    (o : (deployedAlgebraicInstanceOfCert p ν cert hz hvalid).Opening)
+    {a₀ : Fin (2 ^ shape.k) → Fp}
+    (hcommit₀ : commit (ursOfAugmentedBasis shape.k basis) a₀
+      = deployedCommitment (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+            (chRecord ν (fun _ => 0))
+        - p.multiU ν • (ursOfAugmentedBasis shape.k basis).u
+        - p.multiBlind ν • (ursOfAugmentedBasis shape.k basis).w)
+    (hval₀ : innerProduct a₀ (evalVector shape.k (ν 7))
+      = multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0)))
+    (hacc : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+      (chRecord ν (fun _ => 0))) :
+    HonestCompletenessSupply (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+      (chRecord ν (fun _ => 0))
+    ∨ HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
+        (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w := by
+  by_cases hae : o.1 = a₀
+  · exact Or.inl (honestCompletenessSupply_of_openings_agree p ν cert hz hvalid o hval₀ hae hacc)
+  · refine Or.inr (hasNontrivialRelation_of_two_openings _ hae ?_)
+    rw [opening_commit_deployed_of_instance p ν cert hz hvalid o, hcommit₀]
 
 end Zcash.Snark
