@@ -3,11 +3,11 @@ import Mathlib
 /-!
 # Random-oracle collision vocabulary (classical ROM)
 
-Shared Layer-A foundation for the classical-ROM security arguments (key-binding `H^*`, and — reused
-by the Layer-B games — note-commitment / nullifier `H^rcm`). We follow the *deterministic-exhibition*
+Shared foundation for the classical-ROM security arguments (key-binding `H^*`, and — reused
+by the ledger-model games — note-commitment / nullifier `H^rcm`). We follow the *deterministic-exhibition*
 style of `BindingSignature/Balance.lean`: a security theorem reduces a break to an *exhibited*
 random-oracle collision, and the probability that such a collision occurs within `q` oracle queries —
-the birthday bound `q(q-1)/|F|` — is a separate concern (Layer C), carried as a named quantity
+the birthday bound `q(q-1)/|F|` — is a separate concern, carried as a named quantity
 until discharged.
 
 An abstract oracle is any function `O : Q → F` from queries to field outputs; "randomness" enters only
