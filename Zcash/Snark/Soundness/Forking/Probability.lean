@@ -71,7 +71,6 @@ theorem uniformOfFintype_map_precomp_injective {ι T F : Type*} [Fintype ι] [De
     [Fintype T] [DecidableEq T] [Fintype F] [Nonempty F]
     (φ : ι → T) (hφ : Function.Injective φ) :
     (PMF.uniformOfFintype (T → F)).map (fun O => O ∘ φ) = PMF.uniformOfFintype (ι → F) := by
-  classical
   have hsplit : (fun O : T → F => O ∘ φ)
       = (fun O' : ↥(Set.range φ) → F => fun i => O' (Equiv.ofInjective φ hφ i))
         ∘ Prod.fst
@@ -151,7 +150,6 @@ theorem uniformOfFintype_prod_fiber_bound_right {A B : Type*} [Fintype A] [Finty
     _ = β * ((Fintype.card A : ℝ≥0∞) * Fintype.card B) := by ring
     _ = β * Fintype.card (A × B) := by rw [Fintype.card_prod]; push_cast; ring
 
-open Classical in
 /-- Unread oracle coordinates remain uniform after choosing a target from the other coordinates. -/
 theorem uniformOfFintype_fresh_read_bound {ι T F X : Type*} [Fintype ι] [DecidableEq ι]
     [Fintype T] [DecidableEq T] [Fintype F] [Nonempty F]
@@ -206,7 +204,6 @@ theorem uniformOfFintype_toOuterMeasure_singleton {α : Type*} [Fintype α] [Non
 theorem map_eval_uniformOfFintype {T F : Type*} [Fintype T] [DecidableEq T] [Fintype F]
     [Nonempty F] (t : T) :
     (PMF.uniformOfFintype (T → F)).map (fun O => O t) = PMF.uniformOfFintype F := by
-  classical
   have h : (fun O : T → F => O t)
       = (Equiv.funUnique {x : T // x = t} F)
         ∘ Prod.fst
@@ -230,7 +227,6 @@ theorem uniformOfFintype_cond_point {T F : Type*} [Fintype T] [DecidableEq T] [F
     (hE : ∀ (O : T → F) (v : F), Function.update O t v ∈ E ↔ O ∈ E) :
     (PMF.uniformOfFintype (T → F)).toOuterMeasure {O : T → F | O t = u ∧ O ∈ E}
       = (PMF.uniformOfFintype (T → F)).toOuterMeasure E / Fintype.card F := by
-  classical
   set e := Equiv.piSplitAt t (fun _ : T => F) with he
   have hsymm : ∀ (O : T → F) (v : F), e.symm (v, (e O).2) = Function.update O t v := by
     intro O v
@@ -302,7 +298,6 @@ theorem sum_point_mem_measure_le {T F : Type*} [Fintype T] [DecidableEq T] [Fint
           ENNReal.mul_div_cancel_right (Nat.cast_ne_zero.mpr Fintype.card_ne_zero)
             (ENNReal.natCast_ne_top _)]
 
-open Classical in
 /-- An update-blind set contains `O t` with at most its uniform-measure bound. -/
 theorem uniformOfFintype_point_mem_blind_le {T F : Type*} [Fintype T] [DecidableEq T] [Fintype F]
     [Nonempty F] (t : T) (S : (T → F) → Set F)
@@ -384,7 +379,6 @@ theorem acc_pair_card {F : Type*} [Fintype F] [DecidableEq F] (P : F → Prop) [
     (Finset.univ.filter P).card * (Finset.univ.filter P).card
       = (Finset.univ.filter (fun p : F × F => P p.1 ∧ P p.2 ∧ p.1 ≠ p.2)).card
         + (Finset.univ.filter P).card := by
-  classical
   set A := Finset.univ.filter P with hA
   have hoff : (Finset.univ.filter (fun p : F × F => P p.1 ∧ P p.2 ∧ p.1 ≠ p.2)) = A.offDiag := by
     ext p
@@ -404,7 +398,6 @@ theorem forking_card_bound {Ψ F : Type*} [Fintype Ψ] [Fintype F] [DecidableEq 
           * ((∑ ψ : Ψ,
                 (Finset.univ.filter (fun p : F × F => acc ψ p.1 ∧ acc ψ p.2 ∧ p.1 ≠ p.2)).card)
               + ∑ ψ : Ψ, (Finset.univ.filter (acc ψ)).card) := by
-  classical
   set E : Ψ → ℕ := fun ψ => (Finset.univ.filter (acc ψ)).card with hE
   set D : Ψ → ℕ :=
     fun ψ => (Finset.univ.filter (fun p : F × F => acc ψ p.1 ∧ acc ψ p.2 ∧ p.1 ≠ p.2)).card with hD
@@ -433,7 +426,6 @@ theorem forking_card_bound {Ψ F : Type*} [Fintype Ψ] [Fintype F] [DecidableEq 
 theorem card_acc_pairs {Ψ F : Type*} [Fintype Ψ] [Fintype F] (acc : Ψ → F → Prop)
     [∀ ψ, DecidablePred (acc ψ)] :
     Nat.card {x : Ψ × F | acc x.1 x.2} = ∑ ψ : Ψ, (Finset.univ.filter (acc ψ)).card := by
-  classical
   rw [Nat.card_coe_set_eq, Set.ncard_eq_toFinset_card', Set.toFinset_setOf,
     Finset.card_filter, Fintype.sum_prod_type]
   refine Finset.sum_congr rfl fun ψ _ => ?_
@@ -445,7 +437,6 @@ theorem card_acc_distinct {Ψ F : Type*} [Fintype Ψ] [Fintype F] [DecidableEq F
     Nat.card {x : Ψ × F × F | acc x.1 x.2.1 ∧ acc x.1 x.2.2 ∧ x.2.1 ≠ x.2.2}
       = ∑ ψ : Ψ,
           (Finset.univ.filter (fun p : F × F => acc ψ p.1 ∧ acc ψ p.2 ∧ p.1 ≠ p.2)).card := by
-  classical
   rw [Nat.card_coe_set_eq, Set.ncard_eq_toFinset_card', Set.toFinset_setOf,
     Finset.card_filter, Fintype.sum_prod_type]
   refine Finset.sum_congr rfl fun ψ _ => ?_
@@ -460,7 +451,6 @@ theorem forking_measure_bound {Ψ F : Type*} [Fintype Ψ] [Nonempty Ψ] [Fintype
           {x : Ψ × F × F | acc x.1 x.2.1 ∧ acc x.1 x.2.2 ∧ x.2.1 ≠ x.2.2}
         + (PMF.uniformOfFintype (Ψ × F)).toOuterMeasure {x : Ψ × F | acc x.1 x.2}
             / Fintype.card F := by
-  classical
   set Nψ : ℝ≥0∞ := (Fintype.card Ψ : ℝ≥0∞) with hNψ
   set Nf : ℝ≥0∞ := (Fintype.card F : ℝ≥0∞) with hNf
   set E : ℕ := ∑ ψ : Ψ, (Finset.univ.filter (acc ψ)).card with hEdef

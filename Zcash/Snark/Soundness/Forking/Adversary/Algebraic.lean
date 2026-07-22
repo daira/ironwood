@@ -1227,7 +1227,6 @@ theorem snarkFailure_prob_le_of_textbookDL
             ¬ family.hasCleanOpening (scalarBasis B p.1) p.2}
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
-  classical
   refine le_trans (MeasureTheory.measure_mono
     (show {p : (AugmentedIndex (2 ^ shape.k) → Fp) × family.Coins |
         fsWinsFull (family.adversary (scalarBasis B p.1))
@@ -1270,7 +1269,6 @@ theorem snarkFailure_prob_le_of_textbookDL_full
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
         Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
-  classical
   refine le_trans (MeasureTheory.measure_mono
     (show {p : (AugmentedIndex (2 ^ shape.k) → Fp) × family.Coins |
         fsWinsFull (family.adversary (scalarBasis B p.1))
@@ -1413,7 +1411,6 @@ def ReductionEfficient (family : ComputedAlgebraicFSFamily shape) (R : ℕ) : Pr
 /-- Every fixed family has a finite call bound; this is not a uniform asymptotic bound. -/
 theorem reductionEfficient_exists (family : ComputedAlgebraicFSFamily shape) :
     ∃ R, family.ReductionEfficient R := by
-  classical
   refine ⟨Finset.univ.sup fun basis => ∑ coins : family.Coins,
       (family.instanceAttempt basis coins).runs, fun basis => ?_⟩
   calc ∑ coins : family.Coins, (family.instanceAttempt basis coins).runs
@@ -1565,7 +1562,6 @@ abbrev Coins (fam : ComputedAlgebraicFSFamilyRand shape R) :=
   (BTranscript Fp VestaG (preIpaLen shape fam.init.length 10 + 3 * shape.k) → Fp) ×
     RecursiveForkTape Fp shape.k
 
-open Classical in
 /-- Average the binding bound over private coins. -/
 theorem binding_prob_le_of_textbookDL_rand [Fintype R] [Nonempty R]
     (B : VestaG) (fam : ComputedAlgebraicFSFamilyRand shape R) {bound : ℝ≥0∞}
@@ -1590,7 +1586,6 @@ def foldedRelationFinder (fam : ComputedAlgebraicFSFamilyRand shape R) :
       Option (AlgebraicRelationWitness (F := Fp) basis) :=
   fun basis p => (fam.determinize p.2).relationFinder basis p.1
 
-open Classical in
 /-- Bound averaged binding from one DL bound on the private-coin-folded solver. -/
 theorem binding_prob_le_of_foldedTextbookDL_rand [Fintype R] [Nonempty R]
     (B : VestaG) (fam : ComputedAlgebraicFSFamilyRand shape R) {bound : ℝ≥0∞}
@@ -1603,7 +1598,6 @@ theorem binding_prob_le_of_foldedTextbookDL_rand [Fintype R] [Nonempty R]
       ≤ (fam.Q + shape.k) * (3 / Fintype.card Fp) +
         (fam.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
         Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
-  classical
   refine le_trans (MeasureTheory.measure_mono
     (show {p : (AugmentedIndex (2 ^ shape.k) → Fp) × (fam.Coins × R) |
         ComputedAlgebraicFSFamily.bindingWin (fam.determinize p.2.2)
@@ -1662,7 +1656,6 @@ theorem binding_prob_le_of_foldedTextbookDL_rand [Fintype R] [Nonempty R]
       (scalarBasis B coeffs)
   exact (add_le_add hsucc hfail).trans_eq (by ac_rfl)
 
-open Classical in
 /-- Average the full-acceptance clean-opening bound over private coins. -/
 theorem snarkFailure_prob_le_of_textbookDL_rand [Fintype R] [Nonempty R]
     (B : VestaG) (fam : ComputedAlgebraicFSFamilyRand shape R) {bound : ℝ≥0∞}
@@ -1696,7 +1689,6 @@ def foldedSnarkRelationFinder (fam : ComputedAlgebraicFSFamilyRand shape R) :
       Option (AlgebraicRelationWitness (F := Fp) basis) :=
   fun basis p => (fam.determinize p.2).snarkRelationFinder basis p.1
 
-open Classical in
 /-- Bound averaged clean-opening failure from one DL bound on the private-coin-folded solver. -/
 theorem snarkFailure_prob_le_of_foldedTextbookDL_rand [Fintype R] [Nonempty R]
     (B : VestaG) (fam : ComputedAlgebraicFSFamilyRand shape R) {bound : ℝ≥0∞}
@@ -1713,7 +1705,6 @@ theorem snarkFailure_prob_le_of_foldedTextbookDL_rand [Fintype R] [Nonempty R]
       ≤ (fam.Q + shape.k) * (3 / Fintype.card Fp) +
         (fam.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
         Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
-  classical
   refine le_trans (MeasureTheory.measure_mono
     (show {p : (AugmentedIndex (2 ^ shape.k) → Fp) × (fam.Coins × R) |
         fsWinsFull ((fam.determinize p.2.2).adversary (scalarBasis B p.1))
@@ -1777,7 +1768,6 @@ structure ComputedAlgebraicFSFamilyUnbounded (shape : Shape) where
   Q : ℕ
   queryBound : ∀ basis, (adversary basis).QueryBound Q
 
-open Classical in
 /-- Transfer any finite-coin event across a uniform-URS basis identification. -/
 theorem uniformURS_basis_transfer {k : ℕ} {C : Type*} [Fintype C] [Nonempty C]
     {Ω : Type*} (setup : PMF Ω) (B : VestaG)
@@ -1820,11 +1810,9 @@ variable {shape : Shape}
 /-- One finite support containing the reachable support of every basis-indexed adversary. -/
 def globalReachSet (family : ComputedAlgebraicFSFamilyUnbounded shape) :
     Finset (List (TranscriptElt Fp VestaG)) := by
-  classical
   exact Finset.univ.biUnion fun basis : AugmentedIndex (2 ^ shape.k) → VestaG =>
     (family.adversary basis).reachSet
 
-open Classical in
 theorem reachSet_subset_globalReachSet (family : ComputedAlgebraicFSFamilyUnbounded shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) :
     (family.adversary basis).reachSet ⊆ family.globalReachSet := by
@@ -1836,7 +1824,6 @@ component, then fix the junk table as private randomness. -/
 def splitFamilyRand (family : ComputedAlgebraicFSFamilyUnbounded shape) :
     ComputedAlgebraicFSFamilyRand shape
       ({t // t ∈ family.globalReachSet} → Fp) := by
-  classical
   let L := preIpaLen shape family.init.length 10 + 3 * shape.k
   exact
     { init := family.init
@@ -1870,7 +1857,6 @@ theorem run_splitFamilyRand_adversary (family : ComputedAlgebraicFSFamilyUnbound
         (truncateTranscript (preIpaLen shape family.init.length 10 + 3 * shape.k))
         family.globalReachSet (family.reachSet_subset_globalReachSet basis)).run
           (Sum.elim O junk) := by
-  classical
   change (OracleComp.restrictSum junk
     ((family.adversary basis).splitDomain
       (Subtype.val : BTranscript Fp VestaG
@@ -2042,11 +2028,9 @@ def determinize (family : ComputedAlgebraicFSFamilyUnboundedRand shape R) (r : R
 def globalReachSet [Fintype R]
     (family : ComputedAlgebraicFSFamilyUnboundedRand shape R) :
     Finset (List (TranscriptElt Fp VestaG)) := by
-  classical
   exact Finset.univ.biUnion fun basis : AugmentedIndex (2 ^ shape.k) → VestaG =>
     Finset.univ.biUnion fun r : R => (family.adversary basis r).reachSet
 
-open Classical in
 theorem reachSet_subset_globalReachSet [Fintype R]
     (family : ComputedAlgebraicFSFamilyUnboundedRand shape R)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (r : R) :
@@ -2061,7 +2045,6 @@ def splitFamilyRand [Fintype R]
     (family : ComputedAlgebraicFSFamilyUnboundedRand shape R) :
     ComputedAlgebraicFSFamilyRand shape
       (R × ({t // t ∈ family.globalReachSet} → Fp)) := by
-  classical
   let L := preIpaLen shape family.init.length 10 + 3 * shape.k
   exact
     { init := family.init
@@ -2096,7 +2079,6 @@ theorem run_splitFamilyRand_adversary [Fintype R]
         (truncateTranscript (preIpaLen shape family.init.length 10 + 3 * shape.k))
         family.globalReachSet (family.reachSet_subset_globalReachSet basis r)).run
           (Sum.elim O junk) := by
-  classical
   change (OracleComp.restrictSum junk
     ((family.adversary basis r).splitDomain
       (Subtype.val : BTranscript Fp VestaG

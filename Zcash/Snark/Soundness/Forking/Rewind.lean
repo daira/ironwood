@@ -495,7 +495,6 @@ theorem flatAccept_pathData {U W : G} {z : Fp} : {d : ℕ} → (P : Prover Fp G 
       simp only [Fin.cons_zero, Fin.tail_cons]
       rw [flatAccept]
 
-open Classical in
 /-- Halo2's verifier equation on a path-spliced proof equals `flatAccept P` on that path. -/
 theorem deployedVerifierEq_iff_flatAccept_adaptive {shape : Shape} [DecidableEq G] [Inhabited G]
     (g : Fin (2 ^ shape.k) → G) (w u : G) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G)
