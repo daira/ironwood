@@ -7,6 +7,8 @@ import Zcash.Snark.Soundness.Multiopen.BudgetedExtraction
 import Zcash.Snark.Soundness.VestaBudget
 import Zcash.Snark.Soundness.Compose67Unconditional
 import Zcash.Snark.Soundness.Compose67Forking
+import Zcash.Snark.Soundness.Compose67Prefixes
+import Zcash.Snark.Soundness.Compose67Completeness
 import Zcash.Meta.AxiomCheck
 import Mathlib.Util.AssertNoSorry
 
@@ -316,6 +318,21 @@ assert_no_sorry member_snark_of_instance_budgeted
 assert_no_sorry orchard_verifier_sound_vesta_budgeted
 assert_no_sorry cleanOpening_provenance
 assert_no_sorry snarkExtraction_prob_le_of_generatorRO_textbookDL_budgeted
+-- The `hfold` surface: the grouping's eval faithfulness at the vanishing slot is proven, not
+-- assumed, so the derivation reads the verifier-computed `expectedHEval` off the routed member.
+assert_no_sorry vanishing_query_mem_assembleQueries
+assert_no_sorry assembleQueries_vanishingH_unique
+assert_no_sorry constructIntermediateSets_unique_comm_routed
+assert_no_sorry vanishing_slot_routed
+assert_no_sorry hfold_of_expectedHEval_binding
+assert_no_sorry hfold_of_vanishing_slot_binding
+-- The root-of-unity exclusion is derived from acceptance (`assemble?` rejects at `xⁿ = 1`), and the
+-- budget's good branch supplies `hbind` at the routed vanishing slot — so `hfold` now stands on the
+-- fingerprint premise alone.
+assert_no_sorry deployedAccepts_xn_ne_one
+assert_no_sorry hfold_of_member_budget
+assert_no_sorry hgood_failure_priced
+assert_no_sorry hgood_of_good_challenge
 -- The UNCONDITIONAL decomposition: `hExtract` removed, the residual quantified as the
 -- clean-but-not-extracted measure term (bounded by the multiopen budget under the coupling
 -- documented in `Compose67Unconditional`, not assumed here).
@@ -328,6 +345,60 @@ assert_no_sorry snarkExtraction_prob_le_of_generatorRO_textbookDL_decomposed
 assert_no_sorry fibered_accept_below_threshold_le
 assert_no_sorry residual_le_of_coupling_containment
 assert_no_sorry snarkExtraction_prob_le_of_generatorRO_textbookDL_unconditional
+-- The adaptive-coupling ladder (`Soundness.Compose67Assembly`): the residual bounded through the
+-- honest random-oracle query loss instead of the over-idealised exact pushforward. Its two inputs
+-- are the family `PeelDecode` and the honest-completeness containment `hcont`.
+assert_no_sorry independentProductPMF_fiber_bound
+assert_no_sorry residual_le_via_ladder
+assert_no_sorry snarkExtraction_prob_le_of_generatorRO_textbookDL_ladder
+-- The ladder at the concrete multiopen prefixes (`Soundness.Compose67Prefixes`): the four `x₁`–`x₄`
+-- squeeze points, the decode's chain half discharged outright, and its state half reduced to the
+-- level-0 factorisation of the accept event (`exists_multiopenStateAt_iff`, an iff — so the
+-- factorisation is exactly the standing decode-side input, not a convenient sufficient condition).
+assert_no_sorry multiopenPrefixReads_eq
+assert_no_sorry multiopenLen_lt
+assert_no_sorry multiopenChainAt_prefixes
+assert_no_sorry multiopenLevelOf_prefixes
+assert_no_sorry multiopenChainAt_ne
+assert_no_sorry exists_multiopenStateAt_iff
+assert_no_sorry multiopenPeelDecode_of_factors
+assert_no_sorry snarkExtraction_prob_le_of_generatorRO_textbookDL_multiopen
+-- The honest-completeness half of `hcont` (`Soundness.Compose67Completeness`): the bad event priced
+-- unconditionally, and the landing side reduced to the AGM-completeness supply, itself built from a
+-- clean opening's forked transcript.
+assert_no_sorry memberBadEvent_measure_le
+assert_no_sorry memberBadEvent_of_supply
+assert_no_sorry honestCompletenessSupply_of_forkedTranscript
+assert_no_sorry forkedTranscript_nonempty_of_instanceOpening
+assert_no_sorry honestCompletenessSupply_of_instanceOpening
+-- The supply's own inputs, discharged: the three IPA fold challenges are exhibited in `Fp`, deployed
+-- acceptance is reduced to the family's accept predicate, and the value shift is forced by the
+-- witness tie. What is left in `honestCompletenessSupply_of_cleanOpening` is the tie itself.
+assert_no_sorry exists_ipaFoldChallenges
+assert_no_sorry deployedAccepts_of_verifierEq
+assert_no_sorry honestCompletenessSupply_of_openings_agree
+assert_no_sorry honestCompletenessSupply_of_cleanOpening
+-- The witness tie is no longer a premise: the clean opening and the batch witness commit to the
+-- same element, so either they agree (supply) or they collide (relation).
+assert_no_sorry honestCompletenessSupply_or_relation
+-- Acceptance through `assemble?`: the deployed decision excludes the verifier's rejection paths,
+-- which `DeployedIpaVerifierEq` does not, so the supply carries no `assemble? = some m` premise.
+assert_no_sorry fullAlgebraicAcceptDeployed
+assert_no_sorry fullAlgebraicAccept_of_deployed
+assert_no_sorry honestCompletenessSupply_of_cleanOpening_deployed
+assert_no_sorry snarkExtractionFailureEventDeployed
+assert_no_sorry snarkExtractionFailureEventDeployed_subset
+assert_no_sorry snarkExtractionFailureEventDeployed_measure_le
+-- The adaptive coupling (`Forking.AdaptiveCoupling`): escapes blind by overwriting rather than by
+-- decoding, the per-level averaging bound, and the ladder logic separated from the weights.
+assert_no_sorry updEsc
+assert_no_sorry updEsc_blind
+assert_no_sorry card_heavy_mul_le
+assert_no_sorry updEsc_measure_le
+assert_no_sorry updEsc_escapesDuringC_measure_le
+assert_no_sorry adaptEsc
+assert_no_sorry adapt_decomposition
+assert_no_sorry adaptEsc_measure_le
 
 /-- info: 'Zcash.Snark.orchard_verifier_vesta_member_constraint_budgeted' depends on axioms:
 [propext, Classical.choice, Quot.sound,
