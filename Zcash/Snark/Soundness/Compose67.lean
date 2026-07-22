@@ -3,7 +3,7 @@ import Zcash.Snark.Soundness.Forking.Adversary.Algebraic
 import Zcash.Snark.Soundness.AGM.Capstone
 
 /-!
-# Issue #67: composing the algebraic forking extraction with the deployed decoded capstone
+# Composing the algebraic forking extraction with the deployed decoded capstone
 
 `Soundness.Forking.Adversary.Algebraic` proves the clean-opening branch of the algebraic forking
 family (`runToSnark`, bounded by `snarkFailure_prob_le_of_*`); `Soundness.Vesta` proves the deployed
@@ -67,7 +67,7 @@ theorem commit_aMulti_eq_multiopen
   rw [sub_sub, eq_sub_iff_add_eq, ← add_assoc]
   exact h
 
-/-- **The algebraic clean opening is an `IpaRelation` at the identified commitment/value (the #67
+/-- **The algebraic clean opening is an `IpaRelation` at the identified commitment/value (the
 bridge, abstract form).** A clean `Opening` of a `DeployedAlgebraicForkingInstance` `x` is an
 `IpaRelation` at `commit … x.aMulti`, base `x.b`, value `x.v + z⁻¹·vU − ξ·⟨s,b⟩`. Given the
 P-identification `hP` (`commit x.aMulti = P`), the value identification `hv` (`x.v = v`), and the
@@ -85,15 +85,11 @@ theorem ipaRelation_of_opening
   rw [hval, add_sub_assoc, hshift, add_zero, hv]
 
 set_option maxHeartbeats 1000000 in
-/-- **The bridge at the constructed instance.** `ipaRelation_of_opening` at
-`deployedAlgebraicInstanceOfCert p ν cert hz hvalid`, with `P` the deployed opened commitment
-`deployedCommitment − multiU•u − multiBlind•w` and `v = multiopenValue`. `hP` is discharged by
-`commit_aMulti_eq_multiopen` (through `deployedCommitment_eq_multiopen`); `hv` is `rfl` (the instance's
-`v` field). `hshift` is carried only by this standalone single-opening bridge: the composition derives
-it on the witness tie (`shift_eq_zero_of_openings_agree` / `ipaRelation_deployed_of_openings_agree`)
-and needs only the commitment identification elsewhere, so no downstream theorem carries it. This is
-the exact `IpaRelation` shape `OpenedBatchOpenings.ipaRelation_of_x4Current` and the deployed member
-capstone consume. -/
+/-- **The bridge at the constructed instance.** The clean opening is an `IpaRelation` at the
+deployed opened commitment `deployedCommitment − multiU•u − multiBlind•w` with `v = multiopenValue`
+(`commit_aMulti_eq_multiopen` identifies the commitment). Only this standalone bridge carries
+`hshift`; the composition derives the shift on the witness tie
+(`shift_eq_zero_of_openings_agree`). -/
 theorem ipaRelation_deployed_of_instance
     {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)
     (cert : AlgebraicDForkCert (F := Fp)
@@ -231,19 +227,12 @@ theorem ipaRelation_deployed_of_openings_agree
 open Polynomial in
 open Classical in
 set_option maxHeartbeats 1000000 in
-/-- **Witness-tie: the algebraic clean opening feeds the deployed member capstone.** Mirroring the
-legacy forking constraint (`orchard_verifier_vesta_forking_constraint_deployed_x4`), the deployed
-batch `pbatch` supplies its own opening `hrel₀` (`ipaRelation_of_x4Current`) at witness `a₀`, and the
-algebraic instance's clean opening `o` commits to the *same* point
-`deployedCommitment − multiU•u − multiBlind•w` (`opening_commit_deployed_of_instance`). *Either* the
-two witnesses agree — and `member_constraint_of_relation_and_batch` produces the member SNARK
-relation — *or* they collide on `commit` with distinct witnesses, yielding a nontrivial `(g,u,w)`
-relation (`hasNontrivialRelation_of_two_openings`). This ties the deployed batch's witness to the
-extracted witness, so the SNARK relation the capstone concludes is about the extracted opening (or
-binding breaks). No shift hypothesis is carried: the agree branch forces it
-(`shift_eq_zero_of_openings_agree`) and the collision branch never reads the opened value. The
-member-capstone gate data (`hquot`/`hgood`/layout/`hquotCommitted`/`mdec`) is carried as premises —
-it is the deployed gate check, produced separately by the derived-terminal machinery. -/
+/-- **Witness-tie: the algebraic clean opening feeds the deployed member capstone.** The batch
+supplies its own opening at witness `a₀`, and the clean opening commits to the same point
+(`opening_commit_deployed_of_instance`). *Either* the witnesses agree — and
+`member_constraint_of_relation_and_batch` produces the member SNARK relation — *or* they collide,
+a nontrivial `(g,u,w)` relation (`hasNontrivialRelation_of_two_openings`). No shift hypothesis is
+carried; the gate data (`hquot`/`hgood`/layout/`mdec`) stays a premise. -/
 theorem member_relation_or_dlr_of_instance
     {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)
     (cert : AlgebraicDForkCert (F := Fp)
@@ -344,15 +333,10 @@ theorem member_relation_or_dlr_of_instance
 open Polynomial in
 open Classical in
 set_option maxHeartbeats 1000000 in
-/-- **G3 completion: the runToSnark-analogue on the computed path.** Matching the algebraic
-instance's `run` (`runToSnark`'s clean-opening/relation dichotomy): on the clean-opening branch, the
-witness-tie `member_relation_or_dlr_of_instance` produces the member SNARK relation (or a binding
-`HasNontrivialRelation`); on the relation branch, the algebraic extraction's own
-`AlgebraicRelationWitness`. Unlike `runToSnark` — whose `hcirc` admits no DL escape and whose
-`hencodes` is at the raw `commit … aMulti` shape — this matches `run` directly, so the member
-capstone's binding disjunct threads out cleanly and the deployed opened-commitment shape is used
-throughout. The bounded probability of the non-clean branch is `snarkFailure_prob_le_of_*` (#56),
-attached in the G4 step. -/
+/-- The `runToSnark`-analogue on the computed path: on the clean-opening branch the witness tie
+produces the member SNARK relation (or a binding `HasNontrivialRelation`); on the relation branch,
+the algebraic extraction's own `AlgebraicRelationWitness`. Stated at the deployed opened-commitment
+shape so the binding disjunct threads out cleanly. -/
 noncomputable def member_snark_of_instance
     {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)
     (cert : AlgebraicDForkCert (F := Fp)
@@ -447,7 +431,7 @@ noncomputable def member_snark_of_instance
         hpoly deg xpt mdec hquot hgood pp hadviceLayout hinstanceLayout hquotCommitted hencodes)
   | PSum.inr rel => PSum.inr rel
 
-/-- **The computed member relation yields the `KnowledgeSoundness.SnarkRelation` (G5 bridge).** The
+/-- **The computed member relation yields the `KnowledgeSoundness.SnarkRelation`.** The
 `SnarkRelationWithMemberColumns` the composition produces projects onto the plain `SnarkRelation`
 (`Soundness.KnowledgeSoundness`) at `circuitSat := circuitSatViaGates …` on the decoded member
 columns: its `opens` field is the IPA opening and its `satisfiesCircuit` field is exactly the gate
@@ -478,17 +462,12 @@ theorem snarkRelation_of_memberColumns {G : Type*} [AddCommGroup G] [Module Fp G
   ⟨hmem.opens, hmem.satisfiesCircuit⟩
 
 open Polynomial in
-/-- **#67 G5: deployed soundness on the computed path — `ExtractableFromAcceptance` retired.** The
-computed counterpart of `orchard_verifier_sound_vesta_conditional` (`Soundness.Vesta`): it concludes
-the same `KnowledgeSoundness.SnarkRelation`-based `S`, but from the algebraic forking instance and the
-deployed gate data — with **no `ExtractableFromAcceptance` hypothesis**. On the clean-opening branch
-the extracted witness both opens the deployed commitment and satisfies the member gate check
-(`member_snark_of_instance` composed with `snarkRelation_of_memberColumns`); on the non-clean branch
-the algebraic family returns a computed DL relation (`AlgebraicRelationWitness`). Unlike the legacy
-conditional endpoints, `circuitSat` is not a free parameter — it is the concrete gate check on the
-decoded member columns, so `hencodes` quantifies over the batch/decode the computed path produces.
-This supersedes `orchard_verifier_sound_conditional`/`orchard_verifier_sound_vesta_conditional` and
-their assumed bridge `ExtractableFromAcceptance` (`Soundness.Main`). -/
+/-- **Deployed soundness on the computed path — `ExtractableFromAcceptance` retired.** The same
+`SnarkRelation`-shaped conclusion as the conditional endpoint, but from the algebraic forking
+instance and the deployed gate data, with no assumed bridge: the clean-opening branch opens the
+deployed commitment and satisfies the member gate check, the non-clean branch returns a computed DL
+relation. `circuitSat` is not a free parameter — it is the concrete gate check on the decoded
+member columns. Supersedes the `_conditional` endpoints and `ExtractableFromAcceptance`. -/
 noncomputable def orchard_verifier_sound_vesta_computed
     {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)
     (cert : AlgebraicDForkCert (F := Fp)
@@ -595,9 +574,9 @@ noncomputable def orchard_verifier_sound_vesta_computed
 
 /-! ## G4 — the quantitative knowledge-error bound (conditional)
 
-The `#56` clean-opening failure `snarkFailureEvent` is already bounded
+The clean-opening failure `snarkFailureEvent` is already bounded
 (`snarkFailure_prob_le_of_generatorRO_textbookDL`). On every clean-opening run the composition
-`member_snark_of_instance` (G3) delivers `SnarkRelation ∨ DL` *given the deployed gate data*
+`member_snark_of_instance` delivers `SnarkRelation ∨ DL` *given the deployed gate data*
 (`pbatch`/`mdec`/`hquot`/`hgood`/layout). So the SNARK-extraction failure is contained in the
 clean-opening failure and inherits the same bound — **conditional on the gate data discharging on
 clean openings** (`hExtract`).
@@ -639,13 +618,13 @@ end ComputedAlgebraicFSFamily
 
 open scoped ENNReal in
 open ComputedAlgebraicFSFamily in
-/-- **#67 G4: conditional knowledge-soundness bound.** The measure of "deployed acceptance but no
-SNARK extraction" inherits the `#56` clean-opening bound
+/-- **Conditional knowledge-soundness bound.** The measure of "deployed acceptance but no
+SNARK extraction" inherits the clean-opening bound
 `(Q+k)·3/|Fp| + (Q+1)/|Fp| + |basis|·ε`, **conditional on `hExtract`** — that every clean-opening run
 delivers the extraction (which `member_snark_of_instance` supplies given the deployed gate data). By
 set-containment (`snarkExtractionFailureEvent_subset`) + outer-measure monotonicity, so the concrete
 AGM bound transfers verbatim. `hExtract` is the honest disjoint-halves gap: discharging it family-wide
-needs a failure-probability bound over the deployed accept measures, which does not exist (the #18
+needs a failure-probability bound over the deployed accept measures, which does not exist (the
 floors are measure-lower-bound premises only). -/
 theorem snarkExtraction_prob_le_of_generatorRO_textbookDL {shape : Shape}
     {T : Type*} [DecidableEq T] (B : VestaG) (hB : B ≠ 0)
@@ -667,7 +646,7 @@ theorem snarkExtraction_prob_le_of_generatorRO_textbookDL {shape : Shape}
       (Set.preimage_mono (family.snarkExtractionFailureEvent_subset extracted hExtract)))
     (snarkFailure_prob_le_of_generatorRO_textbookDL B hB query hquery family hDL)
 
-/-- **Instance provenance (G4 Piece A).** Whenever the computed family's `instanceAttempt` yields an
+/-- **Instance provenance.** Whenever the computed family's `instanceAttempt` yields an
 instance `x`, that `x` is a `deployedAlgebraicInstanceOfCert` of a concrete `AlgebraicWfProof p`,
 oracle-scalar vector `ν`, and certificate — the structural inverse of `computedDeployedAlgebraicInstance`
 (which returns `some` only on the cert-found, `ν 10 ≠ 0` branch). This exposes the `AlgebraicWfProof`

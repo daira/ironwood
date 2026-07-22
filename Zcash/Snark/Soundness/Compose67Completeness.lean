@@ -2,54 +2,32 @@ import Zcash.Snark.Soundness.Compose67Forking
 import Zcash.Snark.Soundness.Compose67
 
 /-!
-# The honest-completeness containment for the #67 ladder (`hcont`)
+# The honest-completeness containment for the composition ladder (`hcont`)
 
-The ladder endpoint `snarkExtraction_prob_le_of_generatorRO_textbookDL_ladder`
-(`Soundness.Compose67Assembly`) is unconditional modulo two concrete non-circular inputs: the family
-`PeelDecode` (`D`) and the honest-completeness containment (`hcont`). This module discharges the
-measure side of `hcont` outright and reduces its landing side to a single sharp, non-circular
-*honest-completeness supply* hypothesis.
+The ladder endpoint (`Soundness.Compose67Assembly`) is unconditional modulo two inputs: the family
+`PeelDecode` and the containment `hcont`. This module discharges `hcont`'s measure side outright
+and reduces its landing side to one non-circular hypothesis:
 
-Two facts assembled here from `Compose67Forking`:
+* `memberBadEvent_measure_le` — the priced bad event has measure at most the sum of its three
+  worst-case thresholds, unconditionally: each part is self-pricing (the joint-accept part by its
+  own guard, the `x₄`/`x₁` floor-failure parts by the single-slot bound through coordinate
+  cylinders).
+* `memberBadEvent_of_supply` — on the clean-but-not-extracted residual the honest challenge tuple
+  lands in `memberBadEvent`, given the single-transcript supply: deployed acceptance and a
+  Fiat–Shamir tree at the honest IPA base.
 
-* **`memberBadEvent_measure_le`** — the priced bad event has measure at most the sum of its three
-  worst-case thresholds, *unconditionally* (no acceptance, no coupling). Each of the three parts is
-  self-pricing: the joint-accept part is either empty or `memberJointAccept` itself (whose measure
-  the part's own guard bounds); the `x₄`/`x₁` floor-failure parts are the single-slot below-threshold
-  events (`uniformOfFintype_accept_below_threshold_le`) read through the fourth/first coordinate
-  cylinders. This is the `μ(accept) ≤ s` half of `hcont` for `accept := memberBadEvent`.
-
-* **`memberBadEvent_containment_of_supply`** — the landing half: on the clean-but-not-extracted
-  residual, the honest challenge tuple lands in `memberBadEvent` — *given the single-transcript
-  supply* (deployed acceptance and a Fiat–Shamir tree at the honest IPA base `evalVector urs.k ch.x3`
-  produced by the clean opening). This is `honest_tuple_mem_memberBadEvent` (already proven — the
-  batch and member decode are produced or priced, nothing assumed) packaged with the supply as an
-  explicit premise.
-
-The one remaining input, `HonestCompletenessSupply`, is the standard AGM-completeness bridge: a
-family clean opening yields deployed acceptance and a Fiat–Shamir tree at the honest base. It is
-non-circular (it mentions neither `extracted` nor any measure) and is the sole residual on the
-landing side of `#67`.
+The remaining input, `HonestCompletenessSupply`, is the standard AGM-completeness bridge — a clean
+opening yields deployed acceptance and a tree at the honest base. It mentions neither `extracted`
+nor any measure.
 
 ## Discharging the supply from a clean opening
 
-The final section reduces that bridge to the two facts a clean opening genuinely does not carry:
-
-* the **IPA fold-challenge facts** are discharged outright — `exists_ipaFoldChallenges` exhibits
-  `1, 2, 3` as three distinct nonzero elements of `Fp` (a prime field of order `≈ 2²⁵⁴`);
-* **deployed acceptance** is reduced from the `DeployedAccepts` MSM form to the family's own accept
-  predicate `DeployedIpaVerifierEq` (`fullAlgebraicAccept`) by `deployedAccepts_of_verifierEq`, the
-  converse of `deployedAccepts_verifierEq` (`Soundness.Main`) modulo the assembly being defined —
-  `assemble? vk ps ch = some m`, which is the reader's well-formedness check on the proof string,
-  not a soundness assumption;
-* the **value shift** is discharged by `shift_eq_zero_of_openings_agree` (`Soundness.Compose67`) on
-  the witness tie, so `honestCompletenessSupply_of_openings_agree` carries no `hshift`.
-
-`honestCompletenessSupply_of_cleanOpening` packages all three: from the clean opening's provenance
-data plus a witness tie and the family's acceptance, it produces the supply with the fold challenges
-and the shift discharged. What no single accepting run supplies is the witness tie itself — the
-deployed batch that ties `o.1` to a batch witness is a *rewinding* product, priced by
-`deployed_member_budget` — which is exactly the residual the ladder's `hcont` is there to pay for. -/
+The final sections discharge the supply's own inputs: the IPA fold challenges
+(`exists_ipaFoldChallenges` exhibits `1, 2, 3` in `Fp`), deployed acceptance
+(`deployedAccepts_of_verifierEq`), the value shift (forced on the witness tie), and the tie itself
+(`honestCompletenessSupply_or_relation`: *either* the supply *or* a nontrivial `(g, u, w)`
+relation). What no single accepting run supplies is the tie's batch — a rewinding product, priced
+by `deployed_member_budget`, the residual `hcont` pays for. -/
 
 namespace Zcash.Snark
 
@@ -433,18 +411,12 @@ theorem honestCompletenessSupply_of_cleanOpening {shape : Shape}
 
 /-! ### Acceptance through `assemble?`
 
-`fullAlgebraicAccept` is a `DeployedIpaVerifierEq`, which is strictly weaker than `DeployedAccepts`:
-it asserts the verifier's MSM equation but does not exclude the *rejection* paths. `assemble?`
-returns `none` on a malformed proof string, at `ch.x ^ vk.n = 1`, on duplicate commitment/point
-queries, and when `x₃` hits an opened point — two of which abstract deployed panics — and
-`DeployedAccepts` is `False` on every one of them. So a run can satisfy the family's accept
-predicate while the deployed verifier never reaches a decision.
-
-Taking the deployed decision as the family's acceptance closes that gap by construction, and removes
-the `assemble? = some m` side condition that `deployedAccepts_of_verifierEq` has to carry. The
-definition is additive: it implies the predicate the family uses today
-(`fullAlgebraicAccept_of_deployed`), so a family instantiated at it inherits everything proved about
-the weaker one. -/
+`fullAlgebraicAccept` asserts the verifier's MSM equation but not its *rejection* paths:
+`assemble?` returns `none` on a malformed proof string, at `ch.x ^ vk.n = 1`, on duplicate
+queries, and when `x₃` hits an opened point, and `DeployedAccepts` is `False` on every one. Taking
+the deployed decision as the family's acceptance closes that gap by construction and removes the
+`assemble? = some m` side condition. Additive: the strengthened predicate implies the current one
+(`fullAlgebraicAccept_of_deployed`), so everything proved about the weaker predicate carries over. -/
 
 /-- The family's accept predicate strengthened to the deployed decision: the verifier reaches a
 decision *and* accepts. -/
@@ -489,13 +461,10 @@ theorem snarkExtractionFailureEventDeployed_subset {shape : Shape}
     ((family.adversary q.1).run q.2.1) _ _ hacc, hnex⟩
 
 open scoped ENNReal in
-/-- **Every knowledge-error bound transfers to deployed acceptance.** Because deployed acceptance
-implies the verifier-equation predicate, the deployed failure event is contained in the one the
-existing endpoints bound, and outer-measure monotonicity carries any such bound across verbatim.
-
-This is what makes the acceptance change usable without restating the family: the endpoints stay as
-they are, and the bound is *read* at the deployed decision — where a verifier panic is non-accepting
-— rather than at the weaker predicate. -/
+/-- **Every knowledge-error bound transfers to deployed acceptance.** The deployed failure event is
+contained in the one the existing endpoints bound
+(`snarkExtractionFailureEventDeployed_subset`), so monotonicity carries any such bound across — the
+endpoints stay as they are, and the bound is read where a verifier panic is non-accepting. -/
 theorem snarkExtractionFailureEventDeployed_measure_le {shape : Shape} {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ shape.k) → T)
     (family : ComputedAlgebraicFSFamily shape)
@@ -546,18 +515,12 @@ theorem honestCompletenessSupply_of_cleanOpening_deployed {shape : Shape}
   honestCompletenessSupply_of_openings_agree p ν cert hz hvalid o hval₀ hae hverify
 
 set_option maxHeartbeats 1000000 in
-/-- **The supply, or binding breaks — the witness tie discharged into the standard disjunction.**
-The clean opening `o` and the deployed batch witness `a₀` commit to the *same* group element: `o`
-by `opening_commit_deployed_of_instance` (no shift hypothesis needed), `a₀` by the batch's own
-opening equation `hcommit₀`. So *either* the two witnesses agree — and
-`honestCompletenessSupply_of_openings_agree` produces the supply, its value shift forced — *or* they
-are two distinct openings of one commitment, which is a nontrivial `(g, u, w)` relation
-(`hasNontrivialRelation_of_two_openings`).
-
-This is the same either-agree-or-collide split `member_relation_or_dlr_of_instance`
-(`Soundness.Compose67`) uses for the witness tie, so the tie stops being a premise: the caller
-supplies the batch's commitment and value equations, both of which `OpenedBatchOpenings` carries,
-and takes the relation branch as a win exactly as the rest of the composition does. -/
+/-- **The supply, or binding breaks.** The clean opening `o` and the batch witness `a₀` commit to
+the same group element (`opening_commit_deployed_of_instance` and `hcommit₀`), so *either* they
+agree — `honestCompletenessSupply_of_openings_agree` produces the supply, shift forced — *or* they
+are two distinct openings of one commitment, a nontrivial `(g, u, w)` relation
+(`hasNontrivialRelation_of_two_openings`). The same agree-or-collide split as
+`member_relation_or_dlr_of_instance`, so the witness tie stops being a premise. -/
 theorem honestCompletenessSupply_or_relation {shape : Shape}
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)

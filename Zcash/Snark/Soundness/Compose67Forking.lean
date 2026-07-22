@@ -2,42 +2,25 @@ import Zcash.Snark.Soundness.Compose67Unconditional
 import Zcash.Snark.Soundness.Multiopen.BudgetedExtraction
 
 /-!
-# The forking reduction closing the #67 residual
+# The forking reduction closing the clean-but-not-extracted residual
 
-`Compose67Unconditional.snarkExtraction_prob_le_of_generatorRO_textbookDL_decomposed` bounds the
-SNARK-extraction failure by the `#56` clean-opening bound **plus** the clean-but-not-extracted
-residual `μ(cleanButNotExtracted)`. This module closes that residual to the multiopen knowledge
-error, isolating exactly the two standard, **non-circular** facts the forking argument needs:
+This module closes the residual `μ(cleanButNotExtracted)` to the multiopen knowledge error, given
+exactly two non-circular facts:
 
-* **(a) the coupling** — a *distributional* statement: the four fresh multiopen challenges,
-  extracted from the coins by reading/reprogramming the random oracle at the sealed multiopen
-  prefixes, are jointly uniform (a `PMF.map` equality onto `uniformOfFintype`, the exact shape of the
-  proven `Soundness.Forking.Rewind.roChallenges_ipaRound_uniform`, and the explicit form of the
-  random-oracle-uniformity convention every `hprob`/`hJ` floor already carries —
-  `Soundness.Forking.Oracle`);
-* **(b) the containment** — a *structural* statement: on the clean-but-not-extracted residual the
-  extracted challenge tuple lands in the per-base accept event whose measure is below the threshold
-  (this bundles the deployed→opened accept decomposition, `openedX*Accept_of_deployedAccepts`, with
-  the budget `Soundness.Multiopen.BudgetedExtraction.deployed_member_budget`: extraction fails only
-  when the joint accept measure is `≤ Σtᵢ`).
+* **(a) the coupling** — the four fresh multiopen challenges, read from the coins by
+  reading/reprogramming the oracle at the sealed multiopen prefixes, are jointly uniform (the shape
+  proven for the IPA rounds by `roChallenges_ipaRound_uniform`);
+* **(b) the containment** — on the residual, the challenge tuple lands in the per-base accept event
+  whose measure is below the threshold (`deployed_member_budget`: extraction fails only when the
+  joint accept measure is `≤ Σtᵢ`).
 
-Neither mentions `extracted`'s measure or the conclusion — (a) is about the challenge distribution,
-(b) is a set containment. The reduction proper (this file's `residual_le_of_coupling_containment`
-and its `fibered_accept_below_threshold_le` engine) is *proven*: given (a) and (b) the residual is
-`≤ Σtᵢ` by the fibered single-slot counting bound
-(`Soundness.Forking.Probability.uniformOfFintype_accept_below_threshold_le`, lifted over the base by
-`uniformOfFintype_prod_fiber_bound_right`) transported along the coupling's pushforward. Composing
-with the decomposition gives the unconditional single-number bound
-`(Q+k)·3/|Fp| + (Q+1)/|Fp| + |basis|·ε + t`.
-
-The residual base-dependence (the accept set varies with the coins prefix) is why a single
-pushforward does not suffice and the *fibered* form is needed: per base the challenge is uniform and
-the accept set is fixed, so the single-slot bound applies fiberwise and integrates. What this module
-does **not** discharge is (a) and (b) themselves for the concrete family: (a) is the genuine
-probabilistic modeling step (an adaptive multiopen rewind tree, not a composition of existing
-lemmas — confirmed by the forking/oracle audit that `reprogramX*` are pointwise-only), and (b) is
-the protocol-decomposition of a family clean opening into the four canonical-run accept events.
-They are the honest remaining premises; everything between them and the single number is proven here.
+Neither mentions `extracted`'s measure — (a) is about the challenge distribution, (b) is a set
+containment. Given both, the reduction is proven (`residual_le_of_coupling_containment`): the accept
+set varies with the coins, so the *fibered* single-slot counting bound applies per base and
+integrates, giving the single-number bound `(Q+k)·3/|Fp| + (Q+1)/|Fp| + |basis|·ε + t`. What this
+module does not discharge is (a) and (b) for the concrete family — (a) is the genuine modelling
+step (`reprogramX*` are pointwise-only), (b) the protocol decomposition of a clean opening into the
+four canonical-run accept events.
 -/
 
 namespace Zcash.Snark
@@ -88,25 +71,12 @@ theorem residual_le_of_coupling_containment {Ω A B : Type*}
 
 set_option maxHeartbeats 1000000 in
 open ComputedAlgebraicFSFamily in
-/-- **#67: the unconditional single-number knowledge-error bound, modulo the forking coupling.**
-`snarkExtraction_prob_le_of_generatorRO_textbookDL_decomposed` with the clean-but-not-extracted
-residual closed to the threshold `t` by the forking reduction. The two hypotheses are the isolated
-standard facts:
-
-* `hcouple` — **(a)** the challenge-uniformity coupling: the coins measure pushes forward under the
-  base-and-challenge extraction `f : Ω → A × (Fp⁴)` to the uniform product. `A` is the base space
-  (the per-coins deployed instance data the multiopen accept event depends on); the `Fp⁴` factor is
-  the four fresh multiopen challenges.
-* `hcont` — **(b)** the accept containment: on the clean-but-not-extracted residual, `f` lands in the
-  accept-below-threshold event for the per-base accept family `acc` (instantiated at
-  `w ∈ memberJointAccept` and `t := Σtᵢ` by `deployed_member_budget`).
-
-Instantiating `t` with the multiopen knowledge error
-`((deployedSetQueries…−1)/|Fp|) + ((deployedX4PairCount…−1)/|Fp| + (…allPts…)/|Fp| +
-deployedX4PairCount/|Fp|)` gives the single-number bound
-`(Q+k)·3/|Fp| + (Q+1)/|Fp| + |basis|·ε + Σtᵢ`. This is the honest close: everything is proven except
-`hcouple` (the random-oracle modeling step, an adaptive multiopen rewind tree) and `hcont` (the
-family-clean-opening decomposition), both non-circular and both the standard forking-lemma inputs. -/
+/-- **The unconditional single-number knowledge-error bound, modulo the forking coupling.** The
+decomposed bound with the residual closed to the threshold `t` from two isolated facts: `hcouple`
+(the coins push forward to the uniform product on base × challenges) and `hcont` (the residual
+lands in the accept-below-threshold event, instantiated by `deployed_member_budget`). Everything
+else is proven; `hcouple` is the random-oracle modelling step and `hcont` the clean-opening
+decomposition — the standard forking-lemma inputs. -/
 theorem snarkExtraction_prob_le_of_generatorRO_textbookDL_unconditional {shape : Shape}
     {T : Type*} [DecidableEq T] (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ shape.k) → T) (hquery : Function.Injective query)
@@ -188,18 +158,11 @@ theorem memberJointAccept_measure_le_of_not_extraction {G : Type*} [AddCommGroup
           + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp) :=
   (deployed_member_budget urs hk vk ps ch i hi md b₂f havoid).resolve_right hnex
 
-/-- **Honest completeness ⇒ joint accept membership — the structural half of `hcont` (`hDecomp`),
-now a theorem.** When the honest transcript deployed-accepts and admits a Fiat–Shamir tree at the
-honest IPA base `evalVector urs.k ch.x3` carrying an opened `x₄` batch there, the honest challenge
-tuple `(ch.x1, ch.x2, ch.x3, ch.x4)` lies in `memberJointAccept` at `b₂f := fun _ => evalVector`.
-
-With the honest-preferring canonical selectors (`canonicalX{1,2,3}Run_honest`), the four canonical
-rewind bases collapse to the honest transcript at the honest tuple (the splice/challenge identities
-`honestX*Run_spliced`/`_challenges` are `rfl`), so each level is the honest run's own accept: the
-deployed→opened bridge `openedX4Accept_of_deployedAccepts` for `x₄`, and the shared honest IPA
-opening (`deployed_to_acceptV` off the `(g,U,W)`-relation branch) for `x₁`/`x₂`/`x₃`. This is the
-containment premise of `residual_le_of_coupling_containment` discharged for the honest tuple; the
-one remaining input is the RO-uniformity coupling that makes that tuple uniform. -/
+/-- **Honest completeness gives joint accept membership — the structural half of `hcont`.** When
+the honest transcript deployed-accepts and admits a Fiat–Shamir tree at the honest IPA base with an
+opened `x₄` batch, the honest challenge tuple lies in `memberJointAccept`: the honest-preferring
+canonical selectors collapse the four rewind bases to the honest transcript, so each level is the
+honest run's own accept. -/
 theorem memberJointAccept_of_honest {G : Type*} [AddCommGroup G] [Module Fp G] [DecidableEq G]
     [Inhabited G] {shape : Shape} (urs : URS G) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -321,21 +284,11 @@ noncomputable def memberBadEvent {G : Type*} [AddCommGroup G] [Module Fp G]
 set_option maxHeartbeats 1000000 in
 open Classical in
 /-- **The containment, discharged: a clean-but-not-extracted honest tuple lands in the priced bad
-event.** Given the single-transcript supply — deployed acceptance and a Fiat–Shamir tree at the
-honest IPA base — plus the per-set data and the failure of extraction (`hnex`, the unfolding of
-"not extracted": no produced batch's member decode binds all columns, and no `(g,U,W)` relation is
-at hand), the honest challenge tuple `(ch.x1, ch.x2, ch.x3, ch.x4)` lies in `memberBadEvent`:
-
-* if the honest-base `x₄` floor fails, the honest slot's accept (from the deployed→opened bridge)
-  puts the tuple in the `x₄` floor-failure part;
-* otherwise the floor produces the opened `x₄` batch (`openedX4Rewind_of_x4Prob_forked` seeded by
-  the honest fork's clean opening); if the `x₁` floor fails, the batch itself witnesses the honest
-  `x₁` accept and the tuple sits in the `x₁` floor-failure part;
-* with both floors, the member decode exists (`openedMemberDecode_of_x1Prob`), the tuple is in
-  `memberJointAccept` (`memberJointAccept_of_honest`), and `hnex` turns the budget
-  (`deployed_member_budget`) into the below-threshold bound — the first part.
-
-No batch, decode, or measure fact is assumed: everything is produced or priced. -/
+event.** Given deployed acceptance, a Fiat–Shamir tree at the honest IPA base, and the failure of
+extraction (`hnex`), the honest tuple lies in `memberBadEvent`: a failed `x₄` floor puts it in the
+`x₄` part; otherwise the floor produces the batch, and a failed `x₁` floor puts it in the `x₁`
+part; with both floors the member decode exists and `hnex` turns `deployed_member_budget` into the
+below-threshold bound. Everything is produced or priced; no batch, decode, or measure is assumed. -/
 theorem honest_tuple_mem_memberBadEvent {G : Type*} [AddCommGroup G] [Module Fp G]
     [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -643,17 +596,11 @@ theorem deployedAllPts_card_le {G : Type*} [AddCommGroup G] [Module Fp G]
 set_option maxHeartbeats 1000000 in
 open Classical in
 open ComputedAlgebraicFSFamily in
-/-- **#67: the single-number knowledge-error bound over the priced union, modulo the coupling.**
-`snarkExtraction_prob_le_of_generatorRO_textbookDL_unconditional` with the containment target
-enlarged to the three-part priced bad event, so that the containment hypothesis is dischargeable
-*pointwise from single-transcript supply*: at the deployed instantiation the fiber at base `a` is
-`memberBadEvent`, and `honest_tuple_mem_memberBadEvent` lands every clean-but-not-extracted honest
-tuple there given only deployed acceptance, a Fiat–Shamir tree at the honest IPA base, the per-set
-data, and the unfolding of "not extracted" — no batch, member decode, or measure hypothesis. The
-price is `T + S4 + S1`: the worst-case knowledge budget plus the two slot floor-failure prices
-(for the deployed counts, `deployedX4PairCount_le_numPointSets` and `deployedAllPts_card_le` bound
-the base variation). The remaining hypothesis is `hcouple` — the challenge-uniformity coupling, the
-random-oracle modeling step. -/
+/-- **The single-number knowledge-error bound over the priced union, modulo the coupling.** The
+unconditional bound with the containment target enlarged to `memberBadEvent`, so the containment is
+dischargeable pointwise from single-transcript supply (`honest_tuple_mem_memberBadEvent`). The
+price is `T + S4 + S1` — the worst-case knowledge budget plus the two floor-failure prices. The one
+remaining hypothesis is `hcouple`, the challenge-uniformity coupling. -/
 theorem snarkExtraction_prob_le_of_generatorRO_textbookDL_unconditional_priced {shape : Shape}
     {T' : Type*} [DecidableEq T'] (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ shape.k) → T') (hquery : Function.Injective query)

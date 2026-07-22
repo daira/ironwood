@@ -23,3 +23,7 @@ extend-ignore-identifiers-re = [
   "^[A-Za-z0-9_]{1,3}$",
   "^H[A-Za-z0-9]{3}$",
 ]
+
+[default.extend-words]
+thr = "thr"  # threshold identifiers (`thr`, `thr1`, `thr4`) in Compose67Completeness
+hsi = "hsi"  # hypothesis identifiers (`hsiN`) in Verifier/Assemble

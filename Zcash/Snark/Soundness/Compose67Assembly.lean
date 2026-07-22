@@ -3,22 +3,15 @@ import Zcash.Snark.Soundness.Compose67Unconditional
 import Zcash.Snark.Soundness.Forking.AdaptiveCoupling
 
 /-!
-# Assembling the unconditional #67 bound from the adaptive coupling
+# Assembling the unconditional knowledge-error bound from the adaptive coupling
 
-`Compose67Unconditional.snarkExtraction_prob_le_of_generatorRO_textbookDL_decomposed` leaves the
-knowledge-error bound as `#56 AGM bound + μ(cleanButNotExtracted)`. This module bounds that residual
-through the adaptive random-oracle coupling of `Forking.AdaptiveCoupling`
-(`PeelDecode.landsBelow_measure_le`), rather than the over-idealised exact-pushforward `hcouple` of
-`Compose67Forking` (which the honest random-oracle model does not supply — the accept set depends on
-the table, so the four challenge reads are not independent of it; the honest coupling carries the
-ladder's `(Q+4)·τ` query loss).
-
-The missing measure-theory plumbing is a fiber bound for `independentProductPMF` with an *arbitrary*
-first factor (the generator-RO setup is not uniform): `independentProductPMF_fiber_bound`. Composed
-with the uniform tape-marginal (`uniformOfFintype_prod_fiber_bound`) and the per-basis ladder bound,
-it reduces `#67`'s residual to two concrete inputs — a `PeelDecode` for the family's four multiopen
-prefixes, and the honest-completeness containment (a clean opening's honest challenge tuple lands in
-`memberJointAccept`, its measure below the knowledge-error threshold on `¬extracted`).
+The decomposed bound leaves `clean-opening bound + μ(cleanButNotExtracted)`. This module bounds the
+residual through the adaptive coupling (`PeelDecode.landsBelow_measure_le`), which carries the
+ladder's `(Q+4)·τ` query loss — the honest random-oracle model supplies no exact pushforward, since
+the accept set depends on the table. `independentProductPMF_fiber_bound` integrates the per-basis
+ladder bound over the (non-uniform) generator-RO setup, reducing the residual to two concrete
+inputs: a `PeelDecode` for the family's four multiopen prefixes, and the honest-completeness
+containment `hcont`.
 -/
 
 open scoped ENNReal
@@ -47,17 +40,12 @@ theorem independentProductPMF_fiber_bound {A B : Type*} (p : PMF A) (q : PMF B)
     _ = β := by rw [PMF.tsum_coe, one_mul]
 
 open ComputedAlgebraicFSFamily in
-/-- **The #67 residual, bounded by the adaptive coupling.** With
-* a `PeelDecode` for the family's four multiopen prefixes at each basis (`D`), and
-* the honest-completeness containment `hcont` — on the clean-but-not-extracted event, the family's
-  four multiopen challenge reads land in the per-output joint accept event, whose uniform measure is
-  below the knowledge-error threshold `s` (the `¬extracted` half is `deployed_member_budget`),
-
-the clean-but-not-extracted residual measure is at most `(Q + 4)·τ` for any `τ` with `s ≤ τ⁴`. This
-is the honest random-oracle coupling — the ladder's query-loss form, *not* an exact pushforward —
-integrated over the (non-uniform) generator-RO setup by `independentProductPMF_fiber_bound` and the
-recursive-fork tape marginalised by `uniformOfFintype_prod_fiber_bound`, with the per-basis loss
-supplied by `PeelDecode.landsBelow_measure_le`. -/
+/-- **The clean-but-not-extracted residual, bounded by the adaptive coupling.** Given a
+`PeelDecode` for the family's four multiopen prefixes (`D`) and the containment `hcont` (on the
+residual, the four challenge reads land in the per-output joint accept event, of measure below
+`s`), the residual measure is at most `(Q + 4)·τ` for any `τ` with `s ≤ τ⁴` — the ladder's
+query-loss coupling, integrated over the generator-RO setup by
+`independentProductPMF_fiber_bound`. -/
 theorem residual_le_via_ladder {shape : Shape}
     {T' : Type*} [DecidableEq T']
     (query : AugmentedIndex (2 ^ shape.k) → T')
@@ -117,16 +105,11 @@ theorem residual_le_via_ladder {shape : Shape}
 
 set_option maxHeartbeats 1000000 in
 open ComputedAlgebraicFSFamily in
-/-- **#67, unconditional up to the adaptive coupling inputs.** The knowledge-error probability —
-deployed acceptance without SNARK extraction — is at most the `#56` clean-opening bound
-`(Q+k)·3/|Fp| + (Q+1)/|Fp| + |basis|·ε` plus the adaptive-coupling term `(Q+4)·τ`, for any `τ` with
-the per-output joint-accept threshold `s ≤ τ⁴`. No `hExtract`, and no exact-pushforward `hcouple`:
-the coupling is discharged by the honest ladder (`residual_le_via_ladder`), which carries the
-random-oracle query loss. The two remaining inputs are the genuine #67 content, both non-circular:
-`D` — a `PeelDecode` witnessing that each basis's four multiopen challenges are the adaptive
-squeeze-point reads of the oracle table; and `hcont` — the honest-completeness containment (a clean
-opening's four challenge reads land in the per-output joint accept event, whose measure is below `s`
-whenever extraction fails, via `deployed_member_budget`). -/
+/-- **The knowledge-error bound, unconditional up to the adaptive coupling inputs.** Deployed
+acceptance without SNARK extraction has probability at most the clean-opening bound
+`(Q+k)·3/|Fp| + (Q+1)/|Fp| + |basis|·ε` plus `(Q+4)·τ`, for any `τ` with `s ≤ τ⁴`. No `hExtract`
+and no exact pushforward; the two inputs are the decode `D` and the containment `hcont`
+(via `deployed_member_budget`), both non-circular. -/
 theorem snarkExtraction_prob_le_of_generatorRO_textbookDL_ladder {shape : Shape}
     {T' : Type*} [DecidableEq T'] (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ shape.k) → T') (hquery : Function.Injective query)

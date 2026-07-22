@@ -269,7 +269,7 @@ assert_no_sorry orchard_deployed_relation_prob_eq_of_uniformURS
 assert_no_sorry orchard_deployed_relation_prob_le_of_uniformURS_textbookDL
 assert_no_sorry orchard_deployed_relation_prob_le_of_generatorRO_textbookDL
 
--- The multiopen value-check chain (issue #18): the deployed value check derived from the nested
+-- The multiopen value-check chain: the deployed value check derived from the nested
 -- forking floors, the x₁ member un-batch on top of it, and the terminal with `hadvice`/`hinstance`
 -- produced rather than assumed (`Soundness.Multiopen.ValueCheckX3`, `Soundness.Vesta`).
 assert_no_sorry deployed_value_check_node_binding

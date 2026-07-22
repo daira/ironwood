@@ -1,52 +1,27 @@
 import Zcash.Snark.Soundness.Compose67
 
 /-!
-# The unconditional decomposition of the #67 knowledge-error bound
+# The unconditional decomposition of the knowledge-error bound
 
-`snarkExtraction_prob_le_of_generatorRO_textbookDL` (`Soundness.Compose67`) bounds the
-SNARK-extraction failure `{deployed acceptance ∧ ¬extracted}` by the `#56` clean-opening bound
-`(Q+k)·3/|Fp| + (Q+1)/|Fp| + |basis|·ε`, **conditional** on `hExtract : ∀ basis coins,
-hasCleanOpening → extracted` — the assumption that *every* clean-opening run already extracts.
+`snarkExtraction_prob_le_of_generatorRO_textbookDL` is conditional on `hExtract` — the assumption
+that every clean-opening run already extracts. This module removes it: the failure event splits,
+with no hypothesis at all, into the clean-opening failure (already priced) and the
+**clean-but-not-extracted** residual, giving the unconditional inequality
 
-This module removes that assumption. The failure event splits, with no hypothesis at all, into the
-clean-opening failure (already priced by `#56`) and the **clean-but-not-extracted** residual: runs
-that produced a clean IPA opening yet on which the SNARK extraction predicate fails. The main result
-`snarkExtraction_prob_le_of_generatorRO_textbookDL_decomposed` is the resulting *unconditional*
-inequality
+  `μ {accept ∧ ¬extracted} ≤ [ clean-opening bound ] + μ {hasCleanOpening ∧ ¬extracted}`
 
-  `μ {accept ∧ ¬extracted} ≤ [ #56 bound ] + μ {hasCleanOpening ∧ ¬extracted}`.
+(`snarkExtraction_prob_le_of_generatorRO_textbookDL_decomposed`). The conditionality is now one
+quantified term: `hExtract` held exactly when the residual is empty; here it is measured instead.
 
-So the conditionality of the #67 bound is now a single, explicit, quantified term — not an assumed
-implication. `hExtract` held exactly when that residual is empty; here it is measured instead.
+## What closing the residual needs
 
-## What closing the residual needs (the recorded gap)
-
-The residual `μ(cleanButNotExtracted)` is bounded by the multiopen knowledge error
-`t₁ + (t₂ + t₃ + t₄)` (`Soundness.Multiopen.BudgetedExtraction.deployed_member_budget`), but only
-through a coupling this file does **not** discharge, for the reason recorded at
-`Soundness.VestaBudget` (the clean-opening hand-off note) and confirmed by the forking/oracle audit:
-
-* `deployed_member_budget` prices a *per-base* accept event over `uniformOfFintype (Fp × Fp × Fp × Fp)`
-  — the four fresh (reprogrammed) multiopen challenges;
-* `cleanButNotExtracted` lives over the family's coin space `family.Coins`, whose Fiat–Shamir
-  challenges are *functions of the coins*, not an independent fresh draw;
-* the bridge is a **distributional coupling**, of the exact shape of `roChallenges_ipaRound_uniform`
-  (`Soundness.Forking.Rewind`, proven for the IPA rounds): the pushforward of
-  `uniformOfFintype family.Coins` under reading/reprogramming the oracle at the sealed
-  `preX1Transcript` prefix and the `canonicalX{1,2,3}Run`-determined `preX2/preX3/preX4` prefixes
-  equals `uniformOfFintype (Fp × Fp × Fp × Fp)` on the relevant marginal, independent of the residual
-  coins. This is the explicit form of the random-oracle-uniformity convention every `hprob`/`hJ`
-  floor already carries in its statement (`Soundness.Forking.Oracle`, `uniformChallenge`); it is a
-  genuine probabilistic modeling step (with an adaptive multiopen rewind tree), not a composition of
-  existing lemmas. It is **not** assumed here: a premise phrased as a bound on
-  `μ(cleanButNotExtracted)` would mention `extracted` and restate the conclusion, so it is
-  deliberately omitted. The residual term stands quantified and unproven-below, which is the honest
-  state.
-
-Everything above `hExtract` — the member witness→columns binding from a single joint accept floor,
-the derived gate feed, the value shift, the extraction logic — is discharged (`Soundness.VestaBudget`,
-`Soundness.Multiopen.BudgetedExtraction`). This file isolates precisely the one measure-theoretic
-coupling that remains between here and a single unconditional number.
+`deployed_member_budget` prices a per-base accept event over the four fresh multiopen challenges;
+`cleanButNotExtracted` lives over the family's coin space, whose Fiat–Shamir challenges are
+functions of the coins. The bridge is a distributional coupling — the shape proven for the IPA
+rounds by `roChallenges_ipaRound_uniform` — and a genuine modelling step, not a composition of
+existing lemmas. It is deliberately not assumed here: a premise bounding the residual would restate
+the conclusion. Everything above `hExtract` is discharged (`Soundness.VestaBudget`,
+`Multiopen.BudgetedExtraction`); this file isolates the one coupling that remains.
 -/
 
 namespace Zcash.Snark
@@ -63,7 +38,7 @@ variable {shape : Shape}
 
 /-- The **clean-but-not-extracted** residual: runs on which the computed family produced a clean IPA
 opening (`hasCleanOpening`) yet the SNARK-extraction predicate `extracted` fails. This is the only
-part of the SNARK-extraction failure not already contained in the `#56` clean-opening failure
+part of the SNARK-extraction failure not already contained in the clean-opening failure
 `snarkFailureEvent`. -/
 def cleanButNotExtracted (family : ComputedAlgebraicFSFamily shape)
     (extracted : (AugmentedIndex (2 ^ shape.k) → VestaG) → family.Coins → Prop) :
@@ -89,17 +64,10 @@ end ComputedAlgebraicFSFamily
 
 set_option maxHeartbeats 1000000 in
 open ComputedAlgebraicFSFamily in
-/-- **#67: the unconditional knowledge-error decomposition.** Without the `hExtract` hypothesis of
-`snarkExtraction_prob_le_of_generatorRO_textbookDL`, the measure of "deployed acceptance but no SNARK
-extraction" is at most the `#56` clean-opening bound `(Q+k)·3/|Fp| + (Q+1)/|Fp| + |basis|·ε` **plus**
-the measure of the clean-but-not-extracted residual. Set containment
-(`snarkExtractionFailureEvent_subset_union`) + `measure_union_le` + the `#56` bound
-(`snarkFailure_prob_le_of_generatorRO_textbookDL`).
-
-The residual term is exactly the coupling gap documented in this module: it is bounded by the
-multiopen knowledge error `t₁ + (t₂ + t₃ + t₄)` under the distributional challenge-uniformity
-coupling, which is a modeling step not discharged here. This theorem is the honest unconditional
-form: no assumed implication, the one remaining gap standing as a measured quantity. -/
+/-- **The unconditional knowledge-error decomposition.** Without `hExtract`, the measure of
+"deployed acceptance but no SNARK extraction" is at most the clean-opening bound plus the measure
+of the clean-but-not-extracted residual (set containment and `measure_union_le`). The residual is
+the coupling gap recorded in the module docstring — measured, not assumed away. -/
 theorem snarkExtraction_prob_le_of_generatorRO_textbookDL_decomposed {shape : Shape}
     {T : Type*} [DecidableEq T] (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ shape.k) → T) (hquery : Function.Injective query)
@@ -117,7 +85,7 @@ theorem snarkExtraction_prob_le_of_generatorRO_textbookDL_decomposed {shape : Sh
             (PMF.uniformOfFintype family.Coins)).toOuterMeasure
               ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
                 family.cleanButNotExtracted extracted) := by
-  -- Bind the #56 bound first, then abbreviate the (shared) outer measure `μ`, so `set` rewrites the
+  -- Bind the clean-opening bound first, then abbreviate the (shared) outer measure `μ`, so `set` rewrites the
   -- AGM term into the same `μ` shape as the goal. The preimage map is left as the literal it is in
   -- both goal and `hAGM`, avoiding a `set f` whose binder type would thrash elaboration.
   have hAGM := snarkFailure_prob_le_of_generatorRO_textbookDL B hB query hquery family hDL

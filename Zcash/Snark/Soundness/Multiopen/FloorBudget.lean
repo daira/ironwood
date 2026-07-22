@@ -104,20 +104,11 @@ theorem openedX1_floor_failure_le [DecidableEq G] [Inhabited G] {shape : Shape}
       ≤ t :=
   squeeze_floor_failure_le (OpenedX1Accept urs hk vk ps ch) t
 
-/-- **Nested single-squeeze floor-failure bound (the Fubini composition primitive).** For a family
-of single-slot accept predicates `acc b : Fp → Prop` indexed by an outer `Fintype` base `b : B`,
-the failure event "the inner run accepts at its fresh slot `x.1` while the inner accept-measure at
-that base sits `≤ t`" has probability `≤ t` over the *joint* draw of the inner slot and the outer
-base.
-
-This is the crux of whether option-(b) composes: at each fixed outer base `b`, the inner
-accept-measure `measure(filter (acc b))` is a constant in the inner slot `x.1`, so
-`squeeze_floor_failure_le (acc b) t` bounds the fiber by `t`; `uniformOfFintype_prod_fiber_bound`
-then lifts the uniform per-fiber bound to the product. The inner threshold condition never depends
-on the inner slot, so no `x.1`-dependence leaks across the lift — the nested `Fubini` is clean. The
-deployed squeezes instantiate `acc := OpenedX{2,3,4}Accept` at the base produced by the outer
-sampled challenges (via the `reprogramX*` run-determination), with `B` the outer challenge product
-`Fp`, `Fp × Fp`, `Fp × Fp × Fp`. -/
+/-- **Nested single-squeeze floor-failure bound (the Fubini primitive).** For accept predicates
+indexed by an outer base, the event "the inner run accepts at its fresh slot while the inner
+accept-measure at that base sits `≤ t`" has probability `≤ t` over the joint draw: at each base the
+inner measure is constant in the slot, so the single-slot bound applies fiberwise and
+`uniformOfFintype_prod_fiber_bound` lifts it — no slot-dependence leaks across the lift. -/
 theorem nested_squeeze_floor_failure_le {B : Type*} [Fintype B] [Nonempty B]
     (acc : B → Fp → Prop) (t : ℝ≥0∞) :
     (PMF.uniformOfFintype (Fp × B)).toOuterMeasure
@@ -146,19 +137,10 @@ theorem nested_squeeze_floor_failure_le_right {A : Type*} [Fintype A] [Nonempty 
         ¬ (t < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter (acc a)))})
     (fun a => squeeze_floor_failure_le (acc a) t)
 
-/-- **Two-squeeze combined floor-failure budget (the union composes).** Over the joint draw of an
-outer challenge (`x.1`) and an inner challenge (`x.2`), the probability that *either* the outer
-floor fails (outer accepts but its accept-measure `≤ t₁`) *or* the inner floor fails at the base the
-outer challenge determines (inner accepts but its accept-measure `≤ t₂`) is `≤ t₁ + t₂` — the sum of
-the two thresholds.
-
-This is the smallest faithful instance of the combined multiopen budget: it shows the per-squeeze
-floor-failure bounds (`nested_squeeze_floor_failure_le` for the outer, `_right` for the inner-at-
-outer-base) union additively on a *shared* sampling space with no cross term — exactly the
-`measure_union_le`-then-`add_le_add` step the full x₁/x₂/x₃/x₄ budget iterates. The four-squeeze
-budget is this same union over the nested challenge product; the only additional work is the
-product-association reindexing that routes each squeeze's fresh slot to the coordinate its fiber
-bound consumes (no further soundness content — the nested Fubini already composes cleanly here). -/
+/-- **Two-squeeze combined floor-failure budget.** Over the joint draw, the probability that
+*either* floor fails — a squeeze accepts while its accept-measure sits at or below its threshold —
+is `≤ t₁ + t₂`: the per-squeeze bounds union additively on the shared sampling space with no cross
+term. The four-squeeze budget iterates exactly this union. -/
 theorem combined_two_floor_failure_le (acc₁ : Fp → Prop) (acc₂ : Fp → Fp → Prop)
     (t₁ t₂ : ℝ≥0∞) :
     (PMF.uniformOfFintype (Fp × Fp)).toOuterMeasure
@@ -223,20 +205,10 @@ def reindexX4 : (Fp × Fp × Fp × Fp) ≃ Fp × (Fp × Fp × Fp) :=
   ⟨fun w => (w.2.2.2, w.1, w.2.1, w.2.2.1), fun p => (p.2.1, p.2.2.1, p.2.2.2, p.1),
     fun _ => rfl, fun _ => rfl⟩
 
-/-- **Four-squeeze combined floor-failure budget — the unconditional multiopen budget.** Over the
-joint uniform draw of the four fresh challenges `w = (x₁, x₂, x₃, x₄)`, the probability that *any* of
-the four nested squeeze floors fails — squeeze `i` accepts at its fresh slot yet its accept-measure
-at the base the earlier challenges determine sits at or below its threshold `tᵢ` — is bounded by the
-sum of the four thresholds `t₁ + t₂ + t₃ + t₄`.
-
-Each squeeze's failure is bounded by `tᵢ` via `floor_failure_reindex_le` (routing that squeeze's
-fresh challenge to the fiber's first coordinate and the earlier challenges to the base, through
-`reindexX{2,3,4}`), and the four events union additively with no cross term (`measure_union_le`
-iterated). This is the combined soundness budget in the sampled-run model: the extraction fails only
-inside this event, so the computed-path knowledge error is at most `t₁ + t₂ + t₃ + t₄` plus the AGM
-commitment-binding term. `deployed_combined_floor_failure_le` below instantiates `accᵢ` at
-`OpenedX{1,2,3,4}Accept` with the earlier-challenge-determined bases, and the budgeted extraction
-(`Soundness.Multiopen.BudgetedExtraction`) consumes the budget without floor hypotheses. -/
+/-- **Four-squeeze combined floor-failure budget.** Over the joint uniform draw of
+`(x₁, x₂, x₃, x₄)`, the probability that any squeeze floor fails is `≤ t₁ + t₂ + t₃ + t₄`: each
+failure is bounded by its threshold (`floor_failure_reindex_le` routes the fresh challenge to its
+fiber coordinate) and the four events union additively. -/
 theorem combined_floor_failure_le
     (acc₁ : Fp → Prop) (acc₂ : Fp → Fp → Prop)
     (acc₃ : Fp → Fp → Fp → Prop) (acc₄ : Fp → Fp → Fp → Fp → Prop)
@@ -270,30 +242,13 @@ theorem combined_floor_failure_le
     ext w
     simp only [reindexX4, Equiv.coe_fn_mk, Set.mem_setOf_eq]
 
-/-- **The deployed four-squeeze floor-failure event.** The abstract
-`combined_floor_failure_le` instantiated at the deployed multiopen accept predicates
-`OpenedX{1,2,3,4}Accept`, with each squeeze's base threaded from the earlier sampled challenges by
-the adversary's rewind-run strategy `g₁`/`g₂`/`g₃` (the run each sampled challenge determines, via
-`Soundness.Forking.reprogramX*`) and the `x₂` blinder `b₂`. Over the joint uniform draw of the four
-fresh challenges `w = (x₁, x₂, x₃, x₄)`, the probability that *any* deployed squeeze floor fails —
-squeeze `i` accepts at its fresh slot yet the accept-measure at the `g`-determined base sits at or
-below its threshold `tᵢ` — is at most `t₁ + t₂ + t₃ + t₄`.
-
-The four failure sets are the exact negations of the deployed terminal's `hprob1`/`hx2`/`hprob3`/
-`hprob4` floors (`Soundness.Vesta.orchard_verifier_vesta_member_constraint_derived`) at the
-sampled runs:
-* `x₁` at the honest base `(ps, ch)` — its floor is base-independent;
-* `x₂` at `(g₁ ξ).spliced ps` / `(g₁ ξ).challenges ch ξ` with blinder `b₂ ξ`;
-* `x₃` at the `x₂`-rewound base, blinder `evalVector urs.k χ` seeded by the fresh `x₃` slot;
-* `x₄` at the `x₃`-rewound base, blinder `evalVector urs.k χ` seeded by the `x₃` challenge (the
-  third coordinate), the fresh slot being the `x₄` challenge (the fourth coordinate).
-
-This is a direct application of `combined_floor_failure_le`: the deployed predicates slot into its
-abstract `acc₁…acc₄` with the base-threading and blinder-routing lining up definitionally, so the
-budget arithmetic is inherited unchanged. The thresholds are left abstract (`t₁…t₄`): the deployed
-`hprob*` thresholds (`deployedX4PairCount`/`deployedSetQueries`/`deployedAllPts` at the *sampled*
-bases) name the run, and the splice-invariance lemmas (`x1Run_pairCount`/`x1Run_allPts` and their
-`x₂`/`x₃`/`x₄` siblings) equate them to the honest-base constants where they are consumed. -/
+/-- **The deployed four-squeeze floor-failure event.** `combined_floor_failure_le` instantiated at
+the deployed accept predicates `OpenedX{1,2,3,4}Accept`, each squeeze's base threaded from the
+earlier sampled challenges by the rewind-run strategies `g₁`/`g₂`/`g₃`: the probability that any
+deployed squeeze floor fails is at most `t₁ + t₂ + t₃ + t₄`. The four failure sets are the exact
+negations of the derived terminal's floor premises at the sampled runs; the splice-invariance
+lemmas (`x1Run_pairCount`/`x1Run_allPts` and siblings) equate the sampled-base thresholds to the
+honest-base constants where they are consumed. -/
 def deployedFloorFailureSet [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -353,18 +308,11 @@ theorem deployed_combined_floor_failure_le [DecidableEq G] [Inhabited G] {shape 
         (evalVector urs.k χ) ω)
     t₁ t₂ t₃ t₄
 
-/-- **The deployed floors hold except on the budget.** Complement of
-`deployed_combined_floor_failure_le`: the challenge tuples on which *every* deployed squeeze floor is
-satisfied — the "good" event `deployedFloorFailureSetᶜ`, on which each accepting sampled run's floor
-`tᵢ < measure(accept)` holds — have probability at least `1 - (t₁ + t₂ + t₃ + t₄)`.
-
-Pure outer-measure arithmetic: `S ∪ Sᶜ = univ` has measure `1`
-(`uniformOfFintype_toOuterMeasure_univ`), subadditivity (`measure_union_le`) gives
-`1 ≤ μ S + μ Sᶜ`, hence `μ Sᶜ ≥ 1 - μ S ≥ 1 - (t₁+t₂+t₃+t₄)` by the failure bound. On the good
-event the derived terminal's `hprob*` floor premises hold at the `g`-determined runs
-(`deployed_singlepath_floor_of_good` below); the budgeted extraction
-(`Soundness.Multiopen.BudgetedExtraction`) consumes the same budget through the joint accept floor
-directly. -/
+/-- **The deployed floors hold except on the budget.** Complement of the failure bound: the
+challenge tuples on which every deployed squeeze floor holds have probability at least
+`1 − (t₁ + t₂ + t₃ + t₄)`. On the good event the derived terminal's floor premises hold at the
+determined runs (`deployed_singlepath_floor_of_good`); the budgeted extraction consumes the same
+budget through the joint accept floor directly. -/
 theorem deployed_combined_floor_holds [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -463,15 +411,10 @@ theorem uniformOfFintype_toOuterMeasure_setOf_filter {α : Type*} [Fintype α] [
 
 open Classical in
 /-- **The heavy-fiber Markov bound — the budgeted-forking descent primitive.** If the joint accept
-event `A` over a uniform product beats `t + T`, then the *heavy* first coordinates — those whose
-fiber measure beats `T` — have measure above `t`. Splitting the current squeeze's threshold `t` off
-the joint floor leaves the residual floor `T` intact on every heavy fiber, which is exactly the
-recursion shape of the budgeted extraction: fork the heavy set (measure `> t` gives the sample
-family), then descend into each sampled fiber (measure `> T`).
-
-Counting proof: `A` is covered by the light part (fibers of measure `≤ T`, product measure `≤ T` by
-the Fubini fiber bound) and the heavy cylinder (product measure `= μ(heavy) · 1`), so
-`t + T < μ(A) ≤ μ(heavy) + T`; cancel `T` (finite). -/
+event beats `t + T`, the heavy first coordinates — fiber measure above `T` — have measure above
+`t`: peeling the current squeeze's threshold off the joint floor leaves the residual floor intact
+on every heavy fiber, which is the recursion the budgeted extraction runs. Counting proof: the
+light fibers contribute at most `T`, the heavy cylinder at most `μ(heavy)`; cancel `T`. -/
 theorem uniformOfFintype_heavy_fiber_lt {α β : Type*} [Fintype α] [Nonempty α] [Fintype β]
     [Nonempty β] (A : Set (α × β)) {t T : ℝ≥0∞} (hT : T ≠ ⊤)
     (hA : t + T < (PMF.uniformOfFintype (α × β)).toOuterMeasure A) :

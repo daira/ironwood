@@ -4,31 +4,17 @@ import Zcash.Snark.Soundness.Multiopen.FloorBudget
 /-!
 # The budgeted multiopen extraction (single-path member terminal)
 
-The extraction cores of `Soundness.Multiopen.ValueCheckX3`
-(`deployed_value_check_node_binding`/`deployed_member_node_binding`) consume their squeeze floors
-*universally quantified over the splice runs* `X1Run`/`X2Run`/`X3Run` — each forking level draws an
-injective sample family and needs the next level's floor at every sampled run's base. This module
-re-proves the nested extraction in *budgeted* form: the only measure premise is a single **joint
-accept floor** `t₁ + t₂ + t₃ + t₄ < μ(J)` over the joint uniform draw of the four fresh challenges,
-where `J` is the nested accept event along the *canonical* rewind path. Two devices dissolve the
-`∀`-over-runs quantification:
+The extraction cores of `Multiopen.ValueCheckX3` consume their squeeze floors quantified over every
+splice run. This module re-proves the nested extraction with a single measure premise — one joint
+accept floor `t₁ + t₂ + t₃ + t₄ < μ(J)` over the joint draw of the four fresh challenges — using
+canonical run selectors (`Classical.choose` fixes each level's accepting run before any probability
+statement) and heavy-fiber Markov descent (each level peels its own threshold off the joint floor,
+`uniformOfFintype_heavy_fiber_lt`, and forks the heavy set into the sample family the next level
+consumes).
 
-* **Canonical run selectors** (`canonicalX1Run`/`canonicalX2Run`/`canonicalX3Run`): each opened
-  accept event existentially carries its accepting splice run; `Classical.choose` fixes a canonical
-  one *as a function of the challenge*, before any probability statement. The joint event `J` and
-  the extraction then reference the same runs by construction — no per-sample choice remains.
-* **Heavy-fiber Markov descent** (`uniformOfFintype_heavy_fiber_lt`, `Soundness.Multiopen.
-  FloorBudget`): each level peels its own threshold `tᵢ` off the joint floor, leaving the residual
-  floor on every heavy fiber; `exists_injective_accepting_of_measure` forks the heavy set into the
-  sample family that level's algebra consumes, and each sample *carries its own inner floor* into
-  the next level. The heavy sets have positive measure, so every level self-anchors — the anchor
-  premises (`hξ₀`/`hζ₀`/`hx3anchor`) of the `∀`-over-runs cores disappear.
-
-The endpoint `deployed_member_budget` is the combined soundness budget: for the deployed member
-decode, *either* the joint accept measure sits within the knowledge-error budget `Σtᵢ`, *or* the
-decoded member columns take their claimed evaluations (or a computed `(g, U, W)`-relation exists).
-The `∀`-over-runs cores remain in place — this module builds alongside them; the non-measure
-premises (`havoid`, `hql`, the member decode) are unchanged except that `havoid` is only required
+The endpoint `deployed_member_budget` is the combined budget: *either* the joint accept measure
+sits within `Σtᵢ`, *or* every decoded member column takes its claimed evaluation (or a computed
+`(g, U, W)`-relation exists). The `∀`-over-runs cores remain alongside; `havoid` is required only
 at the canonical runs.
 -/
 
@@ -259,19 +245,12 @@ theorem innerJointAccept_mk [DecidableEq G] [Inhabited G] {shape : Shape} {urs :
   ⟨h2, h3, h4⟩
 
 set_option maxHeartbeats 2000000 in
-/-- **The deployed multiopen value check from the joint accept floor (budgeted form).** The
-conclusion of `deployed_value_check_node_binding` — the honest `x₄`-slot aggregate column for point
-set `count − 1 − j₀` takes its claimed interpolation at each of that set's points, or a nontrivial
-`(g, U, W)` relation exists — with the `∀`-over-runs floor premises (`hζ₀`/`hprob2`/`hx3anchor`/
-`hprob3`/`hprob4`) replaced by the single joint floor `t₂ + t₃ + t₄ < μ(innerJointAccept)` over the
-joint uniform draw of the three challenges, at the *honest-base* threshold constants (the per-run
-thresholds are splice-invariant: `x2Run_pairCount`/`x3Run_pairCount`). The heavy-fiber Markov
-descent (`uniformOfFintype_heavy_fiber_lt`) peels one threshold per squeeze; each level's heavy set
-self-anchors (positive measure) and forks into the sample family
-(`exists_injective_accepting_of_measure`), every sample carrying its own inner floor at the
-canonical run's base; the innermost floor is spent by the canonical grid extraction
-(`openedX3_rewound_batch_eval_canonical`). The sample-avoidance premise `havoid` is required only
-at the canonical `x₂` runs. -/
+/-- **The deployed multiopen value check from the joint accept floor.** The conclusion of
+`deployed_value_check_node_binding` — each honest `x₄`-slot aggregate takes its claimed
+interpolation at each set point, or a `(g, U, W)` relation exists — with the `∀`-over-runs floors
+replaced by one joint floor `t₂ + t₃ + t₄ < μ(innerJointAccept)` at the honest-base thresholds.
+The Markov descent peels one threshold per squeeze; each heavy set self-anchors and forks into the
+sample family. `havoid` is required only at the canonical runs. -/
 theorem deployed_value_check_node_binding_budgeted [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -646,19 +625,12 @@ def memberJointAccept [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G
       ((canonicalX1Run urs hk vk ps ch w.1).challenges ch w.1) (b₂f w.1)}
 
 set_option maxHeartbeats 4000000 in
-/-- **The deployed member-column node binding from the joint accept floor (the budgeted member
-terminal).** The conclusion of `deployed_member_node_binding` — each decoded member column of point
-set `i` takes its claimed evaluation at each of the set's points, or a nontrivial `(g, U, W)`
-relation exists — with the entire nested floor family (`hξ₀`/`hprob1`/`hx2`/`hx3anchor`/`hprob3`/
-`hprob4`) replaced by the single joint floor `t₁ + (t₂ + t₃ + t₄) < μ(memberJointAccept)` at the
-honest-base threshold constants. The heavy-fiber Markov descent peels the `x₁` threshold, forking
-`|members|` distinct heavy compression samples (each self-anchoring: positive fiber measure means
-the pinned `x₁` accept holds and the canonical run carries the batch); every sample retains the
-inner joint floor at its canonical base, which the budgeted value check
-(`deployed_value_check_node_binding_budgeted`) spends after transporting the thresholds across the
-splice (`x1Run_pairCount`/`x1Run_allPts`). The samples' aggregate identities separate the members
-(`member_binding_of_x1_samples`), exactly as in the `∀`-over-runs core. `havoid` is required only
-at the canonical runs. -/
+/-- **The budgeted member terminal.** The conclusion of `deployed_member_node_binding` — each
+decoded member column takes its claimed evaluation at each set point, or a `(g, U, W)` relation
+exists — with the entire nested floor family replaced by the single joint floor
+`t₁ + (t₂ + t₃ + t₄) < μ(memberJointAccept)` at the honest-base thresholds. The Markov descent
+peels the `x₁` threshold and forks the member samples, each carrying the inner floor its canonical
+base spends (`deployed_value_check_node_binding_budgeted`). `havoid` only at the canonical runs. -/
 theorem deployed_member_node_binding_budgeted [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)

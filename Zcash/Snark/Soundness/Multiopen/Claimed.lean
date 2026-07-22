@@ -7,31 +7,16 @@ import Zcash.Snark.Soundness.Forking.Probability
 /-!
 # Claimed-evaluation binding through the `x₃` rewinds
 
-`Soundness.Multiopen.RPoly` proved the sample-forces-identity core: a decoded column of degree
-`< |points|` that reproduces the deployed `r`-value `lagrangeEval · points evals` at `|points|`
-distinct interpolation challenges is the `r`-polynomial, so its value at each rotated node is the
-claimed evaluation (`col_eval_node_eq_claimed`). This module produces those samples from an accept
-*measure*, closing the last fingerprint-delegated step:
+`RPoly` proved that enough interpolation samples force a decoded column to be the `r`-polynomial.
+This module produces those samples from an accept *measure*:
 
-* `claimedEval_of_x3Prob` — **the `x₃` forking floor for claimed-eval binding.** From a per-run
-  consistency `acc χ → col.eval χ = lagrangeEval χ points evals` (the verifier's multiopen value
-  check at the interpolation challenge, `Verifier.Checks.multiopenEval`) and an accept measure of
-  the `x₃`-rewound runs beating `(|points| − 1) / p`, the single-squeeze counting floor
-  (`exists_injective_accepting_of_measure`) yields the `|points|` distinct samples, and the decoded
-  column's value at every rotated query point `ωⁱ·x` is bound to the proof string's claimed
-  evaluation. The measure carries the same random-oracle uniformity axiom as every `hprob`
-  (`Soundness.Forking.Oracle`); the runs are the `reprogramX3` reprogramming events
-  (`Soundness.Forking.Rewind`, sealed by `Soundness.Forking.Ordering`). This is the value-side twin
-  of the `x₄` opened chain (`Soundness.Multiopen.Opened`), consuming the same rewinding floor.
-
-* `gateGood_of_xProb` — **the gate `x`→`x₃` transport, grounded.** Once the decoded
-  columns' claimed evaluations are pinned by the binding above, the gate-check difference polynomial
-  `C` is a fixed function of the committed data. An accept measure over the deployed `x`-squeeze
-  events beating `natDegree C / p` then produces a good gate-check challenge outside `szBadSet C`
-  (`Soundness.GoodChallenge.exists_accepting_good_challenge`), so the `_xgood` rungs' `accX` event is
-  grounded over the deployed `x`-squeeze rather than assumed. The Schwartz–Zippel difference is
-  pinned before `x` is sampled (`adviceCommitments_mem_preXTranscript`/`hPieces_mem_preXTranscript`,
-  `Soundness.Forking.Ordering`), the commit-before-challenge ordering the argument needs.
+* `claimedEval_of_x3Prob` — an accept measure of the `x₃`-rewound runs beating `(|points| − 1) / p`
+  yields the distinct samples, binding each decoded column's value at every rotated query point to
+  the proof string's claimed evaluation. The runs are the `reprogramX3` events (`Forking.Rewind`,
+  sealed by `Forking.Ordering`), under the usual random-oracle uniformity axiom.
+* `gateGood_of_xProb` — with the claimed evaluations pinned, the gate-check difference polynomial
+  is fixed before `x` is sampled, so an accept measure over the deployed `x`-squeeze produces a
+  good challenge outside its bad set (`GoodChallenge.exists_accepting_good_challenge`).
 -/
 
 namespace Zcash.Snark
@@ -63,22 +48,12 @@ theorem claimedEval_of_x3Prob {points evals : List Fp} {col : Polynomial Fp}
     (fun j j' h => Fin.cast_injective hn (hξinj h))
     (fun j => hconsistent _ (hξacc (Fin.cast hn j))) i
 
-/-- **The `x₂` set-separation counting floor (a general algebraic lemma).** Given `acc χ →
-multiopenEval χ x₃ sets = 0` and an accept measure of the `x₂`-rewound runs beating `(|sets| − 1) / p`,
-the single-squeeze counting floor turns the measure into `|sets|` pairwise-distinct `x₂` samples and
-`multiopenEval_perSet_zero_of_samples` forces each set's cleared contribution `(qⱼ − r(x₃))·∏(x₃−node)⁻¹`
-to vanish. It is the degree-`|sets|`-in-`x₂` separation of the `Σⱼ x₂ʲ·(…)` fold.
-
-**Caveat on the deployed hook.** The premise `multiopenEval χ x₃ sets = 0` is *not* directly what
-deployed acceptance supplies: acceptance forces the IPA to open to `multiopenValue` (which is computed
-from the claimed data, hence self-consistent — `deployed_verification_eq`), not to `0`. The operative
-binding for the deployed value check is instead the `x₃`-rewind: the quotient column `q′_col` is fixed
-across `x₃`-rewinds (`q′` absorbed before `x₃`) and satisfies `q′_col.eval x₃ = multiopenEval x₂ x₃ sets`
-(`Opened.openedDecodedCols_top_eval_x3`), so it is *that* rewind that pins the per-set consistency after
-denominator clearing. This lemma captures the set-separation *structure*; the end-to-end derivation of
-`hconsistent` is the landed fixed-`q′` composition — `deployed_value_check_node_binding` /
-`deployed_member_node_binding` (`Soundness.Multiopen.ValueCheckX3`), consumed by
-`Soundness.Vesta.orchard_verifier_vesta_member_constraint_derived`. -/
+/-- **The `x₂` set-separation counting floor.** Given per-run vanishing
+`multiopenEval χ x₃ sets = 0` and an accept measure beating `(|sets| − 1) / p`, the counting floor
+yields `|sets|` distinct samples, and `multiopenEval_perSet_zero_of_samples` forces each set's
+cleared contribution to vanish. Caveat: deployed acceptance supplies the vanishing only through the
+`x₃`-rewind's fixed-`q′` binding, not directly; the end-to-end derivation is
+`deployed_value_check_node_binding` (`Multiopen.ValueCheckX3`). -/
 theorem claimedCombined_of_x2Prob {x3 : Fp} {sets : List (List Fp × List Fp × Fp)}
     (hlen : 0 < sets.length)
     (acc : Fp → Prop) [DecidablePred acc]

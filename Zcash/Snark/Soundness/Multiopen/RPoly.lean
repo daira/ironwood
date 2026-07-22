@@ -5,21 +5,11 @@ import Zcash.Snark.Soundness.Multiopen.Deployed
 /-!
 # The r-polynomial core: interpolants, node values, and identity-from-samples
 
-The claimed-evaluation binding recovers polynomial identities from per-run scalar identities: each
-`x₃`-rewound run's decode values substitute into the verifier's combined evaluation
-(`multiopenEval`), and enough runs force the identity as polynomials. This module supplies the
-generic pieces:
-
-* `poly_eq_of_agree_on_family` — **identity from samples.** Two polynomials whose difference has
-  degree at most `d` and which agree on `d + 1` pairwise-distinct points are equal — the counting
-  core in the direction the rewinding uses (samples force identity), the polynomial-level twin of
-  `exists_injective_accepting_of_measure`.
-* `lagrangePoly` — the interpolant of a point/value list as a `Polynomial`, with its node values
-  (`lagrangePoly_eval_node`): at each node it takes the claimed value. This is the `r`-polynomial
-  of one point set.
-* `lagrangePoly_eval` — the deployed fold `lagrangeEval` (`Verifier/Checks.lean`) *is* the
-  interpolant's evaluation, so identities about the deployed combined value transfer to the
-  polynomial.
+Generic pieces for the claimed-evaluation binding: `poly_eq_of_agree_on_family` (two polynomials of
+bounded degree agreeing on enough distinct points are equal — samples force identity),
+`lagrangePoly` (the interpolant of one point set, taking the claimed value at each node), and
+`lagrangePoly_eval` (the deployed fold `lagrangeEval` is the interpolant's evaluation, so deployed
+identities transfer to the polynomial).
 -/
 
 namespace Zcash.Snark

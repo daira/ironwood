@@ -5,49 +5,22 @@ import Zcash.Snark.Soundness.Forking.Oracle
 /-!
 # Schwartz–Zippel good-challenge exclusions from challenge uniformity
 
-The constraint layer consumes good-challenge hypotheses (`hgood`): the vanishing-check challenge
-avoids the Schwartz–Zippel bad set `szBadSet C` — the roots of the constraint difference
-`C = numerator − h · (Xⁿ − 1)` (`Zcash.Snark.Soundness.Constraints`). This module derives those
-exclusions from challenge uniformity under the random-oracle model, so they are budgeted
-consequences of the one distributional idealization rather than unexamined assumptions:
-
-* `uniformChallenge_szBadSet` — **the exclusion budget.** A fresh uniform squeeze lands in a use
-  site's bad set with probability at most `natDegree C / p`: root counting (`szBadSet_card_le`)
-  composed with the uniform-measure identity (`uniformChallenge_badSet`).
-* `uniformChallenge_szGoodSet` — **the good-challenge condition holds with overwhelming
-  probability**: the complement event `x ∉ szBadSet C` (exactly the `hgood` shape, by
-  `not_mem_szBadSet`) has probability at least `1 − natDegree C / p` — for the deployed degrees
-  against `p ≈ 2²⁵⁴`, overwhelming.
-* `uniformChallenge_quotient_szBadSet` — the vanishing-check site with its degree made explicit:
-  the budget is `max (deg numerator) (deg h + n) / p` (via `szBadSet_quotient_card_le`).
-* `quotientCheck_badSet_measure` — the acceptance-side reading (the random-oracle-measure twin of
-  `quotientCheck_sound`): a committed-polynomial set that *violates* the constraint identity passes
-  the verifier's point check on a set of challenges of measure at most `natDegree C / p`.
-* `exists_accepting_good_challenge` / `_quotient` — **the production step.** An accept event whose
-  uniform measure beats the budget contains an accepting challenge *outside* the bad set. This is
-  what the `_xgood` rungs consume: the good challenge is *produced* from the accept measure, so
-  `hgood` disappears from those signatures — the x-site analogue of the forking floors
-  (`extractable_of_prob`, `exists_injective_accepting_of_measure`).
+The constraint layer assumes the vanishing-check challenge avoids the roots of the constraint
+difference `C = numerator − h · (Xⁿ − 1)` (`hgood`). This module derives that from challenge
+uniformity: a fresh uniform squeeze lands in the bad set with probability at most `natDegree C / p`
+(`uniformChallenge_szBadSet`), so an accept event whose measure beats the budget contains an
+accepting challenge outside it (`exists_accepting_good_challenge`) — `hgood` is *produced* from the
+accept measure, not assumed.
 
 ## Scope
 
 The measure is `uniformChallenge`, the random-oracle idealization of one fresh squeeze
-(`Zcash.Snark.Soundness.Forking.Oracle` — the accepted uniformity axiom, carried in the statements).
-The Schwartz–Zippel argument needs the difference polynomial pinned before the challenge is sampled,
-and the deployed schedule provides exactly that: `deriveChallenges` squeezes `x` from a transcript
-that has already absorbed the advice column commitments and the quotient `h` pieces
-(`adviceCommitments_mem_preXTranscript`/`hPieces_mem_preXTranscript`, sealed by
-`deriveChallenges_x_eq` in `Soundness.Forking.Ordering`; instance data enters through the `init`
-prefix and the fixed columns through the VK), so `C` is a function of the prefix the squeeze hashes.
-The `reprogramX` event (`Soundness.Forking.Rewind`) grounds the `x`-squeeze runs as oracle
-reprogramming; grounding `accX` over those deployed `x`-squeeze events is now
-`Soundness.Multiopen.Claimed.gateGood_of_xProb` — once the decoded columns' claimed evaluations are
-pinned (`Claimed.claimedEval_of_x3Prob`, the `x₃` binding), the difference polynomial `C` is a fixed
-function of the committed data, so the good challenge is *produced* from the deployed `x`-squeeze
-accept measure. The several `d / p` and `1 / p` `Fp`-exclusions compose into one subadditive bound
-(`uniformChallenge_szBadSet_union`, below); the cross-domain forking budgets stay with the accepted
-random-oracle floor (`Zcash.Snark.Soundness.Forking.Oracle`). The pinned decoded endpoints take a
-single canonical difference polynomial, so the budget is drawn once.
+(`Forking.Oracle`). The argument needs the difference polynomial pinned before the challenge is
+sampled, and the deployed schedule provides exactly that: `x` is squeezed from a transcript that has
+already absorbed the advice commitments and the quotient pieces (sealed by `deriveChallenges_x_eq`,
+`Forking.Ordering`). Grounding the accept event over the deployed `x`-squeeze runs is
+`Claimed.gateGood_of_xProb`; the several `d / p` exclusions compose subadditively
+(`uniformChallenge_szBadSet_union`).
 -/
 
 namespace Zcash.Snark

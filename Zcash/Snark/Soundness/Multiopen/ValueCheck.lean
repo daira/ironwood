@@ -4,21 +4,12 @@ import Zcash.Snark.Soundness.Multiopen.RPoly
 /-!
 # The multiopen value check, derived: per-set node binding
 
-The mathematical core of the deployed multiopen value check — the step that un-batches the verifier's
-opening into the per-set claimed-evaluation consistency `hconsistent`
-(`col.eval x₃ = lagrangeEval x₃ points evals`) that `Claimed.claimedEval_of_x3Prob` consumes.
-
-The argument is *commitment-binding*, driven by two nested rewinds (the accept bridges
-`openedX3Accept_of_deployedAccepts` / `openedX2Accept_of_deployedAccepts`,
-`Soundness.Multiopen.Opened`):
-
-* the quotient column `q′_col` is fixed across `x₃`-rewinds (`q′` absorbed before `x₃`) and, over
-  enough `x₃`-samples, the cleared quotient identity holds as *polynomials*
-  `qCol · D = Σⱼ C(x₂ʲ)·(colⱼ − rⱼ)·Wⱼ`, `D = ∏(X − p)` over all points, `Wⱼ = D / ∏(pts j)`;
-* evaluating that identity at any point `p` kills the left side (`D(p) = 0`) and every set not
-  containing `p` (`Wⱼ(p) = 0`), leaving a power sum in `x₂` whose coefficients are *fixed* (they live
-  before `x₁`), so the `x₂`-rewind family (`coeffs_zero_of_power_sum_vanishes`) forces each
-  `(colⱼ − rⱼ)(p)·Wⱼ(p) = 0`, hence — `Wⱼ(p) ≠ 0` for `p ∈ pts j` — the node binding `colⱼ(p) = rⱼ(p)`.
+Un-batches the verifier's opening into the per-set claimed-evaluation consistency that
+`Claimed.claimedEval_of_x3Prob` consumes, by commitment binding over two nested rewinds: the
+quotient column is fixed across `x₃`-rewinds, enough `x₃`-samples make the cleared quotient
+identity hold as polynomials, and evaluating it at any point kills every set not containing that
+point — leaving an `x₂`-power sum with fixed coefficients, so the `x₂`-rewind family forces the
+node binding `colⱼ(p) = rⱼ(p)` (`node_binding_of_samples`).
 -/
 
 namespace Zcash.Snark

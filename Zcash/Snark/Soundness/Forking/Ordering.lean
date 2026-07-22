@@ -307,7 +307,7 @@ theorem deriveChallenges_ipaRound_eq_roundChallenge {shape : Shape} [Zero F] (fs
           (fun i => ps.ipaRounds ⟨i % shape.k, Nat.mod_lt _ j.pos⟩) j.val := by
   rw [deriveChallenges_ipaRound_eq, roundChallenge, roundTranscriptFin_eq_roundTranscript]
 
-/-! ## Sealing the multiopen squeeze points (issue #18's rewinding note)
+/-! ## Sealing the multiopen squeeze points
 
 The multiopen rewinding (`Soundness.Multiopen.Decode`) forks on the batching challenge `x₄`; the
 analogue of the round-by-round treatment above needs the same two ingredients at the multiopen
@@ -512,7 +512,7 @@ theorem preX3Transcript_length_eq {shape : Shape} (init : List (TranscriptElt F 
   simp only [preX3Transcript, preX2Transcript, List.length_append, List.length_cons,
     List.length_nil]
 
-/-! ## Sealing the gate-check squeeze point `x` (issue #12's derivation note)
+/-! ## Sealing the gate-check squeeze point `x`
 
 The good-challenge derivation (`Soundness.GoodChallenge`, the `_xgood` capstone rungs) spends an
 accept measure over the vanishing-check challenge `x`. Tying that measure's runs to the deployed

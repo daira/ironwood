@@ -22,7 +22,7 @@ fingerprinted `constructIntermediateSets` grouping (`x4BatchCommitments`/`x4Batc
 * the top power carries the prover's quotient commitment `q′` and the recomputed base evaluation
   `msm_eval` (`deployedBaseEval`).
 
-So the batch the decode consumes is the deployed grouping itself — per the issue-#21 principle the decode
+So the batch the decode consumes is the deployed grouping itself — per the fingerprint-equivalence principle the decode
 *consumes* the fingerprint-validated `constructIntermediateSets` output rather than re-modeling the
 batching as an independent flat power series; no separate "flat model = deployed" obligation is left at
 the `x₄` level. The batch "columns" at this level are the multiopen aggregates (`qᵢ`, `q′`), not the
@@ -416,16 +416,12 @@ theorem x1DecodeCols_value {m n : ℕ} (z : Fin n → Fp) (hz : Function.Injecti
   rw [hlin, ← x1DecodeCols_reconstruct z hz a r]
   exact hau r
 
-/-- **Within-set un-batching across `x₁` rewinds (heterogeneous values), existential form.** From
-per-run openings of the `x₁`-power aggregates at pairwise-distinct compression challenges — the
-commitment equations uniform, the value data heterogeneous, because each run `r` opens at its own
-evaluation vector `b r` to its own claimed set evaluation `u r` — the Vandermonde decode recovers
-per-column witnesses that (i) open the member commitments, (ii) reconstruct every run's aggregate
-witness, and (iii) transport every run's value equation. The `x₁` counterpart of `batch_open_soundV`,
-which handles the uniform-`b` case (the `x₄` level, where all rewinds share `x₃`); the canonical
-witness is `x1DecodeCols`. Reference form: the live member binding (`deployed_witness_member_binding`
-and its opened mirror) consumes `x1DecodeCols` and its component lemmas directly; this existential
-packages the recoverability fact they instantiate. -/
+/-- **Within-set un-batching across `x₁` rewinds, existential form.** Per-run openings of the
+`x₁`-power aggregates at distinct compression challenges — values heterogeneous, each run opening
+at its own evaluation vector — Vandermonde-decode to per-column witnesses that open the member
+commitments, reconstruct every run's aggregate witness, and transport every run's value equation.
+The live member binding consumes the canonical `x1DecodeCols` directly; this existential packages
+the recoverability fact it instantiates. -/
 theorem x1_batch_open_soundV {m n : ℕ} (g : Fin m → G) (C : Fin n → G)
     (z : Fin n → Fp) (hz : Function.Injective z) (a : Fin n → (Fin m → Fp))
     (b : Fin n → (Fin m → Fp)) (u : Fin n → Fp)
@@ -464,29 +460,13 @@ noncomputable def deployedMultiopenRewind_of_x4Rewinds [DecidableEq G] [Inhabite
   rw [hcur] at fam
   exact multiopenRewindForRelation_of_acceptedFamily fam
 
-/-- **Per-run clean-tree production from the deployed accept, off the relation branch.** If no
-nontrivial `(g, U, W)` relation exists, then the accepting `x₄`-rewound run peels through its
-`FiatShamirTree` bridge to a clean accepting IPA transcript on the fork's *opened* commitment
-(`deployed_to_acceptV` cannot land on the relation branch). This feeds the per-run event of
-`deployedMultiopenRewind_of_x4Prob` from `DeployedAccepts`-level facts; a capstone consuming it splits
-classically on `HasNontrivialRelation` and short-circuits to the relation disjunct otherwise.
-
-The fork declares its `U`/`W` components (`ForkedTranscript.pU`/`pW`) and the IPA accept is stated
-on `ForkedTranscript.openedCommitment` (= `deployedCommitment` with the declared `pU • u + pW • w`
-removed) — matching `orchard_verifier_vesta_opening_of_forked`. The clean tree is therefore
-produced for `fs.openedCommitment`, not the raw `deployedCommitment`; the opened chain
-(`Soundness.Multiopen.Opened`) consumes exactly this output: `openedX4Accept_of_deployedAccepts`
-packages it as the opened accept event, and `openedX4Rewind_of_x4Prob` produces the batch for the
-fork's opened statement.
-
-This fixed-`ps` form is a convenience/reference only: its IPA fields open the honest collapse, so a
-`DeployedAccepts` measure over rewound `ξ` runs fed through *it* would be a constant strategy. The
-live opened chain does not use it — `x4_cleanTree_of_deployedAccepts_adaptive` (below) is the
-adaptive analogue, re-sending the post-`x₄` opening per run (via `X4Run`/`spliceX4`, mirroring the
-`x₁` layer's `spliceMultiopen`), and `OpenedX4Accept`/`openedX4Rewind_of_x4Prob`
-(`Soundness.Multiopen.Opened`) range over those runs. So the earlier static-dichotomy caveat is
-retired: the accept measure the collapse actually spends is adaptive, and the batch aggregates are
-`x₄`-invariant (`x4Run_x4BatchCommitments`/`_x4BatchEvals`) so the decode is unaffected. -/
+/-- **Per-run clean-tree production from the deployed accept, off the relation branch.** With no
+nontrivial `(g, U, W)` relation, an accepting `x₄`-rewound run peels through its `FiatShamirTree`
+bridge to a clean accepting IPA transcript on the fork's *opened* commitment
+(`ForkedTranscript.openedCommitment`, the declared `pU•u + pW•w` removed). This fixed-`ps` form is
+reference only — its IPA fields open the honest collapse, so a measure fed through it would be a
+constant strategy; the live chain uses `x4_cleanTree_of_deployedAccepts_adaptive` below, whose runs
+re-send the post-`x₄` opening (`X4Run`/`spliceX4`). -/
 theorem x4_cleanTree_of_deployedAccepts [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -505,15 +485,11 @@ theorem x4_cleanTree_of_deployedAccepts [DecidableEq G] [Inhabited G] {shape : S
 
 open scoped ENNReal in
 open Classical in
-/-- **The `x₄` forking floor, multiopen instance.** If the honest run has an accepting clean IPA
-transcript and the accept measure of the `x₄`-rewound runs beats `pairCount / p` — the single-squeeze
-counting threshold — then the terminal multiopen-rewinding output for the pinned deployed statement
-exists over the deployed aggregates. The measure hypothesis carries the same random-oracle uniformity
-axiom as every `hprob` (`Soundness.Forking.Oracle`); the runs are the `reprogramX4` reprogramming events;
-each run's accepting transcript is the per-run round-forking output (produced upstream, e.g. by the
-`FiatShamirTree` bridges or the round-forking ladder). This is the multiopen instance of the
-codebase-wide rewinding-extraction floor — `extractable_of_prob` is the multi-round analogue, and
-`exists_injective_accepting_of_measure` (`Soundness.Forking.Probability`) is the counting core. -/
+/-- **The `x₄` forking floor, multiopen instance.** An honest accepting clean IPA transcript plus
+an accept measure of the `x₄`-rewound runs beating `pairCount / p` produce the terminal
+multiopen-rewinding output over the deployed aggregates. The measure carries the usual
+random-oracle uniformity axiom (`Forking.Oracle`); the runs are the `reprogramX4` events, each
+run's accepting transcript its own round-forking output. -/
 noncomputable def deployedMultiopenRewind_of_x4Prob [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) {b : Fin (2 ^ urs.k) → Fp}
@@ -1204,30 +1180,14 @@ theorem x4BatchEvals_getD [DecidableEq G] [Inhabited G] {shape : Shape}
   rw [List.getD_eq_getElem _ _ hj₁, List.getElem_reverse, List.getD_eq_getElem _ _ hj₂]
   exact congrArg Prod.snd List.getElem_zip
 
-/-- **The extracted witness bound to the member commitments — the two-level decode, closed.** Fix an
-`x₄` batch containing the extracted witness `a` over the deployed aggregates (as
-`deployedMultiopenRewind_of_x4Prob` produces), a point set `i`, and an `x₁`-rewind family for it:
-pairwise-distinct compression challenges with the honest `ch.x1` in the `cur` slot, per-run
-continuations and post-`x₁` challenges, and per-run aggregate witnesses — the current one pinned to
-the canonical `x₄` decode's coefficient at set `i`'s batch position (the slot bridges
-`x4BatchCommitments_getD`/`x4BatchEvals_getD` re-index batch positions by point set when discharging
-it and the per-run value data). Then the canonical member decode
-`x1DecodeCols`:
-
-* opens the *member commitments* the fingerprinted grouping routes to set `i` — the actual queried
-  column commitments (advice, instance, fixed, permutation/lookup products, vanishing);
-* reconstructs the honest aggregate witness as its `ch.x1`-power combination — so, composed with
-  `DecodedColumnFamilyOfBatch.currentWitness_eq` for the `x₄` batch, the extracted witness is the
-  explicit two-level (`x₄` then `x₁`) power combination of member-column witnesses;
-* transports every run's value equation to the decoded members (values heterogeneous per run — each
-  run opens at its own `x₃`).
-
-Per-member claimed evaluations at the original rotated points and the gate/`x`→`x₃` transport remain
-the fingerprint-delegated half (`Soundness.Multiopen.Decode`, the deployed-status section). On this
-base each run's aggregate witness arrives in augmented `(g, u, w)` representation, so the live form
-is the opened mirror `opened_witness_member_binding`, its inputs produced from the `x₁` accept
-measure by `openedMemberDecode_of_x1Prob` (`Soundness.Multiopen.Opened`). The per-set decodes are
-glued into the full two-level combination by `deployed_witness_two_level`. -/
+/-- **The extracted witness bound to the member commitments — the two-level decode, closed.**
+Given an `x₄` batch containing the extracted witness and an `x₁`-rewind family for point set `i`,
+the canonical member decode `x1DecodeCols` opens the *member commitments* the grouping routes to
+the set — the actual queried column commitments — reconstructs the honest aggregate witness as its
+`ch.x1`-power combination (so the extracted witness is the explicit two-level `x₄`-then-`x₁` power
+combination of member-column witnesses), and transports every run's value equation. Per-member
+claimed evaluations and the gate transport remain with the fingerprint half; the live form is the
+opened mirror `opened_witness_member_binding`, glued over sets by `deployed_witness_two_level`. -/
 theorem deployed_witness_member_binding [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
