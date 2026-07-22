@@ -37,42 +37,44 @@ namespace Zcash.Security.Ledger
 
 variable {F : Type*} [Field F]
 variable {G : Type*} [AddCommGroup G] [Module F G]
-variable {B : Type*} {KW : Type*}
+variable {IVK NK RHO PSI CMX RT : Type*} {KW : Type*}
 
 /-- An Orchard-shaped note. Point encodings and type conversions are abstracted away:
 `gd` and `pkd` are group elements, `ρ` and `ψ` base-field values, `v` a natural number
 (range-bounded by the statement). -/
-structure Note (G B : Type*) where
+structure Note (G RHO PSI : Type*) where
   gd : G
   pkd : G
   v : ℕ
-  ρ : B
-  ψ : B
+  ρ : RHO
+  ψ : PSI
 
 /-- The public inputs of an Action that the games consume: the anchor, the revealed
 nullifier, the randomized verification key, the net value commitment, and the new note
 commitment's extracted coordinate. -/
-structure ActionInstance (G B : Type*) where
-  rt : B
-  nf_old : B
+structure ActionInstance (G RT RHO CMX : Type*) where
+  rt : RT
+  /-- `⦂ RHO`: nullifiers share ρ's type, forced by ρ-uniqueness (`ρ_new = nf_old`). -/
+  nf_old : RHO
   rk : G
   cv_net : G
-  cmx_new : B
+  cmx_new : CMX
 
 /-- The abstract primitives of an Orchard-shaped shielded protocol. No algebraic structure
 is required of the fields themselves; the group algebra enters only through the statement
 and lemmas. `emb` is the embedding of base-field values used as scalars
 (`[0, q) ⊆ [0, r)` concretely). -/
-structure Primitives (F G B : Type*) where
+structure Primitives (F G IVK NK RHO PSI CMX RT : Type*) where
   depth : ℕ
   valueBound : ℕ
-  emb : B → F
+  emb : IVK → F
   emb_injective : Function.Injective emb
-  extract : G → B
-  noteCommit : F → Note G B → Option G
-  deriveNullifier : B → B → B → G → B
-  merkleCRH : B × B → B
-  leafOf : B → B → B
+  extract : G → CMX
+  noteCommit : F → Note G RHO PSI → Option G
+  /-- Nullifiers share ρ's type (`RHO`), forced by ρ-uniqueness (`ρ_new = nf_old`). -/
+  deriveNullifier : NK → RHO → PSI → G → RHO
+  merkleCRH : RT × RT → RT
+  leafOf : CMX → RHO → RT
   randomizePublic : F → G → G
   valueCommit : ℤ → F → G
 
@@ -80,9 +82,9 @@ structure Primitives (F G B : Type*) where
 condition `KB` enforced by the statement, and a `Break` predicate. `break_of_nk_ne` is the
 guarantee the games consume; the key-binding layer instantiates `Break` and discharges it
 (reducing breaks onward to random-oracle collisions or DLR relations). -/
-structure KeyBindingInterface (KW G B : Type*) where
-  ivk : KW → B
-  nk : KW → B
+structure KeyBindingInterface (KW G IVK NK : Type*) where
+  ivk : KW → IVK
+  nk : KW → NK
   akP : KW → G
   KB : KW → Prop
   Break : KW → KW → Prop
@@ -91,11 +93,11 @@ structure KeyBindingInterface (KW G B : Type*) where
 
 /-- The auxiliary inputs of an Action. `cm_old`/`cm_new` are carried explicitly so that the
 statement's commitment checks pin them; `kw` is the key-binding witness. -/
-structure ActionWitness (KW F G B : Type*) (d : ℕ) where
+structure ActionWitness (KW F G RHO PSI RT : Type*) (d : ℕ) where
   pos : Fin d → Bool
-  path : Fin d → B
-  note_old : Note G B
-  note_new : Note G B
+  path : Fin d → RT
+  note_old : Note G RHO PSI
+  note_new : Note G RHO PSI
   cm_old : G
   cm_new : G
   kw : KW
@@ -111,8 +113,9 @@ satisfy this interface (the latter enforces strictly more).
 TODO: It's unclear how well this will compose with Gregor's approach to the circuit proof.
 In particular, should this be `Prop`-only or will we need to apply the break-as-computed-data
 pattern here? -/
-structure ActionSatisfied (P : Primitives F G B) (kv : KeyBindingInterface KW G B)
-    (inst : ActionInstance G B) (w : ActionWitness KW F G B P.depth) : Prop where
+structure ActionSatisfied (P : Primitives F G IVK NK RHO PSI CMX RT)
+    (kv : KeyBindingInterface KW G IVK NK) (inst : ActionInstance G RT RHO CMX)
+    (w : ActionWitness KW F G RHO PSI RT P.depth) : Prop where
   /-- Spend-side commitment integrity: `cm_old` opens `note_old` with `rcm_old`. -/
   commit_old : P.noteCommit w.rcm_old w.note_old = some w.cm_old
   /-- Merkle path validity for nonzero-valued spends. -/
@@ -148,11 +151,11 @@ convention in `Zcash.Security.RandomOracle`): two distinct `(rcm, note)` tuples 
 equal extracted coordinates. Computed by the games' reductions; each instantiation reduces
 it onward (a Sinsemilla/DLR relation pre-quantum; an `H^rcm` ±-collision for the Recovery
 Statement via the Pedersen lift and the `extract` ±-property). -/
-structure NoteCommitBreak (P : Primitives F G B) where
+structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI CMX RT) where
   rcm₁ : F
-  n₁ : Note G B
+  n₁ : Note G RHO PSI
   rcm₂ : F
-  n₂ : Note G B
+  n₂ : Note G RHO PSI
   cm₁ : G
   cm₂ : G
   ne : (rcm₁, n₁) ≠ (rcm₂, n₂)
@@ -162,9 +165,9 @@ structure NoteCommitBreak (P : Primitives F G B) where
 
 section Pinning
 
-variable {P : Primitives F G B} {kv : KeyBindingInterface KW G B}
-variable {inst₁ inst₂ : ActionInstance G B}
-variable {w₁ w₂ : ActionWitness KW F G B P.depth}
+variable {P : Primitives F G IVK NK RHO PSI CMX RT} {kv : KeyBindingInterface KW G IVK NK}
+variable {inst₁ inst₂ : ActionInstance G RT RHO CMX}
+variable {w₁ w₂ : ActionWitness KW F G RHO PSI RT P.depth}
 
 /-- **`ivk`-pinning** (ZIP 2005 `lemma-ivk-pinning`): the address `(g_d, pk_d)` of the
 spent note determines `ivk`. Pure module algebra: needs only `g_d ≠ 0`, injectivity of the
