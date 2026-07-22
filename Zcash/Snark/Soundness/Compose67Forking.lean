@@ -188,4 +188,299 @@ theorem memberJointAccept_measure_le_of_not_extraction {G : Type*} [AddCommGroup
           + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp) :=
   (deployed_member_budget urs hk vk ps ch i hi md b₂f havoid).resolve_right hnex
 
+/-- **Honest completeness ⇒ joint accept membership — the structural half of `hcont` (`hDecomp`),
+now a theorem.** When the honest transcript deployed-accepts and admits a Fiat–Shamir tree at the
+honest IPA base `evalVector urs.k ch.x3` carrying an opened `x₄` batch there, the honest challenge
+tuple `(ch.x1, ch.x2, ch.x3, ch.x4)` lies in `memberJointAccept` at `b₂f := fun _ => evalVector`.
+
+With the honest-preferring canonical selectors (`canonicalX{1,2,3}Run_honest`), the four canonical
+rewind bases collapse to the honest transcript at the honest tuple (the splice/challenge identities
+`honestX*Run_spliced`/`_challenges` are `rfl`), so each level is the honest run's own accept: the
+deployed→opened bridge `openedX4Accept_of_deployedAccepts` for `x₄`, and the shared honest IPA
+opening (`deployed_to_acceptV` off the `(g,U,W)`-relation branch) for `x₁`/`x₂`/`x₃`. This is the
+containment premise of `residual_le_of_coupling_containment` discharged for the honest tuple; the
+one remaining input is the RO-uniformity coupling that makes that tuple uniform. -/
+theorem memberJointAccept_of_honest {G : Type*} [AddCommGroup G] [Module Fp G] [DecidableEq G]
+    [Inhabited G] {shape : Shape} (urs : URS G) (hk : shape.k = urs.k)
+    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (hnrel : ¬HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+    {z blind : Fp} (hz : z ≠ 0)
+    (hFS : FiatShamirTree urs hk vk ps ch (evalVector urs.k ch.x3) z blind)
+    (hacc : DeployedAccepts urs hk vk ps ch)
+    (aR : Fin (2 ^ urs.k) → Fp) (pUR pWR : Fp)
+    (hbatch : Nonempty (OpenedBatchOpenings urs (evalVector urs.k ch.x3)
+      (x4BatchCommitments urs hk vk ps ch) (x4BatchEvals vk ps ch) aR pUR pWR)) :
+    (ch.x1, ch.x2, ch.x3, ch.x4) ∈
+      memberJointAccept urs hk vk ps ch (fun _ => evalVector urs.k ch.x3) := by
+  -- the honest run's clean accepting IPA opening at the honest base (off the DL branch)
+  have fs : ForkedTranscript urs hk vk ps ch (evalVector urs.k ch.x3) z blind :=
+    ForkedTranscript.ofAccepts urs hk vk ps ch hacc hFS
+  have hRunAcc : ∃ (z' blind' : Fp)
+      (fs' : ForkedTranscript urs hk vk ps ch (evalVector urs.k ch.x3) z' blind')
+      (t : IpaTreeV Fp G urs.k),
+      IpaAcceptV urs.g (evalVector urs.k ch.x3) fs'.openedCommitment
+        (multiopenValue vk ps ch) t := by
+    rcases deployed_to_acceptV hz urs.g (evalVector urs.k ch.x3) fs.openedCommitment
+        (multiopenValue vk ps ch) blind fs.tree fs.accepts with hclean | hrel
+    · exact ⟨z, blind, fs, projTree fs.tree, hclean⟩
+    · exact absurd hrel hnrel
+  -- honest-run accept payloads (honest splices/challenges are the identity, by `rfl`)
+  have hX1 : X1PinnedRunAccepts urs hk vk ps ch ch.x1 (honestX1Run ps ch) :=
+    ⟨aR, pUR, pWR, hacc, hbatch⟩
+  have hX2 : X2RunAccepts urs hk vk ps ch (evalVector urs.k ch.x3) ch.x2 (honestX2Run ps ch) :=
+    hRunAcc
+  have hX3 : X3RunAccepts urs hk vk ps ch (evalVector urs.k ch.x3) ch.x3 (honestX3Run ps ch) :=
+    hRunAcc
+  -- the four honest-run accept events (bases already honest)
+  have h1 : OpenedX1PinnedAccept urs hk vk ps ch ch.x1 := ⟨honestX1Run ps ch, hX1⟩
+  have h2 : OpenedX2Accept urs hk vk ps ch (evalVector urs.k ch.x3) ch.x2 :=
+    ⟨honestX2Run ps ch, hX2⟩
+  have h3 : OpenedX3Accept urs hk vk ps ch (evalVector urs.k ch.x3) ch.x3 :=
+    ⟨honestX3Run ps ch, hX3⟩
+  have h4 : OpenedX4Accept urs hk vk ps ch (evalVector urs.k ch.x3) ch.x4 :=
+    openedX4Accept_of_deployedAccepts urs hk vk ps ch hz hnrel (honestX4Run ps ch) ch.x4 hFS hacc
+  -- collapse the canonical selectors to the honest runs and discharge each level
+  have hc1 := canonicalX1Run_honest urs hk vk ps ch hX1
+  have hc2 := canonicalX2Run_honest urs hk vk ps ch (evalVector urs.k ch.x3) hX2
+  have hc3 := canonicalX3Run_honest urs hk vk ps ch (evalVector urs.k ch.x3) hX3
+  simp only [memberJointAccept, innerJointAccept, Set.mem_setOf_eq, hc1,
+    honestX1Run_spliced, honestX1Run_challenges, hc2, honestX2Run_spliced,
+    honestX2Run_challenges, hc3, honestX3Run_spliced, honestX3Run_challenges]
+  exact ⟨h1, h2, h3, h4⟩
+
+/-! ## The batch produced on the good event
+
+`memberJointAccept_of_honest` consumes an opened `x₄` batch. That batch is a *rewinding output*,
+not a single-transcript object — but its production is already priced: given the honest fork and
+the `x₄` accept floor at the honest base, `openedX4Rewind_of_x4Prob_forked` produces it, and when
+the floor *fails*, the honest challenge tuple sits in the single-slot floor-failure event whose
+measure is at most the threshold (`uniformOfFintype_accept_below_threshold_le`). The lemmas below
+package both branches: the batch hypothesis disappears in favor of a priced event. -/
+
+open Classical in
+/-- **Honest membership with the batch derived from the `x₄` floor.** As
+`memberJointAccept_of_honest`, but instead of assuming the opened `x₄` batch, derive it: the honest
+fork's clean accepting opening (off the `(g,U,W)` branch) seeds `openedX4Rewind_of_x4Prob_forked`
+at the honest base, and the floor pays for the rewound family. -/
+theorem memberJointAccept_of_honest_of_floor {G : Type*} [AddCommGroup G] [Module Fp G]
+    [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G) (hk : shape.k = urs.k)
+    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (hnrel : ¬HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+    {z blind : Fp} (hz : z ≠ 0)
+    (hFS : FiatShamirTree urs hk vk ps ch (evalVector urs.k ch.x3) z blind)
+    (hacc : DeployedAccepts urs hk vk ps ch)
+    (hprob4 : ((deployedX4PairCount vk ps ch : ℝ≥0∞)) / Fintype.card Fp
+      < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
+          (OpenedX4Accept urs hk vk ps ch (evalVector urs.k ch.x3)))) :
+    (ch.x1, ch.x2, ch.x3, ch.x4) ∈
+      memberJointAccept urs hk vk ps ch (fun _ => evalVector urs.k ch.x3) := by
+  have fs : ForkedTranscript urs hk vk ps ch (evalVector urs.k ch.x3) z blind :=
+    ForkedTranscript.ofAccepts urs hk vk ps ch hacc hFS
+  rcases deployed_to_acceptV hz urs.g (evalVector urs.k ch.x3) fs.openedCommitment
+      (multiopenValue vk ps ch) blind fs.tree fs.accepts with hclean | hrel
+  · have ext := ipaRelation_extract urs (evalVector urs.k ch.x3) fs.openedCommitment
+      (multiopenValue vk ps ch) (projTree fs.tree) hclean
+    have batch := openedX4Rewind_of_x4Prob_forked urs hk vk ps ch fs
+      ⟨projTree fs.tree, hclean⟩ hprob4 ext.1 ext.2
+    exact memberJointAccept_of_honest urs hk vk ps ch hnrel hz hFS hacc
+      ext.1 fs.pU fs.pW ⟨batch⟩
+  · exact absurd hrel hnrel
+
+open Classical in
+/-- **The priced bad event for the deployed member extraction at point set `i`.** Three parts, each
+with its own price: the joint accept holds but its measure is within the knowledge budget
+(`deployed_member_budget`'s left branch); the honest-base `x₄` squeeze accepts at the drawn slot but
+its floor fails; the honest-base `x₁` squeeze accepts at the drawn slot but its floor fails. The
+containment lemma below shows a clean-but-not-extracted run's honest challenge tuple always lands
+here — the floor failures pay for the two rewinding productions (the `x₄` batch and the member
+decode) that bare acceptance does not supply. -/
+noncomputable def memberBadEvent {G : Type*} [AddCommGroup G] [Module Fp G]
+    [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G) (hk : shape.k = urs.k)
+    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (i : ℕ) : Set (Fp × Fp × Fp × Fp) :=
+  {w : Fp × Fp × Fp × Fp |
+      w ∈ memberJointAccept urs hk vk ps ch (fun _ => evalVector urs.k ch.x3) ∧
+      (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
+          (memberJointAccept urs hk vk ps ch (fun _ => evalVector urs.k ch.x3))
+        ≤ (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+          + (((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+            + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+                + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
+            + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp)}
+    ∪ {w : Fp × Fp × Fp × Fp |
+        OpenedX4Accept urs hk vk ps ch (evalVector urs.k ch.x3) w.2.2.2 ∧
+        (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
+            (OpenedX4Accept urs hk vk ps ch (evalVector urs.k ch.x3)))
+          ≤ (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp}
+    ∪ {w : Fp × Fp × Fp × Fp |
+        OpenedX1Accept urs hk vk ps ch w.1 ∧
+        (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
+            (OpenedX1Accept urs hk vk ps ch))
+          ≤ (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp}
+
+set_option maxHeartbeats 1000000 in
+open Classical in
+/-- **The containment, discharged: a clean-but-not-extracted honest tuple lands in the priced bad
+event.** Given the single-transcript supply — deployed acceptance and a Fiat–Shamir tree at the
+honest IPA base — plus the per-set data and the failure of extraction (`hnex`, the unfolding of
+"not extracted": no produced batch's member decode binds all columns, and no `(g,U,W)` relation is
+at hand), the honest challenge tuple `(ch.x1, ch.x2, ch.x3, ch.x4)` lies in `memberBadEvent`:
+
+* if the honest-base `x₄` floor fails, the honest slot's accept (from the deployed→opened bridge)
+  puts the tuple in the `x₄` floor-failure part;
+* otherwise the floor produces the opened `x₄` batch (`openedX4Rewind_of_x4Prob_forked` seeded by
+  the honest fork's clean opening); if the `x₁` floor fails, the batch itself witnesses the honest
+  `x₁` accept and the tuple sits in the `x₁` floor-failure part;
+* with both floors, the member decode exists (`openedMemberDecode_of_x1Prob`), the tuple is in
+  `memberJointAccept` (`memberJointAccept_of_honest`), and `hnex` turns the budget
+  (`deployed_member_budget`) into the below-threshold bound — the first part.
+
+No batch, decode, or measure fact is assumed: everything is produced or priced. -/
+theorem honest_tuple_mem_memberBadEvent {G : Type*} [AddCommGroup G] [Module Fp G]
+    [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G) (hk : shape.k = urs.k)
+    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (hnrel : ¬HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+    {z blind : Fp} (hz : z ≠ 0)
+    (hFS : FiatShamirTree urs hk vk ps ch (evalVector urs.k ch.x3) z blind)
+    (hacc : DeployedAccepts urs hk vk ps ch)
+    (i : ℕ) (hi : i < deployedX4PairCount vk ps ch)
+    (hlen : 0 < (deployedSetQueries vk ps ch i).length)
+    (havoid : ∀ (ξv ζv χv : Fp),
+      OpenedX3Accept urs hk vk
+        ((canonicalX2Run urs hk vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
+            ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv)
+            (evalVector urs.k ch.x3) ζv).spliced
+          ((canonicalX1Run urs hk vk ps ch ξv).spliced ps))
+        ((canonicalX2Run urs hk vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
+            ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv)
+            (evalVector urs.k ch.x3) ζv).challenges
+          ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) ζv)
+        (evalVector urs.k χv) χv →
+      ∀ k', χv ∉ deployedSetPts vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
+        ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) k')
+    (hnex : ∀ (a₀ : Fin (2 ^ urs.k) → Fp) (pU pW : Fp)
+      (pbatch : OpenedBatchOpenings urs (evalVector urs.k ch.x3)
+        (x4BatchCommitments urs hk vk ps ch) (x4BatchEvals vk ps ch) a₀ pU pW)
+      (md : OpenedMemberDecode urs hk vk ps ch pbatch i hi),
+      ¬ ∀ (idx : Fin ((constructIntermediateSets
+            (assembleQueries vk ps ch)).points.getD i []).length)
+          (m₀ : Fin (deployedSetQueries vk ps ch i).length),
+          (coeffsToPoly (md.cols m₀)).eval
+              (((constructIntermediateSets (assembleQueries vk ps ch)).points.getD i [])[idx])
+            = ((deployedSetQueries vk ps ch i).getD (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
+          ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w) :
+    (ch.x1, ch.x2, ch.x3, ch.x4) ∈ memberBadEvent urs hk vk ps ch i := by
+  by_cases hp4 : ((deployedX4PairCount vk ps ch : ℝ≥0∞)) / Fintype.card Fp
+      < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
+          (OpenedX4Accept urs hk vk ps ch (evalVector urs.k ch.x3)))
+  · -- the x₄ floor holds: produce the batch from the honest fork's clean opening
+    have fs : ForkedTranscript urs hk vk ps ch (evalVector urs.k ch.x3) z blind :=
+      ForkedTranscript.ofAccepts urs hk vk ps ch hacc hFS
+    rcases deployed_to_acceptV hz urs.g (evalVector urs.k ch.x3) fs.openedCommitment
+        (multiopenValue vk ps ch) blind fs.tree fs.accepts with hclean | hrel
+    swap
+    · exact absurd hrel hnrel
+    have ext := ipaRelation_extract urs (evalVector urs.k ch.x3) fs.openedCommitment
+      (multiopenValue vk ps ch) (projTree fs.tree) hclean
+    have batch := openedX4Rewind_of_x4Prob_forked urs hk vk ps ch fs
+      ⟨projTree fs.tree, hclean⟩ hp4 ext.1 ext.2
+    by_cases hp1 : (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+        < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
+            (OpenedX1Accept urs hk vk ps ch))
+    · -- both floors: member decode + joint membership + the budget's below-threshold branch
+      have md := openedMemberDecode_of_x1Prob urs hk vk ps ch batch i hi hlen hp1 hacc
+      have hmem : (ch.x1, ch.x2, ch.x3, ch.x4) ∈
+          memberJointAccept urs hk vk ps ch (fun _ => evalVector urs.k ch.x3) :=
+        memberJointAccept_of_honest urs hk vk ps ch hnrel hz hFS hacc
+          ext.1 fs.pU fs.pW ⟨batch⟩
+      have hbudget := memberJointAccept_measure_le_of_not_extraction urs hk vk ps ch i hi md
+        (fun _ => evalVector urs.k ch.x3) havoid (hnex ext.1 fs.pU fs.pW batch md)
+      exact Or.inl (Or.inl ⟨hmem, hbudget⟩)
+    · -- x₁ floor fails: the batch witnesses the honest x₁ accept
+      have hx₁ : OpenedX1Accept urs hk vk ps ch ch.x1 :=
+        ⟨honestX1Run ps ch, evalVector urs.k ch.x3, ext.1, fs.pU, fs.pW, hacc, ⟨batch⟩⟩
+      exact Or.inr ⟨hx₁, not_lt.mp hp1⟩
+  · -- x₄ floor fails: the honest slot's opened accept (deployed→opened bridge)
+    have h4 : OpenedX4Accept urs hk vk ps ch (evalVector urs.k ch.x3) ch.x4 :=
+      openedX4Accept_of_deployedAccepts urs hk vk ps ch hz hnrel
+        (honestX4Run ps ch) ch.x4 hFS hacc
+    exact Or.inl (Or.inr ⟨h4, not_lt.mp hp4⟩)
+
+/-! ## Pricing the bad event: per-base thresholds and slot cylinders -/
+
+/-- `fibered_accept_below_threshold_le` with a *base-dependent* threshold dominated by a constant:
+the per-base thresholds (the deployed counts vary with the proof string behind the base) are
+absorbed into their worst case. -/
+theorem fibered_accept_below_threshold_le_of_le {A B : Type*} [Fintype A] [Fintype B]
+    [Nonempty A] [Nonempty B] [DecidableEq B] (acc : A → B → Prop)
+    [∀ a, DecidablePred (acc a)] (t : A → ℝ≥0∞) {T : ℝ≥0∞} (hT : ∀ a, t a ≤ T) :
+    (PMF.uniformOfFintype (A × B)).toOuterMeasure
+        {x : A × B | acc x.1 x.2 ∧
+          (PMF.uniformOfFintype B).toOuterMeasure (Finset.univ.filter (acc x.1)) ≤ t x.1}
+      ≤ T := by
+  have h := uniformOfFintype_prod_fiber_bound_right
+    (S := fun a => {b : B | acc a b ∧
+      (PMF.uniformOfFintype B).toOuterMeasure (Finset.univ.filter (acc a)) ≤ t a})
+    (fun a => le_trans (uniformOfFintype_accept_below_threshold_le (acc a) (t a)) (hT a))
+  convert h using 2
+
+/-- The uniform measure of a first-coordinate cylinder is the coordinate's own measure. -/
+theorem uniformOfFintype_fst_cylinder {α β : Type*} [Fintype α] [Nonempty α]
+    [Fintype β] [Nonempty β] (E : Set α) :
+    (PMF.uniformOfFintype (α × β)).toOuterMeasure {p : α × β | p.1 ∈ E}
+      = (PMF.uniformOfFintype α).toOuterMeasure E := by
+  have hset : {p : α × β | p.1 ∈ E} = E ×ˢ (Set.univ : Set β) := by
+    ext ⟨a, b⟩; simp [Set.mem_prod]
+  rw [hset, uniformOfFintype_toOuterMeasure_prod, uniformOfFintype_toOuterMeasure_univ, mul_one]
+
+/-- The uniform measure of a fourth-coordinate cylinder over the challenge quadruple. -/
+theorem uniformOfFintype_x4_cylinder (E : Set Fp) :
+    (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
+        {w : Fp × Fp × Fp × Fp | w.2.2.2 ∈ E}
+      = (PMF.uniformOfFintype Fp).toOuterMeasure E := by
+  have hset : {w : Fp × Fp × Fp × Fp | w.2.2.2 ∈ E}
+      = reindexX4 ⁻¹' {p : Fp × (Fp × Fp × Fp) | p.1 ∈ E} := rfl
+  rw [hset, uniformOfFintype_toOuterMeasure_preimage_equiv reindexX4,
+    uniformOfFintype_fst_cylinder]
+
+open Classical in
+/-- **The fibered slot floor-failure bound.** For a per-base single-slot accept family read through
+a slot projection `g` whose cylinders have the slot's own measure, the event "the drawn slot
+accepts at the base and that base's floor is at most `s(base)`" is bounded by the worst-case
+threshold `S`. Per base the set is either empty (floor above `s`) or the accept cylinder, whose
+measure is the accept measure `≤ s(base) ≤ S`. -/
+theorem fibered_slot_floor_le {A B' : Type*} [Fintype A] [Nonempty A]
+    [Fintype B'] [Nonempty B'] (g : B' → Fp)
+    (hg : ∀ E : Set Fp, (PMF.uniformOfFintype B').toOuterMeasure {w : B' | g w ∈ E}
+      = (PMF.uniformOfFintype Fp).toOuterMeasure E)
+    (acc : A → Fp → Prop) (s : A → ℝ≥0∞) {S : ℝ≥0∞} (hS : ∀ a, s a ≤ S) :
+    (PMF.uniformOfFintype (A × B')).toOuterMeasure
+        {x : A × B' | acc x.1 (g x.2) ∧
+          (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter (acc x.1)) ≤ s x.1}
+      ≤ S := by
+  have hfiber : ∀ a, (PMF.uniformOfFintype B').toOuterMeasure
+      {w : B' | acc a (g w) ∧
+        (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter (acc a)) ≤ s a}
+      ≤ S := by
+    intro a
+    by_cases hc : (PMF.uniformOfFintype Fp).toOuterMeasure
+        (Finset.univ.filter (acc a)) ≤ s a
+    · have hset : {w : B' | acc a (g w) ∧
+          (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter (acc a)) ≤ s a}
+          = {w : B' | g w ∈ {χ : Fp | acc a χ}} :=
+        Set.ext fun w => ⟨fun h => h.1, fun h => ⟨h, hc⟩⟩
+      rw [hset, hg, uniformOfFintype_toOuterMeasure_setOf_filter]
+      exact le_trans hc (hS a)
+    · have hset : {w : B' | acc a (g w) ∧
+          (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter (acc a)) ≤ s a}
+          = (∅ : Set B') :=
+        Set.ext fun w => ⟨fun h => absurd h.2 hc, fun h => h.elim⟩
+      rw [hset]
+      simp
+  have h := uniformOfFintype_prod_fiber_bound_right
+    (S := fun a => {w : B' | acc a (g w) ∧
+      (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter (acc a)) ≤ s a})
+    hfiber
+  convert h using 2
+
 end Zcash.Snark

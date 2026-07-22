@@ -74,7 +74,11 @@ challenge (the `_xgood` rung `member_constraint_of_relation_and_batch_xgood`,
 member columns are pinned at `ch.x`'s rotation points (the deployed query points), so the gate check
 is coupled to `ch.x` and cannot move to a separate challenge without re-running the value binding at
 that challenge's rotations. So `hgood` stays a faithfulness surface at `ch.x`, exactly as the base
-rung's docstring records (`Opened.member_constraint_of_relation_and_batch_xgood`). -/
+rung's docstring records (`Opened.member_constraint_of_relation_and_batch_xgood`) — but its failure
+over the `x`-squeeze is priced (`hgood_failure_priced`/`hgood_of_good_challenge`, this module), and
+`hfold` decomposes into the vanishing-slot value binding + `ch.x^vk.n ≠ 1` + the sharpened fold
+fingerprint (`vanishing_query_mem_assembleQueries`/`hfold_of_expectedHEval_binding`, this module) —
+see the `hfold`/`hgood` section note at the end of this file. -/
 theorem orchard_verifier_vesta_member_constraint_budgeted {shape : Shape}
     (urs : URS VestaG) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp VestaG) (ps : ProofString shape Fp VestaG)
@@ -871,5 +875,118 @@ theorem snarkExtraction_prob_le_of_generatorRO_textbookDL_budgeted {shape : Shap
     (fun bs coins h => by
       obtain ⟨p, ν, cert, hz, hvalid, hout, o, hrun⟩ := cleanOpening_provenance family coins h
       exact hSupply bs coins p ν cert hz hvalid hout o hrun)
+
+/-! ## The `hfold`/`hgood` surfaces: derivation core and price
+
+The two gate-check surfaces of the budgeted capstone decompose further; neither is an opaque
+assumption.
+
+* **`hfold` is a value binding, not a check the verifier skips.** The deployed verifier *computes*
+  the expected quotient evaluation from the full claimed-evaluation expression list — halo2's
+  `expected_h_eval`: `expectedHEval exprs ch.y (ch.x ^ vk.n) = fold(exprs) · (ch.x^vk.n − 1)⁻¹`
+  over `exprs = allExpressions` (gates ++ permutation ++ lookup, all sub-proofs) — and pins the
+  vanishing-`h` opening query at exactly that value (`vanishing_query_mem_assembleQueries`). The
+  member node binding at that slot (`hquotCommitted` routes `hpoly` there) therefore binds
+  `hpoly.eval ch.x` to `expectedHEval …`, and `hfold_of_expectedHEval_binding` turns that binding
+  into the capstone's `hfold` equation given two side conditions: `ch.x ^ vk.n ≠ 1` (root-of-unity
+  avoidance, a `vk.n / p`-priced squeeze exclusion), and the *sharpened* fingerprint `hfp` — the
+  parameter gate fold equals the deployed `allExpressions` fold, the zcash/ironwood#11/#13 surface
+  stated as one explicit equation. The single bookkeeping fact this module does not prove is the
+  grouping's eval faithfulness at the vanishing slot: `constructIntermediateSets` routes the
+  (unique — no other query carries `CommitmentId.vanishingH`) vanishing query to a member whose
+  eval list is `[expectedHEval …]`, so the routed `getD` value *is* `expectedHEval …`; that lemma
+  belongs beside `constructIntermediateSets_point_mem` (`Verifier.Assemble`).
+
+* **`hgood`'s failure is Schwartz–Zippel-priced.** For the capstone's difference polynomial the
+  failure event of the exact `hgood` implication has uniform-squeeze measure at most
+  `max (deg numerator) (deg hpoly + deg) / p` (`hgood_failure_priced`), and every challenge
+  outside the bad set satisfies the implication verbatim (`hgood_of_good_challenge`). The two
+  hooks a probabilistic assembly must supply are the same random-oracle coupling the joint accept
+  floor carries: that `ch.x` is one fresh uniform squeeze, and that the difference polynomial is
+  pinned before `x` is squeezed (`adviceCommitments_mem_preXTranscript` /
+  `hPieces_mem_preXTranscript`, `Soundness.Forking.Ordering`). -/
+
+/-- The vanishing-`h` opening query is a deployed opening query with its claimed evaluation
+*computed* by the verifier: slot identity `vanishingH`, opening point `ch.x`, and evaluation
+`expectedHEval` of the full claimed-evaluation expression list — the fact `hfold`'s derivation
+consumes. (halo2 `plonk/verifier.rs`: the verifier recomputes `expected_h_eval` and queries the
+`h` commitment at it; `assembleQueries` appends `vanishingQueries` last, so the query is the
+head of that suffix.) -/
+theorem vanishing_query_mem_assembleQueries {G : Type*} [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
+    ∃ q ∈ assembleQueries vk ps ch,
+      q.commId = CommitmentId.vanishingH ∧ q.point = ch.x ∧
+      q.eval = expectedHEval
+        (allExpressions vk ps ch
+          (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1
+          (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.1
+          (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2)
+        ch.y (ch.x ^ vk.n) := by
+  refine ⟨{ point := ch.x,
+            commitment := .msm (vanishingHCommitment shape.k (ch.x ^ vk.n) (List.ofFn ps.hPieces)),
+            eval := expectedHEval
+              (allExpressions vk ps ch
+                (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1
+                (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.1
+                (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2)
+              ch.y (ch.x ^ vk.n),
+            commId := .vanishingH }, ?_, rfl, rfl, rfl⟩
+  simp only [assembleQueries, vanishingQueries]
+  exact List.mem_append.mpr (Or.inr (List.mem_cons_self))
+
+/-- **The `hfold` derivation core.** The capstone's gate-fold equation from the vanishing-slot
+value binding: if the extracted quotient's evaluation at `ch.x` is the verifier-computed
+`expectedHEval` (`hbind` — supplied by the member node binding at the `hquotCommitted` slot),
+the squeeze avoids the `deg`-th roots of unity (`hxn`), and the parameter gate fold equals the
+deployed expression fold (`hfp` — the zcash/ironwood#11/#13 fingerprint, sharpened to one
+equation), then `hfold` holds verbatim. Pure field algebra: `expectedHEval` clears its
+`(x^deg − 1)⁻¹` against `hxn`. -/
+theorem hfold_of_expectedHEval_binding {ng : ℕ} (gates : Fin ng → Expr Fp)
+    (fixedClaimed adviceClaimed instanceClaimed : ℕ → Fp) (y x : Fp)
+    (hpoly : Polynomial Fp) (deg : ℕ) (exprs : List Fp)
+    (hxn : x ^ deg ≠ 1)
+    (hbind : hpoly.eval x = expectedHEval exprs y (x ^ deg))
+    (hfp : (List.ofFn (fun i : Fin ng =>
+          (gates i).eval fixedClaimed adviceClaimed instanceClaimed)).foldl
+            (fun acc v => acc * y + v) 0
+        = exprs.foldl (fun acc v => acc * y + v) 0) :
+    (List.ofFn (fun i : Fin ng =>
+        (gates i).eval fixedClaimed adviceClaimed instanceClaimed)).foldl
+          (fun acc v => acc * y + v) 0
+      = hpoly.eval x * (x ^ deg - 1) := by
+  rw [hfp, hbind, expectedHEval, mul_assoc,
+    inv_mul_cancel₀ (sub_ne_zero.mpr hxn), mul_one]
+
+open Polynomial in
+open scoped ENNReal in
+/-- **The `hgood` failure event, Schwartz–Zippel-priced.** The set of squeezes at which the
+budgeted capstone's exact `hgood` implication *fails* — the gate identity fails as polynomials
+yet its difference vanishes at the squeeze — is the difference's root set, of uniform measure at
+most `max (deg numerator) (deg hq + n) / p` (the caller-computable budget of
+`szBadSet_quotient_card_le`). The assembly hooks (that `ch.x` is one fresh uniform squeeze and
+the difference is pinned pre-squeeze) are recorded in this section's note. -/
+theorem hgood_failure_priced (numerator hq : Polynomial Fp) (n : ℕ) :
+    uniformChallenge.toOuterMeasure
+        {x : Fp | ¬(numerator ≠ hq * (X ^ n - 1) →
+          (numerator - hq * (X ^ n - 1)).eval x ≠ 0)}
+      ≤ ((max numerator.natDegree (hq.natDegree + n) : ℕ) : ℝ≥0∞)
+        / (Fintype.card Fp : ℝ≥0∞) := by
+  have hset : {x : Fp | ¬(numerator ≠ hq * (X ^ n - 1) →
+        (numerator - hq * (X ^ n - 1)).eval x ≠ 0)}
+      = ↑(szBadSet (numerator - hq * (X ^ n - 1))) := by
+    ext x
+    simp only [Set.mem_setOf_eq, Finset.mem_coe, mem_szBadSet, Classical.not_imp, not_not,
+      sub_ne_zero]
+  rw [hset, uniformChallenge_badSet]
+  gcongr
+  exact_mod_cast szBadSet_quotient_card_le numerator hq n
+
+open Polynomial in
+/-- Any squeeze outside the priced bad set satisfies the budgeted capstone's `hgood` implication
+verbatim (`not_mem_szBadSet` at the quotient difference). -/
+theorem hgood_of_good_challenge (numerator hq : Polynomial Fp) (n : ℕ) {x : Fp}
+    (hx : x ∉ szBadSet (numerator - hq * (X ^ n - 1))) :
+    numerator ≠ hq * (X ^ n - 1) → (numerator - hq * (X ^ n - 1)).eval x ≠ 0 :=
+  fun hne => (not_mem_szBadSet.mp hx) (sub_ne_zero.mpr hne)
 
 end Zcash.Snark
