@@ -216,8 +216,9 @@ whole table. -/
 
 /-- The answers at `t` that would ±-collide with a recorded `(query, answer)` pair: two
 candidate values per pair, one per sign. A list representing the step's *bad set* (only
-membership matters, but it is more convenient to use the list length `2·|σ|` to bound the
-set's cardinality; coinciding candidates only slacken the bound). -/
+membership matters, but the list length `2·|σ|` is a convenient bound on the set's
+cardinality; coinciding candidates merely leave the inequality slack, they do not
+invalidate it). -/
 def badList (s : Q → F) (σ : List (Q × F)) (t : Q) : List F :=
   σ.map (fun p => s p.1 + p.2 - s t) ++ σ.map (fun p => -(s p.1 + p.2) - s t)
 
