@@ -139,11 +139,12 @@ theorem deriveChallenges_at_captured_shape (n : ℕ) (fs : FiatShamir Fp G)
 no two distinct sub-proofs' opening queries share a commitment slot, so the multiopen grouping cannot
 merge across sub-proofs. -/
 theorem commId_disjoint_at_captured_shape (n : ℕ) (vk : VerifyingKey (shape n) Fp G)
+    (instanceCommitment : Fin (shape n).numProofs → ℕ → G)
     (ps : ProofString (shape n) Fp G) (x xInv xNext xLast : Fp) {p p' : Fin (shape n).numProofs}
     (hpp : p ≠ p') :
-    ∀ q ∈ subProofOpeningQueries vk ps x xInv xNext xLast p,
-      ∀ q' ∈ subProofOpeningQueries vk ps x xInv xNext xLast p',
+    ∀ q ∈ subProofOpeningQueries vk instanceCommitment ps x xInv xNext xLast p,
+      ∀ q' ∈ subProofOpeningQueries vk instanceCommitment ps x xInv xNext xLast p',
         q.commId ≠ q'.commId :=
-  subProofOpeningQueries_commId_disjoint vk ps x xInv xNext xLast hpp
+  subProofOpeningQueries_commId_disjoint vk instanceCommitment ps x xInv xNext xLast hpp
 
 end Zcash.Snark.FixtureMax
