@@ -76,6 +76,9 @@ assert_axioms Zcash.Security.KeyBinding.break_measure_le_adaptive
 assert_axioms Zcash.Security.KeyBinding.break_measure_le_of_queryBound
 assert_axioms Zcash.Security.KeyBinding.toOuterMeasure_bind_le
 assert_axioms Zcash.Security.KeyBinding.break_measure_le_mixture
+assert_axioms Zcash.Security.KeyBinding.uniformOfFintype_prod
+assert_computable Zcash.Security.KeyBinding.evalEquiv
+assert_axioms Zcash.Security.KeyBinding.uniform_triple_eval
 
 /-! ## Ledger-layer break reductions
 

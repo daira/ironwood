@@ -49,6 +49,9 @@ an `OracleComp` from the Fiat–Shamir layer):
   witnesses' derivation inputs: `Q·(Q−1)/|F|` (ZIP 2005's accounting).
 * `break_measure_le_of_queryBound` — hypothesis-free: any `Q`-query machine, via
   `OracleComp.completing` appending the four derivation queries: `(Q+4)·(Q+3)/|F|`.
+* `uniform_triple_eval` — the triple↔table transport: the three derivation oracles drawn
+  independently and uniformly assemble (`FinalQuery.eval`) into exactly the uniform whole
+  table.
 
 The remaining modelling steps toward the full ZIP 2005 key-binding theorem are tracked in
 issue #68.
@@ -498,6 +501,55 @@ theorem toOuterMeasure_bind_le {α β : Type*} (p : PMF α) (f : α → PMF β) 
       ≤ ∑' a, p a * ε := ENNReal.tsum_le_tsum fun a => mul_le_mul_right (h a) _
     _ = ε := by rw [ENNReal.tsum_mul_right, PMF.tsum_coe, one_mul]
 
+
+/-! ## The derivation oracles as independent draws -/
+
+section Transport
+
+variable [Field F] [Fintype QK] [Fintype SK] [Fintype AK] [Fintype NK] [Fintype F]
+variable [DecidableEq QK] [DecidableEq SK] [DecidableEq AK] [DecidableEq NK] [DecidableEq F]
+
+/-- Drawing the coordinates independently and uniformly is the uniform draw on the product. -/
+theorem uniformOfFintype_prod {α β : Type*} [Fintype α] [Nonempty α] [Fintype β] [Nonempty β] :
+    PMF.uniformOfFintype (α × β)
+      = (PMF.uniformOfFintype α).bind fun a => (PMF.uniformOfFintype β).map (Prod.mk a) := by
+  refine PMF.ext fun x => ?_
+  rw [PMF.bind_apply, tsum_eq_single x.1 fun a ha => ?_]
+  · rw [PMF.map_apply, tsum_eq_single x.2 fun b hb => ?_]
+    · simp only [Prod.mk.eta, if_pos, PMF.uniformOfFintype_apply, Fintype.card_prod,
+        Nat.cast_mul]
+      rw [ENNReal.mul_inv (Or.inr (ENNReal.natCast_ne_top _))
+        (Or.inl (ENNReal.natCast_ne_top _))]
+    · exact if_neg fun h => hb (congrArg Prod.snd h).symm
+  · rw [PMF.map_apply, ENNReal.tsum_eq_zero.mpr fun b => if_neg fun h =>
+      ha (congrArg Prod.fst h).symm, mul_zero]
+
+/-- The three final `rivk`-derivation oracles assemble bijectively into whole tables
+(`FinalQuery.eval`); the inverse is restriction along the constructors. -/
+def evalEquiv :
+    ((SK → F) × (QK → AK → NK → F) × (F → AK → NK → F)) ≃ (FinalQuery QK SK AK NK F → F) where
+  toFun H := FinalQuery.eval H.1 H.2.1 H.2.2
+  invFun O := (fun sk => O (.legacy sk), fun qk ak nk => O (.ext qk ak nk),
+    fun rivk_ext ak nk => O (.int rivk_ext ak nk))
+  left_inv _H := rfl
+  right_inv O := eval_restrict O
+
+/-- **Triple↔table uniformity transport**, as a stated PMF equality: drawing the three final
+`rivk`-derivation oracles independently and uniformly and combining them with
+`FinalQuery.eval` is the uniform whole-table draw. -/
+theorem uniform_triple_eval :
+    ((PMF.uniformOfFintype (SK → F)).bind fun Hleg =>
+        (PMF.uniformOfFintype (QK → AK → NK → F)).bind fun Hext =>
+          (PMF.uniformOfFintype (F → AK → NK → F)).map fun Hint =>
+            FinalQuery.eval Hleg Hext Hint)
+      = PMF.uniformOfFintype (FinalQuery QK SK AK NK F → F) := by
+  rw [← map_uniformOfFintype_equiv (evalEquiv (QK := QK) (SK := SK) (AK := AK) (NK := NK)
+    (F := F))]
+  simp only [uniformOfFintype_prod, PMF.map_bind, PMF.map_comp]
+  rfl
+
+end Transport
+
 /-! ## The key-binding capstone -/
 
 section Capstone
@@ -654,6 +706,7 @@ theorem break_measure_le_mixture {ι : Type*} (Extract : G → AK) (S : G) (hfn 
   refine toOuterMeasure_bind_le _ _ _ fun i => ?_
   rw [PMF.toOuterMeasure_map_apply]
   exact break_measure_le_of_queryBound Extract S hfn Ggen hExt hS (Hask i) (Hnk i) (hQ i)
+
 
 end Capstone
 
