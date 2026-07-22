@@ -1,10 +1,10 @@
-import Zcash.Snark.Soundness.Multiopen.ValueCheckX3
+import Zcash.Snark.Soundness.Multiopen.NodeBinding
 import Zcash.Snark.Soundness.Multiopen.FloorBudget
 
 /-!
 # The budgeted multiopen extraction (single-path member terminal)
 
-The extraction cores of `Multiopen.ValueCheckX3` consume their squeeze floors quantified over every
+The extraction cores of `Multiopen.NodeBinding` consume their squeeze floors quantified over every
 splice run. This module re-proves the nested extraction with a single measure premise — one joint
 accept floor `t₁ + t₂ + t₃ + t₄ < μ(J)` over the joint draw of the four fresh challenges — using
 canonical run selectors (`Classical.choose` fixes each level's accepting run before any probability
@@ -866,7 +866,7 @@ with the point membership supplied instead of a positional index and the `hql` b
 discharged (`deployedSetQueries_eval_length`). Each decoded member column takes its claimed
 evaluation at any point of its set — located by `idxOf` — or a nontrivial `(g, U, W)` relation
 exists. The budgeted counterpart of `deployed_member_node_binding_at_point`
-(`Soundness.Multiopen.ValueCheckX3`), same conclusion from the joint accept floor. -/
+(`Soundness.Multiopen.NodeBinding`), same conclusion from the joint accept floor. -/
 theorem deployed_member_node_binding_at_point_budgeted [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)

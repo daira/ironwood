@@ -4,7 +4,7 @@ import Zcash.Snark.Soundness.Forking.Probability
 /-!
 # Multiopen floor-failure budget
 
-The deployed multiopen value check (`Soundness.Multiopen.ValueCheckX3`, `Soundness.Vesta`) consumes
+The deployed multiopen value check (`Soundness.Multiopen.NodeBinding`, `Soundness.Vesta`) consumes
 forking-floor premises `hprob*` of the shape `threshold < measure(accept over the fresh Fp
 challenge)` — one per squeeze `x₁`/`x₂`/`x₃`/`x₄`. Each such floor is a lower bound on the deployed
 verifier's accept fraction over the single fresh uniform `Fp` challenge that squeeze reprograms

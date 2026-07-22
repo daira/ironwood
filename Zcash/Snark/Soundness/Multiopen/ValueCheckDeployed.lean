@@ -10,7 +10,7 @@ import Zcash.Snark.Soundness.Multiopen.Opened
 supplies the *deployed* grouping it is instantiated at: the point sets `deployedSetPts` and their
 union `deployedAllPts` come from `constructIntermediateSets (assembleQueries vk ps ch)`, and each
 set's points sit inside the union (`deployedSetPts_subset`). The instantiation itself is
-`deployed_node_binding_of_grid` (`Soundness.Multiopen.ValueCheckX3`), which feeds
+`deployed_node_binding_of_grid` (`Soundness.Multiopen.NodeBinding`), which feeds
 `node_binding_of_samples` the run openings acceptance actually supplies; `deployedAllPts`'s
 cardinality is also the `x₃` floor threshold of the derived capstone and the floor budget. The
 query-point membership bridge `deployed_query_point_mem` and the member↔aggregate eval bridge

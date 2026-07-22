@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.Compose67
+import Zcash.Snark.Soundness.Composition.Bridge
 import Zcash.Snark.Soundness.Multiopen.BudgetedExtraction
 
 /-!
@@ -25,7 +25,7 @@ joint floor but stays named, because the statement's decode terms carry its proo
 
 namespace Zcash.Snark
 
--- Match the instance set `AlgebraicWfProof.multiopen_repr` is stated against (`Soundness.Compose67`
+-- Match the instance set `AlgebraicWfProof.multiopen_repr` is stated against (`Soundness.Composition.Bridge`
 -- and `Forking.Adversary.Algebraic` use the same concrete `Inhabited VestaG`); a binder would be a
 -- different instance term, forcing the `multiopenCommitment` fold through `whnf`. Named to avoid an
 -- auto-generated-name collision on co-import.
@@ -227,7 +227,7 @@ open scoped ENNReal in
 open Classical in
 set_option maxHeartbeats 4000000 in
 /-- **The budgeted witness tie on the computed path.** `member_relation_or_dlr_of_instance`
-(`Soundness.Compose67`) with the member decode *constructed* and `hquot` *derived*: on the
+(`Soundness.Composition.Bridge`) with the member decode *constructed* and `hquot` *derived*: on the
 agreement branch the budgeted deployed capstone runs at the algebraic instance's base
 `(p.proof.1, chRecord ν)`; on the disagreement branch the two openings of the shared commitment
 collide into a computed `(g, u, w)` relation. No `mdec`/`hquot` hypothesis remains — the measure
@@ -402,7 +402,7 @@ open scoped ENNReal in
 open Classical in
 set_option maxHeartbeats 1000000 in
 /-- The budgeted `runToSnark`-analogue on the computed path: `member_snark_of_instance`
-(`Soundness.Compose67`) with the clean-opening branch routed through the budgeted witness tie, so
+(`Soundness.Composition.Bridge`) with the clean-opening branch routed through the budgeted witness tie, so
 no member decode or quotient identity is hypothesised. On the clean-opening branch the budgeted
 capstone produces the member SNARK relation (or a binding `HasNontrivialRelation`); on the
 relation branch, the algebraic extraction's own `AlgebraicRelationWitness`. -/
@@ -573,7 +573,7 @@ open Polynomial in
 open scoped ENNReal in
 open Classical in
 /-- **Deployed soundness on the computed path, extraction data derived.** The budgeted counterpart
-of `orchard_verifier_sound_vesta_computed` (`Soundness.Compose67`): the same
+of `orchard_verifier_sound_vesta_computed` (`Soundness.Composition.Bridge`): the same
 `KnowledgeSoundness.SnarkRelation`-based `S` / `HasNontrivialRelation` / `AlgebraicRelationWitness`
 trichotomy, but with the member decode constructed and the quotient identity derived — no
 `mdec`/`hquot` hypothesis. What remains hypothesised: the deployed acceptance `hacc0`, the two
@@ -757,7 +757,7 @@ noncomputable def orchard_verifier_sound_vesta_budgeted
 
 `hasCleanOpening` (`Forking.Adversary.Algebraic`) packages an instance the computed family
 produced together with its clean-opening branch. `instanceAttempt_provenance`
-(`Soundness.Compose67`) exposes the `AlgebraicWfProof` behind that instance, and the budgeted
+(`Soundness.Composition.Bridge`) exposes the `AlgebraicWfProof` behind that instance, and the budgeted
 witness tie above turns the opening into the member SNARK relation given the multiopen rewind
 data. The two theorems below chain these: the extraction *logic* of the conditional
 knowledge-error bound's `hExtract` hypothesis is discharged, leaving a data-supply obligation
@@ -1132,7 +1132,7 @@ at the capstone's own `deployedClaimedFeed`s, and its relation branch merges int
 data (`hroute`/`hevals`, from `vanishing_slot_routed`), the budget's good branch (`hbindAll`), the
 routed quotient (`hquot`), and the fingerprint (`hfp`); the root-of-unity exclusion is read off
 `hacc0`. `hgood` remains a premise — priced (`hgood_failure_priced`), but its pricing hook needs
-the adaptive coupling (the standing gap in `Soundness.Compose67Prefixes`). -/
+the adaptive coupling (the standing gap in `Soundness.Composition.Prefixes`). -/
 theorem orchard_verifier_vesta_member_constraint_budgeted_hfold_derived {shape : Shape}
     (urs : URS VestaG) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp VestaG) (ps : ProofString shape Fp VestaG)

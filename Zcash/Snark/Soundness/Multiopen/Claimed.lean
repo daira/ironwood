@@ -53,7 +53,7 @@ theorem claimedEval_of_x3Prob {points evals : List Fp} {col : Polynomial Fp}
 yields `|sets|` distinct samples, and `multiopenEval_perSet_zero_of_samples` forces each set's
 cleared contribution to vanish. Caveat: deployed acceptance supplies the vanishing only through the
 `x₃`-rewind's fixed-`q′` binding, not directly; the end-to-end derivation is
-`deployed_value_check_node_binding` (`Multiopen.ValueCheckX3`). -/
+`deployed_value_check_node_binding` (`Multiopen.NodeBinding`). -/
 theorem claimedCombined_of_x2Prob {x3 : Fp} {sets : List (List Fp × List Fp × Fp)}
     (hlen : 0 < sets.length)
     (acc : Fp → Prop) [DecidablePred acc]

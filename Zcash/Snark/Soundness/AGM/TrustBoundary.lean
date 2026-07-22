@@ -2,13 +2,13 @@ import Zcash.Snark.Soundness.AGM.BindingSignature
 import Zcash.Snark.Soundness.AGM.Capstone
 import Zcash.Snark.Soundness.AGM.ProbabilityVesta
 import Zcash.Snark.Soundness.Forking.Adversary
-import Zcash.Snark.Soundness.Compose67
+import Zcash.Snark.Soundness.Composition.Bridge
 import Zcash.Snark.Soundness.Multiopen.BudgetedExtraction
 import Zcash.Snark.Soundness.VestaBudget
-import Zcash.Snark.Soundness.Compose67Unconditional
-import Zcash.Snark.Soundness.Compose67Forking
-import Zcash.Snark.Soundness.Compose67Prefixes
-import Zcash.Snark.Soundness.Compose67Completeness
+import Zcash.Snark.Soundness.Composition.Decomposition
+import Zcash.Snark.Soundness.Composition.Residual
+import Zcash.Snark.Soundness.Composition.Prefixes
+import Zcash.Snark.Soundness.Composition.Completeness
 import Zcash.Meta.AxiomCheck
 import Mathlib.Util.AssertNoSorry
 
@@ -271,12 +271,12 @@ assert_no_sorry orchard_deployed_relation_prob_le_of_generatorRO_textbookDL
 
 -- The multiopen value-check chain: the deployed value check derived from the nested
 -- forking floors, the x₁ member un-batch on top of it, and the terminal with `hadvice`/`hinstance`
--- produced rather than assumed (`Soundness.Multiopen.ValueCheckX3`, `Soundness.Vesta`).
+-- produced rather than assumed (`Soundness.Multiopen.NodeBinding`, `Soundness.Vesta`).
 assert_no_sorry deployed_value_check_node_binding
 assert_no_sorry deployed_member_node_binding
 assert_no_sorry orchard_verifier_vesta_member_constraint_derived
 
--- The forking-extraction ∘ decoded-capstone composition (`Soundness.Compose67`): the algebraic
+-- The forking-extraction ∘ decoded-capstone composition (`Soundness.Composition.Bridge`): the algebraic
 -- clean opening identified with the deployed capstone's shape (`ipaRelation_deployed_of_instance`),
 -- the witness-tie composition (`member_snark_of_instance`), and the computed-path soundness
 -- endpoint (`orchard_verifier_sound_vesta_computed`) that concludes the plain `SnarkRelation` with
@@ -335,23 +335,23 @@ assert_no_sorry hgood_failure_priced
 assert_no_sorry hgood_of_good_challenge
 -- The UNCONDITIONAL decomposition: `hExtract` removed, the residual quantified as the
 -- clean-but-not-extracted measure term (bounded by the multiopen budget under the coupling
--- documented in `Compose67Unconditional`, not assumed here).
+-- documented in `Composition.Decomposition`, not assumed here).
 assert_no_sorry ComputedAlgebraicFSFamily.snarkExtractionFailureEvent_subset_union
 assert_no_sorry snarkExtraction_prob_le_of_generatorRO_textbookDL_decomposed
 -- The forking reduction: the residual closed to the multiopen budget `t` by the fibered single-slot
 -- counting bound, transported along the challenge-uniformity coupling. The coupling `hcouple` and the
--- accept containment `hcont` are the isolated non-circular premises (documented in `Compose67Forking`);
+-- accept containment `hcont` are the isolated non-circular premises (documented in `Composition.Residual`);
 -- the reduction itself is proven.
 assert_no_sorry fibered_accept_below_threshold_le
 assert_no_sorry residual_le_of_coupling_containment
 assert_no_sorry snarkExtraction_prob_le_of_generatorRO_textbookDL_unconditional
--- The adaptive-coupling ladder (`Soundness.Compose67Assembly`): the residual bounded through the
+-- The adaptive-coupling ladder (`Soundness.Composition.Assembly`): the residual bounded through the
 -- honest random-oracle query loss instead of the over-idealised exact pushforward. Its two inputs
 -- are the family `PeelDecode` and the honest-completeness containment `hcont`.
 assert_no_sorry independentProductPMF_fiber_bound
 assert_no_sorry residual_le_via_ladder
 assert_no_sorry snarkExtraction_prob_le_of_generatorRO_textbookDL_ladder
--- The ladder at the concrete multiopen prefixes (`Soundness.Compose67Prefixes`): the four `x₁`–`x₄`
+-- The ladder at the concrete multiopen prefixes (`Soundness.Composition.Prefixes`): the four `x₁`–`x₄`
 -- squeeze points, the decode's chain half discharged outright, and its state half reduced to the
 -- level-0 factorisation of the accept event (`exists_multiopenStateAt_iff`, an iff — so the
 -- factorisation is exactly the standing decode-side input, not a convenient sufficient condition).
@@ -363,7 +363,7 @@ assert_no_sorry multiopenChainAt_ne
 assert_no_sorry exists_multiopenStateAt_iff
 assert_no_sorry multiopenPeelDecode_of_factors
 assert_no_sorry snarkExtraction_prob_le_of_generatorRO_textbookDL_multiopen
--- The honest-completeness half of `hcont` (`Soundness.Compose67Completeness`): the bad event priced
+-- The honest-completeness half of `hcont` (`Soundness.Composition.Completeness`): the bad event priced
 -- unconditionally, and the landing side reduced to the AGM-completeness supply, itself built from a
 -- clean opening's forked transcript.
 assert_no_sorry memberBadEvent_measure_le

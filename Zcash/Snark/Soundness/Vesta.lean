@@ -3,7 +3,7 @@ import Zcash.Snark.Soundness.Main
 import Zcash.Snark.Soundness.Forking.Rewind
 import Zcash.Snark.Soundness.Multiopen.Opened
 import Zcash.Snark.Soundness.Multiopen.ValueCheckDeployed
-import Zcash.Snark.Soundness.Multiopen.ValueCheckX3
+import Zcash.Snark.Soundness.Multiopen.NodeBinding
 import Zcash.Snark.Soundness.Forking.KnowledgeError
 import CompElliptic.Curves.Pasta
 import CompElliptic.Curves.PastaOrder

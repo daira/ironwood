@@ -1,9 +1,9 @@
-import Zcash.Snark.Soundness.Compose67Assembly
+import Zcash.Snark.Soundness.Composition.Assembly
 
 /-!
 # The concrete multiopen prefixes for the composition ladder
 
-The ladder endpoint (`Soundness.Compose67Assembly`) needs to know where the four multiopen
+The ladder endpoint (`Soundness.Composition.Assembly`) needs to know where the four multiopen
 challenges live in the transcript. This module pins them: the four squeeze points `x₁,x₂,x₃,x₄`,
 with the ladder's reads at those points being exactly the multiopen challenges the verifier uses
 (`multiopenPrefixReads_eq`).
@@ -24,7 +24,7 @@ included, so it must recover the accept event from the `x₁`-level prefix alone
 and `multiopenPeelDecode_of_factors` builds the decode from it, feeding the concrete ladder
 endpoint.
 
-`memberBadEvent` (`Soundness.Compose67Forking`) does **not** satisfy the factorisation: it reads
+`memberBadEvent` (`Soundness.Composition.Residual`) does **not** satisfy the factorisation: it reads
 `ch.x3` and the point-set commitments, absorbed at squeeze positions `7` and `8` — after `x₁` is
 answered at `5` — so a prover steering its post-`x₁` commitments moves the accept event while the
 level-0 prefix stands still. Closing the composition therefore needs a decode whose escape sets may
@@ -276,7 +276,7 @@ noncomputable def multiopenPeelDecode_of_factors (family : ComputedAlgebraicFSFa
 set_option maxHeartbeats 1000000 in
 open ComputedAlgebraicFSFamily in
 /-- **The ladder endpoint at the concrete multiopen prefixes.**
-`snarkExtraction_prob_le_of_generatorRO_textbookDL_ladder` (`Soundness.Compose67Assembly`) with
+`snarkExtraction_prob_le_of_generatorRO_textbookDL_ladder` (`Soundness.Composition.Assembly`) with
 `prefixes := multiopenPrefixes` and its `PeelDecode` supplied by
 `multiopenPeelDecode_of_factors`: the knowledge-error probability is at most the clean-opening
 bound plus the adaptive-coupling term `(Q+4)·τ`, and the decode input has collapsed from a whole
