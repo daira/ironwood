@@ -5,6 +5,8 @@ import Zcash.Snark.Soundness.Forking.Adversary
 import Zcash.Snark.Soundness.Compose67
 import Zcash.Snark.Soundness.Multiopen.BudgetedExtraction
 import Zcash.Snark.Soundness.VestaBudget
+import Zcash.Snark.Soundness.Compose67Unconditional
+import Zcash.Snark.Soundness.Compose67Forking
 import Zcash.Meta.AxiomCheck
 import Mathlib.Util.AssertNoSorry
 
@@ -314,6 +316,18 @@ assert_no_sorry member_snark_of_instance_budgeted
 assert_no_sorry orchard_verifier_sound_vesta_budgeted
 assert_no_sorry cleanOpening_provenance
 assert_no_sorry snarkExtraction_prob_le_of_generatorRO_textbookDL_budgeted
+-- The UNCONDITIONAL decomposition: `hExtract` removed, the residual quantified as the
+-- clean-but-not-extracted measure term (bounded by the multiopen budget under the coupling
+-- documented in `Compose67Unconditional`, not assumed here).
+assert_no_sorry ComputedAlgebraicFSFamily.snarkExtractionFailureEvent_subset_union
+assert_no_sorry snarkExtraction_prob_le_of_generatorRO_textbookDL_decomposed
+-- The forking reduction: the residual closed to the multiopen budget `t` by the fibered single-slot
+-- counting bound, transported along the challenge-uniformity coupling. The coupling `hcouple` and the
+-- accept containment `hcont` are the isolated non-circular premises (documented in `Compose67Forking`);
+-- the reduction itself is proven.
+assert_no_sorry fibered_accept_below_threshold_le
+assert_no_sorry residual_le_of_coupling_containment
+assert_no_sorry snarkExtraction_prob_le_of_generatorRO_textbookDL_unconditional
 
 /-- info: 'Zcash.Snark.orchard_verifier_vesta_member_constraint_budgeted' depends on axioms:
 [propext, Classical.choice, Quot.sound,
