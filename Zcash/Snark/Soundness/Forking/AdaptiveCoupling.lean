@@ -297,6 +297,243 @@ theorem peel_decomposition {σ : Set (F × F × F × F)} {τ s : ℝ≥0∞} {a 
 
 end Peel
 
+/-! ## Adaptive escape sets: overwriting the point instead of decoding it
+
+`PeelDecode` pins the joint accept event as a set `σ` recovered from the transcript point alone
+(`stateAt`), which forces the event to be determined *before* its level's challenge is answered. The
+multiopen accept events are not so determined: `memberBadEvent` reads `ch.x3` and the multiopen
+commitments, which the transcript absorbs at squeeze positions `7` and `8` — after `x₁` is answered
+at `5` — so a prover steering its post-`x₁` commitments moves the event while the level-0 prefix
+stands still. `exists_multiopenStateAt_iff` (`Soundness.Compose67Prefixes`) states that obstruction
+as an iff, so it is the whole decode-side content and not an artefact of one instantiation.
+
+The primitive below is the shape the adaptive replacement needs. Instead of decoding a fixed set,
+threshold a *weight* evaluated on the table with the point's answer **overwritten** by the candidate.
+Overwriting is what buys blindness: the escape set never reads `O t`, because it replaces it. That
+leaves the weight free to depend on the entire adaptive continuation — rerunning the adversary
+included — which is precisely what a fixed-set decode cannot express.
+
+What remains for the full adaptive ladder, on top of this: the per-level averaging bound (Markov at
+one squeeze: a weight averaging at most `τ * τ` over a uniform answer puts at most `τ` of the mass
+above `τ`), and the adaptive analogue of `peel_decomposition` — a landing run exposes one read
+inside its level's escape, with the levels' weights being conditional continuation measures rather
+than the fixed-set fibers `peelG1`–`peelG4`. -/
+
+/-- The escape set of a weight `g` at threshold `τ`: the answers `v` at `t` whose *overwritten*
+table `O[t ↦ v]` carries weight at least `τ`. -/
+def updEsc {T F : Type*} [DecidableEq T] (g : T → (T → F) → ℝ≥0∞) (τ : ℝ≥0∞) :
+    T → (T → F) → Set F :=
+  fun t O => {v : F | τ ≤ g t (Function.update O t v)}
+
+/-- **Update-form escapes are blind at their own point, for every weight.** The candidate answer
+overwrites whatever `O` holds at `t`, so a second update at `t` is absorbed
+(`Function.update_idem`). This is the blindness hypothesis of `escapesDuringC_measure_le'`, obtained
+without constraining `g` at all — in particular `g` may rerun the adversary on the overwritten
+table, the case that defeats a fixed-set `stateAt`. -/
+theorem updEsc_blind {T F : Type*} [DecidableEq T] (g : T → (T → F) → ℝ≥0∞) (τ : ℝ≥0∞)
+    (t : T) (O : T → F) (v₀ : F) :
+    updEsc g τ t (Function.update O t v₀) = updEsc g τ t O := by
+  ext v
+  simp only [updEsc, Set.mem_setOf_eq, Function.update_idem]
+
+open Classical in
+/-- **Markov at one squeeze, at the level of counts.** The answers whose weight reaches `τ` each
+contribute at least `τ` to the total, so `τ` times their count is at most the total weight. This is
+the counting core of the per-level averaging bound; it assumes nothing about `g`. -/
+theorem card_heavy_mul_le {F : Type*} [Fintype F] (g : F → ℝ≥0∞) (τ : ℝ≥0∞) :
+    τ * (Nat.card {v : F | τ ≤ g v} : ℝ≥0∞) ≤ ∑ v : F, g v := by
+  classical
+  have hcard : Nat.card {v : F | τ ≤ g v}
+      = (Finset.univ.filter (fun v => τ ≤ g v)).card := by
+    rw [Nat.card_coe_set_eq, Set.ncard_eq_toFinset_card', Set.toFinset_setOf]
+  rw [hcard]
+  calc τ * ((Finset.univ.filter (fun v => τ ≤ g v)).card : ℝ≥0∞)
+      = ∑ _v ∈ Finset.univ.filter (fun v => τ ≤ g v), τ := by
+        rw [Finset.sum_const, nsmul_eq_mul, mul_comm]
+    _ ≤ ∑ v ∈ Finset.univ.filter (fun v => τ ≤ g v), g v :=
+        Finset.sum_le_sum fun v hv => (Finset.mem_filter.mp hv).2
+    _ ≤ ∑ v : F, g v :=
+        Finset.sum_le_sum_of_subset (Finset.filter_subset _ _)
+
+/-- **The per-level averaging bound.** If the weight averages at most `τ * τ` over a uniform answer
+at `t` — stated as a sum, `∑ᵥ g(O[t ↦ v]) ≤ τ * τ * |F|` — then the escape set has measure at most
+`τ`. This is the obligation the fixed-set ladder discharges by its peeling gates
+(`peelEsc_measure_le`), restated so the weight may depend on the whole table.
+
+Markov (`card_heavy_mul_le`) bounds the heavy count by `τ * |F|`, and the uniform measure is that
+count over `|F|`. The threshold must be nonzero: at `τ = 0` every answer is heavy. -/
+theorem updEsc_measure_le {T F : Type*} [DecidableEq T] [Fintype F] [Nonempty F]
+    (g : T → (T → F) → ℝ≥0∞) {τ : ℝ≥0∞} (hτ : τ ≠ 0) (t : T) (O : T → F)
+    (havg : (∑ v : F, g t (Function.update O t v)) ≤ τ * τ * Fintype.card F) :
+    (PMF.uniformOfFintype F).toOuterMeasure (updEsc g τ t O) ≤ τ := by
+  classical
+  have hcount : (Nat.card {v : F | τ ≤ g t (Function.update O t v)} : ℝ≥0∞)
+      ≤ τ * Fintype.card F := by
+    rcases eq_or_ne τ ⊤ with rfl | hτtop
+    · rw [ENNReal.top_mul (Nat.cast_ne_zero.mpr Fintype.card_ne_zero)]
+      exact le_top
+    · have h : τ * (Nat.card {v : F | τ ≤ g t (Function.update O t v)} : ℝ≥0∞)
+          ≤ τ * (τ * Fintype.card F) := by
+        rw [← mul_assoc]
+        exact le_trans (card_heavy_mul_le (fun v => g t (Function.update O t v)) τ) havg
+      exact (ENNReal.mul_le_mul_iff_right hτ hτtop).mp h
+  have hset : updEsc g τ t O = {v : F | τ ≤ g t (Function.update O t v)} := rfl
+  rw [hset, uniformOfFintype_toOuterMeasure_set]
+  exact ENNReal.div_le_of_le_mul hcount
+
+/-- An answer lies in its *own* escape set exactly when its table is already heavy: overwriting `t`
+with the value it already holds is the identity (`Function.update_eq_self`). This turns the abstract
+membership `O t ∈ updEsc g τ t O` into the checkable inequality `τ ≤ g t O`. -/
+theorem mem_updEsc_self {T F : Type*} [DecidableEq T] (g : T → (T → F) → ℝ≥0∞) (τ : ℝ≥0∞)
+    (t : T) (O : T → F) : O t ∈ updEsc g τ t O ↔ τ ≤ g t O := by
+  simp only [updEsc, Set.mem_setOf_eq, Function.update_eq_self]
+
+/-- **What a weight has to satisfy for the adaptive coupling.** Two properties, and nothing else:
+
+* `avg` — at every point, the weight averages at most `τ * τ` over a uniform answer there (stated as
+  a sum, to avoid dividing). This is the per-level obligation; `updEsc_measure_le` turns it into the
+  escape-set measure bound.
+* `lands` — every table in the event escapes. By `mem_updEsc_self` this is the concrete requirement
+  that a landing run queries some point whose weight has already reached `τ`.
+
+Packaging them makes the residual of the adaptive coupling a single construction: exhibit a weight
+with these two properties for the multiopen process, and `AdaptiveWeight.measure_le` delivers the
+query-loss bound. The blindness that a fixed-set decode cannot supply is free here — `updEsc` is
+blind at its own point for *every* weight, so `wt` may rerun the adversary on the overwritten
+table. -/
+structure AdaptiveWeight (T F : Type*) [DecidableEq T] {α : Type*} (A : OracleComp T F α)
+    (Land : (T → F) → Prop) (τ : ℝ≥0∞) [Fintype F] where
+  /-- The weight assigned to a transcript point on a table. -/
+  wt : T → (T → F) → ℝ≥0∞
+  /-- The weight averages at most `τ * τ` over a uniform answer at each point. -/
+  avg : ∀ t O, (∑ v : F, wt t (Function.update O t v)) ≤ τ * τ * Fintype.card F
+  /-- Every table in the event escapes: some queried point is already heavy. -/
+  lands : ∀ O, Land O → A.escapesDuringC (updEsc wt τ) O
+
+/-- **The adaptive coupling bound.** A weight satisfying the two obligations prices the event at
+`Q · τ` for a `Q`-query machine. Blindness comes from `updEsc_blind`, the per-point measure bound
+from `updEsc_measure_le` applied to `avg`, and the containment from `lands`; `escapesDuringC_measure_le'`
+does the rest.
+
+This is the adaptive replacement for `PeelDecode.landsBelow_measure_le`: same conclusion, but the
+event may depend on the table, which is what the multiopen accept events require
+(`Soundness.Compose67Prefixes`). -/
+theorem AdaptiveWeight.measure_le {T F : Type*} [Fintype T] [DecidableEq T] [Fintype F]
+    [Nonempty F] {α : Type*} {A : OracleComp T F α} {Land : (T → F) → Prop} {τ : ℝ≥0∞}
+    (W : AdaptiveWeight T F A Land τ) (hτ : τ ≠ 0) {Q : ℕ} (hQ : A.QueryBound Q) :
+    (PMF.uniformOfFintype (T → F)).toOuterMeasure {O : T → F | Land O} ≤ Q * τ := by
+  refine le_trans (MeasureTheory.measure_mono (fun O hO => W.lands O hO)) ?_
+  exact escapesDuringC_measure_le' (updEsc W.wt τ) (updEsc_blind W.wt τ)
+    (fun t O => updEsc_measure_le W.wt hτ t O (W.avg t O)) hQ
+
+/-! ### The ladder logic, separated from the weights
+
+`peelEsc`/`peel_decomposition` interleave two things: the *ladder logic* — case-split down the levels,
+and whichever gate first fails exposes an escape — and the *choice of weights*, which in the
+fixed-set version are the fibers `peelG1`–`peelG4` of a set `σ`. Only the second half is what forces
+the accept event to be pinned before its level's challenge. The logic below is the first half on its
+own, over arbitrary weights, so the adaptive instantiation can reuse it verbatim with conditional
+continuation measures in place of the fibers. -/
+
+/-- The escape sets of an abstract weight ladder: at each level, the gate is the previous level's
+weight and the escape is the next level's heavy set. Same shape as `peelEsc`, with the fixed-set
+fibers replaced by arbitrary weights and an arbitrary leaf. -/
+def adaptEsc {F : Type*} (G1 : ℝ≥0∞) (G2 : F → ℝ≥0∞) (G3 : F → F → ℝ≥0∞)
+    (G4 : F → F → F → ℝ≥0∞) (leaf : F → F → F → Set F) (τ : ℝ≥0∞) : ℕ → F → F → F → Set F
+  | 0, _, _, _ => if G1 ≤ τ then {x : F | τ ≤ G2 x} else ∅
+  | 1, a, _, _ => if G2 a ≤ τ then {x : F | τ ≤ G3 a x} else ∅
+  | 2, a, b, _ => if G3 a b ≤ τ then {x : F | τ ≤ G4 a b x} else ∅
+  | 3, a, b, c => if G4 a b c ≤ τ then leaf a b c else ∅
+  | _ + 4, _, _, _ => ∅
+
+/-- **The ladder decomposition over abstract weights.** Given the top gate `G1 ≤ τ` and a point of
+the leaf, some coordinate lies in its level's escape set: walk down the levels, and the first gate
+that holds exposes the escape, with the leaf itself as the last resort.
+
+This is `peel_decomposition`'s combinatorial content with no measure theory in it. Instantiating
+`G1`–`G4` at the fibers of a fixed `σ` recovers the existing ladder — where `G1 ≤ τ` is supplied by
+`peelG1_mul_le` from the `τ⁴` budget. Instantiating them at conditional continuation measures is
+what the adaptive coupling needs; there the same `G1 ≤ τ` obligation is the analogue of
+`peelG1_mul_le`, and it is the piece that still needs the resampling account. -/
+theorem adapt_decomposition {F : Type*} {G1 : ℝ≥0∞} {G2 : F → ℝ≥0∞} {G3 : F → F → ℝ≥0∞}
+    {G4 : F → F → F → ℝ≥0∞} {leaf : F → F → F → Set F} {τ : ℝ≥0∞} {a b c d : F}
+    (hG1 : G1 ≤ τ) (hleaf : d ∈ leaf a b c) :
+    ∃ j : Fin 4, ![a, b, c, d] j ∈ adaptEsc G1 G2 G3 G4 leaf τ (j : ℕ) a b c := by
+  by_cases h2 : τ ≤ G2 a
+  · refine ⟨0, ?_⟩
+    show a ∈ if G1 ≤ τ then {x : F | τ ≤ G2 x} else ∅
+    rw [if_pos hG1]
+    exact h2
+  · push_neg at h2
+    by_cases h3 : τ ≤ G3 a b
+    · refine ⟨1, ?_⟩
+      show b ∈ if G2 a ≤ τ then {x : F | τ ≤ G3 a x} else ∅
+      rw [if_pos (le_of_lt h2)]
+      exact h3
+    · push_neg at h3
+      by_cases h4 : τ ≤ G4 a b c
+      · refine ⟨2, ?_⟩
+        show c ∈ if G3 a b ≤ τ then {x : F | τ ≤ G4 a b x} else ∅
+        rw [if_pos (le_of_lt h3)]
+        exact h4
+      · push_neg at h4
+        refine ⟨3, ?_⟩
+        show d ∈ if G4 a b c ≤ τ then leaf a b c else ∅
+        rw [if_pos (le_of_lt h4)]
+        exact hleaf
+
+/-- Every abstract-ladder escape set has uniform measure at most `τ`, provided each level's heavy
+set does and the leaf does. The gates make three of the five cases vacuous. -/
+theorem adaptEsc_measure_le {F : Type*} [Fintype F] [Nonempty F] (G1 : ℝ≥0∞) (G2 : F → ℝ≥0∞)
+    (G3 : F → F → ℝ≥0∞) (G4 : F → F → F → ℝ≥0∞) (leaf : F → F → F → Set F) (τ : ℝ≥0∞)
+    (h2 : ∀ a, G2 a ≤ τ → (PMF.uniformOfFintype F).toOuterMeasure {x : F | τ ≤ G3 a x} ≤ τ)
+    (h1 : G1 ≤ τ → (PMF.uniformOfFintype F).toOuterMeasure {x : F | τ ≤ G2 x} ≤ τ)
+    (h3 : ∀ a b, G3 a b ≤ τ → (PMF.uniformOfFintype F).toOuterMeasure {x : F | τ ≤ G4 a b x} ≤ τ)
+    (h4 : ∀ a b c, G4 a b c ≤ τ → (PMF.uniformOfFintype F).toOuterMeasure (leaf a b c) ≤ τ)
+    (lvl : ℕ) (a b c : F) :
+    (PMF.uniformOfFintype F).toOuterMeasure (adaptEsc G1 G2 G3 G4 leaf τ lvl a b c) ≤ τ := by
+  match lvl with
+  | 0 =>
+      show (PMF.uniformOfFintype F).toOuterMeasure
+        (if G1 ≤ τ then {x : F | τ ≤ G2 x} else ∅) ≤ τ
+      split_ifs with h
+      · exact h1 h
+      · simp
+  | 1 =>
+      show (PMF.uniformOfFintype F).toOuterMeasure
+        (if G2 a ≤ τ then {x : F | τ ≤ G3 a x} else ∅) ≤ τ
+      split_ifs with h
+      · exact h2 a h
+      · simp
+  | 2 =>
+      show (PMF.uniformOfFintype F).toOuterMeasure
+        (if G3 a b ≤ τ then {x : F | τ ≤ G4 a b x} else ∅) ≤ τ
+      split_ifs with h
+      · exact h3 a b h
+      · simp
+  | 3 =>
+      show (PMF.uniformOfFintype F).toOuterMeasure
+        (if G4 a b c ≤ τ then leaf a b c else ∅) ≤ τ
+      split_ifs with h
+      · exact h4 a b c h
+      · simp
+  | _ + 4 =>
+      show (PMF.uniformOfFintype F).toOuterMeasure (∅ : Set F) ≤ τ
+      simp
+
+/-- **The query-loss bound for an update-form escape family.** With the per-point measure bound
+`hesc` — the level-wise averaging obligation described in this section's note — a `Q`-query
+adversary escapes with probability at most `Q · ε`. Blindness is automatic (`updEsc_blind`), so this
+is `escapesDuringC_measure_le'` with its harder hypothesis discharged structurally rather than by a
+decode. -/
+theorem updEsc_escapesDuringC_measure_le {T F : Type*} [Fintype T] [DecidableEq T] [Fintype F]
+    [Nonempty F] {α : Type*} (g : T → (T → F) → ℝ≥0∞) (τ : ℝ≥0∞) {ε : ℝ≥0∞}
+    (hesc : ∀ t O, (PMF.uniformOfFintype F).toOuterMeasure (updEsc g τ t O) ≤ ε)
+    {A : OracleComp T F α} {Q : ℕ} (hQ : A.QueryBound Q) :
+    (PMF.uniformOfFintype (T → F)).toOuterMeasure
+      {O : T → F | A.escapesDuringC (updEsc g τ) O} ≤ Q * ε :=
+  escapesDuringC_measure_le' (updEsc g τ) (updEsc_blind g τ) hesc hQ
+
 /-! ## The decoded escape composition
 
 Mirroring `StagedDecode` (`Forking.Adversary.OracleComp`): a transcript decoder recovers, at each
