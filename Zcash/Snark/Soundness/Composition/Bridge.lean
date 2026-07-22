@@ -436,7 +436,13 @@ noncomputable def member_snark_of_instance
 (`Soundness.KnowledgeSoundness`) at `circuitSat := circuitSatViaGates …` on the decoded member
 columns: its `opens` field is the IPA opening and its `satisfiesCircuit` field is exactly the gate
 check. This is the payload `ExtractableFromAcceptance` (`Soundness.Main`) *assumed* — an `IpaRelation`
-together with circuit satisfaction — now delivered on the computed path, so the bridge is retired. -/
+together with circuit satisfaction — now delivered on the computed path.
+
+That does *not* retire `ExtractableFromAcceptance`: what is delivered here is the payload's *shape*,
+from a `SnarkRelationWithMemberColumns` that the computed path still takes as supplied data
+(`pbatch`/`mdec`/`hquot`/`hgood` are hypotheses of `orchard_verifier_sound_vesta_computed` below, not
+consequences of an accepting run). Producing them from a bare accepting run is the open composition
+surface; see that theorem's docstring for the precise statement of what remains. -/
 theorem snarkRelation_of_memberColumns {G : Type*} [AddCommGroup G] [Module Fp G]
     [DecidableEq G] [Inhabited G] {shp : Shape} {urs : URS G} {hk : shp.k = urs.k}
     {vk : VerifyingKey shp Fp G} {ps : ProofString shp Fp G} {ch : Challenges shp.k Fp}
@@ -462,12 +468,18 @@ theorem snarkRelation_of_memberColumns {G : Type*} [AddCommGroup G] [Module Fp G
   ⟨hmem.opens, hmem.satisfiesCircuit⟩
 
 open Polynomial in
-/-- **Deployed soundness on the computed path — `ExtractableFromAcceptance` retired.** The same
-`SnarkRelation`-shaped conclusion as the conditional endpoint, but from the algebraic forking
-instance and the deployed gate data, with no assumed bridge: the clean-opening branch opens the
-deployed commitment and satisfies the member gate check, the non-clean branch returns a computed DL
-relation. `circuitSat` is not a free parameter — it is the concrete gate check on the decoded
-member columns. Supersedes the `_conditional` endpoints and `ExtractableFromAcceptance`. -/
+/-- **Deployed soundness on the computed path, per certificate.** From one algebraic forking
+certificate together with the deployed data — the batch `pbatch`, the member decode `mdec`, the
+gate checks `hquot`/`hgood`, the layout identities, and `hencodes` — the clean-opening branch opens
+the deployed commitment and satisfies the member gate check, and the non-clean branch returns a
+computed DL relation. `circuitSat` is not a free parameter: it is the concrete gate check on the
+decoded member columns.
+
+What this does *not* do is retire `ExtractableFromAcceptance`. The premise is absent from this
+signature, but only because the data it stood in for is supplied by hand instead; producing that
+data from a bare accepting run is the open composition surface. The conditional endpoint
+`orchard_verifier_sound_vesta_conditional` (`Soundness.Vesta`) still carries the assumed bridge,
+and the quantitative endpoint below is still conditional on `hExtract`. -/
 noncomputable def orchard_verifier_sound_vesta_computed
     {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)
     (cert : AlgebraicDForkCert (F := Fp)
