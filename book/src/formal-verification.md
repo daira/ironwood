@@ -103,12 +103,14 @@ capstones) — as build-time obligations expressed through two commands from `Zc
   direct terms of the inputs, so the break data cannot have been conjured from mere propositional
   existence. `+native` covers the Vesta producers.
 
-The one boundary kept as a literal pin is `Zcash.Snark.Fixtures.SingleAction.TrustBoundary`, which
-belongs to the `FixtureCheck` target (kept out of `lake build Zcash` because the captures are large
-and slow). There a `#guard_msgs`-pinned `#print axioms fingerprint_matches` documents precisely
-*which* compiler-trust axiom `native_decide` adds — on this toolchain a per-declaration axiom
+The boundaries kept as literal pins are the two fixture censuses,
+`Zcash.Snark.Fixtures.SingleAction.TrustBoundary` and `…MultiAction.TrustBoundary`, which belong to
+the `FixtureCheck` target (kept out of `lake build Zcash` because the captures are large and slow).
+Each states its tier with `assert_axioms` like the rest of the development, and *additionally*
+retains a `#guard_msgs`-pinned `#print axioms fingerprint_matches` documenting precisely *which*
+compiler-trust axiom `native_decide` adds — on this toolchain a per-declaration axiom
 (`…_native.native_decide.ax_1_1`), where older Lean versions used the global `Lean.ofReduceBool` —
-because for the captured fingerprint match the exact axiom set *is* the claim, the case
+because for a captured fingerprint match the exact axiom set *is* the claim, the case
 `Zcash.Meta.AxiomCheck` reserves the pinned form for. CI builds both `Zcash` and `FixtureCheck` as
 part of the default targets, and `fingerprint_matches`'s `native_decide` compiles and runs the
 verifier, so anything `noncomputable` on the assembled-verifier path fails the build.
