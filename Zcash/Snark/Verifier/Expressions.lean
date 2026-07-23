@@ -36,6 +36,17 @@ inductive Expr (F : Type*) where
   | product : Expr F → Expr F → Expr F
   | scaled : Expr F → F → Expr F
 
+/-- Carry a gate expression along a ring hom, leaf by leaf. -/
+def Expr.map {F G : Type*} (f : F → G) : Expr F → Expr G
+  | .constant c => .constant (f c)
+  | .fixed i => .fixed i
+  | .advice i => .advice i
+  | .instance i => .instance i
+  | .negated e => .negated (e.map f)
+  | .sum a b => .sum (a.map f) (b.map f)
+  | .product a b => .product (a.map f) (b.map f)
+  | .scaled e c => .scaled (e.map f) (f c)
+
 /-- Evaluate a gate polynomial at the claimed evaluations (halo2 `Expression::evaluate` with the
 verifier's closures): queries resolve to `fixedEvals`/`adviceEvals`/`instanceEvals` at their index. -/
 def Expr.eval {F : Type*} [CommRing F] (fixedEvals adviceEvals instanceEvals : ℕ → F) :
@@ -55,6 +66,74 @@ def Expr.eval {F : Type*} [CommRing F] (fixedEvals adviceEvals instanceEvals : �
 def compressExprs {F : Type*} [CommRing F] (fixedEvals adviceEvals instanceEvals : ℕ → F)
     (theta : F) (exprs : List (Expr F)) : F :=
   exprs.foldl (fun acc e => acc * theta + e.eval fixedEvals adviceEvals instanceEvals) (0 : F)
+
+/-- Evaluating a gate expression commutes with a ring hom: the AST is built from constants, column
+queries, and ring operations, so pushing `f` to the leaves gives the same value. -/
+theorem Expr.eval_map {F G : Type*} [CommRing F] [CommRing G] (f : F →+* G)
+    (fixedEvals adviceEvals instanceEvals : ℕ → F) (e : Expr F) :
+    f (e.eval fixedEvals adviceEvals instanceEvals)
+      = (e.map f).eval (fun i => f (fixedEvals i)) (fun i => f (adviceEvals i))
+          (fun i => f (instanceEvals i)) := by
+  induction e with
+  | constant c => simp [Expr.eval, Expr.map]
+  | fixed i => simp [Expr.eval, Expr.map]
+  | advice i => simp [Expr.eval, Expr.map]
+  | «instance» i => simp [Expr.eval, Expr.map]
+  | negated e ih => simp [Expr.eval, Expr.map, ih]
+  | sum a b iha ihb => simp [Expr.eval, Expr.map, iha, ihb]
+  | product a b iha ihb => simp [Expr.eval, Expr.map, iha, ihb]
+  | scaled e c ih => simp [Expr.eval, Expr.map, ih]
+
+/-- A `y`-fold of ring elements commutes with a ring hom. -/
+theorem RingHom.map_foldByY {F G : Type*} [CommRing F] [CommRing G] (f : F →+* G) (y : F)
+    (l : List F) (init : F) :
+    f (l.foldl (fun acc v => acc * y + v) init)
+      = (l.map f).foldl (fun acc v => acc * f y + v) (f init) := by
+  induction l generalizing init with
+  | nil => simp
+  | cons a t ih => simp [ih, map_add, map_mul]
+
+/-- Compressing a list of gate expressions by `theta` commutes with a ring hom. -/
+theorem compressExprs_map {F G : Type*} [CommRing F] [CommRing G] (f : F →+* G)
+    (fixedEvals adviceEvals instanceEvals : ℕ → F) (theta : F) (exprs : List (Expr F)) :
+    f (compressExprs fixedEvals adviceEvals instanceEvals theta exprs)
+      = compressExprs (fun i => f (fixedEvals i)) (fun i => f (adviceEvals i))
+          (fun i => f (instanceEvals i)) (f theta) (exprs.map (Expr.map f)) := by
+  unfold compressExprs
+  suffices h : ∀ (l : List (Expr F)) (init : F),
+      f (l.foldl (fun acc e => acc * theta + e.eval fixedEvals adviceEvals instanceEvals) init)
+        = (l.map (Expr.map f)).foldl
+            (fun acc e => acc * f theta + e.eval (fun i => f (fixedEvals i))
+              (fun i => f (adviceEvals i)) (fun i => f (instanceEvals i))) (f init) by
+    simpa using h exprs 0
+  intro l
+  induction l with
+  | nil => intro init; simp
+  | cons a t ih => intro init; simp [ih, map_add, map_mul, Expr.eval_map f]
+
+/-- Both folds inside `permChunkExpression` commute with a ring hom. -/
+theorem permChunk_left_map {F G : Type*} [CommRing F] [CommRing G] (f : F →+* G)
+    (beta gamma : F) (pairs : List (F × F)) (init : F) :
+    f (pairs.foldl (fun acc p => acc * (p.1 + beta * p.2 + gamma)) init)
+      = (pairs.map (fun p => (f p.1, f p.2))).foldl
+          (fun acc p => acc * (p.1 + f beta * p.2 + f gamma)) (f init) := by
+  induction pairs generalizing init with
+  | nil => simp
+  | cons a t ih => simp [ih, map_add, map_mul]
+
+theorem permChunk_right_map {F G : Type*} [CommRing F] [CommRing G] (f : F →+* G)
+    (gamma delta : F) (pairs : List (F × F)) :
+    ∀ init : F × F,
+      f ((pairs.foldl (fun acc p => (acc.1 * (p.1 + acc.2 + gamma), acc.2 * delta)) init).1)
+        = ((pairs.map (fun p => (f p.1, f p.2))).foldl
+            (fun acc p => (acc.1 * (p.1 + acc.2 + f gamma), acc.2 * f delta))
+            (f init.1, f init.2)).1 := by
+  induction pairs with
+  | nil => intro init; simp
+  | cons a t ih =>
+      intro init
+      simpa [map_add, map_mul] using
+        ih (init.1 * (a.1 + init.2 + gamma), init.2 * delta)
 
 /-- One chunk's step of the permutation argument's running product `z` (halo2
 `permutation/verifier.rs`): moving down one row, `z` multiplies in each column's factor
