@@ -2,6 +2,7 @@ import Mathlib
 import Zcash.Snark.Soundness.ConstraintSatisfaction
 import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.PermutationRows
+import Zcash.Snark.Soundness.GoodChallenge
 
 /-!
 # The verifier's lookup constraints, read row by row
@@ -22,6 +23,7 @@ The last two facts feed `Lookup.run_structure`; the first three telescope throug
 namespace Zcash.Snark
 
 open Polynomial Finset
+open scoped ENNReal
 
 /-- Polynomial-valued lookup evaluations.  The next product and previous permuted-input openings
 are represented by composing with `ω X` and `ω⁻¹ X`, respectively. -/
@@ -167,6 +169,26 @@ theorem lookup_product_eq_or_factor_eq_zero
 noncomputable def lookupColumnRows (omega : Fp) (p : Polynomial Fp) (m : ℕ) : Fin m → Fp :=
   fun i => p.eval (omega ^ (i : ℕ))
 
+/-- Challenge values that make one row of a compressed lookup column's additive factor vanish. -/
+noncomputable def lookupColumnZeroBadSet
+    (omega : Fp) (p : Polynomial Fp) (m : ℕ) : Finset Fp :=
+  additiveZeroBadSet (lookupColumnRows omega p m)
+
+/-- Membership in a lookup-column zero set is exactly a vanishing row factor. -/
+theorem mem_lookupColumnZeroBadSet_iff
+    (omega : Fp) (p : Polynomial Fp) (m : ℕ) (challenge : Fp) :
+    challenge ∈ lookupColumnZeroBadSet omega p m ↔
+      ∃ i : Fin m, p.eval (omega ^ (i : ℕ)) + challenge = 0 := by
+  exact mem_additiveZeroBadSet_iff (lookupColumnRows omega p m) challenge
+
+/-- The zero-factor exclusion for one compressed lookup column costs at most one challenge value
+per participating row. -/
+theorem uniformChallenge_lookupColumnZeroBadSet
+    (omega : Fp) (p : Polynomial Fp) (m : ℕ) :
+    uniformChallenge.toOuterMeasure (lookupColumnZeroBadSet omega p m)
+      ≤ (m : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞) := by
+  simpa using uniformChallenge_additiveZeroBadSet (lookupColumnRows omega p m)
+
 /-- The five deployed lookup constraints for coherent base polynomials, each known to vanish on the
 size-`n` evaluation domain.  This is the compact interface between family-level
 `ConstraintSatisfaction` and the row-semantic endpoint below. -/
@@ -241,5 +263,50 @@ theorem deployed_lookup_subset
       (lookup_run_structure_of_dvd omega a s l0P lLastP lBlindP homega
         hdvd.runStart hdvd.runStep hrow hactive hl0) i
   · exact Or.inr hzero
+
+/-- **The deployed lookup argument without a residual zero branch.** Avoiding one `β` value per
+compressed input row and one `γ` value per compressed table row rules out the legitimate
+zero-product case left by `deployed_lookup_subset`, so every compressed input row occurs in the
+compressed table.  These exclusions are schedule-correct: the compressed columns are fixed after
+`θ`, before `β` and `γ` are squeezed. -/
+theorem deployed_lookup_subset_of_nonzero_challenges
+    (omega beta gamma : Fp) (z a s input table l0P lLastP lBlindP : Polynomial Fp)
+    {n u : ℕ}
+    (hdvd : LookupConstraintsDvd n omega beta gamma z a s input table l0P lLastP lBlindP)
+    (homega : omega ≠ 0)
+    (hrow : ∀ i : ℕ, (omega ^ i) ^ n = 1)
+    (hactive : ∀ i < u + 1,
+      1 - (lLastP.eval (omega ^ i) + lBlindP.eval (omega ^ i)) ≠ 0)
+    (hl0 : l0P.eval (omega ^ 0) ≠ 0)
+    (hlast : lLastP.eval (omega ^ (u + 1)) ≠ 0)
+    (hgoodGamma : gamma ∉ szBadSet
+      ((lookupProdDiff
+        (univ.val.map (lookupColumnRows omega a (u + 1)))
+        (univ.val.map (lookupColumnRows omega s (u + 1)))
+        (univ.val.map (lookupColumnRows omega input (u + 1)))
+        (univ.val.map (lookupColumnRows omega table (u + 1)))).map (evalRingHom beta)))
+    (hgoodBeta : ∀ j, beta ∉ szBadSet
+      ((lookupProdDiff
+        (univ.val.map (lookupColumnRows omega a (u + 1)))
+        (univ.val.map (lookupColumnRows omega s (u + 1)))
+        (univ.val.map (lookupColumnRows omega input (u + 1)))
+        (univ.val.map (lookupColumnRows omega table (u + 1)))).coeff j))
+    (hinputNonzero : beta ∉ lookupColumnZeroBadSet omega input (u + 1))
+    (htableNonzero : gamma ∉ lookupColumnZeroBadSet omega table (u + 1)) :
+    ∀ i : Fin (u + 1), ∃ j : Fin (u + 1),
+      lookupColumnRows omega input (u + 1) i =
+        lookupColumnRows omega table (u + 1) j := by
+  rcases deployed_lookup_subset omega beta gamma z a s input table l0P lLastP lBlindP
+      hdvd homega hrow hactive hl0 hlast hgoodGamma hgoodBeta with hsubset | hzero
+  · exact hsubset
+  · exfalso
+    rcases hzero with ⟨i, hi, hfactor⟩
+    rcases mul_eq_zero.mp hfactor with hinput | htable
+    · apply hinputNonzero
+      rw [mem_lookupColumnZeroBadSet_iff]
+      exact ⟨⟨i, Finset.mem_range.mp hi⟩, hinput⟩
+    · apply htableNonzero
+      rw [mem_lookupColumnZeroBadSet_iff]
+      exact ⟨⟨i, Finset.mem_range.mp hi⟩, htable⟩
 
 end Zcash.Snark

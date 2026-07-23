@@ -40,6 +40,8 @@ import Zcash.Snark.Soundness.PermutationInstantiation
 import Zcash.Snark.Soundness.PermutationSemantics
 import Zcash.Snark.Soundness.CircuitSatisfaction
 import Zcash.Snark.Soundness.OperationCopies
+import Zcash.Snark.Soundness.OperationLookups
+import Zcash.Snark.Soundness.CircuitIntegration
 import Zcash.Snark.Soundness.InnerProduct
 import Zcash.Snark.Soundness.TrustBoundary
 import Zcash.Snark.Soundness.Extraction
@@ -47,6 +49,7 @@ import Zcash.Snark.Soundness.Constraints
 import Zcash.Snark.Soundness.ConstraintSatisfaction
 import Zcash.Snark.Soundness.LookupRows
 import Zcash.Snark.Soundness.LookupInstantiation
+import Zcash.Snark.Soundness.LookupSemantics
 import Zcash.Snark.Soundness.FoldSplit
 import Zcash.Snark.Soundness.CommitFold
 import Zcash.Snark.Soundness.Consistency

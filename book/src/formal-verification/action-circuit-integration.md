@@ -299,6 +299,27 @@ themselves are already eliminated by the priced `γ` exclusion above. The concre
 layout instantiation only has to encode endpoints as keygen cells (including
 constants-column allocations) and identify their environment reads.
 
+The generic lookup and reassembly halves are now present too.
+`operationEnabledLookups` extracts every placed `enableLookup` activation and
+`lookup_constraints_iff_enabledLookups` proves that their tuple membership is exactly
+the full record's lookup field. `resolverLookupSubset` joins the five resolver-backed
+constraint families to the deployed row theorem. Its `β`/`γ` zero-product branch is
+eliminated by `lookupColumnZeroBadSet`, at one excluded challenge value per usable
+row. `foldPoly_injective_of_length_eq` then proves the separate `θ` step:
+equal-length tuples with equal compressions are equal outside their explicit
+compression-difference root set. `EnabledLookup.thetaBadSet` unions those roots over
+the usable table rows and bounds the event by
+`usableRows × tupleArity / |Fp|`.
+
+`EnabledLookup.DeployedWitness` packages the remaining representation facts for one
+activation: the matching resolver input/table polynomials, row-evaluation coherence,
+usable-row count, tuple arity, scalar subset, and good `θ`. Finally,
+`FullCircuitBridge` combines those lookup witnesses with gate/fixed satisfaction and
+the copy-replay witness. Its `satisfaction_or_bad` theorem returns the exact
+`FullCircuitSatisfaction` record, and `constraints_or_bad` returns Clean's single
+ground-truth `Halo2.Constraints`. The remaining Action-specific work is therefore
+construction of these records, not another semantic proof.
+
 The per-gate half of that translation is proven
 (`eraseExpr_substSelectorMap_eval` plus the packed-selector row algebra), and the
 reassembly should be stated *generically*: one theorem by induction
