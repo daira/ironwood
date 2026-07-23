@@ -133,6 +133,16 @@ open Zcash.Snark
 assert_computable NontrivialDLRelation.ofCollision +choice
 assert_computable NontrivialDLRelation.ofIpaOpenings +choice
 
+/-! ### Verifier-soundness capstones -/
+
+assert_axioms deployedAccepts_verifierEq
+assert_axioms orchard_verifier_sound_conditional
+assert_axioms orchard_verifier_deployed_opening_of_forked
+assert_axioms orchard_verifier_deployed_constraint_of_forked
+assert_axioms orchard_verifier_sound_vesta_conditional +native
+assert_axioms orchard_verifier_vesta_opening_of_forked +native
+assert_axioms orchard_verifier_vesta_constraint_of_forked +native
+
 /-! ### Deployed binding-reduction breaks
 
 The binding reductions return computed data (plain `def`s); the same treatment covers the forking
