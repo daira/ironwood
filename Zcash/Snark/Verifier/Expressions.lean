@@ -321,6 +321,23 @@ theorem subProofConstraints_map {F G : Type*} [CommRing F] [CommRing G] (f : F �
   · exact List.map_congr_left fun g _ => Expr.eval_map f _ _ _ g
   · exact congrArg List.flatten (List.map_congr_left fun lk _ => lookupExpressions_map f ..)
 
+/-- The rule chaining chunk `c` to chunk `c + 1` is one of the permutation constraint values: the
+next chunk's running product starts where this one's ended. -/
+theorem chain_mem_permutationExpressions {F : Type*} [CommRing F]
+    (sets : List (PermSetEval F)) (chunks : List (PermSetEval F × List (F × F)))
+    (beta gamma x delta : F) (chunkLen : ℕ) (l0 lLast lBlind : F)
+    {c : ℕ} (hc : c + 1 < sets.length) :
+    (sets[c + 1].eval - sets[c].lastEval.getD 0) * l0
+      ∈ permutationExpressions sets chunks beta gamma x delta chunkLen l0 lLast lBlind := by
+  unfold permutationExpressions
+  refine List.mem_append.mpr (Or.inl (List.mem_append.mpr (Or.inr
+    (List.mem_map.mpr ⟨(sets[c + 1], sets[c]), ?_, rfl⟩))))
+  have hlen : ((sets.drop 1).zip sets).length = sets.length - 1 := by
+    simp [List.length_zip]
+  refine List.mem_iff_getElem.mpr ⟨c, by rw [hlen]; omega, ?_⟩
+  rw [List.getElem_zip, List.getElem_drop]
+  simp [Nat.add_comm]
+
 /-- The lookup rules, written out: start, end, the step rule, the row-0 equality, and the
 run-structure rule. -/
 theorem lookupExpressions_eq {F : Type*} [CommRing F] (le : LookupEval F)

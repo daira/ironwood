@@ -554,7 +554,6 @@ assert_axioms grandProduct_eq_or_cell_eq_zero
 assert_axioms multiset_pair_eq_of_prod_eval_eq
 assert_axioms cellPairs_eq_of_running_product
 assert_axioms perm_copy_constraints_of_running_product
-assert_axioms telescope_chunks
 assert_axioms lookup_multisets_of_prod_eval_eq
 assert_axioms lookup_multisets_of_diff_eq_zero
 assert_axioms lookup_subset_of_components
@@ -580,7 +579,6 @@ assert_axioms end_mem_permutationExpressions
 assert_axioms mem_subProofConstraints_of_mem_permutationExpressions
 assert_axioms mem_allConstraints_of_mem_subProofConstraints
 assert_axioms mem_constraintPolys_of_mem_permutationExpressions
-assert_axioms flat_recurrence
 assert_axioms head?_deployedPermSets
 assert_axioms getLast?_deployedPermSets
 assert_axioms deployed_copy_constraints_of_identity
@@ -602,9 +600,10 @@ assert_axioms deployed_lookup_relation_of_identity
 assert_axioms constraint_identity_of_hfold
 assert_axioms declared_equalities_of_running_product
 assert_axioms deployed_declared_equalities_of_identity
-assert_axioms flatCell_injective
-assert_axioms name_injective_flat
-assert_axioms perm_copy_constraints_of_chunks
+assert_axioms prod_map_chunkCellPairs
+assert_axioms perm_copy_constraints_of_chunk_products
+assert_axioms chunkName_injective_of_coset
+assert_axioms deployed_declared_equalities_of_identity_chunks
 assert_axioms circuitSatViaConstraints_of_check
 assert_axioms orchard_verifier_sound_vesta_constraints
 -- Closing the loop: the capstone hands over an opening paired with satisfaction of the whole
@@ -612,6 +611,11 @@ assert_axioms orchard_verifier_sound_vesta_constraints
 assert_axioms snarkRelation_constraints
 assert_axioms declared_equalities_of_circuitSat
 assert_axioms lookup_relation_of_circuitSat
+-- Several permutation chunks, not one: the chaining rule located in the list, read at row zero, and
+-- the chunks flattened into a single running product so the permutation acts on every cell.
+assert_axioms chain_mem_permutationExpressions
+assert_axioms running_product_chain
+assert_axioms deployed_copy_constraints_of_identity_chunks
 assert_axioms hgood_failure_priced
 assert_axioms hgood_of_good_challenge
 -- The UNCONDITIONAL decomposition: `hExtract` removed, the residual quantified as the
