@@ -205,8 +205,15 @@ nontrivial-relation branch. It feeds the clean branch directly into the lookup
 instantiation theorem. The grouping layer now proves claimed-value faithfulness on
 the verifier's non-duplicate path, constructs the commitment-ID route automatically,
 and derives its coverage and non-duplication premises from a successful `assemble?`.
-The analogous permutation-set/chunk routing into
-`deployed_perm_copy_constraints_all_chunks` remains.
+`PermutationInstantiation` now supplies the analogous permutation layer. It maps
+running products through `permProduct`, maps each chunk's value-side `ColumnRef`
+through the corresponding VK query-layout entry, maps its σ-side through
+`permCommon`, and proves that evaluating the resulting polynomial records reproduces
+`subProofPermSets` and `subProofPermChunks`. The decoded-member specialization retains
+the nontrivial-relation branch. Its resolver-backed constraint model and
+`ResolverPermutationConstraints` package extract the exact step, inter-set chain,
+start, and end divisibility facts consumed by
+`deployed_perm_copy_constraints_all_chunks`.
 
 The active item-4 sequence is:
 
@@ -220,10 +227,16 @@ The active item-4 sequence is:
 4. package the resulting gate, copy, and lookup conclusions as the full
    circuit-satisfaction interface consumed by the Clean-operation bridge.
 
-Steps 1 and 2 are complete. The next implementation slice is step 3: relate the
-decoded members belonging to the permutation product point sets to the chunk indices
-used by `deployed_perm_copy_constraints_all_chunks`, while retaining the same
-nontrivial-relation alternative supplied by member-node binding.
+Steps 1 and 2 are complete, and the polynomial-instantiation half of step 3 is
+complete. Closing step 3 now means supplying the theorem's semantic/VK side
+conditions: the concrete chunks match the permutation-set count; every chunk
+`ColumnRef` selects an in-range, rotation-zero query-layout entry and every
+`permCommon` index is in range; `ω^m` is the verifier's last-row rotation; the replayed
+keygen σ maps each cell to the permutation-column name used by the constraint; the
+cell names are injective; and the domain/challenge conditions required by
+`deployed_perm_copy_constraints_all_chunks` hold. These facts are deliberately
+separate from polynomial routing: most are circuit/VK computations or the σ-cycle
+correctness theorem, not multiopen claims.
 
 After that, translate the endpoints to the exact relations that Clean's
 `Halo2.Constraints` requires: declared `constrainEqual`/`constrainInstance` copies,
