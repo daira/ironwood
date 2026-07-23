@@ -62,7 +62,7 @@ def compressExprs {F : Type*} [CommRing F] (fixedEvals adviceEvals instanceEvals
 name `σ` assigns it. Over the whole table the two must cancel — the multiset identity that
 `Soundness/Permutation.lean` turns into the copy constraints. Switched off on the last/blinding
 rows. -/
-def permChunkExpression {F : Type*} [Field F] (beta gamma x delta : F) (chunkLen chunkIndex : ℕ)
+def permChunkExpression {F : Type*} [CommRing F] (beta gamma x delta : F) (chunkLen chunkIndex : ℕ)
     (set : PermSetEval F) (pairs : List (F × F)) (lLast lBlind : F) : F :=
   let left := pairs.foldl (fun acc p => acc * (p.1 + beta * p.2 + gamma)) set.nextEval
   let deltaStart := beta * x * delta ^ (chunkIndex * chunkLen)
@@ -74,7 +74,7 @@ def permChunkExpression {F : Type*} [Field F] (beta gamma x delta : F) (chunkLen
 the running product must start at `1` and end at `0` or `1`, consecutive sets must chain (each
 set's start equals the previous set's end), and every chunk must satisfy the step rule
 (`permChunkExpression`). `chunks` pairs each set with its `(columnEval, permEval)` list. -/
-def permutationExpressions {F : Type*} [Field F] (sets : List (PermSetEval F))
+def permutationExpressions {F : Type*} [CommRing F] (sets : List (PermSetEval F))
     (chunks : List (PermSetEval F × List (F × F))) (beta gamma x delta : F) (chunkLen : ℕ)
     (l0 lLast lBlind : F) : List F :=
   (match sets.head? with | some first => [l0 * (1 - first.eval)] | none => [])
@@ -88,7 +88,7 @@ product must start at `1` and end at `0` or `1`; its step multiplies in the comp
 factors and divides out the permuted columns' `(a'+β)·(s'+γ)`; and the permuted columns must
 satisfy the two run-structure rules that `Soundness/Lookup.run_structure` consumes as hypotheses.
 `active = 1 − (l_last + l_blind)` switches rules off on the last/blinding rows. -/
-def lookupExpressions {F : Type*} [Field F] (le : LookupEval F) (inputExprs tableExprs : List (Expr F))
+def lookupExpressions {F : Type*} [CommRing F] (le : LookupEval F) (inputExprs tableExprs : List (Expr F))
     (fixedEvals adviceEvals instanceEvals : ℕ → F) (theta beta gamma l0 lLast lBlind : F) : List F :=
   let active := 1 - (lLast + lBlind)
   let left := le.productNextEval * (le.permutedInputEval + beta) * (le.permutedTableEval + gamma)
