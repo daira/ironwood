@@ -19,8 +19,8 @@ semantics (`derive_gates_eval`) to any verifying key whose gate list equals a
 derivation's — the gate-side input to the Clean-constraints transport. `actionCS` is
 the Action instance of the source constraint system.
 
-This module also hosts the DERIVED keygen witnesses of the pinned-CS derivation: the
-Action circuit's keygen-view operation stream (`actionOperations`) and the
+This module also hosts the DERIVED keygen data of the pinned-CS derivation: the
+closed Action circuit's operation stream (`actionOperations`) and the
 selector-compression map computed from it end to end (`actionSelMapDerived`) — synthesize
 mirror → region shapes → V1 floor-planner placement → selector activations →
 `compress_selectors`. Everything here is pure term-level data (no fixture reads); the
@@ -74,34 +74,15 @@ open Circuits.Action.Circuit in
 def actionConfig : Config :=
   (configure orchardGenerators {}).1
 
-open Circuits.Action.Circuit in
-/-- Keygen-view witnesses: every program `Value::unknown()`-shaped. Keygen synthesizes
-`without_witnesses()` (`plonk/keygen.rs`) and never evaluates witness programs, so
-`actionOperations` — and everything derived from it — is witness-independent; these are
-the canonical unknown-shaped programs (the same set as the layout tests'
-`TestVkLayoutAction.aW`). -/
-def keygenWitnesses : Witnesses Fp :=
-  let unk : Witgen.MOver Fp (AssignedCell Fp) (FExpr Fp) := pure (.const 0)
-  let unkPoint : Witgen.MOver Fp (AssignedCell Fp) (Circuits.Point (FExpr Fp)) :=
-    pure { x := .const 0, y := .const 0 }
-  let unkNat : Witgen.MOver Fp (AssignedCell Fp) (NExpr Fp) := pure (.const 0)
-  { psiOld := unk, rhoOld := unk, nk := unk, vOld := unk, vNew := unk, psiNew := unk,
-    magnitude := unk, sign := unk,
-    cmOld := unkPoint, gdOld := unkPoint, akP := unkPoint, pkDOld := unkPoint,
-    gdNew := unkPoint, pkdNew := unkPoint,
-    rcv := unkNat, alpha := unkNat, rivk := unkNat,
-    rcmOld := unkNat, rcmNew := unkNat,
-    merkleSib := fun _ => .native fun _ => #v[(0 : Fp)],
-    merkleSwap := fun _ _ => false }
-
-open Circuits.Action (orchardBases) in
-/-- The ironwood (post-NU 6.3) Action circuit's keygen-view operation stream, at the
-real certified bases — the object the layout tests mirror as
+open Circuits.Action (orchardActionCircuit) in
+/-- The closed ironwood Action circuit's operation stream at the real certified bases.
+Key generation does not evaluate witness programs, so the fixed hint-backed programs
+affect assigned expressions but not the circuit's layout. This is the object the layout
+tests mirror as
 `TestVkLayoutAction.aProgram` (its placements, copies, σ and fixed contents are pinned
 against the Rust dump there and in `TestFloorPlanner`). -/
 def actionOperations : Operations Fp :=
-  (Circuits.Action.Circuit.synthesize orchardGenerators orchardBases keygenWitnesses
-    actionConfig).operations
+  (orchardActionCircuit.synthesize actionConfig ()).operations
 
 /-- The selector-compression map, DERIVED end to end from the ported circuit: V1
 floor-planner placements (`FloorPlanner.V1.starts`, the legacy-pdqsort port) → selector
@@ -150,11 +131,11 @@ def actionK : ℕ := minimalK actionCS actionOperations
 /-- Binary exponentiation (`Monoid.npow`'s default recursion is linear — unusable for
 exponents of order `p/2^k`). -/
 def powFast (b : Fp) (n : ℕ) : Fp :=
-  if h : n = 0 then 1
+  if n = 0 then 1
   else
     let r := powFast (b * b) (n / 2)
     if n % 2 = 1 then b * r else r
-  decreasing_by exact Nat.div_lt_self (Nat.pos_of_ne_zero h) one_lt_two
+  decreasing_by omega
 
 /-- The size-`2^k` domain's root of unity: pasta `Fp::GENERATOR = 5`,
 `ROOT_OF_UNITY = 5^((p−1)/2^32)`, and `EvaluationDomain::new` squares it down `32 − k`

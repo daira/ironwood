@@ -46,11 +46,22 @@ commitments remain explicit inputs to the verifier and soundness stack.
 
 ```text
 Clean environment assumptions
-  + exact synthesized-operation constraints
+  + exact constraints of the closed, unit-input synthesis
   -> SpecPost realGenerators realBases extractedActionData.
 ```
 
-The intended final adapter is small once those premises are available:
+Both proof-carrying Action circuits now expose `unit` input. Their prover choices are
+the fixed `Action.Circuit.hintWitnesses` program: field, point, scalar, and Merkle-path
+values are read from the runtime `ProverHint` through `hintGet` (the existing native
+Merkle-swap function reads the same hint environment). The raw
+`synthesizeBase ... W` function remains useful for internal circuit lemmas, but neither
+the base nor post-Ironwood `FormalCircuit` lets its caller select `W`.
+
+Correspondingly, `Bridge.actionOperations` is synthesized from the real
+`orchardActionCircuit` at unit input. The separate synthetic
+`Bridge.keygenWitnesses` value has been removed.
+
+The intended final adapter is small once the remaining premises are available:
 
 ```text
 placed Clean environment satisfying `mainPost`
@@ -160,7 +171,8 @@ state that the actual `VerifyingKey` fields used by `Zcash.Snark` correspond to:
   the derivation's activation input circuit-side) and the permutation columns (with
   the commitment-matching phase);
 - `Action.Circuit.configure orchardGenerators` after selector compression;
-- the post-NU6.3 `mainPost` layout at `orchardBases`;
+- the closed post-NU6.3 `mainPost` layout at `orchardBases`, whose operation stream is
+  now derived directly from `orchardActionCircuit`;
 - the fixed commitments, permutation commitments, and query/chunk ordering produced
   by key generation.
 
@@ -361,8 +373,7 @@ From the recovered per-column row values, build:
 - `Environment.usableRows` from `n` and the VK blinding factor;
 - the post-NU6.3 floor-planner placement;
 - the concrete `Config` returned by `Action.Circuit.configure`;
-- an arbitrary `PrivateInputs.Var` (soundness does not inspect its verifier value;
-  extraction reads the environment).
+- the unit input of the closed Action circuit.
 
 Then prove `Action.Circuit.EnvAssumptions`, including generator-table exactness, all
 table-loaded facts, fixed-base environment assumptions, and selector distinctness.
@@ -376,6 +387,12 @@ polynomials through `resolverEnvironment`, and packages the result as a placed C
 environment. `ActionAssignment.ofDecodedMembers` specializes this to the actual
 `decodedPolynomialResolver`; the remaining work is proving the concrete VK and public
 instance polynomials satisfy the Action-specific representation facts below.
+
+The top-level `EnvAssumptions` field has not yet been closed: it is still inherited by
+the base and post-Ironwood bundles so their existing proofs typecheck. The next circuit
+boundary change is to make the post-Ironwood bundle's environment assumption `True`
+and derive the child table/config/usable-row facts internally from transported
+constraints plus the generic compiler/VK well-formedness facts.
 
 Note that most of `EnvAssumptions` should come out of the transported `Constraints`
 themselves rather than separate VK-fixed-data facts: `GeneratorTableExact` is defined
@@ -434,6 +451,9 @@ whose public inputs were committed by the verifier.
 
 ## Suggested implementation order
 
+0. Complete: close both Action circuit inputs to `unit`, instantiate all prover choices
+   with the fixed hint-backed witness program, and derive `actionOperations` from the
+   real proof-carrying circuit.
 1. Complete: instantiate #91's constraint split at the deployed list, route the
    permutation and lookup members to its proved endpoints, and expose a full
    circuit-satisfaction record in the computed endpoint.
