@@ -5,6 +5,9 @@ import Zcash.Snark.Soundness.Forking.Adversary
 import Zcash.Snark.Soundness.Composition.Bridge
 import Zcash.Snark.Soundness.Multiopen.BudgetedExtraction
 import Zcash.Snark.Soundness.VestaBudget
+import Zcash.Snark.Soundness.FoldSplit
+import Zcash.Snark.Soundness.GrandProductBridge
+import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.Composition.Decomposition
 import Zcash.Snark.Soundness.Composition.Residual
 import Zcash.Snark.Soundness.Composition.Prefixes
@@ -378,6 +381,17 @@ assert_no_sorry eval_constraintPolys
 assert_no_sorry eval_combineConstraints
 assert_no_sorry eval_combineConstraints_deployed
 assert_no_sorry hfold_of_constraint_polys
+-- The permutation and lookup arguments closed from the verifier's own row checks: the combined
+-- check splits into its parts, the running product telescopes across the rows, two challenge root
+-- counts turn the product into a multiset identity, and the existing structural theorems turn that
+-- into the copy constraints and the lookup inclusion.
+assert_no_sorry constraints_dvd_of_good_y
+assert_no_sorry telescope_running_product
+assert_no_sorry grandProduct_eq_or_cell_eq_zero
+assert_no_sorry multiset_pair_eq_of_prod_eval_eq
+assert_no_sorry cellPairs_eq_of_running_product
+assert_no_sorry perm_copy_constraints_of_running_product
+assert_no_sorry lookup_subset_of_run_structure
 assert_no_sorry hgood_failure_priced
 assert_no_sorry hgood_of_good_challenge
 -- The UNCONDITIONAL decomposition: `hExtract` removed, the residual quantified as the
