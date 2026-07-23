@@ -17,8 +17,9 @@ integration roadmap):
   another member's root is written (`_of_other`), nonzero at the selector's own root
   (`_of_root`). This is the algebra that turns "the compressed gate vanishes" into
   "the gated constraint vanishes" at enabled rows.
-* `Expression.selectorFree` and `substSelectorMap_selectorFree` — compression under a
-  total map leaves no selector atom, so the erasure's junk selector arm is unreachable.
+* `Expression.selectorFree` and `substSelectorMap_selectorFree` — compression leaves
+  exactly the uncovered selector atoms (`selectorsCovered`), so for a covering map the
+  erasure's junk selector arm is unreachable.
 * `eraseExpr_eval` — the query-walk erasure of a selector-free expression evaluates to
   the original, when the evaluation families interpret the walk's final query layout
   (`Interprets`).
@@ -26,6 +27,27 @@ integration roadmap):
   pipeline evaluates to the original Clean gate expression under the
   selector-replacement valuation.
 -/
+
+namespace Halo2.Expression
+
+/-- No `Query.selector` atom occurs in the expression. -/
+def selectorFree {F : Type} : Expression F Query → Bool
+  | .var (.selector _) => false
+  | .var _ => true
+  | .const _ => true
+  | .add a b => a.selectorFree && b.selectorFree
+  | .mul a b => a.selectorFree && b.selectorFree
+
+/-- Every selector atom's index satisfies `dom` — with `dom := (m · |>.isSome)`, the
+compression map covers the expression. -/
+def selectorsCovered {F : Type} (dom : ℕ → Bool) : Expression F Query → Bool
+  | .var (.selector s) => dom s.index
+  | .var _ => true
+  | .const _ => true
+  | .add a b => a.selectorsCovered dom && b.selectorsCovered dom
+  | .mul a b => a.selectorsCovered dom && b.selectorsCovered dom
+
+end Halo2.Expression
 
 namespace Zcash.Circuits.Fixtures
 
@@ -154,14 +176,6 @@ replaces every one by its root-finding polynomial, whose atoms are a fixed query
 constants. `Expression.selectorFree` is the Boolean witness `eraseExpr_eval` consumes to
 rule the erasure's junk selector arm unreachable. -/
 
-/-- No `Query.selector` atom occurs in the expression. -/
-def _root_.Halo2.Expression.selectorFree {F : Type} : Expression F Query → Bool
-  | .var (.selector _) => false
-  | .var _ => true
-  | .const _ => true
-  | .add a b => a.selectorFree && b.selectorFree
-  | .mul a b => a.selectorFree && b.selectorFree
-
 private theorem selectorFree_foldl_mul (fs : List (Expression Fp Query))
     (acc : Expression Fp Query) (hacc : acc.selectorFree = true)
     (hfs : ∀ f ∈ fs, f.selectorFree = true) :
@@ -188,29 +202,33 @@ theorem selReplacement_selectorFree (d : SelCompress) :
     subst hj
     rfl
 
-/-- Compression under a total map leaves no selector atom. -/
+/-- Compression leaves exactly the uncovered selector atoms: the substituted expression
+is selector-free iff the map covers every selector occurrence. -/
 theorem substSelectorMap_selectorFree (m : ℕ → Option SelCompress)
-    (hm : ∀ i, (m i).isSome) (e : Expression Fp Query) :
-    (substSelectorMap m e).selectorFree = true := by
+    (e : Expression Fp Query) :
+    (substSelectorMap m e).selectorFree
+      = e.selectorsCovered (fun i => (m i).isSome) := by
   induction e with
   | var q =>
       cases q with
       | selector sel =>
           cases hs : m sel.index with
           | some d =>
-              simp only [substSelectorMap, hs]
+              simp only [substSelectorMap, hs, Expression.selectorsCovered,
+                Option.isSome_some]
               exact selReplacement_selectorFree d
-          | none => exact absurd (hm sel.index) (by simp [hs])
+          | none => simp [substSelectorMap, hs, Expression.selectorsCovered,
+              Expression.selectorFree]
       | fixed c r => rfl
       | advice c r => rfl
       | «instance» c r => rfl
   | const c => rfl
   | add a b iha ihb =>
-      show (Expression.add _ _).selectorFree = true
-      simp [Expression.selectorFree, iha, ihb]
+      show (Expression.add _ _).selectorFree = _
+      simp [Expression.selectorFree, Expression.selectorsCovered, iha, ihb]
   | mul a b iha ihb =>
-      show (Expression.mul _ _).selectorFree = true
-      simp [Expression.selectorFree, iha, ihb]
+      show (Expression.mul _ _).selectorFree = _
+      simp [Expression.selectorFree, Expression.selectorsCovered, iha, ihb]
 
 /-! ## The query walk interprets its own layout
 
@@ -538,13 +556,15 @@ the selector-replacement valuation. Composition of `eraseExpr_eval` with
 `substSelectorMap_eval`; one application per gate polynomial per row is the gate
 portion of the Clean-constraints transport. -/
 theorem eraseExpr_substSelectorMap_eval (m : ℕ → Option SelCompress)
-    (hm : ∀ i, (m i).isSome) (fE aE iE : ℕ → Fp) (v : Query → Fp)
+    (fE aE iE : ℕ → Fp) (v : Query → Fp)
     (p : Expression Fp Query) (s sfin : QueryState)
+    (hcov : p.selectorsCovered (fun i => (m i).isSome) = true)
     (hext : sfin.Extends (eraseExpr (substSelectorMap m p) s).2)
     (hint : Interprets sfin fE aE iE v) :
     Expr.eval fE aE iE (eraseExpr (substSelectorMap m p) s).1
       = p.eval (substValuation m v) := by
-  rw [eraseExpr_eval fE aE iE v _ s sfin (substSelectorMap_selectorFree m hm p) hext hint,
+  rw [eraseExpr_eval fE aE iE v _ s sfin
+      ((substSelectorMap_selectorFree m p).trans hcov) hext hint,
     substSelectorMap_eval]
 
 end Zcash.Circuits.Fixtures
