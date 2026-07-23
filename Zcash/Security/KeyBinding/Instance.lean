@@ -16,14 +16,14 @@ namespace Zcash.Security
 
 open Zcash.Security.KeyBinding Zcash.Security.Ledger Zcash.Security.RandomOracle Zcash.Snark
 
-variable {G F IVK AK NK SK QK : Type*}
+variable {G IVK AK NK RIVK ASK QK SK : Type*}
 
 /-- The concrete key-binding witness, viewed through the games' `KeyBindingInterface`. -/
 def KeyBinding.toInterface
-    [AddCommGroup G] [Field F] [Field IVK] [Module F G]
-    (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → F) (Ggen : G)
-    (H : Oracles F AK NK SK QK) :
-    KeyBindingInterface (KeyBinding.Witness G F IVK AK NK SK QK) G IVK NK where
+    [AddCommGroup G] [Field RIVK] [Field IVK] [Module RIVK G] [SMul ASK G]
+    (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK) (Ggen : G)
+    (H : Oracles AK NK RIVK ASK QK SK) :
+    KeyBindingInterface (KeyBinding.Witness G IVK AK NK RIVK QK SK) G IVK NK where
   ivk w := w.ivk
   nk w := w.nk
   akP w := w.akP
@@ -41,26 +41,27 @@ probability at most `(n+4)·(n+3)/|F|`. `toInterface` interprets `Break` as
 `KeyBinding.Break` definitionally, so the games' `∨ kv.Break` branches inherit the bound
 directly. -/
 theorem toInterface_break_measure_le {ι : Type*}
-    [AddCommGroup G] [Field F] [Field IVK] [Module F G] [NoZeroSMulDivisors F G]
-    [Fintype QK] [Fintype SK] [Fintype AK] [Fintype NK] [Fintype F] [Nonempty NK]
-    [DecidableEq QK] [DecidableEq SK] [DecidableEq AK] [DecidableEq NK] [DecidableEq F]
-    (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → F) (Ggen : G) (hS : S ≠ 0) (p : PMF ι)
-    {A : ι → OracleComp (FinalQuery QK SK AK NK F) F
-      (KeyBinding.Witness G F IVK AK NK SK QK × KeyBinding.Witness G F IVK AK NK SK QK)}
+    [AddCommGroup G] [Field RIVK] [Field IVK] [Module RIVK G] [NoZeroSMulDivisors RIVK G]
+    [SMul ASK G] [Fintype QK] [Fintype SK] [Fintype AK] [Fintype NK] [Fintype RIVK]
+    [Fintype ASK] [Nonempty ASK] [Nonempty NK]
+    [DecidableEq QK] [DecidableEq SK] [DecidableEq AK] [DecidableEq NK] [DecidableEq RIVK]
+    (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK) (Ggen : G) (hS : S ≠ 0) (p : PMF ι)
+    {A : ι → OracleComp (FinalQuery AK NK RIVK QK SK) RIVK
+      (KeyBinding.Witness G IVK AK NK RIVK QK SK × KeyBinding.Witness G IVK AK NK RIVK QK SK)}
     {n : ℕ} (hQ : ∀ i, (A i).QueryBound n) :
-    ((p.bind fun i => (PMF.uniformOfFintype (SK → F)).bind fun Hask =>
+    ((p.bind fun i => (PMF.uniformOfFintype (SK → ASK)).bind fun Hask =>
         (PMF.uniformOfFintype (SK → NK)).bind fun Hnk =>
-          (PMF.uniformOfFintype (SK → F)).bind fun Hleg =>
-            (PMF.uniformOfFintype (QK → AK → NK → F)).bind fun Hext =>
-              (PMF.uniformOfFintype (F → AK → NK → F)).map fun Hint =>
+          (PMF.uniformOfFintype (SK → RIVK)).bind fun Hleg =>
+            (PMF.uniformOfFintype (QK → AK → NK → RIVK)).bind fun Hext =>
+              (PMF.uniformOfFintype (RIVK → AK → NK → RIVK)).map fun Hint =>
                 (i, Hask, Hnk, FinalQuery.eval Hleg Hext Hint))).toOuterMeasure
-        {x : ι × (SK → F) × (SK → NK) × (FinalQuery QK SK AK NK F → F) |
+        {x : ι × (SK → ASK) × (SK → NK) × (FinalQuery AK NK RIVK QK SK → RIVK) |
           (KeyBinding.toInterface Extract S hfn Ggen
               ⟨x.2.1, x.2.2.1, fun sk => x.2.2.2 (.legacy sk),
                 fun qk ak nk => x.2.2.2 (.ext qk ak nk),
                 fun rivk_ext ak nk => x.2.2.2 (.int rivk_ext ak nk)⟩).Break
             ((A x.1).run x.2.2.2).1 ((A x.1).run x.2.2.2).2}
-      ≤ ((n + 4) * (n + 3) : ℕ) / Fintype.card F :=
+      ≤ ((n + 4) * (n + 3) : ℕ) / Fintype.card RIVK :=
   KeyBinding.break_measure_le_product Extract S hfn Ggen hS p hQ
 
 
