@@ -1,6 +1,7 @@
 import Zcash.Snark.Soundness.Vesta
 import Zcash.Snark.Soundness.Forking.Adversary.Algebraic
 import Zcash.Snark.Soundness.AGM.Capstone
+import Zcash.Snark.Soundness.PolynomialEnvironment
 
 /-!
 # Composing the algebraic forking extraction with the deployed decoded capstone
@@ -47,6 +48,34 @@ local instance vestaInhabitedCompositionBridge : Inhabited VestaG := ⟨0⟩
 
 variable {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
   {instanceCommitment : Fin shape.numProofs → ℕ → VestaG}
+
+/-- Strengthen an extracted relation with exact operation semantics on the same witness. -/
+theorem SnarkRelation.and_satisfies
+    {G : Type*} [AddCommGroup G] [Module Fp G]
+    {urs : URS G} {P : G} {b : Fin (2 ^ urs.k) → Fp} {v : Fp}
+    {circuitSat semanticSat : (Fin (2 ^ urs.k) → Fp) → Prop}
+    {a : Fin (2 ^ urs.k) → Fp}
+    (relation : SnarkRelation urs P b v circuitSat a)
+    (semantic : semanticSat a) :
+    SnarkRelation urs P b v (fun witness => circuitSat witness ∧ semanticSat witness) a :=
+  ⟨relation.opens, relation.satisfiesCircuit, semantic⟩
+
+/-- The computed endpoint's circuit predicate: its existing decoded gate identity together with
+the exact placed Clean operation semantics. -/
+def circuitSatViaGatesAndOperations
+    {k : ℕ}
+    (fixedCols : ℕ → Polynomial Fp)
+    (decodeAdvice decodeInstance :
+      (Fin (2 ^ k) → Fp) → (ℕ → Polynomial Fp))
+    (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp)
+    (hpoly : Polynomial Fp) (deg : ℕ)
+    (place : Halo2.RegionIndex → ℕ)
+    (decodeEnvironment :
+      (Fin (2 ^ k) → Fp) → Halo2.Environment Fp)
+    (ops : Halo2.Operations Fp) (initialRegion : Halo2.RegionIndex)
+    (a : Fin (2 ^ k) → Fp) : Prop :=
+  circuitSatViaGates fixedCols decodeAdvice decodeInstance y gates hpoly deg a ∧
+    circuitSatViaOperations place decodeEnvironment ops initialRegion a
 
 /-- `deployedCommitment` at the split URS unfolds to `multiopenCommitment`: definitional (the `hk`
 cast is `rfl` on `ursOfAugmentedBasis`, whose `.k` is `shape.k`). Isolated so downstream terms match
@@ -553,6 +582,36 @@ noncomputable def orchard_verifier_sound_vesta_computed
       hpoly = coeffsToPoly ((mdec hSet hhSet).cols hMem) ∧
       (deployedSetCommIds (instanceCommitment := instanceCommitment) vk p.proof.1 (chRecord ν (fun _ => 0)) hSet).getD (hMem : ℕ)
           CommitmentId.randomPoly = CommitmentId.vanishingH)
+    (place : Halo2.RegionIndex → ℕ)
+    (ops : Halo2.Operations Fp) (initialRegion : Halo2.RegionIndex)
+    (fullEnvironment : ∀ (a : Fin (2 ^ shape.k) → Fp)
+        (bo : OpenedBatchOpenings (ursOfAugmentedBasis shape.k basis) (evalVector shape.k (ν 7))
+          (x4BatchCommitments (instanceCommitment := instanceCommitment)
+            (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+            (chRecord ν (fun _ => 0)))
+          (x4BatchEvals (instanceCommitment := instanceCommitment) vk p.proof.1
+            (chRecord ν (fun _ => 0))) a (p.multiU ν) (p.multiBlind ν))
+        (_md : ∀ i (hi : i < deployedX4PairCount
+            (instanceCommitment := instanceCommitment) vk p.proof.1
+            (chRecord ν (fun _ => 0))),
+          OpenedMemberDecode (instanceCommitment := instanceCommitment)
+            (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+            (chRecord ν (fun _ => 0)) bo i hi),
+      Halo2.Environment Fp)
+    (hfull : ∀ (a : Fin (2 ^ shape.k) → Fp)
+        (bo : OpenedBatchOpenings (ursOfAugmentedBasis shape.k basis) (evalVector shape.k (ν 7))
+          (x4BatchCommitments (instanceCommitment := instanceCommitment)
+            (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+            (chRecord ν (fun _ => 0)))
+          (x4BatchEvals (instanceCommitment := instanceCommitment) vk p.proof.1
+            (chRecord ν (fun _ => 0))) a (p.multiU ν) (p.multiBlind ν))
+        (md : ∀ i (hi : i < deployedX4PairCount
+            (instanceCommitment := instanceCommitment) vk p.proof.1
+            (chRecord ν (fun _ => 0))),
+          OpenedMemberDecode (instanceCommitment := instanceCommitment)
+            (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+            (chRecord ν (fun _ => 0)) bo i hi),
+      FullCircuitSatisfaction place (fullEnvironment a bo md) ops initialRegion)
     {S : Prop}
     (hencodes : ∀ (a : Fin (2 ^ shape.k) → Fp)
         (bo : OpenedBatchOpenings (ursOfAugmentedBasis shape.k basis) (evalVector shape.k (ν 7))
@@ -568,12 +627,12 @@ noncomputable def orchard_verifier_sound_vesta_computed
           - p.multiU ν • (ursOfAugmentedBasis shape.k basis).u
           - p.multiBlind ν • (ursOfAugmentedBasis shape.k basis).w)
         (evalVector shape.k (ν 7)) (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
-        (circuitSatViaGates fixedCols
+        (circuitSatViaGatesAndOperations fixedCols
           (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
             coeffsToPoly ((md (adviceSet j) (hadviceSet j)).cols (adviceMem j))))
           (fun _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
             coeffsToPoly ((md (instanceSet j) (hinstanceSet j)).cols (instanceMem j))))
-          y gates hpoly deg) a → S) :
+          y gates hpoly deg place (fun _ => fullEnvironment a bo md) ops initialRegion) a → S) :
     (S ∨ HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
         (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w)
       ⊕' AlgebraicRelationWitness (F := Fp) basis :=
@@ -582,7 +641,8 @@ noncomputable def orchard_verifier_sound_vesta_computed
     hadviceLayout hinstanceLayout hquotCommitted
     (S := S)
     (fun a hmem => hencodes a hmem.batchOpenings hmem.memberDecode
-      (snarkRelation_of_memberColumns hmem))
+      ((snarkRelation_of_memberColumns hmem).and_satisfies
+        (hfull a hmem.batchOpenings hmem.memberDecode)))
 
 /-! ## G4 — the quantitative knowledge-error bound (conditional)
 

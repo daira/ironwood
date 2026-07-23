@@ -90,17 +90,23 @@ The remaining work is:
 ### 2. Replace the free column decoders
 
 **Status: polynomial/query-level decoding is implemented by
-[#30](https://github.com/zcash/ironwood/pull/30); Clean row decoding remains open.**
+[#30](https://github.com/zcash/ironwood/pull/30); the generic Clean row decoder is now
+implemented on this branch, while its concrete Action instantiation remains open.**
 
 The deployed/member capstones use canonical decoding through `coeffsToPoly`,
 `decodedCols`, `x1DecodeCols`, query-layout member selection, and `rotatedFeed`. The
 extracted opening and the polynomials consumed by those capstones are therefore not
 independent.
 
-The Action bridge still needs a canonical decoder from those polynomials to values on
-the size-`2^k` evaluation domain. Prove that:
+`PolynomialEnvironment` is the canonical decoder from those polynomials to values on
+the size-`2^k` evaluation domain. It evaluates column `c` at row `r` as
+`c(ω^r)` and proves that Clean's rotated advice, fixed, and instance queries agree
+with the verifier's rotated polynomials. `resolverEnvironment` selects fixed,
+per-proof advice, and per-proof instance columns from the shared `CommitmentId`
+resolver.
 
-- row rotations match `omega` multiplication;
+The concrete Action construction still has to prove that:
+
 - column/query indices match the VK query layouts;
 - instance values are the supplied Action public inputs;
 - usable and blinding rows are treated exactly as Halo 2 treats them.
@@ -268,6 +274,17 @@ the generated columns, and prove that their commitments are the concrete VK's
 `permutationCommonCommitment`s. Commitment binding then supplies the
 `ofKeygenColumns` polynomial equalities (or the existing nontrivial-relation branch).
 
+The residual zero-factor branch is now closed generically as well.
+`additiveZeroBadSet` observes that, after `β` and the committed cell values are fixed,
+each factor `value + β·name + γ` excludes exactly one value of the later `γ`
+challenge. `resolverPermutationZeroFactorBadSet` collects those exclusions,
+`uniformChallenge_resolverPermutationGammaBadSet` combines their active-cell count
+with the existing Schwartz–Zippel root budget, and
+`resolverPermutationCopyConstraints` now concludes cycle equality directly under the
+combined good-`γ` condition. Thus concrete Action work need not propagate a
+zero-product disjunction; it only supplies the already explicit challenge-avoidance
+premise at the correct transcript squeeze.
+
 After that, translate the endpoints to the exact relations that Clean's
 `Halo2.Constraints` requires: declared `constrainEqual`/`constrainInstance` copies,
 `RegionOperation.enableLookup` membership with the exact loaded tables, fixed
@@ -275,17 +292,57 @@ assignments and selector activations, and all synthesized regions under their ac
 placement. Replace the gate-only circuit predicate with a full satisfaction record;
 custom gates alone still cannot imply the Action operation trace.
 
-The per-gate half of that translation is proven
-(`eraseExpr_substSelectorMap_eval` plus the packed-selector row algebra), and the
-reassembly should be stated *generically*: one theorem by induction
-over an arbitrary `Halo2.Operations` list, taking gate vanishing, copy equalities,
-lookup membership, and fixed-column data as inputs, with the circuit-specific facts
-isolated into decidable coherence side conditions — every enabled gate registered in
-the constraint system, gate polynomials linear in their own selector and free of
-foreign selectors, co-packed selectors never co-enabled, the activation table matching
-the packed fixed columns, rows within bounds. Those side conditions are discharged for
-the Action instance computationally (the same `native_decide`-style work the VK-match
-and layout tests already do), not by an Action-specific proof walk. The
+The generic target and copy half of that translation are now in place.
+`FullCircuitSatisfaction` splits the authoritative `Halo2.Constraints` predicate into
+gate, copy, lookup, and fixed/table fields and proves exact equivalence in both
+directions. `operationDeclaredCopies` extracts equality, instance, and constant copies from the
+complete operation stream; `copy_constraints_iff_declaredCopies` proves that their
+satisfaction is exactly the full record's copy field. Finally,
+`copy_constraints_or_bad_of_replay` transports equality from the generic keygen
+permutation cycles to every declared copy while preserving the caller's shared
+exceptional event (for example commitment binding). Permutation zero factors
+themselves are already eliminated by the priced `γ` exclusion above. The concrete
+layout instantiation only has to encode endpoints as keygen cells (including
+constants-column allocations) and identify their environment reads.
+
+The generic lookup and reassembly halves are now present too.
+`operationEnabledLookups` extracts every placed `enableLookup` activation and
+`lookup_constraints_iff_enabledLookups` proves that their tuple membership is exactly
+the full record's lookup field. `resolverLookupSubset` joins the five resolver-backed
+constraint families to the deployed row theorem. Its `β`/`γ` zero-product branch is
+eliminated by `lookupColumnZeroBadSet`, at one excluded challenge value per usable
+row. `foldPoly_injective_of_length_eq` then proves the separate `θ` step:
+equal-length tuples with equal compressions are equal outside their explicit
+compression-difference root set. `EnabledLookup.thetaBadSet` unions those roots over
+the usable table rows and bounds the event by
+`usableRows × tupleArity / |Fp|`.
+
+`EnabledLookup.DeployedWitness` packages the remaining representation facts for one
+activation: the matching resolver input/table polynomials, row-evaluation coherence,
+usable-row count, tuple arity, scalar subset, and good `θ`. Finally,
+`FullCircuitBridge` combines those lookup witnesses with gate/fixed satisfaction and
+the copy-replay witness. Its `satisfaction_or_bad` theorem returns the exact
+`FullCircuitSatisfaction` record, and `constraints_or_bad` returns Clean's single
+ground-truth `Halo2.Constraints`. The remaining Action-specific work is therefore
+construction of these records, not another semantic proof.
+
+The generic gate and fixed/table operation layers are now implemented as well.
+`operationEnabledGates` extracts every placed activation and
+`gate_constraints_iff_enabledGates` proves exact equivalence with the gate family.
+`EnabledGate.PolynomialWitness` identifies each enabled Clean constraint with one
+member of #91's selected polynomial gate family; domain divisibility then proves the
+Clean constraint directly. `operationFixedRequirements` similarly extracts fixed
+assignments and table loads, with `fixed_constraints_iff_requirements` proving exact
+equivalence to the fixed family. `FullCircuitBridge.ofPolynomialWitnesses` assembles
+these gate/fixed witnesses with the existing copy and lookup witnesses.
+
+The remaining gate work is therefore the circuit-specific packed-selector row algebra:
+every enabled gate must be registered in the constraint system, gate polynomials must
+be linear in their own selector and free of foreign selectors, co-packed selectors
+must never be co-enabled, and the activation table must match the packed fixed columns.
+Those side conditions are discharged for the Action instance computationally (the
+same `native_decide`-style work the VK-match and layout tests already do), not by an
+Action-specific proof walk. The
 `Fixtures.Layout` reconstruction is already generic over operations, so σ-cycle
 correctness of its replayed keygen merge is likewise a once-and-for-all lemma. A useful
 de-risking step is to instantiate the generic theorem first for the small `AddChip`
@@ -311,6 +368,14 @@ Then prove `Action.Circuit.EnvAssumptions`, including generator-table exactness,
 table-loaded facts, fixed-base environment assumptions, and selector distinctness.
 No current open PR performs this construction. This is the central Action-specific
 representation bridge.
+
+`ActionAssignment` now fixes the generic construction's circuit-side choices. It uses
+the V1 placement derived from `Bridge.actionOperations`, computes usable rows as
+`vk.n - vk.blindingFactors - 1`, selects one proof member's fixed/advice/instance
+polynomials through `resolverEnvironment`, and packages the result as a placed Clean
+environment. `ActionAssignment.ofDecodedMembers` specializes this to the actual
+`decodedPolynomialResolver`; the remaining work is proving the concrete VK and public
+instance polynomials satisfy the Action-specific representation facts below.
 
 Note that most of `EnvAssumptions` should come out of the transported `Constraints`
 themselves rather than separate VK-fixed-data facts: `GeneratorTableExact` is defined
@@ -347,16 +412,20 @@ Once the direct semantic bridge exists, instantiate the Vesta constraint capston
 with the concrete high-level Action statement. Then thread that same concrete
 statement through the computed Fiat–Shamir/AGM endpoint.
 
-#30 adds `orchard_verifier_sound_vesta_computed`, whose circuit predicate is the
-concrete gate check over decoded member columns rather than a free decoder. It still
-receives batch/decode/gate/layout data by hand, and its quantitative endpoint remains
-conditional on the family-wide `hExtract` data-supply premise. #91 derives the full
-constraint fold, splits it under a good `y`, and proves the permutation/lookup semantic
-endpoints, but does not yet call them from the deployed list; it also records the
-adaptive `x`-challenge coupling as standing work. #85 threads statement-derived
+#30 adds `orchard_verifier_sound_vesta_computed`, whose original circuit predicate was
+the concrete gate check over decoded member columns rather than a free decoder. This
+branch now strengthens that endpoint's extracted relation with exact
+`FullCircuitSatisfaction` of the same witness and carries both facts in
+`circuitSatViaGatesAndOperations`. This is type-level plumbing, not yet the final
+derivation: the endpoint currently receives the full-satisfaction proof and decoded
+environment as inputs. Supplying them from the deployed constraint split and the
+Action records is the next representation step.
+
+The computed endpoint still receives batch/decode/gate/layout data by hand, and its
+quantitative endpoint remains conditional on the family-wide
+`hExtract`/adaptive-coupling data-supply premise. #85 threads statement-derived
 instance commitments through the live verifier. #82 documents the computed capstone
-and #79 provides the eventual trust-boundary census location; neither changes these
-proof obligations.
+and #79 provides the eventual trust-boundary census location.
 
 The final theorem should say, modulo the explicitly priced Fiat–Shamir, polynomial
 identity, and discrete-log failure events, that acceptance by the modeled deployed
@@ -365,13 +434,13 @@ whose public inputs were committed by the verifier.
 
 ## Suggested implementation order
 
-1. Instantiate #91's constraint split at the deployed list, route the permutation and
-   lookup members to its proved endpoints, and expose a full circuit-satisfaction
-   record instead of the gate-only predicate.
+1. Complete: instantiate #91's constraint split at the deployed list, route the
+   permutation and lookup members to its proved endpoints, and expose a full
+   circuit-satisfaction record in the computed endpoint.
 2. Make #89's post-compression CS and layout fixtures available as reusable Lean data,
    and prove VK/layout equality theorems that discharge #30's routing hypotheses.
-3. Define the canonical polynomial-to-row decoder, construct the placed Clean
-   environment, and prove `Action.Circuit.EnvAssumptions`.
+3. The canonical polynomial-to-row decoder is complete. Construct its placed Action
+   environment and prove `Action.Circuit.EnvAssumptions`.
 4. Prove the decomposed full-satisfaction-to-Action bridge, first for one selected
    Action and then for every `Fin shape.numProofs`.
 5. Supply the decoded/full-satisfaction data inside the computed experiment, close the
