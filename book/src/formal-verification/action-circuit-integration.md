@@ -144,10 +144,15 @@ state that the actual `VerifyingKey` fields used by `Zcash.Snark` correspond to:
   witnesses — registration seed and selector-compression map — as explicit inputs
   until the keygen ports compute them); `Fixtures.SingleAction.PinnedCsMatch`/
   `VkMatch` compute the captured VK's pinned CS equal to the derived Action circuit
-  (`vk_pinnedCs_eq_derived`, per-field `native_decide` on the fast CS-data dump), and
-  `derive_gates_eval` hands every VK gate's evaluation to the Clean gate expressions.
-  Pending for the full pinned record: counts (dumper emission requested), permutation
-  columns and constants (with the commitment-matching phase);
+  (per-field `native_decide` on the fast CS-data dump, `capturedPinnedCs_eq_derived`
+  over the full record — counts, constants, and minimum degree included — with
+  `VkMatch` exporting the per-field verifying-key links), and `derive_gates_eval`
+  hands every VK gate's evaluation to the Clean gate expressions. The
+  selector-compression map is now *derived* from the circuit
+  (`deriveSelCompressMap`, the `compress_selectors` port, checked equal to the Rust
+  dump by `TestSelMapDerivation`); pending: the floor-planner placement port (making
+  the derivation's activation input circuit-side) and the permutation columns (with
+  the commitment-matching phase);
 - `Action.Circuit.configure orchardGenerators` after selector compression;
 - the post-NU6.3 `mainPost` layout at `orchardBases`;
 - the fixed commitments, permutation commitments, and query/chunk ordering produced
