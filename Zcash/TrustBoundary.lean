@@ -80,6 +80,7 @@ assert_axioms Zcash.Security.KeyBinding.uniformOfFintype_prod
 assert_computable Zcash.Security.KeyBinding.evalEquiv
 assert_axioms Zcash.Security.KeyBinding.uniform_triple_eval
 assert_axioms Zcash.Security.KeyBinding.break_measure_le_product
+assert_axioms Zcash.Security.toInterface_break_measure_le
 
 /-! ## Ledger-layer break reductions
 
