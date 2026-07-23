@@ -376,8 +376,8 @@ private theorem short_inner_soundness (B : FixedBase) (cfg : Config) (offset : �
         exact ⟨hx, hy⟩)
       ⟨if_pos rfl, if_pos rfl⟩
       (by
-        intro j hj1 hj20 hass
-        obtain ⟨hOnP, hOnQ, hne⟩ := hass
+        intro j hj1 hj20 hPointAssumptions
+        obtain ⟨hOnP, hOnQ, hne⟩ := hPointAssumptions
         dsimp only at hOnP hOnQ hne ⊢
         rw [if_neg (by omega : ¬j = 0), if_neg (by omega : ¬j = 0)]
         rcases Nat.lt_or_ge j 2 with hj2 | hj2
@@ -583,8 +583,8 @@ private theorem short_completeness_chain (B : FixedBase) (cfg : Config) (offset 
       exact ⟨hx, hy⟩)
     ⟨if_pos rfl, if_pos rfl⟩
     (by
-      intro j hj1 hj83 hass
-      obtain ⟨hOnP, hOnQ, hne⟩ := hass
+      intro j hj1 hj83 hPointAssumptions
+      obtain ⟨hOnP, hOnQ, hne⟩ := hPointAssumptions
       dsimp only at hOnP hOnQ hne ⊢
       rw [if_neg (by omega : ¬j = 0), if_neg (by omega : ¬j = 0)]
       rcases Nat.lt_or_ge j 2 with hj2 | hj2

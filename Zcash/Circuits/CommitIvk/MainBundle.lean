@@ -191,7 +191,7 @@ theorem soundness (G : Generators) (R : FixedBase) (Q : Point Fp)
   simp only [circuit_norm,
     Nat.add_assoc, Nat.reduceAdd] at hCanS
   obtain ⟨hSa, hSb0v, hSb1, hSb2v, hSc, hSd0v, hSd1, hSbW, hSdW⟩ := hCanS
-  obtain ⟨hiak, hink, -⟩ := h_input
+  obtain ⟨hiak, hInputNk, -⟩ := h_input
   -- ── field-level canonical piece values ──
   have haF : env.advice cfg.hashConfig.witnessPieces ((place i₀ : ℕ) : ℤ)
       = ((bitrange (AssignedCell.eval place env input_var_ak).val 0 250 : ℕ) : Fp) := by
@@ -267,7 +267,7 @@ theorem soundness (G : Generators) (R : FixedBase) (Q : Point Fp)
     hak hnk
   -- ── land the Spec ──
   simp only [Spec]
-  rw [hiak, hink] at hchunks
+  rw [hiak, hInputNk] at hchunks
   refine breaksOfGuarded (Or.inl hQ) (fun m hm => G.S_onCurve (chunksOf_mem_lt (by
     simpa [Specs.Sinsemilla.commitIvkChunks] using hm))) ?_
   intro B hB
@@ -408,12 +408,12 @@ private theorem commit_derived_spec (G : Generators) (R : FixedBase)
             c inp i) : Value Point Fp)
           = B + (((Ecc.MulFixed.FullWidth.fwExtract c.1 i
               (⟨place, env.toEnvironment⟩ : Placed Environment Fp)).2 • R) : Point Fp) := by
-  have hpeP :
+  have hPiecesProver :
       (eval (⟨place, env⟩ : Placed ProverEnvironment Fp) inp).pieces =
         (eval (⟨place, env⟩ : Placed ProverEnvironment Fp) inp.pieces
           : Value (fields ns.length) Fp) := by
     with_unfolding_all rfl
-  have hpeE :
+  have hPiecesEnv :
       (eval (⟨place, env.toEnvironment⟩ : Placed Environment Fp) inp).pieces =
         (eval (⟨place, env.toEnvironment⟩ : Placed Environment Fp) inp.pieces
           : Value (fields ns.length) Fp) := by
@@ -426,10 +426,10 @@ private theorem commit_derived_spec (G : Generators) (R : FixedBase)
             (eval (⟨place, env⟩ : Placed ProverEnvironment Fp) inp).pieces ∧
           ∃ B, hashToPoint G.S Q (Sinsemilla.Chain.honestChunks ns
             (eval (⟨place, env⟩ : Placed ProverEnvironment Fp) inp).pieces) = some B
-        rw [hpeP]
+        rw [hPiecesProver]
         exact ⟨hPB', hHon'⟩)).1
   rw [Sinsemilla.CommitDomain.commit_spec_eq, Sinsemilla.CommitDomain.commit_extract_eq] at h
-  rw [hpeE] at h
+  rw [hPiecesEnv] at h
   simp only at h
   exact h
 
@@ -504,7 +504,7 @@ theorem completeness (G : Generators) (R : FixedBase) (Q : Point Fp)
   simp only [synthPieces_output, synthPieces_nextRegionIndex,
     synthPieces_regionCount, Nat.add_assoc] at hWcm hWCan
   simp only [Nat.reduceAdd] at hWCan
-  obtain ⟨hiak, hink, -⟩ := h_input
+  obtain ⟨hiak, hInputNk, -⟩ := h_input
   -- ── honest piece facts ──
   have hHF := CommitIvk.Commit.honest_pieces_facts
     (AssignedCell.eval place env input_var_ak)
@@ -528,7 +528,7 @@ theorem completeness (G : Generators) (R : FixedBase) (Q : Point Fp)
         env.advice cfg.hashConfig.witnessPieces ((place (i₀ + 6) : ℕ) : ℤ)]
       = commitIvkChunks (show Fp from input_ak).val (show Fp from input_nk).val := by
     rw [honestChunks_donor_eq]
-    rw [hiak, hink] at hHonestDonor
+    rw [hiak, hInputNk] at hHonestDonor
     exact hHonestDonor
   -- ── derived commit contract (the composite's rely-conditions) ──
   have hPB2 : Sinsemilla.Chain.PieceBounds ns
