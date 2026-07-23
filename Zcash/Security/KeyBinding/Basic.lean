@@ -98,6 +98,29 @@ structure Extractor (G IVK AK : Type*) [Neg G] where
   /-- `toIVK` identifies exactly the ±-pairs (the x-coordinate property). -/
   toIVK_pm : ∀ P Q : G, toIVK P = toIVK Q ↔ P =± Q
 
+/-- `toIVK` is at most 2-to-1 (`toIVK_pm`), so the `IVK` domain is at least half the group:
+`|G| ≤ 2·|IVK|`. An `IVK` small enough to find collisions in admits no `Extractor` at all —
+undersized instantiations make the key-binding theorems vacuous rather than falsely secure.
+This is why the birthday bounds involve only `|RIVK|`: `ivk`-derivation collisions are
+excluded exactly, which the deployed x-coordinate extraction satisfies (exactly 2-to-1 on
+±-pairs). A hash-derived `ivk` (Sapling's `CRH^ivk`) does not satisfy `toIVK_pm` and would
+need a collision-resistance term in the bound instead. -/
+theorem Extractor.card_ivk_ge [Neg G] [Fintype G] [Fintype IVK] [DecidableEq G]
+    [DecidableEq IVK] (Extract : Extractor G IVK AK) :
+    Fintype.card G ≤ 2 * Fintype.card IVK := by
+  refine Finset.card_le_mul_card_image_of_maps_to
+    (f := Extract.toIVK) (fun a _ => Finset.mem_univ _) 2 fun b _ => ?_
+  by_cases hb : ∃ P, Extract.toIVK P = b
+  · obtain ⟨P, hP⟩ := hb
+    calc ((Finset.univ : Finset G).filter fun x => Extract.toIVK x = b).card
+        ≤ ({P, -P} : Finset G).card := Finset.card_le_card fun x hx => by
+            rw [Finset.mem_filter] at hx
+            rcases (Extract.toIVK_pm x P).mp (hx.2.trans hP.symm) with h | h <;>
+              simp [Finset.mem_insert, h]
+      _ ≤ 2 := le_trans (Finset.card_insert_le _ _) (by simp)
+  · rw [Finset.filter_eq_empty_iff.mpr fun {x} _ => fun hx => hb ⟨x, hx⟩]
+    simp
+
 section Algebra
 variable [AddCommGroup G] [Field IVK] [Field RIVK] [Module RIVK G] [NoZeroSMulDivisors RIVK G]
 

@@ -35,6 +35,7 @@ assert_computable Zcash.Security.RandomOracle.CollisionUpToSign.ofBreak +choice
 
 /-! ## Key binding — theorems -/
 
+assert_axioms Zcash.Security.KeyBinding.Extractor.card_ivk_ge
 assert_axioms Zcash.Security.KeyBinding.commit_scalar_pm
 assert_axioms Zcash.Security.KeyBinding.rivk_eq_finalOracle
 assert_axioms Zcash.Security.KeyBinding.sameIvk_finalOracle_pm
