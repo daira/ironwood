@@ -526,6 +526,19 @@ assert_axioms hfold_of_vanishing_slot_binding
 -- fingerprint premise alone.
 assert_axioms deployedAccepts_xn_ne_one
 assert_axioms hfold_of_member_budget
+-- The permutation and lookup arguments folded into the constraint model: the verifier's expression
+-- list is the generic builder run on its own claimed evaluations, the same builder over column
+-- polynomials evaluates back onto it, and the fold equation therefore needs no fingerprint premise.
+assert_axioms permutationExpressions_map
+assert_axioms lookupExpressions_map
+assert_axioms subProofConstraints_map
+assert_axioms allConstraints_map
+assert_axioms subProofExpressions_eq
+assert_axioms allExpressions_eq
+assert_axioms eval_constraintPolys
+assert_axioms eval_combineConstraints
+assert_axioms eval_combineConstraints_deployed
+assert_axioms hfold_of_constraint_polys
 assert_axioms hgood_failure_priced
 assert_axioms hgood_of_good_challenge
 -- The UNCONDITIONAL decomposition: `hExtract` removed, the residual quantified as the
