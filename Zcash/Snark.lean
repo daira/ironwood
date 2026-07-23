@@ -33,7 +33,6 @@ import Zcash.Snark.Soundness.Lookup
 import Zcash.Snark.Soundness.Permutation
 import Zcash.Snark.Soundness.PermutationConstruction
 import Zcash.Snark.Soundness.InnerProduct
-import Zcash.Snark.Soundness.TrustBoundary
 import Zcash.Snark.Soundness.Extraction
 import Zcash.Snark.Soundness.Constraints
 import Zcash.Snark.Soundness.CommitFold
@@ -46,7 +45,6 @@ import Zcash.Snark.Soundness.Deployed.Binding
 import Zcash.Snark.Soundness.Deployed.Fold
 import Zcash.Snark.Soundness.Deployed.Ipa
 import Zcash.Snark.Soundness.Deployed.IpaPeel
-import Zcash.Snark.Soundness.Deployed.TrustBoundary
 import Zcash.Snark.Soundness.Deployed.Verification
 -- The reusable Fiat–Shamir forking kernel and its concrete adversary producer.
 import Zcash.Snark.Soundness.Forking
@@ -63,4 +61,3 @@ import Zcash.Snark.Soundness.AGM.Peel
 import Zcash.Snark.Soundness.AGM.Prover
 import Zcash.Snark.Soundness.AGM.Capstone
 import Zcash.Snark.Soundness.AGM.BindingSignature
-import Zcash.Snark.Soundness.AGM.TrustBoundary

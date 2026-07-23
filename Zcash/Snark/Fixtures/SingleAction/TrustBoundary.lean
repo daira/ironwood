@@ -1,5 +1,5 @@
 import Zcash.Snark.Fixtures.SingleAction.Fixture
-import Mathlib.Util.AssertNoSorry
+import Zcash.Meta.AxiomCheck
 
 /-!
 # Checked trust boundary of the concrete fingerprint fixture
@@ -14,8 +14,10 @@ Both checks below follow Lean's elaborated dependency graph (via `Lean.collectAx
 anywhere in the transitive closure — including the `Soundness/` proof layer and Mathlib — which a
 syntactic scan of the verifier sources cannot.
 
-* `assert_no_sorry` — fails the build if the named constant transitively depends on `sorryAx`. Applied to
-  `fingerprint_matches` (the captured match) and `assemble` (the verifier assembly it runs).
+* `assert_axioms` (from `Zcash.Meta.AxiomCheck`) — bounds the trusted base at the standard tier and so
+  rejects `sorryAx` and any unexpected axiom, walking the whole dependency graph. Applied to every
+  captured fixture (`+native` for the `native_decide` ones) and to `assemble` (the verifier assembly it
+  runs).
 * `#print axioms` pinned by `#guard_msgs` — freezes the exact axiom set `fingerprint_matches` rests on, so
   a newly introduced axiom changes the set and fails the build. The
   pinned set records `fingerprint_matches._native.native_decide.ax_1_1`, the compiler-trust axiom that
@@ -27,14 +29,16 @@ syntactic scan of the verifier sources cannot.
 
 open Zcash.Snark Zcash.Snark.Fixture
 
--- No `sorry` reaches the captured match or the verifier assembly it runs (whole dependency graph).
-assert_no_sorry fingerprint_matches
-assert_no_sorry capturedPointCoordinatesValid_eq_true
-assert_no_sorry capturedInit_startsWith_vkTranscriptRepr
-assert_no_sorry capturedMsm_eval_eq_zero
-assert_no_sorry assembledMsm_eval_eq_zero
-assert_no_sorry Msm.evalNat
-assert_no_sorry assemble
+-- Every captured fixture and the verifier assembly it runs are bounded at the standard tier — no
+-- `sorry`, no unexpected axiom (whole dependency graph). The `native_decide` fixtures carry the
+-- compiler-trust axiom, permitted by `+native` and pinned exactly by the `#print axioms` guards below.
+assert_axioms fingerprint_matches +native
+assert_axioms capturedPointCoordinatesValid_eq_true +native
+assert_axioms capturedInit_startsWith_vkTranscriptRepr +native
+assert_axioms capturedMsm_eval_eq_zero +native
+assert_axioms assembledMsm_eval_eq_zero +native
+assert_axioms Msm.evalNat
+assert_axioms assemble
 
 -- `whitespace := lax` collapses all whitespace, so the pin is insensitive to how
 -- `#print axioms` line-wraps the list (a formatting artifact of the axiom-name lengths).
