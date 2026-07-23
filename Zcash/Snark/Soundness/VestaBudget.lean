@@ -860,9 +860,9 @@ assumption.
   (`vanishing_slot_routed`); binding `hpoly.eval ch.x` to it gives the capstone's `hfold` equation
   (`hfold_of_vanishing_slot_binding`, `hfold_of_member_budget`). Its inputs are settled: `hxn`
   follows from acceptance (`deployedAccepts_xn_ne_one`), `hbind` from the good branch of
-  `deployed_member_budget`, and `hfp` reduces to a per-instance list equality
-  (`hfp_of_expressions_eq`), open only until the permutation and lookup arguments are folded into
-  the constraint model.
+  `deployed_member_budget`, and `hfp` is proved outright on the full constraint list
+  (`hfold_of_constraint_polys`) — the permutation and lookup arguments are part of the model, so
+  the two folds are two runs of the same code rather than an assumed correspondence.
 
 * **`hgood`'s failure is Schwartz–Zippel-priced.** For the capstone's difference polynomial the
   failure event of the exact `hgood` implication has uniform-squeeze measure at most
@@ -938,26 +938,21 @@ theorem vanishing_slot_routed {G : Type*} [AddCommGroup G] [Module Fp G] [Decida
     simp only [deployedSetQueries, constructIntermediateSets_zip_sets_getD]
     rw [hsets d₀, hev]
 
-/-- **The `hfold` derivation core.** The capstone's gate-fold equation from the vanishing-slot
-value binding: if the extracted quotient's evaluation at `ch.x` is the verifier-computed
-`expectedHEval` (`hbind` — supplied by the member node binding at the `hquotCommitted` slot),
-the squeeze avoids the `deg`-th roots of unity (`hxn`), and the parameter gate fold equals the
-deployed expression fold (`hfp` — the expression-fold fingerprint, sharpened to one
-equation), then `hfold` holds verbatim. Pure field algebra: `expectedHEval` clears its
-`(x^deg − 1)⁻¹` against `hxn`. -/
-theorem hfold_of_expectedHEval_binding {ng : ℕ} (gates : Fin ng → Expr Fp)
-    (fixedClaimed adviceClaimed instanceClaimed : ℕ → Fp) (y x : Fp)
+/-- **The `hfold` derivation core.** The capstone's fold equation from the vanishing-slot value
+binding: if the extracted quotient's evaluation at `ch.x` is the verifier-computed `expectedHEval`
+(`hbind` — supplied by the member node binding at the `hquotCommitted` slot), the squeeze avoids the
+`deg`-th roots of unity (`hxn`), and the constraint list folds to the same value as the deployed
+expression list (`hfp` — the fingerprint, sharpened to one equation), then `hfold` holds verbatim.
+Pure field algebra: `expectedHEval` clears its `(x^deg − 1)⁻¹` against `hxn`. The constraint list is
+left abstract: the gates alone instantiate it, and so does the full gate / permutation / lookup list
+(`Soundness.Constraints.eval_combineConstraints_deployed`), which discharges `hfp` outright. -/
+theorem hfold_of_expectedHEval_binding (constraints : List Fp) (y x : Fp)
     (hpoly : Polynomial Fp) (deg : ℕ) (exprs : List Fp)
     (hxn : x ^ deg ≠ 1)
     (hbind : hpoly.eval x = expectedHEval exprs y (x ^ deg))
-    (hfp : (List.ofFn (fun i : Fin ng =>
-          (gates i).eval fixedClaimed adviceClaimed instanceClaimed)).foldl
-            (fun acc v => acc * y + v) 0
+    (hfp : constraints.foldl (fun acc v => acc * y + v) 0
         = exprs.foldl (fun acc v => acc * y + v) 0) :
-    (List.ofFn (fun i : Fin ng =>
-        (gates i).eval fixedClaimed adviceClaimed instanceClaimed)).foldl
-          (fun acc v => acc * y + v) 0
-      = hpoly.eval x * (x ^ deg - 1) := by
+    constraints.foldl (fun acc v => acc * y + v) 0 = hpoly.eval x * (x ^ deg - 1) := by
   rw [hfp, hbind, expectedHEval, mul_assoc,
     inv_mul_cancel₀ (sub_ne_zero.mpr hxn), mul_one]
 
@@ -987,8 +982,7 @@ avoidance `hxn` (a `vk.n / p`-priced squeeze exclusion) and the sharpened expres
 theorem hfold_of_vanishing_slot_binding {G : Type*} [AddCommGroup G] [Module Fp G]
     [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
-    {ng : ℕ} (gates : Fin ng → Expr Fp)
-    (fixedClaimed adviceClaimed instanceClaimed : ℕ → Fp)
+    (constraints : List Fp)
     (hpoly : Polynomial Fp) (i m : ℕ)
     (hrouted : ∀ d₀, ((deployedSetQueries vk ps ch i).getD m d₀).2
       = [expectedHEval
@@ -1000,20 +994,15 @@ theorem hfold_of_vanishing_slot_binding {G : Type*} [AddCommGroup G] [Module Fp 
     (hbind : hpoly.eval ch.x
       = ((deployedSetQueries vk ps ch i).getD m (CommitmentRef.point 0, [])).2.getD 0 0)
     (hxn : ch.x ^ vk.n ≠ 1)
-    (hfp : (List.ofFn (fun j : Fin ng =>
-          (gates j).eval fixedClaimed adviceClaimed instanceClaimed)).foldl
-            (fun acc v => acc * ch.y + v) 0
+    (hfp : constraints.foldl (fun acc v => acc * ch.y + v) 0
         = (allExpressions vk ps ch
             (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1
             (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.1
             (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2).foldl
             (fun acc v => acc * ch.y + v) 0) :
-    (List.ofFn (fun j : Fin ng =>
-        (gates j).eval fixedClaimed adviceClaimed instanceClaimed)).foldl
-          (fun acc v => acc * ch.y + v) 0
+    constraints.foldl (fun acc v => acc * ch.y + v) 0
       = hpoly.eval ch.x * (ch.x ^ vk.n - 1) := by
-  refine hfold_of_expectedHEval_binding gates fixedClaimed adviceClaimed instanceClaimed
-    ch.y ch.x hpoly vk.n _ hxn ?_ hfp
+  refine hfold_of_expectedHEval_binding constraints ch.y ch.x hpoly vk.n _ hxn ?_ hfp
   rw [hbind, hrouted (CommitmentRef.point 0, [])]
   rfl
 
@@ -1029,8 +1018,7 @@ theorem hfold_of_member_budget {G : Type*} [AddCommGroup G] [Module Fp G] [Decid
     [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
-    {ng : ℕ} (gates : Fin ng → Expr Fp)
-    (fixedClaimed adviceClaimed instanceClaimed : ℕ → Fp)
+    (constraints : List Fp)
     (hpoly : Polynomial Fp) (i m : ℕ) (hm : m < (deployedSetQueries vk ps ch i).length)
     (colPoly : Fin (deployedSetQueries vk ps ch i).length → Polynomial Fp)
     (hbindAll : ∀ (idx : Fin ((constructIntermediateSets
@@ -1050,24 +1038,20 @@ theorem hfold_of_member_budget {G : Type*} [AddCommGroup G] [Module Fp G] [Decid
             (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2)
           ch.y (ch.x ^ vk.n)])
     (hacc : DeployedAccepts urs hk vk ps ch)
-    (hfp : (List.ofFn (fun j : Fin ng =>
-          (gates j).eval fixedClaimed adviceClaimed instanceClaimed)).foldl
-            (fun acc v => acc * ch.y + v) 0
+    (hfp : constraints.foldl (fun acc v => acc * ch.y + v) 0
         = (allExpressions vk ps ch
             (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1
             (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.1
             (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2).foldl
             (fun acc v => acc * ch.y + v) 0) :
-    (List.ofFn (fun j : Fin ng =>
-        (gates j).eval fixedClaimed adviceClaimed instanceClaimed)).foldl
-          (fun acc v => acc * ch.y + v) 0
+    constraints.foldl (fun acc v => acc * ch.y + v) 0
       = hpoly.eval ch.x * (ch.x ^ vk.n - 1)
     ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   have hlt : 0 < ((constructIntermediateSets (assembleQueries vk ps ch)).points.getD i []).length := by
     rw [hroute]; simp
   rcases hbindAll ⟨0, hlt⟩ ⟨m, hm⟩ with hb | hrel
-  · refine Or.inl (hfold_of_vanishing_slot_binding vk ps ch gates fixedClaimed adviceClaimed
-      instanceClaimed hpoly i m hevals ?_ (deployedAccepts_xn_ne_one urs hk vk ps ch hacc) hfp)
+  · refine Or.inl (hfold_of_vanishing_slot_binding vk ps ch constraints hpoly i m hevals ?_
+      (deployedAccepts_xn_ne_one urs hk vk ps ch hacc) hfp)
     have hx : ((constructIntermediateSets (assembleQueries vk ps ch)).points.getD i [])[(0 : ℕ)]'hlt
         = ch.x := by
       rw [List.getElem_of_eq hroute hlt]
@@ -1075,6 +1059,72 @@ theorem hfold_of_member_budget {G : Type*} [AddCommGroup G] [Module Fp G] [Decid
     rw [hquot, ← hx]
     exact hb
   · exact Or.inr hrel
+
+open Polynomial in
+/-- **`hfold`, with the fingerprint discharged.** `hfold_of_member_budget` run on the full
+constraint list — gates, permutation argument and lookup argument together — instead of an abstract
+gate family. That list is the evaluation of the constraint *polynomials* at `ch.x`, so the
+fingerprint premise is no longer assumed: `eval_combineConstraints_deployed` proves it from the node
+binding alone.
+
+Named assumptions: `hfixed`/`hadvice`/`hinstance` — the fed columns take the claimed evaluations at
+`ch.x`; `hsets`/`hchunks`/`hlookups` — the permutation sets, chunks and lookups do the same;
+`hl0`/`hlLast`/`hlBlind` — the Lagrange polynomials take the verifier's Lagrange values;
+`hbindAll`/`hquot`/`hroute`/`hevals`/`hacc` — unchanged from `hfold_of_member_budget`. -/
+theorem hfold_of_constraint_polys {G : Type*} [AddCommGroup G] [Module Fp G] [DecidableEq G]
+    [Inhabited G] {shape : Shape}
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+    (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (fixedCols : ℕ → Polynomial Fp)
+    (adviceCols instanceCols : Fin shape.numProofs → ℕ → Polynomial Fp)
+    (sets : Fin shape.numProofs → List (PermSetEval (Polynomial Fp)))
+    (chunks : Fin shape.numProofs →
+      List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
+    (lookups : Fin shape.numProofs →
+      List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (l0 lLast lBlind : Polynomial Fp)
+    (hpoly : Polynomial Fp) (i m : ℕ) (hm : m < (deployedSetQueries vk ps ch i).length)
+    (colPoly : Fin (deployedSetQueries vk ps ch i).length → Polynomial Fp)
+    (hbindAll : ∀ (idx : Fin ((constructIntermediateSets
+          (assembleQueries vk ps ch)).points.getD i []).length)
+        (m₀ : Fin (deployedSetQueries vk ps ch i).length),
+        (colPoly m₀).eval
+            (((constructIntermediateSets (assembleQueries vk ps ch)).points.getD i [])[idx])
+          = ((deployedSetQueries vk ps ch i).getD (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
+        ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+    (hquot : hpoly = colPoly ⟨m, hm⟩)
+    (hroute : (constructIntermediateSets (assembleQueries vk ps ch)).points.getD i [] = [ch.x])
+    (hevals : ∀ d₀, ((deployedSetQueries vk ps ch i).getD m d₀).2
+      = [expectedHEval
+          (allExpressions vk ps ch
+            (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1
+            (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.1
+            (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2)
+          ch.y (ch.x ^ vk.n)])
+    (hacc : DeployedAccepts urs hk vk ps ch)
+    (hfixed : ∀ j, (fixedCols j).eval ch.x = finFn ps.fixedEvals j)
+    (hadvice : ∀ p j, (adviceCols p j).eval ch.x = finFn (ps.adviceEvals p) j)
+    (hinstance : ∀ p j, (instanceCols p j).eval ch.x = finFn (ps.instanceEvals p) j)
+    (hsets : ∀ p, (sets p).map (PermSetEval.map (fun q => q.eval ch.x)) = subProofPermSets ps p)
+    (hchunks : ∀ p, (chunks p).map (fun c => (c.1.map (fun q => q.eval ch.x),
+        c.2.map (fun q => (q.1.eval ch.x, q.2.eval ch.x)))) = subProofPermChunks vk ps p)
+    (hlookups : ∀ p, (lookups p).map (fun lk => (lk.1.map (fun q => q.eval ch.x), lk.2.1, lk.2.2))
+      = subProofLookups vk ps p)
+    (hl0 : l0.eval ch.x = (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1)
+    (hlLast : lLast.eval ch.x
+      = (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.1)
+    (hlBlind : lBlind.eval ch.x
+      = (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2) :
+    (combineConstraints fixedCols adviceCols instanceCols vk.gates sets chunks lookups
+        ch.beta ch.gamma vk.delta ch.theta ch.y vk.chunkLen l0 lLast lBlind).eval ch.x
+      = hpoly.eval ch.x * (ch.x ^ vk.n - 1)
+    ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  have hfp := eval_combineConstraints_deployed vk ps ch fixedCols adviceCols instanceCols
+    sets chunks lookups l0 lLast lBlind hfixed hadvice hinstance hsets hchunks hlookups
+    hl0 hlLast hlBlind
+  rw [eval_combineConstraints] at hfp ⊢
+  exact hfold_of_member_budget urs hk vk ps ch _ hpoly i m hm colPoly hbindAll hquot hroute
+    hevals hacc hfp
 
 open Polynomial in
 open scoped ENNReal in
@@ -1254,10 +1304,10 @@ theorem orchard_verifier_vesta_member_constraint_budgeted_hfold_derived {shape :
     S ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   subst hy
   subst hdeg
-  rcases hfold_of_member_budget urs hk vk ps ch gates
-      (fun n => (fixedCols n).eval ch.x)
-      (deployedClaimedFeed vk ps ch adviceSet adviceMem vk.adviceQueryLayout)
-      (deployedClaimedFeed vk ps ch instanceSet instanceMem vk.instanceQueryLayout)
+  rcases hfold_of_member_budget urs hk vk ps ch
+      (List.ofFn (fun j : Fin ng => (gates j).eval (fun n => (fixedCols n).eval ch.x)
+        (deployedClaimedFeed vk ps ch adviceSet adviceMem vk.adviceQueryLayout)
+        (deployedClaimedFeed vk ps ch instanceSet instanceMem vk.instanceQueryLayout)))
       hpoly i m hm colPoly hbindAll hquot hroute hevals hacc0 hfp with hfold | hrel
   · exact orchard_verifier_vesta_member_constraint_budgeted urs hk vk ps ch pU pW adviceSet
       hadviceSet adviceMem instanceSet hinstanceSet instanceMem fixedCols ch.y gates hpoly vk.n
