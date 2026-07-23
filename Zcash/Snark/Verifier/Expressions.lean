@@ -47,6 +47,15 @@ def Expr.map {F G : Type*} (f : F → G) : Expr F → Expr G
   | .product a b => .product (a.map f) (b.map f)
   | .scaled e c => .scaled (e.map f) (f c)
 
+/-- Mapping an expression twice is mapping once along the composite. -/
+theorem Expr.map_map {F G H : Type*} (f : F → G) (g : G → H) (e : Expr F) :
+    (e.map f).map g = e.map (fun c => g (f c)) := by
+  induction e <;> simp_all [Expr.map]
+
+/-- Mapping an expression along the identity leaves it unchanged. -/
+@[simp] theorem Expr.map_id {F : Type*} (e : Expr F) : (e.map fun c => c) = e := by
+  induction e <;> simp_all [Expr.map]
+
 /-- Evaluate a gate polynomial at the claimed evaluations (halo2 `Expression::evaluate` with the
 verifier's closures): queries resolve to `fixedEvals`/`adviceEvals`/`instanceEvals` at their index. -/
 def Expr.eval {F : Type*} [CommRing F] (fixedEvals adviceEvals instanceEvals : ℕ → F) :
@@ -230,6 +239,77 @@ theorem lookupExpressions_map {F G : Type*} [CommRing F] [CommRing G] (f : F →
           (f theta) (f beta) (f gamma) (f l0) (f lLast) (f lBlind) := by
   unfold lookupExpressions
   simp [LookupEval.map, map_add, map_sub, map_mul, map_one, map_pow, compressExprs_map f]
+
+/-- All constraint values for one sub-proof over any commutative ring (halo2 `plonk/verifier.rs`,
+the per-proof `flat_map`): the gate values, then the permutation-argument values, then the
+lookup-argument values. The verifier instantiates this at its claimed evaluations; the soundness
+proof instantiates the same builder one level up, at column polynomials. -/
+def subProofConstraints {F : Type*} [CommRing F] (fixedFeed adviceFeed instanceFeed : ℕ → F)
+    (gates : List (Expr F)) (sets : List (PermSetEval F))
+    (chunks : List (PermSetEval F × List (F × F)))
+    (lookups : List (LookupEval F × List (Expr F) × List (Expr F)))
+    (beta gamma x delta theta : F) (chunkLen : ℕ) (l0 lLast lBlind : F) : List F :=
+  gates.map (fun g => g.eval fixedFeed adviceFeed instanceFeed)
+  ++ permutationExpressions sets chunks beta gamma x delta chunkLen l0 lLast lBlind
+  ++ (lookups.map (fun lk => lookupExpressions lk.1 lk.2.1 lk.2.2 fixedFeed adviceFeed instanceFeed
+      theta beta gamma l0 lLast lBlind)).flatten
+
+/-- The whole constraint list commutes with a ring hom. Building the constraints over polynomials and
+then evaluating at a point gives exactly the verifier's list at that point's evaluations — this is
+what makes the polynomial and value levels agree term by term rather than only after the `y` fold. -/
+theorem subProofConstraints_map {F G : Type*} [CommRing F] [CommRing G] (f : F →+* G)
+    (fixedFeed adviceFeed instanceFeed : ℕ → F) (gates : List (Expr F))
+    (sets : List (PermSetEval F)) (chunks : List (PermSetEval F × List (F × F)))
+    (lookups : List (LookupEval F × List (Expr F) × List (Expr F)))
+    (beta gamma x delta theta : F) (chunkLen : ℕ) (l0 lLast lBlind : F) :
+    (subProofConstraints fixedFeed adviceFeed instanceFeed gates sets chunks lookups
+        beta gamma x delta theta chunkLen l0 lLast lBlind).map f
+      = subProofConstraints (fun i => f (fixedFeed i)) (fun i => f (adviceFeed i))
+          (fun i => f (instanceFeed i)) (gates.map (Expr.map f)) (sets.map (PermSetEval.map f))
+          (chunks.map (fun c => (c.1.map f, c.2.map (fun q => (f q.1, f q.2)))))
+          (lookups.map (fun lk =>
+            (lk.1.map f, lk.2.1.map (Expr.map f), lk.2.2.map (Expr.map f))))
+          (f beta) (f gamma) (f x) (f delta) (f theta) chunkLen (f l0) (f lLast) (f lBlind) := by
+  unfold subProofConstraints
+  simp only [List.map_append, List.map_flatten, List.map_map]
+  refine congrArg₂ (· ++ ·) (congrArg₂ (· ++ ·) ?_ (permutationExpressions_map f ..)) ?_
+  · exact List.map_congr_left fun g _ => Expr.eval_map f _ _ _ g
+  · exact congrArg List.flatten (List.map_congr_left fun lk _ => lookupExpressions_map f ..)
+
+/-- Every constraint value across the sub-proofs, in the verifier's order. The fixed columns, the
+gates and the challenge-derived scalars are shared; the advice and instance evaluations, the
+permutation sets and the lookups vary per sub-proof. -/
+def allConstraints {F : Type*} [CommRing F] {np : ℕ} (fixedFeed : ℕ → F)
+    (adviceFeed instanceFeed : Fin np → ℕ → F) (gates : List (Expr F))
+    (sets : Fin np → List (PermSetEval F))
+    (chunks : Fin np → List (PermSetEval F × List (F × F)))
+    (lookups : Fin np → List (LookupEval F × List (Expr F) × List (Expr F)))
+    (beta gamma x delta theta : F) (chunkLen : ℕ) (l0 lLast lBlind : F) : List F :=
+  (List.ofFn (fun p : Fin np =>
+    subProofConstraints fixedFeed (adviceFeed p) (instanceFeed p) gates (sets p) (chunks p)
+      (lookups p) beta gamma x delta theta chunkLen l0 lLast lBlind)).flatten
+
+/-- The whole constraint list, across all sub-proofs, commutes with a ring hom. -/
+theorem allConstraints_map {F G : Type*} [CommRing F] [CommRing G] (f : F →+* G) {np : ℕ}
+    (fixedFeed : ℕ → F) (adviceFeed instanceFeed : Fin np → ℕ → F) (gates : List (Expr F))
+    (sets : Fin np → List (PermSetEval F))
+    (chunks : Fin np → List (PermSetEval F × List (F × F)))
+    (lookups : Fin np → List (LookupEval F × List (Expr F) × List (Expr F)))
+    (beta gamma x delta theta : F) (chunkLen : ℕ) (l0 lLast lBlind : F) :
+    (allConstraints fixedFeed adviceFeed instanceFeed gates sets chunks lookups
+        beta gamma x delta theta chunkLen l0 lLast lBlind).map f
+      = allConstraints (fun i => f (fixedFeed i)) (fun p i => f (adviceFeed p i))
+          (fun p i => f (instanceFeed p i)) (gates.map (Expr.map f))
+          (fun p => (sets p).map (PermSetEval.map f))
+          (fun p => (chunks p).map (fun c => (c.1.map f, c.2.map (fun q => (f q.1, f q.2)))))
+          (fun p => (lookups p).map (fun lk =>
+            (lk.1.map f, lk.2.1.map (Expr.map f), lk.2.2.map (Expr.map f))))
+          (f beta) (f gamma) (f x) (f delta) (f theta) chunkLen (f l0) (f lLast) (f lBlind) := by
+  unfold allConstraints
+  rw [List.map_flatten, List.map_ofFn]
+  simp only [Function.comp_def]
+  refine congrArg List.flatten (congrArg List.ofFn (funext fun p => ?_))
+  exact subProofConstraints_map f ..
 
 /-- `expected_h_eval` (halo2 `vanishing/verifier.rs` `verify`): fold all constraint values by `y`
 (`acc·y + v`) and divide by `xⁿ − 1`. The verifier opens the folded `h` commitment to this value. -/
