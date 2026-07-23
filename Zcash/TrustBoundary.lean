@@ -594,6 +594,12 @@ assert_axioms lookup_row_step
 assert_axioms lookup_rules_dvd_of_identity
 assert_axioms deployed_lookup_subset_of_identity
 assert_axioms deployed_lookup_relation_of_identity
+-- Decompression: the θ-compressed membership becomes membership of whole rows, since the
+-- compression is the fold polynomial of the row's values and a good θ separates distinct tuples.
+assert_axioms foldPoly_sub
+assert_axioms tuple_eq_of_foldPoly_eval_eq
+assert_axioms compress_eval_eq_foldPoly
+assert_axioms deployed_lookup_tuple_of_identity
 -- The last links: the point check lifted to the polynomial identity, the permutation taken to be the
 -- one keygen builds from the circuit's copy constraints, the cells of every chunk covered at once,
 -- and circuit satisfaction defined by the whole constraint list rather than the gates alone.

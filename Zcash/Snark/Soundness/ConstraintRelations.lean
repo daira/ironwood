@@ -22,53 +22,64 @@ open Polynomial Finset
 open Finset in
 /-- **The circuit's declared equalities, read out of the capstone's predicate.** Circuit
 satisfaction over the full constraint list gives the permutation argument's conclusion: cells the
-circuit's copy constraints force equal do hold equal values. -/
+circuit's copy constraints force equal do hold equal values — across every chunk, for any number of
+sub-proofs. -/
 theorem declared_equalities_of_circuitSat
-    (omega beta gamma delta theta y : Fp) (chunkLen : ℕ)
+    (omega beta gamma delta theta y : Fp) (chunkLen : ℕ) {nc m : ℕ} (hnc : 0 < nc)
     (z : ℕ → Polynomial Fp) (lastP : ℕ → Option (Polynomial Fp))
     (cols : ℕ → List (Polynomial Fp × Polynomial Fp))
-    {kk : ℕ} (fixedCols : ℕ → Polynomial Fp)
-    (adviceCols instanceCols : Fin 1 → ℕ → Polynomial Fp) (gates : List (Expr Fp))
-    (lookups : Fin 1 → List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
-    (l0P lLastP lBlindP hpoly : Polynomial Fp) {n u : ℕ} (hn : n ≠ 0)
+    {kk np : ℕ} (fixedCols : ℕ → Polynomial Fp)
+    (decodeAdvice decodeInstance : (Fin (2 ^ kk) → Fp) → Fin np → ℕ → Polynomial Fp)
+    (gates : List (Expr Fp))
+    (sets : Fin np → List (PermSetEval (Polynomial Fp)))
+    (chunks : Fin np →
+      List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
+    (lookups : Fin np → List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (l0P lLastP lBlindP hpoly : Polynomial Fp) {n : ℕ} (hn : n ≠ 0) (p : Fin np)
     (a : Fin (2 ^ kk) → Fp)
-    (cs : List ((Fin u × Fin (cols 0).length) × (Fin u × Fin (cols 0).length)))
-    (hsat : circuitSatViaConstraints fixedCols (fun _ => adviceCols) (fun _ => instanceCols) gates
-      (fun _ => deployedPermSets omega 1 z lastP)
-      (fun _ => deployedPermChunks omega 1 z lastP cols) lookups
-      beta gamma delta theta y chunkLen l0P lLastP lBlindP hpoly n a)
-    (hgoodY : ∀ j, y ∉ szBadSet (foldSplitWitness (constraintPolys fixedCols adviceCols
-      instanceCols gates (fun _ => deployedPermSets omega 1 z lastP)
-      (fun _ => deployedPermChunks omega 1 z lastP cols) lookups
+    (hsets : sets p = deployedPermSets omega nc z lastP)
+    (hchunks : chunks p = deployedPermChunks omega nc z lastP cols)
+    (cs : List (((c : Fin nc) × Fin m × Fin (cols (c : ℕ)).length)
+      × ((c : Fin nc) × Fin m × Fin (cols (c : ℕ)).length)))
+    (hsat : circuitSatViaConstraints fixedCols decodeAdvice decodeInstance gates sets chunks
+      lookups beta gamma delta theta y chunkLen l0P lLastP lBlindP hpoly n a)
+    (hgoodY : ∀ j, y ∉ szBadSet (foldSplitWitness (constraintPolys fixedCols
+      (decodeAdvice a) (decodeInstance a) gates sets chunks lookups
       beta gamma delta theta chunkLen l0P lLastP lBlindP) n j))
     (hrow : ∀ i : ℕ, (omega ^ i) ^ n = 1)
-    (hactive : ∀ i < u, 1 - (lLastP.eval (omega ^ i) + lBlindP.eval (omega ^ i)) ≠ 0)
-    (hl0 : l0P.eval (omega ^ 0) ≠ 0) (hlast : lLastP.eval (omega ^ u) ≠ 0)
-    (hσ : ∀ c : Fin u × Fin (cols 0).length,
-      rowSigmaName omega (cols 0) (c.1 : ℕ) (c.2 : ℕ)
-        = rowName omega delta 0 ((PermConstruction.build cs c).1 : ℕ)
-            ((PermConstruction.build cs c).2 : ℕ))
-    (hnm : Function.Injective fun c : Fin u × Fin (cols 0).length =>
-      rowName omega delta 0 (c.1 : ℕ) (c.2 : ℕ))
+    (hactive : ∀ i < m, 1 - (lLastP.eval (omega ^ i) + lBlindP.eval (omega ^ i)) ≠ 0)
+    (hl0 : l0P.eval (omega ^ 0) ≠ 0) (hlast : lLastP.eval (omega ^ m) ≠ 0)
+    (hlastEval : ∀ c, c + 1 < nc → ((lastP c).getD 0).eval (omega ^ 0) = (z c).eval (omega ^ m))
+    (hσ : ∀ cell : (c : Fin nc) × Fin m × Fin (cols (c : ℕ)).length,
+      chunkSigma omega cols (cell.1 : ℕ) (cell.2.1 : ℕ) (cell.2.2 : ℕ)
+        = chunkName omega delta chunkLen ((PermConstruction.build cs cell).1 : ℕ)
+            ((PermConstruction.build cs cell).2.1 : ℕ)
+            ((PermConstruction.build cs cell).2.2 : ℕ))
+    (hnm : Function.Injective
+      fun cell : (c : Fin nc) × Fin m × Fin (cols (c : ℕ)).length =>
+        chunkName omega delta chunkLen (cell.1 : ℕ) (cell.2.1 : ℕ) (cell.2.2 : ℕ))
     (hgoodγ : gamma ∉ szBadSet (linProdDiff
-      ((cellPairs u (cols 0).length (rowValue omega (cols 0))
-        (rowSigmaName omega (cols 0))).map (fun q => q.1 + q.2 * beta))
-      ((cellPairs u (cols 0).length (rowValue omega (cols 0))
-        (rowName omega delta 0)).map (fun q => q.1 + q.2 * beta))))
+      ((chunkCellPairs nc m (fun c => (cols (c : ℕ)).length) (chunkValue omega cols)
+        (chunkSigma omega cols)).map (fun q => q.1 + q.2 * beta))
+      ((chunkCellPairs nc m (fun c => (cols (c : ℕ)).length) (chunkValue omega cols)
+        (chunkName omega delta chunkLen)).map (fun q => q.1 + q.2 * beta))))
     (hgoodβ : ∀ j, beta ∉ szBadSet ((pairProdDiff
-      (cellPairs u (cols 0).length (rowValue omega (cols 0)) (rowSigmaName omega (cols 0)))
-      (cellPairs u (cols 0).length (rowValue omega (cols 0))
-        (rowName omega delta 0))).coeff j))
-    {x w : Fin u × Fin (cols 0).length}
-    (hxw : Relation.EqvGen (fun p q => (p, q) ∈ cs) x w) :
-    rowValue omega (cols 0) (x.1 : ℕ) (x.2 : ℕ)
-        = rowValue omega (cols 0) (w.1 : ℕ) (w.2 : ℕ)
-      ∨ ∃ q ∈ range u ×ˢ range (cols 0).length,
-          rowValue omega (cols 0) q.1 q.2
-            + beta * rowName omega delta 0 q.1 q.2 + gamma = 0 :=
-  deployed_declared_equalities_of_identity omega beta gamma delta theta y chunkLen z lastP cols
-    fixedCols adviceCols instanceCols gates lookups l0P lLastP lBlindP hpoly hn 0 cs hsat hgoodY
-    hrow hactive hl0 hlast hσ hnm hgoodγ hgoodβ hxw
+      (chunkCellPairs nc m (fun c => (cols (c : ℕ)).length) (chunkValue omega cols)
+        (chunkSigma omega cols))
+      (chunkCellPairs nc m (fun c => (cols (c : ℕ)).length) (chunkValue omega cols)
+        (chunkName omega delta chunkLen))).coeff j))
+    {x w : (c : Fin nc) × Fin m × Fin (cols (c : ℕ)).length}
+    (hxw : Relation.EqvGen (fun a b => (a, b) ∈ cs) x w) :
+    chunkValue omega cols (x.1 : ℕ) (x.2.1 : ℕ) (x.2.2 : ℕ)
+        = chunkValue omega cols (w.1 : ℕ) (w.2.1 : ℕ) (w.2.2 : ℕ)
+      ∨ ∃ cell : (c : Fin nc) × Fin m × Fin (cols (c : ℕ)).length,
+          chunkValue omega cols (cell.1 : ℕ) (cell.2.1 : ℕ) (cell.2.2 : ℕ)
+            + beta * chunkName omega delta chunkLen (cell.1 : ℕ) (cell.2.1 : ℕ) (cell.2.2 : ℕ)
+            + gamma = 0 :=
+  deployed_declared_equalities_of_identity_chunks omega beta gamma delta theta y chunkLen hnc z
+    lastP cols fixedCols (decodeAdvice a) (decodeInstance a) gates sets chunks lookups
+    l0P lLastP lBlindP hpoly hn p hsets hchunks cs hsat hgoodY hrow hactive hl0 hlast hlastEval
+    hσ hnm hgoodγ hgoodβ hxw
 
 open Finset in
 /-- **The lookup relation, read out of the capstone's predicate.** The same satisfaction predicate
