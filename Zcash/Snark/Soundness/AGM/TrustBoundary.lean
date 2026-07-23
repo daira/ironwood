@@ -6,6 +6,7 @@ import Zcash.Snark.Soundness.Composition.Bridge
 import Zcash.Snark.Soundness.Multiopen.BudgetedExtraction
 import Zcash.Snark.Soundness.VestaBudget
 import Zcash.Snark.Soundness.FoldSplit
+import Zcash.Snark.Soundness.ConstraintSatisfaction
 import Zcash.Snark.Soundness.GrandProductBridge
 import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.PermutationRows
@@ -382,6 +383,22 @@ assert_no_sorry eval_constraintPolys
 assert_no_sorry eval_combineConstraints
 assert_no_sorry eval_combineConstraints_deployed
 assert_no_sorry hfold_of_constraint_polys
+assert_no_sorry ConstraintPolyModel.constraints_eq_constraintPolys
+assert_no_sorry ConstraintPolyModel.gate_mem_constraints
+assert_no_sorry ConstraintPolyModel.permutation_mem_constraints
+assert_no_sorry ConstraintPolyModel.lookup_mem_constraints
+assert_no_sorry ConstraintPolyModel.lookupExpression_mem_lookupConstraints
+assert_no_sorry ConstraintSatisfaction.of_all
+assert_no_sorry ConstraintSatisfaction.lookupExpression
+assert_no_sorry permutation_start_mem
+assert_no_sorry permutation_end_mem
+assert_no_sorry permutation_chain_mem
+assert_no_sorry permutation_step_mem
+assert_no_sorry lookup_start_mem
+assert_no_sorry lookup_end_mem
+assert_no_sorry lookup_product_step_mem
+assert_no_sorry lookup_run_start_mem
+assert_no_sorry lookup_run_step_mem
 -- The permutation and lookup arguments closed from the verifier's own row checks: the combined
 -- check splits into its parts, the running product telescopes across the rows, two challenge root
 -- counts turn the product into a multiset identity, and the existing structural theorems turn that
