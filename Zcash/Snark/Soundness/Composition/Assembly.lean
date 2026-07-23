@@ -103,7 +103,6 @@ theorem residual_le_via_ladder {shape : Shape}
   exact (D (orchardGeneratorROBasis query setup)).landsBelow_measure_le
     (family.queryBound (orchardGeneratorROBasis query setup)) hsτ
 
-set_option maxHeartbeats 1000000 in
 open ComputedAlgebraicFSFamily in
 /-- **The knowledge-error bound, unconditional up to the adaptive coupling inputs.** Deployed
 acceptance without SNARK extraction has probability at most the clean-opening bound

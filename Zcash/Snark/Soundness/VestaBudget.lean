@@ -25,6 +25,12 @@ joint floor but stays named, because the statement's decode terms carry its proo
 
 namespace Zcash.Snark
 
+-- The deployed grouping definitions appear inside index types, so a defeq check on an index can
+-- pull the whole `constructIntermediateSets (assembleQueries …)` computation through `whnf`.
+-- Sealing them keeps those checks syntactic; the proofs below use their equation lemmas.
+attribute [local irreducible] deployedSetQueries deployedSetCommIds deployedX4PairCount
+  x4BatchCommitments x4BatchEvals
+
 -- Match the instance set `AlgebraicWfProof.multiopen_repr` is stated against (`Soundness.Composition.Bridge`
 -- and `Forking.Adversary.Algebraic` use the same concrete `Inhabited VestaG`); a binder would be a
 -- different instance term, forcing the `multiopenCommitment` fold through `whnf`. Named to avoid an
@@ -34,7 +40,6 @@ local instance vestaInhabitedVestaBudget : Inhabited VestaG := ⟨0⟩
 open Polynomial in
 open scoped ENNReal in
 open Classical in
-set_option maxHeartbeats 4000000 in
 /-- **Budgeted deployed member capstone: the floor family priced by one joint accept floor.** The
 conclusion of the derived capstone — the gate check at `ch.x` on the decoded member columns, the
 claimed evaluations derived and `hquot` produced — from a single joint accept floor per point set,
@@ -225,7 +230,6 @@ variable {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
 open Polynomial in
 open scoped ENNReal in
 open Classical in
-set_option maxHeartbeats 4000000 in
 /-- **The budgeted witness tie on the computed path.** `member_relation_or_dlr_of_instance`
 (`Soundness.Composition.Bridge`) with the member decode *constructed* and `hquot` *derived*: on the
 agreement branch the budgeted deployed capstone runs at the algebraic instance's base
@@ -400,7 +404,6 @@ theorem member_relation_or_dlr_of_instance_budgeted
 open Polynomial in
 open scoped ENNReal in
 open Classical in
-set_option maxHeartbeats 1000000 in
 /-- The budgeted `runToSnark`-analogue on the computed path: `member_snark_of_instance`
 (`Soundness.Composition.Bridge`) with the clean-opening branch routed through the budgeted witness tie, so
 no member decode or quotient identity is hypothesised. On the clean-opening branch the budgeted
@@ -1014,7 +1017,6 @@ theorem hfold_of_vanishing_slot_binding {G : Type*} [AddCommGroup G] [Module Fp 
   rw [hbind, hrouted (CommitmentRef.point 0, [])]
   rfl
 
-set_option maxHeartbeats 1000000 in
 /-- **`hfold` from the budget's good branch.** `deployed_member_budget` ends in a disjunction:
 *either* the joint accept measure sits inside the four-threshold budget, *or* every decoded member
 column takes its claimed evaluation (or a `(g, u, w)` relation is at hand). Consuming the second
@@ -1123,7 +1125,6 @@ theorem hfp_of_expressions_eq {ng : ℕ} (gates : Fin ng → Expr Fp)
 open Polynomial in
 open scoped ENNReal in
 open Classical in
-set_option maxHeartbeats 4000000 in
 /-- **The budgeted member capstone with `hfold` derived.** The capstone at the deployed
 instantiation (`y := ch.y`, `deg := vk.n`, forced by `hy`/`hdeg`), its `hfold` premise supplied by
 `hfold_of_member_budget`: that lemma is generic in the claimed-evaluation feeds, so it instantiates

@@ -21,6 +21,12 @@ across the family); producing it end-to-end from acceptance is the remaining con
 
 namespace Zcash.Snark
 
+-- The deployed grouping definitions appear inside index types, so a defeq check on an index can
+-- pull the whole `constructIntermediateSets (assembleQueries …)` computation through `whnf`.
+-- Sealing them keeps those checks syntactic; the proofs below use their equation lemmas.
+attribute [local irreducible] deployedSetQueries deployedSetCommIds deployedX4PairCount
+  x4BatchCommitments x4BatchEvals
+
 open Polynomial
 open scoped ENNReal
 open Classical
@@ -131,7 +137,6 @@ theorem openedX3_rewound_aggregate_value [DecidableEq G] [Inhabited G] {shape : 
       (hprob4 r) a ha, ?_⟩
   exact openedDecodedCols_eval_x3 urs hk vk (r.spliced ps) (r.challenges ch χ) _ _
 
-set_option maxHeartbeats 1000000 in
 /-- **Binding the rewound aggregate to the honest one (discharge step 4).** The honest `pbatch` and a
 rewound run's batch decode the *same* `x₄`-slot aggregate commitment — the point-set aggregates are
 fixed before `x₃` (`x3Run_x4Qs`/`x3Run_qPrime`), so `x4BatchCommitments` agrees slot-for-slot. Both
@@ -209,7 +214,6 @@ theorem openedX3_perχ_consistency [DecidableEq G] [Inhabited G] {shape : Shape}
   · exact Or.inl (by rw [heq, hval, hx2cons r])
   · exact Or.inr hdlr
 
-set_option maxHeartbeats 1000000 in
 /-- The deployed `x₃` value check closed to the inner `x₂` consistency — the *aggregate route*,
 superseded by the fixed-`q′` chain (`deployed_value_check_node_binding` below) and retained as the
 record of why that route was taken instead: its inner consistency `hx2cons` is an open obligation,
@@ -477,7 +481,8 @@ theorem deployedSetsForEval_reverse_getD_u [DecidableEq G] [Inhabited G] {shape 
     ((deployedSetsForEval vk ps ch).reverse.getD k ([], [], 0)).2.2
       = x4BatchEvals vk ps ch ⟨k, Nat.lt_succ_of_lt hk⟩ := by
   have hlenS := deployedSetsForEval_length vk ps ch
-  have hlenP : (deployedX4Pairs vk ps ch).length = deployedX4PairCount vk ps ch := rfl
+  have hlenP : (deployedX4Pairs vk ps ch).length = deployedX4PairCount vk ps ch :=
+    (deployedX4PairCount_eq vk ps ch).symm
   have hik : deployedX4PairCount vk ps ch - 1 - k < deployedX4PairCount vk ps ch := by omega
   -- per-index: both the value-check set's u-field and the batch pair's eval are `multiopenU[i]`
   have key : ((deployedSetsForEval vk ps ch).getD
@@ -498,7 +503,6 @@ theorem deployedSetsForEval_reverse_getD_u [DecidableEq G] [Inhabited G] {shape 
       ← List.getD_eq_getElem?_getD]
   exact key
 
-set_option maxHeartbeats 1000000 in
 /-- **The deployed value-check node binding, reduced to the grid openings.**
 `node_binding_of_grid_openings` at the deployed grouping, with the reversed indexing
 `multiopenEval` needs; the structural field identifications are discharged from the reversed
@@ -617,7 +621,6 @@ theorem openedX3_rewound_qprime_value [DecidableEq G] [Inhabited G] {shape : Sha
       (hprob4 r) a ha, ?_⟩
   exact openedDecodedCols_top_eval_x3 urs hk vk (r.spliced ps) (r.challenges ch χ) _
 
-set_option maxHeartbeats 1000000 in
 /-- **Binding a rewound `x₂` run's aggregate to the honest one (grid `hu` building block).** The `x₂`
 analogue of `openedX3_agg_binding`: the honest `pbatch` and a batch for an `x₂`-rewound run decode the
 *same* `x₄`-slot commitment — the point-set aggregates are fixed before `x₂` (`x2Run_x4Qs`), so
@@ -661,7 +664,6 @@ theorem openedX2_agg_binding [DecidableEq G] [Inhabited G] {shape : Shape}
   · exact Or.inl (by simp only [openedDecodedCols, heq])
   · exact Or.inr hdlr
 
-set_option maxHeartbeats 1000000 in
 /-- **Binding the doubly-rewound aggregate directly to the honest one (grid `hu` building block).**
 The composed `x₂`-then-`x₃` analogue: the honest `pbatch` and a batch for a doubly-rewound run
 (`x₂`-rewind `r₂` then `x₃`-rewind `r₃`) decode the *same* `x₄`-slot aggregate commitment — the
@@ -718,7 +720,6 @@ theorem openedX2X3_agg_binding [DecidableEq G] [Inhabited G] {shape : Shape}
   · exact Or.inl (by simp only [openedDecodedCols, heq])
   · exact Or.inr hdlr
 
-set_option maxHeartbeats 1000000 in
 /-- **The `q′` (top-slot) column is fixed across `x₃`-rewinds.** `q′` is absorbed before `x₃`
 (`x3Run_qPrime`), so the honest batch and any `x₃`-rewound run's batch decode a shared commitment,
 and `hasNontrivialRelation_of_two_augmented_openings` forces the decoded columns equal — or
@@ -753,7 +754,6 @@ theorem openedX3_qprime_binding [DecidableEq G] [Inhabited G] {shape : Shape}
   · exact Or.inl (by simp only [openedDecodedCols, heq])
   · exact Or.inr hdlr
 
-set_option maxHeartbeats 1000000 in
 /-- **The `q′` (top-slot) column agrees across two `x₃`-rewinds of the same base (pair form).** Both
 `x₃`-rewound runs `r`, `r'` (of the same string `ps`) decode the *same* `q′` commitment at their top
 slots — `q′` is absorbed before `x₃` (`x3Run_qPrime`), so `x4BatchCommitments … ⟨count⟩` of either
@@ -822,16 +822,6 @@ theorem openedX3_rewound_batch_eval [DecidableEq G] [Inhabited G] {shape : Shape
   intro j
   exact openedDecodedCols_eval_x3 urs hk vk (r.spliced ps) (r.challenges ch χ) _ j
 
-/-- The `x₄` batch's top slot is the recomputed base evaluation (the `else` branch of
-`x4BatchEvals`) — the value the quotient commitment `q′` is claimed to open to. Composed with
-`deployedBaseEval_eq_multiopenEval` this is the grid `hopen`'s right-hand side. -/
-theorem x4BatchEvals_top [DecidableEq G] [Inhabited G] {shape : Shape}
-    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
-    x4BatchEvals vk ps ch ⟨deployedX4PairCount vk ps ch, Nat.lt_succ_self _⟩
-      = deployedBaseEval vk ps ch := by
-  show (if deployedX4PairCount vk ps ch < deployedX4PairCount vk ps ch then _
-    else deployedBaseEval vk ps ch) = deployedBaseEval vk ps ch
-  rw [if_neg (lt_irrefl _)]
 
 /-- **The value-check sets' points and compressed-evals fields are fixed under a double
 (`x₂`-then-`x₃`) rewind.** The grouping and the `x₁` compression read only pre-`x₂` data
@@ -962,7 +952,6 @@ theorem grid_hdeg_bound {numSets : ℕ} (allPts : Finset Fp) (pts : Fin numSets 
           Polynomial.natDegree_mul_le
       _ ≤ N + allPts.card := add_le_add (hcr j) (coProd_natDegree_le _ _)
 
-set_option maxHeartbeats 2000000 in
 /-- **The deployed multiopen value check from the nested `x₂`×`x₃`×`x₄` floors.** *Either* the
 honest `x₄`-slot aggregate for point set `count − 1 − j₀` takes its claimed interpolation at each
 of its points, *or* a nontrivial `(g, U, W)` relation exists — everything produced from the accept
@@ -1353,7 +1342,6 @@ theorem deployedSetsForEval_x1_getD_fields [DecidableEq G] [Inhabited G] {shape 
       x1Run_setQueries]
     rfl
 
-set_option maxHeartbeats 4000000 in
 /-- **The `x₁`-rewound aggregate opens the `ξ`-fold of the decoded member columns.**
 An `x₁`-rewound run's decoded `x₄`-slot aggregate for point set `i` and the `ξ`-power combination
 of a member decode's columns are two augmented openings of the *same* group element: the run's
@@ -1428,7 +1416,6 @@ theorem openedX1_agg_member_binding [DecidableEq G] [Inhabited G] {shape : Shape
   · exact Or.inl heq
   · exact Or.inr hdlr
 
-set_option maxHeartbeats 4000000 in
 /-- **Eval form of the `x₁` aggregate↔member binding.** The `x₁`-rewound run's decoded
 aggregate polynomial for set `i` evaluates anywhere to the `ξ`-power fold of the member column
 polynomials' values — or a nontrivial relation exists. The `x₁` un-batch equates this against the
@@ -1486,7 +1473,6 @@ def OpenedX1PinnedAccept [DecidableEq G] [Inhabited G] {shape : Shape} (urs : UR
       (x4BatchCommitments urs hk vk (run.spliced ps) (run.challenges ch χv))
       (x4BatchEvals vk (run.spliced ps) (run.challenges ch χv)) aR pUR pWR)
 
-set_option maxHeartbeats 4000000 in
 /-- **The deployed member-column node binding, from the nested `x₁`×`x₂`×`x₃`×`x₄` floors.**
 *Either* each decoded member column of point set `i` takes its claimed evaluation at each of the
 set's points, *or* a nontrivial `(g, U, W)` relation exists. The `x₁` floor yields the compression
@@ -1738,7 +1724,6 @@ noncomputable def deployedClaimedFeed [DecidableEq G] [Inhabited G] {shape : Sha
           (rotateOmega vk.omega ch.x (layout.getD n (0, 0)).2)) 0
     else 0
 
-set_option maxHeartbeats 4000000 in
 /-- **The member node binding at a located set point.** `deployed_member_node_binding`
 with the point membership supplied instead of a positional index and the `hql` bookkeeping
 discharged (`deployedSetQueries_eval_length`): each decoded member column takes its claimed

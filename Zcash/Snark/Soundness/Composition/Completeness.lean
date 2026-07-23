@@ -31,6 +31,12 @@ by `deployed_member_budget`, the residual `hcont` pays for. -/
 
 namespace Zcash.Snark
 
+-- The deployed grouping definitions appear inside index types, so a defeq check on an index can
+-- pull the whole `constructIntermediateSets (assembleQueries …)` computation through `whnf`.
+-- Sealing them keeps those checks syntactic; the proofs below use their equation lemmas.
+attribute [local irreducible] deployedSetQueries deployedSetCommIds deployedX4PairCount
+  x4BatchCommitments x4BatchEvals
+
 open Polynomial
 open scoped ENNReal
 open Classical
@@ -203,7 +209,6 @@ theorem honestCompletenessSupply_of_forkedTranscript [DecidableEq G] [Inhabited 
   let ⟨ft⟩ := hft
   ⟨z, blind, hz, ⟨fun _ => ft⟩, hacc⟩
 
-set_option maxHeartbeats 1000000 in
 /-- **The honest-base forked transcript from a family instance's clean opening.** The instance's
 `Opening` gives an `IpaRelation` at `commit aMulti`; `ipaRelation_deployed_of_instance` re-expresses
 it (under the honest value shift `hshift`) at the de-blinded deployed commitment
@@ -242,7 +247,6 @@ theorem forkedTranscript_nonempty_of_instanceOpening {shape : Shape}
     rw [hcommit]; abel
   · rw [← hval]; simp only [commitGen, innerProduct, smul_eq_mul]
 
-set_option maxHeartbeats 1000000 in
 /-- **The honest-completeness supply from a family instance's clean opening.** Combining the forked
 transcript from the opening (`forkedTranscript_nonempty_of_instanceOpening`) with deployed acceptance
 via `honestCompletenessSupply_of_forkedTranscript`. This discharges the *tree-construction* side of
@@ -335,7 +339,6 @@ theorem deployedAccepts_of_verifierEq [DecidableEq G] [Inhabited G] {shape : Sha
       (constructIntermediateSets (assembleQueries vk ps ch))]
   exact h
 
-set_option maxHeartbeats 1000000 in
 /-- **The honest-completeness supply with the shift derived.**
 `honestCompletenessSupply_of_instanceOpening` with `hshift` discharged by
 `shift_eq_zero_of_openings_agree` (`Soundness.Composition.Bridge`): the clean opening's witness `o.1` agreeing
@@ -372,7 +375,6 @@ theorem honestCompletenessSupply_of_openings_agree {shape : Shape}
     (shift_eq_zero_of_openings_agree p ν cert hz hvalid o hval₀ hae)
     u₁ u₂ u₃ h12 h13 h23 hu₁ hu₂ hu₃ hacc
 
-set_option maxHeartbeats 1000000 in
 /-- **The honest-completeness supply from a family clean opening.** `cleanOpening_provenance`
 (`Soundness.VestaBudget`) exposes the `AlgebraicWfProof`, oracle scalars, certificate, and clean
 opening behind a produced instance; this theorem turns that data into the supply, with the fold
@@ -481,7 +483,6 @@ theorem snarkExtractionFailureEventDeployed_measure_le {shape : Shape} {T : Type
   le_trans (MeasureTheory.measure_mono
     (Set.preimage_mono (snarkExtractionFailureEventDeployed_subset family extracted))) h
 
-set_option maxHeartbeats 1000000 in
 /-- **The honest-completeness supply from a clean opening, with no `assemble?` premise.**
 `honestCompletenessSupply_of_cleanOpening` with acceptance taken as the deployed decision: because
 `fullAlgebraicAcceptDeployed` *is* `DeployedAccepts`, the rejection-path side condition disappears
@@ -514,7 +515,6 @@ theorem honestCompletenessSupply_of_cleanOpening_deployed {shape : Shape}
       (chRecord ν (fun _ => 0)) :=
   honestCompletenessSupply_of_openings_agree p ν cert hz hvalid o hval₀ hae hverify
 
-set_option maxHeartbeats 1000000 in
 /-- **The supply, or binding breaks.** The clean opening `o` and the batch witness `a₀` commit to
 the same group element (`opening_commit_deployed_of_instance` and `hcommit₀`), so *either* they
 agree — `honestCompletenessSupply_of_openings_agree` produces the supply, shift forced — *or* they

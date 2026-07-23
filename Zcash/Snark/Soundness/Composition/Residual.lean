@@ -25,6 +25,12 @@ four canonical-run accept events.
 
 namespace Zcash.Snark
 
+-- The deployed grouping definitions appear inside index types, so a defeq check on an index can
+-- pull the whole `constructIntermediateSets (assembleQueries …)` computation through `whnf`.
+-- Sealing them keeps those checks syntactic; the proofs below use their equation lemmas.
+attribute [local irreducible] deployedSetQueries deployedSetCommIds deployedX4PairCount
+  x4BatchCommitments x4BatchEvals
+
 open scoped ENNReal
 
 /-- **The fibered single-slot counting bound.** For a per-base accept family `acc : A → B → Prop`
@@ -69,7 +75,6 @@ theorem residual_le_of_coupling_containment {Ω A B : Type*}
     _ = (PMF.uniformOfFintype (A × B)).toOuterMeasure AccSet := by rw [hcouple]
     _ ≤ t := fibered_accept_below_threshold_le acc t
 
-set_option maxHeartbeats 1000000 in
 open ComputedAlgebraicFSFamily in
 /-- **The unconditional single-number knowledge-error bound, modulo the forking coupling.** The
 decomposed bound with the residual closed to the threshold `t` from two isolated facts: `hcouple`
@@ -281,7 +286,6 @@ noncomputable def memberBadEvent {G : Type*} [AddCommGroup G] [Module Fp G]
             (OpenedX1Accept urs hk vk ps ch))
           ≤ (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp}
 
-set_option maxHeartbeats 1000000 in
 open Classical in
 /-- **The containment, discharged: a clean-but-not-extracted honest tuple lands in the priced bad
 event.** Given deployed acceptance, a Fiat–Shamir tree at the honest IPA base, and the failure of
@@ -593,7 +597,6 @@ theorem deployedAllPts_card_le {G : Type*} [AddCommGroup G] [Module Fp G]
     _ ≤ ((assembleQueries vk ps ch).map (·.point)).length := List.toFinset_card_le _
     _ = (assembleQueries vk ps ch).length := List.length_map ..
 
-set_option maxHeartbeats 1000000 in
 open Classical in
 open ComputedAlgebraicFSFamily in
 /-- **The single-number knowledge-error bound over the priced union, modulo the coupling.** The
