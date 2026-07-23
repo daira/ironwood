@@ -25,30 +25,54 @@ theorem vk_lookupTables_ofFn : List.ofFn vk.lookupTableExprs = vkLookupTableExpr
 
 /-- **The captured verifying key's gates are the derived Action circuit's.** -/
 theorem vk_gates_eq_derived : vk.gates = actionPinnedCs.gates :=
-  congrArg PartialPinnedConstraintSystem.gates capturedPinnedCs_eq_derived
+  congrArg PinnedConstraintSystem.gates capturedPinnedCs_eq_derived
 
 theorem vk_adviceQueryLayout_eq_derived :
     vk.adviceQueryLayout = actionPinnedCs.adviceQueryLayout :=
-  congrArg PartialPinnedConstraintSystem.adviceQueryLayout capturedPinnedCs_eq_derived
+  congrArg PinnedConstraintSystem.adviceQueryLayout capturedPinnedCs_eq_derived
 
 theorem vk_fixedQueryLayout_eq_derived :
     vk.fixedQueryLayout = actionPinnedCs.fixedQueryLayout :=
-  congrArg PartialPinnedConstraintSystem.fixedQueryLayout capturedPinnedCs_eq_derived
+  congrArg PinnedConstraintSystem.fixedQueryLayout capturedPinnedCs_eq_derived
 
 theorem vk_instanceQueryLayout_eq_derived :
     vk.instanceQueryLayout = actionPinnedCs.instanceQueryLayout :=
-  congrArg PartialPinnedConstraintSystem.instanceQueryLayout capturedPinnedCs_eq_derived
+  congrArg PinnedConstraintSystem.instanceQueryLayout capturedPinnedCs_eq_derived
 
 theorem vk_lookupInputExprs_eq_derived :
     List.ofFn vk.lookupInputExprs = actionPinnedCs.lookupInputExprs :=
   vk_lookupInputs_ofFn.trans
-    (congrArg PartialPinnedConstraintSystem.lookupInputExprs capturedPinnedCs_eq_derived)
+    (congrArg PinnedConstraintSystem.lookupInputExprs capturedPinnedCs_eq_derived)
 
 theorem vk_lookupTableExprs_eq_derived :
     List.ofFn vk.lookupTableExprs = actionPinnedCs.lookupTableExprs :=
   vk_lookupTables_ofFn.trans
-    (congrArg PartialPinnedConstraintSystem.lookupTableExprs capturedPinnedCs_eq_derived)
+    (congrArg PinnedConstraintSystem.lookupTableExprs capturedPinnedCs_eq_derived)
+
+/-! ## The VK's domain and permutation scalars, derived
+
+The captured `vk`'s scalar fields — previously transcribed constants — are all
+computable from the circuit: `omega`/`n` from the derived domain exponent `actionK`
+(`minimalK`), `blindingFactors` from the configure-recorded advice queries, `delta` a
+pasta constant, `chunkLen` from the ported `cs.degree()`, and `permutationChunks` the
+recorded permutation columns chunked by it. -/
+
+/-- Bundled `native_decide`s (per-field theorems would re-evaluate the shared
+selector-map/projection work once each; the chunks live in a separate bundle only
+because instance synthesis balks at the 6-product). -/
+theorem vk_scalars_derived :
+    (vk.omega, vk.n, vk.blindingFactors, vk.delta, vk.chunkLen)
+      = (omegaOf actionK, 2 ^ actionK, actionCS.blindingFactors, deltaFp,
+          actionCS.chunkLen) := by
+  native_decide
+
+theorem vk_permutationChunks_derived :
+    vk.permutationChunks
+      = permutationChunksOf (actionSelMapDerived (2 ^ actionK)) actionCS := by
+  native_decide
 
 assert_no_sorry vk_gates_eq_derived
+assert_no_sorry vk_scalars_derived
+assert_no_sorry vk_permutationChunks_derived
 
 end Zcash.Snark.Fixture

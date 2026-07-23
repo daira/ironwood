@@ -26,17 +26,15 @@ open Fixtures.Json
 def actionCS : ConstraintSystem Fp :=
   (Action.Circuit.configure Specs.Sinsemilla.orchardGenerators {}).2
 
-/-- Registration-order query seed from a dumped fixture's query layouts. -/
-def seedOf (f : CsFixture) : List Query :=
-  f.adviceQueryLayout.map (fun (c, r) => Query.advice ⟨c⟩ r)
-    ++ f.fixedQueryLayout.map (fun (c, r) => Query.fixed ⟨c⟩ r)
-    ++ f.instanceQueryLayout.map (fun (c, r) => Query.instance ⟨c⟩ r)
-
 #eval show IO Unit from do
   let actionPost ← loadCsFixture "Zcash/Circuits/Fixtures/actionPost.json" 0xdb884f3c3174a41b
   runChecks [
-    -- The Rust-dumped selector map, applied mechanically, yields exactly the dumped CS.
+    -- Every gate's/lookup's `queriedCells` registered faithfully; the layout equality
+    -- below then certifies the recorded order against the Rust dump.
+    ("action: no ill-formed queriedCells", actionCS.invalidQueriedCells.isEmpty),
+    -- The Rust-dumped selector map, applied mechanically to the configure-recorded CS,
+    -- yields exactly the dumped CS.
     ("actionPost: projected CS = dump",
-      projectCS (seedOf actionPost) actionSelMap actionCS == actionPost)]
+      projectCS actionSelMap actionCS == actionPost)]
 
 end Zcash.Circuits.Fixtures.Test.MatchAction

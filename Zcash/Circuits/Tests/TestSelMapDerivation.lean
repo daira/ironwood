@@ -16,9 +16,13 @@ separately pins the derived placements against the layout fixture's.)
 
 namespace Zcash.Circuits.Fixtures.Test.SelMapDerivation
 
-open Bridge (actionSelMapDerived)
+open Bridge (actionSelMapDerived actionK)
 
 -- The fully derived map (the one wired into `actionPinnedCs`) equals the Rust dump.
 #guard actionSelMapDerived (2 ^ 11) == actionSelMap
+
+-- The derived domain exponent (`minimalK`, the keygen fit condition) equals orchard's
+-- pinned `K = 11` (`circuit.rs:76`) — so the check above also covers the derived size.
+#guard actionK == 11
 
 end Zcash.Circuits.Fixtures.Test.SelMapDerivation

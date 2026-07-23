@@ -1,29 +1,23 @@
 import Zcash.Circuits.Fixtures.ProjectSemantics
+import Zcash.Circuits.Fixtures.CompressSelectors
 
 /-!
-# `PartialPinnedConstraintSystem` — the pinned constraint system, derived from a circuit
+# `PinnedConstraintSystem` — the pinned constraint system, derived from a circuit
 
 halo2's `PinnedConstraintSystem` is the canonical view of the constraint system a
 verifying key pins (and hashes into `transcript_repr`): counts, flattened gate
-polynomials, query lists, permutation columns, lookups, constants.
-`PartialPinnedConstraintSystem` is the sub-record the current capture certifies — the
-gate polynomials, the three query layouts, and the lookup argument expressions;
-*partial* because the permutation columns (landing with the commitment-matching phase)
-are not yet compared.
-`PartialPinnedConstraintSystem.derive` computes it from a Clean `ConstraintSystem`,
-given the two keygen witnesses the Lean side does not yet compute itself:
-
-* `seed` — the query-registration order (halo2 registers queries during `configure`;
-  Clean's constraint system does not record declaration order — computing this needs
-  the planned `Configure` query-registration refactor);
-* `map` — the `compress_selectors` packing (layout-dependent: derives from the
-  activation table over the synthesized operations — computing it needs the planned
-  floor-planner and `compress_selectors` ports).
-
-Once both are computed, `derive` becomes a function of the `FormalCircuit` alone.
-Until then they are explicit inputs, and their correctness is enforced by the
-capture-equality theorems (`Zcash.Snark.Fixtures.SingleAction.PinnedCsMatch`): a wrong seed
-or packing produces different gates or layouts and fails the comparison.
+polynomials, query lists, permutation columns, lookups, constants. The Lean record
+mirrors every field of the Rust pinned record (`circuit.rs:966-979`).
+`PinnedConstraintSystem.derive` computes it from a Clean `ConstraintSystem` and
+the `compress_selectors` packing `map` (derived circuit-side, `Bridge/VkProjection.lean`).
+The query-registration order needs no input: Clean's configure-time query registration
+records it in `cs.{advice,fixed,instance}Queries` (each `Gate` carries its closure's
+query atoms in call order; the `Configure` actions register them exactly as Rust's
+`query_*_index` does), and the packed columns' fixed queries are appended by the
+projection (`queryWalkInit`). `derive` is thus a function of the circuit and the domain
+size alone; the recorded orders are certified by the capture-equality theorems
+(`Zcash.Snark.Fixtures.SingleAction.PinnedCsMatch`): a wrong `queriedCells` list or
+packing produces different layouts or gates and fails the comparison.
 
 The evaluation lemmas (`derive_gates_eval`) carry the projection semantics
 (`ProjectSemantics`) to the derived record: each derived gate evaluates to its source
@@ -35,11 +29,34 @@ namespace Zcash.Circuits.Fixtures
 open Halo2
 open Snark (Expr)
 
-/-- The compared sub-record of halo2's `PinnedConstraintSystem`: column counts, gate
-polynomials, query layouts, lookup argument expressions, constants columns, and the
-minimum-degree override — everything pinned except the permutation columns (pending
-the commitment-matching phase). -/
-structure PartialPinnedConstraintSystem where
+/-! ## Constraint-system derived scalars
+
+halo2 quantities that are pure functions of the `ConstraintSystem` — computable since
+the configure-time query registration records `adviceQueries`. -/
+
+/-- halo2 `ConstraintSystem::blinding_factors` (`circuit.rs:1652-1675`):
+`max(3, max per-column advice-query count) + 1 + 1`. The per-column counts are Rust's
+`num_advice_queries`, recovered by counting the recorded `adviceQueries`. -/
+def _root_.Halo2.ConstraintSystem.blindingFactors (cs : ConstraintSystem Fp) : ℕ :=
+  let factors := (List.range cs.numAdviceColumns).foldl
+    (fun m c => max m (cs.adviceQueries.countP (fun q => q.1.index = c))) 1
+  max 3 factors + 1 + 1
+
+/-- halo2 `ConstraintSystem::minimum_rows` (`circuit.rs:1678-1689`):
+blinding factors + l_last + l_0 breathing room + one row. -/
+def _root_.Halo2.ConstraintSystem.minimumRows (cs : ConstraintSystem Fp) : ℕ :=
+  cs.blindingFactors + 3
+
+/-- The permutation argument's chunk length, `cs.degree() - 2`
+(`permutation/verifier.rs:43`). -/
+def _root_.Halo2.ConstraintSystem.chunkLen (cs : ConstraintSystem Fp) : ℕ :=
+  csDegree cs - 2
+
+/-- The Lean mirror of halo2's `PinnedConstraintSystem` (`circuit.rs:966-979`): column
+counts, gate polynomials, query layouts, the permutation argument's columns, lookup
+argument expressions, constants columns, and the minimum-degree override — every field
+of the Rust pinned record. -/
+structure PinnedConstraintSystem where
   numFixedColumns : ℕ
   numAdviceColumns : ℕ
   numInstanceColumns : ℕ
@@ -48,36 +65,37 @@ structure PartialPinnedConstraintSystem where
   adviceQueryLayout : List (ℕ × ℤ)
   fixedQueryLayout : List (ℕ × ℤ)
   instanceQueryLayout : List (ℕ × ℤ)
+  /-- The permutation argument's columns (`permutation::Argument`), in `enable_equality`
+  call order — recorded in `cs.permutationColumns`. -/
+  permutationColumns : List AnyColumn
   lookupInputExprs : List (List (Expr Fp))
   lookupTableExprs : List (List (Expr Fp))
   constants : List ℕ
   minimumDegree : Option ℕ
 deriving DecidableEq, Repr
 
-/-- A query-registration seed from per-kind layouts (advice, fixed, instance — the
-kinds live in independent index spaces). -/
-def csSeed (adviceL fixedL instL : List (ℕ × ℤ)) : List Query :=
-  adviceL.map (fun (c, r) => Query.advice ⟨c⟩ r)
-    ++ fixedL.map (fun (c, r) => Query.fixed ⟨c⟩ r)
-    ++ instL.map (fun (c, r) => Query.instance ⟨c⟩ r)
-
-/-- Derive the pinned CS data from a Clean constraint system and the two keygen
-witnesses (see the module docstring for their status). -/
-def PartialPinnedConstraintSystem.derive (cs : ConstraintSystem Fp) (seed : List Query)
-    (map : SelCompressMap) : PartialPinnedConstraintSystem where
-  numFixedColumns := (projectCS seed map cs).numFixedColumns
-  numAdviceColumns := (projectCS seed map cs).numAdviceColumns
-  numInstanceColumns := (projectCS seed map cs).numInstanceColumns
-  numSelectors := (projectCS seed map cs).numSelectors
-  gates := (projectCS seed map cs).gates
-  adviceQueryLayout := (projectCS seed map cs).adviceQueryLayout
-  fixedQueryLayout := (projectCS seed map cs).fixedQueryLayout
-  instanceQueryLayout := (projectCS seed map cs).instanceQueryLayout
-  lookupInputExprs := (projectCS seed map cs).lookups.map (·.inputs)
-  lookupTableExprs := (projectCS seed map cs).lookups.map (·.tables)
-  -- Clean's constraint system does not model `set_minimum_degree`; Orchard never calls it.
-  constants := cs.constants.map (·.index)
-  minimumDegree := none
+/-- Derive the pinned CS data from a Clean constraint system and the (circuit-derived)
+selector-compression map; the query layouts come from the CS's configure-recorded
+queries (see the module docstring). -/
+def PinnedConstraintSystem.derive (cs : ConstraintSystem Fp)
+    (map : SelCompressMap) : PinnedConstraintSystem :=
+  -- single let: the projection (selector substitution + query walk) runs once per
+  -- `derive` evaluation, not once per field
+  let proj := projectCS map cs
+  { numFixedColumns := proj.numFixedColumns
+    numAdviceColumns := proj.numAdviceColumns
+    numInstanceColumns := proj.numInstanceColumns
+    numSelectors := proj.numSelectors
+    gates := proj.gates
+    adviceQueryLayout := proj.adviceQueryLayout
+    fixedQueryLayout := proj.fixedQueryLayout
+    instanceQueryLayout := proj.instanceQueryLayout
+    permutationColumns := cs.permutationColumns
+    lookupInputExprs := proj.lookups.map (·.inputs)
+    lookupTableExprs := proj.lookups.map (·.tables)
+    -- Clean's constraint system does not model `set_minimum_degree`; Orchard never calls it.
+    constants := cs.constants.map (·.index)
+    minimumDegree := none }
 
 /-! ## Threading the erasure lemmas through the gate list -/
 
@@ -127,46 +145,46 @@ theorem eraseGates_eval (fE aE iE : ℕ → Fp) (v : Query → Fp)
 /-! ## Semantics of the derived record -/
 
 /-- The derived gate list, unfolded: the erasure of the compressed flat gates from the
-seeded walk state. -/
-theorem PartialPinnedConstraintSystem.derive_gates (cs : ConstraintSystem Fp) (seed : List Query)
+configure-recorded walk state. -/
+theorem PinnedConstraintSystem.derive_gates (cs : ConstraintSystem Fp)
     (map : SelCompressMap) :
-    (PartialPinnedConstraintSystem.derive cs seed map).gates
+    (PinnedConstraintSystem.derive cs map).gates
       = (eraseGates ((flatGates cs).map (substSelectorMap map.lookup))
-          (seedQueries seed {})).1 := by
-  simp only [PartialPinnedConstraintSystem.derive, projectCS]
+          (queryWalkInit map cs)).1 := by
+  simp only [PinnedConstraintSystem.derive, projectCS]
 
 /-- The derived record has one gate polynomial per flattened source gate. -/
-theorem PartialPinnedConstraintSystem.derive_gates_length (cs : ConstraintSystem Fp) (seed : List Query)
+theorem PinnedConstraintSystem.derive_gates_length (cs : ConstraintSystem Fp)
     (map : SelCompressMap) :
-    (PartialPinnedConstraintSystem.derive cs seed map).gates.length = (flatGates cs).length := by
-  rw [PartialPinnedConstraintSystem.derive_gates, eraseGates_length, List.length_map]
+    (PinnedConstraintSystem.derive cs map).gates.length = (flatGates cs).length := by
+  rw [PinnedConstraintSystem.derive_gates, eraseGates_length, List.length_map]
 
 /-- **Each derived gate evaluates to its source gate.** Given selector coverage, the
 `j`-th derived gate — at query families interpreting the walk's layout — evaluates to
 the `j`-th flattened Clean gate expression under the selector-replacement valuation.
 The gate-side link between a verifying key matching the derivation and the Clean
 constraint semantics. -/
-theorem PartialPinnedConstraintSystem.derive_gates_eval (cs : ConstraintSystem Fp) (seed : List Query)
+theorem PinnedConstraintSystem.derive_gates_eval (cs : ConstraintSystem Fp)
     (map : SelCompressMap) (fE aE iE : ℕ → Fp) (v : Query → Fp)
     (hcov : ∀ p ∈ flatGates cs,
       p.selectorsCovered (fun i => (map.lookup i).isSome) = true)
     (hint : Interprets
       (eraseGates ((flatGates cs).map (substSelectorMap map.lookup))
-        (seedQueries seed {})).2 fE aE iE v)
-    (j : ℕ) (hg : j < (PartialPinnedConstraintSystem.derive cs seed map).gates.length)
+        (queryWalkInit map cs)).2 fE aE iE v)
+    (j : ℕ) (hg : j < (PinnedConstraintSystem.derive cs map).gates.length)
     (hp : j < (flatGates cs).length) :
-    Expr.eval fE aE iE (PartialPinnedConstraintSystem.derive cs seed map).gates[j]
+    Expr.eval fE aE iE (PinnedConstraintSystem.derive cs map).gates[j]
       = Expression.eval (substValuation map.lookup v) (flatGates cs)[j] := by
   have hfree : ∀ p ∈ (flatGates cs).map (substSelectorMap map.lookup),
       p.selectorFree = true := by
     intro p hp'
     obtain ⟨q, hq, rfl⟩ := List.mem_map.mp hp'
     exact (substSelectorMap_selectorFree _ q).trans (hcov q hq)
-  rw [List.getElem_of_eq (PartialPinnedConstraintSystem.derive_gates cs seed map) hg]
+  rw [List.getElem_of_eq (PinnedConstraintSystem.derive_gates cs map) hg]
   have h := eraseGates_eval fE aE iE v
-    ((flatGates cs).map (substSelectorMap map.lookup)) (seedQueries seed {}) _ hfree
+    ((flatGates cs).map (substSelectorMap map.lookup)) (queryWalkInit map cs) _ hfree
     (QueryState.Extends.refl _) hint j
-    ((PartialPinnedConstraintSystem.derive_gates cs seed map) ▸ hg) (by simpa using hp)
+    ((PinnedConstraintSystem.derive_gates cs map) ▸ hg) (by simpa using hp)
   rw [List.getElem_map, substSelectorMap_eval] at h
   exact h
 

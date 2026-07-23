@@ -10,13 +10,13 @@ dumped from the actual Rust circuit (`AddPost.lean`, `actionPost.json`).
 
 Two pieces (design doc `vk-matching-design.md` §3):
 
-* **The first-encounter query-index walk** (halo2 `circuit.rs` `query_{advice,fixed,
-  instance}_index`): halo2 assigns each *new* `(column, rotation)` the next query index, in
-  the order the query is first *built* inside a gate closure. We reproduce that order by a
-  left-to-right traversal of each gate polynomial (matching the order the Rust closure
-  constructs its sub-expressions), gate by gate. The walk simultaneously (a) accumulates
-  the `{advice,fixed,instance}QueryLayout` lists and (b) rewrites each `Query` atom to its
-  index, erasing `Halo2.Expression Fp Query` into the index-based `Expr Fp`.
+* **The query-index walk** (halo2 `circuit.rs` `query_{advice,fixed,instance}_index`):
+  halo2 assigns each *new* `(column, rotation)` the next query index, in the order the
+  query is first *called* inside a gate/lookup closure. That order is recorded in the
+  `ConstraintSystem` at configure time (`{advice,fixed,instance}Queries`, Clean's
+  `query-registration-design.md`); the walk starts from those layouts and rewrites each
+  `Query` atom to its index, erasing `Halo2.Expression Fp Query` into the index-based
+  `Expr Fp`.
 
 * **The operator erasure** (`Clean/Halo2/Expression.lean:104-109`): Halo2-Clean's four-node
   `Expression` (`var/const/add/mul`) is lowered to ironwood's `Expr` matching how Rust's
@@ -151,30 +151,37 @@ def eraseLookups : List (LookupArgument Fp) → QueryState → List LookupFixtur
       let (ls, s) := eraseLookups as s
       (l :: ls, s)
 
-/-! ### The query-registration seed (halo2 `queried_cells`)
+/-! ### The configure-recorded query layouts (halo2 `queried_cells`)
 
 **Load-bearing subtlety** (design doc D6): halo2 assigns query indices in the order
 `query_advice`/`query_fixed`/`query_instance` are *called* inside each gate/lookup closure —
 i.e. the order the queries are *declared*, not the order they appear in the finished
-polynomial AST. A gate authored as "declare all queries via `let`, then build polys" (the
-standard idiom, and how the ports read) registers in `let` order; but the first poly's AST
-may reference those queries in a different order. So a naive first-encounter walk over the
-finished polynomials produces the wrong layout *and* the wrong in-gate indices.
+polynomial AST. So a naive first-encounter walk over the finished polynomials produces
+the wrong layout *and* the wrong in-gate indices.
 
-We reproduce halo2 faithfully by pre-seeding the walk with each gate's queried cells in
-declaration order (halo2's `Gate::queried_cells`, `circuit.rs`). This seed is per-gadget
-data supplied by the caller (the fixture test), exactly mirroring what the Rust closure
-records. Once seeded, the erasure DFS finds every query already registered and reuses its
-index, matching halo2 for both the layout and the gate expressions. Queries not in the seed
-(should be none for a faithful seed) are appended in first-encounter order as a fallback. -/
+Since Clean's configure-time query registration (`query-registration-design.md` in the
+Clean repo), the `ConstraintSystem` records that order itself in
+`{advice,fixed,instance}Queries`: `createGate`/`enableEquality`/`enableConstant`/`lookup`
+register in execution order, exactly as Rust does (each `Gate` carries its closure's
+atoms in call order as `queriedCells`). The walk starts from those recorded layouts, so
+the erasure DFS finds every query already registered and reuses its index. Queries not
+recorded (none, for faithful `queriedCells` lists) are appended in first-encounter order
+as a fallback — and surface as a layout mismatch in the capture equality, which is what
+certifies the per-gate hand-listed orders. -/
 
-/-- Pre-register a declaration-order list of query atoms into the walk state. -/
-def seedQueries : List Query → QueryState → QueryState
-  | [], s => s
-  | .selector _ :: qs, s => seedQueries qs s
-  | .advice col rot :: qs, s => seedQueries qs (s.advIdx col.index rot).2
-  | .fixed col rot :: qs, s => seedQueries qs (s.fixIdx col.index rot).2
-  | .instance col rot :: qs, s => seedQueries qs (s.instIdx col.index rot).2
+/-- The query-walk state pre-loaded with the CS's configure-recorded query layouts. -/
+def recordedQueries (cs : ConstraintSystem Fp) : QueryState where
+  advice := (cs.adviceQueries.map fun (c, r) => (c.index, r)).toArray
+  fixed := (cs.fixedQueries.map fun (c, r) => (c.index, r)).toArray
+  inst := (cs.instanceQueries.map fun (c, r) => (c.index, r)).toArray
+
+/-- The post-compression walk start: the configure-recorded layouts plus the packed
+selector columns' rot-0 fixed queries, appended in packing order — halo2 registers them
+at column-allocation time inside `compress_selectors` (`circuit.rs:1267-1274`, via
+`query_fixed_index` in the allocate closure), BEFORE the substituted gates are walked. -/
+def queryWalkInit (map : SelCompressMap) (cs : ConstraintSystem Fp) : QueryState :=
+  (List.range map.newFixedCols).foldl
+    (fun s i => (s.fixIdx (cs.numFixedColumns + i) 0).2) (recordedQueries cs)
 
 /-! ## The projection (selector-compression-map driven)
 
@@ -232,15 +239,10 @@ def substSelectorMap (m : ℕ → Option SelCompress) :
 (in gates and lookups) by its root-finding replacement, grow `numFixedColumns` by the new
 packed columns, and run the seeded query walk.
 
-Halo2's query order after compression: the packed columns' fixed queries are registered at
-column-ALLOCATION time inside `compress_selectors` (`circuit.rs:1267-1274`, via
-`query_fixed_index` in the allocate closure), i.e. all new fixed queries append to the
-existing fixed layout in packing order, BEFORE the substituted gates are walked. The
-`seed` (built from the dumped fixture's layouts) reproduces this. `numSelectors` is NOT
-reset by compression (halo2 keeps the count; the pinned VK doesn't carry it — design doc
-§2.3). -/
-def projectCS (seed : List Query) (map : SelCompressMap)
-    (cs : ConstraintSystem Fp) : CsFixture :=
+Halo2's query order after compression: `queryWalkInit` — the configure-recorded layouts
+plus the packed columns' fixed queries in packing order. `numSelectors` is NOT reset by
+compression (halo2 keeps the count; the pinned VK doesn't carry it — design doc §2.3). -/
+def projectCS (map : SelCompressMap) (cs : ConstraintSystem Fp) : CsFixture :=
   let m : ℕ → Option SelCompress := map.lookup
   let polys := (flatGates cs).map (substSelectorMap m)
   let lookups' : List (LookupArgument Fp) := cs.lookups.map (fun a =>
@@ -248,7 +250,7 @@ def projectCS (seed : List Query) (map : SelCompressMap)
       tables := a.tables.map (substSelectorMap m) })
   -- plain projections (not `let (a, b) := …` matches), so record-field access reduces
   -- structurally without evaluating the walk — `Bridge.VkProjection` relies on this
-  let gs := eraseGates polys (seedQueries seed {})
+  let gs := eraseGates polys (queryWalkInit map cs)
   let lks := eraseLookups lookups' gs.2
   { numAdviceColumns := cs.numAdviceColumns
     numFixedColumns := cs.numFixedColumns + map.newFixedCols

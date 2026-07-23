@@ -73,20 +73,12 @@ def mulProgram : Configure Fp Config := do
 
 def mulCS : ConstraintSystem Fp := (mulProgram {}).2
 
-/-- The whole-chain registration-order query seed (halo2 `queried_cells` across every gate
-and lookup closure — and `enable_equality`/`enable_constant`, which also register rot-0
-queries via `query_any_index` — in configure-call order, plus the packed columns' rot-0
-fixed queries, registered at column-allocation time inside `compress_selectors`). Built
-from the dumped layouts: the Rust dump's `{advice,fixed}QueryLayout` ARE the deduplicated
-first-encounter order per query kind, so seeding with them reproduces the exact layouts
-and isolates any gate/lookup AST mismatch. (Advice and fixed live in independent index
-spaces, so seeding each kind in its own order is faithful.) -/
-def mulSeed : List Query :=
-  mulPost.adviceQueryLayout.map (fun (c, r) => Query.advice ⟨c⟩ r)
-    ++ mulPost.fixedQueryLayout.map (fun (c, r) => Query.fixed ⟨c⟩ r)
+-- Every gate's/lookup's `queriedCells` registered faithfully (no ill-formed entries);
+-- the layout equality below then certifies the recorded order against the Rust dump.
+#guard mulCS.invalidQueriedCells.isEmpty
 
--- The Rust-dumped selector-compression map, applied mechanically, yields exactly the
--- dumped CS.
-#guard projectCS mulSeed mulSelMap mulCS == mulPost
+-- The Rust-dumped selector-compression map, applied mechanically to the
+-- configure-recorded CS, yields exactly the dumped CS.
+#guard projectCS mulSelMap mulCS == mulPost
 
 end Zcash.Circuits.Fixtures.Test
