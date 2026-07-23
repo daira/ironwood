@@ -1,4 +1,5 @@
 import Zcash.Security.KeyBinding.Instance
+import Zcash.Security.KeyBinding.Probability
 import Zcash.Security.Common.Birthday
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
@@ -58,6 +59,30 @@ assert_axioms Zcash.Security.KeyBinding.toInterface
 assert_axioms Zcash.Security.Birthday.card_shifted_pm_collision_le
 assert_axioms Zcash.Security.Birthday.shifted_pm_collision_fraction_le
 assert_axioms Zcash.Security.Birthday.birthday_closed_form
+
+/-! ## Key binding — whole-table random-oracle model -/
+
+assert_computable Zcash.Security.KeyBinding.finalQueryEquiv
+assert_axioms Zcash.Security.KeyBinding.eval_restrict
+assert_axioms Zcash.Security.KeyBinding.pair_shifted_collision_measure_le
+assert_axioms Zcash.Security.KeyBinding.finset_shifted_collision_measure_le
+assert_axioms Zcash.Security.KeyBinding.ofBreak_queries
+assert_axioms Zcash.Security.KeyBinding.break_measure_le
+assert_computable Zcash.Security.KeyBinding.badList
+assert_axioms Zcash.Security.KeyBinding.mem_badList
+assert_axioms Zcash.Security.KeyBinding.badList_measure_le
+assert_axioms Zcash.Security.KeyBinding.escapesWithHistory
+assert_axioms Zcash.Security.KeyBinding.escapesWithHistory_measure_le
+assert_axioms Zcash.Security.KeyBinding.CollidesDuring
+assert_axioms Zcash.Security.KeyBinding.CollidesDuring.of_pair
+assert_axioms Zcash.Security.KeyBinding.sum_two_mul_add
+assert_axioms Zcash.Security.KeyBinding.collidesDuring_measure_le
+assert_axioms Zcash.Security.KeyBinding.queries_pair_collision_measure_le
+assert_computable Zcash.Security.KeyBinding.derivQueries
+assert_axioms Zcash.Security.KeyBinding.break_measure_le_adaptive
+assert_axioms Zcash.Security.KeyBinding.break_measure_le_of_queryBound
+assert_axioms Zcash.Security.KeyBinding.toOuterMeasure_bind_le
+assert_axioms Zcash.Security.KeyBinding.break_measure_le_mixture
 
 /-! ## Ledger-layer break reductions
 
