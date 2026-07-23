@@ -92,4 +92,32 @@ theorem grandProduct_eq_or_cell_eq_zero [Field F] (z : ℕ → F) (a b : ℕ →
   · obtain ⟨j, hj, hj0⟩ := prod_eq_zero_iff.mp hzero
     exact Or.inr ⟨(i, j), mem_product.mpr ⟨hi, hj⟩, hj0⟩
 
+
+/-! ## Chunks
+
+halo2 splits the permutation columns into chunks, each with its own running product, chained so that
+each chunk starts where the previous one ended. That chain is itself a running product over the
+chunk index, so the same telescoping applies a second time and the whole table is one product. -/
+
+/-- **Chunk stitching.** Per-chunk recurrences plus the chaining rule telescope across the chunks:
+the boundary values of the first and last chunk relate the two whole-table products. -/
+theorem telescope_chunks [CommRing F] (Z : ℕ → ℕ → F) (A B : ℕ → ℕ → ℕ → F) {nc m k : ℕ}
+    (hrec : ∀ c < nc, ∀ i < m,
+      Z c (i + 1) * ∏ j ∈ range k, B c i j = Z c i * ∏ j ∈ range k, A c i j)
+    (hchain : ∀ c < nc, Z (c + 1) 0 = Z c m) :
+    Z nc 0 * ∏ p ∈ range nc ×ˢ range m, ∏ j ∈ range k, B p.1 p.2 j
+      = Z 0 0 * ∏ p ∈ range nc ×ˢ range m, ∏ j ∈ range k, A p.1 p.2 j := by
+  have hstep : ∀ c < nc, Z (c + 1) 0 * ∏ i ∈ range m, ∏ j ∈ range k, B c i j
+      = Z c 0 * ∏ i ∈ range m, ∏ j ∈ range k, A c i j := by
+    intro c hc
+    rw [hchain c hc]
+    exact telescope_running_product (Z c) (fun i => ∏ j ∈ range k, A c i j)
+      (fun i => ∏ j ∈ range k, B c i j) fun i hi => hrec c hc i hi
+  have hall := telescope_running_product (fun c => Z c 0)
+    (fun c => ∏ i ∈ range m, ∏ j ∈ range k, A c i j)
+    (fun c => ∏ i ∈ range m, ∏ j ∈ range k, B c i j) hstep
+  rw [← prod_range_prod_range (fun c i => ∏ j ∈ range k, B c i j),
+    ← prod_range_prod_range (fun c i => ∏ j ∈ range k, A c i j)]
+  exact hall
+
 end Zcash.Snark

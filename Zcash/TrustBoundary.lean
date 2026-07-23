@@ -21,6 +21,7 @@ import Zcash.Snark.Soundness.VestaBudget
 import Zcash.Snark.Soundness.FoldSplit
 import Zcash.Snark.Soundness.GrandProductBridge
 import Zcash.Snark.Soundness.LookupAssembly
+import Zcash.Snark.Soundness.PermutationRows
 
 /-!
 # Trust boundary, build-checked
@@ -552,7 +553,23 @@ assert_axioms grandProduct_eq_or_cell_eq_zero
 assert_axioms multiset_pair_eq_of_prod_eval_eq
 assert_axioms cellPairs_eq_of_running_product
 assert_axioms perm_copy_constraints_of_running_product
-assert_axioms lookup_subset_of_run_structure
+assert_axioms telescope_chunks
+assert_axioms lookup_multisets_of_prod_eval_eq
+assert_axioms lookup_multisets_of_diff_eq_zero
+assert_axioms lookup_subset_of_components
+assert_axioms lookup_subset_of_prod_eval_eq
+-- The deployed row reading: the step rule's folds are running products, the boundary rules pin the
+-- product at the first and last rows, and the cell names separate. These are theorems about
+-- `permChunkExpression` itself, so the chain above starts at the verifier's own constraint list.
+assert_axioms permChunk_left_eq_prod
+assert_axioms permChunk_right_eq_prod
+assert_axioms permChunkExpression_eq
+assert_axioms eval_eq_zero_of_dvd_vanishing
+assert_axioms perm_row_recurrence
+assert_axioms running_product_start
+assert_axioms running_product_end
+assert_axioms name_injective_of_coset
+assert_axioms deployed_perm_copy_constraints
 assert_axioms hgood_failure_priced
 assert_axioms hgood_of_good_challenge
 -- The UNCONDITIONAL decomposition: `hExtract` removed, the residual quantified as the

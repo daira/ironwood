@@ -158,6 +158,51 @@ def permChunkExpression {F : Type*} [CommRing F] (beta gamma x delta : F) (chunk
     (set.eval, deltaStart)).1
   (left - right) * (1 - (lLast + lBlind))
 
+/-- The step rule's left fold is a running product: each column contributes
+`value + β·permutation + γ`, on top of the running product at the next row. -/
+theorem permChunk_left_eq_prod {F : Type*} [CommRing F] (beta gamma : F) (pairs : List (F × F))
+    (init : F) :
+    pairs.foldl (fun acc p => acc * (p.1 + beta * p.2 + gamma)) init
+      = init * ∏ j ∈ Finset.range pairs.length,
+          ((pairs.getD j (0, 0)).1 + beta * (pairs.getD j (0, 0)).2 + gamma) := by
+  induction pairs generalizing init with
+  | nil => simp
+  | cons a t ih =>
+      rw [List.foldl_cons, ih, List.length_cons, Finset.prod_range_succ']
+      simp only [List.getD_cons_zero, List.getD_cons_succ]
+      ring
+
+/-- The step rule's right fold is the same running product with the columns named by their
+`δ`-coset position: column `j` of chunk `c` carries the name `d₀·δ^j`, where `d₀` already holds the
+chunk's offset `β·x·δ^{c·chunkLen}`. -/
+theorem permChunk_right_eq_prod {F : Type*} [CommRing F] (gamma delta : F) (pairs : List (F × F))
+    (init d₀ : F) :
+    (pairs.foldl (fun (acc : F × F) p => (acc.1 * (p.1 + acc.2 + gamma), acc.2 * delta))
+        (init, d₀)).1
+      = init * ∏ j ∈ Finset.range pairs.length,
+          ((pairs.getD j (0, 0)).1 + d₀ * delta ^ j + gamma) := by
+  induction pairs generalizing init d₀ with
+  | nil => simp
+  | cons a t ih =>
+      rw [List.foldl_cons, ih, List.length_cons, Finset.prod_range_succ']
+      simp only [List.getD_cons_zero, List.getD_cons_succ, pow_zero, mul_one, pow_succ]
+      ring
+
+/-- **The step rule is a one-row recurrence.** `permChunkExpression` vanishes exactly when the
+running product at the next row times the `σ`-named factors equals the running product at this row
+times the identity-named factors — or the row is switched off. This is the shape the telescoping
+consumes. -/
+theorem permChunkExpression_eq {F : Type*} [CommRing F] (beta gamma x delta : F)
+    (chunkLen chunkIndex : ℕ) (set : PermSetEval F) (pairs : List (F × F)) (lLast lBlind : F) :
+    permChunkExpression beta gamma x delta chunkLen chunkIndex set pairs lLast lBlind
+      = (set.nextEval * ∏ j ∈ Finset.range pairs.length,
+            ((pairs.getD j (0, 0)).1 + beta * (pairs.getD j (0, 0)).2 + gamma)
+          - set.eval * ∏ j ∈ Finset.range pairs.length,
+            ((pairs.getD j (0, 0)).1
+              + beta * x * delta ^ (chunkIndex * chunkLen) * delta ^ j + gamma))
+        * (1 - (lLast + lBlind)) := by
+  simp only [permChunkExpression, permChunk_left_eq_prod, permChunk_right_eq_prod]
+
 /-- The permutation argument's constraint values (halo2 `permutation/verifier.rs` `expressions`):
 the running product must start at `1` and end at `0` or `1`, consecutive sets must chain (each
 set's start equals the previous set's end), and every chunk must satisfy the step rule
