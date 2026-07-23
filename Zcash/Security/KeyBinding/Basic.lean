@@ -84,8 +84,8 @@ inductive FinalQuery (AK NK RIVK QK SK : Type*) where
   deriving DecidableEq
 
 /-- The combined final `rivk`-derivation random oracle: dispatch each final query to its oracle. -/
-def FinalQuery.eval (Hrivk_legacy : SK → RIVK) (Hrivk_ext : QK → AK → NK → RIVK) (Hrivk_int : RIVK → AK → NK → RIVK) :
-    FinalQuery AK NK RIVK QK SK → RIVK
+def FinalQuery.eval (Hrivk_legacy : SK → RIVK) (Hrivk_ext : QK → AK → NK → RIVK)
+    (Hrivk_int : RIVK → AK → NK → RIVK) : FinalQuery AK NK RIVK QK SK → RIVK
   | .ext qk ak nk => Hrivk_ext qk ak nk
   | .legacy sk => Hrivk_legacy sk
   | .int rivk_ext ak nk => Hrivk_int rivk_ext ak nk
@@ -130,7 +130,8 @@ variable [AddCommGroup G] [Field IVK] [Field RIVK] [Module RIVK G] [NoZeroSMulDi
 /-- The `ivk` commitment as a Pedersen lift:
 `Commitivk rivk ak nk = Extract.toIVK ((h ak nk + rivk) • S)`, with `h` abstract-but-non-querying and `S`
 a fixed base. Mirrors the `NoteCommit` repair `(H^rcm + f) • R`. -/
-def Commitivk (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK) (rivk : RIVK) (ak : AK) (nk : NK) : IVK :=
+def Commitivk (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK) (rivk : RIVK)
+    (ak : AK) (nk : NK) : IVK :=
   Extract.toIVK ((hfn ak nk + rivk) • S)
 
 omit [Field IVK] in
@@ -251,7 +252,8 @@ structure BreakProj (AK NK RIVK QK SK : Type*) where
   qk_or_sk : Branch QK SK
 
 /-- The break projection, read off a witness. -/
-def Witness.breakProj (Extract : Extractor G IVK AK) (w : Witness G IVK AK NK RIVK QK SK) : BreakProj AK NK RIVK QK SK :=
+def Witness.breakProj (Extract : Extractor G IVK AK) (w : Witness G IVK AK NK RIVK QK SK) :
+    BreakProj AK NK RIVK QK SK :=
   ⟨Extract.toAK w.akP, w.nk, w.rivk, w.qk_or_sk⟩
 
 /-- A full key-binding break (ZIP 2005): two valid witnesses with equal `ivk` and differing
@@ -362,8 +364,8 @@ theorem rivk_eq_finalOracle
 
 /-- The non-querying shift: `hfn` at the query's key data (for `.legacy sk`, `ak`/`nk` are
 recovered via `Hask`/`Hnk`, so the shift is a function of the query alone). -/
-def shiftOf (Extract : Extractor G IVK AK) (Ggen : G) (hfn : AK → NK → RIVK) (Hask : SK → ASK) (Hnk : SK → NK) :
-    FinalQuery AK NK RIVK QK SK → RIVK
+def shiftOf (Extract : Extractor G IVK AK) (Ggen : G) (hfn : AK → NK → RIVK)
+    (Hask : SK → ASK) (Hnk : SK → NK) : FinalQuery AK NK RIVK QK SK → RIVK
   | .ext _ ak nk => hfn ak nk
   | .legacy sk => hfn (Extract.toAK ((Hask sk) • Ggen)) (Hnk sk)
   | .int _ ak nk => hfn ak nk
@@ -483,7 +485,8 @@ theorem branch_eq_branchOfQuery {w : Witness G IVK AK NK RIVK QK SK} (Extract : 
 
 omit [Field IVK] [Field RIVK] [NoZeroSMulDivisors RIVK G] [DecidableEq RIVK] in
 /-- A witness's `rivk_ext`-derivation query is never `.int`. -/
-theorem extQueryOf_ne_int {w : Witness G IVK AK NK RIVK QK SK} (Extract : Extractor G IVK AK) (rivk_ext : RIVK) (ak : AK) (nk : NK) :
+theorem extQueryOf_ne_int {w : Witness G IVK AK NK RIVK QK SK} (Extract : Extractor G IVK AK)
+    (rivk_ext : RIVK) (ak : AK) (nk : NK) :
     extQueryOf Extract w ≠ .int rivk_ext ak nk := by
   rcases hb : w.qk_or_sk with qk | sk <;> simp [extQueryOf, hb]
 

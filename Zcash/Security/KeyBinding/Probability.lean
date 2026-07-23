@@ -530,7 +530,8 @@ theorem uniformOfFintype_prod {α β : Type*} [Fintype α] [Nonempty α] [Fintyp
 /-- The three final `rivk`-derivation oracles assemble bijectively into whole tables
 (`FinalQuery.eval`); the inverse is restriction along the constructors. -/
 def evalEquiv :
-    ((SK → RIVK) × (QK → AK → NK → RIVK) × (RIVK → AK → NK → RIVK)) ≃ (FinalQuery AK NK RIVK QK SK → RIVK) where
+    ((SK → RIVK) × (QK → AK → NK → RIVK) × (RIVK → AK → NK → RIVK))
+      ≃ (FinalQuery AK NK RIVK QK SK → RIVK) where
   toFun H := FinalQuery.eval H.1 H.2.1 H.2.2
   invFun O := (fun sk => O (.legacy sk), fun qk ak nk => O (.ext qk ak nk),
     fun rivk_ext ak nk => O (.int rivk_ext ak nk))
@@ -633,7 +634,8 @@ the adversary's queries chosen adaptively. -/
 theorem break_measure_le_adaptive (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK)
     (Ggen : G) (hS : S ≠ 0)
     (Hask : SK → ASK) (Hnk : SK → NK)
-    {A : OracleComp (FinalQuery AK NK RIVK QK SK) RIVK (Witness G IVK AK NK RIVK QK SK × Witness G IVK AK NK RIVK QK SK)}
+    {A : OracleComp (FinalQuery AK NK RIVK QK SK) RIVK
+      (Witness G IVK AK NK RIVK QK SK × Witness G IVK AK NK RIVK QK SK)}
     {n : ℕ} (hQ : A.QueryBound n)
     (hqueries : ∀ (O : FinalQuery AK NK RIVK QK SK → RIVK) (i : Fin 4),
       derivQueries Extract (A.run O) i ∈ A.queries O) :
@@ -667,7 +669,8 @@ bound at budget `n + 4`. -/
 theorem break_measure_le_of_queryBound (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK)
     (Ggen : G) (hS : S ≠ 0)
     (Hask : SK → ASK) (Hnk : SK → NK)
-    {A : OracleComp (FinalQuery AK NK RIVK QK SK) RIVK (Witness G IVK AK NK RIVK QK SK × Witness G IVK AK NK RIVK QK SK)}
+    {A : OracleComp (FinalQuery AK NK RIVK QK SK) RIVK
+      (Witness G IVK AK NK RIVK QK SK × Witness G IVK AK NK RIVK QK SK)}
     {n : ℕ} (hQ : A.QueryBound n) :
     (PMF.uniformOfFintype (FinalQuery AK NK RIVK QK SK → RIVK)).toOuterMeasure
         {O : FinalQuery AK NK RIVK QK SK → RIVK |
@@ -696,7 +699,8 @@ bound is uniform in the slice, so averaging preserves it. -/
 theorem break_measure_le_mixture {ι : Type*} (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK)
     (Ggen : G) (hS : S ≠ 0)
     (p : PMF ι) (Hask : ι → SK → ASK) (Hnk : ι → SK → NK)
-    {A : ι → OracleComp (FinalQuery AK NK RIVK QK SK) RIVK (Witness G IVK AK NK RIVK QK SK × Witness G IVK AK NK RIVK QK SK)}
+    {A : ι → OracleComp (FinalQuery AK NK RIVK QK SK) RIVK
+      (Witness G IVK AK NK RIVK QK SK × Witness G IVK AK NK RIVK QK SK)}
     {n : ℕ} (hQ : ∀ i, (A i).QueryBound n) :
     ((p.bind fun i => (PMF.uniformOfFintype (FinalQuery AK NK RIVK QK SK → RIVK)).map
         (Prod.mk i))).toOuterMeasure
