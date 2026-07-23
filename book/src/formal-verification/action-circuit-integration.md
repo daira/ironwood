@@ -326,17 +326,23 @@ the copy-replay witness. Its `satisfaction_or_bad` theorem returns the exact
 ground-truth `Halo2.Constraints`. The remaining Action-specific work is therefore
 construction of these records, not another semantic proof.
 
-The per-gate half of that translation is proven
-(`eraseExpr_substSelectorMap_eval` plus the packed-selector row algebra), and the
-reassembly should be stated *generically*: one theorem by induction
-over an arbitrary `Halo2.Operations` list, taking gate vanishing, copy equalities,
-lookup membership, and fixed-column data as inputs, with the circuit-specific facts
-isolated into decidable coherence side conditions — every enabled gate registered in
-the constraint system, gate polynomials linear in their own selector and free of
-foreign selectors, co-packed selectors never co-enabled, the activation table matching
-the packed fixed columns, rows within bounds. Those side conditions are discharged for
-the Action instance computationally (the same `native_decide`-style work the VK-match
-and layout tests already do), not by an Action-specific proof walk. The
+The generic gate and fixed/table operation layers are now implemented as well.
+`operationEnabledGates` extracts every placed activation and
+`gate_constraints_iff_enabledGates` proves exact equivalence with the gate family.
+`EnabledGate.PolynomialWitness` identifies each enabled Clean constraint with one
+member of #91's selected polynomial gate family; domain divisibility then proves the
+Clean constraint directly. `operationFixedRequirements` similarly extracts fixed
+assignments and table loads, with `fixed_constraints_iff_requirements` proving exact
+equivalence to the fixed family. `FullCircuitBridge.ofPolynomialWitnesses` assembles
+these gate/fixed witnesses with the existing copy and lookup witnesses.
+
+The remaining gate work is therefore the circuit-specific packed-selector row algebra:
+every enabled gate must be registered in the constraint system, gate polynomials must
+be linear in their own selector and free of foreign selectors, co-packed selectors
+must never be co-enabled, and the activation table must match the packed fixed columns.
+Those side conditions are discharged for the Action instance computationally (the
+same `native_decide`-style work the VK-match and layout tests already do), not by an
+Action-specific proof walk. The
 `Fixtures.Layout` reconstruction is already generic over operations, so σ-cycle
 correctness of its replayed keygen merge is likewise a once-and-for-all lemma. A useful
 de-risking step is to instantiate the generic theorem first for the small `AddChip`
@@ -362,6 +368,14 @@ Then prove `Action.Circuit.EnvAssumptions`, including generator-table exactness,
 table-loaded facts, fixed-base environment assumptions, and selector distinctness.
 No current open PR performs this construction. This is the central Action-specific
 representation bridge.
+
+`ActionAssignment` now fixes the generic construction's circuit-side choices. It uses
+the V1 placement derived from `Bridge.actionOperations`, computes usable rows as
+`vk.n - vk.blindingFactors - 1`, selects one proof member's fixed/advice/instance
+polynomials through `resolverEnvironment`, and packages the result as a placed Clean
+environment. `ActionAssignment.ofDecodedMembers` specializes this to the actual
+`decodedPolynomialResolver`; the remaining work is proving the concrete VK and public
+instance polynomials satisfy the Action-specific representation facts below.
 
 Note that most of `EnvAssumptions` should come out of the transported `Constraints`
 themselves rather than separate VK-fixed-data facts: `GeneratorTableExact` is defined

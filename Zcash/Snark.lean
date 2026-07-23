@@ -41,8 +41,11 @@ import Zcash.Snark.Soundness.PermutationSemantics
 import Zcash.Snark.Soundness.CircuitSatisfaction
 import Zcash.Snark.Soundness.OperationCopies
 import Zcash.Snark.Soundness.OperationLookups
+import Zcash.Snark.Soundness.OperationGates
+import Zcash.Snark.Soundness.OperationFixed
 import Zcash.Snark.Soundness.CircuitIntegration
 import Zcash.Snark.Soundness.PolynomialEnvironment
+import Zcash.Snark.Soundness.ActionAssignment
 import Zcash.Snark.Soundness.InnerProduct
 import Zcash.Snark.Soundness.TrustBoundary
 import Zcash.Snark.Soundness.Extraction

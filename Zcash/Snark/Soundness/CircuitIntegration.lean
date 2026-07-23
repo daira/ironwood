@@ -1,5 +1,7 @@
 import Zcash.Snark.Soundness.OperationCopies
 import Zcash.Snark.Soundness.OperationLookups
+import Zcash.Snark.Soundness.OperationGates
+import Zcash.Snark.Soundness.OperationFixed
 
 /-!
 # Reassembling full circuit satisfaction
@@ -53,6 +55,34 @@ structure FullCircuitBridge
   theta : Fp
   lookups : ∀ lookup ∈ operationEnabledLookups ops i,
     EnabledLookup.DeployedWitness place env theta lookup
+
+/-- Construct the full bridge directly from the deployed gate split and the three
+operation-family representation witnesses. -/
+def FullCircuitBridge.ofPolynomialWitnesses
+    {np n : ℕ} (model : ConstraintPolyModel np) (proofIndex : Fin np)
+    (omega : Fp) (place : RegionIndex → ℕ) (env : Environment Fp)
+    (ops : Operations Fp) (i : RegionIndex)
+    (satisfaction : ConstraintSatisfaction model n)
+    (domain : ∀ row : ℕ, (omega ^ row) ^ n = 1)
+    {cell : Type} [DecidableEq cell] [Fintype cell]
+    {Bad : Prop}
+    (copies : CopyReplayWitness place env ops cell Bad)
+    (theta : Fp)
+    (gates : ∀ enabled ∈ operationEnabledGates ops i,
+      ∀ constraint ∈ enabled.gate.constraints,
+        EnabledGate.PolynomialWitness
+          model proofIndex omega place env enabled constraint)
+    (lookups : ∀ lookup ∈ operationEnabledLookups ops i,
+      EnabledLookup.DeployedWitness place env theta lookup)
+    (fixed : ∀ requirement ∈ operationFixedRequirements ops i,
+      requirement.Satisfied place env) :
+    FullCircuitBridge place env ops i cell Bad where
+  gates := gate_constraints_of_polynomial_witnesses
+    model proofIndex omega place env ops i satisfaction domain gates
+  fixed := fixed_constraints_of_requirements place env ops i fixed
+  copies := copies
+  theta := theta
+  lookups := lookups
 
 /-- Reassemble the four semantic families, preserving the copy bridge's shared exceptional event. -/
 theorem FullCircuitBridge.satisfaction_or_bad
