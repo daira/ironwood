@@ -1158,31 +1158,18 @@ theorem hgood_of_good_challenge (numerator hq : Polynomial Fp) (n : ℕ) {x : Fp
     numerator ≠ hq * (X ^ n - 1) → (numerator - hq * (X ^ n - 1)).eval x ≠ 0 :=
   fun hne => (not_mem_szBadSet.mp hx) (sub_ne_zero.mpr hne)
 
-/-- The fold fingerprint reduces to list equality: the `y`-power fold is a function of the list, so
-`hfp` holds once the gate list agrees with the deployed `allExpressions` list. With the fingerprint
-fixed this is a per-instance syntactic check, not an analytic obligation — at the deployed
-expressions it is definitional. -/
-theorem hfp_of_expressions_eq {ng : ℕ} (gates : Fin ng → Expr Fp)
-    (fixedClaimed adviceClaimed instanceClaimed : ℕ → Fp) (y : Fp) (exprs : List Fp)
-    (h : List.ofFn (fun i : Fin ng =>
-        (gates i).eval fixedClaimed adviceClaimed instanceClaimed) = exprs) :
-    (List.ofFn (fun i : Fin ng =>
-        (gates i).eval fixedClaimed adviceClaimed instanceClaimed)).foldl
-          (fun acc v => acc * y + v) 0
-      = exprs.foldl (fun acc v => acc * y + v) 0 := by
-  rw [h]
-
 open Polynomial in
 open scoped ENNReal in
 open Classical in
 /-- **The budgeted member capstone with `hfold` derived.** The capstone at the deployed
 instantiation (`y := ch.y`, `deg := vk.n`, forced by `hy`/`hdeg`), its `hfold` premise supplied by
-`hfold_of_member_budget`: that lemma is generic in the claimed-evaluation feeds, so it instantiates
-at the capstone's own `deployedClaimedFeed`s, and its relation branch merges into the capstone's
-`HasNontrivialRelation` disjunct. In place of `hfold` the caller supplies the routed vanishing-slot
-data (`hroute`/`hevals`, from `vanishing_slot_routed`), the budget's good branch (`hbindAll`), the
-routed quotient (`hquot`), and the fingerprint (`hfp`); the root-of-unity exclusion is read off
-`hacc0`. `hgood` remains a premise — priced (`hgood_failure_priced`), but its pricing hook needs
+`hfold_of_member_budget`: that lemma is generic in the constraint list, so it instantiates at this
+capstone's gate fold over its own `deployedClaimedFeed`s, and its relation branch merges into the
+capstone's `HasNontrivialRelation` disjunct. In place of `hfold` the caller supplies the routed
+vanishing-slot data (`hroute`/`hevals`, from `vanishing_slot_routed`), the budget's good branch
+(`hbindAll`), the routed quotient (`hquot`), and the fingerprint (`hfp`); the root-of-unity
+exclusion is read off `hacc0`. Instantiating the same lemma at the full constraint list instead
+proves `hfp` rather than assuming it (`hfold_of_constraint_polys`). `hgood` remains a premise — priced (`hgood_failure_priced`), but its pricing hook needs
 the adaptive coupling (the standing gap in `Soundness.Composition.Prefixes`). -/
 theorem orchard_verifier_vesta_member_constraint_budgeted_hfold_derived {shape : Shape}
     (urs : URS VestaG) (hk : shape.k = urs.k)

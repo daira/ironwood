@@ -175,6 +175,14 @@ assert_no_sorry Zcash.Security.BindingSignature.NontrivialRelation.toDiscreteLog
 assert_no_sorry Zcash.Security.BindingSignature.orchardImbalanceToDiscreteLog
 assert_no_sorry Zcash.Security.BindingSignature.saplingImbalanceToDiscreteLog
 
+/-- info: 'Zcash.Snark.eval_combineConstraints_deployed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms eval_combineConstraints_deployed
+
+/-- info: 'Zcash.Snark.hfold_of_constraint_polys' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms hfold_of_constraint_polys
+
 /-- info: 'Zcash.Snark.discreteLogOfBasis_of_relation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms discreteLogOfBasis_of_relation
@@ -357,6 +365,19 @@ assert_no_sorry hfold_of_vanishing_slot_binding
 -- fingerprint premise alone.
 assert_no_sorry deployedAccepts_xn_ne_one
 assert_no_sorry hfold_of_member_budget
+-- The permutation and lookup arguments folded into the constraint model: the verifier's expression
+-- list is the generic builder run on its own claimed evaluations, the same builder over column
+-- polynomials evaluates back onto it, and the fold equation therefore needs no fingerprint premise.
+assert_no_sorry permutationExpressions_map
+assert_no_sorry lookupExpressions_map
+assert_no_sorry subProofConstraints_map
+assert_no_sorry allConstraints_map
+assert_no_sorry subProofExpressions_eq
+assert_no_sorry allExpressions_eq
+assert_no_sorry eval_constraintPolys
+assert_no_sorry eval_combineConstraints
+assert_no_sorry eval_combineConstraints_deployed
+assert_no_sorry hfold_of_constraint_polys
 assert_no_sorry hgood_failure_priced
 assert_no_sorry hgood_of_good_challenge
 -- The UNCONDITIONAL decomposition: `hExtract` removed, the residual quantified as the
