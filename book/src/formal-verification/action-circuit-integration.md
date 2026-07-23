@@ -4,11 +4,16 @@ This note maps the missing semantic last mile between the deployed Halo 2 verifi
 model in `Zcash/Snark` and the proved post-NU6.3 Action circuit in
 `Zcash/Circuits/Action`.
 
-The executable Lean blueprint is
-`Zcash.Snark.Soundness.ActionCircuit`. Its destination is a proposition
-`ActionStatement public`: there is constructively extracted `ActionData` whose ten
-public fields equal `public`, which satisfies the complete §4.17.4 Action statement and
-the post-NU6.3 cross-address condition.
+A short executable blueprint previously recorded this destination against the legacy
+free-decoder capstone API. It was intentionally removed before integrating #30/#91:
+adapting its `Decoder` and monolithic gate-to-Action proposition would preserve the
+wrong abstraction more expensively than rebuilding the small semantic adapter against
+the decoded-member and full-constraint interfaces.
+
+The durable destination is unchanged: for each supplied public Action, constructively
+extract `ActionData` whose ten public fields equal that Action's instance column, prove
+the complete §4.17.4 Action statement, and prove the post-NU6.3 cross-address
+condition.
 
 ## Upstream open-PR landscape
 
@@ -40,7 +45,7 @@ already compose. In particular, #30 and #85 both change the verifier and soundne
 signatures, while #91 inherits #30's pre-#85 API. They must be reconciled before the
 last-mile Action integration can depend on all three.
 
-## What now composes
+## Stable semantic endpoint
 
 `Action.Circuit.soundnessPost` already proves
 
@@ -50,44 +55,20 @@ Clean environment assumptions
   -> SpecPost realGenerators realBases extractedActionData.
 ```
 
-The spike packages its premise as `Assignment.Satisfies` and proves:
+The discarded blueprint checked that the intended final adapter is small once those
+premises are available:
 
 ```text
-Assignment.Satisfies public
+placed Clean environment satisfying `mainPost`
   -> ActionStatement public
   -> the hencodes conclusion expected by SnarkRelation.
 ```
 
-The key proved lemmas are:
-
-- `PublicInputs.ofActionData_extract`: the constructive extractor's ten public
-  fields are exactly the ten reads from the primary instance column.
-- `specPost_of_constraints`: direct application of the existing proved Action
-  circuit soundness theorem at the real generators and fixed bases.
-- `actionStatement_of_satisfies`: packages the extracted witness and fixes its public
-  inputs.
-- `SnarkRelation.mapCircuitSat` and `hencodes_of_circuitSat`: general predicate
-  transport at the `SnarkRelation` boundary.
-- `actionCircuitSat_hencodes`: the exact Clean satisfaction predicate discharges
-  `hencodes` without another assumption.
-- `gate_hencodes`: a `GateToActionBridge` discharges the `hencodes` used by the
-  existing gate/quotient capstones.
-
-The opening half of `SnarkRelation` is intentionally unused by the last lemma. Its
-purpose is upstream: it must ensure that the vector satisfying the circuit predicate is
-the vector extracted from the verifier's committed polynomial.
-
-## The open bridge
-
-`GateToActionBridge` is currently the named open theorem:
-
-```text
-circuitSatViaGates ... a
-  -> (decode a).Satisfies public.
-```
-
-It should not be assumed as one monolithic axiom in the final development. The
-following work items decompose the proof.
+No replacement declarations should be introduced until the #30/#85/#91 interfaces
+have been reconciled. The final implementation should define the high-level public
+input/statement types and the direct `soundnessPost` adapter alongside the concrete
+decoded-member-to-Clean construction, rather than installing another abstract decoder
+or monolithic bridge. The following work items decompose that construction.
 
 ### 1. Recover the committed columns from multiopen
 
@@ -218,9 +199,8 @@ From the recovered per-column row values, build:
 
 Then prove `Action.Circuit.EnvAssumptions`, including generator-table exactness, all
 table-loaded facts, fixed-base environment assumptions, and selector distinctness.
-No current open PR performs this construction. This is the central
-Action-specific representation bridge and the natural home of
-`GateToActionBridge`'s replacement.
+No current open PR performs this construction. This is the central Action-specific
+representation bridge.
 
 ### 6. Generalize from one Action to an Orchard bundle
 
@@ -247,9 +227,10 @@ single-index result into a family of Clean assignments and Action statements.
 [#91](https://github.com/zcash/ironwood/pull/91), and
 [#85](https://github.com/zcash/ironwood/pull/85); no end-to-end Action theorem yet.**
 
-Instantiate the existing Vesta constraint capstones with `ActionStatement public` and
-`gate_hencodes`. Then thread the same semantic conclusion through the computed
-Fiat–Shamir/AGM endpoint, rather than stopping at a legacy propositional wrapper.
+Once the direct semantic bridge exists, instantiate the Vesta constraint capstones
+with the concrete high-level Action statement. Then thread the same semantic
+conclusion through the computed Fiat–Shamir/AGM endpoint, rather than stopping at a
+legacy propositional wrapper.
 
 #30 adds `orchard_verifier_sound_vesta_computed`, whose circuit predicate is the
 concrete gate check over decoded member columns rather than a free decoder. It still
@@ -278,8 +259,8 @@ whose public inputs were committed by the verifier.
    lookup semantics.
 5. Define the canonical polynomial-to-row decoder, construct the placed Clean
    environment, and prove `Action.Circuit.EnvAssumptions`.
-6. Replace `GateToActionBridge` with this decomposed full-satisfaction bridge, first
-   for one selected Action and then for every `Fin shape.numProofs`.
+6. Prove the decomposed full-satisfaction-to-Action bridge, first for one selected
+   Action and then for every `Fin shape.numProofs`.
 7. Supply the decoded/full-satisfaction data inside the computed experiment, close the
    remaining adaptive-coupling/`hExtract` obligation, instantiate the endpoint with
    `ActionStatement`, and add the theorem to the consolidated trust boundary.
