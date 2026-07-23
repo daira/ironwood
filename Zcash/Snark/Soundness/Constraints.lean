@@ -307,6 +307,51 @@ theorem eval_combineConstraints {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
   simp
 
 open Polynomial in
+/-- A permutation constraint of one sub-proof is one of the polynomial constraints. This is what
+lets a fact proved about the whole list — every constraint vanishes on the domain — be read off for
+a single rule. -/
+theorem mem_constraintPolys_of_mem_permutationExpressions {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
+    (adviceCols instanceCols : Fin np → ℕ → Polynomial Fp) (gates : List (Expr Fp))
+    (sets : Fin np → List (PermSetEval (Polynomial Fp)))
+    (chunks : Fin np →
+      List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
+    (lookups : Fin np → List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (beta gamma delta theta : Fp) (chunkLen : ℕ) (l0 lLast lBlind : Polynomial Fp)
+    (p : Fin np) {v : Polynomial Fp}
+    (h : v ∈ permutationExpressions (sets p) (chunks p) (C beta) (C gamma) X (C delta) chunkLen
+      l0 lLast lBlind) :
+    v ∈ constraintPolys fixedCols adviceCols instanceCols gates sets chunks lookups
+        beta gamma delta theta chunkLen l0 lLast lBlind := by
+  rw [constraintPolys]
+  apply mem_allConstraints_of_mem_subProofConstraints (p := p)
+  apply mem_subProofConstraints_of_mem_permutationExpressions
+  exact h
+
+open Polynomial in
+/-- A lookup constraint of one sub-proof is one of the polynomial constraints. -/
+theorem mem_constraintPolys_of_mem_lookupExpressions {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
+    (adviceCols instanceCols : Fin np → ℕ → Polynomial Fp) (gates : List (Expr Fp))
+    (sets : Fin np → List (PermSetEval (Polynomial Fp)))
+    (chunks : Fin np →
+      List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
+    (lookups : Fin np → List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (beta gamma delta theta : Fp) (chunkLen : ℕ) (l0 lLast lBlind : Polynomial Fp)
+    (p : Fin np) {lk : LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)}
+    (hlk : lk ∈ lookups p) {v : Polynomial Fp}
+    (h : v ∈ lookupExpressions lk.1 (lk.2.1.map (Expr.map C)) (lk.2.2.map (Expr.map C))
+      fixedCols (adviceCols p) (instanceCols p) (C theta) (C beta) (C gamma) l0 lLast lBlind) :
+    v ∈ constraintPolys fixedCols adviceCols instanceCols gates sets chunks lookups
+        beta gamma delta theta chunkLen l0 lLast lBlind := by
+  have h1 : v ∈ subProofConstraints fixedCols (adviceCols p) (instanceCols p)
+      (gates.map (Expr.map C)) (sets p) (chunks p)
+      ((lookups p).map (fun l => (l.1, l.2.1.map (Expr.map C), l.2.2.map (Expr.map C))))
+      (C beta) (C gamma) X (C delta) (C theta) chunkLen l0 lLast lBlind :=
+    mem_subProofConstraints_of_mem_lookupExpressions _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      (List.mem_map_of_mem hlk) h
+  rw [constraintPolys]
+  exact mem_allConstraints_of_mem_subProofConstraints _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ p h1
+
+open Polynomial in
 /-- **The fingerprint, discharged.** The polynomial constraint numerator at the gate point is the
 verifier's own `expected_h_eval` fold — no longer an assumption relating an abstract gate list to the
 deployed one, but an equation between two things built by the same code. The hypotheses are exactly

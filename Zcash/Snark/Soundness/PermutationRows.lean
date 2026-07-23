@@ -196,4 +196,133 @@ theorem deployed_perm_copy_constraints
   · simpa using running_product_start hstart (hrow 0) hl0
   · exact running_product_end hend (hrow u) hlast
 
+
+/-! ## The deployed instantiation
+
+`constraintPolys` leaves the permutation sets and chunks as parameters, because the column
+polynomials come from the decode rather than the verifying key. These definitions make the choice
+the soundness argument needs: each chunk's set *is* a committed running product together with the
+rotation that reads the next row. -/
+
+/-- The permutation sets at the polynomial level: chunk `c` carries its running product `z c`. -/
+noncomputable def deployedPermSets (omega : Fp) (nc : ℕ) (z : ℕ → Polynomial Fp)
+    (lastP : ℕ → Option (Polynomial Fp)) : List (PermSetEval (Polynomial Fp)) :=
+  (List.range nc).map (fun c => permSetPolys omega (z c) (lastP c))
+
+/-- The permutation chunks at the polynomial level: each set with its chunk's columns. -/
+noncomputable def deployedPermChunks (omega : Fp) (nc : ℕ) (z : ℕ → Polynomial Fp)
+    (lastP : ℕ → Option (Polynomial Fp)) (cols : ℕ → List (Polynomial Fp × Polynomial Fp)) :
+    List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)) :=
+  (List.range nc).map (fun c => (permSetPolys omega (z c) (lastP c), cols c))
+
+@[simp] theorem length_deployedPermChunks (omega : Fp) (nc : ℕ) (z : ℕ → Polynomial Fp)
+    (lastP : ℕ → Option (Polynomial Fp)) (cols : ℕ → List (Polynomial Fp × Polynomial Fp)) :
+    (deployedPermChunks omega nc z lastP cols).length = nc := by
+  simp [deployedPermChunks]
+
+@[simp] theorem getElem_deployedPermChunks (omega : Fp) (nc : ℕ) (z : ℕ → Polynomial Fp)
+    (lastP : ℕ → Option (Polynomial Fp)) (cols : ℕ → List (Polynomial Fp × Polynomial Fp))
+    {c : ℕ} (hc : c < (deployedPermChunks omega nc z lastP cols).length) :
+    (deployedPermChunks omega nc z lastP cols)[c]
+      = (permSetPolys omega (z c) (lastP c), cols c) := by
+  simp only [deployedPermChunks, List.getElem_map, List.getElem_range]
+
+theorem head?_deployedPermSets (omega : Fp) {nc : ℕ} (hnc : 0 < nc) (z : ℕ → Polynomial Fp)
+    (lastP : ℕ → Option (Polynomial Fp)) :
+    (deployedPermSets omega nc z lastP).head? = some (permSetPolys omega (z 0) (lastP 0)) := by
+  rw [deployedPermSets, List.head?_map]
+  rcases nc with _ | nc
+  · exact absurd hnc (lt_irrefl 0)
+  · simp [List.range_succ_eq_map]
+
+theorem getLast?_deployedPermSets (omega : Fp) {nc : ℕ} (hnc : 0 < nc) (z : ℕ → Polynomial Fp)
+    (lastP : ℕ → Option (Polynomial Fp)) :
+    (deployedPermSets omega nc z lastP).getLast?
+      = some (permSetPolys omega (z (nc - 1)) (lastP (nc - 1))) := by
+  rw [deployedPermSets, List.getLast?_map]
+  rcases nc with _ | nc
+  · exact absurd hnc (lt_irrefl 0)
+  · simp [List.range_succ]
+
+open Finset in
+/-- **The copy constraints from the constraint identity.** Every input is either a constraint the
+verifier's own polynomial identity supplies (`hidentity`), a challenge avoiding a priced root set,
+or a condition on the verifying key's constants. Nothing about the shape of the checks is assumed:
+the step rule and the two boundary rules are located inside the deployed constraint list and their
+vanishing is read off the identity. Stated for a single permutation chunk; the chaining rule for
+several is `RunningProduct.flat_recurrence`. -/
+theorem deployed_copy_constraints_of_identity
+    (omega beta gamma delta theta y : Fp) (chunkLen : ℕ)
+    (z : ℕ → Polynomial Fp) (lastP : ℕ → Option (Polynomial Fp))
+    (cols : ℕ → List (Polynomial Fp × Polynomial Fp))
+    {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
+    (adviceCols instanceCols : Fin np → ℕ → Polynomial Fp) (gates : List (Expr Fp))
+    (lookups : Fin np → List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (l0P lLastP lBlindP hpoly : Polynomial Fp) {n u : ℕ} (hn : n ≠ 0) (p : Fin np)
+    (σ : Equiv.Perm (Fin u × Fin (cols 0).length))
+    (hidentity : combineConstraints fixedCols adviceCols instanceCols gates
+        (fun _ => deployedPermSets omega 1 z lastP)
+        (fun _ => deployedPermChunks omega 1 z lastP cols) lookups
+        beta gamma delta theta y chunkLen l0P lLastP lBlindP = hpoly * (X ^ n - 1))
+    (hgoodY : ∀ j, y ∉ szBadSet (foldSplitWitness (constraintPolys fixedCols adviceCols
+      instanceCols gates (fun _ => deployedPermSets omega 1 z lastP)
+      (fun _ => deployedPermChunks omega 1 z lastP cols) lookups
+      beta gamma delta theta chunkLen l0P lLastP lBlindP) n j))
+    (hrow : ∀ i : ℕ, (omega ^ i) ^ n = 1)
+    (hactive : ∀ i < u, 1 - (lLastP.eval (omega ^ i) + lBlindP.eval (omega ^ i)) ≠ 0)
+    (hl0 : l0P.eval (omega ^ 0) ≠ 0) (hlast : lLastP.eval (omega ^ u) ≠ 0)
+    (hσ : ∀ c : Fin u × Fin (cols 0).length,
+      rowSigmaName omega (cols 0) (c.1 : ℕ) (c.2 : ℕ)
+        = rowName omega delta 0 ((σ c).1 : ℕ) ((σ c).2 : ℕ))
+    (hnm : Function.Injective fun c : Fin u × Fin (cols 0).length =>
+      rowName omega delta 0 (c.1 : ℕ) (c.2 : ℕ))
+    (hgoodγ : gamma ∉ szBadSet (linProdDiff
+      ((cellPairs u (cols 0).length (rowValue omega (cols 0))
+        (rowSigmaName omega (cols 0))).map (fun q => q.1 + q.2 * beta))
+      ((cellPairs u (cols 0).length (rowValue omega (cols 0))
+        (rowName omega delta 0)).map (fun q => q.1 + q.2 * beta))))
+    (hgoodβ : ∀ j, beta ∉ szBadSet ((pairProdDiff
+      (cellPairs u (cols 0).length (rowValue omega (cols 0)) (rowSigmaName omega (cols 0)))
+      (cellPairs u (cols 0).length (rowValue omega (cols 0))
+        (rowName omega delta 0))).coeff j))
+    {c d : Fin u × Fin (cols 0).length} (hcd : σ.SameCycle c d) :
+    rowValue omega (cols 0) (c.1 : ℕ) (c.2 : ℕ)
+        = rowValue omega (cols 0) (d.1 : ℕ) (d.2 : ℕ)
+      ∨ ∃ q ∈ range u ×ˢ range (cols 0).length,
+          rowValue omega (cols 0) q.1 q.2
+            + beta * rowName omega delta 0 q.1 q.2 + gamma = 0 := by
+  -- every constraint in the deployed list vanishes on the domain
+  have hall := constraints_dvd_of_good_y _ hpoly hn hidentity hgoodY
+  -- locate the step rule and the two boundary rules inside that list
+  have hmemStep := mem_constraintPolys_of_mem_permutationExpressions fixedCols adviceCols
+    instanceCols gates (fun _ => deployedPermSets omega 1 z lastP)
+    (fun _ => deployedPermChunks omega 1 z lastP cols) lookups beta gamma delta theta chunkLen
+    l0P lLastP lBlindP p
+    (permChunkExpression_mem_permutationExpressions (deployedPermSets omega 1 z lastP)
+      (deployedPermChunks omega 1 z lastP cols) (C beta) (C gamma) X (C delta) chunkLen
+      l0P lLastP lBlindP (c := 0) (by simp))
+  have hmemStart := mem_constraintPolys_of_mem_permutationExpressions fixedCols adviceCols
+    instanceCols gates (fun _ => deployedPermSets omega 1 z lastP)
+    (fun _ => deployedPermChunks omega 1 z lastP cols) lookups beta gamma delta theta chunkLen
+    l0P lLastP lBlindP p
+    (start_mem_permutationExpressions (deployedPermChunks omega 1 z lastP cols) (C beta) (C gamma)
+      X (C delta) chunkLen l0P lLastP lBlindP
+      (head?_deployedPermSets omega Nat.one_pos z lastP))
+  have hmemEnd := mem_constraintPolys_of_mem_permutationExpressions fixedCols adviceCols
+    instanceCols gates (fun _ => deployedPermSets omega 1 z lastP)
+    (fun _ => deployedPermChunks omega 1 z lastP cols) lookups beta gamma delta theta chunkLen
+    l0P lLastP lBlindP p
+    (end_mem_permutationExpressions (deployedPermChunks omega 1 z lastP cols) (C beta) (C gamma)
+      X (C delta) chunkLen l0P lLastP lBlindP
+      (getLast?_deployedPermSets omega Nat.one_pos z lastP))
+  have hstep := hall _ hmemStep
+  have hstart := hall _ hmemStart
+  have hend := hall _ hmemEnd
+  simp only [getElem_deployedPermChunks, permSetPolys_eval] at hstep hstart hend
+  have key := deployed_perm_copy_constraints omega beta gamma delta chunkLen 0 (z 0) (lastP 0)
+    (cols 0) l0P lLastP lBlindP σ (by simpa using hstep) hstart hend hrow hactive hl0 hlast
+    (by simpa [Nat.zero_mul] using hσ) (by simpa [Nat.zero_mul] using hnm)
+    (by simpa [Nat.zero_mul] using hgoodγ) (by simpa [Nat.zero_mul] using hgoodβ) hcd
+  simpa [Nat.zero_mul] using key
+
 end Zcash.Snark

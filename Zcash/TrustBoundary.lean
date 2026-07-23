@@ -570,6 +570,31 @@ assert_axioms running_product_start
 assert_axioms running_product_end
 assert_axioms name_injective_of_coset
 assert_axioms deployed_perm_copy_constraints
+-- Locating a single rule inside the verifier's flat constraint list, fixing the permutation sets to
+-- committed running products, and chaining the two: the copy constraints now follow from the
+-- polynomial constraint identity itself, with no hypothesis about the shape of the checks.
+assert_axioms permChunkExpression_mem_permutationExpressions
+assert_axioms start_mem_permutationExpressions
+assert_axioms end_mem_permutationExpressions
+assert_axioms mem_subProofConstraints_of_mem_permutationExpressions
+assert_axioms mem_allConstraints_of_mem_subProofConstraints
+assert_axioms mem_constraintPolys_of_mem_permutationExpressions
+assert_axioms flat_recurrence
+assert_axioms head?_deployedPermSets
+assert_axioms getLast?_deployedPermSets
+assert_axioms deployed_copy_constraints_of_identity
+-- The same for the lookup argument: its five rules located in the list, read row by row, and
+-- chained to the inclusion.
+assert_axioms lookupExpressions_eq
+assert_axioms mem_subProofConstraints_of_mem_lookupExpressions
+assert_axioms mem_constraintPolys_of_mem_lookupExpressions
+assert_axioms running_product_end_flipped
+assert_axioms lookup_row_recurrence
+assert_axioms lookup_row_zero
+assert_axioms lookup_row_step
+assert_axioms lookup_rules_dvd_of_identity
+assert_axioms deployed_lookup_subset_of_identity
+assert_axioms deployed_lookup_relation_of_identity
 assert_axioms hgood_failure_priced
 assert_axioms hgood_of_good_challenge
 -- The UNCONDITIONAL decomposition: `hExtract` removed, the residual quantified as the

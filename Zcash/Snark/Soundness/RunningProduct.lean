@@ -120,4 +120,36 @@ theorem telescope_chunks [CommRing F] (Z : ℕ → ℕ → F) (A B : ℕ → ℕ
     ← prod_range_prod_range (fun c i => ∏ j ∈ range k, A c i j)]
   exact hall
 
+
+/-- **Chunks flattened.** Reading the chunks end to end as a single running product — step `t` is row
+`t % m` of chunk `t / m` — satisfies the one-step recurrence throughout, because the chaining rule is
+exactly what holds at a chunk boundary. -/
+theorem flat_recurrence [CommRing F] (Z : ℕ → ℕ → F) (A B : ℕ → ℕ → ℕ → F) {nc m k : ℕ}
+    (hm : 0 < m)
+    (hrec : ∀ c < nc, ∀ i < m,
+      Z c (i + 1) * ∏ j ∈ range k, B c i j = Z c i * ∏ j ∈ range k, A c i j)
+    (hchain : ∀ c < nc, Z (c + 1) 0 = Z c m)
+    {t : ℕ} (ht : t < nc * m) :
+    Z ((t + 1) / m) ((t + 1) % m) * ∏ j ∈ range k, B (t / m) (t % m) j
+      = Z (t / m) (t % m) * ∏ j ∈ range k, A (t / m) (t % m) j := by
+  obtain ⟨q, r, hr, rfl⟩ : ∃ q r, r < m ∧ t = m * q + r :=
+    ⟨t / m, t % m, Nat.mod_lt _ hm, (Nat.div_add_mod t m).symm⟩
+  have hq : q < nc := by
+    by_contra hle
+    exact absurd ht (by push_neg at hle ⊢; calc nc * m ≤ q * m := Nat.mul_le_mul_right m hle
+      _ ≤ m * q + r := by rw [mul_comm]; omega)
+  have hdiv : (m * q + r) / m = q := by rw [Nat.mul_add_div hm, Nat.div_eq_of_lt hr, add_zero]
+  have hmod : (m * q + r) % m = r := by rw [Nat.mul_add_mod, Nat.mod_eq_of_lt hr]
+  rw [hdiv, hmod]
+  rcases eq_or_lt_of_le (Nat.succ_le_of_lt hr) with hlast | hmid
+  · -- last row of chunk `q`: the next step is row `0` of chunk `q + 1`
+    have hsum : m * q + r + 1 = m * (q + 1) := by rw [mul_add, mul_one]; omega
+    rw [hsum, Nat.mul_div_cancel_left _ hm, Nat.mul_mod_right, hchain q hq, ← hlast]
+    exact hrec q hq r hr
+  · -- interior row: the next step is the next row of the same chunk
+    have hsum : m * q + r + 1 = m * q + (r + 1) := by omega
+    rw [hsum, Nat.mul_add_div hm, Nat.div_eq_of_lt hmid, add_zero, Nat.mul_add_mod,
+      Nat.mod_eq_of_lt hmid]
+    exact hrec q hq r hr
+
 end Zcash.Snark
