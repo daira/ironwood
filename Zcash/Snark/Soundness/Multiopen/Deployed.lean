@@ -1159,6 +1159,22 @@ theorem x4BatchCommitments_getD [DecidableEq G] [Inhabited G] {shape : Shape} (u
   exact congrArg Prod.fst List.getElem_zip
 
 omit [AddCommGroup G] [Module Fp G] in
+/-- The `x₄` pair count is the length of the pair list — the definitional unfolding, as a lemma so
+downstream files can use it without delta-reducing the sealed definition. -/
+theorem deployedX4PairCount_eq [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
+    deployedX4PairCount vk ps ch = (deployedX4Pairs vk ps ch).length := rfl
+
+/-- The top slot of the `x₄` batch evaluations is the recomputed base evaluation: the slot index
+equals the pair count, so the branch that reads a point set is not taken. -/
+theorem x4BatchEvals_top [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
+    x4BatchEvals vk ps ch ⟨deployedX4PairCount vk ps ch, Nat.lt_succ_self _⟩
+      = deployedBaseEval vk ps ch := by
+  show (if deployedX4PairCount vk ps ch < deployedX4PairCount vk ps ch then _
+    else deployedBaseEval vk ps ch) = deployedBaseEval vk ps ch
+  rw [if_neg (lt_irrefl _)]
+
 /-- The in-range `x₄` batch evaluations, set-indexed: batch slot `j` carries the claimed set
 evaluation of point set `count − 1 − j`. -/
 theorem x4BatchEvals_getD [DecidableEq G] [Inhabited G] {shape : Shape}

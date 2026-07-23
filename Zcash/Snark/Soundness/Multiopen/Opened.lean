@@ -58,6 +58,13 @@ evaluations at the original rotated points and the gate/`x`→`x₃` transport
 
 namespace Zcash.Snark
 
+-- The deployed grouping definitions appear inside index types (`Fin (deployedSetQueries …).length`),
+-- so every defeq check on an index invites `whnf` to unfold the whole
+-- `constructIntermediateSets (assembleQueries …)` computation. Sealing them keeps those checks
+-- syntactic; the proofs below use their equation lemmas, never delta-reduction.
+attribute [local irreducible] deployedSetQueries deployedSetCommIds deployedX4PairCount
+  x4BatchCommitments x4BatchEvals
+
 section Opened
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
@@ -240,9 +247,7 @@ theorem openedDecodedCols_top_eval_x3 [DecidableEq G] [Inhabited G] {shape : Sha
     (openedDecodedCols pbatch ⟨deployedX4PairCount vk ps ch, Nat.lt_succ_self _⟩).eval ch.x3
       = deployedBaseEval vk ps ch := by
   rw [openedDecodedCols_eval_x3]
-  show (if deployedX4PairCount vk ps ch < deployedX4PairCount vk ps ch then _
-    else deployedBaseEval vk ps ch) = deployedBaseEval vk ps ch
-  rw [if_neg (lt_irrefl _)]
+  exact x4BatchEvals_top vk ps ch
 
 /-- The current witness is the current-challenge power combination of the decoded column vectors —
 the opened counterpart of `DecodedColumnFamilyOfBatch.currentWitness_eq`. -/
@@ -540,7 +545,6 @@ noncomputable def openedX4Rewind_of_x4Prob_forked [DecidableEq G] [Inhabited G] 
 
 -- The `deployedSetQueries`-shaped index types make the power-sum defeq checks heavy under the
 -- v4.30.0 toolchain; the budget below matches the other heavy proofs in this file.
-set_option maxHeartbeats 1000000 in
 /-- At the deployed instantiation with the honest batching challenge in the current slot, the
 batch's own current-slot equations already open the fork's statement: the power sums collapse to
 `deployedCommitment`/`multiopenValue` at `ch.x4`
@@ -766,7 +770,6 @@ theorem openedX1Accept_of_deployedAccepts [DecidableEq G] [Inhabited G] {shape :
 
 -- The member-index types carry `deployedSetQueries`-shaped lengths, so defeq checks are heavy;
 -- the budget below covers them (as on the producer).
-set_option maxHeartbeats 1000000 in
 /-- The decoded member triples for point set `i`: each opens its member commitment — an actual
 queried column commitment — in augmented form, and the honest opened `x₄`-decode triple at set
 `i`'s batch position is the `ch.x1`-power combination of the decoded triples. Produced from the
@@ -800,7 +803,6 @@ open scoped ENNReal in
 open Classical in
 -- The member-index types carry `deployedSetQueries`-shaped lengths, so defeq checks are heavy;
 -- the budget below covers them.
-set_option maxHeartbeats 1000000 in
 /-- **The `x₁` forking floor through the opened chain.** If the opened `x₁` accept measure beats
 `(len − 1) / p` for point set `i`'s member count, the member-binding output exists — decoded member
 triples opening the actual queried column commitments in augmented form, with the honest opened
@@ -958,7 +960,6 @@ noncomputable def rotatedFeed {n : ℕ} (omega : Fp) (layout : List (ℕ × ℤ)
     (col j).comp (Polynomial.C (omega ^ (layout.getD (j : ℕ) (0, 0)).2) * Polynomial.X)
 
 open Polynomial in
-set_option maxHeartbeats 1000000 in
 /-- The SNARK relation with the circuit side fed by decoded *member* columns — the actual queried
 column commitments' openings, selected per advice/instance index from their point sets. The witness
 chain is carried in full: `a` opens the statement, the opened `x₄` batch contains it, and each
@@ -1016,7 +1017,6 @@ structure SnarkRelationWithMemberColumns [DecidableEq G] [Inhabited G] {shape : 
       y gates hpoly deg a
 
 open Polynomial in
-set_option maxHeartbeats 1000000 in
 /-- Turn a final opened relation, its batch family, and per-set member decodes into the
 member-column SNARK relation: the gate check is stated once, on the member polynomials of the
 supplied decodes — the satisfiable pinned shape. Its truth for the deployed verifier — the claimed
@@ -1098,7 +1098,6 @@ theorem member_constraint_of_relation_and_batch [DecidableEq G] [Inhabited G] {s
 open Polynomial in
 open scoped ENNReal in
 open Classical in
-set_option maxHeartbeats 1000000 in
 /-- The member-column endpoint with the good challenge *derived*, not assumed: `hgood` is replaced
 by an accept event whose measure beats the vanishing-check budget, and the good challenge is
 produced at the pinned member decode (`exists_accepting_good_challenge_quotient`,

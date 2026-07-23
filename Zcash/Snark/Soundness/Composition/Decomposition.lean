@@ -62,7 +62,6 @@ theorem snarkExtractionFailureEvent_subset_union (family : ComputedAlgebraicFSFa
 
 end ComputedAlgebraicFSFamily
 
-set_option maxHeartbeats 1000000 in
 open ComputedAlgebraicFSFamily in
 /-- **The unconditional knowledge-error decomposition.** Without `hExtract`, the measure of
 "deployed acceptance but no SNARK extraction" is at most the clean-opening bound plus the measure

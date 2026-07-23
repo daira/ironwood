@@ -20,6 +20,12 @@ at the canonical runs.
 
 namespace Zcash.Snark
 
+-- The deployed grouping definitions appear inside index types, so a defeq check on an index can
+-- pull the whole `constructIntermediateSets (assembleQueries …)` computation through `whnf`.
+-- Sealing them keeps those checks syntactic; the proofs below use their equation lemmas.
+attribute [local irreducible] deployedSetQueries deployedSetCommIds deployedX4PairCount
+  x4BatchCommitments x4BatchEvals
+
 open Polynomial
 open scoped ENNReal
 open Classical
@@ -244,7 +250,6 @@ theorem innerJointAccept_mk [DecidableEq G] [Inhabited G] {shape : Shape} {urs :
     (ζv, χv, ωv) ∈ innerJointAccept urs hk vk ps ch b₂ :=
   ⟨h2, h3, h4⟩
 
-set_option maxHeartbeats 2000000 in
 /-- **The deployed multiopen value check from the joint accept floor.** The conclusion of
 `deployed_value_check_node_binding` — each honest `x₄`-slot aggregate takes its claimed
 interpolation at each set point, or a `(g, U, W)` relation exists — with the `∀`-over-runs floors
@@ -624,7 +629,6 @@ def memberJointAccept [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G
     w.2 ∈ innerJointAccept urs hk vk ((canonicalX1Run urs hk vk ps ch w.1).spliced ps)
       ((canonicalX1Run urs hk vk ps ch w.1).challenges ch w.1) (b₂f w.1)}
 
-set_option maxHeartbeats 4000000 in
 /-- **The budgeted member terminal.** The conclusion of `deployed_member_node_binding` — each
 decoded member column takes its claimed evaluation at each set point, or a `(g, U, W)` relation
 exists — with the entire nested floor family replaced by the single joint floor
@@ -860,7 +864,6 @@ theorem deployed_member_node_binding_budgeted [DecidableEq G] [Inhabited G] {sha
     (((constructIntermediateSets (assembleQueries vk ps ch)).points.getD i [])[idx])
     ξ hξinj hagg m₀
 
-set_option maxHeartbeats 4000000 in
 /-- The budgeted member node binding at a located set point: `deployed_member_node_binding_budgeted`
 with the point membership supplied instead of a positional index and the `hql` bookkeeping
 discharged (`deployedSetQueries_eval_length`). Each decoded member column takes its claimed

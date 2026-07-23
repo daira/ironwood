@@ -34,6 +34,12 @@ turns the curve into an `Fp`-module and the abstract theorems specialize to Vest
 
 namespace Zcash.Snark
 
+-- The deployed grouping definitions appear inside index types, so a defeq check on an index can
+-- pull the whole `constructIntermediateSets (assembleQueries …)` computation through `whnf`.
+-- Sealing them keeps those checks syntactic; the proofs below use their equation lemmas.
+attribute [local irreducible] deployedSetQueries deployedSetCommIds deployedX4PairCount
+  x4BatchCommitments x4BatchEvals
+
 open CompElliptic.Curves.Pasta CompElliptic.CurveForms.ShortWeierstrass CompElliptic.CurveOrder
 
 /-- The deployed verifier group `E_q`, concretely `SWPoint Vesta.curve`: the points of `y² = x³ + 5`. -/
@@ -774,7 +780,6 @@ theorem orchard_verifier_vesta_forking_constraint_deployed_x4 [DecidableEq Vesta
 open Polynomial in
 open scoped ENNReal in
 open Classical in
-set_option maxHeartbeats 1000000 in
 /-- **Deployed member-column constraint capstone: the gate check on the real circuit columns.**
 *Either* the SNARK relation holds with the circuit checked on the decoded *member* columns — the
 actual queried column commitments' openings — *or* a nontrivial `(g, u, w)` relation exists. The
@@ -875,7 +880,6 @@ theorem orchard_verifier_vesta_member_constraint_deployed_x4 [DecidableEq VestaG
 open Polynomial in
 open scoped ENNReal in
 open Classical in
-set_option maxHeartbeats 1000000 in
 /-- **Terminal deployed member capstone: `hquot` derived, not assumed.** From the per-column
 claimed evaluations and the gate-fold identity `hfold`, `quotientCheck_of_claimed` produces
 `hquot`, threaded into the member capstone — the multiopen value check closed into the gate check.
@@ -976,7 +980,6 @@ theorem orchard_verifier_vesta_member_constraint_deployed_terminal [DecidableEq 
 open Polynomial in
 open scoped ENNReal in
 open Classical in
-set_option maxHeartbeats 4000000 in
 /-- **Derived deployed member capstone: the claimed evaluations produced from the floors.** The
 gate check runs at `ch.x` on the decoded member columns, whose claimed evaluations are *derived*:
 each in-range layout entry is a deployed opening query, its rotated point a point of the member's

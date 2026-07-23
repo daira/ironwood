@@ -32,6 +32,12 @@ computed `(g,u,w)` relation — the dichotomy `member_relation_or_dlr_of_instanc
 
 namespace Zcash.Snark
 
+-- The deployed grouping definitions appear inside index types, so a defeq check on an index can
+-- pull the whole `constructIntermediateSets (assembleQueries …)` computation through `whnf`.
+-- Sealing them keeps those checks syntactic; the proofs below use their equation lemmas.
+attribute [local irreducible] deployedSetQueries deployedSetCommIds deployedX4PairCount
+  x4BatchCommitments x4BatchEvals
+
 -- Match the instance set `AlgebraicWfProof.multiopen_repr` is stated against
 -- (`Forking.Adversary.Algebraic` uses the same concrete `Inhabited VestaG`); a local `[Inhabited]`
 -- binder would be a *different* instance term, forcing the `multiopenCommitment` fold through `whnf`.
@@ -84,7 +90,6 @@ theorem ipaRelation_of_opening
   refine ⟨hcommit.trans hP, ?_⟩
   rw [hval, add_sub_assoc, hshift, add_zero, hv]
 
-set_option maxHeartbeats 1000000 in
 /-- **The bridge at the constructed instance.** The clean opening is an `IpaRelation` at the
 deployed opened commitment `deployedCommitment − multiU•u − multiBlind•w` with `v = multiopenValue`
 (`commit_aMulti_eq_multiopen` identifies the commitment). Only this standalone bridge carries
@@ -122,7 +127,6 @@ theorem ipaRelation_deployed_of_instance
       exact commit_aMulti_eq_multiopen p ν)
     rfl hshift o
 
-set_option maxHeartbeats 1000000 in
 /-- The extracted opening commits to the de-blinded deployed commitment
 `deployedCommitment − multiU•u − multiBlind•w` — the commitment conjunct of
 `ipaRelation_deployed_of_instance`, available with no value-shift hypothesis. -/
@@ -153,7 +157,6 @@ theorem opening_commit_deployed_of_instance
       show (p.proof.1 : ProofString shape Fp VestaG) = p.algebraicProof.erase from rfl]
     exact commit_aMulti_eq_multiopen p ν)
 
-set_option maxHeartbeats 1000000 in
 /-- **The honest value shift is forced on the witness tie.** The clean opening opens at
 `multiopenValue + (z⁻¹·vU − ξ·⟨s,b⟩)`; a witness `a₀` of the deployed batch opens the same inner
 product at `multiopenValue`. If the two witnesses agree, the shift `z⁻¹·vU − ξ·⟨s,b⟩` is `0` —
@@ -191,7 +194,6 @@ theorem shift_eq_zero_of_openings_agree
   rw [hval₀, add_sub_assoc] at h'
   exact left_eq_add.mp h'
 
-set_option maxHeartbeats 1000000 in
 /-- `ipaRelation_deployed_of_instance` with `hshift` discharged by
 `shift_eq_zero_of_openings_agree`: on the witness tie the clean opening satisfies the deployed
 `IpaRelation` at `multiopenValue` with no shift hypothesis. -/
@@ -226,7 +228,6 @@ theorem ipaRelation_deployed_of_openings_agree
 
 open Polynomial in
 open Classical in
-set_option maxHeartbeats 1000000 in
 /-- **Witness-tie: the algebraic clean opening feeds the deployed member capstone.** The batch
 supplies its own opening at witness `a₀`, and the clean opening commits to the same point
 (`opening_commit_deployed_of_instance`). *Either* the witnesses agree — and
@@ -332,7 +333,6 @@ theorem member_relation_or_dlr_of_instance
 
 open Polynomial in
 open Classical in
-set_option maxHeartbeats 1000000 in
 /-- The `runToSnark`-analogue on the computed path: on the clean-opening branch the witness tie
 produces the member SNARK relation (or a binding `HasNontrivialRelation`); on the relation branch,
 the algebraic extraction's own `AlgebraicRelationWitness`. Stated at the deployed opened-commitment

@@ -273,7 +273,6 @@ noncomputable def multiopenPeelDecode_of_factors (family : ComputedAlgebraicFSFa
       multiopenChainAt_prefixes family basis p j i (le_of_lt hij)
     chainAt_ne := multiopenChainAt_ne family }
 
-set_option maxHeartbeats 1000000 in
 open ComputedAlgebraicFSFamily in
 /-- **The ladder endpoint at the concrete multiopen prefixes.**
 `snarkExtraction_prob_le_of_generatorRO_textbookDL_ladder` (`Soundness.Composition.Assembly`) with
