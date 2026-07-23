@@ -222,7 +222,20 @@ exclusions. Given those records,
 `ConstraintSatisfaction.resolverPermutationCopyConstraints` yields equality on every
 keygen permutation cycle (or the theorem's explicit zero-factor branch). The same
 module flattens variable-width chunks to global columns and derives chunk-name
-injectivity from the standard root-of-unity/coset hypotheses.
+injectivity from the standard root-of-unity/coset hypotheses. The generic keygen
+construction is now present as well: `replayKeygenPermutation` performs the
+source-ordered cycle merges and proves that its cycles are exactly the copy-equivalence
+classes; `chunkPermutationOfFlat` conjugates that flat permutation through an
+arbitrary concrete chunk layout; and
+`keygenSigmaColumn` interpolates the permuted cell names over the evaluation domain.
+Its node-evaluation and degree-bound theorems prove that these are exactly the
+degree-`< n` common permutation polynomials required by Halo2.
+`ResolverPermutationCycle.ofKeygenColumns` then restricts the full-domain keygen
+permutation to the active rows and constructs the semantic cycle record; its only
+polynomial-identification premise says that each resolver-selected common polynomial
+equals the corresponding generated σ column. Keeping the full `n`-row interpolation
+separate from the `m` active-row copy theorem is essential: the VK commits to the
+former even though soundness reads only the latter.
 
 The active item-4 sequence is:
 
@@ -248,6 +261,12 @@ and the remaining domain/coset facts must be discharged. The `β`/`γ` exclusion
 with the forking/bad-set accounting. These facts are deliberately separate from
 polynomial routing: most are circuit/VK computations or the VK-to-σ interpolation
 theorem, not multiopen claims.
+
+The interpolation theorem itself is no longer concrete work. Once the Action
+permutation data lands, it remains to build the flat-to-chunk equivalence, instantiate
+the generated columns, and prove that their commitments are the concrete VK's
+`permutationCommonCommitment`s. Commitment binding then supplies the
+`ofKeygenColumns` polynomial equalities (or the existing nontrivial-relation branch).
 
 After that, translate the endpoints to the exact relations that Clean's
 `Halo2.Constraints` requires: declared `constrainEqual`/`constrainInstance` copies,
