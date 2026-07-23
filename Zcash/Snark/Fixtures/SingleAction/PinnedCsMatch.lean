@@ -10,13 +10,14 @@ CS-data dump, and `actionPinnedCs`, derived from the ported `Action.Circuit.conf
 `capturedPinnedCs_eq_derived` computes them equal; the per-field theorems split the
 same equality so a regeneration drift names the diverging field.
 
-The derivation's keygen witnesses: the selector-compression map is the Rust dump
-(`actionSelMap`), and the registration seed is the capture's own layouts — the
-fixed-point form: the equality then says the capture is consistent with the circuit
-under its own query-registration order, which pins the semantics (the layouts the
-consumers read are the ones the equality certifies). Both witnesses become computed,
-circuit-side data in the planned keygen ports (see the
-`PartialPinnedConstraintSystem` module docstring).
+The derivation's keygen witnesses: the selector-compression map is COMPUTED
+circuit-side (`actionSelMapDerived`, `Bridge/VkProjection.lean` — synthesize mirror →
+V1 floor-planner placement → activations → `compress_selectors`; the Rust-dumped
+`actionSelMap` survives only as a cross-check in `TestSelMapDerivation`), and the
+registration seed is the capture's own layouts — the fixed-point form: the equality
+then says the capture is consistent with the circuit under its own query-registration
+order, which pins the semantics (the layouts the consumers read are the ones the
+equality certifies).
 
 This module deliberately imports only the capture's `VkCsData` (plain field/ℕ data) —
 not the full fixture with its point captures — so the checks build in seconds;
@@ -46,10 +47,13 @@ def capturedPinnedCs : PartialPinnedConstraintSystem where
   minimumDegree := vkMinimumDegree
 
 /-- The pinned CS derived from the ported Action circuit, at the capture's
-registration order (fixed-point form; see the module docstring). -/
+registration order (fixed-point form; see the module docstring). The selector map is
+the fully derived one at the Action domain size `n = 2^11` (`k = 11`, a domain
+parameter, not a fixture artifact). -/
 def actionPinnedCs : PartialPinnedConstraintSystem :=
   .derive actionCS
-    (csSeed vkAdviceQueryLayout vkFixedQueryLayout vkInstanceQueryLayout) actionSelMap
+    (csSeed vkAdviceQueryLayout vkFixedQueryLayout vkInstanceQueryLayout)
+    (actionSelMapDerived (2 ^ 11))
 
 theorem counts_eq :
     (capturedPinnedCs.numFixedColumns, capturedPinnedCs.numAdviceColumns,
@@ -87,7 +91,8 @@ theorem capturedPinnedCs_eq_derived : capturedPinnedCs = actionPinnedCs := by na
 coverage side condition of `PartialPinnedConstraintSystem.derive_gates_eval`. -/
 theorem action_gates_selectorsCovered :
     ((flatGates actionCS).all
-      (·.selectorsCovered (fun i => (actionSelMap.lookup i).isSome))) = true := by
+      (·.selectorsCovered (fun i => ((actionSelMapDerived (2 ^ 11)).lookup i).isSome)))
+      = true := by
   native_decide
 
 assert_no_sorry capturedPinnedCs_eq_derived

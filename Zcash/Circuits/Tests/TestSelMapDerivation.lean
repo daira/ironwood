@@ -1,33 +1,24 @@
-import Zcash.Circuits.Fixtures.CompressSelectors
-import Zcash.Circuits.Tests.TestVkLayoutAction
-import Zcash.Circuits.Tests.TestVkMatchAction
+import Zcash.Bridge.VkProjection
+import Zcash.Circuits.Fixtures.ActionSelMap
 
 /-!
-# Derivation test: the computed selector-compression map is the Rust dump
+# Cross-check: the derived selector-compression map is the Rust dump
 
-Runs `deriveSelCompressMap` on the ported Action `configure` output and the real
-synthesized activations (`Layout.activations` over the keygen-view operation stream, at
-the layout fixture's placements) and checks the result equal to the Rust-dumped
-`actionSelMap`. This certifies the `compress_selectors` port end to end; the dumped map
-remains in use as the derivation's cross-checked reference until the placement input is
-computed circuit-side as well.
+`Bridge.actionSelMapDerived` — the derivation witness `actionPinnedCs` consumes
+(`Zcash/Snark/Fixtures/SingleAction/PinnedCsMatch.lean`) — is computed end to end from
+the ported circuit: synthesize mirror (`Bridge.actionOperations`) → region shapes → V1
+floor-planner placement (`FloorPlanner.V1.starts`) → selector activations
+(`Layout.activations`) → the `compress_selectors` port (`deriveSelCompressMap`). This
+test keeps the Rust-dumped `actionSelMap` as the derivation's cross-checked reference:
+the two must stay EQUAL at the Action domain size `n = 2^11`. (`TestFloorPlanner`
+separately pins the derived placements against the layout fixture's.)
 -/
 
 namespace Zcash.Circuits.Fixtures.Test.SelMapDerivation
 
-open Halo2 Fixtures Fixtures.Layout
-open LayoutAction (aProgram)
-open MatchAction (actionCS)
+open Bridge (actionSelMapDerived)
 
-#eval show IO Unit from do
-  let fx ← Json.loadLayoutFixture "Zcash/Circuits/Fixtures/actionLayout.json"
-    0x51cd2f7ce66a8c7
-  let ops : Operations Fp := aProgram.operations
-  let regions : List (ℕ × RegionOperations Fp) := (indexedRegions ops 0).1
-  let starts : List ℕ := (fx.regions.filter (·.name ≠ "generator_table")).map (·.start)
-  let acts : List (ℕ × ℕ) := activations starts regions
-  Json.runChecks [
-    ("derived selector-compression map = Rust dump",
-      deriveSelCompressMap actionCS fx.n acts == actionSelMap)]
+-- The fully derived map (the one wired into `actionPinnedCs`) equals the Rust dump.
+#guard actionSelMapDerived (2 ^ 11) == actionSelMap
 
 end Zcash.Circuits.Fixtures.Test.SelMapDerivation
