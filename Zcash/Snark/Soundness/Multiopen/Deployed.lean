@@ -239,33 +239,34 @@ end X1PowerForm
 section Deployed
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
+variable {shape : Shape} (instanceCommitment : Fin shape.numProofs → ℕ → G)
 
 /-- The deployed `x₁`-compressed point-set aggregates, exactly as `assembleOpening` builds them from the
 fingerprinted `constructIntermediateSets` grouping: per point set (in processing order), the `x₁`-power
 fold of the commitments routed to it. -/
-def deployedX4Qs [DecidableEq G] [Inhabited G] {shape : Shape} (vk : VerifyingKey shape Fp G)
+def deployedX4Qs [DecidableEq G] [Inhabited G]  (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) : List (Msm shape.k Fp G) :=
-  let grouped := constructIntermediateSets (assembleQueries vk ps ch)
+  let grouped := constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)
   ((grouped.sets.zip grouped.points).map (fun sp => compressSet ch.x1 sp.1 sp.2.length)).map Prod.fst
 
 /-- The deployed `x₄`-collapse pair list: the point-set aggregates zipped with the prover's claimed set
 evaluations `u`, in the order the collapse folds them. -/
-def deployedX4Pairs [DecidableEq G] [Inhabited G] {shape : Shape} (vk : VerifyingKey shape Fp G)
+def deployedX4Pairs [DecidableEq G] [Inhabited G]  (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) : List (Msm shape.k Fp G × Fp) :=
-  (deployedX4Qs vk ps ch).zip (List.ofFn ps.multiopenU)
+  (deployedX4Qs (instanceCommitment := instanceCommitment) vk ps ch).zip (List.ofFn ps.multiopenU)
 
 /-- The number of `x₄`-collapsed `(qᵢ, uᵢ)` pairs. The `x₄` batch has this many aggregate columns plus
 the `q′` slot. -/
-def deployedX4PairCount [DecidableEq G] [Inhabited G] {shape : Shape} (vk : VerifyingKey shape Fp G)
+def deployedX4PairCount [DecidableEq G] [Inhabited G]  (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) : ℕ :=
-  (deployedX4Pairs vk ps ch).length
+  (deployedX4Pairs (instanceCommitment := instanceCommitment) vk ps ch).length
 
 /-- The deployed base evaluation `msm_eval` the `x₄` collapse starts from: the `x₂`-combined,
 vanishing-divided Lagrange step (`multiopenEval`) over the fingerprinted grouping — the value the
 quotient commitment `q′` is claimed to open to. -/
-def deployedBaseEval [DecidableEq G] [Inhabited G] {shape : Shape} (vk : VerifyingKey shape Fp G)
+def deployedBaseEval [DecidableEq G] [Inhabited G]  (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) : Fp :=
-  let grouped := constructIntermediateSets (assembleQueries vk ps ch)
+  let grouped := constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)
   let compressed := (grouped.sets.zip grouped.points).map (fun sp => compressSet ch.x1 sp.1 sp.2.length)
   multiopenEval ch.x2 ch.x3
     (((grouped.points.zip (compressed.map Prod.snd)).zip (List.ofFn ps.multiopenU)).map
@@ -274,38 +275,38 @@ def deployedBaseEval [DecidableEq G] [Inhabited G] {shape : Shape} (vk : Verifyi
 /-- The deployed `x₄` batch column commitments: ascending `ξ`-powers carry the point-set aggregates in
 reverse fold order, the top power the quotient commitment `q′`. These are the "columns" the `x₄`-level
 decode recovers — the fingerprinted grouping's own aggregates, not a modeled flat batch. -/
-noncomputable def x4BatchCommitments [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
+noncomputable def x4BatchCommitments [DecidableEq G] [Inhabited G]  (urs : URS G)
     (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
-    (ch : Challenges shape.k Fp) : Fin (deployedX4PairCount vk ps ch + 1) → G :=
+    (ch : Challenges shape.k Fp) : Fin (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch + 1) → G :=
   fun j =>
-    if (j : ℕ) < deployedX4PairCount vk ps ch then
-      ((deployedX4Pairs vk ps ch).reverse.getD (j : ℕ) (Msm.zero shape.k Fp G, 0)).1.eval
+    if (j : ℕ) < deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch then
+      ((deployedX4Pairs (instanceCommitment := instanceCommitment) vk ps ch).reverse.getD (j : ℕ) (Msm.zero shape.k Fp G, 0)).1.eval
         ⟨shape.k, hk ▸ urs.g, urs.w, urs.u⟩
     else ps.multiopenQPrime
 
 /-- The deployed `x₄` batch column evaluations: ascending `ξ`-powers carry the claimed set evaluations
 `uᵢ` in reverse fold order, the top power the recomputed base evaluation `msm_eval`. -/
-def x4BatchEvals [DecidableEq G] [Inhabited G] {shape : Shape} (vk : VerifyingKey shape Fp G)
+def x4BatchEvals [DecidableEq G] [Inhabited G]  (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
-    Fin (deployedX4PairCount vk ps ch + 1) → Fp :=
+    Fin (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch + 1) → Fp :=
   fun j =>
-    if (j : ℕ) < deployedX4PairCount vk ps ch then
-      ((deployedX4Pairs vk ps ch).reverse.getD (j : ℕ) (Msm.zero shape.k Fp G, 0)).2
-    else deployedBaseEval vk ps ch
+    if (j : ℕ) < deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch then
+      ((deployedX4Pairs (instanceCommitment := instanceCommitment) vk ps ch).reverse.getD (j : ℕ) (Msm.zero shape.k Fp G, 0)).2
+    else deployedBaseEval (instanceCommitment := instanceCommitment) vk ps ch
 
 /-- **The deployed commitment is a flat power batch in the `x₄` squeeze.** Over the rewound runs
 `{ch with x4 := ξ}` — everything upstream of the collapse (`assembleQueries`, the grouping, the `x₁`
 compression, the base evaluation) is untouched by the redraw — the pinned `deployedCommitment` is the
 `ξ`-power combination of the deployed aggregates. This discharges `acceptedBatchFamily_of_rewinds`'s
 `hP` for the deployed verifier, closing the flat-batch model boundary at the `x₄` level. -/
-theorem deployedCommitment_x4_batch [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
+theorem deployedCommitment_x4_batch [DecidableEq G] [Inhabited G]  (urs : URS G)
     (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) (ξ : Fp) :
-    deployedCommitment urs hk vk ps {ch with x4 := ξ}
-      = ∑ j : Fin (deployedX4PairCount vk ps ch + 1),
-          ξ ^ (j : ℕ) • x4BatchCommitments urs hk vk ps ch j := by
+    deployedCommitment urs hk vk instanceCommitment ps {ch with x4 := ξ}
+      = ∑ j : Fin (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch + 1),
+          ξ ^ (j : ℕ) • x4BatchCommitments (instanceCommitment := instanceCommitment) urs hk vk ps ch j := by
   show (assembleOpening ch.x1 ch.x2 ch.x3 ξ ps.multiopenQPrime (List.ofFn ps.multiopenU)
-      (constructIntermediateSets (assembleQueries vk ps ch)) (Msm.zero shape.k Fp G)).1.eval
+      (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)) (Msm.zero shape.k Fp G)).1.eval
         ⟨shape.k, hk ▸ urs.g, urs.w, urs.u⟩ = _
   rw [assembleOpening, multiopenCombine_fst_eval_powerForm, powerSum_ite_last]
   rfl
@@ -315,64 +316,64 @@ omit [AddCommGroup G] [Module Fp G] in
 `deployedCommitment_x4_batch`: over `{ch with x4 := ξ}`, the pinned `multiopenValue` is the `ξ`-power
 combination of the claimed set evaluations with the base evaluation on top — the discharge of
 `acceptedBatchFamily_of_rewinds`'s `hv`. -/
-theorem multiopenValue_x4_batch [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem multiopenValue_x4_batch [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (ξ : Fp) :
-    multiopenValue vk ps {ch with x4 := ξ}
-      = ∑ j : Fin (deployedX4PairCount vk ps ch + 1), ξ ^ (j : ℕ) • x4BatchEvals vk ps ch j := by
+    multiopenValue vk instanceCommitment ps {ch with x4 := ξ}
+      = ∑ j : Fin (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch + 1), ξ ^ (j : ℕ) • x4BatchEvals (instanceCommitment := instanceCommitment) vk ps ch j := by
   show (assembleOpening ch.x1 ch.x2 ch.x3 ξ ps.multiopenQPrime (List.ofFn ps.multiopenU)
-      (constructIntermediateSets (assembleQueries vk ps ch)) (Msm.zero shape.k Fp G)).2 = _
+      (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)) (Msm.zero shape.k Fp G)).2 = _
   rw [assembleOpening, multiopenCombine_snd_powerForm, powerSum_ite_last]
   rfl
 
 /-- The queries the fingerprinted grouping routes to point set `i`, in the accumulate order the `x₁`
 compression folds them (`MultiopenGrouped.sets`, zipped with the set's points). -/
-def deployedSetQueries [DecidableEq G] [Inhabited G] {shape : Shape} (vk : VerifyingKey shape Fp G)
+def deployedSetQueries [DecidableEq G] [Inhabited G]  (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) (i : ℕ) :
     List (CommitmentRef shape.k Fp G × List Fp) :=
-  (let grouped := constructIntermediateSets (assembleQueries vk ps ch)
+  (let grouped := constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)
    (grouped.sets.zip grouped.points).getD i ([], [])).1
 
 /-- The slot identities of point set `i`'s routed members, positionally aligned with
 `deployedSetQueries` (halo2 `CommitmentData` retains its commitment identity through the grouping;
-`constructIntermediateSets_sets_ids_aligned`). `deployedSetCommIds vk ps ch i |>.getD m` names
+`constructIntermediateSets_sets_ids_aligned`). `deployedSetCommIds (instanceCommitment := instanceCommitment) vk ps ch i |>.getD m` names
 *which* commitment — advice/instance/fixed column, permutation/lookup product, vanishing — member
 `(i, m)` is, tying the decoded member polynomials back to the verifying key's query layout. -/
-def deployedSetCommIds [DecidableEq G] [Inhabited G] {shape : Shape} (vk : VerifyingKey shape Fp G)
+def deployedSetCommIds [DecidableEq G] [Inhabited G]  (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) (i : ℕ) : List CommitmentId :=
-  (constructIntermediateSets (assembleQueries vk ps ch)).ids.getD i []
+  (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).ids.getD i []
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- The identity list is positionally aligned with the member list: one slot identity per routed
 member. -/
-theorem deployedSetCommIds_length [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem deployedSetCommIds_length [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (i : ℕ) :
-    (deployedSetCommIds vk ps ch i).length = (deployedSetQueries vk ps ch i).length := by
+    (deployedSetCommIds (instanceCommitment := instanceCommitment) vk ps ch i).length = (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length := by
   simp only [deployedSetCommIds, deployedSetQueries]
   rw [constructIntermediateSets_zip_sets_getD]
-  exact constructIntermediateSets_sets_ids_aligned (assembleQueries vk ps ch) i
+  exact constructIntermediateSets_sets_ids_aligned (assembleQueries vk instanceCommitment ps ch) i
 
 /-- **The two-level batch structure, made explicit.** The `x₄`-level batch column `i` (a point-set
 aggregate of `deployedX4Qs`) is itself a flat power batch in the `x₁` squeeze of the member commitments
 the fingerprinted grouping routes to that set. Composing with `deployedCommitment_x4_batch`: the deployed
 commitment is the `x₄`-power batch of `x₁`-power batches of the actual query commitments — the deployed
 two-level collapse in closed form. -/
-theorem deployedX4Qs_getD_eval [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem deployedX4Qs_getD_eval [DecidableEq G] [Inhabited G]
     (g : Fin (2 ^ shape.k) → G) (w u : G) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) {i : ℕ}
-    (hi : i < (deployedX4Qs vk ps ch).length) :
-    ((deployedX4Qs vk ps ch).getD i (Msm.zero shape.k Fp G)).eval ⟨shape.k, g, w, u⟩
-      = ∑ j ∈ Finset.range (deployedSetQueries vk ps ch i).length,
-          ch.x1 ^ j • ((deployedSetQueries vk ps ch i).getD j (.point 0, [])).1.eval
+    (hi : i < (deployedX4Qs (instanceCommitment := instanceCommitment) vk ps ch).length) :
+    ((deployedX4Qs (instanceCommitment := instanceCommitment) vk ps ch).getD i (Msm.zero shape.k Fp G)).eval ⟨shape.k, g, w, u⟩
+      = ∑ j ∈ Finset.range (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length,
+          ch.x1 ^ j • ((deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).getD j (.point 0, [])).1.eval
             ⟨shape.k, g, w, u⟩ := by
-  have hzip : i < ((constructIntermediateSets (assembleQueries vk ps ch)).sets.zip
-      (constructIntermediateSets (assembleQueries vk ps ch)).points).length := by
+  have hzip : i < ((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).sets.zip
+      (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points).length := by
     simpa [deployedX4Qs] using hi
-  have hq : (deployedX4Qs vk ps ch).getD i (Msm.zero shape.k Fp G)
-      = (compressSet ch.x1 (deployedSetQueries vk ps ch i)
-          (((constructIntermediateSets (assembleQueries vk ps ch)).sets.zip
-            (constructIntermediateSets (assembleQueries vk ps ch)).points).getD i
+  have hq : (deployedX4Qs (instanceCommitment := instanceCommitment) vk ps ch).getD i (Msm.zero shape.k Fp G)
+      = (compressSet ch.x1 (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i)
+          (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).sets.zip
+            (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points).getD i
               ([], [])).2.length).1 := by
     rw [deployedX4Qs, List.getD_eq_getElem _ _ (by simpa [deployedX4Qs] using hi),
       List.getElem_map, List.getElem_map, deployedSetQueries,
@@ -441,21 +442,23 @@ aggregates. This is `acceptedBatchFamily_of_rewinds` with the flat power form no
 (`deployedCommitment_x4_batch`/`multiopenValue_x4_batch`) rather than assumed: no flat-batch scope
 hypothesis is left at this level. The runs are the `reprogramX4` reprogramming events
 (`Soundness.Forking.Rewind`); producing them from an accept measure is `deployedMultiopenRewind_of_x4Prob`. -/
-noncomputable def deployedMultiopenRewind_of_x4Rewinds [DecidableEq G] [Inhabited G] {shape : Shape}
+noncomputable def deployedMultiopenRewind_of_x4Rewinds [DecidableEq G] [Inhabited G]
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) {b : Fin (2 ^ urs.k) → Fp}
-    (ξ : Fin (deployedX4PairCount vk ps ch + 1) → Fp) (hξinj : Function.Injective ξ)
-    (cur : Fin (deployedX4PairCount vk ps ch + 1)) (hcur : ξ cur = ch.x4)
+    (ξ : Fin (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch + 1) → Fp) (hξinj : Function.Injective ξ)
+    (cur : Fin (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch + 1)) (hcur : ξ cur = ch.x4)
     (htrees : ∀ r, ∃ t : IpaTreeV Fp G urs.k,
-      IpaAcceptV urs.g b (deployedCommitment urs hk vk ps {ch with x4 := ξ r})
-        (multiopenValue vk ps {ch with x4 := ξ r}) t) :
-    MultiopenRewindForRelation urs (deployedCommitment urs hk vk ps ch) b
-      (multiopenValue vk ps ch) (x4BatchCommitments urs hk vk ps ch) (x4BatchEvals vk ps ch) := by
+      IpaAcceptV urs.g b (deployedCommitment urs hk vk instanceCommitment ps {ch with x4 := ξ r})
+        (multiopenValue vk instanceCommitment ps {ch with x4 := ξ r}) t) :
+    MultiopenRewindForRelation urs (deployedCommitment urs hk vk instanceCommitment ps ch) b
+      (multiopenValue vk instanceCommitment ps ch) (x4BatchCommitments (instanceCommitment := instanceCommitment) urs hk vk ps ch) (x4BatchEvals (instanceCommitment := instanceCommitment) vk ps ch) := by
   have fam := acceptedBatchFamily_of_rewinds (urs := urs) (b := b) ξ hξinj
-    (fun x => deployedCommitment urs hk vk ps {ch with x4 := x})
-    (fun x => multiopenValue vk ps {ch with x4 := x})
-    (fun r => deployedCommitment_x4_batch urs hk vk ps ch (ξ r))
-    (fun r => multiopenValue_x4_batch vk ps ch (ξ r))
+    (fun x => deployedCommitment urs hk vk instanceCommitment ps {ch with x4 := x})
+    (fun x => multiopenValue vk instanceCommitment ps {ch with x4 := x})
+    (fun r => deployedCommitment_x4_batch (instanceCommitment := instanceCommitment)
+      urs hk vk ps ch (ξ r))
+    (fun r => multiopenValue_x4_batch (instanceCommitment := instanceCommitment)
+      vk ps ch (ξ r))
     cur htrees
   rw [hcur] at fam
   exact multiopenRewindForRelation_of_acceptedFamily fam
@@ -467,19 +470,19 @@ bridge to a clean accepting IPA transcript on the fork's *opened* commitment
 reference only — its IPA fields open the honest collapse, so a measure fed through it would be a
 constant strategy; the live chain uses `x4_cleanTree_of_deployedAccepts_adaptive` below, whose runs
 re-send the post-`x₄` opening (`X4Run`/`spliceX4`). -/
-theorem x4_cleanTree_of_deployedAccepts [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x4_cleanTree_of_deployedAccepts [DecidableEq G] [Inhabited G]
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp} (hz : z ≠ 0)
     (hnrel : ¬HasNontrivialRelation (F := Fp) urs.g urs.u urs.w) (ξ : Fp)
-    (hFS : FiatShamirTree urs hk vk ps {ch with x4 := ξ} b z blind)
-    (hacc : DeployedAccepts urs hk vk ps {ch with x4 := ξ}) :
-    ∃ (fs : ForkedTranscript urs hk vk ps {ch with x4 := ξ} b z blind) (t : IpaTreeV Fp G urs.k),
-      IpaAcceptV urs.g b fs.openedCommitment (multiopenValue vk ps {ch with x4 := ξ}) t := by
-  set fs := hFS (deployedAccepts_verifierEq urs hk vk ps _ hacc) with hfs
+    (hFS : FiatShamirTree urs hk vk instanceCommitment ps {ch with x4 := ξ} b z blind)
+    (hacc : DeployedAccepts urs hk vk instanceCommitment ps {ch with x4 := ξ}) :
+    ∃ (fs : ForkedTranscript urs hk vk instanceCommitment ps {ch with x4 := ξ} b z blind) (t : IpaTreeV Fp G urs.k),
+      IpaAcceptV urs.g b fs.openedCommitment (multiopenValue vk instanceCommitment ps {ch with x4 := ξ}) t := by
+  set fs := hFS (deployedAccepts_verifierEq urs hk vk instanceCommitment ps _ hacc) with hfs
   refine ⟨fs, ?_⟩
   rcases deployed_to_acceptV hz urs.g b fs.openedCommitment
-      (multiopenValue vk ps {ch with x4 := ξ}) blind fs.tree fs.accepts with hclean | hrel
+      (multiopenValue vk instanceCommitment ps {ch with x4 := ξ}) blind fs.tree fs.accepts with hclean | hrel
   · exact ⟨projTree fs.tree, hclean⟩
   · exact absurd hrel hnrel
 
@@ -490,27 +493,28 @@ an accept measure of the `x₄`-rewound runs beating `pairCount / p` produce the
 multiopen-rewinding output over the deployed aggregates. The measure carries the usual
 random-oracle uniformity axiom (`Forking.Oracle`); the runs are the `reprogramX4` events, each
 run's accepting transcript its own round-forking output. -/
-noncomputable def deployedMultiopenRewind_of_x4Prob [DecidableEq G] [Inhabited G] {shape : Shape}
+noncomputable def deployedMultiopenRewind_of_x4Prob [DecidableEq G] [Inhabited G]
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) {b : Fin (2 ^ urs.k) → Fp}
     (hcur : ∃ t : IpaTreeV Fp G urs.k,
-      IpaAcceptV urs.g b (deployedCommitment urs hk vk ps ch) (multiopenValue vk ps ch) t)
-    (hprob : ((deployedX4PairCount vk ps ch : ℝ≥0∞)) / Fintype.card Fp
+      IpaAcceptV urs.g b (deployedCommitment urs hk vk instanceCommitment ps ch) (multiopenValue vk instanceCommitment ps ch) t)
+    (hprob : ((deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch : ℝ≥0∞)) / Fintype.card Fp
       < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter (fun x =>
           ∃ t : IpaTreeV Fp G urs.k,
-            IpaAcceptV urs.g b (deployedCommitment urs hk vk ps {ch with x4 := x})
-              (multiopenValue vk ps {ch with x4 := x}) t))) :
-    MultiopenRewindForRelation urs (deployedCommitment urs hk vk ps ch) b
-      (multiopenValue vk ps ch) (x4BatchCommitments urs hk vk ps ch) (x4BatchEvals vk ps ch) := by
+            IpaAcceptV urs.g b (deployedCommitment urs hk vk instanceCommitment ps {ch with x4 := x})
+              (multiopenValue vk instanceCommitment ps {ch with x4 := x}) t))) :
+    MultiopenRewindForRelation urs (deployedCommitment urs hk vk instanceCommitment ps ch) b
+      (multiopenValue vk instanceCommitment ps ch) (x4BatchCommitments (instanceCommitment := instanceCommitment) urs hk vk ps ch) (x4BatchEvals (instanceCommitment := instanceCommitment) vk ps ch) := by
   have hx₀ : ∃ t : IpaTreeV Fp G urs.k,
-      IpaAcceptV urs.g b (deployedCommitment urs hk vk ps {ch with x4 := ch.x4})
-        (multiopenValue vk ps {ch with x4 := ch.x4}) t := hcur
+      IpaAcceptV urs.g b (deployedCommitment urs hk vk instanceCommitment ps {ch with x4 := ch.x4})
+        (multiopenValue vk instanceCommitment ps {ch with x4 := ch.x4}) t := hcur
   have hex := exists_injective_accepting_of_measure
     (acc := fun x => ∃ t : IpaTreeV Fp G urs.k,
-      IpaAcceptV urs.g b (deployedCommitment urs hk vk ps {ch with x4 := x})
-        (multiopenValue vk ps {ch with x4 := x}) t)
+      IpaAcceptV urs.g b (deployedCommitment urs hk vk instanceCommitment ps {ch with x4 := x})
+        (multiopenValue vk instanceCommitment ps {ch with x4 := x}) t)
     (x₀ := ch.x4) hx₀ hprob
-  exact deployedMultiopenRewind_of_x4Rewinds urs hk vk ps ch (Classical.choose hex)
+  exact deployedMultiopenRewind_of_x4Rewinds (instanceCommitment := instanceCommitment)
+    urs hk vk ps ch (Classical.choose hex)
     (Classical.choose_spec hex).1 0 (Classical.choose_spec hex).2.1
     (Classical.choose_spec hex).2.2
 
@@ -539,7 +543,7 @@ structure MultiopenContinuation (shape : Shape) (G : Type*) where
 
 /-- Splice a post-`x₁` continuation onto the shared pre-`x₁` proof prefix: every field absorbed before
 `x₁` is the base `ps`'s, the post-`x₁` fields are the continuation's. -/
-def spliceMultiopen {shape : Shape} (ps : ProofString shape Fp G)
+def spliceMultiopen  (ps : ProofString shape Fp G)
     (c : MultiopenContinuation shape G) : ProofString shape Fp G :=
   { ps with
     multiopenQPrime := c.multiopenQPrime
@@ -579,12 +583,12 @@ structure X1Run (shape : Shape) (G : Type*) where
   ipaRound : Fin shape.k → Fp
 
 /-- The run's proof string: the shared pre-`x₁` prefix with the run's continuation spliced on. -/
-def X1Run.spliced {shape : Shape} (r : X1Run shape G) (ps : ProofString shape Fp G) :
+def X1Run.spliced  (r : X1Run shape G) (ps : ProofString shape Fp G) :
     ProofString shape Fp G :=
   spliceMultiopen ps r.cont
 
 /-- The run's challenge record at compression challenge `χ`. -/
-def X1Run.challenges {shape : Shape} (r : X1Run shape G) (ch : Challenges shape.k Fp) (χ : Fp) :
+def X1Run.challenges  (r : X1Run shape G) (ch : Challenges shape.k Fp) (χ : Fp) :
     Challenges shape.k Fp :=
   x1RunChallenges ch χ r.x2 r.x3 r.x4 r.xi r.z r.ipaRound
 
@@ -592,19 +596,19 @@ def X1Run.challenges {shape : Shape} (r : X1Run shape G) (ch : Challenges shape.
 identity (`honestX1Run_spliced`/`_challenges`, by structure eta), so the honest run sits inside every
 `x₁`-rewind family — the eta identities are what instantiations discharge `hcur`/`hwC` at the honest
 slot with. -/
-def honestX1Run {shape : Shape} (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
+def honestX1Run  (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
     X1Run shape G :=
   ⟨⟨ps.multiopenQPrime, ps.multiopenU, ps.ipaS, ps.ipaRounds, ps.ipaC, ps.ipaF⟩,
     ch.x2, ch.x3, ch.x4, ch.xi, ch.z, ch.ipaRound⟩
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Splicing the honest continuation is the identity. -/
-theorem honestX1Run_spliced {shape : Shape} (ps : ProofString shape Fp G)
+theorem honestX1Run_spliced  (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) : (honestX1Run ps ch).spliced ps = ps := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- The honest run's challenge record at the honest compression challenge is the honest record. -/
-theorem honestX1Run_challenges {shape : Shape} (ps : ProofString shape Fp G)
+theorem honestX1Run_challenges  (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) : (honestX1Run ps ch).challenges ch ch.x1 = ch := rfl
 
 /-! The pre-`x₁` projections of a rewound run are the honest ones — the per-field `rfl` facts the
@@ -612,94 +616,94 @@ root query-list invariance is assembled from (keeping every definitional-equalit
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Pre-`x₁` challenge projection shared across runs. -/
-theorem x1Run_challenges_x {shape : Shape} (r : X1Run shape G) (ch : Challenges shape.k Fp)
+theorem x1Run_challenges_x  (r : X1Run shape G) (ch : Challenges shape.k Fp)
     (χ : Fp) : (r.challenges ch χ).x = ch.x := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Pre-`x₁` challenge projection shared across runs. -/
-theorem x1Run_challenges_y {shape : Shape} (r : X1Run shape G) (ch : Challenges shape.k Fp)
+theorem x1Run_challenges_y  (r : X1Run shape G) (ch : Challenges shape.k Fp)
     (χ : Fp) : (r.challenges ch χ).y = ch.y := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Pre-`x₁` proof projection shared across runs. -/
-theorem x1Run_spliced_adviceCommitments {shape : Shape} (r : X1Run shape G)
+theorem x1Run_spliced_adviceCommitments  (r : X1Run shape G)
     (ps : ProofString shape Fp G) : (r.spliced ps).adviceCommitments = ps.adviceCommitments := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Pre-`x₁` proof projection shared across runs. -/
-theorem x1Run_spliced_lookupPermutedInput {shape : Shape} (r : X1Run shape G)
+theorem x1Run_spliced_lookupPermutedInput  (r : X1Run shape G)
     (ps : ProofString shape Fp G) :
     (r.spliced ps).lookupPermutedInput = ps.lookupPermutedInput := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Pre-`x₁` proof projection shared across runs. -/
-theorem x1Run_spliced_lookupPermutedTable {shape : Shape} (r : X1Run shape G)
+theorem x1Run_spliced_lookupPermutedTable  (r : X1Run shape G)
     (ps : ProofString shape Fp G) :
     (r.spliced ps).lookupPermutedTable = ps.lookupPermutedTable := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Pre-`x₁` proof projection shared across runs. -/
-theorem x1Run_spliced_permutationProduct {shape : Shape} (r : X1Run shape G)
+theorem x1Run_spliced_permutationProduct  (r : X1Run shape G)
     (ps : ProofString shape Fp G) :
     (r.spliced ps).permutationProduct = ps.permutationProduct := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Pre-`x₁` proof projection shared across runs. -/
-theorem x1Run_spliced_lookupProduct {shape : Shape} (r : X1Run shape G)
+theorem x1Run_spliced_lookupProduct  (r : X1Run shape G)
     (ps : ProofString shape Fp G) : (r.spliced ps).lookupProduct = ps.lookupProduct := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Pre-`x₁` proof projection shared across runs. -/
-theorem x1Run_spliced_vanishingRandom {shape : Shape} (r : X1Run shape G)
+theorem x1Run_spliced_vanishingRandom  (r : X1Run shape G)
     (ps : ProofString shape Fp G) : (r.spliced ps).vanishingRandom = ps.vanishingRandom := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Pre-`x₁` proof projection shared across runs. -/
-theorem x1Run_spliced_hPieces {shape : Shape} (r : X1Run shape G)
+theorem x1Run_spliced_hPieces  (r : X1Run shape G)
     (ps : ProofString shape Fp G) : (r.spliced ps).hPieces = ps.hPieces := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Pre-`x₁` proof projection shared across runs. -/
-theorem x1Run_spliced_instanceEvals {shape : Shape} (r : X1Run shape G)
+theorem x1Run_spliced_instanceEvals  (r : X1Run shape G)
     (ps : ProofString shape Fp G) : (r.spliced ps).instanceEvals = ps.instanceEvals := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Pre-`x₁` proof projection shared across runs. -/
-theorem x1Run_spliced_adviceEvals {shape : Shape} (r : X1Run shape G)
+theorem x1Run_spliced_adviceEvals  (r : X1Run shape G)
     (ps : ProofString shape Fp G) : (r.spliced ps).adviceEvals = ps.adviceEvals := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Pre-`x₁` proof projection shared across runs. -/
-theorem x1Run_spliced_fixedEvals {shape : Shape} (r : X1Run shape G)
+theorem x1Run_spliced_fixedEvals  (r : X1Run shape G)
     (ps : ProofString shape Fp G) : (r.spliced ps).fixedEvals = ps.fixedEvals := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Pre-`x₁` proof projection shared across runs. -/
-theorem x1Run_spliced_vanishingRandomEval {shape : Shape} (r : X1Run shape G)
+theorem x1Run_spliced_vanishingRandomEval  (r : X1Run shape G)
     (ps : ProofString shape Fp G) :
     (r.spliced ps).vanishingRandomEval = ps.vanishingRandomEval := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Pre-`x₁` proof projection shared across runs. -/
-theorem x1Run_spliced_permutationCommonEvals {shape : Shape} (r : X1Run shape G)
+theorem x1Run_spliced_permutationCommonEvals  (r : X1Run shape G)
     (ps : ProofString shape Fp G) :
     (r.spliced ps).permutationCommonEvals = ps.permutationCommonEvals := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Pre-`x₁` proof projection shared across runs. -/
-theorem x1Run_spliced_permutationSetEvals {shape : Shape} (r : X1Run shape G)
+theorem x1Run_spliced_permutationSetEvals  (r : X1Run shape G)
     (ps : ProofString shape Fp G) :
     (r.spliced ps).permutationSetEvals = ps.permutationSetEvals := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Pre-`x₁` proof projection shared across runs. -/
-theorem x1Run_spliced_lookupEvals {shape : Shape} (r : X1Run shape G)
+theorem x1Run_spliced_lookupEvals  (r : X1Run shape G)
     (ps : ProofString shape Fp G) : (r.spliced ps).lookupEvals = ps.lookupEvals := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- The per-sub-proof constraint values are shared across `x₁` rewinds: they read only pre-`x₁`
 evaluations and challenges. -/
-theorem x1Run_subProofExpressions {shape : Shape} (vk : VerifyingKey shape Fp G)
+theorem x1Run_subProofExpressions  (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) (r : X1Run shape G) (χ : Fp)
     (l0 lLast lBlind : Fp) (p : Fin shape.numProofs) :
     subProofExpressions vk (r.spliced ps) (r.challenges ch χ) l0 lLast lBlind p
@@ -707,7 +711,7 @@ theorem x1Run_subProofExpressions {shape : Shape} (vk : VerifyingKey shape Fp G)
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- The full constraint-value list is shared across `x₁` rewinds. -/
-theorem x1Run_allExpressions {shape : Shape} (vk : VerifyingKey shape Fp G)
+theorem x1Run_allExpressions  (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) (r : X1Run shape G) (χ : Fp)
     (l0 lLast lBlind : Fp) :
     allExpressions vk (r.spliced ps) (r.challenges ch χ) l0 lLast lBlind
@@ -722,10 +726,10 @@ fields). Assembled from the per-field projection facts so every definitional-equ
 small. Everything grouping-derived is rewritten through this one equality. A refactor of the
 assembly's read set — a new challenge read or a post-`x₁` proof-field read — breaks this seal loudly,
 by design; extend the per-field projection facts alongside. -/
-theorem x1Run_assembleQueries [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x1Run_assembleQueries [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (r : X1Run shape G) (χ : Fp) :
-    assembleQueries vk (r.spliced ps) (r.challenges ch χ) = assembleQueries vk ps ch := by
+    assembleQueries vk instanceCommitment (r.spliced ps) (r.challenges ch χ) = assembleQueries vk instanceCommitment ps ch := by
   simp only [assembleQueries, x1Run_allExpressions, x1Run_challenges_x, x1Run_challenges_y,
     x1Run_spliced_hPieces, x1Run_spliced_instanceEvals, x1Run_spliced_adviceCommitments,
     x1Run_spliced_adviceEvals, x1Run_spliced_permutationProduct,
@@ -736,49 +740,50 @@ theorem x1Run_assembleQueries [DecidableEq G] [Inhabited G] {shape : Shape}
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- The grouping's routed queries are shared across `x₁` rewinds. -/
-theorem x1Run_setQueries [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x1Run_setQueries [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (r : X1Run shape G) (χ : Fp) (i : ℕ) :
-    deployedSetQueries vk (r.spliced ps) (r.challenges ch χ) i
-      = deployedSetQueries vk ps ch i := by
+    deployedSetQueries (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch χ) i
+      = deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i := by
   simp only [deployedSetQueries, x1Run_assembleQueries]
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- The number of point-set aggregates is shared across `x₁` rewinds. -/
-theorem x1Run_x4Qs_length [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x1Run_x4Qs_length [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (r : X1Run shape G) (χ : Fp) :
-    (deployedX4Qs vk (r.spliced ps) (r.challenges ch χ)).length
-      = (deployedX4Qs vk ps ch).length := by
+    (deployedX4Qs (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch χ)).length
+      = (deployedX4Qs (instanceCommitment := instanceCommitment) vk ps ch).length := by
   simp only [deployedX4Qs, x1Run_assembleQueries, List.length_map]
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- The `x₄` pair count is shared across `x₁` rewinds: the grouping is the honest one and the `u`
 vector's length is shape-fixed. Interface fact for callers re-indexing a run's `x₄` batch against
 the honest one (`x4BatchCommitments_getD` at the run); no in-tree consumer yet. -/
-theorem x1Run_pairCount [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x1Run_pairCount [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (r : X1Run shape G) (χ : Fp) :
-    deployedX4PairCount vk (r.spliced ps) (r.challenges ch χ) = deployedX4PairCount vk ps ch := by
+    deployedX4PairCount (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch χ) = deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch := by
   simp only [deployedX4PairCount, deployedX4Pairs, List.length_zip, List.length_ofFn,
     x1Run_x4Qs_length]
 
 /-- **The run aggregate is the run-`x₁`-power batch of the honest members.** At a rewound run, point
 set `i`'s aggregate evaluates to the `χ`-power combination of the *shared* member commitments the
 honest grouping routes to that set — the `x₁` collapse re-weighted, nothing else moved. -/
-theorem x1Run_x4Qs_getD_eval [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x1Run_x4Qs_getD_eval [DecidableEq G] [Inhabited G]
     (g : Fin (2 ^ shape.k) → G) (w u : G) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) (r : X1Run shape G) (χ : Fp)
-    {i : ℕ} (hi : i < (deployedX4Qs vk ps ch).length) :
-    ((deployedX4Qs vk (r.spliced ps) (r.challenges ch χ)).getD i (Msm.zero shape.k Fp G)).eval
+    {i : ℕ} (hi : i < (deployedX4Qs (instanceCommitment := instanceCommitment) vk ps ch).length) :
+    ((deployedX4Qs (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch χ)).getD i (Msm.zero shape.k Fp G)).eval
         ⟨shape.k, g, w, u⟩
-      = ∑ j ∈ Finset.range (deployedSetQueries vk ps ch i).length,
-          χ ^ j • ((deployedSetQueries vk ps ch i).getD j (.point 0, [])).1.eval
+      = ∑ j ∈ Finset.range (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length,
+          χ ^ j • ((deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).getD j (.point 0, [])).1.eval
             ⟨shape.k, g, w, u⟩ := by
-  have hi' : i < (deployedX4Qs vk (r.spliced ps) (r.challenges ch χ)).length := by
+  have hi' : i < (deployedX4Qs (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch χ)).length := by
     rw [x1Run_x4Qs_length]
     exact hi
-  rw [deployedX4Qs_getD_eval g w u vk (r.spliced ps) (r.challenges ch χ) hi',
+  rw [deployedX4Qs_getD_eval (instanceCommitment := instanceCommitment)
+      g w u vk (r.spliced ps) (r.challenges ch χ) hi',
     x1Run_setQueries]
   rfl
 
@@ -801,7 +806,7 @@ structure X3Continuation (shape : Shape) (G : Type*) where
   ipaF : Fp
 
 /-- Splice a post-`x₃` continuation onto the shared pre-`x₃` proof prefix. -/
-def spliceX3 {shape : Shape} (ps : ProofString shape Fp G) (c : X3Continuation shape G) :
+def spliceX3  (ps : ProofString shape Fp G) (c : X3Continuation shape G) :
     ProofString shape Fp G :=
   { ps with
     multiopenU := c.multiopenU
@@ -819,73 +824,73 @@ structure X3Run (shape : Shape) (G : Type*) where
   ipaRound : Fin shape.k → Fp
 
 /-- The run's proof string: the shared pre-`x₃` prefix with the run's continuation spliced on. -/
-def X3Run.spliced {shape : Shape} (r : X3Run shape G) (ps : ProofString shape Fp G) :
+def X3Run.spliced  (r : X3Run shape G) (ps : ProofString shape Fp G) :
     ProofString shape Fp G :=
   spliceX3 ps r.cont
 
 /-- The run's challenge record at interpolation challenge `χ`: pre-`x₃` challenges the honest
 ones, `x₃ := χ`, post-`x₃` challenges the run's own. -/
-def X3Run.challenges {shape : Shape} (r : X3Run shape G) (ch : Challenges shape.k Fp) (χ : Fp) :
+def X3Run.challenges  (r : X3Run shape G) (ch : Challenges shape.k Fp) (χ : Fp) :
     Challenges shape.k Fp :=
   { theta := ch.theta, beta := ch.beta, gamma := ch.gamma, y := ch.y, x := ch.x
     x1 := ch.x1, x2 := ch.x2, x3 := χ, x4 := r.x4, xi := r.xi, z := r.z
     ipaRound := r.ipaRound }
 
 /-- The honest run as an `X3Run`; splicing it back is the identity by structure eta. -/
-def honestX3Run {shape : Shape} (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
+def honestX3Run  (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
     X3Run shape G :=
   ⟨⟨ps.multiopenU, ps.ipaS, ps.ipaRounds, ps.ipaC, ps.ipaF⟩, ch.x4, ch.xi, ch.z, ch.ipaRound⟩
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Splicing the honest continuation is the identity. -/
-theorem honestX3Run_spliced {shape : Shape} (ps : ProofString shape Fp G)
+theorem honestX3Run_spliced  (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) : (honestX3Run ps ch).spliced ps = ps := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- The honest run's challenge record at the honest interpolation challenge is the honest record. -/
-theorem honestX3Run_challenges {shape : Shape} (ps : ProofString shape Fp G)
+theorem honestX3Run_challenges  (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) : (honestX3Run ps ch).challenges ch ch.x3 = ch := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- **The query list is shared across `x₃` rewinds**: the assembly reads only pre-`x₃` proof
 fields and challenges. A refactor of the assembly's read set breaks this seal loudly, by design. -/
-theorem x3Run_assembleQueries [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x3Run_assembleQueries [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (r : X3Run shape G) (χ : Fp) :
-    assembleQueries vk (r.spliced ps) (r.challenges ch χ) = assembleQueries vk ps ch := rfl
+    assembleQueries vk instanceCommitment (r.spliced ps) (r.challenges ch χ) = assembleQueries vk instanceCommitment ps ch := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- **The point-set aggregates are shared across `x₃` rewinds** — stronger than the `x₁` case: the
 compression challenge is also shared, so the aggregates themselves (not just their members) are
 the honest ones. Only their evaluation point and the claimed set evaluations move per run. -/
-theorem x3Run_x4Qs [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x3Run_x4Qs [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (r : X3Run shape G) (χ : Fp) :
-    deployedX4Qs vk (r.spliced ps) (r.challenges ch χ) = deployedX4Qs vk ps ch := rfl
+    deployedX4Qs (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch χ) = deployedX4Qs (instanceCommitment := instanceCommitment) vk ps ch := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- The quotient commitment `q′` is shared across `x₃` rewinds (absorbed before `x₃`,
 `qPrime_mem_preX3Transcript`). -/
-theorem x3Run_qPrime {shape : Shape} (ps : ProofString shape Fp G) (r : X3Run shape G) :
+theorem x3Run_qPrime  (ps : ProofString shape Fp G) (r : X3Run shape G) :
     (r.spliced ps).multiopenQPrime = ps.multiopenQPrime := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- The `x₄` pair count is shared across `x₃` rewinds. -/
-theorem x3Run_pairCount [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x3Run_pairCount [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (r : X3Run shape G) (χ : Fp) :
-    deployedX4PairCount vk (r.spliced ps) (r.challenges ch χ)
-      = deployedX4PairCount vk ps ch := by
+    deployedX4PairCount (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch χ)
+      = deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch := by
   simp only [deployedX4PairCount, deployedX4Pairs, List.length_zip, List.length_ofFn,
     x3Run_x4Qs]
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- The grouping's routed queries are shared across `x₃` rewinds. -/
-theorem x3Run_setQueries [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x3Run_setQueries [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (r : X3Run shape G) (χ : Fp) (i : ℕ) :
-    deployedSetQueries vk (r.spliced ps) (r.challenges ch χ) i
-      = deployedSetQueries vk ps ch i := by
+    deployedSetQueries (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch χ) i
+      = deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i := by
   simp only [deployedSetQueries, x3Run_assembleQueries]
 
 /-- The rewound prover's post-`x₂` continuation: additionally re-sends `q′`. -/
@@ -898,7 +903,7 @@ structure X2Continuation (shape : Shape) (G : Type*) where
   ipaF : Fp
 
 /-- Splice a post-`x₂` continuation onto the shared pre-`x₂` proof prefix. -/
-def spliceX2 {shape : Shape} (ps : ProofString shape Fp G) (c : X2Continuation shape G) :
+def spliceX2  (ps : ProofString shape Fp G) (c : X2Continuation shape G) :
     ProofString shape Fp G :=
   { ps with
     multiopenQPrime := c.multiopenQPrime
@@ -918,55 +923,55 @@ structure X2Run (shape : Shape) (G : Type*) where
   ipaRound : Fin shape.k → Fp
 
 /-- The run's proof string: the shared pre-`x₂` prefix with the run's continuation spliced on. -/
-def X2Run.spliced {shape : Shape} (r : X2Run shape G) (ps : ProofString shape Fp G) :
+def X2Run.spliced  (r : X2Run shape G) (ps : ProofString shape Fp G) :
     ProofString shape Fp G :=
   spliceX2 ps r.cont
 
 /-- The run's challenge record at set-separation challenge `χ`. -/
-def X2Run.challenges {shape : Shape} (r : X2Run shape G) (ch : Challenges shape.k Fp) (χ : Fp) :
+def X2Run.challenges  (r : X2Run shape G) (ch : Challenges shape.k Fp) (χ : Fp) :
     Challenges shape.k Fp :=
   { theta := ch.theta, beta := ch.beta, gamma := ch.gamma, y := ch.y, x := ch.x
     x1 := ch.x1, x2 := χ, x3 := r.x3, x4 := r.x4, xi := r.xi, z := r.z
     ipaRound := r.ipaRound }
 
 /-- The honest run as an `X2Run`; splicing it back is the identity by structure eta. -/
-def honestX2Run {shape : Shape} (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
+def honestX2Run  (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
     X2Run shape G :=
   ⟨⟨ps.multiopenQPrime, ps.multiopenU, ps.ipaS, ps.ipaRounds, ps.ipaC, ps.ipaF⟩,
     ch.x3, ch.x4, ch.xi, ch.z, ch.ipaRound⟩
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Splicing the honest continuation is the identity. -/
-theorem honestX2Run_spliced {shape : Shape} (ps : ProofString shape Fp G)
+theorem honestX2Run_spliced  (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) : (honestX2Run ps ch).spliced ps = ps := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- The honest run's challenge record at the honest separation challenge is the honest record. -/
-theorem honestX2Run_challenges {shape : Shape} (ps : ProofString shape Fp G)
+theorem honestX2Run_challenges  (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) : (honestX2Run ps ch).challenges ch ch.x2 = ch := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- **The query list is shared across `x₂` rewinds.** -/
-theorem x2Run_assembleQueries [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x2Run_assembleQueries [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (r : X2Run shape G) (χ : Fp) :
-    assembleQueries vk (r.spliced ps) (r.challenges ch χ) = assembleQueries vk ps ch := rfl
+    assembleQueries vk instanceCommitment (r.spliced ps) (r.challenges ch χ) = assembleQueries vk instanceCommitment ps ch := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- **The point-set aggregates are shared across `x₂` rewinds** (the compression challenge is
 pre-`x₂`). -/
-theorem x2Run_x4Qs [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x2Run_x4Qs [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (r : X2Run shape G) (χ : Fp) :
-    deployedX4Qs vk (r.spliced ps) (r.challenges ch χ) = deployedX4Qs vk ps ch := rfl
+    deployedX4Qs (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch χ) = deployedX4Qs (instanceCommitment := instanceCommitment) vk ps ch := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- The `x₄` pair count is shared across `x₂` rewinds. -/
-theorem x2Run_pairCount [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x2Run_pairCount [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (r : X2Run shape G) (χ : Fp) :
-    deployedX4PairCount vk (r.spliced ps) (r.challenges ch χ)
-      = deployedX4PairCount vk ps ch := by
+    deployedX4PairCount (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch χ)
+      = deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch := by
   simp only [deployedX4PairCount, deployedX4Pairs, List.length_zip, List.length_ofFn,
     x2Run_x4Qs]
 
@@ -992,7 +997,7 @@ structure X4Continuation (shape : Shape) (G : Type*) where
   ipaF : Fp
 
 /-- Splice a post-`x₄` continuation onto the shared pre-`x₄` proof prefix. -/
-def spliceX4 {shape : Shape} (ps : ProofString shape Fp G) (c : X4Continuation shape G) :
+def spliceX4  (ps : ProofString shape Fp G) (c : X4Continuation shape G) :
     ProofString shape Fp G :=
   { ps with
     ipaS := c.ipaS
@@ -1008,63 +1013,63 @@ structure X4Run (shape : Shape) (G : Type*) where
   ipaRound : Fin shape.k → Fp
 
 /-- The run's proof string: the shared pre-`x₄` prefix with the run's continuation spliced on. -/
-def X4Run.spliced {shape : Shape} (r : X4Run shape G) (ps : ProofString shape Fp G) :
+def X4Run.spliced  (r : X4Run shape G) (ps : ProofString shape Fp G) :
     ProofString shape Fp G :=
   spliceX4 ps r.cont
 
 /-- The run's challenge record at batching challenge `χ`: pre-`x₄` challenges the honest ones,
 `x₄ := χ`, post-`x₄` challenges the run's own. -/
-def X4Run.challenges {shape : Shape} (r : X4Run shape G) (ch : Challenges shape.k Fp) (χ : Fp) :
+def X4Run.challenges  (r : X4Run shape G) (ch : Challenges shape.k Fp) (χ : Fp) :
     Challenges shape.k Fp :=
   { theta := ch.theta, beta := ch.beta, gamma := ch.gamma, y := ch.y, x := ch.x
     x1 := ch.x1, x2 := ch.x2, x3 := ch.x3, x4 := χ, xi := r.xi, z := r.z
     ipaRound := r.ipaRound }
 
 /-- The honest run as an `X4Run`; splicing it back is the identity by structure eta. -/
-def honestX4Run {shape : Shape} (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
+def honestX4Run  (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
     X4Run shape G :=
   ⟨⟨ps.ipaS, ps.ipaRounds, ps.ipaC, ps.ipaF⟩, ch.xi, ch.z, ch.ipaRound⟩
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Splicing the honest continuation is the identity. -/
-theorem honestX4Run_spliced {shape : Shape} (ps : ProofString shape Fp G)
+theorem honestX4Run_spliced  (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) : (honestX4Run ps ch).spliced ps = ps := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- The honest run's challenge record at the honest batching challenge is the honest record. -/
-theorem honestX4Run_challenges {shape : Shape} (ps : ProofString shape Fp G)
+theorem honestX4Run_challenges  (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) : (honestX4Run ps ch).challenges ch ch.x4 = ch := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- **The query list is shared across `x₄` rewinds**: the assembly reads only pre-`x₄` proof
 fields and challenges (never the IPA opening). -/
-theorem x4Run_assembleQueries [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x4Run_assembleQueries [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (r : X4Run shape G) (χ : Fp) :
-    assembleQueries vk (r.spliced ps) (r.challenges ch χ) = assembleQueries vk ps ch := rfl
+    assembleQueries vk instanceCommitment (r.spliced ps) (r.challenges ch χ) = assembleQueries vk instanceCommitment ps ch := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- **The point-set aggregates are shared across `x₄` rewinds** — the compression challenge and the
 routed queries are pre-`x₄`, so the aggregates are definitionally the honest ones. -/
-theorem x4Run_x4Qs [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x4Run_x4Qs [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (r : X4Run shape G) (χ : Fp) :
-    deployedX4Qs vk (r.spliced ps) (r.challenges ch χ) = deployedX4Qs vk ps ch := rfl
+    deployedX4Qs (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch χ) = deployedX4Qs (instanceCommitment := instanceCommitment) vk ps ch := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- The `x₄` pair count is shared across `x₄` rewinds. -/
-theorem x4Run_pairCount [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x4Run_pairCount [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (r : X4Run shape G) (χ : Fp) :
-    deployedX4PairCount vk (r.spliced ps) (r.challenges ch χ) = deployedX4PairCount vk ps ch := by
+    deployedX4PairCount (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch χ) = deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch := by
   simp only [deployedX4PairCount, deployedX4Pairs, List.length_zip, List.length_ofFn, x4Run_x4Qs]
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- The grouping's routed queries are shared across `x₄` rewinds. -/
-theorem x4Run_setQueries [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x4Run_setQueries [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (r : X4Run shape G) (χ : Fp) (i : ℕ) :
-    deployedSetQueries vk (r.spliced ps) (r.challenges ch χ) i = deployedSetQueries vk ps ch i := by
+    deployedSetQueries (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch χ) i = deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i := by
   simp only [deployedSetQueries, x4Run_assembleQueries]
 
 omit [AddCommGroup G] [Module Fp G] in
@@ -1072,34 +1077,34 @@ omit [AddCommGroup G] [Module Fp G] in
 data it does not read the redrawn `x₄` (the collapse folds the aggregates by `x₄`, but the *value*
 component `multiopenValue` is the base evaluation and claimed set evaluations, both pre-`x₄`) nor
 the re-sent IPA opening. So the rewound run opens the honest run's `multiopenValue`. -/
-theorem x4Run_multiopenValue [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x4Run_multiopenValue [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (r : X4Run shape G) (χ : Fp) :
-    multiopenValue vk (r.spliced ps) (r.challenges ch χ) = multiopenValue vk ps {ch with x4 := χ} :=
+    multiopenValue vk instanceCommitment (r.spliced ps) (r.challenges ch χ) = multiopenValue vk instanceCommitment ps {ch with x4 := χ} :=
   rfl
 
 /-- **The deployed commitment at an `x₄` rewind is the honest commitment at the redrawn `x₄`** — the
 IPA opening the run re-sends never enters the multiopen commitment MSM, so the fork's opened
 statement is over the honest aggregates. -/
-theorem x4Run_deployedCommitment [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
+theorem x4Run_deployedCommitment [DecidableEq G] [Inhabited G]  (urs : URS G)
     (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) (r : X4Run shape G) (χ : Fp) :
-    deployedCommitment urs hk vk (r.spliced ps) (r.challenges ch χ)
-      = deployedCommitment urs hk vk ps {ch with x4 := χ} := rfl
+    deployedCommitment urs hk vk instanceCommitment (r.spliced ps) (r.challenges ch χ)
+      = deployedCommitment urs hk vk instanceCommitment ps {ch with x4 := χ} := rfl
 
 /-- The `x₄` batch column commitments are shared across `x₄` rewinds (the aggregates are pre-`x₄`). -/
-theorem x4Run_x4BatchCommitments [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
+theorem x4Run_x4BatchCommitments [DecidableEq G] [Inhabited G]  (urs : URS G)
     (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) (r : X4Run shape G) (χ : Fp) :
-    x4BatchCommitments urs hk vk (r.spliced ps) (r.challenges ch χ)
-      = x4BatchCommitments urs hk vk ps ch := rfl
+    x4BatchCommitments (instanceCommitment := instanceCommitment) urs hk vk (r.spliced ps) (r.challenges ch χ)
+      = x4BatchCommitments (instanceCommitment := instanceCommitment) urs hk vk ps ch := rfl
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- The `x₄` batch column evaluations are shared across `x₄` rewinds. -/
-theorem x4Run_x4BatchEvals [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x4Run_x4BatchEvals [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (r : X4Run shape G) (χ : Fp) :
-    x4BatchEvals vk (r.spliced ps) (r.challenges ch χ) = x4BatchEvals vk ps ch := rfl
+    x4BatchEvals (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch χ) = x4BatchEvals (instanceCommitment := instanceCommitment) vk ps ch := rfl
 
 /-- **Per-run clean-tree production with a re-sent opening — the adaptive `x₄` feeder.** The
 adaptive analogue of `x4_cleanTree_of_deployedAccepts`: the rewound run presents its own proof
@@ -1109,22 +1114,23 @@ for the *shared* honest `multiopenValue` (`x4Run_multiopenValue`). Because the b
 `x₄`-invariant (`x4Run_x4BatchCommitments`/`_x4BatchEvals`), the family of such per-run openings
 decodes over the same deployed aggregates as before — so the collapse consumes an adaptive accept
 measure, not a constant strategy. This retires the fixed-`ps` static dichotomy of the plain feeder. -/
-theorem x4_cleanTree_of_deployedAccepts_adaptive [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x4_cleanTree_of_deployedAccepts_adaptive [DecidableEq G] [Inhabited G]
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp} (hz : z ≠ 0)
     (hnrel : ¬HasNontrivialRelation (F := Fp) urs.g urs.u urs.w) (r : X4Run shape G) (ξ : Fp)
-    (hFS : FiatShamirTree urs hk vk (r.spliced ps) (r.challenges ch ξ) b z blind)
-    (hacc : DeployedAccepts urs hk vk (r.spliced ps) (r.challenges ch ξ)) :
-    ∃ (fs : ForkedTranscript urs hk vk (r.spliced ps) (r.challenges ch ξ) b z blind)
+    (hFS : FiatShamirTree urs hk vk instanceCommitment (r.spliced ps) (r.challenges ch ξ) b z blind)
+    (hacc : DeployedAccepts urs hk vk instanceCommitment (r.spliced ps) (r.challenges ch ξ)) :
+    ∃ (fs : ForkedTranscript urs hk vk instanceCommitment (r.spliced ps) (r.challenges ch ξ) b z blind)
       (t : IpaTreeV Fp G urs.k),
-      IpaAcceptV urs.g b fs.openedCommitment (multiopenValue vk ps {ch with x4 := ξ}) t := by
-  set fs := hFS (deployedAccepts_verifierEq urs hk vk (r.spliced ps) _ hacc) with hfs
+      IpaAcceptV urs.g b fs.openedCommitment (multiopenValue vk instanceCommitment ps {ch with x4 := ξ}) t := by
+  set fs := hFS (deployedAccepts_verifierEq urs hk vk instanceCommitment (r.spliced ps) _ hacc) with hfs
   refine ⟨fs, ?_⟩
-  have hval : multiopenValue vk (r.spliced ps) (r.challenges ch ξ)
-      = multiopenValue vk ps {ch with x4 := ξ} := x4Run_multiopenValue vk ps ch r ξ
+  have hval : multiopenValue vk instanceCommitment (r.spliced ps) (r.challenges ch ξ)
+      = multiopenValue vk instanceCommitment ps {ch with x4 := ξ} :=
+    x4Run_multiopenValue (instanceCommitment := instanceCommitment) vk ps ch r ξ
   rcases deployed_to_acceptV hz urs.g b fs.openedCommitment
-      (multiopenValue vk (r.spliced ps) (r.challenges ch ξ)) blind fs.tree fs.accepts with
+      (multiopenValue vk instanceCommitment (r.spliced ps) (r.challenges ch ξ)) blind fs.tree fs.accepts with
       hclean | hrel
   · exact ⟨projTree fs.tree, hval ▸ hclean⟩
   · exact absurd hrel hnrel
@@ -1133,23 +1139,23 @@ theorem x4_cleanTree_of_deployedAccepts_adaptive [DecidableEq G] [Inhabited G] {
 
 /-- The in-range `x₄` batch columns, set-indexed: batch column `j` is the aggregate of point set
 `count − 1 − j` (the collapse folds the sets so the last one processed carries `ξ⁰`). -/
-theorem x4BatchCommitments_getD [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
+theorem x4BatchCommitments_getD [DecidableEq G] [Inhabited G]  (urs : URS G)
     (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
-    (ch : Challenges shape.k Fp) {j : Fin (deployedX4PairCount vk ps ch + 1)}
-    (hj : (j : ℕ) < deployedX4PairCount vk ps ch) :
-    x4BatchCommitments urs hk vk ps ch j
-      = ((deployedX4Qs vk ps ch).getD (deployedX4PairCount vk ps ch - 1 - (j : ℕ))
+    (ch : Challenges shape.k Fp) {j : Fin (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch + 1)}
+    (hj : (j : ℕ) < deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch) :
+    x4BatchCommitments (instanceCommitment := instanceCommitment) urs hk vk ps ch j
+      = ((deployedX4Qs (instanceCommitment := instanceCommitment) vk ps ch).getD (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - (j : ℕ))
             (Msm.zero shape.k Fp G)).eval ⟨shape.k, hk ▸ urs.g, urs.w, urs.u⟩ := by
   rw [x4BatchCommitments, if_pos hj]
-  have hj₁ : (j : ℕ) < (deployedX4Pairs vk ps ch).reverse.length := by
+  have hj₁ : (j : ℕ) < (deployedX4Pairs (instanceCommitment := instanceCommitment) vk ps ch).reverse.length := by
     rw [List.length_reverse]
     exact hj
-  have hj₂ : deployedX4PairCount vk ps ch - 1 - (j : ℕ) < (deployedX4Pairs vk ps ch).length := by
-    have hj' : (j : ℕ) < (deployedX4Pairs vk ps ch).length := hj
+  have hj₂ : deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - (j : ℕ) < (deployedX4Pairs (instanceCommitment := instanceCommitment) vk ps ch).length := by
+    have hj' : (j : ℕ) < (deployedX4Pairs (instanceCommitment := instanceCommitment) vk ps ch).length := hj
     simp only [deployedX4PairCount]
     omega
-  have hj₃ : deployedX4PairCount vk ps ch - 1 - (j : ℕ) < (deployedX4Qs vk ps ch).length := by
-    have hle : (deployedX4Pairs vk ps ch).length ≤ (deployedX4Qs vk ps ch).length := by
+  have hj₃ : deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - (j : ℕ) < (deployedX4Qs (instanceCommitment := instanceCommitment) vk ps ch).length := by
+    have hle : (deployedX4Pairs (instanceCommitment := instanceCommitment) vk ps ch).length ≤ (deployedX4Qs (instanceCommitment := instanceCommitment) vk ps ch).length := by
       simp only [deployedX4Pairs, List.length_zip]
       exact min_le_left _ _
     simp only [deployedX4PairCount]
@@ -1161,34 +1167,34 @@ theorem x4BatchCommitments_getD [DecidableEq G] [Inhabited G] {shape : Shape} (u
 omit [AddCommGroup G] [Module Fp G] in
 /-- The `x₄` pair count is the length of the pair list — the definitional unfolding, as a lemma so
 downstream files can use it without delta-reducing the sealed definition. -/
-theorem deployedX4PairCount_eq [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem deployedX4PairCount_eq [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
-    deployedX4PairCount vk ps ch = (deployedX4Pairs vk ps ch).length := rfl
+    deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch = (deployedX4Pairs (instanceCommitment := instanceCommitment) vk ps ch).length := rfl
 
 /-- The top slot of the `x₄` batch evaluations is the recomputed base evaluation: the slot index
 equals the pair count, so the branch that reads a point set is not taken. -/
-theorem x4BatchEvals_top [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x4BatchEvals_top [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
-    x4BatchEvals vk ps ch ⟨deployedX4PairCount vk ps ch, Nat.lt_succ_self _⟩
-      = deployedBaseEval vk ps ch := by
-  show (if deployedX4PairCount vk ps ch < deployedX4PairCount vk ps ch then _
-    else deployedBaseEval vk ps ch) = deployedBaseEval vk ps ch
+    x4BatchEvals (instanceCommitment := instanceCommitment) vk ps ch ⟨deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch, Nat.lt_succ_self _⟩
+      = deployedBaseEval (instanceCommitment := instanceCommitment) vk ps ch := by
+  show (if deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch < deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch then _
+    else deployedBaseEval (instanceCommitment := instanceCommitment) vk ps ch) = deployedBaseEval (instanceCommitment := instanceCommitment) vk ps ch
   rw [if_neg (lt_irrefl _)]
 
 /-- The in-range `x₄` batch evaluations, set-indexed: batch slot `j` carries the claimed set
 evaluation of point set `count − 1 − j`. -/
-theorem x4BatchEvals_getD [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem x4BatchEvals_getD [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
-    {j : Fin (deployedX4PairCount vk ps ch + 1)} (hj : (j : ℕ) < deployedX4PairCount vk ps ch) :
-    x4BatchEvals vk ps ch j
-      = (List.ofFn ps.multiopenU).getD (deployedX4PairCount vk ps ch - 1 - (j : ℕ)) 0 := by
+    {j : Fin (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch + 1)} (hj : (j : ℕ) < deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch) :
+    x4BatchEvals (instanceCommitment := instanceCommitment) vk ps ch j
+      = (List.ofFn ps.multiopenU).getD (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - (j : ℕ)) 0 := by
   rw [x4BatchEvals, if_pos hj]
-  have hj₁ : (j : ℕ) < (deployedX4Pairs vk ps ch).reverse.length := by
+  have hj₁ : (j : ℕ) < (deployedX4Pairs (instanceCommitment := instanceCommitment) vk ps ch).reverse.length := by
     rw [List.length_reverse]
     exact hj
-  have hj₂ : deployedX4PairCount vk ps ch - 1 - (j : ℕ) < (List.ofFn ps.multiopenU).length := by
-    have hj' : (j : ℕ) < (deployedX4Pairs vk ps ch).length := hj
-    have hle : (deployedX4Pairs vk ps ch).length ≤ (List.ofFn ps.multiopenU).length := by
+  have hj₂ : deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - (j : ℕ) < (List.ofFn ps.multiopenU).length := by
+    have hj' : (j : ℕ) < (deployedX4Pairs (instanceCommitment := instanceCommitment) vk ps ch).length := hj
+    have hle : (deployedX4Pairs (instanceCommitment := instanceCommitment) vk ps ch).length ≤ (List.ofFn ps.multiopenU).length := by
       simp only [deployedX4Pairs, List.length_zip]
       exact min_le_right _ _
     simp only [deployedX4PairCount]
@@ -1204,48 +1210,49 @@ the set — the actual queried column commitments — reconstructs the honest ag
 combination of member-column witnesses), and transports every run's value equation. Per-member
 claimed evaluations and the gate transport remain with the fingerprint half; the live form is the
 opened mirror `opened_witness_member_binding`, glued over sets by `deployed_witness_two_level`. -/
-theorem deployed_witness_member_binding [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem deployed_witness_member_binding [DecidableEq G] [Inhabited G]
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     {b : Fin (2 ^ urs.k) → Fp} {a : Fin (2 ^ urs.k) → Fp}
-    (hbatch : BatchOpeningsForWitness urs b (x4BatchCommitments urs hk vk ps ch)
-      (x4BatchEvals vk ps ch) a)
-    (i : ℕ) (hi : i < deployedX4PairCount vk ps ch)
-    (χ : Fin (deployedSetQueries vk ps ch i).length → Fp) (hχ : Function.Injective χ)
-    (cur : Fin (deployedSetQueries vk ps ch i).length) (hcur : χ cur = ch.x1)
-    (runs : Fin (deployedSetQueries vk ps ch i).length → X1Run shape G)
-    (w : Fin (deployedSetQueries vk ps ch i).length → (Fin (2 ^ urs.k) → Fp))
-    (bv : Fin (deployedSetQueries vk ps ch i).length → (Fin (2 ^ urs.k) → Fp))
-    (uv : Fin (deployedSetQueries vk ps ch i).length → Fp)
+    (hbatch : BatchOpeningsForWitness urs b (x4BatchCommitments (instanceCommitment := instanceCommitment) urs hk vk ps ch)
+      (x4BatchEvals (instanceCommitment := instanceCommitment) vk ps ch) a)
+    (i : ℕ) (hi : i < deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch)
+    (χ : Fin (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length → Fp) (hχ : Function.Injective χ)
+    (cur : Fin (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length) (hcur : χ cur = ch.x1)
+    (runs : Fin (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length → X1Run shape G)
+    (w : Fin (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length → (Fin (2 ^ urs.k) → Fp))
+    (bv : Fin (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length → (Fin (2 ^ urs.k) → Fp))
+    (uv : Fin (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length → Fp)
     (hwC : ∀ r, commit urs (w r)
-      = ((deployedX4Qs vk ((runs r).spliced ps) ((runs r).challenges ch (χ r))).getD i
+      = ((deployedX4Qs (instanceCommitment := instanceCommitment) vk ((runs r).spliced ps) ((runs r).challenges ch (χ r))).getD i
             (Msm.zero shape.k Fp G)).eval ⟨shape.k, hk ▸ urs.g, urs.w, urs.u⟩)
     (hwu : ∀ r, commitGen (bv r) (w r) = uv r)
     (hwcur : w cur = (decodedCols_spec hbatch).decodedColumns.coeffs
-      ⟨deployedX4PairCount vk ps ch - 1 - i, by omega⟩) :
-    (∀ m : Fin (deployedSetQueries vk ps ch i).length, commit urs (x1DecodeCols χ w m)
-        = ((deployedSetQueries vk ps ch i).getD (m : ℕ) (.point 0, [])).1.eval
+      ⟨deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - i, by omega⟩) :
+    (∀ m : Fin (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length, commit urs (x1DecodeCols χ w m)
+        = ((deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).getD (m : ℕ) (.point 0, [])).1.eval
             ⟨shape.k, hk ▸ urs.g, urs.w, urs.u⟩)
     ∧ ((decodedCols_spec hbatch).decodedColumns.coeffs
-          ⟨deployedX4PairCount vk ps ch - 1 - i, by omega⟩
-        = ∑ m : Fin (deployedSetQueries vk ps ch i).length,
+          ⟨deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - i, by omega⟩
+        = ∑ m : Fin (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length,
             ch.x1 ^ (m : ℕ) • x1DecodeCols χ w m)
-    ∧ (∀ r, ∑ m : Fin (deployedSetQueries vk ps ch i).length,
+    ∧ (∀ r, ∑ m : Fin (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length,
         χ r ^ (m : ℕ) • commitGen (bv r) (x1DecodeCols χ w m) = uv r) := by
-  have hqs : i < (deployedX4Qs vk ps ch).length := by
-    have hle : deployedX4PairCount vk ps ch ≤ (deployedX4Qs vk ps ch).length := by
+  have hqs : i < (deployedX4Qs (instanceCommitment := instanceCommitment) vk ps ch).length := by
+    have hle : deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch ≤ (deployedX4Qs (instanceCommitment := instanceCommitment) vk ps ch).length := by
       simp only [deployedX4PairCount, deployedX4Pairs, List.length_zip]
       exact min_le_left _ _
     omega
   have haC : ∀ r, commitGen urs.g (w r)
-      = ∑ m : Fin (deployedSetQueries vk ps ch i).length, χ r ^ (m : ℕ)
-          • ((deployedSetQueries vk ps ch i).getD (m : ℕ) (.point 0, [])).1.eval
+      = ∑ m : Fin (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length, χ r ^ (m : ℕ)
+          • ((deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).getD (m : ℕ) (.point 0, [])).1.eval
               ⟨shape.k, hk ▸ urs.g, urs.w, urs.u⟩ := by
     intro r
     rw [← commit_eq_commitGen, hwC r,
-      x1Run_x4Qs_getD_eval (hk ▸ urs.g) urs.w urs.u vk ps ch (runs r) (χ r) hqs,
+      x1Run_x4Qs_getD_eval (instanceCommitment := instanceCommitment)
+        (hk ▸ urs.g) urs.w urs.u vk ps ch (runs r) (χ r) hqs,
       Fin.sum_univ_eq_sum_range
-        (fun m => χ r ^ m • ((deployedSetQueries vk ps ch i).getD m (.point 0, [])).1.eval
+        (fun m => χ r ^ m • ((deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).getD m (.point 0, [])).1.eval
           ⟨shape.k, hk ▸ urs.g, urs.w, urs.u⟩)]
   refine ⟨fun m => ?_, ?_, fun r => x1DecodeCols_value χ hχ w bv uv hwu r⟩
   · rw [commit_eq_commitGen]
@@ -1261,38 +1268,38 @@ extracted witness is the explicit two-level power combination: `x₄` powers ove
 each in-range position expanded as the `ch.x1` powers of its point set's decoded member witnesses,
 the top position keeping the `q′` coefficient. The member-opening facts for the decoded witnesses
 are `deployed_witness_member_binding`, per set; this theorem is the gluing. -/
-theorem deployed_witness_two_level [DecidableEq G] [Inhabited G] {shape : Shape}
+theorem deployed_witness_two_level [DecidableEq G] [Inhabited G]
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     {b : Fin (2 ^ urs.k) → Fp} {a : Fin (2 ^ urs.k) → Fp}
-    (hbatch : BatchOpeningsForWitness urs b (x4BatchCommitments urs hk vk ps ch)
-      (x4BatchEvals vk ps ch) a)
-    (χ : ∀ i : ℕ, Fin (deployedSetQueries vk ps ch i).length → Fp)
+    (hbatch : BatchOpeningsForWitness urs b (x4BatchCommitments (instanceCommitment := instanceCommitment) urs hk vk ps ch)
+      (x4BatchEvals (instanceCommitment := instanceCommitment) vk ps ch) a)
+    (χ : ∀ i : ℕ, Fin (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length → Fp)
     (hχ : ∀ i, Function.Injective (χ i))
-    (w : ∀ i : ℕ, Fin (deployedSetQueries vk ps ch i).length → (Fin (2 ^ urs.k) → Fp))
-    (cur : ∀ i : ℕ, Fin (deployedSetQueries vk ps ch i).length)
+    (w : ∀ i : ℕ, Fin (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length → (Fin (2 ^ urs.k) → Fp))
+    (cur : ∀ i : ℕ, Fin (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length)
     (hcur : ∀ i, χ i (cur i) = ch.x1)
-    (hwcur : ∀ i (hi : i < deployedX4PairCount vk ps ch),
+    (hwcur : ∀ i (hi : i < deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch),
       w i (cur i) = (decodedCols_spec hbatch).decodedColumns.coeffs
-        ⟨deployedX4PairCount vk ps ch - 1 - i, by omega⟩) :
-    a = ∑ j : Fin (deployedX4PairCount vk ps ch + 1),
+        ⟨deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - i, by omega⟩) :
+    a = ∑ j : Fin (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch + 1),
       hbatch.batchChallenge hbatch.current ^ (j : ℕ) •
-        (if _hj : (j : ℕ) < deployedX4PairCount vk ps ch then
-          ∑ m : Fin (deployedSetQueries vk ps ch
-              (deployedX4PairCount vk ps ch - 1 - (j : ℕ))).length,
+        (if _hj : (j : ℕ) < deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch then
+          ∑ m : Fin (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch
+              (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - (j : ℕ))).length,
             ch.x1 ^ (m : ℕ) •
-              x1DecodeCols (χ (deployedX4PairCount vk ps ch - 1 - (j : ℕ)))
-                (w (deployedX4PairCount vk ps ch - 1 - (j : ℕ))) m
+              x1DecodeCols (χ (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - (j : ℕ)))
+                (w (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - (j : ℕ))) m
         else (decodedCols_spec hbatch).decodedColumns.coeffs j) := by
   refine ((decodedCols_spec hbatch).currentWitness_eq).trans ?_
   refine Finset.sum_congr rfl fun j _ => ?_
   refine congrArg (hbatch.batchChallenge hbatch.current ^ (j : ℕ) • ·) ?_
-  by_cases hj : (j : ℕ) < deployedX4PairCount vk ps ch
+  by_cases hj : (j : ℕ) < deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch
   · rw [dif_pos hj]
-    set i := deployedX4PairCount vk ps ch - 1 - (j : ℕ) with hidef
-    have hi : i < deployedX4PairCount vk ps ch := by omega
-    have hji : (⟨deployedX4PairCount vk ps ch - 1 - i, by omega⟩ :
-        Fin (deployedX4PairCount vk ps ch + 1)) = j := by
+    set i := deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - (j : ℕ) with hidef
+    have hi : i < deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch := by omega
+    have hji : (⟨deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - i, by omega⟩ :
+        Fin (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch + 1)) = j := by
       apply Fin.ext
       simp only [hidef]
       omega

@@ -201,9 +201,9 @@ section QueryProvenance
 variable {shape : Shape} {F G : Type*} [Field F] [Inhabited G]
 
 /-- Proof and verifying-key commitments that the deployed verifier may feed to multiopen. -/
-def AssemblyPoint (vk : VerifyingKey shape F G) (ps : ProofString shape F G) (x : G) : Prop :=
+def AssemblyPoint (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape F G) (x : G) : Prop :=
   (∃ (p : Fin shape.numProofs) (e : ℕ × ℤ), e ∈ vk.instanceQueryLayout
-      ∧ x = vk.instanceCommitment p e.1)
+      ∧ x = instanceCommitment p e.1)
   ∨ (∃ (p : Fin shape.numProofs) (e : ℕ × ℤ), e ∈ vk.adviceQueryLayout
       ∧ x = finFnG (ps.adviceCommitments p) e.1)
   ∨ (∃ p s, x = ps.permutationProduct p s)
@@ -275,10 +275,10 @@ private theorem permutationCommonQueries_commitment {k : ℕ} (x : F)
   exact ⟨ce.1, (mem_of_mem_zip_fst hce), rfl⟩
 
 /-- Every query's commitment points lie in the assembly pool. -/
-theorem assembleQueries_points_mem (vk : VerifyingKey shape F G)
+theorem assembleQueries_points_mem (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape F G) (ch : Challenges shape.k F) :
-    ∀ q ∈ assembleQueries vk ps ch, ∀ x ∈ q.commitment.points,
-      AssemblyPoint vk ps x := by
+    ∀ q ∈ assembleQueries vk instanceCommitment ps ch, ∀ x ∈ q.commitment.points,
+      AssemblyPoint vk instanceCommitment ps x := by
   intro q hq x hx
   simp only [assembleQueries] at hq
   rcases List.mem_append.mp hq with hq | hq
@@ -350,18 +350,18 @@ local instance : Inhabited VestaG := ⟨0⟩
 variable {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
 
 /-- Every point appended by the deployed multiopen MSM is `q'` or an `AssemblyPoint`. -/
-theorem multiopenMsm_points_mem (vk : VerifyingKey shape Fp VestaG)
+theorem multiopenMsm_points_mem (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG)
     (ps : ProofString shape Fp VestaG) (ch : Challenges shape.k Fp) :
-    ∀ x ∈ (multiopenMsm vk ps ch).otherPoints,
-      x = ps.multiopenQPrime ∨ AssemblyPoint vk ps x := by
+    ∀ x ∈ (multiopenMsm vk instanceCommitment ps ch).otherPoints,
+      x = ps.multiopenQPrime ∨ AssemblyPoint vk instanceCommitment ps x := by
   intro x hx
   -- `multiopenMsm` is `(assembleOpening …).1`; peel the `x₄` collapse
-  have hopen : multiopenMsm vk ps ch
+  have hopen : multiopenMsm vk instanceCommitment ps ch
       = (assembleOpening ch.x1 ch.x2 ch.x3 ch.x4 ps.multiopenQPrime (List.ofFn ps.multiopenU)
-          (constructIntermediateSets (assembleQueries vk ps ch)) (Msm.zero shape.k Fp VestaG)).1 :=
+          (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)) (Msm.zero shape.k Fp VestaG)).1 :=
     rfl
   rw [hopen, assembleOpening] at hx
-  set grouped := constructIntermediateSets (assembleQueries vk ps ch) with hg
+  set grouped := constructIntermediateSets (assembleQueries vk instanceCommitment ps ch) with hg
   rcases mem_otherPoints_multiopenCombine _ _ _ _ _ _ x hx with hq | hinc | ⟨m, hm, hxm⟩
   · exact Or.inl hq
   · rw [Msm.otherPoints_zero] at hinc
@@ -374,34 +374,34 @@ theorem multiopenMsm_points_mem (vk : VerifyingKey shape Fp VestaG)
     have hsp1 : sp.1 ∈ grouped.sets :=
       mem_of_mem_zip_fst hsp
     obtain ⟨q, hq, hqcomm⟩ := constructIntermediateSets_ref_mem _ sp.1 hsp1 qc hqc
-    refine Or.inr (assembleQueries_points_mem vk ps ch q hq x ?_)
+    refine Or.inr (assembleQueries_points_mem vk instanceCommitment ps ch q hq x ?_)
     rw [← hqcomm]
     exact hxc
 
 /-- A list representing `q'` and every `AssemblyPoint` covers every point appended by multiopen. -/
-theorem multiopenMsm_points_covered (vk : VerifyingKey shape Fp VestaG)
+theorem multiopenMsm_points_covered (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG)
     (aps : AlgebraicProofString shape basis) (ν : Fin 11 → Fp)
     (L : List (AlgebraicPoint (F := Fp) basis))
-    (hL : ∀ x, (x = aps.erase.multiopenQPrime ∨ AssemblyPoint vk aps.erase x) →
+    (hL : ∀ x, (x = aps.erase.multiopenQPrime ∨ AssemblyPoint vk instanceCommitment aps.erase x) →
       ∃ ap ∈ L, ap.point = x) :
-    ∀ pr ∈ (multiopenMsm vk aps.erase (chRecord ν (fun _ => 0))).other,
+    ∀ pr ∈ (multiopenMsm vk instanceCommitment aps.erase (chRecord ν (fun _ => 0))).other,
       ∃ ap ∈ L, ap.point = pr.2 := by
   intro pr hpr
-  have hx : pr.2 ∈ (multiopenMsm vk aps.erase (chRecord ν (fun _ => 0))).otherPoints :=
+  have hx : pr.2 ∈ (multiopenMsm vk instanceCommitment aps.erase (chRecord ν (fun _ => 0))).otherPoints :=
     List.mem_map_of_mem hpr
-  exact hL pr.2 (multiopenMsm_points_mem vk aps.erase (chRecord ν (fun _ => 0)) pr.2 hx)
+  exact hL pr.2 (multiopenMsm_points_mem vk instanceCommitment aps.erase (chRecord ν (fun _ => 0)) pr.2 hx)
 
 /-- Build `AlgebraicWfProof` from representations of `q'`, the proof commitments, and the
 verifying-key commitments. -/
-def AlgebraicWfProof.ofStandard {vk : VerifyingKey shape Fp VestaG}
+def AlgebraicWfProof.ofStandard {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG}
     (aps : AlgebraicProofString shape basis) (hwf : PsWellFormed aps.erase)
     (L : List (AlgebraicPoint (F := Fp) basis))
-    (hL : ∀ x, (x = aps.erase.multiopenQPrime ∨ AssemblyPoint vk aps.erase x) →
+    (hL : ∀ x, (x = aps.erase.multiopenQPrime ∨ AssemblyPoint vk instanceCommitment aps.erase x) →
       ∃ ap ∈ L, ap.point = x) :
-    AlgebraicWfProof basis vk :=
+    AlgebraicWfProof basis vk instanceCommitment :=
   AlgebraicWfProof.ofRepresented aps hwf (fun ν =>
-    RepresentedMultiopen.ofCoveredList vk aps.erase ν L
-      (multiopenMsm_points_covered vk aps ν L hL))
+    RepresentedMultiopen.ofCoveredList vk instanceCommitment aps.erase ν L
+      (multiopenMsm_points_covered vk instanceCommitment aps ν L hL))
 
 end MultiopenProvenance
 

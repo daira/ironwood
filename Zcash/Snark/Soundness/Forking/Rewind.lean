@@ -415,18 +415,18 @@ open scoped ENNReal in
 open Classical in
 /-- A lower bound on deployed acceptance also bounds the explicit verifier-equation event. -/
 theorem kerr_lt_verifierEq_of_deployedAccepts [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (psf : (Fin shape.k → Fp) → ProofString shape Fp G)
     (chf : (Fin shape.k → Fp) → Challenges shape.k Fp) {ε : ℝ≥0∞}
     (h : ε < (PMF.uniformOfFintype (Fin shape.k → Fp)).toOuterMeasure
-        (Finset.univ.filter (fun χ => DeployedAccepts urs hk vk (psf χ) (chf χ)))) :
+        (Finset.univ.filter (fun χ => DeployedAccepts urs hk vk instanceCommitment (psf χ) (chf χ)))) :
     ε < (PMF.uniformOfFintype (Fin shape.k → Fp)).toOuterMeasure
         (Finset.univ.filter (fun χ =>
-          DeployedIpaVerifierEq (hk ▸ urs.g) urs.w urs.u vk (psf χ) (chf χ))) := by
+          DeployedIpaVerifierEq (hk ▸ urs.g) urs.w urs.u vk instanceCommitment (psf χ) (chf χ))) := by
   refine lt_of_lt_of_le h ((PMF.uniformOfFintype (Fin shape.k → Fp)).toOuterMeasure.mono ?_)
   intro χ hχ
   simp only [Finset.coe_filter, Finset.mem_univ, true_and, Set.mem_setOf_eq] at hχ ⊢
-  exact deployedAccepts_verifierEq urs hk vk (psf χ) (chf χ) hχ
+  exact deployedAccepts_verifierEq urs hk vk instanceCommitment (psf χ) (chf χ) hχ
 
 /-! ## Deployed forking opening
 
@@ -725,12 +725,12 @@ theorem foldAllFin_evalVector {d : ℕ} (χ : Fin d → Fp) (x : Fp) :
 
 /-- Halo2's deployed IPA verifier equation equals `flatAccept` for the proof's fixed IPA tree. -/
 theorem deployedVerifierEq_iff_flatAccept {shape : Shape} [DecidableEq Fp] [DecidableEq G] [Inhabited G]
-    (g : Fin (2 ^ shape.k) → G) (w u : G) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
+    (g : Fin (2 ^ shape.k) → G) (w u : G) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) :
-    DeployedIpaVerifierEq g w u vk ps ch ↔
+    DeployedIpaVerifierEq g w u vk instanceCommitment ps ch ↔
       flatAccept (proverOfRounds ps.ipaRounds ps.ipaC ps.ipaF) g (evalVector shape.k ch.x3) u w ch.z
-        (multiopenCommitment g w u vk ps ch
-          + (∑ i, ([-(multiopenValue vk ps ch)].getD i.val 0) • g i) + ch.xi • ps.ipaS)
+        (multiopenCommitment g w u vk instanceCommitment ps ch
+          + (∑ i, ([-(multiopenValue vk instanceCommitment ps ch)].getD i.val 0) • g i) + ch.xi • ps.ipaS)
         ch.ipaRound := by
   rw [deployedVerifierEq_cf, flatAccept_proverOfRounds, foldAllFin_evalVector,
     show (-ps.ipaC * computeB ch.x3 (List.ofFn ch.ipaRound) * ch.z)
@@ -780,24 +780,24 @@ theorem flatAccept_pathData {U W : G} {z : Fp} : {d : ℕ} → (P : Prover Fp G 
 open Classical in
 /-- Halo2's verifier equation on a path-spliced proof equals `flatAccept P` on that path. -/
 theorem deployedVerifierEq_iff_flatAccept_adaptive {shape : Shape} [DecidableEq G] [Inhabited G]
-    (g : Fin (2 ^ shape.k) → G) (w u : G) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
+    (g : Fin (2 ^ shape.k) → G) (w u : G) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) (P : Prover Fp G shape.k) (χ : Fin shape.k → Fp) :
-    DeployedIpaVerifierEq g w u vk
+    DeployedIpaVerifierEq g w u vk instanceCommitment
         (spliceIpa ps (pathData P χ).1 (pathData P χ).2.1 (pathData P χ).2.2) {ch with ipaRound := χ} ↔
       flatAccept P g (evalVector shape.k ch.x3) u w ch.z
-        (multiopenCommitment g w u vk ps ch
-          + (∑ i, ([-(multiopenValue vk ps ch)].getD i.val 0) • g i) + ch.xi • ps.ipaS) χ := by
+        (multiopenCommitment g w u vk instanceCommitment ps ch
+          + (∑ i, ([-(multiopenValue vk instanceCommitment ps ch)].getD i.val 0) • g i) + ch.xi • ps.ipaS) χ := by
   rw [deployedVerifierEq_iff_flatAccept]
-  have e1 : multiopenValue vk
+  have e1 : multiopenValue vk instanceCommitment
       (spliceIpa ps (pathData P χ).1 (pathData P χ).2.1 (pathData P χ).2.2) {ch with ipaRound := χ}
-      = multiopenValue vk ps ch := rfl
-  have e2 : multiopenCommitment g w u vk
+      = multiopenValue vk instanceCommitment ps ch := rfl
+  have e2 : multiopenCommitment g w u vk instanceCommitment
       (spliceIpa ps (pathData P χ).1 (pathData P χ).2.1 (pathData P χ).2.2) {ch with ipaRound := χ}
-      = multiopenCommitment g w u vk ps ch := rfl
+      = multiopenCommitment g w u vk instanceCommitment ps ch := rfl
   rw [e1, e2]
   exact (flatAccept_pathData P g (evalVector shape.k ch.x3)
-    (multiopenCommitment g w u vk ps ch
-      + (∑ i, ([-(multiopenValue vk ps ch)].getD i.val 0) • g i) + ch.xi • ps.ipaS) χ).symm
+    (multiopenCommitment g w u vk instanceCommitment ps ch
+      + (∑ i, ([-(multiopenValue vk instanceCommitment ps ch)].getD i.val 0) • g i) + ch.xi • ps.ipaS) χ).symm
 
 /-! ## Prover-to-verifier bridge
 

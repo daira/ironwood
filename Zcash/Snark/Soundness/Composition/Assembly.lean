@@ -51,9 +51,9 @@ theorem residual_le_via_ladder {shape : Shape}
     (query : AugmentedIndex (2 ^ shape.k) → T')
     (family : ComputedAlgebraicFSFamily shape)
     (extracted : (AugmentedIndex (2 ^ shape.k) → VestaG) → family.Coins → Prop)
-    (prefixes : ∀ basis, AlgebraicWfProof basis (family.vk basis) → Fin 4 →
+    (prefixes : ∀ basis, AlgebraicWfProof basis (family.vk basis) (family.instanceCommitment basis) → Fin 4 →
       BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k))
-    (accept : ∀ basis, AlgebraicWfProof basis (family.vk basis) → Set (Fp × Fp × Fp × Fp))
+    (accept : ∀ basis, AlgebraicWfProof basis (family.vk basis) (family.instanceCommitment basis) → Set (Fp × Fp × Fp × Fp))
     (D : ∀ basis, PeelDecode
         (BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k))
         Fp (accept basis) (prefixes basis))
@@ -115,9 +115,9 @@ theorem snarkExtraction_prob_le_of_generatorRO_textbookDL_ladder {shape : Shape}
     (family : ComputedAlgebraicFSFamily shape) {bound : ℝ≥0∞}
     (hDL : TextbookDLWithCoinsAdvantageLE B family.snarkRelationFinder bound)
     (extracted : (AugmentedIndex (2 ^ shape.k) → VestaG) → family.Coins → Prop)
-    (prefixes : ∀ basis, AlgebraicWfProof basis (family.vk basis) → Fin 4 →
+    (prefixes : ∀ basis, AlgebraicWfProof basis (family.vk basis) (family.instanceCommitment basis) → Fin 4 →
       BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k))
-    (accept : ∀ basis, AlgebraicWfProof basis (family.vk basis) → Set (Fp × Fp × Fp × Fp))
+    (accept : ∀ basis, AlgebraicWfProof basis (family.vk basis) (family.instanceCommitment basis) → Set (Fp × Fp × Fp × Fp))
     (D : ∀ basis, PeelDecode
         (BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k))
         Fp (accept basis) (prefixes basis))
