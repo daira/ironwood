@@ -20,7 +20,7 @@ variable {G IVK AK NK RIVK ASK QK SK : Type*}
 
 /-- The concrete key-binding witness, viewed through the games' `KeyBindingInterface`. -/
 def KeyBinding.toInterface
-    [AddCommGroup G] [Field RIVK] [Field IVK] [Module RIVK G] [SMul ASK G]
+    [AddCommGroup G] [Field IVK] [Field RIVK] [Module RIVK G] [SMul ASK G]
     (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK) (Ggen : G)
     (H : Oracles AK NK RIVK ASK QK SK) :
     KeyBindingInterface (KeyBinding.Witness G IVK AK NK RIVK QK SK) G IVK NK where
@@ -41,10 +41,10 @@ probability at most `(n+4)·(n+3)/|F|`. `toInterface` interprets `Break` as
 `KeyBinding.Break` definitionally, so the games' `∨ kv.Break` branches inherit the bound
 directly. -/
 theorem toInterface_break_measure_le {ι : Type*}
-    [AddCommGroup G] [Field RIVK] [Field IVK] [Module RIVK G] [NoZeroSMulDivisors RIVK G]
-    [SMul ASK G] [Fintype QK] [Fintype SK] [Fintype AK] [Fintype NK] [Fintype RIVK]
-    [Fintype ASK] [Nonempty ASK] [Nonempty NK]
-    [DecidableEq QK] [DecidableEq SK] [DecidableEq AK] [DecidableEq NK] [DecidableEq RIVK]
+    [AddCommGroup G] [Field IVK] [Field RIVK] [Module RIVK G] [NoZeroSMulDivisors RIVK G]
+    [SMul ASK G] [Fintype AK] [Fintype NK] [Fintype RIVK] [Fintype ASK] [Fintype QK]
+    [Fintype SK] [Nonempty NK] [Nonempty ASK]
+    [DecidableEq AK] [DecidableEq NK] [DecidableEq RIVK] [DecidableEq QK] [DecidableEq SK]
     (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK) (Ggen : G) (hS : S ≠ 0) (p : PMF ι)
     {A : ι → OracleComp (FinalQuery AK NK RIVK QK SK) RIVK
       (KeyBinding.Witness G IVK AK NK RIVK QK SK × KeyBinding.Witness G IVK AK NK RIVK QK SK)}

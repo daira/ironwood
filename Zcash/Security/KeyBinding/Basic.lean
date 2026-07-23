@@ -99,7 +99,7 @@ structure Extractor (G IVK AK : Type*) [Neg G] where
   toIVK_pm : ∀ P Q : G, toIVK P = toIVK Q ↔ P =± Q
 
 section Algebra
-variable [AddCommGroup G] [Field RIVK] [Field IVK] [Module RIVK G] [NoZeroSMulDivisors RIVK G]
+variable [AddCommGroup G] [Field IVK] [Field RIVK] [Module RIVK G] [NoZeroSMulDivisors RIVK G]
 
 /-- The `ivk` commitment as a Pedersen lift:
 `Commitivk rivk ak nk = Extract.toIVK ((h ak nk + rivk) • S)`, with `h` abstract-but-non-querying and `S`
@@ -182,7 +182,7 @@ structure Oracles (AK NK RIVK ASK QK SK : Type*) where
   rivk_int : RIVK → AK → NK → RIVK
 
 section Derivation
-variable [AddCommGroup G] [Field RIVK] [Field IVK] [Module RIVK G] [SMul ASK G]
+variable [AddCommGroup G] [Field IVK] [Field RIVK] [Module RIVK G] [SMul ASK G]
 
 /-- `BindKeys^sk` (ZIP 2005): the `sk`-branch derivation constraints. -/
 structure BindKeysSk (Ggen : G) (H : Oracles AK NK RIVK ASK QK SK)
@@ -206,7 +206,7 @@ structure KBDerivation (Extract : Extractor G IVK AK) (Ggen : G)
 end Derivation
 
 section Full
-variable [AddCommGroup G] [Field RIVK] [Field IVK] [Module RIVK G] [SMul ASK G]
+variable [AddCommGroup G] [Field IVK] [Field RIVK] [Module RIVK G] [SMul ASK G]
 
 /-- The full key-binding condition: commitment opening and key derivation constraints. -/
 structure KB (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK) (Ggen : G)
@@ -290,7 +290,7 @@ theorem qk_or_sk_pinned (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK 
 end Full
 
 section Onward
-variable [AddCommGroup G] [Field RIVK] [Field IVK] [Module RIVK G] [SMul ASK G] [DecidableEq RIVK]
+variable [AddCommGroup G] [Field IVK] [Field RIVK] [Module RIVK G] [SMul ASK G] [DecidableEq RIVK]
 
 /-- The `rivk_ext`-derivation query of a witness: the query at which the combined final oracle
 produces its `rivk_ext`, selected by the branch. Never `.int` (`extQueryOf_ne_int`). -/
@@ -375,8 +375,8 @@ theorem shiftedFinalOracle_finalQueryOf
 end Onward
 
 section OnwardCollision
-variable [AddCommGroup G] [Field RIVK] [Field IVK] [Module RIVK G] [SMul ASK G]
-variable [NoZeroSMulDivisors RIVK G] [DecidableEq RIVK]
+variable [AddCommGroup G] [Field IVK] [Field RIVK] [Module RIVK G] [NoZeroSMulDivisors RIVK G]
+variable [SMul ASK G] [DecidableEq RIVK]
 
 /-- **Same-`ivk` ±-equation over `H^*`.** Two witnesses opening the same `ivk` (`KBOpening`), both
 satisfying the derivation constraints, give the ZIP 2005 break equation with the final-oracle
@@ -448,13 +448,13 @@ def branchOfQuery : FinalQuery AK NK RIVK QK SK → Option (Branch QK SK)
   | .legacy sk => some (.sk sk)
   | .int _ _ _ => none
 
-omit [Field RIVK] [Field IVK] [NoZeroSMulDivisors RIVK G] [DecidableEq RIVK] in
+omit [Field IVK] [Field RIVK] [NoZeroSMulDivisors RIVK G] [DecidableEq RIVK] in
 /-- A witness's Branch data is recoverable from its `rivk_ext`-derivation query. -/
 theorem branch_eq_branchOfQuery {w : Witness G IVK AK NK RIVK QK SK} (Extract : Extractor G IVK AK) :
     some w.qk_or_sk = branchOfQuery (extQueryOf Extract w) := by
   rcases hb : w.qk_or_sk with qk | sk <;> simp [extQueryOf, branchOfQuery, hb]
 
-omit [Field RIVK] [Field IVK] [NoZeroSMulDivisors RIVK G] [DecidableEq RIVK] in
+omit [Field IVK] [Field RIVK] [NoZeroSMulDivisors RIVK G] [DecidableEq RIVK] in
 /-- A witness's `rivk_ext`-derivation query is never `.int`. -/
 theorem extQueryOf_ne_int {w : Witness G IVK AK NK RIVK QK SK} (Extract : Extractor G IVK AK) (rivk_ext : RIVK) (ak : AK) (nk : NK) :
     extQueryOf Extract w ≠ .int rivk_ext ak nk := by
@@ -558,7 +558,7 @@ coincide. What the birthday bound then adds is that inhabiting this event is har
 non-querying, so a fixed shift cannot be steered to manufacture collisions, and ±-colliding the
 shifted oracle at distinct queries has probability at most `q(q-1)/r` (`Birthday.lean`). -/
 def _root_.Zcash.Security.RandomOracle.CollisionUpToSign.ofBreak
-    [DecidableEq QK] [DecidableEq SK] [DecidableEq AK] [DecidableEq NK]
+    [DecidableEq AK] [DecidableEq NK] [DecidableEq QK] [DecidableEq SK]
     (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK) (Ggen : G) (hS : S ≠ 0)
     (H : Oracles AK NK RIVK ASK QK SK)
     {w₁ w₂ : Witness G IVK AK NK RIVK QK SK}

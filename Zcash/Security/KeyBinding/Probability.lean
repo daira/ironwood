@@ -82,7 +82,7 @@ def finalQueryEquiv : FinalQuery AK NK RIVK QK SK ≃ (QK × AK × NK) ⊕ SK �
   left_inv q := by cases q <;> rfl
   right_inv x := by rcases x with ⟨qk, ak, nk⟩ | sk | ⟨rivk_ext, ak, nk⟩ <;> rfl
 
-instance [Fintype QK] [Fintype SK] [Fintype AK] [Fintype NK] [Fintype RIVK] :
+instance [Fintype AK] [Fintype NK] [Fintype RIVK] [Fintype QK] [Fintype SK] :
     Fintype (FinalQuery AK NK RIVK QK SK) :=
   Fintype.ofEquiv _ finalQueryEquiv.symm
 
@@ -509,8 +509,8 @@ theorem toOuterMeasure_bind_le {α β : Type*} (p : PMF α) (f : α → PMF β) 
 
 section Transport
 
-variable [Field RIVK] [Fintype QK] [Fintype SK] [Fintype AK] [Fintype NK] [Fintype RIVK]
-variable [DecidableEq QK] [DecidableEq SK] [DecidableEq AK] [DecidableEq NK] [DecidableEq RIVK]
+variable [Field RIVK] [Fintype AK] [Fintype NK] [Fintype RIVK] [Fintype QK] [Fintype SK]
+variable [DecidableEq AK] [DecidableEq NK] [DecidableEq RIVK] [DecidableEq QK] [DecidableEq SK]
 
 /-- Drawing the coordinates independently and uniformly is the uniform draw on the product. -/
 theorem uniformOfFintype_prod {α β : Type*} [Fintype α] [Nonempty α] [Fintype β] [Nonempty β] :
@@ -557,12 +557,12 @@ end Transport
 
 section Capstone
 
-variable [AddCommGroup G] [Field RIVK] [Field IVK] [Module RIVK G] [NoZeroSMulDivisors RIVK G]
+variable [AddCommGroup G] [Field IVK] [Field RIVK] [Module RIVK G] [NoZeroSMulDivisors RIVK G]
 variable [SMul ASK G]
-variable [Fintype QK] [Fintype SK] [Fintype AK] [Fintype NK] [Fintype RIVK]
-variable [DecidableEq QK] [DecidableEq SK] [DecidableEq AK] [DecidableEq NK] [DecidableEq RIVK]
+variable [Fintype AK] [Fintype NK] [Fintype RIVK] [Fintype QK] [Fintype SK]
+variable [DecidableEq AK] [DecidableEq NK] [DecidableEq RIVK] [DecidableEq QK] [DecidableEq SK]
 
-omit [Fintype QK] [Fintype SK] [Fintype AK] [Fintype NK] [Fintype RIVK] in
+omit [Fintype AK] [Fintype NK] [Fintype RIVK] [Fintype QK] [Fintype SK] in
 /-- The queries at which `CollisionUpToSign.ofBreak` exhibits its collision are the witnesses'
 derivation queries: the `rivk_ext`-derivation pair in the residual case, the final-query pair
 otherwise. Stated over any `c` equal to the computed collision (`hc`), so that a consumer's
@@ -715,7 +715,7 @@ probability space in full: the adversary's private randomness (any distribution 
 the five oracle tables — `H^ask`, `H^nk`, and the three final `rivk`-derivation oracles —
 drawn independently, the tables uniformly. The machine runs on the combined table, and the
 bound is the hypothesis-free `(n+4)·(n+3)/|F|`. -/
-theorem break_measure_le_product {ι : Type*} [Fintype ASK] [Nonempty ASK] [Nonempty NK]
+theorem break_measure_le_product {ι : Type*} [Fintype ASK] [Nonempty NK] [Nonempty ASK]
     (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK)
     (Ggen : G) (hS : S ≠ 0)
     (p : PMF ι)
