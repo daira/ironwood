@@ -276,6 +276,41 @@ theorem subProofConstraints_map {F G : Type*} [CommRing F] [CommRing G] (f : F �
   · exact List.map_congr_left fun g _ => Expr.eval_map f _ _ _ g
   · exact congrArg List.flatten (List.map_congr_left fun lk _ => lookupExpressions_map f ..)
 
+/-- Every constraint value across the sub-proofs, in the verifier's order. The fixed columns, the
+gates and the challenge-derived scalars are shared; the advice and instance evaluations, the
+permutation sets and the lookups vary per sub-proof. -/
+def allConstraints {F : Type*} [CommRing F] {np : ℕ} (fixedFeed : ℕ → F)
+    (adviceFeed instanceFeed : Fin np → ℕ → F) (gates : List (Expr F))
+    (sets : Fin np → List (PermSetEval F))
+    (chunks : Fin np → List (PermSetEval F × List (F × F)))
+    (lookups : Fin np → List (LookupEval F × List (Expr F) × List (Expr F)))
+    (beta gamma x delta theta : F) (chunkLen : ℕ) (l0 lLast lBlind : F) : List F :=
+  (List.ofFn (fun p : Fin np =>
+    subProofConstraints fixedFeed (adviceFeed p) (instanceFeed p) gates (sets p) (chunks p)
+      (lookups p) beta gamma x delta theta chunkLen l0 lLast lBlind)).flatten
+
+/-- The whole constraint list, across all sub-proofs, commutes with a ring hom. -/
+theorem allConstraints_map {F G : Type*} [CommRing F] [CommRing G] (f : F →+* G) {np : ℕ}
+    (fixedFeed : ℕ → F) (adviceFeed instanceFeed : Fin np → ℕ → F) (gates : List (Expr F))
+    (sets : Fin np → List (PermSetEval F))
+    (chunks : Fin np → List (PermSetEval F × List (F × F)))
+    (lookups : Fin np → List (LookupEval F × List (Expr F) × List (Expr F)))
+    (beta gamma x delta theta : F) (chunkLen : ℕ) (l0 lLast lBlind : F) :
+    (allConstraints fixedFeed adviceFeed instanceFeed gates sets chunks lookups
+        beta gamma x delta theta chunkLen l0 lLast lBlind).map f
+      = allConstraints (fun i => f (fixedFeed i)) (fun p i => f (adviceFeed p i))
+          (fun p i => f (instanceFeed p i)) (gates.map (Expr.map f))
+          (fun p => (sets p).map (PermSetEval.map f))
+          (fun p => (chunks p).map (fun c => (c.1.map f, c.2.map (fun q => (f q.1, f q.2)))))
+          (fun p => (lookups p).map (fun lk =>
+            (lk.1.map f, lk.2.1.map (Expr.map f), lk.2.2.map (Expr.map f))))
+          (f beta) (f gamma) (f x) (f delta) (f theta) chunkLen (f l0) (f lLast) (f lBlind) := by
+  unfold allConstraints
+  rw [List.map_flatten, List.map_ofFn]
+  simp only [Function.comp_def]
+  refine congrArg List.flatten (congrArg List.ofFn (funext fun p => ?_))
+  exact subProofConstraints_map f ..
+
 /-- `expected_h_eval` (halo2 `vanishing/verifier.rs` `verify`): fold all constraint values by `y`
 (`acc·y + v`) and divide by `xⁿ − 1`. The verifier opens the folded `h` commitment to this value. -/
 def expectedHEval {F : Type*} [Field F] (exprs : List F) (y xn : F) : F :=
