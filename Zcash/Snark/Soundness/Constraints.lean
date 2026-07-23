@@ -224,6 +224,86 @@ theorem eval_combineGates {n : ℕ} (fixedCols adviceCols instanceCols : ℕ →
           (fun acc v => acc * y + v) 0 := by
   simp [combineGates, eval_foldByY]
 
+/-! ## The permutation and lookup arguments at the polynomial level
+
+`combineGates` folds only the custom gates. The verifier's `expected_h_eval` folds the permutation
+and lookup constraint values too, so the polynomial the quotient check is really about is the fold of
+*all* the constraints. `constraintPolys` builds that list one level up — the same
+`subProofConstraints` the verifier uses, but over column polynomials instead of claimed values — and
+`eval_constraintPolys` says evaluating at `x` lands back on the verifier's list. -/
+
+open Polynomial in
+/-- Every constraint value for one sub-proof, as a polynomial. The gates and lookup expressions carry
+scalar constants, so they are lifted with `C`; the gate point `x` becomes `X`, since evaluating the
+result at `x` must give it back. -/
+noncomputable def constraintPolys (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
+    (gates : List (Expr Fp)) (sets : List (PermSetEval (Polynomial Fp)))
+    (chunks : List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
+    (lookups : List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (beta gamma delta theta : Fp) (chunkLen : ℕ) (l0 lLast lBlind : Polynomial Fp) :
+    List (Polynomial Fp) :=
+  subProofConstraints fixedCols adviceCols instanceCols (gates.map (Expr.map C)) sets chunks
+    (lookups.map (fun lk =>
+      (lk.1, lk.2.1.map (Expr.map C), lk.2.2.map (Expr.map C))))
+    (C beta) (C gamma) X (C delta) (C theta) chunkLen l0 lLast lBlind
+
+open Polynomial in
+/-- Evaluating the polynomial constraints at `x` gives the verifier's constraint values at the
+columns' values at `x`. -/
+theorem eval_constraintPolys (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
+    (gates : List (Expr Fp)) (sets : List (PermSetEval (Polynomial Fp)))
+    (chunks : List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
+    (lookups : List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (beta gamma delta theta : Fp) (chunkLen : ℕ) (l0 lLast lBlind : Polynomial Fp) (x : Fp) :
+    (constraintPolys fixedCols adviceCols instanceCols gates sets chunks lookups
+        beta gamma delta theta chunkLen l0 lLast lBlind).map (fun q => q.eval x)
+      = subProofConstraints (fun i => (fixedCols i).eval x) (fun i => (adviceCols i).eval x)
+          (fun i => (instanceCols i).eval x) gates
+          (sets.map (PermSetEval.map (fun q => q.eval x)))
+          (chunks.map (fun c => (c.1.map (fun q => q.eval x),
+            c.2.map (fun q => (q.1.eval x, q.2.eval x)))))
+          (lookups.map (fun lk => (lk.1.map (fun q => q.eval x), lk.2.1, lk.2.2)))
+          beta gamma x delta theta chunkLen (l0.eval x) (lLast.eval x) (lBlind.eval x) := by
+  have hmap : (fun q : Polynomial Fp => q.eval x) = ⇑(evalRingHom x) := rfl
+  rw [constraintPolys, hmap, subProofConstraints_map (evalRingHom x)]
+  simp [List.map_map, Function.comp_def, Expr.map_map, Expr.map_id, PermSetEval.map,
+    LookupEval.map]
+
+open Polynomial in
+/-- The constraint numerator with the permutation and lookup arguments folded in: the same `acc·y + v`
+order `combineGates` uses, over the full constraint list. -/
+noncomputable def combineConstraints (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
+    (gates : List (Expr Fp)) (sets : List (PermSetEval (Polynomial Fp)))
+    (chunks : List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
+    (lookups : List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (beta gamma delta theta y : Fp) (chunkLen : ℕ) (l0 lLast lBlind : Polynomial Fp) :
+    Polynomial Fp :=
+  (constraintPolys fixedCols adviceCols instanceCols gates sets chunks lookups
+    beta gamma delta theta chunkLen l0 lLast lBlind).foldl (fun acc q => acc * C y + q) 0
+
+open Polynomial in
+/-- **The fingerprint, definitionally.** The numerator at `x` is the `y` fold of the verifier's own
+constraint values — so once the fed columns evaluate to the claimed evaluations, the fold the
+verifier computes and the fold the polynomial identity is about are the same number, with nothing
+assumed. -/
+theorem eval_combineConstraints (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
+    (gates : List (Expr Fp)) (sets : List (PermSetEval (Polynomial Fp)))
+    (chunks : List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
+    (lookups : List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (beta gamma delta theta y : Fp) (chunkLen : ℕ) (l0 lLast lBlind : Polynomial Fp) (x : Fp) :
+    (combineConstraints fixedCols adviceCols instanceCols gates sets chunks lookups
+        beta gamma delta theta y chunkLen l0 lLast lBlind).eval x
+      = (subProofConstraints (fun i => (fixedCols i).eval x) (fun i => (adviceCols i).eval x)
+          (fun i => (instanceCols i).eval x) gates
+          (sets.map (PermSetEval.map (fun q => q.eval x)))
+          (chunks.map (fun c => (c.1.map (fun q => q.eval x),
+            c.2.map (fun q => (q.1.eval x, q.2.eval x)))))
+          (lookups.map (fun lk => (lk.1.map (fun q => q.eval x), lk.2.1, lk.2.2)))
+          beta gamma x delta theta chunkLen (l0.eval x) (lLast.eval x) (lBlind.eval x)).foldl
+          (fun acc v => acc * y + v) 0 := by
+  rw [combineConstraints, eval_foldByY, eval_constraintPolys]
+  simp
+
 /-- **Gate transport (in-Lean).** If the fed columns evaluate at `x` to the claimed values
 (`hfixed`/`hadvice`/`hinstance` — the node binding, once `rotatedFeed`'s `ω^rot` is folded in) and the
 `y`-fold of the gates over those claimed values is the committed quotient's contribution
