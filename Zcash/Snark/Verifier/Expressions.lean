@@ -181,6 +181,56 @@ def lookupExpressions {F : Type*} [CommRing F] (le : LookupEval F) (inputExprs t
     (le.permutedInputEval - le.permutedTableEval) * (le.permutedInputEval - le.permutedInputInvEval)
       * active ]
 
+/-- `permChunkExpression` commutes with a ring hom: both interior folds do
+(`permChunk_left_map`/`permChunk_right_map`) and the rest is ring arithmetic. -/
+theorem permChunkExpression_map {F G : Type*} [CommRing F] [CommRing G] (f : F →+* G)
+    (beta gamma x delta : F) (chunkLen chunkIndex : ℕ) (set : PermSetEval F)
+    (pairs : List (F × F)) (lLast lBlind : F) :
+    f (permChunkExpression beta gamma x delta chunkLen chunkIndex set pairs lLast lBlind)
+      = permChunkExpression (f beta) (f gamma) (f x) (f delta) chunkLen chunkIndex
+          (set.map f) (pairs.map (fun p => (f p.1, f p.2))) (f lLast) (f lBlind) := by
+  unfold permChunkExpression
+  simp only [PermSetEval.map, map_sub, map_mul, map_add, map_one]
+  rw [permChunk_left_map f beta gamma pairs set.nextEval,
+    permChunk_right_map f gamma delta pairs (set.eval, beta * x * delta ^ (chunkIndex * chunkLen))]
+  simp [map_mul, map_pow]
+
+/-- The permutation constraint values commute with a ring hom: each of the four pieces is built
+from the set evaluations by ring operations, and the chunk terms by `permChunkExpression_map`. -/
+theorem permutationExpressions_map {F G : Type*} [CommRing F] [CommRing G] (f : F →+* G)
+    (sets : List (PermSetEval F)) (chunks : List (PermSetEval F × List (F × F)))
+    (beta gamma x delta : F) (chunkLen : ℕ) (l0 lLast lBlind : F) :
+    (permutationExpressions sets chunks beta gamma x delta chunkLen l0 lLast lBlind).map f
+      = permutationExpressions (sets.map (PermSetEval.map f))
+          (chunks.map (fun c => (c.1.map f, c.2.map (fun p => (f p.1, f p.2)))))
+          (f beta) (f gamma) (f x) (f delta) chunkLen (f l0) (f lLast) (f lBlind) := by
+  unfold permutationExpressions
+  simp only [List.map_append]
+  refine congrArg₂ (· ++ ·) (congrArg₂ (· ++ ·) (congrArg₂ (· ++ ·) ?_ ?_) ?_) ?_
+  · cases sets <;> simp [PermSetEval.map, map_mul, map_sub, map_one]
+  · rcases h : sets.getLast? with _ | last <;>
+      simp [List.getLast?_map, h, PermSetEval.map, map_mul, map_sub, map_pow]
+  · rw [← List.map_drop, List.zip_map, List.map_map, List.map_map]
+    refine List.map_congr_left fun p _ => ?_
+    obtain ⟨a, b⟩ := p
+    cases hb : b.lastEval <;> simp [PermSetEval.map, hb, map_sub, map_mul]
+  · rw [List.length_map, List.zip_map_right, List.map_map, List.map_map]
+    refine List.map_congr_left fun p _ => ?_
+    simp [permChunkExpression_map f]
+
+/-- The lookup constraint values commute with a ring hom: the compressed input/table terms by
+`compressExprs_map`, the rest by ring arithmetic on the lookup evaluations. -/
+theorem lookupExpressions_map {F G : Type*} [CommRing F] [CommRing G] (f : F →+* G)
+    (le : LookupEval F) (inputExprs tableExprs : List (Expr F))
+    (fixedEvals adviceEvals instanceEvals : ℕ → F) (theta beta gamma l0 lLast lBlind : F) :
+    (lookupExpressions le inputExprs tableExprs fixedEvals adviceEvals instanceEvals
+        theta beta gamma l0 lLast lBlind).map f
+      = lookupExpressions (le.map f) (inputExprs.map (Expr.map f)) (tableExprs.map (Expr.map f))
+          (fun i => f (fixedEvals i)) (fun i => f (adviceEvals i)) (fun i => f (instanceEvals i))
+          (f theta) (f beta) (f gamma) (f l0) (f lLast) (f lBlind) := by
+  unfold lookupExpressions
+  simp [LookupEval.map, map_add, map_sub, map_mul, map_one, map_pow, compressExprs_map f]
+
 /-- `expected_h_eval` (halo2 `vanishing/verifier.rs` `verify`): fold all constraint values by `y`
 (`acc·y + v`) and divide by `xⁿ − 1`. The verifier opens the folded `h` commitment to this value. -/
 def expectedHEval {F : Type*} [Field F] (exprs : List F) (y xn : F) : F :=
