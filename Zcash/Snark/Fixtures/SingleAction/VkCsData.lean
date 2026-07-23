@@ -6,6 +6,18 @@ set_option maxRecDepth 1000000
 
 namespace Zcash.Snark.Fixture
 
+def vkNumFixedColumns : ℕ := 29
+
+def vkNumAdviceColumns : ℕ := 10
+
+def vkNumInstanceColumns : ℕ := 1
+
+def vkNumSelectors : ℕ := 56
+
+def vkConstants : List ℕ := [3]
+
+def vkMinimumDegree : Option ℕ := none
+
 /-- Scalar field element from four little-endian u64 limbs. -/
 def mkFp (a b c d : ℕ) : Fp := (a : Fp) + (b : Fp) * (2 : Fp) ^ 64 + (c : Fp) * (2 : Fp) ^ 128 + (d : Fp) * (2 : Fp) ^ 192
 

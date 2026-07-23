@@ -9,12 +9,13 @@ import Zcash.Snark.Verifier.Assemble
 # The verifying key's pinned constraint system, on the verifier side
 
 Crosses `Zcash.Circuits.Fixtures.PartialPinnedConstraintSystem` to the verifier's
-`VerifyingKey` record: `VerifyingKey.pinnedCs` reads the pinned sub-record off a
-verifying key, and `VerifyingKey.gates_eval_of_pinnedCs_eq` carries the derived-gate
-semantics (`derive_gates_eval`) to any verifying key whose pinned CS equals a
-derivation — the gate-side input to the Clean-constraints transport. `actionCS` is the
-Action instance of the source constraint system; the capture equality lives in
-`Zcash.Snark.Fixtures.SingleAction.PinnedCsMatch`/`VkMatch`.
+`VerifyingKey` record. The pinned record carries more than the verifier's runtime
+`VerifyingKey` (counts, constants), so the record-level capture equality lives fixture
+side (`Zcash.Snark.Fixtures.SingleAction.PinnedCsMatch`), and the verifying key
+connects field-wise: `VerifyingKey.gates_eval_of_gates_eq` carries the derived-gate
+semantics (`derive_gates_eval`) to any verifying key whose gate list equals a
+derivation's — the gate-side input to the Clean-constraints transport. `actionCS` is
+the Action instance of the source constraint system.
 -/
 
 namespace Zcash.Snark
@@ -22,25 +23,15 @@ namespace Zcash.Snark
 open Halo2
 open Circuits.Fixtures
 
-/-- The pinned-CS sub-record of a verifying key: gates, query layouts, and the
-flattened lookup expression lists. -/
-def VerifyingKey.pinnedCs {shape : Shape} {G : Type*}
-    (vk : VerifyingKey shape Fp G) : PartialPinnedConstraintSystem where
-  gates := vk.gates
-  adviceQueryLayout := vk.adviceQueryLayout
-  fixedQueryLayout := vk.fixedQueryLayout
-  instanceQueryLayout := vk.instanceQueryLayout
-  lookupInputExprs := List.ofFn vk.lookupInputExprs
-  lookupTableExprs := List.ofFn vk.lookupTableExprs
-
-/-- **A verifying key whose pinned CS is a derivation evaluates like the source
-circuit.** Given `vk.pinnedCs = .derive cs seed map` and selector coverage, the `j`-th
-VK gate — at query families interpreting the derivation walk's layout — evaluates to
-the `j`-th flattened Clean gate expression under the selector-replacement valuation. -/
-theorem VerifyingKey.gates_eval_of_pinnedCs_eq
+/-- **A verifying key whose gate list is a derivation's evaluates like the source
+circuit.** Given `vk.gates = (.derive cs seed map).gates` and selector coverage, the
+`j`-th VK gate — at query families interpreting the derivation walk's layout —
+evaluates to the `j`-th flattened Clean gate expression under the selector-replacement
+valuation. -/
+theorem VerifyingKey.gates_eval_of_gates_eq
     {shape : Shape} {G : Type*} (vk : VerifyingKey shape Fp G)
     (cs : ConstraintSystem Fp) (seed : List Query) (map : SelCompressMap)
-    (heq : vk.pinnedCs = PartialPinnedConstraintSystem.derive cs seed map)
+    (hgates : vk.gates = (PartialPinnedConstraintSystem.derive cs seed map).gates)
     (fE aE iE : ℕ → Fp) (v : Query → Fp)
     (hcov : ∀ p ∈ flatGates cs,
       p.selectorsCovered (fun i => (map.lookup i).isSome) = true)
@@ -50,8 +41,6 @@ theorem VerifyingKey.gates_eval_of_pinnedCs_eq
     (j : ℕ) (hg : j < vk.gates.length) (hp : j < (flatGates cs).length) :
     Expr.eval fE aE iE vk.gates[j]
       = Expression.eval (substValuation map.lookup v) (flatGates cs)[j] := by
-  have hgates : vk.gates = (PartialPinnedConstraintSystem.derive cs seed map).gates :=
-    congrArg PartialPinnedConstraintSystem.gates heq
   rw [List.getElem_of_eq hgates hg]
   exact PartialPinnedConstraintSystem.derive_gates_eval cs seed map fE aE iE v hcov
     hint j (hgates ▸ hg) hp

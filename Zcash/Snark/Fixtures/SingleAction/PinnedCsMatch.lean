@@ -32,18 +32,30 @@ open Circuits.Fixtures
 
 /-- The capture's CS data, as the pinned record. -/
 def capturedPinnedCs : PartialPinnedConstraintSystem where
+  numFixedColumns := vkNumFixedColumns
+  numAdviceColumns := vkNumAdviceColumns
+  numInstanceColumns := vkNumInstanceColumns
+  numSelectors := vkNumSelectors
   gates := vkGates
   adviceQueryLayout := vkAdviceQueryLayout
   fixedQueryLayout := vkFixedQueryLayout
   instanceQueryLayout := vkInstanceQueryLayout
   lookupInputExprs := vkLookupInputExprs
   lookupTableExprs := vkLookupTableExprs
+  constants := vkConstants
+  minimumDegree := vkMinimumDegree
 
 /-- The pinned CS derived from the ported Action circuit, at the capture's
 registration order (fixed-point form; see the module docstring). -/
 def actionPinnedCs : PartialPinnedConstraintSystem :=
   .derive actionCS
     (csSeed vkAdviceQueryLayout vkFixedQueryLayout vkInstanceQueryLayout) actionSelMap
+
+theorem counts_eq :
+    (capturedPinnedCs.numFixedColumns, capturedPinnedCs.numAdviceColumns,
+      capturedPinnedCs.numInstanceColumns, capturedPinnedCs.numSelectors)
+    = (actionPinnedCs.numFixedColumns, actionPinnedCs.numAdviceColumns,
+      actionPinnedCs.numInstanceColumns, actionPinnedCs.numSelectors) := by native_decide
 
 theorem gates_eq : capturedPinnedCs.gates = actionPinnedCs.gates := by native_decide
 
@@ -61,6 +73,12 @@ theorem lookupInputExprs_eq :
 
 theorem lookupTableExprs_eq :
     capturedPinnedCs.lookupTableExprs = actionPinnedCs.lookupTableExprs := by native_decide
+
+theorem constants_eq : capturedPinnedCs.constants = actionPinnedCs.constants := by
+  native_decide
+
+theorem minimumDegree_eq :
+    capturedPinnedCs.minimumDegree = actionPinnedCs.minimumDegree := by native_decide
 
 /-- **The capture is the derived Action circuit** (pinned CS). -/
 theorem capturedPinnedCs_eq_derived : capturedPinnedCs = actionPinnedCs := by native_decide

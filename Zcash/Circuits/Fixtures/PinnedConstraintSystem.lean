@@ -8,8 +8,8 @@ verifying key pins (and hashes into `transcript_repr`): counts, flattened gate
 polynomials, query lists, permutation columns, lookups, constants.
 `PartialPinnedConstraintSystem` is the sub-record the current capture certifies — the
 gate polynomials, the three query layouts, and the lookup argument expressions;
-*partial* because the counts (pending a dumper emission) and the permutation columns
-and constants (landing with the commitment-matching phase) are not yet compared.
+*partial* because the permutation columns (landing with the commitment-matching phase)
+are not yet compared.
 `PartialPinnedConstraintSystem.derive` computes it from a Clean `ConstraintSystem`,
 given the two keygen witnesses the Lean side does not yet compute itself:
 
@@ -35,16 +35,23 @@ namespace Zcash.Circuits.Fixtures
 open Halo2
 open Snark (Expr)
 
-/-- The compared sub-record of halo2's `PinnedConstraintSystem`: gate polynomials,
-query layouts, and lookup argument expressions (see the module docstring for the
-pending fields). -/
+/-- The compared sub-record of halo2's `PinnedConstraintSystem`: column counts, gate
+polynomials, query layouts, lookup argument expressions, constants columns, and the
+minimum-degree override — everything pinned except the permutation columns (pending
+the commitment-matching phase). -/
 structure PartialPinnedConstraintSystem where
+  numFixedColumns : ℕ
+  numAdviceColumns : ℕ
+  numInstanceColumns : ℕ
+  numSelectors : ℕ
   gates : List (Expr Fp)
   adviceQueryLayout : List (ℕ × ℤ)
   fixedQueryLayout : List (ℕ × ℤ)
   instanceQueryLayout : List (ℕ × ℤ)
   lookupInputExprs : List (List (Expr Fp))
   lookupTableExprs : List (List (Expr Fp))
+  constants : List ℕ
+  minimumDegree : Option ℕ
 deriving DecidableEq, Repr
 
 /-- A query-registration seed from per-kind layouts (advice, fixed, instance — the
@@ -58,12 +65,19 @@ def csSeed (adviceL fixedL instL : List (ℕ × ℤ)) : List Query :=
 witnesses (see the module docstring for their status). -/
 def PartialPinnedConstraintSystem.derive (cs : ConstraintSystem Fp) (seed : List Query)
     (map : SelCompressMap) : PartialPinnedConstraintSystem where
+  numFixedColumns := (projectCS seed map cs).numFixedColumns
+  numAdviceColumns := (projectCS seed map cs).numAdviceColumns
+  numInstanceColumns := (projectCS seed map cs).numInstanceColumns
+  numSelectors := (projectCS seed map cs).numSelectors
   gates := (projectCS seed map cs).gates
   adviceQueryLayout := (projectCS seed map cs).adviceQueryLayout
   fixedQueryLayout := (projectCS seed map cs).fixedQueryLayout
   instanceQueryLayout := (projectCS seed map cs).instanceQueryLayout
   lookupInputExprs := (projectCS seed map cs).lookups.map (·.inputs)
   lookupTableExprs := (projectCS seed map cs).lookups.map (·.tables)
+  -- Clean's constraint system does not model `set_minimum_degree`; Orchard never calls it.
+  constants := cs.constants.map (·.index)
+  minimumDegree := none
 
 /-! ## Threading the erasure lemmas through the gate list -/
 
