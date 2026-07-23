@@ -90,17 +90,23 @@ The remaining work is:
 ### 2. Replace the free column decoders
 
 **Status: polynomial/query-level decoding is implemented by
-[#30](https://github.com/zcash/ironwood/pull/30); Clean row decoding remains open.**
+[#30](https://github.com/zcash/ironwood/pull/30); the generic Clean row decoder is now
+implemented on this branch, while its concrete Action instantiation remains open.**
 
 The deployed/member capstones use canonical decoding through `coeffsToPoly`,
 `decodedCols`, `x1DecodeCols`, query-layout member selection, and `rotatedFeed`. The
 extracted opening and the polynomials consumed by those capstones are therefore not
 independent.
 
-The Action bridge still needs a canonical decoder from those polynomials to values on
-the size-`2^k` evaluation domain. Prove that:
+`PolynomialEnvironment` is the canonical decoder from those polynomials to values on
+the size-`2^k` evaluation domain. It evaluates column `c` at row `r` as
+`c(ω^r)` and proves that Clean's rotated advice, fixed, and instance queries agree
+with the verifier's rotated polynomials. `resolverEnvironment` selects fixed,
+per-proof advice, and per-proof instance columns from the shared `CommitmentId`
+resolver.
 
-- row rotations match `omega` multiplication;
+The concrete Action construction still has to prove that:
+
 - column/query indices match the VK query layouts;
 - instance values are the supplied Action public inputs;
 - usable and blinding rows are treated exactly as Halo 2 treats them.
@@ -392,16 +398,20 @@ Once the direct semantic bridge exists, instantiate the Vesta constraint capston
 with the concrete high-level Action statement. Then thread that same concrete
 statement through the computed Fiat–Shamir/AGM endpoint.
 
-#30 adds `orchard_verifier_sound_vesta_computed`, whose circuit predicate is the
-concrete gate check over decoded member columns rather than a free decoder. It still
-receives batch/decode/gate/layout data by hand, and its quantitative endpoint remains
-conditional on the family-wide `hExtract` data-supply premise. #91 derives the full
-constraint fold, splits it under a good `y`, and proves the permutation/lookup semantic
-endpoints, but does not yet call them from the deployed list; it also records the
-adaptive `x`-challenge coupling as standing work. #85 threads statement-derived
+#30 adds `orchard_verifier_sound_vesta_computed`, whose original circuit predicate was
+the concrete gate check over decoded member columns rather than a free decoder. This
+branch now strengthens that endpoint's extracted relation with exact
+`FullCircuitSatisfaction` of the same witness and carries both facts in
+`circuitSatViaGatesAndOperations`. This is type-level plumbing, not yet the final
+derivation: the endpoint currently receives the full-satisfaction proof and decoded
+environment as inputs. Supplying them from the deployed constraint split and the
+Action records is the next representation step.
+
+The computed endpoint still receives batch/decode/gate/layout data by hand, and its
+quantitative endpoint remains conditional on the family-wide
+`hExtract`/adaptive-coupling data-supply premise. #85 threads statement-derived
 instance commitments through the live verifier. #82 documents the computed capstone
-and #79 provides the eventual trust-boundary census location; neither changes these
-proof obligations.
+and #79 provides the eventual trust-boundary census location.
 
 The final theorem should say, modulo the explicitly priced Fiat–Shamir, polynomial
 identity, and discrete-log failure events, that acceptance by the modeled deployed
@@ -410,13 +420,13 @@ whose public inputs were committed by the verifier.
 
 ## Suggested implementation order
 
-1. Instantiate #91's constraint split at the deployed list, route the permutation and
-   lookup members to its proved endpoints, and expose a full circuit-satisfaction
-   record instead of the gate-only predicate.
+1. Complete: instantiate #91's constraint split at the deployed list, route the
+   permutation and lookup members to its proved endpoints, and expose a full
+   circuit-satisfaction record in the computed endpoint.
 2. Make #89's post-compression CS and layout fixtures available as reusable Lean data,
    and prove VK/layout equality theorems that discharge #30's routing hypotheses.
-3. Define the canonical polynomial-to-row decoder, construct the placed Clean
-   environment, and prove `Action.Circuit.EnvAssumptions`.
+3. The canonical polynomial-to-row decoder is complete. Construct its placed Action
+   environment and prove `Action.Circuit.EnvAssumptions`.
 4. Prove the decomposed full-satisfaction-to-Action bridge, first for one selected
    Action and then for every `Fin shape.numProofs`.
 5. Supply the decoded/full-satisfaction data inside the computed experiment, close the

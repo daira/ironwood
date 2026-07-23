@@ -20,6 +20,7 @@ import Zcash.Snark.Soundness.OperationCopies
 import Zcash.Snark.Soundness.OperationLookups
 import Zcash.Snark.Soundness.LookupSemantics
 import Zcash.Snark.Soundness.CircuitIntegration
+import Zcash.Snark.Soundness.PolynomialEnvironment
 import Zcash.Snark.Soundness.Composition.Decomposition
 import Zcash.Snark.Soundness.Composition.Residual
 import Zcash.Snark.Soundness.Composition.Prefixes
@@ -313,6 +314,7 @@ assert_no_sorry orchard_verifier_vesta_member_constraint_derived
 assert_no_sorry ipaRelation_deployed_of_instance
 assert_no_sorry member_snark_of_instance
 assert_no_sorry snarkRelation_of_memberColumns
+assert_no_sorry SnarkRelation.and_satisfies
 assert_no_sorry orchard_verifier_sound_vesta_computed
 assert_no_sorry snarkExtraction_prob_le_of_generatorRO_textbookDL
 assert_no_sorry instanceAttempt_provenance
@@ -514,6 +516,9 @@ assert_no_sorry ConstraintSatisfaction.resolverLookupSubset
 assert_no_sorry CopyReplayWitness.constraints_or_bad
 assert_no_sorry FullCircuitBridge.satisfaction_or_bad
 assert_no_sorry FullCircuitBridge.constraints_or_bad
+assert_no_sorry polynomialEnvironment_query_advice
+assert_no_sorry polynomialEnvironment_query_fixed
+assert_no_sorry polynomialEnvironment_query_instance
 assert_no_sorry permutationLastEvalsWellFormed_of_assemble?_eq_some
 assert_no_sorry eval_permutationDataOfDecodedResolver_or_relation
 assert_no_sorry hgood_failure_priced
