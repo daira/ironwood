@@ -15,14 +15,14 @@ namespace Zcash.Security
 
 open Zcash.Security.KeyBinding Zcash.Security.Ledger
 
-variable {G F AK NK SK QK : Type*}
+variable {G F IVK AK NK SK QK : Type*}
 
 /-- The concrete key-binding witness, viewed through the games' `KeyBindingInterface`. -/
 def KeyBinding.toInterface
-    [AddCommGroup G] [Field F] [Field AK] [Module F G]
-    (Extract : G → AK) (S : G) (hfn : AK → NK → F) (Ggen : G)
+    [AddCommGroup G] [Field F] [Field IVK] [Module F G]
+    (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → F) (Ggen : G)
     (H : Oracles F AK NK SK QK) :
-    KeyBindingInterface (KeyBinding.Witness G F AK NK SK QK) G AK NK where
+    KeyBindingInterface (KeyBinding.Witness G F IVK AK NK SK QK) G IVK NK where
   ivk w := w.ivk
   nk w := w.nk
   akP w := w.akP
