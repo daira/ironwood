@@ -23,6 +23,7 @@ import Zcash.Snark.Soundness.GrandProductBridge
 import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.PermutationRows
 import Zcash.Snark.Soundness.ConstraintRelations
+import Zcash.Snark.Soundness.ChallengePricing
 
 /-!
 # Trust boundary, build-checked
@@ -600,6 +601,16 @@ assert_axioms foldPoly_sub
 assert_axioms tuple_eq_of_foldPoly_eval_eq
 assert_axioms compress_eval_eq_foldPoly
 assert_axioms deployed_lookup_tuple_of_identity
+-- Every new challenge surface priced the way `hgood` is: a uniform-challenge measure bound per
+-- root-set event — the fold split's `y`, the bridge's `β` and `γ`, the vanishing-factor escapes,
+-- and the decompression's pairwise `θ`. Sequential conditioning across the squeezes is the same
+-- coupling hook `hgood` carries, documented with the `hfold`/`hgood` surfaces.
+assert_axioms uniformChallenge_szBadSet_iUnion_le
+assert_axioms goodY_failure_measure_le
+assert_axioms perm_gamma_failure_measure_le
+assert_axioms perm_beta_failure_measure_le
+assert_axioms escape_measure_le
+assert_axioms theta_failure_measure_le
 -- The last links: the point check lifted to the polynomial identity, the permutation taken to be the
 -- one keygen builds from the circuit's copy constraints, the cells of every chunk covered at once,
 -- and circuit satisfaction defined by the whole constraint list rather than the gates alone.
