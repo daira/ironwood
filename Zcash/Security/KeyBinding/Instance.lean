@@ -44,8 +44,7 @@ theorem toInterface_break_measure_le {ι : Type*}
     [AddCommGroup G] [Field F] [Field IVK] [Module F G] [NoZeroSMulDivisors F G]
     [Fintype QK] [Fintype SK] [Fintype AK] [Fintype NK] [Fintype F] [Nonempty NK]
     [DecidableEq QK] [DecidableEq SK] [DecidableEq AK] [DecidableEq NK] [DecidableEq F]
-    (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → F) (Ggen : G)
-    (hExt : ∀ P R : G, Extract.toIVK P = Extract.toIVK R ↔ P =± R) (hS : S ≠ 0) (p : PMF ι)
+    (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → F) (Ggen : G) (hS : S ≠ 0) (p : PMF ι)
     {A : ι → OracleComp (FinalQuery QK SK AK NK F) F
       (KeyBinding.Witness G F IVK AK NK SK QK × KeyBinding.Witness G F IVK AK NK SK QK)}
     {n : ℕ} (hQ : ∀ i, (A i).QueryBound n) :
@@ -62,7 +61,7 @@ theorem toInterface_break_measure_le {ι : Type*}
                 fun rivk_ext ak nk => x.2.2.2 (.int rivk_ext ak nk)⟩).Break
             ((A x.1).run x.2.2.2).1 ((A x.1).run x.2.2.2).2}
       ≤ ((n + 4) * (n + 3) : ℕ) / Fintype.card F :=
-  KeyBinding.break_measure_le_product Extract S hfn Ggen hExt hS p hQ
+  KeyBinding.break_measure_le_product Extract S hfn Ggen hS p hQ
 
 
 end Zcash.Security

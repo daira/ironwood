@@ -566,15 +566,15 @@ omit [Fintype QK] [Fintype SK] [Fintype AK] [Fintype NK] [Fintype F] in
 derivation queries: the `rivk_ext`-derivation pair in the residual case, the final-query pair
 otherwise. Stated over any `c` equal to the computed collision (`hc`), so that a consumer's
 `set c := CollisionUpToSign.ofBreak ... with hc` supplies `hc` directly. -/
-theorem ofBreak_queries {Extract : Extractor G IVK AK} {S : G} {hfn : AK → NK → F} {Ggen : G}
-    {hExt : ∀ P R : G, Extract.toIVK P = Extract.toIVK R ↔ P =± R} {hS : S ≠ 0}
+theorem ofBreak_queries {Extract : Extractor G IVK AK} {S : G} {hfn : AK → NK → F}
+    {Ggen : G} {hS : S ≠ 0}
     {H : Oracles F AK NK SK QK}
     {w₁ w₂ : Witness G F IVK AK NK SK QK}
     {hbrk : Break Extract S hfn Ggen H w₁ w₂}
     {c : RandomOracle.CollisionUpToSign
       (shiftedFinalOracle Extract Ggen hfn H
         (QK := QK) (SK := SK))}
-    (hc : c = CollisionUpToSign.ofBreak Extract S hfn Ggen hExt hS H hbrk) :
+    (hc : c = CollisionUpToSign.ofBreak Extract S hfn Ggen hS H hbrk) :
     (c.q₁ = extQueryOf Extract w₁ ∧ c.q₂ = extQueryOf Extract w₂) ∨
       (c.q₁ = finalQueryOf Extract w₁ ∧ c.q₂ = finalQueryOf Extract w₂) := by
   subst hc
@@ -588,8 +588,8 @@ table. An adversary —here, any pair of witness choices depending on the whole 
 witnesses' derivation queries lie in a set `Qs` of at most `q` queries *fixed in advance*,
 produces a key-binding `Break` with probability at most `q·(q−1)/|F|`. This is ZIP 2005's
 `ε_kb` at `|F| = r`. -/
-theorem break_measure_le (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → F) (Ggen : G)
-    (hExt : ∀ P R : G, Extract.toIVK P = Extract.toIVK R ↔ P =± R) (hS : S ≠ 0)
+theorem break_measure_le (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → F)
+    (Ggen : G) (hS : S ≠ 0)
     (Hask : SK → F) (Hnk : SK → NK)
     (w₁ w₂ : (FinalQuery QK SK AK NK F → F) → Witness G F IVK AK NK SK QK)
     (Qs : Finset (FinalQuery QK SK AK NK F)) {q : ℕ} (hq : Qs.card ≤ q)
@@ -605,7 +605,7 @@ theorem break_measure_le (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK
     (finset_shifted_collision_measure_le (shiftOf Extract Ggen hfn Hask Hnk) Qs hq)
   intro O hO
   obtain ⟨hf₁, hf₂, he₁, he₂⟩ := hqueries O
-  set c := CollisionUpToSign.ofBreak Extract S hfn Ggen hExt hS _ hO with hc
+  set c := CollisionUpToSign.ofBreak Extract S hfn Ggen hS _ hO with hc
   have hq12 := ofBreak_queries hc
   have hpm : shiftOf Extract Ggen hfn Hask Hnk c.q₁ + O c.q₁
       =± shiftOf Extract Ggen hfn Hask Hnk c.q₂ + O c.q₂ := by
@@ -628,8 +628,8 @@ def derivQueries (Extract : Extractor G IVK AK)
 /-- **Adaptive key-binding bound (ZIP 2005 accounting).** An `n`-query machine that queries its
 output witnesses' derivation inputs produces a key-binding `Break` with probability at most
 `n·(n−1)/|F|` — ZIP 2005's `ε_kb` at `|F| = r`, with the adversary's queries chosen adaptively. -/
-theorem break_measure_le_adaptive (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → F) (Ggen : G)
-    (hExt : ∀ P R : G, Extract.toIVK P = Extract.toIVK R ↔ P =± R) (hS : S ≠ 0)
+theorem break_measure_le_adaptive (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → F)
+    (Ggen : G) (hS : S ≠ 0)
     (Hask : SK → F) (Hnk : SK → NK)
     {A : OracleComp (FinalQuery QK SK AK NK F) F (Witness G F IVK AK NK SK QK × Witness G F IVK AK NK SK QK)}
     {n : ℕ} (hQ : A.QueryBound n)
@@ -644,7 +644,7 @@ theorem break_measure_le_adaptive (Extract : Extractor G IVK AK) (S : G) (hfn : 
   refine le_trans (MeasureTheory.measure_mono ?_)
     (queries_pair_collision_measure_le (shiftOf Extract Ggen hfn Hask Hnk) hQ)
   intro O hO
-  set c := CollisionUpToSign.ofBreak Extract S hfn Ggen hExt hS _ hO with hc
+  set c := CollisionUpToSign.ofBreak Extract S hfn Ggen hS _ hO with hc
   have hq12 := ofBreak_queries hc
   have hpm : shiftOf Extract Ggen hfn Hask Hnk c.q₁ + O c.q₁
       =± shiftOf Extract Ggen hfn Hask Hnk c.q₂ + O c.q₂ := by
@@ -662,8 +662,8 @@ theorem break_measure_le_adaptive (Extract : Extractor G IVK AK) (S : G) (hfn : 
 key-binding `Break` with probability at most `(n+4)·(n+3)/|F|`: complete the machine with its
 output witnesses' four derivation queries (`OracleComp.completing`) and apply the adaptive
 bound at budget `n + 4`. -/
-theorem break_measure_le_of_queryBound (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → F) (Ggen : G)
-    (hExt : ∀ P R : G, Extract.toIVK P = Extract.toIVK R ↔ P =± R) (hS : S ≠ 0)
+theorem break_measure_le_of_queryBound (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → F)
+    (Ggen : G) (hS : S ≠ 0)
     (Hask : SK → F) (Hnk : SK → NK)
     {A : OracleComp (FinalQuery QK SK AK NK F) F (Witness G F IVK AK NK SK QK × Witness G F IVK AK NK SK QK)}
     {n : ℕ} (hQ : A.QueryBound n) :
@@ -680,7 +680,7 @@ theorem break_measure_le_of_queryBound (Extract : Extractor G IVK AK) (S : G) (h
     rw [OracleComp.run_completing, OracleComp.completing, OracleComp.queries_bind,
       OracleComp.queries_queryList]
     exact List.mem_append.2 (Or.inr (List.mem_ofFn.2 ⟨i, rfl⟩))
-  have hbound := break_measure_le_adaptive Extract S hfn Ggen hExt hS Hask Hnk
+  have hbound := break_measure_le_adaptive Extract S hfn Ggen hS Hask Hnk
     (OracleComp.queryBound_completing (derivQueries Extract) hQ) hqueries
   have h43 : n + 4 - 1 = n + 3 := by omega
   simpa [OracleComp.run_completing, h43] using hbound
@@ -692,7 +692,7 @@ tables; this lifts it to the mixture. The index `ι` bundles everything the poin
 fixes — private coins and both outer tables, under any joint distribution `p` — and the
 bound is uniform in the slice, so averaging preserves it. -/
 theorem break_measure_le_mixture {ι : Type*} (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → F)
-    (Ggen : G) (hExt : ∀ P R : G, Extract.toIVK P = Extract.toIVK R ↔ P =± R) (hS : S ≠ 0)
+    (Ggen : G) (hS : S ≠ 0)
     (p : PMF ι) (Hask : ι → SK → F) (Hnk : ι → SK → NK)
     {A : ι → OracleComp (FinalQuery QK SK AK NK F) F (Witness G F IVK AK NK SK QK × Witness G F IVK AK NK SK QK)}
     {n : ℕ} (hQ : ∀ i, (A i).QueryBound n) :
@@ -706,7 +706,7 @@ theorem break_measure_le_mixture {ι : Type*} (Extract : Extractor G IVK AK) (S 
       ≤ ((n + 4) * (n + 3) : ℕ) / Fintype.card F := by
   refine toOuterMeasure_bind_le _ _ _ fun i => ?_
   rw [PMF.toOuterMeasure_map_apply]
-  exact break_measure_le_of_queryBound Extract S hfn Ggen hExt hS (Hask i) (Hnk i) (hQ i)
+  exact break_measure_le_of_queryBound Extract S hfn Ggen hS (Hask i) (Hnk i) (hQ i)
 
 
 /-- **Adaptive key-binding bound over five independent oracle tables** — ZIP 2005's
@@ -716,7 +716,7 @@ drawn independently, the tables uniformly. The machine runs on the combined tabl
 bound is the hypothesis-free `(n+4)·(n+3)/|F|`. -/
 theorem break_measure_le_product {ι : Type*} [Nonempty NK]
     (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → F)
-    (Ggen : G) (hExt : ∀ P R : G, Extract.toIVK P = Extract.toIVK R ↔ P =± R) (hS : S ≠ 0)
+    (Ggen : G) (hS : S ≠ 0)
     (p : PMF ι)
     {A : ι → OracleComp (FinalQuery QK SK AK NK F) F
       (Witness G F IVK AK NK SK QK × Witness G F IVK AK NK SK QK)}
@@ -746,7 +746,7 @@ theorem break_measure_le_product {ι : Type*} [Nonempty NK]
     simp only [PMF.map_bind, PMF.map_comp]
     rfl
   rw [htr, PMF.toOuterMeasure_map_apply]
-  exact break_measure_le_of_queryBound Extract S hfn Ggen hExt hS Hask Hnk (hQ i)
+  exact break_measure_le_of_queryBound Extract S hfn Ggen hS Hask Hnk (hQ i)
 
 end Capstone
 
