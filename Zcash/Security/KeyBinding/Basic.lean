@@ -21,7 +21,8 @@ The route, each step proven here:
    (Balance's and Spend Authorization's imports).
 
 The probabilistic side — producing the computed collision is hard — is the birthday bound
-`ε_kb ≤ q(q-1)/r` (`Birthday.lean`). `PRF^nf`-pinning, Spendability's import, is not here yet.
+`ε_kb ≤ q(q-1)/r` (`Birthday.lean`), ZIP 2005's `ε_kb` as sharpened in zcash/zips#1338.
+`PRF^nf`-pinning, Spendability's import, is not here yet.
 
 Abstract setting: a prime-order group `G` as an `RIVK`-vector space. The scalar types are
 `RIVK` (rivk values and the rivk-derivation oracle outputs) and `ASK` (`H^ask` outputs, acting
@@ -95,7 +96,9 @@ projection side. -/
 structure Extractor (G IVK AK : Type*) [Neg G] where
   toIVK : G → IVK
   toAK : G → AK
-  /-- `toIVK` identifies exactly the ±-pairs (the x-coordinate property). -/
+  /-- `toIVK` identifies exactly the ±-pairs (the x-coordinate property). At the identity
+  point the concrete x-coordinate instantiation needs "no Pallas point has x = 0"
+  (x = 0 forces y² = 5, a non-square). -/
   toIVK_pm : ∀ P Q : G, toIVK P = toIVK Q ↔ P =± Q
 
 /-- `toIVK` is at most 2-to-1 (`toIVK_pm`), so the `IVK` domain is at least half the group:
@@ -155,7 +158,8 @@ structure KBOpening (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → 
     (w : Witness G IVK AK NK RIVK QK SK) : Prop where
   /-- `ivk` opens as `Commitivk` at `(rivk, ak, nk)`. -/
   commit : w.ivk = Commitivk Extract S hfn w.rivk (Extract.toAK w.akP) w.nk
-  /-- `ivk ≠ 0`. -/
+  /-- `ivk ≠ 0` (ZIP 2005 requires `ivk ∉ {0, ⊥}`). No proof in this development consumes
+  it; its discharge belongs to the statement instantiation. -/
   nonzero : w.ivk ≠ 0
 
 /-- `OpeningBreak` — a `Commitivk`-opening collision (produced by the games layer): two valid

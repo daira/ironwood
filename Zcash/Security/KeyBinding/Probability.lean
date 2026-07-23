@@ -34,7 +34,7 @@ Results (static model — the query set is fixed before the table is sampled):
   query set of size at most `q`: probability at most `q·(q−1)/|F|`.
 * `break_measure_le` — the key-binding capstone: an adversary whose witnesses' derivation
   queries land in the static set produces a `Break` with probability at most `q·(q−1)/|RIVK|`
-  (ZIP 2005's `ε_kb`; `|RIVK| = r`).
+  (ZIP 2005's `ε_kb` as sharpened in zcash/zips#1338; `|RIVK| = r`).
 
 Results (adaptive — a bounded-query machine choosing queries after seeing earlier answers, as
 an `OracleComp` from the Fiat–Shamir layer):
@@ -587,8 +587,8 @@ theorem ofBreak_queries {Extract : Extractor G IVK AK} {S : G} {hfn : AK → NK 
 /-- **Non-adaptive key-binding birthday bound.** Sample the combined final oracle as a uniform
 table. An adversary —here, any pair of witness choices depending on the whole table— whose
 witnesses' derivation queries lie in a set `Qs` of at most `q` queries *fixed in advance*,
-produces a key-binding `Break` with probability at most `q·(q−1)/|F|`. This is ZIP 2005's
-`ε_kb` at `|F| = r`. -/
+produces a key-binding `Break` with probability at most `q·(q−1)/|RIVK|`. This is ZIP 2005's
+`ε_kb` as sharpened in zcash/zips#1338, at `|RIVK| = r`. -/
 theorem break_measure_le (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK)
     (Ggen : G) (hS : S ≠ 0)
     (Hask : SK → ASK) (Hnk : SK → NK)
@@ -628,7 +628,8 @@ def derivQueries (Extract : Extractor G IVK AK)
 
 /-- **Adaptive key-binding bound (ZIP 2005 accounting).** An `n`-query machine that queries its
 output witnesses' derivation inputs produces a key-binding `Break` with probability at most
-`n·(n−1)/|F|` — ZIP 2005's `ε_kb` at `|F| = r`, with the adversary's queries chosen adaptively. -/
+`n·(n−1)/|RIVK|` — ZIP 2005's `ε_kb` (as sharpened in zcash/zips#1338) at `|RIVK| = r`, with
+the adversary's queries chosen adaptively. -/
 theorem break_measure_le_adaptive (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK)
     (Ggen : G) (hS : S ≠ 0)
     (Hask : SK → ASK) (Hnk : SK → NK)
@@ -716,7 +717,7 @@ the five oracle tables — `H^ask`, `H^nk`, and the three final `rivk`-derivatio
 drawn independently, the tables uniformly. The machine receives the sampled `H^ask`/`H^nk`
 tables — dominating any query strategy against those oracles, with the query budget counting
 only rivk-oracle queries — and runs on the combined table; the bound is the hypothesis-free
-`(n+4)·(n+3)/|F|`. -/
+`(n+4)·(n+3)/|RIVK|`. -/
 theorem break_measure_le_product {ι : Type*} [Fintype ASK] [Nonempty NK] [Nonempty ASK]
     (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK)
     (Ggen : G) (hS : S ≠ 0)
