@@ -167,6 +167,21 @@ theorem lookup_product_eq_or_factor_eq_zero
 noncomputable def lookupColumnRows (omega : Fp) (p : Polynomial Fp) (m : ℕ) : Fin m → Fp :=
   fun i => p.eval (omega ^ (i : ℕ))
 
+/-- The five deployed lookup constraints for coherent base polynomials, each known to vanish on the
+size-`n` evaluation domain.  This is the compact interface between family-level
+`ConstraintSatisfaction` and the row-semantic endpoint below. -/
+structure LookupConstraintsDvd (n : ℕ) (omega beta gamma : Fp)
+    (z a s input table l0P lLastP lBlindP : Polynomial Fp) : Prop where
+  start : (X ^ n - 1 : Polynomial Fp) ∣ l0P * (1 - z)
+  finish : (X ^ n - 1 : Polynomial Fp) ∣ lLastP * (z ^ 2 - z)
+  product : (X ^ n - 1 : Polynomial Fp) ∣
+    (z.comp (C omega * X) * (a + C beta) * (s + C gamma)
+      - z * (input + C beta) * (table + C gamma))
+      * (1 - (lLastP + lBlindP))
+  runStart : (X ^ n - 1 : Polynomial Fp) ∣ l0P * (a - s)
+  runStep : (X ^ n - 1 : Polynomial Fp) ∣
+    (a - s) * (a - a.comp (C omega⁻¹ * X)) * (1 - (lLastP + lBlindP))
+
 open Finset in
 /-- **The deployed lookup argument.** The verifier's five lookup constraints imply that every
 compressed input row occurs in the compressed table, unless the running product ends on its
@@ -177,16 +192,8 @@ the permuted-input/input and permuted-table/table multiset identities. -/
 theorem deployed_lookup_subset
     (omega beta gamma : Fp) (z a s input table l0P lLastP lBlindP : Polynomial Fp)
     {n u : ℕ}
+    (hdvd : LookupConstraintsDvd n omega beta gamma z a s input table l0P lLastP lBlindP)
     (homega : omega ≠ 0)
-    (hproduct : (X ^ n - 1 : Polynomial Fp) ∣
-      (z.comp (C omega * X) * (a + C beta) * (s + C gamma)
-        - z * (input + C beta) * (table + C gamma))
-        * (1 - (lLastP + lBlindP)))
-    (hstart : (X ^ n - 1 : Polynomial Fp) ∣ l0P * (1 - z))
-    (hend : (X ^ n - 1 : Polynomial Fp) ∣ lLastP * (z ^ 2 - z))
-    (hrunStart : (X ^ n - 1 : Polynomial Fp) ∣ l0P * (a - s))
-    (hrunStep : (X ^ n - 1 : Polynomial Fp) ∣
-      (a - s) * (a - a.comp (C omega⁻¹ * X)) * (1 - (lLastP + lBlindP)))
     (hrow : ∀ i : ℕ, (omega ^ i) ^ n = 1)
     (hactive : ∀ i < u + 1,
       1 - (lLastP.eval (omega ^ i) + lBlindP.eval (omega ^ i)) ≠ 0)
@@ -209,7 +216,8 @@ theorem deployed_lookup_subset
     ∨ ∃ i ∈ range (u + 1),
       (input.eval (omega ^ i) + beta) * (table.eval (omega ^ i) + gamma) = 0 := by
   rcases lookup_product_eq_or_factor_eq_zero omega beta gamma z a s input table
-      l0P lLastP lBlindP hproduct hstart hend hrow hactive hl0 hlast with hprod | hzero
+      l0P lLastP lBlindP hdvd.product hdvd.start hdvd.finish hrow hactive hl0 hlast with
+    hprod | hzero
   · left
     have hprod' :
         (∏ i, (beta + lookupColumnRows omega a (u + 1) i))
@@ -231,7 +239,7 @@ theorem deployed_lookup_subset
         simpa [Finset.prod_eq_multiset_prod, Multiset.map_map, Function.comp_def] using hprod'))
     exact fun i => lookup_subset_of_components hain hstbl
       (lookup_run_structure_of_dvd omega a s l0P lLastP lBlindP homega
-        hrunStart hrunStep hrow hactive hl0) i
+        hdvd.runStart hdvd.runStep hrow hactive hl0) i
   · exact Or.inr hzero
 
 end Zcash.Snark

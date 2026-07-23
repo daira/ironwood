@@ -182,10 +182,15 @@ This integration branch now packages the deployed flat list as
 `ConstraintSatisfaction` record, and exposes named membership/divisibility facts for
 each selected lookup's five constraints. `LookupRows` reads those five polynomial
 constraints over the evaluation domain and closes the lookup endpoint, including the
-explicit zero-factor branch when the running product ends at zero. The remaining
-generic plumbing must identify each selected proof-string lookup with those rotated
-polynomials and similarly route the selected permutation-set/chunk shapes from
-`ConstraintSatisfaction` into `deployed_perm_copy_constraints_all_chunks`.
+explicit zero-factor branch when the running product ends at zero.
+`LookupInstantiation` now constructs those coherent lookup entries from an arbitrary
+VK and a `CommitmentId`-keyed polynomial resolver, proves that openings for the actual
+assembled lookup queries give the verifier's five claimed evaluations, and specializes
+`ConstraintSatisfaction` to the compact five-constraint record consumed by that
+endpoint. The remaining multiopen plumbing must construct the resolver from the
+decoded member slots and discharge its uniform assembled-query opening premise; the
+analogous permutation-set/chunk routing into
+`deployed_perm_copy_constraints_all_chunks` also remains.
 
 After that, translate the endpoints to the exact relations that Clean's
 `Halo2.Constraints` requires: declared `constrainEqual`/`constrainInstance` copies,

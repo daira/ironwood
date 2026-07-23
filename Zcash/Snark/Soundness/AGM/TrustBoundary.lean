@@ -8,6 +8,7 @@ import Zcash.Snark.Soundness.VestaBudget
 import Zcash.Snark.Soundness.FoldSplit
 import Zcash.Snark.Soundness.ConstraintSatisfaction
 import Zcash.Snark.Soundness.LookupRows
+import Zcash.Snark.Soundness.LookupInstantiation
 import Zcash.Snark.Soundness.GrandProductBridge
 import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.PermutationRows
@@ -433,6 +434,15 @@ assert_no_sorry lookup_run_step_of_dvd
 assert_no_sorry lookup_run_structure_of_dvd
 assert_no_sorry lookup_product_eq_or_factor_eq_zero
 assert_no_sorry deployed_lookup_subset
+assert_no_sorry mem_assembleQueries_of_mem_subProofLookupQueries
+assert_no_sorry constraintModelOfResolver_lookups
+assert_no_sorry lookupEntry_mem_lookupEntriesOfResolver
+assert_no_sorry lookupEntry_mem_constraintModelOfResolver
+assert_no_sorry eval_lookupEntriesOfResolver
+assert_no_sorry eval_lookupEntriesOfResolver_of_assembleQueries
+assert_no_sorry eval_constraintModelOfResolver_lookups
+assert_no_sorry eval_constraintModelOfResolver_lookups_of_assembleQueries
+assert_no_sorry ConstraintSatisfaction.lookupConstraintsDvdOfResolver
 -- The deployed row reading: the step rule's folds are running products, the boundary rules pin the
 -- product at the first and last rows, and the cell names separate. These are theorems about
 -- `permChunkExpression` itself, so the chain above starts at the verifier's own constraint list.

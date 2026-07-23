@@ -42,6 +42,7 @@ import Zcash.Snark.Soundness.Extraction
 import Zcash.Snark.Soundness.Constraints
 import Zcash.Snark.Soundness.ConstraintSatisfaction
 import Zcash.Snark.Soundness.LookupRows
+import Zcash.Snark.Soundness.LookupInstantiation
 import Zcash.Snark.Soundness.FoldSplit
 import Zcash.Snark.Soundness.CommitFold
 import Zcash.Snark.Soundness.Consistency
