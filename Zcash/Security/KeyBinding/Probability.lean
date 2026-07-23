@@ -568,15 +568,13 @@ otherwise. Stated over any `c` equal to the computed collision (`hc`), so that a
 `set c := CollisionUpToSign.ofBreak ... with hc` supplies `hc` directly. -/
 theorem ofBreak_queries {Extract : G → AK} {S : G} {hfn : AK → NK → F} {Ggen : G}
     {hExt : ∀ P R : G, Extract P = Extract R ↔ P =± R} {hS : S ≠ 0}
-    {Hask : SK → F} {Hnk : SK → NK} {Hrivk_legacy : SK → F}
-    {Hrivk_ext : QK → AK → NK → F} {Hrivk_int : F → AK → NK → F}
+    {H : Oracles F AK NK SK QK}
     {w₁ w₂ : Witness G F AK NK SK QK}
-    {hbrk : Break Extract S hfn Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int w₁ w₂}
+    {hbrk : Break Extract S hfn Ggen H w₁ w₂}
     {c : RandomOracle.CollisionUpToSign
-      (shiftedFinalOracle Extract Ggen hfn Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int
+      (shiftedFinalOracle Extract Ggen hfn H
         (QK := QK) (SK := SK))}
-    (hc : c = CollisionUpToSign.ofBreak Extract S hfn Ggen hExt hS Hask Hnk Hrivk_legacy
-      Hrivk_ext Hrivk_int hbrk) :
+    (hc : c = CollisionUpToSign.ofBreak Extract S hfn Ggen hExt hS H hbrk) :
     (c.q₁ = extQueryOf Extract w₁ ∧ c.q₂ = extQueryOf Extract w₂) ∨
       (c.q₁ = finalQueryOf Extract w₁ ∧ c.q₂ = finalQueryOf Extract w₂) := by
   subst hc
@@ -599,15 +597,15 @@ theorem break_measure_le (Extract : G → AK) (S : G) (hfn : AK → NK → F) (G
       extQueryOf Extract (w₁ O) ∈ Qs ∧ extQueryOf Extract (w₂ O) ∈ Qs) :
     (PMF.uniformOfFintype (FinalQuery QK SK AK NK F → F)).toOuterMeasure
         {O : FinalQuery QK SK AK NK F → F |
-          Break Extract S hfn Ggen Hask Hnk
-            (fun sk => O (.legacy sk)) (fun qk ak nk => O (.ext qk ak nk))
-            (fun rivk_ext ak nk => O (.int rivk_ext ak nk)) (w₁ O) (w₂ O)}
+          Break Extract S hfn Ggen
+            ⟨Hask, Hnk, fun sk => O (.legacy sk), fun qk ak nk => O (.ext qk ak nk),
+              fun rivk_ext ak nk => O (.int rivk_ext ak nk)⟩ (w₁ O) (w₂ O)}
       ≤ (q * (q - 1) : ℕ) / Fintype.card F := by
   refine le_trans (MeasureTheory.measure_mono ?_)
     (finset_shifted_collision_measure_le (shiftOf Extract Ggen hfn Hask Hnk) Qs hq)
   intro O hO
   obtain ⟨hf₁, hf₂, he₁, he₂⟩ := hqueries O
-  set c := CollisionUpToSign.ofBreak Extract S hfn Ggen hExt hS Hask Hnk _ _ _ hO with hc
+  set c := CollisionUpToSign.ofBreak Extract S hfn Ggen hExt hS _ hO with hc
   have hq12 := ofBreak_queries hc
   have hpm : shiftOf Extract Ggen hfn Hask Hnk c.q₁ + O c.q₁
       =± shiftOf Extract Ggen hfn Hask Hnk c.q₂ + O c.q₂ := by
@@ -639,14 +637,14 @@ theorem break_measure_le_adaptive (Extract : G → AK) (S : G) (hfn : AK → NK 
       derivQueries Extract (A.run O) i ∈ A.queries O) :
     (PMF.uniformOfFintype (FinalQuery QK SK AK NK F → F)).toOuterMeasure
         {O : FinalQuery QK SK AK NK F → F |
-          Break Extract S hfn Ggen Hask Hnk
-            (fun sk => O (.legacy sk)) (fun qk ak nk => O (.ext qk ak nk))
-            (fun rivk_ext ak nk => O (.int rivk_ext ak nk)) (A.run O).1 (A.run O).2}
+          Break Extract S hfn Ggen
+            ⟨Hask, Hnk, fun sk => O (.legacy sk), fun qk ak nk => O (.ext qk ak nk),
+              fun rivk_ext ak nk => O (.int rivk_ext ak nk)⟩ (A.run O).1 (A.run O).2}
       ≤ (n * (n - 1) : ℕ) / Fintype.card F := by
   refine le_trans (MeasureTheory.measure_mono ?_)
     (queries_pair_collision_measure_le (shiftOf Extract Ggen hfn Hask Hnk) hQ)
   intro O hO
-  set c := CollisionUpToSign.ofBreak Extract S hfn Ggen hExt hS Hask Hnk _ _ _ hO with hc
+  set c := CollisionUpToSign.ofBreak Extract S hfn Ggen hExt hS _ hO with hc
   have hq12 := ofBreak_queries hc
   have hpm : shiftOf Extract Ggen hfn Hask Hnk c.q₁ + O c.q₁
       =± shiftOf Extract Ggen hfn Hask Hnk c.q₂ + O c.q₂ := by
@@ -671,9 +669,9 @@ theorem break_measure_le_of_queryBound (Extract : G → AK) (S : G) (hfn : AK �
     {n : ℕ} (hQ : A.QueryBound n) :
     (PMF.uniformOfFintype (FinalQuery QK SK AK NK F → F)).toOuterMeasure
         {O : FinalQuery QK SK AK NK F → F |
-          Break Extract S hfn Ggen Hask Hnk
-            (fun sk => O (.legacy sk)) (fun qk ak nk => O (.ext qk ak nk))
-            (fun rivk_ext ak nk => O (.int rivk_ext ak nk)) (A.run O).1 (A.run O).2}
+          Break Extract S hfn Ggen
+            ⟨Hask, Hnk, fun sk => O (.legacy sk), fun qk ak nk => O (.ext qk ak nk),
+              fun rivk_ext ak nk => O (.int rivk_ext ak nk)⟩ (A.run O).1 (A.run O).2}
       ≤ ((n + 4) * (n + 3) : ℕ) / Fintype.card F := by
   have hqueries : ∀ (O : FinalQuery QK SK AK NK F → F) (i : Fin 4),
       derivQueries Extract ((A.completing (derivQueries Extract)).run O) i
@@ -701,9 +699,9 @@ theorem break_measure_le_mixture {ι : Type*} (Extract : G → AK) (S : G) (hfn 
     ((p.bind fun i => (PMF.uniformOfFintype (FinalQuery QK SK AK NK F → F)).map
         (Prod.mk i))).toOuterMeasure
         {x : ι × (FinalQuery QK SK AK NK F → F) |
-          Break Extract S hfn Ggen (Hask x.1) (Hnk x.1)
-            (fun sk => x.2 (.legacy sk)) (fun qk ak nk => x.2 (.ext qk ak nk))
-            (fun rivk_ext ak nk => x.2 (.int rivk_ext ak nk))
+          Break Extract S hfn Ggen
+            ⟨(Hask x.1), (Hnk x.1), fun sk => x.2 (.legacy sk), fun qk ak nk => x.2 (.ext qk ak nk),
+              fun rivk_ext ak nk => x.2 (.int rivk_ext ak nk)⟩
             ((A x.1).run x.2).1 ((A x.1).run x.2).2}
       ≤ ((n + 4) * (n + 3) : ℕ) / Fintype.card F := by
   refine toOuterMeasure_bind_le _ _ _ fun i => ?_
@@ -730,9 +728,9 @@ theorem break_measure_le_product {ι : Type*} [Nonempty NK]
               (PMF.uniformOfFintype (F → AK → NK → F)).map fun Hint =>
                 (i, Hask, Hnk, FinalQuery.eval Hleg Hext Hint))).toOuterMeasure
         {x : ι × (SK → F) × (SK → NK) × (FinalQuery QK SK AK NK F → F) |
-          Break Extract S hfn Ggen x.2.1 x.2.2.1
-            (fun sk => x.2.2.2 (.legacy sk)) (fun qk ak nk => x.2.2.2 (.ext qk ak nk))
-            (fun rivk_ext ak nk => x.2.2.2 (.int rivk_ext ak nk))
+          Break Extract S hfn Ggen
+            ⟨x.2.1, x.2.2.1, fun sk => x.2.2.2 (.legacy sk), fun qk ak nk => x.2.2.2 (.ext qk ak nk),
+              fun rivk_ext ak nk => x.2.2.2 (.int rivk_ext ak nk)⟩
             ((A x.1).run x.2.2.2).1 ((A x.1).run x.2.2.2).2}
       ≤ ((n + 4) * (n + 3) : ℕ) / Fintype.card F := by
   refine toOuterMeasure_bind_le _ _ _ fun i => ?_

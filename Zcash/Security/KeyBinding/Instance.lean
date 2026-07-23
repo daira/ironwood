@@ -21,17 +21,15 @@ variable {G F AK NK SK QK : Type*}
 def KeyBinding.toInterface
     [AddCommGroup G] [Field F] [Field AK] [Module F G]
     (Extract : G → AK) (S : G) (hfn : AK → NK → F) (Ggen : G)
-    (Hask : SK → F) (Hnk : SK → NK) (Hrivk_legacy : SK → F)
-    (Hrivk_ext : QK → AK → NK → F) (Hrivk_int : F → AK → NK → F) :
+    (H : Oracles F AK NK SK QK) :
     KeyBindingInterface (KeyBinding.Witness G F AK NK SK QK) G AK NK where
   ivk w := w.ivk
   nk w := w.nk
   akP w := w.akP
-  KB := KeyBinding.KB Extract S hfn Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int
-  Break := KeyBinding.Break Extract S hfn Ggen Hask Hnk Hrivk_legacy Hrivk_ext Hrivk_int
+  KB := KeyBinding.KB Extract S hfn Ggen H
+  Break := KeyBinding.Break Extract S hfn Ggen H
   break_of_nk_ne {_w₁ _w₂} h₁ h₂ hivk hne := by
     by_contra hnb
-    exact hne (KeyBinding.nk_pinned Extract S hfn Ggen Hask Hnk Hrivk_legacy
-      Hrivk_ext Hrivk_int h₁ h₂ hivk hnb)
+    exact hne (KeyBinding.nk_pinned Extract S hfn Ggen H h₁ h₂ hivk hnb)
 
 end Zcash.Security
