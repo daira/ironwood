@@ -14,6 +14,7 @@ import Zcash.Snark.Soundness.GrandProductBridge
 import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.PermutationRows
 import Zcash.Snark.Soundness.PermutationInstantiation
+import Zcash.Snark.Soundness.PermutationSemantics
 import Zcash.Snark.Soundness.Composition.Decomposition
 import Zcash.Snark.Soundness.Composition.Residual
 import Zcash.Snark.Soundness.Composition.Prefixes
@@ -474,6 +475,9 @@ assert_no_sorry eval_permutationCommonPolynomialOfResolver
 assert_no_sorry eval_permutationChunkPairsOfResolver
 assert_no_sorry eval_permutationChunksOfResolver
 assert_no_sorry ConstraintSatisfaction.resolverPermutationConstraints
+assert_no_sorry flattenPermutationChunkCell_injective
+assert_no_sorry chunkRowName_injective_of_coset
+assert_no_sorry ConstraintSatisfaction.resolverPermutationCopyConstraints
 assert_no_sorry permutationLastEvalsWellFormed_of_assemble?_eq_some
 assert_no_sorry eval_permutationDataOfDecodedResolver_or_relation
 assert_no_sorry hgood_failure_priced

@@ -213,7 +213,16 @@ through the corresponding VK query-layout entry, maps its σ-side through
 the nontrivial-relation branch. Its resolver-backed constraint model and
 `ResolverPermutationConstraints` package extract the exact step, inter-set chain,
 start, and end divisibility facts consumed by
-`deployed_perm_copy_constraints_all_chunks`.
+`deployed_perm_copy_constraints_all_chunks`. `PermutationSemantics` now completes the
+generic semantic call: `ResolverPermutationDomain` isolates the concrete VK/domain
+facts, `ResolverPermutationCycle` carries the replayed global cell permutation and
+the common-polynomial naming equation, and
+`ResolverPermutationGoodChallenges` carries the separately priced `β`/`γ`
+exclusions. Given those records,
+`ConstraintSatisfaction.resolverPermutationCopyConstraints` yields equality on every
+keygen permutation cycle (or the theorem's explicit zero-factor branch). The same
+module flattens variable-width chunks to global columns and derives chunk-name
+injectivity from the standard root-of-unity/coset hypotheses.
 
 The active item-4 sequence is:
 
@@ -227,16 +236,18 @@ The active item-4 sequence is:
 4. package the resulting gate, copy, and lookup conclusions as the full
    circuit-satisfaction interface consumed by the Clean-operation bridge.
 
-Steps 1 and 2 are complete, and the polynomial-instantiation half of step 3 is
-complete. Closing step 3 now means supplying the theorem's semantic/VK side
-conditions: the concrete chunks match the permutation-set count; every chunk
-`ColumnRef` selects an in-range, rotation-zero query-layout entry and every
-`permCommon` index is in range; `ω^m` is the verifier's last-row rotation; the replayed
-keygen σ maps each cell to the permutation-column name used by the constraint; the
-cell names are injective; and the domain/challenge conditions required by
-`deployed_perm_copy_constraints_all_chunks` hold. These facts are deliberately
-separate from polynomial routing: most are circuit/VK computations or the σ-cycle
-correctness theorem, not multiopen claims.
+Steps 1 and 2 are complete, and both generic halves of step 3 are complete: decoded
+polynomials instantiate the four permutation constraint families, and the structured
+semantic endpoint feeds them to the all-chunks copy theorem. Concrete closure now
+means constructing its records for the Action VK. In detail: the chunks must match
+the permutation-set count; every chunk `ColumnRef` must select an in-range,
+rotation-zero query-layout entry and every `permCommon` index must be in range;
+`ω^m` must be the verifier's last-row rotation; the replayed keygen σ must map each
+cell to the permutation-column name interpolated by the decoded common polynomial;
+and the remaining domain/coset facts must be discharged. The `β`/`γ` exclusions stay
+with the forking/bad-set accounting. These facts are deliberately separate from
+polynomial routing: most are circuit/VK computations or the VK-to-σ interpolation
+theorem, not multiopen claims.
 
 After that, translate the endpoints to the exact relations that Clean's
 `Halo2.Constraints` requires: declared `constrainEqual`/`constrainInstance` copies,
