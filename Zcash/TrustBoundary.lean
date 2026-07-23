@@ -22,6 +22,7 @@ import Zcash.Snark.Soundness.FoldSplit
 import Zcash.Snark.Soundness.GrandProductBridge
 import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.PermutationRows
+import Zcash.Snark.Soundness.ConstraintRelations
 
 /-!
 # Trust boundary, build-checked
@@ -595,6 +596,22 @@ assert_axioms lookup_row_step
 assert_axioms lookup_rules_dvd_of_identity
 assert_axioms deployed_lookup_subset_of_identity
 assert_axioms deployed_lookup_relation_of_identity
+-- The last links: the point check lifted to the polynomial identity, the permutation taken to be the
+-- one keygen builds from the circuit's copy constraints, the cells of every chunk covered at once,
+-- and circuit satisfaction defined by the whole constraint list rather than the gates alone.
+assert_axioms constraint_identity_of_hfold
+assert_axioms declared_equalities_of_running_product
+assert_axioms deployed_declared_equalities_of_identity
+assert_axioms flatCell_injective
+assert_axioms name_injective_flat
+assert_axioms perm_copy_constraints_of_chunks
+assert_axioms circuitSatViaConstraints_of_check
+assert_axioms orchard_verifier_sound_vesta_constraints
+-- Closing the loop: the capstone hands over an opening paired with satisfaction of the whole
+-- constraint list, and the two arguments' relations are read back out of that same predicate.
+assert_axioms snarkRelation_constraints
+assert_axioms declared_equalities_of_circuitSat
+assert_axioms lookup_relation_of_circuitSat
 assert_axioms hgood_failure_priced
 assert_axioms hgood_of_good_challenge
 -- The UNCONDITIONAL decomposition: `hExtract` removed, the residual quantified as the

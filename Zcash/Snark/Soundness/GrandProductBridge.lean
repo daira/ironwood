@@ -2,6 +2,7 @@ import Mathlib
 import Zcash.Snark.Soundness.GrandProduct
 import Zcash.Snark.Soundness.RunningProduct
 import Zcash.Snark.Soundness.Permutation
+import Zcash.Snark.Soundness.PermutationConstruction
 import Zcash.Snark.Soundness.Constraints
 
 /-!
@@ -282,5 +283,31 @@ theorem perm_copy_constraints_of_running_product {m k : ℕ} (z : ℕ → Fp)
             (fun c => (value (c.1 : ℕ) (c.2 : ℕ), sigmaName (c.1 : ℕ) (c.2 : ℕ))) := hmulti'
       _ = _ := Multiset.map_congr rfl fun c _ => by rw [hσ c]
   · exact Or.inr hzero
+
+
+open Finset in
+/-- **The circuit's declared equalities are enforced.** The same chain with the permutation taken to
+be the one the keygen builds from the circuit's copy constraints: by `build_correct` its cycles are
+exactly the classes those constraints force, so the conclusion is about the circuit's own declared
+equalities rather than about an arbitrary permutation. -/
+theorem declared_equalities_of_running_product {m k : ℕ} (z : ℕ → Fp)
+    (value nm sigmaName : ℕ → ℕ → Fp) (β γ : Fp)
+    (cs : List ((Fin m × Fin k) × (Fin m × Fin k)))
+    (hσ : ∀ c : Fin m × Fin k, sigmaName (c.1 : ℕ) (c.2 : ℕ)
+      = nm ((PermConstruction.build cs c).1 : ℕ) ((PermConstruction.build cs c).2 : ℕ))
+    (hnm : Function.Injective fun c : Fin m × Fin k => nm (c.1 : ℕ) (c.2 : ℕ))
+    (hrec : ∀ i < m, z (i + 1) * ∏ j ∈ range k, (value i j + β * sigmaName i j + γ)
+        = z i * ∏ j ∈ range k, (value i j + β * nm i j + γ))
+    (hz0 : z 0 = 1) (hzm : z m = 0 ∨ z m = 1)
+    (hgoodγ : γ ∉ szBadSet (linProdDiff
+      ((cellPairs m k value sigmaName).map (fun p => p.1 + p.2 * β))
+      ((cellPairs m k value nm).map (fun p => p.1 + p.2 * β))))
+    (hgoodβ : ∀ j, β ∉ szBadSet
+      ((pairProdDiff (cellPairs m k value sigmaName) (cellPairs m k value nm)).coeff j))
+    {x y : Fin m × Fin k} (hxy : Relation.EqvGen (fun u v => (u, v) ∈ cs) x y) :
+    value (x.1 : ℕ) (x.2 : ℕ) = value (y.1 : ℕ) (y.2 : ℕ)
+      ∨ ∃ p ∈ range m ×ˢ range k, value p.1 p.2 + β * nm p.1 p.2 + γ = 0 :=
+  perm_copy_constraints_of_running_product z value nm sigmaName β γ (PermConstruction.build cs)
+    hσ hnm hrec hz0 hzm hgoodγ hgoodβ ((PermConstruction.build_correct cs x y).mpr hxy)
 
 end Zcash.Snark

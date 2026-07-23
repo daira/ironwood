@@ -130,6 +130,106 @@ theorem name_injective_of_coset {omega : Fp} {u k : ℕ} (colName : Fin k → Fp
     exact mul_right_cancel₀ (hne j') h
   exact Prod.ext (Fin.ext hi) hj
 
+/-! ## Cells across all chunks
+
+Reading the chunks end to end makes step `t` of the flattened running product row `t % m` of chunk
+`t / m`, so cell `(t, j)` of the flattened table is row `t % m`, column `(t / m)·k + j`. That
+reindexing is injective, which carries name distinctness from one chunk to the whole table. -/
+
+/-- The flattened cell index is injective. -/
+theorem flatCell_injective {nc m k : ℕ} (hm : 0 < m) (hk : 0 < k) :
+    Function.Injective fun c : Fin (nc * m) × Fin k =>
+      (((c.1 : ℕ) % m, (c.1 : ℕ) / m * k + (c.2 : ℕ)) : ℕ × ℕ) := by
+  have key : ∀ a b c d : ℕ, b < k → d < k → a * k + b = c * k + d → a = c ∧ b = d := by
+    intro a b c d hb hd hab
+    have hac : a = c := by
+      have h1 : (b + a * k) / k = a := by
+        rw [Nat.add_mul_div_right _ _ hk, Nat.div_eq_of_lt hb, Nat.zero_add]
+      have h2 : (d + c * k) / k = c := by
+        rw [Nat.add_mul_div_right _ _ hk, Nat.div_eq_of_lt hd, Nat.zero_add]
+      rw [← h1, ← h2]
+      congr 1
+      omega
+    subst hac
+    exact ⟨rfl, by omega⟩
+  rintro ⟨t, j⟩ ⟨t', j'⟩ h
+  simp only [Prod.mk.injEq] at h
+  obtain ⟨hmod, hdiv⟩ := h
+  obtain ⟨hq, hj⟩ := key _ _ _ _ j.isLt j'.isLt hdiv
+  refine Prod.ext (Fin.ext ?_) (Fin.ext hj)
+  have hd1 := Nat.div_add_mod (t : ℕ) m
+  have hd2 := Nat.div_add_mod (t' : ℕ) m
+  rw [hq, hmod] at hd1
+  exact hd1.symm.trans hd2
+
+/-- **Name distinctness across the whole table.** With `ω` of order `m` and the `δ`-powers below the
+total column count in distinct cosets, the names `ω^{t mod m}·δ^{(t div m)·k + j}` separate every
+cell of every chunk. -/
+theorem name_injective_flat {omega delta : Fp} {nc m k : ℕ} (hm : 0 < m) (hk : 0 < k)
+    (hdelta : delta ≠ 0) (homega : omega ^ m = 1)
+    (horder : ∀ i i' : ℕ, i < m → i' < m → omega ^ i = omega ^ i' → i = i')
+    (hcoset : ∀ j j' : ℕ, j < nc * k → j' < nc * k → ∀ t : ℕ,
+      delta ^ j = omega ^ t * delta ^ j' → j = j') :
+    Function.Injective fun c : Fin (nc * m) × Fin k =>
+      omega ^ ((c.1 : ℕ) % m) * delta ^ ((c.1 : ℕ) / m * k + (c.2 : ℕ)) := by
+  have hlt : ∀ c : Fin (nc * m) × Fin k, (c.1 : ℕ) / m * k + (c.2 : ℕ) < nc * k := by
+    rintro ⟨t, j⟩
+    have hlt' : (t : ℕ) < m * nc := lt_of_lt_of_eq t.isLt (mul_comm nc m)
+    have h1 : (t : ℕ) / m < nc := Nat.div_lt_of_lt_mul hlt'
+    calc (t : ℕ) / m * k + (j : ℕ) < (t : ℕ) / m * k + k := by omega
+      _ = ((t : ℕ) / m + 1) * k := by ring
+      _ ≤ nc * k := Nat.mul_le_mul_right k h1
+  have hbase := name_injective_of_coset (omega := omega) (u := m) (k := nc * k)
+    (fun j : Fin (nc * k) => delta ^ (j : ℕ)) (fun j => pow_ne_zero _ hdelta) homega horder
+    (fun j j' t hjj => Fin.ext (hcoset j j' j.isLt j'.isLt t hjj))
+  rintro ⟨t, j⟩ ⟨t', j'⟩ h
+  simp only at h
+  have hpair : ((⟨(t : ℕ) % m, Nat.mod_lt _ hm⟩ : Fin m),
+        (⟨(t : ℕ) / m * k + (j : ℕ), hlt (t, j)⟩ : Fin (nc * k)))
+      = ((⟨(t' : ℕ) % m, Nat.mod_lt _ hm⟩ : Fin m),
+        (⟨(t' : ℕ) / m * k + (j' : ℕ), hlt (t', j')⟩ : Fin (nc * k))) := hbase h
+  have hcomp := congrArg (fun p : Fin m × Fin (nc * k) => (((p.1 : ℕ), (p.2 : ℕ)) : ℕ × ℕ)) hpair
+  exact flatCell_injective (nc := nc) hm hk (a₁ := (t, j)) (a₂ := (t', j')) hcomp
+
+open Finset in
+/-- **The copy constraints across every chunk.** Reading the chunks end to end (`flat_recurrence`)
+makes the per-chunk recurrences and the chaining rule one running product over `nc · m` steps, so the
+single-chunk chain covers the whole table. The permutation acts on all cells at once, which is what
+halo2's `σ` does. -/
+theorem perm_copy_constraints_of_chunks {nc m k : ℕ} (hm : 0 < m)
+    (Z : ℕ → ℕ → Fp) (value nm sigmaName : ℕ → ℕ → Fp) (beta gamma : Fp)
+    (σ : Equiv.Perm (Fin (nc * m) × Fin k))
+    (hσ : ∀ c : Fin (nc * m) × Fin k,
+      sigmaName (c.1 : ℕ) (c.2 : ℕ) = nm ((σ c).1 : ℕ) ((σ c).2 : ℕ))
+    (hnm : Function.Injective fun c : Fin (nc * m) × Fin k => nm (c.1 : ℕ) (c.2 : ℕ))
+    (hrec : ∀ c < nc, ∀ i < m,
+      Z c (i + 1) * ∏ j ∈ range k, (value (m * c + i) j + beta * sigmaName (m * c + i) j + gamma)
+        = Z c i * ∏ j ∈ range k, (value (m * c + i) j + beta * nm (m * c + i) j + gamma))
+    (hchain : ∀ c < nc, Z (c + 1) 0 = Z c m)
+    (hz0 : Z 0 0 = 1) (hzend : Z nc 0 = 0 ∨ Z nc 0 = 1)
+    (hgoodγ : gamma ∉ szBadSet (linProdDiff
+      ((cellPairs (nc * m) k value sigmaName).map (fun q => q.1 + q.2 * beta))
+      ((cellPairs (nc * m) k value nm).map (fun q => q.1 + q.2 * beta))))
+    (hgoodβ : ∀ j, beta ∉ szBadSet ((pairProdDiff (cellPairs (nc * m) k value sigmaName)
+      (cellPairs (nc * m) k value nm)).coeff j))
+    {x w : Fin (nc * m) × Fin k} (hxw : σ.SameCycle x w) :
+    value (x.1 : ℕ) (x.2 : ℕ) = value (w.1 : ℕ) (w.2 : ℕ)
+      ∨ ∃ q ∈ range (nc * m) ×ˢ range k,
+          value q.1 q.2 + beta * nm q.1 q.2 + gamma = 0 := by
+  refine perm_copy_constraints_of_running_product (fun t => Z (t / m) (t % m)) value nm sigmaName
+    beta gamma σ hσ hnm ?_ ?_ ?_ hgoodγ hgoodβ hxw
+  · intro t ht
+    have hflat := flat_recurrence Z
+      (fun c i j => value (m * c + i) j + beta * nm (m * c + i) j + gamma)
+      (fun c i j => value (m * c + i) j + beta * sigmaName (m * c + i) j + gamma)
+      hm hrec hchain ht
+    simpa [Nat.div_add_mod] using hflat
+  · simpa [Nat.zero_div, Nat.zero_mod] using hz0
+  · have h1 : nc * m / m = nc := Nat.mul_div_cancel _ hm
+    have h2 : nc * m % m = 0 := by simp
+    simp only [h1, h2]
+    exact hzend
+
 /-! ## The permutation argument at the deployed constraints
 
 Naming the three families the row reading produces, so the end-to-end statement stays readable: the
@@ -324,5 +424,57 @@ theorem deployed_copy_constraints_of_identity
     (by simpa [Nat.zero_mul] using hσ) (by simpa [Nat.zero_mul] using hnm)
     (by simpa [Nat.zero_mul] using hgoodγ) (by simpa [Nat.zero_mul] using hgoodβ) hcd
   simpa [Nat.zero_mul] using key
+
+
+open Finset in
+/-- **The circuit's declared equalities, from the constraint identity.** `deployed_copy_constraints_of_identity`
+with the permutation taken to be the one built from the circuit's copy constraints, so the
+conclusion names the equalities the circuit declared rather than the cycles of some permutation. -/
+theorem deployed_declared_equalities_of_identity
+    (omega beta gamma delta theta y : Fp) (chunkLen : ℕ)
+    (z : ℕ → Polynomial Fp) (lastP : ℕ → Option (Polynomial Fp))
+    (cols : ℕ → List (Polynomial Fp × Polynomial Fp))
+    {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
+    (adviceCols instanceCols : Fin np → ℕ → Polynomial Fp) (gates : List (Expr Fp))
+    (lookups : Fin np → List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (l0P lLastP lBlindP hpoly : Polynomial Fp) {n u : ℕ} (hn : n ≠ 0) (p : Fin np)
+    (cs : List ((Fin u × Fin (cols 0).length) × (Fin u × Fin (cols 0).length)))
+    (hidentity : combineConstraints fixedCols adviceCols instanceCols gates
+        (fun _ => deployedPermSets omega 1 z lastP)
+        (fun _ => deployedPermChunks omega 1 z lastP cols) lookups
+        beta gamma delta theta y chunkLen l0P lLastP lBlindP = hpoly * (X ^ n - 1))
+    (hgoodY : ∀ j, y ∉ szBadSet (foldSplitWitness (constraintPolys fixedCols adviceCols
+      instanceCols gates (fun _ => deployedPermSets omega 1 z lastP)
+      (fun _ => deployedPermChunks omega 1 z lastP cols) lookups
+      beta gamma delta theta chunkLen l0P lLastP lBlindP) n j))
+    (hrow : ∀ i : ℕ, (omega ^ i) ^ n = 1)
+    (hactive : ∀ i < u, 1 - (lLastP.eval (omega ^ i) + lBlindP.eval (omega ^ i)) ≠ 0)
+    (hl0 : l0P.eval (omega ^ 0) ≠ 0) (hlast : lLastP.eval (omega ^ u) ≠ 0)
+    (hσ : ∀ c : Fin u × Fin (cols 0).length,
+      rowSigmaName omega (cols 0) (c.1 : ℕ) (c.2 : ℕ)
+        = rowName omega delta 0 ((PermConstruction.build cs c).1 : ℕ)
+            ((PermConstruction.build cs c).2 : ℕ))
+    (hnm : Function.Injective fun c : Fin u × Fin (cols 0).length =>
+      rowName omega delta 0 (c.1 : ℕ) (c.2 : ℕ))
+    (hgoodγ : gamma ∉ szBadSet (linProdDiff
+      ((cellPairs u (cols 0).length (rowValue omega (cols 0))
+        (rowSigmaName omega (cols 0))).map (fun q => q.1 + q.2 * beta))
+      ((cellPairs u (cols 0).length (rowValue omega (cols 0))
+        (rowName omega delta 0)).map (fun q => q.1 + q.2 * beta))))
+    (hgoodβ : ∀ j, beta ∉ szBadSet ((pairProdDiff
+      (cellPairs u (cols 0).length (rowValue omega (cols 0)) (rowSigmaName omega (cols 0)))
+      (cellPairs u (cols 0).length (rowValue omega (cols 0))
+        (rowName omega delta 0))).coeff j))
+    {x w : Fin u × Fin (cols 0).length}
+    (hxw : Relation.EqvGen (fun a b => (a, b) ∈ cs) x w) :
+    rowValue omega (cols 0) (x.1 : ℕ) (x.2 : ℕ)
+        = rowValue omega (cols 0) (w.1 : ℕ) (w.2 : ℕ)
+      ∨ ∃ q ∈ range u ×ˢ range (cols 0).length,
+          rowValue omega (cols 0) q.1 q.2
+            + beta * rowName omega delta 0 q.1 q.2 + gamma = 0 :=
+  deployed_copy_constraints_of_identity omega beta gamma delta theta y chunkLen z lastP cols
+    fixedCols adviceCols instanceCols gates lookups l0P lLastP lBlindP hpoly hn p
+    (PermConstruction.build cs) hidentity hgoodY hrow hactive hl0 hlast hσ hnm hgoodγ hgoodβ
+    ((PermConstruction.build_correct cs x w).mpr hxw)
 
 end Zcash.Snark

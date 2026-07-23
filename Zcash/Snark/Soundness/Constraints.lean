@@ -86,6 +86,18 @@ theorem constraint_identity_of_accept (numerator h : Polynomial Fp) (n : ℕ) (x
     simpa [quotientCheck, eval_mul, eval_sub, eval_pow, eval_X, eval_one] using hcheck
   simp [eval_sub, hval]
 
+/-- **From the point check to the polynomial identity, with a relation branch.** The derived fold
+equations end in a disjunction — the equation, or a nontrivial group relation — and the
+good-challenge premise turns the equation half into the identity the constraint layer needs. This is
+`constraint_identity_of_accept` shaped for those callers. -/
+theorem constraint_identity_of_hfold {numerator hpoly : Polynomial Fp} {n : ℕ} {x : Fp} {R : Prop}
+    (hfold : numerator.eval x = hpoly.eval x * (x ^ n - 1) ∨ R)
+    (hgood : numerator ≠ hpoly * (X ^ n - 1) → (numerator - hpoly * (X ^ n - 1)).eval x ≠ 0) :
+    numerator = hpoly * (X ^ n - 1) ∨ R := by
+  rcases hfold with h | hr
+  · exact Or.inl (constraint_identity_of_accept numerator hpoly n x h hgood)
+  · exact Or.inr hr
+
 /-! ## Lifting gate expressions to polynomials
 
 The verifier evaluates each gate `Expr` at the claimed evaluations — the committed column
