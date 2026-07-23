@@ -7,6 +7,7 @@ import Zcash.Snark.Soundness.Multiopen.BudgetedExtraction
 import Zcash.Snark.Soundness.VestaBudget
 import Zcash.Snark.Soundness.FoldSplit
 import Zcash.Snark.Soundness.ConstraintSatisfaction
+import Zcash.Snark.Soundness.LookupRows
 import Zcash.Snark.Soundness.GrandProductBridge
 import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.PermutationRows
@@ -399,6 +400,11 @@ assert_no_sorry lookup_end_mem
 assert_no_sorry lookup_product_step_mem
 assert_no_sorry lookup_run_start_mem
 assert_no_sorry lookup_run_step_mem
+assert_no_sorry ConstraintSatisfaction.lookupStart
+assert_no_sorry ConstraintSatisfaction.lookupEnd
+assert_no_sorry ConstraintSatisfaction.lookupProductStep
+assert_no_sorry ConstraintSatisfaction.lookupRunStart
+assert_no_sorry ConstraintSatisfaction.lookupRunStep
 -- The permutation and lookup arguments closed from the verifier's own row checks: the combined
 -- check splits into its parts, the running product telescopes across the rows, two challenge root
 -- counts turn the product into a multiset identity, and the existing structural theorems turn that
@@ -419,6 +425,13 @@ assert_no_sorry lookup_multisets_of_prod_eval_eq
 assert_no_sorry lookup_multisets_of_diff_eq_zero
 assert_no_sorry lookup_subset_of_components
 assert_no_sorry lookup_subset_of_prod_eval_eq
+assert_no_sorry eval_lookupEvalPolys_productNextEval
+assert_no_sorry eval_lookupEvalPolys_permutedInputInvEval_succ
+assert_no_sorry lookup_product_row_recurrence
+assert_no_sorry lookup_run_start_of_dvd
+assert_no_sorry lookup_run_step_of_dvd
+assert_no_sorry lookup_run_structure_of_dvd
+assert_no_sorry lookup_product_eq_or_factor_eq_zero
 -- The deployed row reading: the step rule's folds are running products, the boundary rules pin the
 -- product at the first and last rows, and the cell names separate. These are theorems about
 -- `permChunkExpression` itself, so the chain above starts at the verifier's own constraint list.

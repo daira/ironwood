@@ -230,4 +230,59 @@ theorem lookup_run_step_mem {F : Type*} [CommRing F] (le : LookupEval F)
         theta beta gamma l0 lLast lBlind := by
   simp [lookupExpressions]
 
+/-! ## A selected lookup's five constraints from full satisfaction -/
+
+/-- Full satisfaction supplies a selected lookup's running-product start constraint. -/
+theorem ConstraintSatisfaction.lookupStart {np n : ℕ} {M : ConstraintPolyModel np}
+    (h : ConstraintSatisfaction M n) (p : Fin np)
+    {lk : LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)}
+    (hlk : lk ∈ M.lookups p) :
+    (X ^ n - 1 : Polynomial Fp) ∣ M.l0 * (1 - lk.1.productEval) :=
+  h.lookupExpression p hlk (lookup_start_mem ..)
+
+/-- Full satisfaction supplies a selected lookup's running-product end constraint. -/
+theorem ConstraintSatisfaction.lookupEnd {np n : ℕ} {M : ConstraintPolyModel np}
+    (h : ConstraintSatisfaction M n) (p : Fin np)
+    {lk : LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)}
+    (hlk : lk ∈ M.lookups p) :
+    (X ^ n - 1 : Polynomial Fp) ∣
+      M.lLast * (lk.1.productEval ^ 2 - lk.1.productEval) :=
+  h.lookupExpression p hlk (lookup_end_mem ..)
+
+/-- Full satisfaction supplies a selected lookup's product-step constraint. -/
+theorem ConstraintSatisfaction.lookupProductStep {np n : ℕ} {M : ConstraintPolyModel np}
+    (h : ConstraintSatisfaction M n) (p : Fin np)
+    {lk : LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)}
+    (hlk : lk ∈ M.lookups p) :
+    (X ^ n - 1 : Polynomial Fp) ∣
+      (lk.1.productNextEval * (lk.1.permutedInputEval + C M.beta)
+          * (lk.1.permutedTableEval + C M.gamma)
+        - lk.1.productEval
+          * (compressExprs M.fixedCols (M.adviceCols p) (M.instanceCols p) (C M.theta)
+              (lk.2.1.map (Expr.map C)) + C M.beta)
+          * (compressExprs M.fixedCols (M.adviceCols p) (M.instanceCols p) (C M.theta)
+              (lk.2.2.map (Expr.map C)) + C M.gamma))
+        * (1 - (M.lLast + M.lBlind)) :=
+  h.lookupExpression p hlk (lookup_product_step_mem ..)
+
+/-- Full satisfaction supplies a selected lookup's first-row run constraint. -/
+theorem ConstraintSatisfaction.lookupRunStart {np n : ℕ} {M : ConstraintPolyModel np}
+    (h : ConstraintSatisfaction M n) (p : Fin np)
+    {lk : LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)}
+    (hlk : lk ∈ M.lookups p) :
+    (X ^ n - 1 : Polynomial Fp) ∣
+      M.l0 * (lk.1.permutedInputEval - lk.1.permutedTableEval) :=
+  h.lookupExpression p hlk (lookup_run_start_mem ..)
+
+/-- Full satisfaction supplies a selected lookup's repeat-or-match run constraint. -/
+theorem ConstraintSatisfaction.lookupRunStep {np n : ℕ} {M : ConstraintPolyModel np}
+    (h : ConstraintSatisfaction M n) (p : Fin np)
+    {lk : LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)}
+    (hlk : lk ∈ M.lookups p) :
+    (X ^ n - 1 : Polynomial Fp) ∣
+      (lk.1.permutedInputEval - lk.1.permutedTableEval)
+        * (lk.1.permutedInputEval - lk.1.permutedInputInvEval)
+        * (1 - (M.lLast + M.lBlind)) :=
+  h.lookupExpression p hlk (lookup_run_step_mem ..)
+
 end Zcash.Snark
