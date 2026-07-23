@@ -191,10 +191,28 @@ endpoint. `Multiopen.ConstraintResolver` now constructs that resolver from
 `OpenedMemberDecode` columns and a partial commitment-ID-to-member routing, and turns
 the existing member-node binding into uniform query openings or the existing
 nontrivial-relation branch. It feeds the clean branch directly into the lookup
-instantiation theorem. The remaining multiopen bookkeeping must derive the routing
-evidence (including grouped claimed-value faithfulness) from `assembleQueries` and
-`constructIntermediateSets`; the analogous permutation-set/chunk routing into
-`deployed_perm_copy_constraints_all_chunks` also remains.
+instantiation theorem. The grouping layer now proves claimed-value faithfulness on
+the verifier's non-duplicate path, constructs the commitment-ID route automatically,
+and derives its coverage and non-duplication premises from a successful `assemble?`.
+The analogous permutation-set/chunk routing into
+`deployed_perm_copy_constraints_all_chunks` remains.
+
+The active item-4 sequence is:
+
+1. prove a generic grouping theorem that, on the verifier's non-duplicate path, routes
+   every flat query to the grouped member carrying its `CommitmentId`, opening point,
+   and claimed evaluation;
+2. use that theorem to construct `DeployedQueryRoute` automatically for the decoded
+   resolver, eliminating its remaining assembled-query bookkeeping premise;
+3. instantiate the permutation set/chunk polynomials from the same resolver and feed
+   `deployed_perm_copy_constraints_all_chunks`;
+4. package the resulting gate, copy, and lookup conclusions as the full
+   circuit-satisfaction interface consumed by the Clean-operation bridge.
+
+Steps 1 and 2 are complete. The next implementation slice is step 3: relate the
+decoded members belonging to the permutation product point sets to the chunk indices
+used by `deployed_perm_copy_constraints_all_chunks`, while retaining the same
+nontrivial-relation alternative supplied by member-node binding.
 
 After that, translate the endpoints to the exact relations that Clean's
 `Halo2.Constraints` requires: declared `constrainEqual`/`constrainInstance` copies,
