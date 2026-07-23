@@ -187,9 +187,13 @@ explicit zero-factor branch when the running product ends at zero.
 VK and a `CommitmentId`-keyed polynomial resolver, proves that openings for the actual
 assembled lookup queries give the verifier's five claimed evaluations, and specializes
 `ConstraintSatisfaction` to the compact five-constraint record consumed by that
-endpoint. The remaining multiopen plumbing must construct the resolver from the
-decoded member slots and discharge its uniform assembled-query opening premise; the
-analogous permutation-set/chunk routing into
+endpoint. `Multiopen.ConstraintResolver` now constructs that resolver from
+`OpenedMemberDecode` columns and a partial commitment-ID-to-member routing, and turns
+the existing member-node binding into uniform query openings or the existing
+nontrivial-relation branch. It feeds the clean branch directly into the lookup
+instantiation theorem. The remaining multiopen bookkeeping must derive the routing
+evidence (including grouped claimed-value faithfulness) from `assembleQueries` and
+`constructIntermediateSets`; the analogous permutation-set/chunk routing into
 `deployed_perm_copy_constraints_all_chunks` also remains.
 
 After that, translate the endpoints to the exact relations that Clean's

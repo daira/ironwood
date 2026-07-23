@@ -9,6 +9,7 @@ import Zcash.Snark.Soundness.FoldSplit
 import Zcash.Snark.Soundness.ConstraintSatisfaction
 import Zcash.Snark.Soundness.LookupRows
 import Zcash.Snark.Soundness.LookupInstantiation
+import Zcash.Snark.Soundness.Multiopen.ConstraintResolver
 import Zcash.Snark.Soundness.GrandProductBridge
 import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.PermutationRows
@@ -443,6 +444,8 @@ assert_no_sorry eval_lookupEntriesOfResolver_of_assembleQueries
 assert_no_sorry eval_constraintModelOfResolver_lookups
 assert_no_sorry eval_constraintModelOfResolver_lookups_of_assembleQueries
 assert_no_sorry ConstraintSatisfaction.lookupConstraintsDvdOfResolver
+assert_no_sorry decodedPolynomialResolver_opens_or_relation
+assert_no_sorry eval_lookupEntriesOfDecodedResolver_or_relation
 -- The deployed row reading: the step rule's folds are running products, the boundary rules pin the
 -- product at the first and last rows, and the cell names separate. These are theorems about
 -- `permChunkExpression` itself, so the chain above starts at the verifier's own constraint list.
