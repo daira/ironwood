@@ -43,7 +43,7 @@ theorem mem_reachSet_query_self (t : T) (k : F → OracleComp T F α) :
   Finset.mem_insert_self t _
 
 theorem reachSet_query_subset (t : T) (k : F → OracleComp T F α) (u : F) :
-    (k u).reachSet ⊆ (query t k).reachSet := fun x hx =>
+    (k u).reachSet ⊆ (query t k).reachSet := fun _ hx =>
   Finset.subset_insert t _
     (Finset.subset_biUnion_of_mem (fun v : F => (k v).reachSet) (Finset.mem_univ u) hx)
 
@@ -63,7 +63,7 @@ def restrictTo (S : Finset T) : (A : OracleComp T F α) → A.reachSet ⊆ S →
   | .pure a, _ => .pure a
   | .query t k, h =>
       .query ⟨t, h (mem_reachSet_query_self t k)⟩ fun u =>
-        (k u).restrictTo S (fun x hx => h (reachSet_query_subset t k u hx))
+        (k u).restrictTo S (fun _ hx => h (reachSet_query_subset t k u hx))
 
 /-- The restriction reproduces the run against any table agreeing on the subdomain. -/
 theorem run_restrictTo (S : Finset T) :
@@ -93,7 +93,7 @@ def splitDomain {T_D : Type*} (ι : T_D → T) (ρ : T → Option T_D) (S : Fins
       .query (match ρ t with
         | some tD => Sum.inl tD
         | none => Sum.inr ⟨t, h (mem_reachSet_query_self t k)⟩)
-        fun u => (k u).splitDomain ι ρ S (fun x hx => h (reachSet_query_subset t k u hx))
+        fun u => (k u).splitDomain ι ρ S (fun _ hx => h (reachSet_query_subset t k u hx))
 
 /-- The split machine reproduces the run against any full table agreeing with the designated
 table along `ι` and with the junk table elsewhere. -/
@@ -112,11 +112,11 @@ theorem run_splitDomain {T_D : Type*} (ι : T_D → T) (ρ : T → Option T_D) (
           | none => Sum.inr ⟨t, h (mem_reachSet_query_self t k)⟩) = Ofull t := by
         cases hρ : ρ t with
         | some tD =>
-            simp only [hρ]
+            simp
             rw [hρ₂ t tD hρ]
             exact (hD tD).symm
         | none =>
-            simp only [hρ]
+            simp
             exact (hJ t (h (mem_reachSet_query_self t k)) hρ).symm
       rw [hans]
       exact run_splitDomain ι ρ S hρ₂ (k (Ofull t)) _ O' Ofull hD hJ
@@ -239,6 +239,7 @@ theorem fsWinsFull_mapDomain_measure_eq {T₀ J : Type*} [Fintype T₀] [Decidab
     uniformOfFintype_map_precomp_injective Sum.inl Sum.inl_injective]
 
 open Classical in
+omit [Fintype F] [Nonempty F] in
 /-- Split and original machines have the same outcome on agreeing tables when all game points lie
 in the designated component. -/
 theorem fsWinsFull_splitDomain {T T_D : Type*} [DecidableEq T] [Fintype F]

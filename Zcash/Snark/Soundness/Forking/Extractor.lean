@@ -118,6 +118,7 @@ def DForkCert.treeRuns : {d : ℕ} → DForkCert F G d → ℕ
   | 0, .leaf _ _ => 1
   | _ + 1, .node _ _ _ _ _ c₁ c₂ c₃ => c₁.treeRuns + c₂.treeRuns + c₃.treeRuns
 
+omit [Field F] [AddCommGroup G] [Module F G] in
 /-- Every depth-`d` forking certificate stores exactly `3ᵈ` accepting leaves. -/
 theorem DForkCert.treeRuns_eq : {d : ℕ} → (c : DForkCert F G d) → c.treeRuns = 3 ^ d
   | 0, .leaf _ _ => rfl

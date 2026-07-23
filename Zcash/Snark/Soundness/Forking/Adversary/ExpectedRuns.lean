@@ -18,6 +18,7 @@ variable {F : Type*} [DecidableEq F] {n : ℕ}
 def scanRank (e : Fin n ≃ F) (A : Finset F) (x : F) : ℕ :=
   (A.filter (fun a => e.symm a < e.symm x)).card
 
+omit [DecidableEq F] in
 /-- Ranks are strictly monotone along the sampling order. -/
 theorem scanRank_lt_of_lt (e : Fin n ≃ F) (A : Finset F) {x y : F}
     (hx : x ∈ A) (hxy : e.symm x < e.symm y) : scanRank e A x < scanRank e A y := by
@@ -33,6 +34,7 @@ theorem scanRank_lt_of_lt (e : Fin n ≃ F) (A : Finset F) {x y : F}
     rw [Finset.mem_filter] at this
     exact absurd this.2 (lt_irrefl _)
 
+omit [DecidableEq F] in
 /-- At most `j` members of `A` have rank below `j`: ranks are injective on `A`. -/
 theorem card_filter_scanRank_lt_le (e : Fin n ≃ F) (A : Finset F) (j : ℕ) :
     (A.filter (fun x => scanRank e A x < j)).card ≤ j := by

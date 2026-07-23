@@ -158,6 +158,7 @@ section GroupingProvenance
 
 variable {k : ℕ} {F G : Type*} [DecidableEq F] [DecidableEq G]
 
+omit [DecidableEq F] [DecidableEq G] in
 private theorem mem_comms_foldl (queries : List (VerifierQuery k F G)) :
     ∀ (init : List (CommitmentId × CommitmentRef k F G)),
     ∀ ce ∈ queries.foldl (fun acc q =>
@@ -170,8 +171,7 @@ private theorem mem_comms_foldl (queries : List (VerifierQuery k F G)) :
       intro init ce hce
       rw [List.foldl_cons] at hce
       rcases ih _ ce hce with h0 | ⟨q', hq', rfl⟩
-      · beta_reduce at h0
-        split at h0
+      · split at h0
         · exact Or.inl h0
         · rcases List.mem_append.mp h0 with h1 | h1
           · exact Or.inl h1
@@ -216,6 +216,7 @@ def AssemblyPoint (vk : VerifyingKey shape F G) (ps : ProofString shape F G) (x 
   ∨ x = ps.vanishingRandom
   ∨ x = ps.multiopenQPrime
 
+omit [Inhabited G] in
 private theorem columnQueries_commitment {k : ℕ} (omega x : F) (commitment : ℕ → G)
     (mkId : ℕ → CommitmentId) (layout : List (ℕ × ℤ)) (evals : List F) :
     ∀ q ∈ columnQueries (k := k) omega x commitment mkId layout evals,
@@ -224,6 +225,7 @@ private theorem columnQueries_commitment {k : ℕ} (omega x : F) (commitment : �
   obtain ⟨e, he, rfl⟩ := List.mem_map.mp hq
   exact ⟨e.1, (mem_of_mem_zip_fst he), rfl⟩
 
+omit [Inhabited G] in
 private theorem permutationQueries_commitment {k : ℕ} (x xNext xLast : F)
     (mkId : ℕ → CommitmentId) (sets : List (G × PermSetEval F)) :
     ∀ q ∈ permutationQueries (k := k) x xNext xLast mkId sets,
@@ -243,6 +245,7 @@ private theorem permutationQueries_commitment {k : ℕ} (x xNext xLast : F)
       mem_of_mem_zip_fst (List.mem_reverse.mp (List.mem_of_mem_drop hs))
     exact ⟨s.1, hs1, rfl⟩
 
+omit [Inhabited G] in
 private theorem lookupQueries_commitment {k : ℕ} (x xInv xNext : F)
     (mkProduct mkInput mkTable : ℕ → CommitmentId)
     (lookups : List (LookupCommitments G × LookupEval F)) :
@@ -266,6 +269,7 @@ private theorem lookupQueries_commitment {k : ℕ} (x xInv xNext : F)
   · exact Or.inl rfl
   · exact absurd hq2 (List.not_mem_nil)
 
+omit [Inhabited G] in
 private theorem permutationCommonQueries_commitment {k : ℕ} (x : F)
     (mkId : ℕ → CommitmentId) (commsEvals : List (G × F)) :
     ∀ q ∈ permutationCommonQueries (k := k) x mkId commsEvals,

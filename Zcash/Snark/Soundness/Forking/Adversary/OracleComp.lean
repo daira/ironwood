@@ -367,7 +367,7 @@ theorem AvoidsCache.run_queries_nodup [DecidableEq T] :
         exact List.nodup_cons.mpr ⟨htnotin, hnd⟩
       · intro p hp
         rw [queries, List.mem_cons]
-        push_neg
+        push Not
         refine ⟨fun hpt => ?_, ?_⟩
         · exact absurd (hpt ▸ List.mem_map_of_mem (f := Prod.fst) hp) ht
         · exact hdis p (List.mem_cons_of_mem _ hp)
@@ -1132,12 +1132,12 @@ variable {T F : Type*}
 /-- The points the schedule visits when its reads are `χ`. -/
 def points : {k : ℕ} → AdSched T F k → (Fin k → F) → (Fin k → T)
   | 0, _, _ => Fin.elim0
-  | k + 1, s, χ => Fin.cons s.1 (points (s.2 (χ 0)) (Fin.tail χ))
+  | _ + 1, s, χ => Fin.cons s.1 (points (s.2 (χ 0)) (Fin.tail χ))
 
 /-- The schedule's reads against a table `O`. -/
 def read : {k : ℕ} → AdSched T F k → (T → F) → (Fin k → F)
   | 0, _, _ => Fin.elim0
-  | k + 1, s, O => Fin.cons (O s.1) (read (s.2 (O s.1)) O)
+  | _ + 1, s, O => Fin.cons (O s.1) (read (s.2 (O s.1)) O)
 
 /-- Reads match a target exactly when the table agrees at its visited points. -/
 theorem read_eq_iff : {k : ℕ} → (s : AdSched T F k) → (O : T → F) → (χ : Fin k → F) →
@@ -1562,7 +1562,7 @@ theorem extractable_of_lt_fsAdvantage [Fintype T] [DecidableEq T] [Fintype F] [N
     (h : (Q + k) * (3 / Fintype.card F) < fsAdvantage A accept prefixes) :
     ∃ O : T → F, Extractable (accept (A.run O)) := by
   by_contra hno
-  push_neg at hno
+  push Not at hno
   exact absurd (D.fsAdvantage_le hQ hno) (not_le.mpr h)
 
 end StagedDecode

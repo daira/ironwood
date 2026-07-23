@@ -339,6 +339,7 @@ def ursOfAugmentedBasis (k : ℕ) (basis : AugmentedIndex (2 ^ k) → G) : URS G
     u := basis AugmentedIndex.u
     w := basis AugmentedIndex.w }
 
+omit [AddCommGroup G] in
 /-- Splitting an augmented basis into a URS and reassembling it loses no public group element. -/
 @[simp] theorem augmentedBasis_ursOfAugmentedBasis (k : ℕ)
     (basis : AugmentedIndex (2 ^ k) → G) :

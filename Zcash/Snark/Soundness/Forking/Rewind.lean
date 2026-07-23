@@ -42,6 +42,7 @@ noncomputable def reprogramRounds {shape : Shape} (O : List (TranscriptElt Fp G)
       t = roundTranscriptFin (preIpaTranscript init ps) ps.ipaRounds j
     then χ h.choose else O t
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- At the round-`j` prefix, the reprogrammed oracle answers `χ j`. -/
 theorem reprogramRounds_apply_round {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (χ : Fin shape.k → Fp)
@@ -55,6 +56,7 @@ theorem reprogramRounds_apply_round {shape : Shape} (O : List (TranscriptElt Fp 
   rw [dif_pos hex]
   exact (congrArg χ (roundTranscriptFin_injective _ _ hex.choose_spec)).symm
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Off the round prefixes, the reprogrammed oracle is `O`. -/
 theorem reprogramRounds_apply_ne {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (χ : Fin shape.k → Fp)
@@ -66,6 +68,7 @@ theorem reprogramRounds_apply_ne {shape : Shape} (O : List (TranscriptElt Fp G) 
   rintro ⟨j, hj⟩
   exact ht j hj
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Reprogramming leaves every transcript no longer than the pre-IPA prefix unchanged. -/
 theorem reprogramRounds_apply_short {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (χ : Fin shape.k → Fp)
@@ -83,6 +86,7 @@ private theorem Challenges.ext' {k : ℕ} {F : Type*} {c₁ c₂ : Challenges k 
     (hu : c₁.ipaRound = c₂.ipaRound) : c₁ = c₂ := by
   cases c₁; cases c₂; simp_all
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Rerunning the deployed schedule with `reprogramRounds` replaces only its IPA round vector. -/
 theorem roChallenges_reprogramRounds {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (χ : Fin shape.k → Fp) :
@@ -103,6 +107,7 @@ theorem roChallenges_reprogramRounds {shape : Shape} (O : List (TranscriptElt Fp
 For a fixed proof, distinct round prefixes yield a uniform challenge vector. Computed adversaries
 instead use the full query experiment in `Soundness.Forking.Adversary`. -/
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Each deployed IPA round challenge is the oracle answer at its round prefix. -/
 theorem roChallenges_ipaRound_apply {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (j : Fin shape.k) :
@@ -110,6 +115,7 @@ theorem roChallenges_ipaRound_apply {shape : Shape} (O : List (TranscriptElt Fp 
       = O (roundTranscriptFin (preIpaTranscript init ps) ps.ipaRounds j) :=
   deriveChallenges_ipaRound_eq (ofOracle O) init ps j
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- A uniform random oracle gives a uniform IPA challenge vector at the distinct round prefixes. -/
 theorem roChallenges_ipaRound_uniform [DecidableEq G] {shape : Shape}
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) :
@@ -245,6 +251,7 @@ def invProver : {d : ℕ} → Prover Fp G d → Prover Fp G d
   | 0, .leaf c f => .leaf c f
   | _ + 1, .node L R cont => .node R L (fun u => invProver (cont u⁻¹))
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- `invProver` is an involution. -/
 theorem invProver_invProver : {d : ℕ} → (P : Prover Fp G d) → invProver (invProver P) = P
   | 0, .leaf _ _ => rfl
@@ -341,6 +348,7 @@ def proverOfRounds : {d : ℕ} → (Fin d → G × G) → Fp → Fp → Prover F
   | 0, _, c, f => .leaf c f
   | _ + 1, R, c, f => .node (R 0).1 (R 0).2 (fun _ => proverOfRounds (Fin.tail R) c f)
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- A fixed proof's strategy returns round point `R j` at depth `j` on every challenge path. -/
 theorem proverRoundPoint_proverOfRounds : {d : ℕ} → (R : Fin d → G × G) → (c f : Fp) →
     (χ : Fin d → Fp) → (j : ℕ) → (hj : j < d) →
