@@ -192,7 +192,7 @@ theorem extractable_of_kerr_lt [Fintype α] [DecidableEq α] [Zero α] :
           kerr (Fintype.card α) d
             < (Finset.univ.filter (fun rest : Fin d → α => acc (Fin.cons u rest))).card)).card := by
         by_contra hcon
-        push_neg at hcon
+        push Not at hcon
         have hgc : (Finset.univ.filter (fun u : α => kerr (Fintype.card α) d
             < (Finset.univ.filter (fun rest : Fin d → α => acc (Fin.cons u rest))).card)).card ≤ 3 := by
           omega

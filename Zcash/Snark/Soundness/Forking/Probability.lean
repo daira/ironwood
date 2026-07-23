@@ -358,7 +358,7 @@ theorem extractable_of_prob [Fintype α] [DecidableEq α] [Zero α] [Nonempty α
     Extractable acc := by
   apply extractable_of_kerr_lt
   by_contra hle
-  push_neg at hle
+  push Not at hle
   have hmono : (PMF.uniformOfFintype (Fin d → α)).toOuterMeasure (Finset.univ.filter acc)
       ≤ (kerr (Fintype.card α) d : ℝ≥0∞) / Fintype.card (Fin d → α) := by
     rw [uniformOfFintype_toOuterMeasure_finset]

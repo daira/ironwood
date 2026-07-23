@@ -42,6 +42,7 @@ theorem self_mem_goodChallenges_iff [Fintype F] {d m : ℕ} (hmk : m + (d + 1) =
     scanCandidate_self basis k A prefixes rounds final win decideWin hmk O childC]
   simp [h0]
 
+omit [Field F] in
 /-- A candidate's low-rank test only counts *other* challenges sampled before it: its own
 membership in the good set is invisible to its rank. -/
 theorem scanRank_insert_erase {n : ℕ} (e : Fin n ≃ F) (M : Finset F) (u : F) :

@@ -202,11 +202,11 @@ theorem roundTranscriptFin_eq_append {k : ℕ} (t₀ : List (TranscriptElt F G))
             TranscriptElt.challenge])).flatten)
         ++ [TranscriptElt.point (rounds j).1, TranscriptElt.point (rounds j).2,
             TranscriptElt.challenge] := by
-  rw [roundTranscriptFin, List.take_succ, List.append_assoc]
+  rw [roundTranscriptFin, List.take_add_one, List.append_assoc]
   congr 1
   rw [List.map_append, List.flatten_append]
   congr 1
-  rw [List.getElem?_eq_getElem (by simpa using j.isLt)]
+  rw [List.getElem?_eq_getElem (by simp)]
   simp
 
 /-- The pre-block prefix of the round-`j` transcript has length `t₀.length + 3 · j`. -/
