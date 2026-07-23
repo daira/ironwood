@@ -29,9 +29,8 @@ def KeyBinding.toInterface
   akP w := w.akP
   KB := KeyBinding.KB Extract S hfn Ggen H
   Break := KeyBinding.Break Extract S hfn Ggen H
-  break_of_nk_ne {_w₁ _w₂} h₁ h₂ hivk hne := by
-    by_contra hnb
-    exact hne (KeyBinding.nk_pinned Extract S hfn Ggen H h₁ h₂ hivk hnb)
+  break_of_nk_ne {_w₁ _w₂} h₁ h₂ hivk hne :=
+    ⟨h₁, h₂, hivk, fun heq => hne (congrArg BreakProj.nk heq)⟩
 
 
 /-- The probabilistic key-binding bound, delivered at the games' interface: over the

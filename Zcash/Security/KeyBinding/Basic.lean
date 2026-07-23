@@ -22,7 +22,8 @@ The route, each step proven here:
 
 The probabilistic side — producing the computed collision is hard — is the birthday bound
 `ε_kb ≤ q(q-1)/r` (`Birthday.lean`), ZIP 2005's `ε_kb` as sharpened in zcash/zips#1338.
-`PRF^nf`-pinning, which the Spendability argument consumes, is not here yet.
+nf-pinning, which the Spendability argument consumes, is the games'
+`nfOldEqOrBreak` (`Security/Ledger/Statement.lean`).
 
 Abstract setting: a prime-order group `G` as an `RIVK`-vector space. The scalar types are
 `RIVK` (rivk values and the rivk-derivation oracle outputs) and `ASK` (`H^ask` outputs, acting

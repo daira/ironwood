@@ -81,7 +81,10 @@ structure Primitives (F G IVK NK RHO PSI CMX RT : Type*) where
 /-- The games-facing view of a key-binding witness type `KW`: projections, the key-binding
 condition `KB` enforced by the statement, and a `Break` predicate. `break_of_nk_ne` is the
 guarantee the games consume; the key-binding layer instantiates `Break` and discharges it
-(reducing breaks onward to random-oracle collisions or DLR relations). -/
+(reducing breaks onward to random-oracle collisions or DLR relations). This interface is
+provisional: its shape is to be revisited against what the Balance and Spendability games
+actually consume once they are formalized — in particular `Break` being an opaque `Prop`
+limits the games to certificate-level break exhibition. -/
 structure KeyBindingInterface (KW G IVK NK : Type*) where
   ivk : KW → IVK
   nk : KW → NK
@@ -208,23 +211,29 @@ def noteCommitBreakOfNe
     NoteCommitBreak P :=
   ⟨_, _, _, _, _, _, hne, h₁.commit_old, h₂.commit_old, hx⟩
 
-/-- **Nullifier determinism up to a break**: two satisfied spends of the same note tuple
-reveal the same nullifier, or their key witnesses exhibit a key-binding break. Together
-with `tuple_eq_or_noteCommitBreak` this is what turns a repeated spend of a positioned note
-into a repeated nullifier in the Balance argument. -/
-theorem nf_old_eq_or_break [NoZeroSMulDivisors F G]
+/-- **Nullifier determinism up to a break** — **nf-pinning** (ZIP 2005 `lemma-nf-pinning`,
+consumed by the Spendability argument), as computed data per the breaks-as-computed-data
+convention: two satisfied spends of the same note tuple either reveal the same nullifier or
+their key witnesses exhibit a key-binding break, with the branch decided on the
+nullifier-key comparison. Together with `tuple_eq_or_noteCommitBreak` this is what turns a
+repeated spend of a positioned note into a repeated nullifier in the Balance argument. The
+nullifier here is a function by definition; the circuit-soundness layer must separately
+ensure the deployed circuit computes `DeriveNullifier` deterministically as a function of
+`(nk, ρ, ψ, cm)`. -/
+def nfOldEqOrBreak [DecidableEq NK] [NoZeroSMulDivisors F G]
     (h₁ : ActionSatisfied P kv inst₁ w₁) (h₂ : ActionSatisfied P kv inst₂ w₂)
     (hrcm : w₁.rcm_old = w₂.rcm_old) (hnote : w₁.note_old = w₂.note_old) :
-    inst₁.nf_old = inst₂.nf_old ∨ kv.Break w₁.kw w₂.kw := by
-  have hcm : w₁.cm_old = w₂.cm_old := by
-    have h := h₁.commit_old
-    rw [hrcm, hnote, h₂.commit_old] at h
-    exact (Option.some.inj h).symm
-  rcases nk_eq_or_break h₁ h₂ (congrArg Note.gd hnote) (congrArg Note.pkd hnote) with
-    hnk | hbr
-  · left
-    rw [h₁.nf_old_eq, h₂.nf_old_eq, hnk, hcm, hnote]
-  · exact Or.inr hbr
+    (inst₁.nf_old = inst₂.nf_old) ⊕' kv.Break w₁.kw w₂.kw :=
+  if hnk : kv.nk w₁.kw = kv.nk w₂.kw then
+    .inl (by
+      have hcm : w₁.cm_old = w₂.cm_old := by
+        have h := h₁.commit_old
+        rw [hrcm, hnote, h₂.commit_old] at h
+        exact (Option.some.inj h).symm
+      rw [h₁.nf_old_eq, h₂.nf_old_eq, hnk, hcm, hnote])
+  else
+    .inr (kv.break_of_nk_ne h₁.key_binding h₂.key_binding
+      (ivk_pinned h₁ h₂ (congrArg Note.gd hnote) (congrArg Note.pkd hnote)) hnk)
 
 end Pinning
 

@@ -91,6 +91,7 @@ even in erased positions, which is the strict (flagless) `assert_computable` tie
 assert_computable Collision.upToSign
 assert_computable Merkle.collisionOfWrongLeaf
 assert_computable noteCommitBreakOfNe
+assert_computable Zcash.Security.Ledger.nfOldEqOrBreak +choice
 
 /-! ## Binding-signature relation reductions
 
