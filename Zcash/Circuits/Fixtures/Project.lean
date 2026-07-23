@@ -196,6 +196,11 @@ MECHANICALLY (`substSelectorMap` below) and the resulting CS is checked EQUAL to
 post-compression fixture — any error in the reconstruction conventions (root order, factor
 shape, query registration) surfaces as a gate mismatch in that equality. -/
 
+/-- Look up a selector's compression datum by index (`entries` is an association list
+keyed by selector index). -/
+def SelCompressMap.lookup (map : SelCompressMap) (s : ℕ) : Option SelCompress :=
+  (map.entries.find? (fun e => e.1 = s)).map (·.2)
+
 /-- Build the root-finding replacement polynomial `q·∏_{i≠root}((i : Fp) − q)` for a selector,
 `q` being the packed column's fixed query (`compress_selectors.rs:184-208`; left-assoc fold,
 matching Rust's `expression = expression * (Constant(root) − query)` accumulation). For
@@ -236,21 +241,23 @@ reset by compression (halo2 keeps the count; the pinned VK doesn't carry it — 
 §2.3). -/
 def projectCS (seed : List Query) (map : SelCompressMap)
     (cs : ConstraintSystem Fp) : CsFixture :=
-  let m : ℕ → Option SelCompress := fun s => (map.entries.find? (fun e => e.1 = s)).map (·.2)
+  let m : ℕ → Option SelCompress := map.lookup
   let polys := (flatGates cs).map (substSelectorMap m)
   let lookups' : List (LookupArgument Fp) := cs.lookups.map (fun a =>
     { inputs := a.inputs.map (substSelectorMap m)
       tables := a.tables.map (substSelectorMap m) })
-  let (gates, s) := eraseGates polys (seedQueries seed {})
-  let (lookups, s) := eraseLookups lookups' s
+  -- plain projections (not `let (a, b) := …` matches), so record-field access reduces
+  -- structurally without evaluating the walk — `Bridge.VkProjection` relies on this
+  let gs := eraseGates polys (seedQueries seed {})
+  let lks := eraseLookups lookups' gs.2
   { numAdviceColumns := cs.numAdviceColumns
     numFixedColumns := cs.numFixedColumns + map.newFixedCols
     numInstanceColumns := cs.numInstanceColumns
     numSelectors := cs.numSelectors
-    adviceQueryLayout := s.advice.toList
-    fixedQueryLayout := s.fixed.toList
-    instanceQueryLayout := s.inst.toList
-    gates := gates
-    lookups := lookups }
+    adviceQueryLayout := lks.2.advice.toList
+    fixedQueryLayout := lks.2.fixed.toList
+    instanceQueryLayout := lks.2.inst.toList
+    gates := gs.1
+    lookups := lks.1 }
 
 end Zcash.Circuits.Fixtures

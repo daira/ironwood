@@ -5,4 +5,5 @@ import Zcash.Common
 import Zcash.Circuits
 import Zcash.Security
 import Zcash.Snark
+import Zcash.Bridge
 import Zcash.TrustBoundary

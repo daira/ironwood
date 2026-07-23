@@ -138,10 +138,16 @@ They are build-time `IO` Boolean checks over JSON fixtures, not propositions reu
 by soundness. Refactor the projections and fixture values so kernel-checked theorems
 state that the actual `VerifyingKey` fields used by `Zcash.Snark` correspond to:
 
-- `vk.gates = (projectCS seed actionSelMap actionCS).gates` and the analogous
-  query-layout equalities, closing the loop between the Snark-side captured VK and the
-  circuit-side projection (a `Decide`-style equality once both sides are Lean data);
-
+- **done on this branch**: `Zcash.Circuits.Fixtures.PartialPinnedConstraintSystem`
+  models the sub-record of halo2's `PinnedConstraintSystem` the capture certifies, and
+  its derivation from a Clean constraint system (`derive`, taking the two keygen
+  witnesses — registration seed and selector-compression map — as explicit inputs
+  until the keygen ports compute them); `Fixtures.SingleAction.PinnedCsMatch`/
+  `VkMatch` compute the captured VK's pinned CS equal to the derived Action circuit
+  (`vk_pinnedCs_eq_derived`, per-field `native_decide` on the fast CS-data dump), and
+  `derive_gates_eval` hands every VK gate's evaluation to the Clean gate expressions.
+  Pending for the full pinned record: counts (dumper emission requested), permutation
+  columns and constants (with the commitment-matching phase);
 - `Action.Circuit.configure orchardGenerators` after selector compression;
 - the post-NU6.3 `mainPost` layout at `orchardBases`;
 - the fixed commitments, permutation commitments, and query/chunk ordering produced
