@@ -42,6 +42,7 @@ import Zcash.Snark.Soundness.Extraction
 import Zcash.Snark.Soundness.Constraints
 import Zcash.Snark.Soundness.ConstraintSatisfaction
 import Zcash.Snark.Soundness.LookupRows
+import Zcash.Snark.Soundness.LookupInstantiation
 import Zcash.Snark.Soundness.FoldSplit
 import Zcash.Snark.Soundness.CommitFold
 import Zcash.Snark.Soundness.Consistency
@@ -72,6 +73,7 @@ import Zcash.Snark.Soundness.Multiopen.Deployed
 import Zcash.Snark.Soundness.Multiopen.Opened
 import Zcash.Snark.Soundness.Multiopen.RPoly
 import Zcash.Snark.Soundness.Multiopen.Claimed
+import Zcash.Snark.Soundness.Multiopen.ConstraintResolver
 import Zcash.Snark.Soundness.Multiopen.DecodeFixture
 import Zcash.Snark.Soundness.Vesta
 -- Concrete fork-tree knowledge error over the deployed Orchard parameters.
