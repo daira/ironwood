@@ -1,16 +1,18 @@
 import Zcash.Circuits.Ecc.Basic
 
 /-!
-# VK-matching fixture types (vendored ironwood `Expr` mirror)
+# VK-matching fixture types (verifier `Expr` mirror)
 
-Local, minimal copies of the ironwood `Fixture.lean` value types (`Zcash.Snark.Expr` and a
-`CsFixture` record over the CS-data fields), used to compare a Halo2-Clean `ConstraintSystem`
-projection against a fixture dumped from the actual Rust circuit.
+Minimal local copies of the verifier-side value types (`Zcash.Snark.Expr` and a
+`CsFixture` record over the CS-data fields), used to compare a Halo2-Clean
+`ConstraintSystem` projection against a fixture dumped from the actual Rust circuit.
 
-**Vendored, not imported** (design doc `vk-matching-design.md` D5): clean2 does not import
-ironwood, so we mirror ironwood's `Expr` (`Verifier/Expressions.lean:29-51`) exactly here.
-The erasure target of `Expression Fp Query` (`Clean/Halo2/Expression.lean:104-109`) is this
-`Expr Fp`. `deriving DecidableEq, Repr` powers the `#eval …  == fixture` comparison.
+**Mirrored, not imported**: the circuit subtree does not depend on `Zcash.Snark`, so
+`Zcash.Snark.Expr` (`Verifier/Expressions.lean`) is mirrored exactly here. (The mirror
+predates the move into this repo: the projection was developed in Clean, which could
+not import ironwood — design doc `vk-matching-design.md` D5.) The erasure target of
+`Expression Fp Query` (`Clean/Halo2/Expression.lean:104-109`) is this `Expr Fp`.
+`deriving DecidableEq, Repr` powers the `#eval … == fixture` comparison.
 
 The dumper (`halo2_proofs::plonk::dump_lean`) emits `CsFixture` literals into
 `AddPre.lean` / `AddPost.lean` in this namespace.
@@ -18,9 +20,9 @@ The dumper (`halo2_proofs::plonk::dump_lean`) emits `CsFixture` literals into
 
 namespace Zcash.Circuits.Fixtures
 
-/-- Ironwood's gate-polynomial AST (`Zcash.Snark.Expr`), index-based: `fixed`/`advice`/
-`instance` carry a **query index**, not a `(column, rotation)`. This is the erasure target
-of `Expression Fp Query`. -/
+/-- The verifier's gate-polynomial AST (`Zcash.Snark.Expr`, mirrored), index-based:
+`fixed`/`advice`/`instance` carry a **query index**, not a `(column, rotation)`. This is
+the erasure target of `Expression Fp Query`. -/
 inductive Expr (F : Type) where
   | constant : F → Expr F
   | fixed : ℕ → Expr F

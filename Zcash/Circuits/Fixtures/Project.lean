@@ -16,7 +16,7 @@ Two pieces (design doc `vk-matching-design.md` §3):
   left-to-right traversal of each gate polynomial (matching the order the Rust closure
   constructs its sub-expressions), gate by gate. The walk simultaneously (a) accumulates
   the `{advice,fixed,instance}QueryLayout` lists and (b) rewrites each `Query` atom to its
-  index, erasing `_root_.Halo2.Expression Fp Query` into the index-based `Expr Fp`.
+  index, erasing `Halo2.Expression Fp Query` into the index-based `Expr Fp`.
 
 * **The operator erasure** (`Clean/Halo2/Expression.lean:104-109`): Halo2-Clean's four-node
   `Expression` (`var/const/add/mul`) is lowered to ironwood's `Expr` matching how Rust's
@@ -34,7 +34,7 @@ one new fixed column, replacement = the bare fixed query — see `compress_selec
 
 namespace Zcash.Circuits.Fixtures
 
-open _root_.Halo2
+open Halo2
 
 /-- The mutable state of the query walk: the three query layouts accumulated so far, in
 first-encounter order. -/
@@ -63,12 +63,12 @@ def QueryState.instIdx (s : QueryState) (col : ℕ) (rot : ℤ) : ℕ × QuerySt
   | some i => (i, s)
   | none => (s.inst.size, { s with inst := s.inst.push (col, rot) })
 
-/-- Erase one `_root_.Halo2.Expression Fp Query` into an `Expr Fp`, threading the query-walk state.
+/-- Erase one `Expression Fp Query` into an `Expr Fp`, threading the query-walk state.
 Traversal order (left operand before right, atom on encounter) is what determines the
 query indices, so it must match the order the Rust gate closure *builds* its expression.
 The Rust `std::ops` build left-to-right (`a - b` builds `a`, then `b`, then combines), so a
 plain left-to-right structural traversal reproduces it. -/
-def eraseExpr : _root_.Halo2.Expression Fp Query → QueryState → Expr Fp × QueryState
+def eraseExpr : Expression Fp Query → QueryState → Expr Fp × QueryState
   | .const c, s => (.constant c, s)
   | .var (.selector sel), s => (.selector sel.index, s)
   | .var (.advice col rot), s =>
@@ -119,7 +119,7 @@ def eraseExpr : _root_.Halo2.Expression Fp Query → QueryState → Expr Fp × Q
       (.product a' b', s)
 
 /-- Erase a list of gate polynomials in order, threading the query walk. -/
-def eraseGates : List (_root_.Halo2.Expression Fp Query) → QueryState → List (Expr Fp) × QueryState
+def eraseGates : List (Expression Fp Query) → QueryState → List (Expr Fp) × QueryState
   | [], s => ([], s)
   | p :: ps, s =>
       let (e, s) := eraseExpr p s
@@ -128,19 +128,19 @@ def eraseGates : List (_root_.Halo2.Expression Fp Query) → QueryState → List
 
 /-- Flatten a `ConstraintSystem`'s gates to the ordered list of all constraint polynomials
 (mirrors halo2 `PinnedGates`' `flat_map(polynomials)`). -/
-def flatGates (cs : _root_.Halo2.ConstraintSystem Fp) : List (_root_.Halo2.Expression Fp Query) :=
+def flatGates (cs : ConstraintSystem Fp) : List (Expression Fp Query) :=
   cs.gates.flatMap (fun g => g.constraints.map (·.poly))
 
 /-- Erase a whole `LookupArgument` (its input and table expression lists), threading the
 query walk. Mirrors `eraseGates` but returns a `LookupFixture`. -/
-def eraseLookup (arg : _root_.Halo2.LookupArgument Fp) (s : QueryState) :
+def eraseLookup (arg : LookupArgument Fp) (s : QueryState) :
     LookupFixture × QueryState :=
   let (inputs, s) := eraseGates arg.inputs s
   let (tables, s) := eraseGates arg.tables s
   ({ inputs, tables }, s)
 
 /-- Erase a list of lookups in registration order, threading the walk. -/
-def eraseLookups : List (_root_.Halo2.LookupArgument Fp) → QueryState → List LookupFixture × QueryState
+def eraseLookups : List (LookupArgument Fp) → QueryState → List LookupFixture × QueryState
   | [], s => ([], s)
   | a :: as, s =>
       let (l, s) := eraseLookup a s
@@ -183,7 +183,7 @@ concatenation, in configure order, of each gate's/lookup's declaration-order que
 the seed pre-registers every query, both `eraseGates` and `eraseLookups` only *look up*
 indices (never append), so gates and lookups can be erased in their own list order over the
 shared, fully-seeded state — the query layout is fixed by the seed alone. -/
-def projectCS (seed : List Query) (cs : _root_.Halo2.ConstraintSystem Fp) : CsFixture :=
+def projectCS (seed : List Query) (cs : ConstraintSystem Fp) : CsFixture :=
   let s0 := seedQueries seed {}
   let (gates, s) := eraseGates (flatGates cs) s0
   let (lookups, s) := eraseLookups cs.lookups s
@@ -213,7 +213,7 @@ query on the packed column *before* the walk. -/
 
 /-- Substitute a single simple selector by a fixed query on the packed column `packedCol`,
 rotation 0 (the `combination_len = 1` replacement). Leaves everything else untouched. -/
-def substSelector (packedCol : ℕ) : _root_.Halo2.Expression Fp Query → _root_.Halo2.Expression Fp Query
+def substSelector (packedCol : ℕ) : Expression Fp Query → Expression Fp Query
   | .var (.selector _) => .var (.fixed ⟨packedCol⟩ 0)
   | .var q => .var q
   | .const c => .const c
@@ -223,7 +223,7 @@ def substSelector (packedCol : ℕ) : _root_.Halo2.Expression Fp Query → _root
 /-- Project the post-compression CS for a **single-selector** gadget: substitute the
 selector by the packed fixed column (index = old `numFixedColumns`), grow `numFixedColumns`
 by 1, drop `numSelectors` to 0 (selectors don't survive compression), then run the same walk. -/
-def projectCSPost (seed : List Query) (cs : _root_.Halo2.ConstraintSystem Fp) : CsFixture :=
+def projectCSPost (seed : List Query) (cs : ConstraintSystem Fp) : CsFixture :=
   let packedCol := cs.numFixedColumns
   let polys := (flatGates cs).map (substSelector packedCol)
   -- The substituted selector becomes a fixed query on the packed column; register it in
@@ -264,12 +264,12 @@ shape, query registration) surfaces as a gate mismatch in that equality. -/
 matching Rust's `expression = expression * (Constant(root) − query)` accumulation). For
 `combinationLen = 1` this is the bare `q` (empty product) — the single-selector and
 degree-0 (complex/lookup-only selector) cases. -/
-def selReplacement (d : SelCompress) : _root_.Halo2.Expression Fp Query :=
-  let q : _root_.Halo2.Expression Fp Query := var (.fixed ⟨d.packedCol⟩ 0)
+def selReplacement (d : SelCompress) : Expression Fp Query :=
+  let q : Expression Fp Query := var (.fixed ⟨d.packedCol⟩ 0)
   let factors := (List.range d.combinationLen).filterMap (fun j =>
     let i := j + 1
     if i = d.assignedRoot then none
-    else some (((i : Fp) : _root_.Halo2.Expression Fp Query) - q))
+    else some (((i : Fp) : Expression Fp Query) - q))
   factors.foldl (· * ·) q
 
 /-- Substitute each `Query.selector k` by its root-finding replacement from the map `m`
@@ -277,7 +277,7 @@ def selReplacement (d : SelCompress) : _root_.Halo2.Expression Fp Query :=
 complete map). Rust substitutes in gates AND lookups (`circuit.rs:1321-1335` — lookup
 expressions carry the complex selectors). -/
 def substSelectorMap (m : ℕ → Option SelCompress) :
-    _root_.Halo2.Expression Fp Query → _root_.Halo2.Expression Fp Query
+    Expression Fp Query → Expression Fp Query
   | .var (.selector s) => match m s.index with
       | some d => selReplacement d
       | none => .var (.selector s)
@@ -298,10 +298,10 @@ pre-compression fixed layout in packing order, BEFORE the substituted gates are 
 columns) reproduces this. `numSelectors` is NOT reset by compression (halo2 keeps the count;
 the pinned VK doesn't carry it — design doc §2.3). -/
 def projectCSPostMap (seed : List Query) (map : SelCompressMap)
-    (cs : _root_.Halo2.ConstraintSystem Fp) : CsFixture :=
+    (cs : ConstraintSystem Fp) : CsFixture :=
   let m : ℕ → Option SelCompress := fun s => (map.entries.find? (fun e => e.1 = s)).map (·.2)
   let polys := (flatGates cs).map (substSelectorMap m)
-  let lookups' : List (_root_.Halo2.LookupArgument Fp) := cs.lookups.map (fun a =>
+  let lookups' : List (LookupArgument Fp) := cs.lookups.map (fun a =>
     { inputs := a.inputs.map (substSelectorMap m)
       tables := a.tables.map (substSelectorMap m) })
   let (gates, s) := eraseGates polys (seedQueries seed {})
