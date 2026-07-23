@@ -268,6 +268,17 @@ the generated columns, and prove that their commitments are the concrete VK's
 `permutationCommonCommitment`s. Commitment binding then supplies the
 `ofKeygenColumns` polynomial equalities (or the existing nontrivial-relation branch).
 
+The residual zero-factor branch is now closed generically as well.
+`additiveZeroBadSet` observes that, after `β` and the committed cell values are fixed,
+each factor `value + β·name + γ` excludes exactly one value of the later `γ`
+challenge. `resolverPermutationZeroFactorBadSet` collects those exclusions,
+`uniformChallenge_resolverPermutationGammaBadSet` combines their active-cell count
+with the existing Schwartz–Zippel root budget, and
+`resolverPermutationCopyConstraints` now concludes cycle equality directly under the
+combined good-`γ` condition. Thus concrete Action work need not propagate a
+zero-product disjunction; it only supplies the already explicit challenge-avoidance
+premise at the correct transcript squeeze.
+
 After that, translate the endpoints to the exact relations that Clean's
 `Halo2.Constraints` requires: declared `constrainEqual`/`constrainInstance` copies,
 `RegionOperation.enableLookup` membership with the exact loaded tables, fixed
@@ -282,9 +293,11 @@ directions. `operationDeclaredCopies` extracts equality, instance, and constant 
 complete operation stream; `copy_constraints_iff_declaredCopies` proves that their
 satisfaction is exactly the full record's copy field. Finally,
 `copy_constraints_or_bad_of_replay` transports equality from the generic keygen
-permutation cycles to every declared copy while preserving one explicit exceptional
-event. The concrete layout instantiation only has to encode endpoints as keygen cells
-(including constants-column allocations) and identify their environment reads.
+permutation cycles to every declared copy while preserving the caller's shared
+exceptional event (for example commitment binding). Permutation zero factors
+themselves are already eliminated by the priced `γ` exclusion above. The concrete
+layout instantiation only has to encode endpoints as keygen cells (including
+constants-column allocations) and identify their environment reads.
 
 The per-gate half of that translation is proven
 (`eraseExpr_substSelectorMap_eval` plus the packed-selector row algebra), and the

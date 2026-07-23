@@ -1,5 +1,6 @@
 import Zcash.Snark.Soundness.PermutationInstantiation
 import Zcash.Snark.Soundness.PermutationConstruction
+import Zcash.Snark.Soundness.GoodChallenge
 
 /-!
 # Semantic endpoint for resolver-backed permutation constraints
@@ -19,6 +20,7 @@ source cell.
 namespace Zcash.Snark
 
 open Polynomial
+open scoped ENNReal
 
 set_option maxHeartbeats 20000
 
@@ -353,15 +355,14 @@ noncomputable def ResolverPermutationCycle.ofKeygenColumns
         (sigma ⟨chunk, i, column⟩).2.1
         (sigma ⟨chunk, i, column⟩).2.2 := by simp [source]
 
-/-- The two challenge exclusions used to recover the multiset of `(value, name)` pairs from the
-grand-product identity.  They are kept separate from VK semantics because the forking/bad-set
-accounting, rather than key generation, supplies them. -/
-structure ResolverPermutationGoodChallenges
+/-- The polynomial in `γ` whose non-roots let the grand-product identity recover the multiset of
+`(value, name)` pairs.  Its coefficients are fixed after `β` is squeezed. -/
+noncomputable def resolverPermutationGammaDifference
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → Polynomial Fp)
-    (p : Fin shape.numProofs) (m : ℕ) : Prop where
-  gamma : ch.gamma ∉ szBadSet (linProdDiff
+    (p : Fin shape.numProofs) (m : ℕ) : Polynomial Fp :=
+  linProdDiff
     ((chunkedCellPairs shape.numPermutationSets m
       (fun c => (ResolverPermutationPairs vk poly p c).length)
       (chunkRowValue vk.omega (ResolverPermutationPairs vk poly p))
@@ -371,7 +372,95 @@ structure ResolverPermutationGoodChallenges
       (fun c => (ResolverPermutationPairs vk poly p c).length)
       (chunkRowValue vk.omega (ResolverPermutationPairs vk poly p))
       (chunkRowName vk.omega vk.delta vk.chunkLen)).map
-        (fun q => q.1 + q.2 * ch.beta)))
+        (fun q => q.1 + q.2 * ch.beta))
+
+/-- The part of a source-cell permutation factor fixed before `γ` is squeezed. -/
+noncomputable def resolverPermutationFactorOffset
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) (m : ℕ)
+    (cell : ResolverPermutationCell vk poly p m) : Fp :=
+  chunkRowValue vk.omega (ResolverPermutationPairs vk poly p)
+      cell.1 cell.2.1 cell.2.2
+    + ch.beta * chunkRowName vk.omega vk.delta vk.chunkLen
+      cell.1 cell.2.1 cell.2.2
+
+/-- Values of `γ` that make at least one source-cell permutation factor vanish. -/
+noncomputable def resolverPermutationZeroFactorBadSet
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) (m : ℕ) : Finset Fp :=
+  additiveZeroBadSet (resolverPermutationFactorOffset vk ch poly p m)
+
+/-- A zero source-cell factor is exactly membership in its schedule-correct `γ` bad set. -/
+theorem mem_resolverPermutationZeroFactorBadSet_iff
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) (m : ℕ) :
+    ch.gamma ∈ resolverPermutationZeroFactorBadSet vk ch poly p m ↔
+      ∃ cell : ResolverPermutationCell vk poly p m,
+        chunkRowValue vk.omega (ResolverPermutationPairs vk poly p)
+            cell.1 cell.2.1 cell.2.2
+          + ch.beta * chunkRowName vk.omega vk.delta vk.chunkLen
+            cell.1 cell.2.1 cell.2.2
+          + ch.gamma = 0 := by
+  exact mem_additiveZeroBadSet_iff
+    (resolverPermutationFactorOffset vk ch poly p m) ch.gamma
+
+/-- The residual zero-factor exclusion costs at most one `γ` value per active permutation cell. -/
+theorem uniformChallenge_resolverPermutationZeroFactorBadSet
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) (m : ℕ) :
+    uniformChallenge.toOuterMeasure
+        (resolverPermutationZeroFactorBadSet vk ch poly p m)
+      ≤ (Fintype.card (ResolverPermutationCell vk poly p m) : ℝ≥0∞)
+          / (Fintype.card Fp : ℝ≥0∞) :=
+  uniformChallenge_additiveZeroBadSet
+    (resolverPermutationFactorOffset vk ch poly p m)
+
+/-- The complete `γ` exclusion: roots needed for multiset recovery together with the individual
+source-cell factors that must stay nonzero while propagating equality around a cycle. -/
+noncomputable def resolverPermutationGammaBadSet
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) (m : ℕ) : Finset Fp :=
+  szBadSet (resolverPermutationGammaDifference vk ch poly p m) ∪
+    resolverPermutationZeroFactorBadSet vk ch poly p m
+
+/-- The combined `γ` exclusion has the sum of the Schwartz–Zippel and active-cell budgets. -/
+theorem uniformChallenge_resolverPermutationGammaBadSet
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) (m : ℕ) :
+    uniformChallenge.toOuterMeasure
+        (resolverPermutationGammaBadSet vk ch poly p m)
+      ≤ ((resolverPermutationGammaDifference vk ch poly p m).natDegree +
+            Fintype.card (ResolverPermutationCell vk poly p m) : ℕ) /
+          (Fintype.card Fp : ℝ≥0∞) := by
+  refine le_trans
+    (uniformChallenge_szBadSet_union
+      (resolverPermutationGammaDifference vk ch poly p m)
+      (resolverPermutationZeroFactorBadSet vk ch poly p m)) ?_
+  gcongr
+  exact_mod_cast additiveZeroBadSet_card_le
+    (resolverPermutationFactorOffset vk ch poly p m)
+
+/-- The challenge exclusions used both to recover the multiset of `(value, name)` pairs and to
+propagate equality around its cycles.  They are kept separate from VK semantics because the
+forking/bad-set accounting, rather than key generation, supplies them. -/
+structure ResolverPermutationGoodChallenges
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) (m : ℕ) : Prop where
+  gamma : ch.gamma ∉ resolverPermutationGammaBadSet vk ch poly p m
   beta : ∀ j, ch.beta ∉ szBadSet ((pairProdDiff
     (chunkedCellPairs shape.numPermutationSets m
       (fun c => (ResolverPermutationPairs vk poly p c).length)
@@ -383,8 +472,8 @@ structure ResolverPermutationGoodChallenges
       (chunkRowName vk.omega vk.delta vk.chunkLen))).coeff j)
 
 /-- Resolver-backed full constraint satisfaction enforces equality on every replayed keygen
-permutation cycle, apart from the explicit zero-factor branch already present in the permutation
-soundness theorem.
+permutation cycle.  The formerly explicit zero-factor branch is excluded by the separately priced
+active-cell component of `ResolverPermutationGoodChallenges.gamma`.
 
 The proof does no new algebra: it joins the polynomial half from
 `ConstraintSatisfaction.resolverPermutationConstraints` to the domain, keygen-semantic, and
@@ -405,18 +494,11 @@ theorem ConstraintSatisfaction.resolverPermutationCopyConstraints
     chunkRowValue vk.omega (ResolverPermutationPairs vk poly p)
         c.1 c.2.1 c.2.2 =
       chunkRowValue vk.omega (ResolverPermutationPairs vk poly p)
-        d.1 d.2.1 d.2.2
-      ∨ ∃ chunk ∈ Finset.range shape.numPermutationSets,
-          ∃ i ∈ Finset.range m,
-          ∃ j ∈ Finset.range (ResolverPermutationPairs vk poly p chunk).length,
-            chunkRowValue vk.omega (ResolverPermutationPairs vk poly p) chunk i j
-                + ch.beta *
-                  chunkRowName vk.omega vk.delta vk.chunkLen chunk i j
-                + ch.gamma = 0 := by
+        d.1 d.2.1 d.2.2 := by
   have hconstraints :=
     h.resolverPermutationConstraints vk ch poly l0 lLast lBlind p
       hdom.nonempty hdom.chunkCount hdom.lastRotation
-  exact deployed_perm_copy_constraints_all_chunks
+  have hresult := deployed_perm_copy_constraints_all_chunks
     vk.omega ch.beta ch.gamma vk.delta vk.chunkLen
     (fun chunk => poly (.permProduct p chunk))
     (ResolverPermutationPairs vk poly p)
@@ -426,6 +508,16 @@ theorem ConstraintSatisfaction.resolverPermutationCopyConstraints
       intro i
       rw [← pow_mul, Nat.mul_comm, pow_mul, hdom.root, one_pow])
     hdom.active hdom.firstSelector hdom.lastSelector
-    hcycle.mapsNames hcycle.namesInjective hgood.gamma hgood.beta hcd
+    hcycle.mapsNames hcycle.namesInjective
+    (fun hmem => hgood.gamma (Finset.mem_union_left _ hmem)) hgood.beta hcd
+  rcases hresult with heq | hzero
+  · exact heq
+  · apply False.elim
+    apply hgood.gamma
+    apply Finset.mem_union_right
+    rw [mem_resolverPermutationZeroFactorBadSet_iff]
+    rcases hzero with ⟨chunk, hchunk, i, hi, j, hj, hfactor⟩
+    exact ⟨⟨⟨chunk, Finset.mem_range.mp hchunk⟩,
+      ⟨⟨i, Finset.mem_range.mp hi⟩, ⟨j, Finset.mem_range.mp hj⟩⟩⟩, hfactor⟩
 
 end Zcash.Snark
