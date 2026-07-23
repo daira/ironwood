@@ -713,26 +713,28 @@ theorem break_measure_le_mixture {ι : Type*} (Extract : Extractor G IVK AK) (S 
 /-- **Adaptive key-binding bound over five independent oracle tables** — ZIP 2005's
 probability space in full: the adversary's private randomness (any distribution `p`) and
 the five oracle tables — `H^ask`, `H^nk`, and the three final `rivk`-derivation oracles —
-drawn independently, the tables uniformly. The machine runs on the combined table, and the
-bound is the hypothesis-free `(n+4)·(n+3)/|F|`. -/
+drawn independently, the tables uniformly. The machine receives the sampled `H^ask`/`H^nk`
+tables — dominating any query strategy against those oracles, with the query budget counting
+only rivk-oracle queries — and runs on the combined table; the bound is the hypothesis-free
+`(n+4)·(n+3)/|F|`. -/
 theorem break_measure_le_product {ι : Type*} [Fintype ASK] [Nonempty NK] [Nonempty ASK]
     (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK)
     (Ggen : G) (hS : S ≠ 0)
     (p : PMF ι)
-    {A : ι → OracleComp (FinalQuery AK NK RIVK QK SK) RIVK
+    {A : ι → (SK → ASK) → (SK → NK) → OracleComp (FinalQuery AK NK RIVK QK SK) RIVK
       (Witness G IVK AK NK RIVK QK SK × Witness G IVK AK NK RIVK QK SK)}
-    {n : ℕ} (hQ : ∀ i, (A i).QueryBound n) :
+    {n : ℕ} (hQ : ∀ i Hask Hnk, (A i Hask Hnk).QueryBound n) :
     ((p.bind fun i => (PMF.uniformOfFintype (SK → ASK)).bind fun Hask =>
         (PMF.uniformOfFintype (SK → NK)).bind fun Hnk =>
           (PMF.uniformOfFintype (SK → RIVK)).bind fun Hleg =>
             (PMF.uniformOfFintype (QK → AK → NK → RIVK)).bind fun Hext =>
               (PMF.uniformOfFintype (RIVK → AK → NK → RIVK)).map fun Hint =>
                 (i, Hask, Hnk, FinalQuery.eval Hleg Hext Hint))).toOuterMeasure
-        {x : ι × (SK → ASK) × (SK → NK) × (FinalQuery AK NK RIVK QK SK → RIVK) |
+        (setOf fun (i, Hask, Hnk, O) =>
           Break Extract S hfn Ggen
-            ⟨x.2.1, x.2.2.1, fun sk => x.2.2.2 (.legacy sk), fun qk ak nk => x.2.2.2 (.ext qk ak nk),
-              fun rivk_ext ak nk => x.2.2.2 (.int rivk_ext ak nk)⟩
-            ((A x.1).run x.2.2.2).1 ((A x.1).run x.2.2.2).2}
+            ⟨Hask, Hnk, fun sk => O (.legacy sk), fun qk ak nk => O (.ext qk ak nk),
+              fun rivk_ext ak nk => O (.int rivk_ext ak nk)⟩
+            ((A i Hask Hnk).run O).1 ((A i Hask Hnk).run O).2)
       ≤ ((n + 4) * (n + 3) : ℕ) / Fintype.card RIVK := by
   refine toOuterMeasure_bind_le _ _ _ fun i => ?_
   refine toOuterMeasure_bind_le _ _ _ fun Hask => ?_
@@ -747,7 +749,7 @@ theorem break_measure_le_product {ι : Type*} [Fintype ASK] [Nonempty NK] [Nonem
     simp only [PMF.map_bind, PMF.map_comp]
     rfl
   rw [htr, PMF.toOuterMeasure_map_apply]
-  exact break_measure_le_of_queryBound Extract S hfn Ggen hS Hask Hnk (hQ i)
+  exact break_measure_le_of_queryBound Extract S hfn Ggen hS Hask Hnk (hQ i Hask Hnk)
 
 end Capstone
 

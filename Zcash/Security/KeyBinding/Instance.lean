@@ -36,7 +36,8 @@ def KeyBinding.toInterface
 
 /-- The probabilistic key-binding bound, delivered at the games' interface: over the
 adversary's private randomness (any distribution `p`) and the five independent oracle
-tables, a bounded-query machine's output witnesses exhibit the interface's `Break` with
+tables, a bounded-query machine — receiving the sampled `H^ask`/`H^nk` tables and querying
+the combined rivk table — has output witnesses exhibiting the interface's `Break` with
 probability at most `(n+4)·(n+3)/|F|`. `toInterface` interprets `Break` as
 `KeyBinding.Break` definitionally, so the games' `∨ kv.Break` branches inherit the bound
 directly. -/
@@ -46,21 +47,21 @@ theorem toInterface_break_measure_le {ι : Type*}
     [Fintype SK] [Nonempty NK] [Nonempty ASK]
     [DecidableEq AK] [DecidableEq NK] [DecidableEq RIVK] [DecidableEq QK] [DecidableEq SK]
     (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK) (Ggen : G) (hS : S ≠ 0) (p : PMF ι)
-    {A : ι → OracleComp (FinalQuery AK NK RIVK QK SK) RIVK
+    {A : ι → (SK → ASK) → (SK → NK) → OracleComp (FinalQuery AK NK RIVK QK SK) RIVK
       (KeyBinding.Witness G IVK AK NK RIVK QK SK × KeyBinding.Witness G IVK AK NK RIVK QK SK)}
-    {n : ℕ} (hQ : ∀ i, (A i).QueryBound n) :
+    {n : ℕ} (hQ : ∀ i Hask Hnk, (A i Hask Hnk).QueryBound n) :
     ((p.bind fun i => (PMF.uniformOfFintype (SK → ASK)).bind fun Hask =>
         (PMF.uniformOfFintype (SK → NK)).bind fun Hnk =>
           (PMF.uniformOfFintype (SK → RIVK)).bind fun Hleg =>
             (PMF.uniformOfFintype (QK → AK → NK → RIVK)).bind fun Hext =>
               (PMF.uniformOfFintype (RIVK → AK → NK → RIVK)).map fun Hint =>
                 (i, Hask, Hnk, FinalQuery.eval Hleg Hext Hint))).toOuterMeasure
-        {x : ι × (SK → ASK) × (SK → NK) × (FinalQuery AK NK RIVK QK SK → RIVK) |
+        (setOf fun (i, Hask, Hnk, O) =>
           (KeyBinding.toInterface Extract S hfn Ggen
-              ⟨x.2.1, x.2.2.1, fun sk => x.2.2.2 (.legacy sk),
-                fun qk ak nk => x.2.2.2 (.ext qk ak nk),
-                fun rivk_ext ak nk => x.2.2.2 (.int rivk_ext ak nk)⟩).Break
-            ((A x.1).run x.2.2.2).1 ((A x.1).run x.2.2.2).2}
+              ⟨Hask, Hnk, fun sk => O (.legacy sk),
+                fun qk ak nk => O (.ext qk ak nk),
+                fun rivk_ext ak nk => O (.int rivk_ext ak nk)⟩).Break
+            ((A i Hask Hnk).run O).1 ((A i Hask Hnk).run O).2)
       ≤ ((n + 4) * (n + 3) : ℕ) / Fintype.card RIVK :=
   KeyBinding.break_measure_le_product Extract S hfn Ggen hS p hQ
 
