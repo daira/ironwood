@@ -432,6 +432,7 @@ assert_no_sorry lookup_run_start_of_dvd
 assert_no_sorry lookup_run_step_of_dvd
 assert_no_sorry lookup_run_structure_of_dvd
 assert_no_sorry lookup_product_eq_or_factor_eq_zero
+assert_no_sorry deployed_lookup_subset
 -- The deployed row reading: the step rule's folds are running products, the boundary rules pin the
 -- product at the first and last rows, and the cell names separate. These are theorems about
 -- `permChunkExpression` itself, so the chain above starts at the verifier's own constraint list.

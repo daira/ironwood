@@ -163,4 +163,75 @@ theorem lookup_product_eq_or_factor_eq_zero
   · exact running_product_start hstart (hrow 0) hl0
   · exact running_product_end (by simpa [mul_comm] using hend) (hrow m) hlast
 
+/-- A polynomial column read over the first `m` powers of the evaluation-domain generator. -/
+noncomputable def lookupColumnRows (omega : Fp) (p : Polynomial Fp) (m : ℕ) : Fin m → Fp :=
+  fun i => p.eval (omega ^ (i : ℕ))
+
+open Finset in
+/-- **The deployed lookup argument.** The verifier's five lookup constraints imply that every
+compressed input row occurs in the compressed table, unless the running product ends on its
+legitimate zero branch and therefore exposes a vanishing input/table challenge factor.
+
+The root-set hypotheses price the two sampled challenges used to separate the paired product into
+the permuted-input/input and permuted-table/table multiset identities. -/
+theorem deployed_lookup_subset
+    (omega beta gamma : Fp) (z a s input table l0P lLastP lBlindP : Polynomial Fp)
+    {n u : ℕ}
+    (homega : omega ≠ 0)
+    (hproduct : (X ^ n - 1 : Polynomial Fp) ∣
+      (z.comp (C omega * X) * (a + C beta) * (s + C gamma)
+        - z * (input + C beta) * (table + C gamma))
+        * (1 - (lLastP + lBlindP)))
+    (hstart : (X ^ n - 1 : Polynomial Fp) ∣ l0P * (1 - z))
+    (hend : (X ^ n - 1 : Polynomial Fp) ∣ lLastP * (z ^ 2 - z))
+    (hrunStart : (X ^ n - 1 : Polynomial Fp) ∣ l0P * (a - s))
+    (hrunStep : (X ^ n - 1 : Polynomial Fp) ∣
+      (a - s) * (a - a.comp (C omega⁻¹ * X)) * (1 - (lLastP + lBlindP)))
+    (hrow : ∀ i : ℕ, (omega ^ i) ^ n = 1)
+    (hactive : ∀ i < u + 1,
+      1 - (lLastP.eval (omega ^ i) + lBlindP.eval (omega ^ i)) ≠ 0)
+    (hl0 : l0P.eval (omega ^ 0) ≠ 0)
+    (hlast : lLastP.eval (omega ^ (u + 1)) ≠ 0)
+    (hgoodGamma : gamma ∉ szBadSet
+      ((lookupProdDiff
+        (univ.val.map (lookupColumnRows omega a (u + 1)))
+        (univ.val.map (lookupColumnRows omega s (u + 1)))
+        (univ.val.map (lookupColumnRows omega input (u + 1)))
+        (univ.val.map (lookupColumnRows omega table (u + 1)))).map (evalRingHom beta)))
+    (hgoodBeta : ∀ j, beta ∉ szBadSet
+      ((lookupProdDiff
+        (univ.val.map (lookupColumnRows omega a (u + 1)))
+        (univ.val.map (lookupColumnRows omega s (u + 1)))
+        (univ.val.map (lookupColumnRows omega input (u + 1)))
+        (univ.val.map (lookupColumnRows omega table (u + 1)))).coeff j)) :
+    (∀ i : Fin (u + 1), ∃ j : Fin (u + 1),
+      lookupColumnRows omega input (u + 1) i = lookupColumnRows omega table (u + 1) j)
+    ∨ ∃ i ∈ range (u + 1),
+      (input.eval (omega ^ i) + beta) * (table.eval (omega ^ i) + gamma) = 0 := by
+  rcases lookup_product_eq_or_factor_eq_zero omega beta gamma z a s input table
+      l0P lLastP lBlindP hproduct hstart hend hrow hactive hl0 hlast with hprod | hzero
+  · left
+    have hprod' :
+        (∏ i, (beta + lookupColumnRows omega a (u + 1) i))
+            * (∏ i, (gamma + lookupColumnRows omega s (u + 1) i))
+          = (∏ i, (beta + lookupColumnRows omega input (u + 1) i))
+            * (∏ i, (gamma + lookupColumnRows omega table (u + 1) i)) := by
+      simp only [lookupColumnRows]
+      rw [Fin.prod_univ_eq_prod_range
+          (fun i => beta + a.eval (omega ^ i)) (u + 1),
+        Fin.prod_univ_eq_prod_range
+          (fun i => gamma + s.eval (omega ^ i)) (u + 1),
+        Fin.prod_univ_eq_prod_range
+          (fun i => beta + input.eval (omega ^ i)) (u + 1),
+        Fin.prod_univ_eq_prod_range
+          (fun i => gamma + table.eval (omega ^ i)) (u + 1)]
+      simpa [prod_mul_distrib, mul_assoc, add_comm] using hprod
+    obtain ⟨hain, hstbl⟩ := lookup_multisets_of_diff_eq_zero
+      (lookup_multisets_of_prod_eval_eq hgoodGamma hgoodBeta (by
+        simpa [Finset.prod_eq_multiset_prod, Multiset.map_map, Function.comp_def] using hprod'))
+    exact fun i => lookup_subset_of_components hain hstbl
+      (lookup_run_structure_of_dvd omega a s l0P lLastP lBlindP homega
+        hrunStart hrunStep hrow hactive hl0) i
+  · exact Or.inr hzero
+
 end Zcash.Snark

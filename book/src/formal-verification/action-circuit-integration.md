@@ -177,11 +177,15 @@ fingerprint premise at the quotient check. Its latest stack additionally proves:
 - the lookup row equations and product identity imply every input value occurs in the
   table.
 
-Those links are not yet chained from the deployed constraint list: the split theorem
-has no deployed instantiation, and the copy/lookup endpoints have no callers. The
-immediate generic task is to add the membership lemmas and plumbing that feed
-`constraints_dvd_of_good_y` into `deployed_perm_copy_constraints` and
-`lookup_subset_of_prod_eval_eq`.
+This integration branch now packages the deployed flat list as
+`ConstraintPolyModel.constraints`, turns the split theorem into the family-separated
+`ConstraintSatisfaction` record, and exposes named membership/divisibility facts for
+each selected lookup's five constraints. `LookupRows` reads those five polynomial
+constraints over the evaluation domain and closes the lookup endpoint, including the
+explicit zero-factor branch when the running product ends at zero. The remaining
+generic plumbing must identify each selected proof-string lookup with those rotated
+polynomials and similarly route the selected permutation-set/chunk shapes from
+`ConstraintSatisfaction` into `deployed_perm_copy_constraints_all_chunks`.
 
 After that, translate the endpoints to the exact relations that Clean's
 `Halo2.Constraints` requires: declared `constrainEqual`/`constrainInstance` copies,
