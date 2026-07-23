@@ -29,7 +29,9 @@ most of the relevant implementation:
   claimed-evaluation binding, and decoded-column capstone foundations.
 - [#91, Permutation and lookup arguments](https://github.com/zcash/ironwood/pull/91),
   extends #30's polynomial constraint model with the verifier's permutation and lookup
-  expressions. It is a draft stacked on #30's `decode-witness` branch, not on `main`.
+  expressions, splits the combined constraint check, reads the arguments row by row,
+  telescopes their running products, and reaches copy-equality and lookup-inclusion
+  endpoints. It is a draft stacked on #30's `decode-witness` branch, not on `main`.
 - [#85, Derive instance commitments](https://github.com/zcash/ironwood/pull/85),
   removes statement-derived instance commitments from the circuit-fixed VK, derives
   them from public inputs, and exercises the result with single- and multi-Action
@@ -155,31 +157,35 @@ merely restating fixture equality.
 
 ### 4. Strengthen circuit satisfaction beyond custom gates
 
-**Status: the protocol-polynomial half is implemented by draft
-[#91](https://github.com/zcash/ironwood/pull/91); the implication to Clean semantics
-remains open.**
+**Status: the protocol mathematics is implemented by draft
+[#91](https://github.com/zcash/ironwood/pull/91); deployed reachability and the mapping
+to Clean operations remain open.**
 
 #30's decoded capstones record only the combined custom-gate quotient identity. #91
 defines the full gate/permutation/lookup constraint list over polynomials, proves that
 evaluation commutes with its builders, and identifies its `y` fold with the verifier's
 own `allExpressions`/`expected_h_eval` fold. This removes the former permutation/lookup
-fingerprint premise at the quotient check.
+fingerprint premise at the quotient check. Its latest stack additionally proves:
 
-As #91's own scope note emphasizes, the argument equations have not yet been turned
-into the circuit-level relations that Clean's `Halo2.Constraints` requires:
+- a good `y` splits the combined check into divisibility of every individual
+  constraint;
+- the permutation row equations telescope through each chunk and across chunks;
+- the resulting multiset identity gives equal values on each permutation cycle;
+- the lookup row equations and product identity imply every input value occurs in the
+  table.
 
-- copy constraints (`constrainEqual` and `constrainInstance`), enforced by the
-  permutation argument;
-- lookup membership and exact loaded-table contents;
-- fixed assignments and selector activations;
-- all synthesized regions under their actual placement.
+Those links are not yet chained from the deployed constraint list: the split theorem
+has no deployed instantiation, and the copy/lookup endpoints have no callers. The
+immediate generic task is to add the membership lemmas and plumbing that feed
+`constraints_dvd_of_good_y` into `deployed_perm_copy_constraints` and
+`lookup_subset_of_prod_eval_eq`.
 
-Use the existing permutation kernels and `PermutationConstruction` to derive equality
-for every declared copy. Connect lookup grand-product soundness to Clean's
-`RegionOperation.enableLookup` membership semantics. Either replace
-`circuitSatViaGates` with a full Halo 2 satisfaction record or add proved permutation
-and lookup components beside it; a custom-gates-only predicate cannot imply
-`Assignment.Constraints`.
+After that, translate the endpoints to the exact relations that Clean's
+`Halo2.Constraints` requires: declared `constrainEqual`/`constrainInstance` copies,
+`RegionOperation.enableLookup` membership with the exact loaded tables, fixed
+assignments and selector activations, and all synthesized regions under their actual
+placement. Replace the gate-only circuit predicate with a full satisfaction record;
+custom gates alone still cannot imply the Action operation trace.
 
 ### 5. Construct the Clean assignment
 
@@ -236,10 +242,12 @@ legacy propositional wrapper.
 concrete gate check over decoded member columns rather than a free decoder. It still
 receives batch/decode/gate/layout data by hand, and its quantitative endpoint remains
 conditional on the family-wide `hExtract` data-supply premise. #91 derives the full
-constraint fold and prices `hgood`, but records the adaptive `x`-challenge coupling as
-standing work. #85 threads statement-derived instance commitments through the live
-verifier. #82 documents the computed capstone and #79 provides the eventual
-trust-boundary census location; neither changes these proof obligations.
+constraint fold, splits it under a good `y`, and proves the permutation/lookup semantic
+endpoints, but does not yet call them from the deployed list; it also records the
+adaptive `x`-challenge coupling as standing work. #85 threads statement-derived
+instance commitments through the live verifier. #82 documents the computed capstone
+and #79 provides the eventual trust-boundary census location; neither changes these
+proof obligations.
 
 The final theorem should say, modulo the explicitly priced Fiat–Shamir, polynomial
 identity, and discrete-log failure events, that acceptance by the modeled deployed
@@ -248,15 +256,15 @@ whose public inputs were committed by the verifier.
 
 ## Suggested implementation order
 
-1. Land or otherwise reconcile #85's public-instance API with #30's decoded-column
-   stack, then rebase the #91 stack onto that combined interface.
+1. Reconcile #85's public-instance API with the combined #30/#91 decoded-column and
+   full-constraint stack.
 2. Reuse #30's two-level decode and budgeted member binding; do not rebuild the
    `x₄`/`x₁` recovery locally.
-3. Make #89's post-compression CS and layout fixtures available as reusable Lean data,
+3. Instantiate #91's constraint split at the deployed list, route the permutation and
+   lookup members to its proved endpoints, and expose a full circuit-satisfaction
+   record instead of the gate-only predicate.
+4. Make #89's post-compression CS and layout fixtures available as reusable Lean data,
    and prove VK/layout equality theorems that discharge #30's routing hypotheses.
-4. Extend #91's full constraint-polynomial result through the permutation and lookup
-   soundness kernels to a full circuit-satisfaction record matching Clean's copy and
-   lookup semantics.
 5. Define the canonical polynomial-to-row decoder, construct the placed Clean
    environment, and prove `Action.Circuit.EnvAssumptions`.
 6. Prove the decomposed full-satisfaction-to-Action bridge, first for one selected
