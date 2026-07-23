@@ -114,7 +114,18 @@ representation.
 
 **Status: executable coverage in
 [#89](https://github.com/zcash/ironwood/pull/89) and public-instance provenance in
-[#85](https://github.com/zcash/ironwood/pull/85), but no reusable bridge theorem.**
+[#85](https://github.com/zcash/ironwood/pull/85); the projection's *semantics* are now
+proven on this branch, but the fixture-equality side still has no reusable theorem.**
+
+`Zcash.Circuits.Fixtures.ProjectSemantics` proves that the VK-match projection
+preserves meaning: selector compression is evaluation under the root-finding
+replacement valuation (`substSelectorMap_eval`, with the packed-column case algebra
+`selReplacement_eval_of_root`/`_of_other`/`_of_zero`), and the query-index erasure walk
+evaluates to the original gate expression whenever the evaluation families interpret
+the walk's final query layout (`eraseExpr_eval`; composed per gate as
+`eraseExpr_substSelectorMap_eval`). The projection now targets the verifier's own gate
+AST (the shared `Zcash/Common/Expr.lean`), so no translation layer separates the two
+sides. What remains here is the *syntactic* linking:
 
 The circuit subtree already contains strong executable checks:
 
@@ -126,6 +137,10 @@ The circuit subtree already contains strong executable checks:
 They are build-time `IO` Boolean checks over JSON fixtures, not propositions reusable
 by soundness. Refactor the projections and fixture values so kernel-checked theorems
 state that the actual `VerifyingKey` fields used by `Zcash.Snark` correspond to:
+
+- `vk.gates = (projectCS seed actionSelMap actionCS).gates` and the analogous
+  query-layout equalities, closing the loop between the Snark-side captured VK and the
+  circuit-side projection (a `Decide`-style equality once both sides are Lean data);
 
 - `Action.Circuit.configure orchardGenerators` after selector compression;
 - the post-NU6.3 `mainPost` layout at `orchardBases`;
@@ -175,6 +190,22 @@ assignments and selector activations, and all synthesized regions under their ac
 placement. Replace the gate-only circuit predicate with a full satisfaction record;
 custom gates alone still cannot imply the Action operation trace.
 
+The per-gate half of that translation is proven
+(`eraseExpr_substSelectorMap_eval` plus the packed-selector row algebra), and the
+reassembly should be stated *generically*: one theorem by induction
+over an arbitrary `Halo2.Operations` list, taking gate vanishing, copy equalities,
+lookup membership, and fixed-column data as inputs, with the circuit-specific facts
+isolated into decidable coherence side conditions — every enabled gate registered in
+the constraint system, gate polynomials linear in their own selector and free of
+foreign selectors, co-packed selectors never co-enabled, the activation table matching
+the packed fixed columns, rows within bounds. Those side conditions are discharged for
+the Action instance computationally (the same `native_decide`-style work the VK-match
+and layout tests already do), not by an Action-specific proof walk. The
+`Fixtures.Layout` reconstruction is already generic over operations, so σ-cycle
+correctness of its replayed keygen merge is likewise a once-and-for-all lemma. A useful
+de-risking step is to instantiate the generic theorem first for the small `AddChip`
+fixtures before the full Action circuit.
+
 ### 5. Construct the Clean assignment
 
 **Status: open. [#89](https://github.com/zcash/ironwood/pull/89) supplies the target
@@ -195,6 +226,12 @@ Then prove `Action.Circuit.EnvAssumptions`, including generator-table exactness,
 table-loaded facts, fixed-base environment assumptions, and selector distinctness.
 No current open PR performs this construction. This is the central Action-specific
 representation bridge.
+
+Note that most of `EnvAssumptions` should come out of the transported `Constraints`
+themselves rather than separate VK-fixed-data facts: `GeneratorTableExact` is defined
+as the `Constraints` of the generator-table load, and the Action circuit's own
+operations contain the `loadTable`/`assignFixed` steps whose transported clauses pin
+the same fixed cells the table-loaded and fixed-base assumptions read.
 
 ### 6. Generalize from one Action to an Orchard bundle
 
