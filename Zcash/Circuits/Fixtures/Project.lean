@@ -2,11 +2,11 @@ import Zcash.Circuits.Fixtures.FixtureTypes
 import Clean.Halo2.Configure
 
 /-!
-# `projectCS` — Halo2-Clean `ConstraintSystem` → ironwood `CsFixture`
+# `projectCS` — Halo2-Clean `ConstraintSystem` → `CsFixture`
 
 Projects a Halo2-Clean `ConstraintSystem Fp` (the output of running a chip's `configure`)
-into the ironwood-shaped `CsFixture`, so it can be compared for **equality** against a
-fixture dumped from the actual Rust circuit (`AddPre.lean` / `AddPost.lean`).
+into the `CsFixture` shape, so it can be compared for **equality** against a fixture
+dumped from the actual Rust circuit (`AddPost.lean`, `actionPost.json`).
 
 Two pieces (design doc `vk-matching-design.md` §3):
 
@@ -21,20 +21,23 @@ Two pieces (design doc `vk-matching-design.md` §3):
 * **The operator erasure** (`Clean/Halo2/Expression.lean:104-109`): Halo2-Clean's four-node
   `Expression` (`var/const/add/mul`) is lowered to ironwood's `Expr` matching how Rust's
   `std::ops` build `Expression<F>`: `Neg`/`Sub` produce `mul (const (-1)) e ↦ .negated e`,
-  `add ↦ .sum`, `mul ↦ .product`, `const ↦ .constant`, and `var ↦ .advice/.fixed/.instance/
-  .selector`. `.scaled` — Rust `expr * field` (`impl Mul<F>`) — DOES arise in the mul chain
+  `add ↦ .sum`, `mul ↦ .product`, `const ↦ .constant`, and `var ↦ .advice/.fixed/.instance`.
+  .scaled` — Rust `expr * field` (`impl Mul<F>`) — DOES arise in the mul chain
   (its lookup, bitshift, incomplete `TWO_INV` and LSB gates use it): it is the `mul e (const c)`
   case, constant on the RIGHT, spelled in ports via the `HMul (Expression F L) F` instance as
   `e * (c : Fp)`. A genuine `Constant * e` product is `mul (const c) e` (constant on the LEFT).
 
-Pre-compression keeps `.selector`; post-compression is handled by `projectCSPost` which
-substitutes each simple selector by its packed fixed column (for a single-selector gadget:
-one new fixed column, replacement = the bare fixed query — see `compress_selectors.rs`).
+The projection targets the deployed VK's shape (after halo2's `compress_selectors`):
+selectors are substituted by their packed-fixed-column replacements *before* the walk
+(`substSelectorMap`), so no selector atom survives to the erasure. A stray selector atom
+erases to a junk constant; `ProjectSemantics` supplies the selector-freeness that makes
+the case unreachable.
 -/
 
 namespace Zcash.Circuits.Fixtures
 
 open Halo2
+open Zcash.Snark (Expr)
 
 /-- The mutable state of the query walk: the three query layouts accumulated so far, in
 first-encounter order. -/
@@ -70,7 +73,8 @@ The Rust `std::ops` build left-to-right (`a - b` builds `a`, then `b`, then comb
 plain left-to-right structural traversal reproduces it. -/
 def eraseExpr : Expression Fp Query → QueryState → Expr Fp × QueryState
   | .const c, s => (.constant c, s)
-  | .var (.selector sel), s => (.selector sel.index, s)
+  -- unreachable post-substitution (see the module docstring); junk value keeps the walk total
+  | .var (.selector _), s => (.constant 0, s)
   | .var (.advice col rot), s =>
       let (i, s) := s.advIdx col.index rot
       (.advice i, s)
@@ -172,74 +176,7 @@ def seedQueries : List Query → QueryState → QueryState
   | .fixed col rot :: qs, s => seedQueries qs (s.fixIdx col.index rot).2
   | .instance col rot :: qs, s => seedQueries qs (s.instIdx col.index rot).2
 
-/-- Project a Halo2-Clean `ConstraintSystem` (pre-compression) into the ironwood
-`CsFixture`: flatten gates, run the query walk + erasure (seeded with the whole chain's
-registration-order queries), erase the lookups, read the counts.
-
-**Seed = whole-circuit registration order** (design doc D6 generalised to multiple gadgets):
-halo2 assigns query indices in the order `query_{advice,fixed,instance}` are *called*
-across all `create_gate`/`lookup` closures, in configure-call order. So `seed` is the
-concatenation, in configure order, of each gate's/lookup's declaration-order queries. Once
-the seed pre-registers every query, both `eraseGates` and `eraseLookups` only *look up*
-indices (never append), so gates and lookups can be erased in their own list order over the
-shared, fully-seeded state — the query layout is fixed by the seed alone. -/
-def projectCS (seed : List Query) (cs : ConstraintSystem Fp) : CsFixture :=
-  let s0 := seedQueries seed {}
-  let (gates, s) := eraseGates (flatGates cs) s0
-  let (lookups, s) := eraseLookups cs.lookups s
-  { numAdviceColumns := cs.numAdviceColumns
-    numFixedColumns := cs.numFixedColumns
-    numInstanceColumns := cs.numInstanceColumns
-    numSelectors := cs.numSelectors
-    adviceQueryLayout := s.advice.toList
-    fixedQueryLayout := s.fixed.toList
-    instanceQueryLayout := s.inst.toList
-    gates := gates
-    lookups := lookups }
-
-/-! ## Post-compression projection (single-selector gadget)
-
-For a gadget with `numSelectors = 1` simple selector active in its gate, `compress_selectors`
-packs it into one new fixed column with `combination_len = 1`, `assigned_root = 1`, so the
-replacement expression is the *bare* fixed query on the new column (no `∏(i−q)` factor). The
-new fixed column index is `numFixedColumns` (appended after the existing fixed columns), and
-its query is registered (via `query_fixed_index`) the *first* time a substituted selector is
-encountered during the gate rewrite — i.e. at fixed-query index 0 if there were no prior
-fixed queries.
-
-This mirrors halo2's order: compression substitutes selectors first, then the query walk runs
-over the substituted expressions. We model that by substituting `Query.selector` for a fixed
-query on the packed column *before* the walk. -/
-
-/-- Substitute a single simple selector by a fixed query on the packed column `packedCol`,
-rotation 0 (the `combination_len = 1` replacement). Leaves everything else untouched. -/
-def substSelector (packedCol : ℕ) : Expression Fp Query → Expression Fp Query
-  | .var (.selector _) => .var (.fixed ⟨packedCol⟩ 0)
-  | .var q => .var q
-  | .const c => .const c
-  | .add a b => .add (substSelector packedCol a) (substSelector packedCol b)
-  | .mul a b => .mul (substSelector packedCol a) (substSelector packedCol b)
-
-/-- Project the post-compression CS for a **single-selector** gadget: substitute the
-selector by the packed fixed column (index = old `numFixedColumns`), grow `numFixedColumns`
-by 1, drop `numSelectors` to 0 (selectors don't survive compression), then run the same walk. -/
-def projectCSPost (seed : List Query) (cs : ConstraintSystem Fp) : CsFixture :=
-  let packedCol := cs.numFixedColumns
-  let polys := (flatGates cs).map (substSelector packedCol)
-  -- The substituted selector becomes a fixed query on the packed column; register it in
-  -- the fixed layout (halo2 does this via `query_fixed_index` during substitution, before
-  -- the advice/instance seed of the following gates). Prepend it to the fixed seed.
-  let (gates, s) := eraseGates polys (seedQueries (Query.fixed ⟨packedCol⟩ 0 :: seed) {})
-  { numAdviceColumns := cs.numAdviceColumns
-    numFixedColumns := cs.numFixedColumns + 1
-    numInstanceColumns := cs.numInstanceColumns
-    numSelectors := cs.numSelectors
-    adviceQueryLayout := s.advice.toList
-    fixedQueryLayout := s.fixed.toList
-    instanceQueryLayout := s.inst.toList
-    gates := gates }
-
-/-! ## Post-compression projection (general, multi-selector, map-driven)
+/-! ## The projection (selector-compression-map driven)
 
 `compress_selectors` (`circuit.rs:1232-1338`, `compress_selectors.rs`) is a **whole-circuit,
 layout-dependent** step (design doc §2.4): which selectors pack into a shared fixed column
@@ -286,18 +223,18 @@ def substSelectorMap (m : ℕ → Option SelCompress) :
   | .add a b => .add (substSelectorMap m a) (substSelectorMap m b)
   | .mul a b => .mul (substSelectorMap m a) (substSelectorMap m b)
 
-/-- Project the post-compression CS with a Rust-dumped selector-compression map: substitute
-every selector (in gates and lookups) by its root-finding replacement, grow
-`numFixedColumns` by the new packed columns, and run the same seeded query walk.
+/-- Project the CS with a Rust-dumped selector-compression map: substitute every selector
+(in gates and lookups) by its root-finding replacement, grow `numFixedColumns` by the new
+packed columns, and run the seeded query walk.
 
-Halo2's post-compression query order: the packed columns' fixed queries are registered at
+Halo2's query order after compression: the packed columns' fixed queries are registered at
 column-ALLOCATION time inside `compress_selectors` (`circuit.rs:1267-1274`, via
 `query_fixed_index` in the allocate closure), i.e. all new fixed queries append to the
-pre-compression fixed layout in packing order, BEFORE the substituted gates are walked. The
-`seed` (built from the dumped post fixture's layouts, or equivalently pre-layout ++ packed
-columns) reproduces this. `numSelectors` is NOT reset by compression (halo2 keeps the count;
-the pinned VK doesn't carry it — design doc §2.3). -/
-def projectCSPostMap (seed : List Query) (map : SelCompressMap)
+existing fixed layout in packing order, BEFORE the substituted gates are walked. The
+`seed` (built from the dumped fixture's layouts) reproduces this. `numSelectors` is NOT
+reset by compression (halo2 keeps the count; the pinned VK doesn't carry it — design doc
+§2.3). -/
+def projectCS (seed : List Query) (map : SelCompressMap)
     (cs : ConstraintSystem Fp) : CsFixture :=
   let m : ℕ → Option SelCompress := fun s => (map.entries.find? (fun e => e.1 = s)).map (·.2)
   let polys := (flatGates cs).map (substSelectorMap m)

@@ -75,7 +75,7 @@ All checks live in ONE `#eval` so the shared reconstruction (ops → regions →
 (pinned content hash — see `Fixtures/Json.lean`). Split into per-product checks
 temporarily when debugging a mismatch. -/
 #eval show IO Unit from do
-  let fx ← Json.loadLayoutFixture "Clean/Ironwood/Fixtures/actionLayout.json"
+  let fx ← Json.loadLayoutFixture "Zcash/Circuits/Fixtures/actionLayout.json"
     0x51cd2f7ce66a8c7
   let ops : Operations Fp := aProgram.operations
   let regions : List (ℕ × RegionOperations Fp) := (indexedRegions ops 0).1

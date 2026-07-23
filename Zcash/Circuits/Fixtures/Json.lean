@@ -25,6 +25,7 @@ namespace Zcash.Circuits.Fixtures.Json
 
 open Lean (Json JsonNumber)
 open Fixtures
+open Zcash.Snark (Expr)
 
 /-! ## Content hash (FNV-1a 64) -/
 
@@ -124,7 +125,6 @@ def jExpr : Expr Fp → Json
   | .sum a b => Json.arr #["+", jExpr a, jExpr b]
   | .product a b => Json.arr #["*", jExpr a, jExpr b]
   | .scaled e c => Json.arr #["s", jExpr e, jFp c]
-  | .selector i => Json.arr #["q", jNat i]
 
 partial def getExpr (j : Json) : Except String (Expr Fp) := do
   match ← getArr j with
@@ -136,7 +136,6 @@ partial def getExpr (j : Json) : Except String (Expr Fp) := do
   | #[.str "+", a, b] => pure (.sum (← getExpr a) (← getExpr b))
   | #[.str "*", a, b] => pure (.product (← getExpr a) (← getExpr b))
   | #[.str "s", e, c] => pure (.scaled (← getExpr e) (← getFp c))
-  | #[.str "q", i] => pure (.selector (← getNat i))
   | _ => .error s!"unknown Expr node {j.compress}"
 
 /-! ## `CsFixture` -/

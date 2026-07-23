@@ -1,7 +1,7 @@
 name = "Zcash"
 version = "0.1.0"
 keywords = ["cryptography", "math", "protocols"]
-defaultTargets = ["Zcash", "FixtureCheck"]
+defaultTargets = ["Zcash", "FixtureCheck", "CircuitCheck"]
 
 [leanOptions]
 pp.unicode.fun = true # pretty-prints `fun a ↦ b`
@@ -39,3 +39,11 @@ name = "Zcash"
 [[lean_lib]]
 name = "FixtureCheck"
 globs = ["Zcash.Snark.Fixtures.+"]
+
+# The circuit-side VK-match and layout tests: fixture comparisons (`#guard`/`#eval`) of the
+# projected constraint system and reconstructed keygen layout against the in-repo Rust dumps.
+# Instance-level like `FixtureCheck`, so not imported by the `Zcash` library; this target
+# keeps them exercised by plain `lake build` (they were previously in no target at all).
+[[lean_lib]]
+name = "CircuitCheck"
+globs = ["Zcash.Circuits.Tests.+"]

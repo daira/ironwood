@@ -1,6 +1,6 @@
 import Zcash.Circuits.Fixtures.Project
-import Zcash.Circuits.Fixtures.AddPre
 import Zcash.Circuits.Fixtures.AddPost
+import Zcash.Circuits.Fixtures.AddSelMap
 import Zcash.Circuits.Ecc.Add
 
 /-!
@@ -9,12 +9,10 @@ import Zcash.Circuits.Ecc.Add
 The first end-to-end VK match for Halo2-Clean. Runs the ported `Add.add.configure` on the same
 columns the Rust harness used (`advices[0..8]` in the roles
 `x_p, y_p, x_qr, y_qr, lambda, alpha, beta, gamma, delta`), projects the resulting
-`ConstraintSystem` to the ironwood `CsFixture` shape, and checks it **equal** to the fixture
-dumped from the actual Rust circuit (`AddPre.lean` / `AddPost.lean`).
-
-* `addPre`  — pre-selector-compression (gates still carry `.selector 0`).
-* `addPost` — post-`compress_selectors` (the single `q_add` selector packed into one new
-  fixed column; every `.selector 0` replaced by `.fixed 0`).
+`ConstraintSystem` to the `CsFixture` shape, and checks it **equal** to the fixture
+dumped from the actual Rust circuit (`AddPost.lean`: after `compress_selectors`, the
+single `q_add` selector is packed into one new fixed column, every selector atom
+replaced by `.fixed 0`).
 
 The comparison is `#guard` on `DecidableEq CsFixture`, so CI fails on any drift between the
 Lean Add port and the Rust constraint system.
@@ -54,10 +52,9 @@ def addSeed : List Query :=
     .advice ⟨2⟩ 1, .advice ⟨3⟩ 1,
     .advice ⟨4⟩ 0, .advice ⟨5⟩ 0, .advice ⟨6⟩ 0, .advice ⟨7⟩ 0, .advice ⟨8⟩ 0 ]
 
--- Pre-compression: projected CS equals the dumped fixture.
-#guard projectCS addSeed addCS == addPre
-
--- Post-compression: projected CS equals the dumped fixture.
-#guard projectCSPost addSeed addCS == addPost
+-- Projected CS equals the dumped fixture. The packed column's rot-0 fixed query joins
+-- the seed (registered at column-allocation time inside `compress_selectors`; fixed and
+-- advice indices live in independent spaces, so its seed position is immaterial).
+#guard projectCS (.fixed ⟨0⟩ 0 :: addSeed) addSelMap addCS == addPost
 
 end Zcash.Circuits.Fixtures.Test

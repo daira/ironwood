@@ -3,12 +3,12 @@ import Zcash.Circuits.Fixtures.Project
 /-!
 # The VK-match projection preserves evaluation
 
-`projectCSPostMap` (`Fixtures/Project.lean`) is what the VK-match tests compare against
+`projectCS` (`Fixtures/Project.lean`) is what the VK-match tests compare against
 the Rust dumps: selector compression (`substSelectorMap`), then the query-index walk
-that erases `Expression Fp Query` into the index-based `Expr Fp`. The tests establish
-*syntactic* equality with the dump; this module supplies the *semantic* half the
-soundness bridge needs (the reusable VK-correctness step of the Action integration
-roadmap):
+that erases `Expression Fp Query` into the verifier's gate AST `Zcash.Snark.Expr`. The
+tests establish *syntactic* equality with the dump; this module supplies the *semantic*
+half the soundness bridge needs (the reusable VK-correctness step of the Action
+integration roadmap):
 
 * `substSelectorMap_eval` — compression is evaluation under a rewritten valuation: each
   selector reads its root-finding replacement instead (`substValuation`).
@@ -17,43 +17,20 @@ roadmap):
   another member's root is written (`_of_other`), nonzero at the selector's own root
   (`_of_root`). This is the algebra that turns "the compressed gate vanishes" into
   "the gated constraint vanishes" at enabled rows.
-* `eraseExpr_eval` — the query-walk erasure evaluates to the original expression, when
-  the evaluation families interpret the walk's final query layout (`Interprets`).
+* `Expression.selectorFree` and `substSelectorMap_selectorFree` — compression under a
+  total map leaves no selector atom, so the erasure's junk selector arm is unreachable.
+* `eraseExpr_eval` — the query-walk erasure of a selector-free expression evaluates to
+  the original, when the evaluation families interpret the walk's final query layout
+  (`Interprets`).
 * `eraseExpr_substSelectorMap_eval` — the composed per-gate step: the whole projection
   pipeline evaluates to the original Clean gate expression under the
   selector-replacement valuation.
-
-The translation from this file's `Expr.eval` to the verifier's mirrored
-`Zcash.Snark.Expr` lives in the bridge layer (`Zcash.Bridge.ProjectionBridge`),
-which composes these lemmas with the VK gate lists.
 -/
 
 namespace Zcash.Circuits.Fixtures
 
 open Halo2
-
-/-! ## Evaluating the fixture `Expr` mirror -/
-
-/-- Evaluation of the fixture `Expr`, mirroring the verifier's `Expr.eval` with a
-valuation `selE` for the pre-compression `selector` atoms. -/
-def Expr.eval (fE aE iE selE : ℕ → Fp) : Expr Fp → Fp
-  | .constant c => c
-  | .fixed i => fE i
-  | .advice i => aE i
-  | .instance i => iE i
-  | .negated a => -(Expr.eval fE aE iE selE a)
-  | .sum a b => Expr.eval fE aE iE selE a + Expr.eval fE aE iE selE b
-  | .product a b => Expr.eval fE aE iE selE a * Expr.eval fE aE iE selE b
-  | .scaled a c => Expr.eval fE aE iE selE a * c
-  | .selector i => selE i
-
-/-- No `selector` atom occurs — true of every post-compression expression. -/
-def Expr.selectorFree : Expr Fp → Bool
-  | .constant _ | .fixed _ | .advice _ | .instance _ => true
-  | .negated a => a.selectorFree
-  | .sum a b | .product a b => a.selectorFree && b.selectorFree
-  | .scaled a _ => a.selectorFree
-  | .selector _ => false
+open Zcash.Snark (Expr)
 
 /-! ## Selector compression is evaluation under a rewritten valuation -/
 
@@ -169,6 +146,71 @@ theorem selReplacement_eval_of_root (d : SelCompress) (v : Query → Fp)
     · rw [if_neg hroot, Option.some_inj] at hx0
       rw [sub_eq_zero] at hx0
       exact hroot (hcast _ _ (by omega) hlen hx0)
+
+/-! ## Selector-freeness
+
+Post-compression expressions contain no selector atom: compression under a total map
+replaces every one by its root-finding polynomial, whose atoms are a fixed query and
+constants. `Expression.selectorFree` is the Boolean witness `eraseExpr_eval` consumes to
+rule the erasure's junk selector arm unreachable. -/
+
+/-- No `Query.selector` atom occurs in the expression. -/
+def _root_.Halo2.Expression.selectorFree {F : Type} : Expression F Query → Bool
+  | .var (.selector _) => false
+  | .var _ => true
+  | .const _ => true
+  | .add a b => a.selectorFree && b.selectorFree
+  | .mul a b => a.selectorFree && b.selectorFree
+
+private theorem selectorFree_foldl_mul (fs : List (Expression Fp Query))
+    (acc : Expression Fp Query) (hacc : acc.selectorFree = true)
+    (hfs : ∀ f ∈ fs, f.selectorFree = true) :
+    (fs.foldl (· * ·) acc).selectorFree = true := by
+  induction fs generalizing acc with
+  | nil => exact hacc
+  | cons f fs ih =>
+      rw [List.foldl_cons]
+      refine ih (acc * f) ?_ (fun g hg => hfs g (List.mem_cons_of_mem f hg))
+      show (Expression.mul acc f).selectorFree = true
+      simp [Expression.selectorFree, hacc, hfs f (List.mem_cons_self ..)]
+
+/-- The root-finding replacement's atoms are a fixed query and constants. -/
+theorem selReplacement_selectorFree (d : SelCompress) :
+    (selReplacement d).selectorFree = true := by
+  unfold selReplacement
+  refine selectorFree_foldl_mul _ _ rfl ?_
+  intro f hf
+  rw [List.mem_filterMap] at hf
+  obtain ⟨j, _, hj⟩ := hf
+  by_cases hcase : j + 1 = d.assignedRoot
+  · simp [hcase] at hj
+  · rw [if_neg hcase, Option.some_inj] at hj
+    subst hj
+    rfl
+
+/-- Compression under a total map leaves no selector atom. -/
+theorem substSelectorMap_selectorFree (m : ℕ → Option SelCompress)
+    (hm : ∀ i, (m i).isSome) (e : Expression Fp Query) :
+    (substSelectorMap m e).selectorFree = true := by
+  induction e with
+  | var q =>
+      cases q with
+      | selector sel =>
+          cases hs : m sel.index with
+          | some d =>
+              simp only [substSelectorMap, hs]
+              exact selReplacement_selectorFree d
+          | none => exact absurd (hm sel.index) (by simp [hs])
+      | fixed c r => rfl
+      | advice c r => rfl
+      | «instance» c r => rfl
+  | const c => rfl
+  | add a b iha ihb =>
+      show (Expression.add _ _).selectorFree = true
+      simp [Expression.selectorFree, iha, ihb]
+  | mul a b iha ihb =>
+      show (Expression.mul _ _).selectorFree = true
+      simp [Expression.selectorFree, iha, ihb]
 
 /-! ## The query walk interprets its own layout
 
@@ -407,35 +449,34 @@ theorem eraseExpr_extends (e : Expression Fp Query) (s : QueryState) :
 
 /-- **Erasure preserves evaluation.** If the evaluation families interpret the layout of
 any state extending the walk's output — in practice the whole-circuit walk's final state
-— then the erased expression evaluates to the original at `v`, with `selE` covering the
-(pre-compression) selector atoms. Stepped through by the walk's own case split; the
-`Interprets`/`Extends` bookkeeping is what lets sibling subexpressions share one final
-layout. -/
-theorem eraseExpr_eval (fE aE iE selE : ℕ → Fp) (v : Query → Fp)
-    (hsel : ∀ sel : Selector, selE sel.index = v (.selector sel))
+— then the erased selector-free expression evaluates to the original at `v`. Stepped
+through by the walk's own case split; the `Interprets`/`Extends` bookkeeping is what
+lets sibling subexpressions share one final layout. -/
+theorem eraseExpr_eval (fE aE iE : ℕ → Fp) (v : Query → Fp)
     (e : Expression Fp Query) (s sfin : QueryState)
+    (hfree : e.selectorFree = true)
     (hext : sfin.Extends (eraseExpr e s).2)
     (hint : Interprets sfin fE aE iE v) :
-    Expr.eval fE aE iE selE (eraseExpr e s).1 = e.eval v := by
+    Expr.eval fE aE iE (eraseExpr e s).1 = e.eval v := by
   induction e, s using eraseExpr.induct with
   | case1 c s => rfl
-  | case2 sel s => exact hsel sel
+  | case2 sel s => simp [Expression.selectorFree] at hfree
   | case3 col rot s i s₁ heq =>
-      show Expr.eval fE aE iE selE (.advice (s.advIdx col.index rot).1)
+      show Expr.eval fE aE iE (.advice (s.advIdx col.index rot).1)
         = v (.advice col rot)
       have hspec := advIdx_spec s col.index rot
       have := (hint.mono (by simpa [eraseExpr, heq] using hext)).advice
         (s.advIdx col.index rot).1 col.index rot (by rw [heq] at hspec ⊢; exact hspec)
       simpa using this
   | case4 col rot s i s₁ heq =>
-      show Expr.eval fE aE iE selE (.fixed (s.fixIdx col.index rot).1)
+      show Expr.eval fE aE iE (.fixed (s.fixIdx col.index rot).1)
         = v (.fixed col rot)
       have hspec := fixIdx_spec s col.index rot
       have := (hint.mono (by simpa [eraseExpr, heq] using hext)).fixed
         (s.fixIdx col.index rot).1 col.index rot (by rw [heq] at hspec ⊢; exact hspec)
       simpa using this
   | case5 col rot s i s₁ heq =>
-      show Expr.eval fE aE iE selE (.instance (s.instIdx col.index rot).1)
+      show Expr.eval fE aE iE (.instance (s.instIdx col.index rot).1)
         = v (.instance col rot)
       have hspec := instIdx_spec s col.index rot
       have := (hint.mono (by simpa [eraseExpr, heq] using hext)).inst
@@ -443,40 +484,50 @@ theorem eraseExpr_eval (fE aE iE selE : ℕ → Fp) (v : Query → Fp)
       simpa using this
   | case6 e s e' s₁ heq ih =>
       simp only [eraseExpr, if_true] at hext ⊢
-      rw [Expr.eval, ih hext,
+      simp only [Expression.selectorFree, Bool.true_and] at hfree
+      rw [Expr.eval, ih hfree hext,
         show (Expression.mul (.const (-1)) e).eval v = -1 * e.eval v from rfl]
       ring
   | case7 c e s hc e' s₁ heq ih =>
       simp only [eraseExpr, if_neg hc] at hext ⊢
-      rw [Expr.eval, Expr.eval, ih hext]
+      simp only [Expression.selectorFree, Bool.true_and] at hfree
+      rw [Expr.eval, Expr.eval, ih hfree hext]
       rfl
   | case8 e c s he e' s₁ heq ih =>
       rw [eraseExpr_mulConstant e c s he] at hext ⊢
-      rw [Expr.eval, Expr.eval, ih hext,
+      simp only [Expression.selectorFree, Bool.and_true] at hfree
+      rw [Expr.eval, Expr.eval, ih hfree hext,
         show (Expression.mul e (.mul (.const c) (.const 1))).eval v
           = e.eval v * (c * 1) from rfl]
       ring
   | case9 e c one s he hone e' s₁ heq e'' s₂ heq₂ ih₁ ih₂ =>
       rw [eraseExpr_mul_const_mul_const_of_ne_one e c one s he hone] at hext ⊢
       simp only [heq] at hext ih₁ ⊢
+      simp only [Expression.selectorFree, Bool.and_true] at hfree
       simp only [Expr.eval]
-      rw [ih₁ (QueryState.Extends.trans (eraseExpr_extends _ _) hext), ih₂ hext]
+      rw [ih₁ hfree (QueryState.Extends.trans (eraseExpr_extends _ _) hext),
+        ih₂ rfl hext]
       rfl
   | case10 e c s he e' s₁ heq ih =>
       rw [eraseExpr_mul_const e c s he] at hext ⊢
-      rw [Expr.eval, ih hext]
+      simp only [Expression.selectorFree, Bool.and_true] at hfree
+      rw [Expr.eval, ih hfree hext]
       rfl
   | case11 a b s e' s₁ heq e'' s₂ heq₂ ih₁ ih₂ =>
       simp only [eraseExpr] at hext ⊢
       simp only [heq] at hext ih₁ ⊢
+      simp only [Expression.selectorFree, Bool.and_eq_true] at hfree
       simp only [Expr.eval]
-      rw [ih₁ (QueryState.Extends.trans (eraseExpr_extends _ _) hext), ih₂ hext]
+      rw [ih₁ hfree.1 (QueryState.Extends.trans (eraseExpr_extends _ _) hext),
+        ih₂ hfree.2 hext]
       rfl
   | case12 a b s ha hb1 hb2 e' s₁ heq e'' s₂ heq₂ ih₁ ih₂ =>
       rw [eraseExpr_mul a b s ha hb1 hb2] at hext ⊢
       simp only [heq] at hext ih₁ ⊢
+      simp only [Expression.selectorFree, Bool.and_eq_true] at hfree
       simp only [Expr.eval]
-      rw [ih₁ (QueryState.Extends.trans (eraseExpr_extends _ _) hext), ih₂ hext]
+      rw [ih₁ hfree.1 (QueryState.Extends.trans (eraseExpr_extends _ _) hext),
+        ih₂ hfree.2 hext]
       rfl
 
 /-! ## The composed per-gate step -/
@@ -487,13 +538,13 @@ the selector-replacement valuation. Composition of `eraseExpr_eval` with
 `substSelectorMap_eval`; one application per gate polynomial per row is the gate
 portion of the Clean-constraints transport. -/
 theorem eraseExpr_substSelectorMap_eval (m : ℕ → Option SelCompress)
-    (fE aE iE selE : ℕ → Fp) (v : Query → Fp)
-    (hsel : ∀ sel : Selector, selE sel.index = v (.selector sel))
+    (hm : ∀ i, (m i).isSome) (fE aE iE : ℕ → Fp) (v : Query → Fp)
     (p : Expression Fp Query) (s sfin : QueryState)
     (hext : sfin.Extends (eraseExpr (substSelectorMap m p) s).2)
     (hint : Interprets sfin fE aE iE v) :
-    Expr.eval fE aE iE selE (eraseExpr (substSelectorMap m p) s).1
+    Expr.eval fE aE iE (eraseExpr (substSelectorMap m p) s).1
       = p.eval (substValuation m v) := by
-  rw [eraseExpr_eval fE aE iE selE v hsel _ s sfin hext hint, substSelectorMap_eval]
+  rw [eraseExpr_eval fE aE iE v _ s sfin (substSelectorMap_selectorFree m hm p) hext hint,
+    substSelectorMap_eval]
 
 end Zcash.Circuits.Fixtures

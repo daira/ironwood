@@ -1,41 +1,23 @@
 import Zcash.Circuits.Ecc.Basic
+import Zcash.Common.Expr
 
 /-!
-# VK-matching fixture types (verifier `Expr` mirror)
+# VK-matching fixture types
 
-Minimal local copies of the verifier-side value types (`Zcash.Snark.Expr` and a
-`CsFixture` record over the CS-data fields), used to compare a Halo2-Clean
-`ConstraintSystem` projection against a fixture dumped from the actual Rust circuit.
-
-**Mirrored, not imported**: the circuit subtree does not depend on `Zcash.Snark`, so
-`Zcash.Snark.Expr` (`Verifier/Expressions.lean`) is mirrored exactly here. (The mirror
-predates the move into this repo: the projection was developed in Clean, which could
-not import ironwood — design doc `vk-matching-design.md` D5.) The erasure target of
-`Expression Fp Query` (`Clean/Halo2/Expression.lean:104-109`) is this `Expr Fp`.
-`deriving DecidableEq, Repr` powers the `#eval … == fixture` comparison.
+The record shapes for comparing a Halo2-Clean `ConstraintSystem` projection against a
+fixture dumped from the actual Rust circuit. Gate polynomials use the verifier's own
+AST, `Zcash.Snark.Expr` (the shared leaf `Zcash/Common/Expr.lean`): the projection is
+post-selector-compression, so every gate is selector-free and the erasure target of
+`Expression Fp Query` (`Clean/Halo2/Expression.lean:104-109`) is exactly that type.
+`DecidableEq`/`Repr` on it power the `#eval … == fixture` comparison.
 
 The dumper (`halo2_proofs::plonk::dump_lean`) emits `CsFixture` literals into
-`AddPre.lean` / `AddPost.lean` in this namespace.
+`AddPost.lean` in this namespace.
 -/
 
 namespace Zcash.Circuits.Fixtures
 
-/-- The verifier's gate-polynomial AST (`Zcash.Snark.Expr`, mirrored), index-based:
-`fixed`/`advice`/`instance` carry a **query index**, not a `(column, rotation)`. This is
-the erasure target of `Expression Fp Query`. -/
-inductive Expr (F : Type) where
-  | constant : F → Expr F
-  | fixed : ℕ → Expr F
-  | advice : ℕ → Expr F
-  | instance : ℕ → Expr F
-  | negated : Expr F → Expr F
-  | sum : Expr F → Expr F → Expr F
-  | product : Expr F → Expr F → Expr F
-  | scaled : Expr F → F → Expr F
-  /-- Pre-compression only: a simple selector, by index. Post-compression this never
-  appears (each is substituted by a fixed-column root-finding polynomial). -/
-  | selector : ℕ → Expr F
-deriving DecidableEq, Repr
+open Zcash.Snark (Expr)
 
 /-- Build an `Fp` from four little-endian u64 limbs, matching the ironwood fixture's `mkFp`
 and the Rust dumper's `to_repr()` limb encoding. -/
