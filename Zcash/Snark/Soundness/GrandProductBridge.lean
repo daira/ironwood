@@ -1,5 +1,7 @@
 import Mathlib
 import Zcash.Snark.Soundness.GrandProduct
+import Zcash.Snark.Soundness.RunningProduct
+import Zcash.Snark.Soundness.Permutation
 import Zcash.Snark.Soundness.Constraints
 
 /-!
@@ -103,5 +105,94 @@ theorem szBadSet_linProdDiff_card_le (s t : Multiset Fp) :
   refine (szBadSet_card_le _).trans ?_
   refine (natDegree_sub_le _ _).trans ?_
   rw [natDegree_prod_X_add_u s, natDegree_prod_X_add_u t]
+
+
+/-! ## The permutation argument, from the row recurrence to the copy constraints
+
+Composing the two halves. `RunningProduct` turns the verifier's per-row recurrence into a product
+over every cell; the bridge above turns that product into the multiset of `(value, name)` pairs;
+`Soundness.Permutation.perm_copy_constraints` turns the multiset into the copy constraints. One
+branch survives all the way: a vanishing factor, meaning the running product ended at zero or a
+`value + β·name + γ` collided. It stays in the conclusion rather than being assumed away. -/
+
+/-- The `(value, name)` pair of every cell of an `m × k` table. -/
+noncomputable def cellPairs (m k : ℕ) (value nm : ℕ → ℕ → Fp) : Multiset (Fp × Fp) :=
+  (Finset.univ : Finset (Fin m × Fin k)).val.map
+    (fun c => (value (c.1 : ℕ) (c.2 : ℕ), nm (c.1 : ℕ) (c.2 : ℕ)))
+
+open Finset in
+/-- A product over the cell pairs is the row-by-row product the telescoping produces. -/
+theorem prod_map_cellPairs (m k : ℕ) (value nm : ℕ → ℕ → Fp) (f : Fp × Fp → Fp) :
+    ((cellPairs m k value nm).map f).prod
+      = ∏ i ∈ range m, ∏ j ∈ range k, f (value i j, nm i j) := by
+  rw [cellPairs, Multiset.map_map, ← Finset.prod_eq_multiset_prod, Fintype.prod_prod_type]
+  simp only [Function.comp_apply]
+  rw [← Fin.prod_univ_eq_prod_range (fun i => ∏ j ∈ range k, f (value i j, nm i j)) m]
+  exact prod_congr rfl fun i _ => Fin.prod_univ_eq_prod_range
+    (fun j => f (value (i : ℕ) j, nm (i : ℕ) j)) k
+
+open Finset in
+/-- **The permutation argument's multiset identity.** The verifier's per-row recurrence on the
+running product, with the boundary values it also checks, gives equality of the `(value, name)`
+multisets — *either* that, *or* one of the identity-side factors vanished. -/
+theorem cellPairs_eq_of_running_product {m k : ℕ} (z : ℕ → Fp)
+    (value nm sigmaName : ℕ → ℕ → Fp) (β γ : Fp)
+    (hrec : ∀ i < m, z (i + 1) * ∏ j ∈ range k, (value i j + β * sigmaName i j + γ)
+        = z i * ∏ j ∈ range k, (value i j + β * nm i j + γ))
+    (hz0 : z 0 = 1) (hzm : z m = 0 ∨ z m = 1)
+    (hgoodγ : γ ∉ szBadSet (linProdDiff
+      ((cellPairs m k value sigmaName).map (fun p => p.1 + p.2 * β))
+      ((cellPairs m k value nm).map (fun p => p.1 + p.2 * β))))
+    (hgoodβ : ∀ j, β ∉ szBadSet
+      ((pairProdDiff (cellPairs m k value sigmaName) (cellPairs m k value nm)).coeff j)) :
+    cellPairs m k value sigmaName = cellPairs m k value nm
+      ∨ ∃ p ∈ range m ×ˢ range k, value p.1 p.2 + β * nm p.1 p.2 + γ = 0 := by
+  rcases grandProduct_eq_or_cell_eq_zero z
+      (fun i j => value i j + β * nm i j + γ) (fun i j => value i j + β * sigmaName i j + γ)
+      hrec hz0 hzm with hprod | hzero
+  · refine Or.inl (multiset_pair_eq_of_prod_eval_eq hgoodγ hgoodβ ?_)
+    rw [prod_map_cellPairs, prod_map_cellPairs]
+    rw [← prod_range_prod_range (fun i j => value i j + β * sigmaName i j + γ),
+      ← prod_range_prod_range (fun i j => value i j + β * nm i j + γ)] at hprod
+    calc ∏ i ∈ range m, ∏ j ∈ range k, (γ + (value i j + sigmaName i j * β))
+        = ∏ i ∈ range m, ∏ j ∈ range k, (value i j + β * sigmaName i j + γ) := by
+          exact prod_congr rfl fun i _ => prod_congr rfl fun j _ => by ring
+      _ = ∏ i ∈ range m, ∏ j ∈ range k, (value i j + β * nm i j + γ) := hprod
+      _ = ∏ i ∈ range m, ∏ j ∈ range k, (γ + (value i j + nm i j * β)) := by
+          exact prod_congr rfl fun i _ => prod_congr rfl fun j _ => by ring
+  · exact Or.inr hzero
+
+open Finset in
+/-- **The copy constraints, from the verifier's checks.** Cells in the same cycle of `σ` hold equal
+values. `hσ` says the left-hand names are the `σ`-relabelled ones, `hnm` is the name distinctness the
+keygen provides, and the surviving branch is a vanishing factor. This is the permutation argument's
+soundness statement with the product step supplied rather than assumed. -/
+theorem perm_copy_constraints_of_running_product {m k : ℕ} (z : ℕ → Fp)
+    (value nm sigmaName : ℕ → ℕ → Fp) (β γ : Fp) (σ : Equiv.Perm (Fin m × Fin k))
+    (hσ : ∀ c : Fin m × Fin k,
+      sigmaName (c.1 : ℕ) (c.2 : ℕ) = nm ((σ c).1 : ℕ) ((σ c).2 : ℕ))
+    (hnm : Function.Injective fun c : Fin m × Fin k => nm (c.1 : ℕ) (c.2 : ℕ))
+    (hrec : ∀ i < m, z (i + 1) * ∏ j ∈ range k, (value i j + β * sigmaName i j + γ)
+        = z i * ∏ j ∈ range k, (value i j + β * nm i j + γ))
+    (hz0 : z 0 = 1) (hzm : z m = 0 ∨ z m = 1)
+    (hgoodγ : γ ∉ szBadSet (linProdDiff
+      ((cellPairs m k value sigmaName).map (fun p => p.1 + p.2 * β))
+      ((cellPairs m k value nm).map (fun p => p.1 + p.2 * β))))
+    (hgoodβ : ∀ j, β ∉ szBadSet
+      ((pairProdDiff (cellPairs m k value sigmaName) (cellPairs m k value nm)).coeff j))
+    {c d : Fin m × Fin k} (hcd : σ.SameCycle c d) :
+    value (c.1 : ℕ) (c.2 : ℕ) = value (d.1 : ℕ) (d.2 : ℕ)
+      ∨ ∃ p ∈ range m ×ˢ range k, value p.1 p.2 + β * nm p.1 p.2 + γ = 0 := by
+  rcases cellPairs_eq_of_running_product z value nm sigmaName β γ hrec hz0 hzm hgoodγ hgoodβ with
+    hmulti | hzero
+  · have hmulti' : cellPairs m k value nm = cellPairs m k value sigmaName := hmulti.symm
+    simp only [cellPairs] at hmulti'
+    refine Or.inl (perm_copy_constraints σ hnm (fun c => value (c.1 : ℕ) (c.2 : ℕ)) ?_ hcd)
+    calc (Finset.univ : Finset (Fin m × Fin k)).val.map
+            (fun c => (value (c.1 : ℕ) (c.2 : ℕ), nm (c.1 : ℕ) (c.2 : ℕ)))
+        = (Finset.univ : Finset (Fin m × Fin k)).val.map
+            (fun c => (value (c.1 : ℕ) (c.2 : ℕ), sigmaName (c.1 : ℕ) (c.2 : ℕ))) := hmulti'
+      _ = _ := Multiset.map_congr rfl fun c _ => by rw [hσ c]
+  · exact Or.inr hzero
 
 end Zcash.Snark
