@@ -18,11 +18,11 @@ The route, each step proven here:
 3. `CollisionUpToSign.ofBreak` — a full `Break` computes a ±-collision of the shifted combined
    oracle at distinct queries; `residual_of_finalQuery_eq` handles coinciding queries.
 4. `nk_pinned` / `ak_pinned` / `qk_or_sk_pinned` — without a break, the components agree
-   (Balance's and Spend Authorization's imports).
+   (consumed by the Balance and Spend Authorization arguments).
 
 The probabilistic side — producing the computed collision is hard — is the birthday bound
 `ε_kb ≤ q(q-1)/r` (`Birthday.lean`), ZIP 2005's `ε_kb` as sharpened in zcash/zips#1338.
-`PRF^nf`-pinning, Spendability's import, is not here yet.
+`PRF^nf`-pinning, which the Spendability argument consumes, is not here yet.
 
 Abstract setting: a prime-order group `G` as an `RIVK`-vector space. The scalar types are
 `RIVK` (rivk values and the rivk-derivation oracle outputs) and `ASK` (`H^ask` outputs, acting
@@ -267,9 +267,9 @@ structure Break (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK
   /-- The witnesses differ in the break projection. -/
   proj_ne : w₁.breakProj Extract ≠ w₂.breakProj Extract
 
-/-- `nk`-pinning (Balance's import): two valid witnesses with the same `ivk` that do **not** form a
-key-binding break must share the same nullifier key `nk`. (The probability that a break *does* occur
-is the birthday bound.) -/
+/-- `nk`-pinning (consumed by the Balance argument): two valid witnesses with the same `ivk`
+that do **not** form a key-binding break must share the same nullifier key `nk`. (The
+probability that a break *does* occur is the birthday bound.) -/
 theorem nk_pinned (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK) (Ggen : G)
     (H : Oracles AK NK RIVK ASK QK SK)
     {w₁ w₂ : Witness G IVK AK NK RIVK QK SK}
@@ -283,9 +283,10 @@ theorem nk_pinned (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RI
   refine ⟨h₁, h₂, hivk, fun heq => hne ?_⟩
   exact congrArg BreakProj.nk heq
 
-/-- `ak`-pinning up to y-sign (Spend Authorization's import): two valid witnesses with the same `ivk`
-that do *not* form a key-binding break share the same `ak = Extract.toAK ak^ℙ` — i.e. `ak^ℙ` is pinned up
-to its y-sign, matching the protocol's choice to consume `ak` as a single x-coordinate. -/
+/-- `ak`-pinning up to y-sign (consumed by the Spend Authorization argument): two valid
+witnesses with the same `ivk` that do *not* form a key-binding break share the same
+`ak = Extract.toAK ak^ℙ` — i.e. `ak^ℙ` is pinned up to its y-sign, matching the protocol's
+choice to consume `ak` as a single x-coordinate. -/
 theorem ak_pinned (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK) (Ggen : G)
     (H : Oracles AK NK RIVK ASK QK SK)
     {w₁ w₂ : Witness G IVK AK NK RIVK QK SK}
@@ -299,10 +300,11 @@ theorem ak_pinned (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RI
   refine ⟨h₁, h₂, hivk, fun heq => hne ?_⟩
   exact congrArg BreakProj.ak heq
 
-/-- `qk`/`sk`-pinning (Spend Authorization's import): two valid witnesses with the same `ivk` that do
-*not* form a key-binding break share the same branch — the same `qk` or the same `sk`, including
-*which* of the two backs the witness. This is stronger than ZIP 2005's former "`qk` determined by
-`ivk` when `qk ≠ ⊥`". -/
+/-- `qk`/`sk`-pinning (consumed by the Spend Authorization argument): two valid witnesses
+with the same `ivk` that do *not* form a key-binding break share the same branch — the same
+`qk` or the same `sk`, including *which* of the two backs the witness. This is stronger than
+ZIP 2005's former statement, which determined `qk`'s value when present but not which branch
+backs the witness. -/
 theorem qk_or_sk_pinned (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK) (Ggen : G)
     (H : Oracles AK NK RIVK ASK QK SK)
     {w₁ w₂ : Witness G IVK AK NK RIVK QK SK}
