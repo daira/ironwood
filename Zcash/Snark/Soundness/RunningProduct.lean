@@ -10,14 +10,12 @@ factors equals `z` at this row times another. The verifier also pins `z` at the 
 at the last row to `0` or `1`.
 
 Multiplying the recurrence across the rows cancels every interior `z`, leaving the two whole-column
-products related by the boundary values. That is the step from what the verifier checks (a per-row
-identity) to what the soundness kernel consumes (a product identity, which `GrandProduct` turns into
-a multiset identity).
+products related by the boundary values. That turns the verifier's per-row checks into the product
+identity `GrandProduct` reads as a multiset identity.
 
-The `z`-ends-at-`0` branch is not vacuous and is not silently dropped: it forces one of the factors
-to be zero, which for the arguments' factors `v + β·name + γ` is a collision on the challenges. So
-the results here end in *either* the product identity *or* an explicit vanishing factor, and the
-caller prices the second branch.
+If `z` ends at `0`, one factor `v + β·name + γ` must vanish — a collision on the challenges. So each
+result here is *either* the product identity *or* an explicit vanishing factor, and the caller
+prices the second branch.
 -/
 
 namespace Zcash.Snark

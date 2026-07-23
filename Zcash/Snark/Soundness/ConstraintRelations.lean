@@ -135,4 +135,63 @@ theorem lookup_relation_of_circuitSat (omega beta gamma delta theta y : Fp) (chu
     tableExprs fixedCols adviceCols instanceCols gates sets chunks lookups l0P lLastP lBlindP hpoly
     hn p homega hlk hsat hgoodY hrow hactive hl0 hlast hgoodγ hgoodβ i
 
+
+open Finset in
+/-- **The tuple-level lookup, read out of the capstone's predicate.** With `θ` outside each row
+pair's collision root set, the same satisfaction predicate gives membership of whole rows: every
+input row of the lookup appears as a table row. This is the form a circuit's table statement
+consumes. -/
+theorem lookup_tuple_of_circuitSat (omega beta gamma delta theta y : Fp) (chunkLen : ℕ)
+    (zP aP sP : Polynomial Fp) (inputExprs tableExprs : List (Expr Fp))
+    {kk np : ℕ} (fixedCols : ℕ → Polynomial Fp)
+    (adviceCols instanceCols : Fin np → ℕ → Polynomial Fp) (gates : List (Expr Fp))
+    (sets : Fin np → List (PermSetEval (Polynomial Fp)))
+    (chunks : Fin np →
+      List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
+    (lookups : Fin np → List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (l0P lLastP lBlindP hpoly : Polynomial Fp) {n m : ℕ} (hn : n ≠ 0) (p : Fin np)
+    (a : Fin (2 ^ kk) → Fp) (homega : omega ≠ 0)
+    (harity : inputExprs.length = tableExprs.length)
+    (hlk : (lookupEvalPolys omega zP aP sP, inputExprs, tableExprs) ∈ lookups p)
+    (hsat : circuitSatViaConstraints fixedCols (fun _ => adviceCols) (fun _ => instanceCols) gates
+      sets chunks lookups beta gamma delta theta y chunkLen l0P lLastP lBlindP hpoly n a)
+    (hgoodY : ∀ j, y ∉ szBadSet (foldSplitWitness (constraintPolys fixedCols adviceCols
+      instanceCols gates sets chunks lookups beta gamma delta theta chunkLen l0P lLastP lBlindP)
+      n j))
+    (hrow : ∀ i : ℕ, (omega ^ i) ^ n = 1)
+    (hactive : ∀ i < m + 1, 1 - (lLastP.eval (omega ^ i) + lBlindP.eval (omega ^ i)) ≠ 0)
+    (hl0 : l0P.eval (omega ^ 0) ≠ 0) (hlast : lLastP.eval (omega ^ (m + 1)) ≠ 0)
+    (hgoodγ : gamma ∉ szBadSet ((lookupProdDiff
+      (univ.val.map fun i : Fin (m + 1) => aP.eval (omega ^ (i : ℕ)))
+      (univ.val.map fun i : Fin (m + 1) => sP.eval (omega ^ (i : ℕ)))
+      (univ.val.map fun i : Fin (m + 1) =>
+        (compressExprs fixedCols (adviceCols p) (instanceCols p) (C theta)
+          (inputExprs.map (Expr.map C))).eval (omega ^ (i : ℕ)))
+      (univ.val.map fun i : Fin (m + 1) =>
+        (compressExprs fixedCols (adviceCols p) (instanceCols p) (C theta)
+          (tableExprs.map (Expr.map C))).eval (omega ^ (i : ℕ)))).map (evalRingHom beta)))
+    (hgoodβ : ∀ j, beta ∉ szBadSet ((lookupProdDiff
+      (univ.val.map fun i : Fin (m + 1) => aP.eval (omega ^ (i : ℕ)))
+      (univ.val.map fun i : Fin (m + 1) => sP.eval (omega ^ (i : ℕ)))
+      (univ.val.map fun i : Fin (m + 1) =>
+        (compressExprs fixedCols (adviceCols p) (instanceCols p) (C theta)
+          (inputExprs.map (Expr.map C))).eval (omega ^ (i : ℕ)))
+      (univ.val.map fun i : Fin (m + 1) =>
+        (compressExprs fixedCols (adviceCols p) (instanceCols p) (C theta)
+          (tableExprs.map (Expr.map C))).eval (omega ^ (i : ℕ)))).coeff j))
+    (hgoodθ : ∀ i j : Fin (m + 1), theta ∉ szBadSet
+      (foldPoly (rowTuple fixedCols (adviceCols p) (instanceCols p) omega inputExprs (i : ℕ))
+        - foldPoly (rowTuple fixedCols (adviceCols p) (instanceCols p) omega tableExprs (j : ℕ))))
+    (i : Fin (m + 1)) :
+    (∃ j : Fin (m + 1),
+        rowTuple fixedCols (adviceCols p) (instanceCols p) omega inputExprs (i : ℕ)
+          = rowTuple fixedCols (adviceCols p) (instanceCols p) omega tableExprs (j : ℕ))
+    ∨ ∃ t ∈ range (m + 1), ((compressExprs fixedCols (adviceCols p) (instanceCols p) (C theta)
+            (inputExprs.map (Expr.map C))).eval (omega ^ t) + beta)
+          * ((compressExprs fixedCols (adviceCols p) (instanceCols p) (C theta)
+            (tableExprs.map (Expr.map C))).eval (omega ^ t) + gamma) = 0 :=
+  deployed_lookup_tuple_of_identity omega beta gamma delta theta y chunkLen zP aP sP inputExprs
+    tableExprs fixedCols adviceCols instanceCols gates sets chunks lookups l0P lLastP lBlindP hpoly
+    hn p homega harity hlk hsat hgoodY hrow hactive hl0 hlast hgoodγ hgoodβ hgoodθ i
+
 end Zcash.Snark

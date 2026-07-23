@@ -794,7 +794,18 @@ assumption.
   hooks a probabilistic assembly must supply are the same random-oracle coupling the joint accept
   floor carries: that `ch.x` is one fresh uniform squeeze, and that the difference polynomial is
   pinned before `x` is squeezed (`adviceCommitments_mem_preXTranscript` /
-  `hPieces_mem_preXTranscript`, `Soundness.Forking.Ordering`). -/
+  `hPieces_mem_preXTranscript`, `Soundness.Forking.Ordering`).
+
+* **Every other challenge surface carries the same shape of price**
+  (`Soundness.ChallengePricing`): the fold split's `y` (`goodY_failure_measure_le`,
+  `≤ n·length/p`), the multiset bridge's `γ` and `β` (`perm_gamma_failure_measure_le`,
+  `perm_beta_failure_measure_le`), the vanishing-factor escapes (`escape_measure_le`), and the
+  tuple decompression's pairwise `θ` (`theta_failure_measure_le`). Each is a per-challenge
+  uniform measure bound with its data pinned in the transcript before that challenge is squeezed
+  (θ after the advice commitments, β and γ after θ, `y` after the lookup commitments, `x` last).
+  Composing them into the terminal error is the same single coupling hook `hgood` awaits — the
+  events live on different squeezes, so their joint bound needs exactly the sequential coupling
+  above, once, for all of them. -/
 
 /-- The vanishing-`h` opening query is a deployed opening query with its claimed evaluation
 *computed* by the verifier: slot identity `vanishingH`, opening point `ch.x`, and evaluation
@@ -866,9 +877,9 @@ binding: if the extracted quotient's evaluation at `ch.x` is the verifier-comput
 (`hbind` — supplied by the member node binding at the `hquotCommitted` slot), the squeeze avoids the
 `deg`-th roots of unity (`hxn`), and the constraint list folds to the same value as the deployed
 expression list (`hfp` — the fingerprint, sharpened to one equation), then `hfold` holds verbatim.
-Pure field algebra: `expectedHEval` clears its `(x^deg − 1)⁻¹` against `hxn`. The constraint list is
-left abstract: the gates alone instantiate it, and so does the full gate / permutation / lookup list
-(`Soundness.Constraints.eval_combineConstraints_deployed`), which discharges `hfp` outright. -/
+Pure field algebra: `expectedHEval` clears its `(x^deg − 1)⁻¹` against `hxn`. The constraint list
+stays abstract — the gates alone instantiate it, and so does the full gate / permutation / lookup
+list (`eval_combineConstraints_deployed`), which discharges `hfp`. -/
 theorem hfold_of_expectedHEval_binding (constraints : List Fp) (y x : Fp)
     (hpoly : Polynomial Fp) (deg : ℕ) (exprs : List Fp)
     (hxn : x ^ deg ≠ 1)
@@ -1100,8 +1111,11 @@ capstone's `HasNontrivialRelation` disjunct. In place of `hfold` the caller supp
 vanishing-slot data (`hroute`/`hevals`, from `vanishing_slot_routed`), the budget's good branch
 (`hbindAll`), the routed quotient (`hquot`), and the fingerprint (`hfp`); the root-of-unity
 exclusion is read off `hacc0`. Instantiating the same lemma at the full constraint list instead
-proves `hfp` rather than assuming it (`hfold_of_constraint_polys`). `hgood` remains a premise — priced (`hgood_failure_priced`), but its pricing hook needs
-the adaptive coupling (the standing gap in `Soundness.Composition.Prefixes`). -/
+proves `hfp` rather than assuming it (`hfold_of_constraint_polys`). `hgood` remains a premise —
+priced (`hgood_failure_priced`), but its pricing hook needs the adaptive coupling (the standing
+gap in `Soundness.Composition.Prefixes`). Superseded for deployed use: the gate-only fold cannot
+match the committed quotient, which absorbs the permutation and lookup terms — use the
+constraint-carrying capstones at the end of this file. -/
 theorem orchard_verifier_vesta_member_constraint_budgeted_hfold_derived {shape : Shape}
     (urs : URS VestaG) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (ps : ProofString shape Fp VestaG)
@@ -1222,6 +1236,528 @@ theorem orchard_verifier_vesta_member_constraint_budgeted_hfold_derived {shape :
       hadviceSet adviceMem instanceSet hinstanceSet instanceMem fixedCols ch.y gates hpoly vk.n
       pbatch hξcur hlen hprob1 hacc0 p hadvLen hinstLen b₂f hJ hfold hgood
       hadviceLayout hinstanceLayout hquotCommitted hencodes
+  · exact Or.inr hrel
+
+
+/-! ## The member relation over the full constraint system
+
+`SnarkRelationWithMemberColumns` carries the gate check on the decoded member columns. The twin
+below carries satisfaction of the whole constraint list — gates, permutation argument and lookup
+argument — over the same decoded columns and the same witness chain. The chain enters the assembly
+as hypotheses, so nothing probabilistic is re-derived: the deployed capstone family gains a member
+whose conclusion mentions the two arguments. -/
+
+variable {G : Type*}
+
+open Polynomial in
+/-- The member-column SNARK relation over the full constraint system: the witness chain of
+`SnarkRelationWithMemberColumns`, with circuit satisfaction stated by `circuitSatViaConstraints`
+on the decoded member columns instead of the gate check alone. -/
+structure SnarkRelationWithMemberConstraints [AddCommGroup G] [Module Fp G] [DecidableEq G]
+    [Inhabited G] {shape : Shape}
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (P : G) (b : Fin (2 ^ urs.k) → Fp) (v : Fp) (p : Fin shape.numProofs)
+    {numAdvice numInstance np : ℕ}
+    (adviceSet : Fin numAdvice → ℕ)
+    (hadviceSet : ∀ j, adviceSet j < deployedX4PairCount vk instanceCommitment ps ch)
+    (adviceMem : ∀ j : Fin numAdvice, Fin (deployedSetQueries vk instanceCommitment ps ch (adviceSet j)).length)
+    (instanceSet : Fin numInstance → ℕ)
+    (hinstanceSet : ∀ j, instanceSet j < deployedX4PairCount vk instanceCommitment ps ch)
+    (instanceMem : ∀ j : Fin numInstance,
+      Fin (deployedSetQueries vk instanceCommitment ps ch (instanceSet j)).length)
+    (fixedCols : ℕ → Polynomial Fp) (gates : List (Expr Fp))
+    (sets : Fin np → List (PermSetEval (Polynomial Fp)))
+    (chunks : Fin np →
+      List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
+    (lookups : Fin np → List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (beta gamma delta theta y : Fp) (chunkLen : ℕ) (l0 lLast lBlind : Polynomial Fp)
+    (hpoly : Polynomial Fp) (deg : ℕ) (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp) where
+  opens : IpaRelation urs P b v a
+  batchOpenings : OpenedBatchOpenings urs b (x4BatchCommitments urs hk vk instanceCommitment ps ch)
+    (x4BatchEvals vk instanceCommitment ps ch) a pU pW
+  /-- Advice selection is forced by the verifying key's query layout, as in the gate relation. -/
+  adviceLayout : ∀ j : Fin numAdvice,
+    (deployedSetCommIds vk instanceCommitment ps ch (adviceSet j)).getD (adviceMem j : ℕ) CommitmentId.vanishingH
+      = CommitmentId.adviceCol p (vk.adviceQueryLayout.getD (j : ℕ) (0, 0)).1
+  /-- Instance selection is likewise forced by the layout. -/
+  instanceLayout : ∀ j : Fin numInstance,
+    (deployedSetCommIds vk instanceCommitment ps ch (instanceSet j)).getD (instanceMem j : ℕ) CommitmentId.vanishingH
+      = CommitmentId.instanceCol p (vk.instanceQueryLayout.getD (j : ℕ) (0, 0)).1
+  memberDecode : ∀ i (hi : i < deployedX4PairCount vk instanceCommitment ps ch),
+    OpenedMemberDecode urs hk vk instanceCommitment ps ch batchOpenings i hi
+  /-- The quotient is the committed vanishing-`h` polynomial, as in the gate relation. -/
+  quotCommitted : ∃ (hSet : ℕ) (hhSet : hSet < deployedX4PairCount vk instanceCommitment ps ch)
+      (hMem : Fin (deployedSetQueries vk instanceCommitment ps ch hSet).length),
+    hpoly = coeffsToPoly ((memberDecode hSet hhSet).cols hMem) ∧
+    (deployedSetCommIds vk instanceCommitment ps ch hSet).getD (hMem : ℕ) CommitmentId.randomPoly
+      = CommitmentId.vanishingH
+  /-- **The whole constraint system is satisfied** — gates, permutation and lookup arguments — on
+  the decoded member columns. -/
+  satisfiesCircuit :
+    circuitSatViaConstraints fixedCols
+      (fun _ _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+        coeffsToPoly ((memberDecode (adviceSet j) (hadviceSet j)).cols (adviceMem j))))
+      (fun _ _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+        coeffsToPoly ((memberDecode (instanceSet j) (hinstanceSet j)).cols (instanceMem j))))
+      gates sets chunks lookups beta gamma delta theta y chunkLen l0 lLast lBlind hpoly deg a
+
+open Polynomial in
+/-- The constraint-carrying member relation projects onto the plain `SnarkRelation` at
+`circuitSat := circuitSatViaConstraints …` on the decoded member columns: its `opens` field is the
+IPA opening and its `satisfiesCircuit` field is exactly the constraint identity. -/
+theorem SnarkRelationWithMemberConstraints.toSnarkRelation [AddCommGroup G] [Module Fp G]
+    [DecidableEq G] [Inhabited G] {shape : Shape}
+    {urs : URS G} {hk : shape.k = urs.k} {vk : VerifyingKey shape Fp G}
+    {instanceCommitment : Fin shape.numProofs → ℕ → G}
+    {ps : ProofString shape Fp G} {ch : Challenges shape.k Fp}
+    {P : G} {b : Fin (2 ^ urs.k) → Fp} {v : Fp} {p : Fin shape.numProofs}
+    {numAdvice numInstance np : ℕ}
+    {adviceSet : Fin numAdvice → ℕ}
+    {hadviceSet : ∀ j, adviceSet j < deployedX4PairCount vk instanceCommitment ps ch}
+    {adviceMem : ∀ j : Fin numAdvice, Fin (deployedSetQueries vk instanceCommitment ps ch (adviceSet j)).length}
+    {instanceSet : Fin numInstance → ℕ}
+    {hinstanceSet : ∀ j, instanceSet j < deployedX4PairCount vk instanceCommitment ps ch}
+    {instanceMem : ∀ j : Fin numInstance,
+      Fin (deployedSetQueries vk instanceCommitment ps ch (instanceSet j)).length}
+    {fixedCols : ℕ → Polynomial Fp} {gates : List (Expr Fp)}
+    {sets : Fin np → List (PermSetEval (Polynomial Fp))}
+    {chunks : Fin np →
+      List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp))}
+    {lookups : Fin np → List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp))}
+    {beta gamma delta theta y : Fp} {chunkLen : ℕ} {l0 lLast lBlind : Polynomial Fp}
+    {hpoly : Polynomial Fp} {deg : ℕ} {pU pW : Fp} {a : Fin (2 ^ urs.k) → Fp}
+    (hmem : SnarkRelationWithMemberConstraints urs hk vk instanceCommitment ps ch P b v p adviceSet hadviceSet
+      adviceMem instanceSet hinstanceSet instanceMem fixedCols gates sets chunks lookups
+      beta gamma delta theta y chunkLen l0 lLast lBlind hpoly deg pU pW a) :
+    SnarkRelation urs P b v
+      (circuitSatViaConstraints fixedCols
+        (fun _ _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((hmem.memberDecode (adviceSet j) (hadviceSet j)).cols (adviceMem j))))
+        (fun _ _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((hmem.memberDecode (instanceSet j) (hinstanceSet j)).cols
+            (instanceMem j))))
+        gates sets chunks lookups beta gamma delta theta y chunkLen l0 lLast lBlind hpoly deg) a :=
+  ⟨hmem.opens, hmem.satisfiesCircuit⟩
+
+open Polynomial in
+/-- Turn a final opened relation, its batch family, and per-set member decodes into the
+constraint-carrying member relation: the twin of `member_constraint_of_relation_and_batch` with the
+whole constraint list in place of the gates. -/
+theorem member_constraints_of_relation_and_batch [AddCommGroup G] [Module Fp G] [DecidableEq G]
+    [Inhabited G] {shape : Shape}
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    {P : G} {b : Fin (2 ^ urs.k) → Fp} {v : Fp}
+    {numAdvice numInstance np : ℕ}
+    (adviceSet : Fin numAdvice → ℕ)
+    (hadviceSet : ∀ j, adviceSet j < deployedX4PairCount vk instanceCommitment ps ch)
+    (adviceMem : ∀ j : Fin numAdvice, Fin (deployedSetQueries vk instanceCommitment ps ch (adviceSet j)).length)
+    (instanceSet : Fin numInstance → ℕ)
+    (hinstanceSet : ∀ j, instanceSet j < deployedX4PairCount vk instanceCommitment ps ch)
+    (instanceMem : ∀ j : Fin numInstance,
+      Fin (deployedSetQueries vk instanceCommitment ps ch (instanceSet j)).length)
+    (fixedCols : ℕ → Polynomial Fp) (gates : List (Expr Fp))
+    (sets : Fin np → List (PermSetEval (Polynomial Fp)))
+    (chunks : Fin np →
+      List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
+    (lookups : Fin np → List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (beta gamma delta theta y : Fp) (chunkLen : ℕ) (l0 lLast lBlind : Polynomial Fp)
+    (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp)
+    {pU pW : Fp} {a : Fin (2 ^ urs.k) → Fp}
+    (hrel : IpaRelation urs P b v a)
+    (pbatch : OpenedBatchOpenings urs b (x4BatchCommitments urs hk vk instanceCommitment ps ch)
+      (x4BatchEvals vk instanceCommitment ps ch) a pU pW)
+    (mdec : ∀ i (hi : i < deployedX4PairCount vk instanceCommitment ps ch),
+      OpenedMemberDecode urs hk vk instanceCommitment ps ch pbatch i hi)
+    (hquotC : quotientCheck
+      (combineConstraints fixedCols
+        (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((mdec (adviceSet j) (hadviceSet j)).cols (adviceMem j))))
+        (fun _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((mdec (instanceSet j) (hinstanceSet j)).cols (instanceMem j))))
+        gates sets chunks lookups beta gamma delta theta y chunkLen l0 lLast lBlind) hpoly deg x)
+    (hgoodC :
+      combineConstraints fixedCols
+        (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((mdec (adviceSet j) (hadviceSet j)).cols (adviceMem j))))
+        (fun _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((mdec (instanceSet j) (hinstanceSet j)).cols (instanceMem j))))
+        gates sets chunks lookups beta gamma delta theta y chunkLen l0 lLast lBlind
+          ≠ hpoly * (X ^ deg - 1) →
+      (combineConstraints fixedCols
+        (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((mdec (adviceSet j) (hadviceSet j)).cols (adviceMem j))))
+        (fun _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((mdec (instanceSet j) (hinstanceSet j)).cols (instanceMem j))))
+        gates sets chunks lookups beta gamma delta theta y chunkLen l0 lLast lBlind
+          - hpoly * (X ^ deg - 1)).eval x ≠ 0)
+    (p : Fin shape.numProofs)
+    (hadviceLayout : ∀ j : Fin numAdvice,
+      (deployedSetCommIds vk instanceCommitment ps ch (adviceSet j)).getD (adviceMem j : ℕ) CommitmentId.vanishingH
+        = CommitmentId.adviceCol p (vk.adviceQueryLayout.getD (j : ℕ) (0, 0)).1)
+    (hinstanceLayout : ∀ j : Fin numInstance,
+      (deployedSetCommIds vk instanceCommitment ps ch (instanceSet j)).getD (instanceMem j : ℕ) CommitmentId.vanishingH
+        = CommitmentId.instanceCol p (vk.instanceQueryLayout.getD (j : ℕ) (0, 0)).1)
+    (hquotCommitted : ∃ (hSet : ℕ) (hhSet : hSet < deployedX4PairCount vk instanceCommitment ps ch)
+        (hMem : Fin (deployedSetQueries vk instanceCommitment ps ch hSet).length),
+      hpoly = coeffsToPoly ((mdec hSet hhSet).cols hMem) ∧
+      (deployedSetCommIds vk instanceCommitment ps ch hSet).getD (hMem : ℕ) CommitmentId.randomPoly
+        = CommitmentId.vanishingH)
+    {S : Prop}
+    (hencodes : ∀ a,
+      SnarkRelationWithMemberConstraints urs hk vk instanceCommitment ps ch P b v p adviceSet hadviceSet adviceMem
+        instanceSet hinstanceSet instanceMem fixedCols gates sets chunks lookups
+        beta gamma delta theta y chunkLen l0 lLast lBlind hpoly deg pU pW a → S) :
+    S := by
+  have hsat := circuitSatViaConstraints_of_check fixedCols
+    (fun _ _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+      coeffsToPoly ((mdec (adviceSet j) (hadviceSet j)).cols (adviceMem j))))
+    (fun _ _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+      coeffsToPoly ((mdec (instanceSet j) (hinstanceSet j)).cols (instanceMem j))))
+    gates sets chunks lookups beta gamma delta theta y chunkLen l0 lLast lBlind hpoly deg a x
+    hquotC hgoodC
+  exact hencodes a
+    { opens := hrel
+      batchOpenings := pbatch
+      memberDecode := mdec
+      adviceLayout := hadviceLayout
+      instanceLayout := hinstanceLayout
+      quotCommitted := hquotCommitted
+      satisfiesCircuit := hsat }
+
+
+open Polynomial in
+open scoped ENNReal in
+open Classical in
+/-- **Deployed member capstone over the full constraint system.** The twin of
+`orchard_verifier_vesta_member_constraint_deployed_x4`: same witness chain — the batch family's
+opening and the constructed member decodes — with the constraint check in place of the gate check,
+so the deployed endpoint now asserts the gates, permutation and lookup arguments together. -/
+theorem orchard_verifier_vesta_member_constraints_deployed_x4 {shape : Shape}
+    (urs : URS VestaG) (hk : shape.k = urs.k)
+    (vk : VerifyingKey shape Fp VestaG)
+    (instanceCommitment : Fin shape.numProofs → ℕ → VestaG)
+    (ps : ProofString shape Fp VestaG)
+    (ch : Challenges shape.k Fp)
+    (pU pW : Fp)
+    {numAdvice numInstance np : ℕ}
+    (adviceSet : Fin numAdvice → ℕ)
+    (hadviceSet : ∀ j, adviceSet j < deployedX4PairCount vk instanceCommitment ps ch)
+    (adviceMem : ∀ j : Fin numAdvice, Fin (deployedSetQueries vk instanceCommitment ps ch (adviceSet j)).length)
+    (instanceSet : Fin numInstance → ℕ)
+    (hinstanceSet : ∀ j, instanceSet j < deployedX4PairCount vk instanceCommitment ps ch)
+    (instanceMem : ∀ j : Fin numInstance,
+      Fin (deployedSetQueries vk instanceCommitment ps ch (instanceSet j)).length)
+    (fixedCols : ℕ → Polynomial Fp) (gates : List (Expr Fp))
+    (sets : Fin np → List (PermSetEval (Polynomial Fp)))
+    (chunks : Fin np →
+      List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
+    (lookups : Fin np → List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (beta gamma delta theta y : Fp) (chunkLen : ℕ) (l0 lLast lBlind : Polynomial Fp)
+    (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp)
+    {a₀ : Fin (2 ^ urs.k) → Fp}
+    (pbatch : OpenedBatchOpenings urs (evalVector urs.k ch.x3)
+      (x4BatchCommitments urs hk vk instanceCommitment ps ch) (x4BatchEvals vk instanceCommitment ps ch) a₀ pU pW)
+    (hξcur : pbatch.batchChallenge pbatch.current = ch.x4)
+    (hlen : ∀ i, i < deployedX4PairCount vk instanceCommitment ps ch
+      → 0 < (deployedSetQueries vk instanceCommitment ps ch i).length)
+    (hprob1 : ∀ i, i < deployedX4PairCount vk instanceCommitment ps ch →
+      (((deployedSetQueries vk instanceCommitment ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+        < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
+            (OpenedX1Accept urs hk vk instanceCommitment ps ch)))
+    (hacc0 : DeployedAccepts urs hk vk instanceCommitment ps ch)
+    (hquotC : quotientCheck
+      (combineConstraints fixedCols
+        (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
+            (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
+              (adviceMem j))))
+        (fun _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
+            (hinstanceSet j) (hlen _ (hinstanceSet j))
+            (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
+        gates sets chunks lookups beta gamma delta theta y chunkLen l0 lLast lBlind) hpoly deg x)
+    (hgoodC :
+      combineConstraints fixedCols
+        (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
+            (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
+              (adviceMem j))))
+        (fun _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
+            (hinstanceSet j) (hlen _ (hinstanceSet j))
+            (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
+        gates sets chunks lookups beta gamma delta theta y chunkLen l0 lLast lBlind
+          ≠ hpoly * (X ^ deg - 1) →
+      (combineConstraints fixedCols
+        (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
+            (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
+              (adviceMem j))))
+        (fun _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
+            (hinstanceSet j) (hlen _ (hinstanceSet j))
+            (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
+        gates sets chunks lookups beta gamma delta theta y chunkLen l0 lLast lBlind
+          - hpoly * (X ^ deg - 1)).eval x ≠ 0)
+    (p : Fin shape.numProofs)
+    (hadviceLayout : ∀ j : Fin numAdvice,
+      (deployedSetCommIds vk instanceCommitment ps ch (adviceSet j)).getD (adviceMem j : ℕ) CommitmentId.vanishingH
+        = CommitmentId.adviceCol p (vk.adviceQueryLayout.getD (j : ℕ) (0, 0)).1)
+    (hinstanceLayout : ∀ j : Fin numInstance,
+      (deployedSetCommIds vk instanceCommitment ps ch (instanceSet j)).getD (instanceMem j : ℕ) CommitmentId.vanishingH
+        = CommitmentId.instanceCol p (vk.instanceQueryLayout.getD (j : ℕ) (0, 0)).1)
+    (hquotCommitted : ∃ (hSet : ℕ) (hhSet : hSet < deployedX4PairCount vk instanceCommitment ps ch)
+        (hMem : Fin (deployedSetQueries vk instanceCommitment ps ch hSet).length),
+      hpoly = coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch hSet hhSet
+          (hlen _ hhSet) (hprob1 _ hhSet) hacc0).cols hMem) ∧
+      (deployedSetCommIds vk instanceCommitment ps ch hSet).getD (hMem : ℕ) CommitmentId.randomPoly
+        = CommitmentId.vanishingH)
+    {S : Prop}
+    (hencodes : ∀ a,
+      SnarkRelationWithMemberConstraints urs hk vk instanceCommitment ps ch
+        (deployedCommitment urs hk vk instanceCommitment ps ch - pU • urs.u - pW • urs.w)
+        (evalVector urs.k ch.x3) (multiopenValue vk instanceCommitment ps ch) p adviceSet hadviceSet adviceMem
+        instanceSet hinstanceSet instanceMem fixedCols gates sets chunks lookups
+        beta gamma delta theta y chunkLen l0 lLast lBlind hpoly deg pU pW a → S) :
+    S ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w :=
+  Or.inl (member_constraints_of_relation_and_batch urs hk vk instanceCommitment ps ch adviceSet hadviceSet
+    adviceMem instanceSet hinstanceSet instanceMem fixedCols gates sets chunks lookups
+    beta gamma delta theta y chunkLen l0 lLast lBlind hpoly deg x
+    (pbatch.ipaRelation_of_x4Current hξcur) pbatch
+    (fun i hi => openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch i hi (hlen i hi)
+      (hprob1 i hi) hacc0)
+    hquotC hgoodC p hadviceLayout hinstanceLayout hquotCommitted hencodes)
+
+open Polynomial in
+open scoped ENNReal in
+open Classical in
+/-- **The deployed terminal at the constraint predicate.** The capstone payload handed over is
+`SnarkRelation` at `circuitSatViaConstraints` on the decoded member columns — the opening the
+batch family already carries, paired with satisfaction of the whole constraint system. This is
+the endpoint the circuit bridge composes with. -/
+theorem orchard_verifier_vesta_member_constraints_terminal {shape : Shape}
+    (urs : URS VestaG) (hk : shape.k = urs.k)
+    (vk : VerifyingKey shape Fp VestaG)
+    (instanceCommitment : Fin shape.numProofs → ℕ → VestaG)
+    (ps : ProofString shape Fp VestaG)
+    (ch : Challenges shape.k Fp)
+    (pU pW : Fp)
+    {numAdvice numInstance np : ℕ}
+    (adviceSet : Fin numAdvice → ℕ)
+    (hadviceSet : ∀ j, adviceSet j < deployedX4PairCount vk instanceCommitment ps ch)
+    (adviceMem : ∀ j : Fin numAdvice, Fin (deployedSetQueries vk instanceCommitment ps ch (adviceSet j)).length)
+    (instanceSet : Fin numInstance → ℕ)
+    (hinstanceSet : ∀ j, instanceSet j < deployedX4PairCount vk instanceCommitment ps ch)
+    (instanceMem : ∀ j : Fin numInstance,
+      Fin (deployedSetQueries vk instanceCommitment ps ch (instanceSet j)).length)
+    (fixedCols : ℕ → Polynomial Fp) (gates : List (Expr Fp))
+    (sets : Fin np → List (PermSetEval (Polynomial Fp)))
+    (chunks : Fin np →
+      List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
+    (lookups : Fin np → List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (beta gamma delta theta y : Fp) (chunkLen : ℕ) (l0 lLast lBlind : Polynomial Fp)
+    (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp)
+    {a₀ : Fin (2 ^ urs.k) → Fp}
+    (pbatch : OpenedBatchOpenings urs (evalVector urs.k ch.x3)
+      (x4BatchCommitments urs hk vk instanceCommitment ps ch) (x4BatchEvals vk instanceCommitment ps ch) a₀ pU pW)
+    (hξcur : pbatch.batchChallenge pbatch.current = ch.x4)
+    (hlen : ∀ i, i < deployedX4PairCount vk instanceCommitment ps ch
+      → 0 < (deployedSetQueries vk instanceCommitment ps ch i).length)
+    (hprob1 : ∀ i, i < deployedX4PairCount vk instanceCommitment ps ch →
+      (((deployedSetQueries vk instanceCommitment ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+        < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
+            (OpenedX1Accept urs hk vk instanceCommitment ps ch)))
+    (hacc0 : DeployedAccepts urs hk vk instanceCommitment ps ch)
+    (hquotC : quotientCheck
+      (combineConstraints fixedCols
+        (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
+            (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
+              (adviceMem j))))
+        (fun _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
+            (hinstanceSet j) (hlen _ (hinstanceSet j))
+            (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
+        gates sets chunks lookups beta gamma delta theta y chunkLen l0 lLast lBlind) hpoly deg x)
+    (hgoodC :
+      combineConstraints fixedCols
+        (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
+            (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
+              (adviceMem j))))
+        (fun _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
+            (hinstanceSet j) (hlen _ (hinstanceSet j))
+            (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
+        gates sets chunks lookups beta gamma delta theta y chunkLen l0 lLast lBlind
+          ≠ hpoly * (X ^ deg - 1) →
+      (combineConstraints fixedCols
+        (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
+            (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
+              (adviceMem j))))
+        (fun _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
+            (hinstanceSet j) (hlen _ (hinstanceSet j))
+            (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
+        gates sets chunks lookups beta gamma delta theta y chunkLen l0 lLast lBlind
+          - hpoly * (X ^ deg - 1)).eval x ≠ 0)
+    {S : Prop}
+    (hencodes : ∀ a,
+      SnarkRelation urs (deployedCommitment urs hk vk instanceCommitment ps ch - pU • urs.u - pW • urs.w)
+        (evalVector urs.k ch.x3) (multiopenValue vk instanceCommitment ps ch)
+        (circuitSatViaConstraints fixedCols
+          (fun _ _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+            coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
+              (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
+                (adviceMem j))))
+          (fun _ _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+            coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
+              (hinstanceSet j) (hlen _ (hinstanceSet j))
+              (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
+          gates sets chunks lookups beta gamma delta theta y chunkLen l0 lLast lBlind hpoly deg)
+        a → S) :
+    S ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w :=
+  Or.inl (hencodes a₀
+    ⟨pbatch.ipaRelation_of_x4Current hξcur,
+      circuitSatViaConstraints_of_check fixedCols _ _ gates sets chunks lookups
+        beta gamma delta theta y chunkLen l0 lLast lBlind hpoly deg a₀ x hquotC hgoodC⟩)
+
+
+open Polynomial in
+open scoped ENNReal in
+open Classical in
+/-- **The constraint terminal with `hquotC` and `hgoodC` derived.** The conditional split: given
+the feed and carrier bindings at `ch.x` and a squeeze outside the constraint numerator's bad set,
+the quotient check over the full constraint list follows from the vanishing-slot binding
+(`hfold_of_constraint_polys`) and the good-challenge implication from `hgood_of_good_challenge` —
+so the capstone hands over `SnarkRelation` at `circuitSatViaConstraints` with no assumed check.
+Producing these bindings and the good squeeze from acceptance, with their failure probabilities
+composed, is the computed-path re-instantiation. -/
+theorem orchard_verifier_vesta_member_constraints_terminal_derived {shape : Shape}
+    (urs : URS VestaG) (hk : shape.k = urs.k)
+    (vk : VerifyingKey shape Fp VestaG)
+    (instanceCommitment : Fin shape.numProofs → ℕ → VestaG)
+    (ps : ProofString shape Fp VestaG)
+    (ch : Challenges shape.k Fp)
+    (pU pW : Fp)
+    {numAdvice numInstance : ℕ}
+    (adviceSet : Fin numAdvice → ℕ)
+    (hadviceSet : ∀ j, adviceSet j < deployedX4PairCount vk instanceCommitment ps ch)
+    (adviceMem : ∀ j : Fin numAdvice, Fin (deployedSetQueries vk instanceCommitment ps ch (adviceSet j)).length)
+    (instanceSet : Fin numInstance → ℕ)
+    (hinstanceSet : ∀ j, instanceSet j < deployedX4PairCount vk instanceCommitment ps ch)
+    (instanceMem : ∀ j : Fin numInstance,
+      Fin (deployedSetQueries vk instanceCommitment ps ch (instanceSet j)).length)
+    (fixedCols : ℕ → Polynomial Fp)
+    (sets : Fin shape.numProofs → List (PermSetEval (Polynomial Fp)))
+    (chunks : Fin shape.numProofs →
+      List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
+    (lookups : Fin shape.numProofs →
+      List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (l0P lLastP lBlindP : Polynomial Fp) (hpoly : Polynomial Fp)
+    {a₀ : Fin (2 ^ urs.k) → Fp}
+    (pbatch : OpenedBatchOpenings urs (evalVector urs.k ch.x3)
+      (x4BatchCommitments urs hk vk instanceCommitment ps ch) (x4BatchEvals vk instanceCommitment ps ch) a₀ pU pW)
+    (hξcur : pbatch.batchChallenge pbatch.current = ch.x4)
+    (hlen : ∀ i, i < deployedX4PairCount vk instanceCommitment ps ch
+      → 0 < (deployedSetQueries vk instanceCommitment ps ch i).length)
+    (hprob1 : ∀ i, i < deployedX4PairCount vk instanceCommitment ps ch →
+      (((deployedSetQueries vk instanceCommitment ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+        < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
+            (OpenedX1Accept urs hk vk instanceCommitment ps ch)))
+    (hacc0 : DeployedAccepts urs hk vk instanceCommitment ps ch)
+    (i m : ℕ) (hm : m < (deployedSetQueries vk instanceCommitment ps ch i).length)
+    (colPoly : Fin (deployedSetQueries vk instanceCommitment ps ch i).length → Polynomial Fp)
+    (hbindAll : ∀ (idx : Fin ((constructIntermediateSets
+          (assembleQueries vk instanceCommitment ps ch)).points.getD i []).length)
+        (m₀ : Fin (deployedSetQueries vk instanceCommitment ps ch i).length),
+        (colPoly m₀).eval
+            (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i [])[idx])
+          = ((deployedSetQueries vk instanceCommitment ps ch i).getD (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
+        ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+    (hquot : hpoly = colPoly ⟨m, hm⟩)
+    (hroute : (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i [] = [ch.x])
+    (hevals : ∀ d₀, ((deployedSetQueries vk instanceCommitment ps ch i).getD m d₀).2
+      = [expectedHEval
+          (allExpressions vk ps ch
+            (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1
+            (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.1
+            (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2)
+          ch.y (ch.x ^ vk.n)])
+    (hfixed : ∀ j, (fixedCols j).eval ch.x = finFn ps.fixedEvals j)
+    (hadviceBind : ∀ (q : Fin shape.numProofs) j,
+      ((rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
+            (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
+              (adviceMem j))) j).eval ch.x)
+        = finFn (ps.adviceEvals q) j)
+    (hinstanceBind : ∀ (q : Fin shape.numProofs) j,
+      ((rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
+            (hinstanceSet j) (hlen _ (hinstanceSet j)) (hprob1 _ (hinstanceSet j)) hacc0).cols
+              (instanceMem j))) j).eval ch.x)
+        = finFn (ps.instanceEvals q) j)
+    (hsets : ∀ q, (sets q).map (PermSetEval.map (fun r => r.eval ch.x)) = subProofPermSets ps q)
+    (hchunks : ∀ q, (chunks q).map (fun c => (c.1.map (fun r => r.eval ch.x),
+        c.2.map (fun r => (r.1.eval ch.x, r.2.eval ch.x)))) = subProofPermChunks vk ps q)
+    (hlookups : ∀ q, (lookups q).map
+        (fun lk => (lk.1.map (fun r => r.eval ch.x), lk.2.1, lk.2.2)) = subProofLookups vk ps q)
+    (hl0 : l0P.eval ch.x = (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1)
+    (hlLast : lLastP.eval ch.x
+      = (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.1)
+    (hlBlind : lBlindP.eval ch.x
+      = (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2)
+    (hxgood : ch.x ∉ szBadSet
+      (combineConstraints fixedCols
+        (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
+            (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
+              (adviceMem j))))
+        (fun _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
+            (hinstanceSet j) (hlen _ (hinstanceSet j))
+            (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
+        vk.gates sets chunks lookups ch.beta ch.gamma vk.delta ch.theta ch.y vk.chunkLen
+        l0P lLastP lBlindP - hpoly * (X ^ vk.n - 1)))
+    {S : Prop}
+    (hencodes : ∀ a,
+      SnarkRelation urs (deployedCommitment urs hk vk instanceCommitment ps ch - pU • urs.u - pW • urs.w)
+        (evalVector urs.k ch.x3) (multiopenValue vk instanceCommitment ps ch)
+        (circuitSatViaConstraints fixedCols
+          (fun _ _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+            coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
+              (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
+                (adviceMem j))))
+          (fun _ _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+            coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
+              (hinstanceSet j) (hlen _ (hinstanceSet j))
+              (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
+          vk.gates sets chunks lookups ch.beta ch.gamma vk.delta ch.theta ch.y vk.chunkLen
+          l0P lLastP lBlindP hpoly vk.n)
+        a → S) :
+    S ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  rcases hfold_of_constraint_polys urs hk vk instanceCommitment ps ch fixedCols
+      (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+        coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
+          (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
+            (adviceMem j))))
+      (fun _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+        coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
+          (hinstanceSet j) (hlen _ (hinstanceSet j))
+          (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
+      sets chunks lookups l0P lLastP lBlindP hpoly i m hm colPoly hbindAll hquot hroute hevals
+      hacc0 hfixed hadviceBind hinstanceBind hsets hchunks hlookups hl0 hlLast hlBlind
+    with hfold | hrel
+  · exact orchard_verifier_vesta_member_constraints_terminal urs hk vk instanceCommitment ps ch pU pW adviceSet
+      hadviceSet adviceMem instanceSet hinstanceSet instanceMem fixedCols vk.gates sets chunks
+      lookups ch.beta ch.gamma vk.delta ch.theta ch.y vk.chunkLen l0P lLastP lBlindP hpoly vk.n
+      ch.x pbatch hξcur hlen hprob1 hacc0 hfold
+      (hgood_of_good_challenge _ hpoly vk.n hxgood) hencodes
   · exact Or.inr hrel
 
 end Zcash.Snark

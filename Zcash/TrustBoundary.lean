@@ -611,6 +611,14 @@ assert_axioms perm_gamma_failure_measure_le
 assert_axioms perm_beta_failure_measure_le
 assert_axioms escape_measure_le
 assert_axioms theta_failure_measure_le
+-- The deployed capstone family over the full constraint system: the same witness chain — the batch
+-- family's opening and the constructed member decodes — with the constraint check on the decoded
+-- columns in place of the gate check, ending in `SnarkRelation` at `circuitSatViaConstraints`.
+assert_axioms SnarkRelationWithMemberConstraints.toSnarkRelation
+assert_axioms member_constraints_of_relation_and_batch
+assert_axioms orchard_verifier_vesta_member_constraints_deployed_x4 +native
+assert_axioms orchard_verifier_vesta_member_constraints_terminal +native
+assert_axioms orchard_verifier_vesta_member_constraints_terminal_derived +native
 -- The last links: the point check lifted to the polynomial identity, the permutation taken to be the
 -- one keygen builds from the circuit's copy constraints, the cells of every chunk covered at once,
 -- and circuit satisfaction defined by the whole constraint list rather than the gates alone.
@@ -622,12 +630,13 @@ assert_axioms perm_copy_constraints_of_chunk_products
 assert_axioms chunkName_injective_of_coset
 assert_axioms deployed_declared_equalities_of_identity_chunks
 assert_axioms circuitSatViaConstraints_of_check
-assert_axioms orchard_verifier_sound_vesta_constraints
+assert_axioms orchard_verifier_sound_vesta_constraints +native
 -- Closing the loop: the capstone hands over an opening paired with satisfaction of the whole
 -- constraint list, and the two arguments' relations are read back out of that same predicate.
 assert_axioms snarkRelation_constraints
 assert_axioms declared_equalities_of_circuitSat
 assert_axioms lookup_relation_of_circuitSat
+assert_axioms lookup_tuple_of_circuitSat
 -- Several permutation chunks, not one: the chaining rule located in the list, read at row zero, and
 -- the chunks flattened into a single running product so the permutation acts on every cell.
 assert_axioms chain_mem_permutationExpressions
