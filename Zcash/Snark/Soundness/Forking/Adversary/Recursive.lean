@@ -160,7 +160,7 @@ theorem RecursiveForkTape.toCoins_bounded {F : Type*} [Fintype F] [DecidableEq F
   | 0, .leaf => trivial
   | _ + 1, .node order child => by
       constructor
-      · simp [RecursiveForkTape.toCoins, RecursiveForkTape.orderList]
+      · simp [RecursiveForkTape.orderList]
       · intro u
         exact toCoins_bounded (child u)
 
@@ -274,7 +274,7 @@ theorem nextForkChallenge_isSome_of_good {F α : Type*} [Zero F] [DecidableEq F]
       · cases hv : (attempt v).output with
         | some result => simp
         | none =>
-            simp only [hv, RecursiveForkAttempt.addRuns]
+            simp only [RecursiveForkAttempt.addRuns]
             apply ih seen
             · rcases List.mem_cons.mp hmem with rfl | hmem
               · simp [hv] at hgood
@@ -381,10 +381,10 @@ theorem nextForkChallenge_runs_le {F α : Type*} [Zero F] [DecidableEq F]
           le_trans (ih seen) (Nat.mul_le_mul_right C (Nat.le_succ order.length))
       · cases hu : (attempt u).output with
         | some result =>
-            simp only [hu, List.length_cons]
+            simp only [List.length_cons]
             exact le_trans (hC u) (Nat.le_mul_of_pos_left C (Nat.succ_pos _))
         | none =>
-            simp only [hu, RecursiveForkAttempt.addRuns, List.length_cons]
+            simp only [RecursiveForkAttempt.addRuns, List.length_cons]
             calc
               _ ≤ C + order.length * C := Nat.add_le_add (hC u) (ih seen)
               _ = (order.length + 1) * C := by ring
@@ -746,7 +746,7 @@ def AlgebraicForkRealizes (basis : ι → G) (decode : T → G × G) :
     {d : ℕ} → ((Fin d → T) → (Fin d → F) → F → F → Prop) →
       AlgebraicDForkCert (F := F) basis d → Prop
   | 0, acc, .leaf c f => acc Fin.elim0 Fin.elim0 c f
-  | d + 1, acc, .node L R v₁ v₂ v₃ c₁ c₂ c₃ =>
+  | _ + 1, acc, .node L R v₁ v₂ v₃ c₁ c₂ c₃ =>
       v₁ ≠ v₂ ∧ v₁ ≠ v₃ ∧ v₂ ≠ v₃ ∧
       v₁ ≠ 0 ∧ v₂ ≠ 0 ∧ v₃ ≠ 0 ∧
       ∃ t : T, L.point = (decode t).2 ∧ R.point = (decode t).1 ∧
@@ -757,6 +757,7 @@ def AlgebraicForkRealizes (basis : ι → G) (decode : T → G × G) :
         AlgebraicForkRealizes basis decode
           (fun ts cs c f => acc (Fin.cons t ts) (Fin.cons v₃⁻¹ cs) c f) c₃
 
+omit [DecidableEq T] [DecidableEq F] in
 /-- Realization is monotone in its leaf relation. -/
 theorem AlgebraicForkRealizes.mono (basis : ι → G) (decode : T → G × G) :
     {d : ℕ} → {acc acc' : (Fin d → T) → (Fin d → F) → F → F → Prop} →
@@ -884,7 +885,7 @@ theorem recursiveAlgebraicForkFrom_realizes
                   RecursiveRunHistory k (m + 1) (by omega) prefixes O p (nextHistory u₁) := by
                 intro i
                 refine Fin.lastCases ?_ (fun q => ?_) i
-                · simpa [nextHistory, t, j, hp, u₁]
+                · simp [nextHistory, t, j, hp, u₁]
                 · simpa [nextHistory] using hhistory q
               have hhistoryUpdate (u : F) (O' : T → F) (p' : P)
                   (hO' : O' = Function.update O t u) (hp' : p' = A.run O')
@@ -895,7 +896,7 @@ theorem recursiveAlgebraicForkFrom_realizes
                 · constructor
                   · simpa [nextHistory] using ht'
                   · subst O'
-                    simp only [nextHistory, Fin.snoc_last, Prod.fst, Prod.snd]
+                    simp only [nextHistory, Fin.snoc_last]
                     simp [Function.update_apply]
                 · have hq : (q.val : ℕ) < m := q.isLt
                   let qk : Fin k := ⟨q.val, by omega⟩
@@ -919,7 +920,7 @@ theorem recursiveAlgebraicForkFrom_realizes
                       · have hround : D.roundOf t = m := by
                           simpa [t, j] using D.roundOf_prefixes (A.run O) j
                         rw [hround]
-                        simpa [qk] using hq
+                        omega
                       · rw [D.chainAt_prefixes (A.run O) j qk (by change q.val ≤ m; omega)]
                         simpa [t, hp, qk] using (hhistory q).1.trans heq'
                     · simpa [nextHistory] using (hhistory q).2
@@ -927,13 +928,13 @@ theorem recursiveAlgebraicForkFrom_realizes
                 subst O₂
                 subst p₂
                 have hs := stable_update m hm O p u₂ hstable
-                have htp : prefixes p ⟨m, hm⟩ = t := by simpa [t, j, hp]
+                have htp : prefixes p ⟨m, hm⟩ = t := by simp [t, j, hp]
                 simpa [htp] using hs (by simpa [htp] using ht₂)
               have hstable₃ : stable O₃ p₃ := by
                 subst O₃
                 subst p₃
                 have hs := stable_update m hm O p u₃ hstable
-                have htp : prefixes p ⟨m, hm⟩ = t := by simpa [t, j, hp]
+                have htp : prefixes p ⟨m, hm⟩ = t := by simp [t, j, hp]
                 simpa [htp] using hs (by simpa [htp] using ht₃)
               have hr₁ := recursiveAlgebraicForkFrom_realizes basis k A prefixes rounds final
                 win decideWin decode D stable stable_update hdecode
@@ -1064,10 +1065,11 @@ def RecursiveForkReached (k : ℕ) (prefixes : P → Fin k → T)
     {d : ℕ} → (m : ℕ) → m + d = k → (O : T → F) → (p : P) →
       RecursiveForkCoins F d → Prop
   | 0, _, _, _, _, .leaf => True
-  | d + 1, m, hmk, O, p, .node order child =>
+  | d + 1, m, _, O, p, .node order child =>
       root.nodeAt ((List.ofFn fun i : Fin k => O (prefixes p i)).take m) =
           some ⟨d, order, child⟩
 
+omit [DecidableEq T] [Field F] [DecidableEq F] in
 /-- Extending a reached node by its current challenge reaches the selected child coins. -/
 theorem recursiveForkReached_child (k : ℕ) (prefixes : P → Fin k → T)
     (root : RecursiveForkCoins F k) {d m : ℕ} (hmk : m + (d + 1) = k)
@@ -1078,7 +1080,7 @@ theorem recursiveForkReached_child (k : ℕ) (prefixes : P → Fin k → T)
   cases d with
   | zero =>
       cases hc : child (O (prefixes p ⟨m, by omega⟩))
-      simp [RecursiveForkReached, hc]
+      simp [RecursiveForkReached]
   | succ d =>
       unfold RecursiveForkReached at hreach
       let all : List F := List.ofFn fun i : Fin k => O (prefixes p i)
@@ -1149,7 +1151,7 @@ theorem recursiveForkEscapeSet_blind
         (List.ofFn (fun i : Fin k => Function.update O t v (D.chainAt t i))).take
             (D.roundOf t) = path := by
       apply List.ext_getElem
-      · simp [path, hm]
+      · simp [path]
       · intro i hi hi'
         rw [List.getElem_take, List.getElem_take, List.getElem_ofFn, List.getElem_ofFn,
           Function.update_apply, if_neg]
@@ -1160,9 +1162,9 @@ theorem recursiveForkEscapeSet_blind
     rw [hpath]
     generalize hnode : root.nodeAt path = node?
     cases node? with
-    | none => simp [hnode]
+    | none => simp
     | some node =>
-        simp only [hnode]
+        simp only
         by_cases hd : D.roundOf t + 1 + node.depth = k
         · simp only [dif_pos hd]
           congr 1
@@ -1191,9 +1193,9 @@ theorem recursiveForkEscapeSet_measure_le [Fintype F]
       (List.ofFn fun i : Fin k => O (D.chainAt t i)).take (D.roundOf t)
     generalize hnode : root.nodeAt path = node?
     cases node? with
-    | none => simp [hnode]
+    | none => simp
     | some node =>
-        simp only [hnode]
+        simp only
         by_cases hd : D.roundOf t + 1 + node.depth = k
         · simp only [dif_pos hd]
           obtain ⟨a, b, hab⟩ := recursiveForkEscape_subset_triple (fun u =>
@@ -1315,7 +1317,7 @@ theorem recursiveAlgebraicForkFrom_isSome_of_not_escape [Fintype F]
           funext q
           by_cases hq : q = t
           · subst q; simp [u₁]
-          · simp [Function.update_apply, hq]]
+          · simp [hq]]
         exact ⟨rfl, hfirst⟩
       have hthree : ThreeForkSuccess good := by
         by_contra hthree
