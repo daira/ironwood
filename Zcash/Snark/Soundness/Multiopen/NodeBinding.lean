@@ -10,13 +10,22 @@ accept measure plus a per-accepting-run *consistency* — the decoded column rep
 `r`-value at the accepting interpolation challenge — into the node binding: at each rotated set
 point, the aggregate column's value is the claimed evaluation.
 
-This module instantiates that core at the deployed grouping. `deployed_aggregate_node_binding_of_x3consistency`
-fixes the decoded column to the fingerprinted `x₄`-slot aggregate for point set `j`
-(`openedDecodedCols pbatch` at batch position `count − 1 − j`) and the accept event to
-`OpenedX3Accept` (the `reprogramX3` rewinds, `Soundness.Multiopen.Opened`). The per-run consistency
-`hconsistent` is the operative deployed hook — it is what the fixed-`q′` commitment binding across
-the `x₃`-rewinds supplies (`openedDecodedCols_top_eval_x3` pins `q′` before `x₃`, so it is shared
-across the family); producing it end-to-end from acceptance is the remaining constraint-side work.
+Two routes to that instantiation live here, and only the second is load-bearing.
+
+The *aggregate route* (`deployed_aggregate_node_binding_of_x3consistency` and its
+`…_or_dlr` closure) fixes the decoded column to the fingerprinted `x₄`-slot aggregate for point set
+`j` (`openedDecodedCols pbatch` at batch position `count − 1 − j`) and the accept event to
+`OpenedX3Accept` (the `reprogramX3` rewinds, `Soundness.Multiopen.Opened`), leaving the per-run
+consistency `hconsistent` — equivalently the inner `hx2cons` — as an open obligation. **Nothing
+routes through either theorem**: no proof term in the tree consumes them, and they are retained
+only as the record of why the route was abandoned (`X2Run` re-sends `q′` across `x₂`-rewinds, so
+there is no fixed-`q′` anchor at `x₂` to discharge `hx2cons` against; see
+`hx2cons_slot_eq_multiopenU`).
+
+The *fixed-`q′` route* is the live chain: `deployed_node_binding_of_grid` →
+`deployed_value_check_node_binding` → `deployed_member_node_binding`, which anchors on the `q′`
+absorbed before `x₃` (`openedDecodedCols_top_eval_x3`) and so discharges `hconsistent`/`hx2cons`
+end-to-end from the accept floors. The capstones consume that chain.
 -/
 
 namespace Zcash.Snark
@@ -36,9 +45,12 @@ variable {G : Type*} [AddCommGroup G] [Module Fp G]
 /-- **The deployed multiopen value check for one point set's aggregate, from the `x₃` floor.**
 `claimedEval_of_x3Prob` at the deployed grouping: given the per-run consistency `hconsistent` and
 an `OpenedX3Accept` measure beating `(|points| − 1) / p`, the decoded `x₄`-slot aggregate for point
-set `j` takes its claimed evaluation at each rotated set point. The consistency premise is the
-fixed-`q′` hook (`openedDecodedCols_top_eval_x3`): `q′` is absorbed before `x₃`, so the aggregate
-is one fixed polynomial across the rewound family. -/
+set `j` takes its claimed evaluation at each rotated set point.
+
+The head of the *aggregate route*, and reference-only: no proof term consumes it. `hconsistent` is
+left assumed here, and the attempt to discharge it (`deployed_aggregate_node_binding_or_dlr`) bottoms
+out in the open `hx2cons`. The live chain reaches the same conclusion from the accept floors alone —
+see `deployed_value_check_node_binding`. -/
 theorem deployed_aggregate_node_binding_of_x3consistency [DecidableEq G] [Inhabited G]
     {shape : Shape} (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -214,10 +226,11 @@ theorem openedX3_perχ_consistency [DecidableEq G] [Inhabited G] {shape : Shape}
   · exact Or.inl (by rw [heq, hval, hx2cons r])
   · exact Or.inr hdlr
 
-/-- The deployed `x₃` value check closed to the inner `x₂` consistency — the *aggregate route*,
-superseded by the fixed-`q′` chain (`deployed_value_check_node_binding` below) and retained as the
-record of why that route was taken instead: its inner consistency `hx2cons` is an open obligation,
-which the live chain avoids by anchoring on the fixed `q′` across `x₃`-rewinds. -/
+/-- The deployed `x₃` value check closed to the inner `x₂` consistency — the tail of the *aggregate
+route*, superseded by the fixed-`q′` chain (`deployed_value_check_node_binding` below) and, like the
+route's head, reference-only: no proof term consumes it. It is retained as the record of why that
+route was taken instead — its inner consistency `hx2cons` is an open obligation, which the live
+chain avoids by anchoring on the fixed `q′` across `x₃`-rewinds. -/
 theorem deployed_aggregate_node_binding_or_dlr [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -959,8 +972,20 @@ floors, with no per-run consistency, no vanishing, and no grid openings assumed.
 yields the set-separation samples, the `x₃` floor the interpolation samples per base, the nested
 `x₄` floor decodes each run's batch; the fixed-`q′` and doubly-rewound aggregate bindings tie every
 grid decode to the honest aggregate on pain of a computed relation, and the cleared-denominator
-core separates the sets. Measures carry the usual random-oracle uniformity axiom; `havoid` is the
-standard sample-avoidance floor. This discharges `hconsistent`/`hx2cons` end-to-end. -/
+core separates the sets. Measures carry the usual random-oracle uniformity axiom. This discharges
+`hconsistent`/`hx2cons` end-to-end.
+
+The `x₃` threshold pays for two distinct things, and the sum is what `hprob3` states:
+
+* `max(2^k, |allPts|) + |allPts|` is the **degree** bound `d` of `grid_hdeg_bound` — column degree
+  `< 2^k`, interpolant degree `< |allPts|`, plus `deg(vanishingProd allPts) = |allPts|` — so `d + 1`
+  distinct interpolation samples are what pin the cleared-denominator identity, and beating `d/|F|`
+  is what produces them;
+* the further `+ |allPts|` is the **collision** charge, and it is what lets the samples be drawn off
+  the opened set points (`exists_injective_accepting_avoiding_of_measure`). Acceptance alone cannot
+  supply that: at a colliding `χ` the verifier's `(x₃ − p)⁻¹` is `0⁻¹ = 0`, so the multiopen check
+  degenerates rather than failing. Paying for it here is what removes the sample-avoidance
+  hypothesis this theorem used to carry. -/
 theorem deployed_value_check_node_binding [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -972,10 +997,9 @@ theorem deployed_value_check_node_binding [DecidableEq G] [Inhabited G] {shape :
     (hprob2 : ((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
       < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
           (OpenedX2Accept urs hk vk ps ch b₂)))
-    (hx3anchor : ∀ (r₂ : X2Run shape G) (ζv : Fp), ∃ χ₀ : Fp,
-      OpenedX3Accept urs hk vk (r₂.spliced ps) (r₂.challenges ch ζv) (evalVector urs.k χ₀) χ₀)
     (hprob3 : ∀ (r₂ : X2Run shape G) (ζv : Fp),
       ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+          + (deployedAllPts vk ps ch).card
           + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
         < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
             (fun χv => OpenedX3Accept urs hk vk (r₂.spliced ps) (r₂.challenges ch ζv)
@@ -986,9 +1010,6 @@ theorem deployed_value_check_node_binding [DecidableEq G] [Inhabited G] {shape :
         < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
             (OpenedX4Accept urs hk vk (r₃.spliced (r₂.spliced ps))
               (r₃.challenges (r₂.challenges ch ζv) χv) (evalVector urs.k χv))))
-    (havoid : ∀ (r₂ : X2Run shape G) (ζv χv : Fp),
-      OpenedX3Accept urs hk vk (r₂.spliced ps) (r₂.challenges ch ζv) (evalVector urs.k χv) χv →
-      ∀ k, χv ∉ deployedSetPts vk ps ch k)
     (j₀ : Fin (deployedX4PairCount vk ps ch)) {p : Fp}
     (hp : p ∈ deployedSetPts vk ps ch (deployedX4PairCount vk ps ch - 1 - (j₀ : ℕ))) :
     (openedDecodedCols pbatch ⟨(j₀ : ℕ), Nat.lt_succ_of_lt j₀.isLt⟩).eval p
@@ -1014,19 +1035,23 @@ theorem deployed_value_check_node_binding [DecidableEq G] [Inhabited G] {shape :
   have hruns : ∀ s : Fin (deployedX4PairCount vk ps ch), ∃ r : X2Run shape G, True :=
     fun s => (hζacc s).elim fun r _ => ⟨r, trivial⟩
   choose r₂ hr₂ using hruns
-  -- per-x₂ x₃ sample families at the rewound bases
+  -- per-x₂ x₃ sample families at the rewound bases, drawn off the opened set points
   have hχfam : ∀ s : Fin (deployedX4PairCount vk ps ch),
       ∃ ξ : Fin (max (2 ^ urs.k) (deployedAllPts vk ps ch).card
           + (deployedAllPts vk ps ch).card + 1) → Fp,
         Function.Injective ξ ∧ ∀ t, OpenedX3Accept urs hk vk ((r₂ s).spliced ps)
-          ((r₂ s).challenges ch (ζ s)) (evalVector urs.k (ξ t)) (ξ t) := by
+          ((r₂ s).challenges ch (ζ s)) (evalVector urs.k (ξ t)) (ξ t)
+          ∧ ξ t ∉ deployedAllPts vk ps ch := by
     intro s
-    obtain ⟨χ₀, hχ₀⟩ := hx3anchor (r₂ s) (ζ s)
-    obtain ⟨ξ, hinj, _, hacc⟩ := exists_injective_accepting_of_measure
+    exact exists_injective_accepting_avoiding_of_measure
       (acc := fun χv => OpenedX3Accept urs hk vk ((r₂ s).spliced ps)
-        ((r₂ s).challenges ch (ζ s)) (evalVector urs.k χv) χv) hχ₀ (hprob3 (r₂ s) (ζ s))
-    exact ⟨ξ, hinj, hacc⟩
-  choose χ hχinj hχacc using hχfam
+        ((r₂ s).challenges ch (ζ s)) (evalVector urs.k χv) χv)
+      (deployedAllPts vk ps ch) (hprob3 (r₂ s) (ζ s))
+  choose χ hχinj hχboth using hχfam
+  have hχacc : ∀ s t, OpenedX3Accept urs hk vk ((r₂ s).spliced ps)
+      ((r₂ s).challenges ch (ζ s)) (evalVector urs.k (χ s t)) (χ s t) :=
+    fun s t => (hχboth s t).1
+  have hχavoid : ∀ s t, χ s t ∉ deployedAllPts vk ps ch := fun s t => (hχboth s t).2
   -- per-grid-point extracted batch with all-slot values
   have hbat : ∀ (s : Fin (deployedX4PairCount vk ps ch))
       (t : Fin (max (2 ^ urs.k) (deployedAllPts vk ps ch).card
@@ -1112,11 +1137,13 @@ theorem deployed_value_check_node_binding [DecidableEq G] [Inhabited G] {shape :
             deployedSetsForEval_reverse_getD_toFinset vk ps ch j.isLt]
           exact Finset.card_le_card (deployedSetPts_subset vk ps ch _)
         exact le_trans (le_trans hle hcard) (le_max_right _ _)
-  -- premise: the samples avoid the nodes
+  -- premise: the samples avoid the nodes — they were drawn off `deployedAllPts`, which every set's
+  -- points sit inside
   have hnode' : ∀ s t (j : Fin (deployedX4PairCount vk ps ch)),
       (vanishingProd (deployedSetPts vk ps ch
         (deployedX4PairCount vk ps ch - 1 - (j : ℕ)))).eval (χ s t) ≠ 0 :=
-    fun s t j => vanishingProd_eval_ne (havoid (r₂ s) (ζ s) (χ s t) (hχacc s t) _)
+    fun s t j => vanishingProd_eval_ne
+      (fun hmem => hχavoid s t (deployedSetPts_subset vk ps ch _ hmem))
   -- premise: the run openings (top slot, t-independent via the fixed-q′ pair binding)
   have hopen' : ∀ s t, (openedDecodedCols (Bf s 0)
       ⟨deployedX4PairCount vk ((r₃f s 0).spliced ((r₂ s).spliced ps))
@@ -1499,11 +1526,9 @@ theorem deployed_member_node_binding [DecidableEq G] [Inhabited G] {shape : Shap
           / Fintype.card Fp
         < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
             (OpenedX2Accept urs hk vk (r₁.spliced ps) (r₁.challenges ch ξv) b₂)))
-    (hx3anchor : ∀ (r₁ : X1Run shape G) (ξv : Fp) (r₂ : X2Run shape G) (ζv : Fp), ∃ χ₀ : Fp,
-      OpenedX3Accept urs hk vk (r₂.spliced (r₁.spliced ps))
-        (r₂.challenges (r₁.challenges ch ξv) ζv) (evalVector urs.k χ₀) χ₀)
     (hprob3 : ∀ (r₁ : X1Run shape G) (ξv : Fp) (r₂ : X2Run shape G) (ζv : Fp),
       ((max (2 ^ urs.k) (deployedAllPts vk (r₁.spliced ps) (r₁.challenges ch ξv)).card
+          + (deployedAllPts vk (r₁.spliced ps) (r₁.challenges ch ξv)).card
           + (deployedAllPts vk (r₁.spliced ps) (r₁.challenges ch ξv)).card : ℕ) : ℝ≥0∞)
           / Fintype.card Fp
         < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
@@ -1518,10 +1543,6 @@ theorem deployed_member_node_binding [DecidableEq G] [Inhabited G] {shape : Shap
             (OpenedX4Accept urs hk vk (r₃.spliced (r₂.spliced (r₁.spliced ps)))
               (r₃.challenges (r₂.challenges (r₁.challenges ch ξv) ζv) χv)
               (evalVector urs.k χv))))
-    (havoid : ∀ (r₁ : X1Run shape G) (ξv : Fp) (r₂ : X2Run shape G) (ζv χv : Fp),
-      OpenedX3Accept urs hk vk (r₂.spliced (r₁.spliced ps))
-        (r₂.challenges (r₁.challenges ch ξv) ζv) (evalVector urs.k χv) χv →
-      ∀ k', χv ∉ deployedSetPts vk (r₁.spliced ps) (r₁.challenges ch ξv) k')
     (hql : ∀ qc ∈ deployedSetQueries vk ps ch i,
       qc.2.length
         = ((constructIntermediateSets (assembleQueries vk ps ch)).points.getD i []).length)
@@ -1581,10 +1602,8 @@ theorem deployed_member_node_binding [DecidableEq G] [Inhabited G] {shape : Shap
       exact List.mem_toFinset.mpr (List.getElem_mem idx.isLt)
     have hA := deployed_value_check_node_binding urs hk vk ((r₁f s).spliced ps)
       ((r₁f s).challenges ch (ξ s)) (hBne s).some hζacc' hprob2'
-      (fun r₂ ζv => hx3anchor (r₁f s) (ξ s) r₂ ζv)
       (fun r₂ ζv => hprob3 (r₁f s) (ξ s) r₂ ζv)
       (fun r₂ ζv χv r₃ => hprob4 (r₁f s) (ξ s) r₂ ζv χv r₃)
-      (fun r₂ ζv χv h => havoid (r₁f s) (ξ s) r₂ ζv χv h)
       ⟨deployedX4PairCount vk ((r₁f s).spliced ps) ((r₁f s).challenges ch (ξ s)) - 1 - i,
         by omega⟩
       (by
@@ -1748,11 +1767,9 @@ theorem deployed_member_node_binding_at_point [DecidableEq G] [Inhabited G] {sha
           / Fintype.card Fp
         < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
             (OpenedX2Accept urs hk vk (r₁.spliced ps) (r₁.challenges ch ξv) b₂)))
-    (hx3anchor : ∀ (r₁ : X1Run shape G) (ξv : Fp) (r₂ : X2Run shape G) (ζv : Fp), ∃ χ₀ : Fp,
-      OpenedX3Accept urs hk vk (r₂.spliced (r₁.spliced ps))
-        (r₂.challenges (r₁.challenges ch ξv) ζv) (evalVector urs.k χ₀) χ₀)
     (hprob3 : ∀ (r₁ : X1Run shape G) (ξv : Fp) (r₂ : X2Run shape G) (ζv : Fp),
       ((max (2 ^ urs.k) (deployedAllPts vk (r₁.spliced ps) (r₁.challenges ch ξv)).card
+          + (deployedAllPts vk (r₁.spliced ps) (r₁.challenges ch ξv)).card
           + (deployedAllPts vk (r₁.spliced ps) (r₁.challenges ch ξv)).card : ℕ) : ℝ≥0∞)
           / Fintype.card Fp
         < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
@@ -1767,10 +1784,6 @@ theorem deployed_member_node_binding_at_point [DecidableEq G] [Inhabited G] {sha
             (OpenedX4Accept urs hk vk (r₃.spliced (r₂.spliced (r₁.spliced ps)))
               (r₃.challenges (r₂.challenges (r₁.challenges ch ξv) ζv) χv)
               (evalVector urs.k χv))))
-    (havoid : ∀ (r₁ : X1Run shape G) (ξv : Fp) (r₂ : X2Run shape G) (ζv χv : Fp),
-      OpenedX3Accept urs hk vk (r₂.spliced (r₁.spliced ps))
-        (r₂.challenges (r₁.challenges ch ξv) ζv) (evalVector urs.k χv) χv →
-      ∀ k', χv ∉ deployedSetPts vk (r₁.spliced ps) (r₁.challenges ch ξv) k')
     {p : Fp} (hpt : p ∈ deployedSetPts vk ps ch i)
     (m₀ : Fin (deployedSetQueries vk ps ch i).length) :
     (coeffsToPoly (md.cols m₀)).eval p
@@ -1783,8 +1796,8 @@ theorem deployed_member_node_binding_at_point [DecidableEq G] [Inhabited G] {sha
   have hlt : ((constructIntermediateSets (assembleQueries vk ps ch)).points.getD i []).idxOf p
       < ((constructIntermediateSets (assembleQueries vk ps ch)).points.getD i []).length :=
     List.idxOf_lt_length_iff.mpr hmem
-  have hb := deployed_member_node_binding urs hk vk ps ch i hi md hξ₀ hprob1 hx2 hx3anchor
-    hprob3 hprob4 havoid (deployedSetQueries_eval_length vk ps ch i) ⟨_, hlt⟩ m₀
+  have hb := deployed_member_node_binding urs hk vk ps ch i hi md hξ₀ hprob1 hx2
+    hprob3 hprob4 (deployedSetQueries_eval_length vk ps ch i) ⟨_, hlt⟩ m₀
   rcases hb with hb | hdlr
   · refine Or.inl ?_
     rwa [show (((constructIntermediateSets (assembleQueries vk ps ch)).points.getD i []))[

@@ -1030,11 +1030,9 @@ theorem orchard_verifier_vesta_member_constraint_derived [DecidableEq VestaG]
           / Fintype.card Fp
         < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
             (OpenedX2Accept urs hk vk (r₁.spliced ps) (r₁.challenges ch ξv) b₂)))
-    (hx3anchor : ∀ (r₁ : X1Run shape VestaG) (ξv : Fp) (r₂ : X2Run shape VestaG) (ζv : Fp),
-      ∃ χ₀ : Fp, OpenedX3Accept urs hk vk (r₂.spliced (r₁.spliced ps))
-        (r₂.challenges (r₁.challenges ch ξv) ζv) (evalVector urs.k χ₀) χ₀)
     (hprob3 : ∀ (r₁ : X1Run shape VestaG) (ξv : Fp) (r₂ : X2Run shape VestaG) (ζv : Fp),
       ((max (2 ^ urs.k) (deployedAllPts vk (r₁.spliced ps) (r₁.challenges ch ξv)).card
+          + (deployedAllPts vk (r₁.spliced ps) (r₁.challenges ch ξv)).card
           + (deployedAllPts vk (r₁.spliced ps) (r₁.challenges ch ξv)).card : ℕ) : ℝ≥0∞)
           / Fintype.card Fp
         < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
@@ -1049,10 +1047,6 @@ theorem orchard_verifier_vesta_member_constraint_derived [DecidableEq VestaG]
             (OpenedX4Accept urs hk vk (r₃.spliced (r₂.spliced (r₁.spliced ps)))
               (r₃.challenges (r₂.challenges (r₁.challenges ch ξv) ζv) χv)
               (evalVector urs.k χv))))
-    (havoid : ∀ (r₁ : X1Run shape VestaG) (ξv : Fp) (r₂ : X2Run shape VestaG) (ζv χv : Fp),
-      OpenedX3Accept urs hk vk (r₂.spliced (r₁.spliced ps))
-        (r₂.challenges (r₁.challenges ch ξv) ζv) (evalVector urs.k χv) χv →
-      ∀ k', χv ∉ deployedSetPts vk (r₁.spliced ps) (r₁.challenges ch ξv) k')
     (hfold : (List.ofFn (fun i : Fin ng =>
         (gates i).eval (fun n => (fixedCols n).eval ch.x)
           (deployedClaimedFeed vk ps ch adviceSet adviceMem vk.adviceQueryLayout)
@@ -1120,7 +1114,7 @@ theorem orchard_verifier_vesta_member_constraint_derived [DecidableEq VestaG]
         (hadviceSet ⟨n, h⟩)
         (openedMemberDecode_of_x1Prob urs hk vk ps ch pbatch (adviceSet ⟨n, h⟩)
           (hadviceSet ⟨n, h⟩) (hlen _ (hadviceSet ⟨n, h⟩)) (hprob1 _ (hadviceSet ⟨n, h⟩)) hacc0)
-        hξ₀p (hprob1p _ (hadviceSet ⟨n, h⟩)) hx2 hx3anchor hprob3 hprob4 havoid hpt
+        hξ₀p (hprob1p _ (hadviceSet ⟨n, h⟩)) hx2 hprob3 hprob4 hpt
         (adviceMem ⟨n, h⟩)
       rcases hb with hb | hdlr
       swap
@@ -1153,7 +1147,7 @@ theorem orchard_verifier_vesta_member_constraint_derived [DecidableEq VestaG]
         (openedMemberDecode_of_x1Prob urs hk vk ps ch pbatch (instanceSet ⟨n, h⟩)
           (hinstanceSet ⟨n, h⟩) (hlen _ (hinstanceSet ⟨n, h⟩)) (hprob1 _ (hinstanceSet ⟨n, h⟩))
           hacc0)
-        hξ₀p (hprob1p _ (hinstanceSet ⟨n, h⟩)) hx2 hx3anchor hprob3 hprob4 havoid hpt
+        hξ₀p (hprob1p _ (hinstanceSet ⟨n, h⟩)) hx2 hprob3 hprob4 hpt
         (instanceMem ⟨n, h⟩)
       rcases hb with hb | hdlr
       swap

@@ -136,17 +136,6 @@ theorem memberJointAccept_measure_le_of_not_extraction {G : Type*} [AddCommGroup
     (i : ℕ) (hi : i < deployedX4PairCount vk ps ch)
     (md : OpenedMemberDecode urs hk vk ps ch pbatch i hi)
     (b₂f : Fp → Fin (2 ^ urs.k) → Fp)
-    (havoid : ∀ (ξv ζv χv : Fp),
-      OpenedX3Accept urs hk vk
-        ((canonicalX2Run urs hk vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-            ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) (b₂f ξv) ζv).spliced
-          ((canonicalX1Run urs hk vk ps ch ξv).spliced ps))
-        ((canonicalX2Run urs hk vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-            ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) (b₂f ξv) ζv).challenges
-          ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) ζv)
-        (evalVector urs.k χv) χv →
-      ∀ k', χv ∉ deployedSetPts vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-        ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) k')
     (hnex : ¬ ∀ (idx : Fin ((constructIntermediateSets
           (assembleQueries vk ps ch)).points.getD i []).length)
         (m₀ : Fin (deployedSetQueries vk ps ch i).length),
@@ -159,9 +148,10 @@ theorem memberJointAccept_measure_le_of_not_extraction {G : Type*} [AddCommGroup
       ≤ (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
         + (((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+              + (deployedAllPts vk ps ch).card
               + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp) :=
-  (deployed_member_budget urs hk vk ps ch i hi md b₂f havoid).resolve_right hnex
+  (deployed_member_budget urs hk vk ps ch i hi md b₂f).resolve_right hnex
 
 /-- **Honest completeness gives joint accept membership — the structural half of `hcont`.** When
 the honest transcript deployed-accepts and admits a Fiat–Shamir tree at the honest IPA base with an
@@ -273,6 +263,7 @@ noncomputable def memberBadEvent {G : Type*} [AddCommGroup G] [Module Fp G]
         ≤ (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + (((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
             + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+                + (deployedAllPts vk ps ch).card
                 + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
             + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp)}
     ∪ {w : Fp × Fp × Fp × Fp |
@@ -302,19 +293,6 @@ theorem honest_tuple_mem_memberBadEvent {G : Type*} [AddCommGroup G] [Module Fp 
     (hacc : DeployedAccepts urs hk vk ps ch)
     (i : ℕ) (hi : i < deployedX4PairCount vk ps ch)
     (hlen : 0 < (deployedSetQueries vk ps ch i).length)
-    (havoid : ∀ (ξv ζv χv : Fp),
-      OpenedX3Accept urs hk vk
-        ((canonicalX2Run urs hk vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-            ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv)
-            (evalVector urs.k ch.x3) ζv).spliced
-          ((canonicalX1Run urs hk vk ps ch ξv).spliced ps))
-        ((canonicalX2Run urs hk vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-            ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv)
-            (evalVector urs.k ch.x3) ζv).challenges
-          ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) ζv)
-        (evalVector urs.k χv) χv →
-      ∀ k', χv ∉ deployedSetPts vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-        ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) k')
     (hnex : ∀ (a₀ : Fin (2 ^ urs.k) → Fp) (pU pW : Fp)
       (pbatch : OpenedBatchOpenings urs (evalVector urs.k ch.x3)
         (x4BatchCommitments urs hk vk ps ch) (x4BatchEvals vk ps ch) a₀ pU pW)
@@ -351,7 +329,7 @@ theorem honest_tuple_mem_memberBadEvent {G : Type*} [AddCommGroup G] [Module Fp 
         memberJointAccept_of_honest urs hk vk ps ch hnrel hz hFS hacc
           ext.1 fs.pU fs.pW ⟨batch⟩
       have hbudget := memberJointAccept_measure_le_of_not_extraction urs hk vk ps ch i hi md
-        (fun _ => evalVector urs.k ch.x3) havoid (hnex ext.1 fs.pU fs.pW batch md)
+        (fun _ => evalVector urs.k ch.x3) (hnex ext.1 fs.pU fs.pW batch md)
       exact Or.inl (Or.inl ⟨hmem, hbudget⟩)
     · -- x₁ floor fails: the batch witnesses the honest x₁ accept
       have hx₁ : OpenedX1Accept urs hk vk ps ch ch.x1 :=

@@ -14,8 +14,14 @@ consumes).
 
 The endpoint `deployed_member_budget` is the combined budget: *either* the joint accept measure
 sits within `Σtᵢ`, *or* every decoded member column takes its claimed evaluation (or a computed
-`(g, U, W)`-relation exists). The `∀`-over-runs cores remain alongside; `havoid` is required only
-at the canonical runs.
+`(g, U, W)`-relation exists). The `∀`-over-runs cores remain alongside.
+
+There are no side hypotheses beyond the floor: `t₃` carries a `+ |allPts|` collision summand on top
+of the interpolation degree bound, which buys the `x₃` samples off the opened set points outright
+(`exists_injective_accepting_avoiding_of_measure`) rather than assuming they miss them. That matters
+because acceptance does not imply it — a colliding `χ` makes the verifier's `(x₃ − p)⁻¹` equal
+`0⁻¹ = 0`, degenerating the multiopen check instead of failing it — so the avoidance has to be paid
+for, and `t₃` is where it is paid.
 -/
 
 namespace Zcash.Snark
@@ -255,7 +261,16 @@ theorem innerJointAccept_mk [DecidableEq G] [Inhabited G] {shape : Shape} {urs :
 interpolation at each set point, or a `(g, U, W)` relation exists — with the `∀`-over-runs floors
 replaced by one joint floor `t₂ + t₃ + t₄ < μ(innerJointAccept)` at the honest-base thresholds.
 The Markov descent peels one threshold per squeeze; each heavy set self-anchors and forks into the
-sample family. `havoid` is required only at the canonical runs. -/
+sample family.
+
+`t₃ = (max(2^k, |allPts|) + |allPts| + |allPts|) / |F|` is two charges in one line: the first two
+summands are the interpolation *degree* bound `d` of `grid_hdeg_bound` (so beating `d/|F|` yields
+the `d + 1` distinct samples the cleared-denominator core needs), the third is the *collision*
+charge that lets those samples be drawn off `deployedAllPts`
+(`exists_injective_accepting_avoiding_of_measure`). Acceptance cannot supply the latter — at a
+colliding `χ` the verifier computes `(x₃ − p)⁻¹ = 0⁻¹ = 0` and the multiopen check degenerates
+instead of failing — so it is paid for here, which is what retires the sample-avoidance hypothesis
+this theorem used to take. -/
 theorem deployed_value_check_node_binding_budgeted [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -265,14 +280,11 @@ theorem deployed_value_check_node_binding_budgeted [DecidableEq G] [Inhabited G]
     (b₂ : Fin (2 ^ urs.k) → Fp)
     (hJ : ((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
         + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+            + (deployedAllPts vk ps ch).card
             + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
         + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp
       < (PMF.uniformOfFintype (Fp × Fp × Fp)).toOuterMeasure
           (innerJointAccept urs hk vk ps ch b₂))
-    (havoid : ∀ (ζv χv : Fp),
-      OpenedX3Accept urs hk vk ((canonicalX2Run urs hk vk ps ch b₂ ζv).spliced ps)
-        ((canonicalX2Run urs hk vk ps ch b₂ ζv).challenges ch ζv) (evalVector urs.k χv) χv →
-      ∀ k, χv ∉ deployedSetPts vk ps ch k)
     (j₀ : Fin (deployedX4PairCount vk ps ch)) {p : Fp}
     (hp : p ∈ deployedSetPts vk ps ch (deployedX4PairCount vk ps ch - 1 - (j₀ : ℕ))) :
     (openedDecodedCols pbatch ⟨(j₀ : ℕ), Nat.lt_succ_of_lt j₀.isLt⟩).eval p
@@ -289,6 +301,7 @@ theorem deployed_value_check_node_binding_budgeted [DecidableEq G] [Inhabited G]
   have hcard0 : ((Fintype.card Fp : ℕ) : ℝ≥0∞) ≠ 0 :=
     Nat.cast_ne_zero.mpr Fintype.card_ne_zero
   have ht₃top : ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+      + (deployedAllPts vk ps ch).card
       + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp ≠ ⊤ :=
     (ENNReal.div_lt_top (ENNReal.natCast_ne_top _) hcard0).ne
   have ht₄top : (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp ≠ ⊤ :=
@@ -301,12 +314,14 @@ theorem deployed_value_check_node_binding_budgeted [DecidableEq G] [Inhabited G]
   have hζfam : ∃ ζ : Fin (deployedX4PairCount vk ps ch) → Fp,
       Function.Injective ζ ∧ ∀ s,
         ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+            + (deployedAllPts vk ps ch).card
             + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp
         < (PMF.uniformOfFintype (Fp × Fp)).toOuterMeasure
             {vw : Fp × Fp | (ζ s, vw) ∈ innerJointAccept urs hk vk ps ch b₂} := by
     have hne : {ζv : Fp |
         ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+            + (deployedAllPts vk ps ch).card
             + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp
         < (PMF.uniformOfFintype (Fp × Fp)).toOuterMeasure
@@ -319,6 +334,7 @@ theorem deployed_value_check_node_binding_budgeted [DecidableEq G] [Inhabited G]
     obtain ⟨ζ', hinj, _, hacc⟩ := exists_injective_accepting_of_measure
       (acc := fun ζv =>
         ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+            + (deployedAllPts vk ps ch).card
             + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp
         < (PMF.uniformOfFintype (Fp × Fp)).toOuterMeasure
@@ -337,57 +353,41 @@ theorem deployed_value_check_node_binding_budgeted [DecidableEq G] [Inhabited G]
       exact absurd this (not_lt.mpr zero_le)
     obtain ⟨vw, hvw⟩ := hne
     exact hvw.1
-  -- level-3 descent per x₂ sample: the heavy interpolation challenges keep the x₄ floor
+  -- level-3 descent per x₂ sample: the heavy interpolation challenges keep the x₄ floor, and the
+  -- collision summand of `t₃` buys them off the opened set points
   have hχfam : ∀ s : Fin (deployedX4PairCount vk ps ch),
       ∃ ξ : Fin (max (2 ^ urs.k) (deployedAllPts vk ps ch).card
           + (deployedAllPts vk ps ch).card + 1) → Fp,
         Function.Injective ξ ∧ ∀ t,
-          OpenedX3Accept urs hk vk
-            ((canonicalX2Run urs hk vk ps ch b₂ (ζ s)).spliced ps)
-            ((canonicalX2Run urs hk vk ps ch b₂ (ζ s)).challenges ch (ζ s))
-            (evalVector urs.k (ξ t)) (ξ t) ∧
-          (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp
+          ((deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp
             < (PMF.uniformOfFintype Fp).toOuterMeasure
-                {ωv : Fp | (ζ s, ξ t, ωv) ∈ innerJointAccept urs hk vk ps ch b₂} := by
+                {ωv : Fp | (ζ s, ξ t, ωv) ∈ innerJointAccept urs hk vk ps ch b₂})
+          ∧ ξ t ∉ deployedAllPts vk ps ch := by
     intro s
     have hheavy3 := uniformOfFintype_heavy_fiber_lt (α := Fp) (β := Fp)
       {vw : Fp × Fp | (ζ s, vw) ∈ innerJointAccept urs hk vk ps ch b₂} ht₄top (hζheavy s)
-    have hne : {χv : Fp |
-        (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp
-          < (PMF.uniformOfFintype Fp).toOuterMeasure
-              {ωv : Fp | (ζ s, χv, ωv) ∈ innerJointAccept urs hk vk ps ch b₂}}.Nonempty := by
-      refine nonempty_of_uniformOfFintype_toOuterMeasure_ne_zero (fun h0 => ?_)
-      -- `hheavy3`'s fiber set is the nested-comprehension form; re-ascribe at the flattened
-      -- set (definitionally equal) so the zero-measure hypothesis rewrites.
-      have hh : ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
-            + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
-          < (PMF.uniformOfFintype Fp).toOuterMeasure
-              {χv : Fp | (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp
-                < (PMF.uniformOfFintype Fp).toOuterMeasure
-                    {ωv : Fp | (ζ s, χv, ωv) ∈ innerJointAccept urs hk vk ps ch b₂}} := hheavy3
-      rw [h0] at hh
-      exact absurd hh (not_lt.mpr zero_le)
-    obtain ⟨χ₀, hχ₀⟩ := hne
     rw [uniformOfFintype_toOuterMeasure_setOf_filter] at hheavy3
-    obtain ⟨ξ, hinj, _, hacc⟩ := exists_injective_accepting_of_measure
+    exact exists_injective_accepting_avoiding_of_measure
       (acc := fun χv =>
         (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp
           < (PMF.uniformOfFintype Fp).toOuterMeasure
               {ωv : Fp | (ζ s, χv, ωv) ∈ innerJointAccept urs hk vk ps ch b₂})
-      hχ₀ hheavy3
-    refine ⟨ξ, hinj, fun t => ⟨?_, hacc t⟩⟩
-    have hne4 : {ωv : Fp | (ζ s, ξ t, ωv) ∈ innerJointAccept urs hk vk ps ch b₂}.Nonempty := by
+      (deployedAllPts vk ps ch) hheavy3
+  choose χ hχinj hχboth using hχfam
+  have hχavoid : ∀ s t, χ s t ∉ deployedAllPts vk ps ch := fun s t => (hχboth s t).2
+  -- each sampled fiber is nonempty, so each sample's x₃ rewind accepts
+  have hχacc : ∀ s t, OpenedX3Accept urs hk vk
+      ((canonicalX2Run urs hk vk ps ch b₂ (ζ s)).spliced ps)
+      ((canonicalX2Run urs hk vk ps ch b₂ (ζ s)).challenges ch (ζ s))
+      (evalVector urs.k (χ s t)) (χ s t) := by
+    intro s t
+    have hne4 : {ωv : Fp | (ζ s, χ s t, ωv) ∈ innerJointAccept urs hk vk ps ch b₂}.Nonempty := by
       refine nonempty_of_uniformOfFintype_toOuterMeasure_ne_zero (fun h0 => ?_)
-      have := hacc t
+      have := (hχboth s t).1
       rw [h0] at this
       exact absurd this (not_lt.mpr zero_le)
     obtain ⟨ωv, hωv⟩ := hne4
     exact hωv.2.1
-  choose χ hχinj hχboth using hχfam
-  have hχacc : ∀ s t, OpenedX3Accept urs hk vk
-      ((canonicalX2Run urs hk vk ps ch b₂ (ζ s)).spliced ps)
-      ((canonicalX2Run urs hk vk ps ch b₂ (ζ s)).challenges ch (ζ s))
-      (evalVector urs.k (χ s t)) (χ s t) := fun s t => (hχboth s t).1
   -- the sampled x₄ fiber is exactly the opened x₄ accept event at the canonical x₃ run's base
   have hχfloor : ∀ s t,
       (deployedX4PairCount vk
@@ -438,7 +438,7 @@ theorem deployed_value_check_node_binding_budgeted [DecidableEq G] [Inhabited G]
           ((canonicalX2Run urs hk vk ps ch b₂ (ζ s)).challenges ch (ζ s)) _ (χ s t)).trans
         (x2Run_pairCount vk ps ch _ (ζ s))
     rw [hccK, ← uniformOfFintype_toOuterMeasure_setOf_filter, ← hsetEq]
-    exact (hχboth s t).2
+    exact (hχboth s t).1
   -- per-grid-point extracted batch with all-slot values, from the canonical grid extraction
   have hbat : ∀ (s : Fin (deployedX4PairCount vk ps ch))
       (t : Fin (max (2 ^ urs.k) (deployedAllPts vk ps ch).card
@@ -543,11 +543,13 @@ theorem deployed_value_check_node_binding_budgeted [DecidableEq G] [Inhabited G]
             deployedSetsForEval_reverse_getD_toFinset vk ps ch j.isLt]
           exact Finset.card_le_card (deployedSetPts_subset vk ps ch _)
         exact le_trans (le_trans hle hcard) (le_max_right _ _)
-  -- premise: the samples avoid the nodes
+  -- premise: the samples avoid the nodes — they were drawn off `deployedAllPts`, which every set's
+  -- points sit inside
   have hnode' : ∀ s t (j : Fin (deployedX4PairCount vk ps ch)),
       (vanishingProd (deployedSetPts vk ps ch
         (deployedX4PairCount vk ps ch - 1 - (j : ℕ)))).eval (χ s t) ≠ 0 :=
-    fun s t j => vanishingProd_eval_ne (havoid (ζ s) (χ s t) (hχacc s t) _)
+    fun s t j => vanishingProd_eval_ne
+      (fun hmem => hχavoid s t (deployedSetPts_subset vk ps ch _ hmem))
   -- premise: the run openings (top slot, t-independent via the fixed-q′ pair binding)
   have hopen' : ∀ s t, (openedDecodedCols (Bf s 0)
       ⟨deployedX4PairCount vk
@@ -634,7 +636,8 @@ decoded member column takes its claimed evaluation at each set point, or a `(g, 
 exists — with the entire nested floor family replaced by the single joint floor
 `t₁ + (t₂ + t₃ + t₄) < μ(memberJointAccept)` at the honest-base thresholds. The Markov descent
 peels the `x₁` threshold and forks the member samples, each carrying the inner floor its canonical
-base spends (`deployed_value_check_node_binding_budgeted`). `havoid` only at the canonical runs. -/
+base spends (`deployed_value_check_node_binding_budgeted`), whose `t₃` already pays the sample
+collision charge — so the floor is the only premise. -/
 theorem deployed_member_node_binding_budgeted [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -647,21 +650,11 @@ theorem deployed_member_node_binding_budgeted [DecidableEq G] [Inhabited G] {sha
     (hJ : (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
         + (((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+              + (deployedAllPts vk ps ch).card
               + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp)
       < (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
           (memberJointAccept urs hk vk ps ch b₂f))
-    (havoid : ∀ (ξv ζv χv : Fp),
-      OpenedX3Accept urs hk vk
-        ((canonicalX2Run urs hk vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-            ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) (b₂f ξv) ζv).spliced
-          ((canonicalX1Run urs hk vk ps ch ξv).spliced ps))
-        ((canonicalX2Run urs hk vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-            ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) (b₂f ξv) ζv).challenges
-          ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) ζv)
-        (evalVector urs.k χv) χv →
-      ∀ k', χv ∉ deployedSetPts vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-        ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) k')
     (hql : ∀ qc ∈ deployedSetQueries vk ps ch i,
       qc.2.length
         = ((constructIntermediateSets (assembleQueries vk ps ch)).points.getD i []).length)
@@ -684,6 +677,7 @@ theorem deployed_member_node_binding_budgeted [DecidableEq G] [Inhabited G] {sha
   -- the residual (inner) threshold is finite
   have htres : (((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
       + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+          + (deployedAllPts vk ps ch).card
           + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
       + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp) ≠ ⊤ :=
     ENNReal.add_ne_top.mpr
@@ -699,6 +693,7 @@ theorem deployed_member_node_binding_budgeted [DecidableEq G] [Inhabited G] {sha
       Function.Injective ξ ∧ ∀ s,
         ((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+              + (deployedAllPts vk ps ch).card
               + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp
         < (PMF.uniformOfFintype (Fp × Fp × Fp)).toOuterMeasure
@@ -706,6 +701,7 @@ theorem deployed_member_node_binding_budgeted [DecidableEq G] [Inhabited G] {sha
     have hne : {ξv : Fp |
         ((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+              + (deployedAllPts vk ps ch).card
               + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp
         < (PMF.uniformOfFintype (Fp × Fp × Fp)).toOuterMeasure
@@ -719,6 +715,7 @@ theorem deployed_member_node_binding_budgeted [DecidableEq G] [Inhabited G] {sha
       (acc := fun ξv =>
         ((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+              + (deployedAllPts vk ps ch).card
               + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp
         < (PMF.uniformOfFintype (Fp × Fp × Fp)).toOuterMeasure
@@ -742,6 +739,7 @@ theorem deployed_member_node_binding_budgeted [DecidableEq G] [Inhabited G] {sha
   have hinner : ∀ s,
       ((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
         + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+            + (deployedAllPts vk ps ch).card
             + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
         + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp
       < (PMF.uniformOfFintype (Fp × Fp × Fp)).toOuterMeasure
@@ -797,6 +795,8 @@ theorem deployed_member_node_binding_budgeted [DecidableEq G] [Inhabited G] {sha
               ((canonicalX1Run urs hk vk ps ch (ξ s)).spliced ps)
               ((canonicalX1Run urs hk vk ps ch (ξ s)).challenges ch (ξ s))).card
             + (deployedAllPts vk ((canonicalX1Run urs hk vk ps ch (ξ s)).spliced ps)
+              ((canonicalX1Run urs hk vk ps ch (ξ s)).challenges ch (ξ s))).card
+            + (deployedAllPts vk ((canonicalX1Run urs hk vk ps ch (ξ s)).spliced ps)
               ((canonicalX1Run urs hk vk ps ch (ξ s)).challenges ch (ξ s))).card : ℕ) : ℝ≥0∞)
           / Fintype.card Fp
         + (deployedX4PairCount vk ((canonicalX1Run urs hk vk ps ch (ξ s)).spliced ps)
@@ -812,7 +812,6 @@ theorem deployed_member_node_binding_budgeted [DecidableEq G] [Inhabited G] {sha
       ((canonicalX1Run urs hk vk ps ch (ξ s)).spliced ps)
       ((canonicalX1Run urs hk vk ps ch (ξ s)).challenges ch (ξ s))
       (hBne s).some (b₂f (ξ s)) hJ_s
-      (fun ζv χv h3 => havoid (ξ s) ζv χv h3)
       ⟨deployedX4PairCount vk ((canonicalX1Run urs hk vk ps ch (ξ s)).spliced ps)
           ((canonicalX1Run urs hk vk ps ch (ξ s)).challenges ch (ξ s)) - 1 - i,
         by omega⟩
@@ -882,21 +881,11 @@ theorem deployed_member_node_binding_at_point_budgeted [DecidableEq G] [Inhabite
     (hJ : (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
         + (((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+              + (deployedAllPts vk ps ch).card
               + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp)
       < (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
           (memberJointAccept urs hk vk ps ch b₂f))
-    (havoid : ∀ (ξv ζv χv : Fp),
-      OpenedX3Accept urs hk vk
-        ((canonicalX2Run urs hk vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-            ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) (b₂f ξv) ζv).spliced
-          ((canonicalX1Run urs hk vk ps ch ξv).spliced ps))
-        ((canonicalX2Run urs hk vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-            ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) (b₂f ξv) ζv).challenges
-          ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) ζv)
-        (evalVector urs.k χv) χv →
-      ∀ k', χv ∉ deployedSetPts vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-        ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) k')
     {p : Fp} (hpt : p ∈ deployedSetPts vk ps ch i)
     (m₀ : Fin (deployedSetQueries vk ps ch i).length) :
     (coeffsToPoly (md.cols m₀)).eval p
@@ -909,7 +898,7 @@ theorem deployed_member_node_binding_at_point_budgeted [DecidableEq G] [Inhabite
   have hlt : ((constructIntermediateSets (assembleQueries vk ps ch)).points.getD i []).idxOf p
       < ((constructIntermediateSets (assembleQueries vk ps ch)).points.getD i []).length :=
     List.idxOf_lt_length_iff.mpr hmem
-  have hb := deployed_member_node_binding_budgeted urs hk vk ps ch i hi md b₂f hJ havoid
+  have hb := deployed_member_node_binding_budgeted urs hk vk ps ch i hi md b₂f hJ
     (deployedSetQueries_eval_length vk ps ch i) ⟨_, hlt⟩ m₀
   rcases hb with hb | hdlr
   · refine Or.inl ?_
@@ -931,23 +920,13 @@ theorem deployed_member_budget [DecidableEq G] [Inhabited G] {shape : Shape}
       (x4BatchCommitments urs hk vk ps ch) (x4BatchEvals vk ps ch) a₀ pU pW}
     (i : ℕ) (hi : i < deployedX4PairCount vk ps ch)
     (md : OpenedMemberDecode urs hk vk ps ch pbatch i hi)
-    (b₂f : Fp → Fin (2 ^ urs.k) → Fp)
-    (havoid : ∀ (ξv ζv χv : Fp),
-      OpenedX3Accept urs hk vk
-        ((canonicalX2Run urs hk vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-            ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) (b₂f ξv) ζv).spliced
-          ((canonicalX1Run urs hk vk ps ch ξv).spliced ps))
-        ((canonicalX2Run urs hk vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-            ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) (b₂f ξv) ζv).challenges
-          ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) ζv)
-        (evalVector urs.k χv) χv →
-      ∀ k', χv ∉ deployedSetPts vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-        ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) k') :
+    (b₂f : Fp → Fin (2 ^ urs.k) → Fp) :
     (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
         (memberJointAccept urs hk vk ps ch b₂f)
       ≤ (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
         + (((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+              + (deployedAllPts vk ps ch).card
               + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp)
     ∨ ∀ (idx : Fin ((constructIntermediateSets
@@ -960,12 +939,13 @@ theorem deployed_member_budget [DecidableEq G] [Inhabited G] {shape : Shape}
   by_cases hJ : (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
       + (((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
         + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+            + (deployedAllPts vk ps ch).card
             + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
         + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp)
     < (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
         (memberJointAccept urs hk vk ps ch b₂f)
   · exact Or.inr (fun idx m₀ => deployed_member_node_binding_budgeted urs hk vk ps ch i hi md
-      b₂f hJ havoid (deployedSetQueries_eval_length vk ps ch i) idx m₀)
+      b₂f hJ (deployedSetQueries_eval_length vk ps ch i) idx m₀)
   · exact Or.inl (not_lt.mp hJ)
 
 end Zcash.Snark

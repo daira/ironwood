@@ -546,6 +546,47 @@ theorem exists_injective_accepting_of_measure {α : Type*} [Fintype α] [Decidab
         simpa using (Finset.mem_filter.mp this).2
 
 open scoped ENNReal in
+/-- **The single-squeeze forking count, off a bad set.** The avoidance-strengthened
+`exists_injective_accepting_of_measure`: paying `bad.card / |α|` on top of the `n / |α|` sampling
+floor buys `n + 1` pairwise-distinct accepting values that additionally miss `bad` altogether.
+Counting, not a union bound: beating `(n + bad.card) / |α|` forces `n + bad.card < #{acc}`, so
+`#({acc} \ bad) > n` whatever `bad` is.
+
+This is what turns a sample-avoidance hypothesis into a budget line. The multiopen grid needs its
+interpolation challenges off the opened set points (else the cleared-denominator core divides by a
+vanishing `∏(χ − p)`), and an accepting run does *not* supply that: at a colliding challenge the
+verifier's `(x₃ − p)⁻¹` is `0⁻¹ = 0`, so the check degenerates rather than failing. Charging
+`|allPts| / |α|` for the collisions and sampling off `allPts` discharges the hypothesis outright.
+
+No anchor is needed — unlike `exists_injective_accepting_of_measure`, which threads a given
+accepting value into slot `0`, the floor alone is what produces the family here. -/
+theorem exists_injective_accepting_avoiding_of_measure {α : Type*} [Fintype α] [DecidableEq α]
+    [Nonempty α] {n : ℕ} {acc : α → Prop} [DecidablePred acc] (bad : Finset α)
+    (hprob : ((n + bad.card : ℕ) : ℝ≥0∞) / Fintype.card α
+      < (PMF.uniformOfFintype α).toOuterMeasure (Finset.univ.filter acc)) :
+    ∃ ξ : Fin (n + 1) → α, Function.Injective ξ ∧ ∀ r, acc (ξ r) ∧ ξ r ∉ bad := by
+  have hcard : n + bad.card < (Finset.univ.filter acc).card := by
+    by_contra hle
+    push_neg at hle
+    have hmono : (PMF.uniformOfFintype α).toOuterMeasure (Finset.univ.filter acc)
+        ≤ ((n + bad.card : ℕ) : ℝ≥0∞) / Fintype.card α := by
+      rw [uniformOfFintype_toOuterMeasure_finset]
+      exact ENNReal.div_le_div_right (by exact_mod_cast hle) _
+    exact absurd hprob (not_lt.mpr hmono)
+  have hsd : n + 1 ≤ ((Finset.univ.filter acc) \ bad).card := by
+    have := Finset.le_card_sdiff bad (Finset.univ.filter acc)
+    omega
+  obtain ⟨S, hS, hScard⟩ := Finset.exists_subset_card_eq hsd
+  refine ⟨fun i => (S.equivFin.symm (Fin.cast hScard.symm i) : α), ?_, ?_⟩
+  · intro i j hij
+    have h1 := S.equivFin.symm.injective (Subtype.val_injective hij)
+    exact Fin.val_injective (by simpa using congrArg Fin.val h1)
+  · intro r
+    have hmem := hS (S.equivFin.symm (Fin.cast hScard.symm r)).2
+    rw [Finset.mem_sdiff] at hmem
+    exact ⟨(Finset.mem_filter.mp hmem.1).2, hmem.2⟩
+
+open scoped ENNReal in
 /-- **The single-squeeze forking *failure* bound** — the failure-side complement of
 `exists_injective_accepting_of_measure`. Over one fresh uniform challenge `χ`, the event "`acc χ` holds
 yet the accept measure sits at or below the threshold `t`" has measure `≤ t`: the threshold condition is

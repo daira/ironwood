@@ -43,11 +43,13 @@ open Classical in
 /-- **Budgeted deployed member capstone: the floor family priced by one joint accept floor.** The
 conclusion of the derived capstone — the gate check at `ch.x` on the decoded member columns, the
 claimed evaluations derived and `hquot` produced — from a single joint accept floor per point set,
-`t₁(i) + (t₂ + t₃ + t₄) < μ(memberJointAccept)`, in place of seven run-quantified floors. `havoid`
-only at the canonical runs.
+`t₁(i) + (t₂ + t₃ + t₄) < μ(memberJointAccept)`, in place of seven run-quantified floors. The floor
+is the whole multiopen-side premise: `t₃` carries a `+ |allPts|` collision summand that buys the
+interpolation samples off the opened set points, so no sample-avoidance hypothesis is taken (see
+`Multiopen.BudgetedExtraction`).
 
 Named assumptions: `hacc0` (acceptance), `hprob1` (the honest-base `x₁` floor, feeding the member
-decode), `hJ` (the joint floor), `havoid`, `hfold` (the gate fold at the deployed claimed
+decode), `hJ` (the joint floor), `hfold` (the gate fold at the deployed claimed
 evaluations), `hgood` (Schwartz–Zippel at the *fixed* `ch.x`), the layout identities, the
 committed-quotient identity, `hencodes`.
 
@@ -92,21 +94,11 @@ theorem orchard_verifier_vesta_member_constraint_budgeted {shape : Shape}
       (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
         + (((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+              + (deployedAllPts vk ps ch).card
               + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp)
       < (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
           (memberJointAccept urs hk vk ps ch b₂f))
-    (havoid : ∀ (ξv ζv χv : Fp),
-      OpenedX3Accept urs hk vk
-        ((canonicalX2Run urs hk vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-            ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) (b₂f ξv) ζv).spliced
-          ((canonicalX1Run urs hk vk ps ch ξv).spliced ps))
-        ((canonicalX2Run urs hk vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-            ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) (b₂f ξv) ζv).challenges
-          ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) ζv)
-        (evalVector urs.k χv) χv →
-      ∀ k', χv ∉ deployedSetPts vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-        ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) k')
     (hfold : (List.ofFn (fun i : Fin ng =>
         (gates i).eval (fun n => (fixedCols n).eval ch.x)
           (deployedClaimedFeed vk ps ch adviceSet adviceMem vk.adviceQueryLayout)
@@ -174,7 +166,7 @@ theorem orchard_verifier_vesta_member_constraint_budgeted {shape : Shape}
         (hadviceSet ⟨n, h⟩)
         (openedMemberDecode_of_x1Prob urs hk vk ps ch pbatch (adviceSet ⟨n, h⟩)
           (hadviceSet ⟨n, h⟩) (hlen _ (hadviceSet ⟨n, h⟩)) (hprob1 _ (hadviceSet ⟨n, h⟩)) hacc0)
-        b₂f (hJ _ (hadviceSet ⟨n, h⟩)) havoid hpt (adviceMem ⟨n, h⟩)
+        b₂f (hJ _ (hadviceSet ⟨n, h⟩)) hpt (adviceMem ⟨n, h⟩)
       rcases hb with hb | hdlr
       swap
       · exact absurd hdlr hrel
@@ -206,7 +198,7 @@ theorem orchard_verifier_vesta_member_constraint_budgeted {shape : Shape}
         (openedMemberDecode_of_x1Prob urs hk vk ps ch pbatch (instanceSet ⟨n, h⟩)
           (hinstanceSet ⟨n, h⟩) (hlen _ (hinstanceSet ⟨n, h⟩)) (hprob1 _ (hinstanceSet ⟨n, h⟩))
           hacc0)
-        b₂f (hJ _ (hinstanceSet ⟨n, h⟩)) havoid hpt (instanceMem ⟨n, h⟩)
+        b₂f (hJ _ (hinstanceSet ⟨n, h⟩)) hpt (instanceMem ⟨n, h⟩)
       rcases hb with hb | hdlr
       swap
       · exact absurd hdlr hrel
@@ -295,6 +287,7 @@ theorem member_relation_or_dlr_of_instance_budgeted
             / Fintype.card Fp
           + ((max (2 ^ shape.k)
                 (deployedAllPts vk p.proof.1 (chRecord ν (fun _ => 0))).card
+              + (deployedAllPts vk p.proof.1 (chRecord ν (fun _ => 0))).card
               + (deployedAllPts vk p.proof.1 (chRecord ν (fun _ => 0))).card : ℕ) : ℝ≥0∞)
             / Fintype.card Fp
           + (deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)) : ℝ≥0∞)
@@ -302,30 +295,6 @@ theorem member_relation_or_dlr_of_instance_budgeted
       < (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
           (memberJointAccept (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
             (chRecord ν (fun _ => 0)) b₂f))
-    (havoid : ∀ (ξv ζv χv : Fp),
-      OpenedX3Accept (ursOfAugmentedBasis shape.k basis) rfl vk
-        ((canonicalX2Run (ursOfAugmentedBasis shape.k basis) rfl vk
-            ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-              (chRecord ν (fun _ => 0)) ξv).spliced p.proof.1)
-            ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-              (chRecord ν (fun _ => 0)) ξv).challenges (chRecord ν (fun _ => 0)) ξv)
-            (b₂f ξv) ζv).spliced
-          ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-            (chRecord ν (fun _ => 0)) ξv).spliced p.proof.1))
-        ((canonicalX2Run (ursOfAugmentedBasis shape.k basis) rfl vk
-            ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-              (chRecord ν (fun _ => 0)) ξv).spliced p.proof.1)
-            ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-              (chRecord ν (fun _ => 0)) ξv).challenges (chRecord ν (fun _ => 0)) ξv)
-            (b₂f ξv) ζv).challenges
-          ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-            (chRecord ν (fun _ => 0)) ξv).challenges (chRecord ν (fun _ => 0)) ξv) ζv)
-        (evalVector shape.k χv) χv →
-      ∀ k', χv ∉ deployedSetPts vk
-        ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-          (chRecord ν (fun _ => 0)) ξv).spliced p.proof.1)
-        ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-          (chRecord ν (fun _ => 0)) ξv).challenges (chRecord ν (fun _ => 0)) ξv) k')
     (hfold : (List.ofFn (fun i : Fin ng =>
         (gates i).eval
           (fun n => (fixedCols n).eval (chRecord ν (fun _ => 0) : Challenges shape.k Fp).x)
@@ -395,7 +364,7 @@ theorem member_relation_or_dlr_of_instance_budgeted
   · exact orchard_verifier_vesta_member_constraint_budgeted (ursOfAugmentedBasis shape.k basis)
       rfl vk p.proof.1 (chRecord ν (fun _ => 0)) (p.multiU ν) (p.multiBlind ν)
       adviceSet hadviceSet adviceMem instanceSet hinstanceSet instanceMem fixedCols y gates
-      hpoly deg pbatch hξcur hlen hprob1 hacc0 pp hadvLen hinstLen b₂f hJ havoid hfold hgood
+      hpoly deg pbatch hξcur hlen hprob1 hacc0 pp hadvLen hinstLen b₂f hJ hfold hgood
       hadviceLayout hinstanceLayout hquotCommitted hencodes
   · exact Or.inr (hasNontrivialRelation_of_two_openings (ursOfAugmentedBasis shape.k basis) hae
       ((opening_commit_deployed_of_instance p ν cert hz hvalid o).trans
@@ -467,6 +436,7 @@ noncomputable def member_snark_of_instance_budgeted
             / Fintype.card Fp
           + ((max (2 ^ shape.k)
                 (deployedAllPts vk p.proof.1 (chRecord ν (fun _ => 0))).card
+              + (deployedAllPts vk p.proof.1 (chRecord ν (fun _ => 0))).card
               + (deployedAllPts vk p.proof.1 (chRecord ν (fun _ => 0))).card : ℕ) : ℝ≥0∞)
             / Fintype.card Fp
           + (deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)) : ℝ≥0∞)
@@ -474,30 +444,6 @@ noncomputable def member_snark_of_instance_budgeted
       < (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
           (memberJointAccept (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
             (chRecord ν (fun _ => 0)) b₂f))
-    (havoid : ∀ (ξv ζv χv : Fp),
-      OpenedX3Accept (ursOfAugmentedBasis shape.k basis) rfl vk
-        ((canonicalX2Run (ursOfAugmentedBasis shape.k basis) rfl vk
-            ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-              (chRecord ν (fun _ => 0)) ξv).spliced p.proof.1)
-            ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-              (chRecord ν (fun _ => 0)) ξv).challenges (chRecord ν (fun _ => 0)) ξv)
-            (b₂f ξv) ζv).spliced
-          ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-            (chRecord ν (fun _ => 0)) ξv).spliced p.proof.1))
-        ((canonicalX2Run (ursOfAugmentedBasis shape.k basis) rfl vk
-            ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-              (chRecord ν (fun _ => 0)) ξv).spliced p.proof.1)
-            ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-              (chRecord ν (fun _ => 0)) ξv).challenges (chRecord ν (fun _ => 0)) ξv)
-            (b₂f ξv) ζv).challenges
-          ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-            (chRecord ν (fun _ => 0)) ξv).challenges (chRecord ν (fun _ => 0)) ξv) ζv)
-        (evalVector shape.k χv) χv →
-      ∀ k', χv ∉ deployedSetPts vk
-        ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-          (chRecord ν (fun _ => 0)) ξv).spliced p.proof.1)
-        ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-          (chRecord ν (fun _ => 0)) ξv).challenges (chRecord ν (fun _ => 0)) ξv) k')
     (hfold : (List.ofFn (fun i : Fin ng =>
         (gates i).eval
           (fun n => (fixedCols n).eval (chRecord ν (fun _ => 0) : Challenges shape.k Fp).x)
@@ -568,7 +514,7 @@ noncomputable def member_snark_of_instance_budgeted
   | PSum.inl o =>
       PSum.inl (member_relation_or_dlr_of_instance_budgeted p ν cert hz hvalid o pbatch hξcur
         adviceSet hadviceSet adviceMem instanceSet hinstanceSet instanceMem fixedCols y gates
-        hpoly deg hlen hprob1 hacc0 pp hadvLen hinstLen b₂f hJ havoid hfold hgood
+        hpoly deg hlen hprob1 hacc0 pp hadvLen hinstLen b₂f hJ hfold hgood
         hadviceLayout hinstanceLayout hquotCommitted hencodes)
   | PSum.inr rel => PSum.inr rel
 
@@ -642,6 +588,7 @@ noncomputable def orchard_verifier_sound_vesta_budgeted
             / Fintype.card Fp
           + ((max (2 ^ shape.k)
                 (deployedAllPts vk p.proof.1 (chRecord ν (fun _ => 0))).card
+              + (deployedAllPts vk p.proof.1 (chRecord ν (fun _ => 0))).card
               + (deployedAllPts vk p.proof.1 (chRecord ν (fun _ => 0))).card : ℕ) : ℝ≥0∞)
             / Fintype.card Fp
           + (deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)) : ℝ≥0∞)
@@ -649,30 +596,6 @@ noncomputable def orchard_verifier_sound_vesta_budgeted
       < (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
           (memberJointAccept (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
             (chRecord ν (fun _ => 0)) b₂f))
-    (havoid : ∀ (ξv ζv χv : Fp),
-      OpenedX3Accept (ursOfAugmentedBasis shape.k basis) rfl vk
-        ((canonicalX2Run (ursOfAugmentedBasis shape.k basis) rfl vk
-            ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-              (chRecord ν (fun _ => 0)) ξv).spliced p.proof.1)
-            ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-              (chRecord ν (fun _ => 0)) ξv).challenges (chRecord ν (fun _ => 0)) ξv)
-            (b₂f ξv) ζv).spliced
-          ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-            (chRecord ν (fun _ => 0)) ξv).spliced p.proof.1))
-        ((canonicalX2Run (ursOfAugmentedBasis shape.k basis) rfl vk
-            ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-              (chRecord ν (fun _ => 0)) ξv).spliced p.proof.1)
-            ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-              (chRecord ν (fun _ => 0)) ξv).challenges (chRecord ν (fun _ => 0)) ξv)
-            (b₂f ξv) ζv).challenges
-          ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-            (chRecord ν (fun _ => 0)) ξv).challenges (chRecord ν (fun _ => 0)) ξv) ζv)
-        (evalVector shape.k χv) χv →
-      ∀ k', χv ∉ deployedSetPts vk
-        ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-          (chRecord ν (fun _ => 0)) ξv).spliced p.proof.1)
-        ((canonicalX1Run (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
-          (chRecord ν (fun _ => 0)) ξv).challenges (chRecord ν (fun _ => 0)) ξv) k')
     (hfold : (List.ofFn (fun i : Fin ng =>
         (gates i).eval
           (fun n => (fixedCols n).eval (chRecord ν (fun _ => 0) : Challenges shape.k Fp).x)
@@ -751,7 +674,7 @@ noncomputable def orchard_verifier_sound_vesta_budgeted
       ⊕' AlgebraicRelationWitness (F := Fp) basis :=
   member_snark_of_instance_budgeted p ν cert hz hvalid pbatch hξcur adviceSet hadviceSet adviceMem
     instanceSet hinstanceSet instanceMem fixedCols y gates hpoly deg hlen hprob1 hacc0 pp
-    hadvLen hinstLen b₂f hJ havoid hfold hgood hadviceLayout hinstanceLayout hquotCommitted
+    hadvLen hinstLen b₂f hJ hfold hgood hadviceLayout hinstanceLayout hquotCommitted
     (S := S)
     (fun a hmem => hencodes a hmem.batchOpenings hmem.memberDecode
       (snarkRelation_of_memberColumns hmem))
@@ -1170,21 +1093,11 @@ theorem orchard_verifier_vesta_member_constraint_budgeted_hfold_derived {shape :
       (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
         + (((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+              + (deployedAllPts vk ps ch).card
               + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
           + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp)
       < (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
           (memberJointAccept urs hk vk ps ch b₂f))
-    (havoid : ∀ (ξv ζv χv : Fp),
-      OpenedX3Accept urs hk vk
-        ((canonicalX2Run urs hk vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-            ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) (b₂f ξv) ζv).spliced
-          ((canonicalX1Run urs hk vk ps ch ξv).spliced ps))
-        ((canonicalX2Run urs hk vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-            ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) (b₂f ξv) ζv).challenges
-          ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) ζv)
-        (evalVector urs.k χv) χv →
-      ∀ k', χv ∉ deployedSetPts vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-        ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) k')
     (hgood :
       combineGates fixedCols
         (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
@@ -1261,7 +1174,7 @@ theorem orchard_verifier_vesta_member_constraint_budgeted_hfold_derived {shape :
       hpoly i m hm colPoly hbindAll hquot hroute hevals hacc0 hfp with hfold | hrel
   · exact orchard_verifier_vesta_member_constraint_budgeted urs hk vk ps ch pU pW adviceSet
       hadviceSet adviceMem instanceSet hinstanceSet instanceMem fixedCols ch.y gates hpoly vk.n
-      pbatch hξcur hlen hprob1 hacc0 p hadvLen hinstLen b₂f hJ havoid hfold hgood
+      pbatch hξcur hlen hprob1 hacc0 p hadvLen hinstLen b₂f hJ hfold hgood
       hadviceLayout hinstanceLayout hquotCommitted hencodes
   · exact Or.inr hrel
 

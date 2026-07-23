@@ -56,6 +56,7 @@ noncomputable def memberBadBudget [DecidableEq G] [Inhabited G] {shape : Shape}
   (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
       + (((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
         + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+            + (deployedAllPts vk ps ch).card
             + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
         + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp)
     + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp
@@ -73,6 +74,7 @@ theorem memberBadEvent_measure_le [DecidableEq G] [Inhabited G] {shape : Shape}
     (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
       + (((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
         + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
+            + (deployedAllPts vk ps ch).card
             + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
         + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp) with hthr
   set thr4 : ℝ≥0∞ := (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp with hthr4
@@ -166,19 +168,6 @@ theorem memberBadEvent_of_supply [DecidableEq G] [Inhabited G] {shape : Shape}
     (hsupply : HonestCompletenessSupply urs hk vk ps ch)
     (i : ℕ) (hi : i < deployedX4PairCount vk ps ch)
     (hlen : 0 < (deployedSetQueries vk ps ch i).length)
-    (havoid : ∀ (ξv ζv χv : Fp),
-      OpenedX3Accept urs hk vk
-        ((canonicalX2Run urs hk vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-            ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv)
-            (evalVector urs.k ch.x3) ζv).spliced
-          ((canonicalX1Run urs hk vk ps ch ξv).spliced ps))
-        ((canonicalX2Run urs hk vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-            ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv)
-            (evalVector urs.k ch.x3) ζv).challenges
-          ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) ζv)
-        (evalVector urs.k χv) χv →
-      ∀ k', χv ∉ deployedSetPts vk ((canonicalX1Run urs hk vk ps ch ξv).spliced ps)
-        ((canonicalX1Run urs hk vk ps ch ξv).challenges ch ξv) k')
     (hnex : ∀ (a₀ : Fin (2 ^ urs.k) → Fp) (pU pW : Fp)
       (pbatch : OpenedBatchOpenings urs (evalVector urs.k ch.x3)
         (x4BatchCommitments urs hk vk ps ch) (x4BatchEvals vk ps ch) a₀ pU pW)
@@ -192,7 +181,7 @@ theorem memberBadEvent_of_supply [DecidableEq G] [Inhabited G] {shape : Shape}
           ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w) :
     (ch.x1, ch.x2, ch.x3, ch.x4) ∈ memberBadEvent urs hk vk ps ch i := by
   obtain ⟨z, blind, hz, ⟨hFS⟩, hacc⟩ := hsupply
-  exact honest_tuple_mem_memberBadEvent urs hk vk ps ch hnrel hz hFS hacc i hi hlen havoid hnex
+  exact honest_tuple_mem_memberBadEvent urs hk vk ps ch hnrel hz hFS hacc i hi hlen hnex
 
 /-- **The supply from a forked transcript and deployed acceptance.** `FiatShamirTree` is the function
 type `DeployedIpaVerifierEq → ForkedTranscript`, so a nonempty forked transcript at the honest IPA
