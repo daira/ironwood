@@ -52,6 +52,9 @@ import Zcash.Snark.Soundness.Deployed.Verification
 import Zcash.Snark.Soundness.Forking
 import Zcash.Snark.Soundness.Main
 import Zcash.Snark.Soundness.Vesta
+-- Semantic last mile: connect the verifier's `hencodes` boundary to the proved
+-- post-NU6.3 Orchard Action circuit statement.
+import Zcash.Snark.Soundness.ActionCircuit
 -- AGM binding reduction: consume computed deployed relations through the fixed-slot discrete-log
 -- adapter and representation-carrying algebraic-prover model (#15).
 import Zcash.Snark.Soundness.AGM.Adapter

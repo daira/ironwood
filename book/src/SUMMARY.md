@@ -12,4 +12,5 @@
 - [Formal Verification](formal-verification.md)
   - [Proof Journey](formal-verification/proof-journey.md)
   - [Proof Map](formal-verification/proof-map.md)
+  - [Action Circuit Integration Spike](formal-verification/action-circuit-integration.md)
   - [Glossary](formal-verification/glossary.md)
