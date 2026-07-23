@@ -125,6 +125,164 @@ abbrev DeployedQueryRoute [DecidableEq G] [Inhabited G]
         vk ps ch slot.setIndex)
     (deployedMemberClaim (instanceCommitment := instanceCommitment) vk ps ch)
 
+/-- Canonical partial routing from commitment identities to deployed member positions.  For an
+identity present in the assembled query list, choose the grouped position supplied by
+`constructIntermediateSets_query_routed`; absent identities remain unrouted. -/
+noncomputable def assembledQueryMemberRoute [DecidableEq G] [Inhabited G]
+    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp)
+    (hcount : deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch
+      = (constructIntermediateSets
+          (assembleQueries vk instanceCommitment ps ch)).sets.length)
+    (hdup : hasDuplicateCommitmentPoint
+      (assembleQueries vk instanceCommitment ps ch) = false) :
+    CommitmentId →
+      Option (DeployedMemberSlot (instanceCommitment := instanceCommitment) vk ps ch) :=
+  fun id =>
+    if hex : ∃ q ∈ assembleQueries vk instanceCommitment ps ch, q.commId = id then
+      let q := Classical.choose hex
+      have hq : q ∈ assembleQueries vk instanceCommitment ps ch :=
+        (Classical.choose_spec hex).1
+      have hr := constructIntermediateSets_query_routed
+        (assembleQueries vk instanceCommitment ps ch) hq hdup
+      let si := Classical.choose hr
+      have hsi := (Classical.choose_spec hr).1
+      have hmex := (Classical.choose_spec hr).2
+      let m := Classical.choose hmex
+      have hm := (Classical.choose_spec hmex).1
+      some
+        { setIndex := si
+          setIndex_lt := by rw [hcount]; exact hsi
+          memberIndex := ⟨m, by
+            simpa only [deployedSetQueries, constructIntermediateSets_zip_sets_getD] using hm⟩ }
+    else none
+
+/-- The canonical route is faithful for every assembled query: it selects the member carrying the
+query's identity, point, and claimed evaluation. -/
+noncomputable def assembledQueryMemberRoute_faithful [DecidableEq G] [Inhabited G]
+    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp)
+    (hcount : deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch
+      = (constructIntermediateSets
+          (assembleQueries vk instanceCommitment ps ch)).sets.length)
+    (hdup : hasDuplicateCommitmentPoint
+      (assembleQueries vk instanceCommitment ps ch) = false)
+    (q : VerifierQuery shape.k Fp G)
+    (hq : q ∈ assembleQueries vk instanceCommitment ps ch) :
+    DeployedQueryRoute (instanceCommitment := instanceCommitment) vk ps ch
+      (assembledQueryMemberRoute (instanceCommitment := instanceCommitment)
+        vk ps ch hcount hdup) q := by
+  classical
+  let hex : ∃ q' ∈ assembleQueries vk instanceCommitment ps ch, q'.commId = q.commId :=
+    ⟨q, hq, rfl⟩
+  let q' := Classical.choose hex
+  have hq'mem : q' ∈ assembleQueries vk instanceCommitment ps ch :=
+    (Classical.choose_spec hex).1
+  have hq'id : q'.commId = q.commId := (Classical.choose_spec hex).2
+  have hr := constructIntermediateSets_query_routed
+    (assembleQueries vk instanceCommitment ps ch) hq'mem hdup
+  let si := Classical.choose hr
+  have hsi := (Classical.choose_spec hr).1
+  have hmex := (Classical.choose_spec hr).2
+  let m := Classical.choose hmex
+  have hm := (Classical.choose_spec hmex).1
+  have hid' := (Classical.choose_spec hmex).2.1
+  let slot : DeployedMemberSlot (instanceCommitment := instanceCommitment) vk ps ch :=
+    { setIndex := si
+      setIndex_lt := by rw [hcount]; exact hsi
+      memberIndex := ⟨m, by
+        simpa only [deployedSetQueries, constructIntermediateSets_zip_sets_getD] using hm⟩ }
+  have hid :
+      (deployedSetCommIds (instanceCommitment := instanceCommitment) vk ps ch si).getD
+          m .vanishingH = q.commId := by
+    simpa only [deployedSetCommIds] using hid'.trans hq'id
+  have hpoint :
+      q.point ∈ deployedSetPts (instanceCommitment := instanceCommitment) vk ps ch si :=
+    deployed_query_point_mem (instanceCommitment := instanceCommitment)
+      vk ps ch hq
+      (by rw [deployedSetCommIds_length]; exact slot.memberIndex.isLt) hid
+  have heval := constructIntermediateSets_query_eval
+    (assembleQueries vk instanceCommitment ps ch) hq hdup
+    (by
+      simpa only [deployedSetCommIds] using
+        (show m < (deployedSetCommIds
+          (instanceCommitment := instanceCommitment) vk ps ch si).length from by
+            rw [deployedSetCommIds_length]
+            exact slot.memberIndex.isLt))
+    (by simpa only [deployedSetCommIds] using hid)
+  refine
+    { slot := slot
+      route_eq := ?_
+      point_mem := hpoint
+      claim_eq := ?_ }
+  · simp only [assembledQueryMemberRoute, dif_pos hex]
+    rfl
+  · simpa only [deployedMemberClaim, deployedSetQueries,
+      constructIntermediateSets_zip_sets_getD] using heval
+
+omit [AddCommGroup G] [Module Fp G] in
+/-- A successful rejecting assembly supplies exactly the two structural facts needed by the
+canonical member route: duplicate commitment-point queries were rejected, and the `u` vector has
+one entry per grouped point set, so the deployed pair count covers every group. -/
+lemma assembledQueryRoutingConditions_of_assemble?_eq_some
+    [DecidableEq G] [Inhabited G]
+    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp) {m : Msm shape.k Fp G}
+    (hm : assemble? vk instanceCommitment ps ch = some m) :
+    deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch
+        = (constructIntermediateSets
+            (assembleQueries vk instanceCommitment ps ch)).sets.length
+      ∧ hasDuplicateCommitmentPoint
+          (assembleQueries vk instanceCommitment ps ch) = false := by
+  classical
+  unfold assemble? at hm
+  by_cases hwf : proofStringWellFormed ps = true
+  · rw [if_pos hwf] at hm
+    by_cases hxn : ch.x ^ vk.n = (1 : Fp)
+    · rw [if_pos hxn] at hm
+      exact absurd hm (by simp)
+    · rw [if_neg hxn] at hm
+      cases hcis : constructIntermediateSets?
+          (assembleQueries vk instanceCommitment ps ch) with
+      | none =>
+          rw [hcis] at hm
+          exact absurd hm (by simp)
+      | some grouped =>
+          rw [hcis] at hm
+          simp only [] at hm
+          by_cases hpts : multiopenPointsAvoidX3 ch.x3 grouped = true
+          · rw [if_pos hpts] at hm
+            have hgrouped := constructIntermediateSets?_eq_some hcis
+            have hdup : hasDuplicateCommitmentPoint
+                (assembleQueries vk instanceCommitment ps ch) = false := by
+              unfold constructIntermediateSets? at hcis
+              by_cases hd : hasDuplicateCommitmentPoint
+                  (assembleQueries vk instanceCommitment ps ch) = true
+              · rw [if_pos hd] at hcis
+                exact absurd hcis (by simp)
+              · exact Bool.eq_false_of_not_eq_true hd
+            unfold assembleFinalMsm? at hm
+            cases hopen : assembleOpening? ch.x1 ch.x2 ch.x3 ch.x4 ps.multiopenQPrime
+                (List.ofFn ps.multiopenU) grouped (Msm.zero shape.k Fp G) with
+            | none =>
+                rw [hopen] at hm
+                exact absurd hm (by simp)
+            | some opened =>
+                unfold assembleOpening? at hopen
+                by_cases hc : (List.ofFn ps.multiopenU).length = grouped.sets.length
+                    ∧ grouped.points.length = grouped.sets.length
+                · have hu := hc.1
+                  subst grouped
+                  refine ⟨?_, hdup⟩
+                  simp [deployedX4PairCount, deployedX4Pairs, deployedX4Qs,
+                    List.length_zip, constructIntermediateSets_points_length, hu]
+                · rw [if_neg hc] at hopen
+                  exact absurd hopen (by simp)
+          · rw [if_neg hpts] at hm
+            exact absurd hm (by simp)
+  · rw [if_neg hwf] at hm
+    exact absurd hm (by simp)
+
 /-- If every routed member is node-bound, the decoded resolver opens every query in `queries`;
 otherwise the existing augmented-basis relation branch is retained. -/
 theorem decodedPolynomialResolver_opens_or_relation [DecidableEq G] [Inhabited G]
@@ -182,10 +340,11 @@ theorem eval_lookupEntriesOfDecodedResolver_or_relation
         deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch),
       OpenedMemberDecode (instanceCommitment := instanceCommitment)
         urs hk vk ps ch pbatch i hi)
-    (route : CommitmentId →
-      Option (DeployedMemberSlot (instanceCommitment := instanceCommitment) vk ps ch))
-    (hrouted : ∀ q ∈ assembleQueries vk instanceCommitment ps ch,
-      DeployedQueryRoute (instanceCommitment := instanceCommitment) vk ps ch route q)
+    (hcount : deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch
+      = (constructIntermediateSets
+          (assembleQueries vk instanceCommitment ps ch)).sets.length)
+    (hdup : hasDuplicateCommitmentPoint
+      (assembleQueries vk instanceCommitment ps ch) = false)
     (hbind : ∀
       (slot : DeployedMemberSlot (instanceCommitment := instanceCommitment) vk ps ch)
       (point : Fp),
@@ -198,18 +357,27 @@ theorem eval_lookupEntriesOfDecodedResolver_or_relation
     (p : Fin shape.numProofs) :
     (lookupEntriesOfResolver vk
         (decodedPolynomialResolver (instanceCommitment := instanceCommitment)
-          urs hk vk ps ch memberDecode route) p).map
+          urs hk vk ps ch memberDecode
+          (assembledQueryMemberRoute (instanceCommitment := instanceCommitment)
+            vk ps ch hcount hdup)) p).map
         (fun lk => (lk.1.map (fun q => q.eval ch.x), lk.2.1, lk.2.2))
         = subProofLookups vk ps p
       ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   rcases decodedPolynomialResolver_opens_or_relation
       (instanceCommitment := instanceCommitment)
-      urs hk vk ps ch memberDecode route
-      (assembleQueries vk instanceCommitment ps ch) hrouted hbind with hopen | hrel
+      urs hk vk ps ch memberDecode
+      (assembledQueryMemberRoute (instanceCommitment := instanceCommitment)
+        vk ps ch hcount hdup)
+      (assembleQueries vk instanceCommitment ps ch)
+      (fun q hq => assembledQueryMemberRoute_faithful
+        (instanceCommitment := instanceCommitment) vk ps ch hcount hdup q hq)
+      hbind with hopen | hrel
   · exact Or.inl (eval_lookupEntriesOfResolver_of_assembleQueries
       vk instanceCommitment ps ch
       (decodedPolynomialResolver (instanceCommitment := instanceCommitment)
-        urs hk vk ps ch memberDecode route) p hopen)
+        urs hk vk ps ch memberDecode
+        (assembledQueryMemberRoute (instanceCommitment := instanceCommitment)
+          vk ps ch hcount hdup)) p hopen)
   · exact Or.inr hrel
 
 end Zcash.Snark
