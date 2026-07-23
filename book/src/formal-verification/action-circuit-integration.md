@@ -1,29 +1,23 @@
-# Action circuit integration spike
+# Action circuit integration roadmap
 
 This note maps the missing semantic last mile between the deployed Halo 2 verifier
 model in `Zcash/Snark` and the proved post-NU6.3 Action circuit in
 `Zcash/Circuits/Action`.
 
-A short executable blueprint previously recorded this destination against the legacy
-free-decoder capstone API. It was intentionally removed before integrating #30/#91:
-adapting its `Decoder` and monolithic gate-to-Action proposition would preserve the
-wrong abstraction more expensively than rebuilding the small semantic adapter against
-the decoded-member and full-constraint interfaces.
-
-The durable destination is unchanged: for each supplied public Action, constructively
+For each supplied public Action, constructively
 extract `ActionData` whose ten public fields equal that Action's instance column, prove
 the complete §4.17.4 Action statement, and prove the post-NU6.3 cross-address
 condition.
 
 ## Upstream open-PR landscape
 
-This roadmap was reconciled with the open pull requests on
-[`zcash/ironwood`](https://github.com/zcash/ironwood) on 2026-07-23. Four PRs carry
-most of the relevant implementation:
+Four open pull requests on
+[`zcash/ironwood`](https://github.com/zcash/ironwood) carry most of the relevant
+implementation:
 
 - [#89, Add Ironwood circuit formalization](https://github.com/zcash/ironwood/pull/89),
   supplies the Action circuit, `soundnessPost`, and the executable Rust/Clean CS and
-  layout comparisons. It is the base of this spike.
+  layout comparisons. It is the base of this integration.
 - [#30, Bind IPA witness to verifier columns](https://github.com/zcash/ironwood/pull/30),
   implements the deployed `x₄` and `x₁` decode, member-commitment and
   claimed-evaluation binding, and decoded-column capstone foundations.
@@ -42,10 +36,9 @@ Two administrative PRs identify the eventual landing surface:
 census, and [#82](https://github.com/zcash/ironwood/pull/82) makes the proof map point at
 the current computed capstone. Neither proves a semantic bridge.
 
-These are coverage notes about open, unmerged work, not assumptions that the branches
-already compose. In particular, #30 and #85 both change the verifier and soundness
-signatures, while #91 inherits #30's pre-#85 API. They must be reconciled before the
-last-mile Action integration can depend on all three.
+The integration branch combines these APIs while preserving #85's architectural
+split: the verifying key contains circuit-fixed data, and statement-derived instance
+commitments remain explicit inputs to the verifier and soundness stack.
 
 ## Stable semantic endpoint
 
@@ -57,8 +50,7 @@ Clean environment assumptions
   -> SpecPost realGenerators realBases extractedActionData.
 ```
 
-The discarded blueprint checked that the intended final adapter is small once those
-premises are available:
+The intended final adapter is small once those premises are available:
 
 ```text
 placed Clean environment satisfying `mainPost`
@@ -66,17 +58,16 @@ placed Clean environment satisfying `mainPost`
   -> the hencodes conclusion expected by SnarkRelation.
 ```
 
-No replacement declarations should be introduced until the #30/#85/#91 interfaces
-have been reconciled. The final implementation should define the high-level public
-input/statement types and the direct `soundnessPost` adapter alongside the concrete
-decoded-member-to-Clean construction, rather than installing another abstract decoder
-or monolithic bridge. The following work items decompose that construction.
+The final implementation should define the high-level public input/statement types and
+the direct `soundnessPost` adapter alongside the concrete decoded-member-to-Clean
+construction. The following work items decompose that construction.
 
 ### 1. Recover the committed columns from multiopen
 
 **Status: substantially implemented by
-[#30](https://github.com/zcash/ironwood/pull/30); instance-commitment provenance is
-improved by [#85](https://github.com/zcash/ironwood/pull/85).**
+[#30](https://github.com/zcash/ironwood/pull/30), with
+[#85](https://github.com/zcash/ironwood/pull/85)'s statement-derived instance
+commitments threaded through the combined stack.**
 
 The `a` in the current `SnarkRelation` is an opening of the final `x₄`-collapsed,
 `x₁`-compressed multiopen commitment. It is not an advice-column vector and cannot be
@@ -89,13 +80,11 @@ budgeted node-binding results recover the point-set aggregates, unbatch their me
 columns, and bind those members to the routed commitments and claimed evaluations.
 The transcript-prefix and multiopen-challenge rewinds are modeled as well.
 
-The remaining work is integration rather than another decode:
+The remaining work is:
 
-1. reconcile #30 with #85 so the decoded instance members are bound to commitments
-   derived from the supplied public inputs, not a VK field;
-2. produce #30's batch/member-decode data from the live computed experiment without
+1. produce #30's batch/member-decode data from the live computed experiment without
    the remaining family-wide `hExtract`/adaptive-coupling supply premise;
-3. route the recovered members into the full constraint model from #91 and then into
+2. route the recovered members into the full constraint model from #91 and then into
    the Clean Action assignment described below.
 
 ### 2. Replace the free column decoders
@@ -103,11 +92,10 @@ The remaining work is integration rather than another decode:
 **Status: polynomial/query-level decoding is implemented by
 [#30](https://github.com/zcash/ironwood/pull/30); Clean row decoding remains open.**
 
-The legacy `circuitSatViaGates` capstones accept arbitrary `decodeAdvice` and
-`decodeInstance` functions. #30's newer deployed/member capstones instead use canonical
-decoding through `coeffsToPoly`, `decodedCols`, `x1DecodeCols`, query-layout member
-selection, and `rotatedFeed`. The extracted opening and the polynomials consumed by
-those capstones are therefore no longer independent.
+The deployed/member capstones use canonical decoding through `coeffsToPoly`,
+`decodedCols`, `x1DecodeCols`, query-layout member selection, and `rotatedFeed`. The
+extracted opening and the polynomials consumed by those capstones are therefore not
+independent.
 
 The Action bridge still needs a canonical decoder from those polynomials to values on
 the size-`2^k` evaluation domain. Prove that:
@@ -234,9 +222,8 @@ single-index result into a family of Clean assignments and Action statements.
 [#85](https://github.com/zcash/ironwood/pull/85); no end-to-end Action theorem yet.**
 
 Once the direct semantic bridge exists, instantiate the Vesta constraint capstones
-with the concrete high-level Action statement. Then thread the same semantic
-conclusion through the computed Fiat–Shamir/AGM endpoint, rather than stopping at a
-legacy propositional wrapper.
+with the concrete high-level Action statement. Then thread that same concrete
+statement through the computed Fiat–Shamir/AGM endpoint.
 
 #30 adds `orchard_verifier_sound_vesta_computed`, whose circuit predicate is the
 concrete gate check over decoded member columns rather than a free decoder. It still
@@ -256,19 +243,15 @@ whose public inputs were committed by the verifier.
 
 ## Suggested implementation order
 
-1. Reconcile #85's public-instance API with the combined #30/#91 decoded-column and
-   full-constraint stack.
-2. Reuse #30's two-level decode and budgeted member binding; do not rebuild the
-   `x₄`/`x₁` recovery locally.
-3. Instantiate #91's constraint split at the deployed list, route the permutation and
+1. Instantiate #91's constraint split at the deployed list, route the permutation and
    lookup members to its proved endpoints, and expose a full circuit-satisfaction
    record instead of the gate-only predicate.
-4. Make #89's post-compression CS and layout fixtures available as reusable Lean data,
+2. Make #89's post-compression CS and layout fixtures available as reusable Lean data,
    and prove VK/layout equality theorems that discharge #30's routing hypotheses.
-5. Define the canonical polynomial-to-row decoder, construct the placed Clean
+3. Define the canonical polynomial-to-row decoder, construct the placed Clean
    environment, and prove `Action.Circuit.EnvAssumptions`.
-6. Prove the decomposed full-satisfaction-to-Action bridge, first for one selected
+4. Prove the decomposed full-satisfaction-to-Action bridge, first for one selected
    Action and then for every `Fin shape.numProofs`.
-7. Supply the decoded/full-satisfaction data inside the computed experiment, close the
+5. Supply the decoded/full-satisfaction data inside the computed experiment, close the
    remaining adaptive-coupling/`hExtract` obligation, instantiate the endpoint with
    `ActionStatement`, and add the theorem to the consolidated trust boundary.
