@@ -1,0 +1,64 @@
+import Zcash.Circuits.Fixtures.FloorPlanner
+import Zcash.Circuits.Tests.TestVkLayoutAdd
+import Zcash.Circuits.Tests.TestVkLayoutMul
+import Zcash.Circuits.Tests.TestVkLayoutAction
+import Zcash.Circuits.Tests.TestVkLayoutActionBase
+
+/-!
+# Floor-planner derivation test: region starts computed from the operation stream
+
+Closes "phase B": the region `starts` that `Fixtures/Layout.lean` used to read from the
+Rust-dumped layout fixture are now DERIVED from the Halo2-Clean `Operations` by the ported
+floor planners (`Fixtures/FloorPlanner.lean`), and checked EQUAL to the fixture placements:
+
+* `SimpleFloorPlanner.starts` == the Add/Mul layout fixtures' per-region starts;
+* `V1.starts` == the Action / Action-base layout fixtures' per-region starts (the legacy
+  pdqsort tie-order reproduced — see `FloorPlanner.Pdqsort`);
+* `V1.constants` == the Action fixtures' `constants` allocation (rows derived from the
+  planner's column allocations, no longer read from the fixture).
+
+`TestSelMapDerivation` consumes these derived starts (see its header).
+-/
+
+namespace Zcash.Circuits.Fixtures.Test.FloorPlannerDeriv
+
+open Halo2 Fixtures Fixtures.FloorPlanner
+
+/-! ## SimpleFloorPlanner: Add and Mul -/
+
+-- Add harness: two regions, no table.
+#guard SimpleFloorPlanner.starts LayoutAdd.ops = addLayout.regions.map (·.start)
+
+-- Mul harness: derived starts equal the fixture's non-table placements.
+#guard SimpleFloorPlanner.starts Test.Layout.ops
+  = (mulLayout.regions.filter (·.name ≠ "table_idx")).map (·.start)
+
+/-! ## V1: the full Action circuit (ironwood + pre-ironwood base)
+
+The derived starts / constants are checked against the JSON fixtures at `#eval` time
+(pinned content hash — see `Fixtures/Json.lean`). Orchard's constants column is fixed
+column 3 (`enable_constant`; the only constants column). -/
+
+#eval show IO Unit from do
+  let fx ← Json.loadLayoutFixture "Zcash/Circuits/Fixtures/actionLayout.json"
+    0x51cd2f7ce66a8c7
+  let ops : Operations Fp := Test.LayoutAction.aProgram.operations
+  let fixtureStarts : List ℕ := (fx.regions.filter (·.name ≠ "generator_table")).map (·.start)
+  Json.runChecks [
+    ("V1 derived starts = actionLayout placements",
+      V1.starts ops == fixtureStarts),
+    ("V1 derived constants allocation = actionLayout constants",
+      V1.constants (ZMod.val : Fp → ℕ) ops [3] == fx.constants)]
+
+#eval show IO Unit from do
+  let fx ← Json.loadLayoutFixture "Zcash/Circuits/Fixtures/actionBaseLayout.json"
+    0x193f3922aa59191e
+  let ops : Operations Fp := Test.LayoutAction.aProgramBase.operations
+  let fixtureStarts : List ℕ := (fx.regions.filter (·.name ≠ "generator_table")).map (·.start)
+  Json.runChecks [
+    ("V1 derived starts = actionBaseLayout placements",
+      V1.starts ops == fixtureStarts),
+    ("V1 derived constants allocation = actionBaseLayout constants",
+      V1.constants (ZMod.val : Fp → ℕ) ops [3] == fx.constants)]
+
+end Zcash.Circuits.Fixtures.Test.FloorPlannerDeriv
