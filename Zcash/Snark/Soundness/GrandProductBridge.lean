@@ -107,6 +107,94 @@ theorem szBadSet_linProdDiff_card_le (s t : Multiset Fp) :
   rw [natDegree_prod_X_add_u s, natDegree_prod_X_add_u t]
 
 
+
+/-! ## The lookup argument's product
+
+The lookup factors are `(input + β)·(table + γ)` with the two challenges on *separate* columns, not
+`value + β·name + γ`. So the product splits into two independent univariate products, and the
+kernel applies twice rather than through `encPair`. The `γ`-leading coefficient of the difference is
+the difference of the two `β`-products, which is what separates the input columns from the table
+columns. -/
+
+/-- The difference of the two lookup products, in `γ` over `Fp[β]`. The input columns enter as
+constants in `γ`; the table columns as the linear factors. -/
+noncomputable def lookupProdDiff (a s inp tbl : Multiset Fp) : Polynomial (Polynomial Fp) :=
+  C (a.map (fun u => X + C u)).prod * (s.map (fun u => X + C (C u))).prod
+    - C (inp.map (fun u => X + C u)).prod * (tbl.map (fun u => X + C (C u))).prod
+
+/-- Evaluating the lookup difference at the sampled challenges is the verifier's own product
+comparison. -/
+theorem eval_lookupProdDiff (a s inp tbl : Multiset Fp) (β γ : Fp) :
+    ((lookupProdDiff a s inp tbl).map (evalRingHom β)).eval γ
+      = (a.map (fun u => β + u)).prod * (s.map (fun u => γ + u)).prod
+        - (inp.map (fun u => β + u)).prod * (tbl.map (fun u => γ + u)).prod := by
+  have hconv : ∀ m : Multiset Fp,
+      ((m.map (fun u => X + C (C u))).prod).map (evalRingHom β)
+        = (m.map (fun u => X + C u)).prod := by
+    intro m
+    rw [Polynomial.map_multiset_prod, Multiset.map_map]
+    refine congrArg Multiset.prod (Multiset.map_congr rfl fun u _ => ?_)
+    simp [Polynomial.map_add]
+  rw [lookupProdDiff, Polynomial.map_sub, Polynomial.map_mul, Polynomial.map_mul,
+    hconv s, hconv tbl, map_C, map_C]
+  simp only [eval_sub, eval_mul, eval_C, coe_evalRingHom]
+  rw [eval_prod_X_add_u a β, eval_prod_X_add_u inp β, eval_prod_X_add_u s γ,
+    eval_prod_X_add_u tbl γ]
+
+/-- **The lookup product's multiset content.** With both challenges outside their bad sets, the
+verifier's field product identity forces the input columns and the table columns to match as
+multisets, separately. -/
+theorem lookup_multisets_of_prod_eval_eq {a s inp tbl : Multiset Fp} {β γ : Fp}
+    (hgoodγ : γ ∉ szBadSet ((lookupProdDiff a s inp tbl).map (evalRingHom β)))
+    (hgoodβ : ∀ j, β ∉ szBadSet ((lookupProdDiff a s inp tbl).coeff j))
+    (h : (a.map (fun u => β + u)).prod * (s.map (fun u => γ + u)).prod
+       = (inp.map (fun u => β + u)).prod * (tbl.map (fun u => γ + u)).prod) :
+    lookupProdDiff a s inp tbl = 0 := by
+  -- the sampled challenges kill the difference, so the `β`-reduction is zero …
+  have hev : ((lookupProdDiff a s inp tbl).map (evalRingHom β)).eval γ = 0 := by
+    rw [eval_lookupProdDiff, h, sub_self]
+  have hmap : (lookupProdDiff a s inp tbl).map (evalRingHom β) = 0 := by
+    by_contra hne
+    exact (not_mem_szBadSet.mp hgoodγ) hne hev
+  -- … and then every coefficient is, so the difference itself is
+  by_contra hne
+  obtain ⟨j, hj⟩ : ∃ j, (lookupProdDiff a s inp tbl).coeff j ≠ 0 := by
+    by_contra hall
+    exact hne (Polynomial.ext fun j => by simpa using not_exists.mp hall j)
+  refine (not_mem_szBadSet.mp (hgoodβ j)) hj ?_
+  have := congrArg (fun q => Polynomial.coeff q j) hmap
+  simpa [Polynomial.coeff_map] using this
+
+/-- **The lookup product separates the columns.** The `γ`-leading coefficient of each side is that
+side's `β`-product, so the difference vanishing forces the input columns to match and then, after
+cancelling, the table columns. -/
+theorem lookup_multisets_of_diff_eq_zero {a s inp tbl : Multiset Fp}
+    (h : lookupProdDiff a s inp tbl = 0) : a = inp ∧ s = tbl := by
+  have hmonic : ∀ m : Multiset Fp, (m.map (fun u => X + C (C u))).prod.Monic := fun m =>
+    monic_multiset_prod_of_monic _ _ fun u _ => monic_X_add_C _
+  have hne : ∀ m : Multiset Fp, (m.map (fun u => X + C u)).prod ≠ 0 := fun m =>
+    (monic_multiset_prod_of_monic _ _ fun u _ => monic_X_add_C u).ne_zero
+  have heq : C (a.map (fun u => X + C u)).prod * (s.map (fun u => X + C (C u))).prod
+      = C (inp.map (fun u => X + C u)).prod * (tbl.map (fun u => X + C (C u))).prod :=
+    sub_eq_zero.mp h
+  -- the leading coefficient in `γ` is the `β`-product on each side
+  have hlead := congrArg Polynomial.leadingCoeff heq
+  rw [leadingCoeff_mul, leadingCoeff_mul, leadingCoeff_C, leadingCoeff_C,
+    (hmonic s).leadingCoeff, (hmonic tbl).leadingCoeff, mul_one, mul_one] at hlead
+  refine ⟨prod_X_add_u_inj hlead, ?_⟩
+  -- cancel the common `β`-product and read off the table columns
+  rw [hlead] at heq
+  have hCne : (C (inp.map (fun u => X + C u)).prod : Polynomial (Polynomial Fp)) ≠ 0 := by
+    simpa using hne inp
+  have hQ := mul_left_cancel₀ hCne heq
+  have hmap : (s.map C).map (fun v => X + C v) = s.map (fun u => X + C (C u)) := by
+    simp [Multiset.map_map]
+  have hmapt : (tbl.map C).map (fun v => X + C v) = tbl.map (fun u => X + C (C u)) := by
+    simp [Multiset.map_map]
+  have hstep : (((s.map C)).map (fun v => X + C v)).prod
+      = (((tbl.map C)).map (fun v => X + C v)).prod := by rw [hmap, hmapt]; exact hQ
+  exact Multiset.map_injective (C_injective (R := Fp)) (prod_X_add_u_inj hstep)
+
 /-! ## The permutation argument, from the row recurrence to the copy constraints
 
 Composing the two halves. `RunningProduct` turns the verifier's per-row recurrence into a product

@@ -35,6 +35,7 @@ import Zcash.Snark.Soundness.PermutationConstruction
 import Zcash.Snark.Soundness.RunningProduct
 import Zcash.Snark.Soundness.GrandProductBridge
 import Zcash.Snark.Soundness.LookupAssembly
+import Zcash.Snark.Soundness.PermutationRows
 import Zcash.Snark.Soundness.InnerProduct
 import Zcash.Snark.Soundness.TrustBoundary
 import Zcash.Snark.Soundness.Extraction
