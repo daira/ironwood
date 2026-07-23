@@ -15,6 +15,8 @@ import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.PermutationRows
 import Zcash.Snark.Soundness.PermutationInstantiation
 import Zcash.Snark.Soundness.PermutationSemantics
+import Zcash.Snark.Soundness.CircuitSatisfaction
+import Zcash.Snark.Soundness.OperationCopies
 import Zcash.Snark.Soundness.Composition.Decomposition
 import Zcash.Snark.Soundness.Composition.Residual
 import Zcash.Snark.Soundness.Composition.Prefixes
@@ -484,6 +486,11 @@ assert_no_sorry keygenSigmaColumn_eval
 assert_no_sorry keygenSigmaColumn_natDegree_lt
 assert_no_sorry ResolverPermutationCycle.ofKeygenColumns
 assert_no_sorry ConstraintSatisfaction.resolverPermutationCopyConstraints
+assert_no_sorry CircuitConstraintFamily.operations_constraints_iff
+assert_no_sorry FullCircuitSatisfaction.iff_constraints
+assert_no_sorry FullCircuitSatisfaction.of_components_or_bad
+assert_no_sorry CircuitConstraintFamily.copy_constraints_iff_declaredCopies
+assert_no_sorry copy_constraints_or_bad_of_replay
 assert_no_sorry permutationLastEvalsWellFormed_of_assemble?_eq_some
 assert_no_sorry eval_permutationDataOfDecodedResolver_or_relation
 assert_no_sorry hgood_failure_priced

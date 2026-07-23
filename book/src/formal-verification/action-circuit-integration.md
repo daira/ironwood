@@ -275,6 +275,17 @@ assignments and selector activations, and all synthesized regions under their ac
 placement. Replace the gate-only circuit predicate with a full satisfaction record;
 custom gates alone still cannot imply the Action operation trace.
 
+The generic target and copy half of that translation are now in place.
+`FullCircuitSatisfaction` splits the authoritative `Halo2.Constraints` predicate into
+gate, copy, lookup, and fixed/table fields and proves exact equivalence in both
+directions. `operationDeclaredCopies` extracts equality, instance, and constant copies from the
+complete operation stream; `copy_constraints_iff_declaredCopies` proves that their
+satisfaction is exactly the full record's copy field. Finally,
+`copy_constraints_or_bad_of_replay` transports equality from the generic keygen
+permutation cycles to every declared copy while preserving one explicit exceptional
+event. The concrete layout instantiation only has to encode endpoints as keygen cells
+(including constants-column allocations) and identify their environment reads.
+
 The per-gate half of that translation is proven
 (`eraseExpr_substSelectorMap_eval` plus the packed-selector row algebra), and the
 reassembly should be stated *generically*: one theorem by induction

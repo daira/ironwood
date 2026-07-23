@@ -38,6 +38,8 @@ import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.PermutationRows
 import Zcash.Snark.Soundness.PermutationInstantiation
 import Zcash.Snark.Soundness.PermutationSemantics
+import Zcash.Snark.Soundness.CircuitSatisfaction
+import Zcash.Snark.Soundness.OperationCopies
 import Zcash.Snark.Soundness.InnerProduct
 import Zcash.Snark.Soundness.TrustBoundary
 import Zcash.Snark.Soundness.Extraction
