@@ -412,8 +412,10 @@ assert_no_sorry eval_eq_zero_of_dvd_vanishing
 assert_no_sorry perm_row_recurrence
 assert_no_sorry running_product_start
 assert_no_sorry running_product_end
+assert_no_sorry running_product_chain
 assert_no_sorry name_injective_of_coset
 assert_no_sorry deployed_perm_copy_constraints
+assert_no_sorry deployed_perm_copy_constraints_all_chunks
 assert_no_sorry hgood_failure_priced
 assert_no_sorry hgood_of_good_challenge
 -- The UNCONDITIONAL decomposition: `hExtract` removed, the residual quantified as the
