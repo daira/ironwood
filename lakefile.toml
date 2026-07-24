@@ -47,3 +47,15 @@ globs = ["Zcash.Snark.Fixtures.+"]
 [[lean_lib]]
 name = "CircuitCheck"
 globs = ["Zcash.Circuits.Tests.+"]
+
+# The Action verifying-key COMMITMENT derivation (`Zcash/Snark/VkCommit/`): derives
+# `fixedCommitment`/`permutationCommonCommitment` from the circuit + captured URS
+# (Lagrange FFT, dense fixed columns, keygen permutation polynomials) and assembles the
+# fully-derived `derivedActionVk`. Deliberately EXCLUDED from `defaultTargets`: the
+# single-column certification `native_decide` alone measures ~21.5 min wall / 6.9 GB RSS
+# (Lagrange FFT + one 2^11-term Vesta MSM + the fixture-closure native codegen — see the
+# module docstring; the full 44-commitment bundle is drafted there but deferred on cost).
+# Build explicitly with `lake build ZcashVkCommit`; the rest of the repo stays fast.
+[[lean_lib]]
+name = "ZcashVkCommit"
+globs = ["Zcash.Snark.VkCommit.+"]

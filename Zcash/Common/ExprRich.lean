@@ -41,4 +41,31 @@ exactly as the verifier `Expr` `e` does — no selector-freeness side condition,
   induction e <;>
     simp_all only [RichExpression.ofExpr, RichExpression.eval, Zcash.Snark.Expr.eval]
 
+/-- Carry a pinned `RichExpression` back to the verifier `Expr`, constructor by
+constructor. Total in the other direction only up to the extra `selector` node, which
+maps to junk (`.constant 0`): post-compression gate/lookup expressions are selector-free
+(`compress_selectors` substitutes every simple selector by a fixed-column polynomial), so
+the `.selector` arm is never reached on the expressions a derived verifying key carries.
+Used to spell a derived VK's gate/lookup fields directly in `Expr` space; the exact
+round-trip is `RichExpression.toExpr_ofExpr`. -/
+def RichExpression.toExpr {F : Type} [Zero F] : RichExpression F → Zcash.Snark.Expr F
+  | .constant c => .constant c
+  | .fixed i => .fixed i
+  | .advice i => .advice i
+  | .instance i => .instance i
+  | .selector _ => .constant 0
+  | .negated e => .negated (RichExpression.toExpr e)
+  | .sum a b => .sum (RichExpression.toExpr a) (RichExpression.toExpr b)
+  | .product a b => .product (RichExpression.toExpr a) (RichExpression.toExpr b)
+  | .scaled e c => .scaled (RichExpression.toExpr e) c
+
+/-- **`toExpr` inverts `ofExpr`.** Since `ofExpr` never emits a `selector` node, carrying a
+verifier `Expr` into `RichExpression` and back is the identity — the junk `.selector` arm of
+`toExpr` is unreachable on `ofExpr` images. This closes the `Expr`/`RichExpression` boundary
+for the verifying key's gate and lookup fields. -/
+@[simp] theorem RichExpression.toExpr_ofExpr {F : Type} [Zero F] (e : Zcash.Snark.Expr F) :
+    RichExpression.toExpr (RichExpression.ofExpr e) = e := by
+  induction e <;>
+    simp_all only [RichExpression.ofExpr, RichExpression.toExpr]
+
 end Halo2
