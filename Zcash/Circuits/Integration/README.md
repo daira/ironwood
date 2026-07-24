@@ -34,5 +34,6 @@ The lookup bridge is split deliberately:
 * `TopLevelLookups.lean` routes synthesis-enabled lookups through the
   circuit-derived verifying key, derives selector coverage, table freedom, tuple
   arity, and activation-row fit from Clean's top-level keygen invariants, reduces
-  the remaining projection boundary to exact packed-selector values, and constructs
-  the deployed witnesses consumed by the generic full-circuit bridge.
+  the remaining projection boundary to exact packed-selector values, packages the
+  bundle-wide `β`/`γ`/`θ` exclusions into the per-proof witness conditions, and
+  constructs the deployed witnesses consumed by the generic full-circuit bridge.

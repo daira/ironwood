@@ -1,5 +1,6 @@
 import Zcash.Circuits.Integration.LookupProjection
 import Zcash.Snark.Soundness.CanonicalConstraintModel
+import Zcash.Snark.Soundness.ChallengePricing
 import Zcash.Snark.Soundness.TopLevelGates
 
 /-!
@@ -797,6 +798,149 @@ structure TopLevelLookupWitnessConditions
       (resolverEnvironment
         (top.toVerifierKey pp urs) poly proofIndex
         (top.usableRowsAt top.domainExponent))
+
+/--
+Index every lookup activation in every proof of a top-level bundle. The activation
+list is shared by all proofs, while the resolver environment is proof-indexed.
+-/
+abbrev TopLevelLookupActivationIndex
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) :=
+  Fin (pp.mergeDerived top).numProofs ×
+    Fin (operationEnabledLookups (top.operations 0) 0).length
+
+/--
+The exact bundle-wide `θ` collision surface for a top-level circuit. A single
+transcript challenge is shared by every proof and every enabled lookup activation,
+so the event must be unioned across both indices.
+-/
+noncomputable def allTopLevelLookupThetaBadSet
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) (urs : URS G)
+    (poly : CommitmentId → Polynomial Fp) : Finset Fp :=
+  enabledLookupThetaBadSetFamily
+    (ι := TopLevelLookupActivationIndex top pp)
+    (fun _ => top.placement)
+    (fun index =>
+      resolverEnvironment
+        (top.toVerifierKey pp urs) poly index.1
+        (top.usableRowsAt top.domainExponent))
+    (fun index =>
+      (operationEnabledLookups (top.operations 0) 0).get index.2)
+
+/-- The row-by-arity root budget for the top-level bundle's `θ` surface. -/
+noncomputable def topLevelLookupThetaBudget
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) (urs : URS G)
+    (poly : CommitmentId → Polynomial Fp) : ℕ :=
+  ∑ index : TopLevelLookupActivationIndex top pp,
+    (resolverEnvironment
+      (top.toVerifierKey pp urs) poly index.1
+      (top.usableRowsAt top.domainExponent)).usableRows *
+    (EnabledLookup.inputValues
+      top.placement
+      (resolverEnvironment
+        (top.toVerifierKey pp urs) poly index.1
+        (top.usableRowsAt top.domainExponent))
+      ((operationEnabledLookups
+        (top.operations 0) 0).get index.2)).length
+
+/--
+The bundle-wide top-level `θ` surface has exactly the generic
+`usableRows × tupleArity` union-bound budget, summed over every proof and
+activation.
+-/
+theorem uniformChallenge_allTopLevelLookupThetaBadSet
+    (coherence : TopLevelLookupCoherence top)
+    (poly : CommitmentId → Polynomial Fp) :
+    uniformChallenge.toOuterMeasure
+        (allTopLevelLookupThetaBadSet top pp urs poly)
+      ≤ (topLevelLookupThetaBudget top pp urs poly : ENNReal) /
+        (Fintype.card Fp : ENNReal) := by
+  unfold allTopLevelLookupThetaBadSet topLevelLookupThetaBudget
+  apply uniformChallenge_enabledLookupThetaBadSetFamily
+  intro index row _hrow
+  let lookup :=
+    (operationEnabledLookups (top.operations 0) 0).get index.2
+  have henabled :
+      lookup ∈ operationEnabledLookups (top.operations 0) 0 :=
+    List.get_mem ..
+  have hargument :
+      lookup.argument ∈ top.constraintSystem.lookups :=
+    OperationsKeygenCoherent.lookup top.keygenCoherent henabled
+  have harity := coherence.arity lookup.argument hargument
+  unfold EnabledLookup.inputValues EnabledLookup.tableValues
+  simpa only [List.length_map] using harity
+
+/--
+The three lookup challenge exclusions at their natural bundle-wide granularity.
+These are transcript/probability-layer facts, independent of fixed-column selector
+realization.
+-/
+structure TopLevelLookupChallengeExclusions
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) (urs : URS G)
+    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (poly : CommitmentId → Polynomial Fp) : Prop where
+  gamma :
+    ch.gamma ∉ allResolverLookupGammaBadSet
+      (top.toVerifierKey pp urs) ch poly
+      ((top.toVerifierKey pp urs).n -
+        (top.toVerifierKey pp urs).blindingFactors - 2)
+  beta :
+    ch.beta ∉ allResolverLookupBetaBadSet
+      (top.toVerifierKey pp urs) ch poly
+      ((top.toVerifierKey pp urs).n -
+        (top.toVerifierKey pp urs).blindingFactors - 2)
+  theta :
+    ch.theta ∉ allTopLevelLookupThetaBadSet top pp urs poly
+
+/--
+Bundle-wide challenge exclusions and exact selector realization construct the
+per-proof conditions consumed by the deployed lookup witnesses.
+-/
+noncomputable def TopLevelLookupWitnessConditions.ofChallengeExclusions
+    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    (inputSelectorValues : ∀ lookup
+      (_henabled :
+        lookup ∈ operationEnabledLookups (top.operations 0) 0),
+      lookup.InputSelectorValuesRealized top
+        (resolverEnvironment
+          (top.toVerifierKey pp urs) poly proofIndex
+          (top.usableRowsAt top.domainExponent)))
+    (exclusions :
+      TopLevelLookupChallengeExclusions top pp urs ch poly) :
+    TopLevelLookupWitnessConditions top pp urs ch poly proofIndex := by
+  refine
+    { inputSelectorValues := inputSelectorValues
+      resolverGood := ?_
+      thetaGood := ?_ }
+  · intro lookup henabled
+    exact allResolverLookupGoodChallenges_of_not_mem
+      (top.toVerifierKey pp urs) ch poly
+      ((top.toVerifierKey pp urs).n -
+        (top.toVerifierKey pp urs).blindingFactors - 2)
+      exclusions.gamma exclusions.beta proofIndex
+      (lookup.topLevelRoute
+        (top := top) (pp := pp) henabled).index
+  · intro lookup henabled
+    obtain ⟨index, hindex, hlookup⟩ :=
+      List.mem_iff_getElem.mp henabled
+    have hfamily :=
+      (not_mem_enabledLookupThetaBadSetFamily_iff
+        (ι := TopLevelLookupActivationIndex top pp)
+        (fun _ => top.placement)
+        (fun index =>
+          resolverEnvironment
+            (top.toVerifierKey pp urs) poly index.1
+            (top.usableRowsAt top.domainExponent))
+        (fun index =>
+          (operationEnabledLookups (top.operations 0) 0).get index.2)
+        ch.theta).mp exclusions.theta
+        (proofIndex, ⟨index, hindex⟩)
+    simpa [allTopLevelLookupThetaBadSet, hlookup] using hfamily
 
 /-- Construct the complete deployed-witness family for one top-level proof. -/
 noncomputable def deployedWitnesses

@@ -268,7 +268,8 @@ merely restating fixture equality.
 
 **Status: the protocol mathematics and generic Clean-operation adapters are
 implemented. Concrete Action closure now consists of fixed/selector realization,
-copy replay packaging, lookup challenge data, and assembly of those families.**
+copy replay packaging, and assembly of those families. Lookup challenge exclusions
+are priced and packaged, but must still be supplied at their transcript squeezes.**
 
 #30's decoded capstones record only the combined custom-gate quotient identity. #91
 defines the full gate/permutation/lookup constraint list over polynomials, proves that
@@ -364,6 +365,13 @@ for an arbitrary finite family of placed Clean activations. Their measure bounds
 multiply or sum the individual row/arity budgets explicitly. Only placement of these
 already-priced events at the corresponding transcript squeezes remains in the
 probability layer.
+`TopLevelLookupChallengeExclusions` now specializes those three events to the exact
+circuit-derived key, all bundle proof indices, and all enabled operation activations.
+Its `θ` field uses `allTopLevelLookupThetaBadSet`, whose reusable measure theorem is
+the sum of `usableRows × tupleArity` over that complete bundle family.
+`TopLevelLookupWitnessConditions.ofChallengeExclusions` turns one such bundle record
+and the fixed stream's exact selector values into the per-proof conditions consumed
+by `deployedWitnesses`; callers no longer distribute `β`/`γ`/`θ` facts manually.
 `PermutationInstantiation` now supplies the analogous permutation layer. It maps
 running products through `permProduct`, maps each chunk's value-side `ColumnRef`
 through the corresponding VK query-layout entry, maps its σ-side through
@@ -416,7 +424,9 @@ The current item-4 sequence is:
    Constant sites additionally have a closed zipped description of the V1 allocation
    stream; the concrete adapter must connect that description to encoded endpoints;
 5. instantiate `TopLevelFixedCoherence`, use it to realize packed selectors and fixed
-   tables, and discharge the lookup selector-projection fields;
+   tables, and discharge the lookup selector-projection fields; bundle-wide lookup
+   challenge exclusions are already packaged by
+   `TopLevelLookupWitnessConditions.ofChallengeExclusions`;
 6. combine gate, copy, lookup, and fixed results in `FullCircuitBridge`.
 
 The permutation side has moved past the former “Action permutation data” placeholder.
@@ -986,8 +996,8 @@ whose public inputs were committed by the verifier.
 3. **Current parallel work:** instantiate Action `TopLevelFixedCoherence`; finish the
    copy endpoint/constants adapter on top of the master linked-pairs constructor; and
    use the fixed/VK result to supply exact packed-selector projection. Lookup
-   configure lawfulness and activation-row fit, plus the Lagrange/instance commitment
-   stream, are complete.
+   configure lawfulness, activation-row fit, and bundle-wide challenge packaging,
+   plus the Lagrange/instance commitment stream, are complete.
 4. Assemble those components for one proof index in `FullCircuitBridge`, then quantify
    the same construction over every `Fin shape.numProofs`. The external
    `Action.Statement` and `Action.BundleStatement` adapters are already implemented.
@@ -1005,7 +1015,7 @@ append-only merge flow.
 
 | Marker | Work package | Current state | Delivers / unblocks |
 |---|---|---|---|
-| **[ME] Lookup** | Consume the exact packed-selector realization from the fixed/VK stream and package the already-priced `β`/`γ`/`θ` exclusions at the transcript boundary. | Correct-by-construction lookup lawfulness, generic routing/projection, activation-row fit, deployed-witness construction, and bundle-wide bad-set aggregation are complete and pinned through Clean. | The lookup field of `FullCircuitBridge` for every Action proof index. |
+| **[ME] Lookup** | Consume the exact packed-selector realization from the fixed/VK stream. | Correct-by-construction lookup lawfulness, generic routing/projection, activation-row fit, deployed-witness construction, bundle-wide bad-set aggregation, exact top-level `θ` pricing, and conversion of one bundle exclusions record into every per-proof witness condition are complete. This stream is now waiting only on fixed/VK selector realization. | The lookup field of `FullCircuitBridge` for every Action proof index. |
 | **[SEPARATE: copy]** | Finish the concrete endpoint encoding/read equations and connect constant sites to the closed V1 allocation zip, then feed those facts to `CopyReplayWitness.ofLinkedPairs`. | Generic replay correctness, σ rows, non-constant declared-copy membership, membership-to-resolver-value equality, active-row restriction, chunk flattening, constant-stream characterization, and the master witness constructor are complete. | The copy field of `FullCircuitBridge`. |
 | **[SEPARATE: fixed/VK]** | Instantiate `TopLevelFixedCoherence` from the circuit-derived dense fixed rows, sparse-to-dense scatter law, fixed-query coverage, and fixed commitments. | Generic fixed/table and selector-realization theorems are complete. | The fixed/table field and the exact packed-selector fact consumed by the lookup stream. |
 | **[DONE: instance]** | No independent work remains in the deterministic instance stream. | `ActionInstanceCommitment.instanceKey` and `.commitment` derive the key and public commitment from the URS and ten Action rows; the binding-aware bundle endpoint consumes them internally and preserves only the shared nontrivial-relation branch. | Public-instance provenance is ready for the one-proof/bundle join. |
