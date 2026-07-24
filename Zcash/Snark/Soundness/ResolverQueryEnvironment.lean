@@ -17,6 +17,77 @@ open Halo2 Polynomial
 
 set_option maxHeartbeats 20000
 
+/-- Erasing one lookup only extends the incoming query state. -/
+theorem eraseLookup_extends
+    {F : Type} [Field F] [DecidableEq F]
+    (argument : LookupArgument F) (state : QueryState) :
+    (eraseLookup argument state).2.Extends state := by
+  unfold eraseLookup
+  generalize hinputs :
+    eraseGates argument.inputs state = inputResult
+  rcases inputResult with ⟨inputs, inputState⟩
+  generalize htables :
+    eraseGates argument.tables inputState = tableResult
+  rcases tableResult with ⟨tables, tableState⟩
+  have hinputExtends := eraseGates_extends argument.inputs state
+  rw [hinputs] at hinputExtends
+  have htableExtends :=
+    eraseGates_extends argument.tables inputState
+  rw [htables] at htableExtends
+  simpa only [htables] using
+    QueryState.Extends.trans hinputExtends htableExtends
+
+/-- Erasing the complete lookup list only extends its incoming query state. -/
+theorem eraseLookups_extends
+    {F : Type} [Field F] [DecidableEq F]
+    (arguments : List (LookupArgument F)) (state : QueryState) :
+    (eraseLookups arguments state).2.Extends state := by
+  induction arguments generalizing state with
+  | nil =>
+      exact QueryState.Extends.refl state
+  | cons argument rest ih =>
+      generalize hlookup :
+        eraseLookup argument state = lookupResult
+      rcases lookupResult with ⟨lookup, lookupState⟩
+      rw [eraseLookups, hlookup]
+      exact QueryState.Extends.trans
+        (by
+          have h := eraseLookup_extends argument state
+          rw [hlookup] at h
+          exact h)
+        (ih lookupState)
+
+/-- Repackage a pinned constraint system's three query layouts as a query state. -/
+def pinnedQueryState
+    {F : Type} (pinned : PinnedConstraintSystem F) : QueryState where
+  advice := pinned.adviceQueryLayout.toArray
+  fixed := pinned.fixedQueryLayout.toArray
+  inst := pinned.instanceQueryLayout.toArray
+
+/--
+The final pinned query layouts extend the intermediate state after gate erasure.
+Lookup projection may append queries, but cannot change any gate query index.
+-/
+theorem PinnedConstraintSystem.derive_queryState_extends_gates
+    {F : Type} [Field F] [DecidableEq F]
+    (cs : ConstraintSystem F) (map : SelCompressMap) :
+    (pinnedQueryState
+      (PinnedConstraintSystem.derive cs map)).Extends
+      (eraseGates
+        ((flatGates cs).map (substSelectorMap map.lookup))
+        (queryWalkInit map cs)).2 := by
+  unfold pinnedQueryState
+  simp only [PinnedConstraintSystem.derive, projectCS]
+  exact eraseLookups_extends
+    (cs.lookups.map fun argument =>
+      { inputs :=
+          argument.inputs.map (substSelectorMap map.lookup)
+        tables :=
+          argument.tables.map (substSelectorMap map.lookup) })
+    (eraseGates
+      ((flatGates cs).map (substSelectorMap map.lookup))
+      (queryWalkInit map cs)).2
+
 /-- Rotating a domain point is addition of its row and query rotation. -/
 theorem rotateOmega_domainPoint
     (omega : Fp) (homega : omega ≠ 0) (row : ℕ) (rotation : ℤ) :

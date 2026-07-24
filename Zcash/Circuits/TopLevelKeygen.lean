@@ -85,6 +85,13 @@ def pinnedCS (self : TopLevelCircuit F ConfigInput Config Output) :
 def regionStarts (self : TopLevelCircuit F ConfigInput Config Output) : List ℕ :=
   FloorPlanner.V1.starts (self.operations 0)
 
+/-- Selector activations produced by the circuit's own synthesis and V1 placement. -/
+def selectorActivations
+    (self : TopLevelCircuit F ConfigInput Config Output) :
+    List (ℕ × ℕ) :=
+  activations self.regionStarts
+    (indexedRegions (self.operations 0) 0).1
+
 /-- The circuit-owned V1 placement function. -/
 def placement (self : TopLevelCircuit F ConfigInput Config Output) :
     RegionIndex → ℕ :=
@@ -102,6 +109,26 @@ def usedRows (self : TopLevelCircuit F ConfigInput Config Output) : ℕ :=
 /-- The smallest keygen domain exponent derived from this circuit's CS and operations. -/
 def domainExponent (self : TopLevelCircuit F ConfigInput Config Output) : ℕ :=
   Halo2.minimalK self.constraintSystem (self.operations 0)
+
+/--
+The selector-compression map derived from the circuit's own constraint system,
+operation stream, placement, and minimal fitting domain.
+-/
+def selectorMap
+    (self : TopLevelCircuit F ConfigInput Config Output) :
+    SelCompressMap :=
+  deriveSelCompressMap self.constraintSystem
+    (2 ^ self.domainExponent) self.selectorActivations
+
+/--
+The circuit-owned pinned constraint system is exactly the projection using its
+circuit-owned selector map.
+-/
+theorem pinnedCS_eq_derive
+    (self : TopLevelCircuit F ConfigInput Config Output) :
+    self.pinnedCS =
+      PinnedConstraintSystem.derive self.constraintSystem self.selectorMap := by
+  rfl
 
 /-- The blinding-row count derived from the circuit's own configure run. -/
 def blindingFactors (self : TopLevelCircuit F ConfigInput Config Output) : ℕ :=

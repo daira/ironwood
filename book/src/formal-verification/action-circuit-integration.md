@@ -527,6 +527,12 @@ columns, but cannot drop one. This closes map coverage independently of Action. 
 distinct configure-side obligation still has to show that selector atoms occurring
 syntactically in configured gate expressions are allocated indices; semantic
 `Gate.WellFormed` alone intentionally does not imply that stronger syntactic fact.
+`ConstraintSystem.GateSelectorsAllocated` now states that obligation precisely:
+each gate's distinguished selector and every selector atom in every constraint are
+below `cs.numSelectors`. The monotonicity lemma for `selectorsCovered` and
+`gateSelectorsCovered_deriveSelCompressMap` then turn that single configure
+certificate into the exact projection-coverage premise. There is no Action-specific
+compression-map computation or selector-count proof left.
 
 For activations, `mem_selectorFixed_of_activation` proves that every synthesized
 `(selector, row)` with a compression-map entry is emitted by the generic
@@ -554,6 +560,24 @@ the two contracts into the required nonzero scale. The remaining gate work is no
 connect circuit-derived fixed rows and polynomials to the emitted layout assignments,
 with only the generic degree-below-field-order condition. The evaluation and
 resolver-membership algebra is no longer circuit-specific.
+
+`TopLevelCircuit.selectorActivations` and `.selectorMap` now expose those two keygen
+objects directly, and `pinnedCS_eq_derive` identifies the circuit's existing pinned
+constraint system with that exact map. The final pinned query state is also proved to
+extend the intermediate gate-erasure state (`derive_queryState_extends_gates`), so
+lookup projection may append query entries without forcing a false equality between
+the VK's final layouts and the earlier gate state.
+
+`TopLevelGateCoherence` is the generic static boundary to the incoming circuit-owned
+verifying key. Its `polynomialWitness` theorem derives the resolver witness for every
+enabled constraint using only the top-level circuit's own operations, placement,
+selector map, pinned projection, and the decoded fixed-polynomial realization.
+`TopLevelGateCoherence.constraints` then supplies the complete gate field of Clean's
+constraint satisfaction. The remaining constructor work is to obtain the record's
+pinned-field equalities from `FormalCircuit.toVerifyingKey`, prove the compact
+configure certificates (`KeygenCoherent`, `GatesWellFormed`, and
+`GateSelectorsAllocated`), and connect the VK's dense fixed rows to
+`SelectorActivationsRealized`.
 
 The `Fixtures.Layout` reconstruction is already generic over operations, so σ-cycle
 correctness of its replayed keygen merge is likewise a once-and-for-all lemma.

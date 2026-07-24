@@ -15,6 +15,84 @@ namespace Halo2
 set_option maxHeartbeats 20000
 
 /--
+A gate's distinguished selector and every selector atom occurring in its constraints
+name allocated selector indices.
+
+The second clause is deliberately syntactic.  Semantic gate well-formedness cannot
+imply it: foreign selector atoms may cancel algebraically while still violating the
+keygen representation invariant.
+-/
+def Gate.SelectorsAllocated
+    {F : Type} (gate : Gate F) (numSelectors : ℕ) : Prop :=
+  gate.selector.index < numSelectors ∧
+    gate.constraints.Forall fun constraint =>
+      constraint.poly.selectorsCovered
+        (fun selector => decide (selector < numSelectors)) = true
+
+/-- Every configured gate uses only allocated selector indices. -/
+def ConstraintSystem.GateSelectorsAllocated
+    {F : Type} (cs : ConstraintSystem F) : Prop :=
+  cs.gates.Forall fun gate => gate.SelectorsAllocated cs.numSelectors
+
+namespace ConstraintSystem.GateSelectorsAllocated
+
+/-- The distinguished selector of a configured gate is allocated. -/
+theorem gate
+    {F : Type} {cs : ConstraintSystem F}
+    (hallocated : cs.GateSelectorsAllocated)
+    {gate : Gate F} (hgate : gate ∈ cs.gates) :
+    gate.selector.index < cs.numSelectors :=
+  (List.forall_iff_forall_mem.mp hallocated gate hgate).1
+
+/-- Every selector atom of a configured constraint is allocated. -/
+theorem constraint
+    {F : Type} {cs : ConstraintSystem F}
+    (hallocated : cs.GateSelectorsAllocated)
+    {gate : Gate F} (hgate : gate ∈ cs.gates)
+    {constraint : Constraint F}
+    (hconstraint : constraint ∈ gate.constraints) :
+    constraint.poly.selectorsCovered
+      (fun selector => decide (selector < cs.numSelectors)) = true := by
+  have hgateAllocated :=
+    List.forall_iff_forall_mem.mp hallocated gate hgate
+  exact List.forall_iff_forall_mem.mp hgateAllocated.2
+    constraint hconstraint
+
+end ConstraintSystem.GateSelectorsAllocated
+
+/--
+Selector coverage is monotone in its domain predicate.
+-/
+theorem Expression.selectorsCovered_mono
+    {F : Type} (source target : ℕ → Bool)
+    (hdom : ∀ selector, source selector = true →
+      target selector = true)
+    (expression : Expression F Query)
+    (hcovered : expression.selectorsCovered source = true) :
+    expression.selectorsCovered target = true := by
+  induction expression with
+  | var query =>
+      cases query with
+      | selector selector =>
+          exact hdom selector.index hcovered
+      | fixed column rotation =>
+          rfl
+      | advice column rotation =>
+          rfl
+      | «instance» column rotation =>
+          rfl
+  | const value =>
+      rfl
+  | add left right ihLeft ihRight =>
+      simp only [Expression.selectorsCovered,
+        Bool.and_eq_true] at hcovered ⊢
+      exact ⟨ihLeft hcovered.1, ihRight hcovered.2⟩
+  | mul left right ihLeft ihRight =>
+      simp only [Expression.selectorsCovered,
+        Bool.and_eq_true] at hcovered ⊢
+      exact ⟨ihLeft hcovered.1, ihRight hcovered.2⟩
+
+/--
 The inner greedy scan only transfers selector descriptions between the chosen
 combination and the remainder.
 -/
@@ -585,6 +663,32 @@ theorem deriveSelCompressMap_lookup_isSome_of_lt
             sourceCompressed.packedCol + cs.numFixedColumns }))
   exact List.mem_map.mpr
     ⟨(selector, source), hsource, rfl⟩
+
+/--
+The circuit-derived compression map covers every selector atom of every configured
+gate once the configure phase certifies that those atoms name allocated selectors.
+-/
+theorem gateSelectorsCovered_deriveSelCompressMap
+    {F : Type} (cs : ConstraintSystem F) (n : ℕ)
+    (activations : List (ℕ × ℕ))
+    (hallocated : cs.GateSelectorsAllocated) :
+    ∀ expression ∈ flatGates cs,
+      expression.selectorsCovered
+        (fun selector =>
+          ((deriveSelCompressMap cs n activations).lookup selector).isSome) =
+        true := by
+  intro expression hexpression
+  rw [flatGates, List.mem_flatMap] at hexpression
+  obtain ⟨gate, hgate, hexpression⟩ := hexpression
+  obtain ⟨constraint, hconstraint, hexpression⟩ :=
+    List.mem_map.mp hexpression
+  subst expression
+  apply Expression.selectorsCovered_mono
+    (fun selector => decide (selector < cs.numSelectors))
+  · intro selector hselector
+    exact deriveSelCompressMap_lookup_isSome_of_lt
+      cs n activations (of_decide_eq_true hselector)
+  · exact hallocated.constraint hgate hconstraint
 
 end Halo2
 

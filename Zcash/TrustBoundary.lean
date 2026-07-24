@@ -40,6 +40,7 @@ import Zcash.Snark.Soundness.PolynomialEnvironment
 import Zcash.Snark.Soundness.ResolverQueryEnvironment
 import Zcash.Snark.Soundness.ResolverGates
 import Zcash.Snark.Soundness.SelectorCoherence
+import Zcash.Snark.Soundness.TopLevelGates
 import Zcash.Snark.Soundness.DomainSelectors
 import Zcash.Snark.Soundness.CanonicalConstraintModel
 import Zcash.Snark.Soundness.InstanceCommitment
@@ -621,6 +622,7 @@ assert_axioms Zcash.Circuits.TopLevelCircuit.fitsAt_domainExponent
 assert_axioms Zcash.Circuits.TopLevelCircuit.blindingFactors_lt_domainSize
 assert_axioms Zcash.Circuits.TopLevelCircuit.blindingFactors_succ_lt_domainSize
 assert_axioms Zcash.Circuits.TopLevelCircuit.synthesisWellFormed
+assert_axioms Zcash.Circuits.TopLevelCircuit.pinnedCS_eq_derive
 assert_axioms Zcash.Bridge.powFast_eq_pow
 assert_axioms Zcash.Bridge.omegaOf_isPrimitiveRoot +native
 assert_axioms Zcash.Bridge.omegaOf_domain +native
@@ -686,8 +688,17 @@ assert_axioms fixedQueryFeedOfResolver_eval_environment
 assert_axioms adviceQueryFeedOfResolver_eval_environment
 assert_axioms instanceQueryFeedOfResolver_eval_environment
 assert_axioms resolverQueryFeeds_interpret
+assert_axioms eraseLookup_extends
+assert_axioms eraseLookups_extends
+assert_axioms PinnedConstraintSystem.derive_queryState_extends_gates
 assert_axioms resolverGatePolynomial_eval
 assert_axioms resolverGatePolynomial_mem
+assert_axioms TopLevelGateCoherence.resolverInterpretsGates
+assert_axioms TopLevelGateCoherence.polynomialWitness
+assert_axioms TopLevelGateCoherence.constraints
+assert_axioms Halo2.Expression.selectorsCovered_mono
+assert_axioms Halo2.ConstraintSystem.GateSelectorsAllocated.gate
+assert_axioms Halo2.ConstraintSystem.GateSelectorsAllocated.constraint
 assert_axioms Halo2.extendCombination_length_conservation
 assert_axioms Halo2.mem_extendCombination_iff
 assert_axioms Halo2.extendCombination_remaining_length_le
@@ -702,6 +713,7 @@ assert_axioms Halo2.SelCompressMap.lookup_isSome_of_mem
 assert_axioms Halo2.process_lookup_isSome_of_mem
 assert_axioms Halo2.SelCompressMap.exists_mem_entries_of_lookup
 assert_axioms Halo2.deriveSelCompressMap_lookup_isSome_of_lt
+assert_axioms Halo2.gateSelectorsCovered_deriveSelCompressMap
 assert_axioms Zcash.Circuits.Fixtures.Layout.mem_selectorFixed_of_activation
 assert_axioms Zcash.Circuits.Fixtures.Layout.exists_activation_of_mem_selectorFixed
 assert_axioms selectorRootsWellFormed_process
