@@ -21,7 +21,6 @@ polynomial witness consumed by the generic constraint-satisfaction split.
 namespace Zcash.Snark
 
 open Halo2 Polynomial Keygen
-open Zcash.Circuits
 
 set_option maxHeartbeats 20000
 

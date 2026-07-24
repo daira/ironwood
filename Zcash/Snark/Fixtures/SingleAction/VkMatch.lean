@@ -2,7 +2,7 @@ import Zcash.Snark.Fixtures.SingleAction.Fixture
 import Zcash.Snark.Core.Domain
 import Zcash.Snark.Keygen.Pipeline
 import Zcash.Circuits.Action.TopLevel
-import Zcash.Circuits.TopLevelKeygen
+import Clean.Halo2.TopLevelKeygen
 import Mathlib.Util.AssertNoSorry
 
 /-!

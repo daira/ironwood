@@ -29,7 +29,7 @@ abbrev actionShape (pp : Keygen.ProofParams) : Shape :=
 
 abbrev actionVk (pp : Keygen.ProofParams) (urs : URS G) :
     VerifyingKey (actionShape pp) Zcash.Circuits.Fp G :=
-  Zcash.Circuits.TopLevelCircuit.toVerifierKey
+  Halo2.TopLevelCircuit.toVerifierKey
     orchardActionTopLevelCircuit pp urs
 
 /-- The permutation chunks of every derived Action VK are `[7, 7, 1]`, with

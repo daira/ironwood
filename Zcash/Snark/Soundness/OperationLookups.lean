@@ -2,6 +2,7 @@ import Zcash.Snark.Soundness.CircuitSatisfaction
 import Zcash.Snark.Soundness.FoldSplit
 import Zcash.Snark.Soundness.GoodChallenge
 import Zcash.Snark.Soundness.LookupRows
+import Clean.Halo2.Keygen.FloorPlanner
 
 /-!
 # Enabled operation lookups and tuple-compression soundness
@@ -91,6 +92,45 @@ def operationEnabledLookups {F : Type} :
       regionEnabledLookups i body ++ operationEnabledLookups rest (i + 1)
   | .constrainInstance _ _ _ :: rest, i => operationEnabledLookups rest i
   | .loadTable _ _ :: rest, i => operationEnabledLookups rest i
+
+/-- Membership in a region's extracted lookup list is exactly membership of the
+corresponding raw `.enableLookup` operation, with the enclosing region retained. -/
+theorem mem_regionEnabledLookups_iff
+    {F : Type} (lookup : EnabledLookup F)
+    (self : RegionIndex) (body : RegionOperations F) :
+    lookup ∈ regionEnabledLookups self body ↔
+      lookup.region = self ∧
+        RegionOperation.enableLookup lookup.argument lookup.enabled lookup.row ∈
+          body := by
+  rcases lookup with ⟨argument, enabled, region, row⟩
+  induction body with
+  | nil =>
+      simp [regionEnabledLookups]
+  | cons operation rest ih =>
+      cases operation <;>
+        simp_all [regionEnabledLookups]
+      all_goals aesop
+
+/--
+An extracted lookup points to the exact indexed region body containing its raw
+activation operation.
+-/
+theorem mem_operationEnabledLookups_iff
+    {F : Type} (lookup : EnabledLookup F)
+    (operations : Operations F) (initial : RegionIndex) :
+    lookup ∈ operationEnabledLookups operations initial ↔
+      ∃ body,
+        (lookup.region, body) ∈ (indexedRegions operations initial).1 ∧
+          RegionOperation.enableLookup lookup.argument lookup.enabled lookup.row ∈
+            body := by
+  induction operations generalizing initial with
+  | nil =>
+      simp [operationEnabledLookups, indexedRegions]
+  | cons operation rest ih =>
+      cases operation <;>
+        simp_all [operationEnabledLookups, indexedRegions,
+          mem_regionEnabledLookups_iff]
+      all_goals aesop
 
 namespace CircuitConstraintFamily
 

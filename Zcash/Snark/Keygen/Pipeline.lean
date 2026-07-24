@@ -3,8 +3,8 @@ import Zcash.Common.ParMap
 import Zcash.Snark.Core.Domain
 import Zcash.Snark.Keygen.Fast.Msm
 import Zcash.Circuits.Integration.ExprRich
-import Zcash.Circuits.Fixtures.Layout
-import Zcash.Circuits.TopLevelKeygen
+import Clean.Halo2.Keygen.Layout
+import Clean.Halo2.TopLevelKeygen
 import Zcash.Snark.Core.Group
 import Zcash.Snark.Verifier.Assemble
 
@@ -36,7 +36,6 @@ namespace Zcash.Snark.Keygen
 
 open Zcash.Snark
 open Halo2
-open Zcash.Circuits.Fixtures
 
 variable {G : Type} [AddCommGroup G] [Inhabited G]
 
@@ -170,7 +169,7 @@ def fixedCommitmentsOf (blind : G) (lagrange : List G) (selMap : Halo2.SelCompre
 /-- The permutation columns as `ColRef`s in `enable_equality` order
 (`cs.permutationColumns`) — the order the keygen `Assembly` mapping and the `δ^i` scaling
 are indexed by, and the column shape `V1.copyList` resolves cells against. -/
-def permColsOf (cs : ConstraintSystem Fp) : List Zcash.Circuits.Fixtures.ColRef :=
+def permColsOf (cs : ConstraintSystem Fp) : List Halo2.Layout.ColRef :=
   cs.permutationColumns.map fun c =>
     match c.kind with
     | .advice => .advice c.index
@@ -246,7 +245,6 @@ namespace Zcash.Snark.VerifyingKey
 
 open Zcash.Snark.Keygen
 open Halo2
-open Zcash.Circuits.Fixtures
 
 variable {G : Type} [AddCommGroup G] [Inhabited G]
 
@@ -318,7 +316,6 @@ namespace Zcash.Snark.Keygen
 
 open Zcash.Snark
 open Halo2
-open Zcash.Circuits.Fixtures
 
 variable {G : Type} [AddCommGroup G] [Inhabited G]
 
@@ -341,7 +338,6 @@ structure ProofParams where
   numPointSets : ℕ
 deriving DecidableEq, Repr
 
-open Zcash.Circuits in
 /-- The `Shape` of a top-level circuit's proofs: the proof-shape counts merged with
 everything the circuit derives — the domain exponent (`TopLevelCircuit.domainExponent`),
 column/lookup/permutation counts from the configure-recorded constraint system, the
@@ -352,7 +348,8 @@ def ProofParams.mergeDerived (pp : ProofParams)
     {ConfigInput Config : Type} {Output : TypeMap} [CircuitType Output]
     (top : TopLevelCircuit Fp ConfigInput Config Output) : Shape :=
   let cs := top.constraintSystem
-  let pinned := top.pinnedCS
+  let pinned :=
+    PinnedConstraintSystem.derive top.constraintSystem top.selectorMap
   { k := top.domainExponent
     numProofs := pp.numProofs
     numAdviceColumns := cs.numAdviceColumns
@@ -368,13 +365,11 @@ def ProofParams.mergeDerived (pp : ProofParams)
 
 end Zcash.Snark.Keygen
 
-namespace Zcash.Circuits.TopLevelCircuit
+namespace Halo2.TopLevelCircuit
 
 open Zcash.Snark
 open Zcash.Snark.Keygen
 open Halo2
-open Zcash.Circuits
-open Zcash.Circuits.Fixtures
 
 variable {G : Type} [AddCommGroup G] [Inhabited G]
 variable {ConfigInput Config : Type} {Output : TypeMap} [CircuitType Output]
@@ -417,4 +412,46 @@ def toVerifierKey
     VerifyingKey (pp.mergeDerived top) Fp G :=
   top.verifierKeyAt (pp.mergeDerived top) urs
 
-end Zcash.Circuits.TopLevelCircuit
+/-- The derived key's advice-query layout has the shape count computed from the same
+top-level pinned constraint system. -/
+theorem toVerifierKey_adviceQueryCount
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) (urs : URS G) :
+    (top.toVerifierKey pp urs).adviceQueryLayout.length =
+      (pp.mergeDerived top).numAdviceQueries := by
+  change
+    (PinnedConstraintSystem.derive
+      top.constraintSystem top.selMapDerived).adviceQueryLayout.length =
+    (PinnedConstraintSystem.derive
+      top.constraintSystem top.selectorMap).adviceQueryLayout.length
+  rw [show top.selMapDerived = top.selectorMap by rfl]
+
+/-- The derived key's fixed-query layout has the shape count computed from the same
+top-level pinned constraint system. -/
+theorem toVerifierKey_fixedQueryCount
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) (urs : URS G) :
+    (top.toVerifierKey pp urs).fixedQueryLayout.length =
+      (pp.mergeDerived top).numFixedQueries := by
+  change
+    (PinnedConstraintSystem.derive
+      top.constraintSystem top.selMapDerived).fixedQueryLayout.length =
+    (PinnedConstraintSystem.derive
+      top.constraintSystem top.selectorMap).fixedQueryLayout.length
+  rw [show top.selMapDerived = top.selectorMap by rfl]
+
+/-- The derived key's instance-query layout has the shape count computed from the same
+top-level pinned constraint system. -/
+theorem toVerifierKey_instanceQueryCount
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) (urs : URS G) :
+    (top.toVerifierKey pp urs).instanceQueryLayout.length =
+      (pp.mergeDerived top).numInstanceQueries := by
+  change
+    (PinnedConstraintSystem.derive
+      top.constraintSystem top.selMapDerived).instanceQueryLayout.length =
+    (PinnedConstraintSystem.derive
+      top.constraintSystem top.selectorMap).instanceQueryLayout.length
+  rw [show top.selMapDerived = top.selectorMap by rfl]
+
+end Halo2.TopLevelCircuit

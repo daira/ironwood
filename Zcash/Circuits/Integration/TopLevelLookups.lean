@@ -19,7 +19,6 @@ packed-selector rows.
 namespace Zcash.Snark
 
 open Halo2 Polynomial Keygen
-open Zcash.Circuits
 
 set_option maxHeartbeats 20000
 
@@ -65,6 +64,36 @@ noncomputable def EnabledLookup.topLevelRoute
   simpa [ProofParams.mergeDerived] using hindex
 
 /--
+Every extracted lookup activation lies inside the top-level circuit's keygen row
+footprint.
+-/
+theorem EnabledLookup.activationRow_lt_usedRows
+    (lookup : EnabledLookup Fp)
+    (henabled :
+      lookup ∈ operationEnabledLookups (top.operations 0) 0) :
+    top.placement lookup.region + lookup.row < top.usedRows := by
+  obtain ⟨body, hregion, hoperation⟩ :=
+    (mem_operationEnabledLookups_iff lookup (top.operations 0) 0).mp henabled
+  exact absoluteRow_lt_usedRows_of_enableLookup_mem
+    (top.operations 0) lookup.region body hregion
+    lookup.argument lookup.enabled lookup.row hoperation
+
+/--
+A fitting circuit-derived domain places every lookup activation in the usable-row
+prefix.
+-/
+theorem EnabledLookup.activationRow_lt_usableRows
+    (gateCoherence : TopLevelGateCoherence top pp urs)
+    (lookup : EnabledLookup Fp)
+    (henabled :
+      lookup ∈ operationEnabledLookups (top.operations 0) 0) :
+    top.placement lookup.region + lookup.row <
+      top.usableRowsAt top.domainExponent :=
+  (lookup.activationRow_lt_usedRows henabled).trans_le
+    (top.usedRows_le_usableRowsAt top.domainExponent
+      (top.fitsAt_domainExponent gateCoherence.domainExponent_lt))
+
+/--
 Static lookup facts at the circuit-derived projection boundary.
 
 Input coverage says selector compression eliminates every selector leaf. Table
@@ -83,53 +112,33 @@ structure TopLevelLookupCoherence
   arity : ∀ argument ∈ top.constraintSystem.lookups,
     argument.inputs.length = argument.tables.length
 
-/--
-The configure-level lawfulness condition for one lookup argument.
-
-Inputs may use allocated complex selectors. Table expressions are selector-free,
-matching Halo 2's table-column constructor, and the input/table tuple arities
-agree by construction.
--/
-def LookupArgumentWellFormed
-    (argument : LookupArgument Fp) (numSelectors : ℕ) : Prop :=
-  (argument.inputs.Forall fun expression =>
-      expression.selectorsCovered
-        (fun selector => decide (selector < numSelectors)) = true) ∧
-    argument.tables.Forall Expression.SelectorFree ∧
-    argument.inputs.length = argument.tables.length
-
-/-- Every lookup registered in a constraint system is well formed. -/
-def ConstraintSystemLookupsWellFormed
-    (constraintSystem : ConstraintSystem Fp) : Prop :=
-  constraintSystem.lookups.Forall fun argument =>
-    LookupArgumentWellFormed argument
-      constraintSystem.numSelectors
-
 namespace TopLevelLookupCoherence
 
 /--
-A lawful synthesis-closed constraint system supplies the static top-level
-lookup boundary. The generic selector compiler turns allocated source indices
-into coverage by the circuit-derived compression map.
+Every top-level circuit supplies the static lookup boundary by construction.
+
+`FormalCircuit.toConstraintSystem` closes selector allocation over every synthesis
+lookup input. `LookupArgument` itself carries selector-freedom of its table tuple and
+equality of the input/table arities. The generic selector compiler then turns the
+syntactic input bound into coverage by the circuit-derived compression map.
 -/
-theorem ofLookupsWellFormed
-    (wellFormed :
-      ConstraintSystemLookupsWellFormed top.constraintSystem) :
+theorem ofTopLevel :
     TopLevelLookupCoherence top := by
-  have argumentWellFormed :
+  have inputAllocated :
       ∀ argument ∈ top.constraintSystem.lookups,
-        LookupArgumentWellFormed argument
-          top.constraintSystem.numSelectors :=
-    List.forall_iff_forall_mem.mp wellFormed
+        ∀ expression ∈ argument.inputs,
+          expression.selectorBound ≤
+            top.constraintSystem.numSelectors := by
+    exact top.lookupInputsAllocated
   refine
     { inputsCovered := ?_
       tablesFree := ?_
       arity := ?_ }
   · intro argument hargument expression hexpression
     have sourceCoverage :=
-      (List.forall_iff_forall_mem.mp
-        (argumentWellFormed argument hargument).1
-        expression hexpression)
+      expression.selectorsCovered_lt_of_selectorBound_le
+        top.constraintSystem.numSelectors
+        (inputAllocated argument hargument expression hexpression)
     apply Expression.selectorsCovered_mono
       (fun selector =>
         decide (selector <
@@ -142,9 +151,10 @@ theorem ofLookupsWellFormed
         (of_decide_eq_true hselector)
     · exact sourceCoverage
   · intro argument hargument
-    exact (argumentWellFormed argument hargument).2.1
+    exact List.forall_iff_forall_mem.mpr
+      (fun table htable => argument.tablesFree table htable)
   · intro argument hargument
-    exact (argumentWellFormed argument hargument).2.2
+    exact argument.arity
 
 end TopLevelLookupCoherence
 
@@ -753,9 +763,9 @@ noncomputable def deployedWitness
       thetaGood := thetaGood }
 
 /--
-The proof-dependent conditions shared by the deployed witnesses for every
-lookup activation in one proof. Static configured-lookup coverage and arity
-remain in `TopLevelLookupCoherence`; this record contains only activation- and
+The proof-dependent conditions shared by the deployed witnesses for every lookup
+activation in one proof. Static configured-lookup coverage, arity, and activation-row
+fit are derived from the top-level circuit; this record contains only selector- and
 challenge-dependent facts.
 -/
 structure TopLevelLookupWitnessConditions
@@ -771,11 +781,6 @@ structure TopLevelLookupWitnessConditions
       (resolverEnvironment
         (top.toVerifierKey pp urs) poly proofIndex
         (top.usableRowsAt top.domainExponent))
-  activationRow : ∀ lookup
-      (_henabled :
-        lookup ∈ operationEnabledLookups (top.operations 0) 0),
-    top.placement lookup.region + lookup.row <
-      top.usableRowsAt top.domainExponent
   resolverGood : ∀ lookup
       (henabled :
         lookup ∈ operationEnabledLookups (top.operations 0) 0),
@@ -842,7 +847,7 @@ noncomputable def deployedWitnesses
   exact coherence.deployedWitness gateCoherence ch poly proofIndex
     hblinding husable satisfaction hrows hroot lookup henabled
     selectorProjection
-    (conditions.activationRow lookup henabled)
+    (lookup.activationRow_lt_usableRows gateCoherence henabled)
     (conditions.resolverGood lookup henabled)
     (conditions.thetaGood lookup henabled)
 

@@ -1,5 +1,5 @@
 import Zcash.Snark.Soundness.ResolverGates
-import Zcash.Circuits.Fixtures.Layout
+import Clean.Halo2.Keygen.Layout
 import Std.Data.HashSet.Lemmas
 
 /-!
@@ -1557,9 +1557,7 @@ theorem gateSelectorsCovered_deriveSelCompressMap
 
 end Halo2
 
-namespace Zcash.Circuits.Fixtures.Layout
-
-open Halo2
+namespace Halo2.Layout
 
 set_option maxHeartbeats 20000
 
@@ -1623,12 +1621,12 @@ theorem exists_activation_of_mem_selectorFixed
     simp only [Prod.mk.injEq] at hresult
     exact ⟨selector, by simpa [hresult.2.1] using hactivation⟩
 
-end Zcash.Circuits.Fixtures.Layout
+end Halo2.Layout
 
 namespace Zcash.Snark
 
 open Halo2
-open Zcash.Circuits.Fixtures.Layout
+open Halo2.Layout
 
 set_option maxHeartbeats 20000
 

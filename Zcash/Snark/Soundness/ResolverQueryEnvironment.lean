@@ -83,7 +83,15 @@ theorem PinnedConstraintSystem.derive_queryState_extends_gates
       { inputs :=
           argument.inputs.map (substSelectorMap map.lookup)
         tables :=
-          argument.tables.map (substSelectorMap map.lookup) })
+          argument.tables.map (substSelectorMap map.lookup)
+        tablesFree := by
+          intro table htable
+          rw [List.mem_map] at htable
+          obtain ⟨source, hsource, rfl⟩ := htable
+          rw [substSelectorMap_eq_of_selectorFree map.lookup source
+            (argument.tablesFree source hsource)]
+          exact argument.tablesFree source hsource
+        arity := by simp [argument.arity] })
     (eraseGates
       ((flatGates cs).map (substSelectorMap map.lookup))
       (queryWalkInit map cs)).2

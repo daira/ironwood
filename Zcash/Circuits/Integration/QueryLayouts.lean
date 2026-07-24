@@ -12,7 +12,6 @@ into the circuit-derived verifying key.
 namespace Zcash.Snark
 
 open Halo2
-open Zcash.Circuits
 
 set_option maxHeartbeats 20000
 

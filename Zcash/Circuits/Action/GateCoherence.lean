@@ -1,5 +1,5 @@
 import Zcash.Circuits.Action.Circuit
-import Zcash.Snark.Soundness.GateProjection
+import Clean.Halo2.Keygen.GateProjection
 
 /-!
 # Action configure gate coherence

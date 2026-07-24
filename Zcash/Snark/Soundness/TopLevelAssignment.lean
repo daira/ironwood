@@ -1,5 +1,5 @@
 import Zcash.Snark.Core.Domain
-import Zcash.Circuits.TopLevelKeygen
+import Clean.Halo2.TopLevelKeygen
 import Zcash.Snark.Soundness.PolynomialEnvironment
 
 /-!
@@ -21,7 +21,6 @@ input to this type.
 namespace Zcash.Snark
 
 open Halo2 Polynomial
-open Zcash.Circuits
 
 set_option maxHeartbeats 20000
 

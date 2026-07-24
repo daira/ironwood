@@ -21,8 +21,6 @@ the circuit-owned instance.
 namespace Zcash.Snark
 
 open Halo2 Polynomial
-open Zcash.Circuits
-open Zcash.Circuits.Fixtures
 
 set_option maxHeartbeats 20000
 

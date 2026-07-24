@@ -81,8 +81,8 @@ import Zcash.Circuits.Ecc.Chip
 import Zcash.Circuits.Action.Circuit
 import Zcash.Circuits.Action.Bundle
 import Zcash.Circuits.Action.RealBases
-import Zcash.Circuits.TopLevel
-import Zcash.Circuits.TopLevelKeygen
+import Clean.Halo2.TopLevel
+import Clean.Halo2.TopLevelKeygen
 import Zcash.Circuits.Action.TopLevel
 import Zcash.Circuits.Action.Statement
 import Zcash.Circuits.Action.SelectorCoherence

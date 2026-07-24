@@ -1,5 +1,5 @@
 import Zcash.Snark.Keygen.Pipeline
-import Zcash.Snark.Soundness.GateProjection
+import Clean.Halo2.Keygen.GateProjection
 import Zcash.Snark.Soundness.OperationGates
 import Zcash.Snark.Soundness.ResolverQueryEnvironment
 import Zcash.Snark.Soundness.TopLevelCoherence

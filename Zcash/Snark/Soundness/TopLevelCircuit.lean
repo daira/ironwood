@@ -1,4 +1,4 @@
-import Zcash.Circuits.TopLevelKeygen
+import Clean.Halo2.TopLevelKeygen
 import Zcash.Snark.Soundness.CircuitIntegration
 
 /-!
@@ -13,7 +13,6 @@ boundaries; no Action-specific circuit, placement, or statement appears here.
 namespace Zcash.Snark
 
 open Halo2
-open Zcash.Circuits
 
 set_option maxHeartbeats 20000
 

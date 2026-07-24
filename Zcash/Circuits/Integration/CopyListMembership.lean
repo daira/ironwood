@@ -15,7 +15,7 @@ constants instantiation.)
 namespace Zcash.Snark
 
 open Halo2
-open Zcash.Circuits.Fixtures Zcash.Circuits.Fixtures.Layout
+open Halo2.Layout
 
 /-- Resolve a non-constant declared copy to the keygen copy tuple: region cells through
 the placement, instance endpoints at their absolute rows. Constant endpoints resolve to
