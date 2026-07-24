@@ -7,14 +7,15 @@ import Zcash.Security.Ledger.Pool
 # The post-NU6.3 Action-to-ledger refinement boundary
 
 This module is deliberately the only place which translates the extracted Action
-circuit witness into the games-facing ledger statement.  In particular, the
-Sinsemilla exceptional branches are kept explicit: a circuit witness is not a
-ledger action until all three hash openings and the Merkle computation are in
-their successful branches.
-
-The Merkle exporter supplies the final raw-encoding path fact.  The small
-success-or-break decomposition below is independent of that exporter and is
-used by the final refinement theorem once that fact is available.
+circuit witness into the games-facing ledger statement — and the only place where
+Sinsemilla escapes become break statements.  The circuit exports its specification
+in the guarded ⊥-model (`HashGuarded`, `ExactMerklePathData`): concrete properties
+of the partial hash function, with no or-break disjunctions
+(`specOrBreak_hashToPointB_iff_guarded` is the audit point for that split).  Here
+the witness's four exact Sinsemilla query families are re-evaluated with the
+Σ-refined chain `hashToPointB` by a computable classifier (`classifyAction`), and
+`validBreak_of_inr` certifies any escape as an exhibited break.  A circuit witness
+is not a ledger action until every query lands in its defined branch.
 
 The Action circuit represents the signed net value by a 64-bit magnitude and a
 field element sign (`1` or `-1`).  The ledger statement uses integer
@@ -248,28 +249,47 @@ def EnableFlagsSatisfied (wit : ActionData) (w : LedgerWitness) : Prop :=
   (w.note_old.v ≠ 0 → wit.enableSpend = 1) ∧
   (w.note_new.v ≠ 0 → wit.enableOutput = 1)
 
+/-! ### The witness's exact Sinsemilla queries
+
+Everything below — the break vocabulary, the computable classifier, and the success
+predicates — is stated over these same four query families, so the specification,
+the classifier, and the correctness theorems cannot silently drift apart.  The
+Merkle queries consume the raw 255-bit child encodings verbatim; a noncanonical
+representative is never reduced before hashing. -/
+
+/-- The exact `Commit^ivk` chunk query of a witness. -/
+abbrev ivkQuery (wit : ActionData) : List ℕ :=
+  commitIvkChunks wit.akP.x.val wit.nk.val
+
+/-- The exact old-note commitment chunk query. -/
+abbrev noteOldQuery (wit : ActionData) : List ℕ :=
+  (NoteCommit.noteScalars wit.gdOld wit.pkdOld wit.vOld wit.rhoOld wit.psiOld).chunks
+
+/-- The exact new-note commitment chunk query (`ρ_new = nf_old`). -/
+abbrev noteNewQuery (wit : ActionData) : List ℕ :=
+  (NoteCommit.noteScalars wit.gdNew wit.pkdNew wit.vNew wit.nfOld wit.psiNew).chunks
+
+/-- The exact layer-`i` Merkle chunk query, over the raw 255-bit child encodings. -/
+abbrev merkleQuery (wit : ActionData) (i : Fin 32) : List ℕ :=
+  merkleChunks i.1 (wit.leftEncoding i) (wit.rightEncoding i)
+
 /-- The four circuit-facing exceptional outcomes, each tied to the witness's own
-exact Sinsemilla hash query via a `hashToPointB … = .inr br` equation.  These are
-proposition-valued on purpose: `SpecPost` retains the Merkle result propositionally,
-so it cannot in general be eliminated into a computational `Type` witness. -/
+exact Sinsemilla hash query via a `hashToPointB … = .inr br` equation and certified
+as a `ValidBreak`.  This is the Prop-level break statement consumed by the
+refinement theorems; the computational witness is the classifier's
+`ActionBreakData` output, connected by `actionBreak_of_classify`. -/
 inductive ActionBreak (wit : ActionData) : Prop
   | commitIvk (br : BreakData) :
-      hashToPointB orchardGenerators.S orchardBases.ivkQ
-          (commitIvkChunks wit.akP.x.val wit.nk.val) = .inr br →
+      hashToPointB orchardGenerators.S orchardBases.ivkQ (ivkQuery wit) = .inr br →
       ValidBreak orchardGenerators.S orchardBases.ivkQ br → ActionBreak wit
   | noteCommitOld (br : BreakData) :
-      hashToPointB orchardGenerators.S orchardBases.noteQ
-          (NoteCommit.noteScalars wit.gdOld wit.pkdOld wit.vOld wit.rhoOld wit.psiOld).chunks
-        = .inr br →
+      hashToPointB orchardGenerators.S orchardBases.noteQ (noteOldQuery wit) = .inr br →
       ValidBreak orchardGenerators.S orchardBases.noteQ br → ActionBreak wit
   | noteCommitNew (br : BreakData) :
-      hashToPointB orchardGenerators.S orchardBases.noteQ
-          (NoteCommit.noteScalars wit.gdNew wit.pkdNew wit.vNew wit.nfOld wit.psiNew).chunks
-        = .inr br →
+      hashToPointB orchardGenerators.S orchardBases.noteQ (noteNewQuery wit) = .inr br →
       ValidBreak orchardGenerators.S orchardBases.noteQ br → ActionBreak wit
   | merkle (i : Fin 32) (br : BreakData) :
-      hashToPointB orchardGenerators.S orchardBases.merkleQ
-          (merkleChunks i.1 (wit.leftEncoding i) (wit.rightEncoding i)) = .inr br →
+      hashToPointB orchardGenerators.S orchardBases.merkleQ (merkleQuery wit i) = .inr br →
       ValidBreak orchardGenerators.S orchardBases.merkleQ br → ActionBreak wit
 
 private theorem merkle_chunk_onCurve {i lv rv m : ℕ}
@@ -279,39 +299,170 @@ private theorem merkle_chunk_onCurve {i lv rv m : ℕ}
   obtain ⟨j, -, rfl⟩ := hm
   exact Nat.mod_lt _ (Nat.two_pow_pos _)
 
+private theorem ivk_chunk_onCurve {wit : ActionData} {m : ℕ}
+    (hm : m ∈ ivkQuery wit) : (orchardGenerators.S m).OnCurve :=
+  orchardGenerators.S_onCurve (chunksOf_mem_lt hm)
+
+private theorem note_chunk_onCurve {gd pkd : Point Fp} {v rho psi : Fp} {m : ℕ}
+    (hm : m ∈ (NoteCommit.noteScalars gd pkd v rho psi).chunks) :
+    (orchardGenerators.S m).OnCurve :=
+  orchardGenerators.S_onCurve (chunksOf_mem_lt hm)
+
+/-- Package a `Commit^ivk` escape of the witness's exact query.  The escape is
+certified with no circuit hypothesis: `validBreak_of_inr` needs only the fixed-base
+validity facts. -/
+theorem commitIvk_break_of_inr {wit : ActionData} (br : BreakData)
+    (hb : hashToPointB orchardGenerators.S orchardBases.ivkQ (ivkQuery wit) = .inr br) :
+    ActionBreak wit :=
+  .commitIvk br hb
+    (validBreak_of_inr (Or.inl orchardBases.ivkQ_onCurve)
+      (fun _ hm => ivk_chunk_onCurve hm) hb)
+
+/-- Package an old-note commitment escape of the witness's exact query. -/
+theorem noteCommitOld_break_of_inr {wit : ActionData} (br : BreakData)
+    (hb : hashToPointB orchardGenerators.S orchardBases.noteQ (noteOldQuery wit) = .inr br) :
+    ActionBreak wit :=
+  .noteCommitOld br hb
+    (validBreak_of_inr (Or.inl orchardBases.noteQ_onCurve)
+      (fun _ hm => note_chunk_onCurve hm) hb)
+
+/-- Package a new-note commitment escape of the witness's exact query. -/
+theorem noteCommitNew_break_of_inr {wit : ActionData} (br : BreakData)
+    (hb : hashToPointB orchardGenerators.S orchardBases.noteQ (noteNewQuery wit) = .inr br) :
+    ActionBreak wit :=
+  .noteCommitNew br hb
+    (validBreak_of_inr (Or.inl orchardBases.noteQ_onCurve)
+      (fun _ hm => note_chunk_onCurve hm) hb)
+
 /-- Package an exact raw-encoding Merkle escape in the circuit-facing break
 vocabulary.  The `hashToPointB` equation certifies that this is the escape of the
 exact witness query, exactly as for the three note/key openings. -/
 theorem merkle_break_of_inr {wit : ActionData} (i : Fin 32) (br : BreakData)
     (hb : hashToPointB orchardGenerators.S orchardBases.merkleQ
-      (merkleChunks i.1 (wit.leftEncoding i) (wit.rightEncoding i)) = .inr br) :
+      (merkleQuery wit i) = .inr br) :
     ActionBreak wit :=
   .merkle i br hb
     (validBreak_of_inr (Or.inl orchardBases.merkleQ_onCurve)
       (fun _ hm => merkle_chunk_onCurve hm) hb)
 
-/-- Splitting the exact raw queries either leaves every Merkle layer defined or
-exhibits its first exceptional hash evaluation. -/
-theorem exactMerkle_hashes_or_break {wit : ActionData} {root : Fp}
-    (hpath : ExactMerklePathData wit root) :
-    (∀ i : Fin 32, ∃ B, hashToPoint orchardGenerators.S orchardBases.merkleQ
-      (merkleChunks i.1 (wit.leftEncoding i) (wit.rightEncoding i)) = some B) ∨
-      ActionBreak wit := by
-  classical
-  by_cases hall : ∀ i : Fin 32, ∃ B, hashToPoint orchardGenerators.S orchardBases.merkleQ
-      (merkleChunks i.1 (wit.leftEncoding i) (wit.rightEncoding i)) = some B
-  · exact Or.inl hall
-  · right
-    push Not at hall
-    obtain ⟨i, hi⟩ := hall
-    obtain ⟨_, _, _, _⟩ := hpath
-    cases hb : hashToPointB orchardGenerators.S orchardBases.merkleQ
-        (merkleChunks i.1 (wit.leftEncoding i) (wit.rightEncoding i)) with
-    | inl B => exact False.elim (hi B (hashToPointB_inl hb))
-    | inr br => exact merkle_break_of_inr i br hb
+/-! ### The computable break classifier
 
-/-- Successful `Commit^ivk` information obtained by choosing the left branch of its
-`SpecOrBreak` clause. -/
+The reduction from a circuit witness to break data is a computation, not a case
+split inside a proof: `classifyAction` re-evaluates the witness's four Sinsemilla
+query families with the Σ-refined chain `hashToPointB` and returns the first escape
+as `Type`-valued data.  It is a plain `def` over the raw deployed constants
+(`ivkQ`/`noteQ`/`merkleQ` and the generator table) — computability is
+compiler-enforced, and `BridgeTests` asserts it via `assert_computable`: the
+break data is genuinely computed, and `Classical.choice` cannot contribute to it.
+(Choice does appear in erased `Prop` positions — Mathlib's `ZMod` numeral and
+field-arithmetic instances carry it in their proof fields, so even the deployed
+point literals depend on it — but the plain-`def` check certifies it stays
+erased.)  `actionBreak_of_classify` and `classify_none_defined` are the
+Prop-level correctness theorems tying its two outcomes to the refinement. -/
+
+/-- The four Sinsemilla sites of an Action witness. -/
+inductive BreakSite
+  | commitIvk
+  | noteCommitOld
+  | noteCommitNew
+  | merkle (i : Fin 32)
+deriving DecidableEq, Repr
+
+/-- A classified escape: the site, together with the escape data of the witness's
+own exact hash query at that site. -/
+structure ActionBreakData where
+  site : BreakSite
+  data : BreakData
+deriving Repr
+
+/-- Scan the 32 exact Merkle layer queries for the first escape. -/
+def classifyMerkle (wit : ActionData) : Option ActionBreakData :=
+  (List.finRange 32).findSome? fun i =>
+    match hashToPointB orchardGenerators.S merkleQ (merkleQuery wit i) with
+    | .inl _ => none
+    | .inr br => some ⟨.merkle i, br⟩
+
+/-- The computable reduction at the Action boundary: the first escape among the
+witness's Sinsemilla queries, or `none` when every hash is defined. -/
+def classifyAction (wit : ActionData) : Option ActionBreakData :=
+  match hashToPointB orchardGenerators.S ivkQ (ivkQuery wit) with
+  | .inr br => some ⟨.commitIvk, br⟩
+  | .inl _ =>
+    match hashToPointB orchardGenerators.S noteQ (noteOldQuery wit) with
+    | .inr br => some ⟨.noteCommitOld, br⟩
+    | .inl _ =>
+      match hashToPointB orchardGenerators.S noteQ (noteNewQuery wit) with
+      | .inr br => some ⟨.noteCommitNew, br⟩
+      | .inl _ => classifyMerkle wit
+
+/-- A classified Merkle escape is an exhibited break of the witness's own query. -/
+theorem actionBreak_of_classifyMerkle {wit : ActionData} {br : ActionBreakData}
+    (h : classifyMerkle wit = some br) : ActionBreak wit := by
+  obtain ⟨i, -, hi⟩ := List.exists_of_findSome?_eq_some h
+  cases hb : hashToPointB orchardGenerators.S merkleQ (merkleQuery wit i) with
+  | inl B => simp [hb] at hi
+  | inr brd => exact merkle_break_of_inr i brd hb
+
+/-- A `none` Merkle verdict leaves every layer's hash defined. -/
+theorem classifyMerkle_none_defined {wit : ActionData}
+    (h : classifyMerkle wit = none) :
+    ∀ i : Fin 32, ∃ B, hashToPoint orchardGenerators.S orchardBases.merkleQ
+      (merkleQuery wit i) = some B := by
+  intro i
+  have hi := List.findSome?_eq_none_iff.mp h i (List.mem_finRange i)
+  cases hb : hashToPointB orchardGenerators.S merkleQ (merkleQuery wit i) with
+  | inl B => exact ⟨B, hashToPointB_inl hb⟩
+  | inr brd => simp [hb] at hi
+
+/-- **Classifier soundness**: a classified escape is an exhibited break of the
+witness's own exact hash query. -/
+theorem actionBreak_of_classify {wit : ActionData} {br : ActionBreakData}
+    (h : classifyAction wit = some br) : ActionBreak wit := by
+  unfold classifyAction at h
+  cases hivk : hashToPointB orchardGenerators.S ivkQ (ivkQuery wit) with
+  | inr brd => exact commitIvk_break_of_inr brd hivk
+  | inl Bi =>
+    simp only [hivk] at h
+    cases hold : hashToPointB orchardGenerators.S noteQ (noteOldQuery wit) with
+    | inr brd => exact noteCommitOld_break_of_inr brd hold
+    | inl Bo =>
+      simp only [hold] at h
+      cases hnew : hashToPointB orchardGenerators.S noteQ (noteNewQuery wit) with
+      | inr brd => exact noteCommitNew_break_of_inr brd hnew
+      | inl Bn =>
+        simp only [hnew] at h
+        exact actionBreak_of_classifyMerkle h
+
+/-- **Classifier completeness**: a `none` verdict leaves every Sinsemilla query of
+the witness defined, so each guarded circuit clause lands in its successful
+branch. -/
+theorem classify_none_defined {wit : ActionData} (h : classifyAction wit = none) :
+    (∃ B, hashToPoint orchardGenerators.S orchardBases.ivkQ
+      (ivkQuery wit) = some B) ∧
+    (∃ B, hashToPoint orchardGenerators.S orchardBases.noteQ
+      (noteOldQuery wit) = some B) ∧
+    (∃ B, hashToPoint orchardGenerators.S orchardBases.noteQ
+      (noteNewQuery wit) = some B) ∧
+    ∀ i : Fin 32, ∃ B, hashToPoint orchardGenerators.S orchardBases.merkleQ
+      (merkleQuery wit i) = some B := by
+  unfold classifyAction at h
+  cases hivk : hashToPointB orchardGenerators.S ivkQ (ivkQuery wit) with
+  | inr brd => simp [hivk] at h
+  | inl Bi =>
+    simp only [hivk] at h
+    cases hold : hashToPointB orchardGenerators.S noteQ (noteOldQuery wit) with
+    | inr brd => simp [hold] at h
+    | inl Bo =>
+      simp only [hold] at h
+      cases hnew : hashToPointB orchardGenerators.S noteQ (noteNewQuery wit) with
+      | inr brd => simp [hnew] at h
+      | inl Bn =>
+        simp only [hnew] at h
+        exact ⟨⟨Bi, hashToPointB_inl hivk⟩, ⟨Bo, hashToPointB_inl hold⟩,
+          ⟨Bn, hashToPointB_inl hnew⟩, classifyMerkle_none_defined h⟩
+
+/-- Successful `Commit^ivk` information: the defined branch of the guarded
+`Commit^ivk` clause, on the witness's exact query. -/
 def CommitIvkSuccess (wit : ActionData) : Prop :=
   ∃ ivk : Fp, ∃ hashPoint : Point Fp,
     hashToPoint orchardGenerators.S orchardBases.ivkQ
@@ -444,75 +595,27 @@ def MerkleSuccess (wit : ActionData) : Prop :=
       (merkleChunks i.1 (wit.leftEncoding i) (wit.rightEncoding i)) = some B) ∧
     wit.vOld * (root - wit.anchor) = 0
 
-theorem commitIvk_success_or_break {wit : ActionData} {input : Value PrivateInputs Fp}
-    (h : SpecPost orchardGenerators orchardBases input () wit) :
-    CommitIvkSuccess wit ∨ ActionBreak wit := by
-  rcases h.1 with ⟨_, _, _, _, _, _, _, _, _, _, _, ⟨ivk, hivk, hpkd⟩,
-    _, _, _, _, _, _⟩
-  cases hb : hashToPointB orchardGenerators.S orchardBases.ivkQ
-      (commitIvkChunks wit.akP.x.val wit.nk.val) with
-  | inl bp =>
-    left
-    refine ⟨ivk, bp, ?_, ?_, hpkd⟩
-    · exact hashToPointB_inl hb
-    · simpa only [SpecOrBreak, hb] using hivk
-  | inr br =>
-    right
-    exact .commitIvk br hb (by simpa only [SpecOrBreak, hb] using hivk)
-
-theorem noteCommitOld_success_or_break {wit : ActionData} {input : Value PrivateInputs Fp}
-    (h : SpecPost orchardGenerators orchardBases input () wit) :
-    NoteCommitOldSuccess wit ∨ ActionBreak wit := by
-  rcases h.1 with ⟨_, _, _, _, _, _, _, _, _, _, _, _, hold, _, _, _, _, _⟩
-  cases hb : hashToPointB orchardGenerators.S orchardBases.noteQ
-      (NoteCommit.noteScalars wit.gdOld wit.pkdOld wit.vOld wit.rhoOld wit.psiOld).chunks with
-  | inl bp =>
-    left
-    exact ⟨bp, hashToPointB_inl hb, by simpa only [SpecOrBreak, hb] using hold⟩
-  | inr br =>
-    right
-    exact .noteCommitOld br hb (by simpa only [SpecOrBreak, hb] using hold)
-
-theorem noteCommitNew_success_or_break {wit : ActionData} {input : Value PrivateInputs Fp}
-    (h : SpecPost orchardGenerators orchardBases input () wit) :
-    NoteCommitNewSuccess wit ∨ ActionBreak wit := by
-  rcases h.1 with ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, hnew, _, _, _, _⟩
-  cases hb : hashToPointB orchardGenerators.S orchardBases.noteQ
-      (NoteCommit.noteScalars wit.gdNew wit.pkdNew wit.vNew wit.nfOld wit.psiNew).chunks with
-  | inl bp =>
-    left
-    exact ⟨bp, hashToPointB_inl hb, by simpa only [SpecOrBreak, hb] using hnew⟩
-  | inr br =>
-    right
-    exact .noteCommitNew br hb (by simpa only [SpecOrBreak, hb] using hnew)
-
-theorem merkle_success_or_break {wit : ActionData} {input : Value PrivateInputs Fp}
-    (h : SpecPost orchardGenerators orchardBases input () wit) :
-    MerkleSuccess wit ∨ ActionBreak wit := by
-  rcases h.1 with ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, ⟨root, -, -, hexact, hanchor⟩,
-    _, _, _⟩
-  rcases exactMerkle_hashes_or_break hexact with hhash | hbreak
-  · exact Or.inl ⟨root, hexact, hhash, hanchor⟩
-  · exact Or.inr hbreak
-
-/-- Split all four exceptional sites in the circuit statement at once. -/
+/-- Split all four exceptional sites in the circuit statement at once, by running
+the classifier: either the witness's own queries compute an exhibited break, or
+every query is defined and each guarded clause of `SpecPost` lands in its
+successful branch. -/
 theorem successes_or_break {wit : ActionData} {input : Value PrivateInputs Fp}
     (h : SpecPost orchardGenerators orchardBases input () wit) :
     (CommitIvkSuccess wit ∧ NoteCommitOldSuccess wit ∧ NoteCommitNewSuccess wit ∧
       MerkleSuccess wit) ∨ ActionBreak wit := by
-  rcases commitIvk_success_or_break h with hci | hbr
-  · rcases noteCommitOld_success_or_break h with hco | hbr
-    · rcases noteCommitNew_success_or_break h with hcn | hbr
-      · rcases merkle_success_or_break h with hm | hbr
-        · exact Or.inl ⟨hci, hco, hcn, hm⟩
-        · exact Or.inr hbr
-      · exact Or.inr hbr
-    · exact Or.inr hbr
-  · exact Or.inr hbr
+  cases hcl : classifyAction wit with
+  | some br => exact Or.inr (actionBreak_of_classify hcl)
+  | none =>
+    obtain ⟨⟨Bi, hBi⟩, ⟨Bo, hBo⟩, ⟨Bn, hBn⟩, hMk⟩ := classify_none_defined hcl
+    rcases h.1 with ⟨_, _, _, _, _, _, _, _, _, _, _, ⟨ivk, hivk, hpkd⟩,
+      hold, hnew, ⟨root, hexact, hanchor⟩, _, _, _⟩
+    exact Or.inl ⟨⟨ivk, Bi, hBi, hivk Bi hBi, hpkd⟩,
+      ⟨Bo, hBo, hold Bo hBo⟩, ⟨Bn, hBn, hnew Bn hBn⟩,
+      ⟨root, hexact, hMk, hanchor⟩⟩
 
 /-- If the caller rules out all four exhibited exceptional cases, the circuit's
-breaks-as-data clauses reduce to their successful openings.  The exact-Merkle
-export subsequently turns the final component into a ledger `Merkle.Path`. -/
+guarded clauses reduce to their successful openings.  The exact-Merkle export
+subsequently turns the final component into a ledger `Merkle.Path`. -/
 theorem successes_of_noBreak {wit : ActionData} {input : Value PrivateInputs Fp}
     (h : SpecPost orchardGenerators orchardBases input () wit)
     (hno : ¬ ActionBreak wit) :

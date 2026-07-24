@@ -143,6 +143,16 @@ theorem enable_output_disabled_forces_zero (wit : ActionData) (w : LedgerWitness
   by_contra hv
   exact hdis (h.2 hv)
 
+/-- The or-break disjunction is provably no stronger than the guarded ⊥-model
+export: the named equivalence, instantiated at the deployed `Commit^ivk` domain
+point.  This is the audit point for the exported-spec/reduction split. -/
+theorem or_break_iff_guarded_smoke (wit : ActionData) (P : Point Fp → Prop) :
+    SpecOrBreak orchardGenerators.S orchardBases.ivkQ P
+        (hashToPointB orchardGenerators.S orchardBases.ivkQ (ivkQuery wit)) ↔
+      HashGuarded orchardGenerators.S orchardBases.ivkQ (ivkQuery wit) P :=
+  specOrBreak_hashToPointB_iff_guarded (Or.inl orchardBases.ivkQ_onCurve)
+    (fun _ hm => orchardGenerators.S_onCurve (chunksOf_mem_lt hm))
+
 /-- The circuit-level postcondition refines directly to the ledger action alternative. -/
 theorem spec_post_bridge_smoke {input : Halo2.Value PrivateInputs Fp} {wit : ActionData}
     (h : SpecPost orchardGenerators orchardBases input () wit) :
@@ -183,8 +193,22 @@ assert_no_sorry cross_address_flag_one
 assert_no_sorry cross_address_flag_arbitrary_nonzero
 assert_no_sorry enable_spend_disabled_forces_zero
 assert_no_sorry enable_output_disabled_forces_zero
+assert_no_sorry or_break_iff_guarded_smoke
 assert_no_sorry spec_post_bridge_smoke
 assert_no_sorry circuit_soundness_bridge_smoke
+assert_no_sorry actionBreak_of_classify
+assert_no_sorry classify_none_defined
+
+-- The circuit-to-ledger reduction is a computation: a plain `def`, compiled by
+-- the Lean compiler — so `Classical.choice` cannot contribute to the computed
+-- break data.  The `+choice` allowance is forced by Mathlib's `ZMod` instances:
+-- even the deployed constants (`Action.ivkQ` is a bare point literal) carry
+-- `Classical.choice` inside erased `Prop` proof fields of the numeral and
+-- field-arithmetic instances.  The plain-`def` check is what certifies that
+-- choice stays erased: had it touched the data path, the definition could not
+-- have compiled (`Zcash.Meta.AxiomCheck` documents this convention).
+assert_computable classifyMerkle +choice
+assert_computable classifyAction +choice
 
 assert_axioms value_positive
 assert_axioms value_negative
