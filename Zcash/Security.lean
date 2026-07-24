@@ -7,6 +7,7 @@ import Zcash.Security.BindingSignature.Sapling
 import Zcash.Security.Ledger.Merkle
 import Zcash.Security.Ledger.Statement
 import Zcash.Security.Ledger.Model
+import Zcash.Security.Ledger.Effects
 import Zcash.Security.Common.RandomOracle
 import Zcash.Security.Common.Birthday
 import Zcash.Security.KeyBinding.Basic

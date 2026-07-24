@@ -1,6 +1,6 @@
 import Zcash.Security.KeyBinding.Instance
 import Zcash.Security.KeyBinding.Probability
-import Zcash.Security.Ledger.Model
+import Zcash.Security.Ledger.Effects
 import Zcash.Security.Common.Birthday
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
@@ -129,10 +129,17 @@ assert_computable leafFun
 assert_computable rootAfter
 assert_computable nullifiers
 assert_computable transparentPoolBalance
+assert_computable outputActions
+assert_computable outputOpenings
+assert_computable positionedOutputs
+assert_computable nonZeroSpends
+assert_computable poolValueBalance
 assert_axioms posVal_lt
 assert_axioms rootAfter_prefix
 assert_axioms output_rho_eq_nullifiers
 assert_axioms output_rho_nodup
+assert_axioms leafList_eq_map
+assert_axioms outputOpenings_length
 
 /-! ## Binding-signature relation reductions
 
