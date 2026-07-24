@@ -585,23 +585,23 @@ one, and `Gate.selectorsOwned_of_withSelector` derives it structurally from the 
 selector-free bodies already used by the semantic gate-shape proof. Allocation is
 monotone as selector counters increase. `PreservesGateSelectorsAllocated` supplies
 the ordinary state-monad preservation rules and direct certificates for the common
-simple- or complex-selector/create-gate leaf patterns. The remaining Action work in
-this certificate is confined to the less common chips that allocate several
-selectors before registering several gates; those need relational composition that
-retains the allocated-index fact returned by each selector allocation.
-`Action.SelectorCoherence` has begun the circuit instantiation without touching the
-VK path: the simple selector/create-gate leaves, the equality-prefixed ECC addition
-leaves, the multiplication decomposition/overflow leaves, and the NoteCommit
-decomposition and canonicity leaves now have local ownership and compositional
-configure certificates. Multi-selector lookup and Sinsemilla-family leaves remain
-before the final `Action.Circuit.configure` certificate.
-The generic two-selector/two-gate and three-selector/three-gate rules now retain
-fresh-index facts across several allocations. They discharge the previously
-non-compositional WitnessPoint, Poseidon, and incomplete-multiplication leaves;
-the complete variable-base multiplication configuration and the simple fixed-base
-canonicity variants now compose as well. The remaining hard cases are specifically
-the mixed simple/complex-selector lookup chips and the preallocated-selector
-fixed-base/Sinsemilla gates.
+simple- or complex-selector/create-gate leaf patterns. Generic relational rules retain
+fresh-index facts across multi-selector gate groups, mixed selector/lookup programs,
+and child programs that consume a selector allocated by their parent. The
+continuation form of the selector/create-gate rule also avoids elaborating a large
+reassociated state-monad term while keeping the 20,000-heartbeat debugging bound.
+
+`Action.SelectorCoherence` now completes the circuit instantiation without touching
+the VK path. It proves ownership and configure preservation for the ordinary leaves,
+LookupRangeCheck, variable- and fixed-base ECC (including the parent-allocated
+running-sum selector), Poseidon, NoteCommit, both Sinsemilla gate forms, and Merkle,
+then composes them in the exact `Action.Circuit.configure` registration order. Thus
+`Action.Circuit.configure_preservesGateSelectorsAllocated` is the compact
+circuit-derived certificate required by `TopLevelGateCoherence`; callers can apply
+the generic `fromEmpty` rule directly, without an Action-specific wrapper theorem.
+This closes the configure-side selector-allocation obligation. It does not claim the
+separate lookup-expression selector-coverage property that the future lookup
+projection may require.
 
 The `Fixtures.Layout` reconstruction is already generic over operations, so σ-cycle
 correctness of its replayed keygen merge is likewise a once-and-for-all lemma.
@@ -828,7 +828,9 @@ whose public inputs were committed by the verifier.
    circuit-owned pinned CS/V1 placement/domain fit, generic
    full-satisfaction-to-`TopLevelCircuit.Statement` endpoint, and decoded
    `TopLevelAssignment` constructor are complete; the legacy `ActionAssignment` is
-   gone. Replace its temporary Action key derivation with generic
+   gone. The Action configure program now also supplies the complete generic
+   `GateSelectorsAllocated` certificate needed by the gate projection. Replace its
+   temporary Action key derivation with generic
    `FormalCircuit.toVerifyingKey` when available, then discharge the resolver
    representation facts.
 4. Instantiate the generic decomposed bridge for one selected Action, adapt

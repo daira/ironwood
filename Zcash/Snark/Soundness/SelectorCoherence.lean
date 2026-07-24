@@ -566,6 +566,43 @@ theorem selectorCreateGate
     rw [hselector]
     exact Nat.lt_succ_self cs.numSelectors
 
+/--
+Continuation form of `selectorCreateGate`.  Keeping the continuation inside this
+rule preserves the fresh-selector relation without forcing elaboration through a
+large reassociated state-monad term.
+-/
+@[circuit_norm]
+theorem selectorCreateGateThen
+    (gate : Selector → Gate F)
+    {next : Selector → Configure F α}
+    (hselector : ∀ selector,
+      (gate selector).selector.index = selector.index)
+    (howned : ∀ selector, (gate selector).SelectorsOwned)
+    (hnext : ∀ selector,
+      PreservesGateSelectorsAllocated (next selector)) :
+    PreservesGateSelectorsAllocated (do
+      let selector ← Halo2.selector
+      Halo2.createGate (gate selector)
+      next selector) := by
+  constructor
+  intro cs hcs
+  let selector : Selector := ⟨cs.numSelectors, true⟩
+  let allocated : ConstraintSystem F :=
+    { cs with numSelectors := cs.numSelectors + 1 }
+  let afterGate :=
+    (Halo2.createGate (gate selector) allocated).2
+  apply (hnext selector).run afterGate
+  change ConstraintSystem.GateSelectorsAllocated
+    ((Halo2.createGate (gate selector) allocated).2)
+  rw [ConstraintSystem.gateSelectorsAllocated_createGate]
+  constructor
+  · exact ConstraintSystem.GateSelectorsAllocated.mono
+      hcs (Nat.le_succ cs.numSelectors)
+  · apply Gate.SelectorsAllocated.of_owned
+      (howned selector)
+    rw [hselector]
+    exact Nat.lt_succ_self cs.numSelectors
+
 /-- Complex-selector counterpart of `selectorCreateGate`. -/
 @[circuit_norm]
 theorem complexSelectorCreateGate
@@ -705,6 +742,208 @@ theorem threeSelectorsThreeGates
       (hthirdOwned first second third)
     rw [hthirdSelector]
     simp [third, allocated]
+
+/--
+The common lookup-chip pattern: two complex selectors and one simple selector,
+followed by lookup registration and one gate owned by the simple selector.
+-/
+@[circuit_norm]
+theorem complexComplexSimpleLookupGate
+    (gate : Selector → Selector → Selector → Gate F)
+    (result : Selector → Selector → Selector → α)
+    (queriedCells :
+      Selector → Selector → Selector →
+        List (Expression F Query))
+    (tableMap :
+      Selector → Selector → Selector →
+        List (Expression F Query × TableColumn))
+    (hselector : ∀ first second third,
+      (gate first second third).selector.index = third.index)
+    (howned : ∀ first second third,
+      (gate first second third).SelectorsOwned) :
+    PreservesGateSelectorsAllocated (do
+      let first ← Halo2.complexSelector
+      let second ← Halo2.complexSelector
+      let third ← Halo2.selector
+      Halo2.lookup (queriedCells first second third)
+        (tableMap first second third)
+      Halo2.createGate (gate first second third)
+      return result first second third) := by
+  constructor
+  intro cs hcs
+  let first : Selector := ⟨cs.numSelectors, false⟩
+  let second : Selector := ⟨cs.numSelectors + 1, false⟩
+  let third : Selector := ⟨cs.numSelectors + 2, true⟩
+  let allocated : ConstraintSystem F :=
+    { cs with numSelectors := cs.numSelectors + 3 }
+  let afterLookup :=
+    (Halo2.lookup (queriedCells first second third)
+      (tableMap first second third) allocated).2
+  change ConstraintSystem.GateSelectorsAllocated
+    ((Halo2.createGate
+      (gate first second third) afterLookup).2)
+  rw [ConstraintSystem.gateSelectorsAllocated_createGate]
+  constructor
+  · exact
+      (lookup (queriedCells first second third)
+        (tableMap first second third)).run allocated
+        (ConstraintSystem.GateSelectorsAllocated.mono
+          hcs (by simp [allocated]))
+  · apply Gate.SelectorsAllocated.of_owned
+      (howned first second third)
+    rw [hselector]
+    have hcount :=
+      ConstraintSystem.lookup_numSelectors
+        (queriedCells first second third)
+        (tableMap first second third) allocated
+    change third.index < afterLookup.numSelectors
+    rw [hcount]
+    simp [third, allocated]
+
+/--
+The Sinsemilla-style registration pattern: allocate a complex selector, a fixed
+column, and a simple selector, register a lookup, then register one owned gate for
+each selector.
+-/
+@[circuit_norm]
+theorem complexFixedSimpleLookupTwoGates
+    (firstGate secondGate :
+      Selector → Column .fixed → Selector → Gate F)
+    (result : Selector → Column .fixed → Selector → α)
+    (queriedCells :
+      Selector → Column .fixed → Selector →
+        List (Expression F Query))
+    (tableMap :
+      Selector → Column .fixed → Selector →
+        List (Expression F Query × TableColumn))
+    (hfirstSelector : ∀ complex fixed simple,
+      (firstGate complex fixed simple).selector.index =
+        simple.index)
+    (hsecondSelector : ∀ complex fixed simple,
+      (secondGate complex fixed simple).selector.index =
+        complex.index)
+    (hfirstOwned : ∀ complex fixed simple,
+      (firstGate complex fixed simple).SelectorsOwned)
+    (hsecondOwned : ∀ complex fixed simple,
+      (secondGate complex fixed simple).SelectorsOwned) :
+    PreservesGateSelectorsAllocated (do
+      let complex ← Halo2.complexSelector
+      let fixed ← Halo2.fixedColumn
+      let simple ← Halo2.selector
+      Halo2.lookup (queriedCells complex fixed simple)
+        (tableMap complex fixed simple)
+      Halo2.createGate (firstGate complex fixed simple)
+      Halo2.createGate (secondGate complex fixed simple)
+      return result complex fixed simple) := by
+  constructor
+  intro cs hcs
+  let complex : Selector := ⟨cs.numSelectors, false⟩
+  let afterComplex : ConstraintSystem F :=
+    { cs with numSelectors := cs.numSelectors + 1 }
+  let fixed : Column .fixed :=
+    ⟨afterComplex.numFixedColumns⟩
+  let afterFixed : ConstraintSystem F :=
+    { afterComplex with
+      numFixedColumns := afterComplex.numFixedColumns + 1 }
+  let simple : Selector :=
+    ⟨afterFixed.numSelectors, true⟩
+  let allocated : ConstraintSystem F :=
+    { afterFixed with
+      numSelectors := afterFixed.numSelectors + 1 }
+  let afterLookup :=
+    (Halo2.lookup (queriedCells complex fixed simple)
+      (tableMap complex fixed simple) allocated).2
+  change ConstraintSystem.GateSelectorsAllocated
+    ((Halo2.createGate
+      (secondGate complex fixed simple)
+      (Halo2.createGate
+        (firstGate complex fixed simple) afterLookup).2).2)
+  rw [ConstraintSystem.gateSelectorsAllocated_createGate]
+  constructor
+  · rw [ConstraintSystem.gateSelectorsAllocated_createGate]
+    constructor
+    · exact
+        (lookup (queriedCells complex fixed simple)
+          (tableMap complex fixed simple)).run allocated
+          (ConstraintSystem.GateSelectorsAllocated.mono
+            hcs (by
+              simp [allocated, afterFixed, afterComplex]
+              omega))
+    · apply Gate.SelectorsAllocated.of_owned
+        (hfirstOwned complex fixed simple)
+      rw [hfirstSelector]
+      have hcount :=
+        ConstraintSystem.lookup_numSelectors
+          (queriedCells complex fixed simple)
+          (tableMap complex fixed simple) allocated
+      change simple.index < afterLookup.numSelectors
+      rw [hcount]
+      simp [simple, allocated, afterFixed, afterComplex]
+  · apply Gate.SelectorsAllocated.of_owned
+      (hsecondOwned complex fixed simple)
+    rw [hsecondSelector]
+    rw [ConstraintSystem.createGate_numSelectors]
+    have hcount :=
+      ConstraintSystem.lookup_numSelectors
+        (queriedCells complex fixed simple)
+        (tableMap complex fixed simple) allocated
+    rw [hcount]
+    simp [complex, allocated, afterFixed, afterComplex]
+
+/--
+Carry a freshly allocated simple selector through a count-preserving subprogram and
+use it in one later owned gate.
+
+This is the relational rule for child configure functions that intentionally accept
+a selector allocated by their parent. Such a child cannot truthfully preserve
+allocation from every arbitrary starting state; `hprogram` receives the exact
+fresh-index fact instead.
+-/
+@[circuit_norm]
+theorem selectorProgramGate
+    (program : Selector → Configure F β)
+    (gate : Selector → β → Gate F)
+    (result : Selector → β → α)
+    (hprogram : ∀ selector cs,
+      cs.GateSelectorsAllocated →
+      selector.index < cs.numSelectors →
+      ((program selector) cs).2.GateSelectorsAllocated)
+    (hprogramCount : ∀ selector cs,
+      ((program selector) cs).2.numSelectors =
+        cs.numSelectors)
+    (hselector : ∀ selector cs,
+      (gate selector
+        ((program selector) cs).1).selector.index =
+          selector.index)
+    (howned : ∀ selector cs,
+      (gate selector
+        ((program selector) cs).1).SelectorsOwned) :
+    PreservesGateSelectorsAllocated (do
+      let selector ← Halo2.selector
+      let value ← program selector
+      Halo2.createGate (gate selector value)
+      return result selector value) := by
+  constructor
+  intro cs hcs
+  let selector : Selector := ⟨cs.numSelectors, true⟩
+  let allocated : ConstraintSystem F :=
+    { cs with numSelectors := cs.numSelectors + 1 }
+  let value := ((program selector) allocated).1
+  let afterProgram := ((program selector) allocated).2
+  change ConstraintSystem.GateSelectorsAllocated
+    ((Halo2.createGate
+      (gate selector value) afterProgram).2)
+  rw [ConstraintSystem.gateSelectorsAllocated_createGate]
+  constructor
+  · apply hprogram selector allocated
+    · exact ConstraintSystem.GateSelectorsAllocated.mono
+        hcs (by simp [allocated])
+    · simp [selector, allocated]
+  · apply Gate.SelectorsAllocated.of_owned
+      (howned selector allocated)
+    rw [hselector selector allocated]
+    rw [hprogramCount selector allocated]
+    simp [selector, allocated]
 
 /-- Run a preserving configure program from the empty Halo 2 builder state. -/
 theorem fromEmpty
