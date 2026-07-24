@@ -1,4 +1,5 @@
 import Zcash.Circuits.Action.Statement
+import Zcash.Snark.Core.Domain
 import Zcash.Snark.Soundness.TopLevelAssignment
 
 /-!
@@ -34,10 +35,10 @@ theorem actionPublicInputs_of_instanceRowPolynomial
     (hpoly : assignment.polynomial
         (.instanceCol proofIndex cfg.primary.index) =
       instanceRowPolynomial (2 ^ top.domainExponent)
-        (Zcash.Bridge.omegaOf top.domainExponent) inputs.rows)
+        (Zcash.Snark.omegaOf top.domainExponent) inputs.rows)
     (hrows : Function.Injective
       fun i : Fin (2 ^ top.domainExponent) =>
-        Zcash.Bridge.omegaOf top.domainExponent ^ (i : ℕ)) :
+        Zcash.Snark.omegaOf top.domainExponent ^ (i : ℕ)) :
     PublicInputs.ofEnvironment cfg
       assignment.environment = inputs := by
   have hread (row : Fin 10) :

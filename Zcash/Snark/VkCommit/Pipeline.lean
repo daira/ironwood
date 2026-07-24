@@ -1,5 +1,6 @@
 import CompElliptic.Curves.Pasta
-import Zcash.Snark.VkCommit.Fast.ParMap
+import Zcash.Common.ParMap
+import Zcash.Snark.Core.Domain
 import Zcash.Snark.VkCommit.Fast.Msm
 import Zcash.Bridge.VkProjection
 import Zcash.Circuits.Fixtures.Layout
@@ -156,14 +157,14 @@ def denseColumns (n numCols : ℕ) (triples : List (ℕ × ℕ × ℕ)) : List (
 
 /-- The derived fixed-column commitments — `commit_lagrange` of each dense fixed column
 with the default blind (`plonk/keygen.rs:230-240`, `keygen_vk`'s `fixed_commitments`). -/
-def fixedCommitmentsOf (urs : URS G) (selMap : Halo2.SelCompressMap) (k : ℕ)
-    (cs : ConstraintSystem Fp) (ops : Operations Fp) : List G :=
-  let lagrange := derivedUrsGLagrange urs
+def fixedCommitmentsOf (blind : G) (lagrange : List G) (selMap : Halo2.SelCompressMap)
+    (k : ℕ) (cs : ConstraintSystem Fp) (ops : Operations Fp) : List G :=
   -- `parMap`: one task per column; Pippenger per MSM (`parMap_eq_map`,
-  -- `commitLagrangeFastWith_eq` — evaluation strategy only)
+  -- `commitLagrangeFastWith_eq` — evaluation strategy only). The Lagrange basis is an
+  -- argument so one FFT serves both commitment families.
   (denseColumns (2 ^ k) (PinnedConstraintSystem.derive cs selMap).numFixedColumns
       (fixedSparseOf selMap k cs ops)).parMap
-    (Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow urs.w lagrange)
+    (Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow blind lagrange)
 
 /-! ## Derived permutation commitments (`plonk/permutation/keygen.rs:102-152`) -/
 
@@ -217,13 +218,13 @@ def permPolysOf (k : ℕ) (cs : ConstraintSystem Fp) (ops : Operations Fp) :
 
 /-- The derived permutation common commitments — `commit_lagrange` of each permutation
 polynomial with the default blind (`build_vk`, `permutation/keygen.rs:147-151`). -/
-def permutationCommitmentsOf (urs : URS G) (k : ℕ)
+def permutationCommitmentsOf (blind : G) (lagrange : List G) (k : ℕ)
     (cs : ConstraintSystem Fp) (ops : Operations Fp) : List G :=
-  let lagrange := derivedUrsGLagrange urs
   -- `parMap`: one task per column; Pippenger per MSM (`parMap_eq_map`,
-  -- `commitLagrangeFastWith_eq` — evaluation strategy only)
+  -- `commitLagrangeFastWith_eq` — evaluation strategy only). The Lagrange basis is an
+  -- argument so one FFT serves both commitment families.
   (permPolysOf k cs ops).parMap
-    (Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow urs.w lagrange)
+    (Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow blind lagrange)
 
 /-! ## Assembly -/
 
@@ -250,6 +251,7 @@ def ofOperations (shape : Shape) (urs : URS G)
   let selMap := deriveSelCompressMap cs (2 ^ k)
     (activations (FloorPlanner.V1.starts ops) (indexedRegions ops 0).1)
   let pinned := PinnedConstraintSystem.derive cs selMap
+  let lagrange := derivedUrsGLagrange urs
   { omega := omegaOf k
     n := 2 ^ k
     blindingFactors := cs.blindingFactors
@@ -259,9 +261,10 @@ def ofOperations (shape : Shape) (urs : URS G)
     instanceQueryLayout := pinned.instanceQueryLayout
     adviceQueryLayout := pinned.adviceQueryLayout
     fixedQueryLayout := pinned.fixedQueryLayout
-    fixedCommitment := fun i => (fixedCommitmentsOf urs selMap k cs ops).getD i 0
+    fixedCommitment := fun i =>
+      (fixedCommitmentsOf urs.w lagrange selMap k cs ops).getD i 0
     permutationCommonCommitment := fun i =>
-      (permutationCommitmentsOf urs k cs ops).getD i.val 0
+      (permutationCommitmentsOf urs.w lagrange k cs ops).getD i.val 0
     permutationChunks := permutationChunksOf selMap cs
     lookupInputExprs := fun l =>
       (pinned.lookupInputExprs.getD l.val []).map RichExpression.toExpr
@@ -347,14 +350,14 @@ def selMapDerived
 /-- The derived fixed-column commitments of a closed circuit against a URS. -/
 def fixedCommitments
     (top : TopLevelCircuit Fp ConfigInput Config Output) (urs : URS G) : List G :=
-  fixedCommitmentsOf urs top.selMapDerived top.domainExponent top.constraintSystem
-    (top.operations 0)
+  fixedCommitmentsOf urs.w (derivedUrsGLagrange urs) top.selMapDerived
+    top.domainExponent top.constraintSystem (top.operations 0)
 
 /-- The derived permutation common commitments of a closed circuit against a URS. -/
 def permutationCommitments
     (top : TopLevelCircuit Fp ConfigInput Config Output) (urs : URS G) : List G :=
-  permutationCommitmentsOf urs top.domainExponent top.constraintSystem
-    (top.operations 0)
+  permutationCommitmentsOf urs.w (derivedUrsGLagrange urs) top.domainExponent
+    top.constraintSystem (top.operations 0)
 
 /-- The verifying key of a closed circuit at an explicitly-given `Shape` (the
 shape-explicit core `Certificate.lean` certifies; `toVerifierKey` below supplies the

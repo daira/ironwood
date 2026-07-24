@@ -1,4 +1,5 @@
 import Zcash.Snark.Fixtures.SingleAction.Fixture
+import Zcash.Snark.Core.Domain
 import Zcash.Snark.Fixtures.SingleAction.PinnedCsMatch
 
 /-!
