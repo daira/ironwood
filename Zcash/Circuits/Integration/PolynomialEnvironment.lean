@@ -1,4 +1,4 @@
-import Zcash.Circuits.Integration.PolynomialEnvironment
+import Zcash.Snark.Soundness.PolynomialEnvironment
 import Zcash.Circuits.Integration.CircuitSatisfaction
 
 /-!
