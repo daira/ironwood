@@ -49,6 +49,8 @@ import Zcash.Snark.Soundness.TopLevelCircuit
 import Zcash.Snark.Soundness.TopLevelAssignment
 import Zcash.Snark.Soundness.TopLevelCoherence
 import Zcash.Snark.Soundness.PolynomialEnvironment
+import Zcash.Snark.Soundness.ResolverQueryEnvironment
+import Zcash.Snark.Soundness.ResolverGates
 import Zcash.Snark.Soundness.DomainSelectors
 import Zcash.Snark.Soundness.CanonicalConstraintModel
 import Zcash.Snark.Soundness.InstanceCommitment

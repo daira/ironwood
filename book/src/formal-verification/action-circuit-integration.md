@@ -473,9 +473,22 @@ multiplication by selector-free expressions.
 evaluates to the packed selector scale times Clean's enabled-gate evaluation whenever
 the fixed/advice/instance query valuations agree. `ConstraintSystem.GatesWellFormed`
 packages the remaining static configure certificate and projects the property to
-every registered constraint. The remaining Action work is to establish that compact
-configure certificate compositionally and identify the packed fixed-column value;
-the evaluation algebra itself is no longer circuit-specific.
+every registered constraint.
+
+The resolver representation now follows Halo2's query indexing exactly. An `Expr`
+leaf indexes a VK query-layout entry `(column, rotation)`, so
+`constraintModelOfResolver` feeds it the decoded base column composed with
+`ω^rotation · X`, rather than incorrectly treating the query index as a column index.
+`resolverQueryFeeds_interpret` proves that these three rotated feeds interpret Clean's
+row environment on every domain row. `enabledGatePolynomialWitnessOfResolver` then
+combines that interpretation, pinned-CS gate equality, configure coherence, and
+selector compression into the `EnabledGate.PolynomialWitness` consumed by the generic
+gate-satisfaction bridge.
+
+The remaining gate work is to establish the compact `GatesWellFormed` configure
+certificate compositionally and derive the packed selector cell's nonzero root value
+from circuit-owned selector activations/fixed columns. The evaluation and
+resolver-membership algebra is no longer circuit-specific.
 
 The `Fixtures.Layout` reconstruction is already generic over operations, so σ-cycle
 correctness of its replayed keygen merge is likewise a once-and-for-all lemma.
@@ -610,8 +623,9 @@ The compositional base and post-Ironwood `FormalCircuit`s intentionally retain t
 `EnvAssumptions`: child circuits may state contracts that a parent fulfills.
 `TopLevelCircuit` is the separate deployment boundary that closes those contracts.
 The generic `SynthesisWellFormed` and full-satisfaction-to-statement steps are now
-complete. The remaining assignment work is to connect the circuit-derived VK/domain
-to the resolver environment, then construct the gate/copy/lookup/fixed witnesses that
+complete. The circuit-derived decoded assignment and rotated resolver environment are
+now connected generically. The remaining representation work is to discharge the
+static gate/selector premises above and construct the copy/lookup/fixed witnesses that
 feed `FullCircuitBridge.topLevelSoundness_or_bad`.
 
 After #79's merge, the generic circuit-integration declarations are checked in the

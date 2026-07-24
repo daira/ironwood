@@ -19,6 +19,67 @@ namespace Zcash.Snark
 
 open Polynomial
 
+/--
+The polynomial feed for one verifier query family.
+
+An `Expr` leaf indexes a query-layout entry, not a committed column directly.  The
+entry names a base column and a rotation, so its polynomial is the resolved base
+column composed with `ω^rotation · X`.  As in the verifier's `finFn` evaluation
+feeds, indices outside the shape-level query count read zero.
+-/
+noncomputable def resolverQueryFeed
+    {n : ℕ} (omega : Fp) (layout : List (ℕ × ℤ))
+    (column : ℕ → Polynomial Fp) : ℕ → Polynomial Fp :=
+  finFn fun query : Fin n =>
+    let entry := layout.getD query.val (0, 0)
+    (column entry.1).comp (C (omega ^ entry.2) * X)
+
+/-- An in-range query feed evaluates its resolved column at the rotated point. -/
+theorem resolverQueryFeed_eval
+    {n : ℕ} (omega : Fp) (layout : List (ℕ × ℤ))
+    (column : ℕ → Polynomial Fp)
+    {query : ℕ} (hquery : query < n) (x : Fp) :
+    (resolverQueryFeed (n := n) omega layout column query).eval x =
+      (column (layout.getD query (0, 0)).1).eval
+        (rotateOmega omega x (layout.getD query (0, 0)).2) := by
+  simp only [resolverQueryFeed, finFn, dif_pos hquery, eval_comp,
+    eval_mul, eval_C, eval_X, rotateOmega]
+  rw [mul_comm]
+
+/-- Outside the shape-level query count the feed is the zero polynomial. -/
+theorem resolverQueryFeed_eval_of_ge
+    {n : ℕ} (omega : Fp) (layout : List (ℕ × ℤ))
+    (column : ℕ → Polynomial Fp)
+    {query : ℕ} (hquery : n ≤ query) (x : Fp) :
+    (resolverQueryFeed (n := n) omega layout column query).eval x = 0 := by
+  simp [resolverQueryFeed, finFn, Nat.not_lt.mpr hquery]
+
+/-- Fixed-query polynomials selected from commitment identities and the VK layout. -/
+noncomputable def fixedQueryFeedOfResolver
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G)
+    (poly : CommitmentId → Polynomial Fp) : ℕ → Polynomial Fp :=
+  resolverQueryFeed (n := shape.numFixedQueries)
+    vk.omega vk.fixedQueryLayout fun column => poly (.fixedCol column)
+
+/-- Advice-query polynomials for one proof, selected from the VK layout. -/
+noncomputable def adviceQueryFeedOfResolver
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) : ℕ → Polynomial Fp :=
+  resolverQueryFeed (n := shape.numAdviceQueries)
+    vk.omega vk.adviceQueryLayout fun column => poly (.adviceCol p column)
+
+/-- Instance-query polynomials for one proof, selected from the VK layout. -/
+noncomputable def instanceQueryFeedOfResolver
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) : ℕ → Polynomial Fp :=
+  resolverQueryFeed (n := shape.numInstanceQueries)
+    vk.omega vk.instanceQueryLayout fun column => poly (.instanceCol p column)
+
 /-- One proof's lookup commitments paired with their five claimed evaluations, in verifier order. -/
 def subProofLookupCommitments {shape : Shape} {F G : Type*}
     (ps : ProofString shape F G) (p : Fin shape.numProofs) :
@@ -81,9 +142,9 @@ noncomputable def lookupInputPolyOfResolver {shape : Shape} {G : Type*}
     (poly : CommitmentId → Polynomial Fp)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) : Polynomial Fp :=
   compressExprs
-    (fun j => poly (.fixedCol j))
-    (fun j => poly (.adviceCol p j))
-    (fun j => poly (.instanceCol p j))
+    (fixedQueryFeedOfResolver vk poly)
+    (adviceQueryFeedOfResolver vk poly p)
+    (instanceQueryFeedOfResolver vk poly p)
     (C ch.theta) ((vk.lookupInputExprs l).map (Expr.map C))
 
 /-- The selected lookup's compressed table polynomial under the same resolver-backed feeds. -/
@@ -92,9 +153,9 @@ noncomputable def lookupTablePolyOfResolver {shape : Shape} {G : Type*}
     (poly : CommitmentId → Polynomial Fp)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) : Polynomial Fp :=
   compressExprs
-    (fun j => poly (.fixedCol j))
-    (fun j => poly (.adviceCol p j))
-    (fun j => poly (.instanceCol p j))
+    (fixedQueryFeedOfResolver vk poly)
+    (adviceQueryFeedOfResolver vk poly p)
+    (instanceQueryFeedOfResolver vk poly p)
     (C ch.theta) ((vk.lookupTableExprs l).map (Expr.map C))
 
 /-- A full constraint model whose column polynomials and lookup arguments are resolved by stable
@@ -108,9 +169,9 @@ noncomputable def constraintModelOfResolver {shape : Shape} {G : Type*}
       List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
     (l0 lLast lBlind : Polynomial Fp) :
     ConstraintPolyModel shape.numProofs where
-  fixedCols j := poly (.fixedCol j)
-  adviceCols p j := poly (.adviceCol p j)
-  instanceCols p j := poly (.instanceCol p j)
+  fixedCols := fixedQueryFeedOfResolver vk poly
+  adviceCols := adviceQueryFeedOfResolver vk poly
+  instanceCols := instanceQueryFeedOfResolver vk poly
   gates := vk.gates
   sets := sets
   chunks := chunks
