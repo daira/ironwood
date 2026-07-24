@@ -479,6 +479,12 @@ repeat any circuit proof; the remaining public-input obligation is solely to
 identify the decoded instance polynomial's first ten domain values with the values
 supplied to the verifier.
 
+That row-identification lemma now consumes `TopLevelAssignment` directly. Its domain
+root is `Bridge.omegaOf k`, its instance column is selected by the assignment's proof
+index, and it no longer accepts an arbitrary verifier key. This is the intentionally
+small Action-specific part: it only maps the first ten rows into `Action.PublicInputs`;
+assignment construction and domain/layout choices remain generic.
+
 `Action.topLevelCircuit` instantiates that boundary. It projects the initial
 Sinsemilla generator-table load from the real `mainPost` operation stream and derives:
 

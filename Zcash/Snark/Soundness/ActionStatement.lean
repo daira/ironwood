@@ -1,5 +1,5 @@
 import Zcash.Circuits.Action.Statement
-import Zcash.Snark.Soundness.PolynomialEnvironment
+import Zcash.Snark.Soundness.TopLevelAssignment
 
 /-!
 # Decoded instance rows to the Orchard Action statement
@@ -12,6 +12,7 @@ must eventually supply.
 namespace Zcash.Snark
 
 open Halo2 Polynomial
+open Zcash.Circuits
 open Zcash.Circuits.Action
 open Zcash.Circuits.Action.Circuit
 
@@ -23,26 +24,27 @@ one Action's rows, reading that column through Clean produces exactly that Actio
 structured public inputs.
 -/
 theorem actionPublicInputs_of_instanceRowPolynomial
-    {shape : Shape} {G : Type*}
-    (vk : VerifyingKey shape Fp G)
-    (poly : CommitmentId → Polynomial Fp)
-    (p : Fin shape.numProofs) (usableRows : ℕ)
+    {TopConfigInput TopConfig : Type} {Output : TypeMap}
+    [CircuitType Output]
+    {top : TopLevelCircuit Fp TopConfigInput TopConfig Output}
+    {k numProofs : ℕ}
+    (assignment : TopLevelAssignment top k numProofs)
     (cfg : Config) (inputs : PublicInputs)
-    (hsize : 10 ≤ 2 ^ shape.k)
-    (hpoly : poly (.instanceCol p cfg.primary.index) =
-      instanceRowPolynomial (2 ^ shape.k) vk.omega inputs.rows)
+    (hsize : 10 ≤ 2 ^ k)
+    (hpoly : assignment.polynomial
+        (.instanceCol assignment.proofIndex cfg.primary.index) =
+      instanceRowPolynomial (2 ^ k) (Zcash.Bridge.omegaOf k) inputs.rows)
     (hrows : Function.Injective
-      fun i : Fin (2 ^ shape.k) => vk.omega ^ (i : ℕ)) :
+      fun i : Fin (2 ^ k) => Zcash.Bridge.omegaOf k ^ (i : ℕ)) :
     PublicInputs.ofEnvironment cfg
-      (resolverEnvironment vk poly p usableRows) = inputs := by
+      assignment.environment = inputs := by
   have hread (row : Fin 10) :
-      (resolverEnvironment vk poly p usableRows).inst cfg.primary (row : ℤ) =
+      assignment.environment.inst cfg.primary (row : ℤ) =
         inputs.rows.getD (row : ℕ) 0 := by
-    let domainRow : Fin (2 ^ shape.k) :=
+    let domainRow : Fin (2 ^ k) :=
       ⟨row, lt_of_lt_of_le row.isLt hsize⟩
-    simpa [domainRow] using
-      resolverEnvironment_instance_of_rowPolynomial
-        vk poly p usableRows cfg.primary inputs.rows hpoly hrows domainRow
+    rw [TopLevelAssignment.environment_instance, hpoly]
+    simpa only [domainRow] using instanceRowPolynomial_eval hrows domainRow
   apply PublicInputs.ext
   · simpa [PublicInputs.ofEnvironment, PublicInputs.rows, ANCHOR] using hread 0
   · simpa [PublicInputs.ofEnvironment, PublicInputs.rows, CV_NET_X] using hread 1
