@@ -1,17 +1,26 @@
 import Zcash.Snark.Keygen.Derivation
+import Zcash.Snark.Keygen.Fast.FastFft
 import Zcash.Snark.Fixtures.SingleAction.Fixture
 
 /-!
 # Concrete certificate for the derived Action verifying key
 
 This module contains the expensive concrete computation, separately from the reusable
-derivation data: ONE bundled `native_decide` evaluating the derived verifying key once
-and comparing every field against the capture — the Lagrange-prefix cross-check and the
-two commitment families (the group-side cost), plus the scalar/gate/layout fields and
-the derived `Shape` (CS-scale). `vk_eq_derived`/`vk_eq_toVerifierKey` assemble the
-record equalities from the bundle's splits; the only definitional steps are structure
-eta and within-`Pipeline` unfoldings, so the certificate is robust against unrelated
-refactors of the `Bridge`/fixture-side spellings.
+derivation data: `native_decide` bundles comparing every field of the derived verifying
+key against the capture. Components are stated over the `TopLevelCircuit` methods and
+the once-evaluated `lagrangeBasis` rather than projections of `derivedActionVk` —
+projecting the record would strictly build ALL its fields, re-running the FFT and both
+commitment passes a second time. The basis itself is computed by the PROVEN-equal
+projective FFT (`Fast.derivedUrsGLagrangeFast_eq`), so the group-side cost is one fast
+FFT plus one Pippenger commitment pass, all inside `certificate_commitments`; the
+remaining bundles are CS-scale. The comparison is split across four theorems because
+`Decidable` instance synthesis fails on larger products of these types (specifically,
+mixing the `Fp`-typed scalars into a product with the group-element lists defeats the
+search); the split keeps each bundle at a shape synthesis accepts, and only the
+commitments bundle pays group-side evaluation. `vk_eq_derived`/`vk_eq_toVerifierKey`
+assemble the record equality from the bundles' splits; the only definitional steps are
+structure eta and within-`Pipeline` unfoldings, so the certificate is robust against
+unrelated refactors of the fixture-side spellings.
 
 The `ZcashKeygen` target builds this module explicitly; ordinary clients of
 `derivedActionVk` only need `Derivation`.
@@ -30,22 +39,27 @@ def actionProofParams : ProofParams := { numProofs := 1, numPointSets := 5 }
 
 /-- The derived Lagrange basis, as a NULLARY definition: evaluated once per
 `native_decide` process (function applications re-evaluate per occurrence — the
-`urs`-parameterized spellings each cost a full ~11k-smul group FFT). The bundle's
-commitment components are stated over `lagrangeBasis` so one FFT serves the prefix
-check and both commitment families; the `derived*_eq` corollaries bridge back to the
-`Derivation.lean` names definitionally. -/
-private def lagrangeBasis : List G := derivedUrsGLagrange capturedURS
+`urs`-parameterized spellings each cost a full group FFT). Computed by the fast
+projective-coordinate FFT, which is PROVEN pointwise equal to the Rust-mirroring
+`derivedUrsGLagrange` (`Fast.derivedUrsGLagrangeFast_eq`) — the corollaries below
+bridge back to the statement-surface name through that equality. -/
+private def lagrangeBasis : List G := Fast.derivedUrsGLagrangeFast capturedURS
 
-/-- **The derived verifying key matches the capture, field by field** — bundled into ONE
-`native_decide` so the derived record (and with it the Lagrange FFT, fixed contents,
-keygen mapping and all 44 commitment MSMs) evaluates exactly once. Components, in
-order: the Lagrange URS 10-generator prefix; the 29 fixed-column and 15 permutation
-commitments; the domain/permutation scalars; the gates; the three query layouts; the
-permutation chunks; the two lookup-expression families; and the derived `Shape`
-(`ProofParams.mergeDerived`) against the fixture's. -/
-theorem certificate :
-    (let a := derivedActionVk shape capturedURS
-     (lagrangeBasis.take capturedUrsGLagrange.length,
+/-- The derived pinned CS in the `Pipeline`-native spelling (`.derive` at the derived
+selector map) — definitionally `ofOperations`' internal `pinned`, which the
+`vk_eq_derived` unifications need (the `TopLevelCircuit.pinnedCS` method goes through
+Clean's `toPinnedCS` and is only propositionally the same record). Nullary, so the
+selector-map/derive work evaluates once per `native_decide` process. -/
+private def actionPinned : PinnedConstraintSystem Fp :=
+  PinnedConstraintSystem.derive orchardActionTopLevelCircuit.constraintSystem
+    orchardActionTopLevelCircuit.selMapDerived
+
+/-- **The derived commitments match the capture** — the group-side bundle: the Lagrange
+URS 10-generator prefix cross-check and the 29 fixed-column and 15 permutation
+commitments, in ONE `native_decide` so the fast FFT, the fixed contents, the keygen
+mapping and all 44 commitment MSMs evaluate exactly once. -/
+theorem certificate_commitments :
+    (lagrangeBasis.take capturedUrsGLagrange.length,
       fixedCommitmentsOf capturedURS.w lagrangeBasis
         orchardActionTopLevelCircuit.selMapDerived
         orchardActionTopLevelCircuit.domainExponent
@@ -54,20 +68,41 @@ theorem certificate :
       permutationCommitmentsOf capturedURS.w lagrangeBasis
         orchardActionTopLevelCircuit.domainExponent
         orchardActionTopLevelCircuit.constraintSystem
-        (orchardActionTopLevelCircuit.operations 0),
-      (a.omega, a.n, a.blindingFactors, a.delta, a.chunkLen),
-      a.gates,
-      (a.instanceQueryLayout, a.adviceQueryLayout, a.fixedQueryLayout),
-      a.permutationChunks,
-      (List.ofFn a.lookupInputExprs, List.ofFn a.lookupTableExprs),
-      actionProofParams.mergeDerived orchardActionTopLevelCircuit))
+        (orchardActionTopLevelCircuit.operations 0))
     = (capturedUrsGLagrange,
        capturedFixedCommitments,
-       capturedPermutationCommonCommitments,
-       (vk.omega, vk.n, vk.blindingFactors, vk.delta, vk.chunkLen),
-       vk.gates,
-       (vk.instanceQueryLayout, vk.adviceQueryLayout, vk.fixedQueryLayout),
-       vk.permutationChunks,
+       capturedPermutationCommonCommitments) := by
+  native_decide
+
+/-- The derived domain/permutation scalars and gates match the captured `vk`'s. -/
+theorem certificate_scalars_gates :
+    ((omegaOf orchardActionTopLevelCircuit.domainExponent,
+       2 ^ orchardActionTopLevelCircuit.domainExponent,
+       orchardActionTopLevelCircuit.constraintSystem.blindingFactors, deltaFp,
+       orchardActionTopLevelCircuit.constraintSystem.chunkLen),
+      actionPinned.gates.map RichExpression.toExpr)
+    = ((vk.omega, vk.n, vk.blindingFactors, vk.delta, vk.chunkLen), vk.gates) := by
+  native_decide
+
+/-- The derived query layouts match the captured `vk`'s. -/
+theorem certificate_layouts :
+    (actionPinned.instanceQueryLayout,
+      actionPinned.adviceQueryLayout,
+      actionPinned.fixedQueryLayout)
+    = (vk.instanceQueryLayout, vk.adviceQueryLayout, vk.fixedQueryLayout) := by
+  native_decide
+
+/-- The derived permutation chunks, lookup-expression families, and `Shape`
+(`ProofParams.mergeDerived`) match the captured `vk`'s and the fixture's. -/
+theorem certificate_cs :
+    (permutationChunksOf orchardActionTopLevelCircuit.selMapDerived
+       orchardActionTopLevelCircuit.constraintSystem,
+      (List.ofFn fun l : Fin shape.numLookups =>
+          (actionPinned.lookupInputExprs.getD l.val []).map RichExpression.toExpr,
+       List.ofFn fun l : Fin shape.numLookups =>
+          (actionPinned.lookupTableExprs.getD l.val []).map RichExpression.toExpr),
+      actionProofParams.mergeDerived orchardActionTopLevelCircuit)
+    = (vk.permutationChunks,
        (List.ofFn vk.lookupInputExprs, List.ofFn vk.lookupTableExprs),
        shape) := by
   native_decide
@@ -77,17 +112,26 @@ set_option maxRecDepth 1000000 in
 theorem derivedUrsGLagrange_prefix_eq :
     (derivedUrsGLagrange capturedURS).take capturedUrsGLagrange.length
       = capturedUrsGLagrange := by
-  have h := certificate
+  have h := certificate_commitments
   simp only [Prod.mk.injEq] at h
+  rw [← Fast.derivedUrsGLagrangeFast_eq]
   exact h.1
 
 set_option maxRecDepth 1000000 in
 /-- The derived fixed-column commitments are the captured ones. -/
 theorem derivedFixedCommitments_eq :
     derivedFixedCommitments capturedURS = capturedFixedCommitments := by
-  have h := certificate
+  have h := certificate_commitments
   simp only [Prod.mk.injEq] at h
-  -- `lagrangeBasis`-stated component, definitionally the `Derivation.lean` name
+  -- unfold the `Derivation.lean` name to the basis-explicit form, then swap in the
+  -- proven-equal fast basis the bundle is stated over
+  rw [show derivedFixedCommitments capturedURS
+      = fixedCommitmentsOf capturedURS.w (derivedUrsGLagrange capturedURS)
+          orchardActionTopLevelCircuit.selMapDerived
+          orchardActionTopLevelCircuit.domainExponent
+          orchardActionTopLevelCircuit.constraintSystem
+          (orchardActionTopLevelCircuit.operations 0) from rfl,
+    ← Fast.derivedUrsGLagrangeFast_eq]
   exact h.2.1
 
 set_option maxRecDepth 1000000 in
@@ -95,26 +139,36 @@ set_option maxRecDepth 1000000 in
 theorem derivedPermutationCommonCommitments_eq :
     derivedPermutationCommonCommitments capturedURS
       = capturedPermutationCommonCommitments := by
-  have h := certificate
+  have h := certificate_commitments
   simp only [Prod.mk.injEq] at h
-  exact h.2.2.1
+  rw [show derivedPermutationCommonCommitments capturedURS
+      = permutationCommitmentsOf capturedURS.w (derivedUrsGLagrange capturedURS)
+          orchardActionTopLevelCircuit.domainExponent
+          orchardActionTopLevelCircuit.constraintSystem
+          (orchardActionTopLevelCircuit.operations 0) from rfl,
+    ← Fast.derivedUrsGLagrangeFast_eq]
+  exact h.2.2
 
 /-- The fixture's `Shape` is the proof-shape parameters merged with the circuit-derived
 counts. -/
 theorem shape_eq_mergeDerived :
     actionProofParams.mergeDerived orchardActionTopLevelCircuit = shape := by
-  have h := certificate
+  have h := certificate_cs
   simp only [Prod.mk.injEq] at h
-  exact h.2.2.2.2.2.2.2.2
+  exact h.2.2
 
 set_option maxRecDepth 1000000 in
 /-- **The captured Action verifying key is fully derived.** Assembled record-wise from
-the bundle's field equalities; the definitional steps are structure eta and
+the bundles' field equalities; the definitional steps are structure eta and
 within-`Pipeline` unfoldings only. -/
 theorem vk_eq_derived : vk = derivedActionVk shape capturedURS := by
-  have h := certificate
-  simp only [Prod.mk.injEq] at h
-  obtain ⟨-, -, -, ⟨ho, hn, hb, hd, hc⟩, hg, ⟨hiq, haq, hfq⟩, hpch, ⟨hli, hlt⟩, -⟩ := h
+  have hsg := certificate_scalars_gates
+  have hly := certificate_layouts
+  have hcs := certificate_cs
+  simp only [Prod.mk.injEq] at hsg hly hcs
+  obtain ⟨⟨ho, hn, hb, hd, hc⟩, hg⟩ := hsg
+  obtain ⟨hiq, haq, hfq⟩ := hly
+  obtain ⟨hpch, ⟨hli, hlt⟩, -⟩ := hcs
   -- structure eta: the derived key is the record of its own projections
   have ha : derivedActionVk shape capturedURS
       = ⟨(derivedActionVk shape capturedURS).omega,
@@ -159,7 +213,7 @@ theorem vk_eq_toVerifierKey :
   rw [toVerifierKey_action, vk_eq_derived]
   exact (derivedActionVk_cast shape_eq_mergeDerived capturedURS).symm
 
-assert_no_sorry certificate
+assert_no_sorry certificate_commitments
 assert_no_sorry vk_eq_derived
 assert_no_sorry vk_eq_toVerifierKey
 
