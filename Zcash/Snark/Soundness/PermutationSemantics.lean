@@ -182,6 +182,46 @@ theorem replayKeygenPermutation_sameCycle_iff
   simpa only [replayKeygenPermutation, List.mem_reverse] using
     PermConstruction.build_correct copies.reverse left right
 
+/--
+A predicate containing both endpoints of every replayed copy is preserved by
+the resulting permutation. This supplies the generic active-row closure fact
+needed when restricting a full-domain keygen permutation.
+-/
+theorem replayKeygenPermutation_preserves
+    {cell : Type*} [DecidableEq cell] [Fintype cell]
+    (copies : List (cell × cell)) (predicate : cell → Prop)
+    (hcopies : ∀ pair ∈ copies,
+      predicate pair.1 ∧ predicate pair.2)
+    (cell : cell) (hcell : predicate cell) :
+    predicate (replayKeygenPermutation copies cell) := by
+  have hedge : ∀ {left right},
+      (left, right) ∈ copies →
+        (predicate left ↔ predicate right) := by
+    intro left right hpair
+    obtain ⟨hleft, hright⟩ := hcopies (left, right) hpair
+    exact ⟨fun _ => hright, fun _ => hleft⟩
+  have hclosure : ∀ {left right},
+      Relation.EqvGen (fun a b => (a, b) ∈ copies) left right →
+        (predicate left ↔ predicate right) := by
+    intro left right hrelation
+    induction hrelation with
+    | rel left right hpair =>
+        exact hedge hpair
+    | refl value =>
+        exact Iff.rfl
+    | symm left right _ ih =>
+        exact ih.symm
+    | trans left middle right _ _ ih₁ ih₂ =>
+        exact ih₁.trans ih₂
+  have hsame :
+      (replayKeygenPermutation copies).SameCycle cell
+        (replayKeygenPermutation copies cell) := by
+    exact ⟨(1 : ℤ), by simp⟩
+  exact
+    (hclosure
+      ((replayKeygenPermutation_sameCycle_iff copies _ _).mp hsame)).mp
+        hcell
+
 /-- Transport keygen's flat `(row, permutation-column)` permutation through the concrete chunk
 layout.  Conjugation preserves the complete cycle structure; no assumption about equal chunk
 widths is needed. -/

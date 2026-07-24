@@ -1000,6 +1000,26 @@ def chunkFlatten (nc numCols chunkLen m : ℕ) (width : ℕ → ℕ)
     rw [Nat.mul_comm]
     exact Nat.div_add_mod (g : ℕ) chunkLen
 
+@[simp]
+theorem chunkFlatten_apply_row
+    {nc numCols chunkLen m : ℕ} {width : ℕ → ℕ}
+    (hcl : 0 < chunkLen) (hcover : numCols ≤ nc * chunkLen)
+    (hw : ∀ c : Fin nc,
+      width (c : ℕ) = min chunkLen (numCols - (c : ℕ) * chunkLen))
+    (cell : ChunkCell nc m width) :
+    (chunkFlatten nc numCols chunkLen m width hcl hcover hw cell).1 =
+      cell.2.1 := rfl
+
+@[simp]
+theorem chunkFlatten_symm_apply_row
+    {nc numCols chunkLen m : ℕ} {width : ℕ → ℕ}
+    (hcl : 0 < chunkLen) (hcover : numCols ≤ nc * chunkLen)
+    (hw : ∀ c : Fin nc,
+      width (c : ℕ) = min chunkLen (numCols - (c : ℕ) * chunkLen))
+    (cell : Fin m × Fin numCols) :
+    ((chunkFlatten nc numCols chunkLen m width hcl hcover hw).symm cell).2.1 =
+      cell.1 := rfl
+
 /-- **The master copy-witness constructor.** Everything reduces to three leaf families
 over the keygen copy list: each copy pair agrees in value (or the shared branch fires,
 via `chunkRowValue_eq_of_mem_copies`), each declared copy's encoded endpoints are
