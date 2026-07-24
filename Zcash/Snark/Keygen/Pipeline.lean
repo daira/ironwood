@@ -480,20 +480,20 @@ variable {ConfigInput Config : Type} {Output : TypeMap} [CircuitType Output]
 /-- The derived selector-compression map of a closed circuit (activation table over the
 circuit's own V1 placement, at the minimal fitting domain). -/
 def selMapDerived
-    (top : TopLevelCircuit Zcash.Circuits.Fp ConfigInput Config Output) : Halo2.SelCompressMap :=
+    (top : TopLevelCircuit Fp ConfigInput Config Output) : Halo2.SelCompressMap :=
   deriveSelCompressMap top.constraintSystem (2 ^ top.domainExponent)
     (activations (FloorPlanner.V1.starts (top.operations 0))
       (indexedRegions (top.operations 0) 0).1)
 
 /-- The derived fixed-column commitments of a closed circuit against a URS. -/
 def fixedCommitments
-    (top : TopLevelCircuit Zcash.Circuits.Fp ConfigInput Config Output) (urs : URS G) : List G :=
+    (top : TopLevelCircuit Fp ConfigInput Config Output) (urs : URS G) : List G :=
   fixedCommitmentsOf urs.w (derivedUrsGLagrange urs) top.selMapDerived
     top.domainExponent top.constraintSystem (top.operations 0)
 
 /-- The derived permutation common commitments of a closed circuit against a URS. -/
 def permutationCommitments
-    (top : TopLevelCircuit Zcash.Circuits.Fp ConfigInput Config Output) (urs : URS G) : List G :=
+    (top : TopLevelCircuit Fp ConfigInput Config Output) (urs : URS G) : List G :=
   permutationCommitmentsOf urs.w (derivedUrsGLagrange urs) top.domainExponent
     top.constraintSystem (top.operations 0)
 
@@ -501,8 +501,8 @@ def permutationCommitments
 shape-explicit core `Certificate.lean` certifies; `toVerifierKey` below supplies the
 derived shape). -/
 def verifierKeyAt
-    (top : TopLevelCircuit Zcash.Circuits.Fp ConfigInput Config Output)
-    (shape : Shape) (urs : URS G) : VerifyingKey shape Zcash.Circuits.Fp G :=
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (shape : Shape) (urs : URS G) : VerifyingKey shape Fp G :=
   .ofOperations shape urs top.constraintSystem (top.operations 0)
 
 /-- **The verifying key of a closed top-level circuit**: the `TopLevelCircuit` carries
@@ -510,9 +510,9 @@ its own `configInput` and unit input, so the only remaining inputs are the proof
 counts and the URS — `keygen_vk` at the `TopLevelCircuit` level, with the derived
 `Shape` in the return type. -/
 def toVerifierKey
-    (top : TopLevelCircuit Zcash.Circuits.Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
     (pp : ProofParams) (urs : URS G) :
-    VerifyingKey (pp.mergeDerived top) Zcash.Circuits.Fp G :=
+    VerifyingKey (pp.mergeDerived top) Fp G :=
   top.verifierKeyAt (pp.mergeDerived top) urs
 
 /-- The derived key exposes exactly the advice-query layout of its selector-map
