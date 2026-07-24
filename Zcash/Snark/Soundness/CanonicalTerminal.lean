@@ -119,8 +119,11 @@ namespace AcceptedModelClaimedEvaluations
 
 /--
 Construct the complete canonical fingerprint from uniform assembled-query
-openings, the three column-feed equations, and the standard permutation/domain
+openings, the three query-layout counts, and the standard permutation/domain
 facts.
+
+The fixed, advice, and instance feed equations are all reconstructed from the
+same opening family; they are not independent terminal premises.
 -/
 noncomputable def ofOpenings
     {shape : Shape}
@@ -149,23 +152,12 @@ noncomputable def ofOpenings
     {hblinding : vk.blindingFactors < vk.n}
     (haccepts :
       DeployedAccepts urs hk vk instanceCommitment ps ch)
-    (fixed : ∀ column,
-      ((CanonicalMemberConstraintRelation.acceptedModel
-        (memberDecode := memberDecode)
-        (hblinding := hblinding) haccepts).fixedCols column).eval ch.x =
-          finFn ps.fixedEvals column)
-    (advice : ∀ proofIndex column,
-      ((CanonicalMemberConstraintRelation.acceptedModel
-        (memberDecode := memberDecode)
-        (hblinding := hblinding) haccepts).adviceCols
-          proofIndex column).eval ch.x =
-        finFn (ps.adviceEvals proofIndex) column)
-    (instanceColumns : ∀ proofIndex column,
-      ((CanonicalMemberConstraintRelation.acceptedModel
-        (memberDecode := memberDecode)
-        (hblinding := hblinding) haccepts).instanceCols
-          proofIndex column).eval ch.x =
-        finFn (ps.instanceEvals proofIndex) column)
+    (hfixedLayout :
+      vk.fixedQueryLayout.length = shape.numFixedQueries)
+    (hadviceLayout :
+      vk.adviceQueryLayout.length = shape.numAdviceQueries)
+    (hinstanceLayout :
+      vk.instanceQueryLayout.length = shape.numInstanceQueries)
     (hopen : ∀ query ∈
       assembleQueries vk instanceCommitment ps ch,
       (CanonicalMemberConstraintRelation.acceptedPolynomial
@@ -192,15 +184,74 @@ noncomputable def ofOpenings
     canonicalConstraintModelOfPermutationResolver_selectorEvaluations
       vk ch polynomial hblinding hrows hroot hnFp hxDomain
   refine
-    { fixed := fixed
-      advice := advice
-      «instance» := instanceColumns
+    { fixed := ?_
+      advice := ?_
+      «instance» := ?_
       sets := ?_
       chunks := ?_
       lookups := ?_
       l0 := ?_
       lLast := ?_
       lBlind := ?_ }
+  · intro query
+    simpa [CanonicalMemberConstraintRelation.acceptedModel,
+      canonicalConstraintModelOfPermutationResolver,
+      constraintModelOfPermutationResolver,
+      constraintModelOfResolver, fixedQueryFeedOfResolver, polynomial] using
+      resolverQueryFeed_eval_of_columnQueries
+        (k := shape.k)
+        vk.omega ch.x vk.fixedCommitment CommitmentId.fixedCol
+        vk.fixedQueryLayout ps.fixedEvals hfixedLayout polynomial
+        (fun q hq => hopen q (by
+          simp only [assembleQueries]
+          exact List.mem_append_left _
+            (List.mem_append_left _
+              (List.mem_append_right _ hq))))
+        query
+  · intro proofIndex query
+    simpa [CanonicalMemberConstraintRelation.acceptedModel,
+      canonicalConstraintModelOfPermutationResolver,
+      constraintModelOfPermutationResolver,
+      constraintModelOfResolver, adviceQueryFeedOfResolver, polynomial] using
+      resolverQueryFeed_eval_of_columnQueries
+        (k := shape.k)
+        vk.omega ch.x (finFnG (ps.adviceCommitments proofIndex))
+        (CommitmentId.adviceCol proofIndex)
+        vk.adviceQueryLayout (ps.adviceEvals proofIndex)
+        hadviceLayout polynomial
+        (fun q hq => hopen q (by
+          simp only [assembleQueries]
+          refine List.mem_append.mpr
+            (Or.inl (List.mem_append.mpr
+              (Or.inl (List.mem_append.mpr (Or.inl ?_)))))
+          refine List.mem_flatten.mpr
+            ⟨_, List.mem_ofFn.mpr ⟨proofIndex, rfl⟩, ?_⟩
+          exact List.mem_append.mpr
+            (Or.inl (List.mem_append.mpr
+              (Or.inl (List.mem_append.mpr (Or.inr hq))))) ))
+        query
+  · intro proofIndex query
+    simpa [CanonicalMemberConstraintRelation.acceptedModel,
+      canonicalConstraintModelOfPermutationResolver,
+      constraintModelOfPermutationResolver,
+      constraintModelOfResolver, instanceQueryFeedOfResolver, polynomial] using
+      resolverQueryFeed_eval_of_columnQueries
+        (k := shape.k)
+        vk.omega ch.x (instanceCommitment proofIndex)
+        (CommitmentId.instanceCol proofIndex)
+        vk.instanceQueryLayout (ps.instanceEvals proofIndex)
+        hinstanceLayout polynomial
+        (fun q hq => hopen q (by
+          simp only [assembleQueries]
+          refine List.mem_append.mpr
+            (Or.inl (List.mem_append.mpr
+              (Or.inl (List.mem_append.mpr (Or.inl ?_)))))
+          refine List.mem_flatten.mpr
+            ⟨_, List.mem_ofFn.mpr ⟨proofIndex, rfl⟩, ?_⟩
+          exact List.mem_append.mpr
+            (Or.inl (List.mem_append.mpr
+              (Or.inl (List.mem_append.mpr (Or.inl hq))))) ))
+        query
   · intro proofIndex
     simpa [CanonicalMemberConstraintRelation.acceptedModel,
       canonicalConstraintModelOfPermutationResolver,
@@ -227,6 +278,83 @@ noncomputable def ofOpenings
   · exact congrArg Prod.fst hselectorEvaluations
   · exact congrArg (fun values => values.2.1) hselectorEvaluations
   · exact congrArg (fun values => values.2.2) hselectorEvaluations
+
+/--
+Construct the canonical claimed-evaluation fingerprint directly from decoded
+member-node binding, retaining the augmented-basis relation when binding fails.
+
+Compared with `ofOpenings`, this is the protocol-facing entry point: acceptance
+chooses the route, and node binding supplies all assembled openings.
+-/
+noncomputable def ofNodeBinding_or_relation
+    {shape : Shape}
+    {urs : URS G} {hk : shape.k = urs.k}
+    {vk : VerifyingKey shape Fp G}
+    {instanceCommitment : Fin shape.numProofs → ℕ → G}
+    {ps : ProofString shape Fp G}
+    {ch : Challenges shape.k Fp}
+    {pU pW : Fp} {a : Fin (2 ^ urs.k) → Fp}
+    {batchOpenings :
+      OpenedBatchOpenings urs (evalVector urs.k ch.x3)
+        (x4BatchCommitments
+          (instanceCommitment := instanceCommitment)
+          urs hk vk ps ch)
+        (x4BatchEvals
+          (instanceCommitment := instanceCommitment)
+          vk ps ch)
+        a pU pW}
+    {memberDecode : ∀ i (hi : i <
+        deployedX4PairCount
+          (instanceCommitment := instanceCommitment)
+          vk ps ch),
+      OpenedMemberDecode
+        (instanceCommitment := instanceCommitment)
+        urs hk vk ps ch batchOpenings i hi}
+    {hblinding : vk.blindingFactors < vk.n}
+    (haccepts :
+      DeployedAccepts urs hk vk instanceCommitment ps ch)
+    (hfixedLayout :
+      vk.fixedQueryLayout.length = shape.numFixedQueries)
+    (hadviceLayout :
+      vk.adviceQueryLayout.length = shape.numAdviceQueries)
+    (hinstanceLayout :
+      vk.instanceQueryLayout.length = shape.numInstanceQueries)
+    (hbind : ∀
+      (slot : DeployedMemberSlot
+        (instanceCommitment := instanceCommitment) vk ps ch)
+      (point : Fp),
+      point ∈ deployedSetPts
+          (instanceCommitment := instanceCommitment)
+          vk ps ch slot.setIndex →
+      (decodedMemberPolynomial
+        (instanceCommitment := instanceCommitment)
+        urs hk vk ps ch memberDecode slot).eval point =
+          deployedMemberClaim
+            (instanceCommitment := instanceCommitment)
+            vk ps ch slot point
+        ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+    (hpermutationWellFormed :
+      permutationLastEvalsWellFormed ps = true)
+    (hpermutationRouting :
+      PermutationChunkRoutingCoherent vk)
+    (hrows : Function.Injective
+      fun row : Fin vk.n => vk.omega ^ (row : ℕ))
+    (hroot : vk.omega ^ vk.n = 1)
+    (hnFp : (vk.n : Fp) ≠ 0)
+    (hxDomain : ch.x ^ vk.n ≠ 1) :
+    AcceptedModelClaimedEvaluations
+        (memberDecode := memberDecode)
+        (hblinding := hblinding) haccepts
+      ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  rcases
+      CanonicalMemberConstraintRelation.acceptedPolynomial_opens_or_relation
+        (memberDecode := memberDecode) haccepts hbind with
+    hopen | hrelation
+  · exact Or.inl <|
+      ofOpenings haccepts hfixedLayout hadviceLayout hinstanceLayout
+        hopen hpermutationWellFormed hpermutationRouting
+        hrows hroot hnFp hxDomain
+  · exact Or.inr hrelation
 
 end AcceptedModelClaimedEvaluations
 

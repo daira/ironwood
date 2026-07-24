@@ -168,6 +168,52 @@ noncomputable def acceptedPolynomial
     (instanceCommitment := instanceCommitment)
     urs hk vk ps ch memberDecode (acceptedRoute haccepts)
 
+/--
+Member-node binding opens every assembled query through the accepting run's
+canonical resolver, or produces the existing augmented-basis relation.
+
+This is the verifier-native source of the uniform opening family used by the
+canonical constraint terminal; no caller-selected route or resolver remains.
+-/
+theorem acceptedPolynomial_opens_or_relation
+    (haccepts :
+      DeployedAccepts urs hk vk instanceCommitment ps ch)
+    (hbind : ∀
+      (slot : DeployedMemberSlot
+        (instanceCommitment := instanceCommitment) vk ps ch)
+      (point : Fp),
+      point ∈ deployedSetPts
+          (instanceCommitment := instanceCommitment)
+          vk ps ch slot.setIndex →
+      (decodedMemberPolynomial
+        (instanceCommitment := instanceCommitment)
+        urs hk vk ps ch memberDecode slot).eval point =
+          deployedMemberClaim
+            (instanceCommitment := instanceCommitment)
+            vk ps ch slot point
+        ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w) :
+    (∀ query ∈ assembleQueries vk instanceCommitment ps ch,
+      (acceptedPolynomial
+        (memberDecode := memberDecode) haccepts query.commId).eval
+          query.point = query.eval)
+      ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  let routing :=
+    canonicalRoutingConditions_of_accepts
+      urs hk vk instanceCommitment ps ch haccepts
+  simpa only [acceptedPolynomial, acceptedRoute, routing] using
+    decodedPolynomialResolver_opens_or_relation
+      (instanceCommitment := instanceCommitment)
+      urs hk vk ps ch memberDecode
+      (assembledQueryMemberRoute
+        (instanceCommitment := instanceCommitment)
+        vk ps ch routing.1 routing.2)
+      (assembleQueries vk instanceCommitment ps ch)
+      (fun query hquery =>
+        assembledQueryMemberRoute_faithful
+          (instanceCommitment := instanceCommitment)
+          vk ps ch routing.1 routing.2 query hquery)
+      hbind
+
 /-- The complete constraint model canonically determined by an accepting run. -/
 noncomputable def acceptedModel
     (haccepts :
