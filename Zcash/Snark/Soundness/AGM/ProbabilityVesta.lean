@@ -56,7 +56,6 @@ theorem orchard_deployed_relation_set_eq_relSet (k : ℕ) (B : VestaG)
       Option (DeployedAlgebraicForkingInstance (G := VestaG) k basis)) :
     orchardDeployedRelationSet k B instances =
       relSet B (deployedAlgebraicRelationFinder instances) := by
-  classical
   ext scalars
   simp only [orchardDeployedRelationSet, relSet, Finset.mem_filter, Finset.mem_univ, true_and]
   exact (deployedAlgebraicRelationFinder_isSome_iff instances (scalarBasis B scalars)).symm
@@ -126,7 +125,6 @@ theorem orchard_uniformURSIdentification_of_generatorRO {T : Type*} [DecidableEq
     OrchardUniformURSIdentification
       (orchardGeneratorROSetup query) k B
       (orchardGeneratorROBasis query) := by
-  classical
   letI : Fintype VestaG := Fintype.ofFinite VestaG
   have hinj : Function.Injective (fun c : Fp => c • B) := by
     intro c c' h
