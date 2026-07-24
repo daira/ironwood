@@ -1,4 +1,4 @@
-import Zcash.Circuits.Fixtures.Project
+import Clean.Halo2.Keygen
 import Zcash.Circuits.Fixtures.AddPost
 import Zcash.Circuits.Fixtures.AddSelMap
 import Zcash.Circuits.Ecc.Add

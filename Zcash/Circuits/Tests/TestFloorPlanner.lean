@@ -1,4 +1,4 @@
-import Zcash.Circuits.Fixtures.FloorPlanner
+import Clean.Halo2.Keygen
 import Zcash.Circuits.Tests.TestVkLayoutAdd
 import Zcash.Circuits.Tests.TestVkLayoutMul
 import Zcash.Circuits.Tests.TestVkLayoutAction
@@ -9,7 +9,7 @@ import Zcash.Circuits.Tests.TestVkLayoutActionBase
 
 Closes "phase B": the region `starts` that `Fixtures/Layout.lean` used to read from the
 Rust-dumped layout fixture are now DERIVED from the Halo2-Clean `Operations` by the ported
-floor planners (`Fixtures/FloorPlanner.lean`), and checked EQUAL to the fixture placements:
+floor planners (`Clean.Halo2.Keygen.FloorPlanner`), and checked EQUAL to the fixture placements:
 
 * `SimpleFloorPlanner.starts` == the Add/Mul layout fixtures' per-region starts;
 * `V1.starts` == the Action / Action-base layout fixtures' per-region starts (the legacy
@@ -22,7 +22,7 @@ floor planners (`Fixtures/FloorPlanner.lean`), and checked EQUAL to the fixture 
 
 namespace Zcash.Circuits.Fixtures.Test.FloorPlannerDeriv
 
-open Halo2 Fixtures Fixtures.FloorPlanner
+open Halo2 Fixtures Halo2.FloorPlanner
 
 /-! ## SimpleFloorPlanner: Add and Mul -/
 

@@ -25,7 +25,7 @@ namespace Zcash.Circuits.Fixtures.Json
 
 open Lean (Json JsonNumber)
 open Fixtures
-open Zcash.Snark (Expr)
+open Halo2 (RichExpression)
 
 /-! ## Content hash (FNV-1a 64) -/
 
@@ -114,9 +114,11 @@ def getQuad (j : Json) : Except String (ℕ × ℕ × ℕ × ℕ) := do
   | #[a, b, c, d] => pure (← getNat a, ← getNat b, ← getNat c, ← getNat d)
   | _ => .error "expected [nat, nat, nat, nat]"
 
-/-! ## Gate-polynomial `Expr` (tagged arrays) -/
+/-! ## Gate-polynomial `RichExpression` (tagged arrays)
 
-def jExpr : Expr Fp → Json
+The dumped gates are post-compression, hence selector-free, so no `selector` tag occurs. -/
+
+def jExpr : RichExpression Fp → Json
   | .constant c => Json.arr #["c", jFp c]
   | .fixed i => Json.arr #["f", jNat i]
   | .advice i => Json.arr #["a", jNat i]
@@ -125,8 +127,9 @@ def jExpr : Expr Fp → Json
   | .sum a b => Json.arr #["+", jExpr a, jExpr b]
   | .product a b => Json.arr #["*", jExpr a, jExpr b]
   | .scaled e c => Json.arr #["s", jExpr e, jFp c]
+  | .selector i => Json.arr #["sel", jNat i]
 
-partial def getExpr (j : Json) : Except String (Expr Fp) := do
+partial def getExpr (j : Json) : Except String (RichExpression Fp) := do
   match ← getArr j with
   | #[.str "c", c] => pure (.constant (← getFp c))
   | #[.str "f", i] => pure (.fixed (← getNat i))
@@ -136,7 +139,7 @@ partial def getExpr (j : Json) : Except String (Expr Fp) := do
   | #[.str "+", a, b] => pure (.sum (← getExpr a) (← getExpr b))
   | #[.str "*", a, b] => pure (.product (← getExpr a) (← getExpr b))
   | #[.str "s", e, c] => pure (.scaled (← getExpr e) (← getFp c))
-  | _ => .error s!"unknown Expr node {j.compress}"
+  | _ => .error s!"unknown RichExpression node {j.compress}"
 
 /-! ## `CsFixture` -/
 

@@ -1,6 +1,5 @@
-import Zcash.Circuits.Fixtures.PinnedConstraintSystem
-import Zcash.Circuits.Fixtures.CompressSelectors
-import Zcash.Circuits.Fixtures.FloorPlanner
+import Clean.Halo2.Keygen
+import Zcash.Common.ExprRich
 import Zcash.Circuits.Specs.SinsemillaGenerators
 import Zcash.Circuits.Action.Circuit
 import Zcash.Circuits.Action.RealBases
@@ -10,14 +9,16 @@ import Zcash.Snark.Verifier.Assemble
 /-!
 # The verifying key's pinned constraint system, on the verifier side
 
-Crosses `Zcash.Circuits.Fixtures.PinnedConstraintSystem` to the verifier's
-`VerifyingKey` record. The pinned record carries more than the verifier's runtime
-`VerifyingKey` (counts, constants), so the record-level capture equality lives fixture
-side (`Zcash.Snark.Fixtures.SingleAction.PinnedCsMatch`), and the verifying key
-connects field-wise: `VerifyingKey.gates_eval_of_gates_eq` carries the derived-gate
-semantics (`derive_gates_eval`) to any verifying key whose gate list equals a
-derivation's — the gate-side input to the Clean-constraints transport. `actionCS` is
-the Action instance of the source constraint system.
+Crosses the Clean-core pinned constraint system (`Clean.Halo2.Keygen`,
+`Halo2.PinnedConstraintSystem`) to the verifier's `VerifyingKey` record. The pinned
+record carries more than the verifier's runtime `VerifyingKey` (counts, constants), so
+the record-level capture equality lives fixture side
+(`Zcash.Snark.Fixtures.SingleAction.PinnedCsMatch`), and the verifying key connects
+field-wise: `VerifyingKey.gates_eval_of_gates_eq` carries the derived-gate semantics
+(`derive_gates_eval`) to any verifying key whose gate list equals a derivation's (through
+the `Expr`/`RichExpression` boundary conversion `RichExpression.ofExpr`) — the gate-side
+input to the Clean-constraints transport. `actionCS` is the Action instance of the source
+constraint system.
 
 This module also hosts the DERIVED keygen data of the pinned-CS derivation: the
 closed Action circuit's operation stream (`actionOperations`) and the
@@ -30,17 +31,20 @@ Rust-dumped `actionSelMap` survives only as a cross-check in `TestSelMapDerivati
 namespace Zcash.Snark
 
 open Halo2
-open Circuits.Fixtures
 
 /-- **A verifying key whose gate list is a derivation's evaluates like the source
-circuit.** Given `vk.gates = (.derive cs map).gates` and selector coverage, the
-`j`-th VK gate — at query families interpreting the derivation walk's layout —
-evaluates to the `j`-th flattened Clean gate expression under the selector-replacement
-valuation. -/
+circuit.** The verifier holds `Zcash.Snark.Expr` gates while the derivation produces
+`Halo2.RichExpression` gates, so the hypothesis relates them through the boundary
+conversion (`RichExpression.ofExpr`): `(.derive cs map).gates = vk.gates.map ofExpr`. Given
+that and selector coverage, the `j`-th VK gate — at query families interpreting the
+derivation walk's layout — evaluates to the `j`-th flattened Clean gate expression under
+the selector-replacement valuation. The evaluation transports across the boundary because
+`ofExpr` preserves evaluation (`RichExpression.eval_ofExpr`). -/
 theorem VerifyingKey.gates_eval_of_gates_eq
     {shape : Shape} {G : Type*} (vk : VerifyingKey shape Fp G)
     (cs : ConstraintSystem Fp) (map : SelCompressMap)
-    (hgates : vk.gates = (PinnedConstraintSystem.derive cs map).gates)
+    (hgates : (PinnedConstraintSystem.derive cs map).gates
+      = vk.gates.map RichExpression.ofExpr)
     (fE aE iE : ℕ → Fp) (v : Query → Fp)
     (hcov : ∀ p ∈ flatGates cs,
       p.selectorsCovered (fun i => (map.lookup i).isSome) = true)
@@ -50,16 +54,18 @@ theorem VerifyingKey.gates_eval_of_gates_eq
     (j : ℕ) (hg : j < vk.gates.length) (hp : j < (flatGates cs).length) :
     Expr.eval fE aE iE vk.gates[j]
       = Expression.eval (substValuation map.lookup v) (flatGates cs)[j] := by
-  rw [List.getElem_of_eq hgates hg]
-  exact PinnedConstraintSystem.derive_gates_eval cs map fE aE iE v hcov
-    hint j (hgates ▸ hg) hp
+  have hg' : j < (PinnedConstraintSystem.derive cs map).gates.length := by
+    rw [hgates, List.length_map]; exact hg
+  have key := PinnedConstraintSystem.derive_gates_eval cs map fE aE iE v hcov hint j hg' hp
+  rw [List.getElem_of_eq hgates hg', List.getElem_map,
+    RichExpression.eval_ofExpr] at key
+  exact key
 
 end Zcash.Snark
 
 namespace Zcash.Bridge
 
 open Halo2
-open Circuits.Fixtures
 open Circuits.Specs.Sinsemilla (orchardGenerators)
 open Snark (Fp)
 
@@ -93,34 +99,17 @@ Cross-checked EQUAL to the Rust-dumped `actionSelMap` in `TestSelMapDerivation`;
 the derivation witness of `actionPinnedCs` (`PinnedCsMatch`). -/
 def actionSelMapDerived (n : ℕ) : SelCompressMap :=
   deriveSelCompressMap actionCS n
-    (Layout.activations (FloorPlanner.V1.starts actionOperations)
-      (Layout.indexedRegions actionOperations 0).1)
+    (activations (FloorPlanner.V1.starts actionOperations)
+      (indexedRegions actionOperations 0).1)
 
 /-! ## The domain exponent `k`, derived
 
 Rust does not compute `k` — orchard pins `const K: u32 = 11` (`circuit.rs:76`) and
-keygen *asserts* the circuit fits: every assignment row must lie in
-`usable_rows = 0..n − (blinding_factors + 1)` (`keygen.rs` `Assembly`) and
-`n ≥ cs.minimum_rows()` (`keygen.rs:200`). The minimal `k` satisfying those asserts is
-therefore the faithful derived value: it equals the pinned constant today (Action:
+keygen *asserts* the circuit fits (`Halo2.minimalK`, the minimal `k` for which every
+assignment row lies in `usable_rows = 0..n − (blinding_factors + 1)` and
+`n ≥ cs.minimum_rows()`, `keygen.rs`). It equals the pinned constant today (Action:
 regions end at row 1779, tables are 1024 rows, blinding 5 → `2^10` fails, `2^11` fits)
 and moves exactly when Rust's assert would force the constant to move. -/
-
-/-- The rows the keygen-view synthesize occupies: floor-planned region extents and
-loaded table lengths (both must fit in the usable rows). -/
-def usedRows (ops : Operations Fp) : ℕ :=
-  let shapes := FloorPlanner.measureRegions ops
-  let starts := FloorPlanner.V1.starts ops
-  let regionEnd := ((starts.zip shapes).map fun (s, sh) => s + sh.rowCount).foldl max 0
-  let tableLen := (ops.filterMap fun op => match op with
-    | .loadTable _ vals => some vals.length
-    | _ => none).foldl max 0
-  max regionEnd tableLen
-
-/-- The minimal domain exponent for which the circuit fits keygen's asserts. -/
-def minimalK (cs : ConstraintSystem Fp) (ops : Operations Fp) : ℕ :=
-  let need := max (usedRows ops + cs.blindingFactors + 1) cs.minimumRows
-  ((List.range 33).find? (fun k => need ≤ 2 ^ k)).getD 33
 
 /-- The Action circuit's derived domain exponent (= orchard's `K = 11`; the equality is
 `#guard`ed in `TestSelMapDerivation`). -/

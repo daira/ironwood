@@ -29,7 +29,7 @@ general theorems (see `TrustBoundary` in this directory for the discipline).
 namespace Zcash.Snark.Fixture
 
 open Bridge
-open Circuits.Fixtures
+open Halo2
 
 /-- The capture's permutation columns, in raw column space. The capture's
 `vkPermutationChunks` stores the verifier view — `ColumnRef`s in QUERY-INDEX space
@@ -43,19 +43,21 @@ def capturedPermutationColumns : List Halo2.AnyColumn :=
     | .fixed qi => ⟨.fixed, (vkFixedQueryLayout.getD qi (0, 0)).1⟩
     | .instance qi => ⟨.instance, (vkInstanceQueryLayout.getD qi (0, 0)).1⟩
 
-/-- The capture's CS data, as the pinned record. -/
-def capturedPinnedCs : PinnedConstraintSystem where
+/-- The capture's CS data, as the pinned record. The captured gate/lookup expressions are
+verifier-typed `Zcash.Snark.Expr`; the pinned record holds `Halo2.RichExpression`, so they
+convert at the boundary (`RichExpression.ofExpr`). -/
+def capturedPinnedCs : PinnedConstraintSystem Fp where
   numFixedColumns := vkNumFixedColumns
   numAdviceColumns := vkNumAdviceColumns
   numInstanceColumns := vkNumInstanceColumns
   numSelectors := vkNumSelectors
-  gates := vkGates
+  gates := vkGates.map RichExpression.ofExpr
   adviceQueryLayout := vkAdviceQueryLayout
   fixedQueryLayout := vkFixedQueryLayout
   instanceQueryLayout := vkInstanceQueryLayout
   permutationColumns := capturedPermutationColumns
-  lookupInputExprs := vkLookupInputExprs
-  lookupTableExprs := vkLookupTableExprs
+  lookupInputExprs := vkLookupInputExprs.map (·.map RichExpression.ofExpr)
+  lookupTableExprs := vkLookupTableExprs.map (·.map RichExpression.ofExpr)
   constants := vkConstants
   minimumDegree := vkMinimumDegree
 
@@ -63,7 +65,7 @@ def capturedPinnedCs : PinnedConstraintSystem where
 circuit's own configure-recorded registration (see the module docstring), at the
 derived domain size `2^actionK` (`minimalK`, the keygen fit condition — no domain
 constant survives as an input either). -/
-def actionPinnedCs : PinnedConstraintSystem :=
+def actionPinnedCs : PinnedConstraintSystem Fp :=
   .derive actionCS (actionSelMapDerived (2 ^ actionK))
 
 /-- **The capture is the derived Action circuit** (pinned CS), and the derivation is

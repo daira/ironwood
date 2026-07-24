@@ -1,4 +1,5 @@
 import Zcash.Bridge.VkProjection
+import Zcash.Circuits.Fixtures.Layout
 import Zcash.Circuits.Action.Bundle
 import Zcash.Snark.Soundness.Multiopen.ConstraintResolver
 import Zcash.Snark.Soundness.PolynomialEnvironment

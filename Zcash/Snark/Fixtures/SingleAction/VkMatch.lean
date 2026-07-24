@@ -15,7 +15,7 @@ the lookup expression lists need re-flattening.
 namespace Zcash.Snark.Fixture
 
 open Bridge
-open Circuits.Fixtures
+open Halo2
 
 theorem vk_lookupInputs_ofFn : List.ofFn vk.lookupInputExprs = vkLookupInputExprs := by
   native_decide
@@ -23,8 +23,11 @@ theorem vk_lookupInputs_ofFn : List.ofFn vk.lookupInputExprs = vkLookupInputExpr
 theorem vk_lookupTables_ofFn : List.ofFn vk.lookupTableExprs = vkLookupTableExprs := by
   native_decide
 
-/-- **The captured verifying key's gates are the derived Action circuit's.** -/
-theorem vk_gates_eq_derived : vk.gates = actionPinnedCs.gates :=
+/-- **The captured verifying key's gates are the derived Action circuit's.** The verifying
+key holds `Zcash.Snark.Expr` gates and the derivation holds `Halo2.RichExpression` gates, so
+the equality is stated through the boundary conversion `RichExpression.ofExpr`. -/
+theorem vk_gates_eq_derived :
+    vk.gates.map RichExpression.ofExpr = actionPinnedCs.gates :=
   congrArg PinnedConstraintSystem.gates capturedPinnedCs_eq_derived
 
 theorem vk_adviceQueryLayout_eq_derived :
@@ -40,14 +43,16 @@ theorem vk_instanceQueryLayout_eq_derived :
   congrArg PinnedConstraintSystem.instanceQueryLayout capturedPinnedCs_eq_derived
 
 theorem vk_lookupInputExprs_eq_derived :
-    List.ofFn vk.lookupInputExprs = actionPinnedCs.lookupInputExprs :=
-  vk_lookupInputs_ofFn.trans
-    (congrArg PinnedConstraintSystem.lookupInputExprs capturedPinnedCs_eq_derived)
+    (List.ofFn vk.lookupInputExprs).map (·.map RichExpression.ofExpr)
+      = actionPinnedCs.lookupInputExprs := by
+  rw [vk_lookupInputs_ofFn]
+  exact congrArg PinnedConstraintSystem.lookupInputExprs capturedPinnedCs_eq_derived
 
 theorem vk_lookupTableExprs_eq_derived :
-    List.ofFn vk.lookupTableExprs = actionPinnedCs.lookupTableExprs :=
-  vk_lookupTables_ofFn.trans
-    (congrArg PinnedConstraintSystem.lookupTableExprs capturedPinnedCs_eq_derived)
+    (List.ofFn vk.lookupTableExprs).map (·.map RichExpression.ofExpr)
+      = actionPinnedCs.lookupTableExprs := by
+  rw [vk_lookupTables_ofFn]
+  exact congrArg PinnedConstraintSystem.lookupTableExprs capturedPinnedCs_eq_derived
 
 /-! ## The VK's domain and permutation scalars, derived
 
