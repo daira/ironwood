@@ -1,5 +1,8 @@
 import Zcash.Snark.Soundness.InstanceCommitment
+import Zcash.Snark.Soundness.FixedLayout
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
+import Zcash.Snark.Soundness.SelectorCoherence
+import Zcash.Snark.Keygen.Pipeline
 
 /-!
 # Fixed-column commitment provenance
@@ -17,12 +20,152 @@ the circuit-owned instance.
 
 namespace Zcash.Snark
 
-open Polynomial
+open Halo2 Polynomial
+open Zcash.Circuits
+open Zcash.Circuits.Fixtures
 
 set_option maxHeartbeats 20000
 
-variable {G : Type*} [AddCommGroup G] [Module Fp G]
+variable {G : Type} [AddCommGroup G] [Module Fp G]
   [DecidableEq G] [Inhabited G]
+
+variable
+    {ConfigInput Config : Type} {Output : TypeMap}
+    [CircuitType Output]
+
+/-- Sparse table and region-local fixed assignments emitted by top-level keygen. -/
+def topLevelFixedOperationEntries
+    (top : TopLevelCircuit Fp ConfigInput Config Output) :
+    List (ℕ × ℕ × ℕ) :=
+  Layout.tableFixed (ZMod.val : Fp → ℕ)
+      (top.usableRowsAt top.domainExponent) (top.operations 0) ++
+    Layout.regionAssignFixed (ZMod.val : Fp → ℕ)
+      top.regionStarts (indexedRegions (top.operations 0) 0).1
+
+/-- Sparse packed-selector assignments emitted by top-level keygen. -/
+def topLevelSelectorEntries
+    (top : TopLevelCircuit Fp ConfigInput Config Output) :
+    List (ℕ × ℕ × ℕ) :=
+  Layout.selectorFixed top.selectorMap top.selectorActivations
+
+/--
+The fixed-row part of a top-level circuit's keygen boundary.
+
+This record contains no proof-dependent data. Its rows, commitments, and query
+coverage are shared by every proof in a bundle. `realizes` is the layout compiler's
+sparse-to-dense correctness statement for exactly the entries consumed by Clean
+fixed/table semantics and selector activation.
+-/
+structure TopLevelFixedCoherence
+    {ConfigInput Config : Type} {Output : TypeMap}
+    [CircuitType Output]
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : Keygen.ProofParams) (urs : URS G) where
+  key :
+    LagrangeCommitmentKey urs (top.toVerifierKey pp urs).omega
+  rows : ℕ → List Fp
+  commitment : ∀ column,
+    column < top.pinnedCS.numFixedColumns →
+      (top.toVerifierKey pp urs).fixedCommitment column =
+        key.commitInstance (rows column) 1
+  query : ∀ column,
+    column < top.pinnedCS.numFixedColumns →
+      ∀ (instanceCommitment :
+          Fin (pp.mergeDerived top).numProofs → ℕ → G)
+        (ps : ProofString (pp.mergeDerived top) Fp G)
+        (ch : Challenges (pp.mergeDerived top).k Fp),
+        ∃ q ∈ assembleQueries
+          (top.toVerifierKey pp urs) instanceCommitment ps ch,
+          q.commId = .fixedCol column
+  realizes : ∀ column row value,
+    (column, row, value) ∈
+        (topLevelFixedOperationEntries top ++
+          topLevelSelectorEntries top) →
+      row < (top.toVerifierKey pp urs).n ∧
+        column < top.pinnedCS.numFixedColumns ∧
+        (rows column).getD row 0 = (value : Fp)
+
+omit [Module Fp G] [DecidableEq G] in
+/--
+Polynomial binding for every used fixed column supplies selector and fixed/table
+semantics. This lemma is independent of decoded-member provenance; callers choose
+the exceptional event carried by `binding`.
+-/
+theorem topLevelFixedConstraints_or_bad
+    {ConfigInput Config : Type} {Output : TypeMap}
+    [CircuitType Output]
+    {top : TopLevelCircuit Fp ConfigInput Config Output}
+    {pp : Keygen.ProofParams} {urs : URS G}
+    (poly : CommitmentId → Polynomial Fp)
+    (rows : ℕ → List Fp)
+    (hrows : Function.Injective
+      fun i : Fin (2 ^ urs.k) =>
+        (top.toVerifierKey pp urs).omega ^ (i : ℕ))
+    (hn : (top.toVerifierKey pp urs).n = 2 ^ urs.k)
+    (realizes : ∀ column row value,
+      (column, row, value) ∈
+          (topLevelFixedOperationEntries top ++
+            topLevelSelectorEntries top) →
+        row < (top.toVerifierKey pp urs).n ∧
+          column < top.pinnedCS.numFixedColumns ∧
+          (rows column).getD row 0 = (value : Fp))
+    {Bad : Prop}
+    (binding : ∀ column,
+      column < top.pinnedCS.numFixedColumns →
+        poly (.fixedCol column) =
+            instanceRowPolynomial (2 ^ urs.k)
+              (top.toVerifierKey pp urs).omega (rows column) ∨
+          Bad)
+    (proofIndex : Fin (pp.mergeDerived top).numProofs) :
+    (SelectorActivationsRealized
+        top.selectorMap top.selectorActivations
+        (resolverEnvironment
+          (top.toVerifierKey pp urs) poly proofIndex
+          (top.usableRowsAt top.domainExponent)) ∧
+      CircuitConstraintFamily.constraints .fixed top.placement
+        (resolverEnvironment
+          (top.toVerifierKey pp urs) poly proofIndex
+          (top.usableRowsAt top.domainExponent))
+        (top.operations 0) 0) ∨ Bad := by
+  classical
+  by_cases hbad : Bad
+  · exact Or.inr hbad
+  · apply Or.inl
+    let environment :=
+      resolverEnvironment
+        (top.toVerifierKey pp urs) poly proofIndex
+        (top.usableRowsAt top.domainExponent)
+    have fixedRead :
+        ∀ {column row value},
+          (column, row, value) ∈
+              (topLevelFixedOperationEntries top ++
+                topLevelSelectorEntries top) →
+            environment.fixed ⟨column⟩ (row : ℤ) = (value : Fp) := by
+      intro column row value hentry
+      obtain ⟨hrow, hcolumn, hvalue⟩ :=
+        realizes column row value hentry
+      have hpolyEq := (binding column hcolumn).resolve_right hbad
+      have hrow' : row < 2 ^ urs.k := by
+        rwa [← hn]
+      rw [resolverEnvironment_fixed, hpolyEq]
+      simpa using
+        (instanceRowPolynomial_eval hrows
+          ⟨row, hrow'⟩).trans hvalue
+    change
+      SelectorActivationsRealized
+          top.selectorMap top.selectorActivations environment ∧
+        CircuitConstraintFamily.constraints .fixed
+          (Layout.place top.regionStarts) environment
+          (top.operations 0) 0
+    constructor
+    · apply selectorActivationsRealized_of_selectorFixed
+      intro column row value hentry
+      exact fixedRead (List.mem_append_right _ hentry)
+    · exact FixedLayout.constraints_of_entries
+        top.regionStarts (top.usableRowsAt top.domainExponent)
+        (top.operations 0) 0 environment rfl
+        (fun column row value hentry =>
+          fixedRead (List.mem_append_left _ hentry))
 
 namespace CanonicalMemberConstraintRelation
 
@@ -137,6 +280,73 @@ theorem fixedColumn_eq_rowPolynomial_or_relation
       decodedPolynomialResolver, routedFixed]
     exact heq
   · exact Or.inr hrelation
+
+/--
+Circuit-derived fixed rows discharge both consumers of fixed-column semantics:
+packed selector activations and explicit fixed/table operations. Commitment binding
+is retained as an explicit alternative.
+-/
+theorem topLevelFixedConstraints_or_relation
+    {ConfigInput Config : Type} {Output : TypeMap}
+    [CircuitType Output]
+    {top : TopLevelCircuit Fp ConfigInput Config Output}
+    {pp : Keygen.ProofParams}
+    {urs : URS G}
+    {hk : (pp.mergeDerived top).k = urs.k}
+    {vk : VerifyingKey (pp.mergeDerived top) Fp G}
+    {instanceCommitment :
+      Fin (pp.mergeDerived top).numProofs → ℕ → G}
+    {ps : ProofString (pp.mergeDerived top) Fp G}
+    {ch : Challenges (pp.mergeDerived top).k Fp}
+    {pU pW : Fp} {a : Fin (2 ^ urs.k) → Fp}
+    {batchOpenings :
+      OpenedBatchOpenings urs (evalVector urs.k ch.x3)
+        (x4BatchCommitments
+          (instanceCommitment := instanceCommitment)
+          urs hk vk ps ch)
+        (x4BatchEvals
+          (instanceCommitment := instanceCommitment)
+          vk ps ch)
+        a pU pW}
+    {memberDecode : ∀ i (hi : i <
+        deployedX4PairCount
+          (instanceCommitment := instanceCommitment)
+          vk ps ch),
+      OpenedMemberDecode
+        (instanceCommitment := instanceCommitment)
+        urs hk vk ps ch batchOpenings i hi}
+    {hblinding : vk.blindingFactors < vk.n}
+    {y : Fp} {hpoly : Polynomial Fp}
+    (relation :
+      CanonicalMemberConstraintRelation
+        urs hk vk instanceCommitment ps ch pU pW a
+        batchOpenings memberDecode hblinding y hpoly vk.n)
+    (hvk : vk = top.toVerifierKey pp urs)
+    (coherence : TopLevelFixedCoherence top pp urs)
+    (hrows : Function.Injective
+      fun i : Fin (2 ^ urs.k) =>
+        (top.toVerifierKey pp urs).omega ^ (i : ℕ))
+    (hn : (top.toVerifierKey pp urs).n = 2 ^ urs.k)
+    (proofIndex : Fin (pp.mergeDerived top).numProofs) :
+    (SelectorActivationsRealized
+        top.selectorMap top.selectorActivations
+        (resolverEnvironment
+          (top.toVerifierKey pp urs) relation.polynomial proofIndex
+          (top.usableRowsAt top.domainExponent)) ∧
+      CircuitConstraintFamily.constraints .fixed top.placement
+        (resolverEnvironment
+          (top.toVerifierKey pp urs) relation.polynomial proofIndex
+          (top.usableRowsAt top.domainExponent))
+        (top.operations 0) 0) ∨
+      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  subst vk
+  apply topLevelFixedConstraints_or_bad
+    relation.polynomial coherence.rows hrows hn coherence.realizes
+  · intro column hcolumn
+    exact relation.fixedColumn_eq_rowPolynomial_or_relation
+      column coherence.key (coherence.rows column)
+      (coherence.commitment column hcolumn) hrows
+      (coherence.query column hcolumn instanceCommitment ps ch)
 
 end CanonicalMemberConstraintRelation
 

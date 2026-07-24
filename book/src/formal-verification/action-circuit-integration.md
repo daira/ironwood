@@ -284,6 +284,12 @@ circuit-owned gate/selector coherence package. Its remaining explicit inputs are
 copy, lookup, and fixed operation families. Deriving those three families, rather
 than accepting a generic reconstruction function, is now the precise deterministic
 completion criterion for `hencodes`.
+The binding-aware
+`actionBundleStatement_or_relation_of_canonicalRelation` additionally derives the
+selector and fixed/table families from `TopLevelFixedCoherence`; its only remaining
+operation-family premises are copy and lookup satisfaction. A fixed-column mismatch
+returns the shared augmented commitment-relation event instead of becoming a silent
+binding assumption.
 `LookupInstantiation` now constructs those coherent lookup entries from an arbitrary
 VK and a `CommitmentId`-keyed polynomial resolver, proves that openings for the actual
 assembled lookup queries give the verifier's five claimed evaluations, and specializes
@@ -593,6 +599,12 @@ with the canonical interpolated row polynomial or a computed nontrivial relation
 among `(g, U, W)`. Consequently fixed and selector satisfaction will not silently
 assume commitment binding: the integration theorem exposes the same exceptional
 branch that the deployed probability layer must price.
+`TopLevelFixedCoherence` packages the proof-independent keygen data—dense rows,
+their Lagrange commitments, fixed-query coverage, and sparse-to-dense layout
+correctness. `topLevelFixedConstraints_or_relation` uses that package to discharge
+both selector activations and all fixed/table operations for a resolver assignment.
+The remaining constructor work is to instantiate this package from the generic
+`TopLevelCircuit.toVerifierKey` pipeline.
 
 The generic operation walk already proves that every extracted enabled gate occurs in
 the floor-planner activation table, and `selectorScale_ne_zero_of_enabledGate` turns
