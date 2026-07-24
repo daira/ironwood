@@ -31,7 +31,6 @@ open Zcash.Circuits.Action
 open Zcash.Circuits.Action.Circuit
 open Zcash.Circuits.Specs.Sinsemilla
 open Zcash.Security.Concrete
-open Zcash.Security.Ledger
 open CompElliptic.Fields.Pasta (PALLAS_BASE_CARD)
 open Halo2
 
