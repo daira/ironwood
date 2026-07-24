@@ -381,6 +381,26 @@ The generic top-level boundary and the Action-side closure are now implemented.
 run, and provides verifier- and prover-side theorems with no exposed
 `EnvAssumptions` premise. `SynthesisWellFormed` currently records the generic layout
 fact needed by table loaders: every declared table block fits in `usableRows`.
+`TopLevelCircuit.Statement` names the semantic proposition extracted from a placed
+environment, so the SNARK bridge can target an arbitrary closed formal circuit
+without mentioning its circuit-specific `Spec`.
+
+The generic keygen layer now derives from the top-level circuit itself:
+
+- `TopLevelCircuit.pinnedCS` runs `FormalCircuit.toPinnedCS` on the circuit's fixed
+  configuration input and unit synthesis input;
+- `regionStarts` and `placement` run the V1 floor planner over the circuit's own
+  operation stream;
+- `usedRows`, `blindingFactors`, `usableRowsAt`, and `FitsAt` state the keygen domain
+  fit entirely in circuit-owned terms;
+- `TopLevelCircuit.synthesisWellFormed` proves that a fitting domain supplies the
+  table-fit contract required by top-level soundness.
+
+On the SNARK side, `FullCircuitSatisfaction.topLevelSoundness` composes exact
+gate/copy/lookup/fixed satisfaction with that generic top-level endpoint.
+`FullCircuitBridge.topLevelSoundness_or_bad` performs the same composition while
+preserving the bridge's shared exceptional event. Neither theorem mentions the
+Action circuit, an Action-specific placement, or Action-specific operations.
 
 `Action.topLevelCircuit` instantiates that boundary. It projects the initial
 Sinsemilla generator-table load from the real `mainPost` operation stream and derives:
@@ -395,20 +415,22 @@ its fixed-table clauses to the corresponding constraints. The deployed
 `orchardActionTopLevelCircuit` specializes this generic Action construction to the
 real generators and certified bases.
 
-`ActionAssignment` now fixes the generic construction's circuit-side choices. It uses
-the V1 placement derived from `Bridge.actionOperations`, computes usable rows as
-`vk.n - vk.blindingFactors - 1`, selects one proof member's fixed/advice/instance
-polynomials through `resolverEnvironment`, and packages the result as a placed Clean
-environment. `ActionAssignment.ofDecodedMembers` specializes this to the actual
-`decodedPolynomialResolver`; the remaining work is proving the concrete VK and public
-instance polynomials satisfy the Action-specific representation facts below.
+The existing `ActionAssignment` still packages one proof member's
+fixed/advice/instance polynomials through `resolverEnvironment`, but its API predates
+the circuit-owned keygen layer: it takes a `VerifyingKey` and repeats Action placement
+and usable-row choices. It is temporary. Once `FormalCircuit.toVerifyingKey` is
+available, replace it with a generic top-level assignment whose VK, pinned CS,
+placement, and operations are derived from the `TopLevelCircuit`. The external
+accepted Action VK then enters only through a certificate that it equals (or has the
+required fields equal to) the derived VK.
 
 The compositional base and post-Ironwood `FormalCircuit`s intentionally retain their
 `EnvAssumptions`: child circuits may state contracts that a parent fulfills.
 `TopLevelCircuit` is the separate deployment boundary that closes those contracts.
-The remaining assignment work is therefore to prove `SynthesisWellFormed` for the
-transported Action environment from the concrete VK/domain and operation stream, then
-feed the transported `Constraints` to `orchardActionTopLevelCircuit.soundness`.
+The generic `SynthesisWellFormed` and full-satisfaction-to-statement steps are now
+complete. The remaining assignment work is to connect the circuit-derived VK/domain
+to the resolver environment, then construct the gate/copy/lookup/fixed witnesses that
+feed `FullCircuitBridge.topLevelSoundness_or_bad`.
 
 Note that most of `EnvAssumptions` should come out of the transported `Constraints`
 themselves rather than separate VK-fixed-data facts: `GeneratorTableExact` is defined
@@ -475,11 +497,14 @@ whose public inputs were committed by the verifier.
    circuit-satisfaction record in the computed endpoint.
 2. Make #89's post-compression CS and layout fixtures available as reusable Lean data,
    and prove VK/layout equality theorems that discharge #30's routing hypotheses.
-3. The canonical polynomial-to-row decoder and the Action top-level environment
-   closure are complete. Construct its placed Action environment and derive
-   `SynthesisWellFormed` from the concrete VK/domain.
-4. Prove the decomposed full-satisfaction-to-Action bridge, first for one selected
-   Action and then for every `Fin shape.numProofs`.
+3. The canonical polynomial-to-row decoder, Action top-level environment closure,
+   circuit-owned pinned CS/V1 placement/domain fit, and generic
+   full-satisfaction-to-`TopLevelCircuit.Statement` endpoint are complete. Replace the
+   legacy Action assignment with a generic circuit-owned-VK assignment and discharge
+   its resolver representation facts.
+4. Instantiate the generic decomposed bridge for one selected Action, adapt
+   `TopLevelCircuit.Statement` to the external Action statement, and then generalize
+   it to every `Fin shape.numProofs`.
 5. Supply the decoded/full-satisfaction data inside the computed experiment, close the
    remaining adaptive-coupling/`hExtract` obligation, instantiate the endpoint with
    `ActionStatement`, and add the theorem to the consolidated trust boundary.

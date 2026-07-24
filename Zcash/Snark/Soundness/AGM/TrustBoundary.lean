@@ -22,6 +22,7 @@ import Zcash.Snark.Soundness.OperationGates
 import Zcash.Snark.Soundness.OperationFixed
 import Zcash.Snark.Soundness.LookupSemantics
 import Zcash.Snark.Soundness.CircuitIntegration
+import Zcash.Snark.Soundness.TopLevelCircuit
 import Zcash.Snark.Soundness.PolynomialEnvironment
 import Zcash.Snark.Soundness.ActionAssignment
 import Zcash.Snark.Soundness.Composition.Decomposition
@@ -522,6 +523,11 @@ assert_no_sorry CopyReplayWitness.constraints_or_bad
 assert_no_sorry FullCircuitBridge.ofPolynomialWitnesses
 assert_no_sorry FullCircuitBridge.satisfaction_or_bad
 assert_no_sorry FullCircuitBridge.constraints_or_bad
+assert_no_sorry Zcash.Circuits.SynthesisWellFormed.of_usedRows
+assert_no_sorry Zcash.Circuits.TopLevelCircuit.usedRows_le_usableRowsAt
+assert_no_sorry Zcash.Circuits.TopLevelCircuit.synthesisWellFormed
+assert_no_sorry FullCircuitSatisfaction.topLevelSoundness
+assert_no_sorry FullCircuitBridge.topLevelSoundness_or_bad
 assert_no_sorry polynomialEnvironment_query_advice
 assert_no_sorry polynomialEnvironment_query_fixed
 assert_no_sorry polynomialEnvironment_query_instance

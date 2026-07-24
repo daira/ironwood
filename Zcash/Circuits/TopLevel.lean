@@ -86,6 +86,14 @@ def operations (self : TopLevelCircuit F ConfigInput Config Output)
     (i : RegionIndex := 0) : Operations F :=
   (self.formalCircuit.synthesize self.config ()).operations i
 
+/-- The semantic statement extracted from a placed satisfying assignment. -/
+def Statement (self : TopLevelCircuit F ConfigInput Config Output)
+    (i : RegionIndex) (env : Placed Environment F) : Prop :=
+  self.formalCircuit.Spec
+    (eval env (show Var unit F from ()))
+    (eval env (self.formalCircuit.output self.config () i))
+    (self.formalCircuit.extract self.config () i env)
+
 /--
 Generic verifier-side top-level soundness.  The public theorem consumes successful
 synthesis/layout and the circuit constraints, but no circuit-specific environment or
@@ -96,10 +104,7 @@ theorem soundness
     (i : RegionIndex) (env : Placed Environment F)
     (hwellFormed : SynthesisWellFormed env.env (self.operations i))
     (hconstraints : Constraints env.place env.env (self.operations i) i) :
-    self.formalCircuit.Spec
-      (eval env (show Var unit F from ()))
-      (eval env (self.formalCircuit.output self.config () i))
-      (self.formalCircuit.extract self.config () i env) := by
+    self.Statement i env := by
   apply self.formalCircuit.soundness self.config i env ()
   · exact self.closesEnvironmentSoundness i env hwellFormed hconstraints
   · rw [self.assumptions_eq]
