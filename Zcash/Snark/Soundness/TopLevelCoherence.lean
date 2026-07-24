@@ -1,4 +1,5 @@
 import Zcash.Circuits.TopLevel
+import Clean.Halo2.Keygen.FloorPlanner
 import Zcash.Snark.Soundness.OperationGates
 import Zcash.Snark.Soundness.OperationLookups
 
@@ -140,5 +141,82 @@ theorem lookup
           exact ih hrest henabled
 
 end OperationsKeygenCoherent
+
+/-- A region gate activation occurs in the keygen selector-activation table. -/
+theorem mem_regionActivations_of_mem_enabledGate
+    {F : Type} (starts : List ℕ)
+    {self : RegionIndex} {body : RegionOperations F}
+    {enabled : EnabledGate F}
+    (henabled : enabled ∈ regionEnabledGates self body) :
+    (enabled.gate.selector.index,
+      starts.getD enabled.region 0 + enabled.row) ∈
+      activations starts [(self, body)] := by
+  simp only [activations, List.flatMap_cons, List.flatMap_nil,
+    List.append_nil]
+  induction body with
+  | nil =>
+      simp [regionEnabledGates] at henabled
+  | cons operation rest ih =>
+      cases operation with
+      | enableGate gate row =>
+          simp only [regionEnabledGates, List.mem_cons] at henabled
+          rcases henabled with rfl | henabled
+          · simp
+          · exact List.mem_append_right _ (ih henabled)
+      | assignAdvice column row witness =>
+          simpa only [List.flatMap_cons, List.nil_append] using ih henabled
+      | assignFixed column row value =>
+          simpa only [List.flatMap_cons, List.nil_append] using ih henabled
+      | enableLookup argument selectors row =>
+          exact List.mem_append_right _ (ih henabled)
+      | constrainEqual left right =>
+          simpa only [List.flatMap_cons, List.nil_append] using ih henabled
+      | constrainConstant cell value =>
+          simpa only [List.flatMap_cons, List.nil_append] using ih henabled
+      | constrainInstance cell column row =>
+          simpa only [List.flatMap_cons, List.nil_append] using ih henabled
+
+/--
+Every extracted enabled gate occurs in the selector activations derived from the
+same operation stream and V1 placement inputs.
+-/
+theorem mem_activations_of_mem_operationEnabledGate
+    {F : Type} (starts : List ℕ)
+    {operations : Operations F} {i : RegionIndex}
+    {enabled : EnabledGate F}
+    (henabled : enabled ∈ operationEnabledGates operations i) :
+    (enabled.gate.selector.index,
+      starts.getD enabled.region 0 + enabled.row) ∈
+      activations starts (indexedRegions operations i).1 := by
+  induction operations generalizing i with
+  | nil =>
+      simp [operationEnabledGates] at henabled
+  | cons operation rest ih =>
+      cases operation with
+      | region name body =>
+          simp only [operationEnabledGates, List.mem_append] at henabled
+          rcases henabled with henabled | henabled
+          · have hregion :=
+              mem_regionActivations_of_mem_enabledGate starts henabled
+            have hregion' :
+                (enabled.gate.selector.index,
+                  starts.getD enabled.region 0 + enabled.row) ∈
+                  body.flatMap fun operation =>
+                    match operation with
+                    | .enableGate gate row =>
+                        [(gate.selector.index, starts.getD i 0 + row)]
+                    | .enableLookup _ selectors row =>
+                        selectors.map fun selector =>
+                          (selector.index, starts.getD i 0 + row)
+                    | _ => [] := by
+              simpa only [activations, List.flatMap_cons,
+                List.flatMap_nil, List.append_nil] using hregion
+            exact List.mem_append_left _ hregion'
+          · have hrest := ih (i := i + 1) henabled
+            exact List.mem_append_right _ hrest
+      | constrainInstance cell column row =>
+          exact ih (i := i) henabled
+      | loadTable table values =>
+          exact ih (i := i) henabled
 
 end Zcash.Snark

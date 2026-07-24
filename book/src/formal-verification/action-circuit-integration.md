@@ -486,9 +486,13 @@ selector compression into the `EnabledGate.PolynomialWitness` consumed by the ge
 gate-satisfaction bridge.
 
 The remaining gate work is to establish the compact `GatesWellFormed` configure
-certificate compositionally and derive the packed selector cell's nonzero root value
-from circuit-owned selector activations/fixed columns. The evaluation and
-resolver-membership algebra is no longer circuit-specific.
+certificate compositionally and prove the two compiler contracts
+`SelectorRootsWellFormed` and `SelectorActivationsRealized` for the circuit-derived
+selector map and fixed columns. The generic operation walk already proves that every
+extracted enabled gate occurs in the floor-planner activation table, and
+`selectorScale_ne_zero_of_enabledGate` turns those contracts into the required
+nonzero scale. The evaluation and resolver-membership algebra is no longer
+circuit-specific.
 
 The `Fixtures.Layout` reconstruction is already generic over operations, so σ-cycle
 correctness of its replayed keygen merge is likewise a once-and-for-all lemma.
