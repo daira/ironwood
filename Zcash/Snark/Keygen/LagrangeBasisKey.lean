@@ -197,4 +197,21 @@ theorem ofPrefix_setup_of_closed {G : Type} [AddCommGroup G] [Module Fp G]
   funext t
   rw [polynomialCoefficients_single_closed urs.k hk i t]
 
+/-- The closed-form generator commitment in the fixture's executable spelling:
+canonical-representative scalars and `nsmul`. -/
+def commitClosedNat {G : Type} [AddCommGroup G] (urs : URS G)
+    (i : Fin (2 ^ urs.k)) : G :=
+  (List.ofFn fun t : Fin (2 ^ urs.k) =>
+    ((2 ^ urs.k : Fp)⁻¹ * (omegaOf urs.k)⁻¹ ^ ((i : ℕ) * (t : ℕ))).val • urs.g t).sum
+
+/-- The executable closed-form commitment is the abstract one. -/
+theorem commitClosedNat_eq {G : Type} [AddCommGroup G] [Module Fp G]
+    (urs : URS G) (i : Fin (2 ^ urs.k)) :
+    commitClosedNat urs i =
+      commit urs (fun t : Fin (2 ^ urs.k) =>
+        (2 ^ urs.k : Fp)⁻¹ * (omegaOf urs.k)⁻¹ ^ ((i : ℕ) * (t : ℕ))) := by
+  rw [commitClosedNat, commit, List.sum_ofFn]
+  refine Finset.sum_congr rfl fun t _ => ?_
+  rw [← Nat.cast_smul_eq_nsmul Fp, ZMod.natCast_rightInverse]
+
 end Zcash.Snark.Keygen
