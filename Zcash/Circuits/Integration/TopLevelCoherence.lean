@@ -1,7 +1,7 @@
 import Clean.Halo2.TopLevel
 import Clean.Halo2.Keygen.FloorPlanner
-import Zcash.Snark.Soundness.OperationGates
-import Zcash.Snark.Soundness.OperationLookups
+import Zcash.Circuits.Integration.OperationGates
+import Zcash.Circuits.Integration.OperationLookups
 
 /-!
 # Top-level configure/synthesis coherence

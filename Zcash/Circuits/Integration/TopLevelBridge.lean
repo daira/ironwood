@@ -1,5 +1,5 @@
 import Zcash.Circuits.Integration.TopLevelLookups
-import Zcash.Snark.Soundness.TopLevelCircuit
+import Zcash.Circuits.Integration.TopLevelCircuit
 
 /-!
 # Circuit-derived full bridge assembly

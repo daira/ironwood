@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.CircuitSatisfaction
+import Zcash.Circuits.Integration.CircuitSatisfaction
 
 /-!
 # Fixed-data requirements in the operation stream

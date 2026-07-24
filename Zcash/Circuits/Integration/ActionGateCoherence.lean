@@ -65,7 +65,7 @@ end Zcash.Circuits
 namespace Zcash.Snark
 
 open Halo2 Keygen
-open Zcash.Circuits
+open Halo2
 open Zcash.Circuits.Action (orchardActionTopLevelCircuit)
 
 namespace ActionGateCoherence

@@ -1,5 +1,5 @@
 import Zcash.Snark.Keygen.Pipeline
-import Zcash.Snark.Soundness.ResolverQueryEnvironment
+import Zcash.Circuits.Integration.ResolverQueryEnvironment
 
 /-!
 # Circuit-owned query-layout coverage

@@ -3,10 +3,10 @@ import Zcash.Circuits.Integration.FixedColumns
 import Zcash.Circuits.Integration.InstanceColumns
 import Zcash.Circuits.Integration.QueryLayouts
 import Zcash.Circuits.Integration.TopLevelLookups
-import Zcash.Snark.Soundness.ActionStatement
+import Zcash.Circuits.Integration.ActionStatement
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
-import Zcash.Snark.Soundness.TopLevelCircuit
-import Zcash.Snark.Soundness.TopLevelGates
+import Zcash.Circuits.Integration.TopLevelCircuit
+import Zcash.Circuits.Integration.TopLevelGates
 import Zcash.Snark.Keygen.Pipeline
 
 /-!

@@ -1,7 +1,7 @@
 import Zcash.Snark.Soundness.InstanceCommitment
-import Zcash.Snark.Soundness.FixedLayout
+import Zcash.Circuits.Integration.FixedLayout
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
-import Zcash.Snark.Soundness.SelectorCoherence
+import Zcash.Circuits.Integration.SelectorCoherence
 import Zcash.Snark.Keygen.LagrangeBasisKey
 
 /-!
@@ -119,7 +119,7 @@ namespace TopLevelFixedCoherence
 
 omit [DecidableEq G] in
 /-- The circuit-derived VK's fixed commitment at one in-range column is the
-`ofPrefix` commitment of the corresponding keygen row vector. -/
+full-list commitment of the corresponding keygen row vector. -/
 theorem fixedCommitment_eq_commitInstance
     {ConfigInput Config : Type} {Output : TypeMap}
     [CircuitType Output]

@@ -1,5 +1,5 @@
 import Zcash.Circuits.Integration.ActionInstanceCommitment
-import Zcash.Snark.Soundness.ActionPermutationDomain
+import Zcash.Circuits.Integration.ActionPermutationDomain
 import Zcash.Snark.Soundness.CanonicalTerminal
 import Mathlib.Util.AssertNoSorry
 

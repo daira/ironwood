@@ -1,6 +1,6 @@
 import Zcash.Snark.Core.Domain
 import Clean.Halo2.TopLevelKeygen
-import Zcash.Snark.Soundness.PolynomialEnvironment
+import Zcash.Circuits.Integration.PolynomialEnvironment
 
 /-!
 # Generic assignments for closed top-level circuits

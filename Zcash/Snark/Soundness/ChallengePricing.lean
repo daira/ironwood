@@ -4,7 +4,7 @@ import Zcash.Snark.Soundness.FoldSplit
 import Zcash.Snark.Soundness.GrandProductBridge
 import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.LookupSemantics
-import Zcash.Snark.Soundness.OperationLookups
+import Zcash.Circuits.Integration.OperationLookups
 
 /-!
 # Pricing the new challenge surfaces

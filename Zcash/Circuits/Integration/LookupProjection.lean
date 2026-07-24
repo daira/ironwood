@@ -1,6 +1,6 @@
 import Zcash.Snark.Keygen.Pipeline
-import Zcash.Snark.Soundness.OperationLookups
-import Zcash.Snark.Soundness.ResolverQueryEnvironment
+import Zcash.Circuits.Integration.OperationLookups
+import Zcash.Circuits.Integration.ResolverQueryEnvironment
 
 /-!
 # Lookup projection across the Clean boundary
