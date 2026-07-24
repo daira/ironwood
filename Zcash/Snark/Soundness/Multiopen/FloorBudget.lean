@@ -45,20 +45,20 @@ variable {G : Type*} [AddCommGroup G] [Module Fp G]
 predicate `OpenedX4Accept` and threshold `deployedX4PairCount / |Fp|`: over the fresh x₄ challenge
 `ξ`, the deployed run accepting while the x₄ rewind accept-measure sits at or below the extraction
 threshold — the negation of the terminal's `hprob4` floor — has probability
-`≤ deployedX4PairCount / |Fp|`, negligible. `OpenedX4Accept urs hk vk ps ch b : Fp → Prop` is
+`≤ deployedX4PairCount / |Fp|`, negligible. `OpenedX4Accept urs hk vk instanceCommitment ps ch b : Fp → Prop` is
 already the single-slot predicate over the x₄ challenge (its last argument), so this is a direct
 instantiation; the x₃/x₂/x₁ squeezes follow the same template at `OpenedX3/X2/X1Accept` and their
 own thresholds. -/
 theorem openedX4_floor_failure_le [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) (b : Fin (2 ^ urs.k) → Fp) :
     (PMF.uniformOfFintype Fp).toOuterMeasure
-        {ξ : Fp | OpenedX4Accept urs hk vk ps ch b ξ ∧
-          ¬ ((deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp
+        {ξ : Fp | OpenedX4Accept urs hk vk instanceCommitment ps ch b ξ ∧
+          ¬ ((deployedX4PairCount vk instanceCommitment ps ch : ℝ≥0∞) / Fintype.card Fp
               < (PMF.uniformOfFintype Fp).toOuterMeasure
-                  (Finset.univ.filter (OpenedX4Accept urs hk vk ps ch b)))}
-      ≤ (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp :=
-  squeeze_floor_failure_le (OpenedX4Accept urs hk vk ps ch b) _
+                  (Finset.univ.filter (OpenedX4Accept urs hk vk instanceCommitment ps ch b)))}
+      ≤ (deployedX4PairCount vk instanceCommitment ps ch : ℝ≥0∞) / Fintype.card Fp :=
+  squeeze_floor_failure_le (OpenedX4Accept urs hk vk instanceCommitment ps ch b) _
 
 /-- **The x₃-squeeze floor-failure bound.** `squeeze_floor_failure_le` at `OpenedX3Accept` and an
 arbitrary threshold `t` (the terminal instantiates `t := (max (2 ^ k) |allPts| + |allPts|)/|Fp|`,
@@ -66,43 +66,43 @@ the `hprob3` floor threshold): over the fresh x₃ challenge the deployed run ac
 rewind accept-measure sits at or below `t` has probability `≤ t`. Same template as
 `openedX4_floor_failure_le`. -/
 theorem openedX3_floor_failure_le [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) (b : Fin (2 ^ urs.k) → Fp)
     (t : ℝ≥0∞) :
     (PMF.uniformOfFintype Fp).toOuterMeasure
-        {χ : Fp | OpenedX3Accept urs hk vk ps ch b χ ∧
+        {χ : Fp | OpenedX3Accept urs hk vk instanceCommitment ps ch b χ ∧
           ¬ (t < (PMF.uniformOfFintype Fp).toOuterMeasure
-                  (Finset.univ.filter (OpenedX3Accept urs hk vk ps ch b)))}
+                  (Finset.univ.filter (OpenedX3Accept urs hk vk instanceCommitment ps ch b)))}
       ≤ t :=
-  squeeze_floor_failure_le (OpenedX3Accept urs hk vk ps ch b) t
+  squeeze_floor_failure_le (OpenedX3Accept urs hk vk instanceCommitment ps ch b) t
 
 /-- **The x₂-squeeze floor-failure bound.** `squeeze_floor_failure_le` at `OpenedX2Accept` and an
 arbitrary threshold `t` (the terminal instantiates `t := (deployedX4PairCount - 1)/|Fp|`, the `hx2`
 floor threshold). Same template as `openedX4_floor_failure_le`. -/
 theorem openedX2_floor_failure_le [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) (b : Fin (2 ^ urs.k) → Fp)
     (t : ℝ≥0∞) :
     (PMF.uniformOfFintype Fp).toOuterMeasure
-        {χ : Fp | OpenedX2Accept urs hk vk ps ch b χ ∧
+        {χ : Fp | OpenedX2Accept urs hk vk instanceCommitment ps ch b χ ∧
           ¬ (t < (PMF.uniformOfFintype Fp).toOuterMeasure
-                  (Finset.univ.filter (OpenedX2Accept urs hk vk ps ch b)))}
+                  (Finset.univ.filter (OpenedX2Accept urs hk vk instanceCommitment ps ch b)))}
       ≤ t :=
-  squeeze_floor_failure_le (OpenedX2Accept urs hk vk ps ch b) t
+  squeeze_floor_failure_le (OpenedX2Accept urs hk vk instanceCommitment ps ch b) t
 
 /-- **The x₁-squeeze floor-failure bound.** `squeeze_floor_failure_le` at `OpenedX1Accept` (which
 carries no blinder argument) and an arbitrary threshold `t` (the terminal instantiates
-`t := ((deployedSetQueries vk ps ch i).length - 1)/|Fp|`, the per-set `hprob1` floor threshold).
+`t := ((deployedSetQueries vk instanceCommitment ps ch i).length - 1)/|Fp|`, the per-set `hprob1` floor threshold).
 Same template as `openedX4_floor_failure_le`. -/
 theorem openedX1_floor_failure_le [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) (t : ℝ≥0∞) :
     (PMF.uniformOfFintype Fp).toOuterMeasure
-        {χ : Fp | OpenedX1Accept urs hk vk ps ch χ ∧
+        {χ : Fp | OpenedX1Accept urs hk vk instanceCommitment ps ch χ ∧
           ¬ (t < (PMF.uniformOfFintype Fp).toOuterMeasure
-                  (Finset.univ.filter (OpenedX1Accept urs hk vk ps ch)))}
+                  (Finset.univ.filter (OpenedX1Accept urs hk vk instanceCommitment ps ch)))}
       ≤ t :=
-  squeeze_floor_failure_le (OpenedX1Accept urs hk vk ps ch) t
+  squeeze_floor_failure_le (OpenedX1Accept urs hk vk instanceCommitment ps ch) t
 
 /-- **Nested single-squeeze floor-failure bound (the Fubini primitive).** For accept predicates
 indexed by an outer base, the event "the inner run accepts at its fresh slot while the inner
@@ -250,36 +250,36 @@ negations of the derived terminal's floor premises at the sampled runs; the spli
 lemmas (`x1Run_pairCount`/`x1Run_allPts` and siblings) equate the sampled-base thresholds to the
 honest-base constants where they are consumed. -/
 def deployedFloorFailureSet [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (g₁ : Fp → X1Run shape G) (g₂ : Fp → Fp → X2Run shape G) (g₃ : Fp → Fp → Fp → X3Run shape G)
     (b₂ : Fp → Fin (2 ^ urs.k) → Fp) (t₁ t₂ t₃ t₄ : ℝ≥0∞) : Set (Fp × Fp × Fp × Fp) :=
-  {w : Fp × Fp × Fp × Fp | OpenedX1Accept urs hk vk ps ch w.1 ∧
+  {w : Fp × Fp × Fp × Fp | OpenedX1Accept urs hk vk instanceCommitment ps ch w.1 ∧
       ¬ (t₁ < (PMF.uniformOfFintype Fp).toOuterMeasure
-              (Finset.univ.filter (OpenedX1Accept urs hk vk ps ch)))}
+              (Finset.univ.filter (OpenedX1Accept urs hk vk instanceCommitment ps ch)))}
     ∪ {w : Fp × Fp × Fp × Fp |
-        OpenedX2Accept urs hk vk ((g₁ w.1).spliced ps) ((g₁ w.1).challenges ch w.1)
+        OpenedX2Accept urs hk vk instanceCommitment ((g₁ w.1).spliced ps) ((g₁ w.1).challenges ch w.1)
             (b₂ w.1) w.2.1 ∧
       ¬ (t₂ < (PMF.uniformOfFintype Fp).toOuterMeasure
-              (Finset.univ.filter (OpenedX2Accept urs hk vk ((g₁ w.1).spliced ps)
+              (Finset.univ.filter (OpenedX2Accept urs hk vk instanceCommitment ((g₁ w.1).spliced ps)
                 ((g₁ w.1).challenges ch w.1) (b₂ w.1))))}
     ∪ {w : Fp × Fp × Fp × Fp |
-        OpenedX3Accept urs hk vk ((g₂ w.1 w.2.1).spliced ((g₁ w.1).spliced ps))
+        OpenedX3Accept urs hk vk instanceCommitment ((g₂ w.1 w.2.1).spliced ((g₁ w.1).spliced ps))
             ((g₂ w.1 w.2.1).challenges ((g₁ w.1).challenges ch w.1) w.2.1)
             (evalVector urs.k w.2.2.1) w.2.2.1 ∧
       ¬ (t₃ < (PMF.uniformOfFintype Fp).toOuterMeasure
-              (Finset.univ.filter (fun χv => OpenedX3Accept urs hk vk
+              (Finset.univ.filter (fun χv => OpenedX3Accept urs hk vk instanceCommitment
                 ((g₂ w.1 w.2.1).spliced ((g₁ w.1).spliced ps))
                 ((g₂ w.1 w.2.1).challenges ((g₁ w.1).challenges ch w.1) w.2.1)
                 (evalVector urs.k χv) χv)))}
     ∪ {w : Fp × Fp × Fp × Fp |
-        OpenedX4Accept urs hk vk
+        OpenedX4Accept urs hk vk instanceCommitment
             ((g₃ w.1 w.2.1 w.2.2.1).spliced ((g₂ w.1 w.2.1).spliced ((g₁ w.1).spliced ps)))
             ((g₃ w.1 w.2.1 w.2.2.1).challenges
               ((g₂ w.1 w.2.1).challenges ((g₁ w.1).challenges ch w.1) w.2.1) w.2.2.1)
             (evalVector urs.k w.2.2.1) w.2.2.2 ∧
       ¬ (t₄ < (PMF.uniformOfFintype Fp).toOuterMeasure
-              (Finset.univ.filter (OpenedX4Accept urs hk vk
+              (Finset.univ.filter (OpenedX4Accept urs hk vk instanceCommitment
                 ((g₃ w.1 w.2.1 w.2.2.1).spliced
                   ((g₂ w.1 w.2.1).spliced ((g₁ w.1).spliced ps)))
                 ((g₃ w.1 w.2.1 w.2.2.1).challenges
@@ -290,19 +290,19 @@ def deployedFloorFailureSet [DecidableEq G] [Inhabited G] {shape : Shape}
 off `deployedFloorFailureSet`: over the joint uniform draw of the four fresh challenges, the deployed
 floor-failure event has probability at most `t₁ + t₂ + t₃ + t₄`. -/
 theorem deployed_combined_floor_failure_le [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (g₁ : Fp → X1Run shape G) (g₂ : Fp → Fp → X2Run shape G) (g₃ : Fp → Fp → Fp → X3Run shape G)
     (b₂ : Fp → Fin (2 ^ urs.k) → Fp) (t₁ t₂ t₃ t₄ : ℝ≥0∞) :
     (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
-        (deployedFloorFailureSet urs hk vk ps ch g₁ g₂ g₃ b₂ t₁ t₂ t₃ t₄)
+        (deployedFloorFailureSet urs hk vk instanceCommitment ps ch g₁ g₂ g₃ b₂ t₁ t₂ t₃ t₄)
       ≤ t₁ + t₂ + t₃ + t₄ :=
   combined_floor_failure_le
-    (OpenedX1Accept urs hk vk ps ch)
-    (fun ξ ζ => OpenedX2Accept urs hk vk ((g₁ ξ).spliced ps) ((g₁ ξ).challenges ch ξ) (b₂ ξ) ζ)
-    (fun ξ ζ χ => OpenedX3Accept urs hk vk ((g₂ ξ ζ).spliced ((g₁ ξ).spliced ps))
+    (OpenedX1Accept urs hk vk instanceCommitment ps ch)
+    (fun ξ ζ => OpenedX2Accept urs hk vk instanceCommitment ((g₁ ξ).spliced ps) ((g₁ ξ).challenges ch ξ) (b₂ ξ) ζ)
+    (fun ξ ζ χ => OpenedX3Accept urs hk vk instanceCommitment ((g₂ ξ ζ).spliced ((g₁ ξ).spliced ps))
         ((g₂ ξ ζ).challenges ((g₁ ξ).challenges ch ξ) ζ) (evalVector urs.k χ) χ)
-    (fun ξ ζ χ ω => OpenedX4Accept urs hk vk
+    (fun ξ ζ χ ω => OpenedX4Accept urs hk vk instanceCommitment
         ((g₃ ξ ζ χ).spliced ((g₂ ξ ζ).spliced ((g₁ ξ).spliced ps)))
         ((g₃ ξ ζ χ).challenges ((g₂ ξ ζ).challenges ((g₁ ξ).challenges ch ξ) ζ) χ)
         (evalVector urs.k χ) ω)
@@ -314,17 +314,17 @@ challenge tuples on which every deployed squeeze floor holds have probability at
 determined runs (`deployed_singlepath_floor_of_good`); the budgeted extraction consumes the same
 budget through the joint accept floor directly. -/
 theorem deployed_combined_floor_holds [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (g₁ : Fp → X1Run shape G) (g₂ : Fp → Fp → X2Run shape G) (g₃ : Fp → Fp → Fp → X3Run shape G)
     (b₂ : Fp → Fin (2 ^ urs.k) → Fp) (t₁ t₂ t₃ t₄ : ℝ≥0∞) :
     1 - (t₁ + t₂ + t₃ + t₄) ≤
       (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
-        (deployedFloorFailureSet urs hk vk ps ch g₁ g₂ g₃ b₂ t₁ t₂ t₃ t₄)ᶜ := by
+        (deployedFloorFailureSet urs hk vk instanceCommitment ps ch g₁ g₂ g₃ b₂ t₁ t₂ t₃ t₄)ᶜ := by
   set μ := (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure with hμ
-  set S := deployedFloorFailureSet urs hk vk ps ch g₁ g₂ g₃ b₂ t₁ t₂ t₃ t₄ with hS
+  set S := deployedFloorFailureSet urs hk vk instanceCommitment ps ch g₁ g₂ g₃ b₂ t₁ t₂ t₃ t₄ with hS
   have hfail : μ S ≤ t₁ + t₂ + t₃ + t₄ :=
-    deployed_combined_floor_failure_le urs hk vk ps ch g₁ g₂ g₃ b₂ t₁ t₂ t₃ t₄
+    deployed_combined_floor_failure_le urs hk vk instanceCommitment ps ch g₁ g₂ g₃ b₂ t₁ t₂ t₃ t₄
   have hsub : (1 : ℝ≥0∞) ≤ μ S + μ Sᶜ := by
     calc (1 : ℝ≥0∞) = μ (Set.univ : Set (Fp × Fp × Fp × Fp)) :=
           (uniformOfFintype_toOuterMeasure_univ).symm
@@ -343,34 +343,34 @@ member terminal consuming floors of this run-pinned shape is
 them as one joint accept floor along the canonical rewind path rather than through this good-event
 decomposition. -/
 theorem deployed_singlepath_floor_of_good [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (g₁ : Fp → X1Run shape G) (g₂ : Fp → Fp → X2Run shape G) (g₃ : Fp → Fp → Fp → X3Run shape G)
     (b₂ : Fp → Fin (2 ^ urs.k) → Fp) (t₁ t₂ t₃ t₄ : ℝ≥0∞)
     {w : Fp × Fp × Fp × Fp}
-    (hw : w ∉ deployedFloorFailureSet urs hk vk ps ch g₁ g₂ g₃ b₂ t₁ t₂ t₃ t₄) :
-    (OpenedX1Accept urs hk vk ps ch w.1 →
+    (hw : w ∉ deployedFloorFailureSet urs hk vk instanceCommitment ps ch g₁ g₂ g₃ b₂ t₁ t₂ t₃ t₄) :
+    (OpenedX1Accept urs hk vk instanceCommitment ps ch w.1 →
         t₁ < (PMF.uniformOfFintype Fp).toOuterMeasure
-              (Finset.univ.filter (OpenedX1Accept urs hk vk ps ch)))
-    ∧ (OpenedX2Accept urs hk vk ((g₁ w.1).spliced ps) ((g₁ w.1).challenges ch w.1) (b₂ w.1) w.2.1 →
+              (Finset.univ.filter (OpenedX1Accept urs hk vk instanceCommitment ps ch)))
+    ∧ (OpenedX2Accept urs hk vk instanceCommitment ((g₁ w.1).spliced ps) ((g₁ w.1).challenges ch w.1) (b₂ w.1) w.2.1 →
         t₂ < (PMF.uniformOfFintype Fp).toOuterMeasure
-              (Finset.univ.filter (OpenedX2Accept urs hk vk ((g₁ w.1).spliced ps)
+              (Finset.univ.filter (OpenedX2Accept urs hk vk instanceCommitment ((g₁ w.1).spliced ps)
                 ((g₁ w.1).challenges ch w.1) (b₂ w.1))))
-    ∧ (OpenedX3Accept urs hk vk ((g₂ w.1 w.2.1).spliced ((g₁ w.1).spliced ps))
+    ∧ (OpenedX3Accept urs hk vk instanceCommitment ((g₂ w.1 w.2.1).spliced ((g₁ w.1).spliced ps))
           ((g₂ w.1 w.2.1).challenges ((g₁ w.1).challenges ch w.1) w.2.1)
           (evalVector urs.k w.2.2.1) w.2.2.1 →
         t₃ < (PMF.uniformOfFintype Fp).toOuterMeasure
-              (Finset.univ.filter (fun χv => OpenedX3Accept urs hk vk
+              (Finset.univ.filter (fun χv => OpenedX3Accept urs hk vk instanceCommitment
                 ((g₂ w.1 w.2.1).spliced ((g₁ w.1).spliced ps))
                 ((g₂ w.1 w.2.1).challenges ((g₁ w.1).challenges ch w.1) w.2.1)
                 (evalVector urs.k χv) χv)))
-    ∧ (OpenedX4Accept urs hk vk
+    ∧ (OpenedX4Accept urs hk vk instanceCommitment
           ((g₃ w.1 w.2.1 w.2.2.1).spliced ((g₂ w.1 w.2.1).spliced ((g₁ w.1).spliced ps)))
           ((g₃ w.1 w.2.1 w.2.2.1).challenges
             ((g₂ w.1 w.2.1).challenges ((g₁ w.1).challenges ch w.1) w.2.1) w.2.2.1)
           (evalVector urs.k w.2.2.1) w.2.2.2 →
         t₄ < (PMF.uniformOfFintype Fp).toOuterMeasure
-              (Finset.univ.filter (OpenedX4Accept urs hk vk
+              (Finset.univ.filter (OpenedX4Accept urs hk vk instanceCommitment
                 ((g₃ w.1 w.2.1 w.2.2.1).spliced
                   ((g₂ w.1 w.2.1).spliced ((g₁ w.1).spliced ps)))
                 ((g₃ w.1 w.2.1 w.2.2.1).challenges

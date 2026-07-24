@@ -874,12 +874,12 @@ private theorem lookupQueries_commId_form {k : ℕ} {F G : Type*} [Field F] {x x
 /-- **Vanishing-slot uniqueness.** Any two queries of `assembleQueries` on the `vanishingH` slot are
 equal — the vanishing-`h` query is the sole carrier of its slot. -/
 theorem assembleQueries_vanishingH_unique {shape : Shape} {F G : Type*} [Field F] [Inhabited G]
-    (vk : VerifyingKey shape F G) (ps : ProofString shape F G) (ch : Challenges shape.k F)
+    (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape F G) (ch : Challenges shape.k F)
     {q₁ q₂ : VerifierQuery shape.k F G}
-    (hq₁ : q₁ ∈ assembleQueries vk ps ch) (hq₂ : q₂ ∈ assembleQueries vk ps ch)
+    (hq₁ : q₁ ∈ assembleQueries vk instanceCommitment ps ch) (hq₂ : q₂ ∈ assembleQueries vk instanceCommitment ps ch)
     (hv₁ : q₁.commId = CommitmentId.vanishingH) (hv₂ : q₂.commId = CommitmentId.vanishingH) :
     q₁ = q₂ := by
-  have hvan : ∀ q : VerifierQuery shape.k F G, q ∈ assembleQueries vk ps ch →
+  have hvan : ∀ q : VerifierQuery shape.k F G, q ∈ assembleQueries vk instanceCommitment ps ch →
       q.commId = CommitmentId.vanishingH →
       q ∈ vanishingQueries (k := shape.k) ch.x
         (vanishingHCommitment shape.k (ch.x ^ vk.n) (List.ofFn ps.hPieces))

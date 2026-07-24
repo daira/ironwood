@@ -51,38 +51,38 @@ variable {G : Type*} [AddCommGroup G] [Module Fp G]
 budget, the `x₄` pair-count floor, and the `x₁` member-count floor. This is the `s` bounding
 `μ(memberBadEvent … i)`. -/
 noncomputable def memberBadBudget [DecidableEq G] [Inhabited G] {shape : Shape}
-    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (urs : URS G) (i : ℕ) : ℝ≥0∞ :=
-  (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
-      + (((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
-        + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
-            + (deployedAllPts vk ps ch).card
-            + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
-        + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp)
-    + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp
-    + (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+  (((deployedSetQueries vk instanceCommitment ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+      + (((deployedX4PairCount vk instanceCommitment ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+        + ((max (2 ^ urs.k) (deployedAllPts vk instanceCommitment ps ch).card
+            + (deployedAllPts vk instanceCommitment ps ch).card
+            + (deployedAllPts vk instanceCommitment ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
+        + (deployedX4PairCount vk instanceCommitment ps ch : ℝ≥0∞) / Fintype.card Fp)
+    + (deployedX4PairCount vk instanceCommitment ps ch : ℝ≥0∞) / Fintype.card Fp
+    + (((deployedSetQueries vk instanceCommitment ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
 
 /-- **The priced bad event has measure at most its three-threshold budget — unconditionally.** No
 acceptance and no coupling: each of the three parts of `memberBadEvent` is self-pricing. This is the
 `μ(accept) ≤ s` half of the ladder's `hcont` for `accept := memberBadEvent`. -/
 theorem memberBadEvent_measure_le [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) (i : ℕ) :
-    (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure (memberBadEvent urs hk vk ps ch i)
-      ≤ memberBadBudget vk ps ch urs i := by
+    (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure (memberBadEvent urs hk vk instanceCommitment ps ch i)
+      ≤ memberBadBudget vk instanceCommitment ps ch urs i := by
   set thr : ℝ≥0∞ :=
-    (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
-      + (((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
-        + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
-            + (deployedAllPts vk ps ch).card
-            + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
-        + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp) with hthr
-  set thr4 : ℝ≥0∞ := (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp with hthr4
+    (((deployedSetQueries vk instanceCommitment ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+      + (((deployedX4PairCount vk instanceCommitment ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+        + ((max (2 ^ urs.k) (deployedAllPts vk instanceCommitment ps ch).card
+            + (deployedAllPts vk instanceCommitment ps ch).card
+            + (deployedAllPts vk instanceCommitment ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
+        + (deployedX4PairCount vk instanceCommitment ps ch : ℝ≥0∞) / Fintype.card Fp) with hthr
+  set thr4 : ℝ≥0∞ := (deployedX4PairCount vk instanceCommitment ps ch : ℝ≥0∞) / Fintype.card Fp with hthr4
   set thr1 : ℝ≥0∞ :=
-    (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp with hthr1
+    (((deployedSetQueries vk instanceCommitment ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp with hthr1
   -- part 1: the joint-accept part, either `memberJointAccept` (guard holds) or empty
   set S : Set (Fp × Fp × Fp × Fp) :=
-    memberJointAccept urs hk vk ps ch (fun _ => evalVector urs.k ch.x3) with hS
+    memberJointAccept urs hk vk instanceCommitment ps ch (fun _ => evalVector urs.k ch.x3) with hS
   have hpart1 : (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
       {w : Fp × Fp × Fp × Fp | w ∈ S ∧
         (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure S ≤ thr} ≤ thr := by
@@ -97,44 +97,44 @@ theorem memberBadEvent_measure_le [DecidableEq G] [Inhabited G] {shape : Shape}
       rw [hset]; simp
   -- part 2: the `x₄` floor-failure part, read through the fourth-coordinate cylinder
   have hpart2 : (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
-      {w : Fp × Fp × Fp × Fp | OpenedX4Accept urs hk vk ps ch (evalVector urs.k ch.x3) w.2.2.2 ∧
+      {w : Fp × Fp × Fp × Fp | OpenedX4Accept urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3) w.2.2.2 ∧
         (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
-          (OpenedX4Accept urs hk vk ps ch (evalVector urs.k ch.x3))) ≤ thr4} ≤ thr4 := by
+          (OpenedX4Accept urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3))) ≤ thr4} ≤ thr4 := by
     by_cases hc : (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
-        (OpenedX4Accept urs hk vk ps ch (evalVector urs.k ch.x3))) ≤ thr4
+        (OpenedX4Accept urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3))) ≤ thr4
     · have hset : {w : Fp × Fp × Fp × Fp |
-          OpenedX4Accept urs hk vk ps ch (evalVector urs.k ch.x3) w.2.2.2 ∧
+          OpenedX4Accept urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3) w.2.2.2 ∧
           (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
-            (OpenedX4Accept urs hk vk ps ch (evalVector urs.k ch.x3))) ≤ thr4}
+            (OpenedX4Accept urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3))) ≤ thr4}
           = {w : Fp × Fp × Fp × Fp | w.2.2.2 ∈
-              {χ : Fp | OpenedX4Accept urs hk vk ps ch (evalVector urs.k ch.x3) χ}} :=
+              {χ : Fp | OpenedX4Accept urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3) χ}} :=
         Set.ext fun w => ⟨fun h => h.1, fun h => ⟨h, hc⟩⟩
       rw [hset, uniformOfFintype_x4_cylinder, uniformOfFintype_toOuterMeasure_setOf_filter]
       exact hc
     · have hset : {w : Fp × Fp × Fp × Fp |
-          OpenedX4Accept urs hk vk ps ch (evalVector urs.k ch.x3) w.2.2.2 ∧
+          OpenedX4Accept urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3) w.2.2.2 ∧
           (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
-            (OpenedX4Accept urs hk vk ps ch (evalVector urs.k ch.x3))) ≤ thr4} = (∅ : Set _) :=
+            (OpenedX4Accept urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3))) ≤ thr4} = (∅ : Set _) :=
         Set.ext fun w => ⟨fun h => absurd h.2 hc, fun h => h.elim⟩
       rw [hset]; simp
   -- part 3: the `x₁` floor-failure part, read through the first-coordinate cylinder
   have hpart3 : (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
-      {w : Fp × Fp × Fp × Fp | OpenedX1Accept urs hk vk ps ch w.1 ∧
+      {w : Fp × Fp × Fp × Fp | OpenedX1Accept urs hk vk instanceCommitment ps ch w.1 ∧
         (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
-          (OpenedX1Accept urs hk vk ps ch)) ≤ thr1} ≤ thr1 := by
+          (OpenedX1Accept urs hk vk instanceCommitment ps ch)) ≤ thr1} ≤ thr1 := by
     by_cases hc : (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
-        (OpenedX1Accept urs hk vk ps ch)) ≤ thr1
-    · have hset : {w : Fp × Fp × Fp × Fp | OpenedX1Accept urs hk vk ps ch w.1 ∧
+        (OpenedX1Accept urs hk vk instanceCommitment ps ch)) ≤ thr1
+    · have hset : {w : Fp × Fp × Fp × Fp | OpenedX1Accept urs hk vk instanceCommitment ps ch w.1 ∧
           (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
-            (OpenedX1Accept urs hk vk ps ch)) ≤ thr1}
-          = {w : Fp × Fp × Fp × Fp | w.1 ∈ {χ : Fp | OpenedX1Accept urs hk vk ps ch χ}} :=
+            (OpenedX1Accept urs hk vk instanceCommitment ps ch)) ≤ thr1}
+          = {w : Fp × Fp × Fp × Fp | w.1 ∈ {χ : Fp | OpenedX1Accept urs hk vk instanceCommitment ps ch χ}} :=
         Set.ext fun w => ⟨fun h => h.1, fun h => ⟨h, hc⟩⟩
       rw [hset, uniformOfFintype_fst_cylinder (α := Fp) (β := Fp × Fp × Fp),
         uniformOfFintype_toOuterMeasure_setOf_filter]
       exact hc
-    · have hset : {w : Fp × Fp × Fp × Fp | OpenedX1Accept urs hk vk ps ch w.1 ∧
+    · have hset : {w : Fp × Fp × Fp × Fp | OpenedX1Accept urs hk vk instanceCommitment ps ch w.1 ∧
           (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
-            (OpenedX1Accept urs hk vk ps ch)) ≤ thr1} = (∅ : Set _) :=
+            (OpenedX1Accept urs hk vk instanceCommitment ps ch)) ≤ thr1} = (∅ : Set _) :=
         Set.ext fun w => ⟨fun h => absurd h.2 hc, fun h => h.elim⟩
       rw [hset]; simp
   -- union bound over the three parts
@@ -149,11 +149,11 @@ Fiat–Shamir tree at the honest IPA base `evalVector urs.k ch.x3`, and deployed
 the standard AGM-completeness bridge (a clean opening corresponds to an accepting deployed
 transcript); it is non-circular — it mentions neither `extracted` nor any measure. -/
 def HonestCompletenessSupply [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) : Prop :=
   ∃ (z blind : Fp), z ≠ 0 ∧
-    Nonempty (FiatShamirTree urs hk vk ps ch (evalVector urs.k ch.x3) z blind) ∧
-    DeployedAccepts urs hk vk ps ch
+    Nonempty (FiatShamirTree urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3) z blind) ∧
+    DeployedAccepts urs hk vk instanceCommitment ps ch
 
 /-- **The landing half of `hcont`, from the supply.** On a base admitting the honest-completeness
 supply and off the `(g, U, W)`-relation branch, if extraction fails at point set `i` (`hnex`: no
@@ -162,26 +162,26 @@ challenge tuple lands in `memberBadEvent`. This is `honest_tuple_mem_memberBadEv
 single-transcript ingredients supplied by `HonestCompletenessSupply` rather than assumed piecemeal —
 so the only standing input on the landing side of `hcont` is the AGM-completeness bridge. -/
 theorem memberBadEvent_of_supply [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (hnrel : ¬HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
-    (hsupply : HonestCompletenessSupply urs hk vk ps ch)
-    (i : ℕ) (hi : i < deployedX4PairCount vk ps ch)
-    (hlen : 0 < (deployedSetQueries vk ps ch i).length)
+    (hsupply : HonestCompletenessSupply urs hk vk instanceCommitment ps ch)
+    (i : ℕ) (hi : i < deployedX4PairCount vk instanceCommitment ps ch)
+    (hlen : 0 < (deployedSetQueries vk instanceCommitment ps ch i).length)
     (hnex : ∀ (a₀ : Fin (2 ^ urs.k) → Fp) (pU pW : Fp)
       (pbatch : OpenedBatchOpenings urs (evalVector urs.k ch.x3)
-        (x4BatchCommitments urs hk vk ps ch) (x4BatchEvals vk ps ch) a₀ pU pW)
-      (md : OpenedMemberDecode urs hk vk ps ch pbatch i hi),
+        (x4BatchCommitments urs hk vk instanceCommitment ps ch) (x4BatchEvals vk instanceCommitment ps ch) a₀ pU pW)
+      (md : OpenedMemberDecode urs hk vk instanceCommitment ps ch pbatch i hi),
       ¬ ∀ (idx : Fin ((constructIntermediateSets
-            (assembleQueries vk ps ch)).points.getD i []).length)
-          (m₀ : Fin (deployedSetQueries vk ps ch i).length),
+            (assembleQueries vk instanceCommitment ps ch)).points.getD i []).length)
+          (m₀ : Fin (deployedSetQueries vk instanceCommitment ps ch i).length),
           (coeffsToPoly (md.cols m₀)).eval
-              (((constructIntermediateSets (assembleQueries vk ps ch)).points.getD i [])[idx])
-            = ((deployedSetQueries vk ps ch i).getD (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
+              (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i [])[idx])
+            = ((deployedSetQueries vk instanceCommitment ps ch i).getD (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
           ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w) :
-    (ch.x1, ch.x2, ch.x3, ch.x4) ∈ memberBadEvent urs hk vk ps ch i := by
+    (ch.x1, ch.x2, ch.x3, ch.x4) ∈ memberBadEvent urs hk vk instanceCommitment ps ch i := by
   obtain ⟨z, blind, hz, ⟨hFS⟩, hacc⟩ := hsupply
-  exact honest_tuple_mem_memberBadEvent urs hk vk ps ch hnrel hz hFS hacc i hi hlen hnex
+  exact honest_tuple_mem_memberBadEvent urs hk vk instanceCommitment ps ch hnrel hz hFS hacc i hi hlen hnex
 
 /-- **The supply from a forked transcript and deployed acceptance.** `FiatShamirTree` is the function
 type `DeployedIpaVerifierEq → ForkedTranscript`, so a nonempty forked transcript at the honest IPA
@@ -189,12 +189,12 @@ base `evalVector urs.k ch.x3` gives a nonempty Fiat–Shamir tree (the constant 
 nonzero blinding `z` and deployed acceptance, this is exactly `HonestCompletenessSupply` — reducing
 the supply to its two primitives (a forked transcript and `DeployedAccepts`). -/
 theorem honestCompletenessSupply_of_forkedTranscript [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     {z blind : Fp} (hz : z ≠ 0)
-    (hft : Nonempty (ForkedTranscript urs hk vk ps ch (evalVector urs.k ch.x3) z blind))
-    (hacc : DeployedAccepts urs hk vk ps ch) :
-    HonestCompletenessSupply urs hk vk ps ch :=
+    (hft : Nonempty (ForkedTranscript urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3) z blind))
+    (hacc : DeployedAccepts urs hk vk instanceCommitment ps ch) :
+    HonestCompletenessSupply urs hk vk instanceCommitment ps ch :=
   let ⟨ft⟩ := hft
   ⟨z, blind, hz, ⟨fun _ => ft⟩, hacc⟩
 
@@ -207,7 +207,7 @@ forked transcript. The three distinct nonzero fold challenges `u₁,u₂,u₃` a
 IPA-soundness field facts (`|Fp|` is a large prime), taken as explicit hypotheses. -/
 theorem forkedTranscript_nonempty_of_instanceOpening {shape : Shape}
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
-    {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (p : AlgebraicWfProof basis vk instanceCommitment) (ν : Fin 11 → Fp)
     (cert : AlgebraicDForkCert (F := Fp)
       (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
         (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
@@ -217,7 +217,7 @@ theorem forkedTranscript_nonempty_of_instanceOpening {shape : Shape}
       (ursOfAugmentedBasis shape.k basis).w (ν 10)
       (commit (ursOfAugmentedBasis shape.k basis)
           (adjustedWitness (p.aMulti ν) p.s
-            (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+            (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
         (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
         (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
       cert.toDForkCert)
@@ -226,10 +226,10 @@ theorem forkedTranscript_nonempty_of_instanceOpening {shape : Shape}
         - ν 9 * innerProduct p.s (evalVector shape.k (ν 7)) = 0)
     (u₁ u₂ u₃ : Fp) (h12 : u₁ ≠ u₂) (h13 : u₁ ≠ u₃) (h23 : u₂ ≠ u₃)
     (hu₁ : u₁ ≠ 0) (hu₂ : u₂ ≠ 0) (hu₃ : u₃ ≠ 0) (blind : Fp) :
-    Nonempty (ForkedTranscript (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+    Nonempty (ForkedTranscript (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
       (chRecord ν (fun _ => 0)) (evalVector shape.k (ν 7)) (ν 10) blind) := by
   obtain ⟨hcommit, hval⟩ := ipaRelation_deployed_of_instance p ν cert hz hvalid hshift o
-  refine ForkedTranscript.nonempty_of_opening (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+  refine ForkedTranscript.nonempty_of_opening (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
     (chRecord ν (fun _ => 0)) u₁ u₂ u₃ h12 h13 h23 hu₁ hu₂ hu₃ o.1 (p.multiU ν) (p.multiBlind ν)
     ?_ ?_
   · rw [commit_eq_commitGen] at hcommit
@@ -244,7 +244,7 @@ IPA fold-challenge field facts, and `DeployedAccepts` — the latter being the A
 that a family clean opening's transcript is deployed-accepted (`erase p` at `chRecord ν`). -/
 theorem honestCompletenessSupply_of_instanceOpening {shape : Shape}
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
-    {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (p : AlgebraicWfProof basis vk instanceCommitment) (ν : Fin 11 → Fp)
     (cert : AlgebraicDForkCert (F := Fp)
       (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
         (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
@@ -254,7 +254,7 @@ theorem honestCompletenessSupply_of_instanceOpening {shape : Shape}
       (ursOfAugmentedBasis shape.k basis).w (ν 10)
       (commit (ursOfAugmentedBasis shape.k basis)
           (adjustedWitness (p.aMulti ν) p.s
-            (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+            (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
         (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
         (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
       cert.toDForkCert)
@@ -263,11 +263,11 @@ theorem honestCompletenessSupply_of_instanceOpening {shape : Shape}
         - ν 9 * innerProduct p.s (evalVector shape.k (ν 7)) = 0)
     (u₁ u₂ u₃ : Fp) (h12 : u₁ ≠ u₂) (h13 : u₁ ≠ u₃) (h23 : u₂ ≠ u₃)
     (hu₁ : u₁ ≠ 0) (hu₂ : u₂ ≠ 0) (hu₃ : u₃ ≠ 0)
-    (hacc : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+    (hacc : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
       (chRecord ν (fun _ => 0))) :
-    HonestCompletenessSupply (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+    HonestCompletenessSupply (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
       (chRecord ν (fun _ => 0)) :=
-  honestCompletenessSupply_of_forkedTranscript (ursOfAugmentedBasis shape.k basis) rfl vk
+  honestCompletenessSupply_of_forkedTranscript (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment
     p.proof.1 (chRecord ν (fun _ => 0)) hz
     (forkedTranscript_nonempty_of_instanceOpening p ν cert hz hvalid o hshift
       u₁ u₂ u₃ h12 h13 h23 hu₁ hu₂ hu₃ 0)
@@ -315,17 +315,17 @@ branch `m` *is* the assembled final MSM (`assemble?_eq_some`), whose evaluation
 predicate `fullAlgebraicAccept` (a `DeployedIpaVerifierEq`) yields the `DeployedAccepts` that
 `honest_tuple_mem_memberBadEvent` consumes. -/
 theorem deployedAccepts_of_verifierEq [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
-    {m : Msm shape.k Fp G} (hm : assemble? vk ps ch = some m)
-    (h : DeployedIpaVerifierEq (hk ▸ urs.g) urs.w urs.u vk ps ch) :
-    DeployedAccepts urs hk vk ps ch := by
+    {m : Msm shape.k Fp G} (hm : assemble? vk instanceCommitment ps ch = some m)
+    (h : DeployedIpaVerifierEq (hk ▸ urs.g) urs.w urs.u vk instanceCommitment ps ch) :
+    DeployedAccepts urs hk vk instanceCommitment ps ch := by
   unfold DeployedAccepts
   rw [hm]
   simp only []
-  rw [eval_cast hk m, assemble?_eq_some vk ps ch hm,
+  rw [eval_cast hk m, assemble?_eq_some vk instanceCommitment ps ch hm,
     deployed_verification_eq (hk ▸ urs.g) urs.w urs.u ps ch
-      (constructIntermediateSets (assembleQueries vk ps ch))]
+      (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch))]
   exact h
 
 /-- **The honest-completeness supply with the shift derived.**
@@ -336,7 +336,7 @@ vanish, so no honest-value-shift hypothesis is carried. The fold challenges are 
 `exists_ipaFoldChallenges`. -/
 theorem honestCompletenessSupply_of_openings_agree {shape : Shape}
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
-    {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (p : AlgebraicWfProof basis vk instanceCommitment) (ν : Fin 11 → Fp)
     (cert : AlgebraicDForkCert (F := Fp)
       (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
         (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
@@ -346,18 +346,18 @@ theorem honestCompletenessSupply_of_openings_agree {shape : Shape}
       (ursOfAugmentedBasis shape.k basis).w (ν 10)
       (commit (ursOfAugmentedBasis shape.k basis)
           (adjustedWitness (p.aMulti ν) p.s
-            (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+            (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
         (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
         (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
       cert.toDForkCert)
     (o : (deployedAlgebraicInstanceOfCert p ν cert hz hvalid).Opening)
     {a₀ : Fin (2 ^ shape.k) → Fp}
     (hval₀ : innerProduct a₀ (evalVector shape.k (ν 7))
-      = multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0)))
+      = multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
     (hae : o.1 = a₀)
-    (hacc : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+    (hacc : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
       (chRecord ν (fun _ => 0))) :
-    HonestCompletenessSupply (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+    HonestCompletenessSupply (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
       (chRecord ν (fun _ => 0)) := by
   obtain ⟨u₁, u₂, u₃, h12, h13, h23, hu₁, hu₂, hu₃⟩ := exists_ipaFoldChallenges
   exact honestCompletenessSupply_of_instanceOpening p ν cert hz hvalid o
@@ -372,7 +372,7 @@ predicate. The two premises left are the ones a single accepting run does not ca
 `hae` (a rewinding product, priced by `deployed_member_budget`) and the assembly being defined. -/
 theorem honestCompletenessSupply_of_cleanOpening {shape : Shape}
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
-    {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (p : AlgebraicWfProof basis vk instanceCommitment) (ν : Fin 11 → Fp)
     (cert : AlgebraicDForkCert (F := Fp)
       (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
         (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
@@ -382,22 +382,22 @@ theorem honestCompletenessSupply_of_cleanOpening {shape : Shape}
       (ursOfAugmentedBasis shape.k basis).w (ν 10)
       (commit (ursOfAugmentedBasis shape.k basis)
           (adjustedWitness (p.aMulti ν) p.s
-            (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+            (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
         (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
         (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
       cert.toDForkCert)
     (o : (deployedAlgebraicInstanceOfCert p ν cert hz hvalid).Opening)
     {a₀ : Fin (2 ^ shape.k) → Fp}
     (hval₀ : innerProduct a₀ (evalVector shape.k (ν 7))
-      = multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0)))
+      = multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
     (hae : o.1 = a₀)
     {m : Msm shape.k Fp VestaG}
-    (hm : assemble? vk p.proof.1 (chRecord ν (fun _ => 0)) = some m)
-    (hverify : fullAlgebraicAccept basis vk p ν (fun _ => 0)) :
-    HonestCompletenessSupply (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+    (hm : assemble? vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) = some m)
+    (hverify : fullAlgebraicAccept basis vk instanceCommitment p ν (fun _ => 0)) :
+    HonestCompletenessSupply (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
       (chRecord ν (fun _ => 0)) :=
   honestCompletenessSupply_of_openings_agree p ν cert hz hvalid o hval₀ hae
-    (deployedAccepts_of_verifierEq (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+    (deployedAccepts_of_verifierEq (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
       (chRecord ν (fun _ => 0)) hm hverify)
 
 /-! ### Acceptance through `assemble?`
@@ -413,19 +413,19 @@ the deployed decision as the family's acceptance closes that gap by construction
 decision *and* accepts. -/
 def fullAlgebraicAcceptDeployed {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (vk : VerifyingKey shape Fp VestaG) (p : AlgebraicWfProof basis vk)
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (p : AlgebraicWfProof basis vk instanceCommitment)
     (ν : Fin 11 → Fp) (χ : Fin shape.k → Fp) : Prop :=
-  DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1 (chRecord ν χ)
+  DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1 (chRecord ν χ)
 
 /-- The strengthened acceptance implies the one the family currently uses, so nothing proved about
 `fullAlgebraicAccept` is lost by moving to it (`deployedAccepts_verifierEq`, `Soundness.Main`). -/
 theorem fullAlgebraicAccept_of_deployed {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (vk : VerifyingKey shape Fp VestaG) (p : AlgebraicWfProof basis vk)
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (p : AlgebraicWfProof basis vk instanceCommitment)
     (ν : Fin 11 → Fp) (χ : Fin shape.k → Fp)
-    (h : fullAlgebraicAcceptDeployed basis vk p ν χ) :
-    fullAlgebraicAccept basis vk p ν χ :=
-  deployedAccepts_verifierEq (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+    (h : fullAlgebraicAcceptDeployed basis vk instanceCommitment p ν χ) :
+    fullAlgebraicAccept basis vk instanceCommitment p ν χ :=
+  deployedAccepts_verifierEq (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
     (chRecord ν χ) h
 
 /-- The knowledge-error event at the *deployed decision*: full deployed acceptance — the verifier
@@ -436,7 +436,7 @@ def snarkExtractionFailureEventDeployed {shape : Shape}
     (family : ComputedAlgebraicFSFamily shape)
     (extracted : (AugmentedIndex (2 ^ shape.k) → VestaG) → family.Coins → Prop) :
     Set ((AugmentedIndex (2 ^ shape.k) → VestaG) × family.Coins) :=
-  {q | fsWinsFull (family.adversary q.1) (fullAlgebraicAcceptDeployed q.1 (family.vk q.1))
+  {q | fsWinsFull (family.adversary q.1) (fullAlgebraicAcceptDeployed q.1 (family.vk q.1) (family.instanceCommitment q.1))
       (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) q.2.1 ∧
     ¬ extracted q.1 q.2}
 
@@ -448,7 +448,7 @@ theorem snarkExtractionFailureEventDeployed_subset {shape : Shape}
     snarkExtractionFailureEventDeployed family extracted
       ⊆ family.snarkExtractionFailureEvent extracted := by
   rintro q ⟨hacc, hnex⟩
-  exact ⟨fullAlgebraicAccept_of_deployed q.1 (family.vk q.1)
+  exact ⟨fullAlgebraicAccept_of_deployed q.1 (family.vk q.1) (family.instanceCommitment q.1)
     ((family.adversary q.1).run q.2.1) _ _ hacc, hnex⟩
 
 open scoped ENNReal in
@@ -480,7 +480,7 @@ witness tie — and `honestCompletenessSupply_or_relation` discharges the tie in
 agree-or-collide disjunction. -/
 theorem honestCompletenessSupply_of_cleanOpening_deployed {shape : Shape}
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
-    {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (p : AlgebraicWfProof basis vk instanceCommitment) (ν : Fin 11 → Fp)
     (cert : AlgebraicDForkCert (F := Fp)
       (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
         (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
@@ -490,17 +490,17 @@ theorem honestCompletenessSupply_of_cleanOpening_deployed {shape : Shape}
       (ursOfAugmentedBasis shape.k basis).w (ν 10)
       (commit (ursOfAugmentedBasis shape.k basis)
           (adjustedWitness (p.aMulti ν) p.s
-            (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+            (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
         (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
         (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
       cert.toDForkCert)
     (o : (deployedAlgebraicInstanceOfCert p ν cert hz hvalid).Opening)
     {a₀ : Fin (2 ^ shape.k) → Fp}
     (hval₀ : innerProduct a₀ (evalVector shape.k (ν 7))
-      = multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0)))
+      = multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
     (hae : o.1 = a₀)
-    (hverify : fullAlgebraicAcceptDeployed basis vk p ν (fun _ => 0)) :
-    HonestCompletenessSupply (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+    (hverify : fullAlgebraicAcceptDeployed basis vk instanceCommitment p ν (fun _ => 0)) :
+    HonestCompletenessSupply (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
       (chRecord ν (fun _ => 0)) :=
   honestCompletenessSupply_of_openings_agree p ν cert hz hvalid o hval₀ hae hverify
 
@@ -512,7 +512,7 @@ are two distinct openings of one commitment, a nontrivial `(g, u, w)` relation
 `member_relation_or_dlr_of_instance`, so the witness tie stops being a premise. -/
 theorem honestCompletenessSupply_or_relation {shape : Shape}
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
-    {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (p : AlgebraicWfProof basis vk instanceCommitment) (ν : Fin 11 → Fp)
     (cert : AlgebraicDForkCert (F := Fp)
       (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
         (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
@@ -522,22 +522,22 @@ theorem honestCompletenessSupply_or_relation {shape : Shape}
       (ursOfAugmentedBasis shape.k basis).w (ν 10)
       (commit (ursOfAugmentedBasis shape.k basis)
           (adjustedWitness (p.aMulti ν) p.s
-            (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+            (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
         (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
         (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
       cert.toDForkCert)
     (o : (deployedAlgebraicInstanceOfCert p ν cert hz hvalid).Opening)
     {a₀ : Fin (2 ^ shape.k) → Fp}
     (hcommit₀ : commit (ursOfAugmentedBasis shape.k basis) a₀
-      = deployedCommitment (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+      = deployedCommitment (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
             (chRecord ν (fun _ => 0))
         - p.multiU ν • (ursOfAugmentedBasis shape.k basis).u
         - p.multiBlind ν • (ursOfAugmentedBasis shape.k basis).w)
     (hval₀ : innerProduct a₀ (evalVector shape.k (ν 7))
-      = multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0)))
-    (hacc : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+      = multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
+    (hacc : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
       (chRecord ν (fun _ => 0))) :
-    HonestCompletenessSupply (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+    HonestCompletenessSupply (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
       (chRecord ν (fun _ => 0))
     ∨ HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
         (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w := by

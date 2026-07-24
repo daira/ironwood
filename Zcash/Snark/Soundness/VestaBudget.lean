@@ -60,111 +60,111 @@ into the vanishing-slot binding, `ch.x^vk.n ≠ 1`, and the fold fingerprint; se
 section note at the end of this file. -/
 theorem orchard_verifier_vesta_member_constraint_budgeted {shape : Shape}
     (urs : URS VestaG) (hk : shape.k = urs.k)
-    (vk : VerifyingKey shape Fp VestaG) (ps : ProofString shape Fp VestaG)
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (ps : ProofString shape Fp VestaG)
     (ch : Challenges shape.k Fp)
     (pU pW : Fp)
     {numAdvice numInstance : ℕ}
     (adviceSet : Fin numAdvice → ℕ)
-    (hadviceSet : ∀ j, adviceSet j < deployedX4PairCount vk ps ch)
-    (adviceMem : ∀ j : Fin numAdvice, Fin (deployedSetQueries vk ps ch (adviceSet j)).length)
+    (hadviceSet : ∀ j, adviceSet j < deployedX4PairCount vk instanceCommitment ps ch)
+    (adviceMem : ∀ j : Fin numAdvice, Fin (deployedSetQueries vk instanceCommitment ps ch (adviceSet j)).length)
     (instanceSet : Fin numInstance → ℕ)
-    (hinstanceSet : ∀ j, instanceSet j < deployedX4PairCount vk ps ch)
+    (hinstanceSet : ∀ j, instanceSet j < deployedX4PairCount vk instanceCommitment ps ch)
     (instanceMem : ∀ j : Fin numInstance,
-      Fin (deployedSetQueries vk ps ch (instanceSet j)).length)
+      Fin (deployedSetQueries vk instanceCommitment ps ch (instanceSet j)).length)
     (fixedCols : ℕ → Polynomial Fp)
     (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : Polynomial Fp) (deg : ℕ)
     {a₀ : Fin (2 ^ urs.k) → Fp}
     (pbatch : OpenedBatchOpenings urs (evalVector urs.k ch.x3)
-      (x4BatchCommitments urs hk vk ps ch) (x4BatchEvals vk ps ch) a₀ pU pW)
+      (x4BatchCommitments urs hk vk instanceCommitment ps ch) (x4BatchEvals vk instanceCommitment ps ch) a₀ pU pW)
     (hξcur : pbatch.batchChallenge pbatch.current = ch.x4)
-    (hlen : ∀ i, i < deployedX4PairCount vk ps ch
-      → 0 < (deployedSetQueries vk ps ch i).length)
-    (hprob1 : ∀ i, i < deployedX4PairCount vk ps ch →
-      (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+    (hlen : ∀ i, i < deployedX4PairCount vk instanceCommitment ps ch
+      → 0 < (deployedSetQueries vk instanceCommitment ps ch i).length)
+    (hprob1 : ∀ i, i < deployedX4PairCount vk instanceCommitment ps ch →
+      (((deployedSetQueries vk instanceCommitment ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
         < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
-            (OpenedX1Accept urs hk vk ps ch)))
-    (hacc0 : DeployedAccepts urs hk vk ps ch)
+            (OpenedX1Accept urs hk vk instanceCommitment ps ch)))
+    (hacc0 : DeployedAccepts urs hk vk instanceCommitment ps ch)
     (p : Fin shape.numProofs)
     (hadvLen : ∀ j : Fin numAdvice, (j : ℕ) < vk.adviceQueryLayout.length
       ∧ (j : ℕ) < (List.ofFn (ps.adviceEvals p)).length)
     (hinstLen : ∀ j : Fin numInstance, (j : ℕ) < vk.instanceQueryLayout.length
       ∧ (j : ℕ) < (List.ofFn (ps.instanceEvals p)).length)
     (b₂f : Fp → Fin (2 ^ urs.k) → Fp)
-    (hJ : ∀ i, i < deployedX4PairCount vk ps ch →
-      (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
-        + (((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
-          + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
-              + (deployedAllPts vk ps ch).card
-              + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
-          + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp)
+    (hJ : ∀ i, i < deployedX4PairCount vk instanceCommitment ps ch →
+      (((deployedSetQueries vk instanceCommitment ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+        + (((deployedX4PairCount vk instanceCommitment ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+          + ((max (2 ^ urs.k) (deployedAllPts vk instanceCommitment ps ch).card
+              + (deployedAllPts vk instanceCommitment ps ch).card
+              + (deployedAllPts vk instanceCommitment ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
+          + (deployedX4PairCount vk instanceCommitment ps ch : ℝ≥0∞) / Fintype.card Fp)
       < (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
-          (memberJointAccept urs hk vk ps ch b₂f))
+          (memberJointAccept urs hk vk instanceCommitment ps ch b₂f))
     (hfold : (List.ofFn (fun i : Fin ng =>
         (gates i).eval (fun n => (fixedCols n).eval ch.x)
-          (deployedClaimedFeed vk ps ch adviceSet adviceMem vk.adviceQueryLayout)
-          (deployedClaimedFeed vk ps ch instanceSet instanceMem vk.instanceQueryLayout))).foldl
+          (deployedClaimedFeed vk instanceCommitment ps ch adviceSet adviceMem vk.adviceQueryLayout)
+          (deployedClaimedFeed vk instanceCommitment ps ch instanceSet instanceMem vk.instanceQueryLayout))).foldl
           (fun acc v => acc * y + v) 0 = hpoly.eval ch.x * (ch.x ^ deg - 1))
     (hgood :
       combineGates fixedCols
         (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk ps ch pbatch (adviceSet j)
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
             (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols (adviceMem j))))
         (rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk ps ch pbatch (instanceSet j)
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
             (hinstanceSet j) (hlen _ (hinstanceSet j))
             (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
         y gates ≠ hpoly * (X ^ deg - 1) →
       (combineGates fixedCols
         (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk ps ch pbatch (adviceSet j)
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
             (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols (adviceMem j))))
         (rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk ps ch pbatch (instanceSet j)
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
             (hinstanceSet j) (hlen _ (hinstanceSet j))
             (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
         y gates - hpoly * (X ^ deg - 1)).eval ch.x ≠ 0)
     (hadviceLayout : ∀ j : Fin numAdvice,
-      (deployedSetCommIds vk ps ch (adviceSet j)).getD (adviceMem j : ℕ) CommitmentId.vanishingH
+      (deployedSetCommIds vk instanceCommitment ps ch (adviceSet j)).getD (adviceMem j : ℕ) CommitmentId.vanishingH
         = CommitmentId.adviceCol p (vk.adviceQueryLayout.getD (j : ℕ) (0, 0)).1)
     (hinstanceLayout : ∀ j : Fin numInstance,
-      (deployedSetCommIds vk ps ch (instanceSet j)).getD (instanceMem j : ℕ) CommitmentId.vanishingH
+      (deployedSetCommIds vk instanceCommitment ps ch (instanceSet j)).getD (instanceMem j : ℕ) CommitmentId.vanishingH
         = CommitmentId.instanceCol p (vk.instanceQueryLayout.getD (j : ℕ) (0, 0)).1)
-    (hquotCommitted : ∃ (hSet : ℕ) (hhSet : hSet < deployedX4PairCount vk ps ch)
-        (hMem : Fin (deployedSetQueries vk ps ch hSet).length),
-      hpoly = coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk ps ch pbatch hSet hhSet
+    (hquotCommitted : ∃ (hSet : ℕ) (hhSet : hSet < deployedX4PairCount vk instanceCommitment ps ch)
+        (hMem : Fin (deployedSetQueries vk instanceCommitment ps ch hSet).length),
+      hpoly = coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch hSet hhSet
           (hlen _ hhSet) (hprob1 _ hhSet) hacc0).cols hMem) ∧
-      (deployedSetCommIds vk ps ch hSet).getD (hMem : ℕ) CommitmentId.randomPoly
+      (deployedSetCommIds vk instanceCommitment ps ch hSet).getD (hMem : ℕ) CommitmentId.randomPoly
         = CommitmentId.vanishingH)
     {S : Prop}
     (hencodes : ∀ a,
-      SnarkRelationWithMemberColumns urs hk vk ps ch
-        (deployedCommitment urs hk vk ps ch - pU • urs.u - pW • urs.w)
-        (evalVector urs.k ch.x3) (multiopenValue vk ps ch) p adviceSet hadviceSet adviceMem
+      SnarkRelationWithMemberColumns urs hk vk instanceCommitment ps ch
+        (deployedCommitment urs hk vk instanceCommitment ps ch - pU • urs.u - pW • urs.w)
+        (evalVector urs.k ch.x3) (multiopenValue vk instanceCommitment ps ch) p adviceSet hadviceSet adviceMem
         instanceSet hinstanceSet instanceMem fixedCols y gates hpoly deg pU pW a → S) :
     S ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   by_cases hrel : HasNontrivialRelation (F := Fp) urs.g urs.u urs.w
   · exact Or.inr hrel
   -- derive `hadvice`: the rotated advice feed's value at `ch.x` is the deployed claimed eval
   have hadvice : ∀ n, (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
-      coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk ps ch pbatch (adviceSet j)
+      coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
         (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
           (adviceMem j))) n).eval ch.x
-      = deployedClaimedFeed vk ps ch adviceSet adviceMem vk.adviceQueryLayout n := by
+      = deployedClaimedFeed vk instanceCommitment ps ch adviceSet adviceMem vk.adviceQueryLayout n := by
     intro n
     by_cases h : n < numAdvice
-    · obtain ⟨q, hqmem, hqid, hqpt⟩ := advice_query_mem_assembleQueries vk ps ch p
+    · obtain ⟨q, hqmem, hqid, hqpt⟩ := advice_query_mem_assembleQueries vk instanceCommitment ps ch p
         (hadvLen ⟨n, h⟩).1 (hadvLen ⟨n, h⟩).2
       have hltm : ((adviceMem ⟨n, h⟩ : ℕ))
-          < (deployedSetCommIds vk ps ch (adviceSet ⟨n, h⟩)).length := by
+          < (deployedSetCommIds vk instanceCommitment ps ch (adviceSet ⟨n, h⟩)).length := by
         rw [deployedSetCommIds_length]
         exact (adviceMem ⟨n, h⟩).isLt
-      have hid : (deployedSetCommIds vk ps ch (adviceSet ⟨n, h⟩)).getD ((adviceMem ⟨n, h⟩ : ℕ))
+      have hid : (deployedSetCommIds vk instanceCommitment ps ch (adviceSet ⟨n, h⟩)).getD ((adviceMem ⟨n, h⟩ : ℕ))
           CommitmentId.vanishingH = q.commId := (hadviceLayout ⟨n, h⟩).trans hqid.symm
-      have hpt := deployed_query_point_mem vk ps ch hqmem hltm hid
+      have hpt := deployed_query_point_mem vk instanceCommitment ps ch hqmem hltm hid
       rw [hqpt] at hpt
-      have hb := deployed_member_node_binding_at_point_budgeted urs hk vk ps ch (adviceSet ⟨n, h⟩)
+      have hb := deployed_member_node_binding_at_point_budgeted urs hk vk instanceCommitment ps ch (adviceSet ⟨n, h⟩)
         (hadviceSet ⟨n, h⟩)
-        (openedMemberDecode_of_x1Prob urs hk vk ps ch pbatch (adviceSet ⟨n, h⟩)
+        (openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet ⟨n, h⟩)
           (hadviceSet ⟨n, h⟩) (hlen _ (hadviceSet ⟨n, h⟩)) (hprob1 _ (hadviceSet ⟨n, h⟩)) hacc0)
         b₂f (hJ _ (hadviceSet ⟨n, h⟩)) hpt (adviceMem ⟨n, h⟩)
       rcases hb with hb | hdlr
@@ -176,26 +176,26 @@ theorem orchard_verifier_vesta_member_constraint_budgeted {shape : Shape}
         deployedClaimedFeed, dif_neg h]
   -- derive `hinstance` symmetrically
   have hinstance : ∀ n, (rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
-      coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk ps ch pbatch (instanceSet j)
+      coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
         (hinstanceSet j) (hlen _ (hinstanceSet j)) (hprob1 _ (hinstanceSet j)) hacc0).cols
           (instanceMem j))) n).eval ch.x
-      = deployedClaimedFeed vk ps ch instanceSet instanceMem vk.instanceQueryLayout n := by
+      = deployedClaimedFeed vk instanceCommitment ps ch instanceSet instanceMem vk.instanceQueryLayout n := by
     intro n
     by_cases h : n < numInstance
-    · obtain ⟨q, hqmem, hqid, hqpt⟩ := instance_query_mem_assembleQueries vk ps ch p
+    · obtain ⟨q, hqmem, hqid, hqpt⟩ := instance_query_mem_assembleQueries vk instanceCommitment ps ch p
         (hinstLen ⟨n, h⟩).1 (hinstLen ⟨n, h⟩).2
       have hltm : ((instanceMem ⟨n, h⟩ : ℕ))
-          < (deployedSetCommIds vk ps ch (instanceSet ⟨n, h⟩)).length := by
+          < (deployedSetCommIds vk instanceCommitment ps ch (instanceSet ⟨n, h⟩)).length := by
         rw [deployedSetCommIds_length]
         exact (instanceMem ⟨n, h⟩).isLt
-      have hid : (deployedSetCommIds vk ps ch (instanceSet ⟨n, h⟩)).getD
+      have hid : (deployedSetCommIds vk instanceCommitment ps ch (instanceSet ⟨n, h⟩)).getD
           ((instanceMem ⟨n, h⟩ : ℕ)) CommitmentId.vanishingH = q.commId :=
         (hinstanceLayout ⟨n, h⟩).trans hqid.symm
-      have hpt := deployed_query_point_mem vk ps ch hqmem hltm hid
+      have hpt := deployed_query_point_mem vk instanceCommitment ps ch hqmem hltm hid
       rw [hqpt] at hpt
-      have hb := deployed_member_node_binding_at_point_budgeted urs hk vk ps ch (instanceSet ⟨n, h⟩)
+      have hb := deployed_member_node_binding_at_point_budgeted urs hk vk instanceCommitment ps ch (instanceSet ⟨n, h⟩)
         (hinstanceSet ⟨n, h⟩)
-        (openedMemberDecode_of_x1Prob urs hk vk ps ch pbatch (instanceSet ⟨n, h⟩)
+        (openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet ⟨n, h⟩)
           (hinstanceSet ⟨n, h⟩) (hlen _ (hinstanceSet ⟨n, h⟩)) (hprob1 _ (hinstanceSet ⟨n, h⟩))
           hacc0)
         b₂f (hJ _ (hinstanceSet ⟨n, h⟩)) hpt (instanceMem ⟨n, h⟩)
@@ -207,13 +207,13 @@ theorem orchard_verifier_vesta_member_constraint_budgeted {shape : Shape}
     · rw [rotatedFeed_eval_of_ge vk.omega vk.instanceQueryLayout _ (Nat.not_lt.mp h) ch.x,
         deployedClaimedFeed, dif_neg h]
   -- the gate check at the deployed opening challenge, from the derived claimed evaluations
-  exact orchard_verifier_vesta_member_constraint_deployed_x4 urs hk vk ps ch pU pW adviceSet
+  exact orchard_verifier_vesta_member_constraint_deployed_x4 urs hk vk instanceCommitment ps ch pU pW adviceSet
     hadviceSet adviceMem instanceSet hinstanceSet instanceMem fixedCols y gates hpoly deg ch.x
     pbatch hξcur hlen hprob1 hacc0
     (quotientCheck_of_claimed fixedCols _ _ y gates hpoly deg ch.x
       (fun n => (fixedCols n).eval ch.x)
-      (deployedClaimedFeed vk ps ch adviceSet adviceMem vk.adviceQueryLayout)
-      (deployedClaimedFeed vk ps ch instanceSet instanceMem vk.instanceQueryLayout)
+      (deployedClaimedFeed vk instanceCommitment ps ch adviceSet adviceMem vk.adviceQueryLayout)
+      (deployedClaimedFeed vk instanceCommitment ps ch instanceSet instanceMem vk.instanceQueryLayout)
       (fun _ => rfl) hadvice hinstance hfold)
     hgood p hadviceLayout hinstanceLayout hquotCommitted hencodes
 
@@ -229,7 +229,7 @@ agreement branch the budgeted deployed capstone runs at the algebraic instance's
 collide into a computed `(g, u, w)` relation. No `mdec`/`hquot` hypothesis remains — the measure
 premises are the honest-base `x₁` floor and the joint accept floor. -/
 theorem member_relation_or_dlr_of_instance_budgeted
-    {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (p : AlgebraicWfProof basis vk instanceCommitment) (ν : Fin 11 → Fp)
     (cert : AlgebraicDForkCert (F := Fp)
       (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
         (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
@@ -239,40 +239,40 @@ theorem member_relation_or_dlr_of_instance_budgeted
       (ursOfAugmentedBasis shape.k basis).w (ν 10)
       (commit (ursOfAugmentedBasis shape.k basis)
           (adjustedWitness (p.aMulti ν) p.s
-            (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+            (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
         (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
         (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
       cert.toDForkCert)
     (o : (deployedAlgebraicInstanceOfCert p ν cert hz hvalid).Opening)
     {a₀ : Fin (2 ^ shape.k) → Fp}
     (pbatch : OpenedBatchOpenings (ursOfAugmentedBasis shape.k basis) (evalVector shape.k (ν 7))
-      (x4BatchCommitments (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+      (x4BatchCommitments (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
         (chRecord ν (fun _ => 0)))
-      (x4BatchEvals vk p.proof.1 (chRecord ν (fun _ => 0))) a₀ (p.multiU ν) (p.multiBlind ν))
+      (x4BatchEvals vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) a₀ (p.multiU ν) (p.multiBlind ν))
     (hξcur : pbatch.batchChallenge pbatch.current
       = (chRecord ν (fun _ => 0) : Challenges shape.k Fp).x4)
     {numAdvice numInstance : ℕ}
     (adviceSet : Fin numAdvice → ℕ)
     (hadviceSet : ∀ j, adviceSet j
-      < deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)))
+      < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
     (adviceMem : ∀ j : Fin numAdvice,
-      Fin (deployedSetQueries vk p.proof.1 (chRecord ν (fun _ => 0)) (adviceSet j)).length)
+      Fin (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (adviceSet j)).length)
     (instanceSet : Fin numInstance → ℕ)
     (hinstanceSet : ∀ j, instanceSet j
-      < deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)))
+      < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
     (instanceMem : ∀ j : Fin numInstance,
-      Fin (deployedSetQueries vk p.proof.1 (chRecord ν (fun _ => 0)) (instanceSet j)).length)
+      Fin (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (instanceSet j)).length)
     (fixedCols : ℕ → Polynomial Fp) (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp)
     (hpoly : Polynomial Fp) (deg : ℕ)
-    (hlen : ∀ i, i < deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0))
-      → 0 < (deployedSetQueries vk p.proof.1 (chRecord ν (fun _ => 0)) i).length)
-    (hprob1 : ∀ i, i < deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)) →
-      (((deployedSetQueries vk p.proof.1 (chRecord ν (fun _ => 0)) i).length - 1 : ℕ) : ℝ≥0∞)
+    (hlen : ∀ i, i < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))
+      → 0 < (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) i).length)
+    (hprob1 : ∀ i, i < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) →
+      (((deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) i).length - 1 : ℕ) : ℝ≥0∞)
           / Fintype.card Fp
         < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
-            (OpenedX1Accept (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+            (OpenedX1Accept (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
               (chRecord ν (fun _ => 0)))))
-    (hacc0 : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+    (hacc0 : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
       (chRecord ν (fun _ => 0)))
     (pp : Fin shape.numProofs)
     (hadvLen : ∀ j : Fin numAdvice, (j : ℕ) < vk.adviceQueryLayout.length
@@ -280,27 +280,27 @@ theorem member_relation_or_dlr_of_instance_budgeted
     (hinstLen : ∀ j : Fin numInstance, (j : ℕ) < vk.instanceQueryLayout.length
       ∧ (j : ℕ) < (List.ofFn ((p.proof.1 : ProofString shape Fp VestaG).instanceEvals pp)).length)
     (b₂f : Fp → Fin (2 ^ shape.k) → Fp)
-    (hJ : ∀ i, i < deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)) →
-      (((deployedSetQueries vk p.proof.1 (chRecord ν (fun _ => 0)) i).length - 1 : ℕ) : ℝ≥0∞)
+    (hJ : ∀ i, i < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) →
+      (((deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) i).length - 1 : ℕ) : ℝ≥0∞)
           / Fintype.card Fp
-        + (((deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)) - 1 : ℕ) : ℝ≥0∞)
+        + (((deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) - 1 : ℕ) : ℝ≥0∞)
             / Fintype.card Fp
           + ((max (2 ^ shape.k)
-                (deployedAllPts vk p.proof.1 (chRecord ν (fun _ => 0))).card
-              + (deployedAllPts vk p.proof.1 (chRecord ν (fun _ => 0))).card
-              + (deployedAllPts vk p.proof.1 (chRecord ν (fun _ => 0))).card : ℕ) : ℝ≥0∞)
+                (deployedAllPts vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))).card
+              + (deployedAllPts vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))).card
+              + (deployedAllPts vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))).card : ℕ) : ℝ≥0∞)
             / Fintype.card Fp
-          + (deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)) : ℝ≥0∞)
+          + (deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) : ℝ≥0∞)
             / Fintype.card Fp)
       < (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
-          (memberJointAccept (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+          (memberJointAccept (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
             (chRecord ν (fun _ => 0)) b₂f))
     (hfold : (List.ofFn (fun i : Fin ng =>
         (gates i).eval
           (fun n => (fixedCols n).eval (chRecord ν (fun _ => 0) : Challenges shape.k Fp).x)
-          (deployedClaimedFeed vk p.proof.1 (chRecord ν (fun _ => 0)) adviceSet adviceMem
+          (deployedClaimedFeed vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) adviceSet adviceMem
             vk.adviceQueryLayout)
-          (deployedClaimedFeed vk p.proof.1 (chRecord ν (fun _ => 0)) instanceSet instanceMem
+          (deployedClaimedFeed vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) instanceSet instanceMem
             vk.instanceQueryLayout))).foldl
           (fun acc v => acc * y + v) 0
         = hpoly.eval (chRecord ν (fun _ => 0) : Challenges shape.k Fp).x
@@ -308,61 +308,61 @@ theorem member_relation_or_dlr_of_instance_budgeted
     (hgood :
       combineGates fixedCols
         (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk
+          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment
             p.proof.1 (chRecord ν (fun _ => 0)) pbatch (adviceSet j)
             (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
               (adviceMem j))))
         (rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk
+          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment
             p.proof.1 (chRecord ν (fun _ => 0)) pbatch (instanceSet j)
             (hinstanceSet j) (hlen _ (hinstanceSet j)) (hprob1 _ (hinstanceSet j)) hacc0).cols
               (instanceMem j))))
         y gates ≠ hpoly * (X ^ deg - 1) →
       (combineGates fixedCols
         (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk
+          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment
             p.proof.1 (chRecord ν (fun _ => 0)) pbatch (adviceSet j)
             (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
               (adviceMem j))))
         (rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk
+          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment
             p.proof.1 (chRecord ν (fun _ => 0)) pbatch (instanceSet j)
             (hinstanceSet j) (hlen _ (hinstanceSet j)) (hprob1 _ (hinstanceSet j)) hacc0).cols
               (instanceMem j))))
         y gates - hpoly * (X ^ deg - 1)).eval
           (chRecord ν (fun _ => 0) : Challenges shape.k Fp).x ≠ 0)
     (hadviceLayout : ∀ j : Fin numAdvice,
-      (deployedSetCommIds vk p.proof.1 (chRecord ν (fun _ => 0)) (adviceSet j)).getD
+      (deployedSetCommIds vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (adviceSet j)).getD
           (adviceMem j : ℕ) CommitmentId.vanishingH
         = CommitmentId.adviceCol pp (vk.adviceQueryLayout.getD (j : ℕ) (0, 0)).1)
     (hinstanceLayout : ∀ j : Fin numInstance,
-      (deployedSetCommIds vk p.proof.1 (chRecord ν (fun _ => 0)) (instanceSet j)).getD
+      (deployedSetCommIds vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (instanceSet j)).getD
           (instanceMem j : ℕ) CommitmentId.vanishingH
         = CommitmentId.instanceCol pp (vk.instanceQueryLayout.getD (j : ℕ) (0, 0)).1)
     (hquotCommitted : ∃ (hSet : ℕ)
-        (hhSet : hSet < deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)))
-        (hMem : Fin (deployedSetQueries vk p.proof.1 (chRecord ν (fun _ => 0)) hSet).length),
+        (hhSet : hSet < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
+        (hMem : Fin (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) hSet).length),
       hpoly = coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl
-          vk p.proof.1 (chRecord ν (fun _ => 0)) pbatch hSet hhSet
+          vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) pbatch hSet hhSet
           (hlen _ hhSet) (hprob1 _ hhSet) hacc0).cols hMem) ∧
-      (deployedSetCommIds vk p.proof.1 (chRecord ν (fun _ => 0)) hSet).getD (hMem : ℕ)
+      (deployedSetCommIds vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) hSet).getD (hMem : ℕ)
           CommitmentId.randomPoly = CommitmentId.vanishingH)
     {S : Prop}
     (hencodes : ∀ a,
-      SnarkRelationWithMemberColumns (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+      SnarkRelationWithMemberColumns (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
         (chRecord ν (fun _ => 0))
-        (deployedCommitment (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+        (deployedCommitment (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
             (chRecord ν (fun _ => 0))
           - p.multiU ν • (ursOfAugmentedBasis shape.k basis).u
           - p.multiBlind ν • (ursOfAugmentedBasis shape.k basis).w)
-        (evalVector shape.k (ν 7)) (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0)))
+        (evalVector shape.k (ν 7)) (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
         pp adviceSet hadviceSet adviceMem instanceSet hinstanceSet instanceMem
         fixedCols y gates hpoly deg (p.multiU ν) (p.multiBlind ν) a → S) :
     S ∨ HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
       (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w := by
   by_cases hae : o.1 = a₀
   · exact orchard_verifier_vesta_member_constraint_budgeted (ursOfAugmentedBasis shape.k basis)
-      rfl vk p.proof.1 (chRecord ν (fun _ => 0)) (p.multiU ν) (p.multiBlind ν)
+      rfl vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (p.multiU ν) (p.multiBlind ν)
       adviceSet hadviceSet adviceMem instanceSet hinstanceSet instanceMem fixedCols y gates
       hpoly deg pbatch hξcur hlen hprob1 hacc0 pp hadvLen hinstLen b₂f hJ hfold hgood
       hadviceLayout hinstanceLayout hquotCommitted hencodes
@@ -379,7 +379,7 @@ no member decode or quotient identity is hypothesised. On the clean-opening bran
 capstone produces the member SNARK relation (or a binding `HasNontrivialRelation`); on the
 relation branch, the algebraic extraction's own `AlgebraicRelationWitness`. -/
 noncomputable def member_snark_of_instance_budgeted
-    {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (p : AlgebraicWfProof basis vk instanceCommitment) (ν : Fin 11 → Fp)
     (cert : AlgebraicDForkCert (F := Fp)
       (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
         (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
@@ -389,39 +389,39 @@ noncomputable def member_snark_of_instance_budgeted
       (ursOfAugmentedBasis shape.k basis).w (ν 10)
       (commit (ursOfAugmentedBasis shape.k basis)
           (adjustedWitness (p.aMulti ν) p.s
-            (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+            (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
         (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
         (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
       cert.toDForkCert)
     {a₀ : Fin (2 ^ shape.k) → Fp}
     (pbatch : OpenedBatchOpenings (ursOfAugmentedBasis shape.k basis) (evalVector shape.k (ν 7))
-      (x4BatchCommitments (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+      (x4BatchCommitments (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
         (chRecord ν (fun _ => 0)))
-      (x4BatchEvals vk p.proof.1 (chRecord ν (fun _ => 0))) a₀ (p.multiU ν) (p.multiBlind ν))
+      (x4BatchEvals vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) a₀ (p.multiU ν) (p.multiBlind ν))
     (hξcur : pbatch.batchChallenge pbatch.current
       = (chRecord ν (fun _ => 0) : Challenges shape.k Fp).x4)
     {numAdvice numInstance : ℕ}
     (adviceSet : Fin numAdvice → ℕ)
     (hadviceSet : ∀ j, adviceSet j
-      < deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)))
+      < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
     (adviceMem : ∀ j : Fin numAdvice,
-      Fin (deployedSetQueries vk p.proof.1 (chRecord ν (fun _ => 0)) (adviceSet j)).length)
+      Fin (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (adviceSet j)).length)
     (instanceSet : Fin numInstance → ℕ)
     (hinstanceSet : ∀ j, instanceSet j
-      < deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)))
+      < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
     (instanceMem : ∀ j : Fin numInstance,
-      Fin (deployedSetQueries vk p.proof.1 (chRecord ν (fun _ => 0)) (instanceSet j)).length)
+      Fin (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (instanceSet j)).length)
     (fixedCols : ℕ → Polynomial Fp) (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp)
     (hpoly : Polynomial Fp) (deg : ℕ)
-    (hlen : ∀ i, i < deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0))
-      → 0 < (deployedSetQueries vk p.proof.1 (chRecord ν (fun _ => 0)) i).length)
-    (hprob1 : ∀ i, i < deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)) →
-      (((deployedSetQueries vk p.proof.1 (chRecord ν (fun _ => 0)) i).length - 1 : ℕ) : ℝ≥0∞)
+    (hlen : ∀ i, i < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))
+      → 0 < (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) i).length)
+    (hprob1 : ∀ i, i < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) →
+      (((deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) i).length - 1 : ℕ) : ℝ≥0∞)
           / Fintype.card Fp
         < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
-            (OpenedX1Accept (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+            (OpenedX1Accept (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
               (chRecord ν (fun _ => 0)))))
-    (hacc0 : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+    (hacc0 : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
       (chRecord ν (fun _ => 0)))
     (pp : Fin shape.numProofs)
     (hadvLen : ∀ j : Fin numAdvice, (j : ℕ) < vk.adviceQueryLayout.length
@@ -429,27 +429,27 @@ noncomputable def member_snark_of_instance_budgeted
     (hinstLen : ∀ j : Fin numInstance, (j : ℕ) < vk.instanceQueryLayout.length
       ∧ (j : ℕ) < (List.ofFn ((p.proof.1 : ProofString shape Fp VestaG).instanceEvals pp)).length)
     (b₂f : Fp → Fin (2 ^ shape.k) → Fp)
-    (hJ : ∀ i, i < deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)) →
-      (((deployedSetQueries vk p.proof.1 (chRecord ν (fun _ => 0)) i).length - 1 : ℕ) : ℝ≥0∞)
+    (hJ : ∀ i, i < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) →
+      (((deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) i).length - 1 : ℕ) : ℝ≥0∞)
           / Fintype.card Fp
-        + (((deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)) - 1 : ℕ) : ℝ≥0∞)
+        + (((deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) - 1 : ℕ) : ℝ≥0∞)
             / Fintype.card Fp
           + ((max (2 ^ shape.k)
-                (deployedAllPts vk p.proof.1 (chRecord ν (fun _ => 0))).card
-              + (deployedAllPts vk p.proof.1 (chRecord ν (fun _ => 0))).card
-              + (deployedAllPts vk p.proof.1 (chRecord ν (fun _ => 0))).card : ℕ) : ℝ≥0∞)
+                (deployedAllPts vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))).card
+              + (deployedAllPts vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))).card
+              + (deployedAllPts vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))).card : ℕ) : ℝ≥0∞)
             / Fintype.card Fp
-          + (deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)) : ℝ≥0∞)
+          + (deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) : ℝ≥0∞)
             / Fintype.card Fp)
       < (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
-          (memberJointAccept (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+          (memberJointAccept (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
             (chRecord ν (fun _ => 0)) b₂f))
     (hfold : (List.ofFn (fun i : Fin ng =>
         (gates i).eval
           (fun n => (fixedCols n).eval (chRecord ν (fun _ => 0) : Challenges shape.k Fp).x)
-          (deployedClaimedFeed vk p.proof.1 (chRecord ν (fun _ => 0)) adviceSet adviceMem
+          (deployedClaimedFeed vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) adviceSet adviceMem
             vk.adviceQueryLayout)
-          (deployedClaimedFeed vk p.proof.1 (chRecord ν (fun _ => 0)) instanceSet instanceMem
+          (deployedClaimedFeed vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) instanceSet instanceMem
             vk.instanceQueryLayout))).foldl
           (fun acc v => acc * y + v) 0
         = hpoly.eval (chRecord ν (fun _ => 0) : Challenges shape.k Fp).x
@@ -457,54 +457,54 @@ noncomputable def member_snark_of_instance_budgeted
     (hgood :
       combineGates fixedCols
         (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk
+          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment
             p.proof.1 (chRecord ν (fun _ => 0)) pbatch (adviceSet j)
             (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
               (adviceMem j))))
         (rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk
+          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment
             p.proof.1 (chRecord ν (fun _ => 0)) pbatch (instanceSet j)
             (hinstanceSet j) (hlen _ (hinstanceSet j)) (hprob1 _ (hinstanceSet j)) hacc0).cols
               (instanceMem j))))
         y gates ≠ hpoly * (X ^ deg - 1) →
       (combineGates fixedCols
         (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk
+          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment
             p.proof.1 (chRecord ν (fun _ => 0)) pbatch (adviceSet j)
             (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
               (adviceMem j))))
         (rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk
+          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment
             p.proof.1 (chRecord ν (fun _ => 0)) pbatch (instanceSet j)
             (hinstanceSet j) (hlen _ (hinstanceSet j)) (hprob1 _ (hinstanceSet j)) hacc0).cols
               (instanceMem j))))
         y gates - hpoly * (X ^ deg - 1)).eval
           (chRecord ν (fun _ => 0) : Challenges shape.k Fp).x ≠ 0)
     (hadviceLayout : ∀ j : Fin numAdvice,
-      (deployedSetCommIds vk p.proof.1 (chRecord ν (fun _ => 0)) (adviceSet j)).getD
+      (deployedSetCommIds vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (adviceSet j)).getD
           (adviceMem j : ℕ) CommitmentId.vanishingH
         = CommitmentId.adviceCol pp (vk.adviceQueryLayout.getD (j : ℕ) (0, 0)).1)
     (hinstanceLayout : ∀ j : Fin numInstance,
-      (deployedSetCommIds vk p.proof.1 (chRecord ν (fun _ => 0)) (instanceSet j)).getD
+      (deployedSetCommIds vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (instanceSet j)).getD
           (instanceMem j : ℕ) CommitmentId.vanishingH
         = CommitmentId.instanceCol pp (vk.instanceQueryLayout.getD (j : ℕ) (0, 0)).1)
     (hquotCommitted : ∃ (hSet : ℕ)
-        (hhSet : hSet < deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)))
-        (hMem : Fin (deployedSetQueries vk p.proof.1 (chRecord ν (fun _ => 0)) hSet).length),
+        (hhSet : hSet < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
+        (hMem : Fin (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) hSet).length),
       hpoly = coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl
-          vk p.proof.1 (chRecord ν (fun _ => 0)) pbatch hSet hhSet
+          vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) pbatch hSet hhSet
           (hlen _ hhSet) (hprob1 _ hhSet) hacc0).cols hMem) ∧
-      (deployedSetCommIds vk p.proof.1 (chRecord ν (fun _ => 0)) hSet).getD (hMem : ℕ)
+      (deployedSetCommIds vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) hSet).getD (hMem : ℕ)
           CommitmentId.randomPoly = CommitmentId.vanishingH)
     {S : Prop}
     (hencodes : ∀ a,
-      SnarkRelationWithMemberColumns (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+      SnarkRelationWithMemberColumns (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
         (chRecord ν (fun _ => 0))
-        (deployedCommitment (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+        (deployedCommitment (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
             (chRecord ν (fun _ => 0))
           - p.multiU ν • (ursOfAugmentedBasis shape.k basis).u
           - p.multiBlind ν • (ursOfAugmentedBasis shape.k basis).w)
-        (evalVector shape.k (ν 7)) (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0)))
+        (evalVector shape.k (ν 7)) (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
         pp adviceSet hadviceSet adviceMem instanceSet hinstanceSet instanceMem
         fixedCols y gates hpoly deg (p.multiU ν) (p.multiBlind ν) a → S) :
     (S ∨ HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
@@ -531,7 +531,7 @@ fingerprint surfaces `hfold`/`hgood`, the layout identities, the committed-quoti
 the batch `pbatch` itself (an `x₄`-rewind output; producing it from bare acceptance is the open
 composition surface recorded in `Soundness.Multiopen.Decode`). -/
 noncomputable def orchard_verifier_sound_vesta_budgeted
-    {vk : VerifyingKey shape Fp VestaG} (p : AlgebraicWfProof basis vk) (ν : Fin 11 → Fp)
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (p : AlgebraicWfProof basis vk instanceCommitment) (ν : Fin 11 → Fp)
     (cert : AlgebraicDForkCert (F := Fp)
       (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
         (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
@@ -541,39 +541,39 @@ noncomputable def orchard_verifier_sound_vesta_budgeted
       (ursOfAugmentedBasis shape.k basis).w (ν 10)
       (commit (ursOfAugmentedBasis shape.k basis)
           (adjustedWitness (p.aMulti ν) p.s
-            (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+            (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
         (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
         (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
       cert.toDForkCert)
     {a₀ : Fin (2 ^ shape.k) → Fp}
     (pbatch : OpenedBatchOpenings (ursOfAugmentedBasis shape.k basis) (evalVector shape.k (ν 7))
-      (x4BatchCommitments (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+      (x4BatchCommitments (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
         (chRecord ν (fun _ => 0)))
-      (x4BatchEvals vk p.proof.1 (chRecord ν (fun _ => 0))) a₀ (p.multiU ν) (p.multiBlind ν))
+      (x4BatchEvals vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) a₀ (p.multiU ν) (p.multiBlind ν))
     (hξcur : pbatch.batchChallenge pbatch.current
       = (chRecord ν (fun _ => 0) : Challenges shape.k Fp).x4)
     {numAdvice numInstance : ℕ}
     (adviceSet : Fin numAdvice → ℕ)
     (hadviceSet : ∀ j, adviceSet j
-      < deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)))
+      < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
     (adviceMem : ∀ j : Fin numAdvice,
-      Fin (deployedSetQueries vk p.proof.1 (chRecord ν (fun _ => 0)) (adviceSet j)).length)
+      Fin (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (adviceSet j)).length)
     (instanceSet : Fin numInstance → ℕ)
     (hinstanceSet : ∀ j, instanceSet j
-      < deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)))
+      < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
     (instanceMem : ∀ j : Fin numInstance,
-      Fin (deployedSetQueries vk p.proof.1 (chRecord ν (fun _ => 0)) (instanceSet j)).length)
+      Fin (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (instanceSet j)).length)
     (fixedCols : ℕ → Polynomial Fp) (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp)
     (hpoly : Polynomial Fp) (deg : ℕ)
-    (hlen : ∀ i, i < deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0))
-      → 0 < (deployedSetQueries vk p.proof.1 (chRecord ν (fun _ => 0)) i).length)
-    (hprob1 : ∀ i, i < deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)) →
-      (((deployedSetQueries vk p.proof.1 (chRecord ν (fun _ => 0)) i).length - 1 : ℕ) : ℝ≥0∞)
+    (hlen : ∀ i, i < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))
+      → 0 < (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) i).length)
+    (hprob1 : ∀ i, i < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) →
+      (((deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) i).length - 1 : ℕ) : ℝ≥0∞)
           / Fintype.card Fp
         < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
-            (OpenedX1Accept (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+            (OpenedX1Accept (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
               (chRecord ν (fun _ => 0)))))
-    (hacc0 : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+    (hacc0 : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
       (chRecord ν (fun _ => 0)))
     (pp : Fin shape.numProofs)
     (hadvLen : ∀ j : Fin numAdvice, (j : ℕ) < vk.adviceQueryLayout.length
@@ -581,27 +581,27 @@ noncomputable def orchard_verifier_sound_vesta_budgeted
     (hinstLen : ∀ j : Fin numInstance, (j : ℕ) < vk.instanceQueryLayout.length
       ∧ (j : ℕ) < (List.ofFn ((p.proof.1 : ProofString shape Fp VestaG).instanceEvals pp)).length)
     (b₂f : Fp → Fin (2 ^ shape.k) → Fp)
-    (hJ : ∀ i, i < deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)) →
-      (((deployedSetQueries vk p.proof.1 (chRecord ν (fun _ => 0)) i).length - 1 : ℕ) : ℝ≥0∞)
+    (hJ : ∀ i, i < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) →
+      (((deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) i).length - 1 : ℕ) : ℝ≥0∞)
           / Fintype.card Fp
-        + (((deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)) - 1 : ℕ) : ℝ≥0∞)
+        + (((deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) - 1 : ℕ) : ℝ≥0∞)
             / Fintype.card Fp
           + ((max (2 ^ shape.k)
-                (deployedAllPts vk p.proof.1 (chRecord ν (fun _ => 0))).card
-              + (deployedAllPts vk p.proof.1 (chRecord ν (fun _ => 0))).card
-              + (deployedAllPts vk p.proof.1 (chRecord ν (fun _ => 0))).card : ℕ) : ℝ≥0∞)
+                (deployedAllPts vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))).card
+              + (deployedAllPts vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))).card
+              + (deployedAllPts vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))).card : ℕ) : ℝ≥0∞)
             / Fintype.card Fp
-          + (deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)) : ℝ≥0∞)
+          + (deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) : ℝ≥0∞)
             / Fintype.card Fp)
       < (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
-          (memberJointAccept (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+          (memberJointAccept (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
             (chRecord ν (fun _ => 0)) b₂f))
     (hfold : (List.ofFn (fun i : Fin ng =>
         (gates i).eval
           (fun n => (fixedCols n).eval (chRecord ν (fun _ => 0) : Challenges shape.k Fp).x)
-          (deployedClaimedFeed vk p.proof.1 (chRecord ν (fun _ => 0)) adviceSet adviceMem
+          (deployedClaimedFeed vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) adviceSet adviceMem
             vk.adviceQueryLayout)
-          (deployedClaimedFeed vk p.proof.1 (chRecord ν (fun _ => 0)) instanceSet instanceMem
+          (deployedClaimedFeed vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) instanceSet instanceMem
             vk.instanceQueryLayout))).foldl
           (fun acc v => acc * y + v) 0
         = hpoly.eval (chRecord ν (fun _ => 0) : Challenges shape.k Fp).x
@@ -609,60 +609,60 @@ noncomputable def orchard_verifier_sound_vesta_budgeted
     (hgood :
       combineGates fixedCols
         (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk
+          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment
             p.proof.1 (chRecord ν (fun _ => 0)) pbatch (adviceSet j)
             (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
               (adviceMem j))))
         (rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk
+          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment
             p.proof.1 (chRecord ν (fun _ => 0)) pbatch (instanceSet j)
             (hinstanceSet j) (hlen _ (hinstanceSet j)) (hprob1 _ (hinstanceSet j)) hacc0).cols
               (instanceMem j))))
         y gates ≠ hpoly * (X ^ deg - 1) →
       (combineGates fixedCols
         (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk
+          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment
             p.proof.1 (chRecord ν (fun _ => 0)) pbatch (adviceSet j)
             (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
               (adviceMem j))))
         (rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk
+          coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment
             p.proof.1 (chRecord ν (fun _ => 0)) pbatch (instanceSet j)
             (hinstanceSet j) (hlen _ (hinstanceSet j)) (hprob1 _ (hinstanceSet j)) hacc0).cols
               (instanceMem j))))
         y gates - hpoly * (X ^ deg - 1)).eval
           (chRecord ν (fun _ => 0) : Challenges shape.k Fp).x ≠ 0)
     (hadviceLayout : ∀ j : Fin numAdvice,
-      (deployedSetCommIds vk p.proof.1 (chRecord ν (fun _ => 0)) (adviceSet j)).getD
+      (deployedSetCommIds vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (adviceSet j)).getD
           (adviceMem j : ℕ) CommitmentId.vanishingH
         = CommitmentId.adviceCol pp (vk.adviceQueryLayout.getD (j : ℕ) (0, 0)).1)
     (hinstanceLayout : ∀ j : Fin numInstance,
-      (deployedSetCommIds vk p.proof.1 (chRecord ν (fun _ => 0)) (instanceSet j)).getD
+      (deployedSetCommIds vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (instanceSet j)).getD
           (instanceMem j : ℕ) CommitmentId.vanishingH
         = CommitmentId.instanceCol pp (vk.instanceQueryLayout.getD (j : ℕ) (0, 0)).1)
     (hquotCommitted : ∃ (hSet : ℕ)
-        (hhSet : hSet < deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0)))
-        (hMem : Fin (deployedSetQueries vk p.proof.1 (chRecord ν (fun _ => 0)) hSet).length),
+        (hhSet : hSet < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
+        (hMem : Fin (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) hSet).length),
       hpoly = coeffsToPoly ((openedMemberDecode_of_x1Prob (ursOfAugmentedBasis shape.k basis) rfl
-          vk p.proof.1 (chRecord ν (fun _ => 0)) pbatch hSet hhSet
+          vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) pbatch hSet hhSet
           (hlen _ hhSet) (hprob1 _ hhSet) hacc0).cols hMem) ∧
-      (deployedSetCommIds vk p.proof.1 (chRecord ν (fun _ => 0)) hSet).getD (hMem : ℕ)
+      (deployedSetCommIds vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) hSet).getD (hMem : ℕ)
           CommitmentId.randomPoly = CommitmentId.vanishingH)
     {S : Prop}
     (hencodes : ∀ (a : Fin (2 ^ shape.k) → Fp)
         (bo : OpenedBatchOpenings (ursOfAugmentedBasis shape.k basis) (evalVector shape.k (ν 7))
-          (x4BatchCommitments (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+          (x4BatchCommitments (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
             (chRecord ν (fun _ => 0)))
-          (x4BatchEvals vk p.proof.1 (chRecord ν (fun _ => 0))) a (p.multiU ν) (p.multiBlind ν))
-        (md : ∀ i (hi : i < deployedX4PairCount vk p.proof.1 (chRecord ν (fun _ => 0))),
-          OpenedMemberDecode (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+          (x4BatchEvals vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) a (p.multiU ν) (p.multiBlind ν))
+        (md : ∀ i (hi : i < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))),
+          OpenedMemberDecode (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
             (chRecord ν (fun _ => 0)) bo i hi),
       SnarkRelation (ursOfAugmentedBasis shape.k basis)
-        (deployedCommitment (ursOfAugmentedBasis shape.k basis) rfl vk p.proof.1
+        (deployedCommitment (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
             (chRecord ν (fun _ => 0))
           - p.multiU ν • (ursOfAugmentedBasis shape.k basis).u
           - p.multiBlind ν • (ursOfAugmentedBasis shape.k basis).w)
-        (evalVector shape.k (ν 7)) (multiopenValue vk p.proof.1 (chRecord ν (fun _ => 0)))
+        (evalVector shape.k (ν 7)) (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
         (circuitSatViaGates fixedCols
           (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
             coeffsToPoly ((md (adviceSet j) (hadviceSet j)).cols (adviceMem j))))
@@ -702,7 +702,7 @@ a concrete `AlgebraicWfProof`, oracle scalars, and certificate, and its run took
 branch. `hasCleanOpening` unpacked through `instanceAttempt_provenance`. -/
 theorem cleanOpening_provenance (family : ComputedAlgebraicFSFamily shape)
     (coins : family.Coins) (h : family.hasCleanOpening basis coins) :
-    ∃ (p : AlgebraicWfProof basis (family.vk basis)) (ν : Fin 11 → Fp)
+    ∃ (p : AlgebraicWfProof basis (family.vk basis) (family.instanceCommitment basis)) (ν : Fin 11 → Fp)
       (cert : AlgebraicDForkCert (F := Fp)
         (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
           (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
@@ -712,7 +712,7 @@ theorem cleanOpening_provenance (family : ComputedAlgebraicFSFamily shape)
         (ursOfAugmentedBasis shape.k basis).w (ν 10)
         (commit (ursOfAugmentedBasis shape.k basis)
             (adjustedWitness (p.aMulti ν) p.s
-              (multiopenValue (family.vk basis) p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+              (multiopenValue (family.vk basis) (family.instanceCommitment basis) p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
           (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
           (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
         cert.toDForkCert),
@@ -740,7 +740,7 @@ theorem snarkExtraction_prob_le_of_generatorRO_textbookDL_budgeted {shape : Shap
     (hDL : TextbookDLWithCoinsAdvantageLE B family.snarkRelationFinder bound)
     (extracted : (AugmentedIndex (2 ^ shape.k) → VestaG) → family.Coins → Prop)
     (hSupply : ∀ (bs : AugmentedIndex (2 ^ shape.k) → VestaG) (coins : family.Coins)
-      (p : AlgebraicWfProof bs (family.vk bs)) (ν : Fin 11 → Fp)
+      (p : AlgebraicWfProof bs (family.vk bs) (family.instanceCommitment bs)) (ν : Fin 11 → Fp)
       (cert : AlgebraicDForkCert (F := Fp)
         (augmentedBasis (ursOfAugmentedBasis shape.k bs).g
           (ursOfAugmentedBasis shape.k bs).u (ursOfAugmentedBasis shape.k bs).w) shape.k)
@@ -750,7 +750,7 @@ theorem snarkExtraction_prob_le_of_generatorRO_textbookDL_budgeted {shape : Shap
         (ursOfAugmentedBasis shape.k bs).w (ν 10)
         (commit (ursOfAugmentedBasis shape.k bs)
             (adjustedWitness (p.aMulti ν) p.s
-              (multiopenValue (family.vk bs) p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+              (multiopenValue (family.vk bs) (family.instanceCommitment bs) p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
           (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k bs).u +
           (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k bs).w)
         cert.toDForkCert),
@@ -803,8 +803,8 @@ consumes. (halo2 `plonk/verifier.rs`: the verifier recomputes `expected_h_eval` 
 `h` commitment at it; `assembleQueries` appends `vanishingQueries` last, so the query is the
 head of that suffix.) -/
 theorem vanishing_query_mem_assembleQueries {G : Type*} [Inhabited G] {shape : Shape}
-    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
-    ∃ q ∈ assembleQueries vk ps ch,
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
+    ∃ q ∈ assembleQueries vk instanceCommitment ps ch,
       q.commId = CommitmentId.vanishingH ∧ q.point = ch.x ∧
       q.eval = expectedHEval
         (allExpressions vk ps ch
@@ -832,24 +832,24 @@ member of a single point set with `points i = [ch.x]`, identity `vanishingH`, an
 the `hfold` derivation reads. -/
 theorem vanishing_slot_routed {G : Type*} [AddCommGroup G] [Module Fp G] [DecidableEq G]
     [Inhabited G] {shape : Shape}
-    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
-    ∃ i, i < (constructIntermediateSets (assembleQueries vk ps ch)).sets.length ∧
-      (constructIntermediateSets (assembleQueries vk ps ch)).points.getD i [] = [ch.x] ∧
-      ∃ m, m < (deployedSetQueries vk ps ch i).length ∧
-        (∀ c₀, (deployedSetCommIds vk ps ch i).getD m c₀ = CommitmentId.vanishingH) ∧
-        ∀ d₀, ((deployedSetQueries vk ps ch i).getD m d₀).2
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
+    ∃ i, i < (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).sets.length ∧
+      (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i [] = [ch.x] ∧
+      ∃ m, m < (deployedSetQueries vk instanceCommitment ps ch i).length ∧
+        (∀ c₀, (deployedSetCommIds vk instanceCommitment ps ch i).getD m c₀ = CommitmentId.vanishingH) ∧
+        ∀ d₀, ((deployedSetQueries vk instanceCommitment ps ch i).getD m d₀).2
           = [expectedHEval
               (allExpressions vk ps ch
                 (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1
                 (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.1
                 (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2)
               ch.y (ch.x ^ vk.n)] := by
-  obtain ⟨q, hq, hid, hpt, hev⟩ := vanishing_query_mem_assembleQueries vk ps ch
-  have huniq : ∀ q' ∈ assembleQueries vk ps ch, q'.commId = q.commId → q' = q := by
+  obtain ⟨q, hq, hid, hpt, hev⟩ := vanishing_query_mem_assembleQueries vk instanceCommitment ps ch
+  have huniq : ∀ q' ∈ assembleQueries vk instanceCommitment ps ch, q'.commId = q.commId → q' = q := by
     intro q' hq' hq'id
-    exact assembleQueries_vanishingH_unique vk ps ch hq' hq (hq'id.trans hid) hid
+    exact assembleQueries_vanishingH_unique vk instanceCommitment ps ch hq' hq (hq'id.trans hid) hid
   obtain ⟨i, hi, hpts, m, hm, hids, hsets⟩ :=
-    constructIntermediateSets_unique_comm_routed (assembleQueries vk ps ch) hq huniq
+    constructIntermediateSets_unique_comm_routed (assembleQueries vk instanceCommitment ps ch) hq huniq
   refine ⟨i, hi, by rw [hpts, hpt], m, ?_, ?_, ?_⟩
   · simp only [deployedSetQueries, constructIntermediateSets_zip_sets_getD]
     exact hm
@@ -889,10 +889,10 @@ deployed verifier panics there; the model renders the panic as rejection), and `
 `False` on the `none` branch. `hfold`'s side condition `hxn` therefore needs no squeeze budget. -/
 theorem deployedAccepts_xn_ne_one {G : Type*} [AddCommGroup G] [Module Fp G] [DecidableEq G]
     [Inhabited G] {shape : Shape} (urs : URS G) (hk : shape.k = urs.k)
-    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
-    (hacc : DeployedAccepts urs hk vk ps ch) : ch.x ^ vk.n ≠ 1 := by
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (hacc : DeployedAccepts urs hk vk instanceCommitment ps ch) : ch.x ^ vk.n ≠ 1 := by
   intro hx
-  have hnone : assemble? vk ps ch = none := by
+  have hnone : assemble? vk instanceCommitment ps ch = none := by
     unfold assemble?
     by_cases hwf : proofStringWellFormed ps = true
     · rw [if_pos hwf, if_pos hx]
@@ -909,11 +909,11 @@ for the vanishing member, and `vanishing_slot_routed` says that value *is* the v
 avoidance `hxn` (a `vk.n / p`-priced squeeze exclusion) and the sharpened expression-fold fingerprint `hfp`. -/
 theorem hfold_of_vanishing_slot_binding {G : Type*} [AddCommGroup G] [Module Fp G]
     [DecidableEq G] [Inhabited G] {shape : Shape}
-    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     {ng : ℕ} (gates : Fin ng → Expr Fp)
     (fixedClaimed adviceClaimed instanceClaimed : ℕ → Fp)
     (hpoly : Polynomial Fp) (i m : ℕ)
-    (hrouted : ∀ d₀, ((deployedSetQueries vk ps ch i).getD m d₀).2
+    (hrouted : ∀ d₀, ((deployedSetQueries vk instanceCommitment ps ch i).getD m d₀).2
       = [expectedHEval
           (allExpressions vk ps ch
             (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1
@@ -921,7 +921,7 @@ theorem hfold_of_vanishing_slot_binding {G : Type*} [AddCommGroup G] [Module Fp 
             (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2)
           ch.y (ch.x ^ vk.n)])
     (hbind : hpoly.eval ch.x
-      = ((deployedSetQueries vk ps ch i).getD m (CommitmentRef.point 0, [])).2.getD 0 0)
+      = ((deployedSetQueries vk instanceCommitment ps ch i).getD m (CommitmentRef.point 0, [])).2.getD 0 0)
     (hxn : ch.x ^ vk.n ≠ 1)
     (hfp : (List.ofFn (fun j : Fin ng =>
           (gates j).eval fixedClaimed adviceClaimed instanceClaimed)).foldl
@@ -950,29 +950,29 @@ one remaining input is the expression-fold fingerprint `hfp`. `hquot` names the 
 as the routed member's own column, not an arbitrary member recording the `vanishingH` identity. -/
 theorem hfold_of_member_budget {G : Type*} [AddCommGroup G] [Module Fp G] [DecidableEq G]
     [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     {ng : ℕ} (gates : Fin ng → Expr Fp)
     (fixedClaimed adviceClaimed instanceClaimed : ℕ → Fp)
-    (hpoly : Polynomial Fp) (i m : ℕ) (hm : m < (deployedSetQueries vk ps ch i).length)
-    (colPoly : Fin (deployedSetQueries vk ps ch i).length → Polynomial Fp)
+    (hpoly : Polynomial Fp) (i m : ℕ) (hm : m < (deployedSetQueries vk instanceCommitment ps ch i).length)
+    (colPoly : Fin (deployedSetQueries vk instanceCommitment ps ch i).length → Polynomial Fp)
     (hbindAll : ∀ (idx : Fin ((constructIntermediateSets
-          (assembleQueries vk ps ch)).points.getD i []).length)
-        (m₀ : Fin (deployedSetQueries vk ps ch i).length),
+          (assembleQueries vk instanceCommitment ps ch)).points.getD i []).length)
+        (m₀ : Fin (deployedSetQueries vk instanceCommitment ps ch i).length),
         (colPoly m₀).eval
-            (((constructIntermediateSets (assembleQueries vk ps ch)).points.getD i [])[idx])
-          = ((deployedSetQueries vk ps ch i).getD (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
+            (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i [])[idx])
+          = ((deployedSetQueries vk instanceCommitment ps ch i).getD (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
         ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
     (hquot : hpoly = colPoly ⟨m, hm⟩)
-    (hroute : (constructIntermediateSets (assembleQueries vk ps ch)).points.getD i [] = [ch.x])
-    (hevals : ∀ d₀, ((deployedSetQueries vk ps ch i).getD m d₀).2
+    (hroute : (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i [] = [ch.x])
+    (hevals : ∀ d₀, ((deployedSetQueries vk instanceCommitment ps ch i).getD m d₀).2
       = [expectedHEval
           (allExpressions vk ps ch
             (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1
             (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.1
             (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2)
           ch.y (ch.x ^ vk.n)])
-    (hacc : DeployedAccepts urs hk vk ps ch)
+    (hacc : DeployedAccepts urs hk vk instanceCommitment ps ch)
     (hfp : (List.ofFn (fun j : Fin ng =>
           (gates j).eval fixedClaimed adviceClaimed instanceClaimed)).foldl
             (fun acc v => acc * ch.y + v) 0
@@ -986,12 +986,12 @@ theorem hfold_of_member_budget {G : Type*} [AddCommGroup G] [Module Fp G] [Decid
           (fun acc v => acc * ch.y + v) 0
       = hpoly.eval ch.x * (ch.x ^ vk.n - 1)
     ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  have hlt : 0 < ((constructIntermediateSets (assembleQueries vk ps ch)).points.getD i []).length := by
+  have hlt : 0 < ((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i []).length := by
     rw [hroute]; simp
   rcases hbindAll ⟨0, hlt⟩ ⟨m, hm⟩ with hb | hrel
-  · refine Or.inl (hfold_of_vanishing_slot_binding vk ps ch gates fixedClaimed adviceClaimed
-      instanceClaimed hpoly i m hevals ?_ (deployedAccepts_xn_ne_one urs hk vk ps ch hacc) hfp)
-    have hx : ((constructIntermediateSets (assembleQueries vk ps ch)).points.getD i [])[(0 : ℕ)]'hlt
+  · refine Or.inl (hfold_of_vanishing_slot_binding vk instanceCommitment ps ch gates fixedClaimed adviceClaimed
+      instanceClaimed hpoly i m hevals ?_ (deployedAccepts_xn_ne_one urs hk vk instanceCommitment ps ch hacc) hfp)
+    have hx : ((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i [])[(0 : ℕ)]'hlt
         = ch.x := by
       rw [List.getElem_of_eq hroute hlt]
       simp
@@ -1059,95 +1059,95 @@ routed quotient (`hquot`), and the fingerprint (`hfp`); the root-of-unity exclus
 the adaptive coupling (the standing gap in `Soundness.Composition.Prefixes`). -/
 theorem orchard_verifier_vesta_member_constraint_budgeted_hfold_derived {shape : Shape}
     (urs : URS VestaG) (hk : shape.k = urs.k)
-    (vk : VerifyingKey shape Fp VestaG) (ps : ProofString shape Fp VestaG)
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (ps : ProofString shape Fp VestaG)
     (ch : Challenges shape.k Fp)
     (pU pW : Fp)
     {numAdvice numInstance : ℕ}
     (adviceSet : Fin numAdvice → ℕ)
-    (hadviceSet : ∀ j, adviceSet j < deployedX4PairCount vk ps ch)
-    (adviceMem : ∀ j : Fin numAdvice, Fin (deployedSetQueries vk ps ch (adviceSet j)).length)
+    (hadviceSet : ∀ j, adviceSet j < deployedX4PairCount vk instanceCommitment ps ch)
+    (adviceMem : ∀ j : Fin numAdvice, Fin (deployedSetQueries vk instanceCommitment ps ch (adviceSet j)).length)
     (instanceSet : Fin numInstance → ℕ)
-    (hinstanceSet : ∀ j, instanceSet j < deployedX4PairCount vk ps ch)
+    (hinstanceSet : ∀ j, instanceSet j < deployedX4PairCount vk instanceCommitment ps ch)
     (instanceMem : ∀ j : Fin numInstance,
-      Fin (deployedSetQueries vk ps ch (instanceSet j)).length)
+      Fin (deployedSetQueries vk instanceCommitment ps ch (instanceSet j)).length)
     (fixedCols : ℕ → Polynomial Fp)
     (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : Polynomial Fp) (deg : ℕ)
     {a₀ : Fin (2 ^ urs.k) → Fp}
     (pbatch : OpenedBatchOpenings urs (evalVector urs.k ch.x3)
-      (x4BatchCommitments urs hk vk ps ch) (x4BatchEvals vk ps ch) a₀ pU pW)
+      (x4BatchCommitments urs hk vk instanceCommitment ps ch) (x4BatchEvals vk instanceCommitment ps ch) a₀ pU pW)
     (hξcur : pbatch.batchChallenge pbatch.current = ch.x4)
-    (hlen : ∀ i, i < deployedX4PairCount vk ps ch
-      → 0 < (deployedSetQueries vk ps ch i).length)
-    (hprob1 : ∀ i, i < deployedX4PairCount vk ps ch →
-      (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+    (hlen : ∀ i, i < deployedX4PairCount vk instanceCommitment ps ch
+      → 0 < (deployedSetQueries vk instanceCommitment ps ch i).length)
+    (hprob1 : ∀ i, i < deployedX4PairCount vk instanceCommitment ps ch →
+      (((deployedSetQueries vk instanceCommitment ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
         < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
-            (OpenedX1Accept urs hk vk ps ch)))
-    (hacc0 : DeployedAccepts urs hk vk ps ch)
+            (OpenedX1Accept urs hk vk instanceCommitment ps ch)))
+    (hacc0 : DeployedAccepts urs hk vk instanceCommitment ps ch)
     (p : Fin shape.numProofs)
     (hadvLen : ∀ j : Fin numAdvice, (j : ℕ) < vk.adviceQueryLayout.length
       ∧ (j : ℕ) < (List.ofFn (ps.adviceEvals p)).length)
     (hinstLen : ∀ j : Fin numInstance, (j : ℕ) < vk.instanceQueryLayout.length
       ∧ (j : ℕ) < (List.ofFn (ps.instanceEvals p)).length)
     (b₂f : Fp → Fin (2 ^ urs.k) → Fp)
-    (hJ : ∀ i, i < deployedX4PairCount vk ps ch →
-      (((deployedSetQueries vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
-        + (((deployedX4PairCount vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
-          + ((max (2 ^ urs.k) (deployedAllPts vk ps ch).card
-              + (deployedAllPts vk ps ch).card
-              + (deployedAllPts vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
-          + (deployedX4PairCount vk ps ch : ℝ≥0∞) / Fintype.card Fp)
+    (hJ : ∀ i, i < deployedX4PairCount vk instanceCommitment ps ch →
+      (((deployedSetQueries vk instanceCommitment ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+        + (((deployedX4PairCount vk instanceCommitment ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+          + ((max (2 ^ urs.k) (deployedAllPts vk instanceCommitment ps ch).card
+              + (deployedAllPts vk instanceCommitment ps ch).card
+              + (deployedAllPts vk instanceCommitment ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
+          + (deployedX4PairCount vk instanceCommitment ps ch : ℝ≥0∞) / Fintype.card Fp)
       < (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
-          (memberJointAccept urs hk vk ps ch b₂f))
+          (memberJointAccept urs hk vk instanceCommitment ps ch b₂f))
     (hgood :
       combineGates fixedCols
         (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk ps ch pbatch (adviceSet j)
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
             (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols (adviceMem j))))
         (rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk ps ch pbatch (instanceSet j)
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
             (hinstanceSet j) (hlen _ (hinstanceSet j))
             (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
         y gates ≠ hpoly * (X ^ deg - 1) →
       (combineGates fixedCols
         (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk ps ch pbatch (adviceSet j)
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
             (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols (adviceMem j))))
         (rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk ps ch pbatch (instanceSet j)
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
             (hinstanceSet j) (hlen _ (hinstanceSet j))
             (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
         y gates - hpoly * (X ^ deg - 1)).eval ch.x ≠ 0)
     (hadviceLayout : ∀ j : Fin numAdvice,
-      (deployedSetCommIds vk ps ch (adviceSet j)).getD (adviceMem j : ℕ) CommitmentId.vanishingH
+      (deployedSetCommIds vk instanceCommitment ps ch (adviceSet j)).getD (adviceMem j : ℕ) CommitmentId.vanishingH
         = CommitmentId.adviceCol p (vk.adviceQueryLayout.getD (j : ℕ) (0, 0)).1)
     (hinstanceLayout : ∀ j : Fin numInstance,
-      (deployedSetCommIds vk ps ch (instanceSet j)).getD (instanceMem j : ℕ) CommitmentId.vanishingH
+      (deployedSetCommIds vk instanceCommitment ps ch (instanceSet j)).getD (instanceMem j : ℕ) CommitmentId.vanishingH
         = CommitmentId.instanceCol p (vk.instanceQueryLayout.getD (j : ℕ) (0, 0)).1)
-    (hquotCommitted : ∃ (hSet : ℕ) (hhSet : hSet < deployedX4PairCount vk ps ch)
-        (hMem : Fin (deployedSetQueries vk ps ch hSet).length),
-      hpoly = coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk ps ch pbatch hSet hhSet
+    (hquotCommitted : ∃ (hSet : ℕ) (hhSet : hSet < deployedX4PairCount vk instanceCommitment ps ch)
+        (hMem : Fin (deployedSetQueries vk instanceCommitment ps ch hSet).length),
+      hpoly = coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch hSet hhSet
           (hlen _ hhSet) (hprob1 _ hhSet) hacc0).cols hMem) ∧
-      (deployedSetCommIds vk ps ch hSet).getD (hMem : ℕ) CommitmentId.randomPoly
+      (deployedSetCommIds vk instanceCommitment ps ch hSet).getD (hMem : ℕ) CommitmentId.randomPoly
         = CommitmentId.vanishingH)
     {S : Prop}
     (hencodes : ∀ a,
-      SnarkRelationWithMemberColumns urs hk vk ps ch
-        (deployedCommitment urs hk vk ps ch - pU • urs.u - pW • urs.w)
-        (evalVector urs.k ch.x3) (multiopenValue vk ps ch) p adviceSet hadviceSet adviceMem
+      SnarkRelationWithMemberColumns urs hk vk instanceCommitment ps ch
+        (deployedCommitment urs hk vk instanceCommitment ps ch - pU • urs.u - pW • urs.w)
+        (evalVector urs.k ch.x3) (multiopenValue vk instanceCommitment ps ch) p adviceSet hadviceSet adviceMem
         instanceSet hinstanceSet instanceMem fixedCols y gates hpoly deg pU pW a → S)
     (hy : y = ch.y) (hdeg : deg = vk.n)
-    (i m : ℕ) (hm : m < (deployedSetQueries vk ps ch i).length)
-    (colPoly : Fin (deployedSetQueries vk ps ch i).length → Polynomial Fp)
+    (i m : ℕ) (hm : m < (deployedSetQueries vk instanceCommitment ps ch i).length)
+    (colPoly : Fin (deployedSetQueries vk instanceCommitment ps ch i).length → Polynomial Fp)
     (hbindAll : ∀ (idx : Fin ((constructIntermediateSets
-          (assembleQueries vk ps ch)).points.getD i []).length)
-        (m₀ : Fin (deployedSetQueries vk ps ch i).length),
+          (assembleQueries vk instanceCommitment ps ch)).points.getD i []).length)
+        (m₀ : Fin (deployedSetQueries vk instanceCommitment ps ch i).length),
         (colPoly m₀).eval
-            (((constructIntermediateSets (assembleQueries vk ps ch)).points.getD i [])[idx])
-          = ((deployedSetQueries vk ps ch i).getD (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
+            (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i [])[idx])
+          = ((deployedSetQueries vk instanceCommitment ps ch i).getD (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
         ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
     (hquot : hpoly = colPoly ⟨m, hm⟩)
-    (hroute : (constructIntermediateSets (assembleQueries vk ps ch)).points.getD i [] = [ch.x])
-    (hevals : ∀ d₀, ((deployedSetQueries vk ps ch i).getD m d₀).2
+    (hroute : (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i [] = [ch.x])
+    (hevals : ∀ d₀, ((deployedSetQueries vk instanceCommitment ps ch i).getD m d₀).2
       = [expectedHEval
           (allExpressions vk ps ch
             (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1
@@ -1156,8 +1156,8 @@ theorem orchard_verifier_vesta_member_constraint_budgeted_hfold_derived {shape :
           ch.y (ch.x ^ vk.n)])
     (hfp : (List.ofFn (fun j : Fin ng =>
           (gates j).eval (fun n => (fixedCols n).eval ch.x)
-            (deployedClaimedFeed vk ps ch adviceSet adviceMem vk.adviceQueryLayout)
-            (deployedClaimedFeed vk ps ch instanceSet instanceMem vk.instanceQueryLayout))).foldl
+            (deployedClaimedFeed vk instanceCommitment ps ch adviceSet adviceMem vk.adviceQueryLayout)
+            (deployedClaimedFeed vk instanceCommitment ps ch instanceSet instanceMem vk.instanceQueryLayout))).foldl
             (fun acc v => acc * ch.y + v) 0
         = (allExpressions vk ps ch
             (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1
@@ -1167,12 +1167,12 @@ theorem orchard_verifier_vesta_member_constraint_budgeted_hfold_derived {shape :
     S ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   subst hy
   subst hdeg
-  rcases hfold_of_member_budget urs hk vk ps ch gates
+  rcases hfold_of_member_budget urs hk vk instanceCommitment ps ch gates
       (fun n => (fixedCols n).eval ch.x)
-      (deployedClaimedFeed vk ps ch adviceSet adviceMem vk.adviceQueryLayout)
-      (deployedClaimedFeed vk ps ch instanceSet instanceMem vk.instanceQueryLayout)
+      (deployedClaimedFeed vk instanceCommitment ps ch adviceSet adviceMem vk.adviceQueryLayout)
+      (deployedClaimedFeed vk instanceCommitment ps ch instanceSet instanceMem vk.instanceQueryLayout)
       hpoly i m hm colPoly hbindAll hquot hroute hevals hacc0 hfp with hfold | hrel
-  · exact orchard_verifier_vesta_member_constraint_budgeted urs hk vk ps ch pU pW adviceSet
+  · exact orchard_verifier_vesta_member_constraint_budgeted urs hk vk instanceCommitment ps ch pU pW adviceSet
       hadviceSet adviceMem instanceSet hinstanceSet instanceMem fixedCols ch.y gates hpoly vk.n
       pbatch hξcur hlen hprob1 hacc0 p hadvLen hinstLen b₂f hJ hfold hgood
       hadviceLayout hinstanceLayout hquotCommitted hencodes

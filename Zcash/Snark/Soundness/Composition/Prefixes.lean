@@ -55,7 +55,7 @@ def multiopenIdx (j : Fin 4) : Fin 11 := ⟨5 + j.val, by omega⟩
 of an algebraic output, packaged as the ladder's `prefixes`. -/
 def multiopenPrefixes (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (p : AlgebraicWfProof basis (family.vk basis)) : Fin 4 →
+    (p : AlgebraicWfProof basis (family.vk basis) (family.instanceCommitment basis)) : Fin 4 →
       BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) :=
   fun j => algebraicFullPrefixesPre family.init p (multiopenIdx j)
 
@@ -103,7 +103,7 @@ theorem multiopenLen_le (shape : Shape) (n₀ : ℕ) {i j : Fin 4} (h : (i : ℕ
 shape-determined length of a well-formed proof's `j`-th multiopen squeeze point. -/
 theorem multiopenPrefixes_length (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (p : AlgebraicWfProof basis (family.vk basis)) (j : Fin 4) :
+    (p : AlgebraicWfProof basis (family.vk basis) (family.instanceCommitment basis)) (j : Fin 4) :
     (multiopenPrefixes family basis p j).val.length
       = preIpaLen shape family.init.length (multiopenIdx j) := by
   show (preIpaSqueezePoints family.init p.proof.1 (multiopenIdx j)).length = _
@@ -123,7 +123,7 @@ def multiopenChainAt (family : ComputedAlgebraicFSFamily shape)
 uses). The eleven squeeze points are prefixes of the pre-IPA transcript, hence of one another. -/
 theorem multiopenChainAt_prefixes (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (p : AlgebraicWfProof basis (family.vk basis)) (j i : Fin 4) (hij : (i : ℕ) ≤ (j : ℕ)) :
+    (p : AlgebraicWfProof basis (family.vk basis) (family.instanceCommitment basis)) (j i : Fin 4) (hij : (i : ℕ) ≤ (j : ℕ)) :
     multiopenChainAt family (multiopenPrefixes family basis p j) i
       = multiopenPrefixes family basis p i := by
   apply Subtype.ext
@@ -156,7 +156,7 @@ def multiopenLevelOf (family : ComputedAlgebraicFSFamily shape)
 /-- On an output's own multiopen prefixes, the decoded level is the prefix's level. -/
 theorem multiopenLevelOf_prefixes (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (p : AlgebraicWfProof basis (family.vk basis)) (j : Fin 4) :
+    (p : AlgebraicWfProof basis (family.vk basis) (family.instanceCommitment basis)) (j : Fin 4) :
     multiopenLevelOf family (multiopenPrefixes family basis p j) = (j : ℕ) := by
   have h01 := multiopenLen_lt shape family.init.length (i := 0) (j := 1) (by decide)
   have h02 := multiopenLen_lt shape family.init.length (i := 0) (j := 2) (by decide)
@@ -229,7 +229,7 @@ prefix and reading its accept event is well defined by the factorisation. This i
 decode-side content of the composition ladder in one condition. -/
 theorem exists_multiopenStateAt_iff (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (accept : AlgebraicWfProof basis (family.vk basis) → Set (Fp × Fp × Fp × Fp)) :
+    (accept : AlgebraicWfProof basis (family.vk basis) (family.instanceCommitment basis) → Set (Fp × Fp × Fp × Fp)) :
     (∃ stateAt : BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) →
         Set (Fp × Fp × Fp × Fp),
       ∀ p (j : Fin 4), stateAt (multiopenPrefixes family basis p j) = accept p)
@@ -259,7 +259,7 @@ open Classical in
 half is supplied by the level-0 factorisation of the accept event. -/
 noncomputable def multiopenPeelDecode_of_factors (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    {accept : AlgebraicWfProof basis (family.vk basis) → Set (Fp × Fp × Fp × Fp)}
+    {accept : AlgebraicWfProof basis (family.vk basis) (family.instanceCommitment basis) → Set (Fp × Fp × Fp × Fp)}
     (hfac : ∀ p q, multiopenPrefixes family basis p 0 = multiopenPrefixes family basis q 0 →
       accept p = accept q) :
     PeelDecode (BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k))
@@ -287,7 +287,7 @@ theorem snarkExtraction_prob_le_of_generatorRO_textbookDL_multiopen {shape : Sha
     (family : ComputedAlgebraicFSFamily shape) {bound : ℝ≥0∞}
     (hDL : TextbookDLWithCoinsAdvantageLE B family.snarkRelationFinder bound)
     (extracted : (AugmentedIndex (2 ^ shape.k) → VestaG) → family.Coins → Prop)
-    (accept : ∀ basis, AlgebraicWfProof basis (family.vk basis) → Set (Fp × Fp × Fp × Fp))
+    (accept : ∀ basis, AlgebraicWfProof basis (family.vk basis) (family.instanceCommitment basis) → Set (Fp × Fp × Fp × Fp))
     (hfac : ∀ basis p q, multiopenPrefixes family basis p 0 = multiopenPrefixes family basis q 0 →
       accept basis p = accept basis q)
     {τ s : ℝ≥0∞} (hsτ : s ≤ τ * (τ * (τ * τ)))
