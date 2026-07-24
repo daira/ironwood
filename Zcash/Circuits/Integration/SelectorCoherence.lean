@@ -1482,6 +1482,67 @@ theorem process_lookup_isSome_of_mem
   exact SelCompressMap.lookup_isSome_of_mem
     (process selectors maxDegree) hentry
 
+/--
+A degree-zero selector is looked up with the dedicated degree-zero packing datum.
+No uniqueness hypothesis on selector indices is needed: all degree-zero entries form
+the prefix of `process.entries`, and every datum in that prefix has length/root `1`.
+-/
+theorem process_lookup_degreeZero_of_mem
+    (selectors : List SelectorDescription) (maxDegree : ℕ)
+    {description : SelectorDescription}
+    (hdescription : description ∈ selectors)
+    (hdegree : description.maxDegree = 0) :
+    ∃ compressed,
+      (process selectors maxDegree).lookup description.selector =
+        some compressed ∧
+      compressed.combinationLen = 1 ∧
+      compressed.assignedRoot = 1 := by
+  let degreeZero := selectors.filter (·.maxDegree = 0)
+  let remaining := selectors.filter (·.maxDegree ≠ 0)
+  let degreeZeroEntries :=
+    degreeZero.zipIdx.map fun (source, column) =>
+      (source.selector, SelCompress.mk column 1 1)
+  let combinations :=
+    buildCombinations maxDegree remaining.length remaining
+  let combinationEntries :=
+    combinations.zipIdx.flatMap fun (combination, column) =>
+      combination.zipIdx.map fun (source, position) =>
+        (source.selector,
+          SelCompress.mk (degreeZero.length + column)
+            combination.length (position + 1))
+  have hdegreeZero : description ∈ degreeZero :=
+    List.mem_filter.mpr ⟨hdescription, by simp [hdegree]⟩
+  obtain ⟨column, hzip⟩ :=
+    exists_mem_zipIdx_of_mem hdegreeZero
+  have hentry :
+      (description.selector, SelCompress.mk column 1 1) ∈
+        degreeZeroEntries := by
+    exact List.mem_map.mpr
+      ⟨(description, column), hzip, rfl⟩
+  have hfindSome :
+      (degreeZeroEntries.find?
+        (fun entry => entry.1 = description.selector)).isSome = true := by
+    rw [List.find?_isSome]
+    exact ⟨(description.selector, SelCompress.mk column 1 1),
+      hentry, by simp⟩
+  obtain ⟨entry, hfind⟩ :=
+    Option.isSome_iff_exists.mp hfindSome
+  have hentryMem : entry ∈ degreeZeroEntries :=
+    List.mem_of_find?_eq_some hfind
+  obtain ⟨indexed, hindexed, hentryEq⟩ :=
+    List.mem_map.mp hentryMem
+  rcases indexed with ⟨source, sourceColumn⟩
+  subst entry
+  let compressed := SelCompress.mk sourceColumn 1 1
+  refine ⟨compressed, ?_, rfl, rfl⟩
+  change
+    Option.map Prod.snd
+      (List.find? (fun entry => entry.1 = description.selector)
+        (degreeZeroEntries ++ combinationEntries)) =
+      some compressed
+  rw [List.find?_append, hfind, Option.some_or]
+  rfl
+
 /-- A successful association-list lookup originates in the map's entries. -/
 theorem SelCompressMap.exists_mem_entries_of_lookup
     (map : SelCompressMap) {selector : ℕ} {compressed : SelCompress}
