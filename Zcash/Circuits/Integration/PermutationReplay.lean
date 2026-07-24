@@ -793,6 +793,101 @@ theorem sameCycle_restrict_of_widen
     widenPermutationChunkCell_injective hactive hi
   exact ⟨(i : ℤ), by simpa using hcd⟩
 
+/-- Same-cycle facts transport through a conjugating equivalence: the conjugated
+permutation's powers are the conjugates of the powers. -/
+theorem sameCycle_permCongr_iff {α β : Type*} [DecidableEq α] [Fintype α]
+    [DecidableEq β] [Fintype β] (e : α ≃ β) (π : Perm α) (x y : β) :
+    (e.permCongr π).SameCycle x y ↔ π.SameCycle (e.symm x) (e.symm y) := by
+  have hpow : ∀ (t : ℕ) (z : β),
+      ((e.permCongr π) ^ t) z = e ((π ^ t) (e.symm z)) := by
+    intro t
+    induction t with
+    | zero => intro z; simp
+    | succ t ih =>
+        intro z
+        rw [pow_succ, pow_succ, Equiv.Perm.mul_apply, Equiv.Perm.mul_apply,
+          Equiv.permCongr_apply, ih (e (π (e.symm z)))]
+        simp
+  constructor
+  · intro h
+    obtain ⟨i, _, hi⟩ := h.exists_pow_eq'
+    refine ⟨(i : ℤ), ?_⟩
+    rw [hpow i x] at hi
+    have := congrArg e.symm hi
+    simpa using this
+  · intro h
+    obtain ⟨i, _, hi⟩ := h.exists_pow_eq'
+    refine ⟨(i : ℤ), ?_⟩
+    have := congrArg e hi
+    rw [← hpow i x] at this
+    simpa using this
+
+/-- **Copy-pair value agreement from copy-list membership.** A copy pair of the keygen
+copy list links its endpoints through the abstract replay; conjugating through the
+chunk flattening, restricting to the active rows, and applying the resolver copy
+theorem yields equal committed values at the two cells. This is the per-pair fact the
+copy-replay witness consumes, with every coordinate translation explicit. -/
+theorem chunkRowValue_eq_of_mem_copies
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (l0 lLast lBlind : Polynomial Fp) (p : Fin shape.numProofs) {n m : ℕ}
+    (h : ConstraintSatisfaction
+      (constraintModelOfPermutationResolver vk ch poly l0 lLast lBlind) n)
+    (hdom : ResolverPermutationDomain vk l0 lLast lBlind n m)
+    (hcycle : ResolverPermutationCycle vk poly p m)
+    (hgood : ResolverPermutationGoodChallenges vk ch poly p m)
+    {numCols domainSize : ℕ} (hactive : m ≤ domainSize)
+    (copies' : List (FlatCell numCols domainSize × FlatCell numCols domainSize))
+    (flatten : ResolverPermutationCell vk poly p domainSize ≃
+      Fin domainSize × Fin numCols)
+    (hrestrict : ∀ c : ResolverPermutationCell vk poly p m,
+      widenPermutationChunkCell hactive (hcycle.sigma c) =
+        chunkPermutationOfFlat flatten
+          ((Equiv.prodComm (Fin numCols) (Fin domainSize)).permCongr
+            (replayKeygenPermutation copies'))
+          (widenPermutationChunkCell hactive c))
+    (l r : FlatCell numCols domainSize) (hmem : (l, r) ∈ copies')
+    (cl cr : ResolverPermutationCell vk poly p m)
+    (hl : flatten (widenPermutationChunkCell hactive cl) = (l.2, l.1))
+    (hr : flatten (widenPermutationChunkCell hactive cr) = (r.2, r.1)) :
+    chunkRowValue vk.omega (ResolverPermutationPairs vk poly p)
+        cl.1 cl.2.1 cl.2.2 =
+      chunkRowValue vk.omega (ResolverPermutationPairs vk poly p)
+        cr.1 cr.2.1 cr.2.2 := by
+  classical
+  -- the replay links the endpoints
+  have hflat : (replayKeygenPermutation copies').SameCycle l r :=
+    replayKeygenPermutation_pair_linked copies' hmem
+  -- conjugate to the row-major orientation
+  have hswapped :
+      (((Equiv.prodComm (Fin numCols) (Fin domainSize)).permCongr
+        (replayKeygenPermutation copies'))).SameCycle (l.2, l.1) (r.2, r.1) := by
+    rw [sameCycle_permCongr_iff]
+    simpa using hflat
+  -- conjugate through the chunk flattening
+  have hchunk :
+      (chunkPermutationOfFlat flatten
+        ((Equiv.prodComm (Fin numCols) (Fin domainSize)).permCongr
+          (replayKeygenPermutation copies'))).SameCycle
+        (widenPermutationChunkCell hactive cl)
+        (widenPermutationChunkCell hactive cr) := by
+    have hcongr :
+        chunkPermutationOfFlat flatten
+            ((Equiv.prodComm (Fin numCols) (Fin domainSize)).permCongr
+              (replayKeygenPermutation copies')) =
+          flatten.symm.permCongr
+            ((Equiv.prodComm (Fin numCols) (Fin domainSize)).permCongr
+              (replayKeygenPermutation copies')) := by
+      refine Equiv.ext fun c => ?_
+      simp [chunkPermutationOfFlat, Equiv.permCongr_apply]
+    rw [hcongr, sameCycle_permCongr_iff]
+    simpa [hl, hr] using hswapped
+  -- restrict to the active rows and read the copy theorem
+  exact ConstraintSatisfaction.resolverPermutationCopyConstraints
+    vk ch poly l0 lLast lBlind p h hdom hcycle hgood
+    (sameCycle_restrict_of_widen hactive _ hcycle.sigma hrestrict hchunk)
+
 end Layout.Asm
 
 end Zcash.Snark
