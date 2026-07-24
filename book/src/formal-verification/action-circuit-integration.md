@@ -155,7 +155,10 @@ relation. The binding-aware Action endpoint invokes this theorem internally; it 
 longer accepts the decoded-polynomial equality as a premise. Its remaining concrete
 instance inputs are the parameters' `LagrangeCommitmentKey`, the public-input
 commitment equation, and coverage of the configured primary column by the derived
-instance query layout.
+instance query layout. The generic layout-to-assembly lemma supplies the actual
+proof- and challenge-dependent query, and the endpoint derives the evaluation-domain
+injectivity and size equalities from `TopLevelCircuit` plus the existing supported-`k`
+bound.
 
 The exported fixture contains only the ten Lagrange generators reachable by Action
 public rows, rather than the whole 2048-row domain. `LagrangeCommitmentKey.ofPrefix`
@@ -608,8 +611,10 @@ among `(g, U, W)`. Consequently fixed and selector satisfaction will not silentl
 assume commitment binding: the integration theorem exposes the same exceptional
 branch that the deployed probability layer must price.
 `TopLevelFixedCoherence` packages the proof-independent keygen data—dense rows,
-their Lagrange commitments, fixed-query coverage, and sparse-to-dense layout
-correctness. `topLevelFixedConstraints_or_relation` uses that package to discharge
+their Lagrange commitments, static fixed-query-layout coverage, and sparse-to-dense
+layout correctness. Generic layout-to-assembly routing turns that static coverage
+into the actual verifier query for any proof string and challenges.
+`topLevelFixedConstraints_or_relation` uses that package to discharge
 both selector activations and all fixed/table operations for a resolver assignment.
 The remaining constructor work is to instantiate this package from the generic
 `TopLevelCircuit.toVerifierKey` pipeline.

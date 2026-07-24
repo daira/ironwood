@@ -33,6 +33,39 @@ variable
     {ConfigInput Config : Type} {Output : TypeMap}
     [CircuitType Output]
 
+omit [AddCommGroup G] [Module Fp G] [DecidableEq G] in
+/--
+A fixed-column entry in the accepted key's query layout produces the assembled
+query used by canonical member routing.
+-/
+theorem fixedQuery_of_layout
+    {shape : Shape}
+    (vk : VerifyingKey shape Fp G)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp)
+    (column : ℕ) (rotation : ℤ)
+    (hcount :
+      vk.fixedQueryLayout.length = shape.numFixedQueries)
+    (hlayout : (column, rotation) ∈ vk.fixedQueryLayout) :
+    ∃ q ∈ assembleQueries vk instanceCommitment ps ch,
+      q.commId = .fixedCol column := by
+  obtain ⟨queryIndex, hqueryIndex, hentry⟩ :=
+    List.mem_iff_getElem.mp hlayout
+  have hevalIndex :
+      queryIndex < (List.ofFn ps.fixedEvals).length := by
+    simpa only [List.length_ofFn, ← hcount] using hqueryIndex
+  obtain ⟨q, hq, hqid, -⟩ :=
+    columnQueries_layout_mem
+      (k' := shape.k) vk.omega ch.x vk.fixedCommitment
+      CommitmentId.fixedCol vk.fixedQueryLayout
+      (List.ofFn ps.fixedEvals) hqueryIndex hevalIndex
+  refine ⟨q, ?_, ?_⟩
+  · simp only [assembleQueries, List.mem_append]
+    exact Or.inl (Or.inl (Or.inr hq))
+  · rw [List.getD_eq_getElem _ _ hqueryIndex, hentry] at hqid
+    exact hqid
+
 /-- Sparse table and region-local fixed assignments emitted by top-level keygen. -/
 def topLevelFixedOperationEntries
     (top : TopLevelCircuit Fp ConfigInput Config Output) :
@@ -68,15 +101,14 @@ structure TopLevelFixedCoherence
     column < top.pinnedCS.numFixedColumns →
       (top.toVerifierKey pp urs).fixedCommitment column =
         key.commitInstance (rows column) 1
-  query : ∀ column,
+  fixedQueryCount :
+    (top.toVerifierKey pp urs).fixedQueryLayout.length =
+      (pp.mergeDerived top).numFixedQueries
+  queryLayout : ∀ column,
     column < top.pinnedCS.numFixedColumns →
-      ∀ (instanceCommitment :
-          Fin (pp.mergeDerived top).numProofs → ℕ → G)
-        (ps : ProofString (pp.mergeDerived top) Fp G)
-        (ch : Challenges (pp.mergeDerived top).k Fp),
-        ∃ q ∈ assembleQueries
-          (top.toVerifierKey pp urs) instanceCommitment ps ch,
-          q.commId = .fixedCol column
+      ∃ rotation,
+        (column, rotation) ∈
+          (top.toVerifierKey pp urs).fixedQueryLayout
   realizes : ∀ column row value,
     (column, row, value) ∈
         (topLevelFixedOperationEntries top ++
@@ -346,7 +378,12 @@ theorem topLevelFixedConstraints_or_relation
     exact relation.fixedColumn_eq_rowPolynomial_or_relation
       column coherence.key (coherence.rows column)
       (coherence.commitment column hcolumn) hrows
-      (coherence.query column hcolumn instanceCommitment ps ch)
+      (by
+        obtain ⟨rotation, hlayout⟩ :=
+          coherence.queryLayout column hcolumn
+        exact fixedQuery_of_layout
+          (top.toVerifierKey pp urs) instanceCommitment ps ch
+          column rotation coherence.fixedQueryCount hlayout)
 
 end CanonicalMemberConstraintRelation
 

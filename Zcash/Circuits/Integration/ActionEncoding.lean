@@ -277,29 +277,17 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
           (Circuit.configure
             Specs.Sinsemilla.orchardGenerators {}).1.primary.index =
         instanceKey.commitInstance (inputs proofIndex).rows 1)
-    (hinstanceQuery : ∀
-      proofIndex :
-        Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs,
-      ∃ q ∈ assembleQueries
-          (orchardActionTopLevelCircuit.toVerifierKey pp urs)
-          instanceCommitment ps ch,
-        q.commId =
-          .instanceCol proofIndex
-            (Circuit.configure
-              Specs.Sinsemilla.orchardGenerators {}).1.primary.index)
+    (hinstanceLayout :
+      ((Circuit.configure
+          Specs.Sinsemilla.orchardGenerators {}).1.primary.index,
+        (0 : ℤ)) ∈
+        (orchardActionTopLevelCircuit.toVerifierKey pp urs).instanceQueryLayout)
     (gateCoherence :
       TopLevelGateCoherence
         orchardActionTopLevelCircuit pp urs)
     (fixedCoherence :
       TopLevelFixedCoherence
         orchardActionTopLevelCircuit pp urs)
-    (hfixedRows : Function.Injective
-      fun i : Fin (2 ^ urs.k) =>
-        (orchardActionTopLevelCircuit.toVerifierKey pp urs).omega ^
-          (i : ℕ))
-    (hdomainSize :
-      (orchardActionTopLevelCircuit.toVerifierKey pp urs).n =
-        2 ^ urs.k)
     (copies : ∀ proofIndex,
       CircuitConstraintFamily.constraints .copy
         orchardActionTopLevelCircuit.placement
@@ -322,6 +310,26 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
       HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   classical
   subst vk
+  have hk' :
+      orchardActionTopLevelCircuit.domainExponent = urs.k :=
+    hk
+  have hfixedRows : Function.Injective
+      fun i : Fin (2 ^ urs.k) =>
+        (orchardActionTopLevelCircuit.toVerifierKey pp urs).omega ^
+          (i : ℕ) := by
+    rw [← hk']
+    change Function.Injective
+      (fun i : Fin
+          (2 ^ orchardActionTopLevelCircuit.domainExponent) =>
+        Zcash.Snark.omegaOf
+          orchardActionTopLevelCircuit.domainExponent ^ (i : ℕ))
+    exact TopLevelAssignment.domainRowsInjective hbound
+  have hdomainSize :
+      (orchardActionTopLevelCircuit.toVerifierKey pp urs).n =
+        2 ^ urs.k := by
+    change
+      2 ^ orchardActionTopLevelCircuit.domainExponent = 2 ^ urs.k
+    rw [hk']
   by_cases hrelation :
       HasNontrivialRelation (F := Fp) urs.g urs.u urs.w
   · exact Or.inr hrelation
@@ -346,7 +354,12 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
             Specs.Sinsemilla.orchardGenerators {}).1.primary.index
           instanceKey (inputs proofIndex).rows 1
           (hinstanceCommitment proofIndex) hfixedRows
-          (hinstanceQuery proofIndex)
+          (instanceQuery_of_layout
+            (orchardActionTopLevelCircuit.toVerifierKey pp urs)
+            instanceCommitment ps ch proofIndex
+            (Circuit.configure
+              Specs.Sinsemilla.orchardGenerators {}).1.primary.index
+            0 gateCoherence.instanceQueryCount hinstanceLayout)
       have hrows := hbound.resolve_right hrelation
       change relation.polynomial
           (.instanceCol proofIndex
@@ -356,9 +369,6 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
           (Zcash.Snark.omegaOf
             orchardActionTopLevelCircuit.domainExponent)
           (inputs proofIndex).rows at hrows
-      have hk' :
-          orchardActionTopLevelCircuit.domainExponent = urs.k :=
-        hk
       simpa only [hk'] using hrows
     apply actionBundleStatement_of_canonicalRelation
       pp urs hk instanceCommitment ps ch

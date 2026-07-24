@@ -19,6 +19,39 @@ set_option maxHeartbeats 20000
 variable {G : Type} [AddCommGroup G] [Module Fp G]
   [DecidableEq G] [Inhabited G]
 
+omit [AddCommGroup G] [Module Fp G] in
+/--
+An instance-column entry in the accepted key's query layout is enough to produce
+the assembled query consumed by canonical member routing.
+
+The evaluation-length premise is not separate: a well-shaped verifying key has one
+instance evaluation for each layout entry.
+-/
+theorem instanceQuery_of_layout
+    {shape : Shape}
+    (vk : VerifyingKey shape Fp G)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp)
+    (proofIndex : Fin shape.numProofs)
+    (column : ℕ) (rotation : ℤ)
+    (hcount :
+      vk.instanceQueryLayout.length = shape.numInstanceQueries)
+    (hlayout : (column, rotation) ∈ vk.instanceQueryLayout) :
+    ∃ q ∈ assembleQueries vk instanceCommitment ps ch,
+      q.commId = .instanceCol proofIndex column := by
+  obtain ⟨queryIndex, hqueryIndex, hentry⟩ :=
+    List.mem_iff_getElem.mp hlayout
+  have hevalIndex :
+      queryIndex < (List.ofFn (ps.instanceEvals proofIndex)).length := by
+    simpa only [List.length_ofFn, ← hcount] using hqueryIndex
+  obtain ⟨q, hq, hqid, -⟩ :=
+    instance_query_mem_assembleQueries
+      vk instanceCommitment ps ch proofIndex hqueryIndex hevalIndex
+  refine ⟨q, hq, ?_⟩
+  rw [List.getD_eq_getElem _ _ hqueryIndex, hentry] at hqid
+  exact hqid
+
 namespace CanonicalMemberConstraintRelation
 
 variable
