@@ -81,6 +81,8 @@ import Zcash.Circuits.Ecc.Chip
 import Zcash.Circuits.Action.Circuit
 import Zcash.Circuits.Action.Bundle
 import Zcash.Circuits.Action.RealBases
+import Zcash.Circuits.TopLevel
+import Zcash.Circuits.Action.TopLevel
 import Zcash.Circuits.Fixtures.ProjectSemantics
 
 /-!

@@ -375,10 +375,25 @@ From the recovered per-column row values, build:
 - the concrete `Config` returned by `Action.Circuit.configure`;
 - the unit input of the closed Action circuit.
 
-Then prove `Action.Circuit.EnvAssumptions`, including generator-table exactness, all
-table-loaded facts, fixed-base environment assumptions, and selector distinctness.
-No current open PR performs this construction. This is the central Action-specific
-representation bridge.
+The generic top-level boundary and the Action-side closure are now implemented.
+`TopLevelCircuit` holds a unit-input `FormalCircuit`, requires its public
+`Assumptions` predicate to be exactly `True`, fixes the result of its own `configure`
+run, and provides verifier- and prover-side theorems with no exposed
+`EnvAssumptions` premise. `SynthesisWellFormed` currently records the generic layout
+fact needed by table loaders: every declared table block fits in `usableRows`.
+
+`Action.topLevelCircuit` instantiates that boundary. It projects the initial
+Sinsemilla generator-table load from the real `mainPost` operation stream and derives:
+
+- exact generator-table contents and all four shared Sinsemilla table-loaded facts;
+- the shared 10-bit range table from the generator table's index column;
+- the fixed-base configuration equalities and lookup-selector distinctness produced
+  by `Action.Circuit.configure`.
+
+The prover-side closure projects the same load from `ExtendsWitnesses` and converts
+its fixed-table clauses to the corresponding constraints. The deployed
+`orchardActionTopLevelCircuit` specializes this generic Action construction to the
+real generators and certified bases.
 
 `ActionAssignment` now fixes the generic construction's circuit-side choices. It uses
 the V1 placement derived from `Bridge.actionOperations`, computes usable rows as
@@ -388,11 +403,12 @@ environment. `ActionAssignment.ofDecodedMembers` specializes this to the actual
 `decodedPolynomialResolver`; the remaining work is proving the concrete VK and public
 instance polynomials satisfy the Action-specific representation facts below.
 
-The top-level `EnvAssumptions` field has not yet been closed: it is still inherited by
-the base and post-Ironwood bundles so their existing proofs typecheck. The next circuit
-boundary change is to make the post-Ironwood bundle's environment assumption `True`
-and derive the child table/config/usable-row facts internally from transported
-constraints plus the generic compiler/VK well-formedness facts.
+The compositional base and post-Ironwood `FormalCircuit`s intentionally retain their
+`EnvAssumptions`: child circuits may state contracts that a parent fulfills.
+`TopLevelCircuit` is the separate deployment boundary that closes those contracts.
+The remaining assignment work is therefore to prove `SynthesisWellFormed` for the
+transported Action environment from the concrete VK/domain and operation stream, then
+feed the transported `Constraints` to `orchardActionTopLevelCircuit.soundness`.
 
 Note that most of `EnvAssumptions` should come out of the transported `Constraints`
 themselves rather than separate VK-fixed-data facts: `GeneratorTableExact` is defined
@@ -459,8 +475,9 @@ whose public inputs were committed by the verifier.
    circuit-satisfaction record in the computed endpoint.
 2. Make #89's post-compression CS and layout fixtures available as reusable Lean data,
    and prove VK/layout equality theorems that discharge #30's routing hypotheses.
-3. The canonical polynomial-to-row decoder is complete. Construct its placed Action
-   environment and prove `Action.Circuit.EnvAssumptions`.
+3. The canonical polynomial-to-row decoder and the Action top-level environment
+   closure are complete. Construct its placed Action environment and derive
+   `SynthesisWellFormed` from the concrete VK/domain.
 4. Prove the decomposed full-satisfaction-to-Action bridge, first for one selected
    Action and then for every `Fin shape.numProofs`.
 5. Supply the decoded/full-satisfaction data inside the computed experiment, close the
