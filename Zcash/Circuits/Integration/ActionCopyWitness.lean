@@ -142,6 +142,80 @@ theorem actionCopyLink :
   | «instance» col row => simp [resolveDeclared] at hres
   | constant v => simp [resolveDeclared] at hres
 
+/-- The environment coordinates a non-constant endpoint reads. -/
+def endpointCoords : CopyEndpoint Fp → Option (AnyColumn × ℤ)
+  | .cell c => some (c.column,
+      ((orchardActionTopLevelCircuit.placement c.regionIndex + c.rowOffset : ℕ) : ℤ))
+  | .instance col row => some (↑col, (row : ℤ))
+  | .constant _ => none
+
+/-- The environment coordinates a typed cell's valuation reads. -/
+def actionCellCoords (fc : FlatCell actionNumPermCols actionDomainSize) :
+    AnyColumn × ℤ :=
+  (ColRef.toAny (actionPermCols.getD (fc.1 : ℕ) (.advice 0)), ((fc.2 : ℕ) : ℤ))
+
+theorem actionCopyValue_coords (env : Environment Fp)
+    (fc : FlatCell actionNumPermCols actionDomainSize) :
+    actionCopyValue env fc =
+      env.get (actionCellCoords fc).1 (actionCellCoords fc).2 := rfl
+
+/-- Every declared non-constant endpoint's read coordinates survive the encoding:
+the permutation-column roundtrip and the placement rows agree. Stated as a named fact
+rather than decided inline: the binder-shaped `Decidable` instance re-evaluates the
+derived layout constants per endpoint and stalls — the discharge needs a memoized
+single-pass Boolean check (`let`-bound starts/columns, `List.all` over the declared
+list) in a compute module. -/
+def ActionReadCoords : Prop :=
+  ∀ copy ∈ operationDeclaredCopies (orchardActionTopLevelCircuit.operations 0),
+    (∀ xy, endpointCoords copy.1 = some xy →
+      actionCellCoords (actionCopyEncode copy.1) = xy) ∧
+    (∀ xy, endpointCoords copy.2 = some xy →
+      actionCellCoords (actionCopyEncode copy.2) = xy)
+
+/-- The declared-endpoint read equations, from the native coordinate facts and the
+constants-column reads. -/
+theorem actionCopyRead (env : Environment Fp) (hcoords : ActionReadCoords)
+    (hconstread : ∀ copy ∈ operationDeclaredCopies
+        (orchardActionTopLevelCircuit.operations 0),
+      ∀ v, copy.2 = .constant v →
+        actionCopyValue env (actionCopyEncode (.constant v)) = v) :
+    ∀ copy ∈ operationDeclaredCopies (orchardActionTopLevelCircuit.operations 0),
+      copy.1.eval orchardActionTopLevelCircuit.placement env =
+          actionCopyValue env (actionCopyEncode copy.1) ∧
+        copy.2.eval orchardActionTopLevelCircuit.placement env =
+          actionCopyValue env (actionCopyEncode copy.2) := by
+  intro copy hcopy
+  obtain ⟨h1, h2⟩ := hcoords copy hcopy
+  have hshape := declared_shape (orchardActionTopLevelCircuit.operations 0)
+    actionPermCols orchardActionTopLevelCircuit.regionStarts copy hcopy
+  have hconst : ∀ v, copy.2 = .constant v →
+      actionCopyValue env (actionCopyEncode (.constant v)) = v :=
+    fun v hv => hconstread copy hcopy v hv
+  obtain ⟨e1, e2⟩ := copy
+  constructor
+  · cases e1 with
+    | cell c =>
+        rw [actionCopyValue_coords, h1 _ rfl]
+        rfl
+    | «instance» col row =>
+        rw [actionCopyValue_coords, h1 _ rfl]
+        rfl
+    | constant v =>
+        rcases hshape with ⟨tuple, hres⟩ | ⟨c, v', hcv⟩
+        · simp [resolveDeclared] at hres
+        · simp at hcv
+  · cases e2 with
+    | cell c =>
+        rw [actionCopyValue_coords, h2 _ rfl]
+        rfl
+    | «instance» col row =>
+        rw [actionCopyValue_coords, h2 _ rfl]
+        rfl
+    | constant v =>
+        rw [show CopyEndpoint.eval orchardActionTopLevelCircuit.placement env
+          (.constant v) = v from rfl]
+        exact (hconst v rfl).symm
+
 /-- **The Action copy-replay witness.** Kind-dispatched from three leaf families over
 the concrete data: value agreement along each decoded keygen copy (the σ-semantics
 transport), value agreement of each declared constant copy (two constants-column
@@ -155,12 +229,11 @@ noncomputable def actionCopyReplayWitness
       ∀ c v, copy = (.cell c, .constant v) →
         actionCopyValue env (actionCopyEncode (.cell c)) =
           actionCopyValue env (actionCopyEncode (.constant v)) ∨ Bad)
-    (hread : ∀ copy ∈ operationDeclaredCopies
+    (hcoords : ActionReadCoords)
+    (hconstread : ∀ copy ∈ operationDeclaredCopies
         (orchardActionTopLevelCircuit.operations 0),
-      copy.1.eval orchardActionTopLevelCircuit.placement env =
-          actionCopyValue env (actionCopyEncode copy.1) ∧
-        copy.2.eval orchardActionTopLevelCircuit.placement env =
-          actionCopyValue env (actionCopyEncode copy.2)) :
+      ∀ v, copy.2 = .constant v →
+        actionCopyValue env (actionCopyEncode (.constant v)) = v) :
     CopyReplayWitness orchardActionTopLevelCircuit.placement env
       (orchardActionTopLevelCircuit.operations 0)
       (FlatCell actionNumPermCols actionDomainSize) Bad :=
@@ -176,6 +249,6 @@ noncomputable def actionCopyReplayWitness
           hpairval (actionCopyLink copy hcopy tuple hres)
       · subst hcv
         exact hconstval _ hcopy c v rfl)
-    hread
+    (actionCopyRead env hcoords hconstread)
 
 end Zcash.Snark
