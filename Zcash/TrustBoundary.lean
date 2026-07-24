@@ -1,4 +1,5 @@
 import Zcash.Circuits.Action.RealBases
+import Zcash.Security.Ledger.Bridge
 import Zcash.Security.KeyBinding.Instance
 import Zcash.Security.KeyBinding.Probability
 import Zcash.Security.Ledger.Balance
@@ -827,3 +828,16 @@ build here. -/
 assert_axioms Zcash.Circuits.Action.Circuit.soundness +native +curveOrder
 assert_axioms Zcash.Circuits.Action.Circuit.soundnessPost +native +curveOrder
 assert_axioms Zcash.Circuits.Action.orchardActionCircuit +native +curveOrder
+
+/-! ## The circuit → ledger bridge — exported refinement theorems
+
+The end-to-end refinement from a satisfying Action assignment to the games-facing ledger
+statement (`ActionBreak … ∨ ∃ inst w, …`), and the break classifier's two correctness
+directions (a classified escape is a witness-tied break; a `none` verdict leaves every
+Sinsemilla query defined). Same budget as the circuit layer above: standard tier plus
+`native_decide` certificates plus the declared curve-order axiom. -/
+
+assert_axioms Zcash.Security.Ledger.Bridge.specPost_to_ledger +native +curveOrder
+assert_axioms Zcash.Security.Ledger.Bridge.circuit_soundness_to_ledger +native +curveOrder
+assert_axioms Zcash.Security.Ledger.Bridge.actionBreak_of_classify +native +curveOrder
+assert_axioms Zcash.Security.Ledger.Bridge.classify_none_defined +native +curveOrder
