@@ -389,6 +389,12 @@ theorem ConstraintSystem.gateSelectorsAllocated_createGate
     List.forall_append]
   simp
 
+@[simp]
+theorem ConstraintSystem.createGate_numSelectors
+    {F : Type} (cs : ConstraintSystem F) (gate : Gate F) :
+    (createGate gate cs).2.numSelectors = cs.numSelectors := by
+  simp [createGate]
+
 namespace Configure
 
 /--
@@ -587,6 +593,118 @@ theorem complexSelectorCreateGate
       (howned ⟨cs.numSelectors, false⟩)
     rw [hselector]
     exact Nat.lt_succ_self cs.numSelectors
+
+/--
+Allocate two simple selectors and create one owned gate for each.  This retains the
+selector-index facts across the second allocation without exposing a giant completed
+configure state.
+-/
+@[circuit_norm]
+theorem twoSelectorsTwoGates
+    (firstGate secondGate : Selector → Selector → Gate F)
+    (result : Selector → Selector → α)
+    (hfirstSelector : ∀ first second,
+      (firstGate first second).selector.index = first.index)
+    (hsecondSelector : ∀ first second,
+      (secondGate first second).selector.index = second.index)
+    (hfirstOwned : ∀ first second,
+      (firstGate first second).SelectorsOwned)
+    (hsecondOwned : ∀ first second,
+      (secondGate first second).SelectorsOwned) :
+    PreservesGateSelectorsAllocated (do
+      let first ← Halo2.selector
+      let second ← Halo2.selector
+      Halo2.createGate (firstGate first second)
+      Halo2.createGate (secondGate first second)
+      return result first second) := by
+  constructor
+  intro cs hcs
+  let first : Selector := ⟨cs.numSelectors, true⟩
+  let second : Selector := ⟨cs.numSelectors + 1, true⟩
+  let allocated : ConstraintSystem F :=
+    { cs with numSelectors := cs.numSelectors + 2 }
+  change
+    ConstraintSystem.GateSelectorsAllocated
+      ((Halo2.createGate (secondGate first second)
+      (Halo2.createGate
+        (firstGate first second) allocated).2).2)
+  rw [ConstraintSystem.gateSelectorsAllocated_createGate]
+  constructor
+  · rw [ConstraintSystem.gateSelectorsAllocated_createGate]
+    constructor
+    · exact ConstraintSystem.GateSelectorsAllocated.mono
+        hcs (by simp [allocated])
+    · apply Gate.SelectorsAllocated.of_owned
+        (hfirstOwned first second)
+      rw [hfirstSelector]
+      simp [first, allocated]
+  · apply Gate.SelectorsAllocated.of_owned
+      (hsecondOwned first second)
+    rw [hsecondSelector]
+    simp [second, allocated]
+
+/-- Three-selector/three-gate counterpart of `twoSelectorsTwoGates`. -/
+@[circuit_norm]
+theorem threeSelectorsThreeGates
+    (firstGate secondGate thirdGate :
+      Selector → Selector → Selector → Gate F)
+    (result : Selector → Selector → Selector → α)
+    (hfirstSelector : ∀ first second third,
+      (firstGate first second third).selector.index =
+        first.index)
+    (hsecondSelector : ∀ first second third,
+      (secondGate first second third).selector.index =
+        second.index)
+    (hthirdSelector : ∀ first second third,
+      (thirdGate first second third).selector.index =
+        third.index)
+    (hfirstOwned : ∀ first second third,
+      (firstGate first second third).SelectorsOwned)
+    (hsecondOwned : ∀ first second third,
+      (secondGate first second third).SelectorsOwned)
+    (hthirdOwned : ∀ first second third,
+      (thirdGate first second third).SelectorsOwned) :
+    PreservesGateSelectorsAllocated (do
+      let first ← Halo2.selector
+      let second ← Halo2.selector
+      let third ← Halo2.selector
+      Halo2.createGate (firstGate first second third)
+      Halo2.createGate (secondGate first second third)
+      Halo2.createGate (thirdGate first second third)
+      return result first second third) := by
+  constructor
+  intro cs hcs
+  let first : Selector := ⟨cs.numSelectors, true⟩
+  let second : Selector := ⟨cs.numSelectors + 1, true⟩
+  let third : Selector := ⟨cs.numSelectors + 2, true⟩
+  let allocated : ConstraintSystem F :=
+    { cs with numSelectors := cs.numSelectors + 3 }
+  change
+    ConstraintSystem.GateSelectorsAllocated
+      ((Halo2.createGate (thirdGate first second third)
+      (Halo2.createGate (secondGate first second third)
+        (Halo2.createGate
+          (firstGate first second third) allocated).2).2).2)
+  rw [ConstraintSystem.gateSelectorsAllocated_createGate]
+  constructor
+  · rw [ConstraintSystem.gateSelectorsAllocated_createGate]
+    constructor
+    · rw [ConstraintSystem.gateSelectorsAllocated_createGate]
+      constructor
+      · exact ConstraintSystem.GateSelectorsAllocated.mono
+          hcs (by simp [allocated])
+      · apply Gate.SelectorsAllocated.of_owned
+          (hfirstOwned first second third)
+        rw [hfirstSelector]
+        simp [first, allocated]
+    · apply Gate.SelectorsAllocated.of_owned
+        (hsecondOwned first second third)
+      rw [hsecondSelector]
+      simp [second, allocated]
+  · apply Gate.SelectorsAllocated.of_owned
+      (hthirdOwned first second third)
+    rw [hthirdSelector]
+    simp [third, allocated]
 
 /-- Run a preserving configure program from the empty Halo 2 builder state. -/
 theorem fromEmpty

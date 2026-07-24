@@ -593,8 +593,15 @@ retains the allocated-index fact returned by each selector allocation.
 VK path: the simple selector/create-gate leaves, the equality-prefixed ECC addition
 leaves, the multiplication decomposition/overflow leaves, and the NoteCommit
 decomposition and canonicity leaves now have local ownership and compositional
-configure certificates. Multi-selector lookup, Poseidon, and Sinsemilla-family
-leaves remain before the final `Action.Circuit.configure` certificate.
+configure certificates. Multi-selector lookup and Sinsemilla-family leaves remain
+before the final `Action.Circuit.configure` certificate.
+The generic two-selector/two-gate and three-selector/three-gate rules now retain
+fresh-index facts across several allocations. They discharge the previously
+non-compositional WitnessPoint, Poseidon, and incomplete-multiplication leaves;
+the complete variable-base multiplication configuration and the simple fixed-base
+canonicity variants now compose as well. The remaining hard cases are specifically
+the mixed simple/complex-selector lookup chips and the preallocated-selector
+fixed-base/Sinsemilla gates.
 
 The `Fixtures.Layout` reconstruction is already generic over operations, so σ-cycle
 correctness of its replayed keygen merge is likewise a once-and-for-all lemma.

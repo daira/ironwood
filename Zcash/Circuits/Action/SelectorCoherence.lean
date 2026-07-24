@@ -156,6 +156,61 @@ theorem configure_preservesGateSelectorsAllocated
 
 end Ecc.Add
 
+namespace Ecc.WitnessPoint
+
+@[circuit_norm]
+theorem pointGate_selectorsOwned
+    (qPoint : Selector) (x y : Column .advice) :
+    (pointGate qPoint x y).SelectorsOwned := by
+  change List.Forall
+    (fun constraint : Constraint Fp =>
+      constraint.poly.selectorsCovered
+        (fun index => decide (index = qPoint.index)) = true)
+    [({ name := "x == 0 v on_curve"
+        poly := querySelector qPoint * queryAdvice x 0 *
+          curveEqn x y } : Constraint Fp),
+     ({ name := "y == 0 v on_curve"
+        poly := querySelector qPoint * queryAdvice y 0 *
+          curveEqn x y } : Constraint Fp)]
+  simp [Expression.selectorsCovered, querySelector, queryAdvice,
+    curveEqn]
+
+@[circuit_norm]
+theorem pointNonIdGate_selectorsOwned
+    (qPointNonId : Selector) (x y : Column .advice) :
+    (pointNonIdGate qPointNonId x y).SelectorsOwned := by
+  change List.Forall
+    (fun constraint : Constraint Fp =>
+      constraint.poly.selectorsCovered
+        (fun index =>
+          decide (index = qPointNonId.index)) = true)
+    [({ name := "on_curve"
+        poly := querySelector qPointNonId * curveEqn x y } :
+      Constraint Fp)]
+  simp [Expression.selectorsCovered, querySelector, queryAdvice,
+    curveEqn]
+
+theorem configure_preservesGateSelectorsAllocated
+    (x y : Column .advice) :
+    Configure.PreservesGateSelectorsAllocated
+      (configure x y) := by
+  unfold configure
+  exact
+    Configure.PreservesGateSelectorsAllocated.twoSelectorsTwoGates
+      (fun qPoint _ => pointGate qPoint x y)
+      (fun _ qPointNonId =>
+        pointNonIdGate qPointNonId x y)
+      (fun qPoint qPointNonId =>
+        ({ qPoint, qPointNonId, x, y } : Config))
+      (fun _ _ => rfl)
+      (fun _ _ => rfl)
+      (fun qPoint _ =>
+        pointGate_selectorsOwned qPoint x y)
+      (fun _ qPointNonId =>
+        pointNonIdGate_selectorsOwned qPointNonId x y)
+
+end Ecc.WitnessPoint
+
 namespace Ecc.AddIncomplete
 
 @[circuit_norm]
@@ -283,6 +338,194 @@ theorem configure_preservesGateSelectorsAllocated
           { qOverflow, lookupConfig, adv0, adv1, adv2 })
 
 end Ecc.MulOverflow
+
+namespace Poseidon
+
+@[circuit_norm]
+theorem fullRoundGate_selectorsOwned (cfg : Config) :
+    (fullRoundGate cfg).SelectorsOwned := by
+  apply Gate.selectorsOwned_of_withSelector
+  simp [pow5Expr, Expression.selectorFree,
+    queryAdvice, queryFixed]
+
+@[circuit_norm]
+theorem partialRoundsGate_selectorsOwned (cfg : Config) :
+    (partialRoundsGate cfg).SelectorsOwned := by
+  apply Gate.selectorsOwned_of_withSelector
+  simp [pow5Expr, Expression.selectorFree,
+    queryAdvice, queryFixed]
+
+@[circuit_norm]
+theorem padAndAddGate_selectorsOwned (cfg : Config) :
+    (padAndAddGate cfg).SelectorsOwned := by
+  apply Gate.selectorsOwned_of_withSelector
+  simp [Expression.selectorFree, queryAdvice]
+
+theorem configure_preservesGateSelectorsAllocated
+    (state : Fin 3 → Column .advice)
+    (partialSbox : Column .advice)
+    (rcA rcB : Fin 3 → Column .fixed) :
+    Configure.PreservesGateSelectorsAllocated
+      (configure state partialSbox rcA rcB) := by
+  unfold configure
+  exact Configure.PreservesGateSelectorsAllocated.bind
+    (Configure.PreservesGateSelectorsAllocated.enableEquality
+      (state 0).toAny) fun _ =>
+    Configure.PreservesGateSelectorsAllocated.bind
+      (Configure.PreservesGateSelectorsAllocated.enableEquality
+        (state 1).toAny) fun _ =>
+    Configure.PreservesGateSelectorsAllocated.bind
+      (Configure.PreservesGateSelectorsAllocated.enableEquality
+        (state 2).toAny) fun _ =>
+    Configure.PreservesGateSelectorsAllocated.bind
+      (Configure.PreservesGateSelectorsAllocated.enableEquality
+        (rcB 0).toAny) fun _ =>
+    Configure.PreservesGateSelectorsAllocated.bind
+      (Configure.PreservesGateSelectorsAllocated.enableEquality
+        (rcB 1).toAny) fun _ =>
+    Configure.PreservesGateSelectorsAllocated.bind
+      (Configure.PreservesGateSelectorsAllocated.enableEquality
+        (rcB 2).toAny) fun _ =>
+    Configure.PreservesGateSelectorsAllocated.threeSelectorsThreeGates
+      (fun sFull sPartial sPadAndAdd =>
+        fullRoundGate
+          { state, partialSbox, rcA, rcB,
+            sFull, sPartial, sPadAndAdd })
+      (fun sFull sPartial sPadAndAdd =>
+        partialRoundsGate
+          { state, partialSbox, rcA, rcB,
+            sFull, sPartial, sPadAndAdd })
+      (fun sFull sPartial sPadAndAdd =>
+        padAndAddGate
+          { state, partialSbox, rcA, rcB,
+            sFull, sPartial, sPadAndAdd })
+      (fun sFull sPartial sPadAndAdd =>
+        ({ state, partialSbox, rcA, rcB,
+           sFull, sPartial, sPadAndAdd } : Config))
+      (fun _ _ _ => rfl)
+      (fun _ _ _ => rfl)
+      (fun _ _ _ => rfl)
+      (fun sFull sPartial sPadAndAdd =>
+        fullRoundGate_selectorsOwned
+          { state, partialSbox, rcA, rcB,
+            sFull, sPartial, sPadAndAdd })
+      (fun sFull sPartial sPadAndAdd =>
+        partialRoundsGate_selectorsOwned
+          { state, partialSbox, rcA, rcB,
+            sFull, sPartial, sPadAndAdd })
+      (fun sFull sPartial sPadAndAdd =>
+        padAndAddGate_selectorsOwned
+          { state, partialSbox, rcA, rcB,
+            sFull, sPartial, sPadAndAdd })
+
+end Poseidon
+
+namespace Ecc.MulIncomplete
+
+@[circuit_norm]
+theorem qMul1Gate_selectorsOwned (cfg : Config) :
+    (qMul1Gate cfg).SelectorsOwned := by
+  apply Gate.selectorsOwned_of_withSelector
+  simp [yA, xRExpr, Expression.selectorFree, queryAdvice]
+
+@[circuit_norm]
+theorem qMul2Gate_selectorsOwned (cfg : Config) :
+    (qMul2Gate cfg).SelectorsOwned := by
+  apply Gate.selectorsOwned_of_withSelector
+  simp [forLoopPolys, yA, xRExpr,
+    Expression.selectorFree, queryAdvice]
+
+@[circuit_norm]
+theorem qMul3Gate_selectorsOwned (cfg : Config) :
+    (qMul3Gate cfg).SelectorsOwned := by
+  apply Gate.selectorsOwned_of_withSelector
+  simp [forLoopPolys, yA, xRExpr,
+    Expression.selectorFree, queryAdvice]
+
+theorem configure_preservesGateSelectorsAllocated
+    (z xA xP yP lambda1 lambda2 : Column .advice) :
+    Configure.PreservesGateSelectorsAllocated
+      (configure z xA xP yP lambda1 lambda2) := by
+  unfold configure
+  exact Configure.PreservesGateSelectorsAllocated.bind
+    (Configure.PreservesGateSelectorsAllocated.enableEquality
+      z.toAny) fun _ =>
+    Configure.PreservesGateSelectorsAllocated.bind
+      (Configure.PreservesGateSelectorsAllocated.enableEquality
+        lambda1.toAny) fun _ =>
+    Configure.PreservesGateSelectorsAllocated.threeSelectorsThreeGates
+      (fun qMul1 qMul2 qMul3 =>
+        qMul1Gate
+          { qMul1, qMul2, qMul3, z, xA, xP, yP,
+            lambda1, lambda2 })
+      (fun qMul1 qMul2 qMul3 =>
+        qMul2Gate
+          { qMul1, qMul2, qMul3, z, xA, xP, yP,
+            lambda1, lambda2 })
+      (fun qMul1 qMul2 qMul3 =>
+        qMul3Gate
+          { qMul1, qMul2, qMul3, z, xA, xP, yP,
+            lambda1, lambda2 })
+      (fun qMul1 qMul2 qMul3 =>
+        ({ qMul1, qMul2, qMul3, z, xA, xP, yP,
+           lambda1, lambda2 } : Config))
+      (fun _ _ _ => rfl)
+      (fun _ _ _ => rfl)
+      (fun _ _ _ => rfl)
+      (fun qMul1 qMul2 qMul3 =>
+        qMul1Gate_selectorsOwned
+          { qMul1, qMul2, qMul3, z, xA, xP, yP,
+            lambda1, lambda2 })
+      (fun qMul1 qMul2 qMul3 =>
+        qMul2Gate_selectorsOwned
+          { qMul1, qMul2, qMul3, z, xA, xP, yP,
+            lambda1, lambda2 })
+      (fun qMul1 qMul2 qMul3 =>
+        qMul3Gate_selectorsOwned
+          { qMul1, qMul2, qMul3, z, xA, xP, yP,
+            lambda1, lambda2 })
+
+end Ecc.MulIncomplete
+
+namespace Ecc.Mul
+
+theorem configure_preservesGateSelectorsAllocated
+    (addConfig : Ecc.Add.Config)
+    (lookupConfig : LookupRangeCheck.Config 10)
+    (advices : Fin 10 → Column .advice) :
+    Configure.PreservesGateSelectorsAllocated
+      (configure addConfig lookupConfig advices) := by
+  unfold configure
+  exact Configure.PreservesGateSelectorsAllocated.bind
+    (Ecc.MulIncomplete.configure_preservesGateSelectorsAllocated
+      (advices 9) (advices 3) (advices 0) (advices 1)
+      (advices 4) (advices 5)) fun hiConfig =>
+    Configure.PreservesGateSelectorsAllocated.bind
+      (Ecc.MulIncomplete.configure_preservesGateSelectorsAllocated
+        (advices 6) (advices 7) (advices 0) (advices 1)
+        (advices 8) (advices 2)) fun loConfig =>
+    Configure.PreservesGateSelectorsAllocated.bind
+      (Ecc.MulComplete.configure_preservesGateSelectorsAllocated
+        (advices 9) addConfig) fun completeConfig =>
+    Configure.PreservesGateSelectorsAllocated.bind
+      (Ecc.MulOverflow.configure_preservesGateSelectorsAllocated
+        10 lookupConfig (advices 6) (advices 7)
+        (advices 8)) fun overflowConfig =>
+    Configure.PreservesGateSelectorsAllocated.selectorCreateGate
+      (fun qMulLsb =>
+        lsbGate
+          { qMulLsb, addConfig, hiConfig, loConfig,
+            completeConfig, overflowConfig })
+      (fun qMulLsb =>
+        ({ qMulLsb, addConfig, hiConfig, loConfig,
+           completeConfig, overflowConfig } : Config))
+      (fun _ => rfl)
+      (fun qMulLsb =>
+        lsbGate_selectorsOwned
+          { qMulLsb, addConfig, hiConfig, loConfig,
+            completeConfig, overflowConfig })
+
+end Ecc.Mul
 
 namespace NoteCommit.DecomposeB
 
@@ -566,5 +809,109 @@ theorem configure_preservesGateSelectorsAllocated
         { qYCanon, advices })
 
 end NoteCommit.YCanonicity
+
+namespace Ecc.MulFixed.BaseFieldElem
+
+@[circuit_norm]
+theorem canonGate_selectorsOwned (cfg : Config) :
+    (canonGate cfg).SelectorsOwned := by
+  apply Gate.selectorsOwned_of_withSelector
+  simp [DecomposeRunningSum.rangeCheckExpr_selectorFree,
+    Expression.mulConstant, Expression.selectorFree,
+    queryAdvice]
+
+theorem configure_preservesGateSelectorsAllocated
+    (canonAdvices : Fin 3 → Column .advice)
+    (lookupConfig : LookupRangeCheck.Config 10)
+    (superConfig : MulFixed.Config) :
+    Configure.PreservesGateSelectorsAllocated
+      (configure canonAdvices lookupConfig superConfig) := by
+  unfold configure
+  exact Configure.PreservesGateSelectorsAllocated.bind
+    (Configure.PreservesGateSelectorsAllocated.enableEquality
+      (canonAdvices 0).toAny) fun _ =>
+    Configure.PreservesGateSelectorsAllocated.bind
+      (Configure.PreservesGateSelectorsAllocated.enableEquality
+        (canonAdvices 1).toAny) fun _ =>
+    Configure.PreservesGateSelectorsAllocated.bind
+      (Configure.PreservesGateSelectorsAllocated.enableEquality
+        (canonAdvices 2).toAny) fun _ =>
+    Configure.PreservesGateSelectorsAllocated.selectorCreateGate
+      (fun qMulFixedBaseField =>
+        canonGate
+          { qMulFixedBaseField, canonAdvices,
+            lookupConfig, superConfig })
+      (fun qMulFixedBaseField =>
+        ({ qMulFixedBaseField, canonAdvices,
+           lookupConfig, superConfig } : Config))
+      (fun _ => rfl)
+      (fun qMulFixedBaseField =>
+        canonGate_selectorsOwned
+          { qMulFixedBaseField, canonAdvices,
+            lookupConfig, superConfig })
+
+end Ecc.MulFixed.BaseFieldElem
+
+namespace Ecc.MulFixed.Short
+
+@[circuit_norm]
+theorem shortGate_selectorsOwned (cfg : Config) :
+    (shortGate cfg).SelectorsOwned := by
+  apply Gate.selectorsOwned_of_withSelector
+  simp [DecomposeRunningSum.rangeCheckExpr_selectorFree,
+    Expression.selectorFree, queryAdvice]
+
+theorem configure_preservesGateSelectorsAllocated
+    (superConfig : MulFixed.Config) :
+    Configure.PreservesGateSelectorsAllocated
+      (configure superConfig) := by
+  unfold configure
+  exact
+    Configure.PreservesGateSelectorsAllocated.selectorCreateGate
+      (fun qMulFixedShort =>
+        shortGate { qMulFixedShort, superConfig })
+      (fun qMulFixedShort =>
+        ({ qMulFixedShort, superConfig } : Config))
+      (fun _ => rfl)
+      (fun qMulFixedShort =>
+        shortGate_selectorsOwned
+          { qMulFixedShort, superConfig })
+
+end Ecc.MulFixed.Short
+
+namespace Ecc.MulFixed.FullWidth
+
+@[circuit_norm]
+theorem fullWidthGate_selectorsOwned (cfg : Config) :
+    (fullWidthGate cfg).SelectorsOwned := by
+  apply Gate.selectorsOwned_of_withSelector
+  rw [List.forall_append]
+  constructor
+  · apply MulFixed.coordsCheck_selectorFree
+    simp [Expression.selectorFree, queryAdvice]
+  · rw [List.forall_iff_forall_mem]
+    intro constraint hconstraint
+    simp only [List.mem_singleton] at hconstraint
+    subst constraint
+    apply DecomposeRunningSum.rangeCheckExpr_selectorFree
+    simp [Expression.selectorFree, queryAdvice]
+
+theorem configure_preservesGateSelectorsAllocated
+    (superConfig : MulFixed.Config) :
+    Configure.PreservesGateSelectorsAllocated
+      (configure superConfig) := by
+  unfold configure
+  exact
+    Configure.PreservesGateSelectorsAllocated.selectorCreateGate
+      (fun qMulFixedFull =>
+        fullWidthGate { qMulFixedFull, superConfig })
+      (fun qMulFixedFull =>
+        ({ qMulFixedFull, superConfig } : Config))
+      (fun _ => rfl)
+      (fun qMulFixedFull =>
+        fullWidthGate_selectorsOwned
+          { qMulFixedFull, superConfig })
+
+end Ecc.MulFixed.FullWidth
 
 end Zcash.Circuits
