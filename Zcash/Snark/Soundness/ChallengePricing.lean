@@ -17,6 +17,7 @@ event, from `uniformChallenge_badSet` and a root count.
   degree at most `d`, cost at most `N·d / p` together.
 * `goodY_failure_measure_le` — the fold split's `y` surface.
 * `perm_gamma/beta_failure_measure_le` — the permutation bridge's two surfaces.
+* `lookup_gamma/beta_failure_measure_le` — the lookup product bridge's two surfaces.
 * `escape_measure_le` — a vanishing-factor branch, as the root set of the product of its factors.
 * `theta_failure_measure_le` — the decompression's pairwise `θ` surface.
 
@@ -195,6 +196,116 @@ theorem perm_beta_failure_measure_le (sp tp : Multiset (Fp × Fp)) :
   refine le_trans (uniformChallenge_szBadSet_iUnion_le (range (d + 1)) _ d
     fun j _ => natDegree_coeff_pairProdDiff_le sp tp j) ?_
   simp
+
+/-- The lookup product difference has `γ`-degree bounded by the larger table column. The two input
+columns occur only in its coefficients. -/
+theorem natDegree_lookupProdDiff_le (a s inp tbl : Multiset Fp) :
+    (lookupProdDiff a s inp tbl).natDegree ≤
+      max (Multiset.card s) (Multiset.card tbl) := by
+  rw [lookupProdDiff]
+  refine le_trans (Polynomial.natDegree_sub_le _ _) (max_le ?_ ?_)
+  · refine le_trans (Polynomial.natDegree_C_mul_le _ _) ?_
+    exact le_trans (by
+      simpa [Multiset.map_map] using
+        (natDegree_prod_X_add_u (s.map C)).le) (le_max_left _ _)
+  · refine le_trans (Polynomial.natDegree_C_mul_le _ _) ?_
+    exact le_trans (by
+      simpa [Multiset.map_map] using
+        (natDegree_prod_X_add_u (tbl.map C)).le) (le_max_right _ _)
+
+/-- Out-of-range `γ` coefficients of the lookup product difference vanish. -/
+theorem lookupProdDiff_coeff_eq_zero_of_le (a s inp tbl : Multiset Fp) {j : ℕ}
+    (hj : max (Multiset.card s) (Multiset.card tbl) < j) :
+    (lookupProdDiff a s inp tbl).coeff j = 0 :=
+  Polynomial.coeff_eq_zero_of_natDegree_lt
+    (lt_of_le_of_lt (natDegree_lookupProdDiff_le a s inp tbl) hj)
+
+/-- Every `γ` coefficient of the lookup product difference has `β`-degree bounded by the larger
+input column. The table factors have coefficients that are constant in `β`. -/
+theorem natDegree_coeff_lookupProdDiff_le
+    (a s inp tbl : Multiset Fp) (j : ℕ) :
+    ((lookupProdDiff a s inp tbl).coeff j).natDegree ≤
+      max (Multiset.card a) (Multiset.card inp) := by
+  have tableCoeff : ∀ (m : Multiset Fp) (j : ℕ),
+      (((m.map (fun u => X + C (C u))).prod).coeff j).natDegree ≤ 0 := by
+    intro m
+    induction m using Multiset.induction with
+    | empty =>
+        intro j
+        rcases eq_or_ne j 0 with rfl | hj
+        · simp
+        · simp [Polynomial.coeff_one, hj]
+    | cons u m ih =>
+        intro j
+        rw [Multiset.map_cons, Multiset.prod_cons, add_mul, Polynomial.coeff_add]
+        refine le_trans (Polynomial.natDegree_add_le _ _) (max_le ?_ ?_)
+        · rcases j with _ | j
+          · simp [Polynomial.mul_coeff_zero, Polynomial.coeff_X_zero]
+          · rw [Polynomial.coeff_X_mul]
+            exact ih j
+        · rw [Polynomial.coeff_C_mul]
+          exact le_trans (Polynomial.natDegree_C_mul_le _ _) (ih j)
+  rw [lookupProdDiff, Polynomial.coeff_sub, Polynomial.coeff_C_mul,
+    Polynomial.coeff_C_mul]
+  refine le_trans (Polynomial.natDegree_sub_le _ _) (max_le ?_ ?_)
+  · refine le_trans Polynomial.natDegree_mul_le ?_
+    calc
+      ((a.map (fun u => X + C u)).prod).natDegree
+          + (((s.map (fun u => X + C (C u))).prod).coeff j).natDegree
+        ≤ Multiset.card a + 0 := Nat.add_le_add (by rw [natDegree_prod_X_add_u])
+          (tableCoeff s j)
+      _ = Multiset.card a := Nat.add_zero _
+      _ ≤ max (Multiset.card a) (Multiset.card inp) := le_max_left _ _
+  · refine le_trans Polynomial.natDegree_mul_le ?_
+    calc
+      ((inp.map (fun u => X + C u)).prod).natDegree
+          + (((tbl.map (fun u => X + C (C u))).prod).coeff j).natDegree
+        ≤ Multiset.card inp + 0 := Nat.add_le_add (by rw [natDegree_prod_X_add_u])
+          (tableCoeff tbl j)
+      _ = Multiset.card inp := Nat.add_zero _
+      _ ≤ max (Multiset.card a) (Multiset.card inp) := le_max_right _ _
+
+/-- **The lookup `γ` surface priced.** Once `β` is fixed, the lookup product difference has one
+root per table row at most. -/
+theorem lookup_gamma_failure_measure_le
+    (a s inp tbl : Multiset Fp) (beta : Fp) :
+    uniformChallenge.toOuterMeasure
+        ↑(szBadSet ((lookupProdDiff a s inp tbl).map (evalRingHom beta)))
+      ≤ (max (Multiset.card s) (Multiset.card tbl) : ℕ) /
+          (Fintype.card Fp : ℝ≥0∞) := by
+  rw [uniformChallenge_badSet]
+  gcongr
+  exact_mod_cast le_trans (szBadSet_card_le _)
+    (le_trans Polynomial.natDegree_map_le (natDegree_lookupProdDiff_le a s inp tbl))
+
+/-- **The lookup `β` surface priced.** There is one root set for each potentially nonzero
+`γ` coefficient, and each such coefficient has degree at most the larger input-column size. -/
+theorem lookup_beta_failure_measure_le (a s inp tbl : Multiset Fp) :
+    uniformChallenge.toOuterMeasure
+        {b : Fp | ∃ j, b ∈ szBadSet ((lookupProdDiff a s inp tbl).coeff j)}
+      ≤ ((max (Multiset.card s) (Multiset.card tbl) + 1)
+          * max (Multiset.card a) (Multiset.card inp) : ℕ) /
+          (Fintype.card Fp : ℝ≥0∞) := by
+  set ds := max (Multiset.card s) (Multiset.card tbl) with hds
+  set da := max (Multiset.card a) (Multiset.card inp) with hda
+  have hset : {b : Fp | ∃ j, b ∈ szBadSet ((lookupProdDiff a s inp tbl).coeff j)}
+      = {b : Fp | ∃ j ∈ range (ds + 1),
+          b ∈ szBadSet ((lookupProdDiff a s inp tbl).coeff j)} := by
+    ext b
+    simp only [Set.mem_setOf_eq, mem_range]
+    constructor
+    · rintro ⟨j, hj⟩
+      rcases lt_or_ge j (ds + 1) with hlt | hge
+      · exact ⟨j, hlt, hj⟩
+      · rw [lookupProdDiff_coeff_eq_zero_of_le a s inp tbl (by omega)] at hj
+        simp [szBadSet] at hj
+    · rintro ⟨j, _, hj⟩
+      exact ⟨j, hj⟩
+  rw [hset]
+  refine le_trans (uniformChallenge_szBadSet_iUnion_le (range (ds + 1)) _ da
+    fun j _ => ?_) ?_
+  · simpa [hda] using natDegree_coeff_lookupProdDiff_le a s inp tbl j
+  · simp [hds, hda]
 
 /-- **A vanishing-factor escape priced.** The event that some listed factor `v + challenge` vanishes
 is the root set of the product `∏ (X + v)`, so it costs at most the factor count over `p`. -/
