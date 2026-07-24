@@ -352,7 +352,9 @@ identifies the raw `.enableLookup` operation, Clean bounds its row by the measur
 region extent and `usedRows`, and the top-level fit certificate bounds `usedRows` by
 the usable-row prefix. `TopLevelLookupWitnessConditions` therefore retains only exact
 packed selector values and the `β`/`γ`/`θ` exclusions; row fit is no longer supplied
-by a caller.
+by a caller. The same activation-row fact also proves that a nonempty lookup family
+has at least one usable row, so deployed lookup construction no longer asks every
+caller for a separate blinding-row arithmetic premise.
 `lookup_gamma_failure_measure_le` and
 `lookup_beta_failure_measure_le` now price the two lookup-product root surfaces
 generically from their column lengths, while
@@ -546,6 +548,12 @@ the copy-replay witness. Its `satisfaction_or_bad` theorem returns the exact
 `FullCircuitSatisfaction` record, and `constraints_or_bad` returns Clean's single
 ground-truth `Halo2.Constraints`. The remaining Action-specific work is therefore
 construction of these records, not another semantic proof.
+`FullCircuitBridge.ofTopLevelCanonical` is now the circuit-integration join for one
+proof: from the circuit-derived canonical constraint model it constructs the gate
+and lookup fields itself, then combines them with fixed/table satisfaction and the
+copy-replay witness. `bundleTopLevelSoundness_or_bad` lifts any such family to all
+proof indices while preserving one shared exceptional event. Thus neither the
+one-proof nor bundle join needs an Action-specific gate/lookup reassembly theorem.
 
 The lookup representation boundary is now generic.
 `LookupProjection` follows the actual threaded `eraseLookups` compiler walk, selects
@@ -998,9 +1006,11 @@ whose public inputs were committed by the verifier.
    use the fixed/VK result to supply exact packed-selector projection. Lookup
    configure lawfulness, activation-row fit, and bundle-wide challenge packaging,
    plus the Lagrange/instance commitment stream, are complete.
-4. Assemble those components for one proof index in `FullCircuitBridge`, then quantify
-   the same construction over every `Fin shape.numProofs`. The external
-   `Action.Statement` and `Action.BundleStatement` adapters are already implemented.
+4. **Generic join complete:** `FullCircuitBridge.ofTopLevelCanonical` assembles one
+   proof index and `bundleTopLevelSoundness_or_bad` quantifies it over every
+   `Fin shape.numProofs`. Instantiate those constructors with the incoming
+   fixed-selector and copy records. The external `Action.Statement` and
+   `Action.BundleStatement` adapters are already implemented.
 5. Replace the live computed capstone's free `S`/`hencodes` argument with that concrete
    bundle bridge and add the resulting theorem to the consolidated trust boundary.
    The family-wide adaptive-coupling/`hExtract` supply problem is a distinct
@@ -1020,8 +1030,8 @@ append-only merge flow.
 | **[SEPARATE: fixed/VK]** | Instantiate `TopLevelFixedCoherence` from the circuit-derived dense fixed rows, sparse-to-dense scatter law, fixed-query coverage, and fixed commitments. | Generic fixed/table and selector-realization theorems are complete. | The fixed/table field and the exact packed-selector fact consumed by the lookup stream. |
 | **[DONE: instance]** | No independent work remains in the deterministic instance stream. | `ActionInstanceCommitment.instanceKey` and `.commitment` derive the key and public commitment from the URS and ten Action rows; the binding-aware bundle endpoint consumes them internally and preserves only the shared nontrivial-relation branch. | Public-instance provenance is ready for the one-proof/bundle join. |
 | **[SEPARATE: ledger]** | Continue [#98](https://github.com/zcash/ironwood/pull/98)'s `SpecPost`-to-ledger refinement. | Independent of polynomial reconstruction and Clean constraint satisfaction. | The games-facing conclusion that should follow after the circuit statement is recovered. |
-| **[JOIN] One proof** | Assemble gate, copy, lookup, and fixed witnesses in `FullCircuitBridge.topLevelSoundness_or_bad`, then apply the instance-row and Action-statement adapters. | Gate and public-instance provenance are concrete; copy, lookup, and fixed are the incoming operation families above. | A concrete Action statement for one `Fin numProofs`, with only explicitly priced exceptional events. |
-| **[JOIN] Bundle and capstone** | Quantify the one-proof construction over the bundle and substitute it into the live computed capstone in place of free `S`/`hencodes`. | Final deterministic integration step; #96 can meet it at the abstract extraction boundary. | #99's completion criterion. |
+| **[JOIN] One proof** | Instantiate `FullCircuitBridge.ofTopLevelCanonical` with the incoming fixed-selector and copy records, then apply the instance-row and Action-statement adapters. | The generic constructor now derives the gate and lookup fields itself; public-instance provenance is concrete. | A concrete Action statement for one `Fin numProofs`, with only explicitly priced exceptional events. |
+| **[JOIN] Bundle and capstone** | Feed the resulting family to `bundleTopLevelSoundness_or_bad` and substitute its concrete conclusion into the live computed capstone in place of free `S`/`hencodes`. | The generic finite-family join is complete; concrete records and the final capstone substitution remain. #96 can meet it at the abstract extraction boundary. | #99's completion criterion. |
 
 The shortest dependency chain to proving `hencodes` is therefore:
 

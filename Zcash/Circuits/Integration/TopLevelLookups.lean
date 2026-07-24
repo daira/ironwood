@@ -622,9 +622,6 @@ noncomputable def deployedWitness
     (hblinding :
       (top.toVerifierKey pp urs).blindingFactors <
         (top.toVerifierKey pp urs).n)
-    (husable :
-      (top.toVerifierKey pp urs).blindingFactors + 1 <
-        (top.toVerifierKey pp urs).n)
     (satisfaction :
       ConstraintSatisfaction
         (canonicalConstraintModelOfPermutationResolver
@@ -672,6 +669,16 @@ noncomputable def deployedWitness
   let route :=
     lookup.topLevelRoute (top := top) (pp := pp) henabled
   let u := vk.n - vk.blindingFactors - 2
+  have husable :
+      vk.blindingFactors + 1 < vk.n := by
+    have hpositive :
+        0 < top.usableRowsAt top.domainExponent :=
+      (Nat.zero_le
+        (top.placement lookup.region + lookup.row)).trans_lt
+        activationRow
+    change top.blindingFactors + 1 < 2 ^ top.domainExponent
+    unfold TopLevelCircuit.usableRowsAt at hpositive
+    omega
   have husableRows : environment.usableRows = u + 1 := by
     change 2 ^ top.domainExponent -
         top.blindingFactors - 1 =
@@ -681,10 +688,6 @@ noncomputable def deployedWitness
     have hvkBlinding :
         vk.blindingFactors = top.blindingFactors := by
       simp only [vk, toVerifierKey_blindingFactors]
-    have husable' :
-        top.blindingFactors + 1 <
-          2 ^ top.domainExponent := by
-      simpa only [vk, hvkn, hvkBlinding] using husable
     rw [hvkn, hvkBlinding]
     omega
   have projected :=
@@ -952,9 +955,6 @@ noncomputable def deployedWitnesses
     (hblinding :
       (top.toVerifierKey pp urs).blindingFactors <
         (top.toVerifierKey pp urs).n)
-    (husable :
-      (top.toVerifierKey pp urs).blindingFactors + 1 <
-        (top.toVerifierKey pp urs).n)
     (satisfaction :
       ConstraintSatisfaction
         (canonicalConstraintModelOfPermutationResolver
@@ -989,7 +989,7 @@ noncomputable def deployedWitnesses
       (conditions.inputSelectorValues lookup henabled)
       (coherence.tablesFree lookup.argument hargument)
   exact coherence.deployedWitness gateCoherence ch poly proofIndex
-    hblinding husable satisfaction hrows hroot lookup henabled
+    hblinding satisfaction hrows hroot lookup henabled
     selectorProjection
     (lookup.activationRow_lt_usableRows gateCoherence henabled)
     (conditions.resolverGood lookup henabled)
@@ -1004,9 +1004,6 @@ theorem constraints
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (hblinding :
       (top.toVerifierKey pp urs).blindingFactors <
-        (top.toVerifierKey pp urs).n)
-    (husable :
-      (top.toVerifierKey pp urs).blindingFactors + 1 <
         (top.toVerifierKey pp urs).n)
     (satisfaction :
       ConstraintSatisfaction
@@ -1028,7 +1025,7 @@ theorem constraints
       (top.operations 0) 0 := by
   apply lookup_constraints_of_deployed_witnesses
   exact coherence.deployedWitnesses gateCoherence ch poly proofIndex
-    hblinding husable satisfaction hrows hroot conditions
+    hblinding satisfaction hrows hroot conditions
 
 end TopLevelLookupCoherence
 

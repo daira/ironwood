@@ -37,3 +37,6 @@ The lookup bridge is split deliberately:
   the remaining projection boundary to exact packed-selector values, packages the
   bundle-wide `β`/`γ`/`θ` exclusions into the per-proof witness conditions, and
   constructs the deployed witnesses consumed by the generic full-circuit bridge.
+* `TopLevelBridge.lean` is the generic join: it derives gate and lookup families
+  from the canonical circuit-owned constraint model and combines them with the
+  fixed/table and copy-replay streams into `FullCircuitBridge`.

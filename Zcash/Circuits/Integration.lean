@@ -10,6 +10,7 @@ import Zcash.Circuits.Integration.InstanceColumns
 import Zcash.Circuits.Integration.LookupProjection
 import Zcash.Circuits.Integration.QueryLayouts
 import Zcash.Circuits.Integration.TopLevelLookups
+import Zcash.Circuits.Integration.TopLevelBridge
 import Zcash.Snark.Soundness.ActionStatement
 import Zcash.Snark.Soundness.CircuitIntegration
 import Zcash.Snark.Soundness.FixedLayout
