@@ -190,11 +190,11 @@ def deltaPowersArr (delta : Fp) (m : ℕ) : Array Fp :=
 
 @[simp] theorem omegaPowersArr_getElem! (omega : Fp) {n j : ℕ} (hj : j < n) :
     (omegaPowersArr omega n)[j]! = omega ^ j := by
-  simp [omegaPowersArr, Array.getElem!_eq_getD, Array.getD, hj]
+  simp [omegaPowersArr, hj]
 
 @[simp] theorem deltaPowersArr_getElem! (delta : Fp) {m j : ℕ} (hj : j < m) :
     (deltaPowersArr delta m)[j]! = delta ^ j := by
-  simp [deltaPowersArr, Array.getElem!_eq_getD, Array.getD, hj]
+  simp [deltaPowersArr, hj]
 
 /-- The permutation columns chunked for the verifier (`permutation/verifier.rs:43-47`:
 `columns.chunks(chunk_len)` with global position indices), in the `ColumnRef`
