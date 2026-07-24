@@ -29,6 +29,18 @@ def Gate.SelectorsAllocated
       constraint.poly.selectorsCovered
         (fun selector => decide (selector < numSelectors)) = true
 
+/--
+A gate constraint mentions no selector other than the gate's distinguished selector.
+This is the local certificate used by the standard allocate-selector/create-gate
+configure pattern.
+-/
+def Gate.SelectorsOwned
+    {F : Type} (gate : Gate F) : Prop :=
+  gate.constraints.Forall fun constraint =>
+    constraint.poly.selectorsCovered
+      (fun selector =>
+        decide (selector = gate.selector.index)) = true
+
 /-- Every configured gate uses only allocated selector indices. -/
 def ConstraintSystem.GateSelectorsAllocated
     {F : Type} (cs : ConstraintSystem F) : Prop :=
@@ -91,6 +103,420 @@ theorem Expression.selectorsCovered_mono
       simp only [Expression.selectorsCovered,
         Bool.and_eq_true] at hcovered ⊢
       exact ⟨ihLeft hcovered.1, ihRight hcovered.2⟩
+
+/-- A selector-free expression is covered by every selector domain. -/
+theorem Expression.selectorsCovered_of_selectorFree
+    {F : Type} (domain : ℕ → Bool)
+    (expression : Expression F Query)
+    (hfree : expression.selectorFree = true) :
+    expression.selectorsCovered domain = true := by
+  induction expression with
+  | var query =>
+      cases query with
+      | selector selector =>
+          simp [Expression.selectorFree] at hfree
+      | fixed column rotation =>
+          rfl
+      | advice column rotation =>
+          rfl
+      | «instance» column rotation =>
+          rfl
+  | const value =>
+      rfl
+  | add left right ihLeft ihRight =>
+      simp only [Expression.selectorFree,
+        Expression.selectorsCovered, Bool.and_eq_true] at hfree ⊢
+      exact ⟨ihLeft hfree.1, ihRight hfree.2⟩
+  | mul left right ihLeft ihRight =>
+      simp only [Expression.selectorFree,
+        Expression.selectorsCovered, Bool.and_eq_true] at hfree ⊢
+      exact ⟨ihLeft hfree.1, ihRight hfree.2⟩
+
+/--
+The standard `Constraints.withSelector` gate shape mentions no foreign selectors.
+-/
+@[circuit_norm]
+theorem Gate.selectorsOwned_of_withSelector
+    {F : Type} [Field F]
+    (name : String) (selector : Selector)
+    (queriedCells : List (Expression F Query))
+    (constraints : List (String × Expression F Query))
+    (hfree : constraints.Forall fun constraint =>
+      constraint.2.selectorFree = true) :
+    ({ name := name
+       selector := selector
+       queriedCells := queriedCells
+       constraints := Constraints.withSelector selector constraints } :
+      Gate F).SelectorsOwned := by
+  rw [Gate.SelectorsOwned, List.forall_iff_forall_mem]
+  intro constraint hconstraint
+  obtain ⟨source, hsource, rfl⟩ :=
+    List.mem_map.mp hconstraint
+  simp only [querySelector, Expression.selectorsCovered,
+    decide_true, Bool.true_and]
+  exact Expression.selectorsCovered_of_selectorFree
+    (fun index => decide (index = selector.index))
+    source.2
+    (List.forall_iff_forall_mem.mp hfree source hsource)
+
+namespace Gate.SelectorsAllocated
+
+/-- Increasing the selector allocation bound preserves gate validity. -/
+theorem mono
+    {F : Type} {gate : Gate F} {source target : ℕ}
+    (hgate : gate.SelectorsAllocated source)
+    (hbound : source ≤ target) :
+    gate.SelectorsAllocated target := by
+  constructor
+  · exact hgate.1.trans_le hbound
+  · rw [List.forall_iff_forall_mem]
+    intro constraint hconstraint
+    apply Expression.selectorsCovered_mono
+      (fun selector => decide (selector < source))
+    · intro selector hselector
+      exact decide_eq_true
+        (lt_of_lt_of_le
+          (of_decide_eq_true hselector) hbound)
+    · exact List.forall_iff_forall_mem.mp hgate.2
+        constraint hconstraint
+
+/--
+A gate whose constraints mention only its own selector is allocated whenever that
+distinguished selector is below the allocation bound.
+-/
+theorem of_owned
+    {F : Type} {gate : Gate F} {numSelectors : ℕ}
+    (howned : gate.SelectorsOwned)
+    (hselector : gate.selector.index < numSelectors) :
+    gate.SelectorsAllocated numSelectors := by
+  constructor
+  · exact hselector
+  · rw [List.forall_iff_forall_mem]
+    intro constraint hconstraint
+    apply Expression.selectorsCovered_mono
+      (fun selector =>
+        decide (selector = gate.selector.index))
+    · intro selector heq
+      exact decide_eq_true
+        (by
+          rw [of_decide_eq_true heq]
+          exact hselector)
+    · exact List.forall_iff_forall_mem.mp howned
+        constraint hconstraint
+
+end Gate.SelectorsAllocated
+
+namespace ConstraintSystem.GateSelectorsAllocated
+
+/-- Increasing the allocation bound preserves every existing gate. -/
+theorem mono
+    {F : Type} {gates : List (Gate F)} {source target : ℕ}
+    (hallocated :
+      gates.Forall fun gate => gate.SelectorsAllocated source)
+    (hbound : source ≤ target) :
+    gates.Forall fun gate => gate.SelectorsAllocated target := by
+  rw [List.forall_iff_forall_mem] at hallocated ⊢
+  intro gate hgate
+  exact (hallocated gate hgate).mono hbound
+
+end ConstraintSystem.GateSelectorsAllocated
+
+namespace ConstraintSystem
+
+@[simp]
+theorem queryAdviceIndex_numSelectors
+    {F : Type} (cs : ConstraintSystem F)
+    (column : Column .advice) (rotation : Rotation) :
+    (cs.queryAdviceIndex column rotation).numSelectors =
+      cs.numSelectors := by
+  simp only [queryAdviceIndex]
+  split <;> rfl
+
+@[simp]
+theorem queryFixedIndex_numSelectors
+    {F : Type} (cs : ConstraintSystem F)
+    (column : Column .fixed) :
+    (cs.queryFixedIndex column).numSelectors =
+      cs.numSelectors := by
+  simp only [queryFixedIndex]
+  split <;> rfl
+
+@[simp]
+theorem queryInstanceIndex_numSelectors
+    {F : Type} (cs : ConstraintSystem F)
+    (column : Column .instance) (rotation : Rotation) :
+    (cs.queryInstanceIndex column rotation).numSelectors =
+      cs.numSelectors := by
+  simp only [queryInstanceIndex]
+  split <;> rfl
+
+@[simp]
+theorem queryAnyIndex_numSelectors
+    {F : Type} (cs : ConstraintSystem F)
+    (column : AnyColumn) :
+    (cs.queryAnyIndex column).numSelectors =
+      cs.numSelectors := by
+  cases column with
+  | mk columnType index =>
+      cases columnType <;> simp [queryAnyIndex]
+
+@[simp]
+theorem registerQueriedCell_numSelectors
+    {F : Type} (cs : ConstraintSystem F) (owner : String)
+    (expression : Expression F Query) :
+    (cs.registerQueriedCell owner expression).numSelectors =
+      cs.numSelectors := by
+  cases expression with
+  | var query =>
+      cases query <;> simp [registerQueriedCell,
+        queryAdviceIndex, queryFixedIndex, queryInstanceIndex] <;>
+        split <;> rfl
+  | const value =>
+      rfl
+  | add left right =>
+      rfl
+  | mul left right =>
+      rfl
+
+@[simp]
+theorem registerQueriedCells_numSelectors
+    {F : Type} (cs : ConstraintSystem F) (owner : String)
+    (expressions : List (Expression F Query)) :
+    (cs.registerQueriedCells owner expressions).numSelectors =
+      cs.numSelectors := by
+  unfold registerQueriedCells
+  induction expressions generalizing cs with
+  | nil =>
+      rfl
+  | cons expression rest ih =>
+      rw [List.foldl_cons, ih,
+        registerQueriedCell_numSelectors]
+
+end ConstraintSystem
+
+/-- The empty configure state has no invalid selector references. -/
+@[circuit_norm]
+theorem ConstraintSystem.gateSelectorsAllocated_empty
+    {F : Type} :
+    ({} : ConstraintSystem F).GateSelectorsAllocated := by
+  simp [ConstraintSystem.GateSelectorsAllocated]
+
+/--
+Appending one gate preserves selector allocation exactly when the prior gates and
+the new gate are allocated at the current selector count.
+-/
+@[circuit_norm]
+theorem ConstraintSystem.gateSelectorsAllocated_createGate
+    {F : Type} (cs : ConstraintSystem F) (gate : Gate F) :
+    ((createGate gate cs).2).GateSelectorsAllocated ↔
+      cs.GateSelectorsAllocated ∧
+        gate.SelectorsAllocated cs.numSelectors := by
+  change List.Forall
+      (fun configured =>
+        configured.SelectorsAllocated
+          (cs.registerQueriedCells gate.name
+            gate.queriedCells).numSelectors)
+      ((cs.registerQueriedCells gate.name
+        gate.queriedCells).gates ++ [gate]) ↔
+    cs.gates.Forall
+      (fun configured =>
+        configured.SelectorsAllocated cs.numSelectors) ∧
+      gate.SelectorsAllocated cs.numSelectors
+  rw [ConstraintSystem.registerQueriedCells_gates,
+    ConstraintSystem.registerQueriedCells_numSelectors,
+    List.forall_append]
+  simp
+
+namespace Configure
+
+/--
+A configure program preserves the invariant that every registered gate refers only
+to allocated selectors.
+-/
+structure PreservesGateSelectorsAllocated
+    {F α : Type} (program : Configure F α) : Prop where
+  run : ∀ cs, cs.GateSelectorsAllocated →
+    (program cs).2.GateSelectorsAllocated
+
+namespace PreservesGateSelectorsAllocated
+
+variable {F α β : Type}
+
+/--
+Any configure action that changes neither the gate list nor selector count preserves
+selector allocation.
+-/
+theorem of_gates_numSelectors
+    (program : Configure F α)
+    (hgates : ∀ cs, (program cs).2.gates = cs.gates)
+    (hselectors : ∀ cs,
+      (program cs).2.numSelectors = cs.numSelectors) :
+    PreservesGateSelectorsAllocated program := by
+  constructor
+  intro cs hcs
+  unfold ConstraintSystem.GateSelectorsAllocated at hcs ⊢
+  rw [hgates, hselectors]
+  exact hcs
+
+@[circuit_norm]
+theorem pure (value : α) :
+    PreservesGateSelectorsAllocated
+      (pure value : Configure F α) := by
+  constructor
+  intro cs hcs
+  exact hcs
+
+@[circuit_norm]
+theorem bind
+    {program : Configure F α} {next : α → Configure F β}
+    (hprogram : PreservesGateSelectorsAllocated program)
+    (hnext : ∀ value,
+      PreservesGateSelectorsAllocated (next value)) :
+    PreservesGateSelectorsAllocated (program >>= next) := by
+  constructor
+  intro cs hcs
+  exact (hnext (program cs).1).run (program cs).2
+    (hprogram.run cs hcs)
+
+@[circuit_norm]
+theorem map
+    (function : α → β) {program : Configure F α}
+    (hprogram : PreservesGateSelectorsAllocated program) :
+    PreservesGateSelectorsAllocated (function <$> program) := by
+  constructor
+  intro cs hcs
+  exact hprogram.run cs hcs
+
+@[circuit_norm]
+theorem adviceColumn :
+    PreservesGateSelectorsAllocated
+      (Halo2.adviceColumn : Configure F (Column .advice)) := by
+  constructor
+  intro cs hcs
+  exact hcs
+
+@[circuit_norm]
+theorem fixedColumn :
+    PreservesGateSelectorsAllocated
+      (Halo2.fixedColumn : Configure F (Column .fixed)) := by
+  constructor
+  intro cs hcs
+  exact hcs
+
+@[circuit_norm]
+theorem instanceColumn :
+    PreservesGateSelectorsAllocated
+      (Halo2.instanceColumn : Configure F (Column .instance)) := by
+  constructor
+  intro cs hcs
+  exact hcs
+
+@[circuit_norm]
+theorem selector :
+    PreservesGateSelectorsAllocated
+      (Halo2.selector : Configure F Selector) := by
+  constructor
+  intro cs hcs
+  exact ConstraintSystem.GateSelectorsAllocated.mono
+    hcs (Nat.le_succ cs.numSelectors)
+
+@[circuit_norm]
+theorem complexSelector :
+    PreservesGateSelectorsAllocated
+      (Halo2.complexSelector : Configure F Selector) := by
+  constructor
+  intro cs hcs
+  exact ConstraintSystem.GateSelectorsAllocated.mono
+    hcs (Nat.le_succ cs.numSelectors)
+
+@[circuit_norm]
+theorem enableEquality (column : AnyColumn) :
+    PreservesGateSelectorsAllocated
+      (Halo2.enableEquality (F := F) column) := by
+  apply of_gates_numSelectors
+  · intro cs
+    simp [Halo2.enableEquality]
+  · intro cs
+    simp [Halo2.enableEquality]
+
+@[circuit_norm]
+theorem enableConstant (column : Column .fixed) :
+    PreservesGateSelectorsAllocated
+      (Halo2.enableConstant (F := F) column) := by
+  apply of_gates_numSelectors
+  · intro cs
+    simp [Halo2.enableConstant]
+  · intro cs
+    simp [Halo2.enableConstant]
+
+@[circuit_norm]
+theorem lookupTableColumn :
+    PreservesGateSelectorsAllocated
+      (Halo2.lookupTableColumn : Configure F TableColumn) :=
+  bind fixedColumn fun _ => pure _
+
+/--
+The standard leaf configure pattern allocates a selector and immediately creates a
+gate whose constraints mention only that selector.
+-/
+@[circuit_norm]
+theorem selectorCreateGate
+    (gate : Selector → Gate F) (result : Selector → α)
+    (hselector : ∀ selector,
+      (gate selector).selector.index = selector.index)
+    (howned : ∀ selector, (gate selector).SelectorsOwned) :
+    PreservesGateSelectorsAllocated (do
+      let selector ← Halo2.selector
+      Halo2.createGate (gate selector)
+      return result selector) := by
+  constructor
+  intro cs hcs
+  change
+    ConstraintSystem.GateSelectorsAllocated
+      ((Halo2.createGate
+      (gate ⟨cs.numSelectors, true⟩)
+      { cs with
+        numSelectors := cs.numSelectors + 1 }).2)
+  rw [ConstraintSystem.gateSelectorsAllocated_createGate]
+  constructor
+  · exact ConstraintSystem.GateSelectorsAllocated.mono
+      hcs (Nat.le_succ cs.numSelectors)
+  · apply Gate.SelectorsAllocated.of_owned
+      (howned ⟨cs.numSelectors, true⟩)
+    rw [hselector]
+    exact Nat.lt_succ_self cs.numSelectors
+
+/-- Complex-selector counterpart of `selectorCreateGate`. -/
+@[circuit_norm]
+theorem complexSelectorCreateGate
+    (gate : Selector → Gate F) (result : Selector → α)
+    (hselector : ∀ selector,
+      (gate selector).selector.index = selector.index)
+    (howned : ∀ selector, (gate selector).SelectorsOwned) :
+    PreservesGateSelectorsAllocated (do
+      let selector ← Halo2.complexSelector
+      Halo2.createGate (gate selector)
+      return result selector) := by
+  constructor
+  intro cs hcs
+  change
+    ConstraintSystem.GateSelectorsAllocated
+      ((Halo2.createGate
+      (gate ⟨cs.numSelectors, false⟩)
+      { cs with
+        numSelectors := cs.numSelectors + 1 }).2)
+  rw [ConstraintSystem.gateSelectorsAllocated_createGate]
+  constructor
+  · exact ConstraintSystem.GateSelectorsAllocated.mono
+      hcs (Nat.le_succ cs.numSelectors)
+  · apply Gate.SelectorsAllocated.of_owned
+      (howned ⟨cs.numSelectors, false⟩)
+    rw [hselector]
+    exact Nat.lt_succ_self cs.numSelectors
+
+end PreservesGateSelectorsAllocated
+
+end Configure
 
 /--
 The inner greedy scan only transfers selector descriptions between the chosen

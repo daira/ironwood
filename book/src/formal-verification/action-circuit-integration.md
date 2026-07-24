@@ -579,6 +579,17 @@ configure certificates (`KeygenCoherent`, `GatesWellFormed`, and
 `GateSelectorsAllocated`), and connect the VK's dense fixed rows to
 `SelectorActivationsRealized`.
 
+The configure proof for `GateSelectorsAllocated` now has a reusable local interface.
+`Gate.SelectorsOwned` says a gate mentions no selector other than its distinguished
+one, and `Gate.selectorsOwned_of_withSelector` derives it structurally from the same
+selector-free bodies already used by the semantic gate-shape proof. Allocation is
+monotone as selector counters increase. `PreservesGateSelectorsAllocated` supplies
+the ordinary state-monad preservation rules and direct certificates for the common
+simple- or complex-selector/create-gate leaf patterns. The remaining Action work in
+this certificate is confined to the less common chips that allocate several
+selectors before registering several gates; those need relational composition that
+retains the allocated-index fact returned by each selector allocation.
+
 The `Fixtures.Layout` reconstruction is already generic over operations, so σ-cycle
 correctness of its replayed keygen merge is likewise a once-and-for-all lemma.
 
