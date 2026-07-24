@@ -321,4 +321,185 @@ def balanceSubsetOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq RHO]
 
 end Validity
 
+/-! ## Balance-value, in conservation form
+
+The value ledger balances: what the shielded pool holds plus what the transparent pool
+holds is exactly what issuance has minted — up to a per-transaction value premiss. The
+premiss says each transaction's witnessed net value matches its declared `vBalance`, or
+a value break of the caller's type is exhibited. The intended deployed discharge is the
+binding-signature machinery (`NontrivialRelation.ofBundleIntImbalance` with the
+statement's value ranges and the action-count bound), with a nontrivial discrete-log
+relation as the break; that glue is not yet formalized, and validity does not yet carry
+binding-signature verification. Balance is then the corollary: given the transparent
+pool never goes negative (`ValidLedger.transparent_nonneg`), the shielded pool holds at
+most what was minted. -/
+
+/-- A transaction's net value, read off its witnesses: spent minus created, over all
+actions (zero-valued dummies contribute zero). -/
+def txNetValue (tx : Tx KW F G RHO PSI MHASH MENC MSG SIG d) : ℤ :=
+  (tx.actions.map fun a => (a.w.note_old.v : ℤ) - a.w.note_new.v).sum
+
+/-- The issuance minted alongside the first `i` transactions. -/
+def issuanceTotal (issuance : ℕ → ℕ)
+    (ledger : Ledger KW F G RHO PSI MHASH MENC MSG SIG d) (i : ℕ) : ℤ :=
+  ((ledger.take i).zipIdx.map fun p => (issuance p.2 : ℤ)).sum
+
+section SumToolbox
+
+private theorem sum_flatMap {α β : Type*} (g : α → List β) (f : β → ℤ) (l : List α) :
+    ((l.flatMap g).map f).sum = (l.map fun x => ((g x).map f).sum).sum := by
+  induction l with
+  | nil => simp
+  | cons a t ih => simp [List.flatMap_cons, ih]
+
+private theorem sum_map_sub {α : Type*} (f g : α → ℤ) (l : List α) :
+    (l.map fun x => f x - g x).sum = (l.map f).sum - (l.map g).sum := by
+  induction l with
+  | nil => simp
+  | cons a t ih => simp only [List.map_cons, List.sum_cons, ih]; ring
+
+private theorem map_zipIdx_fst {α β : Type*} {f : α → β} :
+    ∀ (l : List α) (n : ℕ), ((l.zipIdx n).map fun p => f p.1) = l.map f
+  | [], _ => rfl
+  | a :: t, n => by
+    simp only [List.zipIdx_cons, List.map_cons]
+    rw [map_zipIdx_fst t (n + 1)]
+
+end SumToolbox
+
+/-- The transparent pool balance splits into minted issuance plus declared balances. -/
+theorem transparentPoolBalance_eq (issuance : ℕ → ℕ)
+    (ledger : Ledger KW F G RHO PSI MHASH MENC MSG SIG d) (i : ℕ) :
+    transparentPoolBalance issuance ledger i
+      = issuanceTotal issuance ledger i
+        + ((ledger.take i).map fun tx => tx.vBalance).sum := by
+  rw [transparentPoolBalance, issuanceTotal, List.sum_map_add, map_zipIdx_fst]
+
+/-- The outputs' value total, transaction by transaction. -/
+theorem positionedOutputs_value_sum
+    (ledger : Ledger KW F G RHO PSI MHASH MENC MSG SIG d) (i : ℕ) :
+    ((positionedOutputs ledger i).map fun p => (p.opening.note.v : ℤ)).sum
+      = ((ledger.take i).map fun tx =>
+          (tx.actions.map fun a => (a.w.note_new.v : ℤ)).sum).sum := by
+  rw [positionedOutputs, List.map_map]
+  rw [show ((fun p : PositionedOpening F G RHO PSI => (p.opening.note.v : ℤ))
+        ∘ fun p : Opening F G RHO PSI × ℕ => (⟨p.2, p.1⟩ : PositionedOpening F G RHO PSI))
+      = fun p : Opening F G RHO PSI × ℕ => (p.1.note.v : ℤ) from rfl]
+  rw [show ((outputOpenings (ledger.take i)).zipIdx.map fun p => (p.1.note.v : ℤ))
+      = (outputOpenings (ledger.take i)).map fun o => (o.note.v : ℤ) from
+    map_zipIdx_fst (f := fun o : Opening F G RHO PSI => (o.note.v : ℤ)) _ 0]
+  rw [outputOpenings, List.map_map]
+  rw [show ((fun o : Opening F G RHO PSI => (o.note.v : ℤ)) ∘ outputOpening)
+      = fun a : Action KW F G RHO PSI MHASH MENC SIG d => (a.w.note_new.v : ℤ) from rfl]
+  rw [outputActions, sum_flatMap]
+
+/-- The nonzero spends' value total is every spend's value total: the filtered-out
+spends have value zero. -/
+theorem nonZeroSpends_value_sum
+    (ledger : Ledger KW F G RHO PSI MHASH MENC MSG SIG d) (i : ℕ) :
+    ((nonZeroSpends ledger i).map fun p => (p.opening.note.v : ℤ)).sum
+      = ((ledger.take i).map fun tx =>
+          (tx.actions.map fun a => (a.w.note_old.v : ℤ)).sum).sum := by
+  have hfil : ∀ acts : List (Action KW F G RHO PSI MHASH MENC SIG d),
+      (((acts.filter fun a => a.w.note_old.v ≠ 0).map fun a =>
+          (a.w.note_old.v : ℤ))).sum
+        = (acts.map fun a => (a.w.note_old.v : ℤ)).sum := by
+    intro acts
+    induction acts with
+    | nil => rfl
+    | cons a t ih =>
+        rw [List.filter_cons]
+        by_cases h : a.w.note_old.v ≠ 0
+        · rw [if_pos (by simpa using h), List.map_cons, List.sum_cons, ih,
+            List.map_cons, List.sum_cons]
+        · rw [if_neg (by simpa using h), ih, List.map_cons, List.sum_cons]
+          have h0 : a.w.note_old.v = 0 := by omega
+          rw [h0]
+          simp
+  rw [nonZeroSpends]
+  rw [show ((↑((spendActions ledger i).map spendRecord) :
+        Multiset (PositionedOpening F G RHO PSI)).map
+          fun p => (p.opening.note.v : ℤ)).sum
+      = (((spendActions ledger i).map spendRecord).map
+          fun p => (p.opening.note.v : ℤ)).sum by simp]
+  rw [List.map_map]
+  rw [show ((fun p : PositionedOpening F G RHO PSI => (p.opening.note.v : ℤ))
+        ∘ spendRecord)
+      = fun a : Action KW F G RHO PSI MHASH MENC SIG d => (a.w.note_old.v : ℤ) from rfl]
+  rw [spendActions, sum_flatMap]
+  exact congrArg List.sum (List.map_congr_left fun tx _ => hfil tx.actions)
+
+/-- The shielded pool balance is the negated sum of the transactions' net values. -/
+theorem poolValueBalance_eq_neg
+    (ledger : Ledger KW F G RHO PSI MHASH MENC MSG SIG d) (i : ℕ) :
+    poolValueBalance ledger i = -((ledger.take i).map txNetValue).sum := by
+  rw [poolValueBalance, positionedOutputs_value_sum, nonZeroSpends_value_sum]
+  rw [show ((ledger.take i).map txNetValue).sum
+      = ((ledger.take i).map fun tx =>
+            (tx.actions.map fun a => (a.w.note_old.v : ℤ)).sum).sum
+        - ((ledger.take i).map fun tx =>
+            (tx.actions.map fun a => (a.w.note_new.v : ℤ)).sum).sum by
+    rw [← sum_map_sub]
+    exact congrArg List.sum (List.map_congr_left fun tx _ => by
+      rw [txNetValue, sum_map_sub])]
+  ring
+
+section Conservation
+
+variable [Field F] [AddCommGroup G] [Module F G]
+variable {P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG}
+variable {kv : KeyBindingInterface KW G IVK NK}
+variable {ledger : Ledger KW F G RHO PSI MHASH MENC MSG SIG P.depth}
+variable {issuance : ℕ → ℕ} {maxActions : ℕ}
+
+/-- Run the per-transaction value premiss over a list, stopping at the first break. -/
+def allValueOrBreak {VB : Type*}
+    (perTx : (tx : Tx KW F G RHO PSI MHASH MENC MSG SIG P.depth) → tx ∈ ledger →
+      (txNetValue tx = tx.vBalance) ⊕' VB) :
+    (L : List (Tx KW F G RHO PSI MHASH MENC MSG SIG P.depth)) → (∀ tx ∈ L, tx ∈ ledger) →
+    ((∀ tx ∈ L, txNetValue tx = tx.vBalance) ⊕' VB)
+  | [], _ => .inl (by simp)
+  | tx :: t, hL =>
+    match perTx tx (hL tx (by simp)) with
+    | .inr b => .inr b
+    | .inl heq =>
+      match allValueOrBreak perTx t (fun x hx => hL x (by simp [hx])) with
+      | .inr b => .inr b
+      | .inl hall => .inl (by
+          intro x hx
+          rcases List.mem_cons.mp hx with rfl | hx'
+          exacts [heq, hall x hx'])
+
+/-- **Value conservation.** Up to the value premiss's break, the shielded pool plus the
+transparent pool is exactly the minted issuance. -/
+def valueConservationOrBreak {VB : Type*}
+    (perTx : (tx : Tx KW F G RHO PSI MHASH MENC MSG SIG P.depth) → tx ∈ ledger →
+      (txNetValue tx = tx.vBalance) ⊕' VB) (i : ℕ) :
+    (poolValueBalance ledger i + transparentPoolBalance issuance ledger i
+        = issuanceTotal issuance ledger i) ⊕' VB :=
+  match allValueOrBreak perTx (ledger.take i)
+      (fun _ h => (List.take_sublist i ledger).subset h) with
+  | .inr b => .inr b
+  | .inl hall => .inl (by
+      have hsum : ((ledger.take i).map txNetValue).sum
+          = ((ledger.take i).map fun tx => tx.vBalance).sum :=
+        congrArg List.sum (List.map_congr_left fun tx htx => hall tx htx)
+      rw [poolValueBalance_eq_neg, transparentPoolBalance_eq, hsum]
+      ring)
+
+/-- **Balance-value.** Given the transparent pool never goes negative, the shielded pool
+holds at most what issuance has minted — up to the value premiss's break. -/
+def balanceValueOrBreak {VB : Type*}
+    (hval : ValidLedger P kv issuance maxActions ledger)
+    (perTx : (tx : Tx KW F G RHO PSI MHASH MENC MSG SIG P.depth) → tx ∈ ledger →
+      (txNetValue tx = tx.vBalance) ⊕' VB) (i : ℕ) :
+    (poolValueBalance ledger i ≤ issuanceTotal issuance ledger i) ⊕' VB :=
+  match valueConservationOrBreak (issuance := issuance) perTx i with
+  | .inr b => .inr b
+  | .inl h => .inl (by
+      have hnn := hval.transparent_nonneg i
+      omega)
+
+end Conservation
+
 end Zcash.Security.Ledger.Model

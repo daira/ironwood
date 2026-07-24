@@ -167,6 +167,21 @@ assert_computable spendPinnedOrBreak +choice
 assert_computable allPinnedOrBreak +choice
 assert_computable balanceSubsetOrBreak +choice
 
+/-! ## Balance-value (conservation form)
+
+`+choice` on the two endpoints is again the erased-positions tier: choice arrives with
+the `ring`/`omega` proof terms in their `Prop` fields, never the data path. -/
+
+assert_computable txNetValue
+assert_computable issuanceTotal
+assert_axioms transparentPoolBalance_eq
+assert_axioms positionedOutputs_value_sum
+assert_axioms nonZeroSpends_value_sum
+assert_axioms poolValueBalance_eq_neg
+assert_computable allValueOrBreak
+assert_computable valueConservationOrBreak +choice
+assert_computable balanceValueOrBreak +choice
+
 /-! ## Binding-signature relation reductions
 
 Unlike the ledger break reductions, these depend on `Classical.choice` (`+choice`). It enters
