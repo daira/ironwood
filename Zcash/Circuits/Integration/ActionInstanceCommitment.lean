@@ -100,7 +100,6 @@ equation, primary-query registration, Action domain bound, row capacity, and sta
 gate package are all constructed here rather than supplied by the caller.
 -/
 theorem actionBundleStatement_or_relation_of_canonicalRelation
-    {cell : Type} [DecidableEq cell] [Fintype cell]
     (pp : ProofParams) (urs : URS G)
     (hk :
       (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
@@ -147,16 +146,10 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
     (fixedCoherence :
       TopLevelFixedCoherence
         orchardActionTopLevelCircuit pp urs)
-    (copies : ∀ proofIndex,
-      CopyReplayWitness
-        orchardActionTopLevelCircuit.placement
-        (resolverEnvironment
-          (orchardActionTopLevelCircuit.toVerifierKey pp urs)
-          relation.polynomial proofIndex
-          (orchardActionTopLevelCircuit.usableRowsAt
-            orchardActionTopLevelCircuit.domainExponent))
-        (orchardActionTopLevelCircuit.operations 0) cell
-        (HasNontrivialRelation (F := Fp) urs.g urs.u urs.w))
+    (permutationExclusions :
+      ResolverPermutationChallengeExclusions
+        (orchardActionTopLevelCircuit.toVerifierKey pp urs)
+        ch relation.polynomial actionActiveRows)
     (lookupSelectorValues : ∀ proofIndex lookup
       (_henabled :
         lookup ∈ operationEnabledLookups
@@ -184,7 +177,8 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
       hblinding hpoly relation hgoodY inputs hsize (instanceKey pp urs)
       (commitment_primary pp urs inputs) primaryRegistered
       (ActionGateCoherence.topLevelGateCoherence pp urs)
-      fixedCoherence copies lookupSelectorValues lookupExclusions
+      fixedCoherence permutationExclusions
+      lookupSelectorValues lookupExclusions
 
 assert_no_sorry actionBundleStatement_or_relation_of_canonicalRelation
 
@@ -197,7 +191,6 @@ that same accepting run. This theorem constructs
 endpoint; no free relation, constraint family, or statement proposition remains.
 -/
 theorem actionBundleStatement_or_relation_of_acceptedCircuitSat
-    {cell : Type} [DecidableEq cell] [Fintype cell]
     (pp : ProofParams) (urs : URS G)
     (hk :
       (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
@@ -250,18 +243,13 @@ theorem actionBundleStatement_or_relation_of_acceptedCircuitSat
     (fixedCoherence :
       TopLevelFixedCoherence
         orchardActionTopLevelCircuit pp urs)
-    (copies : ∀ proofIndex,
-      CopyReplayWitness
-        orchardActionTopLevelCircuit.placement
-        (resolverEnvironment
-          (orchardActionTopLevelCircuit.toVerifierKey pp urs)
-          (CanonicalMemberConstraintRelation.acceptedPolynomial
-            (memberDecode := memberDecode) haccepts)
-          proofIndex
-          (orchardActionTopLevelCircuit.usableRowsAt
-            orchardActionTopLevelCircuit.domainExponent))
-        (orchardActionTopLevelCircuit.operations 0) cell
-        (HasNontrivialRelation (F := Fp) urs.g urs.u urs.w))
+    (permutationExclusions :
+      ResolverPermutationChallengeExclusions
+        (orchardActionTopLevelCircuit.toVerifierKey pp urs)
+        ch
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts)
+        actionActiveRows)
     (lookupSelectorValues : ∀ proofIndex lookup
       (_henabled :
         lookup ∈ operationEnabledLookups
@@ -291,14 +279,13 @@ theorem actionBundleStatement_or_relation_of_acceptedCircuitSat
           (memberDecode := memberDecode) haccepts := by
     rfl
   apply actionBundleStatement_or_relation_of_canonicalRelation
-    (cell := cell)
     pp urs hk inputs ps ch vk hvk pU pW a batchOpenings memberDecode
     hblinding hpoly relation
   · simpa only [
       CanonicalMemberConstraintRelation.model,
       hpolynomial] using hgoodY
   · exact fixedCoherence
-  · simpa only [hpolynomial] using copies
+  · simpa only [hpolynomial] using permutationExclusions
   · simpa only [hpolynomial] using lookupSelectorValues
   · simpa only [hpolynomial] using lookupExclusions
 

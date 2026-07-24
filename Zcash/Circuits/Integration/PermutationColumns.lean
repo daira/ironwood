@@ -1,4 +1,5 @@
 import Zcash.Circuits.Integration.FixedColumns
+import Zcash.Snark.Keygen.FftSpec
 import Zcash.Snark.Soundness.PermutationSemantics
 
 /-!
@@ -90,6 +91,19 @@ structure LagrangePrefixSetup (urs : URS G) : Prop where
           commit urs (polynomialCoefficients (2 ^ urs.k)
             (rowPolynomial (omegaOf urs.k)
               (Pi.single i (1 : Fp))))
+
+namespace LagrangePrefixSetup
+
+/-- The symbolic FFT correctness theorem supplies the complete Lagrange-prefix
+setup for every supported Halo 2 domain. -/
+def ofDerived (urs : URS G) (hk : urs.k ≤ 32) :
+    LagrangePrefixSetup urs where
+  length_eq := Keygen.derivedUrsGLagrange_length urs
+  generator_eq :=
+    Keygen.ofPrefix_setup_of_closed urs hk
+      (Keygen.derivedUrsGLagrange_generator_eq urs hk)
+
+end LagrangePrefixSetup
 
 /--
 Nat-indexed permutation commitment provenance over compiler snapshots.
@@ -402,6 +416,48 @@ theorem resolverPermutationPairs_snd_eq_keygenSigmaColumn_or_relation
     rw [resolverPermutationPairs_getElem_snd vk relation.polynomial p cIdx j hj]
     rw [← heq, hidx]
   · exact Or.inr hrelation
+
+/--
+Size-transported form of
+`resolverPermutationPairs_snd_eq_keygenSigmaColumn_or_relation`.
+
+Circuit compilers naturally index σ rows by their own domain-size name, while
+the commitment extractor names the same size as `2 ^ urs.k`. Localizing that
+propositional equality here keeps concrete circuit permutations free of
+dependent casts.
+-/
+theorem resolverPermutationPairs_snd_eq_keygenSigmaColumn_or_relation_of_size
+    {nc n : ℕ} {width : ℕ → ℕ}
+    (relation : CanonicalMemberConstraintRelation
+      urs hk vk instanceCommitment ps ch pU pW a
+      batchOpenings memberDecode hblinding y hpoly deg)
+    (p : Fin shape.numProofs) (cIdx j : ℕ)
+    (hj : j < (vk.permutationChunks.getD cIdx []).length)
+    (c : Fin shape.numPermutationColumns)
+    (hidx : ((vk.permutationChunks.getD cIdx [])[j]).2 = (c : ℕ))
+    (key : LagrangeCommitmentKey urs vk.omega)
+    (rows : List Fp)
+    (hcommit :
+      vk.permutationCommonCommitment c =
+        key.commitInstance rows 1)
+    (hrows : Function.Injective
+      fun i : Fin (2 ^ urs.k) => vk.omega ^ (i : ℕ))
+    (hn : n = 2 ^ urs.k)
+    (sigma : Equiv.Perm (ChunkCell nc n width))
+    (chunk : Fin nc) (column : Fin (width chunk))
+    (hval : ∀ i : Fin n, rows.getD (i : ℕ) 0 =
+      chunkRowName vk.omega vk.delta vk.chunkLen
+        (sigma ⟨chunk, i, column⟩).1
+        (sigma ⟨chunk, i, column⟩).2.1
+        (sigma ⟨chunk, i, column⟩).2.2) :
+    ((ResolverPermutationPairs vk relation.polynomial p cIdx)[j]'
+        (by simpa [ResolverPermutationPairs,
+          permutationChunkPairsOfResolver] using hj)).2 =
+        keygenSigmaColumn vk.omega vk.delta vk.chunkLen sigma chunk column ∨
+      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  subst n
+  exact relation.resolverPermutationPairs_snd_eq_keygenSigmaColumn_or_relation
+    p cIdx j hj c hidx key rows hcommit hrows sigma chunk column hval
 
 end CanonicalMemberConstraintRelation
 
