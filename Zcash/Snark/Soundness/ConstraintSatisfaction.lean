@@ -1,5 +1,7 @@
 import Mathlib
 import Zcash.Snark.Soundness.Constraints
+import Zcash.Snark.Soundness.FoldSplit
+import Zcash.Snark.Soundness.KnowledgeSoundness
 
 /-!
 # The full polynomial constraint system, by argument
@@ -128,6 +130,33 @@ theorem ConstraintSatisfaction.of_all {np n : ℕ} (M : ConstraintPolyModel np)
   gates p c hc := hall c (M.gate_mem_constraints p hc)
   permutation p c hc := hall c (M.permutation_mem_constraints p hc)
   lookups p c hc := hall c (M.lookup_mem_constraints p hc)
+
+/--
+Split the capstone's single folded constraint identity into the
+family-separated satisfaction record used by the semantic bridge.
+
+The only additional premise is the explicit `y`-good event: no coefficient
+witness for a constraint hidden by the fold vanishes at `y`.
+-/
+theorem ConstraintSatisfaction.of_circuitSatViaConstraints
+    {np k n : ℕ} (M : ConstraintPolyModel np)
+    (y : Fp) (hpoly : Polynomial Fp)
+    (a : Fin (2 ^ k) → Fp)
+    (hn : n ≠ 0)
+    (hsat :
+      circuitSatViaConstraints M.fixedCols
+        (fun _ => M.adviceCols) (fun _ => M.instanceCols)
+        M.gates M.sets M.chunks M.lookups
+        M.beta M.gamma M.delta M.theta y M.chunkLen
+        M.l0 M.lLast M.lBlind hpoly n a)
+    (hgoodY : ∀ j,
+      y ∉ szBadSet (foldSplitWitness M.constraints n j)) :
+    ConstraintSatisfaction M n := by
+  apply ConstraintSatisfaction.of_all M
+  apply constraints_dvd_of_good_y M.constraints hpoly hn
+  · rw [M.constraints_eq_constraintPolys]
+    exact hsat
+  · exact hgoodY
 
 /-- Use full satisfaction on a member of one selected lookup's five constraints. -/
 theorem ConstraintSatisfaction.lookupExpression {np n : ℕ} {M : ConstraintPolyModel np}

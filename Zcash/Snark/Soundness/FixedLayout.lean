@@ -1,5 +1,6 @@
 import Zcash.Circuits.Fixtures.Layout
 import Zcash.Snark.Soundness.OperationFixed
+import Zcash.Snark.Soundness.PolynomialEnvironment
 
 /-!
 # Fixed-layout compiler bridge
@@ -290,6 +291,52 @@ theorem constraints_of_entries
   intro requirement hrequirement
   exact requirement_satisfied_of_entries
     starts usable ops i env husable hentries requirement hrequirement
+
+/--
+Dense fixed rows, interpolated over the evaluation domain, realize the full
+fixed-operation family whenever they contain the sparse table and region assignments
+emitted by the layout compiler.
+
+The row-bound premise is kept separate: at the top-level circuit boundary it follows
+from the circuit's domain-fit certificate, while this compiler theorem remains
+independent of how the domain size was chosen.
+-/
+theorem constraints_of_fixedRowPolynomials
+    {n : ℕ} (omega : Fp)
+    (fixedRows : ℕ → List Fp)
+    (adviceCols instanceCols : ℕ → Polynomial Fp)
+    (starts : List ℕ) (usable : ℕ)
+    (ops : Operations Fp) (i : RegionIndex)
+    (hrows :
+      Function.Injective fun row : Fin n =>
+        omega ^ (row : ℕ))
+    (hentryRow : ∀ column row value,
+      (column, row, value) ∈
+        (Layout.tableFixed (ZMod.val : Fp → ℕ) usable ops ++
+          Layout.regionAssignFixed (ZMod.val : Fp → ℕ) starts
+            (indexedRegions ops i).1) →
+      row < n)
+    (hfixed : ∀ column row value,
+      (column, row, value) ∈
+        (Layout.tableFixed (ZMod.val : Fp → ℕ) usable ops ++
+          Layout.regionAssignFixed (ZMod.val : Fp → ℕ) starts
+            (indexedRegions ops i).1) →
+      (fixedRows column).getD row 0 = (value : Fp)) :
+    CircuitConstraintFamily.constraints .fixed
+      (Layout.place starts)
+      (polynomialEnvironment omega usable
+        (fun column =>
+          rowPolynomial omega
+            (zeroPaddedRows (n := n) (fixedRows column)))
+        adviceCols instanceCols)
+      ops i := by
+  apply constraints_of_entries starts usable ops i
+  · rfl
+  · intro column row value hentry
+    rw [polynomialEnvironment_fixed_nat,
+      rowPolynomial_eval hrows
+        ⟨row, hentryRow column row value hentry⟩]
+    exact hfixed column row value hentry
 
 end FixedLayout
 

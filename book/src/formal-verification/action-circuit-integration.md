@@ -262,6 +262,14 @@ This integration branch now packages the deployed flat list as
 each selected lookup's five constraints. `LookupRows` reads those five polynomial
 constraints over the evaluation domain and closes the lookup endpoint, including the
 explicit zero-factor branch when the running product ends at zero.
+`ConstraintSatisfaction.of_circuitSatViaConstraints` now also connects the capstone
+identity directly to that record: a good folding challenge splits
+`circuitSatViaConstraints` into divisibility of every modeled constraint. This is the
+generic deterministic seam at which [#96](https://github.com/zcash/ironwood/pull/96)'s
+extraction/probability result can hand its witness to this PR. #96 deliberately keeps
+the final encoding relation abstract; this PR's completion criterion is to eliminate
+those free `hencodes`/statement parameters by deriving the concrete Action bundle
+statement.
 `LookupInstantiation` now constructs those coherent lookup entries from an arbitrary
 VK and a `CommitmentId`-keyed polynomial resolver, proves that openings for the actual
 assembled lookup queries give the verifier's five claimed evaluations, and specializes
@@ -552,6 +560,14 @@ lemma establishes independently that an emitted selector assignment cannot inven
 row absent from the source activation list. Thus the circuit-owned VK need only
 expose its dense fixed rows and prove the ordinary layout/scatter equations; selector
 semantics does not enter VK assembly.
+
+The same polynomial-to-layout step now covers the complete fixed family, not only
+selector activations. `FixedLayout.constraints_of_fixedRowPolynomials` proves that
+canonical row interpolation satisfies every table load and placed fixed assignment
+emitted by the layout compiler, provided the dense rows contain those sparse entries
+and the emitted rows fit the domain. The remaining fixed-side work is therefore to
+derive those two compiler facts from `TopLevelCircuit` keygen data and feed this
+theorem to `FullCircuitBridge.ofPolynomialWitnesses`.
 
 The generic operation walk already proves that every extracted enabled gate occurs in
 the floor-planner activation table, and `selectorScale_ne_zero_of_enabledGate` turns
