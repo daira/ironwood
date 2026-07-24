@@ -270,6 +270,19 @@ extraction/probability result can hand its witness to this PR. #96 deliberately 
 the final encoding relation abstract; this PR's completion criterion is to eliminate
 those free `hencodes`/statement parameters by deriving the concrete Action bundle
 statement.
+
+That endpoint now has a canonical, bundle-wide type.
+`CanonicalMemberConstraintRelation` derives its commitment-ID polynomial resolver
+from the decoded members and the deployed assembled-query route, then constructs the
+entire constraint model from the accepted VK. Fixed columns, permutation sets/chunks,
+lookups, and selector polynomials are no longer free relation parameters.
+`actionBundleStatement_of_canonicalRelation` consumes this relation and concludes
+the concrete `Action.BundleStatement`, with no abstract `S` or `hencodes` premise and
+with the key locked to `orchardActionTopLevelCircuit.toVerifierKey`. Its remaining
+`reconstruct` argument is exactly the generic representation bridge from
+family-separated `ConstraintSatisfaction` to Clean's authoritative
+`Halo2.Constraints`, once per bundle member. Discharging that argument is now the
+precise deterministic completion criterion for `hencodes`.
 `LookupInstantiation` now constructs those coherent lookup entries from an arbitrary
 VK and a `CommitmentId`-keyed polynomial resolver, proves that openings for the actual
 assembled lookup queries give the verifier's five claimed evaluations, and specializes

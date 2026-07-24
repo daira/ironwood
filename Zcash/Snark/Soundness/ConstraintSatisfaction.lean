@@ -80,6 +80,22 @@ theorem constraints_eq_constraintPolys {np : ℕ} (M : ConstraintPolyModel np) :
     lookupConstraints Zcash.Snark.subProofConstraints
   simp [List.map_map, Function.comp_def]
 
+/--
+The capstone constraint identity specialized to one packaged polynomial model.
+
+The witness vector is retained because it is part of the extracted IPA relation,
+but the model's columns are already canonically decoded and therefore do not vary
+with that vector.
+-/
+def CircuitSat {np k : ℕ} (M : ConstraintPolyModel np)
+    (y : Fp) (hpoly : Polynomial Fp) (deg : ℕ)
+    (a : Fin (2 ^ k) → Fp) : Prop :=
+  circuitSatViaConstraints M.fixedCols
+    (fun _ => M.adviceCols) (fun _ => M.instanceCols)
+    M.gates M.sets M.chunks M.lookups
+    M.beta M.gamma M.delta M.theta y M.chunkLen
+    M.l0 M.lLast M.lBlind hpoly deg a
+
 /-- A member of one sub-proof's list is a member of the deployed flat list. -/
 theorem mem_constraints_of_mem_subProof {np : ℕ} (M : ConstraintPolyModel np) (p : Fin np)
     {c : Polynomial Fp} (hc : c ∈ M.subProofConstraints p) : c ∈ M.constraints := by
@@ -143,12 +159,7 @@ theorem ConstraintSatisfaction.of_circuitSatViaConstraints
     (y : Fp) (hpoly : Polynomial Fp)
     (a : Fin (2 ^ k) → Fp)
     (hn : n ≠ 0)
-    (hsat :
-      circuitSatViaConstraints M.fixedCols
-        (fun _ => M.adviceCols) (fun _ => M.instanceCols)
-        M.gates M.sets M.chunks M.lookups
-        M.beta M.gamma M.delta M.theta y M.chunkLen
-        M.l0 M.lLast M.lBlind hpoly n a)
+    (hsat : M.CircuitSat y hpoly n a)
     (hgoodY : ∀ j,
       y ∉ szBadSet (foldSplitWitness M.constraints n j)) :
     ConstraintSatisfaction M n := by
