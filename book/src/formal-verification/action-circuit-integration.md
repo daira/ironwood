@@ -154,6 +154,12 @@ matches that representation: it turns a certified exported prefix into a full ke
 using canonical monomial-URS commitments beyond the prefix. Thus the concrete setup
 certificate needs ten generator equations, not 2048; zero padding ensures the
 synthetic suffix cannot affect the instance commitment.
+`ofPrefix_commitInstance_eq` proves this last step generically and matches the
+fixture's finite-prefix commitment computation directly.
+`commitPrefixNat_eq_commitPrefix` additionally discharges the representational
+difference between the fixture's executable `c.val • point` natural-scalar sums and
+the abstract `Fp`-module commitment, leaving only the ten actual generator equations
+as concrete setup data.
 
 The concrete Action construction still has to prove that:
 

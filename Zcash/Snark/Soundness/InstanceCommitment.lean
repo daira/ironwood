@@ -136,6 +136,38 @@ noncomputable def ofPrefix (urs : URS G) (omega : Fp) (generatorsPrefix : List G
       generatorsPrefix.getD (i : ℕ) 0 := by
   simp [ofPrefix, hi]
 
+/--
+Commit a finite public column using only an exported Lagrange-generator prefix.
+
+This is the shape used by parameter fixtures: the list contains every generator reached by
+`values`, and rows beyond `values.length` are implicitly zero.
+-/
+def commitPrefix (urs : URS G) (generatorsPrefix : List G)
+    (values : List Fp) (blind : Fp) : G :=
+  (∑ i ∈ Finset.range values.length,
+    values.getD i 0 • generatorsPrefix.getD i 0) + blind • urs.w
+
+/-- Executable fixture spelling of `commitPrefix`, using canonical representatives and `nsmul`. -/
+def commitPrefixNat (urs : URS G) (generatorsPrefix : List G)
+    (values : List Fp) (blind : Fp) : G :=
+  ((List.range values.length).map fun i =>
+    (values.getD i 0).val • generatorsPrefix.getD i 0).sum + blind.val • urs.w
+
+/-- The fixture's canonical-representative MSM is the abstract field-module commitment. -/
+theorem commitPrefixNat_eq_commitPrefix
+    (urs : URS G) (generatorsPrefix : List G)
+    (values : List Fp) (blind : Fp) :
+    commitPrefixNat urs generatorsPrefix values blind =
+      commitPrefix urs generatorsPrefix values blind := by
+  have scalar_nsmul_eq_smul : ∀ (c : Fp) (point : G), c.val • point = c • point :=
+    fun c point => by
+      rw [← Nat.cast_smul_eq_nsmul Fp c.val point, ZMod.natCast_rightInverse c]
+  rw [commitPrefixNat, commitPrefix]
+  simp_rw [scalar_nsmul_eq_smul]
+  rw [← List.sum_toFinset
+      (fun i => values.getD i 0 • generatorsPrefix.getD i 0) List.nodup_range,
+    List.toFinset_range]
+
 /-- Halo 2's public-instance commitment, including its blinding-generator component. -/
 def commitRows {urs : URS G} {omega : Fp}
     (key : LagrangeCommitmentKey urs omega)
@@ -172,6 +204,62 @@ theorem commitInstance_eq {urs : URS G} {omega : Fp}
         blind • urs.w := by
   simpa [commitInstance, instanceCoefficients, instanceRowPolynomial] using
     key.commitRows_eq (zeroPaddedRows (n := 2 ^ urs.k) values) blind
+
+/--
+The full key made by `ofPrefix` commits any column contained in the certified prefix exactly as the
+finite-prefix implementation does.
+-/
+theorem ofPrefix_commitInstance_eq
+    (urs : URS G) (omega : Fp) (generatorsPrefix : List G)
+    (hprefix : ∀ i : Fin (2 ^ urs.k), (i : ℕ) < generatorsPrefix.length →
+      generatorsPrefix.getD (i : ℕ) 0 =
+        commit urs (polynomialCoefficients (2 ^ urs.k)
+          (rowPolynomial omega (Pi.single i 1))))
+    (values : List Fp) (blind : Fp)
+    (hvaluesPrefix : values.length ≤ generatorsPrefix.length)
+    (hvaluesDomain : values.length ≤ 2 ^ urs.k) :
+    (ofPrefix urs omega generatorsPrefix hprefix).commitInstance values blind =
+      commitPrefix urs generatorsPrefix values blind := by
+  classical
+  rw [commitInstance, commitRows, commitGen, commitPrefix]
+  congr 1
+  let summand : ℕ → G := fun i =>
+    if hi : i < 2 ^ urs.k then
+      values.getD i 0 •
+        (ofPrefix urs omega generatorsPrefix hprefix).generators ⟨i, hi⟩
+    else 0
+  have hdomainSum :
+      (∑ i : Fin (2 ^ urs.k),
+          values.getD (i : ℕ) 0 •
+            (ofPrefix urs omega generatorsPrefix hprefix).generators i) =
+        ∑ i ∈ Finset.range (2 ^ urs.k), summand i := by
+    rw [← Fin.sum_univ_eq_sum_range summand (2 ^ urs.k)]
+    apply Finset.sum_congr rfl
+    intro i _
+    simp only [summand, dif_pos i.isLt]
+  simp only [zeroPaddedRows]
+  rw [hdomainSum]
+  symm
+  calc
+    (∑ i ∈ Finset.range values.length,
+        values.getD i 0 • generatorsPrefix.getD i 0) =
+        ∑ i ∈ Finset.range values.length, summand i := by
+      apply Finset.sum_congr rfl
+      intro i hiValues
+      have hiValues' := Finset.mem_range.mp hiValues
+      have hiDomain : i < 2 ^ urs.k := lt_of_lt_of_le hiValues' hvaluesDomain
+      have hiPrefix : i < generatorsPrefix.length :=
+        lt_of_lt_of_le hiValues' hvaluesPrefix
+      simp only [summand, dif_pos hiDomain,
+        ofPrefix_generator_of_lt urs omega generatorsPrefix hprefix ⟨i, hiDomain⟩
+          hiPrefix]
+    _ = ∑ i ∈ Finset.range (2 ^ urs.k), summand i := by
+      apply Finset.sum_subset (Finset.range_mono hvaluesDomain)
+      intro i hiDomain hiValues
+      have hvalues : values.length ≤ i := by
+        simpa only [Finset.mem_range, not_lt] using hiValues
+      simp only [summand, dif_pos (Finset.mem_range.mp hiDomain),
+        List.getD_eq_default values 0 hvalues, zero_smul]
 
 end LagrangeCommitmentKey
 
