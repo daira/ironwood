@@ -148,6 +148,13 @@ decoded member's `OpenedMemberDecode.commitment` equation can be passed directly
 `coeffsToPoly_eq_instanceRowPolynomial_or_relation`; the tiny equality composition is
 intended to remain inline at that use site.
 
+The exported fixture contains only the ten Lagrange generators reachable by Action
+public rows, rather than the whole 2048-row domain. `LagrangeCommitmentKey.ofPrefix`
+matches that representation: it turns a certified exported prefix into a full key by
+using canonical monomial-URS commitments beyond the prefix. Thus the concrete setup
+certificate needs ten generator equations, not 2048; zero padding ensures the
+synthetic suffix cannot affect the instance commitment.
+
 The concrete Action construction still has to prove that:
 
 - column/query indices match the VK query layouts;

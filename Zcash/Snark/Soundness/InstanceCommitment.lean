@@ -100,6 +100,42 @@ structure LagrangeCommitmentKey (urs : URS G) (omega : Fp) where
 
 namespace LagrangeCommitmentKey
 
+/--
+Build a full commitment key from a certified exported prefix.
+
+Parameter fixtures only need to export generators reached by nonzero public rows.  Beyond that
+prefix, this constructor fills the key with the canonical monomial-URS commitment itself, so the
+setup certificate has one obligation per exported generator rather than one per domain row.
+-/
+noncomputable def ofPrefix (urs : URS G) (omega : Fp) (generatorsPrefix : List G)
+    (hprefix : ∀ i : Fin (2 ^ urs.k), (i : ℕ) < generatorsPrefix.length →
+      generatorsPrefix.getD (i : ℕ) 0 =
+        commit urs (polynomialCoefficients (2 ^ urs.k)
+          (rowPolynomial omega (Pi.single i 1)))) :
+    LagrangeCommitmentKey urs omega where
+  generators := fun i =>
+    if (i : ℕ) < generatorsPrefix.length then generatorsPrefix.getD (i : ℕ) 0
+    else
+      commit urs (polynomialCoefficients (2 ^ urs.k)
+        (rowPolynomial omega (Pi.single i 1)))
+  generator_eq := by
+    intro i
+    by_cases hi : (i : ℕ) < generatorsPrefix.length
+    · rw [if_pos hi]
+      exact hprefix i hi
+    · rw [if_neg hi]
+
+@[simp] theorem ofPrefix_generator_of_lt
+    (urs : URS G) (omega : Fp) (generatorsPrefix : List G)
+    (hprefix : ∀ i : Fin (2 ^ urs.k), (i : ℕ) < generatorsPrefix.length →
+      generatorsPrefix.getD (i : ℕ) 0 =
+        commit urs (polynomialCoefficients (2 ^ urs.k)
+          (rowPolynomial omega (Pi.single i 1))))
+    (i : Fin (2 ^ urs.k)) (hi : (i : ℕ) < generatorsPrefix.length) :
+    (ofPrefix urs omega generatorsPrefix hprefix).generators i =
+      generatorsPrefix.getD (i : ℕ) 0 := by
+  simp [ofPrefix, hi]
+
 /-- Halo 2's public-instance commitment, including its blinding-generator component. -/
 def commitRows {urs : URS G} {omega : Fp}
     (key : LagrangeCommitmentKey urs omega)
