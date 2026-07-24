@@ -26,7 +26,7 @@ theorem domainExponent_eq :
 
 /-- The derived Action permutation columns form two full chunks and one singleton. -/
 theorem chunks_eq :
-    Keygen.permutationChunksOf orchardActionTopLevelCircuit.selMapDerived
+    Keygen.permutationChunksOf orchardActionTopLevelCircuit.selectorMap
         orchardActionTopLevelCircuit.constraintSystem =
       [[(.instance 0, 0), (.advice 0, 1), (.advice 1, 2),
           (.advice 2, 3), (.advice 3, 4), (.advice 4, 5),
@@ -48,7 +48,7 @@ theorem columnCount_chunkLen_eq :
 def derivedPinnedCS : Halo2.PinnedConstraintSystem Fp :=
   Halo2.PinnedConstraintSystem.derive
     orchardActionTopLevelCircuit.constraintSystem
-    orchardActionTopLevelCircuit.selMapDerived
+    orchardActionTopLevelCircuit.selectorMap
 
 /-- The two pinned-CS construction paths agree on the three query layouts used
 by permutation routing. This is intentionally narrower than full pinned-CS
@@ -95,7 +95,7 @@ def ColumnRefCoherent : ColumnRef → Prop
 every accompanying common-permutation index is in range. -/
 theorem routingCoherent :
     ∀ chunk ∈
-        Keygen.permutationChunksOf orchardActionTopLevelCircuit.selMapDerived
+        Keygen.permutationChunksOf orchardActionTopLevelCircuit.selectorMap
           orchardActionTopLevelCircuit.constraintSystem,
       ∀ ref ∈ chunk,
         ColumnRefCoherent ref.1 ∧

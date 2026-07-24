@@ -1,5 +1,6 @@
 import Zcash.Snark.Keygen.Derivation
-import Zcash.Snark.Keygen.Fast.FastFft
+import Zcash.Snark.Keygen.Fast.FastFftPar
+import Zcash.Snark.Keygen.Fast.MsmProj
 import Zcash.Snark.Fixtures.SingleAction.Fixture
 
 /-!
@@ -19,10 +20,9 @@ is CONSTRUCTED leaf-by-leaf (`bundleDecEq`, an `instDecidableEqProd` recursion �
 a global instance, since `native_decide` rejects proof-local `letI` fvars):
 instance search on products mixing the `Fp`-typed scalars with the group-element
 lists spins out in the `Fp` reducibility diamond, while every leaf synthesizes
-instantly. `vk_eq_derived`/`vk_eq_toVerifierKey` assemble the record equality from
-the bundle's splits; the only definitional steps are structure eta and
-within-`Pipeline` unfoldings, so the certificate is robust against unrelated
-refactors of the fixture-side spellings.
+instantly. `vk_eq_derived`/`vk_eq_toVerifierKey` assemble the record equality by
+`simp only` unfolding of the named definitions on both sides until the spellings
+coincide — no defeq bridges.
 
 The `ZcashKeygen` target builds this module explicitly; ordinary clients of
 `derivedActionVk` only need `Derivation`.
@@ -41,30 +41,40 @@ def actionProofParams : ProofParams := { numProofs := 1, numPointSets := 5 }
 
 /-- The derived Lagrange basis, as a NULLARY definition: evaluated once per
 `native_decide` process (function applications re-evaluate per occurrence — the
-`urs`-parameterized spellings each cost a full group FFT). Computed by the fast
-projective-coordinate FFT, which is PROVEN pointwise equal to the Rust-mirroring
-`derivedUrsGLagrange` (`Fast.derivedUrsGLagrangeFast_eq`) — the corollaries below
+`urs`-parameterized spellings each cost a full group FFT). Computed by the
+ROUND-PARALLEL projective FFT, PROVEN pointwise equal to the Rust-mirroring
+`derivedUrsGLagrange` (`Fast.derivedUrsGLagrangeParFast_eq`) — the corollaries below
 bridge back to the statement-surface name through that equality. -/
-private def lagrangeBasis : List G := Fast.derivedUrsGLagrangeFast capturedURS
+private def lagrangeBasis : List G := Fast.derivedUrsGLagrangeParFast capturedURS
 
-/-- The derived pinned CS in the `Pipeline`-native spelling (`.derive` at the derived
-selector map) — definitionally `ofOperations`' internal `pinned`, which the
-`vk_eq_derived` unifications need (the `TopLevelCircuit.pinnedCS` method goes through
-Clean's `toPinnedCS` and is only propositionally the same record). Nullary, so the
-selector-map/derive work evaluates once per `native_decide` process. -/
+/-- The per-column committer at the derived basis: the PROJECTIVE windowed Pippenger,
+PROVEN equal to the affine default (`commitProj_eq` via the shared
+`Fast.Msm.commitLagrangeSpec`). Nullary partial application so the basis closure is
+built once. -/
+private def commitProj : List Fp → G :=
+  Fast.MsmProj.commitLagrangeProjWith Fast.Msm.defaultWindow capturedURS.w lagrangeBasis
+
+set_option maxRecDepth 1000000 in
+/-- The projective committer at the derived basis IS the pipeline's affine default at
+the spec basis — both sides are proven equal to `Fast.Msm.commitLagrangeSpec`. -/
+private theorem commitProj_eq :
+    Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow capturedURS.w
+      (derivedUrsGLagrange capturedURS) = commitProj := by
+  funext coeffs
+  simp only [commitProj, lagrangeBasis]
+  rw [Fast.Msm.commitLagrangeFastWith_eq _ (by decide),
+    Fast.MsmProj.commitLagrangeProjWith_eq _ (by decide),
+    Fast.derivedUrsGLagrangeParFast_eq]
+
+/-- The derived pinned CS at the circuit-owned selector map — `ofOperations`' internal
+`pinned` in method spelling. Nullary, so the selector-map/derive work evaluates once
+per `native_decide` process. -/
 private def actionPinned : PinnedConstraintSystem Fp :=
   PinnedConstraintSystem.derive orchardActionTopLevelCircuit.constraintSystem
-    orchardActionTopLevelCircuit.selMapDerived
+    orchardActionTopLevelCircuit.selectorMap
 
-/-- **The derived verifying key matches the capture, field by field** — bundled into ONE
-`native_decide` so the shared work (the fast Lagrange FFT, fixed contents, keygen
-mapping and all 44 commitment MSMs) evaluates exactly once. Components, in order: the
-Lagrange URS 10-generator prefix; the 29 fixed-column and 15 permutation commitments;
-the domain/permutation scalars; the gates; the three query layouts; the permutation
-chunks; the two lookup-expression families; and the derived `Shape`
-(`ProofParams.mergeDerived`) against the fixture's. Each component is definitionally
-the corresponding `derivedActionVk` field (with `lagrangeBasis` for the derived
-Lagrange list), which is what `vk_eq_derived` exploits. -/
+/-- `Decidable` instance for the bundle, CONSTRUCTED leaf-by-leaf (see the module
+docstring). -/
 private instance bundleDecEq : DecidableEq (List G × List G × List G ×
     (Fp × ℕ × ℕ × Fp × ℕ) ×
     List (Expr Fp) ×
@@ -76,14 +86,21 @@ private instance bundleDecEq : DecidableEq (List G × List G × List G ×
     | refine @instDecidableEqProd _ _ ?_ ?_
     | infer_instance
 
+/-- **The derived verifying key matches the capture, field by field** — bundled into ONE
+`native_decide` so the shared work (the fast Lagrange FFT, fixed contents, keygen
+mapping and all 44 commitment MSMs) evaluates exactly once. Components, in order: the
+Lagrange URS 10-generator prefix; the 29 fixed-column and 15 permutation commitments;
+the domain/permutation scalars; the gates; the three query layouts; the permutation
+chunks; the two lookup-expression families; and the derived `Shape`
+(`ProofParams.mergeDerived`) against the fixture's. -/
 theorem certificate :
     (lagrangeBasis.take capturedUrsGLagrange.length,
-      fixedCommitmentsOf capturedURS.w lagrangeBasis
-        orchardActionTopLevelCircuit.selMapDerived
+      fixedCommitmentsWith commitProj
+        orchardActionTopLevelCircuit.selectorMap
         orchardActionTopLevelCircuit.domainExponent
         orchardActionTopLevelCircuit.constraintSystem
         (orchardActionTopLevelCircuit.operations 0),
-      permutationCommitmentsOf capturedURS.w lagrangeBasis
+      permutationCommitmentsWith commitProj
         orchardActionTopLevelCircuit.domainExponent
         orchardActionTopLevelCircuit.constraintSystem
         (orchardActionTopLevelCircuit.operations 0),
@@ -95,7 +112,7 @@ theorem certificate :
       (actionPinned.instanceQueryLayout,
         actionPinned.adviceQueryLayout,
         actionPinned.fixedQueryLayout),
-      permutationChunksOf orchardActionTopLevelCircuit.selMapDerived
+      permutationChunksOf orchardActionTopLevelCircuit.selectorMap
         orchardActionTopLevelCircuit.constraintSystem,
       (List.ofFn fun l : Fin shape.numLookups =>
           (actionPinned.lookupInputExprs.getD l.val []).map RichExpression.toExpr,
@@ -120,8 +137,10 @@ theorem derivedUrsGLagrange_prefix_eq :
       = capturedUrsGLagrange := by
   have h := certificate
   simp only [Prod.mk.injEq] at h
-  rw [← Fast.derivedUrsGLagrangeFast_eq]
-  exact h.1
+  have h1 := h.1
+  simp only [lagrangeBasis] at h1
+  rw [← Fast.derivedUrsGLagrangeParFast_eq]
+  exact h1
 
 set_option maxRecDepth 1000000 in
 /-- The derived fixed-column commitments are the captured ones. -/
@@ -129,16 +148,12 @@ theorem derivedFixedCommitments_eq :
     derivedFixedCommitments capturedURS = capturedFixedCommitments := by
   have h := certificate
   simp only [Prod.mk.injEq] at h
-  -- unfold the `Derivation.lean` name to the basis-explicit form, then swap in the
-  -- proven-equal fast basis the bundle is stated over
-  rw [show derivedFixedCommitments capturedURS
-      = fixedCommitmentsOf capturedURS.w (derivedUrsGLagrange capturedURS)
-          orchardActionTopLevelCircuit.selMapDerived
-          orchardActionTopLevelCircuit.domainExponent
-          orchardActionTopLevelCircuit.constraintSystem
-          (orchardActionTopLevelCircuit.operations 0) from rfl,
-    ← Fast.derivedUrsGLagrangeFast_eq]
-  exact h.2.1
+  have hfc := h.2.1
+  simp only [fixedCommitmentsWith] at hfc
+  simp only [derivedFixedCommitments, Halo2.TopLevelCircuit.fixedCommitments,
+    Halo2.TopLevelCircuit.fixedRows]
+  rw [commitProj_eq]
+  exact hfc
 
 set_option maxRecDepth 1000000 in
 /-- The derived permutation common commitments are the captured ones. -/
@@ -147,13 +162,11 @@ theorem derivedPermutationCommonCommitments_eq :
       = capturedPermutationCommonCommitments := by
   have h := certificate
   simp only [Prod.mk.injEq] at h
-  rw [show derivedPermutationCommonCommitments capturedURS
-      = permutationCommitmentsOf capturedURS.w (derivedUrsGLagrange capturedURS)
-          orchardActionTopLevelCircuit.domainExponent
-          orchardActionTopLevelCircuit.constraintSystem
-          (orchardActionTopLevelCircuit.operations 0) from rfl,
-    ← Fast.derivedUrsGLagrangeFast_eq]
-  exact h.2.2.1
+  have hpc := h.2.2.1
+  simp only [derivedPermutationCommonCommitments,
+    Halo2.TopLevelCircuit.permutationCommitments, permutationCommitmentsOf]
+  rw [commitProj_eq]
+  exact hpc
 
 /-- The fixture's `Shape` is the proof-shape parameters merged with the circuit-derived
 counts. -/
@@ -164,43 +177,30 @@ theorem shape_eq_mergeDerived :
   exact h.2.2.2.2.2.2.2.2
 
 set_option maxRecDepth 1000000 in
-/-- **The captured Action verifying key is fully derived.** Assembled record-wise from
-the bundle's field equalities; the definitional steps are structure eta and
-within-`Pipeline` unfoldings only. -/
+/-- **The captured Action verifying key is fully derived.** Both sides are opened with
+`simp only` on the named definitions (`vk`, the derivation chain, and the
+`TopLevelCircuit` keygen views) until the field spellings coincide, then assembled
+field-wise from the bundle's equalities. -/
 theorem vk_eq_derived : vk = derivedActionVk shape capturedURS := by
   have h := certificate
   simp only [Prod.mk.injEq] at h
-  obtain ⟨-, -, -, ⟨ho, hn, hb, hd, hc⟩, hg, ⟨hiq, haq, hfq⟩, hpch, ⟨hli, hlt⟩, -⟩ := h
-  -- structure eta: the derived key is the record of its own projections
-  have ha : derivedActionVk shape capturedURS
-      = ⟨(derivedActionVk shape capturedURS).omega,
-         (derivedActionVk shape capturedURS).n,
-         (derivedActionVk shape capturedURS).blindingFactors,
-         (derivedActionVk shape capturedURS).delta,
-         (derivedActionVk shape capturedURS).chunkLen,
-         (derivedActionVk shape capturedURS).gates,
-         (derivedActionVk shape capturedURS).instanceQueryLayout,
-         (derivedActionVk shape capturedURS).adviceQueryLayout,
-         (derivedActionVk shape capturedURS).fixedQueryLayout,
-         (derivedActionVk shape capturedURS).fixedCommitment,
-         (derivedActionVk shape capturedURS).permutationCommonCommitment,
-         (derivedActionVk shape capturedURS).permutationChunks,
-         (derivedActionVk shape capturedURS).lookupInputExprs,
-         (derivedActionVk shape capturedURS).lookupTableExprs⟩ := rfl
-  rw [ha]
+  obtain ⟨-, hfc, hpc, ⟨ho, hn, hb, hd, hc⟩, hg, ⟨hiq, haq, hfq⟩, hpch, ⟨hli, hlt⟩, -⟩ := h
+  -- align the bundle's spellings with the keygen internals
+  rw [← commitProj_eq] at hfc hpc
+  simp only [actionPinned, Halo2.TopLevelCircuit.selectorMap,
+    Halo2.TopLevelCircuit.selectorActivations, Halo2.TopLevelCircuit.regionStarts,
+    Halo2.TopLevelCircuit.domainExponent]
+    at ho hn hb hc hg hiq haq hfq hpch hli hlt hfc hpc
+  -- open both records
   unfold vk
+  simp only [derivedActionVk, Halo2.TopLevelCircuit.verifierKeyAt,
+    VerifyingKey.ofOperations, fixedCommitmentsOf, permutationCommitmentsOf,
+    Halo2.TopLevelCircuit.domainExponent]
   rw [VerifyingKey.mk.injEq]
   refine ⟨ho.symm, hn.symm, hb.symm, hd.symm, hc.symm, hg.symm, hiq.symm, haq.symm,
     hfq.symm, ?_, ?_, hpch.symm, ?_, ?_⟩
-  · -- fixedCommitment: within-Pipeline unfolding + the certified list equality
-    rw [show (derivedActionVk shape capturedURS).fixedCommitment
-        = fun i => (derivedFixedCommitments capturedURS).getD i 0 from rfl,
-      derivedFixedCommitments_eq]
-  · rw [show (derivedActionVk shape capturedURS).permutationCommonCommitment
-        = fun i : Fin shape.numPermutationColumns =>
-            (derivedPermutationCommonCommitments capturedURS).getD i.val 0
-        from rfl,
-      derivedPermutationCommonCommitments_eq]
+  · rw [← hfc]
+  · rw [← hpc]
   · exact (List.ofFn_inj.mp hli).symm
   · exact (List.ofFn_inj.mp hlt).symm
 

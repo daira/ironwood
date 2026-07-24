@@ -256,16 +256,24 @@ theorem denseColumns_getD_length
     Array.getElem_toList, Array.length_toList]
   exact hshape.2 column hresultColumn
 
+/-- The derived fixed-column commitments at an explicit per-column committer —
+`fixedCommitmentsOf` is the default instantiation; concrete evaluation sites may pass a
+proven-equal faster committer. -/
+def fixedCommitmentsWith (commit : List Fp → G) (selMap : Halo2.SelCompressMap)
+    (k : ℕ) (cs : ConstraintSystem Fp) (ops : Operations Fp) : List G :=
+  -- `parMap`: one task per column (`parMap_eq_map` — evaluation strategy only)
+  (denseColumns (2 ^ k) (PinnedConstraintSystem.derive cs selMap).numFixedColumns
+      (fixedSparseOf selMap k cs ops)).parMap commit
+
 /-- The derived fixed-column commitments — `commit_lagrange` of each dense fixed column
-with the default blind (`plonk/keygen.rs:230-240`, `keygen_vk`'s `fixed_commitments`). -/
+with the default blind (`plonk/keygen.rs:230-240`, `keygen_vk`'s `fixed_commitments`;
+Pippenger per MSM, `commitLagrangeFastWith_eq` — evaluation strategy only). The
+Lagrange basis is an argument so one FFT serves both commitment families. -/
 def fixedCommitmentsOf (blind : G) (lagrange : List G) (selMap : Halo2.SelCompressMap)
     (k : ℕ) (cs : ConstraintSystem Fp) (ops : Operations Fp) : List G :=
-  -- `parMap`: one task per column; Pippenger per MSM (`parMap_eq_map`,
-  -- `commitLagrangeFastWith_eq` — evaluation strategy only). The Lagrange basis is an
-  -- argument so one FFT serves both commitment families.
-  (denseColumns (2 ^ k) (PinnedConstraintSystem.derive cs selMap).numFixedColumns
-      (fixedSparseOf selMap k cs ops)).parMap
+  fixedCommitmentsWith
     (Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow blind lagrange)
+    selMap k cs ops
 
 /-! ## Derived permutation commitments (`plonk/permutation/keygen.rs:102-152`) -/
 
@@ -330,15 +338,21 @@ def permPolysOf (k : ℕ) (cs : ConstraintSystem Fp) (ops : Operations Fp) :
       let pij := (mapping[i]!)[j]!
       deltaPows[pij.1]! * omegaPows[pij.2]!
 
+/-- The derived permutation common commitments at an explicit per-column committer
+(see `fixedCommitmentsWith`). -/
+def permutationCommitmentsWith (commit : List Fp → G) (k : ℕ)
+    (cs : ConstraintSystem Fp) (ops : Operations Fp) : List G :=
+  -- `parMap`: one task per column (`parMap_eq_map` — evaluation strategy only)
+  (permPolysOf k cs ops).parMap commit
+
 /-- The derived permutation common commitments — `commit_lagrange` of each permutation
-polynomial with the default blind (`build_vk`, `permutation/keygen.rs:147-151`). -/
+polynomial with the default blind (`build_vk`, `permutation/keygen.rs:147-151`;
+Pippenger per MSM, `commitLagrangeFastWith_eq` — evaluation strategy only). -/
 def permutationCommitmentsOf (blind : G) (lagrange : List G) (k : ℕ)
     (cs : ConstraintSystem Fp) (ops : Operations Fp) : List G :=
-  -- `parMap`: one task per column; Pippenger per MSM (`parMap_eq_map`,
-  -- `commitLagrangeFastWith_eq` — evaluation strategy only). The Lagrange basis is an
-  -- argument so one FFT serves both commitment families.
-  (permPolysOf k cs ops).parMap
+  permutationCommitmentsWith
     (Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow blind lagrange)
+    k cs ops
 
 /-! ## Assembly -/
 
@@ -504,21 +518,13 @@ open Halo2
 variable {G : Type} [AddCommGroup G] [Inhabited G]
 variable {ConfigInput Config : Type} {Output : TypeMap} [CircuitType Output]
 
-/-- The derived selector-compression map of a closed circuit (activation table over the
-circuit's own V1 placement, at the minimal fitting domain). -/
-def selMapDerived
-    (top : TopLevelCircuit Fp ConfigInput Config Output) : Halo2.SelCompressMap :=
-  deriveSelCompressMap top.constraintSystem (2 ^ top.domainExponent)
-    (activations (FloorPlanner.V1.starts (top.operations 0))
-      (indexedRegions (top.operations 0) 0).1)
-
 /-- The dense fixed rows keygen commits for a closed circuit. -/
 def fixedRows
     (top : TopLevelCircuit Fp ConfigInput Config Output) : List (List Fp) :=
   denseColumns (2 ^ top.domainExponent)
     (PinnedConstraintSystem.derive
-      top.constraintSystem top.selMapDerived).numFixedColumns
-    (fixedSparseOf top.selMapDerived top.domainExponent
+      top.constraintSystem top.selectorMap).numFixedColumns
+    (fixedSparseOf top.selectorMap top.domainExponent
       top.constraintSystem (top.operations 0))
 
 /-- Keygen produces one dense row vector for every derived fixed column. -/
@@ -528,7 +534,7 @@ theorem fixedRows_length
   change
     (denseColumns (2 ^ top.domainExponent)
       (PinnedConstraintSystem.derive
-        top.constraintSystem top.selMapDerived).numFixedColumns
+        top.constraintSystem top.selectorMap).numFixedColumns
       _).length = top.pinnedCS.numFixedColumns
   rw [denseColumns_length]
   rfl
@@ -554,9 +560,9 @@ used by generic keygen. -/
     (top : TopLevelCircuit Fp ConfigInput Config Output) (urs : URS G) :
     top.fixedCommitments urs =
       fixedCommitmentsOf urs.w (derivedUrsGLagrange urs)
-        top.selMapDerived top.domainExponent
+        top.selectorMap top.domainExponent
         top.constraintSystem (top.operations 0) := by
-  simp only [fixedCommitments, fixedRows, fixedCommitmentsOf]
+  simp only [fixedCommitments, fixedRows, fixedCommitmentsOf, fixedCommitmentsWith]
 
 /-- The derived permutation common commitments of a closed circuit against a URS. -/
 def permutationCommitments
@@ -579,8 +585,8 @@ def verifierKeyAt
     (top.verifierKeyAt shape urs).fixedCommitment column =
       (top.fixedCommitments urs).getD column 0 := by
   simp only [verifierKeyAt, VerifyingKey.ofOperations_fixedCommitment,
-    fixedCommitments_eq_fixedCommitmentsOf,
-    domainExponent, selMapDerived]
+    fixedCommitments_eq_fixedCommitmentsOf, domainExponent, selectorMap,
+    selectorActivations, regionStarts]
 
 /-- **The verifying key of a closed top-level circuit**: the `TopLevelCircuit` carries
 its own `configInput` and unit input, so the only remaining inputs are the proof-shape
@@ -619,7 +625,7 @@ theorem toVerifierKey_adviceQueryLayout_derived
     (pp : ProofParams) (urs : URS G) :
     (top.toVerifierKey pp urs).adviceQueryLayout =
       (PinnedConstraintSystem.derive
-        top.constraintSystem top.selMapDerived).adviceQueryLayout := by
+        top.constraintSystem top.selectorMap).adviceQueryLayout := by
   rfl
 
 /-- The derived key exposes exactly the fixed-query layout of its selector-map
@@ -629,7 +635,7 @@ theorem toVerifierKey_fixedQueryLayout_derived
     (pp : ProofParams) (urs : URS G) :
     (top.toVerifierKey pp urs).fixedQueryLayout =
       (PinnedConstraintSystem.derive
-        top.constraintSystem top.selMapDerived).fixedQueryLayout := by
+        top.constraintSystem top.selectorMap).fixedQueryLayout := by
   rfl
 
 /-- The derived key exposes exactly the instance-query layout of its selector-map
@@ -639,7 +645,7 @@ theorem toVerifierKey_instanceQueryLayout_derived
     (pp : ProofParams) (urs : URS G) :
     (top.toVerifierKey pp urs).instanceQueryLayout =
       (PinnedConstraintSystem.derive
-        top.constraintSystem top.selMapDerived).instanceQueryLayout := by
+        top.constraintSystem top.selectorMap).instanceQueryLayout := by
   rfl
 
 /-- The derived key's advice-query layout has the shape count computed from the same
@@ -651,10 +657,10 @@ theorem toVerifierKey_adviceQueryCount
       (pp.mergeDerived top).numAdviceQueries := by
   change
     (PinnedConstraintSystem.derive
-      top.constraintSystem top.selMapDerived).adviceQueryLayout.length =
+      top.constraintSystem top.selectorMap).adviceQueryLayout.length =
     (PinnedConstraintSystem.derive
       top.constraintSystem top.selectorMap).adviceQueryLayout.length
-  rw [show top.selMapDerived = top.selectorMap by rfl]
+  rw [show top.selectorMap = top.selectorMap by rfl]
 
 /-- The derived key's fixed-query layout has the shape count computed from the same
 top-level pinned constraint system. -/
@@ -665,10 +671,10 @@ theorem toVerifierKey_fixedQueryCount
       (pp.mergeDerived top).numFixedQueries := by
   change
     (PinnedConstraintSystem.derive
-      top.constraintSystem top.selMapDerived).fixedQueryLayout.length =
+      top.constraintSystem top.selectorMap).fixedQueryLayout.length =
     (PinnedConstraintSystem.derive
       top.constraintSystem top.selectorMap).fixedQueryLayout.length
-  rw [show top.selMapDerived = top.selectorMap by rfl]
+  rw [show top.selectorMap = top.selectorMap by rfl]
 
 /-- The derived key's instance-query layout has the shape count computed from the same
 top-level pinned constraint system. -/
@@ -679,9 +685,9 @@ theorem toVerifierKey_instanceQueryCount
       (pp.mergeDerived top).numInstanceQueries := by
   change
     (PinnedConstraintSystem.derive
-      top.constraintSystem top.selMapDerived).instanceQueryLayout.length =
+      top.constraintSystem top.selectorMap).instanceQueryLayout.length =
     (PinnedConstraintSystem.derive
       top.constraintSystem top.selectorMap).instanceQueryLayout.length
-  rw [show top.selMapDerived = top.selectorMap by rfl]
+  rw [show top.selectorMap = top.selectorMap by rfl]
 
 end Halo2.TopLevelCircuit

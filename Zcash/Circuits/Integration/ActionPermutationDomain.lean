@@ -45,7 +45,7 @@ theorem permutationChunks_eq (pp : Keygen.ProofParams) (urs : URS G) :
           (.fixed 8, 13)],
         [(.fixed 9, 14)]] := by
   change
-    Keygen.permutationChunksOf orchardActionTopLevelCircuit.selMapDerived
+    Keygen.permutationChunksOf orchardActionTopLevelCircuit.selectorMap
         orchardActionTopLevelCircuit.constraintSystem = _
   exact chunks_eq
 

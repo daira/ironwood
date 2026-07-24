@@ -5,7 +5,7 @@ import Zcash.Circuits.Fixtures.ActionSelMap
 /-!
 # Cross-check: the derived selector-compression map is the Rust dump
 
-`TopLevelCircuit.selMapDerived` — the derivation witness `actionPinnedCs` consumes
+`TopLevelCircuit.selectorMap` — the derivation witness `actionPinnedCs` consumes
 (`Zcash/Snark/Fixtures/SingleAction/VkMatch.lean`) — is computed end to end from
 the closed circuit: synthesize mirror → region shapes → V1
 floor-planner placement (`FloorPlanner.V1.starts`) → selector activations
@@ -20,7 +20,7 @@ namespace Zcash.Circuits.Fixtures.Test.SelMapDerivation
 open Zcash.Circuits.Action (orchardActionTopLevelCircuit)
 
 -- The fully derived map (the one wired into `actionPinnedCs`) equals the Rust dump.
-#guard orchardActionTopLevelCircuit.selMapDerived == actionSelMap
+#guard orchardActionTopLevelCircuit.selectorMap == actionSelMap
 
 -- The derived domain exponent (`minimalK`, the keygen fit condition) equals orchard's
 -- pinned `K = 11` (`circuit.rs:76`) — so the check above also covers the derived size.

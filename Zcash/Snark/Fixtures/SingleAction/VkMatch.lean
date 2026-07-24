@@ -51,6 +51,21 @@ no domain constant survives as an input either). -/
 def actionPinnedCs : PinnedConstraintSystem Fp :=
   orchardActionTopLevelCircuit.pinnedCS
 
+/-! Nullary evaluation shares: every occurrence of a method APPLICATION in a decided
+proposition re-runs the circuit's configure/synthesize chain during `native_decide`
+evaluation, so the bundles below are stated over these once-per-process definitions.
+The public theorems restate the facts in method spelling via `simp only` unfolding. -/
+
+private def actionCS : ConstraintSystem Fp := orchardActionTopLevelCircuit.constraintSystem
+private def actionOps : Operations Fp := orchardActionTopLevelCircuit.operations 0
+-- raw spellings over the shares: the METHOD chain (`selectorMap` → `domainExponent` →
+-- `constraintSystem`/`operations`, `selectorActivations` → `regionStarts` → `operations`)
+-- re-runs configure/synthesize internally at every step; these run each exactly once
+private def actionK : ℕ := Halo2.minimalK actionCS actionOps
+private def actionSelMap : Halo2.SelCompressMap :=
+  deriveSelCompressMap actionCS (2 ^ actionK)
+    (activations (FloorPlanner.V1.starts actionOps) (indexedRegions actionOps 0).1)
+
 /-- The capture's permutation columns, in raw column space. The captured
 `vk.permutationChunks` stores the verifier view — `ColumnRef`s in QUERY-INDEX space
 (`ColumnRef.resolve` reads the eval arrays by query index) — so each ref resolves to
@@ -86,12 +101,24 @@ well-formed: the domain exponent computes to orchard's pinned `K = 11`
 `native_decide` — separate per-fact theorems would re-evaluate the shared selector-map
 and projection work once each; the field/fact splits below are `congrArg` projections
 of this single evaluation. -/
+private theorem bundle_pinned :
+    (capturedPinnedView, actionK,
+      actionCS.invalidQueriedCells.isEmpty,
+      (flatGates actionCS).all
+        (·.selectorsCovered (fun i => (actionSelMap.lookup i).isSome)))
+      = (actionPinnedCs, 11, true, true) := by native_decide
+
 theorem capturedPinnedView_eq_derived_and_wellFormed :
     (capturedPinnedView, orchardActionTopLevelCircuit.domainExponent,
       orchardActionTopLevelCircuit.constraintSystem.invalidQueriedCells.isEmpty,
       (flatGates orchardActionTopLevelCircuit.constraintSystem).all
-        (·.selectorsCovered (fun i => (orchardActionTopLevelCircuit.selMapDerived.lookup i).isSome)))
-      = (actionPinnedCs, 11, true, true) := by native_decide
+        (·.selectorsCovered (fun i => (orchardActionTopLevelCircuit.selectorMap.lookup i).isSome)))
+      = (actionPinnedCs, 11, true, true) := by
+  have h := bundle_pinned
+  simp only [actionSelMap, actionK, actionCS, actionOps] at h
+  simp only [Halo2.TopLevelCircuit.selectorMap, Halo2.TopLevelCircuit.selectorActivations,
+    Halo2.TopLevelCircuit.regionStarts, Halo2.TopLevelCircuit.domainExponent]
+  exact h
 
 /-- **The capture is the derived Action circuit** (pinned CS, captured families). -/
 theorem capturedPinnedView_eq_derived : capturedPinnedView = actionPinnedCs := by
@@ -117,7 +144,7 @@ theorem action_queriedCells_wellFormed :
 coverage side condition of `PinnedConstraintSystem.derive_gates_eval`. -/
 theorem action_gates_selectorsCovered :
     ((flatGates orchardActionTopLevelCircuit.constraintSystem).all
-      (·.selectorsCovered (fun i => (orchardActionTopLevelCircuit.selMapDerived.lookup i).isSome)))
+      (·.selectorsCovered (fun i => (orchardActionTopLevelCircuit.selectorMap.lookup i).isSome)))
       = true := by
   have h := capturedPinnedView_eq_derived_and_wellFormed
   simp only [Prod.mk.injEq] at h
@@ -172,15 +199,26 @@ and `permutationChunks` the recorded permutation columns chunked by it. -/
 /-- ONE bundled `native_decide` for the scalars and the permutation chunks (separate
 theorems would re-evaluate the shared selector-map/projection work once each; the
 nesting `((…), chunks)` rather than a flat 6-tuple is what instance synthesis accepts). -/
+private theorem bundle_scalars :
+    ((vk.omega, vk.n, vk.blindingFactors, vk.delta, vk.chunkLen), vk.permutationChunks)
+      = ((omegaOf actionK, 2 ^ actionK, actionCS.blindingFactors, deltaFp,
+            actionCS.chunkLen),
+          Keygen.permutationChunksOf actionSelMap actionCS) := by
+  native_decide
+
 theorem vk_scalars_and_chunks_derived :
     ((vk.omega, vk.n, vk.blindingFactors, vk.delta, vk.chunkLen), vk.permutationChunks)
       = ((omegaOf orchardActionTopLevelCircuit.domainExponent,
             2 ^ orchardActionTopLevelCircuit.domainExponent,
             orchardActionTopLevelCircuit.constraintSystem.blindingFactors, deltaFp,
             orchardActionTopLevelCircuit.constraintSystem.chunkLen),
-          Keygen.permutationChunksOf orchardActionTopLevelCircuit.selMapDerived
+          Keygen.permutationChunksOf orchardActionTopLevelCircuit.selectorMap
             orchardActionTopLevelCircuit.constraintSystem) := by
-  native_decide
+  have h := bundle_scalars
+  simp only [actionSelMap, actionK, actionCS, actionOps] at h
+  simp only [Halo2.TopLevelCircuit.selectorMap, Halo2.TopLevelCircuit.selectorActivations,
+    Halo2.TopLevelCircuit.regionStarts, Halo2.TopLevelCircuit.domainExponent]
+  exact h
 
 theorem vk_scalars_derived :
     (vk.omega, vk.n, vk.blindingFactors, vk.delta, vk.chunkLen)
@@ -194,7 +232,7 @@ theorem vk_scalars_derived :
 
 theorem vk_permutationChunks_derived :
     vk.permutationChunks
-      = Keygen.permutationChunksOf orchardActionTopLevelCircuit.selMapDerived
+      = Keygen.permutationChunksOf orchardActionTopLevelCircuit.selectorMap
         orchardActionTopLevelCircuit.constraintSystem := by
   have h := vk_scalars_and_chunks_derived
   simp only [Prod.mk.injEq] at h
