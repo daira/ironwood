@@ -276,6 +276,77 @@ theorem assembleQueries_instance_commitment
     · subst q
       simp at hid
 
+/-- An assembled query carrying a fixed-column identity uses the corresponding
+verifying-key commitment. -/
+theorem assembleQueries_fixed_commitment
+    {shape : Shape} {F G : Type*} [Field F] [Inhabited G]
+    (vk : VerifyingKey shape F G)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) (ch : Challenges shape.k F)
+    (q : VerifierQuery shape.k F G)
+    (hq : q ∈ assembleQueries vk instanceCommitment ps ch)
+    (column : ℕ)
+    (hid : q.commId = .fixedCol column) :
+    q.commitment = .point (vk.fixedCommitment column) := by
+  simp only [assembleQueries, List.mem_append] at hq
+  rcases hq with (((hperProof | hfixed) | hcommon) | hvanishing)
+  · obtain ⟨proofQueries, hproofQueries, hq⟩ :=
+      List.mem_flatten.mp hperProof
+    obtain ⟨proofIndex, hproofQueries⟩ :=
+      List.mem_ofFn.mp hproofQueries
+    rw [← hproofQueries] at hq
+    simp only [List.mem_append] at hq
+    rcases hq with hleft | hlookup
+    · rcases hleft with hleft | hpermutation
+      · rcases hleft with hinstance | hadvice
+        · rw [columnQueries, List.mem_map] at hinstance
+          obtain ⟨entry, _, hq⟩ := hinstance
+          subst q
+          simp at hid
+        · rw [columnQueries, List.mem_map] at hadvice
+          obtain ⟨entry, _, hq⟩ := hadvice
+          subst q
+          simp at hid
+      · simp only [permutationQueries, List.mem_append] at hpermutation
+        rcases hpermutation with hregular | hlast
+        · simp only [List.mem_flatMap, List.mem_cons, List.mem_nil_iff,
+            or_false] at hregular
+          obtain ⟨entry, _, hq | hq⟩ := hregular
+          · subst q
+            simp at hid
+          · subst q
+            simp at hid
+        · rw [List.mem_filterMap] at hlast
+          obtain ⟨entry, _, hentry⟩ := hlast
+          cases hlastEval : entry.1.2.lastEval with
+          | none => simp [hlastEval] at hentry
+          | some lastEvaluation =>
+            simp [hlastEval] at hentry
+            subst q
+            simp at hid
+    · simp only [lookupQueries, List.mem_flatMap, List.mem_cons,
+        List.mem_nil_iff, or_false] at hlookup
+      obtain ⟨entry, _, hq | hq | hq | hq | hq⟩ := hlookup
+      all_goals
+        subst q
+        simp at hid
+  · rw [columnQueries, List.mem_map] at hfixed
+    obtain ⟨entry, _, hq⟩ := hfixed
+    subst q
+    injection hid with hcolumn
+    subst column
+    rfl
+  · rw [permutationCommonQueries, List.mem_map] at hcommon
+    obtain ⟨entry, _, hq⟩ := hcommon
+    subst q
+    simp at hid
+  · simp [vanishingQueries] at hvanishing
+    rcases hvanishing with hq | hq
+    · subst q
+      simp at hid
+    · subst q
+      simp at hid
+
 /-- The multiopen point-set grouping (halo2 `construct_intermediate_sets` output): per point set,
 the routed queries as `(commitment, evaluations)`, the set's points, and the routed members' slot
 identities, positionally aligned with `sets` (`constructIntermediateSets_sets_ids_aligned`) —

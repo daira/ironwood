@@ -145,12 +145,20 @@ member slot. None of these theorems mentions Action placement or operations.
 
 `actionPublicInputs_of_instanceRowPolynomial` then performs the only Action-specific
 row mapping: the first ten reads of the configured primary column are exactly the
-structured `Action.PublicInputs`. The remaining concrete work is to identify the
-routed member's column number with `Action.Config.primary` and provide the parameters'
-`LagrangeCommitmentKey` setup certificate. Once those two facts are supplied, the
-decoded member's `OpenedMemberDecode.commitment` equation can be passed directly to
-`coeffsToPoly_eq_instanceRowPolynomial_or_relation`; the tiny equality composition is
-intended to remain inline at that use site.
+structured `Action.PublicInputs`.
+`CanonicalMemberConstraintRelation.instanceColumn_eq_rowPolynomial_or_relation`
+now performs the deployed representation step generically. It follows an assembled
+instance query through the canonical grouped-member route, identifies that member's
+commitment with the verifier-supplied instance commitment, and concludes that the
+decoded polynomial is the canonical row polynomial or computes the shared nontrivial
+relation. The binding-aware Action endpoint invokes this theorem internally; it no
+longer accepts the decoded-polynomial equality as a premise. Its remaining concrete
+instance inputs are the parameters' `LagrangeCommitmentKey`, the public-input
+commitment equation, and coverage of the configured primary column by the derived
+instance query layout. The generic layout-to-assembly lemma supplies the actual
+proof- and challenge-dependent query, and the endpoint derives the evaluation-domain
+injectivity and size equalities from `TopLevelCircuit` plus the existing supported-`k`
+bound.
 
 The exported fixture contains only the ten Lagrange generators reachable by Action
 public rows, rather than the whole 2048-row domain. `LagrangeCommitmentKey.ofPrefix`
@@ -167,8 +175,10 @@ as concrete setup data.
 
 The concrete Action construction still has to prove that:
 
-- column/query indices match the VK query layouts;
-- instance values are the supplied Action public inputs;
+- the configured primary column occurs in the circuit-derived instance query layout;
+- the verifier-supplied commitment is the Lagrange commitment of the supplied Action
+  public inputs;
+- the exported Lagrange generators certify the compatible commitment key;
 - usable and blinding rows are treated exactly as Halo 2 treats them.
 
 Then expose the result as the row-indexed Clean `Environment` used by
@@ -278,11 +288,19 @@ entire constraint model from the accepted VK. Fixed columns, permutation sets/ch
 lookups, and selector polynomials are no longer free relation parameters.
 `actionBundleStatement_of_canonicalRelation` consumes this relation and concludes
 the concrete `Action.BundleStatement`, with no abstract `S` or `hencodes` premise and
-with the key locked to `orchardActionTopLevelCircuit.toVerifierKey`. Its remaining
-`reconstruct` argument is exactly the generic representation bridge from
-family-separated `ConstraintSatisfaction` to Clean's authoritative
-`Halo2.Constraints`, once per bundle member. Discharging that argument is now the
-precise deterministic completion criterion for `hencodes`.
+with the key locked to `orchardActionTopLevelCircuit.toVerifierKey`. It now derives
+the complete gate family internally from canonical constraint satisfaction and the
+circuit-owned gate/selector coherence package. Its remaining explicit inputs are the
+copy, lookup, and fixed operation families. Deriving those three families, rather
+than accepting a generic reconstruction function, is now the precise deterministic
+completion criterion for `hencodes`.
+The binding-aware
+`actionBundleStatement_or_relation_of_canonicalRelation` additionally derives the
+selector and fixed/table families from `TopLevelFixedCoherence`; its only remaining
+operation-family premises are copy and lookup satisfaction. It also derives the
+public-instance polynomial from the routed member and supplied Lagrange commitment
+data. A fixed- or instance-column mismatch returns the shared augmented
+commitment-relation event instead of becoming a silent binding assumption.
 `LookupInstantiation` now constructs those coherent lookup entries from an arbitrary
 VK and a `CommitmentId`-keyed polynomial resolver, proves that openings for the actual
 assembled lookup queries give the verifier's five claimed evaluations, and specializes
@@ -582,6 +600,25 @@ and the emitted rows fit the domain. The remaining fixed-side work is therefore 
 derive those two compiler facts from `TopLevelCircuit` keygen data and feed this
 theorem to `FullCircuitBridge.ofPolynomialWitnesses`.
 
+The commitment-provenance half of that work is now generic too.
+`assembleQueries_fixed_commitment` proves that an assembled `.fixedCol` query carries
+the corresponding commitment from the accepted VK, and the canonical member route
+retains that identity at the decoded member position.
+`fixedColumn_eq_rowPolynomial_or_relation` compares the member's augmented opening
+with the Lagrange commitment to the keygen row vector. It returns either equality
+with the canonical interpolated row polynomial or a computed nontrivial relation
+among `(g, U, W)`. Consequently fixed and selector satisfaction will not silently
+assume commitment binding: the integration theorem exposes the same exceptional
+branch that the deployed probability layer must price.
+`TopLevelFixedCoherence` packages the proof-independent keygen data—dense rows,
+their Lagrange commitments, static fixed-query-layout coverage, and sparse-to-dense
+layout correctness. Generic layout-to-assembly routing turns that static coverage
+into the actual verifier query for any proof string and challenges.
+`topLevelFixedConstraints_or_relation` uses that package to discharge
+both selector activations and all fixed/table operations for a resolver assignment.
+The remaining constructor work is to instantiate this package from the generic
+`TopLevelCircuit.toVerifierKey` pipeline.
+
 The generic operation walk already proves that every extracted enabled gate occurs in
 the floor-planner activation table, and `selectorScale_ne_zero_of_enabledGate` turns
 the two contracts into the required nonzero scale. The remaining gate work is now to
@@ -793,9 +830,9 @@ the same fixed cells the table-loaded and fixed-base assumptions read.
 ### 6. Generalize from one Action to an Orchard bundle
 
 **Status: verifier-side substrate is generic in #30/#91 and exercised by the merged
-[#85](https://github.com/zcash/ironwood/pull/85). The assignment and external
-statement interfaces are now bundle-indexed; constructing every decoded member and
-feeding the family through the capstone remains open.**
+[#85](https://github.com/zcash/ironwood/pull/85). The assignment, external statement,
+canonical relation, and Action endpoint are bundle-indexed. Discharging the remaining
+copy/lookup/fixed operation families for every member remains open.**
 
 A deployed proof covers `shape.numProofs` Actions. Generalize `PublicInputs`,
 `Assignment`, and `ActionStatement` to a `Fin shape.numProofs` family and decode one
@@ -819,11 +856,12 @@ single-index result into a family of Clean assignments and Action statements.
 
 ### 7. Thread the bridge into the live capstone
 
-**Status: substantial foundations in
+**Status: the canonical relation now reaches a concrete bundle-wide Action theorem,
+but the live Vesta/Fiat–Shamir capstone still accepts `hencodes`. Substantial
+foundations are in
 [#30](https://github.com/zcash/ironwood/pull/30),
 [#91](https://github.com/zcash/ironwood/pull/91), and
-the merged [#85](https://github.com/zcash/ironwood/pull/85); no end-to-end Action
-theorem yet.**
+the merged [#85](https://github.com/zcash/ironwood/pull/85).**
 
 Once the direct semantic bridge exists, instantiate the Vesta constraint capstones
 with the concrete high-level Action statement. Then thread that same concrete
@@ -861,9 +899,10 @@ whose public inputs were committed by the verifier.
    and prove VK/layout equality theorems that discharge #30's routing hypotheses.
 3. The canonical polynomial-to-row decoder, Action top-level environment closure,
    circuit-owned pinned CS/V1 placement/domain fit, generic
-   full-satisfaction-to-`TopLevelCircuit.Statement` endpoint, and decoded
-   `TopLevelAssignment` constructor are complete; the legacy `ActionAssignment` is
-   gone. The Action configure program now also supplies the complete generic
+   full-satisfaction-to-`TopLevelCircuit.Statement` endpoint, decoded
+   `TopLevelAssignment` constructor, and routed instance-column provenance are
+   complete; the legacy `ActionAssignment` is gone. The Action configure program now
+   also supplies the complete generic
    `GateSelectorsAllocated` certificate needed by the gate projection.
    `TopLevelCircuit.toVerifierKey` now supplies the assignment decoder and generic
    gate bridge directly, without a separately supplied shape or VK. Next discharge
@@ -871,9 +910,10 @@ whose public inputs were committed by the verifier.
    the copy/lookup witnesses.
 4. Instantiate the generic decomposed bridge for one selected Action, adapt
    `TopLevelCircuit.Statement` to the external Action statement, and then generalize
-   it to every `Fin shape.numProofs`. The semantic adapter and generic decoded
-   instance-value provenance are complete; routed-member identification, the concrete
-   Lagrange-key certificate, and the remaining bridge witnesses remain.
+   it to every `Fin shape.numProofs`. The semantic adapter, generic decoded
+   instance-value provenance, and routed-member identification are complete; the
+   concrete Lagrange-key/instance-commitment certificate and remaining bridge
+   witnesses remain.
 5. Supply the decoded/full-satisfaction data inside the computed experiment, close the
    remaining adaptive-coupling/`hExtract` obligation, instantiate the endpoint with
    `ActionStatement`, and add the theorem to the consolidated trust boundary.
