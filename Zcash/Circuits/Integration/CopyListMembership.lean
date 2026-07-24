@@ -317,4 +317,47 @@ theorem V1_go_snd_eq (permCols : List ColRef) (starts : List ℕ)
           exact ⟨by simp only [V1.go, hgoEq]; exact ih1,
             by simp only [V1.go, hgoEq]; exact ih2⟩
 
+/-- Every declared copy has a `Cell` left endpoint, and its right endpoint is a cell,
+an instance read, or a constant — so every declared copy either resolves or is a
+constant declaration. -/
+theorem declared_shape (ops : Operations Fp) (permCols : List ColRef)
+    (starts : List ℕ) :
+    ∀ copy ∈ operationDeclaredCopies ops,
+      (∃ tuple, resolveDeclared permCols starts copy = some tuple) ∨
+        ∃ c v, copy = (.cell c, .constant v) := by
+  intro copy hmem
+  induction ops with
+  | nil => simp [operationDeclaredCopies] at hmem
+  | cons op rest ih =>
+      cases op with
+      | region name body =>
+          rw [operationDeclaredCopies] at hmem
+          rcases List.mem_append.mp hmem with hcopy | hcopy
+          · rw [regionDeclaredCopies_eq_filterMap, List.mem_filterMap] at hcopy
+            obtain ⟨rop, _, hop⟩ := hcopy
+            cases rop with
+            | constrainEqual a b =>
+                obtain rfl := Option.some.inj hop
+                exact Or.inl ⟨_, rfl⟩
+            | constrainConstant cell value =>
+                obtain rfl := Option.some.inj hop
+                exact Or.inr ⟨cell, value, rfl⟩
+            | constrainInstance cell col row =>
+                obtain rfl := Option.some.inj hop
+                exact Or.inl ⟨_, rfl⟩
+            | assignAdvice col off val => simp [regionOperationDeclaredCopy?] at hop
+            | assignFixed col off val => simp [regionOperationDeclaredCopy?] at hop
+            | enableGate gate off => simp [regionOperationDeclaredCopy?] at hop
+            | enableLookup arg enabled off => simp [regionOperationDeclaredCopy?] at hop
+          · exact ih hcopy
+      | constrainInstance cell col row =>
+          rw [operationDeclaredCopies] at hmem
+          rcases List.mem_cons.mp hmem with hcopy | hcopy
+          · subst hcopy
+            exact Or.inl ⟨_, rfl⟩
+          · exact ih hcopy
+      | loadTable tbl values =>
+          rw [operationDeclaredCopies] at hmem
+          exact ih hmem
+
 end Zcash.Snark

@@ -45,6 +45,18 @@ theorem actionNumPermCols_pos : 0 < actionNumPermCols := by
 theorem actionDomainSize_pos : 0 < actionDomainSize :=
   Nat.two_pow_pos _
 
+/-- Every keygen copy tuple is in range: 15 permutation columns, `2^11` rows. -/
+theorem actionCopyBounds : ∀ t ∈ actionCopyRaw, t.1 < actionNumPermCols ∧
+    t.2.1 < actionDomainSize ∧ t.2.2.1 < actionNumPermCols ∧
+    t.2.2.2 < actionDomainSize := by
+  native_decide
+
+/-- The decoded Action copy list. -/
+def actionCopies :
+    List (FlatCell actionNumPermCols actionDomainSize ×
+      FlatCell actionNumPermCols actionDomainSize) :=
+  decodeCopies actionNumPermCols actionDomainSize actionCopyRaw actionCopyBounds
+
 /-- A raw coordinate pair as a typed Action permutation cell (`mod` totalization —
 the identity on every in-range coordinate, and every declared coordinate is). -/
 def mkActionCell (p : ℕ × ℕ) : FlatCell actionNumPermCols actionDomainSize :=
@@ -76,11 +88,7 @@ transport), value agreement of each declared constant copy (two constants-column
 reads), and the declared-endpoint read equations (resolution coordinates). -/
 noncomputable def actionCopyReplayWitness
     (env : Environment Fp) {Bad : Prop}
-    (hbounds : ∀ t ∈ actionCopyRaw, t.1 < actionNumPermCols ∧
-      t.2.1 < actionDomainSize ∧ t.2.2.1 < actionNumPermCols ∧
-      t.2.2.2 < actionDomainSize)
-    (hpairval : ∀ pr ∈ decodeCopies actionNumPermCols actionDomainSize
-        actionCopyRaw hbounds,
+    (hpairval : ∀ pr ∈ actionCopies,
       actionCopyValue env pr.1 = actionCopyValue env pr.2 ∨ Bad)
     (hconstval : ∀ copy ∈ operationDeclaredCopies
         (orchardActionTopLevelCircuit.operations 0),
@@ -91,14 +99,8 @@ noncomputable def actionCopyReplayWitness
         (orchardActionTopLevelCircuit.operations 0),
       ∀ tuple, resolveDeclared actionPermCols
           orchardActionTopLevelCircuit.regionStarts copy = some tuple →
-        (replayKeygenPermutation (decodeCopies actionNumPermCols actionDomainSize
-            actionCopyRaw hbounds)).SameCycle
+        (replayKeygenPermutation actionCopies).SameCycle
           (actionCopyEncode copy.1) (actionCopyEncode copy.2))
-    (hshape : ∀ copy ∈ operationDeclaredCopies
-        (orchardActionTopLevelCircuit.operations 0),
-      (∃ tuple, resolveDeclared actionPermCols
-          orchardActionTopLevelCircuit.regionStarts copy = some tuple) ∨
-        ∃ c v, copy = (.cell c, .constant v))
     (hread : ∀ copy ∈ operationDeclaredCopies
         (orchardActionTopLevelCircuit.operations 0),
       copy.1.eval orchardActionTopLevelCircuit.placement env =
@@ -113,7 +115,9 @@ noncomputable def actionCopyReplayWitness
       intro pr hpr
       rw [encodeDeclaredCopies, List.mem_map] at hpr
       obtain ⟨copy, hcopy, rfl⟩ := hpr
-      rcases hshape copy hcopy with ⟨tuple, hres⟩ | ⟨c, v, hcv⟩
+      rcases declared_shape (orchardActionTopLevelCircuit.operations 0)
+          actionPermCols orchardActionTopLevelCircuit.regionStarts copy hcopy with
+        ⟨tuple, hres⟩ | ⟨c, v, hcv⟩
       · exact Zcash.Snark.Layout.Asm.value_eq_or_bad_of_replay_sameCycle (actionCopyValue env) _
           hpairval (hlink copy hcopy tuple hres)
       · subst hcv
