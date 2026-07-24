@@ -62,22 +62,32 @@ computable from the circuit: `omega`/`n` from the derived domain exponent `actio
 pasta constant, `chunkLen` from the ported `cs.degree()`, and `permutationChunks` the
 recorded permutation columns chunked by it. -/
 
-/-- Bundled `native_decide`s (per-field theorems would re-evaluate the shared
-selector-map/projection work once each; the chunks live in a separate bundle only
-because instance synthesis balks at the 6-product). -/
+/-- ONE bundled `native_decide` for the scalars and the permutation chunks (separate
+theorems would re-evaluate the shared selector-map/projection work once each; the
+nesting `((…), chunks)` rather than a flat 6-tuple is what instance synthesis accepts). -/
+theorem vk_scalars_and_chunks_derived :
+    ((vk.omega, vk.n, vk.blindingFactors, vk.delta, vk.chunkLen), vk.permutationChunks)
+      = ((omegaOf actionK, 2 ^ actionK, actionCS.blindingFactors, deltaFp,
+            actionCS.chunkLen),
+          permutationChunksOf (actionSelMapDerived (2 ^ actionK)) actionCS) := by
+  native_decide
+
 theorem vk_scalars_derived :
     (vk.omega, vk.n, vk.blindingFactors, vk.delta, vk.chunkLen)
       = (omegaOf actionK, 2 ^ actionK, actionCS.blindingFactors, deltaFp,
           actionCS.chunkLen) := by
-  native_decide
+  have h := vk_scalars_and_chunks_derived
+  simp only [Prod.mk.injEq] at h ⊢
+  exact h.1
 
 theorem vk_permutationChunks_derived :
     vk.permutationChunks
       = permutationChunksOf (actionSelMapDerived (2 ^ actionK)) actionCS := by
-  native_decide
+  have h := vk_scalars_and_chunks_derived
+  simp only [Prod.mk.injEq] at h
+  exact h.2
 
 assert_no_sorry vk_gates_eq_derived
-assert_no_sorry vk_scalars_derived
-assert_no_sorry vk_permutationChunks_derived
+assert_no_sorry vk_scalars_and_chunks_derived
 
 end Zcash.Snark.Fixture
