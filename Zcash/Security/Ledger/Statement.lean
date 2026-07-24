@@ -40,7 +40,7 @@ namespace Zcash.Security.Ledger
 
 variable {F : Type*} [Field F]
 variable {G : Type*} [AddCommGroup G] [Module F G]
-variable {IVK NK RHO PSI MHASH : Type*} {KW : Type*}
+variable {IVK NK RHO PSI MHASH MENC : Type*} {KW : Type*}
 
 /-- An Orchard-shaped note. Point encodings and type conversions are abstracted away:
 `gd` and `pkd` are group elements, `ρ` and `ψ` base-field values, `v` a natural number
@@ -67,8 +67,7 @@ structure ActionInstance (G MHASH RHO : Type*) where
 is required of the fields themselves; the group algebra enters only through the statement
 and lemmas. `emb` is the embedding of base-field values used as scalars
 (`[0, q) ⊆ [0, r)` concretely). -/
-structure Primitives (F G IVK NK RHO PSI MHASH : Type*) where
-  depth : ℕ
+structure Primitives (F G IVK NK RHO PSI MHASH MENC : Type*) where
   valueBound : ℕ
   emb : IVK → F
   emb_injective : Function.Injective emb
@@ -76,9 +75,18 @@ structure Primitives (F G IVK NK RHO PSI MHASH : Type*) where
   noteCommit : F → Note G RHO PSI → Option G
   /-- Nullifiers share ρ's type (`RHO`), forced by ρ-uniqueness (`ρ_new = nf_old`). -/
   deriveNullifier : NK → RHO → PSI → G → RHO
-  merkleCRH : MHASH × MHASH → MHASH
+  /-- The raw-encoding partial Merkle interface (`Zcash.Security.Ledger.Merkle`): tree
+  nodes are `MHASH` values, `MENC` is the raw child encoding consumed by the
+  height-personalized partial compression. Non-canonical encodings are accepted — a
+  conscious trade-off from Sapling onward: the circuit does not pay for a canonicity
+  check, so collisions are counted over the encoding domain, per height. -/
+  merkle : MerklePrimitives MHASH MENC
   randomizePublic : F → G → G
   valueCommit : ℤ → F → G
+
+/-- The tree depth, read off the Merkle interface. -/
+abbrev Primitives.depth (P : Primitives F G IVK NK RHO PSI MHASH MENC) : ℕ :=
+  P.merkle.depth
 
 /-- The games-facing view of a key-binding witness type `KW`: projections, the key-binding
 condition `KB` enforced by the statement, and a `Break` predicate. `break_of_nk_ne` is the
@@ -98,9 +106,11 @@ structure KeyBindingInterface (KW G IVK NK : Type*) where
 
 /-- The auxiliary inputs of an Action. `cm_old`/`cm_new` are carried explicitly so that the
 statement's commitment checks pin them; `kw` is the key-binding witness. -/
-structure ActionWitness (KW F G RHO PSI MHASH : Type*) (d : ℕ) where
-  pos : Fin d → Bool
-  path : Fin d → MHASH
+structure ActionWitness (KW F G RHO PSI MHASH MENC : Type*) (d : ℕ) where
+  /-- Both raw child encodings at every height, in leaf-to-root order. -/
+  path : Fin d → MENC × MENC
+  /-- The child encoding selected by the path (`false` = left, `true` = right). -/
+  side : Fin d → Bool
   note_old : Note G RHO PSI
   note_new : Note G RHO PSI
   cm_old : G
@@ -118,15 +128,14 @@ satisfy this interface (the latter enforces strictly more).
 TODO: It's unclear how well this will compose with Gregor's approach to the circuit proof.
 In particular, should this be `Prop`-only or will we need to apply the break-as-computed-data
 pattern here? -/
-structure ActionSatisfied (P : Primitives F G IVK NK RHO PSI MHASH)
+structure ActionSatisfied (P : Primitives F G IVK NK RHO PSI MHASH MENC)
     (kv : KeyBindingInterface KW G IVK NK) (inst : ActionInstance G MHASH RHO)
-    (w : ActionWitness KW F G RHO PSI MHASH P.depth) : Prop where
+    (w : ActionWitness KW F G RHO PSI MHASH MENC P.depth) : Prop where
   /-- Spend-side commitment integrity: `cm_old` opens `note_old` with `rcm_old`. -/
   commit_old : P.noteCommit w.rcm_old w.note_old = some w.cm_old
   /-- Merkle path validity for nonzero-valued spends. -/
   merkle_path : w.note_old.v ≠ 0 →
-    Merkle.pathRoot P.merkleCRH P.depth w.pos w.path
-      (P.extract w.cm_old) = inst.rt
+    Merkle.Path P.merkle (P.extract w.cm_old) inst.rt w.path w.side
   /-- Nullifier integrity. -/
   nf_old_eq : inst.nf_old =
     P.deriveNullifier (kv.nk w.kw) w.note_old.ρ w.note_old.ψ w.cm_old
@@ -157,7 +166,7 @@ equal extracted coordinates. Computed by the games' reductions; nothing in this
 development reduces it further. The intended onward reductions are a Sinsemilla/DLR
 relation pre-quantum (spec Theorems 5.4.3 and 5.4.4), and an `H^rcm` ±-collision for the
 Recovery Statement (via the Pedersen lift and the `extract` ±-property). -/
-structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI MHASH) where
+structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI MHASH MENC) where
   rcm₁ : F
   n₁ : Note G RHO PSI
   rcm₂ : F
@@ -171,10 +180,10 @@ structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI MHASH) where
 
 section Pinning
 
-variable {P : Primitives F G IVK NK RHO PSI MHASH}
+variable {P : Primitives F G IVK NK RHO PSI MHASH MENC}
 variable {kv : KeyBindingInterface KW G IVK NK}
 variable {inst₁ inst₂ : ActionInstance G MHASH RHO}
-variable {w₁ w₂ : ActionWitness KW F G RHO PSI MHASH P.depth}
+variable {w₁ w₂ : ActionWitness KW F G RHO PSI MHASH MENC P.depth}
 
 /-- **`ivk`-pinning** (ZIP 2005 `lemma-ivk-pinning`): the address `(g_d, pk_d)` of the
 spent note determines `ivk`. Pure module algebra: needs only `g_d ≠ 0`, injectivity of the
