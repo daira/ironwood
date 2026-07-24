@@ -127,4 +127,194 @@ theorem mem_V1_copyList_of_declared
           have := ih consts hmem
           rwa [hgo] at this
 
+/-- Decode raw copy tuples into typed cells under a bounds certificate. -/
+def decodeCopies (numCols n : ℕ) (raw : List (ℕ × ℕ × ℕ × ℕ))
+    (h : ∀ t ∈ raw, t.1 < numCols ∧ t.2.1 < n ∧ t.2.2.1 < numCols ∧ t.2.2.2 < n) :
+    List (FlatCell numCols n × FlatCell numCols n) :=
+  raw.attach.map fun t =>
+    ((⟨t.1.1, (h t.1 t.2).1⟩, ⟨t.1.2.1, (h t.1 t.2).2.1⟩),
+      (⟨t.1.2.2.1, (h t.1 t.2).2.2.1⟩, ⟨t.1.2.2.2, (h t.1 t.2).2.2.2⟩))
+
+/-- Decoding then re-encoding is the identity: the bounds certificate is the whole
+content of the `hcopies` hypothesis. -/
+theorem decodeCopies_map (numCols n : ℕ) (raw : List (ℕ × ℕ × ℕ × ℕ))
+    (h : ∀ t ∈ raw, t.1 < numCols ∧ t.2.1 < n ∧ t.2.2.1 < numCols ∧ t.2.2.2 < n) :
+    (decodeCopies numCols n raw h).map
+        (fun p => (p.1.pair.1, p.1.pair.2, p.2.pair.1, p.2.pair.2)) = raw := by
+  rw [decodeCopies, List.map_map]
+  have : (fun (t : { x // x ∈ raw }) => t.1) =
+      ((fun p : (FlatCell numCols n × FlatCell numCols n) =>
+          (p.1.pair.1, p.1.pair.2, p.2.pair.1, p.2.pair.2)) ∘
+        fun t : { x // x ∈ raw } =>
+          ((⟨t.1.1, (h t.1 t.2).1⟩, ⟨t.1.2.1, (h t.1 t.2).2.1⟩),
+            (⟨t.1.2.2.1, (h t.1 t.2).2.2.1⟩, ⟨t.1.2.2.2, (h t.1 t.2).2.2.2⟩))) := by
+    funext t
+    rfl
+  rw [← this]
+  exact List.attach_map_subtype_val raw
+
+/-- The constant-declaration sites of a region body, in body order. -/
+def constSites : RegionOperations Fp → List (Cell × Fp)
+  | [] => []
+  | .constrainConstant cell value :: rest => (cell, value) :: constSites rest
+  | _ :: rest => constSites rest
+
+/-- The constants half of a region's copy extraction, in closed zipped form: each
+constant site pairs with the next allocation-map entry — the constants cell on the
+left, the site's resolved cell on the right — and the tail of the map is returned. -/
+theorem regionCopiesSplit_snd_eq (permCols : List ColRef) (starts : List ℕ)
+    (body : RegionOperations Fp) (consts : List (ℕ × ℕ × ℕ))
+    (hlen : (constSites body).length ≤ consts.length) :
+    (regionCopiesSplit permCols starts body consts).2.1 =
+      ((constSites body).zip consts).map (fun se =>
+        (permIndex permCols (ColRef.toAny (.fixed se.2.2.1)), se.2.2.2,
+          (resolveCell permCols starts se.1.1).1,
+          (resolveCell permCols starts se.1.1).2)) ∧
+      (regionCopiesSplit permCols starts body consts).2.2 =
+        consts.drop (constSites body).length := by
+  induction body generalizing consts with
+  | nil => exact ⟨rfl, rfl⟩
+  | cons op rest ih =>
+      cases op with
+      | constrainConstant cell value =>
+          cases consts with
+          | nil => simp [constSites] at hlen
+          | cons entry cs =>
+              have hlen' : (constSites rest).length ≤ cs.length := by
+                simpa [constSites] using hlen
+              obtain ⟨ih1, ih2⟩ := ih cs hlen'
+              constructor
+              · show (permIndex permCols (ColRef.toAny (.fixed entry.2.1)), entry.2.2,
+                    (resolveCell permCols starts cell).1,
+                    (resolveCell permCols starts cell).2) ::
+                    (regionCopiesSplit permCols starts rest cs).2.1 = _
+                rw [ih1]
+                rfl
+              · show (regionCopiesSplit permCols starts rest cs).2.2 = _
+                rw [ih2]
+                rfl
+      | constrainEqual a b =>
+          obtain ⟨ih1, ih2⟩ := ih consts (by simpa [constSites] using hlen)
+          exact ⟨ih1, ih2⟩
+      | constrainInstance cell col row =>
+          obtain ⟨ih1, ih2⟩ := ih consts (by simpa [constSites] using hlen)
+          exact ⟨ih1, ih2⟩
+      | assignAdvice col off val =>
+          obtain ⟨ih1, ih2⟩ := ih consts (by simpa [constSites] using hlen)
+          exact ⟨ih1, ih2⟩
+      | assignFixed col off val =>
+          obtain ⟨ih1, ih2⟩ := ih consts (by simpa [constSites] using hlen)
+          exact ⟨ih1, ih2⟩
+      | enableGate gate off =>
+          obtain ⟨ih1, ih2⟩ := ih consts (by simpa [constSites] using hlen)
+          exact ⟨ih1, ih2⟩
+      | enableLookup arg enabled off =>
+          obtain ⟨ih1, ih2⟩ := ih consts (by simpa [constSites] using hlen)
+          exact ⟨ih1, ih2⟩
+
+/-- Zipping ignores the second list beyond the first's length. -/
+theorem zip_take_length {α β : Type*} (a : List α) (c : List β) :
+    a.zip (c.take a.length) = a.zip c := by
+  induction a generalizing c with
+  | nil => rfl
+  | cons x xs ih =>
+      cases c with
+      | nil => rfl
+      | cons y ys => simp [ih]
+
+/-- The constant-declaration sites of a whole operation stream: region sites in region
+order (V1 defers them all to the end of synthesis, in this order). -/
+def operationConstSites : Operations Fp → List (Cell × Fp)
+  | [] => []
+  | .region _ body :: rest => constSites body ++ operationConstSites rest
+  | .constrainInstance _ _ _ :: rest => operationConstSites rest
+  | .loadTable _ _ :: rest => operationConstSites rest
+
+/-- The V1 constants stream in closed zipped form: every constant site across the
+stream pairs with its allocation-map entry, in region-then-body order. -/
+theorem V1_go_snd_eq (permCols : List ColRef) (starts : List ℕ)
+    (ops : Operations Fp) (consts : List (ℕ × ℕ × ℕ))
+    (hlen : (operationConstSites ops).length ≤ consts.length) :
+    (V1.go permCols starts ops consts).1.2 =
+      ((operationConstSites ops).zip consts).map (fun se =>
+        (permIndex permCols (ColRef.toAny (.fixed se.2.2.1)), se.2.2.2,
+          (resolveCell permCols starts se.1.1).1,
+          (resolveCell permCols starts se.1.1).2)) ∧
+      (V1.go permCols starts ops consts).2 =
+        consts.drop (operationConstSites ops).length := by
+  induction ops generalizing consts with
+  | nil => exact ⟨rfl, rfl⟩
+  | cons op rest ih =>
+      cases op with
+      | region name body =>
+          have hbody : (constSites body).length ≤ consts.length := by
+            refine le_trans ?_ hlen
+            simp [operationConstSites]
+          obtain ⟨hsplit1, hsplit2⟩ :=
+            regionCopiesSplit_snd_eq permCols starts body consts hbody
+          have hrest : (operationConstSites rest).length ≤
+              (consts.drop (constSites body).length).length := by
+            rw [List.length_drop]
+            have := hlen
+            simp only [operationConstSites, List.length_append] at this
+            omega
+          rcases hsplitEq : regionCopiesSplit permCols starts body consts with
+            ⟨eqs, cnsts, cs'⟩
+          rcases hgoEq : V1.go permCols starts rest cs' with ⟨⟨r1, r2⟩, cs''⟩
+          have hcs' : cs' = consts.drop (constSites body).length := by
+            rw [hsplitEq] at hsplit2
+            exact hsplit2
+          obtain ⟨ih1, ih2⟩ := ih (consts.drop (constSites body).length)
+            hrest
+          constructor
+          · show (V1.go permCols starts (.region name body :: rest) consts).1.2 = _
+            simp only [V1.go, hsplitEq, hgoEq]
+            have hcnsts : cnsts = ((constSites body).zip consts).map (fun se =>
+                (permIndex permCols (ColRef.toAny (.fixed se.2.2.1)), se.2.2.2,
+                  (resolveCell permCols starts se.1.1).1,
+                  (resolveCell permCols starts se.1.1).2)) := by
+              rw [hsplitEq] at hsplit1
+              exact hsplit1
+            rw [hcnsts]
+            have hr2 : r2 = ((operationConstSites rest).zip
+                (consts.drop (constSites body).length)).map (fun se =>
+                (permIndex permCols (ColRef.toAny (.fixed se.2.2.1)), se.2.2.2,
+                  (resolveCell permCols starts se.1.1).1,
+                  (resolveCell permCols starts se.1.1).2)) := by
+              rw [hcs'] at hgoEq
+              rw [hgoEq] at ih1
+              exact ih1
+            rw [hr2]
+            conv_rhs =>
+              rw [show operationConstSites (.region name body :: rest) =
+                constSites body ++ operationConstSites rest from rfl,
+                show consts = consts.take (constSites body).length ++
+                  consts.drop (constSites body).length from
+                  (List.take_append_drop _ _).symm]
+            rw [List.zip_append (by rw [List.length_take]; omega),
+              List.map_append, zip_take_length]
+          · show (V1.go permCols starts (.region name body :: rest) consts).2 = _
+            simp only [V1.go, hsplitEq, hgoEq]
+            have : cs'' = (consts.drop (constSites body).length).drop
+                (operationConstSites rest).length := by
+              rw [hcs'] at hgoEq
+              rw [hgoEq] at ih2
+              exact ih2
+            rw [this, List.drop_drop]
+            rw [show operationConstSites (.region name body :: rest) =
+              constSites body ++ operationConstSites rest from rfl]
+            rw [List.length_append]
+      | constrainInstance cell col row =>
+          rcases hgoEq : V1.go permCols starts rest consts with ⟨⟨r1, r2⟩, cs''⟩
+          obtain ⟨ih1, ih2⟩ := ih consts (by simpa [operationConstSites] using hlen)
+          rw [hgoEq] at ih1 ih2
+          exact ⟨by simp only [V1.go, hgoEq]; exact ih1,
+            by simp only [V1.go, hgoEq]; exact ih2⟩
+      | loadTable tbl values =>
+          rcases hgoEq : V1.go permCols starts rest consts with ⟨⟨r1, r2⟩, cs''⟩
+          obtain ⟨ih1, ih2⟩ := ih consts (by simpa [operationConstSites] using hlen)
+          rw [hgoEq] at ih1 ih2
+          exact ⟨by simp only [V1.go, hgoEq]; exact ih1,
+            by simp only [V1.go, hgoEq]; exact ih2⟩
+
 end Zcash.Snark
