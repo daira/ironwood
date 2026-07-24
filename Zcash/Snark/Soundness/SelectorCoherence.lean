@@ -292,6 +292,68 @@ theorem registerQueriedCells_numSelectors
       rw [List.foldl_cons, ih,
         registerQueriedCell_numSelectors]
 
+/-- Lookup registration does not change the configured gate list. -/
+@[simp]
+theorem lookup_gates
+    {F : Type} (queriedCells : List (Expression F Query))
+    (tableMap : List (Expression F Query × TableColumn))
+    (cs : ConstraintSystem F) :
+    ((Halo2.lookup queriedCells tableMap) cs).2.gates =
+      cs.gates := by
+  unfold Halo2.lookup
+  simp only
+  let registered :=
+    cs.registerQueriedCells "lookup" queriedCells
+  have foldGates
+      (state : ConstraintSystem F)
+      (entries : List (Expression F Query × TableColumn)) :
+      (entries.foldl
+        (fun current entry =>
+          current.queryFixedIndex entry.2.inner)
+        state).gates = state.gates := by
+    induction entries generalizing state with
+    | nil =>
+        rfl
+    | cons entry rest ih =>
+        rw [List.foldl_cons, ih,
+          queryFixedIndex_gates]
+  calc
+    _ = registered.gates := foldGates registered tableMap
+    _ = cs.gates :=
+      registerQueriedCells_gates cs "lookup" queriedCells
+
+/-- Lookup registration does not change the selector allocation count. -/
+@[simp]
+theorem lookup_numSelectors
+    {F : Type} (queriedCells : List (Expression F Query))
+    (tableMap : List (Expression F Query × TableColumn))
+    (cs : ConstraintSystem F) :
+    ((Halo2.lookup queriedCells tableMap) cs).2.numSelectors =
+      cs.numSelectors := by
+  unfold Halo2.lookup
+  simp only
+  let registered :=
+    cs.registerQueriedCells "lookup" queriedCells
+  have foldSelectors
+      (state : ConstraintSystem F)
+      (entries : List (Expression F Query × TableColumn)) :
+      (entries.foldl
+        (fun current entry =>
+          current.queryFixedIndex entry.2.inner)
+        state).numSelectors = state.numSelectors := by
+    induction entries generalizing state with
+    | nil =>
+        rfl
+    | cons entry rest ih =>
+        rw [List.foldl_cons, ih,
+          queryFixedIndex_numSelectors]
+  calc
+    _ = registered.numSelectors :=
+      foldSelectors registered tableMap
+    _ = cs.numSelectors :=
+      registerQueriedCells_numSelectors
+        cs "lookup" queriedCells
+
 end ConstraintSystem
 
 /-- The empty configure state has no invalid selector references. -/
@@ -455,6 +517,18 @@ theorem lookupTableColumn :
       (Halo2.lookupTableColumn : Configure F TableColumn) :=
   bind fixedColumn fun _ => pure _
 
+@[circuit_norm]
+theorem lookup
+    (queriedCells : List (Expression F Query))
+    (tableMap : List (Expression F Query × TableColumn)) :
+    PreservesGateSelectorsAllocated
+      (Halo2.lookup queriedCells tableMap) := by
+  apply of_gates_numSelectors
+  · exact ConstraintSystem.lookup_gates
+      queriedCells tableMap
+  · exact ConstraintSystem.lookup_numSelectors
+      queriedCells tableMap
+
 /--
 The standard leaf configure pattern allocates a selector and immediately creates a
 gate whose constraints mention only that selector.
@@ -513,6 +587,13 @@ theorem complexSelectorCreateGate
       (howned ⟨cs.numSelectors, false⟩)
     rw [hselector]
     exact Nat.lt_succ_self cs.numSelectors
+
+/-- Run a preserving configure program from the empty Halo 2 builder state. -/
+theorem fromEmpty
+    {program : Configure F α}
+    (hprogram : PreservesGateSelectorsAllocated program) :
+    (program {}).2.GateSelectorsAllocated :=
+  hprogram.run {} ConstraintSystem.gateSelectorsAllocated_empty
 
 end PreservesGateSelectorsAllocated
 

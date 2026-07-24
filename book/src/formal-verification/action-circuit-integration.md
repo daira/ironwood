@@ -589,6 +589,12 @@ simple- or complex-selector/create-gate leaf patterns. The remaining Action work
 this certificate is confined to the less common chips that allocate several
 selectors before registering several gates; those need relational composition that
 retains the allocated-index fact returned by each selector allocation.
+`Action.SelectorCoherence` has begun the circuit instantiation without touching the
+VK path: the simple selector/create-gate leaves, the equality-prefixed ECC addition
+leaves, the multiplication decomposition/overflow leaves, and the NoteCommit
+decomposition and canonicity leaves now have local ownership and compositional
+configure certificates. Multi-selector lookup, Poseidon, and Sinsemilla-family
+leaves remain before the final `Action.Circuit.configure` certificate.
 
 The `Fixtures.Layout` reconstruction is already generic over operations, so σ-cycle
 correctness of its replayed keygen merge is likewise a once-and-for-all lemma.

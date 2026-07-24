@@ -33,6 +33,7 @@ import Zcash.Snark.Soundness.OperationFixed
 import Zcash.Snark.Soundness.LookupSemantics
 import Zcash.Snark.Soundness.CircuitIntegration
 import Zcash.Circuits.Action.GateCoherence
+import Zcash.Circuits.Action.SelectorCoherence
 import Zcash.Snark.Soundness.TopLevelCircuit
 import Zcash.Snark.Soundness.TopLevelAssignment
 import Zcash.Snark.Soundness.TopLevelCoherence
@@ -713,6 +714,8 @@ assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.selector
 assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.complexSelector
 assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.selectorCreateGate
 assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.complexSelectorCreateGate
+assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.lookup
+assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.fromEmpty
 assert_axioms Halo2.extendCombination_length_conservation
 assert_axioms Halo2.mem_extendCombination_iff
 assert_axioms Halo2.extendCombination_remaining_length_le
