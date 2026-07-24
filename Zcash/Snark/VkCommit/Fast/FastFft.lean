@@ -27,8 +27,6 @@ parameter `smul : ℕ → G → G`. Both `bestFftGFast = bestFftGWith smulFast` 
 `smul` call), so the whole equality reduces to `funext`-ing `smulFast_eq`.
 -/
 
-noncomputable section
-
 open Zcash.Snark
 open Zcash.Snark.VkCommit
 open CompElliptic
