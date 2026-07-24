@@ -550,5 +550,87 @@ field inversion paid once (in the final `toAffine`) instead of once per addition
 theorem smulFast_eq (n : ℕ) (p : G) : smulFast n p = n • p := by
   rw [smulFast, (pnsmulFast_spec (valid_ofAffine p) n).2, toAffine_ofAffine]
 
+/-! ## Fast compiled spelling of `padd` (`@[csimp]`)
+
+Compiled generically, every field operation in `padd` is a boxed closure call through the
+Mathlib `CommRing (ZMod q)` dictionary projections (and each squaring a boxed `Monoid.npow`).
+`paddFast` is the same Renes–Costello–Batina closed forms over the raw `ℕ` representatives
+(`ZMod.val`), each multiplication one fused `(· * ·) % q` (a single pair of GMP calls), with the
+shared subproducts computed once. `padd_eq_paddFast` is a proven `@[csimp]` equality — the
+proven-equality counterpart of `implemented_by`, as for `Msm.evalNatFast` — so every compiled
+call site (the projective Pippenger interiors, the FFT's `smulFast` butterflies) runs the fast
+spelling while `padd` remains the statement surface and the kernel-level meaning. -/
+
+/-- The Vesta base-field order, the modulus of the raw-`ℕ` fast path (reducible so `ZMod qv`
+unifies with `Fq`). -/
+private abbrev qv : ℕ := CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD
+
+private theorem qv_pos : 0 < qv := by decide
+
+private instance : NeZero qv := ⟨qv_pos.ne'⟩
+
+/-- Fused modular addition on canonical representatives. -/
+@[inline] private def fadd (a b : ℕ) : ℕ := (a + b) % qv
+
+/-- Fused modular multiplication: one GMP multiply, one GMP mod. -/
+@[inline] private def fmul (a b : ℕ) : ℕ := (a * b) % qv
+
+/-- Modular subtraction without hypotheses: `a + (q − b mod q) ≡ a − b`. -/
+@[inline] private def fsub (a b : ℕ) : ℕ := (a + (qv - b % qv)) % qv
+
+private theorem cast_fadd (a b : ℕ) : ((fadd a b : ℕ) : Fq) = (a : Fq) + (b : Fq) := by
+  rw [fadd, ZMod.natCast_mod, Nat.cast_add]
+
+private theorem cast_fmul (a b : ℕ) : ((fmul a b : ℕ) : Fq) = (a : Fq) * (b : Fq) := by
+  rw [fmul, ZMod.natCast_mod, Nat.cast_mul]
+
+private theorem cast_fsub (a b : ℕ) : ((fsub a b : ℕ) : Fq) = (a : Fq) - (b : Fq) := by
+  rw [fsub, ZMod.natCast_mod, Nat.cast_add, Nat.cast_sub (Nat.mod_lt _ qv_pos).le,
+    ZMod.natCast_mod, ZMod.natCast_self]
+  ring
+
+private theorem cast_val (a : Fq) : ((ZMod.val a : ℕ) : Fq) = a :=
+  ZMod.natCast_rightInverse a
+
+/-- `padd` over raw `ℕ` representatives: same RCB closed forms, fused mul-mod, shared
+subproducts. Statement-surface code should keep calling `padd`; the compiler substitutes this
+body via `padd_eq_paddFast`. -/
+def paddFast (P Q : PVes) : PVes :=
+  let x1 := P.X.val; let y1 := P.Y.val; let z1 := P.Z.val
+  let x2 := Q.X.val; let y2 := Q.Y.val; let z2 := Q.Z.val
+  let y2sq := fmul y2 y2
+  let z2sq := fmul z2 z2
+  let x1y1 := fmul x1 y1
+  let y1sq := fmul y1 y1
+  let z1sq := fmul z1 z1
+  let x2y2 := fmul x2 y2
+  let y1z1 := fmul y1 z1
+  let x1z1 := fmul x1 z1
+  let y2z2 := fmul y2 z2
+  let x2z2 := fmul x2 z2
+  let x1sq := fmul x1 x1
+  let x2sq := fmul x2 x2
+  let X3 := fsub (fadd (fsub (fsub (fmul x1y1 y2sq) (fmul 15 (fmul x1y1 z2sq)))
+                    (fmul 30 (fmul x1z1 y2z2)))
+               (fsub (fmul y1sq x2y2) (fmul 15 (fmul z1sq x2y2))))
+              (fmul 30 (fmul y1z1 x2z2))
+  let Y3 := fsub (fadd (fadd (fmul y1sq y2sq) (fmul 45 (fmul x1sq x2z2)))
+                    (fmul 45 (fmul x1z1 x2sq)))
+              (fmul 225 (fmul z1sq z2sq))
+  let Z3 := fadd (fadd (fadd (fadd (fadd (fmul y1sq y2z2) (fmul y1z1 y2sq))
+                    (fmul 3 (fmul x1sq x2y2)))
+                    (fmul 3 (fmul x1y1 x2sq)))
+                    (fmul 15 (fmul y1z1 z2sq)))
+                    (fmul 15 (fmul z1sq y2z2))
+  ⟨(X3 : Fq), (Y3 : Fq), (Z3 : Fq)⟩
+
+/-- **The fast spelling is `padd`** — registered with `@[csimp]` so compiled code (including
+`native_decide` auxiliaries) runs the fused raw-`ℕ` form at every `padd` call site. -/
+@[csimp] theorem padd_eq_paddFast : @padd = @paddFast := by
+  funext P Q
+  simp only [padd, paddFast, PVes.mk.injEq]
+  refine ⟨?_, ?_, ?_⟩ <;>
+    simp only [cast_fadd, cast_fmul, cast_fsub, cast_val, Nat.cast_ofNat] <;> ring
+
 end PVes
 end Zcash.Snark.Keygen.Fast.Projective
