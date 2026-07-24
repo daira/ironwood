@@ -1,7 +1,7 @@
 name = "Zcash"
 version = "0.1.0"
 keywords = ["cryptography", "math", "protocols"]
-defaultTargets = ["Zcash", "FixtureCheck"]
+defaultTargets = ["Zcash", "FixtureCheck", "CircuitVkCheck"]
 
 [leanOptions]
 pp.unicode.fun = true # pretty-prints `fun a ↦ b`
@@ -39,3 +39,20 @@ name = "Zcash"
 [[lean_lib]]
 name = "FixtureCheck"
 globs = ["Zcash.Snark.Fixtures.+"]
+
+# The circuit-side VK matching: `Zcash/Circuits/Tests/TestVk*` compare the ported
+# `configure`/`synthesize` against CS and layout fixtures dumped from the actual Rust
+# circuit (see `Zcash/Circuits/Fixtures/`). Like `FixtureCheck`, these are `#eval`-checked
+# empirical bindings kept out of `lake build Zcash`, but compiled by plain `lake build`
+# (what CI runs) so a divergence between the Lean circuit model and the deployed VK fails
+# the build. Roots are enumerated (not a glob) to keep `BenchFixedBase` — a pure
+# kernel-`decide` benchmark — out of CI; the remaining test modules are reached through
+# these roots' imports.
+[[lean_lib]]
+name = "CircuitVkCheck"
+globs = ["Zcash.Circuits.Tests.TestVkMatchAction",
+         "Zcash.Circuits.Tests.TestVkMatchAdd",
+         "Zcash.Circuits.Tests.TestVkMatchMul",
+         "Zcash.Circuits.Tests.TestVkLayoutActionBase",
+         "Zcash.Circuits.Tests.TestVkLayoutAdd",
+         "Zcash.Circuits.Tests.TestVkLayoutMul"]
