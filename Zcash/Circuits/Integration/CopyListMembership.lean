@@ -230,6 +230,96 @@ def operationConstSites : Operations Fp → List (Cell × Fp)
   | .constrainInstance _ _ _ :: rest => operationConstSites rest
   | .loadTable _ _ :: rest => operationConstSites rest
 
+/-- A declared region constant copy occurs in the region's positional constants stream. -/
+theorem mem_constSites_of_declared_constant
+    (body : RegionOperations Fp) (cell : Cell) (value : Fp)
+    (hcopy :
+      (CopyEndpoint.cell cell, CopyEndpoint.constant value) ∈
+        regionDeclaredCopies body) :
+    (cell, value) ∈ constSites body := by
+  induction body with
+  | nil =>
+      simp [regionDeclaredCopies] at hcopy
+  | cons operation rest ih =>
+      cases operation with
+      | constrainConstant assignedCell assignedValue =>
+          rw [regionDeclaredCopies, constSites] at *
+          simp only [regionOperationDeclaredCopy?, List.mem_cons] at hcopy
+          rcases hcopy with heq | hrest
+          · obtain ⟨rfl, rfl⟩ := heq
+            exact List.mem_cons_self
+          · exact List.mem_cons_of_mem _ (ih hrest)
+      | constrainEqual left right =>
+          exact ih (by
+            simpa [regionDeclaredCopies, regionOperationDeclaredCopy?] using hcopy)
+      | constrainInstance copyCell column row =>
+          exact ih (by
+            simpa [regionDeclaredCopies, regionOperationDeclaredCopy?] using hcopy)
+      | assignAdvice column row value =>
+          exact ih (by
+            simpa [regionDeclaredCopies, regionOperationDeclaredCopy?] using hcopy)
+      | assignFixed column row value =>
+          exact ih (by
+            simpa [regionDeclaredCopies, regionOperationDeclaredCopy?] using hcopy)
+      | enableGate gate row =>
+          exact ih (by
+            simpa [regionDeclaredCopies, regionOperationDeclaredCopy?] using hcopy)
+      | enableLookup argument enabled row =>
+          exact ih (by
+            simpa [regionDeclaredCopies, regionOperationDeclaredCopy?] using hcopy)
+
+/-- A declared constant copy occurs in V1's whole-synthesis positional stream. -/
+theorem mem_operationConstSites_of_declared_constant
+    (ops : Operations Fp) (cell : Cell) (value : Fp)
+    (hcopy :
+      (CopyEndpoint.cell cell, CopyEndpoint.constant value) ∈
+        operationDeclaredCopies ops) :
+    (cell, value) ∈ operationConstSites ops := by
+  induction ops with
+  | nil =>
+      simp [operationDeclaredCopies] at hcopy
+  | cons operation rest ih =>
+      cases operation with
+      | region name body =>
+          rw [operationDeclaredCopies] at hcopy
+          rw [operationConstSites, List.mem_append]
+          rcases List.mem_append.mp hcopy with hbody | hrest
+          · exact Or.inl
+              (mem_constSites_of_declared_constant body cell value hbody)
+          · exact Or.inr (ih hrest)
+      | constrainInstance copyCell column row =>
+          rw [operationDeclaredCopies] at hcopy
+          rw [operationConstSites]
+          rcases List.mem_cons.mp hcopy with heq | hrest
+          · cases heq
+          · exact ih hrest
+      | loadTable table values =>
+          rw [operationDeclaredCopies] at hcopy
+          rw [operationConstSites]
+          exact ih hcopy
+
+/-- Every member of the left list occurs in its zip when the right list is long enough. -/
+theorem exists_mem_zip_of_mem_left
+    {α β : Type} (left : List α) (right : List β)
+    (hlen : left.length ≤ right.length)
+    {value : α} (hvalue : value ∈ left) :
+    ∃ paired, (value, paired) ∈ left.zip right := by
+  induction left generalizing right with
+  | nil =>
+      simp at hvalue
+  | cons head tail ih =>
+      cases right with
+      | nil =>
+          simp at hlen
+      | cons paired rest =>
+          rw [List.mem_cons] at hvalue
+          rcases hvalue with rfl | htail
+          · exact ⟨paired, List.mem_cons_self⟩
+          · have hlen' : tail.length ≤ rest.length := by
+              simpa using hlen
+            obtain ⟨other, hother⟩ := ih rest hlen' htail
+            exact ⟨other, List.mem_cons_of_mem _ hother⟩
+
 /-- The V1 constants stream in closed zipped form: every constant site across the
 stream pairs with its allocation-map entry, in region-then-body order. -/
 theorem V1_go_snd_eq (permCols : List ColRef) (starts : List ℕ)
