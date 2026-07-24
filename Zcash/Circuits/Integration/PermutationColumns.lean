@@ -204,6 +204,7 @@ theorem permCommon_eq_keygenSigmaColumn_or_relation
 
 end CanonicalMemberConstraintRelation
 
+omit [AddCommGroup G] [Module Fp G] [DecidableEq G] [Inhabited G] in
 /-- The σ side of a resolver permutation pair is the resolver at the chunk entry's
 common-polynomial index. -/
 theorem resolverPermutationPairs_getElem_snd
