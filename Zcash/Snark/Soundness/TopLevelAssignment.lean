@@ -10,11 +10,11 @@ A decoded verifier witness supplies commitment-ID-indexed column polynomials. A
 table-fit proof. This module joins those two circuit-independent views without
 accepting an arbitrary verifying key.
 
-The domain exponent and proof index remain protocol parameters: one top-level circuit
-is reused for every proof in a bundle, and indexing the assignment by its member
-prevents a bundle construction from silently selecting a different member's columns.
-Once `FormalCircuit.toVerifyingKey` is available, its field equations connect this
-assignment directly to the verifier-side resolver.
+The domain exponent comes from the top-level circuit's own keygen inputs. One
+top-level circuit is reused for every proof in a bundle, and indexing the assignment
+by its member prevents a bundle construction from silently selecting a different
+member's columns. Once `FormalCircuit.toVerifyingKey` is available, its field
+equations connect this assignment directly to the verifier-side resolver.
 -/
 
 namespace Zcash.Snark
@@ -27,15 +27,15 @@ set_option maxHeartbeats 20000
 /--
 The polynomial assignment for one member of a bundle of the same top-level circuit.
 
-The circuit and domain exponent are indices, not stored choices. In particular there
-is no caller-supplied `VerifyingKey`: the eventual decoded constructor uses the key
-derived from `top.formalCircuit`.
+The circuit is an index, not a stored choice. In particular there is no
+caller-supplied domain exponent or `VerifyingKey`: the eventual decoded constructor
+uses the key derived from `top.formalCircuit`.
 -/
 structure TopLevelAssignment
     {ConfigInput Config : Type} {Output : TypeMap}
     [CircuitType Output]
     (top : TopLevelCircuit Fp ConfigInput Config Output)
-    (k numProofs : ℕ) (proofIndex : Fin numProofs) where
+    (numProofs : ℕ) (proofIndex : Fin numProofs) where
   polynomial : CommitmentId → Polynomial Fp
 
 namespace TopLevelAssignment
@@ -50,20 +50,21 @@ abbrev Bundle
     {ConfigInput Config : Type} {Output : TypeMap}
     [CircuitType Output]
     (top : TopLevelCircuit Fp ConfigInput Config Output)
-    (k numProofs : ℕ) :=
+    (numProofs : ℕ) :=
   (proofIndex : Fin numProofs) →
-    TopLevelAssignment top k numProofs proofIndex
+    TopLevelAssignment top numProofs proofIndex
 
 variable
     {ConfigInput Config : Type} {Output : TypeMap}
     [CircuitType Output]
     {top : TopLevelCircuit Fp ConfigInput Config Output}
-    {k numProofs : ℕ} {proofIndex : Fin numProofs}
+    {numProofs : ℕ} {proofIndex : Fin numProofs}
 
 /-- The row-indexed Clean environment for this bundle member. -/
 def environment
-    (assignment : TopLevelAssignment top k numProofs proofIndex) : Environment Fp :=
-  polynomialEnvironment (Zcash.Bridge.omegaOf k) (top.usableRowsAt k)
+    (assignment : TopLevelAssignment top numProofs proofIndex) : Environment Fp :=
+  polynomialEnvironment (Zcash.Bridge.omegaOf top.domainExponent)
+    (top.usableRowsAt top.domainExponent)
     (fun column => assignment.polynomial (.fixedCol column))
     (fun column => assignment.polynomial
       (.adviceCol proofIndex column))
@@ -72,39 +73,40 @@ def environment
 
 /-- The assignment placed by the circuit's own V1 floor-plan. -/
 def placedEnvironment
-    (assignment : TopLevelAssignment top k numProofs proofIndex) :
+    (assignment : TopLevelAssignment top numProofs proofIndex) :
     Placed Environment Fp :=
   ⟨top.placement, assignment.environment⟩
 
 @[simp] theorem environment_usableRows
-    (assignment : TopLevelAssignment top k numProofs proofIndex) :
-    assignment.environment.usableRows = top.usableRowsAt k :=
+    (assignment : TopLevelAssignment top numProofs proofIndex) :
+    assignment.environment.usableRows =
+      top.usableRowsAt top.domainExponent :=
   rfl
 
 @[simp] theorem environment_fixed
-    (assignment : TopLevelAssignment top k numProofs proofIndex)
+    (assignment : TopLevelAssignment top numProofs proofIndex)
     (column : Column .fixed) (row : ℤ) :
     assignment.environment.fixed column row =
       (assignment.polynomial (.fixedCol column.index)).eval
-        (Zcash.Bridge.omegaOf k ^ row) :=
+        (Zcash.Bridge.omegaOf top.domainExponent ^ row) :=
   rfl
 
 @[simp] theorem environment_advice
-    (assignment : TopLevelAssignment top k numProofs proofIndex)
+    (assignment : TopLevelAssignment top numProofs proofIndex)
     (column : Column .advice) (row : ℤ) :
     assignment.environment.advice column row =
       (assignment.polynomial
         (.adviceCol proofIndex column.index)).eval
-          (Zcash.Bridge.omegaOf k ^ row) :=
+          (Zcash.Bridge.omegaOf top.domainExponent ^ row) :=
   rfl
 
 @[simp] theorem environment_instance
-    (assignment : TopLevelAssignment top k numProofs proofIndex)
+    (assignment : TopLevelAssignment top numProofs proofIndex)
     (column : Column .instance) (row : ℤ) :
     assignment.environment.inst column row =
       (assignment.polynomial
         (.instanceCol proofIndex column.index)).eval
-          (Zcash.Bridge.omegaOf k ^ row) :=
+          (Zcash.Bridge.omegaOf top.domainExponent ^ row) :=
   rfl
 
 /--
@@ -112,10 +114,10 @@ A fitting circuit domain supplies the synthesis well-formedness premise for this
 assignment's environment.
 -/
 theorem synthesisWellFormed
-    (assignment : TopLevelAssignment top k numProofs proofIndex)
-    (hfit : top.FitsAt k) :
+    (assignment : TopLevelAssignment top numProofs proofIndex)
+    (hfit : top.FitsAt top.domainExponent) :
     SynthesisWellFormed assignment.environment (top.operations 0) := by
-  apply top.synthesisWellFormed k assignment.environment
+  apply top.synthesisWellFormed top.domainExponent assignment.environment
   · rfl
   · exact hfit
 

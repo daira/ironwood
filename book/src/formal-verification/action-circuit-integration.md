@@ -443,18 +443,19 @@ The generic keygen layer now derives from the top-level circuit itself:
   configuration input and unit synthesis input;
 - `regionStarts` and `placement` run the V1 floor planner over the circuit's own
   operation stream;
-- `usedRows`, `blindingFactors`, `usableRowsAt`, and `FitsAt` state the keygen domain
+- `domainExponent` runs `minimalK` on the same configured CS and operation stream;
+  `usedRows`, `blindingFactors`, `usableRowsAt`, and `FitsAt` state the keygen domain
   fit entirely in circuit-owned terms;
 - `TopLevelCircuit.synthesisWellFormed` proves that a fitting domain supplies the
   table-fit contract required by top-level soundness.
 
 `TopLevelAssignment` is the corresponding verifier-to-Clean assignment shell. It is
 indexed by a bundle proof index and stores only the commitment-ID polynomial resolver;
-a family `∀ p, TopLevelAssignment top k numProofs p` therefore cannot silently read a
+a family `∀ p, TopLevelAssignment top numProofs p` therefore cannot silently read a
 different member's advice or instance columns. The top-level circuit supplies its
-operations, V1 placement, blinding rows, and usable-row fit; `Bridge.omegaOf k`
-supplies the protocol domain root. Consequently the type has no arbitrary
-`VerifyingKey` argument and
+operations, V1 placement, derived domain exponent, blinding rows, and usable-row fit;
+`Bridge.omegaOf top.domainExponent` supplies the protocol domain root. Consequently
+the type has neither an arbitrary domain nor a `VerifyingKey` argument, and
 `TopLevelAssignment.synthesisWellFormed` discharges the layout premise directly from
 `TopLevelCircuit.FitsAt k`.
 
@@ -543,8 +544,8 @@ Clean assignment per sub-proof. The shared fixed columns and VK are common, whil
 advice/instance columns and protocol statements are per Action. The final conclusion
 should quantify over or return the high-level statement for every supplied Action.
 
-`TopLevelAssignment.Bundle top k numProofs` is the dependent family
-`∀ p, TopLevelAssignment top k numProofs p`, so each member is forced to resolve the
+`TopLevelAssignment.Bundle top numProofs` is the dependent family
+`∀ p, TopLevelAssignment top numProofs p`, so each member is forced to resolve the
 columns named by its own index. `Action.BundleStatement G B inputs` is the matching
 external conclusion `∀ p, Action.Statement G B (inputs p)`. No separate monolithic
 bundle witness is required: fixed columns and the circuit-derived VK remain shared,

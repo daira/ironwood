@@ -99,6 +99,10 @@ def placement (self : TopLevelCircuit F ConfigInput Config Output) :
 def usedRows (self : TopLevelCircuit F ConfigInput Config Output) : ℕ :=
   Halo2.usedRows (self.operations 0)
 
+/-- The smallest keygen domain exponent derived from this circuit's CS and operations. -/
+def domainExponent (self : TopLevelCircuit F ConfigInput Config Output) : ℕ :=
+  Halo2.minimalK self.constraintSystem (self.operations 0)
+
 /-- The blinding-row count derived from the circuit's own configure run. -/
 def blindingFactors (self : TopLevelCircuit F ConfigInput Config Output) : ℕ :=
   self.constraintSystem.blindingFactors

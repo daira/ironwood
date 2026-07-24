@@ -27,21 +27,23 @@ theorem actionPublicInputs_of_instanceRowPolynomial
     {TopConfigInput TopConfig : Type} {Output : TypeMap}
     [CircuitType Output]
     {top : TopLevelCircuit Fp TopConfigInput TopConfig Output}
-    {k numProofs : ℕ} {proofIndex : Fin numProofs}
-    (assignment : TopLevelAssignment top k numProofs proofIndex)
+    {numProofs : ℕ} {proofIndex : Fin numProofs}
+    (assignment : TopLevelAssignment top numProofs proofIndex)
     (cfg : Config) (inputs : PublicInputs)
-    (hsize : 10 ≤ 2 ^ k)
+    (hsize : 10 ≤ 2 ^ top.domainExponent)
     (hpoly : assignment.polynomial
         (.instanceCol proofIndex cfg.primary.index) =
-      instanceRowPolynomial (2 ^ k) (Zcash.Bridge.omegaOf k) inputs.rows)
+      instanceRowPolynomial (2 ^ top.domainExponent)
+        (Zcash.Bridge.omegaOf top.domainExponent) inputs.rows)
     (hrows : Function.Injective
-      fun i : Fin (2 ^ k) => Zcash.Bridge.omegaOf k ^ (i : ℕ)) :
+      fun i : Fin (2 ^ top.domainExponent) =>
+        Zcash.Bridge.omegaOf top.domainExponent ^ (i : ℕ)) :
     PublicInputs.ofEnvironment cfg
       assignment.environment = inputs := by
   have hread (row : Fin 10) :
       assignment.environment.inst cfg.primary (row : ℤ) =
         inputs.rows.getD (row : ℕ) 0 := by
-    let domainRow : Fin (2 ^ k) :=
+    let domainRow : Fin (2 ^ top.domainExponent) :=
       ⟨row, lt_of_lt_of_le row.isLt hsize⟩
     rw [TopLevelAssignment.environment_instance, hpoly]
     simpa only [domainRow] using instanceRowPolynomial_eval hrows domainRow
