@@ -1715,7 +1715,7 @@ theorem instance_query_mem_assembleQueries [DecidableEq G] [Inhabited G] {shape 
       q.commId = CommitmentId.instanceCol pi (vk.instanceQueryLayout.getD j (0, 0)).1 ∧
       q.point = rotateOmega vk.omega ch.x (vk.instanceQueryLayout.getD j (0, 0)).2 := by
   obtain ⟨q, hqmem, hqid, hqpt⟩ := columnQueries_layout_mem (k' := shape.k) vk.omega ch.x
-    (vk.instanceCommitment pi) (CommitmentId.instanceCol pi) vk.instanceQueryLayout
+    (instanceCommitment pi) (CommitmentId.instanceCol pi) vk.instanceQueryLayout
     (List.ofFn (ps.instanceEvals pi)) hjl hje
   refine ⟨q, ?_, hqid, hqpt⟩
   simp only [assembleQueries]

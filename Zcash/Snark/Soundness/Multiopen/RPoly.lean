@@ -74,7 +74,7 @@ theorem lagrangePoly_eval_node {points evals : List Fp}
 interpolant's evaluation at `x`, for pairwise-distinct nodes. Stepped through in the body: the
 outer fold is the basis-weighted sum, each inner guarded fold the evaluated Lagrange basis. -/
 theorem lagrangePoly_eval {points evals : List Fp}
-    (hdist : Function.Injective (fun i : Fin points.length => points[i])) (x : Fp) :
+    (_hdist : Function.Injective (fun i : Fin points.length => points[i])) (x : Fp) :
     (lagrangePoly points evals).eval x = lagrangeEval x points evals := by
   classical
   -- The deployed fold, as a range-indexed sum of guarded products.
@@ -182,7 +182,7 @@ theorem coeffs_zero_of_power_sum_vanishes {n : ℕ} (c : ℕ → Fp)
   have hdeg : P.natDegree ≤ n - 1 := by
     rw [hPdef, Polynomial.natDegree_le_iff_coeff_eq_zero]
     intro m hm
-    rw [Polynomial.finset_sum_coeff]
+    rw [Polynomial.finsetSum_coeff]
     refine Finset.sum_eq_zero (fun j hj => ?_)
     simp only [Finset.mem_range] at hj
     rw [Polynomial.coeff_C_mul, Polynomial.coeff_X_pow, if_neg (by omega), mul_zero]
@@ -194,7 +194,7 @@ theorem coeffs_zero_of_power_sum_vanishes {n : ℕ} (c : ℕ → Fp)
     rw [← hvanish (Fin.cast hcast r)]
     exact Finset.sum_congr rfl (fun j _ => by ring)
   have hcoeff : P.coeff i = c i := by
-    rw [hPdef, Polynomial.finset_sum_coeff, Finset.sum_eq_single (i : ℕ)]
+    rw [hPdef, Polynomial.finsetSum_coeff, Finset.sum_eq_single (i : ℕ)]
     · rw [Polynomial.coeff_C_mul, Polynomial.coeff_X_pow, if_pos rfl, mul_one]
     · intro j _ hji
       rw [Polynomial.coeff_C_mul, Polynomial.coeff_X_pow, if_neg (fun h => hji h.symm), mul_zero]
