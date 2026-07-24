@@ -583,6 +583,96 @@ theorem runAssembly_getPair {numCols n : ℕ}
   rw [replayKeygenPermutation_eq_foldl]
   exact (Sim.foldl copies (Sim.new numCols n)).map_eq c
 
+/-- A generated σ-table entry is the δ/ω name of the replayed permutation's image cell:
+the executable pipeline reads the assembly mapping at `(column, row)`, and the mapping's
+action is the abstract replay. -/
+theorem permPolysOf_getD_eq {k : ℕ} (cs : ConstraintSystem Fp) (ops : Operations Fp)
+    (copies' : List (FlatCell (Keygen.permColsOf cs).length (2 ^ k) ×
+      FlatCell (Keygen.permColsOf cs).length (2 ^ k)))
+    (hcopies : Zcash.Circuits.Fixtures.Layout.V1.copyList (Keygen.permColsOf cs)
+        (Halo2.FloorPlanner.V1.starts ops) ops
+        (Keygen.constantsOf cs ops) =
+      copies'.map fun p => (p.1.pair.1, p.1.pair.2, p.2.pair.1, p.2.pair.2))
+    (g : Fin (Keygen.permColsOf cs).length) (j : Fin (2 ^ k)) :
+    ((Keygen.permPolysOf k cs ops).getD (g : ℕ) []).getD (j : ℕ) 0 =
+      deltaFp ^ ((replayKeygenPermutation copies' (g, j)).1 : ℕ) *
+        omegaOf k ^ ((replayKeygenPermutation copies' (g, j)).2 : ℕ) := by
+  have hmap' : ((Zcash.Circuits.Fixtures.Layout.runAssembly (2 ^ k)
+      (Keygen.permColsOf cs).length (copies'.map fun p =>
+        (p.1.pair.1, p.1.pair.2, p.2.pair.1, p.2.pair.2)))[(g : ℕ)]!)[(j : ℕ)]! =
+      (replayKeygenPermutation copies' (g, j)).pair :=
+    Layout.Asm.runAssembly_getPair copies' (g, j)
+  simp only [Keygen.permPolysOf]
+  simp only [List.getD_eq_getElem?_getD, List.getElem?_map,
+    List.getElem?_range g.isLt, List.getElem?_range j.isLt,
+    Option.map_some, Option.getD_some]
+  rw [hcopies, hmap']
+  simp only [FlatCell.pair]
+  rw [Keygen.deltaPowersArr_getElem! _
+      (replayKeygenPermutation copies' (g, j)).1.isLt,
+    Keygen.omegaPowersArr_getElem! _
+      (replayKeygenPermutation copies' (g, j)).2.isLt]
+
+/-- **The σ-row name fact (`hval`), generically.** Reading the derived σ table at a
+cell's global column and row gives the identity name of the cell's image under the
+chunk-shaped replay — the exact premise of the σ-column identification. The chunk
+layout enters through `flatten` (cells against `(row, global column)` pairs) and its
+compatibility facts: the flattening preserves rows, and a cell's chunk/column recompose
+to its global column. -/
+theorem permPolysOf_getD_eq_chunkRowName {k : ℕ}
+    (cs : ConstraintSystem Fp) (ops : Operations Fp)
+    (copies' : List (FlatCell (Keygen.permColsOf cs).length (2 ^ k) ×
+      FlatCell (Keygen.permColsOf cs).length (2 ^ k)))
+    (hcopies : Zcash.Circuits.Fixtures.Layout.V1.copyList (Keygen.permColsOf cs)
+        (Halo2.FloorPlanner.V1.starts ops) ops
+        (Keygen.constantsOf cs ops) =
+      copies'.map fun p => (p.1.pair.1, p.1.pair.2, p.2.pair.1, p.2.pair.2))
+    {nc : ℕ} {width : ℕ → ℕ} (chunkLen : ℕ)
+    (flatten : ChunkCell nc (2 ^ k) width ≃
+      Fin (2 ^ k) × Fin (Keygen.permColsOf cs).length)
+    (hrow : ∀ rc : Fin (2 ^ k) × Fin (Keygen.permColsOf cs).length,
+      ((flatten.symm rc).2.1 : ℕ) = (rc.1 : ℕ))
+    (hcol : ∀ rc : Fin (2 ^ k) × Fin (Keygen.permColsOf cs).length,
+      ((flatten.symm rc).1 : ℕ) * chunkLen + ((flatten.symm rc).2.2 : ℕ) = (rc.2 : ℕ))
+    (chunk : Fin nc) (column : Fin (width chunk)) (i : Fin (2 ^ k)) :
+    ((Keygen.permPolysOf k cs ops).getD
+        ((flatten ⟨chunk, i, column⟩).2 : ℕ) []).getD (i : ℕ) 0 =
+      chunkRowName (omegaOf k) deltaFp chunkLen
+        ((chunkPermutationOfFlat flatten
+            ((Equiv.prodComm _ _).permCongr (replayKeygenPermutation copies'))
+          ⟨chunk, i, column⟩).1 : ℕ)
+        ((chunkPermutationOfFlat flatten
+            ((Equiv.prodComm _ _).permCongr (replayKeygenPermutation copies'))
+          ⟨chunk, i, column⟩).2.1 : ℕ)
+        ((chunkPermutationOfFlat flatten
+            ((Equiv.prodComm _ _).permCongr (replayKeygenPermutation copies'))
+          ⟨chunk, i, column⟩).2.2 : ℕ) := by
+  have hfst : (flatten ⟨chunk, i, column⟩).1 = i := by
+    have := hrow (flatten ⟨chunk, i, column⟩)
+    rw [Equiv.symm_apply_apply] at this
+    exact (Fin.ext this).symm
+  -- the image cell under the chunk-shaped replay
+  set fs := chunkPermutationOfFlat flatten
+    ((Equiv.prodComm _ _).permCongr (replayKeygenPermutation copies'))
+    ⟨chunk, i, column⟩ with hfs
+  -- its flat form: the replay image of `(global column, row)`, coordinates swapped
+  have hfsflat : fs = flatten.symm
+      (((replayKeygenPermutation copies'
+          ((flatten ⟨chunk, i, column⟩).2, (flatten ⟨chunk, i, column⟩).1)).2,
+        (replayKeygenPermutation copies'
+          ((flatten ⟨chunk, i, column⟩).2, (flatten ⟨chunk, i, column⟩).1)).1)) := by
+    rw [hfs, chunkPermutationOfFlat_apply]
+    rfl
+  have hentry := permPolysOf_getD_eq cs ops copies' hcopies
+    (flatten ⟨chunk, i, column⟩).2 i
+  rw [show ((flatten ⟨chunk, i, column⟩).2, i) =
+      ((flatten ⟨chunk, i, column⟩).2, (flatten ⟨chunk, i, column⟩).1) by
+    rw [hfst]] at hentry
+  rw [hentry, chunkRowName, rowName]
+  rw [hfsflat]
+  rw [hrow, hcol]
+  ring
+
 end Layout.Asm
 
 end Zcash.Snark
