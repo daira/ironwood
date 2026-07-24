@@ -239,36 +239,48 @@ def new (n numCols : ℕ) : Asm where
 @[inline] def setNat (a : Array (Array ℕ)) (p : ℕ × ℕ) (v : ℕ) : Array (Array ℕ) :=
   a.modify p.1 (·.set! p.2 v)
 
-/-- `Assembly::copy` over a permutation-column-indexed cell pair, with `n` bounding the
-cycle walk (a cycle has ≤ `n·numCols` cells; `n` alone suffices since one column's walk
-never exceeds `n` distinct rows before closing — but we bound generously by the copy count
-in the caller). Here we bound the walk by `fuel`. -/
-def copy (a : Asm) (fuel : ℕ) (lc lr rc rr : ℕ) : Asm := Id.run do
-  let mut a := a
-  let mut leftCycle := getPair a.aux (lc, lr)
-  let mut rightCycle := getPair a.aux (rc, rr)
-  if leftCycle == rightCycle then return a
-  if getNat a.sizes leftCycle < getNat a.sizes rightCycle then
-    let t := leftCycle; leftCycle := rightCycle; rightCycle := t
-  -- sizes[leftCycle] += sizes[rightCycle]
-  a := { a with sizes := setNat a.sizes leftCycle (getNat a.sizes leftCycle + getNat a.sizes rightCycle) }
-  -- walk the right cycle, re-pointing aux to leftCycle (do-while: at least `rightCycle`)
-  let mut i := rightCycle
-  for _ in [0:fuel] do
-    a := { a with aux := setPair a.aux i leftCycle }
-    i := getPair a.mapping i
-    if i == rightCycle then break
-  -- swap mapping[lc][lr] and mapping[rc][rr]
-  let tmp := getPair a.mapping (lc, lr)
-  a := { a with mapping := setPair a.mapping (lc, lr) (getPair a.mapping (rc, rr)) }
-  a := { a with mapping := setPair a.mapping (rc, rr) tmp }
-  return a
+/-- Re-point the `aux` representative of every cell on the `mapping`-walk from `i` to
+`tgt`, stopping once the walk returns to `stop` (Rust's do-while over the merged-in
+cycle: the first visited cell IS `stop`, so it is re-pointed before the return test).
+Structurally fuel-recursive — iteration-for-iteration the `for`-loop it replaces — so
+proofs can follow the walk directly; callers pass fuel covering any cycle length. -/
+def repoint (a : Asm) : ℕ → (ℕ × ℕ) → (ℕ × ℕ) → (ℕ × ℕ) → Asm
+  | 0, _, _, _ => a
+  | fuel + 1, i, tgt, stop =>
+      let a' := { a with aux := setPair a.aux i tgt }
+      let next := getPair a.mapping i
+      if next == stop then a' else a'.repoint fuel next tgt stop
+
+/-- `Assembly::copy` over a permutation-column-indexed cell pair, with `fuel` bounding
+the cycle walk (a cycle has ≤ `n·numCols` cells; the caller passes exactly that). Plain
+lets and a recursive walk instead of Rust's mutation, so the merge is provable against
+the abstract swap-composition replay (`replayKeygenPermutation`). -/
+def copy (a : Asm) (fuel : ℕ) (lc lr rc rr : ℕ) : Asm :=
+  let leftRep := getPair a.aux (lc, lr)
+  let rightRep := getPair a.aux (rc, rr)
+  if leftRep == rightRep then a
+  else
+    -- the size comparison decides which representative survives the merge
+    let smaller := getNat a.sizes leftRep < getNat a.sizes rightRep
+    let leftCycle := if smaller then rightRep else leftRep
+    let rightCycle := if smaller then leftRep else rightRep
+    -- sizes[leftCycle] += sizes[rightCycle]
+    let a := { a with sizes := setNat a.sizes leftCycle (getNat a.sizes leftCycle + getNat a.sizes rightCycle) }
+    -- walk the right cycle, re-pointing aux to leftCycle (do-while: at least `rightCycle`)
+    let a := a.repoint fuel rightCycle leftCycle rightCycle
+    -- swap mapping[lc][lr] and mapping[rc][rr]
+    let tmp := getPair a.mapping (lc, lr)
+    let a := { a with mapping := setPair a.mapping (lc, lr) (getPair a.mapping (rc, rr)) }
+    { a with mapping := setPair a.mapping (rc, rr) tmp }
 
 end Asm
 
-/-- Replay the whole copy list through the keygen `Assembly`, returning the final `mapping`. -/
+/-- Replay the whole copy list through the keygen `Assembly`, returning the final `mapping`.
+The walk fuel is `n * numCols` — an upper bound on any cycle's length (a cycle visits each
+cell at most once), so every `repoint` walk completes exactly as Rust's unbounded do-while. -/
 def runAssembly (n numCols : ℕ) (copies : List (ℕ × ℕ × ℕ × ℕ)) : Array (Array (ℕ × ℕ)) :=
-  (copies.foldl (fun a (lc, lr, rc, rr) => a.copy n lc lr rc rr) (Asm.new n numCols)).mapping
+  (copies.foldl (fun a (lc, lr, rc, rr) => a.copy (n * numCols) lc lr rc rr)
+    (Asm.new n numCols)).mapping
 
 /-- Sparse σ entries `(col, row, col', row')` where `mapping[col][row] ≠ (col, row)`, in
 `(col, row)` order (col-major) — the fixture's sorting. -/
