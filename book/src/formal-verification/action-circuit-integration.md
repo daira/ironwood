@@ -995,6 +995,13 @@ duplicate-query rejection directly from `DeployedAccepts`.
 `CanonicalMemberConstraintRelation.ofAcceptedCircuitSat` uses those facts to turn
 satisfaction of the accepted run's canonical decoded-member model into the exact
 relation consumed by circuit integration.
+`AcceptedModelClaimedEvaluations` is the corresponding verifier-native node-binding
+fingerprint: it states once that the canonical model's fixed/advice/instance,
+permutation, lookup, and row-selector polynomials evaluate to the accepted proof
+claims at `x`. `acceptedModelCircuitSat_or_relation` feeds that package to the
+deployed quotient-member theorem and returns satisfaction of the same canonical
+model, or the shared augmented commitment relation. The terminal no longer needs to
+choose unrelated advice and instance decoder functions.
 `ActionInstanceCommitment.actionBundleStatement_or_relation_of_acceptedCircuitSat`
 then constructs the concrete Action bundle statement from that satisfaction result,
 with no free `S`, `hencodes`, relation, or operation-constraint family. Its remaining
