@@ -80,6 +80,111 @@ def topLevelSelectorEntries
   Layout.selectorFixed top.selectorMap top.selectorActivations
 
 /--
+**INTERIM full-circuit fallback.** Columns allocated by the pinned constraint
+system but absent from the final fixed-query layout.
+
+This finite diagnostic exists only to unblock concrete circuits while the query
+registration compiler is given a structural coverage theorem.  New generic
+interfaces should consume that theorem, not this computation.
+-/
+def interimFixedQueryCoverageFailures
+    (top : TopLevelCircuit Fp ConfigInput Config Output) : List ℕ :=
+  let pinned := top.pinnedCS
+  let queried := pinned.fixedQueryLayout.map Prod.fst
+  (List.range pinned.numFixedColumns).filter fun column =>
+    decide (column ∉ queried)
+
+/--
+An empty interim query-coverage diagnostic supplies the current
+`TopLevelFixedCoherence` coverage field.
+-/
+theorem fixedQueryCoverage_of_interimFailures_eq_nil
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (hfail : interimFixedQueryCoverageFailures top = []) :
+    ∀ column,
+      column < top.pinnedCS.numFixedColumns →
+        ∃ rotation, (column, rotation) ∈ top.pinnedCS.fixedQueryLayout := by
+  intro column hcolumn
+  have hnotFailure :
+      column ∉ interimFixedQueryCoverageFailures top := by
+    rw [hfail]
+    simp
+  have hcolumnMem :
+      column ∈ top.pinnedCS.fixedQueryLayout.map Prod.fst := by
+    by_contra hmissing
+    apply hnotFailure
+    simp [interimFixedQueryCoverageFailures, hcolumn, hmissing]
+  rw [List.mem_map] at hcolumnMem
+  obtain ⟨entry, hentry, hcolumnEntry⟩ := hcolumnMem
+  rcases entry with ⟨entryColumn, rotation⟩
+  simp only at hcolumnEntry
+  subst entryColumn
+  exact ⟨rotation, hentry⟩
+
+/--
+**INTERIM full-circuit fallback.** Required fixed/table/selector writes whose
+final dense keygen cell does not have the required bounds and value.
+
+The intended replacement follows the compiler pipeline:
+
+* V1 placement proves that different regions never overlap in cells;
+* region-local fixed writes are checked or proved within their small region;
+* table layout, constant allocation, and selector packing expose their own
+  collision and composition laws;
+* generic last-write/dedup/scatter theorems assemble those local facts.
+
+This diagnostic is deliberately named `interim` so a successful whole-circuit
+`native_decide` certificate cannot silently become the permanent architecture.
+-/
+def interimFixedRealizationFailures
+    (top : TopLevelCircuit Fp ConfigInput Config Output) :
+    List (ℕ × ℕ × ℕ) :=
+  let n := 2 ^ top.domainExponent
+  let numFixedColumns := top.pinnedCS.numFixedColumns
+  let rows := top.fixedRows
+  let required :=
+    topLevelFixedOperationEntries top ++ topLevelSelectorEntries top
+  required.filter fun entry =>
+    decide (¬ (
+      entry.2.1 < n ∧
+      entry.1 < numFixedColumns ∧
+      (rows.getD entry.1 []).getD entry.2.1 0 =
+        (entry.2.2 : Fp)))
+
+/--
+An empty interim realization diagnostic proves the exact sparse-to-dense fact
+used by `TopLevelFixedCoherence`.
+-/
+theorem fixedRowsRealize_of_interimFailures_eq_nil
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (hfail : interimFixedRealizationFailures top = []) :
+    ∀ column row value,
+      (column, row, value) ∈
+          (topLevelFixedOperationEntries top ++
+            topLevelSelectorEntries top) →
+        row < 2 ^ top.domainExponent ∧
+          column < top.pinnedCS.numFixedColumns ∧
+          (top.fixedRows.getD column []).getD row 0 =
+            (value : Fp) := by
+  intro column row value hentry
+  let property : Prop :=
+    row < 2 ^ top.domainExponent ∧
+      column < top.pinnedCS.numFixedColumns ∧
+      (top.fixedRows.getD column []).getD row 0 = (value : Fp)
+  have hnotFailure :
+      (column, row, value) ∉ interimFixedRealizationFailures top := by
+    rw [hfail]
+    simp
+  have hnotnot : ¬ ¬ property := by
+    intro hnot
+    apply hnotFailure
+    rw [interimFixedRealizationFailures, List.mem_filter]
+    refine ⟨hentry, ?_⟩
+    change decide (¬ property) = true
+    exact decide_eq_true hnot
+  exact Classical.not_not.mp hnotnot
+
+/--
 The fixed-row part of a top-level circuit's keygen boundary.
 
 This record contains no proof-dependent data. Its rows, commitments, and query

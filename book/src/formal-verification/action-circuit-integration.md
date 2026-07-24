@@ -744,24 +744,38 @@ layout correctness. Generic layout-to-assembly routing turns that static coverag
 into the actual verifier query for any proof string and challenges.
 `topLevelFixedConstraints_or_relation` uses that package to discharge
 both selector activations and all fixed/table operations for a resolver assignment.
-The remaining constructor work is to instantiate this package from the generic
-`TopLevelCircuit.toVerifierKey` pipeline. That work is now split deliberately:
+The constructor is now instantiated through the
+`TopLevelCircuit.toVerifierKey` pipeline:
 
 - the generic keygen half is complete on this branch: `denseColumns` is rectangular,
   each entry of `fixedCommitmentsOf` is the Lagrange commitment of the corresponding
   dense row, and `TopLevelFixedCoherence.ofKeygen` derives the rows, key,
   commitments, and fixed-query count;
-- the concrete Action/VK half may proceed independently: prove those two narrow
-  premises for the circuit-derived fixed layout and its final fixed query layouts.
+- `ActionFixedCoherence.ofKeygen` supplies the Action layout premises and leaves only
+  the URS's generic Lagrange-basis setup equations to its caller.
 
 The commitment proof is factored through a small one-row Lagrange-MSM theorem and
 explicit projection simp lemmas for `ofOperations`, `verifierKeyAt`, and
 `toVerifierKey`; downstream proofs do not unfold the VK constructor. Fixed keygen uses
 the complete executable derived Lagrange list through
 `LagrangeCommitmentKey.ofFullList`, so this constructor has no noncomputable
-interpolation fallback. The remaining sparse-to-dense premise is under design: the
-generic compiler theorem should account for last-write deduplication, leaving no
-large Action operation-list proof.
+interpolation fallback.
+
+The concrete sparse-to-dense and query-coverage premises are currently closed through
+prominently **interim** finite diagnostics.
+`interimFixedRealizationFailures` lists required fixed/table/selector writes whose
+final dense cell has the wrong bounds or value, and its generic soundness theorem
+turns an empty list into the exact realization fact.
+`ActionFixedCoherence.realizationFailures_eq_nil` certifies the Action list is empty.
+The companion query-coverage diagnostic closes the current all-fixed-columns
+coverage field.
+
+Their intended replacement follows the compiler pipeline: prove that V1 regions are
+disjoint in cells, prove small region-local write obligations, establish the
+table/constant/selector-packing collision and composition laws, and assemble them
+through generic last-write/dedup/scatter semantics. Query coverage should likewise
+follow query registration, preferably after weakening the coherence interface to
+request commitments only for columns actually consumed by the semantic bridge.
 
 The generic operation walk already proves that every extracted enabled gate occurs in
 the floor-planner activation table, and `selectorScale_ne_zero_of_enabledGate` turns
@@ -1138,10 +1152,10 @@ append-only merge flow.
 
 | Marker | Work package | Current state | Delivers / unblocks |
 |---|---|---|---|
-| **[ME] fixed compiler** | Derive fixed-write consistency from the complete layout/compiler pipeline where possible: use region cell-disjointness to remove cross-region collisions, decompose the remainder across region-local writes, tables, constants, and selector packing, and finish generic last-write/dedup/scatter semantics. Minimize fixed-query coverage to columns actually consumed by fixed/table/selector requirements. | Dense-row shape, full-list Lagrange commitment provenance, fixed-query count, and the generic `TopLevelFixedCoherence.ofKeygen` constructor are complete. The remaining design question is the precise compiler invariant and decomposition that imply final-write consistency. Any temporary whole-Action `native_decide` certificate must be marked interim, with this structural replacement recorded beside it. | A compiler-derived or compositionally certified coherence value, avoiding a giant permanent Action-specific sparse-layout certificate. |
+| **[ME] fixed compiler** | Replace the interim Action fixed-write and query-coverage diagnostics with compiler-derived laws: use region cell-disjointness to remove cross-region collisions, decompose the remainder across region-local writes, tables, constants, and selector packing, finish generic last-write/dedup/scatter semantics, and minimize query coverage to consumed columns. | Dense-row shape, full-list Lagrange commitment provenance, fixed-query count, and `TopLevelFixedCoherence.ofKeygen` are generic. Two prominently interim finite failure lists now certify Action sparse-to-dense realization and query coverage; `ActionFixedCoherence.ofKeygen` assembles them with the generic constructor. | A usable Action fixed-coherence constructor now; ultimately a compiler-derived replacement for its two interim certificates. |
 | **[ME] lookup join** | Consume the exact packed-selector realization produced by `TopLevelFixedCoherence`. | Correct-by-construction lookup lawfulness, generic routing/projection, activation-row fit, deployed-witness construction, bundle-wide bad-set aggregation, exact top-level `θ` pricing, and conversion of one bundle exclusions record into every per-proof witness condition are complete. This stream is blocked only on fixed coherence; once available, the join should be small. | The lookup field of `FullCircuitBridge` for every Action proof index. |
-| **[SEPARATE: copy]** | Discharge the three remaining leaf families of the landed Action copy adapter (`Integration/ActionCopyWitness.lean`): the declared-endpoint read equations (resolution coordinates and the permutation-column roundtrip), per-pair value agreement (the σ-semantics transport through the routing coherence), and the constant-copy reads (constants-column realization). Bounds, shape, and declared-copy linkage are proven (`actionCopyBounds`/`declared_shape`/`actionCopyLink`). | `actionCopyReplayWitness` now produces the terminal's `copies` argument at its exact types from those families, kind-dispatching constant copies through the allocation zip; generic replay correctness, σ rows, membership, membership-to-resolver-value equality, active-row restriction, chunk flattening, and the constant-stream characterization all sit behind named producing theorems. | The copy field of `FullCircuitBridge`. |
-| **[SEPARATE: Action fixed/VK]** | Prove final fixed-query coverage and sparse-to-dense scatter realization for the circuit-derived Action layout, then instantiate the generic coherence constructor. | Generic fixed/table and selector-realization semantics are complete. The shared generic stream is taking ownership of dense-row shape and fixed-commitment algebra, so this task need not reproduce them. | The fixed/table field and the exact packed-selector fact consumed by the lookup stream. |
+| **[ME] copy** | Discharge the three remaining leaf families of the landed Action copy adapter (`Integration/ActionCopyWitness.lean`): the declared-endpoint read equations (resolution coordinates and the permutation-column roundtrip), per-pair value agreement (the σ-semantics transport through the routing coherence), and the constant-copy reads (constants-column realization). Bounds, shape, and declared-copy linkage are proven (`actionCopyBounds`/`declared_shape`/`actionCopyLink`). | `actionCopyReplayWitness` now produces the terminal's `copies` argument at its exact types from those families, kind-dispatching constant copies through the allocation zip; generic replay correctness, σ rows, membership, membership-to-resolver-value equality, active-row restriction, chunk flattening, and the constant-stream characterization all sit behind named producing theorems. | The copy field of `FullCircuitBridge`. |
+| **[ME] Action fixed/VK** | Supply the generic Lagrange-basis setup equations to `ActionFixedCoherence.ofKeygen` and feed the resulting record into the terminal. | Action query coverage and sparse-to-dense realization are closed by explicitly interim diagnostics; the circuit/keygen constructor is complete. | The fixed/table field and the exact packed-selector fact consumed by the lookup stream. |
 | **[DONE: instance]** | No independent work remains in the deterministic instance stream. | `ActionInstanceCommitment.instanceKey` and `.commitment` derive the key and public commitment from the URS and ten Action rows; the binding-aware bundle endpoint consumes them internally and preserves only the shared nontrivial-relation branch. | Public-instance provenance is ready for the one-proof/bundle join. |
 | **[DONE: terminal API]** | Keep the canonical quotient terminal in polynomial language and perform the concrete join in `Circuits/Integration`. | `acceptedModelCircuitSat_or_relation_of_nodeBinding` reconstructs the complete accepted model and `actionBundleStatement_or_relation_of_acceptedNodeBinding` specializes it to the circuit-derived Action key and concrete bundle statement. Its signature has no free `S`/`hencodes`; applicability still awaits the concrete fixed/copy records. | The deterministic semantic function is ready to be instantiated and then invoked by the live probability capstone. |
 | **[SEPARATE: ledger]** | Continue [#98](https://github.com/zcash/ironwood/pull/98)'s `SpecPost`-to-ledger refinement. | Independent of polynomial reconstruction and Clean constraint satisfaction. | The games-facing conclusion that should follow after the circuit statement is recovered. |
