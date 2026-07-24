@@ -51,6 +51,7 @@ structure Note (G RHO PSI : Type*) where
   v : ℕ
   ρ : RHO
   ψ : PSI
+  deriving DecidableEq
 
 /-- The public inputs of an Action that the games consume: the anchor, the revealed
 nullifier, the randomized verification key, the net value commitment, and the new note

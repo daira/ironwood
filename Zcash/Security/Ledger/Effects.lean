@@ -28,12 +28,14 @@ commitment pins (up to `NoteCommitBreak`), and the unit of account for effects. 
 structure Opening (F G RHO PSI : Type*) where
   rcm : F
   note : Note G RHO PSI
+  deriving DecidableEq
 
 /-- An opening at a tree position: the leaf index for outputs, the witnessed path
 position for spends. -/
 structure PositionedOpening (F G RHO PSI : Type*) where
   pos : ℕ
   opening : Opening F G RHO PSI
+  deriving DecidableEq
 
 /-- All actions of a ledger, in order. Outputs, spends, and leaves are all per-action,
 so their index correspondences reduce to `List.map` facts over this list. -/
