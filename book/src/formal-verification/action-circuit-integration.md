@@ -120,12 +120,23 @@ Public-instance row provenance now has a canonical target as well.
 `instanceRowPolynomial` Lagrange-interpolates a zero-padded list of public values over
 the `ω` domain, `instanceRowPolynomial_eval` proves that it reads those rows back, and
 `resolverEnvironment_instance_of_rowPolynomial` transports a decoded-polynomial
-identity directly to the corresponding Clean instance reads. The remaining
-cryptographic step is to derive that polynomial identity from the verifier's
-statement-derived instance commitment, preserving the existing nontrivial-relation
-branch. `actionPublicInputs_of_instanceRowPolynomial` then performs the only
-Action-specific row mapping: the first ten reads of the configured primary column are
-exactly the structured `Action.PublicInputs`.
+identity directly to the corresponding Clean instance reads.
+
+The generic cryptographic step is now complete in `InstanceCommitment`.
+`LagrangeCommitmentKey` states the circuit-independent setup relation between each
+Lagrange generator and the monomial URS. `commitRows_eq` proves that Halo 2's
+Lagrange-basis public-instance commitment is the monomial commitment of the
+interpolated coefficient vector. Consequently,
+`coeffsToPoly_eq_instanceRowPolynomial_or_relation` proves that any augmented
+`(g, U, W)` opening of that commitment is the canonical zero-padded row polynomial,
+or computes the existing nontrivial-relation branch. At the deployed endpoint,
+`OpenedMemberDecode.commitment` supplies that opening for the routed instance member.
+
+`actionPublicInputs_of_instanceRowPolynomial` then performs the only Action-specific
+row mapping: the first ten reads of the configured primary column are exactly the
+structured `Action.PublicInputs`. The remaining concrete work is to identify the
+routed member as that primary instance column and provide the parameters'
+`LagrangeCommitmentKey` setup certificate.
 
 The concrete Action construction still has to prove that:
 
@@ -190,9 +201,10 @@ state that the actual `VerifyingKey` fields used by `Zcash.Snark` correspond to:
 #85 makes the correct architectural split: `VerifyingKey` contains circuit-fixed data,
 while `assembleQueries` receives per-proof instance commitments derived by
 `commitLagrange` from public inputs. Its captured-fixture theorem proves that derivation
-for the fixtures. The reusable theorem still needs to connect the actual Action public
-input vectors to that generic derivation and connect the remaining VK fields to #89's
-Clean configuration and layout.
+for the fixtures. The generic basis-conversion and binding theorem is now reusable;
+the concrete setup certificate still has to identify the exported Lagrange generators
+with the monomial URS relation. The remaining VK fields still need to be connected to
+#89's Clean configuration and layout.
 
 #30 currently carries `hadviceLayout`, `hinstanceLayout`, quotient routing, and related
 facts as capstone hypotheses. The VK theorem should discharge those facts rather than
@@ -524,8 +536,9 @@ whose public inputs were committed by the verifier.
    its resolver representation facts.
 4. Instantiate the generic decomposed bridge for one selected Action, adapt
    `TopLevelCircuit.Statement` to the external Action statement, and then generalize
-   it to every `Fin shape.numProofs`. The semantic adapter is complete; the decoded
-   instance-value provenance and concrete bridge witnesses remain.
+   it to every `Fin shape.numProofs`. The semantic adapter and generic decoded
+   instance-value provenance are complete; routed-member identification, the concrete
+   Lagrange-key certificate, and the remaining bridge witnesses remain.
 5. Supply the decoded/full-satisfaction data inside the computed experiment, close the
    remaining adaptive-coupling/`hExtract` obligation, instantiate the endpoint with
    `ActionStatement`, and add the theorem to the consolidated trust boundary.

@@ -32,6 +32,24 @@ theorem rowPolynomial_eval {n : ℕ}
     (rowPolynomial omega values).eval (omega ^ (i : ℕ)) = values i :=
   Lagrange.eval_interpolate_at_node _ hrows.injOn (Finset.mem_univ i)
 
+/-- A nonempty evaluation-domain row polynomial has degree below the domain size. -/
+theorem rowPolynomial_natDegree_lt {n : ℕ}
+    {omega : Fp} {values : Fin n → Fp}
+    (hrows : Function.Injective fun i : Fin n => omega ^ (i : ℕ))
+    (hn : 0 < n) :
+    (rowPolynomial omega values).natDegree < n := by
+  have hdegree :
+      (rowPolynomial omega values).degree < (n : WithBot ℕ) := by
+    have hinterpolate := Lagrange.degree_interpolate_lt
+      (s := (Finset.univ : Finset (Fin n)))
+      (v := fun i : Fin n => omega ^ (i : ℕ))
+      (r := values) hrows.injOn
+    simpa [rowPolynomial, Finset.card_univ, Fintype.card_fin] using hinterpolate
+  by_cases hzero : rowPolynomial omega values = 0
+  · rw [hzero, Polynomial.natDegree_zero]
+    exact hn
+  · exact (Polynomial.natDegree_lt_iff_degree_lt hzero).mpr hdegree
+
 /-- Zero-pad a finite public-instance column to the evaluation-domain size. -/
 def zeroPaddedRows {n : ℕ} (values : List Fp) : Fin n → Fp :=
   fun i => values.getD (i : ℕ) 0
