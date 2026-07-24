@@ -440,23 +440,27 @@ The generic gate and fixed/table operation layers are now implemented as well.
 `operationEnabledGates` extracts every placed activation and
 `gate_constraints_iff_enabledGates` proves exact equivalence with the gate family.
 `EnabledGate.PolynomialWitness` identifies each enabled Clean constraint with one
-member of #91's selected polynomial gate family; domain divisibility then proves the
-Clean constraint directly. `operationFixedRequirements` similarly extracts fixed
-assignments and table loads, with `fixed_constraints_iff_requirements` proving exact
-equivalence to the fixed family. `FullCircuitBridge.ofPolynomialWitnesses` assembles
-these gate/fixed witnesses with the existing copy and lookup witnesses.
+member of #91's selected polynomial gate family up to a certified nonzero scale;
+domain divisibility then proves the Clean constraint directly. The scale is essential:
+selector compression replaces an enabled selector by a root-finding expression whose
+value at its packed root is nonzero, but is not generally one.
+`operationFixedRequirements` similarly extracts fixed assignments and table loads,
+with `fixed_constraints_iff_requirements` proving exact equivalence to the fixed
+family. `FullCircuitBridge.ofPolynomialWitnesses` assembles these gate/fixed witnesses
+with the existing copy and lookup witnesses.
 
-The remaining gate work is therefore the circuit-specific packed-selector row algebra:
-every enabled gate must be registered in the constraint system, gate polynomials must
-be linear in their own selector and free of foreign selectors, co-packed selectors
-must never be co-enabled, and the activation table must match the packed fixed columns.
-Those side conditions are discharged for the Action instance computationally (the
-same `native_decide`-style work the VK-match and layout tests already do), not by an
-Action-specific proof walk. The
-`Fixtures.Layout` reconstruction is already generic over operations, so σ-cycle
-correctness of its replayed keygen merge is likewise a once-and-for-all lemma. A useful
-de-risking step is to instantiate the generic theorem first for the small `AddChip`
-fixtures before the full Action circuit.
+The remaining gate work is now a generic keygen-coherence boundary. `FormalCircuit`
+deliberately stores `configure` and `synthesize` as separate functions, so its type
+cannot rule out an ill-formed circuit that synthesizes an unregistered gate or lookup.
+A small predicate on `TopLevelCircuit` must state precisely that every emitted gate and
+lookup belongs to its configured constraint system. Given that predicate, the rest is
+generic: `toPinnedCS` derives placement and selector activations from the same operation
+stream; the selector-compression semantics supplies the nonzero scale at an enabled
+packed root; and the circuit-derived fixed columns supply that root value. No
+Action-specific placement or gate-polynomial witness should remain.
+
+The `Fixtures.Layout` reconstruction is already generic over operations, so σ-cycle
+correctness of its replayed keygen merge is likewise a once-and-for-all lemma.
 
 ### 5. Construct the Clean assignment
 
