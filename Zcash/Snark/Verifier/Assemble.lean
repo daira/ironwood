@@ -906,7 +906,7 @@ theorem constructIntermediateSets_unique_comm_routed {k : ℕ} {F G : Type*} [De
     have hjget : (cisPts queries)[cisPIdx queries q.point]? = some q.point := by
       simp only [cisPIdx]
       exact getElem?_findIdx_self (mem_dedup_foldl queries (·.point) [] hq)
-    simp [List.filterMap_cons, hjget]
+    simp [hjget]
   · show m < (((List.range (cisSetList queries).length).map fun si' =>
       (cisRouted queries si').map fun cd => (cd.2.1, cd.2.2.2)).getD si []).length
     rw [List.getD_eq_getElem?_getD, List.getElem?_map,
@@ -965,7 +965,7 @@ private theorem permutationQueries_commId_form {k : ℕ} {F G : Type*} [Field F]
   rcases hq with hq | hq
   · rw [List.mem_flatMap] at hq
     obtain ⟨s, _, hq⟩ := hq
-    simp only [List.mem_cons, List.mem_singleton, List.not_mem_nil, or_false] at hq
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hq
     rcases hq with rfl | rfl <;> exact ⟨s.2, rfl⟩
   · rw [List.mem_filterMap] at hq
     obtain ⟨s, _, hq⟩ := hq
@@ -979,7 +979,7 @@ private theorem lookupQueries_commId_form {k : ℕ} {F G : Type*} [Field F] {x x
     ∃ n, q.commId = mkProduct n ∨ q.commId = mkInput n ∨ q.commId = mkTable n := by
   rw [lookupQueries, List.mem_flatMap] at hq
   obtain ⟨l, _, hq⟩ := hq
-  simp only [List.mem_cons, List.mem_singleton, List.not_mem_nil, or_false] at hq
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hq
   rcases hq with rfl | rfl | rfl | rfl | rfl
   · exact ⟨l.2, Or.inl rfl⟩
   · exact ⟨l.2, Or.inr (Or.inl rfl)⟩

@@ -1088,7 +1088,7 @@ theorem completeness (G : Generators) (B : Bases) (cfg : Config) :
   obtain ⟨hTE, hT1, hT2, hTM1, hTM2, hFw, hSh, hBf, hMulE, hTL, hDist⟩ := _hE
   obtain ⟨hVcm, hVgd, hVak, hVpk, hVgdn, hVpkn, hWrcv, hWal, hWri, hWro, hWrn,
     hMag, hSign, hV64o, hV64n, ⟨mid, hMid, root, hRootP, hVanch⟩,
-    ⟨Bi, hBi, hPkd⟩, ⟨Bo, hBo, hCmo⟩, ⟨Bn, hBn, hCmx⟩,
+    ⟨Bi, hBi, hPkd⟩, ⟨Bo, hBo, hCmOld⟩, ⟨Bn, hBn, hCmx⟩,
     ⟨hCv1, hCv2⟩, hNf, hRk, hVms, hVes, hVeo⟩ := hPA
   -- Keep the historical local names in the detailed completeness proof, but bind
   -- them to the one fixed top-level witness program.
@@ -1492,7 +1492,7 @@ theorem completeness (G : Generators) (B : Bases) (cfg : Config) :
       rw [Specs.Sinsemilla.hashToPointB_inl_of_some
         (show hashToPoint G.S B.noteQ _ = some Bo from by
           exact hBo)] at hNCoDer
-      rw [hCmo]
+      rw [hCmOld]
       exact hNCoDer.2
     have hNCnval : (eval (⟨place, env.toEnvironment⟩ : Placed Environment Fp)
         ((NoteCommit.Main.circuit G B.noteCommitR B.noteQ

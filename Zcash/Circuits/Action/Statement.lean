@@ -107,9 +107,15 @@ identify `PublicInputs.ofEnvironment` with the values supplied to the verifier.
 -/
 theorem statement_of_topLevelStatement
     (G : Generators) (B : Bases)
+    (top : TopLevelCircuit Fp Unit Config unit)
+    (hformalCircuit : top.formalCircuit = circuit G B)
     (i : RegionIndex) (env : Placed Environment Fp)
-    (h : (topLevelCircuit G B).Statement i env) :
+    (h : top.Statement i env) :
     Statement G B (PublicInputs.ofEnvironment (configure G {}).1 env.env) := by
+  have hconfigInput : top.configInput = () :=
+    Subsingleton.elim _ _
+  simp only [TopLevelCircuit.Statement, TopLevelCircuit.config] at h
+  rw [hformalCircuit, hconfigInput] at h
   refine ⟨extractPost (configure G {}).1 () i env, rfl, ?_⟩
   exact h
 

@@ -35,7 +35,7 @@ theorem independentProductPMF_fiber_bound {A B : Type*} (p : PMF A) (q : PMF B)
         have hpre : (Prod.mk a) ⁻¹' {x : A × B | x.2 ∈ S x.1} = S a := by
           ext b; simp only [Set.mem_preimage, Set.mem_setOf_eq]
         rw [PMF.toOuterMeasure_map_apply, hpre]
-    _ ≤ ∑' a, p a * β := ENNReal.tsum_le_tsum fun a => mul_le_mul_left' (hS a) _
+    _ ≤ ∑' a, p a * β := ENNReal.tsum_le_tsum fun a => mul_le_mul_right (hS a) _
     _ = (∑' a, p a) * β := by rw [ENNReal.tsum_mul_right]
     _ = β := by rw [PMF.tsum_coe, one_mul]
 

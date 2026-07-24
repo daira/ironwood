@@ -517,7 +517,7 @@ theorem exists_injective_accepting_of_measure {α : Type*} [Fintype α] [Decidab
     ∃ ξ : Fin (n + 1) → α, Function.Injective ξ ∧ ξ 0 = x₀ ∧ ∀ r, acc (ξ r) := by
   have hcard : n < (Finset.univ.filter acc).card := by
     by_contra hle
-    push_neg at hle
+    push Not at hle
     have hmono : (PMF.uniformOfFintype α).toOuterMeasure (Finset.univ.filter acc)
         ≤ (n : ℝ≥0∞) / Fintype.card α := by
       rw [uniformOfFintype_toOuterMeasure_finset]

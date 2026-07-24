@@ -78,7 +78,7 @@ theorem node_binding_of_cleared_identities {numSets : ℕ}
   have hsum : ∀ s : Fin numSets, ∑ j ∈ Finset.range numSets, ζ s ^ j * c j = 0 := by
     intro s
     have h := congrArg (Polynomial.eval p) (hid s)
-    rw [eval_mul, vanishingProd_eval_mem hpall, mul_zero, eval_finset_sum] at h
+    rw [eval_mul, vanishingProd_eval_mem hpall, mul_zero, eval_finsetSum] at h
     have key : (∑ j : Fin numSets, ζ s ^ (j : ℕ) * c (j : ℕ)) = 0 := by
       rw [h]
       refine Finset.sum_congr rfl (fun j _ => ?_)
@@ -114,7 +114,7 @@ theorem cleared_identity_of_samples {numSets : ℕ}
     qCol * vanishingProd allPts
       = ∑ j : Fin numSets, C (a j) * ((col j - r j) * coProd allPts (pts j)) := by
   refine poly_eq_of_agree_on_family hdeg χ hχinj (fun t => ?_)
-  rw [eval_mul, hsamp t, eval_finset_sum, Finset.sum_mul]
+  rw [eval_mul, hsamp t, eval_finsetSum, Finset.sum_mul]
   refine Finset.sum_congr rfl (fun j _ => ?_)
   have hcd := clear_denom_eval (hsub j) (hnode t j) (x := χ t)
   rw [eval_mul, eval_C, eval_mul, ← hcd]

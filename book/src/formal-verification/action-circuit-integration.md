@@ -9,15 +9,12 @@ extract `ActionData` whose ten public fields equal that Action's instance column
 the complete §4.17.4 Action statement, and prove the post-NU6.3 cross-address
 condition.
 
-## Upstream open-PR landscape
+## Upstream PR landscape
 
-Four open pull requests on
-[`zcash/ironwood`](https://github.com/zcash/ironwood) carry most of the relevant
-implementation:
+Two open implementation pull requests on
+[`zcash/ironwood`](https://github.com/zcash/ironwood) carry the remaining verifier
+work:
 
-- [#89, Add Ironwood circuit formalization](https://github.com/zcash/ironwood/pull/89),
-  supplies the Action circuit, `soundnessPost`, and the executable Rust/Clean CS and
-  layout comparisons. It is the base of this integration.
 - [#30, Bind IPA witness to verifier columns](https://github.com/zcash/ironwood/pull/30),
   implements the deployed `x₄` and `x₁` decode, member-commitment and
   claimed-evaluation binding, and decoded-column capstone foundations.
@@ -25,16 +22,23 @@ implementation:
   extends #30's polynomial constraint model with the verifier's permutation and lookup
   expressions, splits the combined constraint check, reads the arguments row by row,
   telescopes their running products, and reaches copy-equality and lookup-inclusion
-  endpoints. It is a draft stacked on #30's `decode-witness` branch, not on `main`.
+  endpoints. It is stacked on #30's `decode-witness` branch, not on `main`.
+
+Three directly relevant PRs are now merged into `main`:
+
+- [#89, Add Ironwood circuit formalization](https://github.com/zcash/ironwood/pull/89)
+  supplies the Action circuit, `soundnessPost`, and the executable Rust/Clean CS and
+  layout comparisons. It was the original base of this integration.
 - [#85, Derive instance commitments](https://github.com/zcash/ironwood/pull/85),
   removes statement-derived instance commitments from the circuit-fixed VK, derives
   them from public inputs, and exercises the result with single- and multi-Action
   fixtures.
+- [#79](https://github.com/zcash/ironwood/pull/79) consolidates the checked
+  trust-boundary census into `Zcash/TrustBoundary.lean` and enforces explicit axiom
+  tiers through the `AxiomCheck` macros.
 
-Two administrative PRs identify the eventual landing surface:
-[#79](https://github.com/zcash/ironwood/pull/79) consolidates the checked trust-boundary
-census, and [#82](https://github.com/zcash/ironwood/pull/82) makes the proof map point at
-the current computed capstone. Neither proves a semantic bridge.
+The still-open [#82](https://github.com/zcash/ironwood/pull/82) makes the proof map
+point at the current computed capstone; it does not prove a semantic bridge.
 
 The integration branch combines these APIs while preserving #85's architectural
 split: the verifying key contains circuit-fixed data, and statement-derived instance
@@ -453,9 +457,12 @@ The small Action-specific semantic adapter is also complete.
 `Action.Statement` says that some extracted `ActionData` has exactly those public
 fields and satisfies the complete `SpecPost`. The theorem
 `Action.statement_of_topLevelStatement` specializes the generic top-level conclusion
-to that external statement. It does not repeat any circuit proof; the remaining
-public-input obligation is solely to identify the decoded instance polynomial's
-first ten domain values with the values supplied to the verifier.
+to that external statement. It is parameterized by a top-level circuit and the
+identity of its underlying Action `FormalCircuit`, rather than mentioning the
+concrete proof-carrying `Action.topLevelCircuit` record in its type. It does not
+repeat any circuit proof; the remaining public-input obligation is solely to
+identify the decoded instance polynomial's first ten domain values with the values
+supplied to the verifier.
 
 `Action.topLevelCircuit` instantiates that boundary. It projects the initial
 Sinsemilla generator-table load from the real `mainPost` operation stream and derives:
@@ -487,6 +494,14 @@ complete. The remaining assignment work is to connect the circuit-derived VK/dom
 to the resolver environment, then construct the gate/copy/lookup/fixed witnesses that
 feed `FullCircuitBridge.topLevelSoundness_or_bad`.
 
+After #79's merge, the generic circuit-integration declarations are checked in the
+single `Zcash/TrustBoundary.lean` census with explicit standard or Vesta-native axiom
+budgets. The concrete Action adapter is not independently claimed at the standard
+SNARK tier: mentioning the Action `FormalCircuit` intentionally reaches the circuit
+formalization's existing Pallas/native facts. The eventual end-to-end Action capstone
+must price that concrete circuit trust once, at the final boundary, rather than
+smuggling it into a supposedly generic adapter.
+
 Note that most of `EnvAssumptions` should come out of the transported `Constraints`
 themselves rather than separate VK-fixed-data facts: `GeneratorTableExact` is defined
 as the `Constraints` of the generator-table load, and the Action circuit's own
@@ -495,7 +510,7 @@ the same fixed cells the table-loaded and fixed-base assumptions read.
 
 ### 6. Generalize from one Action to an Orchard bundle
 
-**Status: verifier-side substrate is generic in #30/#91 and exercised by
+**Status: verifier-side substrate is generic in #30/#91 and exercised by the merged
 [#85](https://github.com/zcash/ironwood/pull/85); the semantic conclusion remains
 single-Action.**
 
@@ -516,7 +531,8 @@ single-index result into a family of Clean assignments and Action statements.
 **Status: substantial foundations in
 [#30](https://github.com/zcash/ironwood/pull/30),
 [#91](https://github.com/zcash/ironwood/pull/91), and
-[#85](https://github.com/zcash/ironwood/pull/85); no end-to-end Action theorem yet.**
+the merged [#85](https://github.com/zcash/ironwood/pull/85); no end-to-end Action
+theorem yet.**
 
 Once the direct semantic bridge exists, instantiate the Vesta constraint capstones
 with the concrete high-level Action statement. Then thread that same concrete
@@ -533,8 +549,8 @@ Action records is the next representation step.
 
 The computed endpoint still receives batch/decode/gate/layout data by hand, and its
 quantitative endpoint remains conditional on the family-wide
-`hExtract`/adaptive-coupling data-supply premise. #85 threads statement-derived
-instance commitments through the live verifier. #82 documents the computed capstone
+`hExtract`/adaptive-coupling data-supply premise. The merged #85 threads
+statement-derived instance commitments through the live verifier. #82 documents the computed capstone
 and #79 provides the eventual trust-boundary census location.
 
 The final theorem should say, modulo the explicitly priced Fiat–Shamir, polynomial
