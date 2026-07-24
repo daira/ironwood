@@ -115,6 +115,121 @@ structure AcceptedModelClaimedEvaluations
       (lagrangeBasis vk.omega vk.n vk.blindingFactors
         (ch.x ^ vk.n) ch.x).2.2
 
+namespace AcceptedModelClaimedEvaluations
+
+/--
+Construct the complete canonical fingerprint from uniform assembled-query
+openings, the three column-feed equations, and the standard permutation/domain
+facts.
+-/
+noncomputable def ofOpenings
+    {shape : Shape}
+    {urs : URS G} {hk : shape.k = urs.k}
+    {vk : VerifyingKey shape Fp G}
+    {instanceCommitment : Fin shape.numProofs → ℕ → G}
+    {ps : ProofString shape Fp G}
+    {ch : Challenges shape.k Fp}
+    {pU pW : Fp} {a : Fin (2 ^ urs.k) → Fp}
+    {batchOpenings :
+      OpenedBatchOpenings urs (evalVector urs.k ch.x3)
+        (x4BatchCommitments
+          (instanceCommitment := instanceCommitment)
+          urs hk vk ps ch)
+        (x4BatchEvals
+          (instanceCommitment := instanceCommitment)
+          vk ps ch)
+        a pU pW}
+    {memberDecode : ∀ i (hi : i <
+        deployedX4PairCount
+          (instanceCommitment := instanceCommitment)
+          vk ps ch),
+      OpenedMemberDecode
+        (instanceCommitment := instanceCommitment)
+        urs hk vk ps ch batchOpenings i hi}
+    {hblinding : vk.blindingFactors < vk.n}
+    (haccepts :
+      DeployedAccepts urs hk vk instanceCommitment ps ch)
+    (fixed : ∀ column,
+      ((CanonicalMemberConstraintRelation.acceptedModel
+        (memberDecode := memberDecode)
+        (hblinding := hblinding) haccepts).fixedCols column).eval ch.x =
+          finFn ps.fixedEvals column)
+    (advice : ∀ proofIndex column,
+      ((CanonicalMemberConstraintRelation.acceptedModel
+        (memberDecode := memberDecode)
+        (hblinding := hblinding) haccepts).adviceCols
+          proofIndex column).eval ch.x =
+        finFn (ps.adviceEvals proofIndex) column)
+    (instanceColumns : ∀ proofIndex column,
+      ((CanonicalMemberConstraintRelation.acceptedModel
+        (memberDecode := memberDecode)
+        (hblinding := hblinding) haccepts).instanceCols
+          proofIndex column).eval ch.x =
+        finFn (ps.instanceEvals proofIndex) column)
+    (hopen : ∀ query ∈
+      assembleQueries vk instanceCommitment ps ch,
+      (CanonicalMemberConstraintRelation.acceptedPolynomial
+        (memberDecode := memberDecode) haccepts query.commId).eval
+          query.point = query.eval)
+    (hpermutationWellFormed :
+      permutationLastEvalsWellFormed ps = true)
+    (hpermutationRouting :
+      PermutationChunkRoutingCoherent vk)
+    (hrows : Function.Injective
+      fun row : Fin vk.n => vk.omega ^ (row : ℕ))
+    (hroot : vk.omega ^ vk.n = 1)
+    (hnFp : (vk.n : Fp) ≠ 0)
+    (hxDomain : ch.x ^ vk.n ≠ 1) :
+    AcceptedModelClaimedEvaluations
+      (memberDecode := memberDecode)
+      (hblinding := hblinding) haccepts := by
+  let polynomial :=
+    CanonicalMemberConstraintRelation.acceptedPolynomial
+      (memberDecode := memberDecode) haccepts
+  let selectors :=
+    canonicalLagrangePolynomials vk.omega hblinding
+  have hselectorEvaluations :=
+    canonicalConstraintModelOfPermutationResolver_selectorEvaluations
+      vk ch polynomial hblinding hrows hroot hnFp hxDomain
+  refine
+    { fixed := fixed
+      advice := advice
+      «instance» := instanceColumns
+      sets := ?_
+      chunks := ?_
+      lookups := ?_
+      l0 := ?_
+      lLast := ?_
+      lBlind := ?_ }
+  · intro proofIndex
+    simpa [CanonicalMemberConstraintRelation.acceptedModel,
+      canonicalConstraintModelOfPermutationResolver,
+      constraintModelOfPermutationResolver,
+      constraintModelOfResolver, polynomial, selectors] using
+      eval_permutationSetsOfResolver
+        vk instanceCommitment ps ch polynomial
+        hpermutationWellFormed proofIndex hopen
+  · intro proofIndex
+    simpa [CanonicalMemberConstraintRelation.acceptedModel,
+      canonicalConstraintModelOfPermutationResolver,
+      constraintModelOfPermutationResolver,
+      constraintModelOfResolver, polynomial, selectors] using
+      eval_permutationChunksOfResolver
+        vk instanceCommitment ps ch polynomial
+        hpermutationWellFormed hpermutationRouting proofIndex hopen
+  · intro proofIndex
+    simpa [CanonicalMemberConstraintRelation.acceptedModel,
+      canonicalConstraintModelOfPermutationResolver,
+      constraintModelOfPermutationResolver,
+      constraintModelOfResolver, polynomial, selectors] using
+      eval_lookupEntriesOfResolver_of_assembleQueries
+        vk instanceCommitment ps ch polynomial proofIndex hopen
+  · exact congrArg Prod.fst hselectorEvaluations
+  · exact congrArg (fun values => values.2.1) hselectorEvaluations
+  · exact congrArg (fun values => values.2.2) hselectorEvaluations
+
+end AcceptedModelClaimedEvaluations
+
 /--
 The deployed quotient-member binding, instantiated at the accepted canonical
 decoded model, proves that model's complete circuit identity or returns the shared

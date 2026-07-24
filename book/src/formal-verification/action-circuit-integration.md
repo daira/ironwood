@@ -962,9 +962,10 @@ single-index result into a family of Clean assignments and Action statements.
 ### 7. Thread the bridge into the live capstone
 
 **Status: the canonical relation now reaches a concrete bundle-wide Action theorem,
-and the deterministic `hencodes` function from an accepted canonical constraint
-model is implemented. The live Vesta/Fiat–Shamir capstone still has to be instantiated
-with that function. Substantial
+the deterministic `hencodes` function from an accepted canonical constraint model is
+implemented, and the quotient terminal derives that model's complete claimed-
+evaluation fingerprint from uniform assembled-query openings. The live
+Vesta/Fiat–Shamir capstone still has to be instantiated with that function. Substantial
 foundations are in
 [#30](https://github.com/zcash/ironwood/pull/30),
 [#91](https://github.com/zcash/ironwood/pull/91), and
@@ -998,10 +999,22 @@ relation consumed by circuit integration.
 `AcceptedModelClaimedEvaluations` is the corresponding verifier-native node-binding
 fingerprint: it states once that the canonical model's fixed/advice/instance,
 permutation, lookup, and row-selector polynomials evaluate to the accepted proof
-claims at `x`. `acceptedModelCircuitSat_or_relation` feeds that package to the
-deployed quotient-member theorem and returns satisfaction of the same canonical
-model, or the shared augmented commitment relation. The terminal no longer needs to
-choose unrelated advice and instance decoder functions.
+claims at `x`.
+`AcceptedModelClaimedEvaluations.ofOpenings` now constructs that fingerprint rather
+than asking a terminal caller to restate its nine component families. Its uniform
+opening premise ranges over the actual `assembleQueries` result and uses the accepted
+member decoder's canonical `CommitmentId` resolver. From that one premise it derives
+the permutation-set, permutation-chunk, and lookup evaluations; the canonical
+Lagrange-polynomial theorem derives `l₀`, `l_last`, and `l_blind`. The only column
+feeds still stated separately are fixed, advice, and instance, alongside the standard
+permutation-routing and evaluation-domain facts. Those three feeds are the remaining
+direct connection to the decoded-column/node-binding layer, not a free circuit
+decoder.
+`acceptedModelCircuitSat_or_relation` feeds the resulting package to the deployed
+quotient-member theorem and returns satisfaction of the same canonical model, or the
+shared augmented commitment relation. The terminal no longer needs to choose
+unrelated advice and instance decoder functions or independently supply the derived
+permutation/lookup/selector evaluations.
 `ActionInstanceCommitment.actionBundleStatement_or_relation_of_acceptedCircuitSat`
 then constructs the concrete Action bundle statement from that satisfaction result,
 with no free `S`, `hencodes`, relation, or operation-constraint family. Its remaining
@@ -1036,8 +1049,14 @@ whose public inputs were committed by the verifier.
    `Fin shape.numProofs`. Instantiate those constructors with the incoming
    fixed-selector and copy records. The external `Action.Statement` and
    `Action.BundleStatement` adapters are already implemented.
-5. Replace the live computed capstone's free `S`/`hencodes` argument with that concrete
-   bundle bridge and add the resulting theorem to the consolidated trust boundary.
+5. **Canonical quotient terminal substantially complete:** construct
+   `AcceptedModelClaimedEvaluations` from uniform assembled-query openings, the three
+   decoded column feeds, and standard permutation/domain facts; then obtain canonical
+   model satisfaction or the shared relation. Compose this result with
+   `actionBundleStatement_or_relation_of_acceptedCircuitSat` once the concrete
+   fixed-selector and copy records are available.
+6. Replace the live computed capstone's free `S`/`hencodes` argument with that concrete
+   composition and add the resulting theorem to the consolidated trust boundary.
    The family-wide adaptive-coupling/`hExtract` supply problem is a distinct
    probability-layer task and may remain an explicitly conditional or residual term
    while the deterministic `hencodes` gap is closed.
@@ -1054,7 +1073,9 @@ append-only merge flow.
 | **[SEPARATE: copy]** | Finish the concrete endpoint encoding/read equations and connect constant sites to the closed V1 allocation zip, then feed those facts to `CopyReplayWitness.ofLinkedPairs`. | Generic replay correctness, σ rows, non-constant declared-copy membership, membership-to-resolver-value equality, active-row restriction, chunk flattening, constant-stream characterization, and the master witness constructor are complete. | The copy field of `FullCircuitBridge`. |
 | **[SEPARATE: fixed/VK]** | Instantiate `TopLevelFixedCoherence` from the circuit-derived dense fixed rows, sparse-to-dense scatter law, fixed-query coverage, and fixed commitments. | Generic fixed/table and selector-realization theorems are complete. | The fixed/table field and the exact packed-selector fact consumed by the lookup stream. |
 | **[DONE: instance]** | No independent work remains in the deterministic instance stream. | `ActionInstanceCommitment.instanceKey` and `.commitment` derive the key and public commitment from the URS and ten Action rows; the binding-aware bundle endpoint consumes them internally and preserves only the shared nontrivial-relation branch. | Public-instance provenance is ready for the one-proof/bundle join. |
+| **[ME: terminal]** | Finish the small composition from the canonical quotient terminal into the Action endpoint, keeping `Snark/Soundness` in polynomial language and the Clean adapter in `Circuits/Integration`. | `AcceptedModelClaimedEvaluations.ofOpenings` derives the permutation, lookup, and selector claims from one assembled-query opening family; `acceptedModelCircuitSat_or_relation` derives accepted canonical satisfaction or the shared relation; the Action endpoint already consumes that satisfaction. The concrete fixed/copy records are the only blockers to closing the success branch unconditionally. | The deterministic, non-free implementation to substitute for the live capstone's `hencodes`. |
 | **[SEPARATE: ledger]** | Continue [#98](https://github.com/zcash/ironwood/pull/98)'s `SpecPost`-to-ledger refinement. | Independent of polynomial reconstruction and Clean constraint satisfaction. | The games-facing conclusion that should follow after the circuit statement is recovered. |
+| **[SEPARATE: probability]** | Connect [#96](https://github.com/zcash/ironwood/pull/96)'s extraction/coupling result to the deterministic terminal and place the already-priced lookup/permutation exclusions at their transcript squeezes. | The deterministic terminal consumes decoded openings and explicit good-challenge facts; it does not solve the family-wide adaptive `hExtract` supply problem. | A quantitative live theorem around the deterministic #99 result, without reintroducing a free semantic encoding. |
 | **[JOIN] One proof** | Instantiate the endpoint with the incoming fixed-selector and copy records, then apply the instance-row and Action-statement adapters. | The generic constructor derives gate and lookup fields; the Action canonical endpoint now also consumes `CopyReplayWitness` directly rather than accepting free copy satisfaction. Public-instance provenance is concrete. | A concrete Action statement for one `Fin numProofs`, with only explicitly priced exceptional events. |
 | **[JOIN] Bundle and capstone** | Supply the concrete records to `actionBundleStatement_or_relation_of_acceptedCircuitSat` and use it as the live constraint terminal's `hencodes` function. | The generic finite-family join and deterministic accepted-model-to-Action function are complete; concrete records and the final terminal instantiation remain. #96 can meet it at the abstract extraction boundary. | #99's completion criterion. |
 
