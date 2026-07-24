@@ -713,7 +713,20 @@ into the actual verifier query for any proof string and challenges.
 `topLevelFixedConstraints_or_relation` uses that package to discharge
 both selector activations and all fixed/table operations for a resolver assignment.
 The remaining constructor work is to instantiate this package from the generic
-`TopLevelCircuit.toVerifierKey` pipeline.
+`TopLevelCircuit.toVerifierKey` pipeline. That work is now split deliberately:
+
+- the generic keygen half is in progress on this branch: prove that
+  `denseColumns` is rectangular, identify each entry of `fixedCommitmentsOf` with
+  the Lagrange commitment of the corresponding dense row, and provide a constructor
+  whose remaining premises are only query coverage and sparse-to-dense realization;
+- the concrete Action/VK half may proceed independently: prove those two narrow
+  premises for the circuit-derived fixed layout and its final fixed query layouts.
+
+The rectangularity lemmas are already implemented on this branch. The commitment
+identification theorem is the current proof-engineering task; it is being factored
+through a small generic Lagrange-commitment lemma so elaboration remains practical at
+the normal 20,000-heartbeat development budget. This is constructor support, not a
+new Action-side semantic obligation.
 
 The generic operation walk already proves that every extracted enabled gate occurs in
 the floor-planner activation table, and `selectorScale_ne_zero_of_enabledGate` turns
@@ -1055,11 +1068,15 @@ whose public inputs were committed by the verifier.
    polynomial row environment, gate witnesses, and lookup witnesses from
    `TopLevelCircuit`. The executable permutation assembly is now proved equal to the
    abstract copy replay, and the concrete Action gate-coherence package is complete.
-3. **Current parallel work:** instantiate Action `TopLevelFixedCoherence`; finish the
+3. **Current parallel work:** finish the generic constructor support for
+   `TopLevelFixedCoherence` (dense-row shape and commitment provenance); instantiate
+   its remaining query-coverage and sparse-scatter premises for Action; finish the
    copy endpoint/constants adapter on top of the master linked-pairs constructor; and
-   use the fixed/VK result to supply exact packed-selector projection. Lookup
-   configure lawfulness, activation-row fit, and bundle-wide challenge packaging,
-   plus the Lagrange/instance commitment stream, are complete.
+   use fixed coherence to supply exact packed-selector projection. Lookup configure
+   lawfulness, activation-row fit, and bundle-wide challenge packaging, plus the
+   public-instance Lagrange commitment stream, are complete. The fixed-column
+   commitment proof is analogous but is intentionally kept in the generic keygen
+   layer.
 4. **Generic join complete:** `FullCircuitBridge.ofTopLevelCanonical` assembles one
    proof index and `bundleTopLevelSoundness_or_bad` quantifies it over every
    `Fin shape.numProofs`. Instantiate those constructors with the incoming
@@ -1086,23 +1103,24 @@ append-only merge flow.
 
 | Marker | Work package | Current state | Delivers / unblocks |
 |---|---|---|---|
-| **[ME] Lookup** | Consume the exact packed-selector realization from the fixed/VK stream. | Correct-by-construction lookup lawfulness, generic routing/projection, activation-row fit, deployed-witness construction, bundle-wide bad-set aggregation, exact top-level `θ` pricing, and conversion of one bundle exclusions record into every per-proof witness condition are complete. This stream is now waiting only on fixed/VK selector realization. | The lookup field of `FullCircuitBridge` for every Action proof index. |
+| **[ME] fixed constructor** | Finish generic `TopLevelFixedCoherence` constructor support in keygen: dense-row shape, per-column Lagrange commitment provenance, and the smallest useful constructor interface. | `denseColumns_length`/`denseColumns_getD_length` provide the rectangularity facts; the per-column commitment theorem is being factored to avoid elaborating the whole keygen pipeline in one theorem. It should leave only query coverage and sparse-to-dense realization to the concrete circuit/VK certificate. | A stable seam at which the concrete Action fixed/VK work can supply its two static facts, without duplicating commitment algebra. |
+| **[ME] lookup join** | Consume the exact packed-selector realization produced by `TopLevelFixedCoherence`. | Correct-by-construction lookup lawfulness, generic routing/projection, activation-row fit, deployed-witness construction, bundle-wide bad-set aggregation, exact top-level `θ` pricing, and conversion of one bundle exclusions record into every per-proof witness condition are complete. This stream is blocked only on fixed coherence; once available, the join should be small. | The lookup field of `FullCircuitBridge` for every Action proof index. |
 | **[SEPARATE: copy]** | Finish the concrete endpoint encoding/read equations and connect constant sites to the closed V1 allocation zip, then feed those facts to `CopyReplayWitness.ofLinkedPairs`. | Generic replay correctness, σ rows, non-constant declared-copy membership, membership-to-resolver-value equality, active-row restriction, chunk flattening, constant-stream characterization, and the master witness constructor are complete. | The copy field of `FullCircuitBridge`. |
-| **[SEPARATE: fixed/VK]** | Instantiate `TopLevelFixedCoherence` from the circuit-derived dense fixed rows, sparse-to-dense scatter law, fixed-query coverage, and fixed commitments. | Generic fixed/table and selector-realization theorems are complete. | The fixed/table field and the exact packed-selector fact consumed by the lookup stream. |
+| **[SEPARATE: Action fixed/VK]** | Prove final fixed-query coverage and sparse-to-dense scatter realization for the circuit-derived Action layout, then instantiate the generic coherence constructor. | Generic fixed/table and selector-realization semantics are complete. The shared generic stream is taking ownership of dense-row shape and fixed-commitment algebra, so this task need not reproduce them. | The fixed/table field and the exact packed-selector fact consumed by the lookup stream. |
 | **[DONE: instance]** | No independent work remains in the deterministic instance stream. | `ActionInstanceCommitment.instanceKey` and `.commitment` derive the key and public commitment from the URS and ten Action rows; the binding-aware bundle endpoint consumes them internally and preserves only the shared nontrivial-relation branch. | Public-instance provenance is ready for the one-proof/bundle join. |
-| **[DONE: terminal]** | Keep the canonical quotient terminal in polynomial language and perform the concrete join in `Circuits/Integration`. | `acceptedModelCircuitSat_or_relation_of_nodeBinding` reconstructs the complete accepted model and `actionBundleStatement_or_relation_of_acceptedNodeBinding` specializes it to the circuit-derived Action key and concrete bundle statement. No free `S`/`hencodes` remains. | The deterministic semantic function is ready for the live probability capstone and the incoming fixed/copy records. |
+| **[DONE: terminal API]** | Keep the canonical quotient terminal in polynomial language and perform the concrete join in `Circuits/Integration`. | `acceptedModelCircuitSat_or_relation_of_nodeBinding` reconstructs the complete accepted model and `actionBundleStatement_or_relation_of_acceptedNodeBinding` specializes it to the circuit-derived Action key and concrete bundle statement. Its signature has no free `S`/`hencodes`; applicability still awaits the concrete fixed/copy records. | The deterministic semantic function is ready to be instantiated and then invoked by the live probability capstone. |
 | **[SEPARATE: ledger]** | Continue [#98](https://github.com/zcash/ironwood/pull/98)'s `SpecPost`-to-ledger refinement. | Independent of polynomial reconstruction and Clean constraint satisfaction. | The games-facing conclusion that should follow after the circuit statement is recovered. |
 | **[SEPARATE: probability]** | Connect [#96](https://github.com/zcash/ironwood/pull/96)'s extraction/coupling result to the deterministic terminal and place the already-priced lookup/permutation exclusions at their transcript squeezes. | The deterministic terminal consumes decoded openings and explicit good-challenge facts; it does not solve the family-wide adaptive `hExtract` supply problem. | A quantitative live theorem around the deterministic #99 result, without reintroducing a free semantic encoding. |
 | **[JOIN] One proof** | Instantiate the endpoint with the incoming fixed-selector and copy records, then apply the instance-row and Action-statement adapters. | The generic constructor derives gate and lookup fields; the Action canonical endpoint now also consumes `CopyReplayWitness` directly rather than accepting free copy satisfaction. Public-instance provenance is concrete. | A concrete Action statement for one `Fin numProofs`, with only explicitly priced exceptional events. |
-| **[JOIN] Bundle and capstone** | Supply the concrete records to `actionBundleStatement_or_relation_of_acceptedNodeBinding` and invoke it from the live extraction/probability theorem. | The generic finite-family join and deterministic accepted-node-binding-to-Action terminal are complete; concrete records and the quantitative invocation remain. #96 can meet it at the decoded node-binding boundary. | #99's completion criterion. |
+| **[JOIN] Bundle and capstone** | Supply the concrete records to `actionBundleStatement_or_relation_of_acceptedNodeBinding` and invoke it from the live extraction/probability theorem. | The generic finite-family join and deterministic accepted-node-binding-to-Action terminal are complete; concrete records and the quantitative invocation remain. This invocation—not merely the existence of a terminal whose own signature omits them—is where the live capstone's free `S`/`hencodes` are finally eliminated. #96 can meet it at the decoded node-binding boundary. | #99's completion criterion. |
 
 The shortest dependency chain to proving `hencodes` is therefore:
 
 ```text
-fixed/VK ─────> lookup ─┐
-copy adapter ───────────┼─> one-proof bridge ─> bundle bridge ─> replace hencodes
-instance (done) ────────┤
-gate (done) ────────────┘
+generic fixed constructor ─> Action fixed/VK ─> lookup ─┐
+copy adapter ────────────────────────────────────────────┼─> instantiate terminal
+instance (done) ─────────────────────────────────────────┤      ─> replace live hencodes
+gate (done) ─────────────────────────────────────────────┘
 ```
 
 The family-wide `hExtract`/adaptive-coupling premise is deliberately absent from this

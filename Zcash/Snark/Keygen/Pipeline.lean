@@ -144,14 +144,117 @@ def fixedSparseOf (selMap : Halo2.SelCompressMap) (k : ℕ)
       ++ Layout.regionAssignFixed (ZMod.val : Fp → ℕ) (FloorPlanner.V1.starts ops)
           (indexedRegions ops 0).1))
 
+/-- Apply one sparse fixed assignment to the dense column accumulator. -/
+def scatterDenseColumn (numCols : ℕ) (cols : Array (Array Fp))
+    (entry : ℕ × ℕ × ℕ) : Array (Array Fp) :=
+  let (column, row, value) := entry
+  if column < numCols then
+    cols.modify column fun values =>
+      values.set! row ((value : ℕ) : Fp)
+  else
+    cols
+
 /-- Scatter sparse `(col, row, natval)` triples into `numCols` dense length-`n` columns,
 default `0` (`domain.empty_lagrange`); the `natval`s are `ZMod.val`s coerced back to `Fp`. -/
-def denseColumns (n numCols : ℕ) (triples : List (ℕ × ℕ × ℕ)) : List (List Fp) := Id.run do
-  let mut cols : Array (Array Fp) := Array.replicate numCols (Array.replicate n 0)
-  for (c, r, v) in triples do
-    if c < numCols then
-      cols := cols.modify c (fun col => col.set! r ((v : ℕ) : Fp))
-  return cols.toList.map Array.toList
+def denseColumns (n numCols : ℕ)
+    (triples : List (ℕ × ℕ × ℕ)) : List (List Fp) :=
+  let initial : Array (Array Fp) :=
+    Array.replicate numCols (Array.replicate n 0)
+  (triples.foldl (scatterDenseColumn numCols) initial).toList.map
+    Array.toList
+
+/-- One scatter step preserves both the number of columns and every column's
+row count. -/
+private theorem scatterDenseColumn_sized
+    {n numCols : ℕ} {cols : Array (Array Fp)}
+    (hsize : cols.size = numCols)
+    (hrows : ∀ column (hcolumn : column < cols.size),
+      cols[column].size = n)
+    (entry : ℕ × ℕ × ℕ) :
+    let next := scatterDenseColumn numCols cols entry
+    next.size = numCols ∧
+      ∀ column (hcolumn : column < next.size),
+        next[column].size = n := by
+  rcases entry with ⟨column, rest⟩
+  rcases rest with ⟨row, value⟩
+  simp only [scatterDenseColumn]
+  split
+  next hcolumn =>
+    constructor
+    · simpa only [Array.size_modify] using hsize
+    · intro other hother
+      rw [Array.getElem_modify hother]
+      split
+      next heq =>
+        subst other
+        simp only [Array.size_set!]
+        exact hrows column (by simpa only [hsize] using hcolumn)
+      next hne =>
+        exact hrows other (by simpa using hother)
+  next _ =>
+    exact ⟨hsize, hrows⟩
+
+/-- Folding scatter over a rectangular accumulator preserves its shape. -/
+private theorem scatterDenseColumns_fold_sized
+    {n numCols : ℕ} (triples : List (ℕ × ℕ × ℕ))
+    {cols : Array (Array Fp)}
+    (hsize : cols.size = numCols)
+    (hrows : ∀ column (hcolumn : column < cols.size),
+      cols[column].size = n) :
+    let result := triples.foldl (scatterDenseColumn numCols) cols
+    result.size = numCols ∧
+      ∀ column (hcolumn : column < result.size),
+        result[column].size = n := by
+  induction triples generalizing cols with
+  | nil =>
+      exact ⟨hsize, hrows⟩
+  | cons entry rest ih =>
+      simp only [List.foldl_cons]
+      have hnext :=
+        scatterDenseColumn_sized hsize hrows entry
+      exact ih hnext.1 hnext.2
+
+/-- The dense scatter accumulator initialized by `denseColumns` is rectangular. -/
+private theorem denseColumns_fold_sized
+    (n numCols : ℕ) (triples : List (ℕ × ℕ × ℕ)) :
+    let initial : Array (Array Fp) :=
+      Array.replicate numCols (Array.replicate n 0)
+    let result := triples.foldl (scatterDenseColumn numCols) initial
+    result.size = numCols ∧
+      ∀ column (hcolumn : column < result.size),
+        result[column].size = n := by
+  apply scatterDenseColumns_fold_sized triples
+  · simp
+  · intro column hcolumn
+    simp
+
+/-- Dense fixed reconstruction emits exactly the requested number of columns. -/
+theorem denseColumns_length
+    (n numCols : ℕ) (triples : List (ℕ × ℕ × ℕ)) :
+    (denseColumns n numCols triples).length = numCols := by
+  let initial : Array (Array Fp) :=
+    Array.replicate numCols (Array.replicate n 0)
+  let result := triples.foldl (scatterDenseColumn numCols) initial
+  have hshape := denseColumns_fold_sized n numCols triples
+  simpa [denseColumns, initial, result] using hshape.1
+
+/-- Every in-range dense fixed column has exactly the requested row count. -/
+theorem denseColumns_getD_length
+    (n numCols : ℕ) (triples : List (ℕ × ℕ × ℕ))
+    (column : ℕ) (hcolumn : column < numCols) :
+    ((denseColumns n numCols triples).getD column []).length = n := by
+  let initial : Array (Array Fp) :=
+    Array.replicate numCols (Array.replicate n 0)
+  let result := triples.foldl (scatterDenseColumn numCols) initial
+  have hshape := denseColumns_fold_sized n numCols triples
+  have hresultColumn : column < result.size := by
+    rw [hshape.1]
+    exact hcolumn
+  rw [List.getD_eq_getElem _ _ (by
+    simpa only [denseColumns_length] using hcolumn)]
+  simp only [denseColumns, List.getElem_map,
+    Array.getElem_toList, Array.length_toList]
+  exact hshape.2 column hresultColumn
 
 /-- The derived fixed-column commitments — `commit_lagrange` of each dense fixed column
 with the default blind (`plonk/keygen.rs:230-240`, `keygen_vk`'s `fixed_commitments`). -/
