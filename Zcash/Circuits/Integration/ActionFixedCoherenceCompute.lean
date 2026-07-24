@@ -59,8 +59,7 @@ theorem realizationFailures_eq_nil :
 theorem realizes :
     ∀ column row value,
       (column, row, value) ∈
-          (topLevelFixedOperationEntries orchardActionTopLevelCircuit ++
-            topLevelSelectorEntries orchardActionTopLevelCircuit) →
+          topLevelRequiredFixedEntries orchardActionTopLevelCircuit →
         row < 2 ^ orchardActionTopLevelCircuit.domainExponent ∧
           column <
             orchardActionTopLevelCircuit.pinnedCS.numFixedColumns ∧

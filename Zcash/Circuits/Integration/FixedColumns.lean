@@ -79,6 +79,24 @@ def topLevelSelectorEntries
     List (ℕ × ℕ × ℕ) :=
   Layout.selectorFixed top.selectorMap top.selectorActivations
 
+/-- Fixed cells allocated for `constrainConstant` values by the V1 floor planner. -/
+def topLevelConstantEntries
+    (top : TopLevelCircuit Fp ConfigInput Config Output) :
+    List (ℕ × ℕ × ℕ) :=
+  Layout.constantsFixed
+    (Keygen.constantsOf top.constraintSystem (top.operations 0))
+
+/--
+Every sparse fixed write whose value is consumed by the semantic bridge:
+table/region assignments, allocated constants, and packed selectors.
+-/
+def topLevelRequiredFixedEntries
+    (top : TopLevelCircuit Fp ConfigInput Config Output) :
+    List (ℕ × ℕ × ℕ) :=
+  topLevelFixedOperationEntries top ++
+    topLevelConstantEntries top ++
+    topLevelSelectorEntries top
+
 /--
 **INTERIM full-circuit fallback.** Columns allocated by the pinned constraint
 system but absent from the final fixed-query layout.
@@ -142,8 +160,7 @@ def interimFixedRealizationFailures
   let n := 2 ^ top.domainExponent
   let numFixedColumns := top.pinnedCS.numFixedColumns
   let rows := top.fixedRows
-  let required :=
-    topLevelFixedOperationEntries top ++ topLevelSelectorEntries top
+  let required := topLevelRequiredFixedEntries top
   required.filter fun entry =>
     decide (¬ (
       entry.2.1 < n ∧
@@ -160,8 +177,7 @@ theorem fixedRowsRealize_of_interimFailures_eq_nil
     (hfail : interimFixedRealizationFailures top = []) :
     ∀ column row value,
       (column, row, value) ∈
-          (topLevelFixedOperationEntries top ++
-            topLevelSelectorEntries top) →
+          topLevelRequiredFixedEntries top →
         row < 2 ^ top.domainExponent ∧
           column < top.pinnedCS.numFixedColumns ∧
           (top.fixedRows.getD column []).getD row 0 =
@@ -214,8 +230,7 @@ structure TopLevelFixedCoherence
           (top.toVerifierKey pp urs).fixedQueryLayout
   realizes : ∀ column row value,
     (column, row, value) ∈
-        (topLevelFixedOperationEntries top ++
-          topLevelSelectorEntries top) →
+        topLevelRequiredFixedEntries top →
       row < (top.toVerifierKey pp urs).n ∧
         column < top.pinnedCS.numFixedColumns ∧
         (rows column).getD row 0 = (value : Fp)
@@ -293,8 +308,7 @@ def ofKeygen
             (top.toVerifierKey pp urs).fixedQueryLayout)
     (realizes : ∀ column row value,
       (column, row, value) ∈
-          (topLevelFixedOperationEntries top ++
-            topLevelSelectorEntries top) →
+          topLevelRequiredFixedEntries top →
         row < (top.toVerifierKey pp urs).n ∧
           column < top.pinnedCS.numFixedColumns ∧
           (top.fixedRows.getD column []).getD row 0 =
@@ -316,6 +330,58 @@ end TopLevelFixedCoherence
 
 omit [Module Fp G] [DecidableEq G] in
 /--
+One required sparse fixed entry reads back from its canonically bound dense-row
+polynomial, or the caller's shared exceptional branch fires.
+
+This is the pointwise form used by consumers such as constant-copy replay; the
+family theorem below merely applies it to selectors and fixed/table operations.
+-/
+theorem topLevelFixedEntryRead_or_bad
+    {ConfigInput Config : Type} {Output : TypeMap}
+    [CircuitType Output]
+    {top : TopLevelCircuit Fp ConfigInput Config Output}
+    {pp : Keygen.ProofParams} {urs : URS G}
+    (poly : CommitmentId → Polynomial Fp)
+    (rows : ℕ → List Fp)
+    (hrows : Function.Injective
+      fun i : Fin (2 ^ urs.k) =>
+        (top.toVerifierKey pp urs).omega ^ (i : ℕ))
+    (hn : (top.toVerifierKey pp urs).n = 2 ^ urs.k)
+    (realizes : ∀ column row value,
+      (column, row, value) ∈ topLevelRequiredFixedEntries top →
+        row < (top.toVerifierKey pp urs).n ∧
+          column < top.pinnedCS.numFixedColumns ∧
+          (rows column).getD row 0 = (value : Fp))
+    {Bad : Prop}
+    (binding : ∀ column,
+      column < top.pinnedCS.numFixedColumns →
+        poly (.fixedCol column) =
+            instanceRowPolynomial (2 ^ urs.k)
+              (top.toVerifierKey pp urs).omega (rows column) ∨
+          Bad)
+    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    {column row value : ℕ}
+    (hentry :
+      (column, row, value) ∈ topLevelRequiredFixedEntries top) :
+    (resolverEnvironment
+        (top.toVerifierKey pp urs) poly proofIndex
+        (top.usableRowsAt top.domainExponent)).fixed
+          ⟨column⟩ (row : ℤ) = (value : Fp) ∨
+      Bad := by
+  obtain ⟨hrow, hcolumn, hvalue⟩ :=
+    realizes column row value hentry
+  rcases binding column hcolumn with hpolyEq | hbad
+  · apply Or.inl
+    have hrow' : row < 2 ^ urs.k := by
+      rwa [← hn]
+    rw [resolverEnvironment_fixed, hpolyEq]
+    simpa using
+      (instanceRowPolynomial_eval hrows
+        ⟨row, hrow'⟩).trans hvalue
+  · exact Or.inr hbad
+
+omit [Module Fp G] [DecidableEq G] in
+/--
 Polynomial binding for every used fixed column supplies selector and fixed/table
 semantics. This lemma is independent of decoded-member provenance; callers choose
 the exceptional event carried by `binding`.
@@ -333,8 +399,7 @@ theorem topLevelFixedConstraints_or_bad
     (hn : (top.toVerifierKey pp urs).n = 2 ^ urs.k)
     (realizes : ∀ column row value,
       (column, row, value) ∈
-          (topLevelFixedOperationEntries top ++
-            topLevelSelectorEntries top) →
+          topLevelRequiredFixedEntries top →
         row < (top.toVerifierKey pp urs).n ∧
           column < top.pinnedCS.numFixedColumns ∧
           (rows column).getD row 0 = (value : Fp))
@@ -367,19 +432,13 @@ theorem topLevelFixedConstraints_or_bad
     have fixedRead :
         ∀ {column row value},
           (column, row, value) ∈
-              (topLevelFixedOperationEntries top ++
-                topLevelSelectorEntries top) →
+              topLevelRequiredFixedEntries top →
             environment.fixed ⟨column⟩ (row : ℤ) = (value : Fp) := by
       intro column row value hentry
-      obtain ⟨hrow, hcolumn, hvalue⟩ :=
-        realizes column row value hentry
-      have hpolyEq := (binding column hcolumn).resolve_right hbad
-      have hrow' : row < 2 ^ urs.k := by
-        rwa [← hn]
-      rw [resolverEnvironment_fixed, hpolyEq]
-      simpa using
-        (instanceRowPolynomial_eval hrows
-          ⟨row, hrow'⟩).trans hvalue
+      exact
+        (topLevelFixedEntryRead_or_bad
+          poly rows hrows hn realizes binding proofIndex hentry).resolve_right
+            hbad
     change
       SelectorActivationsRealized
           top.selectorMap top.selectorActivations environment ∧
@@ -389,12 +448,18 @@ theorem topLevelFixedConstraints_or_bad
     constructor
     · apply selectorActivationsRealized_of_selectorFixed
       intro column row value hentry
-      exact fixedRead (List.mem_append_right _ hentry)
+      apply fixedRead
+      change (column, row, value) ∈ topLevelSelectorEntries top at hentry
+      simp only [topLevelRequiredFixedEntries, List.mem_append]
+      exact Or.inr hentry
     · exact FixedLayout.constraints_of_entries
         top.regionStarts (top.usableRowsAt top.domainExponent)
         (top.operations 0) 0 environment rfl
-        (fun column row value hentry =>
-          fixedRead (List.mem_append_left _ hentry))
+        (fun column row value hentry => fixedRead (by
+          change
+            (column, row, value) ∈ topLevelFixedOperationEntries top at hentry
+          simp only [topLevelRequiredFixedEntries, List.mem_append]
+          exact Or.inl (Or.inl hentry)))
 
 namespace CanonicalMemberConstraintRelation
 
@@ -581,6 +646,76 @@ theorem topLevelFixedConstraints_or_relation
         exact fixedQuery_of_layout
           (top.toVerifierKey pp urs) instanceCommitment ps ch
           column rotation coherence.fixedQueryCount hlayout)
+
+/--
+Pointwise fixed-cell realization at the canonical decoded-member relation.
+Constants replay uses this theorem for the V1-allocated constants cells; selector
+and fixed/table family proofs use its bundled sibling above.
+-/
+theorem topLevelFixedEntryRead_or_relation
+    {ConfigInput Config : Type} {Output : TypeMap}
+    [CircuitType Output]
+    {top : TopLevelCircuit Fp ConfigInput Config Output}
+    {pp : Keygen.ProofParams}
+    {urs : URS G}
+    {hk : (pp.mergeDerived top).k = urs.k}
+    {vk : VerifyingKey (pp.mergeDerived top) Fp G}
+    {instanceCommitment :
+      Fin (pp.mergeDerived top).numProofs → ℕ → G}
+    {ps : ProofString (pp.mergeDerived top) Fp G}
+    {ch : Challenges (pp.mergeDerived top).k Fp}
+    {pU pW : Fp} {a : Fin (2 ^ urs.k) → Fp}
+    {batchOpenings :
+      OpenedBatchOpenings urs (evalVector urs.k ch.x3)
+        (x4BatchCommitments
+          (instanceCommitment := instanceCommitment)
+          urs hk vk ps ch)
+        (x4BatchEvals
+          (instanceCommitment := instanceCommitment)
+          vk ps ch)
+        a pU pW}
+    {memberDecode : ∀ i (hi : i <
+        deployedX4PairCount
+          (instanceCommitment := instanceCommitment)
+          vk ps ch),
+      OpenedMemberDecode
+        (instanceCommitment := instanceCommitment)
+        urs hk vk ps ch batchOpenings i hi}
+    {hblinding : vk.blindingFactors < vk.n}
+    {y : Fp} {hpoly : Polynomial Fp}
+    (relation :
+      CanonicalMemberConstraintRelation
+        urs hk vk instanceCommitment ps ch pU pW a
+        batchOpenings memberDecode hblinding y hpoly vk.n)
+    (hvk : vk = top.toVerifierKey pp urs)
+    (coherence : TopLevelFixedCoherence top pp urs)
+    (hrows : Function.Injective
+      fun i : Fin (2 ^ urs.k) =>
+        (top.toVerifierKey pp urs).omega ^ (i : ℕ))
+    (hn : (top.toVerifierKey pp urs).n = 2 ^ urs.k)
+    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    {column row value : ℕ}
+    (hentry :
+      (column, row, value) ∈ topLevelRequiredFixedEntries top) :
+    (resolverEnvironment
+        (top.toVerifierKey pp urs) relation.polynomial proofIndex
+        (top.usableRowsAt top.domainExponent)).fixed
+          ⟨column⟩ (row : ℤ) = (value : Fp) ∨
+      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  subst vk
+  apply topLevelFixedEntryRead_or_bad
+    relation.polynomial coherence.rows hrows hn coherence.realizes
+  · intro fixedColumn hcolumn
+    exact relation.fixedColumn_eq_rowPolynomial_or_relation
+      fixedColumn coherence.key (coherence.rows fixedColumn)
+      (coherence.commitment fixedColumn hcolumn) hrows
+      (by
+        obtain ⟨rotation, hlayout⟩ :=
+          coherence.queryLayout fixedColumn hcolumn
+        exact fixedQuery_of_layout
+          (top.toVerifierKey pp urs) instanceCommitment ps ch
+          fixedColumn rotation coherence.fixedQueryCount hlayout)
+  · exact hentry
 
 end CanonicalMemberConstraintRelation
 
