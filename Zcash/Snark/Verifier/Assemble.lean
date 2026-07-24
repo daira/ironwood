@@ -161,10 +161,13 @@ def assembleQueries {shape : Shape} {F G : Type*} [Field F] [Inhabited G] (vk : 
   perProof ++ fixedQ ++ permCommonQ ++ vanishingQ
 
 /-- The multiopen point-set grouping (halo2 `construct_intermediate_sets` output): per point set,
-the queries grouped into it as `(commitment, evaluations at this set's points)`, plus the set's
-points. Derived by `constructIntermediateSets`. -/
+the routed queries as `(commitment, evaluations)`, the set's points, and the routed members' slot
+identities, positionally aligned with `sets` (`constructIntermediateSets_sets_ids_aligned`) —
+mirroring halo2's `CommitmentData`, which retains commitment identity. The identity is what ties a
+decoded member back to the verifying key's query layout. Derived by `constructIntermediateSets`. -/
 structure MultiopenGrouped (k : ℕ) (F G : Type*) where
   sets : List (List (CommitmentRef k F G × List F))
+  ids : List (List CommitmentId)
   points : List (List F)
 
 /-- Compress one point set by the `x₁` powers (halo2 `multiopen/verifier.rs` `accumulate`): fold the
@@ -241,27 +244,679 @@ def constructIntermediateSets {k : ℕ} {F G : Type*} [DecidableEq F] [Decidable
   let comms : List (CommitmentId × CommitmentRef k F G) :=
     queries.foldl (fun acc q => if acc.any (fun c => decide (c.1 = q.commId)) then acc
       else acc ++ [(q.commId, q.commitment)]) []
-  -- per commitment: its ascending point-index set, and its eval vector over that set
-  let commData : List (CommitmentRef k F G × List ℕ × List F) :=
+  -- per commitment (halo2 `CommitmentData`, identity retained): its slot identity, curve value,
+  -- ascending point-index set, and eval vector over that set
+  let commData : List (CommitmentId × CommitmentRef k F G × List ℕ × List F) :=
     comms.map fun c =>
       let qs := queries.filter fun q => decide (q.commId = c.1)
       let idxs := qs.map fun q => pointIdx q.point
       let idxSet := (List.range points.length).filter fun i => idxs.contains i
       let evals := idxSet.filterMap fun i =>
         (qs.find? fun q => decide (pointIdx q.point = i)).map (·.eval)
-      (c.2, idxSet, evals)
+      (c.1, c.2, idxSet, evals)
   -- distinct point-index sets, first-appearance order (over commitments) → set index
   let setList : List (List ℕ) :=
-    commData.foldl (fun acc cd => if cd.2.1 ∈ acc then acc else acc ++ [cd.2.1]) []
+    commData.foldl (fun acc cd => if cd.2.2.1 ∈ acc then acc else acc ++ [cd.2.2.1]) []
   let setIdx : List ℕ → ℕ := fun s => setList.findIdx fun x => decide (x = s)
-  -- accumulate order is reversed commitment order; per set, the (commitment, evals) routed to it
+  -- accumulate order is reversed commitment order; per set, the members routed to it — `sets`
+  -- (curve value, evals) and `ids` (slot identity) are projections of the same routed list, so
+  -- they are positionally aligned by construction
   let revData := commData.reverse
+  let routed : ℕ → List (CommitmentId × CommitmentRef k F G × List ℕ × List F) :=
+    fun si => revData.filter fun cd => decide (setIdx cd.2.2.1 = si)
   let sets : List (List (CommitmentRef k F G × List F)) :=
-    (List.range setList.length).map fun si =>
-      (revData.filter fun cd => decide (setIdx cd.2.1 = si)).map fun cd => (cd.1, cd.2.2)
+    (List.range setList.length).map fun si => (routed si).map fun cd => (cd.2.1, cd.2.2.2)
+  let ids : List (List CommitmentId) :=
+    (List.range setList.length).map fun si => (routed si).map (·.1)
   -- per set, its points in ascending point-index order
   let setPoints : List (List F) := setList.map fun s => s.filterMap fun i => points[i]?
-  { sets := sets, points := setPoints }
+  { sets := sets, ids := ids, points := setPoints }
+
+/-- The grouping's `ids` and `sets` views are positionally aligned: per point set they are two
+projections of the same routed member list (halo2's `CommitmentData` entries routed to that set),
+so their lengths agree — `ids[i][m]` names the slot identity of the member `sets[i][m]`. -/
+theorem constructIntermediateSets_sets_ids_aligned {k : ℕ} {F G : Type*} [DecidableEq F]
+    [DecidableEq G] (queries : List (VerifierQuery k F G)) (i : ℕ) :
+    ((constructIntermediateSets queries).ids.getD i []).length
+      = ((constructIntermediateSets queries).sets.getD i []).length := by
+  simp only [constructIntermediateSets, List.getD_eq_getElem?_getD, List.getElem?_map]
+  rcases h : (List.range _)[i]? with _ | si
+  · simp
+  · simp [List.length_map]
+
+/-- The `ids` view has one entry per point set, aligned with `sets`. -/
+theorem constructIntermediateSets_ids_length {k : ℕ} {F G : Type*} [DecidableEq F]
+    [DecidableEq G] (queries : List (VerifierQuery k F G)) :
+    (constructIntermediateSets queries).ids.length
+      = (constructIntermediateSets queries).sets.length := by
+  simp [constructIntermediateSets]
+
+/-- `sets` and `points` have one entry per point set. -/
+theorem constructIntermediateSets_points_length {k : ℕ} {F G : Type*} [DecidableEq F]
+    [DecidableEq G] (queries : List (VerifierQuery k F G)) :
+    (constructIntermediateSets queries).sets.length
+      = (constructIntermediateSets queries).points.length := by
+  simp [constructIntermediateSets]
+
+/-- Projecting the first component of the `sets.zip points` view (`deployedSetQueries`'s shape) is
+the plain `sets` entry — the zip never truncates, since `sets` and `points` are equal-length. -/
+theorem constructIntermediateSets_zip_sets_getD {k : ℕ} {F G : Type*} [DecidableEq F]
+    [DecidableEq G] (queries : List (VerifierQuery k F G)) (i : ℕ) :
+    (((constructIntermediateSets queries).sets.zip
+        (constructIntermediateSets queries).points).getD i ([], [])).1
+      = (constructIntermediateSets queries).sets.getD i [] := by
+  have hlen := constructIntermediateSets_points_length queries
+  rcases lt_or_ge i (constructIntermediateSets queries).sets.length with hi | hi
+  · rw [List.getD_eq_getElem _ _ (by rw [List.length_zip, ← hlen, min_self]; exact hi),
+      List.getElem_zip, List.getD_eq_getElem _ _ hi]
+  · rw [List.getD_eq_default _ _ (by rw [List.length_zip, ← hlen, min_self]; exact hi),
+      List.getD_eq_default _ _ hi]
+
+/-- Anything already in the accumulator survives the first-appearance dedup fold. -/
+private theorem mem_dedup_foldl_mono {α β : Type*} [DecidableEq β] (l : List α) (f : α → β) :
+    ∀ (init : List β) (x : β), x ∈ init →
+      x ∈ l.foldl (fun acc a => if f a ∈ acc then acc else acc ++ [f a]) init := by
+  induction l with
+  | nil => intro init x hx; simpa using hx
+  | cons a l ih =>
+      intro init x hx
+      rw [List.foldl_cons]
+      apply ih
+      by_cases h : f a ∈ init
+      · rwa [if_pos h]
+      · rw [if_neg h]; exact List.mem_append.mpr (Or.inl hx)
+
+/-- Every element's image under `f` lands in the first-appearance dedup fold over `l`. -/
+private theorem mem_dedup_foldl {α β : Type*} [DecidableEq β] (l : List α) (f : α → β) :
+    ∀ (init : List β) {a : α}, a ∈ l →
+      f a ∈ l.foldl (fun acc b => if f b ∈ acc then acc else acc ++ [f b]) init := by
+  induction l with
+  | nil => intro init a ha; exact absurd ha (List.not_mem_nil)
+  | cons c l ih =>
+      intro init a ha
+      rw [List.foldl_cons]
+      rcases List.mem_cons.mp ha with rfl | ha'
+      · apply mem_dedup_foldl_mono
+        by_cases h : f a ∈ init
+        · rwa [if_pos h]
+        · rw [if_neg h]; exact List.mem_append.mpr (Or.inr (List.mem_singleton.mpr rfl))
+      · exact ih _ ha'
+
+/-- `findIdx` of a present element retrieves it: the option-get at that index is the element. -/
+private theorem getElem?_findIdx_self {α : Type*} [DecidableEq α] {l : List α} {x : α}
+    (h : x ∈ l) : l[l.findIdx (fun y => decide (y = x))]? = some x := by
+  have hex : ∃ z ∈ l, (fun y => decide (y = x)) z = true := ⟨x, h, by simp⟩
+  have hlt : l.findIdx (fun y => decide (y = x)) < l.length :=
+    List.findIdx_lt_length_of_exists hex
+  rw [List.getElem?_eq_getElem hlt]
+  have hval := List.findIdx_getElem (p := fun y => decide (y = x)) (xs := l) (w := hlt)
+  simp only [decide_eq_true_eq] at hval
+  rw [hval]
+
+/-- **Point routing (F4 core).** Every query's point lands in the point list of the set its
+commitment slot is routed to: if `q ∈ queries` and `q.commId` names member `m` of point set `si`
+(`ids[si][m] = q.commId`), then `q.point` appears in set `si`'s points. The point companion of
+`constructIntermediateSets_ref_mem` — a query routed into a set by its slot identity has its opening
+point among that set's points, since the set's points are exactly the point-indices of the members
+routed there. -/
+theorem constructIntermediateSets_point_mem {k : ℕ} {F G : Type*} [DecidableEq F] [DecidableEq G]
+    (queries : List (VerifierQuery k F G))
+    {q : VerifierQuery k F G} (hq : q ∈ queries) {si m : ℕ} {d₀ : CommitmentId}
+    (hlt : m < ((constructIntermediateSets queries).ids.getD si []).length)
+    (hid : ((constructIntermediateSets queries).ids.getD si []).getD m d₀ = q.commId) :
+    q.point ∈ (constructIntermediateSets queries).points.getD si [] := by
+  classical
+  -- positional `getD` → membership: `q.commId` is a member of set `si`'s id list
+  have hmem : q.commId ∈ (constructIntermediateSets queries).ids.getD si [] := by
+    have h1 : ((constructIntermediateSets queries).ids.getD si [])[m] = q.commId := by
+      rw [← hid, List.getD_eq_getElem _ _ hlt]
+    exact h1 ▸ List.getElem_mem hlt
+  simp only [constructIntermediateSets] at hmem ⊢
+  -- reduce `ids.getD si` (a `(range _).map _` list) to its `si`-th entry
+  rw [List.getD_eq_getElem?_getD, List.getElem?_map] at hmem
+  rcases hrange : (List.range _)[si]? with _ | j
+  · rw [hrange] at hmem
+    simp only [Option.map_none, Option.getD_none, List.not_mem_nil] at hmem
+  · rw [hrange] at hmem
+    obtain ⟨hsiN, hjval⟩ := List.getElem?_eq_some_iff.mp hrange
+    rw [List.getElem_range] at hjval
+    subst j
+    simp only [Option.map_some, Option.getD_some] at hmem
+    obtain ⟨cd, hcd, hcd1⟩ := List.mem_map.mp hmem
+    -- `cd` is routed to `si` and its commId is `q.commId`
+    rw [List.mem_filter] at hcd
+    obtain ⟨hcdrev, hcddec⟩ := hcd
+    rw [decide_eq_true_eq] at hcddec
+    rw [List.mem_reverse] at hcdrev
+    -- `cd`'s point-index set is set `si`'s distinct index list, so `points.getD si` filters it
+    have hcdset := mem_dedup_foldl _ (fun x => x.2.2.1) ([] : List (List ℕ)) hcdrev
+    have hsi := getElem?_findIdx_self hcdset
+    simp only [hcddec] at hsi
+    simp only [List.getD_eq_getElem?_getD, List.getElem?_map, hsi, Option.map_some,
+      Option.getD_some, List.mem_filterMap]
+    -- the point-index of `q.point` witnesses membership: it is a valid index retrieving `q.point`,
+    -- and it lies in `cd`'s (hence set `si`'s) index set because `q` is one of `cd`'s queries
+    refine ⟨(List.foldl (fun acc q => if q.point ∈ acc then acc else acc ++ [q.point]) []
+      queries).findIdx (fun y => decide (y = q.point)), ?_, ?_⟩
+    · obtain ⟨c, hc, rfl⟩ := List.mem_map.mp hcdrev
+      refine List.mem_filter.mpr ⟨?_, ?_⟩
+      · rw [List.mem_range]
+        exact List.findIdx_lt_length_of_exists
+          ⟨q.point, mem_dedup_foldl _ (fun x => x.point) [] hq, by simp⟩
+      · exact (List.contains_iff_mem).mpr (List.mem_map.mpr
+          ⟨q, List.mem_filter.mpr ⟨hq, by rw [decide_eq_true_eq]; exact hcd1.symm⟩, rfl⟩)
+    · exact getElem?_findIdx_self (mem_dedup_foldl _ (fun x => x.point) [] hq)
+
+/-- The first-appearance dedup fold produces a `Nodup` list (it appends only elements not already
+present). -/
+private theorem nodup_dedup_foldl {α β : Type*} [DecidableEq β] (l : List α) (f : α → β) :
+    ∀ (init : List β), init.Nodup →
+      (l.foldl (fun acc a => if f a ∈ acc then acc else acc ++ [f a]) init).Nodup := by
+  induction l with
+  | nil => intro init h; simpa using h
+  | cons a l ih =>
+      intro init h
+      rw [List.foldl_cons]
+      apply ih
+      by_cases hmem : f a ∈ init
+      · rwa [if_pos hmem]
+      · rw [if_neg hmem]
+        exact List.Nodup.append h (List.nodup_singleton _) (List.disjoint_singleton.mpr hmem)
+
+/-- **Each deployed point set's point list has no duplicates.** The grouping's `points` field lists
+each point set's points; every such list is a `filterMap` of a duplicate-free index set over the
+internal distinct-points list (itself `Nodup` by the first-appearance fold), extracting distinct
+entries, so it is `Nodup`. -/
+theorem constructIntermediateSets_points_nodup {k : ℕ} {F G : Type*} [DecidableEq F] [DecidableEq G]
+    (queries : List (VerifierQuery k F G)) (idx : ℕ) :
+    ((constructIntermediateSets queries).points.getD idx []).Nodup := by
+  classical
+  have key : ∀ ps ∈ (constructIntermediateSets queries).points, ps.Nodup := by
+    intro ps hps
+    simp only [constructIntermediateSets] at hps
+    obtain ⟨s, hs, rfl⟩ := List.mem_map.mp hps
+    -- `s` is one of the distinct point-index sets, hence a filtered `range`, hence `Nodup`
+    -- (via a fold invariant on the actual `setList` fold, to match its membership instance)
+    have hsnodup : s.Nodup := by
+      refine List.foldlRecOn (motive := fun acc : List (List ℕ) => ∀ x ∈ acc, x.Nodup)
+        _ _ ?_ ?_ s hs
+      · intro x hx; exact absurd hx (List.not_mem_nil)
+      · intro acc hacc cd hcd
+        split
+        · exact hacc
+        · intro x hx
+          rcases List.mem_append.mp hx with h | h
+          · exact hacc x h
+          · rw [List.mem_singleton] at h
+            subst h
+            obtain ⟨c, -, rfl⟩ := List.mem_map.mp hcd
+            exact List.Nodup.filter _ List.nodup_range
+    -- the internal points list is `Nodup`
+    have hpnodup : (queries.foldl (fun acc q => if q.point ∈ acc then acc else acc ++ [q.point])
+        ([] : List F)).Nodup := nodup_dedup_foldl queries (·.point) [] List.nodup_nil
+    -- `filterMap (points[·]?)` preserves `Nodup`: distinct valid indices give distinct entries
+    refine List.Nodup.filterMap ?_ hsnodup
+    intro i i' b hb hb'
+    rw [Option.mem_def, List.getElem?_eq_some_iff] at hb hb'
+    obtain ⟨hi, hbi⟩ := hb
+    obtain ⟨hi', hbi'⟩ := hb'
+    have h2 : (⟨i, hi⟩ : Fin _) = ⟨i', hi'⟩ :=
+      List.nodup_iff_injective_getElem.mp hpnodup (hbi.trans hbi'.symm)
+    exact congrArg Fin.val h2
+  rcases lt_or_ge idx (constructIntermediateSets queries).points.length with hlt | hge
+  · rw [List.getD_eq_getElem _ _ hlt]; exact key _ (List.getElem_mem hlt)
+  · rw [List.getD_eq_default _ _ hge]; exact List.nodup_nil
+
+/-- Two `filterMap`s over the same list have equal length when both functions are everywhere
+defined on it. -/
+private theorem length_filterMap_eq_of_forall_isSome {α β γ : Type*}
+    {f : α → Option β} {g : α → Option γ} :
+    ∀ (l : List α), (∀ x ∈ l, (f x).isSome) → (∀ x ∈ l, (g x).isSome) →
+      (l.filterMap f).length = (l.filterMap g).length := by
+  intro l
+  induction l with
+  | nil => intro _ _; rfl
+  | cons a l ih =>
+      intro hf hg
+      have hfa := hf a (List.mem_cons_self ..)
+      have hga := hg a (List.mem_cons_self ..)
+      rw [List.filterMap_cons, List.filterMap_cons]
+      rcases ha : f a with _ | b
+      · rw [ha] at hfa; exact absurd hfa (by simp)
+      rcases hb : g a with _ | c
+      · rw [hb] at hga; exact absurd hga (by simp)
+      simp only [List.length_cons]
+      exact congrArg Nat.succ (ih (fun x hx => hf x (List.mem_cons_of_mem _ hx))
+        (fun x hx => hg x (List.mem_cons_of_mem _ hx)))
+
+/-- **Each routed member claims one evaluation per set point.** A grouped member's evaluation list
+and its set's point list are `filterMap`s over the same duplicate-free point-index set, and both
+extractions are everywhere defined — every index in the set is in range of the internal points
+list, and every index got there from some query of the member's slot, so the `find?` succeeds. So
+the lengths agree: the member claims exactly one evaluation at each of its set's points. -/
+theorem constructIntermediateSets_eval_length {k : ℕ} {F G : Type*} [DecidableEq F] [DecidableEq G]
+    (queries : List (VerifierQuery k F G)) (i : ℕ) :
+    ∀ qc ∈ (constructIntermediateSets queries).sets.getD i [],
+      qc.2.length = ((constructIntermediateSets queries).points.getD i []).length := by
+  classical
+  intro qc hqc
+  simp only [constructIntermediateSets] at hqc ⊢
+  rw [List.getD_eq_getElem?_getD, List.getElem?_map] at hqc
+  rcases hrange : (List.range _)[i]? with _ | j
+  · rw [hrange] at hqc
+    simp only [Option.map_none, Option.getD_none, List.not_mem_nil] at hqc
+  · rw [hrange] at hqc
+    obtain ⟨hsiN, hjval⟩ := List.getElem?_eq_some_iff.mp hrange
+    rw [List.getElem_range] at hjval
+    subst j
+    simp only [Option.map_some, Option.getD_some] at hqc
+    obtain ⟨cd, hcd, rfl⟩ := List.mem_map.mp hqc
+    -- `cd` is routed to set `i`: its point-index set is `setList[i]`
+    rw [List.mem_filter] at hcd
+    obtain ⟨hcdrev, hcddec⟩ := hcd
+    rw [decide_eq_true_eq] at hcddec
+    rw [List.mem_reverse] at hcdrev
+    have hcdset := mem_dedup_foldl _ (fun x => x.2.2.1) ([] : List (List ℕ)) hcdrev
+    have hsi := getElem?_findIdx_self hcdset
+    simp only [hcddec] at hsi
+    simp only [List.getD_eq_getElem?_getD, List.getElem?_map, hsi, Option.map_some,
+      Option.getD_some]
+    -- `cd` comes from `commData`: its evals are a `filterMap` over its own index set
+    obtain ⟨c, hc, rfl⟩ := List.mem_map.mp hcdrev
+    -- both `filterMap`s are everywhere defined on the index set
+    refine length_filterMap_eq_of_forall_isSome _ ?_ ?_
+    · intro x hx
+      rw [List.mem_filter] at hx
+      have hxq := (List.contains_iff_mem).mp hx.2
+      obtain ⟨q, hq, hqi⟩ := List.mem_map.mp hxq
+      have hfind : (List.find? (fun q' => decide ((List.foldl
+          (fun acc q'' => if q''.point ∈ acc then acc else acc ++ [q''.point]) [] queries).findIdx
+            (fun y => decide (y = q'.point)) = x))
+          (queries.filter (fun q' => decide (q'.commId = c.1)))).isSome := by
+        rw [List.find?_isSome]
+        exact ⟨q, hq, by simp [hqi]⟩
+      simpa using hfind
+    · intro x hx
+      rw [List.mem_filter, List.mem_range] at hx
+      rw [List.getElem?_eq_getElem hx.1]
+      exact Option.isSome_some
+
+/-! ### Unique-slot routing (the vanishing-slot eval faithfulness)
+
+The vanishing-`h` query carries a *verifier-computed* claimed evaluation and is the only query on
+its slot. The lemmas below track such a unique-slot query through the grouping pipeline: the
+private `cis*` definitions name `constructIntermediateSets`' internal stages (each definitionally
+equal to the corresponding `let`), the fold helpers characterize the keyed commitment dedup, and
+`constructIntermediateSets_unique_comm_routed` concludes the query is routed to a member whose
+recorded evaluation list is exactly `[q.eval]`, in a point set whose point list is exactly
+`[q.point]`. `assembleQueries_vanishingH_unique` supplies the uniqueness for the vanishing slot,
+and `Soundness.Multiopen.ValueCheckDeployed.deployed_vanishingH_routed` reads the result off in
+the deployed `getD` shapes — the grouping-side fact the `hfold` derivation consumes. -/
+
+/-- The grouping's internal distinct-points list (first-appearance order). -/
+private def cisPts {k : ℕ} {F G : Type*} (queries : List (VerifierQuery k F G))
+    [DecidableEq F] : List F :=
+  queries.foldl (fun acc q => if q.point ∈ acc then acc else acc ++ [q.point]) []
+
+/-- The grouping's internal point index. -/
+private def cisPIdx {k : ℕ} {F G : Type*} (queries : List (VerifierQuery k F G))
+    [DecidableEq F] (p : F) : ℕ :=
+  (cisPts queries).findIdx fun x => decide (x = p)
+
+/-- The grouping's internal keyed distinct-commitments list. -/
+private def cisComms {k : ℕ} {F G : Type*} (queries : List (VerifierQuery k F G)) :
+    List (CommitmentId × CommitmentRef k F G) :=
+  queries.foldl (fun acc q => if acc.any (fun c => decide (c.1 = q.commId)) then acc
+    else acc ++ [(q.commId, q.commitment)]) []
+
+/-- The grouping's internal per-commitment data: identity, curve value, ascending point-index
+set, and eval vector over that set. -/
+private def cisData {k : ℕ} {F G : Type*} (queries : List (VerifierQuery k F G))
+    [DecidableEq F] : List (CommitmentId × CommitmentRef k F G × List ℕ × List F) :=
+  (cisComms queries).map fun c =>
+    let qs := queries.filter fun q => decide (q.commId = c.1)
+    let idxs := qs.map fun q => cisPIdx queries q.point
+    let idxSet := (List.range (cisPts queries).length).filter fun i => idxs.contains i
+    let evals := idxSet.filterMap fun i =>
+      (qs.find? fun q => decide (cisPIdx queries q.point = i)).map (·.eval)
+    (c.1, c.2, idxSet, evals)
+
+/-- The grouping's internal distinct point-index sets (first-appearance order over commitments). -/
+private def cisSetList {k : ℕ} {F G : Type*} (queries : List (VerifierQuery k F G))
+    [DecidableEq F] : List (List ℕ) :=
+  (cisData queries).foldl (fun acc cd => if cd.2.2.1 ∈ acc then acc else acc ++ [cd.2.2.1]) []
+
+/-- The members routed to point set `si`, in accumulate order. -/
+private def cisRouted {k : ℕ} {F G : Type*} (queries : List (VerifierQuery k F G))
+    [DecidableEq F] (si : ℕ) :
+    List (CommitmentId × CommitmentRef k F G × List ℕ × List F) :=
+  (cisData queries).reverse.filter fun cd =>
+    decide ((cisSetList queries).findIdx (fun x => decide (x = cd.2.2.1)) = si)
+
+/-- Anything already in the keyed accumulator survives the keyed dedup fold. -/
+private theorem cisComms_fold_mono {k : ℕ} {F G : Type*} (l : List (VerifierQuery k F G)) :
+    ∀ (init : List (CommitmentId × CommitmentRef k F G))
+      {e : CommitmentId × CommitmentRef k F G}, e ∈ init →
+      e ∈ l.foldl (fun acc q => if acc.any (fun c => decide (c.1 = q.commId)) then acc
+        else acc ++ [(q.commId, q.commitment)]) init := by
+  induction l with
+  | nil => intro init e he; simpa using he
+  | cons a l ih =>
+      intro init e he
+      rw [List.foldl_cons]
+      by_cases h : init.any (fun c => decide (c.1 = a.commId)) = true
+      · rw [if_pos h]; exact ih init he
+      · rw [if_neg h]; exact ih _ (List.mem_append.mpr (Or.inl he))
+
+/-- Every query's slot identity is keyed by the keyed dedup fold. -/
+private theorem cisComms_fold_covers {k : ℕ} {F G : Type*} (l : List (VerifierQuery k F G)) :
+    ∀ (init : List (CommitmentId × CommitmentRef k F G)) {q : VerifierQuery k F G}, q ∈ l →
+      ∃ e ∈ l.foldl (fun acc q' => if acc.any (fun c => decide (c.1 = q'.commId)) then acc
+        else acc ++ [(q'.commId, q'.commitment)]) init, e.1 = q.commId := by
+  induction l with
+  | nil => intro _ _ hq; exact absurd hq List.not_mem_nil
+  | cons a l ih =>
+      intro init q hq
+      rw [List.foldl_cons]
+      rcases List.mem_cons.mp hq with rfl | hq'
+      · by_cases h : init.any (fun c => decide (c.1 = q.commId)) = true
+        · rw [if_pos h]
+          obtain ⟨e, he, hek⟩ := List.any_eq_true.mp h
+          exact ⟨e, cisComms_fold_mono l init he, by simpa using hek⟩
+        · rw [if_neg h]
+          refine ⟨(q.commId, q.commitment), cisComms_fold_mono l _ ?_, rfl⟩
+          exact List.mem_append.mpr (Or.inr (List.mem_singleton.mpr rfl))
+      · by_cases h : init.any (fun c => decide (c.1 = a.commId)) = true
+        · rw [if_pos h]; exact ih init hq'
+        · rw [if_neg h]; exact ih _ hq'
+
+/-- Every entry of the keyed dedup fold is an initial entry or the key–value pair of some list
+element. -/
+private theorem cisComms_fold_prov {k : ℕ} {F G : Type*} (l : List (VerifierQuery k F G)) :
+    ∀ (init : List (CommitmentId × CommitmentRef k F G))
+      {e : CommitmentId × CommitmentRef k F G},
+      e ∈ l.foldl (fun acc q => if acc.any (fun c => decide (c.1 = q.commId)) then acc
+        else acc ++ [(q.commId, q.commitment)]) init →
+      e ∈ init ∨ ∃ q ∈ l, e = (q.commId, q.commitment) := by
+  induction l with
+  | nil => intro init e he; exact Or.inl (by simpa using he)
+  | cons a l ih =>
+      intro init e he
+      rw [List.foldl_cons] at he
+      by_cases h : init.any (fun c => decide (c.1 = a.commId)) = true
+      · rw [if_pos h] at he
+        rcases ih init he with h1 | ⟨b, hb, rfl⟩
+        · exact Or.inl h1
+        · exact Or.inr ⟨b, List.mem_cons_of_mem _ hb, rfl⟩
+      · rw [if_neg h] at he
+        rcases ih _ he with h1 | ⟨b, hb, rfl⟩
+        · rcases List.mem_append.mp h1 with h2 | h2
+          · exact Or.inl h2
+          · exact Or.inr ⟨a, List.mem_cons_self .., List.mem_singleton.mp h2⟩
+        · exact Or.inr ⟨b, List.mem_cons_of_mem _ hb, rfl⟩
+
+/-- Filtering `range n` by equality with `j < n` leaves exactly `[j]`. -/
+private theorem range_filter_eq_singleton {j n : ℕ} (h : j < n) :
+    (List.range n).filter (fun i => decide (i = j)) = [j] := by
+  induction n with
+  | zero => omega
+  | succ n ih =>
+      rw [List.range_succ, List.filter_append]
+      rcases Nat.lt_or_ge j n with hj | hj
+      · rw [ih hj]
+        have h2 : List.filter (fun i => decide (i = j)) [n] = [] := by
+          have hne : ¬ (n = j) := by omega
+          simp [hne]
+        rw [h2, List.append_nil]
+      · have hjn : j = n := by omega
+        subst hjn
+        have h1 : (List.range j).filter (fun i => decide (i = j)) = [] := by
+          rw [List.filter_eq_nil_iff]
+          intro a ha
+          simp only [decide_eq_true_eq]
+          exact Nat.ne_of_lt (List.mem_range.mp ha)
+        rw [h1, List.nil_append]
+        simp
+
+/-- A unique-slot query's per-commitment data entry: its own identity and curve value, the
+singleton index set of its point, and the singleton eval list of its claimed evaluation. -/
+private theorem cisData_unique_entry {k : ℕ} {F G : Type*} [DecidableEq F]
+    (queries : List (VerifierQuery k F G)) {q : VerifierQuery k F G} (hq : q ∈ queries)
+    (huniq : ∀ q' ∈ queries, q'.commId = q.commId → q' = q) :
+    (q.commId, q.commitment, [cisPIdx queries q.point], [q.eval]) ∈ cisData queries := by
+  classical
+  have hcomm : (q.commId, q.commitment) ∈ cisComms queries := by
+    obtain ⟨e, he, hek⟩ := cisComms_fold_covers queries [] hq
+    rcases cisComms_fold_prov queries [] he with h0 | ⟨q', hq', rfl⟩
+    · exact absurd h0 List.not_mem_nil
+    · have hqq : q' = q := huniq q' hq' hek
+      subst hqq; exact he
+  have hqsall : ∀ q' ∈ queries.filter (fun q'' => decide (q''.commId = q.commId)), q' = q := by
+    intro q' hq'
+    have h1 := List.mem_filter.mp hq'
+    exact huniq q' h1.1 (by simpa using h1.2)
+  have hqmem : q ∈ queries.filter (fun q'' => decide (q''.commId = q.commId)) :=
+    List.mem_filter.mpr ⟨hq, by simp⟩
+  have hlt : cisPIdx queries q.point < (cisPts queries).length :=
+    List.findIdx_lt_length_of_exists
+      ⟨q.point, mem_dedup_foldl queries (·.point) [] hq, by simp⟩
+  -- the index set is the singleton of the query's point index
+  have hidxset : (List.range (cisPts queries).length).filter
+      (fun i => ((queries.filter (fun q'' => decide (q''.commId = q.commId))).map
+        (fun q' => cisPIdx queries q'.point)).contains i) = [cisPIdx queries q.point] := by
+    rw [← range_filter_eq_singleton hlt]
+    refine List.filter_congr ?_
+    intro i _
+    rw [Bool.eq_iff_iff]
+    simp only [List.contains_iff_mem, decide_eq_true_eq]
+    constructor
+    · intro hmem
+      obtain ⟨q', hq', hq'i⟩ := List.mem_map.mp hmem
+      rw [hqsall q' hq'] at hq'i
+      exact hq'i.symm
+    · intro hi
+      subst hi
+      exact List.mem_map.mpr ⟨q, hqmem, rfl⟩
+  -- the eval list is the singleton of the query's claimed evaluation
+  have hfind : ((queries.filter (fun q'' => decide (q''.commId = q.commId))).find?
+      (fun q' => decide (cisPIdx queries q'.point = cisPIdx queries q.point))) = some q := by
+    rcases hcons : queries.filter (fun q'' => decide (q''.commId = q.commId)) with _ | ⟨h₀, t⟩
+    · rw [hcons] at hqmem; exact absurd hqmem List.not_mem_nil
+    · have hh : h₀ = q := hqsall h₀ (by rw [hcons]; exact List.mem_cons_self ..)
+      subst hh
+      rw [hcons]
+      refine List.find?_cons_of_pos ?_
+      simp only [decide_eq_true_eq]
+  refine List.mem_map.mpr ⟨(q.commId, q.commitment), hcomm, ?_⟩
+  show (q.commId, q.commitment,
+      (List.range (cisPts queries).length).filter
+        (fun i => ((queries.filter (fun q'' => decide (q''.commId = q.commId))).map
+          (fun q' => cisPIdx queries q'.point)).contains i),
+      ((List.range (cisPts queries).length).filter
+        (fun i => ((queries.filter (fun q'' => decide (q''.commId = q.commId))).map
+          (fun q' => cisPIdx queries q'.point)).contains i)).filterMap
+        (fun i => ((queries.filter (fun q'' => decide (q''.commId = q.commId))).find?
+          (fun q' => decide (cisPIdx queries q'.point = i))).map (·.eval)))
+    = (q.commId, q.commitment, [cisPIdx queries q.point], [q.eval])
+  rw [hidxset]
+  have hfm : ([cisPIdx queries q.point].filterMap
+      (fun i => ((queries.filter (fun q'' => decide (q''.commId = q.commId))).find?
+        (fun q' => decide (cisPIdx queries q'.point = i))).map (·.eval))) = [q.eval] := by
+    rw [List.filterMap_cons, hfind]; rfl
+  rw [hfm]
+
+/-- **Unique-slot routing.** A query whose slot identity no other query carries is routed by the
+grouping to a member of exactly one point set: that set's point list is the singleton of the
+query's opening point, the member's recorded identity is the query's slot, and the member's
+recorded evaluation list is the singleton of the query's claimed evaluation — for the vanishing
+slot, the verifier-computed `expectedHEval`. The grouping-side eval-faithfulness fact the `hfold`
+derivation consumes. -/
+theorem constructIntermediateSets_unique_comm_routed {k : ℕ} {F G : Type*} [DecidableEq F]
+    [DecidableEq G] (queries : List (VerifierQuery k F G)) {q : VerifierQuery k F G}
+    (hq : q ∈ queries) (huniq : ∀ q' ∈ queries, q'.commId = q.commId → q' = q) :
+    ∃ i, i < (constructIntermediateSets queries).sets.length ∧
+      (constructIntermediateSets queries).points.getD i [] = [q.point] ∧
+      ∃ m, m < ((constructIntermediateSets queries).sets.getD i []).length ∧
+        (∀ c₀, ((constructIntermediateSets queries).ids.getD i []).getD m c₀ = q.commId) ∧
+        ∀ d₀, ((constructIntermediateSets queries).sets.getD i []).getD m d₀
+          = (q.commitment, [q.eval]) := by
+  classical
+  have hcd := cisData_unique_entry queries hq huniq
+  have hslmem : [cisPIdx queries q.point] ∈ cisSetList queries := by
+    have h1 := mem_dedup_foldl (cisData queries) (fun x => x.2.2.1) [] hcd
+    simpa using h1
+  have hsilt : (cisSetList queries).findIdx
+      (fun x => decide (x = [cisPIdx queries q.point])) < (cisSetList queries).length :=
+    List.findIdx_lt_length_of_exists ⟨[cisPIdx queries q.point], hslmem, by simp⟩
+  have hsiget : (cisSetList queries)[(cisSetList queries).findIdx
+      (fun x => decide (x = [cisPIdx queries q.point]))]? = some [cisPIdx queries q.point] :=
+    getElem?_findIdx_self hslmem
+  set si := (cisSetList queries).findIdx (fun x => decide (x = [cisPIdx queries q.point]))
+    with hsi
+  have hrouted : (q.commId, q.commitment, [cisPIdx queries q.point], [q.eval])
+      ∈ cisRouted queries si := by
+    rw [cisRouted]
+    refine List.mem_filter.mpr ⟨List.mem_reverse.mpr hcd, ?_⟩
+    simp [hsi]
+  obtain ⟨m, hm, hrm⟩ := List.mem_iff_getElem.mp hrouted
+  refine ⟨si, ?_, ?_, m, ?_, ?_, ?_⟩
+  · show si < ((List.range (cisSetList queries).length).map fun si' =>
+      (cisRouted queries si').map fun cd => (cd.2.1, cd.2.2.2)).length
+    rw [List.length_map, List.length_range]
+    exact hsilt
+  · show ((cisSetList queries).map fun s => s.filterMap fun i => (cisPts queries)[i]?).getD si []
+      = [q.point]
+    rw [List.getD_eq_getElem?_getD, List.getElem?_map, hsiget]
+    have hjget : (cisPts queries)[cisPIdx queries q.point]? = some q.point := by
+      simp only [cisPIdx]
+      exact getElem?_findIdx_self (mem_dedup_foldl queries (·.point) [] hq)
+    simp [hjget]
+  · show m < (((List.range (cisSetList queries).length).map fun si' =>
+      (cisRouted queries si').map fun cd => (cd.2.1, cd.2.2.2)).getD si []).length
+    rw [List.getD_eq_getElem?_getD, List.getElem?_map,
+      List.getElem?_eq_getElem (by rw [List.length_range]; exact hsilt), List.getElem_range]
+    simpa using hm
+  · intro c₀
+    show (((List.range (cisSetList queries).length).map fun si' =>
+      (cisRouted queries si').map (·.1)).getD si []).getD m c₀ = q.commId
+    have hlen1 : si < ((List.range (cisSetList queries).length).map fun si' =>
+        (cisRouted queries si').map (·.1)).length := by
+      rw [List.length_map, List.length_range]; exact hsilt
+    have hin : ((List.range (cisSetList queries).length).map fun si' =>
+        (cisRouted queries si').map (·.1)).getD si [] = (cisRouted queries si).map (·.1) := by
+      rw [List.getD_eq_getElem _ _ hlen1, List.getElem_map, List.getElem_range]
+    rw [hin, List.getD_eq_getElem _ _ (by rw [List.length_map]; exact hm), List.getElem_map, hrm]
+  · intro d₀
+    show (((List.range (cisSetList queries).length).map fun si' =>
+      (cisRouted queries si').map fun cd => (cd.2.1, cd.2.2.2)).getD si []).getD m d₀
+      = (q.commitment, [q.eval])
+    have hlen1 : si < ((List.range (cisSetList queries).length).map fun si' =>
+        (cisRouted queries si').map fun cd => (cd.2.1, cd.2.2.2)).length := by
+      rw [List.length_map, List.length_range]; exact hsilt
+    have hin : ((List.range (cisSetList queries).length).map fun si' =>
+        (cisRouted queries si').map fun cd => (cd.2.1, cd.2.2.2)).getD si []
+        = (cisRouted queries si).map fun cd => (cd.2.1, cd.2.2.2) := by
+      rw [List.getD_eq_getElem _ _ hlen1, List.getElem_map, List.getElem_range]
+    rw [hin, List.getD_eq_getElem _ _ (by rw [List.length_map]; exact hm), List.getElem_map, hrm]
+
+/-! ### Vanishing-slot uniqueness
+
+Every builder tags its queries with its own `CommitmentId` constructor family; only
+`vanishingQueries` emits the `vanishingH` slot, and it does so exactly once. So the vanishing-`h`
+query is the unique carrier of its slot in `assembleQueries` — the uniqueness
+`constructIntermediateSets_unique_comm_routed` needs to route it unambiguously. -/
+
+private theorem columnQueries_commId_form {k : ℕ} {F G : Type*} [Field F] {omega x : F}
+    {comm : ℕ → G} {mkId : ℕ → CommitmentId} {layout : List (ℕ × ℤ)} {evals : List F}
+    {q : VerifierQuery k F G} (hq : q ∈ columnQueries omega x comm mkId layout evals) :
+    ∃ n, q.commId = mkId n := by
+  rw [columnQueries, List.mem_map] at hq
+  obtain ⟨e, _, rfl⟩ := hq
+  exact ⟨e.1.1, rfl⟩
+
+private theorem permutationCommonQueries_commId_form {k : ℕ} {F G : Type*} [Field F] {x : F}
+    {mkId : ℕ → CommitmentId} {commsEvals : List (G × F)} {q : VerifierQuery k F G}
+    (hq : q ∈ permutationCommonQueries x mkId commsEvals) : ∃ n, q.commId = mkId n := by
+  rw [permutationCommonQueries, List.mem_map] at hq
+  obtain ⟨e, _, rfl⟩ := hq
+  exact ⟨e.2, rfl⟩
+
+private theorem permutationQueries_commId_form {k : ℕ} {F G : Type*} [Field F]
+    {x xNext xLast : F} {mkId : ℕ → CommitmentId} {sets : List (G × PermSetEval F)}
+    {q : VerifierQuery k F G} (hq : q ∈ permutationQueries x xNext xLast mkId sets) :
+    ∃ n, q.commId = mkId n := by
+  rw [permutationQueries, List.mem_append] at hq
+  rcases hq with hq | hq
+  · rw [List.mem_flatMap] at hq
+    obtain ⟨s, _, hq⟩ := hq
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hq
+    rcases hq with rfl | rfl <;> exact ⟨s.2, rfl⟩
+  · rw [List.mem_filterMap] at hq
+    obtain ⟨s, _, hq⟩ := hq
+    obtain ⟨le, _, rfl⟩ := by simpa using hq
+    exact ⟨s.2, rfl⟩
+
+private theorem lookupQueries_commId_form {k : ℕ} {F G : Type*} [Field F] {x xInv xNext : F}
+    {mkProduct mkInput mkTable : ℕ → CommitmentId}
+    {lookups : List (LookupCommitments G × LookupEval F)} {q : VerifierQuery k F G}
+    (hq : q ∈ lookupQueries x xInv xNext mkProduct mkInput mkTable lookups) :
+    ∃ n, q.commId = mkProduct n ∨ q.commId = mkInput n ∨ q.commId = mkTable n := by
+  rw [lookupQueries, List.mem_flatMap] at hq
+  obtain ⟨l, _, hq⟩ := hq
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hq
+  rcases hq with rfl | rfl | rfl | rfl | rfl
+  · exact ⟨l.2, Or.inl rfl⟩
+  · exact ⟨l.2, Or.inr (Or.inl rfl)⟩
+  · exact ⟨l.2, Or.inr (Or.inr rfl)⟩
+  · exact ⟨l.2, Or.inr (Or.inl rfl)⟩
+  · exact ⟨l.2, Or.inl rfl⟩
+
+/-- **Vanishing-slot uniqueness.** Any two queries of `assembleQueries` on the `vanishingH` slot are
+equal — the vanishing-`h` query is the sole carrier of its slot. -/
+theorem assembleQueries_vanishingH_unique {shape : Shape} {F G : Type*} [Field F] [Inhabited G]
+    (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape F G) (ch : Challenges shape.k F)
+    {q₁ q₂ : VerifierQuery shape.k F G}
+    (hq₁ : q₁ ∈ assembleQueries vk instanceCommitment ps ch) (hq₂ : q₂ ∈ assembleQueries vk instanceCommitment ps ch)
+    (hv₁ : q₁.commId = CommitmentId.vanishingH) (hv₂ : q₂.commId = CommitmentId.vanishingH) :
+    q₁ = q₂ := by
+  have hvan : ∀ q : VerifierQuery shape.k F G, q ∈ assembleQueries vk instanceCommitment ps ch →
+      q.commId = CommitmentId.vanishingH →
+      q ∈ vanishingQueries (k := shape.k) ch.x
+        (vanishingHCommitment shape.k (ch.x ^ vk.n) (List.ofFn ps.hPieces))
+        (expectedHEval (allExpressions vk ps ch
+          (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1
+          (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.1
+          (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2) ch.y
+          (ch.x ^ vk.n))
+        ps.vanishingRandom ps.vanishingRandomEval := by
+    intro q hq hv
+    simp only [assembleQueries, List.mem_append] at hq
+    rcases hq with (((h | h) | h) | h)
+    · -- per-sub-proof block
+      rw [List.mem_flatten] at h
+      obtain ⟨l, hlof, hql⟩ := h
+      rw [List.mem_ofFn] at hlof
+      obtain ⟨p, rfl⟩ := hlof
+      simp only [List.mem_append] at hql
+      rcases hql with ((hql | hql) | hql) | hql
+      · obtain ⟨n, hn⟩ := columnQueries_commId_form hql; rw [hv] at hn; exact absurd hn (by simp)
+      · obtain ⟨n, hn⟩ := columnQueries_commId_form hql; rw [hv] at hn; exact absurd hn (by simp)
+      · obtain ⟨n, hn⟩ := permutationQueries_commId_form hql; rw [hv] at hn
+        exact absurd hn (by simp)
+      · obtain ⟨n, hn | hn | hn⟩ := lookupQueries_commId_form hql <;>
+          (rw [hv] at hn; exact absurd hn (by simp))
+    · obtain ⟨n, hn⟩ := columnQueries_commId_form h; rw [hv] at hn; exact absurd hn (by simp)
+    · obtain ⟨n, hn⟩ := permutationCommonQueries_commId_form h; rw [hv] at hn
+      exact absurd hn (by simp)
+    · exact h
+  have h1 := hvan q₁ hq₁ hv₁
+  have h2 := hvan q₂ hq₂ hv₂
+  simp only [vanishingQueries, List.mem_cons, List.not_mem_nil, or_false] at h1 h2
+  rcases h1 with rfl | rfl
+  · rcases h2 with rfl | rfl
+    · rfl
+    · exact CommitmentId.noConfusion hv₂
+  · exact CommitmentId.noConfusion hv₁
 
 /-- Whether the flat query list contains two queries for the same commitment slot at the same
 point. Halo2 rejects this (`None`, mapped to `OpeningError`), even when the two evaluations
