@@ -251,27 +251,33 @@ def repoint (a : Asm) : ℕ → (ℕ × ℕ) → (ℕ × ℕ) → (ℕ × ℕ) �
       let next := getPair a.mapping i
       if next == stop then a' else a'.repoint fuel next tgt stop
 
+/-- The merge branch of `Assembly::copy`: absorb the smaller cycle into the larger and
+swap the two mapping entries. Split from `copy` so its `mapping`/`aux` components can be
+characterized separately (the walk never touches `mapping` or `sizes`; the swap never
+touches `aux`). -/
+def merge (a : Asm) (fuel : ℕ) (lp rp : ℕ × ℕ) : Asm :=
+  let leftRep := getPair a.aux lp
+  let rightRep := getPair a.aux rp
+  -- the size comparison decides which representative survives the merge
+  let smaller := getNat a.sizes leftRep < getNat a.sizes rightRep
+  let leftCycle := if smaller then rightRep else leftRep
+  let rightCycle := if smaller then leftRep else rightRep
+  -- sizes[leftCycle] += sizes[rightCycle]
+  let a1 := { a with sizes := setNat a.sizes leftCycle (getNat a.sizes leftCycle + getNat a.sizes rightCycle) }
+  -- walk the right cycle, re-pointing aux to leftCycle (do-while: at least `rightCycle`)
+  let a2 := a1.repoint fuel rightCycle leftCycle rightCycle
+  -- swap mapping[lc][lr] and mapping[rc][rr]
+  let tmp := getPair a2.mapping lp
+  let a3 := { a2 with mapping := setPair a2.mapping lp (getPair a2.mapping rp) }
+  { a3 with mapping := setPair a3.mapping rp tmp }
+
 /-- `Assembly::copy` over a permutation-column-indexed cell pair, with `fuel` bounding
 the cycle walk (a cycle has ≤ `n·numCols` cells; the caller passes exactly that). Plain
 lets and a recursive walk instead of Rust's mutation, so the merge is provable against
 the abstract swap-composition replay (`replayKeygenPermutation`). -/
 def copy (a : Asm) (fuel : ℕ) (lc lr rc rr : ℕ) : Asm :=
-  let leftRep := getPair a.aux (lc, lr)
-  let rightRep := getPair a.aux (rc, rr)
-  if leftRep == rightRep then a
-  else
-    -- the size comparison decides which representative survives the merge
-    let smaller := getNat a.sizes leftRep < getNat a.sizes rightRep
-    let leftCycle := if smaller then rightRep else leftRep
-    let rightCycle := if smaller then leftRep else rightRep
-    -- sizes[leftCycle] += sizes[rightCycle]
-    let a := { a with sizes := setNat a.sizes leftCycle (getNat a.sizes leftCycle + getNat a.sizes rightCycle) }
-    -- walk the right cycle, re-pointing aux to leftCycle (do-while: at least `rightCycle`)
-    let a := a.repoint fuel rightCycle leftCycle rightCycle
-    -- swap mapping[lc][lr] and mapping[rc][rr]
-    let tmp := getPair a.mapping (lc, lr)
-    let a := { a with mapping := setPair a.mapping (lc, lr) (getPair a.mapping (rc, rr)) }
-    { a with mapping := setPair a.mapping (rc, rr) tmp }
+  if getPair a.aux (lc, lr) == getPair a.aux (rc, rr) then a
+  else merge a fuel (lc, lr) (rc, rr)
 
 end Asm
 
