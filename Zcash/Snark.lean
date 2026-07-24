@@ -53,7 +53,7 @@ import Zcash.Snark.Soundness.DomainSelectors
 import Zcash.Snark.Soundness.CanonicalConstraintModel
 import Zcash.Snark.Soundness.InstanceCommitment
 import Zcash.Snark.Soundness.ActionStatement
-import Zcash.Snark.Soundness.ActionAssignment
+import Zcash.Snark.VkCommit.Assignment
 import Zcash.Snark.Soundness.InnerProduct
 import Zcash.Snark.Soundness.Extraction
 import Zcash.Snark.Soundness.Constraints

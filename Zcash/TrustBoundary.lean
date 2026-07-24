@@ -39,8 +39,8 @@ import Zcash.Snark.Soundness.PolynomialEnvironment
 import Zcash.Snark.Soundness.DomainSelectors
 import Zcash.Snark.Soundness.CanonicalConstraintModel
 import Zcash.Snark.Soundness.InstanceCommitment
-import Zcash.Snark.Soundness.ActionAssignment
 import Zcash.Snark.Soundness.ActionStatement
+import Zcash.Snark.VkCommit.Assignment
 import Zcash.Snark.Soundness.Composition.Decomposition
 import Zcash.Snark.Soundness.Composition.Residual
 import Zcash.Snark.Soundness.Composition.Prefixes
@@ -650,7 +650,6 @@ assert_axioms actionPublicInputs_of_instanceRowPolynomial
 assert_axioms polynomialEnvironment_query_advice
 assert_axioms polynomialEnvironment_query_fixed
 assert_axioms polynomialEnvironment_query_instance
-assert_axioms ActionAssignment.ofDecodedMembers_proofIndex
 assert_axioms permutationLastEvalsWellFormed_of_assemble?_eq_some
 assert_axioms eval_permutationDataOfDecodedResolver_or_relation
 assert_axioms hgood_failure_priced

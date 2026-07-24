@@ -1,13 +1,14 @@
-import Zcash.Snark.Fixtures.SingleAction.VkMatch
+import Zcash.Bridge.VkProjection
 import Zcash.Circuits.Fixtures.Layout
+import Zcash.Snark.Core.Group
 
 /-!
 # Deriving the Action verifying key's commitment fields from the circuit + captured URS
 
-This module derives the two commitment families the Action `VerifyingKey` capture still
-transcribes as opaque points — `fixedCommitment` (the 29 fixed columns) and
-`permutationCommonCommitment` (the 15 permutation columns) — from the derived circuit
-layout and the captured monomial URS: Lagrange-basis URS by inverse FFT
+This module derives the two commitment families of an Action `VerifyingKey` —
+`fixedCommitment` (the 29 fixed columns) and `permutationCommonCommitment` (the 15
+permutation columns) — from the derived circuit layout and a supplied monomial URS:
+Lagrange-basis URS by inverse FFT
 (`derivedUrsGLagrange`), dense fixed columns from the certified layout recipe
 (`derivedFixedColumns`), the keygen permutation polynomials (`permPolyColumns`), and
 `commit_lagrange` commitments for both families. `derivedActionVk` assembles a
@@ -20,31 +21,19 @@ layout and the captured monomial URS: Lagrange-basis URS by inverse FFT
 * `commit_lagrange` blind: `poly/commitment.rs:212-216` (`Blind::default () = Blind(F::ONE)`).
 * Permutation commitments: `plonk/permutation/keygen.rs:102-152` (`Assembly::build_vk`).
 
-## Certification status and cost (why this target is non-default)
+## Certification
 
-`commitments_derived` below certifies the whole derivation (inverse FFT + `n⁻¹`
-scaling + dense column reconstruction + keygen mapping + blind convention) by ONE
-bundled `native_decide`. Measured baseline: a single-column probe cost **1291 s wall,
-6.9 GB peak RSS** — dominated by the fixed cost every `native_decide` in this file pays
-(native codegen of the ~2110-point fixture closure) plus the Lagrange FFT
-(2^11·11 group butterflies) and one 2^11-term Vesta MSM, all under the naive
-`ZMod.val • point` binary scalar multiplication with affine (inversion-per-add) point
-arithmetic.
-
-The FULL bundled certification — all 29 fixed + 15 permutation commitments + the
-Lagrange-prefix cross-check in one `native_decide`, and the record theorem
-`vk = derivedActionVk` — costs the fixed ≈ 21.5 min plus ~43 additional MSMs.
-Maintainer-accepted as a known annoyance: this target (`ZcashVkCommit`, see
-`lakefile.toml`) is excluded from `defaultTargets` so the default build stays fast, and
-the acceleration path is a Pippenger bucket MSM + projective coordinates + faster
-certified field arithmetic (the dominant cost today is one field inversion per affine
-point-add inside the binary `ZMod.val • point` scalar multiplication).
+`Zcash.Snark.VkCommit.Certificate` certifies the whole derivation (inverse FFT +
+`n⁻¹` scaling + dense column reconstruction + keygen mapping + blind convention) and
+proves `vk = derivedActionVk`. It is kept in a separate module so clients can import
+the derived data and key without evaluating the expensive concrete certificate.
+The explicit `ZcashVkCommit` target builds both modules; it remains excluded from
+`defaultTargets`.
 -/
 
 namespace Zcash.Snark.VkCommit
 
 open Zcash.Snark
-open Zcash.Snark.Fixture
 open Bridge
 open Halo2
 open Zcash.Circuits.Fixtures
@@ -74,7 +63,8 @@ butterflies `(a, b) ↦ (a + tw·b, a − tw·b)`. The scalar action `tw·b` is 
 `ZMod.val • point` convention `commitLagrange` uses (Rust's iterative and recursive
 `best_fft` branches compute this identical result; we mirror the iterative one,
 `arithmetic.rs:223-252`). -/
-def bestFftG (a0 : Array G) (omega : Fp) (logN : ℕ) : Array G := Id.run do
+def bestFftG {G : Type} [AddCommGroup G] [Inhabited G]
+    (a0 : Array G) (omega : Fp) (logN : ℕ) : Array G := Id.run do
   let n := a0.size
   let mut a := a0
   -- bit-reversal permutation (`arithmetic.rs:207-212`)
@@ -108,14 +98,14 @@ def bestFftG (a0 : Array G) (omega : Fp) (logN : ℕ) : Array G := Id.run do
     half := chunk
   return a
 
-/-- The derived Lagrange-basis URS generators (length `2^actionK = 2048`): the monomial
-generators `capturedUrsG` transformed by an inverse FFT at `omega⁻¹ = alpha_inv` and scaled
-by `n⁻¹ = TWO_INV^k = (2^k)⁻¹` — halo2's `g_lagrange` (`poly/commitment.rs:75-88`).
-`commitments_derived` cross-checks the captured 10-generator prefix directly and
-certifies the rest through the commitments. -/
-def derivedUrsGLagrange : List G :=
-  let minv : Fp := ((2 : Fp) ^ actionK)⁻¹
-  (bestFftG capturedUrsG.toArray (omegaInvOf actionK) actionK).toList.map fun p => minv.val • p
+/-- The Lagrange-basis generators derived from a monomial URS by inverse FFT and
+`n⁻¹` scaling, exactly as in halo2's `Params::new`. -/
+def derivedUrsGLagrange {G : Type} [AddCommGroup G] [Inhabited G]
+    (urs : URS G) : List G :=
+  let monomial := List.ofFn urs.g
+  let minv : Fp := ((2 : Fp) ^ urs.k)⁻¹
+  (bestFftG monomial.toArray (omegaInvOf urs.k) urs.k).toList.map
+    fun point => minv.val • point
 
 /-! ## Generalized Lagrange commitment (`poly/commitment.rs:212-216`) -/
 
@@ -124,9 +114,10 @@ def derivedUrsGLagrange : List G :=
 `(∑ᵢ coeffsᵢ • basisᵢ) + w` — the same `+ w` blind convention the existing
 `commitLagrange` uses, generalized to an arbitrary basis and coefficient list (the
 instance-commitment path through `commitLagrange` is deliberately left untouched). -/
-def commitLagrangeWith (basis : List G) (coeffs : List Fp) : G :=
+def commitLagrangeWith {G : Type} [AddCommGroup G] [Inhabited G]
+    (blind : G) (basis : List G) (coeffs : List Fp) : G :=
   ((List.range coeffs.length).map
-    (fun i => (coeffs.getD i 0).val • basis.getD i 0)).sum + capturedURS.w
+    (fun i => (coeffs.getD i 0).val • basis.getD i 0)).sum + blind
 
 /-! ## Derived fixed columns and their commitments
 
@@ -141,6 +132,10 @@ commits to; the layout test simply predates the planner-side constants derivatio
 The dense columns are `numFixedColumns` (= 29, `actionPinnedCs.numFixedColumns`)
 columns of length `2^actionK`, unassigned cells `0` (`domain.empty_lagrange`,
 `plonk/keygen.rs`), assigned values coerced back from the `ZMod.val` triples. -/
+
+/-- The Action pinned constraint system, derived without any captured fixture. -/
+def actionPinnedCs : PinnedConstraintSystem Fp :=
+  .derive actionCS (actionSelMapDerived (2 ^ actionK))
 
 /-- Derived region bodies, by `assignRegion` index. -/
 def actionRegions : List (ℕ × RegionOperations Fp) := (indexedRegions actionOperations 0).1
@@ -183,11 +178,11 @@ def denseColumns (n numCols : ℕ) (triples : List (ℕ × ℕ × ℕ)) : List (
 def derivedFixedColumns : List (List Fp) :=
   denseColumns (2 ^ actionK) actionPinnedCs.numFixedColumns actionFixedSparse
 
-/-- The derived fixed-column commitments — `commit_lagrange` of each dense fixed column
-with the default blind (`plonk/keygen.rs`, `keygen_vk`'s `fixed_commitments`). All 29 are
-certified equal to the capture in `commitments_derived`. -/
-def derivedFixedCommitments : List G :=
-  derivedFixedColumns.map (commitLagrangeWith derivedUrsGLagrange)
+/-- The derived fixed-column commitments against the supplied URS. -/
+def derivedFixedCommitments {G : Type} [AddCommGroup G] [Inhabited G]
+    (urs : URS G) : List G :=
+  let lagrange := derivedUrsGLagrange urs
+  derivedFixedColumns.map (commitLagrangeWith urs.w lagrange)
 
 /-! ## Derived permutation commitments (`plonk/permutation/keygen.rs:102-152`) -/
 
@@ -246,11 +241,12 @@ def permPolyColumns : List (List Fp) :=
       let pij := (mapping[i]!)[j]!
       deltaPows[pij.1]! * omegaPows[pij.2]!
 
-/-- The derived permutation common commitments — `commit_lagrange` of each permutation
-polynomial with the default blind (`build_vk`, `permutation/keygen.rs:147-151`). Certified
-against the capture in `commitments_derived`. -/
-def derivedPermutationCommonCommitments : List G :=
-  permPolyColumns.map (commitLagrangeWith derivedUrsGLagrange)
+/-- The derived permutation common commitments against the supplied URS. -/
+def derivedPermutationCommonCommitments
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    (urs : URS G) : List G :=
+  let lagrange := derivedUrsGLagrange urs
+  permPolyColumns.map (commitLagrangeWith urs.w lagrange)
 
 /-! ## The fully-derived Action verifying key -/
 
@@ -263,7 +259,10 @@ by `RichExpression.toExpr`, `permutationChunks` from the derived selector map
 (`vk_permutationChunks_derived`), and the commitment families from
 `derivedFixedCommitments`/`derivedPermutationCommonCommitments`. The record equality
 is `vk_eq_derived` below (consuming the bundled commitment certification). -/
-def derivedActionVk : VerifyingKey shape Fp G where
+def derivedActionVk
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    (shape : Shape) (urs : URS G) :
+    VerifyingKey shape Fp G where
   omega := omegaOf actionK
   n := 2 ^ actionK
   blindingFactors := actionCS.blindingFactors
@@ -273,96 +272,13 @@ def derivedActionVk : VerifyingKey shape Fp G where
   instanceQueryLayout := actionPinnedCs.instanceQueryLayout
   adviceQueryLayout := actionPinnedCs.adviceQueryLayout
   fixedQueryLayout := actionPinnedCs.fixedQueryLayout
-  fixedCommitment := fun i => derivedFixedCommitments.getD i 0
-  permutationCommonCommitment := fun i => derivedPermutationCommonCommitments.getD i.val 0
+  fixedCommitment := fun i => (derivedFixedCommitments urs).getD i 0
+  permutationCommonCommitment := fun i =>
+    (derivedPermutationCommonCommitments urs).getD i.val 0
   permutationChunks := permutationChunksOf (actionSelMapDerived (2 ^ actionK)) actionCS
   lookupInputExprs := fun l =>
     (actionPinnedCs.lookupInputExprs.getD l.val []).map RichExpression.toExpr
   lookupTableExprs := fun l =>
     (actionPinnedCs.lookupTableExprs.getD l.val []).map RichExpression.toExpr
-
-/-! ## Certification
-
-ONE `native_decide` sharing the FFT, fixed contents and keygen mapping across the
-Lagrange-prefix cross-check and all 44 commitments, split by `Prod.mk.injEq`, feeding
-the record theorem `vk = derivedActionVk` (record-wise, NOT `native_decide` — the
-record has function fields). Maintainer-accepted cost (this module's build runs tens of
-minutes; see the module docstring), quarantined in the non-default `ZcashVkCommit`
-target. -/
-
-/-- **The derived commitment data matches the capture**: the Lagrange URS 10-generator
-prefix, the 29 fixed-column commitments, and the 15 permutation common commitments —
-bundled into ONE `native_decide` so the shared Lagrange FFT, fixed contents, and keygen
-mapping evaluate exactly once (rather than once per fact). -/
-theorem commitments_derived :
-    (derivedUrsGLagrange.take capturedUrsGLagrange.length,
-     derivedFixedCommitments, derivedPermutationCommonCommitments)
-    = (capturedUrsGLagrange, capturedFixedCommitments,
-       capturedPermutationCommonCommitments) := by native_decide
-
-/-- The derived Lagrange URS reproduces the captured 10-generator prefix. -/
-theorem derivedUrsGLagrange_prefix_eq :
-    derivedUrsGLagrange.take capturedUrsGLagrange.length = capturedUrsGLagrange := by
-  have h := commitments_derived
-  simp only [Prod.mk.injEq] at h
-  exact h.1
-
-/-- The derived fixed-column commitments are the captured ones. -/
-theorem derivedFixedCommitments_eq :
-    derivedFixedCommitments = capturedFixedCommitments := by
-  have h := commitments_derived
-  simp only [Prod.mk.injEq] at h
-  exact h.2.1
-
-/-- The derived permutation common commitments are the captured ones. -/
-theorem derivedPermutationCommonCommitments_eq :
-    derivedPermutationCommonCommitments = capturedPermutationCommonCommitments := by
-  have h := commitments_derived
-  simp only [Prod.mk.injEq] at h
-  exact h.2.2
-
-/-- `((List.ofFn f).map g).getD` at an in-range `Fin` index is `g (f l)`. -/
-private theorem getD_map_ofFn {α β : Type} {n : ℕ} (f : Fin n → α) (g : α → β)
-    (l : Fin n) (d : β) : ((List.ofFn f).map g).getD l.val d = g (f l) := by
-  simp [List.getD_eq_getElem?_getD, l.isLt]
-
-/-- **The captured Action verifying key is fully derived.** Proven record-wise (not by
-`native_decide` — the record carries function fields) from the certified field
-equalities: scalars (`vk_scalars_derived`), gates/queries via the pinned CS
-(`vk_*_eq_derived` and `RichExpression.toExpr_ofExpr`), `permutationChunks`
-(`vk_permutationChunks_derived`), and the two commitment families
-(`commitments_derived`). -/
-theorem vk_eq_derived : vk = derivedActionVk := by
-  have hs := vk_scalars_derived
-  simp only [Prod.mk.injEq] at hs
-  obtain ⟨ho, hn, hb, hd, hc⟩ := hs
-  have hg : actionPinnedCs.gates.map RichExpression.toExpr = vk.gates := by
-    rw [← vk_gates_eq_derived, List.map_map]
-    simp [Function.comp_def, RichExpression.toExpr_ofExpr]
-  have hli : (fun l => (actionPinnedCs.lookupInputExprs.getD l.val []).map
-      RichExpression.toExpr) = vk.lookupInputExprs := by
-    funext l
-    rw [← vk_lookupInputExprs_eq_derived, getD_map_ofFn, List.map_map]
-    simp [Function.comp_def, RichExpression.toExpr_ofExpr]
-  have hlt : (fun l => (actionPinnedCs.lookupTableExprs.getD l.val []).map
-      RichExpression.toExpr) = vk.lookupTableExprs := by
-    funext l
-    rw [← vk_lookupTableExprs_eq_derived, getD_map_ofFn, List.map_map]
-    simp [Function.comp_def, RichExpression.toExpr_ofExpr]
-  have hfc : (fun i => derivedFixedCommitments.getD i 0) = vk.fixedCommitment := by
-    rw [derivedFixedCommitments_eq]; rfl
-  have hpp : (fun i : Fin shape.numPermutationColumns =>
-      derivedPermutationCommonCommitments.getD i.val 0)
-      = vk.permutationCommonCommitment := by
-    rw [derivedPermutationCommonCommitments_eq]; rfl
-  unfold vk derivedActionVk
-  rw [VerifyingKey.mk.injEq]
-  exact ⟨ho, hn, hb, hd, hc, hg.symm,
-    vk_instanceQueryLayout_eq_derived, vk_adviceQueryLayout_eq_derived,
-    vk_fixedQueryLayout_eq_derived, hfc.symm, hpp.symm, vk_permutationChunks_derived,
-    hli.symm, hlt.symm⟩
-
-assert_no_sorry commitments_derived
-assert_no_sorry vk_eq_derived
 
 end Zcash.Snark.VkCommit

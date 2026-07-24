@@ -482,8 +482,8 @@ correctness of its replayed keygen merge is likewise a once-and-for-all lemma.
 
 ### 5. Construct the Clean assignment
 
-**Status: the generic VK-free assignment shell is implemented; its decoded-member
-constructor remains open. The merged
+**Status: the generic VK-free assignment shell and a circuit-derived Action
+decoded-member constructor are implemented. The merged
 [#89](https://github.com/zcash/ironwood/pull/89) supplies the target semantics, while
 [#30](https://github.com/zcash/ironwood/pull/30) and
 [#91](https://github.com/zcash/ironwood/pull/91) supply most of the prospective source
@@ -545,10 +545,22 @@ the type has neither an arbitrary domain nor a `VerifyingKey` argument, and
 `TopLevelAssignment.synthesisWellFormed` discharges the layout premise directly from
 `TopLevelCircuit.FitsAt k`.
 
-The incoming `FormalCircuit.toVerifyingKey` completes this seam rather than changing
-it: prove that its `omega`, `n`, and blinding fields are the domain values above, then
-define the decoded-member constructor using that circuit-derived key. The external
-accepted key appears only through its equality certificate with the derived key.
+`TopLevelAssignment.ofActionDecodedMembers` now constructs this shell directly from
+the deployed decoded-member resolver. It never accepts an arbitrary verifying key:
+the decoder uses `VkCommit.derivedActionVk shape urs`, whose scalar, gate, query-layout,
+fixed-commitment, permutation-commitment, permutation-chunk, and lookup fields are
+derived from the configured Action circuit and supplied URS. The reusable derivation
+is independent of the captured fixture; the deliberately expensive
+`VkCommit.Certificate` separately proves that the captured deployed key equals that
+derived key.
+
+The incoming generic `FormalCircuit.toVerifyingKey` will shrink the remaining
+Action-specific seam rather than alter the assignment interface. Replace
+`derivedActionVk` with `orchardActionTopLevelCircuit.formalCircuit.toVerifyingKey`,
+prove the generic field equations connecting that key to the circuit-owned domain and
+layout above, and retain the captured-key equality only as an external deployment
+certificate. Until that lands, the constructor has one explicit shape-domain
+coherence premise because `Shape.k` is not itself derived from its key.
 
 On the SNARK side, `FullCircuitSatisfaction.topLevelSoundness` composes exact
 gate/copy/lookup/fixed satisfaction with that generic top-level endpoint.
@@ -587,13 +599,12 @@ its fixed-table clauses to the corresponding constraints. The deployed
 `orchardActionTopLevelCircuit` specializes this generic Action construction to the
 real generators and certified bases.
 
-The existing `ActionAssignment` still packages one proof member's
-fixed/advice/instance polynomials through `resolverEnvironment`, but its API predates
-the circuit-owned keygen layer: it takes a `VerifyingKey` and repeats Action placement
-and usable-row choices. It is temporary. Once `FormalCircuit.toVerifyingKey` is
-available, move its decoded constructor onto `TopLevelAssignment` and delete the
-legacy Action-specific type. The external accepted Action VK then enters only through
-a certificate that it equals (or has the required fields equal to) the derived VK.
+The legacy `ActionAssignment` has been deleted. Its decoded constructor now returns
+the generic `TopLevelAssignment` indexed by `orchardActionTopLevelCircuit`, so
+placement, operations, domain exponent, blinding factors, and usable rows all come
+from the top-level circuit. The only Action-specific work left in this layer is the
+deployed decoder routing and, pending generic `FormalCircuit.toVerifyingKey`, the
+temporary concrete spelling of the circuit-derived key.
 
 The compositional base and post-Ironwood `FormalCircuit`s intentionally retain their
 `EnvAssumptions`: child circuits may state contracts that a parent fulfills.
@@ -687,10 +698,12 @@ whose public inputs were committed by the verifier.
 2. Make #89's post-compression CS and layout fixtures available as reusable Lean data,
    and prove VK/layout equality theorems that discharge #30's routing hypotheses.
 3. The canonical polynomial-to-row decoder, Action top-level environment closure,
-   circuit-owned pinned CS/V1 placement/domain fit, and generic
-   full-satisfaction-to-`TopLevelCircuit.Statement` endpoint are complete. Replace the
-   legacy Action assignment with a generic circuit-owned-VK assignment and discharge
-   its resolver representation facts.
+   circuit-owned pinned CS/V1 placement/domain fit, generic
+   full-satisfaction-to-`TopLevelCircuit.Statement` endpoint, and decoded
+   `TopLevelAssignment` constructor are complete; the legacy `ActionAssignment` is
+   gone. Replace its temporary Action key derivation with generic
+   `FormalCircuit.toVerifyingKey` when available, then discharge the resolver
+   representation facts.
 4. Instantiate the generic decomposed bridge for one selected Action, adapt
    `TopLevelCircuit.Statement` to the external Action statement, and then generalize
    it to every `Fin shape.numProofs`. The semantic adapter and generic decoded

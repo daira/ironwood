@@ -13,8 +13,9 @@ accepting an arbitrary verifying key.
 The domain exponent comes from the top-level circuit's own keygen inputs. One
 top-level circuit is reused for every proof in a bundle, and indexing the assignment
 by its member prevents a bundle construction from silently selecting a different
-member's columns. Once `FormalCircuit.toVerifyingKey` is available, its field
-equations connect this assignment directly to the verifier-side resolver.
+member's columns. A decoded constructor connects this shell to the verifier-side
+resolver using the key derived from the formal circuit; no accepted key is a free
+input to this type.
 -/
 
 namespace Zcash.Snark
@@ -28,8 +29,8 @@ set_option maxHeartbeats 20000
 The polynomial assignment for one member of a bundle of the same top-level circuit.
 
 The circuit is an index, not a stored choice. In particular there is no
-caller-supplied domain exponent or `VerifyingKey`: the eventual decoded constructor
-uses the key derived from `top.formalCircuit`.
+caller-supplied domain exponent or `VerifyingKey`: decoded constructors use the key
+derived from `top.formalCircuit`.
 -/
 structure TopLevelAssignment
     {ConfigInput Config : Type} {Output : TypeMap}
