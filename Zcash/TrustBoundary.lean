@@ -33,6 +33,7 @@ import Zcash.Snark.Soundness.LookupSemantics
 import Zcash.Snark.Soundness.CircuitIntegration
 import Zcash.Snark.Soundness.TopLevelCircuit
 import Zcash.Snark.Soundness.TopLevelAssignment
+import Zcash.Snark.Soundness.TopLevelCoherence
 import Zcash.Snark.Soundness.PolynomialEnvironment
 import Zcash.Snark.Soundness.DomainSelectors
 import Zcash.Snark.Soundness.CanonicalConstraintModel
@@ -592,6 +593,10 @@ assert_axioms TopLevelAssignment.domainSizeCastNeZero
 assert_axioms TopLevelAssignment.blindingFactors_lt_domainSize
 assert_axioms TopLevelAssignment.blindingFactors_succ_lt_domainSize
 assert_axioms TopLevelAssignment.synthesisWellFormed
+assert_axioms OperationsKeygenCoherent.region_gate
+assert_axioms OperationsKeygenCoherent.gate
+assert_axioms OperationsKeygenCoherent.region_lookup
+assert_axioms OperationsKeygenCoherent.lookup
 assert_axioms rowPolynomial_eval
 assert_axioms rowPolynomial_natDegree_lt
 assert_axioms instanceRowPolynomial_eval

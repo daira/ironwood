@@ -16,6 +16,42 @@ namespace Zcash.Circuits
 
 open Halo2
 
+variable {F : Type}
+
+/--
+Static configure/synthesis coherence for one region operation.
+
+Assignments and copies need no configure-phase registration. Gate and lookup
+activations do: their semantic expressions must be among the arguments from which
+key generation constructs the pinned constraint system.
+-/
+@[circuit_norm]
+def RegionOperation.KeygenCoherent
+    (cs : ConstraintSystem F) : RegionOperation F → Prop
+  | .enableGate gate _ => gate ∈ cs.gates
+  | .enableLookup argument _ _ => argument ∈ cs.lookups
+  | _ => True
+
+/-- Static configure/synthesis coherence for one layouter operation. -/
+@[circuit_norm]
+def Operation.KeygenCoherent
+    (cs : ConstraintSystem F) : Operation F → Prop
+  | .region _ body => body.Forall (RegionOperation.KeygenCoherent cs)
+  | _ => True
+
+/--
+Every gate and lookup emitted by synthesis was registered by the same circuit's
+configure phase.
+
+`FormalCircuit` intentionally keeps `configure` and `synthesize` independent, so
+this property cannot be derived for an arbitrary value of that type. A deployed
+top-level circuit certifies it once; the verifier-to-circuit bridge then uses it
+generically.
+-/
+def OperationsKeygenCoherent
+    (cs : ConstraintSystem F) (operations : Operations F) : Prop :=
+  operations.Forall (Operation.KeygenCoherent cs)
+
 /--
 Generic well-formedness facts supplied by successful synthesis/layout rather than by
 the proof's constraint polynomials.
@@ -85,6 +121,14 @@ def constraintSystem (self : TopLevelCircuit F ConfigInput Config Output) :
 def operations (self : TopLevelCircuit F ConfigInput Config Output)
     (i : RegionIndex := 0) : Operations F :=
   (self.formalCircuit.synthesize self.config ()).operations i
+
+/--
+The circuit-side static premise needed to connect synthesized gate and lookup
+activations to the pinned constraint system derived from `configure`.
+-/
+def KeygenCoherent
+    (self : TopLevelCircuit F ConfigInput Config Output) : Prop :=
+  OperationsKeygenCoherent self.constraintSystem (self.operations 0)
 
 /-- The semantic statement extracted from a placed satisfying assignment. -/
 def Statement (self : TopLevelCircuit F ConfigInput Config Output)

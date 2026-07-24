@@ -452,12 +452,18 @@ with the existing copy and lookup witnesses.
 The remaining gate work is now a generic keygen-coherence boundary. `FormalCircuit`
 deliberately stores `configure` and `synthesize` as separate functions, so its type
 cannot rule out an ill-formed circuit that synthesizes an unregistered gate or lookup.
-A small predicate on `TopLevelCircuit` must state precisely that every emitted gate and
-lookup belongs to its configured constraint system. Given that predicate, the rest is
-generic: `toPinnedCS` derives placement and selector activations from the same operation
-stream; the selector-compression semantics supplies the nonzero scale at an enabled
-packed root; and the circuit-derived fixed columns supply that root value. No
-Action-specific placement or gate-polynomial witness should remain.
+`OperationsKeygenCoherent` now states precisely that every emitted gate and lookup
+belongs to its configured constraint system, and `TopLevelCircuit.KeygenCoherent`
+specializes it to a closed circuit's own configure/synthesis pair.
+`OperationsKeygenCoherent.gate` and `.lookup` transport that compact certificate to
+every activation extracted by the operation bridge. Given that predicate, the rest is
+generic: `toPinnedCS` derives placement and selector activations from the same
+operation stream; the selector-compression semantics supplies the nonzero scale at an
+enabled packed root; and the circuit-derived fixed columns supply that root value. No
+Action-specific placement or gate-polynomial witness should remain. The Action
+certificate itself should be assembled compositionally at the opaque subcircuit call
+boundaries; expanding the entire 395-region operation stream into one proof goal would
+defeat those boundaries.
 
 The `Fixtures.Layout` reconstruction is already generic over operations, so σ-cycle
 correctness of its replayed keygen merge is likewise a once-and-for-all lemma.
