@@ -66,4 +66,4 @@ globs = ["Zcash.Circuits.Integration", "Zcash.Circuits.Integration.+"]
 # explicitly with `lake build ZcashKeygen`; the rest of the repo stays fast.
 [[lean_lib]]
 name = "ZcashKeygen"
-globs = ["Zcash.Snark.Keygen.+"]
+globs = ["Zcash.Snark.Keygen.+", "Zcash.Snark.Soundness.Deployed.ActionVk"]
