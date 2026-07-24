@@ -22,7 +22,7 @@ namespace AddChip
 theorem addGate_wellFormed (cfg : Config) :
     (addGate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (a b c : Column .advice) :
@@ -43,7 +43,7 @@ namespace CondSwap
 theorem swapGate_wellFormed (cfg : Config) :
     (swapGate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (a b aSwapped bSwapped swap : Column .advice) :
@@ -82,13 +82,13 @@ theorem pointGate_wellFormed
   simp only [List.mem_cons] at hconstraint
   rcases hconstraint with rfl | hconstraint
   · exact (Expression.gatedBy_querySelector qPoint).mul_right
-      (by rfl) |>.mul_right
-      (by simp [curveEqn, Expression.selectorFree, queryAdvice])
+      (by selector_free) |>.mul_right
+      (by simp [curveEqn, Expression.SelectorFree, queryAdvice])
   · simp only [List.not_mem_nil, or_false] at hconstraint
     subst constraint
     exact (Expression.gatedBy_querySelector qPoint).mul_right
-      (by rfl) |>.mul_right
-      (by simp [curveEqn, Expression.selectorFree, queryAdvice])
+      (by selector_free) |>.mul_right
+      (by simp [curveEqn, Expression.SelectorFree, queryAdvice])
 
 @[circuit_norm]
 theorem pointNonIdGate_wellFormed
@@ -105,7 +105,7 @@ theorem pointNonIdGate_wellFormed
   simp only [List.mem_singleton] at hconstraint
   subst constraint
   exact (Expression.gatedBy_querySelector qPointNonId).mul_right
-    (by simp [curveEqn, Expression.selectorFree, queryAdvice])
+    (by simp [curveEqn, Expression.SelectorFree, queryAdvice])
 
 theorem configure_preservesGateWellFormedness
     (x y : Column .advice) :
@@ -131,7 +131,7 @@ theorem orchardGate_wellFormed
     (qOrchard : Selector) (advices : Fin 10 → Column .advice) :
     (orchardGate qOrchard advices).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 end Action.Circuit
 
@@ -140,7 +140,7 @@ namespace CommitIvk
 theorem gate_wellFormed (cfg : Config) :
     (gate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [boolCheck, Expression.selectorFree, queryAdvice]
+  simp [boolCheck, Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (advices : Fin 10 → Column .advice) :
@@ -161,7 +161,7 @@ theorem gate_wellFormed
       Column .advice) :
     (gate qAdd lambda xP yP xQR yQR alpha beta gamma delta).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (xP yP xQR yQR lambda alpha beta gamma delta :
@@ -210,7 +210,7 @@ theorem gate_wellFormed
     (xP yP xQR yQR : Column .advice) :
     (gate qAddIncomplete xP yP xQR yQR).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (xP yP xQR yQR : Column .advice) :
@@ -251,7 +251,7 @@ namespace Ecc.Mul
 theorem lsbGate_wellFormed (cfg : Config) :
     (lsbGate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 end Ecc.Mul
 
@@ -260,7 +260,7 @@ namespace Ecc.MulComplete
 theorem decomposeGate_wellFormed (cfg : Config) :
     (decomposeGate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (zComplete : Column .advice) (addConfig : Ecc.Add.Config) :
@@ -286,7 +286,7 @@ namespace Ecc.MulOverflow
 theorem overflowGate_wellFormed (K : ℕ) (cfg : Config K) :
     (overflowGate K cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (K : ℕ) (lookupConfig : LookupRangeCheck.Config K)
@@ -317,7 +317,7 @@ namespace LookupRangeCheck
 theorem bitshiftGate_wellFormed (K : ℕ) (cfg : Config K) :
     (bitshiftGate K cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (K : ℕ) (runningSum : Column .advice)
@@ -352,22 +352,22 @@ namespace DecomposeRunningSum
 @[simp]
 theorem rangeCheckExpr_selectorFree
     (range : ℕ) (word : Expression Fp Query)
-    (hword : word.selectorFree = true) :
-    (rangeCheckExpr range word).selectorFree = true := by
+    (hword : word.SelectorFree) :
+    (rangeCheckExpr range word).SelectorFree := by
   unfold rangeCheckExpr
   have foldlSelectorFree
       (indices : List ℕ) (acc : Expression Fp Query)
-      (hacc : acc.selectorFree = true) :
+      (hacc : acc.SelectorFree) :
       (indices.foldl
         (fun result (index : ℕ) =>
           result * (Expression.const (index : Fp) - word))
-        acc).selectorFree = true := by
+        acc).SelectorFree := by
     induction indices generalizing acc with
     | nil => exact hacc
     | cons index rest ih =>
         rw [List.foldl_cons]
         apply ih
-        simp [Expression.selectorFree, hacc, hword]
+        simp [Expression.SelectorFree, hacc, hword]
   exact foldlSelectorFree _ word hword
 
 theorem rangeCheckGate_wellFormed (W : ℕ) (cfg : Config) :
@@ -378,7 +378,7 @@ theorem rangeCheckGate_wellFormed (W : ℕ) (cfg : Config) :
   simp only [List.mem_singleton] at hconstraint
   subst constraint
   apply rangeCheckExpr_selectorFree
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (W : ℕ) (qRangeCheck : Selector) (z : Column .advice) :
@@ -400,7 +400,7 @@ namespace Sinsemilla.Merkle.Gate
 theorem decomposeGate_wellFormed (cfg : Config) :
     (decomposeGate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (aWhole bWhole cWhole leftNode rightNode z1A z1B b1 b2 lWhole :
@@ -447,12 +447,12 @@ namespace Sinsemilla.HashPiece
 theorem initialYQGate_wellFormed (cfg : Config) :
     (initialYQGate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [yAExpr, xRExpr, Expression.selectorFree, queryAdvice, queryFixed]
+  simp [yAExpr, xRExpr, Expression.SelectorFree, queryAdvice, queryFixed]
 
 theorem sinsemillaGate_wellFormed (cfg : Config) :
     (sinsemillaGate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [yAExpr, xRExpr, qS3Expr, Expression.selectorFree,
+  simp [yAExpr, xRExpr, qS3Expr, Expression.SelectorFree,
     queryAdvice, queryFixed]
 
 theorem configure_preservesGateWellFormedness
@@ -509,17 +509,17 @@ namespace Poseidon
 theorem fullRoundGate_wellFormed (cfg : Config) :
     (fullRoundGate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [pow5Expr, Expression.selectorFree, queryAdvice, queryFixed]
+  simp [pow5Expr, Expression.SelectorFree, queryAdvice, queryFixed]
 
 theorem partialRoundsGate_wellFormed (cfg : Config) :
     (partialRoundsGate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [pow5Expr, Expression.selectorFree, queryAdvice, queryFixed]
+  simp [pow5Expr, Expression.SelectorFree, queryAdvice, queryFixed]
 
 theorem padAndAddGate_wellFormed (cfg : Config) :
     (padAndAddGate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (state : Fin 3 → Column .advice)
@@ -573,19 +573,19 @@ namespace Ecc.MulIncomplete
 theorem qMul1Gate_wellFormed (cfg : Config) :
     (qMul1Gate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [yA, xRExpr, Expression.selectorFree, queryAdvice]
+  simp [yA, xRExpr, Expression.SelectorFree, queryAdvice]
 
 theorem qMul2Gate_wellFormed (cfg : Config) :
     (qMul2Gate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
   simp [forLoopPolys, yA, xRExpr,
-    Expression.selectorFree, queryAdvice]
+    Expression.SelectorFree, queryAdvice]
 
 theorem qMul3Gate_wellFormed (cfg : Config) :
     (qMul3Gate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
   simp [forLoopPolys, yA, xRExpr,
-    Expression.selectorFree, queryAdvice]
+    Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (z xA xP yP lambda1 lambda2 : Column .advice) :
@@ -662,7 +662,7 @@ namespace NoteCommit.DecomposeB
 theorem gate_wellFormed (cfg : Config) :
     (gate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [NoteCommit.boolCheck, Expression.selectorFree, queryAdvice]
+  simp [NoteCommit.boolCheck, Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (colL colM colR : Column .advice) :
@@ -684,7 +684,7 @@ namespace NoteCommit.DecomposeD
 theorem gate_wellFormed (cfg : Config) :
     (gate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [NoteCommit.boolCheck, Expression.selectorFree, queryAdvice]
+  simp [NoteCommit.boolCheck, Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (colL colM colR : Column .advice) :
@@ -706,7 +706,7 @@ namespace NoteCommit.DecomposeE
 theorem gate_wellFormed (cfg : Config) :
     (gate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (colL colM colR : Column .advice) :
@@ -728,7 +728,7 @@ namespace NoteCommit.DecomposeG
 theorem gate_wellFormed (cfg : Config) :
     (gate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [NoteCommit.boolCheck, Expression.selectorFree, queryAdvice]
+  simp [NoteCommit.boolCheck, Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (colL colM : Column .advice) :
@@ -749,7 +749,7 @@ namespace NoteCommit.DecomposeH
 theorem gate_wellFormed (cfg : Config) :
     (gate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [NoteCommit.boolCheck, Expression.selectorFree, queryAdvice]
+  simp [NoteCommit.boolCheck, Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (colL colM colR : Column .advice) :
@@ -771,7 +771,7 @@ namespace NoteCommit.GdCanonicity
 theorem gate_wellFormed (cfg : Config) :
     (gate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (colL colM colR colZ : Column .advice) :
@@ -794,7 +794,7 @@ namespace NoteCommit.PkdCanonicity
 theorem gate_wellFormed (cfg : Config) :
     (gate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (colL colM colR colZ : Column .advice) :
@@ -817,7 +817,7 @@ namespace NoteCommit.ValueCanonicity
 theorem gate_wellFormed (cfg : Config) :
     (gate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (colL colM colR colZ : Column .advice) :
@@ -840,7 +840,7 @@ namespace NoteCommit.RhoCanonicity
 theorem gate_wellFormed (cfg : Config) :
     (gate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (colL colM colR colZ : Column .advice) :
@@ -863,7 +863,7 @@ namespace NoteCommit.PsiCanonicity
 theorem gate_wellFormed (cfg : Config) :
     (gate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (colL colM colR colZ : Column .advice) :
@@ -886,7 +886,7 @@ namespace NoteCommit.YCanonicity
 theorem gate_wellFormed (cfg : Config) :
     (gate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
-  simp [NoteCommit.boolCheck, Expression.selectorFree, queryAdvice]
+  simp [NoteCommit.boolCheck, Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (advices : Fin 10 → Column .advice) :
@@ -950,35 +950,34 @@ namespace Ecc.MulFixed
 @[simp]
 theorem windowPow_selectorFree
     (word : Expression Fp Query)
-    (hword : word.selectorFree = true) (k : ℕ) :
-    (windowPow word k).selectorFree = true := by
+    (hword : word.SelectorFree) (k : ℕ) :
+    (windowPow word k).SelectorFree := by
   unfold windowPow
   have foldlSelectorFree
       (indices : List ℕ) (acc : Expression Fp Query)
-      (hacc : acc.selectorFree = true) :
-      (indices.foldl (fun result _ => result * word) acc).selectorFree =
-        true := by
+      (hacc : acc.SelectorFree) :
+      (indices.foldl (fun result _ => result * word) acc).SelectorFree := by
     induction indices generalizing acc with
     | nil => exact hacc
     | cons index rest ih =>
         rw [List.foldl_cons]
         apply ih
-        simp [Expression.selectorFree, hacc, hword]
-  exact foldlSelectorFree _ _ (by rfl)
+        simp [Expression.SelectorFree, hacc, hword]
+  exact foldlSelectorFree _ _ (by selector_free)
 
 theorem coordsCheck_selectorFree
     (cfg : Config) (word : Expression Fp Query)
-    (hword : word.selectorFree = true) :
+    (hword : word.SelectorFree) :
     (coordsCheck cfg word).Forall fun constraint =>
-      constraint.2.selectorFree = true := by
-  simp [coordsCheck, interpolatedX, Expression.selectorFree,
+      constraint.2.SelectorFree := by
+  simp [coordsCheck, interpolatedX, Expression.SelectorFree,
     queryAdvice, queryFixed, hword]
 
 theorem coordsGate_wellFormed (cfg : Config) :
     (coordsGate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
   apply coordsCheck_selectorFree
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (lagrangeCoeffs : Fin 8 → Column .fixed)
@@ -1018,7 +1017,7 @@ theorem canonGate_wellFormed (cfg : Config) :
     (canonGate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
   simp [DecomposeRunningSum.rangeCheckExpr_selectorFree,
-    Expression.mulConstant, Expression.selectorFree, queryAdvice]
+    Expression.mulConstant, Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (canonAdvices : Fin 3 → Column .advice)
@@ -1057,7 +1056,7 @@ theorem shortGate_wellFormed (cfg : Config) :
     (shortGate cfg).WellFormed := by
   apply Gate.wellFormed_of_withSelector
   simp [DecomposeRunningSum.rangeCheckExpr_selectorFree,
-    Expression.selectorFree, queryAdvice]
+    Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (superConfig : MulFixed.Config) :
@@ -1082,13 +1081,13 @@ theorem fullWidthGate_wellFormed (cfg : Config) :
   rw [List.forall_append]
   constructor
   · apply MulFixed.coordsCheck_selectorFree
-    simp [Expression.selectorFree, queryAdvice]
+    simp [Expression.SelectorFree, queryAdvice]
   · rw [List.forall_iff_forall_mem]
     intro constraint hconstraint
     simp only [List.mem_singleton] at hconstraint
     subst constraint
     apply DecomposeRunningSum.rangeCheckExpr_selectorFree
-    simp [Expression.selectorFree, queryAdvice]
+    simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateWellFormedness
     (superConfig : MulFixed.Config) :

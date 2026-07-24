@@ -55,7 +55,7 @@ fixed, advice, and instance queries.
 -/
 theorem eval_eq_of_selectorFree
     (expression : Expression F Query)
-    (hfree : expression.selectorFree = true)
+    (hfree : expression.SelectorFree)
     (left right : Query → F)
     (hfixed : ∀ column rotation,
       left (.fixed column rotation) = right (.fixed column rotation))
@@ -68,7 +68,7 @@ theorem eval_eq_of_selectorFree
   | var query =>
       cases query with
       | selector selector =>
-          simp [selectorFree] at hfree
+          simp [Expression.SelectorFree] at hfree
       | fixed column rotation =>
           exact hfixed column rotation
       | advice column rotation =>
@@ -77,10 +77,10 @@ theorem eval_eq_of_selectorFree
           exact hinstance column rotation
   | const value => rfl
   | add leftExpression rightExpression ihLeft ihRight =>
-      simp only [selectorFree, Bool.and_eq_true] at hfree
+      simp only [Expression.SelectorFree] at hfree
       simp only [eval, ihLeft hfree.1, ihRight hfree.2]
   | mul leftExpression rightExpression ihLeft ihRight =>
-      simp only [selectorFree, Bool.and_eq_true] at hfree
+      simp only [Expression.SelectorFree] at hfree
       simp only [eval, ihLeft hfree.1, ihRight hfree.2]
 
 /-- A selector atom is gated by itself. -/
@@ -107,7 +107,7 @@ theorem GatedBy.add
 theorem GatedBy.mul_right
     {selector : Selector} {gated free : Expression F Query}
     (hgated : gated.GatedBy selector)
-    (hfree : free.selectorFree = true) :
+    (hfree : free.SelectorFree) :
     (gated * free).GatedBy selector := by
   intro base scale
   simp only [GatedBy] at hgated ⊢
@@ -128,7 +128,7 @@ theorem GatedBy.mul_right
 @[circuit_norm]
 theorem GatedBy.mul_left
     {selector : Selector} {free gated : Expression F Query}
-    (hfree : free.selectorFree = true)
+    (hfree : free.SelectorFree)
     (hgated : gated.GatedBy selector) :
     (free * gated).GatedBy selector := by
   intro base scale
@@ -284,11 +284,12 @@ theorem Gate.wellFormed_of_withSelector
     (queriedCells : List (Expression F Query))
     (constraints : List (String × Expression F Query))
     (hfree : constraints.Forall fun constraint =>
-      constraint.2.selectorFree = true) :
+      constraint.2.SelectorFree) :
     ({ name := name
        selector := selector
        queriedCells := queriedCells
-       constraints := Constraints.withSelector selector constraints } :
+       constraints := Constraints.withSelector selector constraints
+         (List.forall_iff_forall_mem.mp hfree) } :
       Gate F).WellFormed := by
   rw [Gate.WellFormed, List.forall_iff_forall_mem]
   intro constraint hconstraint

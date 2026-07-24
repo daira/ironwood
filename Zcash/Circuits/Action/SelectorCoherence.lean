@@ -22,7 +22,7 @@ namespace AddChip
 theorem addGate_selectorsOwned (cfg : Config) :
     (addGate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
     (a b c : Column .advice) :
@@ -45,7 +45,7 @@ namespace CondSwap
 theorem swapGate_selectorsOwned (cfg : Config) :
     (swapGate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
     (a b aSwapped bSwapped swap : Column .advice) :
@@ -74,7 +74,7 @@ namespace CommitIvk
 theorem gate_selectorsOwned (cfg : Config) :
     (gate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [boolCheck, Expression.selectorFree, queryAdvice]
+  simp [boolCheck, Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
     (advices : Fin 10 → Column .advice) :
@@ -102,7 +102,7 @@ theorem gate_selectorsOwned
     (gate qAdd lambda xP yP xQR yQR
       alpha beta gamma delta).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
     (xP yP xQR yQR lambda alpha beta gamma delta :
@@ -219,7 +219,7 @@ theorem gate_selectorsOwned
     (xP yP xQR yQR : Column .advice) :
     (gate qAddIncomplete xP yP xQR yQR).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
     (xP yP xQR yQR : Column .advice) :
@@ -268,7 +268,7 @@ namespace Ecc.Mul
 theorem lsbGate_selectorsOwned (cfg : Config) :
     (lsbGate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 end Ecc.Mul
 
@@ -278,7 +278,7 @@ namespace Ecc.MulComplete
 theorem decomposeGate_selectorsOwned (cfg : Config) :
     (decomposeGate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
     (zComplete : Column .advice)
@@ -308,7 +308,7 @@ theorem overflowGate_selectorsOwned
     (K : ℕ) (cfg : Config K) :
     (overflowGate K cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
     (K : ℕ) (lookupConfig : LookupRangeCheck.Config K)
@@ -346,7 +346,7 @@ theorem bitshiftGate_selectorsOwned
     (K : ℕ) (cfg : Config K) :
     (bitshiftGate K cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
     (K : ℕ) (runningSum : Column .advice)
@@ -394,7 +394,7 @@ theorem rangeCheckGate_selectorsOwned
   simp only [List.mem_singleton] at hconstraint
   subst constraint
   apply rangeCheckExpr_selectorFree
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 /--
 Relational preservation for the child configure program whose selector is allocated
@@ -446,7 +446,7 @@ namespace Sinsemilla.Merkle.Gate
 theorem decomposeGate_selectorsOwned (cfg : Config) :
     (decomposeGate cfg).SelectorsOwned := by
   apply Halo2.Gate.selectorsOwned_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
     (aWhole bWhole cWhole leftNode rightNode z1A z1B b1 b2 lWhole :
@@ -496,7 +496,7 @@ namespace Sinsemilla.HashPiece
 theorem initialYQGate_selectorsOwned (cfg : Config) :
     (initialYQGate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [yAExpr, xRExpr, Expression.selectorFree,
+  simp [yAExpr, xRExpr, Expression.SelectorFree,
     queryAdvice, queryFixed]
 
 @[circuit_norm]
@@ -504,7 +504,7 @@ theorem sinsemillaGate_selectorsOwned (cfg : Config) :
     (sinsemillaGate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
   simp [yAExpr, xRExpr, qS3Expr,
-    Expression.selectorFree, queryAdvice, queryFixed]
+    Expression.SelectorFree, queryAdvice, queryFixed]
 
 theorem configure_preservesGateSelectorsAllocated
     (G : Specs.Sinsemilla.Generators)
@@ -576,21 +576,21 @@ namespace Poseidon
 theorem fullRoundGate_selectorsOwned (cfg : Config) :
     (fullRoundGate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [pow5Expr, Expression.selectorFree,
+  simp [pow5Expr, Expression.SelectorFree,
     queryAdvice, queryFixed]
 
 @[circuit_norm]
 theorem partialRoundsGate_selectorsOwned (cfg : Config) :
     (partialRoundsGate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [pow5Expr, Expression.selectorFree,
+  simp [pow5Expr, Expression.SelectorFree,
     queryAdvice, queryFixed]
 
 @[circuit_norm]
 theorem padAndAddGate_selectorsOwned (cfg : Config) :
     (padAndAddGate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
     (state : Fin 3 → Column .advice)
@@ -657,21 +657,21 @@ namespace Ecc.MulIncomplete
 theorem qMul1Gate_selectorsOwned (cfg : Config) :
     (qMul1Gate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [yA, xRExpr, Expression.selectorFree, queryAdvice]
+  simp [yA, xRExpr, Expression.SelectorFree, queryAdvice]
 
 @[circuit_norm]
 theorem qMul2Gate_selectorsOwned (cfg : Config) :
     (qMul2Gate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
   simp [forLoopPolys, yA, xRExpr,
-    Expression.selectorFree, queryAdvice]
+    Expression.SelectorFree, queryAdvice]
 
 @[circuit_norm]
 theorem qMul3Gate_selectorsOwned (cfg : Config) :
     (qMul3Gate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
   simp [forLoopPolys, yA, xRExpr,
-    Expression.selectorFree, queryAdvice]
+    Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
     (z xA xP yP lambda1 lambda2 : Column .advice) :
@@ -764,7 +764,7 @@ namespace NoteCommit.DecomposeB
 theorem gate_selectorsOwned (cfg : Config) :
     (gate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [NoteCommit.boolCheck, Expression.selectorFree,
+  simp [NoteCommit.boolCheck, Expression.SelectorFree,
     queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
@@ -790,7 +790,7 @@ namespace NoteCommit.DecomposeD
 theorem gate_selectorsOwned (cfg : Config) :
     (gate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [NoteCommit.boolCheck, Expression.selectorFree,
+  simp [NoteCommit.boolCheck, Expression.SelectorFree,
     queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
@@ -816,7 +816,7 @@ namespace NoteCommit.DecomposeE
 theorem gate_selectorsOwned (cfg : Config) :
     (gate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
     (colL colM colR : Column .advice) :
@@ -841,7 +841,7 @@ namespace NoteCommit.DecomposeG
 theorem gate_selectorsOwned (cfg : Config) :
     (gate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [NoteCommit.boolCheck, Expression.selectorFree,
+  simp [NoteCommit.boolCheck, Expression.SelectorFree,
     queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
@@ -867,7 +867,7 @@ namespace NoteCommit.DecomposeH
 theorem gate_selectorsOwned (cfg : Config) :
     (gate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [NoteCommit.boolCheck, Expression.selectorFree,
+  simp [NoteCommit.boolCheck, Expression.SelectorFree,
     queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
@@ -893,7 +893,7 @@ namespace NoteCommit.GdCanonicity
 theorem gate_selectorsOwned (cfg : Config) :
     (gate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
     (colL colM colR colZ : Column .advice) :
@@ -919,7 +919,7 @@ namespace NoteCommit.PkdCanonicity
 theorem gate_selectorsOwned (cfg : Config) :
     (gate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
     (colL colM colR colZ : Column .advice) :
@@ -945,7 +945,7 @@ namespace NoteCommit.ValueCanonicity
 theorem gate_selectorsOwned (cfg : Config) :
     (gate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
     (colL colM colR colZ : Column .advice) :
@@ -971,7 +971,7 @@ namespace NoteCommit.RhoCanonicity
 theorem gate_selectorsOwned (cfg : Config) :
     (gate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
     (colL colM colR colZ : Column .advice) :
@@ -997,7 +997,7 @@ namespace NoteCommit.PsiCanonicity
 theorem gate_selectorsOwned (cfg : Config) :
     (gate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
     (colL colM colR colZ : Column .advice) :
@@ -1023,7 +1023,7 @@ namespace NoteCommit.YCanonicity
 theorem gate_selectorsOwned (cfg : Config) :
     (gate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [NoteCommit.boolCheck, Expression.selectorFree,
+  simp [NoteCommit.boolCheck, Expression.SelectorFree,
     queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
@@ -1093,7 +1093,7 @@ theorem canonGate_selectorsOwned (cfg : Config) :
     (canonGate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
   simp [DecomposeRunningSum.rangeCheckExpr_selectorFree,
-    Expression.mulConstant, Expression.selectorFree,
+    Expression.mulConstant, Expression.SelectorFree,
     queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
@@ -1135,7 +1135,7 @@ theorem shortGate_selectorsOwned (cfg : Config) :
     (shortGate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
   simp [DecomposeRunningSum.rangeCheckExpr_selectorFree,
-    Expression.selectorFree, queryAdvice]
+    Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
     (superConfig : MulFixed.Config) :
@@ -1164,13 +1164,13 @@ theorem fullWidthGate_selectorsOwned (cfg : Config) :
   rw [List.forall_append]
   constructor
   · apply MulFixed.coordsCheck_selectorFree
-    simp [Expression.selectorFree, queryAdvice]
+    simp [Expression.SelectorFree, queryAdvice]
   · rw [List.forall_iff_forall_mem]
     intro constraint hconstraint
     simp only [List.mem_singleton] at hconstraint
     subst constraint
     apply DecomposeRunningSum.rangeCheckExpr_selectorFree
-    simp [Expression.selectorFree, queryAdvice]
+    simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
     (superConfig : MulFixed.Config) :
@@ -1197,7 +1197,7 @@ theorem coordsGate_selectorsOwned (cfg : Config) :
     (coordsGate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
   apply coordsCheck_selectorFree
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 theorem configure_preservesGateSelectorsAllocated
     (lagrangeCoeffs : Fin 8 → Column .fixed)
@@ -1319,7 +1319,7 @@ theorem orchardGate_selectorsOwned
     (qOrchard : Selector) (advices : Fin 10 → Column .advice) :
     (orchardGate qOrchard advices).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [Expression.selectorFree, queryAdvice]
+  simp [Expression.SelectorFree, queryAdvice]
 
 /--
 The Action configure program allocates every selector referenced by one of its
