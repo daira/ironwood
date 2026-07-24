@@ -455,6 +455,16 @@ sentinel, so any derived exponent below `33` satisfies the operation-footprint a
 blinding-row fit inequality. `TopLevelAssignment.synthesisWellFormed` therefore needs
 only this standard supported-domain bound, not a separately reconstructed row proof.
 
+The domain algebra is kernel-reusable as well. `Bridge.powFast_eq_pow` connects the
+executable binary exponentiation to ordinary powers, and
+`omegaOf_isPrimitiveRoot`, `omegaOf_domain`, and `omegaOf_powers_injective` derive the
+size-`2^k` root, vanishing-domain equation, and distinct row nodes from CompElliptic's
+certified Pasta `2^32` root for every supported `k`. A single native-tier equality
+connects the executable generator spelling to that certified root; `omegaOf` itself
+remains pure, so generic assignment and Action semantic theorems retain their standard
+axiom tier. Concrete Action proofs no longer need fixture-specific hypotheses for
+these domain facts.
+
 `TopLevelAssignment` is the corresponding verifier-to-Clean assignment shell. It is
 indexed by a bundle proof index and stores only the commitment-ID polynomial resolver;
 a family `∀ p, TopLevelAssignment top numProofs p` therefore cannot silently read a

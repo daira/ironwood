@@ -573,6 +573,10 @@ assert_axioms Zcash.Circuits.SynthesisWellFormed.of_usedRows
 assert_axioms Zcash.Circuits.TopLevelCircuit.usedRows_le_usableRowsAt
 assert_axioms Zcash.Circuits.TopLevelCircuit.fitsAt_domainExponent
 assert_axioms Zcash.Circuits.TopLevelCircuit.synthesisWellFormed
+assert_axioms Zcash.Bridge.powFast_eq_pow
+assert_axioms Zcash.Bridge.omegaOf_isPrimitiveRoot +native
+assert_axioms Zcash.Bridge.omegaOf_domain +native
+assert_axioms Zcash.Bridge.omegaOf_powers_injective +native
 assert_axioms FullCircuitSatisfaction.topLevelSoundness
 assert_axioms FullCircuitBridge.topLevelSoundness_or_bad
 assert_axioms TopLevelAssignment.synthesisWellFormed
