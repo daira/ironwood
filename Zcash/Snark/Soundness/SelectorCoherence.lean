@@ -108,13 +108,13 @@ theorem Expression.selectorsCovered_mono
 theorem Expression.selectorsCovered_of_selectorFree
     {F : Type} (domain : ℕ → Bool)
     (expression : Expression F Query)
-    (hfree : expression.selectorFree = true) :
+    (hfree : expression.SelectorFree) :
     expression.selectorsCovered domain = true := by
   induction expression with
   | var query =>
       cases query with
       | selector selector =>
-          simp [Expression.selectorFree] at hfree
+          simp [Expression.SelectorFree] at hfree
       | fixed column rotation =>
           rfl
       | advice column rotation =>
@@ -124,11 +124,11 @@ theorem Expression.selectorsCovered_of_selectorFree
   | const value =>
       rfl
   | add left right ihLeft ihRight =>
-      simp only [Expression.selectorFree,
+      simp only [Expression.SelectorFree,
         Expression.selectorsCovered, Bool.and_eq_true] at hfree ⊢
       exact ⟨ihLeft hfree.1, ihRight hfree.2⟩
   | mul left right ihLeft ihRight =>
-      simp only [Expression.selectorFree,
+      simp only [Expression.SelectorFree,
         Expression.selectorsCovered, Bool.and_eq_true] at hfree ⊢
       exact ⟨ihLeft hfree.1, ihRight hfree.2⟩
 
@@ -142,11 +142,12 @@ theorem Gate.selectorsOwned_of_withSelector
     (queriedCells : List (Expression F Query))
     (constraints : List (String × Expression F Query))
     (hfree : constraints.Forall fun constraint =>
-      constraint.2.selectorFree = true) :
+      constraint.2.SelectorFree) :
     ({ name := name
        selector := selector
        queriedCells := queriedCells
-       constraints := Constraints.withSelector selector constraints } :
+       constraints := Constraints.withSelector selector constraints
+         (List.forall_iff_forall_mem.mp hfree) } :
       Gate F).SelectorsOwned := by
   rw [Gate.SelectorsOwned, List.forall_iff_forall_mem]
   intro constraint hconstraint
