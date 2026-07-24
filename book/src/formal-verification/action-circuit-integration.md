@@ -155,10 +155,13 @@ relation. The binding-aware Action endpoint invokes this theorem internally; it 
 longer accepts the decoded-polynomial equality as a premise. Its remaining concrete
 instance inputs are the parameters' `LagrangeCommitmentKey`, the public-input
 commitment equation, and coverage of the configured primary column by the derived
-instance query layout. The generic layout-to-assembly lemma supplies the actual
-proof- and challenge-dependent query, and the endpoint derives the evaluation-domain
-injectivity and size equalities from `TopLevelCircuit` plus the existing supported-`k`
-bound.
+instance query layout. The endpoint now states that last fact in the circuit's native
+language—registration of the primary column in its synthesis-closed constraint
+system. The generic query compiler proves that configure-registered layouts survive
+packed-selector insertion and the gate/lookup erasure walks, and then the generic
+layout-to-assembly lemma supplies the actual proof- and challenge-dependent query.
+The endpoint also derives evaluation-domain injectivity and size equalities from
+`TopLevelCircuit` plus the existing supported-`k` bound.
 
 The exported fixture contains only the ten Lagrange generators reachable by Action
 public rows, rather than the whole 2048-row domain. `LagrangeCommitmentKey.ofPrefix`
