@@ -1,0 +1,178 @@
+import Zcash.Circuits.Ecc.MulFixed.Certs.NullifierK
+import Zcash.Circuits.Ecc.MulFixed.Certs.ValueCommitR
+import Zcash.Circuits.Ecc.MulFixed.Certs.SpendAuthG
+import Zcash.Circuits.Ecc.MulFixed.Certs.CommitIvkR
+import Zcash.Circuits.Ecc.MulFixed.Certs.NoteCommitR
+import Zcash.Circuits.Ecc.MulFixed.Certs.ValueCommitV
+import Zcash.Circuits.Specs.SinsemillaGenerators
+import Zcash.Circuits.Poseidon.Hash
+import Zcash.Circuits.NoteCommit.MainTheorems
+import Zcash.Security.Concrete.PallasGroup
+import Zcash.Security.Ledger.Statement
+import Zcash.Security.KeyBinding.Pool
+
+/-!
+# The deployed pool's concrete ledger primitives
+
+This module instantiates the abstract ledger `Primitives` and
+`KeyBindingInterface` for the deployed pool over Pallas.  It supplies the
+concrete `Encoding`, note/value commitments, nullifier derivation, Merkle
+compression, and key binding used by the games-facing statement, with the
+Sinsemilla domain points (`merkleQ`, `ivkQ`, `noteQ`) inlined as on-curve
+constants.
+-/
+
+namespace Zcash.Security.Ledger.Pool
+
+open Zcash.Circuits
+open Zcash.Circuits.Specs.Sinsemilla
+open Zcash.Security.Concrete
+
+def merkleQ : Point Fp :=
+  { x := (9991206725476878888751475603038274618448000607209514551456795194094072219296 :
+      Fp),
+    y := (24209798415301550423396126020228723009317736024280831393239261884225294625378 :
+      Fp) }
+
+theorem merkleQ_onCurve : merkleQ.OnCurve := by
+  show merkleQ.y ^ 2 = merkleQ.x ^ 3 + pallasB
+  decide
+
+def ivkQ : Point Fp :=
+  { x := (2593820817260930114322133467408868473290945477826616247349533151445648376562 :
+      Fp),
+    y := (12214744946019415453501880094709511126888074367290315326445800415816181472958 :
+      Fp) }
+
+theorem ivkQ_onCurve : ivkQ.OnCurve := by
+  show ivkQ.y ^ 2 = ivkQ.x ^ 3 + pallasB
+  decide
+
+def noteQ : Point Fp :=
+  { x := (10629404576683096409262958701336170057000067777256141967953463442979689100381 :
+      Fp),
+    y := (22898949290933268079297281211505753011910178734473470279111609228438645877859 :
+      Fp) }
+
+theorem noteQ_onCurve : noteQ.OnCurve := by
+  show noteQ.y ^ 2 = noteQ.x ^ 3 + pallasB
+  decide
+
+abbrev Encoding := { n : ℕ // n < 2 ^ 255 }
+
+def decode (e : Encoding) : Fp := (e.1 : Fp)
+
+def merkleCompress (i : Fin 32) (children : Encoding × Encoding) : Fp :=
+  match hashToPoint orchardGenerators.S merkleQ
+      (merkleChunks i.1 children.1.1 children.2.1) with
+  | some p => p.x
+  | none => 0
+
+theorem merkleCompress_eq_of_hashToPoint {i : Fin 32} {children : Encoding × Encoding}
+    {p : Point Fp}
+    (h : hashToPoint orchardGenerators.S merkleQ
+      (merkleChunks i.1 children.1.1 children.2.1) = some p) :
+    merkleCompress i children = p.x := by
+  unfold merkleCompress
+  rw [h]
+
+def merkle : MerklePrimitives Fp Encoding where
+  depth := 32
+  decode := decode
+  compress := merkleCompress
+
+def extract (P : PallasGroup) : Fp := (PallasGroup.toPoint P).x
+
+@[simp] theorem extract_ofPoint (P : Point Fp) (hP : P.Valid) :
+    extract (PallasGroup.ofPoint P hP) = P.x := by
+  simp [extract]
+
+def leafOf (cmx _rho : Fp) : Fp := cmx
+
+def randomizePublic (α : Fq) (ak : PallasGroup) : PallasGroup :=
+  α • PallasGroup.ofPoint Ecc.MulFixed.Certs.spendAuthG.point
+    (Or.inl Ecc.MulFixed.Certs.spendAuthG.onCurve) + ak
+
+theorem toPoint_randomizePublic (α : Fq) (ak : PallasGroup) :
+    PallasGroup.toPoint (randomizePublic α ak) =
+      α.val • Ecc.MulFixed.Certs.spendAuthG.point + PallasGroup.toPoint ak := by
+  simp [randomizePublic]
+
+def deriveNullifier (nk rho psi : Fp) (cm : PallasGroup) : Fp :=
+  (PallasGroup.toPoint cm +
+    ((Poseidon.Hash.ConstantLength.value #v[nk, rho] + psi).val : Fq).val
+      • Ecc.MulFixed.Certs.nullifierK.point).x
+
+def intScalar (z : ℤ) : Fq := (z : Fq)
+
+def valueCommit (z : ℤ) (r : Fq) : PallasGroup :=
+  intScalar z • PallasGroup.ofPoint Ecc.MulFixed.Certs.valueCommitV.point
+      (Or.inl Ecc.MulFixed.Certs.valueCommitV.onCurve)
+    + r • PallasGroup.ofPoint Ecc.MulFixed.Certs.valueCommitR.point
+      (Or.inl Ecc.MulFixed.Certs.valueCommitR.onCurve)
+
+theorem toPoint_valueCommit (z : ℤ) (r : Fq) :
+    PallasGroup.toPoint (valueCommit z r) =
+      (intScalar z).val • Ecc.MulFixed.Certs.valueCommitV.point +
+        r.val • Ecc.MulFixed.Certs.valueCommitR.point := by
+  simp [valueCommit]
+
+def notePoint (P : PallasGroup) : Point Fp := PallasGroup.toPoint P
+
+def noteScalars (n : Note PallasGroup Fp Fp) : NoteCommit.NoteCommitScalars :=
+  NoteCommit.noteScalars (notePoint n.gd) (notePoint n.pkd) (n.v : Fp) n.ρ n.ψ
+
+def noteHash (n : Note PallasGroup Fp Fp) : Option (Point Fp) :=
+  hashToPoint orchardGenerators.S noteQ (noteScalars n).chunks
+
+def noteCommit (rcm : Fq) (n : Note PallasGroup Fp Fp) : Option PallasGroup :=
+  noteHash n >>= fun bp =>
+    PallasGroup.ofPoint? (bp + rcm.val • Ecc.MulFixed.Certs.noteCommitR.point)
+
+theorem noteCommit_eq_some_of_hash {rcm : Fq} {n : Note PallasGroup Fp Fp} {bp : Point Fp}
+    {cm : PallasGroup}
+    (hh : noteHash n = some bp)
+    (hcm : PallasGroup.ofPoint? (bp + rcm.val • Ecc.MulFixed.Certs.noteCommitR.point) = some cm) :
+    noteCommit rcm n = some cm := by
+  simp [noteCommit, hh, hcm]
+
+theorem noteCommit_eq_some_of_hashToPoint {rcm : Fq} {n : Note PallasGroup Fp Fp}
+    {bp cm : Point Fp} (hbp : noteHash n = some bp)
+    (hcm : cm = bp + rcm.val • Ecc.MulFixed.Certs.noteCommitR.point)
+    (hvalid : cm.Valid) :
+    noteCommit rcm n = some (PallasGroup.ofPoint cm hvalid) := by
+  apply noteCommit_eq_some_of_hash hbp
+  subst cm
+  exact PallasGroup.ofPoint?_eq_some _ hvalid
+
+def primitives : Primitives Fq PallasGroup Fp Fp Fp Fp Fp Fp Encoding where
+  valueBound := 2 ^ 64
+  emb := PallasGroup.embedFp
+  emb_injective := PallasGroup.embedFp_injective
+  extract := extract
+  noteCommit := noteCommit
+  deriveNullifier := deriveNullifier
+  merkle := merkle
+  leafOf := leafOf
+  randomizePublic := randomizePublic
+  valueCommit := valueCommit
+
+def commitIvkHash (ak nk : Fp) : Option PallasGroup :=
+  (hashToPoint orchardGenerators.S ivkQ
+    (commitIvkChunks ak.val nk.val)).bind fun p => PallasGroup.ofPoint? p
+
+theorem commitIvkHash_eq_some_of_hashToPoint {ak nk : Fp} {p : Point Fp}
+    (h : hashToPoint orchardGenerators.S ivkQ
+      (commitIvkChunks ak.val nk.val) = some p) (hp : p.Valid) :
+    commitIvkHash ak nk = some (PallasGroup.ofPoint p hp) := by
+  unfold commitIvkHash
+  rw [h, Option.bind_some]
+  exact PallasGroup.ofPoint?_eq_some p hp
+
+def keyBinding : KeyBindingInterface (KeyBinding.Pool.Witness Fq PallasGroup Fp)
+    PallasGroup Fp Fp :=
+  KeyBinding.Pool.toInterface extract commitIvkHash
+    (PallasGroup.ofPoint Ecc.MulFixed.Certs.commitIvkR.point
+      (Or.inl Ecc.MulFixed.Certs.commitIvkR.onCurve))
+
+end Zcash.Security.Ledger.Pool

@@ -5,7 +5,7 @@ import Zcash.Circuits.Ecc.MulFixed.Certs.CommitIvkR
 import Zcash.Circuits.Ecc.MulFixed.Certs.NoteCommitR
 import Zcash.Circuits.Ecc.MulFixed.Certs.ValueCommitV
 import Zcash.Circuits.Specs.SinsemillaGenerators
-import Zcash.Circuits.Action.Bundle
+import Zcash.Circuits.Action.Circuit
 
 /-!
 # The real Orchard `Bases`
@@ -68,20 +68,5 @@ def orchardBases : Circuit.Bases where
   ivkQ_onCurve := ivkQ_onCurve
   noteQ := noteQ
   noteQ_onCurve := noteQ_onCurve
-
-/-- The PROVEN end-to-end Action circuit (soundness + completeness, the Bundle arc)
-instantiated at the real deployed constants — the certified fixed bases, the `Q`
-points, and the kernel-verified Sinsemilla generator table.
-
-The prover's private data enters through the circuit input (`PrivateInputs`, the
-`Unconstrained` hint pattern: the input is the witness programs, the verifier value is
-erased, the prover value is the evaluated `WitnessData`). Soundness is knowledge
-soundness at the constructive extractor: for ANY assignment satisfying the
-constraints, the `ActionData` read off the cells satisfies the §4.17.4 spec; the
-input matters only for completeness (the honest prover running those programs
-satisfies the constraints). -/
-def orchardActionCircuit :
-    FormalCircuit Fp Unit Circuit.Config Circuit.PrivateInputs unit :=
-  Circuit.circuit Specs.Sinsemilla.orchardGenerators orchardBases
 
 end Zcash.Circuits.Action

@@ -20,7 +20,9 @@ projections (`ivk`, `nk`, `akP`), the key-binding condition `KB` enforced by the
 and a `Break` predicate with the guarantee that two `KB`-witnesses sharing an `ivk` but
 disagreeing on `nk` are a break. The concrete witness structure, the factoring
 `KB = KBOpening ∧ KBDerivation`, and the reduction from `Break` to random-oracle
-collisions live in the key-binding layer (`keep/keybinding-design.md`).
+collisions live in the key-binding layer
+(`Zcash/Security/KeyBinding/Basic.lean` for Recovery and
+`Zcash/Security/KeyBinding/Pool.lean` for the deployed Action circuit).
 
 The lemmas here are the deterministic pinning steps of the Balance argument:
 
@@ -37,7 +39,7 @@ namespace Zcash.Security.Ledger
 
 variable {F : Type*} [Field F]
 variable {G : Type*} [AddCommGroup G] [Module F G]
-variable {IVK NK RHO PSI CMX RT : Type*} {KW : Type*}
+variable {IVK NK RHO PSI CMX RT : Type*} {E : Type*} {KW : Type*}
 
 /-- An Orchard-shaped note. Point encodings and type conversions are abstracted away:
 `gd` and `pkd` are group elements, `ρ` and `ψ` base-field values, `v` a natural number
@@ -64,8 +66,7 @@ structure ActionInstance (G RT RHO CMX : Type*) where
 is required of the fields themselves; the group algebra enters only through the statement
 and lemmas. `emb` is the embedding of base-field values used as scalars
 (`[0, q) ⊆ [0, r)` concretely). -/
-structure Primitives (F G IVK NK RHO PSI CMX RT : Type*) where
-  depth : ℕ
+structure Primitives (F G IVK NK RHO PSI CMX RT E : Type*) where
   valueBound : ℕ
   emb : IVK → F
   emb_injective : Function.Injective emb
@@ -73,10 +74,16 @@ structure Primitives (F G IVK NK RHO PSI CMX RT : Type*) where
   noteCommit : F → Note G RHO PSI → Option G
   /-- Nullifiers share ρ's type (`RHO`), forced by ρ-uniqueness (`ρ_new = nf_old`). -/
   deriveNullifier : NK → RHO → PSI → G → RHO
-  merkleCRH : RT × RT → RT
+  /-- The raw-encoding Merkle interface: tree nodes are `RT` values, `E` is the raw
+  child encoding consumed by the level-personalized compression. -/
+  merkle : MerklePrimitives RT E
   leafOf : CMX → RHO → RT
   randomizePublic : F → G → G
   valueCommit : ℤ → F → G
+
+/-- The collision vocabulary associated with the level-personalized Merkle primitive. -/
+abbrev MerkleCollision (P : Primitives F G IVK NK RHO PSI CMX RT E) :=
+  Merkle.Collision P.merkle
 
 /-- The games-facing view of a key-binding witness type `KW`: projections, the key-binding
 condition `KB` enforced by the statement, and a `Break` predicate. `break_of_nk_ne` is the
@@ -96,9 +103,11 @@ structure KeyBindingInterface (KW G IVK NK : Type*) where
 
 /-- The auxiliary inputs of an Action. `cm_old`/`cm_new` are carried explicitly so that the
 statement's commitment checks pin them; `kw` is the key-binding witness. -/
-structure ActionWitness (KW F G RHO PSI RT : Type*) (d : ℕ) where
-  pos : Fin d → Bool
-  path : Fin d → RT
+structure ActionWitness (KW F G RHO PSI E : Type*) (d : ℕ) where
+  /-- Both raw child encodings at every layer, in leaf-to-root order. -/
+  path : Fin d → E × E
+  /-- The child encoding selected by the path (`false` = left, `true` = right). -/
+  side : Fin d → Bool
   note_old : Note G RHO PSI
   note_new : Note G RHO PSI
   cm_old : G
@@ -116,15 +125,14 @@ satisfy this interface (the latter enforces strictly more).
 TODO: It's unclear how well this will compose with Gregor's approach to the circuit proof.
 In particular, should this be `Prop`-only or will we need to apply the break-as-computed-data
 pattern here? -/
-structure ActionSatisfied (P : Primitives F G IVK NK RHO PSI CMX RT)
+structure ActionSatisfied (P : Primitives F G IVK NK RHO PSI CMX RT E)
     (kv : KeyBindingInterface KW G IVK NK) (inst : ActionInstance G RT RHO CMX)
-    (w : ActionWitness KW F G RHO PSI RT P.depth) : Prop where
+    (w : ActionWitness KW F G RHO PSI E P.merkle.depth) : Prop where
   /-- Spend-side commitment integrity: `cm_old` opens `note_old` with `rcm_old`. -/
   commit_old : P.noteCommit w.rcm_old w.note_old = some w.cm_old
   /-- Merkle path validity for nonzero-valued spends. -/
   merkle_path : w.note_old.v ≠ 0 →
-    Merkle.pathRoot P.merkleCRH P.depth w.pos w.path
-      (P.leafOf (P.extract w.cm_old) w.note_old.ρ) = inst.rt
+    Merkle.Path P.merkle (P.leafOf (P.extract w.cm_old) w.note_old.ρ) inst.rt w.path w.side
   /-- Nullifier integrity. -/
   nf_old_eq : inst.nf_old =
     P.deriveNullifier (kv.nk w.kw) w.note_old.ρ w.note_old.ψ w.cm_old
@@ -154,7 +162,7 @@ convention in `Zcash.Security.RandomOracle`): two distinct `(rcm, note)` tuples 
 equal extracted coordinates. Computed by the games' reductions; each instantiation reduces
 it onward (a Sinsemilla/DLR relation pre-quantum; an `H^rcm` ±-collision for the Recovery
 Statement via the Pedersen lift and the `extract` ±-property). -/
-structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI CMX RT) where
+structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI CMX RT E) where
   rcm₁ : F
   n₁ : Note G RHO PSI
   rcm₂ : F
@@ -168,9 +176,10 @@ structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI CMX RT) where
 
 section Pinning
 
-variable {P : Primitives F G IVK NK RHO PSI CMX RT} {kv : KeyBindingInterface KW G IVK NK}
+variable {P : Primitives F G IVK NK RHO PSI CMX RT E}
+variable {kv : KeyBindingInterface KW G IVK NK}
 variable {inst₁ inst₂ : ActionInstance G RT RHO CMX}
-variable {w₁ w₂ : ActionWitness KW F G RHO PSI RT P.depth}
+variable {w₁ w₂ : ActionWitness KW F G RHO PSI E P.merkle.depth}
 
 /-- **`ivk`-pinning** (ZIP 2005 `lemma-ivk-pinning`): the address `(g_d, pk_d)` of the
 spent note determines `ivk`. Pure module algebra: needs only `g_d ≠ 0`, injectivity of the

@@ -132,3 +132,49 @@ theorem pathRoot_authPath (H : B × B → B) (d : ℕ) (f : (Fin d → Bool) →
         Bool.cond_true, Bool.not_false, Bool.not_true, ih]
 
 end Zcash.Security.Ledger.Merkle
+
+
+namespace Zcash.Security.Ledger.Merkle
+
+variable {B E : Type*}
+
+/-- The Merkle-specific part of the ledger primitive interface.  `E` is the raw
+encoding consumed by the compression function; it is deliberately separate from the
+node type `B`, since an Orchard field element can have more than one accepted 255-bit
+encoding. -/
+structure MerklePrimitives (B E : Type*) where
+  depth : ℕ
+  decode : E → B
+  compress : Fin depth → E × E → B
+
+/-- Select the raw child on the path.  `false` selects the left child and `true`
+selects the right child. -/
+def selectedChild (side : Bool) (children : E × E) : E :=
+  if side then children.2 else children.1
+
+/-- The running node after the first `i` leaf-to-root path cells.  In particular,
+`node ... 0` is the leaf and `node ... (i + 1)` is the compression at layer `i`.
+The selected-child equations in `Path` tie these otherwise raw inputs together. -/
+def node (P : MerklePrimitives B E) (leaf : B) (children : Fin P.depth → E × E) :
+    Fin (P.depth + 1) → B :=
+  Fin.cases leaf (fun i => P.compress i (children i))
+
+/-- A raw Orchard-style authentication path, ordered from the leaf towards the root.
+Every layer carries both *raw* child encodings and its selected side.  The selected
+encoding must decode to the current node, and compression at level `i` produces the
+next node. -/
+def Path (P : MerklePrimitives B E) (leaf root : B)
+    (children : Fin P.depth → E × E) (side : Fin P.depth → Bool) : Prop :=
+  (∀ i, P.decode (selectedChild (side i) (children i)) = node P leaf children (Fin.castSucc i)) ∧
+    node P leaf children (Fin.last P.depth) = root
+
+/-- A Merkle collision records the layer whose personalization was collided. -/
+abbrev Collision (P : MerklePrimitives B E) :=
+  Σ i : Fin P.depth, RandomOracle.Collision (P.compress i)
+
+end Zcash.Security.Ledger.Merkle
+
+/-- The raw-encoding Merkle interface, re-exported at the ledger namespace for the
+statement layer. -/
+abbrev Zcash.Security.Ledger.MerklePrimitives (B E : Type*) :=
+  Zcash.Security.Ledger.Merkle.MerklePrimitives B E
