@@ -83,7 +83,7 @@ import Zcash.Circuits.Action.Bundle
 import Zcash.Circuits.Action.RealBases
 import Zcash.Circuits.TopLevel
 import Zcash.Circuits.Action.TopLevel
-import Zcash.Circuits.Fixtures.ProjectSemantics
+import Clean.Halo2.Keygen
 
 /-!
 # Ironwood circuits
