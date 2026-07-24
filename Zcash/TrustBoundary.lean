@@ -1,6 +1,7 @@
 import Zcash.Security.KeyBinding.Instance
 import Zcash.Security.KeyBinding.Probability
 import Zcash.Security.Ledger.Balance
+import Zcash.Security.Ledger.Spendability
 import Zcash.Security.Common.Birthday
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
@@ -181,6 +182,17 @@ assert_axioms poolValueBalance_eq_neg
 assert_computable allValueOrBreak
 assert_computable valueConservationOrBreak +choice
 assert_computable balanceValueOrBreak +choice
+
+/-! ## Spendability
+
+The Faerie-Gold core and the roadblock inversion are computable reductions at the strict
+flagless tier; the nullifier split and the persistence theorem are deterministic list
+facts. -/
+
+assert_axioms nullifiers_append
+assert_computable faerieGoldCore
+assert_computable respendOrBreak
+assert_axioms validLedger_append
 
 /-! ## Binding-signature relation reductions
 

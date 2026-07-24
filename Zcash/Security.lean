@@ -9,6 +9,7 @@ import Zcash.Security.Ledger.Statement
 import Zcash.Security.Ledger.Model
 import Zcash.Security.Ledger.Effects
 import Zcash.Security.Ledger.Balance
+import Zcash.Security.Ledger.Spendability
 import Zcash.Security.Common.RandomOracle
 import Zcash.Security.Common.Birthday
 import Zcash.Security.KeyBinding.Basic
