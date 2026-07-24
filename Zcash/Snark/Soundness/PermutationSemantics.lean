@@ -91,6 +91,25 @@ def widenPermutationChunkCell
   | ⟨chunk, row, column⟩ =>
       ⟨chunk, ⟨row, lt_of_lt_of_le row.isLt hrows⟩, column⟩
 
+/-- Widening an active-row cell into the full evaluation domain loses no coordinate. -/
+theorem widenPermutationChunkCell_injective
+    {nc activeRows domainSize : ℕ} {width : ℕ → ℕ}
+    (hrows : activeRows ≤ domainSize) :
+    Function.Injective
+      (widenPermutationChunkCell (nc := nc) (width := width) hrows) := by
+  rintro ⟨chunk, row, column⟩ ⟨chunk', row', column'⟩ h
+  have hchunk : chunk = chunk' := congrArg Sigma.fst h
+  subst chunk'
+  have hrow : (row : ℕ) = row' :=
+    congrArg (fun cell => (cell.2.1 : ℕ)) h
+  have hcolumn : (column : ℕ) = column' :=
+    congrArg (fun cell => (cell.2.2 : ℕ)) h
+  have : row = row' := Fin.ext hrow
+  subst row'
+  have : column = column' := Fin.ext hcolumn
+  subst column'
+  rfl
+
 @[simp] theorem widenPermutationChunkCell_fst
     {nc activeRows domainSize : ℕ} {width : ℕ → ℕ}
     (hrows : activeRows ≤ domainSize) (c : ChunkCell nc activeRows width) :
