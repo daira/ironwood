@@ -1,6 +1,6 @@
 import Zcash.Security.KeyBinding.Instance
 import Zcash.Security.KeyBinding.Probability
-import Zcash.Security.Ledger.Effects
+import Zcash.Security.Ledger.Balance
 import Zcash.Security.Common.Birthday
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
@@ -140,6 +140,32 @@ assert_axioms output_rho_eq_nullifiers
 assert_axioms output_rho_nodup
 assert_axioms leafList_eq_map
 assert_axioms outputOpenings_length
+
+/-! ## Balance-subset
+
+The capstone and the per-spend pinning are computable reductions; `findPair` and the
+anchor search (`Nat.find`, itself axiom-free) keep the branch decisions decidable.
+`+choice` on the three reductions is the erased-positions tier: choice enters only
+through Mathlib proof terms in `Prop` positions (e.g. `List.getD_eq_getElem`'s proof),
+never the data path. -/
+
+assert_computable findPair
+assert_axioms findPair_spec
+assert_axioms findPair_none
+assert_axioms flatMap_sublist
+assert_axioms outputActions_prefix
+assert_axioms nullifiers_prefix
+assert_axioms take_prefix_take
+assert_axioms spendActions_map_nf_sublist
+assert_axioms length_leafList
+assert_axioms length_positionedOutputs
+assert_axioms positionedOutputs_getElem
+assert_computable noteCommitBreakOfOutputNe
+assert_axioms satisfied_of_spendMem
+assert_axioms anchor_of_spendMem
+assert_computable spendPinnedOrBreak +choice
+assert_computable allPinnedOrBreak +choice
+assert_computable balanceSubsetOrBreak +choice
 
 /-! ## Binding-signature relation reductions
 

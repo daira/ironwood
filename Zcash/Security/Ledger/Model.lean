@@ -52,7 +52,7 @@ structure Tx (KW F G RHO PSI MHASH MENC MSG SIG : Type*) (d : ℕ) where
 abbrev Ledger (KW F G RHO PSI MHASH MENC MSG SIG : Type*) (d : ℕ) :=
   List (Tx KW F G RHO PSI MHASH MENC MSG SIG d)
 
-/-- The tree position index of a path-position bit vector: bit `i` weights `2^i`.
+/-- The tree position index of a path-position bit vector: bit `i` weighs `2^i`.
 Defined as a fold over `List.finRange` rather than a `Finset` sum, to avoid an
 unnecessary dependency on `Classical.choice`. -/
 def posVal {d : ℕ} (pos : Fin d → Bool) : ℕ :=
