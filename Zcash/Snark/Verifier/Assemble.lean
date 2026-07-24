@@ -38,6 +38,7 @@ inductive ColumnRef where
   | advice : ℕ → ColumnRef
   | fixed : ℕ → ColumnRef
   | instance : ℕ → ColumnRef
+deriving DecidableEq, Repr
 
 /-- Resolve a permutation column reference to its claimed evaluation. -/
 def ColumnRef.resolve {F : Type*} (cr : ColumnRef) (instanceEvals adviceEvals fixedEvals : ℕ → F) : F :=
