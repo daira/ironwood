@@ -1,4 +1,4 @@
-import Zcash.Snark.VkCommit.Pipeline
+import Zcash.Snark.Keygen.Pipeline
 import Zcash.Circuits.Action.TopLevel
 
 /-!
@@ -7,13 +7,13 @@ import Zcash.Circuits.Action.TopLevel
 The `Pipeline.lean` generic `keygen_vk` instantiated at the closed Orchard Action
 circuit: every definition here is a `TopLevelCircuit` method applied to
 `orchardActionTopLevelCircuit`. The names are the certification surface —
-`Certificate.lean` (the expensive `ZcashVkCommit`-only module) proves them equal to the
+`Certificate.lean` (the expensive `ZcashKeygen`-only module) proves them equal to the
 capture (`commitments_derived`, `vk_eq_derived`, `shape_eq_mergeDerived`,
 `vk_eq_toVerifierKey`); `Assignment.lean` and other clients consume the data without
 evaluating the certificate.
 -/
 
-namespace Zcash.Snark.VkCommit
+namespace Zcash.Snark.Keygen
 
 open Zcash.Snark
 open Halo2
@@ -52,4 +52,4 @@ theorem toVerifierKey_action (pp : ProofParams) (urs : URS G) :
     orchardActionTopLevelCircuit.toVerifierKey pp urs
       = derivedActionVk (pp.mergeDerived orchardActionTopLevelCircuit) urs := rfl
 
-end Zcash.Snark.VkCommit
+end Zcash.Snark.Keygen

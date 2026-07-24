@@ -1,5 +1,5 @@
 import Zcash.Snark.Fixtures.SingleAction.VkCsData
-import Zcash.Snark.VkCommit.Pipeline
+import Zcash.Snark.Keygen.Pipeline
 import Zcash.Circuits.Action.TopLevel
 import Zcash.Circuits.TopLevelKeygen
 import Mathlib.Util.AssertNoSorry

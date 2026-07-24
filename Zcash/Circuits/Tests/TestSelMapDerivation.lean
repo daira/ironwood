@@ -1,4 +1,4 @@
-import Zcash.Snark.VkCommit.Pipeline
+import Zcash.Snark.Keygen.Pipeline
 import Zcash.Circuits.Action.TopLevel
 import Zcash.Circuits.Fixtures.ActionSelMap
 

@@ -1,4 +1,4 @@
-import Zcash.Snark.VkCommit.Derivation
+import Zcash.Snark.Keygen.Derivation
 import Zcash.Snark.Fixtures.SingleAction.Fixture
 
 /-!
@@ -13,11 +13,11 @@ record equalities from the bundle's splits; the only definitional steps are stru
 eta and within-`Pipeline` unfoldings, so the certificate is robust against unrelated
 refactors of the `Bridge`/fixture-side spellings.
 
-The `ZcashVkCommit` target builds this module explicitly; ordinary clients of
+The `ZcashKeygen` target builds this module explicitly; ordinary clients of
 `derivedActionVk` only need `Derivation`.
 -/
 
-namespace Zcash.Snark.VkCommit
+namespace Zcash.Snark.Keygen
 
 open Zcash.Snark
 open Zcash.Snark.Fixture
@@ -163,4 +163,4 @@ assert_no_sorry certificate
 assert_no_sorry vk_eq_derived
 assert_no_sorry vk_eq_toVerifierKey
 
-end Zcash.Snark.VkCommit
+end Zcash.Snark.Keygen

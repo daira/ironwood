@@ -2,8 +2,8 @@
 Copyright (c) 2026 Ironwood Contributors.
 Released under the Apache License, Version 2.0.
 -/
-import Zcash.Snark.VkCommit.Fast.Msm
-import Zcash.Snark.VkCommit.Fast.Projective
+import Zcash.Snark.Keygen.Fast.Msm
+import Zcash.Snark.Keygen.Fast.Projective
 
 /-!
 # The windowed Pippenger MSM run entirely in projective coordinates
@@ -42,14 +42,14 @@ Vesta-specific).
 -/
 
 open Zcash.Snark
-open Zcash.Snark.VkCommit.Fast
-open Zcash.Snark.VkCommit.Fast.Projective
-open Zcash.Snark.VkCommit.Fast.Projective.PVes
+open Zcash.Snark.Keygen.Fast
+open Zcash.Snark.Keygen.Fast.Projective
+open Zcash.Snark.Keygen.Fast.Projective.PVes
 open CompElliptic
 open CompElliptic.CurveForms.ShortWeierstrass
 open CompElliptic.Curves.Pasta
 
-namespace Zcash.Snark.VkCommit.Fast.MsmProj
+namespace Zcash.Snark.Keygen.Fast.MsmProj
 
 /-- The Vesta affine group carries a default point, needed to instantiate the `Fast.Msm` wrapper
 (`commitLagrangeSpec`, `commitLagrangeFastWith_eq`) whose section fixes `[Inhabited G]`. -/
@@ -257,7 +257,7 @@ def commitLagrangeProjWith (c : ℕ) (blind : Projective.G) (basis : List Projec
       fun t => (t.1.val, t.2)) + blind
 
 /-- **The projective commitment equals the naive `commit_lagrange` spec**
-(`Fast.Msm.commitLagrangeSpec`, verbatim from `VkCommit.commitLagrangeWith`). -/
+(`Fast.Msm.commitLagrangeSpec`, verbatim from `Keygen.commitLagrangeWith`). -/
 theorem commitLagrangeProjWith_eq (c : ℕ) (hc : 0 < c)
     (blind : Projective.G) (basis : List Projective.G) (coeffs : List Fp) :
     commitLagrangeProjWith c blind basis coeffs = Msm.commitLagrangeSpec blind basis coeffs := by
@@ -265,4 +265,4 @@ theorem commitLagrangeProjWith_eq (c : ℕ) (hc : 0 < c)
   rw [pippengerProj_eq, Msm.zip_terms_eq, Msm.pippenger_eq_msm c hc, List.map_map]
   rfl
 
-end Zcash.Snark.VkCommit.Fast.MsmProj
+end Zcash.Snark.Keygen.Fast.MsmProj

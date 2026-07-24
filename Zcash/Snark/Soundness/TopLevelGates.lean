@@ -1,4 +1,4 @@
-import Zcash.Snark.VkCommit.Pipeline
+import Zcash.Snark.Keygen.Pipeline
 import Zcash.Snark.Core.Domain
 import Zcash.Snark.Soundness.ResolverGates
 import Zcash.Snark.Soundness.ResolverQueryEnvironment
@@ -19,7 +19,7 @@ polynomial witness consumed by the generic constraint-satisfaction split.
 
 namespace Zcash.Snark
 
-open Halo2 Polynomial VkCommit
+open Halo2 Polynomial Keygen
 open Zcash.Circuits
 
 set_option maxHeartbeats 20000

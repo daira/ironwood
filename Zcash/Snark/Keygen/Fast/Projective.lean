@@ -35,7 +35,7 @@ open CompElliptic
 open CompElliptic.CurveForms.ShortWeierstrass
 open CompElliptic.Curves.Pasta
 
-namespace Zcash.Snark.VkCommit.Fast.Projective
+namespace Zcash.Snark.Keygen.Fast.Projective
 
 /-- The Vesta base field `𝔽_q` (= `PallasScalarField`), over which the Vesta curve is defined. -/
 abbrev Fq := CompElliptic.Fields.Pasta.VestaBaseField
@@ -551,4 +551,4 @@ theorem smulFast_eq (n : ℕ) (p : G) : smulFast n p = n • p := by
   rw [smulFast, (pnsmulFast_spec (valid_ofAffine p) n).2, toAffine_ofAffine]
 
 end PVes
-end Zcash.Snark.VkCommit.Fast.Projective
+end Zcash.Snark.Keygen.Fast.Projective

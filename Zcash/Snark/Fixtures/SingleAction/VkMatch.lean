@@ -72,7 +72,7 @@ theorem vk_scalars_and_chunks_derived :
       = ((omegaOf orchardActionTopLevelCircuit.domainExponent, 2 ^ orchardActionTopLevelCircuit.domainExponent,
             orchardActionTopLevelCircuit.constraintSystem.blindingFactors, deltaFp,
             orchardActionTopLevelCircuit.constraintSystem.chunkLen),
-          VkCommit.permutationChunksOf orchardActionTopLevelCircuit.selMapDerived
+          Keygen.permutationChunksOf orchardActionTopLevelCircuit.selMapDerived
             orchardActionTopLevelCircuit.constraintSystem) := by
   native_decide
 
@@ -87,7 +87,7 @@ theorem vk_scalars_derived :
 
 theorem vk_permutationChunks_derived :
     vk.permutationChunks
-      = VkCommit.permutationChunksOf orchardActionTopLevelCircuit.selMapDerived
+      = Keygen.permutationChunksOf orchardActionTopLevelCircuit.selMapDerived
         orchardActionTopLevelCircuit.constraintSystem := by
   have h := vk_scalars_and_chunks_derived
   simp only [Prod.mk.injEq] at h
