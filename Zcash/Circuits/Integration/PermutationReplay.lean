@@ -932,6 +932,71 @@ theorem restrictActivePerm_widen
       π (widenPermutationChunkCell hactive c) :=
   widen_mk_of_lt hactive _ (hpres c)
 
+/-- Chunk cells are determined by their three numeric coordinates. -/
+theorem chunkCell_ext {nc m : ℕ} {width : ℕ → ℕ} {x y : ChunkCell nc m width}
+    (h1 : (x.1 : ℕ) = (y.1 : ℕ)) (h2 : (x.2.1 : ℕ) = (y.2.1 : ℕ))
+    (h3 : (x.2.2 : ℕ) = (y.2.2 : ℕ)) : x = y := by
+  rcases x with ⟨a, r, col⟩
+  rcases y with ⟨b, s, dol⟩
+  simp only at h1 h2 h3
+  obtain rfl : a = b := Fin.ext h1
+  obtain rfl : r = s := Fin.ext h2
+  obtain rfl : col = dol := Fin.ext h3
+  rfl
+
+/-- The chunk flattening: halo2 groups the permutation columns into `nc` chunks of
+`chunkLen` (the last possibly shorter), so a chunk cell is a `(row, global column)`
+pair with `global = chunk · chunkLen + column`. Generic over the chunking law. -/
+def chunkFlatten (nc numCols chunkLen m : ℕ) (width : ℕ → ℕ)
+    (hcl : 0 < chunkLen) (hcover : numCols ≤ nc * chunkLen)
+    (hw : ∀ c : Fin nc, width (c : ℕ) = min chunkLen (numCols - (c : ℕ) * chunkLen)) :
+    ChunkCell nc m width ≃ Fin m × Fin numCols where
+  toFun cell :=
+    (cell.2.1, ⟨(cell.1 : ℕ) * chunkLen + (cell.2.2 : ℕ), by
+      have hcol : (cell.2.2 : ℕ) < min chunkLen (numCols - (cell.1 : ℕ) * chunkLen) := by
+        rw [← hw cell.1]
+        exact cell.2.2.isLt
+      have := lt_min_iff.mp hcol
+      omega⟩)
+  invFun rg :=
+    ⟨⟨(rg.2 : ℕ) / chunkLen, by
+        have hlt := rg.2.isLt
+        by_contra hge
+        push_neg at hge
+        have hmul : nc * chunkLen ≤ (rg.2 : ℕ) / chunkLen * chunkLen :=
+          Nat.mul_le_mul_right _ hge
+        have hdivle := Nat.div_mul_le_self (rg.2 : ℕ) chunkLen
+        omega⟩,
+      rg.1,
+      ⟨(rg.2 : ℕ) % chunkLen, by
+        rw [hw]
+        simp only [Fin.val_mk]
+        refine lt_min (Nat.mod_lt _ hcl) ?_
+        have hlt := rg.2.isLt
+        have hdm := Nat.div_add_mod (rg.2 : ℕ) chunkLen
+        have hcomm : (rg.2 : ℕ) / chunkLen * chunkLen =
+            chunkLen * ((rg.2 : ℕ) / chunkLen) := Nat.mul_comm _ _
+        omega⟩⟩
+  left_inv cell := by
+    rcases cell with ⟨c, i, col⟩
+    have hcol : (col : ℕ) < min chunkLen (numCols - (c : ℕ) * chunkLen) := by
+      rw [← hw c]
+      exact col.isLt
+    have hcolcl : (col : ℕ) < chunkLen := lt_of_lt_of_le hcol (min_le_left _ _)
+    refine chunkCell_ext ?_ rfl ?_
+    · show ((c : ℕ) * chunkLen + (col : ℕ)) / chunkLen = (c : ℕ)
+      rw [Nat.mul_comm (c : ℕ) chunkLen, Nat.mul_add_div hcl,
+        Nat.div_eq_of_lt hcolcl, Nat.add_zero]
+    · show ((c : ℕ) * chunkLen + (col : ℕ)) % chunkLen = (col : ℕ)
+      rw [Nat.mul_comm (c : ℕ) chunkLen, Nat.mul_add_mod,
+        Nat.mod_eq_of_lt hcolcl]
+  right_inv rg := by
+    rcases rg with ⟨i, g⟩
+    refine Prod.ext_iff.mpr ⟨rfl, Fin.ext ?_⟩
+    show (g : ℕ) / chunkLen * chunkLen + (g : ℕ) % chunkLen = (g : ℕ)
+    rw [Nat.mul_comm]
+    exact Nat.div_add_mod (g : ℕ) chunkLen
+
 end Layout.Asm
 
 end Zcash.Snark
