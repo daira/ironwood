@@ -40,3 +40,8 @@ The lookup bridge is split deliberately:
 * `TopLevelBridge.lean` is the generic join: it derives gate and lookup families
   from the canonical circuit-owned constraint model and combines them with the
   fixed/table and copy-replay streams into `FullCircuitBridge`.
+* `ActionTerminal.lean` is the final concrete join. It specializes the
+  verifier-native accepted decoded-model terminal to the circuit-derived Action
+  verification key and consumes the Clean fixed/copy/selector records to produce
+  `Action.BundleStatement` (or the shared augmented-basis relation). No Clean type
+  is introduced into `Zcash/Snark/Soundness/CanonicalTerminal.lean`.

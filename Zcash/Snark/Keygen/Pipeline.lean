@@ -412,6 +412,36 @@ def toVerifierKey
     VerifyingKey (pp.mergeDerived top) Fp G :=
   top.verifierKeyAt (pp.mergeDerived top) urs
 
+/-- The derived key exposes exactly the advice-query layout of its selector-map
+derivation. -/
+theorem toVerifierKey_adviceQueryLayout_derived
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) (urs : URS G) :
+    (top.toVerifierKey pp urs).adviceQueryLayout =
+      (PinnedConstraintSystem.derive
+        top.constraintSystem top.selMapDerived).adviceQueryLayout := by
+  rfl
+
+/-- The derived key exposes exactly the fixed-query layout of its selector-map
+derivation. -/
+theorem toVerifierKey_fixedQueryLayout_derived
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) (urs : URS G) :
+    (top.toVerifierKey pp urs).fixedQueryLayout =
+      (PinnedConstraintSystem.derive
+        top.constraintSystem top.selMapDerived).fixedQueryLayout := by
+  rfl
+
+/-- The derived key exposes exactly the instance-query layout of its selector-map
+derivation. -/
+theorem toVerifierKey_instanceQueryLayout_derived
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) (urs : URS G) :
+    (top.toVerifierKey pp urs).instanceQueryLayout =
+      (PinnedConstraintSystem.derive
+        top.constraintSystem top.selMapDerived).instanceQueryLayout := by
+  rfl
+
 /-- The derived key's advice-query layout has the shape count computed from the same
 top-level pinned constraint system. -/
 theorem toVerifierKey_adviceQueryCount

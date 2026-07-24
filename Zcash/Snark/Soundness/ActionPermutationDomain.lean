@@ -134,6 +134,21 @@ entry, and every common-permutation index is in range. -/
 theorem routingCoherent_of_derived
     (pp : Keygen.ProofParams) (urs : URS G) :
     PermutationChunkRoutingCoherent (actionVk pp urs) := by
+  have hadviceLayout :
+      (actionVk pp urs).adviceQueryLayout =
+        orchardActionTopLevelCircuit.pinnedCS.adviceQueryLayout :=
+    (orchardActionTopLevelCircuit.toVerifierKey_adviceQueryLayout_derived
+      pp urs).trans adviceQueryLayout_eq
+  have hfixedLayout :
+      (actionVk pp urs).fixedQueryLayout =
+        orchardActionTopLevelCircuit.pinnedCS.fixedQueryLayout :=
+    (orchardActionTopLevelCircuit.toVerifierKey_fixedQueryLayout_derived
+      pp urs).trans fixedQueryLayout_eq
+  have hinstanceLayout :
+      (actionVk pp urs).instanceQueryLayout =
+        orchardActionTopLevelCircuit.pinnedCS.instanceQueryLayout :=
+    (orchardActionTopLevelCircuit.toVerifierKey_instanceQueryLayout_derived
+      pp urs).trans instanceQueryLayout_eq
   rintro chunk hchunk ⟨ref, common⟩ href
   have hroute := routingCoherent chunk hchunk (ref, common) href
   rcases hroute with ⟨hrefCoherent, hcommon⟩
@@ -141,28 +156,37 @@ theorem routingCoherent_of_derived
   · cases ref with
     | advice i =>
         rcases hrefCoherent with ⟨hi, hrotation⟩
-        change
-          i < orchardActionTopLevelCircuit.pinnedCS.adviceQueryLayout.length ∧
-          i < derivedPinnedCS.adviceQueryLayout.length ∧
-            (derivedPinnedCS.adviceQueryLayout.getD i (0, 0)).2 = 0
-        rw [adviceQueryLayout_eq]
-        exact ⟨hi, hi, hrotation⟩
+        change PermutationColumnRef.Coherent
+          (actionVk pp urs) (.advice i)
+        simp only [PermutationColumnRef.Coherent]
+        refine ⟨?_, ?_, ?_⟩
+        · rw [← orchardActionTopLevelCircuit.toVerifierKey_adviceQueryCount
+            pp urs, hadviceLayout]
+          exact hi
+        · simpa only [hadviceLayout] using hi
+        · simpa only [hadviceLayout] using hrotation
     | fixed i =>
         rcases hrefCoherent with ⟨hi, hrotation⟩
-        change
-          i < orchardActionTopLevelCircuit.pinnedCS.fixedQueryLayout.length ∧
-          i < derivedPinnedCS.fixedQueryLayout.length ∧
-            (derivedPinnedCS.fixedQueryLayout.getD i (0, 0)).2 = 0
-        rw [fixedQueryLayout_eq]
-        exact ⟨hi, hi, hrotation⟩
+        change PermutationColumnRef.Coherent
+          (actionVk pp urs) (.fixed i)
+        simp only [PermutationColumnRef.Coherent]
+        refine ⟨?_, ?_, ?_⟩
+        · rw [← orchardActionTopLevelCircuit.toVerifierKey_fixedQueryCount
+            pp urs, hfixedLayout]
+          exact hi
+        · simpa only [hfixedLayout] using hi
+        · simpa only [hfixedLayout] using hrotation
     | «instance» i =>
         rcases hrefCoherent with ⟨hi, hrotation⟩
-        change
-          i < orchardActionTopLevelCircuit.pinnedCS.instanceQueryLayout.length ∧
-          i < derivedPinnedCS.instanceQueryLayout.length ∧
-            (derivedPinnedCS.instanceQueryLayout.getD i (0, 0)).2 = 0
-        rw [instanceQueryLayout_eq]
-        exact ⟨hi, hi, hrotation⟩
+        change PermutationColumnRef.Coherent
+          (actionVk pp urs) (.instance i)
+        simp only [PermutationColumnRef.Coherent]
+        refine ⟨?_, ?_, ?_⟩
+        · rw [← orchardActionTopLevelCircuit.toVerifierKey_instanceQueryCount
+            pp urs, hinstanceLayout]
+          exact hi
+        · simpa only [hinstanceLayout] using hi
+        · simpa only [hinstanceLayout] using hrotation
   · simpa [actionShape, Keygen.ProofParams.mergeDerived] using hcommon
 
 /-! ## Pasta permutation-name cosets -/

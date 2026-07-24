@@ -962,10 +962,11 @@ single-index result into a family of Clean assignments and Action statements.
 ### 7. Thread the bridge into the live capstone
 
 **Status: the canonical relation now reaches a concrete bundle-wide Action theorem,
-the deterministic `hencodes` function from an accepted canonical constraint model is
-implemented, and the quotient terminal derives that model's complete claimed-
-evaluation fingerprint from uniform assembled-query openings. The live
-Vesta/Fiat–Shamir capstone still has to be instantiated with that function. Substantial
+the deterministic accepted-node-binding terminal is implemented without a free
+`S`/`hencodes`, and the quotient terminal derives that model's complete claimed-
+evaluation fingerprint from the accepted assembled queries. The live
+Vesta/Fiat–Shamir probability capstone still has to invoke that concrete terminal.
+Substantial
 foundations are in
 [#30](https://github.com/zcash/ironwood/pull/30),
 [#91](https://github.com/zcash/ironwood/pull/91), and
@@ -1026,6 +1027,17 @@ arguments are the concrete fixed/copy/selector records and the already-priced lo
 challenge exclusions. This theorem is the function to substitute at the live
 constraint terminal's `hencodes` argument.
 
+That substitution is now expressed directly, without preserving the abstract
+argument.
+`ActionInstanceCommitment.actionBundleStatement_or_relation_of_acceptedNodeBinding`
+specializes the canonical terminal to
+`orchardActionTopLevelCircuit.toVerifierKey`, derives all query-layout, permutation,
+and domain facts from that circuit-owned key, and feeds canonical satisfaction into
+the Action endpoint. Its conclusion is exactly the concrete `Action.BundleStatement`
+or the shared augmented-basis relation. The theorem has no arbitrary key, decoder,
+constraint model, `S`, or `hencodes`; only the still-concrete fixed/copy/selector
+records and explicitly priced good-challenge facts remain.
+
 The final theorem should say, modulo the explicitly priced Fiat–Shamir, polynomial
 identity, and discrete-log failure events, that acceptance by the modeled deployed
 verifier with the post-NU6.3 Action VK yields the high-level statement for every Action
@@ -1053,12 +1065,13 @@ whose public inputs were committed by the verifier.
    `Fin shape.numProofs`. Instantiate those constructors with the incoming
    fixed-selector and copy records. The external `Action.Statement` and
    `Action.BundleStatement` adapters are already implemented.
-5. **Canonical quotient terminal substantially complete:** construct
+5. **Complete:** construct
    `AcceptedModelClaimedEvaluations` from accepted decoded-member node binding, the
    circuit-derived query-layout counts, and standard permutation/domain facts; then
-   obtain canonical model satisfaction or the shared relation. Compose this result with
-   `actionBundleStatement_or_relation_of_acceptedCircuitSat` once the concrete
-   fixed-selector and copy records are available.
+   obtain canonical model satisfaction or the shared relation and compose it with
+   `actionBundleStatement_or_relation_of_acceptedCircuitSat` in the Action-owned
+   integration boundary. The resulting accepted-node-binding theorem is ready to
+   consume the concrete fixed-selector and copy records.
 6. Replace the live computed capstone's free `S`/`hencodes` argument with that concrete
    composition and add the resulting theorem to the consolidated trust boundary.
    The family-wide adaptive-coupling/`hExtract` supply problem is a distinct
@@ -1077,11 +1090,11 @@ append-only merge flow.
 | **[SEPARATE: copy]** | Finish the concrete endpoint encoding/read equations and connect constant sites to the closed V1 allocation zip, then feed those facts to `CopyReplayWitness.ofLinkedPairs`. | Generic replay correctness, σ rows, non-constant declared-copy membership, membership-to-resolver-value equality, active-row restriction, chunk flattening, constant-stream characterization, and the master witness constructor are complete. | The copy field of `FullCircuitBridge`. |
 | **[SEPARATE: fixed/VK]** | Instantiate `TopLevelFixedCoherence` from the circuit-derived dense fixed rows, sparse-to-dense scatter law, fixed-query coverage, and fixed commitments. | Generic fixed/table and selector-realization theorems are complete. | The fixed/table field and the exact packed-selector fact consumed by the lookup stream. |
 | **[DONE: instance]** | No independent work remains in the deterministic instance stream. | `ActionInstanceCommitment.instanceKey` and `.commitment` derive the key and public commitment from the URS and ten Action rows; the binding-aware bundle endpoint consumes them internally and preserves only the shared nontrivial-relation branch. | Public-instance provenance is ready for the one-proof/bundle join. |
-| **[ME: terminal]** | Finish the small composition from the canonical quotient terminal into the Action endpoint, keeping `Snark/Soundness` in polynomial language and the Clean adapter in `Circuits/Integration`. | `AcceptedModelClaimedEvaluations.ofNodeBinding_or_relation` derives every fixed/advice/instance, permutation, lookup, and selector claim from accepted member-node binding; `acceptedModelCircuitSat_or_relation` derives accepted canonical satisfaction or the shared relation; the Action endpoint already consumes that satisfaction. The concrete fixed/copy records are the only blockers to closing the success branch unconditionally. | The deterministic, non-free implementation to substitute for the live capstone's `hencodes`. |
+| **[DONE: terminal]** | Keep the canonical quotient terminal in polynomial language and perform the concrete join in `Circuits/Integration`. | `acceptedModelCircuitSat_or_relation_of_nodeBinding` reconstructs the complete accepted model and `actionBundleStatement_or_relation_of_acceptedNodeBinding` specializes it to the circuit-derived Action key and concrete bundle statement. No free `S`/`hencodes` remains. | The deterministic semantic function is ready for the live probability capstone and the incoming fixed/copy records. |
 | **[SEPARATE: ledger]** | Continue [#98](https://github.com/zcash/ironwood/pull/98)'s `SpecPost`-to-ledger refinement. | Independent of polynomial reconstruction and Clean constraint satisfaction. | The games-facing conclusion that should follow after the circuit statement is recovered. |
 | **[SEPARATE: probability]** | Connect [#96](https://github.com/zcash/ironwood/pull/96)'s extraction/coupling result to the deterministic terminal and place the already-priced lookup/permutation exclusions at their transcript squeezes. | The deterministic terminal consumes decoded openings and explicit good-challenge facts; it does not solve the family-wide adaptive `hExtract` supply problem. | A quantitative live theorem around the deterministic #99 result, without reintroducing a free semantic encoding. |
 | **[JOIN] One proof** | Instantiate the endpoint with the incoming fixed-selector and copy records, then apply the instance-row and Action-statement adapters. | The generic constructor derives gate and lookup fields; the Action canonical endpoint now also consumes `CopyReplayWitness` directly rather than accepting free copy satisfaction. Public-instance provenance is concrete. | A concrete Action statement for one `Fin numProofs`, with only explicitly priced exceptional events. |
-| **[JOIN] Bundle and capstone** | Supply the concrete records to `actionBundleStatement_or_relation_of_acceptedCircuitSat` and use it as the live constraint terminal's `hencodes` function. | The generic finite-family join and deterministic accepted-model-to-Action function are complete; concrete records and the final terminal instantiation remain. #96 can meet it at the abstract extraction boundary. | #99's completion criterion. |
+| **[JOIN] Bundle and capstone** | Supply the concrete records to `actionBundleStatement_or_relation_of_acceptedNodeBinding` and invoke it from the live extraction/probability theorem. | The generic finite-family join and deterministic accepted-node-binding-to-Action terminal are complete; concrete records and the quantitative invocation remain. #96 can meet it at the decoded node-binding boundary. | #99's completion criterion. |
 
 The shortest dependency chain to proving `hencodes` is therefore:
 

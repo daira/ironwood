@@ -23,6 +23,30 @@ variable {G : Type*} [AddCommGroup G] [Module Fp G]
   [DecidableEq G] [Inhabited G]
 
 /--
+Successful deployed acceptance supplies the proof string's permutation
+last-evaluation read schedule.
+-/
+theorem permutationLastEvalsWellFormed_of_deployedAccepts
+    {shape : Shape}
+    (urs : URS G) (hk : shape.k = urs.k)
+    (vk : VerifyingKey shape Fp G)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp)
+    (haccepts :
+      DeployedAccepts urs hk vk instanceCommitment ps ch) :
+    permutationLastEvalsWellFormed ps = true := by
+  unfold DeployedAccepts at haccepts
+  cases hassemble :
+      assemble? vk instanceCommitment ps ch with
+  | none =>
+      rw [hassemble] at haccepts
+      exact False.elim haccepts
+  | some msm =>
+      exact permutationLastEvalsWellFormed_of_assemble?_eq_some
+        vk instanceCommitment ps ch hassemble
+
+/--
 The canonical decoded model evaluates at the quotient challenge to exactly the
 claims carried by the accepted proof string.
 
@@ -521,6 +545,326 @@ theorem acceptedModelCircuitSat_or_relation
         constraintModelOfResolver] using hcheck
     · apply hgood_of_good_challenge
       simpa only [model] using hxgood
+  · exact Or.inr hrelation
+
+/--
+Uniform openings of the accepted canonical resolver prove satisfaction directly
+when `hpoly` is that resolver's vanishing-quotient polynomial.
+
+Unlike `acceptedModelCircuitSat_or_relation`, this formulation does not expose a
+point-set index, member index, or an independently selected member-polynomial
+family. The unique assembled `vanishingH` query supplies the quotient evaluation.
+-/
+theorem acceptedModelCircuitSat_of_openings
+    {shape : Shape}
+    (urs : URS G) (hk : shape.k = urs.k)
+    (vk : VerifyingKey shape Fp G)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp)
+    {pU pW : Fp} {a : Fin (2 ^ urs.k) → Fp}
+    {batchOpenings :
+      OpenedBatchOpenings urs (evalVector urs.k ch.x3)
+        (x4BatchCommitments
+          (instanceCommitment := instanceCommitment)
+          urs hk vk ps ch)
+        (x4BatchEvals
+          (instanceCommitment := instanceCommitment)
+          vk ps ch)
+        a pU pW}
+    (memberDecode : ∀ i (hi : i <
+        deployedX4PairCount
+          (instanceCommitment := instanceCommitment)
+          vk ps ch),
+      OpenedMemberDecode
+        (instanceCommitment := instanceCommitment)
+        urs hk vk ps ch batchOpenings i hi)
+    (haccepts :
+      DeployedAccepts urs hk vk instanceCommitment ps ch)
+    (hblinding : vk.blindingFactors < vk.n)
+    (hpoly : Polynomial Fp)
+    (hquot :
+      hpoly =
+        CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts .vanishingH)
+    (hopen : ∀ query ∈
+      assembleQueries vk instanceCommitment ps ch,
+      (CanonicalMemberConstraintRelation.acceptedPolynomial
+        (memberDecode := memberDecode) haccepts query.commId).eval
+          query.point = query.eval)
+    (claimed :
+      AcceptedModelClaimedEvaluations
+        (memberDecode := memberDecode)
+        (hblinding := hblinding) haccepts)
+    (hxgood :
+      ch.x ∉ szBadSet
+        (combineConstraints
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).fixedCols
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).adviceCols
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).instanceCols
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).gates
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).sets
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).chunks
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).lookups
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).beta
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).gamma
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).delta
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).theta
+          ch.y
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).chunkLen
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).l0
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).lLast
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).lBlind -
+          hpoly * (X ^ vk.n - 1))) :
+    (CanonicalMemberConstraintRelation.acceptedModel
+        (memberDecode := memberDecode)
+        (hblinding := hblinding) haccepts).CircuitSat
+          ch.y hpoly vk.n a := by
+  let polynomial :=
+    CanonicalMemberConstraintRelation.acceptedPolynomial
+      (memberDecode := memberDecode) haccepts
+  let model :=
+    CanonicalMemberConstraintRelation.acceptedModel
+      (memberDecode := memberDecode)
+      (hblinding := hblinding) haccepts
+  obtain ⟨query, hquery, hqueryId, hqueryPoint, hqueryEval⟩ :=
+    vanishing_query_mem_assembleQueries
+      vk instanceCommitment ps ch
+  have hpolyEval :
+      hpoly.eval ch.x =
+        expectedHEval
+          (allExpressions vk ps ch
+            (lagrangeBasis vk.omega vk.n vk.blindingFactors
+              (ch.x ^ vk.n) ch.x).1
+            (lagrangeBasis vk.omega vk.n vk.blindingFactors
+              (ch.x ^ vk.n) ch.x).2.1
+            (lagrangeBasis vk.omega vk.n vk.blindingFactors
+              (ch.x ^ vk.n) ch.x).2.2)
+          ch.y (ch.x ^ vk.n) := by
+    calc
+      hpoly.eval ch.x =
+          (polynomial .vanishingH).eval ch.x := by
+            rw [hquot]
+      _ = (polynomial query.commId).eval query.point := by
+            rw [hqueryId, hqueryPoint]
+      _ = query.eval := hopen query hquery
+      _ = _ := hqueryEval
+  have hfingerprint :=
+    eval_combineConstraints_deployed
+      vk ps ch model.fixedCols model.adviceCols model.instanceCols
+      model.sets model.chunks model.lookups
+      model.l0 model.lLast model.lBlind
+      claimed.fixed claimed.advice claimed.«instance»
+      claimed.sets claimed.chunks claimed.lookups
+      claimed.l0 claimed.lLast claimed.lBlind
+  have hcheck :
+      (combineConstraints
+        model.fixedCols model.adviceCols model.instanceCols model.gates
+        model.sets model.chunks model.lookups
+        model.beta model.gamma model.delta model.theta ch.y
+        model.chunkLen model.l0 model.lLast model.lBlind).eval ch.x =
+          hpoly.eval ch.x * (ch.x ^ vk.n - 1) := by
+    exact hfingerprint.trans <|
+      hfold_of_expectedHEval_binding
+        (allExpressions vk ps ch
+          (lagrangeBasis vk.omega vk.n vk.blindingFactors
+            (ch.x ^ vk.n) ch.x).1
+          (lagrangeBasis vk.omega vk.n vk.blindingFactors
+            (ch.x ^ vk.n) ch.x).2.1
+          (lagrangeBasis vk.omega vk.n vk.blindingFactors
+            (ch.x ^ vk.n) ch.x).2.2)
+        ch.y ch.x hpoly vk.n
+        (allExpressions vk ps ch
+          (lagrangeBasis vk.omega vk.n vk.blindingFactors
+            (ch.x ^ vk.n) ch.x).1
+          (lagrangeBasis vk.omega vk.n vk.blindingFactors
+            (ch.x ^ vk.n) ch.x).2.1
+          (lagrangeBasis vk.omega vk.n vk.blindingFactors
+            (ch.x ^ vk.n) ch.x).2.2)
+        (deployedAccepts_xn_ne_one
+          urs hk vk instanceCommitment ps ch haccepts)
+        hpolyEval rfl
+  apply circuitSatViaConstraints_of_check
+    model.fixedCols (fun _ => model.adviceCols)
+    (fun _ => model.instanceCols)
+    model.gates model.sets model.chunks model.lookups
+    model.beta model.gamma model.delta model.theta ch.y
+    model.chunkLen model.l0 model.lLast model.lBlind
+    hpoly vk.n a ch.x
+  · simpa [model, CanonicalMemberConstraintRelation.acceptedModel,
+      canonicalConstraintModelOfPermutationResolver,
+      constraintModelOfPermutationResolver,
+      constraintModelOfResolver] using hcheck
+  · apply hgood_of_good_challenge
+    simpa only [model] using hxgood
+
+/--
+The canonical quotient terminal directly from accepted member-node binding.
+
+All query evaluations and the quotient carrier are fixed by the accepted
+`CommitmentId` resolver. The only exceptional branch is the existing
+augmented-basis relation produced by node binding.
+-/
+theorem acceptedModelCircuitSat_or_relation_of_nodeBinding
+    {shape : Shape}
+    (urs : URS G) (hk : shape.k = urs.k)
+    (vk : VerifyingKey shape Fp G)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp)
+    {pU pW : Fp} {a : Fin (2 ^ urs.k) → Fp}
+    {batchOpenings :
+      OpenedBatchOpenings urs (evalVector urs.k ch.x3)
+        (x4BatchCommitments
+          (instanceCommitment := instanceCommitment)
+          urs hk vk ps ch)
+        (x4BatchEvals
+          (instanceCommitment := instanceCommitment)
+          vk ps ch)
+        a pU pW}
+    (memberDecode : ∀ i (hi : i <
+        deployedX4PairCount
+          (instanceCommitment := instanceCommitment)
+          vk ps ch),
+      OpenedMemberDecode
+        (instanceCommitment := instanceCommitment)
+        urs hk vk ps ch batchOpenings i hi)
+    (haccepts :
+      DeployedAccepts urs hk vk instanceCommitment ps ch)
+    (hblinding : vk.blindingFactors < vk.n)
+    (hpoly : Polynomial Fp)
+    (hquot :
+      hpoly =
+        CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts .vanishingH)
+    (hfixedLayout :
+      vk.fixedQueryLayout.length = shape.numFixedQueries)
+    (hadviceLayout :
+      vk.adviceQueryLayout.length = shape.numAdviceQueries)
+    (hinstanceLayout :
+      vk.instanceQueryLayout.length = shape.numInstanceQueries)
+    (hbind : ∀
+      (slot : DeployedMemberSlot
+        (instanceCommitment := instanceCommitment) vk ps ch)
+      (point : Fp),
+      point ∈ deployedSetPts
+          (instanceCommitment := instanceCommitment)
+          vk ps ch slot.setIndex →
+      (decodedMemberPolynomial
+        (instanceCommitment := instanceCommitment)
+        urs hk vk ps ch memberDecode slot).eval point =
+          deployedMemberClaim
+            (instanceCommitment := instanceCommitment)
+            vk ps ch slot point
+        ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+    (hpermutationRouting :
+      PermutationChunkRoutingCoherent vk)
+    (hrows : Function.Injective
+      fun row : Fin vk.n => vk.omega ^ (row : ℕ))
+    (hroot : vk.omega ^ vk.n = 1)
+    (hnFp : (vk.n : Fp) ≠ 0)
+    (hxgood :
+      ch.x ∉ szBadSet
+        (combineConstraints
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).fixedCols
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).adviceCols
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).instanceCols
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).gates
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).sets
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).chunks
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).lookups
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).beta
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).gamma
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).delta
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).theta
+          ch.y
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).chunkLen
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).l0
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).lLast
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hblinding) haccepts).lBlind -
+          hpoly * (X ^ vk.n - 1))) :
+    (CanonicalMemberConstraintRelation.acceptedModel
+        (memberDecode := memberDecode)
+        (hblinding := hblinding) haccepts).CircuitSat
+          ch.y hpoly vk.n a
+      ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  rcases
+      CanonicalMemberConstraintRelation.acceptedPolynomial_opens_or_relation
+        (memberDecode := memberDecode) haccepts hbind with
+    hopen | hrelation
+  · have claimed :=
+      AcceptedModelClaimedEvaluations.ofOpenings
+        (hblinding := hblinding)
+        haccepts hfixedLayout hadviceLayout hinstanceLayout hopen
+        (permutationLastEvalsWellFormed_of_deployedAccepts
+          urs hk vk instanceCommitment ps ch haccepts)
+        hpermutationRouting hrows hroot hnFp
+        (deployedAccepts_xn_ne_one
+          urs hk vk instanceCommitment ps ch haccepts)
+    exact Or.inl <|
+      acceptedModelCircuitSat_of_openings
+        urs hk vk instanceCommitment ps ch memberDecode
+        haccepts hblinding hpoly hquot hopen claimed hxgood
   · exact Or.inr hrelation
 
 end Zcash.Snark
