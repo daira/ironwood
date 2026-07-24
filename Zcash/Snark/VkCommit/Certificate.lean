@@ -68,17 +68,20 @@ theorem vk_eq_derived : vk = derivedActionVk shape capturedURS := by
   have hs := vk_scalars_derived
   simp only [Prod.mk.injEq] at hs
   obtain ⟨ho, hn, hb, hd, hc⟩ := hs
-  have hg : actionPinnedCs.gates.map RichExpression.toExpr = vk.gates := by
+  -- the `have`s are stated over `Fixture.actionPinnedCs` (what the `VkMatch` lemmas
+  -- speak about); the final `exact` bridges to the definitionally-equal
+  -- `VkCommit.actionPinnedCs` inside `derivedActionVk`
+  have hg : Fixture.actionPinnedCs.gates.map RichExpression.toExpr = vk.gates := by
     rw [← vk_gates_eq_derived, List.map_map]
     simp [Function.comp_def, RichExpression.toExpr_ofExpr]
   have hli : (fun l =>
-      (actionPinnedCs.lookupInputExprs.getD l.val []).map
+      (Fixture.actionPinnedCs.lookupInputExprs.getD l.val []).map
         RichExpression.toExpr) = vk.lookupInputExprs := by
     funext l
     rw [← vk_lookupInputExprs_eq_derived, getD_map_ofFn, List.map_map]
     simp [Function.comp_def, RichExpression.toExpr_ofExpr]
   have hlt : (fun l =>
-      (actionPinnedCs.lookupTableExprs.getD l.val []).map
+      (Fixture.actionPinnedCs.lookupTableExprs.getD l.val []).map
         RichExpression.toExpr) = vk.lookupTableExprs := by
     funext l
     rw [← vk_lookupTableExprs_eq_derived, getD_map_ofFn, List.map_map]
