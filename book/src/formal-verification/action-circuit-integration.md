@@ -361,14 +361,17 @@ The current item-4 sequence is:
 
 1. **complete:** route every assembled query through the canonical decoded-member
    resolver and instantiate the full deployed constraint model;
-2. **complete:** derive the complete gate family from circuit-derived query layouts,
-   selector compression, and canonical constraint satisfaction;
+2. **complete, including Action:** derive the complete gate family from
+   circuit-derived query layouts, selector compression, and canonical constraint
+   satisfaction; `ActionGateCoherence.topLevelGateCoherence` supplies the deployed
+   circuit's static package;
 3. **generic layer complete:** route every enabled lookup to its configured argument,
    project its input/table tuples into the resolver polynomials, and construct the
    complete `EnabledLookup.DeployedWitness` family;
-4. **replay theorem complete, packaging open:** use the proved equality between the
-   executable keygen assembly and `replayKeygenPermutation` to construct the concrete
-   `CopyReplayWitness`;
+4. **generic replay/witness construction complete, Action adapter open:** use the
+   proved equality between the executable keygen assembly and
+   `replayKeygenPermutation`, plus pairwise resolver-value agreement, to construct the
+   concrete `CopyReplayWitness`;
 5. instantiate `TopLevelFixedCoherence`, use it to realize packed selectors and fixed
    tables, and discharge the lookup selector-projection fields;
 6. combine gate, copy, lookup, and fixed results in `FullCircuitBridge`.
@@ -377,10 +380,12 @@ The permutation side has moved past the former “Action permutation data” pla
 The Action chunk/domain certificates, decoded σ-column identification, and executable
 assembly simulation are present. `runAssembly_getPair` proves that the final assembly
 mapping is exactly the action of `replayKeygenPermutation` over the same ordered
-copies. The remaining copy task is the narrow representation adapter: encode Clean
-copy endpoints as assembly cells, identify their resolver-environment values, and
-package the resulting cycle equality as `CopyReplayWitness`. The `β`/`γ` exclusions
-remain with the explicit bad-set accounting rather than becoming circuit assumptions.
+copies. `CopyReplayWitness.ofPairCycles` and `.ofPairValues` now perform the generic
+packaging. The remaining copy task is the narrow Action representation adapter:
+encode Clean copy endpoints as assembly cells, identify their resolver-environment
+values, and prove pairwise equality (or the shared exceptional event). The `β`/`γ`
+exclusions remain with the explicit bad-set accounting rather than becoming circuit
+assumptions.
 
 The residual zero-factor branch is now closed generically as well.
 `additiveZeroBadSet` observes that, after `β` and the committed cell values are fixed,
@@ -925,10 +930,11 @@ whose public inputs were committed by the verifier.
    polynomial row environment, gate witnesses, and lookup witnesses from
    `TopLevelCircuit`. The executable permutation assembly is now proved equal to the
    abstract copy replay.
-3. **Current parallel work:** instantiate Action `TopLevelFixedCoherence`; construct
-   the concrete `CopyReplayWitness`; derive exact lookup selector projection,
-   activation-row fit, and priced lookup challenge conditions; and close the
-   Lagrange-prefix/instance-commitment certificate.
+3. **Current parallel work:** instantiate Action `TopLevelFixedCoherence`; specialize
+   the generic copy-replay constructors to the Action endpoint encoding; derive exact
+   lookup selector projection, activation-row fit, and priced lookup challenge
+   conditions; and finish the Lagrange-prefix/instance-commitment certificate. The
+   Action `TopLevelGateCoherence` constructor is complete.
 4. Assemble those components for one proof index in `FullCircuitBridge`, then quantify
    the same construction over every `Fin shape.numProofs`. The external
    `Action.Statement` and `Action.BundleStatement` adapters are already implemented.
