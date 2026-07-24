@@ -519,6 +519,14 @@ the minimal field-size condition `csDegree cs < scalarFieldOrder`, independent o
 total selector count. This avoids normalizing the Action configure program merely to
 discover that it has 56 selectors; the required bound is the ordinary generic
 keygen-degree bound instead, not an Action-specific fact or fixture computation.
+The complementary coverage theorem
+`deriveSelCompressMap_lookup_isSome_of_lt` proves that this same generic compiler
+produces a compression-map entry for every allocated selector index
+`selector < cs.numSelectors`: the greedy partition may regroup selectors into packed
+columns, but cannot drop one. This closes map coverage independently of Action. A
+distinct configure-side obligation still has to show that selector atoms occurring
+syntactically in configured gate expressions are allocated indices; semantic
+`Gate.WellFormed` alone intentionally does not imply that stronger syntactic fact.
 
 For activations, `mem_selectorFixed_of_activation` proves that every synthesized
 `(selector, row)` with a compression-map entry is emitted by the generic

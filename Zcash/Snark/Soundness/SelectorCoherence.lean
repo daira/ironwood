@@ -54,6 +54,207 @@ theorem extendCombination_length_conservation
               Nat.add_comm] using hlength
 
 /--
+The inner greedy scan partitions the initial combination and candidate list:
+it neither drops nor invents selector descriptions.
+-/
+theorem mem_extendCombination_iff
+    (maxDegree d : ℕ) (comb selectors : List SelectorDescription)
+    (description : SelectorDescription) :
+    description ∈ (extendCombination maxDegree d comb selectors).1 ∨
+        description ∈ (extendCombination maxDegree d comb selectors).2 ↔
+      description ∈ comb ∨ description ∈ selectors := by
+  induction selectors generalizing d comb with
+  | nil =>
+      simp [extendCombination]
+  | cons selector rest ih =>
+      simp only [extendCombination]
+      split
+      · simp [or_assoc, or_comm]
+      · split
+        · generalize hresult :
+            extendCombination maxDegree d comb rest = result
+          rcases result with ⟨chosen, remaining⟩
+          have hpartition := ih d comb
+          rw [hresult] at hpartition
+          simp only [List.mem_cons] at *
+          change
+            (description ∈ chosen ∨ description = selector ∨
+              description ∈ remaining) ↔
+            (description ∈ comb ∨ description = selector ∨
+              description ∈ rest)
+          constructor
+          · intro h
+            rcases h with hchosen | rfl | hremaining
+            · rcases hpartition.mp (Or.inl hchosen) with
+                hcomb | hrest
+              · exact Or.inl hcomb
+              · exact Or.inr (Or.inr hrest)
+            · exact Or.inr (Or.inl rfl)
+            · rcases hpartition.mp (Or.inr hremaining) with
+                hcomb | hrest
+              · exact Or.inl hcomb
+              · exact Or.inr (Or.inr hrest)
+          · intro h
+            rcases h with hcomb | rfl | hrest
+            · rcases hpartition.mpr (Or.inl hcomb) with
+                hchosen | hremaining
+              · exact Or.inl hchosen
+              · exact Or.inr (Or.inr hremaining)
+            · exact Or.inr (Or.inl rfl)
+            · rcases hpartition.mpr (Or.inr hrest) with
+                hchosen | hremaining
+              · exact Or.inl hchosen
+              · exact Or.inr (Or.inr hremaining)
+        · let nextDegree :=
+            max d (selector.maxDegree - 1)
+          split
+          · generalize hresult :
+              extendCombination maxDegree d comb rest = result
+            rcases result with ⟨chosen, remaining⟩
+            have hpartition := ih d comb
+            rw [hresult] at hpartition
+            simp only [List.mem_cons] at *
+            change
+              (description ∈ chosen ∨ description = selector ∨
+                description ∈ remaining) ↔
+              (description ∈ comb ∨ description = selector ∨
+                description ∈ rest)
+            constructor
+            · intro h
+              rcases h with hchosen | rfl | hremaining
+              · rcases hpartition.mp (Or.inl hchosen) with
+                  hcomb | hrest
+                · exact Or.inl hcomb
+                · exact Or.inr (Or.inr hrest)
+              · exact Or.inr (Or.inl rfl)
+              · rcases hpartition.mp (Or.inr hremaining) with
+                  hcomb | hrest
+                · exact Or.inl hcomb
+                · exact Or.inr (Or.inr hrest)
+            · intro h
+              rcases h with hcomb | rfl | hrest
+              · rcases hpartition.mpr (Or.inl hcomb) with
+                  hchosen | hremaining
+                · exact Or.inl hchosen
+                · exact Or.inr (Or.inr hremaining)
+              · exact Or.inr (Or.inl rfl)
+              · rcases hpartition.mpr (Or.inr hrest) with
+                  hchosen | hremaining
+                · exact Or.inl hchosen
+                · exact Or.inr (Or.inr hremaining)
+          · generalize hresult :
+              extendCombination maxDegree nextDegree
+                (comb ++ [selector]) rest = result
+            rcases result with ⟨chosen, remaining⟩
+            have hpartition :=
+              ih nextDegree (comb ++ [selector])
+            rw [hresult] at hpartition
+            simp only [List.mem_cons] at *
+            change
+              (description ∈ chosen ∨ description ∈ remaining) ↔
+              (description ∈ comb ∨ description = selector ∨
+                description ∈ rest)
+            simpa only [List.mem_append, List.mem_singleton,
+              or_assoc] using hpartition
+
+/-- The inner scan's remaining candidates are no longer than its input candidates. -/
+theorem extendCombination_remaining_length_le
+    (maxDegree d : ℕ) (comb selectors : List SelectorDescription) :
+    (extendCombination maxDegree d comb selectors).2.length ≤
+      selectors.length := by
+  induction selectors generalizing d comb with
+  | nil =>
+      simp [extendCombination]
+  | cons selector rest ih =>
+      simp only [extendCombination]
+      split
+      · simp
+      · split
+        · generalize hresult :
+            extendCombination maxDegree d comb rest = result
+          rcases result with ⟨chosen, remaining⟩
+          have hlength := ih d comb
+          rw [hresult] at hlength
+          change remaining.length ≤ rest.length at hlength
+          simpa only [List.length_cons] using
+            Nat.succ_le_succ hlength
+        · let nextDegree :=
+            max d (selector.maxDegree - 1)
+          split
+          · generalize hresult :
+              extendCombination maxDegree d comb rest = result
+            rcases result with ⟨chosen, remaining⟩
+            have hlength := ih d comb
+            rw [hresult] at hlength
+            change remaining.length ≤ rest.length at hlength
+            simpa only [List.length_cons] using
+              Nat.succ_le_succ hlength
+          · exact (ih nextDegree (comb ++ [selector])).trans
+              (Nat.le_succ _)
+
+/-- Every list member occurs in the list paired with its zero-based index. -/
+private theorem exists_mem_zipIdx_of_mem
+    {α : Type} {item : α} {items : List α}
+    (hitem : item ∈ items) :
+    ∃ index, (item, index) ∈ items.zipIdx := by
+  obtain ⟨index, hindex, hget⟩ :=
+    List.mem_iff_getElem.mp hitem
+  refine ⟨index, ?_⟩
+  rw [List.mk_mem_zipIdx_iff_getElem?,
+    List.getElem?_eq_some_iff]
+  exact ⟨hindex, hget⟩
+
+/--
+With enough outer-loop fuel, every candidate occurs in one returned selector
+combination.
+-/
+theorem exists_mem_buildCombinations
+    (maxDegree fuel : ℕ) (selectors : List SelectorDescription)
+    (hfuel : selectors.length ≤ fuel)
+    {description : SelectorDescription}
+    (hdescription : description ∈ selectors) :
+    ∃ combination ∈ buildCombinations maxDegree fuel selectors,
+      description ∈ combination := by
+  induction fuel generalizing selectors with
+  | zero =>
+      have : selectors = [] := List.eq_nil_of_length_eq_zero (by omega)
+      simp [this] at hdescription
+  | succ fuel ih =>
+      cases selectors with
+      | nil =>
+          simp at hdescription
+      | cons selector rest =>
+          simp only [buildCombinations]
+          generalize hresult :
+              extendCombination maxDegree
+                (selector.maxDegree - 1) [selector] rest =
+                result
+          rcases result with ⟨chosen, remaining⟩
+          have hsource :
+              description ∈ [selector] ∨ description ∈ rest := by
+            simpa only [List.mem_cons, List.mem_singleton,
+              List.not_mem_nil, or_false] using hdescription
+          have hpartition :=
+            (mem_extendCombination_iff maxDegree
+              (selector.maxDegree - 1) [selector] rest
+              description).mpr hsource
+          rw [hresult] at hpartition
+          rcases hpartition with hchosen | hremaining
+          · exact ⟨chosen, List.mem_cons_self, hchosen⟩
+          · have hremainingLength :=
+              extendCombination_remaining_length_le maxDegree
+                (selector.maxDegree - 1) [selector] rest
+            rw [hresult] at hremainingLength
+            change remaining.length ≤ rest.length at hremainingLength
+            have hremainingFuel : remaining.length ≤ fuel := by
+              simp only [List.length_cons] at hfuel
+              omega
+            obtain ⟨combination, hcombination, hmember⟩ :=
+              ih remaining hremainingFuel hremaining
+            exact ⟨combination,
+              List.mem_cons_of_mem chosen hcombination, hmember⟩
+
+/--
 The greedy extension never exceeds the degree budget when its initial combination
 already fits.  Candidate degrees need no separate bound: the algorithm checks the
 updated degree and length before every insertion.
@@ -265,6 +466,79 @@ theorem process_entry_root_degree_bounds
       combination.length ≤ maxDegree
     exact ⟨by omega, by omega, hcombinationLength⟩
 
+/-- Every input selector description receives an entry in the packed map. -/
+theorem exists_mem_process_entries
+    (selectors : List SelectorDescription) (maxDegree : ℕ)
+    {description : SelectorDescription}
+    (hdescription : description ∈ selectors) :
+    ∃ compressed,
+      (description.selector, compressed) ∈
+        (process selectors maxDegree).entries := by
+  let degreeZero := selectors.filter (·.maxDegree = 0)
+  let remaining := selectors.filter (·.maxDegree ≠ 0)
+  let combinations :=
+    buildCombinations maxDegree remaining.length remaining
+  change ∃ compressed,
+    (description.selector, compressed) ∈
+      (degreeZero.zipIdx.map fun (source, column) =>
+        (source.selector, SelCompress.mk column 1 1)) ++
+      (combinations.zipIdx.flatMap fun (combination, column) =>
+        combination.zipIdx.map fun (source, position) =>
+          (source.selector,
+            SelCompress.mk (degreeZero.length + column)
+              combination.length (position + 1)))
+  by_cases hdegree : description.maxDegree = 0
+  · have hdegreeZero : description ∈ degreeZero :=
+      List.mem_filter.mpr ⟨hdescription, by simp [hdegree]⟩
+    obtain ⟨column, hzip⟩ :=
+      exists_mem_zipIdx_of_mem hdegreeZero
+    refine ⟨SelCompress.mk column 1 1, ?_⟩
+    apply List.mem_append_left
+    exact List.mem_map.mpr
+      ⟨(description, column), hzip, rfl⟩
+  · have hremaining : description ∈ remaining :=
+      List.mem_filter.mpr ⟨hdescription, by simp [hdegree]⟩
+    obtain ⟨combination, hcombination, hmember⟩ :=
+      exists_mem_buildCombinations maxDegree remaining.length
+        remaining (Nat.le_refl _) hremaining
+    obtain ⟨column, hcombinationZip⟩ :=
+      exists_mem_zipIdx_of_mem hcombination
+    obtain ⟨position, hdescriptionZip⟩ :=
+      exists_mem_zipIdx_of_mem hmember
+    refine
+      ⟨SelCompress.mk (degreeZero.length + column)
+        combination.length (position + 1), ?_⟩
+    apply List.mem_append_right
+    rw [List.mem_flatMap]
+    exact ⟨(combination, column), hcombinationZip,
+      List.mem_map.mpr
+        ⟨(description, position), hdescriptionZip, rfl⟩⟩
+
+/-- An association-list entry makes the corresponding map lookup present. -/
+theorem SelCompressMap.lookup_isSome_of_mem
+    (map : SelCompressMap) {selector : ℕ} {compressed : SelCompress}
+    (hentry : (selector, compressed) ∈ map.entries) :
+    (map.lookup selector).isSome = true := by
+  have hfind :
+      (map.entries.find? (fun entry => entry.1 = selector)).isSome := by
+    rw [List.find?_isSome]
+    exact ⟨(selector, compressed), hentry, by simp⟩
+  obtain ⟨entry, hentryEq⟩ :=
+    Option.isSome_iff_exists.mp hfind
+  simp [SelCompressMap.lookup, hentryEq]
+
+/-- `process` covers every input selector key. -/
+theorem process_lookup_isSome_of_mem
+    (selectors : List SelectorDescription) (maxDegree : ℕ)
+    {description : SelectorDescription}
+    (hdescription : description ∈ selectors) :
+    ((process selectors maxDegree).lookup
+      description.selector).isSome = true := by
+  obtain ⟨compressed, hentry⟩ :=
+    exists_mem_process_entries selectors maxDegree hdescription
+  exact SelCompressMap.lookup_isSome_of_mem
+    (process selectors maxDegree) hentry
+
 /-- A successful association-list lookup originates in the map's entries. -/
 theorem SelCompressMap.exists_mem_entries_of_lookup
     (map : SelCompressMap) {selector : ℕ} {compressed : SelCompress}
@@ -273,6 +547,44 @@ theorem SelCompressMap.exists_mem_entries_of_lookup
   simp only [SelCompressMap.lookup, Option.map_eq_some_iff] at hlookup
   obtain ⟨entry, hfind, hcompressed⟩ := hlookup
   exact ⟨entry, List.mem_of_find?_eq_some hfind, hcompressed⟩
+
+/--
+The circuit-derived compression map covers every allocated selector index.
+Selector packing changes columns and roots, but never drops a configured selector.
+-/
+theorem deriveSelCompressMap_lookup_isSome_of_lt
+    {F : Type} (cs : ConstraintSystem F) (n : ℕ)
+    (activations : List (ℕ × ℕ)) {selector : ℕ}
+    (hselector : selector < cs.numSelectors) :
+    ((deriveSelCompressMap cs n activations).lookup selector).isSome =
+      true := by
+  let table := activationTable n cs.numSelectors activations
+  let degrees := selectorMaxDegrees cs
+  let descriptions :=
+    (List.range cs.numSelectors).map fun index =>
+      SelectorDescription.mk index table[index]! degrees[index]!
+  let packing := process descriptions (csDegree cs)
+  let description :=
+    SelectorDescription.mk selector
+      table[selector]! degrees[selector]!
+  have hdescription : description ∈ descriptions := by
+    apply List.mem_map.mpr
+    exact ⟨selector, List.mem_range.mpr hselector, rfl⟩
+  obtain ⟨source, hsource⟩ :=
+    exists_mem_process_entries descriptions (csDegree cs)
+      hdescription
+  let compressed : SelCompress :=
+    { source with
+      packedCol := source.packedCol + cs.numFixedColumns }
+  apply SelCompressMap.lookup_isSome_of_mem
+  change (selector, compressed) ∈
+    packing.entries.map (fun (sourceSelector, sourceCompressed) =>
+      (sourceSelector,
+        { sourceCompressed with
+          packedCol :=
+            sourceCompressed.packedCol + cs.numFixedColumns }))
+  exact List.mem_map.mpr
+    ⟨(selector, source), hsource, rfl⟩
 
 end Halo2
 
