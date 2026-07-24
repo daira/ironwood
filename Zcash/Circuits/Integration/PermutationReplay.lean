@@ -761,6 +761,38 @@ def CopyReplayWitness.ofPairValues
   read := hread
   cycle := fun h => value_eq_or_bad_of_replay_sameCycle value _ hpair h
 
+/-- Same-cycle facts transport from the full-domain keygen permutation to its
+active-row restriction: the restriction equation pushes powers through the widening,
+and widening is injective. -/
+theorem sameCycle_restrict_of_widen
+    {nc activeRows domainSize : ℕ} {width : ℕ → ℕ}
+    (hactive : activeRows ≤ domainSize)
+    (fullSigma : Perm (ChunkCell nc domainSize width))
+    (sigma : Perm (ChunkCell nc activeRows width))
+    (hrestrict : ∀ c : ChunkCell nc activeRows width,
+      widenPermutationChunkCell hactive (sigma c) =
+        fullSigma (widenPermutationChunkCell hactive c))
+    {c d : ChunkCell nc activeRows width}
+    (h : fullSigma.SameCycle (widenPermutationChunkCell hactive c)
+      (widenPermutationChunkCell hactive d)) :
+    sigma.SameCycle c d := by
+  classical
+  have hpow : ∀ (t : ℕ) (e : ChunkCell nc activeRows width),
+      (fullSigma ^ t) (widenPermutationChunkCell hactive e) =
+        widenPermutationChunkCell hactive ((sigma ^ t) e) := by
+    intro t
+    induction t with
+    | zero => intro e; rfl
+    | succ t ih =>
+        intro e
+        rw [pow_succ, pow_succ, Equiv.Perm.mul_apply, Equiv.Perm.mul_apply,
+          ← hrestrict e, ih (sigma e)]
+  obtain ⟨i, _, hi⟩ := h.exists_pow_eq'
+  rw [hpow i c] at hi
+  have hcd : (sigma ^ i) c = d :=
+    widenPermutationChunkCell_injective hactive hi
+  exact ⟨(i : ℤ), by simpa using hcd⟩
+
 end Layout.Asm
 
 end Zcash.Snark
