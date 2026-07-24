@@ -45,6 +45,41 @@ theorem columnCount_chunkLen_eq :
   native_decide
 
 /-- Query-layout coherence specialized to the derived Action pinned constraint system. -/
+def derivedPinnedCS : Halo2.PinnedConstraintSystem Fp :=
+  Halo2.PinnedConstraintSystem.derive
+    orchardActionTopLevelCircuit.constraintSystem
+    orchardActionTopLevelCircuit.selMapDerived
+
+/-- The two pinned-CS construction paths agree on the three query layouts used
+by permutation routing. This is intentionally narrower than full pinned-CS
+equality: no gate or lookup expression is part of this computation. -/
+theorem queryLayouts_eq :
+    (derivedPinnedCS.instanceQueryLayout,
+      derivedPinnedCS.adviceQueryLayout,
+      derivedPinnedCS.fixedQueryLayout) =
+    (orchardActionTopLevelCircuit.pinnedCS.instanceQueryLayout,
+      orchardActionTopLevelCircuit.pinnedCS.adviceQueryLayout,
+      orchardActionTopLevelCircuit.pinnedCS.fixedQueryLayout) := by
+  native_decide
+
+set_option maxRecDepth 100000 in
+theorem instanceQueryLayout_eq :
+    derivedPinnedCS.instanceQueryLayout =
+      orchardActionTopLevelCircuit.pinnedCS.instanceQueryLayout :=
+  congrArg Prod.fst queryLayouts_eq
+
+set_option maxRecDepth 100000 in
+theorem adviceQueryLayout_eq :
+    derivedPinnedCS.adviceQueryLayout =
+      orchardActionTopLevelCircuit.pinnedCS.adviceQueryLayout :=
+  congrArg (fun layouts => layouts.2.1) queryLayouts_eq
+
+set_option maxRecDepth 100000 in
+theorem fixedQueryLayout_eq :
+    derivedPinnedCS.fixedQueryLayout =
+      orchardActionTopLevelCircuit.pinnedCS.fixedQueryLayout :=
+  congrArg (fun layouts => layouts.2.2) queryLayouts_eq
+
 def ColumnRefCoherent : ColumnRef → Prop
   | .advice i =>
       i < orchardActionTopLevelCircuit.pinnedCS.adviceQueryLayout.length ∧
@@ -66,7 +101,26 @@ theorem routingCoherent :
         ColumnRefCoherent ref.1 ∧
           ref.2 <
             orchardActionTopLevelCircuit.constraintSystem.permutationColumns.length := by
-  native_decide
+  rw [chunks_eq]
+  simp only [List.mem_cons, List.not_mem_nil, or_false]
+  rintro chunk (rfl | rfl | rfl)
+  · intro ref href
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at href
+    rcases href with rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    all_goals
+      simp only [ColumnRefCoherent]
+      native_decide
+  · intro ref href
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at href
+    rcases href with rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    all_goals
+      simp only [ColumnRefCoherent]
+      native_decide
+  · intro ref href
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at href
+    rcases href with rfl
+    simp only [ColumnRefCoherent]
+    native_decide
 
 /-- The first 21 powers of Pasta's permutation coset generator are distinct.
 Twenty-one is `3 * 7`, the padded Action permutation-column range. -/
@@ -78,6 +132,7 @@ assert_no_sorry domainExponent_lt
 assert_no_sorry domainExponent_eq
 assert_no_sorry chunks_eq
 assert_no_sorry columnCount_chunkLen_eq
+assert_no_sorry queryLayouts_eq
 assert_no_sorry routingCoherent
 assert_no_sorry deltaPowers_injective
 

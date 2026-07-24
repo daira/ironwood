@@ -22,14 +22,15 @@ open Zcash.Circuits.Action (orchardActionTopLevelCircuit)
 
 namespace ActionPermutationDomain
 
-variable {G : Type*} [AddCommGroup G] [Inhabited G]
+variable {G : Type} [AddCommGroup G] [Inhabited G]
 
 abbrev actionShape (pp : Keygen.ProofParams) : Shape :=
   pp.mergeDerived orchardActionTopLevelCircuit
 
 abbrev actionVk (pp : Keygen.ProofParams) (urs : URS G) :
-    VerifyingKey (actionShape pp) Fp G :=
-  orchardActionTopLevelCircuit.toVerifierKey pp urs
+    VerifyingKey (actionShape pp) Zcash.Circuits.Fp G :=
+  Zcash.Circuits.TopLevelCircuit.toVerifierKey
+    orchardActionTopLevelCircuit pp urs
 
 /-- The permutation chunks of every derived Action VK are `[7, 7, 1]`, with
 the verifier's exact query-layout and common-column indices. -/
@@ -47,6 +48,7 @@ theorem permutationChunks_eq (pp : Keygen.ProofParams) (urs : URS G) :
         orchardActionTopLevelCircuit.constraintSystem = _
   exact chunks_eq
 
+set_option maxRecDepth 100000 in
 /-- The derived Action VK has one verifier permutation set per chunk. -/
 theorem chunkCount (pp : Keygen.ProofParams) (urs : URS G) :
     (actionVk pp urs).permutationChunks.length =
@@ -56,12 +58,15 @@ theorem chunkCount (pp : Keygen.ProofParams) (urs : URS G) :
     (orchardActionTopLevelCircuit.constraintSystem.permutationColumns.length +
       orchardActionTopLevelCircuit.constraintSystem.chunkLen - 1) /
       orchardActionTopLevelCircuit.constraintSystem.chunkLen
-  rw [show
-    (orchardActionTopLevelCircuit.constraintSystem.permutationColumns.length,
-      orchardActionTopLevelCircuit.constraintSystem.chunkLen) = (15, 7) from
-        columnCount_chunkLen_eq]
-  decide
+  have hcolumns :
+      orchardActionTopLevelCircuit.constraintSystem.permutationColumns.length = 15 :=
+    congrArg Prod.fst columnCount_chunkLen_eq
+  have hchunkLen :
+      orchardActionTopLevelCircuit.constraintSystem.chunkLen = 7 :=
+    congrArg Prod.snd columnCount_chunkLen_eq
+  rw [hcolumns, hchunkLen]
 
+set_option maxRecDepth 100000 in
 /-- The Action verifier's permutation chunk family is nonempty. -/
 theorem nonempty (pp : Keygen.ProofParams) :
     0 < (actionShape pp).numPermutationSets := by
@@ -69,10 +74,13 @@ theorem nonempty (pp : Keygen.ProofParams) :
     (orchardActionTopLevelCircuit.constraintSystem.permutationColumns.length +
       orchardActionTopLevelCircuit.constraintSystem.chunkLen - 1) /
       orchardActionTopLevelCircuit.constraintSystem.chunkLen
-  rw [show
-    (orchardActionTopLevelCircuit.constraintSystem.permutationColumns.length,
-      orchardActionTopLevelCircuit.constraintSystem.chunkLen) = (15, 7) from
-        columnCount_chunkLen_eq]
+  have hcolumns :
+      orchardActionTopLevelCircuit.constraintSystem.permutationColumns.length = 15 :=
+    congrArg Prod.fst columnCount_chunkLen_eq
+  have hchunkLen :
+      orchardActionTopLevelCircuit.constraintSystem.chunkLen = 7 :=
+    congrArg Prod.snd columnCount_chunkLen_eq
+  rw [hcolumns, hchunkLen]
   decide
 
 /-- The concrete chunk widths retained for consumers that need their exact values. -/
@@ -81,6 +89,7 @@ theorem chunkLengths (pp : Keygen.ProofParams) (urs : URS G) :
   rw [permutationChunks_eq]
   decide
 
+set_option maxRecDepth 100000 in
 /-- Every derived Action permutation chunk has width at most `vk.chunkLen`. -/
 theorem chunkLength_le (pp : Keygen.ProofParams) (urs : URS G) :
     ∀ i, i < (actionShape pp).numPermutationSets →
@@ -119,24 +128,41 @@ theorem resolverPairsLength_le
   simpa [ResolverPermutationPairs, permutationChunkPairsOfResolver] using
     chunkLength_le pp urs i hi
 
+set_option maxRecDepth 100000 in
 /-- Every chunk value reference selects an in-range rotation-zero query-layout
 entry, and every common-permutation index is in range. -/
 theorem routingCoherent_of_derived
     (pp : Keygen.ProofParams) (urs : URS G) :
     PermutationChunkRoutingCoherent (actionVk pp urs) := by
-  intro chunk hchunk ref href
-  have hroute := routingCoherent chunk (by
-    change chunk ∈
-      Keygen.permutationChunksOf orchardActionTopLevelCircuit.selMapDerived
-        orchardActionTopLevelCircuit.constraintSystem
-    exact hchunk) ref href
+  rintro chunk hchunk ⟨ref, common⟩ href
+  have hroute := routingCoherent chunk hchunk (ref, common) href
   rcases hroute with ⟨hrefCoherent, hcommon⟩
   constructor
-  · cases ref.1 <;>
-      simpa [PermutationColumnRef.Coherent, ColumnRefCoherent, actionShape,
-        Keygen.ProofParams.mergeDerived, actionVk,
-        TopLevelCircuit.toVerifierKey, TopLevelCircuit.verifierKeyAt,
-        VerifyingKey.ofOperations, TopLevelCircuit.pinnedCS] using hrefCoherent
+  · cases ref with
+    | advice i =>
+        rcases hrefCoherent with ⟨hi, hrotation⟩
+        change
+          i < orchardActionTopLevelCircuit.pinnedCS.adviceQueryLayout.length ∧
+          i < derivedPinnedCS.adviceQueryLayout.length ∧
+            (derivedPinnedCS.adviceQueryLayout.getD i (0, 0)).2 = 0
+        rw [adviceQueryLayout_eq]
+        exact ⟨hi, hi, hrotation⟩
+    | fixed i =>
+        rcases hrefCoherent with ⟨hi, hrotation⟩
+        change
+          i < orchardActionTopLevelCircuit.pinnedCS.fixedQueryLayout.length ∧
+          i < derivedPinnedCS.fixedQueryLayout.length ∧
+            (derivedPinnedCS.fixedQueryLayout.getD i (0, 0)).2 = 0
+        rw [fixedQueryLayout_eq]
+        exact ⟨hi, hi, hrotation⟩
+    | «instance» i =>
+        rcases hrefCoherent with ⟨hi, hrotation⟩
+        change
+          i < orchardActionTopLevelCircuit.pinnedCS.instanceQueryLayout.length ∧
+          i < derivedPinnedCS.instanceQueryLayout.length ∧
+            (derivedPinnedCS.instanceQueryLayout.getD i (0, 0)).2 = 0
+        rw [instanceQueryLayout_eq]
+        exact ⟨hi, hi, hrotation⟩
   · simpa [actionShape, Keygen.ProofParams.mergeDerived] using hcommon
 
 /-! ## Pasta permutation-name cosets -/
@@ -155,9 +181,7 @@ theorem deltaFp_pow_pastaOddFactor :
     deltaFp ^ pastaOddFactor = 1 := by
   rw [deltaFp, powFast_eq_pow, ← pow_mul,
     scalarFieldOrder_sub_one_factorization]
-  exact ZMod.pow_card_sub_one_eq_one (by
-    norm_num [scalarFieldOrder,
-      CompElliptic.Fields.Pasta.PALLAS_BASE_CARD])
+  exact ZMod.pow_card_sub_one_eq_one (by decide : (5 : Fp) ≠ 0)
 
 theorem pastaOddFactor_coprime_actionDomain :
     Nat.Coprime (2 ^ 11) pastaOddFactor := by
@@ -181,6 +205,8 @@ theorem deltaFp_actionCosets
     rw [← pow_mul, Nat.mul_comm, pow_mul,
       deltaFp_pow_pastaOddFactor, one_pow]
   have hpow := congrArg (fun x : Fp => x ^ pastaOddFactor) h
+  change (deltaFp ^ (j : ℕ)) ^ pastaOddFactor =
+    (omegaOf 11 ^ t * deltaFp ^ (j' : ℕ)) ^ pastaOddFactor at hpow
   rw [hj, mul_pow, hj', mul_one] at hpow
   have htMul : omegaOf 11 ^ (t * pastaOddFactor) = 1 := by
     rw [pow_mul]
@@ -253,10 +279,23 @@ theorem lastRowRotation (pp : Keygen.ProofParams) (urs : URS G) :
         ((actionVk pp urs).n - (actionVk pp urs).blindingFactors - 1) =
       (actionVk pp urs).omega ^
         (-(((actionVk pp urs).blindingFactors : ℤ) + 1)) := by
-  let ch : Challenges (actionShape pp).k Fp := default
+  let ch : Challenges (actionShape pp).k Fp :=
+    { theta := 0
+      beta := 0
+      gamma := 0
+      y := 0
+      x := 0
+      x1 := 0
+      x2 := 0
+      x3 := 0
+      x4 := 0
+      xi := 0
+      z := 0
+      ipaRound := fun _ => 0 }
   let poly : CommitmentId → Polynomial Fp := fun _ => 0
   exact (domain pp urs ch poly).lastRotation
 
+set_option maxRecDepth 100000 in
 /-- Action chunk names are injective on any active prefix of the derived
 evaluation domain. This is the `hnames` premise retained by
 `ResolverPermutationCycle.ofKeygenColumns`. -/
@@ -281,9 +320,7 @@ theorem namesInjective
       apply pow_ne_zero
       change deltaFp ≠ 0
       rw [deltaFp, powFast_eq_pow]
-      exact pow_ne_zero _ (by
-        norm_num [scalarFieldOrder,
-          CompElliptic.Fields.Pasta.PALLAS_BASE_CARD])
+      exact pow_ne_zero _ (by decide : (5 : Fp) ≠ 0)
     · exact root pp urs
     · intro i i' hi hi' heq
       have hfin :
@@ -305,39 +342,45 @@ theorem namesInjective
               orchardActionTopLevelCircuit.constraintSystem.chunkLen - 1) /
               orchardActionTopLevelCircuit.constraintSystem.chunkLen) *
             orchardActionTopLevelCircuit.constraintSystem.chunkLen = 21
-        rw [show
-          (orchardActionTopLevelCircuit.constraintSystem.permutationColumns.length,
-            orchardActionTopLevelCircuit.constraintSystem.chunkLen) = (15, 7) from
-              columnCount_chunkLen_eq]
-        decide
+        have hcolumns :
+            orchardActionTopLevelCircuit.constraintSystem.permutationColumns.length = 15 :=
+          congrArg Prod.fst columnCount_chunkLen_eq
+        have hchunkLen :
+            orchardActionTopLevelCircuit.constraintSystem.chunkLen = 7 :=
+          congrArg Prod.snd columnCount_chunkLen_eq
+        rw [hcolumns, hchunkLen]
       have hj : (j : ℕ) < 21 := by
-        have := j.isLt
-        change (j : ℕ) <
-          (actionShape pp).numPermutationSets *
-            (actionVk pp urs).chunkLen at this
-        rwa [hsize] at this
+        have hlt := j.isLt
+        omega
       have hj' : (j' : ℕ) < 21 := by
-        have := j'.isLt
-        change (j' : ℕ) <
-          (actionShape pp).numPermutationSets *
-            (actionVk pp urs).chunkLen at this
-        rwa [hsize] at this
-      exact Fin.ext_iff.mp
-        (deltaFp_actionCosets ⟨j, hj⟩ ⟨j', hj'⟩ t hcoset)
+        have hlt := j'.isLt
+        omega
+      apply Fin.ext
+      have heq21 :
+          (⟨j, hj⟩ : Fin 21) = ⟨j', hj'⟩ :=
+        deltaFp_actionCosets ⟨j, hj⟩ ⟨j', hj'⟩ t hcoset
+      exact congrArg (fun x : Fin 21 => x.val) heq21
   intro c d hname
-  have hwiden :
-      Function.Injective
-        (widenPermutationChunkCell
-          (width := fun i =>
-            (ResolverPermutationPairs (actionVk pp urs) poly p i).length)
-          hactive) := by
-    rintro ⟨chunk, row, column⟩ ⟨chunk', row', column'⟩ h
-    simp only [widenPermutationChunkCell, Sigma.mk.inj_iff,
-      Prod.mk.injEq, Fin.mk.injEq, heq_eq_eq] at h ⊢
-    exact h
-  apply hwiden
-  apply hfull
-  simpa using hname
+  have hwiden := widenPermutationChunkCell_injective
+    (nc := (actionShape pp).numPermutationSets)
+    (width := fun i =>
+      (ResolverPermutationPairs (actionVk pp urs) poly p i).length)
+    hactive
+  have hwname :
+      chunkRowName (actionVk pp urs).omega (actionVk pp urs).delta
+          (actionVk pp urs).chunkLen
+          (widenPermutationChunkCell hactive c).1
+          (widenPermutationChunkCell hactive c).2.1
+          (widenPermutationChunkCell hactive c).2.2 =
+        chunkRowName (actionVk pp urs).omega (actionVk pp urs).delta
+          (actionVk pp urs).chunkLen
+          (widenPermutationChunkCell hactive d).1
+          (widenPermutationChunkCell hactive d).2.1
+          (widenPermutationChunkCell hactive d).2.2 := by
+    simpa only [widenPermutationChunkCell_fst,
+      widenPermutationChunkCell_row,
+      widenPermutationChunkCell_column] using hname
+  exact hwiden (hfull hwname)
 
 /-- Assemble the semantic cycle once G3a supplies the replayed full permutation
 and its active restriction, and the commitment layer supplies `hcolumns`. -/

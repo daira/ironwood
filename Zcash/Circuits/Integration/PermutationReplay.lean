@@ -100,7 +100,7 @@ theorem getPair_setPair_self {numCols n : ℕ} {a : Array (Array (ℕ × ℕ))}
     getPair (setPair a p v) p = v := by
   obtain ⟨hsize, hrow⟩ := h
   have hp1' : p.1 < a.size := hsize ▸ hp1
-  simp [Zcash.Circuits.Fixtures.Layout.Asm.getPair, Zcash.Circuits.Fixtures.Layout.Asm.setPair, Array.getElem!_eq_getD, Array.getD,
+  simp [Zcash.Circuits.Fixtures.Layout.Asm.getPair, Zcash.Circuits.Fixtures.Layout.Asm.setPair,
     Array.size_modify, hp1', Array.getElem_modify_self,
     Array.set!, Array.getElem_setIfInBounds_self, hrow _ hp1', hp2]
 
@@ -114,7 +114,7 @@ theorem getPair_setPair_ne {numCols n : ℕ} {a : Array (Array (ℕ × ℕ))}
     by_cases hq1 : q.1 < a.size
     · have hp1 : p.1 < a.size := h1 ▸ hq1
       simp [Zcash.Circuits.Fixtures.Layout.Asm.getPair, Zcash.Circuits.Fixtures.Layout.Asm.setPair, Array.getElem!_eq_getD, Array.getD,
-        Array.size_modify, hq1, h1, Array.getElem_modify_self,
+        Array.size_modify, h1, Array.getElem_modify_self,
         Array.set!, Array.size_setIfInBounds, hp1]
       split
       · exact Array.getElem_setIfInBounds_ne (by assumption) (Ne.symm h2)

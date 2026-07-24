@@ -1,6 +1,7 @@
 import Zcash.Circuits.Action.Statement
 import Zcash.Circuits.Integration.FixedColumns
 import Zcash.Circuits.Integration.InstanceColumns
+import Zcash.Circuits.Integration.QueryLayouts
 import Zcash.Snark.Soundness.ActionStatement
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 import Zcash.Snark.Soundness.TopLevelCircuit
@@ -277,11 +278,11 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
           (Circuit.configure
             Specs.Sinsemilla.orchardGenerators {}).1.primary.index =
         instanceKey.commitInstance (inputs proofIndex).rows 1)
-    (hinstanceLayout :
+    (hinstanceRegistered :
       ((Circuit.configure
-          Specs.Sinsemilla.orchardGenerators {}).1.primary.index,
-        (0 : ℤ)) ∈
-        (orchardActionTopLevelCircuit.toVerifierKey pp urs).instanceQueryLayout)
+          Specs.Sinsemilla.orchardGenerators {}).1.primary,
+        (0 : Rotation)) ∈
+        orchardActionTopLevelCircuit.constraintSystem.instanceQueries)
     (gateCoherence :
       TopLevelGateCoherence
         orchardActionTopLevelCircuit pp urs)
@@ -359,7 +360,12 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
             instanceCommitment ps ch proofIndex
             (Circuit.configure
               Specs.Sinsemilla.orchardGenerators {}).1.primary.index
-            0 gateCoherence.instanceQueryCount hinstanceLayout)
+            0 gateCoherence.instanceQueryCount
+            (QueryLayouts.instanceQueryLayout_of_constraintSystem
+                orchardActionTopLevelCircuit pp urs
+                (Circuit.configure
+                  Specs.Sinsemilla.orchardGenerators {}).1.primary
+                0 hinstanceRegistered))
       have hrows := hbound.resolve_right hrelation
       change relation.polynomial
           (.instanceCol proofIndex
