@@ -1,4 +1,5 @@
 import Zcash.Circuits.Integration.ActionEncoding
+import Zcash.Circuits.Integration.ActionPermutationDomain
 import Zcash.Circuits.Integration.CopyListMembership
 
 /-!
@@ -39,11 +40,36 @@ def actionCopyRaw : List (ℕ × ℕ × ℕ × ℕ) :=
     orchardActionTopLevelCircuit.regionStarts
     (orchardActionTopLevelCircuit.operations 0) actionConsts
 
+/-- The last usable row of the circuit-derived Action domain. -/
+def actionActiveRows : ℕ :=
+  orchardActionTopLevelCircuit.usableRowsAt
+    orchardActionTopLevelCircuit.domainExponent
+
 theorem actionNumPermCols_pos : 0 < actionNumPermCols := by
   native_decide
 
 theorem actionDomainSize_pos : 0 < actionDomainSize :=
   Nat.two_pow_pos _
+
+@[simp]
+theorem actionDomainSize_eq
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    (pp : ProofParams) (urs : URS G) :
+    actionDomainSize = (ActionPermutationDomain.actionVk pp urs).n := by
+  simp [actionDomainSize]
+
+theorem actionActiveRows_le_domainSize :
+    actionActiveRows ≤ actionDomainSize := by
+  unfold actionActiveRows TopLevelCircuit.usableRowsAt
+  exact le_trans (Nat.sub_le _ _) (Nat.sub_le _ _)
+
+@[simp]
+theorem actionActiveRows_eq
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    (pp : ProofParams) (urs : URS G) :
+    actionActiveRows = ActionPermutationDomain.activeRows pp urs := by
+  simp [actionActiveRows, ActionPermutationDomain.activeRows,
+    TopLevelCircuit.usableRowsAt]
 
 /-- Every keygen copy tuple is in range: 15 permutation columns, `2^11` rows. -/
 theorem actionCopyBounds : ∀ t ∈ actionCopyRaw, t.1 < actionNumPermCols ∧
@@ -56,6 +82,221 @@ def actionCopies :
     List (FlatCell actionNumPermCols actionDomainSize ×
       FlatCell actionNumPermCols actionDomainSize) :=
   decodeCopies actionNumPermCols actionDomainSize actionCopyRaw actionCopyBounds
+
+/-- Decoded copy pairs whose endpoints escape the usable-row prefix. -/
+def actionCopyActiveRowFailures :
+    List (FlatCell actionNumPermCols actionDomainSize ×
+      FlatCell actionNumPermCols actionDomainSize) :=
+  actionCopies.filter fun pair =>
+    decide (¬ (
+      (pair.1.2 : ℕ) < actionActiveRows ∧
+        (pair.2.2 : ℕ) < actionActiveRows))
+
+/-- Every Action keygen copy endpoint lies in the usable-row prefix. -/
+theorem actionCopyActiveRowFailures_eq_nil :
+    actionCopyActiveRowFailures = [] := by
+  native_decide
+
+/-- Pointwise usable-row bounds extracted from the finite copy diagnostic. -/
+theorem actionCopyRowsActive
+    (pair : FlatCell actionNumPermCols actionDomainSize ×
+      FlatCell actionNumPermCols actionDomainSize)
+    (hpair : pair ∈ actionCopies) :
+    (pair.1.2 : ℕ) < actionActiveRows ∧
+      (pair.2.2 : ℕ) < actionActiveRows := by
+  by_contra hnot
+  have hfailure : pair ∈ actionCopyActiveRowFailures := by
+    rw [actionCopyActiveRowFailures, List.mem_filter]
+    exact ⟨hpair, decide_eq_true hnot⟩
+  rw [actionCopyActiveRowFailures_eq_nil] at hfailure
+  simp at hfailure
+
+/-- Action keygen replays preserve the usable-row prefix. -/
+theorem actionReplayPreservesActive
+    (cell : FlatCell actionNumPermCols actionDomainSize)
+    (hcell : (cell.2 : ℕ) < actionActiveRows) :
+    ((replayKeygenPermutation actionCopies cell).2 : ℕ) <
+      actionActiveRows := by
+  apply replayKeygenPermutation_preserves actionCopies
+    (fun candidate => (candidate.2 : ℕ) < actionActiveRows)
+  · intro pair hpair
+    exact actionCopyRowsActive pair hpair
+  · exact hcell
+
+set_option maxRecDepth 100000 in
+/-- The Action permutation argument has three chunks. -/
+theorem actionNumPermutationSets_eq
+    (pp : ProofParams) :
+    (ActionPermutationDomain.actionShape pp).numPermutationSets = 3 := by
+  change
+    (orchardActionTopLevelCircuit.constraintSystem.permutationColumns.length +
+        orchardActionTopLevelCircuit.constraintSystem.chunkLen - 1) /
+      orchardActionTopLevelCircuit.constraintSystem.chunkLen = 3
+  have hdata := ActionPermutationDomain.columnCount_chunkLen_eq
+  have hcolumns :
+      orchardActionTopLevelCircuit.constraintSystem.permutationColumns.length =
+        15 :=
+    congrArg Prod.fst hdata
+  have hchunkLen :
+      orchardActionTopLevelCircuit.constraintSystem.chunkLen = 7 :=
+    congrArg Prod.snd hdata
+  rw [hcolumns, hchunkLen]
+
+/-- The Action permutation argument has 15 columns. -/
+theorem actionNumPermCols_eq : actionNumPermCols = 15 := by
+  native_decide
+
+set_option maxRecDepth 100000 in
+/-- The Action permutation chunk width is seven. -/
+theorem actionChunkLen_eq
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    (pp : ProofParams) (urs : URS G) :
+    (ActionPermutationDomain.actionVk pp urs).chunkLen = 7 := by
+  change orchardActionTopLevelCircuit.constraintSystem.chunkLen = 7
+  exact congrArg Prod.snd
+    ActionPermutationDomain.columnCount_chunkLen_eq
+
+set_option maxRecDepth 100000 in
+/-- Resolver-backed Action permutation chunks have the exact `[7,7,1]` widths. -/
+theorem actionResolverChunkWidth
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    (pp : ProofParams) (urs : URS G)
+    (poly : CommitmentId → Polynomial Fp)
+    (proofIndex :
+      Fin (ActionPermutationDomain.actionShape pp).numProofs)
+    (chunk :
+      Fin (ActionPermutationDomain.actionShape pp).numPermutationSets) :
+    (ResolverPermutationPairs
+        (ActionPermutationDomain.actionVk pp urs)
+        poly proofIndex chunk).length =
+      min (ActionPermutationDomain.actionVk pp urs).chunkLen
+        (actionNumPermCols -
+          (chunk : ℕ) *
+            (ActionPermutationDomain.actionVk pp urs).chunkLen) := by
+  simp only [ResolverPermutationPairs,
+    permutationChunkPairsOfResolver, List.length_map]
+  rw [ActionPermutationDomain.permutationChunks_eq,
+    actionChunkLen_eq, actionNumPermCols_eq]
+  have hchunk : (chunk : ℕ) < 3 := by
+    simpa only [actionNumPermutationSets_eq] using chunk.isLt
+  have hcases :
+      (chunk : ℕ) = 0 ∨ (chunk : ℕ) = 1 ∨ (chunk : ℕ) = 2 := by
+    omega
+  rcases hcases with hzero | hone | htwo
+  · simp [hzero]
+  · simp [hone]
+  · simp [htwo]
+
+/-- Flatten the derived `[7,7,1]` Action chunks to `(row, global column)`. -/
+noncomputable def actionChunkFlatten
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    (pp : ProofParams) (urs : URS G)
+    (poly : CommitmentId → Polynomial Fp)
+    (proofIndex :
+      Fin (ActionPermutationDomain.actionShape pp).numProofs) :
+    ResolverPermutationCell
+        (ActionPermutationDomain.actionVk pp urs)
+        poly proofIndex actionDomainSize ≃
+      Fin actionDomainSize × Fin actionNumPermCols :=
+  Layout.Asm.chunkFlatten
+    (ActionPermutationDomain.actionShape pp).numPermutationSets
+    actionNumPermCols
+    (ActionPermutationDomain.actionVk pp urs).chunkLen
+    actionDomainSize
+    (fun chunk =>
+      (ResolverPermutationPairs
+        (ActionPermutationDomain.actionVk pp urs)
+        poly proofIndex chunk).length)
+    (by rw [actionChunkLen_eq]; decide)
+    (by
+      rw [actionNumPermCols_eq, actionNumPermutationSets_eq,
+        actionChunkLen_eq]
+      decide)
+    (actionResolverChunkWidth pp urs poly proofIndex)
+
+/-- The full-domain Action keygen permutation in resolver chunk coordinates. -/
+noncomputable def actionFullSigma
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    (pp : ProofParams) (urs : URS G)
+    (poly : CommitmentId → Polynomial Fp)
+    (proofIndex :
+      Fin (ActionPermutationDomain.actionShape pp).numProofs) :
+    Equiv.Perm
+      (ResolverPermutationCell
+        (ActionPermutationDomain.actionVk pp urs)
+        poly proofIndex actionDomainSize) :=
+  chunkPermutationOfFlat
+    (actionChunkFlatten pp urs poly proofIndex)
+    ((Equiv.prodComm
+        (Fin actionNumPermCols) (Fin actionDomainSize)).permCongr
+      (replayKeygenPermutation actionCopies))
+
+/-- The full-domain Action replay sends active chunk cells to active chunk
+cells. This is structural after the finite endpoint-row certificate: flattening
+and unflattening preserve the row coordinate. -/
+theorem actionFullSigma_preservesActive
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    (pp : ProofParams) (urs : URS G)
+    (poly : CommitmentId → Polynomial Fp)
+    (proofIndex :
+      Fin (ActionPermutationDomain.actionShape pp).numProofs)
+    (cell : ResolverPermutationCell
+      (ActionPermutationDomain.actionVk pp urs)
+      poly proofIndex actionActiveRows) :
+    (((actionFullSigma pp urs poly proofIndex)
+        (widenPermutationChunkCell actionActiveRows_le_domainSize cell)).2.1 :
+      ℕ) < actionActiveRows := by
+  let flat : FlatCell actionNumPermCols actionDomainSize :=
+    (Equiv.prodComm (Fin actionNumPermCols) (Fin actionDomainSize)).symm
+      (actionChunkFlatten pp urs poly proofIndex
+        (widenPermutationChunkCell actionActiveRows_le_domainSize cell))
+  have hflat : (flat.2 : ℕ) < actionActiveRows := by
+    change
+      (((actionChunkFlatten pp urs poly proofIndex)
+        (widenPermutationChunkCell actionActiveRows_le_domainSize cell)).1 :
+        ℕ) < actionActiveRows
+    simpa only [actionChunkFlatten,
+      _root_.Zcash.Snark.Layout.Asm.chunkFlatten_apply_row,
+      widenPermutationChunkCell_row] using cell.2.1.isLt
+  have hreplay := actionReplayPreservesActive flat hflat
+  simpa only [actionFullSigma, chunkPermutationOfFlat_apply,
+    Equiv.permCongr_apply, Equiv.prodComm_apply, actionChunkFlatten,
+    _root_.Zcash.Snark.Layout.Asm.chunkFlatten_symm_apply_row, flat] using hreplay
+
+/-- Restrict the full Action keygen replay to the usable-row prefix. -/
+noncomputable def actionActiveSigma
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    (pp : ProofParams) (urs : URS G)
+    (poly : CommitmentId → Polynomial Fp)
+    (proofIndex :
+      Fin (ActionPermutationDomain.actionShape pp).numProofs) :
+    Equiv.Perm
+      (ResolverPermutationCell
+        (ActionPermutationDomain.actionVk pp urs)
+        poly proofIndex actionActiveRows) :=
+  Layout.Asm.restrictActivePerm actionActiveRows_le_domainSize
+    (actionFullSigma pp urs poly proofIndex)
+    (actionFullSigma_preservesActive pp urs poly proofIndex)
+
+/-- The active Action replay is the restriction of its full-domain replay. -/
+theorem actionActiveSigma_widen
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    (pp : ProofParams) (urs : URS G)
+    (poly : CommitmentId → Polynomial Fp)
+    (proofIndex :
+      Fin (ActionPermutationDomain.actionShape pp).numProofs)
+    (cell : ResolverPermutationCell
+      (ActionPermutationDomain.actionVk pp urs)
+      poly proofIndex actionActiveRows) :
+    widenPermutationChunkCell actionActiveRows_le_domainSize
+        (actionActiveSigma pp urs poly proofIndex cell) =
+      actionFullSigma pp urs poly proofIndex
+        (widenPermutationChunkCell actionActiveRows_le_domainSize cell) :=
+  Layout.Asm.restrictActivePerm_widen
+    actionActiveRows_le_domainSize
+    (actionFullSigma pp urs poly proofIndex)
+    (actionFullSigma_preservesActive pp urs poly proofIndex)
+    cell
 
 /-- A raw coordinate pair as a typed Action permutation cell (`mod` totalization —
 the identity on every in-range coordinate, and every declared coordinate is). -/
