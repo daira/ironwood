@@ -1,6 +1,8 @@
 import Zcash.Circuits.Integration.ExprRich
 import Zcash.Circuits.Integration.ActionEncoding
 import Zcash.Circuits.Integration.FixedColumns
+import Zcash.Circuits.Integration.PermutationColumns
+import Zcash.Circuits.Integration.PermutationReplay
 import Zcash.Circuits.Integration.InstanceColumns
 import Zcash.Circuits.Integration.QueryLayouts
 import Zcash.Snark.Soundness.ActionStatement

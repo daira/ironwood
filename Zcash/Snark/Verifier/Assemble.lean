@@ -347,6 +347,126 @@ theorem assembleQueries_fixed_commitment
     · subst q
       simp at hid
 
+/-- An assembled query carrying a common-permutation identity uses the corresponding
+verifying-key σ-column commitment. -/
+theorem assembleQueries_permCommon_commitment
+    {shape : Shape} {F G : Type*} [Field F] [Inhabited G]
+    (vk : VerifyingKey shape F G)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) (ch : Challenges shape.k F)
+    (q : VerifierQuery shape.k F G)
+    (hq : q ∈ assembleQueries vk instanceCommitment ps ch)
+    (c : Fin shape.numPermutationColumns)
+    (hid : q.commId = .permCommon (c : ℕ)) :
+    q.commitment = .point (vk.permutationCommonCommitment c) := by
+  simp only [assembleQueries, List.mem_append] at hq
+  rcases hq with (((hperProof | hfixed) | hcommon) | hvanishing)
+  · obtain ⟨proofQueries, hproofQueries, hq⟩ :=
+      List.mem_flatten.mp hperProof
+    obtain ⟨proofIndex, hproofQueries⟩ :=
+      List.mem_ofFn.mp hproofQueries
+    rw [← hproofQueries] at hq
+    simp only [List.mem_append] at hq
+    rcases hq with hleft | hlookup
+    · rcases hleft with hleft | hpermutation
+      · rcases hleft with hinstance | hadvice
+        · rw [columnQueries, List.mem_map] at hinstance
+          obtain ⟨entry, _, hq⟩ := hinstance
+          subst q
+          simp at hid
+        · rw [columnQueries, List.mem_map] at hadvice
+          obtain ⟨entry, _, hq⟩ := hadvice
+          subst q
+          simp at hid
+      · simp only [permutationQueries, List.mem_append] at hpermutation
+        rcases hpermutation with hregular | hlast
+        · simp only [List.mem_flatMap, List.mem_cons, List.mem_nil_iff,
+            or_false] at hregular
+          obtain ⟨entry, _, hq | hq⟩ := hregular
+          · subst q
+            simp at hid
+          · subst q
+            simp at hid
+        · rw [List.mem_filterMap] at hlast
+          obtain ⟨entry, _, hentry⟩ := hlast
+          cases hlastEval : entry.1.2.lastEval with
+          | none => simp [hlastEval] at hentry
+          | some lastEvaluation =>
+            simp [hlastEval] at hentry
+            subst q
+            simp at hid
+    · simp only [lookupQueries, List.mem_flatMap, List.mem_cons,
+        List.mem_nil_iff, or_false] at hlookup
+      obtain ⟨entry, _, hq | hq | hq | hq | hq⟩ := hlookup
+      all_goals
+        subst q
+        simp at hid
+  · rw [columnQueries, List.mem_map] at hfixed
+    obtain ⟨entry, _, hq⟩ := hfixed
+    subst q
+    simp at hid
+  · rw [permutationCommonQueries, List.mem_map] at hcommon
+    obtain ⟨ce, hce, hq⟩ := hcommon
+    subst q
+    obtain ⟨k, hk, hcek⟩ := List.getElem_of_mem hce
+    rw [List.getElem_zip] at hcek
+    have hkn : k < shape.numPermutationColumns := by
+      have hkzip := hk
+      simp only [List.length_zip, List.length_range, List.length_ofFn,
+        Nat.min_self] at hkzip
+      exact hkzip
+    have hce1 : ce.1 = (vk.permutationCommonCommitment ⟨k, hkn⟩,
+        ps.permutationCommonEvals ⟨k, hkn⟩) := by
+      rw [← hcek]
+      simp
+    have hce2 : ce.2 = k := by
+      rw [← hcek]
+      simp
+    have hkc : k = (c : ℕ) := by
+      simpa [hce2] using hid
+    have hfin : (⟨k, hkn⟩ : Fin shape.numPermutationColumns) = c :=
+      Fin.ext hkc
+    simp [hce1, hfin]
+  · simp [vanishingQueries] at hvanishing
+    rcases hvanishing with hq | hq
+    · subst q
+      simp at hid
+    · subst q
+      simp at hid
+
+/-- The common-permutation query list covers every index below its input length. -/
+private theorem permutationCommonQueries_getElem_mem {k : ℕ} {F G : Type*} [Field F]
+    (x : F) (mkId : ℕ → CommitmentId) (ces : List (G × F)) (i : ℕ)
+    (hi : i < ces.length) :
+    ∃ q ∈ permutationCommonQueries (k := k) x mkId ces, q.commId = mkId i := by
+  have hz : i < (ces.zip (List.range ces.length)).length := by simpa using hi
+  have hmem := List.mem_map_of_mem
+    (f := fun ce : (G × F) × ℕ =>
+      ({ point := x, commitment := .point ce.1.1, eval := ce.1.2,
+         commId := mkId ce.2 } : VerifierQuery k F G))
+    (List.getElem_mem hz)
+  rw [permutationCommonQueries]
+  refine ⟨_, hmem, ?_⟩
+  simp [List.getElem_zip]
+
+/-- Every verifying-key σ column is opened by the assembled queries: the common-permutation
+queries cover the whole column family by construction. -/
+theorem assembleQueries_permCommon_query
+    {shape : Shape} {F G : Type*} [Field F] [Inhabited G]
+    (vk : VerifyingKey shape F G)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) (ch : Challenges shape.k F)
+    (c : Fin shape.numPermutationColumns) :
+    ∃ q ∈ assembleQueries vk instanceCommitment ps ch,
+      q.commId = .permCommon (c : ℕ) := by
+  obtain ⟨q, hqmem, hqid⟩ := permutationCommonQueries_getElem_mem (k := shape.k)
+    ch.x CommitmentId.permCommon
+    (List.ofFn fun c => (vk.permutationCommonCommitment c, ps.permutationCommonEvals c))
+    (c : ℕ) (by simp)
+  refine ⟨q, ?_, hqid⟩
+  simp only [assembleQueries, List.mem_append]
+  exact Or.inl (Or.inr hqmem)
+
 /-- The multiopen point-set grouping (halo2 `construct_intermediate_sets` output): per point set,
 the routed queries as `(commitment, evaluations)`, the set's points, and the routed members' slot
 identities, positionally aligned with `sets` (`constructIntermediateSets_sets_ids_aligned`) —
