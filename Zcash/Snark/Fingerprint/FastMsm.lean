@@ -24,21 +24,28 @@ namespace Zcash.Snark.Msm
 
 open Zcash.Snark
 
-/-- `evalNat` through the proven windowed Pippenger accelerator: one bucketed MSM over
-the generator terms, the blinding/inner-product generators, and the extra term list. -/
+/-- `evalNat` through the proven windowed Pippenger accelerator, with the ~32 independent
+windows evaluated in parallel (`Keygen.Fast.Msm.pippengerFastPar`): one bucketed MSM over
+the generator terms, the blinding/inner-product generators, and the extra term list.
+
+The replacement must stay generic over `[AddCommGroup G]` (a `@[csimp]` lemma replaces the
+whole constant), so the *affine* windows-parallel accelerator is the fastest admissible form
+here; the Vesta-specific projective interior (`Keygen.Fast.MsmProj.pippengerProjScatterPar`)
+cannot be dispatched from a generic `G`. -/
 def evalNatFast {p : ℕ} {G : Type*} [AddCommGroup G]
     (urs : URS G) (m : Msm urs.k (ZMod p) G) : G :=
-  Keygen.Fast.Msm.pippengerFast Keygen.Fast.Msm.defaultWindow
+  Keygen.Fast.Msm.pippengerFastPar Keygen.Fast.Msm.defaultWindow
     ((List.ofFn fun i => ((m.gScalars i).val, urs.g i))
       ++ (m.wScalar.val, urs.w) :: (m.uScalar.val, urs.u)
         :: m.other.map fun t => (t.1.val, t.2))
 
 /-- **The fast MSM evaluation is `evalNat`** — registered with `@[csimp]` so compiled
-code (including the fixtures' `native_decide` auxiliaries) runs the Pippenger form. -/
+code (including the fixtures' `native_decide` auxiliaries) runs the windows-parallel
+Pippenger form. -/
 @[csimp] theorem evalNat_eq_evalNatFast : @evalNat = @evalNatFast := by
   funext p G inst urs m
   unfold evalNat evalNatFast
-  rw [Keygen.Fast.Msm.pippengerFast_eq,
+  rw [Keygen.Fast.Msm.pippengerFastPar_eq, Keygen.Fast.Msm.pippengerFast_eq,
     Keygen.Fast.Msm.pippenger_eq_msm _ (by decide)]
   simp only [List.map_append, List.map_cons, List.map_ofFn, List.map_map,
     List.sum_append, List.sum_cons, List.sum_ofFn, Function.comp_def]

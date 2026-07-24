@@ -47,12 +47,14 @@ ROUND-PARALLEL projective FFT, PROVEN pointwise equal to the Rust-mirroring
 bridge back to the statement-surface name through that equality. -/
 private def lagrangeBasis : List G := Fast.derivedUrsGLagrangeParFast capturedURS
 
-/-- The per-column committer at the derived basis: the PROJECTIVE windowed Pippenger,
-PROVEN equal to the affine default (`commitProj_eq` via the shared
-`Fast.Msm.commitLagrangeSpec`). Nullary partial application so the basis closure is
-built once. -/
+/-- The per-column committer at the derived basis: the PROJECTIVE windowed Pippenger with
+single-pass Array bucketing (`Fast.MsmProj.commitLagrangeProjScatterWith` — ~5× the
+filterMap-bucketed form; serial per column, since the 44-column `parMap` of
+`fixedCommitmentsWith`/`permutationCommitmentsWith` already saturates the cores), PROVEN
+equal to the affine default (`commitProj_eq` via the shared `Fast.Msm.commitLagrangeSpec`).
+Nullary partial application so the basis closure is built once. -/
 private def commitProj : List Fp → G :=
-  Fast.MsmProj.commitLagrangeProjWith Fast.Msm.defaultWindow capturedURS.w lagrangeBasis
+  Fast.MsmProj.commitLagrangeProjScatterWith Fast.Msm.defaultWindow capturedURS.w lagrangeBasis
 
 set_option maxRecDepth 1000000 in
 /-- The projective committer at the derived basis IS the pipeline's affine default at
@@ -63,7 +65,7 @@ private theorem commitProj_eq :
   funext coeffs
   simp only [commitProj, lagrangeBasis]
   rw [Fast.Msm.commitLagrangeFastWith_eq _ (by decide),
-    Fast.MsmProj.commitLagrangeProjWith_eq _ (by decide),
+    Fast.MsmProj.commitLagrangeProjScatterWith_eq _ (by decide),
     Fast.derivedUrsGLagrangeParFast_eq]
 
 /-- The derived pinned CS at the circuit-owned selector map — `ofOperations`' internal
