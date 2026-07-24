@@ -184,6 +184,10 @@ The concrete Action construction still has to prove that:
 - the exported Lagrange generators certify the compatible commitment key;
 - usable and blinding rows are treated exactly as Halo 2 treats them.
 
+**Active next slice: concrete instance-commitment provenance.** Prove the Action
+Lagrange-key and public-input commitment certificates, then remove the endpoint's
+instance-key/commitment parameters and, if possible, its registration premise.
+
 Then expose the result as the row-indexed Clean `Environment` used by
 `Action.Circuit.soundnessPost`. The remaining gap is not the old free-polynomial
 decoder; it is the polynomial/query representation to Clean row/placement
@@ -668,9 +672,9 @@ construction direction rather than restated as caller hypotheses. Its
 using only the top-level circuit's own operations, placement, selector map, pinned
 projection, and the decoded fixed-polynomial realization.
 `TopLevelGateCoherence.constraints` then supplies the complete gate field of Clean's
-constraint satisfaction. The remaining constructor work is to prove the compact
-configure certificates (`GatesWellFormed` and `GateSelectorsAllocated`) and connect
-the derived VK's dense fixed rows to `SelectorActivationsRealized`.
+constraint satisfaction. The concrete Action constructor is now complete; the
+remaining gate-adjacent work belongs to the fixed stream, which connects the derived
+VK's dense fixed rows to `SelectorActivationsRealized`.
 
 The configure proof for `GateSelectorsAllocated` now has a reusable local interface.
 `Gate.SelectorsOwned` says a gate mentions no selector other than its distinguished
@@ -690,12 +694,15 @@ LookupRangeCheck, variable- and fixed-base ECC (including the parent-allocated
 running-sum selector), Poseidon, NoteCommit, both Sinsemilla gate forms, and Merkle,
 then composes them in the exact `Action.Circuit.configure` registration order. Thus
 `Action.Circuit.configure_preservesGateSelectorsAllocated` is the compact
-circuit-derived certificate required by `TopLevelGateCoherence`; callers can apply
-the generic `fromEmpty` rule directly, without an Action-specific wrapper theorem.
-This closes the configure-side selector-allocation obligation. It does not claim the
-separate lookup-expression selector-coverage property required by
-`TopLevelLookupCoherence`; that property and exact packed-selector realization remain
-part of the lookup/fixed compiler boundary.
+circuit-derived certificate required by `TopLevelGateCoherence`. Together with the
+corresponding gate certificate, it now feeds
+`ActionGateCoherence.topLevelGateCoherence`, which also discharges the three query
+counts and the domain/degree bounds for the derived Action key. A sealed,
+equality-pinned configure handle keeps the `fromEmpty` proof structural without
+normalizing the full configure monad. This closes the configure-side gate/selector
+obligation. It does not claim the separate lookup-expression selector-coverage
+property required by `TopLevelLookupCoherence`; that property and exact packed-selector
+realization remain part of the lookup/fixed compiler boundary.
 
 The `Fixtures.Layout` reconstruction is generic over operations, and σ-cycle
 correctness of its replayed keygen merge is now proved once and for all:
@@ -929,12 +936,12 @@ whose public inputs were committed by the verifier.
 2. **Complete generically:** derive the pinned CS, V1 placement, domain, verifying key,
    polynomial row environment, gate witnesses, and lookup witnesses from
    `TopLevelCircuit`. The executable permutation assembly is now proved equal to the
-   abstract copy replay.
+   abstract copy replay, and the concrete Action gate-coherence package is complete.
 3. **Current parallel work:** instantiate Action `TopLevelFixedCoherence`; specialize
    the generic copy-replay constructors to the Action endpoint encoding; derive exact
    lookup selector projection, activation-row fit, and priced lookup challenge
-   conditions; and finish the Lagrange-prefix/instance-commitment certificate. The
-   Action `TopLevelGateCoherence` constructor is complete.
+   conditions; and finish the now-active Lagrange-prefix/instance-commitment
+   certificate.
 4. Assemble those components for one proof index in `FullCircuitBridge`, then quantify
    the same construction over every `Fin shape.numProofs`. The external
    `Action.Statement` and `Action.BundleStatement` adapters are already implemented.

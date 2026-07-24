@@ -1,5 +1,6 @@
 import Zcash.Circuits.Integration.PermutationColumns
 import Zcash.Snark.Soundness.CircuitIntegration
+import Zcash.Snark.Keygen.LagrangeBasisKey
 
 /-!
 # The executable keygen assembly replay is the abstract permutation replay

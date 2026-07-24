@@ -123,4 +123,78 @@ theorem polynomialCoefficients_single_closed (k : ℕ) (hk : k ≤ 32)
   rw [polynomialCoefficients, rowPolynomial_single_eq_closed k hk i]
   exact lagrangeBasisClosed_coeff k i t
 
+theorem permPolysOf_length (k : ℕ) (cs : Halo2.ConstraintSystem Fp)
+    (ops : Halo2.Operations Fp) :
+    (permPolysOf k cs ops).length = (permColsOf cs).length := by
+  simp [permPolysOf]
+
+theorem permPolysOf_getD_length (k : ℕ) (cs : Halo2.ConstraintSystem Fp)
+    (ops : Halo2.Operations Fp) (c : ℕ) (hc : c < (permColsOf cs).length) :
+    ((permPolysOf k cs ops).getD c []).length = 2 ^ k := by
+  have hcl : c < (permPolysOf k cs ops).length := by
+    rw [permPolysOf_length]; exact hc
+  rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hcl]
+  simp [permPolysOf]
+
+/-- **The derived σ commitments are Lagrange-key commitments of the derived σ rows**:
+the executable Pippenger pipeline (with halo2's default blind, the `w` generator) equals
+the abstract prefix-key commitment. The two hypotheses are the per-URS setup facts —
+the derived basis length and the generator identities, native-tier at a concrete URS
+through the closed coefficient form (`polynomialCoefficients_single_closed`). -/
+theorem permutationCommitmentsOf_getD_eq_commitInstance
+    {G : Type} [AddCommGroup G] [Module Fp G] [Inhabited G]
+    (urs : URS G) (cs : Halo2.ConstraintSystem Fp) (ops : Halo2.Operations Fp)
+    (hlen : (derivedUrsGLagrange urs).length = 2 ^ urs.k)
+    (hprefix : ∀ i : Fin (2 ^ urs.k), (i : ℕ) < (derivedUrsGLagrange urs).length →
+      (derivedUrsGLagrange urs).getD (i : ℕ) 0 =
+        commit urs (polynomialCoefficients (2 ^ urs.k)
+          (rowPolynomial (omegaOf urs.k) (Pi.single i (1 : Fp)))))
+    (c : ℕ) (hc : c < (permColsOf cs).length) :
+    (permutationCommitmentsOf urs.w (derivedUrsGLagrange urs) urs.k cs ops).getD c 0 =
+      (LagrangeCommitmentKey.ofPrefix urs (omegaOf urs.k) (derivedUrsGLagrange urs)
+          hprefix).commitInstance
+        ((permPolysOf urs.k cs ops).getD c []) 1 := by
+  classical
+  have hrowlen : ((permPolysOf urs.k cs ops).getD c []).length = 2 ^ urs.k :=
+    permPolysOf_getD_length urs.k cs ops c hc
+  rw [LagrangeCommitmentKey.ofPrefix_commitInstance_eq urs (omegaOf urs.k) _ hprefix _ 1
+    (by rw [hrowlen, hlen]) (by rw [hrowlen])]
+  have hcl : c < (permPolysOf urs.k cs ops).length := by
+    rw [permPolysOf_length]; exact hc
+  have hget : ((permPolysOf urs.k cs ops).map
+      (Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow urs.w
+        (derivedUrsGLagrange urs))).getD c 0 =
+      Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow urs.w
+        (derivedUrsGLagrange urs) ((permPolysOf urs.k cs ops).getD c []) := by
+    rw [List.getD_eq_getElem?_getD, List.getElem?_map, List.getElem?_eq_getElem hcl,
+      List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hcl]
+    rfl
+  rw [permutationCommitmentsOf, List.parMap_eq_map, hget,
+    Fast.Msm.commitLagrangeFastWith_eq Fast.Msm.defaultWindow
+      (by norm_num [Fast.Msm.defaultWindow]) urs.w]
+  rw [← LagrangeCommitmentKey.commitPrefixNat_eq_commitPrefix,
+    Fast.Msm.commitLagrangeSpec, LagrangeCommitmentKey.commitPrefixNat]
+  congr 1
+  rw [← Nat.cast_smul_eq_nsmul Fp ((1 : Fp).val) urs.w,
+    ZMod.natCast_rightInverse (1 : Fp), one_smul]
+
+/-- The `ofPrefix` setup obligation in fully computable form: the noncomputable
+interpolation coefficients are replaced by the closed form, so a concrete URS can
+discharge the per-generator identities by native evaluation. -/
+theorem ofPrefix_setup_of_closed {G : Type} [AddCommGroup G] [Module Fp G]
+    [Inhabited G] (urs : URS G) (hk : urs.k ≤ 32)
+    (hgen : ∀ i : Fin (2 ^ urs.k),
+      (derivedUrsGLagrange urs).getD (i : ℕ) 0 =
+        commit urs fun t : Fin (2 ^ urs.k) =>
+          (2 ^ urs.k : Fp)⁻¹ * (omegaOf urs.k)⁻¹ ^ ((i : ℕ) * (t : ℕ))) :
+    ∀ i : Fin (2 ^ urs.k), (i : ℕ) < (derivedUrsGLagrange urs).length →
+      (derivedUrsGLagrange urs).getD (i : ℕ) 0 =
+        commit urs (polynomialCoefficients (2 ^ urs.k)
+          (rowPolynomial (omegaOf urs.k) (Pi.single i (1 : Fp)))) := by
+  intro i _
+  rw [hgen i]
+  congr 1
+  funext t
+  rw [polynomialCoefficients_single_closed urs.k hk i t]
+
 end Zcash.Snark.Keygen
