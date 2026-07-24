@@ -155,15 +155,20 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
               (pp.mergeDerived orchardActionTopLevelCircuit).numProofs
               proofIndex))
         (orchardActionTopLevelCircuit.operations 0) 0)
-    (lookups : ∀ proofIndex,
-      CircuitConstraintFamily.constraints .lookup
-        orchardActionTopLevelCircuit.placement
-        (TopLevelAssignment.environment
-          ({ polynomial := relation.polynomial } :
-            TopLevelAssignment orchardActionTopLevelCircuit
-              (pp.mergeDerived orchardActionTopLevelCircuit).numProofs
-              proofIndex))
-        (orchardActionTopLevelCircuit.operations 0) 0) :
+    (lookupSelectorValues : ∀ proofIndex lookup
+      (_henabled :
+        lookup ∈ operationEnabledLookups
+          (orchardActionTopLevelCircuit.operations 0) 0),
+      lookup.InputSelectorValuesRealized
+        orchardActionTopLevelCircuit
+        (resolverEnvironment
+          (orchardActionTopLevelCircuit.toVerifierKey pp urs)
+          relation.polynomial proofIndex
+          (orchardActionTopLevelCircuit.usableRowsAt
+            orchardActionTopLevelCircuit.domainExponent)))
+    (lookupExclusions :
+      TopLevelLookupCoherence.TopLevelLookupChallengeExclusions
+        orchardActionTopLevelCircuit pp urs ch relation.polynomial) :
     BundleStatement Specs.Sinsemilla.orchardGenerators orchardBases inputs ∨
       HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   have hsize :
@@ -177,7 +182,7 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
       hblinding hpoly relation hgoodY inputs hsize (instanceKey pp urs)
       (commitment_primary pp urs inputs) primaryRegistered
       (ActionGateCoherence.topLevelGateCoherence pp urs)
-      fixedCoherence copies lookups
+      fixedCoherence copies lookupSelectorValues lookupExclusions
 
 assert_no_sorry actionBundleStatement_or_relation_of_canonicalRelation
 

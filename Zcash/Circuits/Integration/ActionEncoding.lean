@@ -2,6 +2,7 @@ import Zcash.Circuits.Action.Statement
 import Zcash.Circuits.Integration.FixedColumns
 import Zcash.Circuits.Integration.InstanceColumns
 import Zcash.Circuits.Integration.QueryLayouts
+import Zcash.Circuits.Integration.TopLevelLookups
 import Zcash.Snark.Soundness.ActionStatement
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 import Zcash.Snark.Soundness.TopLevelCircuit
@@ -298,15 +299,20 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
               (pp.mergeDerived orchardActionTopLevelCircuit).numProofs
               proofIndex))
         (orchardActionTopLevelCircuit.operations 0) 0)
-    (lookups : ∀ proofIndex,
-      CircuitConstraintFamily.constraints .lookup
-        orchardActionTopLevelCircuit.placement
-        (TopLevelAssignment.environment
-          ({ polynomial := relation.polynomial } :
-            TopLevelAssignment orchardActionTopLevelCircuit
-              (pp.mergeDerived orchardActionTopLevelCircuit).numProofs
-              proofIndex))
-        (orchardActionTopLevelCircuit.operations 0) 0) :
+    (lookupSelectorValues : ∀ proofIndex lookup
+      (_henabled :
+        lookup ∈ operationEnabledLookups
+          (orchardActionTopLevelCircuit.operations 0) 0),
+      lookup.InputSelectorValuesRealized
+        orchardActionTopLevelCircuit
+        (resolverEnvironment
+          (orchardActionTopLevelCircuit.toVerifierKey pp urs)
+          relation.polynomial proofIndex
+          (orchardActionTopLevelCircuit.usableRowsAt
+            orchardActionTopLevelCircuit.domainExponent)))
+    (lookupExclusions :
+      TopLevelLookupCoherence.TopLevelLookupChallengeExclusions
+        orchardActionTopLevelCircuit pp urs ch relation.polynomial) :
     BundleStatement Specs.Sinsemilla.orchardGenerators orchardBases inputs ∨
       HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   classical
@@ -331,6 +337,27 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
     change
       2 ^ orchardActionTopLevelCircuit.domainExponent = 2 ^ urs.k
     rw [hk']
+  have hlookupRows : Function.Injective
+      fun i : Fin
+          (orchardActionTopLevelCircuit.toVerifierKey pp urs).n =>
+        (orchardActionTopLevelCircuit.toVerifierKey pp urs).omega ^
+          (i : ℕ) := by
+    rw [hdomainSize]
+    exact hfixedRows
+  have hdomainRoot :
+      (orchardActionTopLevelCircuit.toVerifierKey pp urs).omega ^
+        (orchardActionTopLevelCircuit.toVerifierKey pp urs).n = 1 := by
+    change
+      Zcash.Snark.omegaOf
+          orchardActionTopLevelCircuit.domainExponent ^
+        (2 ^ orchardActionTopLevelCircuit.domainExponent) = 1
+    exact TopLevelAssignment.domainRoot hbound
+  have hnonzero :
+      (orchardActionTopLevelCircuit.toVerifierKey pp urs).n ≠ 0 := by
+    change 2 ^ orchardActionTopLevelCircuit.domainExponent ≠ 0
+    positivity
+  have hsatisfaction :=
+    relation.constraintSatisfaction hnonzero hgoodY
   by_cases hrelation :
       HasNontrivialRelation (F := Fp) urs.g urs.u urs.w
   · exact Or.inr hrelation
@@ -396,7 +423,18 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
             orchardActionTopLevelCircuit.domainExponent))
       exact hclean.1
     · exact copies
-    · exact lookups
+    · intro proofIndex
+      let lookupCoherence :
+          TopLevelLookupCoherence orchardActionTopLevelCircuit :=
+        TopLevelLookupCoherence.ofTopLevel
+      let conditions :=
+        TopLevelLookupCoherence.TopLevelLookupWitnessConditions.ofChallengeExclusions
+          ch relation.polynomial proofIndex
+          (lookupSelectorValues proofIndex) lookupExclusions
+      exact lookupCoherence.constraints
+        gateCoherence
+        ch relation.polynomial proofIndex hblinding hsatisfaction
+        hlookupRows hdomainRoot conditions
     · intro proofIndex
       have hfixed :=
         relation.topLevelFixedConstraints_or_relation

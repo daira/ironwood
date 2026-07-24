@@ -315,10 +315,12 @@ completion criterion for `hencodes`.
 The binding-aware
 `actionBundleStatement_or_relation_of_canonicalRelation` additionally derives the
 selector and fixed/table families from `TopLevelFixedCoherence`; its only remaining
-operation-family premises are copy and lookup satisfaction. It also derives the
-public-instance polynomial from the routed member and supplied Lagrange commitment
-data. A fixed- or instance-column mismatch returns the shared augmented
-commitment-relation event instead of becoming a silent binding assumption.
+operation-family premise is copy satisfaction. It derives lookup satisfaction
+internally from exact packed-selector values and one
+`TopLevelLookupChallengeExclusions` record, and derives the public-instance
+polynomial from the routed member and supplied Lagrange commitment data. A fixed- or
+instance-column mismatch returns the shared augmented commitment-relation event
+instead of becoming a silent binding assumption.
 `LookupInstantiation` now constructs those coherent lookup entries from an arbitrary
 VK and a `CommitmentId`-keyed polynomial resolver, proves that openings for the actual
 assembled lookup queries give the verifier's five claimed evaluations, and specializes
@@ -932,9 +934,9 @@ the same fixed cells the table-loaded and fixed-base assumptions read.
 
 **Status: verifier-side substrate is generic in #30/#91 and exercised by the merged
 [#85](https://github.com/zcash/ironwood/pull/85). The assignment, external statement,
-canonical relation, public-instance commitment, and Action endpoint are bundle-indexed.
-Discharging the remaining copy/lookup/fixed operation families for every member
-remains open.**
+canonical relation, public-instance commitment, Action endpoint, lookup challenge
+packaging, and generic full-bridge join are bundle-indexed. Concrete copy replay and
+fixed-row selector realization remain open.**
 
 A deployed proof covers `shape.numProofs` Actions. Generalize `PublicInputs`,
 `Assignment`, and `ActionStatement` to a `Fin shape.numProofs` family and decode one
