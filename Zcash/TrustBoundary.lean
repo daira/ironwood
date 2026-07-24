@@ -1,5 +1,6 @@
 import Zcash.Security.KeyBinding.Instance
 import Zcash.Security.KeyBinding.Probability
+import Zcash.Security.Ledger.Model
 import Zcash.Security.Common.Birthday
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
@@ -45,7 +46,7 @@ Two commands from `Zcash.Meta.AxiomCheck`, per the breaks-as-computed-data disci
 -/
 
 open Zcash.Security.KeyBinding Zcash.Security.RandomOracle Zcash.Security.Birthday
-open Zcash.Security.Ledger Zcash.Security.BindingSignature
+open Zcash.Security.Ledger Zcash.Security.Ledger.Model Zcash.Security.BindingSignature
 open Zcash.Meta
 
 /-! ## Key binding — computed break reductions -/
@@ -112,6 +113,26 @@ assert_computable Collision.upToSign
 assert_computable Merkle.collisionOfWrongLeaf
 assert_computable noteCommitBreakOfNe
 assert_computable Zcash.Security.Ledger.nfOldEqOrBreak +choice
+
+/-! ## Ledger model
+
+The ledger-model definitions are plain computable data over public ledger contents; the
+theorems are deterministic list facts. -/
+
+assert_computable posVal
+assert_computable Merkle.subRoot
+assert_computable Merkle.authChildren
+assert_axioms Merkle.Path.compress_isSome
+assert_axioms Merkle.path_of_root
+assert_computable leafList
+assert_computable leafFun
+assert_computable rootAfter
+assert_computable nullifiers
+assert_computable transparentPoolBalance
+assert_axioms posVal_lt
+assert_axioms rootAfter_prefix
+assert_axioms output_rho_eq_nullifiers
+assert_axioms output_rho_nodup
 
 /-! ## Binding-signature relation reductions
 
