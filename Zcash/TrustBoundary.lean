@@ -35,6 +35,7 @@ import Zcash.Snark.Soundness.TopLevelCircuit
 import Zcash.Snark.Soundness.TopLevelAssignment
 import Zcash.Snark.Soundness.PolynomialEnvironment
 import Zcash.Snark.Soundness.DomainSelectors
+import Zcash.Snark.Soundness.CanonicalConstraintModel
 import Zcash.Snark.Soundness.InstanceCommitment
 import Zcash.Snark.Soundness.ActionAssignment
 import Zcash.Snark.Soundness.ActionStatement
@@ -596,6 +597,9 @@ assert_axioms domain_pow_sub_eq_zpow_neg
 assert_axioms blindSelectorPolynomial_eq_sum
 assert_axioms blindSelectorPolynomial_eval_eq_lagrangeBasis
 assert_axioms canonicalLagrangePolynomials_eval
+assert_axioms canonicalConstraintModelOfPermutationResolver_selectorEvaluations
+assert_axioms ResolverPermutationDomain.ofCanonicalConstraintModel
+assert_axioms ResolverLookupDomain.ofCanonicalConstraintModel
 assert_axioms rowSelectorPolynomial_eval
 assert_axioms blindSelectorPolynomial_eval
 assert_axioms firstSelectorPolynomial_nonzero

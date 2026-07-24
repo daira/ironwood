@@ -374,6 +374,17 @@ evaluation domain, evaluating the fixed canonical polynomial triple is exactly
 the deployed `lagrangeBasis` computation. No Action-specific selector
 provenance remains.
 
+`canonicalConstraintModelOfPermutationResolver` now installs that fixed triple
+directly into the generic commitment-ID resolver model, eliminating the option
+for a downstream caller to pair accepted verifier evaluations with unrelated
+selector polynomials. Its selector-evaluation theorem supplies all three
+deployed matching equations together.
+`ResolverPermutationDomain.ofCanonicalConstraintModel` additionally derives
+the last-row rotation, while
+`ResolverLookupDomain.ofCanonicalConstraintModel` derives the lookup active-row
+boundary. Concrete instantiation retains only the genuine VK chunk counts and
+the generic root/domain facts.
+
 After that, translate the endpoints to the exact relations that Clean's
 `Halo2.Constraints` requires: declared `constrainEqual`/`constrainInstance` copies,
 `RegionOperation.enableLookup` membership with the exact loaded tables, fixed
