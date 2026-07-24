@@ -123,7 +123,9 @@ the `ω` domain, `instanceRowPolynomial_eval` proves that it reads those rows ba
 identity directly to the corresponding Clean instance reads. The remaining
 cryptographic step is to derive that polynomial identity from the verifier's
 statement-derived instance commitment, preserving the existing nontrivial-relation
-branch.
+branch. `actionPublicInputs_of_instanceRowPolynomial` then performs the only
+Action-specific row mapping: the first ten reads of the configured primary column are
+exactly the structured `Action.PublicInputs`.
 
 The concrete Action construction still has to prove that:
 

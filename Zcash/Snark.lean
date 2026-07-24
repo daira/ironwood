@@ -46,6 +46,7 @@ import Zcash.Snark.Soundness.OperationFixed
 import Zcash.Snark.Soundness.CircuitIntegration
 import Zcash.Snark.Soundness.TopLevelCircuit
 import Zcash.Snark.Soundness.PolynomialEnvironment
+import Zcash.Snark.Soundness.ActionStatement
 import Zcash.Snark.Soundness.ActionAssignment
 import Zcash.Snark.Soundness.InnerProduct
 import Zcash.Snark.Soundness.TrustBoundary

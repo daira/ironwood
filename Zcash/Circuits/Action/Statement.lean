@@ -30,6 +30,24 @@ structure PublicInputs where
 
 namespace PublicInputs
 
+@[ext] theorem ext
+    {left right : PublicInputs}
+    (anchor : left.anchor = right.anchor)
+    (cvX : left.cvX = right.cvX)
+    (cvY : left.cvY = right.cvY)
+    (nfOld : left.nfOld = right.nfOld)
+    (rkX : left.rkX = right.rkX)
+    (rkY : left.rkY = right.rkY)
+    (cmx : left.cmx = right.cmx)
+    (enableSpend : left.enableSpend = right.enableSpend)
+    (enableOutput : left.enableOutput = right.enableOutput)
+    (disableCrossAddress :
+      left.disableCrossAddress = right.disableCrossAddress) :
+    left = right := by
+  cases left
+  cases right
+  simp_all
+
 /-- Serialize the structured statement to the Action circuit's instance-column rows. -/
 def rows (inputs : PublicInputs) : List Fp :=
   [inputs.anchor, inputs.cvX, inputs.cvY, inputs.nfOld, inputs.rkX,
@@ -55,16 +73,16 @@ def ofActionData (data : ActionData) : PublicInputs where
 
 /-- Read the Action instance directly from the configured primary column. -/
 def ofEnvironment (cfg : Config) (env : Environment Fp) : PublicInputs where
-  anchor := env.get cfg.primary (ANCHOR : ℤ)
-  cvX := env.get cfg.primary (CV_NET_X : ℤ)
-  cvY := env.get cfg.primary (CV_NET_Y : ℤ)
-  nfOld := env.get cfg.primary (NF_OLD : ℤ)
-  rkX := env.get cfg.primary (RK_X : ℤ)
-  rkY := env.get cfg.primary (RK_Y : ℤ)
-  cmx := env.get cfg.primary (CMX : ℤ)
-  enableSpend := env.get cfg.primary (ENABLE_SPEND : ℤ)
-  enableOutput := env.get cfg.primary (ENABLE_OUTPUT : ℤ)
-  disableCrossAddress := env.get cfg.primary (DISABLE_CROSS_ADDRESS : ℤ)
+  anchor := env.inst cfg.primary (ANCHOR : ℤ)
+  cvX := env.inst cfg.primary (CV_NET_X : ℤ)
+  cvY := env.inst cfg.primary (CV_NET_Y : ℤ)
+  nfOld := env.inst cfg.primary (NF_OLD : ℤ)
+  rkX := env.inst cfg.primary (RK_X : ℤ)
+  rkY := env.inst cfg.primary (RK_Y : ℤ)
+  cmx := env.inst cfg.primary (CMX : ℤ)
+  enableSpend := env.inst cfg.primary (ENABLE_SPEND : ℤ)
+  enableOutput := env.inst cfg.primary (ENABLE_OUTPUT : ℤ)
+  disableCrossAddress := env.inst cfg.primary (DISABLE_CROSS_ADDRESS : ℤ)
 
 theorem ofActionData_extractPost
     (cfg : Config) (i : RegionIndex) (env : Placed Environment Fp) :
