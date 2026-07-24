@@ -1,5 +1,6 @@
 import Clean.Halo2.Keygen.Semantics
 import Zcash.Snark.Soundness.LookupInstantiation
+import Zcash.Snark.Soundness.PermutationInstantiation
 import Zcash.Circuits.Integration.PolynomialEnvironment
 
 /-!
@@ -16,6 +17,84 @@ namespace Zcash.Snark
 open Halo2 Polynomial
 
 set_option maxHeartbeats 20000
+
+/-- Decode a verifier permutation query reference back to the concrete Clean
+column selected by its query-layout entry. -/
+def permutationColumnAddress
+    {shape : Shape} {F G : Type*}
+    (vk : VerifyingKey shape F G) : ColumnRef → AnyColumn
+  | .advice query =>
+      ⟨.advice, (vk.adviceQueryLayout.getD query (0, 0)).1⟩
+  | .fixed query =>
+      ⟨.fixed, (vk.fixedQueryLayout.getD query (0, 0)).1⟩
+  | .instance query =>
+      ⟨.instance, (vk.instanceQueryLayout.getD query (0, 0)).1⟩
+
+/--
+The value polynomial selected by a coherent permutation query reference reads
+the same natural-numbered row as its decoded Clean column.
+-/
+theorem permutationColumnPolynomial_eval_environment
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G)
+    (poly : CommitmentId → Polynomial Fp)
+    (proofIndex : Fin shape.numProofs)
+    (usableRows row : ℕ) (reference : ColumnRef)
+    (hcoherent : PermutationColumnRef.Coherent vk reference) :
+    (permutationColumnPolynomialOfResolver
+        vk poly proofIndex reference).eval (vk.omega ^ row) =
+      (resolverEnvironment vk poly proofIndex usableRows).get
+        (permutationColumnAddress vk reference) (row : ℤ) := by
+  cases reference with
+  | advice query =>
+      rcases hcoherent with ⟨hcount, -, -⟩
+      simp [permutationColumnPolynomialOfResolver, ColumnRef.resolve, finFn,
+        permutationColumnCommitmentId, permutationColumnAddress,
+        resolverEnvironment, polynomialEnvironment, hcount]
+  | fixed query =>
+      rcases hcoherent with ⟨hcount, -, -⟩
+      simp [permutationColumnPolynomialOfResolver, ColumnRef.resolve, finFn,
+        permutationColumnCommitmentId, permutationColumnAddress,
+        resolverEnvironment, polynomialEnvironment, hcount]
+  | «instance» query =>
+      rcases hcoherent with ⟨hcount, -, -⟩
+      simp [permutationColumnPolynomialOfResolver, ColumnRef.resolve, finFn,
+        permutationColumnCommitmentId, permutationColumnAddress,
+        resolverEnvironment, polynomialEnvironment, hcount]
+
+/--
+One resolver permutation chunk value is the canonical environment read at the
+concrete column decoded from that chunk's query reference.
+-/
+theorem chunkRowValue_eq_resolverEnvironment
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G)
+    (poly : CommitmentId → Polynomial Fp)
+    (proofIndex : Fin shape.numProofs)
+    (usableRows chunk row column : ℕ)
+    (hcolumn :
+      column < (vk.permutationChunks.getD chunk []).length)
+    (hcoherent :
+      PermutationColumnRef.Coherent vk
+        ((vk.permutationChunks.getD chunk [])[column]).1) :
+    chunkRowValue vk.omega
+        (permutationChunkPairsOfResolver vk poly proofIndex)
+        chunk row column =
+      (resolverEnvironment vk poly proofIndex usableRows).get
+        (permutationColumnAddress vk
+          ((vk.permutationChunks.getD chunk [])[column]).1)
+        (row : ℤ) := by
+  rw [chunkRowValue, rowValue]
+  have hpairs :
+      column <
+        (permutationChunkPairsOfResolver
+          vk poly proofIndex chunk).length := by
+    simpa [permutationChunkPairsOfResolver] using hcolumn
+  rw [List.getD_eq_getElem _ _ hpairs]
+  simp only [permutationChunkPairsOfResolver, List.getElem_map]
+  exact permutationColumnPolynomial_eval_environment
+    vk poly proofIndex usableRows row
+      ((vk.permutationChunks.getD chunk [])[column]).1 hcoherent
 
 /-- Erasing one lookup only extends the incoming query state. -/
 theorem eraseLookup_extends

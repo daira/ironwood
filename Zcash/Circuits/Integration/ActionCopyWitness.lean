@@ -298,6 +298,352 @@ theorem actionActiveSigma_widen
     (actionFullSigma_preservesActive pp urs poly proofIndex)
     cell
 
+/-- Re-express an active flat keygen cell in resolver chunk coordinates. -/
+noncomputable def actionActiveChunkCell
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    (pp : ProofParams) (urs : URS G)
+    (poly : CommitmentId → Polynomial Fp)
+    (proofIndex :
+      Fin (ActionPermutationDomain.actionShape pp).numProofs)
+    (flat : FlatCell actionNumPermCols actionDomainSize)
+    (hrow : (flat.2 : ℕ) < actionActiveRows) :
+    ResolverPermutationCell
+      (ActionPermutationDomain.actionVk pp urs)
+      poly proofIndex actionActiveRows :=
+  let full :=
+    (actionChunkFlatten pp urs poly proofIndex).symm (flat.2, flat.1)
+  ⟨full.1,
+    ⟨(full.2.1 : ℕ), by
+      simpa only [actionChunkFlatten,
+        _root_.Zcash.Snark.Layout.Asm.chunkFlatten_symm_apply_row] using hrow⟩,
+    full.2.2⟩
+
+/-- Widening the active chunk encoding recovers the full inverse flattening. -/
+theorem actionActiveChunkCell_widen
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    (pp : ProofParams) (urs : URS G)
+    (poly : CommitmentId → Polynomial Fp)
+    (proofIndex :
+      Fin (ActionPermutationDomain.actionShape pp).numProofs)
+    (flat : FlatCell actionNumPermCols actionDomainSize)
+    (hrow : (flat.2 : ℕ) < actionActiveRows) :
+    widenPermutationChunkCell actionActiveRows_le_domainSize
+        (actionActiveChunkCell pp urs poly proofIndex flat hrow) =
+      (actionChunkFlatten pp urs poly proofIndex).symm
+        (flat.2, flat.1) := by
+  apply _root_.Zcash.Snark.Layout.Asm.chunkCell_ext <;> rfl
+
+/-- Flattening the resolver encoding of an active flat cell returns `(row,column)`. -/
+theorem actionActiveChunkCell_flatten
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    (pp : ProofParams) (urs : URS G)
+    (poly : CommitmentId → Polynomial Fp)
+    (proofIndex :
+      Fin (ActionPermutationDomain.actionShape pp).numProofs)
+    (flat : FlatCell actionNumPermCols actionDomainSize)
+    (hrow : (flat.2 : ℕ) < actionActiveRows) :
+    actionChunkFlatten pp urs poly proofIndex
+        (widenPermutationChunkCell actionActiveRows_le_domainSize
+          (actionActiveChunkCell pp urs poly proofIndex flat hrow)) =
+      (flat.2, flat.1) := by
+  rw [actionActiveChunkCell_widen, Equiv.apply_symm_apply]
+
+/-- The Action cell valuation: the environment read of the cell's permutation column
+at the cell's absolute row. -/
+def actionCopyValue (env : Environment Fp)
+    (fc : FlatCell actionNumPermCols actionDomainSize) : Fp :=
+  env.get (ColRef.toAny (actionPermCols.getD (fc.1 : ℕ) (.advice 0)))
+    (((fc.2 : ℕ) : ℕ) : ℤ)
+
+/--
+The resolver chunk coordinate obtained from an active flat Action cell decodes
+to the same concrete column as the flat cell's global permutation-column
+index.
+-/
+theorem actionActiveChunkCell_columnAddress
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    (pp : ProofParams) (urs : URS G)
+    (poly : CommitmentId → Polynomial Fp)
+    (proofIndex :
+      Fin (ActionPermutationDomain.actionShape pp).numProofs)
+    (flat : FlatCell actionNumPermCols actionDomainSize)
+    (hrow : (flat.2 : ℕ) < actionActiveRows) :
+    let cell :=
+      actionActiveChunkCell pp urs poly proofIndex flat hrow
+    permutationColumnAddress
+        (ActionPermutationDomain.actionVk pp urs)
+        (((ActionPermutationDomain.actionVk pp urs).permutationChunks.getD
+          cell.1 []).getD cell.2.2 ((.advice 0), 0)).1 =
+      ColRef.toAny
+        (actionPermCols.getD flat.1 (.advice 0)) := by
+  let vk := ActionPermutationDomain.actionVk pp urs
+  let cell :=
+    actionActiveChunkCell pp urs poly proofIndex flat hrow
+  have hchunk :
+      (cell.1 : ℕ) < vk.permutationChunks.length := by
+    rw [ActionPermutationDomain.chunkCount]
+    exact cell.1.isLt
+  have hcolumn :
+      (cell.2.2 : ℕ) <
+        (vk.permutationChunks.getD cell.1 []).length := by
+    simpa only [cell, vk, ResolverPermutationPairs,
+      permutationChunkPairsOfResolver, List.length_map] using
+        cell.2.2.isLt
+  have hglobal :
+      (flat.1 : ℕ) <
+        (actionPermCols.map ColRef.toAny).length := by
+    simpa only [List.length_map] using flat.1.isLt
+  have hcoordinate :
+      (cell.1 : ℕ) * 7 + (cell.2.2 : ℕ) = (flat.1 : ℕ) := by
+    have hflatten :=
+      actionActiveChunkCell_flatten
+        pp urs poly proofIndex flat hrow
+    have hsecond :=
+      congrArg (fun coordinate => (coordinate.2 : ℕ)) hflatten
+    simpa only [actionChunkFlatten,
+      _root_.Zcash.Snark.Layout.Asm.chunkFlatten,
+      actionChunkLen_eq, cell] using hsecond
+  have hindex :
+      (vk.permutationChunks.take cell.1).flatten.length +
+          (cell.2.2 : ℕ) =
+        (flat.1 : ℕ) := by
+    have hcellChunk : (cell.1 : ℕ) < 3 := by
+      simpa only [cell, actionNumPermutationSets_eq] using cell.1.isLt
+    have hcases :
+        (cell.1 : ℕ) = 0 ∨ (cell.1 : ℕ) = 1 ∨
+          (cell.1 : ℕ) = 2 := by
+      omega
+    rw [ActionPermutationDomain.permutationChunks_eq]
+    rcases hcases with hzero | hone | htwo
+    · simp only [hzero, List.take_zero, List.flatten_nil,
+        List.length_nil, Nat.zero_add]
+      simpa only [hzero, Nat.zero_mul, Nat.zero_add] using hcoordinate
+    · simp only [hone, List.take_succ_cons, List.take_zero,
+        List.flatten_cons, List.flatten_nil, List.append_nil,
+        List.length_cons, List.length_nil, Nat.reduceAdd]
+      simpa only [hone, Nat.one_mul] using hcoordinate
+    · simp only [htwo, List.take_succ_cons, List.take_zero,
+        List.flatten_cons, List.flatten_nil, List.append_nil,
+        List.length_append, List.length_cons, List.length_nil,
+        Nat.reduceAdd]
+      simpa only [htwo, Nat.reduceMul] using hcoordinate
+  have hdecoded := decodedChunkAddress_eq_sourceColumn
+    (fun reference =>
+      permutationColumnAddress vk reference.1)
+    ((.advice 0), 0)
+    (ColRef.toAny (.advice 0))
+    vk.permutationChunks
+    (actionPermCols.map ColRef.toAny)
+    (by
+      simpa only [vk, actionPermCols] using
+        ActionPermutationDomain.permutationColumnAddresses_eq pp urs)
+    cell.1 cell.2.2 flat.1
+    hchunk hcolumn hglobal hindex
+  have hmap :
+      (actionPermCols.map ColRef.toAny).getD flat.1
+          (ColRef.toAny (.advice 0)) =
+        ColRef.toAny (actionPermCols.getD flat.1 (.advice 0)) :=
+    List.getD_map actionPermCols (.advice 0) ColRef.toAny
+  simpa only [vk, cell] using hdecoded.trans hmap
+
+/--
+The Action flat-cell valuation in the canonical resolver environment is exactly
+the verifier-native `chunkRowValue` at its active resolver chunk coordinate.
+-/
+theorem actionCopyValue_eq_activeChunkRowValue
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    (pp : ProofParams) (urs : URS G)
+    (poly : CommitmentId → Polynomial Fp)
+    (proofIndex :
+      Fin (ActionPermutationDomain.actionShape pp).numProofs)
+    (flat : FlatCell actionNumPermCols actionDomainSize)
+    (hrow : (flat.2 : ℕ) < actionActiveRows) :
+    let vk := ActionPermutationDomain.actionVk pp urs
+    let cell :=
+      actionActiveChunkCell pp urs poly proofIndex flat hrow
+    actionCopyValue
+        (resolverEnvironment vk poly proofIndex actionActiveRows) flat =
+      chunkRowValue vk.omega
+        (ResolverPermutationPairs vk poly proofIndex)
+        cell.1 cell.2.1 cell.2.2 := by
+  let vk := ActionPermutationDomain.actionVk pp urs
+  let cell :=
+    actionActiveChunkCell pp urs poly proofIndex flat hrow
+  change
+    actionCopyValue
+        (resolverEnvironment vk poly proofIndex actionActiveRows) flat =
+      chunkRowValue vk.omega
+        (ResolverPermutationPairs vk poly proofIndex)
+        cell.1 cell.2.1 cell.2.2
+  have hchunk :
+      (cell.1 : ℕ) < vk.permutationChunks.length := by
+    rw [ActionPermutationDomain.chunkCount]
+    exact cell.1.isLt
+  have hcolumn :
+      (cell.2.2 : ℕ) <
+        (vk.permutationChunks.getD cell.1 []).length := by
+    simpa only [cell, vk, ResolverPermutationPairs,
+      permutationChunkPairsOfResolver, List.length_map] using
+        cell.2.2.isLt
+  have hchunkMem :
+      vk.permutationChunks.getD cell.1 [] ∈
+        vk.permutationChunks := by
+    rw [List.getD_eq_getElem _ _ hchunk]
+    exact List.getElem_mem ..
+  have hreferenceMem :
+      (vk.permutationChunks.getD cell.1 [])[cell.2.2] ∈
+        vk.permutationChunks.getD cell.1 [] :=
+    List.getElem_mem ..
+  have hcoherent :
+      PermutationColumnRef.Coherent vk
+        ((vk.permutationChunks.getD cell.1 [])[cell.2.2]).1 :=
+    (ActionPermutationDomain.routingCoherent_of_derived pp urs
+      _ hchunkMem _ hreferenceMem).1
+  have hresolver :=
+    chunkRowValue_eq_resolverEnvironment
+      vk poly proofIndex actionActiveRows
+      cell.1 cell.2.1 cell.2.2 hcolumn hcoherent
+  have haddress :=
+    actionActiveChunkCell_columnAddress
+      pp urs poly proofIndex flat hrow
+  dsimp only at haddress
+  change
+    permutationColumnAddress vk
+        ((vk.permutationChunks.getD cell.1 []).getD
+          cell.2.2 ((.advice 0), 0)).1 =
+      ColRef.toAny
+        (actionPermCols.getD flat.1 (.advice 0)) at haddress
+  rw [List.getD_eq_getElem _ _ hcolumn] at haddress
+  have hcellRow : (cell.2.1 : ℕ) = (flat.2 : ℕ) := by
+    have hflatten :=
+      actionActiveChunkCell_flatten
+        pp urs poly proofIndex flat hrow
+    have hfirst :=
+      congrArg (fun coordinate => (coordinate.1 : ℕ)) hflatten
+    simpa only [actionChunkFlatten,
+      _root_.Zcash.Snark.Layout.Asm.chunkFlatten_apply_row,
+      widenPermutationChunkCell_row, cell] using hfirst
+  calc
+    actionCopyValue
+        (resolverEnvironment vk poly proofIndex actionActiveRows) flat =
+      (resolverEnvironment vk poly proofIndex actionActiveRows).get
+        (ColRef.toAny (actionPermCols.getD flat.1 (.advice 0)))
+        (flat.2 : ℤ) := rfl
+    _ = (resolverEnvironment vk poly proofIndex actionActiveRows).get
+        (permutationColumnAddress vk
+          ((vk.permutationChunks.getD cell.1 [])[cell.2.2]).1)
+        (cell.2.1 : ℤ) := by
+          rw [← hcellRow]
+          congr 1
+          exact haddress.symm
+    _ = chunkRowValue vk.omega
+        (ResolverPermutationPairs vk poly proofIndex)
+        cell.1 cell.2.1 cell.2.2 := hresolver.symm
+
+/--
+Every decoded Action keygen-copy pair has equal values in the canonical
+resolver environment once the generic permutation premises hold.
+
+`hcycleSigma` records the construction provenance intentionally omitted from
+the abstract `ResolverPermutationCycle`: the cycle is the Action active replay.
+-/
+theorem actionCopyPairValue_of_resolverPermutation
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    (pp : ProofParams) (urs : URS G)
+    (ch : Challenges (ActionPermutationDomain.actionShape pp).k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (l0 lLast lBlind : Polynomial Fp)
+    (proofIndex :
+      Fin (ActionPermutationDomain.actionShape pp).numProofs)
+    {n : ℕ}
+    (hsat : ConstraintSatisfaction
+      (constraintModelOfPermutationResolver
+        (ActionPermutationDomain.actionVk pp urs)
+        ch poly l0 lLast lBlind) n)
+    (hdom : ResolverPermutationDomain
+      (ActionPermutationDomain.actionVk pp urs)
+      l0 lLast lBlind n actionActiveRows)
+    (hcycle : ResolverPermutationCycle
+      (ActionPermutationDomain.actionVk pp urs)
+      poly proofIndex actionActiveRows)
+    (hcycleSigma :
+      hcycle.sigma =
+        actionActiveSigma pp urs poly proofIndex)
+    (hgood : ResolverPermutationGoodChallenges
+      (ActionPermutationDomain.actionVk pp urs)
+      ch poly proofIndex actionActiveRows) :
+    ∀ pair ∈ actionCopies,
+      actionCopyValue
+          (resolverEnvironment
+            (ActionPermutationDomain.actionVk pp urs)
+            poly proofIndex actionActiveRows)
+          pair.1 =
+        actionCopyValue
+          (resolverEnvironment
+            (ActionPermutationDomain.actionVk pp urs)
+            poly proofIndex actionActiveRows)
+          pair.2 := by
+  intro pair hpair
+  let vk := ActionPermutationDomain.actionVk pp urs
+  have hrows := actionCopyRowsActive pair hpair
+  let left :=
+    actionActiveChunkCell pp urs poly proofIndex pair.1 hrows.1
+  let right :=
+    actionActiveChunkCell pp urs poly proofIndex pair.2 hrows.2
+  have hrestrict :
+      ∀ cell : ResolverPermutationCell
+          vk poly proofIndex actionActiveRows,
+        widenPermutationChunkCell actionActiveRows_le_domainSize
+            (hcycle.sigma cell) =
+          chunkPermutationOfFlat
+            (actionChunkFlatten pp urs poly proofIndex)
+            ((Equiv.prodComm
+              (Fin actionNumPermCols)
+              (Fin actionDomainSize)).permCongr
+                (replayKeygenPermutation actionCopies))
+            (widenPermutationChunkCell
+              actionActiveRows_le_domainSize cell) := by
+    intro cell
+    rw [hcycleSigma]
+    simpa only [actionFullSigma] using
+      actionActiveSigma_widen pp urs poly proofIndex cell
+  have hchunkValues :=
+    Layout.Asm.chunkRowValue_eq_of_mem_copies
+      vk ch poly l0 lLast lBlind proofIndex
+      hsat hdom hcycle hgood
+      actionActiveRows_le_domainSize actionCopies
+      (actionChunkFlatten pp urs poly proofIndex)
+      hrestrict
+      pair.1 pair.2 hpair left right
+      (by
+        simpa only [left] using
+          actionActiveChunkCell_flatten
+            pp urs poly proofIndex pair.1 hrows.1)
+      (by
+        simpa only [right] using
+          actionActiveChunkCell_flatten
+            pp urs poly proofIndex pair.2 hrows.2)
+  calc
+    actionCopyValue
+        (resolverEnvironment vk poly proofIndex actionActiveRows)
+        pair.1 =
+      chunkRowValue vk.omega
+        (ResolverPermutationPairs vk poly proofIndex)
+        left.1 left.2.1 left.2.2 := by
+          simpa only [vk, left] using
+            actionCopyValue_eq_activeChunkRowValue
+              pp urs poly proofIndex pair.1 hrows.1
+    _ = chunkRowValue vk.omega
+        (ResolverPermutationPairs vk poly proofIndex)
+        right.1 right.2.1 right.2.2 := hchunkValues
+    _ = actionCopyValue
+        (resolverEnvironment vk poly proofIndex actionActiveRows)
+        pair.2 := by
+          symm
+          simpa only [vk, right] using
+            actionCopyValue_eq_activeChunkRowValue
+              pp urs poly proofIndex pair.2 hrows.2
+
 /-- A raw coordinate pair as a typed Action permutation cell (`mod` totalization —
 the identity on every in-range coordinate, and every declared coordinate is). -/
 def mkActionCell (p : ℕ × ℕ) : FlatCell actionNumPermCols actionDomainSize :=
@@ -315,13 +661,6 @@ def actionCopyEncode : CopyEndpoint Fp → FlatCell actionNumPermCols actionDoma
       (match actionConsts.find? (fun e => e.1 = v.val) with
         | some e => (permIndex actionPermCols (ColRef.toAny (.fixed e.2.1)), e.2.2)
         | none => (0, 0))
-
-/-- The Action cell valuation: the environment read of the cell's permutation column
-at the cell's absolute row. -/
-def actionCopyValue (env : Environment Fp)
-    (fc : FlatCell actionNumPermCols actionDomainSize) : Fp :=
-  env.get (ColRef.toAny (actionPermCols.getD (fc.1 : ℕ) (.advice 0)))
-    (((fc.2 : ℕ) : ℕ) : ℤ)
 
 /-- The concrete column/row denoted directly by an Action copy endpoint. -/
 def actionEndpointAddress : CopyEndpoint Fp → AnyColumn × ℕ
