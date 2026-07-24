@@ -494,9 +494,18 @@ actions preserve it; `createGate` requires only the supplied gate's local
 gate invariant. Consequently the Action proof can follow its nested chip boundaries
 and never reduce the giant completed `Action.Circuit.configure` term.
 
-The remaining gate work is to attach the small local `Gate.WellFormed` certificates
-to the configure functions that introduce gates, compose those certificates through
-the Action configuration, and prove the two compiler contracts
+`Action.GateCoherence` now supplies local `Gate.WellFormed` certificates for all 37
+distinct custom-gate definitions reachable from Action configuration. This includes
+the manually associated witness-point constraints, the fold-built running-range
+checks, every NoteCommit gate, and the shared/final fixed-base gates. Small
+selector-freedom lemmas for `rangeCheckExpr`, `windowPow`, and `coordsCheck` keep those
+proofs structural rather than evaluating concrete field data. The first leaf
+configure certificates (`AddChip`, `CondSwap`, and `WitnessPoint`) exercise the
+StateM interface at 20k heartbeats.
+
+The remaining gate work is to lift the other local certificates through their chip
+configure functions, compose those certificates through the Action configuration,
+and prove the two compiler contracts
 `SelectorRootsWellFormed` and `SelectorActivationsRealized` for the circuit-derived
 selector map and fixed columns. The generic operation walk already proves that every
 extracted enabled gate occurs in the floor-planner activation table, and

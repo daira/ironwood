@@ -394,9 +394,10 @@ A configure program preserves gate well-formedness for every incoming constraint
 system.  This is the compositional proof interface for nested chip configuration:
 the parent circuit need not evaluate the completed configure state.
 -/
-def PreservesGateWellFormedness
-    (program : Configure F α) : Prop :=
-  ∀ cs, cs.GatesWellFormed → (program cs).2.GatesWellFormed
+structure PreservesGateWellFormedness
+    (program : Configure F α) : Prop where
+  run : ∀ cs, cs.GatesWellFormed →
+    (program cs).2.GatesWellFormed
 
 namespace PreservesGateWellFormedness
 
@@ -404,6 +405,7 @@ namespace PreservesGateWellFormedness
 theorem pure (value : α) :
     PreservesGateWellFormedness
       (pure value : Configure F α) := by
+  constructor
   intro cs hcs
   exact hcs
 
@@ -413,14 +415,25 @@ theorem bind
     (hprogram : PreservesGateWellFormedness program)
     (hnext : ∀ value, PreservesGateWellFormedness (next value)) :
     PreservesGateWellFormedness (program >>= next) := by
+  constructor
   intro cs hcs
-  exact hnext (program cs).1 (program cs).2
-    (hprogram cs hcs)
+  exact (hnext (program cs).1).run (program cs).2
+    (hprogram.run cs hcs)
+
+@[circuit_norm]
+theorem map
+    (function : α → β) {program : Configure F α}
+    (hprogram : PreservesGateWellFormedness program) :
+    PreservesGateWellFormedness (function <$> program) := by
+  constructor
+  intro cs hcs
+  exact hprogram.run cs hcs
 
 @[circuit_norm]
 theorem adviceColumn :
     PreservesGateWellFormedness
       (Halo2.adviceColumn : Configure F (Column .advice)) := by
+  constructor
   intro cs hcs
   exact hcs
 
@@ -428,6 +441,7 @@ theorem adviceColumn :
 theorem fixedColumn :
     PreservesGateWellFormedness
       (Halo2.fixedColumn : Configure F (Column .fixed)) := by
+  constructor
   intro cs hcs
   exact hcs
 
@@ -435,6 +449,7 @@ theorem fixedColumn :
 theorem instanceColumn :
     PreservesGateWellFormedness
       (Halo2.instanceColumn : Configure F (Column .instance)) := by
+  constructor
   intro cs hcs
   exact hcs
 
@@ -442,6 +457,7 @@ theorem instanceColumn :
 theorem selector :
     PreservesGateWellFormedness
       (Halo2.selector : Configure F Selector) := by
+  constructor
   intro cs hcs
   exact hcs
 
@@ -449,6 +465,7 @@ theorem selector :
 theorem complexSelector :
     PreservesGateWellFormedness
       (Halo2.complexSelector : Configure F Selector) := by
+  constructor
   intro cs hcs
   exact hcs
 
@@ -456,6 +473,7 @@ theorem complexSelector :
 theorem enableEquality (column : AnyColumn) :
     PreservesGateWellFormedness
       (Halo2.enableEquality (F := F) column) := by
+  constructor
   intro cs hcs
   simpa [Halo2.enableEquality, ConstraintSystem.GatesWellFormed] using hcs
 
@@ -463,6 +481,7 @@ theorem enableEquality (column : AnyColumn) :
 theorem enableConstant (column : Column .fixed) :
     PreservesGateWellFormedness
       (Halo2.enableConstant (F := F) column) := by
+  constructor
   intro cs hcs
   simpa [Halo2.enableConstant, ConstraintSystem.GatesWellFormed] using hcs
 
@@ -477,6 +496,7 @@ theorem createGate
     (gate : Gate F) (hgate : gate.WellFormed) :
     PreservesGateWellFormedness
       (Halo2.createGate gate) := by
+  constructor
   intro cs hcs
   exact (ConstraintSystem.gatesWellFormed_createGate cs gate).2
     ⟨hcs, hgate⟩
@@ -487,6 +507,7 @@ theorem lookup
     (tableMap : List (Expression F Query × TableColumn)) :
     PreservesGateWellFormedness
       (Halo2.lookup queriedCells tableMap) := by
+  constructor
   intro cs hcs
   simp only [Halo2.lookup, ConstraintSystem.GatesWellFormed]
   have registerTableGates

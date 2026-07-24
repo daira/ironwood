@@ -32,6 +32,7 @@ import Zcash.Snark.Soundness.OperationGates
 import Zcash.Snark.Soundness.OperationFixed
 import Zcash.Snark.Soundness.LookupSemantics
 import Zcash.Snark.Soundness.CircuitIntegration
+import Zcash.Circuits.Action.GateCoherence
 import Zcash.Snark.Soundness.TopLevelCircuit
 import Zcash.Snark.Soundness.TopLevelAssignment
 import Zcash.Snark.Soundness.TopLevelCoherence
@@ -585,8 +586,19 @@ assert_axioms Halo2.ConstraintSystem.gatesWellFormed_createGate
 assert_axioms Halo2.ConstraintSystem.GatesWellFormed.constraint
 assert_axioms Halo2.Configure.PreservesGateWellFormedness.pure
 assert_axioms Halo2.Configure.PreservesGateWellFormedness.bind
+assert_axioms Halo2.Configure.PreservesGateWellFormedness.map
 assert_axioms Halo2.Configure.PreservesGateWellFormedness.createGate
 assert_axioms Halo2.Configure.PreservesGateWellFormedness.lookup
+assert_axioms Zcash.Circuits.Action.Circuit.orchardGate_wellFormed
+assert_axioms Zcash.Circuits.Ecc.WitnessPoint.pointGate_wellFormed
+assert_axioms Zcash.Circuits.Ecc.WitnessPoint.pointNonIdGate_wellFormed
+assert_axioms Zcash.Circuits.Ecc.MulFixed.coordsGate_wellFormed
+assert_axioms Zcash.Circuits.Ecc.MulFixed.BaseFieldElem.canonGate_wellFormed
+assert_axioms Zcash.Circuits.Ecc.MulFixed.FullWidth.fullWidthGate_wellFormed
+assert_axioms Zcash.Circuits.Ecc.MulFixed.Short.shortGate_wellFormed
+assert_axioms Zcash.Circuits.Poseidon.partialRoundsGate_wellFormed
+assert_axioms Zcash.Circuits.Sinsemilla.HashPiece.sinsemillaGate_wellFormed
+assert_axioms Zcash.Circuits.NoteCommit.YCanonicity.gate_wellFormed
 assert_axioms gate_constraints_of_polynomial_witnesses
 assert_axioms fixed_constraints_of_requirements
 assert_axioms CopyReplayWitness.constraints_or_bad
