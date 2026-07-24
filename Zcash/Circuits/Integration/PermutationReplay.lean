@@ -321,7 +321,7 @@ open Zcash.Circuits.Fixtures.Layout.Asm in
 cycle length. -/
 theorem Sim.copy {numCols n : ℕ} {a : Asm} {π : Perm (FlatCell numCols n)}
     (sim : Sim a π) (l r : FlatCell numCols n) :
-    Sim (Zcash.Circuits.Fixtures.Layout.Asm.copy a (numCols * n)
+    Sim (Zcash.Circuits.Fixtures.Layout.Asm.copy a (n * numCols)
         l.pair.1 l.pair.2 r.pair.1 r.pair.2)
       (PermConstruction.step π (l, r)) := by
   classical
@@ -381,13 +381,14 @@ theorem Sim.copy {numCols n : ℕ} {a : Asm} {π : Perm (FlatCell numCols n)}
     obtain ⟨sN, ⟨hs1, hsret⟩, hsle, hsmin⟩ := exists_minimal_return π RC
     -- the aux component after the merge, cycle by cycle
     have haux2 : ∀ d : FlatCell numCols n,
-        getPair (Zcash.Circuits.Fixtures.Layout.Asm.merge a (numCols * n)
+        getPair (Zcash.Circuits.Fixtures.Layout.Asm.merge a (n * numCols)
             (l.pair.1, l.pair.2) (r.pair.1, r.pair.2)).aux d.pair =
           if π.SameCycle RC d then LC.pair else getPair a.aux d.pair := by
       intro d
       rw [merge_aux, hRCpair, hLCpair]
       rw [getPair_repoint_aux sim.aux_shape sim.map_eq sN RC RC LC.pair
-        hsret hs1 hsmin (numCols * n) (by omega) d]
+        hsret hs1 hsmin (n * numCols)
+        (le_trans hsle (le_of_eq (Nat.mul_comm _ _))) d]
       by_cases hcyc : π.SameCycle RC d
       · rw [if_pos ((sameCycle_iff_exists_pow_lt hs1 hsret d).mp hcyc), if_pos hcyc]
       · rw [if_neg (fun h => hcyc ((sameCycle_iff_exists_pow_lt hs1 hsret d).mpr h)),
@@ -506,6 +507,81 @@ theorem Sim.copy {numCols n : ℕ} {a : Asm} {π : Perm (FlatCell numCols n)}
           · rcases huvlr with ⟨hul, hvr⟩ | ⟨hur, hvl⟩
             · exact absurd (h2.trans (hul ▸ hRCcyc)).symm hd
             · exact absurd (h1.trans (hur ▸ hRCcyc)).symm hc
+
+/-- The fresh assembly simulates the identity permutation. -/
+theorem Sim.new (numCols n : ℕ) :
+    Sim (numCols := numCols) (n := n)
+      (Zcash.Circuits.Fixtures.Layout.Asm.new n numCols) 1 := by
+  have hget : ∀ c : FlatCell numCols n,
+      getPair ((Array.range numCols).map
+        (fun i => Zcash.Circuits.Fixtures.Layout.Asm.initCol i n)) c.pair = c.pair := by
+    intro c
+    simp [Zcash.Circuits.Fixtures.Layout.Asm.getPair,
+      Zcash.Circuits.Fixtures.Layout.Asm.initCol, Array.getElem!_eq_getD, Array.getD,
+      FlatCell.pair, c.1.isLt, c.2.isLt]
+  have hshape : Shaped numCols n ((Array.range numCols).map
+      (fun i => Zcash.Circuits.Fixtures.Layout.Asm.initCol i n)) := by
+    refine ⟨by simp, ?_⟩
+    intro i hi
+    simp only [Array.size_map, Array.size_range] at hi
+    simp [Zcash.Circuits.Fixtures.Layout.Asm.initCol, hi]
+  have hgetm : ∀ c : FlatCell numCols n,
+      getPair (Zcash.Circuits.Fixtures.Layout.Asm.new n numCols).mapping c.pair =
+        c.pair := fun c => hget c
+  have hgeta : ∀ c : FlatCell numCols n,
+      getPair (Zcash.Circuits.Fixtures.Layout.Asm.new n numCols).aux c.pair =
+        c.pair := fun c => hget c
+  refine ⟨hshape, hshape, ?_, ?_, ?_⟩
+  · intro c
+    simpa using hgetm c
+  · intro c
+    exact ⟨c, hgeta c, Equiv.Perm.SameCycle.refl 1 c, hgeta c⟩
+  · intro c d
+    rw [hgeta c, hgeta d]
+    constructor
+    · intro h
+      rw [Equiv.Perm.sameCycle_one]
+      exact FlatCell.pair_injective h
+    · intro h
+      rw [Equiv.Perm.sameCycle_one] at h
+      rw [h]
+
+/-- The simulation survives a whole copy fold. -/
+theorem Sim.foldl {numCols n : ℕ}
+    (copies : List (FlatCell numCols n × FlatCell numCols n))
+    {a : Asm} {π : Perm (FlatCell numCols n)} (sim : Sim a π) :
+    Sim (copies.foldl (fun st p =>
+        Zcash.Circuits.Fixtures.Layout.Asm.copy st (n * numCols)
+          p.1.pair.1 p.1.pair.2 p.2.pair.1 p.2.pair.2) a)
+      (copies.foldl PermConstruction.step π) := by
+  induction copies generalizing a π with
+  | nil => exact sim
+  | cons p rest ih => exact ih (sim.copy p.1 p.2)
+
+/-- The abstract replay is the copy-order fold of the merge step. -/
+theorem replayKeygenPermutation_eq_foldl {cell : Type*} [DecidableEq cell] [Fintype cell]
+    (copies : List (cell × cell)) :
+    replayKeygenPermutation copies = copies.foldl PermConstruction.step 1 := by
+  have hbuild : ∀ l : List (cell × cell),
+      PermConstruction.build l = l.foldr (fun ab π => PermConstruction.step π ab) 1 := by
+    intro l
+    induction l with
+    | nil => rfl
+    | cons ab rest ih => simp [PermConstruction.build, ih]
+  rw [replayKeygenPermutation, hbuild, List.foldr_reverse]
+
+/-- **The executable keygen assembly is the abstract replay**: on every cell, the final
+`mapping` is the action of `replayKeygenPermutation` over the same copies. -/
+theorem runAssembly_getPair {numCols n : ℕ}
+    (copies : List (FlatCell numCols n × FlatCell numCols n))
+    (c : FlatCell numCols n) :
+    getPair (Zcash.Circuits.Fixtures.Layout.runAssembly n numCols
+        (copies.map fun p => (p.1.pair.1, p.1.pair.2, p.2.pair.1, p.2.pair.2))) c.pair =
+      ((replayKeygenPermutation copies) c).pair := by
+  rw [Zcash.Circuits.Fixtures.Layout.runAssembly]
+  rw [List.foldl_map]
+  rw [replayKeygenPermutation_eq_foldl]
+  exact (Sim.foldl copies (Sim.new numCols n)).map_eq c
 
 end Layout.Asm
 
