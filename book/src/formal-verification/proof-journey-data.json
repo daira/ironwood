@@ -19,7 +19,7 @@
     },
     "decodeStack": {
       "label": "PR #30 decode head",
-      "ref": "e91e08b2cc73afa644e3a027858d98f35af0b29c",
+      "ref": "d2a01b30c4475827e8a2620dea6cfb876561c716",
       "fetch": "pull/30/head"
     }
   },
@@ -56,7 +56,7 @@
       "label": "PR #30",
       "title": "Bind the IPA witness to verifier columns",
       "url": "https://github.com/zcash/ironwood/pull/30",
-      "sha": "e91e08b",
+      "sha": "d2a01b3",
       "lane": "stack"
     },
     "31": {

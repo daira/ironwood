@@ -10,6 +10,14 @@ bounded degree agreeing on enough distinct points are equal — samples force id
 `lagrangePoly` (the interpolant of one point set, taking the claimed value at each node), and
 `lagrangePoly_eval` (the deployed fold `lagrangeEval` is the interpolant's evaluation, so deployed
 identities transfer to the polynomial).
+
+The polynomial theory here is Mathlib's, not reinvented: `lagrangePoly` is `Lagrange.interpolate`,
+`lagrangePoly_eval_node` is `Lagrange.eval_interpolate_at_node`, and `poly_eq_of_agree_on_family`
+repackages `Polynomial.eq_zero_of_natDegree_lt_card_of_eval_eq_zero`. Only the fold bridge is local:
+the deployed check runs a hand-rolled `foldl` (`lagrangeEval`), and `foldl_range_add_eq_sum`,
+`foldl_range_guardProd_eq_prod`, and `guardProd_eq_prod_erase` rewrite it into the `Finset`
+sum/product Mathlib evaluates the interpolant to. CompPoly mirrors the same Mathlib defs, so
+switching to it would not remove this bridge.
 -/
 
 namespace Zcash.Snark
@@ -73,7 +81,8 @@ theorem lagrangePoly_eval_node {points evals : List Fp}
 /-- The deployed combined-evaluation fold (`lagrangeEval`, `Verifier/Checks.lean`) is the
 interpolant's evaluation at `x`, for pairwise-distinct nodes. Stepped through in the body: the
 outer fold is the basis-weighted sum, each inner guarded fold the evaluated Lagrange basis. -/
-theorem lagrangePoly_eval {points evals : List Fp} (x : Fp) :
+theorem lagrangePoly_eval {points evals : List Fp}
+    (_hdist : Function.Injective (fun i : Fin points.length => points[i])) (x : Fp) :
     (lagrangePoly points evals).eval x = lagrangeEval x points evals := by
   classical
   -- The deployed fold, as a range-indexed sum of guarded products.
@@ -264,7 +273,7 @@ theorem col_eq_lagrangePoly_of_samples {points evals : List Fp} {col : Polynomia
     refine le_trans (Polynomial.natDegree_sub_le _ _) (max_le ?_ ?_) <;> omega
   exact poly_eq_of_agree_on_family hdiff (fun r => ξ (Fin.cast hn r))
     (hξ.comp (Fin.cast_injective hn))
-    (fun r => (hmatch (Fin.cast hn r)).trans (lagrangePoly_eval _).symm)
+    (fun r => (hmatch (Fin.cast hn r)).trans (lagrangePoly_eval hnode _).symm)
 
 /-- **The decoded column's node values are the claimed evaluations.** Composing
 `col_eq_lagrangePoly_of_samples` with `lagrangePoly_eval_node`: at each rotated query point

@@ -275,7 +275,8 @@ def rotVk : VerifyingKey rotShape Fp Fp :=
     permutationCommonCommitment := Fin.elim0, permutationChunks := [],
     lookupInputExprs := Fin.elim0, lookupTableExprs := Fin.elim0 }
 
-/-- The rotated toy has no instance queries, so its externally supplied instance commitments vanish. -/
+/-- Instance commitment of the rotated toy. The verifier computes this per proof from the public
+instances rather than reading it off the key, so it is an argument to the assembly, not a VK field. -/
 def rotInstanceCommitment : Fin rotShape.numProofs → ℕ → Fp := fun _ _ => 0
 
 /-- Proof string of the rotated toy: advice commitment `10` (opened at both rotations, evals `11`/`12`),
@@ -299,22 +300,22 @@ def rotCh : Challenges rotShape.k Fp :=
 
 /-- The fingerprinted grouping of the rotated toy has two point sets, so the `x₄` collapse has two
 `(qᵢ, uᵢ)` pairs — the count is *computed* from `constructIntermediateSets`. -/
-theorem rot_pairCount : deployedX4PairCount (instanceCommitment := rotInstanceCommitment) rotVk rotPs rotCh = 2 := by decide
+theorem rot_pairCount : deployedX4PairCount rotVk rotInstanceCommitment rotPs rotCh = 2 := by decide
 
 /-- The `x₄` batch columns of the rotated toy, computed: power `ξ⁰` carries the `{x}` point-set
 aggregate (`random 7 + x₁ · h`, with `h` the empty-piece zero MSM), power `ξ¹` the rotated advice
 aggregate (`10`), and the top power the quotient commitment `q′ = 5`. -/
 theorem rot_x4BatchCommitments :
-    x4BatchCommitments (instanceCommitment := rotInstanceCommitment) toyUrs rfl rotVk rotPs rotCh ⟨0, by decide⟩ = 7
-      ∧ x4BatchCommitments (instanceCommitment := rotInstanceCommitment) toyUrs rfl rotVk rotPs rotCh ⟨1, by decide⟩ = 10
-      ∧ x4BatchCommitments (instanceCommitment := rotInstanceCommitment) toyUrs rfl rotVk rotPs rotCh ⟨2, by decide⟩ = 5 := by
+    x4BatchCommitments toyUrs rfl rotVk rotInstanceCommitment rotPs rotCh ⟨0, by decide⟩ = 7
+      ∧ x4BatchCommitments toyUrs rfl rotVk rotInstanceCommitment rotPs rotCh ⟨1, by decide⟩ = 10
+      ∧ x4BatchCommitments toyUrs rfl rotVk rotInstanceCommitment rotPs rotCh ⟨2, by decide⟩ = 5 := by
   refine ⟨?_, ?_, ?_⟩ <;> decide
 
 /-- The `x₄` batch evaluations on the `u` slots, computed: the claimed set evaluations in reverse fold
 order. -/
 theorem rot_x4BatchEvals :
-    x4BatchEvals (G := Fp) (instanceCommitment := rotInstanceCommitment) rotVk rotPs rotCh ⟨0, by decide⟩ = 8
-      ∧ x4BatchEvals (G := Fp) (instanceCommitment := rotInstanceCommitment) rotVk rotPs rotCh ⟨1, by decide⟩ = 4 := by
+    x4BatchEvals (G := Fp) rotVk rotInstanceCommitment rotPs rotCh ⟨0, by decide⟩ = 8
+      ∧ x4BatchEvals (G := Fp) rotVk rotInstanceCommitment rotPs rotCh ⟨1, by decide⟩ = 4 := by
   refine ⟨?_, ?_⟩ <;> decide
 
 /-- The deployed `x₄` power form instantiated on the rotated two-set instance: the pinned deployed
@@ -322,9 +323,9 @@ commitment over the rewound runs `{rotCh with x4 := ξ}` is the `ξ`-power batch
 aggregates. -/
 theorem rot_deployed_x4_batch (ξ : Fp) :
     deployedCommitment (G := Fp) toyUrs rfl rotVk rotInstanceCommitment rotPs {rotCh with x4 := ξ}
-      = ∑ j : Fin (deployedX4PairCount (instanceCommitment := rotInstanceCommitment) rotVk rotPs rotCh + 1),
-          ξ ^ (j : ℕ) • x4BatchCommitments (instanceCommitment := rotInstanceCommitment) toyUrs rfl rotVk rotPs rotCh j :=
-  deployedCommitment_x4_batch (instanceCommitment := rotInstanceCommitment) toyUrs rfl rotVk rotPs rotCh ξ
+      = ∑ j : Fin (deployedX4PairCount rotVk rotInstanceCommitment rotPs rotCh + 1),
+          ξ ^ (j : ℕ) • x4BatchCommitments toyUrs rfl rotVk rotInstanceCommitment rotPs rotCh j :=
+  deployedCommitment_x4_batch toyUrs rfl rotVk rotInstanceCommitment rotPs rotCh ξ
 
 /-! ## The opened batch on augmented data
 
@@ -428,26 +429,26 @@ def rotBindPs0 : ProofString rotShape Fp Fp :=
 and `q′` is the recomputed base evaluation (which reads no `q′`), so the `x₄` batch columns and
 evaluations coincide. -/
 def rotBindPs : ProofString rotShape Fp Fp :=
-  { rotBindPs0 with multiopenQPrime := deployedBaseEval (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs0 rotCh }
+  { rotBindPs0 with multiopenQPrime := deployedBaseEval rotVk rotInstanceCommitment rotBindPs0 rotCh }
 
 /-- The `x₄` batch columns and evaluations of the guard instance coincide — computed. -/
 theorem rotBind_CE :
-    x4BatchCommitments (instanceCommitment := rotInstanceCommitment) toyUrs rfl rotVk rotBindPs rotCh = x4BatchEvals (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs rotCh := by
+    x4BatchCommitments toyUrs rfl rotVk rotInstanceCommitment rotBindPs rotCh = x4BatchEvals rotVk rotInstanceCommitment rotBindPs rotCh := by
   decide
 
 /-- The plain `x₄` batch of the guard instance: each rewound witness is the power combination of
 the (coinciding) batch evaluations, at the batching challenges `0, 1, 2` read off the slot index. -/
 noncomputable def rotBindBatch :
     BatchOpeningsForWitness toyUrs (fun _ => 1)
-      (x4BatchCommitments (instanceCommitment := rotInstanceCommitment) toyUrs rfl rotVk rotBindPs rotCh) (x4BatchEvals (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs rotCh)
-      (fun _ => ∑ j : Fin (deployedX4PairCount (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs rotCh + 1),
-        (((0 : Fin (deployedX4PairCount (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs rotCh + 1)) : ℕ) : Fp) ^ (j : ℕ)
-          • x4BatchEvals (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs rotCh j) where
+      (x4BatchCommitments toyUrs rfl rotVk rotInstanceCommitment rotBindPs rotCh) (x4BatchEvals rotVk rotInstanceCommitment rotBindPs rotCh)
+      (fun _ => ∑ j : Fin (deployedX4PairCount rotVk rotInstanceCommitment rotBindPs rotCh + 1),
+        (((0 : Fin (deployedX4PairCount rotVk rotInstanceCommitment rotBindPs rotCh + 1)) : ℕ) : Fp) ^ (j : ℕ)
+          • x4BatchEvals rotVk rotInstanceCommitment rotBindPs rotCh j) where
   batchChallenge := fun r => ((r : ℕ) : Fp)
   challengesDistinct := by decide
-  batched := fun r _ => ∑ j : Fin (deployedX4PairCount (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs rotCh + 1),
-    (((r : Fin (deployedX4PairCount (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs rotCh + 1)) : ℕ) : Fp) ^ (j : ℕ)
-      • x4BatchEvals (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs rotCh j
+  batched := fun r _ => ∑ j : Fin (deployedX4PairCount rotVk rotInstanceCommitment rotBindPs rotCh + 1),
+    (((r : Fin (deployedX4PairCount rotVk rotInstanceCommitment rotBindPs rotCh + 1)) : ℕ) : Fp) ^ (j : ℕ)
+      • x4BatchEvals rotVk rotInstanceCommitment rotBindPs rotCh j
   current := 0
   current_eq := rfl
   commitment := by decide
@@ -457,26 +458,25 @@ noncomputable def rotBindBatch :
 the advice point set (one member), the honest `x₁` run in the single slot, and the aggregate
 witness pinned to the canonical decode. -/
 theorem rotBind_member_binding_discharged : True := by
-  have hres := deployed_witness_member_binding (shape := rotShape)
-    (instanceCommitment := rotInstanceCommitment) toyUrs rfl rotVk rotBindPs
+  have hres := deployed_witness_member_binding (shape := rotShape) toyUrs rfl rotVk rotInstanceCommitment rotBindPs
     rotCh (b := fun _ => 1) rotBindBatch 0 (by decide)
     (fun _ => 3) (by decide) ⟨0, by decide⟩ rfl
     (fun _ => honestX1Run rotBindPs rotCh)
     (fun _ => (decodedCols_spec rotBindBatch).decodedColumns.coeffs
-      ⟨deployedX4PairCount (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs rotCh - 1 - 0, by omega⟩)
+      ⟨deployedX4PairCount rotVk rotInstanceCommitment rotBindPs rotCh - 1 - 0, by omega⟩)
     (fun _ _ => 1)
     (fun _ => commitGen (fun _ => (1 : Fp))
       ((decodedCols_spec rotBindBatch).decodedColumns.coeffs
-        ⟨deployedX4PairCount (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs rotCh - 1 - 0, by omega⟩))
+        ⟨deployedX4PairCount rotVk rotInstanceCommitment rotBindPs rotCh - 1 - 0, by omega⟩))
     ?_ ?_ ?_
   · trivial
   · intro r
     show commit toyUrs ((decodedCols_spec rotBindBatch).decodedColumns.coeffs
-        ⟨deployedX4PairCount (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs rotCh - 1 - 0, by omega⟩)
-        = ((deployedX4Qs (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs rotCh).getD 0 (Msm.zero rotShape.k Fp Fp)).eval
+        ⟨deployedX4PairCount rotVk rotInstanceCommitment rotBindPs rotCh - 1 - 0, by omega⟩)
+        = ((deployedX4Qs rotVk rotInstanceCommitment rotBindPs rotCh).getD 0 (Msm.zero rotShape.k Fp Fp)).eval
             ⟨rotShape.k, toyUrs.g, toyUrs.w, toyUrs.u⟩
     rw [(decodedCols_spec rotBindBatch).decodedColumns.commitment
-      ⟨deployedX4PairCount (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs rotCh - 1 - 0, by omega⟩]
+      ⟨deployedX4PairCount rotVk rotInstanceCommitment rotBindPs rotCh - 1 - 0, by omega⟩]
     decide
   · intro r
     rfl
@@ -509,16 +509,16 @@ def rotChB : Challenges rotShape.k Fp := { rotCh with x4 := 0 }
 component-free slots (`toyUrs` has `u = w = 0`). -/
 noncomputable def rotBindOpenedBatch :
     OpenedBatchOpenings toyUrs (fun _ => 1)
-      (x4BatchCommitments (instanceCommitment := rotInstanceCommitment) toyUrs rfl rotVk rotBindPs rotChB)
-      (x4BatchEvals (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs rotChB)
-      (fun _ => ∑ j : Fin (deployedX4PairCount (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs rotChB + 1),
-        (((0 : Fin (deployedX4PairCount (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs rotChB + 1)) : ℕ) : Fp) ^ (j : ℕ)
-          • x4BatchEvals (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs rotChB j) 0 0 where
+      (x4BatchCommitments toyUrs rfl rotVk rotInstanceCommitment rotBindPs rotChB)
+      (x4BatchEvals rotVk rotInstanceCommitment rotBindPs rotChB)
+      (fun _ => ∑ j : Fin (deployedX4PairCount rotVk rotInstanceCommitment rotBindPs rotChB + 1),
+        (((0 : Fin (deployedX4PairCount rotVk rotInstanceCommitment rotBindPs rotChB + 1)) : ℕ) : Fp) ^ (j : ℕ)
+          • x4BatchEvals rotVk rotInstanceCommitment rotBindPs rotChB j) 0 0 where
   batchChallenge := fun r => ((r : ℕ) : Fp)
   challengesDistinct := by decide
-  batched := fun r _ => ∑ j : Fin (deployedX4PairCount (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs rotChB + 1),
-    (((r : Fin (deployedX4PairCount (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs rotChB + 1)) : ℕ) : Fp) ^ (j : ℕ)
-      • x4BatchEvals (instanceCommitment := rotInstanceCommitment) rotVk rotBindPs rotChB j
+  batched := fun r _ => ∑ j : Fin (deployedX4PairCount rotVk rotInstanceCommitment rotBindPs rotChB + 1),
+    (((r : Fin (deployedX4PairCount rotVk rotInstanceCommitment rotBindPs rotChB + 1)) : ℕ) : Fp) ^ (j : ℕ)
+      • x4BatchEvals rotVk rotInstanceCommitment rotBindPs rotChB j
   batchedU := fun _ => 0
   batchedW := fun _ => 0
   current := 0
@@ -531,8 +531,7 @@ noncomputable def rotBindOpenedBatch :
 /-- The pinned capstone's derived opening discharged concretely: the designated batch at the
 honest batching challenge opens the opened statement, no opening assumed. -/
 theorem rotBindB_pinned_opening_discharged : True := by
-  have := OpenedBatchOpenings.ipaRelation_of_x4Current
-    (instanceCommitment := rotInstanceCommitment) rotBindOpenedBatch (by decide)
+  have := rotBindOpenedBatch.ipaRelation_of_x4Current (by decide)
   trivial
 
 /-! ## Regression guards for the halo2-faithfulness fixes
@@ -566,10 +565,10 @@ slot-identity list `deployedSetCommIds` is positionally aligned with the member 
 (`quotCommitted`) index into. The pre-fix `CommitmentRef`-only projection dropped the identities, so
 this equality could not be stated. -/
 theorem rot_setCommIds_aligned :
-    (deployedSetCommIds (instanceCommitment := rotInstanceCommitment) rotVk rotPs rotCh 0).length = (deployedSetQueries (instanceCommitment := rotInstanceCommitment) rotVk rotPs rotCh 0).length
-      ∧ (deployedSetCommIds (instanceCommitment := rotInstanceCommitment) rotVk rotPs rotCh 1).length
-          = (deployedSetQueries (instanceCommitment := rotInstanceCommitment) rotVk rotPs rotCh 1).length :=
-  ⟨deployedSetCommIds_length (instanceCommitment := rotInstanceCommitment) rotVk rotPs rotCh 0, deployedSetCommIds_length (instanceCommitment := rotInstanceCommitment) rotVk rotPs rotCh 1⟩
+    (deployedSetCommIds rotVk rotInstanceCommitment rotPs rotCh 0).length = (deployedSetQueries rotVk rotInstanceCommitment rotPs rotCh 0).length
+      ∧ (deployedSetCommIds rotVk rotInstanceCommitment rotPs rotCh 1).length
+          = (deployedSetQueries rotVk rotInstanceCommitment rotPs rotCh 1).length :=
+  ⟨deployedSetCommIds_length rotVk rotInstanceCommitment rotPs rotCh 0, deployedSetCommIds_length rotVk rotInstanceCommitment rotPs rotCh 1⟩
 
 end MultiopenDecodeFixture
 end Zcash.Snark

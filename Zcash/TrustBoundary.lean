@@ -12,46 +12,18 @@ import Zcash.Snark.Soundness.AGM.Capstone
 import Zcash.Snark.Soundness.AGM.ProbabilityVesta
 import Zcash.Snark.Soundness.Forking.Adversary
 import Zcash.Snark.Soundness.Composition.Bridge
+import Zcash.Snark.Soundness.Composition.Completeness
+import Zcash.Snark.Soundness.Composition.Decomposition
+import Zcash.Snark.Soundness.Composition.Prefixes
+import Zcash.Snark.Soundness.Composition.Residual
 import Zcash.Snark.Soundness.Multiopen.BudgetedExtraction
 import Zcash.Snark.Soundness.VestaBudget
 import Zcash.Snark.Soundness.FoldSplit
-import Zcash.Snark.Soundness.ConstraintSatisfaction
-import Zcash.Snark.Soundness.LookupRows
-import Zcash.Snark.Soundness.LookupInstantiation
-import Zcash.Snark.Soundness.Multiopen.ConstraintResolver
 import Zcash.Snark.Soundness.GrandProductBridge
 import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.PermutationRows
-import Zcash.Snark.Soundness.PermutationInstantiation
-import Zcash.Snark.Soundness.PermutationSemantics
-import Zcash.Snark.Soundness.CircuitSatisfaction
-import Zcash.Snark.Soundness.OperationCopies
-import Zcash.Snark.Soundness.OperationLookups
-import Zcash.Snark.Soundness.GateProjection
-import Zcash.Snark.Soundness.OperationGates
-import Zcash.Snark.Soundness.OperationFixed
-import Zcash.Snark.Soundness.FixedLayout
-import Zcash.Snark.Soundness.LookupSemantics
-import Zcash.Snark.Soundness.CircuitIntegration
-import Zcash.Circuits.Action.GateCoherence
-import Zcash.Circuits.Action.SelectorCoherence
-import Zcash.Snark.Soundness.TopLevelCircuit
-import Zcash.Snark.Soundness.TopLevelAssignment
-import Zcash.Snark.Soundness.TopLevelCoherence
-import Zcash.Snark.Soundness.PolynomialEnvironment
-import Zcash.Snark.Soundness.ResolverQueryEnvironment
-import Zcash.Snark.Soundness.ResolverGates
-import Zcash.Snark.Soundness.SelectorCoherence
-import Zcash.Snark.Soundness.TopLevelGates
-import Zcash.Snark.Soundness.DomainSelectors
-import Zcash.Snark.Soundness.CanonicalConstraintModel
-import Zcash.Snark.Soundness.InstanceCommitment
-import Zcash.Snark.Soundness.ActionStatement
-import Zcash.Snark.VkCommit.Assignment
-import Zcash.Snark.Soundness.Composition.Decomposition
-import Zcash.Snark.Soundness.Composition.Residual
-import Zcash.Snark.Soundness.Composition.Prefixes
-import Zcash.Snark.Soundness.Composition.Completeness
+import Zcash.Snark.Soundness.ConstraintRelations
+import Zcash.Snark.Soundness.ChallengePricing
 
 /-!
 # Trust boundary, build-checked
@@ -396,27 +368,55 @@ assert_axioms kerr_div_card
 assert_axioms deployed_forking_knowledge_error
 assert_axioms deployed_forking_knowledge_error_captured
 
-/-! ### Circuit integration
+/-! ### Multiopen decode, budgeted extraction, and the forking composition
 
-The generic constraint decomposition, decoded-column bridge, top-level Clean semantics, and
-Action statement adapter carried by the circuit-soundness integration. -/
+The decode layer that recovers the verifier's columns from the batched multiopen, the budgeted
+extraction that replaces the per-run squeeze floors with one joint accept floor, and the
+composition layer that joins the forking extraction to the decoded capstones. Theorems throughout,
+so `assert_axioms`, with `+native` on the Vesta-instantiated endpoints. -/
 
+-- The multiopen value-check chain: the deployed value check derived from the nested
+-- forking floors, the x₁ member un-batch on top of it, and the terminal with `hadvice`/`hinstance`
+-- produced rather than assumed (`Soundness.Multiopen.NodeBinding`, `Soundness.Vesta`).
 assert_axioms deployed_value_check_node_binding
 assert_axioms deployed_member_node_binding
 assert_axioms orchard_verifier_vesta_member_constraint_derived +native
+
+-- The forking-extraction ∘ decoded-capstone composition (`Soundness.Composition.Bridge`): the algebraic
+-- clean opening identified with the deployed capstone's shape (`ipaRelation_deployed_of_instance`),
+-- the witness-tie composition (`member_snark_of_instance`), and the computed-path soundness
+-- endpoint (`orchard_verifier_sound_vesta_computed`) that concludes the plain `SnarkRelation` with
+-- NO `ExtractableFromAcceptance` hypothesis. On the witness tie the opened-value shift is derived
+-- (`shift_eq_zero_of_openings_agree`), so `hshift` survives only on the standalone single-opening
+-- bridge. `snarkExtraction_prob_le_of_generatorRO_textbookDL` is the CONDITIONAL knowledge-error
+-- bound: the SNARK-extraction failure is contained in the clean-opening failure and inherits its
+-- `(Q+k)·3/|Fp| + (Q+1)/|Fp| + |basis|·ε` bound, conditional on `hExtract` (clean opening ⟹
+-- extraction). Discharging `hExtract` — coupling the AGM family's coin measure to the multiopen
+-- budget below — is the remaining reconciliation.
 assert_axioms ipaRelation_deployed_of_instance +native
 assert_axioms member_snark_of_instance +native
 assert_axioms snarkRelation_of_memberColumns
-assert_axioms SnarkRelation.and_satisfies
 assert_axioms orchard_verifier_sound_vesta_computed +native
 assert_axioms snarkExtraction_prob_le_of_generatorRO_textbookDL +native
 assert_axioms instanceAttempt_provenance +native
 assert_axioms ipaRelation_deployed_of_openings_agree +native
 assert_axioms shift_eq_zero_of_openings_agree +native
+
+-- The budgeted multiopen extraction (`Soundness.Multiopen.FloorBudget`,
+-- `Soundness.Multiopen.BudgetedExtraction`): the heavy-fiber Markov descent
+-- (`uniformOfFintype_heavy_fiber_lt`) replaces the `∀`-over-runs squeeze floors of the value-check
+-- and member cores with a single joint accept floor at honest-base thresholds, the runs pinned by
+-- the canonical selectors; `deployed_member_budget` is the combined soundness budget — the joint
+-- accept measure sits within the four-threshold budget, or every decoded member column takes its
+-- claimed evaluation (or a computed relation exists).
 assert_axioms uniformOfFintype_heavy_fiber_lt
 assert_axioms deployed_value_check_node_binding_budgeted
 assert_axioms deployed_member_node_binding_budgeted
 assert_axioms deployed_member_budget
+
+-- The decode layer (`Soundness.Multiopen.Decode`/`Deployed`): the Vandermonde recovery of the
+-- column witnesses, the deployed x4 collapse proved to be a flat power batch, and the two-level
+-- binding of the extracted witness to the member commitments.
 assert_axioms decodedColumnFamily_of_batch_openings
 assert_axioms deployedCommitment_x4_batch
 assert_axioms multiopenValue_x4_batch
@@ -425,16 +425,93 @@ assert_axioms member_binding_of_x1_samples
 assert_axioms deployed_witness_member_binding
 assert_axioms deployed_witness_two_level
 assert_axioms node_binding_of_samples
+-- The multiopen support modules, pinned directly rather than transitively through the capstones
+-- above. `Opened` holds the rewind accept events and the three `Classical.choose` witness
+-- extractors; `RPoly` the interpolation/power-form algebra; `Compat` the Msm-evaluation and
+-- two-openings binding lemmas; `Claimed` the counting cores; `ValueCheckDeployed` the deployed
+-- point sets. A stray axiom here would surface at a capstone, but only these pins name the
+-- declaration that introduced it.
+assert_axioms vandermonde_decode_map
+assert_axioms vandermonde_reconstruct_map
+assert_axioms openedColumnDecode
+assert_axioms openedDecodedCols
+assert_axioms openedDecodedCols_eval_x3
+assert_axioms openedDecodedCols_top_eval_x3
+assert_axioms OpenedColumnDecode.currentWitness_eq
+assert_axioms openedRewindForRelation_of_batch
+assert_axioms openedX4Batch_of_witnessFamily
+assert_axioms OpenedX4Accept
+assert_axioms openedX4Accept_of_deployedAccepts
+assert_axioms OpenedX3Accept
+assert_axioms openedX3Accept_of_deployedAccepts
+assert_axioms OpenedX2Accept
+assert_axioms openedX2Accept_of_deployedAccepts
+assert_axioms openedX4Rewind_of_x4Prob
+assert_axioms openedX4Rewind_of_x4Prob_forked
+assert_axioms OpenedBatchOpenings.ipaRelation_of_x4Current
+assert_axioms opened_constraint_of_relation_and_batch
+assert_axioms x1DecodeComp
+assert_axioms opened_witness_member_binding
+assert_axioms OpenedX1Accept
+assert_axioms openedX1Accept_of_deployedAccepts
+assert_axioms openedMemberDecode_of_x1Prob
+assert_axioms rotatedFeed
+assert_axioms member_constraint_of_relation_and_batch
+assert_axioms member_constraint_of_relation_and_batch_xgood
+assert_axioms poly_eq_of_agree_on_family
+assert_axioms foldl_range_add_eq_sum
+assert_axioms foldl_range_guardProd_eq_prod
+assert_axioms guardProd_eq_prod_erase
+assert_axioms lagrangePoly
+assert_axioms lagrangePoly_eval_node
+assert_axioms lagrangePoly_eval
+assert_axioms foldl_mul_inv_eq_prod
+assert_axioms multiopenEval_powerForm
+assert_axioms coeffs_zero_of_power_sum_vanishes
+assert_axioms multiopenEval_perSet_zero_of_samples
+assert_axioms lagrangePoly_natDegree_lt
+assert_axioms col_eq_lagrangePoly_of_samples
+assert_axioms col_eval_node_eq_claimed
+assert_axioms Msm.eval_zero
+assert_axioms Msm.eval_scale
+assert_axioms Msm.eval_add
+assert_axioms HasNontrivialRelation
+assert_axioms HasNontrivialRelation.of_nontrivialRelation
+assert_axioms deployed_to_acceptV
+assert_axioms hasNontrivialRelation_of_two_openings
+assert_axioms decoded_constraint_of_relation_and_batch
+assert_axioms decoded_constraint_of_opening_or_relation
+assert_axioms claimedEval_of_x3Prob
+assert_axioms claimedCombined_of_x2Prob
+assert_axioms gateGood_of_xProb
+assert_axioms hgood_of_xProb
+assert_axioms deployedSetPts
+assert_axioms deployedAllPts
+assert_axioms deployedSetPts_subset
+assert_axioms member_aggregate_eval_bridge
+assert_axioms deployed_query_point_mem
+-- The avoidance-strengthened forking count (`Soundness.Forking.Probability`): the counting lemma
+-- that buys the multiopen grid's interpolation samples off the opened set points, so the value
+-- check takes no sample-avoidance hypothesis.
+assert_axioms exists_injective_accepting_avoiding_of_measure
+-- The good-challenge production (`Soundness.GoodChallenge`): the Schwartz-Zippel exclusion budget
+-- and the pigeonhole that produces an accepting challenge outside the bad set.
 assert_axioms uniformChallenge_szBadSet
 assert_axioms uniformChallenge_szGoodSet
 assert_axioms uniformChallenge_quotient_szBadSet
 assert_axioms uniformChallenge_szBadSet_union
 assert_axioms exists_accepting_good_challenge
 assert_axioms exists_accepting_good_challenge_quotient
+-- The deployed Vesta capstone family: the decoded-column rungs and the terminal, alongside the
+-- derived capstone already pinned below.
 assert_axioms orchard_verifier_vesta_decoded_constraint_of_forked_x4 +native
 assert_axioms orchard_verifier_vesta_forking_constraint_deployed_x4 +native
 assert_axioms orchard_verifier_vesta_member_constraint_deployed_x4 +native
 assert_axioms orchard_verifier_vesta_member_constraint_deployed_terminal +native
+
+-- The budgeted capstone and computed path (`Soundness.VestaBudget`): the derived deployed member
+-- capstone with the run-quantified floors replaced by the joint accept floor, and the computed-path
+-- endpoint with the member decode constructed and `hquot` derived — no extraction-data hypothesis.
 assert_axioms deployed_member_node_binding_at_point_budgeted
 assert_axioms orchard_verifier_vesta_member_constraint_budgeted +native
 assert_axioms member_relation_or_dlr_of_instance_budgeted +native
@@ -442,14 +519,22 @@ assert_axioms member_snark_of_instance_budgeted +native
 assert_axioms orchard_verifier_sound_vesta_budgeted +native
 assert_axioms cleanOpening_provenance +native
 assert_axioms snarkExtraction_prob_le_of_generatorRO_textbookDL_budgeted +native
+-- The `hfold` surface: the grouping's eval faithfulness at the vanishing slot is proven, not
+-- assumed, so the derivation reads the verifier-computed `expectedHEval` off the routed member.
 assert_axioms vanishing_query_mem_assembleQueries
 assert_axioms assembleQueries_vanishingH_unique
 assert_axioms constructIntermediateSets_unique_comm_routed
 assert_axioms vanishing_slot_routed
 assert_axioms hfold_of_expectedHEval_binding
 assert_axioms hfold_of_vanishing_slot_binding
+-- The root-of-unity exclusion is derived from acceptance (`assemble?` rejects at `xⁿ = 1`), and the
+-- budget's good branch supplies `hbind` at the routed vanishing slot — so `hfold` now stands on the
+-- fingerprint premise alone.
 assert_axioms deployedAccepts_xn_ne_one
 assert_axioms hfold_of_member_budget
+-- The permutation and lookup arguments folded into the constraint model: the verifier's expression
+-- list is the generic builder run on its own claimed evaluations, the same builder over column
+-- polynomials evaluates back onto it, and the fold equation therefore needs no fingerprint premise.
 assert_axioms permutationExpressions_map
 assert_axioms lookupExpressions_map
 assert_axioms subProofConstraints_map
@@ -460,71 +545,23 @@ assert_axioms eval_constraintPolys
 assert_axioms eval_combineConstraints
 assert_axioms eval_combineConstraints_deployed
 assert_axioms hfold_of_constraint_polys
-assert_axioms ConstraintPolyModel.constraints_eq_constraintPolys
-assert_axioms ConstraintPolyModel.gate_mem_constraints
-assert_axioms ConstraintPolyModel.permutation_mem_constraints
-assert_axioms ConstraintPolyModel.lookup_mem_constraints
-assert_axioms ConstraintPolyModel.lookupExpression_mem_lookupConstraints
-assert_axioms ConstraintSatisfaction.of_all
-assert_axioms ConstraintSatisfaction.lookupExpression
-assert_axioms permutation_start_mem
-assert_axioms permutation_end_mem
-assert_axioms permutation_chain_mem
-assert_axioms permutation_step_mem
-assert_axioms lookup_start_mem
-assert_axioms lookup_end_mem
-assert_axioms lookup_product_step_mem
-assert_axioms lookup_run_start_mem
-assert_axioms lookup_run_step_mem
-assert_axioms ConstraintSatisfaction.lookupStart
-assert_axioms ConstraintSatisfaction.lookupEnd
-assert_axioms ConstraintSatisfaction.lookupProductStep
-assert_axioms ConstraintSatisfaction.lookupRunStart
-assert_axioms ConstraintSatisfaction.lookupRunStep
+-- The permutation and lookup arguments closed from the verifier's own row checks: the combined
+-- check splits into its parts, the running product telescopes across the rows, two challenge root
+-- counts turn the product into a multiset identity, and the existing structural theorems turn that
+-- into the copy constraints and the lookup inclusion.
 assert_axioms constraints_dvd_of_good_y
 assert_axioms telescope_running_product
 assert_axioms grandProduct_eq_or_cell_eq_zero
 assert_axioms multiset_pair_eq_of_prod_eval_eq
 assert_axioms cellPairs_eq_of_running_product
 assert_axioms perm_copy_constraints_of_running_product
-assert_axioms prod_map_chunkedCellPairs
-assert_axioms chunkedCellPairs_eq_of_running_product
-assert_axioms perm_copy_constraints_of_chunked_running_product
-assert_axioms telescope_chunks
-assert_axioms telescope_chunks_variable_width
-assert_axioms chunkedGrandProduct_eq_or_cell_eq_zero
 assert_axioms lookup_multisets_of_prod_eval_eq
 assert_axioms lookup_multisets_of_diff_eq_zero
 assert_axioms lookup_subset_of_components
 assert_axioms lookup_subset_of_prod_eval_eq
-assert_axioms eval_lookupEvalPolys_productNextEval
-assert_axioms eval_lookupEvalPolys_permutedInputInvEval_succ
-assert_axioms lookup_product_row_recurrence
-assert_axioms lookup_run_start_of_dvd
-assert_axioms lookup_run_step_of_dvd
-assert_axioms lookup_run_structure_of_dvd
-assert_axioms lookup_product_eq_or_factor_eq_zero
-assert_axioms deployed_lookup_subset
-assert_axioms mem_assembleQueries_of_mem_subProofLookupQueries
-assert_axioms constraintModelOfResolver_lookups
-assert_axioms lookupEntry_mem_lookupEntriesOfResolver
-assert_axioms lookupEntry_mem_constraintModelOfResolver
-assert_axioms eval_lookupEntriesOfResolver
-assert_axioms eval_lookupEntriesOfResolver_of_assembleQueries
-assert_axioms eval_constraintModelOfResolver_lookups
-assert_axioms eval_constraintModelOfResolver_lookups_of_assembleQueries
-assert_axioms ConstraintSatisfaction.lookupConstraintsDvdOfResolver
-assert_axioms query_eq_of_noDuplicateCommitmentPoint
-assert_axioms constructIntermediateSets_query_routed
-assert_axioms constructIntermediateSets_query_eval
-assert_axioms assembleQueries_instance_commitment
-assert_axioms constructIntermediateSets_member_provenance
-assert_axioms assembledQueryMemberRoute
-assert_axioms assembledQueryMemberRoute_faithful
-assert_axioms deployedMemberRef_eq_instanceCommitment
-assert_axioms assembledQueryRoutingConditions_of_assemble?_eq_some
-assert_axioms decodedPolynomialResolver_opens_or_relation
-assert_axioms eval_lookupEntriesOfDecodedResolver_or_relation
+-- The deployed row reading: the step rule's folds are running products, the boundary rules pin the
+-- product at the first and last rows, and the cell names separate. These are theorems about
+-- `permChunkExpression` itself, so the chain above starts at the verifier's own constraint list.
 assert_axioms permChunk_left_eq_prod
 assert_axioms permChunk_right_eq_prod
 assert_axioms permChunkExpression_eq
@@ -532,240 +569,103 @@ assert_axioms eval_eq_zero_of_dvd_vanishing
 assert_axioms perm_row_recurrence
 assert_axioms running_product_start
 assert_axioms running_product_end
-assert_axioms running_product_chain
 assert_axioms name_injective_of_coset
 assert_axioms deployed_perm_copy_constraints
-assert_axioms deployed_perm_copy_constraints_all_chunks
-assert_axioms permutationLastEval_isSome
-assert_axioms eval_permutationSetsOfResolver
-assert_axioms eval_permutationColumnPolynomialOfResolver
-assert_axioms eval_permutationCommonPolynomialOfResolver
-assert_axioms eval_permutationChunkPairsOfResolver
-assert_axioms eval_permutationChunksOfResolver
-assert_axioms ConstraintSatisfaction.resolverPermutationConstraints
-assert_axioms flattenPermutationChunkCell_injective
-assert_axioms chunkRowName_injective_of_coset
-assert_axioms replayKeygenPermutation_pair_linked
-assert_axioms replayKeygenPermutation_sameCycle_iff
-assert_axioms chunkPermutationOfFlat_apply
-assert_axioms keygenSigmaColumn_eval
-assert_axioms keygenSigmaColumn_natDegree_lt
-assert_axioms ResolverPermutationDomain.ofCanonicalSelectors
-assert_axioms ResolverPermutationCycle.ofKeygenColumns
-assert_axioms mem_additiveZeroBadSet_iff
-assert_axioms uniformChallenge_additiveZeroBadSet
-assert_axioms mem_resolverPermutationZeroFactorBadSet_iff
-assert_axioms uniformChallenge_resolverPermutationGammaBadSet
-assert_axioms ConstraintSatisfaction.resolverPermutationCopyConstraints
-assert_axioms CircuitConstraintFamily.operations_constraints_iff
-assert_axioms FullCircuitSatisfaction.iff_constraints
-assert_axioms FullCircuitSatisfaction.of_components_or_bad
-assert_axioms CircuitConstraintFamily.copy_constraints_iff_declaredCopies
-assert_axioms copy_constraints_or_bad_of_replay
-assert_axioms CircuitConstraintFamily.lookup_constraints_iff_enabledLookups
-assert_axioms foldPoly_injective_of_length_eq
-assert_axioms eq_of_compressValues_eq_of_not_mem
-assert_axioms EnabledLookup.thetaBadSet_card_le
-assert_axioms uniformChallenge_enabledLookupThetaBadSet
-assert_axioms EnabledLookup.satisfied_of_compressed
-assert_axioms lookup_constraints_of_compressed
-assert_axioms deployed_lookup_subset_of_nonzero_challenges
-assert_axioms EnabledLookup.satisfied_of_deployed_subset
-assert_axioms lookup_constraints_of_deployed_subsets
-assert_axioms EnabledLookup.DeployedWitness.satisfied
-assert_axioms lookup_constraints_of_deployed_witnesses
-assert_axioms ResolverLookupDomain.ofCanonicalSelectors
-assert_axioms ConstraintSatisfaction.resolverLookupSubset
-assert_axioms Halo2.Expression.eval_eq_of_selectorFree
-assert_axioms Halo2.Expression.gatedBy_querySelector
-assert_axioms Halo2.Expression.GatedBy.add
-assert_axioms Halo2.Expression.GatedBy.mul_right
-assert_axioms Halo2.Expression.GatedBy.mul_left
-assert_axioms Halo2.Expression.eval_substSelectorMap_eq_scale
-assert_axioms Halo2.Expression.eval_enabledGateValuation_eq_queryEval
-assert_axioms Halo2.Expression.eval_substSelectorMap_eq_scale_queryEval
-assert_axioms Halo2.Gate.wellFormed_of_withSelector
-assert_axioms Halo2.ConstraintSystem.gatesWellFormed_empty
-assert_axioms Halo2.ConstraintSystem.gatesWellFormed_createGate
-assert_axioms Halo2.ConstraintSystem.GatesWellFormed.constraint
-assert_axioms Halo2.Configure.PreservesGateWellFormedness.pure
-assert_axioms Halo2.Configure.PreservesGateWellFormedness.bind
-assert_axioms Halo2.Configure.PreservesGateWellFormedness.map
-assert_axioms Halo2.Configure.PreservesGateWellFormedness.createGate
-assert_axioms Halo2.Configure.PreservesGateWellFormedness.selectorCreateGate
-assert_axioms Halo2.Configure.PreservesGateWellFormedness.fromEmpty
-assert_axioms Halo2.Configure.PreservesGateWellFormedness.lookup
-assert_axioms Zcash.Circuits.Action.Circuit.orchardGate_wellFormed
-assert_axioms Zcash.Circuits.Ecc.WitnessPoint.pointGate_wellFormed
-assert_axioms Zcash.Circuits.Ecc.WitnessPoint.pointNonIdGate_wellFormed
-assert_axioms Zcash.Circuits.Ecc.MulFixed.coordsGate_wellFormed
-assert_axioms Zcash.Circuits.Ecc.MulFixed.BaseFieldElem.canonGate_wellFormed
-assert_axioms Zcash.Circuits.Ecc.MulFixed.FullWidth.fullWidthGate_wellFormed
-assert_axioms Zcash.Circuits.Ecc.MulFixed.Short.shortGate_wellFormed
-assert_axioms Zcash.Circuits.Poseidon.partialRoundsGate_wellFormed
-assert_axioms Zcash.Circuits.Sinsemilla.HashPiece.sinsemillaGate_wellFormed
-assert_axioms Zcash.Circuits.NoteCommit.YCanonicity.gate_wellFormed
-assert_axioms Zcash.Circuits.NoteCommit.configure_preservesGateWellFormedness
-assert_axioms Zcash.Circuits.Ecc.configure_preservesGateWellFormedness +native
-assert_axioms Zcash.Circuits.Action.Circuit.configure_preservesGateWellFormedness +native
-assert_axioms gate_constraints_of_polynomial_witnesses
-assert_axioms fixed_constraints_of_requirements
-assert_axioms CopyReplayWitness.constraints_or_bad
-assert_axioms FullCircuitBridge.ofPolynomialWitnesses
-assert_axioms FullCircuitBridge.satisfaction_or_bad
-assert_axioms FullCircuitBridge.constraints_or_bad
-assert_axioms Zcash.Circuits.SynthesisWellFormed.of_usedRows
-assert_axioms Zcash.Circuits.OperationsKeygenCoherent.append
-assert_axioms Zcash.Circuits.OperationsKeygenCoherent.region_cons
-assert_axioms Zcash.Circuits.OperationsKeygenCoherent.constrainInstance_cons
-assert_axioms Zcash.Circuits.OperationsKeygenCoherent.loadTable_cons
-assert_axioms Zcash.Circuits.TopLevelCircuit.usedRows_le_usableRowsAt
-assert_axioms Zcash.Circuits.TopLevelCircuit.fitsAt_domainExponent
-assert_axioms Zcash.Circuits.TopLevelCircuit.blindingFactors_lt_domainSize
-assert_axioms Zcash.Circuits.TopLevelCircuit.blindingFactors_succ_lt_domainSize
-assert_axioms Zcash.Circuits.TopLevelCircuit.synthesisWellFormed
-assert_axioms Zcash.Circuits.TopLevelCircuit.pinnedCS_eq_derive
-assert_axioms Zcash.Bridge.powFast_eq_pow
-assert_axioms Zcash.Bridge.omegaOf_isPrimitiveRoot +native
-assert_axioms Zcash.Bridge.omegaOf_domain +native
-assert_axioms Zcash.Bridge.omegaOf_powers_injective +native
-assert_axioms Zcash.Bridge.domainSize_cast_ne_zero
-assert_axioms FullCircuitSatisfaction.topLevelSoundness
-assert_axioms FullCircuitBridge.topLevelSoundness_or_bad
-assert_axioms TopLevelAssignment.domainRoot +native
-assert_axioms TopLevelAssignment.domainRowsInjective +native
-assert_axioms TopLevelAssignment.domainSizeCastNeZero
-assert_axioms TopLevelAssignment.blindingFactors_lt_domainSize
-assert_axioms TopLevelAssignment.blindingFactors_succ_lt_domainSize
-assert_axioms TopLevelAssignment.synthesisWellFormed
-assert_axioms OperationsKeygenCoherent.region_gate
-assert_axioms OperationsKeygenCoherent.gate
-assert_axioms OperationsKeygenCoherent.region_lookup
-assert_axioms OperationsKeygenCoherent.lookup
-assert_axioms mem_regionActivations_of_mem_enabledGate
-assert_axioms mem_activations_of_mem_operationEnabledGate
-assert_axioms rowPolynomial_eval
-assert_axioms rowPolynomial_natDegree_lt
-assert_axioms instanceRowPolynomial_eval
-assert_axioms resolverEnvironment_instance_of_rowPolynomial
-assert_axioms rowSelectorPolynomial_eq_basis
-assert_axioms domainNodal_eq_vanishing
-assert_axioms domainNodalWeight_eq
-assert_axioms rowSelectorPolynomial_eval_eq_lagrangeBasisValue
-assert_axioms rowSelectorPolynomial_eval_eq_lagrangeBasisValue_of_rotation
-assert_axioms domain_pow_sub_eq_zpow_neg
-assert_axioms blindSelectorPolynomial_eq_sum
-assert_axioms blindSelectorPolynomial_eval_eq_lagrangeBasis
-assert_axioms canonicalLagrangePolynomials_eval
-assert_axioms canonicalConstraintModelOfPermutationResolver_selectorEvaluations
-assert_axioms ResolverPermutationDomain.ofCanonicalConstraintModel
-assert_axioms ResolverLookupDomain.ofCanonicalConstraintModel
-assert_axioms rowSelectorPolynomial_eval
-assert_axioms blindSelectorPolynomial_eval
-assert_axioms firstSelectorPolynomial_nonzero
-assert_axioms lastSelectorPolynomial_nonzero
-assert_axioms last_add_blind_active
-assert_axioms coeffsToPoly_polynomialCoefficients
-assert_axioms rowPolynomial_eq_sum_single
-assert_axioms polynomialCoefficients_rowPolynomial_eq_sum_single
-assert_axioms coeffsToPoly_instanceCoefficients
-assert_axioms LagrangeCommitmentKey.ofPrefix
-assert_axioms LagrangeCommitmentKey.ofPrefix_generator_of_lt
-assert_axioms LagrangeCommitmentKey.commitPrefix
-assert_axioms LagrangeCommitmentKey.commitPrefixNat
-assert_axioms LagrangeCommitmentKey.commitPrefixNat_eq_commitPrefix
-assert_axioms LagrangeCommitmentKey.ofPrefix_commitInstance_eq
-assert_axioms LagrangeCommitmentKey.commitRows_eq
-assert_axioms LagrangeCommitmentKey.commitInstance_eq
-assert_axioms instanceOpening_eq_or_relation
-assert_axioms coeffsToPoly_eq_instanceRowPolynomial_or_relation
-assert_axioms actionPublicInputs_of_instanceRowPolynomial
-assert_axioms polynomialEnvironment_query_advice
-assert_axioms polynomialEnvironment_query_fixed
-assert_axioms polynomialEnvironment_query_instance
-assert_axioms resolverQueryFeed_eval
-assert_axioms resolverQueryFeed_eval_of_ge
-assert_axioms rotateOmega_domainPoint
-assert_axioms fixedQueryFeedOfResolver_eval_environment
-assert_axioms adviceQueryFeedOfResolver_eval_environment
-assert_axioms instanceQueryFeedOfResolver_eval_environment
-assert_axioms resolverQueryFeeds_interpret
-assert_axioms eraseLookup_extends
-assert_axioms eraseLookups_extends
-assert_axioms PinnedConstraintSystem.derive_queryState_extends_gates
-assert_axioms resolverGatePolynomial_eval
-assert_axioms resolverGatePolynomial_mem
-assert_axioms TopLevelGateCoherence.resolverInterpretsGates
-assert_axioms TopLevelGateCoherence.polynomialWitness
-assert_axioms TopLevelGateCoherence.constraints
-assert_axioms FixedLayout.mem_tableFixed_of_loadTable_of_lt
-assert_axioms FixedLayout.mem_tableFixed_of_loadTable_of_fill
-assert_axioms FixedLayout.loadTable_mem_of_requirement
-assert_axioms FixedLayout.mem_regionAssignFixed_of_requirement
-assert_axioms FixedLayout.requirement_satisfied_of_entries
-assert_axioms FixedLayout.constraints_of_entries
-assert_axioms Halo2.Expression.selectorsCovered_mono
-assert_axioms Halo2.Expression.selectorsCovered_of_selectorFree
-assert_axioms Halo2.Gate.selectorsOwned_of_withSelector
-assert_axioms Halo2.Gate.SelectorsAllocated.mono
-assert_axioms Halo2.Gate.SelectorsAllocated.of_owned
-assert_axioms Halo2.ConstraintSystem.GateSelectorsAllocated.gate
-assert_axioms Halo2.ConstraintSystem.GateSelectorsAllocated.constraint
-assert_axioms Halo2.ConstraintSystem.GateSelectorsAllocated.mono
-assert_axioms Halo2.ConstraintSystem.gateSelectorsAllocated_empty
-assert_axioms Halo2.ConstraintSystem.gateSelectorsAllocated_createGate
-assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.pure
-assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.bind
-assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.map
-assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.selector
-assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.complexSelector
-assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.selectorCreateGate
-assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.selectorCreateGateThen
-assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.complexSelectorCreateGate
-assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.lookup
-assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.twoSelectorsTwoGates
-assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.threeSelectorsThreeGates
-assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.complexComplexSimpleLookupGate
-assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.complexFixedSimpleLookupTwoGates
-assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.selectorProgramGate
-assert_axioms Halo2.Configure.PreservesGateSelectorsAllocated.fromEmpty
-assert_axioms Zcash.Circuits.Action.Circuit.configure_preservesGateSelectorsAllocated +native
-assert_axioms Halo2.extendCombination_length_conservation
-assert_axioms Halo2.mem_extendCombination_iff
-assert_axioms Halo2.extendCombination_remaining_length_le
-assert_axioms Halo2.exists_mem_buildCombinations
-assert_axioms Halo2.extendCombination_length_le
-assert_axioms Halo2.length_le_of_mem_buildCombinations
-assert_axioms Halo2.length_le_maxDegree_of_mem_buildCombinations
-assert_axioms Halo2.process_entry_root_bounds
-assert_axioms Halo2.process_entry_root_degree_bounds
-assert_axioms Halo2.exists_mem_process_entries
-assert_axioms Halo2.SelCompressMap.lookup_isSome_of_mem
-assert_axioms Halo2.process_lookup_isSome_of_mem
-assert_axioms Halo2.SelCompressMap.exists_mem_entries_of_lookup
-assert_axioms Halo2.deriveSelCompressMap_lookup_isSome_of_lt
-assert_axioms Halo2.gateSelectorsCovered_deriveSelCompressMap
-assert_axioms Zcash.Circuits.Fixtures.Layout.mem_selectorFixed_of_activation
-assert_axioms Zcash.Circuits.Fixtures.Layout.exists_activation_of_mem_selectorFixed
-assert_axioms selectorRootsWellFormed_process
-assert_axioms selectorRootsWellFormed_deriveSelCompressMap
-assert_axioms selectorActivationsRealized_of_selectorFixed
-assert_axioms selectorActivationsRealized_of_fixedRowPolynomials
-assert_axioms selectorScale_ne_zero_of_root
-assert_axioms selectorScale_ne_zero_of_environment
-assert_axioms selectorScale_ne_zero_of_enabledGate
-assert_axioms permutationLastEvalsWellFormed_of_assemble?_eq_some
-assert_axioms eval_permutationDataOfDecodedResolver_or_relation
+-- Locating a single rule inside the verifier's flat constraint list, fixing the permutation sets to
+-- committed running products, and chaining the two: the copy constraints now follow from the
+-- polynomial constraint identity itself, with no hypothesis about the shape of the checks.
+assert_axioms permChunkExpression_mem_permutationExpressions
+assert_axioms start_mem_permutationExpressions
+assert_axioms end_mem_permutationExpressions
+assert_axioms mem_subProofConstraints_of_mem_permutationExpressions
+assert_axioms mem_allConstraints_of_mem_subProofConstraints
+assert_axioms mem_constraintPolys_of_mem_permutationExpressions
+assert_axioms head?_deployedPermSets
+assert_axioms getLast?_deployedPermSets
+assert_axioms deployed_copy_constraints_of_identity
+-- The same for the lookup argument: its five rules located in the list, read row by row, and
+-- chained to the inclusion.
+assert_axioms lookupExpressions_eq
+assert_axioms mem_subProofConstraints_of_mem_lookupExpressions
+assert_axioms mem_constraintPolys_of_mem_lookupExpressions
+assert_axioms running_product_end_flipped
+assert_axioms lookup_row_recurrence
+assert_axioms lookup_row_zero
+assert_axioms lookup_row_step
+assert_axioms lookup_rules_dvd_of_identity
+assert_axioms deployed_lookup_subset_of_identity
+assert_axioms deployed_lookup_relation_of_identity
+-- Decompression: the θ-compressed membership becomes membership of whole rows, since the
+-- compression is the fold polynomial of the row's values and a good θ separates distinct tuples.
+assert_axioms foldPoly_sub
+assert_axioms tuple_eq_of_foldPoly_eval_eq
+assert_axioms compress_eval_eq_foldPoly
+assert_axioms deployed_lookup_tuple_of_identity
+-- Every new challenge surface priced the way `hgood` is: a uniform-challenge measure bound per
+-- root-set event — the fold split's `y`, the bridge's `β` and `γ`, the vanishing-factor escapes,
+-- and the decompression's pairwise `θ`. Sequential conditioning across the squeezes is the same
+-- coupling hook `hgood` carries, documented with the `hfold`/`hgood` surfaces.
+assert_axioms uniformChallenge_szBadSet_iUnion_le
+assert_axioms goodY_failure_measure_le
+assert_axioms perm_gamma_failure_measure_le
+assert_axioms perm_beta_failure_measure_le
+assert_axioms escape_measure_le
+assert_axioms theta_failure_measure_le
+-- The deployed capstone family over the full constraint system: the same witness chain — the batch
+-- family's opening and the constructed member decodes — with the constraint check on the decoded
+-- columns in place of the gate check, ending in `SnarkRelation` at `circuitSatViaConstraints`.
+assert_axioms SnarkRelationWithMemberConstraints.toSnarkRelation
+assert_axioms member_constraints_of_relation_and_batch
+assert_axioms orchard_verifier_vesta_member_constraints_deployed_x4 +native
+assert_axioms orchard_verifier_vesta_member_constraints_terminal +native
+assert_axioms orchard_verifier_vesta_member_constraints_terminal_derived +native
+-- The last links: the point check lifted to the polynomial identity, the permutation taken to be the
+-- one keygen builds from the circuit's copy constraints, the cells of every chunk covered at once,
+-- and circuit satisfaction defined by the whole constraint list rather than the gates alone.
+assert_axioms constraint_identity_of_hfold
+assert_axioms declared_equalities_of_running_product
+assert_axioms deployed_declared_equalities_of_identity
+assert_axioms prod_map_chunkCellPairs
+assert_axioms perm_copy_constraints_of_chunk_products
+assert_axioms chunkName_injective_of_coset
+assert_axioms deployed_declared_equalities_of_identity_chunks
+assert_axioms circuitSatViaConstraints_of_check
+assert_axioms orchard_verifier_sound_vesta_constraints +native
+-- Closing the loop: the capstone hands over an opening paired with satisfaction of the whole
+-- constraint list, and the two arguments' relations are read back out of that same predicate.
+assert_axioms snarkRelation_constraints
+assert_axioms declared_equalities_of_circuitSat
+assert_axioms lookup_relation_of_circuitSat
+assert_axioms lookup_tuple_of_circuitSat
+-- Several permutation chunks, not one: the chaining rule located in the list, read at row zero, and
+-- the chunks flattened into a single running product so the permutation acts on every cell.
+assert_axioms chain_mem_permutationExpressions
+assert_axioms running_product_chain
+assert_axioms deployed_copy_constraints_of_identity_chunks
 assert_axioms hgood_failure_priced
 assert_axioms hgood_of_good_challenge
+-- The UNCONDITIONAL decomposition: `hExtract` removed, the residual quantified as the
+-- clean-but-not-extracted measure term (bounded by the multiopen budget under the coupling
+-- documented in `Composition.Decomposition`, not assumed here).
 assert_axioms ComputedAlgebraicFSFamily.snarkExtractionFailureEvent_subset_union +native
 assert_axioms snarkExtraction_prob_le_of_generatorRO_textbookDL_decomposed +native
+-- The forking reduction: the residual closed to the multiopen budget `t` by the fibered single-slot
+-- counting bound, transported along the challenge-uniformity coupling. The coupling `hcouple` and the
+-- accept containment `hcont` are the isolated non-circular premises (documented in `Composition.Residual`);
+-- the reduction itself is proven.
 assert_axioms fibered_accept_below_threshold_le
 assert_axioms residual_le_of_coupling_containment
 assert_axioms snarkExtraction_prob_le_of_generatorRO_textbookDL_unconditional +native
+-- The adaptive-coupling ladder (`Soundness.Composition.Assembly`): the residual bounded through the
+-- honest random-oracle query loss instead of the over-idealised exact pushforward. Its two inputs
+-- are the family `PeelDecode` and the honest-completeness containment `hcont`.
 assert_axioms independentProductPMF_fiber_bound
 assert_axioms residual_le_via_ladder +native
 assert_axioms snarkExtraction_prob_le_of_generatorRO_textbookDL_ladder +native
+-- The ladder at the concrete multiopen prefixes (`Soundness.Composition.Prefixes`): the four `x₁`–`x₄`
+-- squeeze points, the decode's chain half discharged outright, and its state half reduced to the
+-- level-0 factorisation of the accept event (`exists_multiopenStateAt_iff`, an iff — so the
+-- factorisation is exactly the standing decode-side input, not a convenient sufficient condition).
 assert_axioms multiopenPrefixReads_eq +native
 assert_axioms multiopenLen_lt
 assert_axioms multiopenChainAt_prefixes +native
@@ -774,22 +674,34 @@ assert_axioms multiopenChainAt_ne
 assert_axioms exists_multiopenStateAt_iff +native
 assert_axioms multiopenPeelDecode_of_factors +native
 assert_axioms snarkExtraction_prob_le_of_generatorRO_textbookDL_multiopen +native
+-- The honest-completeness half of `hcont` (`Soundness.Composition.Completeness`): the bad event priced
+-- unconditionally, and the landing side reduced to the AGM-completeness supply, itself built from a
+-- clean opening's forked transcript.
 assert_axioms memberBadEvent_measure_le
 assert_axioms memberBadEvent_of_supply
 assert_axioms honestCompletenessSupply_of_forkedTranscript
 assert_axioms forkedTranscript_nonempty_of_instanceOpening +native
 assert_axioms honestCompletenessSupply_of_instanceOpening +native
+-- The supply's own inputs, discharged: the three IPA fold challenges are exhibited in `Fp`, deployed
+-- acceptance is reduced to the family's accept predicate, and the value shift is forced by the
+-- witness tie. What is left in `honestCompletenessSupply_of_cleanOpening` is the tie itself.
 assert_axioms exists_ipaFoldChallenges
 assert_axioms deployedAccepts_of_verifierEq
 assert_axioms honestCompletenessSupply_of_openings_agree +native
 assert_axioms honestCompletenessSupply_of_cleanOpening +native
+-- The witness tie is no longer a premise: the clean opening and the batch witness commit to the
+-- same element, so either they agree (supply) or they collide (relation).
 assert_axioms honestCompletenessSupply_or_relation +native
+-- Acceptance through `assemble?`: the deployed decision excludes the verifier's rejection paths,
+-- which `DeployedIpaVerifierEq` does not, so the supply carries no `assemble? = some m` premise.
 assert_axioms fullAlgebraicAcceptDeployed +native
 assert_axioms fullAlgebraicAccept_of_deployed +native
 assert_axioms honestCompletenessSupply_of_cleanOpening_deployed +native
 assert_axioms snarkExtractionFailureEventDeployed +native
 assert_axioms snarkExtractionFailureEventDeployed_subset +native
 assert_axioms snarkExtractionFailureEventDeployed_measure_le +native
+-- The adaptive coupling (`Forking.AdaptiveCoupling`): escapes blind by overwriting rather than by
+-- decoding, the per-level averaging bound, and the ladder logic separated from the weights.
 assert_axioms updEsc
 assert_axioms updEsc_blind
 assert_axioms card_heavy_mul_le

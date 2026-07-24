@@ -25,16 +25,6 @@ namespace Zcash.Snark
 open Polynomial Finset
 open scoped ENNReal
 
-/-- Polynomial-valued lookup evaluations.  The next product and previous permuted-input openings
-are represented by composing with `ω X` and `ω⁻¹ X`, respectively. -/
-noncomputable def lookupEvalPolys (omega : Fp) (z a s : Polynomial Fp) :
-    LookupEval (Polynomial Fp) where
-  productEval := z
-  productNextEval := z.comp (C omega * X)
-  permutedInputEval := a
-  permutedInputInvEval := a.comp (C omega⁻¹ * X)
-  permutedTableEval := s
-
 @[simp] theorem lookupEvalPolys_productEval (omega : Fp) (z a s : Polynomial Fp) :
     (lookupEvalPolys omega z a s).productEval = z := rfl
 

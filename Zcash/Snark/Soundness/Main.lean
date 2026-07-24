@@ -249,8 +249,7 @@ theorem orchard_verifier_deployed_opening_of_forked [DecidableEq G] [Inhabited G
     (ch : Challenges shape.k Fp) {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp}
     {circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop}
     (fs : ForkedTranscript urs hk vk instanceCommitment ps ch b z blind)
-    (hclean : IpaAcceptV urs.g b fs.openedCommitment
-      (multiopenValue vk instanceCommitment ps ch)
+    (hclean : IpaAcceptV urs.g b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
       (projTree fs.tree))
     (hcirc : ∀ a, IpaRelation urs fs.openedCommitment b
       (multiopenValue vk instanceCommitment ps ch) a → circuitSat a)
@@ -276,13 +275,11 @@ theorem orchard_verifier_deployed_constraint_of_forked [DecidableEq G] [Inhabite
     (decodeAdvice decodeInstance : (Fin (2 ^ urs.k) → Fp) → (ℕ → Polynomial Fp))
     (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp)
     (fs : ForkedTranscript urs hk vk instanceCommitment ps ch b z blind)
-    (hclean : IpaAcceptV urs.g b fs.openedCommitment
-      (multiopenValue vk instanceCommitment ps ch)
+    (hclean : IpaAcceptV urs.g b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
       (projTree fs.tree))
     (hquot : ∀ a, IpaRelation urs fs.openedCommitment b
       (multiopenValue vk instanceCommitment ps ch) a →
-      quotientCheck (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates)
-        hpoly deg x)
+      quotientCheck (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates) hpoly deg x)
     (hgood : ∀ a, IpaRelation urs fs.openedCommitment b
       (multiopenValue vk instanceCommitment ps ch) a →
       combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates ≠ hpoly * (X ^ deg - 1) →

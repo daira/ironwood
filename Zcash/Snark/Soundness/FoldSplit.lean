@@ -199,4 +199,50 @@ theorem constraints_dvd_of_good_y (cs : List (Polynomial Fp)) (hq : Polynomial F
   obtain ⟨j, hj⟩ := exists_foldSplitWitness_ne_zero hn hmem hdvd
   exact (not_mem_szBadSet.mp (hgoodY j)) hj (eval_foldSplitWitness_eq_zero hn hfold j)
 
+
+/-! ## Tuples under the fold
+
+The lookup argument compresses each row of expressions into one scalar by `θ` — the same `acc·θ + v`
+fold. Two rows that agree compressed need not agree as tuples; they do once `θ` avoids the roots of
+the difference of their fold polynomials. This is the decompression step a tuple-level lookup
+statement needs. -/
+
+/-- The fold polynomial is linear in the list: subtracting two folds of equal length folds the
+pointwise differences. -/
+theorem foldPoly_sub {l₁ l₂ : List Fp} (hlen : l₁.length = l₂.length) :
+    foldPoly l₁ - foldPoly l₂ = foldPoly (List.zipWith (· - ·) l₁ l₂) := by
+  induction l₁ using List.reverseRecOn generalizing l₂ with
+  | nil =>
+      obtain rfl : l₂ = [] := List.eq_nil_of_length_eq_zero (by simpa using hlen.symm)
+      simp
+  | append_singleton t₁ v₁ ih =>
+      rcases l₂.eq_nil_or_concat with rfl | ⟨t₂, v₂, rfl⟩
+      · simp at hlen
+      · have hlen' : t₁.length = t₂.length := by
+          simpa [List.concat_eq_append] using hlen
+        rw [List.concat_eq_append, List.zipWith_append (h := hlen'), foldPoly_concat,
+          foldPoly_concat, List.zipWith_cons_cons, List.zipWith_nil_right, foldPoly_concat,
+          ← ih hlen', map_sub]
+        ring
+
+/-- **Decompression.** Equal folds at a `θ` outside the difference's roots force equal tuples. -/
+theorem tuple_eq_of_foldPoly_eval_eq {u w : List Fp} (hlen : u.length = w.length) {θ : Fp}
+    (hgood : θ ∉ szBadSet (foldPoly u - foldPoly w))
+    (heq : (foldPoly u).eval θ = (foldPoly w).eval θ) : u = w := by
+  by_contra hne
+  have hD : foldPoly u - foldPoly w ≠ 0 := by
+    rw [foldPoly_sub hlen]
+    intro h0
+    apply hne
+    have hz := (foldPoly_eq_zero_iff _).mp h0
+    refine List.ext_getElem hlen fun i hi hi' => ?_
+    have hmem : u[i] - w[i] ∈ List.zipWith (· - ·) u w := by
+      have hilt : i < (List.zipWith (· - ·) u w).length := by
+        simpa [List.length_zipWith, hlen] using hi'
+      have := List.getElem_mem hilt
+      simpa [List.getElem_zipWith] using this
+    exact sub_eq_zero.mp (hz _ hmem)
+  refine (not_mem_szBadSet.mp hgood) hD ?_
+  rw [eval_sub, heq, sub_self]
+
 end Zcash.Snark

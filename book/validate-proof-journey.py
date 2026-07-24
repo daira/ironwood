@@ -81,13 +81,23 @@ def fetch_source_if_missing(source):
     )
     if present.returncode == 0:
         return
-    subprocess.run(
-        ["git", "fetch", "--no-tags", "--depth=100", "origin", source["fetch"]],
+    # CI checks out a depth-1 clone of the merge commit, so a pinned commit is normally absent and
+    # has to come from its own ref. Fetch it in full: `--depth` leaves the object missing whenever
+    # the pin sits outside the truncated history, which surfaces later as an unreadable source file
+    # rather than as the fetch failure it is. Report a failure here for the same reason.
+    fetched = subprocess.run(
+        ["git", "fetch", "--no-tags", "origin", source["fetch"]],
         cwd=REPO_DIR,
         check=False,
         capture_output=True,
         text=True,
     )
+    if fetched.returncode != 0:
+        print(
+            f"proof journey validation: could not fetch {source['fetch']} for {source['label']}: "
+            f"{fetched.stderr.strip()}",
+            file=sys.stderr,
+        )
 
 
 def source_text(errors, source, source_path):

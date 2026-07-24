@@ -22,26 +22,25 @@ namespace Zcash.Snark
 open Polynomial
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
-variable {shape : Shape} (instanceCommitment : Fin shape.numProofs → ℕ → G)
 
 /-- The points of deployed point set `j`, as a finite set. -/
-noncomputable def deployedSetPts [DecidableEq G] [Inhabited G]
-    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+noncomputable def deployedSetPts [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (j : ℕ) : Finset Fp :=
   ((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD j []).toFinset
 
 /-- The union of all the deployed point sets — the roots of the vanishing polynomial `D`. -/
-noncomputable def deployedAllPts [DecidableEq G] [Inhabited G]
-    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
+noncomputable def deployedAllPts [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
     Finset Fp :=
   (Finset.range (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.length).biUnion
-    (fun j => deployedSetPts (instanceCommitment := instanceCommitment) vk ps ch j)
+    (fun j => deployedSetPts vk instanceCommitment ps ch j)
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- Each deployed point set sits inside the union of all points. -/
-theorem deployedSetPts_subset [DecidableEq G] [Inhabited G]
-    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
-    (j : ℕ) : deployedSetPts (instanceCommitment := instanceCommitment) vk ps ch j ⊆ deployedAllPts (instanceCommitment := instanceCommitment) vk ps ch := by
+theorem deployedSetPts_subset [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (j : ℕ) : deployedSetPts vk instanceCommitment ps ch j ⊆ deployedAllPts vk instanceCommitment ps ch := by
   rcases lt_or_ge j (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.length
     with hj | hj
   · exact Finset.subset_biUnion_of_mem _ (Finset.mem_range.mpr hj)
@@ -53,16 +52,16 @@ theorem deployedSetPts_subset [DecidableEq G] [Inhabited G]
 `ch.x1`-power fold of its decoded member columns' evaluations. Immediate from the member decode's
 `reconstruct` field and `commitGen`'s linearity (`coeffsToPoly_eval` both ways). This is the algebraic
 link the x₁ un-batch (F2) runs over. -/
-theorem member_aggregate_eval_bridge [DecidableEq G] [Inhabited G]
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+theorem member_aggregate_eval_bridge [DecidableEq G] [Inhabited G] {shape : Shape}
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     {b a : Fin (2 ^ urs.k) → Fp} {pU pW : Fp}
-    (pbatch : OpenedBatchOpenings urs b (x4BatchCommitments (instanceCommitment := instanceCommitment) urs hk vk ps ch)
-      (x4BatchEvals (instanceCommitment := instanceCommitment) vk ps ch) a pU pW)
-    (i : ℕ) (hi : i < deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch)
-    (md : OpenedMemberDecode (instanceCommitment := instanceCommitment) urs hk vk ps ch pbatch i hi) (node : Fp) :
-    (openedDecodedCols pbatch ⟨deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - i, by omega⟩).eval node
-      = ∑ m : Fin (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length,
+    (pbatch : OpenedBatchOpenings urs b (x4BatchCommitments urs hk vk instanceCommitment ps ch)
+      (x4BatchEvals vk instanceCommitment ps ch) a pU pW)
+    (i : ℕ) (hi : i < deployedX4PairCount vk instanceCommitment ps ch)
+    (md : OpenedMemberDecode urs hk vk instanceCommitment ps ch pbatch i hi) (node : Fp) :
+    (openedDecodedCols pbatch ⟨deployedX4PairCount vk instanceCommitment ps ch - 1 - i, by omega⟩).eval node
+      = ∑ m : Fin (deployedSetQueries vk instanceCommitment ps ch i).length,
           ch.x1 ^ (m : ℕ) * (coeffsToPoly (md.cols m)).eval node := by
   rw [openedDecodedCols, coeffsToPoly_eval, md.reconstruct, commitGen_sum]
   refine Finset.sum_congr rfl (fun m _ => ?_)
@@ -72,16 +71,16 @@ omit [AddCommGroup G] [Module Fp G] in
 /-- **F4 (deployed): a routed query's point is one of its set's points.** The deployed specialization
 of `constructIntermediateSets_point_mem`: if `q` is one of the verifier's opening queries and its
 commitment slot names member `m` of deployed point set `si` (`deployedSetCommIds`), then `q`'s
-opening point lies in `deployedSetPts (instanceCommitment := instanceCommitment) vk ps ch si`. This is the bridge the layout hypotheses
+opening point lies in `deployedSetPts vk instanceCommitment ps ch si`. This is the bridge the layout hypotheses
 (`hadviceLayout`/`hinstanceLayout`) feed the value check: it turns the member's slot identity into
 the rotated query point being a genuine node of the set, so the per-set node binding applies there. -/
-theorem deployed_query_point_mem [DecidableEq G] [Inhabited G]
-    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+theorem deployed_query_point_mem [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     {q : VerifierQuery shape.k Fp G} (hq : q ∈ assembleQueries vk instanceCommitment ps ch)
     {si m : ℕ} {d₀ : CommitmentId}
-    (hlt : m < (deployedSetCommIds (instanceCommitment := instanceCommitment) vk ps ch si).length)
-    (hid : (deployedSetCommIds (instanceCommitment := instanceCommitment) vk ps ch si).getD m d₀ = q.commId) :
-    q.point ∈ deployedSetPts (instanceCommitment := instanceCommitment) vk ps ch si := by
+    (hlt : m < (deployedSetCommIds vk instanceCommitment ps ch si).length)
+    (hid : (deployedSetCommIds vk instanceCommitment ps ch si).getD m d₀ = q.commId) :
+    q.point ∈ deployedSetPts vk instanceCommitment ps ch si := by
   simp only [deployedSetCommIds] at hlt hid
   rw [deployedSetPts, List.mem_toFinset]
   exact constructIntermediateSets_point_mem (assembleQueries vk instanceCommitment ps ch) hq hlt hid

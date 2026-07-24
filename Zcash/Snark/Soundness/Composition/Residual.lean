@@ -29,7 +29,7 @@ namespace Zcash.Snark
 -- pull the whole `constructIntermediateSets (assembleQueries …)` computation through `whnf`.
 -- Sealing them keeps those checks syntactic; the proofs below use their equation lemmas.
 attribute [local irreducible] deployedSetQueries deployedSetCommIds deployedX4PairCount
-  x4BatchCommitments x4BatchEvals deployedSetPts deployedAllPts
+  x4BatchCommitments x4BatchEvals
 
 open scoped ENNReal
 
@@ -128,41 +128,30 @@ budget. Isolating it here leaves only the coupling **(a)** and the pure structur
 **(b)** as the standing non-circular premises of the forking argument. -/
 theorem memberJointAccept_measure_le_of_not_extraction {G : Type*} [AddCommGroup G] [Module Fp G]
     [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
-    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     {a₀ : Fin (2 ^ urs.k) → Fp} {pU pW : Fp}
     {pbatch : OpenedBatchOpenings urs (evalVector urs.k ch.x3)
-      (x4BatchCommitments (instanceCommitment := instanceCommitment) urs hk vk ps ch) (x4BatchEvals (instanceCommitment := instanceCommitment) vk ps ch) a₀ pU pW}
-    (i : ℕ) (hi : i < deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch)
-    (md : OpenedMemberDecode (instanceCommitment := instanceCommitment) urs hk vk ps ch pbatch i hi)
+      (x4BatchCommitments urs hk vk instanceCommitment ps ch) (x4BatchEvals vk instanceCommitment ps ch) a₀ pU pW}
+    (i : ℕ) (hi : i < deployedX4PairCount vk instanceCommitment ps ch)
+    (md : OpenedMemberDecode urs hk vk instanceCommitment ps ch pbatch i hi)
     (b₂f : Fp → Fin (2 ^ urs.k) → Fp)
-    (havoid : ∀ (ξv ζv χv : Fp),
-      OpenedX3Accept (instanceCommitment := instanceCommitment) urs hk vk
-        ((canonicalX2Run urs hk vk instanceCommitment ((canonicalX1Run urs hk vk instanceCommitment ps ch ξv).spliced ps)
-            ((canonicalX1Run urs hk vk instanceCommitment ps ch ξv).challenges ch ξv) (b₂f ξv) ζv).spliced
-          ((canonicalX1Run urs hk vk instanceCommitment ps ch ξv).spliced ps))
-        ((canonicalX2Run urs hk vk instanceCommitment ((canonicalX1Run urs hk vk instanceCommitment ps ch ξv).spliced ps)
-            ((canonicalX1Run urs hk vk instanceCommitment ps ch ξv).challenges ch ξv) (b₂f ξv) ζv).challenges
-          ((canonicalX1Run urs hk vk instanceCommitment ps ch ξv).challenges ch ξv) ζv)
-        (evalVector urs.k χv) χv →
-      ∀ k', χv ∉ deployedSetPts (instanceCommitment := instanceCommitment) vk ((canonicalX1Run urs hk vk instanceCommitment ps ch ξv).spliced ps)
-        ((canonicalX1Run urs hk vk instanceCommitment ps ch ξv).challenges ch ξv) k')
     (hnex : ¬ ∀ (idx : Fin ((constructIntermediateSets
           (assembleQueries vk instanceCommitment ps ch)).points.getD i []).length)
-        (m₀ : Fin (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length),
+        (m₀ : Fin (deployedSetQueries vk instanceCommitment ps ch i).length),
         (coeffsToPoly (md.cols m₀)).eval
             (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i [])[idx])
-          = ((deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).getD (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
+          = ((deployedSetQueries vk instanceCommitment ps ch i).getD (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
         ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w) :
     (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
         (memberJointAccept urs hk vk instanceCommitment ps ch b₂f)
-      ≤ (((deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
-        + (((deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
-          + ((max (2 ^ urs.k) (deployedAllPts (instanceCommitment := instanceCommitment) vk ps ch).card
-              + (deployedAllPts (instanceCommitment := instanceCommitment) vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
-          + (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch : ℝ≥0∞) / Fintype.card Fp) :=
-  (deployed_member_budget urs hk vk instanceCommitment ps ch i hi md b₂f havoid).resolve_right hnex
+      ≤ (((deployedSetQueries vk instanceCommitment ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+        + (((deployedX4PairCount vk instanceCommitment ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+          + ((max (2 ^ urs.k) (deployedAllPts vk instanceCommitment ps ch).card
+              + (deployedAllPts vk instanceCommitment ps ch).card
+              + (deployedAllPts vk instanceCommitment ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
+          + (deployedX4PairCount vk instanceCommitment ps ch : ℝ≥0∞) / Fintype.card Fp) :=
+  (deployed_member_budget urs hk vk instanceCommitment ps ch i hi md b₂f).resolve_right hnex
 
 /-- **Honest completeness gives joint accept membership — the structural half of `hcont`.** When
 the honest transcript deployed-accepts and admits a Fiat–Shamir tree at the honest IPA base with an
@@ -178,7 +167,7 @@ theorem memberJointAccept_of_honest {G : Type*} [AddCommGroup G] [Module Fp G] [
     (hacc : DeployedAccepts urs hk vk instanceCommitment ps ch)
     (aR : Fin (2 ^ urs.k) → Fp) (pUR pWR : Fp)
     (hbatch : Nonempty (OpenedBatchOpenings urs (evalVector urs.k ch.x3)
-      (x4BatchCommitments (instanceCommitment := instanceCommitment) urs hk vk ps ch) (x4BatchEvals (instanceCommitment := instanceCommitment) vk ps ch) aR pUR pWR)) :
+      (x4BatchCommitments urs hk vk instanceCommitment ps ch) (x4BatchEvals vk instanceCommitment ps ch) aR pUR pWR)) :
     (ch.x1, ch.x2, ch.x3, ch.x4) ∈
       memberJointAccept urs hk vk instanceCommitment ps ch (fun _ => evalVector urs.k ch.x3) := by
   -- the honest run's clean accepting IPA opening at the honest base (off the DL branch)
@@ -201,13 +190,13 @@ theorem memberJointAccept_of_honest {G : Type*} [AddCommGroup G] [Module Fp G] [
   have hX3 : X3RunAccepts urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3) ch.x3 (honestX3Run ps ch) :=
     hRunAcc
   -- the four honest-run accept events (bases already honest)
-  have h1 : OpenedX1PinnedAccept (instanceCommitment := instanceCommitment) urs hk vk ps ch ch.x1 := ⟨honestX1Run ps ch, hX1⟩
-  have h2 : OpenedX2Accept (instanceCommitment := instanceCommitment) urs hk vk ps ch (evalVector urs.k ch.x3) ch.x2 :=
+  have h1 : OpenedX1PinnedAccept urs hk vk instanceCommitment ps ch ch.x1 := ⟨honestX1Run ps ch, hX1⟩
+  have h2 : OpenedX2Accept urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3) ch.x2 :=
     ⟨honestX2Run ps ch, hX2⟩
-  have h3 : OpenedX3Accept (instanceCommitment := instanceCommitment) urs hk vk ps ch (evalVector urs.k ch.x3) ch.x3 :=
+  have h3 : OpenedX3Accept urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3) ch.x3 :=
     ⟨honestX3Run ps ch, hX3⟩
-  have h4 : OpenedX4Accept (instanceCommitment := instanceCommitment) urs hk vk ps ch (evalVector urs.k ch.x3) ch.x4 :=
-    openedX4Accept_of_deployedAccepts (instanceCommitment := instanceCommitment) urs hk vk ps ch hz hnrel (honestX4Run ps ch) ch.x4 hFS hacc
+  have h4 : OpenedX4Accept urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3) ch.x4 :=
+    openedX4Accept_of_deployedAccepts urs hk vk instanceCommitment ps ch hz hnrel (honestX4Run ps ch) ch.x4 hFS hacc
   -- collapse the canonical selectors to the honest runs and discharge each level
   have hc1 := canonicalX1Run_honest urs hk vk instanceCommitment ps ch hX1
   have hc2 := canonicalX2Run_honest urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3) hX2
@@ -238,9 +227,9 @@ theorem memberJointAccept_of_honest_of_floor {G : Type*} [AddCommGroup G] [Modul
     {z blind : Fp} (hz : z ≠ 0)
     (hFS : FiatShamirTree urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3) z blind)
     (hacc : DeployedAccepts urs hk vk instanceCommitment ps ch)
-    (hprob4 : ((deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch : ℝ≥0∞)) / Fintype.card Fp
+    (hprob4 : ((deployedX4PairCount vk instanceCommitment ps ch : ℝ≥0∞)) / Fintype.card Fp
       < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
-          (OpenedX4Accept (instanceCommitment := instanceCommitment) urs hk vk ps ch (evalVector urs.k ch.x3)))) :
+          (OpenedX4Accept urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3)))) :
     (ch.x1, ch.x2, ch.x3, ch.x4) ∈
       memberJointAccept urs hk vk instanceCommitment ps ch (fun _ => evalVector urs.k ch.x3) := by
   have fs : ForkedTranscript urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3) z blind :=
@@ -249,7 +238,7 @@ theorem memberJointAccept_of_honest_of_floor {G : Type*} [AddCommGroup G] [Modul
       (multiopenValue vk instanceCommitment ps ch) blind fs.tree fs.accepts with hclean | hrel
   · have ext := ipaRelation_extract urs (evalVector urs.k ch.x3) fs.openedCommitment
       (multiopenValue vk instanceCommitment ps ch) (projTree fs.tree) hclean
-    have batch := openedX4Rewind_of_x4Prob_forked (instanceCommitment := instanceCommitment) urs hk vk ps ch fs
+    have batch := openedX4Rewind_of_x4Prob_forked urs hk vk instanceCommitment ps ch fs
       ⟨projTree fs.tree, hclean⟩ hprob4 ext.1 ext.2
     exact memberJointAccept_of_honest urs hk vk instanceCommitment ps ch hnrel hz hFS hacc
       ext.1 fs.pU fs.pW ⟨batch⟩
@@ -271,21 +260,22 @@ noncomputable def memberBadEvent {G : Type*} [AddCommGroup G] [Module Fp G]
       w ∈ memberJointAccept urs hk vk instanceCommitment ps ch (fun _ => evalVector urs.k ch.x3) ∧
       (PMF.uniformOfFintype (Fp × Fp × Fp × Fp)).toOuterMeasure
           (memberJointAccept urs hk vk instanceCommitment ps ch (fun _ => evalVector urs.k ch.x3))
-        ≤ (((deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
-          + (((deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
-            + ((max (2 ^ urs.k) (deployedAllPts (instanceCommitment := instanceCommitment) vk ps ch).card
-                + (deployedAllPts (instanceCommitment := instanceCommitment) vk ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
-            + (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch : ℝ≥0∞) / Fintype.card Fp)}
+        ≤ (((deployedSetQueries vk instanceCommitment ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+          + (((deployedX4PairCount vk instanceCommitment ps ch - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+            + ((max (2 ^ urs.k) (deployedAllPts vk instanceCommitment ps ch).card
+                + (deployedAllPts vk instanceCommitment ps ch).card
+                + (deployedAllPts vk instanceCommitment ps ch).card : ℕ) : ℝ≥0∞) / Fintype.card Fp
+            + (deployedX4PairCount vk instanceCommitment ps ch : ℝ≥0∞) / Fintype.card Fp)}
     ∪ {w : Fp × Fp × Fp × Fp |
-        OpenedX4Accept (instanceCommitment := instanceCommitment) urs hk vk ps ch (evalVector urs.k ch.x3) w.2.2.2 ∧
+        OpenedX4Accept urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3) w.2.2.2 ∧
         (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
-            (OpenedX4Accept (instanceCommitment := instanceCommitment) urs hk vk ps ch (evalVector urs.k ch.x3)))
-          ≤ (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch : ℝ≥0∞) / Fintype.card Fp}
+            (OpenedX4Accept urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3)))
+          ≤ (deployedX4PairCount vk instanceCommitment ps ch : ℝ≥0∞) / Fintype.card Fp}
     ∪ {w : Fp × Fp × Fp × Fp |
-        OpenedX1Accept (instanceCommitment := instanceCommitment) urs hk vk ps ch w.1 ∧
+        OpenedX1Accept urs hk vk instanceCommitment ps ch w.1 ∧
         (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
-            (OpenedX1Accept (instanceCommitment := instanceCommitment) urs hk vk ps ch))
-          ≤ (((deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp}
+            (OpenedX1Accept urs hk vk instanceCommitment ps ch))
+          ≤ (((deployedSetQueries vk instanceCommitment ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp}
 
 open Classical in
 /-- **The containment, discharged: a clean-but-not-extracted honest tuple lands in the priced bad
@@ -301,36 +291,23 @@ theorem honest_tuple_mem_memberBadEvent {G : Type*} [AddCommGroup G] [Module Fp 
     {z blind : Fp} (hz : z ≠ 0)
     (hFS : FiatShamirTree urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3) z blind)
     (hacc : DeployedAccepts urs hk vk instanceCommitment ps ch)
-    (i : ℕ) (hi : i < deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch)
-    (hlen : 0 < (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length)
-    (havoid : ∀ (ξv ζv χv : Fp),
-      OpenedX3Accept (instanceCommitment := instanceCommitment) urs hk vk
-        ((canonicalX2Run urs hk vk instanceCommitment ((canonicalX1Run urs hk vk instanceCommitment ps ch ξv).spliced ps)
-            ((canonicalX1Run urs hk vk instanceCommitment ps ch ξv).challenges ch ξv)
-            (evalVector urs.k ch.x3) ζv).spliced
-          ((canonicalX1Run urs hk vk instanceCommitment ps ch ξv).spliced ps))
-        ((canonicalX2Run urs hk vk instanceCommitment ((canonicalX1Run urs hk vk instanceCommitment ps ch ξv).spliced ps)
-            ((canonicalX1Run urs hk vk instanceCommitment ps ch ξv).challenges ch ξv)
-            (evalVector urs.k ch.x3) ζv).challenges
-          ((canonicalX1Run urs hk vk instanceCommitment ps ch ξv).challenges ch ξv) ζv)
-        (evalVector urs.k χv) χv →
-      ∀ k', χv ∉ deployedSetPts (instanceCommitment := instanceCommitment) vk ((canonicalX1Run urs hk vk instanceCommitment ps ch ξv).spliced ps)
-        ((canonicalX1Run urs hk vk instanceCommitment ps ch ξv).challenges ch ξv) k')
+    (i : ℕ) (hi : i < deployedX4PairCount vk instanceCommitment ps ch)
+    (hlen : 0 < (deployedSetQueries vk instanceCommitment ps ch i).length)
     (hnex : ∀ (a₀ : Fin (2 ^ urs.k) → Fp) (pU pW : Fp)
       (pbatch : OpenedBatchOpenings urs (evalVector urs.k ch.x3)
-        (x4BatchCommitments (instanceCommitment := instanceCommitment) urs hk vk ps ch) (x4BatchEvals (instanceCommitment := instanceCommitment) vk ps ch) a₀ pU pW)
-      (md : OpenedMemberDecode (instanceCommitment := instanceCommitment) urs hk vk ps ch pbatch i hi),
+        (x4BatchCommitments urs hk vk instanceCommitment ps ch) (x4BatchEvals vk instanceCommitment ps ch) a₀ pU pW)
+      (md : OpenedMemberDecode urs hk vk instanceCommitment ps ch pbatch i hi),
       ¬ ∀ (idx : Fin ((constructIntermediateSets
             (assembleQueries vk instanceCommitment ps ch)).points.getD i []).length)
-          (m₀ : Fin (deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length),
+          (m₀ : Fin (deployedSetQueries vk instanceCommitment ps ch i).length),
           (coeffsToPoly (md.cols m₀)).eval
               (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i [])[idx])
-            = ((deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).getD (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
+            = ((deployedSetQueries vk instanceCommitment ps ch i).getD (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
           ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w) :
     (ch.x1, ch.x2, ch.x3, ch.x4) ∈ memberBadEvent urs hk vk instanceCommitment ps ch i := by
-  by_cases hp4 : ((deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch : ℝ≥0∞)) / Fintype.card Fp
+  by_cases hp4 : ((deployedX4PairCount vk instanceCommitment ps ch : ℝ≥0∞)) / Fintype.card Fp
       < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
-          (OpenedX4Accept (instanceCommitment := instanceCommitment) urs hk vk ps ch (evalVector urs.k ch.x3)))
+          (OpenedX4Accept urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3)))
   · -- the x₄ floor holds: produce the batch from the honest fork's clean opening
     have fs : ForkedTranscript urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3) z blind :=
       ForkedTranscript.ofAccepts urs hk vk instanceCommitment ps ch hacc hFS
@@ -340,27 +317,27 @@ theorem honest_tuple_mem_memberBadEvent {G : Type*} [AddCommGroup G] [Module Fp 
     · exact absurd hrel hnrel
     have ext := ipaRelation_extract urs (evalVector urs.k ch.x3) fs.openedCommitment
       (multiopenValue vk instanceCommitment ps ch) (projTree fs.tree) hclean
-    have batch := openedX4Rewind_of_x4Prob_forked (instanceCommitment := instanceCommitment) urs hk vk ps ch fs
+    have batch := openedX4Rewind_of_x4Prob_forked urs hk vk instanceCommitment ps ch fs
       ⟨projTree fs.tree, hclean⟩ hp4 ext.1 ext.2
-    by_cases hp1 : (((deployedSetQueries (instanceCommitment := instanceCommitment) vk ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
+    by_cases hp1 : (((deployedSetQueries vk instanceCommitment ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
         < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
-            (OpenedX1Accept (instanceCommitment := instanceCommitment) urs hk vk ps ch))
+            (OpenedX1Accept urs hk vk instanceCommitment ps ch))
     · -- both floors: member decode + joint membership + the budget's below-threshold branch
-      have md := openedMemberDecode_of_x1Prob (instanceCommitment := instanceCommitment) urs hk vk ps ch batch i hi hlen hp1 hacc
+      have md := openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch batch i hi hlen hp1 hacc
       have hmem : (ch.x1, ch.x2, ch.x3, ch.x4) ∈
           memberJointAccept urs hk vk instanceCommitment ps ch (fun _ => evalVector urs.k ch.x3) :=
         memberJointAccept_of_honest urs hk vk instanceCommitment ps ch hnrel hz hFS hacc
           ext.1 fs.pU fs.pW ⟨batch⟩
       have hbudget := memberJointAccept_measure_le_of_not_extraction urs hk vk instanceCommitment ps ch i hi md
-        (fun _ => evalVector urs.k ch.x3) havoid (hnex ext.1 fs.pU fs.pW batch md)
+        (fun _ => evalVector urs.k ch.x3) (hnex ext.1 fs.pU fs.pW batch md)
       exact Or.inl (Or.inl ⟨hmem, hbudget⟩)
     · -- x₁ floor fails: the batch witnesses the honest x₁ accept
-      have hx₁ : OpenedX1Accept (instanceCommitment := instanceCommitment) urs hk vk ps ch ch.x1 :=
+      have hx₁ : OpenedX1Accept urs hk vk instanceCommitment ps ch ch.x1 :=
         ⟨honestX1Run ps ch, evalVector urs.k ch.x3, ext.1, fs.pU, fs.pW, hacc, ⟨batch⟩⟩
       exact Or.inr ⟨hx₁, not_lt.mp hp1⟩
   · -- x₄ floor fails: the honest slot's opened accept (deployed→opened bridge)
-    have h4 : OpenedX4Accept (instanceCommitment := instanceCommitment) urs hk vk ps ch (evalVector urs.k ch.x3) ch.x4 :=
-      openedX4Accept_of_deployedAccepts (instanceCommitment := instanceCommitment) urs hk vk ps ch hz hnrel
+    have h4 : OpenedX4Accept urs hk vk instanceCommitment ps ch (evalVector urs.k ch.x3) ch.x4 :=
+      openedX4Accept_of_deployedAccepts urs hk vk instanceCommitment ps ch hz hnrel
         (honestX4Run ps ch) ch.x4 hFS hacc
     exact Or.inl (Or.inr ⟨h4, not_lt.mp hp4⟩)
 
@@ -529,7 +506,7 @@ point is some query's opening point). -/
 theorem deployedX4PairCount_le_numPointSets {G : Type*} [AddCommGroup G] [Module Fp G]
     [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
-    deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch ≤ shape.numPointSets := by
+    deployedX4PairCount vk instanceCommitment ps ch ≤ shape.numPointSets := by
   simp only [deployedX4PairCount, deployedX4Pairs, List.length_zip, List.length_ofFn]
   exact min_le_right _ _
 
@@ -582,9 +559,9 @@ theorem constructIntermediateSets_points_getD_mem_queries {k : ℕ} {F G' : Type
 theorem deployedAllPts_card_le {G : Type*} [AddCommGroup G] [Module Fp G]
     [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
-    (deployedAllPts (instanceCommitment := instanceCommitment) vk ps ch).card ≤ (assembleQueries vk instanceCommitment ps ch).length := by
+    (deployedAllPts vk instanceCommitment ps ch).card ≤ (assembleQueries vk instanceCommitment ps ch).length := by
   classical
-  have hsub : deployedAllPts (instanceCommitment := instanceCommitment) vk ps ch
+  have hsub : deployedAllPts vk instanceCommitment ps ch
       ⊆ ((assembleQueries vk instanceCommitment ps ch).map (·.point)).toFinset := by
     intro x hx
     rw [deployedAllPts, Finset.mem_biUnion] at hx
@@ -593,7 +570,7 @@ theorem deployedAllPts_card_le {G : Type*} [AddCommGroup G] [Module Fp G]
     obtain ⟨q, hq, hqx⟩ := constructIntermediateSets_points_getD_mem_queries _ j hj
     rw [List.mem_toFinset, List.mem_map]
     exact ⟨q, hq, hqx⟩
-  calc (deployedAllPts (instanceCommitment := instanceCommitment) vk ps ch).card
+  calc (deployedAllPts vk instanceCommitment ps ch).card
       ≤ ((assembleQueries vk instanceCommitment ps ch).map (·.point)).toFinset.card := Finset.card_le_card hsub
     _ ≤ ((assembleQueries vk instanceCommitment ps ch).map (·.point)).length := List.toFinset_card_le _
     _ = (assembleQueries vk instanceCommitment ps ch).length := List.length_map ..

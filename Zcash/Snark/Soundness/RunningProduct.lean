@@ -10,14 +10,12 @@ factors equals `z` at this row times another. The verifier also pins `z` at the 
 at the last row to `0` or `1`.
 
 Multiplying the recurrence across the rows cancels every interior `z`, leaving the two whole-column
-products related by the boundary values. That is the step from what the verifier checks (a per-row
-identity) to what the soundness kernel consumes (a product identity, which `GrandProduct` turns into
-a multiset identity).
+products related by the boundary values. That turns the verifier's per-row checks into the product
+identity `GrandProduct` reads as a multiset identity.
 
-The `z`-ends-at-`0` branch is not vacuous and is not silently dropped: it forces one of the factors
-to be zero, which for the arguments' factors `v + β·name + γ` is a collision on the challenges. So
-the results here end in *either* the product identity *or* an explicit vanishing factor, and the
-caller prices the second branch.
+If `z` ends at `0`, one factor `v + β·name + γ` must vanish — a collision on the challenges. So each
+result here is *either* the product identity *or* an explicit vanishing factor, and the caller
+prices the second branch.
 -/
 
 namespace Zcash.Snark
@@ -92,76 +90,5 @@ theorem grandProduct_eq_or_cell_eq_zero [Field F] (z : ℕ → F) (a b : ℕ →
   · obtain ⟨j, hj, hj0⟩ := prod_eq_zero_iff.mp hzero
     exact Or.inr ⟨(i, j), mem_product.mpr ⟨hi, hj⟩, hj0⟩
 
-
-/-! ## Chunks
-
-halo2 splits the permutation columns into chunks, each with its own running product, chained so that
-each chunk starts where the previous one ended. That chain is itself a running product over the
-chunk index, so the same telescoping applies a second time and the whole table is one product. -/
-
-/-- **Chunk stitching.** Per-chunk recurrences plus the chaining rule telescope across the chunks:
-the boundary values of the first and last chunk relate the two whole-table products. -/
-theorem telescope_chunks [CommRing F] (Z : ℕ → ℕ → F) (A B : ℕ → ℕ → ℕ → F) {nc m k : ℕ}
-    (hrec : ∀ c < nc, ∀ i < m,
-      Z c (i + 1) * ∏ j ∈ range k, B c i j = Z c i * ∏ j ∈ range k, A c i j)
-    (hchain : ∀ c < nc, Z (c + 1) 0 = Z c m) :
-    Z nc 0 * ∏ p ∈ range nc ×ˢ range m, ∏ j ∈ range k, B p.1 p.2 j
-      = Z 0 0 * ∏ p ∈ range nc ×ˢ range m, ∏ j ∈ range k, A p.1 p.2 j := by
-  have hstep : ∀ c < nc, Z (c + 1) 0 * ∏ i ∈ range m, ∏ j ∈ range k, B c i j
-      = Z c 0 * ∏ i ∈ range m, ∏ j ∈ range k, A c i j := by
-    intro c hc
-    rw [hchain c hc]
-    exact telescope_running_product (Z c) (fun i => ∏ j ∈ range k, A c i j)
-      (fun i => ∏ j ∈ range k, B c i j) fun i hi => hrec c hc i hi
-  have hall := telescope_running_product (fun c => Z c 0)
-    (fun c => ∏ i ∈ range m, ∏ j ∈ range k, A c i j)
-    (fun c => ∏ i ∈ range m, ∏ j ∈ range k, B c i j) hstep
-  rw [← prod_range_prod_range (fun c i => ∏ j ∈ range k, B c i j),
-    ← prod_range_prod_range (fun c i => ∏ j ∈ range k, A c i j)]
-  exact hall
-
-/-- **Variable-width chunk stitching.** The deployed permutation layout may end in a short chunk.
-The same two-level telescoping works when chunk `c` contains `width c` columns. -/
-theorem telescope_chunks_variable_width [CommRing F] (Z : ℕ → ℕ → F)
-    (A B : ℕ → ℕ → ℕ → F) (width : ℕ → ℕ) {nc m : ℕ}
-    (hrec : ∀ c < nc, ∀ i < m,
-      Z c (i + 1) * ∏ j ∈ range (width c), B c i j
-        = Z c i * ∏ j ∈ range (width c), A c i j)
-    (hchain : ∀ c < nc, Z (c + 1) 0 = Z c m) :
-    Z nc 0 * ∏ c ∈ range nc, ∏ i ∈ range m, ∏ j ∈ range (width c), B c i j
-      = Z 0 0 * ∏ c ∈ range nc, ∏ i ∈ range m, ∏ j ∈ range (width c), A c i j := by
-  apply telescope_running_product (fun c => Z c 0)
-    (fun c => ∏ i ∈ range m, ∏ j ∈ range (width c), A c i j)
-    (fun c => ∏ i ∈ range m, ∏ j ∈ range (width c), B c i j)
-  intro c hc
-  rw [hchain c hc]
-  exact telescope_running_product (Z c)
-    (fun i => ∏ j ∈ range (width c), A c i j)
-    (fun i => ∏ j ∈ range (width c), B c i j)
-    fun i hi => hrec c hc i hi
-
-/-- **The variable-width permutation product.** With the first and final running-product values
-pinned as in the verifier, stitched chunks give the whole-table product identity, or an explicit
-identity-side factor is zero. The exceptional branch is retained for later challenge pricing. -/
-theorem chunkedGrandProduct_eq_or_cell_eq_zero [Field F] (Z : ℕ → ℕ → F)
-    (A B : ℕ → ℕ → ℕ → F) (width : ℕ → ℕ) {nc m : ℕ}
-    (hrec : ∀ c < nc, ∀ i < m,
-      Z c (i + 1) * ∏ j ∈ range (width c), B c i j
-        = Z c i * ∏ j ∈ range (width c), A c i j)
-    (hchain : ∀ c < nc, Z (c + 1) 0 = Z c m)
-    (hz0 : Z 0 0 = 1) (hzend : Z nc 0 = 0 ∨ Z nc 0 = 1) :
-    (∏ c ∈ range nc, ∏ i ∈ range m, ∏ j ∈ range (width c), B c i j
-        = ∏ c ∈ range nc, ∏ i ∈ range m, ∏ j ∈ range (width c), A c i j)
-      ∨ ∃ c ∈ range nc, ∃ i ∈ range m, ∃ j ∈ range (width c), A c i j = 0 := by
-  have htel := telescope_chunks_variable_width Z A B width hrec hchain
-  rw [hz0, one_mul] at htel
-  rcases hzend with hzend | hzend
-  · rw [hzend, zero_mul] at htel
-    obtain ⟨c, hc, hrow⟩ := prod_eq_zero_iff.mp htel.symm
-    obtain ⟨i, hi, hcols⟩ := prod_eq_zero_iff.mp hrow
-    obtain ⟨j, hj, hzero⟩ := prod_eq_zero_iff.mp hcols
-    exact Or.inr ⟨c, hc, i, hi, j, hj, hzero⟩
-  · rw [hzend, one_mul] at htel
-    exact Or.inl htel
 
 end Zcash.Snark

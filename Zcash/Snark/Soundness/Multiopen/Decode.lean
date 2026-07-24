@@ -189,7 +189,7 @@ noncomputable def multiopenRewindForRelation_of_acceptedFamily {urs : URS G} {P 
 /-- Package rewound accepting transcripts at distinct batching challenges into an
 `AcceptedBatchFamily`, given the flat power form of the batched statement in the batching challenge.
 `P`/`v` are the statement as a function of that challenge — for the deployed verifier,
-`fun ξ => deployedCommitment urs hk vk ps {ch with x4 := ξ}` and the matching `multiopenValue`, the
+`fun ξ => deployedCommitment urs hk vk instanceCommitment ps {ch with x4 := ξ}` and the matching `multiopenValue`, the
 runs `Soundness.Forking.reprogramX4` (via its apply lemmas) identifies with oracle reprogramming — and
 `hP`/`hv` are the flat-batch power form, *proven* for the deployed verifier over the fingerprinted
 grouping's aggregates (`deployedCommitment_x4_batch`/`multiopenValue_x4_batch`,

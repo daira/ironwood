@@ -124,7 +124,7 @@ theorem permChunk_left_eq_prod {F : Type*} [CommRing F] (beta gamma : F) (pairs 
   | cons a t ih =>
       rw [List.foldl_cons, ih, List.length_cons, Finset.prod_range_succ']
       simp only [List.getD_cons_zero, List.getD_cons_succ]
-      ring
+      ring_nf
 
 /-- The step rule's right fold is the same running product with the columns named by their
 `δ`-coset position: column `j` of chunk `c` carries the name `d₀·δ^j`, where `d₀` already holds the
@@ -140,7 +140,7 @@ theorem permChunk_right_eq_prod {F : Type*} [CommRing F] (gamma delta : F) (pair
   | cons a t ih =>
       rw [List.foldl_cons, ih, List.length_cons, Finset.prod_range_succ']
       simp only [List.getD_cons_zero, List.getD_cons_succ, pow_zero, mul_one, pow_succ]
-      ring
+      ring_nf
 
 /-- **The step rule is a one-row recurrence.** `permChunkExpression` vanishes exactly when the
 running product at the next row times the `σ`-named factors equals the running product at this row
@@ -275,6 +275,105 @@ theorem subProofConstraints_map {F G : Type*} [CommRing F] [CommRing G] (f : F �
   · exact List.map_congr_left fun g _ => Expr.eval_map f _ _ _ g
   · exact congrArg List.flatten (List.map_congr_left fun lk _ => lookupExpressions_map f ..)
 
+/-- The rule chaining chunk `c` to chunk `c + 1` is one of the permutation constraint values: the
+next chunk's running product starts where this one's ended. -/
+theorem chain_mem_permutationExpressions {F : Type*} [CommRing F]
+    (sets : List (PermSetEval F)) (chunks : List (PermSetEval F × List (F × F)))
+    (beta gamma x delta : F) (chunkLen : ℕ) (l0 lLast lBlind : F)
+    {c : ℕ} (hc : c + 1 < sets.length) :
+    (sets[c + 1].eval - sets[c].lastEval.getD 0) * l0
+      ∈ permutationExpressions sets chunks beta gamma x delta chunkLen l0 lLast lBlind := by
+  unfold permutationExpressions
+  refine List.mem_append.mpr (Or.inl (List.mem_append.mpr (Or.inr
+    (List.mem_map.mpr ⟨(sets[c + 1], sets[c]), ?_, rfl⟩))))
+  have hlen : ((sets.drop 1).zip sets).length = sets.length - 1 := by
+    simp [List.length_zip]
+  refine List.mem_iff_getElem.mpr ⟨c, by rw [hlen]; omega, ?_⟩
+  rw [List.getElem_zip, List.getElem_drop]
+  simp [Nat.add_comm]
+
+/-- The lookup rules, written out: start, end, the step rule, the row-0 equality, and the
+run-structure rule. -/
+theorem lookupExpressions_eq {F : Type*} [CommRing F] (le : LookupEval F)
+    (inputExprs tableExprs : List (Expr F)) (fixedEvals adviceEvals instanceEvals : ℕ → F)
+    (theta beta gamma l0 lLast lBlind : F) :
+    lookupExpressions le inputExprs tableExprs fixedEvals adviceEvals instanceEvals
+        theta beta gamma l0 lLast lBlind
+      = [ l0 * (1 - le.productEval),
+          lLast * (le.productEval ^ 2 - le.productEval),
+          (le.productNextEval * (le.permutedInputEval + beta) * (le.permutedTableEval + gamma)
+            - le.productEval
+              * (compressExprs fixedEvals adviceEvals instanceEvals theta inputExprs + beta)
+              * (compressExprs fixedEvals adviceEvals instanceEvals theta tableExprs + gamma))
+            * (1 - (lLast + lBlind)),
+          l0 * (le.permutedInputEval - le.permutedTableEval),
+          (le.permutedInputEval - le.permutedTableEval)
+            * (le.permutedInputEval - le.permutedInputInvEval) * (1 - (lLast + lBlind)) ] := rfl
+
+/-- A lookup constraint value is one of the sub-proof's constraint values. -/
+theorem mem_subProofConstraints_of_mem_lookupExpressions {F : Type*} [CommRing F]
+    (fixedFeed adviceFeed instanceFeed : ℕ → F) (gates : List (Expr F))
+    (sets : List (PermSetEval F)) (chunks : List (PermSetEval F × List (F × F)))
+    (lookups : List (LookupEval F × List (Expr F) × List (Expr F)))
+    (beta gamma x delta theta : F) (chunkLen : ℕ) (l0 lLast lBlind : F)
+    {lk : LookupEval F × List (Expr F) × List (Expr F)} (hlk : lk ∈ lookups) {v : F}
+    (h : v ∈ lookupExpressions lk.1 lk.2.1 lk.2.2 fixedFeed adviceFeed instanceFeed
+      theta beta gamma l0 lLast lBlind) :
+    v ∈ subProofConstraints fixedFeed adviceFeed instanceFeed gates sets chunks lookups
+        beta gamma x delta theta chunkLen l0 lLast lBlind := by
+  unfold subProofConstraints
+  exact List.mem_append.mpr (Or.inr (List.mem_flatten.mpr
+    ⟨_, List.mem_map.mpr ⟨lk, hlk, rfl⟩, h⟩))
+
+/-! ## Locating a single constraint in the list
+
+The soundness argument needs one constraint at a time — the step rule for a chunk, the rule pinning
+the running product at the first row — but the verifier hands over one flat list. These lemmas place
+each rule inside that list, so a fact proved about the whole list transfers to the rule. -/
+
+/-- The step rule for chunk `c` is one of the permutation constraint values. -/
+theorem permChunkExpression_mem_permutationExpressions {F : Type*} [CommRing F]
+    (sets : List (PermSetEval F)) (chunks : List (PermSetEval F × List (F × F)))
+    (beta gamma x delta : F) (chunkLen : ℕ) (l0 lLast lBlind : F)
+    {c : ℕ} (hc : c < chunks.length) :
+    permChunkExpression beta gamma x delta chunkLen c (chunks[c].1) (chunks[c].2) lLast lBlind
+      ∈ permutationExpressions sets chunks beta gamma x delta chunkLen l0 lLast lBlind := by
+  unfold permutationExpressions
+  refine List.mem_append.mpr (Or.inr (List.mem_map.mpr ⟨(c, chunks[c]), ?_, rfl⟩))
+  have hlen : ((List.range chunks.length).zip chunks).length = chunks.length := by
+    simp [List.length_zip]
+  refine List.mem_iff_getElem.mpr ⟨c, by rw [hlen]; exact hc, ?_⟩
+  rw [List.getElem_zip]
+  simp
+
+/-- The rule pinning the running product at the first row is one of the permutation constraint
+values. -/
+theorem start_mem_permutationExpressions {F : Type*} [CommRing F]
+    {sets : List (PermSetEval F)} (chunks : List (PermSetEval F × List (F × F)))
+    (beta gamma x delta : F) (chunkLen : ℕ) (l0 lLast lBlind : F)
+    {first : PermSetEval F} (hhead : sets.head? = some first) :
+    l0 * (1 - first.eval)
+      ∈ permutationExpressions sets chunks beta gamma x delta chunkLen l0 lLast lBlind := by
+  unfold permutationExpressions
+  refine List.mem_append.mpr (Or.inl (List.mem_append.mpr (Or.inl (List.mem_append.mpr
+    (Or.inl ?_)))))
+  rw [hhead]
+  simp
+
+/-- The rule pinning the running product at the last row is one of the permutation constraint
+values. -/
+theorem end_mem_permutationExpressions {F : Type*} [CommRing F]
+    {sets : List (PermSetEval F)} (chunks : List (PermSetEval F × List (F × F)))
+    (beta gamma x delta : F) (chunkLen : ℕ) (l0 lLast lBlind : F)
+    {last : PermSetEval F} (hlast : sets.getLast? = some last) :
+    (last.eval ^ 2 - last.eval) * lLast
+      ∈ permutationExpressions sets chunks beta gamma x delta chunkLen l0 lLast lBlind := by
+  unfold permutationExpressions
+  refine List.mem_append.mpr (Or.inl (List.mem_append.mpr (Or.inl (List.mem_append.mpr
+    (Or.inr ?_)))))
+  rw [hlast]
+  simp
+
 /-- Every constraint value across the sub-proofs, in the verifier's order. The fixed columns, the
 gates and the challenge-derived scalars are shared; the advice and instance evaluations, the
 permutation sets and the lookups vary per sub-proof. -/
@@ -309,6 +408,32 @@ theorem allConstraints_map {F G : Type*} [CommRing F] [CommRing G] (f : F →+* 
   simp only [Function.comp_def]
   refine congrArg List.flatten (congrArg List.ofFn (funext fun p => ?_))
   exact subProofConstraints_map f ..
+
+/-- A permutation constraint value is one of the sub-proof's constraint values. -/
+theorem mem_subProofConstraints_of_mem_permutationExpressions {F : Type*} [CommRing F]
+    (fixedFeed adviceFeed instanceFeed : ℕ → F) (gates : List (Expr F))
+    (sets : List (PermSetEval F)) (chunks : List (PermSetEval F × List (F × F)))
+    (lookups : List (LookupEval F × List (Expr F) × List (Expr F)))
+    (beta gamma x delta theta : F) (chunkLen : ℕ) (l0 lLast lBlind : F) {v : F}
+    (h : v ∈ permutationExpressions sets chunks beta gamma x delta chunkLen l0 lLast lBlind) :
+    v ∈ subProofConstraints fixedFeed adviceFeed instanceFeed gates sets chunks lookups
+        beta gamma x delta theta chunkLen l0 lLast lBlind := by
+  unfold subProofConstraints
+  exact List.mem_append.mpr (Or.inl (List.mem_append.mpr (Or.inr h)))
+
+/-- A sub-proof's constraint value is one of the whole list's. -/
+theorem mem_allConstraints_of_mem_subProofConstraints {F : Type*} [CommRing F] {np : ℕ}
+    (fixedFeed : ℕ → F) (adviceFeed instanceFeed : Fin np → ℕ → F) (gates : List (Expr F))
+    (sets : Fin np → List (PermSetEval F))
+    (chunks : Fin np → List (PermSetEval F × List (F × F)))
+    (lookups : Fin np → List (LookupEval F × List (Expr F) × List (Expr F)))
+    (beta gamma x delta theta : F) (chunkLen : ℕ) (l0 lLast lBlind : F) (p : Fin np) {v : F}
+    (h : v ∈ subProofConstraints fixedFeed (adviceFeed p) (instanceFeed p) gates (sets p)
+      (chunks p) (lookups p) beta gamma x delta theta chunkLen l0 lLast lBlind) :
+    v ∈ allConstraints fixedFeed adviceFeed instanceFeed gates sets chunks lookups
+        beta gamma x delta theta chunkLen l0 lLast lBlind := by
+  unfold allConstraints
+  exact List.mem_flatten.mpr ⟨_, List.mem_ofFn.mpr ⟨p, rfl⟩, h⟩
 
 /-- `expected_h_eval` (halo2 `vanishing/verifier.rs` `verify`): fold all constraint values by `y`
 (`acc·y + v`) and divide by `xⁿ − 1`. The verifier opens the folded `h` commitment to this value. -/

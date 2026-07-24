@@ -161,14 +161,13 @@ theorem uniformChallenge_szBadSet_union (C : Polynomial Fp) (extra : Finset Fp) 
   gcongr
   exact_mod_cast le_trans (Finset.card_union_le _ _) (Nat.add_le_add_right (szBadSet_card_le C) _)
 
-/-! ## Additive-factor exclusions
+/-! ## Named additive-factor exclusions
 
-Permutation and lookup grand products contain factors of the form `offset i + challenge`.  Once
-`offset` is fixed before the challenge squeeze, each index excludes at most one challenge value.
-The following small generic interface records that event directly, instead of leaving a
-zero-factor disjunction at every semantic use site. -/
+`ChallengePricing.escape_measure_le` prices the same vanishing-factor event as a set.
+The circuit bridge also needs a finite, reusable set that can be carried as a
+good-challenge hypothesis, so retain this equivalent indexed presentation. -/
 
-/-- The challenge values that make at least one member of a finite family
+/-- Challenge values that make at least one member of a finite family
 `offset i + challenge` vanish. -/
 def additiveZeroBadSet {ι : Type*} [Fintype ι] [DecidableEq ι]
     (offset : ι → Fp) : Finset Fp :=
