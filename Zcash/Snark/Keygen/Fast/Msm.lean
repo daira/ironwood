@@ -7,7 +7,7 @@ import Zcash.Snark.Core.Field
 /-!
 # Windowed Pippenger multi-scalar multiplication, proven equal to the naive MSM
 
-The VK-commitment certification (`Zcash/Snark/VkCommit/Pipeline.lean`) collapses each fixed /
+The VK-commitment certification (`Zcash/Snark/Keygen/Pipeline.lean`) collapses each fixed /
 permutation column into a `commit_lagrange`, whose mathematical core is the naive multi-scalar
 multiplication (MSM)
 
@@ -50,7 +50,7 @@ single-pass `bucketScatter` of `pippengerFast` eliminates.
 * The Horner fold reconstructs `∑ i, base ^ i • windowContribution i` (`hornerList_eq`).
 -/
 
-namespace Zcash.Snark.VkCommit.Fast.Msm
+namespace Zcash.Snark.Keygen.Fast.Msm
 
 open scoped BigOperators
 
@@ -443,7 +443,7 @@ theorem pippengerFast_eq_msm (c : ℕ) (hc : 0 < c) (terms : List (ℕ × M)) :
     pippengerFast c terms = (terms.map fun t => t.1 • t.2).sum := by
   rw [pippengerFast_eq, pippenger_eq_msm c hc]
 
-/-! ## The `commit_lagrange` wrapper (matching `VkCommit.commitLagrangeWith`) -/
+/-! ## The `commit_lagrange` wrapper (matching `Keygen.commitLagrangeWith`) -/
 
 /-- The default window size, picked by measurement (see the module docstring's ladder): `c = 8`
 is the optimum for the certification's `n = 2048`-term MSMs — `10.7×` over the naive MSM. -/
@@ -455,8 +455,8 @@ variable {G : Type*} [AddCommGroup G] [Inhabited G]
 
 open Zcash.Snark
 
-/-- The naive `commit_lagrange` spec, restated verbatim from `VkCommit.commitLagrangeWith`
-(`Zcash/Snark/VkCommit/Pipeline.lean`) so this module can prove the fast version equal to it without
+/-- The naive `commit_lagrange` spec, restated verbatim from `Keygen.commitLagrangeWith`
+(`Zcash/Snark/Keygen/Pipeline.lean`) so this module can prove the fast version equal to it without
 editing that file:
 `(∑ᵢ coeffsᵢ.val • basisᵢ) + blind`. -/
 def commitLagrangeSpec (blind : G) (basis : List G) (coeffs : List Fp) : G :=
@@ -504,4 +504,4 @@ theorem commitLagrangeFastWith_eq (c : ℕ) (hc : 0 < c)
 
 end Wrapper
 
-end Zcash.Snark.VkCommit.Fast.Msm
+end Zcash.Snark.Keygen.Fast.Msm

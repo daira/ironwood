@@ -27,7 +27,7 @@ the compiled `Task` primitives are already part of the `native_decide` trust bou
   `Task.spawn fn = ⟨fn ()⟩`, `Task.get ⟨a⟩ = a` are what the kernel and `decide` see.
 -/
 
-namespace Zcash.Snark.VkCommit.Fast
+namespace Zcash.Snark.Keygen.Fast
 
 universe u v
 
@@ -72,4 +72,4 @@ def parMapChunked {α : Type u} {β : Type v} (chunkSize : ℕ) (f : α → β) 
   unfold parMapChunked
   rw [List.parMap_eq_map, ← List.map_flatten, chunk_flatten]
 
-end Zcash.Snark.VkCommit.Fast
+end Zcash.Snark.Keygen.Fast

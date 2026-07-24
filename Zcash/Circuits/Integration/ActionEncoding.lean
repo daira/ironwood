@@ -3,7 +3,7 @@ import Zcash.Snark.Soundness.ActionStatement
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 import Zcash.Snark.Soundness.TopLevelCircuit
 import Zcash.Snark.Soundness.TopLevelGates
-import Zcash.Snark.VkCommit.Pipeline
+import Zcash.Snark.Keygen.Pipeline
 
 /-!
 # Canonical decoded relation to the Orchard Action statement
@@ -19,7 +19,7 @@ namespace Zcash.Snark
 open Halo2 Polynomial
 open Zcash.Circuits
 open Zcash.Circuits.Action
-open VkCommit
+open Keygen
 
 set_option maxHeartbeats 20000
 
@@ -36,7 +36,7 @@ There is no free proposition `S` and no `hencodes` premise. The remaining
 not an Action semantic assumption.
 -/
 theorem actionBundleStatement_of_canonicalRelation
-    (pp : VkCommit.ProofParams) (urs : URS G)
+    (pp : Keygen.ProofParams) (urs : URS G)
     (hk :
       (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
     (instanceCommitment :

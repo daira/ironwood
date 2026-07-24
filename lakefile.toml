@@ -48,13 +48,13 @@ globs = ["Zcash.Snark.Fixtures.+"]
 name = "CircuitCheck"
 globs = ["Zcash.Circuits.Tests.+"]
 
-# The Action verifying-key COMMITMENT derivation (`Zcash/Snark/VkCommit/`): derives
+# The Action verifying-key COMMITMENT derivation (`Zcash/Snark/Keygen/`): derives
 # `fixedCommitment`/`permutationCommonCommitment` from the circuit + captured URS
 # (Lagrange FFT, dense fixed columns, keygen permutation polynomials) and assembles the
 # fully-derived `derivedActionVk`. Deliberately EXCLUDED from `defaultTargets`: the
 # concrete certificate is intentionally expensive. `Derivation` contains the reusable
 # data and key; `Certificate` contains the native commitment equality. Build both
-# explicitly with `lake build ZcashVkCommit`; the rest of the repo stays fast.
+# explicitly with `lake build ZcashKeygen`; the rest of the repo stays fast.
 [[lean_lib]]
-name = "ZcashVkCommit"
-globs = ["Zcash.Snark.VkCommit.+"]
+name = "ZcashKeygen"
+globs = ["Zcash.Snark.Keygen.+"]

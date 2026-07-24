@@ -1,7 +1,7 @@
 import CompElliptic.Curves.Pasta
 import Zcash.Common.ParMap
 import Zcash.Snark.Core.Domain
-import Zcash.Snark.VkCommit.Fast.Msm
+import Zcash.Snark.Keygen.Fast.Msm
 import Zcash.Circuits.Integration.ExprRich
 import Zcash.Circuits.Fixtures.Layout
 import Zcash.Circuits.TopLevelKeygen
@@ -32,7 +32,7 @@ capture certification live in `Derivation.lean` / `Certificate.lean`.
 * Permutation commitments: `plonk/permutation/keygen.rs:102-152` (`Assembly::build_vk`).
 -/
 
-namespace Zcash.Snark.VkCommit
+namespace Zcash.Snark.Keygen
 
 open Zcash.Snark
 open Halo2
@@ -241,11 +241,11 @@ def permutationCommitmentsOf (blind : G) (lagrange : List G) (k : ℕ)
 
 /-! ## Assembly -/
 
-end Zcash.Snark.VkCommit
+end Zcash.Snark.Keygen
 
 namespace Zcash.Snark.VerifyingKey
 
-open Zcash.Snark.VkCommit
+open Zcash.Snark.Keygen
 open Halo2
 open Zcash.Circuits.Fixtures
 
@@ -315,7 +315,7 @@ theorem gates_eval_of_gates_eq
 
 end Zcash.Snark.VerifyingKey
 
-namespace Zcash.Snark.VkCommit
+namespace Zcash.Snark.Keygen
 
 open Zcash.Snark
 open Halo2
@@ -367,12 +367,12 @@ def ProofParams.mergeDerived (pp : ProofParams)
     numFixedQueries := pinned.fixedQueryLayout.length
     numPointSets := pp.numPointSets }
 
-end Zcash.Snark.VkCommit
+end Zcash.Snark.Keygen
 
 namespace Zcash.Circuits.TopLevelCircuit
 
 open Zcash.Snark
-open Zcash.Snark.VkCommit
+open Zcash.Snark.Keygen
 open Halo2
 open Zcash.Circuits
 open Zcash.Circuits.Fixtures

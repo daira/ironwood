@@ -31,13 +31,11 @@ The closed forms below (specialized `a = 0`, `b = 5`, `b3 = 3b = 15`, homogeneou
 * `Z₃ = Y₁²Y₂Z₂ + Y₁Z₁Y₂² + 3X₁²X₂Y₂ + 3X₁Y₁X₂² + 15Y₁Z₁Z₂² + 15Z₁²Y₂Z₂`
 -/
 
-noncomputable section
-
 open CompElliptic
 open CompElliptic.CurveForms.ShortWeierstrass
 open CompElliptic.Curves.Pasta
 
-namespace Zcash.Snark.VkCommit.Fast.Projective
+namespace Zcash.Snark.Keygen.Fast.Projective
 
 /-- The Vesta base field `𝔽_q` (= `PallasScalarField`), over which the Vesta curve is defined. -/
 abbrev Fq := CompElliptic.Fields.Pasta.VestaBaseField
@@ -70,6 +68,11 @@ def pid : PVes := ⟨0, 1, 0⟩
 
 /-- The homogeneous projective curve equation `Y²Z = X³ + 5Z³` (Vesta, `a = 0`, `b = 5`). -/
 def OnCurveP (P : PVes) : Prop := P.Y^2*P.Z = P.X^3 + 5*P.Z^3
+
+/-- `OnCurveP` unfolds definitionally to a field equation, hence is decidable. This is what keeps
+`toAffine` — and everything downstream of it, `smulFast` in particular — computable. -/
+instance (P : PVes) : Decidable (OnCurveP P) :=
+  inferInstanceAs (Decidable (P.Y^2*P.Z = P.X^3 + 5*P.Z^3))
 
 /-- A representable projective point: on the projective curve and not the zero vector. -/
 def Valid (P : PVes) : Prop := OnCurveP P ∧ (P.X ≠ 0 ∨ P.Y ≠ 0 ∨ P.Z ≠ 0)
@@ -437,7 +440,6 @@ theorem valid_pid : Valid pid := by
 
 /-! ## Bridge to the affine group `G = SWPoint Vesta.curve` -/
 
-open Classical in
 /-- Interpret a projective point as an element of the affine group: a finite on-curve point maps to
 `(X/Z, Y/Z)`, everything else (points at infinity, off-curve junk) to the identity `𝒪`. -/
 def toAffine (P : PVes) : G :=
@@ -549,4 +551,4 @@ theorem smulFast_eq (n : ℕ) (p : G) : smulFast n p = n • p := by
   rw [smulFast, (pnsmulFast_spec (valid_ofAffine p) n).2, toAffine_ofAffine]
 
 end PVes
-end Zcash.Snark.VkCommit.Fast.Projective
+end Zcash.Snark.Keygen.Fast.Projective

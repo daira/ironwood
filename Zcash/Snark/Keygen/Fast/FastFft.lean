@@ -2,13 +2,13 @@
 Copyright (c) 2026 Ironwood Contributors.
 Released under the Apache License, Version 2.0.
 -/
-import Zcash.Snark.VkCommit.Pipeline
-import Zcash.Snark.VkCommit.Fast.Projective
+import Zcash.Snark.Keygen.Pipeline
+import Zcash.Snark.Keygen.Fast.Projective
 
 /-!
 # Vesta-specialized fast Lagrange-basis group FFT
 
-`bestFftG` (`Zcash.Snark.VkCommit.Pipeline`) is the Rust-mirroring, group-generic radix-2 DIT FFT
+`bestFftG` (`Zcash.Snark.Keygen.Pipeline`) is the Rust-mirroring, group-generic radix-2 DIT FFT
 used to derive the Lagrange basis. Every butterfly evaluates `twiddle.val • point`, which for the
 affine group `G = SWPoint Vesta.curve` is a binary double-and-add over affine points — each affine
 add pays one field inversion (~255 field muls). At domain size `2^k` the FFT does `Θ(k·2^k)`
@@ -27,14 +27,12 @@ parameter `smul : ℕ → G → G`. Both `bestFftGFast = bestFftGWith smulFast` 
 `smul` call), so the whole equality reduces to `funext`-ing `smulFast_eq`.
 -/
 
-noncomputable section
-
 open Zcash.Snark
-open Zcash.Snark.VkCommit
+open Zcash.Snark.Keygen
 open CompElliptic
 open CompElliptic.Curves.Pasta
 
-namespace Zcash.Snark.VkCommit.Fast
+namespace Zcash.Snark.Keygen.Fast
 
 /-- The concrete Vesta affine group `SWPoint Vesta.curve` (as in `Fast/Projective.lean`). -/
 abbrev GVes := Projective.G
@@ -147,4 +145,4 @@ theorem derivedUrsGLagrangeFast_eq (urs : URS GVes) :
     derivedUrsGLagrangeFast urs = derivedUrsGLagrange urs := by
   simp only [derivedUrsGLagrangeFast, derivedUrsGLagrange, bestFftGFast_eq]
 
-end Zcash.Snark.VkCommit.Fast
+end Zcash.Snark.Keygen.Fast

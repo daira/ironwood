@@ -1,4 +1,4 @@
-import Zcash.Snark.VkCommit.Pipeline
+import Zcash.Snark.Keygen.Pipeline
 import Zcash.Snark.Soundness.Multiopen.ConstraintResolver
 import Zcash.Snark.Soundness.TopLevelAssignment
 import Zcash.Circuits.Action.TopLevel
@@ -32,7 +32,7 @@ supplied URS uses that derived domain exponent.
 noncomputable def ofActionDecodedMembers
     {G : Type}
     [AddCommGroup G] [Module Fp G] [DecidableEq G] [Inhabited G]
-    (pp : VkCommit.ProofParams)
+    (pp : Keygen.ProofParams)
     (urs : URS G)
     (hk :
       (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
