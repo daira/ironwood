@@ -1,5 +1,6 @@
 import CompElliptic.Curves.Pasta
 import Zcash.Snark.VkCommit.Fast.ParMap
+import Zcash.Snark.VkCommit.Fast.Msm
 import Zcash.Bridge.VkProjection
 import Zcash.Circuits.Fixtures.Layout
 import Zcash.Circuits.TopLevelKeygen
@@ -158,10 +159,11 @@ with the default blind (`plonk/keygen.rs:230-240`, `keygen_vk`'s `fixed_commitme
 def fixedCommitmentsOf (urs : URS G) (selMap : Halo2.SelCompressMap) (k : ℕ)
     (cs : ConstraintSystem Fp) (ops : Operations Fp) : List G :=
   let lagrange := derivedUrsGLagrange urs
-  -- `parMap`: one task per column MSM (`parMap_eq_map` — evaluation strategy only)
+  -- `parMap`: one task per column; Pippenger per MSM (`parMap_eq_map`,
+  -- `commitLagrangeFastWith_eq` — evaluation strategy only)
   (denseColumns (2 ^ k) (PinnedConstraintSystem.derive cs selMap).numFixedColumns
       (fixedSparseOf selMap k cs ops)).parMap
-    (commitLagrangeWith urs.w lagrange)
+    (Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow urs.w lagrange)
 
 /-! ## Derived permutation commitments (`plonk/permutation/keygen.rs:102-152`) -/
 
@@ -218,8 +220,10 @@ polynomial with the default blind (`build_vk`, `permutation/keygen.rs:147-151`).
 def permutationCommitmentsOf (urs : URS G) (k : ℕ)
     (cs : ConstraintSystem Fp) (ops : Operations Fp) : List G :=
   let lagrange := derivedUrsGLagrange urs
-  -- `parMap`: one task per column MSM (`parMap_eq_map` — evaluation strategy only)
-  (permPolysOf k cs ops).parMap (commitLagrangeWith urs.w lagrange)
+  -- `parMap`: one task per column; Pippenger per MSM (`parMap_eq_map`,
+  -- `commitLagrangeFastWith_eq` — evaluation strategy only)
+  (permPolysOf k cs ops).parMap
+    (Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow urs.w lagrange)
 
 /-! ## Assembly -/
 
