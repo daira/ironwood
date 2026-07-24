@@ -18,6 +18,7 @@ variable {F : Type*} [DecidableEq F] {n : ℕ}
 def scanRank (e : Fin n ≃ F) (A : Finset F) (x : F) : ℕ :=
   (A.filter (fun a => e.symm a < e.symm x)).card
 
+omit [DecidableEq F] in
 /-- Ranks are strictly monotone along the sampling order. -/
 theorem scanRank_lt_of_lt (e : Fin n ≃ F) (A : Finset F) {x y : F}
     (hx : x ∈ A) (hxy : e.symm x < e.symm y) : scanRank e A x < scanRank e A y := by
@@ -33,10 +34,10 @@ theorem scanRank_lt_of_lt (e : Fin n ≃ F) (A : Finset F) {x y : F}
     rw [Finset.mem_filter] at this
     exact absurd this.2 (lt_irrefl _)
 
+omit [DecidableEq F] in
 /-- At most `j` members of `A` have rank below `j`: ranks are injective on `A`. -/
 theorem card_filter_scanRank_lt_le (e : Fin n ≃ F) (A : Finset F) (j : ℕ) :
     (A.filter (fun x => scanRank e A x < j)).card ≤ j := by
-  classical
   have hinj : Set.InjOn (scanRank e A) (A.filter (fun x => scanRank e A x < j)) := by
     intro x hx y hy hxy
     rw [Finset.coe_filter, Set.mem_setOf_eq] at hx hy
@@ -81,7 +82,6 @@ carries the rank of `x` to the rank of `y`. -/
 theorem scanRank_trans_swap (e : Fin n ≃ F) (A : Finset F) {x y : F}
     (hx : x ∈ A) (hy : y ∈ A) :
     scanRank (e.trans (Equiv.swap x y)) A x = scanRank e A y := by
-  classical
   have hsymm : ∀ a : F, (e.trans (Equiv.swap x y)).symm a = e.symm (Equiv.swap x y a) := by
     intro a
     rw [Equiv.symm_trans_apply, Equiv.symm_swap]
@@ -104,7 +104,6 @@ theorem scanRank_trans_swap (e : Fin n ≃ F) (A : Finset F) {x y : F}
 
 variable [Fintype F]
 
-open Classical in
 /-- Two members of `A` are low-rank in equally many orders: composing with the swap is a bijection
 of the order space exchanging the two events. -/
 theorem card_orders_scanRank_lt_congr (A : Finset F) {x y : F} (hx : x ∈ A) (hy : y ∈ A)
@@ -132,7 +131,6 @@ theorem card_orders_scanRank_lt_congr (A : Finset F) {x y : F} (hx : x ∈ A) (h
   have := congrArg (fun e : Fin n ≃ F => Equiv.swap x y (e i)) h
   simpa [Equiv.swap_apply_self] using this
 
-open Classical in
 /-- A member of `A` has rank below `j` in at most a `j/|A|` fraction of sampling orders. -/
 theorem card_scanRank_lt_mul_le (A : Finset F) {x : F} (hx : x ∈ A) (j : ℕ) :
     A.card * (Finset.univ.filter (fun e : Fin n ≃ F => scanRank e A x < j)).card
@@ -162,7 +160,6 @@ the coordinate appears in `|β|^(|α|−1)` assignments. -/
 theorem sum_eval_pi {α β : Type*} [Fintype α] [DecidableEq α] [Fintype β]
     (a : α) (g : β → ℕ) :
     ∑ f : α → β, g (f a) = Fintype.card β ^ (Fintype.card α - 1) * ∑ b : β, g b := by
-  classical
   rw [← Equiv.sum_comp (Equiv.piSplitAt a (fun _ : α => β)).symm (fun f => g (f a))]
   have happ : ∀ p : β × ({a' // a' ≠ a} → β),
       ((Equiv.piSplitAt a (fun _ : α => β)).symm p) a = p.1 := by
@@ -361,7 +358,6 @@ section ScanRankBound
 
 variable {F : Type*} [Zero F] [DecidableEq F] [Fintype F]
 
-open Classical in
 /-- A scan pays only candidates preceded by fewer than two good challenges. -/
 theorem nextForkChallenge_runs_le_rank_sum {α : Type*}
     (attempt : F → RecursiveForkAttempt α) (order : Fin (Fintype.card F) ≃ F)
@@ -433,14 +429,12 @@ def scanCandidate {d : ℕ} (m : ℕ) (hmk : m + (d + 1) = k) (O : T → F)
       (m + 1) (by omega) O' p' (childC u)
   else { output := none, runs := 1 }
 
-open Classical in
 /-- The node's good set: nonzero challenges whose reprogrammed candidate returns a certificate. -/
 noncomputable def goodChallenges [Fintype F] {d : ℕ} (m : ℕ) (hmk : m + (d + 1) = k)
     (O : T → F) (childC : F → RecursiveForkCoins F d) : Finset F :=
   Finset.univ.filter (fun u : F => u ≠ 0 ∧
     (scanCandidate basis k A prefixes rounds final win decideWin m hmk O childC u).output.isSome)
 
-open Classical in
 /-- One extractor node pays the abort unit, its first branch, and at most twice its low-rank
 candidates. -/
 theorem recursiveAlgebraicForkFrom_node_runs_le [Fintype F] {d m : ℕ}
@@ -575,14 +569,12 @@ variable (basis : ι → G) (k : ℕ) (A : OracleComp T F P) (prefixes : P → F
   (rounds : P → Fin k → AlgebraicPoint (F := F) basis × AlgebraicPoint (F := F) basis)
   (final : P → F × F) (win : (T → F) → P → Prop) (decideWin : ∀ O p, Decidable (win O p))
 
-open Classical in
 /-- Every reachable node has at least `σ₀` nonzero, trunk-stable successful continuations. The run
 bound uses density `(σ₀−1)/|F|` after excluding the incumbent branch. -/
 def ForkSpread (σ₀ : ℕ) : Prop :=
   ∀ (d m : ℕ) (hmk : m + (d + 1) = k) (O : T → F) (childC : F → RecursiveForkCoins F d),
     σ₀ ≤ (goodChallenges basis k A prefixes rounds final win decideWin m hmk O childC).card
 
-open Classical in
 /-- Under fork spread, the depth-`d` expected run count is at most
 `(6·|F|/(σ₀−1))^d`. -/
 theorem recursiveAlgebraicForkFrom_sum_runs_le_of_forkSpread {σ₀ : ℕ} (h2 : 2 ≤ σ₀)
@@ -894,7 +886,6 @@ theorem recursiveAlgebraicForkFrom_sum_runs_le_of_forkSpread {σ₀ : ℕ} (h2 :
             rw [hcard, Nat.pow_succ]
             ring
 
-open Classical in
 /-- Over the uniform tape, fork spread gives `E[runs] ≤ (6·|F|/(σ₀−1))^k`, or `(6/δ)^k`
 for `δ = (σ₀−1)/|F|`. -/
 theorem recursiveAlgebraicFork_sum_runs_le_of_forkSpread {σ₀ : ℕ} (h2 : 2 ≤ σ₀)

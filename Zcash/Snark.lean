@@ -32,10 +32,16 @@ import Zcash.Snark.Soundness.GrandProduct
 import Zcash.Snark.Soundness.Lookup
 import Zcash.Snark.Soundness.Permutation
 import Zcash.Snark.Soundness.PermutationConstruction
+import Zcash.Snark.Soundness.RunningProduct
+import Zcash.Snark.Soundness.GrandProductBridge
+import Zcash.Snark.Soundness.LookupAssembly
+import Zcash.Snark.Soundness.PermutationRows
+import Zcash.Snark.Soundness.ConstraintRelations
+import Zcash.Snark.Soundness.ChallengePricing
 import Zcash.Snark.Soundness.InnerProduct
-import Zcash.Snark.Soundness.TrustBoundary
 import Zcash.Snark.Soundness.Extraction
 import Zcash.Snark.Soundness.Constraints
+import Zcash.Snark.Soundness.FoldSplit
 import Zcash.Snark.Soundness.CommitFold
 import Zcash.Snark.Soundness.Consistency
 import Zcash.Snark.Soundness.KnowledgeSoundness
@@ -46,14 +52,30 @@ import Zcash.Snark.Soundness.Deployed.Binding
 import Zcash.Snark.Soundness.Deployed.Fold
 import Zcash.Snark.Soundness.Deployed.Ipa
 import Zcash.Snark.Soundness.Deployed.IpaPeel
-import Zcash.Snark.Soundness.Deployed.TrustBoundary
 import Zcash.Snark.Soundness.Deployed.Verification
 -- The reusable Fiat–Shamir forking kernel and its concrete adversary producer.
 import Zcash.Snark.Soundness.Forking
 import Zcash.Snark.Soundness.Main
+-- Multiopen decode reconstruction: bind the IPA witness to real verifier columns recovered from
+-- batched openings (`Multiopen.Decode`), the compatibility layer exposing the propositional binding
+-- interface over fs-adversary's `NontrivialRelation`/`ForkedTranscript` apparatus (`Multiopen.Compat`),
+-- the `x₄` multiopen rewinding (`Multiopen.Deployed`), the opened chain threading the fork's declared
+-- `U`/`W` components through the batch decode (`Multiopen.Opened`), and the discharge fixtures
+-- (`Multiopen.DecodeFixture`).
+-- Schwartz–Zippel good-challenge budgets and production (kills `hgood` at the `_xgood` rungs).
+import Zcash.Snark.Soundness.GoodChallenge
+import Zcash.Snark.Soundness.Multiopen.Decode
+import Zcash.Snark.Soundness.Multiopen.Compat
+import Zcash.Snark.Soundness.Multiopen.Deployed
+import Zcash.Snark.Soundness.Multiopen.Opened
+import Zcash.Snark.Soundness.Multiopen.RPoly
+import Zcash.Snark.Soundness.Multiopen.Claimed
+import Zcash.Snark.Soundness.Multiopen.DecodeFixture
 import Zcash.Snark.Soundness.Vesta
+-- Concrete fork-tree knowledge error over the deployed Orchard parameters.
+import Zcash.Snark.Soundness.Deployed.ConcreteBounds
 -- AGM binding reduction: consume computed deployed relations through the fixed-slot discrete-log
--- adapter and representation-carrying algebraic-prover model (#15).
+-- adapter and representation-carrying algebraic-prover model.
 import Zcash.Snark.Soundness.AGM.Adapter
 import Zcash.Snark.Soundness.AGM.Probability
 import Zcash.Snark.Soundness.AGM.ProbabilityVesta
@@ -61,4 +83,3 @@ import Zcash.Snark.Soundness.AGM.Peel
 import Zcash.Snark.Soundness.AGM.Prover
 import Zcash.Snark.Soundness.AGM.Capstone
 import Zcash.Snark.Soundness.AGM.BindingSignature
-import Zcash.Snark.Soundness.AGM.TrustBoundary

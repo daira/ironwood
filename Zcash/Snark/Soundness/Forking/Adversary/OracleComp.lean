@@ -367,7 +367,7 @@ theorem AvoidsCache.run_queries_nodup [DecidableEq T] :
         exact List.nodup_cons.mpr ⟨htnotin, hnd⟩
       · intro p hp
         rw [queries, List.mem_cons]
-        push_neg
+        push Not
         refine ⟨fun hpt => ?_, ?_⟩
         · exact absurd (hpt ▸ List.mem_map_of_mem (f := Prod.fst) hp) ht
         · exact hdis p (List.mem_cons_of_mem _ hp)
@@ -439,7 +439,6 @@ theorem card_win_eq_sum_forkIdx [Fintype T] [DecidableEq T] [Fintype F] [Decidab
     (Finset.univ.filter win).card
       = ∑ i ∈ Finset.range Q,
           (Finset.univ.filter (fun O => win O ∧ forkIdx A fp O = i)).card := by
-  classical
   rw [Finset.card_eq_sum_card_fiberwise
     (f := fun O => forkIdx A fp O) (t := Finset.range Q) ?_]
   · refine Finset.sum_congr rfl fun i _ => ?_
@@ -536,7 +535,6 @@ theorem applyUpdates_update_of_mem {σ : List (T × F)} {t : T}
         · rw [Function.update_comm hp]
           exact ih h _
 
-open Classical in
 /-- A `Q`-query machine enters pointwise `ε`-escape sets with probability at most `Q·ε`. -/
 theorem escapesDuring_measure_le {T F : Type*} [Fintype T] [DecidableEq T] [Fintype F]
     [Nonempty F] {α : Type*} (esc : T → Set F) {ε : ℝ≥0∞}
@@ -645,7 +643,6 @@ theorem escapesDuring_measure_le {T F : Type*} [Fintype T] [DecidableEq T] [Fint
           _ = (Q + 1) * ε := by ring
           _ = ((Q + 1 : ℕ) : ℝ≥0∞) * ε := by push_cast; ring
 
-open Classical in
 /-- A `Q`-query cache-avoiding machine enters table-dependent blind escape sets of measure `ε` with
 probability at most `Q · ε`. -/
 theorem escapesDuringC_measure_le {T F : Type*} [Fintype T] [DecidableEq T] [Fintype F]
@@ -722,7 +719,6 @@ theorem escapesDuringC_measure_le {T F : Type*} [Fintype T] [DecidableEq T] [Fin
         _ = (Q + 1) * ε := by ring
         _ = ((Q + 1 : ℕ) : ℝ≥0∞) * ε := by push_cast; ring
 
-open Classical in
 /-- The conditional escape bound for an arbitrary machine: deduplicate
 (`OracleComp.escapesDuringC_dedup`), then apply the fresh-query bound. -/
 theorem escapesDuringC_measure_le' {T F : Type*} [Fintype T] [DecidableEq T] [Fintype F]
@@ -757,7 +753,6 @@ theorem sum_table_fiberwise {T F : Type*} [Fintype T] [DecidableEq T] [Fintype F
     [DecidableEq F] (t : T) (g : (T → F) → ℕ) :
     ∑ O : T → F, g O
       = ∑ u : F, ∑ O ∈ Finset.univ.filter (fun O : T → F => O t = u), g O := by
-  classical
   calc ∑ O : T → F, g O = ∑ O : T → F, ∑ u : F, if O t = u then g O else 0 := by
         refine Finset.sum_congr rfl fun O _ => ?_
         simp
@@ -770,7 +765,6 @@ theorem sum_table_fiber_blind {T F : Type*} [Fintype T] [DecidableEq T] [Fintype
     (hblind : ∀ (O : T → F) (v : F), g (Function.update O t v) = g O) (u u' : F) :
     ∑ O ∈ Finset.univ.filter (fun O : T → F => O t = u), g O
       = ∑ O ∈ Finset.univ.filter (fun O : T → F => O t = u'), g O := by
-  classical
   refine Finset.sum_nbij' (fun O => Function.update O t u') (fun O => Function.update O t u)
     (fun O hO => ?_) (fun O hO => ?_) (fun O hO => ?_) (fun O hO => ?_) (fun O hO => ?_)
   · simp
@@ -792,7 +786,6 @@ theorem sum_table_fiber_mul_card {T F : Type*} [Fintype T] [DecidableEq T] [Fint
     Finset.sum_congr rfl fun u' _ => sum_table_fiber_blind t g hblind u' u,
     Finset.sum_const, Finset.card_univ, smul_eq_mul, mul_comm]
 
-open Classical in
 /-- A `Q`-query machine's total blind charge is at most `Q` times its average per-point budget,
 stated after clearing the factor `|F|`.  The budget must hold uniformly over every override
 context `σ'`, not just the ambient one; `queryCharge_sum_mul_le_table_budget` trades this for a
@@ -872,7 +865,6 @@ theorem queryCharge_sum_mul_le {T F α : Type*} [Fintype T] [DecidableEq T] [Fin
           _ = Q * M * Fintype.card (T → F) * Fintype.card F := by
               rw [Finset.sum_const, Finset.card_univ, smul_eq_mul, mul_comm]
 
-open Classical in
 /-- Table-indexed query-charge bound, charging the budget sum at the original override context. -/
 theorem queryCharge_sum_mul_le_table_budget {T F α : Type*} [Fintype T] [DecidableEq T]
     [Fintype F] [DecidableEq F] [Nonempty F] (v : T → (T → F) → F → ℕ)
@@ -1037,7 +1029,6 @@ theorem applyUpdates_apply_mem_nodup {T F : Type*} [DecidableEq T] {σ : List (T
       · rw [applyUpdates_cons]
         exact ih hnodup.2 hp _
 
-open Classical in
 /-- Bound the charge at an adaptively selected queried point under a reprogrammed table by the
 query budget times the average per-point budget. -/
 theorem steeredCharge_context_sum_mul_le {T F α : Type*} [Fintype T] [DecidableEq T] [Fintype F]
@@ -1066,7 +1057,6 @@ theorem steeredCharge_context_sum_mul_le {T F α : Type*} [Fintype T] [Decidable
         queryCharge_sum_mul_le v hblind hbudget (OracleComp.dedup_queryBound hQ σ)
           (OracleComp.dedup_avoidsCache σ A)
 
-open Classical in
 /-- Table-indexed form of `steeredCharge_context_sum_mul_le`. -/
 theorem steeredCharge_context_sum_mul_le_table_budget {T F α : Type*} [Fintype T]
     [DecidableEq T] [Fintype F] [DecidableEq F] [Nonempty F] (v : T → (T → F) → F → ℕ)
@@ -1093,7 +1083,6 @@ theorem steeredCharge_context_sum_mul_le_table_budget {T F α : Type*} [Fintype 
         queryCharge_sum_mul_le_table_budget v hblind B hB (OracleComp.dedup_queryBound hQ σ)
           (OracleComp.dedup_avoidsCache σ A)
 
-open Classical in
 /-- Context-free form of `steeredCharge_context_sum_mul_le`. -/
 theorem steeredCharge_sum_mul_le {T F α : Type*} [Fintype T] [DecidableEq T] [Fintype F]
     [DecidableEq F] [Nonempty F] (v : T → (T → F) → F → ℕ)
@@ -1132,12 +1121,12 @@ variable {T F : Type*}
 /-- The points the schedule visits when its reads are `χ`. -/
 def points : {k : ℕ} → AdSched T F k → (Fin k → F) → (Fin k → T)
   | 0, _, _ => Fin.elim0
-  | k + 1, s, χ => Fin.cons s.1 (points (s.2 (χ 0)) (Fin.tail χ))
+  | _ + 1, s, χ => Fin.cons s.1 (points (s.2 (χ 0)) (Fin.tail χ))
 
 /-- The schedule's reads against a table `O`. -/
 def read : {k : ℕ} → AdSched T F k → (T → F) → (Fin k → F)
   | 0, _, _ => Fin.elim0
-  | k + 1, s, O => Fin.cons (O s.1) (read (s.2 (O s.1)) O)
+  | _ + 1, s, O => Fin.cons (O s.1) (read (s.2 (O s.1)) O)
 
 /-- Reads match a target exactly when the table agrees at its visited points. -/
 theorem read_eq_iff : {k : ℕ} → (s : AdSched T F k) → (O : T → F) → (χ : Fin k → F) →
@@ -1166,7 +1155,6 @@ theorem read_eq_iff : {k : ℕ} → (s : AdSched T F k) → (O : T → F) → (�
 /-- Freshness along `χ`: the χ-determined points are pairwise distinct. -/
 def Fresh {k : ℕ} (s : AdSched T F k) : Prop := ∀ χ : Fin k → F, Function.Injective (s.points χ)
 
-open Classical in
 /-- A fresh adaptive schedule reads a uniform table to a uniform answer vector. -/
 theorem map_read_uniform [Fintype T] [DecidableEq T] [Fintype F] [Nonempty F] {k : ℕ}
     (s : AdSched T F k) (hs : s.Fresh) :
@@ -1295,7 +1283,6 @@ theorem schedule_fork_bound {T F : Type*} [Fintype T] [DecidableEq T] [Fintype F
                 ∧ O (pt₁ (s.read O)) ≠ O (pt₂ (s.read O))}
         + (PMF.uniformOfFintype (T → F)).toOuterMeasure
             {O | acc (s.read O) (O (pt₁ (s.read O)))} / Fintype.card F := by
-  classical
   set sd := (s.snoc pt₁).snoc (fun χ : Fin (k + 1) → F => pt₂ (Fin.init χ)) with hsd
   have hs1 : (s.snoc pt₁).Fresh := AdSched.Fresh.of_snoc hd
   have hread1 : ∀ O, (s.snoc pt₁).read O = Fin.snoc (s.read O) (O (pt₁ (s.read O))) :=
@@ -1535,7 +1522,6 @@ theorem win_forces [DecidableEq T] (D : StagedDecode T F P k accept prefixes)
     rw [D.stateAt_prefixes, D.roundOf_prefixes, D.chainAt_prefixes]
     exact hj
 
-open Classical in
 /-- A staged `Q`-query adversary with no extractable output has advantage at most
 `(Q + k) · 3/|F|`. -/
 theorem fsAdvantage_le [Fintype T] [DecidableEq T] [Fintype F] [Nonempty F]
@@ -1554,7 +1540,6 @@ theorem fsAdvantage_le [Fintype T] [DecidableEq T] [Fintype F] [Nonempty F]
     (OracleComp.queryBound_completing prefixes hQ)
   exact_mod_cast h
 
-open Classical in
 /-- Advantage above `(Q+k)·3/|F|` yields an extractable output. -/
 theorem extractable_of_lt_fsAdvantage [Fintype T] [DecidableEq T] [Fintype F] [Nonempty F]
     (D : StagedDecode T F P k accept prefixes) {A : OracleComp T F P} {Q : ℕ}
@@ -1562,13 +1547,12 @@ theorem extractable_of_lt_fsAdvantage [Fintype T] [DecidableEq T] [Fintype F] [N
     (h : (Q + k) * (3 / Fintype.card F) < fsAdvantage A accept prefixes) :
     ∃ O : T → F, Extractable (accept (A.run O)) := by
   by_contra hno
-  push_neg at hno
+  push Not at hno
   exact absurd (D.fsAdvantage_le hQ hno) (not_le.mpr h)
 
 end StagedDecode
 
 
-open Classical in
 /-- Legacy staged-adversary wrapper: advantage above `(Q + k) · 3/p` yields an IPA opening or
 relation. -/
 noncomputable def legacy_deployed_forking_soundness_of_adversary

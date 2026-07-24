@@ -234,7 +234,7 @@ private theorem length_flatten_ofFn_const {β : Type*} {a c : ℕ} (g : Fin a �
     funext i
     exact hg i]
   rw [List.sum_ofFn]
-  simp [mul_comm]
+  simp
 
 private theorem length_absorbPoints2 {a b : ℕ} (f : Fin a → Fin b → G) :
     (absorbPoints2 (F := Fp) f).length = a * b := by
@@ -262,7 +262,6 @@ private theorem length_permSetBlock {n : ℕ} (g : Fin n → PermSetEval Fp)
     (hg : ∀ s : Fin n, (g s).lastEval.isSome = ((s : ℕ) + 1 < n)) :
     ((List.ofFn (fun s => absorbPermSet (G := G) (g s))).flatten).length
       = 2 * n + (n - 1) := by
-  classical
   have hterm : ∀ s : Fin n, ((List.length ∘ fun s => absorbPermSet (G := G) (g s)) s)
       = 2 + (if (s : ℕ) + 1 < n then 1 else 0) := by
     intro s
@@ -274,7 +273,7 @@ private theorem length_permSetBlock {n : ℕ} (g : Fin n → PermSetEval Fp)
     · rw [show (Finset.univ.filter (fun s : Fin (m + 1) => (s : ℕ) + 1 < m + 1))
           = Finset.univ.filter (fun s : Fin (m + 1) => s ≠ Fin.last m) from
         Finset.filter_congr fun s _ => by
-          simp only [eq_iff_iff, Ne, Fin.ext_iff, Fin.val_last]
+          simp only [Ne, Fin.ext_iff, Fin.val_last]
           omega]
       rw [Finset.filter_ne', Finset.card_erase_of_mem (Finset.mem_univ _), Finset.card_univ,
         Fintype.card_fin]
@@ -319,13 +318,13 @@ private theorem len_sqPt0 {shape : Shape} (init : List (TranscriptElt Fp G))
     (ps : ProofString shape Fp G) :
     (sqPt0 init ps).length
       = init.length + shape.numProofs * shape.numAdviceColumns + 1 := by
-  simp [sqPt0, List.length_append, length_absorbPoints2] <;> omega
+  simp [sqPt0, List.length_append, length_absorbPoints2] ; omega
 
 private theorem len_sqPt1 {shape : Shape} (init : List (TranscriptElt Fp G))
     (ps : ProofString shape Fp G) :
     (sqPt1 init ps).length
       = (sqPt0 init ps).length + shape.numProofs * (2 * shape.numLookups) + 1 := by
-  simp [sqPt1, List.length_append, length_absorbLookupPermuted] <;> omega
+  simp [sqPt1, List.length_append, length_absorbLookupPermuted] ; omega
 
 private theorem len_sqPt2 {shape : Shape} (init : List (TranscriptElt Fp G))
     (ps : ProofString shape Fp G) :
@@ -337,12 +336,12 @@ private theorem len_sqPt3 {shape : Shape} (init : List (TranscriptElt Fp G))
     (sqPt3 init ps).length
       = (sqPt2 init ps).length + shape.numProofs * shape.numPermutationSets
         + shape.numProofs * shape.numLookups + 1 + 1 := by
-  simp [sqPt3, List.length_append, length_absorbPoints2] <;> omega
+  simp [sqPt3, List.length_append, length_absorbPoints2] ; omega
 
 private theorem len_sqPt4 {shape : Shape} (init : List (TranscriptElt Fp G))
     (ps : ProofString shape Fp G) :
     (sqPt4 init ps).length = (sqPt3 init ps).length + shape.numQuotientPieces + 1 := by
-  simp [sqPt4, List.length_append, length_absorbPoints] <;> omega
+  simp [sqPt4, List.length_append, length_absorbPoints] ; omega
 
 private theorem len_sqEvalElts {shape : Shape} (ps : ProofString shape Fp G)
     (hwf : PsWellFormed ps) :
@@ -362,7 +361,7 @@ private theorem len_sqEvalElts {shape : Shape} (ps : ProofString shape Fp G)
       ).flatten).length
       = shape.numProofs * (5 * shape.numLookups) := length_lookupEvalBlock _
   simp only [sqEvalElts, List.length_append, length_absorbScalars, length_absorbScalars2,
-    hperm, hlook, List.length_cons, List.length_nil] <;> omega
+    hperm, hlook, List.length_cons, List.length_nil]
 
 private theorem len_sqPt5 {shape : Shape} (init : List (TranscriptElt Fp G))
     (ps : ProofString shape Fp G) (hwf : PsWellFormed ps) :
@@ -373,7 +372,7 @@ private theorem len_sqPt5 {shape : Shape} (init : List (TranscriptElt Fp G))
           + shape.numPermutationColumns
           + shape.numProofs * (2 * shape.numPermutationSets + (shape.numPermutationSets - 1))
           + shape.numProofs * (5 * shape.numLookups)) + 1 := by
-  simp [sqPt5, List.length_append, len_sqEvalElts ps hwf, Nat.add_assoc] <;> omega
+  simp [sqPt5, List.length_append, len_sqEvalElts ps hwf, Nat.add_assoc]
 
 private theorem len_sqPt6 {shape : Shape} (init : List (TranscriptElt Fp G))
     (ps : ProofString shape Fp G) :
@@ -383,17 +382,17 @@ private theorem len_sqPt6 {shape : Shape} (init : List (TranscriptElt Fp G))
 private theorem len_sqPt7 {shape : Shape} (init : List (TranscriptElt Fp G))
     (ps : ProofString shape Fp G) :
     (sqPt7 init ps).length = (sqPt6 init ps).length + 1 + 1 := by
-  simp [sqPt7, List.length_append] <;> omega
+  simp [sqPt7, List.length_append]
 
 private theorem len_sqPt8 {shape : Shape} (init : List (TranscriptElt Fp G))
     (ps : ProofString shape Fp G) :
     (sqPt8 init ps).length = (sqPt7 init ps).length + shape.numPointSets + 1 := by
-  simp [sqPt8, List.length_append, length_absorbScalars] <;> omega
+  simp [sqPt8, List.length_append, length_absorbScalars] ; omega
 
 private theorem len_sqPt9 {shape : Shape} (init : List (TranscriptElt Fp G))
     (ps : ProofString shape Fp G) :
     (sqPt9 init ps).length = (sqPt8 init ps).length + 1 + 1 := by
-  simp [sqPt9, List.length_append] <;> omega
+  simp [sqPt9, List.length_append]
 
 private theorem len_sqPt10 {shape : Shape} (init : List (TranscriptElt Fp G))
     (ps : ProofString shape Fp G) :

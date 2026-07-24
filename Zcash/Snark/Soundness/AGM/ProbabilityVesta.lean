@@ -13,8 +13,8 @@ The reduction samples a basis as uniform scalar multiples of `B`.
 `orchard_uniformURSIdentification_of_generatorRO` proves this inside a uniform generator random-
 oracle model. Treating halo2's hash-to-curve as that oracle remains an assumption.
 
-`Soundness.Forking.Adversary.Algebraic` builds these instances from the bounded-query Fiat–Shamir
-adversary and connects its binding event to the relation event.
+`Soundness.Forking.Algebraic` builds the basis-indexed instance family from the deployed bounded-query
+Fiat–Shamir adversary and identifies this relation event with its above-query-loss binding event.
 -/
 
 open scoped ENNReal
@@ -56,7 +56,6 @@ theorem orchard_deployed_relation_set_eq_relSet (k : ℕ) (B : VestaG)
       Option (DeployedAlgebraicForkingInstance (G := VestaG) k basis)) :
     orchardDeployedRelationSet k B instances =
       relSet B (deployedAlgebraicRelationFinder instances) := by
-  classical
   ext scalars
   simp only [orchardDeployedRelationSet, relSet, Finset.mem_filter, Finset.mem_univ, true_and]
   exact (deployedAlgebraicRelationFinder_isSome_iff instances (scalarBasis B scalars)).symm
@@ -126,7 +125,6 @@ theorem orchard_uniformURSIdentification_of_generatorRO {T : Type*} [DecidableEq
     OrchardUniformURSIdentification
       (orchardGeneratorROSetup query) k B
       (orchardGeneratorROBasis query) := by
-  classical
   letI : Fintype VestaG := Fintype.ofFinite VestaG
   have hinj : Function.Injective (fun c : Fp => c • B) := by
     intro c c' h

@@ -1,0 +1,699 @@
+import Zcash.Snark.Soundness.Vesta
+import Zcash.Snark.Soundness.Forking.Adversary.Algebraic
+import Zcash.Snark.Soundness.AGM.Capstone
+
+/-!
+# Composing the algebraic forking extraction with the deployed decoded capstone
+
+`Soundness.Forking.Adversary.Algebraic` proves the clean-opening branch of the algebraic forking
+family (`runToSnark`, bounded by `snarkFailure_prob_le_of_*`); `Soundness.Vesta` proves the deployed
+decoded capstone (`orchard_verifier_vesta_member_constraint_derived`). The two are architecturally
+disjoint — one runs over an adversary-produced `AlgebraicWfProof` at oracle-derived challenges
+`chRecord ν`, the other over a deployed `(vk, ps, ch)` run. This module builds the identification
+bridge the composition needs on the *computed path*: the algebraic instance's clean `Opening` — an
+`IpaRelation` at `commit … aMulti` — is exactly the `IpaRelation` at the deployed opened commitment
+`deployedCommitment − pU•u − pW•w` the capstone consumes, once `AlgebraicWfProof.multiopen_repr`
+rewrites the commitment. The honest value shift `z⁻¹·vU − ξ·⟨s,b⟩` is *derived*, not assumed: on the
+witness-tie branch it is forced to vanish (`shift_eq_zero_of_openings_agree`), and the collision
+branch needs only the commitment identification (`opening_commit_deployed_of_instance`), so the
+composition chain carries no shift hypothesis.
+
+## The extracted `U`/`W` coordinates (`pU`, `pW`)
+
+`pU`/`pW` are outputs, never hypotheses: the AGM representation (`AlgebraicWfProof.multiopen_repr`)
+exposes the adversary's aggregate commitment as `commit(aMulti) + pU•u + pW•w`, so the extracted
+opening is the generalized Pedersen triple `(aMulti, pU, pW)` in the augmented basis `(g, u, w)`.
+The relation is stated at the de-blinded point `deployedCommitment − pU•u − pW•w` because
+`IpaRelation` is the `g`-span opening. `pW` is the `w`-weight of the AGM representation — an
+adversary may set it to anything, so the argument never assumes it is nonzero. Its value is
+immaterial because the de-blinding subtracts `pW•w` (and `pU•u`) off whatever they are
+(`opening_commit_deployed_of_instance`, no value-shift hypothesis). Weight on `u` shifts the opened
+value by `z⁻¹·vU`; against the deployed batch opening of the same point that shift either vanishes
+or the witnesses collide into a computed `(g,u,w)` relation — the dichotomy
+`member_relation_or_dlr_of_instance` proves.
+-/
+
+namespace Zcash.Snark
+
+-- The deployed grouping definitions appear inside index types, so a defeq check on an index can
+-- pull the whole `constructIntermediateSets (assembleQueries …)` computation through `whnf`.
+-- Sealing them keeps those checks syntactic; the proofs below use their equation lemmas.
+attribute [local irreducible] deployedSetQueries deployedSetCommIds deployedX4PairCount
+  x4BatchCommitments x4BatchEvals
+
+-- Match the instance set `AlgebraicWfProof.multiopen_repr` is stated against
+-- (`Forking.Adversary.Algebraic` uses the same concrete `Inhabited VestaG`); a local `[Inhabited]`
+-- binder would be a *different* instance term, forcing the `multiopenCommitment` fold through `whnf`.
+-- Named (not anonymous) to avoid an auto-generated-name collision with the identical
+-- `local instance` in `Forking.Adversary.Provenance` when both are imported into `TrustBoundary`.
+local instance vestaInhabitedCompositionBridge : Inhabited VestaG := ⟨0⟩
+
+variable {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+
+/-- `deployedCommitment` at the split URS unfolds to `multiopenCommitment`: definitional (the `hk`
+cast is `rfl` on `ursOfAugmentedBasis`, whose `.k` is `shape.k`). Isolated so downstream terms match
+`AlgebraicWfProof.multiopen_repr`'s `multiopenCommitment` without forcing the fold through `whnf`. -/
+theorem deployedCommitment_eq_multiopen
+    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (ps : ProofString shape Fp VestaG)
+    (ch : Challenges shape.k Fp) :
+    deployedCommitment (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment ps ch
+      = multiopenCommitment (ursOfAugmentedBasis shape.k basis).g
+          (ursOfAugmentedBasis shape.k basis).w (ursOfAugmentedBasis shape.k basis).u vk instanceCommitment ps ch :=
+  rfl
+
+/-- **The g-span representation of the multiopen commitment (P-identification).** The algebraic
+proof's aggregate witness `aMulti ν` commits to `multiopenCommitment − multiU•u − multiBlind•w`:
+immediate from `AlgebraicWfProof.multiopen_repr`. -/
+theorem commit_aMulti_eq_multiopen
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (p : AlgebraicWfProof basis vk instanceCommitment) (ν : Fin 11 → Fp) :
+    commit (ursOfAugmentedBasis shape.k basis) (p.aMulti ν)
+      = multiopenCommitment (ursOfAugmentedBasis shape.k basis).g
+          (ursOfAugmentedBasis shape.k basis).w (ursOfAugmentedBasis shape.k basis).u
+          vk instanceCommitment p.algebraicProof.erase (chRecord ν (fun _ => 0))
+        - p.multiU ν • (ursOfAugmentedBasis shape.k basis).u
+        - p.multiBlind ν • (ursOfAugmentedBasis shape.k basis).w := by
+  have h := p.multiopen_repr ν
+  rw [sub_sub, eq_sub_iff_add_eq, ← add_assoc]
+  exact h
+
+/-- **The algebraic clean opening is an `IpaRelation` at the identified commitment/value (the
+bridge, abstract form).** A clean `Opening` of a `DeployedAlgebraicForkingInstance` `x` is an
+`IpaRelation` at `commit … x.aMulti`, base `x.b`, value `x.v + z⁻¹·vU − ξ·⟨s,b⟩`. Given the
+P-identification `hP` (`commit x.aMulti = P`), the value identification `hv` (`x.v = v`), and the
+honest shift-vanishing `hshift`, that opening's witness satisfies `IpaRelation urs P x.b v`. -/
+theorem ipaRelation_of_opening
+    {P : VestaG} {v : Fp}
+    (x : DeployedAlgebraicForkingInstance (G := VestaG) shape.k basis)
+    (hP : commit (ursOfAugmentedBasis shape.k basis) x.aMulti = P)
+    (hv : x.v = v)
+    (hshift : x.z⁻¹ * x.vU - x.ξ * innerProduct x.s x.b = 0)
+    (o : x.Opening) :
+    IpaRelation (ursOfAugmentedBasis shape.k basis) P x.b v o.1 := by
+  obtain ⟨hcommit, hval⟩ := o.2
+  refine ⟨hcommit.trans hP, ?_⟩
+  rw [hval, add_sub_assoc, hshift, add_zero, hv]
+
+/-- **The bridge at the constructed instance.** The clean opening is an `IpaRelation` at the
+deployed opened commitment `deployedCommitment − multiU•u − multiBlind•w` with `v = multiopenValue`
+(`commit_aMulti_eq_multiopen` identifies the commitment). Only this standalone bridge carries
+`hshift`; the composition derives the shift on the witness tie
+(`shift_eq_zero_of_openings_agree`). -/
+theorem ipaRelation_deployed_of_instance
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (p : AlgebraicWfProof basis vk instanceCommitment) (ν : Fin 11 → Fp)
+    (cert : AlgebraicDForkCert (F := Fp)
+      (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
+        (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
+    (hz : ν 10 ≠ 0)
+    (hvalid : DeployedForkValid (ursOfAugmentedBasis shape.k basis).g
+      (evalVector shape.k (ν 7)) (ursOfAugmentedBasis shape.k basis).u
+      (ursOfAugmentedBasis shape.k basis).w (ν 10)
+      (commit (ursOfAugmentedBasis shape.k basis)
+          (adjustedWitness (p.aMulti ν) p.s
+            (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+        (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
+        (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
+      cert.toDForkCert)
+    (hshift : (ν 10)⁻¹ * (p.multiU ν + ν 9 * p.sU)
+        - ν 9 * innerProduct p.s (evalVector shape.k (ν 7)) = 0)
+    (o : (deployedAlgebraicInstanceOfCert p ν cert hz hvalid).Opening) :
+    IpaRelation (ursOfAugmentedBasis shape.k basis)
+      (deployedCommitment (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
+            (chRecord ν (fun _ => 0))
+        - p.multiU ν • (ursOfAugmentedBasis shape.k basis).u
+        - p.multiBlind ν • (ursOfAugmentedBasis shape.k basis).w)
+      (evalVector shape.k (ν 7)) (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) o.1 :=
+  ipaRelation_of_opening (deployedAlgebraicInstanceOfCert p ν cert hz hvalid)
+    (by
+      simp only [deployedAlgebraicInstanceOfCert]
+      rw [deployedCommitment_eq_multiopen,
+        show (p.proof.1 : ProofString shape Fp VestaG) = p.algebraicProof.erase from rfl]
+      exact commit_aMulti_eq_multiopen p ν)
+    rfl hshift o
+
+/-- The extracted opening commits to the de-blinded deployed commitment
+`deployedCommitment − multiU•u − multiBlind•w` — the commitment conjunct of
+`ipaRelation_deployed_of_instance`, available with no value-shift hypothesis. -/
+theorem opening_commit_deployed_of_instance
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (p : AlgebraicWfProof basis vk instanceCommitment) (ν : Fin 11 → Fp)
+    (cert : AlgebraicDForkCert (F := Fp)
+      (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
+        (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
+    (hz : ν 10 ≠ 0)
+    (hvalid : DeployedForkValid (ursOfAugmentedBasis shape.k basis).g
+      (evalVector shape.k (ν 7)) (ursOfAugmentedBasis shape.k basis).u
+      (ursOfAugmentedBasis shape.k basis).w (ν 10)
+      (commit (ursOfAugmentedBasis shape.k basis)
+          (adjustedWitness (p.aMulti ν) p.s
+            (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+        (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
+        (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
+      cert.toDForkCert)
+    (o : (deployedAlgebraicInstanceOfCert p ν cert hz hvalid).Opening) :
+    commit (ursOfAugmentedBasis shape.k basis) o.1
+      = deployedCommitment (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
+            (chRecord ν (fun _ => 0))
+        - p.multiU ν • (ursOfAugmentedBasis shape.k basis).u
+        - p.multiBlind ν • (ursOfAugmentedBasis shape.k basis).w :=
+  o.2.1.trans (by
+    simp only [deployedAlgebraicInstanceOfCert]
+    rw [deployedCommitment_eq_multiopen,
+      show (p.proof.1 : ProofString shape Fp VestaG) = p.algebraicProof.erase from rfl]
+    exact commit_aMulti_eq_multiopen p ν)
+
+/-- **The honest value shift is forced on the witness tie.** The clean opening opens at
+`multiopenValue + (z⁻¹·vU − ξ·⟨s,b⟩)`; a witness `a₀` of the deployed batch opens the same inner
+product at `multiopenValue`. If the two witnesses agree, the shift `z⁻¹·vU − ξ·⟨s,b⟩` is `0` —
+the condition `ipaRelation_deployed_of_instance` names `hshift`, derived rather than assumed. -/
+theorem shift_eq_zero_of_openings_agree
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (p : AlgebraicWfProof basis vk instanceCommitment) (ν : Fin 11 → Fp)
+    (cert : AlgebraicDForkCert (F := Fp)
+      (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
+        (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
+    (hz : ν 10 ≠ 0)
+    (hvalid : DeployedForkValid (ursOfAugmentedBasis shape.k basis).g
+      (evalVector shape.k (ν 7)) (ursOfAugmentedBasis shape.k basis).u
+      (ursOfAugmentedBasis shape.k basis).w (ν 10)
+      (commit (ursOfAugmentedBasis shape.k basis)
+          (adjustedWitness (p.aMulti ν) p.s
+            (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+        (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
+        (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
+      cert.toDForkCert)
+    (o : (deployedAlgebraicInstanceOfCert p ν cert hz hvalid).Opening)
+    {a₀ : Fin (2 ^ shape.k) → Fp}
+    (hval₀ : innerProduct a₀ (evalVector shape.k (ν 7))
+      = multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
+    (hae : o.1 = a₀) :
+    (ν 10)⁻¹ * (p.multiU ν + ν 9 * p.sU)
+      - ν 9 * innerProduct p.s (evalVector shape.k (ν 7)) = 0 := by
+  have h := o.2.2
+  rw [hae] at h
+  -- Re-ascribe by definitional unfolding: the instance's projections (`x.b`, `x.v`, …) reduce to
+  -- the `ν`-expressions, aligning the hidden `2 ^ urs.k` index with `2 ^ shape.k` so `rw` matches.
+  have h' : innerProduct a₀ (evalVector shape.k (ν 7))
+      = multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))
+        + (ν 10)⁻¹ * (p.multiU ν + ν 9 * p.sU)
+        - ν 9 * innerProduct p.s (evalVector shape.k (ν 7)) := h
+  rw [hval₀, add_sub_assoc] at h'
+  exact left_eq_add.mp h'
+
+/-- `ipaRelation_deployed_of_instance` with `hshift` discharged by
+`shift_eq_zero_of_openings_agree`: on the witness tie the clean opening satisfies the deployed
+`IpaRelation` at `multiopenValue` with no shift hypothesis. -/
+theorem ipaRelation_deployed_of_openings_agree
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (p : AlgebraicWfProof basis vk instanceCommitment) (ν : Fin 11 → Fp)
+    (cert : AlgebraicDForkCert (F := Fp)
+      (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
+        (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
+    (hz : ν 10 ≠ 0)
+    (hvalid : DeployedForkValid (ursOfAugmentedBasis shape.k basis).g
+      (evalVector shape.k (ν 7)) (ursOfAugmentedBasis shape.k basis).u
+      (ursOfAugmentedBasis shape.k basis).w (ν 10)
+      (commit (ursOfAugmentedBasis shape.k basis)
+          (adjustedWitness (p.aMulti ν) p.s
+            (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+        (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
+        (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
+      cert.toDForkCert)
+    (o : (deployedAlgebraicInstanceOfCert p ν cert hz hvalid).Opening)
+    {a₀ : Fin (2 ^ shape.k) → Fp}
+    (hval₀ : innerProduct a₀ (evalVector shape.k (ν 7))
+      = multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
+    (hae : o.1 = a₀) :
+    IpaRelation (ursOfAugmentedBasis shape.k basis)
+      (deployedCommitment (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
+            (chRecord ν (fun _ => 0))
+        - p.multiU ν • (ursOfAugmentedBasis shape.k basis).u
+        - p.multiBlind ν • (ursOfAugmentedBasis shape.k basis).w)
+      (evalVector shape.k (ν 7)) (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) o.1 :=
+  ipaRelation_deployed_of_instance p ν cert hz hvalid
+    (shift_eq_zero_of_openings_agree p ν cert hz hvalid o hval₀ hae) o
+
+open Polynomial in
+open Classical in
+/-- **Witness-tie: the algebraic clean opening feeds the deployed member capstone.** The batch
+supplies its own opening at witness `a₀`, and the clean opening commits to the same point
+(`opening_commit_deployed_of_instance`). *Either* the witnesses agree — and
+`member_constraint_of_relation_and_batch` produces the member SNARK relation — *or* they collide,
+a nontrivial `(g,u,w)` relation (`hasNontrivialRelation_of_two_openings`). No shift hypothesis is
+carried; the gate data (`hquot`/`hgood`/layout/`mdec`) stays a premise. -/
+theorem member_relation_or_dlr_of_instance
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (p : AlgebraicWfProof basis vk instanceCommitment) (ν : Fin 11 → Fp)
+    (cert : AlgebraicDForkCert (F := Fp)
+      (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
+        (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
+    (hz : ν 10 ≠ 0)
+    (hvalid : DeployedForkValid (ursOfAugmentedBasis shape.k basis).g
+      (evalVector shape.k (ν 7)) (ursOfAugmentedBasis shape.k basis).u
+      (ursOfAugmentedBasis shape.k basis).w (ν 10)
+      (commit (ursOfAugmentedBasis shape.k basis)
+          (adjustedWitness (p.aMulti ν) p.s
+            (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+        (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
+        (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
+      cert.toDForkCert)
+    (o : (deployedAlgebraicInstanceOfCert p ν cert hz hvalid).Opening)
+    {a₀ : Fin (2 ^ shape.k) → Fp}
+    (pbatch : OpenedBatchOpenings (ursOfAugmentedBasis shape.k basis) (evalVector shape.k (ν 7))
+      (x4BatchCommitments (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
+        (chRecord ν (fun _ => 0)))
+      (x4BatchEvals vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) a₀ (p.multiU ν) (p.multiBlind ν))
+    (hξcur : pbatch.batchChallenge pbatch.current
+      = (chRecord ν (fun _ => 0) : Challenges shape.k Fp).x4)
+    {numAdvice numInstance : ℕ}
+    (adviceSet : Fin numAdvice → ℕ)
+    (hadviceSet : ∀ j, adviceSet j
+      < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
+    (adviceMem : ∀ j : Fin numAdvice,
+      Fin (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (adviceSet j)).length)
+    (instanceSet : Fin numInstance → ℕ)
+    (hinstanceSet : ∀ j, instanceSet j
+      < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
+    (instanceMem : ∀ j : Fin numInstance,
+      Fin (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (instanceSet j)).length)
+    (fixedCols : ℕ → Polynomial Fp) (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp)
+    (hpoly : Polynomial Fp) (deg : ℕ) (xpt : Fp)
+    (mdec : ∀ i (hi : i < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))),
+      OpenedMemberDecode (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
+        (chRecord ν (fun _ => 0)) pbatch i hi)
+    (hquot : quotientCheck
+      (combineGates fixedCols
+        (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((mdec (adviceSet j) (hadviceSet j)).cols (adviceMem j))))
+        (rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((mdec (instanceSet j) (hinstanceSet j)).cols (instanceMem j))))
+        y gates) hpoly deg xpt)
+    (hgood :
+      combineGates fixedCols
+        (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((mdec (adviceSet j) (hadviceSet j)).cols (adviceMem j))))
+        (rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((mdec (instanceSet j) (hinstanceSet j)).cols (instanceMem j))))
+        y gates ≠ hpoly * (X ^ deg - 1) →
+      (combineGates fixedCols
+        (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((mdec (adviceSet j) (hadviceSet j)).cols (adviceMem j))))
+        (rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((mdec (instanceSet j) (hinstanceSet j)).cols (instanceMem j))))
+        y gates - hpoly * (X ^ deg - 1)).eval xpt ≠ 0)
+    (pp : Fin shape.numProofs)
+    (hadviceLayout : ∀ j : Fin numAdvice,
+      (deployedSetCommIds vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (adviceSet j)).getD
+          (adviceMem j : ℕ) CommitmentId.vanishingH
+        = CommitmentId.adviceCol pp (vk.adviceQueryLayout.getD (j : ℕ) (0, 0)).1)
+    (hinstanceLayout : ∀ j : Fin numInstance,
+      (deployedSetCommIds vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (instanceSet j)).getD
+          (instanceMem j : ℕ) CommitmentId.vanishingH
+        = CommitmentId.instanceCol pp (vk.instanceQueryLayout.getD (j : ℕ) (0, 0)).1)
+    (hquotCommitted : ∃ (hSet : ℕ)
+        (hhSet : hSet < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
+        (hMem : Fin (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) hSet).length),
+      hpoly = coeffsToPoly ((mdec hSet hhSet).cols hMem) ∧
+      (deployedSetCommIds vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) hSet).getD (hMem : ℕ)
+          CommitmentId.randomPoly = CommitmentId.vanishingH)
+    {S : Prop}
+    (hencodes : ∀ a,
+      SnarkRelationWithMemberColumns (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
+        (chRecord ν (fun _ => 0))
+        (deployedCommitment (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
+            (chRecord ν (fun _ => 0))
+          - p.multiU ν • (ursOfAugmentedBasis shape.k basis).u
+          - p.multiBlind ν • (ursOfAugmentedBasis shape.k basis).w)
+        (evalVector shape.k (ν 7)) (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
+        pp adviceSet hadviceSet adviceMem instanceSet hinstanceSet instanceMem
+        fixedCols y gates hpoly deg (p.multiU ν) (p.multiBlind ν) a → S) :
+    S ∨ HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
+      (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w := by
+  have hrel₀ := pbatch.ipaRelation_of_x4Current hξcur
+  have hcomm := opening_commit_deployed_of_instance p ν cert hz hvalid o
+  by_cases hae : o.1 = a₀
+  · exact Or.inl (member_constraint_of_relation_and_batch (ursOfAugmentedBasis shape.k basis) rfl
+      vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) adviceSet hadviceSet adviceMem instanceSet hinstanceSet
+      instanceMem fixedCols y gates hpoly deg xpt hrel₀ pbatch mdec hquot hgood pp hadviceLayout
+      hinstanceLayout hquotCommitted hencodes)
+  · exact Or.inr (hasNontrivialRelation_of_two_openings (ursOfAugmentedBasis shape.k basis) hae
+      (hcomm.trans hrel₀.1.symm))
+
+open Polynomial in
+open Classical in
+/-- The `runToSnark`-analogue on the computed path: on the clean-opening branch the witness tie
+produces the member SNARK relation (or a binding `HasNontrivialRelation`); on the relation branch,
+the algebraic extraction's own `AlgebraicRelationWitness`. Stated at the deployed opened-commitment
+shape so the binding disjunct threads out cleanly. -/
+noncomputable def member_snark_of_instance
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (p : AlgebraicWfProof basis vk instanceCommitment) (ν : Fin 11 → Fp)
+    (cert : AlgebraicDForkCert (F := Fp)
+      (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
+        (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
+    (hz : ν 10 ≠ 0)
+    (hvalid : DeployedForkValid (ursOfAugmentedBasis shape.k basis).g
+      (evalVector shape.k (ν 7)) (ursOfAugmentedBasis shape.k basis).u
+      (ursOfAugmentedBasis shape.k basis).w (ν 10)
+      (commit (ursOfAugmentedBasis shape.k basis)
+          (adjustedWitness (p.aMulti ν) p.s
+            (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+        (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
+        (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
+      cert.toDForkCert)
+    {a₀ : Fin (2 ^ shape.k) → Fp}
+    (pbatch : OpenedBatchOpenings (ursOfAugmentedBasis shape.k basis) (evalVector shape.k (ν 7))
+      (x4BatchCommitments (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
+        (chRecord ν (fun _ => 0)))
+      (x4BatchEvals vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) a₀ (p.multiU ν) (p.multiBlind ν))
+    (hξcur : pbatch.batchChallenge pbatch.current
+      = (chRecord ν (fun _ => 0) : Challenges shape.k Fp).x4)
+    {numAdvice numInstance : ℕ}
+    (adviceSet : Fin numAdvice → ℕ)
+    (hadviceSet : ∀ j, adviceSet j
+      < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
+    (adviceMem : ∀ j : Fin numAdvice,
+      Fin (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (adviceSet j)).length)
+    (instanceSet : Fin numInstance → ℕ)
+    (hinstanceSet : ∀ j, instanceSet j
+      < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
+    (instanceMem : ∀ j : Fin numInstance,
+      Fin (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (instanceSet j)).length)
+    (fixedCols : ℕ → Polynomial Fp) (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp)
+    (hpoly : Polynomial Fp) (deg : ℕ) (xpt : Fp)
+    (mdec : ∀ i (hi : i < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))),
+      OpenedMemberDecode (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
+        (chRecord ν (fun _ => 0)) pbatch i hi)
+    (hquot : quotientCheck
+      (combineGates fixedCols
+        (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((mdec (adviceSet j) (hadviceSet j)).cols (adviceMem j))))
+        (rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((mdec (instanceSet j) (hinstanceSet j)).cols (instanceMem j))))
+        y gates) hpoly deg xpt)
+    (hgood :
+      combineGates fixedCols
+        (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((mdec (adviceSet j) (hadviceSet j)).cols (adviceMem j))))
+        (rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((mdec (instanceSet j) (hinstanceSet j)).cols (instanceMem j))))
+        y gates ≠ hpoly * (X ^ deg - 1) →
+      (combineGates fixedCols
+        (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((mdec (adviceSet j) (hadviceSet j)).cols (adviceMem j))))
+        (rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((mdec (instanceSet j) (hinstanceSet j)).cols (instanceMem j))))
+        y gates - hpoly * (X ^ deg - 1)).eval xpt ≠ 0)
+    (pp : Fin shape.numProofs)
+    (hadviceLayout : ∀ j : Fin numAdvice,
+      (deployedSetCommIds vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (adviceSet j)).getD
+          (adviceMem j : ℕ) CommitmentId.vanishingH
+        = CommitmentId.adviceCol pp (vk.adviceQueryLayout.getD (j : ℕ) (0, 0)).1)
+    (hinstanceLayout : ∀ j : Fin numInstance,
+      (deployedSetCommIds vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (instanceSet j)).getD
+          (instanceMem j : ℕ) CommitmentId.vanishingH
+        = CommitmentId.instanceCol pp (vk.instanceQueryLayout.getD (j : ℕ) (0, 0)).1)
+    (hquotCommitted : ∃ (hSet : ℕ)
+        (hhSet : hSet < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
+        (hMem : Fin (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) hSet).length),
+      hpoly = coeffsToPoly ((mdec hSet hhSet).cols hMem) ∧
+      (deployedSetCommIds vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) hSet).getD (hMem : ℕ)
+          CommitmentId.randomPoly = CommitmentId.vanishingH)
+    {S : Prop}
+    (hencodes : ∀ a,
+      SnarkRelationWithMemberColumns (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
+        (chRecord ν (fun _ => 0))
+        (deployedCommitment (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
+            (chRecord ν (fun _ => 0))
+          - p.multiU ν • (ursOfAugmentedBasis shape.k basis).u
+          - p.multiBlind ν • (ursOfAugmentedBasis shape.k basis).w)
+        (evalVector shape.k (ν 7)) (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
+        pp adviceSet hadviceSet adviceMem instanceSet hinstanceSet instanceMem
+        fixedCols y gates hpoly deg (p.multiU ν) (p.multiBlind ν) a → S) :
+    (S ∨ HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
+        (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w)
+      ⊕' AlgebraicRelationWitness (F := Fp) basis :=
+  match (deployedAlgebraicInstanceOfCert p ν cert hz hvalid).run with
+  | PSum.inl o =>
+      PSum.inl (member_relation_or_dlr_of_instance p ν cert hz hvalid o pbatch hξcur
+        adviceSet hadviceSet adviceMem instanceSet hinstanceSet instanceMem fixedCols y gates
+        hpoly deg xpt mdec hquot hgood pp hadviceLayout hinstanceLayout hquotCommitted hencodes)
+  | PSum.inr rel => PSum.inr rel
+
+/-- **The computed member relation yields the `KnowledgeSoundness.SnarkRelation`.** The
+`SnarkRelationWithMemberColumns` the composition produces projects onto the plain `SnarkRelation`
+(`Soundness.KnowledgeSoundness`) at `circuitSat := circuitSatViaGates …` on the decoded member
+columns: its `opens` field is the IPA opening and its `satisfiesCircuit` field is exactly the gate
+check. This is the payload `ExtractableFromAcceptance` (`Soundness.Main`) *assumed* — an `IpaRelation`
+together with circuit satisfaction — now delivered on the computed path.
+
+That does *not* retire `ExtractableFromAcceptance`: what is delivered here is the payload's *shape*,
+from a `SnarkRelationWithMemberColumns` that the computed path still takes as supplied data
+(`pbatch`/`mdec`/`hquot`/`hgood` are hypotheses of `orchard_verifier_sound_vesta_computed` below, not
+consequences of an accepting run). Producing them from a bare accepting run is the open composition
+surface; see that theorem's docstring for the precise statement of what remains. -/
+theorem snarkRelation_of_memberColumns {G : Type*} [AddCommGroup G] [Module Fp G]
+    [DecidableEq G] [Inhabited G] {shp : Shape} {urs : URS G} {hk : shp.k = urs.k}
+    {vk : VerifyingKey shp Fp G} {instanceCommitment : Fin shp.numProofs → ℕ → G} {ps : ProofString shp Fp G} {ch : Challenges shp.k Fp}
+    {P : G} {b : Fin (2 ^ urs.k) → Fp} {v : Fp} {pp : Fin shp.numProofs}
+    {numAdvice numInstance : ℕ} {adviceSet : Fin numAdvice → ℕ}
+    {hadviceSet : ∀ j, adviceSet j < deployedX4PairCount vk instanceCommitment ps ch}
+    {adviceMem : ∀ j : Fin numAdvice, Fin (deployedSetQueries vk instanceCommitment ps ch (adviceSet j)).length}
+    {instanceSet : Fin numInstance → ℕ}
+    {hinstanceSet : ∀ j, instanceSet j < deployedX4PairCount vk instanceCommitment ps ch}
+    {instanceMem : ∀ j : Fin numInstance,
+      Fin (deployedSetQueries vk instanceCommitment ps ch (instanceSet j)).length}
+    {fixedCols : ℕ → Polynomial Fp} {y : Fp} {ng : ℕ} {gates : Fin ng → Expr Fp}
+    {hpoly : Polynomial Fp} {deg : ℕ} {pU pW : Fp} {a : Fin (2 ^ urs.k) → Fp}
+    (hmem : SnarkRelationWithMemberColumns urs hk vk instanceCommitment ps ch P b v pp adviceSet hadviceSet adviceMem
+      instanceSet hinstanceSet instanceMem fixedCols y gates hpoly deg pU pW a) :
+    SnarkRelation urs P b v
+      (circuitSatViaGates fixedCols
+        (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((hmem.memberDecode (adviceSet j) (hadviceSet j)).cols (adviceMem j))))
+        (fun _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((hmem.memberDecode (instanceSet j) (hinstanceSet j)).cols (instanceMem j))))
+        y gates hpoly deg) a :=
+  ⟨hmem.opens, hmem.satisfiesCircuit⟩
+
+open Polynomial in
+/-- **Deployed soundness on the computed path, per certificate.** From one algebraic forking
+certificate together with the deployed data — the batch `pbatch`, the member decode `mdec`, the
+gate checks `hquot`/`hgood`, the layout identities, and `hencodes` — the clean-opening branch opens
+the deployed commitment and satisfies the member gate check, and the non-clean branch returns a
+computed DL relation. `circuitSat` is not a free parameter: it is the concrete gate check on the
+decoded member columns.
+
+What this does *not* do is retire `ExtractableFromAcceptance`. The premise is absent from this
+signature, but only because the data it stood in for is supplied by hand instead; producing that
+data from a bare accepting run is the open composition surface. The conditional endpoint
+`orchard_verifier_sound_vesta_conditional` (`Soundness.Vesta`) still carries the assumed bridge,
+and the quantitative endpoint below is still conditional on `hExtract`. -/
+noncomputable def orchard_verifier_sound_vesta_computed
+    {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG} (p : AlgebraicWfProof basis vk instanceCommitment) (ν : Fin 11 → Fp)
+    (cert : AlgebraicDForkCert (F := Fp)
+      (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
+        (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
+    (hz : ν 10 ≠ 0)
+    (hvalid : DeployedForkValid (ursOfAugmentedBasis shape.k basis).g
+      (evalVector shape.k (ν 7)) (ursOfAugmentedBasis shape.k basis).u
+      (ursOfAugmentedBasis shape.k basis).w (ν 10)
+      (commit (ursOfAugmentedBasis shape.k basis)
+          (adjustedWitness (p.aMulti ν) p.s
+            (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+        (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
+        (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
+      cert.toDForkCert)
+    {a₀ : Fin (2 ^ shape.k) → Fp}
+    (pbatch : OpenedBatchOpenings (ursOfAugmentedBasis shape.k basis) (evalVector shape.k (ν 7))
+      (x4BatchCommitments (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
+        (chRecord ν (fun _ => 0)))
+      (x4BatchEvals vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) a₀ (p.multiU ν) (p.multiBlind ν))
+    (hξcur : pbatch.batchChallenge pbatch.current
+      = (chRecord ν (fun _ => 0) : Challenges shape.k Fp).x4)
+    {numAdvice numInstance : ℕ}
+    (adviceSet : Fin numAdvice → ℕ)
+    (hadviceSet : ∀ j, adviceSet j
+      < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
+    (adviceMem : ∀ j : Fin numAdvice,
+      Fin (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (adviceSet j)).length)
+    (instanceSet : Fin numInstance → ℕ)
+    (hinstanceSet : ∀ j, instanceSet j
+      < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
+    (instanceMem : ∀ j : Fin numInstance,
+      Fin (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (instanceSet j)).length)
+    (fixedCols : ℕ → Polynomial Fp) (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp)
+    (hpoly : Polynomial Fp) (deg : ℕ) (xpt : Fp)
+    (mdec : ∀ i (hi : i < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))),
+      OpenedMemberDecode (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
+        (chRecord ν (fun _ => 0)) pbatch i hi)
+    (hquot : quotientCheck
+      (combineGates fixedCols
+        (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((mdec (adviceSet j) (hadviceSet j)).cols (adviceMem j))))
+        (rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((mdec (instanceSet j) (hinstanceSet j)).cols (instanceMem j))))
+        y gates) hpoly deg xpt)
+    (hgood :
+      combineGates fixedCols
+        (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((mdec (adviceSet j) (hadviceSet j)).cols (adviceMem j))))
+        (rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((mdec (instanceSet j) (hinstanceSet j)).cols (instanceMem j))))
+        y gates ≠ hpoly * (X ^ deg - 1) →
+      (combineGates fixedCols
+        (rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((mdec (adviceSet j) (hadviceSet j)).cols (adviceMem j))))
+        (rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((mdec (instanceSet j) (hinstanceSet j)).cols (instanceMem j))))
+        y gates - hpoly * (X ^ deg - 1)).eval xpt ≠ 0)
+    (pp : Fin shape.numProofs)
+    (hadviceLayout : ∀ j : Fin numAdvice,
+      (deployedSetCommIds vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (adviceSet j)).getD
+          (adviceMem j : ℕ) CommitmentId.vanishingH
+        = CommitmentId.adviceCol pp (vk.adviceQueryLayout.getD (j : ℕ) (0, 0)).1)
+    (hinstanceLayout : ∀ j : Fin numInstance,
+      (deployedSetCommIds vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) (instanceSet j)).getD
+          (instanceMem j : ℕ) CommitmentId.vanishingH
+        = CommitmentId.instanceCol pp (vk.instanceQueryLayout.getD (j : ℕ) (0, 0)).1)
+    (hquotCommitted : ∃ (hSet : ℕ)
+        (hhSet : hSet < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
+        (hMem : Fin (deployedSetQueries vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) hSet).length),
+      hpoly = coeffsToPoly ((mdec hSet hhSet).cols hMem) ∧
+      (deployedSetCommIds vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)) hSet).getD (hMem : ℕ)
+          CommitmentId.randomPoly = CommitmentId.vanishingH)
+    {S : Prop}
+    (hencodes : ∀ (a : Fin (2 ^ shape.k) → Fp)
+        (bo : OpenedBatchOpenings (ursOfAugmentedBasis shape.k basis) (evalVector shape.k (ν 7))
+          (x4BatchCommitments (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
+            (chRecord ν (fun _ => 0)))
+          (x4BatchEvals vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))) a (p.multiU ν) (p.multiBlind ν))
+        (md : ∀ i (hi : i < deployedX4PairCount vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0))),
+          OpenedMemberDecode (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
+            (chRecord ν (fun _ => 0)) bo i hi),
+      SnarkRelation (ursOfAugmentedBasis shape.k basis)
+        (deployedCommitment (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
+            (chRecord ν (fun _ => 0))
+          - p.multiU ν • (ursOfAugmentedBasis shape.k basis).u
+          - p.multiBlind ν • (ursOfAugmentedBasis shape.k basis).w)
+        (evalVector shape.k (ν 7)) (multiopenValue vk instanceCommitment p.proof.1 (chRecord ν (fun _ => 0)))
+        (circuitSatViaGates fixedCols
+          (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+            coeffsToPoly ((md (adviceSet j) (hadviceSet j)).cols (adviceMem j))))
+          (fun _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+            coeffsToPoly ((md (instanceSet j) (hinstanceSet j)).cols (instanceMem j))))
+          y gates hpoly deg) a → S) :
+    (S ∨ HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
+        (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w)
+      ⊕' AlgebraicRelationWitness (F := Fp) basis :=
+  member_snark_of_instance p ν cert hz hvalid pbatch hξcur adviceSet hadviceSet adviceMem
+    instanceSet hinstanceSet instanceMem fixedCols y gates hpoly deg xpt mdec hquot hgood pp
+    hadviceLayout hinstanceLayout hquotCommitted
+    (S := S)
+    (fun a hmem => hencodes a hmem.batchOpenings hmem.memberDecode
+      (snarkRelation_of_memberColumns hmem))
+
+/-! ## G4 — the quantitative knowledge-error bound (conditional)
+
+The clean-opening failure `snarkFailureEvent` is already bounded
+(`snarkFailure_prob_le_of_generatorRO_textbookDL`). On every clean-opening run the composition
+`member_snark_of_instance` delivers `SnarkRelation ∨ DL` *given the deployed gate data*
+(`pbatch`/`mdec`/`hquot`/`hgood`/layout). So the SNARK-extraction failure is contained in the
+clean-opening failure and inherits the same bound — **conditional on the gate data discharging on
+clean openings** (`hExtract`).
+
+The extraction *logic* behind `hExtract` is discharged downstream: the budgeted witness tie
+(`Soundness.VestaBudget.member_relation_or_dlr_of_instance_budgeted`) concludes the extraction from
+a clean opening given the multiopen rewind data, and
+`Soundness.VestaBudget.snarkExtraction_prob_le_of_generatorRO_textbookDL_budgeted` restates this
+bound with `hExtract` reduced to that data-supply obligation through the instance provenance. The
+multiopen failure itself is priced (`Soundness.Multiopen.FloorBudget`,
+`Soundness.Multiopen.BudgetedExtraction.deployed_member_budget`). What keeps the bound conditional
+is the coin–challenge coupling: the supply's inputs live over the multiopen challenge draw, which
+the family's coin space does not range over — see the hand-off note in `Soundness.VestaBudget`. -/
+
+namespace ComputedAlgebraicFSFamily
+
+variable {shape : Shape}
+
+/-- The SNARK-extraction-failure event: full deployed acceptance with no successful SNARK extraction
+`extracted`. `extracted` is the composition's per-run conclusion (`SnarkRelation ∨ DL`), delivered on
+the clean-opening branch by `member_snark_of_instance` given the deployed gate data. -/
+def snarkExtractionFailureEvent (family : ComputedAlgebraicFSFamily shape)
+    (extracted : (AugmentedIndex (2 ^ shape.k) → VestaG) → family.Coins → Prop) :
+    Set ((AugmentedIndex (2 ^ shape.k) → VestaG) × family.Coins) :=
+  {q | fsWinsFull (family.adversary q.1) (fullAlgebraicAccept q.1 (family.vk q.1) (family.instanceCommitment q.1))
+      (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) q.2.1 ∧
+    ¬ extracted q.1 q.2}
+
+/-- If every clean-opening run yields the extraction, the SNARK-extraction failure is contained in
+the clean-opening failure `snarkFailureEvent`. -/
+theorem snarkExtractionFailureEvent_subset (family : ComputedAlgebraicFSFamily shape)
+    (extracted : (AugmentedIndex (2 ^ shape.k) → VestaG) → family.Coins → Prop)
+    (hExtract : ∀ basis coins, family.hasCleanOpening basis coins → extracted basis coins) :
+    family.snarkExtractionFailureEvent extracted ⊆ family.snarkFailureEvent := by
+  rintro q ⟨hacc, hnex⟩
+  exact ⟨hacc, fun hclean => hnex (hExtract q.1 q.2 hclean)⟩
+
+end ComputedAlgebraicFSFamily
+
+open scoped ENNReal in
+open ComputedAlgebraicFSFamily in
+/-- **Conditional knowledge-soundness bound.** The measure of "deployed acceptance but no
+SNARK extraction" inherits the clean-opening bound
+`(Q+k)·3/|Fp| + (Q+1)/|Fp| + |basis|·ε`, **conditional on `hExtract`** — that every clean-opening run
+delivers the extraction (which `member_snark_of_instance` supplies given the deployed gate data). By
+set-containment (`snarkExtractionFailureEvent_subset`) + outer-measure monotonicity, so the concrete
+AGM bound transfers verbatim. `hExtract` is the honest disjoint-halves gap: discharging it family-wide
+needs a failure-probability bound over the deployed accept measures, which does not exist (the
+floors are measure-lower-bound premises only). -/
+theorem snarkExtraction_prob_le_of_generatorRO_textbookDL {shape : Shape}
+    {T : Type*} [DecidableEq T] (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex (2 ^ shape.k) → T) (hquery : Function.Injective query)
+    (family : ComputedAlgebraicFSFamily shape) {bound : ℝ≥0∞}
+    (hDL : TextbookDLWithCoinsAdvantageLE B family.snarkRelationFinder bound)
+    (extracted : (AugmentedIndex (2 ^ shape.k) → VestaG) → family.Coins → Prop)
+    (hExtract : ∀ basis coins, family.hasCleanOpening basis coins → extracted basis coins) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          family.snarkExtractionFailureEvent extracted)
+      ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
+        (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
+        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound :=
+  le_trans
+    ((independentProductPMF (orchardGeneratorROSetup query)
+        (PMF.uniformOfFintype family.Coins)).toOuterMeasure.mono
+      (Set.preimage_mono (family.snarkExtractionFailureEvent_subset extracted hExtract)))
+    (snarkFailure_prob_le_of_generatorRO_textbookDL B hB query hquery family hDL)
+
+/-- **Instance provenance.** Whenever the computed family's `instanceAttempt` yields an
+instance `x`, that `x` is a `deployedAlgebraicInstanceOfCert` of a concrete `AlgebraicWfProof p`,
+oracle-scalar vector `ν`, and certificate — the structural inverse of `computedDeployedAlgebraicInstance`
+(which returns `some` only on the cert-found, `ν 10 ≠ 0` branch). This exposes the `AlgebraicWfProof`
+behind a clean-opening instance, the datum any future unconditional-bound reconciliation needs to hand
+the deployed member capstone. It does NOT, on its own, produce the deployed batch `pbatch`/`mdec` — those
+require the multiopen `x₄`/`x₁` rewinds (a distinct probabilistic account), which a single proof cannot
+furnish (`OpenedBatchOpenings` needs an injective multi-challenge batch). -/
+theorem instanceAttempt_provenance
+    (family : ComputedAlgebraicFSFamily shape) (coins : family.Coins)
+    {x : DeployedAlgebraicForkingInstance (G := VestaG) shape.k basis}
+    (h : (family.instanceAttempt basis coins).output = some x) :
+    ∃ (p : AlgebraicWfProof basis (family.vk basis) (family.instanceCommitment basis)) (ν : Fin 11 → Fp)
+      (cert : AlgebraicDForkCert (F := Fp)
+        (augmentedBasis (ursOfAugmentedBasis shape.k basis).g
+          (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) shape.k)
+      (hz : ν 10 ≠ 0)
+      (hvalid : DeployedForkValid (ursOfAugmentedBasis shape.k basis).g
+        (evalVector shape.k (ν 7)) (ursOfAugmentedBasis shape.k basis).u
+        (ursOfAugmentedBasis shape.k basis).w (ν 10)
+        (commit (ursOfAugmentedBasis shape.k basis)
+            (adjustedWitness (p.aMulti ν) p.s
+              (multiopenValue (family.vk basis) (family.instanceCommitment basis) p.proof.1 (chRecord ν (fun _ => 0))) (ν 9)) +
+          (p.multiU ν + ν 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
+          (p.multiBlind ν + ν 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w)
+        cert.toDForkCert),
+      x = deployedAlgebraicInstanceOfCert p ν cert hz hvalid := by
+  simp only [ComputedAlgebraicFSFamily.instanceAttempt,
+    computedDeployedAlgebraicInstanceFromTape, computedDeployedAlgebraicInstance] at h
+  split at h
+  · exact absurd h (by simp)
+  · split at h
+    · exact ⟨_, _, _, _, _, (Option.some.inj h).symm⟩
+    · exact absurd h (by simp)
+
+end Zcash.Snark
