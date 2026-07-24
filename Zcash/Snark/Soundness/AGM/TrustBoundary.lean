@@ -25,6 +25,7 @@ import Zcash.Snark.Soundness.CircuitIntegration
 import Zcash.Snark.Soundness.TopLevelCircuit
 import Zcash.Snark.Soundness.PolynomialEnvironment
 import Zcash.Snark.Soundness.ActionAssignment
+import Zcash.Circuits.Action.Statement
 import Zcash.Snark.Soundness.Composition.Decomposition
 import Zcash.Snark.Soundness.Composition.Residual
 import Zcash.Snark.Soundness.Composition.Prefixes
@@ -528,6 +529,10 @@ assert_no_sorry Zcash.Circuits.TopLevelCircuit.usedRows_le_usableRowsAt
 assert_no_sorry Zcash.Circuits.TopLevelCircuit.synthesisWellFormed
 assert_no_sorry FullCircuitSatisfaction.topLevelSoundness
 assert_no_sorry FullCircuitBridge.topLevelSoundness_or_bad
+assert_no_sorry Zcash.Circuits.Action.statement_of_topLevelStatement
+assert_no_sorry rowPolynomial_eval
+assert_no_sorry instanceRowPolynomial_eval
+assert_no_sorry resolverEnvironment_instance_of_rowPolynomial
 assert_no_sorry polynomialEnvironment_query_advice
 assert_no_sorry polynomialEnvironment_query_fixed
 assert_no_sorry polynomialEnvironment_query_instance

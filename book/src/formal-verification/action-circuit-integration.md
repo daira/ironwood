@@ -116,6 +116,15 @@ with the verifier's rotated polynomials. `resolverEnvironment` selects fixed,
 per-proof advice, and per-proof instance columns from the shared `CommitmentId`
 resolver.
 
+Public-instance row provenance now has a canonical target as well.
+`instanceRowPolynomial` Lagrange-interpolates a zero-padded list of public values over
+the `ω` domain, `instanceRowPolynomial_eval` proves that it reads those rows back, and
+`resolverEnvironment_instance_of_rowPolynomial` transports a decoded-polynomial
+identity directly to the corresponding Clean instance reads. The remaining
+cryptographic step is to derive that polynomial identity from the verifier's
+statement-derived instance commitment, preserving the existing nontrivial-relation
+branch.
+
 The concrete Action construction still has to prove that:
 
 - column/query indices match the VK query layouts;
@@ -402,6 +411,15 @@ gate/copy/lookup/fixed satisfaction with that generic top-level endpoint.
 preserving the bridge's shared exceptional event. Neither theorem mentions the
 Action circuit, an Action-specific placement, or Action-specific operations.
 
+The small Action-specific semantic adapter is also complete.
+`Action.PublicInputs` names the ten instance-column rows in protocol order and
+`Action.Statement` says that some extracted `ActionData` has exactly those public
+fields and satisfies the complete `SpecPost`. The theorem
+`Action.statement_of_topLevelStatement` specializes the generic top-level conclusion
+to that external statement. It does not repeat any circuit proof; the remaining
+public-input obligation is solely to identify the decoded instance polynomial's
+first ten domain values with the values supplied to the verifier.
+
 `Action.topLevelCircuit` instantiates that boundary. It projects the initial
 Sinsemilla generator-table load from the real `mainPost` operation stream and derives:
 
@@ -504,7 +522,8 @@ whose public inputs were committed by the verifier.
    its resolver representation facts.
 4. Instantiate the generic decomposed bridge for one selected Action, adapt
    `TopLevelCircuit.Statement` to the external Action statement, and then generalize
-   it to every `Fin shape.numProofs`.
+   it to every `Fin shape.numProofs`. The semantic adapter is complete; the decoded
+   instance-value provenance and concrete bridge witnesses remain.
 5. Supply the decoded/full-satisfaction data inside the computed experiment, close the
    remaining adaptive-coupling/`hExtract` obligation, instantiate the endpoint with
    `ActionStatement`, and add the theorem to the consolidated trust boundary.
