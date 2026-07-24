@@ -485,8 +485,18 @@ combines that interpretation, pinned-CS gate equality, configure coherence, and
 selector compression into the `EnabledGate.PolynomialWitness` consumed by the generic
 gate-satisfaction bridge.
 
-The remaining gate work is to establish the compact `GatesWellFormed` configure
-certificate compositionally and prove the two compiler contracts
+The compact static configure interface is now compositional.
+`Gate.wellFormed_of_withSelector` certifies the standard Halo 2 gate constructor from
+selector-free bodies, while `Configure.PreservesGateWellFormedness` is a semantic
+StateM invariant with `pure` and `bind` composition laws. All primitive configure
+actions preserve it; `createGate` requires only the supplied gate's local
+`Gate.WellFormed` proof, and lookup registration preserves the already-established
+gate invariant. Consequently the Action proof can follow its nested chip boundaries
+and never reduce the giant completed `Action.Circuit.configure` term.
+
+The remaining gate work is to attach the small local `Gate.WellFormed` certificates
+to the configure functions that introduce gates, compose those certificates through
+the Action configuration, and prove the two compiler contracts
 `SelectorRootsWellFormed` and `SelectorActivationsRealized` for the circuit-derived
 selector map and fixed columns. The generic operation walk already proves that every
 extracted enabled gate occurs in the floor-planner activation table, and
