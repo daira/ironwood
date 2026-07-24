@@ -1171,6 +1171,7 @@ theorem deployedX4PairCount_eq [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
     deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch = (deployedX4Pairs (instanceCommitment := instanceCommitment) vk ps ch).length := rfl
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The top slot of the `x₄` batch evaluations is the recomputed base evaluation: the slot index
 equals the pair count, so the branch that reads a point set is not taken. -/
 theorem x4BatchEvals_top [DecidableEq G] [Inhabited G]
@@ -1181,6 +1182,7 @@ theorem x4BatchEvals_top [DecidableEq G] [Inhabited G]
     else deployedBaseEval (instanceCommitment := instanceCommitment) vk ps ch) = deployedBaseEval (instanceCommitment := instanceCommitment) vk ps ch
   rw [if_neg (lt_irrefl _)]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The in-range `x₄` batch evaluations, set-indexed: batch slot `j` carries the claimed set
 evaluation of point set `count − 1 − j`. -/
 theorem x4BatchEvals_getD [DecidableEq G] [Inhabited G]

@@ -73,8 +73,7 @@ theorem lagrangePoly_eval_node {points evals : List Fp}
 /-- The deployed combined-evaluation fold (`lagrangeEval`, `Verifier/Checks.lean`) is the
 interpolant's evaluation at `x`, for pairwise-distinct nodes. Stepped through in the body: the
 outer fold is the basis-weighted sum, each inner guarded fold the evaluated Lagrange basis. -/
-theorem lagrangePoly_eval {points evals : List Fp}
-    (hdist : Function.Injective (fun i : Fin points.length => points[i])) (x : Fp) :
+theorem lagrangePoly_eval {points evals : List Fp} (x : Fp) :
     (lagrangePoly points evals).eval x = lagrangeEval x points evals := by
   classical
   -- The deployed fold, as a range-indexed sum of guarded products.
@@ -105,7 +104,7 @@ theorem lagrangePoly_eval {points evals : List Fp}
   rw [houter, ← Fin.sum_univ_eq_sum_range (fun i => evals.getD i 0
     * ∏ j ∈ Finset.range points.length,
         if j = i then 1 else (x - points.getD j 0) / (points.getD i 0 - points.getD j 0))]
-  rw [lagrangePoly, Lagrange.interpolate_apply, eval_finset_sum]
+  rw [lagrangePoly, Lagrange.interpolate_apply, eval_finsetSum]
   refine Finset.sum_congr rfl fun i _ => ?_
   rw [eval_mul, eval_C]
   congr 1
@@ -182,19 +181,19 @@ theorem coeffs_zero_of_power_sum_vanishes {n : ℕ} (c : ℕ → Fp)
   have hdeg : P.natDegree ≤ n - 1 := by
     rw [hPdef, Polynomial.natDegree_le_iff_coeff_eq_zero]
     intro m hm
-    rw [Polynomial.finset_sum_coeff]
+    rw [Polynomial.finsetSum_coeff]
     refine Finset.sum_eq_zero (fun j hj => ?_)
     simp only [Finset.mem_range] at hj
     rw [Polynomial.coeff_C_mul, Polynomial.coeff_X_pow, if_neg (by omega), mul_zero]
   have hP0 : P = 0 := by
     refine poly_eq_of_agree_on_family (d := n - 1) (Q := 0) (by rw [sub_zero]; exact hdeg)
       (fun r => ξ (Fin.cast hcast r)) (hξ.comp (Fin.cast_injective hcast)) (fun r => ?_)
-    rw [Polynomial.eval_zero, hPdef, Polynomial.eval_finset_sum]
+    rw [Polynomial.eval_zero, hPdef, Polynomial.eval_finsetSum]
     simp only [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow, Polynomial.eval_X]
     rw [← hvanish (Fin.cast hcast r)]
     exact Finset.sum_congr rfl (fun j _ => by ring)
   have hcoeff : P.coeff i = c i := by
-    rw [hPdef, Polynomial.finset_sum_coeff, Finset.sum_eq_single (i : ℕ)]
+    rw [hPdef, Polynomial.finsetSum_coeff, Finset.sum_eq_single (i : ℕ)]
     · rw [Polynomial.coeff_C_mul, Polynomial.coeff_X_pow, if_pos rfl, mul_one]
     · intro j _ hji
       rw [Polynomial.coeff_C_mul, Polynomial.coeff_X_pow, if_neg (fun h => hji h.symm), mul_zero]
@@ -265,7 +264,7 @@ theorem col_eq_lagrangePoly_of_samples {points evals : List Fp} {col : Polynomia
     refine le_trans (Polynomial.natDegree_sub_le _ _) (max_le ?_ ?_) <;> omega
   exact poly_eq_of_agree_on_family hdiff (fun r => ξ (Fin.cast hn r))
     (hξ.comp (Fin.cast_injective hn))
-    (fun r => (hmatch (Fin.cast hn r)).trans (lagrangePoly_eval hnode _).symm)
+    (fun r => (hmatch (Fin.cast hn r)).trans (lagrangePoly_eval _).symm)
 
 /-- **The decoded column's node values are the claimed evaluations.** Composing
 `col_eq_lagrangePoly_of_samples` with `lagrangePoly_eval_node`: at each rotated query point

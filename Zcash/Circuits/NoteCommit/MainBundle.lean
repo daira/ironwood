@@ -1127,12 +1127,14 @@ theorem completeness (G : Generators) (R : FixedBase)
   simp only [synthPieces, LookupRangeCheck.witnessShortCheck,
     Sinsemilla.HashToPoint.witnessMessagePiece, circuit_norm, readCell] at hWP
   obtain ⟨hwa, ⟨hwb0, hWrb0⟩, ⟨hwb3, hWrb3⟩, hwb, hwc, ⟨hwd2, hWrd2⟩, hwd,
-    ⟨hwe0, hWre0⟩, ⟨hwe1, hWre1⟩, hwe, hwf, ⟨hwg1, hWrg1⟩, hwg, ⟨hwh0, hWrh0⟩, hwh⟩ := hWP
+    ⟨hwe0, hWitnessReadE0⟩, ⟨hwe1, hWitnessReadE1⟩, hwe, hwf,
+    ⟨hwg1, hWrg1⟩, hwg, ⟨hwh0, hWrh0⟩, hwh⟩ := hWP
   simp only [synthChecks, synthPieces, LookupRangeCheck.witnessShortCheck,
     LookupRangeCheck.witnessCheck, Sinsemilla.HashToPoint.witnessMessagePiece,
     circuit_norm, readCell] at hWCk
   simp only [Operations.regionCount] at hWCk
-  obtain ⟨hWy1, hWy2, hWcm, ⟨hWaP, hWra⟩, ⟨hWbP, hWrb⟩, ⟨hWeP, hWre⟩, ⟨hWgP, hWrg⟩⟩ := hWCk
+  obtain ⟨hWy1, hWy2, hWcm, ⟨hWaP, hWra⟩, ⟨hWbP, hWrb⟩,
+    ⟨hWeP, hWitnessReadE⟩, ⟨hWgP, hWrg⟩⟩ := hWCk
   -- ── prover-side MessageCellFacts at the read cells ──
   obtain ⟨higdX, higdY, hipkdX, hipkdY, hival, hirho, hipsi, -⟩ := h_input
   have hVal64' : (AssignedCell.eval place env.toEnvironment input_var_value).val < 2 ^ 64 := by
@@ -1348,7 +1350,7 @@ theorem completeness (G : Generators) (R : FixedBase)
   obtain ⟨hbz0, loB, hloB, htelB⟩ := hWbS
   have hWeSfull := Halo2.SubcircuitRw.region_completeness_derived
     (LookupRangeCheck.rangeCheckAt 10 14 false) cfg.lookupConfig 0 (i₀ + 31)
-    place env () hWre
+    place env () hWitnessReadE
     (by rw [LookupRangeCheck.rangeCheckAt_envAssumptions_eq]; exact ⟨hTableL, hDistinct⟩)
     (by rw [LookupRangeCheck.rangeCheckAt_assumptions_eq]
         norm_num [CompElliptic.Fields.Pasta.PALLAS_BASE_CARD])
@@ -1584,7 +1586,7 @@ theorem completeness (G : Generators) (R : FixedBase)
            exact Specs.bitrange_lt _ _ _)⟩
   · exact Halo2.SubcircuitRw.region_completeness_leaf
       (LookupRangeCheck.shortRangeCheck 10 6) cfg.lookupConfig 0 (i₀ + 7) place env ()
-      hWre0
+      hWitnessReadE0
       ⟨(by rw [LookupRangeCheck.shortRangeCheck_envAssumptions_eq]; exact ⟨hTableL, hDistinct⟩),
        (by rw [LookupRangeCheck.shortRangeCheck_assumptions_eq]
            norm_num [CompElliptic.Fields.Pasta.PALLAS_BASE_CARD]),
@@ -1599,7 +1601,7 @@ theorem completeness (G : Generators) (R : FixedBase)
            exact Specs.bitrange_lt _ _ _)⟩
   · exact Halo2.SubcircuitRw.region_completeness_leaf
       (LookupRangeCheck.shortRangeCheck 10 4) cfg.lookupConfig 0 (i₀ + 8) place env ()
-      hWre1
+      hWitnessReadE1
       ⟨(by rw [LookupRangeCheck.shortRangeCheck_envAssumptions_eq]; exact ⟨hTableL, hDistinct⟩),
        (by rw [LookupRangeCheck.shortRangeCheck_assumptions_eq]
            norm_num [CompElliptic.Fields.Pasta.PALLAS_BASE_CARD]),
@@ -1698,7 +1700,7 @@ theorem completeness (G : Generators) (R : FixedBase)
        (by rw [LookupRangeCheck.rangeCheckAt_proverAssumptions_eq]; simp)⟩
   · exact Halo2.SubcircuitRw.region_completeness_leaf
       (LookupRangeCheck.rangeCheckAt 10 14 false) cfg.lookupConfig 0 (i₀ + 31)
-      place env () hWre
+      place env () hWitnessReadE
       ⟨(by rw [LookupRangeCheck.rangeCheckAt_envAssumptions_eq]; exact ⟨hTableL, hDistinct⟩),
        (by rw [LookupRangeCheck.rangeCheckAt_assumptions_eq]
            norm_num [CompElliptic.Fields.Pasta.PALLAS_BASE_CARD]),

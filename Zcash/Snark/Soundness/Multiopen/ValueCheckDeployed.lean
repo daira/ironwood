@@ -37,6 +37,7 @@ noncomputable def deployedAllPts [DecidableEq G] [Inhabited G]
   (Finset.range (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.length).biUnion
     (fun j => deployedSetPts (instanceCommitment := instanceCommitment) vk ps ch j)
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Each deployed point set sits inside the union of all points. -/
 theorem deployedSetPts_subset [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -67,6 +68,7 @@ theorem member_aggregate_eval_bridge [DecidableEq G] [Inhabited G]
   refine Finset.sum_congr rfl (fun m _ => ?_)
   rw [commitGen_smul_left, ← coeffsToPoly_eval, smul_eq_mul]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- **F4 (deployed): a routed query's point is one of its set's points.** The deployed specialization
 of `constructIntermediateSets_point_mem`: if `q` is one of the verifier's opening queries and its
 commitment slot names member `m` of deployed point set `si` (`deployedSetCommIds`), then `q`'s

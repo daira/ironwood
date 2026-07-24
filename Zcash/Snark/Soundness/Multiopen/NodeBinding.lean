@@ -170,9 +170,17 @@ theorem openedX3_agg_binding [DecidableEq G] [Inhabited G]
     have hidx : deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - j)
         = deployedX4PairCount (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch χ) - 1
             - (deployedX4PairCount (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch χ) - 1 - j) := by omega
-    rw [x4BatchCommitments_getD (instanceCommitment := instanceCommitment) urs hk vk ps ch (j := ⟨_, by omega⟩) (by simp only [Fin.val_mk]; omega),
+    rw [x4BatchCommitments_getD (instanceCommitment := instanceCommitment) urs hk vk ps ch (j := ⟨_, by omega⟩) (by
+        change deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - j <
+          deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch
+        omega),
       x4BatchCommitments_getD (instanceCommitment := instanceCommitment) urs hk vk (r.spliced ps) (r.challenges ch χ) (j := ⟨_, by omega⟩)
-        (by simp only [Fin.val_mk]; omega),
+        (by
+          change deployedX4PairCount (instanceCommitment := instanceCommitment) vk (r.spliced ps)
+              (r.challenges ch χ) - 1 - j <
+            deployedX4PairCount (instanceCommitment := instanceCommitment) vk (r.spliced ps)
+              (r.challenges ch χ)
+          omega),
       x3Run_x4Qs, hidx]
   have hc1 := (openedColumnDecode pbatch).commitment
     ⟨deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - j, by omega⟩
@@ -252,13 +260,14 @@ theorem deployed_aggregate_node_binding_or_dlr [DecidableEq G] [Inhabited G]
         = lagrangeEval χ points evals
   · exact Or.inl (claimedEval_of_x3Prob hlen hnode hdeg
       (fun χ => OpenedX3Accept (instanceCommitment := instanceCommitment) urs hk vk ps ch (evalVector urs.k χ) χ) hcons hχ₀ hprob i)
-  · push_neg at hcons
+  · push Not at hcons
     obtain ⟨χ, hPχ, hne⟩ := hcons
     rcases openedX3_perχ_consistency (instanceCommitment := instanceCommitment) urs hk vk ps ch j hj pbatch (hprob4 χ) (hx2cons χ) hPχ with
       hc | hdlr
     · exact absurd hc hne
     · exact Or.inr hdlr
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- **The `hx2cons` slot is the claimed set evaluation `uⱼ` (inner-`x₂` reduction).** Unfolding the
 `x₄`-batch eval at point set `j`'s slot `count − 1 − j` through `x4BatchEvals_getD`: it is exactly the
 prover's claimed set evaluation `multiopenUⱼ`. So the remaining F3 premise `hx2cons`
@@ -273,9 +282,13 @@ theorem hx2cons_slot_eq_multiopenU [DecidableEq G] [Inhabited G]
     x4BatchEvals (instanceCommitment := instanceCommitment) vk ps ch ⟨deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - j, by omega⟩
       = (List.ofFn ps.multiopenU).getD j 0 := by
   rw [x4BatchEvals_getD (instanceCommitment := instanceCommitment) vk ps ch
-    (j := ⟨deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - j, by omega⟩) (by simp only [Fin.val_mk]; omega)]
+    (j := ⟨deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - j, by omega⟩) (by
+      change deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - j <
+        deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch
+      omega)]
   congr 1
-  simp only [Fin.val_mk]
+  change deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 -
+    (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - j) = j
   omega
 
 /-- `multiopenEval` in forward-order power form: reindexing `multiopenEval_powerForm` by set
@@ -311,7 +324,7 @@ theorem prod_range_getD_eq_toFinset {l : List Fp} (hnd : l.Nodup) (χ : Fp) :
     obtain ⟨i, hi⟩ := List.mem_iff_get.mp (List.mem_toFinset.mp hp)
     exact ⟨i, Finset.mem_univ _, hi⟩
   · intro i _
-    simp [List.getD_eq_getElem, List.get_eq_getElem, i.isLt]
+    simp [List.get_eq_getElem, i.isLt]
 
 /-- Inverse form of the product-shape conversion. -/
 theorem prod_inv_range_getD_eq_toFinset {l : List Fp} (hnd : l.Nodup) (χ : Fp) :
@@ -384,11 +397,13 @@ noncomputable def deployedSetsForEval [DecidableEq G] [Inhabited G]
   ((grouped.points.zip (compressed.map Prod.snd)).zip (List.ofFn ps.multiopenU)).map
     (fun p => (p.1.1, p.1.2, p.2))
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- `deployedBaseEval` is `multiopenEval` over `deployedSetsForEval` — definitional. -/
 theorem deployedBaseEval_eq_multiopenEval [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
     deployedBaseEval (instanceCommitment := instanceCommitment) vk ps ch = multiopenEval ch.x2 ch.x3 (deployedSetsForEval (instanceCommitment := instanceCommitment) vk ps ch) := rfl
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- **Shape alignment: the value-check `sets` has exactly `deployedX4PairCount` entries.** Both reduce
 to `min(min(gsets.length, gpoints.length), numPointSets)` — the grouping's set count clipped to the
 prover's claimed-eval count — so no `= shape.numPointSets` fact is needed. This lets the deployed
@@ -401,6 +416,7 @@ theorem deployedSetsForEval_length [DecidableEq G] [Inhabited G]
     List.length_map, List.length_zip, List.length_ofFn]
   omega
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The `j`-th value-check set's point list is grouping point set `j`'s points — so its finset is
 `deployedSetPts j`. The points-field identification for `node_binding_of_grid_openings`. -/
 theorem deployedSetsForEval_getD_points [DecidableEq G] [Inhabited G]
@@ -419,6 +435,7 @@ theorem deployedSetsForEval_getD_points [DecidableEq G] [Inhabited G]
     List.getD_eq_getElem _ _ (by omega)]
   simp only [deployedSetsForEval, List.getElem_map, List.getElem_zip]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The `j`-th value-check set's point finset is exactly `deployedSetPts j` — the `hpts`
 field-identification for `node_binding_of_grid_openings`. -/
 theorem deployedSetsForEval_getD_toFinset [DecidableEq G] [Inhabited G]
@@ -427,6 +444,7 @@ theorem deployedSetsForEval_getD_toFinset [DecidableEq G] [Inhabited G]
     ((deployedSetsForEval (instanceCommitment := instanceCommitment) vk ps ch).getD k ([], [], 0)).1.toFinset = deployedSetPts (instanceCommitment := instanceCommitment) vk ps ch k := by
   rw [deployedSetsForEval_getD_points (instanceCommitment := instanceCommitment) vk ps ch hk, deployedSetPts]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The `j`-th value-check set's point list is duplicate-free — the `hnd` field-identification for
 `node_binding_of_grid_openings`, via `constructIntermediateSets_points_nodup`. -/
 theorem deployedSetsForEval_getD_nodup [DecidableEq G] [Inhabited G]
@@ -436,6 +454,7 @@ theorem deployedSetsForEval_getD_nodup [DecidableEq G] [Inhabited G]
   rw [deployedSetsForEval_getD_points (instanceCommitment := instanceCommitment) vk ps ch hk]
   exact constructIntermediateSets_points_nodup _ _
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The `reverse`d value-check `sets`, at index `k`, reads grouping set `numSets − 1 − k`'s point
 list — the reversed index the `multiopenEval` power convention pairs `x₂^k` with. -/
 theorem deployedSetsForEval_reverse_getD_points [DecidableEq G] [Inhabited G]
@@ -452,6 +471,7 @@ theorem deployedSetsForEval_reverse_getD_points [DecidableEq G] [Inhabited G]
   rw [htup]
   exact deployedSetsForEval_getD_points (instanceCommitment := instanceCommitment) vk ps ch (by omega)
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The reversed value-check set's point finset is `deployedSetPts (numSets − 1 − k)` — the `hpts`
 field-ID at the reversed indexing. -/
 theorem deployedSetsForEval_reverse_getD_toFinset [DecidableEq G] [Inhabited G]
@@ -461,6 +481,7 @@ theorem deployedSetsForEval_reverse_getD_toFinset [DecidableEq G] [Inhabited G]
       = deployedSetPts (instanceCommitment := instanceCommitment) vk ps ch (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - k) := by
   rw [deployedSetsForEval_reverse_getD_points (instanceCommitment := instanceCommitment) vk ps ch hk, deployedSetPts]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The reversed value-check set's point list is `Nodup` — the `hnd` field-ID at the reversed
 indexing. -/
 theorem deployedSetsForEval_reverse_getD_nodup [DecidableEq G] [Inhabited G]
@@ -470,6 +491,7 @@ theorem deployedSetsForEval_reverse_getD_nodup [DecidableEq G] [Inhabited G]
   rw [deployedSetsForEval_reverse_getD_points (instanceCommitment := instanceCommitment) vk ps ch hk]
   exact constructIntermediateSets_points_nodup _ _
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The reversed value-check set's claimed-eval (`u`) field at index `k` is the batch eval slot `k`
 (`x4BatchEvals`) — the `u`-field counterpart of `deployedSetsForEval_reverse_getD_points`. Both reduce
 to the prover's claimed set eval `multiopenU` at position `count − 1 − k`: `deployedSetsForEval`'s
@@ -569,9 +591,7 @@ theorem deployed_node_binding_of_grid [DecidableEq G] [Inhabited G]
   · -- hr
     intro s t j
     rw [hsetpts s t j, hsetevals s t j]
-    exact lagrangePoly_eval
-      (List.nodup_iff_injective_getElem.mp (deployedSetsForEval_reverse_getD_nodup (instanceCommitment := instanceCommitment) vk ps ch j.isLt))
-      (χ s t)
+    exact lagrangePoly_eval (χ s t)
 
 /-- **Per-rewind IPA relation from an `x₂` accept (grid extraction, x₂ entry point).** The `x₂`
 analogue of `openedX3_relation_of_accept`: an accepting `x₂`-rewound run's forked transcript opens
@@ -654,9 +674,17 @@ theorem openedX2_agg_binding [DecidableEq G] [Inhabited G]
     have hidx : deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - (deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - j)
         = deployedX4PairCount (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch χ) - 1
             - (deployedX4PairCount (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch χ) - 1 - j) := by omega
-    rw [x4BatchCommitments_getD (instanceCommitment := instanceCommitment) urs hk vk ps ch (j := ⟨_, by omega⟩) (by simp only [Fin.val_mk]; omega),
+    rw [x4BatchCommitments_getD (instanceCommitment := instanceCommitment) urs hk vk ps ch (j := ⟨_, by omega⟩) (by
+        change deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - j <
+          deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch
+        omega),
       x4BatchCommitments_getD (instanceCommitment := instanceCommitment) urs hk vk (r.spliced ps) (r.challenges ch χ) (j := ⟨_, by omega⟩)
-        (by simp only [Fin.val_mk]; omega),
+        (by
+          change deployedX4PairCount (instanceCommitment := instanceCommitment) vk (r.spliced ps)
+              (r.challenges ch χ) - 1 - j <
+            deployedX4PairCount (instanceCommitment := instanceCommitment) vk (r.spliced ps)
+              (r.challenges ch χ)
+          omega),
       x2Run_x4Qs, hidx]
   have hc1 := (openedColumnDecode pbatch).commitment
     ⟨deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - j, by omega⟩
@@ -708,10 +736,18 @@ theorem openedX2X3_agg_binding [DecidableEq G] [Inhabited G]
             (r₃.challenges (r₂.challenges ch ζ) χ) - 1
             - (deployedX4PairCount (instanceCommitment := instanceCommitment) vk (r₃.spliced (r₂.spliced ps))
                 (r₃.challenges (r₂.challenges ch ζ) χ) - 1 - j) := by omega
-    rw [x4BatchCommitments_getD (instanceCommitment := instanceCommitment) urs hk vk ps ch (j := ⟨_, by omega⟩) (by simp only [Fin.val_mk]; omega),
+    rw [x4BatchCommitments_getD (instanceCommitment := instanceCommitment) urs hk vk ps ch (j := ⟨_, by omega⟩) (by
+        change deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - j <
+          deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch
+        omega),
       x4BatchCommitments_getD (instanceCommitment := instanceCommitment) urs hk vk (r₃.spliced (r₂.spliced ps))
         (r₃.challenges (r₂.challenges ch ζ) χ) (j := ⟨_, by omega⟩)
-        (by simp only [Fin.val_mk]; omega),
+        (by
+          change deployedX4PairCount (instanceCommitment := instanceCommitment) vk
+              (r₃.spliced (r₂.spliced ps)) (r₃.challenges (r₂.challenges ch ζ) χ) - 1 - j <
+            deployedX4PairCount (instanceCommitment := instanceCommitment) vk
+              (r₃.spliced (r₂.spliced ps)) (r₃.challenges (r₂.challenges ch ζ) χ)
+          omega),
       x3Run_x4Qs, x2Run_x4Qs, hidx]
   have hc1 := (openedColumnDecode pbatch).commitment
     ⟨deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch - 1 - j, by omega⟩
@@ -826,6 +862,7 @@ theorem openedX3_rewound_batch_eval [DecidableEq G] [Inhabited G]
   exact openedDecodedCols_eval_x3 (instanceCommitment := instanceCommitment) urs hk vk (r.spliced ps) (r.challenges ch χ) _ j
 
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- **The value-check sets' points and compressed-evals fields are fixed under a double
 (`x₂`-then-`x₃`) rewind.** The grouping and the `x₁` compression read only pre-`x₂` data
 (`x2Run_assembleQueries`/`x3Run_assembleQueries`, and both challenge records keep `x₁`), so entry
@@ -856,6 +893,7 @@ theorem deployedSetsForEval_x2x3_getD_fields [DecidableEq G] [Inhabited G]
     · simp only [deployedSetsForEval, List.getElem_map, List.getElem_zip]
       rfl
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Reversed-index form of `deployedSetsForEval_x2x3_getD_fields` — the `hsetpts`/`hsetevals`
 field agreements `deployed_node_binding_of_grid` consumes for the doubly-rewound grid runs. -/
 theorem deployedSetsForEval_x2x3_reverse_getD_fields [DecidableEq G] [Inhabited G]
@@ -924,7 +962,7 @@ theorem vanishingProd_natDegree_le (pts : Finset Fp) :
   rw [vanishingProd]
   calc (∏ p ∈ pts, (X - C p)).natDegree
       ≤ ∑ p ∈ pts, (X - C p).natDegree := Polynomial.natDegree_prod_le _ _
-    _ = pts.card := by simp [Polynomial.natDegree_X_sub_C]
+    _ = pts.card := by simp
 
 /-- The complementary product's degree is at most the full point count. -/
 theorem coProd_natDegree_le (all pts : Finset Fp) :
@@ -1233,6 +1271,7 @@ theorem compressSet_snd_getD {k' : ℕ} {F G' : Type*} [Field F]
   rw [h, List.getD_eq_getElem _ _ (by rw [List.length_replicate]; exact hidx),
     List.getElem_replicate, one_mul, zero_add]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The `k`-th value-check set's compressed evaluation vector is `compressSet`'s — the evals-field
 identification for the deployed sets (the `.2.1` companion of `deployedSetsForEval_getD_points`). -/
 theorem deployedSetsForEval_getD_evals [DecidableEq G] [Inhabited G]
@@ -1259,6 +1298,7 @@ theorem deployedSetsForEval_getD_evals [DecidableEq G] [Inhabited G]
   rw [List.getD_eq_getElem _ _ hzip, List.getD_eq_getElem _ _ hpts]
   simp only [List.getElem_zip]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The grouping's point lists are shared across `x₁` rewinds. -/
 theorem x1Run_groupPoints [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1267,6 +1307,7 @@ theorem x1Run_groupPoints [DecidableEq G] [Inhabited G]
       = (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points := by
   rw [x1Run_assembleQueries]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The deployed point sets are shared across `x₁` rewinds. -/
 theorem x1Run_setPts [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1284,6 +1325,7 @@ its cardinality — is the honest one. Together with `x{1,2,3,4}Run_pairCount`/`
 in `Deployed`), this shows *every* deployed threshold is a splice-invariant structural constant, the
 enabling fact for reading the run-indexed floors off the base-independent budget. -/
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The deployed point-set union is shared across `x₁` rewinds. -/
 theorem x1Run_allPts [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1291,6 +1333,7 @@ theorem x1Run_allPts [DecidableEq G] [Inhabited G]
     deployedAllPts (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch ξ) = deployedAllPts (instanceCommitment := instanceCommitment) vk ps ch := by
   simp only [deployedAllPts, deployedSetPts, x1Run_assembleQueries]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The deployed point-set union is shared across `x₂` rewinds. -/
 theorem x2Run_allPts [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1298,6 +1341,7 @@ theorem x2Run_allPts [DecidableEq G] [Inhabited G]
     deployedAllPts (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch ζ) = deployedAllPts (instanceCommitment := instanceCommitment) vk ps ch := by
   simp only [deployedAllPts, deployedSetPts, x2Run_assembleQueries]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The deployed point-set union is shared across `x₃` rewinds. -/
 theorem x3Run_allPts [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1305,6 +1349,7 @@ theorem x3Run_allPts [DecidableEq G] [Inhabited G]
     deployedAllPts (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch χ) = deployedAllPts (instanceCommitment := instanceCommitment) vk ps ch := by
   simp only [deployedAllPts, deployedSetPts, x3Run_assembleQueries]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The deployed point-set union is shared across `x₄` rewinds. -/
 theorem x4Run_allPts [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1312,6 +1357,7 @@ theorem x4Run_allPts [DecidableEq G] [Inhabited G]
     deployedAllPts (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch ω) = deployedAllPts (instanceCommitment := instanceCommitment) vk ps ch := by
   simp only [deployedAllPts, deployedSetPts, x4Run_assembleQueries]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The deployed point-union cardinality (the `hprob3` threshold ingredient) is `x₁`-invariant. -/
 theorem x1Run_allPts_card [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1319,6 +1365,7 @@ theorem x1Run_allPts_card [DecidableEq G] [Inhabited G]
     (deployedAllPts (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch ξ)).card = (deployedAllPts (instanceCommitment := instanceCommitment) vk ps ch).card :=
   congrArg Finset.card (x1Run_allPts (instanceCommitment := instanceCommitment) vk ps ch r ξ)
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The deployed point-union cardinality is `x₂`-invariant. -/
 theorem x2Run_allPts_card [DecidableEq G] [Inhabited G]
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1326,6 +1373,7 @@ theorem x2Run_allPts_card [DecidableEq G] [Inhabited G]
     (deployedAllPts (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch ζ)).card = (deployedAllPts (instanceCommitment := instanceCommitment) vk ps ch).card :=
   congrArg Finset.card (x2Run_allPts (instanceCommitment := instanceCommitment) vk ps ch r ζ)
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- **The `x₁`-rewound value-check set at `k`: honest points, `ξ`-compressed member evals (F2 stage
 A).** At an `x₁`-rewound base the grouping is the honest one (`x1Run_assembleQueries`) and only the
 compression challenge moves (`(r.challenges ch ξ).x1 = ξ`), so set `k`'s point list is the honest
@@ -1376,9 +1424,13 @@ theorem openedX1_agg_member_binding [DecidableEq G] [Inhabited G]
   have hc2 := (openedColumnDecode B).commitment
     ⟨deployedX4PairCount (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch ξ) - 1 - i, by omega⟩
   rw [x4BatchCommitments_getD (instanceCommitment := instanceCommitment) urs hk vk (r.spliced ps) (r.challenges ch ξ)
-    (j := ⟨_, by omega⟩) (by simp only [Fin.val_mk]; omega)] at hc2
-  simp only [Fin.val_mk,
-    show deployedX4PairCount (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch ξ) - 1
+    (j := ⟨_, by omega⟩) (by
+      change deployedX4PairCount (instanceCommitment := instanceCommitment) vk (r.spliced ps)
+          (r.challenges ch ξ) - 1 - i <
+        deployedX4PairCount (instanceCommitment := instanceCommitment) vk (r.spliced ps)
+          (r.challenges ch ξ)
+      omega)] at hc2
+  simp only [show deployedX4PairCount (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch ξ) - 1
       - (deployedX4PairCount (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch ξ) - 1 - i) = i from by omega]
     at hc2
   have hqs : i < (deployedX4Qs (instanceCommitment := instanceCommitment) vk (r.spliced ps) (r.challenges ch ξ)).length := by
@@ -1449,6 +1501,7 @@ theorem openedX1_agg_member_eval [DecidableEq G] [Inhabited G]
     rw [commitGen_smul_left, ← coeffsToPoly_eval, smul_eq_mul]
   · exact Or.inr hdlr
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- **`hql` discharged: each routed member of a deployed point set claims one evaluation per set
 point** (`constructIntermediateSets_eval_length` at the deployed queries). This closes the
 one structural bookkeeping premise of `deployed_member_node_binding`. -/
@@ -1674,6 +1727,7 @@ theorem columnQueries_layout_mem {k' : ℕ} {F G' : Type*} [Field F] (omega x : 
   · show rotateOmega omega x ((layout.zip evals)[j]).1.2 = _
     rw [List.getElem_zip, List.getD_eq_getElem _ _ hjl]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Each in-range advice layout entry contributes a deployed opening query: slot identity
 `adviceCol`, opening point `rotateOmega ω x rot` — the query `deployed_query_point_mem` routes. -/
 theorem advice_query_mem_assembleQueries [DecidableEq G] [Inhabited G]
@@ -1694,6 +1748,7 @@ theorem advice_query_mem_assembleQueries [DecidableEq G] [Inhabited G]
   exact List.mem_append.mpr (Or.inl (List.mem_append.mpr (Or.inl (List.mem_append.mpr
     (Or.inr hqmem)))))
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Each in-range instance layout entry contributes a deployed opening query, as
 `advice_query_mem_assembleQueries`. -/
 theorem instance_query_mem_assembleQueries [DecidableEq G] [Inhabited G]

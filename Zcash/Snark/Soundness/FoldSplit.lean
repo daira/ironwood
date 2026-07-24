@@ -111,7 +111,7 @@ theorem dvd_iff_modByMonic_eq_zero {n : ℕ} (hn : n ≠ 0) (c : Polynomial Fp) 
   (modByMonic_eq_zero_iff_dvd (monic_X_pow_sub_one hn)).symm
 
 /-- The `y` fold commutes with reduction: folding and then reducing is reducing and then folding. -/
-theorem foldl_modByMonic (cs : List (Polynomial Fp)) (y : Fp) {r : Polynomial Fp} (hr : r.Monic) :
+theorem foldl_modByMonic (cs : List (Polynomial Fp)) (y : Fp) {r : Polynomial Fp} :
     (cs.foldl (fun acc q => acc * C y + q) 0) %ₘ r
       = (cs.map (fun c => c %ₘ r)).foldl (fun acc q => acc * C y + q) 0 := by
   suffices h : ∀ (t : List (Polynomial Fp)) (acc : Polynomial Fp),
@@ -164,7 +164,7 @@ theorem eval_foldSplitWitness_eq_zero {cs : List (Polynomial Fp)} {hq : Polynomi
     (foldSplitWitness cs n j).eval y = 0 := by
   have hmonic := monic_X_pow_sub_one hn
   have hzero : (cs.map (fun c => c %ₘ (X ^ n - 1))).foldl (fun acc q => acc * C y + q) 0 = 0 := by
-    rw [← foldl_modByMonic cs y hmonic, hfold]
+    rw [← foldl_modByMonic cs y, hfold]
     exact (modByMonic_eq_zero_iff_dvd hmonic).mpr ⟨hq, mul_comm _ _⟩
   have hcoeff : (List.foldl (fun acc q => acc * C y + q) 0
       (cs.map (fun c => c %ₘ (X ^ n - 1)))).coeff j = 0 := by

@@ -1,6 +1,7 @@
 import Zcash.Snark.Soundness.PermutationInstantiation
 import Zcash.Snark.Soundness.PermutationConstruction
 import Zcash.Snark.Soundness.GoodChallenge
+import Zcash.Snark.Soundness.DomainSelectors
 
 /-!
 # Semantic endpoint for resolver-backed permutation constraints
@@ -267,6 +268,37 @@ structure ResolverPermutationDomain
     1 - (lLast.eval (vk.omega ^ i) + lBlind.eval (vk.omega ^ i)) ≠ 0
   firstSelector : l0.eval (vk.omega ^ 0) ≠ 0
   lastSelector : lLast.eval (vk.omega ^ m) ≠ 0
+
+/--
+Build the permutation-domain record with the canonical first, last-usable, and
+blinding-row selectors. The caller retains only the structural VK/domain facts;
+all selector evaluations are discharged here.
+-/
+theorem ResolverPermutationDomain.ofCanonicalSelectors
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) {n m : ℕ}
+    (hn : 0 < n) (hm : m < n)
+    (hrows : Function.Injective fun i : Fin n => vk.omega ^ (i : ℕ))
+    (hnonempty : 0 < shape.numPermutationSets)
+    (hchunkCount : vk.permutationChunks.length = shape.numPermutationSets)
+    (hlastRotation :
+      vk.omega ^ m = vk.omega ^ (-((vk.blindingFactors : ℤ) + 1)))
+    (hroot : vk.omega ^ n = 1) :
+    ResolverPermutationDomain vk
+      (rowSelectorPolynomial vk.omega ⟨0, hn⟩)
+      (rowSelectorPolynomial vk.omega ⟨m, hm⟩)
+      (blindSelectorPolynomial vk.omega ⟨m, hm⟩) n m where
+  nonempty := hnonempty
+  chunkCount := hchunkCount
+  lastRotation := hlastRotation
+  root := hroot
+  active i hi := by
+    exact last_add_blind_active ⟨m, hm⟩
+      ⟨i, lt_trans hi hm⟩ hi hrows
+  firstSelector :=
+    firstSelectorPolynomial_nonzero ⟨0, hn⟩ rfl hrows
+  lastSelector :=
+    lastSelectorPolynomial_nonzero ⟨m, hm⟩ hrows
 
 /-- The semantic content of the common permutation columns.
 

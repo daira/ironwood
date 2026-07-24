@@ -206,6 +206,76 @@ def assembleQueries {shape : Shape} {F G : Type*} [Field F] [Inhabited G] (vk : 
   let vanishingQ := vanishingQueries x hComm eHEval ps.vanishingRandom ps.vanishingRandomEval
   perProof ++ fixedQ ++ permCommonQ ++ vanishingQ
 
+/-- An assembled query carrying an instance-column identity uses that statement-derived commitment. -/
+theorem assembleQueries_instance_commitment
+    {shape : Shape} {F G : Type*} [Field F] [Inhabited G]
+    (vk : VerifyingKey shape F G)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) (ch : Challenges shape.k F)
+    (q : VerifierQuery shape.k F G)
+    (hq : q ∈ assembleQueries vk instanceCommitment ps ch)
+    (p : Fin shape.numProofs) (column : ℕ)
+    (hid : q.commId = .instanceCol p column) :
+    q.commitment = .point (instanceCommitment p column) := by
+  simp only [assembleQueries, List.mem_append] at hq
+  rcases hq with (((hperProof | hfixed) | hcommon) | hvanishing)
+  · obtain ⟨proofQueries, hproofQueries, hq⟩ := List.mem_flatten.mp hperProof
+    obtain ⟨proofIndex, hproofQueries⟩ := List.mem_ofFn.mp hproofQueries
+    rw [← hproofQueries] at hq
+    simp only [List.mem_append] at hq
+    rcases hq with hleft | hlookup
+    · rcases hleft with hleft | hpermutation
+      · rcases hleft with hinstance | hadvice
+        · rw [columnQueries, List.mem_map] at hinstance
+          obtain ⟨entry, _, hq⟩ := hinstance
+          subst q
+          injection hid with hproofIndex hcolumn
+          have : proofIndex = p := Fin.ext hproofIndex
+          subst proofIndex
+          subst column
+          rfl
+        · rw [columnQueries, List.mem_map] at hadvice
+          obtain ⟨entry, _, hq⟩ := hadvice
+          subst q
+          simp at hid
+      · simp only [permutationQueries, List.mem_append] at hpermutation
+        rcases hpermutation with hregular | hlast
+        · simp only [List.mem_flatMap, List.mem_cons, List.mem_nil_iff,
+            or_false] at hregular
+          obtain ⟨entry, _, hq | hq⟩ := hregular
+          · subst q
+            simp at hid
+          · subst q
+            simp at hid
+        · rw [List.mem_filterMap] at hlast
+          obtain ⟨entry, _, hentry⟩ := hlast
+          cases hlastEval : entry.1.2.lastEval with
+          | none => simp [hlastEval] at hentry
+          | some lastEvaluation =>
+            simp [hlastEval] at hentry
+            subst q
+            simp at hid
+    · simp only [lookupQueries, List.mem_flatMap, List.mem_cons,
+        List.mem_nil_iff, or_false] at hlookup
+      obtain ⟨entry, _, hq | hq | hq | hq | hq⟩ := hlookup
+      all_goals
+        subst q
+        simp at hid
+  · rw [columnQueries, List.mem_map] at hfixed
+    obtain ⟨entry, _, hq⟩ := hfixed
+    subst q
+    simp at hid
+  · rw [permutationCommonQueries, List.mem_map] at hcommon
+    obtain ⟨entry, _, hq⟩ := hcommon
+    subst q
+    simp at hid
+  · simp [vanishingQueries] at hvanishing
+    rcases hvanishing with hq | hq
+    · subst q
+      simp at hid
+    · subst q
+      simp at hid
+
 /-- The multiopen point-set grouping (halo2 `construct_intermediate_sets` output): per point set,
 the routed queries as `(commitment, evaluations)`, the set's points, and the routed members' slot
 identities, positionally aligned with `sets` (`constructIntermediateSets_sets_ids_aligned`) —
@@ -836,7 +906,7 @@ theorem constructIntermediateSets_unique_comm_routed {k : ℕ} {F G : Type*} [De
     have hjget : (cisPts queries)[cisPIdx queries q.point]? = some q.point := by
       simp only [cisPIdx]
       exact getElem?_findIdx_self (mem_dedup_foldl queries (·.point) [] hq)
-    simp [List.filterMap_cons, hjget]
+    simp [hjget]
   · show m < (((List.range (cisSetList queries).length).map fun si' =>
       (cisRouted queries si').map fun cd => (cd.2.1, cd.2.2.2)).getD si []).length
     rw [List.getD_eq_getElem?_getD, List.getElem?_map,
@@ -895,7 +965,7 @@ private theorem permutationQueries_commId_form {k : ℕ} {F G : Type*} [Field F]
   rcases hq with hq | hq
   · rw [List.mem_flatMap] at hq
     obtain ⟨s, _, hq⟩ := hq
-    simp only [List.mem_cons, List.mem_singleton, List.not_mem_nil, or_false] at hq
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hq
     rcases hq with rfl | rfl <;> exact ⟨s.2, rfl⟩
   · rw [List.mem_filterMap] at hq
     obtain ⟨s, _, hq⟩ := hq
@@ -909,7 +979,7 @@ private theorem lookupQueries_commId_form {k : ℕ} {F G : Type*} [Field F] {x x
     ∃ n, q.commId = mkProduct n ∨ q.commId = mkInput n ∨ q.commId = mkTable n := by
   rw [lookupQueries, List.mem_flatMap] at hq
   obtain ⟨l, _, hq⟩ := hq
-  simp only [List.mem_cons, List.mem_singleton, List.not_mem_nil, or_false] at hq
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hq
   rcases hq with rfl | rfl | rfl | rfl | rfl
   · exact ⟨l.2, Or.inl rfl⟩
   · exact ⟨l.2, Or.inr (Or.inl rfl)⟩
@@ -1322,6 +1392,67 @@ theorem constructIntermediateSets_query_eval {k : ℕ} {F G : Type*}
     rfl
   rw [hmember, hpoints]
   exact hcdeval
+
+/--
+The grouped commitment and identity views at one member position come from the same flat query.
+This indexed provenance statement preserves the `CommitmentId` aligned with the group element.
+-/
+theorem constructIntermediateSets_member_provenance {k : ℕ} {F G : Type*}
+    [DecidableEq F] [DecidableEq G]
+    (queries : List (VerifierQuery k F G))
+    (i m : ℕ)
+    (hi : i < (constructIntermediateSets queries).sets.length)
+    (hm : m < ((constructIntermediateSets queries).sets.getD i []).length)
+    (defaultMember : CommitmentRef k F G × List F)
+    (defaultId : CommitmentId) :
+    ∃ q ∈ queries,
+      (((constructIntermediateSets queries).sets.getD i []).getD m defaultMember).1 =
+          q.commitment ∧
+        ((constructIntermediateSets queries).ids.getD i []).getD m defaultId =
+          q.commId := by
+  classical
+  have hiSetList : i < (cisSetList queries).length := by
+    change i < ((List.range (cisSetList queries).length).map fun si =>
+      (cisRouted queries si).map fun cd => (cd.2.1, cd.2.2.2)).length at hi
+    simpa using hi
+  have hsets :
+      (constructIntermediateSets queries).sets.getD i [] =
+        (cisRouted queries i).map fun cd => (cd.2.1, cd.2.2.2) := by
+    change ((List.range (cisSetList queries).length).map fun si =>
+      (cisRouted queries si).map fun cd => (cd.2.1, cd.2.2.2)).getD i [] = _
+    rw [List.getD_eq_getElem _ _ (by simpa using hiSetList),
+      List.getElem_map, List.getElem_range]
+  have hids :
+      (constructIntermediateSets queries).ids.getD i [] =
+        (cisRouted queries i).map (·.1) := by
+    change ((List.range (cisSetList queries).length).map fun si =>
+      (cisRouted queries si).map (·.1)).getD i [] = _
+    rw [List.getD_eq_getElem _ _ (by simpa using hiSetList),
+      List.getElem_map, List.getElem_range]
+  have hmRouted : m < (cisRouted queries i).length := by
+    rw [hsets, List.length_map] at hm
+    exact hm
+  let cd := (cisRouted queries i)[m]
+  have hcdRouted : cd ∈ cisRouted queries i :=
+    List.getElem_mem hmRouted
+  have hcdData : cd ∈ cisData queries := by
+    exact List.mem_reverse.mp (List.mem_filter.mp hcdRouted).1
+  obtain ⟨c, hc, hcd⟩ := List.mem_map.mp hcdData
+  rcases cisComms_fold_prov queries [] hc with hnil | ⟨q, hq, hcq⟩
+  · exact absurd hnil List.not_mem_nil
+  · have hcommitment : cd.2.1 = q.commitment :=
+      (congrArg (fun entry => entry.2.1) hcd).symm.trans
+        (congrArg (fun entry => entry.2) hcq)
+    have hidentity : cd.1 = q.commId :=
+      (congrArg (fun entry => entry.1) hcd).symm.trans
+        (congrArg (fun entry => entry.1) hcq)
+    refine ⟨q, hq, ?_, ?_⟩
+    · rw [hsets, List.getD_eq_getElem _ _ (by simpa using hmRouted),
+        List.getElem_map]
+      simpa [cd] using hcommitment
+    · rw [hids, List.getD_eq_getElem _ _ (by simpa using hmRouted),
+        List.getElem_map]
+      simpa [cd] using hidentity
 
 /-- Rejecting version of `assembleOpening`. Halo2 derives the number of `u` evaluations from the grouped
 point sets and reads exactly that many scalars; a mismatch means the typed proof string is not the deployed

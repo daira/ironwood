@@ -186,14 +186,14 @@ theorem peelG2_mul_le (σ : Set (F × F × F × F)) (τ : ℝ≥0∞) (a : F) :
     peelG2 σ τ a * (τ * τ)
       ≤ (PMF.uniformOfFintype (F × F × F)).toOuterMeasure
           {bcd : F × F × F | (a, bcd.1, bcd.2.1, bcd.2.2) ∈ σ} := by
-  refine le_trans (mul_le_mul_right' ?_ _)
+  refine le_trans (mul_le_mul_left ?_ _)
     (uniformOfFintype_prod_fiber_lower
       {bcd : F × F × F | (a, bcd.1, bcd.2.1, bcd.2.2) ∈ σ} (τ * τ))
   refine (PMF.uniformOfFintype F).toOuterMeasure.mono ?_
   intro b hb
   have h3 := peelG3_mul_le σ τ a b
   have hb' : τ ≤ peelG3 σ τ a b := hb
-  exact le_trans (mul_le_mul_right' hb' τ) h3
+  exact le_trans (mul_le_mul_left hb' τ) h3
 
 /-- Level-1 chain: a heavy `x₁` measure forces joint mass in the whole set. -/
 theorem peelG1_mul_le (σ : Set (F × F × F × F)) (τ : ℝ≥0∞) :
@@ -201,7 +201,7 @@ theorem peelG1_mul_le (σ : Set (F × F × F × F)) (τ : ℝ≥0∞) :
       ≤ (PMF.uniformOfFintype (F × F × F × F)).toOuterMeasure σ := by
   have hσ : σ = {abcd : F × F × F × F | (abcd.1, abcd.2.1, abcd.2.2.1, abcd.2.2.2) ∈ σ} := by
     ext ⟨a, b, c, d⟩; rfl
-  refine le_trans (mul_le_mul_right' ?_ _)
+  refine le_trans (mul_le_mul_left ?_ _)
     (le_trans (uniformOfFintype_prod_fiber_lower
       {abcd : F × (F × F × F) | (abcd.1, abcd.2.1, abcd.2.2.1, abcd.2.2.2) ∈ σ} (τ * (τ * τ)))
       (le_of_eq (by rw [← hσ])))
@@ -209,7 +209,7 @@ theorem peelG1_mul_le (σ : Set (F × F × F × F)) (τ : ℝ≥0∞) :
   intro a ha
   have h2 := peelG2_mul_le σ τ a
   have ha' : τ ≤ peelG2 σ τ a := ha
-  exact le_trans (mul_le_mul_right' ha' (τ * τ)) h2
+  exact le_trans (mul_le_mul_left ha' (τ * τ)) h2
 
 open Classical in
 /-- **The peeling decomposition.** A member of a below-threshold joint set always exposes one
@@ -237,7 +237,7 @@ theorem peel_decomposition {σ : Set (F × F × F × F)} {τ s : ℝ≥0∞} {a 
   · -- level-0 escape; its gate holds because a heavy `x₁` level would blow the budget
     have hgate : peelG1 σ τ ≤ τ := by
       by_contra hg
-      push_neg at hg
+      push Not at hg
       -- τ < peelG1 ≤ 1, so τ is finite and the strict product beats the budget
       have hle1 : peelG1 σ τ ≤ 1 := by
         rw [peelG1, ← uniformOfFintype_toOuterMeasure_univ (α := F)]
@@ -262,21 +262,21 @@ theorem peel_decomposition {σ : Set (F × F × F × F)} {τ s : ℝ≥0∞} {a 
     show a ∈ if peelG1 σ τ ≤ τ then {x : F | τ ≤ peelG2 σ τ x} else ∅
     rw [if_pos hgate]
     exact h2
-  · push_neg at h2
+  · push Not at h2
     by_cases h3 : τ ≤ peelG3 σ τ a b
     · refine ⟨1, ?_⟩
       show b ∈ peelEsc σ τ 1 a b c
       show b ∈ if peelG2 σ τ a ≤ τ then {x : F | τ ≤ peelG3 σ τ a x} else ∅
       rw [if_pos (le_of_lt h2)]
       exact h3
-    · push_neg at h3
+    · push Not at h3
       by_cases h4 : τ ≤ peelG4 σ a b c
       · refine ⟨2, ?_⟩
         show c ∈ peelEsc σ τ 2 a b c
         show c ∈ if peelG3 σ τ a b ≤ τ then {x : F | τ ≤ peelG4 σ a b x} else ∅
         rw [if_pos (le_of_lt h3)]
         exact h4
-      · push_neg at h4
+      · push Not at h4
         refine ⟨3, ?_⟩
         show d ∈ peelEsc σ τ 3 a b c
         show d ∈ if peelG4 σ a b c ≤ τ then {x : F | (a, b, c, x) ∈ σ} else ∅
@@ -435,19 +435,19 @@ theorem adapt_decomposition {F : Type*} {G1 : ℝ≥0∞} {G2 : F → ℝ≥0∞
     show a ∈ if G1 ≤ τ then {x : F | τ ≤ G2 x} else ∅
     rw [if_pos hG1]
     exact h2
-  · push_neg at h2
+  · push Not at h2
     by_cases h3 : τ ≤ G3 a b
     · refine ⟨1, ?_⟩
       show b ∈ if G2 a ≤ τ then {x : F | τ ≤ G3 a x} else ∅
       rw [if_pos (le_of_lt h2)]
       exact h3
-    · push_neg at h3
+    · push Not at h3
       by_cases h4 : τ ≤ G4 a b c
       · refine ⟨2, ?_⟩
         show c ∈ if G3 a b ≤ τ then {x : F | τ ≤ G4 a b x} else ∅
         rw [if_pos (le_of_lt h3)]
         exact h4
-      · push_neg at h4
+      · push Not at h4
         refine ⟨3, ?_⟩
         show d ∈ if G4 a b c ≤ τ then leaf a b c else ∅
         rw [if_pos (le_of_lt h4)]
