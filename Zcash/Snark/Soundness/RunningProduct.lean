@@ -90,5 +90,48 @@ theorem grandProduct_eq_or_cell_eq_zero [Field F] (z : ℕ → F) (a b : ℕ →
   · obtain ⟨j, hj, hj0⟩ := prod_eq_zero_iff.mp hzero
     exact Or.inr ⟨(i, j), mem_product.mpr ⟨hi, hj⟩, hj0⟩
 
+/-- **Variable-width chunk stitching.** The deployed permutation layout may end in a short chunk.
+The same two-level telescoping works when chunk `c` contains `width c` columns. -/
+theorem telescope_chunks_variable_width [CommRing F] (Z : ℕ → ℕ → F)
+    (A B : ℕ → ℕ → ℕ → F) (width : ℕ → ℕ) {nc m : ℕ}
+    (hrec : ∀ c < nc, ∀ i < m,
+      Z c (i + 1) * ∏ j ∈ range (width c), B c i j
+        = Z c i * ∏ j ∈ range (width c), A c i j)
+    (hchain : ∀ c < nc, Z (c + 1) 0 = Z c m) :
+    Z nc 0 * ∏ c ∈ range nc, ∏ i ∈ range m, ∏ j ∈ range (width c), B c i j
+      = Z 0 0 * ∏ c ∈ range nc, ∏ i ∈ range m, ∏ j ∈ range (width c), A c i j := by
+  apply telescope_running_product (fun c => Z c 0)
+    (fun c => ∏ i ∈ range m, ∏ j ∈ range (width c), A c i j)
+    (fun c => ∏ i ∈ range m, ∏ j ∈ range (width c), B c i j)
+  intro c hc
+  rw [hchain c hc]
+  exact telescope_running_product (Z c)
+    (fun i => ∏ j ∈ range (width c), A c i j)
+    (fun i => ∏ j ∈ range (width c), B c i j)
+    fun i hi => hrec c hc i hi
+
+/-- **The variable-width permutation product.** With the first and final running-product values
+pinned as in the verifier, stitched chunks give the whole-table product identity, or an explicit
+identity-side factor is zero. The exceptional branch is retained for later challenge pricing. -/
+theorem chunkedGrandProduct_eq_or_cell_eq_zero [Field F] (Z : ℕ → ℕ → F)
+    (A B : ℕ → ℕ → ℕ → F) (width : ℕ → ℕ) {nc m : ℕ}
+    (hrec : ∀ c < nc, ∀ i < m,
+      Z c (i + 1) * ∏ j ∈ range (width c), B c i j
+        = Z c i * ∏ j ∈ range (width c), A c i j)
+    (hchain : ∀ c < nc, Z (c + 1) 0 = Z c m)
+    (hz0 : Z 0 0 = 1) (hzend : Z nc 0 = 0 ∨ Z nc 0 = 1) :
+    (∏ c ∈ range nc, ∏ i ∈ range m, ∏ j ∈ range (width c), B c i j
+        = ∏ c ∈ range nc, ∏ i ∈ range m, ∏ j ∈ range (width c), A c i j)
+      ∨ ∃ c ∈ range nc, ∃ i ∈ range m, ∃ j ∈ range (width c), A c i j = 0 := by
+  have htel := telescope_chunks_variable_width Z A B width hrec hchain
+  rw [hz0, one_mul] at htel
+  rcases hzend with hzend | hzend
+  · rw [hzend, zero_mul] at htel
+    obtain ⟨c, hc, hrow⟩ := prod_eq_zero_iff.mp htel.symm
+    obtain ⟨i, hi, hcols⟩ := prod_eq_zero_iff.mp hrow
+    obtain ⟨j, hj, hzero⟩ := prod_eq_zero_iff.mp hcols
+    exact Or.inr ⟨c, hc, i, hi, j, hj, hzero⟩
+  · rw [hzend, one_mul] at htel
+    exact Or.inl htel
 
 end Zcash.Snark

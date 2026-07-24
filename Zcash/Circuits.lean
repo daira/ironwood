@@ -86,6 +86,7 @@ import Zcash.Circuits.TopLevelKeygen
 import Zcash.Circuits.Action.TopLevel
 import Zcash.Circuits.Action.Statement
 import Zcash.Circuits.Action.SelectorCoherence
+import Zcash.Circuits.Integration
 
 /-!
 # Ironwood circuits

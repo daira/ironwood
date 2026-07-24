@@ -99,6 +99,16 @@ theorem running_product_end {lLastP zP : Polynomial Fp} {n : ℕ}
     · exact Or.inr (sub_eq_zero.mp h1)
   · exact absurd h hlast
 
+/-- The inter-set rule `(zNext - zLast)·ℓ₀ = 0` joins two permutation running products at the
+first row. -/
+theorem running_product_chain {l0P zNextP zLastP : Polynomial Fp} {n : ℕ}
+    (hdvd : (X ^ n - 1 : Polynomial Fp) ∣ (zNextP - zLastP) * l0P)
+    {r : Fp} (hr : r ^ n = 1) (hl0 : l0P.eval r ≠ 0) :
+    zNextP.eval r = zLastP.eval r := by
+  have hzero := eval_eq_zero_of_dvd_vanishing hdvd hr
+  rw [eval_mul, eval_sub] at hzero
+  exact sub_eq_zero.mp ((mul_eq_zero.mp hzero).resolve_right hl0)
+
 /-! ## The identity names are distinct
 
 halo2 names cell `(row i, column j)` by `ωⁱ·δ^j`. Distinctness of those names is what turns the
@@ -148,6 +158,20 @@ noncomputable def rowSigmaName (omega : Fp) (pairs : List (Polynomial Fp × Poly
 noncomputable def rowName (omega delta : Fp) (off : ℕ) : ℕ → ℕ → Fp :=
   fun i j => omega ^ i * delta ^ (off + j)
 
+/-- The committed values across a family of variable-width chunks. -/
+noncomputable def chunkRowValue (omega : Fp)
+    (pairs : ℕ → List (Polynomial Fp × Polynomial Fp)) : ℕ → ℕ → ℕ → Fp :=
+  fun c => rowValue omega (pairs c)
+
+/-- The permutation-column names across a family of variable-width chunks. -/
+noncomputable def chunkRowSigmaName (omega : Fp)
+    (pairs : ℕ → List (Polynomial Fp × Polynomial Fp)) : ℕ → ℕ → ℕ → Fp :=
+  fun c => rowSigmaName omega (pairs c)
+
+/-- The identity name of a chunked cell, including the chunk's column offset. -/
+noncomputable def chunkRowName (omega delta : Fp) (chunkLen : ℕ) : ℕ → ℕ → ℕ → Fp :=
+  fun c => rowName omega delta (c * chunkLen)
+
 open Finset in
 /-- **The permutation argument, closed at the deployed constraints.** Every hypothesis is either a
 constraint the verifier checks (`hstep`/`hstart`/`hend`, each vanishing on the domain), a fact about
@@ -196,6 +220,76 @@ theorem deployed_perm_copy_constraints
   · simpa using running_product_start hstart (hrow 0) hl0
   · exact running_product_end hend (hrow u) hlast
 
+open Finset in
+/-- **The deployed permutation argument across all chunks.** The chunk step constraints give the
+row recurrences, the verifier's inter-set constraints join their running products, and its unique
+start/end constraints pin the combined product. The conclusion uses one global `σ`, so copy cycles
+may cross chunk boundaries and the final chunk may be shorter than `chunkLen`. -/
+theorem deployed_perm_copy_constraints_all_chunks
+    (omega beta gamma delta : Fp) (chunkLen : ℕ)
+    (z : ℕ → Polynomial Fp)
+    (pairs : ℕ → List (Polynomial Fp × Polynomial Fp))
+    (l0P lLastP lBlindP : Polynomial Fp) {nc n m : ℕ} (hnc : 0 < nc)
+    (σ : Equiv.Perm (ChunkCell nc m (fun c => (pairs c).length)))
+    (hstep : ∀ c < nc, (X ^ n - 1 : Polynomial Fp) ∣
+      permChunkExpression (C beta) (C gamma) X (C delta) chunkLen c
+        (permSetPolys omega (z c) none) (pairs c) lLastP lBlindP)
+    (hchain : ∀ c, c + 1 < nc → (X ^ n - 1 : Polynomial Fp) ∣
+      (z (c + 1) - (z c).comp (C (omega ^ m) * X)) * l0P)
+    (hstart : (X ^ n - 1 : Polynomial Fp) ∣ l0P * (1 - z 0))
+    (hend : (X ^ n - 1 : Polynomial Fp) ∣
+      ((z (nc - 1)) ^ 2 - z (nc - 1)) * lLastP)
+    (hrow : ∀ i : ℕ, (omega ^ i) ^ n = 1)
+    (hactive : ∀ i < m, 1 - (lLastP.eval (omega ^ i) + lBlindP.eval (omega ^ i)) ≠ 0)
+    (hl0 : l0P.eval (omega ^ 0) ≠ 0) (hlast : lLastP.eval (omega ^ m) ≠ 0)
+    (hσ : ∀ c : ChunkCell nc m (fun c => (pairs c).length),
+      chunkRowSigmaName omega pairs c.1 c.2.1 c.2.2
+        = chunkRowName omega delta chunkLen (σ c).1 (σ c).2.1 (σ c).2.2)
+    (hnm : Function.Injective fun c : ChunkCell nc m (fun c => (pairs c).length) =>
+      chunkRowName omega delta chunkLen c.1 c.2.1 c.2.2)
+    (hgoodγ : gamma ∉ szBadSet (linProdDiff
+      ((chunkedCellPairs nc m (fun c => (pairs c).length)
+        (chunkRowValue omega pairs) (chunkRowSigmaName omega pairs)).map
+          (fun p => p.1 + p.2 * beta))
+      ((chunkedCellPairs nc m (fun c => (pairs c).length)
+        (chunkRowValue omega pairs) (chunkRowName omega delta chunkLen)).map
+          (fun p => p.1 + p.2 * beta))))
+    (hgoodβ : ∀ j, beta ∉ szBadSet ((pairProdDiff
+      (chunkedCellPairs nc m (fun c => (pairs c).length)
+        (chunkRowValue omega pairs) (chunkRowSigmaName omega pairs))
+      (chunkedCellPairs nc m (fun c => (pairs c).length)
+        (chunkRowValue omega pairs) (chunkRowName omega delta chunkLen))).coeff j))
+    {c d : ChunkCell nc m (fun c => (pairs c).length)} (hcd : σ.SameCycle c d) :
+    chunkRowValue omega pairs c.1 c.2.1 c.2.2
+        = chunkRowValue omega pairs d.1 d.2.1 d.2.2
+      ∨ ∃ c ∈ range nc, ∃ i ∈ range m, ∃ j ∈ range (pairs c).length,
+          chunkRowValue omega pairs c i j
+            + beta * chunkRowName omega delta chunkLen c i j + gamma = 0 := by
+  let Z : ℕ → ℕ → Fp := fun c i =>
+    if hc : c < nc then (z c).eval (omega ^ i)
+    else (z (nc - 1)).eval (omega ^ m)
+  apply perm_copy_constraints_of_chunked_running_product
+    (fun c => (pairs c).length) Z (chunkRowValue omega pairs)
+    (chunkRowName omega delta chunkLen) (chunkRowSigmaName omega pairs)
+    beta gamma σ hσ hnm
+  · intro c hc i hi
+    simpa [Z, hc, chunkRowValue, chunkRowName, chunkRowSigmaName, rowValue, rowSigmaName, rowName,
+      pow_add, mul_assoc, mul_comm, mul_left_comm] using
+      perm_row_recurrence omega beta gamma delta chunkLen c (z c) none (pairs c)
+        lLastP lBlindP (hstep c hc) (hrow i) (hactive i hi)
+  · intro c hc
+    by_cases hnext : c + 1 < nc
+    · have h := running_product_chain (hchain c hnext) (hrow 0) hl0
+      simpa [Z, hc, hnext, eval_comp_rotate] using h
+    · have hlastc : c = nc - 1 := by omega
+      have hnotLastNext : ¬ nc - 1 + 1 < nc := by omega
+      simp [Z, hlastc, hnotLastNext]
+  · simpa [Z, hnc] using running_product_start hstart (hrow 0) hl0
+  · simpa [Z] using running_product_end hend (hrow m) hlast
+  · exact hgoodγ
+  · exact hgoodβ
+  · exact hcd
+
 
 /-! ## The deployed instantiation
 
@@ -243,16 +337,6 @@ theorem getLast?_deployedPermSets (omega : Fp) {nc : ℕ} (hnc : 0 < nc) (z : �
   rcases nc with _ | nc
   · exact absurd hnc (lt_irrefl 0)
   · simp [List.range_succ]
-
-/-- The chaining rule at a row: the next chunk's running product starts where this one ended. -/
-theorem running_product_chain {l0P A B : Polynomial Fp} {n : ℕ}
-    (hdvd : (X ^ n - 1 : Polynomial Fp) ∣ (A - B) * l0P) {r : Fp} (hr : r ^ n = 1)
-    (hl0 : l0P.eval r ≠ 0) : A.eval r = B.eval r := by
-  have hzero := eval_eq_zero_of_dvd_vanishing hdvd hr
-  rw [eval_mul, eval_sub] at hzero
-  rcases mul_eq_zero.mp hzero with h | h
-  · exact sub_eq_zero.mp h
-  · exact absurd h hl0
 
 @[simp] theorem length_deployedPermSets (omega : Fp) (nc : ℕ) (z : ℕ → Polynomial Fp)
     (lastP : ℕ → Option (Polynomial Fp)) :
