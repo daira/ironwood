@@ -714,6 +714,52 @@ def CopyReplayWitness.ofPairCycles
       ((replayKeygenPermutation_sameCycle_iff
         (encodeDeclaredCopies encode (operationDeclaredCopies ops)) l r).mp h))
 
+/-- Value agreement (with a shared exceptional branch) extends from copy pairs to whole
+replayed cycles: the cycles are the equivalence closure of the pairs, and the branch
+threads through reflexivity, symmetry, and transitivity. -/
+theorem value_eq_or_bad_of_replay_sameCycle {cell : Type*} [DecidableEq cell]
+    [Fintype cell] {Bad : Prop} (value : cell → Fp) (copies : List (cell × cell))
+    (hpair : ∀ p ∈ copies, value p.1 = value p.2 ∨ Bad)
+    {l r : cell} (h : (replayKeygenPermutation copies).SameCycle l r) :
+    value l = value r ∨ Bad := by
+  have hgen := (replayKeygenPermutation_sameCycle_iff copies l r).mp h
+  clear h
+  induction hgen with
+  | rel u v huv => exact hpair (u, v) huv
+  | refl u => exact Or.inl rfl
+  | symm u v _ ih =>
+      rcases ih with ih | ih
+      · exact Or.inl ih.symm
+      · exact Or.inr ih
+  | trans u v w _ _ ih1 ih2 =>
+      rcases ih1 with ih1 | ih1
+      · rcases ih2 with ih2 | ih2
+        · exact Or.inl (ih1.trans ih2)
+        · exact Or.inr ih2
+      · exact Or.inr ih1
+
+/-- **The copy-replay witness from pairwise value agreement.** The strongest generic
+form: no linking permutation at all — each encoded declared copy pair agrees in value
+(or the shared exceptional branch fires), and the cycle field follows by closure. The
+Action instantiation discharges the pair fact per copy kind: two resolved cells agree
+through the σ-semantics copy theorem (their keygen copy links them), and a resolved
+cell agrees with its constant's allocated constants-column cell through the same link
+plus the fixed-column realization of the constants column. -/
+def CopyReplayWitness.ofPairValues
+    {numCols n : ℕ} {place : RegionIndex → ℕ} {env : Environment Fp}
+    {ops : Operations Fp} {Bad : Prop}
+    (encode : CopyEndpoint Fp → FlatCell numCols n)
+    (value : FlatCell numCols n → Fp)
+    (hpair : ∀ p ∈ encodeDeclaredCopies encode (operationDeclaredCopies ops),
+      value p.1 = value p.2 ∨ Bad)
+    (hread : ∀ endpoint : CopyEndpoint Fp,
+      endpoint.eval place env = value (encode endpoint)) :
+    CopyReplayWitness place env ops (FlatCell numCols n) Bad where
+  encode := encode
+  value := value
+  read := hread
+  cycle := fun h => value_eq_or_bad_of_replay_sameCycle value _ hpair h
+
 end Layout.Asm
 
 end Zcash.Snark
