@@ -107,7 +107,6 @@ def toAlgebraicPoint {ι : Type*} [Fintype ι] {basis : ι → G}
 theorem exists_nonzero_coeff {ι : Type*} [Fintype ι] {basis : ι → G}
     (r : AlgebraicRelationWitness (F := F) basis) :
     ∃ i, r.coeffs i ≠ 0 := by
-  classical
   by_contra h
   apply r.nontrivial
   funext i
@@ -123,14 +122,12 @@ noncomputable def nonzeroCoeffSlots {ι : Type*} [Fintype ι] [DecidableEq ι] {
 @[simp] theorem mem_nonzeroCoeffSlots {ι : Type*} [Fintype ι] [DecidableEq ι]
     {basis : ι → G} (r : AlgebraicRelationWitness (F := F) basis) (i : ι) :
     i ∈ r.nonzeroCoeffSlots ↔ r.coeffs i ≠ 0 := by
-  classical
   simp [nonzeroCoeffSlots]
 
 /-- A nontrivial relation has at least one slot from which extraction succeeds. -/
 theorem nonzeroCoeffSlots_nonempty {ι : Type*} [Fintype ι] [DecidableEq ι] {basis : ι → G}
     (r : AlgebraicRelationWitness (F := F) basis) :
     r.nonzeroCoeffSlots.Nonempty := by
-  classical
   obtain ⟨i, hi⟩ := r.exists_nonzero_coeff
   exact ⟨i, by simp [nonzeroCoeffSlots, hi]⟩
 
@@ -145,14 +142,12 @@ noncomputable def challengeHitCount {ι : Type*} [Fintype ι] [DecidableEq ι] {
 theorem challengeHitCount_pos {ι : Type*} [Fintype ι] [DecidableEq ι] {basis : ι → G}
     (r : AlgebraicRelationWitness (F := F) basis) :
     0 < r.challengeHitCount := by
-  classical
   exact Finset.card_pos.mpr r.nonzeroCoeffSlots_nonempty
 
 /-- The number of successful challenge placements is bounded by the number of public basis slots. -/
 theorem challengeHitCount_le_total {ι : Type*} [Fintype ι] [DecidableEq ι] {basis : ι → G}
     (r : AlgebraicRelationWitness (F := F) basis) :
     r.challengeHitCount ≤ Fintype.card ι := by
-  classical
   dsimp [challengeHitCount, nonzeroCoeffSlots]
   apply Finset.card_le_card
   intro i hi
@@ -180,7 +175,6 @@ theorem representationEval_eq_challenge_add_known {ι : Type*} [Fintype ι] [Dec
     (hknown : ∀ i, i ≠ challenge → basis i = logs i • B) :
     representationEval basis coeffs =
       coeffs challenge • basis challenge + relationLogExcept logs coeffs challenge • B := by
-  classical
   have hsum : ((Finset.univ.erase challenge).sum fun i => coeffs i • basis i)
       = relationLogExcept logs coeffs challenge • B := by
     calc

@@ -262,7 +262,6 @@ private theorem length_permSetBlock {n : ℕ} (g : Fin n → PermSetEval Fp)
     (hg : ∀ s : Fin n, (g s).lastEval.isSome = ((s : ℕ) + 1 < n)) :
     ((List.ofFn (fun s => absorbPermSet (G := G) (g s))).flatten).length
       = 2 * n + (n - 1) := by
-  classical
   have hterm : ∀ s : Fin n, ((List.length ∘ fun s => absorbPermSet (G := G) (g s)) s)
       = 2 + (if (s : ℕ) + 1 < n then 1 else 0) := by
     intro s
