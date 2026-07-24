@@ -588,6 +588,8 @@ assert_axioms Halo2.Configure.PreservesGateWellFormedness.pure
 assert_axioms Halo2.Configure.PreservesGateWellFormedness.bind
 assert_axioms Halo2.Configure.PreservesGateWellFormedness.map
 assert_axioms Halo2.Configure.PreservesGateWellFormedness.createGate
+assert_axioms Halo2.Configure.PreservesGateWellFormedness.selectorCreateGate
+assert_axioms Halo2.Configure.PreservesGateWellFormedness.fromEmpty
 assert_axioms Halo2.Configure.PreservesGateWellFormedness.lookup
 assert_axioms Zcash.Circuits.Action.Circuit.orchardGate_wellFormed
 assert_axioms Zcash.Circuits.Ecc.WitnessPoint.pointGate_wellFormed
@@ -599,6 +601,9 @@ assert_axioms Zcash.Circuits.Ecc.MulFixed.Short.shortGate_wellFormed
 assert_axioms Zcash.Circuits.Poseidon.partialRoundsGate_wellFormed
 assert_axioms Zcash.Circuits.Sinsemilla.HashPiece.sinsemillaGate_wellFormed
 assert_axioms Zcash.Circuits.NoteCommit.YCanonicity.gate_wellFormed
+assert_axioms Zcash.Circuits.NoteCommit.configure_preservesGateWellFormedness
+assert_axioms Zcash.Circuits.Ecc.configure_preservesGateWellFormedness +native
+assert_axioms Zcash.Circuits.Action.Circuit.configure_preservesGateWellFormedness +native
 assert_axioms gate_constraints_of_polynomial_witnesses
 assert_axioms fixed_constraints_of_requirements
 assert_axioms CopyReplayWitness.constraints_or_bad

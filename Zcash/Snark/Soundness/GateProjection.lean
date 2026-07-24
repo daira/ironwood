@@ -501,6 +501,29 @@ theorem createGate
   exact (ConstraintSystem.gatesWellFormed_createGate cs gate).2
     ⟨hcs, hgate⟩
 
+/--
+The standard leaf-chip configure pattern: allocate one simple selector, register
+its locally certified gate, and return the selector-indexed config.
+-/
+@[circuit_norm]
+theorem selectorCreateGate
+    (gate : Selector → Gate F) (result : Selector → α)
+    (hgate : ∀ selector, (gate selector).WellFormed) :
+    PreservesGateWellFormedness (do
+      let selector ← Halo2.selector
+      Halo2.createGate (gate selector)
+      return result selector) :=
+  bind selector fun selector =>
+    bind (createGate _ (hgate selector)) fun _ =>
+      pure _
+
+/-- Run a preserving configure program from Halo 2's empty initial state. -/
+theorem fromEmpty
+    {program : Configure F α}
+    (hprogram : PreservesGateWellFormedness program) :
+    (program {}).2.GatesWellFormed :=
+  hprogram.run {} ConstraintSystem.gatesWellFormed_empty
+
 @[circuit_norm]
 theorem lookup
     (queriedCells : List (Expression F Query))

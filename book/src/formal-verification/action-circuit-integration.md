@@ -499,13 +499,18 @@ distinct custom-gate definitions reachable from Action configuration. This inclu
 the manually associated witness-point constraints, the fold-built running-range
 checks, every NoteCommit gate, and the shared/final fixed-base gates. Small
 selector-freedom lemmas for `rangeCheckExpr`, `windowPow`, and `coordsCheck` keep those
-proofs structural rather than evaluating concrete field data. The first leaf
-configure certificates (`AddChip`, `CondSwap`, and `WitnessPoint`) exercise the
-StateM interface at 20k heartbeats.
+proofs structural rather than evaluating concrete field data.
 
-The remaining gate work is to lift the other local certificates through their chip
-configure functions, compose those certificates through the Action configuration,
-and prove the two compiler contracts
+The configure lift is complete as well. Each gate-producing leaf has a
+`PreservesGateWellFormedness` certificate; the composite NoteCommit, variable- and
+fixed-base multiplication, ECC, Poseidon, Sinsemilla, Merkle, and finally
+`Action.Circuit.configure` theorems follow the actual configure call graph. The final
+Action theorem is a certificate about the configure program, not a kernel reduction
+of the finished constraint system. `PreservesGateWellFormedness.fromEmpty` specializes
+such a certificate to the standard empty Halo 2 builder state when the downstream
+bridge needs the concrete `GatesWellFormed` fact.
+
+The remaining gate work is to prove the two compiler contracts
 `SelectorRootsWellFormed` and `SelectorActivationsRealized` for the circuit-derived
 selector map and fixed columns. The generic operation walk already proves that every
 extracted enabled gate occurs in the floor-planner activation table, and
