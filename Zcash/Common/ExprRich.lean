@@ -59,6 +59,19 @@ def RichExpression.toExpr {F : Type} [Zero F] : RichExpression F → Zcash.Snark
   | .product a b => .product (RichExpression.toExpr a) (RichExpression.toExpr b)
   | .scaled e c => .scaled (RichExpression.toExpr e) c
 
+/-- Converting a pinned expression to the verifier AST preserves evaluation.
+
+The pre-compression `selector` fallback is harmless here: both
+`RichExpression.eval` and the converted verifier constant evaluate it as zero.
+Post-compression verifying-key expressions do not contain this node in any case. -/
+@[simp] theorem RichExpression.eval_toExpr {F : Type} [CommRing F]
+    (fE aE iE : ℕ → F) (e : RichExpression F) :
+    (RichExpression.toExpr e).eval fE aE iE =
+      e.eval fE aE iE := by
+  induction e <;>
+    simp_all only [RichExpression.toExpr, RichExpression.eval,
+      Zcash.Snark.Expr.eval]
+
 /-- **`toExpr` inverts `ofExpr`.** Since `ofExpr` never emits a `selector` node, carrying a
 verifier `Expr` into `RichExpression` and back is the identity — the junk `.selector` arm of
 `toExpr` is unreachable on `ofExpr` images. This closes the `Expr`/`RichExpression` boundary

@@ -391,9 +391,10 @@ Those remaining domain facts are now exposed directly from every fitting
 injectivity, and nonzero field-size premises at the circuit-derived exponent.
 The two `blindingFactors_*_domainSize` theorems derive the selector and
 active-prefix bounds from keygen's existing `FitsAt` certificate (with a
-nonempty-operation premise only for the stronger lookup bound). Once
-`toVerifyingKey` identifies the VK fields with these circuit-owned values, no
-Action arithmetic is needed to instantiate the canonical resolver model.
+nonempty-operation premise only for the stronger lookup bound).
+`TopLevelCircuit.toVerifierKey` now constructs the verifier key from exactly this
+circuit-owned keygen data, so no Action arithmetic or separately supplied key is
+needed to instantiate the canonical resolver model.
 
 After that, translate the endpoints to the exact relations that Clean's
 `Halo2.Constraints` requires: declared `constrainEqual`/`constrainInstance` copies,
@@ -566,16 +567,18 @@ extend the intermediate gate-erasure state (`derive_queryState_extends_gates`), 
 lookup projection may append query entries without forcing a false equality between
 the VK's final layouts and the earlier gate state.
 
-`TopLevelGateCoherence` is the generic static boundary to the incoming circuit-owned
-verifying key. Its `polynomialWitness` theorem derives the resolver witness for every
-enabled constraint using only the top-level circuit's own operations, placement,
-selector map, pinned projection, and the decoded fixed-polynomial realization.
+`TopLevelGateCoherence` is the generic static boundary to the circuit-owned verifying
+key. It is now parameterized by proof parameters and a URS, and all of its
+verifier-side objects use `top.toVerifierKey pp urs`; an arbitrary key cannot be paired
+with a circuit. Gate expressions and query layouts are therefore obtained in keygen's
+construction direction rather than restated as caller hypotheses. Its
+`polynomialWitness` theorem derives the resolver witness for every enabled constraint
+using only the top-level circuit's own operations, placement, selector map, pinned
+projection, and the decoded fixed-polynomial realization.
 `TopLevelGateCoherence.constraints` then supplies the complete gate field of Clean's
-constraint satisfaction. The remaining constructor work is to obtain the record's
-pinned-field equalities from `FormalCircuit.toVerifyingKey`, prove the compact
-configure certificates (`GatesWellFormed` and `GateSelectorsAllocated`), and connect
-the VK's dense fixed rows to
-`SelectorActivationsRealized`.
+constraint satisfaction. The remaining constructor work is to prove the compact
+configure certificates (`GatesWellFormed` and `GateSelectorsAllocated`) and connect
+the derived VK's dense fixed rows to `SelectorActivationsRealized`.
 
 The configure proof for `GateSelectorsAllocated` now has a reusable local interface.
 `Gate.SelectorsOwned` says a gate mentions no selector other than its distinguished
@@ -682,20 +685,14 @@ the type has neither an arbitrary domain nor a `VerifyingKey` argument, and
 
 `TopLevelAssignment.ofActionDecodedMembers` now constructs this shell directly from
 the deployed decoded-member resolver. It never accepts an arbitrary verifying key:
-the decoder uses `VkCommit.derivedActionVk shape urs`, whose scalar, gate, query-layout,
-fixed-commitment, permutation-commitment, permutation-chunk, and lookup fields are
-derived from the configured Action circuit and supplied URS. The reusable derivation
-is independent of the captured fixture; the deliberately expensive
+the decoder uses
+`orchardActionTopLevelCircuit.toVerifierKey pp urs`, whose shape, scalar, gates,
+query layouts, fixed commitments, permutation commitments and lookup data are all
+derived from the configured Action circuit and supplied URS. The constructor no
+longer accepts a separate shape or a shape/domain coherence premise. The reusable
+derivation remains independent of the captured fixture; the deliberately expensive
 `VkCommit.Certificate` separately proves that the captured deployed key equals that
 derived key.
-
-The incoming generic `FormalCircuit.toVerifyingKey` will shrink the remaining
-Action-specific seam rather than alter the assignment interface. Replace
-`derivedActionVk` with `orchardActionTopLevelCircuit.formalCircuit.toVerifyingKey`,
-prove the generic field equations connecting that key to the circuit-owned domain and
-layout above, and retain the captured-key equality only as an external deployment
-certificate. Until that lands, the constructor has one explicit shape-domain
-coherence premise because `Shape.k` is not itself derived from its key.
 
 On the SNARK side, `FullCircuitSatisfaction.topLevelSoundness` composes exact
 gate/copy/lookup/fixed satisfaction with that generic top-level endpoint.
@@ -738,8 +735,8 @@ The legacy `ActionAssignment` has been deleted. Its decoded constructor now retu
 the generic `TopLevelAssignment` indexed by `orchardActionTopLevelCircuit`, so
 placement, operations, domain exponent, blinding factors, and usable rows all come
 from the top-level circuit. The only Action-specific work left in this layer is the
-deployed decoder routing and, pending generic `FormalCircuit.toVerifyingKey`, the
-temporary concrete spelling of the circuit-derived key.
+deployed decoder routing; the verifier key itself is now obtained generically from
+the top-level circuit.
 
 The compositional base and post-Ironwood `FormalCircuit`s intentionally retain their
 `EnvAssumptions`: child circuits may state contracts that a parent fulfills.
@@ -838,10 +835,11 @@ whose public inputs were committed by the verifier.
    full-satisfaction-to-`TopLevelCircuit.Statement` endpoint, and decoded
    `TopLevelAssignment` constructor are complete; the legacy `ActionAssignment` is
    gone. The Action configure program now also supplies the complete generic
-   `GateSelectorsAllocated` certificate needed by the gate projection. Replace its
-   temporary Action key derivation with generic
-   `FormalCircuit.toVerifyingKey` when available, then discharge the resolver
-   representation facts.
+   `GateSelectorsAllocated` certificate needed by the gate projection.
+   `TopLevelCircuit.toVerifierKey` now supplies the assignment decoder and generic
+   gate bridge directly, without a separately supplied shape or VK. Next discharge
+   the remaining resolver representation facts, chiefly fixed-row realization and
+   the copy/lookup witnesses.
 4. Instantiate the generic decomposed bridge for one selected Action, adapt
    `TopLevelCircuit.Statement` to the external Action statement, and then generalize
    it to every `Fin shape.numProofs`. The semantic adapter and generic decoded

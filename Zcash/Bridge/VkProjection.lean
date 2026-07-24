@@ -15,10 +15,9 @@ record carries more than the verifier's runtime `VerifyingKey` (counts, constant
 the record-level capture equality lives fixture side
 (`Zcash.Snark.Fixtures.SingleAction.PinnedCsMatch`), and the verifying key connects
 field-wise: `VerifyingKey.gates_eval_of_gates_eq` carries the derived-gate semantics
-(`derive_gates_eval`) to any verifying key whose gate list equals a derivation's (through
-the `Expr`/`RichExpression` boundary conversion `RichExpression.ofExpr`) — the gate-side
-input to the Clean-constraints transport. `actionCS` is the Action instance of the source
-constraint system.
+(`derive_gates_eval`) to any verifying key whose gate list is the derivation mapped
+through `RichExpression.toExpr` — exactly the direction in which key generation builds
+the key. `actionCS` is the Action instance of the source constraint system.
 
 This module also hosts the DERIVED keygen data of the pinned-CS derivation: the
 closed Action circuit's operation stream (`actionOperations`) and the
@@ -34,17 +33,17 @@ open Halo2
 
 /-- **A verifying key whose gate list is a derivation's evaluates like the source
 circuit.** The verifier holds `Zcash.Snark.Expr` gates while the derivation produces
-`Halo2.RichExpression` gates, so the hypothesis relates them through the boundary
-conversion (`RichExpression.ofExpr`): `(.derive cs map).gates = vk.gates.map ofExpr`. Given
-that and selector coverage, the `j`-th VK gate — at query families interpreting the
-derivation walk's layout — evaluates to the `j`-th flattened Clean gate expression under
-the selector-replacement valuation. The evaluation transports across the boundary because
-`ofExpr` preserves evaluation (`RichExpression.eval_ofExpr`). -/
+`Halo2.RichExpression` gates, so the hypothesis follows keygen's construction direction:
+`vk.gates = (.derive cs map).gates.map RichExpression.toExpr`. Given that and selector
+coverage, the `j`-th VK gate — at query families interpreting the derivation walk's
+layout — evaluates to the `j`-th flattened Clean gate expression under the
+selector-replacement valuation. -/
 theorem VerifyingKey.gates_eval_of_gates_eq
     {shape : Shape} {G : Type*} (vk : VerifyingKey shape Fp G)
     (cs : ConstraintSystem Fp) (map : SelCompressMap)
-    (hgates : (PinnedConstraintSystem.derive cs map).gates
-      = vk.gates.map RichExpression.ofExpr)
+    (hgates : vk.gates =
+      (PinnedConstraintSystem.derive cs map).gates.map
+        RichExpression.toExpr)
     (fE aE iE : ℕ → Fp) (v : Query → Fp)
     (hcov : ∀ p ∈ flatGates cs,
       p.selectorsCovered (fun i => (map.lookup i).isSome) = true)
@@ -55,10 +54,11 @@ theorem VerifyingKey.gates_eval_of_gates_eq
     Expr.eval fE aE iE vk.gates[j]
       = Expression.eval (substValuation map.lookup v) (flatGates cs)[j] := by
   have hg' : j < (PinnedConstraintSystem.derive cs map).gates.length := by
-    rw [hgates, List.length_map]; exact hg
+    rw [hgates, List.length_map] at hg
+    exact hg
   have key := PinnedConstraintSystem.derive_gates_eval cs map fE aE iE v hcov hint j hg' hp
-  rw [List.getElem_of_eq hgates hg', List.getElem_map,
-    RichExpression.eval_ofExpr] at key
+  rw [List.getElem_of_eq hgates hg, List.getElem_map,
+    RichExpression.eval_toExpr]
   exact key
 
 end Zcash.Snark

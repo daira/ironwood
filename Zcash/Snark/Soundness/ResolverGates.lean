@@ -210,8 +210,9 @@ noncomputable def enabledGatePolynomialWitnessOfResolver
     (hgate : enabled.gate ∈ cs.gates)
     (hconstraint : constraint ∈ enabled.gate.constraints)
     (hwellFormed : cs.GatesWellFormed)
-    (hgates : (PinnedConstraintSystem.derive cs map).gates =
-      vk.gates.map RichExpression.ofExpr)
+    (hgates : vk.gates =
+      (PinnedConstraintSystem.derive cs map).gates.map
+        RichExpression.toExpr)
     (hcoverage : ∀ expression ∈ flatGates cs,
       expression.selectorsCovered
         (fun index => (map.lookup index).isSome) = true)
@@ -259,9 +260,9 @@ noncomputable def enabledGatePolynomialWitnessOfResolver
   have hgateLength :
       vk.gates.length = (flatGates cs).length := by
     have hlength := congrArg List.length hgates
-    rw [PinnedConstraintSystem.derive_gates_length,
-      List.length_map] at hlength
-    exact hlength.symm
+    rw [List.length_map,
+      PinnedConstraintSystem.derive_gates_length] at hlength
+    exact hlength
   have hgateIndexVk : gateIndex < vk.gates.length := by
     omega
   let index : Fin vk.gates.length := ⟨gateIndex, hgateIndexVk⟩
