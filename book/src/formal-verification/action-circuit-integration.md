@@ -347,6 +347,18 @@ combined good-`γ` condition. Thus concrete Action work need not propagate a
 zero-product disjunction; it only supplies the already explicit challenge-avoidance
 premise at the correct transcript squeeze.
 
+The evaluation-domain selector side is now generic too.
+`rowSelectorPolynomial` and `blindSelectorPolynomial` define the canonical `l₀`,
+`l_last`, and `l_blind` row polynomials. Their evaluation theorems discharge the
+first-row, last-row, and active-row selector premises shared by
+`ResolverPermutationDomain` and `ResolverLookupDomain`. The remaining provenance step
+is to identify the verifier-side Lagrange polynomials with these canonical
+polynomials; it does not depend on Action placement or operations.
+`ResolverPermutationDomain.ofCanonicalSelectors` and
+`ResolverLookupDomain.ofCanonicalSelectors` now perform this generic discharge:
+their callers retain only the actual domain bounds, root facts, and the
+permutation-specific chunk/last-rotation facts.
+
 After that, translate the endpoints to the exact relations that Clean's
 `Halo2.Constraints` requires: declared `constrainEqual`/`constrainInstance` copies,
 `RegionOperation.enableLookup` membership with the exact loaded tables, fixed

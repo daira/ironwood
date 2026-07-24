@@ -1,5 +1,6 @@
 import Zcash.Snark.Soundness.LookupInstantiation
 import Zcash.Snark.Soundness.GoodChallenge
+import Zcash.Snark.Soundness.DomainSelectors
 
 /-!
 # Semantic endpoint for resolver-backed lookup constraints
@@ -28,6 +29,33 @@ structure ResolverLookupDomain
     1 - (lLast.eval (vk.omega ^ i) + lBlind.eval (vk.omega ^ i)) ≠ 0
   firstSelector : l0.eval (vk.omega ^ 0) ≠ 0
   lastSelector : lLast.eval (vk.omega ^ (u + 1)) ≠ 0
+
+/--
+Build the lookup-domain record with the canonical first, last-usable, and
+blinding-row selectors. The selector evaluations are independent of the lookup
+and of the circuit being instantiated.
+-/
+theorem ResolverLookupDomain.ofCanonicalSelectors
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) {n u : ℕ}
+    (hlast : u + 1 < n)
+    (hrows : Function.Injective fun i : Fin n => vk.omega ^ (i : ℕ))
+    (homega : vk.omega ≠ 0)
+    (hroot : vk.omega ^ n = 1) :
+    ResolverLookupDomain vk
+      (rowSelectorPolynomial vk.omega ⟨0, lt_trans (Nat.zero_lt_succ u) hlast⟩)
+      (rowSelectorPolynomial vk.omega ⟨u + 1, hlast⟩)
+      (blindSelectorPolynomial vk.omega ⟨u + 1, hlast⟩) n u where
+  omegaNonzero := homega
+  root := hroot
+  active i hi := by
+    exact last_add_blind_active ⟨u + 1, hlast⟩
+      ⟨i, lt_trans hi hlast⟩ hi hrows
+  firstSelector :=
+    firstSelectorPolynomial_nonzero
+      ⟨0, lt_trans (Nat.zero_lt_succ u) hlast⟩ rfl hrows
+  lastSelector :=
+    lastSelectorPolynomial_nonzero ⟨u + 1, hlast⟩ hrows
 
 /-- The product-difference polynomial whose roots are excluded at the selected lookup's `γ`
 squeeze.  It is fixed after `β`. -/
