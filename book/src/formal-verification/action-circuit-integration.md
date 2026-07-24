@@ -479,6 +479,17 @@ the copy-replay witness. Its `satisfaction_or_bad` theorem returns the exact
 ground-truth `Halo2.Constraints`. The remaining Action-specific work is therefore
 construction of these records, not another semantic proof.
 
+The first half of that lookup representation boundary is now generic.
+`LookupProjection` follows the actual threaded `eraseLookups` compiler walk, selects
+the configured argument corresponding to any lookup index, and proves that both
+derived pinned tuples evaluate like their selector-substituted Clean source
+expressions under the final resolver query layouts. The remaining lookup projection
+fact is intentionally stronger than the gate analogue: lookup selectors must have
+their exact zero/one activation values, not merely a nonzero scale. Orchard's lookup
+selectors are complex/lookup-only selectors, so keygen assigns them singleton packed
+columns; the next constructor connects those columns to each enabled operation's
+exact selector list and then builds `EnabledLookup.DeployedWitness`.
+
 The generic gate and fixed/table operation layers are now implemented as well.
 `operationEnabledGates` extracts every placed activation and
 `gate_constraints_iff_enabledGates` proves exact equivalence with the gate family.

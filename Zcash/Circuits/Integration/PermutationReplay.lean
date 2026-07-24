@@ -517,14 +517,14 @@ theorem Sim.new (numCols n : ℕ) :
         (fun i => Zcash.Circuits.Fixtures.Layout.Asm.initCol i n)) c.pair = c.pair := by
     intro c
     simp [Zcash.Circuits.Fixtures.Layout.Asm.getPair,
-      Zcash.Circuits.Fixtures.Layout.Asm.initCol, Array.getElem!_eq_getD, Array.getD,
+      Zcash.Circuits.Fixtures.Layout.Asm.initCol,
       FlatCell.pair, c.1.isLt, c.2.isLt]
   have hshape : Shaped numCols n ((Array.range numCols).map
       (fun i => Zcash.Circuits.Fixtures.Layout.Asm.initCol i n)) := by
     refine ⟨by simp, ?_⟩
     intro i hi
     simp only [Array.size_map, Array.size_range] at hi
-    simp [Zcash.Circuits.Fixtures.Layout.Asm.initCol, hi]
+    simp [Zcash.Circuits.Fixtures.Layout.Asm.initCol]
   have hgetm : ∀ c : FlatCell numCols n,
       getPair (Zcash.Circuits.Fixtures.Layout.Asm.new n numCols).mapping c.pair =
         c.pair := fun c => hget c
