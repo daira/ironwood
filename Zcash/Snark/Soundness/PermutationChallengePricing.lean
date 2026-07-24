@@ -108,6 +108,17 @@ noncomputable def allResolverPermutationBetaBadSet
   (Finset.univ : Finset (Fin shape.numProofs)).biUnion fun p =>
     resolverPermutationBetaBadSet vk poly p m
 
+/-- Bundle-wide permutation challenge exclusions at one active-row boundary.
+This is the verifier-native package consumed by circuit integrations. -/
+structure ResolverPermutationChallengeExclusions
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp) (m : ℕ) : Prop where
+  gamma :
+    ch.gamma ∉ allResolverPermutationGammaBadSet vk ch poly m
+  beta :
+    ch.beta ∉ allResolverPermutationBetaBadSet vk poly m
+
 /-- Avoiding the bundle-wide permutation bad sets supplies the good-challenge record for every
 proof. -/
 theorem allResolverPermutationGoodChallenges_of_not_mem
@@ -126,6 +137,19 @@ theorem allResolverPermutationGoodChallenges_of_not_mem
   · intro hmem
     apply hbeta
     exact Finset.mem_biUnion.mpr ⟨p, Finset.mem_univ _, hmem⟩
+
+/-- A bundle exclusion package supplies the per-proof record used by the
+permutation semantic endpoint. -/
+theorem ResolverPermutationChallengeExclusions.good
+    {shape : Shape} {G : Type*}
+    {vk : VerifyingKey shape Fp G} {ch : Challenges shape.k Fp}
+    {poly : CommitmentId → Polynomial Fp} {m : ℕ}
+    (exclusions :
+      ResolverPermutationChallengeExclusions vk ch poly m) :
+    ∀ p : Fin shape.numProofs,
+      ResolverPermutationGoodChallenges vk ch poly p m :=
+  allResolverPermutationGoodChallenges_of_not_mem
+    vk ch poly m exclusions.gamma exclusions.beta
 
 /-- One resolver permutation `γ` exclusion costs at most two challenge values per active
 permutation cell: one for multiset recovery and one for source-factor nonvanishing. -/

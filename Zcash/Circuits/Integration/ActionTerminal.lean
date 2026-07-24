@@ -37,7 +37,6 @@ from the accepted assembled queries. No free semantic proposition, `hencodes`,
 constraint family, or decoded-column feed remains.
 -/
 theorem actionBundleStatement_or_relation_of_acceptedNodeBinding
-    {cell : Type} [DecidableEq cell] [Fintype cell]
     (pp : ProofParams) (urs : URS G)
     (hk :
       (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
@@ -193,18 +192,13 @@ theorem actionBundleStatement_or_relation_of_acceptedNodeBinding
     (fixedCoherence :
       TopLevelFixedCoherence
         orchardActionTopLevelCircuit pp urs)
-    (copies : ∀ proofIndex,
-      CopyReplayWitness
-        orchardActionTopLevelCircuit.placement
-        (resolverEnvironment
-          (orchardActionTopLevelCircuit.toVerifierKey pp urs)
-          (CanonicalMemberConstraintRelation.acceptedPolynomial
-            (memberDecode := memberDecode) haccepts)
-          proofIndex
-          (orchardActionTopLevelCircuit.usableRowsAt
-            orchardActionTopLevelCircuit.domainExponent))
-        (orchardActionTopLevelCircuit.operations 0) cell
-        (HasNontrivialRelation (F := Fp) urs.g urs.u urs.w))
+    (permutationExclusions :
+      ResolverPermutationChallengeExclusions
+        (orchardActionTopLevelCircuit.toVerifierKey pp urs)
+        ch
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts)
+        actionActiveRows)
     (lookupSelectorValues : ∀ proofIndex lookup
       (_henabled :
         lookup ∈ operationEnabledLookups
@@ -250,10 +244,9 @@ theorem actionBundleStatement_or_relation_of_acceptedNodeBinding
     hsatisfied | hrelation
   · exact
       actionBundleStatement_or_relation_of_acceptedCircuitSat
-        (cell := cell)
         pp urs hk inputs ps ch vk rfl pU pW a
         batchOpenings memberDecode haccepts hblinding hpoly
-        hsatisfied hgoodY fixedCoherence copies
+        hsatisfied hgoodY fixedCoherence permutationExclusions
         lookupSelectorValues lookupExclusions
   · exact Or.inr hrelation
 

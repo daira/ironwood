@@ -7,6 +7,7 @@ import Zcash.Circuits.Integration.ActionStatement
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 import Zcash.Circuits.Integration.TopLevelCircuit
 import Zcash.Circuits.Integration.TopLevelGates
+import Zcash.Circuits.Integration.ActionCopyReplay
 import Zcash.Snark.Keygen.Pipeline
 
 /-!
@@ -220,7 +221,6 @@ operation family. A mismatch is returned as the augmented nontrivial-relation ev
 already used by the deployed extraction stack.
 -/
 theorem actionBundleStatement_or_relation_of_canonicalRelation
-    {cell : Type} [DecidableEq cell] [Fintype cell]
     (pp : Keygen.ProofParams) (urs : URS G)
     (hk :
       (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
@@ -291,16 +291,10 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
     (fixedCoherence :
       TopLevelFixedCoherence
         orchardActionTopLevelCircuit pp urs)
-    (copies : ∀ proofIndex,
-      CopyReplayWitness
-        orchardActionTopLevelCircuit.placement
-        (resolverEnvironment
-          (orchardActionTopLevelCircuit.toVerifierKey pp urs)
-          relation.polynomial proofIndex
-          (orchardActionTopLevelCircuit.usableRowsAt
-            orchardActionTopLevelCircuit.domainExponent))
-        (orchardActionTopLevelCircuit.operations 0) cell
-        (HasNontrivialRelation (F := Fp) urs.g urs.u urs.w))
+    (permutationExclusions :
+      ResolverPermutationChallengeExclusions
+        (orchardActionTopLevelCircuit.toVerifierKey pp urs)
+        ch relation.polynomial actionActiveRows)
     (lookupSelectorValues : ∀ proofIndex lookup
       (_henabled :
         lookup ∈ operationEnabledLookups
@@ -425,7 +419,13 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
             orchardActionTopLevelCircuit.domainExponent))
       exact hclean.1
     · intro proofIndex
-      exact (copies proofIndex).constraints_or_bad.resolve_right hrelation
+      have hcopy :=
+        actionCopyReplayWitness_or_relation
+          pp urs hk relation hgoodY fixedCoherence
+          permutationExclusions proofIndex
+      obtain ⟨copy⟩ := hcopy.resolve_right hrelation
+      simpa only [actionActiveRows] using
+        copy.constraints_or_bad.resolve_right hrelation
     · intro proofIndex
       let lookupCoherence :
           TopLevelLookupCoherence orchardActionTopLevelCircuit :=

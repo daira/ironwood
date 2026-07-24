@@ -598,6 +598,24 @@ def toVerifierKey
     VerifyingKey (pp.mergeDerived top) Fp G :=
   top.verifierKeyAt (pp.mergeDerived top) urs
 
+/-- The derived key uses the circuit-owned fitting domain size. -/
+@[simp]
+theorem toVerifierKey_n
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) (urs : URS G) :
+    (top.toVerifierKey pp urs).n = 2 ^ top.domainExponent := by
+  simp [toVerifierKey, verifierKeyAt, VerifyingKey.ofOperations,
+    TopLevelCircuit.domainExponent]
+
+/-- The derived key preserves the closed constraint system's blinding count. -/
+@[simp]
+theorem toVerifierKey_blindingFactors
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) (urs : URS G) :
+    (top.toVerifierKey pp urs).blindingFactors = top.blindingFactors := by
+  simp [toVerifierKey, verifierKeyAt, VerifyingKey.ofOperations,
+    TopLevelCircuit.blindingFactors]
+
 /-- The derived key exposes the fixed commitments computed from its own dense rows. -/
 theorem toVerifierKey_fixedCommitment
     (top : TopLevelCircuit Fp ConfigInput Config Output)

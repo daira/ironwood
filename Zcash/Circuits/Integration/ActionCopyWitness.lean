@@ -1,4 +1,4 @@
-import Zcash.Circuits.Integration.ActionEncoding
+import Zcash.Circuits.Integration.FixedColumns
 import Zcash.Circuits.Integration.ActionPermutationDomain
 import Zcash.Circuits.Integration.CopyListMembership
 

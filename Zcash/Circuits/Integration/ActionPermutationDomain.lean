@@ -423,8 +423,41 @@ theorem namesInjective
       widenPermutationChunkCell_column] using hname
   exact hwiden (hfull hwname)
 
-/-- Assemble the semantic cycle once G3a supplies the replayed full permutation
-and its active restriction, and the commitment layer supplies `hcolumns`. -/
+/-- Assemble the semantic cycle at any active-row prefix preserved by the
+replayed full permutation. -/
+noncomputable def cycleOfKeygenColumnsAt
+    (pp : Keygen.ProofParams) (urs : URS G)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin (actionShape pp).numProofs)
+    {m : ℕ}
+    (hactive : m ≤ (actionVk pp urs).n)
+    (fullSigma : Equiv.Perm
+      (ResolverPermutationCell (actionVk pp urs) poly p
+        (actionVk pp urs).n))
+    (sigma : Equiv.Perm
+      (ResolverPermutationCell (actionVk pp urs) poly p
+        m))
+    (hcolumns : ∀
+      (chunk : Fin (actionShape pp).numPermutationSets)
+      (column : Fin
+        (ResolverPermutationPairs (actionVk pp urs) poly p chunk).length),
+      (ResolverPermutationPairs
+          (actionVk pp urs) poly p chunk)[column].2 =
+        keygenSigmaColumn
+          (actionVk pp urs).omega (actionVk pp urs).delta
+          (actionVk pp urs).chunkLen fullSigma chunk column)
+    (hrestrict : ∀ c :
+        ResolverPermutationCell (actionVk pp urs) poly p m,
+      widenPermutationChunkCell hactive (sigma c) =
+        fullSigma
+          (widenPermutationChunkCell hactive c)) :
+    ResolverPermutationCycle (actionVk pp urs) poly p m :=
+  ResolverPermutationCycle.ofKeygenColumns
+    (actionVk pp urs) poly p hactive fullSigma sigma
+      (rowsInjective pp urs) hcolumns hrestrict
+      (namesInjective pp urs poly p hactive)
+
+/-- Assemble the semantic cycle at the verifier-derived active-row boundary. -/
 noncomputable def cycleOfKeygenColumns
     (pp : Keygen.ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
@@ -452,16 +485,15 @@ noncomputable def cycleOfKeygenColumns
           (widenPermutationChunkCell (activeRows_le pp urs) c)) :
     ResolverPermutationCycle (actionVk pp urs) poly p
       (activeRows pp urs) :=
-  ResolverPermutationCycle.ofKeygenColumns
-    (actionVk pp urs) poly p (activeRows_le pp urs) fullSigma sigma
-      (rowsInjective pp urs) hcolumns hrestrict
-      (namesInjective pp urs poly p (activeRows_le pp urs))
+  cycleOfKeygenColumnsAt pp urs poly p (activeRows_le pp urs)
+    fullSigma sigma hcolumns hrestrict
 
 assert_no_sorry permutationChunks_eq
 assert_no_sorry routingCoherent_of_derived
 assert_no_sorry deltaFp_actionCosets
 assert_no_sorry domain
 assert_no_sorry namesInjective
+assert_no_sorry cycleOfKeygenColumnsAt
 assert_no_sorry cycleOfKeygenColumns
 
 end ActionPermutationDomain

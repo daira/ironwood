@@ -452,7 +452,8 @@ The current item-4 sequence is:
 3. **generic layer complete:** route every enabled lookup to its configured argument,
    project its input/table tuples into the resolver polynomials, and construct the
    complete `EnabledLookup.DeployedWitness` family;
-4. **generic replay/value transport and most of the concrete adapter complete:**
+4. **complete, including Action:** generic replay/value transport and the concrete
+   copy adapter:
    every resolvable declared non-constant copy occurs in the V1 copy list, and
    `chunkRowValue_eq_of_mem_copies` transports that membership through replay,
    conjugation, active-row restriction, and the resolver copy theorem to endpoint
@@ -466,9 +467,14 @@ The current item-4 sequence is:
    derived chunks recovers the circuit's declared permutation-column order, with no
    concrete computation certificate. The Action `[7,7,1]` specialization uses only
    its three prefix lengths to prove that `actionCopyValue` is exactly the resolver's
-   `chunkRowValue` at the inverse-flattened active cell. What remains is to construct
-   the resolver cycle from the generated σ columns and apply the generic cycle-value
-   theorem to every member of `actionCopies`;
+   `chunkRowValue` at the inverse-flattened active cell.
+   `actionResolverPermutationCycle_or_relation` now identifies every routed common
+   polynomial with its generated Action σ column and constructs the exact active
+   resolver cycle, or returns the shared augmented-commitment relation. The symbolic
+   `bestFftG` correctness theorem supplies the Lagrange-basis setup generically; no
+   concrete setup certificate remains. `actionCopyReplayWitness_or_relation` combines
+   that cycle, canonical constraint satisfaction, bundle-wide permutation challenge
+   exclusions, and fixed reads to construct the complete `CopyReplayWitness`;
 5. instantiate `TopLevelFixedCoherence`, use it to realize packed selectors and fixed
    tables, and discharge the lookup selector-projection fields; bundle-wide lookup
    challenge exclusions are already packaged by
@@ -487,9 +493,12 @@ adapter's coordinate/value side is now closed.
 `actionActiveChunkCell_columnAddress` uses the generic permutation-compiler round
 trip to identify the verifier query reference with the corresponding Clean
 `actionPermCols` entry, and `actionCopyValue_eq_activeChunkRowValue` identifies the
-resulting environment read with the verifier-native chunk-row value. The remaining
-σ leaf is therefore the generated-column/cycle argument, not another layout or
-query-index comparison.
+resulting environment read with the verifier-native chunk-row value.
+`actionResolverPermutationCycle_or_relation` closes the remaining σ leaf from the
+keygen-generated rows and commitments. Finally,
+`actionCopyPairValue_of_resolverPermutation` applies the generic cycle theorem to
+every decoded keygen copy, and `actionCopyReplayWitness_or_relation` packages those
+equalities together with constant allocations and fixed-row reads.
 `actionCopyAddressFailures_eq_nil` certifies the finite endpoint address law;
 `mem_operationConstSites_of_declared_constant`, `V1_go_snd_eq`, and
 `actionConstantRawPair` follow constant declarations through the positional compiler
@@ -497,7 +506,9 @@ stream into the raw keygen copy list. Fixed coherence now includes allocated con
 as required compiler output. Consequently
 `actionCopyReplayWitness_ofPairValues_or_bad` derives constant-copy equality and all
 declared endpoint reads internally; its only semantic premise is value agreement on
-each decoded `actionCopies` pair.
+each decoded `actionCopies` pair. That premise is now constructed internally at the
+binding-aware Action endpoint; the terminal API no longer accepts a caller-supplied
+copy witness.
 
 The `β`/`γ` exclusions remain with explicit bad-set accounting rather than becoming
 circuit assumptions. `PermutationChallengePricing` now packages their union across
