@@ -930,9 +930,9 @@ whose public inputs were committed by the verifier.
 4. Instantiate the generic decomposed bridge for one selected Action, adapt
    `TopLevelCircuit.Statement` to the external Action statement, and then generalize
    it to every `Fin shape.numProofs`. The semantic adapter, generic decoded
-   instance-value provenance, routed-member identification, and the Action
-   Lagrange-key/instance-commitment adapter are complete; other bridge witnesses
-   remain with their independent streams.
+   instance-value provenance, and routed-member identification are complete; the
+   concrete Lagrange-key/instance-commitment certificate is the active next slice;
+   other bridge witnesses remain with their independent streams.
 5. Supply the decoded/full-satisfaction data inside the computed experiment, close the
    remaining adaptive-coupling/`hExtract` obligation, instantiate the endpoint with
    `ActionStatement`, and add the theorem to the consolidated trust boundary.
