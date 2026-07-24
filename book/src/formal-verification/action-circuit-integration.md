@@ -512,11 +512,13 @@ bridge needs the concrete `GatesWellFormed` fact.
 
 The selector compiler layer is now generic as well. The greedy packing proof shows
 that every compression-map entry has a positive assigned root, that the root is at
-most its combination length, and that the combination contains no more selectors
-than the configured circuit. Consequently
+most its combination length, and—more tightly—that every combination length is
+bounded by the constraint system's compression degree. Consequently
 `selectorRootsWellFormed_deriveSelCompressMap` proves `SelectorRootsWellFormed` from
-the minimal field-size condition `cs.numSelectors < scalarFieldOrder`; it is not an
-Action-specific fact or a fixture computation.
+the minimal field-size condition `csDegree cs < scalarFieldOrder`, independent of the
+total selector count. This avoids normalizing the Action configure program merely to
+discover that it has 56 selectors; the required bound is the ordinary generic
+keygen-degree bound instead, not an Action-specific fact or fixture computation.
 
 For activations, `mem_selectorFixed_of_activation` proves that every synthesized
 `(selector, row)` with a compression-map entry is emitted by the generic
@@ -541,8 +543,8 @@ semantics does not enter VK assembly.
 The generic operation walk already proves that every extracted enabled gate occurs in
 the floor-planner activation table, and `selectorScale_ne_zero_of_enabledGate` turns
 the two contracts into the required nonzero scale. The remaining gate work is now to
-prove the configured selector-count bound and connect circuit-derived fixed
-polynomials to the emitted layout assignments. The evaluation and
+connect circuit-derived fixed rows and polynomials to the emitted layout assignments,
+with only the generic degree-below-field-order condition. The evaluation and
 resolver-membership algebra is no longer circuit-specific.
 
 The `Fixtures.Layout` reconstruction is already generic over operations, so σ-cycle

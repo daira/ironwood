@@ -53,6 +53,33 @@ theorem extendCombination_length_conservation
             simpa [nextDegree, Nat.add_assoc, Nat.add_left_comm,
               Nat.add_comm] using hlength
 
+/--
+The greedy extension never exceeds the degree budget when its initial combination
+already fits.  Candidate degrees need no separate bound: the algorithm checks the
+updated degree and length before every insertion.
+-/
+theorem extendCombination_length_le
+    (maxDegree d : ℕ) (comb selectors : List SelectorDescription)
+    (hcomb : comb.length ≤ maxDegree) :
+    (extendCombination maxDegree d comb selectors).1.length ≤
+      maxDegree := by
+  induction selectors generalizing d comb with
+  | nil =>
+      simpa [extendCombination] using hcomb
+  | cons selector rest ih =>
+      simp only [extendCombination]
+      split
+      · exact hcomb
+      · split
+        · exact ih d comb hcomb
+        · let nextDegree :=
+            max d (selector.maxDegree - 1)
+          split
+          · exact ih d comb hcomb
+          · apply ih nextDegree (comb ++ [selector])
+            simp only [List.length_append, List.length_singleton]
+            omega
+
 /-- Every combination returned by the outer packing loop fits in its input list. -/
 theorem length_le_of_mem_buildCombinations
     (maxDegree fuel : ℕ) (selectors combination :
@@ -88,6 +115,40 @@ theorem length_le_of_mem_buildCombinations
               ih remaining hcombination
             simp only [List.length_cons]
             omega
+
+/--
+Every combination returned by the outer packing loop fits in the selector
+compression degree budget.
+-/
+theorem length_le_maxDegree_of_mem_buildCombinations
+    (maxDegree fuel : ℕ) (selectors combination :
+      List SelectorDescription)
+    (hpositive : 1 ≤ maxDegree)
+    (hcombination :
+      combination ∈ buildCombinations maxDegree fuel selectors) :
+    combination.length ≤ maxDegree := by
+  induction fuel generalizing selectors with
+  | zero =>
+      simp [buildCombinations] at hcombination
+  | succ fuel ih =>
+      cases selectors with
+      | nil =>
+          simp [buildCombinations] at hcombination
+      | cons selector rest =>
+          simp only [buildCombinations] at hcombination
+          generalize hresult :
+              extendCombination maxDegree
+                (selector.maxDegree - 1) [selector] rest =
+                result at hcombination
+          rcases result with ⟨chosen, remaining⟩
+          simp only [List.mem_cons] at hcombination
+          rcases hcombination with rfl | hcombination
+          · have hchosen :=
+              extendCombination_length_le maxDegree
+                (selector.maxDegree - 1) [selector] rest
+                (by simpa using hpositive)
+            simpa [hresult] using hchosen
+          · exact ih remaining hcombination
 
 /--
 Every `process` entry receives a positive root within its combination, and the
@@ -150,6 +211,59 @@ theorem process_entry_root_bounds
       combination.length ≤ selectors.length
     refine ⟨by omega, by omega, ?_⟩
     exact hcombinationLength.trans hremainingLength
+
+/--
+Every `process` entry's assigned root is bounded by the compression degree,
+independently of how many selectors the circuit declares.
+-/
+theorem process_entry_root_degree_bounds
+    (selectors : List SelectorDescription) (maxDegree : ℕ)
+    (hpositive : 1 ≤ maxDegree)
+    (entry : ℕ × SelCompress)
+    (hentry : entry ∈ (process selectors maxDegree).entries) :
+    1 ≤ entry.2.assignedRoot ∧
+      entry.2.assignedRoot ≤ entry.2.combinationLen ∧
+      entry.2.combinationLen ≤ maxDegree := by
+  let degreeZero := selectors.filter (·.maxDegree = 0)
+  let remaining := selectors.filter (·.maxDegree ≠ 0)
+  let combinations :=
+    buildCombinations maxDegree remaining.length remaining
+  change entry ∈
+    (degreeZero.zipIdx.map fun (description, column) =>
+      (description.selector, SelCompress.mk column 1 1)) ++
+    (combinations.zipIdx.flatMap fun (combination, column) =>
+      combination.zipIdx.map fun (description, position) =>
+        (description.selector,
+          SelCompress.mk (degreeZero.length + column)
+            combination.length (position + 1))) at hentry
+  rw [List.mem_append] at hentry
+  rcases hentry with hdegreeZero | hcombination
+  · obtain ⟨indexed, _hindexed, rfl⟩ :=
+      List.mem_map.mp hdegreeZero
+    simpa using hpositive
+  · rw [List.mem_flatMap] at hcombination
+    obtain ⟨indexedCombination, hindexedCombination,
+      hcombinationEntry⟩ := hcombination
+    rcases indexedCombination with ⟨combination, column⟩
+    obtain ⟨indexedDescription, hindexedDescription, rfl⟩ :=
+      List.mem_map.mp hcombinationEntry
+    rcases indexedDescription with ⟨description, position⟩
+    have hposition :
+        position < combination.length := by
+      simpa using
+        List.snd_lt_of_mem_zipIdx hindexedDescription
+    have hcombinationMem :
+        combination ∈ combinations :=
+      List.fst_mem_of_mem_zipIdx hindexedCombination
+    have hcombinationLength :
+        combination.length ≤ maxDegree :=
+      length_le_maxDegree_of_mem_buildCombinations
+        maxDegree remaining.length remaining combination
+        hpositive hcombinationMem
+    change 1 ≤ position + 1 ∧
+      position + 1 ≤ combination.length ∧
+      combination.length ≤ maxDegree
+    exact ⟨by omega, by omega, hcombinationLength⟩
 
 /-- A successful association-list lookup originates in the map's entries. -/
 theorem SelCompressMap.exists_mem_entries_of_lookup
@@ -238,31 +352,33 @@ open Zcash.Circuits.Fixtures.Layout
 set_option maxHeartbeats 20000
 
 /--
-The selector packer assigns valid roots whenever the number of candidate selectors
-fits below the scalar-field characteristic.
+The selector packer assigns valid roots whenever its compression degree fits below
+the scalar-field characteristic.
 -/
 theorem selectorRootsWellFormed_process
     (selectors : List SelectorDescription) (maxDegree : ℕ)
-    (hselectorCount : selectors.length < scalarFieldOrder) :
+    (hpositive : 1 ≤ maxDegree)
+    (hdegree : maxDegree < scalarFieldOrder) :
     SelectorRootsWellFormed (process selectors maxDegree) := by
   intro selector compressed hlookup
   obtain ⟨entry, hentry, hcompressed⟩ :=
     SelCompressMap.exists_mem_entries_of_lookup
       (process selectors maxDegree) hlookup
   have hbounds :=
-    process_entry_root_bounds selectors maxDegree entry hentry
+    process_entry_root_degree_bounds selectors maxDegree
+      hpositive entry hentry
   rw [← hcompressed]
   exact ⟨hbounds.1, hbounds.2.1,
-    hbounds.2.2.trans_lt hselectorCount⟩
+    hbounds.2.2.trans_lt hdegree⟩
 
 /--
 The circuit-derived selector map has valid roots under the minimal generic size
-condition: the configured selector count is below the scalar-field order.
+condition: the constraint-system degree is below the scalar-field order.
 -/
 theorem selectorRootsWellFormed_deriveSelCompressMap
     {F : Type} (cs : ConstraintSystem F) (n : ℕ)
     (activations : List (ℕ × ℕ))
-    (hselectorCount : cs.numSelectors < scalarFieldOrder) :
+    (hdegree : csDegree cs < scalarFieldOrder) :
     SelectorRootsWellFormed
       (deriveSelCompressMap cs n activations) := by
   let table := activationTable n cs.numSelectors activations
@@ -282,15 +398,14 @@ theorem selectorRootsWellFormed_deriveSelCompressMap
   obtain ⟨⟨sourceSelector, source⟩, hsource, rfl⟩ :=
     List.mem_map.mp hentry
   have hbounds :=
-    process_entry_root_bounds descriptions (csDegree cs)
+    process_entry_root_degree_bounds descriptions (csDegree cs)
+      (by
+        unfold csDegree
+        exact le_trans (by omega) (Nat.le_max_left _ _))
       (sourceSelector, source) hsource
-  have hdescriptionLength :
-      descriptions.length = cs.numSelectors := by
-    simp [descriptions]
   rw [← hcompressed]
-  refine ⟨hbounds.1, hbounds.2.1, ?_⟩
-  rw [hdescriptionLength] at hbounds
-  exact hbounds.2.2.trans_lt hselectorCount
+  exact ⟨hbounds.1, hbounds.2.1,
+    hbounds.2.2.trans_lt hdegree⟩
 
 /--
 It is enough to realize the fixed assignments emitted by `selectorFixed` in
