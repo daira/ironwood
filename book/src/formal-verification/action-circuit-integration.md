@@ -533,14 +533,23 @@ the same fixed cells the table-loaded and fixed-base assumptions read.
 ### 6. Generalize from one Action to an Orchard bundle
 
 **Status: verifier-side substrate is generic in #30/#91 and exercised by the merged
-[#85](https://github.com/zcash/ironwood/pull/85); the semantic conclusion remains
-single-Action.**
+[#85](https://github.com/zcash/ironwood/pull/85). The assignment and external
+statement interfaces are now bundle-indexed; constructing every decoded member and
+feeding the family through the capstone remains open.**
 
 A deployed proof covers `shape.numProofs` Actions. Generalize `PublicInputs`,
 `Assignment`, and `ActionStatement` to a `Fin shape.numProofs` family and decode one
 Clean assignment per sub-proof. The shared fixed columns and VK are common, while
 advice/instance columns and protocol statements are per Action. The final conclusion
 should quantify over or return the high-level statement for every supplied Action.
+
+`TopLevelAssignment.Bundle top k numProofs` is the dependent family
+`∀ p, TopLevelAssignment top k numProofs p`, so each member is forced to resolve the
+columns named by its own index. `Action.BundleStatement G B inputs` is the matching
+external conclusion `∀ p, Action.Statement G B (inputs p)`. No separate monolithic
+bundle witness is required: fixed columns and the circuit-derived VK remain shared,
+while decoded advice/instance polynomials and extracted `ActionData` remain
+per-member.
 
 #85's multi-Action fixture derives each proof's instance commitment and proves that
 sub-proof commitment slots remain disjoint. #30 and #91 already build much of their

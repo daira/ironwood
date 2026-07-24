@@ -100,6 +100,12 @@ def Statement (G : Generators) (B : Bases) (inputs : PublicInputs) : Prop :=
     PublicInputs.ofActionData data = inputs ∧
       SpecPost G B () () data
 
+/-- The external semantic conclusion for every Action proved in one Halo 2 bundle. -/
+def BundleStatement
+    (G : Generators) (B : Bases) {numProofs : ℕ}
+    (inputs : Fin numProofs → PublicInputs) : Prop :=
+  ∀ proofIndex, Statement G B (inputs proofIndex)
+
 /--
 The generic top-level circuit statement specializes to the externally named Action
 statement.  Instance-polynomial provenance is deliberately separate: it only has to

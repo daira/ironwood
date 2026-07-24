@@ -40,6 +40,20 @@ structure TopLevelAssignment
 
 namespace TopLevelAssignment
 
+/--
+One assignment for every proof in a bundle.
+
+The dependent member index ensures that the assignment at `proofIndex` resolves
+exactly that member's advice and instance columns.
+-/
+abbrev Bundle
+    {ConfigInput Config : Type} {Output : TypeMap}
+    [CircuitType Output]
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (k numProofs : ℕ) :=
+  (proofIndex : Fin numProofs) →
+    TopLevelAssignment top k numProofs proofIndex
+
 variable
     {ConfigInput Config : Type} {Output : TypeMap}
     [CircuitType Output]
