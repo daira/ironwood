@@ -184,15 +184,9 @@ The concrete Action construction still has to prove that:
 - the exported Lagrange generators certify the compatible commitment key;
 - usable and blinding rows are treated exactly as Halo 2 treats them.
 
-**Active next slice: concrete instance-commitment provenance.** Construct the
-Action-specific `LagrangeCommitmentKey` certificate and public-input commitment
-equation from the derived instance-commitment key and supplied public inputs. Then
-use the circuit-derived query-layout registration result to remove the endpoint's
-`instanceKey`, `hinstanceCommitment`, and, if the generic compiler seam permits,
-separate primary-column registration arguments. This is independent of the
-copy-replay, lookup-projection, and fixed-column streams; #96's routed-member and
-binding infrastructure remains the generic substrate rather than part of this
-concrete certificate.
+**Active next slice: concrete instance-commitment provenance.** Prove the Action
+Lagrange-key and public-input commitment certificates, then remove the endpoint's
+instance-key/commitment parameters and, if possible, its registration premise.
 
 Then expose the result as the row-indexed Clean `Environment` used by
 `Action.Circuit.soundnessPost`. The remaining gap is not the old free-polynomial
@@ -689,24 +683,12 @@ running-sum selector), Poseidon, NoteCommit, both Sinsemilla gate forms, and Mer
 then composes them in the exact `Action.Circuit.configure` registration order. Thus
 `Action.Circuit.configure_preservesGateSelectorsAllocated` is the compact
 circuit-derived certificate required by `TopLevelGateCoherence`. Together with the
-corresponding gate-well-formedness certificate, it now feeds
-`ActionGateCoherence.topLevelGateCoherence`, which packages the deployed
-`orchardActionTopLevelCircuit` against its own `toVerifierKey pp urs`. The constructor
-also discharges all three derived query-layout counts, the supported-domain bound,
-and the constraint-system degree bound. Query-count coherence reuses the
-instance-coherent `ActionPermutationDomain.queryLayouts_eq` bridge; the small native
-module `ActionGateCoherenceCompute` isolates only synthesis-closure gate data and the
-two numeric bounds.
-
-The concrete `fromEmpty` lift seals the exact configure program behind an opaque
-handle carrying a proof that it equals
-`Action.Circuit.configure orchardGenerators`. This prevents Lean from eagerly
-normalizing the entire state-monad program merely to inspect its final constraint
-system, while preserving the structural configure proof and exact source identity.
-The elevated recursion-depth option is scoped to the concrete derived-Action theorem
-namespace; no heartbeat override is needed. This closes the configure-side
-gate/selector obligation. It does not claim the separate lookup-expression
-selector-coverage property.
+corresponding gate certificate, it now feeds
+`ActionGateCoherence.topLevelGateCoherence`, which also discharges the three query
+counts and the domain/degree bounds for the derived Action key. A sealed,
+equality-pinned configure handle keeps the `fromEmpty` proof structural without
+normalizing the full configure monad. This closes the configure-side gate/selector
+obligation, but not lookup-expression selector coverage.
 
 The `Fixtures.Layout` reconstruction is already generic over operations, so σ-cycle
 correctness of its replayed keygen merge is likewise a once-and-for-all lemma.
@@ -940,11 +922,8 @@ whose public inputs were committed by the verifier.
    full-satisfaction-to-`TopLevelCircuit.Statement` endpoint, decoded
    `TopLevelAssignment` constructor, and routed instance-column provenance are
    complete; the legacy `ActionAssignment` is gone. The Action configure program now
-   also supplies the complete generic `GatesWellFormed` and
-   `GateSelectorsAllocated` certificates, and
-   `ActionGateCoherence.topLevelGateCoherence` packages them with all three query
-   counts, the supported-domain bound, and the degree bound for the circuit-derived
-   Action key.
+   also supplies both gate certificates, and
+   `ActionGateCoherence.topLevelGateCoherence` completes their derived-key package.
    `TopLevelCircuit.toVerifierKey` now supplies the assignment decoder and generic
    gate bridge directly, without a separately supplied shape or VK. Next discharge
    the remaining resolver representation facts, chiefly fixed-row realization and
@@ -953,10 +932,8 @@ whose public inputs were committed by the verifier.
    `TopLevelCircuit.Statement` to the external Action statement, and then generalize
    it to every `Fin shape.numProofs`. The semantic adapter, generic decoded
    instance-value provenance, and routed-member identification are complete; the
-   concrete Lagrange-key/instance-commitment certificate is the active next slice.
-   It should derive the public-input commitment equality and remove the remaining
-   instance-key/commitment (and preferably registration) parameters from the Action
-   endpoint. Other bridge witnesses remain with their independent streams.
+   concrete Lagrange-key/instance-commitment certificate is the active next slice;
+   other bridge witnesses remain with their independent streams.
 5. Supply the decoded/full-satisfaction data inside the computed experiment, close the
    remaining adaptive-coupling/`hExtract` obligation, instantiate the endpoint with
    `ActionStatement`, and add the theorem to the consolidated trust boundary.
