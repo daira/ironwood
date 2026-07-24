@@ -29,19 +29,29 @@ the check stable across the toolchain-dependent axiom naming. -/
 def isNativeDecideAxiom (n : Name) : Bool :=
   n.components.any (· == `native_decide)
 
+/-- The declared curve-order trust tier: the Pallas point count
+(`Zcash.Circuits.pallas_natCard`, `Zcash/Circuits/Specs/Pallas.lean`) — the one explicit
+axiom behind the scalar-multiplication circuit proofs. Kept as a raw name literal so this
+meta module does not import the circuits tree. -/
+def curveOrderAxioms : Array Name := #[`Zcash.Circuits.pallas_natCard]
+
 /--
 `assert_axioms foo` fails the build unless `foo` depends only on the standard axioms
 (`propext`, `Classical.choice`, `Quot.sound`) — in particular, no `sorry` and no `native_decide`.
 
 `assert_axioms foo +native` additionally permits `native_decide` compiler-trust axioms, whose exact
-names are toolchain-dependent. Any other axiom (including `sorryAx`) is still rejected.
+names are toolchain-dependent. `assert_axioms foo +native +curveOrder` (flags in that order)
+additionally permits the declared Pallas curve-order axiom — the budget of the circuit-layer
+soundness theorems. Any other axiom (including `sorryAx`) is still rejected.
 -/
-elab "assert_axioms " n:ident native:("+native")? : command => do
+elab "assert_axioms " n:ident native:("+native")? curveOrder:("+curveOrder")? : command => do
   let name ← liftCoreM <| realizeGlobalConstNoOverloadWithInfo n
   let axs ← collectAxioms name
   let allowNative := native.isSome
+  let allowCurveOrder := curveOrder.isSome
   let unexpected := axs.filter fun ax =>
     !standardAxioms.contains ax && !(allowNative && isNativeDecideAxiom ax)
+      && !(allowCurveOrder && curveOrderAxioms.contains ax)
   unless unexpected.isEmpty do
     throwError "{n} depends on unexpected axiom(s): {unexpected.toList}"
 

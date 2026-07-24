@@ -1,3 +1,4 @@
+import Zcash.Circuits.Action.RealBases
 import Zcash.Security.KeyBinding.Instance
 import Zcash.Security.KeyBinding.Probability
 import Zcash.Security.Ledger.Balance
@@ -812,3 +813,17 @@ assert_axioms updEsc_escapesDuringC_measure_le
 assert_axioms adaptEsc
 assert_axioms adapt_decomposition
 assert_axioms adaptEsc_measure_le
+
+/-! ## The Action circuit — the halo2-native soundness trust surface
+
+The circuit-layer soundness theorems live above the standard tier: they consume the one
+declared axiom `Zcash.Circuits.pallas_natCard` (the Pallas point count — see the
+`+curveOrder` tier in `Zcash.Meta.AxiomCheck`) and `native_decide` certificates (the six
+fixed-base window tables and small `interval_cases` facts). These assertions pin exactly
+that budget for the generic soundness theorems and for the fully-instantiated deployed
+bundle — a `sorry` or any further axiom reached anywhere in the Action stack fails the
+build here. -/
+
+assert_axioms Zcash.Circuits.Action.Circuit.soundness +native +curveOrder
+assert_axioms Zcash.Circuits.Action.Circuit.soundnessPost +native +curveOrder
+assert_axioms Zcash.Circuits.Action.orchardActionCircuit +native +curveOrder
