@@ -1,4 +1,5 @@
 import Zcash.Circuits.Integration.PermutationColumns
+import Zcash.Snark.Soundness.CircuitIntegration
 
 /-!
 # The executable keygen assembly replay is the abstract permutation replay
@@ -582,6 +583,182 @@ theorem runAssembly_getPair {numCols n : ℕ}
   rw [List.foldl_map]
   rw [replayKeygenPermutation_eq_foldl]
   exact (Sim.foldl copies (Sim.new numCols n)).map_eq c
+
+/-- A generated σ-table entry is the δ/ω name of the replayed permutation's image cell:
+the executable pipeline reads the assembly mapping at `(column, row)`, and the mapping's
+action is the abstract replay. -/
+theorem permPolysOf_getD_eq {k : ℕ} (cs : ConstraintSystem Fp) (ops : Operations Fp)
+    (copies' : List (FlatCell (Keygen.permColsOf cs).length (2 ^ k) ×
+      FlatCell (Keygen.permColsOf cs).length (2 ^ k)))
+    (hcopies : Zcash.Circuits.Fixtures.Layout.V1.copyList (Keygen.permColsOf cs)
+        (Halo2.FloorPlanner.V1.starts ops) ops
+        (Keygen.constantsOf cs ops) =
+      copies'.map fun p => (p.1.pair.1, p.1.pair.2, p.2.pair.1, p.2.pair.2))
+    (g : Fin (Keygen.permColsOf cs).length) (j : Fin (2 ^ k)) :
+    ((Keygen.permPolysOf k cs ops).getD (g : ℕ) []).getD (j : ℕ) 0 =
+      deltaFp ^ ((replayKeygenPermutation copies' (g, j)).1 : ℕ) *
+        omegaOf k ^ ((replayKeygenPermutation copies' (g, j)).2 : ℕ) := by
+  have hmap' : ((Zcash.Circuits.Fixtures.Layout.runAssembly (2 ^ k)
+      (Keygen.permColsOf cs).length (copies'.map fun p =>
+        (p.1.pair.1, p.1.pair.2, p.2.pair.1, p.2.pair.2)))[(g : ℕ)]!)[(j : ℕ)]! =
+      (replayKeygenPermutation copies' (g, j)).pair :=
+    Layout.Asm.runAssembly_getPair copies' (g, j)
+  simp only [Keygen.permPolysOf]
+  simp only [List.getD_eq_getElem?_getD, List.getElem?_map,
+    List.getElem?_range g.isLt, List.getElem?_range j.isLt,
+    Option.map_some, Option.getD_some]
+  rw [hcopies, hmap']
+  simp only [FlatCell.pair]
+  rw [Keygen.deltaPowersArr_getElem! _
+      (replayKeygenPermutation copies' (g, j)).1.isLt,
+    Keygen.omegaPowersArr_getElem! _
+      (replayKeygenPermutation copies' (g, j)).2.isLt]
+
+/-- **The σ-row name fact (`hval`), generically.** Reading the derived σ table at a
+cell's global column and row gives the identity name of the cell's image under the
+chunk-shaped replay — the exact premise of the σ-column identification. The chunk
+layout enters through `flatten` (cells against `(row, global column)` pairs) and its
+compatibility facts: the flattening preserves rows, and a cell's chunk/column recompose
+to its global column. -/
+theorem permPolysOf_getD_eq_chunkRowName {k : ℕ}
+    (cs : ConstraintSystem Fp) (ops : Operations Fp)
+    (copies' : List (FlatCell (Keygen.permColsOf cs).length (2 ^ k) ×
+      FlatCell (Keygen.permColsOf cs).length (2 ^ k)))
+    (hcopies : Zcash.Circuits.Fixtures.Layout.V1.copyList (Keygen.permColsOf cs)
+        (Halo2.FloorPlanner.V1.starts ops) ops
+        (Keygen.constantsOf cs ops) =
+      copies'.map fun p => (p.1.pair.1, p.1.pair.2, p.2.pair.1, p.2.pair.2))
+    {nc : ℕ} {width : ℕ → ℕ} (chunkLen : ℕ)
+    (flatten : ChunkCell nc (2 ^ k) width ≃
+      Fin (2 ^ k) × Fin (Keygen.permColsOf cs).length)
+    (hrow : ∀ rc : Fin (2 ^ k) × Fin (Keygen.permColsOf cs).length,
+      ((flatten.symm rc).2.1 : ℕ) = (rc.1 : ℕ))
+    (hcol : ∀ rc : Fin (2 ^ k) × Fin (Keygen.permColsOf cs).length,
+      ((flatten.symm rc).1 : ℕ) * chunkLen + ((flatten.symm rc).2.2 : ℕ) = (rc.2 : ℕ))
+    (chunk : Fin nc) (column : Fin (width chunk)) (i : Fin (2 ^ k)) :
+    ((Keygen.permPolysOf k cs ops).getD
+        ((flatten ⟨chunk, i, column⟩).2 : ℕ) []).getD (i : ℕ) 0 =
+      chunkRowName (omegaOf k) deltaFp chunkLen
+        ((chunkPermutationOfFlat flatten
+            ((Equiv.prodComm _ _).permCongr (replayKeygenPermutation copies'))
+          ⟨chunk, i, column⟩).1 : ℕ)
+        ((chunkPermutationOfFlat flatten
+            ((Equiv.prodComm _ _).permCongr (replayKeygenPermutation copies'))
+          ⟨chunk, i, column⟩).2.1 : ℕ)
+        ((chunkPermutationOfFlat flatten
+            ((Equiv.prodComm _ _).permCongr (replayKeygenPermutation copies'))
+          ⟨chunk, i, column⟩).2.2 : ℕ) := by
+  have hfst : (flatten ⟨chunk, i, column⟩).1 = i := by
+    have := hrow (flatten ⟨chunk, i, column⟩)
+    rw [Equiv.symm_apply_apply] at this
+    exact (Fin.ext this).symm
+  -- the image cell under the chunk-shaped replay
+  set fs := chunkPermutationOfFlat flatten
+    ((Equiv.prodComm _ _).permCongr (replayKeygenPermutation copies'))
+    ⟨chunk, i, column⟩ with hfs
+  -- its flat form: the replay image of `(global column, row)`, coordinates swapped
+  have hfsflat : fs = flatten.symm
+      (((replayKeygenPermutation copies'
+          ((flatten ⟨chunk, i, column⟩).2, (flatten ⟨chunk, i, column⟩).1)).2,
+        (replayKeygenPermutation copies'
+          ((flatten ⟨chunk, i, column⟩).2, (flatten ⟨chunk, i, column⟩).1)).1)) := by
+    rw [hfs, chunkPermutationOfFlat_apply]
+    rfl
+  have hentry := permPolysOf_getD_eq cs ops copies' hcopies
+    (flatten ⟨chunk, i, column⟩).2 i
+  rw [show ((flatten ⟨chunk, i, column⟩).2, i) =
+      ((flatten ⟨chunk, i, column⟩).2, (flatten ⟨chunk, i, column⟩).1) by
+    rw [hfst]] at hentry
+  rw [hentry, chunkRowName, rowName]
+  rw [hfsflat]
+  rw [hrow, hcol]
+  ring
+
+/-- **The copy-replay witness, generically.** Any cell valuation that is constant on the
+cycles of a permutation linking every encoded declared copy supplies the complete copy
+witness: the replayed cycles are the equivalence closure of the declared pairs, so they
+transport into the linking permutation's cycles. The Action instantiation supplies
+`encode` (the layout resolution, constants to their allocated constants-column cells),
+`value` (the resolver environment's cell reads), `hpairs` (each declared copy resolves
+into the keygen copy list), and `hvalue` (the σ-semantics copy theorem, with its priced
+exceptional branch as `Bad`). -/
+def CopyReplayWitness.ofPairCycles
+    {numCols n : ℕ} {place : RegionIndex → ℕ} {env : Environment Fp}
+    {ops : Operations Fp} {Bad : Prop}
+    (encode : CopyEndpoint Fp → FlatCell numCols n)
+    (value : FlatCell numCols n → Fp)
+    (π : Perm (FlatCell numCols n))
+    (hpairs : ∀ p ∈ encodeDeclaredCopies encode (operationDeclaredCopies ops),
+      π.SameCycle p.1 p.2)
+    (hvalue : ∀ l r : FlatCell numCols n, π.SameCycle l r →
+      value l = value r ∨ Bad)
+    (hread : ∀ endpoint : CopyEndpoint Fp,
+      endpoint.eval place env = value (encode endpoint)) :
+    CopyReplayWitness place env ops (FlatCell numCols n) Bad where
+  encode := encode
+  value := value
+  read := hread
+  cycle := by
+    have htrans : ∀ x y : FlatCell numCols n,
+        Relation.EqvGen (fun u v =>
+          (u, v) ∈ encodeDeclaredCopies encode (operationDeclaredCopies ops)) x y →
+        π.SameCycle x y := by
+      intro x y hgen
+      induction hgen with
+      | rel u v huv => exact hpairs (u, v) huv
+      | refl u => exact Equiv.Perm.SameCycle.refl π u
+      | symm u v _ ih => exact ih.symm
+      | trans u v w _ _ ih1 ih2 => exact ih1.trans ih2
+    intro l r h
+    exact hvalue l r (htrans l r
+      ((replayKeygenPermutation_sameCycle_iff
+        (encodeDeclaredCopies encode (operationDeclaredCopies ops)) l r).mp h))
+
+/-- Value agreement (with a shared exceptional branch) extends from copy pairs to whole
+replayed cycles: the cycles are the equivalence closure of the pairs, and the branch
+threads through reflexivity, symmetry, and transitivity. -/
+theorem value_eq_or_bad_of_replay_sameCycle {cell : Type*} [DecidableEq cell]
+    [Fintype cell] {Bad : Prop} (value : cell → Fp) (copies : List (cell × cell))
+    (hpair : ∀ p ∈ copies, value p.1 = value p.2 ∨ Bad)
+    {l r : cell} (h : (replayKeygenPermutation copies).SameCycle l r) :
+    value l = value r ∨ Bad := by
+  have hgen := (replayKeygenPermutation_sameCycle_iff copies l r).mp h
+  clear h
+  induction hgen with
+  | rel u v huv => exact hpair (u, v) huv
+  | refl u => exact Or.inl rfl
+  | symm u v _ ih =>
+      rcases ih with ih | ih
+      · exact Or.inl ih.symm
+      · exact Or.inr ih
+  | trans u v w _ _ ih1 ih2 =>
+      rcases ih1 with ih1 | ih1
+      · rcases ih2 with ih2 | ih2
+        · exact Or.inl (ih1.trans ih2)
+        · exact Or.inr ih2
+      · exact Or.inr ih1
+
+/-- **The copy-replay witness from pairwise value agreement.** The strongest generic
+form: no linking permutation at all — each encoded declared copy pair agrees in value
+(or the shared exceptional branch fires), and the cycle field follows by closure. The
+Action instantiation discharges the pair fact per copy kind: two resolved cells agree
+through the σ-semantics copy theorem (their keygen copy links them), and a resolved
+cell agrees with its constant's allocated constants-column cell through the same link
+plus the fixed-column realization of the constants column. -/
+def CopyReplayWitness.ofPairValues
+    {numCols n : ℕ} {place : RegionIndex → ℕ} {env : Environment Fp}
+    {ops : Operations Fp} {Bad : Prop}
+    (encode : CopyEndpoint Fp → FlatCell numCols n)
+    (value : FlatCell numCols n → Fp)
+    (hpair : ∀ p ∈ encodeDeclaredCopies encode (operationDeclaredCopies ops),
+      value p.1 = value p.2 ∨ Bad)
+    (hread : ∀ endpoint : CopyEndpoint Fp,
+      endpoint.eval place env = value (encode endpoint)) :
+    CopyReplayWitness place env ops (FlatCell numCols n) Bad where
+  encode := encode
+  value := value
+  read := hread
+  cycle := fun h => value_eq_or_bad_of_replay_sameCycle value _ hpair h
 
 end Layout.Asm
 
