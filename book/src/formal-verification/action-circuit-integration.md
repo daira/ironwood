@@ -252,9 +252,9 @@ merely restating fixture equality.
 
 ### 4. Strengthen circuit satisfaction beyond custom gates
 
-**Status: the protocol mathematics is implemented by draft
-[#91](https://github.com/zcash/ironwood/pull/91); deployed reachability and the mapping
-to Clean operations remain open.**
+**Status: the protocol mathematics and generic Clean-operation adapters are
+implemented. Concrete Action closure now consists of fixed/selector realization,
+copy replay packaging, lookup challenge data, and assembly of those families.**
 
 #30's decoded capstones record only the combined custom-gate quotient identity. #91
 defines the full gate/permutation/lookup constraint list over polynomials, proves that
@@ -315,6 +315,16 @@ nontrivial-relation branch. It feeds the clean branch directly into the lookup
 instantiation theorem. The grouping layer now proves claimed-value faithfulness on
 the verifier's non-duplicate path, constructs the commitment-ID route automatically,
 and derives its coverage and non-duplication premises from a successful `assemble?`.
+The Clean-facing representation step is now generic as well.
+`LookupProjection` proves that the circuit-derived VK's selected input and table
+expressions evaluate like their configured Clean expressions.
+`TopLevelLookups` routes every synthesis-enabled lookup to that configured index,
+projects its exact selector-substituted tuples into the resolver's compressed
+input/table polynomials, and constructs both one `EnabledLookup.DeployedWitness` and
+the complete witness family consumed by `FullCircuitBridge`. Its remaining concrete
+inputs are deliberately explicit: realization of the packed selector values, the
+activation-row fit fact, and the separately priced `β`/`γ`/`θ` exclusions. The first
+two are compiler/fixed-layout facts; they are not Action semantic assumptions.
 `PermutationInstantiation` now supplies the analogous permutation layer. It maps
 running products through `permProduct`, maps each chunk's value-side `ColumnRef`
 through the corresponding VK query-layout entry, maps its σ-side through
@@ -347,36 +357,30 @@ equals the corresponding generated σ column. Keeping the full `n`-row interpola
 separate from the `m` active-row copy theorem is essential: the VK commits to the
 former even though soundness reads only the latter.
 
-The active item-4 sequence is:
+The current item-4 sequence is:
 
-1. prove a generic grouping theorem that, on the verifier's non-duplicate path, routes
-   every flat query to the grouped member carrying its `CommitmentId`, opening point,
-   and claimed evaluation;
-2. use that theorem to construct `DeployedQueryRoute` automatically for the decoded
-   resolver, eliminating its remaining assembled-query bookkeeping premise;
-3. instantiate the permutation set/chunk polynomials from the same resolver and feed
-   `deployed_perm_copy_constraints_all_chunks`;
-4. package the resulting gate, copy, and lookup conclusions as the full
-   circuit-satisfaction interface consumed by the Clean-operation bridge.
+1. **complete:** route every assembled query through the canonical decoded-member
+   resolver and instantiate the full deployed constraint model;
+2. **complete:** derive the complete gate family from circuit-derived query layouts,
+   selector compression, and canonical constraint satisfaction;
+3. **generic layer complete:** route every enabled lookup to its configured argument,
+   project its input/table tuples into the resolver polynomials, and construct the
+   complete `EnabledLookup.DeployedWitness` family;
+4. **replay theorem complete, packaging open:** use the proved equality between the
+   executable keygen assembly and `replayKeygenPermutation` to construct the concrete
+   `CopyReplayWitness`;
+5. instantiate `TopLevelFixedCoherence`, use it to realize packed selectors and fixed
+   tables, and discharge the lookup selector-projection fields;
+6. combine gate, copy, lookup, and fixed results in `FullCircuitBridge`.
 
-Steps 1 and 2 are complete, and both generic halves of step 3 are complete: decoded
-polynomials instantiate the four permutation constraint families, and the structured
-semantic endpoint feeds them to the all-chunks copy theorem. Concrete closure now
-means constructing its records for the Action VK. In detail: the chunks must match
-the permutation-set count; every chunk `ColumnRef` must select an in-range,
-rotation-zero query-layout entry and every `permCommon` index must be in range;
-`ω^m` must be the verifier's last-row rotation; the replayed keygen σ must map each
-cell to the permutation-column name interpolated by the decoded common polynomial;
-and the remaining domain/coset facts must be discharged. The `β`/`γ` exclusions stay
-with the forking/bad-set accounting. These facts are deliberately separate from
-polynomial routing: most are circuit/VK computations or the VK-to-σ interpolation
-theorem, not multiopen claims.
-
-The interpolation theorem itself is no longer concrete work. Once the Action
-permutation data lands, it remains to build the flat-to-chunk equivalence, instantiate
-the generated columns, and prove that their commitments are the concrete VK's
-`permutationCommonCommitment`s. Commitment binding then supplies the
-`ofKeygenColumns` polynomial equalities (or the existing nontrivial-relation branch).
+The permutation side has moved past the former “Action permutation data” placeholder.
+The Action chunk/domain certificates, decoded σ-column identification, and executable
+assembly simulation are present. `runAssembly_getPair` proves that the final assembly
+mapping is exactly the action of `replayKeygenPermutation` over the same ordered
+copies. The remaining copy task is the narrow representation adapter: encode Clean
+copy endpoints as assembly cells, identify their resolver-environment values, and
+package the resulting cycle equality as `CopyReplayWitness`. The `β`/`γ` exclusions
+remain with the explicit bad-set accounting rather than becoming circuit assumptions.
 
 The residual zero-factor branch is now closed generically as well.
 `additiveZeroBadSet` observes that, after `β` and the committed cell values are fixed,
@@ -479,16 +483,19 @@ the copy-replay witness. Its `satisfaction_or_bad` theorem returns the exact
 ground-truth `Halo2.Constraints`. The remaining Action-specific work is therefore
 construction of these records, not another semantic proof.
 
-The first half of that lookup representation boundary is now generic.
+The lookup representation boundary is now generic.
 `LookupProjection` follows the actual threaded `eraseLookups` compiler walk, selects
 the configured argument corresponding to any lookup index, and proves that both
 derived pinned tuples evaluate like their selector-substituted Clean source
-expressions under the final resolver query layouts. The remaining lookup projection
-fact is intentionally stronger than the gate analogue: lookup selectors must have
-their exact zero/one activation values, not merely a nonzero scale. Orchard's lookup
-selectors are complex/lookup-only selectors, so keygen assigns them singleton packed
-columns; the next constructor connects those columns to each enabled operation's
-exact selector list and then builds `EnabledLookup.DeployedWitness`.
+expressions under the final resolver query layouts. `TopLevelLookups` then routes an
+enabled operation through configure/synthesis closure, proves that its compressed
+resolver input and table polynomials evaluate to the concrete Clean tuples, and
+constructs the one-lookup and whole-operation-stream deployed witness families.
+The remaining concrete selector fact is intentionally stronger than the gate
+analogue: lookup selectors must have their exact zero/one activation values, not
+merely a nonzero scale. Orchard's lookup selectors are complex/lookup-only selectors,
+so the fixed-layout constructor should derive that exact projection from their packed
+columns rather than expose it as an Action assumption.
 
 The generic gate and fixed/table operation layers are now implemented as well.
 `operationEnabledGates` extracts every placed activation and
@@ -681,11 +688,14 @@ then composes them in the exact `Action.Circuit.configure` registration order. T
 circuit-derived certificate required by `TopLevelGateCoherence`; callers can apply
 the generic `fromEmpty` rule directly, without an Action-specific wrapper theorem.
 This closes the configure-side selector-allocation obligation. It does not claim the
-separate lookup-expression selector-coverage property that the future lookup
-projection may require.
+separate lookup-expression selector-coverage property required by
+`TopLevelLookupCoherence`; that property and exact packed-selector realization remain
+part of the lookup/fixed compiler boundary.
 
-The `Fixtures.Layout` reconstruction is already generic over operations, so σ-cycle
-correctness of its replayed keygen merge is likewise a once-and-for-all lemma.
+The `Fixtures.Layout` reconstruction is generic over operations, and σ-cycle
+correctness of its replayed keygen merge is now proved once and for all:
+`runAssembly_getPair` identifies the executable assembly mapping with
+`replayKeygenPermutation`.
 
 ### 5. Construct the Clean assignment
 
@@ -823,9 +833,11 @@ The compositional base and post-Ironwood `FormalCircuit`s intentionally retain t
 `TopLevelCircuit` is the separate deployment boundary that closes those contracts.
 The generic `SynthesisWellFormed` and full-satisfaction-to-statement steps are now
 complete. The circuit-derived decoded assignment and rotated resolver environment are
-now connected generically. The remaining representation work is to discharge the
-static gate/selector premises above and construct the copy/lookup/fixed witnesses that
-feed `FullCircuitBridge.topLevelSoundness_or_bad`.
+now connected generically. Gate and lookup witness construction are generic; the
+remaining representation work is to instantiate their compact fixed/selector
+coherence inputs, construct `CopyReplayWitness`, supply the lookup challenge
+conditions, and feed the resulting families to
+`FullCircuitBridge.topLevelSoundness_or_bad`.
 
 After #79's merge, the generic circuit-integration declarations are checked in the
 single `Zcash/TrustBoundary.lean` census with explicit standard or Vesta-native axiom
@@ -903,31 +915,25 @@ whose public inputs were committed by the verifier.
 
 ## Suggested implementation order
 
-0. Complete: close both Action circuit inputs to `unit`, instantiate all prover choices
-   with the fixed hint-backed witness program, and derive `actionOperations` from the
+0. **Complete:** close both Action circuit inputs to `unit`, instantiate prover choices
+   through the hint-backed witness program, and derive the operation stream from the
    real proof-carrying circuit.
-1. Complete: instantiate #91's constraint split at the deployed list, route the
-   permutation and lookup members to its proved endpoints, and expose a full
-   circuit-satisfaction record in the computed endpoint.
-2. Make #89's post-compression CS and layout fixtures available as reusable Lean data,
-   and prove VK/layout equality theorems that discharge #30's routing hypotheses.
-3. The canonical polynomial-to-row decoder, Action top-level environment closure,
-   circuit-owned pinned CS/V1 placement/domain fit, generic
-   full-satisfaction-to-`TopLevelCircuit.Statement` endpoint, decoded
-   `TopLevelAssignment` constructor, and routed instance-column provenance are
-   complete; the legacy `ActionAssignment` is gone. The Action configure program now
-   also supplies the complete generic
-   `GateSelectorsAllocated` certificate needed by the gate projection.
-   `TopLevelCircuit.toVerifierKey` now supplies the assignment decoder and generic
-   gate bridge directly, without a separately supplied shape or VK. Next discharge
-   the remaining resolver representation facts, chiefly fixed-row realization and
-   the copy/lookup witnesses.
-4. Instantiate the generic decomposed bridge for one selected Action, adapt
-   `TopLevelCircuit.Statement` to the external Action statement, and then generalize
-   it to every `Fin shape.numProofs`. The semantic adapter, generic decoded
-   instance-value provenance, and routed-member identification are complete; the
-   concrete Lagrange-key/instance-commitment certificate and remaining bridge
-   witnesses remain.
-5. Supply the decoded/full-satisfaction data inside the computed experiment, close the
-   remaining adaptive-coupling/`hExtract` obligation, instantiate the endpoint with
-   `ActionStatement`, and add the theorem to the consolidated trust boundary.
+1. **Complete:** instantiate the full constraint split at the canonical deployed
+   resolver, including the domain-selector, permutation, and lookup semantic
+   endpoints.
+2. **Complete generically:** derive the pinned CS, V1 placement, domain, verifying key,
+   polynomial row environment, gate witnesses, and lookup witnesses from
+   `TopLevelCircuit`. The executable permutation assembly is now proved equal to the
+   abstract copy replay.
+3. **Current parallel work:** instantiate Action `TopLevelFixedCoherence`; construct
+   the concrete `CopyReplayWitness`; derive exact lookup selector projection,
+   activation-row fit, and priced lookup challenge conditions; and close the
+   Lagrange-prefix/instance-commitment certificate.
+4. Assemble those components for one proof index in `FullCircuitBridge`, then quantify
+   the same construction over every `Fin shape.numProofs`. The external
+   `Action.Statement` and `Action.BundleStatement` adapters are already implemented.
+5. Replace the live computed capstone's free `S`/`hencodes` argument with that concrete
+   bundle bridge and add the resulting theorem to the consolidated trust boundary.
+   The family-wide adaptive-coupling/`hExtract` supply problem is a distinct
+   probability-layer task and may remain an explicitly conditional or residual term
+   while the deterministic `hencodes` gap is closed.

@@ -26,3 +26,11 @@ written during circuit integration:
 
 The normative architecture rule and current migration guidance are in
 [`clean-boundary.md`](clean-boundary.md).
+
+The lookup bridge is split deliberately:
+
+* `LookupProjection.lean` proves the query-erasure and selector-substitution
+  compiler semantics for configured lookups;
+* `TopLevelLookups.lean` routes synthesis-enabled lookups through the
+  circuit-derived verifying key and constructs the deployed witnesses consumed
+  by the generic full-circuit bridge.
