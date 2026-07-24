@@ -90,7 +90,7 @@ theorem capturedPinnedView_eq_derived_and_wellFormed :
     (capturedPinnedView, orchardActionTopLevelCircuit.domainExponent,
       orchardActionTopLevelCircuit.constraintSystem.invalidQueriedCells.isEmpty,
       (flatGates orchardActionTopLevelCircuit.constraintSystem).all
-        (·.selectorsCovered (fun i => (orchardActionTopLevelCircuit.selMapDerived.lookup i).isSome)))
+        (·.selectorsCovered (fun i => (orchardActionTopLevelCircuit.selectorMap.lookup i).isSome)))
       = (actionPinnedCs, 11, true, true) := by native_decide
 
 /-- **The capture is the derived Action circuit** (pinned CS, captured families). -/
@@ -117,7 +117,7 @@ theorem action_queriedCells_wellFormed :
 coverage side condition of `PinnedConstraintSystem.derive_gates_eval`. -/
 theorem action_gates_selectorsCovered :
     ((flatGates orchardActionTopLevelCircuit.constraintSystem).all
-      (·.selectorsCovered (fun i => (orchardActionTopLevelCircuit.selMapDerived.lookup i).isSome)))
+      (·.selectorsCovered (fun i => (orchardActionTopLevelCircuit.selectorMap.lookup i).isSome)))
       = true := by
   have h := capturedPinnedView_eq_derived_and_wellFormed
   simp only [Prod.mk.injEq] at h
@@ -178,7 +178,7 @@ theorem vk_scalars_and_chunks_derived :
             2 ^ orchardActionTopLevelCircuit.domainExponent,
             orchardActionTopLevelCircuit.constraintSystem.blindingFactors, deltaFp,
             orchardActionTopLevelCircuit.constraintSystem.chunkLen),
-          Keygen.permutationChunksOf orchardActionTopLevelCircuit.selMapDerived
+          Keygen.permutationChunksOf orchardActionTopLevelCircuit.selectorMap
             orchardActionTopLevelCircuit.constraintSystem) := by
   native_decide
 
@@ -194,7 +194,7 @@ theorem vk_scalars_derived :
 
 theorem vk_permutationChunks_derived :
     vk.permutationChunks
-      = Keygen.permutationChunksOf orchardActionTopLevelCircuit.selMapDerived
+      = Keygen.permutationChunksOf orchardActionTopLevelCircuit.selectorMap
         orchardActionTopLevelCircuit.constraintSystem := by
   have h := vk_scalars_and_chunks_derived
   simp only [Prod.mk.injEq] at h

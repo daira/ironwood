@@ -477,18 +477,10 @@ open Halo2
 variable {G : Type} [AddCommGroup G] [Inhabited G]
 variable {ConfigInput Config : Type} {Output : TypeMap} [CircuitType Output]
 
-/-- The derived selector-compression map of a closed circuit (activation table over the
-circuit's own V1 placement, at the minimal fitting domain). -/
-def selMapDerived
-    (top : TopLevelCircuit Fp ConfigInput Config Output) : Halo2.SelCompressMap :=
-  deriveSelCompressMap top.constraintSystem (2 ^ top.domainExponent)
-    (activations (FloorPlanner.V1.starts (top.operations 0))
-      (indexedRegions (top.operations 0) 0).1)
-
 /-- The derived fixed-column commitments of a closed circuit against a URS. -/
 def fixedCommitments
     (top : TopLevelCircuit Fp ConfigInput Config Output) (urs : URS G) : List G :=
-  fixedCommitmentsOf urs.w (derivedUrsGLagrange urs) top.selMapDerived
+  fixedCommitmentsOf urs.w (derivedUrsGLagrange urs) top.selectorMap
     top.domainExponent top.constraintSystem (top.operations 0)
 
 /-- The derived permutation common commitments of a closed circuit against a URS. -/
@@ -522,7 +514,7 @@ theorem toVerifierKey_adviceQueryLayout_derived
     (pp : ProofParams) (urs : URS G) :
     (top.toVerifierKey pp urs).adviceQueryLayout =
       (PinnedConstraintSystem.derive
-        top.constraintSystem top.selMapDerived).adviceQueryLayout := by
+        top.constraintSystem top.selectorMap).adviceQueryLayout := by
   rfl
 
 /-- The derived key exposes exactly the fixed-query layout of its selector-map
@@ -532,7 +524,7 @@ theorem toVerifierKey_fixedQueryLayout_derived
     (pp : ProofParams) (urs : URS G) :
     (top.toVerifierKey pp urs).fixedQueryLayout =
       (PinnedConstraintSystem.derive
-        top.constraintSystem top.selMapDerived).fixedQueryLayout := by
+        top.constraintSystem top.selectorMap).fixedQueryLayout := by
   rfl
 
 /-- The derived key exposes exactly the instance-query layout of its selector-map
@@ -542,7 +534,7 @@ theorem toVerifierKey_instanceQueryLayout_derived
     (pp : ProofParams) (urs : URS G) :
     (top.toVerifierKey pp urs).instanceQueryLayout =
       (PinnedConstraintSystem.derive
-        top.constraintSystem top.selMapDerived).instanceQueryLayout := by
+        top.constraintSystem top.selectorMap).instanceQueryLayout := by
   rfl
 
 /-- The derived key's advice-query layout has the shape count computed from the same
@@ -554,10 +546,10 @@ theorem toVerifierKey_adviceQueryCount
       (pp.mergeDerived top).numAdviceQueries := by
   change
     (PinnedConstraintSystem.derive
-      top.constraintSystem top.selMapDerived).adviceQueryLayout.length =
+      top.constraintSystem top.selectorMap).adviceQueryLayout.length =
     (PinnedConstraintSystem.derive
       top.constraintSystem top.selectorMap).adviceQueryLayout.length
-  rw [show top.selMapDerived = top.selectorMap by rfl]
+  rw [show top.selectorMap = top.selectorMap by rfl]
 
 /-- The derived key's fixed-query layout has the shape count computed from the same
 top-level pinned constraint system. -/
@@ -568,10 +560,10 @@ theorem toVerifierKey_fixedQueryCount
       (pp.mergeDerived top).numFixedQueries := by
   change
     (PinnedConstraintSystem.derive
-      top.constraintSystem top.selMapDerived).fixedQueryLayout.length =
+      top.constraintSystem top.selectorMap).fixedQueryLayout.length =
     (PinnedConstraintSystem.derive
       top.constraintSystem top.selectorMap).fixedQueryLayout.length
-  rw [show top.selMapDerived = top.selectorMap by rfl]
+  rw [show top.selectorMap = top.selectorMap by rfl]
 
 /-- The derived key's instance-query layout has the shape count computed from the same
 top-level pinned constraint system. -/
@@ -582,9 +574,9 @@ theorem toVerifierKey_instanceQueryCount
       (pp.mergeDerived top).numInstanceQueries := by
   change
     (PinnedConstraintSystem.derive
-      top.constraintSystem top.selMapDerived).instanceQueryLayout.length =
+      top.constraintSystem top.selectorMap).instanceQueryLayout.length =
     (PinnedConstraintSystem.derive
       top.constraintSystem top.selectorMap).instanceQueryLayout.length
-  rw [show top.selMapDerived = top.selectorMap by rfl]
+  rw [show top.selectorMap = top.selectorMap by rfl]
 
 end Halo2.TopLevelCircuit

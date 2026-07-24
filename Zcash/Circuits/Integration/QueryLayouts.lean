@@ -131,10 +131,10 @@ theorem instanceQueryLayout_of_constraintSystem
   change
     (column.index, rotation) ∈
       (PinnedConstraintSystem.derive
-        top.constraintSystem top.selMapDerived).instanceQueryLayout
+        top.constraintSystem top.selectorMap).instanceQueryLayout
   exact
     PinnedConstraintSystem.mem_instanceQueryLayout_derive_of_mem
-      top.constraintSystem top.selMapDerived column rotation hquery
+      top.constraintSystem top.selectorMap column rotation hquery
 
 end QueryLayouts
 
