@@ -1,4 +1,4 @@
-import Zcash.Bridge.VkProjection
+import Zcash.Snark.VkCommit.Pipeline
 import Zcash.Snark.Soundness.GateProjection
 import Zcash.Snark.Soundness.OperationGates
 import Zcash.Snark.Soundness.ResolverQueryEnvironment
