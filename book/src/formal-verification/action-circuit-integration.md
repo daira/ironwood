@@ -526,6 +526,14 @@ For activations, `mem_selectorFixed_of_activation` proves that every synthesized
 fixed-column reads realize those emitted assignments. The incoming circuit-owned VK
 construction can discharge that obligation by identifying its fixed polynomials with
 the layout compiler output; no Action-specific activation-placement argument remains.
+The polynomial side of that connection is already generic:
+`selectorActivationsRealized_of_fixedRowPolynomials` takes dense fixed-row lists,
+in-domain activation rows, and the expected sparse-to-dense cell equalities, then uses
+canonical Lagrange interpolation to prove that the resulting polynomial environment
+realizes every selector activation. Its converse compiler lemma establishes that an
+emitted selector assignment cannot invent a row absent from the source activation
+list. Thus the circuit-owned VK need only expose its dense fixed rows and prove the
+ordinary layout/scatter equations; selector semantics does not enter VK assembly.
 
 The generic operation walk already proves that every extracted enabled gate occurs in
 the floor-planner activation table, and `selectorScale_ne_zero_of_enabledGate` turns

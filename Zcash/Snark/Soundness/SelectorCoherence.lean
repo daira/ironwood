@@ -206,6 +206,28 @@ theorem mem_selectorFixed_of_activation
   · simp only [hfind, Option.map_some]
     rw [← hcompressed]
 
+/--
+Conversely, every packed fixed assignment emitted by `selectorFixed` retains the
+row of some source activation.  Selector deduplication may forget multiplicity and
+order, but it cannot invent rows.
+-/
+theorem exists_activation_of_mem_selectorFixed
+    (map : SelCompressMap) (activationRows : List (ℕ × ℕ))
+    {column row value : ℕ}
+    (hentry :
+      (column, row, value) ∈ selectorFixed map activationRows) :
+    ∃ selector, (selector, row) ∈ activationRows := by
+  unfold selectorFixed at hentry
+  rw [List.mem_filterMap] at hentry
+  obtain ⟨⟨selector, sourceRow⟩, huniq, hmapped⟩ := hentry
+  rw [Std.HashSet.mem_toList, mem_foldl_insert_iff] at huniq
+  rcases huniq with hfalse | hactivation
+  · simp at hfalse
+  · simp only [Option.map_eq_some_iff] at hmapped
+    obtain ⟨entry, _hfind, hresult⟩ := hmapped
+    simp only [Prod.mk.injEq] at hresult
+    exact ⟨selector, by simpa [hresult.2.1] using hactivation⟩
+
 end Zcash.Circuits.Fixtures.Layout
 
 namespace Zcash.Snark
@@ -286,5 +308,43 @@ theorem selectorActivationsRealized_of_selectorFixed
   exact hfixed
     (mem_selectorFixed_of_activation map activationRows
       hactivation hlookup)
+
+/--
+Dense fixed-column rows compiled into their canonical interpolation polynomials
+realize selector activations whenever the sparse selector assignments occur at
+in-domain rows with the expected dense values.
+
+This is the polynomial boundary expected from key generation: the selector compiler
+does not need to know how commitments or a concrete verifying key are assembled.
+-/
+theorem selectorActivationsRealized_of_fixedRowPolynomials
+    {n : ℕ} (omega : Fp)
+    (fixedRows : ℕ → List Fp)
+    (adviceCols instanceCols : ℕ → Polynomial Fp)
+    (usableRows : ℕ)
+    (map : SelCompressMap) (activationRows : List (ℕ × ℕ))
+    (hrows :
+      Function.Injective fun row : Fin n => omega ^ (row : ℕ))
+    (hrowBound :
+      ∀ {selector row : ℕ},
+        (selector, row) ∈ activationRows → row < n)
+    (hfixed :
+      ∀ {column row value : ℕ},
+        (column, row, value) ∈ selectorFixed map activationRows →
+          (fixedRows column).getD row 0 = (value : Fp)) :
+    SelectorActivationsRealized map activationRows
+      (polynomialEnvironment omega usableRows
+        (fun column =>
+          rowPolynomial omega
+            (zeroPaddedRows (n := n) (fixedRows column)))
+        adviceCols instanceCols) := by
+  apply selectorActivationsRealized_of_selectorFixed
+  intro column row value hentry
+  obtain ⟨selector, hactivation⟩ :=
+    exists_activation_of_mem_selectorFixed map activationRows hentry
+  have hrow : row < n := hrowBound hactivation
+  rw [polynomialEnvironment_fixed_nat,
+    rowPolynomial_eval hrows ⟨row, hrow⟩]
+  exact hfixed hentry
 
 end Zcash.Snark
