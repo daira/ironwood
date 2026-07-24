@@ -54,6 +54,51 @@ theorem resolverQueryFeed_eval_of_ge
     (resolverQueryFeed (n := n) omega layout column query).eval x = 0 := by
   simp [resolverQueryFeed, finFn, Nat.not_lt.mpr hquery]
 
+/--
+Uniform openings of a complete `columnQueries` block reconstruct its entire
+resolver query feed at the verifier challenge.
+
+The layout-count equality is the only structural premise: `List.ofFn evals`
+already has exactly `n` entries. Out-of-range query indices are zero on both
+sides, matching `finFn`.
+-/
+theorem resolverQueryFeed_eval_of_columnQueries
+    {n k : ℕ} {G : Type*}
+    (omega x : Fp)
+    (commitment : ℕ → G) (mkId : ℕ → CommitmentId)
+    (layout : List (ℕ × ℤ)) (evals : Fin n → Fp)
+    (hlayout : layout.length = n)
+    (poly : CommitmentId → Polynomial Fp)
+    (hopen : ∀ q ∈
+      columnQueries (k := k) omega x commitment mkId layout
+        (List.ofFn evals),
+      (poly q.commId).eval q.point = q.eval)
+    (query : ℕ) :
+    (resolverQueryFeed (n := n) omega layout
+      (fun column => poly (mkId column)) query).eval x =
+        finFn evals query := by
+  by_cases hquery : query < n
+  · have hlayoutQuery : query < layout.length := by
+      simpa only [hlayout] using hquery
+    let q : VerifierQuery k Fp G :=
+      { point := rotateOmega omega x
+          (layout.getD query (0, 0)).2
+        commitment := .point
+          (commitment (layout.getD query (0, 0)).1)
+        eval := (List.ofFn evals).getD query 0
+        commId := mkId (layout.getD query (0, 0)).1 }
+    have hq :
+        q ∈ columnQueries (k := k) omega x commitment mkId layout
+          (List.ofFn evals) := by
+      exact columnQuery_getD_mem omega x commitment mkId layout
+        (List.ofFn evals) hlayoutQuery (by simpa using hquery)
+    have hopenQuery := hopen q hq
+    rw [resolverQueryFeed_eval omega layout _ hquery x]
+    simpa [q, finFn, hquery] using hopenQuery
+  · rw [resolverQueryFeed_eval_of_ge omega layout _
+      (Nat.le_of_not_gt hquery) x]
+    simp [finFn, hquery]
+
 /-- Fixed-query polynomials selected from commitment identities and the VK layout. -/
 noncomputable def fixedQueryFeedOfResolver
     {shape : Shape} {G : Type*}

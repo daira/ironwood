@@ -18,7 +18,6 @@ placement, or verifying key is selected here.
 namespace Zcash.Snark
 
 open Halo2
-open Halo2
 
 set_option maxHeartbeats 20000
 

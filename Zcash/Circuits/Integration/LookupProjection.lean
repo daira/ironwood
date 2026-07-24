@@ -21,6 +21,23 @@ open Halo2
 
 set_option maxHeartbeats 20000
 
+/-- Substitute the selector-compression map through one lookup while retaining the
+lawfulness facts carried by `LookupArgument`. -/
+private abbrev substitutedLookup
+    {F : Type} [Field F] [DecidableEq F]
+    (map : SelCompressMap) (argument : LookupArgument F) :
+    LookupArgument F where
+  inputs := argument.inputs.map (substSelectorMap map.lookup)
+  tables := argument.tables.map (substSelectorMap map.lookup)
+  tablesFree := by
+    intro table htable
+    rw [List.mem_map] at htable
+    obtain ⟨source, hsource, rfl⟩ := htable
+    rw [substSelectorMap_eq_of_selectorFree map.lookup source
+      (argument.tablesFree source hsource)]
+    exact argument.tablesFree source hsource
+  arity := by simp [argument.arity]
+
 /-- The lookup walk emits one fixture per source argument. -/
 theorem eraseLookups_length
     {F : Type} [Field F] [DecidableEq F]
@@ -188,11 +205,7 @@ theorem PinnedConstraintSystem.derive_lookup_eval
       argument.tables.map
         (Expression.eval (substValuation map.lookup valuation))) := by
   let arguments : List (LookupArgument F) :=
-    cs.lookups.map fun argument =>
-      { inputs :=
-          argument.inputs.map (substSelectorMap map.lookup)
-        tables :=
-          argument.tables.map (substSelectorMap map.lookup) }
+    cs.lookups.map (substitutedLookup map)
   let gateState :=
     (eraseGates
       ((flatGates cs).map (substSelectorMap map.lookup))
@@ -254,12 +267,7 @@ theorem PinnedConstraintSystem.derive_lookup_eval
         List.getElem_map, hfixtureIndex]
   have hargument :
       arguments[lookupIndex] =
-        { inputs :=
-            cs.lookups[lookupIndex].inputs.map
-              (substSelectorMap map.lookup)
-          tables :=
-            cs.lookups[lookupIndex].tables.map
-              (substSelectorMap map.lookup) } := by
+        substitutedLookup map cs.lookups[lookupIndex] := by
     simp [arguments]
   have hinputFree :
       ∀ expression ∈ arguments[lookupIndex].inputs,
@@ -294,7 +302,7 @@ theorem PinnedConstraintSystem.derive_lookup_eval
     (pinnedQueryState (PinnedConstraintSystem.derive cs map))
     fixed advice instanceFeed valuation htableFree hextends hinterprets
   rw [hargument] at hinputs htables
-  simp only [List.map_map] at hinputs htables
+  simp only [substitutedLookup, List.map_map] at hinputs htables
   have hinputMap :
       cs.lookups[lookupIndex].inputs.map
           (Expression.eval valuation ∘
@@ -323,24 +331,14 @@ theorem PinnedConstraintSystem.derive_lookup_eval
       (PinnedConstraintSystem.derive cs map).lookupInputExprs.getD
           lookupIndex [] =
         (eraseLookup
-          { inputs :=
-              cs.lookups[lookupIndex].inputs.map
-                (substSelectorMap map.lookup)
-            tables :=
-              cs.lookups[lookupIndex].tables.map
-                (substSelectorMap map.lookup) }
+          (substitutedLookup map cs.lookups[lookupIndex])
           localState).1.inputs := by
     simpa only [hargument] using hfixtureInputs
   have hfixtureTables' :
       (PinnedConstraintSystem.derive cs map).lookupTableExprs.getD
           lookupIndex [] =
         (eraseLookup
-          { inputs :=
-              cs.lookups[lookupIndex].inputs.map
-                (substSelectorMap map.lookup)
-            tables :=
-              cs.lookups[lookupIndex].tables.map
-                (substSelectorMap map.lookup) }
+          (substitutedLookup map cs.lookups[lookupIndex])
           localState).1.tables := by
     simpa only [hargument] using hfixtureTables
   dsimp only

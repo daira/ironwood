@@ -13,7 +13,6 @@ boundaries; no Action-specific circuit, placement, or statement appears here.
 namespace Zcash.Snark
 
 open Halo2
-open Halo2
 
 set_option maxHeartbeats 20000
 

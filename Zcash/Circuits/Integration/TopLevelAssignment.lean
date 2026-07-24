@@ -21,7 +21,6 @@ input to this type.
 namespace Zcash.Snark
 
 open Halo2 Polynomial
-open Halo2
 
 set_option maxHeartbeats 20000
 

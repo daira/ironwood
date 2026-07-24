@@ -77,6 +77,7 @@ import Zcash.Snark.Soundness.Multiopen.RPoly
 import Zcash.Snark.Soundness.Multiopen.Claimed
 import Zcash.Snark.Soundness.Multiopen.DecodeFixture
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
+import Zcash.Snark.Soundness.CanonicalTerminal
 import Zcash.Snark.Soundness.Vesta
 -- Concrete fork-tree knowledge error over the deployed Orchard parameters.
 import Zcash.Snark.Soundness.Deployed.ConcreteBounds

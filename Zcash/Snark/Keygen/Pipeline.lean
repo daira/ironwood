@@ -3,7 +3,7 @@ import Zcash.Common.ParMap
 import Zcash.Snark.Core.Domain
 import Zcash.Snark.Keygen.Fast.Msm
 import Zcash.Circuits.Integration.ExprRich
-import Zcash.Circuits.Fixtures.Layout
+import Clean.Halo2.Keygen.Layout
 import Clean.Halo2.TopLevelKeygen
 import Zcash.Snark.Core.Group
 import Zcash.Snark.Verifier.Assemble
@@ -36,7 +36,6 @@ namespace Zcash.Snark.Keygen
 
 open Zcash.Snark
 open Halo2
-open Zcash.Circuits.Fixtures
 
 variable {G : Type} [AddCommGroup G] [Inhabited G]
 
@@ -145,14 +144,117 @@ def fixedSparseOf (selMap : Halo2.SelCompressMap) (k : ℕ)
       ++ Layout.regionAssignFixed (ZMod.val : Fp → ℕ) (FloorPlanner.V1.starts ops)
           (indexedRegions ops 0).1))
 
+/-- Apply one sparse fixed assignment to the dense column accumulator. -/
+def scatterDenseColumn (numCols : ℕ) (cols : Array (Array Fp))
+    (entry : ℕ × ℕ × ℕ) : Array (Array Fp) :=
+  let (column, row, value) := entry
+  if column < numCols then
+    cols.modify column fun values =>
+      values.set! row ((value : ℕ) : Fp)
+  else
+    cols
+
 /-- Scatter sparse `(col, row, natval)` triples into `numCols` dense length-`n` columns,
 default `0` (`domain.empty_lagrange`); the `natval`s are `ZMod.val`s coerced back to `Fp`. -/
-def denseColumns (n numCols : ℕ) (triples : List (ℕ × ℕ × ℕ)) : List (List Fp) := Id.run do
-  let mut cols : Array (Array Fp) := Array.replicate numCols (Array.replicate n 0)
-  for (c, r, v) in triples do
-    if c < numCols then
-      cols := cols.modify c (fun col => col.set! r ((v : ℕ) : Fp))
-  return cols.toList.map Array.toList
+def denseColumns (n numCols : ℕ)
+    (triples : List (ℕ × ℕ × ℕ)) : List (List Fp) :=
+  let initial : Array (Array Fp) :=
+    Array.replicate numCols (Array.replicate n 0)
+  (triples.foldl (scatterDenseColumn numCols) initial).toList.map
+    Array.toList
+
+/-- One scatter step preserves both the number of columns and every column's
+row count. -/
+private theorem scatterDenseColumn_sized
+    {n numCols : ℕ} {cols : Array (Array Fp)}
+    (hsize : cols.size = numCols)
+    (hrows : ∀ column (hcolumn : column < cols.size),
+      cols[column].size = n)
+    (entry : ℕ × ℕ × ℕ) :
+    let next := scatterDenseColumn numCols cols entry
+    next.size = numCols ∧
+      ∀ column (hcolumn : column < next.size),
+        next[column].size = n := by
+  rcases entry with ⟨column, rest⟩
+  rcases rest with ⟨row, value⟩
+  simp only [scatterDenseColumn]
+  split
+  next hcolumn =>
+    constructor
+    · simpa only [Array.size_modify] using hsize
+    · intro other hother
+      rw [Array.getElem_modify hother]
+      split
+      next heq =>
+        subst other
+        simp only [Array.size_set!]
+        exact hrows column (by simpa only [hsize] using hcolumn)
+      next hne =>
+        exact hrows other (by simpa using hother)
+  next _ =>
+    exact ⟨hsize, hrows⟩
+
+/-- Folding scatter over a rectangular accumulator preserves its shape. -/
+private theorem scatterDenseColumns_fold_sized
+    {n numCols : ℕ} (triples : List (ℕ × ℕ × ℕ))
+    {cols : Array (Array Fp)}
+    (hsize : cols.size = numCols)
+    (hrows : ∀ column (hcolumn : column < cols.size),
+      cols[column].size = n) :
+    let result := triples.foldl (scatterDenseColumn numCols) cols
+    result.size = numCols ∧
+      ∀ column (hcolumn : column < result.size),
+        result[column].size = n := by
+  induction triples generalizing cols with
+  | nil =>
+      exact ⟨hsize, hrows⟩
+  | cons entry rest ih =>
+      simp only [List.foldl_cons]
+      have hnext :=
+        scatterDenseColumn_sized hsize hrows entry
+      exact ih hnext.1 hnext.2
+
+/-- The dense scatter accumulator initialized by `denseColumns` is rectangular. -/
+private theorem denseColumns_fold_sized
+    (n numCols : ℕ) (triples : List (ℕ × ℕ × ℕ)) :
+    let initial : Array (Array Fp) :=
+      Array.replicate numCols (Array.replicate n 0)
+    let result := triples.foldl (scatterDenseColumn numCols) initial
+    result.size = numCols ∧
+      ∀ column (hcolumn : column < result.size),
+        result[column].size = n := by
+  apply scatterDenseColumns_fold_sized triples
+  · simp
+  · intro column hcolumn
+    simp
+
+/-- Dense fixed reconstruction emits exactly the requested number of columns. -/
+theorem denseColumns_length
+    (n numCols : ℕ) (triples : List (ℕ × ℕ × ℕ)) :
+    (denseColumns n numCols triples).length = numCols := by
+  let initial : Array (Array Fp) :=
+    Array.replicate numCols (Array.replicate n 0)
+  let result := triples.foldl (scatterDenseColumn numCols) initial
+  have hshape := denseColumns_fold_sized n numCols triples
+  simpa [denseColumns, initial, result] using hshape.1
+
+/-- Every in-range dense fixed column has exactly the requested row count. -/
+theorem denseColumns_getD_length
+    (n numCols : ℕ) (triples : List (ℕ × ℕ × ℕ))
+    (column : ℕ) (hcolumn : column < numCols) :
+    ((denseColumns n numCols triples).getD column []).length = n := by
+  let initial : Array (Array Fp) :=
+    Array.replicate numCols (Array.replicate n 0)
+  let result := triples.foldl (scatterDenseColumn numCols) initial
+  have hshape := denseColumns_fold_sized n numCols triples
+  have hresultColumn : column < result.size := by
+    rw [hshape.1]
+    exact hcolumn
+  rw [List.getD_eq_getElem _ _ (by
+    simpa only [denseColumns_length] using hcolumn)]
+  simp only [denseColumns, List.getElem_map,
+    Array.getElem_toList, Array.length_toList]
+  exact hshape.2 column hresultColumn
 
 /-- The derived fixed-column commitments — `commit_lagrange` of each dense fixed column
 with the default blind (`plonk/keygen.rs:230-240`, `keygen_vk`'s `fixed_commitments`). -/
@@ -170,7 +272,7 @@ def fixedCommitmentsOf (blind : G) (lagrange : List G) (selMap : Halo2.SelCompre
 /-- The permutation columns as `ColRef`s in `enable_equality` order
 (`cs.permutationColumns`) — the order the keygen `Assembly` mapping and the `δ^i` scaling
 are indexed by, and the column shape `V1.copyList` resolves cells against. -/
-def permColsOf (cs : ConstraintSystem Fp) : List Zcash.Circuits.Fixtures.ColRef :=
+def permColsOf (cs : ConstraintSystem Fp) : List Halo2.Layout.ColRef :=
   cs.permutationColumns.map fun c =>
     match c.kind with
     | .advice => .advice c.index
@@ -246,7 +348,6 @@ namespace Zcash.Snark.VerifyingKey
 
 open Zcash.Snark.Keygen
 open Halo2
-open Zcash.Circuits.Fixtures
 
 variable {G : Type} [AddCommGroup G] [Inhabited G]
 
@@ -318,7 +419,6 @@ namespace Zcash.Snark.Keygen
 
 open Zcash.Snark
 open Halo2
-open Zcash.Circuits.Fixtures
 
 variable {G : Type} [AddCommGroup G] [Inhabited G]
 
@@ -341,7 +441,6 @@ structure ProofParams where
   numPointSets : ℕ
 deriving DecidableEq, Repr
 
-open Zcash.Circuits in
 /-- The `Shape` of a top-level circuit's proofs: the proof-shape counts merged with
 everything the circuit derives — the domain exponent (`TopLevelCircuit.domainExponent`),
 column/lookup/permutation counts from the configure-recorded constraint system, the
@@ -352,7 +451,8 @@ def ProofParams.mergeDerived (pp : ProofParams)
     {ConfigInput Config : Type} {Output : TypeMap} [CircuitType Output]
     (top : TopLevelCircuit Fp ConfigInput Config Output) : Shape :=
   let cs := top.constraintSystem
-  let pinned := top.pinnedCS
+  let pinned :=
+    PinnedConstraintSystem.derive top.constraintSystem top.selectorMap
   { k := top.domainExponent
     numProofs := pp.numProofs
     numAdviceColumns := cs.numAdviceColumns
@@ -373,8 +473,6 @@ namespace Halo2.TopLevelCircuit
 open Zcash.Snark
 open Zcash.Snark.Keygen
 open Halo2
-open Zcash.Circuits
-open Zcash.Circuits.Fixtures
 
 variable {G : Type} [AddCommGroup G] [Inhabited G]
 variable {ConfigInput Config : Type} {Output : TypeMap} [CircuitType Output]
@@ -416,5 +514,77 @@ def toVerifierKey
     (pp : ProofParams) (urs : URS G) :
     VerifyingKey (pp.mergeDerived top) Zcash.Circuits.Fp G :=
   top.verifierKeyAt (pp.mergeDerived top) urs
+
+/-- The derived key exposes exactly the advice-query layout of its selector-map
+derivation. -/
+theorem toVerifierKey_adviceQueryLayout_derived
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) (urs : URS G) :
+    (top.toVerifierKey pp urs).adviceQueryLayout =
+      (PinnedConstraintSystem.derive
+        top.constraintSystem top.selMapDerived).adviceQueryLayout := by
+  rfl
+
+/-- The derived key exposes exactly the fixed-query layout of its selector-map
+derivation. -/
+theorem toVerifierKey_fixedQueryLayout_derived
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) (urs : URS G) :
+    (top.toVerifierKey pp urs).fixedQueryLayout =
+      (PinnedConstraintSystem.derive
+        top.constraintSystem top.selMapDerived).fixedQueryLayout := by
+  rfl
+
+/-- The derived key exposes exactly the instance-query layout of its selector-map
+derivation. -/
+theorem toVerifierKey_instanceQueryLayout_derived
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) (urs : URS G) :
+    (top.toVerifierKey pp urs).instanceQueryLayout =
+      (PinnedConstraintSystem.derive
+        top.constraintSystem top.selMapDerived).instanceQueryLayout := by
+  rfl
+
+/-- The derived key's advice-query layout has the shape count computed from the same
+top-level pinned constraint system. -/
+theorem toVerifierKey_adviceQueryCount
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) (urs : URS G) :
+    (top.toVerifierKey pp urs).adviceQueryLayout.length =
+      (pp.mergeDerived top).numAdviceQueries := by
+  change
+    (PinnedConstraintSystem.derive
+      top.constraintSystem top.selMapDerived).adviceQueryLayout.length =
+    (PinnedConstraintSystem.derive
+      top.constraintSystem top.selectorMap).adviceQueryLayout.length
+  rw [show top.selMapDerived = top.selectorMap by rfl]
+
+/-- The derived key's fixed-query layout has the shape count computed from the same
+top-level pinned constraint system. -/
+theorem toVerifierKey_fixedQueryCount
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) (urs : URS G) :
+    (top.toVerifierKey pp urs).fixedQueryLayout.length =
+      (pp.mergeDerived top).numFixedQueries := by
+  change
+    (PinnedConstraintSystem.derive
+      top.constraintSystem top.selMapDerived).fixedQueryLayout.length =
+    (PinnedConstraintSystem.derive
+      top.constraintSystem top.selectorMap).fixedQueryLayout.length
+  rw [show top.selMapDerived = top.selectorMap by rfl]
+
+/-- The derived key's instance-query layout has the shape count computed from the same
+top-level pinned constraint system. -/
+theorem toVerifierKey_instanceQueryCount
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) (urs : URS G) :
+    (top.toVerifierKey pp urs).instanceQueryLayout.length =
+      (pp.mergeDerived top).numInstanceQueries := by
+  change
+    (PinnedConstraintSystem.derive
+      top.constraintSystem top.selMapDerived).instanceQueryLayout.length =
+    (PinnedConstraintSystem.derive
+      top.constraintSystem top.selectorMap).instanceQueryLayout.length
+  rw [show top.selMapDerived = top.selectorMap by rfl]
 
 end Halo2.TopLevelCircuit

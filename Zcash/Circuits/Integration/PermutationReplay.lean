@@ -21,7 +21,7 @@ representative-agnostic.
 
 namespace Zcash.Snark
 
-open Halo2 Halo2.Layout Zcash.Circuits.Fixtures.Layout
+open Halo2 Halo2.Layout
 open Equiv (Perm swap)
 
 set_option maxHeartbeats 400000
@@ -964,7 +964,7 @@ def chunkFlatten (nc numCols chunkLen m : ℕ) (width : ℕ → ℕ)
     ⟨⟨(rg.2 : ℕ) / chunkLen, by
         have hlt := rg.2.isLt
         by_contra hge
-        push_neg at hge
+        push Not at hge
         have hmul : nc * chunkLen ≤ (rg.2 : ℕ) / chunkLen * chunkLen :=
           Nat.mul_le_mul_right _ hge
         have hdivle := Nat.div_mul_le_self (rg.2 : ℕ) chunkLen
@@ -972,7 +972,8 @@ def chunkFlatten (nc numCols chunkLen m : ℕ) (width : ℕ → ℕ)
       rg.1,
       ⟨(rg.2 : ℕ) % chunkLen, by
         rw [hw]
-        simp only [Fin.val_mk]
+        change (rg.2 : ℕ) % chunkLen <
+          min chunkLen (numCols - (rg.2 : ℕ) / chunkLen * chunkLen)
         refine lt_min (Nat.mod_lt _ hcl) ?_
         have hlt := rg.2.isLt
         have hdm := Nat.div_add_mod (rg.2 : ℕ) chunkLen
@@ -998,6 +999,35 @@ def chunkFlatten (nc numCols chunkLen m : ℕ) (width : ℕ → ℕ)
     show (g : ℕ) / chunkLen * chunkLen + (g : ℕ) % chunkLen = (g : ℕ)
     rw [Nat.mul_comm]
     exact Nat.div_add_mod (g : ℕ) chunkLen
+
+/-- **The master copy-witness constructor.** Everything reduces to three leaf families
+over the keygen copy list: each copy pair agrees in value (or the shared branch fires,
+via `chunkRowValue_eq_of_mem_copies`), each declared copy's encoded endpoints are
+linked by the replayed list (via the membership lemmas), and the declared endpoints
+read back (resolution and the constants realization). -/
+noncomputable def CopyReplayWitness.ofLinkedPairs
+    {numCols n : ℕ} {place : RegionIndex → ℕ} {env : Environment Fp}
+    {ops : Operations Fp} {Bad : Prop}
+    (copies' : List (FlatCell numCols n × FlatCell numCols n))
+    (encode : CopyEndpoint Fp → FlatCell numCols n)
+    (value : FlatCell numCols n → Fp)
+    (hpairval : ∀ pr ∈ copies', value pr.1 = value pr.2 ∨ Bad)
+    (hlink : ∀ copy ∈ operationDeclaredCopies ops,
+      (replayKeygenPermutation copies').SameCycle
+        (encode copy.1) (encode copy.2))
+    (hread : ∀ copy ∈ operationDeclaredCopies ops,
+      copy.1.eval place env = value (encode copy.1) ∧
+        copy.2.eval place env = value (encode copy.2)) :
+    CopyReplayWitness place env ops (FlatCell numCols n) Bad :=
+  CopyReplayWitness.ofPairCycles encode value
+    (replayKeygenPermutation copies')
+    (by
+      intro pr hpr
+      rw [encodeDeclaredCopies, List.mem_map] at hpr
+      obtain ⟨copy, hcopy, rfl⟩ := hpr
+      exact hlink copy hcopy)
+    (fun l r h => value_eq_or_bad_of_replay_sameCycle value copies' hpairval h)
+    hread
 
 end Layout.Asm
 

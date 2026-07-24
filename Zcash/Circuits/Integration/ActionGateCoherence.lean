@@ -112,34 +112,22 @@ private theorem adviceQueryCount
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G) :
     (orchardActionTopLevelCircuit.toVerifierKey pp urs).adviceQueryLayout.length =
-      (pp.mergeDerived orchardActionTopLevelCircuit).numAdviceQueries := by
-  change
-    ActionPermutationDomain.derivedPinnedCS.adviceQueryLayout.length =
-      orchardActionTopLevelCircuit.pinnedCS.adviceQueryLayout.length
-  exact congrArg List.length
-    ActionPermutationDomain.adviceQueryLayout_eq
+      (pp.mergeDerived orchardActionTopLevelCircuit).numAdviceQueries :=
+  orchardActionTopLevelCircuit.toVerifierKey_adviceQueryCount pp urs
 
 private theorem fixedQueryCount
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G) :
     (orchardActionTopLevelCircuit.toVerifierKey pp urs).fixedQueryLayout.length =
-      (pp.mergeDerived orchardActionTopLevelCircuit).numFixedQueries := by
-  change
-    ActionPermutationDomain.derivedPinnedCS.fixedQueryLayout.length =
-      orchardActionTopLevelCircuit.pinnedCS.fixedQueryLayout.length
-  exact congrArg List.length
-    ActionPermutationDomain.fixedQueryLayout_eq
+      (pp.mergeDerived orchardActionTopLevelCircuit).numFixedQueries :=
+  orchardActionTopLevelCircuit.toVerifierKey_fixedQueryCount pp urs
 
 private theorem instanceQueryCount
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G) :
     (orchardActionTopLevelCircuit.toVerifierKey pp urs).instanceQueryLayout.length =
-      (pp.mergeDerived orchardActionTopLevelCircuit).numInstanceQueries := by
-  change
-    ActionPermutationDomain.derivedPinnedCS.instanceQueryLayout.length =
-      orchardActionTopLevelCircuit.pinnedCS.instanceQueryLayout.length
-  exact congrArg List.length
-    ActionPermutationDomain.instanceQueryLayout_eq
+      (pp.mergeDerived orchardActionTopLevelCircuit).numInstanceQueries :=
+  orchardActionTopLevelCircuit.toVerifierKey_instanceQueryCount pp urs
 
 /--
 The deployed Orchard Action circuit satisfies the complete static gate boundary

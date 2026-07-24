@@ -370,23 +370,6 @@ theorem eval_permutationSetsOfResolver
       rw [eval_comp_rotate, mul_comm]
       simpa only [rotateOmega] using hopenLast
 
-private theorem columnQuery_getD_mem
-    {k : ℕ} {F G : Type*} [Field F]
-    (omega x : F) (commitment : ℕ → G) (mkId : ℕ → CommitmentId)
-    (layout : List (ℕ × ℤ)) (evals : List F) {i : ℕ}
-    (hil : i < layout.length) (hie : i < evals.length) :
-    { point := rotateOmega omega x (layout.getD i (0, 0)).2,
-      commitment := .point (commitment (layout.getD i (0, 0)).1),
-      eval := evals.getD i 0,
-      commId := mkId (layout.getD i (0, 0)).1 } ∈
-        columnQueries (k := k) omega x commitment mkId layout evals := by
-  unfold columnQueries
-  refine List.mem_map.mpr ⟨(layout[i], evals[i]), ?_, ?_⟩
-  · rw [List.mem_iff_getElem]
-    refine ⟨i, by simp [hil, hie], ?_⟩
-    simp
-  · simp [hil, hie]
-
 /-- A coherent permutation value reference is opened at `x`, and therefore the selected resolver
 polynomial evaluates to the proof's claimed column value. -/
 theorem eval_permutationColumnPolynomialOfResolver

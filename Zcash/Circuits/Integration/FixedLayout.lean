@@ -1,4 +1,4 @@
-import Zcash.Circuits.Fixtures.Layout
+import Clean.Halo2.Keygen.Layout
 import Zcash.Circuits.Integration.OperationFixed
 import Zcash.Circuits.Integration.PolynomialEnvironment
 
@@ -15,7 +15,6 @@ products; they are not needed for the explicit fixed requirements extracted here
 namespace Zcash.Snark
 
 open Halo2
-open Zcash.Circuits.Fixtures
 
 set_option maxHeartbeats 20000
 
