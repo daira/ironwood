@@ -27,8 +27,9 @@ Static coherence between a top-level circuit's own keygen data and a verifier ke
 
 No placement, operation stream, selector map, or pinned constraint system is supplied
 by the caller: all four are derived from `top`.  The remaining fields are validity
-certificates for the configure/synthesize pair and field equalities that
-`FormalCircuit.toVerifyingKey` is expected to expose.
+certificates and field equalities that `FormalCircuit.toVerifyingKey` is expected to
+expose. Gate/lookup registration coherence is absent because the circuit-derived
+constraint system closes the raw configure result under synthesis by construction.
 -/
 structure TopLevelGateCoherence
     {shape : Shape} {G : Type*}
@@ -36,7 +37,6 @@ structure TopLevelGateCoherence
     [CircuitType Output]
     (top : TopLevelCircuit Fp ConfigInput Config Output)
     (vk : VerifyingKey shape Fp G) : Prop where
-  keygenCoherent : top.KeygenCoherent
   gatesWellFormed : top.constraintSystem.GatesWellFormed
   gateSelectorsAllocated :
     top.constraintSystem.GateSelectorsAllocated
@@ -155,7 +155,7 @@ noncomputable def polynomialWitness
       enabled constraint := by
   have hgate : enabled.gate ∈ top.constraintSystem.gates :=
     OperationsKeygenCoherent.gate
-      coherence.keygenCoherent henabled
+      top.keygenCoherent henabled
   have hselector :
       enabled.gate.selector.index <
         top.constraintSystem.numSelectors :=

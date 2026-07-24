@@ -1,4 +1,4 @@
-import Clean.Halo2.Formal
+import Clean.Halo2.Keygen.PinnedCs
 
 /-!
 # Closed top-level formal circuits
@@ -95,6 +95,44 @@ theorem OperationsKeygenCoherent.loadTable_cons
   simp [OperationsKeygenCoherent, Operation.KeygenCoherent]
 
 /--
+Closing a constraint system under an operation stream makes configure/synthesis
+registration coherence true by construction.
+-/
+theorem OperationsKeygenCoherent.closeWithOperations
+    [DecidableEq F] (cs : ConstraintSystem F) (operations : Operations F) :
+    OperationsKeygenCoherent (cs.closeWithOperations operations) operations := by
+  rw [OperationsKeygenCoherent, List.forall_iff_forall_mem]
+  intro operation hoperation
+  cases operation with
+  | region name body =>
+      rw [Operation.KeygenCoherent, List.forall_iff_forall_mem]
+      intro regionOperation hregionOperation
+      cases regionOperation with
+      | enableGate gate row =>
+          apply ConstraintSystem.mem_gates_closeWithOperations_of_enabled
+          simp only [Operations.enabledGates, List.mem_flatMap]
+          refine ⟨.region name body, hoperation, ?_⟩
+          simp only [RegionOperations.enabledGates]
+          exact List.mem_filterMap.mpr
+            ⟨.enableGate gate row, hregionOperation, rfl⟩
+      | enableLookup argument selectors row =>
+          apply ConstraintSystem.mem_lookups_closeWithOperations_of_enabled
+          simp only [Operations.enabledLookups, List.mem_flatMap]
+          refine ⟨.region name body, hoperation, ?_⟩
+          simp only [RegionOperations.enabledLookups]
+          exact List.mem_filterMap.mpr
+            ⟨.enableLookup argument selectors row, hregionOperation, rfl⟩
+      | assignAdvice
+      | assignFixed
+      | constrainEqual
+      | constrainConstant
+      | constrainInstance =>
+          trivial
+  | constrainInstance
+  | loadTable =>
+      trivial
+
+/--
 Generic well-formedness facts supplied by successful synthesis/layout rather than by
 the proof's constraint polynomials.
 
@@ -154,10 +192,11 @@ variable
 def config (self : TopLevelCircuit F ConfigInput Config Output) : Config :=
   (self.formalCircuit.configure self.configInput {}).1
 
-/-- The constraint system produced by that same configure run. -/
+/-- The circuit-derived constraint system used by key generation: the configure result
+closed under every gate and lookup enabled by this circuit's synthesis. -/
 def constraintSystem (self : TopLevelCircuit F ConfigInput Config Output) :
     ConstraintSystem F :=
-  (self.formalCircuit.configure self.configInput {}).2
+  self.formalCircuit.toConstraintSystem self.configInput ()
 
 /-- The closed top-level operation stream. -/
 def operations (self : TopLevelCircuit F ConfigInput Config Output)
@@ -171,6 +210,13 @@ activations to the pinned constraint system derived from `configure`.
 def KeygenCoherent
     (self : TopLevelCircuit F ConfigInput Config Output) : Prop :=
   OperationsKeygenCoherent self.constraintSystem (self.operations 0)
+
+/-- Configure/synthesis registration coherence follows from the circuit-derived
+constraint system; it is not a separate top-level circuit obligation. -/
+theorem keygenCoherent
+    (self : TopLevelCircuit F ConfigInput Config Output) :
+    self.KeygenCoherent := by
+  apply OperationsKeygenCoherent.closeWithOperations
 
 /-- The semantic statement extracted from a placed satisfying assignment. -/
 def Statement (self : TopLevelCircuit F ConfigInput Config Output)

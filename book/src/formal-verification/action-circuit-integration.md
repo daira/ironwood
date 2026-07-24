@@ -449,21 +449,19 @@ with `fixed_constraints_iff_requirements` proving exact equivalence to the fixed
 family. `FullCircuitBridge.ofPolynomialWitnesses` assembles these gate/fixed witnesses
 with the existing copy and lookup witnesses.
 
-The remaining gate work is now a generic keygen-coherence boundary. `FormalCircuit`
-deliberately stores `configure` and `synthesize` as separate functions, so its type
-cannot rule out an ill-formed circuit that synthesizes an unregistered gate or lookup.
-`OperationsKeygenCoherent` now states precisely that every emitted gate and lookup
-belongs to its configured constraint system, and `TopLevelCircuit.KeygenCoherent`
-specializes it to a closed circuit's own configure/synthesis pair.
-`OperationsKeygenCoherent.gate` and `.lookup` transport that compact certificate to
-every activation extracted by the operation bridge. Given that predicate, the rest is
-generic: `toPinnedCS` derives placement and selector activations from the same
-operation stream; the selector-compression semantics supplies the nonzero scale at an
-enabled packed root; and the circuit-derived fixed columns supply that root value. No
-Action-specific placement or gate-polynomial witness should remain. The Action
-certificate itself should be assembled compositionally at the opaque subcircuit call
-boundaries; expanding the entire 395-region operation stream into one proof goal would
-defeat those boundaries.
+Configure/synthesis registration coherence is now enforced at the generic keygen
+boundary rather than certified by each concrete circuit. `ConstraintSystem.closeWithOperations`
+preserves the raw configure order and appends the first occurrence of every gate or
+lookup enabled only by synthesis, including the query registrations that affect
+blinding factors. `FormalCircuit.toConstraintSystem` exposes that closed system and
+`toPinnedCS` uses it consistently for domain sizing, selector compression, and
+projection. For faithful circuits such as Action the closure is inert, as checked by
+the existing VK/layout fixtures. `OperationsKeygenCoherent.closeWithOperations` proves
+the former registration premise once by construction, and `TopLevelCircuit.keygenCoherent`
+instantiates it without an Action certificate. `OperationsKeygenCoherent.gate` and
+`.lookup` still provide the convenient transport from an extracted activation to
+membership in the closed CS. The separate question whether registered gate
+expressions satisfy `Gate.WellFormed` is intentionally unchanged.
 
 The scaling algebra is now proved in `GateProjection`.
 `Expression.GatedBy` captures exactly the required gate shape: linear in the gate's
@@ -575,8 +573,8 @@ selector map, pinned projection, and the decoded fixed-polynomial realization.
 `TopLevelGateCoherence.constraints` then supplies the complete gate field of Clean's
 constraint satisfaction. The remaining constructor work is to obtain the record's
 pinned-field equalities from `FormalCircuit.toVerifyingKey`, prove the compact
-configure certificates (`KeygenCoherent`, `GatesWellFormed`, and
-`GateSelectorsAllocated`), and connect the VK's dense fixed rows to
+configure certificates (`GatesWellFormed` and `GateSelectorsAllocated`), and connect
+the VK's dense fixed rows to
 `SelectorActivationsRealized`.
 
 The configure proof for `GateSelectorsAllocated` now has a reusable local interface.
