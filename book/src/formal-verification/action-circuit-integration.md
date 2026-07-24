@@ -445,9 +445,15 @@ The generic keygen layer now derives from the top-level circuit itself:
   operation stream;
 - `domainExponent` runs `minimalK` on the same configured CS and operation stream;
   `usedRows`, `blindingFactors`, `usableRowsAt`, and `FitsAt` state the keygen domain
-  fit entirely in circuit-owned terms;
+fit entirely in circuit-owned terms;
 - `TopLevelCircuit.synthesisWellFormed` proves that a fitting domain supplies the
   table-fit contract required by top-level soundness.
+
+`TopLevelCircuit.fitsAt_domainExponent` closes the remaining generic arithmetic:
+`minimalK` searches exponents `0` through `32` and uses `33` only as its failure
+sentinel, so any derived exponent below `33` satisfies the operation-footprint and
+blinding-row fit inequality. `TopLevelAssignment.synthesisWellFormed` therefore needs
+only this standard supported-domain bound, not a separately reconstructed row proof.
 
 `TopLevelAssignment` is the corresponding verifier-to-Clean assignment shell. It is
 indexed by a bundle proof index and stores only the commitment-ID polynomial resolver;

@@ -571,6 +571,7 @@ assert_axioms FullCircuitBridge.satisfaction_or_bad
 assert_axioms FullCircuitBridge.constraints_or_bad
 assert_axioms Zcash.Circuits.SynthesisWellFormed.of_usedRows
 assert_axioms Zcash.Circuits.TopLevelCircuit.usedRows_le_usableRowsAt
+assert_axioms Zcash.Circuits.TopLevelCircuit.fitsAt_domainExponent
 assert_axioms Zcash.Circuits.TopLevelCircuit.synthesisWellFormed
 assert_axioms FullCircuitSatisfaction.topLevelSoundness
 assert_axioms FullCircuitBridge.topLevelSoundness_or_bad

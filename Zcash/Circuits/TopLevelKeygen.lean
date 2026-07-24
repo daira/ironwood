@@ -115,6 +115,34 @@ def usableRowsAt (self : TopLevelCircuit F ConfigInput Config Output) (k : ℕ) 
 def FitsAt (self : TopLevelCircuit F ConfigInput Config Output) (k : ℕ) : Prop :=
   self.usedRows + self.blindingFactors + 1 ≤ 2 ^ k
 
+/--
+The bounded `minimalK` search supplies the keygen fit inequality whenever it returns
+a supported Pasta domain exponent rather than its sentinel value `33`.
+-/
+theorem fitsAt_domainExponent
+    (self : TopLevelCircuit F ConfigInput Config Output)
+    (hbound : self.domainExponent < 33) :
+    self.FitsAt self.domainExponent := by
+  let need :=
+    max (self.usedRows + self.blindingFactors + 1)
+      self.constraintSystem.minimumRows
+  have findFits (need : ℕ)
+      (hbound :
+        ((List.range 33).find? (fun k => need ≤ 2 ^ k)).getD 33 < 33) :
+      need ≤ 2 ^
+        ((List.range 33).find? (fun k => need ≤ 2 ^ k)).getD 33 := by
+    generalize hfind :
+      (List.range 33).find? (fun k => need ≤ 2 ^ k) = result at hbound ⊢
+    cases result with
+    | none => simp at hbound
+    | some k =>
+        simpa using List.find?_some hfind
+  have hk : need ≤ 2 ^ self.domainExponent := by
+    apply findFits need
+    simpa [domainExponent, Halo2.minimalK, need] using hbound
+  unfold FitsAt
+  exact (Nat.le_max_left _ _).trans hk
+
 theorem usedRows_le_usableRowsAt
     (self : TopLevelCircuit F ConfigInput Config Output) (k : ℕ)
     (hfit : self.FitsAt k) :
