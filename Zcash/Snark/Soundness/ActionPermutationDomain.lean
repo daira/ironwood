@@ -218,6 +218,15 @@ theorem blindingFactors_lt (pp : Keygen.ProofParams) (urs : URS G) :
     2 ^ orchardActionTopLevelCircuit.domainExponent
   exact TopLevelAssignment.blindingFactors_lt_domainSize domainExponent_lt
 
+/-- The active permutation prefix ends at the last usable Action row. -/
+abbrev activeRows (pp : Keygen.ProofParams) (urs : URS G) : ℕ :=
+  (actionVk pp urs).n - (actionVk pp urs).blindingFactors - 1
+
+theorem activeRows_le (pp : Keygen.ProofParams) (urs : URS G) :
+    activeRows pp urs ≤ (actionVk pp urs).n := by
+  unfold activeRows
+  omega
+
 /-- Canonical selectors and the derived usable-row count form the complete
 generic permutation-domain record. In particular its `lastRotation` field is
 the verifier's `omega^(-(blindingFactors + 1))` rotation. -/
@@ -336,13 +345,12 @@ noncomputable def cycleOfKeygenColumns
     (pp : Keygen.ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
     (p : Fin (actionShape pp).numProofs)
-    {activeRows : ℕ}
-    (hactive : activeRows ≤ (actionVk pp urs).n)
     (fullSigma : Equiv.Perm
       (ResolverPermutationCell (actionVk pp urs) poly p
         (actionVk pp urs).n))
     (sigma : Equiv.Perm
-      (ResolverPermutationCell (actionVk pp urs) poly p activeRows))
+      (ResolverPermutationCell (actionVk pp urs) poly p
+        (activeRows pp urs)))
     (hcolumns : ∀
       (chunk : Fin (actionShape pp).numPermutationSets)
       (column : Fin
@@ -353,14 +361,17 @@ noncomputable def cycleOfKeygenColumns
           (actionVk pp urs).omega (actionVk pp urs).delta
           (actionVk pp urs).chunkLen fullSigma chunk column)
     (hrestrict : ∀ c :
-        ResolverPermutationCell (actionVk pp urs) poly p activeRows,
-      widenPermutationChunkCell hactive (sigma c) =
-        fullSigma (widenPermutationChunkCell hactive c)) :
-    ResolverPermutationCycle (actionVk pp urs) poly p activeRows :=
+        ResolverPermutationCell (actionVk pp urs) poly p
+          (activeRows pp urs),
+      widenPermutationChunkCell (activeRows_le pp urs) (sigma c) =
+        fullSigma
+          (widenPermutationChunkCell (activeRows_le pp urs) c)) :
+    ResolverPermutationCycle (actionVk pp urs) poly p
+      (activeRows pp urs) :=
   ResolverPermutationCycle.ofKeygenColumns
-    (actionVk pp urs) poly p hactive fullSigma sigma
+    (actionVk pp urs) poly p (activeRows_le pp urs) fullSigma sigma
       (rowsInjective pp urs) hcolumns hrestrict
-      (namesInjective pp urs poly p hactive)
+      (namesInjective pp urs poly p (activeRows_le pp urs))
 
 assert_no_sorry permutationChunks_eq
 assert_no_sorry routingCoherent_of_derived
