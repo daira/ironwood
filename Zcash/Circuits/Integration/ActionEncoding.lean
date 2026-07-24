@@ -2,6 +2,7 @@ import Zcash.Circuits.Action.Statement
 import Zcash.Snark.Soundness.ActionStatement
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 import Zcash.Snark.Soundness.TopLevelCircuit
+import Zcash.Snark.Soundness.TopLevelGates
 import Zcash.Snark.Keygen.Pipeline
 
 /-!
@@ -96,24 +97,56 @@ theorem actionBundleStatement_of_canonicalRelation
           (Zcash.Snark.omegaOf
             orchardActionTopLevelCircuit.domainExponent)
           (inputs proofIndex).rows)
-    (reconstruct : ∀ proofIndex,
-      ConstraintSatisfaction relation.model
-          vk.n →
-        Halo2.Constraints orchardActionTopLevelCircuit.placement
-          (TopLevelAssignment.environment
-            ({ polynomial := relation.polynomial } :
-              TopLevelAssignment orchardActionTopLevelCircuit
-                (pp.mergeDerived orchardActionTopLevelCircuit).numProofs
-                proofIndex))
-          (orchardActionTopLevelCircuit.operations 0) 0) :
+    (gateCoherence :
+      TopLevelGateCoherence
+        orchardActionTopLevelCircuit pp urs)
+    (selectors : ∀ proofIndex,
+      SelectorActivationsRealized
+        orchardActionTopLevelCircuit.selectorMap
+        orchardActionTopLevelCircuit.selectorActivations
+        (TopLevelAssignment.environment
+          ({ polynomial := relation.polynomial } :
+            TopLevelAssignment orchardActionTopLevelCircuit
+              (pp.mergeDerived orchardActionTopLevelCircuit).numProofs
+              proofIndex)))
+    (copies : ∀ proofIndex,
+      CircuitConstraintFamily.constraints .copy
+        orchardActionTopLevelCircuit.placement
+        (TopLevelAssignment.environment
+          ({ polynomial := relation.polynomial } :
+            TopLevelAssignment orchardActionTopLevelCircuit
+              (pp.mergeDerived orchardActionTopLevelCircuit).numProofs
+              proofIndex))
+        (orchardActionTopLevelCircuit.operations 0) 0)
+    (lookups : ∀ proofIndex,
+      CircuitConstraintFamily.constraints .lookup
+        orchardActionTopLevelCircuit.placement
+        (TopLevelAssignment.environment
+          ({ polynomial := relation.polynomial } :
+            TopLevelAssignment orchardActionTopLevelCircuit
+              (pp.mergeDerived orchardActionTopLevelCircuit).numProofs
+              proofIndex))
+        (orchardActionTopLevelCircuit.operations 0) 0)
+    (fixed : ∀ proofIndex,
+      CircuitConstraintFamily.constraints .fixed
+        orchardActionTopLevelCircuit.placement
+        (TopLevelAssignment.environment
+          ({ polynomial := relation.polynomial } :
+            TopLevelAssignment orchardActionTopLevelCircuit
+              (pp.mergeDerived orchardActionTopLevelCircuit).numProofs
+              proofIndex))
+        (orchardActionTopLevelCircuit.operations 0) 0) :
     BundleStatement Specs.Sinsemilla.orchardGenerators orchardBases inputs := by
+  subst vk
   have hn :
-      vk.n ≠ 0 := by
-    rw [hvk]
+      (orchardActionTopLevelCircuit.toVerifierKey pp urs).n ≠ 0 := by
     change 2 ^ orchardActionTopLevelCircuit.domainExponent ≠ 0
     positivity
   have hsatisfaction :=
     relation.constraintSatisfaction hn hgoodY
+  have hroot :=
+    TopLevelAssignment.domainRoot
+      (top := orchardActionTopLevelCircuit) hbound
   intro proofIndex
   let assignment :
       TopLevelAssignment orchardActionTopLevelCircuit
@@ -124,7 +157,26 @@ theorem actionBundleStatement_of_canonicalRelation
       Halo2.Constraints orchardActionTopLevelCircuit.placement
         assignment.environment
         (orchardActionTopLevelCircuit.operations 0) 0 := by
-    exact reconstruct proofIndex hsatisfaction
+    apply FullCircuitSatisfaction.constraints
+    refine
+      { gates := ?_
+        copies := copies proofIndex
+        lookups := lookups proofIndex
+        fixed := fixed proofIndex }
+    have hdomain : ∀ row : ℕ,
+        ((orchardActionTopLevelCircuit.toVerifierKey pp urs).omega ^ row) ^
+          (orchardActionTopLevelCircuit.toVerifierKey pp urs).n = 1 := by
+      intro row
+      change
+        (Zcash.Snark.omegaOf
+          orchardActionTopLevelCircuit.domainExponent ^ row) ^
+            (2 ^ orchardActionTopLevelCircuit.domainExponent) = 1
+      rw [← pow_mul, Nat.mul_comm, pow_mul, hroot, one_pow]
+    have hgates :=
+      gateCoherence.canonicalConstraints ch relation.polynomial
+        hblinding proofIndex hsatisfaction hdomain
+        (selectors proofIndex)
+    simpa [TopLevelAssignment.environment, resolverEnvironment] using hgates
   have htop :
       orchardActionTopLevelCircuit.Statement 0
         assignment.placedEnvironment := by

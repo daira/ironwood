@@ -3,6 +3,7 @@ import Zcash.Snark.Core.Domain
 import Zcash.Snark.Soundness.ResolverGates
 import Zcash.Snark.Soundness.ResolverQueryEnvironment
 import Zcash.Snark.Soundness.SelectorCoherence
+import Zcash.Snark.Soundness.CanonicalConstraintModel
 
 /-!
 # Generic top-level gate bridge
@@ -275,6 +276,55 @@ theorem constraints
   exact coherence.polynomialWitness
     ch poly sets chunks l0 lLast lBlind proofIndex usableRows
     hfixed enabled henabled constraint hconstraint
+
+/--
+Specialize the top-level gate bridge to the canonical resolver model.
+
+This removes the last opportunity for a gate caller to supply unrelated permutation
+families or Lagrange-selector polynomials: they are the ones derived from the same
+resolver and circuit-owned verification key.
+-/
+theorem canonicalConstraints
+    (coherence : TopLevelGateCoherence top pp urs)
+    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (hblinding :
+      (top.toVerifierKey pp urs).blindingFactors <
+        (top.toVerifierKey pp urs).n)
+    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    (satisfaction :
+      ConstraintSatisfaction
+        (canonicalConstraintModelOfPermutationResolver
+          (top.toVerifierKey pp urs) ch poly hblinding)
+        (top.toVerifierKey pp urs).n)
+    (domain : ∀ row : ℕ,
+      ((top.toVerifierKey pp urs).omega ^ row) ^
+        (top.toVerifierKey pp urs).n = 1)
+    (hfixed : SelectorActivationsRealized top.selectorMap
+      top.selectorActivations
+      (resolverEnvironment
+        (top.toVerifierKey pp urs) poly proofIndex
+        (top.usableRowsAt top.domainExponent))) :
+    CircuitConstraintFamily.constraints .gate top.placement
+      (resolverEnvironment
+        (top.toVerifierKey pp urs) poly proofIndex
+        (top.usableRowsAt top.domainExponent))
+      (top.operations 0) 0 := by
+  let selectors :=
+    canonicalLagrangePolynomials
+      (top.toVerifierKey pp urs).omega hblinding
+  apply coherence.constraints ch poly
+    (permutationSetsOfResolver
+      (top.toVerifierKey pp urs) poly)
+    (permutationChunksOfResolver
+      (top.toVerifierKey pp urs) poly)
+    selectors.1 selectors.2.1 selectors.2.2 proofIndex
+    (top.usableRowsAt top.domainExponent)
+    (top.toVerifierKey pp urs).n
+  · simpa [canonicalConstraintModelOfPermutationResolver,
+      constraintModelOfPermutationResolver, selectors] using satisfaction
+  · exact domain
+  · exact hfixed
 
 end TopLevelGateCoherence
 
