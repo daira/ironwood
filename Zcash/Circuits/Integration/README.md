@@ -10,6 +10,8 @@ interfaces:
 * an ironwood `VerifyingKey` and pinned constraint view;
 * reconstruction of Clean operation satisfaction from ironwood polynomial
   satisfaction;
+* semantic projection of configured lookup tuples into the verifier's
+  query-index expression language;
 * a final circuit statement expressed without exposing Clean implementation details
   to verifier or soundness callers.
 
