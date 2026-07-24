@@ -367,8 +367,12 @@ weight, and
 fixed row-selector polynomial evaluates to the verifier's deployed
 `lagrangeBasisValue` formula at any rotation naming that row. The blinding
 selector is separately identified as the sum of all row selectors after the
-last usable row. What remains here is the generic finite reindexing that matches
-those rows to the verifier's negative blinding rotations.
+last usable row. `blindingDomainRowEquiv` performs the generic finite reindexing
+between those rows and the verifier's negative blinding rotations, and
+`canonicalLagrangePolynomials_eval` packages the result: away from the
+evaluation domain, evaluating the fixed canonical polynomial triple is exactly
+the deployed `lagrangeBasis` computation. No Action-specific selector
+provenance remains.
 
 After that, translate the endpoints to the exact relations that Clean's
 `Halo2.Constraints` requires: declared `constrainEqual`/`constrainInstance` copies,
