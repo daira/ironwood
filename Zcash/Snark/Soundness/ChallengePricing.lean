@@ -3,6 +3,8 @@ import Zcash.Snark.Soundness.GoodChallenge
 import Zcash.Snark.Soundness.FoldSplit
 import Zcash.Snark.Soundness.GrandProductBridge
 import Zcash.Snark.Soundness.LookupAssembly
+import Zcash.Snark.Soundness.LookupSemantics
+import Zcash.Snark.Soundness.OperationLookups
 
 /-!
 # Pricing the new challenge surfaces
@@ -33,7 +35,7 @@ the `hfold`/`hgood` surfaces in `Soundness.VestaBudget` and not re-derived here.
 
 namespace Zcash.Snark
 
-open Polynomial Finset
+open Halo2 Polynomial Finset
 open scoped ENNReal
 
 /-- **The shared union bound.** Finitely many root-set events, each of degree at most `d`, together
@@ -307,6 +309,275 @@ theorem lookup_beta_failure_measure_le (a s inp tbl : Multiset Fp) :
   · simpa [hda] using natDegree_coeff_lookupProdDiff_le a s inp tbl j
   · simp [hds, hda]
 
+/-! ## Resolver-backed lookup challenge families -/
+
+/-- The complete `γ` exclusion for one deployed lookup: the product-difference roots together
+with the table-column zero factors used to eliminate the residual running-product branch. -/
+noncomputable def resolverLookupGammaBadSet
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) : Finset Fp :=
+  szBadSet ((resolverLookupProductDifference vk ch poly p l u).map
+    (evalRingHom ch.beta)) ∪
+  lookupColumnZeroBadSet vk.omega
+    (lookupTablePolyOfResolver vk ch poly p l) (u + 1)
+
+/-- The complete `β` exclusion for one deployed lookup: every potentially nonzero coefficient of
+the product difference together with the input-column zero factors. There are at most `u + 2`
+coefficients because the `γ` degree is at most `u + 1`. -/
+noncomputable def resolverLookupBetaBadSet
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) : Finset Fp :=
+  ((Finset.range (u + 2)).biUnion fun j =>
+    szBadSet ((resolverLookupProductDifference vk ch poly p l u).coeff j)) ∪
+  lookupColumnZeroBadSet vk.omega
+    (lookupInputPolyOfResolver vk ch poly p l) (u + 1)
+
+/-- Avoiding the two finite bad sets supplies exactly the four challenge facts consumed by one
+resolver-backed lookup endpoint. -/
+theorem ResolverLookupGoodChallenges.ofBadSets
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ)
+    (hgamma : ch.gamma ∉ resolverLookupGammaBadSet vk ch poly p l u)
+    (hbeta : ch.beta ∉ resolverLookupBetaBadSet vk ch poly p l u) :
+    ResolverLookupGoodChallenges vk ch poly p l u where
+  gamma hmem := hgamma (Finset.mem_union_left _ hmem)
+  beta j := by
+    by_cases hj : j < u + 2
+    · intro hmem
+      apply hbeta
+      rw [resolverLookupBetaBadSet]
+      exact Finset.mem_union_left _ (Finset.mem_biUnion.mpr
+        ⟨j, Finset.mem_range.mpr hj, hmem⟩)
+    · have hzero :
+          (resolverLookupProductDifference vk ch poly p l u).coeff j = 0 := by
+        apply lookupProdDiff_coeff_eq_zero_of_le
+        simpa [resolverLookupProductDifference] using (show u + 1 < j by omega)
+      simp [hzero, szBadSet]
+  inputNonzero hmem := hbeta (by
+    rw [resolverLookupBetaBadSet]
+    exact Finset.mem_union_right _ hmem)
+  tableNonzero hmem := hgamma (by
+    rw [resolverLookupGammaBadSet]
+    exact Finset.mem_union_right _ hmem)
+
+/-- One deployed lookup's full `γ` exclusion costs at most two values per participating row: one
+for multiset recovery and one for the table-column zero factor. -/
+theorem resolverLookupGammaBadSet_card_le
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) :
+    (resolverLookupGammaBadSet vk ch poly p l u).card ≤ 2 * (u + 1) := by
+  have hroot :
+      (szBadSet ((resolverLookupProductDifference vk ch poly p l u).map
+        (evalRingHom ch.beta))).card ≤ u + 1 := by
+    exact le_trans (szBadSet_card_le _)
+      (le_trans Polynomial.natDegree_map_le (by
+        simpa [resolverLookupProductDifference] using
+          natDegree_lookupProdDiff_le
+            (Finset.univ.val.map
+              (lookupColumnRows vk.omega (poly (.lookupPermInput p l)) (u + 1)))
+            (Finset.univ.val.map
+              (lookupColumnRows vk.omega (poly (.lookupPermTable p l)) (u + 1)))
+            (Finset.univ.val.map
+              (lookupColumnRows vk.omega
+                (lookupInputPolyOfResolver vk ch poly p l) (u + 1)))
+            (Finset.univ.val.map
+              (lookupColumnRows vk.omega
+                (lookupTablePolyOfResolver vk ch poly p l) (u + 1)))))
+  have hzero :
+      (lookupColumnZeroBadSet vk.omega
+        (lookupTablePolyOfResolver vk ch poly p l) (u + 1)).card ≤ u + 1 := by
+    rw [lookupColumnZeroBadSet]
+    simpa using additiveZeroBadSet_card_le
+      (lookupColumnRows vk.omega
+        (lookupTablePolyOfResolver vk ch poly p l) (u + 1))
+  rw [resolverLookupGammaBadSet]
+  calc
+    (szBadSet ((resolverLookupProductDifference vk ch poly p l u).map
+          (evalRingHom ch.beta)) ∪
+        lookupColumnZeroBadSet vk.omega
+          (lookupTablePolyOfResolver vk ch poly p l) (u + 1)).card
+      ≤ (szBadSet ((resolverLookupProductDifference vk ch poly p l u).map
+            (evalRingHom ch.beta))).card +
+          (lookupColumnZeroBadSet vk.omega
+            (lookupTablePolyOfResolver vk ch poly p l) (u + 1)).card := by
+        exact Finset.card_union_le _ _
+    _ ≤ (u + 1) + (u + 1) := Nat.add_le_add hroot hzero
+    _ = 2 * (u + 1) := by omega
+
+/-- Uniform `γ` hits one deployed lookup's complete bad set with probability at most two values
+per participating row over the scalar-field size. -/
+theorem uniformChallenge_resolverLookupGammaBadSet
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) :
+    uniformChallenge.toOuterMeasure
+        (resolverLookupGammaBadSet vk ch poly p l u)
+      ≤ (2 * (u + 1) : ℕ) / (Fintype.card Fp : ℝ≥0∞) := by
+  rw [uniformChallenge_badSet]
+  gcongr
+  exact_mod_cast resolverLookupGammaBadSet_card_le vk ch poly p l u
+
+/-- One deployed lookup's full `β` exclusion costs at most
+`(u + 2)·(u + 1) + (u + 1) = (u + 3)·(u + 1)` challenge values. -/
+theorem resolverLookupBetaBadSet_card_le
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) :
+    (resolverLookupBetaBadSet vk ch poly p l u).card ≤
+      (u + 2) * (u + 1) + (u + 1) := by
+  have hcoeff : ∀ j,
+      (szBadSet ((resolverLookupProductDifference vk ch poly p l u).coeff j)).card
+        ≤ u + 1 := by
+    intro j
+    exact le_trans (szBadSet_card_le _) (by
+      simpa [resolverLookupProductDifference] using
+        natDegree_coeff_lookupProdDiff_le
+          (Finset.univ.val.map
+            (lookupColumnRows vk.omega (poly (.lookupPermInput p l)) (u + 1)))
+          (Finset.univ.val.map
+            (lookupColumnRows vk.omega (poly (.lookupPermTable p l)) (u + 1)))
+          (Finset.univ.val.map
+            (lookupColumnRows vk.omega
+              (lookupInputPolyOfResolver vk ch poly p l) (u + 1)))
+          (Finset.univ.val.map
+            (lookupColumnRows vk.omega
+              (lookupTablePolyOfResolver vk ch poly p l) (u + 1))) j)
+  have hzero :
+      (lookupColumnZeroBadSet vk.omega
+        (lookupInputPolyOfResolver vk ch poly p l) (u + 1)).card ≤ u + 1 := by
+    rw [lookupColumnZeroBadSet]
+    simpa using additiveZeroBadSet_card_le
+      (lookupColumnRows vk.omega
+        (lookupInputPolyOfResolver vk ch poly p l) (u + 1))
+  rw [resolverLookupBetaBadSet]
+  calc
+    (((Finset.range (u + 2)).biUnion fun j =>
+          szBadSet ((resolverLookupProductDifference vk ch poly p l u).coeff j)) ∪
+        lookupColumnZeroBadSet vk.omega
+          (lookupInputPolyOfResolver vk ch poly p l) (u + 1)).card
+      ≤ ((Finset.range (u + 2)).biUnion fun j =>
+          szBadSet ((resolverLookupProductDifference vk ch poly p l u).coeff j)).card +
+        (lookupColumnZeroBadSet vk.omega
+          (lookupInputPolyOfResolver vk ch poly p l) (u + 1)).card := by
+        exact Finset.card_union_le _ _
+    _ ≤ (∑ j ∈ Finset.range (u + 2),
+          (szBadSet ((resolverLookupProductDifference vk ch poly p l u).coeff j)).card) +
+        (u + 1) := Nat.add_le_add Finset.card_biUnion_le hzero
+    _ ≤ (∑ _j ∈ Finset.range (u + 2), (u + 1)) + (u + 1) := by
+      exact Nat.add_le_add (Finset.sum_le_sum fun j _ => hcoeff j) (le_refl _)
+    _ = (u + 2) * (u + 1) + (u + 1) := by simp
+
+/-- Uniform `β` hits one deployed lookup's complete coefficient/zero-factor bad set with the
+corresponding root-count probability. -/
+theorem uniformChallenge_resolverLookupBetaBadSet
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) :
+    uniformChallenge.toOuterMeasure
+        (resolverLookupBetaBadSet vk ch poly p l u)
+      ≤ ((u + 2) * (u + 1) + (u + 1) : ℕ) /
+          (Fintype.card Fp : ℝ≥0∞) := by
+  rw [uniformChallenge_badSet]
+  gcongr
+  exact_mod_cast resolverLookupBetaBadSet_card_le vk ch poly p l u
+
+/-- The union of all lookup `γ` exclusions in one proof bundle. The challenge is shared by every
+proof and lookup argument, so this is the event the transcript squeeze must avoid. -/
+noncomputable def allResolverLookupGammaBadSet
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp) (u : ℕ) : Finset Fp :=
+  (Finset.univ : Finset (Fin shape.numProofs × Fin shape.numLookups)).biUnion fun q =>
+    resolverLookupGammaBadSet vk ch poly q.1 q.2 u
+
+/-- The union of all lookup `β` exclusions in one proof bundle. -/
+noncomputable def allResolverLookupBetaBadSet
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp) (u : ℕ) : Finset Fp :=
+  (Finset.univ : Finset (Fin shape.numProofs × Fin shape.numLookups)).biUnion fun q =>
+    resolverLookupBetaBadSet vk ch poly q.1 q.2 u
+
+/-- Avoiding the bundle-wide lookup bad sets supplies the good-challenge record for every proof
+and every deployed lookup argument. -/
+theorem allResolverLookupGoodChallenges_of_not_mem
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp) (u : ℕ)
+    (hgamma : ch.gamma ∉ allResolverLookupGammaBadSet vk ch poly u)
+    (hbeta : ch.beta ∉ allResolverLookupBetaBadSet vk ch poly u) :
+    ∀ (p : Fin shape.numProofs) (l : Fin shape.numLookups),
+      ResolverLookupGoodChallenges vk ch poly p l u := by
+  intro p l
+  apply ResolverLookupGoodChallenges.ofBadSets
+  · intro hmem
+    apply hgamma
+    exact Finset.mem_biUnion.mpr ⟨(p, l), Finset.mem_univ _, hmem⟩
+  · intro hmem
+    apply hbeta
+    exact Finset.mem_biUnion.mpr ⟨(p, l), Finset.mem_univ _, hmem⟩
+
+/-- The bundle-wide lookup `γ` surface is the number of proof/lookup pairs times the per-argument
+two-values-per-row budget. -/
+theorem uniformChallenge_allResolverLookupGammaBadSet
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp) (u : ℕ) :
+    uniformChallenge.toOuterMeasure
+        (allResolverLookupGammaBadSet vk ch poly u)
+      ≤ (shape.numProofs * shape.numLookups * (2 * (u + 1)) : ℕ) /
+          (Fintype.card Fp : ℝ≥0∞) := by
+  rw [uniformChallenge_badSet]
+  gcongr
+  rw [allResolverLookupGammaBadSet]
+  calc
+    ((Finset.univ : Finset (Fin shape.numProofs × Fin shape.numLookups)).biUnion
+        fun q => resolverLookupGammaBadSet vk ch poly q.1 q.2 u).card
+      ≤ ∑ q ∈ (Finset.univ : Finset (Fin shape.numProofs × Fin shape.numLookups)),
+          (resolverLookupGammaBadSet vk ch poly q.1 q.2 u).card :=
+        Finset.card_biUnion_le
+    _ ≤ ∑ _q ∈ (Finset.univ : Finset (Fin shape.numProofs × Fin shape.numLookups)),
+          2 * (u + 1) := Finset.sum_le_sum fun q _ =>
+            resolverLookupGammaBadSet_card_le vk ch poly q.1 q.2 u
+    _ = shape.numProofs * shape.numLookups * (2 * (u + 1)) := by simp
+
+/-- The bundle-wide lookup `β` surface is the number of proof/lookup pairs times the
+coefficient-and-zero-factor budget for one argument. -/
+theorem uniformChallenge_allResolverLookupBetaBadSet
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp) (u : ℕ) :
+    uniformChallenge.toOuterMeasure
+        (allResolverLookupBetaBadSet vk ch poly u)
+      ≤ (shape.numProofs * shape.numLookups *
+          ((u + 2) * (u + 1) + (u + 1)) : ℕ) /
+          (Fintype.card Fp : ℝ≥0∞) := by
+  rw [uniformChallenge_badSet]
+  gcongr
+  rw [allResolverLookupBetaBadSet]
+  calc
+    ((Finset.univ : Finset (Fin shape.numProofs × Fin shape.numLookups)).biUnion
+        fun q => resolverLookupBetaBadSet vk ch poly q.1 q.2 u).card
+      ≤ ∑ q ∈ (Finset.univ : Finset (Fin shape.numProofs × Fin shape.numLookups)),
+          (resolverLookupBetaBadSet vk ch poly q.1 q.2 u).card :=
+        Finset.card_biUnion_le
+    _ ≤ ∑ _q ∈ (Finset.univ : Finset (Fin shape.numProofs × Fin shape.numLookups)),
+          ((u + 2) * (u + 1) + (u + 1)) := Finset.sum_le_sum fun q _ =>
+            resolverLookupBetaBadSet_card_le vk ch poly q.1 q.2 u
+    _ = shape.numProofs * shape.numLookups *
+        ((u + 2) * (u + 1) + (u + 1)) := by simp
+
 /-- **A vanishing-factor escape priced.** The event that some listed factor `v + challenge` vanishes
 is the root set of the product `∏ (X + v)`, so it costs at most the factor count over `p`. -/
 theorem escape_measure_le (vs : Multiset Fp) :
@@ -354,5 +625,65 @@ theorem theta_failure_measure_le {N r : ℕ} (inputT tableT : ℕ → List Fp)
       · exact le_trans (le_of_lt (natDegree_foldPoly_lt h))
           ((hlen q.2 (mem_range.mp h2)).2)
   · simp [mul_assoc]
+
+/-! The operation-level lookup bridge has one `thetaBadSet` per enabled lookup activation (and per
+proof assignment). The following family union is the exact finite event a shared `θ` squeeze must
+avoid; unlike `theta_failure_measure_le`, it retains the Clean placement and environment needed by
+the eventual bridge constructor. -/
+
+/-- The union of the tuple-compression collision sets for an arbitrary finite family of enabled
+lookup activations. -/
+noncomputable def enabledLookupThetaBadSetFamily
+    {ι : Type*} [Fintype ι]
+    (place : ι → RegionIndex → ℕ) (env : ι → Environment Fp)
+    (lookup : ι → EnabledLookup Fp) : Finset Fp :=
+  (Finset.univ : Finset ι).biUnion fun i =>
+    (lookup i).thetaBadSet (place i) (env i)
+
+/-- Avoiding the family union supplies the `θ` exclusion for every enabled activation. -/
+theorem not_mem_enabledLookupThetaBadSetFamily_iff
+    {ι : Type*} [Fintype ι]
+    (place : ι → RegionIndex → ℕ) (env : ι → Environment Fp)
+    (lookup : ι → EnabledLookup Fp) (theta : Fp) :
+    theta ∉ enabledLookupThetaBadSetFamily place env lookup ↔
+      ∀ i, theta ∉ (lookup i).thetaBadSet (place i) (env i) := by
+  classical
+  simp [enabledLookupThetaBadSetFamily]
+
+/-- The family collision set costs the sum of `usableRows × tupleArity` over its activations. -/
+theorem enabledLookupThetaBadSetFamily_card_le
+    {ι : Type*} [Fintype ι]
+    (place : ι → RegionIndex → ℕ) (env : ι → Environment Fp)
+    (lookup : ι → EnabledLookup Fp)
+    (hlength : ∀ i row, row < (env i).usableRows →
+      ((lookup i).inputValues (place i) (env i)).length =
+        ((lookup i).tableValues (env i) row).length) :
+    (enabledLookupThetaBadSetFamily place env lookup).card ≤
+      ∑ i : ι, (env i).usableRows *
+        ((lookup i).inputValues (place i) (env i)).length := by
+  classical
+  rw [enabledLookupThetaBadSetFamily]
+  refine le_trans Finset.card_biUnion_le ?_
+  exact Finset.sum_le_sum fun i _ =>
+    (lookup i).thetaBadSet_card_le (place i) (env i)
+      (fun row hrow => hlength i row hrow)
+
+/-- Uniform `θ` hits some activation in a finite enabled-lookup family with probability at most
+the sum of the individual row-by-arity budgets. -/
+theorem uniformChallenge_enabledLookupThetaBadSetFamily
+    {ι : Type*} [Fintype ι]
+    (place : ι → RegionIndex → ℕ) (env : ι → Environment Fp)
+    (lookup : ι → EnabledLookup Fp)
+    (hlength : ∀ i row, row < (env i).usableRows →
+      ((lookup i).inputValues (place i) (env i)).length =
+        ((lookup i).tableValues (env i) row).length) :
+    uniformChallenge.toOuterMeasure
+        (enabledLookupThetaBadSetFamily place env lookup)
+      ≤ (∑ i : ι, (env i).usableRows *
+          ((lookup i).inputValues (place i) (env i)).length : ℕ) /
+        (Fintype.card Fp : ℝ≥0∞) := by
+  rw [uniformChallenge_badSet]
+  gcongr
+  exact_mod_cast enabledLookupThetaBadSetFamily_card_le place env lookup hlength
 
 end Zcash.Snark

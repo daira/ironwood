@@ -350,8 +350,14 @@ not Action semantic assumptions. `lookup_gamma_failure_measure_le` and
 `lookup_beta_failure_measure_le` now price the two lookup-product root surfaces
 generically from their column lengths, while
 `uniformChallenge_enabledLookupThetaBadSet` prices one enabled tuple-compression
-surface. What remains on the challenge side is the finite union over the deployed
-lookup family and its placement at the corresponding transcript squeezes.
+surface. The family aggregation is complete as well:
+`allResolverLookupBetaBadSet` and `allResolverLookupGammaBadSet` combine every
+proof/lookup pair and construct all of their `ResolverLookupGoodChallenges` records
+from two shared exclusions; `enabledLookupThetaBadSetFamily` does the analogous job
+for an arbitrary finite family of placed Clean activations. Their measure bounds
+multiply or sum the individual row/arity budgets explicitly. Only placement of these
+already-priced events at the corresponding transcript squeezes remains in the
+probability layer.
 `PermutationInstantiation` now supplies the analogous permutation layer. It maps
 running products through `permProduct`, maps each chunk's value-side `ColumnRef`
 through the corresponding VK query-layout entry, maps its σ-side through
@@ -982,7 +988,7 @@ append-only merge flow.
 
 | Marker | Work package | Current state | Delivers / unblocks |
 |---|---|---|---|
-| **[ME] Lookup** | Finish the Action instance of `ConstraintSystemLookupsWellFormed`; derive activation-row fit where the generic floor-planner contract permits it; aggregate the per-lookup `β`/`γ`/`θ` exclusions at their transcript squeezes. | The generic route, projection, deployed-witness family, selector-level `InputSelectorValuesRealized` interface, and individual lookup challenge prices are complete. Exact packed selector values will be supplied by the fixed/VK stream. | The lookup field of `FullCircuitBridge` for every Action proof index. |
+| **[ME] Lookup** | Finish the Action instance of `ConstraintSystemLookupsWellFormed` and derive activation-row fit where the generic floor-planner contract permits it. | The generic route, projection, deployed-witness family, selector-level `InputSelectorValuesRealized` interface, individual challenge prices, and bundle-wide `β`/`γ`/`θ` bad-set aggregation are complete. Exact packed selector values will be supplied by the fixed/VK stream; transcript coupling belongs to the probability layer. | The lookup field of `FullCircuitBridge` for every Action proof index. |
 | **[SEPARATE: copy]** | Specialize `CopyReplayWitness.ofPairValues` to Action: encode each Clean copy endpoint as its keygen assembly cell and identify the two resolver-environment reads. | Generic replay correctness, cycle construction, σ rows, and witness constructors are complete. | The copy field of `FullCircuitBridge`. |
 | **[SEPARATE: fixed/VK]** | Instantiate `TopLevelFixedCoherence` from the circuit-derived dense fixed rows, sparse-to-dense scatter law, fixed-query coverage, and fixed commitments. | Generic fixed/table and selector-realization theorems are complete. | The fixed/table field and the exact packed-selector fact consumed by the lookup stream. |
 | **[SEPARATE: instance]** | Complete the Action `LagrangeCommitmentKey.ofPrefix` certificate and identify the verifier-supplied instance commitment with the ten public rows. | The generic basis conversion, finite-prefix reduction, closed coefficient form, and natural-scalar bridge are complete or in active development. | Removes the remaining instance-key/commitment parameters from the binding-aware Action endpoint. |
