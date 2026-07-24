@@ -40,7 +40,7 @@ namespace Zcash.Security.Ledger
 
 variable {F : Type*} [Field F]
 variable {G : Type*} [AddCommGroup G] [Module F G]
-variable {IVK NK RHO PSI CMX RT : Type*} {KW : Type*}
+variable {IVK NK RHO PSI CMX MHASH : Type*} {KW : Type*}
 
 /-- An Orchard-shaped note. Point encodings and type conversions are abstracted away:
 `gd` and `pkd` are group elements, `ρ` and `ψ` base-field values, `v` a natural number
@@ -55,8 +55,8 @@ structure Note (G RHO PSI : Type*) where
 /-- The public inputs of an Action that the games consume: the anchor, the revealed
 nullifier, the randomized verification key, the net value commitment, and the new note
 commitment's extracted coordinate. -/
-structure ActionInstance (G RT RHO CMX : Type*) where
-  rt : RT
+structure ActionInstance (G MHASH RHO CMX : Type*) where
+  rt : MHASH
   /-- `⦂ RHO`: nullifiers share ρ's type, forced by ρ-uniqueness (`ρ_new = nf_old`). -/
   nf_old : RHO
   rk : G
@@ -67,7 +67,7 @@ structure ActionInstance (G RT RHO CMX : Type*) where
 is required of the fields themselves; the group algebra enters only through the statement
 and lemmas. `emb` is the embedding of base-field values used as scalars
 (`[0, q) ⊆ [0, r)` concretely). -/
-structure Primitives (F G IVK NK RHO PSI CMX RT : Type*) where
+structure Primitives (F G IVK NK RHO PSI CMX MHASH : Type*) where
   depth : ℕ
   valueBound : ℕ
   emb : IVK → F
@@ -76,8 +76,8 @@ structure Primitives (F G IVK NK RHO PSI CMX RT : Type*) where
   noteCommit : F → Note G RHO PSI → Option G
   /-- Nullifiers share ρ's type (`RHO`), forced by ρ-uniqueness (`ρ_new = nf_old`). -/
   deriveNullifier : NK → RHO → PSI → G → RHO
-  merkleCRH : RT × RT → RT
-  leafOf : CMX → RHO → RT
+  merkleCRH : MHASH × MHASH → MHASH
+  leafOf : CMX → RHO → MHASH
   randomizePublic : F → G → G
   valueCommit : ℤ → F → G
 
@@ -99,9 +99,9 @@ structure KeyBindingInterface (KW G IVK NK : Type*) where
 
 /-- The auxiliary inputs of an Action. `cm_old`/`cm_new` are carried explicitly so that the
 statement's commitment checks pin them; `kw` is the key-binding witness. -/
-structure ActionWitness (KW F G RHO PSI RT : Type*) (d : ℕ) where
+structure ActionWitness (KW F G RHO PSI MHASH : Type*) (d : ℕ) where
   pos : Fin d → Bool
-  path : Fin d → RT
+  path : Fin d → MHASH
   note_old : Note G RHO PSI
   note_new : Note G RHO PSI
   cm_old : G
@@ -119,9 +119,9 @@ satisfy this interface (the latter enforces strictly more).
 TODO: It's unclear how well this will compose with Gregor's approach to the circuit proof.
 In particular, should this be `Prop`-only or will we need to apply the break-as-computed-data
 pattern here? -/
-structure ActionSatisfied (P : Primitives F G IVK NK RHO PSI CMX RT)
-    (kv : KeyBindingInterface KW G IVK NK) (inst : ActionInstance G RT RHO CMX)
-    (w : ActionWitness KW F G RHO PSI RT P.depth) : Prop where
+structure ActionSatisfied (P : Primitives F G IVK NK RHO PSI CMX MHASH)
+    (kv : KeyBindingInterface KW G IVK NK) (inst : ActionInstance G MHASH RHO CMX)
+    (w : ActionWitness KW F G RHO PSI MHASH P.depth) : Prop where
   /-- Spend-side commitment integrity: `cm_old` opens `note_old` with `rcm_old`. -/
   commit_old : P.noteCommit w.rcm_old w.note_old = some w.cm_old
   /-- Merkle path validity for nonzero-valued spends. -/
@@ -158,7 +158,7 @@ equal extracted coordinates. Computed by the games' reductions; nothing in this
 development reduces it further. The intended onward reductions are a Sinsemilla/DLR
 relation pre-quantum (spec Theorems 5.4.3 and 5.4.4), and an `H^rcm` ±-collision for the
 Recovery Statement (via the Pedersen lift and the `extract` ±-property). -/
-structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI CMX RT) where
+structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI CMX MHASH) where
   rcm₁ : F
   n₁ : Note G RHO PSI
   rcm₂ : F
@@ -172,9 +172,9 @@ structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI CMX RT) where
 
 section Pinning
 
-variable {P : Primitives F G IVK NK RHO PSI CMX RT} {kv : KeyBindingInterface KW G IVK NK}
-variable {inst₁ inst₂ : ActionInstance G RT RHO CMX}
-variable {w₁ w₂ : ActionWitness KW F G RHO PSI RT P.depth}
+variable {P : Primitives F G IVK NK RHO PSI CMX MHASH} {kv : KeyBindingInterface KW G IVK NK}
+variable {inst₁ inst₂ : ActionInstance G MHASH RHO CMX}
+variable {w₁ w₂ : ActionWitness KW F G RHO PSI MHASH P.depth}
 
 /-- **`ivk`-pinning** (ZIP 2005 `lemma-ivk-pinning`): the address `(g_d, pk_d)` of the
 spent note determines `ivk`. Pure module algebra: needs only `g_d ≠ 0`, injectivity of the
