@@ -178,4 +178,23 @@ theorem permutationCommitmentsOf_getD_eq_commitInstance
   rw [← Nat.cast_smul_eq_nsmul Fp ((1 : Fp).val) urs.w,
     ZMod.natCast_rightInverse (1 : Fp), one_smul]
 
+/-- The `ofPrefix` setup obligation in fully computable form: the noncomputable
+interpolation coefficients are replaced by the closed form, so a concrete URS can
+discharge the per-generator identities by native evaluation. -/
+theorem ofPrefix_setup_of_closed {G : Type} [AddCommGroup G] [Module Fp G]
+    [Inhabited G] (urs : URS G) (hk : urs.k ≤ 32)
+    (hgen : ∀ i : Fin (2 ^ urs.k),
+      (derivedUrsGLagrange urs).getD (i : ℕ) 0 =
+        commit urs fun t : Fin (2 ^ urs.k) =>
+          (2 ^ urs.k : Fp)⁻¹ * (omegaOf urs.k)⁻¹ ^ ((i : ℕ) * (t : ℕ))) :
+    ∀ i : Fin (2 ^ urs.k), (i : ℕ) < (derivedUrsGLagrange urs).length →
+      (derivedUrsGLagrange urs).getD (i : ℕ) 0 =
+        commit urs (polynomialCoefficients (2 ^ urs.k)
+          (rowPolynomial (omegaOf urs.k) (Pi.single i (1 : Fp)))) := by
+  intro i _
+  rw [hgen i]
+  congr 1
+  funext t
+  rw [polynomialCoefficients_single_closed urs.k hk i t]
+
 end Zcash.Snark.Keygen
