@@ -1,5 +1,6 @@
 import Zcash.Circuits.Action.Statement
 import Zcash.Circuits.Integration.FixedColumns
+import Zcash.Circuits.Integration.InstanceColumns
 import Zcash.Snark.Soundness.ActionStatement
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 import Zcash.Snark.Soundness.TopLevelCircuit
@@ -266,18 +267,26 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
         PublicInputs)
     (hsize :
       10 ≤ 2 ^ orchardActionTopLevelCircuit.domainExponent)
-    (hinstance : ∀
+    (instanceKey :
+      LagrangeCommitmentKey urs
+        (orchardActionTopLevelCircuit.toVerifierKey pp urs).omega)
+    (hinstanceCommitment : ∀
       proofIndex :
         Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs,
-      relation.polynomial
-          (.instanceCol proofIndex
+      instanceCommitment proofIndex
+          (Circuit.configure
+            Specs.Sinsemilla.orchardGenerators {}).1.primary.index =
+        instanceKey.commitInstance (inputs proofIndex).rows 1)
+    (hinstanceQuery : ∀
+      proofIndex :
+        Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs,
+      ∃ q ∈ assembleQueries
+          (orchardActionTopLevelCircuit.toVerifierKey pp urs)
+          instanceCommitment ps ch,
+        q.commId =
+          .instanceCol proofIndex
             (Circuit.configure
-              Specs.Sinsemilla.orchardGenerators {}).1.primary.index) =
-        instanceRowPolynomial
-          (2 ^ orchardActionTopLevelCircuit.domainExponent)
-          (Zcash.Snark.omegaOf
-            orchardActionTopLevelCircuit.domainExponent)
-          (inputs proofIndex).rows)
+              Specs.Sinsemilla.orchardGenerators {}).1.primary.index)
     (gateCoherence :
       TopLevelGateCoherence
         orchardActionTopLevelCircuit pp urs)
@@ -312,18 +321,54 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
     BundleStatement Specs.Sinsemilla.orchardGenerators orchardBases inputs ∨
       HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   classical
+  subst vk
   by_cases hrelation :
       HasNontrivialRelation (F := Fp) urs.g urs.u urs.w
   · exact Or.inr hrelation
   · apply Or.inl
+    have hinstance : ∀
+        proofIndex :
+          Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs,
+        relation.polynomial
+            (.instanceCol proofIndex
+              (Circuit.configure
+                Specs.Sinsemilla.orchardGenerators {}).1.primary.index) =
+          instanceRowPolynomial
+            (2 ^ orchardActionTopLevelCircuit.domainExponent)
+            (Zcash.Snark.omegaOf
+              orchardActionTopLevelCircuit.domainExponent)
+            (inputs proofIndex).rows := by
+      intro proofIndex
+      have hbound :=
+        relation.instanceColumn_eq_rowPolynomial_or_relation
+          proofIndex
+          (Circuit.configure
+            Specs.Sinsemilla.orchardGenerators {}).1.primary.index
+          instanceKey (inputs proofIndex).rows 1
+          (hinstanceCommitment proofIndex) hfixedRows
+          (hinstanceQuery proofIndex)
+      have hrows := hbound.resolve_right hrelation
+      change relation.polynomial
+          (.instanceCol proofIndex
+            (Circuit.configure
+              Specs.Sinsemilla.orchardGenerators {}).1.primary.index) =
+        instanceRowPolynomial (2 ^ urs.k)
+          (Zcash.Snark.omegaOf
+            orchardActionTopLevelCircuit.domainExponent)
+          (inputs proofIndex).rows at hrows
+      have hk' :
+          orchardActionTopLevelCircuit.domainExponent = urs.k :=
+        hk
+      simpa only [hk'] using hrows
     apply actionBundleStatement_of_canonicalRelation
-      pp urs hk instanceCommitment ps ch vk hvk pU pW a
+      pp urs hk instanceCommitment ps ch
+      (orchardActionTopLevelCircuit.toVerifierKey pp urs) rfl pU pW a
       batchOpenings memberDecode hbound hblinding hpoly relation hgoodY
       inputs hsize hinstance gateCoherence
     · intro proofIndex
       have hfixed :=
         relation.topLevelFixedConstraints_or_relation
-          hvk fixedCoherence hfixedRows hdomainSize proofIndex
+          rfl fixedCoherence hfixedRows hdomainSize proofIndex
       have hclean := hfixed.resolve_right hrelation
       change SelectorActivationsRealized
         orchardActionTopLevelCircuit.selectorMap
@@ -339,7 +384,7 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
     · intro proofIndex
       have hfixed :=
         relation.topLevelFixedConstraints_or_relation
-          hvk fixedCoherence hfixedRows hdomainSize proofIndex
+          rfl fixedCoherence hfixedRows hdomainSize proofIndex
       have hclean := hfixed.resolve_right hrelation
       change CircuitConstraintFamily.constraints .fixed
         orchardActionTopLevelCircuit.placement
