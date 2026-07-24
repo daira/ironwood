@@ -1,5 +1,6 @@
 import Zcash.Circuits.Integration.ExprRich
 import Zcash.Circuits.Integration.ActionEncoding
+import Zcash.Circuits.Integration.FixedColumns
 import Zcash.Snark.Soundness.ActionStatement
 import Zcash.Snark.Soundness.CircuitIntegration
 import Zcash.Snark.Soundness.FixedLayout

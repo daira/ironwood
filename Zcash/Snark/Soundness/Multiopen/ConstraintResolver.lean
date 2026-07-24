@@ -222,6 +222,57 @@ noncomputable def assembledQueryMemberRoute_faithful [DecidableEq G] [Inhabited 
 
 omit [Module Fp G] in
 /--
+The member selected by the canonical route carries the routed commitment identity.
+This exposes the positional identity fact retained by `MultiopenGrouped.ids`.
+-/
+theorem assembledQueryMemberRoute_id [DecidableEq G] [Inhabited G]
+    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp)
+    (hcount : deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch
+      = (constructIntermediateSets
+          (assembleQueries vk instanceCommitment ps ch)).sets.length)
+    (hdup : hasDuplicateCommitmentPoint
+      (assembleQueries vk instanceCommitment ps ch) = false)
+    (id : CommitmentId)
+    (slot : DeployedMemberSlot (instanceCommitment := instanceCommitment) vk ps ch)
+    (hroute :
+      assembledQueryMemberRoute (instanceCommitment := instanceCommitment)
+        vk ps ch hcount hdup id = some slot) :
+    (deployedSetCommIds (instanceCommitment := instanceCommitment)
+      vk ps ch slot.setIndex).getD (slot.memberIndex : ℕ) .vanishingH = id := by
+  classical
+  unfold assembledQueryMemberRoute at hroute
+  split at hroute
+  next hex =>
+    let q := Classical.choose hex
+    have hq : q ∈ assembleQueries vk instanceCommitment ps ch :=
+      (Classical.choose_spec hex).1
+    have hqid : q.commId = id :=
+      (Classical.choose_spec hex).2
+    let routed := constructIntermediateSets_query_routed
+      (assembleQueries vk instanceCommitment ps ch) hq hdup
+    let si := Classical.choose routed
+    have hmex := (Classical.choose_spec routed).2
+    let m := Classical.choose hmex
+    have hid := (Classical.choose_spec hmex).2.1
+    have hslot :
+        slot =
+          { setIndex := si
+            setIndex_lt := by
+              rw [hcount]
+              exact (Classical.choose_spec routed).1
+            memberIndex := ⟨m, by
+              simpa only [deployedSetQueries,
+                constructIntermediateSets_zip_sets_getD] using
+                (Classical.choose_spec hmex).1⟩ } := by
+      exact Option.some.inj hroute |>.symm
+    subst slot
+    simpa only [deployedSetCommIds] using hid.trans hqid
+  next hnone =>
+    cases hroute
+
+omit [Module Fp G] in
+/--
 Any deployed member carrying an instance-column identity is the statement-derived commitment for
 that proof and column.  This is the commitment-side companion of the canonical query route: the
 grouping retains `CommitmentId` positionally, so no circuit-specific placement fact is needed.
@@ -264,6 +315,57 @@ theorem deployedMemberRef_eq_instanceCommitment [DecidableEq G] [Inhabited G]
       q.commitment = .point (instanceCommitment p column) :=
     assembleQueries_instance_commitment vk instanceCommitment ps ch q hq p column hqId
   simpa only [deployedSetQueries, constructIntermediateSets_zip_sets_getD] using
+    href.trans hqCommitment
+
+omit [Module Fp G] in
+/--
+Any deployed member carrying a fixed-column identity is the corresponding
+verifying-key commitment. This is the fixed-column counterpart of
+`deployedMemberRef_eq_instanceCommitment`.
+-/
+theorem deployedMemberRef_eq_fixedCommitment [DecidableEq G] [Inhabited G]
+    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp)
+    (hcount : deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch
+      = (constructIntermediateSets
+          (assembleQueries vk instanceCommitment ps ch)).sets.length)
+    (slot : DeployedMemberSlot (instanceCommitment := instanceCommitment) vk ps ch)
+    (column : ℕ)
+    (hid :
+      (deployedSetCommIds (instanceCommitment := instanceCommitment)
+        vk ps ch slot.setIndex).getD (slot.memberIndex : ℕ) .vanishingH
+        = .fixedCol column) :
+    ((deployedSetQueries (instanceCommitment := instanceCommitment)
+      vk ps ch slot.setIndex).getD (slot.memberIndex : ℕ) (.point 0, [])).1
+      = .point (vk.fixedCommitment column) := by
+  classical
+  have hi :
+      slot.setIndex <
+        (constructIntermediateSets
+          (assembleQueries vk instanceCommitment ps ch)).sets.length := by
+    rw [← hcount]
+    exact slot.setIndex_lt
+  have hm :
+      (slot.memberIndex : ℕ) <
+        ((constructIntermediateSets
+          (assembleQueries vk instanceCommitment ps ch)).sets.getD
+            slot.setIndex []).length := by
+    simpa only [deployedSetQueries,
+      constructIntermediateSets_zip_sets_getD] using
+      slot.memberIndex.isLt
+  obtain ⟨q, hq, href, hqid⟩ :=
+    constructIntermediateSets_member_provenance
+      (assembleQueries vk instanceCommitment ps ch)
+      slot.setIndex (slot.memberIndex : ℕ) hi hm
+      (.point 0, []) .vanishingH
+  have hqId : q.commId = .fixedCol column := by
+    exact hqid.symm.trans hid
+  have hqCommitment :
+      q.commitment = .point (vk.fixedCommitment column) :=
+    assembleQueries_fixed_commitment
+      vk instanceCommitment ps ch q hq column hqId
+  simpa only [deployedSetQueries,
+    constructIntermediateSets_zip_sets_getD] using
     href.trans hqCommitment
 
 omit [AddCommGroup G] [Module Fp G] in

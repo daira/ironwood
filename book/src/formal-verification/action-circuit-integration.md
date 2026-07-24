@@ -278,11 +278,12 @@ entire constraint model from the accepted VK. Fixed columns, permutation sets/ch
 lookups, and selector polynomials are no longer free relation parameters.
 `actionBundleStatement_of_canonicalRelation` consumes this relation and concludes
 the concrete `Action.BundleStatement`, with no abstract `S` or `hencodes` premise and
-with the key locked to `orchardActionTopLevelCircuit.toVerifierKey`. Its remaining
-`reconstruct` argument is exactly the generic representation bridge from
-family-separated `ConstraintSatisfaction` to Clean's authoritative
-`Halo2.Constraints`, once per bundle member. Discharging that argument is now the
-precise deterministic completion criterion for `hencodes`.
+with the key locked to `orchardActionTopLevelCircuit.toVerifierKey`. It now derives
+the complete gate family internally from canonical constraint satisfaction and the
+circuit-owned gate/selector coherence package. Its remaining explicit inputs are the
+copy, lookup, and fixed operation families. Deriving those three families, rather
+than accepting a generic reconstruction function, is now the precise deterministic
+completion criterion for `hencodes`.
 `LookupInstantiation` now constructs those coherent lookup entries from an arbitrary
 VK and a `CommitmentId`-keyed polynomial resolver, proves that openings for the actual
 assembled lookup queries give the verifier's five claimed evaluations, and specializes
@@ -582,6 +583,17 @@ and the emitted rows fit the domain. The remaining fixed-side work is therefore 
 derive those two compiler facts from `TopLevelCircuit` keygen data and feed this
 theorem to `FullCircuitBridge.ofPolynomialWitnesses`.
 
+The commitment-provenance half of that work is now generic too.
+`assembleQueries_fixed_commitment` proves that an assembled `.fixedCol` query carries
+the corresponding commitment from the accepted VK, and the canonical member route
+retains that identity at the decoded member position.
+`fixedColumn_eq_rowPolynomial_or_relation` compares the member's augmented opening
+with the Lagrange commitment to the keygen row vector. It returns either equality
+with the canonical interpolated row polynomial or a computed nontrivial relation
+among `(g, U, W)`. Consequently fixed and selector satisfaction will not silently
+assume commitment binding: the integration theorem exposes the same exceptional
+branch that the deployed probability layer must price.
+
 The generic operation walk already proves that every extracted enabled gate occurs in
 the floor-planner activation table, and `selectorScale_ne_zero_of_enabledGate` turns
 the two contracts into the required nonzero scale. The remaining gate work is now to
@@ -793,9 +805,9 @@ the same fixed cells the table-loaded and fixed-base assumptions read.
 ### 6. Generalize from one Action to an Orchard bundle
 
 **Status: verifier-side substrate is generic in #30/#91 and exercised by the merged
-[#85](https://github.com/zcash/ironwood/pull/85). The assignment and external
-statement interfaces are now bundle-indexed; constructing every decoded member and
-feeding the family through the capstone remains open.**
+[#85](https://github.com/zcash/ironwood/pull/85). The assignment, external statement,
+canonical relation, and Action endpoint are bundle-indexed. Discharging the remaining
+copy/lookup/fixed operation families for every member remains open.**
 
 A deployed proof covers `shape.numProofs` Actions. Generalize `PublicInputs`,
 `Assignment`, and `ActionStatement` to a `Fin shape.numProofs` family and decode one
@@ -819,11 +831,12 @@ single-index result into a family of Clean assignments and Action statements.
 
 ### 7. Thread the bridge into the live capstone
 
-**Status: substantial foundations in
+**Status: the canonical relation now reaches a concrete bundle-wide Action theorem,
+but the live Vesta/Fiat–Shamir capstone still accepts `hencodes`. Substantial
+foundations are in
 [#30](https://github.com/zcash/ironwood/pull/30),
 [#91](https://github.com/zcash/ironwood/pull/91), and
-the merged [#85](https://github.com/zcash/ironwood/pull/85); no end-to-end Action
-theorem yet.**
+the merged [#85](https://github.com/zcash/ironwood/pull/85).**
 
 Once the direct semantic bridge exists, instantiate the Vesta constraint capstones
 with the concrete high-level Action statement. Then thread that same concrete
