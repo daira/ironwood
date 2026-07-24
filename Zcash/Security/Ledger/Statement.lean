@@ -40,7 +40,7 @@ namespace Zcash.Security.Ledger
 
 variable {F : Type*} [Field F]
 variable {G : Type*} [AddCommGroup G] [Module F G]
-variable {IVK NK RHO PSI CMX MHASH : Type*} {KW : Type*}
+variable {IVK NK RHO PSI MHASH : Type*} {KW : Type*}
 
 /-- An Orchard-shaped note. Point encodings and type conversions are abstracted away:
 `gd` and `pkd` are group elements, `ρ` and `ψ` base-field values, `v` a natural number
@@ -55,29 +55,28 @@ structure Note (G RHO PSI : Type*) where
 /-- The public inputs of an Action that the games consume: the anchor, the revealed
 nullifier, the randomized verification key, the net value commitment, and the new note
 commitment's extracted coordinate. -/
-structure ActionInstance (G MHASH RHO CMX : Type*) where
+structure ActionInstance (G MHASH RHO : Type*) where
   rt : MHASH
   /-- `⦂ RHO`: nullifiers share ρ's type, forced by ρ-uniqueness (`ρ_new = nf_old`). -/
   nf_old : RHO
   rk : G
   cv_net : G
-  cmx_new : CMX
+  cmx_new : MHASH
 
 /-- The abstract primitives of an Orchard-shaped shielded protocol. No algebraic structure
 is required of the fields themselves; the group algebra enters only through the statement
 and lemmas. `emb` is the embedding of base-field values used as scalars
 (`[0, q) ⊆ [0, r)` concretely). -/
-structure Primitives (F G IVK NK RHO PSI CMX MHASH : Type*) where
+structure Primitives (F G IVK NK RHO PSI MHASH : Type*) where
   depth : ℕ
   valueBound : ℕ
   emb : IVK → F
   emb_injective : Function.Injective emb
-  extract : G → CMX
+  extract : G → MHASH
   noteCommit : F → Note G RHO PSI → Option G
   /-- Nullifiers share ρ's type (`RHO`), forced by ρ-uniqueness (`ρ_new = nf_old`). -/
   deriveNullifier : NK → RHO → PSI → G → RHO
   merkleCRH : MHASH × MHASH → MHASH
-  leafOf : CMX → RHO → MHASH
   randomizePublic : F → G → G
   valueCommit : ℤ → F → G
 
@@ -119,15 +118,15 @@ satisfy this interface (the latter enforces strictly more).
 TODO: It's unclear how well this will compose with Gregor's approach to the circuit proof.
 In particular, should this be `Prop`-only or will we need to apply the break-as-computed-data
 pattern here? -/
-structure ActionSatisfied (P : Primitives F G IVK NK RHO PSI CMX MHASH)
-    (kv : KeyBindingInterface KW G IVK NK) (inst : ActionInstance G MHASH RHO CMX)
+structure ActionSatisfied (P : Primitives F G IVK NK RHO PSI MHASH)
+    (kv : KeyBindingInterface KW G IVK NK) (inst : ActionInstance G MHASH RHO)
     (w : ActionWitness KW F G RHO PSI MHASH P.depth) : Prop where
   /-- Spend-side commitment integrity: `cm_old` opens `note_old` with `rcm_old`. -/
   commit_old : P.noteCommit w.rcm_old w.note_old = some w.cm_old
   /-- Merkle path validity for nonzero-valued spends. -/
   merkle_path : w.note_old.v ≠ 0 →
     Merkle.pathRoot P.merkleCRH P.depth w.pos w.path
-      (P.leafOf (P.extract w.cm_old) w.note_old.ρ) = inst.rt
+      (P.extract w.cm_old) = inst.rt
   /-- Nullifier integrity. -/
   nf_old_eq : inst.nf_old =
     P.deriveNullifier (kv.nk w.kw) w.note_old.ρ w.note_old.ψ w.cm_old
@@ -158,7 +157,7 @@ equal extracted coordinates. Computed by the games' reductions; nothing in this
 development reduces it further. The intended onward reductions are a Sinsemilla/DLR
 relation pre-quantum (spec Theorems 5.4.3 and 5.4.4), and an `H^rcm` ±-collision for the
 Recovery Statement (via the Pedersen lift and the `extract` ±-property). -/
-structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI CMX MHASH) where
+structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI MHASH) where
   rcm₁ : F
   n₁ : Note G RHO PSI
   rcm₂ : F
@@ -172,8 +171,9 @@ structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI CMX MHASH) where
 
 section Pinning
 
-variable {P : Primitives F G IVK NK RHO PSI CMX MHASH} {kv : KeyBindingInterface KW G IVK NK}
-variable {inst₁ inst₂ : ActionInstance G MHASH RHO CMX}
+variable {P : Primitives F G IVK NK RHO PSI MHASH}
+variable {kv : KeyBindingInterface KW G IVK NK}
+variable {inst₁ inst₂ : ActionInstance G MHASH RHO}
 variable {w₁ w₂ : ActionWitness KW F G RHO PSI MHASH P.depth}
 
 /-- **`ivk`-pinning** (ZIP 2005 `lemma-ivk-pinning`): the address `(g_d, pk_d)` of the
