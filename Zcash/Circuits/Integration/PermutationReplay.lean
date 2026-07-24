@@ -964,7 +964,7 @@ def chunkFlatten (nc numCols chunkLen m : ℕ) (width : ℕ → ℕ)
     ⟨⟨(rg.2 : ℕ) / chunkLen, by
         have hlt := rg.2.isLt
         by_contra hge
-        push_neg at hge
+        push Not at hge
         have hmul : nc * chunkLen ≤ (rg.2 : ℕ) / chunkLen * chunkLen :=
           Nat.mul_le_mul_right _ hge
         have hdivle := Nat.div_mul_le_self (rg.2 : ℕ) chunkLen
@@ -972,7 +972,8 @@ def chunkFlatten (nc numCols chunkLen m : ℕ) (width : ℕ → ℕ)
       rg.1,
       ⟨(rg.2 : ℕ) % chunkLen, by
         rw [hw]
-        simp only [Fin.val_mk]
+        change (rg.2 : ℕ) % chunkLen <
+          min chunkLen (numCols - (rg.2 : ℕ) / chunkLen * chunkLen)
         refine lt_min (Nat.mod_lt _ hcl) ?_
         have hlt := rg.2.isLt
         have hdm := Nat.div_add_mod (rg.2 : ℕ) chunkLen

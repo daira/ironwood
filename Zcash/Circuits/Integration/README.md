@@ -32,6 +32,7 @@ The lookup bridge is split deliberately:
 * `LookupProjection.lean` proves the query-erasure and selector-substitution
   compiler semantics for configured lookups;
 * `TopLevelLookups.lean` routes synthesis-enabled lookups through the
-  circuit-derived verifying key, reduces projection to configure lawfulness and
-  exact packed-selector values, and constructs the deployed witnesses consumed by
-  the generic full-circuit bridge.
+  circuit-derived verifying key, derives selector coverage, table freedom, tuple
+  arity, and activation-row fit from Clean's top-level keygen invariants, reduces
+  the remaining projection boundary to exact packed-selector values, and constructs
+  the deployed witnesses consumed by the generic full-circuit bridge.
