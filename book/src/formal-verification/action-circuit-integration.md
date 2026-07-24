@@ -962,7 +962,9 @@ single-index result into a family of Clean assignments and Action statements.
 ### 7. Thread the bridge into the live capstone
 
 **Status: the canonical relation now reaches a concrete bundle-wide Action theorem,
-but the live Vesta/Fiat–Shamir capstone still accepts `hencodes`. Substantial
+and the deterministic `hencodes` function from an accepted canonical constraint
+model is implemented. The live Vesta/Fiat–Shamir capstone still has to be instantiated
+with that function. Substantial
 foundations are in
 [#30](https://github.com/zcash/ironwood/pull/30),
 [#91](https://github.com/zcash/ironwood/pull/91), and
@@ -986,6 +988,19 @@ quantitative endpoint remains conditional on the family-wide
 `hExtract`/adaptive-coupling data-supply premise. The merged #85 threads
 statement-derived instance commitments through the live verifier. #82 documents the computed capstone
 and #79 provides the eventual trust-boundary census location.
+
+At the deterministic seam,
+`canonicalRoutingConditions_of_accepts` now obtains the grouped-set count and
+duplicate-query rejection directly from `DeployedAccepts`.
+`CanonicalMemberConstraintRelation.ofAcceptedCircuitSat` uses those facts to turn
+satisfaction of the accepted run's canonical decoded-member model into the exact
+relation consumed by circuit integration.
+`ActionInstanceCommitment.actionBundleStatement_or_relation_of_acceptedCircuitSat`
+then constructs the concrete Action bundle statement from that satisfaction result,
+with no free `S`, `hencodes`, relation, or operation-constraint family. Its remaining
+arguments are the concrete fixed/copy/selector records and the already-priced lookup
+challenge exclusions. This theorem is the function to substitute at the live
+constraint terminal's `hencodes` argument.
 
 The final theorem should say, modulo the explicitly priced Fiat–Shamir, polynomial
 identity, and discrete-log failure events, that acceptance by the modeled deployed
@@ -1034,7 +1049,7 @@ append-only merge flow.
 | **[DONE: instance]** | No independent work remains in the deterministic instance stream. | `ActionInstanceCommitment.instanceKey` and `.commitment` derive the key and public commitment from the URS and ten Action rows; the binding-aware bundle endpoint consumes them internally and preserves only the shared nontrivial-relation branch. | Public-instance provenance is ready for the one-proof/bundle join. |
 | **[SEPARATE: ledger]** | Continue [#98](https://github.com/zcash/ironwood/pull/98)'s `SpecPost`-to-ledger refinement. | Independent of polynomial reconstruction and Clean constraint satisfaction. | The games-facing conclusion that should follow after the circuit statement is recovered. |
 | **[JOIN] One proof** | Instantiate the endpoint with the incoming fixed-selector and copy records, then apply the instance-row and Action-statement adapters. | The generic constructor derives gate and lookup fields; the Action canonical endpoint now also consumes `CopyReplayWitness` directly rather than accepting free copy satisfaction. Public-instance provenance is concrete. | A concrete Action statement for one `Fin numProofs`, with only explicitly priced exceptional events. |
-| **[JOIN] Bundle and capstone** | Feed the resulting family to `bundleTopLevelSoundness_or_bad` and substitute its concrete conclusion into the live computed capstone in place of free `S`/`hencodes`. | The generic finite-family join is complete; concrete records and the final capstone substitution remain. #96 can meet it at the abstract extraction boundary. | #99's completion criterion. |
+| **[JOIN] Bundle and capstone** | Supply the concrete records to `actionBundleStatement_or_relation_of_acceptedCircuitSat` and use it as the live constraint terminal's `hencodes` function. | The generic finite-family join and deterministic accepted-model-to-Action function are complete; concrete records and the final terminal instantiation remain. #96 can meet it at the abstract extraction boundary. | #99's completion criterion. |
 
 The shortest dependency chain to proving `hencodes` is therefore:
 
