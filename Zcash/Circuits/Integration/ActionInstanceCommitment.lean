@@ -70,6 +70,28 @@ omit [DecidableEq G] in
 
 assert_no_sorry commitment_primary
 
+omit [DecidableEq G] in
+/-- On the primary column, the verifier commitment is the monomial-URS commitment
+to the zero-padded public-row polynomial, with Halo 2's default blind. -/
+theorem commitment_primary_eq_commit
+    (pp : ProofParams) (urs : URS G)
+    (inputs :
+      Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs →
+        PublicInputs)
+    (proofIndex :
+      Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs) :
+    commitment pp urs inputs proofIndex
+        (Action.Circuit.configure
+          Specs.Sinsemilla.orchardGenerators {}).1.primary.index =
+      commit urs
+          (instanceCoefficients (2 ^ urs.k)
+            (orchardActionTopLevelCircuit.toVerifierKey pp urs).omega
+            (inputs proofIndex).rows) +
+        urs.w := by
+  rw [commitment_primary, LagrangeCommitmentKey.commitInstance_eq, one_smul]
+
+assert_no_sorry commitment_primary_eq_commit
+
 /--
 The Action endpoint with public-instance provenance closed.
 
