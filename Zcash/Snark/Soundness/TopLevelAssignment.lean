@@ -60,6 +60,47 @@ variable
     {top : TopLevelCircuit Fp ConfigInput Config Output}
     {numProofs : ℕ} {proofIndex : Fin numProofs}
 
+/-- The circuit-derived domain generator has exact order `2^k`. -/
+theorem domainRoot
+    (hbound : top.domainExponent < 33) :
+    Zcash.Bridge.omegaOf top.domainExponent ^
+      (2 ^ top.domainExponent) = 1 := by
+  simpa using Zcash.Bridge.omegaOf_domain
+    top.domainExponent 1 (by omega)
+
+/-- Circuit-derived domain row names are injective. -/
+theorem domainRowsInjective
+    (hbound : top.domainExponent < 33) :
+    Function.Injective fun row : Fin (2 ^ top.domainExponent) =>
+      Zcash.Bridge.omegaOf top.domainExponent ^ (row : ℕ) :=
+  Zcash.Bridge.omegaOf_powers_injective
+    top.domainExponent (by omega)
+
+/-- The circuit-derived domain size is nonzero in the verifier scalar field. -/
+theorem domainSizeCastNeZero
+    (hbound : top.domainExponent < 33) :
+    (((2 ^ top.domainExponent : ℕ) : Fp)) ≠ 0 :=
+  Zcash.Bridge.domainSize_cast_ne_zero
+    top.domainExponent (by omega)
+
+/-- A fitting top-level circuit has fewer blinding rows than domain rows. -/
+theorem blindingFactors_lt_domainSize
+    (hbound : top.domainExponent < 33) :
+    top.blindingFactors < 2 ^ top.domainExponent :=
+  top.blindingFactors_lt_domainSize top.domainExponent
+    (top.fitsAt_domainExponent hbound)
+
+/--
+A top-level circuit with a nonempty operation footprint has a nonempty active
+prefix before its final usable row.
+-/
+theorem blindingFactors_succ_lt_domainSize
+    (hbound : top.domainExponent < 33)
+    (hused : 0 < top.usedRows) :
+    top.blindingFactors + 1 < 2 ^ top.domainExponent :=
+  top.blindingFactors_succ_lt_domainSize top.domainExponent
+    (top.fitsAt_domainExponent hbound) hused
+
 /-- The row-indexed Clean environment for this bundle member. -/
 def environment
     (assignment : TopLevelAssignment top numProofs proofIndex) : Environment Fp :=

@@ -199,6 +199,19 @@ theorem omegaOf_powers_injective (k : ℕ) (hk : k ≤ 32) :
   apply Fin.ext
   exact (omegaOf_isPrimitiveRoot k hk).pow_inj left.isLt right.isLt heq
 
+/-- The supported evaluation-domain size is nonzero when cast into `Fp`. -/
+theorem domainSize_cast_ne_zero (k : ℕ) (hk : k ≤ 32) :
+    ((2 ^ k : ℕ) : Fp) ≠ 0 := by
+  intro hzero
+  have hdiv : Snark.scalarFieldOrder ∣ 2 ^ k :=
+    (ZMod.natCast_eq_zero_iff (2 ^ k) Snark.scalarFieldOrder).mp hzero
+  apply Nat.not_dvd_of_pos_of_lt (by positivity) _ hdiv
+  calc
+    2 ^ k ≤ 2 ^ 32 := Nat.pow_le_pow_right (by omega) hk
+    _ < Snark.scalarFieldOrder := by
+      norm_num [Snark.scalarFieldOrder,
+        CompElliptic.Fields.Pasta.PALLAS_BASE_CARD]
+
 /-- pasta `Fp::DELTA = GENERATOR^(2^S) = 5^(2^32)`. -/
 def deltaFp : Fp := powFast 5 (2 ^ 32)
 

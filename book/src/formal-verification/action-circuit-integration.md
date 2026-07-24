@@ -385,6 +385,16 @@ the last-row rotation, while
 boundary. Concrete instantiation retains only the genuine VK chunk counts and
 the generic root/domain facts.
 
+Those remaining domain facts are now exposed directly from every fitting
+`TopLevelCircuit`. `TopLevelAssignment.domainRoot`,
+`domainRowsInjective`, and `domainSizeCastNeZero` provide the root, row
+injectivity, and nonzero field-size premises at the circuit-derived exponent.
+The two `blindingFactors_*_domainSize` theorems derive the selector and
+active-prefix bounds from keygen's existing `FitsAt` certificate (with a
+nonempty-operation premise only for the stronger lookup bound). Once
+`toVerifyingKey` identifies the VK fields with these circuit-owned values, no
+Action arithmetic is needed to instantiate the canonical resolver model.
+
 After that, translate the endpoints to the exact relations that Clean's
 `Halo2.Constraints` requires: declared `constrainEqual`/`constrainInstance` copies,
 `RegionOperation.enableLookup` membership with the exact loaded tables, fixed

@@ -143,6 +143,26 @@ theorem fitsAt_domainExponent
   unfold FitsAt
   exact (Nat.le_max_left _ _).trans hk
 
+/-- A fitting keygen domain has strictly more rows than its blinding count. -/
+theorem blindingFactors_lt_domainSize
+    (self : TopLevelCircuit F ConfigInput Config Output)
+    (k : ℕ) (hfit : self.FitsAt k) :
+    self.blindingFactors < 2 ^ k := by
+  unfold FitsAt at hfit
+  omega
+
+/--
+A nonempty operation footprint leaves at least one non-blinding usable row
+before the final usable row.
+-/
+theorem blindingFactors_succ_lt_domainSize
+    (self : TopLevelCircuit F ConfigInput Config Output)
+    (k : ℕ) (hfit : self.FitsAt k)
+    (hused : 0 < self.usedRows) :
+    self.blindingFactors + 1 < 2 ^ k := by
+  unfold FitsAt at hfit
+  omega
+
 theorem usedRows_le_usableRowsAt
     (self : TopLevelCircuit F ConfigInput Config Output) (k : ℕ)
     (hfit : self.FitsAt k) :
