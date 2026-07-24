@@ -1,0 +1,295 @@
+import Clean.Halo2.Keygen.Semantics
+
+/-!
+# Selector-compressed gate semantics
+
+Halo 2 replaces every configured selector with a root-finding expression over a
+packed fixed column. At a row where a gate is enabled, that expression is nonzero
+but need not evaluate to one. Consequently the verifier-side gate polynomial is a
+nonzero scalar multiple of Clean's enabled-gate evaluation, not literally equal to
+it.
+
+This file isolates the generic algebra. `Expression.GatedBy selector` says that an
+expression is linear in its own selector and independent of foreign selectors.
+The main theorem then evaluates selector compression as the packed selector scale
+times the ordinary enabled-gate valuation.
+-/
+
+namespace Halo2
+
+namespace Expression
+
+variable {F : Type} [Field F]
+
+/-- Replace one selector's value while leaving every other query unchanged. -/
+def replaceSelectorValue
+    (selector : Selector) (value : F) (base : Query → F) : Query → F
+  | .selector other =>
+      if other.index = selector.index then value
+      else base (.selector other)
+  | query => base query
+
+/--
+The valuation used by Clean for one enabled gate: its own selector is one,
+foreign selectors are zero, and ordinary queries retain their supplied values.
+-/
+def enabledGateValuation
+    (selector : Selector) (base : Query → F) : Query → F
+  | .selector other =>
+      if other.index = selector.index then 1 else 0
+  | query => base query
+
+/--
+An expression is gated by `selector` when changing that selector to `scale`
+multiplies its enabled-gate evaluation by `scale`, independently of all foreign
+selector values.
+-/
+def GatedBy (expression : Expression F Query) (selector : Selector) : Prop :=
+  ∀ (base : Query → F) (scale : F),
+    expression.eval (replaceSelectorValue selector scale base) =
+      scale * expression.eval (enabledGateValuation selector base)
+
+/--
+A selector-free expression has the same evaluation under valuations agreeing on
+fixed, advice, and instance queries.
+-/
+theorem eval_eq_of_selectorFree
+    (expression : Expression F Query)
+    (hfree : expression.selectorFree = true)
+    (left right : Query → F)
+    (hfixed : ∀ column rotation,
+      left (.fixed column rotation) = right (.fixed column rotation))
+    (hadvice : ∀ column rotation,
+      left (.advice column rotation) = right (.advice column rotation))
+    (hinstance : ∀ column rotation,
+      left (.instance column rotation) = right (.instance column rotation)) :
+    expression.eval left = expression.eval right := by
+  induction expression with
+  | var query =>
+      cases query with
+      | selector selector =>
+          simp [selectorFree] at hfree
+      | fixed column rotation =>
+          exact hfixed column rotation
+      | advice column rotation =>
+          exact hadvice column rotation
+      | «instance» column rotation =>
+          exact hinstance column rotation
+  | const value => rfl
+  | add leftExpression rightExpression ihLeft ihRight =>
+      simp only [selectorFree, Bool.and_eq_true] at hfree
+      simp only [eval, ihLeft hfree.1, ihRight hfree.2]
+  | mul leftExpression rightExpression ihLeft ihRight =>
+      simp only [selectorFree, Bool.and_eq_true] at hfree
+      simp only [eval, ihLeft hfree.1, ihRight hfree.2]
+
+/-- A selector atom is gated by itself. -/
+@[circuit_norm]
+theorem gatedBy_querySelector (selector : Selector) :
+    (querySelector (F := F) selector).GatedBy selector := by
+  intro base scale
+  simp [querySelector, eval, replaceSelectorValue,
+    enabledGateValuation]
+
+/-- Sums of expressions gated by the same selector remain gated. -/
+@[circuit_norm]
+theorem GatedBy.add
+    {selector : Selector} {left right : Expression F Query}
+    (hleft : left.GatedBy selector)
+    (hright : right.GatedBy selector) :
+    (left + right).GatedBy selector := by
+  intro base scale
+  simp only [GatedBy] at hleft hright ⊢
+  simp only [eval, hleft, hright, mul_add]
+
+/-- Multiplying a gated expression on the right by selector-free data preserves gating. -/
+@[circuit_norm]
+theorem GatedBy.mul_right
+    {selector : Selector} {gated free : Expression F Query}
+    (hgated : gated.GatedBy selector)
+    (hfree : free.selectorFree = true) :
+    (gated * free).GatedBy selector := by
+  intro base scale
+  simp only [GatedBy] at hgated ⊢
+  simp only [eval, hgated]
+  have hfreeEval :
+      free.eval (replaceSelectorValue selector scale base) =
+        free.eval (enabledGateValuation selector base) := by
+    apply eval_eq_of_selectorFree free hfree
+    · intro _ _
+      rfl
+    · intro _ _
+      rfl
+    · intro _ _
+      rfl
+  rw [hfreeEval, mul_assoc]
+
+/-- Multiplying selector-free data on the left by a gated expression preserves gating. -/
+@[circuit_norm]
+theorem GatedBy.mul_left
+    {selector : Selector} {free gated : Expression F Query}
+    (hfree : free.selectorFree = true)
+    (hgated : gated.GatedBy selector) :
+    (free * gated).GatedBy selector := by
+  intro base scale
+  simp only [GatedBy] at hgated ⊢
+  simp only [eval, hgated]
+  have hfreeEval :
+      free.eval (replaceSelectorValue selector scale base) =
+        free.eval (enabledGateValuation selector base) := by
+    apply eval_eq_of_selectorFree free hfree
+    · intro _ _
+      rfl
+    · intro _ _
+      rfl
+    · intro _ _
+      rfl
+  rw [hfreeEval]
+  ring
+
+/--
+Selector compression evaluates a gated expression as the packed selector's
+root-finding value times the ordinary enabled-gate evaluation.
+-/
+theorem eval_substSelectorMap_eq_scale
+    (map : ℕ → Option SelCompress)
+    (valuation : Query → F)
+    (expression : Expression F Query)
+    (selector : Selector) (compressed : SelCompress)
+    (hgated : expression.GatedBy selector)
+    (hmap : map selector.index = some compressed) :
+    (substSelectorMap map expression).eval valuation =
+      (selReplacement compressed).eval valuation *
+        expression.eval (enabledGateValuation selector valuation) := by
+  rw [substSelectorMap_eval]
+  let scale := (selReplacement compressed).eval valuation
+  have hreplace :
+      replaceSelectorValue selector scale
+          (substValuation map valuation) =
+        substValuation map valuation := by
+    funext query
+    cases query with
+    | selector other =>
+        by_cases hindex : other.index = selector.index
+        · simp [replaceSelectorValue, substValuation, scale,
+            hindex, hmap]
+        · simp [replaceSelectorValue, hindex]
+    | fixed column rotation => rfl
+    | advice column rotation => rfl
+    | «instance» column rotation => rfl
+  have henabled :
+      enabledGateValuation selector (substValuation map valuation) =
+        enabledGateValuation selector valuation := by
+    funext query
+    cases query <;> rfl
+  calc
+    expression.eval (substValuation map valuation) =
+        expression.eval
+          (replaceSelectorValue selector scale
+            (substValuation map valuation)) := by
+              rw [hreplace]
+    _ = scale * expression.eval
+          (enabledGateValuation selector
+            (substValuation map valuation)) :=
+      hgated _ _
+    _ = (selReplacement compressed).eval valuation *
+          expression.eval
+            (enabledGateValuation selector valuation) := by
+      rw [henabled]
+
+/--
+If a verifier-side valuation agrees with a Clean environment on ordinary
+queries, the enabled-gate valuation evaluates every expression exactly as
+Clean's selector-one/foreign-selectors-zero valuation.
+-/
+theorem eval_enabledGateValuation_eq_queryEval
+    (valuation : Query → F) (environment : Environment F)
+    (selector : Selector) (row : ℤ)
+    (expression : Expression F Query)
+    (hfixed : ∀ column rotation,
+      valuation (.fixed column rotation) =
+        environment.fixed column (row + rotation))
+    (hadvice : ∀ column rotation,
+      valuation (.advice column rotation) =
+        environment.advice column (row + rotation))
+    (hinstance : ∀ column rotation,
+      valuation (.instance column rotation) =
+        environment.inst column (row + rotation)) :
+    expression.eval (enabledGateValuation selector valuation) =
+      expression.eval
+        (Query.eval environment
+          (fun index => if index = selector.index then 1 else 0) row) := by
+  congr 1
+  funext query
+  cases query with
+  | selector other =>
+      simp [enabledGateValuation, Query.eval]
+  | fixed column rotation =>
+      exact hfixed column rotation
+  | advice column rotation =>
+      exact hadvice column rotation
+  | «instance» column rotation =>
+      exact hinstance column rotation
+
+/--
+The complete generic row-evaluation bridge for a selector-gated expression:
+selector compression contributes only its explicit scale, while fixed, advice,
+and instance query values come from the supplied Clean environment.
+-/
+theorem eval_substSelectorMap_eq_scale_queryEval
+    (map : ℕ → Option SelCompress)
+    (valuation : Query → F) (environment : Environment F)
+    (expression : Expression F Query)
+    (selector : Selector) (compressed : SelCompress) (row : ℤ)
+    (hgated : expression.GatedBy selector)
+    (hmap : map selector.index = some compressed)
+    (hfixed : ∀ column rotation,
+      valuation (.fixed column rotation) =
+        environment.fixed column (row + rotation))
+    (hadvice : ∀ column rotation,
+      valuation (.advice column rotation) =
+        environment.advice column (row + rotation))
+    (hinstance : ∀ column rotation,
+      valuation (.instance column rotation) =
+        environment.inst column (row + rotation)) :
+    (substSelectorMap map expression).eval valuation =
+      (selReplacement compressed).eval valuation *
+        expression.eval
+          (Query.eval environment
+            (fun index => if index = selector.index then 1 else 0) row) := by
+  rw [eval_substSelectorMap_eq_scale map valuation expression
+    selector compressed hgated hmap]
+  rw [eval_enabledGateValuation_eq_queryEval valuation environment
+    selector row expression hfixed hadvice hinstance]
+
+end Expression
+
+/--
+Every configured custom-gate polynomial is linear in its own selector and
+independent of foreign selectors, as required by selector compression.
+-/
+def ConstraintSystem.GatesWellFormed
+    {F : Type} [Field F] (cs : ConstraintSystem F) : Prop :=
+  cs.gates.Forall fun gate =>
+    gate.constraints.Forall fun constraint =>
+      constraint.poly.GatedBy gate.selector
+
+namespace ConstraintSystem.GatesWellFormed
+
+variable {F : Type} [Field F]
+
+/-- A well-formed configured gate supplies gating for each of its constraints. -/
+theorem constraint
+    {cs : ConstraintSystem F} (hwellFormed : cs.GatesWellFormed)
+    {gate : Gate F} (hgate : gate ∈ cs.gates)
+    {constraint : Constraint F}
+    (hconstraint : constraint ∈ gate.constraints) :
+    constraint.poly.GatedBy gate.selector := by
+  have hgateWellFormed :=
+    List.forall_iff_forall_mem.mp hwellFormed gate hgate
+  exact List.forall_iff_forall_mem.mp
+    hgateWellFormed constraint hconstraint
+
+end ConstraintSystem.GatesWellFormed
+
+end Halo2

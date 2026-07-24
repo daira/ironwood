@@ -1,5 +1,6 @@
 import Zcash.Snark.Soundness.CircuitSatisfaction
 import Zcash.Snark.Soundness.ConstraintSatisfaction
+import Zcash.Snark.Soundness.GateProjection
 import Zcash.Snark.Soundness.PermutationRows
 
 /-!

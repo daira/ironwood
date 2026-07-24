@@ -465,6 +465,18 @@ certificate itself should be assembled compositionally at the opaque subcircuit 
 boundaries; expanding the entire 395-region operation stream into one proof goal would
 defeat those boundaries.
 
+The scaling algebra is now proved in `GateProjection`.
+`Expression.GatedBy` captures exactly the required gate shape: linear in the gate's
+own selector and independent of foreign selectors. It composes across sums and
+multiplication by selector-free expressions.
+`eval_substSelectorMap_eq_scale_queryEval` then proves that a compressed verifier gate
+evaluates to the packed selector scale times Clean's enabled-gate evaluation whenever
+the fixed/advice/instance query valuations agree. `ConstraintSystem.GatesWellFormed`
+packages the remaining static configure certificate and projects the property to
+every registered constraint. The remaining Action work is to establish that compact
+configure certificate compositionally and identify the packed fixed-column value;
+the evaluation algebra itself is no longer circuit-specific.
+
 The `Fixtures.Layout` reconstruction is already generic over operations, so σ-cycle
 correctness of its replayed keygen merge is likewise a once-and-for-all lemma.
 

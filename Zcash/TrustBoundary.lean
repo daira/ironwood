@@ -27,6 +27,7 @@ import Zcash.Snark.Soundness.PermutationSemantics
 import Zcash.Snark.Soundness.CircuitSatisfaction
 import Zcash.Snark.Soundness.OperationCopies
 import Zcash.Snark.Soundness.OperationLookups
+import Zcash.Snark.Soundness.GateProjection
 import Zcash.Snark.Soundness.OperationGates
 import Zcash.Snark.Soundness.OperationFixed
 import Zcash.Snark.Soundness.LookupSemantics
@@ -568,6 +569,15 @@ assert_axioms EnabledLookup.DeployedWitness.satisfied
 assert_axioms lookup_constraints_of_deployed_witnesses
 assert_axioms ResolverLookupDomain.ofCanonicalSelectors
 assert_axioms ConstraintSatisfaction.resolverLookupSubset
+assert_axioms Halo2.Expression.eval_eq_of_selectorFree
+assert_axioms Halo2.Expression.gatedBy_querySelector
+assert_axioms Halo2.Expression.GatedBy.add
+assert_axioms Halo2.Expression.GatedBy.mul_right
+assert_axioms Halo2.Expression.GatedBy.mul_left
+assert_axioms Halo2.Expression.eval_substSelectorMap_eq_scale
+assert_axioms Halo2.Expression.eval_enabledGateValuation_eq_queryEval
+assert_axioms Halo2.Expression.eval_substSelectorMap_eq_scale_queryEval
+assert_axioms Halo2.ConstraintSystem.GatesWellFormed.constraint
 assert_axioms gate_constraints_of_polynomial_witnesses
 assert_axioms fixed_constraints_of_requirements
 assert_axioms CopyReplayWitness.constraints_or_bad
