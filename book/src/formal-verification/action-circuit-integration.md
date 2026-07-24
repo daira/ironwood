@@ -152,12 +152,11 @@ instance query through the canonical grouped-member route, identifies that membe
 commitment with the verifier-supplied instance commitment, and concludes that the
 decoded polynomial is the canonical row polynomial or computes the shared nontrivial
 relation. The binding-aware Action endpoint invokes this theorem internally; it no
-longer accepts the decoded-polynomial equality as a premise. Its remaining concrete
-instance inputs are the parameters' `LagrangeCommitmentKey`, the public-input
-commitment equation, and coverage of the configured primary column by the derived
-instance query layout. The endpoint now states that last fact in the circuit's native
-language—registration of the primary column in its synthesis-closed constraint
-system. The generic query compiler proves that configure-registered layouts survive
+longer accepts the decoded-polynomial equality as a premise.
+`ActionInstanceCommitment.actionBundleStatement_or_relation_of_canonicalRelation`
+constructs the Lagrange key from the monomial URS, derives the commitment from the
+ten supplied rows, and discharges primary-column registration. The generic query
+compiler proves that configure-registered layouts survive
 packed-selector insertion and the gate/lookup erasure walks, and then the generic
 layout-to-assembly lemma supplies the actual proof- and challenge-dependent query.
 The endpoint also derives evaluation-domain injectivity and size equalities from
@@ -931,9 +930,9 @@ whose public inputs were committed by the verifier.
 4. Instantiate the generic decomposed bridge for one selected Action, adapt
    `TopLevelCircuit.Statement` to the external Action statement, and then generalize
    it to every `Fin shape.numProofs`. The semantic adapter, generic decoded
-   instance-value provenance, and routed-member identification are complete; the
-   concrete Lagrange-key/instance-commitment certificate is the active next slice;
-   other bridge witnesses remain with their independent streams.
+   instance-value provenance, routed-member identification, and the Action
+   Lagrange-key/instance-commitment adapter are complete; other bridge witnesses
+   remain with their independent streams.
 5. Supply the decoded/full-satisfaction data inside the computed experiment, close the
    remaining adaptive-coupling/`hExtract` obligation, instantiate the endpoint with
    `ActionStatement`, and add the theorem to the consolidated trust boundary.

@@ -1,0 +1,164 @@
+import Zcash.Circuits.Integration.ActionEncoding
+import Zcash.Circuits.Integration.ActionGateCoherence
+import Zcash.Circuits.Integration.ActionInstanceCommitmentCompute
+import Mathlib.Util.AssertNoSorry
+
+/-!
+# Action public-instance commitment provenance
+
+The verifier's public-instance commitment is determined by the supplied Action rows
+and the monomial URS. This module constructs the compatible Lagrange key directly
+from that URS, defines the verifier commitment, and specializes the Action semantic
+endpoint so neither the key nor its commitment equation is an external premise.
+-/
+
+namespace Zcash.Snark
+
+open Halo2 Polynomial Keygen
+open Zcash.Circuits
+open Zcash.Circuits.Action
+
+namespace ActionInstanceCommitment
+
+variable {G : Type} [AddCommGroup G] [Module Fp G]
+  [DecidableEq G] [Inhabited G]
+
+/-- The canonical Lagrange commitment key derived from a monomial URS and domain
+generator. Each row generator is, by construction, the monomial commitment to the
+corresponding interpolating basis polynomial. -/
+noncomputable def instanceKey
+    (pp : ProofParams) (urs : URS G) :
+    LagrangeCommitmentKey urs
+      (orchardActionTopLevelCircuit.toVerifierKey pp urs).omega where
+  generators := fun i =>
+    commit urs
+      (polynomialCoefficients (2 ^ urs.k)
+        (rowPolynomial
+          (orchardActionTopLevelCircuit.toVerifierKey pp urs).omega
+          (Pi.single i (1 : Fp))))
+  generator_eq := fun _ => rfl
+
+/-- The verifier-derived commitment family for Action public inputs. The Action
+circuit has one public instance column; unused column indices are mapped to zero. -/
+noncomputable def commitment
+    (pp : ProofParams) (urs : URS G)
+    (inputs :
+      Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs →
+        PublicInputs) :
+    Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs →
+      ℕ → G :=
+  fun proofIndex column =>
+    if column =
+        (Action.Circuit.configure
+          Specs.Sinsemilla.orchardGenerators {}).1.primary.index then
+      (instanceKey pp urs).commitInstance (inputs proofIndex).rows 1
+    else 0
+
+omit [DecidableEq G] in
+@[simp] theorem commitment_primary
+    (pp : ProofParams) (urs : URS G)
+    (inputs :
+      Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs →
+        PublicInputs)
+    (proofIndex :
+      Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs) :
+    commitment pp urs inputs proofIndex
+        (Action.Circuit.configure
+          Specs.Sinsemilla.orchardGenerators {}).1.primary.index =
+      (instanceKey pp urs).commitInstance (inputs proofIndex).rows 1 := by
+  simp [commitment]
+
+assert_no_sorry commitment_primary
+
+/--
+The Action endpoint with public-instance provenance closed.
+
+The instance commitment is computed from `inputs`; its compatible key, commitment
+equation, primary-query registration, Action domain bound, row capacity, and static
+gate package are all constructed here rather than supplied by the caller.
+-/
+theorem actionBundleStatement_or_relation_of_canonicalRelation
+    (pp : ProofParams) (urs : URS G)
+    (hk :
+      (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
+    (inputs :
+      Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs →
+        PublicInputs)
+    (ps : ProofString
+      (pp.mergeDerived orchardActionTopLevelCircuit) Fp G)
+    (ch : Challenges
+      (pp.mergeDerived orchardActionTopLevelCircuit).k Fp)
+    (vk : VerifyingKey
+      (pp.mergeDerived orchardActionTopLevelCircuit) Fp G)
+    (hvk :
+      vk = orchardActionTopLevelCircuit.toVerifierKey pp urs)
+    (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
+    (batchOpenings :
+      OpenedBatchOpenings urs (evalVector urs.k ch.x3)
+        (x4BatchCommitments
+          (instanceCommitment := commitment pp urs inputs)
+          urs hk vk ps ch)
+        (x4BatchEvals
+          (instanceCommitment := commitment pp urs inputs)
+          vk ps ch)
+        a pU pW)
+    (memberDecode : ∀ i (hi : i <
+        deployedX4PairCount
+          (instanceCommitment := commitment pp urs inputs)
+          vk ps ch),
+      OpenedMemberDecode
+        (instanceCommitment := commitment pp urs inputs)
+        urs hk vk ps ch batchOpenings i hi)
+    (hblinding :
+      vk.blindingFactors < vk.n)
+    (hpoly : Polynomial Fp)
+    (relation :
+      CanonicalMemberConstraintRelation
+        urs hk vk
+        (commitment pp urs inputs) ps ch pU pW a
+        batchOpenings memberDecode hblinding ch.y hpoly vk.n)
+    (hgoodY : ∀ j,
+      ch.y ∉ szBadSet
+        (foldSplitWitness relation.model.constraints
+          vk.n j))
+    (fixedCoherence :
+      TopLevelFixedCoherence
+        orchardActionTopLevelCircuit pp urs)
+    (copies : ∀ proofIndex,
+      CircuitConstraintFamily.constraints .copy
+        orchardActionTopLevelCircuit.placement
+        (TopLevelAssignment.environment
+          ({ polynomial := relation.polynomial } :
+            TopLevelAssignment orchardActionTopLevelCircuit
+              (pp.mergeDerived orchardActionTopLevelCircuit).numProofs
+              proofIndex))
+        (orchardActionTopLevelCircuit.operations 0) 0)
+    (lookups : ∀ proofIndex,
+      CircuitConstraintFamily.constraints .lookup
+        orchardActionTopLevelCircuit.placement
+        (TopLevelAssignment.environment
+          ({ polynomial := relation.polynomial } :
+            TopLevelAssignment orchardActionTopLevelCircuit
+              (pp.mergeDerived orchardActionTopLevelCircuit).numProofs
+              proofIndex))
+        (orchardActionTopLevelCircuit.operations 0) 0) :
+    BundleStatement Specs.Sinsemilla.orchardGenerators orchardBases inputs ∨
+      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  have hsize :
+      10 ≤ 2 ^ orchardActionTopLevelCircuit.domainExponent := by
+    rw [ActionPermutationDomain.domainExponent_eq]
+    norm_num
+  exact
+    Zcash.Snark.actionBundleStatement_or_relation_of_canonicalRelation
+      pp urs hk (commitment pp urs inputs) ps ch vk hvk pU pW a
+      batchOpenings memberDecode ActionPermutationDomain.domainExponent_lt
+      hblinding hpoly relation hgoodY inputs hsize (instanceKey pp urs)
+      (commitment_primary pp urs inputs) primaryRegistered
+      (ActionGateCoherence.topLevelGateCoherence pp urs)
+      fixedCoherence copies lookups
+
+assert_no_sorry actionBundleStatement_or_relation_of_canonicalRelation
+
+end ActionInstanceCommitment
+
+end Zcash.Snark
