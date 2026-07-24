@@ -1,5 +1,6 @@
 import CompElliptic.Curves.Pasta
-import Zcash.Snark.VkCommit.Fast.ParMap
+import Zcash.Common.ParMap
+import Zcash.Snark.Core.Domain
 import Zcash.Snark.VkCommit.Fast.Msm
 import Zcash.Bridge.VkProjection
 import Zcash.Circuits.Fixtures.Layout
