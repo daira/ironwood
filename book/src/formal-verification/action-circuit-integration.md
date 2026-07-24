@@ -448,11 +448,13 @@ The generic keygen layer now derives from the top-level circuit itself:
 - `TopLevelCircuit.synthesisWellFormed` proves that a fitting domain supplies the
   table-fit contract required by top-level soundness.
 
-`TopLevelAssignment` is the corresponding verifier-to-Clean assignment shell. It
-stores only a bundle proof index and the commitment-ID polynomial resolver. The
-top-level circuit supplies its operations, V1 placement, blinding rows, and usable-row
-fit; `Bridge.omegaOf k` supplies the protocol domain root. Consequently the type has
-no arbitrary `VerifyingKey` argument and
+`TopLevelAssignment` is the corresponding verifier-to-Clean assignment shell. It is
+indexed by a bundle proof index and stores only the commitment-ID polynomial resolver;
+a family `∀ p, TopLevelAssignment top k numProofs p` therefore cannot silently read a
+different member's advice or instance columns. The top-level circuit supplies its
+operations, V1 placement, blinding rows, and usable-row fit; `Bridge.omegaOf k`
+supplies the protocol domain root. Consequently the type has no arbitrary
+`VerifyingKey` argument and
 `TopLevelAssignment.synthesisWellFormed` discharges the layout premise directly from
 `TopLevelCircuit.FitsAt k`.
 

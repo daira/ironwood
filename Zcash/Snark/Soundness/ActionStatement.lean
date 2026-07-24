@@ -27,12 +27,12 @@ theorem actionPublicInputs_of_instanceRowPolynomial
     {TopConfigInput TopConfig : Type} {Output : TypeMap}
     [CircuitType Output]
     {top : TopLevelCircuit Fp TopConfigInput TopConfig Output}
-    {k numProofs : ℕ}
-    (assignment : TopLevelAssignment top k numProofs)
+    {k numProofs : ℕ} {proofIndex : Fin numProofs}
+    (assignment : TopLevelAssignment top k numProofs proofIndex)
     (cfg : Config) (inputs : PublicInputs)
     (hsize : 10 ≤ 2 ^ k)
     (hpoly : assignment.polynomial
-        (.instanceCol assignment.proofIndex cfg.primary.index) =
+        (.instanceCol proofIndex cfg.primary.index) =
       instanceRowPolynomial (2 ^ k) (Zcash.Bridge.omegaOf k) inputs.rows)
     (hrows : Function.Injective
       fun i : Fin (2 ^ k) => Zcash.Bridge.omegaOf k ^ (i : ℕ)) :
