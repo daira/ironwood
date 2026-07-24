@@ -359,6 +359,17 @@ polynomials; it does not depend on Action placement or operations.
 their callers retain only the actual domain bounds, root facts, and the
 permutation-specific chunk/last-rotation facts.
 
+The transcript-side provenance is now explicit rather than assumed.
+`domainNodal_eq_vanishing` identifies the interpolation nodes' nodal polynomial
+with `X^n - 1`, `domainNodalWeight_eq` computes the corresponding barycentric
+weight, and
+`rowSelectorPolynomial_eval_eq_lagrangeBasisValue_of_rotation` proves that the
+fixed row-selector polynomial evaluates to the verifier's deployed
+`lagrangeBasisValue` formula at any rotation naming that row. The blinding
+selector is separately identified as the sum of all row selectors after the
+last usable row. What remains here is the generic finite reindexing that matches
+those rows to the verifier's negative blinding rotations.
+
 After that, translate the endpoints to the exact relations that Clean's
 `Halo2.Constraints` requires: declared `constrainEqual`/`constrainInstance` copies,
 `RegionOperation.enableLookup` membership with the exact loaded tables, fixed
