@@ -130,13 +130,17 @@ every declared Clean copy.  The caller's `Bad` is shared across all copies, so t
 global exceptional branch rather than one branch per operation.
 
 The concrete layout layer only needs to provide `encode` and `hread`; constant endpoints may be
-encoded by the floor planner's allocated constants-column cells there. -/
+encoded by the floor planner's allocated constants-column cells there. `hread` is required
+only at the DECLARED endpoints — an unconditional read fact is uninstantiable for any
+finite cell type, since a constant endpoint evaluates to an arbitrary field element. -/
 theorem declaredCopies_satisfied_or_bad_of_replay
     {F cell : Type} [FiniteField F] [DecidableEq cell] [Fintype cell]
     (place : RegionIndex → ℕ) (env : Environment F)
     (copies : List (DeclaredCopy F))
     (encode : CopyEndpoint F → cell) (value : cell → F)
-    (hread : ∀ endpoint, endpoint.eval place env = value (encode endpoint))
+    (hread : ∀ copy ∈ copies,
+      copy.1.eval place env = value (encode copy.1) ∧
+        copy.2.eval place env = value (encode copy.2))
     (Bad : Prop)
     (hcycle : ∀ {left right : cell},
       (replayKeygenPermutation (encodeDeclaredCopies encode copies)).SameCycle left right →
@@ -154,7 +158,8 @@ theorem declaredCopies_satisfied_or_bad_of_replay
       replayKeygenPermutation_pair_linked
         (encodeDeclaredCopies encode copies) hencoded
     rcases hcycle hlinked with heq | hbad'
-    · simpa [DeclaredCopy.Satisfied, hread] using heq
+    · obtain ⟨h1, h2⟩ := hread copy hcopy
+      simpa [DeclaredCopy.Satisfied, h1, h2] using heq
     · exact absurd hbad' hbad
 
 /-- The generic replay bridge, phrased directly as the `copies` field of full circuit
@@ -164,7 +169,9 @@ theorem copy_constraints_or_bad_of_replay
     (place : RegionIndex → ℕ) (env : Environment F)
     (ops : Operations F) (i : RegionIndex)
     (encode : CopyEndpoint F → cell) (value : cell → F)
-    (hread : ∀ endpoint, endpoint.eval place env = value (encode endpoint))
+    (hread : ∀ copy ∈ operationDeclaredCopies ops,
+      copy.1.eval place env = value (encode copy.1) ∧
+        copy.2.eval place env = value (encode copy.2))
     (Bad : Prop)
     (hcycle : ∀ {left right : cell},
       (replayKeygenPermutation

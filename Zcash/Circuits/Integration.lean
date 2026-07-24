@@ -2,11 +2,14 @@ import Zcash.Circuits.Integration.ExprRich
 import Zcash.Circuits.Integration.ActionEncoding
 import Zcash.Circuits.Integration.ActionGateCoherence
 import Zcash.Circuits.Integration.ActionGateCoherenceCompute
+import Zcash.Circuits.Integration.ActionInstanceCommitment
+import Zcash.Circuits.Integration.ActionInstanceCommitmentCompute
 import Zcash.Circuits.Integration.ActionPermutationDomain
 import Zcash.Circuits.Integration.ActionPermutationDomainCompute
 import Zcash.Circuits.Integration.ActionStatement
 import Zcash.Circuits.Integration.CircuitIntegration
 import Zcash.Circuits.Integration.CircuitSatisfaction
+import Zcash.Circuits.Integration.CopyListMembership
 import Zcash.Circuits.Integration.FixedColumns
 import Zcash.Circuits.Integration.FixedLayout
 import Zcash.Circuits.Integration.InstanceColumns
@@ -26,6 +29,7 @@ import Zcash.Circuits.Integration.TopLevelAssignment
 import Zcash.Circuits.Integration.TopLevelCircuit
 import Zcash.Circuits.Integration.TopLevelCoherence
 import Zcash.Circuits.Integration.TopLevelGates
+import Zcash.Circuits.Integration.TopLevelLookups
 
 /-!
 # Clean-to-Ironwood integration

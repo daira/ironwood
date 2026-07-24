@@ -25,7 +25,9 @@ structure CopyReplayWitness
     (Bad : Prop) where
   encode : CopyEndpoint Fp → cell
   value : cell → Fp
-  read : ∀ endpoint, endpoint.eval place env = value (encode endpoint)
+  read : ∀ copy ∈ operationDeclaredCopies ops,
+    copy.1.eval place env = value (encode copy.1) ∧
+      copy.2.eval place env = value (encode copy.2)
   cycle : ∀ {left right : cell},
     (replayKeygenPermutation
       (encodeDeclaredCopies encode (operationDeclaredCopies ops))).SameCycle left right →
