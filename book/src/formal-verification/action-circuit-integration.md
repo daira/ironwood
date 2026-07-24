@@ -9,6 +9,38 @@ extract `ActionData` whose ten public fields equal that Action's instance column
 the complete §4.17.4 Action statement, and prove the post-NU6.3 cross-address
 condition.
 
+## Consistency proofs should follow the compiler
+
+For consistency, well-formedness, and collision-freedom obligations, first inspect
+whether the property follows from the construction that compiled the circuit. Prefer,
+in order:
+
+1. a generic invariant of the compiler pipeline that makes the bad state impossible;
+2. a compiler decomposition of a large global obligation into small local obligations
+   attached to the components that produced the data;
+3. small structural proofs or computational certificates for those local obligations;
+4. only as a fallback, a full-circuit `native_decide` check over the finished
+   artifact.
+
+The second option is important even when the whole property is not true solely by
+construction. For example, V1 floor planning should generically prove that distinct
+regions never overlap in cells: regions may occupy the same rows, but not the same
+column-and-row cells when both use that column. Global fixed-write consistency can
+then be decomposed into tractable statements about writes within one region and the
+other compiler stages that produce fixed cells—table layout, constant allocation,
+and selector packing—plus composition theorems showing that those stages do not
+collide. Tables are not conceptual exceptions to this approach merely because they
+are outside region placement; they are another part of the broader layout/compiler
+pipeline whose construction should expose the relevant invariant or decomposition.
+The same principle applies to advice assignment, copy-cell resolution, selector
+activation, lookup layout, and future consistency requirements.
+
+A whole-circuit native check is therefore a deliberately bad fallback, not the
+default proof architecture. If such a check temporarily stands in for a compiler
+argument that appears possible but is too large for the current milestone, label it
+prominently as an **interim solution**, state the intended structural replacement,
+and keep it out of foundational interfaces where it could silently become permanent.
+
 ## Upstream PR landscape
 
 The verifier foundations on which this integration was originally stacked are now
@@ -1106,7 +1138,7 @@ append-only merge flow.
 
 | Marker | Work package | Current state | Delivers / unblocks |
 |---|---|---|---|
-| **[ME] fixed compiler** | Finish the generic last-write/dedup/scatter semantics and minimize fixed-query coverage to the columns actually consumed by fixed/table/selector requirements. | Dense-row shape, full-list Lagrange commitment provenance, fixed-query count, and the generic `TopLevelFixedCoherence.ofKeygen` constructor are complete. The remaining design question is whether fixed-write consistency is a successful-keygen law or whether Clean fixed semantics should directly follow final-write behavior. | A correct-by-construction coherence value, avoiding a giant Action-specific sparse-layout certificate. |
+| **[ME] fixed compiler** | Derive fixed-write consistency from the complete layout/compiler pipeline where possible: use region cell-disjointness to remove cross-region collisions, decompose the remainder across region-local writes, tables, constants, and selector packing, and finish generic last-write/dedup/scatter semantics. Minimize fixed-query coverage to columns actually consumed by fixed/table/selector requirements. | Dense-row shape, full-list Lagrange commitment provenance, fixed-query count, and the generic `TopLevelFixedCoherence.ofKeygen` constructor are complete. The remaining design question is the precise compiler invariant and decomposition that imply final-write consistency. Any temporary whole-Action `native_decide` certificate must be marked interim, with this structural replacement recorded beside it. | A compiler-derived or compositionally certified coherence value, avoiding a giant permanent Action-specific sparse-layout certificate. |
 | **[ME] lookup join** | Consume the exact packed-selector realization produced by `TopLevelFixedCoherence`. | Correct-by-construction lookup lawfulness, generic routing/projection, activation-row fit, deployed-witness construction, bundle-wide bad-set aggregation, exact top-level `θ` pricing, and conversion of one bundle exclusions record into every per-proof witness condition are complete. This stream is blocked only on fixed coherence; once available, the join should be small. | The lookup field of `FullCircuitBridge` for every Action proof index. |
 | **[SEPARATE: copy]** | Discharge the three remaining leaf families of the landed Action copy adapter (`Integration/ActionCopyWitness.lean`): the declared-endpoint read equations (resolution coordinates and the permutation-column roundtrip), per-pair value agreement (the σ-semantics transport through the routing coherence), and the constant-copy reads (constants-column realization). Bounds, shape, and declared-copy linkage are proven (`actionCopyBounds`/`declared_shape`/`actionCopyLink`). | `actionCopyReplayWitness` now produces the terminal's `copies` argument at its exact types from those families, kind-dispatching constant copies through the allocation zip; generic replay correctness, σ rows, membership, membership-to-resolver-value equality, active-row restriction, chunk flattening, and the constant-stream characterization all sit behind named producing theorems. | The copy field of `FullCircuitBridge`. |
 | **[SEPARATE: Action fixed/VK]** | Prove final fixed-query coverage and sparse-to-dense scatter realization for the circuit-derived Action layout, then instantiate the generic coherence constructor. | Generic fixed/table and selector-realization semantics are complete. The shared generic stream is taking ownership of dense-row shape and fixed-commitment algebra, so this task need not reproduce them. | The fixed/table field and the exact packed-selector fact consumed by the lookup stream. |
