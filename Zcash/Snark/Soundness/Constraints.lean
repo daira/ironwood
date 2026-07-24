@@ -23,10 +23,14 @@ to the assembly concrete: `Expr.toPoly` lifts the Orchard gate `Expr`s to `Polyn
 `combineGates` assembles them into the actual `numerator` — so the root-counting bound applies to the
 verifier's real gate check.
 
-Scope: what this establishes is **gate** satisfaction — the custom-gate portion of `numerator`. It does
-not connect the permutation and lookup terms to the circuit-level copy and lookup constraints (the
-combinatorial relations those arguments enforce); that is separate work. So "circuit satisfaction" on
-this path means gate satisfaction.
+Two paths through the file. The gates-only path (`combineGates` / `circuitSatViaGates`) folds just the
+custom-gate portion of `numerator`; it is the compatibility shape, so "circuit satisfaction" there
+means **gate** satisfaction. The full path (`combineConstraints` / `circuitSatViaConstraints`) folds
+the permutation and lookup constraint values in too — the same list the verifier's `expected_h_eval`
+combines — and those terms *are* connected to the circuit-level copy and lookup constraints: the
+row-level results carry them to the combinatorial relations, which `ConstraintRelations` reads back out
+of the predicate (the copy-constraint equalities and the lookup inclusion). So "circuit satisfaction"
+on the full path covers gates, the permutation argument, and the lookup argument.
 -/
 
 namespace Zcash.Snark
