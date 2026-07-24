@@ -449,21 +449,19 @@ with `fixed_constraints_iff_requirements` proving exact equivalence to the fixed
 family. `FullCircuitBridge.ofPolynomialWitnesses` assembles these gate/fixed witnesses
 with the existing copy and lookup witnesses.
 
-The remaining gate work is now a generic keygen-coherence boundary. `FormalCircuit`
-deliberately stores `configure` and `synthesize` as separate functions, so its type
-cannot rule out an ill-formed circuit that synthesizes an unregistered gate or lookup.
-`OperationsKeygenCoherent` now states precisely that every emitted gate and lookup
-belongs to its configured constraint system, and `TopLevelCircuit.KeygenCoherent`
-specializes it to a closed circuit's own configure/synthesis pair.
-`OperationsKeygenCoherent.gate` and `.lookup` transport that compact certificate to
-every activation extracted by the operation bridge. Given that predicate, the rest is
-generic: `toPinnedCS` derives placement and selector activations from the same
-operation stream; the selector-compression semantics supplies the nonzero scale at an
-enabled packed root; and the circuit-derived fixed columns supply that root value. No
-Action-specific placement or gate-polynomial witness should remain. The Action
-certificate itself should be assembled compositionally at the opaque subcircuit call
-boundaries; expanding the entire 395-region operation stream into one proof goal would
-defeat those boundaries.
+Configure/synthesis registration coherence is now enforced at the generic keygen
+boundary rather than certified by each concrete circuit. `ConstraintSystem.closeWithOperations`
+preserves the raw configure order and appends the first occurrence of every gate or
+lookup enabled only by synthesis, including the query registrations that affect
+blinding factors. `FormalCircuit.toConstraintSystem` exposes that closed system and
+`toPinnedCS` uses it consistently for domain sizing, selector compression, and
+projection. For faithful circuits such as Action the closure is inert, as checked by
+the existing VK/layout fixtures. `OperationsKeygenCoherent.closeWithOperations` proves
+the former registration premise once by construction, and `TopLevelCircuit.keygenCoherent`
+instantiates it without an Action certificate. `OperationsKeygenCoherent.gate` and
+`.lookup` still provide the convenient transport from an extracted activation to
+membership in the closed CS. The separate question whether registered gate
+expressions satisfy `Gate.WellFormed` is intentionally unchanged.
 
 The scaling algebra is now proved in `GateProjection`.
 `Expression.GatedBy` captures exactly the required gate shape: linear in the gate's
@@ -473,17 +471,143 @@ multiplication by selector-free expressions.
 evaluates to the packed selector scale times Clean's enabled-gate evaluation whenever
 the fixed/advice/instance query valuations agree. `ConstraintSystem.GatesWellFormed`
 packages the remaining static configure certificate and projects the property to
-every registered constraint. The remaining Action work is to establish that compact
-configure certificate compositionally and identify the packed fixed-column value;
-the evaluation algebra itself is no longer circuit-specific.
+every registered constraint.
+
+The resolver representation now follows Halo2's query indexing exactly. An `Expr`
+leaf indexes a VK query-layout entry `(column, rotation)`, so
+`constraintModelOfResolver` feeds it the decoded base column composed with
+`ω^rotation · X`, rather than incorrectly treating the query index as a column index.
+`resolverQueryFeeds_interpret` proves that these three rotated feeds interpret Clean's
+row environment on every domain row. `enabledGatePolynomialWitnessOfResolver` then
+combines that interpretation, pinned-CS gate equality, configure coherence, and
+selector compression into the `EnabledGate.PolynomialWitness` consumed by the generic
+gate-satisfaction bridge.
+
+The compact static configure interface is now compositional.
+`Gate.wellFormed_of_withSelector` certifies the standard Halo 2 gate constructor from
+selector-free bodies, while `Configure.PreservesGateWellFormedness` is a semantic
+StateM invariant with `pure` and `bind` composition laws. All primitive configure
+actions preserve it; `createGate` requires only the supplied gate's local
+`Gate.WellFormed` proof, and lookup registration preserves the already-established
+gate invariant. Consequently the Action proof can follow its nested chip boundaries
+and never reduce the giant completed `Action.Circuit.configure` term.
+
+`Action.GateCoherence` now supplies local `Gate.WellFormed` certificates for all 37
+distinct custom-gate definitions reachable from Action configuration. This includes
+the manually associated witness-point constraints, the fold-built running-range
+checks, every NoteCommit gate, and the shared/final fixed-base gates. Small
+selector-freedom lemmas for `rangeCheckExpr`, `windowPow`, and `coordsCheck` keep those
+proofs structural rather than evaluating concrete field data.
+
+The configure lift is complete as well. Each gate-producing leaf has a
+`PreservesGateWellFormedness` certificate; the composite NoteCommit, variable- and
+fixed-base multiplication, ECC, Poseidon, Sinsemilla, Merkle, and finally
+`Action.Circuit.configure` theorems follow the actual configure call graph. The final
+Action theorem is a certificate about the configure program, not a kernel reduction
+of the finished constraint system. `PreservesGateWellFormedness.fromEmpty` specializes
+such a certificate to the standard empty Halo 2 builder state when the downstream
+bridge needs the concrete `GatesWellFormed` fact.
+
+The selector compiler layer is now generic as well. The greedy packing proof shows
+that every compression-map entry has a positive assigned root, that the root is at
+most its combination length, and—more tightly—that every combination length is
+bounded by the constraint system's compression degree. Consequently
+`selectorRootsWellFormed_deriveSelCompressMap` proves `SelectorRootsWellFormed` from
+the minimal field-size condition `csDegree cs < scalarFieldOrder`, independent of the
+total selector count. This avoids normalizing the Action configure program merely to
+discover that it has 56 selectors; the required bound is the ordinary generic
+keygen-degree bound instead, not an Action-specific fact or fixture computation.
+The complementary coverage theorem
+`deriveSelCompressMap_lookup_isSome_of_lt` proves that this same generic compiler
+produces a compression-map entry for every allocated selector index
+`selector < cs.numSelectors`: the greedy partition may regroup selectors into packed
+columns, but cannot drop one. This closes map coverage independently of Action. A
+distinct configure-side obligation still has to show that selector atoms occurring
+syntactically in configured gate expressions are allocated indices; semantic
+`Gate.WellFormed` alone intentionally does not imply that stronger syntactic fact.
+`ConstraintSystem.GateSelectorsAllocated` now states that obligation precisely:
+each gate's distinguished selector and every selector atom in every constraint are
+below `cs.numSelectors`. The monotonicity lemma for `selectorsCovered` and
+`gateSelectorsCovered_deriveSelCompressMap` then turn that single configure
+certificate into the exact projection-coverage premise. There is no Action-specific
+compression-map computation or selector-count proof left.
+
+For activations, `mem_selectorFixed_of_activation` proves that every synthesized
+`(selector, row)` with a compression-map entry is emitted by the generic
+`Fixtures.Layout.selectorFixed` compiler as the expected packed fixed assignment.
+`selectorActivationsRealized_of_selectorFixed` then reduces
+`SelectorActivationsRealized` to one precise downstream obligation: the environment's
+fixed-column reads realize those emitted assignments. The incoming circuit-owned VK
+construction can discharge that obligation by identifying its fixed polynomials with
+the layout compiler output; no Action-specific activation-placement argument remains.
+The polynomial side of that connection is already generic:
+`selectorActivationsRealized_of_fixedRowPolynomials` takes dense fixed-row lists,
+their common domain length, valid selector roots, and the expected sparse-to-dense
+cell equalities, then uses canonical Lagrange interpolation to prove that the
+resulting polynomial environment realizes every selector activation. It needs no
+separate placement-bound premise: an out-of-domain dense-list read would be zero,
+contradicting the valid selector root's proved nonzeroness. Its converse compiler
+lemma establishes independently that an emitted selector assignment cannot invent a
+row absent from the source activation list. Thus the circuit-owned VK need only
+expose its dense fixed rows and prove the ordinary layout/scatter equations; selector
+semantics does not enter VK assembly.
+
+The generic operation walk already proves that every extracted enabled gate occurs in
+the floor-planner activation table, and `selectorScale_ne_zero_of_enabledGate` turns
+the two contracts into the required nonzero scale. The remaining gate work is now to
+connect circuit-derived fixed rows and polynomials to the emitted layout assignments,
+with only the generic degree-below-field-order condition. The evaluation and
+resolver-membership algebra is no longer circuit-specific.
+
+`TopLevelCircuit.selectorActivations` and `.selectorMap` now expose those two keygen
+objects directly, and `pinnedCS_eq_derive` identifies the circuit's existing pinned
+constraint system with that exact map. The final pinned query state is also proved to
+extend the intermediate gate-erasure state (`derive_queryState_extends_gates`), so
+lookup projection may append query entries without forcing a false equality between
+the VK's final layouts and the earlier gate state.
+
+`TopLevelGateCoherence` is the generic static boundary to the incoming circuit-owned
+verifying key. Its `polynomialWitness` theorem derives the resolver witness for every
+enabled constraint using only the top-level circuit's own operations, placement,
+selector map, pinned projection, and the decoded fixed-polynomial realization.
+`TopLevelGateCoherence.constraints` then supplies the complete gate field of Clean's
+constraint satisfaction. The remaining constructor work is to obtain the record's
+pinned-field equalities from `FormalCircuit.toVerifyingKey`, prove the compact
+configure certificates (`GatesWellFormed` and `GateSelectorsAllocated`), and connect
+the VK's dense fixed rows to
+`SelectorActivationsRealized`.
+
+The configure proof for `GateSelectorsAllocated` now has a reusable local interface.
+`Gate.SelectorsOwned` says a gate mentions no selector other than its distinguished
+one, and `Gate.selectorsOwned_of_withSelector` derives it structurally from the same
+selector-free bodies already used by the semantic gate-shape proof. Allocation is
+monotone as selector counters increase. `PreservesGateSelectorsAllocated` supplies
+the ordinary state-monad preservation rules and direct certificates for the common
+simple- or complex-selector/create-gate leaf patterns. Generic relational rules retain
+fresh-index facts across multi-selector gate groups, mixed selector/lookup programs,
+and child programs that consume a selector allocated by their parent. The
+continuation form of the selector/create-gate rule also avoids elaborating a large
+reassociated state-monad term while keeping the 20,000-heartbeat debugging bound.
+
+`Action.SelectorCoherence` now completes the circuit instantiation without touching
+the VK path. It proves ownership and configure preservation for the ordinary leaves,
+LookupRangeCheck, variable- and fixed-base ECC (including the parent-allocated
+running-sum selector), Poseidon, NoteCommit, both Sinsemilla gate forms, and Merkle,
+then composes them in the exact `Action.Circuit.configure` registration order. Thus
+`Action.Circuit.configure_preservesGateSelectorsAllocated` is the compact
+circuit-derived certificate required by `TopLevelGateCoherence`; callers can apply
+the generic `fromEmpty` rule directly, without an Action-specific wrapper theorem.
+This closes the configure-side selector-allocation obligation. It does not claim the
+separate lookup-expression selector-coverage property that the future lookup
+projection may require.
 
 The `Fixtures.Layout` reconstruction is already generic over operations, so σ-cycle
 correctness of its replayed keygen merge is likewise a once-and-for-all lemma.
 
 ### 5. Construct the Clean assignment
 
-**Status: the generic VK-free assignment shell is implemented; its decoded-member
-constructor remains open. The merged
+**Status: the generic VK-free assignment shell and a circuit-derived Action
+decoded-member constructor are implemented. The merged
 [#89](https://github.com/zcash/ironwood/pull/89) supplies the target semantics, while
 [#30](https://github.com/zcash/ironwood/pull/30) and
 [#91](https://github.com/zcash/ironwood/pull/91) supply most of the prospective source
@@ -525,6 +649,17 @@ sentinel, so any derived exponent below `33` satisfies the operation-footprint a
 blinding-row fit inequality. `TopLevelAssignment.synthesisWellFormed` therefore needs
 only this standard supported-domain bound, not a separately reconstructed row proof.
 
+The fixed-data bridge now reaches the keygen layout compiler as well.
+`FixedLayout.mem_tableFixed_of_loadTable_of_lt` and `_of_fill` cover both the explicit
+table block and Halo 2's default-filled tail, while
+`mem_regionAssignFixed_of_requirement` connects each extracted region requirement to
+its V1 absolute row. Consequently `FixedLayout.constraints_of_entries` proves the
+entire Clean `.fixed` family from realization of the raw sparse entries emitted by
+`Layout.tableFixed ++ Layout.regionAssignFixed`. The remaining representation step is
+intentionally narrow: the circuit-owned key builder must show that its
+deduplicated/scattered dense fixed rows, and then their interpolated polynomials,
+realize those raw entries. No Action operation-list proof remains.
+
 The domain algebra is kernel-reusable as well. `Bridge.powFast_eq_pow` connects the
 executable binary exponentiation to ordinary powers, and
 `omegaOf_isPrimitiveRoot`, `omegaOf_domain`, and `omegaOf_powers_injective` derive the
@@ -545,10 +680,22 @@ the type has neither an arbitrary domain nor a `VerifyingKey` argument, and
 `TopLevelAssignment.synthesisWellFormed` discharges the layout premise directly from
 `TopLevelCircuit.FitsAt k`.
 
-The incoming `FormalCircuit.toVerifyingKey` completes this seam rather than changing
-it: prove that its `omega`, `n`, and blinding fields are the domain values above, then
-define the decoded-member constructor using that circuit-derived key. The external
-accepted key appears only through its equality certificate with the derived key.
+`TopLevelAssignment.ofActionDecodedMembers` now constructs this shell directly from
+the deployed decoded-member resolver. It never accepts an arbitrary verifying key:
+the decoder uses `VkCommit.derivedActionVk shape urs`, whose scalar, gate, query-layout,
+fixed-commitment, permutation-commitment, permutation-chunk, and lookup fields are
+derived from the configured Action circuit and supplied URS. The reusable derivation
+is independent of the captured fixture; the deliberately expensive
+`VkCommit.Certificate` separately proves that the captured deployed key equals that
+derived key.
+
+The incoming generic `FormalCircuit.toVerifyingKey` will shrink the remaining
+Action-specific seam rather than alter the assignment interface. Replace
+`derivedActionVk` with `orchardActionTopLevelCircuit.formalCircuit.toVerifyingKey`,
+prove the generic field equations connecting that key to the circuit-owned domain and
+layout above, and retain the captured-key equality only as an external deployment
+certificate. Until that lands, the constructor has one explicit shape-domain
+coherence premise because `Shape.k` is not itself derived from its key.
 
 On the SNARK side, `FullCircuitSatisfaction.topLevelSoundness` composes exact
 gate/copy/lookup/fixed satisfaction with that generic top-level endpoint.
@@ -587,20 +734,20 @@ its fixed-table clauses to the corresponding constraints. The deployed
 `orchardActionTopLevelCircuit` specializes this generic Action construction to the
 real generators and certified bases.
 
-The existing `ActionAssignment` still packages one proof member's
-fixed/advice/instance polynomials through `resolverEnvironment`, but its API predates
-the circuit-owned keygen layer: it takes a `VerifyingKey` and repeats Action placement
-and usable-row choices. It is temporary. Once `FormalCircuit.toVerifyingKey` is
-available, move its decoded constructor onto `TopLevelAssignment` and delete the
-legacy Action-specific type. The external accepted Action VK then enters only through
-a certificate that it equals (or has the required fields equal to) the derived VK.
+The legacy `ActionAssignment` has been deleted. Its decoded constructor now returns
+the generic `TopLevelAssignment` indexed by `orchardActionTopLevelCircuit`, so
+placement, operations, domain exponent, blinding factors, and usable rows all come
+from the top-level circuit. The only Action-specific work left in this layer is the
+deployed decoder routing and, pending generic `FormalCircuit.toVerifyingKey`, the
+temporary concrete spelling of the circuit-derived key.
 
 The compositional base and post-Ironwood `FormalCircuit`s intentionally retain their
 `EnvAssumptions`: child circuits may state contracts that a parent fulfills.
 `TopLevelCircuit` is the separate deployment boundary that closes those contracts.
 The generic `SynthesisWellFormed` and full-satisfaction-to-statement steps are now
-complete. The remaining assignment work is to connect the circuit-derived VK/domain
-to the resolver environment, then construct the gate/copy/lookup/fixed witnesses that
+complete. The circuit-derived decoded assignment and rotated resolver environment are
+now connected generically. The remaining representation work is to discharge the
+static gate/selector premises above and construct the copy/lookup/fixed witnesses that
 feed `FullCircuitBridge.topLevelSoundness_or_bad`.
 
 After #79's merge, the generic circuit-integration declarations are checked in the
@@ -687,10 +834,14 @@ whose public inputs were committed by the verifier.
 2. Make #89's post-compression CS and layout fixtures available as reusable Lean data,
    and prove VK/layout equality theorems that discharge #30's routing hypotheses.
 3. The canonical polynomial-to-row decoder, Action top-level environment closure,
-   circuit-owned pinned CS/V1 placement/domain fit, and generic
-   full-satisfaction-to-`TopLevelCircuit.Statement` endpoint are complete. Replace the
-   legacy Action assignment with a generic circuit-owned-VK assignment and discharge
-   its resolver representation facts.
+   circuit-owned pinned CS/V1 placement/domain fit, generic
+   full-satisfaction-to-`TopLevelCircuit.Statement` endpoint, and decoded
+   `TopLevelAssignment` constructor are complete; the legacy `ActionAssignment` is
+   gone. The Action configure program now also supplies the complete generic
+   `GateSelectorsAllocated` certificate needed by the gate projection. Replace its
+   temporary Action key derivation with generic
+   `FormalCircuit.toVerifyingKey` when available, then discharge the resolver
+   representation facts.
 4. Instantiate the generic decomposed bridge for one selected Action, adapt
    `TopLevelCircuit.Statement` to the external Action statement, and then generalize
    it to every `Fin shape.numProofs`. The semantic adapter and generic decoded

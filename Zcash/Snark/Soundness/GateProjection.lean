@@ -268,11 +268,288 @@ end Expression
 Every configured custom-gate polynomial is linear in its own selector and
 independent of foreign selectors, as required by selector compression.
 -/
+def Gate.WellFormed
+    {F : Type} [Field F] (gate : Gate F) : Prop :=
+  gate.constraints.Forall fun constraint =>
+    constraint.poly.GatedBy gate.selector
+
+/--
+`Constraints.withSelector` constructs a well-formed gate from selector-free
+ungated bodies.
+-/
+@[circuit_norm]
+theorem Gate.wellFormed_of_withSelector
+    {F : Type} [Field F]
+    (name : String) (selector : Selector)
+    (queriedCells : List (Expression F Query))
+    (constraints : List (String × Expression F Query))
+    (hfree : constraints.Forall fun constraint =>
+      constraint.2.selectorFree = true) :
+    ({ name := name
+       selector := selector
+       queriedCells := queriedCells
+       constraints := Constraints.withSelector selector constraints } :
+      Gate F).WellFormed := by
+  rw [Gate.WellFormed, List.forall_iff_forall_mem]
+  intro constraint hconstraint
+  obtain ⟨source, hsource, rfl⟩ := List.mem_map.mp hconstraint
+  apply Expression.GatedBy.mul_right
+    (Expression.gatedBy_querySelector selector)
+  exact List.forall_iff_forall_mem.mp hfree source hsource
+
 def ConstraintSystem.GatesWellFormed
     {F : Type} [Field F] (cs : ConstraintSystem F) : Prop :=
-  cs.gates.Forall fun gate =>
-    gate.constraints.Forall fun constraint =>
-      constraint.poly.GatedBy gate.selector
+  cs.gates.Forall Gate.WellFormed
+
+namespace ConstraintSystem
+
+variable {F : Type}
+
+@[simp]
+theorem queryAdviceIndex_gates
+    (cs : ConstraintSystem F) (column : Column .advice)
+    (rotation : Rotation) :
+    (cs.queryAdviceIndex column rotation).gates = cs.gates := by
+  simp only [queryAdviceIndex]
+  split <;> rfl
+
+@[simp]
+theorem queryFixedIndex_gates
+    (cs : ConstraintSystem F) (column : Column .fixed) :
+    (cs.queryFixedIndex column).gates = cs.gates := by
+  simp only [queryFixedIndex]
+  split <;> rfl
+
+@[simp]
+theorem queryInstanceIndex_gates
+    (cs : ConstraintSystem F) (column : Column .instance)
+    (rotation : Rotation) :
+    (cs.queryInstanceIndex column rotation).gates = cs.gates := by
+  simp only [queryInstanceIndex]
+  split <;> rfl
+
+@[simp]
+theorem queryAnyIndex_gates
+    (cs : ConstraintSystem F) (column : AnyColumn) :
+    (cs.queryAnyIndex column).gates = cs.gates := by
+  cases column with
+  | mk columnType index =>
+      cases columnType <;> simp [queryAnyIndex]
+
+@[simp]
+theorem registerQueriedCell_gates
+    (cs : ConstraintSystem F) (owner : String)
+    (cell : Expression F Query) :
+    (cs.registerQueriedCell owner cell).gates = cs.gates := by
+  cases cell with
+  | var query =>
+      cases query <;> simp [registerQueriedCell]
+  | const value =>
+      rfl
+  | add left right =>
+      rfl
+  | mul left right =>
+      rfl
+
+@[simp]
+theorem registerQueriedCells_gates
+    (cs : ConstraintSystem F) (owner : String)
+    (cells : List (Expression F Query)) :
+    (cs.registerQueriedCells owner cells).gates = cs.gates := by
+  unfold registerQueriedCells
+  induction cells generalizing cs with
+  | nil => rfl
+  | cons cell rest ih =>
+      rw [List.foldl_cons, ih, registerQueriedCell_gates]
+
+end ConstraintSystem
+
+/-- The empty configure state has no malformed gates. -/
+@[circuit_norm]
+theorem ConstraintSystem.gatesWellFormed_empty
+    {F : Type} [Field F] :
+    ({} : ConstraintSystem F).GatesWellFormed := by
+  simp [ConstraintSystem.GatesWellFormed]
+
+/-- Registering a gate preserves the invariant exactly when that gate is well formed. -/
+@[circuit_norm]
+theorem ConstraintSystem.gatesWellFormed_createGate
+    {F : Type} [Field F]
+    (cs : ConstraintSystem F) (gate : Gate F) :
+    ((createGate gate cs).2).GatesWellFormed ↔
+      cs.GatesWellFormed ∧ gate.WellFormed := by
+  change List.Forall Gate.WellFormed
+      ((cs.registerQueriedCells gate.name gate.queriedCells).gates ++
+        [gate]) ↔
+    List.Forall Gate.WellFormed cs.gates ∧ gate.WellFormed
+  rw [ConstraintSystem.registerQueriedCells_gates, List.forall_append]
+  simp
+
+namespace Configure
+
+variable {F α β : Type} [Field F]
+
+/--
+A configure program preserves gate well-formedness for every incoming constraint
+system.  This is the compositional proof interface for nested chip configuration:
+the parent circuit need not evaluate the completed configure state.
+-/
+structure PreservesGateWellFormedness
+    (program : Configure F α) : Prop where
+  run : ∀ cs, cs.GatesWellFormed →
+    (program cs).2.GatesWellFormed
+
+namespace PreservesGateWellFormedness
+
+@[circuit_norm]
+theorem pure (value : α) :
+    PreservesGateWellFormedness
+      (pure value : Configure F α) := by
+  constructor
+  intro cs hcs
+  exact hcs
+
+@[circuit_norm]
+theorem bind
+    {program : Configure F α} {next : α → Configure F β}
+    (hprogram : PreservesGateWellFormedness program)
+    (hnext : ∀ value, PreservesGateWellFormedness (next value)) :
+    PreservesGateWellFormedness (program >>= next) := by
+  constructor
+  intro cs hcs
+  exact (hnext (program cs).1).run (program cs).2
+    (hprogram.run cs hcs)
+
+@[circuit_norm]
+theorem map
+    (function : α → β) {program : Configure F α}
+    (hprogram : PreservesGateWellFormedness program) :
+    PreservesGateWellFormedness (function <$> program) := by
+  constructor
+  intro cs hcs
+  exact hprogram.run cs hcs
+
+@[circuit_norm]
+theorem adviceColumn :
+    PreservesGateWellFormedness
+      (Halo2.adviceColumn : Configure F (Column .advice)) := by
+  constructor
+  intro cs hcs
+  exact hcs
+
+@[circuit_norm]
+theorem fixedColumn :
+    PreservesGateWellFormedness
+      (Halo2.fixedColumn : Configure F (Column .fixed)) := by
+  constructor
+  intro cs hcs
+  exact hcs
+
+@[circuit_norm]
+theorem instanceColumn :
+    PreservesGateWellFormedness
+      (Halo2.instanceColumn : Configure F (Column .instance)) := by
+  constructor
+  intro cs hcs
+  exact hcs
+
+@[circuit_norm]
+theorem selector :
+    PreservesGateWellFormedness
+      (Halo2.selector : Configure F Selector) := by
+  constructor
+  intro cs hcs
+  exact hcs
+
+@[circuit_norm]
+theorem complexSelector :
+    PreservesGateWellFormedness
+      (Halo2.complexSelector : Configure F Selector) := by
+  constructor
+  intro cs hcs
+  exact hcs
+
+@[circuit_norm]
+theorem enableEquality (column : AnyColumn) :
+    PreservesGateWellFormedness
+      (Halo2.enableEquality (F := F) column) := by
+  constructor
+  intro cs hcs
+  simpa [Halo2.enableEquality, ConstraintSystem.GatesWellFormed] using hcs
+
+@[circuit_norm]
+theorem enableConstant (column : Column .fixed) :
+    PreservesGateWellFormedness
+      (Halo2.enableConstant (F := F) column) := by
+  constructor
+  intro cs hcs
+  simpa [Halo2.enableConstant, ConstraintSystem.GatesWellFormed] using hcs
+
+@[circuit_norm]
+theorem lookupTableColumn :
+    PreservesGateWellFormedness
+      (Halo2.lookupTableColumn : Configure F TableColumn) :=
+  bind fixedColumn fun _ => pure _
+
+@[circuit_norm]
+theorem createGate
+    (gate : Gate F) (hgate : gate.WellFormed) :
+    PreservesGateWellFormedness
+      (Halo2.createGate gate) := by
+  constructor
+  intro cs hcs
+  exact (ConstraintSystem.gatesWellFormed_createGate cs gate).2
+    ⟨hcs, hgate⟩
+
+/--
+The standard leaf-chip configure pattern: allocate one simple selector, register
+its locally certified gate, and return the selector-indexed config.
+-/
+@[circuit_norm]
+theorem selectorCreateGate
+    (gate : Selector → Gate F) (result : Selector → α)
+    (hgate : ∀ selector, (gate selector).WellFormed) :
+    PreservesGateWellFormedness (do
+      let selector ← Halo2.selector
+      Halo2.createGate (gate selector)
+      return result selector) :=
+  bind selector fun selector =>
+    bind (createGate _ (hgate selector)) fun _ =>
+      pure _
+
+/-- Run a preserving configure program from Halo 2's empty initial state. -/
+theorem fromEmpty
+    {program : Configure F α}
+    (hprogram : PreservesGateWellFormedness program) :
+    (program {}).2.GatesWellFormed :=
+  hprogram.run {} ConstraintSystem.gatesWellFormed_empty
+
+@[circuit_norm]
+theorem lookup
+    (queriedCells : List (Expression F Query))
+    (tableMap : List (Expression F Query × TableColumn)) :
+    PreservesGateWellFormedness
+      (Halo2.lookup queriedCells tableMap) := by
+  constructor
+  intro cs hcs
+  simp only [Halo2.lookup, ConstraintSystem.GatesWellFormed]
+  have registerTableGates
+      (state : ConstraintSystem F)
+      (entries : List (Expression F Query × TableColumn)) :
+      (entries.foldl
+        (fun state entry =>
+          state.queryFixedIndex entry.2.inner)
+        state).gates = state.gates := by
+    induction entries generalizing state with
+    | nil => rfl
+    | cons entry rest ih =>
+        rw [List.foldl_cons, ih,
+          ConstraintSystem.queryFixedIndex_gates]
+  simpa [registerTableGates] using hcs
+
+end PreservesGateWellFormedness
+
+end Configure
 
 namespace ConstraintSystem.GatesWellFormed
 

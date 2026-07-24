@@ -10,7 +10,7 @@ autoImplicit = false
 [[require]]
 name = "Clean"
 git = "https://github.com/Verified-zkEVM/clean"
-rev = "b348e6ddbff5f9e8064a0905bf7e0b4ef3fc16a0"
+rev = "905a70f67a178bec324c9494dde18d0868c10f0a"
 
 [[require]]
 name = "CompElliptic"
@@ -52,10 +52,9 @@ globs = ["Zcash.Circuits.Tests.+"]
 # `fixedCommitment`/`permutationCommonCommitment` from the circuit + captured URS
 # (Lagrange FFT, dense fixed columns, keygen permutation polynomials) and assembles the
 # fully-derived `derivedActionVk`. Deliberately EXCLUDED from `defaultTargets`: the
-# single-column certification `native_decide` alone measures ~21.5 min wall / 6.9 GB RSS
-# (Lagrange FFT + one 2^11-term Vesta MSM + the fixture-closure native codegen — see the
-# module docstring; the full 44-commitment bundle is drafted there but deferred on cost).
-# Build explicitly with `lake build ZcashVkCommit`; the rest of the repo stays fast.
+# concrete certificate is intentionally expensive. `Derivation` contains the reusable
+# data and key; `Certificate` contains the native commitment equality. Build both
+# explicitly with `lake build ZcashVkCommit`; the rest of the repo stays fast.
 [[lean_lib]]
 name = "ZcashVkCommit"
 globs = ["Zcash.Snark.VkCommit.+"]
