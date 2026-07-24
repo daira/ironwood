@@ -643,6 +643,14 @@ analogue: lookup selectors must have their exact zero/one activation values, not
 merely a nonzero scale. Orchard's lookup selectors are complex/lookup-only selectors,
 so the fixed-layout constructor should derive that exact projection from their packed
 columns rather than expose it as an Action assumption.
+The generic boundary now quantifies only selector leaves that actually occur in the
+selected lookup's input expressions; unrelated gate selectors may legitimately be
+active at the same absolute row. `LookupSelectorRows` transports exact dense packed
+rows through fixed-polynomial binding into that expression-level projection.
+The remaining compiler argument has two parts: within a region, no relevant selector
+may be activated at the lookup row without appearing in that operation's `enabled`
+list; across regions, V1 placement must keep regions sharing that virtual selector
+column cell-disjoint.
 
 The generic gate and fixed/table operation layers are now implemented as well.
 `operationEnabledGates` extracts every placed activation and
@@ -739,6 +747,11 @@ below `cs.numSelectors`. The monotonicity lemma for `selectorsCovered` and
 `gateSelectorsCovered_deriveSelCompressMap` then turn that single configure
 certificate into the exact projection-coverage premise. There is no Action-specific
 compression-map computation or selector-count proof left.
+For lookup-only selectors, `process_lookup_degreeZero_of_mem` proves structurally that
+degree-zero descriptions are packed alone with combination length and assigned root
+both equal to one. `deriveSelCompressMap_lookup_degreeZero_of_lt` carries that result
+through the circuit-derived fixed-column offset and proves that the packed column lies
+in the newly appended selector-column suffix.
 
 For activations, `mem_selectorFixed_of_activation` proves that every synthesized
 `(selector, row)` with a compression-map entry is emitted by the generic
@@ -809,6 +822,14 @@ turns an empty list into the exact realization fact.
 `ActionFixedCoherence.realizationFailures_eq_nil` certifies the Action list is empty.
 The companion query-coverage diagnostic closes the current all-fixed-columns
 coverage field.
+
+The generic scatter semantics no longer needs computation:
+`denseColumns_getD_getD_eq_zero_of_no_target` proves that an unwritten in-domain cell
+retains the zero initializer, while
+`denseColumns_getD_getD_eq_of_last_write` proves that the final sparse write to a cell
+determines its dense value. These are the assembly lemmas for both disabled selector
+rows and ordinary fixed realization; the remaining work is to prove the required
+no-later-collision facts from the producers of the sparse stream.
 
 Their intended replacement follows the compiler pipeline: prove that V1 regions are
 disjoint in cells, prove small region-local write obligations, establish the

@@ -1552,6 +1552,36 @@ theorem SelCompressMap.exists_mem_entries_of_lookup
   obtain ⟨entry, hfind, hcompressed⟩ := hlookup
   exact ⟨entry, List.mem_of_find?_eq_some hfind, hcompressed⟩
 
+/-- Mapping a fixed-column offset over every entry preserves successful lookup. -/
+private theorem SelCompressMap.lookup_mapPackedOffset
+    (map : SelCompressMap) (offset selector : ℕ)
+    {source : SelCompress}
+    (hlookup : map.lookup selector = some source) :
+    ({ newFixedCols := map.newFixedCols
+       entries := map.entries.map fun (key, compressed) =>
+         (key, { compressed with
+           packedCol := compressed.packedCol + offset }) } :
+        SelCompressMap).lookup selector =
+      some { source with
+        packedCol := source.packedCol + offset } := by
+  rcases map with ⟨newFixedCols, entries⟩
+  simp only [SelCompressMap.lookup] at hlookup ⊢
+  induction entries with
+  | nil =>
+      simp at hlookup
+  | cons entry rest ih =>
+      rcases entry with ⟨key, compressed⟩
+      simp only [List.map_cons, List.find?_cons] at hlookup ⊢
+      by_cases heq : key = selector
+      · simp only [heq, decide_true] at hlookup ⊢
+        simp only [Option.map_some] at hlookup ⊢
+        have hsource : compressed = source :=
+          Option.some.inj hlookup
+        subst compressed
+        rfl
+      · simp only [heq, decide_false] at hlookup ⊢
+        exact ih hlookup
+
 /--
 The circuit-derived compression map covers every allocated selector index.
 Selector packing changes columns and roots, but never drops a configured selector.
@@ -1589,6 +1619,55 @@ theorem deriveSelCompressMap_lookup_isSome_of_lt
             sourceCompressed.packedCol + cs.numFixedColumns }))
   exact List.mem_map.mpr
     ⟨(selector, source), hsource, rfl⟩
+
+/--
+A selector with no gate degree is packed alone by the circuit-derived map. Its
+column is in the newly appended fixed-column suffix.
+-/
+theorem deriveSelCompressMap_lookup_degreeZero_of_lt
+    {F : Type} (cs : ConstraintSystem F) (n : ℕ)
+    (activations : List (ℕ × ℕ)) {selector : ℕ}
+    (hselector : selector < cs.numSelectors)
+    (hdegree : (selectorMaxDegrees cs)[selector]! = 0) :
+    ∃ compressed,
+      (deriveSelCompressMap cs n activations).lookup selector =
+        some compressed ∧
+      compressed.combinationLen = 1 ∧
+      compressed.assignedRoot = 1 ∧
+      cs.numFixedColumns ≤ compressed.packedCol := by
+  let table := activationTable n cs.numSelectors activations
+  let degrees := selectorMaxDegrees cs
+  let descriptions :=
+    (List.range cs.numSelectors).map fun index =>
+      SelectorDescription.mk index table[index]! degrees[index]!
+  let packing := process descriptions (csDegree cs)
+  let description :=
+    SelectorDescription.mk selector table[selector]! degrees[selector]!
+  have hdescription : description ∈ descriptions := by
+    apply List.mem_map.mpr
+    exact ⟨selector, List.mem_range.mpr hselector, rfl⟩
+  have hdescriptionDegree : description.maxDegree = 0 :=
+    hdegree
+  obtain ⟨source, hsource, hlength, hroot⟩ :=
+    process_lookup_degreeZero_of_mem descriptions (csDegree cs)
+      hdescription hdescriptionDegree
+  let compressed : SelCompress :=
+    { source with
+      packedCol := source.packedCol + cs.numFixedColumns }
+  refine ⟨compressed, ?_, hlength, hroot, by
+    simp only [compressed]
+    omega⟩
+  have hsource' : packing.lookup selector = some source := by
+    simpa only [packing, descriptions, description, degrees, table] using
+      hsource
+  change
+    ({ newFixedCols := packing.newFixedCols
+       entries := packing.entries.map fun (key, source) =>
+         (key, { source with
+           packedCol := source.packedCol + cs.numFixedColumns }) } :
+      SelCompressMap).lookup selector = some compressed
+  exact SelCompressMap.lookup_mapPackedOffset
+    packing cs.numFixedColumns selector hsource'
 
 /--
 The circuit-derived compression map covers every selector atom of every configured
