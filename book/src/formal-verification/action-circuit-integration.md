@@ -131,12 +131,22 @@ interpolated coefficient vector. Consequently,
 `(g, U, W)` opening of that commitment is the canonical zero-padded row polynomial,
 or computes the existing nontrivial-relation branch. At the deployed endpoint,
 `OpenedMemberDecode.commitment` supplies that opening for the routed instance member.
+The verifier grouping now preserves enough indexed provenance to close the intervening
+step generically: `constructIntermediateSets_member_provenance` shows that a grouped
+commitment and its retained identity arise from the same assembled query,
+`assembleQueries_instance_commitment` identifies every `.instanceCol p column` query
+with the statement-derived commitment, and
+`deployedMemberRef_eq_instanceCommitment` composes those facts for any deployed
+member slot. None of these theorems mentions Action placement or operations.
 
 `actionPublicInputs_of_instanceRowPolynomial` then performs the only Action-specific
 row mapping: the first ten reads of the configured primary column are exactly the
 structured `Action.PublicInputs`. The remaining concrete work is to identify the
-routed member as that primary instance column and provide the parameters'
-`LagrangeCommitmentKey` setup certificate.
+routed member's column number with `Action.Config.primary` and provide the parameters'
+`LagrangeCommitmentKey` setup certificate. Once those two facts are supplied, the
+decoded member's `OpenedMemberDecode.commitment` equation can be passed directly to
+`coeffsToPoly_eq_instanceRowPolynomial_or_relation`; the tiny equality composition is
+intended to remain inline at that use site.
 
 The concrete Action construction still has to prove that:
 

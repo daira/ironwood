@@ -220,6 +220,52 @@ noncomputable def assembledQueryMemberRoute_faithful [DecidableEq G] [Inhabited 
   · simpa only [deployedMemberClaim, deployedSetQueries,
       constructIntermediateSets_zip_sets_getD] using heval
 
+omit [Module Fp G] in
+/--
+Any deployed member carrying an instance-column identity is the statement-derived commitment for
+that proof and column.  This is the commitment-side companion of the canonical query route: the
+grouping retains `CommitmentId` positionally, so no circuit-specific placement fact is needed.
+-/
+theorem deployedMemberRef_eq_instanceCommitment [DecidableEq G] [Inhabited G]
+    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp)
+    (hcount : deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch
+      = (constructIntermediateSets
+          (assembleQueries vk instanceCommitment ps ch)).sets.length)
+    (slot : DeployedMemberSlot (instanceCommitment := instanceCommitment) vk ps ch)
+    (p : Fin shape.numProofs) (column : ℕ)
+    (hid :
+      (deployedSetCommIds (instanceCommitment := instanceCommitment)
+        vk ps ch slot.setIndex).getD (slot.memberIndex : ℕ) .vanishingH
+        = .instanceCol p column) :
+    ((deployedSetQueries (instanceCommitment := instanceCommitment)
+      vk ps ch slot.setIndex).getD (slot.memberIndex : ℕ) (.point 0, [])).1
+      = .point (instanceCommitment p column) := by
+  classical
+  have hi :
+      slot.setIndex <
+        (constructIntermediateSets
+          (assembleQueries vk instanceCommitment ps ch)).sets.length := by
+    rw [← hcount]
+    exact slot.setIndex_lt
+  have hm :
+      (slot.memberIndex : ℕ) <
+        ((constructIntermediateSets
+          (assembleQueries vk instanceCommitment ps ch)).sets.getD slot.setIndex []).length := by
+    simpa only [deployedSetQueries, constructIntermediateSets_zip_sets_getD] using
+      slot.memberIndex.isLt
+  obtain ⟨q, hq, href, hqid⟩ :=
+    constructIntermediateSets_member_provenance
+      (assembleQueries vk instanceCommitment ps ch)
+      slot.setIndex (slot.memberIndex : ℕ) hi hm (.point 0, []) .vanishingH
+  have hqId : q.commId = .instanceCol p column := by
+    exact hqid.symm.trans hid
+  have hqCommitment :
+      q.commitment = .point (instanceCommitment p column) :=
+    assembleQueries_instance_commitment vk instanceCommitment ps ch q hq p column hqId
+  simpa only [deployedSetQueries, constructIntermediateSets_zip_sets_getD] using
+    href.trans hqCommitment
+
 omit [AddCommGroup G] [Module Fp G] in
 /-- A successful rejecting assembly supplies exactly the two structural facts needed by the
 canonical member route: duplicate commitment-point queries were rejected, and the `u` vector has
