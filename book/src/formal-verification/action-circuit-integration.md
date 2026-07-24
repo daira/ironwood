@@ -117,8 +117,9 @@ The remaining work is:
 ### 2. Replace the free column decoders
 
 **Status: polynomial/query-level decoding is implemented by
-[#30](https://github.com/zcash/ironwood/pull/30); the generic Clean row decoder is now
-implemented on this branch, while its concrete Action instantiation remains open.**
+[#30](https://github.com/zcash/ironwood/pull/30); the generic Clean row decoder and
+the concrete Action public-instance commitment provenance are now implemented on this
+branch.**
 
 The deployed/member capstones use canonical decoding through `coeffsToPoly`,
 `decodedCols`, `x1DecodeCols`, query-layout member selection, and `rotatedFeed`. The
@@ -187,17 +188,15 @@ difference between the fixture's executable `c.val • point` natural-scalar sum
 the abstract `Fp`-module commitment, leaving only the ten actual generator equations
 as concrete setup data.
 
-The concrete Action construction still has to prove that:
-
-- the configured primary column occurs in the circuit-derived instance query layout;
-- the verifier-supplied commitment is the Lagrange commitment of the supplied Action
-  public inputs;
-- the exported Lagrange generators certify the compatible commitment key;
-- usable and blinding rows are treated exactly as Halo 2 treats them.
-
-**Active next slice: concrete instance-commitment provenance.** Prove the Action
-Lagrange-key and public-input commitment certificates, then remove the endpoint's
-instance-key/commitment parameters and, if possible, its registration premise.
+The concrete Action construction is now closed in
+`ActionInstanceCommitment`. `instanceKey` derives the compatible Lagrange key from
+the monomial URS, `commitment` computes the verifier's instance commitment from each
+Action's ten public rows, and `commitment_primary_eq_commit` identifies it with the
+zero-padded row polynomial plus Halo 2's default blind. The Action endpoint constructs
+this key and commitment internally, discharges primary-query registration and the
+Action domain bounds, and no longer accepts an instance key, commitment equation, or
+registration premise from its caller. A commitment mismatch remains visible only as
+the shared `HasNontrivialRelation` exceptional branch.
 
 Then expose the result as the row-indexed Clean `Environment` used by
 `Action.Circuit.soundnessPost`. The remaining gap is not the old free-polynomial
@@ -337,15 +336,23 @@ expressions evaluate like their configured Clean expressions.
 projects its exact selector-substituted tuples into the resolver's compressed
 input/table polynomials, and constructs both one `EnabledLookup.DeployedWitness` and
 the complete witness family consumed by `FullCircuitBridge`.
-`LookupArgumentWellFormed` packages the configure-level facts—allocated input
-selectors, selector-free table expressions, and matching tuple arity—and
-`TopLevelLookupCoherence.ofLookupsWellFormed` turns that single law into compression-map
-coverage. `InputSelectorValuesRealized` further reduces exact projection to one
-selector-level packed-column fact at the activation row; table projection follows
-generically from selector freedom. The remaining concrete inputs are therefore the
-Action instance of that configure law, packed selector values, activation-row fit, and
-the `β`/`γ`/`θ` exclusions. The first three are compiler/fixed-layout facts; they are
-not Action semantic assumptions. `lookup_gamma_failure_measure_le` and
+`LookupArgumentWellFormed` currently packages the configure-level facts—allocated
+input selectors, selector-free table expressions, and matching tuple arity—and
+`TopLevelLookupCoherence.ofLookupsWellFormed` turns that law into compression-map
+coverage. This detached certificate is temporary. The upstream Clean branch now puts
+selector-free tables and matching arity directly in `LookupArgument`, and
+`closeWithOperations` raises `numSelectors` to cover every selector appearing in
+lookup inputs. Once the in-progress module relocation lands in Ironwood, this branch
+will update its Clean pin and replace `ConstraintSystemLookupsWellFormed` with an
+unconditional, circuit-generic `TopLevelLookupCoherence` constructor. No Action
+configure proof should survive that change.
+
+`InputSelectorValuesRealized` further reduces exact projection to one selector-level
+packed-column fact at the activation row; table projection follows generically from
+selector freedom. The remaining concrete inputs are therefore packed selector values,
+generic floor-planner activation-row fit, and the `β`/`γ`/`θ` exclusions. The first
+two are compiler/fixed-layout facts; they are not Action semantic assumptions.
+`lookup_gamma_failure_measure_le` and
 `lookup_beta_failure_measure_le` now price the two lookup-product root surfaces
 generically from their column lengths, while
 `uniformChallenge_enabledLookupThetaBadSet` prices one enabled tuple-compression
@@ -400,10 +407,12 @@ The current item-4 sequence is:
 3. **generic layer complete:** route every enabled lookup to its configured argument,
    project its input/table tuples into the resolver polynomials, and construct the
    complete `EnabledLookup.DeployedWitness` family;
-4. **generic replay/witness construction complete, Action adapter open:** use the
-   proved equality between the executable keygen assembly and
-   `replayKeygenPermutation`, plus pairwise resolver-value agreement, to construct the
-   concrete `CopyReplayWitness`;
+4. **generic replay/value transport complete, Action adapter open:** every resolvable
+   declared non-constant copy is now proved to occur in the V1 copy list, and
+   `chunkRowValue_eq_of_mem_copies` transports that membership through replay,
+   conjugation, active-row restriction, and the resolver copy theorem to endpoint
+   value equality. Use those results to construct the concrete `CopyReplayWitness`;
+   constant copies still require the planner's constants-column allocation;
 5. instantiate `TopLevelFixedCoherence`, use it to realize packed selectors and fixed
    tables, and discharge the lookup selector-projection fields;
 6. combine gate, copy, lookup, and fixed results in `FullCircuitBridge`.
@@ -412,10 +421,13 @@ The permutation side has moved past the former “Action permutation data” pla
 The Action chunk/domain certificates, decoded σ-column identification, and executable
 assembly simulation are present. `runAssembly_getPair` proves that the final assembly
 mapping is exactly the action of `replayKeygenPermutation` over the same ordered
-copies. `CopyReplayWitness.ofPairCycles` and `.ofPairValues` now perform the generic
-packaging. The remaining copy task is the narrow Action representation adapter:
-encode Clean copy endpoints as assembly cells, identify their resolver-environment
-values, and prove pairwise equality (or the shared exceptional event). The `β`/`γ`
+copies. `CopyReplayWitness.ofPairCycles` and `.ofPairValues` perform the generic
+packaging. `mem_V1_copyList_of_declared` now sends every resolvable cell/cell or
+cell/instance declaration into that replay, and `chunkRowValue_eq_of_mem_copies`
+proves the resulting committed endpoint values equal. The remaining copy task is the
+narrow representation adapter: encode Clean endpoints as the corresponding flattened
+assembly cells, prove their resolver-environment read equations, and handle constant
+copies through the planner's positional constants-column allocation. The `β`/`γ`
 exclusions remain with the explicit bad-set accounting rather than becoming circuit
 assumptions.
 
@@ -897,8 +909,9 @@ the same fixed cells the table-loaded and fixed-base assumptions read.
 
 **Status: verifier-side substrate is generic in #30/#91 and exercised by the merged
 [#85](https://github.com/zcash/ironwood/pull/85). The assignment, external statement,
-canonical relation, and Action endpoint are bundle-indexed. Discharging the remaining
-copy/lookup/fixed operation families for every member remains open.**
+canonical relation, public-instance commitment, and Action endpoint are bundle-indexed.
+Discharging the remaining copy/lookup/fixed operation families for every member
+remains open.**
 
 A deployed proof covers `shape.numProofs` Actions. Generalize `PublicInputs`,
 `Assignment`, and `ActionStatement` to a `Fin shape.numProofs` family and decode one
@@ -965,11 +978,11 @@ whose public inputs were committed by the verifier.
    polynomial row environment, gate witnesses, and lookup witnesses from
    `TopLevelCircuit`. The executable permutation assembly is now proved equal to the
    abstract copy replay, and the concrete Action gate-coherence package is complete.
-3. **Current parallel work:** instantiate Action `TopLevelFixedCoherence`; specialize
-   the generic copy-replay constructors to the Action endpoint encoding; derive exact
-   lookup selector projection, activation-row fit, and priced lookup challenge
-   conditions; and finish the now-active Lagrange-prefix/instance-commitment
-   certificate.
+3. **Current parallel work:** instantiate Action `TopLevelFixedCoherence`; finish the
+   copy endpoint/constants adapter on top of the now-proved membership-to-value chain;
+   integrate Clean's correct-by-construction lookup law, then derive exact packed
+   selector projection and generic activation-row fit. The Lagrange/instance
+   commitment stream is complete.
 4. Assemble those components for one proof index in `FullCircuitBridge`, then quantify
    the same construction over every `Fin shape.numProofs`. The external
    `Action.Statement` and `Action.BundleStatement` adapters are already implemented.
@@ -987,21 +1000,21 @@ append-only merge flow.
 
 | Marker | Work package | Current state | Delivers / unblocks |
 |---|---|---|---|
-| **[ME] Lookup** | Finish the Action instance of `ConstraintSystemLookupsWellFormed` and derive activation-row fit where the generic floor-planner contract permits it. | The generic route, projection, deployed-witness family, selector-level `InputSelectorValuesRealized` interface, individual challenge prices, and bundle-wide `β`/`γ`/`θ` bad-set aggregation are complete. Exact packed selector values will be supplied by the fixed/VK stream; transcript coupling belongs to the probability layer. | The lookup field of `FullCircuitBridge` for every Action proof index. |
-| **[SEPARATE: copy]** | Specialize `CopyReplayWitness.ofPairValues` to Action: encode each Clean copy endpoint as its keygen assembly cell and identify the two resolver-environment reads. | Generic replay correctness, cycle construction, σ rows, and witness constructors are complete. | The copy field of `FullCircuitBridge`. |
+| **[ME] Lookup** | Integrate the upstream Clean `LookupArgument` law and selector-allocation closure after the module move/pin lands, delete the detached `ConstraintSystemLookupsWellFormed` premise, and prove activation-row fit from the generic floor planner. | The generic route, projection, deployed-witness family, selector-level `InputSelectorValuesRealized` interface, individual challenge prices, and bundle-wide `β`/`γ`/`θ` bad-set aggregation are complete. The correct-by-construction Clean implementation is pushed but not yet pinned here. Exact packed selector values come from the fixed/VK stream; transcript coupling belongs to the probability layer. | The lookup field of `FullCircuitBridge` for every Action proof index, without an Action configure sidecar. |
+| **[SEPARATE: copy]** | Finish the concrete endpoint encoding/read equations and constant-copy allocation, then feed the resulting pair facts to `CopyReplayWitness.ofPairValues`. | Generic replay correctness, σ rows, witness constructors, non-constant declared-copy membership in the V1 list, and membership-to-resolver-value equality are complete. | The copy field of `FullCircuitBridge`. |
 | **[SEPARATE: fixed/VK]** | Instantiate `TopLevelFixedCoherence` from the circuit-derived dense fixed rows, sparse-to-dense scatter law, fixed-query coverage, and fixed commitments. | Generic fixed/table and selector-realization theorems are complete. | The fixed/table field and the exact packed-selector fact consumed by the lookup stream. |
-| **[SEPARATE: instance]** | Complete the Action `LagrangeCommitmentKey.ofPrefix` certificate and identify the verifier-supplied instance commitment with the ten public rows. | The generic basis conversion, finite-prefix reduction, closed coefficient form, and natural-scalar bridge are complete or in active development. | Removes the remaining instance-key/commitment parameters from the binding-aware Action endpoint. |
+| **[DONE: instance]** | No independent work remains in the deterministic instance stream. | `ActionInstanceCommitment.instanceKey` and `.commitment` derive the key and public commitment from the URS and ten Action rows; the binding-aware bundle endpoint consumes them internally and preserves only the shared nontrivial-relation branch. | Public-instance provenance is ready for the one-proof/bundle join. |
 | **[SEPARATE: ledger]** | Continue [#98](https://github.com/zcash/ironwood/pull/98)'s `SpecPost`-to-ledger refinement. | Independent of polynomial reconstruction and Clean constraint satisfaction. | The games-facing conclusion that should follow after the circuit statement is recovered. |
-| **[JOIN] One proof** | Assemble gate, copy, lookup, and fixed witnesses in `FullCircuitBridge.topLevelSoundness_or_bad`, then apply the instance-row and Action-statement adapters. | Gate is concrete; the other three operation families and instance certificate are the incoming pieces above. | A concrete Action statement for one `Fin numProofs`, with only explicitly priced exceptional events. |
+| **[JOIN] One proof** | Assemble gate, copy, lookup, and fixed witnesses in `FullCircuitBridge.topLevelSoundness_or_bad`, then apply the instance-row and Action-statement adapters. | Gate and public-instance provenance are concrete; copy, lookup, and fixed are the incoming operation families above. | A concrete Action statement for one `Fin numProofs`, with only explicitly priced exceptional events. |
 | **[JOIN] Bundle and capstone** | Quantify the one-proof construction over the bundle and substitute it into the live computed capstone in place of free `S`/`hencodes`. | Final deterministic integration step; #96 can meet it at the abstract extraction boundary. | #99's completion criterion. |
 
 The shortest dependency chain to proving `hencodes` is therefore:
 
 ```text
-fixed/VK ─┬─> lookup ─┐
-copy ─────┼───────────┼─> one-proof bridge ─> bundle bridge ─> replace hencodes
-instance ─┘           │
-gate (done) ──────────┘
+fixed/VK ─────> lookup ─┐
+copy adapter ───────────┼─> one-proof bridge ─> bundle bridge ─> replace hencodes
+instance (done) ────────┤
+gate (done) ────────────┘
 ```
 
 The family-wide `hExtract`/adaptive-coupling premise is deliberately absent from this
