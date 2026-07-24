@@ -6,6 +6,7 @@ import Zcash.Circuits.Integration.ActionTerminal
 import Zcash.Circuits.Integration.FixedColumns
 import Zcash.Circuits.Integration.PermutationColumns
 import Zcash.Circuits.Integration.CopyListMembership
+import Zcash.Circuits.Integration.ActionCopyWitness
 import Zcash.Circuits.Integration.PermutationReplay
 import Zcash.Circuits.Integration.InstanceColumns
 import Zcash.Circuits.Integration.LookupProjection
