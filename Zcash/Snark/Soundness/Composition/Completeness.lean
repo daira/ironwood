@@ -303,7 +303,7 @@ theorem exists_ipaFoldChallenges :
     key 1 2 (by norm_num) (by norm_num) (by norm_num),
     key 1 3 (by norm_num) (by norm_num) (by norm_num),
     key 2 3 (by norm_num) (by norm_num) (by norm_num), ?_, ?_, ?_⟩
-  · simpa using key 1 0 (by norm_num) (by norm_num) (by norm_num)
+  · simp
   · simpa using key 2 0 (by norm_num) (by norm_num) (by norm_num)
   · simpa using key 3 0 (by norm_num) (by norm_num) (by norm_num)
 

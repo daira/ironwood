@@ -181,9 +181,9 @@ theorem openedX3_agg_binding [DecidableEq G] [Inhabited G] {shape : Shape}
     have hidx : deployedX4PairCount vk instanceCommitment ps ch - 1 - (deployedX4PairCount vk instanceCommitment ps ch - 1 - j)
         = deployedX4PairCount vk instanceCommitment (r.spliced ps) (r.challenges ch χ) - 1
             - (deployedX4PairCount vk instanceCommitment (r.spliced ps) (r.challenges ch χ) - 1 - j) := by omega
-    rw [x4BatchCommitments_getD urs hk vk instanceCommitment ps ch (j := ⟨_, by omega⟩) (by simp only [Fin.val_mk]; omega),
+    rw [x4BatchCommitments_getD urs hk vk instanceCommitment ps ch (j := ⟨_, by omega⟩) (by simp only []; omega),
       x4BatchCommitments_getD urs hk vk instanceCommitment (r.spliced ps) (r.challenges ch χ) (j := ⟨_, by omega⟩)
-        (by simp only [Fin.val_mk]; omega),
+        (by simp only []; omega),
       x3Run_x4Qs, hidx]
   have hc1 := (openedColumnDecode pbatch).commitment
     ⟨deployedX4PairCount vk instanceCommitment ps ch - 1 - j, by omega⟩
@@ -264,13 +264,14 @@ theorem deployed_aggregate_node_binding_or_dlr [DecidableEq G] [Inhabited G] {sh
         = lagrangeEval χ points evals
   · exact Or.inl (claimedEval_of_x3Prob hlen hnode hdeg
       (fun χ => OpenedX3Accept urs hk vk instanceCommitment ps ch (evalVector urs.k χ) χ) hcons hχ₀ hprob i)
-  · push_neg at hcons
+  · push Not at hcons
     obtain ⟨χ, hPχ, hne⟩ := hcons
     rcases openedX3_perχ_consistency urs hk vk instanceCommitment ps ch j hj pbatch (hprob4 χ) (hx2cons χ) hPχ with
       hc | hdlr
     · exact absurd hc hne
     · exact Or.inr hdlr
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- **The `hx2cons` slot is the claimed set evaluation `uⱼ` (inner-`x₂` reduction).** Unfolding the
 `x₄`-batch eval at point set `j`'s slot `count − 1 − j` through `x4BatchEvals_getD`: it is exactly the
 prover's claimed set evaluation `multiopenUⱼ`. So the remaining F3 premise `hx2cons`
@@ -285,9 +286,9 @@ theorem hx2cons_slot_eq_multiopenU [DecidableEq G] [Inhabited G] {shape : Shape}
     x4BatchEvals vk instanceCommitment ps ch ⟨deployedX4PairCount vk instanceCommitment ps ch - 1 - j, by omega⟩
       = (List.ofFn ps.multiopenU).getD j 0 := by
   rw [x4BatchEvals_getD vk instanceCommitment ps ch
-    (j := ⟨deployedX4PairCount vk instanceCommitment ps ch - 1 - j, by omega⟩) (by simp only [Fin.val_mk]; omega)]
+    (j := ⟨deployedX4PairCount vk instanceCommitment ps ch - 1 - j, by omega⟩) (by simp only []; omega)]
   congr 1
-  simp only [Fin.val_mk]
+  simp only []
   omega
 
 /-- `multiopenEval` in forward-order power form: reindexing `multiopenEval_powerForm` by set
@@ -323,7 +324,7 @@ theorem prod_range_getD_eq_toFinset {l : List Fp} (hnd : l.Nodup) (χ : Fp) :
     obtain ⟨i, hi⟩ := List.mem_iff_get.mp (List.mem_toFinset.mp hp)
     exact ⟨i, Finset.mem_univ _, hi⟩
   · intro i _
-    simp [List.getD_eq_getElem, List.get_eq_getElem, i.isLt]
+    simp [List.get_eq_getElem, i.isLt]
 
 /-- Inverse form of the product-shape conversion. -/
 theorem prod_inv_range_getD_eq_toFinset {l : List Fp} (hnd : l.Nodup) (χ : Fp) :
@@ -396,11 +397,13 @@ noncomputable def deployedSetsForEval [DecidableEq G] [Inhabited G] {shape : Sha
   ((grouped.points.zip (compressed.map Prod.snd)).zip (List.ofFn ps.multiopenU)).map
     (fun p => (p.1.1, p.1.2, p.2))
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- `deployedBaseEval` is `multiopenEval` over `deployedSetsForEval` — definitional. -/
 theorem deployedBaseEval_eq_multiopenEval [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
     deployedBaseEval vk instanceCommitment ps ch = multiopenEval ch.x2 ch.x3 (deployedSetsForEval vk instanceCommitment ps ch) := rfl
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- **Shape alignment: the value-check `sets` has exactly `deployedX4PairCount` entries.** Both reduce
 to `min(min(gsets.length, gpoints.length), numPointSets)` — the grouping's set count clipped to the
 prover's claimed-eval count — so no `= shape.numPointSets` fact is needed. This lets the deployed
@@ -664,9 +667,9 @@ theorem openedX2_agg_binding [DecidableEq G] [Inhabited G] {shape : Shape}
     have hidx : deployedX4PairCount vk instanceCommitment ps ch - 1 - (deployedX4PairCount vk instanceCommitment ps ch - 1 - j)
         = deployedX4PairCount vk instanceCommitment (r.spliced ps) (r.challenges ch χ) - 1
             - (deployedX4PairCount vk instanceCommitment (r.spliced ps) (r.challenges ch χ) - 1 - j) := by omega
-    rw [x4BatchCommitments_getD urs hk vk instanceCommitment ps ch (j := ⟨_, by omega⟩) (by simp only [Fin.val_mk]; omega),
+    rw [x4BatchCommitments_getD urs hk vk instanceCommitment ps ch (j := ⟨_, by omega⟩) (by simp only []; omega),
       x4BatchCommitments_getD urs hk vk instanceCommitment (r.spliced ps) (r.challenges ch χ) (j := ⟨_, by omega⟩)
-        (by simp only [Fin.val_mk]; omega),
+        (by simp only []; omega),
       x2Run_x4Qs, hidx]
   have hc1 := (openedColumnDecode pbatch).commitment
     ⟨deployedX4PairCount vk instanceCommitment ps ch - 1 - j, by omega⟩
@@ -718,10 +721,10 @@ theorem openedX2X3_agg_binding [DecidableEq G] [Inhabited G] {shape : Shape}
             (r₃.challenges (r₂.challenges ch ζ) χ) - 1
             - (deployedX4PairCount vk instanceCommitment (r₃.spliced (r₂.spliced ps))
                 (r₃.challenges (r₂.challenges ch ζ) χ) - 1 - j) := by omega
-    rw [x4BatchCommitments_getD urs hk vk instanceCommitment ps ch (j := ⟨_, by omega⟩) (by simp only [Fin.val_mk]; omega),
+    rw [x4BatchCommitments_getD urs hk vk instanceCommitment ps ch (j := ⟨_, by omega⟩) (by simp only []; omega),
       x4BatchCommitments_getD urs hk vk instanceCommitment (r₃.spliced (r₂.spliced ps))
         (r₃.challenges (r₂.challenges ch ζ) χ) (j := ⟨_, by omega⟩)
-        (by simp only [Fin.val_mk]; omega),
+        (by simp only []; omega),
       x3Run_x4Qs, x2Run_x4Qs, hidx]
   have hc1 := (openedColumnDecode pbatch).commitment
     ⟨deployedX4PairCount vk instanceCommitment ps ch - 1 - j, by omega⟩
@@ -934,7 +937,7 @@ theorem vanishingProd_natDegree_le (pts : Finset Fp) :
   rw [vanishingProd]
   calc (∏ p ∈ pts, (X - C p)).natDegree
       ≤ ∑ p ∈ pts, (X - C p).natDegree := Polynomial.natDegree_prod_le _ _
-    _ = pts.card := by simp [Polynomial.natDegree_X_sub_C]
+    _ = pts.card := by simp
 
 /-- The complementary product's degree is at most the full point count. -/
 theorem coProd_natDegree_le (all pts : Finset Fp) :
@@ -1282,6 +1285,7 @@ theorem deployedSetsForEval_getD_evals [DecidableEq G] [Inhabited G] {shape : Sh
   rw [List.getD_eq_getElem _ _ hzip, List.getD_eq_getElem _ _ hpts]
   simp only [List.getElem_zip]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The grouping's point lists are shared across `x₁` rewinds. -/
 theorem x1Run_groupPoints [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1290,6 +1294,7 @@ theorem x1Run_groupPoints [DecidableEq G] [Inhabited G] {shape : Shape}
       = (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points := by
   rw [x1Run_assembleQueries]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The deployed point sets are shared across `x₁` rewinds. -/
 theorem x1Run_setPts [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1307,6 +1312,7 @@ its cardinality — is the honest one. Together with `x{1,2,3,4}Run_pairCount`/`
 in `Deployed`), this shows *every* deployed threshold is a splice-invariant structural constant, the
 enabling fact for reading the run-indexed floors off the base-independent budget. -/
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The deployed point-set union is shared across `x₁` rewinds. -/
 theorem x1Run_allPts [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1314,6 +1320,7 @@ theorem x1Run_allPts [DecidableEq G] [Inhabited G] {shape : Shape}
     deployedAllPts vk instanceCommitment (r.spliced ps) (r.challenges ch ξ) = deployedAllPts vk instanceCommitment ps ch := by
   simp only [deployedAllPts, deployedSetPts, x1Run_assembleQueries]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The deployed point-set union is shared across `x₂` rewinds. -/
 theorem x2Run_allPts [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1321,6 +1328,7 @@ theorem x2Run_allPts [DecidableEq G] [Inhabited G] {shape : Shape}
     deployedAllPts vk instanceCommitment (r.spliced ps) (r.challenges ch ζ) = deployedAllPts vk instanceCommitment ps ch := by
   simp only [deployedAllPts, deployedSetPts, x2Run_assembleQueries]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The deployed point-set union is shared across `x₃` rewinds. -/
 theorem x3Run_allPts [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1328,6 +1336,7 @@ theorem x3Run_allPts [DecidableEq G] [Inhabited G] {shape : Shape}
     deployedAllPts vk instanceCommitment (r.spliced ps) (r.challenges ch χ) = deployedAllPts vk instanceCommitment ps ch := by
   simp only [deployedAllPts, deployedSetPts, x3Run_assembleQueries]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The deployed point-set union is shared across `x₄` rewinds. -/
 theorem x4Run_allPts [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1399,8 +1408,8 @@ theorem openedX1_agg_member_binding [DecidableEq G] [Inhabited G] {shape : Shape
   have hc2 := (openedColumnDecode B).commitment
     ⟨deployedX4PairCount vk instanceCommitment (r.spliced ps) (r.challenges ch ξ) - 1 - i, by omega⟩
   rw [x4BatchCommitments_getD urs hk vk instanceCommitment (r.spliced ps) (r.challenges ch ξ)
-    (j := ⟨_, by omega⟩) (by simp only [Fin.val_mk]; omega)] at hc2
-  simp only [Fin.val_mk,
+    (j := ⟨_, by omega⟩) (by simp only []; omega)] at hc2
+  simp only [
     show deployedX4PairCount vk instanceCommitment (r.spliced ps) (r.challenges ch ξ) - 1
       - (deployedX4PairCount vk instanceCommitment (r.spliced ps) (r.challenges ch ξ) - 1 - i) = i from by omega]
     at hc2
@@ -1472,6 +1481,7 @@ theorem openedX1_agg_member_eval [DecidableEq G] [Inhabited G] {shape : Shape}
     rw [commitGen_smul_left, ← coeffsToPoly_eval, smul_eq_mul]
   · exact Or.inr hdlr
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- **`hql` discharged: each routed member of a deployed point set claims one evaluation per set
 point** (`constructIntermediateSets_eval_length` at the deployed queries). This closes the
 one structural bookkeeping premise of `deployed_member_node_binding`. -/
@@ -1685,6 +1695,7 @@ theorem columnQueries_layout_mem {k' : ℕ} {F G' : Type*} [Field F] (omega x : 
   · show rotateOmega omega x ((layout.zip evals)[j]).1.2 = _
     rw [List.getElem_zip, List.getD_eq_getElem _ _ hjl]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Each in-range advice layout entry contributes a deployed opening query: slot identity
 `adviceCol`, opening point `rotateOmega ω x rot` — the query `deployed_query_point_mem` routes. -/
 theorem advice_query_mem_assembleQueries [DecidableEq G] [Inhabited G] {shape : Shape}
@@ -1705,6 +1716,7 @@ theorem advice_query_mem_assembleQueries [DecidableEq G] [Inhabited G] {shape : 
   exact List.mem_append.mpr (Or.inl (List.mem_append.mpr (Or.inl (List.mem_append.mpr
     (Or.inr hqmem)))))
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Each in-range instance layout entry contributes a deployed opening query, as
 `advice_query_mem_assembleQueries`. -/
 theorem instance_query_mem_assembleQueries [DecidableEq G] [Inhabited G] {shape : Shape}
