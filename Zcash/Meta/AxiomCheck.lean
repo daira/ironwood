@@ -30,10 +30,10 @@ def isNativeDecideAxiom (n : Name) : Bool :=
   n.components.any (· == `native_decide)
 
 /-- The declared curve-order trust tier: the Pallas point count
-(`Zcash.Circuits.pallas_natCard`, `Zcash/Circuits/Specs/Pallas.lean`) — the one explicit
-axiom behind the scalar-multiplication circuit proofs. Kept as a raw name literal so this
-meta module does not import the circuits tree. -/
-def curveOrderAxioms : Array Name := #[`Zcash.Circuits.pallas_natCard]
+(`Zcash.Circuits.Point.pallas_natCard`, `Zcash/Circuits/Specs/Pallas.lean`) — the one
+explicit axiom behind the scalar-multiplication circuit proofs. Kept as a raw name literal
+so this meta module does not import the circuits tree. -/
+def curveOrderAxioms : Array Name := #[`Zcash.Circuits.Point.pallas_natCard]
 
 /--
 `assert_axioms foo` fails the build unless `foo` depends only on the standard axioms

@@ -818,7 +818,7 @@ assert_axioms adaptEsc_measure_le
 /-! ## The Action circuit — the halo2-native soundness trust surface
 
 The circuit-layer soundness theorems live above the standard tier: they consume the one
-declared axiom `Zcash.Circuits.pallas_natCard` (the Pallas point count — see the
+declared axiom `Zcash.Circuits.Point.pallas_natCard` (the Pallas point count — see the
 `+curveOrder` tier in `Zcash.Meta.AxiomCheck`) and `native_decide` certificates (the six
 fixed-base window tables and small `interval_cases` facts). These assertions pin exactly
 that budget for the generic soundness theorems and for the fully-instantiated deployed
