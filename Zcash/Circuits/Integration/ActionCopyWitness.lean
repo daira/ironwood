@@ -82,6 +82,66 @@ def actionCopyValue (env : Environment Fp)
   env.get (ColRef.toAny (actionPermCols.getD (fc.1 : ℕ) (.advice 0)))
     (((fc.2 : ℕ) : ℕ) : ℤ)
 
+/-- A typed cell is its raw coordinate pair, so the `mod` totalization is inert. -/
+theorem mkActionCell_eq_of_pair {fc : FlatCell actionNumPermCols actionDomainSize}
+    {p : ℕ × ℕ} (h : fc.pair = p) : mkActionCell p = fc := by
+  rcases fc with ⟨a, b⟩
+  subst h
+  show (⟨(a : ℕ) % actionNumPermCols, _⟩, ⟨(b : ℕ) % actionDomainSize, _⟩) = (a, b)
+  refine Prod.ext_iff.mpr ⟨Fin.ext ?_, Fin.ext ?_⟩
+  · exact Nat.mod_eq_of_lt a.isLt
+  · exact Nat.mod_eq_of_lt b.isLt
+
+/-- **Declared-copy linkage.** Every resolvable declared copy's encoded endpoints are
+linked by the decoded keygen copy list: membership through the floor planner, decoding
+through the bounds certificate, and the replay pair link. -/
+theorem actionCopyLink :
+    ∀ copy ∈ operationDeclaredCopies (orchardActionTopLevelCircuit.operations 0),
+      ∀ tuple, resolveDeclared actionPermCols
+          orchardActionTopLevelCircuit.regionStarts copy = some tuple →
+        (replayKeygenPermutation actionCopies).SameCycle
+          (actionCopyEncode copy.1) (actionCopyEncode copy.2) := by
+  intro copy hcopy tuple hres
+  have hmem : tuple ∈ actionCopyRaw :=
+    mem_V1_copyList_of_declared actionPermCols
+      orchardActionTopLevelCircuit.regionStarts
+      (orchardActionTopLevelCircuit.operations 0) actionConsts copy tuple hres hcopy
+  have hraw : actionCopyRaw = actionCopies.map
+      (fun p => (p.1.pair.1, p.1.pair.2, p.2.pair.1, p.2.pair.2)) :=
+    (decodeCopies_map actionNumPermCols actionDomainSize actionCopyRaw
+      actionCopyBounds).symm
+  rw [hraw, List.mem_map] at hmem
+  obtain ⟨pr, hpr, henc⟩ := hmem
+  have hlinked := replayKeygenPermutation_pair_linked actionCopies hpr
+  have hp1 : pr.1.pair = (tuple.1, tuple.2.1) := by
+    rw [← henc]
+  have hp2 : pr.2.pair = (tuple.2.2.1, tuple.2.2.2) := by
+    rw [← henc]
+  -- identify the encoded endpoints with the decoded pair, by copy kind
+  rcases copy with ⟨e1, e2⟩
+  cases e1 with
+  | cell l =>
+      cases e2 with
+      | cell r =>
+          simp only [resolveDeclared] at hres
+          obtain rfl := Option.some.inj hres
+          rw [show actionCopyEncode (.cell l) = pr.1 from
+              mkActionCell_eq_of_pair (by rw [hp1]),
+            show actionCopyEncode (.cell r) = pr.2 from
+              mkActionCell_eq_of_pair (by rw [hp2])]
+          exact hlinked
+      | «instance» col row =>
+          simp only [resolveDeclared] at hres
+          obtain rfl := Option.some.inj hres
+          rw [show actionCopyEncode (.cell l) = pr.1 from
+              mkActionCell_eq_of_pair (by rw [hp1]),
+            show actionCopyEncode (.instance col row) = pr.2 from
+              mkActionCell_eq_of_pair (by rw [hp2])]
+          exact hlinked
+      | constant v => simp [resolveDeclared] at hres
+  | «instance» col row => simp [resolveDeclared] at hres
+  | constant v => simp [resolveDeclared] at hres
+
 /-- **The Action copy-replay witness.** Kind-dispatched from three leaf families over
 the concrete data: value agreement along each decoded keygen copy (the σ-semantics
 transport), value agreement of each declared constant copy (two constants-column
@@ -95,12 +155,6 @@ noncomputable def actionCopyReplayWitness
       ∀ c v, copy = (.cell c, .constant v) →
         actionCopyValue env (actionCopyEncode (.cell c)) =
           actionCopyValue env (actionCopyEncode (.constant v)) ∨ Bad)
-    (hlink : ∀ copy ∈ operationDeclaredCopies
-        (orchardActionTopLevelCircuit.operations 0),
-      ∀ tuple, resolveDeclared actionPermCols
-          orchardActionTopLevelCircuit.regionStarts copy = some tuple →
-        (replayKeygenPermutation actionCopies).SameCycle
-          (actionCopyEncode copy.1) (actionCopyEncode copy.2))
     (hread : ∀ copy ∈ operationDeclaredCopies
         (orchardActionTopLevelCircuit.operations 0),
       copy.1.eval orchardActionTopLevelCircuit.placement env =
@@ -119,7 +173,7 @@ noncomputable def actionCopyReplayWitness
           actionPermCols orchardActionTopLevelCircuit.regionStarts copy hcopy with
         ⟨tuple, hres⟩ | ⟨c, v, hcv⟩
       · exact Zcash.Snark.Layout.Asm.value_eq_or_bad_of_replay_sameCycle (actionCopyValue env) _
-          hpairval (hlink copy hcopy tuple hres)
+          hpairval (actionCopyLink copy hcopy tuple hres)
       · subst hcv
         exact hconstval _ hcopy c v rfl)
     hread
