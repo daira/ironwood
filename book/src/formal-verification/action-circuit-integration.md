@@ -11,20 +11,17 @@ condition.
 
 ## Upstream PR landscape
 
-Two open implementation pull requests on
-[`zcash/ironwood`](https://github.com/zcash/ironwood) carry the remaining verifier
-work:
+The verifier foundations on which this integration was originally stacked are now
+merged:
 
 - [#30, Bind IPA witness to verifier columns](https://github.com/zcash/ironwood/pull/30),
   implements the deployed `x₄` and `x₁` decode, member-commitment and
   claimed-evaluation binding, and decoded-column capstone foundations.
-- [#91, Permutation and lookup arguments](https://github.com/zcash/ironwood/pull/91),
+- [#91, Permutation and lookup arguments](https://github.com/zcash/ironwood/pull/91)
   extends #30's polynomial constraint model with the verifier's permutation and lookup
   expressions, splits the combined constraint check, reads the arguments row by row,
   telescopes their running products, and reaches copy-equality and lookup-inclusion
-  endpoints. It is stacked on #30's `decode-witness` branch, not on `main`.
-
-Three directly relevant PRs are now merged into `main`:
+  endpoints.
 
 - [#89, Add Ironwood circuit formalization](https://github.com/zcash/ironwood/pull/89)
   supplies the Action circuit, `soundnessPost`, and the executable Rust/Clean CS and
@@ -40,9 +37,24 @@ Three directly relevant PRs are now merged into `main`:
 The still-open [#82](https://github.com/zcash/ironwood/pull/82) makes the proof map
 point at the current computed capstone; it does not prove a semantic bridge.
 
-The integration branch combines these APIs while preserving #85's architectural
-split: the verifying key contains circuit-fixed data, and statement-derived instance
-commitments remain explicit inputs to the verifier and soundness stack.
+Three draft PRs now divide the active work:
+
+- [#99](https://github.com/zcash/ironwood/pull/99) is this deterministic
+  verifier-to-Clean integration. Its concrete completion criterion is elimination of
+  the live capstone's free `S`/`hencodes` by constructing the Action bundle statement
+  from accepted, decoded verifier data.
+- [#96](https://github.com/zcash/ironwood/pull/96) composes the forking/extraction
+  layer with the deployed constraint-soundness capstone. It can remain parallel until
+  #99 supplies the concrete encoding theorem at its abstract statement boundary.
+- [#98](https://github.com/zcash/ironwood/pull/98) refines the circuit-exported
+  `SpecPost` to the games-facing ledger statement, including the concrete handling of
+  Sinsemilla exceptional cases. It is downstream of circuit satisfaction and can
+  proceed independently; the final #99 adapter should target or compose with its
+  refined statement rather than grow a competing ledger semantics.
+
+#99 combines the merged APIs while preserving #85's architectural split: the
+verifying key contains circuit-fixed data, and statement-derived instance commitments
+remain explicit inputs to the verifier and soundness stack.
 
 ## Stable semantic endpoint
 
@@ -956,3 +968,32 @@ whose public inputs were committed by the verifier.
    The family-wide adaptive-coupling/`hExtract` supply problem is a distinct
    probability-layer task and may remain an explicitly conditional or residual term
    while the deterministic `hencodes` gap is closed.
+
+## Current execution dashboard
+
+The ownership labels below are coordination hints, not architectural boundaries.
+Each work package should remain independently mergeable through the branch's
+append-only merge flow.
+
+| Marker | Work package | Current state | Delivers / unblocks |
+|---|---|---|---|
+| **[ME] Lookup** | Finish the Action instance of `ConstraintSystemLookupsWellFormed`; derive activation-row fit where the generic floor-planner contract permits it; price the resolver `β`/`γ` and tuple-compression `θ` exclusions. | The generic route, projection, deployed-witness family, and selector-level `InputSelectorValuesRealized` interface are complete. Exact packed selector values will be supplied by the fixed/VK stream. | The lookup field of `FullCircuitBridge` for every Action proof index. |
+| **[SEPARATE: copy]** | Specialize `CopyReplayWitness.ofPairValues` to Action: encode each Clean copy endpoint as its keygen assembly cell and identify the two resolver-environment reads. | Generic replay correctness, cycle construction, σ rows, and witness constructors are complete. | The copy field of `FullCircuitBridge`. |
+| **[SEPARATE: fixed/VK]** | Instantiate `TopLevelFixedCoherence` from the circuit-derived dense fixed rows, sparse-to-dense scatter law, fixed-query coverage, and fixed commitments. | Generic fixed/table and selector-realization theorems are complete. | The fixed/table field and the exact packed-selector fact consumed by the lookup stream. |
+| **[SEPARATE: instance]** | Complete the Action `LagrangeCommitmentKey.ofPrefix` certificate and identify the verifier-supplied instance commitment with the ten public rows. | The generic basis conversion, finite-prefix reduction, closed coefficient form, and natural-scalar bridge are complete or in active development. | Removes the remaining instance-key/commitment parameters from the binding-aware Action endpoint. |
+| **[SEPARATE: ledger]** | Continue [#98](https://github.com/zcash/ironwood/pull/98)'s `SpecPost`-to-ledger refinement. | Independent of polynomial reconstruction and Clean constraint satisfaction. | The games-facing conclusion that should follow after the circuit statement is recovered. |
+| **[JOIN] One proof** | Assemble gate, copy, lookup, and fixed witnesses in `FullCircuitBridge.topLevelSoundness_or_bad`, then apply the instance-row and Action-statement adapters. | Gate is concrete; the other three operation families and instance certificate are the incoming pieces above. | A concrete Action statement for one `Fin numProofs`, with only explicitly priced exceptional events. |
+| **[JOIN] Bundle and capstone** | Quantify the one-proof construction over the bundle and substitute it into the live computed capstone in place of free `S`/`hencodes`. | Final deterministic integration step; #96 can meet it at the abstract extraction boundary. | #99's completion criterion. |
+
+The shortest dependency chain to proving `hencodes` is therefore:
+
+```text
+fixed/VK ─┬─> lookup ─┐
+copy ─────┼───────────┼─> one-proof bridge ─> bundle bridge ─> replace hencodes
+instance ─┘           │
+gate (done) ──────────┘
+```
+
+The family-wide `hExtract`/adaptive-coupling premise is deliberately absent from this
+chain. It controls how the decoded data is obtained with the claimed probability; it
+does not prevent #99 from proving what that data encodes.
