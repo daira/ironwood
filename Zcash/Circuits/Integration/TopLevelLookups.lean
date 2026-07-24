@@ -67,8 +67,9 @@ noncomputable def EnabledLookup.topLevelRoute
 /--
 Static lookup facts at the circuit-derived projection boundary.
 
-Coverage says selector compression eliminates every selector leaf. Arity is the
-protocol requirement inherited from Halo 2's list-of-pairs lookup constructor.
+Input coverage says selector compression eliminates every selector leaf. Table
+expressions are selector-free because Halo 2 constructs them from lookup-table
+columns. Arity is inherited from the list-of-pairs lookup constructor.
 -/
 structure TopLevelLookupCoherence
     (top : TopLevelCircuit Fp ConfigInput Config Output) : Prop where
@@ -77,13 +78,75 @@ structure TopLevelLookupCoherence
       expression.selectorsCovered
         (fun selector =>
           (top.selectorMap.lookup selector).isSome) = true
-  tablesCovered : ∀ argument ∈ top.constraintSystem.lookups,
-    ∀ expression ∈ argument.tables,
-      expression.selectorsCovered
-        (fun selector =>
-          (top.selectorMap.lookup selector).isSome) = true
+  tablesFree : ∀ argument ∈ top.constraintSystem.lookups,
+    argument.tables.Forall Expression.SelectorFree
   arity : ∀ argument ∈ top.constraintSystem.lookups,
     argument.inputs.length = argument.tables.length
+
+/--
+The configure-level lawfulness condition for one lookup argument.
+
+Inputs may use allocated complex selectors. Table expressions are selector-free,
+matching Halo 2's table-column constructor, and the input/table tuple arities
+agree by construction.
+-/
+def LookupArgumentWellFormed
+    (argument : LookupArgument Fp) (numSelectors : ℕ) : Prop :=
+  (argument.inputs.Forall fun expression =>
+      expression.selectorsCovered
+        (fun selector => decide (selector < numSelectors)) = true) ∧
+    argument.tables.Forall Expression.SelectorFree ∧
+    argument.inputs.length = argument.tables.length
+
+/-- Every lookup registered in a constraint system is well formed. -/
+def ConstraintSystemLookupsWellFormed
+    (constraintSystem : ConstraintSystem Fp) : Prop :=
+  constraintSystem.lookups.Forall fun argument =>
+    LookupArgumentWellFormed argument
+      constraintSystem.numSelectors
+
+namespace TopLevelLookupCoherence
+
+/--
+A lawful synthesis-closed constraint system supplies the static top-level
+lookup boundary. The generic selector compiler turns allocated source indices
+into coverage by the circuit-derived compression map.
+-/
+theorem ofLookupsWellFormed
+    (wellFormed :
+      ConstraintSystemLookupsWellFormed top.constraintSystem) :
+    TopLevelLookupCoherence top := by
+  have argumentWellFormed :
+      ∀ argument ∈ top.constraintSystem.lookups,
+        LookupArgumentWellFormed argument
+          top.constraintSystem.numSelectors :=
+    List.forall_iff_forall_mem.mp wellFormed
+  refine
+    { inputsCovered := ?_
+      tablesFree := ?_
+      arity := ?_ }
+  · intro argument hargument expression hexpression
+    have sourceCoverage :=
+      (List.forall_iff_forall_mem.mp
+        (argumentWellFormed argument hargument).1
+        expression hexpression)
+    apply Expression.selectorsCovered_mono
+      (fun selector =>
+        decide (selector <
+          top.constraintSystem.numSelectors))
+    · intro selector hselector
+      exact deriveSelCompressMap_lookup_isSome_of_lt
+        top.constraintSystem
+        (2 ^ top.domainExponent)
+        top.selectorActivations
+        (of_decide_eq_true hselector)
+    · exact sourceCoverage
+  · intro argument hargument
+    exact (argumentWellFormed argument hargument).2.1
+  · intro argument hargument
+    exact (argumentWellFormed argument hargument).2.2
+
+end TopLevelLookupCoherence
 
 /--
 The exact selector-substitution facts needed by one enabled lookup.
@@ -109,6 +172,103 @@ structure EnabledLookup.SelectorProjection
           (substValuation top.selectorMap.lookup
             (Query.eval environment (fun _ => 0) row))) =
       lookup.tableValues environment row
+
+/--
+Selector-free expressions cannot distinguish selector substitution from an
+arbitrary selector valuation. Fixed, advice, and instance queries retain the
+same environment and row on both sides.
+-/
+theorem Expression.eval_substValuation_eq_queryEval_of_selectorFree
+    (map : SelCompressMap) (environment : Environment Fp)
+    (selectors : ℕ → Fp) (row : ℕ)
+    (expression : Expression Fp Query)
+    (hfree : expression.SelectorFree) :
+    expression.eval
+        (substValuation map.lookup
+          (Query.eval environment (fun _ => 0) row)) =
+      expression.eval (Query.eval environment selectors row) := by
+  induction expression with
+  | var query =>
+      cases query with
+      | selector selector =>
+          simp [Expression.SelectorFree] at hfree
+      | fixed column rotation =>
+          rfl
+      | advice column rotation =>
+          rfl
+      | «instance» column rotation =>
+          rfl
+  | const value =>
+      rfl
+  | add left right ihLeft ihRight =>
+      simp only [Expression.SelectorFree] at hfree
+      simp only [Expression.eval, ihLeft hfree.1, ihRight hfree.2]
+  | mul left right ihLeft ihRight =>
+      simp only [Expression.SelectorFree] at hfree
+      simp only [Expression.eval, ihLeft hfree.1, ihRight hfree.2]
+
+/--
+At one enabled lookup's input row, the packed fixed columns realize exactly
+the operation's zero/one selector valuation.
+
+Keeping this as a selector-level condition avoids repeating a proof for every
+input expression. The fixed-layout compiler will provide it by distinguishing
+the enabled selector's packed root from zero and the other packed roots.
+-/
+def EnabledLookup.InputSelectorValuesRealized
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (environment : Environment Fp) (lookup : EnabledLookup Fp) : Prop :=
+  ∀ selector : Selector,
+    substValuation top.selectorMap.lookup
+        (Query.eval environment (fun _ => 0)
+          (top.placement lookup.region + lookup.row))
+        (.selector selector) =
+      lookup.selectorValue selector.index
+
+namespace EnabledLookup.SelectorProjection
+
+/--
+Exact selector values at the activation row, together with selector-free table
+expressions, supply the full lookup selector-projection boundary.
+-/
+theorem ofInputSelectorValues
+    (environment : Environment Fp)
+    (lookup : EnabledLookup Fp)
+    (realized :
+      lookup.InputSelectorValuesRealized top environment)
+    (tablesFree :
+      lookup.argument.tables.Forall Expression.SelectorFree) :
+    lookup.SelectorProjection top environment := by
+  have inputValuation :
+      substValuation top.selectorMap.lookup
+          (Query.eval environment (fun _ => 0)
+            (top.placement lookup.region + lookup.row)) =
+        Query.eval environment lookup.selectorValue
+          (top.placement lookup.region + lookup.row) := by
+    funext query
+    cases query with
+    | selector selector =>
+        exact realized selector
+    | fixed column rotation =>
+        rfl
+    | advice column rotation =>
+        rfl
+    | «instance» column rotation =>
+        rfl
+  constructor
+  · unfold EnabledLookup.inputValues
+    rw [inputValuation]
+    rfl
+  · intro row hrow
+    unfold EnabledLookup.tableValues
+    apply List.map_congr_left
+    intro expression hexpression
+    exact
+      Expression.eval_substValuation_eq_queryEval_of_selectorFree
+        top.selectorMap environment lookup.selectorValue row expression
+        (List.forall_iff_forall_mem.mp tablesFree expression hexpression)
+
+end EnabledLookup.SelectorProjection
 
 namespace TopLevelGateCoherence
 
@@ -208,6 +368,24 @@ theorem map_eval_toExpr
     fixed advice instanceFeed expression
 
 namespace TopLevelLookupCoherence
+
+/-- Selector-free lookup tables are covered by every compression map. -/
+theorem tablesCovered
+    (coherence : TopLevelLookupCoherence top)
+    (argument : LookupArgument Fp)
+    (hargument : argument ∈ top.constraintSystem.lookups)
+    (expression : Expression Fp Query)
+    (hexpression : expression ∈ argument.tables) :
+    expression.selectorsCovered
+      (fun selector =>
+        (top.selectorMap.lookup selector).isSome) = true :=
+  Expression.selectorsCovered_of_selectorFree
+    (fun selector =>
+      (top.selectorMap.lookup selector).isSome)
+    expression
+    (List.forall_iff_forall_mem.mp
+      (coherence.tablesFree argument hargument)
+      expression hexpression)
 
 /--
 The circuit-derived verifying key's selected lookup tuples evaluate like the
@@ -586,10 +764,10 @@ structure TopLevelLookupWitnessConditions
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex : Fin (pp.mergeDerived top).numProofs) : Prop where
-  selectorProjection : ∀ lookup
+  inputSelectorValues : ∀ lookup
       (_henabled :
         lookup ∈ operationEnabledLookups (top.operations 0) 0),
-    lookup.SelectorProjection top
+    lookup.InputSelectorValuesRealized top
       (resolverEnvironment
         (top.toVerifierKey pp urs) poly proofIndex
         (top.usableRowsAt top.domainExponent))
@@ -648,9 +826,22 @@ noncomputable def deployedWitnesses
           (top.usableRowsAt top.domainExponent))
         ch.theta := by
   intro lookup henabled
+  let environment :=
+    resolverEnvironment
+      (top.toVerifierKey pp urs) poly proofIndex
+      (top.usableRowsAt top.domainExponent)
+  have hargument :
+      lookup.argument ∈ top.constraintSystem.lookups :=
+    OperationsKeygenCoherent.lookup top.keygenCoherent henabled
+  have selectorProjection :
+      lookup.SelectorProjection top environment :=
+    EnabledLookup.SelectorProjection.ofInputSelectorValues
+      environment lookup
+      (conditions.inputSelectorValues lookup henabled)
+      (coherence.tablesFree lookup.argument hargument)
   exact coherence.deployedWitness gateCoherence ch poly proofIndex
     hblinding husable satisfaction hrows hroot lookup henabled
-    (conditions.selectorProjection lookup henabled)
+    selectorProjection
     (conditions.activationRow lookup henabled)
     (conditions.resolverGood lookup henabled)
     (conditions.thetaGood lookup henabled)

@@ -325,10 +325,16 @@ expressions evaluate like their configured Clean expressions.
 `TopLevelLookups` routes every synthesis-enabled lookup to that configured index,
 projects its exact selector-substituted tuples into the resolver's compressed
 input/table polynomials, and constructs both one `EnabledLookup.DeployedWitness` and
-the complete witness family consumed by `FullCircuitBridge`. Its remaining concrete
-inputs are deliberately explicit: realization of the packed selector values, the
-activation-row fit fact, and the separately priced `β`/`γ`/`θ` exclusions. The first
-two are compiler/fixed-layout facts; they are not Action semantic assumptions.
+the complete witness family consumed by `FullCircuitBridge`.
+`LookupArgumentWellFormed` packages the configure-level facts—allocated input
+selectors, selector-free table expressions, and matching tuple arity—and
+`TopLevelLookupCoherence.ofLookupsWellFormed` turns that single law into compression-map
+coverage. `InputSelectorValuesRealized` further reduces exact projection to one
+selector-level packed-column fact at the activation row; table projection follows
+generically from selector freedom. The remaining concrete inputs are therefore the
+Action instance of that configure law, packed selector values, activation-row fit, and
+the separately priced `β`/`γ`/`θ` exclusions. The first three are compiler/fixed-layout
+facts; they are not Action semantic assumptions.
 `PermutationInstantiation` now supplies the analogous permutation layer. It maps
 running products through `permProduct`, maps each chunk's value-side `ColumnRef`
 through the corresponding VK query-layout entry, maps its σ-side through
