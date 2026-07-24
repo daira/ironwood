@@ -26,7 +26,7 @@ theorem lagrangeBasisClosed_coeff (k : ℕ) (i : Fin (2 ^ k)) (t : Fin (2 ^ k)) 
     (lagrangeBasisClosed k i).coeff (t : ℕ) =
       (2 ^ k : Fp)⁻¹ * (omegaOf k)⁻¹ ^ ((i : ℕ) * (t : ℕ)) := by
   classical
-  rw [lagrangeBasisClosed, Polynomial.coeff_smul, Polynomial.finset_sum_coeff]
+  rw [lagrangeBasisClosed, Polynomial.coeff_smul, Polynomial.finsetSum_coeff]
   rw [Finset.sum_eq_single t]
   · simp
   · intro b _ hbt
@@ -78,7 +78,7 @@ theorem lagrangeBasisClosed_eval (k : ℕ) (hk : k ≤ 32) (i j : Fin (2 ^ k)) :
     have hone : zeta = 1 := by
       rw [hzeta, inv_pow, mul_inv_cancel₀ (pow_ne_zero _ homega)]
     simp only [hone, one_pow, Finset.sum_const, Finset.card_univ, Fintype.card_fin,
-      nsmul_eq_mul, mul_one, if_pos rfl]
+      nsmul_eq_mul, mul_one]
     have hn : (2 ^ k : Fp) ≠ 0 := by
       have hcast := domainSize_cast_ne_zero k hk
       rwa [show ((2 ^ k : ℕ) : Fp) = (2 ^ k : Fp) by push_cast; ring] at hcast
