@@ -45,6 +45,7 @@ import Zcash.Snark.Soundness.OperationGates
 import Zcash.Snark.Soundness.OperationFixed
 import Zcash.Snark.Soundness.CircuitIntegration
 import Zcash.Snark.Soundness.TopLevelCircuit
+import Zcash.Snark.Soundness.TopLevelAssignment
 import Zcash.Snark.Soundness.PolynomialEnvironment
 import Zcash.Snark.Soundness.InstanceCommitment
 import Zcash.Snark.Soundness.ActionStatement

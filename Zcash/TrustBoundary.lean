@@ -32,6 +32,7 @@ import Zcash.Snark.Soundness.OperationFixed
 import Zcash.Snark.Soundness.LookupSemantics
 import Zcash.Snark.Soundness.CircuitIntegration
 import Zcash.Snark.Soundness.TopLevelCircuit
+import Zcash.Snark.Soundness.TopLevelAssignment
 import Zcash.Snark.Soundness.PolynomialEnvironment
 import Zcash.Snark.Soundness.InstanceCommitment
 import Zcash.Snark.Soundness.ActionAssignment
@@ -573,6 +574,7 @@ assert_axioms Zcash.Circuits.TopLevelCircuit.usedRows_le_usableRowsAt
 assert_axioms Zcash.Circuits.TopLevelCircuit.synthesisWellFormed
 assert_axioms FullCircuitSatisfaction.topLevelSoundness
 assert_axioms FullCircuitBridge.topLevelSoundness_or_bad
+assert_axioms TopLevelAssignment.synthesisWellFormed
 assert_axioms rowPolynomial_eval
 assert_axioms rowPolynomial_natDegree_lt
 assert_axioms instanceRowPolynomial_eval

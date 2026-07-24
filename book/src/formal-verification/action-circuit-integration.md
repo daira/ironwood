@@ -412,8 +412,10 @@ fixtures before the full Action circuit.
 
 ### 5. Construct the Clean assignment
 
-**Status: open. [#89](https://github.com/zcash/ironwood/pull/89) supplies the target
-semantics, while [#30](https://github.com/zcash/ironwood/pull/30) and
+**Status: the generic VK-free assignment shell is implemented; its decoded-member
+constructor remains open. The merged
+[#89](https://github.com/zcash/ironwood/pull/89) supplies the target semantics, while
+[#30](https://github.com/zcash/ironwood/pull/30) and
 [#91](https://github.com/zcash/ironwood/pull/91) supply most of the prospective source
 data.**
 
@@ -445,6 +447,19 @@ The generic keygen layer now derives from the top-level circuit itself:
   fit entirely in circuit-owned terms;
 - `TopLevelCircuit.synthesisWellFormed` proves that a fitting domain supplies the
   table-fit contract required by top-level soundness.
+
+`TopLevelAssignment` is the corresponding verifier-to-Clean assignment shell. It
+stores only a bundle proof index and the commitment-ID polynomial resolver. The
+top-level circuit supplies its operations, V1 placement, blinding rows, and usable-row
+fit; `Bridge.omegaOf k` supplies the protocol domain root. Consequently the type has
+no arbitrary `VerifyingKey` argument and
+`TopLevelAssignment.synthesisWellFormed` discharges the layout premise directly from
+`TopLevelCircuit.FitsAt k`.
+
+The incoming `FormalCircuit.toVerifyingKey` completes this seam rather than changing
+it: prove that its `omega`, `n`, and blinding fields are the domain values above, then
+define the decoded-member constructor using that circuit-derived key. The external
+accepted key appears only through its equality certificate with the derived key.
 
 On the SNARK side, `FullCircuitSatisfaction.topLevelSoundness` composes exact
 gate/copy/lookup/fixed satisfaction with that generic top-level endpoint.
@@ -481,10 +496,9 @@ The existing `ActionAssignment` still packages one proof member's
 fixed/advice/instance polynomials through `resolverEnvironment`, but its API predates
 the circuit-owned keygen layer: it takes a `VerifyingKey` and repeats Action placement
 and usable-row choices. It is temporary. Once `FormalCircuit.toVerifyingKey` is
-available, replace it with a generic top-level assignment whose VK, pinned CS,
-placement, and operations are derived from the `TopLevelCircuit`. The external
-accepted Action VK then enters only through a certificate that it equals (or has the
-required fields equal to) the derived VK.
+available, move its decoded constructor onto `TopLevelAssignment` and delete the
+legacy Action-specific type. The external accepted Action VK then enters only through
+a certificate that it equals (or has the required fields equal to) the derived VK.
 
 The compositional base and post-Ironwood `FormalCircuit`s intentionally retain their
 `EnvAssumptions`: child circuits may state contracts that a parent fulfills.
