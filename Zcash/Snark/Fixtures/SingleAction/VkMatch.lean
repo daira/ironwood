@@ -15,7 +15,7 @@ the lookup expression lists need re-flattening.
 
 namespace Zcash.Snark.Fixture
 
-open Bridge
+open Zcash.Circuits.Action (orchardActionTopLevelCircuit)
 open Halo2
 
 theorem vk_lookupInputs_ofFn : List.ofFn vk.lookupInputExprs = vkLookupInputExprs := by
@@ -58,8 +58,9 @@ theorem vk_lookupTableExprs_eq_derived :
 /-! ## The VK's domain and permutation scalars, derived
 
 The captured `vk`'s scalar fields — previously transcribed constants — are all
-computable from the circuit: `omega`/`n` from the derived domain exponent `actionK`
-(`minimalK`), `blindingFactors` from the configure-recorded advice queries, `delta` a
+computable from the circuit: `omega`/`n` from the derived domain exponent
+(`TopLevelCircuit.domainExponent`), `blindingFactors` from the configure-recorded
+advice queries, `delta` a
 pasta constant, `chunkLen` from the ported `cs.degree()`, and `permutationChunks` the
 recorded permutation columns chunked by it. -/
 
@@ -68,22 +69,26 @@ theorems would re-evaluate the shared selector-map/projection work once each; th
 nesting `((…), chunks)` rather than a flat 6-tuple is what instance synthesis accepts). -/
 theorem vk_scalars_and_chunks_derived :
     ((vk.omega, vk.n, vk.blindingFactors, vk.delta, vk.chunkLen), vk.permutationChunks)
-      = ((omegaOf actionK, 2 ^ actionK, actionCS.blindingFactors, deltaFp,
-            actionCS.chunkLen),
-          permutationChunksOf (actionSelMapDerived (2 ^ actionK)) actionCS) := by
+      = ((omegaOf orchardActionTopLevelCircuit.domainExponent, 2 ^ orchardActionTopLevelCircuit.domainExponent,
+            orchardActionTopLevelCircuit.constraintSystem.blindingFactors, deltaFp,
+            orchardActionTopLevelCircuit.constraintSystem.chunkLen),
+          VkCommit.permutationChunksOf orchardActionTopLevelCircuit.selMapDerived
+            orchardActionTopLevelCircuit.constraintSystem) := by
   native_decide
 
 theorem vk_scalars_derived :
     (vk.omega, vk.n, vk.blindingFactors, vk.delta, vk.chunkLen)
-      = (omegaOf actionK, 2 ^ actionK, actionCS.blindingFactors, deltaFp,
-          actionCS.chunkLen) := by
+      = (omegaOf orchardActionTopLevelCircuit.domainExponent, 2 ^ orchardActionTopLevelCircuit.domainExponent,
+          orchardActionTopLevelCircuit.constraintSystem.blindingFactors, deltaFp,
+          orchardActionTopLevelCircuit.constraintSystem.chunkLen) := by
   have h := vk_scalars_and_chunks_derived
   simp only [Prod.mk.injEq] at h ⊢
   exact h.1
 
 theorem vk_permutationChunks_derived :
     vk.permutationChunks
-      = permutationChunksOf (actionSelMapDerived (2 ^ actionK)) actionCS := by
+      = VkCommit.permutationChunksOf orchardActionTopLevelCircuit.selMapDerived
+        orchardActionTopLevelCircuit.constraintSystem := by
   have h := vk_scalars_and_chunks_derived
   simp only [Prod.mk.injEq] at h
   exact h.2

@@ -1,4 +1,3 @@
-import Zcash.Bridge.VkProjection
 import Zcash.Snark.Core.Domain
 import Zcash.Circuits.TopLevelKeygen
 import Zcash.Snark.Soundness.PolynomialEnvironment

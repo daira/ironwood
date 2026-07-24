@@ -2,7 +2,7 @@ import CompElliptic.Curves.Pasta
 import Zcash.Common.ParMap
 import Zcash.Snark.Core.Domain
 import Zcash.Snark.VkCommit.Fast.Msm
-import Zcash.Bridge.VkProjection
+import Zcash.Circuits.Integration.ExprRich
 import Zcash.Circuits.Fixtures.Layout
 import Zcash.Circuits.TopLevelKeygen
 import Zcash.Snark.Core.Group
@@ -35,7 +35,6 @@ capture certification live in `Derivation.lean` / `Certificate.lean`.
 namespace Zcash.Snark.VkCommit
 
 open Zcash.Snark
-open Bridge
 open Halo2
 open Zcash.Circuits.Fixtures
 
@@ -198,6 +197,20 @@ def deltaPowersArr (delta : Fp) (m : ℕ) : Array Fp := Id.run do
     cur := cur * delta
   return arr
 
+/-- The permutation columns chunked for the verifier (`permutation/verifier.rs:43-47`:
+`columns.chunks(chunk_len)` with global position indices), in the `ColumnRef`
+QUERY-INDEX space the verifier resolves evals with (`ColumnRef.resolve`): each column's
+cur-rotation query index in the post-compression layouts. -/
+def permutationChunksOf (map : Halo2.SelCompressMap) (cs : ConstraintSystem Fp) :
+    List (List (Snark.ColumnRef × ℕ)) :=
+  let proj := projectCS map cs
+  let ref : AnyColumn → Snark.ColumnRef := fun c =>
+    match c.kind with
+    | .advice => .advice (proj.adviceQueryLayout.findIdx (· = (c.index, 0)))
+    | .fixed => .fixed (proj.fixedQueryLayout.findIdx (· = (c.index, 0)))
+    | .instance => .instance (proj.instanceQueryLayout.findIdx (· = (c.index, 0)))
+  ((cs.permutationColumns.map ref).zipIdx).toChunks cs.chunkLen
+
 /-- The per-column permutation polynomials in Lagrange form:
 `p_i[j] = deltaomega[i'][j'] = δ^{i'} · ω^{j'}` where `(i', j') = mapping[i][j]`
 (`build_vk`, `permutation/keygen.rs:135-146`), over the keygen `Assembly` mapping
@@ -233,7 +246,6 @@ end Zcash.Snark.VkCommit
 namespace Zcash.Snark.VerifyingKey
 
 open Zcash.Snark.VkCommit
-open Bridge
 open Halo2
 open Zcash.Circuits.Fixtures
 
@@ -270,6 +282,36 @@ def ofOperations (shape : Shape) (urs : URS G)
       (pinned.lookupInputExprs.getD l.val []).map RichExpression.toExpr
     lookupTableExprs := fun l =>
       (pinned.lookupTableExprs.getD l.val []).map RichExpression.toExpr }
+
+/-- **A verifying key whose gate list is a derivation's evaluates like the source
+circuit.** The verifier holds `Zcash.Snark.Expr` gates while the derivation produces
+`Halo2.RichExpression` gates, so the hypothesis follows keygen's construction direction:
+`vk.gates = (.derive cs map).gates.map RichExpression.toExpr`. Given that and selector
+coverage, the `j`-th VK gate — at query families interpreting the derivation walk's
+layout — evaluates to the `j`-th flattened Clean gate expression under the
+selector-replacement valuation. -/
+theorem gates_eval_of_gates_eq
+    {shape : Shape} {G' : Type*} (vk : VerifyingKey shape Fp G')
+    (cs : ConstraintSystem Fp) (map : Halo2.SelCompressMap)
+    (hgates : vk.gates =
+      (PinnedConstraintSystem.derive cs map).gates.map
+        RichExpression.toExpr)
+    (fE aE iE : ℕ → Fp) (v : Query → Fp)
+    (hcov : ∀ p ∈ flatGates cs,
+      p.selectorsCovered (fun i => (map.lookup i).isSome) = true)
+    (hint : Interprets
+      (eraseGates ((flatGates cs).map (substSelectorMap map.lookup))
+        (queryWalkInit map cs)).2 fE aE iE v)
+    (j : ℕ) (hg : j < vk.gates.length) (hp : j < (flatGates cs).length) :
+    Expr.eval fE aE iE vk.gates[j]
+      = Expression.eval (substValuation map.lookup v) (flatGates cs)[j] := by
+  have hg' : j < (PinnedConstraintSystem.derive cs map).gates.length := by
+    rw [hgates, List.length_map] at hg
+    exact hg
+  have key := PinnedConstraintSystem.derive_gates_eval cs map fE aE iE v hcov hint j hg' hp
+  rw [List.getElem_of_eq hgates hg, List.getElem_map,
+    RichExpression.eval_toExpr]
+  exact key
 
 end Zcash.Snark.VerifyingKey
 
@@ -331,7 +373,6 @@ namespace Zcash.Circuits.TopLevelCircuit
 
 open Zcash.Snark
 open Zcash.Snark.VkCommit
-open Bridge
 open Halo2
 open Zcash.Circuits
 open Zcash.Circuits.Fixtures

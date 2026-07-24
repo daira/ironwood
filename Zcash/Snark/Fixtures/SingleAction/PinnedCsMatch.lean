@@ -1,5 +1,5 @@
 import Zcash.Snark.Fixtures.SingleAction.VkCsData
-import Zcash.Bridge.VkProjection
+import Zcash.Snark.VkCommit.Pipeline
 import Zcash.Circuits.Action.TopLevel
 import Zcash.Circuits.TopLevelKeygen
 import Mathlib.Util.AssertNoSorry
@@ -13,7 +13,7 @@ CS-data dump, and `actionPinnedCs`, derived from the ported `Action.Circuit.conf
 same equality so a regeneration drift names the diverging field.
 
 The derivation has no fixture inputs left: the selector-compression map is COMPUTED
-circuit-side (`actionSelMapDerived`, `Bridge/VkProjection.lean` — synthesize mirror →
+circuit-side (`TopLevelCircuit.selMapDerived` — synthesize mirror →
 V1 floor-planner placement → activations → `compress_selectors`; the Rust-dumped
 `actionSelMap` survives only as a cross-check in `TestSelMapDerivation`), and the
 query-registration order is recorded by `configure` itself (Clean's configure-time
@@ -30,7 +30,6 @@ general theorems (see `TrustBoundary` in this directory for the discipline).
 
 namespace Zcash.Snark.Fixture
 
-open Bridge
 open Halo2
 open Zcash.Circuits.Action (orchardActionTopLevelCircuit)
 
@@ -64,17 +63,13 @@ def capturedPinnedCs : PinnedConstraintSystem Fp where
   constants := vkConstants
   minimumDegree := vkMinimumDegree
 
-/-- The pinned CS derived from the ported Action circuit — query order from the
-circuit's own configure-recorded registration (see the module docstring), at the
-derived domain size `2^actionK` (`minimalK`, the keygen fit condition — no domain
-constant survives as an input either). Semantically this IS
-`orchardActionTopLevelCircuit.pinnedCS` (certified in the bundle below as
-`actionPinnedCs_eq_pinnedCS`); it is spelled directly rather than via the method
-because the method threads `FiniteField`-derived `Field`/`DecidableEq` instances while
-this file's context resolves them directly — a typeclass diamond that breaks the
-definitional-equality alignment the `VkCommit` derivation relies on. -/
+/-- The pinned CS derived from the closed Action circuit — the
+`TopLevelCircuit.pinnedCS` method (Clean's `FormalCircuit.toPinnedCS`): query order from
+the circuit's own configure-recorded registration (see the module docstring), at the
+derived domain size (`TopLevelCircuit.domainExponent`, the keygen fit condition — no
+domain constant survives as an input either). -/
 def actionPinnedCs : PinnedConstraintSystem Fp :=
-  .derive actionCS (actionSelMapDerived (2 ^ actionK))
+  orchardActionTopLevelCircuit.pinnedCS
 
 /-- **The capture is the derived Action circuit** (pinned CS), and the derivation is
 well-formed: the domain exponent computes to orchard's pinned `K = 11`
@@ -83,11 +78,11 @@ well-formed: the domain exponent computes to orchard's pinned `K = 11`
 and projection work once each; the field/fact splits below are `congrArg` projections
 of this single evaluation. -/
 theorem capturedPinnedCs_eq_derived_and_wellFormed :
-    (capturedPinnedCs, actionK, actionCS.invalidQueriedCells.isEmpty,
-      (flatGates actionCS).all
-        (·.selectorsCovered (fun i => ((actionSelMapDerived (2 ^ actionK)).lookup i).isSome)),
-      orchardActionTopLevelCircuit.pinnedCS)
-      = (actionPinnedCs, 11, true, true, actionPinnedCs) := by native_decide
+    (capturedPinnedCs, orchardActionTopLevelCircuit.domainExponent,
+      orchardActionTopLevelCircuit.constraintSystem.invalidQueriedCells.isEmpty,
+      (flatGates orchardActionTopLevelCircuit.constraintSystem).all
+        (·.selectorsCovered (fun i => (orchardActionTopLevelCircuit.selMapDerived.lookup i).isSome)))
+      = (actionPinnedCs, 11, true, true) := by native_decide
 
 /-- **The capture is the derived Action circuit** (pinned CS). -/
 theorem capturedPinnedCs_eq_derived : capturedPinnedCs = actionPinnedCs := by
@@ -96,14 +91,15 @@ theorem capturedPinnedCs_eq_derived : capturedPinnedCs = actionPinnedCs := by
   exact h.1
 
 /-- The derived domain exponent is orchard's pinned `K = 11` (`circuit.rs:76`). -/
-theorem actionK_eq : actionK = 11 := by
+theorem actionK_eq : orchardActionTopLevelCircuit.domainExponent = 11 := by
   have h := capturedPinnedCs_eq_derived_and_wellFormed
   simp only [Prod.mk.injEq] at h
   exact h.2.1
 
 /-- Every hand-listed `queriedCells` entry was a well-formed query atom (the poison
 list is empty) — the registration recorded exactly the per-gate lists. -/
-theorem action_queriedCells_wellFormed : actionCS.invalidQueriedCells.isEmpty := by
+theorem action_queriedCells_wellFormed :
+    orchardActionTopLevelCircuit.constraintSystem.invalidQueriedCells.isEmpty := by
   have h := capturedPinnedCs_eq_derived_and_wellFormed
   simp only [Prod.mk.injEq] at h
   exact h.2.2.1
@@ -145,23 +141,14 @@ theorem permutationColumns_eq :
 /-- The selector-compression map covers every selector atom of every Action gate — the
 coverage side condition of `PinnedConstraintSystem.derive_gates_eval`. -/
 theorem action_gates_selectorsCovered :
-    ((flatGates actionCS).all
-      (·.selectorsCovered (fun i => ((actionSelMapDerived (2 ^ actionK)).lookup i).isSome)))
+    ((flatGates orchardActionTopLevelCircuit.constraintSystem).all
+      (·.selectorsCovered (fun i => (orchardActionTopLevelCircuit.selMapDerived.lookup i).isSome)))
       = true := by
   have h := capturedPinnedCs_eq_derived_and_wellFormed
   simp only [Prod.mk.injEq] at h
-  exact h.2.2.2.1
-
-/-- `actionPinnedCs` is the `TopLevelCircuit.pinnedCS` method's output (see the
-docstring on `actionPinnedCs` for why the definition is not literally the method). -/
-theorem actionPinnedCs_eq_pinnedCS :
-    orchardActionTopLevelCircuit.pinnedCS = actionPinnedCs := by
-  have h := capturedPinnedCs_eq_derived_and_wellFormed
-  simp only [Prod.mk.injEq] at h
-  exact h.2.2.2.2
+  exact h.2.2.2
 
 assert_no_sorry capturedPinnedCs_eq_derived
-assert_no_sorry actionPinnedCs_eq_pinnedCS
 assert_no_sorry action_gates_selectorsCovered
 assert_no_sorry action_queriedCells_wellFormed
 assert_no_sorry actionK_eq
