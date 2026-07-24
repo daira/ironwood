@@ -62,19 +62,22 @@ abbrev Encoding := { n : ℕ // n < 2 ^ 255 }
 
 def decode (e : Encoding) : Fp := (e.1 : Fp)
 
-def merkleCompress (i : Fin 32) (children : Encoding × Encoding) : Fp :=
-  match hashToPoint orchardGenerators.S merkleQ
-      (merkleChunks i.1 children.1.1 children.2.1) with
-  | some p => p.x
-  | none => 0
+/-- Level-personalized Merkle compression of a raw child pair.  The escape branch is
+`none`, not a totalized sentinel: definedness of every layer is recorded in
+`Merkle.Path` (see `Merkle.Path.compress_isSome`), so a Sinsemilla exceptional branch
+here can never masquerade as a genuine node value nor as a Merkle collision. -/
+def merkleCompress (i : Fin 32) (children : Encoding × Encoding) : Option Fp :=
+  (hashToPoint orchardGenerators.S merkleQ
+    (merkleChunks i.1 children.1.1 children.2.1)).map Point.x
 
 theorem merkleCompress_eq_of_hashToPoint {i : Fin 32} {children : Encoding × Encoding}
     {p : Point Fp}
     (h : hashToPoint orchardGenerators.S merkleQ
       (merkleChunks i.1 children.1.1 children.2.1) = some p) :
-    merkleCompress i children = p.x := by
+    merkleCompress i children = some p.x := by
   unfold merkleCompress
   rw [h]
+  rfl
 
 def merkle : MerklePrimitives Fp Encoding where
   depth := 32

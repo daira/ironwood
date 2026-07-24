@@ -145,7 +145,10 @@ encoding. -/
 structure MerklePrimitives (B E : Type*) where
   depth : ℕ
   decode : E → B
-  compress : Fin depth → E × E → B
+  /-- Level-personalized compression of a raw child pair.  `none` is an escaped
+  compression; for Orchard, a Sinsemilla exceptional branch.  Definedness is not
+  totalized away — it is recorded in `Path` and recoverable from a path fact. -/
+  compress : Fin depth → E × E → Option B
 
 /-- Select the raw child on the path.  `false` selects the left child and `true`
 selects the right child. -/
@@ -153,24 +156,56 @@ def selectedChild (side : Bool) (children : E × E) : E :=
   if side then children.2 else children.1
 
 /-- The running node after the first `i` leaf-to-root path cells.  In particular,
-`node ... 0` is the leaf and `node ... (i + 1)` is the compression at layer `i`.
-The selected-child equations in `Path` tie these otherwise raw inputs together. -/
+`node ... 0` is `some leaf` and `node ... (i + 1)` is the compression at layer `i`,
+which is `none` on an escaped compression.  The selected-child equations in `Path`
+tie these otherwise raw inputs together. -/
 def node (P : MerklePrimitives B E) (leaf : B) (children : Fin P.depth → E × E) :
-    Fin (P.depth + 1) → B :=
-  Fin.cases leaf (fun i => P.compress i (children i))
+    Fin (P.depth + 1) → Option B :=
+  Fin.cases (some leaf) (fun i => P.compress i (children i))
 
 /-- A raw Orchard-style authentication path, ordered from the leaf towards the root.
 Every layer carries both *raw* child encodings and its selected side.  The selected
 encoding must decode to the current node, and compression at level `i` produces the
-next node. -/
+next node — each equation *also* asserts that the previous compression succeeded, so
+definedness of every layer is part of path validity and is recoverable from the `Path`
+fact itself (see `Path.compress_isSome`). -/
 def Path (P : MerklePrimitives B E) (leaf root : B)
     (children : Fin P.depth → E × E) (side : Fin P.depth → Bool) : Prop :=
-  (∀ i, P.decode (selectedChild (side i) (children i)) = node P leaf children (Fin.castSucc i)) ∧
-    node P leaf children (Fin.last P.depth) = root
+  (∀ i, node P leaf children (Fin.castSucc i) =
+      some (P.decode (selectedChild (side i) (children i)))) ∧
+    node P leaf children (Fin.last P.depth) = some root
 
-/-- A Merkle collision records the layer whose personalization was collided. -/
+/-- Every layer of a valid path has a defined compression: definedness is recorded
+in the `Path` fact rather than carried as a separate bridge invariant.  This is the
+property motivating the partial (`Option`-valued) compressor — the fact each `Path`
+equation asserts `some _` on the running node lets a consumer recover a successful
+evaluation at every level. -/
+theorem Path.compress_isSome {P : MerklePrimitives B E} {leaf root : B}
+    {children : Fin P.depth → E × E} {side : Fin P.depth → Bool}
+    (h : Path P leaf root children side) (i : Fin P.depth) :
+    ∃ b, P.compress i (children i) = some b := by
+  have hnode : node P leaf children i.succ = P.compress i (children i) := by
+    simp [node, Fin.cases_succ]
+  rcases Nat.lt_or_ge (i.1 + 1) P.depth with hlt | hge
+  · have hcast : Fin.castSucc (⟨i.1 + 1, hlt⟩ : Fin P.depth) = i.succ := by
+      apply Fin.ext
+      simp [Fin.val_succ]
+    have hstep := h.1 ⟨i.1 + 1, hlt⟩
+    rw [hcast, hnode] at hstep
+    exact ⟨_, hstep⟩
+  · have heq : i.1 + 1 = P.depth := by have := i.isLt; omega
+    have hlast : i.succ = Fin.last P.depth := by
+      apply Fin.ext
+      simp [Fin.val_succ, Fin.val_last, heq]
+    have hroot := h.2
+    rw [← hlast, hnode] at hroot
+    exact ⟨_, hroot⟩
+
+/-- A Merkle collision records the layer whose personalization was collided, and
+demands *successful* evaluations on both queries (a `DefinedCollision`): an escaped
+layer, whose compression is `none`, can therefore never constitute a collision. -/
 abbrev Collision (P : MerklePrimitives B E) :=
-  Σ i : Fin P.depth, RandomOracle.Collision (P.compress i)
+  Σ i : Fin P.depth, RandomOracle.DefinedCollision (P.compress i)
 
 end Zcash.Security.Ledger.Merkle
 

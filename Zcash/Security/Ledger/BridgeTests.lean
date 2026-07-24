@@ -99,6 +99,17 @@ theorem dummy_spend_merkle_vacuous
         inst.rt w.path w.side := by
   simp [hzero]
 
+/-- Path validity now certifies per-layer definedness: no escaped compression can occur
+inside a valid path.  This is the guarantee that distinguishes the partial
+(`Option`-valued) compressor from a totalized one, and it is recoverable directly from the
+`Merkle.Path` fact rather than a separate bridge invariant. -/
+theorem path_layers_defined
+    {B E : Type*} {P : Merkle.MerklePrimitives B E} {leaf root : B}
+    {children : Fin P.depth → E × E} {side : Fin P.depth → Bool}
+    (h : Merkle.Path P leaf root children side) (i : Fin P.depth) :
+    ∃ b, P.compress i (children i) = some b :=
+  Merkle.Path.compress_isSome h i
+
 /-- Flag zero leaves the post-NU6.3 address condition inert. -/
 theorem cross_address_flag_zero (wit : ActionData) (w : LedgerWitness)
     (hzero : wit.disableCrossAddress = 0) : CrossAddressSatisfied wit w := by
@@ -166,6 +177,7 @@ assert_no_sorry value_commit_negative_scaling
 assert_no_sorry zero_encodings_distinct
 assert_no_sorry zero_encodings_decode_equal
 assert_no_sorry dummy_spend_merkle_vacuous
+assert_no_sorry path_layers_defined
 assert_no_sorry cross_address_flag_zero
 assert_no_sorry cross_address_flag_one
 assert_no_sorry cross_address_flag_arbitrary_nonzero
@@ -183,6 +195,7 @@ assert_axioms value_equal
 assert_axioms zero_encodings_distinct
 assert_axioms zero_encodings_decode_equal
 assert_axioms dummy_spend_merkle_vacuous
+assert_axioms path_layers_defined
 assert_axioms cross_address_flag_zero
 assert_axioms cross_address_flag_one
 assert_axioms cross_address_flag_arbitrary_nonzero
