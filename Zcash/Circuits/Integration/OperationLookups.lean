@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.CircuitSatisfaction
+import Zcash.Circuits.Integration.CircuitSatisfaction
 import Zcash.Snark.Soundness.FoldSplit
 import Zcash.Snark.Soundness.GoodChallenge
 import Zcash.Snark.Soundness.LookupRows

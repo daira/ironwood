@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.ResolverGates
+import Zcash.Circuits.Integration.ResolverGates
 import Clean.Halo2.Keygen.Layout
 import Std.Data.HashSet.Lemmas
 

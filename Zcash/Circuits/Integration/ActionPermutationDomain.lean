@@ -1,6 +1,6 @@
-import Zcash.Snark.Soundness.ActionPermutationDomainCompute
+import Zcash.Circuits.Integration.ActionPermutationDomainCompute
 import Zcash.Snark.Soundness.CanonicalConstraintModel
-import Zcash.Snark.Soundness.TopLevelAssignment
+import Zcash.Circuits.Integration.TopLevelAssignment
 
 /-!
 # Action permutation domain and verifier layout
@@ -17,7 +17,7 @@ the restriction equation, and the common-column identification explicitly.
 namespace Zcash.Snark
 
 open Polynomial
-open Zcash.Circuits
+open Halo2
 open Zcash.Circuits.Action (orchardActionTopLevelCircuit)
 
 namespace ActionPermutationDomain

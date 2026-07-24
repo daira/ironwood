@@ -1,7 +1,7 @@
 import Zcash.Snark.Soundness.InstanceCommitment
-import Zcash.Snark.Soundness.FixedLayout
+import Zcash.Circuits.Integration.FixedLayout
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
-import Zcash.Snark.Soundness.SelectorCoherence
+import Zcash.Circuits.Integration.SelectorCoherence
 import Zcash.Snark.Keygen.Pipeline
 
 /-!

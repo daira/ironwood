@@ -1,5 +1,5 @@
 import Zcash.Circuits.Action.GateCoherence
-import Zcash.Snark.Soundness.SelectorCoherence
+import Zcash.Circuits.Integration.SelectorCoherence
 
 /-!
 # Action configure selector coherence

@@ -1,7 +1,7 @@
-import Zcash.Snark.Soundness.OperationCopies
-import Zcash.Snark.Soundness.OperationLookups
-import Zcash.Snark.Soundness.OperationGates
-import Zcash.Snark.Soundness.OperationFixed
+import Zcash.Circuits.Integration.OperationCopies
+import Zcash.Circuits.Integration.OperationLookups
+import Zcash.Circuits.Integration.OperationGates
+import Zcash.Circuits.Integration.OperationFixed
 
 /-!
 # Reassembling full circuit satisfaction

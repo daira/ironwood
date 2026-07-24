@@ -1,7 +1,7 @@
 import Zcash.Circuits.Integration.LookupProjection
 import Zcash.Snark.Soundness.CanonicalConstraintModel
 import Zcash.Snark.Soundness.ChallengePricing
-import Zcash.Snark.Soundness.TopLevelGates
+import Zcash.Circuits.Integration.TopLevelGates
 
 /-!
 # Resolver-backed lookup witnesses for top-level circuits

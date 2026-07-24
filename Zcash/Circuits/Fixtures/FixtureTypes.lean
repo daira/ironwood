@@ -1,6 +1,7 @@
 import Zcash.Circuits.Ecc.Basic
 import Zcash.Common.Expr
 import Clean.Halo2.Keygen
+import Clean.Halo2.Keygen.Layout
 
 /-!
 # VK-matching fixture types
@@ -51,14 +52,9 @@ The `CsFixture` above captures the *symbolic* constraint system. `LayoutFixture`
 `ℕ` literals — canonical Pallas-base representatives (the same `to_repr()` integer `mkFp`
 decodes, but decimal, so no field arithmetic is forced during elaboration). -/
 
-/-- A permutation-argument column reference, in `cs.permutation.get_columns()` order.
-Matches the ironwood `permutationChunks` `ColumnRef` spelling (`.advice`/`.fixed`/`.instance`
-with a per-type column index). -/
-inductive ColRef where
-  | advice : ℕ → ColRef
-  | fixed : ℕ → ColRef
-  | instance : ℕ → ColRef
-deriving DecidableEq, Repr
+/-- A permutation-argument column reference, in `cs.permutation.get_columns()` order —
+upstreamed to Clean (`Halo2.Layout.ColRef`); re-exposed here for the fixture records. -/
+abbrev ColRef := Halo2.Layout.ColRef
 
 /-- One floor-planner region placement: creation-order `index`, region `name`, and `start`
 row. `start` is the minimum absolute row the region touches, which equals the

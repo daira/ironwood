@@ -1,5 +1,5 @@
 import Clean.Halo2.TopLevelKeygen
-import Zcash.Snark.Soundness.CircuitIntegration
+import Zcash.Circuits.Integration.CircuitIntegration
 
 /-!
 # Generic SNARK-to-top-level-circuit endpoint
