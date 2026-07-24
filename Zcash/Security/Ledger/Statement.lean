@@ -40,7 +40,7 @@ namespace Zcash.Security.Ledger
 
 variable {F : Type*} [Field F]
 variable {G : Type*} [AddCommGroup G] [Module F G]
-variable {IVK NK RHO PSI MHASH MENC : Type*} {KW : Type*}
+variable {IVK NK RHO PSI MHASH MENC MSG SIG : Type*} {KW : Type*}
 
 /-- An Orchard-shaped note. Point encodings and type conversions are abstracted away:
 `gd` and `pkd` are group elements, `ρ` and `ψ` base-field values, `v` a natural number
@@ -66,8 +66,9 @@ structure ActionInstance (G MHASH RHO : Type*) where
 /-- The abstract primitives of an Orchard-shaped shielded protocol. No algebraic structure
 is required of the fields themselves; the group algebra enters only through the statement
 and lemmas. `emb` is the embedding of base-field values used as scalars
-(`[0, q) ⊆ [0, r)` concretely). -/
-structure Primitives (F G IVK NK RHO PSI MHASH MENC : Type*) where
+(`[0, q) ⊆ [0, r)` concretely). `MSG` and `SIG` are the sighash and signature types of the
+spend-authorization scheme. -/
+structure Primitives (F G IVK NK RHO PSI MHASH MENC MSG SIG : Type*) where
   valueBound : ℕ
   emb : IVK → F
   emb_injective : Function.Injective emb
@@ -81,11 +82,20 @@ structure Primitives (F G IVK NK RHO PSI MHASH MENC : Type*) where
   conscious trade-off from Sapling onward: the circuit does not pay for a canonicity
   check, so collisions are counted over the encoding domain, per height. -/
   merkle : MerklePrimitives MHASH MENC
+  /-- The padding value for tree positions beyond the appended leaves
+  (`Uncommitted^Orchard` concretely). -/
+  uncommitted : MHASH
+  /-- No extracted note commitment collides with the padding value (spec Thm 5.4.6
+  concretely). -/
+  uncommitted_ne : ∀ g, extract g ≠ uncommitted
   randomizePublic : F → G → G
   valueCommit : ℤ → F → G
+  /-- Verification of a spend-authorization signature under the randomized key `rk`, over
+  a transaction sighash. -/
+  spendAuthVerify : G → MSG → SIG → Prop
 
 /-- The tree depth, read off the Merkle interface. -/
-abbrev Primitives.depth (P : Primitives F G IVK NK RHO PSI MHASH MENC) : ℕ :=
+abbrev Primitives.depth (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG) : ℕ :=
   P.merkle.depth
 
 /-- The games-facing view of a key-binding witness type `KW`: projections, the key-binding
@@ -128,7 +138,7 @@ satisfy this interface (the latter enforces strictly more).
 TODO: It's unclear how well this will compose with Gregor's approach to the circuit proof.
 In particular, should this be `Prop`-only or will we need to apply the break-as-computed-data
 pattern here? -/
-structure ActionSatisfied (P : Primitives F G IVK NK RHO PSI MHASH MENC)
+structure ActionSatisfied (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
     (kv : KeyBindingInterface KW G IVK NK) (inst : ActionInstance G MHASH RHO)
     (w : ActionWitness KW F G RHO PSI MHASH MENC P.depth) : Prop where
   /-- Spend-side commitment integrity: `cm_old` opens `note_old` with `rcm_old`. -/
@@ -166,7 +176,7 @@ equal extracted coordinates. Computed by the games' reductions; nothing in this
 development reduces it further. The intended onward reductions are a Sinsemilla/DLR
 relation pre-quantum (spec Theorems 5.4.3 and 5.4.4), and an `H^rcm` ±-collision for the
 Recovery Statement (via the Pedersen lift and the `extract` ±-property). -/
-structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI MHASH MENC) where
+structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG) where
   rcm₁ : F
   n₁ : Note G RHO PSI
   rcm₂ : F
@@ -180,7 +190,7 @@ structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI MHASH MENC) where
 
 section Pinning
 
-variable {P : Primitives F G IVK NK RHO PSI MHASH MENC}
+variable {P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG}
 variable {kv : KeyBindingInterface KW G IVK NK}
 variable {inst₁ inst₂ : ActionInstance G MHASH RHO}
 variable {w₁ w₂ : ActionWitness KW F G RHO PSI MHASH MENC P.depth}
