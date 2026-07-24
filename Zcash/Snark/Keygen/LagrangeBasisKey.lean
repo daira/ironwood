@@ -276,7 +276,8 @@ theorem permutationCommitmentsOf_getD_eq_commitInstance
     rw [List.getD_eq_getElem?_getD, List.getElem?_map, List.getElem?_eq_getElem hcl,
       List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hcl]
     rfl
-  rw [permutationCommitmentsOf, List.parMap_eq_map, hget,
+  rw [permutationCommitmentsOf, permutationCommitmentsWith,
+    List.parMap_eq_map, hget,
     Fast.Msm.commitLagrangeFastWith_eq Fast.Msm.defaultWindow
       (by norm_num [Fast.Msm.defaultWindow]) urs.w]
   rw [← LagrangeCommitmentKey.commitPrefixNat_eq_commitPrefix,

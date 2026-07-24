@@ -216,7 +216,7 @@ theorem topLevelPermutationColumnAddresses_eq
     (hcoherent :
       PermutationChunkRoutingCoherent (top.toVerifierKey pp urs)) :
     (Keygen.permutationChunksOf
-        top.selMapDerived top.constraintSystem).flatten.map
+        top.selectorMap top.constraintSystem).flatten.map
           (fun reference =>
             permutationColumnAddress (top.toVerifierKey pp urs) reference.1) =
       (Keygen.permColsOf top.constraintSystem).map
@@ -233,7 +233,7 @@ theorem topLevelPermutationColumnAddresses_eq
   intro column hcolumn
   simp only [Function.comp_apply]
   let projected :=
-    projectCS top.selMapDerived top.constraintSystem
+    projectCS top.selectorMap top.constraintSystem
   let reference :=
     permutationQueryReference projected column
   have hreference :
@@ -257,7 +257,7 @@ theorem topLevelPermutationColumnAddresses_eq
   have hindexedFlat :
       indexed ∈
         (Keygen.permutationChunksOf
-          top.selMapDerived top.constraintSystem).flatten := by
+          top.selectorMap top.constraintSystem).flatten := by
     rw [permutationChunksOf_flatten]
     simpa only [projected] using hindexed
   obtain ⟨chunk, hchunk, hindexedChunk⟩ :=
@@ -265,7 +265,7 @@ theorem topLevelPermutationColumnAddresses_eq
   have hvkChunks :
       (top.toVerifierKey pp urs).permutationChunks =
         Keygen.permutationChunksOf
-          top.selMapDerived top.constraintSystem := by
+          top.selectorMap top.constraintSystem := by
     rfl
   have hrouted := hcoherent chunk (by
     rw [hvkChunks]
