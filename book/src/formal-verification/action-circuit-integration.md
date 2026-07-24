@@ -155,10 +155,13 @@ relation. The binding-aware Action endpoint invokes this theorem internally; it 
 longer accepts the decoded-polynomial equality as a premise. Its remaining concrete
 instance inputs are the parameters' `LagrangeCommitmentKey`, the public-input
 commitment equation, and coverage of the configured primary column by the derived
-instance query layout. The generic layout-to-assembly lemma supplies the actual
-proof- and challenge-dependent query, and the endpoint derives the evaluation-domain
-injectivity and size equalities from `TopLevelCircuit` plus the existing supported-`k`
-bound.
+instance query layout. The endpoint now states that last fact in the circuit's native
+language—registration of the primary column in its synthesis-closed constraint
+system. The generic query compiler proves that configure-registered layouts survive
+packed-selector insertion and the gate/lookup erasure walks, and then the generic
+layout-to-assembly lemma supplies the actual proof- and challenge-dependent query.
+The endpoint also derives evaluation-domain injectivity and size equalities from
+`TopLevelCircuit` plus the existing supported-`k` bound.
 
 The exported fixture contains only the ten Lagrange generators reachable by Action
 public rows, rather than the whole 2048-row domain. `LagrangeCommitmentKey.ofPrefix`
@@ -475,6 +478,17 @@ the copy-replay witness. Its `satisfaction_or_bad` theorem returns the exact
 `FullCircuitSatisfaction` record, and `constraints_or_bad` returns Clean's single
 ground-truth `Halo2.Constraints`. The remaining Action-specific work is therefore
 construction of these records, not another semantic proof.
+
+The first half of that lookup representation boundary is now generic.
+`LookupProjection` follows the actual threaded `eraseLookups` compiler walk, selects
+the configured argument corresponding to any lookup index, and proves that both
+derived pinned tuples evaluate like their selector-substituted Clean source
+expressions under the final resolver query layouts. The remaining lookup projection
+fact is intentionally stronger than the gate analogue: lookup selectors must have
+their exact zero/one activation values, not merely a nonzero scale. Orchard's lookup
+selectors are complex/lookup-only selectors, so keygen assigns them singleton packed
+columns; the next constructor connects those columns to each enabled operation's
+exact selector list and then builds `EnabledLookup.DeployedWitness`.
 
 The generic gate and fixed/table operation layers are now implemented as well.
 `operationEnabledGates` extracts every placed activation and

@@ -368,6 +368,55 @@ theorem deployedMemberRef_eq_fixedCommitment [DecidableEq G] [Inhabited G]
     constructIntermediateSets_zip_sets_getD] using
     href.trans hqCommitment
 
+omit [Module Fp G] in
+/-- Any deployed member carrying a common-permutation identity is the corresponding
+verifying-key σ-column commitment. This is the σ-column counterpart of
+`deployedMemberRef_eq_fixedCommitment`. -/
+theorem deployedMemberRef_eq_permCommonCommitment [DecidableEq G] [Inhabited G]
+    (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp)
+    (hcount : deployedX4PairCount (instanceCommitment := instanceCommitment) vk ps ch
+      = (constructIntermediateSets
+          (assembleQueries vk instanceCommitment ps ch)).sets.length)
+    (slot : DeployedMemberSlot (instanceCommitment := instanceCommitment) vk ps ch)
+    (c : Fin shape.numPermutationColumns)
+    (hid :
+      (deployedSetCommIds (instanceCommitment := instanceCommitment)
+        vk ps ch slot.setIndex).getD (slot.memberIndex : ℕ) .vanishingH
+        = .permCommon (c : ℕ)) :
+    ((deployedSetQueries (instanceCommitment := instanceCommitment)
+      vk ps ch slot.setIndex).getD (slot.memberIndex : ℕ) (.point 0, [])).1
+      = .point (vk.permutationCommonCommitment c) := by
+  classical
+  have hi :
+      slot.setIndex <
+        (constructIntermediateSets
+          (assembleQueries vk instanceCommitment ps ch)).sets.length := by
+    rw [← hcount]
+    exact slot.setIndex_lt
+  have hm :
+      (slot.memberIndex : ℕ) <
+        ((constructIntermediateSets
+          (assembleQueries vk instanceCommitment ps ch)).sets.getD
+            slot.setIndex []).length := by
+    simpa only [deployedSetQueries,
+      constructIntermediateSets_zip_sets_getD] using
+      slot.memberIndex.isLt
+  obtain ⟨q, hq, href, hqid⟩ :=
+    constructIntermediateSets_member_provenance
+      (assembleQueries vk instanceCommitment ps ch)
+      slot.setIndex (slot.memberIndex : ℕ) hi hm
+      (.point 0, []) .vanishingH
+  have hqId : q.commId = .permCommon (c : ℕ) := by
+    exact hqid.symm.trans hid
+  have hqCommitment :
+      q.commitment = .point (vk.permutationCommonCommitment c) :=
+    assembleQueries_permCommon_commitment
+      vk instanceCommitment ps ch q hq c hqId
+  simpa only [deployedSetQueries,
+    constructIntermediateSets_zip_sets_getD] using
+    href.trans hqCommitment
+
 omit [AddCommGroup G] [Module Fp G] in
 /-- A successful rejecting assembly supplies exactly the two structural facts needed by the
 canonical member route: duplicate commitment-point queries were rejected, and the `u` vector has

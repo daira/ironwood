@@ -177,25 +177,24 @@ def permColsOf (cs : ConstraintSystem Fp) : List Zcash.Circuits.Fixtures.ColRef 
     | .fixed => .fixed c.index
     | .instance => .instance c.index
 
-/-- `[ω^0, ω^1, …, ω^(n−1)]` by iterated multiplication (`build_vk`'s `omega_powers`,
-`permutation/keygen.rs:108-116`). -/
-def omegaPowersArr (omega : Fp) (n : ℕ) : Array Fp := Id.run do
-  let mut arr : Array Fp := Array.mkEmpty n
-  let mut cur : Fp := 1
-  for _ in [0:n] do
-    arr := arr.push cur
-    cur := cur * omega
-  return arr
+/-- `[ω^0, ω^1, …, ω^(n−1)]` (`build_vk`'s `omega_powers`, `permutation/keygen.rs:108-116`;
+map form rather than iterated multiplication so entries are `getElem`-transparent for the
+σ-row identification — `ZMod` powers are binary-fast, so the cost difference is noise). -/
+def omegaPowersArr (omega : Fp) (n : ℕ) : Array Fp :=
+  (Array.range n).map (omega ^ ·)
 
-/-- `[δ^0, δ^1, …, δ^(m−1)]` by iterated multiplication (`build_vk`'s `cur *= DELTA`,
-`permutation/keygen.rs:118-133`). -/
-def deltaPowersArr (delta : Fp) (m : ℕ) : Array Fp := Id.run do
-  let mut arr : Array Fp := Array.mkEmpty m
-  let mut cur : Fp := 1
-  for _ in [0:m] do
-    arr := arr.push cur
-    cur := cur * delta
-  return arr
+/-- `[δ^0, δ^1, …, δ^(m−1)]` (`build_vk`'s `cur *= DELTA`, `permutation/keygen.rs:118-133`;
+map form, see `omegaPowersArr`). -/
+def deltaPowersArr (delta : Fp) (m : ℕ) : Array Fp :=
+  (Array.range m).map (delta ^ ·)
+
+@[simp] theorem omegaPowersArr_getElem! (omega : Fp) {n j : ℕ} (hj : j < n) :
+    (omegaPowersArr omega n)[j]! = omega ^ j := by
+  simp [omegaPowersArr, Array.getElem!_eq_getD, Array.getD, hj]
+
+@[simp] theorem deltaPowersArr_getElem! (delta : Fp) {m j : ℕ} (hj : j < m) :
+    (deltaPowersArr delta m)[j]! = delta ^ j := by
+  simp [deltaPowersArr, Array.getElem!_eq_getD, Array.getD, hj]
 
 /-- The permutation columns chunked for the verifier (`permutation/verifier.rs:43-47`:
 `columns.chunks(chunk_len)` with global position indices), in the `ColumnRef`

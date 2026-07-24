@@ -88,6 +88,95 @@ theorem PinnedConstraintSystem.derive_queryState_extends_gates
       ((flatGates cs).map (substSelectorMap map.lookup))
       (queryWalkInit map cs)).2
 
+/-- Prepending packed fixed-selector queries leaves every configure-recorded query
+at the same index. -/
+theorem queryWalkInit_extends_recorded
+    {F : Type} [Field F] [DecidableEq F]
+    (map : SelCompressMap) (cs : ConstraintSystem F) :
+    (queryWalkInit map cs).Extends (recordedQueries cs) := by
+  have fixIdxExtends (state : QueryState) (column : ℕ) :
+      ((state.fixIdx column 0).2).Extends state := by
+    unfold QueryState.fixIdx
+    cases findQuery state.fixed column 0 with
+    | some index =>
+        exact QueryState.Extends.refl state
+    | none =>
+        exact
+          ⟨List.prefix_refl _,
+            by
+              simp only [Array.toList_push]
+              exact List.prefix_append _ _,
+            List.prefix_refl _⟩
+  have foldExtends (columns : List ℕ) (state : QueryState) :
+      (columns.foldl
+        (fun current column =>
+          (current.fixIdx (cs.numFixedColumns + column) 0).2)
+        state).Extends state := by
+    induction columns generalizing state with
+    | nil =>
+        exact QueryState.Extends.refl state
+    | cons column columns ih =>
+        rw [List.foldl_cons]
+        exact QueryState.Extends.trans
+          (fixIdxExtends state (cs.numFixedColumns + column))
+          (ih _)
+  unfold queryWalkInit
+  exact foldExtends (List.range map.newFixedCols) (recordedQueries cs)
+
+/-- The complete pinned query walk preserves the configure-recorded layouts as
+prefixes. -/
+theorem PinnedConstraintSystem.derive_queryState_extends_recorded
+    {F : Type} [Field F] [DecidableEq F]
+    (cs : ConstraintSystem F) (map : SelCompressMap) :
+    (pinnedQueryState
+      (PinnedConstraintSystem.derive cs map)).Extends
+      (recordedQueries cs) := by
+  have hinit := queryWalkInit_extends_recorded map cs
+  have hgates :=
+    eraseGates_extends
+      ((flatGates cs).map (substSelectorMap map.lookup))
+      (queryWalkInit map cs)
+  have hfinal :=
+    PinnedConstraintSystem.derive_queryState_extends_gates cs map
+  exact QueryState.Extends.trans
+    (QueryState.Extends.trans hinit hgates) hfinal
+
+/-- Every configure-registered fixed query remains present in the final pinned
+fixed-query layout. -/
+theorem PinnedConstraintSystem.mem_fixedQueryLayout_derive_of_mem
+    {F : Type} [Field F] [DecidableEq F]
+    (cs : ConstraintSystem F) (map : SelCompressMap)
+    (column : Column .fixed) (rotation : Rotation)
+    (hquery : (column, rotation) ∈ cs.fixedQueries) :
+    (column.index, rotation) ∈
+      (PinnedConstraintSystem.derive cs map).fixedQueryLayout := by
+  have hrecorded :
+      (column.index, rotation) ∈
+        (recordedQueries cs).fixed.toList := by
+    exact List.mem_map.mpr ⟨(column, rotation), hquery, rfl⟩
+  have hext :=
+    PinnedConstraintSystem.derive_queryState_extends_recorded cs map
+  have hfinal := hext.2.1.subset hrecorded
+  simpa [pinnedQueryState] using hfinal
+
+/-- Every configure-registered instance query remains present in the final pinned
+instance-query layout. -/
+theorem PinnedConstraintSystem.mem_instanceQueryLayout_derive_of_mem
+    {F : Type} [Field F] [DecidableEq F]
+    (cs : ConstraintSystem F) (map : SelCompressMap)
+    (column : Column .instance) (rotation : Rotation)
+    (hquery : (column, rotation) ∈ cs.instanceQueries) :
+    (column.index, rotation) ∈
+      (PinnedConstraintSystem.derive cs map).instanceQueryLayout := by
+  have hrecorded :
+      (column.index, rotation) ∈
+        (recordedQueries cs).inst.toList := by
+    exact List.mem_map.mpr ⟨(column, rotation), hquery, rfl⟩
+  have hext :=
+    PinnedConstraintSystem.derive_queryState_extends_recorded cs map
+  have hfinal := hext.2.2.subset hrecorded
+  simpa [pinnedQueryState] using hfinal
+
 /-- Rotating a domain point is addition of its row and query rotation. -/
 theorem rotateOmega_domainPoint
     (omega : Fp) (homega : omega ≠ 0) (row : ℕ) (rotation : ℤ) :
