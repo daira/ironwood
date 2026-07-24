@@ -13,23 +13,10 @@ name: Fixtures
 # is platform-independent, so regeneration is bit-reproducible -- a diff means the
 # fixtures genuinely drifted from the pinned upstream, not run-to-run noise.
 #
-# Pins: `ORCHARD_REF` below points at `mitschabaude/orchard` branch
-# `lean-fixture-capture-0.15.3` -- the 0.15.3 release tag plus one commit adapting the
-# capture harness to the updated Lean fixture exporter (the VkCsData module split,
-# narrowed fixture imports, and pinned-constraint-system metadata export) that produced
-# the checked-in fixtures. That commit also carries a `[patch.crates-io]` in Orchard's
-# Cargo.toml pinning `halo2_proofs` to `mitschabaude/halo2` branch
-# `lean-fixture-dumper-0.3.4` (rev 8a5b8a86f6ccf2cdd1875bdb049aa05bb5e6bce4), the same
-# override mechanism Orchard itself used while pre-release halo2 changes were under
-# review. That halo2 branch is the exporter commits merged with the upstream
-# `halo2_proofs-0.3.4` release -- the merge is load-bearing, since a `[patch.crates-io]`
-# entry only replaces the registry copy of the SAME crate version and Orchard's
-# `halo2_proofs = "0.3"` resolves to 0.3.4.
-#
-# INTERIM: both fork pins revert to upstream (a zcash/orchard release and a released
-# `halo2_proofs`) once the exporter changes are upstreamed to zcash/halo2; tracked with
-# the exporter PR. Regeneration with these pins was verified byte-identical to all four
-# checked-in modules (Fixture.lean and VkCsData.lean, single- and multi-action).
+# Pins: `ORCHARD_REF` below is the upstream `zcash/orchard` 0.15.3 release tag
+# (zcash/orchard#538 instance-commitment derivation capture); its capture harness
+# resolves the released `halo2_proofs` 0.3.4 from crates.io, whose
+# `dump_vesta_lean_fixture` emitted the checked-in fixtures. No fork pins.
 
 # Always triggers, so the `Fixtures CI` gate always reports (a workflow skipped by
 # `on.paths` would leave a required check pending). The heavy regeneration is instead
@@ -47,12 +34,10 @@ concurrency:
 permissions: {}
 
 env:
-  # Orchard release 0.15.3 (zcash/orchard#538 instance-commitment derivation capture) plus the
-  # split-exporter harness commit; carries the halo2_proofs fork pin in its Cargo.toml. Pinned by
-  # commit SHA (branch `lean-fixture-capture-0.15.3`); see the header comment for the full pin
-  # rationale and the interim status.
-  ORCHARD_REPO: mitschabaude/orchard
-  ORCHARD_REF: 6cc9661949659f456ebc6ed15c4110ea4ea1942c
+  # Orchard release 0.15.3 (zcash/orchard#538 instance-commitment derivation capture),
+  # pinned by the release tag's commit SHA.
+  ORCHARD_REPO: zcash/orchard
+  ORCHARD_REF: 13e119a360c4034d23b7de08d15432748f65b9b9
 
 jobs:
   changes:
@@ -74,9 +59,7 @@ jobs:
           filters: |
             fixtures:
               - 'Zcash/Snark/Fixtures/SingleAction/Fixture.lean'
-              - 'Zcash/Snark/Fixtures/SingleAction/VkCsData.lean'
               - 'Zcash/Snark/Fixtures/MultiAction/Fixture.lean'
-              - 'Zcash/Snark/Fixtures/MultiAction/VkCsData.lean'
               - '.github/workflows/fixtures.yml'
 
   verify:
@@ -107,28 +90,22 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           workspaces: orchard-capture
-      # Emits all four fixture modules (per capture: the proof fixture and its VkCsData
-      # constraint-system module) directly over the checked-in copies. `halo2_proofs` resolves
-      # to the fork pin committed in the capture crate's `[patch.crates-io]`, so no separate
-      # Halo2 checkout is needed. The filter matches both accepting captures
-      # (`fingerprint_capture` and `fingerprint_capture_two_actions`) and not the Rust-only
-      # rejection tests.
+      # Emits both fixture modules directly over the checked-in copies. `halo2_proofs`
+      # resolves to the released 0.3.4 from crates.io, so no Halo2 checkout is needed. The
+      # filter matches both accepting captures (`fingerprint_capture` and
+      # `fingerprint_capture_two_actions`) and not the Rust-only rejection tests.
       - name: Regenerate the fixtures from the pinned capture
         working-directory: orchard-capture
         env:
           ORCHARD_LEAN_SINGLE_FIXTURE_OUT: ${{ github.workspace }}/ironwood/Zcash/Snark/Fixtures/SingleAction/Fixture.lean
-          ORCHARD_LEAN_SINGLE_VKCS_OUT: ${{ github.workspace }}/ironwood/Zcash/Snark/Fixtures/SingleAction/VkCsData.lean
           ORCHARD_LEAN_MULTI_FIXTURE_OUT: ${{ github.workspace }}/ironwood/Zcash/Snark/Fixtures/MultiAction/Fixture.lean
-          ORCHARD_LEAN_MULTI_VKCS_OUT: ${{ github.workspace }}/ironwood/Zcash/Snark/Fixtures/MultiAction/VkCsData.lean
         run: cargo test --lib --features verifier-fingerprint circuit::fingerprint::fingerprint_capture -- --nocapture
       - name: Enforce the checked-in fixtures match the regenerated capture
         working-directory: ironwood
         run: |
           if ! git diff --exit-code -- \
               Zcash/Snark/Fixtures/SingleAction/Fixture.lean \
-              Zcash/Snark/Fixtures/SingleAction/VkCsData.lean \
-              Zcash/Snark/Fixtures/MultiAction/Fixture.lean \
-              Zcash/Snark/Fixtures/MultiAction/VkCsData.lean; then
+              Zcash/Snark/Fixtures/MultiAction/Fixture.lean; then
             echo "::error::Checked-in fixtures differ from the pinned Orchard/Halo2 capture. Regenerate them (see the capture commands in Zcash/Snark/Fixtures and orchard src/circuit/fingerprint/mod.rs) and commit the result."
             exit 1
           fi

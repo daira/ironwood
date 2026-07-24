@@ -6,7 +6,7 @@ import Zcash.Circuits.Fixtures.ActionSelMap
 # Cross-check: the derived selector-compression map is the Rust dump
 
 `TopLevelCircuit.selMapDerived` — the derivation witness `actionPinnedCs` consumes
-(`Zcash/Snark/Fixtures/SingleAction/PinnedCsMatch.lean`) — is computed end to end from
+(`Zcash/Snark/Fixtures/SingleAction/VkMatch.lean`) — is computed end to end from
 the closed circuit: synthesize mirror → region shapes → V1
 floor-planner placement (`FloorPlanner.V1.starts`) → selector activations
 (`Layout.activations`) → the `compress_selectors` port (`deriveSelCompressMap`). This
