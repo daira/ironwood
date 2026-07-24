@@ -105,7 +105,7 @@ theorem lagrangePoly_eval {points evals : List Fp}
   rw [houter, ← Fin.sum_univ_eq_sum_range (fun i => evals.getD i 0
     * ∏ j ∈ Finset.range points.length,
         if j = i then 1 else (x - points.getD j 0) / (points.getD i 0 - points.getD j 0))]
-  rw [lagrangePoly, Lagrange.interpolate_apply, eval_finset_sum]
+  rw [lagrangePoly, Lagrange.interpolate_apply, eval_finsetSum]
   refine Finset.sum_congr rfl fun i _ => ?_
   rw [eval_mul, eval_C]
   congr 1
@@ -189,7 +189,7 @@ theorem coeffs_zero_of_power_sum_vanishes {n : ℕ} (c : ℕ → Fp)
   have hP0 : P = 0 := by
     refine poly_eq_of_agree_on_family (d := n - 1) (Q := 0) (by rw [sub_zero]; exact hdeg)
       (fun r => ξ (Fin.cast hcast r)) (hξ.comp (Fin.cast_injective hcast)) (fun r => ?_)
-    rw [Polynomial.eval_zero, hPdef, Polynomial.eval_finset_sum]
+    rw [Polynomial.eval_zero, hPdef, Polynomial.eval_finsetSum]
     simp only [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow, Polynomial.eval_X]
     rw [← hvanish (Fin.cast hcast r)]
     exact Finset.sum_congr rfl (fun j _ => by ring)

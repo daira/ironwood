@@ -68,7 +68,7 @@ noncomputable def coeffsToPoly {n : ℕ} (a : Fin n → Fp) : Polynomial Fp :=
 /-- Evaluating `coeffsToPoly` is the same linear form as committing to the powers evaluation vector. -/
 theorem coeffsToPoly_eval {k : ℕ} (a : Fin (2 ^ k) → Fp) (x : Fp) :
     (coeffsToPoly a).eval x = commitGen (evalVector k x) a := by
-  rw [coeffsToPoly, Polynomial.eval_finset_sum]
+  rw [coeffsToPoly, Polynomial.eval_finsetSum]
   simp [commitGen, evalVector, smul_eq_mul]
 
 /-- A family of rewound batched openings for one batch of column commitments.

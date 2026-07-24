@@ -151,12 +151,14 @@ noncomputable def reprogramX4 {shape : Shape} (O : List (TranscriptElt Fp G) →
     List (TranscriptElt Fp G) → Fp :=
   fun t => if t = preX4Transcript init ps then ξ else O t
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- At the `x₄` prefix the reprogrammed oracle answers `ξ`. -/
 theorem reprogramX4_apply_x4 {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (ξ : Fp) :
     reprogramX4 O init ps ξ (preX4Transcript init ps) = ξ := by
   simp [reprogramX4]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Off the `x₄` prefix the reprogrammed oracle is `O`. -/
 theorem reprogramX4_apply_ne {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (ξ : Fp)
@@ -164,6 +166,7 @@ theorem reprogramX4_apply_ne {shape : Shape} (O : List (TranscriptElt Fp G) → 
     reprogramX4 O init ps ξ t = O t := by
   simp [reprogramX4, ht]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Any input whose length differs from the `x₄` prefix — every other squeeze input of the deployed
 schedule — is untouched by the `x₄` reprogramming. -/
 theorem reprogramX4_apply_length {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
@@ -172,6 +175,7 @@ theorem reprogramX4_apply_length {shape : Shape} (O : List (TranscriptElt Fp G) 
     reprogramX4 O init ps ξ t = O t :=
   reprogramX4_apply_ne O init ps ξ (fun h => ht (congrArg List.length h))
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- An input strictly shorter than the `x₄` prefix is untouched (the pre-`x₄` squeeze inputs). -/
 theorem reprogramX4_apply_short {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (ξ : Fp)
@@ -179,6 +183,7 @@ theorem reprogramX4_apply_short {shape : Shape} (O : List (TranscriptElt Fp G) �
     reprogramX4 O init ps ξ t = O t :=
   reprogramX4_apply_length O init ps ξ ht.ne
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- An input strictly longer than the `x₄` prefix is untouched (the `ξ`/`z` and IPA-round inputs). -/
 theorem reprogramX4_apply_long {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (ξ : Fp)
@@ -222,12 +227,14 @@ noncomputable def reprogramX1 {shape : Shape} (O : List (TranscriptElt Fp G) →
     List (TranscriptElt Fp G) → Fp :=
   fun t => if t = preX1Transcript init ps then χ else O t
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- At the `x₁` prefix the reprogrammed oracle answers `χ`. -/
 theorem reprogramX1_apply_x1 {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (χ : Fp) :
     reprogramX1 O init ps χ (preX1Transcript init ps) = χ := by
   simp [reprogramX1]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Off the `x₁` prefix the reprogrammed oracle is `O`. -/
 theorem reprogramX1_apply_ne {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (χ : Fp)
@@ -235,6 +242,7 @@ theorem reprogramX1_apply_ne {shape : Shape} (O : List (TranscriptElt Fp G) → 
     reprogramX1 O init ps χ t = O t := by
   simp [reprogramX1, ht]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Any input whose length differs from the `x₁` prefix — every other squeeze input of the deployed
 schedule (`preX2Transcript_length_eq` and the chain onward) — is untouched by the `x₁`
 reprogramming. -/
@@ -244,6 +252,7 @@ theorem reprogramX1_apply_length {shape : Shape} (O : List (TranscriptElt Fp G) 
     reprogramX1 O init ps χ t = O t :=
   reprogramX1_apply_ne O init ps χ (fun h => ht (congrArg List.length h))
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- An input strictly shorter than the `x₁` prefix is untouched (the pre-`x₁` squeeze inputs). -/
 theorem reprogramX1_apply_short {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (χ : Fp)
@@ -251,6 +260,7 @@ theorem reprogramX1_apply_short {shape : Shape} (O : List (TranscriptElt Fp G) �
     reprogramX1 O init ps χ t = O t :=
   reprogramX1_apply_length O init ps χ ht.ne
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- An input strictly longer than the `x₁` prefix is untouched (the `x₂`/`x₃`/`x₄`/`ξ`/`z` and
 IPA-round inputs — on the rewound run these absorb the spliced post-`x₁` fields, and their lengths
 stay strictly beyond the `x₁` prefix). -/
@@ -280,12 +290,14 @@ noncomputable def reprogramX3 {shape : Shape} (O : List (TranscriptElt Fp G) →
     List (TranscriptElt Fp G) → Fp :=
   fun t => if t = preX3Transcript init ps then χ else O t
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- At the `x₃` prefix the reprogrammed oracle answers `χ`. -/
 theorem reprogramX3_apply_x3 {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (χ : Fp) :
     reprogramX3 O init ps χ (preX3Transcript init ps) = χ := by
   simp [reprogramX3]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Off the `x₃` prefix the reprogrammed oracle is `O`. -/
 theorem reprogramX3_apply_ne {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (χ : Fp)
@@ -293,6 +305,7 @@ theorem reprogramX3_apply_ne {shape : Shape} (O : List (TranscriptElt Fp G) → 
     reprogramX3 O init ps χ t = O t := by
   simp [reprogramX3, ht]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Any input whose length differs from the `x₃` prefix is untouched by the `x₃` reprogramming. -/
 theorem reprogramX3_apply_length {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (χ : Fp)
@@ -300,6 +313,7 @@ theorem reprogramX3_apply_length {shape : Shape} (O : List (TranscriptElt Fp G) 
     reprogramX3 O init ps χ t = O t :=
   reprogramX3_apply_ne O init ps χ (fun h => ht (congrArg List.length h))
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- An input strictly shorter than the `x₃` prefix is untouched (the pre-`x₃` squeeze inputs). -/
 theorem reprogramX3_apply_short {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (χ : Fp)
@@ -307,6 +321,7 @@ theorem reprogramX3_apply_short {shape : Shape} (O : List (TranscriptElt Fp G) �
     reprogramX3 O init ps χ t = O t :=
   reprogramX3_apply_length O init ps χ ht.ne
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- An input strictly longer than the `x₃` prefix is untouched (the `x₄`/`ξ`/`z` and IPA-round
 inputs). -/
 theorem reprogramX3_apply_long {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
@@ -323,12 +338,14 @@ noncomputable def reprogramX2 {shape : Shape} (O : List (TranscriptElt Fp G) →
     List (TranscriptElt Fp G) → Fp :=
   fun t => if t = preX2Transcript init ps then χ else O t
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- At the `x₂` prefix the reprogrammed oracle answers `χ`. -/
 theorem reprogramX2_apply_x2 {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (χ : Fp) :
     reprogramX2 O init ps χ (preX2Transcript init ps) = χ := by
   simp [reprogramX2]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Off the `x₂` prefix the reprogrammed oracle is `O`. -/
 theorem reprogramX2_apply_ne {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (χ : Fp)
@@ -336,6 +353,7 @@ theorem reprogramX2_apply_ne {shape : Shape} (O : List (TranscriptElt Fp G) → 
     reprogramX2 O init ps χ t = O t := by
   simp [reprogramX2, ht]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Any input whose length differs from the `x₂` prefix is untouched by the `x₂` reprogramming. -/
 theorem reprogramX2_apply_length {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (χ : Fp)
@@ -343,6 +361,7 @@ theorem reprogramX2_apply_length {shape : Shape} (O : List (TranscriptElt Fp G) 
     reprogramX2 O init ps χ t = O t :=
   reprogramX2_apply_ne O init ps χ (fun h => ht (congrArg List.length h))
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- An input strictly shorter than the `x₂` prefix is untouched (the pre-`x₂` squeeze inputs,
 `preX2Transcript_length_eq` placing `x₁` immediately below). -/
 theorem reprogramX2_apply_short {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
@@ -351,6 +370,7 @@ theorem reprogramX2_apply_short {shape : Shape} (O : List (TranscriptElt Fp G) �
     reprogramX2 O init ps χ t = O t :=
   reprogramX2_apply_length O init ps χ ht.ne
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- An input strictly longer than the `x₂` prefix is untouched (the `x₃`/`x₄`/`ξ`/`z` and IPA-round
 inputs — `preX3Transcript_length_eq` and the chain onward). -/
 theorem reprogramX2_apply_long {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
@@ -380,12 +400,14 @@ noncomputable def reprogramX {shape : Shape} (O : List (TranscriptElt Fp G) → 
     List (TranscriptElt Fp G) → Fp :=
   fun t => if t = preXTranscript init ps then xv else O t
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- At the `x` prefix the reprogrammed oracle answers `xv`. -/
 theorem reprogramX_apply_x {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (xv : Fp) :
     reprogramX O init ps xv (preXTranscript init ps) = xv := by
   simp [reprogramX]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Off the `x` prefix the reprogrammed oracle is `O`. -/
 theorem reprogramX_apply_ne {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (xv : Fp)
@@ -393,6 +415,7 @@ theorem reprogramX_apply_ne {shape : Shape} (O : List (TranscriptElt Fp G) → F
     reprogramX O init ps xv t = O t := by
   simp [reprogramX, ht]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Any input whose length differs from the `x` prefix — every other squeeze input of the deployed
 schedule — is untouched by the `x` reprogramming. -/
 theorem reprogramX_apply_length {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
@@ -401,6 +424,7 @@ theorem reprogramX_apply_length {shape : Shape} (O : List (TranscriptElt Fp G) �
     reprogramX O init ps xv t = O t :=
   reprogramX_apply_ne O init ps xv (fun h => ht (congrArg List.length h))
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- An input strictly shorter than the `x` prefix is untouched (the `θ`/`β`/`γ`/`y` squeeze
 inputs). -/
 theorem reprogramX_apply_short {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)
@@ -409,6 +433,7 @@ theorem reprogramX_apply_short {shape : Shape} (O : List (TranscriptElt Fp G) �
     reprogramX O init ps xv t = O t :=
   reprogramX_apply_length O init ps xv ht.ne
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- An input strictly longer than the `x` prefix is untouched (the compression, multiopen, `ξ`/`z`,
 and IPA-round inputs — `preXTranscript_length_lt_preX1Transcript` and the length chain onward). -/
 theorem reprogramX_apply_long {shape : Shape} (O : List (TranscriptElt Fp G) → Fp)

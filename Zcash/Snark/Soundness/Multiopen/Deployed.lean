@@ -699,7 +699,7 @@ theorem x1Run_spliced_lookupEvals {shape : Shape} (r : X1Run shape G)
 omit [AddCommGroup G] [Module Fp G] in
 /-- The per-sub-proof constraint values are shared across `x₁` rewinds: they read only pre-`x₁`
 evaluations and challenges. -/
-theorem x1Run_subProofExpressions {shape : Shape} (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
+theorem x1Run_subProofExpressions {shape : Shape} (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) (r : X1Run shape G) (χ : Fp)
     (l0 lLast lBlind : Fp) (p : Fin shape.numProofs) :
     subProofExpressions vk (r.spliced ps) (r.challenges ch χ) l0 lLast lBlind p
@@ -707,7 +707,7 @@ theorem x1Run_subProofExpressions {shape : Shape} (vk : VerifyingKey shape Fp G)
 
 omit [AddCommGroup G] [Module Fp G] in
 /-- The full constraint-value list is shared across `x₁` rewinds. -/
-theorem x1Run_allExpressions {shape : Shape} (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
+theorem x1Run_allExpressions {shape : Shape} (vk : VerifyingKey shape Fp G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) (r : X1Run shape G) (χ : Fp)
     (l0 lLast lBlind : Fp) :
     allExpressions vk (r.spliced ps) (r.challenges ch χ) l0 lLast lBlind
@@ -1165,6 +1165,7 @@ theorem deployedX4PairCount_eq [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
     deployedX4PairCount vk instanceCommitment ps ch = (deployedX4Pairs vk instanceCommitment ps ch).length := rfl
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The top slot of the `x₄` batch evaluations is the recomputed base evaluation: the slot index
 equals the pair count, so the branch that reads a point set is not taken. -/
 theorem x4BatchEvals_top [DecidableEq G] [Inhabited G] {shape : Shape}
@@ -1175,6 +1176,7 @@ theorem x4BatchEvals_top [DecidableEq G] [Inhabited G] {shape : Shape}
     else deployedBaseEval vk instanceCommitment ps ch) = deployedBaseEval vk instanceCommitment ps ch
   rw [if_neg (lt_irrefl _)]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The in-range `x₄` batch evaluations, set-indexed: batch slot `j` carries the claimed set
 evaluation of point set `count − 1 − j`. -/
 theorem x4BatchEvals_getD [DecidableEq G] [Inhabited G] {shape : Shape}
