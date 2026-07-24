@@ -1,5 +1,6 @@
 import Zcash.Snark.Keygen.Derivation
-import Zcash.Snark.Keygen.Fast.FastFft
+import Zcash.Snark.Keygen.Fast.FastFftPar
+import Zcash.Snark.Keygen.Fast.MsmProj
 import Zcash.Snark.Fixtures.SingleAction.Fixture
 
 /-!
@@ -40,11 +41,30 @@ def actionProofParams : ProofParams := { numProofs := 1, numPointSets := 5 }
 
 /-- The derived Lagrange basis, as a NULLARY definition: evaluated once per
 `native_decide` process (function applications re-evaluate per occurrence — the
-`urs`-parameterized spellings each cost a full group FFT). Computed by the fast
-projective-coordinate FFT, which is PROVEN pointwise equal to the Rust-mirroring
-`derivedUrsGLagrange` (`Fast.derivedUrsGLagrangeFast_eq`) — the corollaries below
+`urs`-parameterized spellings each cost a full group FFT). Computed by the
+ROUND-PARALLEL projective FFT, PROVEN pointwise equal to the Rust-mirroring
+`derivedUrsGLagrange` (`Fast.derivedUrsGLagrangeParFast_eq`) — the corollaries below
 bridge back to the statement-surface name through that equality. -/
-private def lagrangeBasis : List G := Fast.derivedUrsGLagrangeFast capturedURS
+private def lagrangeBasis : List G := Fast.derivedUrsGLagrangeParFast capturedURS
+
+/-- The per-column committer at the derived basis: the PROJECTIVE windowed Pippenger,
+PROVEN equal to the affine default (`commitProj_eq` via the shared
+`Fast.Msm.commitLagrangeSpec`). Nullary partial application so the basis closure is
+built once. -/
+private def commitProj : List Fp → G :=
+  Fast.MsmProj.commitLagrangeProjWith Fast.Msm.defaultWindow capturedURS.w lagrangeBasis
+
+set_option maxRecDepth 1000000 in
+/-- The projective committer at the derived basis IS the pipeline's affine default at
+the spec basis — both sides are proven equal to `Fast.Msm.commitLagrangeSpec`. -/
+private theorem commitProj_eq :
+    Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow capturedURS.w
+      (derivedUrsGLagrange capturedURS) = commitProj := by
+  funext coeffs
+  simp only [commitProj, lagrangeBasis]
+  rw [Fast.Msm.commitLagrangeFastWith_eq _ (by decide),
+    Fast.MsmProj.commitLagrangeProjWith_eq _ (by decide),
+    Fast.derivedUrsGLagrangeParFast_eq]
 
 /-- The derived pinned CS at the circuit-owned selector map — `ofOperations`' internal
 `pinned` in method spelling. Nullary, so the selector-map/derive work evaluates once
@@ -75,12 +95,12 @@ chunks; the two lookup-expression families; and the derived `Shape`
 (`ProofParams.mergeDerived`) against the fixture's. -/
 theorem certificate :
     (lagrangeBasis.take capturedUrsGLagrange.length,
-      fixedCommitmentsOf capturedURS.w lagrangeBasis
+      fixedCommitmentsWith commitProj
         orchardActionTopLevelCircuit.selectorMap
         orchardActionTopLevelCircuit.domainExponent
         orchardActionTopLevelCircuit.constraintSystem
         (orchardActionTopLevelCircuit.operations 0),
-      permutationCommitmentsOf capturedURS.w lagrangeBasis
+      permutationCommitmentsWith commitProj
         orchardActionTopLevelCircuit.domainExponent
         orchardActionTopLevelCircuit.constraintSystem
         (orchardActionTopLevelCircuit.operations 0),
@@ -119,7 +139,7 @@ theorem derivedUrsGLagrange_prefix_eq :
   simp only [Prod.mk.injEq] at h
   have h1 := h.1
   simp only [lagrangeBasis] at h1
-  rw [← Fast.derivedUrsGLagrangeFast_eq]
+  rw [← Fast.derivedUrsGLagrangeParFast_eq]
   exact h1
 
 set_option maxRecDepth 1000000 in
@@ -129,9 +149,10 @@ theorem derivedFixedCommitments_eq :
   have h := certificate
   simp only [Prod.mk.injEq] at h
   have hfc := h.2.1
-  simp only [lagrangeBasis] at hfc
-  simp only [derivedFixedCommitments, Halo2.TopLevelCircuit.fixedCommitments]
-  rw [← Fast.derivedUrsGLagrangeFast_eq]
+  simp only [fixedCommitmentsWith] at hfc
+  simp only [derivedFixedCommitments, Halo2.TopLevelCircuit.fixedCommitments,
+    Halo2.TopLevelCircuit.fixedRows]
+  rw [commitProj_eq]
   exact hfc
 
 set_option maxRecDepth 1000000 in
@@ -142,10 +163,9 @@ theorem derivedPermutationCommonCommitments_eq :
   have h := certificate
   simp only [Prod.mk.injEq] at h
   have hpc := h.2.2.1
-  simp only [lagrangeBasis] at hpc
   simp only [derivedPermutationCommonCommitments,
-    Halo2.TopLevelCircuit.permutationCommitments]
-  rw [← Fast.derivedUrsGLagrangeFast_eq]
+    Halo2.TopLevelCircuit.permutationCommitments, permutationCommitmentsOf]
+  rw [commitProj_eq]
   exact hpc
 
 /-- The fixture's `Shape` is the proof-shape parameters merged with the circuit-derived
@@ -166,8 +186,7 @@ theorem vk_eq_derived : vk = derivedActionVk shape capturedURS := by
   simp only [Prod.mk.injEq] at h
   obtain ⟨-, hfc, hpc, ⟨ho, hn, hb, hd, hc⟩, hg, ⟨hiq, haq, hfq⟩, hpch, ⟨hli, hlt⟩, -⟩ := h
   -- align the bundle's spellings with the keygen internals
-  simp only [lagrangeBasis] at hfc hpc
-  rw [Fast.derivedUrsGLagrangeFast_eq] at hfc hpc
+  rw [← commitProj_eq] at hfc hpc
   simp only [actionPinned, Halo2.TopLevelCircuit.selectorMap,
     Halo2.TopLevelCircuit.selectorActivations, Halo2.TopLevelCircuit.regionStarts,
     Halo2.TopLevelCircuit.domainExponent]
@@ -175,8 +194,8 @@ theorem vk_eq_derived : vk = derivedActionVk shape capturedURS := by
   -- open both records
   unfold vk
   simp only [derivedActionVk, Halo2.TopLevelCircuit.verifierKeyAt,
-    VerifyingKey.ofOperations, Halo2.TopLevelCircuit.selectorActivations,
-    Halo2.TopLevelCircuit.regionStarts, Halo2.TopLevelCircuit.domainExponent]
+    VerifyingKey.ofOperations, fixedCommitmentsOf, permutationCommitmentsOf,
+    Halo2.TopLevelCircuit.domainExponent]
   rw [VerifyingKey.mk.injEq]
   refine ⟨ho.symm, hn.symm, hb.symm, hd.symm, hc.symm, hg.symm, hiq.symm, haq.symm,
     hfq.symm, ?_, ?_, hpch.symm, ?_, ?_⟩

@@ -28,6 +28,7 @@ import Zcash.Snark.Verifier.Assemble
 import Zcash.Snark.Verifier.FiatShamir
 import Zcash.Snark.Verifier.Parametric
 import Zcash.Snark.Fingerprint.Match
+import Zcash.Snark.Fingerprint.FastMsm
 import Zcash.Snark.Soundness.GrandProduct
 import Zcash.Snark.Soundness.Lookup
 import Zcash.Snark.Soundness.Permutation
