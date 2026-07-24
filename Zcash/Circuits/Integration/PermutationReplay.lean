@@ -888,6 +888,50 @@ theorem chunkRowValue_eq_of_mem_copies
     vk ch poly l0 lLast lBlind p h hdom hcycle hgood
     (sameCycle_restrict_of_widen hactive _ hcycle.sigma hrestrict hchunk)
 
+/-- Re-widening a row-bounded cell reproduces it. -/
+theorem widen_mk_of_lt
+    {nc activeRows domainSize : ℕ} {width : ℕ → ℕ}
+    (hactive : activeRows ≤ domainSize)
+    (x : ChunkCell nc domainSize width) (hx : (x.2.1 : ℕ) < activeRows) :
+    widenPermutationChunkCell hactive
+        (⟨x.1, ⟨(x.2.1 : ℕ), hx⟩, x.2.2⟩ : ChunkCell nc activeRows width) = x := by
+  rcases x with ⟨a, r, col⟩
+  rfl
+
+/-- Restrict a full-domain cell permutation to the active rows, given that it maps
+active cells to active cells: injectivity survives the restriction, and a finite
+injection is a permutation. -/
+noncomputable def restrictActivePerm
+    {nc activeRows domainSize : ℕ} {width : ℕ → ℕ}
+    (hactive : activeRows ≤ domainSize)
+    (π : Perm (ChunkCell nc domainSize width))
+    (hpres : ∀ c : ChunkCell nc activeRows width,
+      ((π (widenPermutationChunkCell hactive c)).2.1 : ℕ) < activeRows) :
+    Perm (ChunkCell nc activeRows width) :=
+  Equiv.ofBijective
+    (fun c =>
+      ⟨(π (widenPermutationChunkCell hactive c)).1,
+        ⟨((π (widenPermutationChunkCell hactive c)).2.1 : ℕ), hpres c⟩,
+        (π (widenPermutationChunkCell hactive c)).2.2⟩)
+    (Finite.injective_iff_bijective.mp (by
+      intro c d h
+      apply widenPermutationChunkCell_injective hactive
+      apply π.injective
+      rw [← widen_mk_of_lt hactive _ (hpres c), ← widen_mk_of_lt hactive _ (hpres d)]
+      exact congrArg (widenPermutationChunkCell hactive) h))
+
+/-- The restriction equation of `restrictActivePerm`, by construction. -/
+theorem restrictActivePerm_widen
+    {nc activeRows domainSize : ℕ} {width : ℕ → ℕ}
+    (hactive : activeRows ≤ domainSize)
+    (π : Perm (ChunkCell nc domainSize width))
+    (hpres : ∀ c : ChunkCell nc activeRows width,
+      ((π (widenPermutationChunkCell hactive c)).2.1 : ℕ) < activeRows)
+    (c : ChunkCell nc activeRows width) :
+    widenPermutationChunkCell hactive (restrictActivePerm hactive π hpres c) =
+      π (widenPermutationChunkCell hactive c) :=
+  widen_mk_of_lt hactive _ (hpres c)
+
 end Layout.Asm
 
 end Zcash.Snark
