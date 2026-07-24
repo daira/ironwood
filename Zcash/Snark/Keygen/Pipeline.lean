@@ -256,16 +256,24 @@ theorem denseColumns_getD_length
     Array.getElem_toList, Array.length_toList]
   exact hshape.2 column hresultColumn
 
+/-- The derived fixed-column commitments at an explicit per-column committer —
+`fixedCommitmentsOf` is the default instantiation; concrete evaluation sites may pass a
+proven-equal faster committer. -/
+def fixedCommitmentsWith (commit : List Fp → G) (selMap : Halo2.SelCompressMap)
+    (k : ℕ) (cs : ConstraintSystem Fp) (ops : Operations Fp) : List G :=
+  -- `parMap`: one task per column (`parMap_eq_map` — evaluation strategy only)
+  (denseColumns (2 ^ k) (PinnedConstraintSystem.derive cs selMap).numFixedColumns
+      (fixedSparseOf selMap k cs ops)).parMap commit
+
 /-- The derived fixed-column commitments — `commit_lagrange` of each dense fixed column
-with the default blind (`plonk/keygen.rs:230-240`, `keygen_vk`'s `fixed_commitments`). -/
+with the default blind (`plonk/keygen.rs:230-240`, `keygen_vk`'s `fixed_commitments`;
+Pippenger per MSM, `commitLagrangeFastWith_eq` — evaluation strategy only). The
+Lagrange basis is an argument so one FFT serves both commitment families. -/
 def fixedCommitmentsOf (blind : G) (lagrange : List G) (selMap : Halo2.SelCompressMap)
     (k : ℕ) (cs : ConstraintSystem Fp) (ops : Operations Fp) : List G :=
-  -- `parMap`: one task per column; Pippenger per MSM (`parMap_eq_map`,
-  -- `commitLagrangeFastWith_eq` — evaluation strategy only). The Lagrange basis is an
-  -- argument so one FFT serves both commitment families.
-  (denseColumns (2 ^ k) (PinnedConstraintSystem.derive cs selMap).numFixedColumns
-      (fixedSparseOf selMap k cs ops)).parMap
+  fixedCommitmentsWith
     (Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow blind lagrange)
+    selMap k cs ops
 
 /-! ## Derived permutation commitments (`plonk/permutation/keygen.rs:102-152`) -/
 
@@ -330,15 +338,21 @@ def permPolysOf (k : ℕ) (cs : ConstraintSystem Fp) (ops : Operations Fp) :
       let pij := (mapping[i]!)[j]!
       deltaPows[pij.1]! * omegaPows[pij.2]!
 
+/-- The derived permutation common commitments at an explicit per-column committer
+(see `fixedCommitmentsWith`). -/
+def permutationCommitmentsWith (commit : List Fp → G) (k : ℕ)
+    (cs : ConstraintSystem Fp) (ops : Operations Fp) : List G :=
+  -- `parMap`: one task per column (`parMap_eq_map` — evaluation strategy only)
+  (permPolysOf k cs ops).parMap commit
+
 /-- The derived permutation common commitments — `commit_lagrange` of each permutation
-polynomial with the default blind (`build_vk`, `permutation/keygen.rs:147-151`). -/
+polynomial with the default blind (`build_vk`, `permutation/keygen.rs:147-151`;
+Pippenger per MSM, `commitLagrangeFastWith_eq` — evaluation strategy only). -/
 def permutationCommitmentsOf (blind : G) (lagrange : List G) (k : ℕ)
     (cs : ConstraintSystem Fp) (ops : Operations Fp) : List G :=
-  -- `parMap`: one task per column; Pippenger per MSM (`parMap_eq_map`,
-  -- `commitLagrangeFastWith_eq` — evaluation strategy only). The Lagrange basis is an
-  -- argument so one FFT serves both commitment families.
-  (permPolysOf k cs ops).parMap
+  permutationCommitmentsWith
     (Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow blind lagrange)
+    k cs ops
 
 /-! ## Assembly -/
 
@@ -382,6 +396,22 @@ def ofOperations (shape : Shape) (urs : URS G)
       (pinned.lookupInputExprs.getD l.val []).map RichExpression.toExpr
     lookupTableExprs := fun l =>
       (pinned.lookupTableExprs.getD l.val []).map RichExpression.toExpr }
+
+/-- Projection API for the fixed commitments produced by `ofOperations`.
+
+Downstream proofs should rewrite with this lemma instead of asking definitional
+equality to unfold the complete verifying-key constructor. -/
+@[simp] theorem ofOperations_fixedCommitment
+    (shape : Shape) (urs : URS G)
+    (cs : ConstraintSystem Fp) (ops : Operations Fp)
+    (column : ℕ) :
+    (ofOperations shape urs cs ops).fixedCommitment column =
+      (fixedCommitmentsOf urs.w (derivedUrsGLagrange urs)
+        (deriveSelCompressMap cs (2 ^ minimalK cs ops)
+          (activations (FloorPlanner.V1.starts ops)
+            (indexedRegions ops 0).1))
+        (minimalK cs ops) cs ops).getD column 0 := by
+  simp only [ofOperations]
 
 /-- **A verifying key whose gate list is a derivation's evaluates like the source
 circuit.** The verifier holds `Zcash.Snark.Expr` gates while the derivation produces
@@ -477,11 +507,51 @@ open Halo2
 variable {G : Type} [AddCommGroup G] [Inhabited G]
 variable {ConfigInput Config : Type} {Output : TypeMap} [CircuitType Output]
 
+/-- The dense fixed rows keygen commits for a closed circuit. -/
+def fixedRows
+    (top : TopLevelCircuit Fp ConfigInput Config Output) : List (List Fp) :=
+  denseColumns (2 ^ top.domainExponent)
+    (PinnedConstraintSystem.derive
+      top.constraintSystem top.selectorMap).numFixedColumns
+    (fixedSparseOf top.selectorMap top.domainExponent
+      top.constraintSystem (top.operations 0))
+
+/-- Keygen produces one dense row vector for every derived fixed column. -/
+theorem fixedRows_length
+    (top : TopLevelCircuit Fp ConfigInput Config Output) :
+    top.fixedRows.length = top.pinnedCS.numFixedColumns := by
+  change
+    (denseColumns (2 ^ top.domainExponent)
+      (PinnedConstraintSystem.derive
+        top.constraintSystem top.selectorMap).numFixedColumns
+      _).length = top.pinnedCS.numFixedColumns
+  rw [denseColumns_length]
+  rfl
+
+/-- Every derived fixed row vector spans the complete keygen domain. -/
+theorem fixedRows_getD_length
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (column : ℕ) (hcolumn : column < top.pinnedCS.numFixedColumns) :
+    (top.fixedRows.getD column []).length = 2 ^ top.domainExponent := by
+  apply denseColumns_getD_length
+  simpa only [top.pinnedCS_eq_derive] using hcolumn
+
 /-- The derived fixed-column commitments of a closed circuit against a URS. -/
 def fixedCommitments
     (top : TopLevelCircuit Fp ConfigInput Config Output) (urs : URS G) : List G :=
-  fixedCommitmentsOf urs.w (derivedUrsGLagrange urs) top.selectorMap
-    top.domainExponent top.constraintSystem (top.operations 0)
+  top.fixedRows.parMap
+    (Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow urs.w
+      (derivedUrsGLagrange urs))
+
+/-- The named top-level fixed-row view is exactly the fixed-commitment computation
+used by generic keygen. -/
+@[simp] theorem fixedCommitments_eq_fixedCommitmentsOf
+    (top : TopLevelCircuit Fp ConfigInput Config Output) (urs : URS G) :
+    top.fixedCommitments urs =
+      fixedCommitmentsOf urs.w (derivedUrsGLagrange urs)
+        top.selectorMap top.domainExponent
+        top.constraintSystem (top.operations 0) := by
+  simp only [fixedCommitments, fixedRows, fixedCommitmentsOf, fixedCommitmentsWith]
 
 /-- The derived permutation common commitments of a closed circuit against a URS. -/
 def permutationCommitments
@@ -497,6 +567,16 @@ def verifierKeyAt
     (shape : Shape) (urs : URS G) : VerifyingKey shape Fp G :=
   .ofOperations shape urs top.constraintSystem (top.operations 0)
 
+/-- Projection API for the fixed commitments of the shape-explicit top-level key. -/
+@[simp] theorem verifierKeyAt_fixedCommitment
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (shape : Shape) (urs : URS G) (column : ℕ) :
+    (top.verifierKeyAt shape urs).fixedCommitment column =
+      (top.fixedCommitments urs).getD column 0 := by
+  simp only [verifierKeyAt, VerifyingKey.ofOperations_fixedCommitment,
+    fixedCommitments_eq_fixedCommitmentsOf, domainExponent, selectorMap,
+    selectorActivations, regionStarts]
+
 /-- **The verifying key of a closed top-level circuit**: the `TopLevelCircuit` carries
 its own `configInput` and unit input, so the only remaining inputs are the proof-shape
 counts and the URS — `keygen_vk` at the `TopLevelCircuit` level, with the derived
@@ -506,6 +586,14 @@ def toVerifierKey
     (pp : ProofParams) (urs : URS G) :
     VerifyingKey (pp.mergeDerived top) Fp G :=
   top.verifierKeyAt (pp.mergeDerived top) urs
+
+/-- The derived key exposes the fixed commitments computed from its own dense rows. -/
+theorem toVerifierKey_fixedCommitment
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) (urs : URS G) (column : ℕ) :
+    (top.toVerifierKey pp urs).fixedCommitment column =
+      (top.fixedCommitments urs).getD column 0 := by
+  simp only [toVerifierKey, verifierKeyAt_fixedCommitment]
 
 /-- The derived key exposes exactly the advice-query layout of its selector-map
 derivation. -/

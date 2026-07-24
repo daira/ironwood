@@ -100,6 +100,16 @@ structure LagrangeCommitmentKey (urs : URS G) (omega : Fp) where
 
 namespace LagrangeCommitmentKey
 
+/-- Commitment keys are determined by their generator family; the compatibility
+field is proof-irrelevant. -/
+@[ext] theorem ext {urs : URS G} {omega : Fp}
+    {left right : LagrangeCommitmentKey urs omega}
+    (hgenerators : left.generators = right.generators) :
+    left = right := by
+  cases left
+  cases right
+  simp_all
+
 /--
 Build a full commitment key from a certified exported prefix.
 
@@ -124,6 +134,32 @@ noncomputable def ofPrefix (urs : URS G) (omega : Fp) (generatorsPrefix : List G
     · rw [if_pos hi]
       exact hprefix i hi
     · rw [if_neg hi]
+
+/--
+Build a commitment key from a complete executable generator list.
+
+Unlike `ofPrefix`, this constructor has no interpolated fallback and is therefore
+computable. The caller proves the generator equation for every domain index.
+-/
+def ofFullList (urs : URS G) (omega : Fp) (generators : List G)
+    (hgenerators : ∀ i : Fin (2 ^ urs.k),
+      generators.getD (i : ℕ) 0 =
+        commit urs (polynomialCoefficients (2 ^ urs.k)
+          (rowPolynomial omega (Pi.single i 1)))) :
+    LagrangeCommitmentKey urs omega where
+  generators := fun i => generators.getD (i : ℕ) 0
+  generator_eq := hgenerators
+
+@[simp] theorem ofFullList_generator
+    (urs : URS G) (omega : Fp) (generators : List G)
+    (hgenerators : ∀ i : Fin (2 ^ urs.k),
+      generators.getD (i : ℕ) 0 =
+        commit urs (polynomialCoefficients (2 ^ urs.k)
+          (rowPolynomial omega (Pi.single i 1))))
+    (i : Fin (2 ^ urs.k)) :
+    (ofFullList urs omega generators hgenerators).generators i =
+      generators.getD (i : ℕ) 0 := by
+  simp only [ofFullList]
 
 @[simp] theorem ofPrefix_generator_of_lt
     (urs : URS G) (omega : Fp) (generatorsPrefix : List G)
@@ -260,6 +296,42 @@ theorem ofPrefix_commitInstance_eq
         simpa only [Finset.mem_range, not_lt] using hiValues
       simp only [summand, dif_pos (Finset.mem_range.mp hiDomain),
         List.getD_eq_default values 0 hvalues, zero_smul]
+
+/--
+A complete executable generator list commits finite rows exactly as the corresponding
+prefix computation. This is the computable full-list counterpart of
+`ofPrefix_commitInstance_eq`.
+-/
+theorem ofFullList_commitInstance_eq
+    (urs : URS G) (omega : Fp) (generators : List G)
+    (hlen : generators.length = 2 ^ urs.k)
+    (hgenerators : ∀ i : Fin (2 ^ urs.k),
+      generators.getD (i : ℕ) 0 =
+        commit urs (polynomialCoefficients (2 ^ urs.k)
+          (rowPolynomial omega (Pi.single i 1))))
+    (values : List Fp) (blind : Fp)
+    (hvaluesDomain : values.length ≤ 2 ^ urs.k) :
+    (ofFullList urs omega generators hgenerators).commitInstance values blind =
+      commitPrefix urs generators values blind := by
+  let hprefix : ∀ i : Fin (2 ^ urs.k),
+      (i : ℕ) < generators.length →
+      generators.getD (i : ℕ) 0 =
+        commit urs (polynomialCoefficients (2 ^ urs.k)
+          (rowPolynomial omega (Pi.single i 1))) :=
+    fun i _ => hgenerators i
+  have hkey :
+      ofFullList urs omega generators hgenerators =
+        ofPrefix urs omega generators hprefix := by
+    ext i
+    have hi : (i : ℕ) < generators.length := by
+      rw [hlen]
+      exact i.isLt
+    simp only [ofFullList_generator,
+      ofPrefix_generator_of_lt urs omega generators hprefix i hi]
+  rw [hkey]
+  apply ofPrefix_commitInstance_eq
+  · simpa only [hlen] using hvaluesDomain
+  · exact hvaluesDomain
 
 end LagrangeCommitmentKey
 
