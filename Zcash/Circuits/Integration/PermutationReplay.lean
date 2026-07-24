@@ -693,8 +693,9 @@ def CopyReplayWitness.ofPairCycles
       π.SameCycle p.1 p.2)
     (hvalue : ∀ l r : FlatCell numCols n, π.SameCycle l r →
       value l = value r ∨ Bad)
-    (hread : ∀ endpoint : CopyEndpoint Fp,
-      endpoint.eval place env = value (encode endpoint)) :
+    (hread : ∀ copy ∈ operationDeclaredCopies ops,
+      copy.1.eval place env = value (encode copy.1) ∧
+        copy.2.eval place env = value (encode copy.2)) :
     CopyReplayWitness place env ops (FlatCell numCols n) Bad where
   encode := encode
   value := value
@@ -753,8 +754,9 @@ def CopyReplayWitness.ofPairValues
     (value : FlatCell numCols n → Fp)
     (hpair : ∀ p ∈ encodeDeclaredCopies encode (operationDeclaredCopies ops),
       value p.1 = value p.2 ∨ Bad)
-    (hread : ∀ endpoint : CopyEndpoint Fp,
-      endpoint.eval place env = value (encode endpoint)) :
+    (hread : ∀ copy ∈ operationDeclaredCopies ops,
+      copy.1.eval place env = value (encode copy.1) ∧
+        copy.2.eval place env = value (encode copy.2)) :
     CopyReplayWitness place env ops (FlatCell numCols n) Bad where
   encode := encode
   value := value
