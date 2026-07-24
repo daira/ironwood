@@ -325,9 +325,8 @@ theorem selectorActivationsRealized_of_fixedRowPolynomials
     (map : SelCompressMap) (activationRows : List (ℕ × ℕ))
     (hrows :
       Function.Injective fun row : Fin n => omega ^ (row : ℕ))
-    (hrowBound :
-      ∀ {selector row : ℕ},
-        (selector, row) ∈ activationRows → row < n)
+    (hroots : SelectorRootsWellFormed map)
+    (hlength : ∀ column, (fixedRows column).length = n)
     (hfixed :
       ∀ {column row value : ℕ},
         (column, row, value) ∈ selectorFixed map activationRows →
@@ -338,13 +337,36 @@ theorem selectorActivationsRealized_of_fixedRowPolynomials
           rowPolynomial omega
             (zeroPaddedRows (n := n) (fixedRows column)))
         adviceCols instanceCols) := by
-  apply selectorActivationsRealized_of_selectorFixed
-  intro column row value hentry
-  obtain ⟨selector, hactivation⟩ :=
-    exists_activation_of_mem_selectorFixed map activationRows hentry
-  have hrow : row < n := hrowBound hactivation
+  intro selector row compressed hactivation hlookup
+  have hentry :=
+    mem_selectorFixed_of_activation map activationRows
+      hactivation hlookup
+  have hvalue := hfixed hentry
+  obtain ⟨hpositive, hrootBound, hcombinationBound⟩ :=
+    hroots hlookup
+  have hrootLt :
+      compressed.assignedRoot < scalarFieldOrder :=
+    hrootBound.trans_lt hcombinationBound
+  have hrootNe :
+      (compressed.assignedRoot : Fp) ≠ 0 := by
+    intro hzero
+    have hval := congrArg ZMod.val hzero
+    have : compressed.assignedRoot = 0 := by
+      simpa [ZMod.val_cast_of_lt hrootLt] using hval
+    omega
+  have hrow : row < n := by
+    by_contra hout
+    have hge : (fixedRows compressed.packedCol).length ≤ row := by
+      rw [hlength]
+      omega
+    have hzero :
+        (fixedRows compressed.packedCol).getD row 0 = 0 := by
+      rw [List.getD_eq_getElem?_getD, List.getElem?_eq_none hge]
+      rfl
+    rw [hzero] at hvalue
+    exact hrootNe hvalue.symm
   rw [polynomialEnvironment_fixed_nat,
     rowPolynomial_eval hrows ⟨row, hrow⟩]
-  exact hfixed hentry
+  exact hvalue
 
 end Zcash.Snark
