@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.PolynomialEnvironment
+import Zcash.Circuits.Integration.PolynomialEnvironment
 
 /-!
 # Canonical evaluation-domain selector polynomials

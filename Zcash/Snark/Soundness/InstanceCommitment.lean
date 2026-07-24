@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.PolynomialEnvironment
+import Zcash.Circuits.Integration.PolynomialEnvironment
 import Zcash.Snark.Soundness.Multiopen.Decode
 import Zcash.Snark.Soundness.Deployed.Binding
 import Zcash.Snark.Soundness.Multiopen.Compat
