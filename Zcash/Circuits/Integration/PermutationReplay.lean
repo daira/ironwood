@@ -1011,6 +1011,16 @@ theorem chunkFlatten_apply_row
       cell.2.1 := rfl
 
 @[simp]
+theorem chunkFlatten_apply_column
+    {nc numCols chunkLen m : ℕ} {width : ℕ → ℕ}
+    (hcl : 0 < chunkLen) (hcover : numCols ≤ nc * chunkLen)
+    (hw : ∀ c : Fin nc,
+      width (c : ℕ) = min chunkLen (numCols - (c : ℕ) * chunkLen))
+    (cell : ChunkCell nc m width) :
+    ((chunkFlatten nc numCols chunkLen m width hcl hcover hw cell).2 : ℕ) =
+      (cell.1 : ℕ) * chunkLen + (cell.2.2 : ℕ) := rfl
+
+@[simp]
 theorem chunkFlatten_symm_apply_row
     {nc numCols chunkLen m : ℕ} {width : ℕ → ℕ}
     (hcl : 0 < chunkLen) (hcover : numCols ≤ nc * chunkLen)
@@ -1019,6 +1029,24 @@ theorem chunkFlatten_symm_apply_row
     (cell : Fin m × Fin numCols) :
     ((chunkFlatten nc numCols chunkLen m width hcl hcover hw).symm cell).2.1 =
       cell.1 := rfl
+
+@[simp]
+theorem chunkFlatten_symm_apply_column
+    {nc numCols chunkLen m : ℕ} {width : ℕ → ℕ}
+    (hcl : 0 < chunkLen) (hcover : numCols ≤ nc * chunkLen)
+    (hw : ∀ c : Fin nc,
+      width (c : ℕ) = min chunkLen (numCols - (c : ℕ) * chunkLen))
+    (cell : Fin m × Fin numCols) :
+    (((chunkFlatten nc numCols chunkLen m width hcl hcover hw).symm cell).1 :
+        ℕ) *
+        chunkLen +
+        (((chunkFlatten nc numCols chunkLen m width hcl hcover hw).symm cell).2.2 :
+          ℕ) =
+      (cell.2 : ℕ) := by
+  change (cell.2 : ℕ) / chunkLen * chunkLen +
+      (cell.2 : ℕ) % chunkLen = (cell.2 : ℕ)
+  rw [Nat.mul_comm]
+  exact Nat.div_add_mod (cell.2 : ℕ) chunkLen
 
 /-- **The master copy-witness constructor.** Everything reduces to three leaf families
 over the keygen copy list: each copy pair agrees in value (or the shared branch fires,

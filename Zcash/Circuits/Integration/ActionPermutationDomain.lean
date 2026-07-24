@@ -1,4 +1,5 @@
 import Zcash.Circuits.Integration.ActionPermutationDomainCompute
+import Zcash.Circuits.Integration.PermutationCompiler
 import Zcash.Snark.Soundness.CanonicalConstraintModel
 import Zcash.Circuits.Integration.TopLevelAssignment
 
@@ -188,6 +189,22 @@ theorem routingCoherent_of_derived
         · simpa only [hinstanceLayout] using hi
         · simpa only [hinstanceLayout] using hrotation
   · simpa [actionShape, Keygen.ProofParams.mergeDerived] using hcommon
+
+/--
+Flattening the derived verifier chunks and decoding their query references
+recovers the compiler's original permutation-column order.
+-/
+theorem permutationColumnAddresses_eq
+    (pp : Keygen.ProofParams) (urs : URS G) :
+    ((actionVk pp urs).permutationChunks.flatten.map
+        (fun reference =>
+          permutationColumnAddress (actionVk pp urs) reference.1)) =
+      (Keygen.permColsOf
+        orchardActionTopLevelCircuit.constraintSystem).map
+          Halo2.Layout.ColRef.toAny := by
+  exact topLevelPermutationColumnAddresses_eq
+    orchardActionTopLevelCircuit pp urs
+      (routingCoherent_of_derived pp urs)
 
 /-! ## Pasta permutation-name cosets -/
 

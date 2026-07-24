@@ -413,6 +413,17 @@ equality to unfold the complete verifying-key constructor. -/
         (minimalK cs ops) cs ops).getD column 0 := by
   simp only [ofOperations]
 
+/-- Projection API for common permutation commitments produced by
+`ofOperations`. -/
+@[simp] theorem ofOperations_permutationCommonCommitment
+    (shape : Shape) (urs : URS G)
+    (cs : ConstraintSystem Fp) (ops : Operations Fp)
+    (column : Fin shape.numPermutationColumns) :
+    (ofOperations shape urs cs ops).permutationCommonCommitment column =
+      (permutationCommitmentsOf urs.w (derivedUrsGLagrange urs)
+        (minimalK cs ops) cs ops).getD column.val 0 := by
+  simp only [ofOperations]
+
 /-- **A verifying key whose gate list is a derivation's evaluates like the source
 circuit.** The verifier holds `Zcash.Snark.Expr` gates while the derivation produces
 `Halo2.RichExpression` gates, so the hypothesis follows keygen's construction direction:
@@ -594,6 +605,18 @@ theorem toVerifierKey_fixedCommitment
     (top.toVerifierKey pp urs).fixedCommitment column =
       (top.fixedCommitments urs).getD column 0 := by
   simp only [toVerifierKey, verifierKeyAt_fixedCommitment]
+
+/-- The derived key exposes the common permutation commitments computed from
+its own keygen permutation rows. -/
+theorem toVerifierKey_permutationCommonCommitment
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) (urs : URS G)
+    (column : Fin (pp.mergeDerived top).numPermutationColumns) :
+    (top.toVerifierKey pp urs).permutationCommonCommitment column =
+      (top.permutationCommitments urs).getD column.val 0 := by
+  simp only [toVerifierKey, verifierKeyAt,
+    VerifyingKey.ofOperations_permutationCommonCommitment,
+    permutationCommitments, domainExponent]
 
 /-- The derived key exposes exactly the advice-query layout of its selector-map
 derivation. -/

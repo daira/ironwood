@@ -461,8 +461,14 @@ The current item-4 sequence is:
    roundtrip, connects every constant declaration positionally to its V1 allocation
    and raw copy tuple, realizes both the positional and canonical same-value constant
    cells through fixed coherence, and constructs the complete witness from pairwise
-   σ-copy values alone. Only the concrete pairwise value-transport instantiation
-   remains;
+   σ-copy values alone. The permutation compiler round trip is now generic:
+   `topLevelPermutationColumnAddresses_eq` proves that flattening and decoding the
+   derived chunks recovers the circuit's declared permutation-column order, with no
+   concrete computation certificate. The Action `[7,7,1]` specialization uses only
+   its three prefix lengths to prove that `actionCopyValue` is exactly the resolver's
+   `chunkRowValue` at the inverse-flattened active cell. What remains is to construct
+   the resolver cycle from the generated σ columns and apply the generic cycle-value
+   theorem to every member of `actionCopies`;
 5. instantiate `TopLevelFixedCoherence`, use it to realize packed selectors and fixed
    tables, and discharge the lookup selector-projection fields; bundle-wide lookup
    challenge exclusions are already packaged by
@@ -477,7 +483,13 @@ copies. `CopyReplayWitness.ofPairCycles` and `.ofPairValues` perform the generic
 packaging. `mem_V1_copyList_of_declared` now sends every resolvable cell/cell or
 cell/instance declaration into that replay, and `chunkRowValue_eq_of_mem_copies`
 proves the resulting committed endpoint values equal. The Action representation
-adapter is now closed except for that σ-value leaf.
+adapter's coordinate/value side is now closed.
+`actionActiveChunkCell_columnAddress` uses the generic permutation-compiler round
+trip to identify the verifier query reference with the corresponding Clean
+`actionPermCols` entry, and `actionCopyValue_eq_activeChunkRowValue` identifies the
+resulting environment read with the verifier-native chunk-row value. The remaining
+σ leaf is therefore the generated-column/cycle argument, not another layout or
+query-index comparison.
 `actionCopyAddressFailures_eq_nil` certifies the finite endpoint address law;
 `mem_operationConstSites_of_declared_constant`, `V1_go_snd_eq`, and
 `actionConstantRawPair` follow constant declarations through the positional compiler
@@ -487,9 +499,13 @@ as required compiler output. Consequently
 declared endpoint reads internally; its only semantic premise is value agreement on
 each decoded `actionCopies` pair.
 
-The `β`/`γ`
-exclusions remain with the explicit bad-set accounting rather than becoming circuit
-assumptions.
+The `β`/`γ` exclusions remain with explicit bad-set accounting rather than becoming
+circuit assumptions. `PermutationChallengePricing` now packages their union across
+every proof in a bundle. Avoiding
+`allResolverPermutationGammaBadSet` and `allResolverPermutationBetaBadSet`
+constructs every `ResolverPermutationGoodChallenges`; the corresponding measure
+theorems bound the γ surface by the sum of `2·activeCells` and the β surface by the
+sum of `(activeCells+1)·activeCells`.
 
 The residual zero-factor branch is now closed generically as well.
 `additiveZeroBadSet` observes that, after `β` and the committed cell values are fixed,
