@@ -1,4 +1,5 @@
 import Zcash.Circuits.Integration.PermutationColumns
+import Zcash.Snark.Soundness.CircuitIntegration
 
 /-!
 # The executable keygen assembly replay is the abstract permutation replay
@@ -672,6 +673,46 @@ theorem permPolysOf_getD_eq_chunkRowName {k : ℕ}
   rw [hfsflat]
   rw [hrow, hcol]
   ring
+
+/-- **The copy-replay witness, generically.** Any cell valuation that is constant on the
+cycles of a permutation linking every encoded declared copy supplies the complete copy
+witness: the replayed cycles are the equivalence closure of the declared pairs, so they
+transport into the linking permutation's cycles. The Action instantiation supplies
+`encode` (the layout resolution, constants to their allocated constants-column cells),
+`value` (the resolver environment's cell reads), `hpairs` (each declared copy resolves
+into the keygen copy list), and `hvalue` (the σ-semantics copy theorem, with its priced
+exceptional branch as `Bad`). -/
+def CopyReplayWitness.ofPairCycles
+    {numCols n : ℕ} {place : RegionIndex → ℕ} {env : Environment Fp}
+    {ops : Operations Fp} {Bad : Prop}
+    (encode : CopyEndpoint Fp → FlatCell numCols n)
+    (value : FlatCell numCols n → Fp)
+    (π : Perm (FlatCell numCols n))
+    (hpairs : ∀ p ∈ encodeDeclaredCopies encode (operationDeclaredCopies ops),
+      π.SameCycle p.1 p.2)
+    (hvalue : ∀ l r : FlatCell numCols n, π.SameCycle l r →
+      value l = value r ∨ Bad)
+    (hread : ∀ endpoint : CopyEndpoint Fp,
+      endpoint.eval place env = value (encode endpoint)) :
+    CopyReplayWitness place env ops (FlatCell numCols n) Bad where
+  encode := encode
+  value := value
+  read := hread
+  cycle := by
+    have htrans : ∀ x y : FlatCell numCols n,
+        Relation.EqvGen (fun u v =>
+          (u, v) ∈ encodeDeclaredCopies encode (operationDeclaredCopies ops)) x y →
+        π.SameCycle x y := by
+      intro x y hgen
+      induction hgen with
+      | rel u v huv => exact hpairs (u, v) huv
+      | refl u => exact Equiv.Perm.SameCycle.refl π u
+      | symm u v _ ih => exact ih.symm
+      | trans u v w _ _ ih1 ih2 => exact ih1.trans ih2
+    intro l r h
+    exact hvalue l r (htrans l r
+      ((replayKeygenPermutation_sameCycle_iff
+        (encodeDeclaredCopies encode (operationDeclaredCopies ops)) l r).mp h))
 
 end Layout.Asm
 
