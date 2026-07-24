@@ -220,6 +220,7 @@ operation family. A mismatch is returned as the augmented nontrivial-relation ev
 already used by the deployed extraction stack.
 -/
 theorem actionBundleStatement_or_relation_of_canonicalRelation
+    {cell : Type} [DecidableEq cell] [Fintype cell]
     (pp : Keygen.ProofParams) (urs : URS G)
     (hk :
       (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
@@ -291,14 +292,15 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
       TopLevelFixedCoherence
         orchardActionTopLevelCircuit pp urs)
     (copies : ∀ proofIndex,
-      CircuitConstraintFamily.constraints .copy
+      CopyReplayWitness
         orchardActionTopLevelCircuit.placement
-        (TopLevelAssignment.environment
-          ({ polynomial := relation.polynomial } :
-            TopLevelAssignment orchardActionTopLevelCircuit
-              (pp.mergeDerived orchardActionTopLevelCircuit).numProofs
-              proofIndex))
-        (orchardActionTopLevelCircuit.operations 0) 0)
+        (resolverEnvironment
+          (orchardActionTopLevelCircuit.toVerifierKey pp urs)
+          relation.polynomial proofIndex
+          (orchardActionTopLevelCircuit.usableRowsAt
+            orchardActionTopLevelCircuit.domainExponent))
+        (orchardActionTopLevelCircuit.operations 0) cell
+        (HasNontrivialRelation (F := Fp) urs.g urs.u urs.w))
     (lookupSelectorValues : ∀ proofIndex lookup
       (_henabled :
         lookup ∈ operationEnabledLookups
@@ -422,7 +424,8 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
           (orchardActionTopLevelCircuit.usableRowsAt
             orchardActionTopLevelCircuit.domainExponent))
       exact hclean.1
-    · exact copies
+    · intro proofIndex
+      exact (copies proofIndex).constraints_or_bad.resolve_right hrelation
     · intro proofIndex
       let lookupCoherence :
           TopLevelLookupCoherence orchardActionTopLevelCircuit :=

@@ -314,9 +314,10 @@ than accepting a generic reconstruction function, is now the precise determinist
 completion criterion for `hencodes`.
 The binding-aware
 `actionBundleStatement_or_relation_of_canonicalRelation` additionally derives the
-selector and fixed/table families from `TopLevelFixedCoherence`; its only remaining
-operation-family premise is copy satisfaction. It derives lookup satisfaction
-internally from exact packed-selector values and one
+selector and fixed/table families from `TopLevelFixedCoherence`. It derives copy
+satisfaction internally from `CopyReplayWitness`, preserving that witness's
+commitment-relation branch, and derives lookup satisfaction internally from exact
+packed-selector values and one
 `TopLevelLookupChallengeExclusions` record, and derives the public-instance
 polynomial from the routed member and supplied Lagrange commitment data. A fixed- or
 instance-column mismatch returns the shared augmented commitment-relation event
@@ -1032,7 +1033,7 @@ append-only merge flow.
 | **[SEPARATE: fixed/VK]** | Instantiate `TopLevelFixedCoherence` from the circuit-derived dense fixed rows, sparse-to-dense scatter law, fixed-query coverage, and fixed commitments. | Generic fixed/table and selector-realization theorems are complete. | The fixed/table field and the exact packed-selector fact consumed by the lookup stream. |
 | **[DONE: instance]** | No independent work remains in the deterministic instance stream. | `ActionInstanceCommitment.instanceKey` and `.commitment` derive the key and public commitment from the URS and ten Action rows; the binding-aware bundle endpoint consumes them internally and preserves only the shared nontrivial-relation branch. | Public-instance provenance is ready for the one-proof/bundle join. |
 | **[SEPARATE: ledger]** | Continue [#98](https://github.com/zcash/ironwood/pull/98)'s `SpecPost`-to-ledger refinement. | Independent of polynomial reconstruction and Clean constraint satisfaction. | The games-facing conclusion that should follow after the circuit statement is recovered. |
-| **[JOIN] One proof** | Instantiate `FullCircuitBridge.ofTopLevelCanonical` with the incoming fixed-selector and copy records, then apply the instance-row and Action-statement adapters. | The generic constructor now derives the gate and lookup fields itself; public-instance provenance is concrete. | A concrete Action statement for one `Fin numProofs`, with only explicitly priced exceptional events. |
+| **[JOIN] One proof** | Instantiate the endpoint with the incoming fixed-selector and copy records, then apply the instance-row and Action-statement adapters. | The generic constructor derives gate and lookup fields; the Action canonical endpoint now also consumes `CopyReplayWitness` directly rather than accepting free copy satisfaction. Public-instance provenance is concrete. | A concrete Action statement for one `Fin numProofs`, with only explicitly priced exceptional events. |
 | **[JOIN] Bundle and capstone** | Feed the resulting family to `bundleTopLevelSoundness_or_bad` and substitute its concrete conclusion into the live computed capstone in place of free `S`/`hencodes`. | The generic finite-family join is complete; concrete records and the final capstone substitution remain. #96 can meet it at the abstract extraction boundary. | #99's completion criterion. |
 
 The shortest dependency chain to proving `hencodes` is therefore:

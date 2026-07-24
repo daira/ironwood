@@ -100,6 +100,7 @@ equation, primary-query registration, Action domain bound, row capacity, and sta
 gate package are all constructed here rather than supplied by the caller.
 -/
 theorem actionBundleStatement_or_relation_of_canonicalRelation
+    {cell : Type} [DecidableEq cell] [Fintype cell]
     (pp : ProofParams) (urs : URS G)
     (hk :
       (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
@@ -147,14 +148,15 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
       TopLevelFixedCoherence
         orchardActionTopLevelCircuit pp urs)
     (copies : ∀ proofIndex,
-      CircuitConstraintFamily.constraints .copy
+      CopyReplayWitness
         orchardActionTopLevelCircuit.placement
-        (TopLevelAssignment.environment
-          ({ polynomial := relation.polynomial } :
-            TopLevelAssignment orchardActionTopLevelCircuit
-              (pp.mergeDerived orchardActionTopLevelCircuit).numProofs
-              proofIndex))
-        (orchardActionTopLevelCircuit.operations 0) 0)
+        (resolverEnvironment
+          (orchardActionTopLevelCircuit.toVerifierKey pp urs)
+          relation.polynomial proofIndex
+          (orchardActionTopLevelCircuit.usableRowsAt
+            orchardActionTopLevelCircuit.domainExponent))
+        (orchardActionTopLevelCircuit.operations 0) cell
+        (HasNontrivialRelation (F := Fp) urs.g urs.u urs.w))
     (lookupSelectorValues : ∀ proofIndex lookup
       (_henabled :
         lookup ∈ operationEnabledLookups
