@@ -651,6 +651,17 @@ sentinel, so any derived exponent below `33` satisfies the operation-footprint a
 blinding-row fit inequality. `TopLevelAssignment.synthesisWellFormed` therefore needs
 only this standard supported-domain bound, not a separately reconstructed row proof.
 
+The fixed-data bridge now reaches the keygen layout compiler as well.
+`FixedLayout.mem_tableFixed_of_loadTable_of_lt` and `_of_fill` cover both the explicit
+table block and Halo 2's default-filled tail, while
+`mem_regionAssignFixed_of_requirement` connects each extracted region requirement to
+its V1 absolute row. Consequently `FixedLayout.constraints_of_entries` proves the
+entire Clean `.fixed` family from realization of the raw sparse entries emitted by
+`Layout.tableFixed ++ Layout.regionAssignFixed`. The remaining representation step is
+intentionally narrow: the circuit-owned key builder must show that its
+deduplicated/scattered dense fixed rows, and then their interpolated polynomials,
+realize those raw entries. No Action operation-list proof remains.
+
 The domain algebra is kernel-reusable as well. `Bridge.powFast_eq_pow` connects the
 executable binary exponentiation to ordinary powers, and
 `omegaOf_isPrimitiveRoot`, `omegaOf_domain`, and `omegaOf_powers_injective` derive the

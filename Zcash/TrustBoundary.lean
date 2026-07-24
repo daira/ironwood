@@ -30,6 +30,7 @@ import Zcash.Snark.Soundness.OperationLookups
 import Zcash.Snark.Soundness.GateProjection
 import Zcash.Snark.Soundness.OperationGates
 import Zcash.Snark.Soundness.OperationFixed
+import Zcash.Snark.Soundness.FixedLayout
 import Zcash.Snark.Soundness.LookupSemantics
 import Zcash.Snark.Soundness.CircuitIntegration
 import Zcash.Circuits.Action.GateCoherence
@@ -697,6 +698,12 @@ assert_axioms resolverGatePolynomial_mem
 assert_axioms TopLevelGateCoherence.resolverInterpretsGates
 assert_axioms TopLevelGateCoherence.polynomialWitness
 assert_axioms TopLevelGateCoherence.constraints
+assert_axioms FixedLayout.mem_tableFixed_of_loadTable_of_lt
+assert_axioms FixedLayout.mem_tableFixed_of_loadTable_of_fill
+assert_axioms FixedLayout.loadTable_mem_of_requirement
+assert_axioms FixedLayout.mem_regionAssignFixed_of_requirement
+assert_axioms FixedLayout.requirement_satisfied_of_entries
+assert_axioms FixedLayout.constraints_of_entries
 assert_axioms Halo2.Expression.selectorsCovered_mono
 assert_axioms Halo2.Expression.selectorsCovered_of_selectorFree
 assert_axioms Halo2.Gate.selectorsOwned_of_withSelector
