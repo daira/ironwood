@@ -416,6 +416,7 @@ theorem deployedSetsForEval_length [DecidableEq G] [Inhabited G] {shape : Shape}
     List.length_map, List.length_zip, List.length_ofFn]
   omega
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The `j`-th value-check set's point list is grouping point set `j`'s points — so its finset is
 `deployedSetPts j`. The points-field identification for `node_binding_of_grid_openings`. -/
 theorem deployedSetsForEval_getD_points [DecidableEq G] [Inhabited G] {shape : Shape}
@@ -434,6 +435,7 @@ theorem deployedSetsForEval_getD_points [DecidableEq G] [Inhabited G] {shape : S
     List.getD_eq_getElem _ _ (by omega)]
   simp only [deployedSetsForEval, List.getElem_map, List.getElem_zip]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The `j`-th value-check set's point finset is exactly `deployedSetPts j` — the `hpts`
 field-identification for `node_binding_of_grid_openings`. -/
 theorem deployedSetsForEval_getD_toFinset [DecidableEq G] [Inhabited G] {shape : Shape}
@@ -442,6 +444,7 @@ theorem deployedSetsForEval_getD_toFinset [DecidableEq G] [Inhabited G] {shape :
     ((deployedSetsForEval vk instanceCommitment ps ch).getD k ([], [], 0)).1.toFinset = deployedSetPts vk instanceCommitment ps ch k := by
   rw [deployedSetsForEval_getD_points vk instanceCommitment ps ch hk, deployedSetPts]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The `j`-th value-check set's point list is duplicate-free — the `hnd` field-identification for
 `node_binding_of_grid_openings`, via `constructIntermediateSets_points_nodup`. -/
 theorem deployedSetsForEval_getD_nodup [DecidableEq G] [Inhabited G] {shape : Shape}
@@ -451,6 +454,7 @@ theorem deployedSetsForEval_getD_nodup [DecidableEq G] [Inhabited G] {shape : Sh
   rw [deployedSetsForEval_getD_points vk instanceCommitment ps ch hk]
   exact constructIntermediateSets_points_nodup _ _
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The `reverse`d value-check `sets`, at index `k`, reads grouping set `numSets − 1 − k`'s point
 list — the reversed index the `multiopenEval` power convention pairs `x₂^k` with. -/
 theorem deployedSetsForEval_reverse_getD_points [DecidableEq G] [Inhabited G] {shape : Shape}
@@ -467,6 +471,7 @@ theorem deployedSetsForEval_reverse_getD_points [DecidableEq G] [Inhabited G] {s
   rw [htup]
   exact deployedSetsForEval_getD_points vk instanceCommitment ps ch (by omega)
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The reversed value-check set's point finset is `deployedSetPts (numSets − 1 − k)` — the `hpts`
 field-ID at the reversed indexing. -/
 theorem deployedSetsForEval_reverse_getD_toFinset [DecidableEq G] [Inhabited G] {shape : Shape}
@@ -476,6 +481,7 @@ theorem deployedSetsForEval_reverse_getD_toFinset [DecidableEq G] [Inhabited G] 
       = deployedSetPts vk instanceCommitment ps ch (deployedX4PairCount vk instanceCommitment ps ch - 1 - k) := by
   rw [deployedSetsForEval_reverse_getD_points vk instanceCommitment ps ch hk, deployedSetPts]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The reversed value-check set's point list is `Nodup` — the `hnd` field-ID at the reversed
 indexing. -/
 theorem deployedSetsForEval_reverse_getD_nodup [DecidableEq G] [Inhabited G] {shape : Shape}
@@ -485,6 +491,7 @@ theorem deployedSetsForEval_reverse_getD_nodup [DecidableEq G] [Inhabited G] {sh
   rw [deployedSetsForEval_reverse_getD_points vk instanceCommitment ps ch hk]
   exact constructIntermediateSets_points_nodup _ _
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The reversed value-check set's claimed-eval (`u`) field at index `k` is the batch eval slot `k`
 (`x4BatchEvals`) — the `u`-field counterpart of `deployedSetsForEval_reverse_getD_points`. Both reduce
 to the prover's claimed set eval `multiopenU` at position `count − 1 − k`: `deployedSetsForEval`'s
@@ -839,6 +846,7 @@ theorem openedX3_rewound_batch_eval [DecidableEq G] [Inhabited G] {shape : Shape
   exact openedDecodedCols_eval_x3 urs hk vk instanceCommitment (r.spliced ps) (r.challenges ch χ) _ j
 
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- **The value-check sets' points and compressed-evals fields are fixed under a double
 (`x₂`-then-`x₃`) rewind.** The grouping and the `x₁` compression read only pre-`x₂` data
 (`x2Run_assembleQueries`/`x3Run_assembleQueries`, and both challenge records keep `x₁`), so entry
@@ -869,6 +877,7 @@ theorem deployedSetsForEval_x2x3_getD_fields [DecidableEq G] [Inhabited G] {shap
     · simp only [deployedSetsForEval, List.getElem_map, List.getElem_zip]
       rfl
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Reversed-index form of `deployedSetsForEval_x2x3_getD_fields` — the `hsetpts`/`hsetevals`
 field agreements `deployed_node_binding_of_grid` consumes for the doubly-rewound grid runs. -/
 theorem deployedSetsForEval_x2x3_reverse_getD_fields [DecidableEq G] [Inhabited G] {shape : Shape}
@@ -1259,6 +1268,7 @@ theorem compressSet_snd_getD {k' : ℕ} {F G' : Type*} [Field F]
   rw [h, List.getD_eq_getElem _ _ (by rw [List.length_replicate]; exact hidx),
     List.getElem_replicate, one_mul, zero_add]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The `k`-th value-check set's compressed evaluation vector is `compressSet`'s — the evals-field
 identification for the deployed sets (the `.2.1` companion of `deployedSetsForEval_getD_points`). -/
 theorem deployedSetsForEval_getD_evals [DecidableEq G] [Inhabited G] {shape : Shape}
@@ -1344,6 +1354,7 @@ theorem x4Run_allPts [DecidableEq G] [Inhabited G] {shape : Shape}
     deployedAllPts vk instanceCommitment (r.spliced ps) (r.challenges ch ω) = deployedAllPts vk instanceCommitment ps ch := by
   simp only [deployedAllPts, deployedSetPts, x4Run_assembleQueries]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The deployed point-union cardinality (the `hprob3` threshold ingredient) is `x₁`-invariant. -/
 theorem x1Run_allPts_card [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1351,6 +1362,7 @@ theorem x1Run_allPts_card [DecidableEq G] [Inhabited G] {shape : Shape}
     (deployedAllPts vk instanceCommitment (r.spliced ps) (r.challenges ch ξ)).card = (deployedAllPts vk instanceCommitment ps ch).card :=
   congrArg Finset.card (x1Run_allPts vk instanceCommitment ps ch r ξ)
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The deployed point-union cardinality is `x₂`-invariant. -/
 theorem x2Run_allPts_card [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1358,6 +1370,7 @@ theorem x2Run_allPts_card [DecidableEq G] [Inhabited G] {shape : Shape}
     (deployedAllPts vk instanceCommitment (r.spliced ps) (r.challenges ch ζ)).card = (deployedAllPts vk instanceCommitment ps ch).card :=
   congrArg Finset.card (x2Run_allPts vk instanceCommitment ps ch r ζ)
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- **The `x₁`-rewound value-check set at `k`: honest points, `ξ`-compressed member evals (F2 stage
 A).** At an `x₁`-rewound base the grouping is the honest one (`x1Run_assembleQueries`) and only the
 compression challenge moves (`(r.challenges ch ξ).x1 = ξ`), so set `k`'s point list is the honest

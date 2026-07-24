@@ -24,10 +24,13 @@ composition chain carries no shift hypothesis.
 exposes the adversary's aggregate commitment as `commit(aMulti) + pU•u + pW•w`, so the extracted
 opening is the generalized Pedersen triple `(aMulti, pU, pW)` in the augmented basis `(g, u, w)`.
 The relation is stated at the de-blinded point `deployedCommitment − pU•u − pW•w` because
-`IpaRelation` is the `g`-span opening. `pW` is the Pedersen blinder — nonzero for honest proofs, so
-it can never be forced to `0`. Weight on `u` shifts the opened value by `z⁻¹·vU`; against the
-deployed batch opening of the same point that shift either vanishes or the witnesses collide into a
-computed `(g,u,w)` relation — the dichotomy `member_relation_or_dlr_of_instance` proves.
+`IpaRelation` is the `g`-span opening. `pW` is the `w`-weight of the AGM representation — an
+adversary may set it to anything, so the argument never assumes it is nonzero. Its value is
+immaterial because the de-blinding subtracts `pW•w` (and `pU•u`) off whatever they are
+(`opening_commit_deployed_of_instance`, no value-shift hypothesis). Weight on `u` shifts the opened
+value by `z⁻¹·vU`; against the deployed batch opening of the same point that shift either vanishes
+or the witnesses collide into a computed `(g,u,w)` relation — the dichotomy
+`member_relation_or_dlr_of_instance` proves.
 -/
 
 namespace Zcash.Snark

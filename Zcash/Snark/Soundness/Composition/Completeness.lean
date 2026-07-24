@@ -4,6 +4,12 @@ import Zcash.Snark.Soundness.Composition.Bridge
 /-!
 # The honest-completeness containment for the composition ladder (`hcont`)
 
+*Honest-completeness* means an honest prover, as modelled in Lean, produces an accepting proof. It
+does **not** claim the Rust `halo2` prover is complete — not in general, not for any one circuit;
+only that a completeness bug there would be fixable without changing the proving system
+incompatibly. `hcont` uses this direction to place the clean-but-not-extracted residual in the
+priced bad event.
+
 The ladder endpoint (`Soundness.Composition.Assembly`) is unconditional modulo two inputs: the family
 `PeelDecode` and the containment `hcont`. This module discharges `hcont`'s measure side outright
 and reduces its landing side to one non-circular hypothesis:

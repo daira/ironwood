@@ -10,6 +10,14 @@ bounded degree agreeing on enough distinct points are equal — samples force id
 `lagrangePoly` (the interpolant of one point set, taking the claimed value at each node), and
 `lagrangePoly_eval` (the deployed fold `lagrangeEval` is the interpolant's evaluation, so deployed
 identities transfer to the polynomial).
+
+The polynomial theory here is Mathlib's, not reinvented: `lagrangePoly` is `Lagrange.interpolate`,
+`lagrangePoly_eval_node` is `Lagrange.eval_interpolate_at_node`, and `poly_eq_of_agree_on_family`
+repackages `Polynomial.eq_zero_of_natDegree_lt_card_of_eval_eq_zero`. Only the fold bridge is local:
+the deployed check runs a hand-rolled `foldl` (`lagrangeEval`), and `foldl_range_add_eq_sum`,
+`foldl_range_guardProd_eq_prod`, and `guardProd_eq_prod_erase` rewrite it into the `Finset`
+sum/product Mathlib evaluates the interpolant to. CompPoly mirrors the same Mathlib defs, so
+switching to it would not remove this bridge.
 -/
 
 namespace Zcash.Snark
