@@ -1,5 +1,5 @@
 import Zcash.Circuits.Integration.PermutationColumns
-import Zcash.Snark.Soundness.CircuitIntegration
+import Zcash.Circuits.Integration.CircuitIntegration
 
 /-!
 # The executable keygen assembly replay is the abstract permutation replay
@@ -20,7 +20,7 @@ representative-agnostic.
 
 namespace Zcash.Snark
 
-open Halo2 Zcash.Circuits.Fixtures.Layout
+open Halo2 Halo2.Layout Zcash.Circuits.Fixtures.Layout
 open Equiv (Perm swap)
 
 set_option maxHeartbeats 400000
@@ -40,7 +40,7 @@ theorem FlatCell.pair_injective {numCols n : ℕ} :
 
 namespace Layout.Asm
 
-open Zcash.Circuits.Fixtures.Layout.Asm
+open Halo2.Layout.Asm
 
 /-- The rectangular shape invariant of the assembly's cell arrays. -/
 def Shaped (numCols n : ℕ) (a : Array (Array (ℕ × ℕ))) : Prop :=
@@ -86,13 +86,13 @@ theorem Shaped.setPair {numCols n : ℕ} {a : Array (Array (ℕ × ℕ))}
     (h : Shaped numCols n a) (p : ℕ × ℕ) (v : ℕ × ℕ) :
     Shaped numCols n (setPair a p v) := by
   obtain ⟨hsize, hrow⟩ := h
-  refine ⟨by simpa [Zcash.Circuits.Fixtures.Layout.Asm.setPair] using hsize, ?_⟩
+  refine ⟨by simpa [Halo2.Layout.Asm.setPair] using hsize, ?_⟩
   intro i hi
-  simp only [Zcash.Circuits.Fixtures.Layout.Asm.setPair, Array.size_modify] at hi
+  simp only [Halo2.Layout.Asm.setPair, Array.size_modify] at hi
   by_cases hip : p.1 = i
   · subst hip
-    simp [Zcash.Circuits.Fixtures.Layout.Asm.setPair, Array.getElem_modify_self, hrow]
-  · simp [Zcash.Circuits.Fixtures.Layout.Asm.setPair, Array.getElem_modify_of_ne hip, hrow]
+    simp [Halo2.Layout.Asm.setPair, Array.getElem_modify_self, hrow]
+  · simp [Halo2.Layout.Asm.setPair, Array.getElem_modify_of_ne hip, hrow]
 
 /-- Reading back the just-written cell (the write position must be in shape). -/
 theorem getPair_setPair_self {numCols n : ℕ} {a : Array (Array (ℕ × ℕ))}
@@ -101,7 +101,7 @@ theorem getPair_setPair_self {numCols n : ℕ} {a : Array (Array (ℕ × ℕ))}
     getPair (setPair a p v) p = v := by
   obtain ⟨hsize, hrow⟩ := h
   have hp1' : p.1 < a.size := hsize ▸ hp1
-  simp [Zcash.Circuits.Fixtures.Layout.Asm.getPair, Zcash.Circuits.Fixtures.Layout.Asm.setPair,
+  simp [Halo2.Layout.Asm.getPair, Halo2.Layout.Asm.setPair,
     Array.size_modify, hp1', Array.getElem_modify_self,
     Array.set!, Array.getElem_setIfInBounds_self, hrow _ hp1', hp2]
 
@@ -114,25 +114,25 @@ theorem getPair_setPair_ne {numCols n : ℕ} {a : Array (Array (ℕ × ℕ))}
   · have h2 : q.2 ≠ p.2 := fun h2 => hpq (Prod.ext_iff.mpr ⟨h1, h2⟩)
     by_cases hq1 : q.1 < a.size
     · have hp1 : p.1 < a.size := h1 ▸ hq1
-      simp [Zcash.Circuits.Fixtures.Layout.Asm.getPair, Zcash.Circuits.Fixtures.Layout.Asm.setPair, Array.getElem!_eq_getD, Array.getD,
+      simp [Halo2.Layout.Asm.getPair, Halo2.Layout.Asm.setPair, Array.getElem!_eq_getD, Array.getD,
         Array.size_modify, h1, Array.getElem_modify_self,
         Array.set!, Array.size_setIfInBounds, hp1]
       split
       · exact Array.getElem_setIfInBounds_ne (by assumption) (Ne.symm h2)
       · rfl
-    · simp [Zcash.Circuits.Fixtures.Layout.Asm.getPair, Zcash.Circuits.Fixtures.Layout.Asm.setPair, Array.getElem!_eq_getD, Array.getD,
+    · simp [Halo2.Layout.Asm.getPair, Halo2.Layout.Asm.setPair, Array.getElem!_eq_getD, Array.getD,
         Array.size_modify, hq1]
-  · simp [Zcash.Circuits.Fixtures.Layout.Asm.getPair, Zcash.Circuits.Fixtures.Layout.Asm.setPair, Array.getElem!_eq_getD, Array.getD,
+  · simp [Halo2.Layout.Asm.getPair, Halo2.Layout.Asm.setPair, Array.getElem!_eq_getD, Array.getD,
       Array.size_modify, Array.getElem_modify_of_ne (fun h => h1 h.symm)]
 
 /-- `repoint` preserves the aux shape. -/
 theorem Shaped.repoint {numCols n : ℕ} {a : Asm}
     (h : Shaped numCols n a.aux) (fuel : ℕ) (i tgt stop : ℕ × ℕ) :
-    Shaped numCols n (Zcash.Circuits.Fixtures.Layout.Asm.repoint a fuel i tgt stop).aux := by
+    Shaped numCols n (Halo2.Layout.Asm.repoint a fuel i tgt stop).aux := by
   induction fuel generalizing a i with
   | zero => exact h
   | succ fuel ih =>
-      simp only [Zcash.Circuits.Fixtures.Layout.Asm.repoint]
+      simp only [Halo2.Layout.Asm.repoint]
       split
       · exact h.setPair i tgt
       · exact ih (h.setPair i tgt) _
@@ -148,7 +148,7 @@ theorem getPair_repoint_aux {numCols n : ℕ} {a : Asm} {π : Perm (FlatCell num
     (hmin : ∀ t, 0 < t → t < s → (π ^ t) start ≠ stop)
     (fuel : ℕ) (hfuel : s ≤ fuel)
     (d : FlatCell numCols n) :
-    getPair (Zcash.Circuits.Fixtures.Layout.Asm.repoint a fuel start.pair tgt stop.pair).aux d.pair =
+    getPair (Halo2.Layout.Asm.repoint a fuel start.pair tgt stop.pair).aux d.pair =
       if ∃ t, t < s ∧ (π ^ t) start = d then tgt else getPair a.aux d.pair := by
   induction s generalizing a start fuel with
   | zero => exact absurd hs1 (by omega)
@@ -161,7 +161,7 @@ theorem getPair_repoint_aux {numCols n : ℕ} {a : Asm} {π : Perm (FlatCell num
         subst hzero
         have hstop : π start = stop := by
           simpa [pow_one] using hs
-        simp only [Zcash.Circuits.Fixtures.Layout.Asm.repoint, hnext, hstop]
+        simp only [Halo2.Layout.Asm.repoint, hnext, hstop]
         rw [if_pos (by simp)]
         by_cases hd : d = start
         · subst hd
@@ -179,7 +179,7 @@ theorem getPair_repoint_aux {numCols n : ℕ} {a : Asm} {π : Perm (FlatCell num
         have hnepair : ((π start).pair == stop.pair) = false := by
           simp only [beq_eq_false_iff_ne]
           exact fun h => hne (FlatCell.pair_injective h)
-        simp only [Zcash.Circuits.Fixtures.Layout.Asm.repoint, hnext, hnepair]
+        simp only [Halo2.Layout.Asm.repoint, hnext, hnepair]
         rw [if_neg (by simp)]
         have hs'' : (π ^ s') (π start) = stop := by
           rw [← Equiv.Perm.mul_apply, ← pow_succ]
@@ -286,43 +286,43 @@ theorem sameCycle_iff_exists_pow_lt {numCols n : ℕ} {π : Perm (FlatCell numCo
 away. -/
 theorem repoint_aux_sizes {a : Asm} (sz : Array (Array ℕ)) (fuel : ℕ)
     (i tgt stop : ℕ × ℕ) :
-    (Zcash.Circuits.Fixtures.Layout.Asm.repoint { a with sizes := sz }
+    (Halo2.Layout.Asm.repoint { a with sizes := sz }
         fuel i tgt stop).aux =
-      (Zcash.Circuits.Fixtures.Layout.Asm.repoint a fuel i tgt stop).aux := by
+      (Halo2.Layout.Asm.repoint a fuel i tgt stop).aux := by
   induction fuel generalizing a i with
   | zero => rfl
   | succ fuel ih =>
-      simp only [Zcash.Circuits.Fixtures.Layout.Asm.repoint]
+      simp only [Halo2.Layout.Asm.repoint]
       split
       · rfl
       · exact ih (a := { a with aux := setPair a.aux i tgt }) _
 
 /-- The mapping component of a merge: the two-entry swap over the untouched mapping. -/
 theorem merge_mapping (a : Asm) (fuel : ℕ) (lp rp : ℕ × ℕ) :
-    (Zcash.Circuits.Fixtures.Layout.Asm.merge a fuel lp rp).mapping =
+    (Halo2.Layout.Asm.merge a fuel lp rp).mapping =
       setPair (setPair a.mapping lp (getPair a.mapping rp)) rp
         (getPair a.mapping lp) := by
-  simp only [Zcash.Circuits.Fixtures.Layout.Asm.merge, repoint_mapping]
+  simp only [Halo2.Layout.Asm.merge, repoint_mapping]
 
 /-- The aux component of a merge: the re-pointing walk over the untouched aux, from and
 to the absorbed representative, targeting the surviving one. -/
 theorem merge_aux (a : Asm) (fuel : ℕ) (lp rp : ℕ × ℕ) :
-    (Zcash.Circuits.Fixtures.Layout.Asm.merge a fuel lp rp).aux =
-      (Zcash.Circuits.Fixtures.Layout.Asm.repoint a fuel
+    (Halo2.Layout.Asm.merge a fuel lp rp).aux =
+      (Halo2.Layout.Asm.repoint a fuel
         (if getNat a.sizes (getPair a.aux lp) < getNat a.sizes (getPair a.aux rp)
           then getPair a.aux lp else getPair a.aux rp)
         (if getNat a.sizes (getPair a.aux lp) < getNat a.sizes (getPair a.aux rp)
           then getPair a.aux rp else getPair a.aux lp)
         (if getNat a.sizes (getPair a.aux lp) < getNat a.sizes (getPair a.aux rp)
           then getPair a.aux lp else getPair a.aux rp)).aux := by
-  simp only [Zcash.Circuits.Fixtures.Layout.Asm.merge, repoint_aux_sizes]
+  simp only [Halo2.Layout.Asm.merge, repoint_aux_sizes]
 
-open Zcash.Circuits.Fixtures.Layout.Asm in
+open Halo2.Layout.Asm in
 /-- One assembly `copy` simulates one abstract merge step, with walk fuel covering any
 cycle length. -/
 theorem Sim.copy {numCols n : ℕ} {a : Asm} {π : Perm (FlatCell numCols n)}
     (sim : Sim a π) (l r : FlatCell numCols n) :
-    Sim (Zcash.Circuits.Fixtures.Layout.Asm.copy a (n * numCols)
+    Sim (Halo2.Layout.Asm.copy a (n * numCols)
         l.pair.1 l.pair.2 r.pair.1 r.pair.2)
       (PermConstruction.step π (l, r)) := by
   classical
@@ -330,7 +330,7 @@ theorem Sim.copy {numCols n : ℕ} {a : Asm} {π : Perm (FlatCell numCols n)}
   obtain ⟨R, hR, hRcyc, hRroot⟩ := sim.aux_rep r
   have hpl : ((l.pair.1, l.pair.2) : ℕ × ℕ) = l.pair := rfl
   have hpr : ((r.pair.1, r.pair.2) : ℕ × ℕ) = r.pair := rfl
-  rw [Zcash.Circuits.Fixtures.Layout.Asm.copy, PermConstruction.step]
+  rw [Halo2.Layout.Asm.copy, PermConstruction.step]
   by_cases hsame : π.SameCycle l r
   · have heq : getPair a.aux l.pair = getPair a.aux r.pair :=
       (sim.aux_eq_iff l r).mpr hsame
@@ -382,7 +382,7 @@ theorem Sim.copy {numCols n : ℕ} {a : Asm} {π : Perm (FlatCell numCols n)}
     obtain ⟨sN, ⟨hs1, hsret⟩, hsle, hsmin⟩ := exists_minimal_return π RC
     -- the aux component after the merge, cycle by cycle
     have haux2 : ∀ d : FlatCell numCols n,
-        getPair (Zcash.Circuits.Fixtures.Layout.Asm.merge a (n * numCols)
+        getPair (Halo2.Layout.Asm.merge a (n * numCols)
             (l.pair.1, l.pair.2) (r.pair.1, r.pair.2)).aux d.pair =
           if π.SameCycle RC d then LC.pair else getPair a.aux d.pair := by
       intro d
@@ -512,25 +512,25 @@ theorem Sim.copy {numCols n : ℕ} {a : Asm} {π : Perm (FlatCell numCols n)}
 /-- The fresh assembly simulates the identity permutation. -/
 theorem Sim.new (numCols n : ℕ) :
     Sim (numCols := numCols) (n := n)
-      (Zcash.Circuits.Fixtures.Layout.Asm.new n numCols) 1 := by
+      (Halo2.Layout.Asm.new n numCols) 1 := by
   have hget : ∀ c : FlatCell numCols n,
       getPair ((Array.range numCols).map
-        (fun i => Zcash.Circuits.Fixtures.Layout.Asm.initCol i n)) c.pair = c.pair := by
+        (fun i => Halo2.Layout.Asm.initCol i n)) c.pair = c.pair := by
     intro c
-    simp [Zcash.Circuits.Fixtures.Layout.Asm.getPair,
-      Zcash.Circuits.Fixtures.Layout.Asm.initCol,
+    simp [Halo2.Layout.Asm.getPair,
+      Halo2.Layout.Asm.initCol,
       FlatCell.pair, c.1.isLt, c.2.isLt]
   have hshape : Shaped numCols n ((Array.range numCols).map
-      (fun i => Zcash.Circuits.Fixtures.Layout.Asm.initCol i n)) := by
+      (fun i => Halo2.Layout.Asm.initCol i n)) := by
     refine ⟨by simp, ?_⟩
     intro i hi
     simp only [Array.size_map, Array.size_range] at hi
-    simp [Zcash.Circuits.Fixtures.Layout.Asm.initCol]
+    simp [Halo2.Layout.Asm.initCol]
   have hgetm : ∀ c : FlatCell numCols n,
-      getPair (Zcash.Circuits.Fixtures.Layout.Asm.new n numCols).mapping c.pair =
+      getPair (Halo2.Layout.Asm.new n numCols).mapping c.pair =
         c.pair := fun c => hget c
   have hgeta : ∀ c : FlatCell numCols n,
-      getPair (Zcash.Circuits.Fixtures.Layout.Asm.new n numCols).aux c.pair =
+      getPair (Halo2.Layout.Asm.new n numCols).aux c.pair =
         c.pair := fun c => hget c
   refine ⟨hshape, hshape, ?_, ?_, ?_⟩
   · intro c
@@ -552,7 +552,7 @@ theorem Sim.foldl {numCols n : ℕ}
     (copies : List (FlatCell numCols n × FlatCell numCols n))
     {a : Asm} {π : Perm (FlatCell numCols n)} (sim : Sim a π) :
     Sim (copies.foldl (fun st p =>
-        Zcash.Circuits.Fixtures.Layout.Asm.copy st (n * numCols)
+        Halo2.Layout.Asm.copy st (n * numCols)
           p.1.pair.1 p.1.pair.2 p.2.pair.1 p.2.pair.2) a)
       (copies.foldl PermConstruction.step π) := by
   induction copies generalizing a π with
@@ -576,10 +576,10 @@ theorem replayKeygenPermutation_eq_foldl {cell : Type*} [DecidableEq cell] [Fint
 theorem runAssembly_getPair {numCols n : ℕ}
     (copies : List (FlatCell numCols n × FlatCell numCols n))
     (c : FlatCell numCols n) :
-    getPair (Zcash.Circuits.Fixtures.Layout.runAssembly n numCols
+    getPair (Halo2.Layout.runAssembly n numCols
         (copies.map fun p => (p.1.pair.1, p.1.pair.2, p.2.pair.1, p.2.pair.2))) c.pair =
       ((replayKeygenPermutation copies) c).pair := by
-  rw [Zcash.Circuits.Fixtures.Layout.runAssembly]
+  rw [Halo2.Layout.runAssembly]
   rw [List.foldl_map]
   rw [replayKeygenPermutation_eq_foldl]
   exact (Sim.foldl copies (Sim.new numCols n)).map_eq c
@@ -590,7 +590,7 @@ action is the abstract replay. -/
 theorem permPolysOf_getD_eq {k : ℕ} (cs : ConstraintSystem Fp) (ops : Operations Fp)
     (copies' : List (FlatCell (Keygen.permColsOf cs).length (2 ^ k) ×
       FlatCell (Keygen.permColsOf cs).length (2 ^ k)))
-    (hcopies : Zcash.Circuits.Fixtures.Layout.V1.copyList (Keygen.permColsOf cs)
+    (hcopies : Halo2.Layout.V1.copyList (Keygen.permColsOf cs)
         (Halo2.FloorPlanner.V1.starts ops) ops
         (Keygen.constantsOf cs ops) =
       copies'.map fun p => (p.1.pair.1, p.1.pair.2, p.2.pair.1, p.2.pair.2))
@@ -598,7 +598,7 @@ theorem permPolysOf_getD_eq {k : ℕ} (cs : ConstraintSystem Fp) (ops : Operatio
     ((Keygen.permPolysOf k cs ops).getD (g : ℕ) []).getD (j : ℕ) 0 =
       deltaFp ^ ((replayKeygenPermutation copies' (g, j)).1 : ℕ) *
         omegaOf k ^ ((replayKeygenPermutation copies' (g, j)).2 : ℕ) := by
-  have hmap' : ((Zcash.Circuits.Fixtures.Layout.runAssembly (2 ^ k)
+  have hmap' : ((Halo2.Layout.runAssembly (2 ^ k)
       (Keygen.permColsOf cs).length (copies'.map fun p =>
         (p.1.pair.1, p.1.pair.2, p.2.pair.1, p.2.pair.2)))[(g : ℕ)]!)[(j : ℕ)]! =
       (replayKeygenPermutation copies' (g, j)).pair :=
@@ -624,7 +624,7 @@ theorem permPolysOf_getD_eq_chunkRowName {k : ℕ}
     (cs : ConstraintSystem Fp) (ops : Operations Fp)
     (copies' : List (FlatCell (Keygen.permColsOf cs).length (2 ^ k) ×
       FlatCell (Keygen.permColsOf cs).length (2 ^ k)))
-    (hcopies : Zcash.Circuits.Fixtures.Layout.V1.copyList (Keygen.permColsOf cs)
+    (hcopies : Halo2.Layout.V1.copyList (Keygen.permColsOf cs)
         (Halo2.FloorPlanner.V1.starts ops) ops
         (Keygen.constantsOf cs ops) =
       copies'.map fun p => (p.1.pair.1, p.1.pair.2, p.2.pair.1, p.2.pair.2))

@@ -1,6 +1,6 @@
 import Zcash.Circuits.Action.Statement
 import Zcash.Snark.Core.Domain
-import Zcash.Snark.Soundness.TopLevelAssignment
+import Zcash.Circuits.Integration.TopLevelAssignment
 
 /-!
 # Decoded instance rows to the Orchard Action statement

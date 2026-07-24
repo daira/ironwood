@@ -1,8 +1,8 @@
 import Zcash.Snark.Keygen.Pipeline
 import Zcash.Snark.Core.Domain
-import Zcash.Snark.Soundness.ResolverGates
-import Zcash.Snark.Soundness.ResolverQueryEnvironment
-import Zcash.Snark.Soundness.SelectorCoherence
+import Zcash.Circuits.Integration.ResolverGates
+import Zcash.Circuits.Integration.ResolverQueryEnvironment
+import Zcash.Circuits.Integration.SelectorCoherence
 import Zcash.Snark.Soundness.CanonicalConstraintModel
 
 /-!

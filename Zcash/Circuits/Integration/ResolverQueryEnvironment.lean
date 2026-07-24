@@ -1,6 +1,6 @@
 import Clean.Halo2.Keygen.Semantics
 import Zcash.Snark.Soundness.LookupInstantiation
-import Zcash.Snark.Soundness.PolynomialEnvironment
+import Zcash.Circuits.Integration.PolynomialEnvironment
 
 /-!
 # Resolver query feeds and Clean environments

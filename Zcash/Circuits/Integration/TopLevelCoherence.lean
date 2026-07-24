@@ -1,7 +1,7 @@
-import Zcash.Circuits.TopLevel
+import Clean.Halo2.TopLevel
 import Clean.Halo2.Keygen.FloorPlanner
-import Zcash.Snark.Soundness.OperationGates
-import Zcash.Snark.Soundness.OperationLookups
+import Zcash.Circuits.Integration.OperationGates
+import Zcash.Circuits.Integration.OperationLookups
 
 /-!
 # Top-level configure/synthesis coherence
@@ -18,7 +18,7 @@ placement, or verifying key is selected here.
 namespace Zcash.Snark
 
 open Halo2
-open Zcash.Circuits
+open Halo2
 
 set_option maxHeartbeats 20000
 

@@ -1,5 +1,5 @@
 import Zcash.Snark.Keygen.Pipeline
-import Zcash.Snark.Soundness.ResolverQueryEnvironment
+import Zcash.Circuits.Integration.ResolverQueryEnvironment
 
 /-!
 # Circuit-owned query-layout coverage
@@ -12,7 +12,7 @@ into the circuit-derived verifying key.
 namespace Zcash.Snark
 
 open Halo2
-open Zcash.Circuits
+open Halo2
 
 set_option maxHeartbeats 20000
 

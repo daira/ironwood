@@ -1,6 +1,6 @@
 import Zcash.Snark.Keygen.Pipeline
 import Zcash.Snark.Soundness.Multiopen.ConstraintResolver
-import Zcash.Snark.Soundness.TopLevelAssignment
+import Zcash.Circuits.Integration.TopLevelAssignment
 import Zcash.Circuits.Action.TopLevel
 
 /-!

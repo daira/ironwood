@@ -1,8 +1,8 @@
 import Zcash.Snark.Keygen.Pipeline
-import Zcash.Snark.Soundness.GateProjection
-import Zcash.Snark.Soundness.OperationGates
-import Zcash.Snark.Soundness.ResolverQueryEnvironment
-import Zcash.Snark.Soundness.TopLevelCoherence
+import Clean.Halo2.Keygen.GateProjection
+import Zcash.Circuits.Integration.OperationGates
+import Zcash.Circuits.Integration.ResolverQueryEnvironment
+import Zcash.Circuits.Integration.TopLevelCoherence
 
 /-!
 # Resolver-backed gate witnesses

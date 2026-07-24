@@ -1,7 +1,7 @@
 name = "Zcash"
 version = "0.1.0"
 keywords = ["cryptography", "math", "protocols"]
-defaultTargets = ["Zcash", "FixtureCheck", "CircuitCheck"]
+defaultTargets = ["Zcash", "FixtureCheck", "CircuitCheck", "Integration"]
 
 [leanOptions]
 pp.unicode.fun = true # pretty-prints `fun a ↦ b`
@@ -47,6 +47,15 @@ globs = ["Zcash.Snark.Fixtures.+"]
 [[lean_lib]]
 name = "CircuitCheck"
 globs = ["Zcash.Circuits.Tests.+"]
+
+# The Clean-to-ironwood integration boundary (`Zcash/Circuits/Integration/`): the
+# cross-language satisfaction seam, capped by the aggregator `Zcash.Circuits.Integration`.
+# Modules here may speak both vocabularies; nothing above the boundary imports Clean
+# identifiers. Its own target so the seam builds by plain `lake build` (the `Zcash`
+# root closure does not reach it).
+[[lean_lib]]
+name = "Integration"
+globs = ["Zcash.Circuits.Integration", "Zcash.Circuits.Integration.+"]
 
 # The Action verifying-key COMMITMENT derivation (`Zcash/Snark/Keygen/`): derives
 # `fixedCommitment`/`permutationCommonCommitment` from the circuit + captured URS

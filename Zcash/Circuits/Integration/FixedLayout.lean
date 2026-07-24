@@ -1,6 +1,6 @@
 import Zcash.Circuits.Fixtures.Layout
-import Zcash.Snark.Soundness.OperationFixed
-import Zcash.Snark.Soundness.PolynomialEnvironment
+import Zcash.Circuits.Integration.OperationFixed
+import Zcash.Circuits.Integration.PolynomialEnvironment
 
 /-!
 # Fixed-layout compiler bridge

@@ -1,6 +1,6 @@
 import Zcash.Snark.Core.Domain
-import Zcash.Circuits.TopLevelKeygen
-import Zcash.Snark.Soundness.PolynomialEnvironment
+import Clean.Halo2.TopLevelKeygen
+import Zcash.Circuits.Integration.PolynomialEnvironment
 
 /-!
 # Generic assignments for closed top-level circuits
@@ -21,7 +21,7 @@ input to this type.
 namespace Zcash.Snark
 
 open Halo2 Polynomial
-open Zcash.Circuits
+open Halo2
 
 set_option maxHeartbeats 20000
 

@@ -1,6 +1,6 @@
-import Zcash.Snark.Soundness.ActionPermutationDomainCompute
+import Zcash.Circuits.Integration.ActionPermutationDomainCompute
 import Zcash.Snark.Soundness.CanonicalConstraintModel
-import Zcash.Snark.Soundness.TopLevelAssignment
+import Zcash.Circuits.Integration.TopLevelAssignment
 
 /-!
 # Action permutation domain and verifier layout
@@ -17,7 +17,7 @@ the restriction equation, and the common-column identification explicitly.
 namespace Zcash.Snark
 
 open Polynomial
-open Zcash.Circuits
+open Halo2
 open Zcash.Circuits.Action (orchardActionTopLevelCircuit)
 
 namespace ActionPermutationDomain
@@ -29,7 +29,7 @@ abbrev actionShape (pp : Keygen.ProofParams) : Shape :=
 
 abbrev actionVk (pp : Keygen.ProofParams) (urs : URS G) :
     VerifyingKey (actionShape pp) Zcash.Circuits.Fp G :=
-  Zcash.Circuits.TopLevelCircuit.toVerifierKey
+  Halo2.TopLevelCircuit.toVerifierKey
     orchardActionTopLevelCircuit pp urs
 
 /-- The permutation chunks of every derived Action VK are `[7, 7, 1]`, with

@@ -1,5 +1,5 @@
-import Zcash.Circuits.TopLevelKeygen
-import Zcash.Snark.Soundness.CircuitIntegration
+import Clean.Halo2.TopLevelKeygen
+import Zcash.Circuits.Integration.CircuitIntegration
 
 /-!
 # Generic SNARK-to-top-level-circuit endpoint
@@ -13,7 +13,7 @@ boundaries; no Action-specific circuit, placement, or statement appears here.
 namespace Zcash.Snark
 
 open Halo2
-open Zcash.Circuits
+open Halo2
 
 set_option maxHeartbeats 20000
 
