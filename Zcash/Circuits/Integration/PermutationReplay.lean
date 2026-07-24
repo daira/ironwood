@@ -999,6 +999,35 @@ def chunkFlatten (nc numCols chunkLen m : ℕ) (width : ℕ → ℕ)
     rw [Nat.mul_comm]
     exact Nat.div_add_mod (g : ℕ) chunkLen
 
+/-- **The master copy-witness constructor.** Everything reduces to three leaf families
+over the keygen copy list: each copy pair agrees in value (or the shared branch fires,
+via `chunkRowValue_eq_of_mem_copies`), each declared copy's encoded endpoints are
+linked by the replayed list (via the membership lemmas), and the declared endpoints
+read back (resolution and the constants realization). -/
+noncomputable def CopyReplayWitness.ofLinkedPairs
+    {numCols n : ℕ} {place : RegionIndex → ℕ} {env : Environment Fp}
+    {ops : Operations Fp} {Bad : Prop}
+    (copies' : List (FlatCell numCols n × FlatCell numCols n))
+    (encode : CopyEndpoint Fp → FlatCell numCols n)
+    (value : FlatCell numCols n → Fp)
+    (hpairval : ∀ pr ∈ copies', value pr.1 = value pr.2 ∨ Bad)
+    (hlink : ∀ copy ∈ operationDeclaredCopies ops,
+      (replayKeygenPermutation copies').SameCycle
+        (encode copy.1) (encode copy.2))
+    (hread : ∀ copy ∈ operationDeclaredCopies ops,
+      copy.1.eval place env = value (encode copy.1) ∧
+        copy.2.eval place env = value (encode copy.2)) :
+    CopyReplayWitness place env ops (FlatCell numCols n) Bad :=
+  CopyReplayWitness.ofPairCycles encode value
+    (replayKeygenPermutation copies')
+    (by
+      intro pr hpr
+      rw [encodeDeclaredCopies, List.mem_map] at hpr
+      obtain ⟨copy, hcopy, rfl⟩ := hpr
+      exact hlink copy hcopy)
+    (fun l r h => value_eq_or_bad_of_replay_sameCycle value copies' hpairval h)
+    hread
+
 end Layout.Asm
 
 end Zcash.Snark
