@@ -35,7 +35,6 @@ theorem independentProductPMF_uniform {A B : Type*} [Fintype A] [Fintype B]
     [Nonempty A] [Nonempty B] :
     independentProductPMF (PMF.uniformOfFintype A) (PMF.uniformOfFintype B) =
       PMF.uniformOfFintype (A × B) := by
-  classical
   apply PMF.ext
   rintro ⟨a, b⟩
   rw [independentProductPMF, PMF.bind_apply, tsum_fintype]
