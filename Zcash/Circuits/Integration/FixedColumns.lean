@@ -2,7 +2,7 @@ import Zcash.Snark.Soundness.InstanceCommitment
 import Zcash.Snark.Soundness.FixedLayout
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 import Zcash.Snark.Soundness.SelectorCoherence
-import Zcash.Snark.Keygen.Pipeline
+import Zcash.Snark.Keygen.LagrangeBasisKey
 
 /-!
 # Fixed-column commitment provenance
@@ -114,6 +114,100 @@ structure TopLevelFixedCoherence
       row < (top.toVerifierKey pp urs).n ∧
         column < top.pinnedCS.numFixedColumns ∧
         (rows column).getD row 0 = (value : Fp)
+
+namespace TopLevelFixedCoherence
+
+omit [DecidableEq G] in
+/-- The circuit-derived VK's fixed commitment at one in-range column is the
+`ofPrefix` commitment of the corresponding keygen row vector. -/
+theorem fixedCommitment_eq_commitInstance
+    {ConfigInput Config : Type} {Output : TypeMap}
+    [CircuitType Output]
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : Keygen.ProofParams) (urs : URS G)
+    (hk : top.domainExponent = urs.k)
+    (hlen : (Keygen.derivedUrsGLagrange urs).length = 2 ^ urs.k)
+    (hgenerators : ∀ i : Fin (2 ^ urs.k),
+      (Keygen.derivedUrsGLagrange urs).getD (i : ℕ) 0 =
+        commit urs (polynomialCoefficients (2 ^ urs.k)
+          (rowPolynomial (top.toVerifierKey pp urs).omega
+            (Pi.single i (1 : Fp)))))
+    (column : ℕ) (hcolumn : column < top.pinnedCS.numFixedColumns) :
+    (top.toVerifierKey pp urs).fixedCommitment column =
+      (LagrangeCommitmentKey.ofFullList
+        urs (top.toVerifierKey pp urs).omega
+        (Keygen.derivedUrsGLagrange urs) hgenerators).commitInstance
+          (top.fixedRows.getD column []) 1 := by
+  rw [top.toVerifierKey_fixedCommitment]
+  have hcolumnRows : column < top.fixedRows.length := by
+    simpa only [top.fixedRows_length] using hcolumn
+  have hget :
+      (top.fixedRows.map
+        (Keygen.Fast.Msm.commitLagrangeFastWith
+          Keygen.Fast.Msm.defaultWindow urs.w
+          (Keygen.derivedUrsGLagrange urs))).getD column 0 =
+        Keygen.Fast.Msm.commitLagrangeFastWith
+          Keygen.Fast.Msm.defaultWindow urs.w
+          (Keygen.derivedUrsGLagrange urs)
+          (top.fixedRows.getD column []) := by
+    rw [List.getD_eq_getElem?_getD, List.getElem?_map,
+      List.getElem?_eq_getElem hcolumnRows,
+      List.getD_eq_getElem?_getD,
+      List.getElem?_eq_getElem hcolumnRows]
+    rfl
+  rw [TopLevelCircuit.fixedCommitments, List.parMap_eq_map, hget]
+  apply Keygen.commitLagrangeFastWith_eq_ofFullList_commitInstance
+    urs (top.toVerifierKey pp urs).omega hlen hgenerators
+  rw [top.fixedRows_getD_length column hcolumn, hk]
+
+/--
+Construct fixed coherence from the exact circuit-derived keygen rows.
+
+Dense-row shape, commitment provenance, and the query-count equality are generic.
+The caller supplies only the setup's Lagrange-basis equations plus the two genuinely
+static circuit/layout facts: coverage of every committed fixed column by the final
+query layout, and preservation of the sparse assignments after last-write
+deduplication and dense scattering.
+-/
+def ofKeygen
+    {ConfigInput Config : Type} {Output : TypeMap}
+    [CircuitType Output]
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : Keygen.ProofParams) (urs : URS G)
+    (hk : top.domainExponent = urs.k)
+    (hlen : (Keygen.derivedUrsGLagrange urs).length = 2 ^ urs.k)
+    (hgenerators : ∀ i : Fin (2 ^ urs.k),
+      (Keygen.derivedUrsGLagrange urs).getD (i : ℕ) 0 =
+        commit urs (polynomialCoefficients (2 ^ urs.k)
+          (rowPolynomial (top.toVerifierKey pp urs).omega
+            (Pi.single i (1 : Fp)))))
+    (queryLayout : ∀ column,
+      column < top.pinnedCS.numFixedColumns →
+        ∃ rotation,
+          (column, rotation) ∈
+            (top.toVerifierKey pp urs).fixedQueryLayout)
+    (realizes : ∀ column row value,
+      (column, row, value) ∈
+          (topLevelFixedOperationEntries top ++
+            topLevelSelectorEntries top) →
+        row < (top.toVerifierKey pp urs).n ∧
+          column < top.pinnedCS.numFixedColumns ∧
+          (top.fixedRows.getD column []).getD row 0 =
+            (value : Fp)) :
+    TopLevelFixedCoherence top pp urs where
+  key :=
+    LagrangeCommitmentKey.ofFullList
+      urs (top.toVerifierKey pp urs).omega
+      (Keygen.derivedUrsGLagrange urs) hgenerators
+  rows := fun column => top.fixedRows.getD column []
+  commitment :=
+    fixedCommitment_eq_commitInstance
+      top pp urs hk hlen hgenerators
+  fixedQueryCount := top.toVerifierKey_fixedQueryCount pp urs
+  queryLayout := queryLayout
+  realizes := realizes
+
+end TopLevelFixedCoherence
 
 omit [Module Fp G] [DecidableEq G] in
 /--

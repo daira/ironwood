@@ -383,6 +383,22 @@ def ofOperations (shape : Shape) (urs : URS G)
     lookupTableExprs := fun l =>
       (pinned.lookupTableExprs.getD l.val []).map RichExpression.toExpr }
 
+/-- Projection API for the fixed commitments produced by `ofOperations`.
+
+Downstream proofs should rewrite with this lemma instead of asking definitional
+equality to unfold the complete verifying-key constructor. -/
+@[simp] theorem ofOperations_fixedCommitment
+    (shape : Shape) (urs : URS G)
+    (cs : ConstraintSystem Fp) (ops : Operations Fp)
+    (column : ℕ) :
+    (ofOperations shape urs cs ops).fixedCommitment column =
+      (fixedCommitmentsOf urs.w (derivedUrsGLagrange urs)
+        (deriveSelCompressMap cs (2 ^ minimalK cs ops)
+          (activations (FloorPlanner.V1.starts ops)
+            (indexedRegions ops 0).1))
+        (minimalK cs ops) cs ops).getD column 0 := by
+  simp only [ofOperations]
+
 /-- **A verifying key whose gate list is a derivation's evaluates like the source
 circuit.** The verifier holds `Zcash.Snark.Expr` gates while the derivation produces
 `Halo2.RichExpression` gates, so the hypothesis follows keygen's construction direction:
@@ -485,11 +501,51 @@ def selMapDerived
     (activations (FloorPlanner.V1.starts (top.operations 0))
       (indexedRegions (top.operations 0) 0).1)
 
+/-- The dense fixed rows keygen commits for a closed circuit. -/
+def fixedRows
+    (top : TopLevelCircuit Fp ConfigInput Config Output) : List (List Fp) :=
+  denseColumns (2 ^ top.domainExponent)
+    (PinnedConstraintSystem.derive
+      top.constraintSystem top.selMapDerived).numFixedColumns
+    (fixedSparseOf top.selMapDerived top.domainExponent
+      top.constraintSystem (top.operations 0))
+
+/-- Keygen produces one dense row vector for every derived fixed column. -/
+theorem fixedRows_length
+    (top : TopLevelCircuit Fp ConfigInput Config Output) :
+    top.fixedRows.length = top.pinnedCS.numFixedColumns := by
+  change
+    (denseColumns (2 ^ top.domainExponent)
+      (PinnedConstraintSystem.derive
+        top.constraintSystem top.selMapDerived).numFixedColumns
+      _).length = top.pinnedCS.numFixedColumns
+  rw [denseColumns_length]
+  rfl
+
+/-- Every derived fixed row vector spans the complete keygen domain. -/
+theorem fixedRows_getD_length
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (column : ℕ) (hcolumn : column < top.pinnedCS.numFixedColumns) :
+    (top.fixedRows.getD column []).length = 2 ^ top.domainExponent := by
+  apply denseColumns_getD_length
+  simpa only [top.pinnedCS_eq_derive] using hcolumn
+
 /-- The derived fixed-column commitments of a closed circuit against a URS. -/
 def fixedCommitments
     (top : TopLevelCircuit Fp ConfigInput Config Output) (urs : URS G) : List G :=
-  fixedCommitmentsOf urs.w (derivedUrsGLagrange urs) top.selMapDerived
-    top.domainExponent top.constraintSystem (top.operations 0)
+  top.fixedRows.parMap
+    (Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow urs.w
+      (derivedUrsGLagrange urs))
+
+/-- The named top-level fixed-row view is exactly the fixed-commitment computation
+used by generic keygen. -/
+@[simp] theorem fixedCommitments_eq_fixedCommitmentsOf
+    (top : TopLevelCircuit Fp ConfigInput Config Output) (urs : URS G) :
+    top.fixedCommitments urs =
+      fixedCommitmentsOf urs.w (derivedUrsGLagrange urs)
+        top.selMapDerived top.domainExponent
+        top.constraintSystem (top.operations 0) := by
+  simp only [fixedCommitments, fixedRows, fixedCommitmentsOf]
 
 /-- The derived permutation common commitments of a closed circuit against a URS. -/
 def permutationCommitments
@@ -505,6 +561,16 @@ def verifierKeyAt
     (shape : Shape) (urs : URS G) : VerifyingKey shape Fp G :=
   .ofOperations shape urs top.constraintSystem (top.operations 0)
 
+/-- Projection API for the fixed commitments of the shape-explicit top-level key. -/
+@[simp] theorem verifierKeyAt_fixedCommitment
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (shape : Shape) (urs : URS G) (column : ℕ) :
+    (top.verifierKeyAt shape urs).fixedCommitment column =
+      (top.fixedCommitments urs).getD column 0 := by
+  simp only [verifierKeyAt, VerifyingKey.ofOperations_fixedCommitment,
+    fixedCommitments_eq_fixedCommitmentsOf,
+    domainExponent, selMapDerived]
+
 /-- **The verifying key of a closed top-level circuit**: the `TopLevelCircuit` carries
 its own `configInput` and unit input, so the only remaining inputs are the proof-shape
 counts and the URS — `keygen_vk` at the `TopLevelCircuit` level, with the derived
@@ -514,6 +580,14 @@ def toVerifierKey
     (pp : ProofParams) (urs : URS G) :
     VerifyingKey (pp.mergeDerived top) Fp G :=
   top.verifierKeyAt (pp.mergeDerived top) urs
+
+/-- The derived key exposes the fixed commitments computed from its own dense rows. -/
+theorem toVerifierKey_fixedCommitment
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (pp : ProofParams) (urs : URS G) (column : ℕ) :
+    (top.toVerifierKey pp urs).fixedCommitment column =
+      (top.fixedCommitments urs).getD column 0 := by
+  simp only [toVerifierKey, verifierKeyAt_fixedCommitment]
 
 /-- The derived key exposes exactly the advice-query layout of its selector-map
 derivation. -/

@@ -715,18 +715,21 @@ both selector activations and all fixed/table operations for a resolver assignme
 The remaining constructor work is to instantiate this package from the generic
 `TopLevelCircuit.toVerifierKey` pipeline. That work is now split deliberately:
 
-- the generic keygen half is in progress on this branch: prove that
-  `denseColumns` is rectangular, identify each entry of `fixedCommitmentsOf` with
-  the Lagrange commitment of the corresponding dense row, and provide a constructor
-  whose remaining premises are only query coverage and sparse-to-dense realization;
+- the generic keygen half is complete on this branch: `denseColumns` is rectangular,
+  each entry of `fixedCommitmentsOf` is the Lagrange commitment of the corresponding
+  dense row, and `TopLevelFixedCoherence.ofKeygen` derives the rows, key,
+  commitments, and fixed-query count;
 - the concrete Action/VK half may proceed independently: prove those two narrow
   premises for the circuit-derived fixed layout and its final fixed query layouts.
 
-The rectangularity lemmas are already implemented on this branch. The commitment
-identification theorem is the current proof-engineering task; it is being factored
-through a small generic Lagrange-commitment lemma so elaboration remains practical at
-the normal 20,000-heartbeat development budget. This is constructor support, not a
-new Action-side semantic obligation.
+The commitment proof is factored through a small one-row Lagrange-MSM theorem and
+explicit projection simp lemmas for `ofOperations`, `verifierKeyAt`, and
+`toVerifierKey`; downstream proofs do not unfold the VK constructor. Fixed keygen uses
+the complete executable derived Lagrange list through
+`LagrangeCommitmentKey.ofFullList`, so this constructor has no noncomputable
+interpolation fallback. The remaining sparse-to-dense premise is under design: the
+generic compiler theorem should account for last-write deduplication, leaving no
+large Action operation-list proof.
 
 The generic operation walk already proves that every extracted enabled gate occurs in
 the floor-planner activation table, and `selectorScale_ne_zero_of_enabledGate` turns
@@ -1103,7 +1106,7 @@ append-only merge flow.
 
 | Marker | Work package | Current state | Delivers / unblocks |
 |---|---|---|---|
-| **[ME] fixed constructor** | Finish generic `TopLevelFixedCoherence` constructor support in keygen: dense-row shape, per-column Lagrange commitment provenance, and the smallest useful constructor interface. | `denseColumns_length`/`denseColumns_getD_length` provide the rectangularity facts; the per-column commitment theorem is being factored to avoid elaborating the whole keygen pipeline in one theorem. It should leave only query coverage and sparse-to-dense realization to the concrete circuit/VK certificate. | A stable seam at which the concrete Action fixed/VK work can supply its two static facts, without duplicating commitment algebra. |
+| **[ME] fixed compiler** | Finish the generic last-write/dedup/scatter semantics and minimize fixed-query coverage to the columns actually consumed by fixed/table/selector requirements. | Dense-row shape, full-list Lagrange commitment provenance, fixed-query count, and the generic `TopLevelFixedCoherence.ofKeygen` constructor are complete. The remaining design question is whether fixed-write consistency is a successful-keygen law or whether Clean fixed semantics should directly follow final-write behavior. | A correct-by-construction coherence value, avoiding a giant Action-specific sparse-layout certificate. |
 | **[ME] lookup join** | Consume the exact packed-selector realization produced by `TopLevelFixedCoherence`. | Correct-by-construction lookup lawfulness, generic routing/projection, activation-row fit, deployed-witness construction, bundle-wide bad-set aggregation, exact top-level `θ` pricing, and conversion of one bundle exclusions record into every per-proof witness condition are complete. This stream is blocked only on fixed coherence; once available, the join should be small. | The lookup field of `FullCircuitBridge` for every Action proof index. |
 | **[SEPARATE: copy]** | Finish the concrete endpoint encoding/read equations and connect constant sites to the closed V1 allocation zip, then feed those facts to `CopyReplayWitness.ofLinkedPairs`. | Generic replay correctness, σ rows, non-constant declared-copy membership, membership-to-resolver-value equality, active-row restriction, chunk flattening, constant-stream characterization, and the master witness constructor are complete. | The copy field of `FullCircuitBridge`. |
 | **[SEPARATE: Action fixed/VK]** | Prove final fixed-query coverage and sparse-to-dense scatter realization for the circuit-derived Action layout, then instantiate the generic coherence constructor. | Generic fixed/table and selector-realization semantics are complete. The shared generic stream is taking ownership of dense-row shape and fixed-commitment algebra, so this task need not reproduce them. | The fixed/table field and the exact packed-selector fact consumed by the lookup stream. |
