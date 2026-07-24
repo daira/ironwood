@@ -189,9 +189,6 @@ theorem actionBundleStatement_or_relation_of_acceptedNodeBinding
               ActionPermutationDomain.blindingFactors_lt pp urs)
             haccepts).constraints
           (orchardActionTopLevelCircuit.toVerifierKey pp urs).n j))
-    (fixedCoherence :
-      TopLevelFixedCoherence
-        orchardActionTopLevelCircuit pp urs)
     (permutationExclusions :
       ResolverPermutationChallengeExclusions
         (orchardActionTopLevelCircuit.toVerifierKey pp urs)
@@ -246,7 +243,7 @@ theorem actionBundleStatement_or_relation_of_acceptedNodeBinding
       actionBundleStatement_or_relation_of_acceptedCircuitSat
         pp urs hk inputs ps ch vk rfl pU pW a
         batchOpenings memberDecode haccepts hblinding hpoly
-        hsatisfied hgoodY fixedCoherence permutationExclusions
+        hsatisfied hgoodY permutationExclusions
         lookupSelectorValues lookupExclusions
   · exact Or.inr hrelation
 

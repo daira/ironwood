@@ -1,6 +1,7 @@
 import Zcash.Circuits.Action.TopLevel
 import Zcash.Circuits.Integration.FixedColumns
 import Zcash.Circuits.Integration.ActionPermutationDomainCompute
+import Zcash.Snark.Keygen.FftSpec
 
 /-!
 # Interim closed computations for Action fixed-column coherence
@@ -105,10 +106,39 @@ noncomputable def ofKeygen
       intro column row value hentry
       exact realizes column row value hentry)
 
+/--
+Construct Action fixed coherence directly from the symbolically proved
+Lagrange-basis FFT specification. The only remaining computations are the
+prominently interim layout failure lists above.
+-/
+noncomputable def ofDerived
+    (pp : ProofParams) (urs : URS G)
+    (hk : orchardActionTopLevelCircuit.domainExponent = urs.k) :
+    TopLevelFixedCoherence orchardActionTopLevelCircuit pp urs := by
+  have hkUrs : urs.k ≤ 32 := by
+    rw [← hk]
+    exact Nat.le_of_lt_succ ActionPermutationDomain.domainExponent_lt
+  have homega :
+      (orchardActionTopLevelCircuit.toVerifierKey pp urs).omega =
+        omegaOf urs.k := by
+    change
+      omegaOf orchardActionTopLevelCircuit.domainExponent =
+        omegaOf urs.k
+    rw [hk]
+  apply ofKeygen pp urs hk (Keygen.derivedUrsGLagrange_length urs)
+  intro i
+  simpa only [homega] using
+    Keygen.ofPrefix_setup_of_closed urs hkUrs
+      (Keygen.derivedUrsGLagrange_generator_eq urs hkUrs) i
+      (by
+        rw [Keygen.derivedUrsGLagrange_length]
+        exact i.isLt)
+
 assert_no_sorry queryCoverageFailures_eq_nil
 assert_no_sorry queryLayout
 assert_no_sorry realizationFailures_eq_nil
 assert_no_sorry realizes
+assert_no_sorry ofDerived
 
 end ActionFixedCoherence
 

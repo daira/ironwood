@@ -143,9 +143,6 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
       ch.y ∉ szBadSet
         (foldSplitWitness relation.model.constraints
           vk.n j))
-    (fixedCoherence :
-      TopLevelFixedCoherence
-        orchardActionTopLevelCircuit pp urs)
     (permutationExclusions :
       ResolverPermutationChallengeExclusions
         (orchardActionTopLevelCircuit.toVerifierKey pp urs)
@@ -177,7 +174,7 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
       hblinding hpoly relation hgoodY inputs hsize (instanceKey pp urs)
       (commitment_primary pp urs inputs) primaryRegistered
       (ActionGateCoherence.topLevelGateCoherence pp urs)
-      fixedCoherence permutationExclusions
+      permutationExclusions
       lookupSelectorValues lookupExclusions
 
 assert_no_sorry actionBundleStatement_or_relation_of_canonicalRelation
@@ -240,9 +237,6 @@ theorem actionBundleStatement_or_relation_of_acceptedCircuitSat
             (memberDecode := memberDecode)
             (hblinding := hblinding) haccepts).constraints
           vk.n j))
-    (fixedCoherence :
-      TopLevelFixedCoherence
-        orchardActionTopLevelCircuit pp urs)
     (permutationExclusions :
       ResolverPermutationChallengeExclusions
         (orchardActionTopLevelCircuit.toVerifierKey pp urs)
@@ -284,7 +278,6 @@ theorem actionBundleStatement_or_relation_of_acceptedCircuitSat
   · simpa only [
       CanonicalMemberConstraintRelation.model,
       hpolynomial] using hgoodY
-  · exact fixedCoherence
   · simpa only [hpolynomial] using permutationExclusions
   · simpa only [hpolynomial] using lookupSelectorValues
   · simpa only [hpolynomial] using lookupExclusions
