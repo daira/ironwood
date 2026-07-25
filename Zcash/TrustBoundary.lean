@@ -24,7 +24,7 @@ import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.PermutationRows
 import Zcash.Snark.Soundness.ConstraintRelations
 import Zcash.Snark.Soundness.ChallengePricing
-import Zcash.Circuits.Integration.ActionVesta
+import Zcash.Snark.Soundness.Deployed.ActionVesta
 
 /-!
 # Trust boundary, build-checked

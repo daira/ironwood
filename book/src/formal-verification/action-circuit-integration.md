@@ -41,6 +41,12 @@ argument that appears possible but is too large for the current milestone, label
 prominently as an **interim solution**, state the intended structural replacement,
 and keep it out of foundational interfaces where it could silently become permanent.
 
+The follow-on design for eliminating the Action-specific certificates is
+[`lawfulness-and-certificate-elimination.md`](../../../Zcash/Circuits/Integration/lawfulness-and-certificate-elimination.md).
+It includes correctness obligations currently hidden by `closeWithOperations`: the
+canonical keygen pipeline should reject configure/synthesis mismatch rather than
+repair it and rely on the concrete VK comparison to make the repair appear harmless.
+
 ## Upstream PR landscape
 
 The verifier foundations on which this integration was originally stacked are now
@@ -1245,7 +1251,7 @@ instance slots forced by `CanonicalMemberConstraintRelation.acceptedRoute` and p
 that their full polynomial feeds equal the canonical accepted model's feeds.
 `Soundness/CanonicalVesta` specializes the verifier-native terminal's former free
 callback to `CircuitSat` for that model. Finally,
-`Circuits/Integration/ActionVesta` supplies the deployed one-proof query layouts,
+`Snark/Soundness/Deployed/ActionVesta` supplies the deployed one-proof query layouts,
 invokes the canonical Vesta adapter, and feeds its result to the Action endpoint.
 These route equalities are generic multiopen facts, not Action synthesis or
 floor-planner obligations. The recent tail of #96 exposes complementary

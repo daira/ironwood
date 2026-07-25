@@ -11,7 +11,6 @@ import Zcash.Circuits.Integration.ActionCopyReplay
 import Zcash.Circuits.Integration.ActionPermutationDomainCompute
 import Zcash.Circuits.Integration.ActionStatement
 import Zcash.Circuits.Integration.ActionTerminal
-import Zcash.Circuits.Integration.ActionVesta
 import Zcash.Circuits.Integration.CircuitIntegration
 import Zcash.Circuits.Integration.CircuitSatisfaction
 import Zcash.Circuits.Integration.CopyListMembership
