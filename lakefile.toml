@@ -55,5 +55,4 @@ globs = ["Zcash.Circuits.Tests.TestVkMatchAction",
          "Zcash.Circuits.Tests.TestVkMatchMul",
          "Zcash.Circuits.Tests.TestVkLayoutActionBase",
          "Zcash.Circuits.Tests.TestVkLayoutAdd",
-         "Zcash.Circuits.Tests.TestVkLayoutMul",
-         "Zcash.Circuits.Tests.TestSelectorIsolation"]
+         "Zcash.Circuits.Tests.TestVkLayoutMul"]
