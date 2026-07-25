@@ -7,6 +7,7 @@ import Zcash.Security.KeyBinding.Probability
 import Zcash.Security.Ledger.Balance
 import Zcash.Security.Ledger.Spendability
 import Zcash.Security.Ledger.SpendAuthority
+import Zcash.Security.Ledger.Completeness
 import Zcash.Security.Common.Birthday
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
@@ -217,6 +218,17 @@ data path. -/
 assert_axioms ivk_eq_of_receivable
 assert_computable spendAuthForgeryOrBreak +choice
 assert_computable spendAuthorityOrBreak +choice
+
+/-! ## Honest-spend completeness
+
+The honest construction is computable data (the wallet's own algorithm, including the
+authentication data recovered from the defined tree); the two completeness endpoints
+are theorems over it. -/
+
+assert_computable honestTx
+assert_computable HonestAction.withDummySpend
+assert_axioms HonestAction.satisfied
+assert_axioms honestTx_valid
 
 /-! ## Binding-signature relation reductions
 

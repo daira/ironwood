@@ -167,7 +167,10 @@ structure ValidLedger (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
   /-- Each anchor is the root after some earlier transaction boundary: an action of
   transaction `i` (zero-based) may reference the tree after any `j ≤ i` transactions,
   so only outputs of strictly earlier transactions. The equation also asserts that the
-  referenced tree is defined (no compression along it escapes). -/
+  referenced tree is defined (no compression along it escapes). Anchors are
+  per-action, a documented simplification: deployed Orchard encodes one anchor for
+  the whole transaction (Sapling v4 allowed per-spend anchors), and per-action
+  anchors only widen what the adversary may do. -/
   anchor_valid : ∀ i : Fin ledger.length, ∀ a ∈ (ledger.get i).actions,
     ∃ j ≤ (i : ℕ), rootAfter P ledger j = some a.inst.rt
   /-- The tree never overflows (the consensus capacity rule). -/
