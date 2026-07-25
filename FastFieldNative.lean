@@ -4,6 +4,7 @@ Released under the Apache License, Version 2.0.
 -/
 import Zcash.Vendor.Montgomery.Native64x8Defs
 import Zcash.Vendor.ProjectiveMontDefs
+import Zcash.Vendor.ScalarFftDefs
 
 /-!
 # The precompiled native lane
@@ -14,7 +15,8 @@ repository.  It exists so that the shared library Lake emits
 library — Lean's dynlib loader derives the expected `initialize_…` symbol from the file name.
 
 Its import closure is core-only by construction: the field definitions
-(`Zcash.Vendor.Montgomery.Native64x8Defs`) and the Vesta point definitions
-(`Zcash.Vendor.ProjectiveMontDefs`) import nothing beyond Lean core, so native
-compilation stays at three modules instead of a mathlib closure.
+(`Zcash.Vendor.Montgomery.Native64x8Defs`), the Vesta point definitions
+(`Zcash.Vendor.ProjectiveMontDefs`) and the scalar FFT (`Zcash.Vendor.ScalarFftDefs`)
+import nothing beyond Lean core, so native compilation stays at four modules instead of a
+mathlib closure.
 -/

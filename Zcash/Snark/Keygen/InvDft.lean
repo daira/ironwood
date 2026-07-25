@@ -132,4 +132,44 @@ theorem commitLagrangeSpec_derivedUrsGLagrange (urs : URS G) (hk : urs.k ≤ 32)
   congr 2
   rw [Nat.mul_comm]
 
+/-! ## The Lagrange generators as monomial MSMs
+
+The same closed form, read the other way round: an individual derived Lagrange generator is a
+single commitment of a closed coefficient row against the monomial URS.  A short **prefix** of
+the derived basis therefore costs that many MSMs, instead of the whole `2 ^ k`-point group
+FFT. -/
+
+/-- The `j`-th derived Lagrange generator's coefficient row: `n⁻¹ · ω^(−j·t)`, `t < 2 ^ k`. -/
+def lagrangeRow (k j : ℕ) : List Fp :=
+  (List.range (2 ^ k)).map fun t => ((2 : Fp) ^ k)⁻¹ * omegaInvOf k ^ (j * t)
+
+theorem lagrangeRow_length (k j : ℕ) : (lagrangeRow k j).length = 2 ^ k := by
+  simp [lagrangeRow]
+
+/-- Each derived Lagrange generator is the unblinded monomial commitment of its row. -/
+theorem commitLagrangeSpec_lagrangeRow (urs : URS G) (hk : urs.k ≤ 32)
+    (j : Fin (2 ^ urs.k)) :
+    Fast.Msm.commitLagrangeSpec 0 (List.ofFn urs.g) (lagrangeRow urs.k (j : ℕ))
+      = (derivedUrsGLagrange urs).getD (j : ℕ) 0 := by
+  rw [Fast.Msm.commitLagrangeSpec, derivedUrsGLagrange_getD urs hk j, add_zero,
+    lagrangeRow_length, sum_range_list, ← Fin.sum_univ_eq_sum_range]
+  refine Finset.sum_congr rfl fun t _ => ?_
+  rw [List.getD_eq_getElem _ 0 (by simp [lagrangeRow]), List.getD_eq_getElem _ 0 (by simp),
+    val_smul']
+  simp [lagrangeRow]
+
+/-- **A prefix of the derived Lagrange basis, without the group FFT**: the first `m`
+generators are `m` monomial MSMs of the closed coefficient rows. -/
+theorem derivedUrsGLagrange_take (urs : URS G) (hk : urs.k ≤ 32) (m : ℕ)
+    (hm : m ≤ 2 ^ urs.k) :
+    (derivedUrsGLagrange urs).take m
+      = List.ofFn fun j : Fin m =>
+          Fast.Msm.commitLagrangeSpec 0 (List.ofFn urs.g) (lagrangeRow urs.k (j : ℕ)) := by
+  have hlen := derivedUrsGLagrange_length urs
+  refine List.ext_getElem (by simp [hlen]; omega) fun i h1 h2 => ?_
+  have hi : i < m := by simp [hlen] at h1; omega
+  rw [List.getElem_take, List.getElem_ofFn]
+  rw [commitLagrangeSpec_lagrangeRow urs hk ⟨i, lt_of_lt_of_le hi hm⟩]
+  exact (List.getD_eq_getElem _ 0 (by rw [hlen]; exact lt_of_lt_of_le hi hm)).symm
+
 end Zcash.Snark.Keygen

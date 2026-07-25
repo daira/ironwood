@@ -335,6 +335,14 @@ def one : Limbs8 := rModModulus
 /-- Montgomery squaring in the Pallas base field. -/
 @[inline] def square (a : Limbs8) : Limbs8 := Native64x8.mul modulusLimbs negInv a a
 
+/-- Enter Montgomery form from a canonical natural number below `p`. -/
+@[inline] def ofNat (n : Nat) : Limbs8 :=
+  Native64x8.mul modulusLimbs negInv (Limbs8.ofNat n) r2ModModulus
+
+/-- Leave Montgomery form: the canonical limb representative. -/
+@[inline] def toLimbs8 (a : Limbs8) : Limbs8 :=
+  Native64x8.mul modulusLimbs negInv a Limbs8.one
+
 end PallasFq
 
 end Native64x8

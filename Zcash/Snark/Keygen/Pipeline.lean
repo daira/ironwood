@@ -553,6 +553,26 @@ theorem fixedCommitmentsSeqWith_eq (commit : List Fp → G) (selMap : Halo2.SelC
       = fixedCommitmentsWith commit selMap k cs ops := by
   simp only [fixedCommitmentsSeqWith, fixedCommitmentsWith, List.parMap_eq_map]
 
+/-- Every dense fixed column has exactly the requested row count. -/
+theorem denseColumns_mem_length (n numCols : ℕ) (triples : List (ℕ × ℕ × ℕ)) :
+    ∀ c ∈ denseColumns n numCols triples, c.length = n := by
+  intro c hc
+  obtain ⟨i, hi, rfl⟩ := List.mem_iff_getElem.mp hc
+  have hi' : i < numCols := by rwa [denseColumns_length] at hi
+  have h := denseColumns_getD_length n numCols triples i hi'
+  rwa [List.getD_eq_getElem _ _ hi] at h
+
+omit [AddCommGroup G] [Inhabited G] in
+/-- Two committers that agree on FULL-DOMAIN columns give the same fixed commitments: every
+dense fixed column has length `2 ^ k`.  This is the hook a concrete evaluation site uses to
+swap in a faster committer whose correctness proof needs the column length. -/
+theorem fixedCommitmentsSeqWith_congr {f g : List Fp → G} (selMap : Halo2.SelCompressMap)
+    (k : ℕ) (cs : ConstraintSystem Fp) (ops : Operations Fp)
+    (h : ∀ l : List Fp, l.length = 2 ^ k → f l = g l) :
+    fixedCommitmentsSeqWith f selMap k cs ops = fixedCommitmentsSeqWith g selMap k cs ops := by
+  simp only [fixedCommitmentsSeqWith]
+  exact List.map_congr_left fun c hc => h c (denseColumns_mem_length _ _ _ c hc)
+
 /-- The derived fixed-column commitments — `commit_lagrange` of each dense fixed column
 with the default blind (`plonk/keygen.rs:230-240`, `keygen_vk`'s `fixed_commitments`;
 Pippenger per MSM, `commitLagrangeFastWith_eq` — evaluation strategy only). The
@@ -645,6 +665,23 @@ theorem permutationCommitmentsSeqWith_eq (commit : List Fp → G) (k : ℕ)
       = permutationCommitmentsWith commit k cs ops := by
   simp only [permutationCommitmentsSeqWith, permutationCommitmentsWith,
     List.parMap_eq_map]
+
+/-- Every permutation polynomial is a full-domain row vector. -/
+theorem permPolysOf_mem_length (k : ℕ) (cs : ConstraintSystem Fp) (ops : Operations Fp) :
+    ∀ l ∈ permPolysOf k cs ops, l.length = 2 ^ k := by
+  intro l hl
+  simp only [permPolysOf, List.mem_map] at hl
+  obtain ⟨i, -, rfl⟩ := hl
+  simp
+
+omit [AddCommGroup G] [Inhabited G] in
+/-- The permutation twin of `fixedCommitmentsSeqWith_congr`. -/
+theorem permutationCommitmentsSeqWith_congr {f g : List Fp → G} (k : ℕ)
+    (cs : ConstraintSystem Fp) (ops : Operations Fp)
+    (h : ∀ l : List Fp, l.length = 2 ^ k → f l = g l) :
+    permutationCommitmentsSeqWith f k cs ops = permutationCommitmentsSeqWith g k cs ops := by
+  simp only [permutationCommitmentsSeqWith]
+  exact List.map_congr_left fun c hc => h c (permPolysOf_mem_length k cs ops c hc)
 
 /-- The derived permutation common commitments — `commit_lagrange` of each permutation
 polynomial with the default blind (`build_vk`, `permutation/keygen.rs:147-151`;

@@ -88,4 +88,5 @@ globs = [
   "FastFieldNative",
   "Zcash.Vendor.Montgomery.Native64x8Defs",
   "Zcash.Vendor.ProjectiveMontDefs",
+  "Zcash.Vendor.ScalarFftDefs",
 ]
