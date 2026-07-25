@@ -59,9 +59,14 @@ jobs:
       # is no fast SHA-256 in the toolchain — so this OS `sha256sum -c` is the
       # cryptographic drift/tamper guard, complementing the `TestVk*` reconstruction that
       # checks the fixtures against the Lean circuit model. See `Zcash/Circuits/Fixtures/`.
+      # The `diff` first fails if SHA256SUMS does not list *exactly* the committed `.json`
+      # fixtures, so a newly added fixture can never slip in content-unpinned.
       - name: Verify circuit fixture content hashes
         working-directory: Zcash/Circuits/Fixtures
-        run: sha256sum -c SHA256SUMS
+        run: |
+          diff <(ls *.json | sort) <(awk '{print $2}' SHA256SUMS | sort) \
+            || { echo "::error::SHA256SUMS must list exactly the committed *.json fixtures"; exit 1; }
+          sha256sum -c SHA256SUMS
       # Installs the toolchain from lean-toolchain, fetches the Mathlib olean
       # cache, and runs `lake build --wfail`, which rejects all warnings and builds
       # `defaultTargets = ["Zcash", "FixtureCheck"]`. Building `FixtureCheck`

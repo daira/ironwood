@@ -21,6 +21,13 @@ fast SHA-256 exists in the toolchain, and a hand-rolled one is not worth maintai
   (`sha256sum -c`, the OS tool). SHA-256 (rather than a non-cryptographic checksum) means
   the pin also resists a *crafted* swap, not just accidental drift.
 
+Because Lake does not track the `.json` as a dependency of this `.lean`, a *local*
+incremental `lake build` after regenerating a fixture may reuse a cached olean and skip
+the semantic `#eval` above — so CI (a clean build, which always re-elaborates, plus the
+`sha256sum` guard) is the authority. After regenerating a fixture locally, refresh
+`SHA256SUMS` (`sha256sum <files> > SHA256SUMS`) and, to re-run the check locally, force a
+rebuild (e.g. `touch` the consuming test or `lake clean`).
+
 Small fixtures (the Add/Mul doc-test pairs, the SelMaps) stay as readable Lean
 literals; only the whole-circuit Action dumps use this path.
 -/
