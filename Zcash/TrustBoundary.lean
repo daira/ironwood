@@ -116,6 +116,14 @@ assert_computable Merkle.collisionOfWrongLeaf
 assert_computable noteCommitBreakOfNe
 assert_computable Zcash.Security.Ledger.nfOldEqOrBreak +choice
 
+/-! ## Statement-layer pinning theorems
+
+The statement layer's exported pinning guarantees: an address `(g_d, pk_d)` determines
+`ivk`, and hence `nk` is determined up to an exhibited key-binding break. -/
+
+assert_axioms ivk_pinned
+assert_axioms nk_eq_or_break
+
 /-! ## Ledger model
 
 The ledger-model definitions are plain computable data over public ledger contents; the
