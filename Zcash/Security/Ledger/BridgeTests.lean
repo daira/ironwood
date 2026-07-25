@@ -232,9 +232,10 @@ assert_computable classifyAction +choice
 assert_axioms value_positive
 assert_axioms value_negative
 assert_axioms value_equal
--- The concrete Pallas refinements inherit the explicit `pallas_natCard` trust
--- declaration (and native certificate checks).  They are therefore audited by
--- `lean_verify` rather than asserted against the smaller standard/native budget.
+-- The concrete Pallas refinements inherit CompElliptic's Pallas point-count witness
+-- (`pallas_natCard`, a `native_decide`-backed theorem) and other native certificate
+-- checks.  They are therefore audited by `lean_verify` rather than asserted against the
+-- smaller standard/native budget.
 assert_axioms zero_encodings_distinct
 assert_axioms zero_encodings_decode_equal
 assert_axioms dummy_spend_merkle_vacuous

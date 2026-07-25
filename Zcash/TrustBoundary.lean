@@ -817,17 +817,17 @@ assert_axioms adaptEsc_measure_le
 
 /-! ## The Action circuit — the halo2-native soundness trust surface
 
-The circuit-layer soundness theorems live above the standard tier: they consume the one
-declared axiom `Zcash.Circuits.Point.pallas_natCard` (the Pallas point count — see the
-`+curveOrder` tier in `Zcash.Meta.AxiomCheck`) and `native_decide` certificates (the six
-fixed-base window tables and small `interval_cases` facts). These assertions pin exactly
-that budget for the generic soundness theorems and for the fully-instantiated deployed
-bundle — a `sorry` or any further axiom reached anywhere in the Action stack fails the
-build here. -/
+The circuit-layer soundness theorems live at the `native_decide` tier: they consume
+`native_decide` certificates only — the six fixed-base window tables, small `interval_cases`
+facts, and CompElliptic's Pallas point-count witness (`pallas_natCard`, now a theorem backed
+by `CompElliptic.Curves.Pasta.Pallas.card_eq` rather than a curve-order axiom). These
+assertions pin exactly that budget for the generic soundness theorems and for the
+fully-instantiated deployed bundle — a `sorry` or any further axiom reached anywhere in the
+Action stack fails the build here. -/
 
-assert_axioms Zcash.Circuits.Action.Circuit.soundness +native +curveOrder
-assert_axioms Zcash.Circuits.Action.Circuit.soundnessPost +native +curveOrder
-assert_axioms Zcash.Circuits.Action.orchardActionCircuit +native +curveOrder
+assert_axioms Zcash.Circuits.Action.Circuit.soundness +native
+assert_axioms Zcash.Circuits.Action.Circuit.soundnessPost +native
+assert_axioms Zcash.Circuits.Action.orchardActionCircuit +native
 
 /-! ## The circuit → ledger bridge — exported refinement theorems
 
@@ -835,9 +835,9 @@ The end-to-end refinement from a satisfying Action assignment to the games-facin
 statement (`ActionBreak … ∨ ∃ inst w, …`), and the break classifier's two correctness
 directions (a classified escape is a witness-tied break; a `none` verdict leaves every
 Sinsemilla query defined). Same budget as the circuit layer above: standard tier plus
-`native_decide` certificates plus the declared curve-order axiom. -/
+`native_decide` certificates (including the Pallas point-count witness). -/
 
-assert_axioms Zcash.Security.Ledger.Bridge.specPost_to_ledger +native +curveOrder
-assert_axioms Zcash.Security.Ledger.Bridge.circuit_soundness_to_ledger +native +curveOrder
-assert_axioms Zcash.Security.Ledger.Bridge.actionBreak_of_classify +native +curveOrder
-assert_axioms Zcash.Security.Ledger.Bridge.classify_none_defined +native +curveOrder
+assert_axioms Zcash.Security.Ledger.Bridge.specPost_to_ledger +native
+assert_axioms Zcash.Security.Ledger.Bridge.circuit_soundness_to_ledger +native
+assert_axioms Zcash.Security.Ledger.Bridge.actionBreak_of_classify +native
+assert_axioms Zcash.Security.Ledger.Bridge.classify_none_defined +native
