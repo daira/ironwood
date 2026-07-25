@@ -28,25 +28,25 @@ So each definition sits on a three-layer stack:
 ## One connected picture
 
 ```mermaid
-%%{init: {"flowchart": {"nodeSpacing": 20, "rankSpacing": 50, "padding": 6, "diagramPadding": 4, "subGraphTitleMargin": {"top": 2, "bottom": 22}}, "themeCSS": ".cluster-label { font-weight: 700; font-size: 1.1em; }"}}%%
+%%{init: {"flowchart": {"nodeSpacing": 20, "rankSpacing": 50, "padding": 6, "diagramPadding": 4, "subGraphTitleMargin": {"top": 4, "bottom": 18}}, "themeCSS": ".cluster-label { font-weight: 700; font-size: 1.1em; font-family: raleway, sans-serif; }"}}%%
 flowchart TD
-  subgraph GAMES["Ledger-model security games — the capstones"]
+  subgraph GAMES["Ledger security games — the capstones"]
     BAL["Balance<br/>balanceSubsetOrBreak<br/>balanceValueOrBreak"]
     SPEND["Spendability<br/>faerieGoldCore<br/>validLedger_append"]
     SPENDAUTH["Spend authority<br/>spendAuthorityOrBreak"]
   end
 
-  BAL ---> BS["Binding-signature<br/>balance"]
-  BAL ---> NCB["Note-commitment<br/>binding"]
-  BAL ---> MERK["Merkle-path<br/>binding"]
-  BAL ---> KB["Key binding<br/>ZIP 2005 (ROM)"]
-  SPEND ---> NCB
-  SPEND ---> MERK
-  SPEND ---> KB
-  SPEND ---> NFB["Nullifier binding"]
-  SPENDAUTH ---> KB
+  BAL --> BS["Binding-signature<br/>balance"]
+  BAL --> NCB["Note-commitment<br/>binding"]
+  BAL --> MERK["Merkle-path<br/>binding"]
+  BAL --> KB["Key binding<br/>ZIP 2005 (ROM)"]
+  SPEND --> NCB
+  SPEND --> MERK
+  SPEND --> KB
+  SPEND --> NFB["Nullifier binding"]
+  SPENDAUTH --> KB
 
-  subgraph ASSUMPTIONS["Computational hardness assumptions"]
+  subgraph ASSUMPTIONS["Hardness assumptions"]
     DL[("Discrete log")]
     CR[("Hash collision<br/>resistance")]
   end
@@ -55,31 +55,53 @@ flowchart TD
     ROM[("Random oracle")]
   end
 
-  BS --->|non-balancing<br/>bundle computes| NDLR["NontrivialRelation<br/>(V,R) discrete-log<br/>relation"]
+  BS --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/BindingSignature/Balance.lean'>non-balancing<br/>bundle computes</a>"| NDLR["NontrivialRelation<br/>(V,R) discrete-log<br/>relation"]
   BS --> STMT["Witness or replay<br/>evidence<br/>ActionSatisfied<br/>§4.17.4"]
-  NCB -->|wrong note<br/>opening computes<br/><br/>| NCBK["NoteCommitBreak"]
+  NCB --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Statement.lean'>wrong note<br/>opening computes</a>"| NCBK["NoteCommitBreak"]
   NCB --> STMT
   MERK --> STMT
-  MERK --->|wrong Merkle<br/>path computes| MC["DefinedCollision<br/>(one height, encoding<br/>domain, success-only)"]
+  MERK ---->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Merkle.lean'>wrong Merkle<br/>path computes</a>"| MC["DefinedCollision<br/>(one height, encoding<br/>domain, success-only)"]
   KB --> STMT
-  KB --->|conflicting ivk<br/>witnesses compute| CUS["CollisionUpToSign<br/>shifted oracle,<br/>distinct queries"]
+  KB ---->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/KeyBinding/Basic.lean'>conflicting ivk<br/>witnesses compute</a>"| CUS["CollisionUpToSign<br/>shifted oracle,<br/>distinct queries"]
   NFB --> STMT
-  NFB --->|"distinct derive-inputs +<br/>equal nullifier<br/>computes"| NFC["NullifierCollision"]
-  SPENDAUTH ---->|"verified signature over<br/>unsigned sighash computes"| SAF["SpendAuthForgery<br/>(randomization<br/>of ±ak)"]
+  NFB ---->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Spendability.lean'>distinct derive-inputs +<br/>equal nullifier<br/>computes</a>"| NFC["NullifierCollision"]
+  SPENDAUTH --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/SpendAuthority.lean'>verified signature over<br/>unsigned sighash computes</a>"| SAF["SpendAuthForgery<br/>(randomization<br/>of ±ak)"]
 
-  STMT -. "justified by<br/>the extractor;<br/>hencodes gap" .-> KS["Knowledge soundness:<br/>accepting proof yields<br/>witness or break data"]
+  STMT -. "<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/Composition/Bridge.lean'>justified by<br/>the extractor;<br/>hencodes gap</a>" .-> KS["Knowledge soundness:<br/>accepting proof yields<br/>witness or break data"]
   NCBK --> SDLR["Sinsemilla<br/>discrete-log<br/>relation"]
 
-  NDLR --->|"independent<br/>hash-to-curve bases"| DL
-  SDLR --->|"independent<br/>hash-to-curve bases"| DL
-  KS --->|AGM heuristic + independent<br/>hash-to-curve bases| DL
-  KS -->|"Fiat–Shamir<br/>heuristic"| ROM
-  MC ---> CR
-  CUS -->|"birthday counting q(q-1)/r,<br/>no assumption"| ROM
-  NFC --->|"named hypothesis:<br/>nullifier base independent<br/>of commitment bases"| DL
-  SAF --> RDSA["RedDSA unforgeability,<br/>±-randomized keys"]
-  RDSA -->|"challenge hash<br/>as random oracle"| ROM
-  RDSA --->|"re-randomization reduction<br/>[FKMSSS2016] +<br/>forking extraction"| DL
+  NDLR ---->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/AGM/BindingSignature.lean'>independent<br/>hash-to-curve bases</a>"| DL
+  SDLR ---->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/AGM/BindingSignature.lean'>independent<br/>hash-to-curve bases</a>"| DL
+  KS ---->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/AGM/Capstone.lean'>AGM heuristic + independent<br/>hash-to-curve bases</a>"| DL
+  KS ---->|"<a target='_blank' href='https://github.com/zcash/ironwood/tree/main/Zcash/Snark/Soundness/Forking'>Fiat–Shamir<br/>heuristic</a>"| ROM
+  MC ----> CR
+  CUS ---->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Common/Birthday.lean'>birthday counting<br/>q(q-1)/r,<br/>no assumption</a>"| ROM
+  NFC ---->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Spendability.lean'>nullifier base<br/>independent of<br/>commitment bases</a>"| DL
+  SAF ---> RDSA["RedDSA unforgeability,<br/>±-randomized keys"]
+  RDSA ---->|"re-rand reduction<br/><a target='_blank' href='https://eprint.iacr.org/2015/395'>[FKMSSS2016]</a> +<br/>forking extraction"| DL
+  RDSA ---->|"challenge hash<br/>as random oracle"| ROM
+
+  click BAL "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Balance.lean" _blank
+  click SPEND "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Spendability.lean" _blank
+  click SPENDAUTH "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/SpendAuthority.lean" _blank
+  click BS "https://github.com/zcash/ironwood/blob/main/Zcash/Security/BindingSignature/Balance.lean" _blank
+  click NCB "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Statement.lean" _blank
+  click MERK "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Merkle.lean" _blank
+  click KB "https://github.com/zcash/ironwood/blob/main/Zcash/Security/KeyBinding/Basic.lean" _blank
+  click NFB "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Spendability.lean" _blank
+  click STMT "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Statement.lean" _blank
+  click NCBK "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Statement.lean" _blank
+  click MC "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Merkle.lean" _blank
+  click CUS "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Common/RandomOracle.lean" _blank
+  click NFC "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Spendability.lean" _blank
+  click SAF "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/SpendAuthority.lean" _blank
+  click NDLR "https://github.com/zcash/ironwood/blob/main/Zcash/Common/DiscreteLogRelation.lean" _blank
+  click SDLR "https://github.com/zcash/ironwood/blob/main/Zcash/Common/DiscreteLogRelation.lean" _blank
+  click KS "https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/KnowledgeSoundness.lean" _blank
+  click DL "https://github.com/zcash/ironwood/blob/main/Zcash/Common/DiscreteLogRelation.lean" _blank
+  click CR "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Common/RandomOracle.lean" _blank
+  click ROM "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Common/RandomOracle.lean" _blank
+  click RDSA "https://github.com/zcash/ironwood/issues/22" _blank
 
   classDef proven fill:#1a7f37,stroke:#116329,color:#ffffff
   classDef checked fill:#0969da,stroke:#0550ae,color:#ffffff
@@ -125,6 +147,18 @@ circuit soundness proof.
 ## The definitions
 
 <style>
+/* "One connected picture" links: labels keep their ordinary colour at rest
+   (blue is reserved for the status coding); hover underlines. */
+.mermaid .edgeLabel a { color: inherit; }
+.mermaid .edgeLabel a:hover,
+.mermaid a:hover .nodeLabel {
+  /* The SVG is scaled down to fit the page, so the default (~1px) underline
+     can fall below one device pixel and drop out on some line boxes; an
+     em-based thickness scales with the text instead. */
+  text-decoration: underline;
+  text-decoration-thickness: 0.12em;
+  text-underline-offset: 0.12em;
+}
 .iw-glossary { margin: 1.3rem 0; display: grid; gap: 26px; }
 .iw-glossary section { display: grid; gap: 9px; }
 .iw-glossary .grp {
