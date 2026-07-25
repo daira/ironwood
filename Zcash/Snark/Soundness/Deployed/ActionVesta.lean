@@ -3,13 +3,13 @@ import Zcash.Snark.Soundness.CanonicalVesta
 import Zcash.Snark.Soundness.Multiopen.CanonicalSelection
 
 /-!
-# Deployed Action specialization of the canonical Vesta terminal
+# Deployed Action soundness capstone
 
-This module is the Action-specific edge of the Vesta constraint-soundness
-bridge. It selects the deployed Action proof's advice and instance members from
-the accepted canonical route, invokes the verifier-native canonical Vesta
-adapter, and hands the resulting circuit satisfaction fact to the Action
-formal-circuit terminal.
+This module is the Action-specific deployed capstone of the Vesta
+constraint-soundness bridge. It selects the deployed Action proof's advice and
+instance members from the accepted canonical route, invokes the verifier-native
+canonical Vesta adapter, and hands the resulting circuit satisfaction fact to the
+Action formal-circuit terminal at the Clean/Ironwood boundary.
 
 The public capstone has no free proposition, encoding callback, or member
 decoder. Its circuit model and decoder are both determined by deployed

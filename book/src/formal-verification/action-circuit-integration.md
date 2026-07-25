@@ -1251,7 +1251,7 @@ instance slots forced by `CanonicalMemberConstraintRelation.acceptedRoute` and p
 that their full polynomial feeds equal the canonical accepted model's feeds.
 `Soundness/CanonicalVesta` specializes the verifier-native terminal's former free
 callback to `CircuitSat` for that model. Finally,
-`Circuits/Integration/ActionVesta` supplies the deployed one-proof query layouts,
+`Snark/Soundness/Deployed/ActionVesta` supplies the deployed one-proof query layouts,
 invokes the canonical Vesta adapter, and feeds its result to the Action endpoint.
 These route equalities are generic multiopen facts, not Action synthesis or
 floor-planner obligations. The recent tail of #96 exposes complementary

@@ -141,6 +141,16 @@ Pure Clean compiler semantics should instead live in `Zcash/Circuits/` or, prefe
 when reusable, upstream in Clean itself. Pure ironwood soundness stays in
 `Zcash/Snark/Soundness/`.
 
+### Deployed specializations stay with soundness
+
+A theorem that relies on the large captured VK artifacts—`Fixture.shape`,
+`Fixture.vk`, `capturedURS`, or the certificate equating those values with
+circuit-derived keygen output—belongs under `Zcash/Snark/Soundness/Deployed/`, not in
+this directory. Such a theorem may import the boundary's public circuit-derived
+terminal, but it should not re-establish Clean semantics itself. Conversely,
+`Circuits/Integration` should not import the fixture dumps merely to advertise the
+final deployed capstone.
+
 ### The public satisfaction contract has two levels
 
 `TopLevelCircuit.Statement` currently consumes a placed Clean `Environment`. It is the
