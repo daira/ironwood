@@ -105,9 +105,12 @@ abbrev Primitives.depth (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG) :
 /-- The games-facing view of a key-binding witness type `KW`: projections, the key-binding
 condition `KB` enforced by the statement, and a `Break` predicate. `break_of_nk_ne`
 (consumed by Balance) and `break_of_akP_ne` (consumed by Spend Authority) are the
-guarantees the games use; the key-binding layer instantiates `Break` and discharges both,
-reducing breaks onward to random-oracle collisions. `Break` being an
-opaque `Prop` limits the games to certificate-level break exhibition. -/
+guarantees the games use; the key-binding layer instantiates `Break` and discharges
+both, reducing breaks onward to random-oracle collisions. `Break` is deliberately an
+opaque `Prop`: the games exhibit the witness pair as data and certify the break
+propositionally, which is exactly the event the probabilistic bound
+(`toInterface_break_measure_le`) covers; data-level onward reductions
+(`CollisionUpToSign.ofBreak`) live below the interface. -/
 structure KeyBindingInterface (KW G IVK NK : Type*) [Neg G] where
   ivk : KW → IVK
   nk : KW → NK

@@ -7,17 +7,19 @@ import Zcash.Security.Ledger.Model
 The deterministic core of the Spend Authority game. Suppose an action spends a note
 addressed to a key witness `wV` (its `pk_d` is `emb (ivk wV) • g_d`), in a transaction
 whose sighash the holder of `wV` never signed. Then the ledger's own data computes one
-of two things. If the action's verification key matches `akP wV` up to sign, the
-action's signature is a `SpendAuthForgery`: a verifying signature under a randomization
-of `± akP wV`, over an unsigned message. If it does not match even up to sign, the two
-key witnesses share an `ivk` (receivability pins it) but not their `akP`, and
-`break_of_akP_ne` turns that into a key-binding break.
+of two things:
+* If the action's verification key matches `akP wV` up to sign, the action's
+  signature is a `SpendAuthForgery`: a verifying signature under a randomization
+  of `± akP wV`, over an unsigned message.
+* If it does not match up to sign, the two key witnesses share an `ivk` (receivability
+  pins it) but not their `akP`, and `break_of_akP_ne` turns that into a key-binding
+  break.
 
 The sign matters because `ak` is consumed as a single extracted coordinate, so the
 statement pins `ak^ℙ` only up to its y-sign. A forgery therefore carries a `negated`
 flag, and the unforgeability hypothesis for the randomized signature scheme must cover
 both `akV` and `-akV`. That is a factor-of-2 security loss, fine with ~2^253 ±-fibres
-remaining.
+remaining, and explicitly accepted in the design (see the note in spec §4.18.4).
 
 What stays outside this layer: unforgeability of the randomized signature scheme itself
 (a named hypothesis; this layer produces the forgery object it consumes), and the

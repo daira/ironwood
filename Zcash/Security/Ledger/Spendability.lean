@@ -14,10 +14,10 @@ named DL/Pedersen-hash hypothesis; for the Recovery Statement, ZIP 2005's Spenda
 theorem reduces it to an `H^rcm` ±-collision.
 
 Persistence says a transaction valid immediately after `ledger` stays valid when
-appended to any valid extension `ledger'`: anchors persist because prefix roots do
-(`rootAfter_prefix`), satisfaction and signatures are per-transaction, and the only live
-conditions are nullifier freshness and the boundary conjuncts (capacity and transparent
-nonnegativity), which appear as hypotheses. The roadblock inversion (`respendOrBreak`)
+appended to any valid extension `ledger'`, under the conditions of nullifier freshness
+and the boundary conjuncts (capacity and transparent nonnegativity), which appear as
+hypotheses. Anchors persist because prefix roots do (`rootAfter_prefix`); satisfaction
+and signatures are per-transaction. The roadblock inversion (`respendOrBreak`)
 classifies what can consume a nullifier first: an action revealing the same nullifier
 either re-spends the same opening (the case Spend Authority handles) or computes a
 break.

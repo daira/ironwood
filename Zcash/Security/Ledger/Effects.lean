@@ -4,12 +4,12 @@ import Zcash.Security.Ledger.Model
 /-!
 # Effects: outputs, spends, and the shielded pool balance
 
-The effects of a valid ledger are read off its witnesses (Zcon3 slides 20-21). An
-output is the `(rcm, note)` opening carried by an action's output side, positioned by
-its leaf index; a spend is the opening carried by an action's spend side, positioned by
-its witnessed path position. Zero-valued spends are excluded — the statement's Merkle
-condition is vacuous for them, so they are dummies by construction and do not need to
-correspond to any output.
+The effects of a valid ledger are read off its witnesses (Zcon3 "Understanding the
+Security of Zcash" slides 20-21). An output is the `(rcm, note)` opening carried by an
+action's output side, positioned by its leaf index; a spend is the opening carried by
+an action's spend side, positioned by its witnessed path position. Zero-valued spends
+are excluded — the statement's Merkle condition is vacuous for them, so they are
+dummies by construction and do not need to correspond to any output.
 
 `Opening` is exactly the pair that `noteCommitBreakOfNe` pins: once Balance-subset pins
 a spend's commitment to an output's leaf, the two openings agree or a note-commitment

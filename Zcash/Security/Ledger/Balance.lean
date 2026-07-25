@@ -19,10 +19,10 @@ opening is spent twice — or the ledger's own data computes a `BalanceBreak`:
 
 The shape of the argument (design doc, "The theorems"): the anchor pins each spend's
 path to a prefix tree; position binding pins the leaf; `uncommitted_ne` rules out the
-padding; the opening comparison pins the output or computes the note-commitment break;
-and duplicate spends of one positioned opening are found by `findPair`, whose result is
-certified as a two-element *sublist* — carrying "two distinct occurrences" with no index
-arithmetic — so `nfOldEqOrBreak` and nullifier uniqueness finish.
+padding; and the opening comparison pins the output or computes the note-commitment
+break. Duplicate spends of one positioned opening are found by `findPair`. Its result
+is certified as a two-element *sublist*, which carries "two distinct occurrences" with
+no index arithmetic, so `nfOldEqOrBreak` and nullifier uniqueness finish.
 
 Everything is a plain computable `def` per breaks-as-computed-data; the anchor index and
 the duplicate pair are found by decidable search, so no data is conjured from the
@@ -48,6 +48,8 @@ def findPair {α β : Type*} [DecidableEq β] (f : α → β) : List α → Opti
     | some b => some (a, b)
     | none => findPair f t
 
+/-- A successful scan certifies its pair: equal images under `f`, and the two entries
+form a two-element sublist of the input — distinct occurrences, in list order. -/
 theorem findPair_spec {α β : Type*} [DecidableEq β] (f : α → β) :
     ∀ {l : List α} {a₁ a₂ : α}, findPair f l = some (a₁, a₂) →
       f a₁ = f a₂ ∧ List.Sublist [a₁, a₂] l
@@ -67,6 +69,7 @@ theorem findPair_spec {α β : Type*} [DecidableEq β] (f : α → β) :
         obtain ⟨hfa, hsub⟩ := findPair_spec f h
         exact ⟨hfa, hsub.trans (List.sublist_cons_self a t)⟩
 
+/-- A failed scan certifies that all images under `f` are pairwise distinct. -/
 theorem findPair_none {α β : Type*} [DecidableEq β] (f : α → β) :
     ∀ {l : List α}, findPair f l = none → (l.map f).Nodup
   | [], _ => by simp
@@ -96,11 +99,13 @@ theorem flatMap_sublist {α β : Type*} {l : List α} {g g' : α → List β}
       simp only [List.flatMap_cons]
       exact (h a (by simp)).append (ih fun x hx => h x (by simp [hx]))
 
+/-- A ledger prefix contributes a prefix of the flattened action list. -/
 theorem outputActions_prefix {l₁ l₂ : Ledger KW F G RHO PSI MHASH MENC MSG SIG d}
     (h : l₁ <+: l₂) : outputActions l₁ <+: outputActions l₂ := by
   obtain ⟨r, rfl⟩ := h
   exact ⟨outputActions r, by simp [outputActions, List.flatMap_append]⟩
 
+/-- A ledger prefix contributes a prefix of the revealed-nullifier list. -/
 theorem nullifiers_prefix {l₁ l₂ : Ledger KW F G RHO PSI MHASH MENC MSG SIG d}
     (h : l₁ <+: l₂) : nullifiers l₁ <+: nullifiers l₂ := by
   obtain ⟨r, rfl⟩ := h
@@ -346,18 +351,21 @@ def issuanceTotal (issuance : ℕ → ℕ)
 
 section SumToolbox
 
+/-- Summing over a flat map is summing the per-chunk sums. -/
 private theorem sum_flatMap {α β : Type*} (g : α → List β) (f : β → ℤ) (l : List α) :
     ((l.flatMap g).map f).sum = (l.map fun x => ((g x).map f).sum).sum := by
   induction l with
   | nil => simp
   | cons a t ih => simp [List.flatMap_cons, ih]
 
+/-- The sum of pointwise differences is the difference of sums. -/
 private theorem sum_map_sub {α : Type*} (f g : α → ℤ) (l : List α) :
     (l.map fun x => f x - g x).sum = (l.map f).sum - (l.map g).sum := by
   induction l with
   | nil => simp
   | cons a t ih => simp only [List.map_cons, List.sum_cons, ih]; ring
 
+/-- Mapping a function of the entry over an index-zipped list ignores the indices. -/
 private theorem map_zipIdx_fst {α β : Type*} {f : α → β} :
     ∀ (l : List α) (n : ℕ), ((l.zipIdx n).map fun p => f p.1) = l.map f
   | [], _ => rfl

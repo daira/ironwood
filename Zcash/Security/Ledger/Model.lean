@@ -130,8 +130,8 @@ structure ValidLedger (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
   duplicates even within one transaction). -/
   nf_nodup : (nullifiers ledger).Nodup
   /-- Each anchor is the root after some earlier transaction boundary: an action of
-  transaction `i` may reference the tree after any `j ≤ i` transactions, so only
-  outputs of strictly earlier transactions. The equation also asserts that the
+  transaction `i` (zero-based) may reference the tree after any `j ≤ i` transactions,
+  so only outputs of strictly earlier transactions. The equation also asserts that the
   referenced tree is defined (no compression along it escapes). -/
   anchor_valid : ∀ i : Fin ledger.length, ∀ a ∈ (ledger.get i).actions,
     ∃ j ≤ (i : ℕ), rootAfter P ledger j = some a.inst.rt
