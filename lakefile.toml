@@ -53,6 +53,14 @@ globs = ["Zcash.Circuits.Tests.+"]
 # Modules here may speak both vocabularies; nothing above the boundary imports Clean
 # identifiers. Its own target so the seam builds by plain `lake build` (the `Zcash`
 # root closure does not reach it).
+# Core-only leaf (ZERO imports): the only lib allowed precompileModules — anything
+# with a mathlib import in its closure would repeat the 2026-07-24 OOM incident.
+# Native symbols from this lib are what native_decide callers pick up.
+[[lean_lib]]
+name = "NatKernelNative"
+precompileModules = true
+globs = ["NatKernelNative", "Zcash.Vendor.NatKernel"]
+
 [[lean_lib]]
 name = "Integration"
 globs = ["Zcash.Circuits.Integration", "Zcash.Circuits.Integration.+"]
@@ -67,3 +75,17 @@ globs = ["Zcash.Circuits.Integration", "Zcash.Circuits.Integration.+"]
 [[lean_lib]]
 name = "ZcashKeygen"
 globs = ["Zcash.Snark.Keygen.+", "Zcash.Snark.Soundness.Deployed.ActionVk"]
+
+# The ONLY library in this repo with `precompileModules`. It is a core-only leaf: its single
+# module imports nothing beyond Lean core, so native compilation covers ~1 file rather than a
+# mathlib import closure -- the latter is what OOM-crashed this box on 2026-07-24 (see the
+# rationale in `/root/bin/lake-capped`). Everything mathlib-side about these definitions lives
+# in `Zcash.Vendor.Montgomery.Native64x8*`, which are NOT in this lane.
+[[lean_lib]]
+name = "FastFieldNative"
+precompileModules = true
+globs = [
+  "FastFieldNative",
+  "Zcash.Vendor.Montgomery.Native64x8Defs",
+  "Zcash.Snark.Keygen.Fast.ProjectiveMontDefs",
+]
