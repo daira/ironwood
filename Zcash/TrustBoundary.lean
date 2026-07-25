@@ -2,6 +2,7 @@ import Zcash.Security.KeyBinding.Instance
 import Zcash.Security.KeyBinding.Probability
 import Zcash.Security.Ledger.Balance
 import Zcash.Security.Ledger.Spendability
+import Zcash.Security.Ledger.SpendAuthority
 import Zcash.Security.Common.Birthday
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
@@ -193,6 +194,18 @@ assert_axioms nullifiers_append
 assert_computable faerieGoldCore
 assert_computable respendOrBreak
 assert_axioms validLedger_append
+
+/-! ## Spend Authority
+
+The per-action core and the valid-ledger capstone are computable reductions; the
+receivability pinning is a deterministic module-algebra theorem. `+choice` on the two
+reductions is the erased-positions tier: choice arrives with `smul_eq_zero`'s Mathlib
+proof inside the receivability pinning, consumed only in `Prop` positions — never the
+data path. -/
+
+assert_axioms ivk_eq_of_receivable
+assert_computable spendAuthForgeryOrBreak +choice
+assert_computable spendAuthorityOrBreak +choice
 
 /-! ## Binding-signature relation reductions
 
