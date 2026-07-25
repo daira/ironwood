@@ -1185,6 +1185,11 @@ duplicate-query rejection directly from `DeployedAccepts`.
 `CanonicalMemberConstraintRelation.ofAcceptedCircuitSat` uses those facts to turn
 satisfaction of the accepted run's canonical decoded-member model into the exact
 relation consumed by circuit integration.
+`Soundness/Deployed/ActionVk` now transports that closed terminal to the captured
+Action proof shape and verifying key using the keygen certificate. It no longer
+accepts lookup-selector realization: fixed coherence constructs those values inside
+the terminal. The module is imported by the root `Zcash` module, so `lake build Zcash` checks
+this deployed seam rather than leaving the capstone outside the build graph.
 `AcceptedModelClaimedEvaluations` is the corresponding verifier-native node-binding
 fingerprint: it states once that the canonical model's fixed/advice/instance,
 permutation, lookup, and row-selector polynomials evaluate to the accepted proof

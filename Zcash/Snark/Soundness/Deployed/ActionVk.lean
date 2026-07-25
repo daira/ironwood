@@ -52,10 +52,10 @@ The bundle-wide challenge exclusions are taken as the unfolded fields of
 its challenges at `(pp.mergeDerived top).k`, which cannot be spelled at the
 fixture `shape` without evaluating the derived domain exponent. Its `γ`/`β`
 fields are shape-generic and appear here at `Fixture.vk`; the `θ` field, like the
-lookup-selector realization premise, is inherited verbatim from the
-Clean/Ironwood seam and still names the circuit
-(`orchardActionTopLevelCircuit`) — those two premises are the seam's cap and have
-no Snark-native spelling today.
+other circuit-derived lookup exclusions, is inherited verbatim from the
+Clean/Ironwood seam and still names `orchardActionTopLevelCircuit`. Exact packed
+lookup-selector values are constructed inside the terminal from fixed coherence
+and are not a deployed-capstone premise.
 -/
 
 namespace Zcash.Snark
@@ -232,18 +232,6 @@ private theorem actionDeployed_transport
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts)
         actionActiveRows)
-    (lookupSelectorValues : ∀ proofIndex lookup
-      (_henabled :
-        lookup ∈ operationEnabledLookups
-          (orchardActionTopLevelCircuit.operations 0) 0),
-      lookup.InputSelectorValuesRealized
-        orchardActionTopLevelCircuit
-        (resolverEnvironment K
-          (CanonicalMemberConstraintRelation.acceptedPolynomial
-            (memberDecode := memberDecode) haccepts)
-          proofIndex
-          (orchardActionTopLevelCircuit.usableRowsAt
-            orchardActionTopLevelCircuit.domainExponent)))
     (lookupGamma :
       ch.gamma ∉ allResolverLookupGammaBadSet K ch
         (CanonicalMemberConstraintRelation.acceptedPolynomial
@@ -270,7 +258,7 @@ private theorem actionDeployed_transport
       actionProofParams capturedURS hk inputs ps ch pU pW a
   rw [← deployedInstanceCommitment_eq inputs] at terminal
   exact terminal batchOpenings memberDecode haccepts hpoly hquot hbind
-    hxgood hgoodY ⟨permGamma, permBeta⟩ lookupSelectorValues
+    hxgood hgoodY ⟨permGamma, permBeta⟩
     ⟨lookupGamma, lookupBeta, lookupTheta⟩
 
 set_option maxRecDepth 1000000 in
@@ -399,18 +387,6 @@ theorem actionBundleStatement_or_relation_of_acceptedNodeBinding_deployed
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts)
         actionActiveRows)
-    (lookupSelectorValues : ∀ proofIndex lookup
-      (_henabled :
-        lookup ∈ operationEnabledLookups
-          (orchardActionTopLevelCircuit.operations 0) 0),
-      lookup.InputSelectorValuesRealized
-        orchardActionTopLevelCircuit
-        (resolverEnvironment Fixture.vk
-          (CanonicalMemberConstraintRelation.acceptedPolynomial
-            (memberDecode := memberDecode) haccepts)
-          proofIndex
-          (orchardActionTopLevelCircuit.usableRowsAt
-            orchardActionTopLevelCircuit.domainExponent)))
     (lookupGamma :
       ch.gamma ∉ allResolverLookupGammaBadSet Fixture.vk ch
         (CanonicalMemberConstraintRelation.acceptedPolynomial
@@ -434,7 +410,7 @@ theorem actionBundleStatement_or_relation_of_acceptedNodeBinding_deployed
     Fixture.vk Keygen.vk_eq_derived
     shape_k_eq_capturedURS_k vk_blindingFactors_lt
     inputs ps ch pU pW a batchOpenings memberDecode haccepts hpoly hquot hbind
-    hxgood hgoodY permGamma permBeta lookupSelectorValues
+    hxgood hgoodY permGamma permBeta
     lookupGamma lookupBeta lookupTheta
 
 assert_no_sorry actionBundleStatement_or_relation_of_acceptedNodeBinding_deployed
