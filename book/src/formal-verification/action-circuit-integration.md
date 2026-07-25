@@ -1190,6 +1190,11 @@ Action proof shape and verifying key using the keygen certificate. It no longer
 accepts lookup-selector realization: fixed coherence constructs those values inside
 the terminal. The module is imported by the root `Zcash` module, so `lake build Zcash` checks
 this deployed seam rather than leaving the capstone outside the build graph.
+The same module now also exports the captured-artifact
+`actionBundleStatement_or_relation_of_acceptedCircuitSat_deployed`. This is the
+entry point for the Vesta constraint-carrying relation: when the upstream capstone
+already supplies satisfaction of the canonical accepted model, it bypasses the
+node-binding reconstruction and consumes that satisfaction directly.
 `AcceptedModelClaimedEvaluations` is the corresponding verifier-native node-binding
 fingerprint: it states once that the canonical model's fixed/advice/instance,
 permutation, lookup, and row-selector polynomials evaluate to the accepted proof

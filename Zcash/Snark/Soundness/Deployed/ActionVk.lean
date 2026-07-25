@@ -108,6 +108,185 @@ theorem deployedInstanceCommitment_eq
 
 set_option maxRecDepth 1000000 in
 /--
+Transport the accepted-circuit-satisfaction Action endpoint to an arbitrary
+shape/key pair identified with the captured circuit-derived artifacts.
+
+Unlike the node-binding terminal below, this endpoint consumes circuit satisfaction
+that an upstream constraint capstone has already established. It is the form needed
+by the live Vesta constraint relation.
+-/
+private theorem actionAcceptedCircuitSatDeployed_transport
+    (s : Shape)
+    (hs : actionProofParams.mergeDerived orchardActionTopLevelCircuit = s)
+    (K : VerifyingKey s Fp G)
+    (hK : K = derivedActionVk s capturedURS)
+    (hk : s.k = capturedURS.k)
+    (hbl : K.blindingFactors < K.n)
+    (inputs : Fin s.numProofs → PublicInputs)
+    (ps : ProofString s Fp G)
+    (ch : Challenges s.k Fp)
+    (pU pW : Fp) (a : Fin (2 ^ capturedURS.k) → Fp)
+    (batchOpenings :
+      OpenedBatchOpenings capturedURS (evalVector capturedURS.k ch.x3)
+        (x4BatchCommitments
+          (instanceCommitment := deployedInstanceCommitment s inputs)
+          capturedURS hk K ps ch)
+        (x4BatchEvals
+          (instanceCommitment := deployedInstanceCommitment s inputs)
+          K ps ch)
+        a pU pW)
+    (memberDecode : ∀ i (hi : i <
+        deployedX4PairCount
+          (instanceCommitment := deployedInstanceCommitment s inputs)
+          K ps ch),
+      OpenedMemberDecode
+        (instanceCommitment := deployedInstanceCommitment s inputs)
+        capturedURS hk K ps ch batchOpenings i hi)
+    (haccepts :
+      DeployedAccepts capturedURS hk K
+        (deployedInstanceCommitment s inputs) ps ch)
+    (hpoly : Polynomial Fp)
+    (hsatisfied :
+      (CanonicalMemberConstraintRelation.acceptedModel
+        (memberDecode := memberDecode)
+        (hblinding := hbl) haccepts).CircuitSat
+          ch.y hpoly K.n a)
+    (hgoodY : ∀ j,
+      ch.y ∉ szBadSet
+        (foldSplitWitness
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := hbl) haccepts).constraints
+          K.n j))
+    (permGamma :
+      ch.gamma ∉ allResolverPermutationGammaBadSet K ch
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts)
+        actionActiveRows)
+    (permBeta :
+      ch.beta ∉ allResolverPermutationBetaBadSet K
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts)
+        actionActiveRows)
+    (lookupGamma :
+      ch.gamma ∉ allResolverLookupGammaBadSet K ch
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts)
+        (K.n - K.blindingFactors - 2))
+    (lookupBeta :
+      ch.beta ∉ allResolverLookupBetaBadSet K ch
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts)
+        (K.n - K.blindingFactors - 2))
+    (lookupTheta :
+      ch.theta ∉ TopLevelLookupCoherence.allTopLevelLookupThetaBadSet
+        orchardActionTopLevelCircuit actionProofParams capturedURS
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts)) :
+    BundleStatement Specs.Sinsemilla.orchardGenerators orchardBases inputs ∨
+      HasNontrivialRelation (F := Fp)
+        capturedURS.g capturedURS.u capturedURS.w := by
+  subst hs
+  rw [← Keygen.toVerifierKey_action actionProofParams capturedURS] at hK
+  subst hK
+  have terminal :=
+    actionBundleStatement_or_relation_of_acceptedCircuitSat
+      actionProofParams capturedURS hk inputs ps ch
+      (orchardActionTopLevelCircuit.toVerifierKey
+        actionProofParams capturedURS)
+      rfl pU pW a
+  rw [← deployedInstanceCommitment_eq inputs] at terminal
+  exact terminal batchOpenings memberDecode haccepts hbl hpoly hsatisfied hgoodY
+    ⟨permGamma, permBeta⟩
+    ⟨lookupGamma, lookupBeta, lookupTheta⟩
+
+set_option maxRecDepth 1000000 in
+/--
+The accepted-circuit-satisfaction Action endpoint at the deployed verifying key.
+This is the concrete `hencodes` target for the Vesta constraint-carrying relation.
+-/
+theorem actionBundleStatement_or_relation_of_acceptedCircuitSat_deployed
+    (inputs : Fin Fixture.shape.numProofs → PublicInputs)
+    (ps : ProofString Fixture.shape Fp G)
+    (ch : Challenges Fixture.shape.k Fp)
+    (pU pW : Fp) (a : Fin (2 ^ capturedURS.k) → Fp)
+    (batchOpenings :
+      OpenedBatchOpenings capturedURS (evalVector capturedURS.k ch.x3)
+        (x4BatchCommitments
+          (instanceCommitment :=
+            deployedInstanceCommitment Fixture.shape inputs)
+          capturedURS shape_k_eq_capturedURS_k Fixture.vk ps ch)
+        (x4BatchEvals
+          (instanceCommitment :=
+            deployedInstanceCommitment Fixture.shape inputs)
+          Fixture.vk ps ch)
+        a pU pW)
+    (memberDecode : ∀ i (hi : i <
+        deployedX4PairCount
+          (instanceCommitment :=
+            deployedInstanceCommitment Fixture.shape inputs)
+          Fixture.vk ps ch),
+      OpenedMemberDecode
+        (instanceCommitment :=
+          deployedInstanceCommitment Fixture.shape inputs)
+        capturedURS shape_k_eq_capturedURS_k Fixture.vk ps ch
+        batchOpenings i hi)
+    (haccepts :
+      DeployedAccepts capturedURS shape_k_eq_capturedURS_k Fixture.vk
+        (deployedInstanceCommitment Fixture.shape inputs) ps ch)
+    (hpoly : Polynomial Fp)
+    (hsatisfied :
+      (CanonicalMemberConstraintRelation.acceptedModel
+        (memberDecode := memberDecode)
+        (hblinding := vk_blindingFactors_lt) haccepts).CircuitSat
+          ch.y hpoly Fixture.vk.n a)
+    (hgoodY : ∀ j,
+      ch.y ∉ szBadSet
+        (foldSplitWitness
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding := vk_blindingFactors_lt) haccepts).constraints
+          Fixture.vk.n j))
+    (permGamma :
+      ch.gamma ∉ allResolverPermutationGammaBadSet Fixture.vk ch
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts)
+        actionActiveRows)
+    (permBeta :
+      ch.beta ∉ allResolverPermutationBetaBadSet Fixture.vk
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts)
+        actionActiveRows)
+    (lookupGamma :
+      ch.gamma ∉ allResolverLookupGammaBadSet Fixture.vk ch
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts)
+        (Fixture.vk.n - Fixture.vk.blindingFactors - 2))
+    (lookupBeta :
+      ch.beta ∉ allResolverLookupBetaBadSet Fixture.vk ch
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts)
+        (Fixture.vk.n - Fixture.vk.blindingFactors - 2))
+    (lookupTheta :
+      ch.theta ∉ TopLevelLookupCoherence.allTopLevelLookupThetaBadSet
+        orchardActionTopLevelCircuit actionProofParams capturedURS
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts)) :
+    BundleStatement Specs.Sinsemilla.orchardGenerators orchardBases inputs ∨
+      HasNontrivialRelation (F := Fp)
+        capturedURS.g capturedURS.u capturedURS.w :=
+  actionAcceptedCircuitSatDeployed_transport
+    Fixture.shape Keygen.shape_eq_mergeDerived
+    Fixture.vk Keygen.vk_eq_derived
+    shape_k_eq_capturedURS_k vk_blindingFactors_lt
+    inputs ps ch pU pW a batchOpenings memberDecode haccepts hpoly hsatisfied
+    hgoodY permGamma permBeta lookupGamma lookupBeta lookupTheta
+
+assert_no_sorry
+  actionBundleStatement_or_relation_of_acceptedCircuitSat_deployed
+
+set_option maxRecDepth 1000000 in
+/--
 Transport of the terminal along a `Shape` equality and a key equality: every
 premise is stated at a variable shape `s` and a variable key `K`, so that
 substituting the certificate equalities `shape_eq_mergeDerived` and
