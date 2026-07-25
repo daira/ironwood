@@ -34,14 +34,19 @@ def isNativeDecideAxiom (n : Name) : Bool :=
 (`propext`, `Classical.choice`, `Quot.sound`) — in particular, no `sorry` and no `native_decide`.
 
 `assert_axioms foo +native` additionally permits `native_decide` compiler-trust axioms, whose exact
-names are toolchain-dependent. Any other axiom (including `sorryAx`) is still rejected.
+names are toolchain-dependent. `+pallas` explicitly permits the project's central
+`Zcash.Circuits.Point.pallas_natCard` point-count assumption. Any other axiom
+(including `sorryAx`) is still rejected.
 -/
-elab "assert_axioms " n:ident native:("+native")? : command => do
+elab "assert_axioms " n:ident native:("+native")? pallas:("+pallas")? : command => do
   let name ← liftCoreM <| realizeGlobalConstNoOverloadWithInfo n
   let axs ← collectAxioms name
   let allowNative := native.isSome
+  let allowPallas := pallas.isSome
   let unexpected := axs.filter fun ax =>
-    !standardAxioms.contains ax && !(allowNative && isNativeDecideAxiom ax)
+    !standardAxioms.contains ax
+      && !(allowNative && isNativeDecideAxiom ax)
+      && !(allowPallas && ax == `Zcash.Circuits.Point.pallas_natCard)
   unless unexpected.isEmpty do
     throwError "{n} depends on unexpected axiom(s): {unexpected.toList}"
 

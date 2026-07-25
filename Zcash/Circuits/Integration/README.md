@@ -31,6 +31,10 @@ The lookup bridge is split deliberately:
 
 * `LookupProjection.lean` proves the query-erasure and selector-substitution
   compiler semantics for configured lookups;
+* `LookupSelectorRows.lean` derives exact expression-level selector projection from
+  singleton packed-selector cells and the shared fixed-row realization boundary;
+  `ActionLookupSelectorRows.lean` merely instantiates that generic boundary with
+  Action's fixed coherence;
 * `TopLevelLookups.lean` routes synthesis-enabled lookups through the
   circuit-derived verifying key, derives selector coverage, table freedom, tuple
   arity, and activation-row fit from Clean's top-level keygen invariants, reduces
@@ -45,3 +49,8 @@ The lookup bridge is split deliberately:
   verification key and consumes the Clean fixed/copy/selector records to produce
   `Action.BundleStatement` (or the shared augmented-basis relation). No Clean type
   is introduced into `Zcash/Snark/Soundness/CanonicalTerminal.lean`.
+* `ActionVesta.lean` is the deployed verifier join. It supplies the canonical
+  accepted-member selections proved in `Zcash/Snark/Soundness`, invokes the
+  constraint-carrying Vesta terminal with its decoder fixed by acceptance, and
+  hands the resulting `CircuitSat` fact to `ActionTerminal`. Its public capstone has
+  no free semantic proposition, encoding callback, decoder, or column-feed choice.

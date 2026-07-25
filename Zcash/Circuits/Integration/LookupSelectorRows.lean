@@ -95,6 +95,50 @@ theorem ExpressionSelectorLeavesSatisfy.mono
   | mul left right ihLeft ihRight =>
       exact ⟨ihLeft h.1, ihRight h.2⟩
 
+/-- Every selector leaf belongs to the expression's syntactic leaf list. -/
+private theorem ExpressionSelectorLeavesSatisfy.mem_expressionSelectorLeaves
+    {F : Type} (expression : Expression F Query) :
+    ExpressionSelectorLeavesSatisfy
+      (fun selector =>
+        selector ∈ EnabledLookup.expressionSelectorLeaves expression)
+      expression := by
+  induction expression with
+  | var query =>
+      cases query <;>
+        simp [ExpressionSelectorLeavesSatisfy,
+          EnabledLookup.expressionSelectorLeaves]
+  | const value =>
+      trivial
+  | add left right ihLeft ihRight
+  | mul left right ihLeft ihRight =>
+      constructor
+      · exact ihLeft.mono fun selector hselector => by
+          simp only [EnabledLookup.expressionSelectorLeaves,
+            List.mem_append]
+          exact Or.inl hselector
+      · exact ihRight.mono fun selector hselector => by
+          simp only [EnabledLookup.expressionSelectorLeaves,
+            List.mem_append]
+          exact Or.inr hselector
+
+/-- Every selector leaf of an input expression occurs in the lookup's leaf list. -/
+theorem EnabledLookup.expressionSelectorLeaves_mem_inputSelectorLeaves
+    (lookup : EnabledLookup Fp)
+    {expression : Expression Fp Query}
+    (hexpression : expression ∈ lookup.argument.inputs) :
+    ExpressionSelectorLeavesSatisfy
+      (fun selector => selector ∈ lookup.inputSelectorLeaves) expression := by
+  have hsubset :
+      ∀ selector ∈ EnabledLookup.expressionSelectorLeaves expression,
+        selector ∈ lookup.inputSelectorLeaves := by
+    intro selector hselector
+    simp only [EnabledLookup.inputSelectorLeaves, List.mem_flatMap]
+    exact
+      ⟨expression, hexpression, hselector⟩
+  exact
+    (ExpressionSelectorLeavesSatisfy.mem_expressionSelectorLeaves
+      expression).mono hsubset
+
 /--
 Agreement on the selector leaves occurring in an expression is sufficient for
 selector substitution to agree with a concrete selector valuation.
@@ -166,6 +210,152 @@ def EnabledLookup.InputSelectorLeafRowsExact
                         (top.placement lookup.region + lookup.row) 0
                   | _ => 0) =
               lookup.selectorValue selector.index) expression
+
+private theorem selReplacement_eval_of_singleton
+    (compressed : SelCompress) (valuation : Query → Fp)
+    (hlength : compressed.combinationLen = 1)
+    (hroot : compressed.assignedRoot = 1) :
+    (selReplacement compressed).eval valuation =
+      valuation (.fixed ⟨compressed.packedCol⟩ 0) := by
+  rcases compressed with ⟨column, length, root⟩
+  simp only at hlength hroot
+  subst length
+  subst root
+  rfl
+
+/--
+Realizing the lookup-selector entries in the shared fixed boundary supplies the exact
+dense-row selector valuation used by lookup projection.
+
+The explicitly interim required-entry list contains an out-of-bounds sentinel if a
+relevant selector is absent from the compression map or is not packed as a singleton
+at root one. Thus any `realizes` proof rules those cases out without exposing a
+separate concrete-circuit premise. The structural replacement proves singleton
+packing and disabled-row zero directly from compiler invariants.
+-/
+theorem EnabledLookup.inputSelectorLeafRowsExact_of_realizes
+    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (rows : ℕ → List Fp) (lookup : EnabledLookup Fp)
+    (henabled :
+      lookup ∈ operationEnabledLookups (top.operations 0) 0)
+    (realizes : ∀ column row value,
+      (column, row, value) ∈ topLevelRequiredFixedEntries top →
+        column < top.pinnedCS.numFixedColumns ∧
+          (rows column).getD row 0 = (value : Fp)) :
+    lookup.InputSelectorLeafRowsExact top rows := by
+  rw [EnabledLookup.InputSelectorLeafRowsExact,
+    List.forall_iff_forall_mem]
+  intro expression hexpression
+  have hmembers :=
+    lookup.expressionSelectorLeaves_mem_inputSelectorLeaves hexpression
+  apply hmembers.mono
+  intro selector hselectorLeaf
+  have required_of_result
+      (entry : ℕ × ℕ × ℕ)
+      (hresult :
+        (match top.selectorMap.lookup selector.index with
+        | some compressed =>
+            if compressed.combinationLen = 1 ∧
+                compressed.assignedRoot = 1 then
+              some
+                (compressed.packedCol,
+                  top.regionStarts.getD lookup.region 0 + lookup.row,
+                  if lookup.enabled.any
+                      (fun candidate =>
+                        candidate.index == selector.index) then
+                    1
+                  else
+                    0)
+            else
+              some
+                (top.pinnedCS.numFixedColumns,
+                  top.regionStarts.getD lookup.region 0 + lookup.row, 0)
+        | none =>
+            some
+              (top.pinnedCS.numFixedColumns,
+                top.regionStarts.getD lookup.region 0 + lookup.row, 0)) =
+          some entry) :
+      entry ∈ topLevelRequiredFixedEntries top := by
+    simp only [topLevelRequiredFixedEntries]
+    apply List.mem_append_right
+    simp only [topLevelSingletonLookupSelectorEntries,
+      List.mem_flatMap]
+    refine ⟨lookup, henabled, ?_⟩
+    rw [List.mem_filterMap]
+    exact ⟨selector, hselectorLeaf, hresult⟩
+  cases hlookup : top.selectorMap.lookup selector.index with
+  | none =>
+      have hrequired :=
+        required_of_result
+          (top.pinnedCS.numFixedColumns,
+            top.regionStarts.getD lookup.region 0 + lookup.row, 0)
+          (by simp [hlookup])
+      have hbound :=
+        (realizes top.pinnedCS.numFixedColumns
+          (top.regionStarts.getD lookup.region 0 + lookup.row)
+          0 hrequired).1
+      exact False.elim (Nat.lt_irrefl _ hbound)
+  | some compressed =>
+      by_cases hsingleton :
+          compressed.combinationLen = 1 ∧
+            compressed.assignedRoot = 1
+      · let expected :=
+          if lookup.enabled.any
+              (fun candidate =>
+                candidate.index == selector.index) then
+            1
+          else
+            0
+        have hrequired :=
+          required_of_result
+            (compressed.packedCol,
+              top.regionStarts.getD lookup.region 0 + lookup.row,
+              expected)
+            (by simp [hlookup, hsingleton, expected])
+        have hrealized :=
+          realizes compressed.packedCol
+            (top.regionStarts.getD lookup.region 0 + lookup.row)
+            expected hrequired
+        refine ⟨hrealized.1, ?_⟩
+        rw [selReplacement_eval_of_singleton compressed _
+          hsingleton.1 hsingleton.2]
+        by_cases henabledSelector :
+            ∃ candidate ∈ lookup.enabled,
+              candidate.index = selector.index
+        · have hany :
+              lookup.enabled.any
+                  (fun candidate =>
+                    candidate.index == selector.index) = true := by
+            simp only [List.any_eq_true, beq_iff_eq]
+            exact henabledSelector
+          have hvalue := hrealized.2
+          simp only [expected, hany, if_true, Nat.cast_one] at hvalue
+          simp only [hvalue, TopLevelCircuit.placement_apply,
+            EnabledLookup.selectorValue, henabledSelector, if_true]
+        · have hany :
+              lookup.enabled.any
+                  (fun candidate =>
+                    candidate.index == selector.index) = false := by
+            simp only [List.any_eq_false]
+            intro candidate hcandidate
+            exact fun heq =>
+              henabledSelector
+                ⟨candidate, hcandidate, beq_iff_eq.mp heq⟩
+          have hvalue := hrealized.2
+          simp only [expected, hany, Bool.false_eq_true, if_false,
+            Nat.cast_zero] at hvalue
+          simp only [hvalue, TopLevelCircuit.placement_apply,
+            EnabledLookup.selectorValue, henabledSelector, if_false]
+      · have hrequired :=
+          required_of_result
+            (top.pinnedCS.numFixedColumns,
+              top.regionStarts.getD lookup.region 0 + lookup.row, 0)
+            (by simp [hlookup, hsingleton])
+        have hbound :=
+          (realizes top.pinnedCS.numFixedColumns
+            (top.regionStarts.getD lookup.region 0 + lookup.row)
+            0 hrequired).1
+        exact False.elim (Nat.lt_irrefl _ hbound)
 
 instance EnabledLookup.inputSelectorLeafRowsExactDecidable
     (top : TopLevelCircuit Fp ConfigInput Config Output)

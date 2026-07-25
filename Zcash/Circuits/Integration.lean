@@ -11,6 +11,7 @@ import Zcash.Circuits.Integration.ActionCopyReplay
 import Zcash.Circuits.Integration.ActionPermutationDomainCompute
 import Zcash.Circuits.Integration.ActionStatement
 import Zcash.Circuits.Integration.ActionTerminal
+import Zcash.Circuits.Integration.ActionVesta
 import Zcash.Circuits.Integration.CircuitIntegration
 import Zcash.Circuits.Integration.CircuitSatisfaction
 import Zcash.Circuits.Integration.CopyListMembership
@@ -20,6 +21,7 @@ import Zcash.Circuits.Integration.FixedLayout
 import Zcash.Circuits.Integration.InstanceColumns
 import Zcash.Circuits.Integration.LookupProjection
 import Zcash.Circuits.Integration.LookupSelectorRows
+import Zcash.Circuits.Integration.ActionLookupSelectorRows
 import Zcash.Circuits.Integration.OperationCopies
 import Zcash.Circuits.Integration.OperationFixed
 import Zcash.Circuits.Integration.OperationGates
