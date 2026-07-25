@@ -2,6 +2,7 @@ import Zcash.Snark.Soundness.InstanceCommitment
 import Zcash.Circuits.Integration.FixedLayout
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 import Zcash.Circuits.Integration.SelectorCoherence
+import Zcash.Circuits.Integration.OperationLookups
 import Zcash.Snark.Keygen.LagrangeBasisKey
 
 /-!
@@ -79,6 +80,44 @@ def topLevelSelectorEntries
     List (ℕ × ℕ × ℕ) :=
   Layout.selectorFixed top.selectorMap top.selectorActivations
 
+/--
+Expected dense cells for lookup-relevant selectors that the selector compiler packed
+alone at root one. Enabled leaves read one; disabled leaves read zero.
+
+A missing or non-singleton map entry emits an out-of-bounds sentinel, so realization
+of this interim list also rules those malformed cases out. The structural replacement
+derives singleton ownership and disabled-row zero from compiler invariants instead.
+-/
+def topLevelSingletonLookupSelectorEntries
+    (top : TopLevelCircuit Fp ConfigInput Config Output) :
+    List (ℕ × ℕ × ℕ) :=
+  let operations := top.operations 0
+  let selectorMap := top.selectorMap
+  let starts := top.regionStarts
+  (operationEnabledLookups operations 0).flatMap fun lookup =>
+    lookup.inputSelectorLeaves.filterMap fun selector =>
+      match selectorMap.lookup selector.index with
+      | some compressed =>
+          if compressed.combinationLen = 1 ∧
+              compressed.assignedRoot = 1 then
+            some
+              (compressed.packedCol,
+                starts.getD lookup.region 0 + lookup.row,
+                if lookup.enabled.any
+                    (fun candidate =>
+                      candidate.index == selector.index) then
+                  1
+                else
+                  0)
+          else
+            some
+              (top.pinnedCS.numFixedColumns,
+                starts.getD lookup.region 0 + lookup.row, 0)
+      | none =>
+          some
+            (top.pinnedCS.numFixedColumns,
+              starts.getD lookup.region 0 + lookup.row, 0)
+
 /-- Fixed cells allocated for `constrainConstant` values by the V1 floor planner. -/
 def topLevelConstantEntries
     (top : TopLevelCircuit Fp ConfigInput Config Output) :
@@ -87,15 +126,17 @@ def topLevelConstantEntries
     (Keygen.constantsOf top.constraintSystem (top.operations 0))
 
 /--
-Every sparse fixed write whose value is consumed by the semantic bridge:
-table/region assignments, allocated constants, and packed selectors.
+Every fixed cell whose value is consumed by the semantic bridge: emitted table,
+region, constant, and selector assignments, plus the interim exact cells needed by
+lookup-selector projection.
 -/
 def topLevelRequiredFixedEntries
     (top : TopLevelCircuit Fp ConfigInput Config Output) :
     List (ℕ × ℕ × ℕ) :=
   topLevelFixedOperationEntries top ++
     topLevelConstantEntries top ++
-    topLevelSelectorEntries top
+    topLevelSelectorEntries top ++
+    topLevelSingletonLookupSelectorEntries top
 
 /--
 **INTERIM full-circuit fallback.** Columns allocated by the pinned constraint
@@ -450,16 +491,14 @@ theorem topLevelFixedConstraints_or_bad
       intro column row value hentry
       apply fixedRead
       change (column, row, value) ∈ topLevelSelectorEntries top at hentry
-      simp only [topLevelRequiredFixedEntries, List.mem_append]
-      exact Or.inr hentry
+      simp [topLevelRequiredFixedEntries, hentry]
     · exact FixedLayout.constraints_of_entries
         top.regionStarts (top.usableRowsAt top.domainExponent)
         (top.operations 0) 0 environment rfl
         (fun column row value hentry => fixedRead (by
           change
             (column, row, value) ∈ topLevelFixedOperationEntries top at hentry
-          simp only [topLevelRequiredFixedEntries, List.mem_append]
-          exact Or.inl (Or.inl hentry)))
+          simp [topLevelRequiredFixedEntries, hentry]))
 
 namespace CanonicalMemberConstraintRelation
 

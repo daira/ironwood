@@ -1016,7 +1016,7 @@ theorem actionConstantEndpointRead_or_bad
           (entry.2.1, entry.2.2, entry.1) ∈
             topLevelRequiredFixedEntries orchardActionTopLevelCircuit := by
         simp only [topLevelRequiredFixedEntries, List.mem_append]
-        exact Or.inl (Or.inr hconstantEntry)
+        exact Or.inl (Or.inl (Or.inr hconstantEntry))
       rcases fixedRead hrequired with hread | hbad
       · apply Or.inl
         have haddress := actionEncodedAddress_eq hendpoint
@@ -1184,7 +1184,7 @@ theorem actionConstantCopyValue_or_bad
         (entry.2.1, entry.2.2, entry.1) ∈
           topLevelRequiredFixedEntries orchardActionTopLevelCircuit := by
       simp only [topLevelRequiredFixedEntries, List.mem_append]
-      exact Or.inl (Or.inr hconstantEntry)
+      exact Or.inl (Or.inl (Or.inr hconstantEntry))
     have hfixed :=
       (fixedRead hrequired).resolve_right hbad
     have hpositional :

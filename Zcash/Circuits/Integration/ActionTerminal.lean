@@ -196,19 +196,6 @@ theorem actionBundleStatement_or_relation_of_acceptedNodeBinding
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts)
         actionActiveRows)
-    (lookupSelectorValues : ∀ proofIndex lookup
-      (_henabled :
-        lookup ∈ operationEnabledLookups
-          (orchardActionTopLevelCircuit.operations 0) 0),
-      lookup.InputSelectorValuesRealized
-        orchardActionTopLevelCircuit
-        (resolverEnvironment
-          (orchardActionTopLevelCircuit.toVerifierKey pp urs)
-          (CanonicalMemberConstraintRelation.acceptedPolynomial
-            (memberDecode := memberDecode) haccepts)
-          proofIndex
-          (orchardActionTopLevelCircuit.usableRowsAt
-            orchardActionTopLevelCircuit.domainExponent)))
     (lookupExclusions :
       TopLevelLookupCoherence.TopLevelLookupChallengeExclusions
         orchardActionTopLevelCircuit pp urs ch
@@ -244,7 +231,7 @@ theorem actionBundleStatement_or_relation_of_acceptedNodeBinding
         pp urs hk inputs ps ch vk rfl pU pW a
         batchOpenings memberDecode haccepts hblinding hpoly
         hsatisfied hgoodY permutationExclusions
-        lookupSelectorValues lookupExclusions
+        lookupExclusions
   · exact Or.inr hrelation
 
 assert_no_sorry actionBundleStatement_or_relation_of_acceptedNodeBinding

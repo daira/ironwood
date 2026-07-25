@@ -147,17 +147,6 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
       ResolverPermutationChallengeExclusions
         (orchardActionTopLevelCircuit.toVerifierKey pp urs)
         ch relation.polynomial actionActiveRows)
-    (lookupSelectorValues : ∀ proofIndex lookup
-      (_henabled :
-        lookup ∈ operationEnabledLookups
-          (orchardActionTopLevelCircuit.operations 0) 0),
-      lookup.InputSelectorValuesRealized
-        orchardActionTopLevelCircuit
-        (resolverEnvironment
-          (orchardActionTopLevelCircuit.toVerifierKey pp urs)
-          relation.polynomial proofIndex
-          (orchardActionTopLevelCircuit.usableRowsAt
-            orchardActionTopLevelCircuit.domainExponent)))
     (lookupExclusions :
       TopLevelLookupCoherence.TopLevelLookupChallengeExclusions
         orchardActionTopLevelCircuit pp urs ch relation.polynomial) :
@@ -175,7 +164,7 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
       (commitment_primary pp urs inputs) primaryRegistered
       (ActionGateCoherence.topLevelGateCoherence pp urs)
       permutationExclusions
-      lookupSelectorValues lookupExclusions
+      lookupExclusions
 
 assert_no_sorry actionBundleStatement_or_relation_of_canonicalRelation
 
@@ -244,19 +233,6 @@ theorem actionBundleStatement_or_relation_of_acceptedCircuitSat
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts)
         actionActiveRows)
-    (lookupSelectorValues : ∀ proofIndex lookup
-      (_henabled :
-        lookup ∈ operationEnabledLookups
-          (orchardActionTopLevelCircuit.operations 0) 0),
-      lookup.InputSelectorValuesRealized
-        orchardActionTopLevelCircuit
-        (resolverEnvironment
-          (orchardActionTopLevelCircuit.toVerifierKey pp urs)
-          (CanonicalMemberConstraintRelation.acceptedPolynomial
-            (memberDecode := memberDecode) haccepts)
-          proofIndex
-          (orchardActionTopLevelCircuit.usableRowsAt
-            orchardActionTopLevelCircuit.domainExponent)))
     (lookupExclusions :
       TopLevelLookupCoherence.TopLevelLookupChallengeExclusions
         orchardActionTopLevelCircuit pp urs ch
@@ -279,7 +255,6 @@ theorem actionBundleStatement_or_relation_of_acceptedCircuitSat
       CanonicalMemberConstraintRelation.model,
       hpolynomial] using hgoodY
   · simpa only [hpolynomial] using permutationExclusions
-  · simpa only [hpolynomial] using lookupSelectorValues
   · simpa only [hpolynomial] using lookupExclusions
 
 assert_no_sorry actionBundleStatement_or_relation_of_acceptedCircuitSat

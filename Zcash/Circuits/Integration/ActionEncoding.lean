@@ -9,6 +9,7 @@ import Zcash.Circuits.Integration.TopLevelCircuit
 import Zcash.Circuits.Integration.TopLevelGates
 import Zcash.Circuits.Integration.ActionCopyReplay
 import Zcash.Circuits.Integration.ActionFixedCoherenceCompute
+import Zcash.Circuits.Integration.ActionLookupSelectorRows
 import Zcash.Snark.Keygen.Pipeline
 
 /-!
@@ -293,17 +294,6 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
       ResolverPermutationChallengeExclusions
         (orchardActionTopLevelCircuit.toVerifierKey pp urs)
         ch relation.polynomial actionActiveRows)
-    (lookupSelectorValues : ∀ proofIndex lookup
-      (_henabled :
-        lookup ∈ operationEnabledLookups
-          (orchardActionTopLevelCircuit.operations 0) 0),
-      lookup.InputSelectorValuesRealized
-        orchardActionTopLevelCircuit
-        (resolverEnvironment
-          (orchardActionTopLevelCircuit.toVerifierKey pp urs)
-          relation.polynomial proofIndex
-          (orchardActionTopLevelCircuit.usableRowsAt
-            orchardActionTopLevelCircuit.domainExponent)))
     (lookupExclusions :
       TopLevelLookupCoherence.TopLevelLookupChallengeExclusions
         orchardActionTopLevelCircuit pp urs ch relation.polynomial) :
@@ -432,10 +422,59 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
       let lookupCoherence :
           TopLevelLookupCoherence orchardActionTopLevelCircuit :=
         TopLevelLookupCoherence.ofTopLevel
+      have lookupSelectorValues : ∀ lookup
+          (henabled :
+            lookup ∈ operationEnabledLookups
+              (orchardActionTopLevelCircuit.operations 0) 0),
+          lookup.InputSelectorValuesRealized
+            orchardActionTopLevelCircuit
+            (resolverEnvironment
+              (orchardActionTopLevelCircuit.toVerifierKey pp urs)
+              relation.polynomial proofIndex
+              (orchardActionTopLevelCircuit.usableRowsAt
+                orchardActionTopLevelCircuit.domainExponent)) := by
+        intro lookup henabled
+        have hrow :
+            orchardActionTopLevelCircuit.placement lookup.region + lookup.row <
+              (orchardActionTopLevelCircuit.toVerifierKey pp urs).n := by
+          exact
+            (lookup.activationRow_lt_usableRows
+              gateCoherence henabled).trans_le
+              (by
+                change
+                  orchardActionTopLevelCircuit.usableRowsAt
+                      orchardActionTopLevelCircuit.domainExponent ≤
+                    2 ^ orchardActionTopLevelCircuit.domainExponent
+                unfold TopLevelCircuit.usableRowsAt
+                omega)
+        have hexact :=
+          actionLookupInputSelectorLeafRowsExact
+            fixedCoherence lookup henabled
+        have hvalues :=
+          lookup.inputSelectorValuesRealized_or_bad
+            relation.polynomial fixedCoherence.rows
+            hfixedRows hdomainSize
+            (Bad :=
+              HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+            (fun column hcolumn =>
+              relation.fixedColumn_eq_rowPolynomial_or_relation
+                column fixedCoherence.key
+                (fixedCoherence.rows column)
+                (fixedCoherence.commitment column hcolumn)
+                hfixedRows
+                (by
+                  obtain ⟨rotation, hlayout⟩ :=
+                    fixedCoherence.queryLayout column hcolumn
+                  exact fixedQuery_of_layout
+                    (orchardActionTopLevelCircuit.toVerifierKey pp urs)
+                    instanceCommitment ps ch column rotation
+                    fixedCoherence.fixedQueryCount hlayout))
+            proofIndex hrow hexact
+        exact hvalues.resolve_right hrelation
       let conditions :=
         TopLevelLookupCoherence.TopLevelLookupWitnessConditions.ofChallengeExclusions
           ch relation.polynomial proofIndex
-          (lookupSelectorValues proofIndex) lookupExclusions
+          lookupSelectorValues lookupExclusions
       exact lookupCoherence.constraints
         gateCoherence
         ch relation.polynomial proofIndex hblinding hsatisfaction

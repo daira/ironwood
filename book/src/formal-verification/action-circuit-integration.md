@@ -674,6 +674,29 @@ The preferred structural replacement remains the generic compiler invariant that
 distinct regions never overlap in cells; once available, it should make the guard
 fall out compositionally and remove the finite certificate.
 
+That guarded path is now implemented in Clean. `V1.planOperations` first tries the
+ordinary shared-column placement, but accepts it only when
+`PlacedLookupSelectorRowsExact` directly checks the semantic seam: for every selector
+leaf of every placed lookup input, membership in the global activation table at that
+row is equivalent to membership in the operation's enabled-selector list. If the
+candidate fails, V1 falls back to a globally separated placement. The generic
+`PlacedLookupSelectorRowsExact.placed` theorem combines this guard with the
+region-local `TopLevelCircuit` law; it does not assume a stronger, unproved allocator
+theorem. The Action candidate passes this guard and retains its fixture-compatible
+placement.
+
+`LookupSelectorRows.inputSelectorLeafRowsExact_of_realizes` now performs the next
+generic step. The interim required-entry list emits the expected zero/one cell for a
+singleton root-one packed selector, and deliberately emits an out-of-bounds sentinel
+if a relevant leaf is missing from the map or has any other packing. Consequently a
+proof of the shared fixed realization boundary both rules out the malformed cases and
+supplies the exact lookup valuation. `ActionLookupSelectorRows` merely instantiates
+this generic theorem with the shared `TopLevelFixedCoherence`; it carries no
+Action-specific selector law. The binding-aware Action encoding endpoint then derives
+`InputSelectorValuesRealized` internally for every proof and lookup; the former free
+`lookupSelectorValues` premise has been removed from the canonical,
+accepted-circuit-satisfaction, and accepted-node-binding APIs.
+
 The generic gate and fixed/table operation layers are now implemented as well.
 `operationEnabledGates` extracts every placed activation and
 `gate_constraints_iff_enabledGates` proves exact equivalence with the gate family.
@@ -845,6 +868,13 @@ turns an empty list into the exact realization fact.
 The companion query-coverage diagnostic closes the current all-fixed-columns
 coverage field.
 
+For the current lookup-selector milestone, the required set also contains the exact
+singleton packed-selector cell at every lookup input leaf: the assigned root when the
+operation enables that selector and zero otherwise. This deliberately reuses the
+existing, prominently interim sparse-to-dense certificate instead of introducing a
+second Action-specific computation. It is an unblocker, not the intended final
+layout proof.
+
 The generic scatter semantics no longer needs computation:
 `denseColumns_getD_getD_eq_zero_of_no_target` proves that an unwritten in-domain cell
 retains the zero initializer, while
@@ -859,6 +889,19 @@ table/constant/selector-packing collision and composition laws, and assemble the
 through generic last-write/dedup/scatter semantics. Query coverage should likewise
 follow query registration, preferably after weakening the coherence interface to
 request commitments only for columns actually consumed by the semantic bridge.
+
+The structural replacement has been narrowed to concrete generic lemmas. The sorter
+and last-write HashMap pass must prove that every final sparse entry originates in
+the raw table/constant/selector/region stream; the synthesis-closed constraint system
+must close `numFixedColumns` over every configured constant, loaded table, and
+region-local fixed assignment; and degree-zero selector packing must prove singleton
+column ownership. Together with the direct V1 guard, those facts prove disabled
+lookup-selector cells remain zero without inspecting the full Action artifact.
+To derive degree zero from the existing no-simple-selector synthesis law, the
+compiler should additionally carry selector-kind consistency by allocated index:
+two selectors with the same index must agree on the `simple` flag. This property is
+not implied by the current interface because `selectorMaxDegrees` keys only by the
+numeric index.
 
 The generic operation walk already proves that every extracted enabled gate occurs in
 the floor-planner activation table, and `selectorScale_ne_zero_of_enabledGate` turns
@@ -1081,8 +1124,8 @@ the same fixed cells the table-loaded and fixed-base assumptions read.
 **Status: verifier-side substrate is generic in #30/#91 and exercised by the merged
 [#85](https://github.com/zcash/ironwood/pull/85). The assignment, external statement,
 canonical relation, public-instance commitment, Action endpoint, lookup challenge
-packaging, and generic full-bridge join are bundle-indexed. Concrete copy replay and
-fixed-row selector realization remain open.**
+packaging, generic full-bridge join, concrete copy replay, and fixed-row lookup
+selector realization are bundle-indexed.**
 
 A deployed proof covers `shape.numProofs` Actions. Generalize `PublicInputs`,
 `Assignment`, and `ActionStatement` to a `Fin shape.numProofs` family and decode one
