@@ -1,5 +1,5 @@
 import Zcash.Snark.Keygen.Derivation
-import Zcash.Snark.Keygen.Fast.MontKernelAdapter
+import Zcash.Snark.Keygen.Fast.InvDftMont
 import Zcash.Snark.Fixtures.SingleAction.Fixture
 
 /-!
@@ -15,18 +15,30 @@ EVALUATION-SHARING DISCIPLINE (each rule was measured, the hard way):
 * The commitment passes use the SEQUENTIAL cores (`fixedCommitmentsSeqWith`/
   `permutationCommitmentsSeqWith`): nullary-definition sharing does NOT survive a
   `parMap` task fan-out in this evaluation tier — the 44 column tasks each captured
-  the unforced `lagrangeBasis` thunk and re-ran the whole group FFT (44 × ~4 min =
+  the unforced shared-basis thunk and re-ran the whole basis derivation (44 × ~4 min =
   the CPU-hours regression this replaces). Let-binding the basis inside the decided
   proposition shares correctly at evaluation but blows the elaborator's fixed budget
   at proof-term finalization; the sequential map costs only ~26 s (scatter committer,
   0.6 s/column) and keeps both evaluation and finalization on known-good mechanisms.
+* There is NO GROUP FFT. `commitLagrangeSpec_derivedUrsGLagrange` (MSM bilinearity applied
+  to `bestFftG_dft`) moves the inverse transform off the curve and onto the coefficients:
+  each column is inverse-DFT'd as SCALARS and then committed against the MONOMIAL URS. The
+  scalar transform is the same `bestFftG` at `G := Fp`, run on the Montgomery lane
+  (`Fast.invDftScalarsMontWith`, `ScalarMont.fft`); the 2048-point group FFT it replaces was
+  measured at 206.8 s of the module's former 258 s. The 10-generator Lagrange prefix the
+  bundle cross-checks is likewise 10 monomial MSMs of the closed coefficient rows
+  (`Fast.take_derivedUrsGLagrange_montPre`), not a prefix of an FFT output — otherwise the
+  group FFT would still be forced.
 * The basis and the per-column committer run through the MONTGOMERY LANE
-  (`Fast.derivedUrsGLagrangeMont` / `Fast.commitLagrangeMontWith`): the zero-import
-  `ProjectiveMontDefs` twins over the eight-limb Montgomery field, compiled by the
+  (`Fast.msmMontPre` / `Fast.commitInvDftMontWith`): the zero-import `ProjectiveMontDefs`
+  and `ScalarFftDefs` twins over the eight-limb Montgomery field, compiled by the
   `FastFieldNative` `precompileModules` leaf, proven equal to the statement-surface
-  functions via the kernel simulation theorems (`msmM_spec`, `fftM_spec`) — which ride in
+  functions via the kernel simulation theorems (`msmM_spec`, `fftS_spec`) — which ride in
   turn on the vendored field's ring isomorphism, so the certificate's group work now runs
   on a PROVEN field implementation rather than on `%`-reduced `Nat`s.
+  The monomial basis in Montgomery form (`monomialBasis`), the twiddle table and the `n⁻¹`
+  scale are nullary shares: the coordinate conversion and the 1024 root powers happen once
+  per process, not once per column.
   Profiling note: THIS module gets the dylib automatically (the `ZcashKeygen` lib
   reaches the lane, so lake passes `--load-dynlib`); a SCRATCH probe through
   `lake env lean` does NOT, and must pass
@@ -52,20 +64,38 @@ open Zcash.Snark
 open Zcash.Snark.Fixture
 open Halo2
 open Zcash.Circuits.Action (orchardActionTopLevelCircuit)
+open Zcash.Vendor.ProjectiveMont (PM)
+open Montgomery.Native64x8 (Limbs8)
+open Zcash.Snark.Keygen.Fast.Projective.PVes (ofAffine)
 
 /-- The Action circuit's proof-shape parameters — the only two `Shape` counts that are
 not circuit data (orchard: one Action proof per statement, five multiopen point sets). -/
 def actionProofParams : ProofParams := { numProofs := 1, numPointSets := 5 }
 
-/-- The derived Lagrange basis: the SERIAL Montgomery-lane FFT, proven equal to the
-Rust-mirroring `derivedUrsGLagrange` (`Fast.derivedUrsGLagrangeMont_eq`). Nullary —
-initialized once on the main evaluation thread (all uses are single-threaded). -/
-private def lagrangeBasis : List G := Fast.derivedUrsGLagrangeMont capturedURS
+/-- The MONOMIAL URS in Montgomery form — THE shared basis of every MSM in the bundle (all
+44 columns and the 10 Lagrange-prefix generators). Nullary, so the coordinate conversion
+runs once on the main evaluation thread (all uses are single-threaded). -/
+private def monomialBasis : List PM :=
+  (List.ofFn capturedURS.g).map fun g => Fast.ofPVesM (ofAffine g)
 
-/-- The per-column committer at the derived basis (scatter Pippenger over Montgomery
-limbs). -/
+/-- The inverse-DFT twiddle table in Montgomery form. Nullary — 1024 root powers, shared. -/
+private def invDftTwiddles : Array Limbs8 := Fast.invDftTwiddlesMont capturedURS.k
+
+/-- The inverse-DFT `n⁻¹` scale in Montgomery form. Nullary — one field inversion, shared. -/
+private def invDftScale : Limbs8 := Fast.invDftScaleMont capturedURS.k
+
+/-- The per-column committer: the column's scalar inverse DFT on the Montgomery lane, then
+one scatter Pippenger against the shared monomial basis. -/
 private def commitProj : List Fp → G :=
-  Fast.commitLagrangeMontWith Fast.Msm.defaultWindow capturedURS.w lagrangeBasis
+  Fast.commitInvDftMontWith Fast.Msm.defaultWindow invDftTwiddles invDftScale
+    capturedURS.k capturedURS.w monomialBasis
+
+/-- The derived Lagrange URS prefix the bundle cross-checks: one monomial MSM per generator
+of the closed coefficient row `n⁻¹·ω^(−j·t)`. -/
+private def lagrangeBasis : List G :=
+  List.ofFn fun j : Fin capturedUrsGLagrange.length =>
+    Fast.commitMontPre Fast.Msm.defaultWindow 0 monomialBasis
+      (lagrangeRow capturedURS.k (j : ℕ))
 
 /-- The derived pinned CS at the circuit-owned selector map — `ofOperations`' internal
 `pinned` in method spelling. Nullary, so the selector-map/derive work evaluates once
@@ -74,19 +104,6 @@ private def actionPinned : PinnedConstraintSystem Fp :=
   PinnedConstraintSystem.derive orchardActionTopLevelCircuit.constraintSystem
     orchardActionTopLevelCircuit.selectorMap
 
-set_option maxRecDepth 1000000 in
-/-- The Montgomery-lane committer at the kernel basis IS the pipeline's affine default at
-the spec basis — both sides are proven equal to `Fast.Msm.commitLagrangeSpec`, and the
-two basis spellings are proven equal by `Fast.derivedUrsGLagrangeMont_eq`. -/
-private theorem committer_eq :
-    Fast.commitLagrangeMontWith Fast.Msm.defaultWindow capturedURS.w
-      (Fast.derivedUrsGLagrangeMont capturedURS)
-      = Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow capturedURS.w
-        (derivedUrsGLagrange capturedURS) := by
-  funext coeffs
-  rw [Fast.commitLagrangeMontWith_eq _ (by decide),
-    Fast.Msm.commitLagrangeFastWith_eq _ (by decide),
-    Fast.derivedUrsGLagrangeMont_eq]
 
 /-- `Decidable` instance for the bundle, CONSTRUCTED leaf-by-leaf (see the module
 docstring). -/
@@ -102,7 +119,7 @@ private instance bundleDecEq : DecidableEq (List G × List G × List G ×
     | infer_instance
 
 /-- **The derived verifying key matches the capture, field by field** — bundled into ONE
-`native_decide` so the shared work (the Lagrange FFT, fixed contents, keygen mapping
+`native_decide` so the shared work (the monomial basis, fixed contents, keygen mapping
 and all 44 commitment MSMs) evaluates exactly once. Components, in order: the Lagrange
 URS 10-generator prefix; the 29 fixed-column and 15 permutation commitments; the
 domain/permutation scalars; the gates; the three query layouts; the permutation
@@ -145,6 +162,38 @@ theorem certificate :
        shape) := by
   native_decide
 
+/-- The fixture's `Shape` is the proof-shape parameters merged with the circuit-derived
+counts. -/
+theorem shape_eq_mergeDerived :
+    actionProofParams.mergeDerived orchardActionTopLevelCircuit = shape := by
+  have h := certificate
+  simp only [Prod.mk.injEq] at h
+  exact h.2.2.2.2.2.2.2.2
+
+/-- The keygen domain exponent the columns are built at IS the captured URS's `k`, so the
+column length the commitment families produce is the domain the committer's inverse DFT runs
+over. Read off the bundle's `Shape` component (`mergeDerived`'s `k` field is the circuit's
+`domainExponent`) rather than by reducing `minimalK`. -/
+private theorem domainExponent_eq :
+    orchardActionTopLevelCircuit.domainExponent = capturedURS.k := by
+  have h := congrArg Shape.k shape_eq_mergeDerived
+  simp only [ProofParams.mergeDerived] at h
+  rw [h]
+  decide
+
+set_option maxRecDepth 1000000 in
+/-- **The bundle's per-column committer IS the pipeline's affine default at the derived
+Lagrange basis**, on every full-domain column: `Fast.commitInvDftMontWith_eq` is the
+bilinearity theorem run through the Montgomery lane on both halves. -/
+private theorem committer_eq (l : List Fp)
+    (hl : l.length = 2 ^ orchardActionTopLevelCircuit.domainExponent) :
+    commitProj l = Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow capturedURS.w
+      (derivedUrsGLagrange capturedURS) l := by
+  rw [Fast.Msm.commitLagrangeFastWith_eq _ (by decide)]
+  simp only [commitProj, monomialBasis]
+  rw [Fast.commitInvDftMontWith_eq Fast.Msm.defaultWindow (by decide) invDftTwiddles
+    invDftScale capturedURS (by decide) rfl rfl l (by rw [hl, domainExponent_eq])]
+
 set_option maxRecDepth 1000000 in
 /-- The derived Lagrange URS reproduces the captured 10-generator prefix. -/
 theorem derivedUrsGLagrange_prefix_eq :
@@ -153,8 +202,10 @@ theorem derivedUrsGLagrange_prefix_eq :
   have h := certificate
   simp only [Prod.mk.injEq] at h
   have h1 := h.1
-  simp only [lagrangeBasis] at h1
-  rw [← Fast.derivedUrsGLagrangeMont_eq]
+  simp only [lagrangeBasis, monomialBasis] at h1
+  rw [List.take_of_length_le (by simp)] at h1
+  rw [Fast.take_derivedUrsGLagrange_montPre Fast.Msm.defaultWindow (by decide) capturedURS
+    (by decide) capturedUrsGLagrange.length (by decide)]
   exact h1
 
 set_option maxRecDepth 1000000 in
@@ -164,8 +215,7 @@ theorem derivedFixedCommitments_eq :
   have h := certificate
   simp only [Prod.mk.injEq] at h
   have hfc := h.2.1
-  simp only [commitProj, lagrangeBasis] at hfc
-  rw [fixedCommitmentsSeqWith_eq, committer_eq] at hfc
+  rw [fixedCommitmentsSeqWith_congr _ _ _ _ committer_eq, fixedCommitmentsSeqWith_eq] at hfc
   simp only [fixedCommitmentsWith] at hfc
   simp only [derivedFixedCommitments, Halo2.TopLevelCircuit.fixedCommitments,
     Halo2.TopLevelCircuit.fixedRows]
@@ -179,19 +229,11 @@ theorem derivedPermutationCommonCommitments_eq :
   have h := certificate
   simp only [Prod.mk.injEq] at h
   have hpc := h.2.2.1
-  simp only [commitProj, lagrangeBasis] at hpc
-  rw [permutationCommitmentsSeqWith_eq, committer_eq] at hpc
+  rw [permutationCommitmentsSeqWith_congr _ _ _ committer_eq,
+    permutationCommitmentsSeqWith_eq] at hpc
   simp only [derivedPermutationCommonCommitments,
     Halo2.TopLevelCircuit.permutationCommitments, permutationCommitmentsOf]
   exact hpc
-
-/-- The fixture's `Shape` is the proof-shape parameters merged with the circuit-derived
-counts. -/
-theorem shape_eq_mergeDerived :
-    actionProofParams.mergeDerived orchardActionTopLevelCircuit = shape := by
-  have h := certificate
-  simp only [Prod.mk.injEq] at h
-  exact h.2.2.2.2.2.2.2.2
 
 set_option maxRecDepth 1000000 in
 /-- **The captured Action verifying key is fully derived.** Both sides are opened with
@@ -203,9 +245,9 @@ theorem vk_eq_derived : vk = derivedActionVk shape capturedURS := by
   simp only [Prod.mk.injEq] at h
   obtain ⟨-, hfc, hpc, ⟨ho, hn, hb, hd, hc⟩, hg, ⟨hiq, haq, hfq⟩, hpch, ⟨hli, hlt⟩, -⟩ := h
   -- align the bundle's spellings with the keygen internals
-  simp only [commitProj, lagrangeBasis] at hfc hpc
-  rw [fixedCommitmentsSeqWith_eq, committer_eq] at hfc
-  rw [permutationCommitmentsSeqWith_eq, committer_eq] at hpc
+  rw [fixedCommitmentsSeqWith_congr _ _ _ _ committer_eq, fixedCommitmentsSeqWith_eq] at hfc
+  rw [permutationCommitmentsSeqWith_congr _ _ _ committer_eq,
+    permutationCommitmentsSeqWith_eq] at hpc
   simp only [actionPinned, Halo2.TopLevelCircuit.selectorMap,
     Halo2.TopLevelCircuit.selectorActivations, Halo2.TopLevelCircuit.regionStarts,
     Halo2.TopLevelCircuit.domainExponent]

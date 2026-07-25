@@ -139,9 +139,13 @@ single commitment of a closed coefficient row against the monomial URS.  A short
 the derived basis therefore costs that many MSMs, instead of the whole `2 ^ k`-point group
 FFT. -/
 
-/-- The `j`-th derived Lagrange generator's coefficient row: `n⁻¹ · ω^(−j·t)`, `t < 2 ^ k`. -/
+/-- The `j`-th derived Lagrange generator's coefficient row: `n⁻¹ · ω^(−j·t)`, `t < 2 ^ k`.
+The scale and the root are bound outside the map: they are loop-invariant, and the scale is a
+field inversion. -/
 def lagrangeRow (k j : ℕ) : List Fp :=
-  (List.range (2 ^ k)).map fun t => ((2 : Fp) ^ k)⁻¹ * omegaInvOf k ^ (j * t)
+  let minv : Fp := ((2 : Fp) ^ k)⁻¹
+  let w : Fp := omegaInvOf k
+  (List.range (2 ^ k)).map fun t => minv * w ^ (j * t)
 
 theorem lagrangeRow_length (k j : ℕ) : (lagrangeRow k j).length = 2 ^ k := by
   simp [lagrangeRow]
