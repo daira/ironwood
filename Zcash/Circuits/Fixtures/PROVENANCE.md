@@ -34,29 +34,40 @@ the `SimpleFloorPlanner` exactly as `keygen_vk` does.
 | halo2_proofs version | 0.3.2 (github.com/zcash/halo2) — recorded in `Layout.lean` |
 | Base (pre-NU 6.3) circuit | orchard 0.14.0 — the `actionBase` dump is byte-identical to the 0.14.0 circuit, verified on the ironwood branch (`TestVkLayoutActionBase.lean`) |
 | Post (NU 6.3 / ironwood) circuit | the orchard ironwood branch (`Circuit::synthesize` with `synthesize_cross_address_checks`) |
-| Instrumented halo2 / orchard commit hashes | **UNKNOWN — not recorded at generation time.** The dump forks have not been published; regeneration is currently not reproducible from pinned sources. |
+| Instrumented halo2 / orchard commit hashes | Not pinned to a public commit. The `dump_lean` / `layout_dump` / `dump_layout_action` instrumentation is one-off tooling in local checkouts of halo2/orchard — it exists only to emit these fixtures for the VK-match tests, is not production code, and by decision is not being upstreamed to main. So there is no public commit to pin and no byte-for-byte regeneration from public sources. |
 
-Closing that last row is the outstanding provenance task: publish the instrumented
-halo2/orchard branches (or fold `dump_lean`/`layout_dump` behind a feature flag
-upstream), record the exact commit hashes here, and add a CI job that regenerates the
-JSON fixtures from those pins and diffs them against the checked-in bytes — the
-circuit-side analogue of what `.github/workflows/fixtures.yml` already does for the
-`Zcash/Snark/Fixtures/` verifier fingerprint captures (which use a separate pipeline:
-orchard 0.15.1 / halo2 0.3.3, `orchard-fingerprint-instances`).
+Note that zcash/halo2#922 does **not** close this: it concerns the *separate*
+verifier-fingerprint exporter (`dump_vesta_lean_fixture` → `Zcash/Snark/Fixtures/`), not
+this circuit-VK dump pipeline.
+
+Because the dump instrumentation is intentionally unpublished, these fixtures are **not**
+reproducible from pinned public sources the way the `Zcash/Snark/Fixtures/` verifier
+fingerprint captures are (those regenerate in CI from a pinned orchard release —
+`.github/workflows/fixtures.yml`). What certifies them instead is the pair of guards under
+[Content pinning](#content-pinning): the SHA-256 pin in `SHA256SUMS` (a CI `sha256sum -c`
+drift/tamper guard) and the `CircuitVkCheck` reconstruction (`TestVk*`), which asserts the
+projected Lean CS/layout equals the dumped bytes — a divergence on either side fails the
+build. Making regeneration reproducible would mean upstreaming the dump behind a feature
+flag; there is no current plan to do that.
 
 ## Content pinning
 
-Every JSON fixture is pinned by an FNV-1a-64 content hash **in the consuming test
-source** (`Fixtures/Json.lean` `loadJsonChecked`): a byte change fails the build until
-the pinned literal is updated, so the committed Lean source always pins the exact
-fixture content. Current artifacts:
+Every JSON fixture is pinned by a SHA-256 content hash in
+[`SHA256SUMS`](./SHA256SUMS) (standard `sha256sum` format), enforced in CI by the
+`Fixtures/*.json` guard in [`.github/workflows/lean.yml`](../../../.github/workflows/lean.yml)
+(`sha256sum -c`, the OS tool). SHA-256 — a cryptographic hash — means the pin resists a
+crafted swap, not just accidental drift. The hash is **not** recomputed inside the Lean
+build: no fast SHA-256 exists in the toolchain (Clean's `Specs.SHA256` reference spec does
+not finish over even the 33 KB fixture at `#eval` time), and a hand-rolled one is not worth
+maintaining. Regenerate the pins with `sha256sum <files> > SHA256SUMS` from this directory.
+Current artifacts:
 
-| File | FNV-1a-64 | Bytes | Pinned in |
+| File | SHA-256 | Bytes | Consumed by |
 |---|---|---|---|
-| `actionPre.json` | `0x31656840fdb3156d` | 33,120 | `TestVkMatchAction.lean` |
-| `actionPost.json` | `0xdb884f3c3174a41b` | 67,143 | `TestVkMatchAction.lean` |
-| `actionLayout.json` | `0x051cd2f7ce66a8c7` | 943,608 | `TestVkLayoutAction.lean` |
-| `actionBaseLayout.json` | `0x193f3922aa59191e` | 941,568 | `TestVkLayoutActionBase.lean` |
+| `actionPre.json` | `8cd36834ba575d83035e1369ea71cc6f6fdae17ba116e425de6c67989b51d448` | 33,120 | `TestVkMatchAction.lean` |
+| `actionPost.json` | `a6083ecd2abc72ea3641fa0d066aabcd91ecb89a1554ef31aa31ab6d7591ff68` | 67,143 | `TestVkMatchAction.lean` |
+| `actionLayout.json` | `7ac082324c93ef6c097ad26dfe7a166d1a74e41a5a6b4c0e250bf3e3d2163a87` | 943,608 | `TestVkLayoutAction.lean` |
+| `actionBaseLayout.json` | `1c155864b0256ad93b9c4d09394dcf7b302ef5fcf9a7ac356ae15988ba09aa08` | 941,568 | `TestVkLayoutActionBase.lean` |
 
 The Add/Mul fixtures and the SelMaps are small enough to live as Lean literals; they
 are pinned by being source files (any edit is a reviewable diff), and their headers
