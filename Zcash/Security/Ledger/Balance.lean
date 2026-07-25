@@ -5,9 +5,12 @@ import Zcash.Security.Ledger.Effects
 # Balance-subset: every nonzero spend is a committed output
 
 The first Balance theorem, as a computed reduction. For a valid ledger, the nonzero
-spends form a sub-multiset of the positioned outputs — each spend is the opening of the
-output that created its commitment, at that output's leaf position, and no positioned
-opening is spent twice — or the ledger's own data computes a `BalanceBreak`:
+spends of the first `i + 1` transactions form a sub-multiset of the positioned outputs
+of the first `i` — outputs of *strictly earlier* transactions, since an anchor
+references the tree at a transaction boundary, so a spend can never match an output of
+its own transaction. Each spend is the opening of the output that created its
+commitment, at that output's leaf position, and no positioned opening is spent twice —
+or the ledger's own data computes a `BalanceBreak`:
 
 * a Merkle `Collision` — one height's compression collided, with both evaluations
   successful — when a spend's authentication path validates a leaf that is not the
@@ -196,7 +199,7 @@ theorem satisfied_of_spendMem
 theorem anchor_of_spendMem
     (hval : ValidLedger P kv issuance maxActions ledger) {i : ℕ}
     {a : Action KW F G RHO PSI MHASH MENC SIG P.depth} (ha : a ∈ spendActions ledger i) :
-    ∃ j, j ≤ i ∧ rootAfter P ledger j = some a.inst.rt := by
+    ∃ j, j < i ∧ rootAfter P ledger j = some a.inst.rt := by
   obtain ⟨tx, htx, hafil⟩ := List.mem_flatMap.mp ha
   obtain ⟨k, hk, hgetk⟩ := List.mem_iff_getElem.mp htx
   have hki : k < i := lt_of_lt_of_le hk (by simp [List.length_take])
@@ -206,7 +209,7 @@ theorem anchor_of_spendMem
     exact hgetk
   obtain ⟨j, hjk, hrt⟩ := hval.anchor_valid ⟨k, hkl⟩ a
     (by rw [hget]; exact List.mem_of_mem_filter hafil)
-  exact ⟨j, le_of_lt (lt_of_le_of_lt hjk hki), hrt⟩
+  exact ⟨j, lt_of_le_of_lt hjk hki, hrt⟩
 
 /-- **Per-spend pinning.** A nonzero spend of a valid ledger is the positioned opening
 of the output that created its commitment — or the ledger data computes a break. The
@@ -215,11 +218,13 @@ computable. -/
 def spendPinnedOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq RHO]
     [DecidableEq PSI] [DecidableEq MHASH] [DecidableEq MENC]
     (hval : ValidLedger P kv issuance maxActions ledger) {i : ℕ}
-    {a : Action KW F G RHO PSI MHASH MENC SIG P.depth} (ha : a ∈ spendActions ledger i) :
+    {a : Action KW F G RHO PSI MHASH MENC SIG P.depth}
+    (ha : a ∈ spendActions ledger (i + 1)) :
     (spendRecord a ∈ positionedOutputs ledger i) ⊕' BalanceBreak P kv :=
-  have hex : ∃ j, j ≤ i ∧ rootAfter P ledger j = some a.inst.rt := anchor_of_spendMem hval ha
+  have hex : ∃ j, j < i + 1 ∧ rootAfter P ledger j = some a.inst.rt :=
+    anchor_of_spendMem hval ha
   let j := Nat.find hex
-  have hji : j ≤ i := (Nat.find_spec hex).1
+  have hji : j ≤ i := Nat.lt_succ_iff.mp (Nat.find_spec hex).1
   have hpath : Merkle.Path P.merkle (P.extract a.w.cm_old) a.inst.rt a.w.path a.w.side :=
     (satisfied_of_spendMem hval ha).1.merkle_path (satisfied_of_spendMem hval ha).2
   have hroot : Merkle.root P.merkle (leafFun P (leafList (ledger.take j)))
@@ -264,7 +269,7 @@ def allPinnedOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq RHO]
     [DecidableEq PSI] [DecidableEq MHASH] [DecidableEq MENC]
     (hval : ValidLedger P kv issuance maxActions ledger) {i : ℕ} :
     (L : List (Action KW F G RHO PSI MHASH MENC SIG P.depth)) →
-    (∀ a ∈ L, a ∈ spendActions ledger i) →
+    (∀ a ∈ L, a ∈ spendActions ledger (i + 1)) →
     ((∀ a ∈ L, spendRecord a ∈ positionedOutputs ledger i) ⊕' BalanceBreak P kv)
   | [], _ => .inl (by simp)
   | a :: t, hL =>
@@ -279,20 +284,23 @@ def allPinnedOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq RHO]
           exacts [hmem, hall x hx'])
 
 /-- **Balance-subset, as a computed reduction.** For a valid ledger, the nonzero spends
-are a sub-multiset of the positioned outputs — or the ledger data computes a
-`BalanceBreak`. Duplicate spends are located by `findPair`; sharing a positioned opening
+of the first `i + 1` transactions are a sub-multiset of the positioned outputs of the
+first `i` — or the ledger data computes a `BalanceBreak`. The one-transaction lag is the
+strictly-earlier constraint: an anchor references a transaction boundary, so a spend
+never matches an output of its own transaction. Duplicate spends are located by
+`findPair`; sharing a positioned opening
 forces sharing a revealed nullifier (`nfOldEqOrBreak`), which nullifier uniqueness
 forbids, so the surviving branch is a key-binding break. -/
 def balanceSubsetOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq RHO]
     [DecidableEq PSI] [DecidableEq MHASH] [DecidableEq MENC] [DecidableEq NK]
     [NoZeroSMulDivisors F G]
     (hval : ValidLedger P kv issuance maxActions ledger) (i : ℕ) :
-    (nonZeroSpends ledger i ≤ ↑(positionedOutputs ledger i)) ⊕' BalanceBreak P kv :=
-  match hfp : findPair spendRecord (spendActions ledger i) with
+    (nonZeroSpends ledger (i + 1) ≤ ↑(positionedOutputs ledger i)) ⊕' BalanceBreak P kv :=
+  match hfp : findPair spendRecord (spendActions ledger (i + 1)) with
   | some (a₁, a₂) =>
       have hspec := findPair_spec spendRecord hfp
-      have h₁ : a₁ ∈ spendActions ledger i := hspec.2.subset (by simp)
-      have h₂ : a₂ ∈ spendActions ledger i := hspec.2.subset (by simp)
+      have h₁ : a₁ ∈ spendActions ledger (i + 1) := hspec.2.subset (by simp)
+      have h₂ : a₂ ∈ spendActions ledger (i + 1) := hspec.2.subset (by simp)
       have hrcm : a₁.w.rcm_old = a₂.w.rcm_old := by
         have := congrArg (fun r => r.opening.rcm) hspec.1
         simpa [spendRecord] using this
@@ -306,15 +314,15 @@ def balanceSubsetOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq RHO]
           -- one nullifier at two distinct occurrences — impossible in a valid ledger
           have hsubnf : List.Sublist [a₁.inst.nf_old, a₂.inst.nf_old] (nullifiers ledger) := by
             have h := (hspec.2.map fun a => a.inst.nf_old).trans
-              (spendActions_map_nf_sublist ledger i)
+              (spendActions_map_nf_sublist ledger (i + 1))
             simpa using h
           have hnd : [a₁.inst.nf_old, a₂.inst.nf_old].Nodup :=
             hval.nf_nodup.sublist hsubnf
           absurd hnf (by simpa using hnd)
   | none =>
-      have hnodup : ((spendActions ledger i).map spendRecord).Nodup :=
+      have hnodup : ((spendActions ledger (i + 1)).map spendRecord).Nodup :=
         findPair_none spendRecord hfp
-      match allPinnedOrBreak hval (spendActions ledger i) (fun _ h => h) with
+      match allPinnedOrBreak hval (spendActions ledger (i + 1)) (fun _ h => h) with
       | .inr b => .inr b
       | .inl hall =>
           .inl (by
