@@ -114,6 +114,41 @@ theorem rootAfter_prefix (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
   obtain ⟨t, rfl⟩ := hpre
   rw [rootAfter, rootAfter, List.take_append_of_le_length hj]
 
+/-- The leaf list distributes over ledger concatenation. -/
+theorem leafList_append (ledger ledger' : Ledger KW F G RHO PSI MHASH MENC MSG SIG d) :
+    leafList (ledger ++ ledger') = leafList ledger ++ leafList ledger' := by
+  simp [leafList]
+
+/-- A prefix balance ignores an extension: the first `i` transactions of `ledger ++ ledger'`
+are those of `ledger` when `i` is within `ledger`. -/
+theorem transparentPoolBalance_append_of_le (issuance : ℕ → ℕ)
+    {ledger : Ledger KW F G RHO PSI MHASH MENC MSG SIG d} {i : ℕ} (hi : i ≤ ledger.length)
+    (ledger' : Ledger KW F G RHO PSI MHASH MENC MSG SIG d) :
+    transparentPoolBalance issuance (ledger ++ ledger') i =
+      transparentPoolBalance issuance ledger i := by
+  rw [transparentPoolBalance, transparentPoolBalance, List.take_append_of_le_length hi]
+
+/-- The balance saturates at the ledger's length: taking more transactions than exist
+changes nothing. -/
+theorem transparentPoolBalance_of_length_le (issuance : ℕ → ℕ)
+    {ledger : Ledger KW F G RHO PSI MHASH MENC MSG SIG d} {i : ℕ} (hi : ledger.length ≤ i) :
+    transparentPoolBalance issuance ledger i =
+      transparentPoolBalance issuance ledger ledger.length := by
+  rw [transparentPoolBalance, transparentPoolBalance, List.take_of_length_le hi,
+    List.take_length]
+
+/-- The balance across an appended transaction: the previous total, plus the issuance
+minted at the new index, plus the transaction's declared net value. -/
+theorem transparentPoolBalance_append_singleton (issuance : ℕ → ℕ)
+    (ledger : Ledger KW F G RHO PSI MHASH MENC MSG SIG d)
+    (tx : Tx KW F G RHO PSI MHASH MENC MSG SIG d) :
+    transparentPoolBalance issuance (ledger ++ [tx]) (ledger.length + 1) =
+      transparentPoolBalance issuance ledger ledger.length
+        + ((issuance ledger.length : ℤ) + tx.vBalance) := by
+  rw [transparentPoolBalance, transparentPoolBalance, List.take_length,
+    List.take_of_length_le (by simp), List.zipIdx_append, List.map_append, List.sum_append]
+  simp
+
 section Validity
 
 variable [Field F] [AddCommGroup G] [Module F G]
