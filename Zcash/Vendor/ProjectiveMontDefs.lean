@@ -31,9 +31,12 @@ structure PM where
   Y : Limbs8
   /-- The `Z` coordinate. -/
   Z : Limbs8
-deriving DecidableEq, Inhabited
+deriving DecidableEq
 
 namespace PM
+
+/-- `Array.get!`/`set!` need a default; the projective identity is the right one. -/
+instance : Inhabited PM := ⟨⟨zero, one, zero⟩⟩
 
 /-- The Montgomery residue of `3`. -/
 def c3 : Limbs8 := ofNat 3
@@ -67,20 +70,88 @@ Montgomery limbs. -/
 /-- The projective identity `𝒪 = (0 : 1 : 0)`. -/
 def pid : PM := ⟨zero, one, zero⟩
 
-/-- Binary scalar multiplication, the same recursion as `CompElliptic.binNsmul` specialized to
-`padd`/`pid`; kept here so that this module stays core-only. -/
-def binNsmul (n : Nat) (P : PM) : PM :=
-  if h : n = 0 then pid
-  else
-    let q := binNsmul (n / 2) P
-    let d := padd q q
-    if n % 2 = 1 then padd d P else d
-  decreasing_by exact Nat.div_lt_self (Nat.pos_of_ne_zero h) (by decide)
+/-! ## Group kernels
 
-/-- Projective scalar multiplication `n • P`, the Montgomery twin of
-`Zcash.Snark.Keygen.Fast.Projective.PVes.pnsmulFast`. -/
-def pnsmulFast (n : Nat) (P : PM) : PM := binNsmul n P
+Spelled to mirror `Zcash.Vendor.NatKernel`'s ladder, Pippenger and FFT **operation for
+operation**, so that the simulation proofs of `Zcash.Vendor.NatKernelEquiv` transfer to this
+tier structurally: only the interpretation of a coordinate changes (a Montgomery residue
+instead of a canonical `Nat`), never the schedule. -/
+
+/-- Fixed 256-step LSB-first double-and-add ladder (mirrors `NatKernel.pnsmul`). -/
+def pnsmul (n : Nat) (p : PM) : PM :=
+  (List.range 256).foldl
+    (fun (st : PM × PM) i =>
+      let acc := if (n >>> i) &&& 1 = 1 then padd st.1 st.2 else st.1
+      (acc, padd st.2 st.2))
+    (pid, p) |>.1
+
+/-- One Array-scatter step (mirrors `NatKernel.scatterStep`). -/
+def scatterStep (a : Array PM) (p : Nat × PM) : Array PM :=
+  if p.1 = 0 then a else a.modify (p.1 - 1) (fun v => padd v p.2)
+
+/-- Scatter a digit-tagged point list into its `base − 1` buckets in ONE pass. -/
+def bucketScatter (base : Nat) (dp : List (Nat × PM)) : Array PM :=
+  dp.foldl scatterStep (Array.replicate (base - 1) pid)
+
+/-- One step of the bucket downsweep (mirrors `NatKernel.accStep`). -/
+def accStep (a : PM) (p : PM × PM) : PM × PM := (padd p.1 a, padd p.2 (padd p.1 a))
+
+/-- The window-`i` value in base `base` (mirrors `NatKernel.windowValue`). -/
+def windowValue (base i : Nat) (terms : List (Nat × PM)) : PM :=
+  let scale := base ^ i
+  (List.foldr accStep (pid, pid)
+    (bucketScatter base (terms.map fun t => (t.1 / scale % base, t.2))).toList).2
+
+/-- `c`-fold doubling — the `base •` Horner step between adjacent windows. -/
+def pdoublings (c : Nat) (p : PM) : PM := (List.range c).foldl (fun a _ => padd a a) p
+
+/-- Windowed Pippenger MSM, window `c` (mirrors `NatKernel.msm`). -/
+def msm (c : Nat) (terms : List (Nat × PM)) : PM :=
+  let numWindows := (256 + c - 1) / c
+  let base := 2 ^ c
+  ((List.range numWindows).map fun i => windowValue base i terms).foldr
+    (fun v acc => padd (pdoublings c acc) v) pid
+
+/-- Projective negation: `-(X : Y : Z) = (X : −Y : Z)` (mirrors `NatKernel.pneg`). -/
+@[inline] def pneg (p : PM) : PM := ⟨p.X, sub zero p.Y, p.Z⟩
+
+/-- Bit-reversal permutation index (mirrors `NatKernel.bitreverse`). -/
+def bitreverse (n l : Nat) : Nat := Id.run do
+  let mut r := 0
+  let mut m := n
+  for _ in [0:l] do
+    r := (r <<< 1) ||| (m &&& 1)
+    m := m >>> 1
+  return r
+
+/-- In-place radix-2 DIT FFT over `PM` (mirrors `NatKernel.fft`): bit-reversal permutation,
+then `logN` rounds of butterflies against the canonical `Nat` twiddle scalars `tw`. -/
+def fft (a0 : Array PM) (tw : Array Nat) (logN : Nat) : Array PM := Id.run do
+  let n := a0.size
+  let mut a := a0
+  for k in [0:n] do
+    let rk := bitreverse k logN
+    if k < rk then
+      let ak := a[k]!
+      let ark := a[rk]!
+      a := (a.set! k ark).set! rk ak
+  let mut half := 1
+  for _ in [0:logN] do
+    let chunk := 2 * half
+    let twiddleChunk := n / chunk
+    for c in [0:n / chunk] do
+      let s := c * chunk
+      for j in [0:half] do
+        let twdl := tw[j * twiddleChunk]!
+        let aIdx := s + j
+        let bIdx := s + half + j
+        let aOld := a[aIdx]!
+        let t := pnsmul twdl a[bIdx]!
+        a := a.set! aIdx (padd aOld t)
+        a := a.set! bIdx (padd aOld (pneg t))
+    half := chunk
+  return a
 
 end PM
 
-end Zcash.Snark.Keygen.Fast.ProjectiveMont
+end Zcash.Vendor.ProjectiveMont
