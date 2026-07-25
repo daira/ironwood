@@ -20,8 +20,9 @@ Pedersen-scalar ±-collisions — essentially note-commitment binding:
 
 The key material is decoupled behind `KeyBindingInterface`: the games see only the
 projections (`ivk`, `nk`, `akP`), the key-binding condition `KB` enforced by the statement,
-and a `Break` predicate with the guarantee that two `KB`-witnesses sharing an `ivk` but
-disagreeing on `nk` are a break. The concrete witness structure, the factoring
+and a `Break` predicate with two guarantees: `KB`-witnesses sharing an `ivk` are a break
+if they disagree on `nk`, or if their `akP`s are not equal up to sign (`=±`, the notation
+scoped in `Zcash.Security.RandomOracle`). The concrete witness structure, the factoring
 `KB = KBOpening ∧ KBDerivation`, and the reduction from `Break` to random-oracle
 collisions live in the key-binding layer (`keep/keybinding-design.md`).
 
@@ -37,6 +38,8 @@ The lemmas here are the deterministic pinning steps of the Balance argument:
 -/
 
 namespace Zcash.Security.Ledger
+
+open scoped Zcash.Security.RandomOracle
 
 variable {F : Type*} [Field F]
 variable {G : Type*} [AddCommGroup G] [Module F G]
@@ -100,13 +103,12 @@ abbrev Primitives.depth (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG) :
   P.merkle.depth
 
 /-- The games-facing view of a key-binding witness type `KW`: projections, the key-binding
-condition `KB` enforced by the statement, and a `Break` predicate. `break_of_nk_ne` is the
-guarantee the games consume; the key-binding layer instantiates `Break` and discharges it
-(reducing breaks onward to random-oracle collisions or DLR relations). This interface is
-provisional: its shape is to be revisited against what the Balance and Spendability games
-actually consume once they are formalized — in particular `Break` being an opaque `Prop`
-limits the games to certificate-level break exhibition. -/
-structure KeyBindingInterface (KW G IVK NK : Type*) where
+condition `KB` enforced by the statement, and a `Break` predicate. `break_of_nk_ne`
+(consumed by Balance) and `break_of_akP_ne` (consumed by Spend Authority) are the
+guarantees the games use; the key-binding layer instantiates `Break` and discharges both,
+reducing breaks onward to random-oracle collisions. `Break` being an
+opaque `Prop` limits the games to certificate-level break exhibition. -/
+structure KeyBindingInterface (KW G IVK NK : Type*) [Neg G] where
   ivk : KW → IVK
   nk : KW → NK
   akP : KW → G
@@ -114,6 +116,12 @@ structure KeyBindingInterface (KW G IVK NK : Type*) where
   Break : KW → KW → Prop
   break_of_nk_ne : ∀ {w₁ w₂ : KW}, KB w₁ → KB w₂ →
     ivk w₁ = ivk w₂ → nk w₁ ≠ nk w₂ → Break w₁ w₂
+  /-- Two `KB`-witnesses sharing an `ivk` whose `akP`s are not equal up to sign are a
+  break. The key-binding layer discharges this from the ±-property of the `ak`
+  extraction: `ak` is consumed as a single extracted coordinate, pinned only up to
+  y-sign. -/
+  break_of_akP_ne : ∀ {w₁ w₂ : KW}, KB w₁ → KB w₂ →
+    ivk w₁ = ivk w₂ → ¬ akP w₁ =± akP w₂ → Break w₁ w₂
 
 /-- The auxiliary inputs of an Action. `cm_old`/`cm_new` are carried explicitly so that the
 statement's commitment checks pin them; `kw` is the key-binding witness. -/
