@@ -6,14 +6,17 @@ import Zcash.Security.Ledger.Merkle
 
 This module transcribes the games-relevant conjuncts of an Orchard-shaped Action statement
 (Zcash protocol specification §4.17.4) over abstract primitives, as the interface consumed
-by the ledger-model security games (Balance, Spendability, Spend Authority). Two intended
-instantiations satisfy it:
+by the ledger-model security games (Balance, Spendability, Spend Authority). Two
+instantiations are intended to satisfy it. The statements themselves are not formalized
+yet, though the key-binding layer already reduces breaks of the `Commit^ivk` opening to
+Pedersen-scalar ±-collisions — essentially note-commitment binding:
 
 * the deployed (pre-quantum) Orchard Action statement, where the key-binding condition is
-  the bare `Commit^ivk` opening and note-commitment breaks reduce to Sinsemilla/DLR
-  relations; and
+  the bare `Commit^ivk` opening, and note-commitment breaks reduce on paper to
+  Sinsemilla/DLR relations (spec Theorems 5.4.3 and 5.4.4); and
 * the ZIP 2005 Recovery Statement, which adds derivation constraints (`KB_deriv`, the
-  `H^rcm`/`H^ψ` checks) so that the same breaks reduce to random-oracle collisions.
+  `H^rcm`/`H^ψ` checks) so that the same breaks reduce to random-oracle collisions
+  (ZIP 2005's key-binding theorem).
 
 The key material is decoupled behind `KeyBindingInterface`: the games see only the
 projections (`ivk`, `nk`, `akP`), the key-binding condition `KB` enforced by the statement,
@@ -151,9 +154,10 @@ structure ActionSatisfied (P : Primitives F G IVK NK RHO PSI CMX RT)
 
 /-- A note-commitment break, as data (per the breaks-as-computed-data
 convention in `Zcash.Security.RandomOracle`): two distinct `(rcm, note)` tuples whose commitments have
-equal extracted coordinates. Computed by the games' reductions; each instantiation reduces
-it onward (a Sinsemilla/DLR relation pre-quantum; an `H^rcm` ±-collision for the Recovery
-Statement via the Pedersen lift and the `extract` ±-property). -/
+equal extracted coordinates. Computed by the games' reductions; nothing in this
+development reduces it further. The intended onward reductions are a Sinsemilla/DLR
+relation pre-quantum (spec Theorems 5.4.3 and 5.4.4), and an `H^rcm` ±-collision for the
+Recovery Statement (via the Pedersen lift and the `extract` ±-property). -/
 structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI CMX RT) where
   rcm₁ : F
   n₁ : Note G RHO PSI
