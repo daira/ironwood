@@ -49,3 +49,8 @@ The lookup bridge is split deliberately:
   verification key and consumes the Clean fixed/copy/selector records to produce
   `Action.BundleStatement` (or the shared augmented-basis relation). No Clean type
   is introduced into `Zcash/Snark/Soundness/CanonicalTerminal.lean`.
+* `ActionVesta.lean` is the deployed verifier join. It supplies the canonical
+  accepted-member selections proved in `Zcash/Snark/Soundness`, invokes the
+  constraint-carrying Vesta terminal with its decoder fixed by acceptance, and
+  hands the resulting `CircuitSat` fact to `ActionTerminal`. Its public capstone has
+  no free semantic proposition, encoding callback, decoder, or column-feed choice.

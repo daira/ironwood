@@ -1149,13 +1149,13 @@ single-index result into a family of Clean assignments and Action statements.
 
 ### 7. Thread the bridge into the live capstone
 
-**Status: the canonical relation now reaches a concrete bundle-wide Action theorem,
-the deterministic accepted-node-binding terminal is implemented without a free
-`S`/`hencodes`, and the quotient terminal derives that model's complete claimed-
-evaluation fingerprint from the accepted assembled queries. The live
-Vesta/Fiat–Shamir probability capstone still has to invoke that concrete terminal.
-Substantial
-foundations are in
+**Status: complete at the deterministic Vesta terminal. The canonical relation now
+reaches a concrete bundle-wide Action theorem, and
+`actionBundleStatement_or_relation_of_vestaTerminalDerived` invokes that theorem
+directly from the constraint-carrying Vesta terminal. Its public signature has no
+free `S`, `hencodes`, member decoder, or independently selected advice/instance
+feeds. The remaining quantitative Fiat–Shamir/adaptive-coupling work is a separate
+probability-layer composition. Substantial foundations are in
 [#30](https://github.com/zcash/ironwood/pull/30),
 [#91](https://github.com/zcash/ironwood/pull/91), and
 the merged [#85](https://github.com/zcash/ironwood/pull/85).**
@@ -1240,14 +1240,17 @@ remain.
 At the captured artifacts,
 `actionBundleStatement_or_relation_of_acceptedCircuitSat_deployed` is the
 corresponding direct receiver for a `CircuitSat` proof over the canonical accepted
-model. The live Vesta theorem still phrases its conclusion through independently
-selected advice and instance members. The current join therefore instantiates that
-theorem with the canonical accepted model and proves that its selected members are
-the members chosen by `CanonicalMemberConstraintRelation.acceptedRoute`. These are
-generic multiopen-routing equalities, not Action synthesis or floor-planner
-obligations. The recent tail of #96 exposes complementary slot-to-commitment
-provenance for the quantitative reroute; it is adjacent to, but does not replace,
-this exact member-route identification.
+model. `Soundness/Multiopen/CanonicalSelection` now constructs the advice and
+instance slots forced by `CanonicalMemberConstraintRelation.acceptedRoute` and proves
+that their full polynomial feeds equal the canonical accepted model's feeds.
+`Soundness/CanonicalVesta` specializes the verifier-native terminal's former free
+callback to `CircuitSat` for that model. Finally,
+`Circuits/Integration/ActionVesta` supplies the deployed one-proof query layouts,
+invokes the canonical Vesta adapter, and feeds its result to the Action endpoint.
+These route equalities are generic multiopen facts, not Action synthesis or
+floor-planner obligations. The recent tail of #96 exposes complementary
+slot-to-commitment provenance for the quantitative reroute; it is adjacent to, but
+not needed for, this exact deterministic member-route identification.
 
 The final theorem should say, modulo the explicitly priced Fiat–Shamir, polynomial
 identity, and discrete-log failure events, that acceptance by the modeled deployed
@@ -1294,14 +1297,14 @@ whose public inputs were committed by the verifier.
    `actionBundleStatement_or_relation_of_acceptedCircuitSat` in the Action-owned
    integration boundary. The resulting accepted-node-binding theorem constructs
    fixed coherence, selector realization, and copy replay internally.
-6. **Current work:** replace the live computed capstone's free `S`/`hencodes`
-   argument with that concrete composition and add the resulting theorem to the
-   consolidated trust boundary. Instantiate the Vesta constraint terminal with the
-   canonical accepted model and identify its selected advice and instance members
-   with the accepted `CommitmentId` route.
+6. **Complete:** replace the live constraint terminal's free `S`/`hencodes`
+   argument with the concrete Action composition. The generic selected-member
+   theorems identify its advice and instance feeds with the accepted
+   `CommitmentId` route; the deployed Vesta capstone fixes the decoder and returns
+   `Action.BundleStatement` or the standard nontrivial-relation alternative.
    The family-wide adaptive-coupling/`hExtract` supply problem is a distinct
    probability-layer task and may remain an explicitly conditional or residual term
-   while the deterministic `hencodes` gap is closed.
+   in the subsequent quantitative theorem.
 
 ## Current execution dashboard
 
@@ -1321,14 +1324,14 @@ append-only merge flow.
 | **[SEPARATE: ledger]** | Continue [#98](https://github.com/zcash/ironwood/pull/98)'s `SpecPost`-to-ledger refinement. | Independent of polynomial reconstruction and Clean constraint satisfaction. | The games-facing conclusion that should follow after the circuit statement is recovered. |
 | **[SEPARATE: probability]** | Connect [#96](https://github.com/zcash/ironwood/pull/96)'s extraction/coupling result to the deterministic terminal and place the already-priced lookup/permutation exclusions at their transcript squeezes. | The deterministic terminal consumes decoded openings and explicit good-challenge facts; it does not solve the family-wide adaptive `hExtract` supply problem. | A quantitative live theorem around the deterministic #99 result, without reintroducing a free semantic encoding. |
 | **[DONE: one proof]** | Apply the internal gate/fixed/copy/instance/lookup adapters to one accepted canonical model. | The Action canonical endpoint constructs fixed coherence, exact selector projection, and copy replay itself. Only explicitly priced exclusions remain. | A concrete Action statement for one `Fin numProofs`, with only explicitly priced exceptional events. |
-| **[JOIN] Bundle and capstone** | Invoke the deployed accepted-`CircuitSat` Action endpoint from the live Vesta constraint theorem. | Current work instantiates the Vesta theorem with the canonical model and proves its selected advice/instance members coincide with the accepted `CommitmentId` route, thereby deleting the free `S`/`hencodes`. #96 supplies adjacent quantitative slot provenance and can meet this theorem at the decoded node-binding boundary. | #99's completion criterion. |
+| **[DONE: Vesta join]** | Invoke the deployed accepted-`CircuitSat` Action endpoint from the live Vesta constraint theorem. | `actionBundleStatement_or_relation_of_vestaTerminalDerived` fixes the accepted decoder, constructs canonical advice/instance slots from the accepted route, proves the complete feed equalities, and composes the resulting `CircuitSat` fact with the deployed Action theorem. Its signature contains no free `S`/`hencodes`, decoder, or selected-member feeds. #96 remains adjacent quantitative work rather than a dependency of this deterministic theorem. | #99's deterministic completion criterion is met. |
 
 The shortest dependency chain to removing `hencodes` is therefore:
 
 ```text
-canonical selected-member equality ─────┐
-deterministic Action terminal (done) ───┼─> instantiate Vesta terminal
-priced exclusions (explicit) ───────────┘      ─> remove live hencodes
+canonical selected-member equality (done) ─────┐
+deterministic Action terminal (done) ──────────┼─> deployed Vesta join (done)
+priced exclusions (explicit) ─────────────────┘      ─> no live hencodes
 ```
 
 The family-wide `hExtract`/adaptive-coupling premise is deliberately absent from this

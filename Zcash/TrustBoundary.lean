@@ -24,6 +24,7 @@ import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.PermutationRows
 import Zcash.Snark.Soundness.ConstraintRelations
 import Zcash.Snark.Soundness.ChallengePricing
+import Zcash.Circuits.Integration.ActionVesta
 
 /-!
 # Trust boundary, build-checked
@@ -619,6 +620,14 @@ assert_axioms member_constraints_of_relation_and_batch
 assert_axioms orchard_verifier_vesta_member_constraints_deployed_x4 +native
 assert_axioms orchard_verifier_vesta_member_constraints_terminal +native
 assert_axioms orchard_verifier_vesta_member_constraints_terminal_derived +native
+-- The accepted-route adapter fixes the advice and instance member feeds, then the
+-- deployed Action boundary consumes the resulting canonical `CircuitSat`. The final
+-- theorem has no free semantic callback, decoder, or selected-column feed.
+assert_axioms acceptedAdviceSelection_feed_eq
+assert_axioms acceptedInstanceSelection_feed_eq
+assert_axioms vestaTerminal_circuitSat_or_relation_of_feed_eq +native
+assert_axioms actionAcceptedCircuitSat_or_relation_of_vestaTerminalDerived +native +pallas
+assert_axioms actionBundleStatement_or_relation_of_vestaTerminalDerived +native +pallas
 -- The last links: the point check lifted to the polynomial identity, the permutation taken to be the
 -- one keygen builds from the circuit's copy constraints, the cells of every chunk covered at once,
 -- and circuit satisfaction defined by the whole constraint list rather than the gates alone.
