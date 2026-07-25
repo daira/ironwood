@@ -7,11 +7,13 @@ import Zcash.Security.Ledger.Balance
 Two deterministic pieces of the Spendability game. The Faerie-Gold core says nullifiers
 pin note tuples: two satisfied spends with distinct openings and equal revealed
 nullifiers compute a break — a `NoteCommitBreak` when their derive-inputs coincide (the
-same commitment opened two ways), and otherwise a `NullifierCollision`, two distinct
-inputs on which `deriveNullifier` agrees. The collision is terminal vocabulary here:
-nothing in this development reduces it further. The intended deployed discharge is a
-named DL/Pedersen-hash hypothesis; for the Recovery Statement, ZIP 2005's Spendability
-theorem reduces it to an `H^rcm` ±-collision.
+same commitment opened two ways), and otherwise a `NullifierCollision`: two distinct
+note openings whose nullifiers agree. It carries the openings, so `cm` is pinned to a
+real commitment and the collision is a genuine discrete-log relation at the
+instantiation, not a coincidence a free `cm` could fabricate. That reduction — collision
+to a DLR break (deployed), or to an `H^rcm` ±-collision for the Recovery Statement via
+ZIP 2005's Spendability theorem — is nonobvious and not yet formalized; it is planned
+for the stacked capstone PR.
 
 Persistence says a transaction valid immediately after `ledger` stays valid when
 appended to any valid extension `ledger'`, under the conditions of nullifier freshness
@@ -47,25 +49,39 @@ variable {ledger ledger' : Ledger KW F G RHO PSI MHASH MENC MSG SIG P.depth}
 variable {T : Tx KW F G RHO PSI MHASH MENC MSG SIG P.depth}
 variable {issuance : ℕ → ℕ} {maxActions : ℕ}
 
-/-- A nullifier-derivation collision, as data: two distinct derive-inputs on which
-`deriveNullifier` agrees. Terminal vocabulary — nothing in this development reduces it
-further; the intended deployed hypothesis is discrete-log independence of the nullifier
-base 𝒦^Orchard from the note-commitment bases. -/
+/-- A nullifier-derivation collision, as data: two note openings — each a note with its
+commitment (`open₁`, `open₂`) — whose derive-inputs `(nk, ρ, ψ, cm)` differ (`ne`) but
+whose `deriveNullifier` outputs agree (`eq`).
+
+The openings are what make this self-certifying. They pin each `cm` to a genuine note
+commitment, so at the Orchard instantiation the collision expands to a nontrivial
+discrete-log relation among the nullifier base 𝒦^Orchard, the note-commitment base, and
+the two commitments' hash images. Drop them and `cm` is a free group element: the affine
+`extract` (an x-coordinate) lets `cm₂` be solved to match, so the bare `(nk, ρ, ψ, cm)`
+collision is fabricable and certifies nothing.
+
+Reducing this collision to a nontrivial discrete-log relation (independence of 𝒦^Orchard
+from the note-commitment bases) is nonobvious and not yet formalized; it is planned for
+the stacked capstone PR. -/
 structure NullifierCollision (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG) where
   nk₁ : NK
-  ρ₁ : RHO
-  ψ₁ : PSI
+  rcm₁ : F
+  note₁ : Note G RHO PSI
   cm₁ : G
+  open₁ : P.noteCommit rcm₁ note₁ = some cm₁
   nk₂ : NK
-  ρ₂ : RHO
-  ψ₂ : PSI
+  rcm₂ : F
+  note₂ : Note G RHO PSI
   cm₂ : G
-  ne : (nk₁, ρ₁, ψ₁, cm₁) ≠ (nk₂, ρ₂, ψ₂, cm₂)
-  eq : P.deriveNullifier nk₁ ρ₁ ψ₁ cm₁ = P.deriveNullifier nk₂ ρ₂ ψ₂ cm₂
+  open₂ : P.noteCommit rcm₂ note₂ = some cm₂
+  ne : (nk₁, note₁.ρ, note₁.ψ, cm₁) ≠ (nk₂, note₂.ρ, note₂.ψ, cm₂)
+  eq : P.deriveNullifier nk₁ note₁.ρ note₁.ψ cm₁
+    = P.deriveNullifier nk₂ note₂.ρ note₂.ψ cm₂
 
 /-- **The Faerie-Gold core.** Two satisfied spends with distinct openings and equal
 revealed nullifiers compute a break: when the derive-inputs coincide the same
-commitment has two openings, and when they differ they are themselves the collision. -/
+commitment has two openings, and when they differ it packages the two openings as a
+`NullifierCollision`. -/
 def faerieGoldCore [DecidableEq G] [DecidableEq NK] [DecidableEq RHO] [DecidableEq PSI]
     {inst₁ inst₂ : ActionInstance G MHASH RHO}
     {w₁ w₂ : ActionWitness KW F G RHO PSI MHASH MENC P.depth}
@@ -79,7 +95,8 @@ def faerieGoldCore [DecidableEq G] [DecidableEq NK] [DecidableEq RHO] [Decidable
       simp only [Prod.mk.injEq] at hin
       exact noteCommitBreakOfNe h₁ h₂ (congrArg P.extract hin.2.2.2) hne)
   else
-    .inr ⟨_, _, _, _, _, _, _, _, hin, by
+    .inr ⟨kv.nk w₁.kw, w₁.rcm_old, w₁.note_old, w₁.cm_old, h₁.commit_old,
+          kv.nk w₂.kw, w₂.rcm_old, w₂.note_old, w₂.cm_old, h₂.commit_old, hin, by
       rw [← h₁.nf_old_eq, ← h₂.nf_old_eq]
       exact hnf⟩
 
