@@ -300,9 +300,11 @@ merely restating fixture equality.
 
 **Status: the protocol mathematics and generic Clean-operation adapters are
 implemented. Action fixed/table coherence and copy replay are now constructed
-internally. Concrete deterministic closure is down to exact packed-selector values
-for lookups. Lookup and permutation challenge exclusions are priced and packaged,
-but must still be supplied at their transcript squeezes.**
+internally. The synthesis-side lookup-selector law is now proved for the complete
+Action circuit; concrete deterministic closure is down to transporting those exact
+activations through V1 placement and packed fixed columns. Lookup and permutation
+challenge exclusions are priced and packaged, but must still be supplied at their
+transcript squeezes.**
 
 #30's decoded capstones record only the combined custom-gate quotient identity. #91
 defines the full gate/permutation/lookup constraint list over polynomials, proves that
@@ -647,10 +649,30 @@ The generic boundary now quantifies only selector leaves that actually occur in 
 selected lookup's input expressions; unrelated gate selectors may legitimately be
 active at the same absolute row. `LookupSelectorRows` transports exact dense packed
 rows through fixed-polynomial binding into that expression-level projection.
-The remaining compiler argument has two parts: within a region, no relevant selector
-may be activated at the lookup row without appearing in that operation's `enabled`
-list; across regions, V1 placement must keep regions sharing that virtual selector
-column cell-disjoint.
+The within-synthesis half of the remaining compiler argument is now closed.
+`TopLevelCircuit` carries two generic operation-stream laws:
+`lookupRelevantSelectorActivationsExact` says that every selector leaf used by a
+lookup input is activated at the lookup row exactly when it appears in that
+operation's enabled-selector list, while `lookupInputsNoSimpleSelectors` rules out
+the simple-selector overlap case that selector packing cannot represent exactly.
+
+The concrete Action proofs are compositional rather than computational.
+`Action/SynthesisLaws.lean` proves reusable laws for the range-check, Sinsemilla,
+Merkle, ECC, fixed-base, CommitIvk, and Action check stages;
+`NoteCommit/SynthesisLaws.lean` proves the corresponding old/new NoteCommit
+decomposition; and `Action/TopLevelSynthesisLaws.lean` combines them for the complete
+unit-input synthesis. The resulting proofs are installed directly in
+`Action.topLevelCircuit`, so downstream generic bridges consume the law through the
+single `TopLevelCircuit` interface rather than an Action sidecar certificate.
+
+The remaining placement half is deliberately narrower: transport this exact
+operation-level accounting through V1's concrete region starts and the derived
+selector-compression map. The short-term path is a guarded V1 selector-placement
+certificate specialized only at this compiler seam. This is an explicit unblocker,
+not a claim that the allocator's full cell-disjointness theorem has been proved.
+The preferred structural replacement remains the generic compiler invariant that
+distinct regions never overlap in cells; once available, it should make the guard
+fall out compositionally and remove the finite certificate.
 
 The generic gate and fixed/table operation layers are now implemented as well.
 `operationEnabledGates` extracts every placed activation and

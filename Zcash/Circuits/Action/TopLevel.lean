@@ -1,5 +1,6 @@
 import Clean.Halo2.TopLevel
 import Zcash.Circuits.Action.RealBases
+import Zcash.Circuits.Action.TopLevelSynthesisLaws
 
 /-!
 # The deployed Orchard Action as a closed top-level circuit
@@ -227,6 +228,10 @@ def topLevelCircuit (G : Generators) (B : Bases) :
   formalCircuit := circuit G B
   configInput := ()
   assumptions_eq := rfl
+  lookupRelevantSelectorActivationsExact :=
+    actionCircuit_lookupRelevantSelectorActivationsExact G B
+  lookupInputsNoSimpleSelectors :=
+    actionCircuit_lookupInputsNoSimpleSelectors G B
   closesEnvironmentSoundness := by
     simp only [circuit_configure_eq, circuit_synthesize_eq,
       circuit_envAssumptions_eq]

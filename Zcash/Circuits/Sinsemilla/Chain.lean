@@ -324,16 +324,21 @@ def SlotPS (G : Generators) (n : ℕ) (piece : Fp) (w : SlotReads (n + 1) Fp) : 
 piece call's width-dependent output lives inside this bundle). Slot `i` of the width list
 `ns`: the `HashPiece` call at its own base row, the boundary `q_s2` re-pin, and the
 piece-linking `sinsemillaGate` at its last row. -/
+def slotSynthesize (G : Generators) (ns : List ℕ)
+    (yaIn : Placed Environment Fp → Fp) (i : ℕ)
+    (cfg : Config) (base : ℕ) (piece : AssignedCell Fp) :
+    RegionCircuit Fp Unit := do
+  let prev ← readState cfg (base - 1)
+  let xEnter ← HashPiece.cellAt cfg.xA base
+  let _ ← (HashPiece.circuit G (ns.getD i 0) (decide (i = ns.length - 1))
+      (if i = 0 then yaIn else boundaryYA prev.row xEnter)).call cfg base piece
+  pure ()
+
 def slot (G : Generators) (ns : List ℕ) (yaIn : Placed Environment Fp → Fp) (i : ℕ) :
     FormalRegionCircuit Fp Config Config field unit where
   configure := pure
 
-  synthesize cfg base (piece : AssignedCell Fp) := do
-    let prev ← readState cfg (base - 1)
-    let xEnter ← HashPiece.cellAt cfg.xA base
-    let _ ← (HashPiece.circuit G (ns.getD i 0) (decide (i = ns.length - 1))
-        (if i = 0 then yaIn else boundaryYA prev.row xEnter)).call cfg base piece
-    pure ()
+  synthesize := slotSynthesize G ns yaIn i
 
   Witness := SlotReads (ns.getD i 0 + 1)
   extract cfg base _ self env :=
@@ -391,6 +396,13 @@ def slot (G : Generators) (ns : List ℕ) (yaIn : Placed Environment Fp → Fp) 
         (by rw [hA'y]; by_cases hi : i = 0 <;> simp [hi, reads])
         hchain'
       exact hres
+
+@[circuit_norm]
+theorem slot_synthesize_eq
+    (G : Generators) (ns : List ℕ)
+    (yaIn : Placed Environment Fp → Fp) (i : ℕ) :
+    (slot G ns yaIn i).synthesize = slotSynthesize G ns yaIn i :=
+  rfl
 
 /-! Contract bridges for the slot child (generated — including over the function-typed
 `yaIn` binder); only the applied deep-extract bridge stays hand-written. -/
