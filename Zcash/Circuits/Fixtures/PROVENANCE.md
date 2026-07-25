@@ -14,7 +14,7 @@ Two custom dump entry points, living in **sibling checkouts** of the Rust reposi
 
 | Tool | Location (in the instrumented checkout) | Produces |
 |---|---|---|
-| `dump_lean` | `halo2_proofs::plonk::dump_lean` (github.com/zcash/halo2, halo2_proofs 0.3.2 era) | `CsFixture` / `LayoutFixture` dumps: `AddPre/AddPost/MulPre/MulPost.lean`, `AddLayout/MulLayout.lean`, `action{Pre,Post}.json`, `action{,Base}Layout.json` |
+| `dump_lean` | `halo2_proofs::plonk::dump_lean` (a fork of github.com/zcash/halo2, halo2_proofs 0.3.2 era — not upstream `main`) | `CsFixture` / `LayoutFixture` dumps: `AddPre/AddPost/MulPre/MulPost.lean`, `AddLayout/MulLayout.lean`, `action{Pre,Post}.json`, `action{,Base}Layout.json` |
 | `layout_dump` | `halo2_gadgets/src/ecc/chip/layout_dump.rs` (`dump_layout_add`, `dump_layout_mul`) and `dump_layout_action` (orchard checkout) | the `*SelMap.lean` selector-compression maps |
 
 Example regeneration command (Add chain, from the instrumented halo2 checkout):

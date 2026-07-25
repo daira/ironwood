@@ -66,10 +66,13 @@ different trust standards.
 **General, quantified theorems** (the soundness statements and security reductions) rest, in
 their abstract form over an arbitrary `Fp`-module, only on the standard classical axioms
 `propext`, `Classical.choice`, and `Quot.sound` — no `sorry`, no additional axioms, no compiler
-trust. Instantiated at the concrete Vesta curve they additionally inherit one compiler-trust
+trust. Instantiated at a concrete Pasta curve they additionally inherit one compiler-trust
 axiom: CompElliptic's curve point-count, a closed computational fact discharged by `native_decide`
-(below). The `+native` flag on the corresponding build-time checks records exactly which endpoints
-carry it.
+(below). This applies to both the SNARK soundness endpoints (Vesta) and the Action circuit
+soundness (Pallas); the Pallas point count was formerly an explicit curve-order axiom and is now
+this same `native_decide`-backed CompElliptic result, so removing that axiom did not shrink the
+trusted base to nothing — it swapped a bespoke axiom for a re-checkable compiler-trust certificate.
+The `+native` flag on the corresponding build-time checks records exactly which endpoints carry it.
 
 **Concrete, closed facts with no free variables** may additionally use `native_decide`
 (which discharges a goal by running compiled native code, adding a compiler-trust axiom) and
