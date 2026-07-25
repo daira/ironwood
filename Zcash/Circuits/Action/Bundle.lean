@@ -163,8 +163,8 @@ theorem main_regionCount (G : Generators) (B : Bases) (cfg : Config)
 /-! ## The extracted data -/
 
 /-- Everything the Action statement speaks about, read off a satisfying assignment:
-the nine public-input rows, the private witness cells, the six witnessed points, and
-the five fixed-base window scalars. -/
+the ten public-input rows (zcash/orchard#504), the private witness cells, the six
+witnessed points, and the five fixed-base window scalars. -/
 structure ActionData where
   anchor : Fp
   cvX : Fp
