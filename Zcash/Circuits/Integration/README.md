@@ -25,7 +25,12 @@ written during circuit integration:
 * only code that genuinely translates between the two sides belongs here.
 
 The normative architecture rule and current migration guidance are in
-[`clean-boundary.md`](clean-boundary.md).
+[`clean-boundary.md`](clean-boundary.md). The next compiler-lawfulness arc is
+specified in
+[`lawfulness-and-certificate-elimination.md`](lawfulness-and-certificate-elimination.md):
+it inventories the Action-specific computational certificates and the correctness
+obligations currently hidden by synthesis closure, then proposes the local laws and
+generic compiler proofs that should replace them.
 
 The lookup bridge is split deliberately:
 
