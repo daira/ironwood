@@ -546,6 +546,7 @@ def fixedCommitmentsSeqWith (commit : List Fp → G) (selMap : Halo2.SelCompress
   (denseColumns (2 ^ k) (PinnedConstraintSystem.derive cs selMap).numFixedColumns
       (fixedSparseOf selMap k cs ops)).map commit
 
+omit [AddCommGroup G] [Inhabited G] in
 theorem fixedCommitmentsSeqWith_eq (commit : List Fp → G) (selMap : Halo2.SelCompressMap)
     (k : ℕ) (cs : ConstraintSystem Fp) (ops : Operations Fp) :
     fixedCommitmentsSeqWith commit selMap k cs ops
@@ -637,6 +638,7 @@ def permutationCommitmentsSeqWith (commit : List Fp → G) (k : ℕ)
     (cs : ConstraintSystem Fp) (ops : Operations Fp) : List G :=
   (permPolysOf k cs ops).map commit
 
+omit [AddCommGroup G] [Inhabited G] in
 theorem permutationCommitmentsSeqWith_eq (commit : List Fp → G) (k : ℕ)
     (cs : ConstraintSystem Fp) (ops : Operations Fp) :
     permutationCommitmentsSeqWith commit k cs ops
