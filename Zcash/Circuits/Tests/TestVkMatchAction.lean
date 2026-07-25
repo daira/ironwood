@@ -34,8 +34,8 @@ def seedOf (f : CsFixture) : List Query :=
     ++ f.instanceQueryLayout.map (fun (c, r) => Query.instance ⟨c⟩ r)
 
 #eval show IO Unit from do
-  let actionPre ← loadCsFixture "Zcash/Circuits/Fixtures/actionPre.json" 0x31656840fdb3156d
-  let actionPost ← loadCsFixture "Zcash/Circuits/Fixtures/actionPost.json" 0xdb884f3c3174a41b
+  let actionPre ← loadCsFixture "Zcash/Circuits/Fixtures/actionPre.json"
+  let actionPost ← loadCsFixture "Zcash/Circuits/Fixtures/actionPost.json"
   runChecks [
     -- Pre-compression: projected CS equals the dumped fixture.
     ("actionPre: projected CS = dump", projectCS (seedOf actionPre) actionCS == actionPre),

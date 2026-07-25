@@ -2,20 +2,24 @@ import Lean.Data.Json
 import Zcash.Circuits.Fixtures.FixtureTypes
 
 /-!
-# JSON codecs and the checked loader for VK fixtures
+# JSON codecs and the loader for VK fixtures
 
 The large generated fixtures (the whole-circuit Action CS and layout dumps) are stored
 as `.json` DATA files, not Lean literals: elaborating a ~1 MB fixture as a Lean term
 costs ~40 s and gigabytes of RSS, while `Json.parse` + decode of the same data runs in
 ~150 ms at `#eval` time. The consuming test loads the file inside its `#eval` check, so
-a mismatch (or a failed load) is a build failure exactly as with `#guard`.
+a parse failure (or a failed load) is a build failure exactly as with `#guard`.
 
-**Dependency tracking / integrity**: Lake does not know a `.lean` file reads a `.json`,
-so each consuming test pins the fixture's FNV-1a-64 content hash as a literal
-(`loadJsonChecked path expectedHash`). Regenerating a fixture changes the hash, the
-loader fails with the actual hash in the message, and updating the pinned literal is
-what makes Lake rebuild the test. The committed Lean source therefore still pins the
-exact fixture content, as it did when the data was a term.
+**Integrity**: two independent guards, neither of which recomputes a hash inside Lean (no
+fast SHA-256 exists in the toolchain, and a hand-rolled one is not worth maintaining):
+
+* *Semantic* — the `CircuitVkCheck` `#eval`s reconstruct the Lean CS/layout and assert it
+  equals the parsed fixture (`TestVk*`), so a fixture that drifts from the Lean circuit
+  model fails the build.
+* *Content* — every fixture's SHA-256 is pinned in `Zcash/Circuits/Fixtures/SHA256SUMS`
+  and enforced by the `Fixtures/*.json` guard in `.github/workflows/lean.yml`
+  (`sha256sum -c`, the OS tool). SHA-256 (rather than a non-cryptographic checksum) means
+  the pin also resists a *crafted* swap, not just accidental drift.
 
 Small fixtures (the Add/Mul doc-test pairs, the SelMaps) stay as readable Lean
 literals; only the whole-circuit Action dumps use this path.
@@ -26,23 +30,11 @@ namespace Zcash.Circuits.Fixtures.Json
 open Lean (Json JsonNumber)
 open Fixtures
 
-/-! ## Content hash (FNV-1a 64) -/
-
-def fnv1a (bytes : ByteArray) : UInt64 :=
-  bytes.foldl (fun h b => (h ^^^ b.toUInt64) * 0x100000001b3) 0xcbf29ce484222325
-
-/-- Read a JSON fixture, check its content hash, parse. Any failure (missing file, hash
-drift after regeneration, parse error) is an `IO` error → a build failure at the
-consuming `#eval`. -/
-def hex (u : UInt64) : String := String.ofList (Nat.toDigits 16 u.toNat)
-
-def loadJsonChecked (path : System.FilePath) (expectedHash : UInt64) : IO Json := do
+/-- Read a JSON fixture and parse it. A missing file or parse error is an `IO` error → a
+build failure at the consuming `#eval`. Content integrity is enforced out of band (see the
+module header): the SHA-256 pin in `SHA256SUMS` + the `CircuitVkCheck` reconstruction. -/
+def loadJson (path : System.FilePath) : IO Json := do
   let bytes ← IO.FS.readBinFile path
-  let h := fnv1a bytes
-  unless h == expectedHash do
-    throw <| IO.userError
-      s!"fixture {path}: content hash 0x{hex h} ≠ pinned 0x{hex expectedHash}. \
-        If you regenerated the fixture, update the pinned hash in the consuming test."
   IO.ofExcept (Json.parse (String.fromUTF8! bytes) |>.mapError IO.userError)
 
 /-! ## Primitive codecs
@@ -215,11 +207,11 @@ def getLayoutFixture (j : Json) : Except String LayoutFixture := do
 
 /-! ## Checked loaders -/
 
-def loadCsFixture (path : System.FilePath) (expectedHash : UInt64) : IO CsFixture := do
-  IO.ofExcept ((getCsFixture (← loadJsonChecked path expectedHash)).mapError IO.userError)
+def loadCsFixture (path : System.FilePath) : IO CsFixture := do
+  IO.ofExcept ((getCsFixture (← loadJson path)).mapError IO.userError)
 
-def loadLayoutFixture (path : System.FilePath) (expectedHash : UInt64) : IO LayoutFixture := do
-  IO.ofExcept ((getLayoutFixture (← loadJsonChecked path expectedHash)).mapError IO.userError)
+def loadLayoutFixture (path : System.FilePath) : IO LayoutFixture := do
+  IO.ofExcept ((getLayoutFixture (← loadJson path)).mapError IO.userError)
 
 /-- `#eval`-check helper: named boolean checks, first failure reported. -/
 def runChecks (checks : List (String × Bool)) : IO Unit := do

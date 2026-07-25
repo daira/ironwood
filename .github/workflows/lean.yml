@@ -54,6 +54,14 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           persist-credentials: false
+      # Content-pins the checked-in circuit VK fixtures (the `.json` CS/layout dumps
+      # consumed by `CircuitVkCheck`). The Lean build does not recompute a hash — there
+      # is no fast SHA-256 in the toolchain — so this OS `sha256sum -c` is the
+      # cryptographic drift/tamper guard, complementing the `TestVk*` reconstruction that
+      # checks the fixtures against the Lean circuit model. See `Zcash/Circuits/Fixtures/`.
+      - name: Verify circuit fixture content hashes
+        working-directory: Zcash/Circuits/Fixtures
+        run: sha256sum -c SHA256SUMS
       # Installs the toolchain from lean-toolchain, fetches the Mathlib olean
       # cache, and runs `lake build --wfail`, which rejects all warnings and builds
       # `defaultTargets = ["Zcash", "FixtureCheck"]`. Building `FixtureCheck`

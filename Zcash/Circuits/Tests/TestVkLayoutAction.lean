@@ -76,7 +76,6 @@ All checks live in ONE `#eval` so the shared reconstruction (ops → regions →
 temporarily when debugging a mismatch. -/
 #eval show IO Unit from do
   let fx ← Json.loadLayoutFixture "Zcash/Circuits/Fixtures/actionLayout.json"
-    0x51cd2f7ce66a8c7
   let ops : Operations Fp := aProgram.operations
   let regions : List (ℕ × RegionOperations Fp) := (indexedRegions ops 0).1
   -- Region starts from the fixture placements (the single `generator_table` slot is the

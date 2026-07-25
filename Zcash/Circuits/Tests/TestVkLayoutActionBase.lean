@@ -20,7 +20,6 @@ list → σ → fixed) evaluates exactly once; the fixture is loaded from
 `actionBaseLayout.json` (pinned content hash — see `Fixtures/Json.lean`). -/
 #eval show IO Unit from do
   let fx ← Json.loadLayoutFixture "Zcash/Circuits/Fixtures/actionBaseLayout.json"
-    0x193f3922aa59191e
   let ops : Operations Fp := aProgramBase.operations
   let regions : List (ℕ × RegionOperations Fp) := (indexedRegions ops 0).1
   let starts : List ℕ := ((fx.regions.filter (·.name ≠ "generator_table")).map (·.start))
