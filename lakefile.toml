@@ -1,7 +1,7 @@
 name = "Zcash"
 version = "0.1.0"
 keywords = ["cryptography", "math", "protocols"]
-defaultTargets = ["Zcash", "FixtureCheck", "CircuitCheck", "Integration"]
+defaultTargets = ["Zcash", "FixtureCheck", "CircuitCheck", "Integration", "ZcashKeygen"]
 
 [leanOptions]
 pp.unicode.fun = true # pretty-prints `fun a ↦ b`
@@ -67,11 +67,12 @@ globs = ["Zcash.Circuits.Integration", "Zcash.Circuits.Integration.+"]
 
 # The Action verifying-key COMMITMENT derivation (`Zcash/Snark/Keygen/`): derives
 # `fixedCommitment`/`permutationCommonCommitment` from the circuit + captured URS
-# (Lagrange FFT, dense fixed columns, keygen permutation polynomials) and assembles the
-# fully-derived `derivedActionVk`. Deliberately EXCLUDED from `defaultTargets`: the
-# concrete certificate is intentionally expensive. `Derivation` contains the reusable
-# data and key; `Certificate` contains the native commitment equality. Build both
-# explicitly with `lake build ZcashKeygen`; the rest of the repo stays fast.
+# (scalar inverse-DFT commitments over the proven Montgomery lane, dense fixed columns,
+# keygen permutation polynomials) and assembles the fully-derived `derivedActionVk`.
+# `Derivation` contains the reusable data and key; `Certificate` contains the native
+# commitment equality. In `defaultTargets` since the certificate dropped to ~45 s
+# (it once took hours, which is why this lane used to be quarantined behind a
+# separate CI workflow).
 [[lean_lib]]
 name = "ZcashKeygen"
 globs = ["Zcash.Snark.Keygen.+", "Zcash.Snark.Soundness.Deployed.ActionVk"]

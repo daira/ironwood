@@ -56,7 +56,9 @@ jobs:
           persist-credentials: false
       # Installs the toolchain from lean-toolchain, fetches the Mathlib olean
       # cache, and runs `lake build --wfail`, which rejects all warnings and builds
-      # `defaultTargets = ["Zcash", "FixtureCheck"]`. Building `FixtureCheck`
+      # the lakefile's `defaultTargets` (including `ZcashKeygen`, whose
+      # `Certificate.lean` natively certifies the deployed verifying key against
+      # the derivation — ~45 s). Building `FixtureCheck`
       # elaborates `Zcash.Snark.Fingerprint.Fixture`, whose
       # `fingerprint_matches := by native_decide` compiles and *runs* the Lean
       # verifier `assemble` on the captured proof. This is the authoritative,
