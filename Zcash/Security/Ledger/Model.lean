@@ -142,9 +142,10 @@ structure ValidLedger (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
   sig_verifies : ∀ tx ∈ ledger, ∀ a ∈ tx.actions, P.spendAuthVerify a.inst.rk tx.sighash a.sig
   /-- The transparent pool balance never goes negative: a transaction can move value
   into the shielded pool only from issuance already minted, less what earlier
-  transactions consumed. Stated cumulatively because transparent funds accumulate — a
-  per-transaction bound against its own index's issuance would underpower the
-  adversary. -/
+  transactions consumed. This is the consensus non-negative chain value balance rule for
+  the transparent pool (ZIP 209). Stated cumulatively because transparent funds
+  accumulate — a per-transaction bound against its own index's issuance would underpower
+  the adversary. -/
   transparent_nonneg : ∀ i : ℕ, 0 ≤ transparentPoolBalance issuance ledger i
   /-- Bounded action count per transaction (consumed by the integer-balance lift). -/
   action_bound : ∀ tx ∈ ledger, tx.actions.length ≤ maxActions
