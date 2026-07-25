@@ -537,6 +537,21 @@ def fixedCommitmentsWith (commit : List Fp → G) (selMap : Halo2.SelCompressMap
   (denseColumns (2 ^ k) (PinnedConstraintSystem.derive cs selMap).numFixedColumns
       (fixedSparseOf selMap k cs ops)).parMap commit
 
+/-- Sequential variant of `fixedCommitmentsWith` — same columns, plain `map`. Used by
+evaluation sites that must stay single-threaded so nullary-definition sharing of the
+committer's basis holds (task fan-outs re-evaluate captured thunks per task in the
+`native_decide` tier). -/
+def fixedCommitmentsSeqWith (commit : List Fp → G) (selMap : Halo2.SelCompressMap)
+    (k : ℕ) (cs : ConstraintSystem Fp) (ops : Operations Fp) : List G :=
+  (denseColumns (2 ^ k) (PinnedConstraintSystem.derive cs selMap).numFixedColumns
+      (fixedSparseOf selMap k cs ops)).map commit
+
+theorem fixedCommitmentsSeqWith_eq (commit : List Fp → G) (selMap : Halo2.SelCompressMap)
+    (k : ℕ) (cs : ConstraintSystem Fp) (ops : Operations Fp) :
+    fixedCommitmentsSeqWith commit selMap k cs ops
+      = fixedCommitmentsWith commit selMap k cs ops := by
+  simp only [fixedCommitmentsSeqWith, fixedCommitmentsWith, List.parMap_eq_map]
+
 /-- The derived fixed-column commitments — `commit_lagrange` of each dense fixed column
 with the default blind (`plonk/keygen.rs:230-240`, `keygen_vk`'s `fixed_commitments`;
 Pippenger per MSM, `commitLagrangeFastWith_eq` — evaluation strategy only). The
@@ -616,6 +631,18 @@ def permutationCommitmentsWith (commit : List Fp → G) (k : ℕ)
     (cs : ConstraintSystem Fp) (ops : Operations Fp) : List G :=
   -- `parMap`: one task per column (`parMap_eq_map` — evaluation strategy only)
   (permPolysOf k cs ops).parMap commit
+
+/-- Sequential variant of `permutationCommitmentsWith` (see `fixedCommitmentsSeqWith`). -/
+def permutationCommitmentsSeqWith (commit : List Fp → G) (k : ℕ)
+    (cs : ConstraintSystem Fp) (ops : Operations Fp) : List G :=
+  (permPolysOf k cs ops).map commit
+
+theorem permutationCommitmentsSeqWith_eq (commit : List Fp → G) (k : ℕ)
+    (cs : ConstraintSystem Fp) (ops : Operations Fp) :
+    permutationCommitmentsSeqWith commit k cs ops
+      = permutationCommitmentsWith commit k cs ops := by
+  simp only [permutationCommitmentsSeqWith, permutationCommitmentsWith,
+    List.parMap_eq_map]
 
 /-- The derived permutation common commitments — `commit_lagrange` of each permutation
 polynomial with the default blind (`build_vk`, `permutation/keygen.rs:147-151`;
