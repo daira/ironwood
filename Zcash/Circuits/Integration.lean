@@ -19,6 +19,7 @@ import Zcash.Circuits.Integration.FixedColumns
 import Zcash.Circuits.Integration.FixedLayout
 import Zcash.Circuits.Integration.InstanceColumns
 import Zcash.Circuits.Integration.LookupProjection
+import Zcash.Circuits.Integration.LookupSelectorRows
 import Zcash.Circuits.Integration.OperationCopies
 import Zcash.Circuits.Integration.OperationFixed
 import Zcash.Circuits.Integration.OperationGates

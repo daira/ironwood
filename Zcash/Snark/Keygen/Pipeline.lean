@@ -256,6 +256,278 @@ theorem denseColumns_getD_length
     Array.getElem_toList, Array.length_toList]
   exact hshape.2 column hresultColumn
 
+/-- Rectangular dense accumulators used by sparse-scatter read proofs. -/
+private def DenseShaped (n numCols : ℕ)
+    (cols : Array (Array Fp)) : Prop :=
+  cols.size = numCols ∧
+    ∀ column (hcolumn : column < cols.size),
+      cols[column].size = n
+
+private theorem DenseShaped.initial (n numCols : ℕ) :
+    DenseShaped n numCols
+      (Array.replicate numCols (Array.replicate n (0 : Fp))) := by
+  constructor
+  · simp
+  · intro column hcolumn
+    simp
+
+private theorem DenseShaped.scatter
+    {n numCols : ℕ} {cols : Array (Array Fp)}
+    (hshape : DenseShaped n numCols cols)
+    (entry : ℕ × ℕ × ℕ) :
+    DenseShaped n numCols
+      (scatterDenseColumn numCols cols entry) :=
+  scatterDenseColumn_sized hshape.1 hshape.2 entry
+
+private theorem DenseShaped.fold
+    {n numCols : ℕ} (triples : List (ℕ × ℕ × ℕ))
+    {cols : Array (Array Fp)}
+    (hshape : DenseShaped n numCols cols) :
+    DenseShaped n numCols
+      (triples.foldl (scatterDenseColumn numCols) cols) :=
+  scatterDenseColumns_fold_sized triples hshape.1 hshape.2
+
+private def denseRead
+    (cols : Array (Array Fp)) (column row : ℕ) : Fp :=
+  (cols.getD column #[]).getD row 0
+
+/-- Scattering an assignment to another cell preserves the selected dense read. -/
+private theorem denseRead_scatter_of_ne
+    {n numCols : ℕ} {cols : Array (Array Fp)}
+    (hshape : DenseShaped n numCols cols)
+    (column row : ℕ)
+    (hcolumn : column < numCols) (hrow : row < n)
+    (entry : ℕ × ℕ × ℕ)
+    (hne : entry.1 ≠ column ∨ entry.2.1 ≠ row) :
+    denseRead (scatterDenseColumn numCols cols entry) column row =
+      denseRead cols column row := by
+  rcases entry with ⟨sourceColumn, sourceRow, value⟩
+  rcases hshape with ⟨hsize, hrows⟩
+  have hcolumn' : column < cols.size := by
+    simpa only [hsize] using hcolumn
+  simp only at hne
+  simp only [denseRead, scatterDenseColumn]
+  split
+  next hsourceColumn =>
+    by_cases hcolumns : sourceColumn = column
+    · subst sourceColumn
+      have hrowsNe : sourceRow ≠ row :=
+        hne.elim (fun h => (h rfl).elim) id
+      have hrow' : row < cols[column].size := by
+        rw [hrows column hcolumn']
+        exact hrow
+      have hrowSet :
+          row < (cols[column].setIfInBounds sourceRow
+            ((value : ℕ) : Fp)).size := by
+        simpa only [Array.size_setIfInBounds] using hrow'
+      have hset :
+          (cols[column].setIfInBounds sourceRow
+            ((value : ℕ) : Fp))[row]'hrowSet =
+            cols[column][row] :=
+        Array.getElem_setIfInBounds_ne hrow' hrowsNe
+      simpa [Array.getD, Array.size_modify, hcolumn',
+        Array.getElem_modify_self, Array.set!,
+        Array.size_setIfInBounds, hrow'] using hset
+    · have hmodifiedColumn :=
+        Array.getElem_modify_of_ne hcolumns
+          (fun (values : Array Fp) =>
+            values.set! sourceRow ((value : ℕ) : Fp))
+          (by simpa only [Array.size_modify] using hcolumn')
+      have hmodifiedRead :=
+        congrArg (fun (values : Array Fp) =>
+          values.getD row 0) hmodifiedColumn
+      simpa [Array.getD, Array.size_modify, hcolumn'] using
+        hmodifiedRead
+  next _ =>
+    rfl
+
+/-- A scatter fold containing no write to a selected cell preserves its value. -/
+private theorem denseRead_fold_of_no_target
+    {n numCols : ℕ} (triples : List (ℕ × ℕ × ℕ))
+    {cols : Array (Array Fp)}
+    (hshape : DenseShaped n numCols cols)
+    (column row : ℕ)
+    (hcolumn : column < numCols) (hrow : row < n)
+    (hnoTarget :
+      ∀ entry ∈ triples,
+        entry.1 ≠ column ∨ entry.2.1 ≠ row) :
+    denseRead (triples.foldl (scatterDenseColumn numCols) cols)
+        column row =
+      denseRead cols column row := by
+  induction triples generalizing cols with
+  | nil =>
+      rfl
+  | cons entry rest ih =>
+      simp only [List.foldl_cons]
+      rw [ih (hshape.scatter entry)]
+      · exact denseRead_scatter_of_ne hshape column row
+          hcolumn hrow entry (hnoTarget entry (by simp))
+      · intro restEntry hrestEntry
+        exact hnoTarget restEntry (by simp [hrestEntry])
+
+/-- Scattering directly to an in-range selected cell writes its value. -/
+private theorem denseRead_scatter_self
+    {n numCols : ℕ} {cols : Array (Array Fp)}
+    (hshape : DenseShaped n numCols cols)
+    (column row value : ℕ)
+    (hcolumn : column < numCols) (hrow : row < n) :
+    denseRead
+        (scatterDenseColumn numCols cols (column, row, value))
+        column row =
+      ((value : ℕ) : Fp) := by
+  rcases hshape with ⟨hsize, hrows⟩
+  have hcolumn' : column < cols.size := by
+    simpa only [hsize] using hcolumn
+  simp [denseRead, scatterDenseColumn, hcolumn,
+    Array.getD, Array.size_modify, hcolumn',
+    Array.getElem_modify_self, Array.set!,
+    Array.getElem_setIfInBounds_self,
+    hrows _ hcolumn', hrow]
+
+/--
+Last-write form of the fold invariant: an explicit target write determines the
+cell whenever the remaining suffix does not target that cell.
+-/
+private theorem denseRead_fold_of_last_write
+    {n numCols : ℕ} (before after : List (ℕ × ℕ × ℕ))
+    {cols : Array (Array Fp)}
+    (hshape : DenseShaped n numCols cols)
+    (column row value : ℕ)
+    (hcolumn : column < numCols) (hrow : row < n)
+    (hnoTarget :
+      ∀ entry ∈ after,
+        entry.1 ≠ column ∨ entry.2.1 ≠ row) :
+    denseRead
+        ((before ++ (column, row, value) :: after).foldl
+          (scatterDenseColumn numCols) cols)
+        column row =
+      ((value : ℕ) : Fp) := by
+  let afterPrefix :=
+    before.foldl (scatterDenseColumn numCols) cols
+  let afterWrite :=
+    scatterDenseColumn numCols afterPrefix (column, row, value)
+  have hprefix : DenseShaped n numCols afterPrefix :=
+    DenseShaped.fold before hshape
+  have hwrite : DenseShaped n numCols afterWrite :=
+    hprefix.scatter (column, row, value)
+  rw [List.foldl_append, List.foldl_cons]
+  change denseRead
+      (after.foldl (scatterDenseColumn numCols) afterWrite)
+      column row = _
+  rw [denseRead_fold_of_no_target after hwrite
+    column row hcolumn hrow hnoTarget]
+  exact denseRead_scatter_self hprefix column row value hcolumn hrow
+
+/--
+An in-range cell not targeted by any sparse assignment retains the dense
+initializer's zero.
+-/
+theorem denseColumns_getD_getD_eq_zero_of_no_target
+    (n numCols : ℕ) (triples : List (ℕ × ℕ × ℕ))
+    (column row : ℕ)
+    (hcolumn : column < numCols) (hrow : row < n)
+    (hnoTarget :
+      ∀ entry ∈ triples,
+        entry.1 ≠ column ∨ entry.2.1 ≠ row) :
+    ((denseColumns n numCols triples).getD column []).getD row 0 =
+      (0 : Fp) := by
+  let initial : Array (Array Fp) :=
+    Array.replicate numCols (Array.replicate n 0)
+  let result :=
+    triples.foldl (scatterDenseColumn numCols) initial
+  have hinitial : DenseShaped n numCols initial :=
+    DenseShaped.initial n numCols
+  have hresult : DenseShaped n numCols result :=
+    DenseShaped.fold triples hinitial
+  have hcolumnResult : column < result.size := by
+    rw [hresult.1]
+    exact hcolumn
+  have hrowResult : row < result[column].size := by
+    rw [hresult.2 column hcolumnResult]
+    exact hrow
+  have hcolumnDense :
+      column < (denseColumns n numCols triples).length := by
+    simpa only [denseColumns_length] using hcolumn
+  have hcolumnRead :
+      (denseColumns n numCols triples).getD column [] =
+        (denseColumns n numCols triples)[column] :=
+    List.getD_eq_getElem _ _ hcolumnDense
+  rw [hcolumnRead]
+  have hrowDense :
+      row < (denseColumns n numCols triples)[column].length := by
+    have hlength :=
+      denseColumns_getD_length n numCols triples column hcolumn
+    rw [hcolumnRead] at hlength
+    rw [hlength]
+    exact hrow
+  rw [List.getD_eq_getElem _ _ hrowDense]
+  simp only [denseColumns, List.getElem_map,
+    Array.getElem_toList]
+  have hread :=
+    denseRead_fold_of_no_target triples hinitial
+      column row hcolumn hrow hnoTarget
+  simp [denseRead, result, initial, Array.getD,
+    hcolumnResult, hrowResult] at hread
+  simpa [hcolumn, hrow] using hread
+
+/--
+An explicit sparse write determines its in-range dense cell when no later entry
+targets that cell.
+-/
+theorem denseColumns_getD_getD_eq_of_last_write
+    (n numCols : ℕ)
+    (before after : List (ℕ × ℕ × ℕ))
+    (column row value : ℕ)
+    (hcolumn : column < numCols) (hrow : row < n)
+    (hnoTarget :
+      ∀ entry ∈ after,
+        entry.1 ≠ column ∨ entry.2.1 ≠ row) :
+    ((denseColumns n numCols
+        (before ++ (column, row, value) :: after)).getD
+      column []).getD row 0 =
+      ((value : ℕ) : Fp) := by
+  let initial : Array (Array Fp) :=
+    Array.replicate numCols (Array.replicate n 0)
+  let triples := before ++ (column, row, value) :: after
+  let result :=
+    triples.foldl (scatterDenseColumn numCols) initial
+  have hinitial : DenseShaped n numCols initial :=
+    DenseShaped.initial n numCols
+  have hresult : DenseShaped n numCols result :=
+    DenseShaped.fold triples hinitial
+  have hcolumnResult : column < result.size := by
+    rw [hresult.1]
+    exact hcolumn
+  have hrowResult : row < result[column].size := by
+    rw [hresult.2 column hcolumnResult]
+    exact hrow
+  have hcolumnDense :
+      column <
+        (denseColumns n numCols triples).length := by
+    simpa only [denseColumns_length] using hcolumn
+  have hcolumnRead :
+      (denseColumns n numCols triples).getD column [] =
+        (denseColumns n numCols triples)[column] :=
+    List.getD_eq_getElem _ _ hcolumnDense
+  rw [hcolumnRead]
+  have hrowDense :
+      row < (denseColumns n numCols triples)[column].length := by
+    have hlength :=
+      denseColumns_getD_length n numCols triples column hcolumn
+    rw [hcolumnRead] at hlength
+    rw [hlength]
+    exact hrow
+  rw [List.getD_eq_getElem _ _ hrowDense]
+  simp only [denseColumns, List.getElem_map,
+    Array.getElem_toList]
+  have hread : denseRead result column row = ((value : ℕ) : Fp) := by
+    exact denseRead_fold_of_last_write before after hinitial
+      column row value hcolumn hrow hnoTarget
+  unfold denseRead at hread
+  rw [← Array.getElem_eq_getD (h := hcolumnResult) #[]] at hread
+  rw [← Array.getElem_eq_getD (h := hrowResult) 0] at hread
+  exact hread
+
 /-- The derived fixed-column commitments at an explicit per-column committer —
 `fixedCommitmentsOf` is the default instantiation; concrete evaluation sites may pass a
 proven-equal faster committer. -/

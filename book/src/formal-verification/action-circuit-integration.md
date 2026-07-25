@@ -299,9 +299,10 @@ merely restating fixture equality.
 ### 4. Strengthen circuit satisfaction beyond custom gates
 
 **Status: the protocol mathematics and generic Clean-operation adapters are
-implemented. Concrete Action closure now consists of fixed/selector realization,
-copy replay packaging, and assembly of those families. Lookup challenge exclusions
-are priced and packaged, but must still be supplied at their transcript squeezes.**
+implemented. Action fixed/table coherence and copy replay are now constructed
+internally. Concrete deterministic closure is down to exact packed-selector values
+for lookups. Lookup and permutation challenge exclusions are priced and packaged,
+but must still be supplied at their transcript squeezes.**
 
 #30's decoded capstones record only the combined custom-gate quotient identity. #91
 defines the full gate/permutation/lookup constraint list over polynomials, proves that
@@ -340,15 +341,15 @@ lookups, and selector polynomials are no longer free relation parameters.
 the concrete `Action.BundleStatement`, with no abstract `S` or `hencodes` premise and
 with the key locked to `orchardActionTopLevelCircuit.toVerifierKey`. It now derives
 the complete gate family internally from canonical constraint satisfaction and the
-circuit-owned gate/selector coherence package. Its remaining explicit inputs are the
-copy, lookup, and fixed operation families. Deriving those three families, rather
-than accepting a generic reconstruction function, is now the precise deterministic
-completion criterion for `hencodes`.
+circuit-owned gate/selector coherence package. The binding-aware endpoint additionally
+constructs the fixed and copy families; exact lookup-selector projection is the last
+deterministic family input.
 The binding-aware
-`actionBundleStatement_or_relation_of_canonicalRelation` additionally derives the
-selector and fixed/table families from `TopLevelFixedCoherence`. It derives copy
-satisfaction internally from `CopyReplayWitness`, preserving that witness's
-commitment-relation branch, and derives lookup satisfaction internally from exact
+`actionBundleStatement_or_relation_of_canonicalRelation` constructs
+`TopLevelFixedCoherence` from the Action circuit, its derived key, and the symbolic
+Lagrange-basis theorem, then derives the selector-activation and fixed/table families.
+It also constructs copy replay from the canonical permutation semantics, preserving
+the commitment-relation branch, and derives lookup satisfaction from exact
 packed-selector values and one
 `TopLevelLookupChallengeExclusions` record, and derives the public-instance
 polynomial from the routed member and supplied Lagrange commitment data. A fixed- or
@@ -380,9 +381,13 @@ raises `numSelectors` to cover every selector appearing in lookup inputs.
 former `LookupArgumentWellFormed`/`ConstraintSystemLookupsWellFormed` sidecar has been
 deleted; no Action configure proof remains.
 
-`InputSelectorValuesRealized` further reduces exact projection to one selector-level
-packed-column fact at the activation row; table projection follows generically from
-selector freedom. Activation-row fit is now generic too: extracted lookup membership
+`InputSelectorValuesRealized` now states exactly the expression-level equality needed
+by projection. Its former all-selectors formulation was false: an unrelated simple
+gate selector can legitimately be active on the same absolute row. The generic
+`LookupSelectorRows` bridge restricts the dense-row obligation to selector leaves that
+actually occur in each lookup input and transports it through fixed-column binding.
+Table projection follows generically from selector freedom. Activation-row fit is now
+generic too: extracted lookup membership
 identifies the raw `.enableLookup` operation, Clean bounds its row by the measured
 region extent and `usedRows`, and the top-level fit certificate bounds `usedRows` by
 the usable-row prefix. `TopLevelLookupWitnessConditions` therefore retains only exact
@@ -638,6 +643,14 @@ analogue: lookup selectors must have their exact zero/one activation values, not
 merely a nonzero scale. Orchard's lookup selectors are complex/lookup-only selectors,
 so the fixed-layout constructor should derive that exact projection from their packed
 columns rather than expose it as an Action assumption.
+The generic boundary now quantifies only selector leaves that actually occur in the
+selected lookup's input expressions; unrelated gate selectors may legitimately be
+active at the same absolute row. `LookupSelectorRows` transports exact dense packed
+rows through fixed-polynomial binding into that expression-level projection.
+The remaining compiler argument has two parts: within a region, no relevant selector
+may be activated at the lookup row without appearing in that operation's `enabled`
+list; across regions, V1 placement must keep regions sharing that virtual selector
+column cell-disjoint.
 
 The generic gate and fixed/table operation layers are now implemented as well.
 `operationEnabledGates` extracts every placed activation and
@@ -734,6 +747,11 @@ below `cs.numSelectors`. The monotonicity lemma for `selectorsCovered` and
 `gateSelectorsCovered_deriveSelCompressMap` then turn that single configure
 certificate into the exact projection-coverage premise. There is no Action-specific
 compression-map computation or selector-count proof left.
+For lookup-only selectors, `process_lookup_degreeZero_of_mem` proves structurally that
+degree-zero descriptions are packed alone with combination length and assigned root
+both equal to one. `deriveSelCompressMap_lookup_degreeZero_of_lt` carries that result
+through the circuit-derived fixed-column offset and proves that the packed column lies
+in the newly appended selector-column suffix.
 
 For activations, `mem_selectorFixed_of_activation` proves that every synthesized
 `(selector, row)` with a compression-map entry is emitted by the generic
@@ -804,6 +822,14 @@ turns an empty list into the exact realization fact.
 `ActionFixedCoherence.realizationFailures_eq_nil` certifies the Action list is empty.
 The companion query-coverage diagnostic closes the current all-fixed-columns
 coverage field.
+
+The generic scatter semantics no longer needs computation:
+`denseColumns_getD_getD_eq_zero_of_no_target` proves that an unwritten in-domain cell
+retains the zero initializer, while
+`denseColumns_getD_getD_eq_of_last_write` proves that the final sparse write to a cell
+determines its dense value. These are the assembly lemmas for both disabled selector
+rows and ordinary fixed realization; the remaining work is to prove the required
+no-later-collision facts from the producers of the sparse stream.
 
 Their intended replacement follows the compiler pipeline: prove that V1 regions are
 disjoint in cells, prove small region-local write obligations, establish the
@@ -1120,8 +1146,10 @@ permutation/lookup/selector evaluations.
 `ActionInstanceCommitment.actionBundleStatement_or_relation_of_acceptedCircuitSat`
 then constructs the concrete Action bundle statement from that satisfaction result,
 with no free `S`, `hencodes`, relation, or operation-constraint family. Its remaining
-arguments are the concrete fixed/copy/selector records and the already-priced lookup
-challenge exclusions. This theorem is the function to substitute at the live
+deterministic argument is exact packed-selector realization for lookups. Fixed/table
+coherence and the complete copy replay witness are now constructed internally; the
+permutation and lookup challenge exclusions remain explicit because they are
+probability-layer events. This theorem is the function to substitute at the live
 constraint terminal's `hencodes` argument.
 
 That substitution is now expressed directly, without preserving the abstract
@@ -1132,8 +1160,8 @@ specializes the canonical terminal to
 and domain facts from that circuit-owned key, and feeds canonical satisfaction into
 the Action endpoint. Its conclusion is exactly the concrete `Action.BundleStatement`
 or the shared augmented-basis relation. The theorem has no arbitrary key, decoder,
-constraint model, `S`, or `hencodes`; only the still-concrete fixed/copy/selector
-records and explicitly priced good-challenge facts remain.
+constraint model, `S`, or `hencodes`; only the still-concrete exact lookup-selector
+fact and explicitly priced good-challenge facts remain.
 
 The final theorem should say, modulo the explicitly priced Fiat–Shamir, polynomial
 identity, and discrete-log failure events, that acceptance by the modeled deployed
@@ -1152,14 +1180,20 @@ whose public inputs were committed by the verifier.
    polynomial row environment, gate witnesses, and lookup witnesses from
    `TopLevelCircuit`. The executable permutation assembly is now proved equal to the
    abstract copy replay, and the concrete Action gate-coherence package is complete.
-3. **Current work:** supply the generic Lagrange-basis equations to the Action fixed
-   constructor; instantiate the remaining σ-copy pairwise value transport; and use
-   fixed coherence to supply exact packed-selector projection. Dense-row shape,
-   commitment provenance, Action query coverage, sparse-scatter realization, endpoint
-   address resolution, positional constants, and declared copy reads are complete
-   (the two Action fixed diagnostics remain explicitly interim pending their structural
-   compiler replacements). Lookup configure lawfulness, activation-row fit,
-   bundle-wide challenge packaging, and public-instance provenance are complete.
+3. **Current work:** derive exact packed-selector projection for lookups from the
+   circuit-owned fixed rows. `ActionFixedCoherence.ofDerived` now obtains the complete
+   Lagrange setup from the symbolic FFT theorem and the Action endpoint constructs it
+   internally. The σ cycle, pairwise value transport, constants, endpoint reads, and
+   complete `CopyReplayWitness` are also constructed internally. The two Action fixed
+   diagnostics remain explicitly interim pending their structural compiler
+   replacements. Lookup configure lawfulness, activation-row fit, bundle-wide
+   challenge packaging, and public-instance provenance are complete. The configured
+   top-level synthesis boundary now carries exact lookup-activation and
+   no-simple-selector laws. Generic `foldOps`/`foldCall` theorems reduce either law
+   over a serial circuit fold to one symbolic round, with a state-independent
+   interface that keeps the potentially large closed-form accumulator opaque.
+   `CalculateRoot.circuit_synthesize_operations` exposes its 16-layer Merkle folds at
+   precisely that boundary rather than reducing the concrete fold.
 4. **Generic join complete:** `FullCircuitBridge.ofTopLevelCanonical` assembles one
    proof index and `bundleTopLevelSoundness_or_bad` quantifies it over every
    `Fin shape.numProofs`. Instantiate those constructors with the incoming
@@ -1187,24 +1221,23 @@ append-only merge flow.
 | Marker | Work package | Current state | Delivers / unblocks |
 |---|---|---|---|
 | **[ME] fixed compiler** | Replace the interim Action fixed-write and query-coverage diagnostics with compiler-derived laws: use region cell-disjointness to remove cross-region collisions, decompose the remainder across region-local writes, tables, constants, and selector packing, finish generic last-write/dedup/scatter semantics, and minimize query coverage to consumed columns. | Dense-row shape, full-list Lagrange commitment provenance, fixed-query count, and `TopLevelFixedCoherence.ofKeygen` are generic. Two prominently interim finite failure lists now certify Action sparse-to-dense realization and query coverage; `ActionFixedCoherence.ofKeygen` assembles them with the generic constructor. | A usable Action fixed-coherence constructor now; ultimately a compiler-derived replacement for its two interim certificates. |
-| **[DONE: FFT correctness]** | Prove `bestFftG`'s DFT specification symbolically — `output[i] = Σ_k ω^{i·k} • input[k]`, by induction over the butterfly rounds (invariant: after round `r`, each `2^r` block holds the DFT of its stride-subsampled slice). | The native Lagrange-key certificate (2048 MSMs at the captured URS) was retired as the wrong trade: never verify an algorithm by running it natively at one parameter set when it has a once-and-for-all correctness theorem. Delivered: `Keygen/FftSpec.lean` proves `bestFftG_dft` (bit-reversal involution + butterfly-round induction, generic `[Module Fp G]`) and `derivedUrsGLagrange_generator_eq` in exactly the `ofPrefix_setup_of_closed` input form; `derivedUrsGLagrange_length` supplies the basis length fact. Remaining: plumb these into `ActionFixedCoherence.ofKeygen`'s setup equations and the σ-commitment identification call sites. | The URS setup equations consumed by `ActionFixedCoherence.ofKeygen` and the σ-commitment identification, for every URS. |
-| **[ME] lookup join** | Consume the exact packed-selector realization produced by `TopLevelFixedCoherence`. | Correct-by-construction lookup lawfulness, generic routing/projection, activation-row fit, deployed-witness construction, bundle-wide bad-set aggregation, exact top-level `θ` pricing, and conversion of one bundle exclusions record into every per-proof witness condition are complete. This stream is blocked only on fixed coherence; once available, the join should be small. | The lookup field of `FullCircuitBridge` for every Action proof index. |
-| **[ME] copy** | Instantiate pairwise value agreement on decoded `actionCopies` from σ semantics. | Endpoint address roundtrips, nonconstant reads, positional constant allocation/value/address linkage, constant fixed reads, and declared-endpoint reads are complete. `actionCopyReplayWitness_ofPairValues_or_bad` constructs the witness from the sole remaining pairwise-value premise. Generic replay correctness, σ rows, active restriction, and chunk flattening already have named theorems. | The copy field of `FullCircuitBridge`. |
-| **[ME] Action fixed/VK** | Supply the generic Lagrange-basis setup equations to `ActionFixedCoherence.ofKeygen` and feed the resulting record into the terminal. | Action query coverage and sparse-to-dense realization are closed by explicitly interim diagnostics; the circuit/keygen constructor is complete. | The fixed/table field and the exact packed-selector fact consumed by the lookup stream. |
+| **[DONE: FFT correctness]** | Prove `bestFftG`'s DFT specification symbolically — `output[i] = Σ_k ω^{i·k} • input[k]`, by induction over the butterfly rounds (invariant: after round `r`, each `2^r` block holds the DFT of its stride-subsampled slice). | `Keygen/FftSpec.lean` proves `bestFftG_dft`, `derivedUrsGLagrange_generator_eq`, and `derivedUrsGLagrange_length`. `ActionFixedCoherence.ofDerived` now consumes those results through `ofPrefix_setup_of_closed`; no Lagrange setup premise reaches the Action endpoint. | The URS setup equations consumed by both fixed and σ commitment identification, for every supported URS. |
+| **[ME] lookup join** | Derive exact packed-selector zero/one values for only the selector leaves occurring in each lookup input, then feed them to `TopLevelLookupWitnessConditions.ofChallengeExclusions`. | The former all-selectors premise was corrected because unrelated gate selectors may be active on the same row. `LookupSelectorRows` now proves the generic fixed-binding transport. The two synthesis laws live on `TopLevelCircuit`; their proof normalizer closes ordinary regions and now handles `foldCall` compositionally instead of expanding concrete Merkle depth. Selector kind consistency and degree-zero singleton packing are generic. The remaining join is V1 selector-column non-overlap plus the Action top-level discharge of those two synthesis-law fields. The legacy block partitioner is factored with a logical in-bounds/permutation contract, and the full insertion/heapsort/pdqsort driver chain now proves `Pdqsort.quicksort_perm` without a computational certificate. | The lookup field of `FullCircuitBridge` for every Action proof index. |
+| **[DONE: copy]** | Instantiate pairwise value agreement on decoded `actionCopies` from σ semantics. | `actionResolverPermutationCycle_or_relation` constructs the exact Action cycle; `actionCopyPairValue_of_resolverPermutation` proves each pair's value equality; `actionCopyReplayWitness_or_relation` packages all copies, constants, and endpoint reads. The terminal no longer accepts a copy witness. | The copy field is internal to the Action endpoint. |
+| **[DONE: Action fixed/VK]** | Supply the generic Lagrange-basis setup equations to `ActionFixedCoherence.ofKeygen` and feed the resulting record into the terminal. | `ActionFixedCoherence.ofDerived` constructs the record from the circuit-owned key and symbolic FFT result. Action query coverage and sparse-to-dense realization remain closed by two explicitly interim diagnostics, but no fixed-coherence premise reaches the terminal. | The fixed/table family is internal; the same bound fixed rows are available for the remaining exact lookup-selector proof. |
 | **[DONE: instance]** | No independent work remains in the deterministic instance stream. | `ActionInstanceCommitment.instanceKey` and `.commitment` derive the key and public commitment from the URS and ten Action rows; the binding-aware bundle endpoint consumes them internally and preserves only the shared nontrivial-relation branch. | Public-instance provenance is ready for the one-proof/bundle join. |
-| **[DONE: terminal API]** | Keep the canonical quotient terminal in polynomial language and perform the concrete join in `Circuits/Integration`. | `acceptedModelCircuitSat_or_relation_of_nodeBinding` reconstructs the complete accepted model and `actionBundleStatement_or_relation_of_acceptedNodeBinding` specializes it to the circuit-derived Action key and concrete bundle statement. Its signature has no free `S`/`hencodes`; applicability still awaits the concrete fixed/copy records. | The deterministic semantic function is ready to be instantiated and then invoked by the live probability capstone. |
+| **[DONE: terminal API]** | Keep the canonical quotient terminal in polynomial language and perform the concrete join in `Circuits/Integration`. | `acceptedModelCircuitSat_or_relation_of_nodeBinding` reconstructs the complete accepted model and `actionBundleStatement_or_relation_of_acceptedNodeBinding` specializes it to the circuit-derived Action key and concrete bundle statement. Its signature has no free `S`/`hencodes`, fixed record, or copy record; applicability still awaits exact lookup-selector values. | The deterministic semantic function is ready for the final selector join and then invocation by the live probability capstone. |
 | **[SEPARATE: ledger]** | Continue [#98](https://github.com/zcash/ironwood/pull/98)'s `SpecPost`-to-ledger refinement. | Independent of polynomial reconstruction and Clean constraint satisfaction. | The games-facing conclusion that should follow after the circuit statement is recovered. |
 | **[SEPARATE: probability]** | Connect [#96](https://github.com/zcash/ironwood/pull/96)'s extraction/coupling result to the deterministic terminal and place the already-priced lookup/permutation exclusions at their transcript squeezes. | The deterministic terminal consumes decoded openings and explicit good-challenge facts; it does not solve the family-wide adaptive `hExtract` supply problem. | A quantitative live theorem around the deterministic #99 result, without reintroducing a free semantic encoding. |
-| **[JOIN] One proof** | Instantiate the endpoint with the incoming fixed-selector and copy records, then apply the instance-row and Action-statement adapters. | The generic constructor derives gate and lookup fields; the Action canonical endpoint now also consumes `CopyReplayWitness` directly rather than accepting free copy satisfaction. Public-instance provenance is concrete. | A concrete Action statement for one `Fin numProofs`, with only explicitly priced exceptional events. |
-| **[JOIN] Bundle and capstone** | Supply the concrete records to `actionBundleStatement_or_relation_of_acceptedNodeBinding` and invoke it from the live extraction/probability theorem. | The generic finite-family join and deterministic accepted-node-binding-to-Action terminal are complete; concrete records and the quantitative invocation remain. This invocation—not merely the existence of a terminal whose own signature omits them—is where the live capstone's free `S`/`hencodes` are finally eliminated. #96 can meet it at the decoded node-binding boundary. | #99's completion criterion. |
+| **[JOIN] One proof** | Supply the derived exact lookup-selector values, then apply the already internal gate/fixed/copy/instance adapters. | The Action canonical endpoint constructs fixed coherence and copy replay itself. Only exact selector projection plus explicitly priced exclusions remain. | A concrete Action statement for one `Fin numProofs`, with only explicitly priced exceptional events. |
+| **[JOIN] Bundle and capstone** | Invoke `actionBundleStatement_or_relation_of_acceptedNodeBinding` from the live extraction/probability theorem. | The generic finite-family join and deterministic accepted-node-binding-to-Action terminal are complete; exact selector closure and the quantitative invocation remain. This invocation—not merely the existence of a terminal whose own signature omits `S`/`hencodes`—is where the live capstone's free semantic conclusion is finally eliminated. #96 can meet it at the decoded node-binding boundary. | #99's completion criterion. |
 
 The shortest dependency chain to proving `hencodes` is therefore:
 
 ```text
-generic fixed constructor ─> Action fixed/VK ─> lookup ─┐
-copy adapter ────────────────────────────────────────────┼─> instantiate terminal
-instance (done) ─────────────────────────────────────────┤      ─> replace live hencodes
-gate (done) ─────────────────────────────────────────────┘
+exact packed-selector values ─> lookup ─┐
+fixed/copy/instance/gate (done) ────────┼─> instantiate terminal
+priced exclusions (explicit) ───────────┘      ─> replace live hencodes
 ```
 
 The family-wide `hExtract`/adaptive-coupling premise is deliberately absent from this

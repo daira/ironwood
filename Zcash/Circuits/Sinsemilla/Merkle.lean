@@ -2240,6 +2240,20 @@ def circuit :
         have := i.isLt; omega)]
     exact ⟨B, hB⟩
 
+/--
+Expose the operation stream of `CalculateRoot.circuit` at its folded-call boundary.
+This keeps structural consumers from reducing the concrete fold or its closed-form
+accumulator merely to see that the trailing output projection emits no operations.
+-/
+theorem circuit_synthesize_operations
+    (cfg : CondSwap.Config × Config × LookupRangeCheck.Config 10)
+    (input : Var Layer.Input Fp) (i : RegionIndex) :
+    ((circuit G Q hQ l₀ d hld wsib wswap).synthesize cfg input).operations i =
+      (FormalCircuit.foldCall (layerAt G Q hQ l₀ wsib wswap) toInput
+        cfg input d).operations i := by
+  simp only [circuit, Circuit.operations_bind, Circuit.operations_pure,
+    List.append_nil]
+
 derive_contract_bridges circuit (G : Generators) (Q : Point Fp) (hQ : Q.OnCurve)
   (l₀ d : ℕ) (hld : l₀ + d ≤ 2 ^ 10) (wsib : ℕ → WitgenIR Fp 1)
   (wswap : ℕ → Placed ProverEnvironment Fp → Bool) :=

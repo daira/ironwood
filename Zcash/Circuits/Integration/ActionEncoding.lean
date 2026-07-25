@@ -8,6 +8,7 @@ import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 import Zcash.Circuits.Integration.TopLevelCircuit
 import Zcash.Circuits.Integration.TopLevelGates
 import Zcash.Circuits.Integration.ActionCopyReplay
+import Zcash.Circuits.Integration.ActionFixedCoherenceCompute
 import Zcash.Snark.Keygen.Pipeline
 
 /-!
@@ -288,9 +289,6 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
     (gateCoherence :
       TopLevelGateCoherence
         orchardActionTopLevelCircuit pp urs)
-    (fixedCoherence :
-      TopLevelFixedCoherence
-        orchardActionTopLevelCircuit pp urs)
     (permutationExclusions :
       ResolverPermutationChallengeExclusions
         (orchardActionTopLevelCircuit.toVerifierKey pp urs)
@@ -316,6 +314,10 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
   have hk' :
       orchardActionTopLevelCircuit.domainExponent = urs.k :=
     hk
+  let fixedCoherence :
+      TopLevelFixedCoherence
+        orchardActionTopLevelCircuit pp urs :=
+    ActionFixedCoherence.ofDerived pp urs hk'
   have hfixedRows : Function.Injective
       fun i : Fin (2 ^ urs.k) =>
         (orchardActionTopLevelCircuit.toVerifierKey pp urs).omega ^

@@ -35,6 +35,20 @@ namespace EnabledLookup
 
 variable {F : Type} [FiniteField F]
 
+/-- Selector leaves occurring in an expression, with multiplicity and syntax order. -/
+def expressionSelectorLeaves : Expression F Query → List Selector
+  | .var (.selector selector) => [selector]
+  | .var _ => []
+  | .const _ => []
+  | .add left right =>
+      expressionSelectorLeaves left ++ expressionSelectorLeaves right
+  | .mul left right =>
+      expressionSelectorLeaves left ++ expressionSelectorLeaves right
+
+/-- Selector leaves occurring in this lookup's input tuple. -/
+def inputSelectorLeaves (lookup : EnabledLookup F) : List Selector :=
+  lookup.argument.inputs.flatMap expressionSelectorLeaves
+
 /-- The selector valuation carried by this particular lookup activation. -/
 def selectorValue (lookup : EnabledLookup F) (index : ℕ) : F :=
   if ∃ selector ∈ lookup.enabled, selector.index = index then 1 else 0

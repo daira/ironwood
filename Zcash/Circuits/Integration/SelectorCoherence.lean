@@ -1482,6 +1482,67 @@ theorem process_lookup_isSome_of_mem
   exact SelCompressMap.lookup_isSome_of_mem
     (process selectors maxDegree) hentry
 
+/--
+A degree-zero selector is looked up with the dedicated degree-zero packing datum.
+No uniqueness hypothesis on selector indices is needed: all degree-zero entries form
+the prefix of `process.entries`, and every datum in that prefix has length/root `1`.
+-/
+theorem process_lookup_degreeZero_of_mem
+    (selectors : List SelectorDescription) (maxDegree : ℕ)
+    {description : SelectorDescription}
+    (hdescription : description ∈ selectors)
+    (hdegree : description.maxDegree = 0) :
+    ∃ compressed,
+      (process selectors maxDegree).lookup description.selector =
+        some compressed ∧
+      compressed.combinationLen = 1 ∧
+      compressed.assignedRoot = 1 := by
+  let degreeZero := selectors.filter (·.maxDegree = 0)
+  let remaining := selectors.filter (·.maxDegree ≠ 0)
+  let degreeZeroEntries :=
+    degreeZero.zipIdx.map fun (source, column) =>
+      (source.selector, SelCompress.mk column 1 1)
+  let combinations :=
+    buildCombinations maxDegree remaining.length remaining
+  let combinationEntries :=
+    combinations.zipIdx.flatMap fun (combination, column) =>
+      combination.zipIdx.map fun (source, position) =>
+        (source.selector,
+          SelCompress.mk (degreeZero.length + column)
+            combination.length (position + 1))
+  have hdegreeZero : description ∈ degreeZero :=
+    List.mem_filter.mpr ⟨hdescription, by simp [hdegree]⟩
+  obtain ⟨column, hzip⟩ :=
+    exists_mem_zipIdx_of_mem hdegreeZero
+  have hentry :
+      (description.selector, SelCompress.mk column 1 1) ∈
+        degreeZeroEntries := by
+    exact List.mem_map.mpr
+      ⟨(description, column), hzip, rfl⟩
+  have hfindSome :
+      (degreeZeroEntries.find?
+        (fun entry => entry.1 = description.selector)).isSome = true := by
+    rw [List.find?_isSome]
+    exact ⟨(description.selector, SelCompress.mk column 1 1),
+      hentry, by simp⟩
+  obtain ⟨entry, hfind⟩ :=
+    Option.isSome_iff_exists.mp hfindSome
+  have hentryMem : entry ∈ degreeZeroEntries :=
+    List.mem_of_find?_eq_some hfind
+  obtain ⟨indexed, hindexed, hentryEq⟩ :=
+    List.mem_map.mp hentryMem
+  rcases indexed with ⟨source, sourceColumn⟩
+  subst entry
+  let compressed := SelCompress.mk sourceColumn 1 1
+  refine ⟨compressed, ?_, rfl, rfl⟩
+  change
+    Option.map Prod.snd
+      (List.find? (fun entry => entry.1 = description.selector)
+        (degreeZeroEntries ++ combinationEntries)) =
+      some compressed
+  rw [List.find?_append, hfind, Option.some_or]
+  rfl
+
 /-- A successful association-list lookup originates in the map's entries. -/
 theorem SelCompressMap.exists_mem_entries_of_lookup
     (map : SelCompressMap) {selector : ℕ} {compressed : SelCompress}
@@ -1490,6 +1551,36 @@ theorem SelCompressMap.exists_mem_entries_of_lookup
   simp only [SelCompressMap.lookup, Option.map_eq_some_iff] at hlookup
   obtain ⟨entry, hfind, hcompressed⟩ := hlookup
   exact ⟨entry, List.mem_of_find?_eq_some hfind, hcompressed⟩
+
+/-- Mapping a fixed-column offset over every entry preserves successful lookup. -/
+private theorem SelCompressMap.lookup_mapPackedOffset
+    (map : SelCompressMap) (offset selector : ℕ)
+    {source : SelCompress}
+    (hlookup : map.lookup selector = some source) :
+    ({ newFixedCols := map.newFixedCols
+       entries := map.entries.map fun (key, compressed) =>
+         (key, { compressed with
+           packedCol := compressed.packedCol + offset }) } :
+        SelCompressMap).lookup selector =
+      some { source with
+        packedCol := source.packedCol + offset } := by
+  rcases map with ⟨newFixedCols, entries⟩
+  simp only [SelCompressMap.lookup] at hlookup ⊢
+  induction entries with
+  | nil =>
+      simp at hlookup
+  | cons entry rest ih =>
+      rcases entry with ⟨key, compressed⟩
+      simp only [List.map_cons, List.find?_cons] at hlookup ⊢
+      by_cases heq : key = selector
+      · simp only [heq, decide_true] at hlookup ⊢
+        simp only [Option.map_some] at hlookup ⊢
+        have hsource : compressed = source :=
+          Option.some.inj hlookup
+        subst compressed
+        rfl
+      · simp only [heq, decide_false] at hlookup ⊢
+        exact ih hlookup
 
 /--
 The circuit-derived compression map covers every allocated selector index.
@@ -1528,6 +1619,55 @@ theorem deriveSelCompressMap_lookup_isSome_of_lt
             sourceCompressed.packedCol + cs.numFixedColumns }))
   exact List.mem_map.mpr
     ⟨(selector, source), hsource, rfl⟩
+
+/--
+A selector with no gate degree is packed alone by the circuit-derived map. Its
+column is in the newly appended fixed-column suffix.
+-/
+theorem deriveSelCompressMap_lookup_degreeZero_of_lt
+    {F : Type} (cs : ConstraintSystem F) (n : ℕ)
+    (activations : List (ℕ × ℕ)) {selector : ℕ}
+    (hselector : selector < cs.numSelectors)
+    (hdegree : (selectorMaxDegrees cs)[selector]! = 0) :
+    ∃ compressed,
+      (deriveSelCompressMap cs n activations).lookup selector =
+        some compressed ∧
+      compressed.combinationLen = 1 ∧
+      compressed.assignedRoot = 1 ∧
+      cs.numFixedColumns ≤ compressed.packedCol := by
+  let table := activationTable n cs.numSelectors activations
+  let degrees := selectorMaxDegrees cs
+  let descriptions :=
+    (List.range cs.numSelectors).map fun index =>
+      SelectorDescription.mk index table[index]! degrees[index]!
+  let packing := process descriptions (csDegree cs)
+  let description :=
+    SelectorDescription.mk selector table[selector]! degrees[selector]!
+  have hdescription : description ∈ descriptions := by
+    apply List.mem_map.mpr
+    exact ⟨selector, List.mem_range.mpr hselector, rfl⟩
+  have hdescriptionDegree : description.maxDegree = 0 :=
+    hdegree
+  obtain ⟨source, hsource, hlength, hroot⟩ :=
+    process_lookup_degreeZero_of_mem descriptions (csDegree cs)
+      hdescription hdescriptionDegree
+  let compressed : SelCompress :=
+    { source with
+      packedCol := source.packedCol + cs.numFixedColumns }
+  refine ⟨compressed, ?_, hlength, hroot, by
+    simp only [compressed]
+    omega⟩
+  have hsource' : packing.lookup selector = some source := by
+    simpa only [packing, descriptions, description, degrees, table] using
+      hsource
+  change
+    ({ newFixedCols := packing.newFixedCols
+       entries := packing.entries.map fun (key, source) =>
+         (key, { source with
+           packedCol := source.packedCol + cs.numFixedColumns }) } :
+      SelCompressMap).lookup selector = some compressed
+  exact SelCompressMap.lookup_mapPackedOffset
+    packing cs.numFixedColumns selector hsource'
 
 /--
 The circuit-derived compression map covers every selector atom of every configured

@@ -219,22 +219,24 @@ theorem Expression.eval_substValuation_eq_queryEval_of_selectorFree
       simp only [Expression.eval, ihLeft hfree.1, ihRight hfree.2]
 
 /--
-At one enabled lookup's input row, the packed fixed columns realize exactly
-the operation's zero/one selector valuation.
+At one enabled lookup's input row, selector substitution agrees with the
+operation's zero/one selector valuation on every input expression.
 
-Keeping this as a selector-level condition avoids repeating a proof for every
-input expression. The fixed-layout compiler will provide it by distinguishing
-the enabled selector's packed root from zero and the other packed roots.
+This deliberately does not require the two valuations to agree on unrelated
+selectors. A gate selector can legitimately be active on the same absolute row
+without occurring in this lookup's inputs.
 -/
 def EnabledLookup.InputSelectorValuesRealized
     (top : TopLevelCircuit Fp ConfigInput Config Output)
     (environment : Environment Fp) (lookup : EnabledLookup Fp) : Prop :=
-  ∀ selector : Selector,
-    substValuation top.selectorMap.lookup
-        (Query.eval environment (fun _ => 0)
+  ∀ expression ∈ lookup.argument.inputs,
+    expression.eval
+        (substValuation top.selectorMap.lookup
+          (Query.eval environment (fun _ => 0)
+            (top.placement lookup.region + lookup.row))) =
+      expression.eval
+        (Query.eval environment lookup.selectorValue
           (top.placement lookup.region + lookup.row))
-        (.selector selector) =
-      lookup.selectorValue selector.index
 
 namespace EnabledLookup.SelectorProjection
 
@@ -250,26 +252,11 @@ theorem ofInputSelectorValues
     (tablesFree :
       lookup.argument.tables.Forall Expression.SelectorFree) :
     lookup.SelectorProjection top environment := by
-  have inputValuation :
-      substValuation top.selectorMap.lookup
-          (Query.eval environment (fun _ => 0)
-            (top.placement lookup.region + lookup.row)) =
-        Query.eval environment lookup.selectorValue
-          (top.placement lookup.region + lookup.row) := by
-    funext query
-    cases query with
-    | selector selector =>
-        exact realized selector
-    | fixed column rotation =>
-        rfl
-    | advice column rotation =>
-        rfl
-    | «instance» column rotation =>
-        rfl
   constructor
   · unfold EnabledLookup.inputValues
-    rw [inputValuation]
-    rfl
+    apply List.map_congr_left
+    intro expression hexpression
+    exact realized expression hexpression
   · intro row hrow
     unfold EnabledLookup.tableValues
     apply List.map_congr_left
