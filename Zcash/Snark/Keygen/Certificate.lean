@@ -1,6 +1,5 @@
 import Zcash.Snark.Keygen.Derivation
-import Zcash.Snark.Keygen.Fast.FastFft
-import Zcash.Snark.Keygen.Fast.MsmProj
+import Zcash.Snark.Keygen.Fast.NatKernelAdapter
 import Zcash.Snark.Fixtures.SingleAction.Fixture
 
 /-!
@@ -21,13 +20,15 @@ EVALUATION-SHARING DISCIPLINE (each rule was measured, the hard way):
   proposition shares correctly at evaluation but blows the elaborator's fixed budget
   at proof-term finalization; the sequential map costs only ~26 s (scatter committer,
   0.6 s/column) and keeps both evaluation and finalization on known-good mechanisms.
-* The basis uses the SERIAL projective FFT (`Fast.derivedUrsGLagrangeFast`, proven
-  equal to the Rust-mirroring `derivedUrsGLagrange`): through library IR the
-  round-parallel variant measured SLOWER (243 s vs 187 s) — its microbenchmark win
-  was an artifact of probe-local compilation.
-* The committer is the PROJECTIVE scatter Pippenger
-  (`Fast.MsmProj.commitLagrangeProjScatterWith`, ~0.6 s/column vs 3.8 s affine),
-  serial per column — the 44-column `parMap` already saturates the cores.
+* The basis and the per-column committer run through the NATIVE LANE
+  (`Fast.derivedUrsGLagrangeKernel` / `Fast.commitLagrangeKernelWith`): the zero-import
+  `NatKernel` twins compiled by the `NatKernelNative` `precompileModules` leaf, proven
+  equal to the statement-surface functions via the kernel simulation theorems.
+  Profiling note: THIS module gets the dylib automatically (the `ZcashKeygen` lib
+  reaches the lane, so lake passes `--load-dynlib`); a SCRATCH probe through
+  `lake env lean` does NOT, and must pass
+  `--load-dynlib=.lake/build/lib/libZcash_NatKernelNative.so` explicitly or it
+  measures the interpreted tier (~1.55× slower on this GMP-bound workload).
 * `actionPinned` stays a nullary share: it is only touched from the main evaluation
   thread, where nullary init-once sharing does hold (the `VkMatch` fix).
 
@@ -56,12 +57,11 @@ def actionProofParams : ProofParams := { numProofs := 1, numPointSets := 5 }
 /-- The derived Lagrange basis: the SERIAL projective FFT, proven equal to the
 Rust-mirroring `derivedUrsGLagrange` (`Fast.derivedUrsGLagrangeFast_eq`). Nullary —
 initialized once on the main evaluation thread (all uses are single-threaded). -/
-private def lagrangeBasis : List G := Fast.derivedUrsGLagrangeFast capturedURS
+private def lagrangeBasis : List G := Fast.derivedUrsGLagrangeKernel capturedURS
 
 /-- The per-column committer at the derived basis (scatter-projective Pippenger). -/
 private def commitProj : List Fp → G :=
-  Fast.MsmProj.commitLagrangeProjScatterWith Fast.Msm.defaultWindow capturedURS.w
-    lagrangeBasis
+  Fast.commitLagrangeKernelWith Fast.Msm.defaultWindow capturedURS.w lagrangeBasis
 
 /-- The derived pinned CS at the circuit-owned selector map — `ofOperations`' internal
 `pinned` in method spelling. Nullary, so the selector-map/derive work evaluates once
@@ -71,18 +71,18 @@ private def actionPinned : PinnedConstraintSystem Fp :=
     orchardActionTopLevelCircuit.selectorMap
 
 set_option maxRecDepth 1000000 in
-/-- The scatter-projective committer at the fast basis IS the pipeline's affine default
-at the spec basis — both sides are proven equal to `Fast.Msm.commitLagrangeSpec`, and
-the two basis spellings are proven equal by `Fast.derivedUrsGLagrangeFast_eq`. -/
+/-- The native-lane committer at the kernel basis IS the pipeline's affine default at
+the spec basis — both sides are proven equal to `Fast.Msm.commitLagrangeSpec`, and the
+two basis spellings are proven equal by `Fast.derivedUrsGLagrangeKernel_eq`. -/
 private theorem committer_eq :
-    Fast.MsmProj.commitLagrangeProjScatterWith Fast.Msm.defaultWindow capturedURS.w
-      (Fast.derivedUrsGLagrangeFast capturedURS)
+    Fast.commitLagrangeKernelWith Fast.Msm.defaultWindow capturedURS.w
+      (Fast.derivedUrsGLagrangeKernel capturedURS)
       = Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow capturedURS.w
         (derivedUrsGLagrange capturedURS) := by
   funext coeffs
-  rw [Fast.MsmProj.commitLagrangeProjScatterWith_eq _ (by decide),
+  rw [Fast.commitLagrangeKernelWith_eq _ (by decide),
     Fast.Msm.commitLagrangeFastWith_eq _ (by decide),
-    Fast.derivedUrsGLagrangeFast_eq]
+    Fast.derivedUrsGLagrangeKernel_eq]
 
 /-- `Decidable` instance for the bundle, CONSTRUCTED leaf-by-leaf (see the module
 docstring). -/
@@ -150,7 +150,7 @@ theorem derivedUrsGLagrange_prefix_eq :
   simp only [Prod.mk.injEq] at h
   have h1 := h.1
   simp only [lagrangeBasis] at h1
-  rw [← Fast.derivedUrsGLagrangeFast_eq]
+  rw [← Fast.derivedUrsGLagrangeKernel_eq]
   exact h1
 
 set_option maxRecDepth 1000000 in

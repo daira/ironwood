@@ -17,7 +17,7 @@ Like `Zcash.Vendor.Montgomery.Native64x8Defs`, this module is core-only: it is p
 `FastFieldNative` precompiled lane.  All proofs live in the sibling module.
 -/
 
-namespace Zcash.Snark.Keygen.Fast.ProjectiveMont
+namespace Zcash.Vendor.ProjectiveMont
 
 open Montgomery.Native64x8 (Limbs8)
 open Montgomery.Native64x8.VestaFq

@@ -87,5 +87,5 @@ precompileModules = true
 globs = [
   "FastFieldNative",
   "Zcash.Vendor.Montgomery.Native64x8Defs",
-  "Zcash.Snark.Keygen.Fast.ProjectiveMontDefs",
+  "Zcash.Vendor.ProjectiveMontDefs",
 ]
