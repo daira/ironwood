@@ -27,5 +27,7 @@ extend-ignore-identifiers-re = [
 [default.extend-words]
 thr = "thr"  # threshold identifiers (`thr`, `thr1`, `thr4`) in Composition/Completeness
 hsi = "hsi"  # hypothesis identifiers (`hsiN`) in Verifier/Assemble
+henc = "henc"  # hypothesis identifier (`henc`) in Integration/ActionCopyWitness
+padd = "padd"  # projective point addition (`padd`) in Keygen/Fast and Vendor
 Hom = "Hom"  # `RingHom`, `evalRingHom` — Mathlib's homomorphism naming
 advices = "advices"
