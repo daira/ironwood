@@ -291,7 +291,7 @@ private theorem mul_cast (x y : Limbs8) (hx : x.Bounded) (hy : y.Bounded)
     mul_inv_cancel₀ Mont64x8Field.r_ne_zero, mul_one]
 
 /-- The canonical value of a fast element is its residue divided by `2 ^ 256`. -/
-private theorem toField_eq (x : FastField modulus) :
+theorem toField_eq (x : FastField modulus) :
     toField x = (x.val.toNat : ZMod modulus) * ((2 ^ 256 : ℕ) : ZMod modulus)⁻¹ := by
   rw [toField, toNat, toLimbs8,
     mul_cast x.val Limbs8.one x.val_bounded Limbs8.one_bounded x.property.2, Limbs8.one_toNat]

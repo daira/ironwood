@@ -422,7 +422,7 @@ open Zcash.Snark.Keygen in
 /-- The radix-2 DIT FFT loop nest with the element type, the butterfly operations and the twiddle
 type all abstracted: `fft` and `bestFftG` are both instances of it (`fft_eq_gen`,
 `bestFftG_eq_gen`, both `rfl`). -/
-private def fftGen {α τ : Type} [Inhabited α] [Inhabited τ] (add sub : α → α → α)
+def fftGen {α τ : Type} [Inhabited α] [Inhabited τ] (add sub : α → α → α)
     (smul : τ → α → α) (a0 : Array α) (tw : Array τ) (logN : ℕ) : Array α := Id.run do
   let n := a0.size
   let mut a := a0
@@ -511,7 +511,7 @@ private theorem fftGen_decompose {α τ : Type} [Inhabited α] [Inhabited τ] (a
 
 open Zcash.Snark.Keygen in
 /-- One step of the bit-reversal permutation. -/
-private def permStep {α : Type} [Inhabited α] (logN : ℕ) (a : Array α) (k : ℕ) : Array α :=
+def permStep {α : Type} [Inhabited α] (logN : ℕ) (a : Array α) (k : ℕ) : Array α :=
   if k < bitreverse k logN then
     (a.set! k a[bitreverse k logN]!).set! (bitreverse k logN) a[k]!
   else a
@@ -529,7 +529,7 @@ private theorem brPermGen_eq_foldl {α : Type} [Inhabited α] (a0 : Array α) (l
   rfl
 
 /-- A single butterfly `(c, j)` of a round at width `half`, as a pure array step. -/
-private def butterflyGen {α τ : Type} [Inhabited α] [Inhabited τ] (add sub : α → α → α)
+def butterflyGen {α τ : Type} [Inhabited α] [Inhabited τ] (add sub : α → α → α)
     (smul : τ → α → α) (n half : ℕ) (tw : Array τ) (c j : ℕ) (a : Array α) : Array α :=
   (a.set! (c * (2 * half) + j)
       (add a[c * (2 * half) + j]!
@@ -539,7 +539,7 @@ private def butterflyGen {α τ : Type} [Inhabited α] [Inhabited τ] (add sub :
         (smul tw[j * (n / (2 * half))]! a[c * (2 * half) + half + j]!))
 
 /-- One round of butterflies at width `half`, as a pure double fold. -/
-private def roundFoldGen {α τ : Type} [Inhabited α] [Inhabited τ] (add sub : α → α → α)
+def roundFoldGen {α τ : Type} [Inhabited α] [Inhabited τ] (add sub : α → α → α)
     (smul : τ → α → α) (n half : ℕ) (tw : Array τ) (a0 : Array α) : Array α :=
   (List.range (n / (2 * half))).foldl
     (fun a c => (List.range half).foldl
@@ -576,7 +576,7 @@ private theorem foldl_rounds_half {α τ : Type} [Inhabited α] [Inhabited τ] (
     ring
 
 /-- The generic loop nest as a permutation fold followed by `logN` round folds. -/
-private theorem fftGen_eq_folds {α τ : Type} [Inhabited α] [Inhabited τ] (add sub : α → α → α)
+theorem fftGen_eq_folds {α τ : Type} [Inhabited α] [Inhabited τ] (add sub : α → α → α)
     (smul : τ → α → α) (a0 : Array α) (tw : Array τ) (logN : ℕ) :
     fftGen add sub smul a0 tw logN
       = (List.range logN).foldl (fun a r => roundFoldGen add sub smul a0.size (2 ^ r) tw a)
