@@ -28,56 +28,86 @@ So each definition sits on a three-layer stack:
 ## One connected picture
 
 ```mermaid
+%%{init: {"flowchart": {"nodeSpacing": 20, "rankSpacing": 50, "padding": 6, "diagramPadding": 4, "subGraphTitleMargin": {"top": 2, "bottom": 22}}, "themeCSS": ".cluster-label { font-weight: 700; font-size: 1.1em; }"}}%%
 flowchart TD
   subgraph GAMES["Ledger-model security games — the capstones"]
-    BAL["Balance"]
-    SPEND["Spendability"]
-    SPENDAUTH["Spend authority"]
+    BAL["Balance<br/>balanceSubsetOrBreak<br/>balanceValueOrBreak"]
+    SPEND["Spendability<br/>faerieGoldCore<br/>validLedger_append"]
+    SPENDAUTH["Spend authority<br/>spendAuthorityOrBreak"]
   end
 
-  SPEND --> SPENDAUTH
-
-  BAL ---> NCB["Note-commitment binding"]
-  BAL ---> BS["Binding-signature balance<br/>Zcash/Security/BindingSignature"]
-  BAL ---> KB["Key binding · ZIP 2005 (ROM)<br/>Zcash/Security/KeyBinding"]
+  BAL ---> BS["Binding-signature<br/>balance"]
+  BAL ---> NCB["Note-commitment<br/>binding"]
+  BAL ---> MERK["Merkle-path<br/>binding"]
+  BAL ---> KB["Key binding<br/>ZIP 2005 (ROM)"]
+  SPEND ---> NCB
+  SPEND ---> MERK
   SPEND ---> KB
-  SPEND ---> MERK["Merkle-path binding"]
-
-  BAL --> SPENDAUTH
+  SPEND ---> NFB["Nullifier binding"]
+  SPENDAUTH ---> KB
 
   subgraph ASSUMPTIONS["Computational hardness assumptions"]
     DL[("Discrete log")]
-    CR[("Hash collision resistance")]
+    CR[("Hash collision<br/>resistance")]
   end
 
   subgraph MODELS["Heuristic adversary models"]
     ROM[("Random oracle")]
   end
 
-  BS --->|non-balancing bundle computes| NDLR["NontrivialRelation<br/>(V,R) discrete-log relation"]
-  BS --> STMT["Witness or replay evidence<br/>for the Action statement<br/>ActionSatisfied · spec §4.17.4"]
-  KB --> STMT
-  KB --->|conflicting ivk witnesses compute| CUS["CollisionUpToSign<br/>shifted oracle, distinct queries"]
-  NCB -->|wrong note opening computes| NCBK["NoteCommitBreak"]
+  BS --->|non-balancing<br/>bundle computes| NDLR["NontrivialRelation<br/>(V,R) discrete-log<br/>relation"]
+  BS --> STMT["Witness or replay<br/>evidence<br/>ActionSatisfied<br/>§4.17.4"]
+  NCB -->|wrong note<br/>opening computes<br/><br/>| NCBK["NoteCommitBreak"]
   NCB --> STMT
   MERK --> STMT
-  MERK --->|wrong Merkle path computes| MC["Merkle collision"]
+  MERK --->|wrong Merkle<br/>path computes| MC["DefinedCollision<br/>(one height, encoding<br/>domain, success-only)"]
+  KB --> STMT
+  KB --->|conflicting ivk<br/>witnesses compute| CUS["CollisionUpToSign<br/>shifted oracle,<br/>distinct queries"]
+  NFB --> STMT
+  NFB --->|"distinct derive-inputs +<br/>equal nullifier<br/>computes"| NFC["NullifierCollision"]
+  SPENDAUTH ---->|"verified signature over<br/>unsigned sighash computes"| SAF["SpendAuthForgery<br/>(randomization<br/>of ±ak)"]
 
-  STMT -. "justified by the extractor;<br/>hencodes gap" .-> KS["Knowledge soundness:<br/>an accepting proof yields a computed<br/>witness or break data"]
-  NCBK --> SDLR["Sinsemilla discrete-log relation"]
+  STMT -. "justified by<br/>the extractor;<br/>hencodes gap" .-> KS["Knowledge soundness:<br/>accepting proof yields<br/>witness or break data"]
+  NCBK --> SDLR["Sinsemilla<br/>discrete-log<br/>relation"]
 
-  KS --->|AGM heuristic + independent hash-to-curve bases| DL
-  KS -->|"Fiat–Shamir heuristic"| ROM
-  CUS -->|"birthday counting q(q-1)/r,<br/>no assumption"| ROM
-  NDLR --->|"independent hash-to-curve bases"| DL
-  SDLR --->|"independent hash-to-curve bases"| DL
+  NDLR --->|"independent<br/>hash-to-curve bases"| DL
+  SDLR --->|"independent<br/>hash-to-curve bases"| DL
+  KS --->|AGM heuristic + independent<br/>hash-to-curve bases| DL
+  KS -->|"Fiat–Shamir<br/>heuristic"| ROM
   MC ---> CR
+  CUS -->|"birthday counting q(q-1)/r,<br/>no assumption"| ROM
+  NFC --->|"named hypothesis:<br/>nullifier base independent<br/>of commitment bases"| DL
+  SAF --> RDSA["RedDSA unforgeability,<br/>±-randomized keys"]
+  RDSA -->|"challenge hash<br/>as random oracle"| ROM
+  RDSA --->|"re-randomization reduction<br/>[FKMSSS2016] +<br/>forking extraction"| DL
+
+  classDef proven fill:#1a7f37,stroke:#116329,color:#ffffff
+  classDef checked fill:#0969da,stroke:#0550ae,color:#ffffff
+  classDef partial fill:#9a6700,stroke:#7d4e00,color:#ffffff
+  classDef hyp fill:#cf222e,stroke:#a40e26,color:#ffffff
+  classDef assumed fill:#57606a,stroke:#424a53,color:#ffffff
+  class BAL,SPEND,SPENDAUTH,KS partial
+  class NCB,BS,KB,MERK,NFB,STMT,NDLR,CUS,NCBK,MC,NFC,SAF checked
+  class SDLR,RDSA hyp
+  class DL,CR,ROM assumed
 ```
 
+<p>
+<span style="color:#1a7f37">■</span> fully proven — nothing here yet<br/>
+<span style="color:#0969da">■</span> stated and machine-checked in Lean, over abstract primitives<br/>
+<span style="color:#9a6700">■</span> partly machine-checked; remainder tracked (the games' probabilistic capstones; knowledge soundness's <code>hencodes</code> bridge)<br/>
+<span style="color:#cf222e">■</span> named hypothesis; formalization deferred<br/>
+<span style="color:#57606a">■</span> assumption or heuristic model; terminal by design
+</p>
+
 This picture is a deliberate approximation, and is likely to change as the formalization
-proceeds. Some components may rest on assumptions not shown — for example, nullifier
-derivation may need a PRF assumption that does not reduce to discrete log or to hash
-collision resistance in the random-oracle model.
+proceeds. Some edges are coarser than the eventual argument — for example, the
+`NullifierCollision` edge to discrete log is a named hypothesis whose `PRF^nf` component
+is not yet decomposed, and may not reduce to discrete log alone. The RedDSA node is a
+named hypothesis rather than a terminal assumption: its discharge edge names the
+reduction for security of signatures with re-randomizable keys
+[<a href="https://eprint.iacr.org/2015/395">FKMSSS2016</a>, section 3], adapted
+to the ±-randomized variant, together with forking extraction of the Schnorr witness.
 
 Every solid arrow reads "rests on"; where an edge carries a label, the label names the
 computed break object flowing along it, or the adversary model or side condition under which
@@ -142,7 +172,7 @@ circuit soundness proof.
 <div class="g"><div class="g-head"><span class="term">Action statement satisfied</span><span class="anchor">Security.Ledger.ActionSatisfied</span></div><div class="def">The games-relevant conjuncts of an Orchard-shaped Action statement (spec §4.17.4) over abstract primitives: commitment integrity, Merkle-path validity, nullifier integrity, the key-binding condition, address integrity, value-commitment integrity. This is the interface the games consume, and the target the verifier-soundness proof is meant to deliver.</div></div>
 <div class="g"><div class="g-head"><span class="term">pinning lemmas</span><span class="anchor">ivk_pinned · nk_eq_or_break · nf_old_eq_or_break</span></div><div class="def">The deterministic steps of the Balance argument: an address <code>(g_d, pk_d)</code> determines <code>ivk</code> (needs only <code>g_d ≠ 0</code> and torsion-freeness), hence <code>nk</code> is determined up to an exhibited key-binding break, and spends of the same note tuple reveal the same nullifier up to a break.</div></div>
 <div class="g"><div class="g-head"><span class="term">NoteCommitBreak</span><span class="anchor">Ledger.NoteCommitBreak · noteCommitBreakOfNe</span></div><div class="def">A note-commitment opening collision, as data. <code>noteCommitBreakOfNe</code> computes one when an <code>extract</code>-equal commitment fails to pin the note tuple <code>(rcm, note)</code>. Prequantumly, note-commitment binding reduces to a Sinsemilla / discrete-log-relation break.</div></div>
-<div class="g"><div class="g-head"><span class="term">Merkle position binding</span><span class="anchor">Ledger.Merkle.collisionOfWrongLeaf</span></div><div class="def">Fixed-depth Merkle trees are position-binding up to a hash collision: a validating authentication path for a leaf that is <em>not</em> the committed one computes a <code>RandomOracle.Collision</code> of the tree hash. The vector-commitment property the Balance and Spendability arguments require of the note-commitment tree.</div></div>
+<div class="g"><div class="g-head"><span class="term">Merkle position binding</span><span class="anchor">Ledger.Merkle.collisionOfWrongLeaf</span></div><div class="def">Fixed-depth Merkle trees are position-binding up to a hash collision: a validating authentication path for a leaf that is <em>not</em> the committed one, against a defined tree, computes a <code>DefinedCollision</code> of one height’s compression — escaped (⊥) evaluations never count as collisions. The vector-commitment property the Balance and Spendability arguments require of the note-commitment tree.</div></div>
 </section>
 
 <section>
