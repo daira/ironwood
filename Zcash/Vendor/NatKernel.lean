@@ -72,32 +72,37 @@ def pnsmul (n : Nat) (p : P3) : P3 :=
       (acc, padd st.2 st.2))
     (pid, p) |>.1
 
-/-- Bucket downsweep: `Σ_{k=1..mask} k • bucket_k` via running suffix sums. -/
-def windowValue (mask : Nat) (buckets : Array P3) : P3 :=
-  ((List.range mask).foldl
-    (fun (st : Nat × P3 × P3) _ =>
-      let k := st.1
-      let running := padd st.2.1 buckets[k]!
-      (k - 1, running, padd st.2.2 running))
-    (mask, pid, pid)).2.2
+/-- One Array-scatter step: digit-`0` terms contribute nothing, any other digit `d` `padd`s the
+point into bucket slot `d − 1` (slot `k` holds bucket `k + 1`). -/
+def scatterStep (a : Array P3) (p : Nat × P3) : Array P3 :=
+  if p.1 = 0 then a else a.modify (p.1 - 1) (fun v => padd v p.2)
+
+/-- Scatter a digit-tagged point list into its `base − 1` buckets in ONE pass. -/
+def bucketScatter (base : Nat) (dp : List (Nat × P3)) : Array P3 :=
+  dp.foldl scatterStep (Array.replicate (base - 1) pid)
+
+/-- One step of the bucket downsweep: carry `(running, total)`, `padd` the next bucket into
+`running`, then `padd` `running` into `total`.  Folded from the top bucket down this computes
+`Σ_{k=1..base-1} k • bucket_k` in `2 · (base − 1)` additions. -/
+def accStep (a : P3) (p : P3 × P3) : P3 × P3 := (padd p.1 a, padd p.2 (padd p.1 a))
+
+/-- The window-`i` value in base `base`: scatter the base-`base` digit-`i` tagged terms into the
+`base − 1` buckets in one pass, then run the suffix-sum downsweep. -/
+def windowValue (base i : Nat) (terms : List (Nat × P3)) : P3 :=
+  let scale := base ^ i
+  (List.foldr accStep (pid, pid)
+    (bucketScatter base (terms.map fun t => (t.1 / scale % base, t.2))).toList).2
+
+/-- `c`-fold doubling — the `base •` Horner step between adjacent windows. -/
+def pdoublings (c : Nat) (p : P3) : P3 := (List.range c).foldl (fun a _ => padd a a) p
 
 /-- Windowed Pippenger MSM, window `c`: per-window Array-scatter buckets, bucket
-downsweep, Horner recombination (most-significant window first, `c` doublings
-between windows). -/
+downsweep, Horner recombination (`c` doublings between adjacent windows). -/
 def msm (c : Nat) (terms : List (Nat × P3)) : P3 :=
   let numWindows := (256 + c - 1) / c
-  let mask := (1 <<< c) - 1
-  (List.range numWindows).foldl
-    (fun acc wrev =>
-      let w := numWindows - 1 - wrev
-      let buckets := terms.foldl
-        (fun bs t =>
-          let d := (t.1 >>> (w * c)) &&& mask
-          if d = 0 then bs else bs.set! d (padd bs[d]! t.2))
-        (Array.replicate (mask + 1) pid)
-      let doubled := (List.range c).foldl (fun a _ => padd a a) acc
-      padd doubled (windowValue mask buckets))
-    pid
+  let base := 2 ^ c
+  ((List.range numWindows).map fun i => windowValue base i terms).foldr
+    (fun v acc => padd (pdoublings c acc) v) pid
 
 /-! ## Projective negation and the radix-2 DIT FFT
 
