@@ -550,13 +550,13 @@ field inversion paid once (in the final `toAffine`) instead of once per addition
 theorem smulFast_eq (n : ℕ) (p : G) : smulFast n p = n • p := by
   rw [smulFast, (pnsmulFast_spec (valid_ofAffine p) n).2, toAffine_ofAffine]
 
-/-! ## Fast compiled spelling of `padd` (`@[csimp]`)
+/-! ## Fast compiled spelling of `padd` (compiled-tier only)
 
 Compiled generically, every field operation in `padd` is a boxed closure call through the
 Mathlib `CommRing (ZMod q)` dictionary projections (and each squaring a boxed `Monoid.npow`).
 `paddFast` is the same Renes–Costello–Batina closed forms over the raw `ℕ` representatives
 (`ZMod.val`), each multiplication one fused `(· * ·) % q` (a single pair of GMP calls), with the
-shared subproducts computed once. `padd_eq_paddFast` is a proven `@[csimp]` equality — the
+shared subproducts computed once. `padd_eq_paddFast` is the proven equality — the
 proven-equality counterpart of `implemented_by`, as for `Msm.evalNatFast` — so every compiled
 call site (the projective Pippenger interiors, the FFT's `smulFast` butterflies) runs the fast
 spelling while `padd` remains the statement surface and the kernel-level meaning. -/
@@ -624,9 +624,15 @@ def paddFast (P Q : PVes) : PVes :=
                     (fmul 15 (fmul z1sq y2z2))
   ⟨(X3 : Fq), (Y3 : Fq), (Z3 : Fq)⟩
 
-/-- **The fast spelling is `padd`** — registered with `@[csimp]` so compiled code (including
+/-- **The fast spelling is `padd`.** NOT registered `@[csimp]`: in the current
+`native_decide` tier, library calls execute through interpreted IR, where this raw-`ℕ`
+spelling measured ~17× SLOWER than the typeclass path it replaces (1.5 ms vs 85 µs per
+add — many small interpreted steps lose to few boxed GMP calls; the same effect that
+makes interpreted Montgomery a 40× regression). The equality is kept for the compiled
+tier: once the fast-field lib ships precompiled (`precompileModules` dylib), registering
+this `@[csimp]` (or the Montgomery successor) makes every compiled call site (including
 `native_decide` auxiliaries) runs the fused raw-`ℕ` form at every `padd` call site. -/
-@[csimp] theorem padd_eq_paddFast : @padd = @paddFast := by
+theorem padd_eq_paddFast : @padd = @paddFast := by
   funext P Q
   simp only [padd, paddFast, PVes.mk.injEq]
   refine ⟨?_, ?_, ?_⟩ <;>
