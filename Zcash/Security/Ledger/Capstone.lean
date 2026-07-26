@@ -23,9 +23,11 @@ branch of a computed reduction needs none. The composition is pure event algebra
 violation event is contained in the union of the arm events, so its probability is at
 most the sum of the per-arm probabilities (`measure_mono` plus `measure_union_le`).
 No independence, no counting. Each arm's probability is then bounded by a named ε
-hypothesis. The intended discharges — the key-binding arm against the key-binding
-layer's probability bound (`toInterface_break_measure_le`), the Merkle and
-note-commitment arms against Sinsemilla/DLR hardness — are not wired here yet.
+hypothesis. The key-binding arm's ε is discharged in `KeyBindingArm.lean` against the
+key-binding layer's probability bound (`toInterface_break_measure_le`), for a ledger
+adversary in the oracle model. Connecting that bound to this layer's named-ε slot — an
+oracle machine against a `PMF` over valid annotated ledgers — is still open, as are the
+Merkle and note-commitment arms (against Sinsemilla/DLR hardness).
 -/
 
 namespace Zcash.Security.Ledger.Model

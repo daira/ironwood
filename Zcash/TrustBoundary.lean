@@ -116,8 +116,11 @@ assert_axioms Zcash.Security.toInterface_break_measure_le
 
 /-! ## Ledger-layer break reductions
 
-These data-producing reductions rest on `propext` and `Quot.sound` only — no `Classical.choice`
-even in erased positions, which is the strict (flagless) `assert_computable` tier. -/
+Most of these data-producing reductions rest on `propext` and `Quot.sound` only — no
+`Classical.choice` even in erased positions, the strict (flagless) `assert_computable`
+tier. The exception is `nfOldEqOrBreak`: it decides the `nk`-equality branch on
+`DecidableEq NK`, so choice arrives with its proof terms in erased positions (the
+`+choice` tier). The reduction data is still a direct term of the inputs. -/
 
 assert_computable Collision.upToSign
 assert_computable Merkle.collisionOfWrongLeaf

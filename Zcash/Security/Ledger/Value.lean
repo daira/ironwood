@@ -29,8 +29,13 @@ no-overflow bound comes from the statement's value ranges, validity's action cou
 `vBalance` range, and one numeric hypothesis `(maxActions + 1) * valueBound ≤ r`
 (deployed: `(maxActions + 1) · 2^64 ≪ r ≈ 2^254`). The extraction input — `bvk` is a
 known multiple of `R` — is the function-typed named form of RedDSA extractability
-(`extractBsk`/`hextract`), applied to validity's binding-signature conjunct; proving it
-by forking is #22's scope.
+(`extractBsk`/`hextract`), applied to validity's binding-signature conjunct. The total
+form carries no computational content on its own: in a cyclic group every `bvk` is some
+multiple of `R`, so a total `hextract` holds for a choose-the-witness `extractBsk` no one
+can run. It stands in for the forking extractor with a knowledge error — an `extractBsk`
+efficient against a binding-signature forger, delivering the relation only with the
+extractor's success probability. Proving it by forking is #22's scope (#107/#67 track the
+restructuring into the knowledge-error form).
 
 `ValueShape.balanceOrBreak` and `ValueShape.conservationOrBreak` compose
 the premiss into the Balance-value capstones: the shielded pool exceeding the minted
@@ -121,7 +126,9 @@ on failure, compute the nontrivial `(V, R)` relation from the witnessed bundle. 
 no-overflow bound is discharged from the statement's value ranges and validity's
 action-count and `vBalance` range rules; the extraction input applies the named
 RedDSA-extractability form (`extractBsk`/`hextract`) to validity's binding-signature
-conjunct. -/
+conjunct. `hextract` is a placeholder, not a theorem: as a total hypothesis it is
+classically satisfiable, computational only relative to an efficient `extractBsk` (see
+the module doc). -/
 def ValueShape.premissOrBreak {issuance : ℕ → ℕ} {maxActions : ℕ}
     {ledger : Ledger KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P.depth}
     (S : ValueShape P)

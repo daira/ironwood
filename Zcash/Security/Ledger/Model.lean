@@ -190,8 +190,11 @@ structure ValidLedger (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
   /-- Each transaction's binding signature verifies under its binding verification key,
   over its sighash (the consensus binding-signature rule). -/
   binding_verified : ∀ tx ∈ ledger, P.bindingVerify (tx.bvk P) tx.sighash tx.bindingSig
-  /-- Each transaction's declared value balance is in range (the consensus `valueBalance`
-  range rule; `|vBalance| ≤ 2^63 − 1 < 2^64 = valueBound` concretely). -/
+  /-- Each transaction's declared value balance is in range. The consensus rule
+  (§7.1.2, [NU5 onward]) is `valueBalanceOrchard ∈ {-MAX_MONEY .. MAX_MONEY}` (inclusive;
+  MAX_MONEY ~2^51 zatoshi), i.e. `|vBalance| <= MAX_MONEY`. This conjunct states the
+  weaker `natAbs < valueBound` (= 2^64 at the intended instantiation), a loose consequence
+  that suffices for the no-overflow bound in the integer-balance lift. -/
   vbalance_bound : ∀ tx ∈ ledger, tx.vBalance.natAbs < P.valueBound
   /-- The transparent pool balance never goes negative: a transaction can move value
   into the shielded pool only from issuance already minted, less what earlier
