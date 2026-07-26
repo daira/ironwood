@@ -1,0 +1,118 @@
+import Mathlib
+import Zcash.Security.KeyBinding.Instance
+import Zcash.Security.Ledger.Balance
+
+-- This lint enforces Mathlib's minimal-hypothesis style, from which we deliberately depart.
+set_option linter.unusedSectionVars false
+
+/-!
+# The key-binding arm's ε, discharged in the oracle model
+
+The capstone layer bounds each game's break arms by named ε hypotheses. This module
+discharges the Balance-subset key-binding arm in the key-binding oracle model:
+`(n + 4) · (n + 3) / |RIVK|` for any `n`-query-bounded adversary — the bound of
+`toInterface_break_measure_le`, inherited at an unchanged query count because the
+reduction makes no oracle queries.
+
+The adversary is pair-annotated: an oracle machine producing a ledger together with a
+candidate witness pair. It cannot run the reduction itself — `balanceSubsetOrBreak`
+consumes a validity proof whose meaning depends on the sampled oracle (through the
+sampled interface `kvAt`), and an oracle machine's result type cannot depend on the
+table it is run against. The bad event ties the annotation to the reduction instead:
+the output ledger is valid, and the reduction at that validity lands in the
+key-binding arm with exactly the output pair (`BalanceBreak.kbPair`). Proof
+irrelevance makes the tie independent of which validity proof the event exhibits.
+That event is contained in "the output pair breaks the sampled interface", so the
+key-binding bound applies to the composite machine that returns the pair.
+
+The same pattern fits Spend Authority's key-binding arm; only Balance-subset is
+discharged here.
+-/
+
+namespace Zcash.Security.Ledger.Model
+
+open Zcash.Security.KeyBinding Zcash.Snark
+
+/-- The key-binding arm's witness pair, when the break lies in that arm. -/
+def BalanceBreak.kbPair {F G IVK NK RHO PSI MHASH MENC MSG SIG KW : Type*}
+    [Field F] [AddCommGroup G] [Module F G]
+    {P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG}
+    {kv : KeyBindingInterface KW G IVK NK} :
+    BalanceBreak P kv → Option (KW × KW)
+  | .keyBinding w₁ w₂ _ => some (w₁, w₂)
+  | .merkle _ => none
+  | .noteCommit _ => none
+
+variable {G IVK AK NK RIVK ASK QK SK : Type*}
+variable {RHO PSI MHASH MENC MSG SIG : Type*}
+
+section OracleModel
+
+variable [AddCommGroup G] [Field IVK] [Field RIVK] [Module RIVK G]
+  [NoZeroSMulDivisors RIVK G] [SMul ASK G]
+  [Fintype AK] [Fintype NK] [Fintype RIVK] [Fintype ASK] [Fintype QK] [Fintype SK]
+  [Nonempty NK] [Nonempty ASK]
+  [DecidableEq AK] [DecidableEq NK] [DecidableEq RIVK] [DecidableEq QK] [DecidableEq SK]
+  [DecidableEq G] [DecidableEq RHO] [DecidableEq PSI] [DecidableEq MHASH]
+  [DecidableEq MENC]
+
+/-- The games-facing key-binding interface at a sampled oracle assignment: the two
+sampled key tables plus the three components of the combined `rivk` oracle. -/
+abbrev kvAt (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK) (Ggen : G)
+    (Hask : SK → ASK) (Hnk : SK → NK) (O : FinalQuery AK NK RIVK QK SK → RIVK) :
+    KeyBindingInterface (KeyBinding.Witness G IVK AK NK RIVK QK SK) G IVK NK :=
+  KeyBinding.toInterface Extract S hfn Ggen
+    ⟨Hask, Hnk, fun sk => O (.legacy sk),
+      fun qk ak nk => O (.ext qk ak nk),
+      fun rivk_ext ak nk => O (.int rivk_ext ak nk)⟩
+
+/-- **The key-binding arm's ε, discharged.** For any `n`-query-bounded pair-annotated
+ledger adversary in the key-binding oracle model, the probability that its output
+ledger is valid and the Balance-subset reduction lands in the key-binding arm with
+exactly its output pair is at most `(n + 4) · (n + 3) / |RIVK|`. The event is
+contained in "the output pair breaks the sampled interface", and the composite that
+returns the pair makes no queries beyond the adversary's own, so
+`toInterface_break_measure_le` applies unchanged. -/
+theorem balanceSubset_keyBindingArm_measure_le {ι : Type*}
+    (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK) (Ggen : G) (hS : S ≠ 0)
+    (p : PMF ι)
+    (P : Primitives RIVK G IVK NK RHO PSI MHASH MENC MSG SIG)
+    (issuance : ℕ → ℕ) (maxActions : ℕ) (i : ℕ)
+    {LA : ι → (SK → ASK) → (SK → NK) →
+      OracleComp (FinalQuery AK NK RIVK QK SK) RIVK
+        (Ledger (KeyBinding.Witness G IVK AK NK RIVK QK SK) RIVK G RHO PSI MHASH MENC
+            MSG SIG P.depth
+          × (KeyBinding.Witness G IVK AK NK RIVK QK SK
+            × KeyBinding.Witness G IVK AK NK RIVK QK SK))}
+    {n : ℕ} (hQ : ∀ j Hask Hnk, (LA j Hask Hnk).QueryBound n) :
+    ((p.bind fun j => (PMF.uniformOfFintype (SK → ASK)).bind fun Hask =>
+        (PMF.uniformOfFintype (SK → NK)).bind fun Hnk =>
+          (PMF.uniformOfFintype (SK → RIVK)).bind fun Hleg =>
+            (PMF.uniformOfFintype (QK → AK → NK → RIVK)).bind fun Hext =>
+              (PMF.uniformOfFintype (RIVK → AK → NK → RIVK)).map fun Hint =>
+                (j, Hask, Hnk, FinalQuery.eval Hleg Hext Hint))).toOuterMeasure
+        (setOf fun (j, Hask, Hnk, O) =>
+          ∃ hval : ValidLedger P (kvAt Extract S hfn Ggen Hask Hnk O)
+              issuance maxActions ((LA j Hask Hnk).run O).1,
+            ∃ b, balanceSubsetOrBreak hval i = PSum.inr b
+              ∧ b.kbPair = some ((LA j Hask Hnk).run O).2)
+      ≤ ((n + 4) * (n + 3) : ℕ) / Fintype.card RIVK := by
+  refine le_trans (MeasureTheory.measure_mono ?_)
+    (toInterface_break_measure_le Extract S hfn Ggen hS p
+      (A := fun j Hask Hnk => (LA j Hask Hnk).bind fun out => .pure out.2)
+      (n := n) (fun j Hask Hnk => ?_))
+  · rintro ⟨j, Hask, Hnk, O⟩ ⟨hval, b, heq, hpair⟩
+    cases b with
+    | keyBinding w₁ w₂ hbr =>
+        simp only [BalanceBreak.kbPair, Option.some.injEq] at hpair
+        simp only [Set.mem_setOf_eq, OracleComp.run_bind, OracleComp.run_pure]
+        rw [← hpair]
+        exact hbr
+    | merkle c => simp [BalanceBreak.kbPair] at hpair
+    | noteCommit nb => simp [BalanceBreak.kbPair] at hpair
+  · exact OracleComp.queryBound_bind (hQ j Hask Hnk)
+      fun out => OracleComp.QueryBound.pure out.2 0
+
+end OracleModel
+
+end Zcash.Security.Ledger.Model

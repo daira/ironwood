@@ -19,6 +19,7 @@ import Zcash.Security.Ledger.Completeness
 import Zcash.Security.Ledger.Capstone
 import Zcash.Security.Ledger.Nullifier
 import Zcash.Security.Ledger.Value
+import Zcash.Security.Ledger.KeyBindingArm
 import Zcash.Security.Common.RandomOracle
 import Zcash.Security.Common.Birthday
 import Zcash.Security.KeyBinding.Basic

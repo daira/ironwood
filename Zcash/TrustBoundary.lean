@@ -11,6 +11,7 @@ import Zcash.Security.Ledger.Completeness
 import Zcash.Security.Ledger.Capstone
 import Zcash.Security.Ledger.Nullifier
 import Zcash.Security.Ledger.Value
+import Zcash.Security.Ledger.KeyBindingArm
 import Zcash.Security.Common.Birthday
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
@@ -269,6 +270,14 @@ assert_axioms balanceSubset_measure_le
 assert_axioms valueConservation_measure_le
 assert_axioms balanceValue_measure_le
 assert_axioms spendAuthority_measure_le
+
+/-! ## The key-binding arm's ε, discharged
+
+The Balance-subset key-binding arm's probability in the key-binding oracle model:
+`(n + 4)(n + 3)/|RIVK|` for any `n`-query-bounded pair-annotated ledger adversary,
+inherited from the key-binding layer's bound at an unchanged query count. -/
+
+assert_axioms balanceSubset_keyBindingArm_measure_le
 
 /-! ## Binding-signature relation reductions
 
