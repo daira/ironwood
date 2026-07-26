@@ -7,6 +7,7 @@ import Zcash.Security.BindingSignature.Sapling
 import Zcash.Security.Ledger.Merkle
 import Zcash.Security.Ledger.Pool
 import Zcash.Security.Ledger.Bridge
+import Zcash.Security.Ledger.SinsemillaDLR
 import Zcash.Security.Ledger.Statement
 import Zcash.Security.Common.RandomOracle
 import Zcash.Security.Common.Birthday

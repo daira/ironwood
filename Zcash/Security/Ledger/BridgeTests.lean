@@ -1,4 +1,5 @@
 import Zcash.Security.Ledger.Bridge
+import Zcash.Security.Ledger.SinsemillaDLR
 import Zcash.Meta.AxiomCheck
 import Mathlib.Util.AssertNoSorry
 
@@ -225,5 +226,19 @@ assert_axioms cross_address_flag_one
 assert_axioms cross_address_flag_arbitrary_nonzero
 assert_axioms enable_spend_disabled_forces_zero
 assert_axioms enable_output_disabled_forces_zero
+
+-- The onward reduction from classified break data to the games-facing
+-- discrete-log-relation object is likewise a computation: the coefficients are a
+-- plain compiled `def` over the break datum, with the relation and nontriviality
+-- facts in erased `Prop` fields (same `+choice` reading as the classifier above).
+assert_no_sorry ofPoint_hashToPoint
+assert_no_sorry breakCoeffs_relation
+assert_no_sorry breakCoeffs_nontrivial
+assert_no_sorry classify_query_inr
+assert_no_sorry classifyRelation_isSome_iff
+assert_no_sorry classifyRelation_site
+assert_computable breakCoeffs +choice
+assert_computable relationOfBreakData +choice
+assert_computable classifyRelation +choice
 
 end Zcash.Security.Ledger.BridgeTests

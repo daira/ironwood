@@ -119,6 +119,27 @@ theorem toPoint_ofPoint?_eq {P : Point Zcash.Circuits.Fp} {Q : PallasGroup}
   apply equivSW.injective
   exact Point.toSW_nsmul hP n
 
+@[simp] theorem ofPoint_zero : ofPoint 0 Point.valid_zero = 0 := by
+  apply equivSW.injective
+  exact Point.toSW_zero
+
+/-- `ofPoint` is proof-irrelevant in its validity certificate, so an affine identity
+converts to the group identity under any certificate. -/
+theorem ofPoint_eq_zero {P : Point Zcash.Circuits.Fp} (hP : P.Valid) (h : P = 0) :
+    ofPoint P hP = 0 := by
+  subst h
+  exact ofPoint_zero
+
+theorem ofPoint_add {P Q : Point Zcash.Circuits.Fp} (hP : P.Valid) (hQ : Q.Valid) :
+    ofPoint (P + Q) (Point.valid_add hP hQ) = ofPoint P hP + ofPoint Q hQ := by
+  apply equivSW.injective
+  exact Point.toSW_add hP hQ
+
+theorem ofPoint_neg {P : Point Zcash.Circuits.Fp} (hP : P.Valid) :
+    ofPoint (-P) (Point.valid_neg hP) = -ofPoint P hP := by
+  apply equivSW.injective
+  exact Point.toSW_neg hP
+
 @[simp] theorem toPoint_x (P : PallasGroup) : (toPoint P).x = P.toSW.x := rfl
 @[simp] theorem toPoint_y (P : PallasGroup) : (toPoint P).y = P.toSW.y := rfl
 

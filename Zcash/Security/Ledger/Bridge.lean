@@ -368,7 +368,9 @@ inductive BreakSite
 deriving DecidableEq, Repr
 
 /-- A classified escape: the site, together with the escape data of the witness's
-own exact hash query at that site. -/
+own exact hash query at that site.  The onward reduction to the games-facing
+discrete-log-relation object is the plain `def` `relationOfBreakData`
+(`Zcash/Security/Ledger/SinsemillaDLR.lean`). -/
 structure ActionBreakData where
   site : BreakSite
   data : BreakData
