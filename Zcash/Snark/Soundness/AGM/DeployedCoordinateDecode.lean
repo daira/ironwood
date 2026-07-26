@@ -13,8 +13,8 @@ rewind-free unbatching without an additional accepting execution.
 
 For the later root-set probability argument, the decoded representation family must additionally
 be fixed before the real `x4` draw. `CanonicalOnlineMultiopenCoordinates` pins the coordinate
-construction, while `DeployedRootPrefixSchedule` records the full causal root-set factorization;
-this file proves only the algebraic decode.
+construction, while `DeployedRootSqueezeInvariance` records the causal condition on each root
+set; this file proves only the algebraic decode.
 -/
 
 namespace Zcash.Snark

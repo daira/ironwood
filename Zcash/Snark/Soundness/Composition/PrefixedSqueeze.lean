@@ -84,7 +84,12 @@ theorem algebraicFullPrefixesPre_ne_x
 
 open ComputedAlgebraicFSFamily in
 /-- The pre-`x` transcript and earlier answers remain pinned while resampling `x`, so a bad-root
-event at `x` costs only `(Q + 1) * epsilon`. -/
+event at `x` costs only `(Q + 1) * epsilon`.
+
+This is the discharge toolkit for `DeployedConstraintXSqueezeSchedule.pinned`: a bad set that is a
+function of the `x` prefix and the four earlier answers is invariant under reprogramming the `x`
+squeeze once the prefix itself is stable (`hstab`), because the earlier squeeze points are strict
+sub-prefixes of the `x` point. -/
 theorem badX_le_via_squeeze_prefixed {T' : Type*} [DecidableEq T']
     (query : AugmentedIndex (2 ^ shape.k) -> T')
     (family : ComputedAlgebraicFSFamily shape)

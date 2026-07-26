@@ -149,35 +149,51 @@ def deployedConstraintBadXEvent (family : ComputedDeployedRootFSFamily shape) :
     (wrappedPreIpaRecord (deployedRootRunOutput family p.1 p.2)).x ∈
       szBadSet (deployedConstraintDifferenceOfRoot family p.1 p.2 root)}
 
-/-- Causal factorization of the exact constraint-difference root set through the transcript prefix
-before `x`.  This is the concrete online-AGM premise: retained representations may determine the
-root set before `x`, but cannot choose it retrospectively after seeing `x`. -/
-structure DeployedConstraintXPrefixSchedule (family : ComputedDeployedRootFSFamily shape)
+/-- The exact constraint-difference root set of one oracle table.  The extractor tape does not
+enter: root witnesses for the same table carry the same batch data, so the union over tapes below
+adds no new roots. -/
+def deployedConstraintXBadSet (family : ComputedDeployedRootFSFamily shape)
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) : Set Fp :=
+  {x | ∃ (tape : RecursiveForkTape Fp shape.k)
+      (root : DeployedRootDecodeWitness family basis (O, tape)),
+    x ∈ szBadSet (deployedConstraintDifferenceOfRoot family basis (O, tape) root)}
+
+/-- Causal condition for the constraint evaluation challenge: the exact constraint-difference
+root set carries a uniform direct bound and is unchanged when the run's own `x` squeeze answer is
+reprogrammed.  The set may consume the earlier `θ`/`β`/`γ`/`y` answers and the retained
+representations — data fixed before the `x` squeeze — but cannot be chosen retrospectively after
+seeing `x`. -/
+structure DeployedConstraintXSqueezeSchedule (family : ComputedDeployedRootFSFamily shape)
     (epsilonX : ENNReal) where
-  badAt : (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) ->
-    BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Set Fp
-  measure_le : forall basis t,
-    (PMF.uniformOfFintype Fp).toOuterMeasure (badAt basis t) <= epsilonX
-  at_point : forall basis coins (root : DeployedRootDecodeWitness family basis coins),
-    badAt basis (algebraicFullPrefixesPre family.init
-      ((family.adversary basis).run coins.1) 4) =
-      szBadSet (deployedConstraintDifferenceOfRoot family basis coins root)
+  measure_le : forall basis O,
+    (PMF.uniformOfFintype Fp).toOuterMeasure
+      (deployedConstraintXBadSet family basis O) <= epsilonX
+  pinned : forall basis
+      (O : BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) (v : Fp),
+    deployedConstraintXBadSet family basis
+        (Function.update O (algebraicFullPrefixesPre family.init
+          ((family.adversary basis).run O) 4) v) =
+      deployedConstraintXBadSet family basis O
 
 /-- The single prefix-pinned event for the constraint evaluation challenge. -/
 noncomputable def deployedConstraintXPinnedEvent
     (family : ComputedDeployedRootFSFamily shape) {epsilonX : ENNReal}
-    (schedule : DeployedConstraintXPrefixSchedule family epsilonX)
+    (schedule : DeployedConstraintXSqueezeSchedule family epsilonX)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) :
     PinnedRootEvent (family.adversary basis) where
   point := fun p => algebraicFullPrefixesPre family.init p 4
-  badAt := schedule.badAt basis
+  bad := fun _p O => deployedConstraintXBadSet family basis O
   budget := epsilonX
-  measure_le := schedule.measure_le basis
+  measure_le := fun _p O => schedule.measure_le basis O
+  pinned := fun O v => schedule.pinned basis O v
 
-/-- The bad-`x` event selected by the provider lands in its run's exact prefix-pinned root set. -/
+/-- The bad-`x` event selected by the provider lands in its run's exact pinned root set. -/
 theorem deployedConstraintBadX_subset_landing
     (family : ComputedDeployedRootFSFamily shape) {epsilonX : ENNReal}
-    (schedule : DeployedConstraintXPrefixSchedule family epsilonX)
+    (schedule : DeployedConstraintXSqueezeSchedule family epsilonX)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) :
     {coins : family.toFamily.Coins | (basis, coins) ∈ deployedConstraintBadXEvent family} <=
       {coins : family.toFamily.Coins |
@@ -185,9 +201,8 @@ theorem deployedConstraintBadX_subset_landing
   rintro coins ⟨root, hx⟩
   change coins.1 (algebraicFullPrefixesPre family.init
       ((family.adversary basis).run coins.1) 4) ∈
-    schedule.badAt basis (algebraicFullPrefixesPre family.init
-      ((family.adversary basis).run coins.1) 4)
-  rw [schedule.at_point basis coins root]
+    deployedConstraintXBadSet family basis coins.1
+  refine ⟨coins.2, root, ?_⟩
   simpa [deployedRootRunOutput, wrappedPreIpaRecord, chRecord,
     wrappedPreIpaReads_run, runReads, runProof] using hx
 
@@ -197,7 +212,7 @@ theorem deployedConstraintBadX_prob_le
     {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ shape.k) -> T)
     (family : ComputedDeployedRootFSFamily shape) {epsilonX : ENNReal}
-    (schedule : DeployedConstraintXPrefixSchedule family epsilonX) :
+    (schedule : DeployedConstraintXSqueezeSchedule family epsilonX) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
@@ -560,7 +575,7 @@ theorem snarkConstraintsDeployed_prob_le_of_root_schedule
     (family : ComputedDeployedRootFSFamily shape)
     (static : DeployedConstraintStaticChecks family)
     {epsilonX dlogBound : ENNReal}
-    (schedule : DeployedConstraintXPrefixSchedule family epsilonX)
+    (schedule : DeployedConstraintXSqueezeSchedule family epsilonX)
     (hDL : TextbookDLWithCoinsAdvantageLE B
       (deployedConstraintRelationFinder family
         (deployedConstraintQuotientFinder family)) dlogBound) :

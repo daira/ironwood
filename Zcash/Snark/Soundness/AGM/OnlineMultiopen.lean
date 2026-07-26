@@ -14,9 +14,9 @@ This file adds a non-breaking refinement of `ComputedAlgebraicFSFamily` for the 
 * the multiopen aggregate coordinates must be the deterministic MSM coordinates obtained from the
   actual representation-carrying commitments used by the assembly.
 
-Exact deployed chronology is represented by the whole-root prefix schedule in
-`DeployedPinnedRoots`; narrower final-output invariance predicates are deliberately omitted because
-they do not establish when all ordinary proof fields affecting a root set were emitted.
+Exact deployed chronology is represented by the squeeze-reprogramming invariance in
+`DeployedPinnedRoots`; final-output equality predicates are deliberately omitted because they do
+not establish when all ordinary proof fields affecting a root set were emitted.
 
 No protocol point or scalar is added to the transcript.  These are ghost conditions on the AGM
 adversary.

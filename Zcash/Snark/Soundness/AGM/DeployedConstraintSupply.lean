@@ -376,7 +376,11 @@ noncomputable def committedFixedFeed {shape : Shape} (poly : G -> Polynomial Fp)
   rotatedFeed vk.omega vk.fixedQueryLayout fun j : Fin shape.numFixedQueries =>
     poly (vk.fixedCommitment (vk.fixedQueryLayout.getD (j : Nat) (0, 0)).1)
 
-/-- Permutation-product carriers built from a pre-`x` polynomial source. -/
+/-- Permutation-product carriers built from a pre-`x` polynomial source.
+
+The final set's `else` branch is dead for deployed proof strings: halo2 reads a last-rotation
+evaluation only for the sets before the final one, so `lastEval` is `none` exactly where the
+branch would degrade the carrier to the claimed constant. -/
 noncomputable def committedPermSets {shape : Shape} (poly : G -> Polynomial Fp)
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) :
     Fin shape.numProofs -> List (PermSetEval (Polynomial Fp)) := fun q =>
