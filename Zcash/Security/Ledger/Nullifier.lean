@@ -52,7 +52,7 @@ section Validity
 variable [Field F] [AddCommGroup G] [Module F G]
 variable {P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG}
 
-/-- The deployed additive shape of nullifier derivation: derivation is a scalar
+/-- The additive shape of the deployed nullifier derivation: derivation is a scalar
 multiple of the nullifier base `K` plus the commitment point, extracted to `RHO`
 (nullifiers share ρ's type), and commitments open as a coefficient combination of the
 fixed `bases` plus a multiple of the randomness base `R`. `extract` is the shape's own

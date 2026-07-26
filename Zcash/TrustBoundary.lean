@@ -213,7 +213,7 @@ assert_axioms validLedger_append
 /-! ## The nullifier-binding reduction
 
 Computed break reduction: a nullifier collision between distinct notes, over the
-deployed additive derivation shape, computes a nontrivial relation among the
+additive shape of the deployed derivation, computes a nontrivial relation among the
 commitment bases, the nullifier base, and the randomness base — the balance
 argument's terminal. `+choice` is the erased-positions tier: choice arrives with the
 `abel`/`simp` proof terms in the relation's `Prop` fields, never the data path. -/
