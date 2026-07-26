@@ -27,14 +27,14 @@ noncomputable def powerErrorPolynomial {n : Nat} (c : Fin n -> Fp) : Polynomial 
 
 @[simp] theorem powerErrorPolynomial_eval {n : Nat} (c : Fin n -> Fp) (x : Fp) :
     (powerErrorPolynomial c).eval x = ∑ i : Fin n, x ^ (i : Nat) * c i := by
-  rw [powerErrorPolynomial, Polynomial.eval_finset_sum]
+  rw [powerErrorPolynomial, Polynomial.eval_finsetSum]
   exact Finset.sum_congr rfl fun i _ => by
     simp only [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow, Polynomial.eval_X]
     ring
 
 theorem powerErrorPolynomial_coeff {n : Nat} (c : Fin n -> Fp) (i : Fin n) :
     (powerErrorPolynomial c).coeff (i : Nat) = c i := by
-  rw [powerErrorPolynomial, Polynomial.finset_sum_coeff, Finset.sum_eq_single i]
+  rw [powerErrorPolynomial, Polynomial.finsetSum_coeff, Finset.sum_eq_single i]
   · rw [Polynomial.coeff_C_mul, Polynomial.coeff_X_pow, if_pos rfl, mul_one]
   · intro j _ hji
     rw [Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
@@ -47,7 +47,7 @@ theorem powerErrorPolynomial_natDegree_le {n : Nat} (c : Fin n -> Fp) :
     (powerErrorPolynomial c).natDegree <= n := by
   rw [powerErrorPolynomial, Polynomial.natDegree_le_iff_coeff_eq_zero]
   intro m hm
-  rw [Polynomial.finset_sum_coeff]
+  rw [Polynomial.finsetSum_coeff]
   refine Finset.sum_eq_zero fun i _ => ?_
   rw [Polynomial.coeff_C_mul, Polynomial.coeff_X_pow, if_neg (by omega), mul_zero]
 
@@ -111,7 +111,7 @@ theorem clearedQuotientErrorPolynomial_eval_eq_zero {numSets : Nat}
         (∏ p ∈ pts j, (x3 - p))⁻¹) :
     (clearedQuotientErrorPolynomial allPts pts col r a qCol).eval x3 = 0 := by
   rw [clearedQuotientErrorPolynomial, Polynomial.eval_sub, sub_eq_zero,
-    Polynomial.eval_mul, hsamp, Polynomial.eval_finset_sum, Finset.sum_mul]
+    Polynomial.eval_mul, hsamp, Polynomial.eval_finsetSum, Finset.sum_mul]
   refine Finset.sum_congr rfl fun j _ => ?_
   have hclear := clear_denom_eval (hsub j) (hnode j) (x := x3)
   rw [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_mul, <- hclear]
@@ -175,7 +175,7 @@ theorem nodeBindingErrorPolynomial_eval_eq_zero {numSets : Nat}
         x2 ^ (j : Nat) * ((col j - r j).eval node * (coProd allPts (pts j)).eval node)) =
         (∑ j : Fin numSets, Polynomial.C (x2 ^ (j : Nat)) *
           ((col j - r j) * coProd allPts (pts j))).eval node := by
-            rw [Polynomial.eval_finset_sum]
+            rw [Polynomial.eval_finsetSum]
             exact Finset.sum_congr rfl fun j _ => by
               rw [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_mul]
     _ = (qCol * vanishingProd allPts).eval node := congrArg _ hid.symm

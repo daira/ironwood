@@ -90,6 +90,16 @@ theorem wrappedAdversary_run_fst (family : ComputedAlgebraicFSFamily shape)
     ((wrappedAdversary family basis).run O).1 = (family.adversary basis).run O := by
   simp only [wrappedAdversary, OracleComp.run_withReads]
 
+/-- The wrapped machine makes at most `family.Q + (11 + shape.k)` queries: the adversary's own
+budget plus one per re-read squeeze point — eleven pre-IPA points and `shape.k` IPA-round points.
+`wrappedAdversary` is irreducible, so callers reach the bound through this lemma rather than
+`OracleComp.queryBound_withReads`. -/
+theorem queryBound_wrappedAdversary (family : ComputedAlgebraicFSFamily shape)
+    (basis : AugmentedIndex (2 ^ shape.k) → VestaG) :
+    (wrappedAdversary family basis).QueryBound (family.Q + (11 + shape.k)) := by
+  rw [wrappedAdversary]
+  exact OracleComp.queryBound_withReads _ (family.queryBound basis)
+
 /-- The wrapped reads reconstruct the run's challenge record. -/
 theorem wrappedRecord_run (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)

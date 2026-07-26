@@ -86,7 +86,7 @@ noncomputable def deployedX4AlgebraicBatchAndValueOrRelation
       (ipaShiftZPolynomial
         (commitGen b aggregate - multiopenValue vk instanceCommitment ps ch)
         aggregateU sU (commitGen b s) ch.xi)) :
-    (Σ' batch : AlgebraicPowerBatch urs
+    (Σ' _batch : AlgebraicPowerBatch urs
         (x4BatchCommitments urs hk vk instanceCommitment ps ch)
         aggregate aggregateU aggregateW ch.x4,
       commitGen b aggregate = multiopenValue vk instanceCommitment ps ch) ⊕'

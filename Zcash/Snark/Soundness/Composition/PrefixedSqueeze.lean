@@ -23,13 +23,16 @@ theorem preIpaLen_lt_x (shape : Shape) (n0 : Nat) {i : Fin 11} (hi : (i : Nat) <
   have hcase : (i : Nat) = 0 ∨ (i : Nat) = 1 ∨ (i : Nat) = 2 ∨ (i : Nat) = 3 := by omega
   rcases hcase with h | h | h | h
   · obtain rfl : i = ⟨0, by norm_num⟩ := Fin.ext h
-    simp [preIpaLen] <;> omega
+    simp [preIpaLen]
+    omega
   · obtain rfl : i = ⟨1, by norm_num⟩ := Fin.ext h
-    simp [preIpaLen] <;> omega
+    simp [preIpaLen]
+    omega
   · obtain rfl : i = ⟨2, by norm_num⟩ := Fin.ext h
-    simp [preIpaLen] <;> omega
+    simp [preIpaLen]
+    omega
   · obtain rfl : i = ⟨3, by norm_num⟩ := Fin.ext h
-    simp [preIpaLen] <;> omega
+    simp [preIpaLen]
 
 /-- Equal `x` squeeze points imply equal earlier squeeze points. -/
 theorem algebraicFullPrefixesPre_eq_of_x_eq

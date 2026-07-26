@@ -160,6 +160,7 @@ theorem decodedQuotient_eq_reassembled_or_relation (urs : URS G) (xn : Fp)
     | PSum.inl h => Or.inl h
     | PSum.inr relation => Or.inr (HasNontrivialRelation.of_nontrivialRelation relation)
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The reassembly fold as a `foldr`: `List.foldl` over the reversed pieces is `List.foldr` over
 the pieces (`List.foldl_reverse`), which inducts forward without reverse-index bookkeeping. -/
 private theorem vanishingHCommitment_foldr (urs : URS G) (xn : Fp) (hPieces : List G) :

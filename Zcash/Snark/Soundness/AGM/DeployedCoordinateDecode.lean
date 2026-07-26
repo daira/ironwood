@@ -158,7 +158,7 @@ noncomputable def deployedX4BatchAndValueOfRepresentationsOrRelation
         (commitGen (evalVector shape.k (nu 7)) (p.aMulti nu) -
           multiopenValue vk instanceCommitment p.proof.1 (chRecord nu (fun _ => 0)))
         (p.multiU nu) p.sU (commitGen (evalVector shape.k (nu 7)) p.s) (nu 9))) :
-    (Σ' batch : AlgebraicPowerBatch (ursOfAugmentedBasis shape.k basis)
+    (Σ' _batch : AlgebraicPowerBatch (ursOfAugmentedBasis shape.k basis)
         (x4BatchCommitments (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
           (chRecord nu (fun _ => 0)))
         (p.aMulti nu) (p.multiU nu) (p.multiBlind nu) (nu 8),

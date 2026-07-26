@@ -70,6 +70,7 @@ theorem deployedAccepts_pipeline [DecidableEq G] [Inhabited G] {shape : Shape}
   · rw [if_neg hguard] at hop
     exact absurd hop (by simp)
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- A routed member retains the canonical commitment named by its slot identity. -/
 theorem deployed_member_commitment_eq_assembled [DecidableEq G] [Inhabited G]
     {shape : Shape} (vk : VerifyingKey shape Fp G)

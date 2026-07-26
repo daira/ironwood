@@ -14,6 +14,7 @@ open Classical Polynomial
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The verifier-generated vanishing query carries the computed quotient evaluation. -/
 theorem vanishing_query_mem_assembleQueries [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
@@ -39,6 +40,7 @@ theorem vanishing_query_mem_assembleQueries [Inhabited G] {shape : Shape}
   simp only [assembleQueries, vanishingQueries]
   exact List.mem_append.mpr (Or.inr List.mem_cons_self)
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Grouping routes the unique vanishing query to a singleton-point member. -/
 theorem vanishing_slot_routed [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
@@ -105,6 +107,7 @@ theorem hfold_of_expectedHEval_binding (constraints : List Fp) (y x : Fp)
   rw [hfp, hbind, expectedHEval, mul_assoc,
     inv_mul_cancel₀ (sub_ne_zero.mpr hxn), mul_one]
 
+omit [Module Fp G] in
 /-- Read the quotient fold from the routed vanishing member. -/
 theorem hfold_of_vanishing_slot_binding [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)

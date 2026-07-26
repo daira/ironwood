@@ -198,6 +198,7 @@ theorem deployedAggregateNodeBinding_of_good_x2
 
 /-! ## Within-set `x1` value separation -/
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Reflecting the reverse-order `x2` slot for set `i` reads the original deployed set entry `i`. -/
 theorem deployedSetsForEval_reverse_getD_reflect
     [DecidableEq G] [Inhabited G] {shape : Shape}
@@ -247,6 +248,7 @@ theorem deployedX1Aggregate_eval
       refine Finset.sum_congr rfl fun m _ => ?_
       rw [commitGen_smul_left, <- coeffsToPoly_eval, smul_eq_mul]
 
+omit [Module Fp G] in
 /-- At a routed node, the deployed set interpolant is exactly the `x1` power sum of the member
 claimed values stored in the proof string. -/
 theorem deployedSetInterpolant_eval_eq_memberPowerSum

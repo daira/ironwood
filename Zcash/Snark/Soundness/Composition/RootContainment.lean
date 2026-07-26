@@ -74,8 +74,8 @@ theorem residual_le_via_wrapped_deployed_pinned_roots
       {O | (roots basis).Landing O})
     (fun _ => ?_)
   refine le_trans ((roots basis).landing_measure_le
-    (OracleComp.queryBound_withReads _ (family.queryBound basis))) ?_
-  exact mul_le_mul_left' (hbudget basis) _
+    (queryBound_wrappedAdversary family basis)) ?_
+  exact mul_le_mul_right (hbudget basis) _
 
 /-- The DLOG-based deployed extraction bound with an additive, prefix-pinned multiopen term. -/
 theorem snarkExtractionDeployed_prob_le_via_wrapped_pinned_roots

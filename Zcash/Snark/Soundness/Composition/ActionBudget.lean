@@ -85,6 +85,7 @@ private theorem permutationCommonQueries_length_le {k' : ℕ} {F' G' : Type*} [F
     (permutationCommonQueries (k := k') x mkId commsEvals).length ≤ commsEvals.length := by
   rw [permutationCommonQueries, List.length_map, List.length_zip, List.length_range, min_self]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- **The deployed query list fits the shape budget.** -/
 theorem assembleQueries_length_le [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape Fp G)
@@ -132,6 +133,7 @@ theorem assembleQueries_length_le [DecidableEq G] [Inhabited G] {shape : Shape}
 
 /-! ## Structural bounds on the deployed counts -/
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The deployed `x4` pair count is at most the shape's point-set arity. -/
 theorem deployedX4PairCount_le_numPointSets [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs -> Nat -> G)
@@ -187,6 +189,7 @@ theorem constructIntermediateSets_points_getD_mem_queries
   · rw [List.getD_eq_default _ _ hge] at hx
     exact absurd hx List.not_mem_nil
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The deployed point union has at most as many points as the verifier has opening queries. -/
 theorem deployedAllPts_card_le [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs -> Nat -> G)
@@ -211,6 +214,7 @@ theorem deployedAllPts_card_le [DecidableEq G] [Inhabited G] {shape : Shape}
       List.toFinset_card_le _
     _ = (assembleQueries vk instanceCommitment ps ch).length := List.length_map ..
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Each point set's member count fits the shape budget. -/
 theorem deployedSetQueries_length_le [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -224,6 +228,7 @@ theorem deployedSetQueries_length_le [DecidableEq G] [Inhabited G] {shape : Shap
         ([], [])).1.length ≤ _
   rw [constructIntermediateSets_zip_sets_getD]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The point union fits the shape budget. -/
 theorem deployedAllPts_card_le_budget [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape Fp G)
@@ -243,10 +248,11 @@ noncomputable def actionBudget (shape : Shape) (k' : ℕ) : ℝ≥0∞ :=
         / Fintype.card Fp
     + (shape.numPointSets : ℝ≥0∞) / Fintype.card Fp)
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- **The joint accept floor's threshold fits the action budget**, for every proof string,
 challenge record, and point set. The uniform worst case the resampled-joint threshold consumes. -/
 theorem deployed_member_threshold_le_actionBudget [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
+    (urs : URS G) (_hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (instanceCommitment : Fin shape.numProofs → Nat → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) (i : ℕ) :
     (((deployedSetQueries vk instanceCommitment ps ch i).length - 1 : ℕ) : ℝ≥0∞) / Fintype.card Fp
@@ -270,7 +276,7 @@ theorem deployed_member_threshold_le_actionBudget [DecidableEq G] [Inhabited G] 
     have hmax : max (2 ^ urs.k) (deployedAllPts vk instanceCommitment ps ch).card
         ≤ max (2 ^ urs.k) (queryBudget shape) := max_le_max le_rfl hP
     omega
-  gcongr <;> exact_mod_cast ‹_›
+  gcongr
 
 /-- The query budget is monotone in the action count. -/
 theorem queryBudget_mono {shape shape' : Shape}
@@ -291,7 +297,7 @@ consensus's `2¹⁶ − 1`, the action budget is capped by its value at the cons
 shape — the term the composite bound consumes for every deployable bundle. -/
 theorem actionBudget_le_consensusMax {shape shape' : Shape} (k' : ℕ)
     (hnp : shape.numProofs ≤ shape'.numProofs)
-    (hcap : shape'.numProofs = 2 ^ 16 - 1)
+    (_hcap : shape'.numProofs = 2 ^ 16 - 1)
     (hiq : shape.numInstanceQueries = shape'.numInstanceQueries)
     (haq : shape.numAdviceQueries = shape'.numAdviceQueries)
     (hps : shape.numPermutationSets = shape'.numPermutationSets)
@@ -307,6 +313,6 @@ theorem actionBudget_le_consensusMax {shape shape' : Shape} (k' : ℕ)
     have hmax : max (2 ^ k') (queryBudget shape) ≤ max (2 ^ k') (queryBudget shape') :=
       max_le_max le_rfl hqb
     omega
-  gcongr <;> exact_mod_cast ‹_›
+  gcongr
 
 end Zcash.Snark

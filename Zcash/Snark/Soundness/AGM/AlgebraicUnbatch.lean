@@ -142,6 +142,7 @@ noncomputable def algebraicBatchErrorPolynomial {urs : URS G} {numColumns : Nat}
   ∑ i : Fin numColumns,
     Polynomial.C (commitGen b (cols i) - columnEvals i) * Polynomial.X ^ (i : Nat)
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Evaluating the error polynomial is the difference between the power-batched represented
 evaluations and the power-batched claimed values. -/
 theorem algebraicBatchErrorPolynomial_eval {urs : URS G} {numColumns : Nat}
@@ -151,7 +152,7 @@ theorem algebraicBatchErrorPolynomial_eval {urs : URS G} {numColumns : Nat}
     (algebraicBatchErrorPolynomial b cols columnEvals).eval x =
       commitGen b (∑ i : Fin numColumns, x ^ (i : Nat) • cols i) -
         ∑ i : Fin numColumns, x ^ (i : Nat) * columnEvals i := by
-  rw [algebraicBatchErrorPolynomial, Polynomial.eval_finset_sum]
+  rw [algebraicBatchErrorPolynomial, Polynomial.eval_finsetSum]
   simp only [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow, Polynomial.eval_X]
   rw [commitGen_sum]
   rw [← Finset.sum_sub_distrib]
@@ -159,6 +160,7 @@ theorem algebraicBatchErrorPolynomial_eval {urs : URS G} {numColumns : Nat}
   rw [commitGen_smul_left, smul_eq_mul]
   ring
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The error polynomial has degree below the number of batch columns.  The deliberately loose
 `<= numColumns` form also covers the empty batch without a side condition. -/
 theorem algebraicBatchErrorPolynomial_natDegree_le {urs : URS G} {numColumns : Nat}
@@ -168,10 +170,11 @@ theorem algebraicBatchErrorPolynomial_natDegree_le {urs : URS G} {numColumns : N
     (algebraicBatchErrorPolynomial b cols columnEvals).natDegree <= numColumns := by
   rw [algebraicBatchErrorPolynomial, Polynomial.natDegree_le_iff_coeff_eq_zero]
   intro m hm
-  rw [Polynomial.finset_sum_coeff]
+  rw [Polynomial.finsetSum_coeff]
   refine Finset.sum_eq_zero fun i _ => ?_
   rw [Polynomial.coeff_C_mul, Polynomial.coeff_X_pow, if_neg (by omega), mul_zero]
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- If the error polynomial is identically zero, every represented column opens to its claimed
 value. -/
 theorem algebraicBatch_values_of_errorPolynomial_eq_zero {urs : URS G} {numColumns : Nat}
@@ -183,7 +186,7 @@ theorem algebraicBatch_values_of_errorPolynomial_eq_zero {urs : URS G} {numColum
   intro i
   have hcoeff : (algebraicBatchErrorPolynomial b cols columnEvals).coeff (i : Nat) = 0 := by
     rw [hzero, Polynomial.coeff_zero]
-  rw [algebraicBatchErrorPolynomial, Polynomial.finset_sum_coeff,
+  rw [algebraicBatchErrorPolynomial, Polynomial.finsetSum_coeff,
     Finset.sum_eq_single i] at hcoeff
   · rw [Polynomial.coeff_C_mul, Polynomial.coeff_X_pow, if_pos rfl, mul_one] at hcoeff
     exact sub_eq_zero.mp hcoeff
@@ -223,6 +226,7 @@ theorem AlgebraicPowerBatch.values_of_good_challenge {urs : URS G} {numColumns :
     exact hgood (mem_szBadSet.mpr ⟨hne, heval⟩)
   exact algebraicBatch_values_of_errorPolynomial_eq_zero b batch.coeffs columnEvals hzero
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- Uniform pricing of the rewind-free batch failure: at most one field element per polynomial
 degree, hence at most `numColumns / |Fp|` using the generic degree bound above. -/
 theorem algebraicBatch_badSet_measure_le {urs : URS G} {numColumns : Nat}
