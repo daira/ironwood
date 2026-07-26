@@ -15,10 +15,13 @@ and scales by `n⁻¹` to obtain the Lagrange-basis generators of a monomial URS
 (`Params::new`, `poly/commitment.rs:75-88`).
 
 These are pure arithmetic: they mention only `Fp`, `URS` and the module action, and nothing
-from the Clean circuit layer. They live in `Zcash/Arithmetic` so that the kernel transplants
-under `Zcash/Vendor` can certify against them without importing the keygen pipeline.
-`Zcash/Snark/Keygen/Pipeline.lean` imports this file and uses `derivedUrsGLagrange` to build
-the Lagrange URS; the DFT specification of `bestFftG` is `Zcash/Snark/Keygen/FftSpec.lean`.
+from the Clean circuit layer. Why the module-generic definition is already in this tree: its
+one instantiation HERE is `G := Fp` — `bestFftG` at the field is the specification the
+scalar inverse-DFT kernel is proven against (`Zcash/Arithmetic/ScalarFftEquiv.lean`). The
+group instantiations (`derivedUrsGLagrange` at the Vesta group, and its DFT
+characterisation) are consumed by the verifying-key derivation that builds on this PR; one
+generic definition means the scalar and group transforms never need a separate agreement
+proof.
 
 The last section abstracts the loop nest itself (`fftGen`) and reduces it to pure folds
 (`fftGen_eq_folds`). That is the shared vocabulary every carrier transplant of this FFT is
