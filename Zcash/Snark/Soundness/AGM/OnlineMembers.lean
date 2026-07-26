@@ -42,7 +42,7 @@ def DeployedMembersCovered
         (chRecord nu (fun _ => 0)) ->
       forall m : Fin (deployedSetQueries vk instanceCommitment aps.erase
         (chRecord nu (fun _ => 0)) i).length,
-        CommitmentRefCovered (aps.multiopenAssemblySource fixed)
+        CommitmentRefCovered (aps.preX1AssemblySource fixed)
           ((deployedSetQueries vk instanceCommitment aps.erase
             (chRecord nu (fun _ => 0)) i).getD (m : Nat) (.point 0, [])).1
 
@@ -60,7 +60,7 @@ structure CoveredCommitmentRepresentation
       c.eval (ursOfAugmentedBasis shape.k basis)
 
 /-- Deterministic coordinates of the first online representation of a point, with zero as an
-unreachable default for uncovered points.  `multiopenAssemblySource` orders prover and fixed
+unreachable default for uncovered points.  `preX1AssemblySource` orders prover and fixed
 pre-`x` representations before `qPrime`, so these coordinates are fixed before the `x` squeeze. -/
 def onlinePointCoordinates (source : List (AlgebraicPoint (F := Fp) basis)) (P : VestaG) :
     (Fin (2 ^ shape.k) -> Fp) × Fp × Fp :=
@@ -168,7 +168,7 @@ def deployedMemberRepresentationsOfCovered
       (chRecord nu (fun _ => 0)) i).getD (m : Nat) (.point 0, [])).1
   let represented : forall m, CoveredCommitmentRepresentation basis (memberRef m) :=
     fun m => coveredCommitmentRepresentation
-      (p.algebraicProof.multiopenAssemblySource fixed) (memberRef m)
+      (p.algebraicProof.preX1AssemblySource fixed) (memberRef m)
       (hcovered nu i hi m)
   refine
     { coeffs := fun m => (represented m).coeffs
@@ -195,8 +195,8 @@ theorem deployedMemberRepresentationsOfCovered_coeffs_point
     (hP : ((deployedSetQueries vk instanceCommitment p.proof.1
       (chRecord nu (fun _ => 0)) i).getD (m : Nat) (.point 0, [])).1 = .point P) :
     (deployedMemberRepresentationsOfCovered p fixed hcovered nu i hi).coeffs m =
-      (onlinePointCoordinates (p.algebraicProof.multiopenAssemblySource fixed) P).1 := by
-  let source := p.algebraicProof.multiopenAssemblySource fixed
+      (onlinePointCoordinates (p.algebraicProof.preX1AssemblySource fixed) P).1 := by
+  let source := p.algebraicProof.preX1AssemblySource fixed
   let memberRef : Fin (deployedSetQueries vk instanceCommitment p.proof.1
       (chRecord nu (fun _ => 0)) i).length -> CommitmentRef shape.k Fp VestaG :=
     fun j => ((deployedSetQueries vk instanceCommitment p.proof.1
@@ -225,10 +225,10 @@ theorem deployedMemberRepresentationsOfCovered_components
     (hc : ((deployedSetQueries vk instanceCommitment p.proof.1
       (chRecord nu (fun _ => 0)) i).getD (m : Nat) (.point 0, [])).1 = c)
     (cCovered : CommitmentRefCovered
-      (p.algebraicProof.multiopenAssemblySource fixed) c) :
+      (p.algebraicProof.preX1AssemblySource fixed) c) :
     let member := deployedMemberRepresentationsOfCovered p fixed hcovered nu i hi
     let represented := coveredCommitmentRepresentation
-      (p.algebraicProof.multiopenAssemblySource fixed) c cCovered
+      (p.algebraicProof.preX1AssemblySource fixed) c cCovered
     member.coeffs m = represented.coeffs ∧ member.uComp m = represented.uComp ∧
       member.wComp m = represented.wComp := by
   subst c

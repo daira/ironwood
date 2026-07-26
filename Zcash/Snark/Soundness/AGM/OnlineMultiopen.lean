@@ -42,23 +42,40 @@ def AlgebraicProofString.preX1Points (aps : AlgebraicProofString shape basis) :
   (List.ofFn fun p => List.ofFn fun i => aps.lookupProduct p i).flatten ++
   [aps.vanishingRandom] ++ List.ofFn aps.hPieces
 
-/-- The represented points from which the final multiopen MSM may be assembled.  `fixed` contains
+/-- The represented points available before the `x1` batching challenge.  `fixed` contains
 representations of verifier-known commitments (for example fixed-column commitments); it is fixed
-per public basis and does not depend on Fiat-Shamir answers. -/
+per public basis and does not depend on Fiat-Shamir answers.  In particular this source excludes
+`qPrime`, which is emitted only after `x2`. -/
+def AlgebraicProofString.preX1AssemblySource
+    (aps : AlgebraicProofString shape basis)
+    (fixed : List (AlgebraicPoint (F := Fp) basis)) :
+    List (AlgebraicPoint (F := Fp) basis) :=
+  aps.preX1Points ++ fixed
+
+/-- The represented points from which the final multiopen MSM may be assembled.  This extends the
+strict pre-`x1` source by the later `qPrime` commitment. -/
 def AlgebraicProofString.multiopenAssemblySource
     (aps : AlgebraicProofString shape basis)
     (fixed : List (AlgebraicPoint (F := Fp) basis)) :
     List (AlgebraicPoint (F := Fp) basis) :=
-  aps.preX1Points ++ fixed ++ [aps.multiopenQPrime]
+  aps.preX1AssemblySource fixed ++ [aps.multiopenQPrime]
 
-/-- Every represented quotient-piece commitment occurs in the pre-`x` portion of the online
-assembly source. -/
+/-- Every represented quotient-piece commitment occurs in the strict pre-`x1` source. -/
+theorem AlgebraicProofString.hPiece_mem_preX1AssemblySource
+    (aps : AlgebraicProofString shape basis)
+    (fixed : List (AlgebraicPoint (F := Fp) basis))
+    (i : Fin shape.numQuotientPieces) :
+    aps.hPieces i ∈ aps.preX1AssemblySource fixed := by
+  simp [AlgebraicProofString.preX1AssemblySource, AlgebraicProofString.preX1Points]
+
+/-- Compatibility form for consumers of the complete multiopen assembly source. -/
 theorem AlgebraicProofString.hPiece_mem_multiopenAssemblySource
     (aps : AlgebraicProofString shape basis)
     (fixed : List (AlgebraicPoint (F := Fp) basis))
     (i : Fin shape.numQuotientPieces) :
     aps.hPieces i ∈ aps.multiopenAssemblySource fixed := by
-  simp [AlgebraicProofString.multiopenAssemblySource, AlgebraicProofString.preX1Points]
+  simp only [AlgebraicProofString.multiopenAssemblySource, List.mem_append]
+  exact Or.inl (aps.hPiece_mem_preX1AssemblySource fixed i)
 
 /-! ## Canonical aggregate coordinates -/
 

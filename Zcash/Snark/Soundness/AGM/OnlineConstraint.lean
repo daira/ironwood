@@ -24,7 +24,7 @@ def deployedConstraintSource (family : ComputedDeployedRootFSFamily shape)
     (pnu : WrappedAlgebraicOutput family.toFamily basis)
     (witness : DeployedBatchWitness family.toFamily basis pnu) :
     List (AlgebraicPoint (F := Fp) basis) :=
-  pnu.1.algebraicProof.multiopenAssemblySource witness.fixedRepresentations
+  pnu.1.algebraicProof.preX1AssemblySource witness.fixedRepresentations
 
 /-- Polynomial of the first online representation of a committed point. -/
 def deployedConstraintPointPolynomial
@@ -54,7 +54,7 @@ theorem deployedConstraintPieceCovered
     CommitmentRefCovered (deployedConstraintSource family basis pnu witness)
       (.point (pnu.1.algebraicProof.hPieces i).point) :=
   ⟨pnu.1.algebraicProof.hPieces i,
-    pnu.1.algebraicProof.hPiece_mem_multiopenAssemblySource witness.fixedRepresentations i,
+    pnu.1.algebraicProof.hPiece_mem_preX1AssemblySource witness.fixedRepresentations i,
     rfl⟩
 
 /-- The online quotient-piece coordinates open the emitted quotient-piece commitment. -/
@@ -98,7 +98,7 @@ theorem deployedConstraintVanishingCovered
     (List.ofFn pnu.1.proof.1.hPieces) pr.2 hpoint
   obtain ⟨i, hi⟩ := List.mem_ofFn.mp hpiece
   refine ⟨pnu.1.algebraicProof.hPieces i,
-    pnu.1.algebraicProof.hPiece_mem_multiopenAssemblySource witness.fixedRepresentations i, ?_⟩
+    pnu.1.algebraicProof.hPiece_mem_preX1AssemblySource witness.fixedRepresentations i, ?_⟩
   exact hi.symm
 
 /-- Quotient-piece representations retained in the online pre-`x` source. -/
