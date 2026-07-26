@@ -41,17 +41,17 @@ ladder, the scatter Pippenger and the FFT loop nest.  The affine meaning then co
 `NatKernelEquiv`'s `pnsmul_spec`/`msm_spec`/`fft_spec` verbatim.
 -/
 
-namespace Zcash.Vendor.ProjectiveMont
+namespace CompElliptic.Curves.Pasta.Fast.ProjectiveMont
 
 open Montgomery.Native64x8
-open Zcash.Snark.Keygen.Fast
-open Zcash.Snark.Keygen.Fast.Projective
-open Zcash.Snark.Keygen.Fast.Projective.PVes
+open CompElliptic.Curves.Pasta.Fast
+open CompElliptic.Curves.Pasta.Fast.Projective
+open CompElliptic.Curves.Pasta.Fast.Projective.PVes
 open CompElliptic.Fields.Pasta (PALLAS_SCALAR_CARD)
-open Zcash.Vendor.NatKernel (P3)
+open CompElliptic.Curves.Pasta.Fast.NatKernel (P3)
 
 /-- The Vesta base field, the ambient field of the projective statement surface. -/
-local notation "Fq" => Zcash.Snark.Keygen.Fast.Projective.Fq
+local notation "Fq" => CompElliptic.Curves.Pasta.Fast.Projective.Fq
 
 /-- The Vesta scalar field, over which the FFT twiddles live. -/
 local notation "Fp" => Zcash.Snark.Fp
@@ -587,4 +587,4 @@ theorem fftM_spec (a0 : Array PM) (tw : Array ℕ) (omega : Fp) (logN : ℕ)
     (by rw [hsize]; exact htwsize) (by rw [hsize]; exact htw)
   rw [hR.map_toG, hspec, hmap]
 
-end Zcash.Vendor.ProjectiveMont
+end CompElliptic.Curves.Pasta.Fast.ProjectiveMont

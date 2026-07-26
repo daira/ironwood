@@ -18,10 +18,10 @@ they are proof infrastructure, not an evaluation path.
 namespace Zcash.Snark.Keygen.Fast
 
 open Zcash.Snark
-open Zcash.Vendor
-open Zcash.Vendor.NatKernel (P3)
-open Zcash.Snark.Keygen.Fast.Projective
-open Zcash.Snark.Keygen.Fast.Projective.PVes
+open CompElliptic.Curves.Pasta.Fast
+open CompElliptic.Curves.Pasta.Fast.NatKernel (P3)
+open CompElliptic.Curves.Pasta.Fast.Projective
+open CompElliptic.Curves.Pasta.Fast.Projective.PVes
 
 local instance : Inhabited G := ⟨0⟩
 

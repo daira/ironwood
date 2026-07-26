@@ -34,6 +34,7 @@ namespace Zcash.Vendor.ScalarMont
 
 open Montgomery.Native64x8
 open Montgomery.Native64x8 (Limbs8)
+open CompElliptic.Curves.Pasta.Fast
 open CompElliptic.Fields.Pasta (PALLAS_BASE_CARD)
 
 /-- The Vesta scalar field — `PALLAS_BASE_CARD` in the Pasta naming. -/

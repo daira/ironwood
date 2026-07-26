@@ -38,14 +38,14 @@ The `msm` and `fft` results go through the already-proven projective ports: `msm
 `fft` is an Array simulation of `bestFftG`'s loop nest carrying `Valid` through every cell.
 -/
 
-namespace Zcash.Vendor.NatKernel
+namespace CompElliptic.Curves.Pasta.Fast.NatKernel
 
-open Zcash.Snark.Keygen.Fast
-open Zcash.Snark.Keygen.Fast.Projective
-open Zcash.Snark.Keygen.Fast.Projective.PVes
+open CompElliptic.Curves.Pasta.Fast
+open CompElliptic.Curves.Pasta.Fast.Projective
+open CompElliptic.Curves.Pasta.Fast.Projective.PVes
 
 /-- The Vesta base field, the ambient field of the projective statement surface. -/
-local notation "Fq" => Zcash.Snark.Keygen.Fast.Projective.Fq
+local notation "Fq" => CompElliptic.Curves.Pasta.Fast.Projective.Fq
 
 /-- The kernel's modulus literal is the Vesta base field order. -/
 theorem qv_eq : qv = CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD := rfl
@@ -764,4 +764,4 @@ theorem fft_spec (a0 : Array P3) (tw : Array ℕ) (omega : Fp) (logN : ℕ)
   exact hrounds.2
 
 
-end Zcash.Vendor.NatKernel
+end CompElliptic.Curves.Pasta.Fast.NatKernel

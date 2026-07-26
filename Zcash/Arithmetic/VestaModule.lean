@@ -27,7 +27,7 @@ namespace Zcash.Snark.Keygen.Fast
 
 open Zcash.Snark
 open CompElliptic.Curves.Pasta
-open Zcash.Snark.Keygen.Fast.Projective
+open CompElliptic.Curves.Pasta.Fast.Projective
 
 /-- Every Vesta point is `p`-torsion, from CompElliptic's pinned `Vesta.card_eq` and the fact
 that a finite group is annihilated by its cardinality.  Mirrors `Zcash.Snark.vestaOrder`. -/

@@ -17,7 +17,7 @@ Like `Zcash.Vendor.CompPoly.Montgomery.Native64x8Defs`, this module is core-only
 `FastFieldNative` precompiled lane.  All proofs live in the sibling module.
 -/
 
-namespace Zcash.Vendor.ProjectiveMont
+namespace CompElliptic.Curves.Pasta.Fast.ProjectiveMont
 
 open Montgomery.Native64x8 (Limbs8)
 open Montgomery.Native64x8.VestaFq
@@ -154,4 +154,4 @@ def fft (a0 : Array PM) (tw : Array Nat) (logN : Nat) : Array PM := Id.run do
 
 end PM
 
-end Zcash.Vendor.ProjectiveMont
+end CompElliptic.Curves.Pasta.Fast.ProjectiveMont

@@ -24,7 +24,7 @@ On landing, the import paths become `Zcash.Vendor.CompPoly.Montgomery.X` →
 | `Native64x8.lean` | `CompPoly/Fields/Montgomery/Native64x8.lean` (theorems) | imports the split-out definitions; two `norm_num` calls dropped (Lean 4.30 vs 4.31 `simp` drift) |
 | `Native64x8Mul.lean` | same name | import path; one `norm_num` dropped |
 | `Native64x8Field.lean` | same name | import path |
-| `Pasta.lean` | `CompPoly/Fields/Pasta/{Basic,Fast}.lean` | **rewritten**: reuses `CompElliptic.Fields.Pasta`'s primes and Pratt certificates instead of vendoring a second copy, so the repo keeps exactly one `Field (ZMod PALLAS_SCALAR_CARD)` instance and the Montgomery carrier bridges directly into `Zcash.Snark.Keygen.Fast.Projective.Fq` |
+| `Pasta.lean` | `CompPoly/Fields/Pasta/{Basic,Fast}.lean` | **rewritten**: reuses `CompElliptic.Fields.Pasta`'s primes and Pratt certificates instead of vendoring a second copy, so the repo keeps exactly one `Field (ZMod PALLAS_SCALAR_CARD)` instance and the Montgomery carrier bridges directly into `CompElliptic.Curves.Pasta.Fast.Projective.Fq` |
 
 The definition/proof split exists for the precompiled lane: `Native64x8Defs.lean` imports
 nothing beyond Lean core, so it can be native-compiled (`FastFieldNative`) without dragging a
@@ -44,3 +44,8 @@ loop nest with the group operations replaced by eight-limb Montgomery field oper
 `Montgomery/Native64x8Defs.lean` it is core-only, so it can sit in the `FastFieldNative`
 precompiled lane. Its correctness proof is *not* here: it is mathlib-side and therefore
 ironwood-permanent, in `Zcash/Arithmetic/ScalarFftEquiv.lean`.
+
+Namespaces here are *not* aligned with upstream yet: CompPoly#274 puts the scalar FFT in
+`Montgomery.ScalarFft`, parameterized over the modulus `(q, negInv)` rather than monomorphized
+at the Pasta scalar field as this copy is. Aligning is part of the migration, not of the
+vendoring.

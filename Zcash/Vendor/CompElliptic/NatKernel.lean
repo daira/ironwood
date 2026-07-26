@@ -14,7 +14,7 @@ operation-for-operation, and their correctness (`Zcash.Vendor.CompElliptic.Proje
 is proven by transport against this kernel. Do not delete it as dead code.
 -/
 
-namespace Zcash.Vendor.NatKernel
+namespace CompElliptic.Curves.Pasta.Fast.NatKernel
 
 /-- The Vesta base-field prime (= `CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD`),
 as a literal so this module needs no imports. -/
@@ -158,4 +158,4 @@ def fft (a0 : Array P3) (tw : Array Nat) (logN : Nat) : Array P3 := Id.run do
     half := chunk
   return a
 
-end Zcash.Vendor.NatKernel
+end CompElliptic.Curves.Pasta.Fast.NatKernel

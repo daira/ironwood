@@ -17,6 +17,11 @@ arithmetic that belongs in **CompElliptic**, and a PR upstreaming it is the next
 | `ProjectiveMontDefs.lean` | the same kernel again on eight-limb Montgomery residues; core-only, so it can be native-compiled in the `FastFieldNative` precompiled lane |
 | `ProjectiveMontEquiv.lean` | transports the `NatKernel` simulation proofs to the Montgomery kernel |
 
+Declaration namespaces are the ones the upstream PR uses
+(`CompElliptic.Curves.Pasta.Fast.{Projective,Msm,MsmProj,NatKernel,ProjectiveMont}`), so the
+migration is an import-path rewrite rather than a rename. The ironwood-side glue keeps its own
+namespaces and reaches this tree through `open CompElliptic.Curves.Pasta.Fast`.
+
 ## Deletion criterion
 
 **Delete this directory** once ironwood's CompElliptic pin provides this code; the only

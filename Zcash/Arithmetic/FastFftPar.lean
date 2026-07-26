@@ -54,6 +54,7 @@ open Zcash.Snark
 open Zcash.Snark.Keygen
 open CompElliptic
 open CompElliptic.Curves.Pasta
+open CompElliptic.Curves.Pasta.Fast
 
 namespace Zcash.Snark.Keygen.Fast
 

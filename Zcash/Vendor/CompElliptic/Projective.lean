@@ -35,7 +35,7 @@ open CompElliptic
 open CompElliptic.CurveForms.ShortWeierstrass
 open CompElliptic.Curves.Pasta
 
-namespace Zcash.Snark.Keygen.Fast.Projective
+namespace CompElliptic.Curves.Pasta.Fast.Projective
 
 /-- The Vesta base field `𝔽_q` (= `PallasScalarField`), over which the Vesta curve is defined. -/
 abbrev Fq := CompElliptic.Fields.Pasta.VestaBaseField
@@ -639,4 +639,4 @@ theorem padd_eq_paddFast : @padd = @paddFast := by
     simp only [cast_fadd, cast_fmul, cast_fsub, cast_val, Nat.cast_ofNat] <;> ring
 
 end PVes
-end Zcash.Snark.Keygen.Fast.Projective
+end CompElliptic.Curves.Pasta.Fast.Projective

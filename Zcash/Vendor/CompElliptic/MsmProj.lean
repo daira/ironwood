@@ -42,14 +42,14 @@ Vesta-specific).
 -/
 
 open Zcash.Snark
-open Zcash.Snark.Keygen.Fast
-open Zcash.Snark.Keygen.Fast.Projective
-open Zcash.Snark.Keygen.Fast.Projective.PVes
+open CompElliptic.Curves.Pasta.Fast
+open CompElliptic.Curves.Pasta.Fast.Projective
+open CompElliptic.Curves.Pasta.Fast.Projective.PVes
 open CompElliptic
 open CompElliptic.CurveForms.ShortWeierstrass
 open CompElliptic.Curves.Pasta
 
-namespace Zcash.Snark.Keygen.Fast.MsmProj
+namespace CompElliptic.Curves.Pasta.Fast.MsmProj
 
 /-- The Vesta affine group carries a default point, needed to instantiate the `Fast.Msm` wrapper
 (`commitLagrangeSpec`, `commitLagrangeFastWith_eq`) whose section fixes `[Inhabited G]`. -/
@@ -503,4 +503,4 @@ theorem commitLagrangeProjScatterWith_eq (c : ℕ) (hc : 0 < c)
   rw [pippengerProjScatter_eq, Msm.zip_terms_eq, Msm.pippenger_eq_msm c hc, List.map_map]
   rfl
 
-end Zcash.Snark.Keygen.Fast.MsmProj
+end CompElliptic.Curves.Pasta.Fast.MsmProj

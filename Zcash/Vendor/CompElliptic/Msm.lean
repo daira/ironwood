@@ -51,7 +51,7 @@ single-pass `bucketScatter` of `pippengerFast` eliminates.
 * The Horner fold reconstructs `∑ i, base ^ i • windowContribution i` (`hornerList_eq`).
 -/
 
-namespace Zcash.Snark.Keygen.Fast.Msm
+namespace CompElliptic.Curves.Pasta.Fast.Msm
 
 open scoped BigOperators
 
@@ -531,4 +531,4 @@ theorem commitLagrangeFastWith_eq (c : ℕ) (hc : 0 < c)
 
 end Wrapper
 
-end Zcash.Snark.Keygen.Fast.Msm
+end CompElliptic.Curves.Pasta.Fast.Msm
