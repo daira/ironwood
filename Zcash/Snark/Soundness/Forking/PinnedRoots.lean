@@ -1,12 +1,13 @@
 import Zcash.Snark.Soundness.Forking.PinnedSqueeze
 
 /-!
-# Additive pricing for prefix-pinned root events
+# Additive pricing for prefix-indexed root events
 
 The fourth-root adaptive-coupling loss is unnecessary when extraction failure exposes a bad root
-at a particular squeeze.  Such a root set is fixed before that squeeze and has a direct
-Schwartz--Zippel measure bound.  `xEscTable_measure_le` already prices one adaptive squeeze at
-`(Q + 1) * epsilon`; this file packages a finite union of such events and sums their budgets.
+at a particular squeeze.  Such a root set is determined by the transcript prefix before that
+squeeze and has a direct Schwartz--Zippel measure bound.  `xEscAtPoint_measure_le` prices one
+adaptive squeeze at `(Q + 1) * epsilon`; this file packages a finite union of such events and sums
+their budgets.
 -/
 
 namespace Zcash.Snark
@@ -16,23 +17,23 @@ open Classical
 
 variable {T F P : Type*} [Fintype F] [Nonempty F]
 
-/-- One output- and table-dependent bad-root set fixed under resampling its own squeeze answer. -/
+/-- One bad-root set indexed by the transcript prefix before its squeeze.
+
+Indexing by `point (A.run O)` makes the causal boundary part of the data model.  There is no
+caller-supplied equality comparing two hindsight-dependent final outputs. -/
 structure PinnedRootEvent [DecidableEq T] (A : OracleComp T F P) where
   point : P -> T
-  bad : P -> (T -> F) -> Set F
+  badAt : T -> Set F
   budget : ENNReal
-  pinned : forall (O : T -> F) (v : F),
-    bad (A.run (Function.update O (point (A.run O)) v))
-        (Function.update O (point (A.run O)) v) = bad (A.run O) O
-  measure_le : forall p O,
-    (PMF.uniformOfFintype F).toOuterMeasure (bad p O) <= budget
+  measure_le : forall t,
+    (PMF.uniformOfFintype F).toOuterMeasure (badAt t) <= budget
 
 namespace PinnedRootEvent
 
 /-- The run's own squeeze answer lands in this bad-root set. -/
 def Landing [DecidableEq T] {A : OracleComp T F P} (event : PinnedRootEvent A)
     (O : T -> F) : Prop :=
-  O (event.point (A.run O)) ∈ event.bad (A.run O) O
+  O (event.point (A.run O)) ∈ event.badAt (event.point (A.run O))
 
 /-- One pinned root event costs its direct root-set budget, with only the standard query loss. -/
 theorem landing_measure_le [Fintype T] [DecidableEq T]
@@ -40,7 +41,7 @@ theorem landing_measure_le [Fintype T] [DecidableEq T]
     (hQ : A.QueryBound Q) :
     (PMF.uniformOfFintype (T -> F)).toOuterMeasure {O : T -> F | event.Landing O}
       <= (Q + 1 : Nat) * event.budget := by
-  exact xEscTable_measure_le A event.point event.bad event.pinned event.measure_le hQ
+  exact xEscAtPoint_measure_le A event.point event.badAt event.measure_le hQ
 
 end PinnedRootEvent
 

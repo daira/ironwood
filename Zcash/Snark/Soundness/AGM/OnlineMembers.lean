@@ -21,9 +21,17 @@ variable {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) -> VestaG}
 attribute [local irreducible] deployedSetQueries deployedX4PairCount
   deployedSetMemberCommitments
 
-/-- Every query commitment routed into a deployed point set has a representation in the online
-multiopen source.  The source's prover points are emitted before `x1`; `fixed` is basis-dependent
-but oracle-independent. -/
+/-- A commitment reference is covered by online representations: a plain point is present
+directly, while an MSM has representations for every appended point it combines. -/
+def CommitmentRefCovered
+    (source : List (AlgebraicPoint (F := Fp) basis)) :
+    CommitmentRef shape.k Fp VestaG -> Prop
+  | .point P => ∃ ap ∈ source, ap.point = P
+  | .msm m => ∀ pr ∈ m.other, ∃ ap ∈ source, ap.point = pr.2
+
+/-- Every query commitment routed into a deployed point set is structurally covered by the online
+multiopen source.  This includes MSM-valued references such as the folded vanishing-`h`
+commitment; their evaluated group point need not itself appear as a source point. -/
 def DeployedMembersCovered
     (vk : VerifyingKey shape Fp VestaG)
     (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
@@ -34,9 +42,50 @@ def DeployedMembersCovered
         (chRecord nu (fun _ => 0)) ->
       forall m : Fin (deployedSetQueries vk instanceCommitment aps.erase
         (chRecord nu (fun _ => 0)) i).length,
-        ∃ ap ∈ aps.multiopenAssemblySource fixed,
-          ap.point = deployedSetMemberCommitments (ursOfAugmentedBasis shape.k basis) rfl
-            vk instanceCommitment aps.erase (chRecord nu (fun _ => 0)) i m
+        CommitmentRefCovered (aps.multiopenAssemblySource fixed)
+          ((deployedSetQueries vk instanceCommitment aps.erase
+            (chRecord nu (fun _ => 0)) i).getD (m : Nat) (.point 0, [])).1
+
+/-- AGM coordinates for the group value of one structurally covered commitment reference. -/
+structure CoveredCommitmentRepresentation
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
+    (c : CommitmentRef shape.k Fp VestaG) where
+  coeffs : Fin (2 ^ shape.k) -> Fp
+  uComp : Fp
+  wComp : Fp
+  commitment :
+    commit (ursOfAugmentedBasis shape.k basis) coeffs +
+        uComp • (ursOfAugmentedBasis shape.k basis).u +
+        wComp • (ursOfAugmentedBasis shape.k basis).w =
+      c.eval (ursOfAugmentedBasis shape.k basis)
+
+/-- Resolve a covered point directly, or combine the representations carried by an MSM-valued
+commitment reference. -/
+noncomputable def coveredCommitmentRepresentation
+    (source : List (AlgebraicPoint (F := Fp) basis))
+    (c : CommitmentRef shape.k Fp VestaG)
+    (hcovered : CommitmentRefCovered source c) :
+    CoveredCommitmentRepresentation basis c := by
+  cases c with
+  | point P =>
+      let ap := Classical.choose hcovered
+      refine
+        { coeffs := ap.gPart
+          uComp := ap.coeffs AugmentedIndex.u
+          wComp := ap.coeffs AugmentedIndex.w
+          commitment := ?_ }
+      simpa only [CommitmentRef.eval] using
+        (AlgebraicPoint.point_eq_components ap).symm.trans
+          (Classical.choose_spec hcovered).2
+  | msm m =>
+      let represented := RepresentedMsm.ofCoveredList m source hcovered
+      refine
+        { coeffs := m.gScalars + repsGPart represented.reps
+          uComp := m.uScalar + repsU represented.reps
+          wComp := m.wScalar + repsW represented.reps
+          commitment := ?_ }
+      simpa only [CommitmentRef.eval] using
+        (Msm.eval_repr m represented.reps represented.covers).symm
 
 /-- Resolve each covered deployed member commitment to the augmented AGM coordinates carried by
 its source point. -/
@@ -52,22 +101,22 @@ noncomputable def deployedMemberRepresentationsOfCovered
     AlgebraicColumnRepresentations (ursOfAugmentedBasis shape.k basis)
       (deployedSetMemberCommitments (ursOfAugmentedBasis shape.k basis) rfl
         vk instanceCommitment p.proof.1 (chRecord nu (fun _ => 0)) i) := by
-  let sourcePoint : Fin (deployedSetQueries vk instanceCommitment p.proof.1
-      (chRecord nu (fun _ => 0)) i).length -> AlgebraicPoint (F := Fp) basis :=
-    fun m => Classical.choose (hcovered nu i hi m)
-  have hsourcePoint : forall m,
-      (sourcePoint m).point = deployedSetMemberCommitments
-        (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
-          (chRecord nu (fun _ => 0)) i m := by
-    intro m
-    exact (Classical.choose_spec (hcovered nu i hi m)).2
+  let memberRef : Fin (deployedSetQueries vk instanceCommitment p.proof.1
+      (chRecord nu (fun _ => 0)) i).length -> CommitmentRef shape.k Fp VestaG :=
+    fun m => ((deployedSetQueries vk instanceCommitment p.proof.1
+      (chRecord nu (fun _ => 0)) i).getD (m : Nat) (.point 0, [])).1
+  let represented : forall m, CoveredCommitmentRepresentation basis (memberRef m) :=
+    fun m => coveredCommitmentRepresentation
+      (p.algebraicProof.multiopenAssemblySource fixed) (memberRef m)
+      (hcovered nu i hi m)
   refine
-    { coeffs := fun m => (sourcePoint m).gPart
-      uComp := fun m => (sourcePoint m).coeffs AugmentedIndex.u
-      wComp := fun m => (sourcePoint m).coeffs AugmentedIndex.w
+    { coeffs := fun m => (represented m).coeffs
+      uComp := fun m => (represented m).uComp
+      wComp := fun m => (represented m).wComp
       commitment := ?_ }
   intro m
-  exact (AlgebraicPoint.point_eq_components (sourcePoint m)).symm.trans (hsourcePoint m)
+  simpa only [memberRef, deployedSetMemberCommitments_apply] using
+    (represented m).commitment
 
 /-- The exact deployed within-set `x1` batch, obtained from online-covered member coordinates.
 Any mismatch with the already decoded `x4` aggregate is returned as an explicit augmented-basis

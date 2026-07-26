@@ -2357,6 +2357,12 @@ private theorem eval_urs_eta (m : Msm shape.k Fp VestaG) :
 
 attribute [local irreducible] multiopenCommitment Msm.eval
 
+/-- Representations for every point appended by an arbitrary MSM. -/
+structure RepresentedMsm (m : Msm shape.k Fp VestaG)
+    (basis : AugmentedIndex (2 ^ shape.k) → VestaG) where
+  reps : List (Fp × AlgebraicPoint (F := Fp) basis)
+  covers : m.other = reps.map (fun t => (t.1, t.2.point))
+
 /-- Representations for every point appended by the multiopen assembly. -/
 structure RepresentedMultiopen
     (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (ps : ProofString shape Fp VestaG)
@@ -2382,6 +2388,21 @@ private theorem list_eq_map_pmap_lookup {β : Type*} (point : β → VestaG)
           (H pr (List.mem_cons_self ..))) = pr.2 := by
         simpa using hp
       exact Prod.ext rfl hpt.symm
+
+/-- Build an arbitrary represented MSM from a list covering every appended point. -/
+def RepresentedMsm.ofCoveredList (m : Msm shape.k Fp VestaG)
+    (L : List (AlgebraicPoint (F := Fp) basis))
+    (hcover : ∀ pr ∈ m.other, ∃ ap ∈ L, ap.point = pr.2) :
+    RepresentedMsm m basis :=
+  have H : ∀ pr ∈ m.other,
+      (L.find? (fun ap => ap.point = pr.2)).isSome := by
+    intro pr hpr
+    rw [List.find?_isSome]
+    obtain ⟨ap, hapL, hap⟩ := hcover pr hpr
+    exact ⟨ap, hapL, by simp [hap]⟩
+  { reps := m.other.pmap
+      (fun pr h => (pr.1, (L.find? (fun ap => ap.point = pr.2)).get h)) H
+    covers := list_eq_map_pmap_lookup AlgebraicPoint.point L _ H }
 
 /-- Build the represented assembly from a list covering every appended point. -/
 def RepresentedMultiopen.ofCoveredList

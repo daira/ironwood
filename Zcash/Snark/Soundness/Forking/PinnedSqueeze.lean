@@ -71,4 +71,44 @@ theorem xEscTable_measure_le [Fintype T] [DecidableEq T] (A : OracleComp T F P) 
     (OracleComp.queryBound_completing (fun p (_ : Fin 1) => xpt p) hQ)
   exact_mod_cast h
 
+open Classical in
+/-- A bad set indexed by the transcript point itself needs no separate rerun-pinning premise.
+
+For a fixed escape point `t`, every reprogrammed run that still selects `t` is tested against the
+same `badAt t`.  This is the native interface for data that is determined by the transcript prefix
+before its squeeze. -/
+theorem xEscAtPoint_measure_le [Fintype T] [DecidableEq T]
+    (A : OracleComp T F P) (xpt : P -> T) (badAt : T -> Set F)
+    {epsilon : ENNReal}
+    (hbad : forall t, (PMF.uniformOfFintype F).toOuterMeasure (badAt t) <= epsilon)
+    {Q : Nat} (hQ : A.QueryBound Q) :
+    (PMF.uniformOfFintype (T -> F)).toOuterMeasure
+      {O : T -> F | O (xpt (A.run O)) ∈ badAt (xpt (A.run O))}
+        <= (Q + 1 : Nat) * epsilon := by
+  let esc : T -> (T -> F) -> Set F := fun t O =>
+    {v : F | t = xpt (A.run (Function.update O t v)) ∧ v ∈ badAt t}
+  have hsub : {O : T -> F | O (xpt (A.run O)) ∈ badAt (xpt (A.run O))} <=
+      {O : T -> F | (A.completing (fun p (_ : Fin 1) => xpt p)).escapesDuringC esc O} := by
+    intro O hO
+    refine OracleComp.escapesDuringC_completing _ (fun p (_ : Fin 1) => xpt p) (j := 0) ?_
+    show O (xpt (A.run O)) ∈ esc (xpt (A.run O)) O
+    constructor
+    · rw [Function.update_eq_self]
+    · exact hO
+  refine le_trans (MeasureTheory.measure_mono hsub) ?_
+  have hblind : forall (t : T) (O : T -> F) (v : F),
+      esc t (Function.update O t v) = esc t O := by
+    intro t O v
+    ext u
+    simp only [esc, Set.mem_setOf_eq, Function.update_idem]
+  have hesc : forall (t : T) (O : T -> F),
+      (PMF.uniformOfFintype F).toOuterMeasure (esc t O) <= epsilon := by
+    intro t O
+    refine le_trans ((PMF.uniformOfFintype F).toOuterMeasure.mono ?_) (hbad t)
+    intro v hv
+    exact hv.2
+  have h := escapesDuringC_measure_le' esc hblind hesc
+    (OracleComp.queryBound_completing (fun p (_ : Fin 1) => xpt p) hQ)
+  exact_mod_cast h
+
 end Zcash.Snark

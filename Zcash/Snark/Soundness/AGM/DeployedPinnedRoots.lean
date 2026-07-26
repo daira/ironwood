@@ -7,10 +7,11 @@ import Zcash.Snark.Soundness.Forking.PinnedRoots
 # The deployed prefix-pinned AGM root family
 
 This module gives the explicit adapter from rewind-free algebraic batch data to
-`PinnedRootFamily`.  The only additional family condition is causal: recomputing the adversary
-after replacing one squeeze answer must leave the corresponding explicit root set unchanged.
-The bad sets themselves are not abstract; they are exactly the two IPA shift polynomials and the
-deployed `x4`, `x3`, `x2`, and per-set `x1` polynomials.
+`PinnedRootFamily`.  The only additional family condition is causal: the corresponding explicit
+root set must factor through the transcript prefix before its squeeze.  The generic probability
+layer consumes that prefix-indexed set directly, with no caller-supplied rerun equality.  The bad
+sets themselves are exactly the two IPA shift polynomials and the deployed `x4`, `x3`, `x2`, and
+per-set `x1` polynomials.
 -/
 
 namespace Zcash.Snark
@@ -313,51 +314,97 @@ theorem deployedRootEventBudget_sum_le (shape : Shape) :
   ring_nf
   exact le_rfl
 
-/-- A computed online AGM family with a concrete batch-or-relation outcome and proofs that each
-explicit root set is pinned before its own squeeze. -/
+/-- The exact causal condition for deployed root data: two executions with the same transcript
+prefix before a squeeze induce the same bad-root set for that squeeze.
+
+This is strictly a prefix-factorization property.  It neither compares hindsight-selected AGM
+representations after changing a challenge nor treats a final-output equality as chronology. -/
+def DeployedRootPrefixDetermined (family : ComputedAlgebraicFSFamily shape)
+    (outcome : DeployedRootOutcomeProvider family) : Prop :=
+  forall basis (i : Fin 6) O O',
+    deployedRootPoint family ((wrappedAdversary family basis).run O) i =
+        deployedRootPoint family ((wrappedAdversary family basis).run O') i ->
+      deployedRootBad family outcome basis ((wrappedAdversary family basis).run O) O i =
+        deployedRootBad family outcome basis ((wrappedAdversary family basis).run O') O' i
+
+/-- Attach a deployed bad-root set to its transcript prefix.  On an unreachable prefix the set is
+empty; on a reachable prefix it is taken from one execution reaching that prefix.  Prefix
+determinism makes the choice observationally irrelevant. -/
+noncomputable def deployedRootBadAt (family : ComputedAlgebraicFSFamily shape)
+    (outcome : DeployedRootOutcomeProvider family)
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) (i : Fin 6)
+    (t : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k)) : Set Fp :=
+  if h : exists O,
+      deployedRootPoint family ((wrappedAdversary family basis).run O) i = t then
+    let O := Classical.choose h
+    deployedRootBad family outcome basis ((wrappedAdversary family basis).run O) O i
+  else ∅
+
+/-- Every prefix-indexed deployed root set inherits the direct root budget of the corresponding
+explicit polynomial. -/
+theorem deployedRootBadAt_measure_le (family : ComputedAlgebraicFSFamily shape)
+    (outcome : DeployedRootOutcomeProvider family)
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) (i : Fin 6)
+    (t : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k)) :
+    (PMF.uniformOfFintype Fp).toOuterMeasure
+        (deployedRootBadAt family outcome basis i t) <= deployedRootEventBudget shape i := by
+  classical
+  unfold deployedRootBadAt
+  split
+  · exact deployedRootBad_measure_le family outcome basis
+      ((wrappedAdversary family basis).run (Classical.choose ‹_›))
+      (Classical.choose ‹_›) i
+  · simp
+
+/-- A prefix-determined family agrees with its prefix-indexed bad set on every actual run. -/
+theorem deployedRootBadAt_point
+    (family : ComputedAlgebraicFSFamily shape)
+    (outcome : DeployedRootOutcomeProvider family)
+    (hprefix : DeployedRootPrefixDetermined family outcome)
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) (i : Fin 6)
+    (O : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) :
+    deployedRootBadAt family outcome basis i
+        (deployedRootPoint family ((wrappedAdversary family basis).run O) i) =
+      deployedRootBad family outcome basis ((wrappedAdversary family basis).run O) O i := by
+  classical
+  unfold deployedRootBadAt
+  split
+  · apply hprefix basis i (Classical.choose ‹_›) O
+    exact Classical.choose_spec ‹_›
+  · exfalso
+    apply ‹¬ _›
+    exact ⟨O, rfl⟩
+
+/-- A computed online AGM family with a concrete batch-or-relation outcome whose exact root data
+factors through the transcript prefix before each squeeze. -/
 structure ComputedDeployedRootFSFamily (shape : Shape)
     extends ComputedOnlineMemberFSFamily shape where
   outcome : DeployedRootOutcomeProvider toComputedAlgebraicFSFamily
-  rootPinned : forall basis (i : Fin 6) O v,
-    deployedRootBad toComputedAlgebraicFSFamily outcome basis
-        ((wrappedAdversary toComputedAlgebraicFSFamily basis).run
-          (Function.update O
-            (deployedRootPoint toComputedAlgebraicFSFamily
-              ((wrappedAdversary toComputedAlgebraicFSFamily basis).run O) i) v))
-        (Function.update O
-          (deployedRootPoint toComputedAlgebraicFSFamily
-            ((wrappedAdversary toComputedAlgebraicFSFamily basis).run O) i) v) i =
-      deployedRootBad toComputedAlgebraicFSFamily outcome basis
-        ((wrappedAdversary toComputedAlgebraicFSFamily basis).run O) O i
+  rootPrefixDetermined :
+    DeployedRootPrefixDetermined toComputedAlgebraicFSFamily outcome
 
 /-- Upgrade an online, member-covered AGM family using the derived offline batch-or-relation
-decoder.  The sole remaining multiopen-specific proof is causal root pinning; the outcome itself is
-no longer caller-supplied.
+decoder.  The sole remaining multiopen-specific proof is that the exact root data factors through
+the preceding transcript prefix; the outcome itself is no longer caller-supplied.
 
-`OnlineMultiopenPinned` alone intentionally does not discharge `hrootPinned`.  It pins the AGM
+`OnlineMultiopenPinned` alone intentionally does not discharge `hprefix`.  It pins the AGM
 representations named by that interface, while the exact deployed root sets also read ordinary
 proof-string scalars and grouping data.  The final-output `OracleComp` interface does not encode
 when those fields were emitted, so deriving their chronology would be unsound.  A concrete family
-must provide this equality from a strengthened online transcript interface (whose schedule is then
-matched to the Rust transcript order). -/
+must provide prefix factorization from a strengthened online transcript interface (whose schedule
+is then matched to the Rust transcript order). -/
 noncomputable def ComputedDeployedRootFSFamily.ofOnline
     (family : ComputedOnlineMemberFSFamily shape)
     (hcapacity : shape.numPointSets + 1 <= Fintype.card Fp)
-    (hrootPinned : forall basis (i : Fin 6) O v,
-      deployedRootBad family.toFamily (deployedRootOutcomeOfOnline family hcapacity) basis
-          ((wrappedAdversary family.toFamily basis).run
-            (Function.update O
-              (deployedRootPoint family.toFamily
-                ((wrappedAdversary family.toFamily basis).run O) i) v))
-          (Function.update O
-            (deployedRootPoint family.toFamily
-              ((wrappedAdversary family.toFamily basis).run O) i) v) i =
-        deployedRootBad family.toFamily (deployedRootOutcomeOfOnline family hcapacity) basis
-          ((wrappedAdversary family.toFamily basis).run O) O i) :
+    (hprefix : DeployedRootPrefixDetermined family.toFamily
+      (deployedRootOutcomeOfOnline family hcapacity)) :
     ComputedDeployedRootFSFamily shape where
   toComputedOnlineMemberFSFamily := family
   outcome := deployedRootOutcomeOfOnline family hcapacity
-  rootPinned := hrootPinned
+  rootPrefixDetermined := hprefix
 
 namespace ComputedDeployedRootFSFamily
 
@@ -475,11 +522,9 @@ noncomputable def pinnedRoots (family : ComputedDeployedRootFSFamily shape)
     PinnedRootFamily (wrappedAdversary family.toFamily basis) 6 where
   event i :=
     { point := fun pnu => deployedRootPoint family.toFamily pnu i
-      bad := fun pnu O => deployedRootBad family.toFamily family.outcome basis pnu O i
+      badAt := deployedRootBadAt family.toFamily family.outcome basis i
       budget := deployedRootEventBudget shape i
-      pinned := family.rootPinned basis i
-      measure_le := fun pnu O =>
-        deployedRootBad_measure_le family.toFamily family.outcome basis pnu O i }
+      measure_le := deployedRootBadAt_measure_le family.toFamily family.outcome basis i }
 
 /-- The six good-root facts exposed when the concrete root family does not land. -/
 structure DeployedGoodRoots (family : ComputedDeployedRootFSFamily shape)
@@ -529,8 +574,11 @@ theorem goodRoots_of_not_landing (family : ComputedDeployedRootFSFamily shape)
     have hi := hgood i
     change O (deployedRootPoint family.toFamily
         ((wrappedAdversary family.toFamily basis).run O) i) ∉
-      deployedRootBad family.toFamily family.outcome basis
-        ((wrappedAdversary family.toFamily basis).run O) O i at hi
+      deployedRootBadAt family.toFamily family.outcome basis i
+        (deployedRootPoint family.toFamily
+          ((wrappedAdversary family.toFamily basis).run O) i) at hi
+    rw [deployedRootBadAt_point family.toFamily family.outcome
+      family.rootPrefixDetermined basis i O] at hi
     have hpoint := deployedRootPoint_run family.toFamily basis O i
     rw [hpoint] at hi
     simpa [wrappedPreIpaReads_run] using hi
