@@ -1,7 +1,7 @@
 name = "Zcash"
 version = "0.1.0"
 keywords = ["cryptography", "math", "protocols"]
-defaultTargets = ["Zcash", "FixtureCheck"]
+defaultTargets = ["Zcash", "FixtureCheck", "Arithmetic"]
 
 [leanOptions]
 pp.unicode.fun = true # pretty-prints `fun a ↦ b`
@@ -39,3 +39,33 @@ name = "Zcash"
 [[lean_lib]]
 name = "FixtureCheck"
 globs = ["Zcash.Snark.Fixtures.+"]
+
+# The fast Pasta arithmetic: `Zcash/Arithmetic/` (ironwood-permanent, mathlib-side) and the two
+# temporary vendorings `Zcash/Vendor/CompPoly/` and `Zcash/Vendor/CompElliptic/`, whose READMEs
+# state their deletion criteria. Only part of these trees is reachable from the `Zcash` library
+# (`Zcash.Arithmetic.FastFftPar` has no importer at all), so without a target of their own the
+# unreached modules would silently stop being compiled and warning-checked. In `defaultTargets`
+# so plain `lake build` -- what CI runs -- keeps every module honest.
+[[lean_lib]]
+name = "Arithmetic"
+globs = ["Zcash.Arithmetic.+", "Zcash.Vendor.CompPoly.+", "Zcash.Vendor.CompElliptic.+"]
+
+# The ONLY library in this repo with `precompileModules`. It is a core-only leaf: its modules
+# import nothing beyond Lean core, so native compilation covers ~4 files rather than a mathlib
+# import closure -- the latter is what OOM-crashed a 16 GB box on 2026-07-24. Everything
+# mathlib-side about these definitions lives in `Zcash.Vendor.CompPoly.Montgomery.Native64x8*`
+# and `Zcash/Arithmetic/`, which are NOT in this lane.
+#
+# `FastFieldNative` must keep a root module of the same name (`FastFieldNative.lean`): Lean
+# derives the dynlib's expected `initialize_…` symbol from the shared object's file name, and
+# without a matching module every importer fails with `error loading plugin, initializer not
+# found`.
+[[lean_lib]]
+name = "FastFieldNative"
+precompileModules = true
+globs = [
+  "FastFieldNative",
+  "Zcash.Vendor.CompPoly.Montgomery.Native64x8Defs",
+  "Zcash.Vendor.CompElliptic.ProjectiveMontDefs",
+  "Zcash.Vendor.CompPoly.ScalarFftDefs",
+]
