@@ -1091,11 +1091,10 @@ Sinsemilla generator-table load from the real `mainPost` operation stream and de
 The prover-side closure projects the same load from `ExtendsWitnesses` and converts
 its fixed-table clauses to the corresponding constraints. The deployed
 `orchardActionTopLevelCircuit` specializes this generic Action construction to the
-real generators and certified bases. The security-layer
-`circuit_soundness_to_ledger` theorem now enters through this closed top-level
-interface: it accepts synthesis well-formedness and the circuit's constraints, while
-the circuit discharges `EnvAssumptions` internally and owns the configuration used to
-extract the ledger witness.
+real generators and certified bases. Clean constraints remain on the generic
+integration side of the boundary: the security-layer bridge begins with the
+Action-native `SpecPost` and refines it to the ledger statement, rather than
+repeating the generic constraint-to-specification argument.
 
 The legacy `ActionAssignment` has been deleted. Its decoded constructor now returns
 the generic `TopLevelAssignment` indexed by `orchardActionTopLevelCircuit`, so

@@ -166,7 +166,7 @@ theorem path_iff_guarded_smoke
         ∀ i, ∃ b, Pool.merkle.compress i (children i) = some b :=
   Merkle.path_iff_guarded_defined
 
-/-- The circuit-level postcondition refines directly to the ledger action alternative. -/
+/-- The Action-native postcondition refines directly to the ledger action alternative. -/
 theorem spec_post_bridge_smoke {MSG SIG : Type*}
     (verify : PallasGroup → MSG → SIG → Prop)
     {wit : ActionData}
@@ -177,27 +177,6 @@ theorem spec_post_bridge_smoke {MSG SIG : Type*}
         CrossAddressSatisfied wit w ∧
         EnableFlagsSatisfied wit w :=
   specPost_to_ledger verify h
-
-/-- Keep the exported end-to-end soundness theorem at its intended public shape. -/
-theorem circuit_soundness_bridge_smoke {MSG SIG : Type*}
-    (verify : PallasGroup → MSG → SIG → Prop)
-    (i₀ : RegionIndex)
-    (env : Placed Environment Fp)
-    (hwellFormed : SynthesisWellFormed env.env
-      (orchardActionTopLevelCircuit.operations i₀))
-    (hconstraints : Constraints env.place env.env
-      (orchardActionTopLevelCircuit.operations i₀) i₀) :
-    ActionBreak
-        (extractPost orchardActionTopLevelCircuit.config () i₀ env) ∨
-      ∃ inst w,
-        PublicProjection
-            (extractPost orchardActionTopLevelCircuit.config () i₀ env) inst ∧
-        ActionSatisfied (Pool.primitives verify) Pool.keyBinding inst w ∧
-        CrossAddressSatisfied
-            (extractPost orchardActionTopLevelCircuit.config () i₀ env) w ∧
-        EnableFlagsSatisfied
-            (extractPost orchardActionTopLevelCircuit.config () i₀ env) w :=
-  circuit_soundness_to_ledger verify i₀ env hwellFormed hconstraints
 
 open Zcash.Meta
 
@@ -220,7 +199,6 @@ assert_no_sorry or_break_iff_guarded_smoke
 assert_no_sorry path_iff_guarded_smoke
 assert_no_sorry guardedPath_of_exact
 assert_no_sorry spec_post_bridge_smoke
-assert_no_sorry circuit_soundness_bridge_smoke
 assert_no_sorry actionBreak_of_classify
 assert_no_sorry classify_none_defined
 assert_no_sorry actionBreak_iff_classify_isSome

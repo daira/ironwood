@@ -1,6 +1,5 @@
 import Zcash.Circuits.Action.Bundle
 import Zcash.Circuits.Action.RealBases
-import Zcash.Circuits.Action.TopLevel
 import Zcash.Circuits.Specs.Pallas
 import Zcash.Security.Ledger.Pool
 
@@ -480,7 +479,7 @@ theorem classify_none_defined {wit : ActionData} (h : classifyAction wit = none)
 
 /-- **The Prop-level break and the computed classifier cannot diverge, at the consumer
 boundary either**: an exhibited `ActionBreak` holds exactly when the classifier reports
-an escape.  A consumer landing in the break arm of `circuit_soundness_to_ledger` can
+an escape.  A consumer landing in the break arm of `specPost_to_ledger` can
 therefore pass to `classifyAction`'s (and hence `classifyRelation`'s) computed data
 without reconstructing the glue: forward, each break constructor's
 `hashToPointB … = .inr` equation contradicts the defined hashes of a `none` verdict;
@@ -925,33 +924,5 @@ theorem specPost_to_ledger (verify : PallasGroup → MSG → SIG → Prop)
           simp [hz]
         exact (sub_eq_zero.mp ((mul_eq_zero.mp heo).resolve_left hvNew0)).symm
   · exact Or.inl hbreak
-
-/-- End-to-end refinement for a satisfying run of the deployed post-NU6.3
-Action circuit.  This is the direct composition of the circuit soundness
-contract with `specPost_to_ledger`; it deliberately leaves the exceptional
-Sinsemilla branch explicit and reports the enable gates as `EnableFlagsSatisfied`. -/
-theorem circuit_soundness_to_ledger (verify : PallasGroup → MSG → SIG → Prop)
-    (i₀ : RegionIndex)
-    (env : Placed Environment Fp)
-    (hwellFormed : SynthesisWellFormed env.env
-      (orchardActionTopLevelCircuit.operations i₀))
-    (hconstraints : Constraints env.place env.env
-      (orchardActionTopLevelCircuit.operations i₀) i₀) :
-    ActionBreak
-        (extractPost orchardActionTopLevelCircuit.config () i₀ env) ∨
-      ∃ inst w,
-        PublicProjection
-            (extractPost orchardActionTopLevelCircuit.config () i₀ env) inst ∧
-        ActionSatisfied (Pool.primitives verify) Pool.keyBinding inst w ∧
-        CrossAddressSatisfied
-            (extractPost orchardActionTopLevelCircuit.config () i₀ env) w ∧
-        EnableFlagsSatisfied
-            (extractPost orchardActionTopLevelCircuit.config () i₀ env) w := by
-  have hstatement :=
-    orchardActionTopLevelCircuit.soundness i₀ env hwellFormed hconstraints
-  have hpost : SpecPost orchardGenerators orchardBases () ()
-      (extractPost orchardActionTopLevelCircuit.config () i₀ env) :=
-    specPost_of_topLevelStatement orchardGenerators orchardBases i₀ env hstatement
-  exact specPost_to_ledger verify hpost
 
 end Zcash.Security.Ledger.Bridge

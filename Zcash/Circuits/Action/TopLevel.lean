@@ -248,16 +248,4 @@ def orchardActionTopLevelCircuit :
     TopLevelCircuit Fp Unit Config unit :=
   topLevelCircuit Specs.Sinsemilla.orchardGenerators orchardBases
 
-/--
-The generic statement exported by the closed Action circuit is exactly the
-Action-native postcondition for its circuit-owned configuration.
--/
-theorem specPost_of_topLevelStatement
-    (G : Generators) (B : Bases)
-    (i : RegionIndex) (env : Placed Environment Fp)
-    (h : (topLevelCircuit G B).Statement i env) :
-    SpecPost G B () ()
-      (extractPost (topLevelCircuit G B).config () i env) :=
-  h
-
 end Zcash.Circuits.Action
