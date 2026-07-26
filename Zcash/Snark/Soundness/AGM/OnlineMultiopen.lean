@@ -12,12 +12,14 @@ does not by itself rule out choosing an alternative representation after seeing 
 This file adds a non-breaking refinement of `ComputedAlgebraicFSFamily` for the tighter route:
 
 * the multiopen aggregate coordinates must be the deterministic MSM coordinates obtained from the
-  actual representation-carrying commitments used by the assembly; and
-* representations emitted before a squeeze are stable when that squeeze, or a later multiopen
-  squeeze, is reprogrammed.
+  actual representation-carrying commitments used by the assembly.
+
+It also defines reusable chronology views for individual emitted fields.  Exact deployed root
+pricing uses the stronger whole-root prefix-factorization interface in `DeployedPinnedRoots`, so
+these narrower views are not presented as sufficient on their own.
 
 No protocol point or scalar is added to the transcript.  These are ghost conditions on the AGM
-adversary, matching the causal order already enforced by the deployed prover/verifier.
+adversary.
 -/
 
 namespace Zcash.Snark
@@ -130,7 +132,7 @@ theorem AlgebraicWfProof.ofOnlineMultiopenRepresented_canonical
   · intro nu
     rfl
 
-/-! ## Prefix pinning -/
+/-! ## Lower-level chronology views -/
 
 /-- A view of the adversary output is pinned from squeeze `first` through squeeze `last` when
 changing any answer in that interval cannot change the view.  The query point is computed from the
@@ -144,14 +146,19 @@ def OracleComp.ViewPinnedBetween {T F P View : Type*} [DecidableEq T]
   forall (O : T -> F) (j : Fin 11), first <= j.val -> j.val <= last -> forall v : F,
     view (A.run (Function.update O (prefixes (A.run O) j) v)) = view (A.run O)
 
-/-- The exact online conditions needed by algebraic multiopen assembly:
+/-- Useful lower-level chronology conditions for algebraic multiopen assembly:
 
 * all commitment representations present before `x1` (index 5) stay fixed through `x4` (index 8);
 * the representation of `qPrime`, emitted before `x3` (index 7), stays fixed through `x4`;
 * the claimed `u` scalars, emitted after `x3`, stay fixed across the `x4` draw.
 
 The last field makes that ordinary transcript-causality requirement explicit for the general
-`OracleComp` model; unlike the first two fields it carries no AGM representation data. -/
+`OracleComp` model; unlike the first two fields it carries no AGM representation data.
+
+These view equalities are intentionally not treated as sufficient for pricing the deployed root
+sets.  The latter also depend on grouping and ordinary proof data, so
+`ComputedDeployedRootFSFamily` separately requires exact root-set factorization through each
+pre-squeeze transcript prefix. -/
 structure OnlineMultiopenPinned {T : Type*} [DecidableEq T]
     {vk : VerifyingKey shape Fp VestaG}
     {instanceCommitment : Fin shape.numProofs -> Nat -> VestaG}
@@ -168,10 +175,10 @@ structure OnlineMultiopenPinned {T : Type*} [DecidableEq T]
 
 /-! ## Refined computed family -/
 
-/-- A computed AGM family whose multiopen coordinates are canonical and whose emitted
-representations obey the deployed transcript chronology.  Extending, rather than modifying,
-`ComputedAlgebraicFSFamily` keeps all existing IPA/DLOG theorems available through `toFamily`.
--/
+/-- A computed AGM family whose multiopen coordinates are canonical.  Exact deployed chronology
+is added only at the root-family layer, where all data affecting each priced bad set is visible.
+Extending, rather than modifying, `ComputedAlgebraicFSFamily` keeps all existing IPA/DLOG theorems
+available through `toFamily`. -/
 structure ComputedOnlineMultiopenFSFamily (shape : Shape)
     extends ComputedAlgebraicFSFamily shape where
   fixedRepresentations : (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) ->
@@ -179,12 +186,10 @@ structure ComputedOnlineMultiopenFSFamily (shape : Shape)
   canonical : forall basis O,
     CanonicalOnlineMultiopenCoordinates ((adversary basis).run O)
       (fixedRepresentations basis)
-  pinned : forall basis,
-    OnlineMultiopenPinned (adversary basis) (algebraicFullPrefixesPre init)
 
 namespace ComputedOnlineMultiopenFSFamily
 
-/-- Forget only the new multiopen chronology evidence. -/
+/-- Forget the canonical multiopen-coordinate evidence. -/
 abbrev toFamily (family : ComputedOnlineMultiopenFSFamily shape) :
     ComputedAlgebraicFSFamily shape := family.toComputedAlgebraicFSFamily
 
