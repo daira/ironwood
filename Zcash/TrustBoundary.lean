@@ -856,13 +856,20 @@ axiom-bounded: they are the reduction's data path, so the plain-`def` half of th
 what stops a later `noncomputable` marking from silently voiding the
 breaks-as-computed-data convention. `+native` covers the deployed bases' on-curve
 certificates carried in their erased `Prop` fields; `+choice` is the same erased-positions
-tier the classifier itself sits at. -/
+tier the classifier itself sits at.
+
+`ofPoint_hashToPoint` and `breakCoeffs_nontrivial` stay at the standard tier: the chain
+combination reasons in `ℕ`-multiples of the lifted table, and nontriviality only in the scalar
+field. `breakCoeffs_relation` needs `+native` because it scales group elements by field
+elements, and the `Module Fq PallasGroup` instance is built from the Pallas point count. That
+is the same witness the circuit layer above carries, reaching this file through the group's
+scalar action rather than a certificate check. -/
 
 assert_computable Zcash.Security.Ledger.Bridge.breakCoeffs +choice
 assert_computable Zcash.Security.Ledger.Bridge.relationOfBreakData +choice +native
 assert_computable Zcash.Security.Ledger.Bridge.classifyRelation +choice +native
 assert_axioms Zcash.Security.Ledger.Bridge.ofPoint_hashToPoint
-assert_axioms Zcash.Security.Ledger.Bridge.breakCoeffs_relation
+assert_axioms Zcash.Security.Ledger.Bridge.breakCoeffs_relation +native
 assert_axioms Zcash.Security.Ledger.Bridge.breakCoeffs_nontrivial
 assert_axioms Zcash.Security.Ledger.Bridge.classify_query_inr +native
 assert_axioms Zcash.Security.Ledger.Bridge.classifyRelation_isSome_iff +native
