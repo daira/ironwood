@@ -23,20 +23,21 @@ nullifier is in effect a Pedersen hash whose input includes ρ directly, so Faer
 Resistance rests on discrete log alone (see the
 [design page's rationale](https://zcash.github.io/orchard/design/nullifiers.html#rationale)).
 
-`NontrivialRelation.ofNullifierCollision` computes the reduction: a collision between
-*distinct* notes yields a `NontrivialRelation` among the commitment bases, `K`, and
-`R` — the same terminal, under the same independent-hash-to-curve-bases discharge, as
-the balance argument's relations. The extract ±-property splits into two sign cases;
-nontriviality comes from the coefficient vectors (their difference is nonzero for
-distinct notes, and their sum is never zero — concretely both hold via the initial
-`2^n • 𝒬` term, whose binary-expansion coefficients determine the message).
+`NontrivialRelation.ofNullifierCollision` computes the reduction: a `NullifierCollision`
+yields a `NontrivialRelation` among the commitment bases, `K`, and `R` — the same
+terminal, under the same independent-hash-to-curve-bases discharge, as the balance
+argument's relations. The extract ±-property splits into two sign cases; nontriviality
+comes from the coefficient vectors (their difference is nonzero for distinct notes,
+their sum is never zero — concretely both hold via the initial `2^n • 𝒬` term, whose
+binary-expansion coefficients determine the message).
 
-The distinct-notes premiss is the consumer's obligation. The intended discharge is
-ledger-level ρ-uniqueness — output notes carry pairwise-distinct ρ in a valid ledger
-(`output_rho_nodup`, the consensus nullifier checks), and equal note records would
-share a ρ — but that composition is not yet formalized: this module sees only the
-collision, not the ledger, and nothing yet connects a game-level collision's notes to
-the ledger's outputs.
+The reduction needs no distinct-notes premiss: the collision's own opening distinctness
+(`(rcm₁, note₁) ≠ (rcm₂, note₂)`) covers every case — distinct notes use the coefficient
+difference, and equal notes force `rcm₁ ≠ rcm₂`, a nonzero randomness coefficient. So it
+composes directly with the game-produced collisions of `faerieGoldCore` /
+`spendabilityOrBreak`, which hold exactly that inequality at construction. (The
+equal-note, equal-`rcm`, distinct-`nk` case — the PRF collision the design page
+discusses — cannot arise: equal openings pin `cm`, so the two spends would coincide.)
 -/
 
 namespace Zcash.Security.Ledger.Model
@@ -137,15 +138,16 @@ theorem cm₂_eq :
 
 end NullifierShape
 
-/-- **The nullifier-binding reduction.** A nullifier collision between distinct notes
-computes a nontrivial relation among the commitment bases, `K`, and `R`: the extract
-±-property turns the collision into a point equation, the openings decompose both
-commitments over the fixed bases, and the coefficient conditions certify
-nontriviality in either sign case. The distinct-notes premiss is the consumer's
-obligation; its intended discharge — not yet formalized — is ledger-level
-ρ-uniqueness (`output_rho_nodup`). -/
+/-- **The nullifier-binding reduction.** A nullifier collision computes a nontrivial
+relation among the commitment bases, `K`, and `R`: the extract ±-property turns the
+collision into a point equation, the openings decompose both commitments over the
+fixed bases, and the coefficient conditions certify nontriviality in either sign case.
+No distinct-notes premiss is needed — the opening distinctness `c.ne` suffices: in the
+`+` case, distinct notes give a nonzero base-coefficient difference (`coeff_sub_ne`),
+and equal notes force `rcm₁ ≠ rcm₂` (a nonzero randomness coefficient); the `−` case
+needs no distinctness at all (`coeff_add_ne`). -/
 def NontrivialRelation.ofNullifierCollision [DecidableEq G] (S : NullifierShape P)
-    (c : NullifierCollision P) (hne : c.note₁ ≠ c.note₂) :
+    (c : NullifierCollision P) :
     NontrivialRelation (F := F) S.bases S.K S.R :=
   have hcf₁ : S.coeff c.note₁ = some ((S.coeff c.note₁).get (S.coeff₁_isSome c)) :=
     (Option.some_get _).symm
@@ -161,7 +163,13 @@ def NontrivialRelation.ofNullifierCollision [DecidableEq G] (S : NullifierShape 
         - (S.coeff c.note₂).get (S.coeff₂_isSome c)
       α := S.scalar c.nk₁ c.note₁.ρ c.note₁.ψ - S.scalar c.nk₂ c.note₂.ρ c.note₂.ψ
       β := c.rcm₁ - c.rcm₂
-      nontrivial := Or.inl (S.coeff_sub_ne hcf₁ hcf₂ hne)
+      nontrivial := by
+        by_cases hnn : c.note₁ = c.note₂
+        · -- equal notes ⇒ the openings differ only in randomness
+          refine Or.inr (Or.inr ?_)
+          intro hβ
+          exact c.ne (Prod.ext (sub_eq_zero.mp hβ) hnn)
+        · exact Or.inl (S.coeff_sub_ne hcf₁ hcf₂ hnn)
       relation := by
         have h := hplus
         rw [S.cm₁_eq c, S.cm₂_eq c] at h
