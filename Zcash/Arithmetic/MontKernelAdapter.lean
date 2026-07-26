@@ -10,7 +10,7 @@ field**, compiled to native code through the `FastFieldNative` `precompileModule
 This module (mathlib-side, NOT in that leaf's glob) provides the `ZMod`-typed entry points
 the certificate evaluates — coordinates into Montgomery form, kernel, affine reading back —
 and the PROVEN equalities to the statement-surface functions, chaining the kernel's
-simulation theorems (`msmM_spec`, `fftM_spec`) into the existing `_eq` ladders.
+simulation theorem `msmM_spec` into the existing `_eq` ladder.
 
 It is the Montgomery twin of `Zcash.Arithmetic.NatKernelAdapter`, mirroring it
 declaration for declaration.
@@ -96,42 +96,5 @@ theorem commitLagrangeMontWith_eq (c : ℕ) (hc : 0 < c)
     simp only [Function.comp_apply, toPVesM_ofPVesM, toAffine_ofAffine]
   rw [hterms, Msm.zip_terms_eq, Msm.pippenger_eq_msm c hc, List.map_map]
   rfl
-
-/-- The Lagrange-basis derivation through the Montgomery-lane kernel FFT. -/
-def derivedUrsGLagrangeMont (urs : URS G) : List G :=
-  let monomial := List.ofFn urs.g
-  let minv : Fp := ((2 : Fp) ^ urs.k)⁻¹
-  let a0 : Array PM := (monomial.map fun g => ofPVesM (ofAffine g)).toArray
-  let tw : Array ℕ :=
-    (Array.range (2 ^ urs.k / 2)).map fun i => ((omegaInvOf urs.k) ^ i : Fp).val
-  ((PM.fft a0 tw urs.k).map toGM).toList.map
-    fun point => minv.val • point
-
-/-- **The Montgomery Lagrange derivation is `derivedUrsGLagrange`.** -/
-theorem derivedUrsGLagrangeMont_eq (urs : URS G) :
-    derivedUrsGLagrangeMont urs = derivedUrsGLagrange urs := by
-  simp only [derivedUrsGLagrangeMont, derivedUrsGLagrange]
-  have hfft := ProjectiveMont.fftM_spec
-    ((List.ofFn urs.g).map fun g => ofPVesM (ofAffine g)).toArray
-    ((Array.range (2 ^ urs.k / 2)).map
-      fun i => ((omegaInvOf urs.k) ^ i : Fp).val)
-    (omegaInvOf urs.k) urs.k
-    (by intro p hp
-        rw [List.mem_toArray, List.mem_map] at hp
-        obtain ⟨g, -, rfl⟩ := hp
-        exact wfp_ofPVesM _)
-    (by intro p hp
-        rw [List.mem_toArray, List.mem_map] at hp
-        obtain ⟨g, -, rfl⟩ := hp
-        exact valid_toPVesM_ofPVesM_ofAffine g)
-    (by simp)
-    (by intro i hi
-        simp only [List.size_toArray, List.length_map, List.length_ofFn] at hi
-        simp [hi])
-  rw [hfft]
-  have ha0 : (((List.ofFn urs.g).map fun g => ofPVesM (ofAffine g)).toArray.map
-      toGM) = (List.ofFn urs.g).toArray := by
-    rw [List.map_toArray, map_toGM_ofPVesM_ofAffine]
-  rw [ha0]
 
 end Zcash.Snark.Keygen.Fast

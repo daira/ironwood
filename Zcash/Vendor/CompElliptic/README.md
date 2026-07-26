@@ -40,5 +40,5 @@ Violating that would make the CompPoly migration (#258/#274) depend on the CompE
 so the two trees could no longer be deleted independently.
 
 The mathlib-side glue that consumes this tree from ironwood's side — the kernel adapters, the
-fast FFT drivers and the scalar inverse-DFT bridge — is ironwood-permanent and lives in
-`Zcash/Arithmetic/`, not here.
+group-FFT statement surface and the scalar inverse-DFT bridge — is ironwood-permanent and lives
+in `Zcash/Arithmetic/`, not here.

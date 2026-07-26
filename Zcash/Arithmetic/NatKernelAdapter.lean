@@ -1,6 +1,5 @@
 import Zcash.Vendor.CompElliptic.NatKernelEquiv
 import Zcash.Vendor.CompElliptic.MsmProj
-import Zcash.Arithmetic.FastFft
 
 /-!
 # Native-lane adapters: the zero-import `NatKernel` behind the keygen spellings
@@ -9,10 +8,10 @@ import Zcash.Arithmetic.FastFft
 double-and-add, scatter Pippenger, radix-2 FFT over canonical `ℕ` representatives).
 This module provides its `ZMod`-typed entry points — coordinates out via `ZMod.val`,
 kernel, cast back — and the PROVEN equalities to the statement-surface functions,
-chaining the kernel's simulation theorems (`msm_spec`, `fft_spec`) into the existing
-`_eq` ladders. The certificate now evaluates the Montgomery lane instead
-(`MontKernelAdapter`), whose correctness proofs transport through these entry points;
-they are proof infrastructure, not an evaluation path.
+chaining the kernel's simulation theorem `msm_spec` into the existing `_eq` ladder.
+The certificate now evaluates the Montgomery lane instead (`MontKernelAdapter`), whose
+correctness proofs transport through these entry points; they are proof infrastructure,
+not an evaluation path.
 -/
 
 namespace Zcash.Snark.Keygen.Fast
@@ -79,41 +78,5 @@ theorem commitLagrangeKernelWith_eq (c : ℕ) (hc : 0 < c)
     simp only [Function.comp_apply, toPVes_ofPVes, toAffine_ofAffine]
   rw [hterms, Msm.zip_terms_eq, Msm.pippenger_eq_msm c hc, List.map_map]
   rfl
-
-/-- The Lagrange-basis derivation through the native-lane kernel FFT. -/
-def derivedUrsGLagrangeKernel (urs : URS G) : List G :=
-  let monomial := List.ofFn urs.g
-  let minv : Fp := ((2 : Fp) ^ urs.k)⁻¹
-  let a0 : Array P3 := (monomial.map fun g => ofPVes (ofAffine g)).toArray
-  let tw : Array ℕ :=
-    (Array.range (2 ^ urs.k / 2)).map fun i => ((omegaInvOf urs.k) ^ i : Fp).val
-  ((NatKernel.fft a0 tw urs.k).map NatKernel.toG).toList.map
-    fun point => minv.val • point
-
-/-- **The kernel Lagrange derivation is `derivedUrsGLagrange`.** -/
-theorem derivedUrsGLagrangeKernel_eq (urs : URS G) :
-    derivedUrsGLagrangeKernel urs = derivedUrsGLagrange urs := by
-  simp only [derivedUrsGLagrangeKernel, derivedUrsGLagrange]
-  have hfft := NatKernel.fft_spec
-    ((List.ofFn urs.g).map fun g => ofPVes (ofAffine g)).toArray
-    ((Array.range (2 ^ urs.k / 2)).map
-      fun i => ((omegaInvOf urs.k) ^ i : Fp).val)
-    (omegaInvOf urs.k) urs.k
-    (by intro p hp
-        rw [List.mem_toArray, List.mem_map] at hp
-        obtain ⟨g, -, rfl⟩ := hp
-        exact valid_toPVes_ofPVes_ofAffine g)
-    (by simp)
-    (by intro i hi
-        simp only [List.size_toArray, List.length_map, List.length_ofFn] at hi
-        simp [hi])
-  rw [hfft]
-  have ha0 : (((List.ofFn urs.g).map fun g => ofPVes (ofAffine g)).toArray.map
-      NatKernel.toG) = (List.ofFn urs.g).toArray := by
-    rw [List.map_toArray, List.map_map]
-    refine congrArg List.toArray ?_
-    conv_rhs => rw [← List.map_id (List.ofFn urs.g)]
-    exact List.map_congr_left fun g _ => toG_ofPVes_ofAffine g
-  rw [ha0]
 
 end Zcash.Snark.Keygen.Fast

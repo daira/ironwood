@@ -43,8 +43,9 @@ globs = ["Zcash.Snark.Fixtures.+"]
 # The fast Pasta arithmetic: `Zcash/Arithmetic/` (ironwood-permanent, mathlib-side) and the two
 # temporary vendorings `Zcash/Vendor/CompPoly/` and `Zcash/Vendor/CompElliptic/`, whose READMEs
 # state their deletion criteria. Only part of these trees is reachable from the `Zcash` library
-# (`Zcash.Arithmetic.FastFftPar` has no importer at all), so without a target of their own the
-# unreached modules would silently stop being compiled and warning-checked. In `defaultTargets`
+# (`Zcash.Arithmetic.MontKernelAdapter` and `Zcash.Arithmetic.ScalarFftEquiv` have no importer
+# at all), so without a target of their own the unreached modules would silently stop being
+# compiled and warning-checked. In `defaultTargets`
 # so plain `lake build` -- what CI runs -- keeps every module honest.
 [[lean_lib]]
 name = "Arithmetic"

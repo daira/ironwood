@@ -4,7 +4,7 @@ Released under the Apache License, Version 2.0.
 -/
 import Zcash.Vendor.CompPoly.ScalarFftDefs
 import Zcash.Vendor.CompPoly.Montgomery.Pasta
-import Zcash.Vendor.CompElliptic.NatKernelEquiv
+import Zcash.Arithmetic.Fft
 
 /-!
 # The scalar Montgomery FFT is the proven group FFT at `G := Fp`
@@ -22,19 +22,19 @@ residues (`WFs x := x.Bounded ∧ x.toNat < p`), the carrier property of the pro
 `FastField` operation on the nose, so the per-operation cast lemmas are the vendored field's
 `toField_*` homomorphism lemmas.
 
-`ScalarFftDefs.fft` and `bestFftG` are recognized as the same generic loop nest
-`NatKernel.fftGen` (`rfl` on both sides), which `NatKernel.fftGen_eq_folds` turns into pure
-`List.foldl`s; the simulation invariant `SimS` is then pushed through the permutation and each
-butterfly, exactly as `NatKernelEquiv` does for the group lane.  The twiddle table of
-`bestFftG` is the only piece that differs: the kernel receives it in Montgomery form from the
-caller, so the butterflies compare `mul` against `t.val • ·` at corresponding entries.
+`ScalarFftDefs.fft` and `bestFftG` are recognized as the same generic loop nest `Keygen.fftGen`
+(`Zcash/Arithmetic/Fft.lean`, `rfl` on both sides), which `Keygen.fftGen_eq_folds` turns into
+pure `List.foldl`s; the simulation invariant `SimS` is then pushed through the permutation and
+each butterfly.  The twiddle table of `bestFftG` is the only piece that differs: the kernel
+receives it in Montgomery form from the caller, so the butterflies compare `mul` against
+`t.val • ·` at corresponding entries.
 -/
 
 namespace Zcash.Vendor.ScalarMont
 
 open Montgomery.Native64x8
 open Montgomery.Native64x8 (Limbs8)
-open CompElliptic.Curves.Pasta.Fast
+open Zcash.Snark.Keygen
 open CompElliptic.Fields.Pasta (PALLAS_BASE_CARD)
 
 /-- The Vesta scalar field — `PALLAS_BASE_CARD` in the Pasta naming. -/
@@ -162,13 +162,13 @@ private theorem twArrS_get (omega : Fp) (m i : ℕ) :
 /-- The kernel FFT is the generic loop nest at the scalar field operations. -/
 private theorem fftS_eq_gen (a0 : Array Limbs8) (tw : Array Limbs8) (logN : ℕ) :
     fft a0 tw logN
-      = NatKernel.fftGen PallasFq.add PallasFq.sub PallasFq.mul a0 tw logN := rfl
+      = fftGen PallasFq.add PallasFq.sub PallasFq.mul a0 tw logN := rfl
 
 /-- `bestFftG` at `G := Fp` is the generic loop nest at the field's own operations, with the
 twiddle table factored out. -/
 private theorem bestFftG_eq_genS (a0 : Array Fp) (omega : Fp) (logN : ℕ) :
-    Zcash.Snark.Keygen.bestFftG a0 omega logN
-      = NatKernel.fftGen (· + ·) (· - ·) (fun (t : Fp) p => t.val • p) a0
+    bestFftG a0 omega logN
+      = fftGen (· + ·) (· - ·) (fun (t : Fp) p => t.val • p) a0
           (twArrS omega (a0.size / 2)) logN := rfl
 
 /-! ## The simulation invariant -/
@@ -214,14 +214,14 @@ private theorem foldl_relS {σ σ' β : Type} (R : σ → σ' → Prop) (l : Lis
   | cons x l ih => exact fun s s' h => ih _ _ (hstep s s' x h)
 
 private theorem simS_permStep (logN : ℕ) {a : Array Limbs8} {b : Array Fp} (h : SimS a b)
-    (k : ℕ) : SimS (NatKernel.permStep logN a k) (NatKernel.permStep logN b k) := by
-  unfold NatKernel.permStep
+    (k : ℕ) : SimS (permStep logN a k) (permStep logN b k) := by
+  unfold permStep
   split
-  · have h1 : SimS (a.set! k a[Zcash.Snark.Keygen.bitreverse k logN]!)
-        (b.set! k (montValS a[Zcash.Snark.Keygen.bitreverse k logN]!)) :=
+  · have h1 : SimS (a.set! k a[bitreverse k logN]!)
+        (b.set! k (montValS a[bitreverse k logN]!)) :=
       h.set k (h.wf_get _)
-    rw [h.get (Zcash.Snark.Keygen.bitreverse k logN)] at h1
-    have h2 := h1.set (Zcash.Snark.Keygen.bitreverse k logN) (h.wf_get k)
+    rw [h.get (bitreverse k logN)] at h1
+    have h2 := h1.set (bitreverse k logN) (h.wf_get k)
     rw [h.get k] at h2
     exact h2
   · exact h
@@ -254,15 +254,15 @@ private theorem simS_bfly {a : Array Limbs8} {b : Array Fp} (h : SimS a b) (iA i
 private theorem simS_butterfly (n half : ℕ) (tw : Array Limbs8) (twFp : Array Fp)
     (hwtw : ∀ i : ℕ, WFs tw[i]!) (htw : ∀ i : ℕ, montValS tw[i]! = twFp[i]!) (c j : ℕ)
     {a : Array Limbs8} {b : Array Fp} (h : SimS a b) :
-    SimS (NatKernel.butterflyGen PallasFq.add PallasFq.sub PallasFq.mul n half tw c j a)
-        (NatKernel.butterflyGen (· + ·) (· - ·) (fun (t : Fp) p => t.val • p) n half twFp c j b) :=
+    SimS (butterflyGen PallasFq.add PallasFq.sub PallasFq.mul n half tw c j a)
+        (butterflyGen (· + ·) (· - ·) (fun (t : Fp) p => t.val • p) n half twFp c j b) :=
   simS_bfly h _ _ _ _ (hwtw (j * (n / (2 * half)))) (htw (j * (n / (2 * half))))
 
 private theorem simS_roundFold (n half : ℕ) (tw : Array Limbs8) (twFp : Array Fp)
     (hwtw : ∀ i : ℕ, WFs tw[i]!) (htw : ∀ i : ℕ, montValS tw[i]! = twFp[i]!)
     {a : Array Limbs8} {b : Array Fp} (h : SimS a b) :
-    SimS (NatKernel.roundFoldGen PallasFq.add PallasFq.sub PallasFq.mul n half tw a)
-        (NatKernel.roundFoldGen (· + ·) (· - ·) (fun (t : Fp) p => t.val • p) n half twFp b) :=
+    SimS (roundFoldGen PallasFq.add PallasFq.sub PallasFq.mul n half tw a)
+        (roundFoldGen (· + ·) (· - ·) (fun (t : Fp) p => t.val • p) n half twFp b) :=
   foldl_relS SimS _ _ _
     (fun s s' c hs => foldl_relS SimS _ _ _
       (fun _ _ j hr => simS_butterfly n half tw twFp hwtw htw c j hr) s s' hs) a b h
@@ -272,14 +272,14 @@ private theorem simS_roundFold (n half : ℕ) (tw : Array Limbs8) (twFp : Array 
 /-- **The scalar kernel FFT is `bestFftG` at `G := Fp`.**  With Montgomery twiddles reading back
 as `ω^i`, the kernel's limb array stays well formed and maps cellwise, under `montValS`, onto
 `bestFftG` of the mapped input: the bit-reversal permutation moves cells, and every butterfly is
-the field's own add/sub/mul.  Statement shape mirrors `NatKernel.fft_spec`. -/
+the field's own add/sub/mul. -/
 theorem fftS_spec (a0 : Array Limbs8) (tw : Array Limbs8) (omega : Fp) (logN : ℕ)
     (hwf : ∀ x ∈ a0, WFs x) (hwtw : ∀ i : ℕ, WFs tw[i]!)
     (htwsize : tw.size = a0.size / 2)
     (htw : ∀ i, i < a0.size / 2 → montValS tw[i]! = omega ^ i) :
     (∀ x ∈ fft a0 tw logN, WFs x)
       ∧ (fft a0 tw logN).map montValS
-          = Zcash.Snark.Keygen.bestFftG (a0.map montValS) omega logN := by
+          = bestFftG (a0.map montValS) omega logN := by
   have hsize : (a0.map montValS).size = a0.size := Array.size_map ..
   have htw' : ∀ i : ℕ, montValS tw[i]! = (twArrS omega (a0.size / 2))[i]! := by
     intro i
@@ -289,20 +289,20 @@ theorem fftS_spec (a0 : Array Limbs8) (tw : Array Limbs8) (omega : Fp) (logN : �
     · rw [if_neg hi, getElem!_neg tw i (by omega), montValS_default]
       rfl
   have hsim0 : SimS a0 (a0.map montValS) := ⟨hwf, rfl⟩
-  have hperm : SimS ((List.range a0.size).foldl (NatKernel.permStep logN) a0)
-      ((List.range a0.size).foldl (NatKernel.permStep logN) (a0.map montValS)) :=
+  have hperm : SimS ((List.range a0.size).foldl (permStep logN) a0)
+      ((List.range a0.size).foldl (permStep logN) (a0.map montValS)) :=
     foldl_relS SimS _ _ _ (fun s s' k hs => simS_permStep logN hs k) _ _ hsim0
   have hrounds : SimS
       ((List.range logN).foldl (fun a r =>
-        NatKernel.roundFoldGen PallasFq.add PallasFq.sub PallasFq.mul a0.size (2 ^ r) tw a)
-        ((List.range a0.size).foldl (NatKernel.permStep logN) a0))
+        roundFoldGen PallasFq.add PallasFq.sub PallasFq.mul a0.size (2 ^ r) tw a)
+        ((List.range a0.size).foldl (permStep logN) a0))
       ((List.range logN).foldl (fun a r =>
-        NatKernel.roundFoldGen (· + ·) (· - ·) (fun (t : Fp) p => t.val • p) a0.size (2 ^ r)
+        roundFoldGen (· + ·) (· - ·) (fun (t : Fp) p => t.val • p) a0.size (2 ^ r)
           (twArrS omega (a0.size / 2)) a)
-        ((List.range a0.size).foldl (NatKernel.permStep logN) (a0.map montValS))) :=
+        ((List.range a0.size).foldl (permStep logN) (a0.map montValS))) :=
     foldl_relS SimS _ _ _
       (fun s s' r hs => simS_roundFold a0.size (2 ^ r) tw _ hwtw htw' hs) _ _ hperm
-  rw [fftS_eq_gen, NatKernel.fftGen_eq_folds, bestFftG_eq_genS, NatKernel.fftGen_eq_folds,
+  rw [fftS_eq_gen, fftGen_eq_folds, bestFftG_eq_genS, fftGen_eq_folds,
     hsize]
   exact hrounds
 

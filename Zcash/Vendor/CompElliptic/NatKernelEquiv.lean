@@ -5,7 +5,6 @@ Released under the Apache License, Version 2.0.
 import Zcash.Vendor.CompElliptic.NatKernel
 import Zcash.Vendor.CompElliptic.Projective
 import Zcash.Vendor.CompElliptic.MsmProj
-import Zcash.Arithmetic.FastFft
 
 /-!
 # The `Nat` kernel is the proven projective arithmetic
@@ -30,12 +29,16 @@ nothing below needs that).  Each kernel operation is shown to commute with it, e
 * `pnsmul_spec` — the kernel's 256-step ladder is `n • ·` in the affine group, for `n < 2 ^ 256`
 * `msm_spec` — the kernel's windowed Pippenger MSM is `Fast.Msm.pippenger`, the accelerator proven
   equal to the naive multi-scalar multiplication
-* `fft_spec` — the kernel's radix-2 DIT FFT is `Keygen.bestFftG`, so the DFT specification of
-  `Keygen/FftSpec.lean` applies to it verbatim
+* `valid_pneg`, `toAffine_pneg` — the kernel's negation is the affine group inverse
 
-The `msm` and `fft` results go through the already-proven projective ports: `msm` mirrors
-`MsmProj.pippengerProjScatter` fold for fold (bucket scatter, suffix-sum downsweep, Horner), and
-`fft` is an Array simulation of `bestFftG`'s loop nest carrying `Valid` through every cell.
+`msm_spec` goes through the already-proven projective port: `msm` mirrors
+`MsmProj.pippengerProjScatter` fold for fold (bucket scatter, suffix-sum downsweep, Horner).
+
+The kernel's radix-2 DIT FFT (`NatKernel.fft`) is deliberately *not* specified here: its
+statement needs a reference group DFT to be equal to, and the projective statement surface has
+none.  A consumer that does have one proves the array simulation on its side, out of `toG`,
+`toPVes_padd`/`valid_padd`, `pnsmul_spec` and `toAffine_pneg` — which is what the last section
+of this module exists to supply.
 -/
 
 namespace CompElliptic.Curves.Pasta.Fast.NatKernel
@@ -348,41 +351,22 @@ theorem msm_spec (c : ℕ) (hc : 0 < c) (terms : List (ℕ × P3))
       _ ≤ (2 ^ c) ^ W := by rw [← pow_mul]; exact Nat.pow_le_pow_right (by norm_num) hcW
   rw [hornerList_windows_eq_msm c W aterms hbound, ← Msm.pippenger_eq_msm c hc]
 
-/-! ## The radix-2 DIT FFT
+/-! ## The affine reading, and projective negation through it
 
-`fft` is the butterfly-for-butterfly transplant of `bestFftG` (`Zcash/Arithmetic/Fft.lean`)
-onto `P3`, with the twiddle table supplied by the caller as canonical `Nat` scalars (the kernel has
-no field type of its own).  The equality is an **Array simulation**: `Sim a b` says every cell of
-the kernel array is a valid projective point whose affine reading is the corresponding cell of the
-`bestFftG` array, and every phase of the algorithm — the bit-reversal permutation, each round, each
-butterfly — preserves it.  `toAffine_padd`/`valid_padd`, `pnsmul_spec` and `toAffine_pneg` are the
-only bridges used, exactly as in the ladder above.
+`toG` is the composite `toAffine ∘ toPVes`, the map an array-level simulation of the kernel
+transports along.  `pneg` is the last kernel operation whose affine meaning is needed: unlike
+`padd` it is not used by the ladder or the MSM, but any FFT-shaped consumer needs it for the
+butterfly's subtraction (`a − t = padd a (pneg t)`). -/
 
-Both FFTs are recognized as instances of one generic loop nest `fftGen` (`rfl` on both sides, the
-twiddle table of `bestFftG` factored out as `twArr`), which is then converted to pure `List.foldl`s
-by the core `forIn`-to-`foldl` route — the same decomposition `Keygen/FftSpec.lean` and
-`Arithmetic/FastFftPar.lean` use. -/
-
-/-- The Vesta scalar field, over which the FFT twiddles live. -/
-local notation "Fp" => Zcash.Snark.Fp
-
-/-- `bestFftG` needs `[Inhabited G]` for `Array.get!`; the affine group has a canonical `0`
-(the same instance `Fast/FastFft.lean` and `Fast/MsmProj.lean` declare locally). -/
-local instance : Inhabited G := ⟨0⟩
-
-/-- The affine reading of a kernel triple — the map the FFT simulation transports along. -/
+/-- The affine reading of a kernel triple. -/
 def toG (p : P3) : G := toAffine (toPVes p)
 
 theorem toG_eq : toG = toAffine ∘ toPVes := rfl
 
-private theorem toG_default : toG (default : P3) = (default : G) := by
-  show toAffine (toPVes pid) = 0
-  rw [toPVes_pid, toAffine_pid]
-
 /-! ### Projective negation through `toAffine` -/
 
 /-- Negation preserves validity: `(X : −Y : Z)` is on the curve whenever `(X : Y : Z)` is. -/
-private theorem valid_pneg {p : P3} (h : Valid (toPVes p)) : Valid (toPVes (pneg p)) := by
+theorem valid_pneg {p : P3} (h : Valid (toPVes p)) : Valid (toPVes (pneg p)) := by
   obtain ⟨hoc, hne⟩ := h
   rw [toPVes_pneg]
   refine ⟨?_, ?_⟩
@@ -394,7 +378,7 @@ private theorem valid_pneg {p : P3} (h : Valid (toPVes p)) : Valid (toPVes (pneg
     · exact Or.inr (Or.inr hz)
 
 /-- **The kernel's negation is the affine group inverse.** -/
-private theorem toAffine_pneg {p : P3} (h : Valid (toPVes p)) :
+theorem toAffine_pneg {p : P3} (h : Valid (toPVes p)) :
     toAffine (toPVes (pneg p)) = - toAffine (toPVes p) := by
   rcases eq_or_ne (toPVes p).Z 0 with hz | hz
   · have h1 : toAffine (toPVes (pneg p)) = 0 := by
@@ -417,351 +401,5 @@ private theorem toAffine_pneg {p : P3} (h : Valid (toPVes p)) :
       CompElliptic.CurveForms.ShortWeierstrass.SWPoint.neg_y]
     rw [Prod.mk.injEq] at e2
     rw [e2.1, e2.2, neg_div]
-
-/-! ### The generic loop nest -/
-
-open Zcash.Snark.Keygen in
-/-- The radix-2 DIT FFT loop nest with the element type, the butterfly operations and the twiddle
-type all abstracted: `fft` and `bestFftG` are both instances of it (`fft_eq_gen`,
-`bestFftG_eq_gen`, both `rfl`). -/
-def fftGen {α τ : Type} [Inhabited α] [Inhabited τ] (add sub : α → α → α)
-    (smul : τ → α → α) (a0 : Array α) (tw : Array τ) (logN : ℕ) : Array α := Id.run do
-  let n := a0.size
-  let mut a := a0
-  for k in [0:n] do
-    let rk := bitreverse k logN
-    if k < rk then
-      let ak := a[k]!
-      let ark := a[rk]!
-      a := (a.set! k ark).set! rk ak
-  let mut half := 1
-  for _ in [0:logN] do
-    let chunk := 2 * half
-    let twiddleChunk := n / chunk
-    for c in [0:n / chunk] do
-      let s := c * chunk
-      for j in [0:half] do
-        let twdl := tw[j * twiddleChunk]!
-        let aIdx := s + j
-        let bIdx := s + half + j
-        let aOld := a[aIdx]!
-        let t := smul twdl a[bIdx]!
-        a := a.set! aIdx (add aOld t)
-        a := a.set! bIdx (sub aOld t)
-    half := chunk
-  return a
-
-/-- The twiddle table of `bestFftG` (`[ω^0 … ω^(m−1)]`), extracted verbatim. -/
-private def twArr (omega : Fp) (m : ℕ) : Array Fp := Id.run do
-  let mut tw : Array Fp := Array.mkEmpty m
-  let mut w : Fp := 1
-  for _ in [0:m] do
-    tw := tw.push w
-    w := w * omega
-  return tw
-
-/-- The kernel FFT is the generic loop nest at `padd`/`padd ∘ pneg`/`pnsmul`. -/
-private theorem fft_eq_gen (a0 : Array P3) (tw : Array ℕ) (logN : ℕ) :
-    fft a0 tw logN = fftGen padd (fun x y => padd x (pneg y)) pnsmul a0 tw logN := rfl
-
-/-- `bestFftG` is the generic loop nest at the affine group law, with its twiddle table factored
-out (definitional: `Prod`-eta on the `for`-loop states). -/
-private theorem bestFftG_eq_gen (a0 : Array G) (omega : Fp) (logN : ℕ) :
-    Zcash.Snark.Keygen.bestFftG a0 omega logN
-      = fftGen (· + ·) (· - ·) (fun (t : Fp) p => t.val • p) a0
-          (twArr omega (a0.size / 2)) logN := rfl
-
-/-! ### The loop nest as pure folds -/
-
-open Zcash.Snark.Keygen in
-/-- Phase 1 of `fftGen`, extracted verbatim: the bit-reversal permutation. -/
-private def brPermGen {α : Type} [Inhabited α] (a0 : Array α) (logN : ℕ) : Array α := Id.run do
-  let mut a := a0
-  for k in [0:a0.size] do
-    let rk := bitreverse k logN
-    if k < rk then
-      let ak := a[k]!
-      let ark := a[rk]!
-      a := (a.set! k ark).set! rk ak
-  return a
-
-/-- Phase 2 of `fftGen`, extracted verbatim: the `logN` butterfly rounds. -/
-private def roundsGen {α τ : Type} [Inhabited α] [Inhabited τ] (add sub : α → α → α)
-    (smul : τ → α → α) (n : ℕ) (tw : Array τ) (a0 : Array α) (logN : ℕ) : Array α := Id.run do
-  let mut a := a0
-  let mut half := 1
-  for _ in [0:logN] do
-    let chunk := 2 * half
-    let twiddleChunk := n / chunk
-    for c in [0:n / chunk] do
-      let s := c * chunk
-      for j in [0:half] do
-        let twdl := tw[j * twiddleChunk]!
-        let aIdx := s + j
-        let bIdx := s + half + j
-        let aOld := a[aIdx]!
-        let t := smul twdl a[bIdx]!
-        a := a.set! aIdx (add aOld t)
-        a := a.set! bIdx (sub aOld t)
-    half := chunk
-  return a
-
-private theorem fftGen_decompose {α τ : Type} [Inhabited α] [Inhabited τ] (add sub : α → α → α)
-    (smul : τ → α → α) (a0 : Array α) (tw : Array τ) (logN : ℕ) :
-    fftGen add sub smul a0 tw logN
-      = roundsGen add sub smul a0.size tw (brPermGen a0 logN) logN := rfl
-
-open Zcash.Snark.Keygen in
-/-- One step of the bit-reversal permutation. -/
-def permStep {α : Type} [Inhabited α] (logN : ℕ) (a : Array α) (k : ℕ) : Array α :=
-  if k < bitreverse k logN then
-    (a.set! k a[bitreverse k logN]!).set! (bitreverse k logN) a[k]!
-  else a
-
-open Zcash.Snark.Keygen in
-private theorem brPermGen_eq_foldl {α : Type} [Inhabited α] (a0 : Array α) (logN : ℕ) :
-    brPermGen a0 logN = (List.range a0.size).foldl (permStep logN) a0 := by
-  show (forIn (m := Id) [0:a0.size] a0 (fun k a =>
-      if k < bitreverse k logN then
-        pure (ForInStep.yield ((a.set! k a[bitreverse k logN]!).set! (bitreverse k logN) a[k]!))
-      else pure (ForInStep.yield a)) >>= fun r => (pure r : Id (Array α))) = _
-  simp only [← apply_ite (fun (z : Array α) => pure (f := Id) (ForInStep.yield z))]
-  simp only [Std.Legacy.Range.forIn_eq_forIn_range', Std.Legacy.Range.size, Nat.sub_zero,
-    Nat.add_sub_cancel, Nat.div_one, ← List.range_eq_range', List.forIn_pure_yield_eq_foldl]
-  rfl
-
-/-- A single butterfly `(c, j)` of a round at width `half`, as a pure array step. -/
-def butterflyGen {α τ : Type} [Inhabited α] [Inhabited τ] (add sub : α → α → α)
-    (smul : τ → α → α) (n half : ℕ) (tw : Array τ) (c j : ℕ) (a : Array α) : Array α :=
-  (a.set! (c * (2 * half) + j)
-      (add a[c * (2 * half) + j]!
-        (smul tw[j * (n / (2 * half))]! a[c * (2 * half) + half + j]!))).set!
-    (c * (2 * half) + half + j)
-      (sub a[c * (2 * half) + j]!
-        (smul tw[j * (n / (2 * half))]! a[c * (2 * half) + half + j]!))
-
-/-- One round of butterflies at width `half`, as a pure double fold. -/
-def roundFoldGen {α τ : Type} [Inhabited α] [Inhabited τ] (add sub : α → α → α)
-    (smul : τ → α → α) (n half : ℕ) (tw : Array τ) (a0 : Array α) : Array α :=
-  (List.range (n / (2 * half))).foldl
-    (fun a c => (List.range half).foldl
-      (fun a j => butterflyGen add sub smul n half tw c j a) a) a0
-
-private theorem roundsGen_eq_foldl {α τ : Type} [Inhabited α] [Inhabited τ] (add sub : α → α → α)
-    (smul : τ → α → α) (n : ℕ) (tw : Array τ) (a0 : Array α) (logN : ℕ) :
-    roundsGen add sub smul n tw a0 logN =
-      ((List.range logN).foldl (fun (p : MProd (Array α) ℕ) _ =>
-        ⟨roundFoldGen add sub smul n p.2 tw p.1, 2 * p.2⟩) ⟨a0, 1⟩).1 := by
-  show (forIn (m := Id) [0:logN] (⟨a0, 1⟩ : MProd (Array α) ℕ) (fun _ p =>
-      (forIn (m := Id) [0:n / (2 * p.2)] p.1 (fun c a =>
-        ForInStep.yield <$> forIn (m := Id) [0:p.2] a (fun j a =>
-          pure (ForInStep.yield (butterflyGen add sub smul n p.2 tw c j a)))) >>= fun a =>
-        pure (ForInStep.yield (⟨a, 2 * p.2⟩ : MProd (Array α) ℕ)))) >>= fun r =>
-      match r with | ⟨a, _⟩ => (pure a : Id (Array α))) = _
-  simp only [Std.Legacy.Range.forIn_eq_forIn_range', Std.Legacy.Range.size, Nat.sub_zero,
-    Nat.add_sub_cancel, Nat.div_one, ← List.range_eq_range', List.forIn_pure_yield_eq_foldl,
-    map_pure, pure_bind]
-  rfl
-
-private theorem foldl_rounds_half {α τ : Type} [Inhabited α] [Inhabited τ] (add sub : α → α → α)
-    (smul : τ → α → α) (n : ℕ) (tw : Array τ) (l : ℕ) (a : Array α) :
-    (List.range l).foldl (fun (p : MProd (Array α) ℕ) _ =>
-        ⟨roundFoldGen add sub smul n p.2 tw p.1, 2 * p.2⟩) ⟨a, 1⟩ =
-      ⟨(List.range l).foldl (fun a r => roundFoldGen add sub smul n (2 ^ r) tw a) a, 2 ^ l⟩ := by
-  induction l with
-  | zero => simp
-  | succ l ih =>
-    rw [List.range_succ, List.foldl_append, List.foldl_append, ih]
-    simp only [List.foldl_cons, List.foldl_nil]
-    refine congrArg₂ MProd.mk rfl ?_
-    rw [pow_succ]
-    ring
-
-/-- The generic loop nest as a permutation fold followed by `logN` round folds. -/
-theorem fftGen_eq_folds {α τ : Type} [Inhabited α] [Inhabited τ] (add sub : α → α → α)
-    (smul : τ → α → α) (a0 : Array α) (tw : Array τ) (logN : ℕ) :
-    fftGen add sub smul a0 tw logN
-      = (List.range logN).foldl (fun a r => roundFoldGen add sub smul a0.size (2 ^ r) tw a)
-          ((List.range a0.size).foldl (permStep logN) a0) := by
-  rw [fftGen_decompose, roundsGen_eq_foldl, foldl_rounds_half, brPermGen_eq_foldl]
-
-/-! ### The simulation invariant -/
-
-/-- The kernel array simulates the affine array: every cell is a valid projective point, and the
-cellwise affine readings are the affine array. -/
-private def Sim (a : Array P3) (b : Array G) : Prop :=
-  (∀ p ∈ a, Valid (toPVes p)) ∧ a.map toG = b
-
-private theorem Sim.valid_get {a : Array P3} {b : Array G} (h : Sim a b) (i : ℕ) :
-    Valid (toPVes a[i]!) := by
-  by_cases hi : i < a.size
-  · rw [getElem!_pos a i hi]
-    exact h.1 _ (Array.getElem_mem hi)
-  · rw [getElem!_neg a i hi]
-    show Valid (toPVes pid)
-    rw [toPVes_pid]
-    exact valid_pid
-
-private theorem Sim.get {a : Array P3} {b : Array G} (h : Sim a b) (i : ℕ) :
-    toG a[i]! = b[i]! := by
-  rw [← h.2]
-  by_cases hi : i < a.size
-  · rw [getElem!_pos a i hi, getElem!_pos (a.map toG) i (by simpa using hi), Array.getElem_map]
-  · rw [getElem!_neg a i hi, getElem!_neg (a.map toG) i (by simpa using hi), toG_default]
-
-private theorem Sim.set {a : Array P3} {b : Array G} (h : Sim a b) (i : ℕ) {p : P3}
-    (hp : Valid (toPVes p)) : Sim (a.set! i p) (b.set! i (toG p)) := by
-  refine ⟨?_, ?_⟩
-  · intro q hq
-    rw [Array.set!_eq_setIfInBounds] at hq
-    rcases Array.mem_or_eq_of_mem_setIfInBounds hq with hq | rfl
-    · exact h.1 q hq
-    · exact hp
-  · rw [Array.set!_eq_setIfInBounds, Array.set!_eq_setIfInBounds, Array.map_setIfInBounds, h.2]
-
-/-- A relation-preserving fold: the shared workhorse for every loop of the FFT. -/
-private theorem foldl_rel {σ σ' β : Type} (R : σ → σ' → Prop) (l : List β)
-    (f : σ → β → σ) (g : σ' → β → σ')
-    (hstep : ∀ s s' x, R s s' → R (f s x) (g s' x)) :
-    ∀ s s', R s s' → R (l.foldl f s) (l.foldl g s') := by
-  induction l with
-  | nil => exact fun s s' h => h
-  | cons x l ih => exact fun s s' h => ih _ _ (hstep s s' x h)
-
-/-- The bit-reversal permutation only moves cells, so it preserves the simulation. -/
-private theorem sim_permStep (logN : ℕ) {a : Array P3} {b : Array G} (h : Sim a b) (k : ℕ) :
-    Sim (permStep logN a k) (permStep logN b k) := by
-  unfold permStep
-  split
-  · rename_i hk
-    have h1 : Sim (a.set! k a[Zcash.Snark.Keygen.bitreverse k logN]!)
-        (b.set! k (toG a[Zcash.Snark.Keygen.bitreverse k logN]!)) :=
-      h.set k (h.valid_get _)
-    rw [h.get (Zcash.Snark.Keygen.bitreverse k logN)] at h1
-    have h2 := h1.set (Zcash.Snark.Keygen.bitreverse k logN) (h.valid_get k)
-    rw [h.get k] at h2
-    exact h2
-  · exact h
-
-/-! ### The butterfly -/
-
-private theorem val_lt_two_pow (x : Fp) : x.val < 2 ^ 256 :=
-  lt_of_lt_of_le (ZMod.val_lt x) (by decide)
-
-/-- **A single butterfly preserves the simulation**: `padd a t ↔ a + t`,
-`padd a (pneg t) ↔ a − t`, and `pnsmul d ↔ d • ·`.  Stated on abstract cell indices; the
-butterfly's own index arithmetic is irrelevant to the transport. -/
-private theorem sim_bfly {a : Array P3} {b : Array G} (h : Sim a b) (iA iB : ℕ) (d : ℕ) (e : Fp)
-    (hd : d = ZMod.val e) :
-    Sim ((a.set! iA (padd a[iA]! (pnsmul d a[iB]!))).set! iB
-          (padd a[iA]! (pneg (pnsmul d a[iB]!))))
-        ((b.set! iA (b[iA]! + ZMod.val e • b[iB]!)).set! iB
-          (b[iA]! - ZMod.val e • b[iB]!)) := by
-  have hvA : Valid (toPVes a[iA]!) := h.valid_get iA
-  have hvB : Valid (toPVes a[iB]!) := h.valid_get iB
-  have hdlt : d < 2 ^ 256 := by rw [hd]; exact val_lt_two_pow e
-  obtain ⟨hvt, hat⟩ := pnsmul_spec hvB d hdlt
-  have hst : toG (pnsmul d a[iB]!) = ZMod.val e • b[iB]! := by
-    rw [toG, hat, ← toG, h.get iB, hd]
-  have hplus : toG (padd a[iA]! (pnsmul d a[iB]!)) = b[iA]! + ZMod.val e • b[iB]! := by
-    rw [toG, toPVes_padd, toAffine_padd hvA hvt, ← toG, ← toG, h.get iA, hst]
-  have hminus : toG (padd a[iA]! (pneg (pnsmul d a[iB]!))) = b[iA]! - ZMod.val e • b[iB]! := by
-    rw [toG, toPVes_padd, toAffine_padd hvA (valid_pneg hvt), toAffine_pneg hvt, ← toG, ← toG,
-      h.get iA, hst, sub_eq_add_neg]
-  have hv1 : Valid (toPVes (padd a[iA]! (pnsmul d a[iB]!))) := by
-    rw [toPVes_padd]; exact valid_padd hvA hvt
-  have hv2 : Valid (toPVes (padd a[iA]! (pneg (pnsmul d a[iB]!)))) := by
-    rw [toPVes_padd]; exact valid_padd hvA (valid_pneg hvt)
-  have s1 := h.set iA hv1
-  rw [hplus] at s1
-  have s2 := s1.set iB hv2
-  rw [hminus] at s2
-  exact s2
-
-/-- A butterfly of the kernel FFT simulates the corresponding butterfly of `bestFftG`. -/
-private theorem sim_butterfly (n half : ℕ) (tw : Array ℕ) (twFp : Array Fp)
-    (htw : ∀ i : ℕ, tw[i]! = ZMod.val twFp[i]!) (c j : ℕ)
-    {a : Array P3} {b : Array G} (h : Sim a b) :
-    Sim (butterflyGen padd (fun x y => padd x (pneg y)) pnsmul n half tw c j a)
-        (butterflyGen (· + ·) (· - ·) (fun (t : Fp) p => t.val • p) n half twFp c j b) :=
-  sim_bfly h _ _ _ _ (htw (j * (n / (2 * half))))
-
-private theorem sim_roundFold (n half : ℕ) (tw : Array ℕ) (twFp : Array Fp)
-    (htw : ∀ i : ℕ, tw[i]! = ZMod.val twFp[i]!) {a : Array P3} {b : Array G} (h : Sim a b) :
-    Sim (roundFoldGen padd (fun x y => padd x (pneg y)) pnsmul n half tw a)
-        (roundFoldGen (· + ·) (· - ·) (fun (t : Fp) p => t.val • p) n half twFp b) :=
-  foldl_rel Sim _ _ _
-    (fun s s' c hs => foldl_rel Sim _ _ _
-      (fun _ _ j hr => sim_butterfly n half tw twFp htw c j hr) s s' hs) a b h
-
-/-! ### The twiddle table -/
-
-private theorem twArr_eq_foldl (omega : Fp) (m : ℕ) :
-    twArr omega m = ((List.range m).foldl
-      (fun (p : MProd (Array Fp) Fp) _ => ⟨p.1.push p.2, p.2 * omega⟩)
-      ⟨Array.mkEmpty m, 1⟩).1 := by
-  show (forIn (m := Id) [0:m] (⟨Array.mkEmpty m, 1⟩ : MProd (Array Fp) Fp) (fun _ p =>
-      pure (ForInStep.yield ⟨p.1.push p.2, p.2 * omega⟩)) >>= fun r =>
-        match r with | ⟨tw, _⟩ => (pure tw : Id (Array Fp))) = _
-  simp only [Std.Legacy.Range.forIn_eq_forIn_range', Std.Legacy.Range.size, Nat.sub_zero,
-    Nat.add_sub_cancel, Nat.div_one, ← List.range_eq_range', List.forIn_pure_yield_eq_foldl]
-  rfl
-
-private theorem twFold_eq (omega : Fp) (m l : ℕ) :
-    (List.range l).foldl (fun (p : MProd (Array Fp) Fp) _ => ⟨p.1.push p.2, p.2 * omega⟩)
-        ⟨Array.mkEmpty m, 1⟩ =
-      ⟨((List.range l).map (omega ^ ·)).toArray, omega ^ l⟩ := by
-  induction l with
-  | zero => simp
-  | succ l ih =>
-    rw [List.range_succ, List.foldl_append, List.foldl_cons, List.foldl_nil, ih]
-    refine congrArg₂ MProd.mk ?_ (by rw [pow_succ])
-    rw [List.map_append, List.map_cons, List.map_nil, ← List.push_toArray]
-
-private theorem twArr_get (omega : Fp) (m i : ℕ) :
-    (twArr omega m)[i]! = if i < m then omega ^ i else 0 := by
-  rw [twArr_eq_foldl, twFold_eq]
-  by_cases hi : i < m
-  · rw [if_pos hi, getElem!_pos _ i (by simpa using hi)]
-    simp
-  · rw [if_neg hi, getElem!_neg _ i (by simp; omega)]
-    rfl
-
-/-! ### The simulation theorem -/
-
-/-- **The kernel FFT is the proven group FFT.**  With twiddles `tw[i] = (ω^i).val` the kernel's
-`P3` array maps cellwise, under `toAffine ∘ toPVes`, onto `bestFftG` of the mapped input — the
-bit-reversal permutation moves cells, and every butterfly is `toAffine_padd` plus `pnsmul_spec`
-plus `toAffine_pneg`.  The DFT specification of `bestFftG` (`Keygen/FftSpec.lean`) therefore
-applies to the kernel verbatim. -/
-theorem fft_spec (a0 : Array P3) (tw : Array ℕ) (omega : Fp) (logN : ℕ)
-    (hv : ∀ p ∈ a0, Valid (toPVes p)) (htwsize : tw.size = a0.size / 2)
-    (htw : ∀ i, i < a0.size / 2 → tw[i]! = (omega ^ i : Fp).val) :
-    (fft a0 tw logN).map toG = Zcash.Snark.Keygen.bestFftG (a0.map toG) omega logN := by
-  have hsize : (a0.map toG).size = a0.size := Array.size_map ..
-  have htw' : ∀ i : ℕ, tw[i]! = ZMod.val (twArr omega (a0.size / 2))[i]! := by
-    intro i
-    rw [twArr_get]
-    by_cases hi : i < a0.size / 2
-    · rw [if_pos hi, htw i hi]
-    · rw [if_neg hi, getElem!_neg tw i (by omega), ZMod.val_zero]
-      rfl
-  have hsim0 : Sim a0 (a0.map toG) := ⟨hv, rfl⟩
-  have hperm : Sim ((List.range a0.size).foldl (permStep logN) a0)
-      ((List.range a0.size).foldl (permStep logN) (a0.map toG)) :=
-    foldl_rel Sim _ _ _ (fun s s' k hs => sim_permStep logN hs k) _ _ hsim0
-  have hrounds : Sim
-      ((List.range logN).foldl (fun a r =>
-        roundFoldGen padd (fun x y => padd x (pneg y)) pnsmul a0.size (2 ^ r) tw a)
-        ((List.range a0.size).foldl (permStep logN) a0))
-      ((List.range logN).foldl (fun a r =>
-        roundFoldGen (· + ·) (· - ·) (fun (t : Fp) p => t.val • p) a0.size (2 ^ r)
-          (twArr omega (a0.size / 2)) a)
-        ((List.range a0.size).foldl (permStep logN) (a0.map toG))) :=
-    foldl_rel Sim _ _ _
-      (fun s s' r hs => sim_roundFold a0.size (2 ^ r) tw _ htw' hs) _ _ hperm
-  rw [fft_eq_gen, fftGen_eq_folds, bestFftG_eq_gen, fftGen_eq_folds, hsize]
-  exact hrounds.2
-
 
 end CompElliptic.Curves.Pasta.Fast.NatKernel

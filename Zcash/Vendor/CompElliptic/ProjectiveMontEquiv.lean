@@ -30,15 +30,20 @@ operation.
 * `toPVesM_pid`, `toPVesM_pneg` — identity and negation
 * `pnsmulM_spec` — the kernel's 256-step ladder is `n • ·` in the affine group, for `n < 2 ^ 256`
 * `msmM_spec` — the kernel's windowed Pippenger MSM is `Fast.Msm.pippenger`
-* `fftM_spec` — the kernel's radix-2 DIT FFT is `Keygen.bestFftG`
 
-Because `ProjectiveMontDefs` was transcribed from `Zcash.Vendor.CompElliptic.NatKernel` **operation for
-operation**, the three kernel-level results are obtained by *transporting along the `Nat`
-kernel* rather than by redoing its group theory: `RM p n` says a Montgomery triple is
+Because `ProjectiveMontDefs` was transcribed from `Zcash.Vendor.CompElliptic.NatKernel` **operation
+for operation**, the kernel-level results are obtained by *transporting along the `Nat` kernel*
+rather than by redoing its group theory: `RM p n` says a Montgomery triple is
 well-formed and denotes the same projective point as a `Nat` triple, `RM` is preserved by
 `padd`/`pid`/`pneg`, and therefore — by structural induction over the shared schedules — by the
-ladder, the scatter Pippenger and the FFT loop nest.  The affine meaning then comes from
-`NatKernelEquiv`'s `pnsmul_spec`/`msm_spec`/`fft_spec` verbatim.
+ladder and the scatter Pippenger.  The affine meaning then comes from `NatKernelEquiv`'s
+`pnsmul_spec`/`msm_spec` verbatim.
+
+The transport API itself (`RM`, `RM2`, `RA` and their closure lemmas, plus the fold combinators
+`foldl_rel₂`/`foldr_rel₂`) is public rather than private, because the same induction is what a
+consumer needs to lift a *further* shared schedule — the kernels' radix-2 DIT FFT in particular,
+whose reference group DFT the projective statement surface does not have — to the Montgomery
+tier.
 -/
 
 namespace CompElliptic.Curves.Pasta.Fast.ProjectiveMont
@@ -52,12 +57,6 @@ open CompElliptic.Curves.Pasta.Fast.NatKernel (P3)
 
 /-- The Vesta base field, the ambient field of the projective statement surface. -/
 local notation "Fq" => CompElliptic.Curves.Pasta.Fast.Projective.Fq
-
-/-- The Vesta scalar field, over which the FFT twiddles live. -/
-local notation "Fp" => Zcash.Snark.Fp
-
-/-- `bestFftG` needs `[Inhabited G]` for `Array.get!`; the affine group has a canonical `0`. -/
-local instance : Inhabited G := ⟨0⟩
 
 /-! ## The field level
 
@@ -239,34 +238,34 @@ kernels are transported wholesale: `RM p n` relates a well-formed Montgomery tri
 triple denoting the same projective point, and the shared schedules preserve it. -/
 
 /-- The canonical `Nat`-kernel triple denoting the same projective point. -/
-private def ofPM (p : PM) : P3 :=
+def ofPM (p : PM) : P3 :=
   ⟨(montVal p.X).val, (montVal p.Y).val, (montVal p.Z).val⟩
 
-private theorem toPVes_ofPM (p : PM) : NatKernel.toPVes (ofPM p) = toPVesM p := by
+theorem toPVes_ofPM (p : PM) : NatKernel.toPVes (ofPM p) = toPVesM p := by
   simp only [NatKernel.toPVes, ofPM, toPVesM, PVes.mk.injEq]
   exact ⟨ZMod.natCast_rightInverse _, ZMod.natCast_rightInverse _, ZMod.natCast_rightInverse _⟩
 
 /-- The kernel correspondence: a well-formed Montgomery triple denoting the same projective
 point as a `Nat` triple. -/
-private def RM (p : PM) (n : P3) : Prop := WFP p ∧ toPVesM p = NatKernel.toPVes n
+def RM (p : PM) (n : P3) : Prop := WFP p ∧ toPVesM p = NatKernel.toPVes n
 
 /-- The correspondence on ladder/downsweep state pairs. -/
-private def RM2 (s : PM × PM) (s' : P3 × P3) : Prop := RM s.1 s'.1 ∧ RM s.2 s'.2
+def RM2 (s : PM × PM) (s' : P3 × P3) : Prop := RM s.1 s'.1 ∧ RM s.2 s'.2
 
-private theorem RM_self {p : PM} (h : WFP p) : RM p (ofPM p) := ⟨h, (toPVes_ofPM p).symm⟩
+theorem RM_self {p : PM} (h : WFP p) : RM p (ofPM p) := ⟨h, (toPVes_ofPM p).symm⟩
 
-private theorem RM_toG {p : PM} {n : P3} (h : RM p n) : toGM p = NatKernel.toG n := by
+theorem RM_toG {p : PM} {n : P3} (h : RM p n) : toGM p = NatKernel.toG n := by
   rw [toGM, NatKernel.toG, h.2]
 
-private theorem RM_padd {p r : PM} {n m : P3} (hp : RM p n) (hr : RM r m) :
+theorem RM_padd {p r : PM} {n m : P3} (hp : RM p n) (hr : RM r m) :
     RM (PM.padd p r) (NatKernel.padd n m) := by
   refine ⟨wfp_padd hp.1 hr.1, ?_⟩
   rw [toPVesM_padd hp.1 hr.1, NatKernel.toPVes_padd, hp.2, hr.2]
 
-private theorem RM_pid : RM PM.pid NatKernel.pid :=
+theorem RM_pid : RM PM.pid NatKernel.pid :=
   ⟨wfp_pid, by rw [toPVesM_pid, NatKernel.toPVes_pid]⟩
 
-private theorem RM_pneg {p : PM} {n : P3} (h : RM p n) :
+theorem RM_pneg {p : PM} {n : P3} (h : RM p n) :
     RM (PM.pneg p) (NatKernel.pneg n) := by
   refine ⟨wfp_pneg h.1, ?_⟩
   rw [toPVesM_pneg h.1, NatKernel.toPVes_pneg, h.2]
@@ -274,7 +273,7 @@ private theorem RM_pneg {p : PM} {n : P3} (h : RM p n) :
 /-! ### Relation-preserving folds -/
 
 /-- A relation-preserving `foldl` whose step may use a property of the list elements. -/
-private theorem foldl_rel₂ {σ σ' β : Type} (R : σ → σ' → Prop) (P : β → Prop) :
+theorem foldl_rel₂ {σ σ' β : Type} (R : σ → σ' → Prop) (P : β → Prop) :
     ∀ (l : List β) (f : σ → β → σ) (g : σ' → β → σ'),
       (∀ s s' x, P x → R s s' → R (f s x) (g s' x)) → (∀ x ∈ l, P x) →
       ∀ s s', R s s' → R (l.foldl f s) (l.foldl g s') := by
@@ -287,7 +286,7 @@ private theorem foldl_rel₂ {σ σ' β : Type} (R : σ → σ' → Prop) (P : �
       (hstep s s' x (hP x (by simp)) h)
 
 /-- A relation-preserving `foldr` whose step may use a property of the list elements. -/
-private theorem foldr_rel₂ {σ σ' β : Type} (R : σ → σ' → Prop) (P : β → Prop) :
+theorem foldr_rel₂ {σ σ' β : Type} (R : σ → σ' → Prop) (P : β → Prop) :
     ∀ (l : List β) (f : β → σ → σ) (g : β → σ' → σ'),
       (∀ x s s', P x → R s s' → R (f x s) (g x s')) → (∀ x ∈ l, P x) →
       ∀ s s', R s s' → R (l.foldr f s) (l.foldr g s') := by
@@ -301,7 +300,7 @@ private theorem foldr_rel₂ {σ σ' β : Type} (R : σ → σ' → Prop) (P : �
 
 /-! ### The scalar ladder -/
 
-private theorem RM_pnsmul (k : ℕ) {p : PM} {n : P3} (h : RM p n) :
+theorem RM_pnsmul (k : ℕ) {p : PM} {n : P3} (h : RM p n) :
     RM (PM.pnsmul k p) (NatKernel.pnsmul k n) := by
   have key : RM2
       ((List.range 256).foldl (fun (st : PM × PM) i =>
@@ -393,13 +392,13 @@ private theorem forall₂_map_self {α β : Type} {R : α → β → Prop} {P : 
       (forall₂_map_self hf l fun b hb => h b (by simp [hb]))
 
 /-- The array-level correspondence: cellwise `RM`. -/
-private def RA (a : Array PM) (b : Array P3) : Prop := List.Forall₂ RM a.toList b.toList
+def RA (a : Array PM) (b : Array P3) : Prop := List.Forall₂ RM a.toList b.toList
 
-private theorem RA.size {a : Array PM} {b : Array P3} (h : RA a b) : a.size = b.size := by
+theorem RA.size {a : Array PM} {b : Array P3} (h : RA a b) : a.size = b.size := by
   have := List.Forall₂.length_eq h
   rwa [Array.length_toList, Array.length_toList] at this
 
-private theorem RA.get {a : Array PM} {b : Array P3} (h : RA a b) (k : ℕ) : RM a[k]! b[k]! := by
+theorem RA.get {a : Array PM} {b : Array P3} (h : RA a b) (k : ℕ) : RM a[k]! b[k]! := by
   by_cases hk : k < a.size
   · have hk' : k < b.size := h.size ▸ hk
     rw [getElem!_pos a k hk, getElem!_pos b k hk']
@@ -409,24 +408,24 @@ private theorem RA.get {a : Array PM} {b : Array P3} (h : RA a b) (k : ℕ) : RM
     rw [getElem!_neg a k hk, getElem!_neg b k hk']
     exact RM_pid
 
-private theorem RA.set {a : Array PM} {b : Array P3} (h : RA a b) (k : ℕ) {p : PM} {n : P3}
+theorem RA.set {a : Array PM} {b : Array P3} (h : RA a b) (k : ℕ) {p : PM} {n : P3}
     (hp : RM p n) : RA (a.set! k p) (b.set! k n) := by
   simp only [RA, Array.set!_eq_setIfInBounds, Array.toList_setIfInBounds]
   exact forall₂_set hp h k
 
-private theorem RA.modify {a : Array PM} {b : Array P3} (h : RA a b) (k : ℕ)
+theorem RA.modify {a : Array PM} {b : Array P3} (h : RA a b) (k : ℕ)
     {f : PM → PM} {g : P3 → P3} (hfg : ∀ p n, RM p n → RM (f p) (g n)) :
     RA (a.modify k f) (b.modify k g) := by
   simp only [RA, Array.toList_modify]
   exact forall₂_modify hfg h k
 
-private theorem RA.map_toG {a : Array PM} {b : Array P3} (h : RA a b) :
+theorem RA.map_toG {a : Array PM} {b : Array P3} (h : RA a b) :
     a.map toGM = b.map NatKernel.toG := by
   have := forall₂_map_eq (f := toGM) (g := NatKernel.toG) (fun _ _ hr => RM_toG hr) h
   rw [← Array.toList_map, ← Array.toList_map] at this
   exact Array.toList_inj.mp this
 
-private theorem RA_self {a : Array PM} (h : ∀ p ∈ a, WFP p) : RA a (a.map ofPM) := by
+theorem RA_self {a : Array PM} (h : ∀ p ∈ a, WFP p) : RA a (a.map ofPM) := by
   simp only [RA, Array.toList_map]
   exact forall₂_map_self (P := WFP) (fun p hp => RM_self hp) a.toList
     (fun p hp => h p (by simpa using hp))
@@ -516,75 +515,4 @@ theorem msmM_spec (c : ℕ) (hc : 0 < c) (terms : List (ℕ × PM))
   rw [hR.2, NatKernel.msm_spec c hc _ hv' hn', List.map_map]
   refine congrArg (Msm.pippenger c) (List.map_congr_left fun t _ => ?_)
   simp only [Function.comp_apply, toPVes_ofPM]
-
-/-! ### The radix-2 DIT FFT -/
-
-private theorem fftM_eq_gen (a0 : Array PM) (tw : Array ℕ) (logN : ℕ) :
-    PM.fft a0 tw logN
-      = NatKernel.fftGen PM.padd (fun x y => PM.padd x (PM.pneg y)) PM.pnsmul a0 tw logN := rfl
-
-private theorem fftN_eq_gen (a0 : Array P3) (tw : Array ℕ) (logN : ℕ) :
-    NatKernel.fft a0 tw logN
-      = NatKernel.fftGen NatKernel.padd (fun x y => NatKernel.padd x (NatKernel.pneg y))
-          NatKernel.pnsmul a0 tw logN := rfl
-
-private theorem RA_permStep (logN : ℕ) {a : Array PM} {b : Array P3} (h : RA a b) (k : ℕ) :
-    RA (NatKernel.permStep logN a k) (NatKernel.permStep logN b k) := by
-  simp only [NatKernel.permStep]
-  split
-  · exact (h.set k (h.get _)).set _ (h.get k)
-  · exact h
-
-private theorem RA_butterfly (n half : ℕ) (tw : Array ℕ) (c j : ℕ) {a : Array PM} {b : Array P3}
-    (h : RA a b) :
-    RA (NatKernel.butterflyGen PM.padd (fun x y => PM.padd x (PM.pneg y)) PM.pnsmul
-          n half tw c j a)
-      (NatKernel.butterflyGen NatKernel.padd (fun x y => NatKernel.padd x (NatKernel.pneg y))
-          NatKernel.pnsmul n half tw c j b) := by
-  simp only [NatKernel.butterflyGen]
-  exact (h.set _ (RM_padd (h.get _) (RM_pnsmul _ (h.get _)))).set _
-    (RM_padd (h.get _) (RM_pneg (RM_pnsmul _ (h.get _))))
-
-private theorem RA_roundFold (n half : ℕ) (tw : Array ℕ) {a : Array PM} {b : Array P3}
-    (h : RA a b) :
-    RA (NatKernel.roundFoldGen PM.padd (fun x y => PM.padd x (PM.pneg y)) PM.pnsmul
-          n half tw a)
-      (NatKernel.roundFoldGen NatKernel.padd (fun x y => NatKernel.padd x (NatKernel.pneg y))
-          NatKernel.pnsmul n half tw b) := by
-  simp only [NatKernel.roundFoldGen]
-  exact foldl_rel₂ RA (fun _ : ℕ => True) _ _ _
-    (fun s s' c _ hs => foldl_rel₂ RA (fun _ : ℕ => True) _ _ _
-      (fun t t' j _ ht => RA_butterfly n half tw c j ht) (fun _ _ => trivial) s s' hs)
-    (fun _ _ => trivial) a b h
-
-private theorem RA_fft {a0 : Array PM} {b0 : Array P3} (tw : Array ℕ) (logN : ℕ) (h : RA a0 b0) :
-    RA (PM.fft a0 tw logN) (NatKernel.fft b0 tw logN) := by
-  rw [fftM_eq_gen, fftN_eq_gen, NatKernel.fftGen_eq_folds, NatKernel.fftGen_eq_folds, h.size]
-  refine foldl_rel₂ RA (fun _ : ℕ => True) _ _ _
-    (fun s s' r _ hs => RA_roundFold b0.size (2 ^ r) tw hs) (fun _ _ => trivial) _ _ ?_
-  exact foldl_rel₂ RA (fun _ : ℕ => True) _ _ _
-    (fun s s' k _ hs => RA_permStep logN hs k) (fun _ _ => trivial) _ _ h
-
-/-- **The kernel FFT is the proven group FFT.**  Statement shape mirrors
-`NatKernel.fft_spec`, with `toG` replaced by the Montgomery reading `toGM`. -/
-theorem fftM_spec (a0 : Array PM) (tw : Array ℕ) (omega : Fp) (logN : ℕ)
-    (hwf : ∀ p ∈ a0, WFP p) (hv : ∀ p ∈ a0, Valid (toPVesM p))
-    (htwsize : tw.size = a0.size / 2)
-    (htw : ∀ i, i < a0.size / 2 → tw[i]! = (omega ^ i : Fp).val) :
-    (PM.fft a0 tw logN).map toGM
-      = Zcash.Snark.Keygen.bestFftG (a0.map toGM) omega logN := by
-  have hsize : (a0.map ofPM).size = a0.size := Array.size_map ..
-  have hR0 : RA a0 (a0.map ofPM) := RA_self hwf
-  have hR := RA_fft (a0 := a0) (b0 := a0.map ofPM) tw logN hR0
-  have hmap : (a0.map ofPM).map NatKernel.toG = a0.map toGM := hR0.map_toG.symm
-  have hvN : ∀ p ∈ a0.map ofPM, Valid (NatKernel.toPVes p) := by
-    intro p hp
-    rw [Array.mem_map] at hp
-    obtain ⟨s, hs, rfl⟩ := hp
-    rw [toPVes_ofPM]
-    exact hv s hs
-  have hspec := NatKernel.fft_spec (a0.map ofPM) tw omega logN hvN
-    (by rw [hsize]; exact htwsize) (by rw [hsize]; exact htw)
-  rw [hR.map_toG, hspec, hmap]
-
 end CompElliptic.Curves.Pasta.Fast.ProjectiveMont
