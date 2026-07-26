@@ -127,9 +127,19 @@ structure ActionWitness (KW F G RHO PSI E : Type*) (d : ℕ) where
 `w`. Both the deployed Orchard Action statement and the ZIP 2005 Recovery Statement
 satisfy this interface (the latter enforces strictly more).
 
-TODO: It's unclear how well this will compose with Gregor's approach to the circuit proof.
-In particular, should this be `Prop`-only or will we need to apply the break-as-computed-data
-pattern here? -/
+This is the security-game statement — the abstract ledger meaning of a successful
+action — and it is deliberately separate from the circuit-facing `SpecPost`:
+`Bridge.specPost_to_ledger` verifies that every `SpecPost` case becomes either this
+statement or an exhibited `Bridge.ActionBreak`. The interface itself stays
+`Prop`-only; the breaks-as-computed-data pattern applies at the bridge
+(`Bridge.classifyAction`, reduced onward to the games-facing discrete-log-relation
+object by `Bridge.relationOfBreakData`), not here. The remaining break-reduction
+step — turning two conflicting valid Merkle paths of the partial interface into a
+concrete hash collision — is tracked at `Merkle.Collision`.
+
+TODO: When the Balance and Spendability games are formalized, verify their exact
+Action interface, including whether the NU6.3 flag conditions belong in the game
+instance or a circuit-facing wrapper. -/
 structure ActionSatisfied (P : Primitives F G IVK NK RHO PSI CMX RT E)
     (kv : KeyBindingInterface KW G IVK NK) (inst : ActionInstance G RT RHO CMX)
     (w : ActionWitness KW F G RHO PSI E P.merkle.depth) : Prop where
