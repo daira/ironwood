@@ -222,91 +222,16 @@ theorem actionBundleStatement_or_relation_of_vestaTerminal
       (ActionGateCoherence.topLevelGateCoherence pp urs)
       i m hm colPoly hbindAll hquot hroute hevals claimed hxgood hgoodY
       (cell := FlatCell actionNumPermCols actionDomainSize)
-      (by
-        intro hsatisfied
-        let relation :=
-          CanonicalMemberConstraintRelation.ofAcceptedCircuitSat
-            haccepts hsatisfied
-        have hpolynomial :
-            relation.polynomial =
-              CanonicalMemberConstraintRelation.acceptedPolynomial
-                (memberDecode := memberDecode) haccepts := by
-          rfl
-        have hcorrect :=
-          actionTopLevelCircuitCorrectness
-            pp urs hk instanceCommitment ps ch pU pW a₀
-            pbatch memberDecode hpoly relation
-            (by
-              simpa only [
-                CanonicalMemberConstraintRelation.model,
-                hpolynomial] using hgoodY)
-            (by simpa only [hpolynomial] using permutationExclusions)
-            (by simpa only [hpolynomial] using lookupExclusions)
-        simpa only [hpolynomial] using hcorrect)
+      (fun hsatisfied =>
+        topLevelCorrectnessOfAcceptedCircuitSat
+          pp urs hk inputs ps ch pU pW a₀ pbatch memberDecode
+          haccepts hpoly hsatisfied hgoodY
+          permutationExclusions lookupExclusions)
   rcases hgeneric with htop | hrelation
-  · by_cases hrelation :
-        HasNontrivialRelation (F := Fp) urs.g urs.u urs.w
-    · exact Or.inr hrelation
-    · have hrows :=
-        actionRowsInjectiveAtUrs pp urs hk
-      have hinstance : ∀
-          proofIndex :
-            Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs,
-          CanonicalMemberConstraintRelation.acceptedPolynomial
-                (memberDecode := memberDecode) haccepts
-              (.instanceCol proofIndex
-                (Circuit.configure
-                  Specs.Sinsemilla.orchardGenerators {}).1.primary.index) =
-            instanceRowPolynomial
-              (2 ^ orchardActionTopLevelCircuit.domainExponent)
-              (Zcash.Snark.omegaOf
-                orchardActionTopLevelCircuit.domainExponent)
-              (inputs proofIndex).rows := by
-        intro proofIndex
-        have hbound :=
-          CanonicalMemberConstraintRelation.acceptedInstanceColumn_eq_rowPolynomial_or_relation
-              (pU := pU) (pW := pW) (a := a₀)
-              (batchOpenings := pbatch) (memberDecode := memberDecode)
-              haccepts proofIndex
-              (Circuit.configure
-                Specs.Sinsemilla.orchardGenerators {}).1.primary.index
-              (instanceKey pp urs) (inputs proofIndex).rows 1
-              (commitment_primary pp urs inputs proofIndex)
-              hrows
-              (instanceQuery_of_layout
-                vk instanceCommitment ps ch proofIndex
-                (Circuit.configure
-                  Specs.Sinsemilla.orchardGenerators {}).1.primary.index
-                0
-                (orchardActionTopLevelCircuit.toVerifierKey_instanceQueryCount
-                  pp urs)
-                (QueryLayouts.instanceQueryLayout_of_constraintSystem
-                  orchardActionTopLevelCircuit pp urs
-                  (Circuit.configure
-                    Specs.Sinsemilla.orchardGenerators {}).1.primary
-                  0 primaryRegistered))
-        have hrowPolynomial := hbound.resolve_right hrelation
-        change
-          CanonicalMemberConstraintRelation.acceptedPolynomial
-                (memberDecode := memberDecode) haccepts
-              (.instanceCol proofIndex
-                (Circuit.configure
-                  Specs.Sinsemilla.orchardGenerators {}).1.primary.index) =
-            instanceRowPolynomial (2 ^ urs.k)
-              (Zcash.Snark.omegaOf
-                orchardActionTopLevelCircuit.domainExponent)
-              (inputs proofIndex).rows at hrowPolynomial
-        simpa only [← hk] using hrowPolynomial
-      apply Or.inl
-      apply actionBundleStatement_of_topLevelBundle
-        pp
-        (CanonicalMemberConstraintRelation.acceptedPolynomial
-          (memberDecode := memberDecode) haccepts)
-        inputs ActionPermutationDomain.domainExponent_lt
-      · rw [ActionPermutationDomain.domainExponent_eq]
-        norm_num
-      · exact hinstance
-      · exact htop
+  · exact
+      actionBundleStatement_or_relation_of_acceptedTopLevelBundle
+        pp urs hk inputs ps ch pU pW a₀ pbatch memberDecode
+        haccepts htop
   · exact Or.inr hrelation
 
 assert_no_sorry actionBundleStatement_or_relation_of_vestaTerminal
