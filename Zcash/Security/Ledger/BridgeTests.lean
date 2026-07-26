@@ -217,6 +217,7 @@ assert_no_sorry spec_post_bridge_smoke
 assert_no_sorry circuit_soundness_bridge_smoke
 assert_no_sorry actionBreak_of_classify
 assert_no_sorry classify_none_defined
+assert_no_sorry actionBreak_iff_classify_isSome
 
 -- The circuit-to-ledger reduction is a computation: a plain `def`, compiled by
 -- the Lean compiler — so `Classical.choice` cannot contribute to the computed

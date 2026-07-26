@@ -469,6 +469,39 @@ theorem classify_none_defined {wit : ActionData} (h : classifyAction wit = none)
         exact ⟨⟨Bi, hashToPointB_inl hivk⟩, ⟨Bo, hashToPointB_inl hold⟩,
           ⟨Bn, hashToPointB_inl hnew⟩, classifyMerkle_none_defined h⟩
 
+/-- **The Prop-level break and the computed classifier cannot diverge, at the consumer
+boundary either**: an exhibited `ActionBreak` holds exactly when the classifier reports
+an escape.  A consumer landing in the break arm of `circuit_soundness_to_ledger` can
+therefore pass to `classifyAction`'s (and hence `classifyRelation`'s) computed data
+without reconstructing the glue: forward, each break constructor's
+`hashToPointB … = .inr` equation contradicts the defined hashes of a `none` verdict;
+backward is classifier soundness. -/
+theorem actionBreak_iff_classify_isSome {wit : ActionData} :
+    ActionBreak wit ↔ (classifyAction wit).isSome := by
+  constructor
+  · intro hb
+    cases hcl : classifyAction wit with
+    | some _ => rfl
+    | none =>
+      obtain ⟨⟨Bi, hBi⟩, ⟨Bo, hBo⟩, ⟨Bn, hBn⟩, hMk⟩ := classify_none_defined hcl
+      cases hb with
+      | commitIvk br heq _ =>
+        rw [hashToPoint_of_inr heq] at hBi
+        exact absurd hBi (by simp)
+      | noteCommitOld br heq _ =>
+        rw [hashToPoint_of_inr heq] at hBo
+        exact absurd hBo (by simp)
+      | noteCommitNew br heq _ =>
+        rw [hashToPoint_of_inr heq] at hBn
+        exact absurd hBn (by simp)
+      | merkle i br heq _ =>
+        obtain ⟨B, hB⟩ := hMk i
+        rw [hashToPoint_of_inr heq] at hB
+        exact absurd hB (by simp)
+  · intro h
+    obtain ⟨abr, habr⟩ := Option.isSome_iff_exists.mp h
+    exact actionBreak_of_classify habr
+
 /-- Successful `Commit^ivk` information: the defined branch of the guarded
 `Commit^ivk` clause, on the witness's exact query. -/
 def CommitIvkSuccess (wit : ActionData) : Prop :=
