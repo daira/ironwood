@@ -1,0 +1,192 @@
+import Zcash.Snark.Soundness.Composition.GoodX
+import Zcash.Snark.Soundness.Multiopen.Decode
+
+/-!
+# The pre-`x` quotient reconstruction
+
+The constraint difference polynomial that `constraints_supply_derived` bounds is
+`combine − hpolyP·(Xⁿ−1)`, where `hpolyP` decodes the *reassembled* vanishing commitment
+`Σᵢ hᵢ·(xⁿ)ⁱ` — so `hpolyP` is `x`-dependent through `xⁿ`, and its bad set is not pinned before
+the `x` squeeze. This module reconstructs the genuinely pre-`x` quotient
+
+  `Hpoly(X) := Σᵢ X^(n·i)·hᵢ(X)`
+
+from the piece polynomials `hᵢ` (chosen openings of the pre-`x` piece commitments `ps.hPieces`),
+and proves the one fact the good-challenge argument needs: **`hpolyP` and `Hpoly` agree in value
+at `x`** (`Xⁿ`-scaled coefficients meet `X^(n·i)` monomials under `(xⁿ)ⁱ = x^(n·i)`). So the
+verifier's check at `x` is the pre-`x` polynomial `combine − Hpoly·(Xⁿ−1)` vanishing at `x`, whose
+bad set is fixed before the squeeze.
+-/
+
+namespace Zcash.Snark
+
+open Polynomial
+
+variable {d : ℕ}
+
+/-- The reassembled quotient *polynomial* at scalar `xn`: `Σᵢ C(xnⁱ)·hᵢ(X)`. This is the polynomial
+whose commitment is halo2's reassembled `h` (`Σᵢ hᵢ·(xⁿ)ⁱ`), read as a polynomial in `X` with
+`xⁿ`-scaled pieces — the `x`-dependent form `hpolyP` decodes. -/
+noncomputable def reassembledQuotient (xn : Fp) (hp : Fin d → Polynomial Fp) : Polynomial Fp :=
+  ∑ i : Fin d, Polynomial.C (xn ^ (i : ℕ)) * hp i
+
+/-- The pre-`x` quotient polynomial `Σᵢ X^(n·i)·hᵢ(X)` — the reassembly with the scalar `xⁿ` lifted
+to the monomial `X^(n·i)`. Pre-`x`: it mentions only the piece polynomials and `n`. -/
+noncomputable def preXQuotient (n : ℕ) (hp : Fin d → Polynomial Fp) : Polynomial Fp :=
+  ∑ i : Fin d, Polynomial.X ^ (n * (i : ℕ)) * hp i
+
+/-- **The reassembly and the pre-`x` quotient agree in value at `x`.** Each term matches under
+`(xⁿ)ⁱ = x^(n·i)`, so the `x`-dependent reassembled `hpolyP` never needs to enter the pinned bad
+set — its evaluation at `x` is the pre-`x` quotient's. -/
+theorem reassembledQuotient_eval_eq_preXQuotient_eval (n : ℕ) (hp : Fin d → Polynomial Fp) (x : Fp) :
+    (reassembledQuotient (x ^ n) hp).eval x = (preXQuotient n hp).eval x := by
+  rw [reassembledQuotient, preXQuotient, Polynomial.eval_finsetSum, Polynomial.eval_finsetSum]
+  refine Finset.sum_congr rfl (fun i _ => ?_)
+  rw [Polynomial.eval_mul, Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+    Polynomial.eval_X, ← pow_mul]
+
+/-- **The verifier's quotient check equals the pre-`x` check at `x`.** Replacing the reassembled
+`hpolyP` (evaluated at `x`) by the pre-`x` quotient leaves the difference polynomial's value at `x`
+unchanged: `(combine − hpolyP·(Xⁿ−1)).eval x = (combine − Hpoly·(Xⁿ−1)).eval x`. So `x` is bad for
+the `x`-dependent check iff it is bad for the pinned pre-`x` polynomial. -/
+theorem quotientCheck_eval_eq_preX (combine : Polynomial Fp) (n : ℕ) (hp : Fin d → Polynomial Fp)
+    (x : Fp) :
+    (combine - reassembledQuotient (x ^ n) hp * (Polynomial.X ^ n - 1)).eval x
+      = (combine - preXQuotient n hp * (Polynomial.X ^ n - 1)).eval x := by
+  rw [Polynomial.eval_sub, Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_mul,
+    reassembledQuotient_eval_eq_preXQuotient_eval]
+
+/-- **Bad-set transport to the pre-`x` polynomial.** If `x` is bad for the `x`-dependent quotient
+check (`combine − hpolyP·(Xⁿ−1)`), then the pre-`x` difference vanishes at `x`; unless that pre-`x`
+polynomial is identically zero (the constraint holds as polynomials), `x` lands in its pinned bad
+set. `hpolyP = reassembledQuotient (xⁿ) hp` is the decoded reassembly. -/
+theorem mem_szBadSet_reassembled_imp (combine : Polynomial Fp) (n : ℕ) (hp : Fin d → Polynomial Fp)
+    {x : Fp}
+    (hx : x ∈ szBadSet (combine - reassembledQuotient (x ^ n) hp * (Polynomial.X ^ n - 1))) :
+    x ∈ szBadSet (combine - preXQuotient n hp * (Polynomial.X ^ n - 1))
+    ∨ combine - preXQuotient n hp * (Polynomial.X ^ n - 1) = 0 := by
+  rw [mem_szBadSet] at hx
+  by_cases hQ : combine - preXQuotient n hp * (Polynomial.X ^ n - 1) = 0
+  · exact Or.inr hQ
+  · refine Or.inl (mem_szBadSet.mpr ⟨hQ, ?_⟩)
+    rw [← quotientCheck_eval_eq_preX]
+    exact hx.2
+
+/-! ## The commit-side reconstruction
+
+The decoded quotient column opens the reassembled commitment `Σᵢ (xⁿ)ⁱ·Hᵢ`; the same element is
+opened by the `(xⁿ)ⁱ`-scaled sum of the pieces' own openings. So the decoded column is that scaled
+sum, or binding breaks — and its polynomial is `reassembledQuotient (xⁿ)` of the piece
+polynomials, exactly the `x`-dependent form whose evaluation the identity above pins. -/
+
+/-- `coeffsToPoly` is additive. -/
+private theorem coeffsToPoly_add {m : ℕ} (a a' : Fin m → Fp) :
+    coeffsToPoly (a + a') = coeffsToPoly a + coeffsToPoly a' := by
+  simp only [coeffsToPoly, Pi.add_apply, Polynomial.C_add, add_mul, Finset.sum_add_distrib]
+
+/-- `coeffsToPoly` sends a scalar multiple to the constant-scaled polynomial. -/
+private theorem coeffsToPoly_smul {m : ℕ} (c : Fp) (a : Fin m → Fp) :
+    coeffsToPoly (c • a) = Polynomial.C c * coeffsToPoly a := by
+  simp only [coeffsToPoly, Pi.smul_apply, smul_eq_mul, Polynomial.C_mul, Finset.mul_sum]
+  exact Finset.sum_congr rfl (fun j _ => by ring)
+
+/-- `coeffsToPoly` sends an `(xⁿ)ⁱ`-scaled coefficient sum to the reassembled quotient of the
+piece polynomials: it is linear, so the scalar `(xⁿ)ⁱ` becomes the constant `C((xⁿ)ⁱ)`. -/
+theorem coeffsToPoly_scaledSum {k : ℕ} (xn : Fp) (hp : Fin d → Fin (2 ^ k) → Fp) :
+    coeffsToPoly (∑ i : Fin d, xn ^ (i : ℕ) • hp i)
+      = reassembledQuotient xn (fun i => coeffsToPoly (hp i)) := by
+  rw [reassembledQuotient]
+  induction (Finset.univ : Finset (Fin d)) using Finset.induction with
+  | empty => simp [coeffsToPoly]
+  | @insert a s h ih =>
+      rw [Finset.sum_insert h, Finset.sum_insert h, coeffsToPoly_add, coeffsToPoly_smul, ih]
+
+variable {G : Type*} [AddCommGroup G] [Module Fp G]
+
+/-- `commit` over an `(xⁿ)ⁱ`-scaled finite sum distributes: `⟨Σᵢ cᵢ•aᵢ, G⟩ = Σᵢ cᵢ•⟨aᵢ, G⟩`. -/
+private theorem commit_scaledSum (urs : URS G) (xn : Fp) (hp : Fin d → Fin (2 ^ urs.k) → Fp) :
+    commit urs (∑ i : Fin d, xn ^ (i : ℕ) • hp i)
+      = ∑ i : Fin d, xn ^ (i : ℕ) • commit urs (hp i) := by
+  induction (Finset.univ : Finset (Fin d)) using Finset.induction with
+  | empty => simp [commit]
+  | @insert a s h ih =>
+      rw [Finset.sum_insert h, Finset.sum_insert h, commit_add, commit_smul, ih]
+
+/-- **The decoded quotient column is the reassembly of the piece openings, or binding breaks.**
+Given openings of each piece commitment `Hᵢ` and a decoded column opening the reassembled
+`Σᵢ (xⁿ)ⁱ·Hᵢ`, the decoded column's polynomial is `reassembledQuotient (xⁿ)` of the piece
+polynomials, or a nontrivial `(g, u, w)` relation exists. -/
+theorem decodedQuotient_eq_reassembled_or_relation (urs : URS G) (xn : Fp)
+    {a : Fin (2 ^ urs.k) → Fp} {cu cw : Fp}
+    {hp : Fin d → Fin (2 ^ urs.k) → Fp} {hpu hpw : Fin d → Fp} {H : Fin d → G}
+    (hpiece : ∀ i, commit urs (hp i) + hpu i • urs.u + hpw i • urs.w = H i)
+    (hopen : commit urs a + cu • urs.u + cw • urs.w = ∑ i : Fin d, xn ^ (i : ℕ) • H i) :
+    coeffsToPoly a = reassembledQuotient xn (fun i => coeffsToPoly (hp i))
+    ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  have hsum : commit urs (∑ i : Fin d, xn ^ (i : ℕ) • hp i)
+      + (∑ i : Fin d, xn ^ (i : ℕ) * hpu i) • urs.u
+      + (∑ i : Fin d, xn ^ (i : ℕ) * hpw i) • urs.w
+      = ∑ i : Fin d, xn ^ (i : ℕ) • H i := by
+    rw [commit_scaledSum, Finset.sum_smul, Finset.sum_smul, ← Finset.sum_add_distrib,
+      ← Finset.sum_add_distrib]
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [mul_smul, mul_smul, ← hpiece i, smul_add, smul_add]
+  rcases chosenOpening_eq_or_relation (C := ∑ i : Fin d, xn ^ (i : ℕ) • H i) urs hopen with hA | hR
+  · rcases chosenOpening_eq_or_relation (C := ∑ i : Fin d, xn ^ (i : ℕ) • H i) urs hsum with hB | hR
+    · exact Or.inl (by rw [hA, ← hB, coeffsToPoly_scaledSum])
+    · exact Or.inr hR
+  · exact Or.inr hR
+
+/-- The reassembly fold as a `foldr`: `List.foldl` over the reversed pieces is `List.foldr` over
+the pieces (`List.foldl_reverse`), which inducts forward without reverse-index bookkeeping. -/
+private theorem vanishingHCommitment_foldr (urs : URS G) (xn : Fp) (hPieces : List G) :
+    vanishingHCommitment urs.k xn hPieces
+      = hPieces.foldr (fun c acc => (acc.scale xn).appendTerm 1 c) (Msm.zero urs.k Fp G) := by
+  rw [vanishingHCommitment, List.foldl_reverse]
+
+/-- **The reassembled vanishing commitment evaluates to `Σᵢ (xⁿ)ⁱ·Hᵢ`.** halo2's
+`vanishingHCommitment` folds the quotient pieces `Σᵢ hᵢ·(xⁿ)ⁱ`; evaluated against the URS it is
+that power-weighted sum, `Hᵢ` the `i`-th piece. -/
+theorem vanishingHCommitment_eval (urs : URS G) (xn : Fp) :
+    ∀ hPieces : List G,
+      (vanishingHCommitment urs.k xn hPieces).eval urs
+        = ∑ j ∈ Finset.range hPieces.length, xn ^ j • hPieces.getD j 0
+  | [] => by simp [vanishingHCommitment_foldr, Msm.eval_zero]
+  | a :: l => by
+      rw [vanishingHCommitment_foldr, List.foldr_cons, Msm.eval_appendTerm, Msm.eval_scale,
+        ← vanishingHCommitment_foldr urs xn l, vanishingHCommitment_eval urs xn l,
+        List.length_cons, Finset.sum_range_succ', Finset.smul_sum]
+      simp only [List.getD_cons_succ, List.getD_cons_zero, pow_zero, one_smul, pow_succ, smul_smul]
+      rw [show (∑ j ∈ Finset.range l.length, (xn * xn ^ j) • l.getD j 0)
+            = ∑ j ∈ Finset.range l.length, (xn ^ j * xn) • l.getD j 0 from
+          Finset.sum_congr rfl (fun j _ => by rw [mul_comm]), add_comm]
+
+/-! ## The quotient connector
+
+Packaging the reconstruction and the bad-set transport: a bad challenge for the verifier's
+`x`-dependent quotient check either lands in the pinned pre-`x` bad set, witnesses the constraint
+polynomial identity, or breaks binding. This is the whole quotient contribution to the
+good-challenge argument — stated at the decoded column, discharged into pre-`x` data. -/
+
+/-- **The quotient connector.** For a decoded column opening the reassembled `Σⱼ (xⁿ)ʲ·Hⱼ` (each
+`Hⱼ` opened by the pieces), if `x` is bad for the verifier's check `combine − hpolyP·(Xⁿ−1)`
+(with `hpolyP` that decoded column), then `x` lands in the pinned pre-`x` bad set of
+`combine − Hpoly·(Xⁿ−1)`, or that pre-`x` polynomial is identically zero (the constraint holds as
+polynomials), or a nontrivial relation exists. -/
+theorem mem_szBadSet_decodedQuotient_imp (urs : URS G) (combine : Polynomial Fp) (n : ℕ) (x : Fp)
+    {a : Fin (2 ^ urs.k) → Fp} {cu cw : Fp}
+    {hp : Fin d → Fin (2 ^ urs.k) → Fp} {hpu hpw : Fin d → Fp} {H : Fin d → G}
+    (hpiece : ∀ i, commit urs (hp i) + hpu i • urs.u + hpw i • urs.w = H i)
+    (hopen : commit urs a + cu • urs.u + cw • urs.w = ∑ i : Fin d, (x ^ n) ^ (i : ℕ) • H i)
+    (hx : x ∈ szBadSet (combine - coeffsToPoly a * (Polynomial.X ^ n - 1))) :
+    x ∈ szBadSet (combine
+        - preXQuotient n (fun i => coeffsToPoly (hp i)) * (Polynomial.X ^ n - 1))
+    ∨ combine - preXQuotient n (fun i => coeffsToPoly (hp i)) * (Polynomial.X ^ n - 1) = 0
+    ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  rcases decodedQuotient_eq_reassembled_or_relation urs (x ^ n) hpiece hopen with hEq | hR
+  · rw [hEq] at hx
+    exact (mem_szBadSet_reassembled_imp combine n (fun i => coeffsToPoly (hp i)) hx).imp
+      id Or.inl
+  · exact Or.inr (Or.inr hR)
+
+end Zcash.Snark
