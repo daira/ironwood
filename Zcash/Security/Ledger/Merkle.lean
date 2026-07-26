@@ -132,6 +132,72 @@ theorem Path.compress_isSome {P : MerklePrimitives B E} {leaf root : B}
     rw [← hlast, hnode] at hroot
     exact ⟨_, hroot⟩
 
+/-! ## The guarded (⊥-model) path
+
+The circuit layer exports its Merkle contract in the specification's literal ⊥-model
+(zcash/ironwood#98): selected-child equations are unconditional, while a compression
+equation fires only when the compression is defined — escapes are unconstrained.
+`GuardedPath` is that statement in this module's own vocabulary (`node`,
+`selectedChild`), so the circuit bridge assembles a strict `Path` by pairing the
+guarded export with per-height definedness (`Path.of_guarded_of_defined`) instead of
+re-deriving the node chain by hand.  `path_iff_guarded_defined` records that nothing
+is lost in the split: a strict `Path` is exactly a guarded one all of whose
+compressions are defined. -/
+
+/-- The guarded counterpart of `Path`: every *defined* running node is the decoded
+selected child at its height, and a *defined* final compression is the root.  Since
+`node … 0 = some leaf` unconditionally, the leaf equation is not guarded; an escaped
+compression leaves its height unconstrained (the ⊥-model). -/
+def GuardedPath (P : MerklePrimitives B E) (leaf root : B)
+    (children : Fin P.depth → E × E) (side : Fin P.depth → Bool) : Prop :=
+  (∀ i, ∀ b, node P leaf children (Fin.castSucc i) = some b →
+      P.decode (selectedChild (side i) (children i)) = b) ∧
+  ∀ b, node P leaf children (Fin.last P.depth) = some b → b = root
+
+/-- A strict path is in particular guarded. -/
+theorem Path.toGuarded {P : MerklePrimitives B E} {leaf root : B}
+    {children : Fin P.depth → E × E} {side : Fin P.depth → Bool}
+    (h : Path P leaf root children side) :
+    GuardedPath P leaf root children side := by
+  refine ⟨fun i b hb => ?_, fun b hb => ?_⟩
+  · rw [h.1 i] at hb
+    exact Option.some.inj hb
+  · rw [h.2] at hb
+    exact (Option.some.inj hb).symm
+
+/-- A guarded path all of whose compressions are defined is a strict `Path`. -/
+theorem Path.of_guarded_of_defined {P : MerklePrimitives B E} {leaf root : B}
+    {children : Fin P.depth → E × E} {side : Fin P.depth → Bool}
+    (hg : GuardedPath P leaf root children side)
+    (hdef : ∀ i, ∃ b, P.compress i (children i) = some b) :
+    Path P leaf root children side := by
+  -- Every running node is defined: index `0` is `some leaf`, and each successor
+  -- index is a compression, defined by `hdef`.
+  have hsome : ∀ k : Fin (P.depth + 1), ∃ b, node P leaf children k = some b := by
+    intro k
+    induction k using Fin.cases with
+    | zero => exact ⟨leaf, by simp [node]⟩
+    | succ j =>
+        obtain ⟨b, hb⟩ := hdef j
+        exact ⟨b, by simp [node, Fin.cases_succ, hb]⟩
+  refine ⟨fun i => ?_, ?_⟩
+  · -- Pin the defined running node with the guarded selected-child clause.
+    obtain ⟨b, hb⟩ := hsome (Fin.castSucc i)
+    rw [hb, hg.1 i b hb]
+  · -- Pin the defined final compression with the guarded root clause.
+    obtain ⟨b, hb⟩ := hsome (Fin.last P.depth)
+    rw [hb, hg.2 b hb]
+
+/-- The strict/guarded split is lossless: `Path` is exactly `GuardedPath` together
+with per-height definedness. -/
+theorem path_iff_guarded_defined {P : MerklePrimitives B E} {leaf root : B}
+    {children : Fin P.depth → E × E} {side : Fin P.depth → Bool} :
+    Path P leaf root children side ↔
+      GuardedPath P leaf root children side ∧
+        ∀ i, ∃ b, P.compress i (children i) = some b :=
+  ⟨fun h => ⟨h.toGuarded, h.compress_isSome⟩,
+   fun ⟨hg, hdef⟩ => Path.of_guarded_of_defined hg hdef⟩
+
 /-- A Merkle collision records the height whose personalized compression was collided,
 and demands *successful* evaluations on both queries (a `DefinedCollision`): an escaped
 compression, being `none`, can therefore never constitute a collision. -/

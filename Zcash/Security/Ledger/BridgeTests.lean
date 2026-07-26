@@ -155,6 +155,17 @@ theorem or_break_iff_guarded_smoke (wit : ActionData) (P : Point Fp → Prop) :
   specOrBreak_hashToPointB_iff_guarded (Or.inl orchardBases.ivkQ_onCurve)
     (fun _ hm => orchardGenerators.S_onCurve (chunksOf_mem_lt hm))
 
+/-- The strict/guarded Merkle split is lossless: the named equivalence, instantiated
+at the deployed pool's compression.  This is the Merkle-side audit point mirroring
+`or_break_iff_guarded_smoke` for the Sinsemilla or-break/guarded split. -/
+theorem path_iff_guarded_smoke
+    (leaf root : Fp) (children : Fin Pool.merkle.depth → Pool.Encoding × Pool.Encoding)
+    (side : Fin Pool.merkle.depth → Bool) :
+    Merkle.Path Pool.merkle leaf root children side ↔
+      Merkle.GuardedPath Pool.merkle leaf root children side ∧
+        ∀ i, ∃ b, Pool.merkle.compress i (children i) = some b :=
+  Merkle.path_iff_guarded_defined
+
 /-- The circuit-level postcondition refines directly to the ledger action alternative. -/
 theorem spec_post_bridge_smoke {MSG SIG : Type*}
     (verify : PallasGroup → MSG → SIG → Prop)
@@ -200,6 +211,8 @@ assert_no_sorry cross_address_flag_arbitrary_nonzero
 assert_no_sorry enable_spend_disabled_forces_zero
 assert_no_sorry enable_output_disabled_forces_zero
 assert_no_sorry or_break_iff_guarded_smoke
+assert_no_sorry path_iff_guarded_smoke
+assert_no_sorry guardedPath_of_exact
 assert_no_sorry spec_post_bridge_smoke
 assert_no_sorry circuit_soundness_bridge_smoke
 assert_no_sorry actionBreak_of_classify

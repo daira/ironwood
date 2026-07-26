@@ -632,10 +632,90 @@ theorem successes_of_noBreak {wit : ActionData} {input : Value PrivateInputs Fp}
       MerkleSuccess wit :=
   (successes_or_break h).resolve_right hno
 
+/-- Recover the successful Sinsemilla hash underlying a defined Merkle
+compression: the converse direction of `Pool.merkleCompress_eq_of_hashToPoint`,
+used to turn a guard hypothesis `merkleCompress … = some b` back into the exact
+hash query that the exported chain pins. -/
+private theorem hashToPoint_of_merkleCompress {i : Fin 32}
+    {children : Pool.Encoding × Pool.Encoding} {b : Fp}
+    (h : Pool.merkleCompress i children = some b) :
+    ∃ B, hashToPoint orchardGenerators.S Pool.merkleQ
+      (merkleChunks i.1 children.1.1 children.2.1) = some B ∧ b = B.x := by
+  simp only [Pool.merkleCompress, Option.map_eq_some_iff] at h
+  obtain ⟨B, hB, hbx⟩ := h
+  exact ⟨B, hB, hbx.symm⟩
+
+/-- The exact circuit Merkle chain, transferred into the ledger's guarded
+(⊥-model) path.  No definedness hypothesis is needed: each guarded clause is
+only asked to fire on an *already defined* running node, and the exported
+existential chain (`nodes`, its selected-child equations, and its per-layer hash
+steps) supplies exactly that node.  Pairing this with per-layer definedness gives
+the strict `Merkle.Path` (`merkle_path_of_exact`). -/
+theorem guardedPath_of_exact {wit : ActionData} {root : Fp}
+    (hpath : ExactMerklePathData wit root) :
+    Merkle.GuardedPath Pool.merkle wit.cmOld.x root
+      (fun i : Fin 32 =>
+        (⟨wit.leftEncoding i, by
+            rcases hpath with ⟨_, _, _, hsteps⟩
+            simpa only [merkleLeftEncoding_fin] using (hsteps i i.isLt).1⟩,
+         ⟨wit.rightEncoding i, by
+            rcases hpath with ⟨_, _, _, hsteps⟩
+            simpa only [merkleRightEncoding_fin] using (hsteps i i.isLt).2.1⟩))
+      wit.merkleSide := by
+  rcases hpath with ⟨nodes, hstart, hroot, hsteps⟩
+  -- A defined compression at height `k`, over the exact encodings, pins the next
+  -- running node via the exported hash step of the chain.
+  have hstepAt : ∀ (k : Fin 32) (c : Pool.Encoding × Pool.Encoding) {b : Fp},
+      c.1.1 = wit.leftEncoding k → c.2.1 = wit.rightEncoding k →
+      Pool.merkleCompress k c = some b → nodes (k.1 + 1) = b := by
+    intro k c b hcl hcr hcomp
+    obtain ⟨B, hB, hbB⟩ := hashToPoint_of_merkleCompress hcomp
+    rw [hcl, hcr] at hB
+    have hB' : hashToPoint orchardGenerators.S orchardBases.merkleQ
+        (merkleChunks (0 + k.1) (merkleLeftEncoding wit k.1) (merkleRightEncoding wit k.1))
+          = some B := by
+      rw [merkleLeftEncoding_fin, merkleRightEncoding_fin]
+      simpa [orchardBases, Zcash.Circuits.Action.merkleQ, Pool.merkleQ] using hB
+    exact ((hsteps k.1 k.isLt).2.2.2 B hB').trans hbB.symm
+  refine ⟨fun i b hb => ?_, fun b hb => ?_⟩
+  · -- Selected-child clause: the decoded selected child is the recorded node,
+    -- and the guard hypothesis pins that node to `b`.
+    have hs := (hsteps i.1 i.isLt).2.2.1
+    rw [merkleSide_fin, merkleLeftEncoding_fin, merkleRightEncoding_fin] at hs
+    have hnodeval : nodes i.1 = b := by
+      rcases i with ⟨iv, hi⟩
+      cases iv with
+      | zero =>
+        have hc : Fin.castSucc (⟨0, hi⟩ : Fin Pool.merkle.depth) = 0 := by apply Fin.ext; simp
+        rw [hc] at hb
+        show nodes 0 = b
+        rw [hstart]
+        simpa [Merkle.node] using hb
+      | succ j =>
+        have hi32 : j + 1 < 32 := hi
+        have hj : j < 32 := by omega
+        have hc : Fin.castSucc (⟨j + 1, hi⟩ : Fin Pool.merkle.depth)
+            = Fin.succ (⟨j, hj⟩ : Fin Pool.merkle.depth) := by
+          apply Fin.ext; simp
+        rw [hc] at hb
+        simp only [Merkle.node, Fin.cases_succ, Pool.merkle] at hb
+        exact hstepAt ⟨j, hj⟩ _ rfl rfl hb
+    rw [Merkle.selectedChild, apply_ite Pool.merkle.decode]
+    simp only [Pool.merkle, Pool.decode]
+    exact hs.trans hnodeval
+  · -- Root clause: the final defined compression is the recorded root.
+    have hlast : (Fin.last Pool.merkle.depth) = Fin.succ (⟨31, by decide⟩ : Fin Pool.merkle.depth) := by
+      apply Fin.ext; simp [Pool.merkle]
+    rw [hlast] at hb
+    simp only [Merkle.node, Fin.cases_succ, Pool.merkle] at hb
+    exact ((hstepAt ⟨31, by omega⟩ _ rfl rfl hb).symm.trans hroot)
+
 /-- An exact, escape-free circuit Merkle chain yields the ledger's raw
 authentication path.  The raw encodings are retained verbatim: the only
 conversion is the ledger decoder from a bounded 255-bit representative to its
-field element. -/
+field element.  The proof is the guarded split: transfer the exact chain into the
+⊥-model path (`guardedPath_of_exact`), then reinstate strictness from the
+per-layer definedness supplied by `hhash`. -/
 theorem merkle_path_of_exact {wit : ActionData} {root : Fp}
     (hpath : ExactMerklePathData wit root)
     (hhash : ∀ i : Fin 32, ∃ B,
@@ -649,116 +729,11 @@ theorem merkle_path_of_exact {wit : ActionData} {root : Fp}
          ⟨wit.rightEncoding i, by
             rcases hpath with ⟨_, _, _, hsteps⟩
             simpa only [merkleRightEncoding_fin] using (hsteps i i.isLt).2.1⟩))
-      wit.merkleSide := by
-  rcases hpath with ⟨nodes, hstart, hroot, hsteps⟩
-  unfold Pool.merkle
-  constructor
-  · intro i
-    rcases i with ⟨i, hi⟩
-    cases i with
-    | zero =>
-      change 0 < 32 at hi
-      let k : Fin 32 := ⟨0, hi⟩
-      have hleft : merkleLeftEncoding wit 0 = wit.leftEncoding k :=
-        merkleLeftEncoding_fin wit k
-      have hright : merkleRightEncoding wit 0 = wit.rightEncoding k :=
-        merkleRightEncoding_fin wit k
-      have hs := hsteps 0 (by omega)
-      cases hside : wit.merkleSide k with
-      | false =>
-        have hside' : merkleSide wit 0 = false :=
-          (merkleSide_fin wit k).trans hside
-        -- Layer 0's running node is `some leaf`; the selected raw child decodes to it.
-        change some wit.cmOld.x = some (wit.leftEncoding k : Fp)
-        have hE : (wit.leftEncoding k : Fp) = wit.cmOld.x := by
-          calc
-            _ = nodes 0 := by simpa [hleft, hright, hside'] using hs.2.2.1
-            _ = _ := hstart
-        exact congrArg some hE.symm
-      | true =>
-        have hside' : merkleSide wit 0 = true :=
-          (merkleSide_fin wit k).trans hside
-        change some wit.cmOld.x = some (wit.rightEncoding k : Fp)
-        have hE : (wit.rightEncoding k : Fp) = wit.cmOld.x := by
-          calc
-            _ = nodes 0 := by simpa [hleft, hright, hside'] using hs.2.2.1
-            _ = _ := hstart
-        exact congrArg some hE.symm
-    | succ j =>
-      change j + 1 < 32 at hi
-      have hj : j < 32 := by omega
-      let k : Fin 32 := ⟨j, hj⟩
-      let k' : Fin 32 := ⟨j + 1, hi⟩
-      have hleft : merkleLeftEncoding wit j = wit.leftEncoding k :=
-        merkleLeftEncoding_fin wit k
-      have hright : merkleRightEncoding wit j = wit.rightEncoding k :=
-        merkleRightEncoding_fin wit k
-      have hleft' : merkleLeftEncoding wit (j + 1) = wit.leftEncoding k' :=
-        merkleLeftEncoding_fin wit k'
-      have hright' : merkleRightEncoding wit (j + 1) = wit.rightEncoding k' :=
-        merkleRightEncoding_fin wit k'
-      have hcurr := hsteps (j + 1) hi
-      obtain ⟨B, hB⟩ := hhash k
-      have hprev := (hsteps j hj).2.2.2 B (by
-        simpa [hleft, hright] using hB)
-      -- The compression producing the running node at layer `j+1` succeeds with `some B.x`.
-      have hcomp : Pool.merkleCompress k
-          (⟨wit.leftEncoding k, by simpa [hleft] using (hsteps j hj).1⟩,
-           ⟨wit.rightEncoding k, by simpa [hright] using (hsteps j hj).2.1⟩) = some B.x :=
-        Pool.merkleCompress_eq_of_hashToPoint (by
-          simpa [k, orchardBases, Zcash.Circuits.Action.merkleQ,
-            Pool.merkleQ] using hB)
-      cases hside : wit.merkleSide k' with
-      | false =>
-        have hside' : merkleSide wit (j + 1) = false :=
-          (merkleSide_fin wit k').trans hside
-        change Pool.merkleCompress k
-          (⟨wit.leftEncoding k, by simpa [hleft] using (hsteps j hj).1⟩,
-           ⟨wit.rightEncoding k, by simpa [hright] using (hsteps j hj).2.1⟩) =
-            some (wit.leftEncoding k' : Fp)
-        calc
-          _ = some B.x := hcomp
-          _ = some (nodes (j + 1)) := congrArg some hprev.symm
-          _ = some (wit.leftEncoding k' : Fp) := by
-            have he : (wit.leftEncoding k' : Fp) = nodes (j + 1) := by
-              simpa [hleft', hright', hside'] using hcurr.2.2.1
-            rw [he]
-      | true =>
-        have hside' : merkleSide wit (j + 1) = true :=
-          (merkleSide_fin wit k').trans hside
-        change Pool.merkleCompress k
-          (⟨wit.leftEncoding k, by simpa [hleft] using (hsteps j hj).1⟩,
-           ⟨wit.rightEncoding k, by simpa [hright] using (hsteps j hj).2.1⟩) =
-            some (wit.rightEncoding k' : Fp)
-        calc
-          _ = some B.x := hcomp
-          _ = some (nodes (j + 1)) := congrArg some hprev.symm
-          _ = some (wit.rightEncoding k' : Fp) := by
-            have he : (wit.rightEncoding k' : Fp) = nodes (j + 1) := by
-              simpa [hleft', hright', hside'] using hcurr.2.2.1
-            rw [he]
-  · let k : Fin 32 := ⟨31, by omega⟩
-    have hleft : merkleLeftEncoding wit 31 = wit.leftEncoding k :=
-      merkleLeftEncoding_fin wit k
-    have hright : merkleRightEncoding wit 31 = wit.rightEncoding k :=
-      merkleRightEncoding_fin wit k
-    -- The final compression yields the root, in its defined branch.
-    change Pool.merkleCompress k
-      (⟨wit.leftEncoding k, by simpa [hleft] using (hsteps 31 (by omega)).1⟩,
-       ⟨wit.rightEncoding k, by simpa [hright] using (hsteps 31 (by omega)).2.1⟩) = some root
-    obtain ⟨B, hB⟩ := hhash k
-    have hnext := (hsteps 31 (by omega)).2.2.2 B (by
-      simpa [hleft, hright] using hB)
-    have hcomp : Pool.merkleCompress k
-        (⟨wit.leftEncoding k, by simpa [hleft] using (hsteps 31 (by omega)).1⟩,
-         ⟨wit.rightEncoding k, by simpa [hright] using (hsteps 31 (by omega)).2.1⟩) = some B.x :=
-      Pool.merkleCompress_eq_of_hashToPoint (by
-        simpa [k, orchardBases, Zcash.Circuits.Action.merkleQ,
-          Pool.merkleQ] using hB)
-    calc
-      _ = some B.x := hcomp
-      _ = some (nodes 32) := congrArg some hnext.symm
-      _ = some root := congrArg some hroot
+      wit.merkleSide :=
+  Merkle.Path.of_guarded_of_defined (guardedPath_of_exact hpath) fun i => by
+    obtain ⟨B, hB⟩ := hhash i
+    exact ⟨B.x, Pool.merkleCompress_eq_of_hashToPoint (by
+      simpa [orchardBases, Zcash.Circuits.Action.merkleQ, Pool.merkleQ] using hB)⟩
 
 /-- The Action postcondition refines to either one of its explicitly exhibited
 Sinsemilla escapes or a fully satisfied concrete Orchard ledger action.  The ledger
