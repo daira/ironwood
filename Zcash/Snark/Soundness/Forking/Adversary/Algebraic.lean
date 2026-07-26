@@ -1446,7 +1446,7 @@ theorem reductionEfficient_exponential (family : ComputedAlgebraicFSFamily shape
     (fun p => (p.proof.1.ipaC, p.proof.1.ipaF))
     (algebraicTableAcceptZ basis (family.vk basis) (family.instanceCommitment basis) family.init) _
 
-/-- Fixed-slot DL hardness at advantage `ε`, as it applies to *one* reduction family with expected
+/-- Textbook DL hardness at advantage `ε`, as it applies to *one* reduction family with expected
 call bound `R`: if the family's extractor meets the call bound, its two derived solvers have
 advantage at most `ε`.  Stated per family, not `∀`-quantified over families: a family's adversary
 is an arbitrary Lean function whose own running time is not encoded, so a family-universal form

@@ -119,14 +119,6 @@ theorem exists_nonzero_coeff {ι : Type*} [Fintype ι] {basis : ι → G}
 
 end AlgebraicRelationWitness
 
-/-- Public input to an algebraic relation adversary.
-
-`params` holds non-group protocol data. `basis` contains every public group element available for
-representing adversary outputs. -/
-structure AlgebraicAdversaryInput (Params ι : Type*) [Fintype ι] where
-  params : Params
-  basis : ι → G
-
 /-- The known-log contribution of every basis slot except the challenge slot. -/
 def relationLogExcept {ι : Type*} [Fintype ι] [DecidableEq ι]
     (logs coeffs : ι → F) (challenge : ι) : F :=
@@ -308,12 +300,6 @@ omit [AddCommGroup G] in
   · rfl
   · fin_cases j <;> simp [augmentedBasis, ursOfAugmentedBasis, AugmentedIndex.u,
       AugmentedIndex.w]
-
-/-- Canonical public AGM input for the augmented `(g, U, W)` basis. -/
-def augmentedAdversaryInput {n : ℕ} (g : Fin n → G) (U W : G) :
-    AlgebraicAdversaryInput (G := G) Unit (AugmentedIndex n) :=
-  { params := ()
-    basis := augmentedBasis g U W }
 
 /-- The coefficients of an augmented relation as one representation vector. -/
 def augmentedCoeffs {n : ℕ} (a : Fin n → F) (alpha beta : F) : AugmentedIndex n → F
