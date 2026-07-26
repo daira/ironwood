@@ -103,7 +103,7 @@ theorem snarkExtractionDeployed_prob_le_via_wrapped_pinned_roots
           snarkExtractionFailureEventDeployed family extracted)
       <= ((family.Q + shape.k) * (3 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
-          Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound)
+          (bound + 1 / Fintype.card Fp))
         + (family.Q + (11 + shape.k) + 1 : Nat) * s := by
   refine le_trans (le_of_eq (congrArg
     (fun S => (independentProductPMF (orchardGeneratorROSetup query)

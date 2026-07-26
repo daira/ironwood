@@ -310,7 +310,7 @@ open scoped ENNReal in
 open ComputedAlgebraicFSFamily in
 /-- **Conditional knowledge-soundness bound.** The measure of "deployed acceptance but no
 SNARK extraction" inherits the clean-opening bound
-`(Q+k)·3/|Fp| + (Q+1)/|Fp| + |basis|·ε`, **conditional on `hExtract`** — that every clean-opening run
+`(Q+k)·3/|Fp| + (Q+1)/|Fp| + ε + 1/|Fp|`, **conditional on `hExtract`** — that every clean-opening run
 delivers the extraction, given the deployed gate data. By
 set-containment (`snarkExtractionFailureEvent_subset`) + outer-measure monotonicity, so the concrete
 AGM bound transfers verbatim. `hExtract` is the honest disjoint-halves gap: discharging it family-wide
@@ -329,7 +329,7 @@ theorem snarkExtraction_prob_le_of_generatorRO_textbookDL {shape : Shape}
           family.snarkExtractionFailureEvent extracted)
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound :=
+        (bound + 1 / Fintype.card Fp) :=
   le_trans
     ((independentProductPMF (orchardGeneratorROSetup query)
         (PMF.uniformOfFintype family.Coins)).toOuterMeasure.mono

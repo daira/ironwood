@@ -1,16 +1,17 @@
 import Zcash.Snark.Soundness.Deployed.Binding
 
 /-!
-# AGM relations and the fixed-slot DL reduction
+# AGM relations and the programmed-basis DL reduction
 
 The deployed soundness code can return `NontrivialRelation g U W`: explicit coefficients for a
 relation among `(g, U, W)`. Merely proving that such a relation exists says nothing in a prime-order
 group. Computing its coefficients is the security break.
 
-This module turns that relation into a plain discrete-log solution. Following
-Fuchsbauer–Kiltz–Loss (<https://eprint.iacr.org/2017/620>), the reduction places its DL challenge in
-one basis slot before the adversary runs and knows the logs of all other slots. It solves the
-challenge when the returned relation has a nonzero coefficient in that slot.
+This module turns that relation into a plain discrete-log solution. Following Jaeger–Tessaro
+(Lemma 3 of <https://eprint.iacr.org/2020/1213>), the reduction programs *every* basis slot from
+its DL challenge `C` as `x i • B + y i • C` with fresh uniform pairs, so the presented basis is
+uniform for any `C` and no challenge slot is guessed. It solves the challenge whenever the
+returned relation has a nonzero component against `y` — a single hyperplane of failure.
 
 The representation types borrow basic structure from ArkLib's AGM `Basic.lean`
 (<https://github.com/Verified-zkEVM/ArkLib/blob/main/ArkLib/AGM/Basic.lean#L13-L14>). ArkLib is not a
@@ -21,16 +22,18 @@ proves the operational prover, certificate, and reductions used here.
 
 * Representations over a public basis (`GroupRepresentation`, `AlgebraicPoint`,
   `AlgebraicRelationWitness`).
-* The fixed-slot relation-to-DL adapter (`discreteLogOfBasis_of_relation`) and its collision and
-  augmented-basis forms.
-* The challenge game (`DLChallengeGame`) and conditional extractor (`solveFromRelation`).
-* The finite fact used by the probability proof: every nontrivial relation hits at least one slot.
+* The known-log eliminator (`discreteLogOfBasis_of_relation`): a relation with a nonzero
+  coefficient at one slot yields that slot's log when all other logs are known. Its augmented-basis
+  forms serve the binding-signature reductions.
+* The programmed-basis relation-to-DL adapter (`discreteLogOfChallenge_of_relation`) and its
+  extract-or-miss form (`programmedExtractOrMiss`), used by the deployed capstone.
 
 ## Computational boundary
 
 `Soundness.AGM.Prover` adds representations to prover and certificate data.
 `Soundness.AGM.Peel` and `.Capstone` compute an IPA opening or relation.
-`Soundness.AGM.Probability` proves the slot-loss bound, and `.ProbabilityVesta` applies it to Vesta.
+`Soundness.AGM.Probability` prices the reduction's single failure hyperplane at `1/|F|`, and
+`.ProbabilityVesta` applies it to Vesta.
 
 The explicit-certificate path is computable. Its boundary is AGM, plain-DL hardness, ideal random
 oracles, an unproved polynomial AFK call bound, and an external PPT-adversary restriction.
@@ -103,7 +106,9 @@ def toAlgebraicPoint {ι : Type*} [Fintype ι] {basis : ι → G}
   { point := 0
     repr := r.toGroupRepresentation }
 
-/-- A nontrivial finite relation has a nonzero coefficient at some basis slot. -/
+/-- A nontrivial finite relation has a nonzero coefficient at some basis slot.
+
+`Soundness.AGM.Probability` uses this slot as the pivot of its hyperplane counting. -/
 theorem exists_nonzero_coeff {ι : Type*} [Fintype ι] {basis : ι → G}
     (r : AlgebraicRelationWitness (F := F) basis) :
     ∃ i, r.coeffs i ≠ 0 := by
@@ -111,47 +116,6 @@ theorem exists_nonzero_coeff {ι : Type*} [Fintype ι] {basis : ι → G}
   apply r.nontrivial
   funext i
   exact not_not.mp (not_exists.mp h i)
-
-/-- Challenge slots where a fixed-slot DL embedding can extract from this relation. -/
-noncomputable def nonzeroCoeffSlots {ι : Type*} [Fintype ι] [DecidableEq ι] {basis : ι → G}
-    (r : AlgebraicRelationWitness (F := F) basis) : Finset ι :=
-  by
-    classical
-    exact Finset.univ.filter fun i => r.coeffs i ≠ 0
-
-@[simp] theorem mem_nonzeroCoeffSlots {ι : Type*} [Fintype ι] [DecidableEq ι]
-    {basis : ι → G} (r : AlgebraicRelationWitness (F := F) basis) (i : ι) :
-    i ∈ r.nonzeroCoeffSlots ↔ r.coeffs i ≠ 0 := by
-  simp [nonzeroCoeffSlots]
-
-/-- A nontrivial relation has at least one slot from which extraction succeeds. -/
-theorem nonzeroCoeffSlots_nonempty {ι : Type*} [Fintype ι] [DecidableEq ι] {basis : ι → G}
-    (r : AlgebraicRelationWitness (F := F) basis) :
-    r.nonzeroCoeffSlots.Nonempty := by
-  obtain ⟨i, hi⟩ := r.exists_nonzero_coeff
-  exact ⟨i, by simp [nonzeroCoeffSlots, hi]⟩
-
-/-- Count of challenge slots where the relation has nonzero coefficient. -/
-noncomputable def challengeHitCount {ι : Type*} [Fintype ι] [DecidableEq ι] {basis : ι → G}
-    (r : AlgebraicRelationWitness (F := F) basis) : ℕ :=
-  r.nonzeroCoeffSlots.card
-
-/-- At least one challenge slot has a nonzero coefficient.
-
-`Soundness.AGM.Probability.hitProb_ge_inv_card` turns this count into a probability bound. -/
-theorem challengeHitCount_pos {ι : Type*} [Fintype ι] [DecidableEq ι] {basis : ι → G}
-    (r : AlgebraicRelationWitness (F := F) basis) :
-    0 < r.challengeHitCount := by
-  exact Finset.card_pos.mpr r.nonzeroCoeffSlots_nonempty
-
-/-- The number of successful challenge placements is bounded by the number of public basis slots. -/
-theorem challengeHitCount_le_total {ι : Type*} [Fintype ι] [DecidableEq ι] {basis : ι → G}
-    (r : AlgebraicRelationWitness (F := F) basis) :
-    r.challengeHitCount ≤ Fintype.card ι := by
-  dsimp [challengeHitCount, nonzeroCoeffSlots]
-  apply Finset.card_le_card
-  intro i hi
-  exact Finset.mem_univ i
 
 end AlgebraicRelationWitness
 
@@ -224,82 +188,82 @@ def discreteLogOfBasis_of_relation {ι : Type*} [Fintype ι] [DecidableEq ι]
     simpa [smul_smul, inv_mul_cancel₀ hcoeff] using hscale
   exact hlog.symm
 
-/-- A DL challenge placed in one slot, with known logs for every other slot.
+/-! ### The programmed-basis relation-to-DL adapter
 
-The challenge slot is fixed before the adversary runs. -/
-structure FixedSlotEmbedding {ι : Type*} [Fintype ι] (base : G) (basis : ι → G) (challenge : ι) where
-  logs : ι → F
-  known : ∀ i, i ≠ challenge → basis i = logs i • base
+Jaeger–Tessaro Lemma 3: every basis slot is programmed from the challenge `C` as
+`x i • B + y i • C`. A returned relation then reads
+`0 = (∑ i, aᵢ·xᵢ) • B + (∑ i, aᵢ·yᵢ) • C`, so the reduction divides by the challenge component
+`∑ i, aᵢ·yᵢ` whenever it is nonzero. No challenge slot is guessed, and the only failure is the
+single hyperplane `∑ i, aᵢ·yᵢ = 0`, which `Soundness.AGM.Probability` prices at `1/|F|`. -/
 
-/-- A plain-DL game with the challenge placed in a fixed slot of an AGM input.
+/-- A DL challenge programmed into every basis slot: slot `i` presents `x i • B + y i • C`.
 
-A solution is the log of that slot, not a slot chosen after seeing the relation. -/
-structure DLChallengeGame (Params ι : Type*) [Fintype ι] [DecidableEq ι] where
-  input : AlgebraicAdversaryInput (G := G) Params ι
-  base : G
-  challenge : ι
-  embedding : FixedSlotEmbedding (F := F) base input.basis challenge
+With fresh uniform pairs `(x i, y i)` the presented basis is uniform for any challenge `C`, so the
+embedding simulates the honest setup perfectly. -/
+structure ProgrammedBasisEmbedding {ι : Type*} [Fintype ι] (B C : G) (basis : ι → G) where
+  x : ι → F
+  y : ι → F
+  programmed : ∀ i, basis i = x i • B + y i • C
 
-namespace DLChallengeGame
+/-- Over a programmed basis, a representation separates into base and challenge components. -/
+theorem representationEval_programmed {ι : Type*} [Fintype ι]
+    (B C : G) (basis : ι → G) (x y coeffs : ι → F)
+    (hprog : ∀ i, basis i = x i • B + y i • C) :
+    representationEval basis coeffs =
+      (∑ i, coeffs i * x i) • B + (∑ i, coeffs i * y i) • C := by
+  calc
+    representationEval basis coeffs
+        = ∑ i, ((coeffs i * x i) • B + (coeffs i * y i) • C) := by
+          refine Finset.sum_congr rfl fun i _ => ?_
+          rw [hprog i, smul_add, smul_smul, smul_smul]
+    _ = (∑ i, coeffs i * x i) • B + (∑ i, coeffs i * y i) • C := by
+          rw [Finset.sum_add_distrib, ← Finset.sum_smul, ← Finset.sum_smul]
 
-/-- A solution of the game: the discrete log of the pre-fixed challenge slot. -/
-abbrev Solution {Params ι : Type*} [Fintype ι] [DecidableEq ι]
-    (game : DLChallengeGame (F := F) (G := G) Params ι) : Type _ :=
-  DiscreteLogRepresentation (F := F) game.base (game.input.basis game.challenge)
+/-- Recover the challenge's discrete log from a relation with nonzero challenge component.
 
-/-- The returned relation has a nonzero coefficient at the challenge slot. -/
-def hits {Params ι : Type*} [Fintype ι] [DecidableEq ι]
-    (game : DLChallengeGame (F := F) (G := G) Params ι)
-    (r : AlgebraicRelationWitness (F := F) game.input.basis) : Prop :=
-  r.coeffs game.challenge ≠ 0
+Every slot is programmed, so no slot guess occurs: the reduction is a field solve for `C`. -/
+def discreteLogOfChallenge_of_relation {ι : Type*} [Fintype ι]
+    (B C : G) (basis : ι → G) (x y : ι → F)
+    (r : AlgebraicRelationWitness (F := F) basis)
+    (hprog : ∀ i, basis i = x i • B + y i • C)
+    (hpair : (∑ i, r.coeffs i * y i) ≠ 0) :
+    DiscreteLogRepresentation (F := F) B C := by
+  refine ⟨(∑ i, r.coeffs i * y i)⁻¹ * (-(∑ i, r.coeffs i * x i)), ?_⟩
+  have hzero : (∑ i, r.coeffs i * x i) • B + (∑ i, r.coeffs i * y i) • C = 0 := by
+    rw [← representationEval_programmed B C basis x y r.coeffs hprog]
+    exact r.relation
+  have hmul : (∑ i, r.coeffs i * y i) • C = (-(∑ i, r.coeffs i * x i)) • B := by
+    calc
+      (∑ i, r.coeffs i * y i) • C = -((∑ i, r.coeffs i * x i) • B) :=
+        eq_neg_of_add_eq_zero_right hzero
+      _ = (-(∑ i, r.coeffs i * x i)) • B := by rw [neg_smul]
+  have hscale := congrArg ((fun X : G => (∑ i, r.coeffs i * y i)⁻¹ • X)) hmul
+  have hlog : C = ((∑ i, r.coeffs i * y i)⁻¹ * (-(∑ i, r.coeffs i * x i))) • B := by
+    simpa [smul_smul, inv_mul_cancel₀ hpair] using hscale
+  exact hlog.symm
 
-theorem hits_iff_mem_nonzeroCoeffSlots {Params ι : Type*} [Fintype ι] [DecidableEq ι]
-    (game : DLChallengeGame (F := F) (G := G) Params ι)
-    (r : AlgebraicRelationWitness (F := F) game.input.basis) :
-    game.hits r ↔ game.challenge ∈ r.nonzeroCoeffSlots :=
-  (r.mem_nonzeroCoeffSlots game.challenge).symm
+/-- The result of testing one returned relation against the challenge programming.
 
-/-- Solve the game when the returned relation hits the challenge slot. -/
-def solveFromRelation {Params ι : Type*} [Fintype ι] [DecidableEq ι]
-    (game : DLChallengeGame (F := F) (G := G) Params ι)
-    (r : AlgebraicRelationWitness (F := F) game.input.basis)
-    (hhit : game.hits r) :
-    Solution (F := F) game :=
-  discreteLogOfBasis_of_relation game.base game.input.basis game.embedding.logs game.challenge r
-    game.embedding.known hhit
-
-end DLChallengeGame
-
-/-- The result of testing one returned relation at the fixed challenge slot.
-
-Both branches retain the same relation: either it yields the discrete log, or its coefficient at
-that slot is zero. -/
-abbrev FixedSlotRelationOutcome {ι : Type*} [Fintype ι] (B : G) (basis : ι → G)
-    (challenge : ι) : Type _ :=
+Both branches retain the same relation: either it yields the challenge's discrete log, or its
+challenge component against `y` is zero. -/
+abbrev ProgrammedRelationOutcome {ι : Type*} [Fintype ι] (B C : G) (basis : ι → G)
+    (y : ι → F) : Type _ :=
   Σ' r : AlgebraicRelationWitness (F := F) basis,
-    DiscreteLogRepresentation (F := F) B (basis challenge) ⊕' (r.coeffs challenge = 0)
+    DiscreteLogRepresentation (F := F) B C ⊕' ((∑ i, r.coeffs i * y i) = 0)
 
-/-- Extract a discrete log on a hit; otherwise return proof that the same relation missed the slot. -/
-def fixedSlotExtractOrMiss {ι : Type*} [Fintype ι] [DecidableEq ι] [DecidableEq F]
-    (B : G) (basis : ι → G) (challenge : ι)
-    (embedding : FixedSlotEmbedding (F := F) B basis challenge)
+/-- Extract the challenge's discrete log, or return proof that the same relation has zero
+challenge component. -/
+def programmedExtractOrMiss {ι : Type*} [Fintype ι] [DecidableEq F]
+    (B C : G) {basis : ι → G}
+    (embedding : ProgrammedBasisEmbedding (F := F) B C basis)
     (r : AlgebraicRelationWitness (F := F) basis) :
-    FixedSlotRelationOutcome (F := F) B basis challenge := by
+    ProgrammedRelationOutcome (F := F) B C basis embedding.y := by
   refine ⟨r, ?_⟩
-  if hhit : r.coeffs challenge ≠ 0 then
-    exact PSum.inl (discreteLogOfBasis_of_relation B basis embedding.logs challenge r
-      embedding.known hhit)
+  if hpair : (∑ i, r.coeffs i * embedding.y i) ≠ 0 then
+    exact PSum.inl (discreteLogOfChallenge_of_relation B C basis embedding.x embedding.y r
+      embedding.programmed hpair)
   else
-    exact PSum.inr (not_ne_iff.mp hhit)
-
-/-- The URS part of a relation after substituting `g i = gLog i • B`. -/
-def relationGLog {n : ℕ} (gLog a : Fin n → F) : F :=
-  commitGen gLog a
-
-/-- If `g i = gLog i • B`, the URS relation equals the scalar MSM of those logs times `B`. -/
-theorem commitGen_of_base_logs {n : ℕ} (B : G) (gLog a : Fin n → F) :
-    commitGen (fun i => gLog i • B) a = relationGLog gLog a • B := by
-  simp [relationGLog, commitGen, Finset.sum_smul, smul_smul, smul_eq_mul]
+    exact PSum.inr (not_ne_iff.mp hpair)
 
 /-- The shared computed-data relation over the augmented basis `(g, U, W)`. -/
 abbrev AugmentedRelationWitness {n : ℕ} (g : Fin n → G) (U W : G) :=
@@ -350,16 +314,6 @@ def augmentedAdversaryInput {n : ℕ} (g : Fin n → G) (U W : G) :
     AlgebraicAdversaryInput (G := G) Unit (AugmentedIndex n) :=
   { params := ()
     basis := augmentedBasis g U W }
-
-/-- DL challenge game with the hidden challenge pre-placed at the augmented basis slot `challenge`. -/
-def augmentedDLChallengeGame {n : ℕ} (B : G) (g : Fin n → G) (U W : G)
-    (challenge : AugmentedIndex n)
-    (embedding : FixedSlotEmbedding (F := F) B (augmentedBasis g U W) challenge) :
-    DLChallengeGame (F := F) (G := G) Unit (AugmentedIndex n) :=
-  { input := augmentedAdversaryInput g U W
-    base := B
-    challenge := challenge
-    embedding := embedding }
 
 /-- The coefficients of an augmented relation as one representation vector. -/
 def augmentedCoeffs {n : ℕ} (a : Fin n → F) (alpha beta : F) : AugmentedIndex n → F
@@ -423,8 +377,8 @@ def groupRepresentationOfCollision (urs : URS G) {a a' : Fin (2 ^ urs.k) → F}
     GroupRepresentation (F := F) urs.g (0 : G) :=
   (relationWitnessOfCollision urs hneq hcollision).toGroupRepresentation
 
-/-- Extend a relation over `g` to `(g,U,W)` with zero `U` and `W` coefficients for the fixed-slot DL
-reduction. -/
+/-- Extend a relation over `g` to `(g,U,W)` with zero `U` and `W` coefficients for the augmented
+DL reduction. -/
 def AlgebraicRelationWitness.augment {n : ℕ} {g : Fin n → G} (U W : G)
     (r : AlgebraicRelationWitness (F := F) g) :
     AlgebraicRelationWitness (F := F) (augmentedBasis g U W) :=
@@ -436,17 +390,6 @@ def AlgebraicRelationWitness.augment {n : ℕ} {g : Fin n → G} (U W : G)
       relation := by
         rw [zero_smul, zero_smul, add_zero, add_zero]
         exact r.relation }
-
-/-- Use a commitment collision to solve DL when its difference hits the fixed challenge slot. -/
-def discreteLogOfCollisionAtChallenge (urs : URS G) (B : G)
-    {a a' : Fin (2 ^ urs.k) → F} (logs : Fin (2 ^ urs.k) → F)
-    (challenge : Fin (2 ^ urs.k))
-    (hneq : a ≠ a') (hcollision : commit urs a = commit urs a')
-    (hknown : ∀ i, i ≠ challenge → urs.g i = logs i • B)
-    (hcoeff : (a - a') challenge ≠ 0) :
-    DiscreteLogRepresentation (F := F) B (urs.g challenge) :=
-  discreteLogOfBasis_of_relation B urs.g logs challenge
-    (relationWitnessOfCollision urs hneq hcollision) hknown hcoeff
 
 /-- Use an augmented relation to solve DL when it hits the fixed challenge slot. -/
 def discreteLogOfAugmentedRelationAtChallenge {n : ℕ} (B : G) (g : Fin n → G) (U W : G)

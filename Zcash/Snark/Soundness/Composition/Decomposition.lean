@@ -79,7 +79,7 @@ theorem snarkExtraction_prob_le_of_generatorRO_textbookDL_decomposed {shape : Sh
           family.snarkExtractionFailureEvent extracted)
       ≤ ((family.Q + shape.k) * (3 / Fintype.card Fp) +
           (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-          Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound)
+          (bound + 1 / Fintype.card Fp))
         + (independentProductPMF (orchardGeneratorROSetup query)
             (PMF.uniformOfFintype family.Coins)).toOuterMeasure
               ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
