@@ -1,5 +1,8 @@
 import Zcash.Security.KeyBinding.Instance
 import Zcash.Security.KeyBinding.Probability
+import Zcash.Security.Ledger.Balance
+import Zcash.Security.Ledger.Spendability
+import Zcash.Security.Ledger.SpendAuthority
 import Zcash.Security.Common.Birthday
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
@@ -46,7 +49,7 @@ Two commands from `Zcash.Meta.AxiomCheck`, per the breaks-as-computed-data disci
 -/
 
 open Zcash.Security.KeyBinding Zcash.Security.RandomOracle Zcash.Security.Birthday
-open Zcash.Security.Ledger Zcash.Security.BindingSignature
+open Zcash.Security.Ledger Zcash.Security.Ledger.Model Zcash.Security.BindingSignature
 open Zcash.Meta
 
 /-! ## Key binding — computed break reductions -/
@@ -113,6 +116,105 @@ assert_computable Collision.upToSign
 assert_computable Merkle.collisionOfWrongLeaf
 assert_computable noteCommitBreakOfNe
 assert_computable Zcash.Security.Ledger.nfOldEqOrBreak +choice
+
+/-! ## Statement-layer pinning theorems
+
+The statement layer's exported pinning guarantees: an address `(g_d, pk_d)` determines
+`ivk`, and hence `nk` is determined up to an exhibited key-binding break. -/
+
+assert_axioms ivk_pinned
+assert_axioms nk_eq_or_break
+
+/-! ## Ledger model
+
+The ledger-model definitions are plain computable data over public ledger contents; the
+theorems are deterministic list facts. -/
+
+assert_computable posVal
+assert_computable Merkle.subRoot
+assert_computable Merkle.authChildren
+assert_axioms Merkle.Path.compress_isSome
+assert_axioms Merkle.path_of_root
+assert_computable leafList
+assert_computable leafFun
+assert_computable rootAfter
+assert_computable nullifiers
+assert_computable transparentPoolBalance
+assert_computable outputActions
+assert_computable outputOpenings
+assert_computable positionedOutputs
+assert_computable nonZeroSpends
+assert_computable poolValueBalance
+assert_axioms posVal_lt
+assert_axioms rootAfter_prefix
+assert_axioms output_rho_eq_nullifiers
+assert_axioms output_rho_nodup
+assert_axioms leafList_eq_map
+assert_axioms outputOpenings_length
+
+/-! ## Balance-subset
+
+The capstone and the per-spend pinning are computable reductions; `findPair` and the
+anchor search (`Nat.find`, itself axiom-free) keep the branch decisions decidable.
+`+choice` on the three reductions is the erased-positions tier: choice enters only
+through Mathlib proof terms in `Prop` positions (e.g. `List.getD_eq_getElem`'s proof),
+never the data path. -/
+
+assert_computable findPair
+assert_axioms findPair_spec
+assert_axioms findPair_none
+assert_axioms flatMap_sublist
+assert_axioms outputActions_prefix
+assert_axioms nullifiers_prefix
+assert_axioms take_prefix_take
+assert_axioms spendActions_map_nf_sublist
+assert_axioms length_leafList
+assert_axioms length_positionedOutputs
+assert_axioms positionedOutputs_getElem
+assert_computable noteCommitBreakOfOutputNe
+assert_axioms satisfied_of_spendMem
+assert_axioms anchor_of_spendMem
+assert_computable spendPinnedOrBreak +choice
+assert_computable allPinnedOrBreak +choice
+assert_computable balanceSubsetOrBreak +choice
+
+/-! ## Balance-value (conservation form)
+
+`+choice` on the two endpoints is again the erased-positions tier: choice arrives with
+the `ring`/`omega` proof terms in their `Prop` fields, never the data path. -/
+
+assert_computable txNetValue
+assert_computable issuanceTotal
+assert_axioms transparentPoolBalance_eq
+assert_axioms positionedOutputs_value_sum
+assert_axioms nonZeroSpends_value_sum
+assert_axioms poolValueBalance_eq_neg
+assert_computable allValueOrBreak
+assert_computable valueConservationOrBreak +choice
+assert_computable balanceValueOrBreak +choice
+
+/-! ## Spendability
+
+The Faerie-Gold core and the roadblock inversion are computable reductions at the strict
+flagless tier; the nullifier split and the persistence theorem are deterministic list
+facts. -/
+
+assert_axioms nullifiers_append
+assert_computable faerieGoldCore
+assert_computable respendOrBreak
+assert_axioms validLedger_append
+
+/-! ## Spend Authority
+
+The per-action core and the valid-ledger capstone are computable reductions; the
+receivability pinning is a deterministic module-algebra theorem. `+choice` on the two
+reductions is the erased-positions tier: choice arrives with `smul_eq_zero`'s Mathlib
+proof inside the receivability pinning, consumed only in `Prop` positions — never the
+data path. -/
+
+assert_axioms ivk_eq_of_receivable
+assert_computable spendAuthForgeryOrBreak +choice
+assert_computable spendAuthorityOrBreak +choice
 
 /-! ## Binding-signature relation reductions
 
