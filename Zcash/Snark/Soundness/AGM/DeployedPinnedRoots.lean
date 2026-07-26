@@ -395,7 +395,11 @@ representations named by that interface, while the exact deployed root sets also
 proof-string scalars and grouping data.  The final-output `OracleComp` interface does not encode
 when those fields were emitted, so deriving their chronology would be unsound.  A concrete family
 must provide prefix factorization from a strengthened online transcript interface (whose schedule
-is then matched to the Rust transcript order). -/
+is then matched to the Rust transcript order).
+
+TODO(#96): instantiate `rootPrefixDetermined` from the deployed Rust transcript chronology, then
+compose the resulting `snarkExtractionDeployed_prob_le_via_deployed_roots` endpoint into the final
+concrete `constraintsBadAccept` capstone. -/
 noncomputable def ComputedDeployedRootFSFamily.ofOnline
     (family : ComputedOnlineMemberFSFamily shape)
     (hcapacity : shape.numPointSets + 1 <= Fintype.card Fp)
