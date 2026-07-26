@@ -9,9 +9,10 @@ group. Computing its coefficients is the security break.
 
 This module turns that relation into a plain discrete-log solution. Following Jaeger–Tessaro
 (Lemma 3 of <https://eprint.iacr.org/2020/1213>), the reduction programs *every* basis slot from
-its DL challenge `C` as `x i • B + y i • C` with fresh uniform pairs, so the presented basis is
-uniform for any `C` and no challenge slot is guessed. It solves the challenge whenever the
-returned relation has a nonzero component against `y` — a single hyperplane of failure.
+its DL challenge `C` as `x i • B + y i • C` with fresh uniform pairs. For the DL game's challenge
+`C = z • B`, the presented slot logs are `x i + z * y i` — exactly uniform, so no challenge slot
+is guessed. It solves the challenge whenever the returned relation has a nonzero component
+against `y` — a single hyperplane of failure.
 
 The representation types borrow basic structure from ArkLib's AGM `Basic.lean`
 (<https://github.com/Verified-zkEVM/ArkLib/blob/main/ArkLib/AGM/Basic.lean#L13-L14>). ArkLib is not a
@@ -190,8 +191,9 @@ single hyperplane `∑ i, aᵢ·yᵢ = 0`, which `Soundness.AGM.Probability` pri
 
 /-- A DL challenge programmed into every basis slot: slot `i` presents `x i • B + y i • C`.
 
-With fresh uniform pairs `(x i, y i)` the presented basis is uniform for any challenge `C`, so the
-embedding simulates the honest setup perfectly. -/
+For a challenge in the base's span — `C = z • B`, as the DL game supplies — fresh uniform pairs
+`(x i, y i)` present the exactly uniform slot logs `x i + z * y i`, so the embedding simulates the
+honest setup perfectly; `Soundness.AGM.Probability.programmedRelSet_card` proves that counting. -/
 structure ProgrammedBasisEmbedding {ι : Type*} [Fintype ι] (B C : G) (basis : ι → G) where
   x : ι → F
   y : ι → F
