@@ -1,5 +1,5 @@
 import Zcash.Snark.Soundness.AGM.DeployedRootDecode
-import Zcash.Snark.Soundness.ConstraintSupply
+import Zcash.Snark.Soundness.ConstraintRouting
 import Zcash.Snark.Soundness.Composition.Quotient
 
 /-!

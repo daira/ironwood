@@ -1,6 +1,7 @@
 import Zcash.Snark.Soundness.AGM.DeployedPinnedRoots
 import Zcash.Snark.Soundness.AGM.DeployedConstraintSupply
 import Zcash.Snark.Soundness.Composition.RootContainment
+import Zcash.Snark.Soundness.Composition.PrefixedSqueeze
 
 /-!
 # Concrete containment for rewind-free deployed AGM decoding

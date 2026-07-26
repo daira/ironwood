@@ -1,5 +1,4 @@
 import Zcash.Snark.Soundness.Composition.DeployedRuntime
-import Zcash.Snark.Soundness.Composition.Assembly
 import Zcash.Snark.Soundness.Forking.PinnedRoots
 
 /-!

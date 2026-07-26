@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.Composition.Capstone
+import Zcash.Snark.Soundness.Multiopen.NodeBinding
 
 /-!
 # The chosen committed openings for the concrete squeeze bad set

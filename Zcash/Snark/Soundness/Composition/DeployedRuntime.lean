@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.Composition.Completeness
+import Zcash.Snark.Soundness.Composition.DeployedAcceptance
 import Zcash.Snark.Soundness.Forking.WithReads
 
 /-!
@@ -17,6 +17,22 @@ open ComputedAlgebraicFSFamily
 local instance vestaInhabitedDeployedRuntime : Inhabited VestaG := ⟨0⟩
 
 variable {shape : Shape}
+
+/-- A fiber bound for an arbitrary independent product. -/
+theorem independentProductPMF_fiber_bound {A B : Type*} (p : PMF A) (q : PMF B)
+    (S : A → Set B) {beta : ENNReal} (hS : ∀ a, q.toOuterMeasure (S a) ≤ beta) :
+    (independentProductPMF p q).toOuterMeasure {x : A × B | x.2 ∈ S x.1} ≤ beta := by
+  rw [independentProductPMF, PMF.toOuterMeasure_bind_apply]
+  calc ∑' a, p a * (q.map (Prod.mk a)).toOuterMeasure {x : A × B | x.2 ∈ S x.1}
+      = ∑' a, p a * q.toOuterMeasure (S a) := by
+        refine tsum_congr fun a => ?_
+        have hpre : (Prod.mk a) ⁻¹' {x : A × B | x.2 ∈ S x.1} = S a := by
+          ext b
+          simp only [Set.mem_preimage, Set.mem_setOf_eq]
+        rw [PMF.toOuterMeasure_map_apply, hpre]
+    _ ≤ ∑' a, p a * beta := ENNReal.tsum_le_tsum fun a => mul_le_mul_right (hS a) _
+    _ = (∑' a, p a) * beta := by rw [ENNReal.tsum_mul_right]
+    _ = beta := by rw [PMF.tsum_coe, one_mul]
 
 /-- The algebraic adversary together with all eleven pre-IPA and `k` IPA-round oracle reads. -/
 noncomputable def wrappedAdversary (family : ComputedAlgebraicFSFamily shape)
