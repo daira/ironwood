@@ -200,7 +200,14 @@ convention in `Zcash.Security.RandomOracle`): two distinct `(rcm, note)` tuples 
 equal extracted coordinates. Computed by the games' reductions; nothing in this
 development reduces it further. The intended onward reductions are a Sinsemilla/DLR
 relation pre-quantum (spec Theorems 5.4.3 and 5.4.4), and an `H^rcm` ±-collision for the
-Recovery Statement (via the Pedersen lift and the `extract` ±-property). -/
+Recovery Statement (via the Pedersen lift and the `extract` ±-property).
+
+The value bounds travel with the break object: `Note.v` is an unbounded `ℕ` while the
+concrete commitment consumes it through a 64-bit encoding, so without them the structure
+would be inhabitable by value-overflow aliasing (`v` versus `v + 2^64`) with no
+cryptographic content, and the onward reductions above would be false as stated.  The
+producers mint breaks from `ActionSatisfied` pairs, whose `v_old_lt`/`v_new_lt` conjuncts
+supply the bounds directly. -/
 structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG) where
   rcm₁ : F
   n₁ : Note G RHO PSI
@@ -212,6 +219,8 @@ structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
   open₁ : P.noteCommit rcm₁ n₁ = some cm₁
   open₂ : P.noteCommit rcm₂ n₂ = some cm₂
   extract_eq : P.extract cm₁ = P.extract cm₂
+  v₁_lt : n₁.v < P.valueBound
+  v₂_lt : n₂.v < P.valueBound
 
 section Pinning
 
@@ -257,7 +266,7 @@ def noteCommitBreakOfNe
     (hx : P.extract w₁.cm_old = P.extract w₂.cm_old)
     (hne : (w₁.rcm_old, w₁.note_old) ≠ (w₂.rcm_old, w₂.note_old)) :
     NoteCommitBreak P :=
-  ⟨_, _, _, _, _, _, hne, h₁.commit_old, h₂.commit_old, hx⟩
+  ⟨_, _, _, _, _, _, hne, h₁.commit_old, h₂.commit_old, hx, h₁.v_old_lt, h₂.v_old_lt⟩
 
 /-- **Nullifier determinism up to a break** — **nf-pinning** (ZIP 2005 `lemma-nf-pinning`,
 consumed by the Spendability argument), as computed data per the breaks-as-computed-data
