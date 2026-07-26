@@ -35,9 +35,8 @@ and at `x`. The `∀`-witness endpoints are kept only as compatibility forms.
   witness as the two-level `x₄`-then-`x₁` power combination of member-column witnesses.
 * **The legacy value check.** `deployed_value_check_node_binding` and
   `deployed_member_node_binding` pin each decoded member column to its claimed evaluation at each
-  set point, or return the proposition `HasNontrivialRelation`. That branch is logical
-  compatibility data, not an executable relation finder; the rewind-free AGM route replaces it
-  with explicit coefficients.
+  set point, or return `HasNontrivialRelation` — compatibility data, not an executable finder;
+  the rewind-free AGM route replaces it with explicit coefficients.
 * **The terminal.** `orchard_verifier_vesta_member_constraint_derived`, with `hadvice`/`hinstance`
   derived from the grouping and the member binding rather than assumed.
 
@@ -48,7 +47,7 @@ verifier computes over the same `vk` — is the fingerprint (`Fingerprint.Match`
 ## What remains
 
 The forking-floor accept measures (the RO-uniformity axiom, as everywhere), the legacy
-`HasNontrivialRelation` disjunct (which cannot itself be charged to DL hardness), `hfold`/`hgood` at the
+`HasNontrivialRelation` disjunct (not chargeable to DL hardness), `hfold`/`hgood` at the
 terminal, the layout identities, and the bookkeeping floors. Producing the batch and member decode
 from a bare accepting run — coupling the coin measure to the multiopen budget — is the open surface
 of the composition that turns *the verifier accepted* into *a witness can be extracted*

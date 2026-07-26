@@ -2,7 +2,7 @@ import Zcash.Snark.Soundness.Composition.DeployedRuntime
 import Zcash.Snark.Soundness.Forking.PinnedRoots
 
 /-!
-# Deployed capstone through prefix-pinned root events
+# Deployed capstone through pinned root events
 
 This module replaces the four-level joint-event coupling with a finite union of explicit bad-root
 events.  Each event is fixed before its own squeeze and carries its direct root-set budget, so the
@@ -17,7 +17,7 @@ open ComputedAlgebraicFSFamily
 
 variable {shape : Shape}
 
-/-- The deployed residual through a concrete family of prefix-pinned root events. -/
+/-- The deployed residual through a concrete family of pinned root events. -/
 theorem residual_le_via_wrapped_deployed_pinned_roots
     {T' : Type*} [DecidableEq T']
     (query : AugmentedIndex (2 ^ shape.k) -> T')
@@ -77,7 +77,7 @@ theorem residual_le_via_wrapped_deployed_pinned_roots
     (queryBound_wrappedAdversary family basis)) ?_
   exact mul_le_mul_right (hbudget basis) _
 
-/-- The DLOG-based deployed extraction bound with an additive, prefix-pinned multiopen term. -/
+/-- The DLOG-based deployed extraction bound with an additive pinned-root multiopen term. -/
 theorem snarkExtractionDeployed_prob_le_via_wrapped_pinned_roots
     {T' : Type*} [DecidableEq T']
     (B : VestaG) (hB : B ≠ 0)

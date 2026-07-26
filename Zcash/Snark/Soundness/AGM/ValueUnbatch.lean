@@ -4,14 +4,10 @@ import Zcash.Snark.Soundness.Multiopen.NodeBinding
 /-!
 # Rewind-free value unbatching for multiopen
 
-The deployed multiopen proof previously obtained many accepting `x3`, `x2`, and `x1` challenges
-and inverted the resulting Vandermonde systems.  Once AGM fixes the relevant polynomials before
-their challenges, one accepting transcript is enough: any failed coefficient identity makes the
-actual Fiat--Shamir challenge a root of one explicit polynomial.
-
-This file isolates that deterministic replacement.  It deliberately leaves transcript pinning
-outside the lemmas: callers must establish that each polynomial is fixed before its challenge is
-squeezed before using the accompanying uniform root-set bounds.
+Once AGM fixes the relevant polynomials before their challenges, one accepting transcript is
+enough: any failed coefficient identity makes the actual challenge a root of one explicit
+polynomial.  Transcript pinning stays outside these lemmas; callers establish it before using the
+uniform root-set bounds.
 -/
 
 namespace Zcash.Snark

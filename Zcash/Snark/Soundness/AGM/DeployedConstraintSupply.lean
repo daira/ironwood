@@ -7,7 +7,7 @@ import Zcash.Snark.Soundness.Composition.Quotient
 
 The historical constraint-supply theorem obtains member polynomials from accepting `x1` rewind
 families.  `DeployedAlgebraicDecode` already supplies the same polynomials directly from
-prefix-pinned AGM coordinates, together with their values at every routed node.  This module
+squeeze-pinned AGM coordinates, together with their values at every routed node.  This module
 connects that deterministic output to the concrete Halo2 constraint layer without reintroducing
 the old multiopen probability floors.
 -/
@@ -237,11 +237,9 @@ noncomputable def DeployedAlgebraicDecode.memberPoly [DecidableEq G] [Inhabited 
     (m : Fin (deployedSetQueries vk instanceCommitment ps ch i).length) : Polynomial Fp :=
   coeffsToPoly ((decoded.batches.x1 i hi).coeffs m)
 
-/-- The rewind-free decoder's member polynomial takes the proof string's recorded value at every
-point routed to its set.  This is the direct AGM replacement for
-`deployed_member_node_binding_at_point_budgeted`: it has no rewind probability premise and no
-relation disjunction because both were discharged while constructing `DeployedAlgebraicDecode`.
--/
+/-- The decoder's member polynomial takes the proof string's recorded value at every point routed
+to its set — no rewind premise and no relation disjunction; both were discharged while
+constructing `DeployedAlgebraicDecode`. -/
 theorem DeployedAlgebraicDecode.memberPoly_eval_at_point [DecidableEq G] [Inhabited G]
     {shape : Shape} {urs : URS G} {hk : shape.k = urs.k} {vk : VerifyingKey shape Fp G} {instanceCommitment : Fin shape.numProofs → Nat → G}
     {ps : ProofString shape Fp G} {ch : Challenges shape.k Fp}
@@ -303,9 +301,8 @@ noncomputable def DeployedAlgebraicDecode.toMemberPolynomials [DecidableEq G] [I
   { poly := decoded.memberPoly
     eval_at_point := decoded.memberPoly_eval_at_point }
 
-/-- The decoded aggregate directly opens the deployed IPA statement.  This is the algebraic
-counterpart of `OpenedBatchOpenings.ipaRelation_of_x4Current`; it uses the actual `x4` power batch,
-not a family of accepting rewinds. -/
+/-- The decoded aggregate directly opens the deployed IPA statement, using the actual `x4` power
+batch rather than a family of accepting rewinds. -/
 theorem DeployedAlgebraicDecode.ipaRelation [DecidableEq G] [Inhabited G]
     {shape : Shape} {urs : URS G} {hk : shape.k = urs.k} {vk : VerifyingKey shape Fp G} {instanceCommitment : Fin shape.numProofs → Nat → G}
     {ps : ProofString shape Fp G} {ch : Challenges shape.k Fp}
@@ -378,9 +375,8 @@ noncomputable def committedFixedFeed {shape : Shape} (poly : G -> Polynomial Fp)
 
 /-- Permutation-product carriers built from a pre-`x` polynomial source.
 
-The final set's `else` branch is dead for deployed proof strings: halo2 reads a last-rotation
-evaluation only for the sets before the final one, so `lastEval` is `none` exactly where the
-branch would degrade the carrier to the claimed constant. -/
+The final set's `else` branch is dead: halo2 reads a last-rotation evaluation only for the sets
+before the final one, so its `lastEval` is `none`. -/
 noncomputable def committedPermSets {shape : Shape} (poly : G -> Polynomial Fp)
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) :
     Fin shape.numProofs -> List (PermSetEval (Polynomial Fp)) := fun q =>
@@ -1022,11 +1018,10 @@ theorem hfold_of_constraint_polys_of_xn_ne_direct
 
 open Polynomial in
 open Classical in
-/-- Mathematical constraint-witness adapter produced directly from `DeployedAlgebraicDecode`.
-Compared to `constraints_supply_derived`, the `OpenedBatchOpenings`, `OpenedX1Accept`, and
-joint-acceptance premises disappear.  The explicit relation branch is returned by the same
-computable quotient comparison used by `deployedConstraintQuotientFinder`; this constructor itself
-remains `noncomputable` because its success branch materializes Mathlib `Polynomial Fp` values. -/
+/-- Constraint-witness adapter produced directly from `DeployedAlgebraicDecode`, with no opened
+or joint-acceptance premises.  The relation branch is the computable quotient comparison of
+`deployedConstraintQuotientFinder`; only the success branch's Mathlib polynomials keep this
+`noncomputable`. -/
 noncomputable def deployedConstraintOutcomeOfDecode
     [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)

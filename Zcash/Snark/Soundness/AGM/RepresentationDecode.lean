@@ -4,10 +4,9 @@ import Zcash.Snark.Soundness.Multiopen.Opened
 /-!
 # Offline decoding of an AGM representation family
 
-An algebraic adversary may expose representations of the verifier's power-batched commitment as a
-function of the batching scalar.  Evaluating that representation function at distinct scalars and
-inverting the resulting Vandermonde system recovers representations of every batch column.  These
-evaluations are local computations on ghost AGM data, not accepting transcript rewinds.
+Evaluating the adversary's representation function at distinct batching scalars and inverting the
+Vandermonde system recovers representations of every batch column — local computations on ghost
+AGM data, not accepting rewinds.
 -/
 
 namespace Zcash.Snark

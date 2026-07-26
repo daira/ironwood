@@ -149,9 +149,8 @@ def deployedConstraintBadXEvent (family : ComputedDeployedRootFSFamily shape) :
     (wrappedPreIpaRecord (deployedRootRunOutput family p.1 p.2)).x ∈
       szBadSet (deployedConstraintDifferenceOfRoot family p.1 p.2 root)}
 
-/-- The exact constraint-difference root set of one oracle table.  The extractor tape does not
-enter: root witnesses for the same table carry the same batch data, so the union over tapes below
-adds no new roots. -/
+/-- The exact constraint-difference root set of one oracle table.  Root witnesses for the same
+table carry the same batch data, so the union over tapes adds no new roots. -/
 def deployedConstraintXBadSet (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (O : BTranscript Fp VestaG
@@ -160,11 +159,10 @@ def deployedConstraintXBadSet (family : ComputedDeployedRootFSFamily shape)
       (root : DeployedRootDecodeWitness family basis (O, tape)),
     x ∈ szBadSet (deployedConstraintDifferenceOfRoot family basis (O, tape) root)}
 
-/-- Causal condition for the constraint evaluation challenge: the exact constraint-difference
-root set carries a uniform direct bound and is unchanged when the run's own `x` squeeze answer is
-reprogrammed.  The set may consume the earlier `θ`/`β`/`γ`/`y` answers and the retained
-representations — data fixed before the `x` squeeze — but cannot be chosen retrospectively after
-seeing `x`. -/
+/-- Causal condition at the `x` squeeze: the constraint-difference root set carries a uniform
+bound and is unchanged when the run's own `x` answer is reprogrammed.  It may consume the earlier
+`θ`/`β`/`γ`/`y` answers and the retained representations, but cannot be chosen after seeing
+`x`. -/
 structure DeployedConstraintXSqueezeSchedule (family : ComputedDeployedRootFSFamily shape)
     (epsilonX : ENNReal) where
   measure_le : forall basis O,
@@ -178,7 +176,7 @@ structure DeployedConstraintXSqueezeSchedule (family : ComputedDeployedRootFSFam
           ((family.adversary basis).run O) 4) v) =
       deployedConstraintXBadSet family basis O
 
-/-- The single prefix-pinned event for the constraint evaluation challenge. -/
+/-- The single pinned event for the constraint evaluation challenge. -/
 noncomputable def deployedConstraintXPinnedEvent
     (family : ComputedDeployedRootFSFamily shape) {epsilonX : ENNReal}
     (schedule : DeployedConstraintXSqueezeSchedule family epsilonX)
@@ -565,9 +563,8 @@ theorem snarkConstraintsDeployed_prob_le_of_online_outcome
     (deployedConstraintDecodedOfOutcome family provider) badX hupgrade hDL hbadX
 
 /-- Concrete rewind-free constraint capstone.  The only computational premise is textbook
-single-instance DLOG for the executable combined finder.  The online prefix schedule discharges
-the exact bad-`x` event additively at `(Q + 1) * epsilonX`; it is not an `n`-DLOG assumption and
-introduces no fourth-root multiopen loss. -/
+single-instance DLOG for the executable combined finder; the schedule prices the bad-`x` event
+additively at `(Q + 1) * epsilonX`. -/
 theorem snarkConstraintsDeployed_prob_le_of_root_schedule
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)

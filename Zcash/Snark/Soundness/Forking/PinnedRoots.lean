@@ -1,18 +1,15 @@
 import Zcash.Snark.Soundness.Forking.PinnedSqueeze
 
 /-!
-# Additive pricing for prefix-indexed root events
+# Additive pricing for pinned root events
 
-The fourth-root adaptive-coupling loss is unnecessary when extraction failure exposes a bad root
-at a particular squeeze.  Such a root set is fixed before that squeeze and has a direct
-Schwartz--Zippel measure bound.  `xEscTable_measure_le` prices one adaptive squeeze at
-`(Q + 1) * epsilon`; this file packages a finite union of such events and sums their budgets.
+A bad root exposed at one squeeze has a direct Schwartz--Zippel bound, and
+`xEscTable_measure_le` prices that squeeze at `(Q + 1) * epsilon`.  This file packages a finite
+union of such events and sums their budgets — no fourth root.
 
-A transcript prefix does not determine the earlier squeeze *answers* (a squeeze absorbs only a
-domain marker; the derived challenge is never re-absorbed), and the deployed bad-root sets do
-consume earlier answers.  `PinnedRootEvent.bad` therefore reads the run output and the whole
-table; the causal boundary is `pinned` — invariance under reprogramming the event's *own* squeeze
-answer.  Data fixed before the squeeze may enter freely; the answer being priced may not.
+A squeezed challenge is never re-absorbed, so a transcript prefix does not determine the earlier
+answers.  `bad` therefore reads the run output and the whole table; the causal boundary is
+`pinned` — invariance under reprogramming the event's own squeeze answer.
 -/
 
 namespace Zcash.Snark
@@ -24,10 +21,9 @@ variable {T F P : Type*} [Fintype F] [Nonempty F]
 
 /-- One bad-root set for one squeeze of a run.
 
-`point` is the transcript prefix hashed by that squeeze.  `bad` may consume the run output and
-the table — in particular the answers at earlier squeeze prefixes, which `point` alone does not
-determine.  `pinned` is the causal condition: reprogramming the run's own squeeze answer leaves
-the bad set unchanged, so the set cannot be chosen after that answer is seen. -/
+`point` is the prefix hashed by the squeeze; `bad` may read the run output and the table,
+including earlier squeeze answers.  `pinned` bars only the answer being priced: reprogramming it
+leaves the set unchanged. -/
 structure PinnedRootEvent [DecidableEq T] (A : OracleComp T F P) where
   point : P -> T
   bad : P -> (T -> F) -> Set F
@@ -92,14 +88,11 @@ end PinnedRootFamily
 
 /-! ## Instantiability
 
-The deployed root sets consume earlier squeeze answers, so the abstraction must accept a bad set
-that genuinely reads the table away from its own point.  The event below does exactly that — its
-bad set is the answer recorded at a *different* point — and both conditions are discharged, so
-constructing such events is a matter of supply, not a vacuous premise. -/
+The event below discharges both conditions for a bad set that reads the table away from its own
+point — the capability the deployed root sets need. -/
 
-/-- A table-reading pinned event: the machine returns immediately, the squeeze point is `t0`, and
-the bad set is the table's answer at a different point `t1`.  `pinned` holds because reprogramming
-`t0` does not change the answer at `t1`. -/
+/-- A table-reading pinned event: the bad set is the answer at `t1`, unchanged by reprogramming
+the squeeze point `t0`. -/
 noncomputable def tableReadingPinnedRootEvent [DecidableEq T] (p0 : P) {t0 t1 : T}
     (hne : t1 ≠ t0) :
     PinnedRootEvent (OracleComp.pure p0 : OracleComp T F P) where
@@ -117,8 +110,7 @@ noncomputable def tableReadingPinnedRootEvent [DecidableEq T] (p0 : P) {t0 t1 : 
     ext u
     simp [Function.update_of_ne hne]
 
-/-- The demonstration event is priced by the generic bound: a zero-query machine pays `1 / |F|`
-for a bad set it cannot see coming. -/
+/-- The demonstration event is priced by the generic bound. -/
 theorem tableReadingPinnedRootEvent_landing_measure_le [Fintype T] [DecidableEq T]
     (p0 : P) {t0 t1 : T} (hne : t1 ≠ t0) :
     (PMF.uniformOfFintype (T -> F)).toOuterMeasure

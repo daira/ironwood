@@ -4,15 +4,12 @@ import Zcash.Snark.Soundness.Composition.DeployedRuntime
 import Zcash.Snark.Soundness.Forking.PinnedRoots
 
 /-!
-# The deployed prefix-pinned AGM root family
+# The deployed pinned AGM root family
 
-This module gives the explicit adapter from rewind-free algebraic batch data to
-`PinnedRootFamily`.  The only additional family condition is causal: each explicit root set must
-be unchanged when its own squeeze answer is reprogrammed (`DeployedRootSqueezeInvariance`).  The
-sets may consume the earlier squeeze answers — a transcript prefix does not determine them — and
-the retained representations; only the answer being priced is barred.  The bad sets themselves
-are exactly the two IPA shift polynomials and the deployed `x4`, `x3`, `x2`, and per-set `x1`
-polynomials.
+The adapter from rewind-free algebraic batch data to `PinnedRootFamily`.  The only family
+condition is causal: each root set is unchanged when its own squeeze answer is reprogrammed
+(`DeployedRootSqueezeInvariance`).  The bad sets are the two IPA shift polynomials and the
+deployed `x4`, `x3`, `x2`, and per-set `x1` polynomials.
 -/
 
 namespace Zcash.Snark
@@ -27,9 +24,8 @@ variable {shape : Shape}
 attribute [local irreducible] deployedX4PairCount deployedSetQueries
   x4BatchCommitments deployedSetMemberCommitments
 
-/-- Traverse a finite family of computed sum outcomes from left to right.  Either every entry
-supplies its left-hand value, or the first right-hand value is returned as data.  In particular,
-this does not search a proposition asserting that some right-hand value exists. -/
+/-- Traverse computed sum outcomes left to right: every left-hand value, or the first right-hand
+value as data — no existential search. -/
 def finForallOrRelationWitness {n : Nat} {A : Fin n -> Type*} {R : Type*}
     (outcome : forall i, A i ⊕' R) : (forall i, A i) ⊕' R := by
   induction n with
@@ -165,10 +161,9 @@ def deployedX4InterpolationDataOfCapacity
       currentPoint := ?_ }
   simp [swap]
 
-/-- Construct the complete deployed batch-or-relation outcome from the representations carried by
-the actual online AGM execution.  This is an offline algebraic decode: `aMulti` is evaluated at
-distinct ghost `x4` values, while every within-set member is resolved from a point representation
-that was already available before `x1`.  No accepting execution is rewound. -/
+/-- The complete deployed batch-or-relation outcome from the online AGM representations:
+`aMulti` is evaluated at distinct ghost `x4` values and every within-set member is resolved from
+a pre-`x1` point representation.  No accepting execution is rewound. -/
 noncomputable def deployedRootOutcomeOfOnline
     (family : ComputedOnlineMemberFSFamily shape)
     (hcapacity : shape.numPointSets + 1 <= Fintype.card Fp) :
@@ -373,16 +368,12 @@ theorem deployedRootEventBudget_sum_le (shape : Shape) :
   ring_nf
   exact le_rfl
 
-/-- The exact causal condition for deployed root data: reprogramming one root event's own squeeze
-answer leaves that event's bad-root set unchanged.
+/-- The causal condition for deployed root data: reprogramming a root event's own squeeze answer
+leaves that event's bad set unchanged.
 
-Bad sets may consume anything fixed before the squeeze — the transcript prefix, the answers at
-earlier squeeze prefixes, and the retained representations — but not the answer being priced.
-Halo2 does not reabsorb squeeze results, so a transcript prefix does not determine the earlier
-answers; stating the condition against the whole table keeps those answers available while the
-generic pricing (`xEscTable_measure_le`) charges only the current squeeze.  This neither compares
-hindsight-selected AGM representations after changing a challenge nor treats a final-output
-equality as chronology. -/
+Bad sets may consume anything fixed before the squeeze — the prefix, the earlier squeeze answers
+(halo2 never reabsorbs them, so the prefix alone does not determine them), and the retained
+representations.  Only the answer being priced is barred. -/
 def DeployedRootSqueezeInvariance (family : ComputedAlgebraicFSFamily shape)
     (outcome : DeployedRootOutcomeProvider family) : Prop :=
   forall basis (i : Fin 6)
@@ -403,17 +394,14 @@ structure ComputedDeployedRootFSFamily (shape : Shape)
   outcome : DeployedRootOutcomeProvider toComputedAlgebraicFSFamily
   pinned : DeployedRootSqueezeInvariance toComputedAlgebraicFSFamily outcome
 
-/-- Mathematical compatibility adapter using the offline Vandermonde decoder.  This constructor is
-intentionally `noncomputable`: it proves the batch-or-relation dichotomy, but does not by itself
-instantiate an executable DLOG adversary.  A concrete-security capstone must instead supply the
-same outcome through a computable direct-coordinate implementation.
+/-- Mathematical compatibility adapter using the offline Vandermonde decoder.  Intentionally
+`noncomputable`: it proves the batch-or-relation dichotomy but does not instantiate an executable
+DLOG adversary; a concrete-security capstone must supply the outcome through a computable
+direct-coordinate implementation.
 
-The sole remaining multiopen-specific proof is `DeployedRootSqueezeInvariance`: each exact root
-set is unchanged when its own squeeze answer is reprogrammed.  The exact deployed root sets read
-earlier squeeze answers, ordinary proof-string scalars, grouping data, and retained
-representations; the final-output `OracleComp` interface does not encode when those fields were
-emitted, so the invariance is stated as the causal premise rather than derived from a final-output
-equality.
+The sole remaining multiopen-specific proof is `DeployedRootSqueezeInvariance`.  The
+final-output `OracleComp` interface does not encode when the data a root set reads was emitted,
+so the invariance is a stated causal premise, not derived from a final-output equality.
 
 TODO(#96): construct the deployed squeeze-invariance schedules from the deployed Rust transcript
 stages — each datum in a root set is emitted or read strictly before that event's squeeze — supply
@@ -439,18 +427,11 @@ namespace ComputedDeployedRootFSFamily
 abbrev toFamily (family : ComputedDeployedRootFSFamily shape) :
     ComputedAlgebraicFSFamily shape := family.toComputedAlgebraicFSFamily
 
-/-- The complete relation producer used by the rewind-free deployed layer.
-
-The recursive extractor's `relationFinder` already preserves both its direct relation branch and
-the clean-opening collision branch.  The only additional relation introduced by algebraic
-multiopen unbatching is the `outcome` relation.  Keeping both branches in one data-returning finder
-is essential: demoting the latter to the bare proposition `HasNontrivialRelation` would make a
-terminal `witness ∨ relation` predicate vacuous in a prime-order group and would not charge the
-new branch to DLOG.
-
-This declaration is computable relative to `family.outcome`.  Instantiating `family` with either
-noncomputable compatibility constructor above does not establish an executable DLOG solver; #96
-must supply a computable direct-coordinate outcome before applying a concrete DLOG assumption. -/
+/-- The complete relation producer used by the rewind-free deployed layer: the recursive
+extractor's `relationFinder` extended by the `outcome` relation.  Both branches stay in one
+data-returning finder — a bare `HasNontrivialRelation` would be vacuous in a prime-order group
+and could not be charged to DLOG.  Computable relative to `family.outcome`; #96 must supply a
+computable direct-coordinate outcome before applying a concrete DLOG assumption. -/
 def deployedRelationFinder (family : ComputedDeployedRootFSFamily shape) :
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) -> family.toFamily.Coins ->
       Option (AlgebraicRelationWitness (F := Fp) basis) :=
@@ -464,17 +445,13 @@ def deployedRelationFinder (family : ComputedDeployedRootFSFamily shape) :
             some (augmentedBasis_ursOfAugmentedBasis shape.k basis ▸
               relation.toAlgebraicRelationWitness)
 
-/-- The complete deployed relation event: the combined finder returns an explicit relation on this
-run.  Its concrete executability has the same relative boundary as `deployedRelationFinder`. -/
+/-- The combined finder returns an explicit relation on this run. -/
 def deployedRelationEvent (family : ComputedDeployedRootFSFamily shape) :
     Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) × family.toFamily.Coins) :=
   {p | (family.deployedRelationFinder p.1 p.2).isSome}
 
-/-- Conditional textbook single-instance DLOG pricing for every relation branch introduced by the
-recursive and rewind-free multiopen extractors.  The hypothesis applies to the concrete finder
-stored in `family`; using a noncomputable compatibility-constructed family does not discharge that
-premise.  Once the finder is computably instantiated, the only reduction loss here is the existing
-augmented-basis cardinality factor. -/
+/-- Conditional textbook single-instance DLOG pricing for every relation branch of the recursive
+and rewind-free extractors.  The only reduction loss is the augmented-basis cardinality factor. -/
 theorem deployedRelation_prob_le_of_textbookDL
     (B : VestaG) (family : ComputedDeployedRootFSFamily shape) {bound : ENNReal}
     (hDL : TextbookDLWithCoinsAdvantageLE B family.deployedRelationFinder bound) :

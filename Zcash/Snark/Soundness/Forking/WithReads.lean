@@ -3,12 +3,9 @@ import Zcash.Snark.Soundness.Forking.Adversary.OracleComp
 /-!
 # Returning a run's own reads with its output
 
-The continuation ladder's accept family is a function of the machine's *output*, but the deployed
-accept events also read the run's non-multiopen challenges — table answers at the output's other
-squeeze points. `withReads` closes the gap: run the machine, re-query a designated family of
-points of its output, and return the output together with those answers. The wrapped machine's
-output determines everything the accept event needs, its run projects onto the original run, and
-its query bound grows by the family's size.
+`withReads` runs a machine, re-queries a designated family of points of its output, and returns
+the output with those answers.  The wrapped output then determines everything the deployed accept
+events read, and the query bound grows only by the family's size.
 -/
 
 namespace Zcash.Snark

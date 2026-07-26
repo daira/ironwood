@@ -21,7 +21,7 @@ namespace Zcash.Snark
 
 open scoped ENNReal
 
-/-- A shape-only upper bound for the sum of all prefix-pinned AGM root events. -/
+/-- A shape-only upper bound for the sum of all pinned AGM root events. -/
 noncomputable def algebraicRootBudget (shape : Shape) (k' : Nat) : ENNReal :=
   ((shape.numPointSets * queryBudget shape * queryBudget shape
       + shape.numPointSets * queryBudget shape

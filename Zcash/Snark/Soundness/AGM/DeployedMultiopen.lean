@@ -57,10 +57,9 @@ theorem deployedX4AlgebraicValues_of_good [DecidableEq G] [Inhabited G] {shape :
   exact hvalue.trans hbatch
   exact hgood
 
-/-- Compose the recursive IPA's shifted opening with AGM commitment unbatching.  If the extracted
-IPA witness differs from the canonical aggregate coordinates, their equal commitments expose an
-augmented-basis relation.  Otherwise the two linear good-challenge conditions recover the raw
-deployed value.  Thus this step needs no accepting multiopen rewind. -/
+/-- Compose the recursive IPA's shifted opening with AGM commitment unbatching.  A witness
+mismatch exposes an augmented-basis relation; otherwise the two linear good-challenge conditions
+recover the raw deployed value. -/
 noncomputable def deployedX4AlgebraicBatchAndValueOrRelation
     [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)

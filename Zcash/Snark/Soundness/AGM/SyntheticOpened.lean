@@ -4,16 +4,10 @@ import Zcash.Snark.Soundness.Multiopen.Opened
 /-!
 # Offline compatibility with the opened-batch interface
 
-The downstream member-constraint endpoint is phrased in terms of `OpenedBatchOpenings`, whose
-historical producer was a family of accepting `x4` rewinds.  Prefix-pinned AGM coordinates make
-those rewinds unnecessary: from represented columns we can form the power combinations at any
-distinct interpolation points locally.
-
-This file packages those *synthetic* combinations as an `OpenedBatchOpenings` compatibility
-object.  They are algebraic calculations, not protocol executions and not accepting prover
-transcripts.  The canonical Vandermonde decode of the compatibility object is proved to return
-the original AGM coordinates exactly, so existing deterministic downstream constraints can be
-reused without retaining the old probabilistic rewind loss.
+Represented columns form power combinations at any distinct interpolation points locally, so this
+file packages them as a *synthetic* `OpenedBatchOpenings` — algebraic calculations, not accepting
+transcripts.  Its canonical Vandermonde decode returns the original AGM coordinates exactly, so
+deterministic downstream constraints are reused without the old rewind loss.
 -/
 
 namespace Zcash.Snark
@@ -22,10 +16,8 @@ open Classical
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 
-/-- Build an opened-batch compatibility object locally from a represented algebraic power batch.
-The interpolation points are arbitrary distinct field elements, with one point pinned to the
-actual batching challenge so that the compatibility object's current slot is the real aggregate.
--/
+/-- Build an opened-batch compatibility object locally from a represented algebraic power batch,
+with one interpolation point pinned to the actual batching challenge. -/
 noncomputable def AlgebraicPowerBatch.toSyntheticOpened
     {urs : URS G} {numColumns : Nat} {columnCommitments : Fin numColumns -> G}
     {aggregate : Fin (2 ^ urs.k) -> Fp} {aggregateU aggregateW challenge : Fp}

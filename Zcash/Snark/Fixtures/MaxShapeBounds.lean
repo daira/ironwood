@@ -4,7 +4,7 @@ import Zcash.Snark.Soundness.Composition.AlgebraicRootBudget
 /-!
 # Concrete composite-bound inputs for the captured Orchard shape
 
-This module specializes the prefix-pinned AGM root budget to the captured Orchard verifier
+This module specializes the pinned AGM root budget to the captured Orchard verifier
 dimensions while leaving the adversary query count explicit.  The resulting term is additive;
 there is no continuation threshold or fourth-root conversion in this path.
 -/
@@ -33,7 +33,7 @@ theorem queryBudget_at_captured_shape (n : ℕ) :
   simp [queryBudget, shape]
   omega
 
-/-! ## Prefix-pinned AGM root budget
+/-! ## Pinned AGM root budget
 
 The direct-root construction uses a conservative all-members/all-nodes union.  The wrapped
 machine makes `11 + k = 22` extra reads and a one-squeeze root event costs
@@ -54,7 +54,7 @@ theorem algebraicRootBudget_at_consensus_max :
   rw [algebraicRootBudget, queryBudget_at_captured_shape]
   norm_num [shape, orchardConsensusMaxProofs]
 
-/-- The concrete multiopen contribution of the prefix-pinned root theorem under `Q <= T`. -/
+/-- The concrete multiopen contribution of the pinned-root theorem under `Q <= T`. -/
 noncomputable def consensusPinnedRootMultiopenModel (T : Nat) : ENNReal :=
   (T + 23 : Nat) * algebraicRootBudget (shape orchardConsensusMaxProofs) 11
 

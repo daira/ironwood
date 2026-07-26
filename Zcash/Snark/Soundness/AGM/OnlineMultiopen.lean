@@ -3,23 +3,11 @@ import Zcash.Snark.Soundness.Forking.Adversary.Algebraic
 /-!
 # Online AGM data for rewind-free multiopen unbatching
 
-The deployed Rust transcript fixes the polynomial commitments before `x1`, fixes `qPrime` before
-`x3`, and fixes the claimed `u` evaluations before `x4`.  The existing algebraic adversary output
-already carries representations for every emitted group point, but its aggregate `aMulti` is an
-arbitrary function of the complete pre-IPA challenge vector.  Consequently the present interface
-does not by itself rule out choosing an alternative representation after seeing a later challenge.
-
-This file adds a non-breaking refinement of `ComputedAlgebraicFSFamily` for the tighter route:
-
-* the multiopen aggregate coordinates must be the deterministic MSM coordinates obtained from the
-  actual representation-carrying commitments used by the assembly.
-
-Exact deployed chronology is represented by the squeeze-reprogramming invariance in
-`DeployedPinnedRoots`; final-output equality predicates are deliberately omitted because they do
-not establish when all ordinary proof fields affecting a root set were emitted.
-
-No protocol point or scalar is added to the transcript.  These are ghost conditions on the AGM
-adversary.
+An arbitrary aggregate `aMulti` could pick a fresh representation after seeing a later challenge.
+This file refines `ComputedAlgebraicFSFamily` so the aggregate coordinates are the deterministic
+MSM coordinates of the representation-carrying commitments actually assembled.  These are ghost
+conditions on the AGM adversary; nothing is added to the transcript.  Chronology itself lives in
+`DeployedPinnedRoots` as the squeeze-reprogramming invariance.
 -/
 
 namespace Zcash.Snark
@@ -42,10 +30,9 @@ def AlgebraicProofString.preX1Points (aps : AlgebraicProofString shape basis) :
   (List.ofFn fun p => List.ofFn fun i => aps.lookupProduct p i).flatten ++
   [aps.vanishingRandom] ++ List.ofFn aps.hPieces
 
-/-- The represented points available before the `x1` batching challenge.  `fixed` contains
-representations of verifier-known commitments (for example fixed-column commitments); it is fixed
-per public basis and does not depend on Fiat-Shamir answers.  In particular this source excludes
-`qPrime`, which is emitted only after `x2`. -/
+/-- The represented points available before the `x1` batching challenge.  `fixed` holds
+verifier-known representations per public basis; `qPrime` is excluded — it is emitted only after
+`x2`. -/
 def AlgebraicProofString.preX1AssemblySource
     (aps : AlgebraicProofString shape basis)
     (fixed : List (AlgebraicPoint (F := Fp) basis)) :
@@ -103,9 +90,8 @@ noncomputable def AlgebraicWfProof.ofOnlineMultiopenRepresented
     RepresentedMultiopen.ofCoveredList vk instanceCommitment aps.erase nu
       (aps.multiopenAssemblySource fixed) (hcover nu)
 
-/-- The proof that an existing `AlgebraicWfProof` uses canonical online multiopen coordinates.
-The three equalities deliberately mention `ofCoveredList`: a merely existential representation of
-the final group point is not enough for algebraic unbatching. -/
+/-- An `AlgebraicWfProof` uses canonical online multiopen coordinates.  The equalities mention
+`ofCoveredList` deliberately: an existential representation is not enough for unbatching. -/
 structure CanonicalOnlineMultiopenCoordinates
     {vk : VerifyingKey shape Fp VestaG}
     {instanceCommitment : Fin shape.numProofs -> Nat -> VestaG}

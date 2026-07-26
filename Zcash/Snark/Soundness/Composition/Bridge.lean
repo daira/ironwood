@@ -598,7 +598,7 @@ clean openings** (`hExtract`).
 
 This generic conditional bridge is retained for callers that already have `hExtract`.  The concrete
 deployed path no longer discharges it through multiopen rewinding: `AGM.DeployedRootDecode` decodes
-the prefix-pinned algebraic representations directly, and `Composition.DeployedRootContainment`
+the squeeze-pinned algebraic representations directly, and `Composition.DeployedRootContainment`
 prices each resulting bad-root event additively. -/
 
 namespace ComputedAlgebraicFSFamily

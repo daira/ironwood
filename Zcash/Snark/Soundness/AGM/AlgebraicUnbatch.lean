@@ -4,15 +4,9 @@ import Zcash.Snark.Soundness.GoodChallenge
 /-!
 # Rewind-free algebraic power-batch unbatching
 
-Once AGM coordinates are emitted online, a verifier power batch can be unbatched without obtaining
-many accepting openings.  The representation coordinates already supply the individual column
-witnesses.  The only probabilistic step is value binding: if the aggregate opens to the public
-power-batched value at a fresh challenge, then any mismatch makes that challenge a root of one
-explicit error polynomial.
-
-This is the deterministic algebraic core used at the deployed `x4` collapse.  It replaces the
-Vandermonde family of accepting `x4` rewinds; the Fiat-Shamir pricing of the root set is kept
-separate so the required prefix-pinning condition remains visible.
+Online AGM coordinates already supply the individual column witnesses of a verifier power batch,
+so no accepting rewinds are needed.  The only probabilistic step is value binding: a mismatch
+makes the fresh challenge a root of one explicit error polynomial, priced separately.
 -/
 
 namespace Zcash.Snark

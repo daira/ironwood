@@ -3,10 +3,9 @@ import Zcash.Snark.Verifier.Assemble
 /-!
 # Canonical commitment references for assembled queries
 
-The multiopen grouping keys queries by `CommitmentId` and retains the commitment reference from
-the first query carrying that identity.  For the verifier-generated query list, every occurrence
-of one identity carries the same reference.  This module records that structural invariant and
-therefore lets soundness proofs recover the exact pre-challenge commitment behind a routed member.
+In the verifier-generated query list, every occurrence of one `CommitmentId` carries the same
+commitment reference.  This invariant lets soundness proofs recover the exact pre-challenge
+commitment behind a routed member.
 -/
 
 namespace Zcash.Snark

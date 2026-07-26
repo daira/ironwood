@@ -3,11 +3,9 @@ import Zcash.Snark.Soundness.GoodChallenge
 /-!
 # Recovering the unshifted multiopen value
 
-The IPA opens the aggregate to
-`v + z⁻¹·(pU + ξ·sU) - ξ·<s,b>`, not directly to `v`.  Because `S` is absorbed before
-both `ξ` and `z`, a nonzero raw-value error can survive only on two linear root sets: one in `ξ`
-and, outside that exceptional root, one in `z`.  This is an additive `2 / |Fp|` loss, not a
-multi-forking loss.
+The IPA opens the aggregate to `v + z⁻¹·(pU + ξ·sU) - ξ·<s,b>`, not to `v`.  `S` is absorbed
+before `ξ` and `z`, so a raw-value error survives only on two linear root sets — an additive
+`2 / |Fp|` loss.
 -/
 
 namespace Zcash.Snark

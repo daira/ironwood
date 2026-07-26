@@ -61,7 +61,7 @@ noncomputable def deployedAlgebraicSetPoints [DecidableEq G] [Inhabited G] {shap
     (deployedX4PairCount vk instanceCommitment ps ch - 1 - (j : Nat))
 
 /-- The exact deployed `x3` error polynomial.  All of its ingredients are fixed before `x3`
-provided the AGM representations are online/prefix-pinned. -/
+provided the AGM representations are online and squeeze-pinned. -/
 noncomputable def deployedX3ErrorPolynomial [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (instanceCommitment : Fin shape.numProofs → Nat → G)

@@ -3,10 +3,9 @@ import Zcash.Snark.Soundness.AGM.SyntheticOpened
 /-!
 # Deployed synthetic-opened adapter
 
-This is the Halo2 specialization of `AlgebraicPowerBatch.toSyntheticOpened`.  It adapts the
-rewind-free `x4` and `x1` AGM batches to the historical deterministic member-constraint interface.
-No value in the synthetic family is supplied by the prover: every entry is computed locally from
-the prefix-pinned representation coordinates.
+The Halo2 specialization of `AlgebraicPowerBatch.toSyntheticOpened`: the rewind-free `x4` and
+`x1` AGM batches presented through the historical member-constraint interface, every entry
+computed locally from representation coordinates.
 -/
 
 namespace Zcash.Snark

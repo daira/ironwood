@@ -6,15 +6,10 @@ import Zcash.Snark.Soundness.Composition.Bridge
 /-!
 # Decode deployed `x4` columns from the adversary's AGM coordinate function
 
-`AlgebraicWfProof` already supplies representations of the complete multiopen commitment for every
-pre-IPA challenge vector.  Varying only `x4` in that ghost representation function and applying the
-offline decoder recovers represented `x4` columns.  This establishes the commitment-side input to
-rewind-free unbatching without an additional accepting execution.
-
-For the later root-set probability argument, the decoded representation family must additionally
-be fixed before the real `x4` draw. `CanonicalOnlineMultiopenCoordinates` pins the coordinate
-construction, while `DeployedRootSqueezeInvariance` records the causal condition on each root
-set; this file proves only the algebraic decode.
+Varying only `x4` in the ghost representation function of `AlgebraicWfProof` and applying the
+offline decoder recovers represented `x4` columns without an additional accepting execution.
+This file proves only the algebraic decode; `CanonicalOnlineMultiopenCoordinates` pins the
+construction and `DeployedRootSqueezeInvariance` carries the causal condition.
 -/
 
 namespace Zcash.Snark

@@ -3,8 +3,7 @@ import Zcash.Snark.Soundness.Forking.Adversary.OracleComp
 /-!
 # A pinned, table-reading squeeze
 
-This is the one-level Fiat--Shamir squeeze bound used by the additive root analysis.  It is
-independent of the historical four-level continuation ladder and its fourth-root threshold.
+The one-level Fiat--Shamir squeeze bound used by the additive root analysis.
 -/
 
 namespace Zcash.Snark
@@ -72,11 +71,8 @@ theorem xEscTable_measure_le [Fintype T] [DecidableEq T] (A : OracleComp T F P) 
   exact_mod_cast h
 
 open Classical in
-/-- A bad set indexed by the transcript point itself needs no separate rerun-pinning premise.
-
-For a fixed escape point `t`, every reprogrammed run that still selects `t` is tested against the
-same `badAt t`.  This is the native interface for data that is determined by the transcript prefix
-before its squeeze. -/
+/-- A bad set indexed by the transcript point itself needs no rerun-pinning premise: every
+reprogrammed run that still selects `t` is tested against the same `badAt t`. -/
 theorem xEscAtPoint_measure_le [Fintype T] [DecidableEq T]
     (A : OracleComp T F P) (xpt : P -> T) (badAt : T -> Set F)
     {epsilon : ENNReal}

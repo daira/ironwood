@@ -4,7 +4,7 @@ import Zcash.Snark.Soundness.Composition.RootContainment
 /-!
 # Concrete containment for rewind-free deployed AGM decoding
 
-This module closes the deterministic seam beneath the prefix-pinned root bound.  On a run with a
+This module closes the deterministic seam beneath the pinned root bound.  On a run with a
 clean recursive-IPA opening, either an executable finder returns a relation, or avoiding the six
 explicit root sets yields every deployed member value.  Thus failure of this concrete extraction
 endpoint is contained in the root-family landing event; no accepting multiopen rewind is used.
@@ -96,7 +96,7 @@ def deployedRootExtracted (family : ComputedDeployedRootFSFamily shape)
     deployedRootDecoded family basis coins
 
 /-- A clean accepting run that does not deliver the concrete AGM decode must hit one of the six
-explicit, prefix-pinned root sets. -/
+explicit, squeeze-pinned root sets. -/
 theorem deployedRootFailure_subset_landing
     (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) :
