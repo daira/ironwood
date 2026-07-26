@@ -8,6 +8,7 @@ import Zcash.Security.Ledger.Balance
 import Zcash.Security.Ledger.Spendability
 import Zcash.Security.Ledger.SpendAuthority
 import Zcash.Security.Ledger.Completeness
+import Zcash.Security.Ledger.Capstone
 import Zcash.Security.Common.Birthday
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
@@ -229,6 +230,13 @@ assert_computable honestTx
 assert_computable HonestAction.withDummySpend
 assert_axioms HonestAction.satisfied
 assert_axioms honestTx_valid
+
+/-! ## Probabilistic capstones
+
+The game-level probability statements: pure event algebra over an adversary
+distribution of valid annotated ledgers, with a named ε hypothesis per break arm. -/
+
+assert_axioms balanceSubset_measure_le
 
 /-! ## Binding-signature relation reductions
 
