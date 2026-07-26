@@ -2,6 +2,9 @@ import Mathlib
 import Zcash.Security.Ledger.Balance
 import Zcash.Security.Ledger.Spendability
 
+-- This lint enforces Mathlib's minimal-hypothesis style, from which we deliberately depart.
+set_option linter.unusedSectionVars false
+
 /-!
 # Honest-spend completeness
 
@@ -26,6 +29,14 @@ The Actions of one honest transaction may reference different anchors, matching 
 model's per-action anchor rule — a documented simplification: deployed Orchard
 encodes one anchor for the whole transaction (Sapling v4 allowed per-spend anchors).
 The deployed case is the instance with all `anchor` fields equal.
+
+`spendabilityOrBreak` is the Spendability capstone at this deterministic layer: the
+owner of a received note can spend it. Either appending the honest transaction keeps
+the ledger valid, or the ledger's own data computes the obstruction — an action
+already spending the owner's exact opening (`Respend`, the case Spend Authority
+covers), a note-commitment break, or a nullifier collision. The nullifier roadblock
+is decided by searching the ledger for the revealing action and running the roadblock
+inversion (`respendOrBreak`) against the owner's satisfied action.
 -/
 
 namespace Zcash.Security.Ledger.Model
@@ -352,6 +363,88 @@ theorem honestTx_valid
     rcases hmem tx htx with h | rfl
     · exact hval.action_bound tx h
     · simpa [honestTx] using hbound
+
+/-! ## The Spendability capstone -/
+
+/-- All actions of a ledger, each paired with its transaction — the searchable form
+of "some action reveals this nullifier". -/
+def actionsWithTx (ledger : Ledger KW F G RHO PSI MHASH MENC MSG SIG P.depth) :
+    List (Tx KW F G RHO PSI MHASH MENC MSG SIG P.depth
+      × Action KW F G RHO PSI MHASH MENC SIG P.depth) :=
+  ledger.flatMap fun tx => tx.actions.map fun a => (tx, a)
+
+/-- Membership in the paired action list gives both memberships. -/
+theorem mem_of_mem_actionsWithTx
+    {p : Tx KW F G RHO PSI MHASH MENC MSG SIG P.depth
+      × Action KW F G RHO PSI MHASH MENC SIG P.depth}
+    (h : p ∈ actionsWithTx ledger) : p.1 ∈ ledger ∧ p.2 ∈ p.1.actions := by
+  obtain ⟨tx, htx, hp⟩ := List.mem_flatMap.mp h
+  obtain ⟨a, ha, rfl⟩ := List.mem_map.mp hp
+  exact ⟨htx, ha⟩
+
+/-- A revealed nullifier comes from some action of the paired list. -/
+theorem exists_actionsWithTx_of_mem_nullifiers {x : RHO} (h : x ∈ nullifiers ledger) :
+    ∃ p ∈ actionsWithTx ledger, p.2.inst.nf_old = x := by
+  simp only [nullifiers, List.mem_flatMap, List.mem_map] at h
+  obtain ⟨tx, htx, a, ha, rfl⟩ := h
+  exact ⟨(tx, a),
+    List.mem_flatMap.mpr ⟨tx, htx, List.mem_map.mpr ⟨a, ha, rfl⟩⟩, rfl⟩
+
+/-- A ledger action spending the given opening. For the owner's opening this is the
+roadblock's benign arm — the case Spend Authority covers: the action's signature
+verifies under a randomization of ± the owner's key. -/
+structure Respend (ledger : Ledger KW F G RHO PSI MHASH MENC MSG SIG P.depth)
+    (rcm : F) (note : Note G RHO PSI) where
+  tx : Tx KW F G RHO PSI MHASH MENC MSG SIG P.depth
+  htx : tx ∈ ledger
+  a : Action KW F G RHO PSI MHASH MENC SIG P.depth
+  ha : a ∈ tx.actions
+  opening_eq : (a.w.rcm_old, a.w.note_old) = (rcm, note)
+
+/-- **The Spendability capstone.** The owner of a received note — an `HonestAction` —
+can spend it: either appending the honest transaction keeps the ledger valid, or the
+ledger's own data computes the obstruction. The arms: an action already spending the
+owner's exact opening (`Respend` — the case Spend Authority covers); a
+note-commitment break; a nullifier collision. The nullifier roadblock is decided by
+searching the ledger for the revealing action and running `respendOrBreak` against
+the owner's satisfied action. -/
+def spendabilityOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq NK]
+    [DecidableEq RHO] [DecidableEq PSI]
+    (hval : ValidLedger P kv issuance maxActions ledger)
+    (hs : HonestAction P kv ledger) (sig : SIG) (sighash : MSG)
+    (hsig : P.spendAuthVerify (P.randomizePublic hs.α (kv.akP hs.kw)) sighash sig)
+    (hcap : (leafList ledger).length + 1 ≤ 2 ^ P.depth)
+    (htrans : 0 ≤ transparentPoolBalance issuance ledger ledger.length
+        + ((issuance ledger.length : ℤ) + (honestTx [(hs, sig)] sighash).vBalance))
+    (hbound : 1 ≤ maxActions) :
+    ValidLedger P kv issuance maxActions (ledger ++ [honestTx [(hs, sig)] sighash])
+      ⊕' Respend ledger hs.rcm_old hs.note_old
+      ⊕' (NoteCommitBreak P ⊕' NullifierCollision P) :=
+  if hmem : hs.nf ∈ nullifiers ledger then
+    have hex : ((actionsWithTx ledger).find? fun q => q.2.inst.nf_old = hs.nf).isSome := by
+      rw [List.find?_isSome]
+      obtain ⟨q, hq, hnf⟩ := exists_actionsWithTx_of_mem_nullifiers hmem
+      exact ⟨q, hq, by simp [hnf]⟩
+    let p := ((actionsWithTx ledger).find? fun q => q.2.inst.nf_old = hs.nf).get hex
+    have hfind : (actionsWithTx ledger).find? (fun q => q.2.inst.nf_old = hs.nf)
+        = some p := (Option.some_get hex).symm
+    have hpmem := mem_of_mem_actionsWithTx (List.mem_of_find?_eq_some hfind)
+    have hpnf : p.2.inst.nf_old = hs.nf := by
+      have := List.find?_some hfind
+      simpa using this
+    have hsat : ActionSatisfied P kv p.2.inst p.2.w :=
+      hval.satisfied p.1 hpmem.1 p.2 hpmem.2
+    match respendOrBreak hsat hs.satisfied hpnf with
+    | .inl heq => .inr (.inl ⟨p.1, hpmem.1, p.2, hpmem.2, heq⟩)
+    | .inr b => .inr (.inr b)
+  else
+    .inl (honestTx_valid hval [(hs, sig)] sighash
+      (by rintro q hq; rw [List.mem_singleton] at hq; subst hq; exact hsig)
+      (by rintro q hq; rw [List.mem_singleton] at hq; subst hq; exact hmem)
+      (by simp)
+      (by simpa using hcap)
+      htrans
+      (by simpa using hbound))
 
 end Honest
 

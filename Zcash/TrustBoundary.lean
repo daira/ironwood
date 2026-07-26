@@ -231,16 +231,20 @@ assert_axioms ivk_eq_of_receivable
 assert_computable spendAuthForgeryOrBreak +choice
 assert_computable spendAuthorityOrBreak +choice
 
-/-! ## Honest-spend completeness
+/-! ## Honest-spend completeness and the Spendability capstone
 
 The honest construction is computable data (the wallet's own algorithm, including the
 authentication data recovered from the defined tree); the two completeness endpoints
-are theorems over it. -/
+are theorems over it. The Spendability capstone is a computed reduction: the
+roadblock branch decides nullifier membership and searches out the revealing action.
+Its `+choice` is the erased-positions tier — choice arrives with proof terms in
+`Prop` positions, never the data path. -/
 
 assert_computable honestTx
 assert_computable HonestAction.withDummySpend
 assert_axioms HonestAction.satisfied
 assert_axioms honestTx_valid
+assert_computable spendabilityOrBreak +choice
 
 /-! ## Probabilistic capstones
 
