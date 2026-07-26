@@ -237,6 +237,9 @@ The game-level probability statements: pure event algebra over an adversary
 distribution of valid annotated ledgers, with a named ε hypothesis per break arm. -/
 
 assert_axioms balanceSubset_measure_le
+assert_axioms valueConservation_measure_le
+assert_axioms balanceValue_measure_le
+assert_axioms spendAuthority_measure_le
 
 /-! ## Binding-signature relation reductions
 
