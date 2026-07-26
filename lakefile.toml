@@ -70,10 +70,10 @@ globs = [
 
 # The fast Pasta arithmetic: `Zcash/Arithmetic/` (ironwood-permanent, mathlib-side) and the
 # remaining temporary vendoring `Zcash/Vendor/CompPoly/` (the scalar FFT definitions), whose
-# README states its deletion criteria. Only part of these trees is reachable from the `Zcash`
-# library (`Zcash.Arithmetic.MontKernelAdapter` and `Zcash.Arithmetic.ScalarFftEquiv` have no
-# importer at all), so without a target of their own the unreached modules would silently stop
-# being compiled and warning-checked. In `defaultTargets`
+# README states its deletion criteria. These trees are not reachable from the `Zcash` library;
+# only the keygen certificate lane pulls them in. Giving them a target of their own means they
+# stay compiled and warning-checked on their own terms rather than incidentally, and it keeps
+# `lake build Arithmetic` a cheap check of the kernels alone. In `defaultTargets`
 # so plain `lake build` -- what CI runs -- keeps every module honest.
 [[lean_lib]]
 name = "Arithmetic"
