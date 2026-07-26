@@ -1546,19 +1546,25 @@ theorem orchard_verifier_vesta_member_constraints_terminal {shape : Shape}
     (ps : ProofString shape Fp VestaG)
     (ch : Challenges shape.k Fp)
     (pU pW : Fp)
-    {numAdvice numInstance np : ℕ}
-    (adviceSet : Fin numAdvice → ℕ)
-    (hadviceSet : ∀ j, adviceSet j < deployedX4PairCount vk instanceCommitment ps ch)
-    (adviceMem : ∀ j : Fin numAdvice, Fin (deployedSetQueries vk instanceCommitment ps ch (adviceSet j)).length)
-    (instanceSet : Fin numInstance → ℕ)
-    (hinstanceSet : ∀ j, instanceSet j < deployedX4PairCount vk instanceCommitment ps ch)
-    (instanceMem : ∀ j : Fin numInstance,
-      Fin (deployedSetQueries vk instanceCommitment ps ch (instanceSet j)).length)
+    {numAdvice numInstance : ℕ}
+    (adviceSet : Fin shape.numProofs → Fin numAdvice → ℕ)
+    (hadviceSet : ∀ p j,
+      adviceSet p j < deployedX4PairCount vk instanceCommitment ps ch)
+    (adviceMem : ∀ (p : Fin shape.numProofs) (j : Fin numAdvice),
+      Fin (deployedSetQueries vk instanceCommitment ps ch
+        (adviceSet p j)).length)
+    (instanceSet : Fin shape.numProofs → Fin numInstance → ℕ)
+    (hinstanceSet : ∀ p j,
+      instanceSet p j < deployedX4PairCount vk instanceCommitment ps ch)
+    (instanceMem : ∀ (p : Fin shape.numProofs) (j : Fin numInstance),
+      Fin (deployedSetQueries vk instanceCommitment ps ch
+        (instanceSet p j)).length)
     (fixedCols : ℕ → Polynomial Fp) (gates : List (Expr Fp))
-    (sets : Fin np → List (PermSetEval (Polynomial Fp)))
-    (chunks : Fin np →
+    (sets : Fin shape.numProofs → List (PermSetEval (Polynomial Fp)))
+    (chunks : Fin shape.numProofs →
       List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
-    (lookups : Fin np → List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (lookups : Fin shape.numProofs →
+      List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
     (beta gamma delta theta y : Fp) (chunkLen : ℕ) (l0 lLast lBlind : Polynomial Fp)
     (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp)
     {a₀ : Fin (2 ^ urs.k) → Fp}
@@ -1574,36 +1580,36 @@ theorem orchard_verifier_vesta_member_constraints_terminal {shape : Shape}
     (hacc0 : DeployedAccepts urs hk vk instanceCommitment ps ch)
     (hquotC : quotientCheck
       (combineConstraints fixedCols
-        (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
-            (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
-              (adviceMem j))))
-        (fun _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
-            (hinstanceSet j) (hlen _ (hinstanceSet j))
-            (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
+        (fun p => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch
+            (adviceSet p j) (hadviceSet p j) (hlen _ (hadviceSet p j))
+            (hprob1 _ (hadviceSet p j)) hacc0).cols (adviceMem p j))))
+        (fun p => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch
+            (instanceSet p j) (hinstanceSet p j) (hlen _ (hinstanceSet p j))
+            (hprob1 _ (hinstanceSet p j)) hacc0).cols (instanceMem p j))))
         gates sets chunks lookups beta gamma delta theta y chunkLen l0 lLast lBlind) hpoly deg x)
     (hgoodC :
       combineConstraints fixedCols
-        (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
-            (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
-              (adviceMem j))))
-        (fun _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
-            (hinstanceSet j) (hlen _ (hinstanceSet j))
-            (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
+        (fun p => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch
+            (adviceSet p j) (hadviceSet p j) (hlen _ (hadviceSet p j))
+            (hprob1 _ (hadviceSet p j)) hacc0).cols (adviceMem p j))))
+        (fun p => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch
+            (instanceSet p j) (hinstanceSet p j) (hlen _ (hinstanceSet p j))
+            (hprob1 _ (hinstanceSet p j)) hacc0).cols (instanceMem p j))))
         gates sets chunks lookups beta gamma delta theta y chunkLen l0 lLast lBlind
           ≠ hpoly * (X ^ deg - 1) →
       (combineConstraints fixedCols
-        (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
-            (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
-              (adviceMem j))))
-        (fun _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
-            (hinstanceSet j) (hlen _ (hinstanceSet j))
-            (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
+        (fun p => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch
+            (adviceSet p j) (hadviceSet p j) (hlen _ (hadviceSet p j))
+            (hprob1 _ (hadviceSet p j)) hacc0).cols (adviceMem p j))))
+        (fun p => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch
+            (instanceSet p j) (hinstanceSet p j) (hlen _ (hinstanceSet p j))
+            (hprob1 _ (hinstanceSet p j)) hacc0).cols (instanceMem p j))))
         gates sets chunks lookups beta gamma delta theta y chunkLen l0 lLast lBlind
           - hpoly * (X ^ deg - 1)).eval x ≠ 0)
     {S : Prop}
@@ -1611,14 +1617,14 @@ theorem orchard_verifier_vesta_member_constraints_terminal {shape : Shape}
       SnarkRelation urs (deployedCommitment urs hk vk instanceCommitment ps ch - pU • urs.u - pW • urs.w)
         (evalVector urs.k ch.x3) (multiopenValue vk instanceCommitment ps ch)
         (circuitSatViaConstraints fixedCols
-          (fun _ _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
-            coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
-              (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
-                (adviceMem j))))
-          (fun _ _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
-            coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
-              (hinstanceSet j) (hlen _ (hinstanceSet j))
-              (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
+          (fun _ p => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+            coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch
+              (adviceSet p j) (hadviceSet p j) (hlen _ (hadviceSet p j))
+              (hprob1 _ (hadviceSet p j)) hacc0).cols (adviceMem p j))))
+          (fun _ p => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+            coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch
+              (instanceSet p j) (hinstanceSet p j) (hlen _ (hinstanceSet p j))
+              (hprob1 _ (hinstanceSet p j)) hacc0).cols (instanceMem p j))))
           gates sets chunks lookups beta gamma delta theta y chunkLen l0 lLast lBlind hpoly deg)
         a → S) :
     S ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w :=
@@ -1646,13 +1652,18 @@ theorem orchard_verifier_vesta_member_constraints_terminal_derived {shape : Shap
     (ch : Challenges shape.k Fp)
     (pU pW : Fp)
     {numAdvice numInstance : ℕ}
-    (adviceSet : Fin numAdvice → ℕ)
-    (hadviceSet : ∀ j, adviceSet j < deployedX4PairCount vk instanceCommitment ps ch)
-    (adviceMem : ∀ j : Fin numAdvice, Fin (deployedSetQueries vk instanceCommitment ps ch (adviceSet j)).length)
-    (instanceSet : Fin numInstance → ℕ)
-    (hinstanceSet : ∀ j, instanceSet j < deployedX4PairCount vk instanceCommitment ps ch)
-    (instanceMem : ∀ j : Fin numInstance,
-      Fin (deployedSetQueries vk instanceCommitment ps ch (instanceSet j)).length)
+    (adviceSet : Fin shape.numProofs → Fin numAdvice → ℕ)
+    (hadviceSet : ∀ p j,
+      adviceSet p j < deployedX4PairCount vk instanceCommitment ps ch)
+    (adviceMem : ∀ (p : Fin shape.numProofs) (j : Fin numAdvice),
+      Fin (deployedSetQueries vk instanceCommitment ps ch
+        (adviceSet p j)).length)
+    (instanceSet : Fin shape.numProofs → Fin numInstance → ℕ)
+    (hinstanceSet : ∀ p j,
+      instanceSet p j < deployedX4PairCount vk instanceCommitment ps ch)
+    (instanceMem : ∀ (p : Fin shape.numProofs) (j : Fin numInstance),
+      Fin (deployedSetQueries vk instanceCommitment ps ch
+        (instanceSet p j)).length)
     (fixedCols : ℕ → Polynomial Fp)
     (sets : Fin shape.numProofs → List (PermSetEval (Polynomial Fp)))
     (chunks : Fin shape.numProofs →
@@ -1692,15 +1703,15 @@ theorem orchard_verifier_vesta_member_constraints_terminal_derived {shape : Shap
     (hfixed : ∀ j, (fixedCols j).eval ch.x = finFn ps.fixedEvals j)
     (hadviceBind : ∀ (q : Fin shape.numProofs) j,
       ((rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
-            (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
-              (adviceMem j))) j).eval ch.x)
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch
+            (adviceSet q j) (hadviceSet q j) (hlen _ (hadviceSet q j))
+            (hprob1 _ (hadviceSet q j)) hacc0).cols (adviceMem q j))) j).eval ch.x)
         = finFn (ps.adviceEvals q) j)
     (hinstanceBind : ∀ (q : Fin shape.numProofs) j,
       ((rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
-            (hinstanceSet j) (hlen _ (hinstanceSet j)) (hprob1 _ (hinstanceSet j)) hacc0).cols
-              (instanceMem j))) j).eval ch.x)
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch
+            (instanceSet q j) (hinstanceSet q j) (hlen _ (hinstanceSet q j))
+            (hprob1 _ (hinstanceSet q j)) hacc0).cols (instanceMem q j))) j).eval ch.x)
         = finFn (ps.instanceEvals q) j)
     (hsets : ∀ q, (sets q).map (PermSetEval.map (fun r => r.eval ch.x)) = subProofPermSets ps q)
     (hchunks : ∀ q, (chunks q).map (fun c => (c.1.map (fun r => r.eval ch.x),
@@ -1714,14 +1725,14 @@ theorem orchard_verifier_vesta_member_constraints_terminal_derived {shape : Shap
       = (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2)
     (hxgood : ch.x ∉ szBadSet
       (combineConstraints fixedCols
-        (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
-            (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
-              (adviceMem j))))
-        (fun _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
-          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
-            (hinstanceSet j) (hlen _ (hinstanceSet j))
-            (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
+        (fun p => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch
+            (adviceSet p j) (hadviceSet p j) (hlen _ (hadviceSet p j))
+            (hprob1 _ (hadviceSet p j)) hacc0).cols (adviceMem p j))))
+        (fun p => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+          coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch
+            (instanceSet p j) (hinstanceSet p j) (hlen _ (hinstanceSet p j))
+            (hprob1 _ (hinstanceSet p j)) hacc0).cols (instanceMem p j))))
         vk.gates sets chunks lookups ch.beta ch.gamma vk.delta ch.theta ch.y vk.chunkLen
         l0P lLastP lBlindP - hpoly * (X ^ vk.n - 1)))
     {S : Prop}
@@ -1729,27 +1740,27 @@ theorem orchard_verifier_vesta_member_constraints_terminal_derived {shape : Shap
       SnarkRelation urs (deployedCommitment urs hk vk instanceCommitment ps ch - pU • urs.u - pW • urs.w)
         (evalVector urs.k ch.x3) (multiopenValue vk instanceCommitment ps ch)
         (circuitSatViaConstraints fixedCols
-          (fun _ _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
-            coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
-              (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
-                (adviceMem j))))
-          (fun _ _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
-            coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
-              (hinstanceSet j) (hlen _ (hinstanceSet j))
-              (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
+          (fun _ p => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+            coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch
+              (adviceSet p j) (hadviceSet p j) (hlen _ (hadviceSet p j))
+              (hprob1 _ (hadviceSet p j)) hacc0).cols (adviceMem p j))))
+          (fun _ p => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+            coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch
+              (instanceSet p j) (hinstanceSet p j) (hlen _ (hinstanceSet p j))
+              (hprob1 _ (hinstanceSet p j)) hacc0).cols (instanceMem p j))))
           vk.gates sets chunks lookups ch.beta ch.gamma vk.delta ch.theta ch.y vk.chunkLen
           l0P lLastP lBlindP hpoly vk.n)
         a → S) :
     S ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   rcases hfold_of_constraint_polys urs hk vk instanceCommitment ps ch fixedCols
-      (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
-        coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (adviceSet j)
-          (hadviceSet j) (hlen _ (hadviceSet j)) (hprob1 _ (hadviceSet j)) hacc0).cols
-            (adviceMem j))))
-      (fun _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
-        coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch (instanceSet j)
-          (hinstanceSet j) (hlen _ (hinstanceSet j))
-          (hprob1 _ (hinstanceSet j)) hacc0).cols (instanceMem j))))
+      (fun p => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
+        coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch
+          (adviceSet p j) (hadviceSet p j) (hlen _ (hadviceSet p j))
+          (hprob1 _ (hadviceSet p j)) hacc0).cols (adviceMem p j))))
+      (fun p => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
+        coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch
+          (instanceSet p j) (hinstanceSet p j) (hlen _ (hinstanceSet p j))
+          (hprob1 _ (hinstanceSet p j)) hacc0).cols (instanceMem p j))))
       sets chunks lookups l0P lLastP lBlindP hpoly i m hm colPoly hbindAll hquot hroute hevals
       hacc0 hfixed hadviceBind hinstanceBind hsets hchunks hlookups hl0 hlLast hlBlind
     with hfold | hrel

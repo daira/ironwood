@@ -1,4 +1,5 @@
 import Zcash.Snark.Soundness.CanonicalTerminal
+import Zcash.Snark.Soundness.Multiopen.CanonicalSelection
 
 /-!
 # Canonical accepted-model adapter for the Vesta terminal
@@ -100,18 +101,21 @@ theorem vestaTerminal_circuitSat_or_relation_of_feed_eq
       OpenedMemberDecode urs hk vk instanceCommitment ps ch pbatch i hi)
     (hblinding : vk.blindingFactors < vk.n)
     {numAdvice numInstance : ℕ}
-    (adviceSet : Fin numAdvice → ℕ)
-    (hadviceSet : ∀ j,
-      adviceSet j < deployedX4PairCount vk instanceCommitment ps ch)
-    (adviceMem : ∀ j : Fin numAdvice,
+    (adviceSet : Fin shape.numProofs → Fin numAdvice → ℕ)
+    (hadviceSet : ∀ proofIndex j,
+      adviceSet proofIndex j <
+        deployedX4PairCount vk instanceCommitment ps ch)
+    (adviceMem : ∀ (proofIndex : Fin shape.numProofs) (j : Fin numAdvice),
       Fin (deployedSetQueries vk instanceCommitment ps ch
-        (adviceSet j)).length)
-    (instanceSet : Fin numInstance → ℕ)
-    (hinstanceSet : ∀ j,
-      instanceSet j < deployedX4PairCount vk instanceCommitment ps ch)
-    (instanceMem : ∀ j : Fin numInstance,
+        (adviceSet proofIndex j)).length)
+    (instanceSet : Fin shape.numProofs → Fin numInstance → ℕ)
+    (hinstanceSet : ∀ proofIndex j,
+      instanceSet proofIndex j <
+        deployedX4PairCount vk instanceCommitment ps ch)
+    (instanceMem : ∀ (proofIndex : Fin shape.numProofs)
+        (j : Fin numInstance),
       Fin (deployedSetQueries vk instanceCommitment ps ch
-        (instanceSet j)).length)
+        (instanceSet proofIndex j)).length)
     (i m : ℕ)
     (hm : m < (deployedSetQueries vk instanceCommitment ps ch i).length)
     (colPoly : Fin (deployedSetQueries vk instanceCommitment ps ch i).length →
@@ -144,26 +148,30 @@ theorem vestaTerminal_circuitSat_or_relation_of_feed_eq
         (memberDecode := memberDecode)
         (hblinding := hblinding) haccepts)
     (hAdvice :
-      (fun _ : Fin shape.numProofs =>
+      (fun proofIndex : Fin shape.numProofs =>
         rotatedFeed vk.omega vk.adviceQueryLayout
           (fun query : Fin numAdvice =>
             coeffsToPoly
               ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment
-                ps ch pbatch (adviceSet query) (hadviceSet query)
-                (hlen _ (hadviceSet query)) (hprob1 _ (hadviceSet query))
-                haccepts).cols (adviceMem query)))) =
+                ps ch pbatch (adviceSet proofIndex query)
+                (hadviceSet proofIndex query)
+                (hlen _ (hadviceSet proofIndex query))
+                (hprob1 _ (hadviceSet proofIndex query))
+                haccepts).cols (adviceMem proofIndex query)))) =
         (CanonicalMemberConstraintRelation.acceptedModel
           (memberDecode := memberDecode)
           (hblinding := hblinding) haccepts).adviceCols)
     (hInstance :
-      (fun _ : Fin shape.numProofs =>
+      (fun proofIndex : Fin shape.numProofs =>
         rotatedFeed vk.omega vk.instanceQueryLayout
           (fun query : Fin numInstance =>
             coeffsToPoly
               ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment
-                ps ch pbatch (instanceSet query) (hinstanceSet query)
-                (hlen _ (hinstanceSet query)) (hprob1 _ (hinstanceSet query))
-                haccepts).cols (instanceMem query)))) =
+                ps ch pbatch (instanceSet proofIndex query)
+                (hinstanceSet proofIndex query)
+                (hlen _ (hinstanceSet proofIndex query))
+                (hprob1 _ (hinstanceSet proofIndex query))
+                haccepts).cols (instanceMem proofIndex query)))) =
         (CanonicalMemberConstraintRelation.acceptedModel
           (memberDecode := memberDecode)
           (hblinding := hblinding) haccepts).instanceCols)
@@ -215,5 +223,199 @@ theorem vestaTerminal_circuitSat_or_relation_of_feed_eq
   exact result
 
 assert_no_sorry vestaTerminal_circuitSat_or_relation_of_feed_eq
+
+set_option maxRecDepth 1000000 in
+/--
+The canonical Vesta terminal with its advice and instance selections derived
+directly from the accepted query route.
+
+Unlike `vestaTerminal_circuitSat_or_relation_of_feed_eq`, callers do not choose
+member slots or prove feed equalities. The construction selects the appropriate
+member separately for every proof and query index, so this theorem applies to
+arbitrary `shape.numProofs`.
+-/
+theorem vestaTerminal_circuitSat_or_relation_of_acceptedSelections
+    {shape : Shape}
+    (urs : URS VestaG) (hk : shape.k = urs.k)
+    (vk : VerifyingKey shape Fp VestaG)
+    (instanceCommitment : Fin shape.numProofs → ℕ → VestaG)
+    (ps : ProofString shape Fp VestaG)
+    (ch : Challenges shape.k Fp)
+    (pU pW : Fp)
+    (hpoly : Polynomial Fp)
+    {a₀ : Fin (2 ^ urs.k) → Fp}
+    (pbatch :
+      OpenedBatchOpenings urs (evalVector urs.k ch.x3)
+        (x4BatchCommitments urs hk vk instanceCommitment ps ch)
+        (x4BatchEvals vk instanceCommitment ps ch) a₀ pU pW)
+    (hξcur : pbatch.batchChallenge pbatch.current = ch.x4)
+    (hlen : ∀ i, i < deployedX4PairCount vk instanceCommitment ps ch →
+      0 < (deployedSetQueries vk instanceCommitment ps ch i).length)
+    (hprob1 : ∀ i, i < deployedX4PairCount vk instanceCommitment ps ch →
+      (((deployedSetQueries vk instanceCommitment ps ch i).length - 1 :
+        ℕ) : ℝ≥0∞) / Fintype.card Fp
+          < (PMF.uniformOfFintype Fp).toOuterMeasure
+            (Finset.univ.filter
+              (OpenedX1Accept urs hk vk instanceCommitment ps ch)))
+    (haccepts : DeployedAccepts urs hk vk instanceCommitment ps ch)
+    (hblinding : vk.blindingFactors < vk.n)
+    (hadviceLayout :
+      vk.adviceQueryLayout.length = shape.numAdviceQueries)
+    (hinstanceLayout :
+      vk.instanceQueryLayout.length = shape.numInstanceQueries)
+    (i m : ℕ)
+    (hm : m < (deployedSetQueries vk instanceCommitment ps ch i).length)
+    (colPoly : Fin (deployedSetQueries vk instanceCommitment ps ch i).length →
+      Polynomial Fp)
+    (hbindAll : ∀ (idx : Fin ((constructIntermediateSets
+          (assembleQueries vk instanceCommitment ps ch)).points.getD i []).length)
+        (m₀ : Fin (deployedSetQueries vk instanceCommitment ps ch i).length),
+      (colPoly m₀).eval
+          (((constructIntermediateSets
+            (assembleQueries vk instanceCommitment ps ch)).points.getD i [])[idx]) =
+        ((deployedSetQueries vk instanceCommitment ps ch i).getD
+          (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
+        ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+    (hquot : hpoly = colPoly ⟨m, hm⟩)
+    (hroute : (constructIntermediateSets
+      (assembleQueries vk instanceCommitment ps ch)).points.getD i [] = [ch.x])
+    (hevals : ∀ d₀,
+      ((deployedSetQueries vk instanceCommitment ps ch i).getD m d₀).2 =
+        [expectedHEval
+          (allExpressions vk ps ch
+            (lagrangeBasis vk.omega vk.n vk.blindingFactors
+              (ch.x ^ vk.n) ch.x).1
+            (lagrangeBasis vk.omega vk.n vk.blindingFactors
+              (ch.x ^ vk.n) ch.x).2.1
+            (lagrangeBasis vk.omega vk.n vk.blindingFactors
+              (ch.x ^ vk.n) ch.x).2.2)
+          ch.y (ch.x ^ vk.n)])
+    (claimed :
+      AcceptedModelClaimedEvaluations
+        (memberDecode :=
+          vestaExtractedMemberDecode urs hk vk instanceCommitment ps ch
+            pbatch hlen hprob1 haccepts)
+        (hblinding := hblinding) haccepts)
+    (hxgood :
+      ch.x ∉ szBadSet
+        (let model :=
+          CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode :=
+              vestaExtractedMemberDecode urs hk vk instanceCommitment ps ch
+                pbatch hlen hprob1 haccepts)
+            (hblinding := hblinding) haccepts
+        combineConstraints model.fixedCols model.adviceCols model.instanceCols
+          model.gates model.sets model.chunks model.lookups
+          model.beta model.gamma model.delta model.theta ch.y model.chunkLen
+          model.l0 model.lLast model.lBlind -
+            hpoly * (X ^ vk.n - 1))) :
+    (CanonicalMemberConstraintRelation.acceptedModel
+        (memberDecode :=
+          vestaExtractedMemberDecode urs hk vk instanceCommitment ps ch
+            pbatch hlen hprob1 haccepts)
+        (hblinding := hblinding) haccepts).CircuitSat
+          ch.y hpoly vk.n a₀ ∨
+      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  let memberDecode :=
+    vestaExtractedMemberDecode urs hk vk instanceCommitment ps ch
+      pbatch hlen hprob1 haccepts
+  let model :=
+    CanonicalMemberConstraintRelation.acceptedModel
+      (memberDecode := memberDecode)
+      (hblinding := hblinding) haccepts
+  let adviceSlot := fun proofIndex =>
+    acceptedAdviceSlot
+      (vk := vk) (instanceCommitment := instanceCommitment)
+      (ps := ps) (ch := ch) (proofIndex := proofIndex)
+      urs hk haccepts hadviceLayout
+  let instanceSlot := fun proofIndex =>
+    acceptedInstanceSlot
+      (vk := vk) (instanceCommitment := instanceCommitment)
+      (ps := ps) (ch := ch) (proofIndex := proofIndex)
+      urs hk haccepts hinstanceLayout
+  let adviceSet :
+      Fin shape.numProofs → Fin shape.numAdviceQueries → ℕ :=
+    fun proofIndex query => (adviceSlot proofIndex query).setIndex
+  have hadviceSet : ∀ proofIndex query, adviceSet proofIndex query <
+      deployedX4PairCount vk instanceCommitment ps ch :=
+    fun proofIndex query => (adviceSlot proofIndex query).setIndex_lt
+  let adviceMem : ∀ (proofIndex : Fin shape.numProofs)
+      (query : Fin shape.numAdviceQueries),
+      Fin (deployedSetQueries vk instanceCommitment ps ch
+        (adviceSet proofIndex query)).length :=
+    fun proofIndex query => (adviceSlot proofIndex query).memberIndex
+  let instanceSet :
+      Fin shape.numProofs → Fin shape.numInstanceQueries → ℕ :=
+    fun proofIndex query => (instanceSlot proofIndex query).setIndex
+  have hinstanceSet : ∀ proofIndex query, instanceSet proofIndex query <
+      deployedX4PairCount vk instanceCommitment ps ch :=
+    fun proofIndex query => (instanceSlot proofIndex query).setIndex_lt
+  let instanceMem : ∀ (proofIndex : Fin shape.numProofs)
+      (query : Fin shape.numInstanceQueries),
+      Fin (deployedSetQueries vk instanceCommitment ps ch
+        (instanceSet proofIndex query)).length :=
+    fun proofIndex query => (instanceSlot proofIndex query).memberIndex
+  have hAdvice :
+      (fun proofIndex : Fin shape.numProofs =>
+        rotatedFeed vk.omega vk.adviceQueryLayout
+          (fun query : Fin shape.numAdviceQueries =>
+            coeffsToPoly
+              ((memberDecode (adviceSet proofIndex query)
+                (hadviceSet proofIndex query)).cols
+                (adviceMem proofIndex query)))) =
+        model.adviceCols := by
+    simpa only [adviceSlot, adviceSet, adviceMem, model] using
+      acceptedAdviceSelection_feed_eq
+        urs hk vk instanceCommitment ps ch pbatch memberDecode haccepts
+        hadviceLayout hblinding
+  have hInstance :
+      (fun proofIndex : Fin shape.numProofs =>
+        rotatedFeed vk.omega vk.instanceQueryLayout
+          (fun query : Fin shape.numInstanceQueries =>
+            coeffsToPoly
+              ((memberDecode (instanceSet proofIndex query)
+                (hinstanceSet proofIndex query)).cols
+                (instanceMem proofIndex query)))) =
+        model.instanceCols := by
+    simpa only [instanceSlot, instanceSet, instanceMem, model] using
+      acceptedInstanceSelection_feed_eq
+        urs hk vk instanceCommitment ps ch pbatch memberDecode haccepts
+        hinstanceLayout hblinding
+  have hAdviceTerminal :
+      (fun proofIndex : Fin shape.numProofs =>
+        rotatedFeed vk.omega vk.adviceQueryLayout
+          (fun query : Fin shape.numAdviceQueries =>
+            coeffsToPoly
+              ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment
+                ps ch pbatch (adviceSet proofIndex query)
+                (hadviceSet proofIndex query)
+                (hlen _ (hadviceSet proofIndex query))
+                (hprob1 _ (hadviceSet proofIndex query))
+                haccepts).cols (adviceMem proofIndex query)))) =
+        model.adviceCols := by
+    simpa only [memberDecode, vestaExtractedMemberDecode] using hAdvice
+  have hInstanceTerminal :
+      (fun proofIndex : Fin shape.numProofs =>
+        rotatedFeed vk.omega vk.instanceQueryLayout
+          (fun query : Fin shape.numInstanceQueries =>
+            coeffsToPoly
+              ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment
+                ps ch pbatch (instanceSet proofIndex query)
+                (hinstanceSet proofIndex query)
+                (hlen _ (hinstanceSet proofIndex query))
+                (hprob1 _ (hinstanceSet proofIndex query))
+                haccepts).cols (instanceMem proofIndex query)))) =
+        model.instanceCols := by
+    simpa only [memberDecode, vestaExtractedMemberDecode] using hInstance
+  have result :=
+    vestaTerminal_circuitSat_or_relation_of_feed_eq
+      urs hk vk instanceCommitment ps ch pU pW hpoly
+      pbatch hξcur hlen hprob1 haccepts memberDecode hblinding
+      adviceSet hadviceSet adviceMem instanceSet hinstanceSet instanceMem
+      i m hm colPoly hbindAll hquot hroute hevals claimed
+      hAdviceTerminal hInstanceTerminal hxgood
+  simpa only [memberDecode] using result
+
+assert_no_sorry vestaTerminal_circuitSat_or_relation_of_acceptedSelections
 
 end Zcash.Snark

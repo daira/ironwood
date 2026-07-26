@@ -9,8 +9,7 @@ members named by the verifying key's query layouts and proves that the resulting
 polynomial feeds are exactly those of the canonical accepted constraint model.
 
 The construction is verifier-native and generic in the proof shape, group, and
-verifying key. A caller selecting one proof index must show that it is the only
-proof index in the bundle.
+verifying key. Every proof in the bundle gets its own selections.
 -/
 
 namespace Zcash.Snark
@@ -202,45 +201,45 @@ private theorem acceptedAdviceSlot_polynomial
 
 /--
 The member slots chosen directly from the accepted canonical route reproduce
-the accepted model's complete advice polynomial feed. The only bundle-level
-premise is that every proof index is the selected one.
+the accepted model's complete advice polynomial feed, proof by proof.
 -/
 theorem acceptedAdviceSelection_feed_eq
-    (hblinding : vk.blindingFactors < vk.n)
-    (hProof : ∀ other : Fin shape.numProofs, other = proofIndex) :
-    let slot := acceptedAdviceSlot
-      (vk := vk) (instanceCommitment := instanceCommitment)
-      (ps := ps) (ch := ch) (proofIndex := proofIndex)
-      urs hk haccepts hLayout
-    (fun _ : Fin shape.numProofs =>
+    (hblinding : vk.blindingFactors < vk.n) :
+    let slot := fun proofIndex =>
+      acceptedAdviceSlot
+        (vk := vk) (instanceCommitment := instanceCommitment)
+        (ps := ps) (ch := ch) (proofIndex := proofIndex)
+        urs hk haccepts hLayout
+    (fun proofIndex : Fin shape.numProofs =>
       rotatedFeed vk.omega vk.adviceQueryLayout
         (fun queryIndex : Fin shape.numAdviceQueries =>
           coeffsToPoly
             ((memberDecode
-              (slot queryIndex).setIndex
-              (slot queryIndex).setIndex_lt).cols
-              (slot queryIndex).memberIndex))) =
+              (slot proofIndex queryIndex).setIndex
+              (slot proofIndex queryIndex).setIndex_lt).cols
+              (slot proofIndex queryIndex).memberIndex))) =
       (CanonicalMemberConstraintRelation.acceptedModel
         (batchOpenings := pbatch)
         (memberDecode := memberDecode)
         (hblinding := hblinding)
         haccepts).adviceCols := by
-  let slot := acceptedAdviceSlot
-    (vk := vk) (instanceCommitment := instanceCommitment)
-    (ps := ps) (ch := ch) (proofIndex := proofIndex)
-    urs hk haccepts hLayout
-  let selected : Fin shape.numAdviceQueries → Polynomial Fp :=
-    fun queryIndex =>
+  let slot := fun proofIndex =>
+    acceptedAdviceSlot
+      (vk := vk) (instanceCommitment := instanceCommitment)
+      (ps := ps) (ch := ch) (proofIndex := proofIndex)
+      urs hk haccepts hLayout
+  let selected :
+      Fin shape.numProofs → Fin shape.numAdviceQueries → Polynomial Fp :=
+    fun proofIndex queryIndex =>
       coeffsToPoly
         ((memberDecode
-          (slot queryIndex).setIndex
-          (slot queryIndex).setIndex_lt).cols
-          (slot queryIndex).memberIndex)
-  funext other query
-  have hOther := hProof other
-  subst other
+          (slot proofIndex queryIndex).setIndex
+          (slot proofIndex queryIndex).setIndex_lt).cols
+          (slot proofIndex queryIndex).memberIndex)
+  funext proofIndex query
   change
-    rotatedFeed vk.omega vk.adviceQueryLayout selected query =
+    rotatedFeed vk.omega vk.adviceQueryLayout
+        (selected proofIndex) query =
       adviceQueryFeedOfResolver vk
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (batchOpenings := pbatch) (memberDecode := memberDecode) haccepts)
@@ -248,7 +247,7 @@ theorem acceptedAdviceSelection_feed_eq
   by_cases hquery : query < shape.numAdviceQueries
   · simp only [rotatedFeed, adviceQueryFeedOfResolver, resolverQueryFeed,
       finFn, dif_pos hquery]
-    rw [show selected ⟨query, hquery⟩ =
+    rw [show selected proofIndex ⟨query, hquery⟩ =
         CanonicalMemberConstraintRelation.acceptedPolynomial
           (batchOpenings := pbatch) (memberDecode := memberDecode) haccepts
           (CommitmentId.adviceCol proofIndex
@@ -446,41 +445,42 @@ private theorem acceptedInstanceSlot_polynomial
 The instance-column twin of `acceptedAdviceSelection_feed_eq`.
 -/
 theorem acceptedInstanceSelection_feed_eq
-    (hblinding : vk.blindingFactors < vk.n)
-    (hProof : ∀ other : Fin shape.numProofs, other = proofIndex) :
-    let slot := acceptedInstanceSlot
-      (vk := vk) (instanceCommitment := instanceCommitment)
-      (ps := ps) (ch := ch) (proofIndex := proofIndex)
-      urs hk haccepts hLayout
-    (fun _ : Fin shape.numProofs =>
+    (hblinding : vk.blindingFactors < vk.n) :
+    let slot := fun proofIndex =>
+      acceptedInstanceSlot
+        (vk := vk) (instanceCommitment := instanceCommitment)
+        (ps := ps) (ch := ch) (proofIndex := proofIndex)
+        urs hk haccepts hLayout
+    (fun proofIndex : Fin shape.numProofs =>
       rotatedFeed vk.omega vk.instanceQueryLayout
         (fun queryIndex : Fin shape.numInstanceQueries =>
           coeffsToPoly
             ((memberDecode
-              (slot queryIndex).setIndex
-              (slot queryIndex).setIndex_lt).cols
-              (slot queryIndex).memberIndex))) =
+              (slot proofIndex queryIndex).setIndex
+              (slot proofIndex queryIndex).setIndex_lt).cols
+              (slot proofIndex queryIndex).memberIndex))) =
       (CanonicalMemberConstraintRelation.acceptedModel
         (batchOpenings := pbatch)
         (memberDecode := memberDecode)
         (hblinding := hblinding)
         haccepts).instanceCols := by
-  let slot := acceptedInstanceSlot
-    (vk := vk) (instanceCommitment := instanceCommitment)
-    (ps := ps) (ch := ch) (proofIndex := proofIndex)
-    urs hk haccepts hLayout
-  let selected : Fin shape.numInstanceQueries → Polynomial Fp :=
-    fun queryIndex =>
+  let slot := fun proofIndex =>
+    acceptedInstanceSlot
+      (vk := vk) (instanceCommitment := instanceCommitment)
+      (ps := ps) (ch := ch) (proofIndex := proofIndex)
+      urs hk haccepts hLayout
+  let selected :
+      Fin shape.numProofs → Fin shape.numInstanceQueries → Polynomial Fp :=
+    fun proofIndex queryIndex =>
       coeffsToPoly
         ((memberDecode
-          (slot queryIndex).setIndex
-          (slot queryIndex).setIndex_lt).cols
-          (slot queryIndex).memberIndex)
-  funext other query
-  have hOther := hProof other
-  subst other
+          (slot proofIndex queryIndex).setIndex
+          (slot proofIndex queryIndex).setIndex_lt).cols
+          (slot proofIndex queryIndex).memberIndex)
+  funext proofIndex query
   change
-    rotatedFeed vk.omega vk.instanceQueryLayout selected query =
+    rotatedFeed vk.omega vk.instanceQueryLayout
+        (selected proofIndex) query =
       instanceQueryFeedOfResolver vk
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (batchOpenings := pbatch) (memberDecode := memberDecode) haccepts)
@@ -488,7 +488,7 @@ theorem acceptedInstanceSelection_feed_eq
   by_cases hquery : query < shape.numInstanceQueries
   · simp only [rotatedFeed, instanceQueryFeedOfResolver, resolverQueryFeed,
       finFn, dif_pos hquery]
-    rw [show selected ⟨query, hquery⟩ =
+    rw [show selected proofIndex ⟨query, hquery⟩ =
         CanonicalMemberConstraintRelation.acceptedPolynomial
           (batchOpenings := pbatch) (memberDecode := memberDecode) haccepts
           (CommitmentId.instanceCol proofIndex

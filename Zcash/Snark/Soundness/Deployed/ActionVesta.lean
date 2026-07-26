@@ -59,27 +59,6 @@ private theorem actionCapturedInstanceQueryCount :
     Fixture.shape Keygen.shape_eq_mergeDerived
     Fixture.vk Keygen.vk_eq_derived).2
 
-private theorem actionNumProofs :
-    Fixture.shape.numProofs = 1 := by
-  rw [← Keygen.shape_eq_mergeDerived]
-  rfl
-
-private def actionProofIndex : Fin Fixture.shape.numProofs :=
-  ⟨0, by
-    rw [actionNumProofs]
-    exact Nat.zero_lt_one⟩
-
-private theorem actionProofIndex_unique
-    (proofIndex : Fin Fixture.shape.numProofs) :
-    proofIndex = actionProofIndex := by
-  apply Fin.ext
-  have hlt : (proofIndex : ℕ) < 1 := by
-    rw [← actionNumProofs]
-    exact proofIndex.isLt
-  have hz : (proofIndex : ℕ) = 0 :=
-    Nat.eq_zero_of_le_zero (Nat.le_of_lt_succ hlt)
-  simpa only [actionProofIndex] using hz
-
 attribute [local irreducible] deployedSetQueries deployedSetCommIds
   deployedX4PairCount x4BatchCommitments x4BatchEvals
   Fixture.vk Fixture.shape capturedURS deployedInstanceCommitment
@@ -198,115 +177,13 @@ theorem actionAcceptedCircuitSat_or_relation_of_vestaTerminalDerived
           ch.y hpoly Fixture.vk.n a₀ ∨
       HasNontrivialRelation (F := Fp)
         capturedURS.g capturedURS.u capturedURS.w := by
-  let memberDecode :=
-    vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
-      Fixture.vk (deployedInstanceCommitment Fixture.shape inputs) ps ch
-      pbatch hlen hprob1 haccepts
-  let model :=
-    CanonicalMemberConstraintRelation.acceptedModel
-      (memberDecode := memberDecode)
-      (hblinding := vk_blindingFactors_lt) haccepts
-  let adviceSlot :=
-    acceptedAdviceSlot
-      (vk := Fixture.vk)
-      (instanceCommitment := deployedInstanceCommitment Fixture.shape inputs)
-      (ps := ps) (ch := ch) (proofIndex := actionProofIndex)
-      capturedURS shape_k_eq_capturedURS_k haccepts
-      actionCapturedAdviceQueryCount
-  let instanceSlot :=
-    acceptedInstanceSlot
-      (vk := Fixture.vk)
-      (instanceCommitment := deployedInstanceCommitment Fixture.shape inputs)
-      (ps := ps) (ch := ch) (proofIndex := actionProofIndex)
-      capturedURS shape_k_eq_capturedURS_k haccepts
-      actionCapturedInstanceQueryCount
-  let adviceSet : Fin Fixture.shape.numAdviceQueries → ℕ :=
-    fun query => (adviceSlot query).setIndex
-  have hadviceSet : ∀ query, adviceSet query <
-      deployedX4PairCount Fixture.vk
-        (deployedInstanceCommitment Fixture.shape inputs) ps ch :=
-    fun query => (adviceSlot query).setIndex_lt
-  let adviceMem : ∀ query : Fin Fixture.shape.numAdviceQueries,
-      Fin (deployedSetQueries Fixture.vk
-        (deployedInstanceCommitment Fixture.shape inputs) ps ch
-        (adviceSet query)).length :=
-    fun query => (adviceSlot query).memberIndex
-  let instanceSet : Fin Fixture.shape.numInstanceQueries → ℕ :=
-    fun query => (instanceSlot query).setIndex
-  have hinstanceSet : ∀ query, instanceSet query <
-      deployedX4PairCount Fixture.vk
-        (deployedInstanceCommitment Fixture.shape inputs) ps ch :=
-    fun query => (instanceSlot query).setIndex_lt
-  let instanceMem : ∀ query : Fin Fixture.shape.numInstanceQueries,
-      Fin (deployedSetQueries Fixture.vk
-        (deployedInstanceCommitment Fixture.shape inputs) ps ch
-        (instanceSet query)).length :=
-    fun query => (instanceSlot query).memberIndex
-  have hAdvice :
-      (fun _ : Fin Fixture.shape.numProofs =>
-        rotatedFeed Fixture.vk.omega Fixture.vk.adviceQueryLayout
-          (fun query : Fin Fixture.shape.numAdviceQueries =>
-            coeffsToPoly
-              ((memberDecode (adviceSet query) (hadviceSet query)).cols
-                (adviceMem query)))) =
-        model.adviceCols := by
-    simpa only [adviceSlot, adviceSet, adviceMem, model] using
-      acceptedAdviceSelection_feed_eq
-        capturedURS shape_k_eq_capturedURS_k Fixture.vk
-        (deployedInstanceCommitment Fixture.shape inputs) ps ch pbatch
-        memberDecode haccepts actionProofIndex
-        actionCapturedAdviceQueryCount vk_blindingFactors_lt
-        actionProofIndex_unique
-  have hInstance :
-      (fun _ : Fin Fixture.shape.numProofs =>
-        rotatedFeed Fixture.vk.omega Fixture.vk.instanceQueryLayout
-          (fun query : Fin Fixture.shape.numInstanceQueries =>
-            coeffsToPoly
-              ((memberDecode (instanceSet query) (hinstanceSet query)).cols
-                (instanceMem query)))) =
-        model.instanceCols := by
-    simpa only [instanceSlot, instanceSet, instanceMem, model] using
-      acceptedInstanceSelection_feed_eq
-        capturedURS shape_k_eq_capturedURS_k Fixture.vk
-        (deployedInstanceCommitment Fixture.shape inputs) ps ch pbatch
-        memberDecode haccepts actionProofIndex
-        actionCapturedInstanceQueryCount vk_blindingFactors_lt
-        actionProofIndex_unique
-  have hAdviceTerminal :
-      (fun _ : Fin Fixture.shape.numProofs =>
-        rotatedFeed Fixture.vk.omega Fixture.vk.adviceQueryLayout
-          (fun query : Fin Fixture.shape.numAdviceQueries =>
-            coeffsToPoly
-              ((openedMemberDecode_of_x1Prob
-                capturedURS shape_k_eq_capturedURS_k Fixture.vk
-                (deployedInstanceCommitment Fixture.shape inputs) ps ch
-                pbatch (adviceSet query) (hadviceSet query)
-                (hlen _ (hadviceSet query)) (hprob1 _ (hadviceSet query))
-                haccepts).cols (adviceMem query)))) =
-        model.adviceCols := by
-    simpa only [memberDecode, vestaExtractedMemberDecode] using hAdvice
-  have hInstanceTerminal :
-      (fun _ : Fin Fixture.shape.numProofs =>
-        rotatedFeed Fixture.vk.omega Fixture.vk.instanceQueryLayout
-          (fun query : Fin Fixture.shape.numInstanceQueries =>
-            coeffsToPoly
-              ((openedMemberDecode_of_x1Prob
-                capturedURS shape_k_eq_capturedURS_k Fixture.vk
-                (deployedInstanceCommitment Fixture.shape inputs) ps ch
-                pbatch (instanceSet query) (hinstanceSet query)
-                (hlen _ (hinstanceSet query)) (hprob1 _ (hinstanceSet query))
-                haccepts).cols (instanceMem query)))) =
-        model.instanceCols := by
-    simpa only [memberDecode, vestaExtractedMemberDecode] using hInstance
-  have result :=
-    vestaTerminal_circuitSat_or_relation_of_feed_eq
+  exact
+    vestaTerminal_circuitSat_or_relation_of_acceptedSelections
       capturedURS shape_k_eq_capturedURS_k Fixture.vk
       (deployedInstanceCommitment Fixture.shape inputs) ps ch pU pW hpoly
-      pbatch hξcur hlen hprob1 haccepts memberDecode vk_blindingFactors_lt
-      adviceSet hadviceSet adviceMem instanceSet hinstanceSet instanceMem
-      i m hm colPoly hbindAll hquot hroute hevals claimed
-      hAdviceTerminal hInstanceTerminal hxgood
-  simpa only [memberDecode] using result
+      pbatch hξcur hlen hprob1 haccepts vk_blindingFactors_lt
+      actionCapturedAdviceQueryCount actionCapturedInstanceQueryCount
+      i m hm colPoly hbindAll hquot hroute hevals claimed hxgood
 
 assert_no_sorry actionAcceptedCircuitSat_or_relation_of_vestaTerminalDerived
 

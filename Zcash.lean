@@ -6,6 +6,4 @@ import Zcash.Circuits
 import Zcash.Circuits.Integration
 import Zcash.Security
 import Zcash.Snark
-import Zcash.Snark.Soundness.Deployed.ActionVk
-import Zcash.Snark.Soundness.Deployed.ActionVesta
 import Zcash.TrustBoundary
