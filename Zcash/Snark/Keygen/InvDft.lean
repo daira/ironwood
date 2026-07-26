@@ -30,6 +30,7 @@ multiplications, and the monomial basis is URS data that needs no derivation at 
 namespace Zcash.Snark.Keygen
 
 open Zcash.Snark
+open CompElliptic.Curves.Pasta
 
 variable {G : Type} [AddCommGroup G] [Inhabited G] [Module Fp G]
 

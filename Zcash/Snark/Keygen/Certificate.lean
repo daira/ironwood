@@ -31,18 +31,21 @@ EVALUATION-SHARING DISCIPLINE (each rule was measured, the hard way):
   group FFT would still be forced.
 * The basis and the per-column committer run through the MONTGOMERY LANE
   (`Fast.msmMontPre` / `Fast.commitInvDftMontWith`): the zero-import `ProjectiveMontDefs`
-  and `ScalarFftDefs` twins over the eight-limb Montgomery field, compiled by the
-  `FastFieldNative` `precompileModules` leaf, proven equal to the statement-surface
-  functions via the kernel simulation theorems (`msmM_spec`, `fftS_spec`) — which ride in
-  turn on the vendored field's ring isomorphism, so the certificate's group work now runs
+  and `ScalarFftDefs` twins over the eight-limb Montgomery field, proven equal to the
+  statement-surface functions via the kernel simulation theorems (`msmM_spec`, `fftS_spec`)
+  — which ride in turn on the field's ring isomorphism, so the certificate's group work runs
   on a PROVEN field implementation rather than on `%`-reduced `Nat`s.
+  Both twins are natively compiled, by two `precompileModules` leaves: the CompElliptic pin's
+  own `FastFieldNative` carries the field and the projective kernels, ironwood's
+  `Zcash.FastFieldNative` carries the scalar FFT.
   The monomial basis in Montgomery form (`monomialBasis`), the twiddle table and the `n⁻¹`
   scale are nullary shares: the coordinate conversion and the 1024 root powers happen once
   per process, not once per column.
-  Profiling note: THIS module gets the dylib automatically (the `ZcashKeygen` lib
-  reaches the lane, so lake passes `--load-dynlib`); a SCRATCH probe through
+  Profiling note: THIS module gets both dylibs automatically (the `ZcashKeygen` lib
+  reaches the lanes, so lake passes `--load-dynlib` for each); a SCRATCH probe through
   `lake env lean` does NOT, and must pass
-  `--load-dynlib=.lake/build/lib/libZcash_FastFieldNative.so` explicitly or it
+  `--load-dynlib=.lake/packages/CompElliptic/.lake/build/lib/libCompElliptic_FastFieldNative.so`
+  and `--load-dynlib=.lake/build/lib/libZcash_Zcash_FastFieldNative.so` explicitly or it
   measures the interpreted tier.
 * `actionPinned` stays a nullary share: it is only touched from the main evaluation
   thread, where nullary init-once sharing does hold (the `VkMatch` fix).
@@ -64,9 +67,10 @@ open Zcash.Snark
 open Zcash.Snark.Fixture
 open Halo2
 open Zcash.Circuits.Action (orchardActionTopLevelCircuit)
-open Zcash.Vendor.ProjectiveMont (PM)
+open CompElliptic.Curves.Pasta
+open CompElliptic.Curves.Pasta.Fast.ProjectiveMont (PM)
 open Montgomery.Native64x8 (Limbs8)
-open Zcash.Snark.Keygen.Fast.Projective.PVes (ofAffine)
+open CompElliptic.Curves.Pasta.Fast.Projective.PVes (ofAffine)
 
 /-- The Action circuit's proof-shape parameters — the only two `Shape` counts that are
 not circuit data (orchard: one Action proof per statement, five multiopen point sets). -/

@@ -26,11 +26,11 @@ generic in an `Fp`-module `G`. The `Module Fp G` premise is what lets the algori
   involution `bitrev_bitrev` proved by induction.
 * `bestFftG` is split — definitionally, `bestFftG_decompose` is `rfl` — into its three
   verbatim phases `brPermImp`/`twImp`/`roundsImp`, and each imperative phase is converted to a
-  pure `List.foldl` through the core `forIn`-to-`foldl` lemmas (the same route as
-  `Arithmetic/FastFftPar.lean`).
-* A round of butterflies is characterized by the written/fresh fold invariant `InvG` — the
-  generic-`G` port of `Arithmetic/FastFftPar.lean`'s disjointness argument: each butterfly reads only
-  the two cells it writes, so after the round every cell holds its gathered value `gOutG`.
+  pure `List.foldl` through the core `forIn`-to-`foldl` lemmas (the same route
+  `Arithmetic/Fft.lean` takes for the loop nest itself).
+* A round of butterflies is characterized by the written/fresh fold invariant `InvG`, a
+  disjointness argument: each butterfly reads only the two cells it writes, so after the round
+  every cell holds its gathered value `gOutG`.
 * The heart is `ct_step`, the Cooley–Tukey butterfly identity for the bit-reversed DFT sums,
   and `rounds_dft`, the induction over rounds with the invariant "after round `r`, each
   `2^r`-block holds the size-`2^r` DFT of its bit-reversal-permuted slice". The minus branch
@@ -415,8 +415,8 @@ private theorem brFold_inv (a0 : Array G) (logN : ℕ) (hsize : a0.size = 2 ^ lo
 
 /-! ## The round invariant: written cells hold their gathered value
 
-The generic-`G` port of `Arithmetic/FastFftPar.lean`'s disjointness argument, with the butterfly
-scalar action `tw.val • ·` of the transparent `bestFftG`. -/
+The disjointness argument, with the butterfly scalar action `tw.val • ·` of the transparent
+`bestFftG`. -/
 
 private def Written (half c jc i : ℕ) : Prop :=
   ∃ c' j', j' < half ∧ (c' < c ∨ (c' = c ∧ j' < jc)) ∧
