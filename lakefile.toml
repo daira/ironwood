@@ -53,12 +53,18 @@ globs = ["Zcash.Circuits.Tests.+"]
 # (scalar inverse-DFT commitments over the proven Montgomery lane, dense fixed columns,
 # keygen permutation polynomials) and assembles the fully-derived `derivedActionVk`.
 # `Derivation` contains the reusable data and key; `Certificate` contains the native
-# commitment equality. In `defaultTargets` since the certificate dropped to ~45 s
+# commitment equality. The deployed Action/Vesta corollary also lives in this
+# fixture-backed lane; the generic, circuit-derived-key capstone is in `Zcash`.
+# In `defaultTargets` since the certificate dropped to ~45 s
 # (it once took hours, which is why this lane used to be quarantined behind a
 # separate CI workflow).
 [[lean_lib]]
 name = "ZcashKeygen"
-globs = ["Zcash.Snark.Keygen.+", "Zcash.Snark.Soundness.Deployed.ActionVk"]
+globs = [
+  "Zcash.Snark.Keygen.+",
+  "Zcash.Snark.Soundness.Deployed.ActionVk",
+  "Zcash.Snark.Soundness.Deployed.ActionVesta",
+]
 
 # The ONLY library in this repo with `precompileModules`. It is a core-only leaf: its single
 # module imports nothing beyond Lean core, so native compilation covers ~1 file rather than a

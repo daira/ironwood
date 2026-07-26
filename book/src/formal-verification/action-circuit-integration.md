@@ -1148,20 +1148,26 @@ while decoded advice/instance polynomials and extracted `ActionData` remain
 per-member.
 
 #85's multi-Action fixture derives each proof's instance commitment and proves that
-sub-proof commitment slots remain disjoint. #30 and #91 already build much of their
-verifier-side data over `Fin shape.numProofs`, but #30's member capstone selects a
-single `pp : Fin shape.numProofs`. The integration theorem must turn that parametric
-single-index result into a family of Clean assignments and Action statements.
+sub-proof commitment slots remain disjoint. The accepted-route selector and Vesta
+terminal now reconstruct advice and instance feeds separately for every
+`Fin shape.numProofs`; there is no distinguished proof index or singleton-shape
+premise. `actionBundleStatement_or_relation_of_vestaTerminal` exposes that fact at
+the public API over arbitrary `ProofParams` and returns the bundle-wide Action
+statement.
 
 ### 7. Thread the bridge into the live capstone
 
 **Status: complete at the deterministic Vesta terminal. The canonical relation now
 reaches a concrete bundle-wide Action theorem, and
-`actionBundleStatement_or_relation_of_vestaTerminalDerived` invokes that theorem
-directly from the constraint-carrying Vesta terminal. Its public signature has no
-free `S`, `hencodes`, member decoder, or independently selected advice/instance
-feeds. The remaining quantitative Fiat–Shamir/adaptive-coupling work is a separate
-probability-layer composition. Substantial foundations are in
+`actionBundleStatement_or_relation_of_vestaTerminal` invokes that theorem directly
+from the constraint-carrying Vesta terminal. It quantifies over arbitrary proof
+parameters, derives its shape and verifying key from
+`orchardActionTopLevelCircuit`, and reconstructs accepted member selections
+proof-by-proof. Its public signature has no free `S`, `hencodes`, member decoder, or
+independently selected advice/instance feeds. The captured-VK theorem is only a
+deployment corollary in `Soundness/Deployed/ActionVesta`; it is not imported by the
+normal `Zcash` target. The remaining quantitative Fiat–Shamir/adaptive-coupling work
+is a separate probability-layer composition. Substantial foundations are in
 [#30](https://github.com/zcash/ironwood/pull/30),
 [#91](https://github.com/zcash/ironwood/pull/91), and
 the merged [#85](https://github.com/zcash/ironwood/pull/85).**
@@ -1250,11 +1256,13 @@ model. `Soundness/Multiopen/CanonicalSelection` now constructs the advice and
 instance slots forced by `CanonicalMemberConstraintRelation.acceptedRoute` and proves
 that their full polynomial feeds equal the canonical accepted model's feeds.
 `Soundness/CanonicalVesta` specializes the verifier-native terminal's former free
-callback to `CircuitSat` for that model. Finally,
-`Snark/Soundness/Deployed/ActionVesta` supplies the deployed one-proof query layouts,
-invokes the canonical Vesta adapter, and feeds its result to the Action endpoint.
-These route equalities are generic multiopen facts, not Action synthesis or
-floor-planner obligations. The recent tail of #96 exposes complementary
+callback to `CircuitSat` for that model and derives the accepted selections for every
+proof index. `Snark/Soundness/ActionVesta` instantiates this generic adapter with the
+Action circuit's derived shape, VK, query-layout counts, and public-instance
+commitments. `Snark/Soundness/Deployed/ActionVesta` only transports the captured
+single-Action artifacts to that generic result. These route equalities are generic
+multiopen facts, not Action synthesis or floor-planner obligations. The recent tail
+of #96 exposes complementary
 slot-to-commitment provenance for the quantitative reroute; it is adjacent to, but
 not needed for, this exact deterministic member-route identification.
 
@@ -1305,9 +1313,9 @@ whose public inputs were committed by the verifier.
    fixed coherence, selector realization, and copy replay internally.
 6. **Complete:** replace the live constraint terminal's free `S`/`hencodes`
    argument with the concrete Action composition. The generic selected-member
-   theorems identify its advice and instance feeds with the accepted
-   `CommitmentId` route; the deployed Vesta capstone fixes the decoder and returns
-   `Action.BundleStatement` or the standard nontrivial-relation alternative.
+   theorems identify every proof's advice and instance feeds with the accepted
+   `CommitmentId` route; the circuit-derived Vesta capstone fixes the decoder and
+   returns `Action.BundleStatement` or the standard nontrivial-relation alternative.
    The family-wide adaptive-coupling/`hExtract` supply problem is a distinct
    probability-layer task and may remain an explicitly conditional or residual term
    in the subsequent quantitative theorem.
@@ -1329,8 +1337,8 @@ append-only merge flow.
 | **[DONE: terminal API]** | Keep the canonical quotient terminal in polynomial language and perform the concrete join in `Circuits/Integration`. | `acceptedModelCircuitSat_or_relation_of_nodeBinding` reconstructs the complete accepted model and `actionBundleStatement_or_relation_of_acceptedNodeBinding` specializes it to the circuit-derived Action key and concrete bundle statement. Its signature has no free `S`/`hencodes`, fixed record, copy record, or selector-value premise. The deployed accepted-`CircuitSat` endpoint is also exported. | The deterministic semantic function is ready for invocation by the live probability capstone. |
 | **[SEPARATE: ledger]** | Continue [#98](https://github.com/zcash/ironwood/pull/98)'s `SpecPost`-to-ledger refinement. | Independent of polynomial reconstruction and Clean constraint satisfaction. | The games-facing conclusion that should follow after the circuit statement is recovered. |
 | **[SEPARATE: probability]** | Connect [#96](https://github.com/zcash/ironwood/pull/96)'s extraction/coupling result to the deterministic terminal and place the already-priced lookup/permutation exclusions at their transcript squeezes. | The deterministic terminal consumes decoded openings and explicit good-challenge facts; it does not solve the family-wide adaptive `hExtract` supply problem. | A quantitative live theorem around the deterministic #99 result, without reintroducing a free semantic encoding. |
-| **[DONE: one proof]** | Apply the internal gate/fixed/copy/instance/lookup adapters to one accepted canonical model. | The Action canonical endpoint constructs fixed coherence, exact selector projection, and copy replay itself. Only explicitly priced exclusions remain. | A concrete Action statement for one `Fin numProofs`, with only explicitly priced exceptional events. |
-| **[DONE: Vesta join]** | Invoke the deployed accepted-`CircuitSat` Action endpoint from the live Vesta constraint theorem. | `actionBundleStatement_or_relation_of_vestaTerminalDerived` fixes the accepted decoder, constructs canonical advice/instance slots from the accepted route, proves the complete feed equalities, and composes the resulting `CircuitSat` fact with the deployed Action theorem. Its signature contains no free `S`/`hencodes`, decoder, or selected-member feeds. #96 remains adjacent quantitative work rather than a dependency of this deterministic theorem. | #99's deterministic completion criterion is met. |
+| **[DONE: bundle]** | Apply the internal gate/fixed/copy/instance/lookup adapters to every accepted canonical model in the proof bundle. | The Action canonical endpoint constructs fixed coherence, exact selector projection, and copy replay per proof index. Only explicitly priced exclusions remain. | A concrete `Action.BundleStatement` over every `Fin numProofs`, with only explicitly priced exceptional events. |
+| **[DONE: Vesta join]** | Invoke the accepted-`CircuitSat` Action endpoint from the live Vesta constraint theorem. | `vestaTerminal_circuitSat_or_relation_of_acceptedSelections` constructs canonical advice/instance slots for every proof index. `actionBundleStatement_or_relation_of_vestaTerminal` composes the resulting `CircuitSat` fact with the circuit-derived Action theorem for arbitrary `ProofParams`; the captured theorem is only a deployed corollary. The public signature contains no free `S`/`hencodes`, decoder, selected-member feeds, separate VK, or singleton-proof premise. #96 remains adjacent quantitative work rather than a dependency of this deterministic theorem. | #99's deterministic completion criterion is met for single- and multi-proof shapes. |
 
 The shortest dependency chain to removing `hencodes` is therefore:
 
