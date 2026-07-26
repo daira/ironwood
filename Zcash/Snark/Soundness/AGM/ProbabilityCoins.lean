@@ -3,9 +3,9 @@ import Zcash.Snark.Soundness.AGM.Probability
 /-!
 # Relation-to-DL probability with extractor coins
 
-Carry independent extractor coins through the programmed-basis DL reduction. As in
-`Soundness.AGM.Probability`, every slot is programmed from the challenge (Jaeger–Tessaro,
-Lemma 3), so the reduction pays only an additive `1/|F|` and no slot-guess factor.
+Carry independent extractor coins through the programmed-basis DL reduction. The experiment,
+the counting, and the `bound + 1/|F|` pricing are those of `Soundness.AGM.Probability`; only the
+coin space gains the extractor's `ρ`.
 -/
 
 open scoped ENNReal
@@ -79,6 +79,7 @@ def returnedCoeffsWithCoins (s : ι → F) (c : ρ) : ι → F :=
   (A (scalarBasis B s) c).elim 0 (fun r => r.coeffs)
 
 omit [DecidableEq ι] [Nonempty ι] [Fintype F] [Fintype ρ] [Nonempty ρ] in
+/-- `returnedCoeffsWithCoins` reads off the coefficients of the relation actually returned. -/
 theorem returnedCoeffsWithCoins_of_eq_some {s : ι → F} {c : ρ}
     {r : AlgebraicRelationWitness (F := F) (scalarBasis B s)}
     (hr : A (scalarBasis B s) c = some r) :
@@ -105,8 +106,7 @@ noncomputable def programmedRelSetWithCoins : Finset (F × (ι → F) × (ι →
   Finset.univ.filter (fun t =>
     (A (scalarBasis B (programmedLogs t.1 t.2.1 t.2.2.1)) t.2.2.2).isSome)
 
-/-- Winning coins for the textbook DL reduction with extractor coins: the returned relation's
-challenge component against `y` is nonzero. -/
+/-- Winning coins: the returned relation's component against `y` is nonzero. -/
 noncomputable def textbookWinSetWithCoins : Finset (F × (ι → F) × (ι → F) × ρ) :=
   Finset.univ.filter (fun t =>
     (A (scalarBasis B (programmedLogs t.1 t.2.1 t.2.2.1)) t.2.2.2).isSome ∧
@@ -175,9 +175,8 @@ theorem programmedRelSetWithCoins_card :
     simp [programmedLogs]
 
 omit [Nonempty ρ] in
-/-- The annihilation event occupies at most a `1/|F|` slice of the coins: stash the challenge log
-in the returned relation's pivot slot of `y`; the hyperplane equation recovers the overwritten
-coordinate. -/
+/-- Annihilation costs at most a `1/|F|` slice of the coins: stash the challenge log in the
+returned relation's pivot slot of `y`, which the hyperplane equation recovers. -/
 theorem missSetWithCoins_card_le :
     (missSetWithCoins B A).card ≤ Fintype.card ((ι → F) × (ι → F) × ρ) := by
   rw [← Finset.card_univ]
@@ -246,19 +245,15 @@ theorem missSetWithCoins_card_le :
 
 /-! ## Textbook single-generator DL game -/
 
-/-- A textbook DL bound for the actual randomized relation finder.
-
-The winning coins are exactly those on which `discreteLogOfChallenge_of_relation` computes the
-discrete log of the challenge `z • B` from the returned relation, via `programmedEmbedding`. -/
+/-- A textbook DL bound for the actual randomized relation finder. Its winning coins are those
+on which `discreteLogOfChallenge_of_relation`, applied to `programmedEmbedding`, computes the
+discrete log of `z • B`. -/
 def TextbookDLWithCoinsAdvantageLE (bound : ℝ≥0∞) : Prop :=
   (PMF.uniformOfFintype (F × (ι → F) × (ι → F) × ρ)).toOuterMeasure
       (textbookWinSetWithCoins B A) ≤ bound
 
 /-- Under textbook DL hardness, randomized relation production has probability at most
-`bound + 1/|F|`.
-
-This is the tight Jaeger–Tessaro form: the fixed-slot reduction it replaces paid the
-multiplicative factor `|ι|` here. -/
+`bound + 1/|F|` — the tight Jaeger–Tessaro form, with no multiplicative loss. -/
 theorem relationWithCoins_prob_le_of_textbookDL {bound : ℝ≥0∞}
     (h : TextbookDLWithCoinsAdvantageLE B A bound) :
     (PMF.uniformOfFintype ((ι → F) × ρ)).toOuterMeasure (relSetWithCoins B A)

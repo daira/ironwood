@@ -6,38 +6,30 @@ import Zcash.Snark.Soundness.Forking.Probability
 
 `Soundness.AGM.Adapter` extracts the challenge's discrete log from a relation whose challenge
 component is nonzero. This module prices that reduction: relation finding costs the textbook DL
-advantage plus a single additive `1/|F|`.
+advantage plus `1/|F|`.
 
 ## Experiment
 
-The textbook DL game supplies the challenge `z • B` for uniform `z`. The reduction samples fresh
-uniform pairs `(x i, y i)` and presents the basis whose slot `i` is `x i • B + y i • (z • B)` —
-the slot log is `x i + z * y i`. For every fixed `z` and `y`, reprogramming `x` is a bijection on
-the presented logs, so the simulation is perfect and needs no hybrid argument (Lemma 3 of
-Jaeger–Tessaro, <https://eprint.iacr.org/2020/1213>). The reduction solves for the challenge
-unless the returned relation annihilates `y` — for each returned relation a single hyperplane,
-occupying a `1/|F|` fraction of the coins.
+The textbook DL game supplies the challenge `z • B` for uniform `z`. The reduction draws fresh
+uniform pairs `(x i, y i)` and presents the basis whose slot `i` has log `x i + z * y i`. It
+solves for the challenge unless the returned relation annihilates `y` (Lemma 3 of Jaeger–Tessaro,
+<https://eprint.iacr.org/2020/1213>).
 
 ## What is proven
 
-* `programmedRelSet_card`: perfect simulation — the relation event on programmed coins has
+* `programmedRelSet_card`: the simulation is perfect — the relation event on programmed coins has
   exactly the honest relation probability.
-* `missSet_card_le`: the annihilation event occupies at most a `1/|F|` fraction of the coins.
+* `missSet_card_le`: annihilation costs at most a `1/|F|` fraction of the coins.
 * `relation_prob_le_of_textbookDL`: textbook DL hardness bounds relation finding by
-  `bound + 1/|F|`.
-
-## Tightness
-
-The reduction is tight up to the additive `1/|F|`: no multiplicative factor appears. The previous
-fixed-slot reduction guessed the challenge slot and paid the factor `|ι|` (`2 ^ k + 2` for the
-deployed augmented basis).
+  `bound + 1/|F|`. No multiplicative factor appears; the fixed-slot reduction this replaces
+  guessed the challenge slot and paid `|ι|`.
 
 ## Boundary
 
 The relation finder `A` is a deterministic total function. These are information-theoretic counting
-theorems; efficiency is modeled outside Lean. `Soundness.AGM.Capstone` supplies the deployed finder,
-and `.ProbabilityVesta` specializes the bounds. Plain-DL hardness, the AGM, and the generator
-random-oracle model remain assumptions at those boundaries.
+theorems; efficiency is modeled outside Lean. `Soundness.AGM.Capstone` supplies the deployed finder
+and `.ProbabilityVesta` specializes the bounds; plain-DL hardness, the AGM, and the generator
+random-oracle model remain assumptions there.
 -/
 
 open scoped ENNReal
@@ -53,13 +45,11 @@ variable {ι : Type*} [Fintype ι] [DecidableEq ι] [Nonempty ι] [Fintype F] (B
 /-- The public basis whose slot `i` is `s i • B`. -/
 def scalarBasis (s : ι → F) : ι → G := fun i => s i • B
 
-/-- The slot logs presented by the reduction: programming pairs `(x, y)` against challenge log
-`z`. -/
+/-- The slot logs the reduction presents, for programming pairs `(x, y)` and challenge log `z`. -/
 def programmedLogs (z : F) (x y : ι → F) : ι → F := fun i => x i + z * y i
 
 omit [DecidableEq ι] [Nonempty ι] [Fintype F] in
-/-- The programmed embedding is available by construction: the presented slot `i` is
-`x i • B + y i • (z • B)`. -/
+/-- The presented basis carries its programming: slot `i` is `x i • B + y i • (z • B)`. -/
 def programmedEmbedding (z : F) (x y : ι → F) :
     ProgrammedBasisEmbedding (F := F) B (z • B) (scalarBasis B (programmedLogs z x y)) :=
   { x := x
@@ -83,6 +73,7 @@ def returnedCoeffs (s : ι → F) : ι → F :=
   (A (scalarBasis B s)).elim 0 (fun r => r.coeffs)
 
 omit [DecidableEq ι] [Nonempty ι] [Fintype F] in
+/-- `returnedCoeffs` reads off the coefficients of the relation actually returned. -/
 theorem returnedCoeffs_of_eq_some {s : ι → F}
     {r : AlgebraicRelationWitness (F := F) (scalarBasis B s)}
     (hr : A (scalarBasis B s) = some r) :
@@ -109,7 +100,7 @@ noncomputable def programmedRelSet : Finset (F × (ι → F) × (ι → F)) :=
   Finset.univ.filter (fun t =>
     (A (scalarBasis B (programmedLogs t.1 t.2.1 t.2.2))).isSome)
 
-/-- Winning coins: `A` returns a relation whose challenge component against `y` is nonzero, so
+/-- Winning coins: the returned relation's component against `y` is nonzero, so
 `discreteLogOfChallenge_of_relation` computes the discrete log of `z • B`. -/
 noncomputable def winSet : Finset (F × (ι → F) × (ι → F)) :=
   Finset.univ.filter (fun t =>
@@ -174,9 +165,9 @@ theorem programmedRelSet_card :
     funext i
     simp [programmedLogs]
 
-/-- The annihilation event occupies at most a `1/|F|` slice of the coins: stash the challenge log
-in the returned relation's pivot slot of `y`; the hyperplane equation recovers the overwritten
-coordinate, so the coins embed into the `(logs, stashed y)` pairs. -/
+/-- Annihilation costs at most a `1/|F|` slice of the coins: stash the challenge log in the
+returned relation's pivot slot of `y`, which the hyperplane equation recovers, so the coins embed
+into one fewer field factor. -/
 theorem missSet_card_le :
     (missSet B A).card ≤ Fintype.card ((ι → F) × (ι → F)) := by
   rw [← Finset.card_univ]
@@ -235,24 +226,16 @@ theorem missSet_card_le :
   simp only [Prod.mk.injEq]
   exact ⟨hz, hx, hy⟩
 
-/-! ### Reduction to textbook single-generator discrete log
-
-The textbook game supplies `z • B`. The reduction programs every slot from the challenge and
-solves whenever the returned relation's challenge component is nonzero; no slot is guessed.
--/
+/-! ### Reduction to textbook single-generator discrete log -/
 
 /-- The reduction built from `A` wins the textbook single-generator DL game with probability at
-most `bound`.
-
-The winning coins are exactly those on which `discreteLogOfChallenge_of_relation` computes the
-discrete log of the challenge `z • B` from the returned relation, via `programmedEmbedding`. -/
+most `bound`. Its winning coins are those on which `discreteLogOfChallenge_of_relation`, applied
+to `programmedEmbedding`, computes the discrete log of `z • B`. -/
 def TextbookDLAdvantageLE (bound : ℝ≥0∞) : Prop :=
   (PMF.uniformOfFintype (F × (ι → F) × (ι → F))).toOuterMeasure (winSet B A) ≤ bound
 
-/-- Under textbook DL hardness, relation finding has probability at most `bound + 1/|F|`.
-
-This is the tight Jaeger–Tessaro form: the fixed-slot reduction it replaces paid the
-multiplicative factor `|ι|` here. -/
+/-- Under textbook DL hardness, relation finding has probability at most `bound + 1/|F|` — the
+tight Jaeger–Tessaro form, with no multiplicative loss. -/
 theorem relation_prob_le_of_textbookDL {bound : ℝ≥0∞} (h : TextbookDLAdvantageLE B A bound) :
     (PMF.uniformOfFintype (ι → F)).toOuterMeasure (relSet B A)
       ≤ bound + 1 / Fintype.card F := by

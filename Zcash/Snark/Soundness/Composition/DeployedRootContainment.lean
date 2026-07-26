@@ -293,8 +293,8 @@ theorem deployedNonRelationFailure_prob_le_of_generatorRO
 /-- The DLOG-based deployed capstone for the concrete rewind-free decode endpoint.
 
 All explicit relations returned by either the recursive extractor or algebraic multiopen
-unbatching are charged to the same single-instance textbook-DLOG assumption.  The reduction
-programs every basis slot from the challenge, so its only loss is an additive `1/|Fp|`. -/
+unbatching are charged to the same single-instance textbook-DLOG assumption, whose reduction
+loses only an additive `1/|Fp|`. -/
 theorem snarkExtractionDeployed_prob_le_via_deployed_roots
     {T' : Type*} [DecidableEq T']
     (B : VestaG) (hB : B ≠ 0)

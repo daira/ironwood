@@ -58,10 +58,9 @@ def deployedAlgebraicForkingRelation_shifted [DecidableEq G] [Inhabited G] (urs 
   | PSum.inr hrel =>
       PSum.inr (AugmentedRelationWitness.toAlgebraicRelationWitness hrel)
 
-/-- Run the deployed certificate and then the programmed-basis DL reduction.
-
-The result is an IPA opening, a discrete log of the challenge `C`, or proof that the returned
-relation's challenge component against the programming is zero. -/
+/-- Run the deployed certificate, then the programmed-basis DL reduction: an IPA opening, the
+challenge `C`'s discrete log, or proof that the returned relation's component against the
+programming is zero. -/
 def deployedAlgebraicForkingProgrammed [DecidableEq G] [Inhabited G] (urs : URS G)
     (B C : G)
     (embedding : ProgrammedBasisEmbedding (F := Fp) B C (augmentedBasis urs.g urs.u urs.w))

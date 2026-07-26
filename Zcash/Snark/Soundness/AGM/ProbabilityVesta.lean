@@ -5,9 +5,9 @@ import Zcash.Snark.Soundness.AGM.Capstone
 /-!
 # Vesta AGM probability bounds
 
-This module applies the generic relation-to-DL probability proof to Vesta and the deployed augmented
-basis `(g, U, W)`. The reduction programs every basis slot from its DL challenge, so relation
-finding costs the textbook DL advantage plus `1/|Fp|` — no augmented-basis cardinality factor.
+`Soundness.AGM.Probability` specialized to Vesta and the deployed augmented basis `(g, U, W)`:
+relation finding costs the textbook DL advantage plus `1/|Fp|`, with no augmented-basis
+cardinality factor.
 
 The reduction samples a basis as uniform scalar multiples of `B`.
 `OrchardUniformURSIdentification` says that the deployed setup has the same distribution.

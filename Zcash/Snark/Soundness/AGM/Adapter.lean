@@ -7,12 +7,9 @@ The deployed soundness code can return `NontrivialRelation g U W`: explicit coef
 relation among `(g, U, W)`. Merely proving that such a relation exists says nothing in a prime-order
 group. Computing its coefficients is the security break.
 
-This module turns that relation into a plain discrete-log solution. Following Jaeger–Tessaro
-(Lemma 3 of <https://eprint.iacr.org/2020/1213>), the reduction programs *every* basis slot from
-its DL challenge `C` as `x i • B + y i • C` with fresh uniform pairs. For the DL game's challenge
-`C = z • B`, the presented slot logs are `x i + z * y i` — exactly uniform, so no challenge slot
-is guessed. It solves the challenge whenever the returned relation has a nonzero component
-against `y` — a single hyperplane of failure.
+This module turns that relation into a plain discrete-log solution, by programming every basis
+slot from the DL challenge rather than guessing which slot the relation will hit — see
+`§ The programmed-basis relation-to-DL adapter` below.
 
 The representation types borrow basic structure from ArkLib's AGM `Basic.lean`
 (<https://github.com/Verified-zkEVM/ArkLib/blob/main/ArkLib/AGM/Basic.lean#L13-L14>). ArkLib is not a
@@ -183,17 +180,17 @@ def discreteLogOfBasis_of_relation {ι : Type*} [Fintype ι] [DecidableEq ι]
 
 /-! ### The programmed-basis relation-to-DL adapter
 
-Jaeger–Tessaro Lemma 3: every basis slot is programmed from the challenge `C` as
-`x i • B + y i • C`. A returned relation then reads
-`0 = (∑ i, aᵢ·xᵢ) • B + (∑ i, aᵢ·yᵢ) • C`, so the reduction divides by the challenge component
-`∑ i, aᵢ·yᵢ` whenever it is nonzero. No challenge slot is guessed, and the only failure is the
-single hyperplane `∑ i, aᵢ·yᵢ = 0`, which `Soundness.AGM.Probability` prices at `1/|F|`. -/
+Jaeger–Tessaro Lemma 3 (<https://eprint.iacr.org/2020/1213>): every slot is programmed from the
+challenge `C` as `x i • B + y i • C`, so a returned relation reads
+`0 = (∑ i, aᵢ·xᵢ) • B + (∑ i, aᵢ·yᵢ) • C` and the reduction divides by `∑ i, aᵢ·yᵢ`. Its only
+failure is the hyperplane `∑ i, aᵢ·yᵢ = 0`, which `Soundness.AGM.Probability` prices at
+`1/|F|`. -/
 
 /-- A DL challenge programmed into every basis slot: slot `i` presents `x i • B + y i • C`.
 
-For a challenge in the base's span — `C = z • B`, as the DL game supplies — fresh uniform pairs
-`(x i, y i)` present the exactly uniform slot logs `x i + z * y i`, so the embedding simulates the
-honest setup perfectly; `Soundness.AGM.Probability.programmedRelSet_card` proves that counting. -/
+For a challenge in the base's span — `C = z • B`, as the DL game supplies — uniform pairs
+`(x i, y i)` present uniform slot logs `x i + z * y i`, so the simulation is perfect;
+`Soundness.AGM.Probability.programmedRelSet_card` proves that counting. -/
 structure ProgrammedBasisEmbedding {ι : Type*} [Fintype ι] (B C : G) (basis : ι → G) where
   x : ι → F
   y : ι → F
@@ -213,9 +210,8 @@ theorem representationEval_programmed {ι : Type*} [Fintype ι]
     _ = (∑ i, coeffs i * x i) • B + (∑ i, coeffs i * y i) • C := by
           rw [Finset.sum_add_distrib, ← Finset.sum_smul, ← Finset.sum_smul]
 
-/-- Recover the challenge's discrete log from a relation with nonzero challenge component.
-
-Every slot is programmed, so no slot guess occurs: the reduction is a field solve for `C`. -/
+/-- Recover the challenge's discrete log from a relation with nonzero challenge component — a
+field solve for `C`, with no slot guess. -/
 def discreteLogOfChallenge_of_relation {ι : Type*} [Fintype ι]
     (B C : G) (basis : ι → G) (x y : ι → F)
     (r : AlgebraicRelationWitness (F := F) basis)
@@ -236,10 +232,9 @@ def discreteLogOfChallenge_of_relation {ι : Type*} [Fintype ι]
     simpa [smul_smul, inv_mul_cancel₀ hpair] using hscale
   exact hlog.symm
 
-/-- The result of testing one returned relation against the challenge programming.
-
-Both branches retain the same relation: either it yields the challenge's discrete log, or its
-challenge component against `y` is zero. -/
+/-- The result of testing one returned relation against the challenge programming. Both branches
+retain that same relation: *either* it yields the challenge's discrete log, *or* its component
+against `y` is zero. -/
 abbrev ProgrammedRelationOutcome {ι : Type*} [Fintype ι] (B C : G) (basis : ι → G)
     (y : ι → F) : Type _ :=
   Σ' r : AlgebraicRelationWitness (F := F) basis,
