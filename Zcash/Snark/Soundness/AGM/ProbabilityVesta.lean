@@ -21,6 +21,8 @@ open scoped ENNReal
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 open CompElliptic.Curves.Pasta CompElliptic.CurveForms.ShortWeierstrass CompElliptic.CurveOrder
 
 /-- Run the computed opening-or-DL endpoint over Vesta. All transcript and AGM data are explicit. -/

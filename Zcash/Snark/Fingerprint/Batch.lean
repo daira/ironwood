@@ -24,6 +24,8 @@ Requires `[NoZeroSMulDivisors Fp G]` — the prime-order property of the verifie
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 open Finset
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]

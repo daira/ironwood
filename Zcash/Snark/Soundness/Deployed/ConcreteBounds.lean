@@ -21,6 +21,8 @@ module records what that floor evaluates to:
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 open scoped ENNReal
 
 /-- **The deployed fork-tree knowledge error is exactly `3k/|F_p|`.** At any IPA depth `k` the

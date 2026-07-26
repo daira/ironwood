@@ -26,6 +26,8 @@ the conclusion. Everything above `hExtract` is discharged (`Soundness.VestaBudge
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 open scoped ENNReal
 
 /-- Match `Algebraic.lean`'s `Inhabited VestaG` value, named to avoid the auto-name clash and the

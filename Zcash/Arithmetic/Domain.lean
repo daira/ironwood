@@ -9,11 +9,11 @@ domain root of unity `omegaOf` (pasta `Fp::GENERATOR = 5`, `ROOT_OF_UNITY` squar
 `EvaluationDomain::new`), `Fp::DELTA`, and the domain facts (primitive-root, power
 injectivity, size nonvanishing) bridged once to CompElliptic's certified Pasta root.
 Moved out of `Zcash/Bridge` per the Clean-boundary architecture
-(`Zcash/Circuits/Integration/clean-boundary.md`): these are verifier-native `Snark/Core`
+(`Zcash/Circuits/Integration/clean-boundary.md`): these are verifier-native arithmetic
 facts, not bridge plumbing.
 -/
 
-namespace Zcash.Snark
+namespace Zcash.Arithmetic
 
 /-- Binary exponentiation (`Monoid.npow`'s default recursion is linear — unusable for
 exponents of order `p/2^k`). -/
@@ -57,7 +57,7 @@ theorem powFast_eq_pow (b : Fp) (n : ℕ) :
 `ROOT_OF_UNITY = 5^((p−1)/2^32)`, and `EvaluationDomain::new` squares it down `32 − k`
 times — so `omega = 5^((p−1)/2^k)`. Certified against the captured VK in `VkMatch`. -/
 def omegaOf (k : ℕ) : Fp :=
-  powFast 5 ((Snark.scalarFieldOrder - 1) / 2 ^ k)
+  powFast 5 ((scalarFieldOrder - 1) / 2 ^ k)
 
 /--
 The executable generator spelling of every supported `omegaOf` agrees with powers of
@@ -101,17 +101,17 @@ theorem omegaOf_powers_injective (k : ℕ) (hk : k ≤ 32) :
 theorem domainSize_cast_ne_zero (k : ℕ) (hk : k ≤ 32) :
     ((2 ^ k : ℕ) : Fp) ≠ 0 := by
   intro hzero
-  have hdiv : Snark.scalarFieldOrder ∣ 2 ^ k :=
-    (ZMod.natCast_eq_zero_iff (2 ^ k) Snark.scalarFieldOrder).mp hzero
+  have hdiv : scalarFieldOrder ∣ 2 ^ k :=
+    (ZMod.natCast_eq_zero_iff (2 ^ k) scalarFieldOrder).mp hzero
   apply Nat.not_dvd_of_pos_of_lt (by positivity) _ hdiv
   calc
     2 ^ k ≤ 2 ^ 32 := Nat.pow_le_pow_right (by omega) hk
-    _ < Snark.scalarFieldOrder := by
-      norm_num [Snark.scalarFieldOrder,
+    _ < scalarFieldOrder := by
+      norm_num [scalarFieldOrder,
         CompElliptic.Fields.Pasta.PALLAS_BASE_CARD]
 
 /-- pasta `Fp::DELTA = GENERATOR^(2^S) = 5^(2^32)`. -/
 def deltaFp : Fp := powFast 5 (2 ^ 32)
 
 
-end Zcash.Snark
+end Zcash.Arithmetic

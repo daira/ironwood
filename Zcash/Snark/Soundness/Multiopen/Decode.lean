@@ -57,6 +57,8 @@ compatibility-shaped.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 open Polynomial
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]

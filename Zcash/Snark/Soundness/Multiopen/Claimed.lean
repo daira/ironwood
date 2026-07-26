@@ -21,6 +21,8 @@ This module produces those samples from an accept *measure*:
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 open Polynomial
 open scoped ENNReal
 

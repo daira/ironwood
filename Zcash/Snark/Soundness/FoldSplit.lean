@@ -25,6 +25,8 @@ That step is not free. The fold is a polynomial in `y` whose coefficients are th
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 open Polynomial Finset
 
 /-- The `acc·y + v` fold read as a polynomial in `y`: `[c₀, …, c_{m-1}]` becomes

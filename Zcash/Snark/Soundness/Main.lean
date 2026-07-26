@@ -48,6 +48,8 @@ This conditional family leaves those components opaque. The computed route is in
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 
 /-- Conditional interface: acceptance supplies a consistent transcript, IPA opening, and circuit

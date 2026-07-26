@@ -12,18 +12,18 @@ and the PROVEN equalities to the statement-surface functions, chaining the kerne
 simulation theorem `msmM_spec` into the existing `_eq` ladder.
 -/
 
-namespace Zcash.Snark.Keygen.Fast
+namespace Zcash.Arithmetic
 
-open Zcash.Snark
 open CompElliptic.Curves.Pasta.Fast
 open CompElliptic.Curves.Pasta.Fast.ProjectiveMont
 open CompElliptic.Curves.Pasta.Fast.ProjectiveMont (PM)
 open Montgomery.Native64x8
 open CompElliptic.Curves.Pasta.Fast.Projective
 open CompElliptic.Curves.Pasta.Fast.Projective.PVes
--- The vendored `Msm` imported ironwood's `Zcash.Snark.Core.Field`, so `Fp` used to arrive here
--- through `open Zcash.Snark`. Upstream's `Msm` is standalone and carries its own (reducibly
--- equal) `Fp := CompElliptic.Fields.Pasta.VestaScalarField`.
+-- The vendored `Msm` imported ironwood's scalar field, so `Fp` used to arrive here through the
+-- enclosing namespace. Upstream's `Msm` is standalone and carries its own (reducibly equal)
+-- `Fp := CompElliptic.Fields.Pasta.VestaScalarField`, which this module takes instead of
+-- importing `Zcash.Arithmetic.Field`.
 open CompElliptic.Curves.Pasta.Fast.Msm (Fp)
 
 local instance : Inhabited G := ⟨0⟩
@@ -101,4 +101,4 @@ theorem commitLagrangeMontWith_eq (c : ℕ) (hc : 0 < c)
   rw [hterms, Msm.zip_terms_eq, Msm.pippenger_eq_msm c hc, List.map_map]
   rfl
 
-end Zcash.Snark.Keygen.Fast
+end Zcash.Arithmetic

@@ -35,6 +35,8 @@ on the full path covers gates, the permutation argument, and the lookup argument
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 open Polynomial Finset
 
 /-- The verifier's vanishing/quotient check at the challenge `x`: the claimed quotient `h` satisfies the

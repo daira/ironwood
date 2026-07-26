@@ -20,6 +20,8 @@ separate equivalence proof.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 /-- halo2 `compute_s`: the `2 ^ u.length` coefficients of `init · ∏ᵢ (1 + u_{k-1-i} · X^{2ⁱ})`.
 With `init = -c` these are the fingerprint's URS-generator coefficients for `[-c] G'`, where `G'`
 is the fully folded generator. Built by the same left-half doubling as the Rust. -/

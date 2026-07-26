@@ -248,7 +248,7 @@ through the `Zcash.Meta.AxiomCheck` macros rather than the older `assert_no_sorr
   `Quot.sound`), with `+native` on the Vesta-instantiated endpoints.
 -/
 
-open Zcash.Snark
+open Zcash.Arithmetic Zcash.Snark
 
 /-! ### Binding reductions from IPA/CommitFold collisions -/
 

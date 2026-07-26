@@ -34,7 +34,7 @@ captured points. The derivation's supporting data and functions (`capturedUrsGLa
 `native_decide` claims cannot be narrowed by quietly widening what they range over.
 -/
 
-open Zcash.Snark Zcash.Snark.Fixture
+open Zcash.Arithmetic Zcash.Snark Zcash.Snark.Fixture
 
 -- Every captured fixture and the verifier assembly it runs are bounded at the standard tier — no
 -- `sorry`, no unexpected axiom (whole dependency graph). The `native_decide` fixtures carry the

@@ -23,9 +23,8 @@ instance search is what guarantees no second `Module Fp (SWPoint Vesta.curve)` c
 with `Soundness.Vesta`'s in a module that reaches both.
 -/
 
-namespace Zcash.Snark.Keygen.Fast
+namespace Zcash.Arithmetic
 
-open Zcash.Snark
 open CompElliptic.Curves.Pasta
 open CompElliptic.Curves.Pasta.Fast.Projective
 
@@ -41,4 +40,4 @@ docstring; introduce it with `haveI` inside a proof that needs it. -/
 @[implicit_reducible]
 def vestaFpModuleDef : Module Fp G := AddCommGroup.zmodModule vestaGroupOrder
 
-end Zcash.Snark.Keygen.Fast
+end Zcash.Arithmetic

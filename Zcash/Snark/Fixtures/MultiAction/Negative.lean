@@ -14,7 +14,7 @@ positive checks: the fingerprint match (`MsmMatch`) and the captured Fiat–Sham
 
 namespace Zcash.Snark.Fixture2
 
-open Zcash.Snark
+open Zcash.Arithmetic Zcash.Snark
 
 theorem valid_capture_assembles : (assemble? vk derivedInstanceCommitment ps ch).isSome = true := by
   native_decide

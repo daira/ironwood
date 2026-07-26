@@ -22,7 +22,7 @@ with (halo2 `MSM::{append_term, scale, add_msm}`). Everything stays generic over
 `F`-module `G`; the concrete instantiation is `F = F_p`, `G = E_q`.
 -/
 
-namespace Zcash.Snark
+namespace Zcash.Arithmetic
 
 /-- The fingerprint MSM (halo2 `MSM<C>`): `gScalars` are the coefficients of the `2 ^ k` URS
 generators, `wScalar` and `uScalar` the coefficients of the blinding and inner-product generators, and
@@ -136,4 +136,4 @@ theorem eval_addToGScalars {F G : Type*} [Field F] [AddCommGroup G] [Module F G]
 
 end Msm
 
-end Zcash.Snark
+end Zcash.Arithmetic

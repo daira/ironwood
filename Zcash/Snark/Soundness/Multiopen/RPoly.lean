@@ -22,6 +22,8 @@ switching to it would not remove this bridge.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 open Polynomial
 
 /-- **Identity from samples.** Two polynomials whose difference has degree at most `d` and which

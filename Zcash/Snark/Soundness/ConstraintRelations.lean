@@ -17,6 +17,8 @@ That closes the loop. The capstone hands over `SnarkRelation … circuitSatViaCo
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 open Polynomial Finset
 
 open Finset in

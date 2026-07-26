@@ -35,6 +35,8 @@ or the witnesses collide into a computed `(g,u,w)` relation — the dichotomy
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 -- The deployed grouping definitions appear inside index types, so a defeq check on an index can
 -- pull the whole `constructIntermediateSets (assembleQueries …)` computation through `whnf`.
 -- Sealing them keeps those checks syntactic; the proofs below use their equation lemmas.

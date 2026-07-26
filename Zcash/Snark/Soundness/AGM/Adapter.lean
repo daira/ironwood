@@ -38,6 +38,8 @@ oracles, an unproved polynomial AFK call bound, and an external PPT-adversary re
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 variable {F G : Type*} [Field F] [AddCommGroup G] [Module F G]
 
 /-- Evaluate an AGM representation over an arbitrary finite public basis. -/

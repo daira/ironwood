@@ -19,6 +19,8 @@ fingerprint polynomial remains open; see `Zcash.Snark.Fingerprint.Match`.)
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 open MvPolynomial Finset Fintype
 
 /-- **Schwartz–Zippel for the fingerprint field.** A nonzero polynomial `p` of total degree `d` in `n`

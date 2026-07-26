@@ -9,6 +9,8 @@ histories support replay and reprogramming; blind escape sets give the adaptive 
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 open scoped ENNReal
 
 /-- An adaptive computation with one oracle `T → F`: either a result or a query whose continuation

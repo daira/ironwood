@@ -32,6 +32,8 @@ the `hfold`/`hgood` surfaces in `Soundness.VestaBudget` and not re-derived here.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 open Polynomial Finset
 open scoped ENNReal
 

@@ -42,6 +42,8 @@ geometry, independent of the accept event, and the adaptive coupling needs it un
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 open ComputedAlgebraicFSFamily
 open scoped ENNReal
 

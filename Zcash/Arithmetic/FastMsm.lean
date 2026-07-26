@@ -21,9 +21,8 @@ the proven-equality counterpart of `implemented_by` (which is forbidden here bec
 it is unchecked).
 -/
 
-namespace Zcash.Snark.Msm
+namespace Zcash.Arithmetic.Msm
 
-open Zcash.Snark
 open CompElliptic.Curves.Pasta.Fast.Msm (defaultWindow pippengerFastPar
   pippengerFastPar_eq pippengerFast_eq pippenger_eq_msm)
 
@@ -55,4 +54,4 @@ Pippenger form. -/
     List.sum_append, List.sum_cons, List.sum_ofFn, Function.comp_def]
   abel
 
-end Zcash.Snark.Msm
+end Zcash.Arithmetic.Msm

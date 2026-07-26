@@ -21,6 +21,8 @@ is used only at the computational boundary.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 variable {F G : Type*} [Field F] [AddCommGroup G] [Module F G]
 
 /-- The polynomial commitment of a coefficient vector `a` against the URS generators:

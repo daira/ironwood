@@ -16,7 +16,7 @@ out-of-range query index would otherwise route through `finFn`/`finFnG` and alia
 
 namespace Zcash.Snark.Fixture2
 
-open Zcash.Snark
+open Zcash.Arithmetic Zcash.Snark
 
 def capturedInstanceCommitmentPrefix : List (TranscriptElt Fp G) :=
   (List.ofFn (fun p : Fin shape.numProofs =>

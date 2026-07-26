@@ -13,7 +13,7 @@ instantiates this shape.
 
 namespace Zcash.Snark.FixtureMax
 
-open Zcash.Snark
+open Zcash.Arithmetic Zcash.Snark
 
 abbrev G := ℕ
 

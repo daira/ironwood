@@ -58,6 +58,8 @@ evaluations at the original rotated points and the gate/`x`→`x₃` transport
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 -- The deployed grouping definitions appear inside index types (`Fin (deployedSetQueries …).length`),
 -- so every defeq check on an index invites `whnf` to unfold the whole
 -- `constructIntermediateSets (assembleQueries …)` computation. Sealing them keeps those checks

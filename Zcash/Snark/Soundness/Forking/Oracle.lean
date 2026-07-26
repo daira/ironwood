@@ -52,6 +52,8 @@ Two scope notes, both part of that floor, not the derived uniformity:
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 open scoped ENNReal
 
 variable {F G : Type*}

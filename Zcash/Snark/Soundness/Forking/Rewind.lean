@@ -16,6 +16,8 @@ and query loss. Identifying Blake2b with the modeled random oracle remains an as
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 
 /-- A random-oracle-backed Fiat–Shamir instance: the squeeze *is* the oracle `O`. -/

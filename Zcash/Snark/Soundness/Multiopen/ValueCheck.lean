@@ -14,6 +14,8 @@ node binding `colⱼ(p) = rⱼ(p)` (`node_binding_of_samples`).
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 open Polynomial
 
 /-- The vanishing polynomial of a finite point set, `∏_{p ∈ pts} (X − p)`. -/

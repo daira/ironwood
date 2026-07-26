@@ -23,6 +23,8 @@ folds and the combined value `v`) is computed here.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 /-- A multiopen query's commitment reference (halo2 `CommitmentReference`): either a single group
 element, or an MSM — the vanishing argument's folded `h` commitment is supplied as an MSM. -/
 inductive CommitmentRef (k : ℕ) (F G : Type*) where

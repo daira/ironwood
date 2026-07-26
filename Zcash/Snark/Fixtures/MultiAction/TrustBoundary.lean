@@ -24,7 +24,7 @@ functions it ranges over; see the single-action sibling for why this is the fixt
 surface.
 -/
 
-open Zcash.Snark Zcash.Snark.Fixture2
+open Zcash.Arithmetic Zcash.Snark Zcash.Snark.Fixture2
 
 assert_axioms capturedPointCoordinatesValid_eq_true +native
 assert_axioms capturedInit_startsWith_vkTranscriptRepr +native

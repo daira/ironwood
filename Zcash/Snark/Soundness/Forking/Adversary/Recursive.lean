@@ -11,6 +11,8 @@ certificate from a finite tape.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 /-- Extractor randomness: `order` lists replacement challenges, and `child u` supplies fresh
 randomness below challenge `u`. -/
 inductive RecursiveForkCoins (F : Type*) : ℕ → Type _ where

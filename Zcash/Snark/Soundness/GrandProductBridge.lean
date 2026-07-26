@@ -29,6 +29,8 @@ counted by `szBadSet_card_le` exactly like the vanishing check's.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 open Polynomial
 
 /-- The difference of the two pair-encoded products, a polynomial in `γ` with coefficients in

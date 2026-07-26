@@ -14,6 +14,8 @@ reduction. Acceptance with an opening mismatch yields a relation.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 open scoped ENNReal
 
 local instance : Inhabited VestaG := ⟨0⟩

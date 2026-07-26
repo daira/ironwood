@@ -22,6 +22,8 @@ concrete curve — see `The reduction form` in `Zcash.Snark.Soundness.Main`.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 variable {F G : Type*} [Field F] [AddCommGroup G] [Module F G]
 
 /-- **The augmented binding reduction, as a computed relation.** Two `(g, U, W)`-combinations

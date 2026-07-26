@@ -44,6 +44,8 @@ fixture-generation boundary rather than being reimplemented in Lean.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic
+
 /-- Two MSMs match iff their `g`/`w`/`u` coefficients are equal and their `other` term lists agree
 up to reordering (`List.Perm`) — term order is only a serialization artifact of how each assembler
 appends, and the term sum is order-independent (`msmMatch_eval`). -/
