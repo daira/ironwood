@@ -53,7 +53,12 @@ structure Note (G RHO PSI : Type*) where
 
 /-- The public inputs of an Action that the games consume: the anchor, the revealed
 nullifier, the randomized verification key, the net value commitment, and the new note
-commitment's extracted coordinate. -/
+commitment's extracted coordinate. The deployed circuit's instance additionally copies
+the bundle-level flags (`enable_spend`, `enable_output`, `disable_cross_address`) into
+every action; the games-facing instance deliberately omits them — the bridge reports
+their exact circuit semantics as side facts (`Bridge.EnableFlagsSatisfied`,
+`Bridge.CrossAddressSatisfied`) pending the games' actual interface (see the TODO on
+`ActionSatisfied`). -/
 structure ActionInstance (G RT RHO CMX : Type*) where
   rt : RT
   /-- `⦂ RHO`: nullifiers share ρ's type, forced by ρ-uniqueness (`ρ_new = nf_old`). -/
