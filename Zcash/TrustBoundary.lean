@@ -9,6 +9,7 @@ import Zcash.Security.Ledger.Spendability
 import Zcash.Security.Ledger.SpendAuthority
 import Zcash.Security.Ledger.Completeness
 import Zcash.Security.Ledger.Capstone
+import Zcash.Security.Ledger.Nullifier
 import Zcash.Security.Common.Birthday
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
@@ -207,6 +208,16 @@ assert_axioms nullifiers_append
 assert_computable faerieGoldCore
 assert_computable respendOrBreak
 assert_axioms validLedger_append
+
+/-! ## The nullifier-binding reduction
+
+Computed break reduction: a nullifier collision between distinct notes, over the
+deployed additive derivation shape, computes a nontrivial relation among the
+commitment bases, the nullifier base, and the randomness base — the balance
+argument's terminal. `+choice` is the erased-positions tier: choice arrives with the
+`abel`/`simp` proof terms in the relation's `Prop` fields, never the data path. -/
+
+assert_computable NontrivialRelation.ofNullifierCollision +choice
 
 /-! ## Spend Authority
 
