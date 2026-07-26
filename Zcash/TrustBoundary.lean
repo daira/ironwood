@@ -16,11 +16,13 @@ import Zcash.Snark.Soundness.Vesta
 import Zcash.Snark.Soundness.Deployed.ConcreteBounds
 import Zcash.Snark.Soundness.AGM.BindingSignature
 import Zcash.Snark.Soundness.AGM.Capstone
+import Zcash.Snark.Soundness.AGM.DeployedConstraintSupply
 import Zcash.Snark.Soundness.AGM.ProbabilityVesta
 import Zcash.Snark.Soundness.Forking.Adversary
 import Zcash.Snark.Soundness.Composition.Bridge
 import Zcash.Snark.Soundness.Composition.Decomposition
 import Zcash.Snark.Soundness.Composition.DeployedRootContainment
+import Zcash.Snark.Soundness.Composition.PrefixedSqueeze
 import Zcash.Snark.Soundness.FoldSplit
 import Zcash.Snark.Soundness.GrandProductBridge
 import Zcash.Snark.Soundness.LookupAssembly
@@ -745,13 +747,11 @@ assert_axioms deployedRootBad_measure_le +native
 assert_axioms deployedRootEventBudget_sum_le
 assert_axioms badX_le_via_squeeze_prefixed +native
 assert_axioms snarkExtractionDeployed_prob_le_via_wrapped_pinned_roots +native
-assert_axioms deployedRootDecoded_constraintSatisfied_or_relation +native
+assert_axioms ComputedDeployedRootFSFamily.deployedRelation_prob_le_of_generatorRO_textbookDL +native
 assert_axioms deployedRootFailure_subset_landing +native
-assert_axioms deployedConstraintFailure_subset_landing +native
+assert_axioms deployedDecodeFailure_subset_union +native
+assert_axioms deployedNonRelationFailure_prob_le_of_generatorRO +native
 assert_axioms snarkExtractionDeployed_prob_le_via_deployed_roots +native
-assert_axioms snarkExtractionDeployed_prob_le_via_deployed_roots_constraints +native
-assert_axioms snarkExtractionDeployed_prob_le_via_deployed_roots_prefixed +native
-assert_axioms snarkExtractionDeployed_prob_le_via_deployed_constraints +native
 
 /-! ## The Action circuit — the halo2-native soundness trust surface
 

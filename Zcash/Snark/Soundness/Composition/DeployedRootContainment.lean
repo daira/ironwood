@@ -1,16 +1,13 @@
 import Zcash.Snark.Soundness.AGM.DeployedPinnedRoots
-import Zcash.Snark.Soundness.AGM.DeployedConstraintSupply
 import Zcash.Snark.Soundness.Composition.RootContainment
-import Zcash.Snark.Soundness.Composition.PrefixedSqueeze
 
 /-!
 # Concrete containment for rewind-free deployed AGM decoding
 
 This module closes the deterministic seam beneath the prefix-pinned root bound.  On a run with a
-clean recursive-IPA opening, either the opening disagrees with the canonical aggregate coordinates
-and exposes a binding relation, or avoiding the six explicit root sets yields every deployed
-member value.  Thus failure of this concrete extraction endpoint is contained in the root-family
-landing event; no accepting multiopen rewind is used.
+clean recursive-IPA opening, either an executable finder returns a relation, or avoiding the six
+explicit root sets yields every deployed member value.  Thus failure of this concrete extraction
+endpoint is contained in the root-family landing event; no accepting multiopen rewind is used.
 -/
 
 namespace Zcash.Snark
@@ -37,97 +34,13 @@ def deployedRootDecoded (family : ComputedDeployedRootFSFamily shape)
     (pnu.1.multiU (wrappedPreIpaReads pnu))
     (pnu.1.multiBlind (wrappedPreIpaReads pnu)))
 
-/-- The exact pre-`x` good-challenge event consumed by the deterministic constraint supply. -/
-noncomputable def deployedConstraintGoodX (family : ComputedDeployedRootFSFamily shape)
-    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
-    (coins : family.toFamily.Coins) : Prop :=
-  let pnu := (wrappedAdversary family.toFamily basis).run coins.1
-  let urs := ursOfAugmentedBasis shape.k basis
-  let ch := wrappedPreIpaRecord pnu
-  ch.x ∉ szBadSet
-    (deployedPreXConstraintDifference urs (family.vk basis)
-      (family.instanceCommitment basis) pnu.1.proof.1 ch)
-
-/-- The concrete constraint witness produced after rewind-free deployed decoding.  The witness is
-the current aggregate AGM coordinate vector, and all constraint carriers are existentially
-produced by the deterministic supply. -/
-def deployedConstraintSatisfied (family : ComputedDeployedRootFSFamily shape)
-    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
-    (coins : family.toFamily.Coins) : Prop :=
-  let pnu := (wrappedAdversary family.toFamily basis).run coins.1
-  let urs := ursOfAugmentedBasis shape.k basis
-  let ch := wrappedPreIpaRecord pnu
-  ∃ (fixedF : Nat -> Polynomial Fp)
-    (adviceF instanceF : Fin shape.numProofs -> Nat -> Polynomial Fp)
-    (setsC : Fin shape.numProofs -> List (PermSetEval (Polynomial Fp)))
-    (chunksC : Fin shape.numProofs ->
-      List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
-    (lookupsC : Fin shape.numProofs ->
-      List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
-    (l0P lLastP lBlindP hpolyP : Polynomial Fp),
-    SnarkRelation urs
-      (deployedCommitment urs rfl (family.vk basis) (family.instanceCommitment basis)
-        pnu.1.proof.1 ch -
-        pnu.1.multiU (wrappedPreIpaReads pnu) • urs.u -
-        pnu.1.multiBlind (wrappedPreIpaReads pnu) • urs.w)
-      (evalVector shape.k ch.x3) (multiopenValue (family.vk basis)
-        (family.instanceCommitment basis) pnu.1.proof.1 ch)
-      (circuitSatViaConstraints fixedF (fun _ => adviceF) (fun _ => instanceF)
-        (family.vk basis).gates setsC chunksC lookupsC ch.beta ch.gamma
-        (family.vk basis).delta ch.theta ch.y (family.vk basis).chunkLen
-        l0P lLastP lBlindP hpolyP (family.vk basis).n)
-      (pnu.1.aMulti (wrappedPreIpaReads pnu))
-
-/-- The family-level deterministic adapter required by the prefixed capstone.  Deployed
-acceptance, the rewind-free AGM decode, and the exact pre-`x` good event produce the concrete
-constraint witness, unless the two augmented representations expose a binding relation. -/
-theorem deployedRootDecoded_constraintSatisfied_or_relation
-    (family : ComputedDeployedRootFSFamily shape)
-    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
-    (coins : family.toFamily.Coins)
-    (hdecoded : deployedRootDecoded family basis coins)
-    (checks : DeployedConstraintChecks (family.vk basis) (family.instanceCommitment basis)
-      ((wrappedAdversary family.toFamily basis).run coins.1).1.proof.1
-      (wrappedPreIpaRecord ((wrappedAdversary family.toFamily basis).run coins.1)))
-    (hAdvLen : shape.numAdviceQueries ≤ (family.vk basis).adviceQueryLayout.length)
-    (hInstLen : shape.numInstanceQueries ≤ (family.vk basis).instanceQueryLayout.length)
-    (hFixedLen : shape.numFixedQueries ≤ (family.vk basis).fixedQueryLayout.length)
-    (homega : (family.vk basis).omega ^ (family.vk basis).n = 1)
-    (hn : ((family.vk basis).n : Fp) ≠ 0)
-    (hgood : deployedConstraintGoodX family basis coins) :
-    deployedConstraintSatisfied family basis coins ∨
-      HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
-        (ursOfAugmentedBasis shape.k basis).u
-        (ursOfAugmentedBasis shape.k basis).w := by
-  let pnu := (wrappedAdversary family.toFamily basis).run coins.1
-  let urs := ursOfAugmentedBasis shape.k basis
-  let ch := wrappedPreIpaRecord pnu
-  rcases hdecoded with ⟨decoded⟩
-  have hpieces : ∀ i : Fin shape.numQuotientPieces,
-      ∃ x : (Fin (2 ^ urs.k) -> Fp) × Fp × Fp,
-        commit urs x.1 + x.2.1 • urs.u + x.2.2 • urs.w = pnu.1.proof.1.hPieces i := by
-    intro i
-    let P := pnu.1.algebraicProof.hPieces i
-    refine ⟨(P.gPart, P.coeffs AugmentedIndex.u, P.coeffs AugmentedIndex.w), ?_⟩
-    simpa [P, pnu, AlgebraicWfProof.proof, AlgebraicProofString.erase] using
-      (AlgebraicPoint.point_eq_components P).symm
-  obtain ⟨fixedF, adviceF, instanceF, setsC, chunksC, lookupsC,
-      l0P, lLastP, lBlindP, hpolyP, hfinish⟩ :=
-    constraints_supply_of_deployedAlgebraicDecode urs rfl (family.vk basis)
-      (family.instanceCommitment basis) pnu.1.proof.1 ch
-      decoded hpieces checks hAdvLen hInstLen hFixedLen homega hn
-  exact hfinish hgood (fun hrelation => by
-    refine ⟨fixedF, adviceF, instanceF, setsC, chunksC, lookupsC,
-      l0P, lLastP, lBlindP, hpolyP, ?_⟩
-    simpa [pnu, urs, ch, deployedConstraintSatisfied] using hrelation)
-
-/-- The concrete output delivered by the rewind-free multiopen layer: either a binding relation or
-all deployed member-polynomial values. -/
+/-- The concrete output delivered by the rewind-free multiopen layer: either the complete computed
+relation finder returns a witness, or all deployed member-polynomial values are decoded.  This is
+deliberately not phrased using the bare existential `HasNontrivialRelation`. -/
 def deployedRootExtracted (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (coins : family.toFamily.Coins) : Prop :=
-  HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
-      (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w ∨
+  (family.deployedRelationFinder basis coins).isSome ∨
     deployedRootDecoded family basis coins
 
 /-- A clean accepting run that does not deliver the concrete AGM decode must hit one of the six
@@ -150,11 +63,15 @@ theorem deployedRootFailure_subset_landing
   | inr relation =>
       exfalso
       apply hnex
-      exact Or.inl (HasNontrivialRelation.of_nontrivialRelation relation)
+      apply Or.inl
+      simp only [ComputedDeployedRootFSFamily.deployedRelationFinder]
+      cases hfinder : family.toFamily.relationFinder basis coins with
+      | some relation => simp
+      | none => simp [O, hout]
   | inl witness =>
       by_contra hlanding
       have hgood := family.goodRoots_of_not_landing basis O witness hout hlanding
-      obtain ⟨cert, hz, hvalid, _houtInstance, opening, _hrun⟩ :=
+      obtain ⟨cert, hz, hvalid, houtInstance, opening, hrun⟩ :=
         cleanOpening_provenance_run family.toFamily basis coins hclean
       let nu := wrappedPreIpaReads pnu
       let ch := wrappedPreIpaRecord pnu
@@ -229,269 +146,190 @@ theorem deployedRootFailure_subset_landing
       · exfalso
         apply hnex
         apply Or.inl
-        exact hasNontrivialRelation_of_two_openings (ursOfAugmentedBasis shape.k basis) hae
-          (by simpa [pnu, nu, wrappedAdversary_run_fst, wrappedPreIpaReads_run] using opening.2.1)
+        simp only [ComputedDeployedRootFSFamily.deployedRelationFinder]
+        have hbase : (family.toFamily.relationFinder basis coins).isSome := by
+          have hae' : opening.1 ≠
+              (deployedAlgebraicInstanceOfCert (runProof family.toFamily basis coins.1)
+                (runReads family.toFamily basis coins.1) cert hz hvalid).aMulti := by
+            simpa [pnu, nu, deployedAlgebraicInstanceOfCert, wrappedAdversary_run_fst,
+              wrappedPreIpaReads_run, runProof, runReads] using hae
+          simp only [ComputedAlgebraicFSFamily.relationFinder, houtInstance,
+            DeployedAlgebraicForkingInstance.runRelation,
+            DeployedAlgebraicForkingInstance.relationOfRun, hrun, dif_neg hae',
+            Option.isSome_some]
+        cases hfinder : family.toFamily.relationFinder basis coins with
+        | none => exact absurd hfinder (Option.ne_none_iff_isSome.mpr hbase)
+        | some relation => simp
 
-/-- Any deterministic constraint endpoint fed by the decoded member values inherits the same
-root-event containment.  This is the adapter used by the concrete `constraintsBadAccept` path:
-the remaining premise is purely deterministic (`decoded member values -> S`), not another
-multiopen probability or rewinding premise. -/
-theorem deployedConstraintFailure_subset_landing
-    (family : ComputedDeployedRootFSFamily shape)
-    (S : (AugmentedIndex (2 ^ shape.k) -> VestaG) -> family.toFamily.Coins -> Prop)
-    (hdecode : forall basis coins,
-      fsWinsFull (family.adversary basis)
-        (fullAlgebraicAcceptDeployed basis (family.vk basis)
-          (family.instanceCommitment basis))
-        (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) coins.1 ->
-      deployedRootDecoded family basis coins ->
-      S basis coins ∨
-        HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
-          (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w)
-    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) :
-    {coins : family.toFamily.Coins |
-        fsWinsFull (family.adversary basis)
-          (fullAlgebraicAcceptDeployed basis (family.vk basis)
-            (family.instanceCommitment basis))
-          (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) coins.1 ∧
-        family.hasCleanOpening basis coins ∧
-        ¬ (S basis coins ∨
-          HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
-            (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w)} <=
-      {coins : family.toFamily.Coins | (family.pinnedRoots basis).Landing coins.1} := by
-  intro coins hfailure
-  apply deployedRootFailure_subset_landing family basis
-  refine ⟨hfailure.1, hfailure.2.1, ?_⟩
-  intro hextracted
-  rcases hextracted with hrelation | hdecoded
-  · exact hfailure.2.2 (Or.inr hrelation)
-  · exact hfailure.2.2 (hdecode basis coins hfailure.1 hdecoded)
+/-- The recursive extractor's non-relation failures, indexed by the sampled augmented basis. -/
+def deployedNonRelationFailureEvent (family : ComputedDeployedRootFSFamily shape) :
+    Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) × family.toFamily.Coins) :=
+  {q | q.2 ∈ family.toFamily.snarkNonRelationFailure q.1}
 
-/-- The DLOG-based deployed capstone with the concrete rewind-free decode endpoint and an additive
-root-set term. -/
+/-- Deployed acceptance without a decoded AGM opening has exactly three causes: recursive
+extraction failure, an explicitly returned relation, or a clean run that lands in a pinned root
+set.  In particular, no bare existential relation proposition appears in this containment. -/
+theorem deployedDecodeFailure_subset_union
+    (family : ComputedDeployedRootFSFamily shape) :
+    snarkExtractionFailureEventDeployed family.toFamily (deployedRootDecoded family) <=
+      deployedNonRelationFailureEvent family ∪
+        (family.deployedRelationEvent ∪
+          cleanButNotExtractedDeployed family.toFamily (deployedRootExtracted family)) := by
+  rintro ⟨basis, coins⟩ ⟨haccept, hnotDecoded⟩
+  by_cases hrelation : (family.deployedRelationFinder basis coins).isSome
+  · exact Or.inr (Or.inl hrelation)
+  by_cases hclean : family.toFamily.hasCleanOpening basis coins
+  · exact Or.inr (Or.inr ⟨haccept, hclean, fun hextracted => by
+      rcases hextracted with hfound | hdecoded
+      · exact hrelation hfound
+      · exact hnotDecoded hdecoded⟩)
+  have hplain : fsWinsFull (family.adversary basis)
+      (fullAlgebraicAccept basis (family.vk basis) (family.instanceCommitment basis))
+      (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) coins.1 := by
+    exact fullAlgebraicAccept_of_deployed basis (family.vk basis)
+      (family.instanceCommitment basis) ((family.adversary basis).run coins.1) _ _ haccept
+  by_cases hz : coins.1 (algebraicFullPrefixesPre family.init
+      ((family.adversary basis).run coins.1) 10) = 0
+  · apply Or.inl
+    change coins ∈ family.toFamily.snarkNonRelationFailure basis
+    exact Or.inr ⟨hplain, hz⟩
+  by_cases hsome : (family.toFamily.instanceAttempt basis coins).output.isSome
+  · obtain ⟨x, hx⟩ := Option.isSome_iff_exists.mp hsome
+    cases hrun : x.run with
+    | inl opening => exact absurd ⟨x, hx, opening, hrun⟩ hclean
+    | inr relation =>
+        exfalso
+        apply hrelation
+        simp only [ComputedDeployedRootFSFamily.deployedRelationFinder,
+          ComputedAlgebraicFSFamily.relationFinder, hx,
+          DeployedAlgebraicForkingInstance.runRelation,
+          DeployedAlgebraicForkingInstance.relationOfRun, hrun, Option.isSome_some]
+  · apply Or.inl
+    change coins ∈ family.toFamily.snarkNonRelationFailure basis
+    apply Or.inl
+    refine ⟨?_, hsome⟩
+    unfold fsWinsFull at hplain ⊢
+    exact ⟨hplain, hz⟩
+
+/-- The recursive, non-relation part of the failure probability is uniform for every sampled
+generator-oracle basis. -/
+theorem deployedNonRelationFailure_prob_le_of_generatorRO
+    {T' : Type*} [DecidableEq T']
+    (query : AugmentedIndex (2 ^ shape.k) -> T')
+    (family : ComputedDeployedRootFSFamily shape) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          deployedNonRelationFailureEvent family)
+      <= (family.Q + shape.k) * (3 / Fintype.card Fp) +
+        (family.Q + 1 : Nat) * (1 / Fintype.card Fp) := by
+  change (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
+      {p | p.2 ∈ family.toFamily.snarkNonRelationFailure
+        (orchardGeneratorROBasis query p.1)}
+    <= (family.Q + shape.k) * (3 / Fintype.card Fp) +
+      (family.Q + 1 : Nat) * (1 / Fintype.card Fp)
+  refine independentProductPMF_fiber_bound (orchardGeneratorROSetup query)
+    (PMF.uniformOfFintype family.toFamily.Coins)
+    (fun setup => family.toFamily.snarkNonRelationFailure
+      (orchardGeneratorROBasis query setup)) ?_
+  intro setup
+  exact family.toFamily.snarkNonRelationFailure_measure_le
+    (orchardGeneratorROBasis query setup)
+
+/-- The DLOG-based deployed capstone for the concrete rewind-free decode endpoint.
+
+All explicit relations returned by either the recursive extractor or algebraic multiopen
+unbatching are charged to the same single-instance textbook-DLOG assumption.  The
+augmented-basis cardinality is a reduction loss, not an n-DLOG assumption. -/
 theorem snarkExtractionDeployed_prob_le_via_deployed_roots
     {T' : Type*} [DecidableEq T']
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ shape.k) -> T') (hquery : Function.Injective query)
     (family : ComputedDeployedRootFSFamily shape) {bound : ENNReal}
-    (hDL : TextbookDLWithCoinsAdvantageLE B family.snarkRelationFinder bound) :
+    (hDL : TextbookDLWithCoinsAdvantageLE B family.deployedRelationFinder bound) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           snarkExtractionFailureEventDeployed family.toFamily
-            (deployedRootExtracted family))
+            (deployedRootDecoded family))
       <= ((family.Q + shape.k) * (3 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
           Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound)
         + (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k := by
-  exact snarkExtractionDeployed_prob_le_via_wrapped_pinned_roots B hB query hquery
-    family.toFamily hDL (deployedRootExtracted family) (family.pinnedRoots)
+  let setup := orchardGeneratorROSetup query
+  let coinPMF := PMF.uniformOfFintype family.toFamily.Coins
+  let basisOf := orchardGeneratorROBasis query
+  let nonRelationBound : ENNReal :=
+    (family.Q + shape.k) * (3 / Fintype.card Fp) +
+      (family.Q + 1 : Nat) * (1 / Fintype.card Fp)
+  let relationBound : ENNReal :=
+    Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound
+  let rootBound : ENNReal :=
+    (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k
+  have hnonRelation :
+      (independentProductPMF setup coinPMF).toOuterMeasure
+          ((fun p => (basisOf p.1, p.2)) ⁻¹' deployedNonRelationFailureEvent family)
+        <= nonRelationBound := by
+    exact deployedNonRelationFailure_prob_le_of_generatorRO query family
+  have hrelation :
+      (independentProductPMF setup coinPMF).toOuterMeasure
+          ((fun p => (basisOf p.1, p.2)) ⁻¹' family.deployedRelationEvent)
+        <= relationBound := by
+    exact family.deployedRelation_prob_le_of_generatorRO_textbookDL
+      B hB query hquery hDL
+  have hroots :
+      (independentProductPMF setup coinPMF).toOuterMeasure
+          ((fun p => (basisOf p.1, p.2)) ⁻¹'
+            cleanButNotExtractedDeployed family.toFamily (deployedRootExtracted family))
+        <= rootBound := by
+    exact residual_le_via_wrapped_deployed_pinned_roots query family.toFamily
+      (deployedRootExtracted family) (family.pinnedRoots)
       (family.pinnedRoots_budget_le) (deployedRootFailure_subset_landing family)
-
-/-- The same additive DLOG-based capstone for a concrete constraint relation `S`, once the
-deterministic circuit layer consumes the decoded deployed member values. -/
-theorem snarkExtractionDeployed_prob_le_via_deployed_roots_constraints
-    {T' : Type*} [DecidableEq T']
-    (B : VestaG) (hB : B ≠ 0)
-    (query : AugmentedIndex (2 ^ shape.k) -> T') (hquery : Function.Injective query)
-    (family : ComputedDeployedRootFSFamily shape) {bound : ENNReal}
-    (hDL : TextbookDLWithCoinsAdvantageLE B family.snarkRelationFinder bound)
-    (S : (AugmentedIndex (2 ^ shape.k) -> VestaG) -> family.toFamily.Coins -> Prop)
-    (hdecode : forall basis coins,
-      fsWinsFull (family.adversary basis)
-        (fullAlgebraicAcceptDeployed basis (family.vk basis)
-          (family.instanceCommitment basis))
-        (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) coins.1 ->
-      deployedRootDecoded family basis coins ->
-      S basis coins ∨
-        HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
-          (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) :
-    (independentProductPMF (orchardGeneratorROSetup query)
-      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
-        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          snarkExtractionFailureEventDeployed family.toFamily
-            (fun basis coins => S basis coins ∨
-              HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
-                (ursOfAugmentedBasis shape.k basis).u
-                (ursOfAugmentedBasis shape.k basis).w))
-      <= ((family.Q + shape.k) * (3 / Fintype.card Fp) +
+  calc
+    (independentProductPMF setup coinPMF).toOuterMeasure
+        ((fun p => (basisOf p.1, p.2)) ⁻¹'
+          snarkExtractionFailureEventDeployed family.toFamily (deployedRootDecoded family))
+      <= (independentProductPMF setup coinPMF).toOuterMeasure
+          ((fun p => (basisOf p.1, p.2)) ⁻¹'
+            (deployedNonRelationFailureEvent family ∪
+              (family.deployedRelationEvent ∪
+                cleanButNotExtractedDeployed family.toFamily
+                  (deployedRootExtracted family)))) :=
+        MeasureTheory.measure_mono
+          (Set.preimage_mono (deployedDecodeFailure_subset_union family))
+    _ = (independentProductPMF setup coinPMF).toOuterMeasure
+          (((fun p => (basisOf p.1, p.2)) ⁻¹'
+              deployedNonRelationFailureEvent family) ∪
+            (((fun p => (basisOf p.1, p.2)) ⁻¹' family.deployedRelationEvent) ∪
+              ((fun p => (basisOf p.1, p.2)) ⁻¹'
+                cleanButNotExtractedDeployed family.toFamily
+                  (deployedRootExtracted family)))) := by
+        rw [Set.preimage_union, Set.preimage_union]
+    _ <= (independentProductPMF setup coinPMF).toOuterMeasure
+          ((fun p => (basisOf p.1, p.2)) ⁻¹' deployedNonRelationFailureEvent family) +
+        (independentProductPMF setup coinPMF).toOuterMeasure
+          ((((fun p => (basisOf p.1, p.2)) ⁻¹' family.deployedRelationEvent) ∪
+            ((fun p => (basisOf p.1, p.2)) ⁻¹'
+              cleanButNotExtractedDeployed family.toFamily
+                (deployedRootExtracted family)))) :=
+      MeasureTheory.measure_union_le _ _
+    _ <= nonRelationBound +
+        ((independentProductPMF setup coinPMF).toOuterMeasure
+            ((fun p => (basisOf p.1, p.2)) ⁻¹' family.deployedRelationEvent) +
+          (independentProductPMF setup coinPMF).toOuterMeasure
+            ((fun p => (basisOf p.1, p.2)) ⁻¹'
+              cleanButNotExtractedDeployed family.toFamily
+                (deployedRootExtracted family))) :=
+      add_le_add hnonRelation (MeasureTheory.measure_union_le _ _)
+    _ <= nonRelationBound + (relationBound + rootBound) :=
+      add_le_add le_rfl (add_le_add hrelation hroots)
+    _ = ((family.Q + shape.k) * (3 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
           Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound)
-        + (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k := by
-  exact snarkExtractionDeployed_prob_le_via_wrapped_pinned_roots B hB query hquery
-    family.toFamily hDL (fun basis coins => S basis coins ∨
-      HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
-        (ursOfAugmentedBasis shape.k basis).u
-        (ursOfAugmentedBasis shape.k basis).w)
-    (family.pinnedRoots) (family.pinnedRoots_budget_le)
-    (deployedConstraintFailure_subset_landing family S hdecode)
-
-/-- Full concrete composition with the pre-`x` circuit-goodness squeeze kept separate.  The
-multiopen term is the additive prefix-pinned root budget; the independent quotient/circuit term
-remains `(Q+1) * epsilonX`, as in the existing PR #96 composition. -/
-theorem snarkExtractionDeployed_prob_le_via_deployed_roots_prefixed
-    {T' : Type*} [DecidableEq T']
-    (B : VestaG) (hB : B ≠ 0)
-    (query : AugmentedIndex (2 ^ shape.k) -> T') (hquery : Function.Injective query)
-    (family : ComputedDeployedRootFSFamily shape) {bound : ENNReal}
-    (hDL : TextbookDLWithCoinsAdvantageLE B family.snarkRelationFinder bound)
-    (S goodX : (AugmentedIndex (2 ^ shape.k) -> VestaG) -> family.toFamily.Coins -> Prop)
-    (hdecode : forall basis coins,
-      fsWinsFull (family.adversary basis)
-        (fullAlgebraicAcceptDeployed basis (family.vk basis)
-          (family.instanceCommitment basis))
-        (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) coins.1 ->
-      deployedRootDecoded family basis coins -> goodX basis coins ->
-      S basis coins ∨
-        HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
-          (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w)
-    (badF : (AugmentedIndex (2 ^ shape.k) -> VestaG) ->
-      BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) ->
-      (Fin 4 -> Fp) -> Set Fp)
-    (hstab : forall basis (O : BTranscript Fp VestaG
-        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) (v : Fp),
-      algebraicFullPrefixesPre family.init ((family.adversary basis).run
-          (Function.update O (algebraicFullPrefixesPre family.init
-            ((family.adversary basis).run O) 4) v)) 4 =
-        algebraicFullPrefixesPre family.init ((family.adversary basis).run O) 4)
-    {epsilonX : ENNReal}
-    (hbad : forall basis t nu,
-      (PMF.uniformOfFintype Fp).toOuterMeasure (badF basis t nu) <= epsilonX)
-    (hcontX : forall basis, {coins : family.toFamily.Coins | ¬ goodX basis coins} <=
-      {coins : family.toFamily.Coins |
-        coins.1 (algebraicFullPrefixesPre family.init
-            ((family.adversary basis).run coins.1) 4) ∈
-          badF basis (algebraicFullPrefixesPre family.init
-              ((family.adversary basis).run coins.1) 4)
-            (fun i : Fin 4 => coins.1 (algebraicFullPrefixesPre family.init
-              ((family.adversary basis).run coins.1) (i.castLE (by omega))))}) :
-    (independentProductPMF (orchardGeneratorROSetup query)
-      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
-        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          snarkExtractionFailureEventDeployed family.toFamily
-            (fun basis coins =>
-              (S basis coins ∨
-                HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
-                  (ursOfAugmentedBasis shape.k basis).u
-                  (ursOfAugmentedBasis shape.k basis).w) ∧ goodX basis coins))
-      <= (((family.Q + shape.k) * (3 / Fintype.card Fp) +
-            (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
-            Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound)
-          + (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k)
-        + (family.Q + 1 : Nat) * epsilonX := by
-  let rootExtracted := fun basis coins =>
-    (goodX basis coins ->
-      S basis coins ∨
-        HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
-          (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w) ∨
-      HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
-        (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w
-  have hsplit : snarkExtractionFailureEventDeployed family.toFamily
-      (fun basis coins =>
-        (S basis coins ∨
-          HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
-            (ursOfAugmentedBasis shape.k basis).u
-            (ursOfAugmentedBasis shape.k basis).w) ∧ goodX basis coins) <=
-      snarkExtractionFailureEventDeployed family.toFamily rootExtracted ∪
-        {q : (AugmentedIndex (2 ^ shape.k) -> VestaG) × family.toFamily.Coins |
-          ¬ goodX q.1 q.2} := by
-    rintro ⟨basis, coins⟩ ⟨haccept, hnex⟩
-    by_cases hgood : goodX basis coins
-    · apply Or.inl
-      refine ⟨haccept, ?_⟩
-      intro hextracted
-      rcases hextracted with hS | hrelation
-      · exact hnex ⟨hS hgood, hgood⟩
-      · exact hnex ⟨Or.inr hrelation, hgood⟩
-    · exact Or.inr hgood
-  refine le_trans ((independentProductPMF (orchardGeneratorROSetup query)
-    (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure.mono
-      (Set.preimage_mono hsplit)) ?_
-  refine le_trans (le_of_eq (congrArg
-    (fun event => (independentProductPMF (orchardGeneratorROSetup query)
-      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure event)
-      Set.preimage_union)) ?_
-  refine le_trans (MeasureTheory.measure_union_le _ _) ?_
-  exact add_le_add
-    (snarkExtractionDeployed_prob_le_via_deployed_roots_constraints B hB query hquery
-      family hDL (fun basis coins => goodX basis coins ->
-        S basis coins ∨
-          HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
-            (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w)
-      (fun basis coins hwin hdecoded => Or.inl (hdecode basis coins hwin hdecoded)))
-    (badX_le_via_squeeze_prefixed query family.toFamily goodX badF hstab hbad hcontX)
-
-/-- The concrete deployed constraint capstone.  Its deterministic decode premise is fully
-discharged: deployed acceptance supplies the verifier checks, prefix-pinned AGM decoding supplies
-the individual member polynomials, and the exact pre-`x` good event supplies the quotient
-identity.  The only remaining probabilistic input at `x` is the explicit `badF` squeeze bound. -/
-theorem snarkExtractionDeployed_prob_le_via_deployed_constraints
-    {T' : Type*} [DecidableEq T']
-    (B : VestaG) (hB : B ≠ 0)
-    (query : AugmentedIndex (2 ^ shape.k) -> T') (hquery : Function.Injective query)
-    (family : ComputedDeployedRootFSFamily shape) {bound : ENNReal}
-    (hDL : TextbookDLWithCoinsAdvantageLE B family.snarkRelationFinder bound)
-    (hAdvLen : forall basis,
-      shape.numAdviceQueries ≤ (family.vk basis).adviceQueryLayout.length)
-    (hInstLen : forall basis,
-      shape.numInstanceQueries ≤ (family.vk basis).instanceQueryLayout.length)
-    (hFixedLen : forall basis,
-      shape.numFixedQueries ≤ (family.vk basis).fixedQueryLayout.length)
-    (homega : forall basis, (family.vk basis).omega ^ (family.vk basis).n = 1)
-    (hn : forall basis, (((family.vk basis).n : Nat) : Fp) ≠ 0)
-    (badF : (AugmentedIndex (2 ^ shape.k) -> VestaG) ->
-      BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) ->
-      (Fin 4 -> Fp) -> Set Fp)
-    (hstab : forall basis (O : BTranscript Fp VestaG
-        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) (v : Fp),
-      algebraicFullPrefixesPre family.init ((family.adversary basis).run
-          (Function.update O (algebraicFullPrefixesPre family.init
-            ((family.adversary basis).run O) 4) v)) 4 =
-        algebraicFullPrefixesPre family.init ((family.adversary basis).run O) 4)
-    {epsilonX : ENNReal}
-    (hbad : forall basis t nu,
-      (PMF.uniformOfFintype Fp).toOuterMeasure (badF basis t nu) ≤ epsilonX)
-    (hcontX : forall basis,
-      {coins : family.toFamily.Coins | ¬ deployedConstraintGoodX family basis coins} <=
-      {coins : family.toFamily.Coins |
-        coins.1 (algebraicFullPrefixesPre family.init
-            ((family.adversary basis).run coins.1) 4) ∈
-          badF basis (algebraicFullPrefixesPre family.init
-              ((family.adversary basis).run coins.1) 4)
-            (fun i : Fin 4 => coins.1 (algebraicFullPrefixesPre family.init
-              ((family.adversary basis).run coins.1) (i.castLE (by omega))))}) :
-    (independentProductPMF (orchardGeneratorROSetup query)
-      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
-        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          snarkExtractionFailureEventDeployed family.toFamily
-            (fun basis coins =>
-              (deployedConstraintSatisfied family basis coins ∨
-                HasNontrivialRelation (F := Fp) (ursOfAugmentedBasis shape.k basis).g
-                  (ursOfAugmentedBasis shape.k basis).u
-                  (ursOfAugmentedBasis shape.k basis).w) ∧
-              deployedConstraintGoodX family basis coins))
-      ≤ (((family.Q + shape.k) * (3 / Fintype.card Fp) +
-            (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
-            Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound)
-          + (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k)
-        + (family.Q + 1 : Nat) * epsilonX := by
-  apply snarkExtractionDeployed_prob_le_via_deployed_roots_prefixed B hB query hquery
-    family hDL (deployedConstraintSatisfied family) (deployedConstraintGoodX family)
-    ?_ badF hstab hbad hcontX
-  intro basis coins hwin hdecoded hgood
-  let pnu := (wrappedAdversary family.toFamily basis).run coins.1
-  have hacc := deployedAccepts_of_fsWinsFull family.toFamily basis coins.1 hwin
-  have checks : DeployedConstraintChecks (family.vk basis) (family.instanceCommitment basis)
-      pnu.1.proof.1
-      (wrappedPreIpaRecord pnu) := by
-    have hpre := DeployedConstraintChecks.of_accepts_chRecord
-      (ursOfAugmentedBasis shape.k basis) rfl (family.vk basis)
-      (family.instanceCommitment basis) (runProof family.toFamily basis coins.1).proof.1
-      (runReads family.toFamily basis coins.1) (runRounds family.toFamily basis coins.1) hacc
-    simpa [pnu, wrappedPreIpaRecord, wrappedPreIpaReads_run,
-      wrappedAdversary_run_fst, runProof] using hpre
-  exact deployedRootDecoded_constraintSatisfied_or_relation family basis coins hdecoded
-    checks
-    (hAdvLen basis) (hInstLen basis) (hFixedLen basis) (homega basis) (hn basis) hgood
+        + (family.Q + (11 + shape.k) + 1 : Nat) *
+          algebraicRootBudget shape shape.k := by
+      simp only [nonRelationBound, relationBound, rootBound]
+      ac_rfl
 
 end Zcash.Snark
