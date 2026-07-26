@@ -60,12 +60,22 @@ coordinates. -/
 structure DeployedBatchWitness (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (pnu : WrappedAlgebraicOutput family basis) where
+  fixedRepresentations : List (AlgebraicPoint (F := Fp) basis)
+  canonical : CanonicalOnlineMultiopenCoordinates pnu.1 fixedRepresentations
+  membersCovered : DeployedMembersCovered (family.vk basis) (family.instanceCommitment basis)
+    pnu.1.algebraicProof fixedRepresentations
   batches : DeployedAlgebraicBatches (ursOfAugmentedBasis shape.k basis) rfl
     (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
     (wrappedPreIpaRecord pnu)
     (pnu.1.aMulti (wrappedPreIpaReads pnu))
     (pnu.1.multiU (wrappedPreIpaReads pnu))
     (pnu.1.multiBlind (wrappedPreIpaReads pnu))
+  memberCoeffs : forall i
+      (hi : i < deployedX4PairCount (family.vk basis) (family.instanceCommitment basis)
+        pnu.1.proof.1 (wrappedPreIpaRecord pnu)),
+    (batches.x1 i hi).coeffs =
+      (deployedMemberRepresentationsOfCovered pnu.1 fixedRepresentations membersCovered
+        (wrappedPreIpaReads pnu) i hi).coeffs
 
 /-- Algebraic unbatching either supplies every deployed batch or returns a concrete augmented-basis
 relation. -/
@@ -142,6 +152,10 @@ noncomputable def deployedRootOutcomeOfOnline
       (family.fixedRepresentations basis) := by
     rw [hp]
     exact family.membersCovered basis O
+  have hcanonical : CanonicalOnlineMultiopenCoordinates p
+      (family.fixedRepresentations basis) := by
+    rw [hp]
+    exact family.canonical basis O
   let interpolation :=
     deployedX4InterpolationDataOfCapacity family.toFamily hcapacity basis pnu
   let x4Batch := deployedX4BatchOfRepresentations p nu interpolation.points
@@ -150,7 +164,7 @@ noncomputable def deployedRootOutcomeOfOnline
       (hi : i < deployedX4PairCount (family.vk basis) (family.instanceCommitment basis)
         p.proof.1
         (wrappedPreIpaRecord pnu)) =>
-    deployedX1BatchOfCoveredOrRelation p (family.fixedRepresentations basis) hcovered nu
+    deployedX1BatchOfCoveredWithSourceOrRelation p (family.fixedRepresentations basis) hcovered nu
       x4Batch i hi
   by_cases hrelation : exists i hi, exists relation, x1Result i hi = PSum.inr relation
   · let i := Classical.choose hrelation
@@ -164,12 +178,29 @@ noncomputable def deployedRootOutcomeOfOnline
           p.proof.1
           (wrappedPreIpaRecord pnu)) =>
         match hresult : x1Result i hi with
-        | PSum.inl batch => batch
+        | PSum.inl result => result.batch
         | PSum.inr relation => False.elim (hrelation ⟨i, hi, relation, hresult⟩)
+    have hx1Coeffs : forall i
+        (hi : i < deployedX4PairCount (family.vk basis) (family.instanceCommitment basis)
+          p.proof.1 (wrappedPreIpaRecord pnu)),
+        (x1 i hi).coeffs =
+          (deployedMemberRepresentationsOfCovered p
+            (family.fixedRepresentations basis) hcovered nu i hi).coeffs := by
+      intro i hi
+      unfold x1
+      split
+      · rename_i result hresult
+        exact result.coeffs_eq
+      · rename_i relation hresult
+        exact False.elim (hrelation ⟨i, hi, relation, hresult⟩)
     exact PSum.inl
-      { batches :=
+      { fixedRepresentations := family.fixedRepresentations basis
+        canonical := hcanonical
+        membersCovered := hcovered
+        batches :=
           { x4 := x4Batch
-            x1 := x1 } }
+            x1 := x1 }
+        memberCoeffs := hx1Coeffs }
 
 /-- Squeeze index used by one root event: `xi`, `z`, `x4`, `x3`, `x2`, and the union of all
 `x1` roots. -/
@@ -378,28 +409,53 @@ theorem deployedRootBadAt_point
     apply ‹¬ _›
     exact ⟨O, rfl⟩
 
+/-- Constructive chronology certificate for the six deployed root events.  A schedule supplies
+the bad set as data indexed by the transcript prefix, together with its direct measure bound and
+its equality to the algebraically derived set on every actual run.  The probability layer consumes
+this object directly; it no longer stores a free final-output invariance proposition. -/
+structure DeployedRootPrefixSchedule (family : ComputedAlgebraicFSFamily shape)
+    (outcome : DeployedRootOutcomeProvider family) where
+  badAt : (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) -> (i : Fin 6) ->
+    BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Set Fp
+  measure_le : forall basis i t,
+    (PMF.uniformOfFintype Fp).toOuterMeasure (badAt basis i t) <=
+      deployedRootEventBudget shape i
+  at_point : forall basis i O,
+    badAt basis i (deployedRootPoint family ((wrappedAdversary family basis).run O) i) =
+      deployedRootBad family outcome basis ((wrappedAdversary family basis).run O) O i
+
+/-- Compatibility adapter from the older equality-style chronology premise.  New concrete
+families should preferably construct `DeployedRootPrefixSchedule` at the transcript stage where
+each bad set is fixed. -/
+noncomputable def DeployedRootPrefixSchedule.ofPrefixDetermined
+    (family : ComputedAlgebraicFSFamily shape)
+    (outcome : DeployedRootOutcomeProvider family)
+    (hprefix : DeployedRootPrefixDetermined family outcome) :
+    DeployedRootPrefixSchedule family outcome where
+  badAt := deployedRootBadAt family outcome
+  measure_le := deployedRootBadAt_measure_le family outcome
+  at_point := deployedRootBadAt_point family outcome hprefix
+
 /-- A computed online AGM family with a concrete batch-or-relation outcome whose exact root data
 factors through the transcript prefix before each squeeze. -/
 structure ComputedDeployedRootFSFamily (shape : Shape)
     extends ComputedOnlineMemberFSFamily shape where
   outcome : DeployedRootOutcomeProvider toComputedAlgebraicFSFamily
-  rootPrefixDetermined :
-    DeployedRootPrefixDetermined toComputedAlgebraicFSFamily outcome
+  schedule : DeployedRootPrefixSchedule toComputedAlgebraicFSFamily outcome
 
 /-- Upgrade an online, member-covered AGM family using the derived offline batch-or-relation
 decoder.  The sole remaining multiopen-specific proof is that the exact root data factors through
 the preceding transcript prefix; the outcome itself is no longer caller-supplied.
 
-`OnlineMultiopenPinned` alone intentionally does not discharge `hprefix`.  It pins the AGM
-representations named by that interface, while the exact deployed root sets also read ordinary
-proof-string scalars and grouping data.  The final-output `OracleComp` interface does not encode
-when those fields were emitted, so deriving their chronology would be unsound.  A concrete family
-must provide prefix factorization from a strengthened online transcript interface (whose schedule
-is then matched to the Rust transcript order).
+The exact deployed root sets also read ordinary proof-string scalars and grouping data.  The
+final-output `OracleComp` interface does not encode when those fields were emitted, so deriving
+their chronology from output equality would be unsound.  The compatibility constructor below
+accepts the old factorization theorem and packages it as the concrete schedule consumed by the
+probability layer.
 
-TODO(#96): instantiate `rootPrefixDetermined` from the deployed Rust transcript chronology, then
-compose the resulting `snarkExtractionDeployed_prob_le_via_deployed_roots` endpoint into the final
-concrete `constraintsBadAccept` capstone. -/
+TODO(#96): construct `DeployedRootPrefixSchedule` from the deployed Rust transcript stages, then
+compose the resulting constraint endpoint into the final concrete `constraintsBadAccept`
+capstone. -/
 noncomputable def ComputedDeployedRootFSFamily.ofOnline
     (family : ComputedOnlineMemberFSFamily shape)
     (hcapacity : shape.numPointSets + 1 <= Fintype.card Fp)
@@ -408,7 +464,20 @@ noncomputable def ComputedDeployedRootFSFamily.ofOnline
     ComputedDeployedRootFSFamily shape where
   toComputedOnlineMemberFSFamily := family
   outcome := deployedRootOutcomeOfOnline family hcapacity
-  rootPrefixDetermined := hprefix
+  schedule := DeployedRootPrefixSchedule.ofPrefixDetermined family.toFamily
+    (deployedRootOutcomeOfOnline family hcapacity) hprefix
+
+/-- Preferred constructor when the online transcript implementation already exposes each root set
+at its pre-squeeze stage. -/
+noncomputable def ComputedDeployedRootFSFamily.ofScheduledOnline
+    (family : ComputedOnlineMemberFSFamily shape)
+    (hcapacity : shape.numPointSets + 1 <= Fintype.card Fp)
+    (schedule : DeployedRootPrefixSchedule family.toFamily
+      (deployedRootOutcomeOfOnline family hcapacity)) :
+    ComputedDeployedRootFSFamily shape where
+  toComputedOnlineMemberFSFamily := family
+  outcome := deployedRootOutcomeOfOnline family hcapacity
+  schedule := schedule
 
 namespace ComputedDeployedRootFSFamily
 
@@ -526,9 +595,9 @@ noncomputable def pinnedRoots (family : ComputedDeployedRootFSFamily shape)
     PinnedRootFamily (wrappedAdversary family.toFamily basis) 6 where
   event i :=
     { point := fun pnu => deployedRootPoint family.toFamily pnu i
-      badAt := deployedRootBadAt family.toFamily family.outcome basis i
+      badAt := family.schedule.badAt basis i
       budget := deployedRootEventBudget shape i
-      measure_le := deployedRootBadAt_measure_le family.toFamily family.outcome basis i }
+      measure_le := family.schedule.measure_le basis i }
 
 /-- The six good-root facts exposed when the concrete root family does not land. -/
 structure DeployedGoodRoots (family : ComputedDeployedRootFSFamily shape)
@@ -578,11 +647,10 @@ theorem goodRoots_of_not_landing (family : ComputedDeployedRootFSFamily shape)
     have hi := hgood i
     change O (deployedRootPoint family.toFamily
         ((wrappedAdversary family.toFamily basis).run O) i) ∉
-      deployedRootBadAt family.toFamily family.outcome basis i
+      family.schedule.badAt basis i
         (deployedRootPoint family.toFamily
           ((wrappedAdversary family.toFamily basis).run O) i) at hi
-    rw [deployedRootBadAt_point family.toFamily family.outcome
-      family.rootPrefixDetermined basis i O] at hi
+    rw [family.schedule.at_point basis i O] at hi
     have hpoint := deployedRootPoint_run family.toFamily basis O i
     rw [hpoint] at hi
     simpa [wrappedPreIpaReads_run] using hi

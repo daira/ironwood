@@ -69,17 +69,25 @@ structure AlgebraicPowerBatch (urs : URS G) {numColumns : Nat}
   reconstructU : aggregateU = ∑ i : Fin numColumns, challenge ^ (i : Nat) * uComp i
   reconstructW : aggregateW = ∑ i : Fin numColumns, challenge ^ (i : Nat) * wComp i
 
-/-- Algebraic unbatching of commitments needs no rewinding.  Compare the aggregate's declared
-coordinates with the componentwise power sum of the already represented columns.  Equality gives
-the batch witnesses directly; inequality is an explicit augmented-basis relation and therefore
-stays on the existing DLOG branch. -/
-def algebraicPowerBatchOrRelation {urs : URS G} {numColumns : Nat}
+/-- A successful algebraic unbatch together with the provenance fact that its columns are exactly
+the online representations supplied to the unbatcher. -/
+structure AlgebraicPowerBatchWithSource (urs : URS G) {numColumns : Nat}
+    {columnCommitments : Fin numColumns -> G}
+    (cols : AlgebraicColumnRepresentations urs columnCommitments)
+    (aggregate : Fin (2 ^ urs.k) -> Fp) (aggregateU aggregateW challenge : Fp) where
+  batch : AlgebraicPowerBatch urs columnCommitments aggregate aggregateU aggregateW challenge
+  coeffs_eq : batch.coeffs = cols.coeffs
+
+/-- Provenance-preserving algebraic unbatching.  Equality gives both the batch witnesses and a
+proof that their columns are the supplied online coordinates; inequality gives an explicit
+augmented-basis relation. -/
+def algebraicPowerBatchWithSourceOrRelation {urs : URS G} {numColumns : Nat}
     {columnCommitments : Fin numColumns -> G}
     (cols : AlgebraicColumnRepresentations urs columnCommitments)
     (aggregate : Fin (2 ^ urs.k) -> Fp) (aggregateU aggregateW challenge : Fp)
     (haggregate : commit urs aggregate + aggregateU • urs.u + aggregateW • urs.w =
       ∑ i : Fin numColumns, challenge ^ (i : Nat) • columnCommitments i) :
-    AlgebraicPowerBatch urs columnCommitments aggregate aggregateU aggregateW challenge ⊕'
+    AlgebraicPowerBatchWithSource urs cols aggregate aggregateU aggregateW challenge ⊕'
       AugmentedRelationWitness (F := Fp) urs.g urs.u urs.w := by
   let powerCoeffs := ∑ i : Fin numColumns, challenge ^ (i : Nat) • cols.coeffs i
   let powerU := ∑ i : Fin numColumns, challenge ^ (i : Nat) * cols.uComp i
@@ -95,14 +103,30 @@ def algebraicPowerBatchOrRelation {urs : URS G} {numColumns : Nat}
       aggregateU powerU aggregateW powerW hcollision with
   | PSum.inl heq =>
       exact PSum.inl
-        { coeffs := cols.coeffs
-          uComp := cols.uComp
-          wComp := cols.wComp
-          commitment := cols.commitment
-          reconstruct := heq.1
-          reconstructU := heq.2.1
-          reconstructW := heq.2.2 }
+        { batch :=
+            { coeffs := cols.coeffs
+              uComp := cols.uComp
+              wComp := cols.wComp
+              commitment := cols.commitment
+              reconstruct := heq.1
+              reconstructU := heq.2.1
+              reconstructW := heq.2.2 }
+          coeffs_eq := rfl }
   | PSum.inr hrel => exact PSum.inr hrel
+
+/-- Compatibility projection for callers that only need the reconstructed batch. -/
+def algebraicPowerBatchOrRelation {urs : URS G} {numColumns : Nat}
+    {columnCommitments : Fin numColumns -> G}
+    (cols : AlgebraicColumnRepresentations urs columnCommitments)
+    (aggregate : Fin (2 ^ urs.k) -> Fp) (aggregateU aggregateW challenge : Fp)
+    (haggregate : commit urs aggregate + aggregateU • urs.u + aggregateW • urs.w =
+      ∑ i : Fin numColumns, challenge ^ (i : Nat) • columnCommitments i) :
+    AlgebraicPowerBatch urs columnCommitments aggregate aggregateU aggregateW challenge ⊕'
+      AugmentedRelationWitness (F := Fp) urs.g urs.u urs.w :=
+  match algebraicPowerBatchWithSourceOrRelation cols aggregate aggregateU aggregateW challenge
+      haggregate with
+  | PSum.inl result => PSum.inl result.batch
+  | PSum.inr relation => PSum.inr relation
 
 /-- The value-error polynomial of represented columns against the verifier's claimed column
 values.  Its coefficient at `i` is exactly

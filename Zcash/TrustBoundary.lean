@@ -21,6 +21,7 @@ import Zcash.Snark.Soundness.AGM.ProbabilityVesta
 import Zcash.Snark.Soundness.Forking.Adversary
 import Zcash.Snark.Soundness.Composition.Bridge
 import Zcash.Snark.Soundness.Composition.Decomposition
+import Zcash.Snark.Soundness.Composition.DeployedConstraintContainment
 import Zcash.Snark.Soundness.Composition.DeployedRootContainment
 import Zcash.Snark.Soundness.Composition.PrefixedSqueeze
 import Zcash.Snark.Soundness.FoldSplit
@@ -625,7 +626,7 @@ assert_axioms allExpressions_eq
 assert_axioms eval_constraintPolys
 assert_axioms eval_combineConstraints
 assert_axioms eval_combineConstraints_deployed
-assert_axioms hfold_of_constraint_polys_of_xn_ne
+assert_axioms hfold_of_constraint_polys_of_xn_ne_direct
 assert_axioms constraints_supply_of_deployedAlgebraicDecode
 -- The permutation and lookup arguments closed from the verifier's own row checks: the combined
 -- check splits into its parts, the running product telescopes across the rows, two challenge root
@@ -754,6 +755,15 @@ assert_axioms deployedRootFailure_subset_landing +native
 assert_axioms deployedDecodeFailure_subset_union +native
 assert_axioms deployedNonRelationFailure_prob_le_of_generatorRO +native
 assert_axioms snarkExtractionDeployed_prob_le_via_deployed_roots +native
+
+-- Online-source constraint composition.  All disagreement branches retain concrete relation
+-- coefficients and are charged through the same single-instance textbook-DLOG finder.
+assert_axioms deployedConstraint_memberPoly_eq_online +native
+assert_axioms deployedOnlineConstraintOutcomeOfDecode +native
+assert_axioms deployedConstraintFailure_subset_union +native
+assert_axioms deployedConstraintRelation_prob_le_of_generatorRO_textbookDL +native
+assert_axioms snarkConstraintsDeployed_prob_le_via_deployed_roots +native
+assert_axioms snarkConstraintsDeployed_prob_le_of_online_outcome +native
 
 /-! ## The Action circuit — the halo2-native soundness trust surface
 

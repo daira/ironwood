@@ -1,5 +1,6 @@
 import Zcash.Snark.Soundness.Composition.GoodX
 import Zcash.Snark.Soundness.Multiopen.Decode
+import Zcash.Snark.Soundness.AGM.Peel
 
 /-!
 # The pre-`x` quotient reconstruction
@@ -112,6 +113,38 @@ private theorem commit_scaledSum (urs : URS G) (xn : Fp) (hp : Fin d → Fin (2 
   | @insert a s h ih =>
       rw [Finset.sum_insert h, Finset.sum_insert h, commit_add, commit_smul, ih]
 
+/-- Computed form of quotient-piece binding.  A disagreement returns the actual augmented-basis
+collision coefficients, so callers can feed this branch directly to their DLOG reduction. -/
+noncomputable def decodedQuotientEqReassembledOrRelationWitness (urs : URS G) (xn : Fp)
+    {a : Fin (2 ^ urs.k) → Fp} {cu cw : Fp}
+    {hp : Fin d → Fin (2 ^ urs.k) → Fp} {hpu hpw : Fin d → Fp} {H : Fin d → G}
+    (hpiece : ∀ i, commit urs (hp i) + hpu i • urs.u + hpw i • urs.w = H i)
+    (hopen : commit urs a + cu • urs.u + cw • urs.w = ∑ i : Fin d, xn ^ (i : ℕ) • H i) :
+    (coeffsToPoly a = reassembledQuotient xn (fun i => coeffsToPoly (hp i))) ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  have hsum : commit urs (∑ i : Fin d, xn ^ (i : ℕ) • hp i)
+      + (∑ i : Fin d, xn ^ (i : ℕ) * hpu i) • urs.u
+      + (∑ i : Fin d, xn ^ (i : ℕ) * hpw i) • urs.w
+      = ∑ i : Fin d, xn ^ (i : ℕ) • H i := by
+    rw [commit_scaledSum, Finset.sum_smul, Finset.sum_smul, ← Finset.sum_add_distrib,
+      ← Finset.sum_add_distrib]
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [mul_smul, mul_smul, ← hpiece i, smul_add, smul_add]
+  let sumCoeffs := ∑ i : Fin d, xn ^ (i : ℕ) • hp i
+  let sumU := ∑ i : Fin d, xn ^ (i : ℕ) * hpu i
+  let sumW := ∑ i : Fin d, xn ^ (i : ℕ) * hpw i
+  have hcollision :
+      commitGen urs.g a + cu • urs.u + cw • urs.w =
+        commitGen urs.g sumCoeffs + sumU • urs.u + sumW • urs.w := by
+    rw [← commit_eq_commitGen, ← commit_eq_commitGen]
+    exact hopen.trans hsum.symm
+  exact match separateOrRelationWitness urs.g urs.u urs.w a sumCoeffs
+      cu sumU cw sumW hcollision with
+    | PSum.inr relation => PSum.inr relation
+    | PSum.inl heq => PSum.inl (by
+        rw [heq.1]
+        exact coeffsToPoly_scaledSum xn hp)
+
 /-- **The decoded quotient column is the reassembly of the piece openings, or binding breaks.**
 Given openings of each piece commitment `Hᵢ` and a decoded column opening the reassembled
 `Σᵢ (xⁿ)ⁱ·Hᵢ`, the decoded column's polynomial is `reassembledQuotient (xⁿ)` of the piece
@@ -123,19 +156,9 @@ theorem decodedQuotient_eq_reassembled_or_relation (urs : URS G) (xn : Fp)
     (hopen : commit urs a + cu • urs.u + cw • urs.w = ∑ i : Fin d, xn ^ (i : ℕ) • H i) :
     coeffsToPoly a = reassembledQuotient xn (fun i => coeffsToPoly (hp i))
     ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  have hsum : commit urs (∑ i : Fin d, xn ^ (i : ℕ) • hp i)
-      + (∑ i : Fin d, xn ^ (i : ℕ) * hpu i) • urs.u
-      + (∑ i : Fin d, xn ^ (i : ℕ) * hpw i) • urs.w
-      = ∑ i : Fin d, xn ^ (i : ℕ) • H i := by
-    rw [commit_scaledSum, Finset.sum_smul, Finset.sum_smul, ← Finset.sum_add_distrib,
-      ← Finset.sum_add_distrib]
-    refine Finset.sum_congr rfl (fun i _ => ?_)
-    rw [mul_smul, mul_smul, ← hpiece i, smul_add, smul_add]
-  rcases chosenOpening_eq_or_relation (C := ∑ i : Fin d, xn ^ (i : ℕ) • H i) urs hopen with hA | hR
-  · rcases chosenOpening_eq_or_relation (C := ∑ i : Fin d, xn ^ (i : ℕ) • H i) urs hsum with hB | hR
-    · exact Or.inl (by rw [hA, ← hB, coeffsToPoly_scaledSum])
-    · exact Or.inr hR
-  · exact Or.inr hR
+  exact match decodedQuotientEqReassembledOrRelationWitness urs xn hpiece hopen with
+    | PSum.inl h => Or.inl h
+    | PSum.inr relation => Or.inr (HasNontrivialRelation.of_nontrivialRelation relation)
 
 /-- The reassembly fold as a `foldr`: `List.foldl` over the reversed pieces is `List.foldr` over
 the pieces (`List.foldl_reverse`), which inducts forward without reverse-index bookkeeping. -/

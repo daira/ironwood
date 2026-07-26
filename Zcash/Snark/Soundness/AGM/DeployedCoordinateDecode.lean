@@ -12,8 +12,9 @@ offline decoder recovers represented `x4` columns.  This establishes the commitm
 rewind-free unbatching without an additional accepting execution.
 
 For the later root-set probability argument, the decoded representation family must additionally
-be pinned before the real `x4` draw.  `CanonicalOnlineMultiopenCoordinates` and
-`OnlineMultiopenPinned` state that separate causal fact; this file proves the algebraic decode.
+be fixed before the real `x4` draw. `CanonicalOnlineMultiopenCoordinates` pins the coordinate
+construction, while `DeployedRootPrefixSchedule` records the full causal root-set factorization;
+this file proves only the algebraic decode.
 -/
 
 namespace Zcash.Snark

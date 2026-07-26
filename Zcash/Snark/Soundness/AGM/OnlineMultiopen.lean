@@ -14,9 +14,9 @@ This file adds a non-breaking refinement of `ComputedAlgebraicFSFamily` for the 
 * the multiopen aggregate coordinates must be the deterministic MSM coordinates obtained from the
   actual representation-carrying commitments used by the assembly.
 
-It also defines reusable chronology views for individual emitted fields.  Exact deployed root
-pricing uses the stronger whole-root prefix-factorization interface in `DeployedPinnedRoots`, so
-these narrower views are not presented as sufficient on their own.
+Exact deployed chronology is represented by the whole-root prefix schedule in
+`DeployedPinnedRoots`; narrower final-output invariance predicates are deliberately omitted because
+they do not establish when all ordinary proof fields affecting a root set were emitted.
 
 No protocol point or scalar is added to the transcript.  These are ghost conditions on the AGM
 adversary.
@@ -49,7 +49,16 @@ def AlgebraicProofString.multiopenAssemblySource
     (aps : AlgebraicProofString shape basis)
     (fixed : List (AlgebraicPoint (F := Fp) basis)) :
     List (AlgebraicPoint (F := Fp) basis) :=
-  aps.preX1Points ++ [aps.multiopenQPrime] ++ fixed
+  aps.preX1Points ++ fixed ++ [aps.multiopenQPrime]
+
+/-- Every represented quotient-piece commitment occurs in the pre-`x` portion of the online
+assembly source. -/
+theorem AlgebraicProofString.hPiece_mem_multiopenAssemblySource
+    (aps : AlgebraicProofString shape basis)
+    (fixed : List (AlgebraicPoint (F := Fp) basis))
+    (i : Fin shape.numQuotientPieces) :
+    aps.hPieces i ∈ aps.multiopenAssemblySource fixed := by
+  simp [AlgebraicProofString.multiopenAssemblySource, AlgebraicProofString.preX1Points]
 
 /-! ## Canonical aggregate coordinates -/
 
@@ -131,47 +140,6 @@ theorem AlgebraicWfProof.ofOnlineMultiopenRepresented_canonical
     rfl
   · intro nu
     rfl
-
-/-! ## Lower-level chronology views -/
-
-/-- A view of the adversary output is pinned from squeeze `first` through squeeze `last` when
-changing any answer in that interval cannot change the view.  The query point is computed from the
-current run, matching the codebase's reprogramming semantics.
-
-This is intentionally stronger than equality of erased transcript points: AGM coordinates for the
-same group point must not be changed in hindsight. -/
-def OracleComp.ViewPinnedBetween {T F P View : Type*} [DecidableEq T]
-    (A : OracleComp T F P) (prefixes : P -> Fin 11 -> T) (view : P -> View)
-    (first last : Nat) : Prop :=
-  forall (O : T -> F) (j : Fin 11), first <= j.val -> j.val <= last -> forall v : F,
-    view (A.run (Function.update O (prefixes (A.run O) j) v)) = view (A.run O)
-
-/-- Useful lower-level chronology conditions for algebraic multiopen assembly:
-
-* all commitment representations present before `x1` (index 5) stay fixed through `x4` (index 8);
-* the representation of `qPrime`, emitted before `x3` (index 7), stays fixed through `x4`;
-* the claimed `u` scalars, emitted after `x3`, stay fixed across the `x4` draw.
-
-The last field makes that ordinary transcript-causality requirement explicit for the general
-`OracleComp` model; unlike the first two fields it carries no AGM representation data.
-
-These view equalities are intentionally not treated as sufficient for pricing the deployed root
-sets.  The latter also depend on grouping and ordinary proof data, so
-`ComputedDeployedRootFSFamily` separately requires exact root-set factorization through each
-pre-squeeze transcript prefix. -/
-structure OnlineMultiopenPinned {T : Type*} [DecidableEq T]
-    {vk : VerifyingKey shape Fp VestaG}
-    {instanceCommitment : Fin shape.numProofs -> Nat -> VestaG}
-    (A : OracleComp T Fp (AlgebraicWfProof basis vk instanceCommitment))
-    (prefixes : AlgebraicWfProof basis vk instanceCommitment -> Fin 11 -> T) : Prop where
-  preX1 : A.ViewPinnedBetween prefixes
-    (fun p => p.algebraicProof.preX1Points) 5 8
-  qPrime : A.ViewPinnedBetween prefixes
-    (fun p => p.algebraicProof.multiopenQPrime) 7 8
-  uValues : A.ViewPinnedBetween prefixes
-    (fun p => p.algebraicProof.multiopenU) 8 8
-  ipaS : A.ViewPinnedBetween prefixes
-    (fun p => p.algebraicProof.ipaS) 9 10
 
 /-! ## Refined computed family -/
 
