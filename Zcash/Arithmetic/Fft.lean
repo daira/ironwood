@@ -15,13 +15,10 @@ and scales by `n⁻¹` to obtain the Lagrange-basis generators of a monomial URS
 (`Params::new`, `poly/commitment.rs:75-88`).
 
 These are pure arithmetic: they mention only `Fp`, `URS` and the module action, and nothing
-from the Clean circuit layer. Why the module-generic definition is already in this tree: its
-one instantiation HERE is `G := Fp` — `bestFftG` at the field is the specification the
-scalar inverse-DFT kernel is proven against (`Zcash/Arithmetic/ScalarFftEquiv.lean`). The
-group instantiations (`derivedUrsGLagrange` at the Vesta group, and its DFT
-characterisation) are consumed by the verifying-key derivation that builds on this PR; one
-generic definition means the scalar and group transforms never need a separate agreement
-proof.
+from the Clean circuit layer, so kernel transplants and accelerator lanes certify against
+them without importing the keygen pipeline. Keeping `bestFftG` generic over the `Fp`-module
+means its field instance (the scalar inverse DFT) and its group instances share one
+definition, so no scalar-vs-group agreement lemma ever needs to exist.
 
 The last section abstracts the loop nest itself (`fftGen`) and reduces it to pure folds
 (`fftGen_eq_folds`). That is the shared vocabulary every carrier transplant of this FFT is
