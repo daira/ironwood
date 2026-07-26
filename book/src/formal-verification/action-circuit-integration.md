@@ -1159,15 +1159,21 @@ statement.
 
 **Status: complete at the deterministic Vesta terminal. The canonical relation now
 reaches a concrete bundle-wide Action theorem, and
-`actionBundleStatement_or_relation_of_vestaTerminal` invokes that theorem directly
-from the constraint-carrying Vesta terminal. It quantifies over arbitrary proof
-parameters, derives its shape and verifying key from
-`orchardActionTopLevelCircuit`, and reconstructs accepted member selections
-proof-by-proof. Its public signature has no free `S`, `hencodes`, member decoder, or
-independently selected advice/instance feeds. The captured-VK theorem is only a
-deployment corollary in `Soundness/Deployed/ActionVesta`; it is not imported by the
-normal `Zcash` target. The remaining quantitative Fiat–Shamir/adaptive-coupling work
-is a separate probability-layer composition. Substantial foundations are in
+the circuit-generic
+`topLevelBundleStatement_or_relation_of_vestaTerminal` now performs the core join
+for an arbitrary `TopLevelCircuit`. `TopLevelCircuitCorrectness` exposes the named
+gate, fixed/selector, copy, and lookup representation boundaries and deliberately
+contains neither the desired statement nor an opaque encoding implication.
+`actionBundleStatement_or_relation_of_vestaTerminal` specializes that theorem with
+the Action correctness constructor, then identifies the primary instance
+polynomial and presents the circuit-owned statement as `Action.BundleStatement`.
+Both the generic and Action theorems quantify over arbitrary proof parameters and
+reconstruct accepted member selections proof-by-proof. Their public signatures have
+no free `S`, `hencodes`, member decoder, or independently selected advice/instance
+feeds. The captured-VK theorem is only a deployment corollary in
+`Soundness/Deployed/ActionVesta`; it is not imported by the normal `Zcash` target.
+The remaining quantitative Fiat–Shamir/adaptive-coupling work is a separate
+probability-layer composition. Substantial foundations are in
 [#30](https://github.com/zcash/ironwood/pull/30),
 [#91](https://github.com/zcash/ironwood/pull/91), and
 the merged [#85](https://github.com/zcash/ironwood/pull/85).**
@@ -1257,12 +1263,15 @@ instance slots forced by `CanonicalMemberConstraintRelation.acceptedRoute` and p
 that their full polynomial feeds equal the canonical accepted model's feeds.
 `Soundness/CanonicalVesta` specializes the verifier-native terminal's former free
 callback to `CircuitSat` for that model and derives the accepted selections for every
-proof index. `Snark/Soundness/ActionVesta` instantiates this generic adapter with the
-Action circuit's derived shape, VK, query-layout counts, and public-instance
-commitments. `Snark/Soundness/Deployed/ActionVesta` only transports the captured
-single-Action artifacts to that generic result. These route equalities are generic
-multiopen facts, not Action synthesis or floor-planner obligations. The recent tail
-of #96 exposes complementary
+proof index. `Snark/Soundness/TopLevelTerminal` generically turns the resulting
+canonical constraint satisfaction and the circuit's component correctness package
+into `TopLevelBundleStatement`; `Snark/Soundness/TopLevelVesta` is the corresponding
+circuit-generic Vesta capstone. `Snark/Soundness/ActionVesta` supplies the Action
+package, derived shape, VK, and public-instance commitments, and performs only the
+final Action statement presentation. `Snark/Soundness/Deployed/ActionVesta` only
+transports the captured single-Action artifacts to that result. These route
+equalities are generic multiopen facts, not Action synthesis or floor-planner
+obligations. The recent tail of #96 exposes complementary
 slot-to-commitment provenance for the quantitative reroute; it is adjacent to, but
 not needed for, this exact deterministic member-route identification.
 

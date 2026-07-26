@@ -49,14 +49,22 @@ The lookup bridge is split deliberately:
 * `TopLevelBridge.lean` is the generic join: it derives gate and lookup families
   from the canonical circuit-owned constraint model and combines them with the
   fixed/table and copy-replay streams into `FullCircuitBridge`.
-* `ActionTerminal.lean` is the final concrete join. It specializes the
-  verifier-native accepted decoded-model terminal to the circuit-derived Action
-  verification key and consumes the Clean fixed/copy/selector records to produce
-  `Action.BundleStatement` (or the shared augmented-basis relation). No Clean type
-  is introduced into `Zcash/Snark/Soundness/CanonicalTerminal.lean`.
-The deployed verifier join and public soundness capstone live outside this boundary,
-in `Zcash/Snark/Soundness/Deployed/ActionVesta.lean`. That module supplies the
-canonical accepted-member selections, invokes the constraint-carrying Vesta terminal
-with its decoder fixed by acceptance, and hands the resulting `CircuitSat` fact to
-`ActionTerminal`. Its public theorem has no free semantic proposition, encoding
-callback, decoder, or column-feed choice.
+* `TopLevelCorrectness.lean` is the interface exported to core soundness. It
+  packages the named gate, fixed/selector, copy, and lookup representation facts
+  for one canonical assignment, but contains neither the desired circuit statement
+  nor an opaque encoding implication.
+* `ActionTerminal.lean` retains the accepted-node-binding specialization. It
+  specializes the verifier-native decoded-model terminal to the circuit-derived
+  Action verification key and produces `Action.BundleStatement` (or the shared
+  augmented-basis relation). No Clean type is introduced into
+  `Zcash/Snark/Soundness/CanonicalTerminal.lean`.
+
+The core terminals live outside this boundary. `Snark/Soundness/TopLevelTerminal`
+turns canonical constraint satisfaction plus `TopLevelCircuitCorrectness` into the
+circuit-owned statement for every proof. `Snark/Soundness/TopLevelVesta` composes
+that result with the verifier-native Vesta terminal for an arbitrary
+`TopLevelCircuit`. `Snark/Soundness/ActionVesta` supplies the Action correctness
+constructor and public-instance presentation, while
+`Snark/Soundness/Deployed/ActionVesta` only transports captured artifacts. None of
+these public capstones has a free semantic proposition, encoding callback, decoder,
+or column-feed choice.

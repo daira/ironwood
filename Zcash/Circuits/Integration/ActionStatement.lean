@@ -1,6 +1,6 @@
 import Zcash.Circuits.Action.Statement
 import Zcash.Snark.Core.Domain
-import Zcash.Circuits.Integration.TopLevelAssignment
+import Zcash.Circuits.Integration.TopLevelCorrectness
 
 /-!
 # Decoded instance rows to the Orchard Action statement
@@ -59,5 +59,65 @@ theorem actionPublicInputs_of_instanceRowPolynomial
   · simpa [PublicInputs.ofEnvironment, PublicInputs.rows, ENABLE_SPEND] using hread 7
   · simpa [PublicInputs.ofEnvironment, PublicInputs.rows, ENABLE_OUTPUT] using hread 8
   · simpa [PublicInputs.ofEnvironment, PublicInputs.rows, DISABLE_CROSS_ADDRESS] using hread 9
+
+/--
+Present the generic top-level bundle statement as the public Orchard Action
+statement once the accepted primary-instance polynomial has been identified.
+-/
+theorem actionBundleStatement_of_topLevelBundle
+    (pp : Keygen.ProofParams)
+    (poly : CommitmentId → Polynomial Fp)
+    (inputs :
+      Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs →
+        PublicInputs)
+    (hbound : orchardActionTopLevelCircuit.domainExponent < 33)
+    (hsize : 10 ≤ 2 ^ orchardActionTopLevelCircuit.domainExponent)
+    (hinstance : ∀
+      proofIndex :
+        Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs,
+      poly
+          (.instanceCol proofIndex
+            (Circuit.configure
+              Specs.Sinsemilla.orchardGenerators {}).1.primary.index) =
+        instanceRowPolynomial
+          (2 ^ orchardActionTopLevelCircuit.domainExponent)
+          (Zcash.Snark.omegaOf
+            orchardActionTopLevelCircuit.domainExponent)
+          (inputs proofIndex).rows)
+    (htop :
+      TopLevelBundleStatement orchardActionTopLevelCircuit pp poly) :
+    BundleStatement Specs.Sinsemilla.orchardGenerators orchardBases inputs := by
+  intro proofIndex
+  let assignment :
+      TopLevelAssignment orchardActionTopLevelCircuit
+        (pp.mergeDerived orchardActionTopLevelCircuit).numProofs proofIndex :=
+    { polynomial := poly }
+  have hstatement :=
+    statement_of_topLevelStatement
+      Specs.Sinsemilla.orchardGenerators orchardBases
+      orchardActionTopLevelCircuit rfl 0
+      assignment.placedEnvironment (htop proofIndex)
+  have hpublic :
+      PublicInputs.ofEnvironment
+          (Circuit.configure
+            Specs.Sinsemilla.orchardGenerators {}).1
+          assignment.environment =
+        inputs proofIndex := by
+    apply actionPublicInputs_of_instanceRowPolynomial
+      assignment
+      (Circuit.configure
+        Specs.Sinsemilla.orchardGenerators {}).1
+      (inputs proofIndex) hsize
+    · exact hinstance proofIndex
+    · exact TopLevelAssignment.domainRowsInjective hbound
+  change
+    Statement Specs.Sinsemilla.orchardGenerators orchardBases
+      (PublicInputs.ofEnvironment
+        (Circuit.configure
+          Specs.Sinsemilla.orchardGenerators {}).1
+        assignment.environment) at hstatement
+  rwa [hpublic] at hstatement
+
+assert_no_sorry actionBundleStatement_of_topLevelBundle
 
 end Zcash.Snark
