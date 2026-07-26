@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.Composition.Residual
+import Zcash.Snark.Soundness.Multiopen.ValueCheckDeployed
 
 /-!
 # The action-dependent budget, capped at the consensus maximum
@@ -129,6 +129,87 @@ theorem assembleQueries_length_le [DecidableEq G] [Inhabited G] {shape : Shape}
     simp only [List.length_ofFn] at h1 h2 h3 h4
     omega
   · rw [queryBudget]
+
+/-! ## Structural bounds on the deployed counts -/
+
+/-- The deployed `x4` pair count is at most the shape's point-set arity. -/
+theorem deployedX4PairCount_le_numPointSets [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs -> Nat -> G)
+    (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
+    deployedX4PairCount vk instanceCommitment ps ch <= shape.numPointSets := by
+  simp only [deployedX4PairCount, deployedX4Pairs, List.length_zip, List.length_ofFn]
+  exact min_le_right _ _
+
+/-- Members of the first-appearance point fold are opening points of the folded queries. -/
+private theorem mem_dedup_points_foldl {k : Nat} {F G' : Type*} [DecidableEq F] :
+    forall (queries : List (VerifierQuery k F G')) (init : List F) (x : F),
+      x ∈ queries.foldl (fun acc q => if q.point ∈ acc then acc else acc ++ [q.point]) init ->
+      x ∈ init ∨ ∃ q ∈ queries, q.point = x := by
+  intro queries
+  induction queries with
+  | nil =>
+      intro init x hx
+      exact Or.inl hx
+  | cons q rest ih =>
+      intro init x hx
+      rw [List.foldl_cons] at hx
+      rcases ih _ x hx with hin | ⟨q', hq', hpt⟩
+      · by_cases hq : q.point ∈ init
+        · rw [if_pos hq] at hin
+          exact Or.inl hin
+        · rw [if_neg hq] at hin
+          rcases List.mem_append.mp hin with h | h
+          · exact Or.inl h
+          · exact Or.inr ⟨q, List.mem_cons_self .., (List.mem_singleton.mp h).symm⟩
+      · exact Or.inr ⟨q', List.mem_cons_of_mem _ hq', hpt⟩
+
+/-- Every point in a grouped point set is some query's opening point. -/
+theorem constructIntermediateSets_points_getD_mem_queries
+    {k : Nat} {F G' : Type*} [DecidableEq F] [DecidableEq G']
+    (queries : List (VerifierQuery k F G')) (si : Nat) {x : F}
+    (hx : x ∈ (constructIntermediateSets queries).points.getD si []) :
+    ∃ q ∈ queries, q.point = x := by
+  classical
+  have key : ∀ pl ∈ (constructIntermediateSets queries).points, x ∈ pl ->
+      ∃ q ∈ queries, q.point = x := by
+    intro pl hpl hxpl
+    simp only [constructIntermediateSets] at hpl
+    obtain ⟨s, hs, rfl⟩ := List.mem_map.mp hpl
+    obtain ⟨i, hi, hix⟩ := List.mem_filterMap.mp hxpl
+    rw [List.getElem?_eq_some_iff] at hix
+    obtain ⟨hilt, rfl⟩ := hix
+    rcases mem_dedup_points_foldl queries [] _ (List.getElem_mem hilt) with h0 | h
+    · exact absurd h0 List.not_mem_nil
+    · exact h
+  rcases lt_or_ge si (constructIntermediateSets queries).points.length with hlt | hge
+  · rw [List.getD_eq_getElem _ _ hlt] at hx
+    exact key _ (List.getElem_mem hlt) hx
+  · rw [List.getD_eq_default _ _ hge] at hx
+    exact absurd hx List.not_mem_nil
+
+/-- The deployed point union has at most as many points as the verifier has opening queries. -/
+theorem deployedAllPts_card_le [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs -> Nat -> G)
+    (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
+    (deployedAllPts vk instanceCommitment ps ch).card <=
+      (assembleQueries vk instanceCommitment ps ch).length := by
+  classical
+  have hsub : deployedAllPts vk instanceCommitment ps ch <=
+      ((assembleQueries vk instanceCommitment ps ch).map (·.point)).toFinset := by
+    intro x hx
+    rw [deployedAllPts, Finset.mem_biUnion] at hx
+    obtain ⟨j, -, hj⟩ := hx
+    rw [deployedSetPts, List.mem_toFinset] at hj
+    obtain ⟨q, hq, hqx⟩ := constructIntermediateSets_points_getD_mem_queries _ j hj
+    rw [List.mem_toFinset, List.mem_map]
+    exact ⟨q, hq, hqx⟩
+  calc
+    (deployedAllPts vk instanceCommitment ps ch).card
+        <= ((assembleQueries vk instanceCommitment ps ch).map (·.point)).toFinset.card :=
+      Finset.card_le_card hsub
+    _ <= ((assembleQueries vk instanceCommitment ps ch).map (·.point)).length :=
+      List.toFinset_card_le _
+    _ = (assembleQueries vk instanceCommitment ps ch).length := List.length_map ..
 
 /-- Each point set's member count fits the shape budget. -/
 theorem deployedSetQueries_length_le [DecidableEq G] [Inhabited G] {shape : Shape}

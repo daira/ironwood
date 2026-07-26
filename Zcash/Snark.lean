@@ -91,3 +91,5 @@ import Zcash.Snark.Soundness.AGM.Peel
 import Zcash.Snark.Soundness.AGM.Prover
 import Zcash.Snark.Soundness.AGM.Capstone
 import Zcash.Snark.Soundness.AGM.BindingSignature
+-- Rewind-free deployed multiopen decoding and additive pinned-root composition.
+import Zcash.Snark.Soundness.Composition.DeployedRootContainment

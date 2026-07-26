@@ -596,15 +596,10 @@ The clean-opening failure `snarkFailureEvent` is already bounded
 clean-opening failure and inherits the same bound — **conditional on the gate data discharging on
 clean openings** (`hExtract`).
 
-The extraction *logic* behind `hExtract` is discharged downstream: the budgeted witness tie
-(`Soundness.VestaBudget.member_relation_or_dlr_of_instance_budgeted`) concludes the extraction from
-a clean opening given the multiopen rewind data, and
-`Soundness.VestaBudget.snarkExtraction_prob_le_of_generatorRO_textbookDL_budgeted` restates this
-bound with `hExtract` reduced to that data-supply obligation through the instance provenance. The
-multiopen failure itself is priced (`Soundness.Multiopen.FloorBudget`,
-`Soundness.Multiopen.BudgetedExtraction.deployed_member_budget`). What keeps the bound conditional
-is the coin–challenge coupling: the supply's inputs live over the multiopen challenge draw, which
-the family's coin space does not range over — see the hand-off note in `Soundness.VestaBudget`. -/
+This generic conditional bridge is retained for callers that already have `hExtract`.  The concrete
+deployed path no longer discharges it through multiopen rewinding: `AGM.DeployedRootDecode` decodes
+the prefix-pinned algebraic representations directly, and `Composition.DeployedRootContainment`
+prices each resulting bad-root event additively. -/
 
 namespace ComputedAlgebraicFSFamily
 
