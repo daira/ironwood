@@ -69,7 +69,7 @@ def onlinePointCoordinates (source : List (AlgebraicPoint (F := Fp) basis)) (P :
   | none => (0, 0, 0)
 
 /-- Polynomial carried by the deterministic online representation of a point. -/
-noncomputable def onlinePointPolynomial
+def onlinePointPolynomial
     (source : List (AlgebraicPoint (F := Fp) basis)) (P : VestaG) : Polynomial Fp :=
   coeffsToPoly (onlinePointCoordinates source P).1
 
@@ -206,6 +206,38 @@ theorem deployedMemberRepresentationsOfCovered_coeffs_point
   have href : memberRef m = .point P := hP
   exact coveredCommitmentRepresentation_coeffs_of_eq_point source (memberRef m)
     (hcovered nu i hi m) P href
+
+/-- A routed member uses exactly the deterministic covered representation of its commitment
+reference, including the two augmented coordinates.  Coverage proofs occur only in erased fields,
+so they cannot alter these components. -/
+theorem deployedMemberRepresentationsOfCovered_components
+    {vk : VerifyingKey shape Fp VestaG}
+    {instanceCommitment : Fin shape.numProofs → Nat → VestaG}
+    (p : AlgebraicWfProof basis vk instanceCommitment)
+    (fixed : List (AlgebraicPoint (F := Fp) basis))
+    (hcovered : DeployedMembersCovered vk instanceCommitment p.algebraicProof fixed)
+    (nu : Fin 11 -> Fp) (i : Nat)
+    (hi : i < deployedX4PairCount vk instanceCommitment p.proof.1
+      (chRecord nu (fun _ => 0)))
+    (m : Fin (deployedSetQueries vk instanceCommitment p.proof.1
+      (chRecord nu (fun _ => 0)) i).length)
+    (c : CommitmentRef shape.k Fp VestaG)
+    (hc : ((deployedSetQueries vk instanceCommitment p.proof.1
+      (chRecord nu (fun _ => 0)) i).getD (m : Nat) (.point 0, [])).1 = c)
+    (cCovered : CommitmentRefCovered
+      (p.algebraicProof.multiopenAssemblySource fixed) c) :
+    let member := deployedMemberRepresentationsOfCovered p fixed hcovered nu i hi
+    let represented := coveredCommitmentRepresentation
+      (p.algebraicProof.multiopenAssemblySource fixed) c cCovered
+    member.coeffs m = represented.coeffs ∧ member.uComp m = represented.uComp ∧
+      member.wComp m = represented.wComp := by
+  subst c
+  change _ = (coveredCommitmentRepresentation _ _ cCovered).coeffs ∧
+    _ = (coveredCommitmentRepresentation _ _ cCovered).uComp ∧
+    _ = (coveredCommitmentRepresentation _ _ cCovered).wComp
+  have hproof : hcovered nu i hi m = cCovered := Subsingleton.elim _ _
+  cases hproof
+  exact ⟨rfl, rfl, rfl⟩
 
 /-- The exact deployed within-set `x1` batch, obtained from online-covered member coordinates.
 Any mismatch with the already decoded `x4` aggregate is returned as an explicit augmented-basis

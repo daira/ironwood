@@ -115,7 +115,7 @@ private theorem commit_scaledSum (urs : URS G) (xn : Fp) (hp : Fin d → Fin (2 
 
 /-- Computed form of quotient-piece binding.  A disagreement returns the actual augmented-basis
 collision coefficients, so callers can feed this branch directly to their DLOG reduction. -/
-noncomputable def decodedQuotientEqReassembledOrRelationWitness (urs : URS G) (xn : Fp)
+def decodedQuotientEqReassembledOrRelationWitness (urs : URS G) (xn : Fp)
     {a : Fin (2 ^ urs.k) → Fp} {cu cw : Fp}
     {hp : Fin d → Fin (2 ^ urs.k) → Fp} {hpu hpw : Fin d → Fp} {H : Fin d → G}
     (hpiece : ∀ i, commit urs (hp i) + hpu i • urs.u + hpw i • urs.w = H i)

@@ -77,6 +77,8 @@ structure AlgebraicPowerBatchWithSource (urs : URS G) {numColumns : Nat}
     (aggregate : Fin (2 ^ urs.k) -> Fp) (aggregateU aggregateW challenge : Fp) where
   batch : AlgebraicPowerBatch urs columnCommitments aggregate aggregateU aggregateW challenge
   coeffs_eq : batch.coeffs = cols.coeffs
+  uComp_eq : batch.uComp = cols.uComp
+  wComp_eq : batch.wComp = cols.wComp
 
 /-- Provenance-preserving algebraic unbatching.  Equality gives both the batch witnesses and a
 proof that their columns are the supplied online coordinates; inequality gives an explicit
@@ -111,7 +113,9 @@ def algebraicPowerBatchWithSourceOrRelation {urs : URS G} {numColumns : Nat}
               reconstruct := heq.1
               reconstructU := heq.2.1
               reconstructW := heq.2.2 }
-          coeffs_eq := rfl }
+          coeffs_eq := rfl
+          uComp_eq := rfl
+          wComp_eq := rfl }
   | PSum.inr hrel => exact PSum.inr hrel
 
 /-- Compatibility projection for callers that only need the reconstructed batch. -/

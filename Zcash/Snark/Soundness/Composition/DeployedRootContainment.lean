@@ -21,18 +21,64 @@ local instance vestaInhabitedDeployedRootContainment : Inhabited VestaG := ⟨0�
 
 variable {shape : Shape}
 
+/-- The wrapped online output for one sampled basis and random-oracle table. -/
+noncomputable abbrev deployedRootRunOutput (family : ComputedDeployedRootFSFamily shape)
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) (coins : family.toFamily.Coins) :=
+  (wrappedAdversary family.toFamily basis).run coins.1
+
+/-- Data retained by a successful deployed root decode.  Keeping the batch witness and its
+equality to the decoded batches is what lets the constraint layer reuse the exact online AGM
+coordinates instead of choosing a fresh existential decode. -/
+structure DeployedRootDecodeWitness (family : ComputedDeployedRootFSFamily shape)
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) (coins : family.toFamily.Coins) where
+  batchWitness : DeployedBatchWitness family.toFamily basis
+    (deployedRootRunOutput family basis coins)
+  outcome_eq : family.outcome basis coins.1 = PSum.inl batchWitness
+  decoded : DeployedAlgebraicDecode (ursOfAugmentedBasis shape.k basis) rfl
+    (family.vk basis) (family.instanceCommitment basis)
+    (deployedRootRunOutput family basis coins).1.proof.1
+    (wrappedPreIpaRecord (deployedRootRunOutput family basis coins))
+    ((deployedRootRunOutput family basis coins).1.aMulti
+      (wrappedPreIpaReads (deployedRootRunOutput family basis coins)))
+    ((deployedRootRunOutput family basis coins).1.multiU
+      (wrappedPreIpaReads (deployedRootRunOutput family basis coins)))
+    ((deployedRootRunOutput family basis coins).1.multiBlind
+      (wrappedPreIpaReads (deployedRootRunOutput family basis coins)))
+  batches_eq : decoded.batches = batchWitness.batches
+
+/-- Retained root-decode provenance is unique.  Its batch data is pinned by `family.outcome`; the
+remaining decode fields are proofs about those same batches.  Thus the later proof-only use of
+`Classical.choice` cannot choose different relation coefficients. -/
+theorem DeployedRootDecodeWitness.unique
+    (family : ComputedDeployedRootFSFamily shape)
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) (coins : family.toFamily.Coins)
+    (a b : DeployedRootDecodeWitness family basis coins) : a = b := by
+  have hw : a.batchWitness = b.batchWitness := by
+    exact PSum.inl.inj (a.outcome_eq.symm.trans b.outcome_eq)
+  cases hw
+  have hd : a.decoded = b.decoded := by
+    cases a.decoded with
+    | mk aBatches aX4 aMembers =>
+        cases b.decoded with
+        | mk bBatches bX4 bMembers =>
+            have hbatches : aBatches = bBatches := a.batches_eq.trans b.batches_eq.symm
+            cases hbatches
+            rfl
+  cases hd
+  rfl
+
+instance deployedRootDecodeWitnessSubsingleton
+    (family : ComputedDeployedRootFSFamily shape)
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) (coins : family.toFamily.Coins) :
+    Subsingleton (DeployedRootDecodeWitness family basis coins) :=
+  ⟨DeployedRootDecodeWitness.unique family basis coins⟩
+
 /-- All deployed member-polynomial values decoded from the AGM coordinates at the run's own
 record. -/
 def deployedRootDecoded (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (coins : family.toFamily.Coins) : Prop :=
-  let pnu := (wrappedAdversary family.toFamily basis).run coins.1
-  Nonempty (DeployedAlgebraicDecode (ursOfAugmentedBasis shape.k basis) rfl
-    (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
-    (wrappedPreIpaRecord pnu)
-    (pnu.1.aMulti (wrappedPreIpaReads pnu))
-    (pnu.1.multiU (wrappedPreIpaReads pnu))
-    (pnu.1.multiBlind (wrappedPreIpaReads pnu)))
+  Nonempty (DeployedRootDecodeWitness family basis coins)
 
 /-- The concrete output delivered by the rewind-free multiopen layer: either the complete computed
 relation finder returns a witness, or all deployed member-polynomial values are decoded.  This is
@@ -137,12 +183,12 @@ theorem deployedRootFailure_subset_landing
           witness.batches hvalue hgood4 hgood3 hgood2 hgood1
         exfalso
         apply hnex
-        exact Or.inr (by
-          simpa [deployedRootExtracted, deployedRootDecoded, pnu, nu, ch] using
-            (show Nonempty (DeployedAlgebraicDecode (ursOfAugmentedBasis shape.k basis) rfl
-              (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1 ch
-                (pnu.1.aMulti nu) (pnu.1.multiU nu)
-                (pnu.1.multiBlind nu)) from ⟨decoded⟩))
+        apply Or.inr
+        refine ⟨{
+          batchWitness := witness
+          outcome_eq := by simpa [O] using hout
+          decoded := decoded
+          batches_eq := rfl }⟩
       · exfalso
         apply hnex
         apply Or.inl

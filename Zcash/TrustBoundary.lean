@@ -299,6 +299,18 @@ assert_computable AugmentedRelationWitness.toAlgebraicRelationWitness +choice
 assert_computable relationWitnessOfCollision +choice
 assert_computable discreteLogOfAugmentedRelationAtChallenge +choice
 assert_computable separateOrRelationWitness +choice
+assert_computable algebraicPowerBatchWithSourceOrRelation +choice
+assert_computable finForallOrRelationWitness +choice
+assert_computable deployedX4InterpolationDataOfCapacity +choice
+assert_computable deployedConstraintQuotientAgreementOrRelation +choice
+assert_computable deployedConstraintQuotientFinder +choice
+assert_computable decodedQuotientEqReassembledOrRelationWitness +choice
+assert_computable DeployedAlgebraicDecode.quotientEvalEqCommittedPreXOrRelationWitness +choice
+assert_computable deployedConstraintOutcomeOfDecode +choice
+assert_computable deployedOnlineConstraintOutcomeOfDecode +choice
+assert_computable ComputedDeployedRootFSFamily.deployedRelationFinder +choice
+assert_computable deployedConstraintFinderOfOutcome +choice
+assert_computable deployedConstraintRelationFinder +choice
 assert_computable relationOfFoldGensWitness +choice
 assert_computable deployedLeafPeelWitness +choice
 assert_computable deployedToAcceptVWitness +choice
@@ -473,23 +485,25 @@ assert_axioms kerr_div_card
 assert_axioms deployed_forking_knowledge_error
 assert_axioms deployed_forking_knowledge_error_captured
 
-/-! ### Multiopen decode, budgeted extraction, and the forking composition
+/-! ### Legacy multiopen decode and forking composition
 
-The decode layer that recovers the verifier's columns from the batched multiopen, the budgeted
-extraction that replaces the per-run squeeze floors with one joint accept floor, and the
-composition layer that joins the forking extraction to the decoded capstones. Theorems throughout,
+These declarations retain the historical rewind-based compatibility surface. Several conclusions
+use the proposition `HasNontrivialRelation`; they are logical disjunctions, not computed break
+producers, and must not be fed directly to a DLOG advantage bound. The active rewind-free route is
+censused below through explicit `PSum` relation data and computable finders. Theorems throughout,
 so `assert_axioms`, with `+native` on the Vesta-instantiated endpoints. -/
 
 -- The multiopen value-check chain: the deployed value check derived from the nested
 -- forking floors, the x₁ member un-batch on top of it, and the terminal with `hadvice`/`hinstance`
--- produced rather than assumed (`Soundness.Multiopen.NodeBinding`, `Soundness.Vesta`).
+-- produced rather than assumed (`Soundness.Multiopen.NodeBinding`, `Soundness.Vesta`). Their
+-- `HasNontrivialRelation` branch is compatibility-only, not an executable finder.
 assert_axioms deployed_value_check_node_binding
 assert_axioms deployed_member_node_binding
 assert_axioms orchard_verifier_vesta_member_constraint_derived +native
 
 -- The forking-extraction ∘ decoded-capstone composition (`Soundness.Composition.Bridge`): the algebraic
 -- clean opening identified with the deployed capstone's shape (`ipaRelation_deployed_of_instance`),
--- the witness-tie composition (`member_snark_of_instance`), and the computed-path soundness
+-- the witness-tie composition (`member_snark_of_instance`), and the historical computed-path
 -- endpoint (`orchard_verifier_sound_vesta_computed`) that concludes the plain `SnarkRelation` with
 -- NO `ExtractableFromAcceptance` hypothesis. On the witness tie the opened-value shift is derived
 -- (`shift_eq_zero_of_openings_agree`), so `hshift` survives only on the standalone single-opening
@@ -497,7 +511,8 @@ assert_axioms orchard_verifier_vesta_member_constraint_derived +native
 -- bound: the SNARK-extraction failure is contained in the clean-opening failure and inherits its
 -- `(Q+k)·3/|Fp| + (Q+1)/|Fp| + |basis|·ε` bound, conditional on `hExtract` (clean opening ⟹
 -- extraction). Discharging `hExtract` — coupling the AGM family's coin measure to the multiopen
--- budget below — is the remaining reconciliation.
+-- budget below — is the remaining reconciliation. This stack is not consumed by the rewind-free
+-- constraint capstone below.
 assert_axioms ipaRelation_deployed_of_instance +native
 assert_axioms member_snark_of_instance +native
 assert_axioms snarkRelation_of_memberColumns
@@ -764,6 +779,11 @@ assert_axioms deployedConstraintFailure_subset_union +native
 assert_axioms deployedConstraintRelation_prob_le_of_generatorRO_textbookDL +native
 assert_axioms snarkConstraintsDeployed_prob_le_via_deployed_roots +native
 assert_axioms snarkConstraintsDeployed_prob_le_of_online_outcome +native
+assert_axioms deployedConstraintUpgradeContained_of_root +native
+assert_axioms deployedConstraintOutcomeOfRoot_relation_eq_online +native
+assert_axioms deployedConstraintBadX_subset_landing +native
+assert_axioms deployedConstraintBadX_prob_le +native
+assert_axioms snarkConstraintsDeployed_prob_le_of_root_schedule +native
 
 /-! ## The Action circuit — the halo2-native soundness trust surface
 

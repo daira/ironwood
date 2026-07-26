@@ -33,21 +33,6 @@ def bindOrRelationWitness {A : Sort u} {B : Sort v} {R : Sort w}
   | PSum.inl value => next value
   | PSum.inr relation => PSum.inr relation
 
-/-- Combine a finite family of computed equality-or-relation comparisons.  The relation branch is
-obtained from one failed comparison, never from the bare proposition that some relation exists. -/
-noncomputable def forallOrRelationWitness {I : Type*} [Fintype I]
-    {P : I → Prop} {R : Sort u} (outcome : ∀ i, P i ⊕' R) :
-    (∀ i, P i) ⊕' R := by
-  classical
-  by_cases hall : ∀ i, P i
-  · exact PSum.inl hall
-  · simp only [not_forall] at hall
-    let i := Classical.choose hall
-    have hnot := Classical.choose_spec hall
-    cases hi : outcome i with
-    | inl proof => exact absurd proof hnot
-    | inr relation => exact PSum.inr relation
-
 /-- Small proof bundle used to sequence the nine finite binding comparisons consumed by the
 constraint adapter without collapsing any failed comparison to an existential proposition. -/
 structure ConstraintAgreementBundle
@@ -388,7 +373,7 @@ noncomputable def committedPreXConstraintDifference [Inhabited G] {shape : Shape
 
 /-- Computed comparison between the decoded vanishing member and a pre-`x` quotient assembled
 from explicit online quotient-piece coordinates. -/
-noncomputable def DeployedAlgebraicDecode.quotientEvalEqCommittedPreXOrRelationWitness
+def DeployedAlgebraicDecode.quotientEvalEqCommittedPreXOrRelationWitness
     [DecidableEq G] [Inhabited G]
     {shape : Shape} {urs : URS G} {hk : shape.k = urs.k}
     {vk : VerifyingKey shape Fp G} {instanceCommitment : Fin shape.numProofs → Nat → G}
@@ -991,11 +976,11 @@ theorem hfold_of_constraint_polys_of_xn_ne_direct
 
 open Polynomial in
 open Classical in
-/-- The concrete constraint supply produced directly from `DeployedAlgebraicDecode`.  Compared to
-`constraints_supply_derived`, the `OpenedBatchOpenings`, `OpenedX1Accept`, and joint-acceptance
-premises disappear: all member polynomials and their routed values come from prefix-pinned AGM
-coordinates. -/
-theorem constraints_supply_of_deployedAlgebraicDecode
+/-- Data-returning constraint outcome produced directly from `DeployedAlgebraicDecode`.
+Compared to `constraints_supply_derived`, the `OpenedBatchOpenings`, `OpenedX1Accept`, and
+joint-acceptance premises disappear.  In particular, the relation branch is returned directly by
+the quotient comparison rather than selected from a `Nonempty` or existential proposition. -/
+def deployedConstraintOutcomeOfDecode
     [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1020,9 +1005,9 @@ theorem constraints_supply_of_deployedAlgebraicDecode
     (homega : vk.omega ^ vk.n = 1) (hn : (vk.n : Fp) ≠ 0)
     (hxgood : ch.x ∉ szBadSet
       (committedPreXConstraintDifference poly piecePoly vk instanceCommitment ps ch)) :
-    Nonempty (DeployedConstraintWitness urs hk vk instanceCommitment ps ch
+    DeployedConstraintWitness urs hk vk instanceCommitment ps ch
         aggregate aggregateU aggregateW ⊕'
-      AugmentedRelationWitness (F := Fp) urs.g urs.u urs.w) := by
+      AugmentedRelationWitness (F := Fp) urs.g urs.u urs.w := by
   let src := decoded.toMemberPolynomials
   obtain ⟨aSet, haSet, aMem, haLayout, haBind⟩ :=
     adviceFeed_bind_of_memberPolynomials urs hk vk instanceCommitment ps ch src checks hAdvLen
@@ -1090,7 +1075,6 @@ theorem constraints_supply_of_deployedAlgebraicDecode
       vk.lookupInputExprs l, vk.lookupTableExprs l)) with hlookupsC
   let decodedHP := src.poly iV hiV ⟨mV, hmV⟩
   let hpolyP := committedPreXQuotient vk piecePoly
-  refine ⟨?_⟩
   have hplainRouted : forall {i : Nat}
       (hi : i < deployedX4PairCount vk instanceCommitment ps ch)
       (m : Fin (deployedSetQueries vk instanceCommitment ps ch i).length)
@@ -1282,10 +1266,10 @@ theorem constraints_supply_of_deployedAlgebraicDecode
           _ _ _ hpolyP vk.n aggregate ch.x hfold'
           (hgood_of_good_challenge _ hpolyP vk.n hxgood')⟩ }
 
-/-- Executable-shape constraint outcome for one decoded AGM run.  Every failed binding comparison
-returns its concrete augmented-basis coefficients; the success branch carries the full SNARK
-relation and its concrete constraint carriers. -/
-noncomputable def deployedConstraintOutcomeOfDecode
+/-- Compatibility theorem for callers that only require logical existence of the direct outcome.
+The active composition consumes `deployedConstraintOutcomeOfDecode` itself so relation
+coefficients remain data. -/
+theorem constraints_supply_of_deployedAlgebraicDecode
     [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (instanceCommitment : Fin shape.numProofs → Nat → G)
@@ -1312,12 +1296,11 @@ noncomputable def deployedConstraintOutcomeOfDecode
     (homega : vk.omega ^ vk.n = 1) (hn : (vk.n : Fp) ≠ 0)
     (hxgood : ch.x ∉ szBadSet
       (committedPreXConstraintDifference poly piecePoly vk instanceCommitment ps ch)) :
-    DeployedConstraintWitness urs hk vk instanceCommitment ps ch
+    Nonempty (DeployedConstraintWitness urs hk vk instanceCommitment ps ch
         aggregate aggregateU aggregateW ⊕'
-      AugmentedRelationWitness (F := Fp) urs.g urs.u urs.w := by
-  exact Classical.choice
-    (constraints_supply_of_deployedAlgebraicDecode urs hk vk instanceCommitment ps ch decoded
+      AugmentedRelationWitness (F := Fp) urs.g urs.u urs.w) := by
+  exact ⟨deployedConstraintOutcomeOfDecode urs hk vk instanceCommitment ps ch decoded
       poly pieceCoeffs pieceU pieceW piecePoly hpieceOpen hpiecePoly hplain checks
-      hAdvLen hInstLen hFixedLen homega hn hxgood)
+      hAdvLen hInstLen hFixedLen homega hn hxgood⟩
 
 end Zcash.Snark

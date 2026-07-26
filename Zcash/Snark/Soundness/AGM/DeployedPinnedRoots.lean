@@ -26,6 +26,22 @@ variable {shape : Shape}
 attribute [local irreducible] deployedX4PairCount deployedSetQueries
   x4BatchCommitments deployedSetMemberCommitments
 
+/-- Traverse a finite family of computed sum outcomes from left to right.  Either every entry
+supplies its left-hand value, or the first right-hand value is returned as data.  In particular,
+this does not search a proposition asserting that some right-hand value exists. -/
+def finForallOrRelationWitness {n : Nat} {A : Fin n -> Type*} {R : Type*}
+    (outcome : forall i, A i ⊕' R) : (forall i, A i) ⊕' R := by
+  induction n with
+  | zero =>
+      exact PSum.inl fun i => Fin.elim0 i
+  | succ n ih =>
+      cases hhead : outcome 0 with
+      | inr relation => exact PSum.inr relation
+      | inl head =>
+          cases htail : ih (fun i => outcome i.succ) with
+          | inr relation => exact PSum.inr relation
+          | inl tail => exact PSum.inl (Fin.cases head tail)
+
 /-- Output type of the challenge-read wrapper used by the composition. -/
 abbrev WrappedAlgebraicOutput (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) :=
@@ -76,6 +92,18 @@ structure DeployedBatchWitness (family : ComputedAlgebraicFSFamily shape)
     (batches.x1 i hi).coeffs =
       (deployedMemberRepresentationsOfCovered pnu.1 fixedRepresentations membersCovered
         (wrappedPreIpaReads pnu) i hi).coeffs
+  memberU : forall i
+      (hi : i < deployedX4PairCount (family.vk basis) (family.instanceCommitment basis)
+        pnu.1.proof.1 (wrappedPreIpaRecord pnu)),
+    (batches.x1 i hi).uComp =
+      (deployedMemberRepresentationsOfCovered pnu.1 fixedRepresentations membersCovered
+        (wrappedPreIpaReads pnu) i hi).uComp
+  memberW : forall i
+      (hi : i < deployedX4PairCount (family.vk basis) (family.instanceCommitment basis)
+        pnu.1.proof.1 (wrappedPreIpaRecord pnu)),
+    (batches.x1 i hi).wComp =
+      (deployedMemberRepresentationsOfCovered pnu.1 fixedRepresentations membersCovered
+        (wrappedPreIpaReads pnu) i hi).wComp
 
 /-- Algebraic unbatching either supplies every deployed batch or returns a concrete augmented-basis
 relation. -/
@@ -107,7 +135,7 @@ structure DeployedX4InterpolationData
 /-- The deployed shape has enough field elements for offline interpolation whenever its fixed
 point-set arity plus one fits in `Fp`.  The construction permutes an arbitrary embedding so that
 its first point is the execution's actual `x4` challenge. -/
-noncomputable def deployedX4InterpolationDataOfCapacity
+def deployedX4InterpolationDataOfCapacity
     (family : ComputedAlgebraicFSFamily shape)
     (hcapacity : shape.numPointSets + 1 <= Fintype.card Fp)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
@@ -122,8 +150,15 @@ noncomputable def deployedX4InterpolationDataOfCapacity
         (family.instanceCommitment basis) pnu.1.proof.1
         (chRecord (wrappedPreIpaReads pnu) (fun _ => 0))) 1).trans hcapacity
   let embedding : Fin (count + 1) ↪ Fp :=
-    Classical.choice (Function.Embedding.nonempty_of_card_le (by
-      simpa only [Fintype.card_fin] using hcount))
+    { toFun := fun i => (i.val : Fp)
+      inj' := fun i j hij => Fin.ext (CharP.natCast_injOn_Iio Fp scalarFieldOrder
+        (by
+          change i.val < Fintype.card Fp
+          exact i.isLt.trans_le hcount)
+        (by
+          change j.val < Fintype.card Fp
+          exact j.isLt.trans_le hcount)
+        hij) }
   let current : Fin (count + 1) := ⟨0, Nat.zero_lt_succ count⟩
   let swap := Equiv.swap (embedding current) (wrappedPreIpaReads pnu 8)
   refine
@@ -160,47 +195,43 @@ noncomputable def deployedRootOutcomeOfOnline
     deployedX4InterpolationDataOfCapacity family.toFamily hcapacity basis pnu
   let x4Batch := deployedX4BatchOfRepresentations p nu interpolation.points
     interpolation.pointsInjective interpolation.current interpolation.currentPoint
-  let x1Result := fun (i : Nat)
-      (hi : i < deployedX4PairCount (family.vk basis) (family.instanceCommitment basis)
-        p.proof.1
-        (wrappedPreIpaRecord pnu)) =>
+  let count := deployedX4PairCount (family.vk basis) (family.instanceCommitment basis)
+    p.proof.1 (wrappedPreIpaRecord pnu)
+  let x1Result := fun i : Fin count =>
     deployedX1BatchOfCoveredWithSourceOrRelation p (family.fixedRepresentations basis) hcovered nu
-      x4Batch i hi
-  by_cases hrelation : exists i hi, exists relation, x1Result i hi = PSum.inr relation
-  · let i := Classical.choose hrelation
-    have hiExists := Classical.choose_spec hrelation
-    let hi := Classical.choose hiExists
-    have relationExists := Classical.choose_spec hiExists
-    let relation := Classical.choose relationExists
-    exact PSum.inr relation
-  · let x1 := fun (i : Nat)
-        (hi : i < deployedX4PairCount (family.vk basis) (family.instanceCommitment basis)
-          p.proof.1
-          (wrappedPreIpaRecord pnu)) =>
-        match hresult : x1Result i hi with
-        | PSum.inl result => result.batch
-        | PSum.inr relation => False.elim (hrelation ⟨i, hi, relation, hresult⟩)
-    have hx1Coeffs : forall i
-        (hi : i < deployedX4PairCount (family.vk basis) (family.instanceCommitment basis)
-          p.proof.1 (wrappedPreIpaRecord pnu)),
-        (x1 i hi).coeffs =
-          (deployedMemberRepresentationsOfCovered p
-            (family.fixedRepresentations basis) hcovered nu i hi).coeffs := by
-      intro i hi
-      unfold x1
-      split
-      · rename_i result hresult
-        exact result.coeffs_eq
-      · rename_i relation hresult
-        exact False.elim (hrelation ⟨i, hi, relation, hresult⟩)
-    exact PSum.inl
-      { fixedRepresentations := family.fixedRepresentations basis
-        canonical := hcanonical
-        membersCovered := hcovered
-        batches :=
-          { x4 := x4Batch
-            x1 := x1 }
-        memberCoeffs := hx1Coeffs }
+      x4Batch i i.isLt
+  cases hall : finForallOrRelationWitness x1Result with
+  | inr relation => exact PSum.inr relation
+  | inl results =>
+      let x1 := fun (i : Nat) (hi : i < count) => (results ⟨i, hi⟩).batch
+      have hx1Coeffs : forall i (hi : i < count),
+          (x1 i hi).coeffs =
+            (deployedMemberRepresentationsOfCovered p
+              (family.fixedRepresentations basis) hcovered nu i hi).coeffs := by
+        intro i hi
+        exact (results ⟨i, hi⟩).coeffs_eq
+      have hx1U : forall i (hi : i < count),
+          (x1 i hi).uComp =
+            (deployedMemberRepresentationsOfCovered p
+              (family.fixedRepresentations basis) hcovered nu i hi).uComp := by
+        intro i hi
+        exact (results ⟨i, hi⟩).uComp_eq
+      have hx1W : forall i (hi : i < count),
+          (x1 i hi).wComp =
+            (deployedMemberRepresentationsOfCovered p
+              (family.fixedRepresentations basis) hcovered nu i hi).wComp := by
+        intro i hi
+        exact (results ⟨i, hi⟩).wComp_eq
+      exact PSum.inl
+        { fixedRepresentations := family.fixedRepresentations basis
+          canonical := hcanonical
+          membersCovered := hcovered
+          batches :=
+            { x4 := x4Batch
+              x1 := x1 }
+          memberCoeffs := hx1Coeffs
+          memberU := hx1U
+          memberW := hx1W }
 
 /-- Squeeze index used by one root event: `xi`, `z`, `x4`, `x3`, `x2`, and the union of all
 `x1` roots. -/
