@@ -1,14 +1,17 @@
 /-!
 # Core-only Nat kernel for Vesta group arithmetic (precompile probe)
 
-UNPROVEN PROBE MODULE — nothing imports this for statements. It transplants the
-proven `paddFast` arithmetic (`Zcash/Snark/Keygen/Fast/Projective.lean`, RCB complete
-addition over raw canonical `ℕ` representatives, Vesta `a = 0, b = 5`) into a module
-with ZERO imports, so it can sit in a `precompileModules` leaf lib
-(`FastFieldNative`-style) without dragging any mathlib closure into native codegen.
-Purpose: measure whether lake-precompiled native code is picked up by `native_decide`
-callers, and what a natively-compiled MSM costs. Proven equalities come after the
-measurement says this lane is real (the `paddFast` cast lemmas are the template).
+Zero-import transplant of the proven `paddFast` arithmetic
+(`Zcash/Snark/Keygen/Fast/Projective.lean`, RCB complete addition over raw canonical
+`ℕ` representatives, Vesta `a = 0, b = 5`), plus the ladder, scatter Pippenger MSM,
+and radix-2 DIT FFT built from it. `Zcash.Vendor.NatKernelEquiv` proves every
+operation here computes the corresponding statement-surface function.
+
+The certificate no longer evaluates this kernel — the Montgomery lane
+(`Zcash.Vendor.ProjectiveMontDefs`, precompiled via `FastFieldNative`) does the work.
+This module is the PROOF INTERMEDIARY: the Montgomery kernels mirror these schedules
+operation-for-operation, and their correctness (`Zcash.Vendor.ProjectiveMontEquiv`)
+is proven by transport against this kernel. Do not delete it as dead code.
 -/
 
 namespace Zcash.Vendor.NatKernel

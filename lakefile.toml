@@ -48,14 +48,6 @@ globs = ["Zcash.Snark.Fixtures.+"]
 name = "CircuitCheck"
 globs = ["Zcash.Circuits.Tests.+"]
 
-# Core-only leaf (ZERO imports): the only lib allowed precompileModules — anything
-# with a mathlib import in its closure would repeat the 2026-07-24 OOM incident.
-# Native symbols from this lib are what native_decide callers pick up.
-[[lean_lib]]
-name = "NatKernelNative"
-precompileModules = true
-globs = ["NatKernelNative", "Zcash.Vendor.NatKernel"]
-
 # The Action verifying-key COMMITMENT derivation (`Zcash/Snark/Keygen/`): derives
 # `fixedCommitment`/`permutationCommonCommitment` from the circuit + captured URS
 # (scalar inverse-DFT commitments over the proven Montgomery lane, dense fixed columns,

@@ -10,10 +10,12 @@ import Zcash.Snark.Keygen.Fast.FastFft
 /-!
 # The `Nat` kernel is the proven projective arithmetic
 
-`Zcash.Vendor.NatKernel` is a zero-import transplant of the projective Vesta arithmetic, so
-that it can sit in the `NatKernelNative` `precompileModules` leaf.  This module — which is
-mathlib-side and therefore *not* in that lane — proves that the transplant computes the
-statement-surface functions of `Zcash.Snark.Keygen.Fast.Projective`.
+`Zcash.Vendor.NatKernel` is a zero-import transplant of the projective Vesta arithmetic.
+This module — which is mathlib-side — proves that the transplant computes the
+statement-surface functions of `Zcash.Snark.Keygen.Fast.Projective`.  The certificate no
+longer *evaluates* the `Nat` kernel (the Montgomery lane does the work), but these specs
+are load-bearing: the Montgomery kernels are proven correct by transport through the
+`Nat` kernel's shared schedules (`Zcash.Vendor.ProjectiveMontEquiv`).
 
 The bridge is the coordinatewise cast `toPVes : P3 → PVes`, `⟨x, y, z⟩ ↦ (x : 𝔽_q, y, z)`.  It
 is a *representation* map, not an isomorphism: many `P3`s denote the same `PVes` (the kernel

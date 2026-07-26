@@ -6,12 +6,13 @@ import Zcash.Snark.Keygen.Fast.FastFft
 # Native-lane adapters: the zero-import `NatKernel` behind the keygen spellings
 
 `Zcash.Vendor.NatKernel` is the core-only twin of the group kernels (RCB addition,
-double-and-add, scatter Pippenger, radix-2 FFT over canonical `ℕ` representatives),
-compiled to native code through the `NatKernelNative` `precompileModules` leaf. This
-module (mathlib-side, NOT in that leaf's glob) provides the `ZMod`-typed entry points
-the certificate evaluates — coordinates out via `ZMod.val`, kernel, cast back — and
-the PROVEN equalities to the statement-surface functions, chaining the kernel's
-simulation theorems (`msm_spec`, `fft_spec`) into the existing `_eq` ladders.
+double-and-add, scatter Pippenger, radix-2 FFT over canonical `ℕ` representatives).
+This module provides its `ZMod`-typed entry points — coordinates out via `ZMod.val`,
+kernel, cast back — and the PROVEN equalities to the statement-surface functions,
+chaining the kernel's simulation theorems (`msm_spec`, `fft_spec`) into the existing
+`_eq` ladders. The certificate now evaluates the Montgomery lane instead
+(`MontKernelAdapter`), whose correctness proofs transport through these entry points;
+they are proof infrastructure, not an evaluation path.
 -/
 
 namespace Zcash.Snark.Keygen.Fast
