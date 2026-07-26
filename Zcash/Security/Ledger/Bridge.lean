@@ -1,5 +1,6 @@
 import Zcash.Circuits.Action.Bundle
 import Zcash.Circuits.Action.RealBases
+import Zcash.Circuits.Action.TopLevel
 import Zcash.Circuits.Specs.Pallas
 import Zcash.Security.Ledger.Pool
 
@@ -930,18 +931,27 @@ Action circuit.  This is the direct composition of the circuit soundness
 contract with `specPost_to_ledger`; it deliberately leaves the exceptional
 Sinsemilla branch explicit and reports the enable gates as `EnableFlagsSatisfied`. -/
 theorem circuit_soundness_to_ledger (verify : PallasGroup → MSG → SIG → Prop)
-    (cfg : Config) (i₀ : RegionIndex)
+    (i₀ : RegionIndex)
     (env : Placed Environment Fp)
-    (henv : EnvAssumptions orchardGenerators cfg env)
+    (hwellFormed : SynthesisWellFormed env.env
+      (orchardActionTopLevelCircuit.operations i₀))
     (hconstraints : Constraints env.place env.env
-      ((mainPost orchardGenerators orchardBases cfg ()).operations i₀) i₀) :
-    ActionBreak (extractPost cfg () i₀ env) ∨
-      ∃ inst w, PublicProjection (extractPost cfg () i₀ env) inst ∧
+      (orchardActionTopLevelCircuit.operations i₀) i₀) :
+    ActionBreak
+        (extractPost orchardActionTopLevelCircuit.config () i₀ env) ∨
+      ∃ inst w,
+        PublicProjection
+            (extractPost orchardActionTopLevelCircuit.config () i₀ env) inst ∧
         ActionSatisfied (Pool.primitives verify) Pool.keyBinding inst w ∧
-        CrossAddressSatisfied (extractPost cfg () i₀ env) w ∧
-        EnableFlagsSatisfied (extractPost cfg () i₀ env) w := by
-  have hpost := soundnessPost orchardGenerators orchardBases cfg i₀ env ()
-    henv trivial hconstraints
-  exact specPost_to_ledger verify (by simpa using hpost)
+        CrossAddressSatisfied
+            (extractPost orchardActionTopLevelCircuit.config () i₀ env) w ∧
+        EnableFlagsSatisfied
+            (extractPost orchardActionTopLevelCircuit.config () i₀ env) w := by
+  have hstatement :=
+    orchardActionTopLevelCircuit.soundness i₀ env hwellFormed hconstraints
+  have hpost : SpecPost orchardGenerators orchardBases () ()
+      (extractPost orchardActionTopLevelCircuit.config () i₀ env) :=
+    specPost_of_topLevelStatement orchardGenerators orchardBases i₀ env hstatement
+  exact specPost_to_ledger verify hpost
 
 end Zcash.Security.Ledger.Bridge

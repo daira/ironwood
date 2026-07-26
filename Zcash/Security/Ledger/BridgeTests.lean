@@ -181,17 +181,23 @@ theorem spec_post_bridge_smoke {MSG SIG : Type*}
 /-- Keep the exported end-to-end soundness theorem at its intended public shape. -/
 theorem circuit_soundness_bridge_smoke {MSG SIG : Type*}
     (verify : PallasGroup → MSG → SIG → Prop)
-    (cfg : Config) (i₀ : RegionIndex)
+    (i₀ : RegionIndex)
     (env : Placed Environment Fp)
-    (henv : EnvAssumptions orchardGenerators cfg env)
+    (hwellFormed : SynthesisWellFormed env.env
+      (orchardActionTopLevelCircuit.operations i₀))
     (hconstraints : Constraints env.place env.env
-      ((mainPost orchardGenerators orchardBases cfg ()).operations i₀) i₀) :
-    ActionBreak (extractPost cfg () i₀ env) ∨
-      ∃ inst w, PublicProjection (extractPost cfg () i₀ env) inst ∧
+      (orchardActionTopLevelCircuit.operations i₀) i₀) :
+    ActionBreak
+        (extractPost orchardActionTopLevelCircuit.config () i₀ env) ∨
+      ∃ inst w,
+        PublicProjection
+            (extractPost orchardActionTopLevelCircuit.config () i₀ env) inst ∧
         ActionSatisfied (Pool.primitives verify) Pool.keyBinding inst w ∧
-        CrossAddressSatisfied (extractPost cfg () i₀ env) w ∧
-        EnableFlagsSatisfied (extractPost cfg () i₀ env) w :=
-  circuit_soundness_to_ledger verify cfg i₀ env henv hconstraints
+        CrossAddressSatisfied
+            (extractPost orchardActionTopLevelCircuit.config () i₀ env) w ∧
+        EnableFlagsSatisfied
+            (extractPost orchardActionTopLevelCircuit.config () i₀ env) w :=
+  circuit_soundness_to_ledger verify i₀ env hwellFormed hconstraints
 
 open Zcash.Meta
 

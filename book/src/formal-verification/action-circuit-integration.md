@@ -1091,7 +1091,11 @@ Sinsemilla generator-table load from the real `mainPost` operation stream and de
 The prover-side closure projects the same load from `ExtendsWitnesses` and converts
 its fixed-table clauses to the corresponding constraints. The deployed
 `orchardActionTopLevelCircuit` specializes this generic Action construction to the
-real generators and certified bases.
+real generators and certified bases. The security-layer
+`circuit_soundness_to_ledger` theorem now enters through this closed top-level
+interface: it accepts synthesis well-formedness and the circuit's constraints, while
+the circuit discharges `EnvAssumptions` internally and owns the configuration used to
+extract the ledger witness.
 
 The legacy `ActionAssignment` has been deleted. Its decoded constructor now returns
 the generic `TopLevelAssignment` indexed by `orchardActionTopLevelCircuit`, so
@@ -1119,11 +1123,12 @@ formalization's existing Pallas/native facts. The eventual end-to-end Action cap
 must price that concrete circuit trust once, at the final boundary, rather than
 smuggling it into a supposedly generic adapter.
 
-Note that most of `EnvAssumptions` should come out of the transported `Constraints`
-themselves rather than separate VK-fixed-data facts: `GeneratorTableExact` is defined
-as the `Constraints` of the generator-table load, and the Action circuit's own
-operations contain the `loadTable`/`assignFixed` steps whose transported clauses pin
-the same fixed cells the table-loaded and fixed-base assumptions read.
+The Action top-level closure obtains its substantive `EnvAssumptions` from the
+transported `Constraints` rather than separate VK-fixed-data facts:
+`GeneratorTableExact` is defined as the `Constraints` of the generator-table load,
+and the Action circuit's own operations contain the `loadTable`/`assignFixed` steps
+whose transported clauses pin the same fixed cells the table-loaded and fixed-base
+assumptions read.
 
 ### 6. Generalize from one Action to an Orchard bundle
 
