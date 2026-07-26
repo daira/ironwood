@@ -1,6 +1,7 @@
 import Mathlib
 import Zcash.Security.KeyBinding.Instance
 import Zcash.Security.Ledger.Balance
+import Zcash.Security.Ledger.SpendAuthority
 
 -- This lint enforces Mathlib's minimal-hypothesis style, from which we deliberately depart.
 set_option linter.unusedSectionVars false
@@ -25,8 +26,11 @@ irrelevance makes the tie independent of which validity proof the event exhibits
 That event is contained in "the output pair breaks the sampled interface", so the
 key-binding bound applies to the composite machine that returns the pair.
 
-The same pattern fits Spend Authority's key-binding arm; only Balance-subset is
-discharged here.
+Spend Authority's key-binding arm is discharged the same way
+(`spendAuthority_keyBindingArm_measure_le`): the victim's key witness is a theorem
+parameter — the `Witness` type is oracle-independent — while its `KB` certificate,
+whose meaning is oracle-dependent, moves inside the event, and the break data's own
+fields supply the pair.
 -/
 
 namespace Zcash.Security.Ledger.Model
@@ -110,6 +114,56 @@ theorem balanceSubset_keyBindingArm_measure_le {ι : Type*}
         exact hbr
     | merkle c => simp [BalanceBreak.kbPair] at hpair
     | noteCommit nb => simp [BalanceBreak.kbPair] at hpair
+  · exact OracleComp.queryBound_bind (hQ j Hask Hnk)
+      fun out => OracleComp.QueryBound.pure out.2 0
+
+/-- **The Spend Authority key-binding arm's ε, discharged.** For any
+`n`-query-bounded pair-annotated ledger adversary in the key-binding oracle model,
+the probability that its output ledger is valid and the Spend Authority reduction —
+at some Action spending a note addressed to the victim `wV` over an unsigned
+sighash — lands in the key-binding arm with exactly its output pair is at most
+`(n + 4) · (n + 3) / |RIVK|`. -/
+theorem spendAuthority_keyBindingArm_measure_le {ι : Type*}
+    (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK) (Ggen : G) (hS : S ≠ 0)
+    (p : PMF ι)
+    (P : Primitives RIVK G IVK NK RHO PSI MHASH MENC MSG SIG)
+    (issuance : ℕ → ℕ) (maxActions : ℕ)
+    (wV : KeyBinding.Witness G IVK AK NK RIVK QK SK) (Signed : MSG → Prop)
+    {LA : ι → (SK → ASK) → (SK → NK) →
+      OracleComp (FinalQuery AK NK RIVK QK SK) RIVK
+        (Ledger (KeyBinding.Witness G IVK AK NK RIVK QK SK) RIVK G RHO PSI MHASH MENC
+            MSG SIG P.depth
+          × (KeyBinding.Witness G IVK AK NK RIVK QK SK
+            × KeyBinding.Witness G IVK AK NK RIVK QK SK))}
+    {n : ℕ} (hQ : ∀ j Hask Hnk, (LA j Hask Hnk).QueryBound n) :
+    ((p.bind fun j => (PMF.uniformOfFintype (SK → ASK)).bind fun Hask =>
+        (PMF.uniformOfFintype (SK → NK)).bind fun Hnk =>
+          (PMF.uniformOfFintype (SK → RIVK)).bind fun Hleg =>
+            (PMF.uniformOfFintype (QK → AK → NK → RIVK)).bind fun Hext =>
+              (PMF.uniformOfFintype (RIVK → AK → NK → RIVK)).map fun Hint =>
+                (j, Hask, Hnk, FinalQuery.eval Hleg Hext Hint))).toOuterMeasure
+        (setOf fun (j, Hask, Hnk, O) =>
+          ∃ hval : ValidLedger P (kvAt Extract S hfn Ggen Hask Hnk O)
+              issuance maxActions ((LA j Hask Hnk).run O).1,
+            ∃ tx, ∃ htx : tx ∈ ((LA j Hask Hnk).run O).1, ∃ a, ∃ ha : a ∈ tx.actions,
+              ∃ hKB : (kvAt Extract S hfn Ggen Hask Hnk O).KB wV,
+                ∃ hrecv : a.w.note_old.pkd
+                    = P.emb ((kvAt Extract S hfn Ggen Hask Hnk O).ivk wV)
+                      • a.w.note_old.gd,
+                  ∃ hfresh : ¬ Signed tx.sighash,
+                    ∃ b, spendAuthorityOrBreak hval htx ha hKB hrecv hfresh = PSum.inr b
+                      ∧ b.w₁ = ((LA j Hask Hnk).run O).2.1
+                      ∧ b.w₂ = ((LA j Hask Hnk).run O).2.2)
+      ≤ ((n + 4) * (n + 3) : ℕ) / Fintype.card RIVK := by
+  refine le_trans (MeasureTheory.measure_mono ?_)
+    (toInterface_break_measure_le Extract S hfn Ggen hS p
+      (A := fun j Hask Hnk => (LA j Hask Hnk).bind fun out => .pure out.2)
+      (n := n) (fun j Hask Hnk => ?_))
+  · rintro ⟨j, Hask, Hnk, O⟩
+      ⟨hval, tx, htx, a, ha, hKB, hrecv, hfresh, b, heq, hw₁, hw₂⟩
+    simp only [Set.mem_setOf_eq, OracleComp.run_bind, OracleComp.run_pure]
+    rw [← hw₁, ← hw₂]
+    exact b.h
   · exact OracleComp.queryBound_bind (hQ j Hask Hnk)
       fun out => OracleComp.QueryBound.pure out.2 0
 

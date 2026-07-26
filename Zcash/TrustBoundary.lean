@@ -271,13 +271,15 @@ assert_axioms valueConservation_measure_le
 assert_axioms balanceValue_measure_le
 assert_axioms spendAuthority_measure_le
 
-/-! ## The key-binding arm's ε, discharged
+/-! ## The key-binding arms' ε, discharged
 
-The Balance-subset key-binding arm's probability in the key-binding oracle model:
-`(n + 4)(n + 3)/|RIVK|` for any `n`-query-bounded pair-annotated ledger adversary,
-inherited from the key-binding layer's bound at an unchanged query count. -/
+The Balance-subset and Spend Authority key-binding arms' probability in the
+key-binding oracle model: `(n + 4)(n + 3)/|RIVK|` for any `n`-query-bounded
+pair-annotated ledger adversary, inherited from the key-binding layer's bound at an
+unchanged query count. -/
 
 assert_axioms balanceSubset_keyBindingArm_measure_le
+assert_axioms spendAuthority_keyBindingArm_measure_le
 
 /-! ## Binding-signature relation reductions
 
