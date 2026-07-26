@@ -79,10 +79,19 @@ theorem merkleCompress_eq_of_hashToPoint {i : Fin 32} {children : Encoding × En
   rw [h]
   rfl
 
+/-- The canonical 255-bit encoding of a node value: its canonical representative. -/
+def canon (b : Fp) : Encoding :=
+  ⟨b.val, lt_trans (ZMod.val_lt b)
+    (by norm_num [CompElliptic.Fields.Pasta.PALLAS_BASE_CARD])⟩
+
+theorem decode_canon (b : Fp) : decode (canon b) = b := ZMod.natCast_zmod_val b
+
 def merkle : MerklePrimitives Fp Encoding where
   depth := 32
   decode := decode
   compress := merkleCompress
+  canon := canon
+  decode_canon := decode_canon
 
 def extract (P : PallasGroup) : Fp := (PallasGroup.toPoint P).x
 
@@ -90,7 +99,27 @@ def extract (P : PallasGroup) : Fp := (PallasGroup.toPoint P).x
     extract (PallasGroup.ofPoint P hP) = P.x := by
   simp [extract]
 
-def leafOf (cmx _rho : Fp) : Fp := cmx
+/-- `13` is a quadratic non-residue in the Pallas base field, so it is not a square. -/
+private theorem unc_thirteen_not_isSquare : ¬ IsSquare (13 : Fp) := by
+  have h : ¬ IsSquare ((13 : ℕ) : Fp) :=
+    Zcash.Circuits.Ecc.MulFixed.Cert.Chain.checkNonSquare_sound (by native_decide)
+  simpa using h
+
+/-- Protocol-spec Theorem 5.4.6 for the ledger pool: `Uncommitted^Orchard = 2` is not the
+extracted `x`-coordinate of any Pallas group element. -/
+theorem extract_ne_two (g : PallasGroup) : (PallasGroup.toPoint g).x ≠ 2 := by
+  intro hx2
+  rcases PallasGroup.toPoint_valid g with hCurve | hZero
+  · -- On-curve case: `x = 2` forces `y² = 2³ + 5 = 13`, a non-residue.
+    unfold Point.OnCurve at hCurve
+    rw [hx2] at hCurve
+    have h13 : (PallasGroup.toPoint g).y ^ 2 = (13 : Fp) := by
+      rw [hCurve]; norm_num [pallasB]
+    exact unc_thirteen_not_isSquare ⟨(PallasGroup.toPoint g).y, by rw [← h13]; ring⟩
+  · -- Identity case: its affine encoding is `(0, 0)`, so `x = 0 ≠ 2`.
+    rw [hZero] at hx2
+    simp only [Point.zero_def] at hx2
+    exact two_ne_zero hx2.symm
 
 def randomizePublic (α : Fq) (ak : PallasGroup) : PallasGroup :=
   α • PallasGroup.ofPoint Ecc.MulFixed.Certs.spendAuthG.point
@@ -148,7 +177,19 @@ theorem noteCommit_eq_some_of_hashToPoint {rcm : Fq} {n : Note PallasGroup Fp Fp
   subst cm
   exact PallasGroup.ofPoint?_eq_some _ hvalid
 
-def primitives : Primitives Fq PallasGroup Fp Fp Fp Fp Fp Fp Encoding where
+/-- `Uncommitted^Orchard` (protocol spec §4.2.3): the padding value for tree positions
+beyond the appended leaves.  `extract_ne_two` below is spec Theorem 5.4.6: it is not
+the extracted coordinate of any Pallas group element. -/
+def uncommitted : Fp := 2
+
+variable {MSG SIG : Type*}
+
+/-- The deployed pool's concrete primitives.  The spend-authorization verification
+predicate is a parameter: the Action circuit neither constrains nor witnesses
+signatures, so every bridge statement holds for an arbitrary scheme; the concrete
+RedPallas instantiation composes downstream. -/
+def primitives (spendAuthVerify : PallasGroup → MSG → SIG → Prop) :
+    Primitives Fq PallasGroup Fp Fp Fp Fp Fp Encoding MSG SIG where
   valueBound := 2 ^ 64
   emb := PallasGroup.embedFp
   emb_injective := PallasGroup.embedFp_injective
@@ -156,9 +197,11 @@ def primitives : Primitives Fq PallasGroup Fp Fp Fp Fp Fp Fp Encoding where
   noteCommit := noteCommit
   deriveNullifier := deriveNullifier
   merkle := merkle
-  leafOf := leafOf
+  uncommitted := uncommitted
+  uncommitted_ne := extract_ne_two
   randomizePublic := randomizePublic
   valueCommit := valueCommit
+  spendAuthVerify := spendAuthVerify
 
 def commitIvkHash (ak nk : Fp) : Option PallasGroup :=
   (hashToPoint orchardGenerators.S ivkQ
@@ -177,5 +220,6 @@ def keyBinding : KeyBindingInterface (KeyBinding.Pool.Witness Fq PallasGroup Fp)
   KeyBinding.Pool.toInterface extract commitIvkHash
     (PallasGroup.ofPoint Ecc.MulFixed.Certs.commitIvkR.point
       (Or.inl Ecc.MulFixed.Certs.commitIvkR.onCurve))
+    (fun P Q h => (PallasGroup.toPoint_x_eq_iff P Q).mp h)
 
 end Zcash.Security.Ledger.Pool

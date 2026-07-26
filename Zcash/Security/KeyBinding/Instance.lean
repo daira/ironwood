@@ -8,8 +8,9 @@ import Zcash.Security.Ledger.Statement
 The deliberate contact point between the concrete key-binding development
 (`Zcash.Security.KeyBinding`: the `Witness`, the factored condition `KB = KBOpening ∧ KBDerivation`,
 and `Break`) and the games-facing view (`Zcash.Security.Ledger.KeyBindingInterface`). The games see
-only the projections and the `break_of_nk_ne` guarantee; here we discharge that guarantee from
-`nk_pinned`.
+only the projections and the `break_of_nk_ne` / `break_of_akP_ne` guarantees; here we discharge
+them from the break projection (`nk` differing directly; `akP` via `toAK_pm`, since the projection
+quotients the y-sign).
 -/
 
 namespace Zcash.Security
@@ -31,6 +32,8 @@ def KeyBinding.toInterface
   Break := KeyBinding.Break Extract S hfn Ggen H
   break_of_nk_ne {_w₁ _w₂} h₁ h₂ hivk hne :=
     ⟨h₁, h₂, hivk, fun heq => hne (congrArg BreakProj.nk heq)⟩
+  break_of_akP_ne {_w₁ _w₂} h₁ h₂ hivk hne :=
+    ⟨h₁, h₂, hivk, fun heq => hne ((Extract.toAK_pm _ _).mp (congrArg BreakProj.ak heq))⟩
 
 
 /-- The probabilistic key-binding bound, delivered at the games' interface: over the

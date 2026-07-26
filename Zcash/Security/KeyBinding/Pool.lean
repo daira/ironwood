@@ -16,6 +16,7 @@ constraints.
 namespace Zcash.Security.KeyBinding.Pool
 
 open Zcash.Security.Ledger
+open scoped Zcash.Security.RandomOracle
 
 variable {F G B : Type*}
 
@@ -62,9 +63,14 @@ structure Break
   ivk_eq : w₁.ivk = w₂.ivk
   projection_ne : w₁.breakProjection extract ≠ w₂.breakProjection extract
 
-/-- The deployed Orchard key-binding predicate as the games-facing interface. -/
+/-- The deployed Orchard key-binding predicate as the games-facing interface.
+`extract_pm` is the ±-fibre property of the extraction (`Extract_ℙ` concretely: equal
+extracted coordinates pin the point up to y-sign); it discharges the games'
+`break_of_akP_ne` from the break projection, exactly as `break_of_nk_ne` is discharged
+from its `nk` component. -/
 def toInterface
-    (extract : G → B) (hash : B → B → Option G) (commitIvkR : G) :
+    (extract : G → B) (hash : B → B → Option G) (commitIvkR : G)
+    (extract_pm : ∀ P Q : G, extract P = extract Q → P =± Q) :
     KeyBindingInterface (Witness F G B) G B B where
   ivk := Witness.ivk
   nk := Witness.nk
@@ -74,6 +80,9 @@ def toInterface
   break_of_nk_ne {w₁ w₂} h₁ h₂ hivk hnk := by
     refine ⟨h₁, h₂, hivk, fun heq => hnk ?_⟩
     exact congrArg BreakProjection.nk heq
+  break_of_akP_ne {w₁ w₂} h₁ h₂ hivk hne := by
+    refine ⟨h₁, h₂, hivk, fun heq => hne ?_⟩
+    exact extract_pm _ _ (congrArg BreakProjection.ak heq)
 
 end
 

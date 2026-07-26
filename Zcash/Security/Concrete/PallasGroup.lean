@@ -143,6 +143,56 @@ theorem ofPoint_neg {P : Point Zcash.Circuits.Fp} (hP : P.Valid) :
 @[simp] theorem toPoint_x (P : PallasGroup) : (toPoint P).x = P.toSW.x := rfl
 @[simp] theorem toPoint_y (P : PallasGroup) : (toPoint P).y = P.toSW.y := rfl
 
+/-- `toPoint` is injective: its affine coordinates determine the group element. -/
+private theorem pmfib_toPoint_injective {P Q : PallasGroup}
+    (h : toPoint P = toPoint Q) : P = Q := by
+  apply equivSW.injective
+  apply SWPoint.ext_pair
+  exact Prod.ext (congrArg Point.x h) (congrArg Point.y h)
+
+/-- An on-curve affine point has nonzero `x` (the identity encodes as `(0, 0)`). -/
+private theorem pmfib_x_ne_zero_of_onCurve {p : Point Zcash.Circuits.Fp}
+    (hp : p.OnCurve) : p.x ≠ 0 := by
+  intro hx
+  rcases p with ⟨x, y⟩
+  subst hx
+  exact Point.no_onCurve_of_x_zero y hp
+
+/-- The `Extract_ℙ` ±-fibre property: two group elements have equal extracted
+`x`-coordinates exactly when they agree up to sign.  The affine encoding of the
+identity is `(0, 0)` and no on-curve point has `x = 0`, so the identity is alone in
+its fibre. -/
+theorem toPoint_x_eq_iff (P Q : PallasGroup) :
+    (PallasGroup.toPoint P).x = (PallasGroup.toPoint Q).x ↔ (P = Q ∨ P = -Q) := by
+  constructor
+  · intro hx
+    by_cases hP0 : toPoint P = 0
+    · -- `toPoint P` is the identity, so its `x` is `0`, forcing `toPoint Q = 0` too.
+      have hQx : (toPoint Q).x = 0 := by
+        rw [← hx, hP0]; rfl
+      have hQy : (toPoint Q).y = 0 :=
+        Point.y_eq_zero_of_valid_of_x_eq_zero (toPoint_valid Q) hQx
+      have hQ0 : toPoint Q = 0 := by
+        apply Point.ext_coords
+        simp only [Point.coords, Point.zero_def, hQx, hQy]
+      exact Or.inl (pmfib_toPoint_injective (hP0.trans hQ0.symm))
+    · -- `toPoint P` is on-curve; its `x` is nonzero, so `toPoint Q` is on-curve too.
+      have hPC : (toPoint P).OnCurve :=
+        Point.onCurve_of_valid_of_ne_zero (toPoint_valid P) hP0
+      have hPxne : (toPoint P).x ≠ 0 := pmfib_x_ne_zero_of_onCurve hPC
+      have hQxne : (toPoint Q).x ≠ 0 := hx ▸ hPxne
+      have hQ0 : toPoint Q ≠ 0 := by
+        intro h; exact hQxne (by rw [h]; rfl)
+      have hQC : (toPoint Q).OnCurve :=
+        Point.onCurve_of_valid_of_ne_zero (toPoint_valid Q) hQ0
+      rcases Point.eq_or_eq_neg_of_x_eq hPC hQC hx with heq | hneg
+      · exact Or.inl (pmfib_toPoint_injective heq)
+      · refine Or.inr (pmfib_toPoint_injective ?_)
+        rw [toPoint_neg]; exact hneg
+  · rintro (rfl | rfl)
+    · rfl
+    · rw [toPoint_neg, Point.neg_x]
+
 /-- The protocol's canonical embedding of Pallas base-field values into scalars. -/
 def embedFp (x : Zcash.Circuits.Fp) : Zcash.Circuits.Fq := (x.val : Zcash.Circuits.Fq)
 

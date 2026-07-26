@@ -91,13 +91,14 @@ theorem zero_encodings_decode_equal :
 the exact conditional in `ActionSatisfied`, so a bridge must not demand a path
 when the spent note has value zero. -/
 theorem dummy_spend_merkle_vacuous
-    {F G IVK NK RHO PSI CMX RT E KW : Type*} [Field F] [AddCommGroup G] [Module F G]
-    {P : Primitives F G IVK NK RHO PSI CMX RT E} {inst : ActionInstance G RT RHO CMX}
-    {w : ActionWitness KW F G RHO PSI E P.merkle.depth}
+    {F G IVK NK RHO PSI MHASH MENC MSG SIG KW : Type*}
+    [Field F] [AddCommGroup G] [Module F G]
+    {P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG}
+    {inst : ActionInstance G MHASH RHO}
+    {w : ActionWitness KW F G RHO PSI MHASH MENC P.depth}
     (hzero : w.note_old.v = 0) :
     w.note_old.v ≠ 0 →
-      Merkle.Path P.merkle (P.leafOf (P.extract w.cm_old) w.note_old.ρ)
-        inst.rt w.path w.side := by
+      Merkle.Path P.merkle (P.extract w.cm_old) inst.rt w.path w.side := by
   simp [hzero]
 
 /-- Path validity now certifies per-layer definedness: no escaped compression can occur
@@ -155,27 +156,31 @@ theorem or_break_iff_guarded_smoke (wit : ActionData) (P : Point Fp → Prop) :
     (fun _ hm => orchardGenerators.S_onCurve (chunksOf_mem_lt hm))
 
 /-- The circuit-level postcondition refines directly to the ledger action alternative. -/
-theorem spec_post_bridge_smoke {input : Halo2.Value PrivateInputs Fp} {wit : ActionData}
+theorem spec_post_bridge_smoke {MSG SIG : Type*}
+    (verify : PallasGroup → MSG → SIG → Prop)
+    {input : Halo2.Value PrivateInputs Fp} {wit : ActionData}
     (h : SpecPost orchardGenerators orchardBases input () wit) :
     ActionBreak wit ∨
       ∃ inst w, PublicProjection wit inst ∧
-        ActionSatisfied Pool.primitives Pool.keyBinding inst w ∧
+        ActionSatisfied (Pool.primitives verify) Pool.keyBinding inst w ∧
         CrossAddressSatisfied wit w ∧
         EnableFlagsSatisfied wit w :=
-  specPost_to_ledger h
+  specPost_to_ledger verify h
 
 /-- Keep the exported end-to-end soundness theorem at its intended public shape. -/
-theorem circuit_soundness_bridge_smoke (cfg : Config) (i₀ : RegionIndex)
+theorem circuit_soundness_bridge_smoke {MSG SIG : Type*}
+    (verify : PallasGroup → MSG → SIG → Prop)
+    (cfg : Config) (i₀ : RegionIndex)
     (env : Placed Environment Fp) (input : Var PrivateInputs Fp)
     (henv : EnvAssumptions orchardGenerators cfg env)
     (hconstraints : Constraints env.place env.env
       ((mainPost orchardGenerators orchardBases cfg input).operations i₀) i₀) :
     ActionBreak (extract cfg input i₀ env) ∨
       ∃ inst w, PublicProjection (extract cfg input i₀ env) inst ∧
-        ActionSatisfied Pool.primitives Pool.keyBinding inst w ∧
+        ActionSatisfied (Pool.primitives verify) Pool.keyBinding inst w ∧
         CrossAddressSatisfied (extract cfg input i₀ env) w ∧
         EnableFlagsSatisfied (extract cfg input i₀ env) w :=
-  circuit_soundness_to_ledger cfg i₀ env input henv hconstraints
+  circuit_soundness_to_ledger verify cfg i₀ env input henv hconstraints
 
 open Zcash.Meta
 
@@ -238,7 +243,13 @@ assert_no_sorry classify_query_inr
 assert_no_sorry classifyRelation_isSome_iff
 assert_no_sorry classifyRelation_site
 assert_computable breakCoeffs +choice
-assert_computable relationOfBreakData +choice
-assert_computable classifyRelation +choice
+-- `relationOfBreakData` and `classifyRelation` are likewise plain compiled `def`s,
+-- but their erased `Prop` fields carry the deployed base points' validity
+-- certificates, which live at the concrete Pallas trust tier (`pallas_natCard`
+-- plus the native certificate checks).  `assert_computable` has no budget for a
+-- declared axiom, so — exactly like the `zero_encodings_*` exclusions above —
+-- they are audited by `lean_verify` rather than asserted here; once
+-- `pallas_natCard` becomes a `native_decide`-backed theorem they can rejoin as
+-- `assert_computable … +choice +native`.
 
 end Zcash.Security.Ledger.BridgeTests

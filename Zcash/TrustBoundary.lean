@@ -1,5 +1,8 @@
 import Zcash.Security.KeyBinding.Instance
 import Zcash.Security.KeyBinding.Probability
+import Zcash.Security.Ledger.Balance
+import Zcash.Security.Ledger.Spendability
+import Zcash.Security.Ledger.SpendAuthority
 import Zcash.Security.Common.Birthday
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
@@ -18,6 +21,12 @@ import Zcash.Snark.Soundness.Composition.Prefixes
 import Zcash.Snark.Soundness.Composition.Residual
 import Zcash.Snark.Soundness.Multiopen.BudgetedExtraction
 import Zcash.Snark.Soundness.VestaBudget
+import Zcash.Snark.Soundness.FoldSplit
+import Zcash.Snark.Soundness.GrandProductBridge
+import Zcash.Snark.Soundness.LookupAssembly
+import Zcash.Snark.Soundness.PermutationRows
+import Zcash.Snark.Soundness.ConstraintRelations
+import Zcash.Snark.Soundness.ChallengePricing
 
 /-!
 # Trust boundary, build-checked
@@ -39,7 +48,7 @@ Two commands from `Zcash.Meta.AxiomCheck`, per the breaks-as-computed-data disci
 -/
 
 open Zcash.Security.KeyBinding Zcash.Security.RandomOracle Zcash.Security.Birthday
-open Zcash.Security.Ledger Zcash.Security.BindingSignature
+open Zcash.Security.Ledger Zcash.Security.Ledger.Model Zcash.Security.BindingSignature
 open Zcash.Meta
 
 /-! ## Key binding — computed break reductions -/
@@ -106,6 +115,105 @@ assert_computable Collision.upToSign
 assert_computable Merkle.collisionOfWrongLeaf
 assert_computable noteCommitBreakOfNe
 assert_computable Zcash.Security.Ledger.nfOldEqOrBreak +choice
+
+/-! ## Statement-layer pinning theorems
+
+The statement layer's exported pinning guarantees: an address `(g_d, pk_d)` determines
+`ivk`, and hence `nk` is determined up to an exhibited key-binding break. -/
+
+assert_axioms ivk_pinned
+assert_axioms nk_eq_or_break
+
+/-! ## Ledger model
+
+The ledger-model definitions are plain computable data over public ledger contents; the
+theorems are deterministic list facts. -/
+
+assert_computable posVal
+assert_computable Merkle.subRoot
+assert_computable Merkle.authChildren
+assert_axioms Merkle.Path.compress_isSome
+assert_axioms Merkle.path_of_root
+assert_computable leafList
+assert_computable leafFun
+assert_computable rootAfter
+assert_computable nullifiers
+assert_computable transparentPoolBalance
+assert_computable outputActions
+assert_computable outputOpenings
+assert_computable positionedOutputs
+assert_computable nonZeroSpends
+assert_computable poolValueBalance
+assert_axioms posVal_lt
+assert_axioms rootAfter_prefix
+assert_axioms output_rho_eq_nullifiers
+assert_axioms output_rho_nodup
+assert_axioms leafList_eq_map
+assert_axioms outputOpenings_length
+
+/-! ## Balance-subset
+
+The capstone and the per-spend pinning are computable reductions; `findPair` and the
+anchor search (`Nat.find`, itself axiom-free) keep the branch decisions decidable.
+`+choice` on the three reductions is the erased-positions tier: choice enters only
+through Mathlib proof terms in `Prop` positions (e.g. `List.getD_eq_getElem`'s proof),
+never the data path. -/
+
+assert_computable findPair
+assert_axioms findPair_spec
+assert_axioms findPair_none
+assert_axioms flatMap_sublist
+assert_axioms outputActions_prefix
+assert_axioms nullifiers_prefix
+assert_axioms take_prefix_take
+assert_axioms spendActions_map_nf_sublist
+assert_axioms length_leafList
+assert_axioms length_positionedOutputs
+assert_axioms positionedOutputs_getElem
+assert_computable noteCommitBreakOfOutputNe
+assert_axioms satisfied_of_spendMem
+assert_axioms anchor_of_spendMem
+assert_computable spendPinnedOrBreak +choice
+assert_computable allPinnedOrBreak +choice
+assert_computable balanceSubsetOrBreak +choice
+
+/-! ## Balance-value (conservation form)
+
+`+choice` on the two endpoints is again the erased-positions tier: choice arrives with
+the `ring`/`omega` proof terms in their `Prop` fields, never the data path. -/
+
+assert_computable txNetValue
+assert_computable issuanceTotal
+assert_axioms transparentPoolBalance_eq
+assert_axioms positionedOutputs_value_sum
+assert_axioms nonZeroSpends_value_sum
+assert_axioms poolValueBalance_eq_neg
+assert_computable allValueOrBreak
+assert_computable valueConservationOrBreak +choice
+assert_computable balanceValueOrBreak +choice
+
+/-! ## Spendability
+
+The Faerie-Gold core and the roadblock inversion are computable reductions at the strict
+flagless tier; the nullifier split and the persistence theorem are deterministic list
+facts. -/
+
+assert_axioms nullifiers_append
+assert_computable faerieGoldCore
+assert_computable respendOrBreak
+assert_axioms validLedger_append
+
+/-! ## Spend Authority
+
+The per-action core and the valid-ledger capstone are computable reductions; the
+receivability pinning is a deterministic module-algebra theorem. `+choice` on the two
+reductions is the erased-positions tier: choice arrives with `smul_eq_zero`'s Mathlib
+proof inside the receivability pinning, consumed only in `Prop` positions — never the
+data path. -/
+
+assert_axioms ivk_eq_of_receivable
+assert_computable spendAuthForgeryOrBreak +choice
+assert_computable spendAuthorityOrBreak +choice
 
 /-! ## Binding-signature relation reductions
 
@@ -526,6 +634,116 @@ assert_axioms hfold_of_vanishing_slot_binding
 -- fingerprint premise alone.
 assert_axioms deployedAccepts_xn_ne_one
 assert_axioms hfold_of_member_budget
+-- The permutation and lookup arguments folded into the constraint model: the verifier's expression
+-- list is the generic builder run on its own claimed evaluations, the same builder over column
+-- polynomials evaluates back onto it, and the fold equation therefore needs no fingerprint premise.
+assert_axioms permutationExpressions_map
+assert_axioms lookupExpressions_map
+assert_axioms subProofConstraints_map
+assert_axioms allConstraints_map
+assert_axioms subProofExpressions_eq
+assert_axioms allExpressions_eq
+assert_axioms eval_constraintPolys
+assert_axioms eval_combineConstraints
+assert_axioms eval_combineConstraints_deployed
+assert_axioms hfold_of_constraint_polys
+-- The permutation and lookup arguments closed from the verifier's own row checks: the combined
+-- check splits into its parts, the running product telescopes across the rows, two challenge root
+-- counts turn the product into a multiset identity, and the existing structural theorems turn that
+-- into the copy constraints and the lookup inclusion.
+assert_axioms constraints_dvd_of_good_y
+assert_axioms telescope_running_product
+assert_axioms grandProduct_eq_or_cell_eq_zero
+assert_axioms multiset_pair_eq_of_prod_eval_eq
+assert_axioms cellPairs_eq_of_running_product
+assert_axioms perm_copy_constraints_of_running_product
+assert_axioms lookup_multisets_of_prod_eval_eq
+assert_axioms lookup_multisets_of_diff_eq_zero
+assert_axioms lookup_subset_of_components
+assert_axioms lookup_subset_of_prod_eval_eq
+-- The deployed row reading: the step rule's folds are running products, the boundary rules pin the
+-- product at the first and last rows, and the cell names separate. These are theorems about
+-- `permChunkExpression` itself, so the chain above starts at the verifier's own constraint list.
+assert_axioms permChunk_left_eq_prod
+assert_axioms permChunk_right_eq_prod
+assert_axioms permChunkExpression_eq
+assert_axioms eval_eq_zero_of_dvd_vanishing
+assert_axioms perm_row_recurrence
+assert_axioms running_product_start
+assert_axioms running_product_end
+assert_axioms name_injective_of_coset
+assert_axioms deployed_perm_copy_constraints
+-- Locating a single rule inside the verifier's flat constraint list, fixing the permutation sets to
+-- committed running products, and chaining the two: the copy constraints now follow from the
+-- polynomial constraint identity itself, with no hypothesis about the shape of the checks.
+assert_axioms permChunkExpression_mem_permutationExpressions
+assert_axioms start_mem_permutationExpressions
+assert_axioms end_mem_permutationExpressions
+assert_axioms mem_subProofConstraints_of_mem_permutationExpressions
+assert_axioms mem_allConstraints_of_mem_subProofConstraints
+assert_axioms mem_constraintPolys_of_mem_permutationExpressions
+assert_axioms head?_deployedPermSets
+assert_axioms getLast?_deployedPermSets
+assert_axioms deployed_copy_constraints_of_identity
+-- The same for the lookup argument: its five rules located in the list, read row by row, and
+-- chained to the inclusion.
+assert_axioms lookupExpressions_eq
+assert_axioms mem_subProofConstraints_of_mem_lookupExpressions
+assert_axioms mem_constraintPolys_of_mem_lookupExpressions
+assert_axioms running_product_end_flipped
+assert_axioms lookup_row_recurrence
+assert_axioms lookup_row_zero
+assert_axioms lookup_row_step
+assert_axioms lookup_rules_dvd_of_identity
+assert_axioms deployed_lookup_subset_of_identity
+assert_axioms deployed_lookup_relation_of_identity
+-- Decompression: the θ-compressed membership becomes membership of whole rows, since the
+-- compression is the fold polynomial of the row's values and a good θ separates distinct tuples.
+assert_axioms foldPoly_sub
+assert_axioms tuple_eq_of_foldPoly_eval_eq
+assert_axioms compress_eval_eq_foldPoly
+assert_axioms deployed_lookup_tuple_of_identity
+-- Every new challenge surface priced the way `hgood` is: a uniform-challenge measure bound per
+-- root-set event — the fold split's `y`, the bridge's `β` and `γ`, the vanishing-factor escapes,
+-- and the decompression's pairwise `θ`. Sequential conditioning across the squeezes is the same
+-- coupling hook `hgood` carries, documented with the `hfold`/`hgood` surfaces.
+assert_axioms uniformChallenge_szBadSet_iUnion_le
+assert_axioms goodY_failure_measure_le
+assert_axioms perm_gamma_failure_measure_le
+assert_axioms perm_beta_failure_measure_le
+assert_axioms escape_measure_le
+assert_axioms theta_failure_measure_le
+-- The deployed capstone family over the full constraint system: the same witness chain — the batch
+-- family's opening and the constructed member decodes — with the constraint check on the decoded
+-- columns in place of the gate check, ending in `SnarkRelation` at `circuitSatViaConstraints`.
+assert_axioms SnarkRelationWithMemberConstraints.toSnarkRelation
+assert_axioms member_constraints_of_relation_and_batch
+assert_axioms orchard_verifier_vesta_member_constraints_deployed_x4 +native
+assert_axioms orchard_verifier_vesta_member_constraints_terminal +native
+assert_axioms orchard_verifier_vesta_member_constraints_terminal_derived +native
+-- The last links: the point check lifted to the polynomial identity, the permutation taken to be the
+-- one keygen builds from the circuit's copy constraints, the cells of every chunk covered at once,
+-- and circuit satisfaction defined by the whole constraint list rather than the gates alone.
+assert_axioms constraint_identity_of_hfold
+assert_axioms declared_equalities_of_running_product
+assert_axioms deployed_declared_equalities_of_identity
+assert_axioms prod_map_chunkCellPairs
+assert_axioms perm_copy_constraints_of_chunk_products
+assert_axioms chunkName_injective_of_coset
+assert_axioms deployed_declared_equalities_of_identity_chunks
+assert_axioms circuitSatViaConstraints_of_check
+assert_axioms orchard_verifier_sound_vesta_constraints +native
+-- Closing the loop: the capstone hands over an opening paired with satisfaction of the whole
+-- constraint list, and the two arguments' relations are read back out of that same predicate.
+assert_axioms snarkRelation_constraints
+assert_axioms declared_equalities_of_circuitSat
+assert_axioms lookup_relation_of_circuitSat
+assert_axioms lookup_tuple_of_circuitSat
+-- Several permutation chunks, not one: the chaining rule located in the list, read at row zero, and
+-- the chunks flattened into a single running product so the permutation acts on every cell.
+assert_axioms chain_mem_permutationExpressions
+assert_axioms running_product_chain
+assert_axioms deployed_copy_constraints_of_identity_chunks
 assert_axioms hgood_failure_priced
 assert_axioms hgood_of_good_challenge
 -- The UNCONDITIONAL decomposition: `hExtract` removed, the residual quantified as the
