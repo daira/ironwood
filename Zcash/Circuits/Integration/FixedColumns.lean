@@ -74,7 +74,15 @@ def topLevelFixedOperationEntries
     Layout.regionAssignFixed (ZMod.val : Fp → ℕ)
       top.regionStarts (indexedRegions (top.operations 0) 0).1
 
-/-- Sparse packed-selector assignments emitted by top-level keygen. -/
+/--
+Sparse packed-selector assignments emitted by top-level keygen.
+
+The current full-circuit realization check also fails closed if two selector
+activations assign incompatible values to the same packed cell: the final dense
+cell cannot realize both sparse entries. That failure is intentionally safe but
+opaque. The structural replacement should instead derive non-overlap (or compatible
+composition) from selector packing and region-placement invariants.
+-/
 def topLevelSelectorEntries
     (top : TopLevelCircuit Fp ConfigInput Config Output) :
     List (ℕ × ℕ × ℕ) :=
@@ -85,8 +93,11 @@ Expected dense cells for lookup-relevant selectors that the selector compiler pa
 alone at root one. Enabled leaves read one; disabled leaves read zero.
 
 A missing or non-singleton map entry emits an out-of-bounds sentinel, so realization
-of this interim list also rules those malformed cases out. The structural replacement
-derives singleton ownership and disabled-row zero from compiler invariants instead.
+of this interim list also rules those malformed cases out. This encoding relies on
+the strict `column < numFixedColumns` check in `interimFixedRealizationFailures`;
+widening or removing that bound would silently turn malformed selector mappings into
+accepted zero entries. The structural replacement derives singleton ownership and
+disabled-row zero from compiler invariants instead.
 -/
 def topLevelSingletonLookupSelectorEntries
     (top : TopLevelCircuit Fp ConfigInput Config Output) :
