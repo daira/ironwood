@@ -1,5 +1,6 @@
 import Zcash.Circuits.Action.RealBases
 import Zcash.Security.Ledger.Bridge
+import Zcash.Security.Ledger.SinsemillaDLR
 import Zcash.Security.KeyBinding.Instance
 import Zcash.Security.KeyBinding.Probability
 import Zcash.Security.Ledger.Balance
@@ -841,3 +842,28 @@ assert_axioms Zcash.Security.Ledger.Bridge.specPost_to_ledger +native
 assert_axioms Zcash.Security.Ledger.Bridge.circuit_soundness_to_ledger +native
 assert_axioms Zcash.Security.Ledger.Bridge.actionBreak_of_classify +native
 assert_axioms Zcash.Security.Ledger.Bridge.classify_none_defined +native
+
+/-! ## The Sinsemilla discrete-log-relation reduction
+
+The onward step from a classified Action escape to the games-facing relation object, which
+the census above stops short of: the escaped chain is turned into an explicit generator
+combination (`ofPoint_hashToPoint`), the coefficient vector is computed from the break datum
+(`breakCoeffs`, with its relation and nontriviality facts), and the two headline reductions
+package that as a `NontrivialRelationOne` at the escaped site's domain point.
+
+`relationOfBreakData` and `classifyRelation` are asserted computable rather than merely
+axiom-bounded: they are the reduction's data path, so the plain-`def` half of the check is
+what stops a later `noncomputable` marking from silently voiding the
+breaks-as-computed-data convention. `+native` covers the deployed bases' on-curve
+certificates carried in their erased `Prop` fields; `+choice` is the same erased-positions
+tier the classifier itself sits at. -/
+
+assert_computable Zcash.Security.Ledger.Bridge.breakCoeffs +choice
+assert_computable Zcash.Security.Ledger.Bridge.relationOfBreakData +choice +native
+assert_computable Zcash.Security.Ledger.Bridge.classifyRelation +choice +native
+assert_axioms Zcash.Security.Ledger.Bridge.ofPoint_hashToPoint
+assert_axioms Zcash.Security.Ledger.Bridge.breakCoeffs_relation
+assert_axioms Zcash.Security.Ledger.Bridge.breakCoeffs_nontrivial
+assert_axioms Zcash.Security.Ledger.Bridge.classify_query_inr +native
+assert_axioms Zcash.Security.Ledger.Bridge.classifyRelation_isSome_iff +native
+assert_axioms Zcash.Security.Ledger.Bridge.classifyRelation_site +native
