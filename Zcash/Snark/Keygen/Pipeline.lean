@@ -2,7 +2,7 @@ import CompElliptic.Curves.Pasta
 import Zcash.Common.ParMap
 import Zcash.Snark.Core.Domain
 import Zcash.Arithmetic.Fft
-import Zcash.Vendor.CompElliptic.Msm
+import CompElliptic.Curves.Pasta.Fast.Msm
 import Zcash.Circuits.Integration.ExprRich
 import Clean.Halo2.Keygen.Layout
 import Clean.Halo2.TopLevelKeygen
@@ -37,6 +37,9 @@ namespace Zcash.Snark.Keygen
 
 open Zcash.Snark
 open Halo2
+-- The concrete fast MSM lives in the CompElliptic pin; opening `Curves.Pasta` keeps its
+-- `Fast.Msm.*` spellings usable alongside ironwood's own `Zcash.Snark.Keygen.Fast.*`.
+open CompElliptic.Curves.Pasta
 
 variable {G : Type} [AddCommGroup G] [Inhabited G]
 
@@ -786,6 +789,7 @@ namespace Halo2.TopLevelCircuit
 open Zcash.Snark
 open Zcash.Snark.Keygen
 open Halo2
+open CompElliptic.Curves.Pasta
 
 variable {G : Type} [AddCommGroup G] [Inhabited G]
 variable {ConfigInput Config : Type} {Output : TypeMap} [CircuitType Output]

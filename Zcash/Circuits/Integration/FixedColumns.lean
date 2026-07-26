@@ -22,6 +22,7 @@ the circuit-owned instance.
 namespace Zcash.Snark
 
 open Halo2 Polynomial
+open CompElliptic.Curves.Pasta
 
 set_option maxHeartbeats 20000
 
@@ -315,11 +316,11 @@ theorem fixedCommitment_eq_commitInstance
     simpa only [top.fixedRows_length] using hcolumn
   have hget :
       (top.fixedRows.map
-        (Keygen.Fast.Msm.commitLagrangeFastWith
-          Keygen.Fast.Msm.defaultWindow urs.w
+        (Fast.Msm.commitLagrangeFastWith
+          Fast.Msm.defaultWindow urs.w
           (Keygen.derivedUrsGLagrange urs))).getD column 0 =
-        Keygen.Fast.Msm.commitLagrangeFastWith
-          Keygen.Fast.Msm.defaultWindow urs.w
+        Fast.Msm.commitLagrangeFastWith
+          Fast.Msm.defaultWindow urs.w
           (Keygen.derivedUrsGLagrange urs)
           (top.fixedRows.getD column []) := by
     rw [List.getD_eq_getElem?_getD, List.getElem?_map,

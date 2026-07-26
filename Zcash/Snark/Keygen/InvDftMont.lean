@@ -32,13 +32,14 @@ namespace Zcash.Snark.Keygen.Fast
 
 open Zcash.Snark
 open Zcash.Vendor
-open Zcash.Vendor.ProjectiveMont
-open Zcash.Vendor.ProjectiveMont (PM)
 open Zcash.Vendor.ScalarMont (WFs montValS)
+open CompElliptic.Curves.Pasta.Fast
+open CompElliptic.Curves.Pasta.Fast.ProjectiveMont
+open CompElliptic.Curves.Pasta.Fast.ProjectiveMont (PM)
 open Montgomery.Native64x8
 open Montgomery.Native64x8 (Limbs8)
-open Zcash.Snark.Keygen.Fast.Projective
-open Zcash.Snark.Keygen.Fast.Projective.PVes
+open CompElliptic.Curves.Pasta.Fast.Projective
+open CompElliptic.Curves.Pasta.Fast.Projective.PVes
 
 local instance : Inhabited G := ⟨0⟩
 

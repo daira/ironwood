@@ -16,6 +16,7 @@ closed form, each required generator equation becomes a computable commitment id
 namespace Zcash.Snark.Keygen
 
 open Polynomial
+open CompElliptic.Curves.Pasta
 
 /-- `ℓ_i` in closed coefficient form: `n⁻¹ · Σ_{t < n} ω^{-i·t} Xᵗ`. -/
 noncomputable def lagrangeBasisClosed (k : ℕ) (i : Fin (2 ^ k)) : Polynomial Fp :=
