@@ -157,6 +157,16 @@ def noteScalars (n : Note PallasGroup Fp Fp) : NoteCommit.NoteCommitScalars :=
 def noteHash (n : Note PallasGroup Fp Fp) : Option (Point Fp) :=
   hashToPoint orchardGenerators.S noteQ (noteScalars n).chunks
 
+/-- The deployed note commitment: the Sinsemilla hash of the note message, plus the
+blinding term `[rcm] NoteCommitR`.
+
+The final blinding addition is modeled as the *complete* group addition — faithful to
+the deployed `halo2_gadgets` `CommitDomain::commit`, whose Sinsemilla chain ends before
+the blinding term is added with complete addition.  The protocol spec's literal
+`SinsemillaCommit` (§5.4.8.4) composes the blinding with incomplete `⸭` instead, so a
+future lemma equating this function with the spec-text one carries the negligible
+exceptional-case caveat on that last addition.  The same modeling choice applies to the
+`Commit^ivk` opening consumed by `keyBinding`. -/
 def noteCommit (rcm : Fq) (n : Note PallasGroup Fp Fp) : Option PallasGroup :=
   noteHash n >>= fun bp =>
     PallasGroup.ofPoint? (bp + rcm.val • Ecc.MulFixed.Certs.noteCommitR.point)
@@ -215,6 +225,10 @@ theorem commitIvkHash_eq_some_of_hashToPoint {ak nk : Fp} {p : Point Fp}
   rw [h, Option.bind_some]
   exact PallasGroup.ofPoint?_eq_some p hp
 
+/-- The deployed circuit's key-binding interface: the bare `Commit^ivk` opening
+`Extract(hashPoint + [rivk] CommitIvkR)` plus `ivk ≠ 0`.  As with `noteCommit`, the
+blinding addition is the complete group addition (deployed-gadget-faithful), not the
+spec text's incomplete `⸭`. -/
 def keyBinding : KeyBindingInterface (KeyBinding.Pool.Witness Fq PallasGroup Fp)
     PallasGroup Fp Fp :=
   KeyBinding.Pool.toInterface extract commitIvkHash
