@@ -110,7 +110,7 @@ def msm (c : Nat) (terms : List (Nat × P3)) : P3 :=
 /-! ## Projective negation and the radix-2 DIT FFT
 
 The butterfly `(a, b) ↦ (a + tw·b, a − tw·b)` of `bestFftG`
-(`Zcash/Snark/Keygen/Pipeline.lean`), transplanted onto `P3`: the group addition is `padd`,
+(`Zcash/Arithmetic/Fft.lean`), transplanted onto `P3`: the group addition is `padd`,
 the scalar action is `pnsmul`, and the subtraction is `padd` against `pneg`.  Twiddles arrive
 as canonical `Nat` scalars (`Fp.val`), computed by the caller, so this module still needs no
 imports. -/

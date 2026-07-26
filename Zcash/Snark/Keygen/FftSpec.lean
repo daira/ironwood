@@ -8,7 +8,7 @@ import Zcash.Snark.Soundness.InnerProduct
 /-!
 # The DFT specification of `bestFftG`
 
-`bestFftG` (`Zcash.Snark.Keygen.Pipeline`) is the Rust-mirroring radix-2 DIT group FFT —
+`bestFftG` (`Zcash.Arithmetic.Fft`) is the Rust-mirroring radix-2 DIT group FFT —
 bit-reversal permutation, twiddle table, `logN` rounds of imperative butterflies. This module
 proves its full mathematical specification: for an input of size `2^logN` and a primitive
 `2^logN`-th root of unity `ω`, the output is the group-valued discrete Fourier transform

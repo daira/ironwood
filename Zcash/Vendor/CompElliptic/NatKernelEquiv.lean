@@ -350,7 +350,7 @@ theorem msm_spec (c : ℕ) (hc : 0 < c) (terms : List (ℕ × P3))
 
 /-! ## The radix-2 DIT FFT
 
-`fft` is the butterfly-for-butterfly transplant of `bestFftG` (`Zcash/Snark/Keygen/Pipeline.lean`)
+`fft` is the butterfly-for-butterfly transplant of `bestFftG` (`Zcash/Arithmetic/Fft.lean`)
 onto `P3`, with the twiddle table supplied by the caller as canonical `Nat` scalars (the kernel has
 no field type of its own).  The equality is an **Array simulation**: `Sim a b` says every cell of
 the kernel array is a valid projective point whose affine reading is the corresponding cell of the
