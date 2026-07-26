@@ -167,19 +167,19 @@ theorem path_iff_guarded_smoke
 
 /-- The circuit-level postcondition refines directly to the ledger action alternative. -/
 theorem spec_post_bridge_smoke {MSG SIG : Type*}
-    (verify : PallasGroup → MSG → SIG → Prop)
+    (verify bverify : PallasGroup → MSG → SIG → Prop)
     {input : Halo2.Value PrivateInputs Fp} {wit : ActionData}
     (h : SpecPost orchardGenerators orchardBases input () wit) :
     ActionBreak wit ∨
       ∃ inst w, PublicProjection wit inst ∧
-        ActionSatisfied (Pool.primitives verify) Pool.keyBinding inst w ∧
+        ActionSatisfied (Pool.primitives verify bverify) Pool.keyBinding inst w ∧
         CrossAddressSatisfied wit w ∧
         EnableFlagsSatisfied wit w :=
-  specPost_to_ledger verify h
+  specPost_to_ledger verify bverify h
 
 /-- Keep the exported end-to-end soundness theorem at its intended public shape. -/
 theorem circuit_soundness_bridge_smoke {MSG SIG : Type*}
-    (verify : PallasGroup → MSG → SIG → Prop)
+    (verify bverify : PallasGroup → MSG → SIG → Prop)
     (cfg : Config) (i₀ : RegionIndex)
     (env : Placed Environment Fp) (input : Var PrivateInputs Fp)
     (henv : EnvAssumptions orchardGenerators cfg env)
@@ -187,10 +187,10 @@ theorem circuit_soundness_bridge_smoke {MSG SIG : Type*}
       ((mainPost orchardGenerators orchardBases cfg input).operations i₀) i₀) :
     ActionBreak (extract cfg input i₀ env) ∨
       ∃ inst w, PublicProjection (extract cfg input i₀ env) inst ∧
-        ActionSatisfied (Pool.primitives verify) Pool.keyBinding inst w ∧
+        ActionSatisfied (Pool.primitives verify bverify) Pool.keyBinding inst w ∧
         CrossAddressSatisfied (extract cfg input i₀ env) w ∧
         EnableFlagsSatisfied (extract cfg input i₀ env) w :=
-  circuit_soundness_to_ledger verify cfg i₀ env input henv hconstraints
+  circuit_soundness_to_ledger verify bverify cfg i₀ env input henv hconstraints
 
 open Zcash.Meta
 

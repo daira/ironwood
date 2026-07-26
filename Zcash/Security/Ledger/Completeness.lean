@@ -244,25 +244,28 @@ variable {kv : KeyBindingInterface KW G IVK NK}
 variable {ledger : Ledger KW F G RHO PSI MHASH MENC MSG SIG P.depth}
 
 /-- The honest transaction over a list of honest Actions, each with its
-spend-authorization signature: it declares the true summed net value. -/
-def honestTx (spends : List (HonestAction P kv ledger × SIG)) (sighash : MSG) :
+spend-authorization signature: it declares the true summed net value and carries the
+given binding signature. -/
+def honestTx (spends : List (HonestAction P kv ledger × SIG)) (sighash : MSG)
+    (bindingSig : SIG) :
     Tx KW F G RHO PSI MHASH MENC MSG SIG P.depth where
   actions := spends.map fun p => p.1.action p.2
   vBalance := (spends.map fun p => (p.1.note_old.v : ℤ) - p.1.note_new.v).sum
   sighash := sighash
+  bindingSig := bindingSig
 
 /-- The honest transaction declares its true net value, so the Balance game's
 per-transaction value premiss holds for it. -/
 theorem txNetValue_honestTx (spends : List (HonestAction P kv ledger × SIG))
-    (sighash : MSG) :
-    txNetValue (honestTx spends sighash) = (honestTx spends sighash).vBalance := by
+    (sighash : MSG) (bindingSig : SIG) :
+    txNetValue (honestTx spends sighash bindingSig) = (honestTx spends sighash bindingSig).vBalance := by
   simp [txNetValue, honestTx, HonestAction.action, HonestAction.witness, List.map_map,
     Function.comp_def]
 
 /-- The honest transaction's nullifier list is the spends' nullifiers, in order. -/
 theorem nullifiers_honestTx (spends : List (HonestAction P kv ledger × SIG))
-    (sighash : MSG) :
-    nullifiers [honestTx spends sighash] = spends.map fun p => p.1.nf := by
+    (sighash : MSG) (bindingSig : SIG) :
+    nullifiers [honestTx spends sighash bindingSig] = spends.map fun p => p.1.nf := by
   simp [nullifiers, honestTx, HonestAction.action, HonestAction.inst, List.map_map,
     Function.comp_def]
 
@@ -278,27 +281,31 @@ conjuncts are proven from `HonestAction`, not assumed. -/
 theorem honestTx_valid
     (hval : ValidLedger P kv issuance maxActions ledger)
     (spends : List (HonestAction P kv ledger × SIG)) (sighash : MSG)
+    (bindingSig : SIG)
     (hsig : ∀ p ∈ spends,
       P.spendAuthVerify (P.randomizePublic p.1.α (kv.akP p.1.kw)) sighash p.2)
     (hfresh : ∀ p ∈ spends, p.1.nf ∉ nullifiers ledger)
     (hnodup : (spends.map fun p => p.1.nf).Nodup)
     (hcap : (leafList ledger).length + spends.length ≤ 2 ^ P.depth)
     (htrans : 0 ≤ transparentPoolBalance issuance ledger ledger.length
-        + ((issuance ledger.length : ℤ) + (honestTx spends sighash).vBalance))
+        + ((issuance ledger.length : ℤ) + (honestTx spends sighash bindingSig).vBalance))
+    (hbind : P.bindingVerify ((honestTx spends sighash bindingSig).bvk P) sighash
+        bindingSig)
+    (hvb : (honestTx spends sighash bindingSig).vBalance.natAbs < P.valueBound)
     (hbound : spends.length ≤ maxActions) :
-    ValidLedger P kv issuance maxActions (ledger ++ [honestTx spends sighash]) := by
-  have hmem : ∀ tx ∈ ledger ++ [honestTx spends sighash],
-      tx ∈ ledger ∨ tx = honestTx spends sighash := by
+    ValidLedger P kv issuance maxActions (ledger ++ [honestTx spends sighash bindingSig]) := by
+  have hmem : ∀ tx ∈ ledger ++ [honestTx spends sighash bindingSig],
+      tx ∈ ledger ∨ tx = honestTx spends sighash bindingSig := by
     intro tx htx
     rcases List.mem_append.mp htx with h | h
     · exact Or.inl h
     · exact Or.inr (by simpa using h)
-  have hact : ∀ a ∈ (honestTx spends sighash).actions,
+  have hact : ∀ a ∈ (honestTx spends sighash bindingSig).actions,
       ∃ p ∈ spends, a = p.1.action p.2 := by
     intro a ha
     obtain ⟨p, hp, rfl⟩ := List.mem_map.mp ha
     exact ⟨p, hp, rfl⟩
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   -- `satisfied`: per-Action; old Actions from `hval`, new ones from `HonestAction.satisfied`.
   · intro tx htx a ha
     rcases hmem tx htx with h | rfl
@@ -316,27 +323,27 @@ theorem honestTx_valid
   -- the new Actions' anchors are `root_eq`, transported the same way.
   · intro i a hai
     by_cases hi : (i : ℕ) < ledger.length
-    · have hget : (ledger ++ [honestTx spends sighash]).get i = ledger.get ⟨(i : ℕ), hi⟩ := by
+    · have hget : (ledger ++ [honestTx spends sighash bindingSig]).get i = ledger.get ⟨(i : ℕ), hi⟩ := by
         simp [List.get_eq_getElem, List.getElem_append_left hi]
       rw [hget] at hai
       obtain ⟨j, hj, hrt⟩ := hval.anchor_valid ⟨(i : ℕ), hi⟩ a hai
       refine ⟨j, hj, ?_⟩
-      rw [rootAfter_prefix P ⟨[honestTx spends sighash], rfl⟩ (le_trans hj (le_of_lt hi))]
+      rw [rootAfter_prefix P ⟨[honestTx spends sighash bindingSig], rfl⟩ (le_trans hj (le_of_lt hi))]
       exact hrt
     · have hieq : (i : ℕ) = ledger.length := by
         have := i.isLt
         simp only [List.length_append, List.length_singleton] at this
         omega
-      have hget : (ledger ++ [honestTx spends sighash]).get i = honestTx spends sighash := by
+      have hget : (ledger ++ [honestTx spends sighash bindingSig]).get i = honestTx spends sighash bindingSig := by
         simp [List.get_eq_getElem, hieq]
       rw [hget] at hai
       obtain ⟨p, hp, rfl⟩ := hact a hai
       refine ⟨p.1.anchor, hieq ▸ p.1.anchor_le, ?_⟩
-      rw [rootAfter_prefix P ⟨[honestTx spends sighash], rfl⟩ p.1.anchor_le]
+      rw [rootAfter_prefix P ⟨[honestTx spends sighash bindingSig], rfl⟩ p.1.anchor_le]
       exact p.1.root_eq
   -- `capacity`: the honest transaction appends one leaf per spend.
   · rw [leafList_append]
-    have hlen : (leafList [honestTx spends sighash]).length = spends.length := by
+    have hlen : (leafList [honestTx spends sighash bindingSig]).length = spends.length := by
       simp [leafList, honestTx]
     rw [List.length_append, hlen]
     exact hcap
@@ -347,6 +354,17 @@ theorem honestTx_valid
     · exact hval.sig_verifies tx h a ha
     · obtain ⟨p, hp, rfl⟩ := hact a ha
       exact hsig p hp
+  -- `binding_verified`: old transactions from `hval`; the new one is the boundary
+  -- hypothesis `hbind`.
+  · intro tx htx
+    rcases hmem tx htx with h | rfl
+    · exact hval.binding_verified tx h
+    · exact hbind
+  -- `vbalance_bound`: old from `hval`; the new declared balance is in range (`hvb`).
+  · intro tx htx
+    rcases hmem tx htx with h | rfl
+    · exact hval.vbalance_bound tx h
+    · exact hvb
   -- `transparent_nonneg`: prefix indices see the old balance; indices past the end
   -- saturate at the new length, where the balance steps by issuance plus `vBalance`
   -- (`htrans`).
@@ -411,13 +429,15 @@ the owner's satisfied action. -/
 def spendabilityOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq NK]
     [DecidableEq RHO] [DecidableEq PSI]
     (hval : ValidLedger P kv issuance maxActions ledger)
-    (hs : HonestAction P kv ledger) (sig : SIG) (sighash : MSG)
+    (hs : HonestAction P kv ledger) (sig : SIG) (sighash : MSG) (bsig : SIG)
     (hsig : P.spendAuthVerify (P.randomizePublic hs.α (kv.akP hs.kw)) sighash sig)
     (hcap : (leafList ledger).length + 1 ≤ 2 ^ P.depth)
     (htrans : 0 ≤ transparentPoolBalance issuance ledger ledger.length
-        + ((issuance ledger.length : ℤ) + (honestTx [(hs, sig)] sighash).vBalance))
+        + ((issuance ledger.length : ℤ) + (honestTx [(hs, sig)] sighash bsig).vBalance))
+    (hbind : P.bindingVerify ((honestTx [(hs, sig)] sighash bsig).bvk P) sighash bsig)
+    (hvb : (honestTx [(hs, sig)] sighash bsig).vBalance.natAbs < P.valueBound)
     (hbound : 1 ≤ maxActions) :
-    ValidLedger P kv issuance maxActions (ledger ++ [honestTx [(hs, sig)] sighash])
+    ValidLedger P kv issuance maxActions (ledger ++ [honestTx [(hs, sig)] sighash bsig])
       ⊕' Respend ledger hs.rcm_old hs.note_old
       ⊕' (NoteCommitBreak P ⊕' NullifierCollision P) :=
   if hmem : hs.nf ∈ nullifiers ledger then
@@ -438,12 +458,14 @@ def spendabilityOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq NK]
     | .inl heq => .inr (.inl ⟨p.1, hpmem.1, p.2, hpmem.2, heq⟩)
     | .inr b => .inr (.inr b)
   else
-    .inl (honestTx_valid hval [(hs, sig)] sighash
+    .inl (honestTx_valid hval [(hs, sig)] sighash bsig
       (by rintro q hq; rw [List.mem_singleton] at hq; subst hq; exact hsig)
       (by rintro q hq; rw [List.mem_singleton] at hq; subst hq; exact hmem)
       (by simp)
       (by simpa using hcap)
       htrans
+      hbind
+      hvb
       (by simpa using hbound))
 
 end Honest

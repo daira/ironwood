@@ -10,6 +10,7 @@ import Zcash.Security.Ledger.SpendAuthority
 import Zcash.Security.Ledger.Completeness
 import Zcash.Security.Ledger.Capstone
 import Zcash.Security.Ledger.Nullifier
+import Zcash.Security.Ledger.Value
 import Zcash.Security.Common.Birthday
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
@@ -218,6 +219,19 @@ argument's terminal. `+choice` is the erased-positions tier: choice arrives with
 `abel`/`simp` proof terms in the relation's `Prop` fields, never the data path. -/
 
 assert_computable NontrivialRelation.ofNullifierCollision +choice
+
+/-! ## The value-premiss discharge
+
+Computed reductions at the Pedersen value-commitment shape: the Balance-value
+premiss lands in the binding-signature layer's nontrivial `(V, R)` relation via
+`ofBundleIntImbalance`, with the no-overflow bound discharged from the statement's
+value ranges, validity's action-count and `vBalance` range rules, and the named
+numeric hypothesis `(maxActions + 1) * valueBound ≤ r`. `+choice` is the
+erased-positions tier. -/
+
+assert_computable ValueShape.premissOrBreak +choice
+assert_computable ValueShape.conservationOrBreak +choice
+assert_computable ValueShape.balanceOrBreak +choice
 
 /-! ## Spend Authority
 

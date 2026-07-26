@@ -117,7 +117,8 @@ def respendOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq NK] [DecidableEq
 /-- **Persistence.** A transaction valid immediately after `ledger` remains valid when
 appended to any valid extension `ledger'`, given that its nullifiers are still fresh
 and the boundary conjuncts hold for the appended ledger. Anchors persist because prefix
-roots do; satisfaction, signatures, and the action bound are per-transaction. -/
+roots do; satisfaction, the signature rules, the value-balance range, and the action
+bound are per-transaction. -/
 theorem validLedger_append
     (hval' : ValidLedger P kv issuance maxActions ledger')
     (hpre : ledger <+: ledger')
@@ -132,7 +133,7 @@ theorem validLedger_append
     rcases List.mem_append.mp htx with h | h
     · exact Or.inl h
     · exact Or.inr (by simpa using h)
-  refine ⟨?_, ?_, ?_, hcap, ?_, htrans, ?_⟩
+  refine ⟨?_, ?_, ?_, hcap, ?_, ?_, ?_, htrans, ?_⟩
   · intro tx htx a ha
     rcases hmem tx htx with h | rfl
     · exact hval'.satisfied tx h a ha
@@ -178,6 +179,14 @@ theorem validLedger_append
     rcases hmem tx htx with h | rfl
     · exact hval'.sig_verifies tx h a ha
     · exact hvalT.sig_verifies tx hTmem a ha
+  · intro tx htx
+    rcases hmem tx htx with h | rfl
+    · exact hval'.binding_verified tx h
+    · exact hvalT.binding_verified tx hTmem
+  · intro tx htx
+    rcases hmem tx htx with h | rfl
+    · exact hval'.vbalance_bound tx h
+    · exact hvalT.vbalance_bound tx hTmem
   · intro tx htx
     rcases hmem tx htx with h | rfl
     · exact hval'.action_bound tx h

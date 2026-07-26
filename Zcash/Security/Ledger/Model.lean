@@ -42,11 +42,13 @@ structure Action (KW F G RHO PSI MHASH MENC SIG : Type*) (d : ℕ) where
   sig : SIG
 
 /-- A transaction: its Actions, the net value flowing out of the pool (positive
-`vBalance` means value leaving), and the sighash its signatures are over. -/
+`vBalance` means value leaving), the sighash its signatures are over, and its binding
+signature (verified under `Tx.bvk` by validity). -/
 structure Tx (KW F G RHO PSI MHASH MENC MSG SIG : Type*) (d : ℕ) where
   actions : List (Action KW F G RHO PSI MHASH MENC SIG d)
   vBalance : ℤ
   sighash : MSG
+  bindingSig : SIG
 
 /-- A ledger: a linearization of transactions (design doc, "Modelling decisions"). -/
 abbrev Ledger (KW F G RHO PSI MHASH MENC MSG SIG : Type*) (d : ℕ) :=
@@ -153,6 +155,13 @@ section Validity
 
 variable [Field F] [AddCommGroup G] [Module F G]
 
+/-- The binding verification key of a transaction: the sum of its actions' net value
+commitments, minus a zero-randomness commitment to its declared `vBalance`
+(`bvk = ∑ cv_net − ValueCommit_0(vBalance)`). -/
+def Tx.bvk (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
+    (tx : Tx KW F G RHO PSI MHASH MENC MSG SIG d) : G :=
+  (tx.actions.map fun a => a.inst.cv_net).sum - P.valueCommit tx.vBalance 0
+
 /-- Validity of a witness-annotated ledger — the premiss of every game. `issuance` is the
 intended issuance schedule and `maxActions` bounds each transaction's action count; both
 are consensus data the games quantify over. -/
@@ -178,6 +187,12 @@ structure ValidLedger (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
   /-- Each action's spend-authorization signature verifies under its `rk`, over its
   transaction's sighash. -/
   sig_verifies : ∀ tx ∈ ledger, ∀ a ∈ tx.actions, P.spendAuthVerify a.inst.rk tx.sighash a.sig
+  /-- Each transaction's binding signature verifies under its binding verification key,
+  over its sighash (the consensus binding-signature rule). -/
+  binding_verified : ∀ tx ∈ ledger, P.bindingVerify (tx.bvk P) tx.sighash tx.bindingSig
+  /-- Each transaction's declared value balance is in range (the consensus `valueBalance`
+  range rule; `|vBalance| ≤ 2^63 − 1 < 2^64 = valueBound` concretely). -/
+  vbalance_bound : ∀ tx ∈ ledger, tx.vBalance.natAbs < P.valueBound
   /-- The transparent pool balance never goes negative: a transaction can move value
   into the shielded pool only from issuance already minted, less what earlier
   transactions consumed. This is the consensus non-negative chain value balance rule for
