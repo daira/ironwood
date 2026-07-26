@@ -1,7 +1,7 @@
 import CompElliptic.Curves.Pasta
 import Zcash.Common.ParMap
 import Zcash.Snark.Core.Domain
-import Zcash.Snark.Keygen.Fast.Msm
+import Zcash.Vendor.CompElliptic.Msm
 import Zcash.Circuits.Integration.ExprRich
 import Clean.Halo2.Keygen.Layout
 import Clean.Halo2.TopLevelKeygen

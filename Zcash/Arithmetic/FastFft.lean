@@ -3,7 +3,7 @@ Copyright (c) 2026 Ironwood Contributors.
 Released under the Apache License, Version 2.0.
 -/
 import Zcash.Snark.Keygen.Pipeline
-import Zcash.Snark.Keygen.Fast.Projective
+import Zcash.Vendor.CompElliptic.Projective
 
 /-!
 # Vesta-specialized fast Lagrange-basis group FFT

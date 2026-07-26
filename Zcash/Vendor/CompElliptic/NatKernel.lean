@@ -2,15 +2,15 @@
 # Core-only Nat kernel for Vesta group arithmetic (precompile probe)
 
 Zero-import transplant of the proven `paddFast` arithmetic
-(`Zcash/Snark/Keygen/Fast/Projective.lean`, RCB complete addition over raw canonical
+(`Zcash/Vendor/CompElliptic/Projective.lean`, RCB complete addition over raw canonical
 `ℕ` representatives, Vesta `a = 0, b = 5`), plus the ladder, scatter Pippenger MSM,
-and radix-2 DIT FFT built from it. `Zcash.Vendor.NatKernelEquiv` proves every
+and radix-2 DIT FFT built from it. `Zcash.Vendor.CompElliptic.NatKernelEquiv` proves every
 operation here computes the corresponding statement-surface function.
 
 The certificate no longer evaluates this kernel — the Montgomery lane
-(`Zcash.Vendor.ProjectiveMontDefs`, precompiled via `FastFieldNative`) does the work.
+(`Zcash.Vendor.CompElliptic.ProjectiveMontDefs`, precompiled via `FastFieldNative`) does the work.
 This module is the PROOF INTERMEDIARY: the Montgomery kernels mirror these schedules
-operation-for-operation, and their correctness (`Zcash.Vendor.ProjectiveMontEquiv`)
+operation-for-operation, and their correctness (`Zcash.Vendor.CompElliptic.ProjectiveMontEquiv`)
 is proven by transport against this kernel. Do not delete it as dead code.
 -/
 
