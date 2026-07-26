@@ -1,6 +1,6 @@
-import Zcash.Snark.Soundness.LookupInstantiation
+import Zcash.Snark.Soundness.Canonical.LookupInstantiation
 import Zcash.Snark.Soundness.GoodChallenge
-import Zcash.Snark.Soundness.DomainSelectors
+import Zcash.Snark.Soundness.Canonical.DomainSelectors
 
 /-!
 # Semantic endpoint for resolver-backed lookup constraints

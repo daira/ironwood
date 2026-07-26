@@ -1,5 +1,5 @@
 import Mathlib
-import Zcash.Snark.Soundness.ConstraintSatisfaction
+import Zcash.Snark.Soundness.Canonical.ConstraintSatisfaction
 import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.PermutationRows
 import Zcash.Snark.Soundness.GoodChallenge

@@ -1,5 +1,5 @@
 import Zcash.Circuits.Integration.CircuitSatisfaction
-import Zcash.Snark.Soundness.ConstraintSatisfaction
+import Zcash.Snark.Soundness.Canonical.ConstraintSatisfaction
 import Clean.Halo2.Keygen.GateProjection
 import Zcash.Snark.Soundness.PermutationRows
 

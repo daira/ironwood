@@ -1,5 +1,5 @@
 import Zcash.Circuits.Integration.LookupProjection
-import Zcash.Snark.Soundness.CanonicalConstraintModel
+import Zcash.Snark.Soundness.Canonical.ConstraintModel
 import Zcash.Snark.Soundness.ChallengePricing
 import Zcash.Circuits.Integration.TopLevelGates
 

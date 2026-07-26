@@ -1,6 +1,6 @@
 import Zcash.Circuits.Integration.ActionPermutationDomainCompute
 import Zcash.Circuits.Integration.PermutationCompiler
-import Zcash.Snark.Soundness.CanonicalConstraintModel
+import Zcash.Snark.Soundness.Canonical.ConstraintModel
 import Zcash.Circuits.Integration.TopLevelAssignment
 
 /-!

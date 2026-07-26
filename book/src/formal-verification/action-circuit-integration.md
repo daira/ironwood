@@ -524,8 +524,8 @@ binding-aware Action endpoint; the terminal API no longer accepts a caller-suppl
 copy witness.
 
 The `β`/`γ` exclusions remain with explicit bad-set accounting rather than becoming
-circuit assumptions. `PermutationChallengePricing` now packages their union across
-every proof in a bundle. Avoiding
+circuit assumptions. `ChallengePricing`'s resolver-permutation section now packages
+their union across every proof in a bundle. Avoiding
 `allResolverPermutationGammaBadSet` and `allResolverPermutationBetaBadSet`
 constructs every `ResolverPermutationGoodChallenges`; the corresponding measure
 theorems bound the γ surface by the sum of `2·activeCells` and the β surface by the
@@ -1265,7 +1265,7 @@ corresponding direct receiver for a `CircuitSat` proof over the canonical accept
 model. `Soundness/Multiopen/CanonicalSelection` now constructs the advice and
 instance slots forced by `CanonicalMemberConstraintRelation.acceptedRoute` and proves
 that their full polynomial feeds equal the canonical accepted model's feeds.
-`Soundness/CanonicalVesta` specializes the verifier-native terminal's former free
+`Soundness/Canonical/Vesta` specializes the verifier-native terminal's former free
 callback to `CircuitSat` for that model and derives the accepted selections for every
 proof index. `Snark/Soundness/TopLevelTerminal` generically turns the resulting
 canonical constraint satisfaction and the circuit's component correctness package

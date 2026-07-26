@@ -57,7 +57,7 @@ The lookup bridge is split deliberately:
   specializes the verifier-native decoded-model terminal to the circuit-derived
   Action verification key and produces `Action.BundleStatement` (or the shared
   augmented-basis relation). No Clean type is introduced into
-  `Zcash/Snark/Soundness/CanonicalTerminal.lean`.
+  `Zcash/Snark/Soundness/Canonical/Terminal.lean`.
 
 The core terminals live outside this boundary. `Snark/Soundness/TopLevelTerminal`
 turns canonical constraint satisfaction plus `TopLevelCircuitCorrectness` into the

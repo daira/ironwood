@@ -39,7 +39,6 @@ import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.PermutationRows
 import Zcash.Snark.Soundness.ConstraintRelations
 import Zcash.Snark.Soundness.ChallengePricing
-import Zcash.Snark.Soundness.PermutationChallengePricing
 import Zcash.Snark.Soundness.InnerProduct
 import Zcash.Snark.Soundness.Extraction
 import Zcash.Snark.Soundness.Constraints
@@ -50,9 +49,9 @@ import Zcash.Snark.Soundness.KnowledgeSoundness
 import Zcash.Snark.Soundness.IpaSoundness
 -- Verifier-native semantic models used by the Clean integration boundary.  These
 -- belong to the core SNARK library even when no capstone imports them incidentally.
-import Zcash.Snark.Soundness.ConstraintSatisfaction
-import Zcash.Snark.Soundness.CanonicalConstraintModel
-import Zcash.Snark.Soundness.InstanceCommitment
+import Zcash.Snark.Soundness.Canonical.ConstraintSatisfaction
+import Zcash.Snark.Soundness.Canonical.ConstraintModel
+import Zcash.Snark.Soundness.Canonical.InstanceCommitment
 -- Deployed halo2-verifier soundness path: peel the deployed IPA (U/W/S apparatus) onto the clean
 -- `ipa_soundV`, with commitment binding expressed as a discrete-log-relation reduction.
 import Zcash.Snark.Soundness.Deployed.Binding
@@ -80,8 +79,8 @@ import Zcash.Snark.Soundness.Multiopen.Claimed
 import Zcash.Snark.Soundness.Multiopen.DecodeFixture
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 import Zcash.Snark.Soundness.Multiopen.CanonicalSelection
-import Zcash.Snark.Soundness.CanonicalTerminal
-import Zcash.Snark.Soundness.CanonicalVesta
+import Zcash.Snark.Soundness.Canonical.Terminal
+import Zcash.Snark.Soundness.Canonical.Vesta
 import Zcash.Snark.Soundness.TopLevelTerminal
 import Zcash.Snark.Soundness.TopLevelVesta
 import Zcash.Snark.Soundness.ActionVesta

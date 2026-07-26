@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.InstanceCommitment
+import Zcash.Snark.Soundness.Canonical.InstanceCommitment
 import Zcash.Circuits.Integration.FixedLayout
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 import Zcash.Circuits.Integration.SelectorCoherence

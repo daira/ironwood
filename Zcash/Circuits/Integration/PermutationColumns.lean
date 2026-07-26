@@ -1,6 +1,6 @@
 import Zcash.Circuits.Integration.FixedColumns
 import Zcash.Snark.Keygen.FftSpec
-import Zcash.Snark.Soundness.PermutationSemantics
+import Zcash.Snark.Soundness.Canonical.PermutationSemantics
 
 /-!
 # σ-column commitment provenance

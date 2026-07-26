@@ -3,7 +3,7 @@ import Zcash.Snark.Core.Domain
 import Zcash.Circuits.Integration.ResolverGates
 import Zcash.Circuits.Integration.ResolverQueryEnvironment
 import Zcash.Circuits.Integration.SelectorCoherence
-import Zcash.Snark.Soundness.CanonicalConstraintModel
+import Zcash.Snark.Soundness.Canonical.ConstraintModel
 
 /-!
 # Generic top-level gate bridge

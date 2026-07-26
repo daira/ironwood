@@ -1,5 +1,5 @@
-import Zcash.Snark.Soundness.CanonicalConstraintModel
-import Zcash.Snark.Soundness.ConstraintSatisfaction
+import Zcash.Snark.Soundness.Canonical.ConstraintModel
+import Zcash.Snark.Soundness.Canonical.ConstraintSatisfaction
 import Zcash.Snark.Soundness.Multiopen.ConstraintResolver
 
 /-!

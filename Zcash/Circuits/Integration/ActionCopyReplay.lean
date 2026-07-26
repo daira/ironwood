@@ -1,6 +1,6 @@
 import Zcash.Circuits.Integration.ActionPermutationCycle
 import Zcash.Circuits.Integration.FixedColumns
-import Zcash.Snark.Soundness.PermutationChallengePricing
+import Zcash.Snark.Soundness.ChallengePricing
 
 /-!
 # Action copy witness from verifier permutation semantics

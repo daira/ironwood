@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.CanonicalTerminal
+import Zcash.Snark.Soundness.Canonical.Terminal
 import Zcash.Snark.Soundness.Multiopen.CanonicalSelection
 
 /-!

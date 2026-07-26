@@ -1,7 +1,7 @@
-import Zcash.Snark.Soundness.PermutationInstantiation
+import Zcash.Snark.Soundness.Canonical.PermutationInstantiation
 import Zcash.Snark.Soundness.PermutationConstruction
 import Zcash.Snark.Soundness.GoodChallenge
-import Zcash.Snark.Soundness.DomainSelectors
+import Zcash.Snark.Soundness.Canonical.DomainSelectors
 
 /-!
 # Semantic endpoint for resolver-backed permutation constraints

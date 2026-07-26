@@ -1,6 +1,6 @@
 import Zcash.Circuits.Integration.ActionInstanceCommitment
 import Zcash.Circuits.Integration.ActionPermutationDomain
-import Zcash.Snark.Soundness.CanonicalTerminal
+import Zcash.Snark.Soundness.Canonical.Terminal
 import Mathlib.Util.AssertNoSorry
 
 /-!
@@ -11,7 +11,7 @@ soundness terminal. It specializes the verifier-native canonical decoded-model
 theorem to the circuit-derived Action verification key and feeds the resulting
 constraint satisfaction into the concrete Action bundle endpoint.
 
-`Zcash.Snark.Soundness.CanonicalTerminal` remains entirely in verifier polynomial
+`Zcash.Snark.Soundness.Canonical.Terminal` remains entirely in verifier polynomial
 language. Clean operation records occur only here, where they are consumed.
 -/
 

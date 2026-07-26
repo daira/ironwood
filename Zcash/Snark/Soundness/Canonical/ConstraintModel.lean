@@ -1,6 +1,6 @@
-import Zcash.Snark.Soundness.DomainSelectors
-import Zcash.Snark.Soundness.PermutationSemantics
-import Zcash.Snark.Soundness.LookupSemantics
+import Zcash.Snark.Soundness.Canonical.DomainSelectors
+import Zcash.Snark.Soundness.Canonical.PermutationSemantics
+import Zcash.Snark.Soundness.Canonical.LookupSemantics
 
 /-!
 # Canonical resolver-backed constraint models

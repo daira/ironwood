@@ -1,5 +1,5 @@
 import Mathlib
-import Zcash.Snark.Soundness.LookupRows
+import Zcash.Snark.Soundness.Canonical.LookupRows
 import Zcash.Snark.Verifier.Parametric
 
 /-!

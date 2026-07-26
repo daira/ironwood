@@ -1,5 +1,5 @@
 import Zcash.Snark.Soundness.Deployed.ActionVk
-import Zcash.Snark.Soundness.CanonicalVesta
+import Zcash.Snark.Soundness.Canonical.Vesta
 import Zcash.Snark.Soundness.Multiopen.CanonicalSelection
 
 /-!

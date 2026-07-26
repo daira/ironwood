@@ -1,5 +1,5 @@
 import Mathlib
-import Zcash.Snark.Soundness.LookupInstantiation
+import Zcash.Snark.Soundness.Canonical.LookupInstantiation
 import Zcash.Snark.Soundness.Multiopen.NodeBinding
 
 /-!

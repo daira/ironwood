@@ -1,5 +1,5 @@
 import Zcash.Circuits.Integration.CircuitSatisfaction
-import Zcash.Snark.Soundness.PermutationSemantics
+import Zcash.Snark.Soundness.Canonical.PermutationSemantics
 
 /-!
 # Declared operation copies and permutation-cycle satisfaction

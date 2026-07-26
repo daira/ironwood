@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.PolynomialEnvironment
+import Zcash.Snark.Soundness.Canonical.PolynomialEnvironment
 import Zcash.Circuits.Integration.CircuitSatisfaction
 
 /-!
@@ -8,7 +8,7 @@ Decoded member columns are polynomials.  Clean circuit semantics reads columns b
 This file supplies the canonical adapter: row `r` of a column polynomial is its evaluation at
 `ω^r`.  Integer rows make rotations definitionally uniform, including negative rotations.
 The underlying row polynomials and their algebra are verifier-native and live in
-`Zcash.Snark.Soundness.PolynomialEnvironment`.
+`Zcash.Snark.Soundness.Canonical.PolynomialEnvironment`.
 -/
 
 namespace Zcash.Snark

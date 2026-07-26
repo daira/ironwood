@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.CanonicalVesta
+import Zcash.Snark.Soundness.Canonical.Vesta
 import Zcash.Snark.Soundness.TopLevelTerminal
 
 /-!

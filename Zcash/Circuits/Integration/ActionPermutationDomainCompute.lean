@@ -1,5 +1,5 @@
 import Zcash.Snark.Keygen.Derivation
-import Zcash.Snark.Soundness.PermutationInstantiation
+import Zcash.Snark.Soundness.Canonical.PermutationInstantiation
 
 /-!
 # Closed computations for the Action permutation layout
