@@ -83,7 +83,15 @@ theorem signedMagnitude_eq_int_sub
     exact int_sub_eq_of_fp_sub_eq hvNew hMagnitude hValue
   · have hnot : sign ≠ 1 := by
       subst sign
-      native_decide
+      -- `(-1 : Fp) = 1` would make the odd base modulus divide `2`.
+      intro h
+      have h2 : (2 : Fp) = 0 := by linear_combination -h
+      have hdvd : (PALLAS_BASE_CARD : ℕ) ∣ 2 := by
+        have : ((2 : ℕ) : Fp) = 0 := by exact_mod_cast h2
+        exact (ZMod.natCast_eq_zero_iff 2 _).mp this
+      have hle := Nat.le_of_dvd (by norm_num) hdvd
+      revert hle
+      norm_num [PALLAS_BASE_CARD]
     rw [if_neg hnot]
     have hrev : vNew - vOld = magnitude := by
       rw [hneg, mul_neg, mul_one] at hValue
