@@ -34,8 +34,10 @@ theorem independentProductPMF_fiber_bound {A B : Type*} (p : PMF A) (q : PMF B)
     _ = (∑' a, p a) * beta := by rw [ENNReal.tsum_mul_right]
     _ = beta := by rw [PMF.tsum_coe, one_mul]
 
-/-- The algebraic adversary together with all eleven pre-IPA and `k` IPA-round oracle reads. -/
-noncomputable def wrappedAdversary (family : ComputedAlgebraicFSFamily shape)
+/-- The algebraic adversary together with all eleven pre-IPA and `k` IPA-round oracle reads.
+Irreducibility keeps dependent witness indices stable during equality elimination; proofs that need
+the implementation unfold it explicitly. -/
+@[irreducible] def wrappedAdversary (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) :
     OracleComp (BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k)) Fp
       (AlgebraicWfProof basis (family.vk basis) (family.instanceCommitment basis) ×
@@ -45,7 +47,7 @@ noncomputable def wrappedAdversary (family : ComputedAlgebraicFSFamily shape)
       (algebraicFullPrefixes family.init p))
 
 /-- The challenge record encoded by a wrapped output. -/
-noncomputable def wrappedRecord {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+def wrappedRecord {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     {vk : VerifyingKey shape Fp VestaG}
     {instanceCommitment : Fin shape.numProofs → Nat → VestaG}
     (pnu : AlgebraicWfProof basis vk instanceCommitment × (Fin (11 + shape.k) → Fp)) :
@@ -54,28 +56,28 @@ noncomputable def wrappedRecord {basis : AugmentedIndex (2 ^ shape.k) → VestaG
     (fun j => pnu.2 (Fin.natAdd 11 j))
 
 /-- The underlying proof produced on one oracle table. -/
-noncomputable def runProof (family : ComputedAlgebraicFSFamily shape)
+def runProof (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
     (O : BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp) :
     AlgebraicWfProof basis (family.vk basis) (family.instanceCommitment basis) :=
   (family.adversary basis).run O
 
 /-- The eleven pre-IPA reads of one run. -/
-noncomputable def runReads (family : ComputedAlgebraicFSFamily shape)
+def runReads (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
     (O : BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp) :
     Fin 11 → Fp :=
   fun i => O (algebraicFullPrefixesPre family.init (runProof family basis O) i)
 
 /-- The `k` IPA-round reads of one run. -/
-noncomputable def runRounds (family : ComputedAlgebraicFSFamily shape)
+def runRounds (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
     (O : BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp) :
     Fin shape.k → Fp :=
   fun j => O (algebraicFullPrefixes family.init (runProof family basis O) j)
 
 /-- The complete challenge record of one run. -/
-noncomputable def runRecord (family : ComputedAlgebraicFSFamily shape)
+def runRecord (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
     (O : BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp) :
     Challenges shape.k Fp :=

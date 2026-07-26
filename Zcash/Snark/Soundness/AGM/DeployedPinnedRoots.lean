@@ -152,12 +152,8 @@ def deployedX4InterpolationDataOfCapacity
   let embedding : Fin (count + 1) ↪ Fp :=
     { toFun := fun i => (i.val : Fp)
       inj' := fun i j hij => Fin.ext (CharP.natCast_injOn_Iio Fp scalarFieldOrder
-        (by
-          change i.val < Fintype.card Fp
-          exact i.isLt.trans_le hcount)
-        (by
-          change j.val < Fintype.card Fp
-          exact j.isLt.trans_le hcount)
+        (by simpa only [card_Fp] using i.isLt.trans_le hcount)
+        (by simpa only [card_Fp] using j.isLt.trans_le hcount)
         hij) }
   let current : Fin (count + 1) := ⟨0, Nat.zero_lt_succ count⟩
   let swap := Equiv.swap (embedding current) (wrappedPreIpaReads pnu 8)
@@ -467,16 +463,21 @@ noncomputable def DeployedRootPrefixSchedule.ofPrefixDetermined
   measure_le := deployedRootBadAt_measure_le family outcome
   at_point := deployedRootBadAt_point family outcome hprefix
 
-/-- A computed online AGM family with a concrete batch-or-relation outcome whose exact root data
-factors through the transcript prefix before each squeeze. -/
+/-- An online AGM family carrying a concrete batch-or-relation outcome whose exact root data
+factors through the transcript prefix before each squeeze.  The structure stores the outcome as
+data, but does not by itself prove that a particular constructor computes it. -/
 structure ComputedDeployedRootFSFamily (shape : Shape)
     extends ComputedOnlineMemberFSFamily shape where
   outcome : DeployedRootOutcomeProvider toComputedAlgebraicFSFamily
   schedule : DeployedRootPrefixSchedule toComputedAlgebraicFSFamily outcome
 
-/-- Upgrade an online, member-covered AGM family using the derived offline batch-or-relation
-decoder.  The sole remaining multiopen-specific proof is that the exact root data factors through
-the preceding transcript prefix; the outcome itself is no longer caller-supplied.
+/-- Mathematical compatibility adapter using the offline Vandermonde decoder.  This constructor is
+intentionally `noncomputable`: it proves the batch-or-relation dichotomy, but does not by itself
+instantiate an executable DLOG adversary.  A concrete-security capstone must instead supply the
+same outcome through a computable direct-coordinate implementation.
+
+The sole remaining multiopen-specific proof is that the exact root data factors through the
+preceding transcript prefix; the outcome itself is no longer caller-supplied.
 
 The exact deployed root sets also read ordinary proof-string scalars and grouping data.  The
 final-output `OracleComp` interface does not encode when those fields were emitted, so deriving
@@ -484,9 +485,10 @@ their chronology from output equality would be unsound.  The compatibility const
 accepts the old factorization theorem and packages it as the concrete schedule consumed by the
 probability layer.
 
-TODO(#96): construct `DeployedRootPrefixSchedule` from the deployed Rust transcript stages, then
-compose the resulting constraint endpoint into the final concrete `constraintsBadAccept`
-capstone. -/
+TODO(#96): replace the compatibility adapter by direct algebraic columns, construct
+`DeployedRootPrefixSchedule` from the deployed Rust transcript stages, and compose the resulting
+computable constraint endpoint into the final concrete `constraintsBadAccept` capstone.  #96 must
+complete that replacement before claiming a concrete executable DLOG solver. -/
 noncomputable def ComputedDeployedRootFSFamily.ofOnline
     (family : ComputedOnlineMemberFSFamily shape)
     (hcapacity : shape.numPointSets + 1 <= Fintype.card Fp)
@@ -498,8 +500,8 @@ noncomputable def ComputedDeployedRootFSFamily.ofOnline
   schedule := DeployedRootPrefixSchedule.ofPrefixDetermined family.toFamily
     (deployedRootOutcomeOfOnline family hcapacity) hprefix
 
-/-- Preferred constructor when the online transcript implementation already exposes each root set
-at its pre-squeeze stage. -/
+/-- Schedule-aware mathematical adapter.  Supplying the schedule closes chronology, but the
+Vandermonde-based outcome remains noncomputable for the reason documented on `ofOnline`. -/
 noncomputable def ComputedDeployedRootFSFamily.ofScheduledOnline
     (family : ComputedOnlineMemberFSFamily shape)
     (hcapacity : shape.numPointSets + 1 <= Fintype.card Fp)
@@ -520,10 +522,14 @@ abbrev toFamily (family : ComputedDeployedRootFSFamily shape) :
 
 The recursive extractor's `relationFinder` already preserves both its direct relation branch and
 the clean-opening collision branch.  The only additional relation introduced by algebraic
-multiopen unbatching is the `outcome` relation.  Keeping both branches in one executable finder is
-essential: demoting the latter to the bare proposition `HasNontrivialRelation` would make a
+multiopen unbatching is the `outcome` relation.  Keeping both branches in one data-returning finder
+is essential: demoting the latter to the bare proposition `HasNontrivialRelation` would make a
 terminal `witness ∨ relation` predicate vacuous in a prime-order group and would not charge the
-new branch to DLOG. -/
+new branch to DLOG.
+
+This declaration is computable relative to `family.outcome`.  Instantiating `family` with either
+noncomputable compatibility constructor above does not establish an executable DLOG solver; #96
+must supply a computable direct-coordinate outcome before applying a concrete DLOG assumption. -/
 def deployedRelationFinder (family : ComputedDeployedRootFSFamily shape) :
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) -> family.toFamily.Coins ->
       Option (AlgebraicRelationWitness (F := Fp) basis) :=
@@ -537,15 +543,17 @@ def deployedRelationFinder (family : ComputedDeployedRootFSFamily shape) :
             some (augmentedBasis_ursOfAugmentedBasis shape.k basis ▸
               relation.toAlgebraicRelationWitness)
 
-/-- The complete deployed relation event is computational: the combined finder returns an explicit
-relation on this run. -/
+/-- The complete deployed relation event: the combined finder returns an explicit relation on this
+run.  Its concrete executability has the same relative boundary as `deployedRelationFinder`. -/
 def deployedRelationEvent (family : ComputedDeployedRootFSFamily shape) :
     Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) × family.toFamily.Coins) :=
   {p | (family.deployedRelationFinder p.1 p.2).isSome}
 
-/-- A textbook single-instance DLOG bound prices every relation branch introduced by the recursive
-and rewind-free multiopen extractors.  The only reduction loss is the existing augmented-basis
-cardinality factor. -/
+/-- Conditional textbook single-instance DLOG pricing for every relation branch introduced by the
+recursive and rewind-free multiopen extractors.  The hypothesis applies to the concrete finder
+stored in `family`; using a noncomputable compatibility-constructed family does not discharge that
+premise.  Once the finder is computably instantiated, the only reduction loss here is the existing
+augmented-basis cardinality factor. -/
 theorem deployedRelation_prob_le_of_textbookDL
     (B : VestaG) (family : ComputedDeployedRootFSFamily shape) {bound : ENNReal}
     (hDL : TextbookDLWithCoinsAdvantageLE B family.deployedRelationFinder bound) :

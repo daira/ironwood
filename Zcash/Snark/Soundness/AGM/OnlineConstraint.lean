@@ -1,5 +1,6 @@
 import Zcash.Snark.Soundness.AGM.DeployedConstraintSupply
 import Zcash.Snark.Soundness.AGM.DeployedPinnedRoots
+import Zcash.Snark.Soundness.Forking.Adversary.Provenance
 
 /-!
 # Constraint supply from retained online AGM provenance
@@ -14,9 +15,46 @@ namespace Zcash.Snark
 
 open Classical Polynomial
 
+universe u v
+
 variable {shape : Shape}
 
 local instance vestaInhabitedOnlineConstraint : Inhabited VestaG := ⟨0⟩
+
+/-- Forget the success branch while retaining explicit relation data. -/
+private def relationOption {A : Sort u} {R : Type v} : A ⊕' R → Option R
+  | PSum.inl _ => none
+  | PSum.inr relation => some relation
+
+private theorem eq_inr_of_relationOption_eq_some {A : Sort u} {R : Type v}
+    {outcome : A ⊕' R} {relation : R}
+    (h : relationOption outcome = some relation) : outcome = PSum.inr relation := by
+  cases outcome with
+  | inl value => simp [relationOption] at h
+  | inr found => simpa [relationOption] using h
+
+/-- The relation projection of the coordinate comparison is invariant under coordinate equality;
+the collision proofs themselves are proposition-valued and therefore irrelevant. -/
+private theorem relationOption_separateOrRelationWitness_congr {n : Nat}
+    (g : Fin n → VestaG) (U W : VestaG)
+    {a₁ a₂ b₁ b₂ : Fin n → Fp} {α₁ α₂ α₁' α₂' β₁ β₂ β₁' β₂' : Fp}
+    (ha : a₁ = a₂) (hb : b₁ = b₂) (hα : α₁ = α₂) (hα' : α₁' = α₂')
+    (hβ : β₁ = β₂) (hβ' : β₁' = β₂')
+    (e₁ : commitGen g a₁ + α₁ • U + β₁ • W =
+      commitGen g b₁ + α₁' • U + β₁' • W)
+    (e₂ : commitGen g a₂ + α₂ • U + β₂ • W =
+      commitGen g b₂ + α₂' • U + β₂' • W) :
+    relationOption (separateOrRelationWitness g U W a₁ b₁ α₁ α₁' β₁ β₁' e₁) =
+      relationOption (separateOrRelationWitness g U W a₂ b₂ α₂ α₂' β₂ β₂' e₂) := by
+  subst a₂
+  subst b₂
+  subst α₂
+  subst α₂'
+  subst β₂
+  subst β₂'
+  have he : e₂ = e₁ := Subsingleton.elim _ _
+  cases he
+  rfl
 
 /-- The deterministic pre-`x` representation source retained by one deployed batch witness. -/
 def deployedConstraintSource (family : ComputedDeployedRootFSFamily shape)
@@ -27,7 +65,7 @@ def deployedConstraintSource (family : ComputedDeployedRootFSFamily shape)
   pnu.1.algebraicProof.preX1AssemblySource witness.fixedRepresentations
 
 /-- Polynomial of the first online representation of a committed point. -/
-def deployedConstraintPointPolynomial
+noncomputable def deployedConstraintPointPolynomial
     (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (pnu : WrappedAlgebraicOutput family.toFamily basis)
@@ -99,7 +137,8 @@ theorem deployedConstraintVanishingCovered
   obtain ⟨i, hi⟩ := List.mem_ofFn.mp hpiece
   refine ⟨pnu.1.algebraicProof.hPieces i,
     pnu.1.algebraicProof.hPiece_mem_preX1AssemblySource witness.fixedRepresentations i, ?_⟩
-  exact hi.symm
+  change (pnu.1.algebraicProof.hPieces i).point = pr.2 at hi
+  exact hi
 
 /-- Quotient-piece representations retained in the online pre-`x` source. -/
 def deployedConstraintPieceRepresentations
@@ -129,9 +168,12 @@ def deployedConstraintQuotientAgreementOrRelation
       (.msm (vanishingHCommitment shape.k xn (List.ofFn pnu.1.proof.1.hPieces)))
       (deployedConstraintVanishingCovered family basis pnu witness)
     let pieces := deployedConstraintPieceRepresentations family basis pnu witness
-    (represented.coeffs = ∑ i, xn ^ (i : Nat) • pieces.coeffs i ∧
-      represented.uComp = ∑ i, xn ^ (i : Nat) * pieces.uComp i ∧
-      represented.wComp = ∑ i, xn ^ (i : Nat) * pieces.wComp i) ⊕'
+    (represented.coeffs = ∑ i : Fin shape.numQuotientPieces,
+        xn ^ (i : Nat) • pieces.coeffs i ∧
+      represented.uComp = ∑ i : Fin shape.numQuotientPieces,
+        xn ^ (i : Nat) * pieces.uComp i ∧
+      represented.wComp = ∑ i : Fin shape.numQuotientPieces,
+        xn ^ (i : Nat) * pieces.wComp i) ⊕'
       AugmentedRelationWitness (F := Fp) urs.g urs.u urs.w := by
   let urs := ursOfAugmentedBasis shape.k basis
   let xn := (wrappedPreIpaRecord pnu).x ^ (family.vk basis).n
@@ -140,12 +182,23 @@ def deployedConstraintQuotientAgreementOrRelation
     (deployedConstraintSource family basis pnu witness) (.msm msm)
     (deployedConstraintVanishingCovered family basis pnu witness)
   let pieces := deployedConstraintPieceRepresentations family basis pnu witness
-  let pieceCoeffs := ∑ i, xn ^ (i : Nat) • pieces.coeffs i
-  let pieceU := ∑ i, xn ^ (i : Nat) * pieces.uComp i
-  let pieceW := ∑ i, xn ^ (i : Nat) * pieces.wComp i
+  let pieceCoeffs := ∑ i : Fin shape.numQuotientPieces,
+    xn ^ (i : Nat) • pieces.coeffs i
+  let pieceU := ∑ i : Fin shape.numQuotientPieces,
+    xn ^ (i : Nat) * pieces.uComp i
+  let pieceW := ∑ i : Fin shape.numQuotientPieces,
+    xn ^ (i : Nat) * pieces.wComp i
   have hvanishing : msm.eval urs =
       ∑ i : Fin shape.numQuotientPieces, xn ^ (i : Nat) • pnu.1.proof.1.hPieces i := by
-    simpa [msm] using vanishingHCommitment_eval urs xn (List.ofFn pnu.1.proof.1.hPieces)
+    calc
+      _ = ∑ i ∈ Finset.range (List.ofFn pnu.1.proof.1.hPieces).length,
+          xn ^ i • (List.ofFn pnu.1.proof.1.hPieces).getD i 0 :=
+        vanishingHCommitment_eval urs xn (List.ofFn pnu.1.proof.1.hPieces)
+      _ = _ := by
+        rw [List.length_ofFn, ← Fin.sum_univ_eq_sum_range]
+        refine Finset.sum_congr rfl fun i _ => ?_
+        rw [List.getD_eq_getElem _ _ (by rw [List.length_ofFn]; exact i.isLt),
+          List.getElem_ofFn]
   have hrepresented : commit urs represented.coeffs + represented.uComp • urs.u +
       represented.wComp • urs.w =
         ∑ i : Fin shape.numQuotientPieces, xn ^ (i : Nat) • pnu.1.proof.1.hPieces i :=
@@ -299,14 +352,53 @@ theorem deployedConstraint_quotient_relation_eq_online
   have hcomponents := deployedConstraint_vanishing_components_eq_online family basis pnu witness
     decoded hbatches hi m (hcommit (.point 0, []))
   unfold DeployedAlgebraicDecode.quotientEvalEqCommittedPreXOrRelationWitness at hrelation
-  unfold deployedConstraintQuotientAgreementOrRelation
-  simp only
-  rw [← hcomponents.1, ← hcomponents.2.1, ← hcomponents.2.2]
-  simpa only using hrelation
+  unfold decodedQuotientEqReassembledOrRelationWitness at hrelation
+  simp only at hrelation
+  split at hrelation
+  · rename_i innerOutcome quotientRelation hinner
+    have hreln : quotientRelation = relation := PSum.inr.inj hrelation
+    split at hinner
+    · rename_i separateRelation hseparate
+      have hinnerRel : separateRelation = quotientRelation := PSum.inr.inj hinner
+      unfold deployedConstraintQuotientAgreementOrRelation
+      simp only
+      apply eq_inr_of_relationOption_eq_some
+      have hseparate' := congrArg relationOption hseparate
+      simp only [relationOption] at hseparate'
+      rw [hinnerRel, hreln] at hseparate'
+      calc
+        _ = relationOption (separateOrRelationWitness
+            (ursOfAugmentedBasis shape.k basis).g
+            (ursOfAugmentedBasis shape.k basis).u
+            (ursOfAugmentedBasis shape.k basis).w
+            ((decoded.batches.x1 i hi).coeffs m)
+            (∑ j : Fin shape.numQuotientPieces,
+              ((wrappedPreIpaRecord pnu).x ^ (family.vk basis).n) ^ (j : Nat) •
+                (deployedConstraintPieceCoordinates family basis pnu witness j).1)
+            ((decoded.batches.x1 i hi).uComp m)
+            (∑ j : Fin shape.numQuotientPieces,
+              ((wrappedPreIpaRecord pnu).x ^ (family.vk basis).n) ^ (j : Nat) *
+                (deployedConstraintPieceCoordinates family basis pnu witness j).2.1)
+            ((decoded.batches.x1 i hi).wComp m)
+            (∑ j : Fin shape.numQuotientPieces,
+              ((wrappedPreIpaRecord pnu).x ^ (family.vk basis).n) ^ (j : Nat) *
+                (deployedConstraintPieceCoordinates family basis pnu witness j).2.2) _) := by
+              apply relationOption_separateOrRelationWitness_congr
+              · exact hcomponents.1.symm
+              · rfl
+              · exact hcomponents.2.1.symm
+              · rfl
+              · exact hcomponents.2.2.symm
+              · rfl
+        _ = some relation := hseparate'
+    · cases hinner
+  · cases hrelation
 
-/-- Concrete constraint outcome built from the actual online AGM source.  No arbitrary chosen
-opening occurs in this function. -/
-def deployedOnlineConstraintOutcomeOfDecode
+/-- Mathematical polynomial-witness adapter built from the actual online AGM source.  No arbitrary
+opening is chosen: its relation branch agrees with the separately executable
+`deployedConstraintQuotientFinder`.  It remains `noncomputable` only because the success branch
+materializes Mathlib `Polynomial Fp` values. -/
+noncomputable def deployedOnlineConstraintOutcomeOfDecode
     (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (pnu : WrappedAlgebraicOutput family.toFamily basis)
@@ -385,7 +477,13 @@ theorem deployedOnlineConstraintOutcome_relation_eq_online
       PSum.inr relation := by
   simp only [deployedOnlineConstraintOutcomeOfDecode, deployedConstraintOutcomeOfDecode,
     bindOrRelationWitness] at hout
-  exact hout
+  split at hout
+  · simp_all only [reduceCtorEq]
+  · rename_i quotientRelation hquotient
+    have honline := deployedConstraint_quotient_relation_eq_online family basis pnu witness
+      decoded hbatches _ _ _ quotientRelation hquotient
+    injection hout with hreln
+    exact hreln ▸ honline
 
 /-- Run-level provider shape consumed by the composite probability theorem.  `none` means the
 decode or pre-`x` premises were unavailable; `some` retains either the constraint witness or the

@@ -55,17 +55,23 @@ theorem DeployedRootDecodeWitness.unique
     (a b : DeployedRootDecodeWitness family basis coins) : a = b := by
   have hw : a.batchWitness = b.batchWitness := by
     exact PSum.inl.inj (a.outcome_eq.symm.trans b.outcome_eq)
-  cases hw
-  have hd : a.decoded = b.decoded := by
-    cases a.decoded with
-    | mk aBatches aX4 aMembers =>
-        cases b.decoded with
-        | mk bBatches bX4 bMembers =>
-            have hbatches : aBatches = bBatches := a.batches_eq.trans b.batches_eq.symm
-            cases hbatches
-            rfl
-  cases hd
-  rfl
+  cases a with
+  | mk aBatch aOutcome aDecoded aBatchesEq =>
+      cases b with
+      | mk bBatch bOutcome bDecoded bBatchesEq =>
+          dsimp only at hw
+          subst bBatch
+          have hd : aDecoded = bDecoded := by
+            cases aDecoded with
+            | mk aBatches aX4 aMembers =>
+                cases bDecoded with
+                | mk bBatches bX4 bMembers =>
+                    have hbatches : aBatches = bBatches :=
+                      aBatchesEq.trans bBatchesEq.symm
+                    cases hbatches
+                    rfl
+          subst bDecoded
+          rfl
 
 instance deployedRootDecodeWitnessSubsingleton
     (family : ComputedDeployedRootFSFamily shape)

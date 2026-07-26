@@ -28,9 +28,9 @@ attribute [local irreducible] deployedSetQueries deployedX4PairCount x4BatchComm
 
 /-- Preserve an explicit relation branch while sequencing a successful result. -/
 def bindOrRelationWitness {A : Sort u} {B : Sort v} {R : Sort w}
-    (outcome : A ⊕' R) (next : A → B ⊕' R) : B ⊕' R :=
+    (outcome : A ⊕' R) (next : A → B) : B ⊕' R :=
   match outcome with
-  | PSum.inl value => next value
+  | PSum.inl value => PSum.inl (next value)
   | PSum.inr relation => PSum.inr relation
 
 /-- Small proof bundle used to sequence the nine finite binding comparisons consumed by the
@@ -79,6 +79,7 @@ theorem DeployedConstraintChecks.of_accepts_chRecord [DecidableEq G] [Inhabited 
   · change (chRecord nu rounds).x ^ vk.n ≠ 1
     exact hxn
 
+omit [AddCommGroup G] [Module Fp G] in
 /-- The pair count follows from the precise `multiopenU` guard, without the final IPA equation. -/
 theorem deployedX4PairCount_eq_sets_length_of_checks [DecidableEq G] [Inhabited G]
     {shape : Shape} (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape Fp G)
@@ -89,70 +90,142 @@ theorem deployedX4PairCount_eq_sets_length_of_checks [DecidableEq G] [Inhabited 
   simp only [List.length_map, List.length_zip, checks.uCount,
     ← constructIntermediateSets_points_length (assembleQueries vk instanceCommitment ps ch), min_self]
 
+/-- Computed deployed route for one commitment slot.  Both indices are the deterministic grouping
+searches returned by `constructIntermediateSets_comm_route`; the remaining fields certify those
+exact values against the deployed `getD` views. -/
+structure DeployedSlotRoute [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
+    (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (c : CommitmentId) (commitment : CommitmentRef shape.k Fp G) where
+  setIndex : Nat
+  setIndex_lt : setIndex < deployedX4PairCount vk instanceCommitment ps ch
+  memberIndex : Fin (deployedSetQueries vk instanceCommitment ps ch setIndex).length
+  id_eq : ∀ c0,
+    (deployedSetCommIds vk instanceCommitment ps ch setIndex).getD (memberIndex : Nat) c0 = c
+  commitment_eq : ∀ d0,
+    ((deployedSetQueries vk instanceCommitment ps ch setIndex).getD
+      (memberIndex : Nat) d0).1 = commitment
+  all_queries : ∀ q ∈ assembleQueries vk instanceCommitment ps ch, q.commId = c →
+    q.point ∈ deployedSetPts vk instanceCommitment ps ch setIndex ∧
+    ((deployedSetQueries vk instanceCommitment ps ch setIndex).getD
+      (memberIndex : Nat) (.point 0, [])).2.getD
+        (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD
+          setIndex []).idxOf q.point) 0 = q.eval
+
 /-- Slot routing from the two grouping guards, with no dependence on the final IPA equation. -/
-theorem deployed_slot_routed_all_of_checks [DecidableEq G] [Inhabited G]
+def deployed_slot_route_of_checks [DecidableEq G] [Inhabited G]
     {shape : Shape} (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp) (checks : DeployedConstraintChecks vk instanceCommitment ps ch)
+    {c : CommitmentId} {q0 : VerifierQuery shape.k Fp G}
+    (hq0 : q0 ∈ assembleQueries vk instanceCommitment ps ch) (hq0c : q0.commId = c) :
+    DeployedSlotRoute vk instanceCommitment ps ch c q0.commitment := by
+  let route :=
+    constructIntermediateSets_comm_route (assembleQueries vk instanceCommitment ps ch) hq0 hq0c
+      (fun q hq q' hq' hid hpt =>
+        congrArg VerifierQuery.eval
+          (eq_of_not_hasDuplicateCommitmentPoint checks.noDuplicate hq' hq hid hpt))
+      (fun q hq hid => assembleQueries_commitment_eq_of_commId vk instanceCommitment ps ch hq0 hq
+        (hid.trans hq0c.symm))
+  have hmlen : route.memberIndex <
+      (deployedSetQueries vk instanceCommitment ps ch route.setIndex).length := by
+    simpa only [deployedSetQueries, constructIntermediateSets_zip_sets_getD]
+      using route.memberIndex_lt
+  refine
+    { setIndex := route.setIndex
+      setIndex_lt := ?_
+      memberIndex := ⟨route.memberIndex, hmlen⟩
+      id_eq := route.id_eq
+      commitment_eq := ?_
+      all_queries := ?_ }
+  · rw [deployedX4PairCount_eq_sets_length_of_checks vk instanceCommitment ps ch checks]
+    exact route.setIndex_lt
+  · intro d0
+    simpa only [deployedSetQueries, constructIntermediateSets_zip_sets_getD]
+      using route.commitment_eq d0
+  · intro q hq hqc
+    obtain ⟨hpt, hev⟩ := route.all_queries q hq hqc
+    refine ⟨by rw [deployedSetPts, List.mem_toFinset]; exact hpt, ?_⟩
+    have h := hev (.point 0, []) 0
+    simpa only [deployedSetQueries, constructIntermediateSets_zip_sets_getD] using h
+
+omit [Module Fp G] in
+/-- Proposition-valued compatibility wrapper for legacy constraint-routing consumers. -/
+theorem deployed_slot_routed_all_of_checks [DecidableEq G] [Inhabited G]
+    {shape : Shape} (vk : VerifyingKey shape Fp G)
+    (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) (checks : DeployedConstraintChecks vk instanceCommitment ps ch)
     {c : CommitmentId} {q0 : VerifierQuery shape.k Fp G}
     (hq0 : q0 ∈ assembleQueries vk instanceCommitment ps ch) (hq0c : q0.commId = c) :
     ∃ i, i < deployedX4PairCount vk instanceCommitment ps ch ∧
       ∃ m : Fin (deployedSetQueries vk instanceCommitment ps ch i).length,
         (∀ c0, (deployedSetCommIds vk instanceCommitment ps ch i).getD (m : Nat) c0 = c) ∧
-        (∀ d0, ((deployedSetQueries vk instanceCommitment ps ch i).getD (m : Nat) d0).1 = q0.commitment) ∧
-        ∀ q ∈ assembleQueries vk instanceCommitment ps ch, q.commId = c ->
+        (∀ d0, ((deployedSetQueries vk instanceCommitment ps ch i).getD
+          (m : Nat) d0).1 = q0.commitment) ∧
+        ∀ q ∈ assembleQueries vk instanceCommitment ps ch, q.commId = c →
           q.point ∈ deployedSetPts vk instanceCommitment ps ch i ∧
-          ((deployedSetQueries vk instanceCommitment ps ch i).getD (m : Nat) (.point 0, [])).2.getD
-              (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i []).idxOf
-                q.point) 0 = q.eval := by
-  obtain ⟨i, hi, m, hmlt, hids, hcomm, hall⟩ :=
-    constructIntermediateSets_comm_routed_all (assembleQueries vk instanceCommitment ps ch) hq0 hq0c
-      (fun q hq q' hq' hid hpt =>
-        congrArg VerifierQuery.eval
-          (eq_of_not_hasDuplicateCommitmentPoint checks.noDuplicate hq' hq hid hpt))
-      (fun q hq hid => assembleQueries_commitment_eq_of_commId vk instanceCommitment ps ch hq0 hq
-        (hid.trans hq0c.symm))
-  have hmlen : m < (deployedSetQueries vk instanceCommitment ps ch i).length := by
-    simpa only [deployedSetQueries, constructIntermediateSets_zip_sets_getD] using hmlt
-  refine ⟨i, ?_, ⟨m, hmlen⟩, hids, ?_, ?_⟩
-  · rw [deployedX4PairCount_eq_sets_length_of_checks vk instanceCommitment ps ch checks]
-    exact hi
-  · intro d0
-    simpa only [deployedSetQueries, constructIntermediateSets_zip_sets_getD] using hcomm d0
-  · intro q hq hqc
-    obtain ⟨hpt, hev⟩ := hall q hq hqc
-    refine ⟨by rw [deployedSetPts, List.mem_toFinset]; exact hpt, ?_⟩
-    have h := hev (.point 0, []) 0
-    simpa only [deployedSetQueries, constructIntermediateSets_zip_sets_getD] using h
+          ((deployedSetQueries vk instanceCommitment ps ch i).getD
+            (m : Nat) (.point 0, [])).2.getD
+              (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD
+                i []).idxOf q.point) 0 = q.eval := by
+  let route := deployed_slot_route_of_checks vk instanceCommitment ps ch checks hq0 hq0c
+  exact ⟨route.setIndex, route.setIndex_lt, route.memberIndex, route.id_eq,
+    route.commitment_eq, route.all_queries⟩
 
-/-- The vanishing slot retains the exact reassembled quotient commitment as well as its routed
-evaluation.  This commitment-aware form is the deterministic input needed by pre-`x` quotient
-recovery. -/
-theorem vanishing_slot_routed_full [DecidableEq G] [Inhabited G] {shape : Shape}
+/-- The canonical concrete query for a slot, point, and claimed evaluation. -/
+def deployedCanonicalQuery [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
-    (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
-    ∃ i, i < (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).sets.length ∧
-      (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i [] = [ch.x] ∧
-      ∃ m, m < (deployedSetQueries vk instanceCommitment ps ch i).length ∧
-        (∀ c₀, (deployedSetCommIds vk instanceCommitment ps ch i).getD m c₀ =
-          CommitmentId.vanishingH) ∧
-        (∀ d₀, ((deployedSetQueries vk instanceCommitment ps ch i).getD m d₀).1 = .msm
-          (vanishingHCommitment shape.k (ch.x ^ vk.n) (List.ofFn ps.hPieces))) ∧
-        ∀ d₀, ((deployedSetQueries vk instanceCommitment ps ch i).getD m d₀).2 =
-          [expectedHEval
-            (allExpressions vk ps ch
-              (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1
-              (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.1
-              (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2)
-            ch.y (ch.x ^ vk.n)] := by
-  obtain ⟨i, hi, hpts, m, hm, hids, hevals⟩ :=
-    vanishing_slot_routed vk instanceCommitment ps ch
-  have hcommit : ∀ d₀, ((deployedSetQueries vk instanceCommitment ps ch i).getD m d₀).1 =
-      .msm (vanishingHCommitment shape.k (ch.x ^ vk.n) (List.ofFn ps.hPieces)) := by
-    intro d₀
-    have h := deployed_member_commitment_eq_assembled vk instanceCommitment ps ch i
-      ⟨m, hm⟩ CommitmentId.vanishingH (hids CommitmentId.vanishingH) d₀
-    simpa only [assembledCommitment] using h
-  exact ⟨i, hi, hpts, m, hm, hids, hcommit, hevals⟩
+    (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (c : CommitmentId) (point eval : Fp) : VerifierQuery shape.k Fp G :=
+  { point := point
+    commitment := assembledCommitment vk instanceCommitment ps ch c
+    eval := eval
+    commId := c }
+
+omit [AddCommGroup G] [Module Fp G] in
+/-- An existential query specification proves membership of the corresponding canonical query;
+the witness is consumed only in this proposition-valued proof, never to choose routing data. -/
+theorem deployedCanonicalQuery_mem_of_spec [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
+    (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (c : CommitmentId) (point eval : Fp)
+    (hspec : ∃ q ∈ assembleQueries vk instanceCommitment ps ch,
+      q.commId = c ∧ q.point = point ∧ q.eval = eval) :
+    deployedCanonicalQuery vk instanceCommitment ps ch c point eval ∈
+      assembleQueries vk instanceCommitment ps ch := by
+  obtain ⟨q, hq, hqid, hpoint, heval⟩ := hspec
+  have hcommit := assembleQueries_commitment_eq_assembled vk instanceCommitment ps ch hq
+  have hqeq : q = deployedCanonicalQuery vk instanceCommitment ps ch c point eval := by
+    cases q
+    simp_all [deployedCanonicalQuery]
+  rwa [← hqeq]
+
+/-- A family of computed deployed routes indexed by protocol slots. -/
+structure DeployedRouteSelector [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
+    (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (I : Type*) (target : I → CommitmentId) (point eval : I → Fp) where
+  canonical_mem : ∀ i,
+    deployedCanonicalQuery vk instanceCommitment ps ch (target i) (point i) (eval i) ∈
+      assembleQueries vk instanceCommitment ps ch
+  route : ∀ i, DeployedSlotRoute vk instanceCommitment ps ch (target i)
+    (assembledCommitment vk instanceCommitment ps ch (target i))
+
+/-- Build computed routes from proposition-valued query-presence proofs.  The returned indices are
+determined by `target`, `point`, and `eval`; `hspec` only certifies membership. -/
+def deployedRouteSelectorOfSpecs [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
+    (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (checks : DeployedConstraintChecks vk instanceCommitment ps ch)
+    (I : Type*) (target : I → CommitmentId) (point eval : I → Fp)
+    (hspec : ∀ i, ∃ q ∈ assembleQueries vk instanceCommitment ps ch,
+      q.commId = target i ∧ q.point = point i ∧ q.eval = eval i) :
+    DeployedRouteSelector vk instanceCommitment ps ch I target point eval := by
+  let hmem := fun i => deployedCanonicalQuery_mem_of_spec vk instanceCommitment ps ch
+    (target i) (point i) (eval i) (hspec i)
+  exact
+    { canonical_mem := hmem
+      route := fun i =>
+        deployed_slot_route_of_checks vk instanceCommitment ps ch checks (hmem i) rfl }
 
 /-- The polynomial represented by member `m` of deployed point set `i`. -/
 noncomputable def DeployedAlgebraicDecode.memberPoly [DecidableEq G] [Inhabited G]
@@ -430,225 +503,200 @@ def DeployedAlgebraicDecode.quotientEvalEqCommittedPreXOrRelationWitness
 
 /-! ## Routed feeds from a deterministic member source -/
 
-open Classical in
-/-- Advice-column feed binding from rewind-free member polynomials. -/
-theorem adviceFeed_bind_of_memberPolynomials [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
+/-- Computed carrier selection for one rotated query feed. -/
+structure DeployedRotatedFeedBinding [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
+    (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (src : DeployedMemberPolynomials vk instanceCommitment ps ch)
+    (Q : Type*) (numQueries : Nat) (layout : List (Nat × Int))
+    (target : Q → Fin numQueries → CommitmentId) (claims : Q → Nat → Fp) where
+  setIndex : Q → Fin numQueries → Nat
+  setIndex_lt : ∀ q j, setIndex q j < deployedX4PairCount vk instanceCommitment ps ch
+  memberIndex : ∀ q j,
+    Fin (deployedSetQueries vk instanceCommitment ps ch (setIndex q j)).length
+  id_eq : ∀ q j,
+    (deployedSetCommIds vk instanceCommitment ps ch (setIndex q j)).getD
+      (memberIndex q j : Nat) CommitmentId.vanishingH = target q j
+  bind : ∀ q n,
+    (rotatedFeed vk.omega layout
+      (fun j => src.poly (setIndex q j) (setIndex_lt q j) (memberIndex q j)) n).eval ch.x =
+      claims q n
+
+/-- Build a rotated feed from computed grouped routes.  Query existence is used only to certify the
+canonical query; all set/member indices are returned by the deterministic route search. -/
+def deployedRotatedFeedBindingOfSpecs [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
+    (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (src : DeployedMemberPolynomials vk instanceCommitment ps ch)
+    (checks : DeployedConstraintChecks vk instanceCommitment ps ch)
+    (Q : Type*) (numQueries : Nat) (layout : List (Nat × Int))
+    (target : Q → Fin numQueries → CommitmentId) (claims : Q → Nat → Fp)
+    (hclaimsZero : ∀ q n, numQueries ≤ n → claims q n = 0)
+    (hspec : ∀ q j, ∃ query ∈ assembleQueries vk instanceCommitment ps ch,
+      query.commId = target q j ∧
+      query.point = rotateOmega vk.omega ch.x (layout.getD (j : Nat) (0, 0)).2 ∧
+      query.eval = claims q (j : Nat)) :
+    DeployedRotatedFeedBinding vk instanceCommitment ps ch src Q numQueries layout
+      target claims := by
+  let I := Q × Fin numQueries
+  let targetI : I → CommitmentId := fun qj => target qj.1 qj.2
+  let pointI : I → Fp := fun qj =>
+    rotateOmega vk.omega ch.x (layout.getD (qj.2 : Nat) (0, 0)).2
+  let evalI : I → Fp := fun qj => claims qj.1 (qj.2 : Nat)
+  let selector := deployedRouteSelectorOfSpecs vk instanceCommitment ps ch checks I
+    targetI pointI evalI (fun qj => hspec qj.1 qj.2)
+  refine
+    { setIndex := fun q j => (selector.route (q, j)).setIndex
+      setIndex_lt := fun q j => (selector.route (q, j)).setIndex_lt
+      memberIndex := fun q j => (selector.route (q, j)).memberIndex
+      id_eq := fun q j => (selector.route (q, j)).id_eq CommitmentId.vanishingH
+      bind := ?_ }
+  intro q n
+  by_cases h : n < numQueries
+  · let j : Fin numQueries := ⟨n, h⟩
+    let route := selector.route (q, j)
+    have hall := route.all_queries
+      (deployedCanonicalQuery vk instanceCommitment ps ch
+        (target q j) (pointI (q, j)) (evalI (q, j)))
+      (selector.canonical_mem (q, j)) rfl
+    rw [rotatedFeed_eval vk.omega layout _ h ch.x]
+    rw [src.eval_at_point route.setIndex route.setIndex_lt route.memberIndex
+      (pointI (q, j)) hall.1]
+    exact hall.2
+  · rw [rotatedFeed_eval_of_ge vk.omega layout _ (Nat.not_lt.mp h) ch.x]
+    rw [hclaimsZero q n (Nat.not_lt.mp h)]
+
+/-- Computed advice-column carrier selection. -/
+def adviceFeedBindingOfMemberPolynomials [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (src : DeployedMemberPolynomials vk instanceCommitment ps ch)
     (checks : DeployedConstraintChecks vk instanceCommitment ps ch)
     (hAdvLen : shape.numAdviceQueries ≤ vk.adviceQueryLayout.length) :
-    ∃ (adviceSet : Fin shape.numProofs -> Fin shape.numAdviceQueries -> Nat)
-      (hadviceSet : forall q j, adviceSet q j < deployedX4PairCount vk instanceCommitment ps ch)
-      (adviceMem : forall (q : Fin shape.numProofs) (j : Fin shape.numAdviceQueries),
-        Fin (deployedSetQueries vk instanceCommitment ps ch (adviceSet q j)).length),
-      (forall (q : Fin shape.numProofs) (j : Fin shape.numAdviceQueries),
-        (deployedSetCommIds vk instanceCommitment ps ch (adviceSet q j)).getD (adviceMem q j : Nat)
-            CommitmentId.vanishingH =
-          CommitmentId.adviceCol q (vk.adviceQueryLayout.getD (j : Nat) (0, 0)).1) ∧
-      forall (q : Fin shape.numProofs) (n : Nat),
-        (rotatedFeed vk.omega vk.adviceQueryLayout
-          (fun j : Fin shape.numAdviceQueries =>
-            src.poly (adviceSet q j) (hadviceSet q j) (adviceMem q j)) n).eval ch.x =
-          finFn (ps.adviceEvals q) n := by
-  have hsel : forall (q : Fin shape.numProofs) (j : Fin shape.numAdviceQueries),
-      exists i, i < deployedX4PairCount vk instanceCommitment ps ch ∧
-        exists m : Fin (deployedSetQueries vk instanceCommitment ps ch i).length,
-          (forall c0, (deployedSetCommIds vk instanceCommitment ps ch i).getD (m : Nat) c0 =
-            CommitmentId.adviceCol q (vk.adviceQueryLayout.getD (j : Nat) (0, 0)).1) ∧
-          rotateOmega vk.omega ch.x (vk.adviceQueryLayout.getD (j : Nat) (0, 0)).2 ∈
-            deployedSetPts vk instanceCommitment ps ch i ∧
-          ((deployedSetQueries vk instanceCommitment ps ch i).getD (m : Nat) (.point 0, [])).2.getD
-              (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i []).idxOf
-                (rotateOmega vk.omega ch.x (vk.adviceQueryLayout.getD (j : Nat) (0, 0)).2)) 0 =
-            finFn (ps.adviceEvals q) (j : Nat) :=
-    fun q j => by
-      obtain ⟨q0, hq0, hq0id, hq0pt, hq0ev⟩ :=
-        advice_query_mem_assembleQueries_eval vk instanceCommitment ps ch q
-          (lt_of_lt_of_le j.isLt hAdvLen) j.isLt
-      obtain ⟨i, hi, m, hids, _hcomm, hall⟩ :=
-        deployed_slot_routed_all_of_checks vk instanceCommitment ps ch checks hq0 hq0id
-      obtain ⟨hpt, hev⟩ := hall q0 hq0 hq0id
-      exact ⟨i, hi, m, fun c0 => hids c0, hq0pt ▸ hpt,
-        by rw [hq0pt, hq0ev] at hev; exact hev⟩
-  choose iSel hiSel mSel hidsSel hptSel hevSel using hsel
-  refine ⟨iSel, hiSel, mSel, fun q j => hidsSel q j CommitmentId.vanishingH, ?_⟩
-  intro q n
-  by_cases h : n < shape.numAdviceQueries
-  · rw [rotatedFeed_eval vk.omega vk.adviceQueryLayout _ h ch.x]
-    rw [src.eval_at_point (iSel q ⟨n, h⟩) (hiSel q ⟨n, h⟩) (mSel q ⟨n, h⟩)
-      _ (hptSel q ⟨n, h⟩)]
-    exact hevSel q ⟨n, h⟩
-  · rw [rotatedFeed_eval_of_ge vk.omega vk.adviceQueryLayout _ (Nat.not_lt.mp h) ch.x,
-      finFn, dif_neg h]
+    DeployedRotatedFeedBinding vk instanceCommitment ps ch src
+      (Fin shape.numProofs) shape.numAdviceQueries vk.adviceQueryLayout
+      (fun q j => CommitmentId.adviceCol q
+        (vk.adviceQueryLayout.getD (j : Nat) (0, 0)).1)
+      (fun q => finFn (ps.adviceEvals q)) :=
+  deployedRotatedFeedBindingOfSpecs vk instanceCommitment ps ch src checks
+    (Fin shape.numProofs) shape.numAdviceQueries vk.adviceQueryLayout
+    (fun q j => CommitmentId.adviceCol q
+      (vk.adviceQueryLayout.getD (j : Nat) (0, 0)).1)
+    (fun q => finFn (ps.adviceEvals q))
+    (fun _ n hn => by simp [finFn, hn])
+    (fun q j => advice_query_mem_assembleQueries_eval vk instanceCommitment ps ch q
+      (lt_of_lt_of_le j.isLt hAdvLen) j.isLt)
 
-open Classical in
-/-- Instance-column twin of `adviceFeed_bind_of_memberPolynomials`. -/
-theorem instanceFeed_bind_of_memberPolynomials [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
+/-- Computed instance-column carrier selection. -/
+def instanceFeedBindingOfMemberPolynomials [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (src : DeployedMemberPolynomials vk instanceCommitment ps ch)
     (checks : DeployedConstraintChecks vk instanceCommitment ps ch)
     (hInstLen : shape.numInstanceQueries ≤ vk.instanceQueryLayout.length) :
-    ∃ (instanceSet : Fin shape.numProofs -> Fin shape.numInstanceQueries -> Nat)
-      (hinstanceSet : forall q j, instanceSet q j < deployedX4PairCount vk instanceCommitment ps ch)
-      (instanceMem : forall (q : Fin shape.numProofs) (j : Fin shape.numInstanceQueries),
-        Fin (deployedSetQueries vk instanceCommitment ps ch (instanceSet q j)).length),
-      (forall (q : Fin shape.numProofs) (j : Fin shape.numInstanceQueries),
-        (deployedSetCommIds vk instanceCommitment ps ch (instanceSet q j)).getD (instanceMem q j : Nat)
-            CommitmentId.vanishingH =
-          CommitmentId.instanceCol q (vk.instanceQueryLayout.getD (j : Nat) (0, 0)).1) ∧
-      forall (q : Fin shape.numProofs) (n : Nat),
-        (rotatedFeed vk.omega vk.instanceQueryLayout
-          (fun j : Fin shape.numInstanceQueries =>
-            src.poly (instanceSet q j) (hinstanceSet q j) (instanceMem q j)) n).eval ch.x =
-          finFn (ps.instanceEvals q) n := by
-  have hsel : forall (q : Fin shape.numProofs) (j : Fin shape.numInstanceQueries),
-      exists i, i < deployedX4PairCount vk instanceCommitment ps ch ∧
-        exists m : Fin (deployedSetQueries vk instanceCommitment ps ch i).length,
-          (forall c0, (deployedSetCommIds vk instanceCommitment ps ch i).getD (m : Nat) c0 =
-            CommitmentId.instanceCol q (vk.instanceQueryLayout.getD (j : Nat) (0, 0)).1) ∧
-          rotateOmega vk.omega ch.x (vk.instanceQueryLayout.getD (j : Nat) (0, 0)).2 ∈
-            deployedSetPts vk instanceCommitment ps ch i ∧
-          ((deployedSetQueries vk instanceCommitment ps ch i).getD (m : Nat) (.point 0, [])).2.getD
-              (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i []).idxOf
-                (rotateOmega vk.omega ch.x (vk.instanceQueryLayout.getD (j : Nat) (0, 0)).2)) 0 =
-            finFn (ps.instanceEvals q) (j : Nat) :=
-    fun q j => by
-      obtain ⟨q0, hq0, hq0id, hq0pt, hq0ev⟩ :=
-        instance_query_mem_assembleQueries_eval vk instanceCommitment ps ch q
-          (lt_of_lt_of_le j.isLt hInstLen) j.isLt
-      obtain ⟨i, hi, m, hids, _hcomm, hall⟩ :=
-        deployed_slot_routed_all_of_checks vk instanceCommitment ps ch checks hq0 hq0id
-      obtain ⟨hpt, hev⟩ := hall q0 hq0 hq0id
-      exact ⟨i, hi, m, fun c0 => hids c0, hq0pt ▸ hpt,
-        by rw [hq0pt, hq0ev] at hev; exact hev⟩
-  choose iSel hiSel mSel hidsSel hptSel hevSel using hsel
-  refine ⟨iSel, hiSel, mSel, fun q j => hidsSel q j CommitmentId.vanishingH, ?_⟩
-  intro q n
-  by_cases h : n < shape.numInstanceQueries
-  · rw [rotatedFeed_eval vk.omega vk.instanceQueryLayout _ h ch.x]
-    rw [src.eval_at_point (iSel q ⟨n, h⟩) (hiSel q ⟨n, h⟩) (mSel q ⟨n, h⟩)
-      _ (hptSel q ⟨n, h⟩)]
-    exact hevSel q ⟨n, h⟩
-  · rw [rotatedFeed_eval_of_ge vk.omega vk.instanceQueryLayout _ (Nat.not_lt.mp h) ch.x,
-      finFn, dif_neg h]
+    DeployedRotatedFeedBinding vk instanceCommitment ps ch src
+      (Fin shape.numProofs) shape.numInstanceQueries vk.instanceQueryLayout
+      (fun q j => CommitmentId.instanceCol q
+        (vk.instanceQueryLayout.getD (j : Nat) (0, 0)).1)
+      (fun q => finFn (ps.instanceEvals q)) :=
+  deployedRotatedFeedBindingOfSpecs vk instanceCommitment ps ch src checks
+    (Fin shape.numProofs) shape.numInstanceQueries vk.instanceQueryLayout
+    (fun q j => CommitmentId.instanceCol q
+      (vk.instanceQueryLayout.getD (j : Nat) (0, 0)).1)
+    (fun q => finFn (ps.instanceEvals q))
+    (fun _ n hn => by simp [finFn, hn])
+    (fun q j => instance_query_mem_assembleQueries_eval vk instanceCommitment ps ch q
+      (lt_of_lt_of_le j.isLt hInstLen) j.isLt)
 
-open Classical in
-/-- Fixed-column feed binding from rewind-free member polynomials. -/
-theorem fixedFeed_bind_of_memberPolynomials [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
+/-- Computed fixed-column carrier selection. -/
+def fixedFeedBindingOfMemberPolynomials [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (src : DeployedMemberPolynomials vk instanceCommitment ps ch)
     (checks : DeployedConstraintChecks vk instanceCommitment ps ch)
     (hFixedLen : shape.numFixedQueries ≤ vk.fixedQueryLayout.length) :
-    ∃ (fixedSet : Fin shape.numFixedQueries -> Nat)
-      (hfixedSet : forall j, fixedSet j < deployedX4PairCount vk instanceCommitment ps ch)
-      (fixedMem : forall j : Fin shape.numFixedQueries,
-        Fin (deployedSetQueries vk instanceCommitment ps ch (fixedSet j)).length),
-      (forall j : Fin shape.numFixedQueries,
-        (deployedSetCommIds vk instanceCommitment ps ch (fixedSet j)).getD (fixedMem j : Nat)
-            CommitmentId.vanishingH =
-          CommitmentId.fixedCol (vk.fixedQueryLayout.getD (j : Nat) (0, 0)).1) ∧
-      forall n : Nat,
-        (rotatedFeed vk.omega vk.fixedQueryLayout
-          (fun j : Fin shape.numFixedQueries =>
-            src.poly (fixedSet j) (hfixedSet j) (fixedMem j)) n).eval ch.x =
-          finFn ps.fixedEvals n := by
-  have hsel : forall j : Fin shape.numFixedQueries,
-      exists i, i < deployedX4PairCount vk instanceCommitment ps ch ∧
-        exists m : Fin (deployedSetQueries vk instanceCommitment ps ch i).length,
-          (forall c0, (deployedSetCommIds vk instanceCommitment ps ch i).getD (m : Nat) c0 =
-            CommitmentId.fixedCol (vk.fixedQueryLayout.getD (j : Nat) (0, 0)).1) ∧
-          rotateOmega vk.omega ch.x (vk.fixedQueryLayout.getD (j : Nat) (0, 0)).2 ∈
-            deployedSetPts vk instanceCommitment ps ch i ∧
-          ((deployedSetQueries vk instanceCommitment ps ch i).getD (m : Nat) (.point 0, [])).2.getD
-              (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i []).idxOf
-                (rotateOmega vk.omega ch.x (vk.fixedQueryLayout.getD (j : Nat) (0, 0)).2)) 0 =
-            finFn ps.fixedEvals (j : Nat) :=
-    fun j => by
-      obtain ⟨q0, hq0, hq0id, hq0pt, hq0ev⟩ :=
-        fixed_query_mem_assembleQueries vk instanceCommitment ps ch
-          (lt_of_lt_of_le j.isLt hFixedLen) j.isLt
-      obtain ⟨i, hi, m, hids, _hcomm, hall⟩ :=
-        deployed_slot_routed_all_of_checks vk instanceCommitment ps ch checks hq0 hq0id
-      obtain ⟨hpt, hev⟩ := hall q0 hq0 hq0id
-      exact ⟨i, hi, m, fun c0 => hids c0, hq0pt ▸ hpt,
-        by rw [hq0pt, hq0ev] at hev; exact hev⟩
-  choose iSel hiSel mSel hidsSel hptSel hevSel using hsel
-  refine ⟨iSel, hiSel, mSel, fun j => hidsSel j CommitmentId.vanishingH, ?_⟩
-  intro n
-  by_cases h : n < shape.numFixedQueries
-  · rw [rotatedFeed_eval vk.omega vk.fixedQueryLayout _ h ch.x]
-    rw [src.eval_at_point (iSel ⟨n, h⟩) (hiSel ⟨n, h⟩) (mSel ⟨n, h⟩)
-      _ (hptSel ⟨n, h⟩)]
-    exact hevSel ⟨n, h⟩
-  · rw [rotatedFeed_eval_of_ge vk.omega vk.fixedQueryLayout _ (Nat.not_lt.mp h) ch.x,
-      finFn, dif_neg h]
+    DeployedRotatedFeedBinding vk instanceCommitment ps ch src
+      Unit shape.numFixedQueries vk.fixedQueryLayout
+      (fun _ j => CommitmentId.fixedCol
+        (vk.fixedQueryLayout.getD (j : Nat) (0, 0)).1)
+      (fun _ => finFn ps.fixedEvals) :=
+  deployedRotatedFeedBindingOfSpecs vk instanceCommitment ps ch src checks
+    Unit shape.numFixedQueries vk.fixedQueryLayout
+    (fun _ j => CommitmentId.fixedCol
+      (vk.fixedQueryLayout.getD (j : Nat) (0, 0)).1)
+    (fun _ => finFn ps.fixedEvals)
+    (fun _ n hn => by simp [finFn, hn])
+    (fun _ j => fixed_query_mem_assembleQueries vk instanceCommitment ps ch
+      (lt_of_lt_of_le j.isLt hFixedLen) j.isLt)
 
 open Classical in
 /-- Permutation-set carriers from rewind-free member polynomials. -/
-theorem permSets_bind_of_memberPolynomials [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
+structure DeployedPermSetsBinding [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
+    (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (src : DeployedMemberPolynomials vk instanceCommitment ps ch) where
+  setIndex : Fin shape.numProofs → Fin shape.numPermutationSets → Nat
+  setIndex_lt : ∀ q s, setIndex q s < deployedX4PairCount vk instanceCommitment ps ch
+  memberIndex : ∀ q s,
+    Fin (deployedSetQueries vk instanceCommitment ps ch (setIndex q s)).length
+  id_eq : ∀ q s,
+    (deployedSetCommIds vk instanceCommitment ps ch (setIndex q s)).getD
+      (memberIndex q s : Nat) CommitmentId.vanishingH = CommitmentId.permProduct q s
+  bind : ∀ q : Fin shape.numProofs,
+    (List.ofFn (fun s : Fin shape.numPermutationSets => PermSetEval.mk
+      (src.poly (setIndex q s) (setIndex_lt q s) (memberIndex q s))
+      ((src.poly (setIndex q s) (setIndex_lt q s) (memberIndex q s)).comp
+        (Polynomial.C (vk.omega ^ (1 : Int)) * Polynomial.X))
+      ((ps.permutationSetEvals q s).lastEval.map (fun le =>
+        if (s : Nat) + 1 < shape.numPermutationSets then
+          (src.poly (setIndex q s) (setIndex_lt q s) (memberIndex q s)).comp
+            (Polynomial.C (vk.omega ^ (-((vk.blindingFactors : Int) + 1))) * Polynomial.X)
+        else Polynomial.C le)))).map (PermSetEval.map (fun r => r.eval ch.x)) =
+      subProofPermSets ps q
+
+/-- Computed permutation-product carrier selection and binding. -/
+def permSetsBindingOfMemberPolynomials [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (src : DeployedMemberPolynomials vk instanceCommitment ps ch)
     (checks : DeployedConstraintChecks vk instanceCommitment ps ch) :
-    ∃ (permSel : Fin shape.numProofs -> Fin shape.numPermutationSets -> Nat)
-      (hpermSel : forall q s, permSel q s < deployedX4PairCount vk instanceCommitment ps ch)
-      (permMem : forall (q : Fin shape.numProofs) (s : Fin shape.numPermutationSets),
-        Fin (deployedSetQueries vk instanceCommitment ps ch (permSel q s)).length),
-      (forall (q : Fin shape.numProofs) (s : Fin shape.numPermutationSets),
-        (deployedSetCommIds vk instanceCommitment ps ch (permSel q s)).getD (permMem q s : Nat)
-            CommitmentId.vanishingH = CommitmentId.permProduct q s) ∧
-      forall q : Fin shape.numProofs,
-        (List.ofFn (fun s : Fin shape.numPermutationSets => PermSetEval.mk
-          (src.poly (permSel q s) (hpermSel q s) (permMem q s))
-          ((src.poly (permSel q s) (hpermSel q s) (permMem q s)).comp
-            (Polynomial.C (vk.omega ^ (1 : Int)) * Polynomial.X))
-          ((ps.permutationSetEvals q s).lastEval.map (fun le =>
-            if (s : Nat) + 1 < shape.numPermutationSets then
-              (src.poly (permSel q s) (hpermSel q s) (permMem q s)).comp
-                (Polynomial.C (vk.omega ^ (-((vk.blindingFactors : Int) + 1))) * Polynomial.X)
-            else Polynomial.C le)))).map (PermSetEval.map (fun r => r.eval ch.x)) =
-          subProofPermSets ps q := by
-  have hsel : forall (q : Fin shape.numProofs) (s : Fin shape.numPermutationSets),
-      exists i, i < deployedX4PairCount vk instanceCommitment ps ch ∧
-        exists m : Fin (deployedSetQueries vk instanceCommitment ps ch i).length,
-          (forall c0, (deployedSetCommIds vk instanceCommitment ps ch i).getD (m : Nat) c0 =
-            CommitmentId.permProduct q s) ∧
-          forall q', q' ∈ assembleQueries vk instanceCommitment ps ch -> q'.commId = CommitmentId.permProduct q s ->
-            q'.point ∈ deployedSetPts vk instanceCommitment ps ch i ∧
-            ((deployedSetQueries vk instanceCommitment ps ch i).getD (m : Nat) (.point 0, [])).2.getD
-                (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i
-                  []).idxOf q'.point) 0 = q'.eval := by
-    intro q s
-    obtain ⟨q0, hq0, hq0id, -, -⟩ := perm_product_query_mem_assembleQueries vk instanceCommitment ps ch q s
-    obtain ⟨i, hi, m, hids, _hcomm, hall⟩ :=
-      deployed_slot_routed_all_of_checks vk instanceCommitment ps ch checks hq0 hq0id
-    exact ⟨i, hi, m, hids, hall⟩
-  choose iSel hiSel mSel hidsSel hallSel using hsel
-  refine ⟨iSel, hiSel, mSel, fun q s => hidsSel q s CommitmentId.vanishingH, ?_⟩
+    DeployedPermSetsBinding vk instanceCommitment ps ch src := by
+  let I := Fin shape.numProofs × Fin shape.numPermutationSets
+  let target : I → CommitmentId := fun qs => CommitmentId.permProduct qs.1 qs.2
+  let point : I → Fp := fun _ => ch.x
+  let value : I → Fp := fun qs => (ps.permutationSetEvals qs.1 qs.2).eval
+  let selector := deployedRouteSelectorOfSpecs vk instanceCommitment ps ch checks I
+    target point value (fun qs => perm_product_query_mem_assembleQueries
+      vk instanceCommitment ps ch qs.1 qs.2)
+  refine
+    { setIndex := fun q s => (selector.route (q, s)).setIndex
+      setIndex_lt := fun q s => (selector.route (q, s)).setIndex_lt
+      memberIndex := fun q s => (selector.route (q, s)).memberIndex
+      id_eq := fun q s => (selector.route (q, s)).id_eq CommitmentId.vanishingH
+      bind := ?_ }
   intro q
   rw [List.map_ofFn, subProofPermSets]
   refine congrArg List.ofFn (funext fun s => ?_)
-  set zdec := src.poly (iSel q s) (hiSel q s) (mSel q s) with hz
-  have hbindAt : forall p, p ∈ deployedSetPts vk instanceCommitment ps ch (iSel q s) ->
+  let route := selector.route (q, s)
+  set zdec := src.poly route.setIndex route.setIndex_lt route.memberIndex with hz
+  have hbindAt : ∀ p, p ∈ deployedSetPts vk instanceCommitment ps ch route.setIndex →
       zdec.eval p =
-        ((deployedSetQueries vk instanceCommitment ps ch (iSel q s)).getD (mSel q s : Nat)
-          (.point 0, [])).2.getD
-        (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD (iSel q s)
-          []).idxOf p) 0 := by
+        ((deployedSetQueries vk instanceCommitment ps ch route.setIndex).getD
+          (route.memberIndex : Nat) (.point 0, [])).2.getD
+        (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD
+          route.setIndex []).idxOf p) 0 := by
     intro p hp
-    exact src.eval_at_point (iSel q s) (hiSel q s) (mSel q s) p hp
-  obtain ⟨qx, hqx, hqxid, hqxpt, hqxev⟩ := perm_product_query_mem_assembleQueries vk instanceCommitment ps ch q s
-  obtain ⟨hptx, hevx⟩ := hallSel q s qx hqx hqxid
+    exact src.eval_at_point route.setIndex route.setIndex_lt route.memberIndex p hp
+  obtain ⟨qx, hqx, hqxid, hqxpt, hqxev⟩ :=
+    perm_product_query_mem_assembleQueries vk instanceCommitment ps ch q s
+  obtain ⟨hptx, hevx⟩ := route.all_queries qx hqx hqxid
   have hbx : zdec.eval ch.x = (ps.permutationSetEvals q s).eval := by
     have hb := hbindAt qx.point hptx
     rw [hqxpt] at hb hevx
     rw [hb, hevx, hqxev]
   obtain ⟨qn, hqn, hqnid, hqnpt, hqnev⟩ :=
     perm_product_next_query_mem_assembleQueries vk instanceCommitment ps ch q s
-  obtain ⟨hptn, hevn⟩ := hallSel q s qn hqn hqnid
+  obtain ⟨hptn, hevn⟩ := route.all_queries qn hqn hqnid
   have hbn : zdec.eval (rotateOmega vk.omega ch.x 1) =
       (ps.permutationSetEvals q s).nextEval := by
     have hb := hbindAt qn.point hptn
@@ -660,162 +708,154 @@ theorem permSets_bind_of_memberPolynomials [DecidableEq G] [Inhabited G] {shape 
   rw [Function.comp_apply, heta]
   simp only [PermSetEval.map, PermSetEval.mk.injEq]
   refine ⟨hbx, ?_, ?_⟩
-  · rw [eval_comp_rotate, <- hbn, rotateOmega, mul_comm]
+  · rw [eval_comp_rotate, ← hbn, rotateOmega, mul_comm]
   · rcases hle : (ps.permutationSetEvals q s).lastEval with _ | le
     · rfl
     · rw [Option.map_map]
       by_cases hlast : (s : Nat) + 1 < shape.numPermutationSets
       · obtain ⟨ql, hql, hqlid, hqlpt, hqlev⟩ :=
           perm_product_last_query_mem_assembleQueries vk instanceCommitment ps ch q s hlast hle
-        obtain ⟨hptl, hevl⟩ := hallSel q s ql hql hqlid
+        obtain ⟨hptl, hevl⟩ := route.all_queries ql hql hqlid
         have hbl : zdec.eval
             (rotateOmega vk.omega ch.x (-((vk.blindingFactors : Int) + 1))) = le := by
           have hb := hbindAt ql.point hptl
           rw [hqlpt] at hb hevl
           rw [hb, hevl, hqlev]
         simp only [Option.map_some, Function.comp_apply, if_pos hlast]
-        rw [eval_comp_rotate, <- hbl, rotateOmega, mul_comm]
+        rw [eval_comp_rotate, ← hbl, rotateOmega, mul_comm]
       · simp only [Option.map_some, Function.comp_apply, if_neg hlast, Polynomial.eval_C]
 
 open Classical in
 /-- Lookup carriers from rewind-free member polynomials. -/
-theorem lookups_bind_of_memberPolynomials [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
+structure DeployedLookupsBinding [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
+    (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (src : DeployedMemberPolynomials vk instanceCommitment ps ch) where
+  productSet : Fin shape.numProofs → Fin shape.numLookups → Nat
+  inputSet : Fin shape.numProofs → Fin shape.numLookups → Nat
+  tableSet : Fin shape.numProofs → Fin shape.numLookups → Nat
+  productSet_lt : ∀ q l, productSet q l < deployedX4PairCount vk instanceCommitment ps ch
+  inputSet_lt : ∀ q l, inputSet q l < deployedX4PairCount vk instanceCommitment ps ch
+  tableSet_lt : ∀ q l, tableSet q l < deployedX4PairCount vk instanceCommitment ps ch
+  productMember : ∀ q l,
+    Fin (deployedSetQueries vk instanceCommitment ps ch (productSet q l)).length
+  inputMember : ∀ q l,
+    Fin (deployedSetQueries vk instanceCommitment ps ch (inputSet q l)).length
+  tableMember : ∀ q l,
+    Fin (deployedSetQueries vk instanceCommitment ps ch (tableSet q l)).length
+  id_eq : ∀ q l,
+    (deployedSetCommIds vk instanceCommitment ps ch (productSet q l)).getD
+        (productMember q l : Nat) CommitmentId.vanishingH = CommitmentId.lookupProduct q l ∧
+    (deployedSetCommIds vk instanceCommitment ps ch (inputSet q l)).getD
+        (inputMember q l : Nat) CommitmentId.vanishingH = CommitmentId.lookupPermInput q l ∧
+    (deployedSetCommIds vk instanceCommitment ps ch (tableSet q l)).getD
+        (tableMember q l : Nat) CommitmentId.vanishingH = CommitmentId.lookupPermTable q l
+  bind : ∀ q : Fin shape.numProofs,
+    (List.ofFn (fun l : Fin shape.numLookups =>
+      (LookupEval.mk
+        (src.poly (productSet q l) (productSet_lt q l) (productMember q l))
+        ((src.poly (productSet q l) (productSet_lt q l) (productMember q l)).comp
+          (Polynomial.C (vk.omega ^ (1 : Int)) * Polynomial.X))
+        (src.poly (inputSet q l) (inputSet_lt q l) (inputMember q l))
+        ((src.poly (inputSet q l) (inputSet_lt q l) (inputMember q l)).comp
+          (Polynomial.C (vk.omega ^ (-1 : Int)) * Polynomial.X))
+        (src.poly (tableSet q l) (tableSet_lt q l) (tableMember q l)),
+      vk.lookupInputExprs l, vk.lookupTableExprs l))).map
+        (fun lk => (lk.1.map (fun r => r.eval ch.x), lk.2.1, lk.2.2)) =
+      subProofLookups vk ps q
+
+/-- Computed lookup carrier selection and binding. -/
+def lookupsBindingOfMemberPolynomials [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (src : DeployedMemberPolynomials vk instanceCommitment ps ch)
     (checks : DeployedConstraintChecks vk instanceCommitment ps ch) :
-    ∃ (prodSel inSel tabSel : Fin shape.numProofs -> Fin shape.numLookups -> Nat)
-      (hprodSel : forall q l, prodSel q l < deployedX4PairCount vk instanceCommitment ps ch)
-      (hinSel : forall q l, inSel q l < deployedX4PairCount vk instanceCommitment ps ch)
-      (htabSel : forall q l, tabSel q l < deployedX4PairCount vk instanceCommitment ps ch)
-      (prodMem : forall (q : Fin shape.numProofs) (l : Fin shape.numLookups),
-        Fin (deployedSetQueries vk instanceCommitment ps ch (prodSel q l)).length)
-      (inMem : forall (q : Fin shape.numProofs) (l : Fin shape.numLookups),
-        Fin (deployedSetQueries vk instanceCommitment ps ch (inSel q l)).length)
-      (tabMem : forall (q : Fin shape.numProofs) (l : Fin shape.numLookups),
-        Fin (deployedSetQueries vk instanceCommitment ps ch (tabSel q l)).length),
-      (forall (q : Fin shape.numProofs) (l : Fin shape.numLookups),
-        (deployedSetCommIds vk instanceCommitment ps ch (prodSel q l)).getD (prodMem q l : Nat)
-            CommitmentId.vanishingH = CommitmentId.lookupProduct q l ∧
-        (deployedSetCommIds vk instanceCommitment ps ch (inSel q l)).getD (inMem q l : Nat)
-            CommitmentId.vanishingH = CommitmentId.lookupPermInput q l ∧
-        (deployedSetCommIds vk instanceCommitment ps ch (tabSel q l)).getD (tabMem q l : Nat)
-            CommitmentId.vanishingH = CommitmentId.lookupPermTable q l) ∧
-      forall q : Fin shape.numProofs,
-        (List.ofFn (fun l : Fin shape.numLookups =>
-          (LookupEval.mk
-            (src.poly (prodSel q l) (hprodSel q l) (prodMem q l))
-            ((src.poly (prodSel q l) (hprodSel q l) (prodMem q l)).comp
-              (Polynomial.C (vk.omega ^ (1 : Int)) * Polynomial.X))
-            (src.poly (inSel q l) (hinSel q l) (inMem q l))
-            ((src.poly (inSel q l) (hinSel q l) (inMem q l)).comp
-              (Polynomial.C (vk.omega ^ (-1 : Int)) * Polynomial.X))
-            (src.poly (tabSel q l) (htabSel q l) (tabMem q l)),
-          vk.lookupInputExprs l, vk.lookupTableExprs l))).map
-            (fun lk => (lk.1.map (fun r => r.eval ch.x), lk.2.1, lk.2.2)) =
-          subProofLookups vk ps q := by
-  have hselP : forall (q : Fin shape.numProofs) (l : Fin shape.numLookups),
-      exists i, i < deployedX4PairCount vk instanceCommitment ps ch ∧
-        exists m : Fin (deployedSetQueries vk instanceCommitment ps ch i).length,
-          (forall c0, (deployedSetCommIds vk instanceCommitment ps ch i).getD (m : Nat) c0 =
-            CommitmentId.lookupProduct q l) ∧
-          forall q', q' ∈ assembleQueries vk instanceCommitment ps ch ->
-            q'.commId = CommitmentId.lookupProduct q l ->
-            q'.point ∈ deployedSetPts vk instanceCommitment ps ch i ∧
-            ((deployedSetQueries vk instanceCommitment ps ch i).getD (m : Nat) (.point 0, [])).2.getD
-                (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i
-                  []).idxOf q'.point) 0 = q'.eval := by
-    intro q l
-    obtain ⟨q0, hq0, hq0id, -, -⟩ := lookup_product_query_mem_assembleQueries vk instanceCommitment ps ch q l
-    obtain ⟨i, hi, m, hids, _hcomm, hall⟩ :=
-      deployed_slot_routed_all_of_checks vk instanceCommitment ps ch checks hq0 hq0id
-    exact ⟨i, hi, m, hids, hall⟩
-  have hselI : forall (q : Fin shape.numProofs) (l : Fin shape.numLookups),
-      exists i, i < deployedX4PairCount vk instanceCommitment ps ch ∧
-        exists m : Fin (deployedSetQueries vk instanceCommitment ps ch i).length,
-          (forall c0, (deployedSetCommIds vk instanceCommitment ps ch i).getD (m : Nat) c0 =
-            CommitmentId.lookupPermInput q l) ∧
-          forall q', q' ∈ assembleQueries vk instanceCommitment ps ch ->
-            q'.commId = CommitmentId.lookupPermInput q l ->
-            q'.point ∈ deployedSetPts vk instanceCommitment ps ch i ∧
-            ((deployedSetQueries vk instanceCommitment ps ch i).getD (m : Nat) (.point 0, [])).2.getD
-                (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i
-                  []).idxOf q'.point) 0 = q'.eval := by
-    intro q l
-    obtain ⟨q0, hq0, hq0id, -, -⟩ := lookup_permInput_query_mem_assembleQueries vk instanceCommitment ps ch q l
-    obtain ⟨i, hi, m, hids, _hcomm, hall⟩ :=
-      deployed_slot_routed_all_of_checks vk instanceCommitment ps ch checks hq0 hq0id
-    exact ⟨i, hi, m, hids, hall⟩
-  have hselT : forall (q : Fin shape.numProofs) (l : Fin shape.numLookups),
-      exists i, i < deployedX4PairCount vk instanceCommitment ps ch ∧
-        exists m : Fin (deployedSetQueries vk instanceCommitment ps ch i).length,
-          (forall c0, (deployedSetCommIds vk instanceCommitment ps ch i).getD (m : Nat) c0 =
-            CommitmentId.lookupPermTable q l) ∧
-          forall q', q' ∈ assembleQueries vk instanceCommitment ps ch ->
-            q'.commId = CommitmentId.lookupPermTable q l ->
-            q'.point ∈ deployedSetPts vk instanceCommitment ps ch i ∧
-            ((deployedSetQueries vk instanceCommitment ps ch i).getD (m : Nat) (.point 0, [])).2.getD
-                (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i
-                  []).idxOf q'.point) 0 = q'.eval := by
-    intro q l
-    obtain ⟨q0, hq0, hq0id, -, -⟩ := lookup_permTable_query_mem_assembleQueries vk instanceCommitment ps ch q l
-    obtain ⟨i, hi, m, hids, _hcomm, hall⟩ :=
-      deployed_slot_routed_all_of_checks vk instanceCommitment ps ch checks hq0 hq0id
-    exact ⟨i, hi, m, hids, hall⟩
-  choose iP hiP mP hidsP hallP using hselP
-  choose iI hiI mI hidsI hallI using hselI
-  choose iT hiT mT hidsT hallT using hselT
-  refine ⟨iP, iI, iT, hiP, hiI, hiT, mP, mI, mT,
-    fun q l => ⟨hidsP q l CommitmentId.vanishingH, hidsI q l CommitmentId.vanishingH,
-      hidsT q l CommitmentId.vanishingH⟩, ?_⟩
+    DeployedLookupsBinding vk instanceCommitment ps ch src := by
+  classical
+  let I := Fin shape.numProofs × Fin shape.numLookups
+  let point : I → Fp := fun _ => ch.x
+  let productTarget : I → CommitmentId := fun ql => CommitmentId.lookupProduct ql.1 ql.2
+  let productValue : I → Fp := fun ql => (ps.lookupEvals ql.1 ql.2).productEval
+  let inputTarget : I → CommitmentId := fun ql => CommitmentId.lookupPermInput ql.1 ql.2
+  let inputValue : I → Fp := fun ql => (ps.lookupEvals ql.1 ql.2).permutedInputEval
+  let tableTarget : I → CommitmentId := fun ql => CommitmentId.lookupPermTable ql.1 ql.2
+  let tableValue : I → Fp := fun ql => (ps.lookupEvals ql.1 ql.2).permutedTableEval
+  let productSelector := deployedRouteSelectorOfSpecs vk instanceCommitment ps ch checks I
+    productTarget point productValue (fun ql => lookup_product_query_mem_assembleQueries
+      vk instanceCommitment ps ch ql.1 ql.2)
+  let inputSelector := deployedRouteSelectorOfSpecs vk instanceCommitment ps ch checks I
+    inputTarget point inputValue (fun ql => lookup_permInput_query_mem_assembleQueries
+      vk instanceCommitment ps ch ql.1 ql.2)
+  let tableSelector := deployedRouteSelectorOfSpecs vk instanceCommitment ps ch checks I
+    tableTarget point tableValue (fun ql => lookup_permTable_query_mem_assembleQueries
+      vk instanceCommitment ps ch ql.1 ql.2)
+  refine
+    { productSet := fun q l => (productSelector.route (q, l)).setIndex
+      inputSet := fun q l => (inputSelector.route (q, l)).setIndex
+      tableSet := fun q l => (tableSelector.route (q, l)).setIndex
+      productSet_lt := fun q l => (productSelector.route (q, l)).setIndex_lt
+      inputSet_lt := fun q l => (inputSelector.route (q, l)).setIndex_lt
+      tableSet_lt := fun q l => (tableSelector.route (q, l)).setIndex_lt
+      productMember := fun q l => (productSelector.route (q, l)).memberIndex
+      inputMember := fun q l => (inputSelector.route (q, l)).memberIndex
+      tableMember := fun q l => (tableSelector.route (q, l)).memberIndex
+      id_eq := fun q l =>
+        ⟨(productSelector.route (q, l)).id_eq CommitmentId.vanishingH,
+          (inputSelector.route (q, l)).id_eq CommitmentId.vanishingH,
+          (tableSelector.route (q, l)).id_eq CommitmentId.vanishingH⟩
+      bind := ?_ }
   intro q
   rw [List.map_ofFn, subProofLookups]
   refine congrArg List.ofFn (funext fun l => ?_)
   rw [Function.comp_apply]
-  have hbindAt : forall (i : Nat) (hi : i < deployedX4PairCount vk instanceCommitment ps ch)
-      (m : Fin (deployedSetQueries vk instanceCommitment ps ch i).length) (p : Fp),
-      p ∈ deployedSetPts vk instanceCommitment ps ch i ->
-      (src.poly i hi m).eval p =
-        ((deployedSetQueries vk instanceCommitment ps ch i).getD (m : Nat) (.point 0, [])).2.getD
-          (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i []).idxOf p) 0 :=
-    src.eval_at_point
-  obtain ⟨q1, hq1, hq1id, hq1pt, hq1ev⟩ := lookup_product_query_mem_assembleQueries vk instanceCommitment ps ch q l
-  obtain ⟨hpt1, hev1⟩ := hallP q l q1 hq1 hq1id
-  have hb1 : (src.poly (iP q l) (hiP q l) (mP q l)).eval ch.x =
-      (ps.lookupEvals q l).productEval := by
-    have hb := hbindAt (iP q l) (hiP q l) (mP q l) q1.point hpt1
+  let productRoute := productSelector.route (q, l)
+  let inputRoute := inputSelector.route (q, l)
+  let tableRoute := tableSelector.route (q, l)
+  obtain ⟨q1, hq1, hq1id, hq1pt, hq1ev⟩ :=
+    lookup_product_query_mem_assembleQueries vk instanceCommitment ps ch q l
+  obtain ⟨hpt1, hev1⟩ := productRoute.all_queries q1 hq1 hq1id
+  have hb1 : (src.poly productRoute.setIndex productRoute.setIndex_lt
+      productRoute.memberIndex).eval ch.x = (ps.lookupEvals q l).productEval := by
+    have hb := src.eval_at_point productRoute.setIndex productRoute.setIndex_lt
+      productRoute.memberIndex q1.point hpt1
     rw [hq1pt] at hb hev1
     rw [hb, hev1, hq1ev]
   obtain ⟨q2, hq2, hq2id, hq2pt, hq2ev⟩ :=
     lookup_product_next_query_mem_assembleQueries vk instanceCommitment ps ch q l
-  obtain ⟨hpt2, hev2⟩ := hallP q l q2 hq2 hq2id
-  have hb2 : (src.poly (iP q l) (hiP q l) (mP q l)).eval
-      (rotateOmega vk.omega ch.x 1) = (ps.lookupEvals q l).productNextEval := by
-    have hb := hbindAt (iP q l) (hiP q l) (mP q l) q2.point hpt2
+  obtain ⟨hpt2, hev2⟩ := productRoute.all_queries q2 hq2 hq2id
+  have hb2 : (src.poly productRoute.setIndex productRoute.setIndex_lt
+      productRoute.memberIndex).eval (rotateOmega vk.omega ch.x 1) =
+      (ps.lookupEvals q l).productNextEval := by
+    have hb := src.eval_at_point productRoute.setIndex productRoute.setIndex_lt
+      productRoute.memberIndex q2.point hpt2
     rw [hq2pt] at hb hev2
     rw [hb, hev2, hq2ev]
   obtain ⟨q3, hq3, hq3id, hq3pt, hq3ev⟩ :=
     lookup_permInput_query_mem_assembleQueries vk instanceCommitment ps ch q l
-  obtain ⟨hpt3, hev3⟩ := hallI q l q3 hq3 hq3id
-  have hb3 : (src.poly (iI q l) (hiI q l) (mI q l)).eval ch.x =
-      (ps.lookupEvals q l).permutedInputEval := by
-    have hb := hbindAt (iI q l) (hiI q l) (mI q l) q3.point hpt3
+  obtain ⟨hpt3, hev3⟩ := inputRoute.all_queries q3 hq3 hq3id
+  have hb3 : (src.poly inputRoute.setIndex inputRoute.setIndex_lt
+      inputRoute.memberIndex).eval ch.x = (ps.lookupEvals q l).permutedInputEval := by
+    have hb := src.eval_at_point inputRoute.setIndex inputRoute.setIndex_lt
+      inputRoute.memberIndex q3.point hpt3
     rw [hq3pt] at hb hev3
     rw [hb, hev3, hq3ev]
   obtain ⟨q4, hq4, hq4id, hq4pt, hq4ev⟩ :=
     lookup_permInput_inv_query_mem_assembleQueries vk instanceCommitment ps ch q l
-  obtain ⟨hpt4, hev4⟩ := hallI q l q4 hq4 hq4id
-  have hb4 : (src.poly (iI q l) (hiI q l) (mI q l)).eval
-      (rotateOmega vk.omega ch.x (-1)) = (ps.lookupEvals q l).permutedInputInvEval := by
-    have hb := hbindAt (iI q l) (hiI q l) (mI q l) q4.point hpt4
+  obtain ⟨hpt4, hev4⟩ := inputRoute.all_queries q4 hq4 hq4id
+  have hb4 : (src.poly inputRoute.setIndex inputRoute.setIndex_lt
+      inputRoute.memberIndex).eval (rotateOmega vk.omega ch.x (-1)) =
+      (ps.lookupEvals q l).permutedInputInvEval := by
+    have hb := src.eval_at_point inputRoute.setIndex inputRoute.setIndex_lt
+      inputRoute.memberIndex q4.point hpt4
     rw [hq4pt] at hb hev4
     rw [hb, hev4, hq4ev]
   obtain ⟨q5, hq5, hq5id, hq5pt, hq5ev⟩ :=
     lookup_permTable_query_mem_assembleQueries vk instanceCommitment ps ch q l
-  obtain ⟨hpt5, hev5⟩ := hallT q l q5 hq5 hq5id
-  have hb5 : (src.poly (iT q l) (hiT q l) (mT q l)).eval ch.x =
-      (ps.lookupEvals q l).permutedTableEval := by
-    have hb := hbindAt (iT q l) (hiT q l) (mT q l) q5.point hpt5
+  obtain ⟨hpt5, hev5⟩ := tableRoute.all_queries q5 hq5 hq5id
+  have hb5 : (src.poly tableRoute.setIndex tableRoute.setIndex_lt
+      tableRoute.memberIndex).eval ch.x = (ps.lookupEvals q l).permutedTableEval := by
+    have hb := src.eval_at_point tableRoute.setIndex tableRoute.setIndex_lt
+      tableRoute.memberIndex q5.point hpt5
     rw [hq5pt] at hb hev5
     rw [hb, hev5, hq5ev]
   have heta : ps.lookupEvals q l =
@@ -826,51 +866,57 @@ theorem lookups_bind_of_memberPolynomials [DecidableEq G] [Inhabited G] {shape :
   rw [heta]
   simp only [LookupEval.map, LookupEval.mk.injEq]
   refine ⟨hb1, ?_, hb3, ?_, hb5⟩
-  · rw [eval_comp_rotate, <- hb2, rotateOmega, mul_comm]
-  · rw [eval_comp_rotate, <- hb4, rotateOmega, mul_comm]
+  · rw [eval_comp_rotate, ← hb2, rotateOmega, mul_comm]
+  · rw [eval_comp_rotate, ← hb4, rotateOmega, mul_comm]
 
 open Classical in
 /-- Permutation-common feed binding from rewind-free member polynomials. -/
-theorem permCommonFeed_bind_of_memberPolynomials [DecidableEq G] [Inhabited G] {shape : Shape}
-    (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
+structure DeployedPermCommonBinding [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
+    (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (src : DeployedMemberPolynomials vk instanceCommitment ps ch) where
+  setIndex : Fin shape.numPermutationColumns → Nat
+  setIndex_lt : ∀ c, setIndex c < deployedX4PairCount vk instanceCommitment ps ch
+  memberIndex : ∀ c,
+    Fin (deployedSetQueries vk instanceCommitment ps ch (setIndex c)).length
+  id_eq : ∀ c,
+    (deployedSetCommIds vk instanceCommitment ps ch (setIndex c)).getD
+      (memberIndex c : Nat) CommitmentId.vanishingH = CommitmentId.permCommon c
+  bind : ∀ n : Nat, (if h : n < shape.numPermutationColumns then
+    src.poly (setIndex ⟨n, h⟩) (setIndex_lt ⟨n, h⟩) (memberIndex ⟨n, h⟩)
+    else 0).eval ch.x = finFn ps.permutationCommonEvals n
+
+/-- Computed permutation-common carrier selection. -/
+def permCommonBindingOfMemberPolynomials [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     (src : DeployedMemberPolynomials vk instanceCommitment ps ch)
     (checks : DeployedConstraintChecks vk instanceCommitment ps ch) :
-    ∃ (commonSel : Fin shape.numPermutationColumns -> Nat)
-      (hcommonSel : ∀ c, commonSel c < deployedX4PairCount vk instanceCommitment ps ch)
-      (commonMem : ∀ c : Fin shape.numPermutationColumns,
-        Fin (deployedSetQueries vk instanceCommitment ps ch (commonSel c)).length),
-      (∀ c : Fin shape.numPermutationColumns,
-        (deployedSetCommIds vk instanceCommitment ps ch (commonSel c)).getD (commonMem c : Nat)
-          CommitmentId.vanishingH = CommitmentId.permCommon c) ∧
-      ∀ n : Nat, (if h : n < shape.numPermutationColumns then
-        src.poly (commonSel ⟨n, h⟩) (hcommonSel ⟨n, h⟩) (commonMem ⟨n, h⟩)
-        else 0).eval ch.x = finFn ps.permutationCommonEvals n := by
-  have hsel : forall c : Fin shape.numPermutationColumns,
-      ∃ i, i < deployedX4PairCount vk instanceCommitment ps ch ∧
-        ∃ m : Fin (deployedSetQueries vk instanceCommitment ps ch i).length,
-          (forall c0, (deployedSetCommIds vk instanceCommitment ps ch i).getD (m : Nat) c0 =
-            CommitmentId.permCommon c) ∧
-          ch.x ∈ deployedSetPts vk instanceCommitment ps ch i ∧
-          ((deployedSetQueries vk instanceCommitment ps ch i).getD (m : Nat) (.point 0, [])).2.getD
-              (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i []).idxOf
-                ch.x) 0 = ps.permutationCommonEvals c := by
-    intro c
-    obtain ⟨q0, hq0, hq0id, hq0pt, hq0ev⟩ :=
-      permCommon_query_mem_assembleQueries vk instanceCommitment ps ch c
-    obtain ⟨i, hi, m, hids, _hcomm, hall⟩ :=
-      deployed_slot_routed_all_of_checks vk instanceCommitment ps ch checks hq0 hq0id
-    obtain ⟨hpt, hev⟩ := hall q0 hq0 hq0id
-    exact ⟨i, hi, m, fun c0 => hids c0, hq0pt ▸ hpt,
-      by rw [hq0pt, hq0ev] at hev; exact hev⟩
-  choose iSel hiSel mSel hidsSel hptSel hevSel using hsel
-  refine ⟨iSel, hiSel, mSel, fun c => hidsSel c CommitmentId.vanishingH, ?_⟩
+    DeployedPermCommonBinding vk instanceCommitment ps ch src := by
+  classical
+  let I := Fin shape.numPermutationColumns
+  let target : I → CommitmentId := fun c => CommitmentId.permCommon c
+  let point : I → Fp := fun _ => ch.x
+  let value : I → Fp := fun c => ps.permutationCommonEvals c
+  let selector := deployedRouteSelectorOfSpecs vk instanceCommitment ps ch checks I
+    target point value (fun c => permCommon_query_mem_assembleQueries
+      vk instanceCommitment ps ch c)
+  refine
+    { setIndex := fun c => (selector.route c).setIndex
+      setIndex_lt := fun c => (selector.route c).setIndex_lt
+      memberIndex := fun c => (selector.route c).memberIndex
+      id_eq := fun c => (selector.route c).id_eq CommitmentId.vanishingH
+      bind := ?_ }
   intro n
   by_cases h : n < shape.numPermutationColumns
-  · rw [dif_pos h, finFn, dif_pos h]
-    rw [src.eval_at_point (iSel ⟨n, h⟩) (hiSel ⟨n, h⟩) (mSel ⟨n, h⟩)
-      _ (hptSel ⟨n, h⟩)]
-    exact hevSel ⟨n, h⟩
+  · let c : Fin shape.numPermutationColumns := ⟨n, h⟩
+    let route := selector.route c
+    have hall := route.all_queries
+      (deployedCanonicalQuery vk instanceCommitment ps ch
+        (target c) (point c) (value c)) (selector.canonical_mem c) rfl
+    rw [dif_pos h, finFn, dif_pos h]
+    rw [src.eval_at_point route.setIndex route.setIndex_lt route.memberIndex ch.x hall.1]
+    exact hall.2
   · rw [dif_neg h, finFn, dif_neg h, Polynomial.eval_zero]
 
 /-! ## Complete deterministic constraint supply -/
@@ -895,6 +941,26 @@ structure DeployedConstraintWitness [DecidableEq G] [Inhabited G] {shape : Shape
   lLastP : Polynomial Fp
   lBlindP : Polynomial Fp
   hpolyP : Polynomial Fp
+  /-- The concrete algebraic decode from which all carrier polynomials were routed. -/
+  decode : DeployedAlgebraicDecode urs hk vk instanceCommitment ps ch
+    aggregate aggregateU aggregateW
+  /-- Canonical polynomial assigned to each plain commitment. -/
+  commitmentPolynomial : G → Polynomial Fp
+  quotientPieces : Fin shape.numQuotientPieces → Polynomial Fp
+  member_plain : ∀ {i : Nat} (hi : i < deployedX4PairCount vk instanceCommitment ps ch)
+    (m : Fin (deployedSetQueries vk instanceCommitment ps ch i).length) {P : G},
+    ((deployedSetQueries vk instanceCommitment ps ch i).getD
+      (m : Nat) (.point 0, [])).1 = CommitmentRef.point P →
+      decode.memberPoly i hi m = commitmentPolynomial P
+  fixed_canonical : fixedF = committedFixedFeed commitmentPolynomial vk
+  advice_canonical : adviceF = committedAdviceFeed commitmentPolynomial vk ps
+  instance_canonical : instanceF =
+    committedInstanceFeed commitmentPolynomial vk instanceCommitment
+  sets_canonical : setsC = committedPermSets commitmentPolynomial vk ps
+  chunks_canonical : chunksC =
+    committedPermChunks commitmentPolynomial vk instanceCommitment ps
+  lookups_canonical : lookupsC = committedLookups commitmentPolynomial vk ps
+  quotient_canonical : hpolyP = committedPreXQuotient vk quotientPieces
   relation : SnarkRelation urs
     (deployedCommitment urs hk vk instanceCommitment ps ch - aggregateU • urs.u - aggregateW • urs.w)
     (evalVector urs.k ch.x3) (multiopenValue vk instanceCommitment ps ch)
@@ -903,12 +969,12 @@ structure DeployedConstraintWitness [DecidableEq G] [Inhabited G] {shape : Shape
       l0P lLastP lBlindP hpolyP vk.n) aggregate
 
 open Polynomial in
+omit [AddCommGroup G] [Module Fp G] in
 /-- Relation-free specialization used by the computed AGM adapter once member-value decoding has
 already supplied the exact routed equality. -/
 theorem hfold_of_constraint_polys_of_xn_ne_direct
-    [DecidableEq G] [Inhabited G] {shape : Shape}
-    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
-    (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    {shape : Shape} (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp)
     (fixedCols : Nat -> Polynomial Fp)
     (adviceCols instanceCols : Fin shape.numProofs -> Nat -> Polynomial Fp)
     (sets : Fin shape.numProofs -> List (PermSetEval (Polynomial Fp)))
@@ -917,25 +983,12 @@ theorem hfold_of_constraint_polys_of_xn_ne_direct
     (lookups : Fin shape.numProofs ->
       List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
     (l0 lLast lBlind hpoly : Polynomial Fp)
-    (i m : Nat) (hm : m < (deployedSetQueries vk instanceCommitment ps ch i).length)
-    (colPoly : Fin (deployedSetQueries vk instanceCommitment ps ch i).length -> Polynomial Fp)
-    (hbindAll : forall
-      (idx : Fin ((constructIntermediateSets
-        (assembleQueries vk instanceCommitment ps ch)).points.getD i []).length)
-      (m0 : Fin (deployedSetQueries vk instanceCommitment ps ch i).length),
-      (colPoly m0).eval
-          (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i [])[idx]) =
-        ((deployedSetQueries vk instanceCommitment ps ch i).getD (m0 : Nat) (.point 0, [])).2.getD
-          (idx : Nat) 0)
-    (hquot : hpoly = colPoly ⟨m, hm⟩)
-    (hroute : (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i [] = [ch.x])
-    (hevals : forall d0, ((deployedSetQueries vk instanceCommitment ps ch i).getD m d0).2 =
-      [expectedHEval
-        (allExpressions vk ps ch
-          (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1
-          (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.1
-          (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2)
-        ch.y (ch.x ^ vk.n)])
+    (hvanishing : hpoly.eval ch.x = expectedHEval
+      (allExpressions vk ps ch
+        (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1
+        (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.1
+        (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2)
+      ch.y (ch.x ^ vk.n))
     (hxn : ch.x ^ vk.n ≠ 1)
     (hfixed : forall j, (fixedCols j).eval ch.x = finFn ps.fixedEvals j)
     (hadvice : forall p j, (adviceCols p j).eval ch.x = finFn (ps.adviceEvals p) j)
@@ -961,26 +1014,16 @@ theorem hfold_of_constraint_polys_of_xn_ne_direct
     sets chunks lookups l0 lLast lBlind hfixed hadvice hinstance hsets hchunks hlookups
     hl0 hlLast hlBlind
   rw [eval_combineConstraints] at hfp ⊢
-  have hlt : 0 <
-      ((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i []).length := by
-    rw [hroute]
-    simp
-  refine hfold_of_vanishing_slot_binding vk instanceCommitment ps ch _ hpoly i m hevals ?_
-    hxn hfp
-  have hx : ((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i
-      [])[(0 : Nat)]'hlt = ch.x := by
-    rw [List.getElem_of_eq hroute hlt]
-    simp
-  rw [hquot, ← hx]
-  exact hbindAll ⟨0, hlt⟩ ⟨m, hm⟩
+  exact hfold_of_expectedHEval_binding _ ch.y ch.x hpoly vk.n _ hxn hvanishing hfp
 
 open Polynomial in
 open Classical in
-/-- Data-returning constraint outcome produced directly from `DeployedAlgebraicDecode`.
+/-- Mathematical constraint-witness adapter produced directly from `DeployedAlgebraicDecode`.
 Compared to `constraints_supply_derived`, the `OpenedBatchOpenings`, `OpenedX1Accept`, and
-joint-acceptance premises disappear.  In particular, the relation branch is returned directly by
-the quotient comparison rather than selected from a `Nonempty` or existential proposition. -/
-def deployedConstraintOutcomeOfDecode
+joint-acceptance premises disappear.  The explicit relation branch is returned by the same
+computable quotient comparison used by `deployedConstraintQuotientFinder`; this constructor itself
+remains `noncomputable` because its success branch materializes Mathlib `Polynomial Fp` values. -/
+noncomputable def deployedConstraintOutcomeOfDecode
     [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -1009,25 +1052,89 @@ def deployedConstraintOutcomeOfDecode
         aggregate aggregateU aggregateW ⊕'
       AugmentedRelationWitness (F := Fp) urs.g urs.u urs.w := by
   let src := decoded.toMemberPolynomials
-  obtain ⟨aSet, haSet, aMem, haLayout, haBind⟩ :=
-    adviceFeed_bind_of_memberPolynomials urs hk vk instanceCommitment ps ch src checks hAdvLen
-  obtain ⟨iSet, hiSet, iMem, hiLayout, hiBind⟩ :=
-    instanceFeed_bind_of_memberPolynomials urs hk vk instanceCommitment ps ch src checks hInstLen
-  obtain ⟨fSet, hfSet, fMem, hfLayout, hfBind⟩ :=
-    fixedFeed_bind_of_memberPolynomials urs hk vk instanceCommitment ps ch src checks hFixedLen
-  obtain ⟨pSet, hpSet, pMem, hpLayout, hpBind⟩ :=
-    permSets_bind_of_memberPolynomials urs hk vk instanceCommitment ps ch src checks
-  obtain ⟨cSet, hcSet, cMem, hcLayout, hcommonF⟩ :=
-    permCommonFeed_bind_of_memberPolynomials urs hk vk instanceCommitment ps ch src checks
-  obtain ⟨lpSel, liSel, ltSel, hlpSel, hliSel, hltSel, lpMem, liMem, ltMem,
-      hlLayout, hlBind⟩ := lookups_bind_of_memberPolynomials urs hk vk instanceCommitment ps ch src checks
-  obtain ⟨hl0, hlLast, hlBlind⟩ :=
-    lagrange_bind_derived vk.omega vk.n vk.blindingFactors ch.x homega hn checks.xnNeOne
-  obtain ⟨iV, hiVsets, hroute, mV, hmV, hidsV, hcommitV, hevalsV⟩ :=
-    vanishing_slot_routed_full vk instanceCommitment ps ch
-  have hiV : iV < deployedX4PairCount vk instanceCommitment ps ch := by
-    rw [deployedX4PairCount_eq_sets_length_of_checks vk instanceCommitment ps ch checks]
-    exact hiVsets
+  let adviceBinding := adviceFeedBindingOfMemberPolynomials
+    vk instanceCommitment ps ch src checks hAdvLen
+  let aSet := adviceBinding.setIndex
+  let haSet := adviceBinding.setIndex_lt
+  let aMem := adviceBinding.memberIndex
+  have haLayout := adviceBinding.id_eq
+  have haBind := adviceBinding.bind
+  let instanceBinding := instanceFeedBindingOfMemberPolynomials
+    vk instanceCommitment ps ch src checks hInstLen
+  let iSet := instanceBinding.setIndex
+  let hiSet := instanceBinding.setIndex_lt
+  let iMem := instanceBinding.memberIndex
+  have hiLayout := instanceBinding.id_eq
+  have hiBind := instanceBinding.bind
+  let fixedBinding := fixedFeedBindingOfMemberPolynomials
+    vk instanceCommitment ps ch src checks hFixedLen
+  let fSet : Fin shape.numFixedQueries → Nat := fun j => fixedBinding.setIndex () j
+  let hfSet : ∀ j, fSet j < deployedX4PairCount vk instanceCommitment ps ch :=
+    fun j => fixedBinding.setIndex_lt () j
+  let fMem : ∀ j, Fin (deployedSetQueries vk instanceCommitment ps ch (fSet j)).length :=
+    fun j => fixedBinding.memberIndex () j
+  have hfLayout : ∀ j,
+      (deployedSetCommIds vk instanceCommitment ps ch (fSet j)).getD
+        (fMem j : Nat) CommitmentId.vanishingH =
+          CommitmentId.fixedCol (vk.fixedQueryLayout.getD (j : Nat) (0, 0)).1 :=
+    fun j => fixedBinding.id_eq () j
+  have hfBind : ∀ n,
+      (rotatedFeed vk.omega vk.fixedQueryLayout
+        (fun j => src.poly (fSet j) (hfSet j) (fMem j)) n).eval ch.x = finFn ps.fixedEvals n :=
+    fixedBinding.bind ()
+  let permBinding := permSetsBindingOfMemberPolynomials vk instanceCommitment ps ch src checks
+  let pSet := permBinding.setIndex
+  let hpSet := permBinding.setIndex_lt
+  let pMem := permBinding.memberIndex
+  have hpLayout := permBinding.id_eq
+  have hpBind := permBinding.bind
+  let commonBinding := permCommonBindingOfMemberPolynomials vk instanceCommitment ps ch src checks
+  let cSet := commonBinding.setIndex
+  let hcSet := commonBinding.setIndex_lt
+  let cMem := commonBinding.memberIndex
+  have hcLayout := commonBinding.id_eq
+  have hcommonF := commonBinding.bind
+  let lookupBinding := lookupsBindingOfMemberPolynomials vk instanceCommitment ps ch src checks
+  let lpSel := lookupBinding.productSet
+  let liSel := lookupBinding.inputSet
+  let ltSel := lookupBinding.tableSet
+  let hlpSel := lookupBinding.productSet_lt
+  let hliSel := lookupBinding.inputSet_lt
+  let hltSel := lookupBinding.tableSet_lt
+  let lpMem := lookupBinding.productMember
+  let liMem := lookupBinding.inputMember
+  let ltMem := lookupBinding.tableMember
+  have hlLayout := lookupBinding.id_eq
+  have hlBind := lookupBinding.bind
+  let vanishingValue := expectedHEval
+    (allExpressions vk ps ch
+      (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1
+      (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.1
+      (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2)
+    ch.y (ch.x ^ vk.n)
+  let vanishingSelector := deployedRouteSelectorOfSpecs vk instanceCommitment ps ch checks Unit
+    (fun _ => CommitmentId.vanishingH) (fun _ => ch.x) (fun _ => vanishingValue)
+    (fun _ => vanishing_query_mem_assembleQueries vk instanceCommitment ps ch)
+  let vanishingRoute := vanishingSelector.route ()
+  let iV := vanishingRoute.setIndex
+  have hiV := vanishingRoute.setIndex_lt
+  let mV : Nat := vanishingRoute.memberIndex
+  have hmV : mV < (deployedSetQueries vk instanceCommitment ps ch iV).length :=
+    vanishingRoute.memberIndex.isLt
+  have hcommitV : ∀ d₀,
+      ((deployedSetQueries vk instanceCommitment ps ch iV).getD mV d₀).1 = .msm
+        (vanishingHCommitment shape.k (ch.x ^ vk.n) (List.ofFn ps.hPieces)) := by
+    intro d₀
+    change ((deployedSetQueries vk instanceCommitment ps ch vanishingRoute.setIndex).getD
+      (vanishingRoute.memberIndex : Nat) d₀).1 = _
+    have h := vanishingRoute.commitment_eq d₀
+    change ((deployedSetQueries vk instanceCommitment ps ch vanishingRoute.setIndex).getD
+      (vanishingRoute.memberIndex : Nat) d₀).1 = .msm
+        (vanishingHCommitment shape.k (ch.x ^ vk.n) (List.ofFn ps.hPieces)) at h
+    exact h
+  have hvanishingRoute := vanishingRoute.all_queries
+    (deployedCanonicalQuery vk instanceCommitment ps ch CommitmentId.vanishingH
+      ch.x vanishingValue) (vanishingSelector.canonical_mem ()) rfl
   set adviceF : Fin shape.numProofs -> Nat -> Polynomial Fp := fun q =>
     rotatedFeed vk.omega vk.adviceQueryLayout
       (fun j : Fin shape.numAdviceQueries => src.poly (aSet q j) (haSet q j) (aMem q j))
@@ -1135,6 +1242,8 @@ def deployedConstraintOutcomeOfDecode
     pieceCoeffs pieceU pieceW piecePoly hpieceOpen hpiecePoly hiV ⟨mV, hmV⟩ hcommitV
   refine bindOrRelationWitness hquotientOutcome ?_
   intro hquotEval
+  obtain ⟨hl0, hlLast, hlBlind⟩ :=
+    lagrange_bind_derived vk.omega vk.n vk.blindingFactors ch.x homega hn checks.xnNeOne
   have hadviceCanonical : adviceF = committedAdviceFeed poly vk ps := by
     funext q
     change rotatedFeed vk.omega vk.adviceQueryLayout
@@ -1183,25 +1292,6 @@ def deployedConstraintOutcomeOfDecode
     funext q
     rw [hchunksC, committedPermChunks, hsetsCanonical, hadviceCanonical, hfixedCanonical,
       hinstanceCanonical, hcommonCanonical]
-  have hbindV : forall
-      (idx : Fin ((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD iV []).length)
-      (m0 : Fin (deployedSetQueries vk instanceCommitment ps ch iV).length),
-      (src.poly iV hiV m0).eval
-          (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD iV [])[idx]) =
-        ((deployedSetQueries vk instanceCommitment ps ch iV).getD (m0 : Nat) (.point 0, [])).2.getD
-          (idx : Nat) 0 := by
-    intro idx m0
-    let point := ((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD iV [])[idx]
-    have hpoint : point ∈ deployedSetPts vk instanceCommitment ps ch iV := by
-      rw [deployedSetPts, List.mem_toFinset]
-      exact List.get_mem _ idx
-    have hb := src.eval_at_point iV hiV m0 point hpoint
-    have hnd := constructIntermediateSets_points_nodup (assembleQueries vk instanceCommitment ps ch) iV
-    have hidx : ((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD iV []).idxOf
-        point = (idx : Nat) := by
-      exact hnd.idxOf_getElem (idx : Nat) idx.isLt
-    rw [hidx] at hb
-    exact hb
   have hconstraintDiff :
       combineConstraints fixedF adviceF instanceF vk.gates setsC chunksC lookupsC
           ch.beta ch.gamma vk.delta ch.theta ch.y vk.chunkLen
@@ -1226,17 +1316,27 @@ def deployedConstraintOutcomeOfDecode
         hpolyP * (Polynomial.X ^ vk.n - 1)) := by
     rw [hconstraintDiff]
     exact hxgood
-  have hfold := hfold_of_constraint_polys_of_xn_ne_direct vk instanceCommitment ps ch
-    fixedF adviceF instanceF setsC chunksC lookupsC _ _ _ decodedHP iV mV hmV
-    (fun m0 => src.poly iV hiV m0) hbindV rfl hroute hevalsV checks.xnNeOne
-    hfBind haBind hiBind hpBind
-    (fun q => permChunks_bind_of_feeds vk ps ch q (setsC q) (hpBind q) fixedF (adviceF q)
-      (instanceF q) commonF hfBind (haBind q) (hiBind q) hcommonF)
-    hlBind hl0 hlLast hlBlind
   have hquotEval' : decodedHP.eval ch.x = hpolyP.eval ch.x := by
     change (decoded.memberPoly iV hiV ⟨mV, hmV⟩).eval ch.x =
       (committedPreXQuotient vk piecePoly).eval ch.x
     exact hquotEval
+  have hdecodedExpected : decodedHP.eval ch.x = vanishingValue := by
+    have hb := src.eval_at_point iV hiV ⟨mV, hmV⟩ ch.x hvanishingRoute.1
+    exact hb.trans hvanishingRoute.2
+  have hvanishing : hpolyP.eval ch.x = expectedHEval
+      (allExpressions vk ps ch
+        (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1
+        (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.1
+        (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2)
+      ch.y (ch.x ^ vk.n) := by
+    rw [← hquotEval']
+    exact hdecodedExpected
+  have hfold := hfold_of_constraint_polys_of_xn_ne_direct vk ps ch
+    fixedF adviceF instanceF setsC chunksC lookupsC _ _ _ hpolyP hvanishing checks.xnNeOne
+    hfBind haBind hiBind hpBind
+    (fun q => permChunks_bind_of_feeds vk ps ch q (setsC q) (hpBind q) fixedF (adviceF q)
+      (instanceF q) commonF hfBind (haBind q) (hiBind q) hcommonF)
+    hlBind hl0 hlLast hlBlind
   have hfold' :
       (combineConstraints fixedF adviceF instanceF vk.gates setsC chunksC lookupsC
         ch.beta ch.gamma vk.delta ch.theta ch.y vk.chunkLen
@@ -1246,9 +1346,8 @@ def deployedConstraintOutcomeOfDecode
           (fun j => lagrangeBasisPoly vk.omega vk.n
             (-((j : Int) + 1)))).foldl (· + ·) 0)).eval ch.x =
           hpolyP.eval ch.x * (ch.x ^ vk.n - 1) := by
-    rw [← hquotEval']
     exact hfold
-  exact PSum.inl
+  exact
     { fixedF := fixedF
       adviceF := adviceF
       instanceF := instanceF
@@ -1260,6 +1359,17 @@ def deployedConstraintOutcomeOfDecode
       lBlindP := ((List.range vk.blindingFactors).map
         (fun j => lagrangeBasisPoly vk.omega vk.n (-((j : Int) + 1)))).foldl (· + ·) 0
       hpolyP := hpolyP
+      decode := decoded
+      commitmentPolynomial := poly
+      quotientPieces := piecePoly
+      member_plain := hplain
+      fixed_canonical := hfixedCanonical
+      advice_canonical := hadviceCanonical
+      instance_canonical := hinstanceCanonical
+      sets_canonical := hsetsCanonical
+      chunks_canonical := hchunksCanonical
+      lookups_canonical := hlookupsCanonical
+      quotient_canonical := rfl
       relation := ⟨decoded.ipaRelation,
         circuitSatViaConstraints_of_check fixedF (fun _ => adviceF) (fun _ => instanceF)
           vk.gates setsC chunksC lookupsC ch.beta ch.gamma vk.delta ch.theta ch.y vk.chunkLen

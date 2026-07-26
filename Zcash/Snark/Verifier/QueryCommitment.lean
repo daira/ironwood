@@ -16,7 +16,7 @@ open Classical
 /-- The commitment reference canonically named by a verifier slot.  All branches except
 `vanishingH` are independent of `ch.x`; the vanishing branch is the explicitly reassembled
 quotient commitment and is handled separately by the pre-`x` quotient connector. -/
-noncomputable def assembledCommitment {shape : Shape} {F G : Type*} [Field F] [Inhabited G]
+def assembledCommitment {shape : Shape} {F G : Type*} [Field F] [Inhabited G]
     (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G) (ch : Challenges shape.k F) :
     CommitmentId -> CommitmentRef shape.k F G
   | .instanceCol p i =>

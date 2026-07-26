@@ -1334,7 +1334,16 @@ theorem constructIntermediateSets_comm_routed {k : ℕ} {F G : Type*} [Decidable
     rw [cisRouted]
     refine List.mem_filter.mpr ⟨List.mem_reverse.mpr hcd, ?_⟩
     simp [hsi]
-  obtain ⟨m, hm, hrm⟩ := List.mem_iff_getElem.mp hrouted
+  set m := (cisRouted queries si).findIdx
+    (fun x => decide (x = (e.1, e.2, idxSet, evals))) with hmdef
+  have hm : m < (cisRouted queries si).length := by
+    rw [hmdef]
+    exact List.findIdx_lt_length_of_exists
+      ⟨(e.1, e.2, idxSet, evals), hrouted, by simp⟩
+  have hrm : (cisRouted queries si)[m] = (e.1, e.2, idxSet, evals) := by
+    have hget := getElem?_findIdx_self hrouted
+    rw [List.getElem?_eq_getElem hm] at hget
+    exact Option.some.inj (by simpa [hmdef] using hget)
   -- the set's point list is the everywhere-defined extraction over the index set
   have hpts : ((cisSetList queries).map fun s => s.filterMap
       fun i => (cisPts queries)[i]?).getD si [] = idxSet.filterMap fun i => (cisPts queries)[i]? := by
@@ -1396,38 +1405,52 @@ theorem constructIntermediateSets_comm_routed {k : ℕ} {F G : Type*} [Decidable
     rw [filterMap_idxOf_of_forall_isSome idxSet hfsome hfinj hjmem hjget, hevals,
       filterMap_getD_idxOf_of_forall_isSome z₀ idxSet hgsome hjmem hgj]
 
-open Classical in
-/-- **General slot routing, all queries of one slot.** The slot named by `c` is routed to a single
-member of a single point set, and *every* query on that slot lands there: its point among the
-set's points, its claimed evaluation recorded at that point's position. The form the
-multi-rotation carriers consume — the permutation product's three openings, the lookup product's
-two — whose fields must decode one committed polynomial. -/
+/-- Computed indices and their routing specification for one commitment slot.  The indices are
+ordinary data obtained by searching the verifier's deterministic grouping; only their validity is
+proof-valued. -/
+structure ConstructIntermediateSetsRoute {k : ℕ} {F G : Type*} [DecidableEq F] [DecidableEq G]
+    (queries : List (VerifierQuery k F G)) (c : CommitmentId)
+    (commitment : CommitmentRef k F G) where
+  setIndex : Nat
+  setIndex_lt : setIndex < (constructIntermediateSets queries).sets.length
+  memberIndex : Nat
+  memberIndex_lt :
+    memberIndex < ((constructIntermediateSets queries).sets.getD setIndex []).length
+  id_eq : ∀ c₀,
+    ((constructIntermediateSets queries).ids.getD setIndex []).getD memberIndex c₀ = c
+  commitment_eq : ∀ d₀,
+    (((constructIntermediateSets queries).sets.getD setIndex []).getD memberIndex d₀).1 = commitment
+  all_queries : ∀ q ∈ queries, q.commId = c →
+    q.point ∈ (constructIntermediateSets queries).points.getD setIndex [] ∧
+    ∀ d₀ (z₀ : F),
+      (((constructIntermediateSets queries).sets.getD setIndex []).getD memberIndex d₀).2.getD
+        (((constructIntermediateSets queries).points.getD setIndex []).idxOf q.point) z₀ = q.eval
 
-theorem constructIntermediateSets_comm_routed_all {k : ℕ} {F G : Type*} [DecidableEq F]
+/-- **Computed general slot routing, all queries of one slot.** The slot named by `c` is routed to
+a single member of a single point set, and *every* query on that slot lands there.  Unlike the
+legacy existential theorem, this definition returns the actual `findIdx` choices as data. -/
+def constructIntermediateSets_comm_route {k : ℕ} {F G : Type*} [DecidableEq F]
     [DecidableEq G] (queries : List (VerifierQuery k F G)) {c : CommitmentId}
     {q₀ : VerifierQuery k F G} (hq₀ : q₀ ∈ queries) (hq₀c : q₀.commId = c)
     (hdet : ∀ q ∈ queries, ∀ q' ∈ queries, q.commId = q'.commId → q.point = q'.point →
       q.eval = q'.eval)
     (hcommit : ∀ q ∈ queries, q.commId = c → q.commitment = q₀.commitment) :
-    ∃ i, i < (constructIntermediateSets queries).sets.length ∧
-      ∃ m, m < ((constructIntermediateSets queries).sets.getD i []).length ∧
-        (∀ c₀, ((constructIntermediateSets queries).ids.getD i []).getD m c₀ = c) ∧
-        (∀ d₀, (((constructIntermediateSets queries).sets.getD i []).getD m d₀).1
-          = q₀.commitment) ∧
-        ∀ q ∈ queries, q.commId = c →
-          q.point ∈ (constructIntermediateSets queries).points.getD i [] ∧
-          ∀ d₀ (z₀ : F),
-            (((constructIntermediateSets queries).sets.getD i []).getD m d₀).2.getD
-              (((constructIntermediateSets queries).points.getD i []).idxOf q.point) z₀
-            = q.eval := by
-  classical
-  obtain ⟨e, he, hek₀⟩ := cisComms_fold_covers queries [] hq₀
-  have hek : e.1 = c := hek₀.trans hq₀c
-  have hecommit : e.2 = q₀.commitment := by
-    rcases cisComms_fold_prov queries [] he with h0 | ⟨q, hq, heq⟩
-    · exact absurd h0 List.not_mem_nil
-    · rw [heq] at hek ⊢
-      exact hcommit q hq hek
+    ConstructIntermediateSetsRoute queries c q₀.commitment := by
+  let e : CommitmentId × CommitmentRef k F G := (c, q₀.commitment)
+  have he : e ∈ cisComms queries := by
+    obtain ⟨e', he', hek'⟩ := cisComms_fold_covers queries [] hq₀
+    have hecommit' : e'.2 = q₀.commitment := by
+      rcases cisComms_fold_prov queries [] he' with h0 | ⟨q, hq, heq⟩
+      · exact absurd h0 List.not_mem_nil
+      · rw [heq] at hek' ⊢
+        exact hcommit q hq (hek'.trans hq₀c)
+    have heq : e' = e := by
+      apply Prod.ext
+      · exact hek'.trans hq₀c
+      · exact hecommit'
+    rwa [← heq]
+  have hek : e.1 = c := rfl
+  have hecommit : e.2 = q₀.commitment := rfl
   have hcd : (e.1, e.2,
       (List.range (cisPts queries).length).filter
         (fun i => ((queries.filter (fun q'' => decide (q''.commId = e.1))).map
@@ -1486,7 +1509,16 @@ theorem constructIntermediateSets_comm_routed_all {k : ℕ} {F G : Type*} [Decid
     rw [cisRouted]
     refine List.mem_filter.mpr ⟨List.mem_reverse.mpr hcd, ?_⟩
     simp [hsi]
-  obtain ⟨m, hm, hrm⟩ := List.mem_iff_getElem.mp hrouted
+  set m := (cisRouted queries si).findIdx
+    (fun x => decide (x = (e.1, e.2, idxSet, evals))) with hmdef
+  have hm : m < (cisRouted queries si).length := by
+    rw [hmdef]
+    exact List.findIdx_lt_length_of_exists
+      ⟨(e.1, e.2, idxSet, evals), hrouted, by simp⟩
+  have hrm : (cisRouted queries si)[m] = (e.1, e.2, idxSet, evals) := by
+    have hget := getElem?_findIdx_self hrouted
+    rw [List.getElem?_eq_getElem hm] at hget
+    exact Option.some.inj (by simpa [hmdef] using hget)
   have hpts : ((cisSetList queries).map fun s => s.filterMap
       fun i => (cisPts queries)[i]?).getD si [] = idxSet.filterMap fun i => (cisPts queries)[i]? := by
     rw [List.getD_eq_getElem?_getD, List.getElem?_map, hsiget]
@@ -1498,7 +1530,14 @@ theorem constructIntermediateSets_comm_routed_all {k : ℕ} {F G : Type*} [Decid
       (cisRouted queries si').map fun cd => (cd.2.1, cd.2.2.2)).getD si []
       = (cisRouted queries si).map fun cd => (cd.2.1, cd.2.2.2) := by
     rw [List.getD_eq_getElem _ _ hlen1, List.getElem_map, List.getElem_range]
-  refine ⟨si, ?_, m, ?_, ?_, ?_, ?_⟩
+  refine
+    { setIndex := si
+      setIndex_lt := ?_
+      memberIndex := m
+      memberIndex_lt := ?_
+      id_eq := ?_
+      commitment_eq := ?_
+      all_queries := ?_ }
   · show si < ((List.range (cisSetList queries).length).map fun si' =>
       (cisRouted queries si').map fun cd => (cd.2.1, cd.2.2.2)).length
     exact hlen1
@@ -1517,14 +1556,12 @@ theorem constructIntermediateSets_comm_routed_all {k : ℕ} {F G : Type*} [Decid
       rw [List.getD_eq_getElem _ _ hlen1', List.getElem_map, List.getElem_range]
     rw [hin', List.getD_eq_getElem _ _ (by rw [List.length_map]; exact hm), List.getElem_map,
       hrm]
-    exact hek
   · intro d₀
     show (((((List.range (cisSetList queries).length).map fun si' =>
       (cisRouted queries si').map fun cd => (cd.2.1, cd.2.2.2)).getD si []).getD m d₀).1)
         = q₀.commitment
     rw [hin, List.getD_eq_getElem _ _ (by rw [List.length_map]; exact hm), List.getElem_map,
       hrm]
-    exact hecommit
   · intro q hq hqc
     have hqmem : q ∈ qs :=
       List.mem_filter.mpr ⟨hq, by rw [decide_eq_true_eq]; exact hqc.trans hek.symm⟩
@@ -1584,6 +1621,28 @@ theorem constructIntermediateSets_comm_routed_all {k : ℕ} {F G : Type*} [Decid
         = q.eval
       rw [filterMap_idxOf_of_forall_isSome idxSet hfsome hfinj hjmem hjget, hevals,
         filterMap_getD_idxOf_of_forall_isSome z₀ idxSet hgsome hjmem hgj]
+
+/-- Proposition-valued compatibility wrapper for the computed route. -/
+theorem constructIntermediateSets_comm_routed_all {k : ℕ} {F G : Type*} [DecidableEq F]
+    [DecidableEq G] (queries : List (VerifierQuery k F G)) {c : CommitmentId}
+    {q₀ : VerifierQuery k F G} (hq₀ : q₀ ∈ queries) (hq₀c : q₀.commId = c)
+    (hdet : ∀ q ∈ queries, ∀ q' ∈ queries, q.commId = q'.commId → q.point = q'.point →
+      q.eval = q'.eval)
+    (hcommit : ∀ q ∈ queries, q.commId = c → q.commitment = q₀.commitment) :
+    ∃ i, i < (constructIntermediateSets queries).sets.length ∧
+      ∃ m, m < ((constructIntermediateSets queries).sets.getD i []).length ∧
+        (∀ c₀, ((constructIntermediateSets queries).ids.getD i []).getD m c₀ = c) ∧
+        (∀ d₀, (((constructIntermediateSets queries).sets.getD i []).getD m d₀).1
+          = q₀.commitment) ∧
+        ∀ q ∈ queries, q.commId = c →
+          q.point ∈ (constructIntermediateSets queries).points.getD i [] ∧
+          ∀ d₀ (z₀ : F),
+            (((constructIntermediateSets queries).sets.getD i []).getD m d₀).2.getD
+              (((constructIntermediateSets queries).points.getD i []).idxOf q.point) z₀
+            = q.eval := by
+  let route := constructIntermediateSets_comm_route queries hq₀ hq₀c hdet hcommit
+  exact ⟨route.setIndex, route.setIndex_lt, route.memberIndex, route.memberIndex_lt,
+    route.id_eq, route.commitment_eq, route.all_queries⟩
 
 /-- **Aligned member commitment.** If every flat query carries the canonical reference named by
 its slot identity, then every in-range grouped member carries that same canonical reference named
