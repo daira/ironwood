@@ -1,5 +1,5 @@
 import Mathlib
-import Zcash.Snark.Core.Field
+import Zcash.Arithmetic.Field
 
 /-!
 # The batch random-linear-combination soundness bound

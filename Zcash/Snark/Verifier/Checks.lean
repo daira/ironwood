@@ -1,5 +1,5 @@
 import Mathlib
-import Zcash.Snark.Core.Msm
+import Zcash.Arithmetic.Msm
 
 /-!
 # The verifier's MSM assembly

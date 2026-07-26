@@ -1,4 +1,4 @@
-import Zcash.Snark.Core.Msm
+import Zcash.Arithmetic.Msm
 import CompElliptic.Curves.Pasta.Fast.Msm
 
 /-!

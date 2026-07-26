@@ -1,5 +1,5 @@
 import Mathlib
-import Zcash.Snark.Core.Msm
+import Zcash.Arithmetic.Msm
 import Zcash.Snark.Fingerprint.SchwartzZippel
 import Zcash.Snark.Verifier.Assemble
 

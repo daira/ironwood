@@ -1,5 +1,5 @@
 import Mathlib
-import Zcash.Snark.Core.Group
+import Zcash.Arithmetic.Group
 
 /-!
 # Inner-product opening relation

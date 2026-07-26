@@ -1,5 +1,5 @@
 import Mathlib
-import Zcash.Snark.Core.Field
+import Zcash.Arithmetic.Field
 import Zcash.Snark.Verifier.Expressions
 import Zcash.Snark.Verifier.Assemble
 

@@ -1,5 +1,5 @@
 import CompElliptic.Curves.Pasta
-import Zcash.Snark.Core.Field
+import Zcash.Arithmetic.Field
 
 /-!
 # Evaluation-domain scalars (pasta `Fp` constants and facts)

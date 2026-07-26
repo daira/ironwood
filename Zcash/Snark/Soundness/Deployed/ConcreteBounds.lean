@@ -1,4 +1,4 @@
-import Zcash.Snark.Core.Field
+import Zcash.Arithmetic.Field
 import Zcash.Snark.Soundness.Forking.KnowledgeError
 
 /-!

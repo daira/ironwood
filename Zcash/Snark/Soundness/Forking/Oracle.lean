@@ -1,6 +1,6 @@
 import Mathlib.Probability.Distributions.Uniform
 import Zcash.Snark.Verifier.FiatShamir
-import Zcash.Snark.Core.Field
+import Zcash.Arithmetic.Field
 
 /-!
 # Random-oracle model for Fiat–Shamir

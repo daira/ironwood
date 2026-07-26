@@ -1,5 +1,5 @@
 import Mathlib
-import Zcash.Snark.Core.Field
+import Zcash.Arithmetic.Field
 
 /-!
 # The Schwartz–Zippel soundness bound for the fingerprint

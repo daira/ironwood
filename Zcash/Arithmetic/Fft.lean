@@ -2,8 +2,8 @@
 Copyright (c) 2026 Ironwood Contributors.
 Released under the Apache License, Version 2.0.
 -/
-import Zcash.Snark.Core.Domain
-import Zcash.Snark.Core.Group
+import Zcash.Arithmetic.Domain
+import Zcash.Arithmetic.Group
 
 /-!
 # The Rust-mirroring group FFT and the derived Lagrange basis

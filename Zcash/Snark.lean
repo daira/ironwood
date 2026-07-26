@@ -13,11 +13,11 @@
 --
 -- Import modules here that should be built as part of the library.
 
-import Zcash.Snark.Core.Field
-import Zcash.Snark.Core.Group
+import Zcash.Arithmetic.Field
+import Zcash.Arithmetic.Group
 import Zcash.Snark.Core.ProofString
 import Zcash.Snark.Core.Challenges
-import Zcash.Snark.Core.Msm
+import Zcash.Arithmetic.Msm
 import Zcash.Snark.Fingerprint.SchwartzZippel
 import Zcash.Snark.Fingerprint.Batch
 import Zcash.Snark.Verifier.Ipa
@@ -28,7 +28,7 @@ import Zcash.Snark.Verifier.Assemble
 import Zcash.Snark.Verifier.FiatShamir
 import Zcash.Snark.Verifier.Parametric
 import Zcash.Snark.Fingerprint.Match
-import Zcash.Snark.Fingerprint.FastMsm
+import Zcash.Arithmetic.FastMsm
 import Zcash.Snark.Soundness.GrandProduct
 import Zcash.Snark.Soundness.Lookup
 import Zcash.Snark.Soundness.Permutation
