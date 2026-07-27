@@ -118,12 +118,6 @@ def environment
     (assignment : TopLevelAssignment top numProofs proofIndex) : Environment Fp :=
   top.environment assignment.proofAssignment
 
-/-- The assignment placed by the circuit's own V1 floor-plan. -/
-def placedEnvironment
-    (assignment : TopLevelAssignment top numProofs proofIndex) :
-    Placed Environment Fp :=
-  top.placedEnvironment assignment.proofAssignment
-
 /--
 The verifier-decoded fixed polynomials encode the fixed rows compiled by the
 top-level circuit.

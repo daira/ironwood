@@ -1029,8 +1029,9 @@ different member's advice or instance columns. The top-level circuit supplies it
 operations, V1 placement, derived domain exponent, blinding rows, and usable-row fit;
 `Bridge.omegaOf top.domainExponent` supplies the protocol domain root. Consequently
 the type has neither an arbitrary domain nor a `VerifyingKey` argument, and
-`TopLevelAssignment.synthesisWellFormed` discharges the layout premise directly from
-`TopLevelCircuit.FitsAt k`.
+`TopLevelAssignment.proofAssignment` exposes only the proof-varying advice and
+instance reads. `TopLevelCircuit.environment` adds the circuit-derived fixed rows and
+usable-row bound.
 
 The deployed capstone constructs this shell internally through the canonical
 accepted-member route, so the decoder never accepts an arbitrary verifying key: it

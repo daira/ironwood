@@ -26,11 +26,11 @@ def TopLevelBundleStatement
     (pp : Keygen.ProofParams)
     (poly : CommitmentId → Polynomial Fp) : Prop :=
   ∀ proofIndex : Fin (pp.mergeDerived top).numProofs,
-    let environment := (({
+    let environment := ({
         polynomial := poly
       } : TopLevelAssignment top
-            (pp.mergeDerived top).numProofs proofIndex).placedEnvironment)
-    top.Statement (top.extractPublicInput environment.env)
+            (pp.mergeDerived top).numProofs proofIndex).environment
+    top.Statement (top.extractPublicInput environment)
 
 namespace TopLevelBundleStatement
 
