@@ -262,6 +262,33 @@ theorem publicInputEncoding_of_rowPolynomials
     simpa only [cell, domainRow] using hrow]
   exact hencoded index
 
+/--
+Derive public-input encoding directly from the row polynomials serialized by the
+top-level circuit's own public-input layout.
+-/
+theorem publicInputEncoding_of_publicInputRowPolynomials
+    (assignment : TopLevelAssignment top numProofs proofIndex)
+    (input : PublicInput Fp)
+    (hpoly : ∀ index,
+      assignment.polynomial
+          (.instanceCol proofIndex
+            (top.publicInputLayout.cells index).1.index) =
+        instanceRowPolynomial (2 ^ top.domainExponent)
+          (Zcash.Arithmetic.omegaOf top.domainExponent)
+          (top.publicInputRows input
+            (top.publicInputLayout.cells index).1))
+    (hinjective : Function.Injective
+      fun row : Fin (2 ^ top.domainExponent) =>
+        Zcash.Arithmetic.omegaOf top.domainExponent ^ (row : ℕ)) :
+    assignment.PublicInputEncoding input := by
+  apply assignment.publicInputEncoding_of_rowPolynomials input
+    (fun column => top.publicInputRows input ⟨column⟩)
+  · intro index
+    exact hpoly index
+  · intro index
+    exact top.publicInputRows_getD_cell input index
+  · exact hinjective
+
 end TopLevelAssignment
 
 end Zcash.Snark

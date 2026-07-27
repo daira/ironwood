@@ -78,14 +78,6 @@ def layout : PublicInputLayout PublicInputs [⟨0⟩] where
   columnSizes := #v[10]
   size_eq := rfl
 
-@[simp] theorem layout_cells (index : Fin (size PublicInputs)) :
-    layout.cells index = (⟨0⟩, index.val) := by
-  simp [layout, PublicInputLayout.cells, PublicInputLayout.cellList]
-
-/-- Serialize the structured statement in its declared instance-cell order. -/
-def rows (inputs : PublicInputs Fp) : List Fp :=
-  (toElements inputs).toList
-
 /-- Project the public part of the circuit's extracted semantic witness. -/
 def ofActionData (data : ActionData) : PublicInputs Fp where
   anchor := data.anchor
@@ -101,7 +93,8 @@ def ofActionData (data : ActionData) : PublicInputs Fp where
 
 theorem ofActionData_extractPost
     (cfg : Config) (i : RegionIndex) (env : Placed Environment Fp)
-    (hprimary : cfg.primary = ⟨0⟩) :
+    (hprimary :
+      cfg.primary = (layout.cells ⟨0, by decide⟩).1) :
     ofActionData (extractPost cfg () i env) = layout.extract env.env := by
   apply PublicInputs.ext <;>
     simp [ofActionData, layout, PublicInputLayout.extract,

@@ -155,10 +155,11 @@ def actionCircuit : TopLevelCircuit Fp Config PublicInputs where
           (configure Specs.Sinsemilla.orchardGenerators {}).1 () 0 env)) =
       extractPost
         (configure Specs.Sinsemilla.orchardGenerators {}).1 () 0 env
-    have hprimary :
-        (configure Specs.Sinsemilla.orchardGenerators {}).1.primary = ⟨0⟩ := by
-      rfl
-    rw [← PublicInputs.ofActionData_extractPost _ _ _ hprimary]
+    rw [← PublicInputs.ofActionData_extractPost
+      (configure Specs.Sinsemilla.orchardGenerators {}).1 0 env (by
+        simp [PublicInputs.layout, PublicInputLayout.cells,
+          PublicInputLayout.cellList]
+        rfl)]
     exact combine_parts
       (extractPost
         (configure Specs.Sinsemilla.orchardGenerators {}).1 () 0 env)
