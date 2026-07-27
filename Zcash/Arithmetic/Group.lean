@@ -16,7 +16,7 @@ The concrete instantiation is unconditional: CompElliptic's Vesta curve
 there with no change to this argument.
 -/
 
-namespace Zcash.Snark
+namespace Zcash.Arithmetic
 
 /-- The uniform reference string, mirroring halo2 `Params` (`poly/commitment.rs`): `k` is the
 `log₂` of the domain size, `g` the `n = 2 ^ k` generators, `w` the blinding generator, and `u`
@@ -28,4 +28,4 @@ structure URS (G : Type*) where
   w : G
   u : G
 
-end Zcash.Snark
+end Zcash.Arithmetic

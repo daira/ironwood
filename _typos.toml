@@ -29,4 +29,5 @@ extend-ignore-identifiers-re = [
 advices = "advices"
 thr = "thr"  # threshold identifiers (`thr`, `thr1`, `thr4`) in Composition/Completeness
 hsi = "hsi"  # hypothesis identifiers (`hsiN`) in Verifier/Assemble
+padd = "padd"  # projective point addition (`padd`) in Vendor/CompElliptic and Arithmetic
 Hom = "Hom"  # `RingHom`, `evalRingHom` — Mathlib's homomorphism naming
