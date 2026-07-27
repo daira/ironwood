@@ -234,15 +234,15 @@ def deployedRootOutcomeOfCovered
 /-- **A deployed root family on the direct route.** The interpolation-free counterpart of
 `ComputedDeployedRootFSFamily.ofOnline`: the outcome is decoded from online coverage, so no
 field-capacity hypothesis is needed and no ghost evaluation points are chosen. The remaining
-input is the causal premise `DeployedRootSqueezeInvariance`, shown satisfiable for a constant
-family in `AGM.PinnedRootWitness`. -/
+input is the strict transcript-stage premise `DeployedRootPrefixDetermined`; the exact squeeze
+invariance used by the probability layer is derived from it. -/
 def ComputedDeployedRootFSFamily.ofCovered
     (family : ComputedOnlineMemberFSFamily shape)
-    (hpinned : DeployedRootSqueezeInvariance family.toFamily
+    (hcausal : DeployedRootPrefixDetermined family.toFamily
       (deployedRootOutcomeOfCovered family)) :
     ComputedDeployedRootFSFamily shape where
   toComputedOnlineMemberFSFamily := family
   outcome := deployedRootOutcomeOfCovered family
-  pinned := hpinned
+  causal := hcausal
 
 end Zcash.Snark

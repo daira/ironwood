@@ -734,7 +734,13 @@ assert_axioms xEscAtPoint_measure_le
 assert_axioms PinnedRootEvent.landing_measure_le
 assert_axioms PinnedRootFamily.landing_measure_le
 assert_axioms deployedRootBad_measure_le +native
+-- The shape-only root budget is monotone, so its consensus-maximum specialization bounds every
+-- smaller captured Orchard bundle rather than only the exact endpoint shape.
+assert_axioms algebraicRootBudget_mono
+assert_axioms DeployedRootPrefixDetermined +native
 assert_axioms DeployedRootSqueezeInvariance +native
+assert_axioms deployedRootSqueezeInvariance_of_prefixDetermined +native
+assert_axioms ComputedDeployedRootFSFamily.pinned +native
 assert_axioms tableReadingPinnedRootEvent
 assert_axioms tableReadingPinnedRootEvent_landing_measure_le
 assert_axioms deployedRootEventBudget_sum_le
@@ -765,13 +771,14 @@ assert_axioms deployedConstraintXBadSet_measure_le +native
 assert_axioms deployedConstraintXSqueezeSchedule_of_pinned +native
 -- The pinned-root witness family (`AGM.PinnedRootWitness`): the zero data over the degenerate
 -- shape, whose assembled multiopen commitment is the zero point for every basis and record —
--- the evaluations the satisfiability pin of `DeployedRootSqueezeInvariance` consumes.
+-- the evaluations consumed by the weaker, derived `DeployedRootSqueezeInvariance` property.
 assert_axioms multiopenCommitment_witness_zero +native
 assert_axioms witnessProof +native
 assert_axioms witnessFamily +native
--- The premise itself, discharged: the constant family's root sets are empty except at `x₃`,
--- where the set is the deployed point set — and the assembly never reads `x₃`, so reprogramming
--- an event's own squeeze answer moves nothing. `DeployedRootSqueezeInvariance` is satisfiable.
+-- That derived property is satisfiable: the constant family's root sets are empty except at
+-- `x₃`, where the set is the deployed point set — and the assembly never reads `x₃`, so
+-- reprogramming an event's own squeeze answer moves nothing.  A deployed family must instead
+-- provide the stronger strict-prefix property above; its constructor derives this equality.
 assert_axioms witnessFamily_reads_update +native
 assert_axioms deployedRootBad_witness +native
 assert_axioms deployedAllPts_x3_blind

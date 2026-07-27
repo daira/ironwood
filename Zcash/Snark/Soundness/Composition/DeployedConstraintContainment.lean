@@ -562,9 +562,10 @@ theorem snarkConstraintsDeployed_prob_le_of_online_outcome
     (deployedConstraintFinderOfOutcome family provider)
     (deployedConstraintDecodedOfOutcome family provider) badX hupgrade hDL hbadX
 
-/-- Concrete rewind-free constraint capstone.  The only computational premise is textbook
-single-instance DLOG for the executable combined finder; the schedule prices the bad-`x` event
-additively at `(Q + 1) * epsilonX`. -/
+/-- Concrete rewind-free **compressed-identity** capstone.  The only computational premise is
+textbook single-instance DLOG for the executable combined finder; the schedule prices the bad-`x`
+event additively at `(Q + 1) * epsilonX`.  This theorem does not claim row-level circuit semantics;
+that conclusion is the separately budgeted semantic capstone below. -/
 theorem snarkConstraintsDeployed_prob_le_of_root_schedule
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)

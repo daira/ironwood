@@ -57,9 +57,10 @@ assert_axioms deployedConstraintStaticChecks_of_captured +native
 -- The `x`-squeeze schedule at the captured key: the degree caps discharged, so `epsilonX` is
 -- the concrete `20470 / |𝔽|`; the squeeze-pinning premise passes through as the named input.
 assert_axioms deployedConstraintXSqueezeSchedule_captured +native
--- The deployed knowledge-error bound at the captured key: the rewind-free capstone with the
--- static checks and degree caps discharged, so the bad-`x` term is the concrete
--- `(Q + 1) · 20470 / |𝔽|` and the multiopen term is the additive root budget.
+-- The deployed compressed-identity extraction bound at the captured key: the rewind-free
+-- capstone with the static checks and degree caps discharged, so the bad-`x` term is the concrete
+-- `(Q + 1) · 20470 / |𝔽|` and the multiopen term is the additive root budget.  Semantic
+-- circuit satisfaction additionally uses the four-budget promotion in the core trust census.
 assert_axioms orchard_deployed_knowledge_error_captured +native
 -- The same bound on the interpolation-free route: the deployed root family built by `ofCovered`,
 -- so the statement rests on no field-capacity premise and no offline interpolation.

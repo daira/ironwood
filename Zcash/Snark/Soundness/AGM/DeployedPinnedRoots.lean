@@ -6,10 +6,11 @@ import Zcash.Snark.Soundness.Forking.PinnedRoots
 /-!
 # The deployed pinned AGM root family
 
-The adapter from rewind-free algebraic batch data to `PinnedRootFamily`.  The only family
-condition is causal: each root set is unchanged when its own squeeze answer is reprogrammed
-(`DeployedRootSqueezeInvariance`).  The bad sets are the two IPA shift polynomials and the
-deployed `x4`, `x3`, `x2`, and per-set `x1` polynomials.
+The adapter from rewind-free algebraic batch data to `PinnedRootFamily`.  The family condition is
+strict transcript-stage causality (`DeployedRootPrefixDetermined`): each root set is fixed by
+answers before its own squeeze.  This implies the exact reprogramming invariance consumed by the
+probability layer.  The bad sets are the two IPA shift polynomials and the deployed `x4`, `x3`,
+`x2`, and per-set `x1` polynomials.
 -/
 
 namespace Zcash.Snark
@@ -370,8 +371,24 @@ theorem deployedRootEventBudget_sum_le (shape : Shape) :
   ring_nf
   exact le_rfl
 
-/-- The causal condition for deployed root data: reprogramming a root event's own squeeze answer
-leaves that event's bad set unchanged.
+/-- **Transcript-stage causality for deployed root data.** The bad set for event `i` is determined
+by oracle answers at transcripts strictly shorter than its own squeeze prefix. This is the natural
+property exported by a sequential Fiat--Shamir implementation: later answers, including the answer
+being priced, cannot affect data already emitted before that squeeze. -/
+def DeployedRootPrefixDetermined (family : ComputedAlgebraicFSFamily shape)
+    (outcome : DeployedRootOutcomeProvider family) : Prop :=
+  forall basis (i : Fin 6)
+    (O O' : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp),
+    (forall t : BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k),
+      t.val.length < preIpaLen shape family.init.length (deployedRootChallengeIndex i) ->
+        O t = O' t) ->
+    deployedRootBad family outcome basis ((wrappedAdversary family basis).run O) O i =
+      deployedRootBad family outcome basis ((wrappedAdversary family basis).run O') O' i
+
+/-- The causal consequence needed by `PinnedRootEvent`: reprogramming a root event's own squeeze
+answer leaves that event's bad set unchanged.
 
 Bad sets may consume anything fixed before the squeeze — the prefix, the earlier squeeze answers
 (halo2 never reabsorbs them, so the prefix alone does not determine them), and the retained
@@ -388,44 +405,72 @@ def DeployedRootSqueezeInvariance (family : ComputedAlgebraicFSFamily shape)
           (deployedRootPoint family ((wrappedAdversary family basis).run O) i) v) i =
       deployedRootBad family outcome basis ((wrappedAdversary family basis).run O) O i
 
+/-- Strict prefix determination implies the exact reprogramming invariance used by the additive
+root-event bound. The updated point has the squeeze prefix's own length, so every strictly shorter
+oracle answer is unchanged. -/
+theorem deployedRootSqueezeInvariance_of_prefixDetermined
+    (family : ComputedAlgebraicFSFamily shape) (outcome : DeployedRootOutcomeProvider family)
+    (hcausal : DeployedRootPrefixDetermined family outcome) :
+    DeployedRootSqueezeInvariance family outcome := by
+  intro basis i O v
+  apply hcausal basis i _ O
+  intro t ht
+  rw [Function.update_apply, if_neg]
+  intro hEq
+  have hlen : (deployedRootPoint family
+      ((wrappedAdversary family basis).run O) i).val.length =
+      preIpaLen shape family.init.length (deployedRootChallengeIndex i) := by
+    unfold deployedRootPoint
+    exact preIpaSqueezePoints_length_eq family.init _
+      ((wrappedAdversary family basis).run O).1.proof.2 _
+  rw [hEq, hlen] at ht
+  exact lt_irrefl _ ht
+
 /-- An online AGM family carrying a concrete batch-or-relation outcome whose exact root data is
-invariant under reprogramming each event's own squeeze answer.  The structure stores the outcome
-as data, but does not by itself prove that a particular constructor computes it. -/
+determined before each event's squeeze. The weaker reprogramming equality used by the probability
+layer is derived from `causal`; it cannot be supplied independently. -/
 structure ComputedDeployedRootFSFamily (shape : Shape)
     extends ComputedOnlineMemberFSFamily shape where
   outcome : DeployedRootOutcomeProvider toComputedAlgebraicFSFamily
-  pinned : DeployedRootSqueezeInvariance toComputedAlgebraicFSFamily outcome
+  causal : DeployedRootPrefixDetermined toComputedAlgebraicFSFamily outcome
 
 /-- Mathematical compatibility adapter using the offline Vandermonde decoder.  Intentionally
 `noncomputable`: it proves the batch-or-relation dichotomy but does not instantiate an executable
 DLOG adversary; a concrete-security capstone must supply the outcome through a computable
 direct-coordinate implementation.
 
-The sole remaining multiopen-specific proof is `DeployedRootSqueezeInvariance`.  The
-final-output `OracleComp` interface does not encode when the data a root set reads was emitted,
-so the invariance is a stated causal premise, not derived from a final-output equality.
+The sole remaining multiopen-specific proof is `DeployedRootPrefixDetermined`. The final-output
+`OracleComp` interface does not encode when the data a root set reads was emitted, so the constructor
+requires the natural strict-prefix statement exported by the staged implementation; the exact
+reprogramming equality is then derived rather than assumed.
 
 The direct-coordinate route is `ComputedDeployedRootFSFamily.ofCovered`
 (`AGM.DirectX4Columns`): it reads the `x4` columns off the online coverage instead of
 interpolating them, so it carries no field-capacity premise and this adapter is no longer the
-only way to supply an outcome.  `AGM.PinnedRootWitness` pins the invariance satisfiable at the
-family level (a constant-output family; `tableReadingPinnedRootEvent` is the event-level
-witness).
+only way to supply an outcome.  `AGM.PinnedRootWitness` shows that the weaker derived
+reprogramming invariant is satisfiable at the family level (a constant-output family;
+`tableReadingPinnedRootEvent` is the event-level witness).
 
-What remains for a deployed family is the invariance itself, read off the Rust transcript
+What remains for a deployed family is strict prefix determination, read off the Rust transcript
 stages — each datum in a root set is emitted or read strictly before that event's squeeze. -/
 noncomputable def ComputedDeployedRootFSFamily.ofOnline
     (family : ComputedOnlineMemberFSFamily shape)
     (hcapacity : shape.numPointSets + 1 <= Fintype.card Fp)
-    (hpinned : DeployedRootSqueezeInvariance family.toFamily
+    (hcausal : DeployedRootPrefixDetermined family.toFamily
       (deployedRootOutcomeOfOnline family hcapacity)) :
     ComputedDeployedRootFSFamily shape where
   toComputedOnlineMemberFSFamily := family
   outcome := deployedRootOutcomeOfOnline family hcapacity
-  pinned := hpinned
+  causal := hcausal
 
 
 namespace ComputedDeployedRootFSFamily
+
+/-- Strict transcript-stage causality supplies the reprogramming invariant consumed by the pinned
+root-family probability theorem. -/
+theorem pinned (family : ComputedDeployedRootFSFamily shape) :
+    DeployedRootSqueezeInvariance family.toComputedAlgebraicFSFamily family.outcome :=
+  deployedRootSqueezeInvariance_of_prefixDetermined _ _ family.causal
 
 /-- Forget the tighter root data. -/
 abbrev toFamily (family : ComputedDeployedRootFSFamily shape) :
