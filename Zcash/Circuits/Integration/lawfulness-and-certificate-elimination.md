@@ -137,7 +137,7 @@ still corresponds to the original 22 theorem rows.
 | # | Current location or hidden behavior | Class | Structural replacement | Expected difficulty |
 |---:|---|:---:|---|---|
 | 24 | `action_queriedCells_wellFormed` in the VK-match bundle | L | Gate/lookup query declarations consist only of valid query atoms and match expression support. This belongs in argument lawfulness, not in a concrete capture. | Easy–medium |
-| 25 | `action_gates_selectorsCovered` in the VK-match bundle | L | Lawful selector allocation is the missing local premise; selector-compression coverage then follows from a generic compiler theorem. | Medium |
+| 25 | `action_gates_selectorsCovered` in the VK-match bundle, currently replaced by the Action-specific `Action/SelectorCoherence.lean` sidecar | L | Move gate-selector allocation into the `FormalCircuit` lawfulness package or enforce it through the configure API. The existing compositional proof can discharge that packaged law during migration; selector-compression coverage then follows from a generic compiler theorem. | Medium |
 | 26 | lookup component of closure inactivity | L | Every synthesis-enabled lookup is present in the raw configure lookup list. This is currently repaired by `closeWithOperations` and is not directly proved for Action. | Medium |
 
 Together with rows 12a and 12b, these bring the inventory to 26 atomic obligations.
@@ -147,6 +147,13 @@ The old `invalidQueriedCells = []` check was previously easy to dismiss because 
 was not imported by the capstone. It belongs here nevertheless: this arc is about the
 correctness of the formal-circuit/keygen interface, not only the minimum imports of one
 terminal theorem.
+
+`Action/SelectorCoherence.lean` is an improvement over a whole-circuit
+`native_decide`: it proves selector allocation compositionally through the configure
+program. It remains architectural debt because the result lives beside the Action
+formal circuit rather than in the circuit package or the construction API whose
+lawfulness it establishes. It is therefore an interim implementation of obligation
+25, not the endpoint.
 
 ## Current compile-cost baseline
 
