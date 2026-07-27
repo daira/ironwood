@@ -16,15 +16,14 @@ import Zcash.Snark.Soundness.Vesta
 import Zcash.Snark.Soundness.Deployed.ConcreteBounds
 import Zcash.Snark.Soundness.AGM.BindingSignature
 import Zcash.Snark.Soundness.AGM.Capstone
+import Zcash.Snark.Soundness.AGM.DeployedConstraintSupply
 import Zcash.Snark.Soundness.AGM.ProbabilityVesta
 import Zcash.Snark.Soundness.Forking.Adversary
 import Zcash.Snark.Soundness.Composition.Bridge
-import Zcash.Snark.Soundness.Composition.Completeness
 import Zcash.Snark.Soundness.Composition.Decomposition
-import Zcash.Snark.Soundness.Composition.Prefixes
-import Zcash.Snark.Soundness.Composition.Residual
-import Zcash.Snark.Soundness.Multiopen.BudgetedExtraction
-import Zcash.Snark.Soundness.VestaBudget
+import Zcash.Snark.Soundness.Composition.DeployedConstraintContainment
+import Zcash.Snark.Soundness.Composition.DeployedRootContainment
+import Zcash.Snark.Soundness.Composition.PrefixedSqueeze
 import Zcash.Snark.Soundness.FoldSplit
 import Zcash.Snark.Soundness.GrandProductBridge
 import Zcash.Snark.Soundness.LookupAssembly
@@ -300,6 +299,19 @@ assert_computable AugmentedRelationWitness.toAlgebraicRelationWitness +choice
 assert_computable relationWitnessOfCollision +choice
 assert_computable discreteLogOfAugmentedRelationAtChallenge +choice
 assert_computable separateOrRelationWitness +choice
+assert_computable algebraicPowerBatchWithSourceOrRelation +choice
+assert_computable finForallOrRelationWitness +choice
+assert_computable constructIntermediateSets_comm_route +choice
+assert_computable deployed_slot_route_of_checks +choice
+assert_computable deployedRouteSelectorOfSpecs +choice
+assert_computable deployedX4InterpolationDataOfCapacity +choice +native
+assert_computable deployedConstraintQuotientAgreementOrRelation +choice +native
+assert_computable deployedConstraintQuotientFinder +choice +native
+assert_computable decodedQuotientEqReassembledOrRelationWitness +choice
+assert_computable DeployedAlgebraicDecode.quotientEvalEqCommittedPreXOrRelationWitness +choice
+assert_computable ComputedDeployedRootFSFamily.deployedRelationFinder +choice +native
+assert_computable deployedConstraintFinderOfOutcome +choice +native
+assert_computable deployedConstraintRelationFinder +choice +native
 assert_computable relationOfFoldGensWitness +choice
 assert_computable deployedLeafPeelWitness +choice
 assert_computable deployedToAcceptVWitness +choice
@@ -474,51 +486,31 @@ assert_axioms kerr_div_card
 assert_axioms deployed_forking_knowledge_error
 assert_axioms deployed_forking_knowledge_error_captured
 
-/-! ### Multiopen decode, budgeted extraction, and the forking composition
+/-! ### Multiopen decode and forking composition
 
-The decode layer that recovers the verifier's columns from the batched multiopen, the budgeted
-extraction that replaces the per-run squeeze floors with one joint accept floor, and the
-composition layer that joins the forking extraction to the decoded capstones. Theorems throughout,
-so `assert_axioms`, with `+native` on the Vesta-instantiated endpoints. -/
-
--- The multiopen value-check chain: the deployed value check derived from the nested
--- forking floors, the x₁ member un-batch on top of it, and the terminal with `hadvice`/`hinstance`
--- produced rather than assumed (`Soundness.Multiopen.NodeBinding`, `Soundness.Vesta`).
-assert_axioms deployed_value_check_node_binding
-assert_axioms deployed_member_node_binding
-assert_axioms orchard_verifier_vesta_member_constraint_derived +native
+The decode layer's surviving surface: the Vandermonde column recovery, the `x₄` flat-power-batch
+collapse, and the forking-extraction composition. The rewind-based compatibility layer that once
+sat here — the propositional binding disjunct and the accept-event ladders it fed — has been
+removed, so every break the deployed route charges to DLOG is computed relation data, censused
+below through explicit `PSum` outcomes and computable finders. Theorems throughout, so
+`assert_axioms`, with `+native` on the Vesta-instantiated endpoints. -/
 
 -- The forking-extraction ∘ decoded-capstone composition (`Soundness.Composition.Bridge`): the algebraic
--- clean opening identified with the deployed capstone's shape (`ipaRelation_deployed_of_instance`),
--- the witness-tie composition (`member_snark_of_instance`), and the computed-path soundness
--- endpoint (`orchard_verifier_sound_vesta_computed`) that concludes the plain `SnarkRelation` with
--- NO `ExtractableFromAcceptance` hypothesis. On the witness tie the opened-value shift is derived
+-- clean opening identified with the deployed capstone's shape (`ipaRelation_deployed_of_instance`).
+-- On the witness tie the opened-value shift is derived
 -- (`shift_eq_zero_of_openings_agree`), so `hshift` survives only on the standalone single-opening
 -- bridge. `snarkExtraction_prob_le_of_generatorRO_textbookDL` is the CONDITIONAL knowledge-error
 -- bound: the SNARK-extraction failure is contained in the clean-opening failure and inherits its
 -- `(Q+k)·3/|Fp| + (Q+1)/|Fp| + |basis|·ε` bound, conditional on `hExtract` (clean opening ⟹
 -- extraction). Discharging `hExtract` — coupling the AGM family's coin measure to the multiopen
--- budget below — is the remaining reconciliation.
+-- budget below — is the remaining reconciliation. This stack is not consumed by the rewind-free
+-- constraint capstone below.
 assert_axioms ipaRelation_deployed_of_instance +native
-assert_axioms member_snark_of_instance +native
 assert_axioms snarkRelation_of_memberColumns
-assert_axioms orchard_verifier_sound_vesta_computed +native
 assert_axioms snarkExtraction_prob_le_of_generatorRO_textbookDL +native
 assert_axioms instanceAttempt_provenance +native
 assert_axioms ipaRelation_deployed_of_openings_agree +native
 assert_axioms shift_eq_zero_of_openings_agree +native
-
--- The budgeted multiopen extraction (`Soundness.Multiopen.FloorBudget`,
--- `Soundness.Multiopen.BudgetedExtraction`): the heavy-fiber Markov descent
--- (`uniformOfFintype_heavy_fiber_lt`) replaces the `∀`-over-runs squeeze floors of the value-check
--- and member cores with a single joint accept floor at honest-base thresholds, the runs pinned by
--- the canonical selectors; `deployed_member_budget` is the combined soundness budget — the joint
--- accept measure sits within the four-threshold budget, or every decoded member column takes its
--- claimed evaluation (or a computed relation exists).
-assert_axioms uniformOfFintype_heavy_fiber_lt
-assert_axioms deployed_value_check_node_binding_budgeted
-assert_axioms deployed_member_node_binding_budgeted
-assert_axioms deployed_member_budget
 
 -- The decode layer (`Soundness.Multiopen.Decode`/`Deployed`): the Vandermonde recovery of the
 -- column witnesses, the deployed x4 collapse proved to be a flat power batch, and the two-level
@@ -526,10 +518,7 @@ assert_axioms deployed_member_budget
 assert_axioms decodedColumnFamily_of_batch_openings
 assert_axioms deployedCommitment_x4_batch
 assert_axioms multiopenValue_x4_batch
-assert_axioms x1_batch_open_soundV
 assert_axioms member_binding_of_x1_samples
-assert_axioms deployed_witness_member_binding
-assert_axioms deployed_witness_two_level
 assert_axioms node_binding_of_samples
 -- The multiopen support modules, pinned directly rather than transitively through the capstones
 -- above. `Opened` holds the rewind accept events and the three `Classical.choose` witness
@@ -543,27 +532,19 @@ assert_axioms openedColumnDecode
 assert_axioms openedDecodedCols
 assert_axioms openedDecodedCols_eval_x3
 assert_axioms openedDecodedCols_top_eval_x3
-assert_axioms OpenedColumnDecode.currentWitness_eq
-assert_axioms openedRewindForRelation_of_batch
 assert_axioms openedX4Batch_of_witnessFamily
 assert_axioms OpenedX4Accept
-assert_axioms openedX4Accept_of_deployedAccepts
 assert_axioms OpenedX3Accept
-assert_axioms openedX3Accept_of_deployedAccepts
 assert_axioms OpenedX2Accept
-assert_axioms openedX2Accept_of_deployedAccepts
 assert_axioms openedX4Rewind_of_x4Prob
 assert_axioms openedX4Rewind_of_x4Prob_forked
-assert_axioms OpenedBatchOpenings.ipaRelation_of_x4Current
 assert_axioms opened_constraint_of_relation_and_batch
 assert_axioms x1DecodeComp
 assert_axioms opened_witness_member_binding
 assert_axioms OpenedX1Accept
-assert_axioms openedX1Accept_of_deployedAccepts
 assert_axioms openedMemberDecode_of_x1Prob
 assert_axioms rotatedFeed
 assert_axioms member_constraint_of_relation_and_batch
-assert_axioms member_constraint_of_relation_and_batch_xgood
 assert_axioms poly_eq_of_agree_on_family
 assert_axioms foldl_range_add_eq_sum
 assert_axioms foldl_range_guardProd_eq_prod
@@ -581,20 +562,11 @@ assert_axioms col_eval_node_eq_claimed
 assert_axioms Msm.eval_zero
 assert_axioms Msm.eval_scale
 assert_axioms Msm.eval_add
-assert_axioms HasNontrivialRelation
-assert_axioms HasNontrivialRelation.of_nontrivialRelation
-assert_axioms deployed_to_acceptV
-assert_axioms hasNontrivialRelation_of_two_openings
-assert_axioms decoded_constraint_of_relation_and_batch
-assert_axioms decoded_constraint_of_opening_or_relation
 assert_axioms claimedEval_of_x3Prob
-assert_axioms claimedCombined_of_x2Prob
 assert_axioms gateGood_of_xProb
-assert_axioms hgood_of_xProb
 assert_axioms deployedSetPts
 assert_axioms deployedAllPts
 assert_axioms deployedSetPts_subset
-assert_axioms member_aggregate_eval_bridge
 assert_axioms deployed_query_point_mem
 -- The avoidance-strengthened forking count (`Soundness.Forking.Probability`): the counting lemma
 -- that buys the multiopen grid's interpolation samples off the opened set points, so the value
@@ -611,33 +583,19 @@ assert_axioms exists_accepting_good_challenge_quotient
 -- The deployed Vesta capstone family: the decoded-column rungs and the terminal, alongside the
 -- derived capstone already pinned below.
 assert_axioms orchard_verifier_vesta_decoded_constraint_of_forked_x4 +native
-assert_axioms orchard_verifier_vesta_forking_constraint_deployed_x4 +native
-assert_axioms orchard_verifier_vesta_member_constraint_deployed_x4 +native
-assert_axioms orchard_verifier_vesta_member_constraint_deployed_terminal +native
 
--- The budgeted capstone and computed path (`Soundness.VestaBudget`): the derived deployed member
--- capstone with the run-quantified floors replaced by the joint accept floor, and the computed-path
--- endpoint with the member decode constructed and `hquot` derived — no extraction-data hypothesis.
-assert_axioms deployed_member_node_binding_at_point_budgeted
-assert_axioms orchard_verifier_vesta_member_constraint_budgeted +native
-assert_axioms member_relation_or_dlr_of_instance_budgeted +native
-assert_axioms member_snark_of_instance_budgeted +native
-assert_axioms orchard_verifier_sound_vesta_budgeted +native
-assert_axioms cleanOpening_provenance +native
-assert_axioms snarkExtraction_prob_le_of_generatorRO_textbookDL_budgeted +native
--- The `hfold` surface: the grouping's eval faithfulness at the vanishing slot is proven, not
--- assumed, so the derivation reads the verifier-computed `expectedHEval` off the routed member.
+-- Deterministic verifier routing used by the rewind-free deployed constraint decoder.
 assert_axioms vanishing_query_mem_assembleQueries
 assert_axioms assembleQueries_vanishingH_unique
 assert_axioms constructIntermediateSets_unique_comm_routed
 assert_axioms vanishing_slot_routed
 assert_axioms hfold_of_expectedHEval_binding
 assert_axioms hfold_of_vanishing_slot_binding
--- The root-of-unity exclusion is derived from acceptance (`assemble?` rejects at `xⁿ = 1`), and the
--- budget's good branch supplies `hbind` at the routed vanishing slot — so `hfold` now stands on the
--- fingerprint premise alone.
 assert_axioms deployedAccepts_xn_ne_one
-assert_axioms hfold_of_member_budget
+assert_axioms deployedAccepts_pipeline
+assert_axioms deployed_member_commitment_eq_assembled
+assert_axioms lagrangeBasisPoly_eval
+assert_axioms lagrange_bind_derived
 -- The permutation and lookup arguments folded into the constraint model: the verifier's expression
 -- list is the generic builder run on its own claimed evaluations, the same builder over column
 -- polynomials evaluates back onto it, and the fold equation therefore needs no fingerprint premise.
@@ -650,7 +608,8 @@ assert_axioms allExpressions_eq
 assert_axioms eval_constraintPolys
 assert_axioms eval_combineConstraints
 assert_axioms eval_combineConstraints_deployed
-assert_axioms hfold_of_constraint_polys
+assert_axioms hfold_of_constraint_polys_of_xn_ne_direct
+assert_axioms constraints_supply_of_deployedAlgebraicDecode
 -- The permutation and lookup arguments closed from the verifier's own row checks: the combined
 -- check splits into its parts, the running product telescopes across the rows, two challenge root
 -- counts turn the product into a multiset identity, and the existing structural theorems turn that
@@ -717,14 +676,6 @@ assert_axioms perm_gamma_failure_measure_le
 assert_axioms perm_beta_failure_measure_le
 assert_axioms escape_measure_le
 assert_axioms theta_failure_measure_le
--- The deployed capstone family over the full constraint system: the same witness chain — the batch
--- family's opening and the constructed member decodes — with the constraint check on the decoded
--- columns in place of the gate check, ending in `SnarkRelation` at `circuitSatViaConstraints`.
-assert_axioms SnarkRelationWithMemberConstraints.toSnarkRelation
-assert_axioms member_constraints_of_relation_and_batch
-assert_axioms orchard_verifier_vesta_member_constraints_deployed_x4 +native
-assert_axioms orchard_verifier_vesta_member_constraints_terminal +native
-assert_axioms orchard_verifier_vesta_member_constraints_terminal_derived +native
 -- The last links: the point check lifted to the polynomial identity, the permutation taken to be the
 -- one keygen builds from the circuit's copy constraints, the cells of every chunk covered at once,
 -- and circuit satisfaction defined by the whole constraint list rather than the gates alone.
@@ -748,74 +699,60 @@ assert_axioms lookup_tuple_of_circuitSat
 assert_axioms chain_mem_permutationExpressions
 assert_axioms running_product_chain
 assert_axioms deployed_copy_constraints_of_identity_chunks
-assert_axioms hgood_failure_priced
 assert_axioms hgood_of_good_challenge
 -- The UNCONDITIONAL decomposition: `hExtract` removed, the residual quantified as the
 -- clean-but-not-extracted measure term (bounded by the multiopen budget under the coupling
 -- documented in `Composition.Decomposition`, not assumed here).
 assert_axioms ComputedAlgebraicFSFamily.snarkExtractionFailureEvent_subset_union +native
 assert_axioms snarkExtraction_prob_le_of_generatorRO_textbookDL_decomposed +native
--- The forking reduction: the residual closed to the multiopen budget `t` by the fibered single-slot
--- counting bound, transported along the challenge-uniformity coupling. The coupling `hcouple` and the
--- accept containment `hcont` are the isolated non-circular premises (documented in `Composition.Residual`);
--- the reduction itself is proven.
-assert_axioms fibered_accept_below_threshold_le
-assert_axioms residual_le_of_coupling_containment
-assert_axioms snarkExtraction_prob_le_of_generatorRO_textbookDL_unconditional +native
--- The adaptive-coupling ladder (`Soundness.Composition.Assembly`): the residual bounded through the
--- honest random-oracle query loss instead of the over-idealised exact pushforward. Its two inputs
--- are the family `PeelDecode` and the honest-completeness containment `hcont`.
+-- Product-measure lifting, now used by the direct pinned-root composition.
 assert_axioms independentProductPMF_fiber_bound
-assert_axioms residual_le_via_ladder +native
-assert_axioms snarkExtraction_prob_le_of_generatorRO_textbookDL_ladder +native
--- The ladder at the concrete multiopen prefixes (`Soundness.Composition.Prefixes`): the four `x₁`–`x₄`
--- squeeze points, the decode's chain half discharged outright, and its state half reduced to the
--- level-0 factorisation of the accept event (`exists_multiopenStateAt_iff`, an iff — so the
--- factorisation is exactly the standing decode-side input, not a convenient sufficient condition).
-assert_axioms multiopenPrefixReads_eq +native
-assert_axioms multiopenLen_lt
-assert_axioms multiopenChainAt_prefixes +native
-assert_axioms multiopenLevelOf_prefixes +native
-assert_axioms multiopenChainAt_ne
-assert_axioms exists_multiopenStateAt_iff +native
-assert_axioms multiopenPeelDecode_of_factors +native
-assert_axioms snarkExtraction_prob_le_of_generatorRO_textbookDL_multiopen +native
--- The honest-completeness half of `hcont` (`Soundness.Composition.Completeness`): the bad event priced
--- unconditionally, and the landing side reduced to the AGM-completeness supply, itself built from a
--- clean opening's forked transcript.
-assert_axioms memberBadEvent_measure_le
-assert_axioms memberBadEvent_of_supply
-assert_axioms honestCompletenessSupply_of_forkedTranscript
-assert_axioms forkedTranscript_nonempty_of_instanceOpening +native
-assert_axioms honestCompletenessSupply_of_instanceOpening +native
--- The supply's own inputs, discharged: the three IPA fold challenges are exhibited in `Fp`, deployed
--- acceptance is reduced to the family's accept predicate, and the value shift is forced by the
--- witness tie. What is left in `honestCompletenessSupply_of_cleanOpening` is the tie itself.
-assert_axioms exists_ipaFoldChallenges
-assert_axioms deployedAccepts_of_verifierEq
-assert_axioms honestCompletenessSupply_of_openings_agree +native
-assert_axioms honestCompletenessSupply_of_cleanOpening +native
--- The witness tie is no longer a premise: the clean opening and the batch witness commit to the
--- same element, so either they agree (supply) or they collide (relation).
-assert_axioms honestCompletenessSupply_or_relation +native
--- Acceptance through `assemble?`: the deployed decision excludes the verifier's rejection paths,
--- which `DeployedIpaVerifierEq` does not, so the supply carries no `assemble? = some m` premise.
+-- Acceptance through `assemble?`, isolated from the historical completeness ladder.
 assert_axioms fullAlgebraicAcceptDeployed +native
 assert_axioms fullAlgebraicAccept_of_deployed +native
-assert_axioms honestCompletenessSupply_of_cleanOpening_deployed +native
 assert_axioms snarkExtractionFailureEventDeployed +native
-assert_axioms snarkExtractionFailureEventDeployed_subset +native
-assert_axioms snarkExtractionFailureEventDeployed_measure_le +native
--- The adaptive coupling (`Forking.AdaptiveCoupling`): escapes blind by overwriting rather than by
--- decoding, the per-level averaging bound, and the ladder logic separated from the weights.
-assert_axioms updEsc
-assert_axioms updEsc_blind
-assert_axioms card_heavy_mul_le
-assert_axioms updEsc_measure_le
-assert_axioms updEsc_escapesDuringC_measure_le
-assert_axioms adaptEsc
-assert_axioms adapt_decomposition
-assert_axioms adaptEsc_measure_le
+assert_axioms snarkExtractionFailureEventDeployed_subset_union +native
+
+-- Rewind-free AGM unbatching and its direct additive root pricing.
+assert_axioms algebraicBatchErrorPolynomial_eval
+assert_axioms algebraicBatchErrorPolynomial_natDegree_le
+assert_axioms algebraicBatch_values_of_errorPolynomial_eq_zero
+assert_axioms algebraicBatch_badSet_measure_le
+assert_axioms deployedX4AlgebraicValues_of_good
+assert_axioms deployedClearedQuotientIdentity_of_good_x3
+assert_axioms deployedAggregateNodeBinding_of_good_x2
+assert_axioms deployedMemberNodeBinding_of_good_x1
+assert_axioms deployedMemberNodeBinding_of_good_challenges
+assert_axioms xEscTable_measure_le
+assert_axioms xEscAtPoint_measure_le
+assert_axioms PinnedRootEvent.landing_measure_le
+assert_axioms PinnedRootFamily.landing_measure_le
+assert_axioms deployedRootBad_measure_le +native
+assert_axioms DeployedRootSqueezeInvariance +native
+assert_axioms tableReadingPinnedRootEvent
+assert_axioms tableReadingPinnedRootEvent_landing_measure_le
+assert_axioms deployedRootEventBudget_sum_le
+assert_axioms badX_le_via_squeeze_prefixed +native
+assert_axioms snarkExtractionDeployed_prob_le_via_wrapped_pinned_roots +native
+assert_axioms ComputedDeployedRootFSFamily.deployedRelation_prob_le_of_generatorRO_textbookDL +native
+assert_axioms deployedRootFailure_subset_landing +native
+assert_axioms deployedDecodeFailure_subset_union +native
+assert_axioms deployedNonRelationFailure_prob_le_of_generatorRO +native
+assert_axioms snarkExtractionDeployed_prob_le_via_deployed_roots +native
+
+-- Online-source constraint composition.  All disagreement branches retain concrete relation
+-- coefficients and are charged through the same single-instance textbook-DLOG finder.
+assert_axioms deployedConstraint_memberPoly_eq_online +native
+assert_axioms deployedOnlineConstraintOutcomeOfDecode +native
+assert_axioms deployedConstraintFailure_subset_union +native
+assert_axioms deployedConstraintRelation_prob_le_of_generatorRO_textbookDL +native
+assert_axioms snarkConstraintsDeployed_prob_le_via_deployed_roots +native
+assert_axioms snarkConstraintsDeployed_prob_le_of_online_outcome +native
+assert_axioms deployedConstraintUpgradeContained_of_root +native
+assert_axioms deployedConstraintOutcomeOfRoot_relation_eq_online +native
+assert_axioms deployedConstraintBadX_subset_landing +native
+assert_axioms deployedConstraintBadX_prob_le +native
+assert_axioms snarkConstraintsDeployed_prob_le_of_root_schedule +native
 
 /-! ## The Action circuit — the halo2-native soundness trust surface
 
