@@ -310,6 +310,15 @@ assert_computable deployedConstraintQuotientAgreementOrRelation +choice +native
 assert_computable deployedConstraintQuotientFinder +choice +native
 assert_computable decodedQuotientEqReassembledOrRelationWitness +choice
 assert_computable DeployedAlgebraicDecode.quotientEvalEqCommittedPreXOrRelationWitness +choice
+assert_computable x4BatchCommitments +choice +native
+assert_computable deployedSetMemberCommitments +choice +native
+assert_computable deployedX4AlgebraicBatchOrRelation +choice +native
+assert_computable deployedX1AlgebraicBatchWithSourceOrRelation +choice +native
+assert_computable deployedX1BatchOfCoveredWithSourceOrRelation +choice +native
+assert_computable deployedX4ColumnRepresentationsOfCovered +choice +native
+assert_computable deployedX4BatchOfCoveredOrRelation +choice +native
+assert_computable deployedRootOutcomeOfCovered +choice +native
+assert_computable ComputedDeployedRootFSFamily.ofCovered +choice +native
 assert_computable ComputedDeployedRootFSFamily.deployedRelationFinder +choice +native
 assert_computable deployedConstraintFinderOfOutcome +choice +native
 assert_computable deployedConstraintRelationFinder +choice +native
@@ -771,11 +780,7 @@ assert_axioms deployedRootSqueezeInvariance_witness +native
 -- a column below the pair count is its set's `x₁` power sum, the last is the prover's `q′` — so
 -- the batch-or-relation decision needs no offline interpolation and no field-capacity premise.
 assert_axioms x4BatchCommitments_eq_memberPowerSum
-assert_axioms deployedX4ColumnRepresentationsOfCovered +native
 assert_axioms aggregate_opens_deployedCommitment +native
-assert_axioms deployedX4BatchOfCoveredOrRelation +native
-assert_axioms deployedRootOutcomeOfCovered +native
-assert_axioms ComputedDeployedRootFSFamily.ofCovered +native
 assert_axioms snarkExtractionDeployed_prob_le_via_wrapped_pinned_roots +native
 assert_axioms ComputedDeployedRootFSFamily.deployedRelation_prob_le_of_generatorRO_textbookDL +native
 assert_axioms deployedRootFailure_subset_landing +native
@@ -796,6 +801,9 @@ assert_axioms deployedConstraintOutcomeOfRoot_relation_eq_online +native
 assert_axioms deployedConstraintBadX_subset_landing +native
 assert_axioms deployedConstraintBadX_prob_le +native
 assert_axioms snarkConstraintsDeployed_prob_le_of_root_schedule +native
+assert_axioms DeployedConstraintSemanticUpgradeContained +native
+assert_axioms deployedConstraintSemanticFailure_subset_union +native
+assert_axioms snarkConstraintsSemanticDeployed_prob_le_of_root_schedule +native
 
 /-! ## The Action circuit — the halo2-native soundness trust surface
 

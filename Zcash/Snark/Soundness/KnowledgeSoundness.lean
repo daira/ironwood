@@ -61,10 +61,12 @@ theorem circuitSatViaGates_of_check {k : ℕ} (fixedCols : ℕ → Polynomial Fp
     circuitSatViaGates fixedCols decodeAdvice decodeInstance y gates hpoly deg a :=
   constraint_identity_of_accept _ hpoly deg x hcheck hgood
 
-/-- **Circuit satisfaction through the full constraint list.** `circuitSatViaGates` asks only that
-the gate combination is the quotient's multiple. This asks it of the whole list — gates, permutation
-argument and lookup argument — so a witness satisfying it satisfies the constraint system the
-verifier actually checks, not just its gate part. -/
+/-- **The verifier's compressed identity over the full constraint list.** `circuitSatViaGates`
+asks only that the gate combination is the quotient's multiple. This predicate folds gates,
+permutation rules, and lookup rules with the sampled `y`, `beta`, `gamma`, and `theta` challenges.
+It is the algebraic identity checked by the verifier, not by itself the row-level semantic
+statement: splitting the `y` fold and recovering permutation/lookup semantics additionally require
+the good-challenge hypotheses in `ConstraintRelations`. -/
 def circuitSatViaConstraints {k np : ℕ} (fixedCols : ℕ → Polynomial Fp)
     (decodeAdvice decodeInstance : (Fin (2 ^ k) → Fp) → Fin np → ℕ → Polynomial Fp)
     (gates : List (Expr Fp))
@@ -77,8 +79,8 @@ def circuitSatViaConstraints {k np : ℕ} (fixedCols : ℕ → Polynomial Fp)
   combineConstraints fixedCols (decodeAdvice a) (decodeInstance a) gates sets chunks lookups
     beta gamma delta theta y chunkLen l0 lLast lBlind = hpoly * (X ^ deg - 1)
 
-/-- Derive constraint-system satisfaction from an accepting quotient check at a good challenge —
-`circuitSatViaGates_of_check` with the permutation and lookup arguments folded in. -/
+/-- Derive the compressed full-list identity from an accepting quotient check at a good `x` —
+`circuitSatViaGates_of_check` with the permutation and lookup expressions folded in. -/
 theorem circuitSatViaConstraints_of_check {k np : ℕ} (fixedCols : ℕ → Polynomial Fp)
     (decodeAdvice decodeInstance : (Fin (2 ^ k) → Fp) → Fin np → ℕ → Polynomial Fp)
     (gates : List (Expr Fp))
@@ -98,10 +100,11 @@ theorem circuitSatViaConstraints_of_check {k np : ℕ} (fixedCols : ℕ → Poly
       beta gamma delta theta y chunkLen l0 lLast lBlind hpoly deg a :=
   constraint_identity_of_accept _ hpoly deg x hcheck hgood
 
-/-- **The capstone payload over the full constraint system.** An IPA opening together with the
-constraint identity *is* `SnarkRelation` at `circuitSatViaConstraints`. This is the projection the
-deployed path needs: the same opening it already computes, paired with satisfaction of the gate,
-permutation and lookup constraints rather than of the gates alone. -/
+/-- **The capstone payload for the compressed full-list identity.** An IPA opening together with
+the verifier's constraint identity is `SnarkRelation` at `circuitSatViaConstraints`. Promoting this
+payload to row-level gate, permutation, and lookup semantics must separately price the `y`, `beta`,
+`gamma`, and `theta` failure surfaces; see `ConstraintRelations` and the semantic capstone in
+`Composition.DeployedConstraintContainment`. -/
 theorem snarkRelation_constraints {np : ℕ} (urs : URS G) {P : G} {b : Fin (2 ^ urs.k) → Fp} {v : Fp}
     (fixedCols : ℕ → Polynomial Fp)
     (decodeAdvice decodeInstance : (Fin (2 ^ urs.k) → Fp) → Fin np → ℕ → Polynomial Fp)

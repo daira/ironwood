@@ -595,4 +595,143 @@ theorem snarkConstraintsDeployed_prob_le_of_root_schedule
     (deployedConstraintUpgradeContained_of_root family static) hDL
     (deployedConstraintBadX_prob_le query family schedule)
 
+/-! ## Promotion from the compressed identity to circuit semantics
+
+The constraint witness above proves the verifier's single identity after the constraint list has
+been compressed by `y`, and after permutation and lookup values have been compressed by `beta`,
+`gamma`, and `theta`. It is not sound to call that event semantic circuit satisfaction without
+pricing collisions at those four earlier squeezes. The following interface makes that last step
+explicit: the caller supplies the concrete semantic predicate, the four failure events, and the
+deterministic proof that a compressed witness outside those events has the intended semantics.
+-/
+
+/-- Outside the four challenge-failure events, a compressed constraint witness upgrades to the
+caller's row-level semantic predicate. In a concrete Orchard instantiation, `ConstraintRelations`
+supplies this implication from the good-`y` fold split, good permutation `beta`/`gamma`, and good
+lookup-tuple `theta` hypotheses. -/
+def DeployedConstraintSemanticUpgradeContained
+    (family : ComputedDeployedRootFSFamily shape)
+    (compressedDecoded semanticDecoded :
+      (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) -> family.toFamily.Coins -> Prop)
+    (badY badBeta badGamma badTheta :
+      Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) × family.toFamily.Coins)) : Prop :=
+  {p | compressedDecoded p.1 p.2 ∧ ¬ semanticDecoded p.1 p.2} <=
+    badY ∪ (badBeta ∪ (badGamma ∪ badTheta))
+
+/-- Failure of the semantic predicate is either failure of the compressed-identity extractor or
+one of the four explicitly priced challenge surfaces. -/
+theorem deployedConstraintSemanticFailure_subset_union
+    (family : ComputedDeployedRootFSFamily shape)
+    (compressedDecoded semanticDecoded :
+      (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) -> family.toFamily.Coins -> Prop)
+    (badY badBeta badGamma badTheta :
+      Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) × family.toFamily.Coins))
+    (hsemantic : DeployedConstraintSemanticUpgradeContained family compressedDecoded
+      semanticDecoded badY badBeta badGamma badTheta) :
+    snarkExtractionFailureEventDeployed family.toFamily semanticDecoded <=
+      snarkExtractionFailureEventDeployed family.toFamily compressedDecoded ∪
+        (badY ∪ (badBeta ∪ (badGamma ∪ badTheta))) := by
+  rintro p ⟨haccept, hnotSemantic⟩
+  by_cases hcompressed : compressedDecoded p.1 p.2
+  · exact Or.inr (hsemantic ⟨hcompressed, hnotSemantic⟩)
+  · exact Or.inl ⟨haccept, hcompressed⟩
+
+/-- **Semantic constraint capstone.** The compressed-identity knowledge error is augmented by
+four named additive budgets. No conclusion about row-level gate, permutation, or lookup semantics
+is available from the compressed payload unless `hsemantic` and all four measure bounds are
+provided.
+
+TODO(#115): When layering the runtime-aware capstone, verify that it either passes through this
+semantic promotion (including all four budgets) or is explicitly scoped to the compressed identity.
+-/
+theorem snarkConstraintsSemanticDeployed_prob_le_of_root_schedule
+    {T : Type*} [DecidableEq T]
+    (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex (2 ^ shape.k) -> T) (hquery : Function.Injective query)
+    (family : ComputedDeployedRootFSFamily shape)
+    (static : DeployedConstraintStaticChecks family)
+    (semanticDecoded :
+      (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) -> family.toFamily.Coins -> Prop)
+    (badY badBeta badGamma badTheta :
+      Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) × family.toFamily.Coins))
+    {epsilonX dlogBound yBound betaBound gammaBound thetaBound : ENNReal}
+    (schedule : DeployedConstraintXSqueezeSchedule family epsilonX)
+    (hDL : TextbookDLWithCoinsAdvantageLE B
+      (deployedConstraintRelationFinder family
+        (deployedConstraintQuotientFinder family)) dlogBound)
+    (hsemantic : DeployedConstraintSemanticUpgradeContained family
+      (deployedConstraintDecodedOfOutcome family
+        (deployedConstraintOutcomeProviderOfRoot family static))
+      semanticDecoded badY badBeta badGamma badTheta)
+    (hY : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' badY) <= yBound)
+    (hBeta : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' badBeta) <= betaBound)
+    (hGamma : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' badGamma) <= gammaBound)
+    (hTheta : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' badTheta) <= thetaBound) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          snarkExtractionFailureEventDeployed family.toFamily semanticDecoded)
+      <= (((family.Q + shape.k) * (3 / Fintype.card Fp) +
+          (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
+          (dlogBound + 1 / Fintype.card Fp))
+        + (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k
+        + (family.Q + 1 : Nat) * epsilonX)
+        + (yBound + (betaBound + (gammaBound + thetaBound))) := by
+  let mu := (independentProductPMF (orchardGeneratorROSetup query)
+    (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
+  let basisCoins : ((↥(Set.range query) -> VestaG) × family.toFamily.Coins) ->
+      ((AugmentedIndex (2 ^ shape.k) -> VestaG) × family.toFamily.Coins) :=
+    fun p => (orchardGeneratorROBasis query p.1, p.2)
+  let compressedDecoded := deployedConstraintDecodedOfOutcome family
+    (deployedConstraintOutcomeProviderOfRoot family static)
+  change mu (basisCoins ⁻¹'
+      snarkExtractionFailureEventDeployed family.toFamily semanticDecoded) <= _
+  have hcompressed := snarkConstraintsDeployed_prob_le_of_root_schedule B hB query hquery
+    family static schedule hDL
+  have hsubset : basisCoins ⁻¹'
+        snarkExtractionFailureEventDeployed family.toFamily semanticDecoded <=
+      basisCoins ⁻¹'
+        (snarkExtractionFailureEventDeployed family.toFamily compressedDecoded ∪
+          (badY ∪ (badBeta ∪ (badGamma ∪ badTheta)))) :=
+    Set.preimage_mono
+      (deployedConstraintSemanticFailure_subset_union family compressedDecoded semanticDecoded
+        badY badBeta badGamma badTheta hsemantic)
+  calc
+    mu (basisCoins ⁻¹'
+        snarkExtractionFailureEventDeployed family.toFamily semanticDecoded)
+        <= mu (basisCoins ⁻¹'
+          (snarkExtractionFailureEventDeployed family.toFamily compressedDecoded ∪
+            (badY ∪ (badBeta ∪ (badGamma ∪ badTheta))))) :=
+      MeasureTheory.measure_mono hsubset
+    _ = mu ((basisCoins ⁻¹'
+          snarkExtractionFailureEventDeployed family.toFamily compressedDecoded) ∪
+        ((basisCoins ⁻¹' badY) ∪
+          ((basisCoins ⁻¹' badBeta) ∪
+            ((basisCoins ⁻¹' badGamma) ∪ (basisCoins ⁻¹' badTheta))))) := by
+      simp only [Set.preimage_union]
+    _ <= mu (basisCoins ⁻¹'
+          snarkExtractionFailureEventDeployed family.toFamily compressedDecoded) +
+        (mu (basisCoins ⁻¹' badY) +
+          (mu (basisCoins ⁻¹' badBeta) +
+            (mu (basisCoins ⁻¹' badGamma) + mu (basisCoins ⁻¹' badTheta)))) := by
+      exact (MeasureTheory.measure_union_le _ _).trans
+        (add_le_add le_rfl ((MeasureTheory.measure_union_le _ _).trans
+          (add_le_add le_rfl ((MeasureTheory.measure_union_le _ _).trans
+            (add_le_add le_rfl (MeasureTheory.measure_union_le _ _))))))
+    _ <= (((family.Q + shape.k) * (3 / Fintype.card Fp) +
+          (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
+          (dlogBound + 1 / Fintype.card Fp))
+        + (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k
+        + (family.Q + 1 : Nat) * epsilonX)
+        + (yBound + (betaBound + (gammaBound + thetaBound))) :=
+      add_le_add hcompressed (add_le_add hY (add_le_add hBeta (add_le_add hGamma hTheta)))
+
 end Zcash.Snark

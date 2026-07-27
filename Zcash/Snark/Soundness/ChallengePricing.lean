@@ -26,9 +26,10 @@ the advice commitments, β and γ after θ, y after the lookup commitments, x la
 the deployed constraint decoder's `hfold`/`hgood` surfaces and not re-derived here.
 -/
 
--- TODO: compose these per-surface prices into the terminal knowledge-error bound. Each is bounded
--- here; folding them together needs the sequential-coupling hook above, the same one `hgood`
--- awaits, supplied with the computed-path re-instantiation.
+-- The terminal API `snarkConstraintsSemanticDeployed_prob_le_of_root_schedule` consumes four
+-- explicit bad-event bounds, one for each surface below. A concrete instantiation must obtain those
+-- bounds through the sequential-coupling hook above; the compressed-identity capstone deliberately
+-- cannot be presented as semantic soundness without them.
 
 namespace Zcash.Snark
 

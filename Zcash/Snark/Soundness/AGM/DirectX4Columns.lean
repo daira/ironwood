@@ -80,7 +80,7 @@ theorem x4BatchCommitments_eq_memberPowerSum {G : Type*} [AddCommGroup G] [Modul
 /-- **AGM coordinates for every `x₄` batch column, read off the online data.** Columns below the
 pair count take the `x₁` power sum of their set's member representations; the final column is the
 prover's `q′`, which carries its own representation. No interpolation, no rewind. -/
-noncomputable def deployedX4ColumnRepresentationsOfCovered
+def deployedX4ColumnRepresentationsOfCovered
     {vk : VerifyingKey shape Fp VestaG}
     {instanceCommitment : Fin shape.numProofs → ℕ → VestaG}
     (p : AlgebraicWfProof basis vk instanceCommitment)
@@ -159,7 +159,7 @@ theorem aggregate_opens_deployedCommitment
 and the aggregate equation comes from the proof's own multiopen representation, so the
 batch-or-relation decision needs no offline interpolation — the drop-in replacement for the
 Vandermonde compatibility adapter. -/
-noncomputable def deployedX4BatchOfCoveredOrRelation
+def deployedX4BatchOfCoveredOrRelation
     {vk : VerifyingKey shape Fp VestaG}
     {instanceCommitment : Fin shape.numProofs → ℕ → VestaG}
     (p : AlgebraicWfProof basis vk instanceCommitment)
@@ -185,12 +185,16 @@ The same batch-or-relation walk as the compatibility adapter, with the `x₄` le
 direct decode above instead of the offline interpolation. Nothing here rewinds and nothing
 interpolates: the `x₄` columns come from online coverage, the per-set `x₁` columns from the same
 member representations, and every disagreement returns explicit relation coefficients.
+
+TODO(#115): Equip this executable direct-coordinate postprocessing with an explicit polynomial
+total-cost bound.  Computability here closes the algorithmic seam; the concrete PPT/runtime bound
+is a separate obligation from counting black-box adversary calls.
 -/
 
 /-- **The deployed root outcome, decoded directly.** The interpolation-free counterpart of
 `deployedRootOutcomeOfOnline`: it needs no field-capacity hypothesis, because it never chooses
 ghost evaluation points. -/
-noncomputable def deployedRootOutcomeOfCovered
+def deployedRootOutcomeOfCovered
     (family : ComputedOnlineMemberFSFamily shape) :
     DeployedRootOutcomeProvider family.toFamily := by
   intro basis O
@@ -232,7 +236,7 @@ noncomputable def deployedRootOutcomeOfCovered
 field-capacity hypothesis is needed and no ghost evaluation points are chosen. The remaining
 input is the causal premise `DeployedRootSqueezeInvariance`, shown satisfiable for a constant
 family in `AGM.PinnedRootWitness`. -/
-noncomputable def ComputedDeployedRootFSFamily.ofCovered
+def ComputedDeployedRootFSFamily.ofCovered
     (family : ComputedOnlineMemberFSFamily shape)
     (hpinned : DeployedRootSqueezeInvariance family.toFamily
       (deployedRootOutcomeOfCovered family)) :
