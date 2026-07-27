@@ -42,12 +42,9 @@ noncomputable def instanceKey
 /-- The verifier-derived commitment family for Action public inputs. The Action
 circuit has one public instance column; unused column indices are mapped to zero. -/
 noncomputable def commitment
-    (pp : ProofParams) (urs : URS G)
-    (inputs :
-      Fin (pp.mergeDerived actionCircuit).numProofs →
-        PublicInputs Fp) :
-    Fin (pp.mergeDerived actionCircuit).numProofs →
-      ℕ → G :=
+    (pp : ProofParams) (urs : URS G) {numProofs : ℕ}
+    (inputs : Fin numProofs → PublicInputs Fp) :
+    Fin numProofs → ℕ → G :=
   fun proofIndex column =>
     if column =
         actionCircuit.config.primary.index then
@@ -56,12 +53,9 @@ noncomputable def commitment
 
 omit [DecidableEq G] in
 @[simp] theorem commitment_primary
-    (pp : ProofParams) (urs : URS G)
-    (inputs :
-      Fin (pp.mergeDerived actionCircuit).numProofs →
-        PublicInputs Fp)
-    (proofIndex :
-      Fin (pp.mergeDerived actionCircuit).numProofs) :
+    (pp : ProofParams) (urs : URS G) {numProofs : ℕ}
+    (inputs : Fin numProofs → PublicInputs Fp)
+    (proofIndex : Fin numProofs) :
     commitment pp urs inputs proofIndex
         actionCircuit.config.primary.index =
       (instanceKey pp urs).commitInstance (inputs proofIndex).rows 1 := by
@@ -73,12 +67,9 @@ omit [DecidableEq G] in
 /-- On the primary column, the verifier commitment is the monomial-URS commitment
 to the zero-padded public-row polynomial, with Halo 2's default blind. -/
 theorem commitment_primary_eq_commit
-    (pp : ProofParams) (urs : URS G)
-    (inputs :
-      Fin (pp.mergeDerived actionCircuit).numProofs →
-        PublicInputs Fp)
-    (proofIndex :
-      Fin (pp.mergeDerived actionCircuit).numProofs) :
+    (pp : ProofParams) (urs : URS G) {numProofs : ℕ}
+    (inputs : Fin numProofs → PublicInputs Fp)
+    (proofIndex : Fin numProofs) :
     commitment pp urs inputs proofIndex
         actionCircuit.config.primary.index =
       commit urs

@@ -1194,8 +1194,9 @@ satisfaction of the accepted run's canonical decoded-member model into the exact
 relation consumed by circuit integration.
 `Soundness/Deployed/ActionVesta` carries the transport ingredients for the deployed
 seam — the fixture `k`-match and blinding-factor facts (`shape_k_eq_capturedURS_k`,
-`vk_blindingFactors_lt`) and the shape-generic `deployedInstanceCommitment` family —
-used to carry the generic Action/Vesta statements to the captured artifacts along
+`vk_blindingFactors_lt`); the public-instance commitment is the circuit-native
+`ActionInstanceCommitment.commitment`, used directly at the captured shape. They carry
+the generic Action/Vesta statements to the captured artifacts along
 the keygen certificate. The deployed capstone in `Soundness/Deployed/ActionVesta`
 consumes satisfaction of the canonical accepted model through that transport.
 `AcceptedModelClaimedEvaluations` is the corresponding verifier-native node-binding
