@@ -1,3 +1,4 @@
+import Zcash.Common.RelationWitness
 import Zcash.Snark.Soundness.Composition.Bridge
 import Zcash.Snark.Soundness.Multiopen.BudgetedExtraction
 
@@ -949,7 +950,7 @@ list `[expectedHEval …]` (`hevals`), so the index-`0` binding is a binding at 
 capstone's `hfold` equation or the relation. Acceptance supplies the root-of-unity exclusion; the
 one remaining input is the expression-fold fingerprint `hfp`. `hquot` names the extracted quotient
 as the routed member's own column, not an arbitrary member recording the `vanishingH` identity. -/
-theorem hfold_of_member_budget {G : Type*} [AddCommGroup G] [Module Fp G] [DecidableEq G]
+noncomputable def hfold_of_member_budget {G : Type*} [AddCommGroup G] [Module Fp G] [DecidableEq G]
     [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -963,7 +964,7 @@ theorem hfold_of_member_budget {G : Type*} [AddCommGroup G] [Module Fp G] [Decid
         (colPoly m₀).eval
             (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i [])[idx])
           = ((deployedSetQueries vk instanceCommitment ps ch i).getD (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
-        ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+        ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w)
     (hquot : hpoly = colPoly ⟨m, hm⟩)
     (hroute : (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i [] = [ch.x])
     (hevals : ∀ d₀, ((deployedSetQueries vk instanceCommitment ps ch i).getD m d₀).2
@@ -982,20 +983,20 @@ theorem hfold_of_member_budget {G : Type*} [AddCommGroup G] [Module Fp G] [Decid
             (fun acc v => acc * ch.y + v) 0) :
     constraints.foldl (fun acc v => acc * ch.y + v) 0
       = hpoly.eval ch.x * (ch.x ^ vk.n - 1)
-    ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+    ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   have hlt : 0 < ((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i []).length := by
     rw [hroute]; simp
-  rcases hbindAll ⟨0, hlt⟩ ⟨m, hm⟩ with hb | hrel
-  · refine Or.inl (hfold_of_vanishing_slot_binding vk instanceCommitment ps ch constraints hpoly i m
-      hevals ?_ (deployedAccepts_xn_ne_one urs hk vk instanceCommitment ps ch hacc) hfp)
-    have hx : ((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i
-        [])[(0 : ℕ)]'hlt
-        = ch.x := by
-      rw [List.getElem_of_eq hroute hlt]
-      simp
-    rw [hquot, ← hx]
-    exact hb
-  · exact Or.inr hrel
+  -- `hbindAll` is consumed at a single index, so no search is needed: the outcome threads through.
+  refine bindOrRelationWitness (hbindAll ⟨0, hlt⟩ ⟨m, hm⟩) fun hb => ?_
+  refine hfold_of_vanishing_slot_binding vk instanceCommitment ps ch constraints hpoly i m
+    hevals ?_ (deployedAccepts_xn_ne_one urs hk vk instanceCommitment ps ch hacc) hfp
+  have hx : ((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i
+      [])[(0 : ℕ)]'hlt
+      = ch.x := by
+    rw [List.getElem_of_eq hroute hlt]
+    simp
+  rw [hquot, ← hx]
+  exact hb
 
 open Polynomial in
 /-- **`hfold`, with the fingerprint discharged.** `hfold_of_member_budget` run on the full
@@ -1008,7 +1009,7 @@ Named assumptions: `hfixed`/`hadvice`/`hinstance` — the fed columns take the c
 `ch.x`; `hsets`/`hchunks`/`hlookups` — the permutation sets, chunks and lookups do the same;
 `hl0`/`hlLast`/`hlBlind` — the Lagrange polynomials take the verifier's Lagrange values;
 `hbindAll`/`hquot`/`hroute`/`hevals`/`hacc` — unchanged from `hfold_of_member_budget`. -/
-theorem hfold_of_constraint_polys {G : Type*} [AddCommGroup G] [Module Fp G] [DecidableEq G]
+noncomputable def hfold_of_constraint_polys {G : Type*} [AddCommGroup G] [Module Fp G] [DecidableEq G]
     [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (instanceCommitment : Fin shape.numProofs → ℕ → G)
@@ -1032,7 +1033,7 @@ theorem hfold_of_constraint_polys {G : Type*} [AddCommGroup G] [Module Fp G] [De
               [])[idx])
           = ((deployedSetQueries vk instanceCommitment ps ch i).getD (m₀ : ℕ)
               (.point 0, [])).2.getD (idx : ℕ) 0
-        ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+        ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w)
     (hquot : hpoly = colPoly ⟨m, hm⟩)
     (hroute : (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i
       [] = [ch.x])
@@ -1060,7 +1061,7 @@ theorem hfold_of_constraint_polys {G : Type*} [AddCommGroup G] [Module Fp G] [De
     (combineConstraints fixedCols adviceCols instanceCols vk.gates sets chunks lookups
         ch.beta ch.gamma vk.delta ch.theta ch.y vk.chunkLen l0 lLast lBlind).eval ch.x
       = hpoly.eval ch.x * (ch.x ^ vk.n - 1)
-    ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+    ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   have hfp := eval_combineConstraints_deployed vk ps ch fixedCols adviceCols instanceCols
     sets chunks lookups l0 lLast lBlind hfixed hadvice hinstance hsets hchunks hlookups
     hl0 hlLast hlBlind
@@ -1203,7 +1204,7 @@ theorem orchard_verifier_vesta_member_constraint_budgeted_hfold_derived {shape :
         (colPoly m₀).eval
             (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i [])[idx])
           = ((deployedSetQueries vk instanceCommitment ps ch i).getD (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
-        ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+        ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w)
     (hquot : hpoly = colPoly ⟨m, hm⟩)
     (hroute : (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i [] = [ch.x])
     (hevals : ∀ d₀, ((deployedSetQueries vk instanceCommitment ps ch i).getD m d₀).2
@@ -1236,7 +1237,9 @@ theorem orchard_verifier_vesta_member_constraint_budgeted_hfold_derived {shape :
       hadviceSet adviceMem instanceSet hinstanceSet instanceMem fixedCols ch.y gates hpoly vk.n
       pbatch hξcur hlen hprob1 hacc0 p hadvLen hinstLen b₂f hJ hfold hgood
       hadviceLayout hinstanceLayout hquotCommitted hencodes
-  · exact Or.inr hrel
+  · -- This budgeted lane keeps its propositional conclusion, so the computed relation is
+    -- demoted here rather than threaded further. It is deleted upstream in any case.
+    exact Or.inr (HasNontrivialRelation.of_nontrivialRelation hrel)
 
 
 /-! ## The member relation over the full constraint system
@@ -1690,7 +1693,7 @@ theorem orchard_verifier_vesta_member_constraints_terminal_derived {shape : Shap
         (colPoly m₀).eval
             (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i [])[idx])
           = ((deployedSetQueries vk instanceCommitment ps ch i).getD (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
-        ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+        ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w)
     (hquot : hpoly = colPoly ⟨m, hm⟩)
     (hroute : (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i [] = [ch.x])
     (hevals : ∀ d₀, ((deployedSetQueries vk instanceCommitment ps ch i).getD m d₀).2
@@ -1769,6 +1772,7 @@ theorem orchard_verifier_vesta_member_constraints_terminal_derived {shape : Shap
       lookups ch.beta ch.gamma vk.delta ch.theta ch.y vk.chunkLen l0P lLastP lBlindP hpoly vk.n
       ch.x pbatch hξcur hlen hprob1 hacc0 hfold
       (hgood_of_good_challenge _ hpoly vk.n hxgood) hencodes
-  · exact Or.inr hrel
+  · -- Propositional lane, as above: demoted here, deleted upstream.
+    exact Or.inr (HasNontrivialRelation.of_nontrivialRelation hrel)
 
 end Zcash.Snark

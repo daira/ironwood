@@ -1,3 +1,4 @@
+import Zcash.Common.RelationWitness
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 import Zcash.Snark.Soundness.VestaBudget
 
@@ -356,7 +357,7 @@ noncomputable def ofNodeBinding_or_relation
           deployedMemberClaim
             (instanceCommitment := instanceCommitment)
             vk ps ch slot point
-        ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+        ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w)
     (hpermutationWellFormed :
       permutationLastEvalsWellFormed ps = true)
     (hpermutationRouting :
@@ -369,16 +370,14 @@ noncomputable def ofNodeBinding_or_relation
     AcceptedModelClaimedEvaluations
         (memberDecode := memberDecode)
         (hblinding := hblinding) haccepts
-      ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  rcases
-      CanonicalMemberConstraintRelation.acceptedPolynomial_opens_or_relation
-        (memberDecode := memberDecode) haccepts hbind with
-    hopen | hrelation
-  · exact Or.inl <|
+      ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w :=
+  bindOrRelationWitness
+    (CanonicalMemberConstraintRelation.acceptedPolynomial_opens_or_relation
+      (memberDecode := memberDecode) haccepts hbind)
+    fun hopen =>
       ofOpenings haccepts hfixedLayout hadviceLayout hinstanceLayout
         hopen hpermutationWellFormed hpermutationRouting
         hrows hroot hnFp hxDomain
-  · exact Or.inr hrelation
 
 end AcceptedModelClaimedEvaluations
 
@@ -387,7 +386,7 @@ The deployed quotient-member binding, instantiated at the accepted canonical
 decoded model, proves that model's complete circuit identity or returns the shared
 augmented commitment relation.
 -/
-theorem acceptedModel_circuitSat_or_relation
+noncomputable def acceptedModel_circuitSat_or_relation
     {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp G)
@@ -439,7 +438,7 @@ theorem acceptedModel_circuitSat_or_relation
           vk instanceCommitment ps ch i).getD
             (memberIndex : ℕ) (.point 0, [])).2.getD
               (pointIndex : ℕ) 0
-        ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+        ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w)
     (hquot : hpoly = columnPolynomial ⟨m, hm⟩)
     (hroute :
       (constructIntermediateSets
@@ -514,8 +513,8 @@ theorem acceptedModel_circuitSat_or_relation
     (CanonicalMemberConstraintRelation.acceptedModel
         (memberDecode := memberDecode)
         (hblinding := hblinding) haccepts).CircuitSat
-          ch.y hpoly vk.n a ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+          ch.y hpoly vk.n a ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   let model :=
     CanonicalMemberConstraintRelation.acceptedModel
       (memberDecode := memberDecode)
@@ -530,22 +529,20 @@ theorem acceptedModel_circuitSat_or_relation
       claimed.fixed claimed.advice claimed.«instance»
       claimed.sets claimed.chunks claimed.lookups
       claimed.l0 claimed.lLast claimed.lBlind
-  rcases hfold with hcheck | hrelation
-  · apply Or.inl
-    apply circuitSatViaConstraints_of_check
-      model.fixedCols (fun _ => model.adviceCols)
-      (fun _ => model.instanceCols)
-      model.gates model.sets model.chunks model.lookups
-      model.beta model.gamma model.delta model.theta ch.y
-      model.chunkLen model.l0 model.lLast model.lBlind
-      hpoly vk.n a ch.x
-    · simpa [model, CanonicalMemberConstraintRelation.acceptedModel,
-        canonicalConstraintModelOfPermutationResolver,
-        constraintModelOfPermutationResolver,
-        constraintModelOfResolver] using hcheck
-    · apply hgood_of_good_challenge
-      simpa only [model] using hxgood
-  · exact Or.inr hrelation
+  refine bindOrRelationWitness hfold fun hcheck => ?_
+  apply circuitSatViaConstraints_of_check
+    model.fixedCols (fun _ => model.adviceCols)
+    (fun _ => model.instanceCols)
+    model.gates model.sets model.chunks model.lookups
+    model.beta model.gamma model.delta model.theta ch.y
+    model.chunkLen model.l0 model.lLast model.lBlind
+    hpoly vk.n a ch.x
+  · simpa [model, CanonicalMemberConstraintRelation.acceptedModel,
+      canonicalConstraintModelOfPermutationResolver,
+      constraintModelOfPermutationResolver,
+      constraintModelOfResolver] using hcheck
+  · apply hgood_of_good_challenge
+    simpa only [model] using hxgood
 
 /--
 Uniform openings of the accepted canonical resolver prove satisfaction directly
@@ -735,7 +732,7 @@ All query evaluations and the quotient carrier are fixed by the accepted
 `CommitmentId` resolver. The only exceptional branch is the existing
 augmented-basis relation produced by node binding.
 -/
-theorem acceptedModel_circuitSat_or_relation_of_decodedMemberPolynomial_eq
+noncomputable def acceptedModel_circuitSat_or_relation_of_decodedMemberPolynomial_eq
     {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp G)
@@ -786,7 +783,7 @@ theorem acceptedModel_circuitSat_or_relation_of_decodedMemberPolynomial_eq
           deployedMemberClaim
             (instanceCommitment := instanceCommitment)
             vk ps ch slot point
-        ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+        ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w)
     (hpermutationRouting :
       PermutationChunkRoutingCoherent vk)
     (hrows : Function.Injective
@@ -847,12 +844,12 @@ theorem acceptedModel_circuitSat_or_relation_of_decodedMemberPolynomial_eq
         (memberDecode := memberDecode)
         (hblinding := hblinding) haccepts).CircuitSat
           ch.y hpoly vk.n a
-      ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  rcases
-      CanonicalMemberConstraintRelation.acceptedPolynomial_opens_or_relation
-        (memberDecode := memberDecode) haccepts hbind with
-    hopen | hrelation
-  · have claimed :=
+      ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  refine bindOrRelationWitness
+    (CanonicalMemberConstraintRelation.acceptedPolynomial_opens_or_relation
+      (memberDecode := memberDecode) haccepts hbind)
+    fun hopen => ?_
+  have claimed :=
       AcceptedModelClaimedEvaluations.ofOpenings
         (hblinding := hblinding)
         haccepts hfixedLayout hadviceLayout hinstanceLayout hopen
@@ -861,10 +858,9 @@ theorem acceptedModel_circuitSat_or_relation_of_decodedMemberPolynomial_eq
         hpermutationRouting hrows hroot hnFp
         (deployedAccepts_xn_ne_one
           urs hk vk instanceCommitment ps ch haccepts)
-    exact Or.inl <|
-      acceptedModel_circuitSat_of_openings
-        urs hk vk instanceCommitment ps ch memberDecode
-        haccepts hblinding hpoly hquot hopen claimed hxgood
-  · exact Or.inr hrelation
+  exact
+    acceptedModel_circuitSat_of_openings
+      urs hk vk instanceCommitment ps ch memberDecode
+      haccepts hblinding hpoly hquot hopen claimed hxgood
 
 end Zcash.Snark
