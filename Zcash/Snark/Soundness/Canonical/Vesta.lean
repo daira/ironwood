@@ -128,7 +128,7 @@ theorem acceptedModel_circuitSat_or_relation_of_feed_eq
             (assembleQueries vk instanceCommitment ps ch)).points.getD i [])[idx]) =
         ((deployedSetQueries vk instanceCommitment ps ch i).getD
           (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
-        ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+        ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w)
     (hquot : hpoly = colPoly ⟨m, hm⟩)
     (hroute : (constructIntermediateSets
       (assembleQueries vk instanceCommitment ps ch)).points.getD i [] = [ch.x])
@@ -275,7 +275,7 @@ theorem acceptedModel_circuitSat_or_relation_of_acceptedSelections
             (assembleQueries vk instanceCommitment ps ch)).points.getD i [])[idx]) =
         ((deployedSetQueries vk instanceCommitment ps ch i).getD
           (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
-        ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+        ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w)
     (hquot : hpoly = colPoly ⟨m, hm⟩)
     (hroute : (constructIntermediateSets
       (assembleQueries vk instanceCommitment ps ch)).points.getD i [] = [ch.x])
