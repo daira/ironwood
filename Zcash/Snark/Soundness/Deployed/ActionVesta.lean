@@ -34,7 +34,7 @@ namespace Deployed
 set_option maxRecDepth 1000000 in
 private theorem actionCapturedQueryCounts_transport
     (s : Shape)
-    (hs : actionProofParams.mergeDerived orchardActionTopLevelCircuit = s)
+    (hs : actionProofParams.mergeDerived actionCircuit = s)
     (K : VerifyingKey s Fp Fixture.G)
     (hK : K = derivedActionVk s capturedURS) :
     K.adviceQueryLayout.length = s.numAdviceQueries ∧
@@ -43,9 +43,9 @@ private theorem actionCapturedQueryCounts_transport
   rw [← Keygen.toVerifierKey_action actionProofParams capturedURS] at hK
   subst hK
   exact
-    ⟨orchardActionTopLevelCircuit.toVerifierKey_adviceQueryCount
+    ⟨actionCircuit.toVerifierKey_adviceQueryCount
       actionProofParams capturedURS,
-    orchardActionTopLevelCircuit.toVerifierKey_instanceQueryCount
+    actionCircuit.toVerifierKey_instanceQueryCount
       actionProofParams capturedURS⟩
 
 private theorem actionCapturedAdviceQueryCount :
@@ -275,13 +275,13 @@ private theorem action_bundleStatement_or_relation_of_acceptedModel_circuitSat_o
         (Fixture.vk.n - Fixture.vk.blindingFactors - 2))
     (lookupTheta :
       ch.theta ∉ TopLevelLookupCoherence.allTopLevelLookupThetaBadSet
-        orchardActionTopLevelCircuit actionProofParams capturedURS
+        actionCircuit actionProofParams capturedURS
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode :=
             vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
               Fixture.vk (deployedInstanceCommitment Fixture.shape inputs)
               ps ch pbatch hlen hprob1 haccepts) haccepts)) :
-    BundleStatement Specs.Sinsemilla.orchardGenerators orchardBases inputs ∨
+    BundleStatement inputs ∨
       HasNontrivialRelation (F := Fp)
         capturedURS.g capturedURS.u capturedURS.w := by
   rcases hterminal with hsatisfied | hrelation
@@ -445,13 +445,13 @@ theorem action_bundleStatement_or_relation_of_deployedAccepts
         (Fixture.vk.n - Fixture.vk.blindingFactors - 2))
     (lookupTheta :
       ch.theta ∉ TopLevelLookupCoherence.allTopLevelLookupThetaBadSet
-        orchardActionTopLevelCircuit actionProofParams capturedURS
+        actionCircuit actionProofParams capturedURS
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode :=
             vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
               Fixture.vk (deployedInstanceCommitment Fixture.shape inputs)
               ps ch pbatch hlen hprob1 haccepts) haccepts)) :
-    BundleStatement Specs.Sinsemilla.orchardGenerators orchardBases inputs ∨
+    BundleStatement inputs ∨
       HasNontrivialRelation (F := Fp)
         capturedURS.g capturedURS.u capturedURS.w := by
   have hterminal :=

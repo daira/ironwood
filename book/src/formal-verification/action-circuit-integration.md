@@ -120,7 +120,7 @@ The final adapter is now:
 ```text
 placed Clean environment satisfying `mainPost`
   -> TopLevelCircuit.Spec extractedPublic extractedPrivate
-  -> Action.Statement extractedPublic.
+  -> Action.actionCircuit.Statement extractedPublic.
 ```
 
 `TopLevelCircuit` owns the public/private boundary. It declares the instance cells
@@ -363,7 +363,7 @@ record. The generic
 `topLevelBundleStatement_or_bad_of_constraintSatisfaction` theorem consumes that
 record and concludes the top-level circuit statement, with no abstract `S` or
 `hencodes` premise and with the key locked to
-`orchardActionTopLevelCircuit.toVerifierKey`. The binding-aware Action endpoint
+`actionCircuit.toVerifierKey`. The binding-aware Action endpoint
 constructs `TopLevelFixedCoherence` from the Action circuit, its derived key, and the
 symbolic Lagrange-basis theorem, then derives the selector-activation and fixed/table
 families.
@@ -679,7 +679,7 @@ Merkle, ECC, fixed-base, CommitIvk, and Action check stages;
 `NoteCommit/SynthesisLaws.lean` proves the corresponding old/new NoteCommit
 decomposition; and `Action/TopLevelSynthesisLaws.lean` combines them for the complete
 unit-input synthesis. The resulting proofs are installed directly in
-`Action.topLevelCircuit`, so downstream generic bridges consume the law through the
+`Action.actionCircuit`, so downstream generic bridges consume the law through the
 single `TopLevelCircuit` interface rather than an Action sidecar certificate.
 
 The remaining placement half is deliberately narrower: transport this exact
@@ -1035,7 +1035,7 @@ usable-row bound.
 
 The deployed capstone constructs this shell internally through the canonical
 accepted-member route, so the decoder never accepts an arbitrary verifying key: it
-uses `orchardActionTopLevelCircuit.toVerifierKey pp urs`, whose shape, scalar, gates,
+uses `actionCircuit.toVerifierKey pp urs`, whose shape, scalar, gates,
 query layouts, fixed commitments, permutation commitments and lookup data are all
 derived from the configured Action circuit and supplied URS, with no separate shape
 or shape/domain coherence premise. (The former standalone constructor,
@@ -1050,17 +1050,14 @@ gate/copy/lookup/fixed satisfaction with that generic top-level endpoint.
 preserving the bridge's shared exceptional event. Neither theorem mentions the
 Action circuit, an Action-specific placement, or Action-specific operations.
 
-The small Action-specific semantic adapter is also complete.
-`Action.PublicInputs` names the ten instance-column rows in protocol order and
-`Action.Statement` says that some extracted `ActionData` has exactly those public
-fields and satisfies the complete `SpecPost`. The theorem
-`Action.statement_of_topLevelStatement` specializes the generic top-level conclusion
-to that external statement. It is parameterized by a top-level circuit and the
-identity of its underlying Action `FormalCircuit`, rather than mentioning the
-concrete proof-carrying `Action.topLevelCircuit` record in its type. It does not
-repeat any circuit proof; the remaining public-input obligation is solely to
-identify the decoded instance polynomial's first ten domain values with the values
-supplied to the verifier.
+The Action-specific public boundary is intentionally small.
+`Action.PublicInputs` names the ten instance-column rows in protocol order, and the
+single concrete `Action.actionCircuit` owns the complete post-NU6.3 specification at
+the real generators and bases. There is no separate Action statement wrapper:
+capstones conclude `actionCircuit.Statement` directly, while
+`Action.BundleStatement` merely quantifies that statement over every proof index.
+The remaining public-input obligation is to identify each decoded instance
+polynomial with the values supplied to the verifier.
 
 That row-identification lemma now consumes `TopLevelAssignment` directly. Its domain
 root is `Bridge.omegaOf k`, its instance column is selected by the assignment's proof
@@ -1068,7 +1065,7 @@ index, and it no longer accepts an arbitrary verifier key. This is the intention
 small Action-specific part: it only maps the first ten rows into `Action.PublicInputs`;
 assignment construction and domain/layout choices remain generic.
 
-`Action.topLevelCircuit` instantiates that boundary. It projects the initial
+`Action.actionCircuit` instantiates that boundary. It projects the initial
 Sinsemilla generator-table load from the real `mainPost` operation stream and derives:
 
 - exact generator-table contents and all four shared Sinsemilla table-loaded facts;
@@ -1078,14 +1075,14 @@ Sinsemilla generator-table load from the real `mainPost` operation stream and de
 
 The prover-side closure projects the same load from `ExtendsWitnesses` and converts
 its fixed-table clauses to the corresponding constraints. The deployed
-`orchardActionTopLevelCircuit` specializes this generic Action construction to the
+`actionCircuit` specializes this generic Action construction to the
 real generators and certified bases. Clean constraints remain on the generic
 integration side of the boundary: the security-layer bridge begins with the
 Action-native `SpecPost` and refines it to the ledger statement, rather than
 repeating the generic constraint-to-specification argument.
 
 The legacy `ActionAssignment` has been deleted. Its decoded constructor now returns
-the generic `TopLevelAssignment` indexed by `orchardActionTopLevelCircuit`, so
+the generic `TopLevelAssignment` indexed by `actionCircuit`, so
 placement, operations, domain exponent, blinding factors, and usable rows all come
 from the top-level circuit. The only Action-specific work left in this layer is the
 deployed decoder routing; the verifier key itself is now obtained generically from
@@ -1133,11 +1130,11 @@ supplied Action.
 
 `TopLevelAssignment.Bundle top numProofs` is the dependent family
 `∀ p, TopLevelAssignment top numProofs p`, so each member is forced to resolve the
-columns named by its own index. `Action.BundleStatement G B inputs` is the matching
-external conclusion `∀ p, Action.Statement G B (inputs p)`. No separate monolithic
-bundle witness is required: fixed columns and the circuit-derived VK remain shared,
-while decoded advice/instance polynomials and extracted `ActionData` remain
-per-member.
+columns named by its own index. `Action.BundleStatement inputs` is the matching
+external conclusion `∀ p, Action.actionCircuit.Statement (inputs p)`. No separate
+monolithic bundle witness is required: fixed columns and the circuit-derived VK
+remain shared, while decoded advice/instance polynomials and extracted `ActionData`
+remain per-member.
 
 #85's multi-Action fixture derives each proof's instance commitment and proves that
 sub-proof commitment slots remain disjoint. The accepted-route selector and Vesta
@@ -1240,7 +1237,7 @@ That substitution is now expressed directly, without preserving the abstract
 argument.
 `ActionInstanceCommitment.action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq`
 specializes the canonical terminal to
-`orchardActionTopLevelCircuit.toVerifierKey`, derives all query-layout, permutation,
+`actionCircuit.toVerifierKey`, derives all query-layout, permutation,
 and domain facts from that circuit-owned key, and feeds canonical satisfaction into
 the Action endpoint. Its conclusion is exactly the concrete `Action.BundleStatement`
 or the shared augmented-basis relation. The theorem has no arbitrary key, decoder,
@@ -1303,8 +1300,8 @@ whose public inputs were committed by the verifier.
 4. **Generic join complete:** `FullCircuitBridge.ofTopLevelCanonical` assembles one
    proof index and `bundleTopLevelSoundness_or_bad` quantifies it over every
    `Fin shape.numProofs`. Instantiate those constructors with the incoming
-   fixed-selector and copy records. The external `Action.Statement` and
-   `Action.BundleStatement` adapters are already implemented.
+   fixed-selector and copy records. The external `Action.BundleStatement` endpoint
+   is already implemented directly over `Action.actionCircuit.Statement`.
 5. **Complete:** construct
    `AcceptedModelClaimedEvaluations` from accepted decoded-member node binding, the
    circuit-derived query-layout counts, and standard permutation/domain facts; then

@@ -259,6 +259,42 @@ theorem publicInputEncoding_of_rowPolynomials
     simpa only [cell, domainRow] using hrow]
   exact hencoded index
 
+/--
+Derive public-input encoding when all elements occupy one instance column in their
+`ProvableType` order.
+-/
+theorem publicInputEncoding_of_contiguousRowPolynomial
+    (assignment : TopLevelAssignment top numProofs proofIndex)
+    (input : PublicInput Fp)
+    (column : Column .instance)
+    (hcells : ∀ index,
+      top.publicInputLayout.cells top.config index =
+        (column, (index : ℕ)))
+    (hfit : size PublicInput ≤ 2 ^ top.domainExponent)
+    (hpoly :
+      assignment.polynomial (.instanceCol proofIndex column.index) =
+        instanceRowPolynomial (2 ^ top.domainExponent)
+          (Zcash.Arithmetic.omegaOf top.domainExponent)
+          (toElements input).toList)
+    (hinjective : Function.Injective
+      fun row : Fin (2 ^ top.domainExponent) =>
+        Zcash.Arithmetic.omegaOf top.domainExponent ^ (row : ℕ)) :
+    assignment.PublicInputEncoding input := by
+  apply assignment.publicInputEncoding_of_rowPolynomials
+    input (fun _ => (toElements input).toList)
+  · intro index
+    rw [hcells index]
+    exact index.isLt.trans_le hfit
+  · intro index
+    rw [hcells index]
+    exact hpoly
+  · intro index
+    rw [hcells index]
+    rw [List.getD_eq_getElem _ _ (by
+      simpa only [Vector.length_toList] using index.isLt)]
+    simp
+  · exact hinjective
+
 end TopLevelAssignment
 
 end Zcash.Snark

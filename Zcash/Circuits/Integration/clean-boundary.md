@@ -13,7 +13,7 @@ and the guest must not scatter *its* vocabulary (`Halo2.ConstraintSystem`, `Oper
 
 Everything Clean produces is funneled through **one concept: `TopLevelCircuit`**, which
 carries everything downstream needs and is instantiated once per concrete circuit
-(`orchardActionTopLevelCircuit`).
+(`actionCircuit`).
 
 `TopLevelCircuit` is deliberately two-sided:
 
