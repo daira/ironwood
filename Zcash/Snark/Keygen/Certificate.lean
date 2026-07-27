@@ -141,11 +141,11 @@ theorem certificate :
         orchardActionTopLevelCircuit.selectorMap
         orchardActionTopLevelCircuit.domainExponent
         orchardActionTopLevelCircuit.constraintSystem
-        (orchardActionTopLevelCircuit.operations 0),
+        (orchardActionTopLevelCircuit.operations),
       permutationCommitmentsSeqWith commitProj
         orchardActionTopLevelCircuit.domainExponent
         orchardActionTopLevelCircuit.constraintSystem
-        (orchardActionTopLevelCircuit.operations 0),
+        (orchardActionTopLevelCircuit.operations),
       (omegaOf orchardActionTopLevelCircuit.domainExponent,
         2 ^ orchardActionTopLevelCircuit.domainExponent,
         orchardActionTopLevelCircuit.constraintSystem.blindingFactors, deltaFp,

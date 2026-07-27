@@ -43,7 +43,7 @@ def topLevelPermutationRows
     (top : TopLevelCircuit Fp Config PublicInput)
     (column : ℕ) : List Fp :=
   (Keygen.permPolysOf top.domainExponent top.constraintSystem
-    (top.operations 0)).getD column []
+    (top.operations)).getD column []
 
 /-- The common-permutation commitment emitted by keygen at a natural column
 index. Keeping this projection opaque prevents coherence interfaces from
@@ -155,7 +155,7 @@ theorem commitment_ofKeygen
   unfold topLevelPermutationCommitment
   have hcommit :=
     Keygen.permutationCommitmentsOf_getD_eq_commitInstance
-      urs top.constraintSystem (top.operations 0)
+      urs top.constraintSystem (top.operations)
       setup.length_eq setup.generator_eq
       column hcolumn
   unfold TopLevelCircuit.permutationCommitments topLevelPermutationRows

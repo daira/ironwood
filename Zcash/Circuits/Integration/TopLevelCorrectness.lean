@@ -95,14 +95,14 @@ structure TopLevelCircuitCorrectness
         (resolverEnvironment
           (top.toVerifierKey pp urs) poly proofIndex
           (top.usableRowsAt top.domainExponent))
-        (top.operations 0) 0) ∨ Bad
+        (top.operations) 0) ∨ Bad
   copies : ∀ proofIndex,
     Nonempty
       (CopyReplayWitness top.placement
         (resolverEnvironment
           (top.toVerifierKey pp urs) poly proofIndex
           (top.usableRowsAt top.domainExponent))
-        (top.operations 0) cell Bad) ∨ Bad
+        (top.operations) cell Bad) ∨ Bad
   lookups : ∀ proofIndex,
     TopLevelLookupCoherence.TopLevelLookupWitnessConditions
       top pp urs ch poly proofIndex ∨ Bad

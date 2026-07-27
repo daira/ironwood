@@ -25,13 +25,13 @@ variable
 /-- Exact full operation satisfaction implies the circuit-owned semantic statement. -/
 theorem topLevelSoundness
     (top : TopLevelCircuit Fp Config PublicInput)
-    (i : RegionIndex) (env : Placed Environment Fp)
+    (env : Placed Environment Fp)
     (hwellFormed :
-      SynthesisWellFormed env.env (top.operations i))
+      SynthesisWellFormed env.env top.operations)
     (hsatisfied :
-      FullCircuitSatisfaction env.place env.env (top.operations i) i) :
+      FullCircuitSatisfaction env.place env.env top.operations 0) :
     top.Statement (top.extractPublicInput env.env) := by
-  apply top.statement_soundness i env hwellFormed
+  apply top.statement_soundness env hwellFormed
   exact FullCircuitSatisfaction.constraints hsatisfied
 
 end FullCircuitSatisfaction
@@ -50,14 +50,14 @@ circuit's own statement, preserving the bridge's shared exceptional event.
 -/
 theorem topLevelSoundness_or_bad
     (top : TopLevelCircuit Fp Config PublicInput)
-    (i : RegionIndex) (env : Placed Environment Fp)
+    (env : Placed Environment Fp)
     (hwellFormed :
-      SynthesisWellFormed env.env (top.operations i))
+      SynthesisWellFormed env.env top.operations)
     (bridge : FullCircuitBridge env.place env.env
-      (top.operations i) i cell Bad) :
+      top.operations 0 cell Bad) :
     top.Statement (top.extractPublicInput env.env) ∨ Bad := by
   rcases bridge.satisfaction_or_bad with hsatisfied | hbad
-  · exact Or.inl (hsatisfied.topLevelSoundness top i env hwellFormed)
+  · exact Or.inl (hsatisfied.topLevelSoundness top env hwellFormed)
   · exact Or.inr hbad
 
 end FullCircuitBridge

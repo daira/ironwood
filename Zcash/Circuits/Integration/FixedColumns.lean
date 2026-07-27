@@ -72,9 +72,9 @@ def topLevelFixedOperationEntries
     (top : TopLevelCircuit Fp Config PublicInput) :
     List (ℕ × ℕ × ℕ) :=
   Layout.tableFixed (ZMod.val : Fp → ℕ)
-      (top.usableRowsAt top.domainExponent) (top.operations 0) ++
+      (top.usableRowsAt top.domainExponent) (top.operations) ++
     Layout.regionAssignFixed (ZMod.val : Fp → ℕ)
-      top.regionStarts (indexedRegions (top.operations 0) 0).1
+      top.regionStarts (indexedRegions (top.operations) 0).1
 
 /--
 Sparse packed-selector assignments emitted by top-level keygen.
@@ -104,7 +104,7 @@ disabled-row zero from compiler invariants instead.
 def topLevelSingletonLookupSelectorEntries
     (top : TopLevelCircuit Fp Config PublicInput) :
     List (ℕ × ℕ × ℕ) :=
-  let operations := top.operations 0
+  let operations := top.operations
   let selectorMap := top.selectorMap
   let starts := top.regionStarts
   (operationEnabledLookups operations 0).flatMap fun lookup =>
@@ -136,7 +136,7 @@ def topLevelConstantEntries
     (top : TopLevelCircuit Fp Config PublicInput) :
     List (ℕ × ℕ × ℕ) :=
   Layout.constantsFixed
-    (Keygen.constantsOf top.constraintSystem (top.operations 0))
+    (Keygen.constantsOf top.constraintSystem (top.operations))
 
 /--
 Every fixed cell whose value is consumed by the semantic bridge: emitted table,
@@ -474,7 +474,7 @@ theorem topLevelFixedConstraints_or_bad
         (resolverEnvironment
           (top.toVerifierKey pp urs) poly proofIndex
           (top.usableRowsAt top.domainExponent))
-        (top.operations 0) 0) ∨ Bad := by
+        (top.operations) 0) ∨ Bad := by
   classical
   by_cases hbad : Bad
   · exact Or.inr hbad
@@ -498,7 +498,7 @@ theorem topLevelFixedConstraints_or_bad
           top.selectorMap top.selectorActivations environment ∧
         CircuitConstraintFamily.constraints .fixed
           (Layout.place top.regionStarts) environment
-          (top.operations 0) 0
+          (top.operations) 0
     constructor
     · apply selectorActivationsRealized_of_selectorFixed
       intro column row value hentry
@@ -507,7 +507,7 @@ theorem topLevelFixedConstraints_or_bad
       simp [topLevelRequiredFixedEntries, hentry]
     · exact FixedLayout.constraints_of_entries
         top.regionStarts (top.usableRowsAt top.domainExponent)
-        (top.operations 0) 0 environment rfl
+        (top.operations) 0 environment rfl
         (fun column row value hentry => fixedRead (by
           change
             (column, row, value) ∈ topLevelFixedOperationEntries top at hentry
@@ -683,7 +683,7 @@ theorem topLevelFixedConstraints_or_relation
         (resolverEnvironment
           (top.toVerifierKey pp urs) relation.polynomial proofIndex
           (top.usableRowsAt top.domainExponent))
-        (top.operations 0) 0) ∨
+        (top.operations) 0) ∨
       HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   subst vk
   apply topLevelFixedConstraints_or_bad

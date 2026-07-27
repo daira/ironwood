@@ -237,7 +237,7 @@ theorem EnabledLookup.inputSelectorLeafRowsExact_of_realizes
     (top : TopLevelCircuit Fp Config PublicInput)
     (rows : ℕ → List Fp) (lookup : EnabledLookup Fp)
     (henabled :
-      lookup ∈ operationEnabledLookups (top.operations 0) 0)
+      lookup ∈ operationEnabledLookups (top.operations) 0)
     (realizes : ∀ column row value,
       (column, row, value) ∈ topLevelRequiredFixedEntries top →
         column < top.pinnedCS.numFixedColumns ∧

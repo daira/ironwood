@@ -59,7 +59,7 @@ evaluation, so the bundles below are stated over these once-per-process definiti
 The public theorems restate the facts in method spelling via `simp only` unfolding. -/
 
 private def actionCS : ConstraintSystem Fp := orchardActionTopLevelCircuit.constraintSystem
-private def actionOps : Operations Fp := orchardActionTopLevelCircuit.operations 0
+private def actionOps : Operations Fp := orchardActionTopLevelCircuit.operations
 -- raw spellings over the shares: the METHOD chain (`selectorMap` → `domainExponent` →
 -- `constraintSystem`/`operations`, `selectorActivations` → `regionStarts` → `operations`)
 -- re-runs configure/synthesize internally at every step; these run each exactly once

@@ -70,7 +70,7 @@ theorem actionCopyReplayWitness_or_relation
           (resolverEnvironment
             (actionVk pp urs) relation.polynomial proofIndex
               actionActiveRows)
-          (orchardActionTopLevelCircuit.operations 0)
+          (orchardActionTopLevelCircuit.operations)
           (FlatCell actionNumPermCols actionDomainSize)
           (HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)) ∨
       HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by

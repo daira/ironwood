@@ -806,7 +806,7 @@ def fixedRows
     (PinnedConstraintSystem.derive
       top.constraintSystem top.selectorMap).numFixedColumns
     (fixedSparseOf top.selectorMap top.domainExponent
-      top.constraintSystem (top.operations 0))
+      top.constraintSystem (top.operations))
 
 /-- Keygen produces one dense row vector for every derived fixed column. -/
 theorem fixedRows_length
@@ -842,14 +842,14 @@ used by generic keygen. -/
     top.fixedCommitments urs =
       fixedCommitmentsOf urs.w (derivedUrsGLagrange urs)
         top.selectorMap top.domainExponent
-        top.constraintSystem (top.operations 0) := by
+        top.constraintSystem (top.operations) := by
   simp only [fixedCommitments, fixedRows, fixedCommitmentsOf, fixedCommitmentsWith]
 
 /-- The derived permutation common commitments of a closed circuit against a URS. -/
 def permutationCommitments
     (top : TopLevelCircuit Fp Config PublicInput) (urs : URS G) : List G :=
   permutationCommitmentsOf urs.w (derivedUrsGLagrange urs) top.domainExponent
-    top.constraintSystem (top.operations 0)
+    top.constraintSystem (top.operations)
 
 /-- The verifying key of a closed circuit at an explicitly-given `Shape` (the
 shape-explicit core `Certificate.lean` certifies; `toVerifierKey` below supplies the
@@ -857,7 +857,7 @@ derived shape). -/
 def verifierKeyAt
     (top : TopLevelCircuit Fp Config PublicInput)
     (shape : Shape) (urs : URS G) : VerifyingKey shape Fp G :=
-  .ofOperations shape urs top.constraintSystem (top.operations 0)
+  .ofOperations shape urs top.constraintSystem (top.operations)
 
 /-- Projection API for the fixed commitments of the shape-explicit top-level key. -/
 @[simp] theorem verifierKeyAt_fixedCommitment

@@ -32,10 +32,10 @@ theorem actionCopyList_decoded :
     Halo2.Layout.V1.copyList
         (Keygen.permColsOf orchardActionTopLevelCircuit.constraintSystem)
         (Halo2.FloorPlanner.V1.starts
-          (orchardActionTopLevelCircuit.operations 0))
-        (orchardActionTopLevelCircuit.operations 0)
+          (orchardActionTopLevelCircuit.operations))
+        (orchardActionTopLevelCircuit.operations)
         (Keygen.constantsOf orchardActionTopLevelCircuit.constraintSystem
-          (orchardActionTopLevelCircuit.operations 0)) =
+          (orchardActionTopLevelCircuit.operations)) =
       Zcash.Snark.actionCopies.map fun pair =>
         (pair.1.pair.1, pair.1.pair.2,
           pair.2.pair.1, pair.2.pair.2) := by
@@ -75,7 +75,7 @@ theorem actionPermutationRows_eq_chunkRowName
           ⟨chunk, row, column⟩).2.2 : ℕ) := by
   apply Zcash.Snark.Layout.Asm.permPolysOf_getD_eq_chunkRowName
     orchardActionTopLevelCircuit.constraintSystem
-    (orchardActionTopLevelCircuit.operations 0)
+    (orchardActionTopLevelCircuit.operations)
     Zcash.Snark.actionCopies
     actionCopyList_decoded
     (actionVk pp urs).chunkLen

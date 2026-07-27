@@ -47,7 +47,7 @@ lookup operation.
 noncomputable def EnabledLookup.topLevelRoute
     (lookup : EnabledLookup Fp)
     (henabled :
-      lookup ∈ operationEnabledLookups (top.operations 0) 0) :
+      lookup ∈ operationEnabledLookups (top.operations) 0) :
     lookup.TopLevelRoute top pp := by
   have hargument :
       lookup.argument ∈ top.constraintSystem.lookups :=
@@ -73,12 +73,12 @@ footprint.
 theorem EnabledLookup.activationRow_lt_usedRows
     (lookup : EnabledLookup Fp)
     (henabled :
-      lookup ∈ operationEnabledLookups (top.operations 0) 0) :
+      lookup ∈ operationEnabledLookups (top.operations) 0) :
     top.placement lookup.region + lookup.row < top.usedRows := by
   obtain ⟨body, hregion, hoperation⟩ :=
-    (mem_operationEnabledLookups_iff lookup (top.operations 0) 0).mp henabled
+    (mem_operationEnabledLookups_iff lookup (top.operations) 0).mp henabled
   exact absoluteRow_lt_usedRows_of_enableLookup_mem
-    (top.operations 0) lookup.region body hregion
+    (top.operations) lookup.region body hregion
     lookup.argument lookup.enabled lookup.row hoperation
 
 /--
@@ -89,7 +89,7 @@ theorem EnabledLookup.activationRow_lt_usableRows
     (gateCoherence : TopLevelGateCoherence top pp urs)
     (lookup : EnabledLookup Fp)
     (henabled :
-      lookup ∈ operationEnabledLookups (top.operations 0) 0) :
+      lookup ∈ operationEnabledLookups (top.operations) 0) :
     top.placement lookup.region + lookup.row <
       top.usableRowsAt top.domainExponent :=
   (lookup.activationRow_lt_usedRows henabled).trans_le
@@ -398,7 +398,7 @@ theorem projectedValues
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (lookup : EnabledLookup Fp)
     (henabled :
-      lookup ∈ operationEnabledLookups (top.operations 0) 0)
+      lookup ∈ operationEnabledLookups (top.operations) 0)
     (selectors :
       lookup.SelectorProjection top
         (resolverEnvironment
@@ -539,7 +539,7 @@ theorem projectedPolynomialValues
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (lookup : EnabledLookup Fp)
     (henabled :
-      lookup ∈ operationEnabledLookups (top.operations 0) 0)
+      lookup ∈ operationEnabledLookups (top.operations) 0)
     (selectors :
       lookup.SelectorProjection top
         (resolverEnvironment
@@ -625,7 +625,7 @@ noncomputable def deployedWitness
         (top.toVerifierKey pp urs).n = 1)
     (lookup : EnabledLookup Fp)
     (henabled :
-      lookup ∈ operationEnabledLookups (top.operations 0) 0)
+      lookup ∈ operationEnabledLookups (top.operations) 0)
     (selectors :
       lookup.SelectorProjection top
         (resolverEnvironment
@@ -769,14 +769,14 @@ structure TopLevelLookupWitnessConditions
     (proofIndex : Fin (pp.mergeDerived top).numProofs) : Prop where
   inputSelectorValues : ∀ lookup
       (_henabled :
-        lookup ∈ operationEnabledLookups (top.operations 0) 0),
+        lookup ∈ operationEnabledLookups (top.operations) 0),
     lookup.InputSelectorValuesRealized top
       (resolverEnvironment
         (top.toVerifierKey pp urs) poly proofIndex
         (top.usableRowsAt top.domainExponent))
   resolverGood : ∀ lookup
       (henabled :
-        lookup ∈ operationEnabledLookups (top.operations 0) 0),
+        lookup ∈ operationEnabledLookups (top.operations) 0),
     ResolverLookupGoodChallenges
       (top.toVerifierKey pp urs) ch poly proofIndex
       (lookup.topLevelRoute
@@ -785,7 +785,7 @@ structure TopLevelLookupWitnessConditions
         (top.toVerifierKey pp urs).blindingFactors - 2)
   thetaGood : ∀ lookup
       (_henabled :
-        lookup ∈ operationEnabledLookups (top.operations 0) 0),
+        lookup ∈ operationEnabledLookups (top.operations) 0),
     ch.theta ∉ lookup.thetaBadSet top.placement
       (resolverEnvironment
         (top.toVerifierKey pp urs) poly proofIndex
@@ -799,7 +799,7 @@ abbrev TopLevelLookupActivationIndex
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) :=
   Fin (pp.mergeDerived top).numProofs ×
-    Fin (operationEnabledLookups (top.operations 0) 0).length
+    Fin (operationEnabledLookups (top.operations) 0).length
 
 /--
 The exact bundle-wide `θ` collision surface for a top-level circuit. A single
@@ -818,7 +818,7 @@ noncomputable def allTopLevelLookupThetaBadSet
         (top.toVerifierKey pp urs) poly index.1
         (top.usableRowsAt top.domainExponent))
     (fun index =>
-      (operationEnabledLookups (top.operations 0) 0).get index.2)
+      (operationEnabledLookups (top.operations) 0).get index.2)
 
 /-- The row-by-arity root budget for the top-level bundle's `θ` surface. -/
 noncomputable def topLevelLookupThetaBudget
@@ -835,7 +835,7 @@ noncomputable def topLevelLookupThetaBudget
         (top.toVerifierKey pp urs) poly index.1
         (top.usableRowsAt top.domainExponent))
       ((operationEnabledLookups
-        (top.operations 0) 0).get index.2)).length
+        (top.operations) 0).get index.2)).length
 
 /--
 The bundle-wide top-level `θ` surface has exactly the generic
@@ -853,9 +853,9 @@ theorem uniformChallenge_allTopLevelLookupThetaBadSet
   apply uniformChallenge_enabledLookupThetaBadSetFamily
   intro index row _hrow
   let lookup :=
-    (operationEnabledLookups (top.operations 0) 0).get index.2
+    (operationEnabledLookups (top.operations) 0).get index.2
   have henabled :
-      lookup ∈ operationEnabledLookups (top.operations 0) 0 :=
+      lookup ∈ operationEnabledLookups (top.operations) 0 :=
     List.get_mem ..
   have hargument :
       lookup.argument ∈ top.constraintSystem.lookups :=
@@ -897,7 +897,7 @@ noncomputable def TopLevelLookupWitnessConditions.ofChallengeExclusions
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (inputSelectorValues : ∀ lookup
       (_henabled :
-        lookup ∈ operationEnabledLookups (top.operations 0) 0),
+        lookup ∈ operationEnabledLookups (top.operations) 0),
       lookup.InputSelectorValuesRealized top
         (resolverEnvironment
           (top.toVerifierKey pp urs) poly proofIndex
@@ -929,7 +929,7 @@ noncomputable def TopLevelLookupWitnessConditions.ofChallengeExclusions
             (top.toVerifierKey pp urs) poly index.1
             (top.usableRowsAt top.domainExponent))
         (fun index =>
-          (operationEnabledLookups (top.operations 0) 0).get index.2)
+          (operationEnabledLookups (top.operations) 0).get index.2)
         ch.theta).mp exclusions.theta
         (proofIndex, ⟨index, hindex⟩)
     simpa [allTopLevelLookupThetaBadSet, hlookup] using hfamily
@@ -957,7 +957,7 @@ noncomputable def deployedWitnesses
         (top.toVerifierKey pp urs).n = 1)
     (conditions :
       TopLevelLookupWitnessConditions top pp urs ch poly proofIndex) :
-    ∀ lookup ∈ operationEnabledLookups (top.operations 0) 0,
+    ∀ lookup ∈ operationEnabledLookups (top.operations) 0,
       lookup.DeployedWitness top.placement
         (resolverEnvironment
           (top.toVerifierKey pp urs) poly proofIndex
@@ -1011,7 +1011,7 @@ theorem constraints
       (resolverEnvironment
         (top.toVerifierKey pp urs) poly proofIndex
         (top.usableRowsAt top.domainExponent))
-      (top.operations 0) 0 := by
+      (top.operations) 0 := by
   apply lookup_constraints_of_deployed_witnesses
   exact coherence.deployedWitnesses gateCoherence ch poly proofIndex
     hblinding satisfaction hrows hroot conditions

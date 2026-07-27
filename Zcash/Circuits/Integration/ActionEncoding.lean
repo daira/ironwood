@@ -187,7 +187,7 @@ noncomputable def actionTopLevelCircuitCorrectness
       have lookupSelectorValues : ∀ lookup
           (henabled :
             lookup ∈ operationEnabledLookups
-              (orchardActionTopLevelCircuit.operations 0) 0),
+              (orchardActionTopLevelCircuit.operations) 0),
           lookup.InputSelectorValuesRealized
             orchardActionTopLevelCircuit
             (resolverEnvironment

@@ -69,7 +69,7 @@ theorem topLevelBundleStatement_or_bad_of_constraintSatisfaction
         hrows hroot hfixed.1 hfixed.2 hcopies.some hlookups
     have hsound :=
       FullCircuitBridge.topLevelSoundness_or_bad
-        top 0 assignment.placedEnvironment
+        top assignment.placedEnvironment
         (assignment.synthesisWellFormed
           correctness.gates.domainExponent_lt)
         (by

@@ -226,7 +226,7 @@ assignment's environment.
 theorem synthesisWellFormed
     (assignment : TopLevelAssignment top numProofs proofIndex)
     (hbound : top.domainExponent < 33) :
-    SynthesisWellFormed assignment.environment (top.operations 0) := by
+    SynthesisWellFormed assignment.environment (top.operations) := by
   apply top.synthesisWellFormed top.domainExponent assignment.environment
   · rfl
   · exact top.fitsAt_domainExponent hbound

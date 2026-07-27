@@ -30,7 +30,7 @@ theorem actionLookupInputSelectorLeafRowsExact
     (lookup : EnabledLookup Fp)
     (henabled :
       lookup ∈ operationEnabledLookups
-        (orchardActionTopLevelCircuit.operations 0) 0) :
+        (orchardActionTopLevelCircuit.operations) 0) :
     lookup.InputSelectorLeafRowsExact
       orchardActionTopLevelCircuit coherence.rows := by
   apply EnabledLookup.inputSelectorLeafRowsExact_of_realizes

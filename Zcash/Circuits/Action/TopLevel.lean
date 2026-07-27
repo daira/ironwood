@@ -171,41 +171,41 @@ private theorem configured_environmentAssumptions
 /-- The real Action synthesis closes its environment contract on the verifier side. -/
 private theorem closesEnvironmentSoundness
     (G : Generators) (B : Bases)
-    (i : RegionIndex) (env : Placed Environment Fp)
+    (env : Placed Environment Fp)
     (hwellFormed : SynthesisWellFormed env.env
-      ((mainPost G B (configure G {}).1 ()).operations i))
+      ((mainPost G B (configure G {}).1 ()).operations 0))
     (hconstraints : Constraints env.place env.env
-      ((mainPost G B (configure G {}).1 ()).operations i) i) :
+      ((mainPost G B (configure G {}).1 ()).operations 0) 0) :
     EnvAssumptions G (configure G {}).1 env := by
   have hUsable : 2 ^ Specs.K ≤ env.env.usableRows := by
     have hfit := hwellFormed.tablesFit
       (configure G {}).1.sinsemilla1.generatorTable.tableIdx
       ((List.range (2 ^ Specs.K)).map (Nat.cast : ℕ → Fp))
-      (initialGeneratorTableIdx_mem G B (configure G {}).1 i)
+      (initialGeneratorTableIdx_mem G B (configure G {}).1 0)
     simpa only [List.length_map, List.length_range] using hfit
-  exact configured_environmentAssumptions G i env hUsable
-    (constraints_initialGeneratorLoad G B (configure G {}).1 i env hconstraints)
+  exact configured_environmentAssumptions G 0 env hUsable
+    (constraints_initialGeneratorLoad G B (configure G {}).1 0 env hconstraints)
 
 /-- The same closure, using the honest prover's fixed-table witness extension. -/
 private theorem closesEnvironmentCompleteness
     (G : Generators) (B : Bases)
-    (i : RegionIndex) (env : Placed ProverEnvironment Fp)
+    (env : Placed ProverEnvironment Fp)
     (hwellFormed : SynthesisWellFormed env.toEnvironment.env
-      ((mainPost G B (configure G {}).1 ()).operations i))
+      ((mainPost G B (configure G {}).1 ()).operations 0))
     (hwitnesses : ExtendsWitnesses env.place env.env
-      ((mainPost G B (configure G {}).1 ()).operations i) i) :
+      ((mainPost G B (configure G {}).1 ()).operations 0) 0) :
     EnvAssumptions G (configure G {}).1 env.toEnvironment := by
   have hUsable : 2 ^ Specs.K ≤ env.env.usableRows := by
     have hfit := hwellFormed.tablesFit
       (configure G {}).1.sinsemilla1.generatorTable.tableIdx
       ((List.range (2 ^ Specs.K)).map (Nat.cast : ℕ → Fp))
-      (initialGeneratorTableIdx_mem G B (configure G {}).1 i)
+      (initialGeneratorTableIdx_mem G B (configure G {}).1 0)
     simpa only [List.length_map, List.length_range] using hfit
   have hloadWitnesses :=
-    extendsWitnesses_initialGeneratorLoad G B (configure G {}).1 i env hwitnesses
+    extendsWitnesses_initialGeneratorLoad G B (configure G {}).1 0 env hwitnesses
   have hload := constraints_generatorLoad_of_extendsWitnesses G
-    (configure G {}).1.sinsemilla1.generatorTable i env hloadWitnesses
-  exact configured_environmentAssumptions G i env.toEnvironment hUsable hload
+    (configure G {}).1.sinsemilla1.generatorTable 0 env hloadWitnesses
+  exact configured_environmentAssumptions G 0 env.toEnvironment hUsable hload
 
 private theorem circuit_configure_eq (G : Generators) (B : Bases) :
     (circuit G B).configure = fun _ => configure G :=
@@ -229,8 +229,8 @@ def topLevelCircuit (G : Generators) (B : Bases) :
   formalCircuit := circuit G B
   publicInputLayout := PublicInputs.layout
   PrivateWitness := PrivateWitness
-  extractPrivate := fun cfg i env =>
-    PrivateWitness.ofActionData (extractPost cfg () i env)
+  extractPrivate := fun cfg env =>
+    PrivateWitness.ofActionData (extractPost cfg () 0 env)
   combine := combine
   Spec := fun inputs privateWitness =>
     SpecPost G B () () (combine inputs privateWitness)
@@ -239,13 +239,13 @@ def topLevelCircuit (G : Generators) (B : Bases) :
     rfl
   extract_factorization := by
     dsimp
-    intro i env
+    intro env
     change combine
       (PublicInputs.layout.extract (configure G {}).1 env.env)
-      (PrivateWitness.ofActionData (extractPost (configure G {}).1 () i env)) =
-      extractPost (configure G {}).1 () i env
+      (PrivateWitness.ofActionData (extractPost (configure G {}).1 () 0 env)) =
+      extractPost (configure G {}).1 () 0 env
     rw [← PublicInputs.ofActionData_extractPost]
-    exact combine_parts (extractPost (configure G {}).1 () i env)
+    exact combine_parts (extractPost (configure G {}).1 () 0 env)
   assumptions_eq := rfl
   lookupRelevantSelectorActivationsExact :=
     actionCircuit_lookupRelevantSelectorActivationsExact G B
@@ -254,13 +254,13 @@ def topLevelCircuit (G : Generators) (B : Bases) :
   closesEnvironmentSoundness := by
     simp only [circuit_configure_eq, circuit_synthesize_eq,
       circuit_envAssumptions_eq]
-    intro i env hwellFormed hconstraints
-    exact closesEnvironmentSoundness G B i env hwellFormed hconstraints
+    intro env hwellFormed hconstraints
+    exact closesEnvironmentSoundness G B env hwellFormed hconstraints
   closesEnvironmentCompleteness := by
     simp only [circuit_configure_eq, circuit_synthesize_eq,
       circuit_envAssumptions_eq]
-    intro i env hwellFormed hwitnesses
-    exact closesEnvironmentCompleteness G B i env hwellFormed hwitnesses
+    intro env hwellFormed hwitnesses
+    exact closesEnvironmentCompleteness G B env hwellFormed hwitnesses
 
 /-- The deployed Orchard Action circuit, instantiated at its real proven constants. -/
 def orchardActionTopLevelCircuit :

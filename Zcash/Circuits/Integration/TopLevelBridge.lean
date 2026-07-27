@@ -70,13 +70,13 @@ noncomputable def ofTopLevelCanonical
         (resolverEnvironment
           (top.toVerifierKey pp urs) poly proofIndex
           (top.usableRowsAt top.domainExponent))
-        (top.operations 0) 0)
+        (top.operations) 0)
     (copies :
       CopyReplayWitness top.placement
         (resolverEnvironment
           (top.toVerifierKey pp urs) poly proofIndex
           (top.usableRowsAt top.domainExponent))
-        (top.operations 0) cell Bad)
+        (top.operations) cell Bad)
     (lookupConditions :
       TopLevelLookupCoherence.TopLevelLookupWitnessConditions
         top pp urs ch poly proofIndex) :
@@ -84,7 +84,7 @@ noncomputable def ofTopLevelCanonical
       (resolverEnvironment
         (top.toVerifierKey pp urs) poly proofIndex
         (top.usableRowsAt top.domainExponent))
-      (top.operations 0) 0 cell Bad := by
+      (top.operations) 0 cell Bad := by
   let lookupCoherence : TopLevelLookupCoherence top :=
     TopLevelLookupCoherence.ofTopLevel
   refine
@@ -110,16 +110,16 @@ not inspect the circuit statement and does not introduce an `hencodes` predicate
 -/
 theorem bundleTopLevelSoundness_or_bad
     (top : TopLevelCircuit Fp Config PublicInput)
-    (i : RegionIndex) {numProofs : ℕ}
+    {numProofs : ℕ}
     (environment : Fin numProofs → Placed Environment Fp)
     (hwellFormed : ∀ proofIndex,
       SynthesisWellFormed (environment proofIndex).env
-        (top.operations i))
+        top.operations)
     (bridge : ∀ proofIndex,
       FullCircuitBridge
         (environment proofIndex).place
         (environment proofIndex).env
-        (top.operations i) i cell Bad) :
+        top.operations 0 cell Bad) :
     (∀ proofIndex,
       top.Statement (top.extractPublicInput (environment proofIndex).env)) ∨ Bad := by
   classical
@@ -129,7 +129,7 @@ theorem bundleTopLevelSoundness_or_bad
     intro proofIndex
     exact
       (FullCircuitBridge.topLevelSoundness_or_bad
-        top i (environment proofIndex)
+        top (environment proofIndex)
         (hwellFormed proofIndex) (bridge proofIndex)).resolve_right hbad
 
 end FullCircuitBridge

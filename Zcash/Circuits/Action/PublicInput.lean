@@ -76,9 +76,6 @@ namespace PublicInputs
 /-- The Action circuit's public input occupies rows 0 through 9 of `primary`. -/
 def layout : PublicInputLayout Config PublicInputs where
   cells := fun cfg i => (cfg.primary, i)
-  cells_injective := by
-    intro cfg i j h
-    exact Fin.ext (congrArg Prod.snd h)
 
 @[simp] theorem layout_cells (cfg : Config) (index : Fin 10) :
     layout.cells cfg index = (cfg.primary, (index : ℕ)) :=
