@@ -55,7 +55,7 @@ Two commands from `Zcash.Meta.AxiomCheck`, per the breaks-as-computed-data disci
   (`propext` / `Classical.choice` / `Quot.sound`). Both commands reject `sorryAx`.
 -/
 
-open Zcash.Security.KeyBinding Zcash.Security.RandomOracle Zcash.Security.Birthday
+open Zcash.Security.RandomOracle
 open Zcash.Security.Ledger Zcash.Security.Ledger.Model Zcash.Security.BindingSignature
 open Zcash.Meta
 
@@ -222,7 +222,7 @@ commitment bases, the nullifier base, and the randomness base — the balance
 argument's terminal. `+choice` is the erased-positions tier: choice arrives with the
 `abel`/`simp` proof terms in the relation's `Prop` fields, never the data path. -/
 
-assert_computable NontrivialRelation.ofNullifierCollision +choice
+assert_computable Zcash.Security.Ledger.Model.NontrivialRelation.ofNullifierCollision +choice
 
 /-! ## The value-premiss discharge
 
@@ -233,9 +233,9 @@ value ranges, validity's action-count and `vBalance` range rules, and the named
 numeric hypothesis `(maxActions + 1) * valueBound ≤ r`. `+choice` is the
 erased-positions tier. -/
 
-assert_computable ValueShape.premissOrBreak +choice
-assert_computable ValueShape.conservationOrBreak +choice
-assert_computable ValueShape.balanceOrBreak +choice
+assert_computable Zcash.Security.Ledger.Model.ValueShape.premissOrBreak +choice
+assert_computable Zcash.Security.Ledger.Model.ValueShape.conservationOrBreak +choice
+assert_computable Zcash.Security.Ledger.Model.ValueShape.balanceOrBreak +choice
 
 /-! ## Spend Authority
 
@@ -258,31 +258,41 @@ roadblock branch decides nullifier membership and searches out the revealing act
 Its `+choice` is the erased-positions tier — choice arrives with proof terms in
 `Prop` positions, never the data path. -/
 
-assert_computable honestTx
-assert_computable HonestAction.withDummySpend
-assert_axioms HonestAction.satisfied
-assert_axioms honestTx_valid
-assert_computable spendabilityOrBreak +choice
+assert_computable Zcash.Security.Ledger.Model.honestTx
+assert_computable Zcash.Security.Ledger.Model.HonestAction.withDummySpend
+assert_axioms Zcash.Security.Ledger.Model.HonestAction.satisfied
+assert_axioms Zcash.Security.Ledger.Model.honestTx_valid
+assert_computable Zcash.Security.Ledger.Model.spendabilityOrBreak +choice
 
 /-! ## Probabilistic capstones
 
 The game-level probability statements: pure event algebra over an adversary
 distribution of valid annotated ledgers, with a named ε hypothesis per break arm. -/
 
-assert_axioms balanceSubset_measure_le
-assert_axioms valueConservation_measure_le
-assert_axioms balanceValue_measure_le
-assert_axioms spendAuthority_measure_le
+assert_axioms Zcash.Security.Ledger.Model.balanceSubset_measure_le
+assert_axioms Zcash.Security.Ledger.Model.valueConservation_measure_le
+assert_axioms Zcash.Security.Ledger.Model.balanceValue_measure_le
+assert_axioms Zcash.Security.Ledger.Model.spendAuthority_measure_le
 
 /-! ## The key-binding arms' ε, discharged
 
 The Balance-subset and Spend Authority key-binding arms' probability in the
-key-binding oracle model: `(n + 4)(n + 3)/|RIVK|` for any `n`-query-bounded
-pair-annotated ledger adversary, inherited from the key-binding layer's bound at an
-unchanged query count. -/
+key-binding oracle model: `(n + 4)(n + 3)/|RIVK|` for any `n`-query-bounded ledger
+adversary, inherited from the key-binding layer's bound at an unchanged query count.
+The bounded events are the reductions' own; the composite machine recovers the arm's
+witness pair from the adversary's output by an oracle-free computable lookup
+(`kbPairOf` from the ledger for Balance; `kwAt` at the announced indices for Spend
+Authority), identified with the reduction's pair by the localization theorems. -/
 
-assert_axioms balanceSubset_keyBindingArm_measure_le
-assert_axioms spendAuthority_keyBindingArm_measure_le
+assert_computable Zcash.Security.Ledger.Model.BalanceBreak.kbPair
+assert_computable Zcash.Security.Ledger.Model.kbPairOf
+assert_axioms Zcash.Security.Ledger.Model.spendPinnedOrBreak_kbPair
+assert_axioms Zcash.Security.Ledger.Model.allPinnedOrBreak_kbPair
+assert_axioms Zcash.Security.Ledger.Model.balanceSubsetOrBreak_kbPair
+assert_computable Zcash.Security.Ledger.Model.kwAt
+assert_axioms Zcash.Security.Ledger.Model.spendAuthorityOrBreak_pair
+assert_axioms Zcash.Security.Ledger.Model.balanceSubset_keyBindingArm_measure_le
+assert_axioms Zcash.Security.Ledger.Model.spendAuthority_keyBindingArm_measure_le
 
 /-! ## Binding-signature relation reductions
 
