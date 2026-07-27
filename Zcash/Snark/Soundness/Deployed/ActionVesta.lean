@@ -21,8 +21,7 @@ namespace Zcash.Snark
 open Polynomial
 open Classical
 open scoped ENNReal
-
-open Halo2 Keygen
+open Keygen
 open Zcash.Circuits
 open Zcash.Circuits.Action
 open Zcash.Snark.Fixture

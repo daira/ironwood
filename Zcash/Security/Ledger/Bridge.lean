@@ -32,7 +32,6 @@ open Zcash.Circuits.Action.Circuit
 open Zcash.Circuits.Specs.Sinsemilla
 open Zcash.Security.Concrete
 open CompElliptic.Fields.Pasta (PALLAS_BASE_CARD)
-open Halo2
 
 /- The Action circuit neither constrains nor witnesses spend-authorization
 signatures, so every bridge statement holds for an arbitrary sighash/signature

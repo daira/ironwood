@@ -16,7 +16,6 @@ evaluating the certificate.
 namespace Zcash.Snark.Keygen
 
 open Zcash.Snark
-open Halo2
 open Zcash.Circuits.Action (orchardActionTopLevelCircuit)
 
 variable {G : Type} [AddCommGroup G] [Inhabited G]

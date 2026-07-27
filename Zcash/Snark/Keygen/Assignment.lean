@@ -14,7 +14,7 @@ parameters, and the supplied URS.
 
 namespace Zcash.Snark
 
-open Halo2 Polynomial
+open Polynomial
 open Zcash.Circuits.Action
 
 set_option maxHeartbeats 20000

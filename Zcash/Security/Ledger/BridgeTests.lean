@@ -23,7 +23,6 @@ open Zcash.Security.Ledger
 open Zcash.Security.Ledger.Pool
 open Zcash.Security.Ledger.Bridge
 open CompElliptic.Fields.Pasta (PALLAS_BASE_CARD)
-open Halo2
 
 /-- The ordinary positive signed-magnitude direction has the ledger integer meaning. -/
 theorem value_positive {vOld vNew magnitude : Fp}
