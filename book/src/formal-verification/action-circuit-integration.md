@@ -707,10 +707,10 @@ The generic gate and fixed/table operation layers are now implemented as well.
 `operationEnabledGates` extracts every placed activation and
 `gate_constraints_iff_enabledGates` proves exact equivalence with the gate family.
 `EnabledGate.PolynomialWitness` identifies each enabled Clean constraint with one
-member of #91's selected polynomial gate family up to a certified nonzero scale;
-domain divisibility then proves the Clean constraint directly. The scale is essential:
-selector compression replaces an enabled selector by a root-finding expression whose
-value at its packed root is nonzero, but is not generally one.
+member of #91's selected polynomial gate family and transports verifier-side
+vanishing to Clean's enabled-gate semantics. Selector compression still supplies a
+nonzero packed-selector value, but the bridge needs only the one-sided vanishing
+implication rather than an exact scaling equation.
 `operationFixedRequirements` similarly extracts fixed assignments and table loads,
 with `fixed_constraints_iff_requirements` proving exact equivalence to the fixed
 family. `FullCircuitBridge.ofPolynomialWitnesses` assembles these gate/fixed witnesses
@@ -726,19 +726,16 @@ projection. For faithful circuits such as Action the closure is inert, as checke
 the existing VK/layout fixtures. `OperationsKeygenCoherent.closeWithOperations` proves
 the former registration premise once by construction, and `TopLevelCircuit.keygenCoherent`
 instantiates it without an Action certificate. `OperationsKeygenCoherent.gate` and
-`.lookup` still provide the convenient transport from an extracted activation to
-membership in the closed CS. The separate question whether registered gate
-expressions satisfy `Gate.WellFormed` is intentionally unchanged.
+.lookup` still provide the convenient transport from an extracted activation to
+membership in the closed CS. Every `Gate` now carries its own `Gate.WellFormed` law,
+so no completed-circuit sidecar is needed.
 
-The scaling algebra is now proved in `GateProjection`.
-`Expression.GatedBy` captures exactly the required gate shape: linear in the gate's
-own selector and independent of foreign selectors. It composes across sums and
-multiplication by selector-free expressions.
-`eval_substSelectorMap_eq_scale_queryEval` then proves that a compressed verifier gate
-evaluates to the packed selector scale times Clean's enabled-gate evaluation whenever
-the fixed/advice/instance query valuations agree. `ConstraintSystem.GatesWellFormed`
-packages the remaining static configure certificate and projects the property to
-every registered constraint.
+The selector-compression bridge is proved in `GateProjection`.
+`eval_substSelectorMap_zero_imp_queryEval_zero` proves that a compressed verifier
+gate's vanishing implies Clean enabled-gate vanishing whenever the ordinary query
+valuations agree, the packed selector is nonzero, and the gate's intrinsic
+well-formedness law holds. `Gate.withSelector` derives that law automatically from
+selector-free ungated bodies; the witness-point gate supplies the only custom proof.
 
 The resolver representation now follows Halo2's query indexing exactly. An `Expr`
 leaf indexes a VK query-layout entry `(column, rotation)`, so
@@ -750,30 +747,11 @@ combines that interpretation, pinned-CS gate equality, configure coherence, and
 selector compression into the `EnabledGate.PolynomialWitness` consumed by the generic
 gate-satisfaction bridge.
 
-The compact static configure interface is now compositional.
-`Gate.wellFormed_of_withSelector` certifies the standard Halo 2 gate constructor from
-selector-free bodies, while `Configure.PreservesGateWellFormedness` is a semantic
-StateM invariant with `pure` and `bind` composition laws. All primitive configure
-actions preserve it; `createGate` requires only the supplied gate's local
-`Gate.WellFormed` proof, and lookup registration preserves the already-established
-gate invariant. Consequently the Action proof can follow its nested chip boundaries
-and never reduce the giant completed `Action.Circuit.configure` term.
-
-`Action.GateCoherence` now supplies local `Gate.WellFormed` certificates for all 37
-distinct custom-gate definitions reachable from Action configuration. This includes
-the manually associated witness-point constraints, the fold-built running-range
-checks, every NoteCommit gate, and the shared/final fixed-base gates. Small
-selector-freedom lemmas for `rangeCheckExpr`, `windowPow`, and `coordsCheck` keep those
-proofs structural rather than evaluating concrete field data.
-
-The configure lift is complete as well. Each gate-producing leaf has a
-`PreservesGateWellFormedness` certificate; the composite NoteCommit, variable- and
-fixed-base multiplication, ECC, Poseidon, Sinsemilla, Merkle, and finally
-`Action.Circuit.configure` theorems follow the actual configure call graph. The final
-Action theorem is a certificate about the configure program, not a kernel reduction
-of the finished constraint system. `PreservesGateWellFormedness.fromEmpty` specializes
-such a certificate to the standard empty Halo 2 builder state when the downstream
-bridge needs the concrete `GatesWellFormed` fact.
+Gate well-formedness is now correct by construction. All ordinary circuit gates use
+`Gate.withSelector`, whose default `selector_free` proof produces the intrinsic
+one-sided law without changing call-site syntax. The custom witness-point gate proves
+the same law directly. This removes the former 1,285-line Action gate-coherence
+sidecar and the generic configure-state preservation machinery it depended on.
 
 The selector compiler layer is now generic as well. The greedy packing proof shows
 that every compression-map entry has a positive assigned root, that the root is at
@@ -932,7 +910,8 @@ construction direction rather than restated as caller hypotheses. Its
 using only the top-level circuit's own operations, placement, selector map, pinned
 projection, and the decoded fixed-polynomial realization.
 `TopLevelGateCoherence.constraints` then supplies the complete gate field of Clean's
-constraint satisfaction. The concrete Action constructor is now complete; the
+constraint satisfaction. Gate well-formedness is read directly from each selected
+gate rather than supplied by this package. The concrete Action constructor is complete; the
 remaining gate-adjacent work belongs to the fixed stream, which connects the derived
 VK's dense fixed rows to `SelectorActivationsRealized`.
 
@@ -955,7 +934,7 @@ running-sum selector), Poseidon, NoteCommit, both Sinsemilla gate forms, and Mer
 then composes them in the exact `Action.Circuit.configure` registration order. Thus
 `Action.Circuit.configure_preservesGateSelectorsAllocated` is the compact
 circuit-derived certificate required by `TopLevelGateCoherence`. Together with the
-corresponding gate certificate, it now feeds
+intrinsic well-formedness of every `Gate`, it feeds
 `ActionGateCoherence.topLevelGateCoherence`, which also discharges the three query
 counts and the domain/degree bounds for the derived Action key. A sealed,
 equality-pinned configure handle keeps the `fromEmpty` proof structural without

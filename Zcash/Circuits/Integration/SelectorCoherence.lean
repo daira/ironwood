@@ -132,9 +132,7 @@ theorem Expression.selectorsCovered_of_selectorFree
         Expression.selectorsCovered, Bool.and_eq_true] at hfree ⊢
       exact ⟨ihLeft hfree.1, ihRight hfree.2⟩
 
-/--
-The standard `Constraints.withSelector` gate shape mentions no foreign selectors.
--/
+/-- The standard `Gate.withSelector` shape mentions no foreign selectors. -/
 @[circuit_norm]
 theorem Gate.selectorsOwned_of_withSelector
     {F : Type} [Field F]
@@ -143,18 +141,15 @@ theorem Gate.selectorsOwned_of_withSelector
     (constraints : List (String × Expression F Query))
     (hfree : constraints.Forall fun constraint =>
       constraint.2.SelectorFree) :
-    ({ name := name
-       selector := selector
-       queriedCells := queriedCells
-       constraints := Constraints.withSelector selector constraints
-         (List.forall_iff_forall_mem.mp hfree) } :
-      Gate F).SelectorsOwned := by
+    (Gate.withSelector name selector queriedCells constraints
+      (List.forall_iff_forall_mem.mp hfree)).SelectorsOwned := by
   rw [Gate.SelectorsOwned, List.forall_iff_forall_mem]
   intro constraint hconstraint
+  change constraint ∈ constraints.map _ at hconstraint
   obtain ⟨source, hsource, rfl⟩ :=
     List.mem_map.mp hconstraint
-  simp only [querySelector, Expression.selectorsCovered,
-    decide_true, Bool.true_and]
+  simp only [Gate.withSelector, querySelector,
+    Expression.selectorsCovered, decide_true, Bool.true_and]
   exact Expression.selectorsCovered_of_selectorFree
     (fun index => decide (index = selector.index))
     source.2
@@ -225,12 +220,28 @@ end ConstraintSystem.GateSelectorsAllocated
 namespace ConstraintSystem
 
 @[simp]
+theorem queryAdviceIndex_gates
+    {F : Type} (cs : ConstraintSystem F)
+    (column : Column .advice) (rotation : Rotation) :
+    (cs.queryAdviceIndex column rotation).gates = cs.gates := by
+  simp only [queryAdviceIndex]
+  split <;> rfl
+
+@[simp]
 theorem queryAdviceIndex_numSelectors
     {F : Type} (cs : ConstraintSystem F)
     (column : Column .advice) (rotation : Rotation) :
     (cs.queryAdviceIndex column rotation).numSelectors =
       cs.numSelectors := by
   simp only [queryAdviceIndex]
+  split <;> rfl
+
+@[simp]
+theorem queryFixedIndex_gates
+    {F : Type} (cs : ConstraintSystem F)
+    (column : Column .fixed) :
+    (cs.queryFixedIndex column).gates = cs.gates := by
+  simp only [queryFixedIndex]
   split <;> rfl
 
 @[simp]
@@ -243,6 +254,14 @@ theorem queryFixedIndex_numSelectors
   split <;> rfl
 
 @[simp]
+theorem queryInstanceIndex_gates
+    {F : Type} (cs : ConstraintSystem F)
+    (column : Column .instance) (rotation : Rotation) :
+    (cs.queryInstanceIndex column rotation).gates = cs.gates := by
+  simp only [queryInstanceIndex]
+  split <;> rfl
+
+@[simp]
 theorem queryInstanceIndex_numSelectors
     {F : Type} (cs : ConstraintSystem F)
     (column : Column .instance) (rotation : Rotation) :
@@ -250,6 +269,15 @@ theorem queryInstanceIndex_numSelectors
       cs.numSelectors := by
   simp only [queryInstanceIndex]
   split <;> rfl
+
+@[simp]
+theorem queryAnyIndex_gates
+    {F : Type} (cs : ConstraintSystem F)
+    (column : AnyColumn) :
+    (cs.queryAnyIndex column).gates = cs.gates := by
+  cases column with
+  | mk columnType index =>
+      cases columnType <;> simp [queryAnyIndex]
 
 @[simp]
 theorem queryAnyIndex_numSelectors
@@ -260,6 +288,23 @@ theorem queryAnyIndex_numSelectors
   cases column with
   | mk columnType index =>
       cases columnType <;> simp [queryAnyIndex]
+
+@[simp]
+theorem registerQueriedCell_gates
+    {F : Type} (cs : ConstraintSystem F) (owner : String)
+    (expression : Expression F Query) :
+    (cs.registerQueriedCell owner expression).gates = cs.gates := by
+  cases expression with
+  | var query =>
+      cases query <;> simp [registerQueriedCell,
+        queryAdviceIndex, queryFixedIndex, queryInstanceIndex] <;>
+        split <;> rfl
+  | const value =>
+      rfl
+  | add left right =>
+      rfl
+  | mul left right =>
+      rfl
 
 @[simp]
 theorem registerQueriedCell_numSelectors
@@ -278,6 +323,18 @@ theorem registerQueriedCell_numSelectors
       rfl
   | mul left right =>
       rfl
+
+@[simp]
+theorem registerQueriedCells_gates
+    {F : Type} (cs : ConstraintSystem F) (owner : String)
+    (expressions : List (Expression F Query)) :
+    (cs.registerQueriedCells owner expressions).gates = cs.gates := by
+  unfold registerQueriedCells
+  induction expressions generalizing cs with
+  | nil =>
+      rfl
+  | cons expression rest ih =>
+      rw [List.foldl_cons, ih, registerQueriedCell_gates]
 
 @[simp]
 theorem registerQueriedCells_numSelectors
