@@ -149,9 +149,49 @@ noncomputable def actionTopLevelCircuitCorrectness
     actionRowsInjectiveAtUrs pp urs hk
   refine
     { gates := ActionGateCoherence.topLevelGateCoherence pp urs
+      fixedEncoding := ?_
       fixed := ?_
       copies := ?_
       lookups := ?_ }
+  · intro proofIndex
+    by_cases hrelation :
+        HasNontrivialRelation (F := Fp) urs.g urs.u urs.w
+    · exact Or.inr hrelation
+    · apply Or.inl
+      let assignment :
+          TopLevelAssignment orchardActionTopLevelCircuit
+            (pp.mergeDerived orchardActionTopLevelCircuit).numProofs
+            proofIndex :=
+        { polynomial := relation.polynomial }
+      have hbinding :=
+        (relation.fixedColumns_eq_rowPolynomials_or_relation
+          orchardActionTopLevelCircuit.pinnedCS.numFixedColumns
+          orchardActionTopLevelCircuit.fixedRows
+          orchardActionTopLevelCircuit.fixedRows_length
+          fixedCoherence.key fixedCoherence.commitment
+          fixedCoherence.fixedQueryCount fixedCoherence.queryLayout
+          fixedCoherence.queryLayoutBounded hfixedRows).resolve_right
+            hrelation
+      apply topLevelFixedColumnEncoding_of_binding
+        assignment
+        (TopLevelAssignment.domainRowsInjective
+          (top := orchardActionTopLevelCircuit)
+          ActionPermutationDomain.domainExponent_lt)
+        (TopLevelAssignment.domainRoot
+          (top := orchardActionTopLevelCircuit)
+          ActionPermutationDomain.domainExponent_lt)
+      intro column
+      change
+        relation.polynomial (.fixedCol column) =
+          instanceRowPolynomial
+            (2 ^ orchardActionTopLevelCircuit.domainExponent)
+            (orchardActionTopLevelCircuit.toVerifierKey pp urs).omega
+            (orchardActionTopLevelCircuit.fixedRows.getD column [])
+      have hkTop :
+          orchardActionTopLevelCircuit.domainExponent = urs.k :=
+        hk
+      rw [hkTop]
+      exact hbinding column
   · intro proofIndex
     exact relation.topLevelFixedConstraints_or_relation
       rfl fixedCoherence hfixedRows hdomainSize proofIndex

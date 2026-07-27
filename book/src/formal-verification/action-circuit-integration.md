@@ -170,9 +170,12 @@ independent.
 `PolynomialEnvironment` is the canonical decoder from those polynomials to values on
 the size-`2^k` evaluation domain. It evaluates column `c` at row `r` as
 `c(ω^r)` and proves that Clean's rotated advice, fixed, and instance queries agree
-with the verifier's rotated polynomials. `resolverEnvironment` selects fixed,
-per-proof advice, and per-proof instance columns from the shared `CommitmentId`
-resolver.
+with the verifier's rotated polynomials. `resolverEnvironment` remains the
+verifier-side polynomial interpretation. At the top-level circuit boundary,
+`resolverAssignment` retains only per-proof advice and instance columns, while
+`TopLevelCircuit.environment` supplies circuit-compiled fixed columns and usable
+rows. `TopLevelAssignment.FixedColumnEncoding` is the named representation fact
+that proves these two environments equal.
 
 Public-instance row provenance now has a canonical target as well.
 `instanceRowPolynomial` Lagrange-interpolates a zero-padded list of public values over
@@ -857,8 +860,11 @@ prominently **interim** finite diagnostics.
 final dense cell has the wrong bounds or value, and its generic soundness theorem
 turns an empty list into the exact realization fact.
 `ActionFixedCoherence.realizationFailures_eq_nil` certifies the Action list is empty.
-The companion query-coverage diagnostic closes the current all-fixed-columns
-coverage field.
+The companion query diagnostic closes both directions of the current
+all-fixed-columns boundary: every allocated fixed column is queried and every queried
+fixed column is allocated. The latter makes out-of-range commitment identities
+provably absent from the verifier resolver. Both directions remain interim compiler
+lawfulness debt.
 
 For the current lookup-selector milestone, the required set also contains the exact
 singleton packed-selector cell at every lookup input leaf: the assigned root when the
@@ -967,18 +973,17 @@ data.**
 
 From the recovered per-column row values, build:
 
-- `Environment.get` for advice, fixed, and instance columns;
-- `Environment.usableRows` from `n` and the VK blinding factor;
-- the post-NU6.3 floor-planner placement;
-- the concrete `Config` returned by `Action.Circuit.configure`;
+- a `ProofAssignment` containing only advice and instance reads;
+- the circuit-owned environment, which compiles fixed rows and usable rows;
+- the circuit-owned post-NU6.3 floor-planner placement and configuration;
 - the unit input of the closed Action circuit.
 
 The generic top-level boundary and the Action-side closure are now implemented.
 `TopLevelCircuit` holds a `FormalCircuit` with unit configuration input, synthesis
 input, and output; requires its public `Assumptions` predicate to be exactly `True`;
 and provides verifier- and prover-side theorems with no exposed `EnvAssumptions`
-premise. `SynthesisWellFormed` currently records the generic layout fact needed by
-table loaders: every declared table block fits in `usableRows`.
+premise. Its single `closesEnvironment` law states only the residual environment
+facts that cannot be derived from both constraints and witness extension.
 `TopLevelCircuit.Statement` receives the circuit's explicit public-input value and
 existentially hides only its private witness. The generic SNARK bridge extracts that
 public value through the circuit-declared instance-cell layout; the Action adapter
@@ -993,14 +998,8 @@ The generic keygen layer now derives from the top-level circuit itself:
 - `domainExponent` runs `minimalK` on the same configured CS and operation stream;
   `usedRows`, `blindingFactors`, `usableRowsAt`, and `FitsAt` state the keygen domain
 fit entirely in circuit-owned terms;
-- `TopLevelCircuit.synthesisWellFormed` proves that a fitting domain supplies the
-  table-fit contract required by top-level soundness.
-
-`TopLevelCircuit.fitsAt_domainExponent` closes the remaining generic arithmetic:
-`minimalK` searches exponents `0` through `32` and uses `33` only as its failure
-sentinel, so any derived exponent below `33` satisfies the operation-footprint and
-blinding-row fit inequality. `TopLevelAssignment.synthesisWellFormed` therefore needs
-only this standard supported-domain bound, not a separately reconstructed row proof.
+- `TopLevelCircuit.environment` combines the compiled fixed rows and usable-row
+  bound with a proof-varying advice/instance assignment.
 
 The fixed-data bridge now reaches the keygen layout compiler as well.
 `FixedLayout.mem_tableFixed_of_loadTable_of_lt` and `_of_fill` cover both the explicit
@@ -1094,13 +1093,12 @@ the top-level circuit.
 The compositional base and post-Ironwood `FormalCircuit`s intentionally retain their
 `EnvAssumptions`: child circuits may state contracts that a parent fulfills.
 `TopLevelCircuit` is the separate deployment boundary that closes those contracts.
-The generic `SynthesisWellFormed` and full-satisfaction-to-statement steps are now
-complete. The circuit-derived decoded assignment and rotated resolver environment are
-now connected generically. Gate and lookup witness construction are generic; the
-remaining representation work is to instantiate their compact fixed/selector
-coherence inputs, construct `CopyReplayWitness`, supply the lookup challenge
-conditions, and feed the resulting families to
-`FullCircuitBridge.topLevelSoundness_or_bad`.
+The full-satisfaction-to-statement step now consumes the canonical
+`top.environment assignment`. Fixed-column commitment binding proves
+`FixedColumnEncoding`, which identifies the verifier resolver environment with that
+canonical environment before the generic soundness terminal is invoked. Gate,
+fixed, copy, lookup, and public-instance reconstruction are all instantiated in the
+Action endpoint.
 
 After #79's merge, the generic circuit-integration declarations are checked in the
 single `Zcash/TrustBoundary.lean` census with explicit standard or Vesta-native axiom
@@ -1330,6 +1328,7 @@ append-only merge flow.
 
 | Marker | Work package | Current state | Delivers / unblocks |
 |---|---|---|---|
+| **[DONE: ProofAssignment]** | Separate proof-varying advice/instance data from circuit-derived placement, fixed rows, and usable rows. | `TopLevelAssignment.proofAssignment` uses `resolverAssignment`; `TopLevelCircuit.environment` supplies the circuit-fixed data. `FixedColumnEncoding` derives exact equality with the verifier polynomial environment, and the generic terminal now invokes top-level soundness only in that canonical environment. | Removes arbitrary synthesis environments and obsolete `SynthesisWellFormed` premises from the final semantic path. |
 | **[ME] fixed compiler** | Replace the interim Action fixed-write and query-coverage diagnostics with compiler-derived laws: use region cell-disjointness to remove cross-region collisions, decompose the remainder across region-local writes, tables, constants, and selector packing, finish generic last-write/dedup/scatter semantics, and minimize query coverage to consumed columns. | Dense-row shape, full-list Lagrange commitment provenance, fixed-query count, and `TopLevelFixedCoherence.ofKeygen` are generic. Two prominently interim finite failure lists now certify Action sparse-to-dense realization and query coverage; `ActionFixedCoherence.ofKeygen` assembles them with the generic constructor. | A usable Action fixed-coherence constructor now; ultimately a compiler-derived replacement for its two interim certificates. |
 | **[DONE: FFT correctness]** | Prove `bestFftG`'s DFT specification symbolically — `output[i] = Σ_k ω^{i·k} • input[k]`, by induction over the butterfly rounds (invariant: after round `r`, each `2^r` block holds the DFT of its stride-subsampled slice). | `Keygen/FftSpec.lean` proves `bestFftG_dft`, `derivedUrsGLagrange_generator_eq`, and `derivedUrsGLagrange_length`. `ActionFixedCoherence.ofDerived` now consumes those results through `ofPrefix_setup_of_closed`; no Lagrange setup premise reaches the Action endpoint. | The URS setup equations consumed by both fixed and σ commitment identification, for every supported URS. |
 | **[DONE: lookup join]** | Derive exact packed-selector zero/one values for only the selector leaves occurring in each lookup input. | The guarded V1 packing path emits either the exact singleton selector row or an out-of-bounds sentinel. Shared fixed realization rules out the sentinel, and `EnabledLookup.inputSelectorLeafRowsExact_of_realizes` supplies the generic exact-row result. `ActionLookupSelectorRows` is only the thin circuit instantiation; no Action-specific planner theorem or free selector-value premise remains. | The lookup field of `FullCircuitBridge` for every Action proof index is internal to the terminal. |

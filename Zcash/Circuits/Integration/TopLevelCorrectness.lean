@@ -85,6 +85,11 @@ structure TopLevelCircuitCorrectness
     (cell : Type) [DecidableEq cell] [Fintype cell]
     (Bad : Prop) : Prop where
   gates : TopLevelGateCoherence top pp urs
+  fixedEncoding : ∀ proofIndex,
+    let assignment :
+        TopLevelAssignment top (pp.mergeDerived top).numProofs proofIndex :=
+      { polynomial := poly }
+    assignment.FixedColumnEncoding pp urs ∨ Bad
   fixed : ∀ proofIndex,
     (SelectorActivationsRealized
         top.selectorMap top.selectorActivations

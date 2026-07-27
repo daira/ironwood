@@ -112,7 +112,7 @@ and should normally be discharged by default tactics and compositional theorems.
 
 | # | Current computation | Class | Structural replacement | Expected difficulty |
 |---:|---|:---:|---|---|
-| 1 | `queryCoverageFailures_eq_nil` | L | Gate and lookup query-support laws, plus generic registration/projection theorems. Narrow fixed coverage from “every allocated fixed column” to every semantically consumed fixed column. | Medium |
+| 1 | `queryCoverageFailures_eq_nil` | L | Gate and lookup query-support laws, plus generic registration/projection theorems. The current diagnostic checks both that every allocated fixed column is queried and that every queried column is allocated; replace both directions structurally, while narrowing coverage to semantically consumed columns. | Medium |
 | 2 | `realizationFailures_eq_nil` | L | Region-local fixed-write consistency, table-load consistency, constant-allocation consistency, and selector-packing consistency; compose them using V1 shared-column non-overlap. | Hard |
 | 3 | `actionNumPermCols_pos` | R | Let generic replay accept an empty permutation family; derive positivity only in branches that consume a copy edge. | Easy |
 | 4 | `actionCopyBounds` | L | Every copied cell is allocated and both endpoint columns are equality-enabled; derive encoded address bounds generically. | Medium |

@@ -3,6 +3,7 @@ import Zcash.Circuits.Integration.FixedLayout
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 import Zcash.Circuits.Integration.SelectorCoherence
 import Zcash.Circuits.Integration.OperationLookups
+import Zcash.Circuits.Integration.TopLevelAssignment
 import Zcash.Snark.Keygen.Lagrange
 
 /-!
@@ -66,6 +67,86 @@ theorem fixedQuery_of_layout
     exact Or.inl (Or.inl (Or.inr hq))
   · rw [List.getD_eq_getElem _ _ hqueryIndex, hentry] at hqid
     exact hqid
+
+omit [AddCommGroup G] [Module Fp G] [DecidableEq G] in
+/-- A fixed-column identity can occur in the assembled verifier queries only through
+the verifying key's fixed-query layout. -/
+theorem fixedLayout_of_assembledQuery
+    {shape : Shape}
+    (vk : VerifyingKey shape Fp G)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape Fp G)
+    (ch : Challenges shape.k Fp)
+    (q : VerifierQuery shape.k Fp G)
+    (hq : q ∈ assembleQueries vk instanceCommitment ps ch)
+    (column : ℕ)
+    (hid : q.commId = .fixedCol column) :
+    ∃ rotation, (column, rotation) ∈ vk.fixedQueryLayout := by
+  simp only [assembleQueries, List.mem_append] at hq
+  rcases hq with (((hperProof | hfixed) | hcommon) | hvanishing)
+  · obtain ⟨proofQueries, hproofQueries, hq⟩ :=
+      List.mem_flatten.mp hperProof
+    obtain ⟨proofIndex, hproofQueries⟩ :=
+      List.mem_ofFn.mp hproofQueries
+    rw [← hproofQueries] at hq
+    simp only [List.mem_append] at hq
+    rcases hq with hleft | hlookup
+    · rcases hleft with hleft | hpermutation
+      · rcases hleft with hinstance | hadvice
+        · rw [columnQueries, List.mem_map] at hinstance
+          obtain ⟨entry, _, rfl⟩ := hinstance
+          simp at hid
+        · rw [columnQueries, List.mem_map] at hadvice
+          obtain ⟨entry, _, rfl⟩ := hadvice
+          simp at hid
+      · simp only [permutationQueries, List.mem_append] at hpermutation
+        rcases hpermutation with hregular | hlast
+        · simp only [List.mem_flatMap, List.mem_cons, List.mem_nil_iff,
+            or_false] at hregular
+          obtain ⟨entry, _, hq | hq⟩ := hregular
+          · subst q
+            simp at hid
+          · subst q
+            simp at hid
+        · rw [List.mem_filterMap] at hlast
+          obtain ⟨entry, _, hentry⟩ := hlast
+          cases hlastEval : entry.1.2.lastEval with
+          | none => simp [hlastEval] at hentry
+          | some lastEvaluation =>
+            simp [hlastEval] at hentry
+            subst q
+            simp at hid
+    · simp only [lookupQueries, List.mem_flatMap, List.mem_cons,
+        List.mem_nil_iff, or_false] at hlookup
+      obtain ⟨entry, _, hq | hq | hq | hq | hq⟩ := hlookup
+      all_goals
+        subst q
+        simp at hid
+  · rw [columnQueries, List.mem_map] at hfixed
+    obtain ⟨entry, hentry, rfl⟩ := hfixed
+    injection hid with hcolumn
+    obtain ⟨index, hindex, hentryAt⟩ := List.mem_iff_getElem.mp hentry
+    have hlayout : index < vk.fixedQueryLayout.length := by
+      exact hindex.trans_le (by
+        simp only [List.length_zip]
+        exact Nat.min_le_left _ _)
+    refine ⟨entry.1.2, ?_⟩
+    have hfirst : entry.1 = vk.fixedQueryLayout[index] := by
+      rw [← hentryAt]
+      simp
+    rw [← hcolumn]
+    change entry.1 ∈ vk.fixedQueryLayout
+    rw [hfirst]
+    exact List.getElem_mem _
+  · rw [permutationCommonQueries, List.mem_map] at hcommon
+    obtain ⟨entry, _, rfl⟩ := hcommon
+    simp at hid
+  · simp [vanishingQueries] at hvanishing
+    rcases hvanishing with hq | hq
+    · subst q
+      simp at hid
+    · subst q
+      simp at hid
 
 /-- Sparse table and region-local fixed assignments emitted by top-level keygen. -/
 def topLevelFixedOperationEntries
@@ -153,7 +234,8 @@ def topLevelRequiredFixedEntries
 
 /--
 **INTERIM full-circuit fallback.** Columns allocated by the pinned constraint
-system but absent from the final fixed-query layout.
+system but absent from the final fixed-query layout, followed by queried columns
+outside the allocated range.
 
 This finite diagnostic exists only to unblock concrete circuits while the query
 registration compiler is given a structural coverage theorem.  New generic
@@ -163,8 +245,9 @@ def interimFixedQueryCoverageFailures
     (top : TopLevelCircuit Fp Config PublicInput) : List ℕ :=
   let pinned := top.pinnedCS
   let queried := pinned.fixedQueryLayout.map Prod.fst
-  (List.range pinned.numFixedColumns).filter fun column =>
-    decide (column ∉ queried)
+  (List.range pinned.numFixedColumns).filter
+      (fun column => decide (column ∉ queried)) ++
+    queried.filter (fun column => decide (pinned.numFixedColumns ≤ column))
 
 /--
 An empty interim query-coverage diagnostic supplies the current
@@ -192,6 +275,28 @@ theorem fixedQueryCoverage_of_interimFailures_eq_nil
   simp only at hcolumnEntry
   subst entryColumn
   exact ⟨rotation, hentry⟩
+
+/-- An empty interim query diagnostic also rules out out-of-range layout entries. -/
+theorem fixedQueryBounded_of_interimFailures_eq_nil
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (hfail : interimFixedQueryCoverageFailures top = []) :
+    ∀ column rotation,
+      (column, rotation) ∈ top.pinnedCS.fixedQueryLayout →
+        column < top.pinnedCS.numFixedColumns := by
+  intro column rotation hentry
+  have hnotFailure :
+      column ∉ interimFixedQueryCoverageFailures top := by
+    rw [hfail]
+    simp
+  have hqueried :
+      column ∈ top.pinnedCS.fixedQueryLayout.map Prod.fst := by
+    exact List.mem_map.mpr ⟨(column, rotation), hentry, rfl⟩
+  by_contra hbound
+  apply hnotFailure
+  simp only [interimFixedQueryCoverageFailures, List.mem_append]
+  apply Or.inr
+  rw [List.mem_filter]
+  exact ⟨hqueried, decide_eq_true (Nat.le_of_not_gt hbound)⟩
 
 /--
 **INTERIM full-circuit fallback.** Required fixed/table/selector writes whose
@@ -281,6 +386,10 @@ structure TopLevelFixedCoherence
       ∃ rotation,
         (column, rotation) ∈
           (top.toVerifierKey pp urs).fixedQueryLayout
+  queryLayoutBounded : ∀ column rotation,
+    (column, rotation) ∈
+        (top.toVerifierKey pp urs).fixedQueryLayout →
+      column < top.pinnedCS.numFixedColumns
   realizes : ∀ column row value,
     (column, row, value) ∈
         topLevelRequiredFixedEntries top →
@@ -359,6 +468,10 @@ def ofKeygen
         ∃ rotation,
           (column, rotation) ∈
             (top.toVerifierKey pp urs).fixedQueryLayout)
+    (queryLayoutBounded : ∀ column rotation,
+      (column, rotation) ∈
+          (top.toVerifierKey pp urs).fixedQueryLayout →
+        column < top.pinnedCS.numFixedColumns)
     (realizes : ∀ column row value,
       (column, row, value) ∈
           topLevelRequiredFixedEntries top →
@@ -376,9 +489,61 @@ def ofKeygen
       top pp urs hk hlen hgenerators
   fixedQueryCount := top.toVerifierKey_fixedQueryCount pp urs
   queryLayout := queryLayout
+  queryLayoutBounded := queryLayoutBounded
   realizes := realizes
 
 end TopLevelFixedCoherence
+
+omit [Module Fp G] [DecidableEq G] in
+/--
+Binding every fixed-column resolver polynomial to the circuit's dense keygen rows
+supplies the exact fixed-column encoding expected by `TopLevelAssignment`.
+-/
+theorem topLevelFixedColumnEncoding_of_binding
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    {top : TopLevelCircuit Fp Config PublicInput}
+    {pp : Keygen.ProofParams} {urs : URS G}
+    {proofIndex : Fin (pp.mergeDerived top).numProofs}
+    (assignment :
+      TopLevelAssignment top (pp.mergeDerived top).numProofs proofIndex)
+    (hrows : Function.Injective
+      fun row : Fin (2 ^ top.domainExponent) =>
+        (top.toVerifierKey pp urs).omega ^ (row : ℕ))
+    (hroot :
+      (top.toVerifierKey pp urs).omega ^
+        (2 ^ top.domainExponent) = 1)
+    (binding : ∀ column,
+      assignment.polynomial (.fixedCol column) =
+        instanceRowPolynomial (2 ^ top.domainExponent)
+          (top.toVerifierKey pp urs).omega
+          (top.fixedRows.getD column [])) :
+    assignment.FixedColumnEncoding pp urs := by
+  intro column row
+  rw [binding column.index]
+  let domainRow : Fin (2 ^ top.domainExponent) :=
+    ⟨row.natMod (2 ^ top.domainExponent),
+      Int.natMod_lt (by positivity)⟩
+  have hpow :
+      (top.toVerifierKey pp urs).omega ^ row =
+        (top.toVerifierKey pp urs).omega ^ (domainRow : ℕ) := by
+    simpa only [domainRow] using
+      zpow_eq_pow_natMod
+        (top.toVerifierKey pp urs).omega
+        (2 ^ top.domainExponent) (by positivity) hroot row
+  rw [hpow]
+  have heval :=
+    instanceRowPolynomial_eval
+      (values := top.fixedRows.getD column.index [])
+      hrows domainRow
+  change
+    (instanceRowPolynomial (2 ^ top.domainExponent)
+      (top.toVerifierKey pp urs).omega
+      (top.fixedRows.getD column.index [])).eval
+        ((top.toVerifierKey pp urs).omega ^ (domainRow : ℕ)) =
+      (top.fixedRows.getD column.index []).getD
+        (row.natMod (2 ^ top.domainExponent)) 0
+  simpa only [domainRow] using heval
 
 omit [Module Fp G] [DecidableEq G] in
 /--
@@ -540,6 +705,22 @@ variable
     {hblinding : vk.blindingFactors < vk.n}
     {y : Fp} {hpoly : Polynomial Fp} {deg : ℕ}
 
+/-- Commitment identities absent from the assembled verifier queries resolve to
+the zero polynomial. -/
+theorem polynomial_eq_zero_of_not_assembled
+    (relation : CanonicalMemberConstraintRelation
+      urs hk vk instanceCommitment ps ch pU pW a
+      batchOpenings memberDecode hblinding y hpoly deg)
+    (id : CommitmentId)
+    (habsent :
+      ¬ ∃ q ∈ assembleQueries vk instanceCommitment ps ch,
+          q.commId = id) :
+    relation.polynomial id = 0 := by
+  unfold CanonicalMemberConstraintRelation.polynomial
+  unfold CanonicalMemberConstraintRelation.route
+  unfold assembledQueryMemberRoute
+  simp only [habsent, dite_false, decodedPolynomialResolver]
+
 /--
 A canonically routed fixed-column opening is the polynomial interpolating its
 keygen rows, or it exhibits an augmented commitment relation.
@@ -624,6 +805,77 @@ theorem fixedColumn_eq_rowPolynomial_or_relation
       decodedPolynomialResolver, routedFixed]
     exact heq
   · exact Or.inr hrelation
+
+/--
+All fixed-column resolver polynomials encode the circuit's complete dense fixed
+rows, or commitment binding has produced the shared nontrivial relation.
+
+In-range columns use the circuit-derived fixed commitments. Out-of-range
+identities are absent from the bounded fixed-query layout, so both the resolver
+polynomial and the circuit's `getD` row vector are zero.
+-/
+theorem fixedColumns_eq_rowPolynomials_or_relation
+    (relation : CanonicalMemberConstraintRelation
+      urs hk vk instanceCommitment ps ch pU pW a
+      batchOpenings memberDecode hblinding y hpoly deg)
+    (numFixedColumns : ℕ)
+    (rows : List (List Fp))
+    (rowsLength : rows.length = numFixedColumns)
+    (key : LagrangeCommitmentKey urs vk.omega)
+    (commitment : ∀ column,
+      column < numFixedColumns →
+        vk.fixedCommitment column =
+          key.commitInstance (rows.getD column []) 1)
+    (fixedQueryCount :
+      vk.fixedQueryLayout.length = shape.numFixedQueries)
+    (queryLayout : ∀ column,
+      column < numFixedColumns →
+        ∃ rotation, (column, rotation) ∈ vk.fixedQueryLayout)
+    (queryLayoutBounded : ∀ column rotation,
+      (column, rotation) ∈ vk.fixedQueryLayout →
+        column < numFixedColumns)
+    (hrows : Function.Injective
+      fun i : Fin (2 ^ urs.k) =>
+        vk.omega ^ (i : ℕ)) :
+    (∀ column,
+      relation.polynomial (.fixedCol column) =
+        instanceRowPolynomial (2 ^ urs.k)
+          vk.omega (rows.getD column [])) ∨
+      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  by_cases hrelation :
+      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w
+  · exact Or.inr hrelation
+  · apply Or.inl
+    intro column
+    by_cases hcolumn : column < numFixedColumns
+    · exact
+        (relation.fixedColumn_eq_rowPolynomial_or_relation
+          column key (rows.getD column [])
+          (commitment column hcolumn) hrows
+          (by
+            obtain ⟨rotation, hlayout⟩ :=
+              queryLayout column hcolumn
+            exact fixedQuery_of_layout
+              vk instanceCommitment ps ch
+              column rotation fixedQueryCount hlayout)).resolve_right
+            hrelation
+    · have habsent :
+          ¬ ∃ q ∈ assembleQueries vk instanceCommitment ps ch,
+              q.commId = .fixedCol column := by
+        rintro ⟨q, hq, hqid⟩
+        obtain ⟨rotation, hlayout⟩ :=
+          fixedLayout_of_assembledQuery
+            vk instanceCommitment ps ch q hq column hqid
+        exact hcolumn
+          (queryLayoutBounded column rotation hlayout)
+      rw [relation.polynomial_eq_zero_of_not_assembled
+        (.fixedCol column) habsent]
+      have hrowsDefault : rows.getD column [] = [] := by
+        apply List.getD_eq_default
+        rw [rowsLength]
+        exact Nat.le_of_not_gt hcolumn
+      rw [hrowsDefault]
+      simp [instanceRowPolynomial, zeroPaddedRows, rowPolynomial]
 
 /--
 Circuit-derived fixed rows discharge both consumers of fixed-column semantics:

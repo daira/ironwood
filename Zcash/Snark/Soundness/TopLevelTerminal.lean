@@ -55,6 +55,8 @@ theorem topLevelBundleStatement_or_bad_of_constraintSatisfaction
         TopLevelAssignment top (pp.mergeDerived top).numProofs proofIndex :=
       { polynomial := poly }
     have hfixed := (correctness.fixed proofIndex).resolve_right hbad
+    have hfixedEncoding :=
+      (correctness.fixedEncoding proofIndex).resolve_right hbad
     have hcopies := (correctness.copies proofIndex).resolve_right hbad
     have hlookups := (correctness.lookups proofIndex).resolve_right hbad
     have hrows :=
@@ -67,16 +69,17 @@ theorem topLevelBundleStatement_or_bad_of_constraintSatisfaction
       FullCircuitBridge.ofTopLevelCanonical
         correctness.gates ch poly proofIndex hblinding satisfaction
         hrows hroot hfixed.1 hfixed.2 hcopies.some hlookups
+    have henvironment :=
+      assignment.resolverEnvironment_eq_environment
+        pp urs hfixedEncoding
+    have canonicalBridge :
+        FullCircuitBridge top.placement assignment.environment
+          top.operations 0 cell Bad := by
+      rw [← henvironment]
+      exact bridge
     have hsound :=
       FullCircuitBridge.topLevelSoundness_or_bad
-        top assignment.placedEnvironment
-        (assignment.synthesisWellFormed
-          correctness.gates.domainExponent_lt)
-        (by
-          simpa only [
-            TopLevelAssignment.placedEnvironment,
-            TopLevelAssignment.environment,
-            resolverEnvironment] using bridge)
+        top assignment.proofAssignment canonicalBridge
     exact hsound.resolve_right hbad
 
 assert_no_sorry topLevelBundleStatement_or_bad_of_constraintSatisfaction

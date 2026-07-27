@@ -18,6 +18,30 @@ open Halo2 Polynomial
 
 set_option maxHeartbeats 20000
 
+/-- Reduce an integer domain-row exponent to its canonical natural representative. -/
+theorem zpow_eq_pow_natMod
+    (omega : Fp) (n : ℕ) (hn : 0 < n)
+    (hroot : omega ^ n = 1) (row : ℤ) :
+    omega ^ row = omega ^ row.natMod n := by
+  have homega : omega ≠ 0 := by
+    intro hzero
+    rw [hzero, zero_pow hn.ne'] at hroot
+    exact zero_ne_one hroot
+  calc
+    omega ^ row =
+        omega ^ (row % (n : ℤ) + (n : ℤ) * (row / (n : ℤ))) := by
+      rw [Int.emod_add_mul_ediv]
+    _ = omega ^ (row % (n : ℤ)) := by
+      rw [zpow_add₀ homega, zpow_mul, show omega ^ (n : ℤ) = 1 by
+        simpa using hroot, one_zpow, mul_one]
+    _ = omega ^ row.natMod n := by
+      rw [← zpow_natCast]
+      congr 1
+      simp only [Int.natMod]
+      exact (Int.toNat_of_nonneg
+        (Int.emod_nonneg row
+          (Int.ofNat_ne_zero.mpr (Nat.ne_of_gt hn)))).symm
+
 /-- Read fixed, advice, and instance column polynomials on the multiplicative `ω` row domain. -/
 def polynomialEnvironment
     (omega : Fp) (usableRows : ℕ)

@@ -1,6 +1,7 @@
 import Zcash.Arithmetic.Domain
 import Clean.Halo2.TopLevelKeygen
 import Zcash.Circuits.Integration.PolynomialEnvironment
+import Zcash.Snark.Keygen.Pipeline
 
 /-!
 # Generic assignments for closed top-level circuits
@@ -122,6 +123,47 @@ def placedEnvironment
     (assignment : TopLevelAssignment top numProofs proofIndex) :
     Placed Environment Fp :=
   top.placedEnvironment assignment.proofAssignment
+
+/--
+The verifier-decoded fixed polynomials encode the fixed rows compiled by the
+top-level circuit.
+
+Unlike advice and instance columns, fixed columns are not part of
+`ProofAssignment`: this is the representation boundary that identifies their
+verifier-side polynomial values with the circuit-owned keygen data.
+-/
+def FixedColumnEncoding
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    (assignment : TopLevelAssignment top numProofs proofIndex)
+    (pp : Keygen.ProofParams) (urs : URS G) : Prop :=
+  ∀ column row,
+    (assignment.polynomial (.fixedCol column.index)).eval
+        ((top.toVerifierKey pp urs).omega ^ row) =
+      top.fixedValue column row
+
+/--
+Fixed-column encoding makes the verifier resolver environment exactly the
+circuit-owned environment built from the corresponding proof assignment.
+-/
+theorem resolverEnvironment_eq_environment
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    (pp : Keygen.ProofParams) (urs : URS G)
+    {proofIndex : Fin (pp.mergeDerived top).numProofs}
+    (assignment :
+      TopLevelAssignment top (pp.mergeDerived top).numProofs proofIndex)
+    (hfixed : assignment.FixedColumnEncoding pp urs) :
+    resolverEnvironment
+        (top.toVerifierKey pp urs) assignment.polynomial proofIndex
+        (top.usableRowsAt top.domainExponent) =
+      assignment.environment := by
+  apply congrArg₂ Environment.mk
+  · funext column row
+    cases column.kind with
+    | advice => rfl
+    | fixed =>
+        exact hfixed ⟨column.index⟩ row
+    | «instance» => rfl
+  · rfl
 
 @[simp] theorem environment_usableRows
     (assignment : TopLevelAssignment top numProofs proofIndex) :

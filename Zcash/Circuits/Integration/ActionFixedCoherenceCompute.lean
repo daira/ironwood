@@ -50,6 +50,15 @@ theorem queryLayout :
   fixedQueryCoverage_of_interimFailures_eq_nil
     orchardActionTopLevelCircuit queryCoverageFailures_eq_nil
 
+/-- The same interim diagnostic rules out out-of-range fixed-query entries. -/
+theorem queryLayoutBounded :
+    ∀ column rotation,
+      (column, rotation) ∈
+          orchardActionTopLevelCircuit.pinnedCS.fixedQueryLayout →
+        column < orchardActionTopLevelCircuit.pinnedCS.numFixedColumns :=
+  fixedQueryBounded_of_interimFailures_eq_nil
+    orchardActionTopLevelCircuit queryCoverageFailures_eq_nil
+
 /--
 **INTERIM:** the final dense Action fixed rows realize every table, region-fixed,
 and packed-selector entry consumed by Clean constraint semantics.
@@ -104,6 +113,14 @@ noncomputable def ofKeygen
           ActionPermutationDomain.derivedPinnedCS.fixedQueryLayout
       rw [ActionPermutationDomain.fixedQueryLayout_eq]
       exact queryLayout column hcolumn)
+    (by
+      intro column rotation hentry
+      rw [orchardActionTopLevelCircuit.toVerifierKey_fixedQueryLayout_derived] at hentry
+      change
+        (column, rotation) ∈
+          ActionPermutationDomain.derivedPinnedCS.fixedQueryLayout at hentry
+      rw [ActionPermutationDomain.fixedQueryLayout_eq] at hentry
+      exact queryLayoutBounded column rotation hentry)
     (by
       intro column row value hentry
       exact realizes column row value hentry)
