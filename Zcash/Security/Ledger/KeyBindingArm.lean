@@ -37,16 +37,6 @@ namespace Zcash.Security.Ledger.Model
 
 open Zcash.Security.KeyBinding Zcash.Snark
 
-/-- The key-binding arm's witness pair, when the break lies in that arm. -/
-def BalanceBreak.kbPair {F G IVK NK RHO PSI MHASH MENC MSG SIG KW : Type*}
-    [Field F] [AddCommGroup G] [Module F G]
-    {P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG}
-    {kv : KeyBindingInterface KW G IVK NK} :
-    BalanceBreak P kv → Option (KW × KW)
-  | .keyBinding w₁ w₂ _ => some (w₁, w₂)
-  | .merkle _ => none
-  | .noteCommit _ => none
-
 -- A shared universe for the oracle-model types, so the sampling experiment can be
 -- written in `do`-notation: `PMF`'s monad instance fixes one universe for the whole
 -- block, which the independent `Type*` universes could not satisfy.
@@ -74,14 +64,19 @@ abbrev kvAt (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK) (G
       fun qk ak nk => O (.ext qk ak nk),
       fun rivk_ext ak nk => O (.int rivk_ext ak nk)⟩
 
-/-- **The key-binding arm's ε, discharged.** For any `n`-query-bounded pair-annotated
-ledger adversary in the key-binding oracle model, the probability that its output
-ledger is valid and the Balance-subset reduction lands in the key-binding arm with
-exactly its output pair is at most `(n + 4) · (n + 3) / |RIVK|`. The event is
-contained in "the output pair breaks the sampled interface", and the composite that
-returns the pair makes no queries beyond the adversary's own, so
-`toInterface_break_measure_le` applies unchanged. -/
+/-- **The key-binding arm's ε, discharged.** For any `n`-query-bounded ledger adversary
+in the key-binding oracle model, the probability that its output ledger is valid and the
+Balance-subset reduction lands in the key-binding arm is at most
+`(n + 4) · (n + 3) / |RIVK|`. The adversary outputs only a ledger; the arm's witness pair
+is recovered from that ledger by the oracle-free `kbPairOf` (`balanceSubsetOrBreak_kbPair`
+identifies it with the reduction's own pair), so the composite that returns the pair makes
+no queries beyond the adversary's own and `toInterface_break_measure_le` applies unchanged.
+`kbPairOf` is `Option`-valued (`findPair` may find no duplicate) while the bound's machine
+must return a concrete pair, so the composite collapses it with `Option.getD default`; the
+default is furnished by `[Inhabited (Witness …)]`, present at the concrete instantiation. On
+every sample of the bounded event `kbPairOf` is `some`, so the default is never used. -/
 theorem balanceSubset_keyBindingArm_measure_le {ι : Type u}
+    [Inhabited (KeyBinding.Witness G IVK AK NK RIVK QK SK)]
     (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK) (Ggen : G) (hS : S ≠ 0)
     (p : PMF ι)
     (P : Primitives RIVK G IVK NK RHO PSI MHASH MENC MSG SIG)
@@ -89,32 +84,28 @@ theorem balanceSubset_keyBindingArm_measure_le {ι : Type u}
     {LA : ι → (SK → ASK) → (SK → NK) →
       OracleComp (FinalQuery AK NK RIVK QK SK) RIVK
         (Ledger (KeyBinding.Witness G IVK AK NK RIVK QK SK) RIVK G RHO PSI MHASH MENC
-            MSG SIG P.depth
-          × (KeyBinding.Witness G IVK AK NK RIVK QK SK
-            × KeyBinding.Witness G IVK AK NK RIVK QK SK))}
+            MSG SIG P.depth)}
     {n : ℕ} (hQ : ∀ j Hask Hnk, (LA j Hask Hnk).QueryBound n) :
     ((kbExperiment p)).toOuterMeasure
         (setOf fun (j, Hask, Hnk, O) =>
           ∃ hval : ValidLedger P (kvAt Extract S hfn Ggen Hask Hnk O)
-              issuance maxActions ((LA j Hask Hnk).run O).1,
-            ∃ b, balanceSubsetOrBreak hval i = PSum.inr b
-              ∧ b.kbPair = some ((LA j Hask Hnk).run O).2)
+              issuance maxActions ((LA j Hask Hnk).run O),
+            ∃ w₁ w₂ h, balanceSubsetOrBreak hval i
+              = PSum.inr (BalanceBreak.keyBinding w₁ w₂ h))
       ≤ ((n + 4) * (n + 3) : ℕ) / Fintype.card RIVK := by
   refine le_trans (MeasureTheory.measure_mono ?_)
     (toInterface_break_measure_le Extract S hfn Ggen hS p
-      (A := fun j Hask Hnk => (LA j Hask Hnk).bind fun out => .pure out.2)
+      (A := fun j Hask Hnk => (LA j Hask Hnk).bind fun L => .pure ((kbPairOf L i).getD default))
       (n := n) (fun j Hask Hnk => ?_))
-  · rintro ⟨j, Hask, Hnk, O⟩ ⟨hval, b, heq, hpair⟩
-    cases b with
-    | keyBinding w₁ w₂ hbr =>
-        simp only [BalanceBreak.kbPair, Option.some.injEq] at hpair
-        simp only [Set.mem_setOf_eq, OracleComp.run_bind, OracleComp.run_pure]
-        rw [← hpair]
-        exact hbr
-    | merkle c => simp [BalanceBreak.kbPair] at hpair
-    | noteCommit nb => simp [BalanceBreak.kbPair] at hpair
+  · rintro ⟨j, Hask, Hnk, O⟩ ⟨hval, w₁, w₂, h, heq⟩
+    simp only [Set.mem_setOf_eq, OracleComp.run_bind, OracleComp.run_pure]
+    have hkp : kbPairOf ((LA j Hask Hnk).run O) i = some (w₁, w₂) := by
+      have := balanceSubsetOrBreak_kbPair hval i heq
+      simpa [BalanceBreak.kbPair] using this.symm
+    rw [hkp]
+    exact h
   · exact OracleComp.queryBound_bind (hQ j Hask Hnk)
-      fun out => OracleComp.QueryBound.pure out.2 0
+      fun L => OracleComp.QueryBound.pure _ 0
 
 /-- **The Spend Authority key-binding arm's ε, discharged.** For any
 `n`-query-bounded pair-annotated ledger adversary in the key-binding oracle model,
