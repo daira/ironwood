@@ -118,8 +118,8 @@ theorem capturedPinnedView_eq_derived_and_wellFormed :
       = (actionPinnedCs, 11, true, true) := by
   have h := bundle_pinned
   simp only [actionSelMap, actionK, actionCS, actionOps] at h
-  simp only [Halo2.TopLevelCircuit.selectorMap, Halo2.TopLevelCircuit.selectorActivations,
-    Halo2.TopLevelCircuit.regionStarts, Halo2.TopLevelCircuit.domainExponent]
+  simp only [Halo2.TopLevelCircuit.selectorMap,
+    Halo2.TopLevelCircuit.domainExponent]
   exact h
 
 /-- **The capture is the derived Action circuit** (pinned CS, captured families). -/
@@ -218,8 +218,8 @@ theorem vk_scalars_and_chunks_derived :
             actionCircuit.constraintSystem) := by
   have h := bundle_scalars
   simp only [actionSelMap, actionK, actionCS, actionOps] at h
-  simp only [Halo2.TopLevelCircuit.selectorMap, Halo2.TopLevelCircuit.selectorActivations,
-    Halo2.TopLevelCircuit.regionStarts, Halo2.TopLevelCircuit.domainExponent]
+  simp only [Halo2.TopLevelCircuit.selectorMap,
+    Halo2.TopLevelCircuit.domainExponent]
   exact h
 
 theorem vk_scalars_derived :

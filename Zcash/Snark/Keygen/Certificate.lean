@@ -276,7 +276,6 @@ theorem vk_eq_derived : vk = derivedActionVk shape capturedURS := by
   rw [permutationCommitmentsSeqWith_congr _ _ _ committer_eq,
     permutationCommitmentsSeqWith_eq] at hpc
   simp only [actionPinned, Halo2.TopLevelCircuit.selectorMap,
-    Halo2.TopLevelCircuit.selectorActivations, Halo2.TopLevelCircuit.regionStarts,
     Halo2.TopLevelCircuit.domainExponent]
     at ho hn hb hc hg hiq haq hfq hpch hli hlt hfc hpc
   -- open both records
@@ -288,6 +287,7 @@ theorem vk_eq_derived : vk = derivedActionVk shape capturedURS := by
     hfq.symm, ?_, ?_, hpch.symm, ?_, ?_⟩
   · rw [← hfc]
   · rw [← hpc]
+    rfl
   · exact (List.ofFn_inj.mp hli).symm
   · exact (List.ofFn_inj.mp hlt).symm
 
