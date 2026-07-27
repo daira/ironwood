@@ -1,3 +1,4 @@
+import Zcash.Common.RelationWitness
 import Zcash.Circuits.Integration.ActionInstanceCommitment
 import Zcash.Circuits.Integration.ActionPermutationDomain
 import Zcash.Snark.Soundness.Canonical.Terminal
@@ -36,7 +37,7 @@ permutation, lookup, and selector claimed evaluations are reconstructed internal
 from the accepted assembled queries. No free semantic proposition, `hencodes`,
 constraint family, or decoded-column feed remains.
 -/
-theorem action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
+noncomputable def action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
     (pp : ProofParams) (urs : URS G)
     (hk :
       (pp.mergeDerived actionCircuit).k = urs.k)
@@ -97,7 +98,7 @@ theorem action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
             (instanceCommitment := actionCircuit.instanceCommitment pp urs inputs)
             (actionCircuit.toVerifierKey pp urs)
             ps ch slot point
-        ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+        ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w)
     (hxgood :
       ch.x ∉ szBadSet
         (combineConstraints
@@ -201,8 +202,8 @@ theorem action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
         actionCircuit pp urs ch
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts)) :
-    BundleStatement inputs ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+    BundleStatement inputs ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   let vk := actionCircuit.toVerifierKey pp urs
   let hblinding : vk.blindingFactors < vk.n :=
     ActionPermutationDomain.blindingFactors_lt pp urs
@@ -232,7 +233,7 @@ theorem action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
         batchOpenings memberDecode haccepts hblinding hpoly
         hsatisfied hgoodY permutationExclusions
         lookupExclusions
-  · exact Or.inr hrelation
+  · exact PSum.inr hrelation
 
 assert_no_sorry action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
 

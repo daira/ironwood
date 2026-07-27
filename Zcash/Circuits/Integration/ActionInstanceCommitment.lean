@@ -1,3 +1,4 @@
+import Zcash.Common.RelationWitness
 import Zcash.Circuits.Integration.ActionEncoding
 import Zcash.Circuits.Integration.ActionGateCoherence
 import Zcash.Circuits.Integration.TopLevelInstanceCommitment
@@ -99,7 +100,7 @@ noncomputable def topLevelCorrectnessOfAcceptedCircuitSat
       (CanonicalMemberConstraintRelation.acceptedPolynomial
         (memberDecode := memberDecode) haccepts)
       (FlatCell actionNumPermCols actionDomainSize)
-      (HasNontrivialRelation (F := Fp) urs.g urs.u urs.w) := by
+      (NontrivialRelation (F := Fp) urs.g urs.u urs.w) := by
   let relation :=
     CanonicalMemberConstraintRelation.ofAcceptedCircuitSat
       haccepts hsatisfied
@@ -130,7 +131,7 @@ that same accepting run. This theorem constructs
 `CanonicalMemberConstraintRelation` internally and applies the closed Action
 endpoint; no free relation, constraint family, or statement proposition remains.
 -/
-theorem action_bundleStatement_or_relation_of_acceptedModel_circuitSat
+noncomputable def action_bundleStatement_or_relation_of_acceptedModel_circuitSat
     (pp : ProofParams) (urs : URS G)
     (hk :
       (pp.mergeDerived actionCircuit).k = urs.k)
@@ -192,8 +193,8 @@ theorem action_bundleStatement_or_relation_of_acceptedModel_circuitSat
         actionCircuit pp urs ch
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts)) :
-    BundleStatement inputs ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+    BundleStatement inputs ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   subst vk
   let relation :=
     CanonicalMemberConstraintRelation.ofAcceptedCircuitSat
@@ -226,12 +227,13 @@ theorem action_bundleStatement_or_relation_of_acceptedModel_circuitSat
     topLevelBundleStatement_or_bad_of_constraintSatisfaction
       hblinding hsatisfaction hcorrect
   rcases htop with htop | hrelation
-  · simpa only [BundleStatement] using
-      (TopLevelInstanceCommitment.statements_or_relation_of_accepted_topLevelBundleStatement
-        actionCircuit pp urs hk inputs ps ch pU pW a batchOpenings
-        memberDecode haccepts
-        ActionPermutationDomain.domainExponent_lt htop)
-  · exact Or.inr hrelation
+  swap
+  · exact PSum.inr hrelation
+  simpa only [BundleStatement] using
+    (TopLevelInstanceCommitment.statements_or_relation_of_accepted_topLevelBundleStatement
+      actionCircuit pp urs hk inputs ps ch pU pW a batchOpenings
+      memberDecode haccepts
+      ActionPermutationDomain.domainExponent_lt htop)
 
 assert_no_sorry action_bundleStatement_or_relation_of_acceptedModel_circuitSat
 
