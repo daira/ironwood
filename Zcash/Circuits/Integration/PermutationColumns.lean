@@ -1,4 +1,5 @@
 import Zcash.Circuits.Integration.FixedColumns
+import Zcash.Common.RelationWitness
 import Zcash.Snark.Keygen.Lagrange
 import Zcash.Snark.Soundness.Canonical.PermutationSemantics
 
@@ -222,7 +223,7 @@ blind `1`. It is independent of the proof and can be established once for the ge
 `TopLevelCircuit.toVerifierKey` construction. Query coverage is unconditional: every σ
 commitment is opened by the assembled queries.
 -/
-theorem permCommon_eq_rowPolynomial_or_relation
+noncomputable def permCommon_eq_rowPolynomial_or_relation
     (relation : CanonicalMemberConstraintRelation
       urs hk vk instanceCommitment ps ch pU pW a
       batchOpenings memberDecode hblinding y hpoly deg)
@@ -235,11 +236,14 @@ theorem permCommon_eq_rowPolynomial_or_relation
     (hrows : Function.Injective
       fun i : Fin (2 ^ urs.k) => vk.omega ^ (i : ℕ)) :
     relation.polynomial (.permCommon (c : ℕ)) =
-        instanceRowPolynomial (2 ^ urs.k) vk.omega rows ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+        instanceRowPolynomial (2 ^ urs.k) vk.omega rows ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   classical
-  obtain ⟨q, hq, hqid⟩ :=
-    assembleQueries_permCommon_query vk instanceCommitment ps ch c
+  have hquery := assembleQueries_permCommon_query vk instanceCommitment ps ch c
+  let q := Classical.choose hquery
+  have hq : q ∈ assembleQueries vk instanceCommitment ps ch :=
+    (Classical.choose_spec hquery).1
+  have hqid : q.commId = _ := (Classical.choose_spec hquery).2
   have routed :=
     assembledQueryMemberRoute_faithful
       (instanceCommitment := instanceCommitment)
@@ -290,12 +294,10 @@ theorem permCommon_eq_rowPolynomial_or_relation
       (decoded.uComp routed.slot.memberIndex)
       (decoded.wComp routed.slot.memberIndex)
       hrows hopen
-  rcases hbound with heq | hrelation
-  · apply Or.inl
-    rw [CanonicalMemberConstraintRelation.polynomial,
-      decodedPolynomialResolver, routedCommon]
-    exact heq
-  · exact Or.inr hrelation
+  refine bindOrRelationWitness hbound fun heq => ?_
+  rw [CanonicalMemberConstraintRelation.polynomial,
+    decodedPolynomialResolver, routedCommon]
+  exact heq
 
 /--
 **The σ-column identification.** A canonically routed common-permutation opening is the
@@ -304,7 +306,7 @@ generated keygen σ column — the `hcolumns` premise of
 relation. `hval` is the keygen-side name fact: the committed σ rows are the replayed
 permutation's cell names.
 -/
-theorem permCommon_eq_keygenSigmaColumn_or_relation
+noncomputable def permCommon_eq_keygenSigmaColumn_or_relation
     {nc : ℕ} {width : ℕ → ℕ}
     (relation : CanonicalMemberConstraintRelation
       urs hk vk instanceCommitment ps ch pU pW a
@@ -325,14 +327,13 @@ theorem permCommon_eq_keygenSigmaColumn_or_relation
         (sigma ⟨chunk, i, column⟩).2.1
         (sigma ⟨chunk, i, column⟩).2.2) :
     relation.polynomial (.permCommon (c : ℕ)) =
-        keygenSigmaColumn vk.omega vk.delta vk.chunkLen sigma chunk column ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  rcases relation.permCommon_eq_rowPolynomial_or_relation
-      c key rows hcommit hrows with heq | hrelation
-  · exact Or.inl (heq.trans
+        keygenSigmaColumn vk.omega vk.delta vk.chunkLen sigma chunk column ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w :=
+  bindOrRelationWitness
+    (relation.permCommon_eq_rowPolynomial_or_relation c key rows hcommit hrows)
+    fun heq => heq.trans
       (instanceRowPolynomial_eq_keygenSigmaColumn
-        vk.omega vk.delta vk.chunkLen sigma chunk column rows hval))
-  · exact Or.inr hrelation
+        vk.omega vk.delta vk.chunkLen sigma chunk column rows hval)
 
 end CanonicalMemberConstraintRelation
 
@@ -385,7 +386,7 @@ resolver's permutation pair is the generated keygen σ column. The routing premi
 (`hj`, `hlt`, `hidx`) are chunk-layout facts of the concrete verifying key; `hcommit`
 and `hval` are the keygen-side commitment and name facts.
 -/
-theorem resolverPermutationPairs_snd_eq_keygenSigmaColumn_or_relation
+noncomputable def resolverPermutationPairs_snd_eq_keygenSigmaColumn_or_relation
     {nc : ℕ} {width : ℕ → ℕ}
     (relation : CanonicalMemberConstraintRelation
       urs hk vk instanceCommitment ps ch pU pW a
@@ -410,14 +411,13 @@ theorem resolverPermutationPairs_snd_eq_keygenSigmaColumn_or_relation
         (sigma ⟨chunk, i, column⟩).2.2) :
     ((ResolverPermutationPairs vk relation.polynomial p cIdx)[j]'
         (by simpa [ResolverPermutationPairs, permutationChunkPairsOfResolver] using hj)).2 =
-        keygenSigmaColumn vk.omega vk.delta vk.chunkLen sigma chunk column ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  rcases relation.permCommon_eq_keygenSigmaColumn_or_relation
-      c key rows hcommit hrows sigma chunk column hval with heq | hrelation
-  · refine Or.inl ?_
-    rw [resolverPermutationPairs_getElem_snd vk relation.polynomial p cIdx j hj]
-    rw [← heq, hidx]
-  · exact Or.inr hrelation
+        keygenSigmaColumn vk.omega vk.delta vk.chunkLen sigma chunk column ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  refine bindOrRelationWitness
+    (relation.permCommon_eq_keygenSigmaColumn_or_relation
+      c key rows hcommit hrows sigma chunk column hval) fun heq => ?_
+  rw [resolverPermutationPairs_getElem_snd vk relation.polynomial p cIdx j hj]
+  rw [← heq, hidx]
 
 /--
 Size-transported form of
@@ -428,7 +428,7 @@ the commitment extractor names the same size as `2 ^ urs.k`. Localizing that
 propositional equality here keeps concrete circuit permutations free of
 dependent casts.
 -/
-theorem resolverPermutationPairs_snd_eq_keygenSigmaColumn_or_relation_of_size
+noncomputable def resolverPermutationPairs_snd_eq_keygenSigmaColumn_or_relation_of_size
     {nc n : ℕ} {width : ℕ → ℕ}
     (relation : CanonicalMemberConstraintRelation
       urs hk vk instanceCommitment ps ch pU pW a
@@ -455,8 +455,8 @@ theorem resolverPermutationPairs_snd_eq_keygenSigmaColumn_or_relation_of_size
     ((ResolverPermutationPairs vk relation.polynomial p cIdx)[j]'
         (by simpa [ResolverPermutationPairs,
           permutationChunkPairsOfResolver] using hj)).2 =
-        keygenSigmaColumn vk.omega vk.delta vk.chunkLen sigma chunk column ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+        keygenSigmaColumn vk.omega vk.delta vk.chunkLen sigma chunk column ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   subst n
   exact relation.resolverPermutationPairs_snd_eq_keygenSigmaColumn_or_relation
     p cIdx j hj c hidx key rows hcommit hrows sigma chunk column hval

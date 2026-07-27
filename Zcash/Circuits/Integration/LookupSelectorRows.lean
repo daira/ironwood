@@ -1,4 +1,5 @@
 import Zcash.Circuits.Integration.FixedColumns
+import Zcash.Common.RelationWitness
 import Zcash.Circuits.Integration.TopLevelLookups
 
 /-!
@@ -405,7 +406,7 @@ omit [Module Fp G] [DecidableEq G] in
 Relevant exact packed rows and fixed-polynomial binding recover precisely the
 expression-level selector boundary consumed by lookup projection.
 -/
-theorem EnabledLookup.inputSelectorValuesRealized_or_bad
+def EnabledLookup.inputSelectorValuesRealized_or_bad
     {top : TopLevelCircuit Fp Config PublicInput}
     {pp : Keygen.ProofParams} {urs : URS G}
     (poly : CommitmentId → Polynomial Fp)
@@ -414,12 +415,12 @@ theorem EnabledLookup.inputSelectorValuesRealized_or_bad
       fun i : Fin (2 ^ urs.k) =>
         (top.toVerifierKey pp urs).omega ^ (i : ℕ))
     (hn : (top.toVerifierKey pp urs).n = 2 ^ urs.k)
-    {Bad : Prop}
+    {Bad : Type}
     (binding : ∀ column,
       column < top.pinnedCS.numFixedColumns →
         poly (.fixedCol column) =
             instanceRowPolynomial (2 ^ urs.k)
-              (top.toVerifierKey pp urs).omega (rows column) ∨
+              (top.toVerifierKey pp urs).omega (rows column) ⊕'
           Bad)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (lookup : EnabledLookup Fp)
@@ -430,12 +431,12 @@ theorem EnabledLookup.inputSelectorValuesRealized_or_bad
     lookup.InputSelectorValuesRealized top
         (resolverEnvironment
           (top.toVerifierKey pp urs) poly proofIndex
-          (top.usableRowsAt top.domainExponent)) ∨
-      Bad := by
-  classical
-  by_cases hbad : Bad
-  · exact Or.inr hbad
-  · apply Or.inl
+          (top.usableRowsAt top.domainExponent)) ⊕'
+      Bad :=
+  bindOrRelationWitness
+    (boundedForallOrRelationWitness (n := top.pinnedCS.numFixedColumns) binding)
+    fun hbinding => by
+    classical
     intro expression hexpression
     apply expression_eval_substValuation_eq_queryEval_of_selectorLeaves
     apply
@@ -451,8 +452,7 @@ theorem EnabledLookup.inputSelectorValuesRealized_or_bad
     | some compressed =>
         rw [hcompressed] at hstatic
         obtain ⟨hcolumn, hstatic⟩ := hstatic
-        have hpolynomial :=
-          (binding compressed.packedCol hcolumn).resolve_right hbad
+        have hpolynomial := hbinding compressed.packedCol hcolumn
         have hdomainRow :
             top.placement lookup.region + lookup.row < 2 ^ urs.k := by
           rwa [← hn]
