@@ -1,4 +1,5 @@
 import Zcash.Circuits.Integration.InstanceColumns
+import Zcash.Common.RelationWitness
 import Zcash.Circuits.Integration.QueryLayouts
 import Zcash.Circuits.Integration.TopLevelCorrectness
 import Mathlib.Util.AssertNoSorry
@@ -150,12 +151,11 @@ noncomputable def acceptedColumn_eq_rowPolynomial_or_relation
       NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   classical
   let column := (top.publicInputLayout.cells index).1
-  let instanceRotation :=
-    Classical.choose
-      (top.exists_rotation_mem_instanceQueries_of_publicInputLayout_cell index)
-  have hregistered :=
-    Classical.choose_spec
-      (top.exists_rotation_mem_instanceQueries_of_publicInputLayout_cell index)
+  -- The registered rotation is an `∃` and the conclusion is data, so it is chosen.
+  have hrotation :=
+    top.exists_rotation_mem_instanceQueries_of_publicInputLayout_cell index
+  let instanceRotation := Classical.choose hrotation
+  have hregistered := Classical.choose_spec hrotation
   have hbound :=
     CanonicalMemberConstraintRelation.acceptedInstanceColumn_eq_rowPolynomial_or_relation
       (pU := pU) (pW := pW) (a := a)
@@ -199,25 +199,24 @@ noncomputable def publicInputEncoding_or_relation
           (memberDecode := memberDecode) haccepts }
   change assignment.PublicInputEncoding (inputs proofIndex) ⊕'
     NontrivialRelation (F := Fp) urs.g urs.u urs.w
-  exact
-    bindOrRelationWitness
-      (finForallOrRelationWitness fun index =>
-        acceptedColumn_eq_rowPolynomial_or_relation
-          top pp urs hk inputs ps ch pU pW a batchOpenings
-          memberDecode haccepts proofIndex index
-          (by
-            change Function.Injective
-              fun i : Fin (2 ^ urs.k) =>
-                Zcash.Arithmetic.omegaOf top.domainExponent ^ (i : ℕ)
-            rw [← hk]
-            exact Zcash.Arithmetic.omegaOf_powers_injective
-              top.domainExponent (by omega)))
-      fun hcolumns => by
-        apply TopLevelAssignment.publicInputEncoding_of_publicInputRowPolynomials
-            (assignment := assignment) (inputs proofIndex)
-        · exact hcolumns
-        · exact Zcash.Arithmetic.omegaOf_powers_injective
-            top.domainExponent (by omega)
+  refine bindOrRelationWitness
+    (finForallOrRelationWitness fun index =>
+      acceptedColumn_eq_rowPolynomial_or_relation
+        top pp urs hk inputs ps ch pU pW a batchOpenings
+        memberDecode haccepts proofIndex index
+        (by
+          change Function.Injective
+            fun i : Fin (2 ^ urs.k) =>
+              Zcash.Arithmetic.omegaOf top.domainExponent ^ (i : ℕ)
+          rw [← hk]
+          exact Zcash.Arithmetic.omegaOf_powers_injective
+            top.domainExponent (by omega)))
+    fun hcolumns => ?_
+  apply TopLevelAssignment.publicInputEncoding_of_publicInputRowPolynomials
+      (assignment := assignment) (inputs proofIndex)
+  · exact hcolumns
+  · exact Zcash.Arithmetic.omegaOf_powers_injective
+      top.domainExponent (by omega)
 
 assert_no_sorry publicInputEncoding_or_relation
 
@@ -241,15 +240,20 @@ noncomputable def statements_or_relation_of_accepted_topLevelBundleStatement
     CanonicalMemberConstraintRelation.acceptedPolynomial
       (memberDecode := memberDecode) haccepts
   change TopLevelBundleStatement top pp poly at htop
-  exact
-    bindOrRelationWitness
-      (finForallOrRelationWitness fun proofIndex =>
+  refine bindOrRelationWitness
+    (finForallOrRelationWitness
+      (A := fun proofIndex : Fin (pp.mergeDerived top).numProofs =>
+        let assignment : TopLevelAssignment top
+            (pp.mergeDerived top).numProofs proofIndex :=
+          { polynomial := poly }
+        assignment.PublicInputEncoding (inputs proofIndex))
+      fun proofIndex =>
         publicInputEncoding_or_relation
           top pp urs hk inputs ps ch pU pW a batchOpenings memberDecode
           haccepts proofIndex domainExponent_lt)
-      fun hencoding =>
-        TopLevelBundleStatement.of_publicInputEncoding
-          top pp poly inputs hencoding htop
+    fun hencoding =>
+      TopLevelBundleStatement.of_publicInputEncoding
+        top pp poly inputs hencoding htop
 
 assert_no_sorry
   statements_or_relation_of_accepted_topLevelBundleStatement

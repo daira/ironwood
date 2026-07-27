@@ -1,4 +1,5 @@
 import Zcash.Circuits.Integration.TopLevelLookups
+import Zcash.Common.RelationWitness
 import Zcash.Circuits.Integration.TopLevelCircuit
 
 /-!
@@ -108,7 +109,7 @@ preserving one shared exceptional event.
 This is the generic finite-family join used by the Action adapter: the proof does
 not inspect the circuit statement and does not introduce an `hencodes` predicate.
 -/
-noncomputable def bundleTopLevelSoundness_or_bad
+def bundleTopLevelSoundness_or_bad
     (top : TopLevelCircuit Fp Config PublicInput)
     {numProofs : ℕ}
     (assignment : Fin numProofs → ProofAssignment Fp)

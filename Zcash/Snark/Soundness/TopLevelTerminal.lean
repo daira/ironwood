@@ -1,4 +1,5 @@
 import Zcash.Circuits.Integration.TopLevelCorrectness
+import Zcash.Common.RelationWitness
 import Zcash.Circuits.Integration.TopLevelAssignment
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 
