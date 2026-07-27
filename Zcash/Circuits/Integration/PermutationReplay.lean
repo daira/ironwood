@@ -1,6 +1,6 @@
 import Zcash.Circuits.Integration.PermutationColumns
 import Zcash.Circuits.Integration.CircuitIntegration
-import Zcash.Snark.Keygen.LagrangeBasisKey
+import Zcash.Snark.Keygen.Lagrange
 
 /-!
 # The executable keygen assembly replay is the abstract permutation replay
@@ -20,6 +20,8 @@ representative-agnostic.
 -/
 
 namespace Zcash.Snark
+
+open Zcash.Arithmetic (deltaFp omegaOf)
 
 open Halo2 Halo2.Layout
 open Equiv (Perm swap)

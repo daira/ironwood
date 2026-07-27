@@ -3,8 +3,8 @@ Copyright (c) 2026 Ironwood Contributors.
 Released under the Apache License, Version 2.0.
 -/
 import Zcash.Arithmetic.ScalarFftEquiv
-import Zcash.Snark.Keygen.InvDft
-import Zcash.Arithmetic.MontKernelAdapter
+import Zcash.Arithmetic.InvDft
+import Zcash.Arithmetic.CommitLagrange
 import Zcash.Arithmetic.VestaModule
 
 /-!
@@ -16,7 +16,7 @@ This module supplies the evaluation-tier spelling of the right-hand side and pro
 to the statement surface:
 
 * `invDftScalarsMont` — the scaled inverse DFT run entirely on eight-limb Montgomery
-  residues (`ScalarMont.fft`, in the `FastFieldNative` precompiled lane), read back as the
+  residues (`fftS`, in the `FastFieldNative` precompiled lane), read back as the
   canonical `ℕ` scalars an MSM consumes.  No `ZMod` inversion appears on the hot path: leaving
   Montgomery form is one reduction (`PallasFq.toLimbs8`).
 * `msmMontPre` — the Montgomery-lane MSM against a basis that is **already** in Montgomery
@@ -28,11 +28,7 @@ Everything is proven against `Fast.Msm.commitLagrangeSpec`, the naive `commit_la
 is where the bilinearity theorem lives.
 -/
 
-namespace Zcash.Snark.Keygen.Fast
-
-open Zcash.Snark
-open Zcash.Vendor
-open Zcash.Vendor.ScalarMont (WFs montValS)
+namespace Zcash.Arithmetic
 open CompElliptic.Curves.Pasta.Fast
 open CompElliptic.Curves.Pasta.Fast.ProjectiveMont
 open CompElliptic.Curves.Pasta.Fast.ProjectiveMont (PM)
@@ -65,14 +61,14 @@ loop-invariant across the columns of a commitment family, so a caller that commi
 columns shares them through its own nullary definitions. -/
 def invDftScalarsMontWith (tw : Array Limbs8) (minv : Limbs8) (k : ℕ)
     (coeffs : List Fp) : List ℕ :=
-  ((ScalarMont.fft (invDftInputMont coeffs) tw k).map
+  ((fftS (invDftInputMont coeffs) tw k).map
     fun x => (PallasFq.toLimbs8 (PallasFq.mul minv x)).toNat).toList
 
 private theorem wfs_of_val (e : Fp) : WFs (PallasFq.ofNat e.val) :=
-  ScalarMont.wfs_ofNat (ZMod.val_lt e)
+  wfs_ofNat (ZMod.val_lt e)
 
 private theorem montValS_of_val (e : Fp) : montValS (PallasFq.ofNat e.val) = e := by
-  rw [ScalarMont.montValS_ofNat (ZMod.val_lt e), ZMod.natCast_rightInverse e]
+  rw [montValS_ofNat (ZMod.val_lt e), ZMod.natCast_rightInverse e]
 
 /-- **The Montgomery-lane inverse DFT is `scalarInvDft`**, in canonical `ℕ` form. -/
 theorem invDftScalarsMontWith_eq (tw : Array Limbs8) (minv : Limbs8) (k : ℕ)
@@ -95,7 +91,7 @@ theorem invDftScalarsMontWith_eq (tw : Array Limbs8) (minv : Limbs8) (k : ℕ)
       simp only [invDftTwiddlesMont, Array.getElem_map, Array.getElem_range]
       exact wfs_of_val _
     · rw [getElem!_neg _ i (by simp [invDftTwiddlesMont]; omega)]
-      exact ScalarMont.wfs_default
+      exact wfs_default
   have htw : ∀ i, i < (invDftInputMont coeffs).size / 2 →
       montValS (invDftTwiddlesMont k)[i]! = omegaInvOf k ^ i := by
     intro i hi
@@ -103,7 +99,7 @@ theorem invDftScalarsMontWith_eq (tw : Array Limbs8) (minv : Limbs8) (k : ℕ)
     rw [getElem!_pos _ i (by simp [invDftTwiddlesMont, hi])]
     simp only [invDftTwiddlesMont, Array.getElem_map, Array.getElem_range]
     exact montValS_of_val _
-  obtain ⟨hwfOut, hmap⟩ := ScalarMont.fftS_spec (invDftInputMont coeffs)
+  obtain ⟨hwfOut, hmap⟩ := fftS_spec (invDftInputMont coeffs)
     (invDftTwiddlesMont k) (omegaInvOf k) k
     (by intro x hx
         rw [invDftInputMont, List.mem_toArray, List.mem_map] at hx
@@ -116,8 +112,8 @@ theorem invDftScalarsMontWith_eq (tw : Array Limbs8) (minv : Limbs8) (k : ℕ)
   refine List.map_congr_left fun x hx => ?_
   have hwx : WFs x := hwfOut x (by simpa using hx)
   have hmv : WFs (PallasFq.ofNat ((((2 : Fp) ^ k)⁻¹).val)) := wfs_of_val _
-  rw [ScalarMont.toNat_toLimbs8 (ScalarMont.wfs_mul hmv hwx),
-    ScalarMont.montValS_mul hmv hwx, montValS_of_val]
+  rw [toNat_toLimbs8 (wfs_mul hmv hwx),
+    montValS_mul hmv hwx, montValS_of_val]
   simp only [Function.comp_apply]
   rw [← Nat.cast_smul_eq_nsmul Fp ((((2 : Fp) ^ k)⁻¹).val) (montValS x),
     ZMod.natCast_rightInverse, smul_eq_mul]
@@ -217,4 +213,4 @@ theorem take_derivedUrsGLagrange_montPre (c : ℕ) (hc : 0 < c) (urs : URS G) (h
   rw [commitMontPre_eq c hc 0 (List.ofFn urs.g) _
     (by rw [lagrangeRow_length, List.length_ofFn])]
 
-end Zcash.Snark.Keygen.Fast
+end Zcash.Arithmetic

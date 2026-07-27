@@ -1,12 +1,12 @@
 import CompElliptic.Curves.Pasta
 import Zcash.Common.ParMap
-import Zcash.Snark.Core.Domain
+import Zcash.Arithmetic.Domain
 import Zcash.Arithmetic.Fft
 import CompElliptic.Curves.Pasta.Fast.Msm
 import Zcash.Circuits.Integration.ExprRich
 import Clean.Halo2.Keygen.Layout
 import Clean.Halo2.TopLevelKeygen
-import Zcash.Snark.Core.Group
+import Zcash.Arithmetic
 import Zcash.Snark.Verifier.Assemble
 
 /-!
@@ -36,9 +36,10 @@ capture certification live in `Derivation.lean` / `Certificate.lean`.
 namespace Zcash.Snark.Keygen
 
 open Zcash.Snark
+open Zcash.Arithmetic (deltaFp omegaOf)
 open Halo2
--- The concrete fast MSM lives in the CompElliptic pin; opening `Curves.Pasta` keeps its
--- `Fast.Msm.*` spellings usable alongside ironwood's own `Zcash.Snark.Keygen.Fast.*`.
+-- The concrete fast MSM lives in the CompElliptic pin; opening `Curves.Pasta` is what makes its
+-- `Fast.Msm.*` spellings resolve here.
 open CompElliptic.Curves.Pasta
 
 variable {G : Type} [AddCommGroup G] [Inhabited G]
@@ -635,6 +636,7 @@ end Zcash.Snark.Keygen
 
 namespace Zcash.Snark.VerifyingKey
 
+open Zcash.Arithmetic (deltaFp derivedUrsGLagrange omegaOf)
 open Zcash.Snark.Keygen
 open Halo2
 
@@ -787,6 +789,9 @@ end Zcash.Snark.Keygen
 namespace Halo2.TopLevelCircuit
 
 open Zcash.Snark
+-- This section declares under `Halo2`, not `Zcash`, so the root re-exports of `Fp`/`URS` are not
+-- on the enclosing-namespace walk and have to be opened explicitly.
+open Zcash.Arithmetic (Fp URS derivedUrsGLagrange)
 open Zcash.Snark.Keygen
 open Halo2
 open CompElliptic.Curves.Pasta

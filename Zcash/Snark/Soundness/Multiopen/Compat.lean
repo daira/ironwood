@@ -20,7 +20,13 @@ decoded-column constraint bridges
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (Msm)
+
 namespace Msm
+
+-- The MSM operations these lemmas are about live in `Zcash.Arithmetic.Msm`; this namespace only
+-- adds the evaluation spine lemmas the decode proofs need.
+open Zcash.Arithmetic.Msm (eval zero scale add)
 
 /-- The zero MSM evaluates to the group identity. -/
 theorem eval_zero {F G : Type*} [Field F] [AddCommGroup G] [Module F G] (urs : URS G) :

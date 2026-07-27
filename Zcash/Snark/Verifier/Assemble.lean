@@ -32,6 +32,8 @@ instances) and bundled here for the assembly.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (Msm Msm.zero)
+
 /-- A permutation column's evaluation reference (halo2 `get_any_query_index` + `column_type`): the
 column's value is the advice / fixed / instance evaluation at the given query index. -/
 inductive ColumnRef where

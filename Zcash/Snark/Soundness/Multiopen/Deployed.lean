@@ -53,6 +53,8 @@ deployed-status section).
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (Msm Msm.eval_appendTerm Msm.zero)
+
 /-! ## The scale-and-add fold in closed power form -/
 
 section PowerFold

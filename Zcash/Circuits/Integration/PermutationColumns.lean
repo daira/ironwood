@@ -1,5 +1,5 @@
 import Zcash.Circuits.Integration.FixedColumns
-import Zcash.Snark.Keygen.FftSpec
+import Zcash.Snark.Keygen.Lagrange
 import Zcash.Snark.Soundness.Canonical.PermutationSemantics
 
 /-!
@@ -25,6 +25,8 @@ every σ commitment unconditionally (`assembleQueries_permCommon_query`).
 -/
 
 namespace Zcash.Snark
+
+open Zcash.Arithmetic (derivedUrsGLagrange derivedUrsGLagrange_length omegaOf)
 
 open Halo2 Polynomial
 
@@ -83,11 +85,11 @@ theorem permutationCommonCommitmentAt_of_lt
 /-- The setup facts needed by prefix-based Lagrange commitments. -/
 structure LagrangePrefixSetup (urs : URS G) : Prop where
   length_eq :
-    (Keygen.derivedUrsGLagrange urs).length = 2 ^ urs.k
+    (derivedUrsGLagrange urs).length = 2 ^ urs.k
   generator_eq :
     ∀ i : Fin (2 ^ urs.k),
-      (i : ℕ) < (Keygen.derivedUrsGLagrange urs).length →
-        (Keygen.derivedUrsGLagrange urs).getD (i : ℕ) 0 =
+      (i : ℕ) < (derivedUrsGLagrange urs).length →
+        (derivedUrsGLagrange urs).getD (i : ℕ) 0 =
           commit urs (polynomialCoefficients (2 ^ urs.k)
             (rowPolynomial (omegaOf urs.k)
               (Pi.single i (1 : Fp))))
@@ -98,7 +100,7 @@ namespace LagrangePrefixSetup
 setup for every supported Halo 2 domain. -/
 def ofDerived (urs : URS G) (hk : urs.k ≤ 32) :
     LagrangePrefixSetup urs where
-  length_eq := Keygen.derivedUrsGLagrange_length urs
+  length_eq := derivedUrsGLagrange_length urs
   generator_eq :=
     Keygen.ofPrefix_setup_of_closed urs hk
       (Keygen.derivedUrsGLagrange_generator_eq urs hk)
@@ -146,7 +148,7 @@ theorem commitment_ofKeygen
     topLevelPermutationCommitment top urs column =
       (LagrangeCommitmentKey.ofPrefix urs
         (omegaOf urs.k)
-        (Keygen.derivedUrsGLagrange urs)
+        (derivedUrsGLagrange urs)
         setup.generator_eq).commitInstance
           (topLevelPermutationRows top column) 1 := by
   unfold topLevelPermutationColumnCount at hcolumn

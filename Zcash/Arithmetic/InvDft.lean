@@ -2,7 +2,8 @@
 Copyright (c) 2026 Ironwood Contributors.
 Released under the Apache License, Version 2.0.
 -/
-import Zcash.Snark.Keygen.FftSpec
+import Zcash.Arithmetic.FftSpec
+import CompElliptic.Curves.Pasta.Fast.Msm
 
 /-!
 # Committing against the derived Lagrange basis is an inverse DFT of the coefficients
@@ -27,9 +28,7 @@ The point of the identity is evaluation cost: the group FFT builds `2 ^ k` **cur
 multiplications, and the monomial basis is URS data that needs no derivation at all.
 -/
 
-namespace Zcash.Snark.Keygen
-
-open Zcash.Snark
+namespace Zcash.Arithmetic
 open CompElliptic.Curves.Pasta
 
 variable {G : Type} [AddCommGroup G] [Inhabited G] [Module Fp G]
@@ -79,13 +78,29 @@ omit [Inhabited G] [Module Fp G] in
 private theorem sum_range_list (n : ℕ) (f : ℕ → G) :
     ((List.range n).map f).sum = ∑ i ∈ Finset.range n, f i := rfl
 
-/-- The derived Lagrange generators as explicit monomial combinations (the sum form of
-`derivedUrsGLagrange_generator_eq`). -/
+/-- **The derived Lagrange generators as explicit monomial combinations.** The `j`-th entry of
+the derived basis is the monomial URS weighted by the closed Lagrange row `n⁻¹ · ω⁻¹^(j·t)`.
+`Keygen/Lagrange.lean` restates this as `derivedUrsGLagrange_generator_eq`, in the verifier's
+`commit` vocabulary. -/
 theorem derivedUrsGLagrange_getD (urs : URS G) (hk : urs.k ≤ 32) (j : Fin (2 ^ urs.k)) :
     (derivedUrsGLagrange urs).getD (j : ℕ) 0
       = ∑ t : Fin (2 ^ urs.k),
           (((2 : Fp) ^ urs.k)⁻¹ * omegaInvOf urs.k ^ ((j : ℕ) * (t : ℕ))) • urs.g t := by
-  rw [derivedUrsGLagrange_generator_eq urs hk j, commit, omegaInvOf_eq_inv urs.k hk]
+  have hsize0 : (List.ofFn urs.g).toArray.size = 2 ^ urs.k := by simp
+  have hdft := bestFftG_dft (List.ofFn urs.g).toArray (omegaInvOf urs.k) urs.k hsize0
+    (omegaInvOf_isPrimitiveRoot urs.k hk) j
+  have hlen : (bestFftG (List.ofFn urs.g).toArray (omegaInvOf urs.k) urs.k).toList.length =
+      2 ^ urs.k := by
+    simp [bestFftG_size]
+  rw [derivedUrsGLagrange, List.getD_eq_getElem?_getD, List.getElem?_map,
+    List.getElem?_eq_getElem (by rw [hlen]; exact j.isLt)]
+  simp only [Option.map_some, Option.getD_some, Array.getElem_toList]
+  rw [← getElem!_pos _ (j : ℕ) (by rw [bestFftG_size, hsize0]; exact j.isLt), hdft, val_smul',
+    Finset.smul_sum]
+  refine Finset.sum_congr rfl fun t _ => ?_
+  rw [getElem!_pos _ (t : ℕ) (by rw [hsize0]; exact t.isLt)]
+  simp only [List.getElem_toArray, List.getElem_ofFn]
+  rw [smul_smul]
 
 /-- **MSM bilinearity moves the transform off the group and onto the scalars**: committing a
 full-domain coefficient column against the derived Lagrange basis is committing its scaled
@@ -177,4 +192,4 @@ theorem derivedUrsGLagrange_take (urs : URS G) (hk : urs.k ≤ 32) (m : ℕ)
   rw [commitLagrangeSpec_lagrangeRow urs hk ⟨i, lt_of_lt_of_le hi hm⟩]
   exact (List.getD_eq_getElem _ 0 (by rw [hlen]; exact lt_of_lt_of_le hi hm)).symm
 
-end Zcash.Snark.Keygen
+end Zcash.Arithmetic

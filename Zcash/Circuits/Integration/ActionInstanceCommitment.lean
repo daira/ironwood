@@ -199,7 +199,7 @@ Acceptance fixes the canonical instance-column route. Public-instance commitment
 binding either identifies that polynomial with the supplied Action rows or yields
 the shared augmented-basis relation.
 -/
-theorem actionBundleStatement_or_relation_of_acceptedTopLevelBundle
+theorem action_bundleStatement_or_relation_of_accepted_topLevelBundleStatement
     (pp : ProofParams) (urs : URS G)
     (hk :
       (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
@@ -253,7 +253,7 @@ theorem actionBundleStatement_or_relation_of_acceptedTopLevelBundle
                 Specs.Sinsemilla.orchardGenerators {}).1.primary.index) =
           instanceRowPolynomial
             (2 ^ orchardActionTopLevelCircuit.domainExponent)
-            (Zcash.Snark.omegaOf
+            (Zcash.Arithmetic.omegaOf
               orchardActionTopLevelCircuit.domainExponent)
             (inputs proofIndex).rows := by
       intro proofIndex
@@ -289,12 +289,12 @@ theorem actionBundleStatement_or_relation_of_acceptedTopLevelBundle
               (Circuit.configure
                 Specs.Sinsemilla.orchardGenerators {}).1.primary.index) =
           instanceRowPolynomial (2 ^ urs.k)
-            (Zcash.Snark.omegaOf
+            (Zcash.Arithmetic.omegaOf
               orchardActionTopLevelCircuit.domainExponent)
             (inputs proofIndex).rows at hrowPolynomial
       simpa only [← hk] using hrowPolynomial
     apply Or.inl
-    apply actionBundleStatement_of_topLevelBundle
+    apply action_bundleStatement_of_topLevelBundleStatement
       pp
       (CanonicalMemberConstraintRelation.acceptedPolynomial
         (memberDecode := memberDecode) haccepts)
@@ -304,7 +304,7 @@ theorem actionBundleStatement_or_relation_of_acceptedTopLevelBundle
     · exact hinstance
     · exact htop
 
-assert_no_sorry actionBundleStatement_or_relation_of_acceptedTopLevelBundle
+assert_no_sorry action_bundleStatement_or_relation_of_accepted_topLevelBundleStatement
 
 /--
 The Action endpoint with public-instance provenance closed.
@@ -313,7 +313,7 @@ The instance commitment is computed from `inputs`; its compatible key, commitmen
 equation, primary-query registration, Action domain bound, row capacity, and static
 gate package are all constructed here rather than supplied by the caller.
 -/
-theorem actionBundleStatement_or_relation_of_canonicalRelation
+theorem action_bundleStatement_or_relation_of_canonicalMemberConstraintRelation
     (pp : ProofParams) (urs : URS G)
     (hk :
       (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
@@ -371,7 +371,7 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
     rw [ActionPermutationDomain.domainExponent_eq]
     norm_num
   exact
-    Zcash.Snark.actionBundleStatement_or_relation_of_canonicalRelation
+    Zcash.Snark.action_bundleStatement_or_relation_of_canonicalMemberConstraintRelation
       pp urs hk (commitment pp urs inputs) ps ch vk hvk pU pW a
       batchOpenings memberDecode ActionPermutationDomain.domainExponent_lt
       hblinding hpoly relation hgoodY inputs hsize (instanceKey pp urs)
@@ -380,7 +380,7 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
       permutationExclusions
       lookupExclusions
 
-assert_no_sorry actionBundleStatement_or_relation_of_canonicalRelation
+assert_no_sorry action_bundleStatement_or_relation_of_canonicalMemberConstraintRelation
 
 /--
 The deterministic `hencodes` handoff for an accepting verifier run.
@@ -390,7 +390,7 @@ that same accepting run. This theorem constructs
 `CanonicalMemberConstraintRelation` internally and applies the closed Action
 endpoint; no free relation, constraint family, or statement proposition remains.
 -/
-theorem actionBundleStatement_or_relation_of_acceptedCircuitSat
+theorem action_bundleStatement_or_relation_of_acceptedModel_circuitSat
     (pp : ProofParams) (urs : URS G)
     (hk :
       (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
@@ -462,7 +462,7 @@ theorem actionBundleStatement_or_relation_of_acceptedCircuitSat
         CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts := by
     rfl
-  apply actionBundleStatement_or_relation_of_canonicalRelation
+  apply action_bundleStatement_or_relation_of_canonicalMemberConstraintRelation
     pp urs hk inputs ps ch vk hvk pU pW a batchOpenings memberDecode
     hblinding hpoly relation
   · simpa only [
@@ -471,7 +471,7 @@ theorem actionBundleStatement_or_relation_of_acceptedCircuitSat
   · simpa only [hpolynomial] using permutationExclusions
   · simpa only [hpolynomial] using lookupExclusions
 
-assert_no_sorry actionBundleStatement_or_relation_of_acceptedCircuitSat
+assert_no_sorry action_bundleStatement_or_relation_of_acceptedModel_circuitSat
 
 end ActionInstanceCommitment
 

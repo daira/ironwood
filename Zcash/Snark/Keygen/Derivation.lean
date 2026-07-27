@@ -7,9 +7,9 @@ import Zcash.Circuits.Action.TopLevel
 The `Pipeline.lean` generic `keygen_vk` instantiated at the closed Orchard Action
 circuit: every definition here is a `TopLevelCircuit` method applied to
 `orchardActionTopLevelCircuit`. The names are the certification surface —
-`Certificate.lean` (the expensive `ZcashKeygen`-only module) proves them equal to the
-capture (`commitments_derived`, `vk_eq_derived`, `shape_eq_mergeDerived`,
-`vk_eq_toVerifierKey`); `Assignment.lean` and other clients consume the data without
+`Certificate.lean` (the expensive module, built only in the `FixtureCheck` lane)
+proves them equal to the capture (`commitments_derived`, `vk_eq_derived`,
+`shape_eq_mergeDerived`, `vk_eq_toVerifierKey`); clients consume the data without
 evaluating the certificate.
 -/
 

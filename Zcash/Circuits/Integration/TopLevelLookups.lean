@@ -19,6 +19,8 @@ packed-selector rows.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (omegaOf)
+
 open Halo2 Polynomial Keygen
 
 set_option maxHeartbeats 20000
@@ -297,12 +299,12 @@ theorem resolverInterpretsPinned
           (top.toVerifierKey pp urs) poly proofIndex usableRows)
         (fun _ => 0) row) := by
   have homega : (top.toVerifierKey pp urs).omega ≠ 0 := by
-    change Zcash.Snark.omegaOf top.domainExponent ≠ 0
+    change Zcash.Arithmetic.omegaOf top.domainExponent ≠ 0
     have hk : top.domainExponent ≤ 32 :=
       Nat.le_of_lt_succ (by
         simpa using coherence.domainExponent_lt)
     exact
-      (Zcash.Snark.omegaOf_isPrimitiveRoot
+      (Zcash.Arithmetic.omegaOf_isPrimitiveRoot
         top.domainExponent hk).isUnit (by positivity) |>.ne_zero
   exact resolverQueryFeeds_interpret
     (top.toVerifierKey pp urs) poly proofIndex usableRows
@@ -908,7 +910,7 @@ noncomputable def TopLevelLookupWitnessConditions.ofChallengeExclusions
       resolverGood := ?_
       thetaGood := ?_ }
   · intro lookup henabled
-    exact allResolverLookupGoodChallenges_of_not_mem
+    exact resolverLookupGoodChallenges_of_not_mem
       (top.toVerifierKey pp urs) ch poly
       ((top.toVerifierKey pp urs).n -
         (top.toVerifierKey pp urs).blindingFactors - 2)

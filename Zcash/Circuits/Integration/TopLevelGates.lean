@@ -1,5 +1,5 @@
 import Zcash.Snark.Keygen.Pipeline
-import Zcash.Snark.Core.Domain
+import Zcash.Arithmetic.Domain
 import Zcash.Circuits.Integration.ResolverGates
 import Zcash.Circuits.Integration.ResolverQueryEnvironment
 import Zcash.Circuits.Integration.SelectorCoherence
@@ -19,6 +19,8 @@ polynomial witness consumed by the generic constraint-satisfaction split.
 -/
 
 namespace Zcash.Snark
+
+open Zcash.Arithmetic (omegaOf scalarFieldOrder)
 
 open Halo2 Polynomial Keygen
 
@@ -95,11 +97,11 @@ theorem resolverInterpretsGates
           (top.toVerifierKey pp urs) poly proofIndex usableRows)
         (fun _ => 0) row) := by
   have homega : (top.toVerifierKey pp urs).omega ≠ 0 := by
-    change Zcash.Snark.omegaOf top.domainExponent ≠ 0
+    change Zcash.Arithmetic.omegaOf top.domainExponent ≠ 0
     have hk : top.domainExponent ≤ 32 :=
       Nat.le_of_lt_succ (by simpa using coherence.domainExponent_lt)
     exact
-      (Zcash.Snark.omegaOf_isPrimitiveRoot
+      (Zcash.Arithmetic.omegaOf_isPrimitiveRoot
         top.domainExponent hk).isUnit (by positivity) |>.ne_zero
   have hfinal := resolverQueryFeeds_interpret
     (top.toVerifierKey pp urs) poly proofIndex usableRows

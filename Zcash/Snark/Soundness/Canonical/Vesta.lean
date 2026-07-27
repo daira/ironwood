@@ -10,7 +10,7 @@ boundary verifier-native names:
 
 * `vestaExtractedMemberDecode` is the decoder forced by the accepted `x₁`
   extraction route.
-* `vestaTerminal_circuitSat_or_relation_of_feed_eq` replaces the free callback
+* `acceptedModel_circuitSat_or_relation_of_feed_eq` replaces the free callback
   with canonical accepted-model circuit satisfaction whenever the selected
   feeds are proved equal to the canonical advice and instance feeds.
 
@@ -72,7 +72,7 @@ member selections. The terminal's remaining relation is then precisely
 `CircuitSat` for the canonical accepted model, apart from the standard
 discrete-log-relation alternative.
 -/
-theorem vestaTerminal_circuitSat_or_relation_of_feed_eq
+theorem acceptedModel_circuitSat_or_relation_of_feed_eq
     {shape : Shape}
     (urs : URS VestaG) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp VestaG)
@@ -222,19 +222,19 @@ theorem vestaTerminal_circuitSat_or_relation_of_feed_eq
         exact h)
   exact result
 
-assert_no_sorry vestaTerminal_circuitSat_or_relation_of_feed_eq
+assert_no_sorry acceptedModel_circuitSat_or_relation_of_feed_eq
 
 set_option maxRecDepth 1000000 in
 /--
 The canonical Vesta terminal with its advice and instance selections derived
 directly from the accepted query route.
 
-Unlike `vestaTerminal_circuitSat_or_relation_of_feed_eq`, callers do not choose
+Unlike `acceptedModel_circuitSat_or_relation_of_feed_eq`, callers do not choose
 member slots or prove feed equalities. The construction selects the appropriate
 member separately for every proof and query index, so this theorem applies to
 arbitrary `shape.numProofs`.
 -/
-theorem vestaTerminal_circuitSat_or_relation_of_acceptedSelections
+theorem acceptedModel_circuitSat_or_relation_of_acceptedSelections
     {shape : Shape}
     (urs : URS VestaG) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp VestaG)
@@ -408,7 +408,7 @@ theorem vestaTerminal_circuitSat_or_relation_of_acceptedSelections
         model.instanceCols := by
     simpa only [memberDecode, vestaExtractedMemberDecode] using hInstance
   have result :=
-    vestaTerminal_circuitSat_or_relation_of_feed_eq
+    acceptedModel_circuitSat_or_relation_of_feed_eq
       urs hk vk instanceCommitment ps ch pU pW hpoly
       pbatch hξcur hlen hprob1 haccepts memberDecode hblinding
       adviceSet hadviceSet adviceMem instanceSet hinstanceSet instanceMem
@@ -416,6 +416,6 @@ theorem vestaTerminal_circuitSat_or_relation_of_acceptedSelections
       hAdviceTerminal hInstanceTerminal hxgood
   simpa only [memberDecode] using result
 
-assert_no_sorry vestaTerminal_circuitSat_or_relation_of_acceptedSelections
+assert_no_sorry acceptedModel_circuitSat_or_relation_of_acceptedSelections
 
 end Zcash.Snark

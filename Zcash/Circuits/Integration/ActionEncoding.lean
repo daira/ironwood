@@ -210,7 +210,7 @@ There is no free proposition `S` and no `hencodes` premise. This direct lemma ke
 selector/fixed inputs explicit; the binding-aware wrapper below derives both from
 `TopLevelFixedCoherence`.
 -/
-theorem actionBundleStatement_of_canonicalRelation
+theorem action_bundleStatement_of_canonicalMemberConstraintRelation
     (pp : Keygen.ProofParams) (urs : URS G)
     (hk :
       (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
@@ -269,7 +269,7 @@ theorem actionBundleStatement_of_canonicalRelation
               Specs.Sinsemilla.orchardGenerators {}).1.primary.index) =
         instanceRowPolynomial
           (2 ^ orchardActionTopLevelCircuit.domainExponent)
-          (Zcash.Snark.omegaOf
+          (Zcash.Arithmetic.omegaOf
             orchardActionTopLevelCircuit.domainExponent)
           (inputs proofIndex).rows)
     (gateCoherence :
@@ -343,7 +343,7 @@ theorem actionBundleStatement_of_canonicalRelation
           (orchardActionTopLevelCircuit.toVerifierKey pp urs).n = 1 := by
       intro row
       change
-        (Zcash.Snark.omegaOf
+        (Zcash.Arithmetic.omegaOf
           orchardActionTopLevelCircuit.domainExponent ^ row) ^
             (2 ^ orchardActionTopLevelCircuit.domainExponent) = 1
       rw [← pow_mul, Nat.mul_comm, pow_mul, hroot, one_pow]
@@ -388,7 +388,7 @@ Fixed-column provenance supplies both selector activations and the fixed/table
 operation family. A mismatch is returned as the augmented nontrivial-relation event
 already used by the deployed extraction stack.
 -/
-theorem actionBundleStatement_or_relation_of_canonicalRelation
+theorem action_bundleStatement_or_relation_of_canonicalMemberConstraintRelation
     (pp : Keygen.ProofParams) (urs : URS G)
     (hk :
       (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
@@ -482,7 +482,7 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
     change Function.Injective
       (fun i : Fin
           (2 ^ orchardActionTopLevelCircuit.domainExponent) =>
-        Zcash.Snark.omegaOf
+        Zcash.Arithmetic.omegaOf
           orchardActionTopLevelCircuit.domainExponent ^ (i : ℕ))
     exact TopLevelAssignment.domainRowsInjective hbound
   have hdomainSize :
@@ -502,7 +502,7 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
       (orchardActionTopLevelCircuit.toVerifierKey pp urs).omega ^
         (orchardActionTopLevelCircuit.toVerifierKey pp urs).n = 1 := by
     change
-      Zcash.Snark.omegaOf
+      Zcash.Arithmetic.omegaOf
           orchardActionTopLevelCircuit.domainExponent ^
         (2 ^ orchardActionTopLevelCircuit.domainExponent) = 1
     exact TopLevelAssignment.domainRoot hbound
@@ -525,7 +525,7 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
                 Specs.Sinsemilla.orchardGenerators {}).1.primary.index) =
           instanceRowPolynomial
             (2 ^ orchardActionTopLevelCircuit.domainExponent)
-            (Zcash.Snark.omegaOf
+            (Zcash.Arithmetic.omegaOf
               orchardActionTopLevelCircuit.domainExponent)
             (inputs proofIndex).rows := by
       intro proofIndex
@@ -553,11 +553,11 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
             (Circuit.configure
               Specs.Sinsemilla.orchardGenerators {}).1.primary.index) =
         instanceRowPolynomial (2 ^ urs.k)
-          (Zcash.Snark.omegaOf
+          (Zcash.Arithmetic.omegaOf
             orchardActionTopLevelCircuit.domainExponent)
           (inputs proofIndex).rows at hrows
       simpa only [hk'] using hrows
-    apply actionBundleStatement_of_canonicalRelation
+    apply action_bundleStatement_of_canonicalMemberConstraintRelation
       pp urs hk instanceCommitment ps ch
       (orchardActionTopLevelCircuit.toVerifierKey pp urs) rfl pU pW a
       batchOpenings memberDecode hbound hblinding hpoly relation hgoodY

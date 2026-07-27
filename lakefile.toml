@@ -1,7 +1,7 @@
 name = "Zcash"
 version = "0.1.0"
 keywords = ["cryptography", "math", "protocols"]
-defaultTargets = ["Zcash", "FixtureCheck", "CircuitCheck", "ZcashKeygen", "Arithmetic"]
+defaultTargets = ["Zcash", "FixtureCheck", "CircuitCheck"]
 
 [leanOptions]
 pp.unicode.fun = true # pretty-prints `fun a ↦ b`
@@ -36,9 +36,13 @@ name = "Zcash"
 # `lake build` (the default targets -- what CI runs) compiles them, so the empirical checks are
 # exercised alongside the parametric verifier obligations in `Zcash`. New modules under `Fixtures/`
 # are picked up by the glob automatically.
+#
+# The deployed Action/Vesta capstone entry extends the same instance-level lane beyond the
+# `Fixtures/` directory. Through its imports it pulls in the verifying-key COMMITMENT certificate
+# chain `Keygen/Certificate`.
 [[lean_lib]]
 name = "FixtureCheck"
-globs = ["Zcash.Snark.Fixtures.+"]
+globs = ["Zcash.Snark.Fixtures.+", "Zcash.Snark.Soundness.Deployed.ActionVesta"]
 
 # The circuit-side VK-match and layout tests: fixture comparisons (`#guard`/`#eval`) of the
 # projected constraint system and reconstructed keygen layout against the in-repo Rust dumps.
@@ -47,37 +51,6 @@ globs = ["Zcash.Snark.Fixtures.+"]
 [[lean_lib]]
 name = "CircuitCheck"
 globs = ["Zcash.Circuits.Tests.+"]
-
-# The Action verifying-key COMMITMENT derivation (`Zcash/Snark/Keygen/`): derives
-# `fixedCommitment`/`permutationCommonCommitment` from the circuit + captured URS
-# (scalar inverse-DFT commitments over the proven Montgomery lane, dense fixed columns,
-# keygen permutation polynomials) and assembles the fully-derived `derivedActionVk`.
-# `Derivation` contains the reusable data and key; `Certificate` contains the native
-# commitment equality. The deployed Action/Vesta corollary also lives in this
-# fixture-backed lane; the generic, circuit-derived-key capstone is in `Zcash`.
-# In `defaultTargets` since the certificate dropped to ~45 s
-# (it once took hours, which is why this lane used to be quarantined behind a
-# separate CI workflow).
-#
-# The fast arithmetic this lane runs on lives in the `Arithmetic` library below.
-[[lean_lib]]
-name = "ZcashKeygen"
-globs = [
-  "Zcash.Snark.Keygen.+",
-  "Zcash.Snark.Soundness.Deployed.ActionVk",
-  "Zcash.Snark.Soundness.Deployed.ActionVesta",
-]
-
-# The fast Pasta arithmetic: `Zcash/Arithmetic/` (ironwood-permanent, mathlib-side) and the
-# remaining temporary vendoring `Zcash/Vendor/CompPoly/` (the scalar FFT definitions), whose
-# README states its deletion criteria. These trees are not reachable from the `Zcash` library;
-# only the keygen certificate lane pulls them in. Giving them a target of their own means they
-# stay compiled and warning-checked on their own terms rather than incidentally, and it keeps
-# `lake build Arithmetic` a cheap check of the kernels alone. In `defaultTargets`
-# so plain `lake build` -- what CI runs -- keeps every module honest.
-[[lean_lib]]
-name = "Arithmetic"
-globs = ["Zcash.Arithmetic.+", "Zcash.Vendor.CompPoly.+"]
 
 # The ONLY library in this repo with `precompileModules`. It is a core-only leaf: its modules
 # import nothing beyond Lean core, so native compilation covers a couple of files rather than a
@@ -101,7 +74,4 @@ globs = ["Zcash.Arithmetic.+", "Zcash.Vendor.CompPoly.+"]
 [[lean_lib]]
 name = "Zcash.FastFieldNative"
 precompileModules = true
-globs = [
-  "Zcash.FastFieldNative",
-  "Zcash.Vendor.CompPoly.ScalarFftDefs",
-]
+globs = ["Zcash.FastFieldNative", "Zcash.Vendor.CompPoly.ScalarFftDefs"]

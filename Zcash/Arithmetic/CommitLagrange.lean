@@ -1,29 +1,38 @@
 import CompElliptic.Curves.Pasta.Fast.ProjectiveMontEquiv
 
 /-!
-# Native-lane adapters: the eight-limb Montgomery kernel behind the keygen spellings
+# The fast Lagrange commitment
 
+`commit_lagrange` — a Pedersen vector commitment against a fixed basis, plus a blind — is the
+operation the verifying-key derivation runs 44 times over 2048-term columns, and it dominates
+that computation. This module gives the fast evaluation path for it (`commitLagrangeMontWith`)
+together with the PROVEN equality to the naive spec (`commitLagrangeMontWith_eq`), so a caller
+gets the speed without the statement ever mentioning the fast route.
+
+The speed comes from running the MSM over the **proven eight-limb Montgomery field**:
 `CompElliptic.Curves.Pasta.Fast.ProjectiveMontDefs` is the core-only twin of the group kernels
-(RCB addition, double-and-add, scatter Pippenger) over the **proven eight-limb Montgomery
-field**, compiled to native code through the `FastFieldNative` `precompileModules` leaf.
-This module (mathlib-side, NOT in that leaf's glob) provides the `ZMod`-typed entry points
-the certificate evaluates — coordinates into Montgomery form, kernel, affine reading back —
-and the PROVEN equalities to the statement-surface functions, chaining the kernel's
-simulation theorem `msmM_spec` into the existing `_eq` ladder.
+(RCB addition, double-and-add, scatter Pippenger) there, compiled to native code through the
+`FastFieldNative` `precompileModules` leaf. This module is mathlib-side and deliberately NOT in
+that leaf's glob: it holds the `ZMod`-typed entry points — coordinates into Montgomery form,
+kernel, affine reading back — and chains the kernel's simulation theorem `msmM_spec` into the
+`_eq` ladder that lands on `Msm.commitLagrangeSpec`.
+
+`ofPVesM` must never be compared definitionally: unfolding it exposes the CIOS rounds, so the
+equalities below are stated and proved by rewriting only.
 -/
 
-namespace Zcash.Snark.Keygen.Fast
+namespace Zcash.Arithmetic
 
-open Zcash.Snark
 open CompElliptic.Curves.Pasta.Fast
 open CompElliptic.Curves.Pasta.Fast.ProjectiveMont
 open CompElliptic.Curves.Pasta.Fast.ProjectiveMont (PM)
 open Montgomery.Native64x8
 open CompElliptic.Curves.Pasta.Fast.Projective
 open CompElliptic.Curves.Pasta.Fast.Projective.PVes
--- The vendored `Msm` imported ironwood's `Zcash.Snark.Core.Field`, so `Fp` used to arrive here
--- through `open Zcash.Snark`. Upstream's `Msm` is standalone and carries its own (reducibly
--- equal) `Fp := CompElliptic.Fields.Pasta.VestaScalarField`.
+-- The vendored `Msm` imported ironwood's scalar field, so `Fp` used to arrive here through the
+-- enclosing namespace. Upstream's `Msm` is standalone and carries its own (reducibly equal)
+-- `Fp := CompElliptic.Fields.Pasta.VestaScalarField`, which this module takes instead of
+-- importing `Zcash.Arithmetic.Field`.
 open CompElliptic.Curves.Pasta.Fast.Msm (Fp)
 
 local instance : Inhabited G := ⟨0⟩
@@ -101,4 +110,4 @@ theorem commitLagrangeMontWith_eq (c : ℕ) (hc : 0 < c)
   rw [hterms, Msm.zip_terms_eq, Msm.pippenger_eq_msm c hc, List.map_map]
   rfl
 
-end Zcash.Snark.Keygen.Fast
+end Zcash.Arithmetic

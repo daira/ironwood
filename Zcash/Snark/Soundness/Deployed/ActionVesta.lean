@@ -29,6 +29,8 @@ open ActionInstanceCommitment
 
 set_option maxHeartbeats 20000
 
+namespace Deployed
+
 set_option maxRecDepth 1000000 in
 private theorem actionCapturedQueryCounts_transport
     (s : Shape)
@@ -71,7 +73,7 @@ the resulting exact feed equalities replace the terminal's independently
 selected feeds. The result is canonical Action-model circuit satisfaction or
 the standard discrete-log-relation alternative.
 -/
-theorem actionAcceptedCircuitSat_or_relation_of_vestaTerminalDerived
+theorem acceptedModel_circuitSat_or_relation_of_deployedAccepts
     (inputs : Fin Fixture.shape.numProofs → PublicInputs Fp)
     (ps : ProofString Fixture.shape Fp Fixture.G)
     (ch : Challenges Fixture.shape.k Fp)
@@ -177,17 +179,17 @@ theorem actionAcceptedCircuitSat_or_relation_of_vestaTerminalDerived
       HasNontrivialRelation (F := Fp)
         capturedURS.g capturedURS.u capturedURS.w := by
   exact
-    vestaTerminal_circuitSat_or_relation_of_acceptedSelections
+    acceptedModel_circuitSat_or_relation_of_acceptedSelections
       capturedURS shape_k_eq_capturedURS_k Fixture.vk
       (deployedInstanceCommitment Fixture.shape inputs) ps ch pU pW hpoly
       pbatch hξcur hlen hprob1 haccepts vk_blindingFactors_lt
       actionCapturedAdviceQueryCount actionCapturedInstanceQueryCount
       i m hm colPoly hbindAll hquot hroute hevals claimed hxgood
 
-assert_no_sorry actionAcceptedCircuitSat_or_relation_of_vestaTerminalDerived
+assert_no_sorry acceptedModel_circuitSat_or_relation_of_deployedAccepts
 
 set_option maxRecDepth 1000000 in
-private theorem actionBundleStatement_or_relation_of_vestaCircuitSat_or_relation
+private theorem action_bundleStatement_or_relation_of_acceptedModel_circuitSat_or_relation
     (inputs : Fin Fixture.shape.numProofs → PublicInputs Fp)
     (ps : ProofString Fixture.shape Fp Fixture.G)
     (ch : Challenges Fixture.shape.k Fp)
@@ -284,7 +286,7 @@ private theorem actionBundleStatement_or_relation_of_vestaCircuitSat_or_relation
         capturedURS.g capturedURS.u capturedURS.w := by
   rcases hterminal with hsatisfied | hrelation
   · exact
-      actionBundleStatement_or_relation_of_acceptedCircuitSat_deployed
+      action_bundleStatement_or_relation_of_acceptedModel_circuitSat_deployed
         inputs ps ch pU pW a₀ pbatch
         (vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
           Fixture.vk (deployedInstanceCommitment Fixture.shape inputs) ps ch
@@ -303,7 +305,7 @@ proposition `S`, no encoding callback, and no freely chosen member decoder.
 Deployed acceptance determines the decoder and canonical constraint model;
 the accepted route determines the advice and instance member selections.
 -/
-theorem actionBundleStatement_or_relation_of_vestaTerminalDerived
+theorem action_bundleStatement_or_relation_of_deployedAccepts
     (inputs : Fin Fixture.shape.numProofs → PublicInputs Fp)
     (ps : ProofString Fixture.shape Fp Fixture.G)
     (ch : Challenges Fixture.shape.k Fp)
@@ -453,14 +455,16 @@ theorem actionBundleStatement_or_relation_of_vestaTerminalDerived
       HasNontrivialRelation (F := Fp)
         capturedURS.g capturedURS.u capturedURS.w := by
   have hterminal :=
-    actionAcceptedCircuitSat_or_relation_of_vestaTerminalDerived
+    acceptedModel_circuitSat_or_relation_of_deployedAccepts
       inputs ps ch pU pW hpoly pbatch hξcur hlen hprob1 haccepts
       i m hm colPoly hbindAll hquot hroute hevals claimed hxgood
   exact
-    actionBundleStatement_or_relation_of_vestaCircuitSat_or_relation
+    action_bundleStatement_or_relation_of_acceptedModel_circuitSat_or_relation
       inputs ps ch pU pW hpoly pbatch hlen hprob1 haccepts hterminal
       hgoodY permGamma permBeta lookupGamma lookupBeta lookupTheta
 
-assert_no_sorry actionBundleStatement_or_relation_of_vestaTerminalDerived
+assert_no_sorry action_bundleStatement_or_relation_of_deployedAccepts
+
+end Deployed
 
 end Zcash.Snark

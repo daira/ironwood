@@ -16,6 +16,8 @@ size equality is discharged by the generic size-transport theorem in
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (derivedUrsGLagrange omegaOf)
+
 open Halo2 Polynomial
 open Keygen
 open ActionPermutationDomain

@@ -1,5 +1,5 @@
 import Zcash.Circuits.Action.Statement
-import Zcash.Snark.Core.Domain
+import Zcash.Arithmetic.Domain
 import Zcash.Circuits.Integration.TopLevelCorrectness
 
 /-!
@@ -35,10 +35,10 @@ theorem actionPublicInputs_of_instanceRowPolynomial
     (hpoly : assignment.polynomial
         (.instanceCol proofIndex cfg.primary.index) =
       instanceRowPolynomial (2 ^ top.domainExponent)
-        (Zcash.Snark.omegaOf top.domainExponent) inputs.rows)
+        (Zcash.Arithmetic.omegaOf top.domainExponent) inputs.rows)
     (hrows : Function.Injective
       fun i : Fin (2 ^ top.domainExponent) =>
-        Zcash.Snark.omegaOf top.domainExponent ^ (i : ℕ)) :
+        Zcash.Arithmetic.omegaOf top.domainExponent ^ (i : ℕ)) :
     PublicInputs.ofEnvironment cfg
       assignment.environment = inputs := by
   have hread (row : Fin 10) :
@@ -62,7 +62,7 @@ theorem actionPublicInputs_of_instanceRowPolynomial
 Present the generic top-level bundle statement as the public Orchard Action
 statement once the accepted primary-instance polynomial has been identified.
 -/
-theorem actionBundleStatement_of_topLevelBundle
+theorem action_bundleStatement_of_topLevelBundleStatement
     (pp : Keygen.ProofParams)
     (poly : CommitmentId → Polynomial Fp)
     (inputs :
@@ -79,7 +79,7 @@ theorem actionBundleStatement_of_topLevelBundle
               Specs.Sinsemilla.orchardGenerators {}).1.primary.index) =
         instanceRowPolynomial
           (2 ^ orchardActionTopLevelCircuit.domainExponent)
-          (Zcash.Snark.omegaOf
+          (Zcash.Arithmetic.omegaOf
             orchardActionTopLevelCircuit.domainExponent)
           (inputs proofIndex).rows)
     (htop :
@@ -116,6 +116,6 @@ theorem actionBundleStatement_of_topLevelBundle
         assignment.environment) at hstatement
   rwa [hpublic] at hstatement
 
-assert_no_sorry actionBundleStatement_of_topLevelBundle
+assert_no_sorry action_bundleStatement_of_topLevelBundleStatement
 
 end Zcash.Snark
