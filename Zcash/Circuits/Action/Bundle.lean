@@ -1966,7 +1966,133 @@ def ProverAssumptionsPost (G : Generators) (B : Bases)
   ProverAssumptions G B () wit hint ∧
   (wit.disableCrossAddress = 0 ∨ (wit.gdOld = wit.gdNew ∧ wit.pkdOld = wit.pkdNew))
 
-theorem soundnessPost (G : Generators) (B : Bases) (cfg : Config) :
+/--
+The residual Action environment contract: layout and configuration facts that
+neither constraint satisfaction nor honest witness extension establishes.
+-/
+def TopLevelEnvAssumptions (cfg : Config)
+    (env : Placed Environment Fp) : Prop :=
+  2 ^ Specs.K ≤ env.env.usableRows ∧
+  cfg.sinsemilla2.generatorTable = cfg.sinsemilla1.generatorTable ∧
+  cfg.merkle1.sinsemilla.generatorTable = cfg.sinsemilla1.generatorTable ∧
+  cfg.merkle2.sinsemilla.generatorTable = cfg.sinsemilla1.generatorTable ∧
+  cfg.lookupConfig.tableIdx = cfg.sinsemilla1.generatorTable.tableIdx ∧
+  Ecc.MulFixed.FullWidth.EnvAssumptions cfg.eccConfig.mulFixedFull env ∧
+  Ecc.MulFixed.Short.EnvAssumptions cfg.eccConfig.mulFixedShort env ∧
+  Ecc.MulFixed.BaseFieldElem.InnerEnvAssumptions
+    cfg.eccConfig.mulFixedBaseField env ∧
+  cfg.eccConfig.mulFixedBaseField.lookupConfig = cfg.lookupConfig ∧
+  cfg.eccConfig.mul.overflowConfig.lookupConfig = cfg.lookupConfig ∧
+  cfg.lookupConfig.qLookup.index ≠ cfg.lookupConfig.qRunning.index
+
+private theorem constraints_initialGeneratorLoad
+    (G : Generators) (B : Bases) (cfg : Config)
+    (i : RegionIndex) (env : Placed Environment Fp)
+    (h : Constraints env.place env.env
+      ((mainPost G B cfg ()).operations i) i) :
+    Constraints env.place env.env
+      ((Sinsemilla.load G cfg.sinsemilla1.generatorTable).operations i) i := by
+  simp only [mainPost, Circuit.operations_bind, Circuit.operations_pure,
+    List.append_nil] at h
+  rw [constraints_append] at h
+  have hbase := h.1
+  rw [FormalCircuit.call_operations] at hbase
+  simp only [baseCircuit, main, CircuitPreIronwood.synthesize, synthesizeBase,
+    Circuit.operations_bind, Circuit.operations_pure] at hbase
+  rw [constraints_append] at hbase
+  have hwitness := hbase.1
+  simp only [synthWitness, Circuit.operations_bind, Circuit.operations_pure,
+    List.append_nil] at hwitness
+  rw [constraints_append] at hwitness
+  exact hwitness.1
+
+private theorem extendsWitnesses_initialGeneratorLoad
+    (G : Generators) (B : Bases) (cfg : Config)
+    (i : RegionIndex) (env : Placed ProverEnvironment Fp)
+    (h : ExtendsWitnesses env.place env.env
+      ((mainPost G B cfg ()).operations i) i) :
+    ExtendsWitnesses env.place env.env
+      ((Sinsemilla.load G cfg.sinsemilla1.generatorTable).operations i) i := by
+  simp only [mainPost, Circuit.operations_bind, Circuit.operations_pure,
+    List.append_nil] at h
+  rw [extendsWitnesses_append] at h
+  have hbase := h.1
+  rw [FormalCircuit.call_operations] at hbase
+  simp only [baseCircuit, main, CircuitPreIronwood.synthesize, synthesizeBase,
+    Circuit.operations_bind, Circuit.operations_pure] at hbase
+  rw [extendsWitnesses_append] at hbase
+  have hwitness := hbase.1
+  simp only [synthWitness, Circuit.operations_bind, Circuit.operations_pure,
+    List.append_nil] at hwitness
+  rw [extendsWitnesses_append] at hwitness
+  exact hwitness.1
+
+private theorem constraints_generatorLoad_of_extendsWitnesses
+    (G : Generators) (cfg : Sinsemilla.GeneratorTableConfig)
+    (i : RegionIndex) (env : Placed ProverEnvironment Fp)
+    (h : ExtendsWitnesses env.place env.env
+      ((Sinsemilla.load G cfg).operations i) i) :
+    Constraints env.place env.toEnvironment.env
+      ((Sinsemilla.load G cfg).operations i) i := by
+  simp only [Sinsemilla.load, circuit_norm] at h ⊢
+  exact h
+
+private theorem generatorTableExact_of_constraints
+    (G : Generators) (cfg : Sinsemilla.GeneratorTableConfig)
+    (i : RegionIndex) (env : Placed Environment Fp)
+    (h : Constraints env.place env.env
+      ((Sinsemilla.load G cfg).operations i) i) :
+    GeneratorTableExact G cfg env.env := by
+  simp only [GeneratorTableExact, Sinsemilla.load, circuit_norm] at h ⊢
+  exact h
+
+private theorem rangeLoad_constraints_of_generatorLoad
+    (G : Generators) (gcfg : Sinsemilla.GeneratorTableConfig)
+    (lcfg : LookupRangeCheck.Config 10)
+    (htable : lcfg.tableIdx = gcfg.tableIdx)
+    (i : RegionIndex) (env : Placed Environment Fp)
+    (h : Constraints env.place env.env
+      ((Sinsemilla.load G gcfg).operations i) i) :
+    Constraints env.place env.env
+      ((LookupRangeCheck.load 10 lcfg).operations i) i := by
+  simp only [Sinsemilla.load, LookupRangeCheck.load, circuit_norm] at h ⊢
+  rw [htable]
+  exact ⟨h.1, h.2.1⟩
+
+private theorem environmentAssumptions_of_constraints
+    (G : Generators) (cfg : Config)
+    (i : RegionIndex) (env : Placed Environment Fp)
+    (hremainder : TopLevelEnvAssumptions cfg env)
+    (hload : Constraints env.place env.env
+      ((Sinsemilla.load G cfg.sinsemilla1.generatorTable).operations i) i) :
+    EnvAssumptions G cfg env := by
+  have hload' : Constraints env.place env.env
+      ((Sinsemilla.load G cfg.sinsemilla1.generatorTable).operations i) i := hload
+  have hexact :=
+    generatorTableExact_of_constraints G cfg.sinsemilla1.generatorTable i env hload'
+  have hgenerator := Sinsemilla.load_generatorTableLoaded G
+    cfg.sinsemilla1.generatorTable env.place env.env i hremainder.1 hload'
+  obtain ⟨hUsable, hs2, hm1, hm2, hlookup, hfull, hshort,
+    hbaseField, hbaseLookup, hmulLookup, hdistinct⟩ := hremainder
+  have hrangeConstraints := rangeLoad_constraints_of_generatorLoad G
+    cfg.sinsemilla1.generatorTable cfg.lookupConfig hlookup i env hload'
+  have hrange := LookupRangeCheck.load_tableLoaded 10 cfg.lookupConfig
+    env.place env.env i (by norm_num) hUsable hrangeConstraints
+  simp only [EnvAssumptions]
+  refine ⟨hexact, hgenerator, ?_, ?_, ?_, hfull, hshort, ?_, ?_, hrange,
+    hdistinct⟩
+  · simpa only [hs2] using hgenerator
+  · simpa only [hm1] using hgenerator
+  · simpa only [hm2] using hgenerator
+  · simp only [Ecc.MulFixed.BaseFieldElem.EnvAssumptions]
+    rw [hbaseLookup]
+    exact ⟨hbaseField, hrange, hdistinct⟩
+  · simp only [Ecc.Mul.EnvAssumptions, Ecc.MulOverflow.EnvAssumptions]
+    rw [hmulLookup]
+    exact ⟨hrange, hdistinct⟩
+
+private theorem soundnessPost_with_environment
+    (G : Generators) (B : Bases) (cfg : Config) :
     FormalCircuit.Soundness (Witness := fun _ => ActionData)
       (mainPost G B cfg) (extractPost cfg) (EnvAssumptions G cfg) (fun _ => True)
       (SpecPost G B) := by
@@ -2040,7 +2166,8 @@ theorem soundnessPost (G : Generators) (B : Bases) (cfg : Config) :
     rw [hpx, hpy]
     rfl
 
-theorem completenessPost (G : Generators) (B : Bases) (cfg : Config) :
+private theorem completenessPost_with_environment
+    (G : Generators) (B : Bases) (cfg : Config) :
     FormalCircuit.Completeness (Witness := fun _ => ActionData)
       (mainPost G B cfg) (extractPost cfg) (EnvAssumptions G cfg) (fun _ => True)
       (ProverAssumptionsPost G B) (fun _ _ _ _ => True) := by
@@ -2174,6 +2301,46 @@ theorem completenessPost (G : Generators) (B : Bases) (cfg : Config) :
       · rw [w7, w1]
         ring
 
+/--
+Action soundness derives every table-content fact from the circuit constraints;
+only the residual layout/configuration contract is assumed.
+-/
+theorem soundnessPost (G : Generators) (B : Bases) (cfg : Config) :
+    FormalCircuit.Soundness (Witness := fun _ => ActionData)
+      (mainPost G B cfg) (extractPost cfg)
+      (TopLevelEnvAssumptions cfg) (fun _ => True)
+      (SpecPost G B) := by
+  intro i env input hremainder hassumptions hconstraints
+  apply soundnessPost_with_environment G B cfg i env input
+  · exact environmentAssumptions_of_constraints G cfg i env hremainder
+      (constraints_initialGeneratorLoad
+        G B cfg i env hconstraints)
+  · exact hassumptions
+  · exact hconstraints
+
+/--
+Action completeness derives the same table-content facts from honest witness
+extension; only the shared residual contract is assumed.
+-/
+theorem completenessPost (G : Generators) (B : Bases) (cfg : Config) :
+    FormalCircuit.Completeness (Witness := fun _ => ActionData)
+      (mainPost G B cfg) (extractPost cfg)
+      (TopLevelEnvAssumptions cfg) (fun _ => True)
+      (ProverAssumptionsPost G B) (fun _ _ _ _ => True) := by
+  intro i env input hwitnesses hremainder hassumptions hprover
+  apply completenessPost_with_environment G B cfg i env input
+  · exact hwitnesses
+  · have hloadWitnesses :=
+      extendsWitnesses_initialGeneratorLoad
+        G B cfg i env hwitnesses
+    have hload :=
+      constraints_generatorLoad_of_extendsWitnesses
+        G cfg.sinsemilla1.generatorTable i env hloadWitnesses
+    exact environmentAssumptions_of_constraints
+      G cfg i env.toEnvironment hremainder hload
+  · exact hassumptions
+  · exact hprover
+
 /-- Rust `impl Circuit for Circuit` on the ironwood branch (post-NU 6.3) as a
 proof-carrying bundle: the e2e Orchard Action statement (§4.17.4 + cross-address
 binding, breaks-as-data) over the extracted primary-instance rows and witness data. -/
@@ -2185,7 +2352,7 @@ def circuit (G : Generators) (B : Bases) :
   elaborated := fun cfg => elaboratedPost G B cfg
   Witness := fun _ => ActionData
   extract := extractPost
-  EnvAssumptions := EnvAssumptions G
+  EnvAssumptions := TopLevelEnvAssumptions
   Assumptions := fun _ => True
   Spec := SpecPost G B
   ProverAssumptions := ProverAssumptionsPost G B
