@@ -72,6 +72,25 @@ axiom: CompElliptic's curve point-count, a closed computational fact discharged 
 soundness (Pallas). The `+native` flag on the corresponding build-time checks records
 exactly which endpoints carry it.
 
+**`@[csimp]` replacement lemmas** get their own `assert_axioms` entries in
+`Zcash/TrustBoundary.lean`, enforced by `scripts/check_csimp_census.sh` in CI: the compiler
+applies a csimp substitution in all downstream compiled code, but the axioms of the lemma's
+own proof are not propagated into downstream `native_decide` axiom tracking (
+[lean4#7463](https://github.com/leanprover/lean4/issues/7463)), so the check must sit on the
+lemma itself. The underlying mechanism study — what `native_decide`, the interpreter, and
+precompiled native code actually trust — is
+[`design/lean-native-trust-research.md`](https://github.com/daira/CompElliptic/blob/main/design/lean-native-trust-research.md)
+in the CompElliptic repository.
+
+**Native-executing checks are opt-in.** Executing a check through locally compiled native
+code (a `precompileModules` dylib — ours, or the CompElliptic pin's) trusts the C emitter,
+the local C toolchain, and the loader, coarse-grained and with no axiom trace. Loading a
+lane's dylib is inseparable from elaborating modules that import it, so the enforced
+invariant sits at the level of checks: no module whose import closure reaches a lane module
+may contain an evaluation-based check (`#eval`, `#guard`, `native_decide`) unless explicitly
+opted in, enforced by `scripts/check_native_optin.py` in CI. Appendix C of the research
+document linked above records the observed Lake behaviour behind this rule.
+
 **Concrete, closed facts with no free variables** may additionally use `native_decide`
 (which discharges a goal by running compiled native code, adding a compiler-trust axiom) and
 the kernel's GMP-backed bignum arithmetic. The principal such fact in this repository is the

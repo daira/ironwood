@@ -1,6 +1,7 @@
 import Zcash.Circuits.Action.RealBases
 import Zcash.Security.Ledger.Bridge
 import Zcash.Security.Ledger.SinsemillaDLR
+import Zcash.Arithmetic.FastMsm
 import Zcash.Security.KeyBinding.Instance
 import Zcash.Security.KeyBinding.Probability
 import Zcash.Security.Ledger.Balance
@@ -874,3 +875,14 @@ assert_axioms Zcash.Security.Ledger.Bridge.breakCoeffs_nontrivial
 assert_axioms Zcash.Security.Ledger.Bridge.classify_query_inr +native
 assert_axioms Zcash.Security.Ledger.Bridge.classifyRelation_isSome_iff +native
 assert_axioms Zcash.Security.Ledger.Bridge.classifyRelation_site +native
+
+/-! ## `@[csimp]` replacement lemmas
+
+Every `@[csimp]` lemma gets an axiom check here. The compiler applies the
+substitution in all downstream compiled code, but the axioms of the lemma's own
+proof are not propagated into downstream `native_decide` axiom tracking (
+[lean4#7463](https://github.com/leanprover/lean4/issues/7463)), so a csimp lemma
+whose proof smuggled `sorryAx` or a project axiom would be invisible to every
+consumer's census entry. Checking the lemma itself closes that hole. -/
+
+assert_axioms Zcash.Arithmetic.Msm.evalNat_eq_evalNatFast
