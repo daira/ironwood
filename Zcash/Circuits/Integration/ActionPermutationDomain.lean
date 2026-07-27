@@ -285,7 +285,7 @@ theorem blindingFactors_lt (pp : Keygen.ProofParams) (urs : URS G) :
     (actionVk pp urs).blindingFactors < (actionVk pp urs).n := by
   change orchardActionTopLevelCircuit.blindingFactors <
     2 ^ orchardActionTopLevelCircuit.domainExponent
-  exact TopLevelAssignment.blindingFactors_lt_domainSize domainExponent_lt
+  exact TopLevelAssignment.blindingFactors_lt_domainSize
 
 /-- The active permutation prefix ends at the last usable Action row. -/
 abbrev activeRows (pp : Keygen.ProofParams) (urs : URS G) : ℕ :=

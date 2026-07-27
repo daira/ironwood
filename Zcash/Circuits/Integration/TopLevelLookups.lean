@@ -86,7 +86,6 @@ A fitting circuit-derived domain places every lookup activation in the usable-ro
 prefix.
 -/
 theorem EnabledLookup.activationRow_lt_usableRows
-    (gateCoherence : TopLevelGateCoherence top pp urs)
     (lookup : EnabledLookup Fp)
     (henabled :
       lookup ∈ operationEnabledLookups (top.operations) 0) :
@@ -94,7 +93,7 @@ theorem EnabledLookup.activationRow_lt_usableRows
       top.usableRowsAt top.domainExponent :=
   (lookup.activationRow_lt_usedRows henabled).trans_le
     (top.usedRows_le_usableRowsAt top.domainExponent
-      (top.fitsAt_domainExponent gateCoherence.domainExponent_lt))
+      top.fitsAt_domainExponent)
 
 /--
 Static lookup facts at the circuit-derived projection boundary.
@@ -980,7 +979,7 @@ noncomputable def deployedWitnesses
   exact coherence.deployedWitness gateCoherence ch poly proofIndex
     hblinding satisfaction hrows hroot lookup henabled
     selectorProjection
-    (lookup.activationRow_lt_usableRows gateCoherence henabled)
+    (lookup.activationRow_lt_usableRows henabled)
     (conditions.resolverGood lookup henabled)
     (conditions.thetaGood lookup henabled)
 

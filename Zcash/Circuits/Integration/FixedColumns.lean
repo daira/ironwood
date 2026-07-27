@@ -136,7 +136,7 @@ def topLevelConstantEntries
     (top : TopLevelCircuit Fp Config PublicInput) :
     List (ℕ × ℕ × ℕ) :=
   Layout.constantsFixed
-    (Keygen.constantsOf top.constraintSystem (top.operations))
+    (Keygen.constantCopyEntries top.constraintSystem (top.operations))
 
 /--
 Every fixed cell whose value is consumed by the semantic bridge: emitted table,

@@ -5,10 +5,10 @@ import Zcash.Circuits.Integration.PolynomialEnvironment
 /-!
 # Generic assignments for closed top-level circuits
 
-A decoded verifier witness supplies commitment-ID-indexed column polynomials. A
-`TopLevelCircuit` supplies the operation stream, V1 placement, blinding rows, and
-table-fit proof. This module joins those two circuit-independent views without
-accepting an arbitrary verifying key.
+A decoded verifier witness supplies commitment-ID-indexed advice and instance
+polynomials. A `TopLevelCircuit` supplies the operation stream, V1 placement, fixed
+rows, blinding rows, and table-fit proof. This module joins those two
+circuit-independent views without accepting an arbitrary verifying key.
 
 The domain exponent comes from the top-level circuit's own keygen inputs. One
 top-level circuit is reused for every proof in a bundle, and indexing the assignment
@@ -85,38 +85,48 @@ theorem domainSizeCastNeZero
 
 /-- A fitting top-level circuit has fewer blinding rows than domain rows. -/
 theorem blindingFactors_lt_domainSize
-    (hbound : top.domainExponent < 33) :
-    top.blindingFactors < 2 ^ top.domainExponent :=
+    : top.blindingFactors < 2 ^ top.domainExponent :=
   top.blindingFactors_lt_domainSize top.domainExponent
-    (top.fitsAt_domainExponent hbound)
+    top.fitsAt_domainExponent
 
 /--
 A top-level circuit with a nonempty operation footprint has a nonempty active
 prefix before its final usable row.
 -/
 theorem blindingFactors_succ_lt_domainSize
-    (hbound : top.domainExponent < 33)
     (hused : 0 < top.usedRows) :
     top.blindingFactors + 1 < 2 ^ top.domainExponent :=
   top.blindingFactors_succ_lt_domainSize top.domainExponent
-    (top.fitsAt_domainExponent hbound) hused
+    top.fitsAt_domainExponent hused
 
-/-- The row-indexed Clean environment for this bundle member. -/
+/--
+The Clean proof-varying assignment decoded from this bundle member.
+
+Fixed columns are intentionally absent: `TopLevelCircuit.environment` compiles them
+from `top.fixedRows`.
+-/
+def proofAssignment
+    (assignment : TopLevelAssignment top numProofs proofIndex) :
+    ProofAssignment Fp where
+  advice := fun column row =>
+    (assignment.polynomial
+      (.adviceCol proofIndex column.index)).eval
+        (Zcash.Arithmetic.omegaOf top.domainExponent ^ row)
+  inst := fun column row =>
+    (assignment.polynomial
+      (.instanceCol proofIndex column.index)).eval
+        (Zcash.Arithmetic.omegaOf top.domainExponent ^ row)
+
+/-- The circuit-owned semantic environment for this bundle member. -/
 def environment
     (assignment : TopLevelAssignment top numProofs proofIndex) : Environment Fp :=
-  polynomialEnvironment (Zcash.Arithmetic.omegaOf top.domainExponent)
-    (top.usableRowsAt top.domainExponent)
-    (fun column => assignment.polynomial (.fixedCol column))
-    (fun column => assignment.polynomial
-      (.adviceCol proofIndex column))
-    (fun column => assignment.polynomial
-      (.instanceCol proofIndex column))
+  top.environment assignment.proofAssignment
 
 /-- The assignment placed by the circuit's own V1 floor-plan. -/
 def placedEnvironment
     (assignment : TopLevelAssignment top numProofs proofIndex) :
     Placed Environment Fp :=
-  ⟨top.placement, assignment.environment⟩
+  top.placedEnvironment assignment.proofAssignment
 
 @[simp] theorem environment_usableRows
     (assignment : TopLevelAssignment top numProofs proofIndex) :
@@ -128,9 +138,8 @@ def placedEnvironment
     (assignment : TopLevelAssignment top numProofs proofIndex)
     (column : Column .fixed) (row : ℤ) :
     assignment.environment.fixed column row =
-      (assignment.polynomial (.fixedCol column.index)).eval
-        (Zcash.Arithmetic.omegaOf top.domainExponent ^ row) :=
-  rfl
+      top.fixedValue column row :=
+  by exact top.environment_fixed assignment.proofAssignment column row
 
 @[simp] theorem environment_advice
     (assignment : TopLevelAssignment top numProofs proofIndex)
@@ -218,18 +227,6 @@ theorem publicInputEncoding_of_rowPolynomials
       (rows cell.1.index).getD cell.2 0 by
     simpa only [cell, domainRow] using hrow]
   exact hencoded index
-
-/--
-A fitting circuit domain supplies the synthesis well-formedness premise for this
-assignment's environment.
--/
-theorem synthesisWellFormed
-    (assignment : TopLevelAssignment top numProofs proofIndex)
-    (hbound : top.domainExponent < 33) :
-    SynthesisWellFormed assignment.environment (top.operations) := by
-  apply top.synthesisWellFormed top.domainExponent assignment.environment
-  · rfl
-  · exact top.fitsAt_domainExponent hbound
 
 end TopLevelAssignment
 

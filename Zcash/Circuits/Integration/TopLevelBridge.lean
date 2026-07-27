@@ -111,17 +111,15 @@ not inspect the circuit statement and does not introduce an `hencodes` predicate
 theorem bundleTopLevelSoundness_or_bad
     (top : TopLevelCircuit Fp Config PublicInput)
     {numProofs : ℕ}
-    (environment : Fin numProofs → Placed Environment Fp)
-    (hwellFormed : ∀ proofIndex,
-      SynthesisWellFormed (environment proofIndex).env
-        top.operations)
+    (assignment : Fin numProofs → ProofAssignment Fp)
     (bridge : ∀ proofIndex,
       FullCircuitBridge
-        (environment proofIndex).place
-        (environment proofIndex).env
+        top.placement
+        (top.environment (assignment proofIndex))
         top.operations 0 cell Bad) :
     (∀ proofIndex,
-      top.Statement (top.extractPublicInput (environment proofIndex).env)) ∨ Bad := by
+      top.Statement
+        (top.extractPublicInput (top.environment (assignment proofIndex)))) ∨ Bad := by
   classical
   by_cases hbad : Bad
   · exact Or.inr hbad
@@ -129,8 +127,7 @@ theorem bundleTopLevelSoundness_or_bad
     intro proofIndex
     exact
       (FullCircuitBridge.topLevelSoundness_or_bad
-        top (environment proofIndex)
-        (hwellFormed proofIndex) (bridge proofIndex)).resolve_right hbad
+        top (assignment proofIndex) (bridge proofIndex)).resolve_right hbad
 
 end FullCircuitBridge
 

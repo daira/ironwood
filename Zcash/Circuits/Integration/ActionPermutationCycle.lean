@@ -34,7 +34,7 @@ theorem actionCopyList_decoded :
         (Halo2.FloorPlanner.V1.starts
           (orchardActionTopLevelCircuit.operations))
         (orchardActionTopLevelCircuit.operations)
-        (Keygen.constantsOf orchardActionTopLevelCircuit.constraintSystem
+        (Keygen.constantCopyEntries orchardActionTopLevelCircuit.constraintSystem
           (orchardActionTopLevelCircuit.operations)) =
       Zcash.Snark.actionCopies.map fun pair =>
         (pair.1.pair.1, pair.1.pair.2,

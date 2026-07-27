@@ -204,9 +204,7 @@ noncomputable def actionTopLevelCircuitCorrectness
               orchardActionTopLevelCircuit.placement lookup.region + lookup.row <
                 2 ^ orchardActionTopLevelCircuit.domainExponent
             exact
-              (lookup.activationRow_lt_usableRows
-                (ActionGateCoherence.topLevelGateCoherence pp urs)
-                henabled).trans_le
+              (lookup.activationRow_lt_usableRows henabled).trans_le
                 (by
                   unfold TopLevelCircuit.usableRowsAt
                   exact (Nat.sub_le _ _).trans (Nat.sub_le _ _))

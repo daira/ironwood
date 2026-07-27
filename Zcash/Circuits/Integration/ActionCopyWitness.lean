@@ -31,7 +31,7 @@ def actionDomainSize : ℕ := 2 ^ orchardActionTopLevelCircuit.domainExponent
 
 /-- The V1 constants allocation of the Action operation stream. -/
 def actionConsts : List (ℕ × ℕ × ℕ) :=
-  constantsOf orchardActionTopLevelCircuit.constraintSystem
+  constantCopyEntries orchardActionTopLevelCircuit.constraintSystem
     (orchardActionTopLevelCircuit.operations)
 
 /-- The keygen copy list of the Action operation stream. -/

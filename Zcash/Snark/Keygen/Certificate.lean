@@ -138,10 +138,7 @@ chunks; the two lookup-expression families; and the derived `Shape`
 theorem certificate :
     (lagrangeBasis.take capturedUrsGLagrange.length,
       fixedCommitmentsSeqWith commitProj
-        orchardActionTopLevelCircuit.selectorMap
-        orchardActionTopLevelCircuit.domainExponent
-        orchardActionTopLevelCircuit.constraintSystem
-        (orchardActionTopLevelCircuit.operations),
+        orchardActionTopLevelCircuit.fixedRows,
       permutationCommitmentsSeqWith commitProj
         orchardActionTopLevelCircuit.domainExponent
         orchardActionTopLevelCircuit.constraintSystem
@@ -204,6 +201,21 @@ private theorem committer_eq (l : List Fp)
   rw [commitInvDftMontWith_eq Fast.Msm.defaultWindow (by decide) invDftTwiddles
     invDftScale capturedURS (by decide) rfl rfl l (by rw [hl, domainExponent_eq])]
 
+/-- Every Clean-compiled Action fixed row spans the full evaluation domain. -/
+private theorem fixedRowLength (row : List Fp)
+    (hrow : row ∈ orchardActionTopLevelCircuit.fixedRows) :
+    row.length = 2 ^ orchardActionTopLevelCircuit.domainExponent := by
+  obtain ⟨column, hcolumn, rfl⟩ := List.mem_iff_getElem.mp hrow
+  have hcolumn' :
+      column <
+        (PinnedConstraintSystem.derive
+          orchardActionTopLevelCircuit.constraintSystem
+          orchardActionTopLevelCircuit.selectorMap).numFixedColumns := by
+    simpa only [orchardActionTopLevelCircuit.fixedRows_length] using hcolumn
+  have hlength :=
+    orchardActionTopLevelCircuit.fixedRows_getD_length column hcolumn'
+  rwa [List.getD_eq_getElem _ _ hcolumn] at hlength
+
 set_option maxRecDepth 1000000 in
 /-- The derived Lagrange URS reproduces the captured 10-generator prefix. -/
 theorem derivedUrsGLagrange_prefix_eq :
@@ -225,10 +237,12 @@ theorem derivedFixedCommitments_eq :
   have h := certificate
   simp only [Prod.mk.injEq] at h
   have hfc := h.2.1
-  rw [fixedCommitmentsSeqWith_congr _ _ _ _ committer_eq, fixedCommitmentsSeqWith_eq] at hfc
+  rw [fixedCommitmentsSeqWith_congr
+      orchardActionTopLevelCircuit.fixedRows
+      (fun row hrow => committer_eq row (fixedRowLength row hrow)),
+    fixedCommitmentsSeqWith_eq] at hfc
   simp only [fixedCommitmentsWith] at hfc
-  simp only [derivedFixedCommitments, Halo2.TopLevelCircuit.fixedCommitments,
-    Halo2.TopLevelCircuit.fixedRows]
+  simp only [derivedFixedCommitments, Halo2.TopLevelCircuit.fixedCommitments]
   exact hfc
 
 set_option maxRecDepth 1000000 in
@@ -255,7 +269,10 @@ theorem vk_eq_derived : vk = derivedActionVk shape capturedURS := by
   simp only [Prod.mk.injEq] at h
   obtain ⟨-, hfc, hpc, ⟨ho, hn, hb, hd, hc⟩, hg, ⟨hiq, haq, hfq⟩, hpch, ⟨hli, hlt⟩, -⟩ := h
   -- align the bundle's spellings with the keygen internals
-  rw [fixedCommitmentsSeqWith_congr _ _ _ _ committer_eq, fixedCommitmentsSeqWith_eq] at hfc
+  rw [fixedCommitmentsSeqWith_congr
+      orchardActionTopLevelCircuit.fixedRows
+      (fun row hrow => committer_eq row (fixedRowLength row hrow)),
+    fixedCommitmentsSeqWith_eq] at hfc
   rw [permutationCommitmentsSeqWith_congr _ _ _ committer_eq,
     permutationCommitmentsSeqWith_eq] at hpc
   simp only [actionPinned, Halo2.TopLevelCircuit.selectorMap,
