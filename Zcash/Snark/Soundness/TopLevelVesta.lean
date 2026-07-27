@@ -191,7 +191,7 @@ theorem topLevelBundleStatement_or_relation_of_deployedAccepts
     vestaExtractedMemberDecode urs hk vk instanceCommitment ps ch
       pbatch hlen hprob1 haccepts
   have hterminal :=
-    acceptedModelCircuitSat_or_relation_of_acceptedSelections
+    acceptedModel_circuitSat_or_relation_of_acceptedSelections
       urs hk vk instanceCommitment ps ch pU pW hpoly
       pbatch hξcur hlen hprob1 haccepts hblinding
       gateCoherence.adviceQueryCount gateCoherence.instanceQueryCount
