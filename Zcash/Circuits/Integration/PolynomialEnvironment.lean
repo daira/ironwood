@@ -1,5 +1,6 @@
 import Zcash.Snark.Soundness.Canonical.PolynomialEnvironment
 import Zcash.Circuits.Integration.CircuitSatisfaction
+import Clean.Halo2.TopLevel
 
 /-!
 # Canonical polynomial-to-row Clean environments
@@ -28,6 +29,34 @@ def polynomialEnvironment
     | .advice => (adviceCols column.index).eval (omega ^ row)
     | .instance => (instanceCols column.index).eval (omega ^ row)
   usableRows := usableRows
+
+/--
+Resolve only the proof-varying part of a Clean top-level environment.
+
+Fixed columns and usable rows intentionally do not appear here: the
+`TopLevelCircuit` compiler supplies them when constructing its environment.
+-/
+def resolverAssignment
+    (omega : Fp) (poly : CommitmentId → Polynomial Fp)
+    (proofIndex : ℕ) : ProofAssignment Fp where
+  advice := fun column row =>
+    (poly (.adviceCol proofIndex column.index)).eval (omega ^ row)
+  inst := fun column row =>
+    (poly (.instanceCol proofIndex column.index)).eval (omega ^ row)
+
+@[simp] theorem resolverAssignment_advice
+    (omega : Fp) (poly : CommitmentId → Polynomial Fp)
+    (proofIndex : ℕ) (column : Column .advice) (row : ℤ) :
+    (resolverAssignment omega poly proofIndex).advice column row =
+      (poly (.adviceCol proofIndex column.index)).eval (omega ^ row) :=
+  rfl
+
+@[simp] theorem resolverAssignment_instance
+    (omega : Fp) (poly : CommitmentId → Polynomial Fp)
+    (proofIndex : ℕ) (column : Column .instance) (row : ℤ) :
+    (resolverAssignment omega poly proofIndex).inst column row =
+      (poly (.instanceCol proofIndex column.index)).eval (omega ^ row) :=
+  rfl
 
 @[simp] theorem polynomialEnvironment_usableRows
     (omega : Fp) (usableRows : ℕ)

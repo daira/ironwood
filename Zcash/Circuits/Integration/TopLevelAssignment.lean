@@ -107,15 +107,10 @@ from `top.fixedRows`.
 -/
 def proofAssignment
     (assignment : TopLevelAssignment top numProofs proofIndex) :
-    ProofAssignment Fp where
-  advice := fun column row =>
-    (assignment.polynomial
-      (.adviceCol proofIndex column.index)).eval
-        (Zcash.Arithmetic.omegaOf top.domainExponent ^ row)
-  inst := fun column row =>
-    (assignment.polynomial
-      (.instanceCol proofIndex column.index)).eval
-        (Zcash.Arithmetic.omegaOf top.domainExponent ^ row)
+    ProofAssignment Fp :=
+  resolverAssignment
+    (Zcash.Arithmetic.omegaOf top.domainExponent)
+    assignment.polynomial proofIndex
 
 /-- The circuit-owned semantic environment for this bundle member. -/
 def environment
