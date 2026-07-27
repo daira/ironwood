@@ -151,6 +151,75 @@ def placedEnvironment
   rfl
 
 /--
+The assignment's instance reads agree with the public-input elements at every cell
+declared by the top-level circuit.
+-/
+def PublicInputEncoding
+    (assignment : TopLevelAssignment top numProofs proofIndex)
+    (input : PublicInput Fp) : Prop :=
+  ∀ index,
+    assignment.environment.inst
+        (top.publicInputLayout.cells top.config index).1
+        (top.publicInputLayout.cells top.config index).2 =
+      (toElements input)[index]
+
+/-- A public-input encoding determines the value extracted through the circuit's
+declared instance-cell layout. -/
+theorem extractPublicInput_eq
+    (assignment : TopLevelAssignment top numProofs proofIndex)
+    (input : PublicInput Fp)
+    (hencoding : assignment.PublicInputEncoding input) :
+    top.extractPublicInput assignment.environment = input := by
+  unfold TopLevelCircuit.extractPublicInput
+  apply top.publicInputLayout.extract_eq
+  exact hencoding
+
+/--
+Derive the public-input encoding from canonical row polynomials, for an arbitrary
+multi-column public-input layout.
+
+`rows column` is the verifier serialization of that instance column. Only columns
+actually named by the layout need a polynomial identity.
+-/
+theorem publicInputEncoding_of_rowPolynomials
+    (assignment : TopLevelAssignment top numProofs proofIndex)
+    (input : PublicInput Fp)
+    (rows : ℕ → List Fp)
+    (hfit : ∀ index,
+      (top.publicInputLayout.cells top.config index).2 <
+        2 ^ top.domainExponent)
+    (hpoly : ∀ index,
+      assignment.polynomial
+          (.instanceCol proofIndex
+            (top.publicInputLayout.cells top.config index).1.index) =
+        instanceRowPolynomial (2 ^ top.domainExponent)
+          (Zcash.Arithmetic.omegaOf top.domainExponent)
+          (rows (top.publicInputLayout.cells top.config index).1.index))
+    (hencoded : ∀ index,
+      (rows (top.publicInputLayout.cells top.config index).1.index).getD
+          (top.publicInputLayout.cells top.config index).2 0 =
+        (toElements input)[index])
+    (hinjective : Function.Injective
+      fun row : Fin (2 ^ top.domainExponent) =>
+        Zcash.Arithmetic.omegaOf top.domainExponent ^ (row : ℕ)) :
+    assignment.PublicInputEncoding input := by
+  intro index
+  let cell := top.publicInputLayout.cells top.config index
+  let domainRow : Fin (2 ^ top.domainExponent) :=
+    ⟨cell.2, hfit index⟩
+  rw [environment_instance, hpoly index]
+  have hrow := instanceRowPolynomial_eval
+    (values := rows cell.1.index) hinjective domainRow
+  rw [show
+    (instanceRowPolynomial (2 ^ top.domainExponent)
+      (Zcash.Arithmetic.omegaOf top.domainExponent)
+      (rows cell.1.index)).eval
+        (Zcash.Arithmetic.omegaOf top.domainExponent ^ (cell.2 : ℤ)) =
+      (rows cell.1.index).getD cell.2 0 by
+    simpa only [cell, domainRow] using hrow]
+  exact hencoded index
+
+/--
 A fitting circuit domain supplies the synthesis well-formedness premise for this
 assignment's environment.
 -/

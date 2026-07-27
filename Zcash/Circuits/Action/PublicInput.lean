@@ -80,6 +80,10 @@ def layout : PublicInputLayout Config PublicInputs where
     intro cfg i j h
     exact Fin.ext (congrArg Prod.snd h)
 
+@[simp] theorem layout_cells (cfg : Config) (index : Fin 10) :
+    layout.cells cfg index = (cfg.primary, (index : ℕ)) :=
+  rfl
+
 /-- Serialize the structured statement in its declared instance-cell order. -/
 def rows (inputs : PublicInputs Fp) : List Fp :=
   (toElements inputs).toList
@@ -87,6 +91,12 @@ def rows (inputs : PublicInputs Fp) : List Fp :=
 @[simp] theorem rows_length (inputs : PublicInputs Fp) :
     inputs.rows.length = 10 :=
   rfl
+
+@[simp] theorem rows_getD (inputs : PublicInputs Fp) (index : Fin 10) :
+    inputs.rows.getD index 0 = (toElements inputs)[index] := by
+  rw [List.getD_eq_getElem inputs.rows 0 (by
+    simpa only [rows, Vector.length_toList] using index.isLt)]
+  simp [rows]
 
 /-- Project the public part of the circuit's extracted semantic witness. -/
 def ofActionData (data : ActionData) : PublicInputs Fp where
@@ -101,15 +111,11 @@ def ofActionData (data : ActionData) : PublicInputs Fp where
   enableOutput := data.enableOutput
   disableCrossAddress := data.disableCrossAddress
 
-/-- Read the Action instance from the cells declared by `layout`. -/
-def ofEnvironment (cfg : Config) (env : Environment Fp) : PublicInputs Fp :=
-  layout.extract cfg env
-
 theorem ofActionData_extractPost
     (cfg : Config) (i : RegionIndex) (env : Placed Environment Fp) :
-    ofActionData (extractPost cfg () i env) = ofEnvironment cfg env.env := by
+    ofActionData (extractPost cfg () i env) = layout.extract cfg env.env := by
   apply PublicInputs.ext <;>
-    simp [ofActionData, ofEnvironment, layout, PublicInputLayout.extract,
+    simp [ofActionData, layout, PublicInputLayout.extract,
       ProvableType.fromElements] <;>
     rw [Environment.get_inst] <;>
     rfl

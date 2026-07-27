@@ -241,7 +241,7 @@ def topLevelCircuit (G : Generators) (B : Bases) :
     dsimp
     intro i env
     change combine
-      (PublicInputs.ofEnvironment (configure G {}).1 env.env)
+      (PublicInputs.layout.extract (configure G {}).1 env.env)
       (PrivateWitness.ofActionData (extractPost (configure G {}).1 () i env)) =
       extractPost (configure G {}).1 () i env
     rw [← PublicInputs.ofActionData_extractPost]
@@ -266,5 +266,14 @@ def topLevelCircuit (G : Generators) (B : Bases) :
 def orchardActionTopLevelCircuit :
     TopLevelCircuit Fp Config PublicInputs :=
   topLevelCircuit Specs.Sinsemilla.orchardGenerators orchardBases
+
+@[simp] theorem orchardActionTopLevelCircuit_publicInputLayout :
+    orchardActionTopLevelCircuit.publicInputLayout = PublicInputs.layout :=
+  rfl
+
+@[simp] theorem orchardActionTopLevelCircuit_config :
+    orchardActionTopLevelCircuit.config =
+      (configure Specs.Sinsemilla.orchardGenerators {}).1 :=
+  rfl
 
 end Zcash.Circuits.Action

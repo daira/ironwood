@@ -32,6 +32,40 @@ def TopLevelBundleStatement
             (pp.mergeDerived top).numProofs proofIndex).placedEnvironment)
     top.Statement (top.extractPublicInput environment.env)
 
+namespace TopLevelBundleStatement
+
+/--
+Present the circuit-owned bundle statement at externally supplied public inputs once
+the canonical polynomial assignments are known to encode them through the circuit's
+declared instance-cell layout.
+-/
+theorem of_publicInputEncoding
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (pp : Keygen.ProofParams)
+    (poly : CommitmentId → Polynomial Fp)
+    (inputs : Fin (pp.mergeDerived top).numProofs → PublicInput Fp)
+    (hencoding : ∀ proofIndex,
+      let assignment : TopLevelAssignment top
+          (pp.mergeDerived top).numProofs proofIndex :=
+        { polynomial := poly }
+      assignment.PublicInputEncoding (inputs proofIndex))
+    (htop : TopLevelBundleStatement top pp poly) :
+    ∀ proofIndex, top.Statement (inputs proofIndex) := by
+  intro proofIndex
+  let assignment : TopLevelAssignment top
+      (pp.mergeDerived top).numProofs proofIndex :=
+    { polynomial := poly }
+  have hstatement := htop proofIndex
+  change top.Statement
+    (top.extractPublicInput assignment.environment) at hstatement
+  rw [assignment.extractPublicInput_eq
+    (inputs proofIndex) (hencoding proofIndex)] at hstatement
+  exact hstatement
+
+end TopLevelBundleStatement
+
 /--
 The representation-boundary facts needed to interpret one canonical polynomial
 assignment as an execution of a top-level circuit.

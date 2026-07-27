@@ -1,6 +1,8 @@
 import Zcash.Circuits.Integration.ActionEncoding
 import Zcash.Circuits.Integration.ActionGateCoherence
 import Zcash.Circuits.Integration.ActionInstanceCommitmentCompute
+import Zcash.Circuits.Action.Statement
+import Zcash.Snark.Soundness.TopLevelTerminal
 import Mathlib.Util.AssertNoSorry
 
 /-!
@@ -293,94 +295,38 @@ theorem action_bundleStatement_or_relation_of_accepted_topLevelBundleStatement
               orchardActionTopLevelCircuit.domainExponent)
             (inputs proofIndex).rows at hrowPolynomial
       simpa only [← hk] using hrowPolynomial
-    apply Or.inl
-    apply action_bundleStatement_of_topLevelBundleStatement
-      pp
-      (CanonicalMemberConstraintRelation.acceptedPolynomial
-        (memberDecode := memberDecode) haccepts)
-      inputs ActionPermutationDomain.domainExponent_lt
-    · rw [ActionPermutationDomain.domainExponent_eq]
+    have hsize :
+        10 ≤ 2 ^ orchardActionTopLevelCircuit.domainExponent := by
+      rw [ActionPermutationDomain.domainExponent_eq]
       norm_num
-    · exact hinstance
-    · exact htop
+    have hencoding : ∀ proofIndex,
+        let assignment : TopLevelAssignment orchardActionTopLevelCircuit
+            (pp.mergeDerived orchardActionTopLevelCircuit).numProofs proofIndex :=
+          { polynomial :=
+              CanonicalMemberConstraintRelation.acceptedPolynomial
+                (memberDecode := memberDecode) haccepts }
+        assignment.PublicInputEncoding (inputs proofIndex) := by
+      intro proofIndex
+      apply actionPublicInputEncoding_of_instanceRowPolynomial
+      · exact hsize
+      · exact hinstance proofIndex
+      · exact TopLevelAssignment.domainRowsInjective
+          ActionPermutationDomain.domainExponent_lt
+    have hpublic :=
+      TopLevelBundleStatement.of_publicInputEncoding
+        orchardActionTopLevelCircuit pp
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts)
+        inputs hencoding htop
+    apply Or.inl
+    intro proofIndex
+    exact
+      (topLevelStatement_iff
+        Specs.Sinsemilla.orchardGenerators orchardBases
+        (inputs proofIndex)).mp (hpublic proofIndex)
 
 assert_no_sorry action_bundleStatement_or_relation_of_accepted_topLevelBundleStatement
 
-/--
-The Action endpoint with public-instance provenance closed.
-
-The instance commitment is computed from `inputs`; its compatible key, commitment
-equation, primary-query registration, Action domain bound, row capacity, and static
-gate package are all constructed here rather than supplied by the caller.
--/
-theorem action_bundleStatement_or_relation_of_canonicalMemberConstraintRelation
-    (pp : ProofParams) (urs : URS G)
-    (hk :
-      (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
-    (inputs :
-      Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs →
-        PublicInputs Fp)
-    (ps : ProofString
-      (pp.mergeDerived orchardActionTopLevelCircuit) Fp G)
-    (ch : Challenges
-      (pp.mergeDerived orchardActionTopLevelCircuit).k Fp)
-    (vk : VerifyingKey
-      (pp.mergeDerived orchardActionTopLevelCircuit) Fp G)
-    (hvk :
-      vk = orchardActionTopLevelCircuit.toVerifierKey pp urs)
-    (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
-    (batchOpenings :
-      OpenedBatchOpenings urs (evalVector urs.k ch.x3)
-        (x4BatchCommitments
-          (instanceCommitment := commitment pp urs inputs)
-          urs hk vk ps ch)
-        (x4BatchEvals
-          (instanceCommitment := commitment pp urs inputs)
-          vk ps ch)
-        a pU pW)
-    (memberDecode : ∀ i (hi : i <
-        deployedX4PairCount
-          (instanceCommitment := commitment pp urs inputs)
-          vk ps ch),
-      OpenedMemberDecode
-        (instanceCommitment := commitment pp urs inputs)
-        urs hk vk ps ch batchOpenings i hi)
-    (hblinding :
-      vk.blindingFactors < vk.n)
-    (hpoly : Polynomial Fp)
-    (relation :
-      CanonicalMemberConstraintRelation
-        urs hk vk
-        (commitment pp urs inputs) ps ch pU pW a
-        batchOpenings memberDecode hblinding ch.y hpoly vk.n)
-    (hgoodY : ∀ j,
-      ch.y ∉ szBadSet
-        (foldSplitWitness relation.model.constraints
-          vk.n j))
-    (permutationExclusions :
-      ResolverPermutationChallengeExclusions
-        (orchardActionTopLevelCircuit.toVerifierKey pp urs)
-        ch relation.polynomial actionActiveRows)
-    (lookupExclusions :
-      TopLevelLookupCoherence.TopLevelLookupChallengeExclusions
-        orchardActionTopLevelCircuit pp urs ch relation.polynomial) :
-    BundleStatement Specs.Sinsemilla.orchardGenerators orchardBases inputs ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  have hsize :
-      10 ≤ 2 ^ orchardActionTopLevelCircuit.domainExponent := by
-    rw [ActionPermutationDomain.domainExponent_eq]
-    norm_num
-  exact
-    Zcash.Snark.action_bundleStatement_or_relation_of_canonicalMemberConstraintRelation
-      pp urs hk (commitment pp urs inputs) ps ch vk hvk pU pW a
-      batchOpenings memberDecode ActionPermutationDomain.domainExponent_lt
-      hblinding hpoly relation hgoodY inputs hsize (instanceKey pp urs)
-      (commitment_primary pp urs inputs) primaryRegistered
-      (ActionGateCoherence.topLevelGateCoherence pp urs)
-      permutationExclusions
-      lookupExclusions
-
-assert_no_sorry action_bundleStatement_or_relation_of_canonicalMemberConstraintRelation
 
 /--
 The deterministic `hencodes` handoff for an accepting verifier run.
@@ -454,6 +400,7 @@ theorem action_bundleStatement_or_relation_of_acceptedModel_circuitSat
           (memberDecode := memberDecode) haccepts)) :
     BundleStatement Specs.Sinsemilla.orchardGenerators orchardBases inputs ∨
       HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  subst vk
   let relation :=
     CanonicalMemberConstraintRelation.ofAcceptedCircuitSat
       haccepts hsatisfied
@@ -462,14 +409,32 @@ theorem action_bundleStatement_or_relation_of_acceptedModel_circuitSat
         CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts := by
     rfl
-  apply action_bundleStatement_or_relation_of_canonicalMemberConstraintRelation
-    pp urs hk inputs ps ch vk hvk pU pW a batchOpenings memberDecode
-    hblinding hpoly relation
-  · simpa only [
+  have hgoodY' : ∀ j,
+      ch.y ∉ szBadSet
+        (foldSplitWitness relation.model.constraints
+          (orchardActionTopLevelCircuit.toVerifierKey pp urs).n j) := by
+    simpa only [
       CanonicalMemberConstraintRelation.model,
       hpolynomial] using hgoodY
-  · simpa only [hpolynomial] using permutationExclusions
-  · simpa only [hpolynomial] using lookupExclusions
+  have hcorrect :=
+    actionTopLevelCircuitCorrectness
+      pp urs hk (commitment pp urs inputs) ps ch pU pW a
+      batchOpenings memberDecode hpoly relation hgoodY'
+      (by simpa only [hpolynomial] using permutationExclusions)
+      (by simpa only [hpolynomial] using lookupExclusions)
+  have hn :
+      (orchardActionTopLevelCircuit.toVerifierKey pp urs).n ≠ 0 := by
+    change 2 ^ orchardActionTopLevelCircuit.domainExponent ≠ 0
+    positivity
+  have hsatisfaction :=
+    relation.constraintSatisfaction hn hgoodY'
+  have htop :=
+    topLevelBundleStatement_or_bad_of_constraintSatisfaction
+      hblinding hsatisfaction hcorrect
+  rcases htop with htop | hrelation
+  · exact action_bundleStatement_or_relation_of_accepted_topLevelBundleStatement
+      pp urs hk inputs ps ch pU pW a batchOpenings memberDecode haccepts htop
+  · exact Or.inr hrelation
 
 assert_no_sorry action_bundleStatement_or_relation_of_acceptedModel_circuitSat
 

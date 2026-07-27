@@ -197,9 +197,14 @@ with the statement-derived commitment, and
 `deployedMemberRef_eq_instanceCommitment` composes those facts for any deployed
 member slot. None of these theorems mentions Action placement or operations.
 
-`actionPublicInputs_of_instanceRowPolynomial` then performs the only Action-specific
-row mapping: the first ten reads of the configured primary column are exactly the
-structured `Action.PublicInputs`.
+`TopLevelAssignment.PublicInputEncoding` now expresses this row mapping generically
+through the cells declared by `TopLevelCircuit.publicInputLayout`.
+`publicInputEncoding_of_rowPolynomials` derives it from canonical per-column row
+polynomials, and `extractPublicInput_eq` identifies the extracted public input.
+The Action specialization supplies only the intrinsic facts that its layout is the
+primary column at rows 0–9 and that `PublicInputs.rows` is its `ProvableType`
+serialization; the former `Integration/ActionStatement.lean` side layer has been
+deleted.
 `CanonicalMemberConstraintRelation.instanceColumn_eq_rowPolynomial_or_relation`
 now performs the deployed representation step generically. It follows an assembled
 instance query through the canonical grouped-member route, identifies that member's
@@ -207,10 +212,11 @@ commitment with the verifier-supplied instance commitment, and concludes that th
 decoded polynomial is the canonical row polynomial or computes the shared nontrivial
 relation. The binding-aware Action endpoint invokes this theorem internally; it no
 longer accepts the decoded-polynomial equality as a premise.
-`ActionInstanceCommitment.action_bundleStatement_or_relation_of_canonicalMemberConstraintRelation`
+`ActionInstanceCommitment.action_bundleStatement_or_relation_of_accepted_topLevelBundleStatement`
 constructs the Lagrange key from the monomial URS, derives the commitment from the
-ten supplied rows, and discharges primary-column registration. The generic query
-compiler proves that configure-registered layouts survive
+ten supplied rows, and binds the verifier-supplied instance polynomial to the
+generic top-level statement. The generic query compiler proves that
+configure-registered layouts survive
 packed-selector insertion and the gate/lookup erasure walks, and then the generic
 layout-to-assembly lemma supplies the actual proof- and challenge-dependent query.
 The endpoint also derives evaluation-domain injectivity and size equalities from
@@ -348,17 +354,16 @@ That endpoint now has a canonical, bundle-wide type.
 from the decoded members and the deployed assembled-query route, then constructs the
 entire constraint model from the accepted VK. Fixed columns, permutation sets/chunks,
 lookups, and selector polynomials are no longer free relation parameters.
-`action_bundleStatement_of_canonicalMemberConstraintRelation` consumes this relation and concludes
-the concrete `Action.BundleStatement`, with no abstract `S` or `hencodes` premise and
-with the key locked to `orchardActionTopLevelCircuit.toVerifierKey`. It now derives
-the complete gate family internally from canonical constraint satisfaction and the
-circuit-owned gate/selector coherence package. The binding-aware endpoint additionally
-constructs the fixed and copy families; exact lookup-selector projection is the last
-deterministic family input.
-The binding-aware
-`action_bundleStatement_or_relation_of_canonicalMemberConstraintRelation` constructs
-`TopLevelFixedCoherence` from the Action circuit, its derived key, and the symbolic
-Lagrange-basis theorem, then derives the selector-activation and fixed/table families.
+`actionTopLevelCircuitCorrectness` packages the Action circuit's gate, fixed, copy,
+lookup, and query-representation laws as a generic `TopLevelCircuitCorrectness`
+record. The generic
+`topLevelBundleStatement_or_bad_of_constraintSatisfaction` theorem consumes that
+record and concludes the top-level circuit statement, with no abstract `S` or
+`hencodes` premise and with the key locked to
+`orchardActionTopLevelCircuit.toVerifierKey`. The binding-aware Action endpoint
+constructs `TopLevelFixedCoherence` from the Action circuit, its derived key, and the
+symbolic Lagrange-basis theorem, then derives the selector-activation and fixed/table
+families.
 It also constructs copy replay from the canonical permutation semantics, preserving
 the commitment-relation branch, and derives lookup satisfaction from exact
 packed-selector values and one
@@ -1120,11 +1125,12 @@ canonical relation, public-instance commitment, Action endpoint, lookup challeng
 packaging, generic full-bridge join, concrete copy replay, and fixed-row lookup
 selector realization are bundle-indexed.**
 
-A deployed proof covers `shape.numProofs` Actions. Generalize `PublicInputs`,
-`Assignment`, and `ActionStatement` to a `Fin shape.numProofs` family and decode one
-Clean assignment per sub-proof. The shared fixed columns and VK are common, while
-advice/instance columns and protocol statements are per Action. The final conclusion
-should quantify over or return the high-level statement for every supplied Action.
+A deployed proof covers `shape.numProofs` Actions. Generalize the public-input family,
+`TopLevelAssignment`, and `Action.BundleStatement` to a `Fin shape.numProofs` family
+and decode one Clean assignment per sub-proof. The shared fixed columns and VK are
+common, while advice/instance columns and protocol statements are per Action. The
+final conclusion should quantify over or return the high-level statement for every
+supplied Action.
 
 `TopLevelAssignment.Bundle top numProofs` is the dependent family
 `∀ p, TopLevelAssignment top numProofs p`, so each member is forced to resolve the
