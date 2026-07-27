@@ -47,7 +47,11 @@ def BalanceBreak.kbPair {F G IVK NK RHO PSI MHASH MENC MSG SIG KW : Type*}
   | .merkle _ => none
   | .noteCommit _ => none
 
-variable {G IVK AK NK RIVK ASK QK SK : Type*}
+-- A shared universe for the oracle-model types, so the sampling experiment can be
+-- written in `do`-notation: `PMF`'s monad instance fixes one universe for the whole
+-- block, which the independent `Type*` universes could not satisfy.
+universe u
+variable {G IVK AK NK RIVK ASK QK SK : Type u}
 variable {RHO PSI MHASH MENC MSG SIG : Type*}
 
 section OracleModel
@@ -77,7 +81,7 @@ exactly its output pair is at most `(n + 4) · (n + 3) / |RIVK|`. The event is
 contained in "the output pair breaks the sampled interface", and the composite that
 returns the pair makes no queries beyond the adversary's own, so
 `toInterface_break_measure_le` applies unchanged. -/
-theorem balanceSubset_keyBindingArm_measure_le {ι : Type*}
+theorem balanceSubset_keyBindingArm_measure_le {ι : Type u}
     (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK) (Ggen : G) (hS : S ≠ 0)
     (p : PMF ι)
     (P : Primitives RIVK G IVK NK RHO PSI MHASH MENC MSG SIG)
@@ -89,12 +93,7 @@ theorem balanceSubset_keyBindingArm_measure_le {ι : Type*}
           × (KeyBinding.Witness G IVK AK NK RIVK QK SK
             × KeyBinding.Witness G IVK AK NK RIVK QK SK))}
     {n : ℕ} (hQ : ∀ j Hask Hnk, (LA j Hask Hnk).QueryBound n) :
-    ((p.bind fun j => (PMF.uniformOfFintype (SK → ASK)).bind fun Hask =>
-        (PMF.uniformOfFintype (SK → NK)).bind fun Hnk =>
-          (PMF.uniformOfFintype (SK → RIVK)).bind fun Hleg =>
-            (PMF.uniformOfFintype (QK → AK → NK → RIVK)).bind fun Hext =>
-              (PMF.uniformOfFintype (RIVK → AK → NK → RIVK)).map fun Hint =>
-                (j, Hask, Hnk, FinalQuery.eval Hleg Hext Hint))).toOuterMeasure
+    ((kbExperiment p)).toOuterMeasure
         (setOf fun (j, Hask, Hnk, O) =>
           ∃ hval : ValidLedger P (kvAt Extract S hfn Ggen Hask Hnk O)
               issuance maxActions ((LA j Hask Hnk).run O).1,
@@ -123,7 +122,7 @@ the probability that its output ledger is valid and the Spend Authority reductio
 at some Action spending a note addressed to the victim `wV` over an unsigned
 sighash — lands in the key-binding arm with exactly its output pair is at most
 `(n + 4) · (n + 3) / |RIVK|`. -/
-theorem spendAuthority_keyBindingArm_measure_le {ι : Type*}
+theorem spendAuthority_keyBindingArm_measure_le {ι : Type u}
     (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK) (Ggen : G) (hS : S ≠ 0)
     (p : PMF ι)
     (P : Primitives RIVK G IVK NK RHO PSI MHASH MENC MSG SIG)
@@ -136,12 +135,7 @@ theorem spendAuthority_keyBindingArm_measure_le {ι : Type*}
           × (KeyBinding.Witness G IVK AK NK RIVK QK SK
             × KeyBinding.Witness G IVK AK NK RIVK QK SK))}
     {n : ℕ} (hQ : ∀ j Hask Hnk, (LA j Hask Hnk).QueryBound n) :
-    ((p.bind fun j => (PMF.uniformOfFintype (SK → ASK)).bind fun Hask =>
-        (PMF.uniformOfFintype (SK → NK)).bind fun Hnk =>
-          (PMF.uniformOfFintype (SK → RIVK)).bind fun Hleg =>
-            (PMF.uniformOfFintype (QK → AK → NK → RIVK)).bind fun Hext =>
-              (PMF.uniformOfFintype (RIVK → AK → NK → RIVK)).map fun Hint =>
-                (j, Hask, Hnk, FinalQuery.eval Hleg Hext Hint))).toOuterMeasure
+    ((kbExperiment p)).toOuterMeasure
         (setOf fun (j, Hask, Hnk, O) =>
           ∃ hval : ValidLedger P (kvAt Extract S hfn Ggen Hask Hnk O)
               issuance maxActions ((LA j Hask Hnk).run O).1,
