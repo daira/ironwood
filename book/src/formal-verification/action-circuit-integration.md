@@ -1147,13 +1147,15 @@ statement.
 **Status: complete at the deterministic Vesta terminal. The canonical relation now
 reaches a concrete bundle-wide Action theorem, and
 the circuit-generic
-`topLevelBundleStatement_or_relation_of_deployedAccepts` now performs the core join
-for an arbitrary `TopLevelCircuit`. `TopLevelCircuitCorrectness` exposes the named
+`topLevelStatements_or_relation_of_deployedAccepts` now performs the complete join
+for an arbitrary `TopLevelCircuit`: it derives the instance commitments from the
+public inputs and returns the circuit's statements at those inputs.
+`TopLevelCircuitCorrectness` exposes the named
 gate, fixed/selector, copy, and lookup representation boundaries and deliberately
 contains neither the desired statement nor an opaque encoding implication.
 `action_bundleStatement_or_relation_of_deployedAccepts` specializes that theorem with
-the Action correctness constructor, then identifies the primary instance
-polynomial and presents the circuit-owned statement as `Action.BundleStatement`.
+the Action correctness constructor; it no longer performs an Action-specific
+instance-polynomial or statement-presentation step.
 Both the generic and Action theorems quantify over arbitrary proof parameters and
 reconstruct accepted member selections proof-by-proof. Their public signatures have
 no free `S`, `hencodes`, member decoder, or independently selected advice/instance
@@ -1220,17 +1222,16 @@ quotient-member theorem and returns satisfaction of the same canonical model, or
 shared augmented commitment relation. The terminal no longer needs to choose
 unrelated advice and instance decoder functions or independently supply the derived
 permutation/lookup/selector evaluations.
-`ActionInstanceCommitment.action_bundleStatement_or_relation_of_acceptedModel_circuitSat`
-then constructs the concrete Action bundle statement from that satisfaction result,
-with no free `S`, `hencodes`, relation, or operation-constraint family. Fixed/table
-coherence, exact packed lookup-selector realization, and the complete copy replay
-witness are now constructed internally. The permutation and lookup challenge
-exclusions remain explicit because they are probability-layer events. This theorem
-is the function to substitute at the live constraint terminal's `hencodes` argument.
+`TopLevelAcceptedModel.statements_or_relation_of_circuitSat`
+then constructs the circuit's statements at the supplied public inputs from that
+satisfaction result, for any top-level circuit. `ActionCorrectness` supplies only
+the Action gate, fixed/table, copy-replay, and lookup package. The permutation and
+lookup challenge exclusions remain explicit because they are probability-layer
+events.
 
 That substitution is now expressed directly, without preserving the abstract
 argument.
-`ActionInstanceCommitment.action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq`
+`ActionTerminal.action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq`
 specializes the canonical terminal to
 `actionCircuit.toVerifierKey`, derives all query-layout, permutation,
 and domain facts from that circuit-owned key, and feeds canonical satisfaction into
@@ -1301,9 +1302,10 @@ whose public inputs were committed by the verifier.
    `AcceptedModelClaimedEvaluations` from accepted decoded-member node binding, the
    circuit-derived query-layout counts, and standard permutation/domain facts; then
    obtain canonical model satisfaction or the shared relation and compose it with
-   `action_bundleStatement_or_relation_of_acceptedModel_circuitSat` in the Action-owned
-   integration boundary. The resulting accepted-node-binding theorem constructs
-   fixed coherence, selector realization, and copy replay internally.
+   `TopLevelAcceptedModel.statements_or_relation_of_circuitSat`
+   at the generic integration boundary. The resulting accepted-node-binding
+   endpoint constructs fixed coherence, selector realization, and copy replay
+   internally.
 6. **Complete:** replace the live constraint terminal's free `S`/`hencodes`
    argument with the concrete Action composition. The generic selected-member
    theorems identify every proof's advice and instance feeds with the accepted

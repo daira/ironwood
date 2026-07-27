@@ -59,4 +59,45 @@ def topLevelSoundness_or_bad
 
 end FullCircuitBridge
 
+/-!
+`TopLevelBridgeWitness` hides the exact environment and operation stream at the
+dependent-type boundary. Their equalities to the circuit-derived values are
+retained as properties, so downstream soundness composition never needs to
+unfold circuit synthesis.
+-/
+variable
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+
+structure TopLevelBridgeWitness
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (assignment : ProofAssignment Fp)
+    (cell : Type) [DecidableEq cell] [Fintype cell]
+    (Bad : Type) where
+  environment : Environment Fp
+  operations : Operations Fp
+  environment_eq : environment = top.environment assignment
+  operations_eq : top.operations = operations
+  bridge : FullCircuitBridge top.placement environment
+    operations 0 cell Bad
+
+namespace TopLevelBridgeWitness
+
+variable
+    {cell : Type} [DecidableEq cell] [Fintype cell]
+    {Bad : Type}
+
+def statement_or_bad
+    {top : TopLevelCircuit Fp Config PublicInput}
+    {assignment : ProofAssignment Fp}
+    (witness : TopLevelBridgeWitness top assignment cell Bad) :
+    top.Statement (top.extractPublicInput (top.environment assignment)) ⊕' Bad :=
+  bindOrRelationWitness witness.bridge.satisfaction_or_bad fun hsatisfied =>
+    FullCircuitSatisfaction.topLevelSoundness top assignment
+      (by
+        rw [witness.operations_eq]
+        exact witness.environment_eq ▸ hsatisfied)
+
+end TopLevelBridgeWitness
+
 end Zcash.Snark

@@ -18,14 +18,24 @@ namespace Zcash.Snark
 
 open Halo2 Polynomial
 
-set_option maxHeartbeats 20000
+universe u v w
 
-/--
-Canonical constraint satisfaction plus the component-level circuit correctness
-package implies the circuit-owned statement for every proof, preserving the one
-shared exceptional event.
--/
-theorem topLevelBundleStatement_or_bad_of_constraintSatisfaction
+def TopLevelTerminalOutcome
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (pp : Keygen.ProofParams)
+    (poly : CommitmentId → Polynomial Fp)
+    (Bad : Type) : Type :=
+  TopLevelBundleStatement top pp poly ⊕' Bad
+
+private def bindOutcome {A : Sort u} {B : Sort v} {R : Sort w}
+    (outcome : A ⊕' R) (next : A → B ⊕' R) : B ⊕' R :=
+  match outcome with
+  | .inl value => next value
+  | .inr bad => .inr bad
+
+noncomputable def topLevelBundleStatement_or_bad_of_components
     {G : Type} [AddCommGroup G] [Inhabited G]
     {Config : Type} {PublicInput : TypeMap}
     [ProvableType PublicInput]
@@ -34,7 +44,57 @@ theorem topLevelBundleStatement_or_bad_of_constraintSatisfaction
     {ch : Challenges (pp.mergeDerived top).k Fp}
     {poly : CommitmentId → Polynomial Fp}
     {cell : Type} [DecidableEq cell] [Fintype cell]
-    {Bad : Prop}
+    {Bad : Type}
+    (hblinding :
+      (top.toVerifierKey pp urs).blindingFactors <
+        (top.toVerifierKey pp urs).n)
+    (satisfaction :
+      ConstraintSatisfaction
+        (canonicalConstraintModelOfPermutationResolver
+          (top.toVerifierKey pp urs) ch poly hblinding)
+        (top.toVerifierKey pp urs).n)
+    (gates : TopLevelGateCoherence top pp urs)
+    (fixedEncoding : ∀ proofIndex,
+      TopLevelFixedEncoding top pp urs poly proofIndex)
+    (fixed : ∀ proofIndex,
+      TopLevelFixed top pp urs poly proofIndex)
+    (copies : ∀ proofIndex,
+      TopLevelCopies top pp urs poly cell Bad proofIndex)
+    (lookups : ∀ proofIndex,
+      TopLevelLookups top pp urs ch poly proofIndex) :
+    TopLevelTerminalOutcome top pp poly Bad := by
+  exact
+    finForallOrRelationWitness
+      (A := fun proofIndex =>
+        let assignment :
+            TopLevelAssignment top
+              (pp.mergeDerived top).numProofs proofIndex :=
+          { polynomial := poly }
+        top.Statement
+          (top.extractPublicInput
+            (top.environment assignment.proofAssignment)))
+      fun proofIndex =>
+        (TopLevelAssignment.bridgeWitness_of_components
+            proofIndex hblinding satisfaction gates
+            (fixedEncoding proofIndex)
+            (fixed proofIndex).1 (fixed proofIndex).2
+            (copies proofIndex) (lookups proofIndex)).statement_or_bad
+
+/--
+Canonical constraint satisfaction plus the component-level circuit correctness
+package implies the circuit-owned statement for every proof, preserving the one
+shared exceptional event.
+-/
+noncomputable def topLevelBundleStatement_or_bad_of_constraintSatisfaction
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    {top : TopLevelCircuit Fp Config PublicInput}
+    {pp : Keygen.ProofParams} {urs : URS G}
+    {ch : Challenges (pp.mergeDerived top).k Fp}
+    {poly : CommitmentId → Polynomial Fp}
+    {cell : Type} [DecidableEq cell] [Fintype cell]
+    {Bad : Type}
     (hblinding :
       (top.toVerifierKey pp urs).blindingFactors <
         (top.toVerifierKey pp urs).n)
@@ -45,42 +105,35 @@ theorem topLevelBundleStatement_or_bad_of_constraintSatisfaction
         (top.toVerifierKey pp urs).n)
     (correctness :
       TopLevelCircuitCorrectness top pp urs ch poly cell Bad) :
-    TopLevelBundleStatement top pp poly ∨ Bad := by
+    TopLevelTerminalOutcome top pp poly Bad := by
   classical
-  by_cases hbad : Bad
-  · exact Or.inr hbad
-  · apply Or.inl
-    intro proofIndex
-    let assignment :
-        TopLevelAssignment top (pp.mergeDerived top).numProofs proofIndex :=
-      { polynomial := poly }
-    have hfixed := (correctness.fixed proofIndex).resolve_right hbad
-    have hfixedEncoding :=
-      (correctness.fixedEncoding proofIndex).resolve_right hbad
-    have hcopies := (correctness.copies proofIndex).resolve_right hbad
-    have hlookups := (correctness.lookups proofIndex).resolve_right hbad
-    have hrows :=
-      TopLevelAssignment.domainRowsInjective
-        (top := top) correctness.gates.domainExponent_lt
-    have hroot :=
-      TopLevelAssignment.domainRoot
-        (top := top) correctness.gates.domainExponent_lt
-    let bridge :=
-      FullCircuitBridge.ofTopLevelCanonical
-        correctness.gates ch poly proofIndex hblinding satisfaction
-        hrows hroot hfixed.1 hfixed.2 hcopies.some hlookups
-    have henvironment :=
-      assignment.resolverEnvironment_eq_environment
-        pp urs hfixedEncoding
-    have canonicalBridge :
-        FullCircuitBridge top.placement assignment.environment
-          top.operations 0 cell Bad := by
-      rw [← henvironment]
-      exact bridge
-    have hsound :=
-      FullCircuitBridge.topLevelSoundness_or_bad
-        top assignment.proofAssignment canonicalBridge
-    exact hsound.resolve_right hbad
+  let fixedEncodingOutcome :=
+    finForallOrRelationWitness
+      (A := fun proofIndex =>
+        TopLevelFixedEncoding top pp urs poly proofIndex)
+      correctness.fixedEncoding
+  let fixedOutcome :=
+    finForallOrRelationWitness
+      (A := fun proofIndex =>
+        TopLevelFixed top pp urs poly proofIndex)
+      correctness.fixed
+  let copiesOutcome :=
+    finForallOrRelationWitness
+      (A := fun proofIndex =>
+        TopLevelCopies top pp urs poly cell Bad proofIndex)
+      correctness.copies
+  let lookupsOutcome :=
+    finForallOrRelationWitness
+      (A := fun proofIndex =>
+        TopLevelLookups top pp urs ch poly proofIndex)
+      correctness.lookups
+  exact bindOutcome fixedEncodingOutcome fun hfixedEncoding =>
+    bindOutcome fixedOutcome fun hfixed =>
+      bindOutcome copiesOutcome fun hcopies =>
+        bindOutcome lookupsOutcome fun hlookups =>
+          topLevelBundleStatement_or_bad_of_components
+            hblinding satisfaction correctness.gates
+            hfixedEncoding hfixed hcopies hlookups
 
 assert_no_sorry topLevelBundleStatement_or_bad_of_constraintSatisfaction
 

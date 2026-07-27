@@ -1,5 +1,5 @@
 import Zcash.Snark.Soundness.TopLevelVesta
-import Zcash.Circuits.Integration.ActionInstanceCommitment
+import Zcash.Circuits.Integration.ActionCorrectness
 
 /-!
 # Action soundness over a circuit-derived Vesta verifying key
@@ -21,7 +21,6 @@ open scoped ENNReal
 open Keygen
 open Zcash.Circuits
 open Zcash.Circuits.Action
-open ActionInstanceCommitment
 
 set_option maxHeartbeats 20000
 
@@ -40,7 +39,7 @@ determine their verifier commitments. If all challenge exclusions hold, the
 accepted proof bundle satisfies the Action specification, unless the supplied
 URS admits a nontrivial discrete-log relation.
 -/
-theorem action_bundleStatement_or_relation_of_deployedAccepts
+noncomputable def action_bundleStatement_or_relation_of_deployedAccepts
     (pp : ProofParams) (urs : URS VestaG)
     (hk :
       (pp.mergeDerived actionCircuit).k = urs.k)
@@ -110,8 +109,8 @@ theorem action_bundleStatement_or_relation_of_deployedAccepts
         ((deployedSetQueries
           (actionCircuit.toVerifierKey pp urs)
           (actionCircuit.instanceCommitment pp urs inputs) ps ch i).getD
-            (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
-        ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+            (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0 ⊕'
+        NontrivialRelation (F := Fp) urs.g urs.u urs.w)
     (hquot : hpoly = colPoly ⟨m, hm⟩)
     (hroute : (constructIntermediateSets
       (assembleQueries
@@ -207,33 +206,29 @@ theorem action_bundleStatement_or_relation_of_deployedAccepts
               (actionCircuit.instanceCommitment pp urs inputs) ps ch
               pbatch hlen hprob1 haccepts)
           haccepts)) :
-    BundleStatement inputs ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+    BundleStatement inputs ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   let vk := actionCircuit.toVerifierKey pp urs
   let instanceCommitment := actionCircuit.instanceCommitment pp urs inputs
   let memberDecode :=
     vestaExtractedMemberDecode urs hk vk instanceCommitment ps ch
       pbatch hlen hprob1 haccepts
   have hgeneric :=
-    topLevelBundleStatement_or_relation_of_deployedAccepts
-      actionCircuit pp urs hk instanceCommitment
+    topLevelStatements_or_relation_of_deployedAccepts
+      actionCircuit pp urs hk inputs
       ps ch pU pW hpoly pbatch hξcur hlen hprob1 haccepts
       (ActionPermutationDomain.blindingFactors_lt pp urs)
       (ActionGateCoherence.topLevelGateCoherence pp urs)
       i m hm colPoly hbindAll hquot hroute hevals claimed hxgood hgoodY
       (cell := FlatCell actionNumPermCols actionDomainSize)
       (fun hsatisfied =>
-        topLevelCorrectnessOfAcceptedCircuitSat
+        ActionCorrectness.ofAcceptedCircuitSat
           pp urs hk inputs ps ch pU pW a₀ pbatch memberDecode
           haccepts hpoly hsatisfied hgoodY
           permutationExclusions lookupExclusions)
-  rcases hgeneric with htop | hrelation
-  · simpa only [BundleStatement] using
-      (TopLevelInstanceCommitment.statements_or_relation_of_accepted_topLevelBundleStatement
-        actionCircuit pp urs hk inputs ps ch pU pW a₀ pbatch
-        memberDecode haccepts
-        ActionPermutationDomain.domainExponent_lt htop)
-  · exact Or.inr hrelation
+  rcases hgeneric with hstatements | hrelation
+  · exact PSum.inl (by simpa only [BundleStatement] using hstatements)
+  · exact PSum.inr hrelation
 
 assert_no_sorry action_bundleStatement_or_relation_of_deployedAccepts
 

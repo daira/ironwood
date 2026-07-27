@@ -25,7 +25,7 @@ variable
     {top : TopLevelCircuit Fp Config PublicInput}
     {pp : Keygen.ProofParams} {urs : URS G}
     {cell : Type} [DecidableEq cell] [Fintype cell]
-    {Bad : Prop}
+    {Bad : Type}
 
 /--
 Assemble the complete operation bridge from the canonical circuit-derived
@@ -108,7 +108,7 @@ preserving one shared exceptional event.
 This is the generic finite-family join used by the Action adapter: the proof does
 not inspect the circuit statement and does not introduce an `hencodes` predicate.
 -/
-theorem bundleTopLevelSoundness_or_bad
+noncomputable def bundleTopLevelSoundness_or_bad
     (top : TopLevelCircuit Fp Config PublicInput)
     {numProofs : ℕ}
     (assignment : Fin numProofs → ProofAssignment Fp)
@@ -119,15 +119,10 @@ theorem bundleTopLevelSoundness_or_bad
         top.operations 0 cell Bad) :
     (∀ proofIndex,
       top.Statement
-        (top.extractPublicInput (top.environment (assignment proofIndex)))) ∨ Bad := by
-  classical
-  by_cases hbad : Bad
-  · exact Or.inr hbad
-  · apply Or.inl
-    intro proofIndex
-    exact
-      (FullCircuitBridge.topLevelSoundness_or_bad
-        top (assignment proofIndex) (bridge proofIndex)).resolve_right hbad
+        (top.extractPublicInput (top.environment (assignment proofIndex)))) ⊕' Bad :=
+  finForallOrRelationWitness fun proofIndex =>
+    FullCircuitBridge.topLevelSoundness_or_bad
+      top (assignment proofIndex) (bridge proofIndex)
 
 end FullCircuitBridge
 

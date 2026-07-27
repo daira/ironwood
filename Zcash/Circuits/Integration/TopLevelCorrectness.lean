@@ -13,8 +13,6 @@ namespace Zcash.Snark
 
 open Halo2 Polynomial
 
-set_option maxHeartbeats 20000
-
 /--
 The statement owned by a top-level circuit, simultaneously for every polynomial
 assignment decoded from one accepted proof bundle.
@@ -66,15 +64,241 @@ theorem of_publicInputEncoding
 
 end TopLevelBundleStatement
 
+abbrev TopLevelFixedEncoding
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (pp : Keygen.ProofParams) (urs : URS G)
+    (poly : CommitmentId → Polynomial Fp)
+    (proofIndex : Fin (pp.mergeDerived top).numProofs) : Prop :=
+  let assignment :
+      TopLevelAssignment top (pp.mergeDerived top).numProofs proofIndex :=
+    { polynomial := poly }
+  assignment.FixedColumnEncoding pp urs
+
+abbrev TopLevelFixed
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (pp : Keygen.ProofParams) (urs : URS G)
+    (poly : CommitmentId → Polynomial Fp)
+    (proofIndex : Fin (pp.mergeDerived top).numProofs) : Prop :=
+  (SelectorActivationsRealized
+      top.selectorMap top.selectorActivations
+      (resolverEnvironment
+        (top.toVerifierKey pp urs) poly proofIndex
+        (top.usableRowsAt top.domainExponent))
+    ∧ CircuitConstraintFamily.constraints .fixed top.placement
+      (resolverEnvironment
+        (top.toVerifierKey pp urs) poly proofIndex
+        (top.usableRowsAt top.domainExponent))
+      top.operations 0)
+
+abbrev TopLevelCopies
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (pp : Keygen.ProofParams) (urs : URS G)
+    (poly : CommitmentId → Polynomial Fp)
+    (cell : Type) [DecidableEq cell] [Fintype cell]
+    (Bad : Type)
+    (proofIndex : Fin (pp.mergeDerived top).numProofs) : Type :=
+  CopyReplayWitness top.placement
+    (resolverEnvironment
+      (top.toVerifierKey pp urs) poly proofIndex
+      (top.usableRowsAt top.domainExponent))
+    top.operations cell Bad
+
+abbrev TopLevelLookups
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (pp : Keygen.ProofParams) (urs : URS G)
+    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (proofIndex : Fin (pp.mergeDerived top).numProofs) : Prop :=
+  TopLevelLookupCoherence.TopLevelLookupWitnessConditions
+    top pp urs ch poly proofIndex
+
+namespace TopLevelAssignment
+
 /--
-The representation-boundary facts needed to interpret one canonical polynomial
+Package one successful set of component witnesses behind abstract environment
+and operation values, retaining only their equalities to the circuit-derived
+values.
+-/
+noncomputable def bridgeWitness_of_components
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    {top : TopLevelCircuit Fp Config PublicInput}
+    {pp : Keygen.ProofParams} {urs : URS G}
+    {ch : Challenges (pp.mergeDerived top).k Fp}
+    {poly : CommitmentId → Polynomial Fp}
+    {cell : Type} [DecidableEq cell] [Fintype cell]
+    {Bad : Type}
+    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    (hblinding :
+      (top.toVerifierKey pp urs).blindingFactors <
+        (top.toVerifierKey pp urs).n)
+    (satisfaction :
+      ConstraintSatisfaction
+        (canonicalConstraintModelOfPermutationResolver
+          (top.toVerifierKey pp urs) ch poly hblinding)
+        (top.toVerifierKey pp urs).n)
+    (gates : TopLevelGateCoherence top pp urs)
+    (fixedEncoding :
+      let assignment :
+          TopLevelAssignment top
+            (pp.mergeDerived top).numProofs proofIndex :=
+        { polynomial := poly }
+      assignment.FixedColumnEncoding pp urs)
+    (selectorActivations :
+      SelectorActivationsRealized
+        top.selectorMap top.selectorActivations
+        (resolverEnvironment
+          (top.toVerifierKey pp urs) poly proofIndex
+          (top.usableRowsAt top.domainExponent)))
+    (fixed :
+      CircuitConstraintFamily.constraints .fixed top.placement
+        (resolverEnvironment
+          (top.toVerifierKey pp urs) poly proofIndex
+          (top.usableRowsAt top.domainExponent))
+        top.operations 0)
+    (copies :
+      CopyReplayWitness top.placement
+        (resolverEnvironment
+          (top.toVerifierKey pp urs) poly proofIndex
+          (top.usableRowsAt top.domainExponent))
+        top.operations cell Bad)
+    (lookups :
+      TopLevelLookupCoherence.TopLevelLookupWitnessConditions
+        top pp urs ch poly proofIndex) :
+    TopLevelBridgeWitness top
+      (({ polynomial := poly } :
+        TopLevelAssignment top
+          (pp.mergeDerived top).numProofs proofIndex).proofAssignment)
+      cell Bad := by
+  let assignment :
+      TopLevelAssignment top (pp.mergeDerived top).numProofs proofIndex :=
+    { polynomial := poly }
+  change TopLevelBridgeWitness top assignment.proofAssignment cell Bad
+  have hrows :=
+    TopLevelAssignment.domainRowsInjective
+      (top := top) gates.domainExponent_lt
+  have hroot :=
+    TopLevelAssignment.domainRoot
+      (top := top) gates.domainExponent_lt
+  have hrowsVk :
+      Function.Injective
+        (fun row : Fin (top.toVerifierKey pp urs).n =>
+          (top.toVerifierKey pp urs).omega ^ (row : ℕ)) := by
+    simpa only [top.toVerifierKey_n, top.toVerifierKey_omega] using hrows
+  have hrootVk :
+      (top.toVerifierKey pp urs).omega ^
+        (top.toVerifierKey pp urs).n = 1 := by
+    simpa only [top.toVerifierKey_n, top.toVerifierKey_omega] using hroot
+  let bridge :=
+    FullCircuitBridge.ofTopLevelCanonical
+      (top := top) (pp := pp) (urs := urs)
+      (cell := cell) (Bad := Bad)
+      gates ch poly proofIndex hblinding satisfaction
+      hrowsVk hrootVk selectorActivations fixed copies lookups
+  clear_value bridge
+  generalize henvironmentValue :
+    resolverEnvironment
+      (top.toVerifierKey pp urs) poly proofIndex
+      (top.usableRowsAt top.domainExponent) = environment at bridge
+  generalize hoperations : top.operations = operations at bridge
+  have henvironment :=
+    assignment.resolverEnvironment_eq_environment
+      pp urs fixedEncoding
+  have henvironment' :
+      resolverEnvironment
+          (top.toVerifierKey pp urs) poly proofIndex
+          (top.usableRowsAt top.domainExponent) =
+        top.environment assignment.proofAssignment :=
+    henvironment
+  refine
+    { environment := environment
+      operations := operations
+      environment_eq := ?_
+      operations_eq := ?_
+      bridge := ?_ }
+  · exact henvironmentValue.symm.trans henvironment'
+  · exact hoperations
+  · exact bridge
+
+end TopLevelAssignment
+
+def TopLevelFixedEncodingOutcome
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (pp : Keygen.ProofParams) (urs : URS G)
+    (poly : CommitmentId → Polynomial Fp)
+    (Bad : Type)
+    (proofIndex : Fin (pp.mergeDerived top).numProofs) : Type :=
+  TopLevelFixedEncoding top pp urs poly proofIndex ⊕' Bad
+
+def TopLevelFixedOutcome
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (pp : Keygen.ProofParams) (urs : URS G)
+    (poly : CommitmentId → Polynomial Fp)
+    (Bad : Type)
+    (proofIndex : Fin (pp.mergeDerived top).numProofs) : Type :=
+  TopLevelFixed top pp urs poly proofIndex ⊕' Bad
+
+def TopLevelCopiesOutcome
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (pp : Keygen.ProofParams) (urs : URS G)
+    (poly : CommitmentId → Polynomial Fp)
+    (cell : Type) [DecidableEq cell] [Fintype cell]
+    (Bad : Type)
+    (proofIndex : Fin (pp.mergeDerived top).numProofs) : Type :=
+  TopLevelCopies top pp urs poly cell Bad proofIndex ⊕' Bad
+
+def TopLevelLookupsOutcome
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (pp : Keygen.ProofParams) (urs : URS G)
+    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (Bad : Type)
+    (proofIndex : Fin (pp.mergeDerived top).numProofs) : Type :=
+  TopLevelLookups top pp urs ch poly proofIndex ⊕' Bad
+
+structure TopLevelCorrectnessData
+    (Gates : Prop)
+    (FixedEncoding Fixed Copies Lookups : Type) : Type where
+  gates : Gates
+  fixedEncoding : FixedEncoding
+  fixed : Fixed
+  copies : Copies
+  lookups : Lookups
+
+/--
+The representation-boundary data needed to interpret one canonical polynomial
 assignment as an execution of a top-level circuit.
 
-Each field names one of the four Clean constraint families.  The shared `Bad`
-alternative is retained componentwise so that commitment-binding failures can be
-joined without turning this record into an opaque statement-level hypothesis.
+Each field names one of the four Clean constraint families. The same computed
+`Bad` witness is retained componentwise so commitment-binding failures can be
+sequenced without turning this record into an opaque statement-level hypothesis.
 -/
-structure TopLevelCircuitCorrectness
+def TopLevelCircuitCorrectness
     {G : Type} [AddCommGroup G] [Inhabited G]
     {Config : Type} {PublicInput : TypeMap}
     [ProvableType PublicInput]
@@ -83,33 +307,16 @@ structure TopLevelCircuitCorrectness
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (cell : Type) [DecidableEq cell] [Fintype cell]
-    (Bad : Prop) : Prop where
-  gates : TopLevelGateCoherence top pp urs
-  fixedEncoding : ∀ proofIndex,
-    let assignment :
-        TopLevelAssignment top (pp.mergeDerived top).numProofs proofIndex :=
-      { polynomial := poly }
-    assignment.FixedColumnEncoding pp urs ∨ Bad
-  fixed : ∀ proofIndex,
-    (SelectorActivationsRealized
-        top.selectorMap top.selectorActivations
-        (resolverEnvironment
-          (top.toVerifierKey pp urs) poly proofIndex
-          (top.usableRowsAt top.domainExponent)) ∧
-      CircuitConstraintFamily.constraints .fixed top.placement
-        (resolverEnvironment
-          (top.toVerifierKey pp urs) poly proofIndex
-          (top.usableRowsAt top.domainExponent))
-        (top.operations) 0) ∨ Bad
-  copies : ∀ proofIndex,
-    Nonempty
-      (CopyReplayWitness top.placement
-        (resolverEnvironment
-          (top.toVerifierKey pp urs) poly proofIndex
-          (top.usableRowsAt top.domainExponent))
-        (top.operations) cell Bad) ∨ Bad
-  lookups : ∀ proofIndex,
-    TopLevelLookupCoherence.TopLevelLookupWitnessConditions
-      top pp urs ch poly proofIndex ∨ Bad
+    (Bad : Type) : Type :=
+  TopLevelCorrectnessData
+    (TopLevelGateCoherence top pp urs)
+    (∀ proofIndex,
+      TopLevelFixedEncodingOutcome top pp urs poly Bad proofIndex)
+    (∀ proofIndex,
+      TopLevelFixedOutcome top pp urs poly Bad proofIndex)
+    (∀ proofIndex,
+      TopLevelCopiesOutcome top pp urs poly cell Bad proofIndex)
+    (∀ proofIndex,
+      TopLevelLookupsOutcome top pp urs ch poly Bad proofIndex)
 
 end Zcash.Snark

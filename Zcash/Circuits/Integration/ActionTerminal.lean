@@ -1,4 +1,5 @@
-import Zcash.Circuits.Integration.ActionInstanceCommitment
+import Zcash.Circuits.Integration.ActionCorrectness
+import Zcash.Circuits.Integration.TopLevelAcceptedModel
 import Zcash.Circuits.Integration.ActionPermutationDomain
 import Zcash.Snark.Soundness.Canonical.Terminal
 import Mathlib.Util.AssertNoSorry
@@ -21,7 +22,7 @@ open Halo2 Polynomial Keygen
 open Zcash.Circuits
 open Zcash.Circuits.Action
 
-namespace ActionInstanceCommitment
+namespace ActionTerminal
 
 variable {G : Type} [AddCommGroup G] [Module Fp G]
   [DecidableEq G] [Inhabited G]
@@ -36,7 +37,7 @@ permutation, lookup, and selector claimed evaluations are reconstructed internal
 from the accepted assembled queries. No free semantic proposition, `hencodes`,
 constraint family, or decoded-column feed remains.
 -/
-theorem action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
+noncomputable def action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
     (pp : ProofParams) (urs : URS G)
     (hk :
       (pp.mergeDerived actionCircuit).k = urs.k)
@@ -96,8 +97,8 @@ theorem action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
           deployedMemberClaim
             (instanceCommitment := actionCircuit.instanceCommitment pp urs inputs)
             (actionCircuit.toVerifierKey pp urs)
-            ps ch slot point
-        ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+            ps ch slot point ⊕'
+        NontrivialRelation (F := Fp) urs.g urs.u urs.w)
     (hxgood :
       ch.x ∉ szBadSet
         (combineConstraints
@@ -201,8 +202,8 @@ theorem action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
         actionCircuit pp urs ch
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts)) :
-    BundleStatement inputs ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+    BundleStatement inputs ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   let vk := actionCircuit.toVerifierKey pp urs
   let hblinding : vk.blindingFactors < vk.n :=
     ActionPermutationDomain.blindingFactors_lt pp urs
@@ -226,16 +227,20 @@ theorem action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
         (ActionPermutationDomain.root pp urs)
         hnFp hxgood with
     hsatisfied | hrelation
-  · exact
-      action_bundleStatement_or_relation_of_acceptedModel_circuitSat
-        pp urs hk inputs ps ch vk rfl pU pW a
+  · simpa only [BundleStatement] using
+      (TopLevelAcceptedModel.statements_or_relation_of_circuitSat
+        actionCircuit pp urs hk inputs ps ch pU pW a
         batchOpenings memberDecode haccepts hblinding hpoly
-        hsatisfied hgoodY permutationExclusions
-        lookupExclusions
-  · exact Or.inr hrelation
+        hsatisfied hgoodY
+        (cell := FlatCell actionNumPermCols actionDomainSize)
+        (ActionCorrectness.ofAcceptedCircuitSat
+          pp urs hk inputs ps ch pU pW a
+          batchOpenings memberDecode haccepts hpoly
+          hsatisfied hgoodY permutationExclusions lookupExclusions))
+  · exact PSum.inr hrelation
 
 assert_no_sorry action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
 
-end ActionInstanceCommitment
+end ActionTerminal
 
 end Zcash.Snark

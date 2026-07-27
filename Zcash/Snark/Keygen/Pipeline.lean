@@ -248,6 +248,14 @@ def ofOperations (shape : Shape) (urs : URS G) (k : ℕ)
     lookupTableExprs := fun l =>
       (pinned.lookupTableExprs.getD l.val []).map RichExpression.toExpr }
 
+/-- Projection API for the domain generator produced by `ofOperations`. -/
+@[simp] theorem ofOperations_omega
+    (shape : Shape) (urs : URS G) (k : ℕ)
+    (cs : ConstraintSystem Fp) (ops : Operations Fp)
+    (fixedRows : List (List Fp)) :
+    (ofOperations shape urs k cs ops fixedRows).omega = omegaOf k := by
+  simp [ofOperations]
+
 /-- Projection API for the fixed commitments produced by `ofOperations`.
 
 Downstream proofs should rewrite with this lemma instead of asking definitional
@@ -404,6 +412,14 @@ def verifierKeyAt
   .ofOperations shape urs top.domainExponent
     top.constraintSystem top.operations top.fixedRows
 
+/-- The shape-explicit key uses the circuit's fitting-domain generator. -/
+@[simp] theorem verifierKeyAt_omega
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (shape : Shape) (urs : URS G) :
+    (top.verifierKeyAt shape urs).omega =
+      Zcash.Arithmetic.omegaOf top.domainExponent := by
+  simp only [verifierKeyAt, VerifyingKey.ofOperations_omega]
+
 /-- Projection API for the fixed commitments of the shape-explicit top-level key. -/
 @[simp] theorem verifierKeyAt_fixedCommitment
     (top : TopLevelCircuit Fp Config PublicInput)
@@ -422,6 +438,14 @@ def toVerifierKey
     (pp : ProofParams) (urs : URS G) :
     VerifyingKey (pp.mergeDerived top) Fp G :=
   top.verifierKeyAt (pp.mergeDerived top) urs
+
+/-- The derived key uses the circuit's fitting-domain generator. -/
+@[simp] theorem toVerifierKey_omega
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (pp : ProofParams) (urs : URS G) :
+    (top.toVerifierKey pp urs).omega =
+      Zcash.Arithmetic.omegaOf top.domainExponent := by
+  simp only [toVerifierKey, verifierKeyAt_omega]
 
 /-- The derived key uses the circuit-owned fitting domain size. -/
 @[simp]

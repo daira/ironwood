@@ -33,7 +33,6 @@ open Keygen
 open Zcash.Circuits
 open Zcash.Circuits.Action
 open Zcash.Snark.Fixture
-open ActionInstanceCommitment
 
 /-- The captured `Shape`'s IPA depth matches the captured URS: both record the
 literal deployed `k = 11`. -/
@@ -55,7 +54,7 @@ equalities `shape_eq_mergeDerived` and `vk_eq_derived` reduces the goal to the
 generic capstone at `(actionProofParams, capturedURS)`; both equalities are
 ordinary `Eq`s, so no cast appears in the statement or proof.
 -/
-private theorem action_bundleStatement_or_relation_of_deployedAccepts_transport
+private noncomputable def action_bundleStatement_or_relation_of_deployedAccepts_transport
     (s : Shape)
     (hs : actionProofParams.mergeDerived actionCircuit = s)
     (K : VerifyingKey s Fp G)
@@ -113,8 +112,8 @@ private theorem action_bundleStatement_or_relation_of_deployedAccepts_transport
                 i [])[idx]) =
         ((deployedSetQueries K
           (actionCircuit.instanceCommitment actionProofParams capturedURS inputs) ps ch i).getD
-            (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
-        ∨ HasNontrivialRelation (F := Fp)
+            (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0 ⊕'
+        NontrivialRelation (F := Fp)
           capturedURS.g capturedURS.u capturedURS.w)
     (hquot : hpoly = colPoly ⟨m, hm⟩)
     (hroute : (constructIntermediateSets
@@ -207,8 +206,8 @@ private theorem action_bundleStatement_or_relation_of_deployedAccepts_transport
             vestaExtractedMemberDecode capturedURS hk
               K (actionCircuit.instanceCommitment actionProofParams capturedURS inputs)
               ps ch pbatch hlen hprob1 haccepts) haccepts)) :
-    BundleStatement inputs ∨
-      HasNontrivialRelation (F := Fp)
+    BundleStatement inputs ⊕'
+      NontrivialRelation (F := Fp)
         capturedURS.g capturedURS.u capturedURS.w := by
   subst hs
   rw [← Keygen.toVerifierKey_action actionProofParams capturedURS] at hK
@@ -235,7 +234,7 @@ freely chosen member decoder. Deployed acceptance determines the decoder and
 canonical constraint model; the accepted route determines the advice and
 instance member selections.
 -/
-theorem action_bundleStatement_or_relation_of_deployedAccepts
+noncomputable def action_bundleStatement_or_relation_of_deployedAccepts
     (inputs : Fin Fixture.shape.numProofs → PublicInputs Fp)
     (ps : ProofString Fixture.shape Fp Fixture.G)
     (ch : Challenges Fixture.shape.k Fp)
@@ -287,8 +286,8 @@ theorem action_bundleStatement_or_relation_of_deployedAccepts
                 i [])[idx]) =
         ((deployedSetQueries Fixture.vk
           (actionCircuit.instanceCommitment actionProofParams capturedURS inputs) ps ch i).getD
-            (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
-        ∨ HasNontrivialRelation (F := Fp)
+            (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0 ⊕'
+        NontrivialRelation (F := Fp)
           capturedURS.g capturedURS.u capturedURS.w)
     (hquot : hpoly = colPoly ⟨m, hm⟩)
     (hroute : (constructIntermediateSets
@@ -381,8 +380,8 @@ theorem action_bundleStatement_or_relation_of_deployedAccepts
             vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
               Fixture.vk (actionCircuit.instanceCommitment actionProofParams capturedURS inputs)
               ps ch pbatch hlen hprob1 haccepts) haccepts)) :
-    BundleStatement inputs ∨
-      HasNontrivialRelation (F := Fp)
+    BundleStatement inputs ⊕'
+      NontrivialRelation (F := Fp)
         capturedURS.g capturedURS.u capturedURS.w :=
   action_bundleStatement_or_relation_of_deployedAccepts_transport
     Fixture.shape Keygen.shape_eq_mergeDerived

@@ -3,7 +3,7 @@ import Zcash.Circuits.Integration.ActionEncoding
 import Zcash.Circuits.Integration.ActionFixedCoherenceCompute
 import Zcash.Circuits.Integration.ActionGateCoherence
 import Zcash.Circuits.Integration.ActionGateCoherenceCompute
-import Zcash.Circuits.Integration.ActionInstanceCommitment
+import Zcash.Circuits.Integration.ActionCorrectness
 import Zcash.Circuits.Integration.ActionPermutationDomain
 import Zcash.Circuits.Integration.ActionPermutationCycle
 import Zcash.Circuits.Integration.ActionCopyReplay
@@ -32,6 +32,7 @@ import Zcash.Circuits.Integration.ResolverGates
 import Zcash.Circuits.Integration.ResolverQueryEnvironment
 import Zcash.Circuits.Integration.SelectorCoherence
 import Zcash.Circuits.Integration.TopLevelAssignment
+import Zcash.Circuits.Integration.TopLevelAcceptedModel
 import Zcash.Circuits.Integration.TopLevelBridge
 import Zcash.Circuits.Integration.TopLevelCircuit
 import Zcash.Circuits.Integration.TopLevelCoherence

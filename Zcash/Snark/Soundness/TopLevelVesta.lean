@@ -1,13 +1,14 @@
 import Zcash.Snark.Soundness.Canonical.Vesta
+import Zcash.Circuits.Integration.TopLevelAcceptedModel
 import Zcash.Snark.Soundness.TopLevelTerminal
 
 /-!
 # Circuit-generic Vesta soundness capstone
 
 This module combines the verifier-native Vesta terminal with the generic
-`TopLevelCircuit` soundness terminal.  It is generic over the circuit and its
-public-instance commitments; circuit-specific presentation theorems may turn the
-resulting `TopLevelBundleStatement` into a friendlier external specification.
+`TopLevelCircuit` soundness and public-instance terminals. The circuit determines
+its verifying key and instance commitments; successful verification yields its
+statement at the public inputs supplied to the verifier.
 -/
 
 namespace Zcash.Snark
@@ -34,14 +35,14 @@ Acceptance fixes the canonical polynomial assignment.  The caller supplies the
 circuit's named component-level correctness package for that assignment, not an
 opaque implication to the desired statement.
 -/
-theorem topLevelBundleStatement_or_relation_of_deployedAccepts
+noncomputable def topLevelStatements_or_relation_of_deployedAccepts
     {Config : Type} {PublicInput : TypeMap}
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS VestaG)
     (hk : (pp.mergeDerived top).k = urs.k)
-    (instanceCommitment :
-      Fin (pp.mergeDerived top).numProofs → ℕ → VestaG)
+    (inputs :
+      Fin (pp.mergeDerived top).numProofs → PublicInput Fp)
     (ps : ProofString (pp.mergeDerived top) Fp VestaG)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (pU pW : Fp)
@@ -50,65 +51,65 @@ theorem topLevelBundleStatement_or_relation_of_deployedAccepts
     (pbatch :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
         (x4BatchCommitments
-          (instanceCommitment := instanceCommitment)
+          (instanceCommitment := top.instanceCommitment pp urs inputs)
           urs hk (top.toVerifierKey pp urs) ps ch)
         (x4BatchEvals
-          (instanceCommitment := instanceCommitment)
+          (instanceCommitment := top.instanceCommitment pp urs inputs)
           (top.toVerifierKey pp urs) ps ch)
         a₀ pU pW)
     (hξcur : pbatch.batchChallenge pbatch.current = ch.x4)
     (hlen : ∀ i, i <
         deployedX4PairCount
-          (top.toVerifierKey pp urs) instanceCommitment ps ch →
+          (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch →
       0 < (deployedSetQueries
-        (top.toVerifierKey pp urs) instanceCommitment ps ch i).length)
+        (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch i).length)
     (hprob1 : ∀ i, i <
         deployedX4PairCount
-          (top.toVerifierKey pp urs) instanceCommitment ps ch →
+          (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch →
       (((deployedSetQueries
-          (top.toVerifierKey pp urs) instanceCommitment ps ch i).length - 1 :
+          (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch i).length - 1 :
             ℕ) : ℝ≥0∞) /
           Fintype.card Fp
         < (PMF.uniformOfFintype Fp).toOuterMeasure
           (Finset.univ.filter
             (OpenedX1Accept urs hk
-              (top.toVerifierKey pp urs) instanceCommitment ps ch)))
+              (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch)))
     (haccepts :
       DeployedAccepts urs hk
-        (top.toVerifierKey pp urs) instanceCommitment ps ch)
+        (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch)
     (hblinding :
       (top.toVerifierKey pp urs).blindingFactors <
         (top.toVerifierKey pp urs).n)
     (gateCoherence : TopLevelGateCoherence top pp urs)
     (i m : ℕ)
     (hm : m < (deployedSetQueries
-      (top.toVerifierKey pp urs) instanceCommitment ps ch i).length)
+      (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch i).length)
     (colPoly : Fin (deployedSetQueries
-      (top.toVerifierKey pp urs) instanceCommitment ps ch i).length →
+      (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch i).length →
         Polynomial Fp)
     (hbindAll : ∀ (idx : Fin ((constructIntermediateSets
           (assembleQueries
-            (top.toVerifierKey pp urs) instanceCommitment ps ch)).points.getD
+            (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch)).points.getD
               i []).length)
         (m₀ : Fin (deployedSetQueries
-          (top.toVerifierKey pp urs) instanceCommitment ps ch i).length),
+          (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch i).length),
       (colPoly m₀).eval
           (((constructIntermediateSets
             (assembleQueries
-              (top.toVerifierKey pp urs) instanceCommitment ps ch)).points.getD
+              (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch)).points.getD
                 i [])[idx]) =
         ((deployedSetQueries
-          (top.toVerifierKey pp urs) instanceCommitment ps ch i).getD
-            (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
-        ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+          (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch i).getD
+            (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0 ⊕'
+        NontrivialRelation (F := Fp) urs.g urs.u urs.w)
     (hquot : hpoly = colPoly ⟨m, hm⟩)
     (hroute : (constructIntermediateSets
       (assembleQueries
-        (top.toVerifierKey pp urs) instanceCommitment ps ch)).points.getD
+        (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch)).points.getD
           i [] = [ch.x])
     (hevals : ∀ d₀,
       ((deployedSetQueries
-        (top.toVerifierKey pp urs) instanceCommitment ps ch i).getD m d₀).2 =
+        (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch i).getD m d₀).2 =
         [expectedHEval
           (allExpressions
             (top.toVerifierKey pp urs) ps ch
@@ -132,7 +133,7 @@ theorem topLevelBundleStatement_or_relation_of_deployedAccepts
       AcceptedModelClaimedEvaluations
         (memberDecode :=
           vestaExtractedMemberDecode urs hk
-            (top.toVerifierKey pp urs) instanceCommitment ps ch
+            (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch
             pbatch hlen hprob1 haccepts)
         (hblinding := hblinding) haccepts)
     (hxgood :
@@ -141,7 +142,7 @@ theorem topLevelBundleStatement_or_relation_of_deployedAccepts
           CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode :=
               vestaExtractedMemberDecode urs hk
-                (top.toVerifierKey pp urs) instanceCommitment ps ch
+                (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch
                 pbatch hlen hprob1 haccepts)
             (hblinding := hblinding) haccepts
         combineConstraints model.fixedCols model.adviceCols model.instanceCols
@@ -155,7 +156,7 @@ theorem topLevelBundleStatement_or_relation_of_deployedAccepts
           (CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode :=
               vestaExtractedMemberDecode urs hk
-                (top.toVerifierKey pp urs) instanceCommitment ps ch
+                (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch
                 pbatch hlen hprob1 haccepts)
             (hblinding := hblinding) haccepts).constraints
           (top.toVerifierKey pp urs).n j))
@@ -165,7 +166,7 @@ theorem topLevelBundleStatement_or_relation_of_deployedAccepts
         (CanonicalMemberConstraintRelation.acceptedModel
           (memberDecode :=
             vestaExtractedMemberDecode urs hk
-              (top.toVerifierKey pp urs) instanceCommitment ps ch
+              (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch
               pbatch hlen hprob1 haccepts)
           (hblinding := hblinding) haccepts).CircuitSat
             ch.y hpoly (top.toVerifierKey pp urs).n a₀),
@@ -173,55 +174,31 @@ theorem topLevelBundleStatement_or_relation_of_deployedAccepts
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode :=
             vestaExtractedMemberDecode urs hk
-              (top.toVerifierKey pp urs) instanceCommitment ps ch
+              (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch
               pbatch hlen hprob1 haccepts)
           haccepts)
         cell
-        (HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)) :
-    TopLevelBundleStatement top pp
-        (CanonicalMemberConstraintRelation.acceptedPolynomial
-          (memberDecode :=
-            vestaExtractedMemberDecode urs hk
-              (top.toVerifierKey pp urs) instanceCommitment ps ch
-              pbatch hlen hprob1 haccepts)
-          haccepts) ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+        (NontrivialRelation (F := Fp) urs.g urs.u urs.w)) :
+    (∀ proofIndex, top.Statement (inputs proofIndex)) ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   let vk := top.toVerifierKey pp urs
   let memberDecode :=
-    vestaExtractedMemberDecode urs hk vk instanceCommitment ps ch
+    vestaExtractedMemberDecode urs hk vk (top.instanceCommitment pp urs inputs) ps ch
       pbatch hlen hprob1 haccepts
   have hterminal :=
     acceptedModel_circuitSat_or_relation_of_acceptedSelections
-      urs hk vk instanceCommitment ps ch pU pW hpoly
+      urs hk vk (top.instanceCommitment pp urs inputs) ps ch pU pW hpoly
       pbatch hξcur hlen hprob1 haccepts hblinding
       gateCoherence.adviceQueryCount gateCoherence.instanceQueryCount
       i m hm colPoly hbindAll hquot hroute hevals claimed hxgood
   rcases hterminal with hsatisfied | hrelation
-  · let relation :=
-      CanonicalMemberConstraintRelation.ofAcceptedCircuitSat
-        haccepts hsatisfied
-    have hpolynomial :
-        relation.polynomial =
-          CanonicalMemberConstraintRelation.acceptedPolynomial
-            (memberDecode := memberDecode) haccepts := by
-      rfl
-    have hn : vk.n ≠ 0 := by
-      change 2 ^ top.domainExponent ≠ 0
-      positivity
-    have hsatisfaction :=
-      relation.constraintSatisfaction hn
-        (by
-          simpa only [
-            CanonicalMemberConstraintRelation.model,
-            hpolynomial] using hgoodY)
-    apply
-      topLevelBundleStatement_or_bad_of_constraintSatisfaction
-        (top := top) (pp := pp) (urs := urs) (ch := ch)
-        (cell := cell) hblinding
-    · simpa only [hpolynomial] using hsatisfaction
-    · exact correctness hsatisfied
-  · exact Or.inr hrelation
+  · exact
+      TopLevelAcceptedModel.statements_or_relation_of_circuitSat
+        top pp urs hk inputs ps ch pU pW a₀ pbatch memberDecode
+        haccepts hblinding hpoly hsatisfied hgoodY
+        (correctness hsatisfied)
+  · exact PSum.inr hrelation
 
-assert_no_sorry topLevelBundleStatement_or_relation_of_deployedAccepts
+assert_no_sorry topLevelStatements_or_relation_of_deployedAccepts
 
 end Zcash.Snark

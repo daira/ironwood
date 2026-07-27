@@ -1,4 +1,6 @@
+import Zcash.Circuits.Integration.ActionCorrectness
 import Zcash.Circuits.Integration.ActionTerminal
+import Zcash.Circuits.Integration.TopLevelAcceptedModel
 import Zcash.Snark.Keygen.Certificate
 
 /-!
@@ -62,7 +64,7 @@ open Halo2 Polynomial Keygen
 open Zcash.Circuits
 open Zcash.Circuits.Action
 open Zcash.Snark.Fixture
-open ActionInstanceCommitment
+open ActionTerminal
 
 /-- The captured `Shape`'s IPA depth matches the captured URS: both record the
 literal deployed `k = 11`. -/
@@ -83,7 +85,7 @@ Unlike the node-binding terminal below, this endpoint consumes circuit satisfact
 that an upstream constraint capstone has already established. It is the form needed
 by the live Vesta constraint relation.
 -/
-private theorem acceptedModel_circuitSat_deployed_transport
+private noncomputable def acceptedModel_circuitSat_deployed_transport
     (s : Shape)
     (hs : actionProofParams.mergeDerived actionCircuit = s)
     (K : VerifyingKey s Fp G)
@@ -151,28 +153,30 @@ private theorem acceptedModel_circuitSat_deployed_transport
         actionCircuit actionProofParams capturedURS
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts)) :
-    BundleStatement inputs ∨
-      HasNontrivialRelation (F := Fp)
+    BundleStatement inputs ⊕'
+      NontrivialRelation (F := Fp)
         capturedURS.g capturedURS.u capturedURS.w := by
   subst hs
   rw [← Keygen.toVerifierKey_action actionProofParams capturedURS] at hK
   subst hK
-  have terminal :=
-    action_bundleStatement_or_relation_of_acceptedModel_circuitSat
-      actionProofParams capturedURS hk inputs ps ch
-      (actionCircuit.toVerifierKey
-        actionProofParams capturedURS)
-      rfl pU pW a
-  exact terminal batchOpenings memberDecode haccepts hbl hpoly hsatisfied hgoodY
-    ⟨permGamma, permBeta⟩
-    ⟨lookupGamma, lookupBeta, lookupTheta⟩
+  simpa only [BundleStatement] using
+    (TopLevelAcceptedModel.statements_or_relation_of_circuitSat
+      actionCircuit actionProofParams capturedURS hk inputs ps ch
+      pU pW a batchOpenings memberDecode haccepts hbl hpoly
+      hsatisfied hgoodY
+      (cell := FlatCell actionNumPermCols actionDomainSize)
+      (ActionCorrectness.ofAcceptedCircuitSat
+        actionProofParams capturedURS hk inputs ps ch pU pW a
+        batchOpenings memberDecode haccepts hpoly hsatisfied hgoodY
+        ⟨permGamma, permBeta⟩
+        ⟨lookupGamma, lookupBeta, lookupTheta⟩))
 
 set_option maxRecDepth 1000000 in
 /--
 The accepted-circuit-satisfaction Action endpoint at the deployed verifying key.
 This is the concrete `hencodes` target for the Vesta constraint-carrying relation.
 -/
-theorem action_bundleStatement_or_relation_of_acceptedModel_circuitSat_deployed
+noncomputable def action_bundleStatement_or_relation_of_acceptedModel_circuitSat_deployed
     (inputs : Fin Fixture.shape.numProofs → PublicInputs Fp)
     (ps : ProofString Fixture.shape Fp G)
     (ch : Challenges Fixture.shape.k Fp)
@@ -239,8 +243,8 @@ theorem action_bundleStatement_or_relation_of_acceptedModel_circuitSat_deployed
         actionCircuit actionProofParams capturedURS
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts)) :
-    BundleStatement inputs ∨
-      HasNontrivialRelation (F := Fp)
+    BundleStatement inputs ⊕'
+      NontrivialRelation (F := Fp)
         capturedURS.g capturedURS.u capturedURS.w :=
   acceptedModel_circuitSat_deployed_transport
     Fixture.shape Keygen.shape_eq_mergeDerived
@@ -261,7 +265,7 @@ substituting the certificate equalities `shape_eq_mergeDerived` and
 `(actionProofParams, capturedURS)`. Both equalities are ordinary `Eq`s and are
 consumed by `subst`; no cast appears in the statement or in the proof.
 -/
-private theorem actionDeployed_transport
+private noncomputable def actionDeployed_transport
     (s : Shape)
     (hs : actionProofParams.mergeDerived actionCircuit = s)
     (K : VerifyingKey s Fp G)
@@ -308,8 +312,8 @@ private theorem actionDeployed_transport
         capturedURS hk K ps ch memberDecode slot).eval point =
           deployedMemberClaim
             (instanceCommitment := actionCircuit.instanceCommitment actionProofParams capturedURS inputs)
-            K ps ch slot point
-        ∨ HasNontrivialRelation (F := Fp)
+            K ps ch slot point ⊕'
+        NontrivialRelation (F := Fp)
             capturedURS.g capturedURS.u capturedURS.w)
     (hxgood :
       ch.x ∉ szBadSet
@@ -393,8 +397,8 @@ private theorem actionDeployed_transport
         actionCircuit actionProofParams capturedURS
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts)) :
-    BundleStatement inputs ∨
-      HasNontrivialRelation (F := Fp)
+    BundleStatement inputs ⊕'
+      NontrivialRelation (F := Fp)
         capturedURS.g capturedURS.u capturedURS.w := by
   subst hs
   rw [← Keygen.toVerifierKey_action actionProofParams capturedURS] at hK
@@ -418,7 +422,7 @@ certificate (`shape_eq_mergeDerived`, `vk_eq_derived`), applied by `subst` insid
 the fixture facts `shape_k_eq_capturedURS_k` and `vk_blindingFactors_lt`,
 discharged here rather than assumed.
 -/
-theorem action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq_deployed
+noncomputable def action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq_deployed
     (inputs : Fin Fixture.shape.numProofs → PublicInputs Fp)
     (ps : ProofString Fixture.shape Fp G)
     (ch : Challenges Fixture.shape.k Fp)
@@ -462,8 +466,8 @@ theorem action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq_deploye
         memberDecode slot).eval point =
           deployedMemberClaim
             (instanceCommitment := actionCircuit.instanceCommitment actionProofParams capturedURS inputs)
-            Fixture.vk ps ch slot point
-        ∨ HasNontrivialRelation (F := Fp)
+            Fixture.vk ps ch slot point ⊕'
+        NontrivialRelation (F := Fp)
             capturedURS.g capturedURS.u capturedURS.w)
     (hxgood :
       ch.x ∉ szBadSet
@@ -547,8 +551,8 @@ theorem action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq_deploye
         actionCircuit actionProofParams capturedURS
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts)) :
-    BundleStatement inputs ∨
-      HasNontrivialRelation (F := Fp)
+    BundleStatement inputs ⊕'
+      NontrivialRelation (F := Fp)
         capturedURS.g capturedURS.u capturedURS.w :=
   actionDeployed_transport
     Fixture.shape Keygen.shape_eq_mergeDerived

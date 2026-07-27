@@ -57,18 +57,22 @@ The lookup bridge is split deliberately:
   from any top-level circuit's public-input layout and binds accepted instance
   polynomials back to the supplied public inputs, for arbitrary column and proof
   counts.
+* `TopLevelAcceptedModel.lean` composes canonical circuit satisfaction, generic
+  circuit correctness, and public-instance binding into the circuit's statements.
+* `ActionCorrectness.lean` contains only the genuinely Action-specific
+  construction of `TopLevelCircuitCorrectness`.
 * `ActionTerminal.lean` retains the accepted-node-binding specialization. It
   specializes the verifier-native decoded-model terminal to the circuit-derived
-  Action verification key and produces `Action.BundleStatement` (or the shared
-  augmented-basis relation). No Clean type is introduced into
+  Action verification key and produces `Action.BundleStatement` or a computed
+  augmented-basis relation. No Clean type is introduced into
   `Zcash/Snark/Soundness/Canonical/Terminal.lean`.
 
 The core terminals live outside this boundary. `Snark/Soundness/TopLevelTerminal`
 turns canonical constraint satisfaction plus `TopLevelCircuitCorrectness` into the
 circuit-owned statement for every proof. `Snark/Soundness/TopLevelVesta` composes
 that result with the verifier-native Vesta terminal for an arbitrary
-`TopLevelCircuit`. `Snark/Soundness/ActionVesta` supplies the Action correctness
-constructor and invokes the generic public-instance binding, while
+`TopLevelCircuit`. `Snark/Soundness/ActionVesta` supplies only the Action
+correctness constructor to that generic capstone, while
 `Snark/Soundness/Deployed/ActionVesta` only transports captured artifacts. None of
 these public capstones has a free semantic proposition, encoding callback, decoder,
 or column-feed choice.
