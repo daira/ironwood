@@ -1,5 +1,5 @@
 import Zcash.Arithmetic.Domain
-import Clean.Halo2.TopLevelKeygen
+import Clean.Halo2.TopLevel
 import Zcash.Circuits.Integration.PolynomialEnvironment
 import Zcash.Snark.Keygen.Pipeline
 
@@ -86,19 +86,17 @@ theorem domainSizeCastNeZero
 
 /-- A fitting top-level circuit has fewer blinding rows than domain rows. -/
 theorem blindingFactors_lt_domainSize
-    : top.blindingFactors < 2 ^ top.domainExponent :=
-  top.blindingFactors_lt_domainSize top.domainExponent
-    top.fitsAt_domainExponent
+    : top.blindingFactors < 2 ^ top.domainExponent := by
+  have h := top.blindingFactors_add_three_le_domainSize
+  omega
 
 /--
-A top-level circuit with a nonempty operation footprint has a nonempty active
-prefix before its final usable row.
+The compiler-derived domain has room beyond the blinding rows and final unusable row.
 -/
 theorem blindingFactors_succ_lt_domainSize
-    (hused : 0 < top.usedRows) :
-    top.blindingFactors + 1 < 2 ^ top.domainExponent :=
-  top.blindingFactors_succ_lt_domainSize top.domainExponent
-    top.fitsAt_domainExponent hused
+    : top.blindingFactors + 1 < 2 ^ top.domainExponent := by
+  have h := top.blindingFactors_add_three_le_domainSize
+  omega
 
 /--
 The Clean proof-varying assignment decoded from this bundle member.
@@ -199,8 +197,8 @@ def PublicInputEncoding
     (input : PublicInput Fp) : Prop :=
   ∀ index,
     assignment.environment.inst
-        (top.publicInputLayout.cells top.config index).1
-        (top.publicInputLayout.cells top.config index).2 =
+        (top.publicInputLayout.cells index).1
+        (top.publicInputLayout.cells index).2 =
       (toElements input)[index]
 
 /-- A public-input encoding determines the value extracted through the circuit's
@@ -225,28 +223,33 @@ theorem publicInputEncoding_of_rowPolynomials
     (assignment : TopLevelAssignment top numProofs proofIndex)
     (input : PublicInput Fp)
     (rows : ℕ → List Fp)
-    (hfit : ∀ index,
-      (top.publicInputLayout.cells top.config index).2 <
-        2 ^ top.domainExponent)
     (hpoly : ∀ index,
       assignment.polynomial
           (.instanceCol proofIndex
-            (top.publicInputLayout.cells top.config index).1.index) =
+            (top.publicInputLayout.cells index).1.index) =
         instanceRowPolynomial (2 ^ top.domainExponent)
           (Zcash.Arithmetic.omegaOf top.domainExponent)
-          (rows (top.publicInputLayout.cells top.config index).1.index))
+          (rows (top.publicInputLayout.cells index).1.index))
     (hencoded : ∀ index,
-      (rows (top.publicInputLayout.cells top.config index).1.index).getD
-          (top.publicInputLayout.cells top.config index).2 0 =
+      (rows (top.publicInputLayout.cells index).1.index).getD
+          (top.publicInputLayout.cells index).2 0 =
         (toElements input)[index])
     (hinjective : Function.Injective
       fun row : Fin (2 ^ top.domainExponent) =>
         Zcash.Arithmetic.omegaOf top.domainExponent ^ (row : ℕ)) :
     assignment.PublicInputEncoding input := by
   intro index
-  let cell := top.publicInputLayout.cells top.config index
+  let cell := top.publicInputLayout.cells index
   let domainRow : Fin (2 ^ top.domainExponent) :=
-    ⟨cell.2, hfit index⟩
+    ⟨cell.2, by
+      have hrow :=
+        top.publicInputLayout_cells_snd_lt_usableRowsAt_domainExponent index
+      have hrow' :
+          cell.2 <
+            2 ^ top.domainExponent - top.blindingFactors - 1 := by
+        simpa only [cell] using hrow
+      have hfit := top.blindingFactors_add_three_le_domainSize
+      omega⟩
   rw [environment_instance, hpoly index]
   have hrow := instanceRowPolynomial_eval
     (values := rows cell.1.index) hinjective domainRow
@@ -258,42 +261,6 @@ theorem publicInputEncoding_of_rowPolynomials
       (rows cell.1.index).getD cell.2 0 by
     simpa only [cell, domainRow] using hrow]
   exact hencoded index
-
-/--
-Derive public-input encoding when all elements occupy one instance column in their
-`ProvableType` order.
--/
-theorem publicInputEncoding_of_contiguousRowPolynomial
-    (assignment : TopLevelAssignment top numProofs proofIndex)
-    (input : PublicInput Fp)
-    (column : Column .instance)
-    (hcells : ∀ index,
-      top.publicInputLayout.cells top.config index =
-        (column, (index : ℕ)))
-    (hfit : size PublicInput ≤ 2 ^ top.domainExponent)
-    (hpoly :
-      assignment.polynomial (.instanceCol proofIndex column.index) =
-        instanceRowPolynomial (2 ^ top.domainExponent)
-          (Zcash.Arithmetic.omegaOf top.domainExponent)
-          (toElements input).toList)
-    (hinjective : Function.Injective
-      fun row : Fin (2 ^ top.domainExponent) =>
-        Zcash.Arithmetic.omegaOf top.domainExponent ^ (row : ℕ)) :
-    assignment.PublicInputEncoding input := by
-  apply assignment.publicInputEncoding_of_rowPolynomials
-    input (fun _ => (toElements input).toList)
-  · intro index
-    rw [hcells index]
-    exact index.isLt.trans_le hfit
-  · intro index
-    rw [hcells index]
-    exact hpoly
-  · intro index
-    rw [hcells index]
-    rw [List.getD_eq_getElem _ _ (by
-      simpa only [Vector.length_toList] using index.isLt)]
-    simp
-  · exact hinjective
 
 end TopLevelAssignment
 

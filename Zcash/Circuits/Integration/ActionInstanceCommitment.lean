@@ -1,6 +1,5 @@
 import Zcash.Circuits.Integration.ActionEncoding
 import Zcash.Circuits.Integration.ActionGateCoherence
-import Zcash.Circuits.Integration.ActionInstanceCommitmentCompute
 import Zcash.Snark.Soundness.TopLevelTerminal
 import Mathlib.Util.AssertNoSorry
 
@@ -39,6 +38,10 @@ noncomputable def instanceKey
           (Pi.single i (1 : Fp))))
   generator_eq := fun _ => rfl
 
+/-- The instance column selected by the Action circuit's public-input layout. -/
+def publicInputColumn : Column .instance :=
+  (actionCircuit.publicInputLayout.cells ⟨0, by decide⟩).1
+
 /-- The verifier-derived commitment family for Action public inputs. The Action
 circuit has one public instance column; unused column indices are mapped to zero. -/
 noncomputable def commitment
@@ -47,39 +50,40 @@ noncomputable def commitment
     Fin numProofs → ℕ → G :=
   fun proofIndex column =>
     if column =
-        actionCircuit.config.primary.index then
+        publicInputColumn.index then
       (instanceKey pp urs).commitInstance (inputs proofIndex).rows 1
     else 0
 
 omit [DecidableEq G] in
-@[simp] theorem commitment_primary
+@[simp] theorem commitment_publicInputColumn
     (pp : ProofParams) (urs : URS G) {numProofs : ℕ}
     (inputs : Fin numProofs → PublicInputs Fp)
     (proofIndex : Fin numProofs) :
     commitment pp urs inputs proofIndex
-        actionCircuit.config.primary.index =
+        publicInputColumn.index =
       (instanceKey pp urs).commitInstance (inputs proofIndex).rows 1 := by
   simp [commitment]
 
-assert_no_sorry commitment_primary
+assert_no_sorry commitment_publicInputColumn
 
 omit [DecidableEq G] in
 /-- On the primary column, the verifier commitment is the monomial-URS commitment
 to the zero-padded public-row polynomial, with Halo 2's default blind. -/
-theorem commitment_primary_eq_commit
+theorem commitment_publicInputColumn_eq_commit
     (pp : ProofParams) (urs : URS G) {numProofs : ℕ}
     (inputs : Fin numProofs → PublicInputs Fp)
     (proofIndex : Fin numProofs) :
     commitment pp urs inputs proofIndex
-        actionCircuit.config.primary.index =
+        publicInputColumn.index =
       commit urs
           (instanceCoefficients (2 ^ urs.k)
             (actionCircuit.toVerifierKey pp urs).omega
             (inputs proofIndex).rows) +
         urs.w := by
-  rw [commitment_primary, LagrangeCommitmentKey.commitInstance_eq, one_smul]
+  rw [commitment_publicInputColumn,
+    LagrangeCommitmentKey.commitInstance_eq, one_smul]
 
-assert_no_sorry commitment_primary_eq_commit
+assert_no_sorry commitment_publicInputColumn_eq_commit
 
 /--
 Construct the Action circuit's component-level correctness package for the
@@ -232,13 +236,19 @@ theorem action_bundleStatement_or_relation_of_accepted_topLevelBundleStatement
   · exact Or.inr hrelation
   · have hrows :=
       actionRowsInjectiveAtUrs pp urs hk
+    obtain ⟨instanceRotation, hregistered⟩ :=
+      actionCircuit.exists_rotation_mem_instanceQueries_of_publicInputLayout_cell
+        ⟨0, by decide⟩
+    change
+      (publicInputColumn, instanceRotation) ∈
+        actionCircuit.constraintSystem.instanceQueries at hregistered
     have hinstance : ∀
         proofIndex :
           Fin (pp.mergeDerived actionCircuit).numProofs,
         CanonicalMemberConstraintRelation.acceptedPolynomial
               (memberDecode := memberDecode) haccepts
             (.instanceCol proofIndex
-              actionCircuit.config.primary.index) =
+              publicInputColumn.index) =
           instanceRowPolynomial
             (2 ^ actionCircuit.domainExponent)
             (Zcash.Arithmetic.omegaOf
@@ -251,36 +261,32 @@ theorem action_bundleStatement_or_relation_of_accepted_topLevelBundleStatement
             (batchOpenings := batchOpenings)
             (memberDecode := memberDecode)
             haccepts proofIndex
-            actionCircuit.config.primary.index
+            publicInputColumn.index
             (instanceKey pp urs) (inputs proofIndex).rows 1
-            (commitment_primary pp urs inputs proofIndex)
+            (commitment_publicInputColumn pp urs inputs proofIndex)
             hrows
             (instanceQuery_of_layout
               (actionCircuit.toVerifierKey pp urs)
               (commitment pp urs inputs) ps ch proofIndex
-              actionCircuit.config.primary.index
-              0
+              publicInputColumn.index
+              instanceRotation
               (actionCircuit.toVerifierKey_instanceQueryCount
                 pp urs)
               (QueryLayouts.instanceQueryLayout_of_constraintSystem
                 actionCircuit pp urs
-                actionCircuit.config.primary
-                0 primaryRegistered))
+                publicInputColumn
+                instanceRotation hregistered))
       have hrowPolynomial := hbound.resolve_right hrelation
       change
         CanonicalMemberConstraintRelation.acceptedPolynomial
               (memberDecode := memberDecode) haccepts
             (.instanceCol proofIndex
-              actionCircuit.config.primary.index) =
+              publicInputColumn.index) =
           instanceRowPolynomial (2 ^ urs.k)
             (Zcash.Arithmetic.omegaOf
               actionCircuit.domainExponent)
             (inputs proofIndex).rows at hrowPolynomial
       simpa only [← hk] using hrowPolynomial
-    have hsize :
-        10 ≤ 2 ^ actionCircuit.domainExponent := by
-      rw [ActionPermutationDomain.domainExponent_eq]
-      norm_num
     have hencoding : ∀ proofIndex,
         let assignment : TopLevelAssignment actionCircuit
             (pp.mergeDerived actionCircuit).numProofs proofIndex :=
@@ -295,14 +301,30 @@ theorem action_bundleStatement_or_relation_of_accepted_topLevelBundleStatement
             CanonicalMemberConstraintRelation.acceptedPolynomial
               (memberDecode := memberDecode) haccepts }
       change assignment.PublicInputEncoding (inputs proofIndex)
-      apply TopLevelAssignment.publicInputEncoding_of_contiguousRowPolynomial
+      apply TopLevelAssignment.publicInputEncoding_of_rowPolynomials
           (assignment := assignment)
           (inputs proofIndex)
-          actionCircuit.config.primary
+          (fun _ => (inputs proofIndex).rows)
       · intro index
-        rfl
-      · exact hsize
-      · simpa only [PublicInputs.rows] using hinstance proofIndex
+        rw [show actionCircuit.publicInputLayout.cells index =
+          (⟨0⟩, index.val) by
+            exact PublicInputs.layout_cells index]
+        simpa only [publicInputColumn, PublicInputs.layout_cells] using
+          hinstance proofIndex
+      · intro index
+        rw [show actionCircuit.publicInputLayout.cells index =
+          (⟨0⟩, index.val) by
+            exact PublicInputs.layout_cells index]
+        rw [List.getD_eq_getElem _ _ (by
+          simpa only [PublicInputs.rows, Vector.length_toList] using
+            index.isLt)]
+        change
+          (toElements (inputs proofIndex)).toList[index.val] =
+            (toElements (inputs proofIndex))[index]
+        rw [Vector.getElem_toList]
+        exact
+          (Vector.get_eq_getElem
+            (toElements (inputs proofIndex)) index).symm
       · exact TopLevelAssignment.domainRowsInjective
           ActionPermutationDomain.domainExponent_lt
     have hpublic :=

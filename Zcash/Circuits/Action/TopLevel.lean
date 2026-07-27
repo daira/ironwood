@@ -1,7 +1,6 @@
 import Clean.Halo2.TopLevel
 import Zcash.Circuits.Action.PublicInput
 import Zcash.Circuits.Action.RealBases
-import Zcash.Circuits.Action.TopLevelSynthesisLaws
 
 /-!
 # The deployed Orchard Action as a closed top-level circuit
@@ -87,13 +86,17 @@ private theorem configured_closesEnvironment
     let formal := circuit Specs.Sinsemilla.orchardGenerators orchardBases
     formal.EnvAssumptions
       (TopLevelCompilation.config formal)
-      (TopLevelCompilation.placedEnvironment formal assignment) := by
+      (TopLevelCompilation.placedEnvironment
+        formal PublicInputs.layout assignment) := by
   let formal := circuit Specs.Sinsemilla.orchardGenerators orchardBases
-  let env := TopLevelCompilation.placedEnvironment formal assignment
+  let env :=
+    TopLevelCompilation.placedEnvironment
+      formal PublicInputs.layout assignment
   change EnvAssumptions
     (configure Specs.Sinsemilla.orchardGenerators {}).1 env
   have htable :
-      2 ^ Specs.K ≤ TopLevelCompilation.usedRows formal := by
+      2 ^ Specs.K ≤
+        TopLevelCompilation.usedRows formal PublicInputs.layout := by
     have hlength := Operations.loadTable_length_le_usedRows
       (TopLevelCompilation.operations formal)
       ((configure Specs.Sinsemilla.orchardGenerators {}).1.sinsemilla1.generatorTable.tableIdx)
@@ -104,14 +107,19 @@ private theorem configured_closesEnvironment
           circuit_synthesize_eq] using
           initialGeneratorTableIdx_mem
             (configure Specs.Sinsemilla.orchardGenerators {}).1 0)
-    simpa only [List.length_map, List.length_range] using hlength
+    have hoperations :
+        2 ^ Specs.K ≤
+          Halo2.usedRows (TopLevelCompilation.operations formal) := by
+      simpa only [List.length_map, List.length_range] using hlength
+    exact hoperations.trans (Nat.le_max_left _ _)
   have hUsable : 2 ^ Specs.K ≤ env.env.usableRows := by
     change
       2 ^ Specs.K ≤
-        2 ^ TopLevelCompilation.domainExponent formal -
+        2 ^ TopLevelCompilation.domainExponent formal PublicInputs.layout -
           (TopLevelCompilation.constraintSystem formal).blindingFactors - 1
     exact htable.trans
-      (TopLevelCompilation.usedRows_le_usableRowsAt_domainExponent formal)
+      (TopLevelCompilation.usedRows_le_usableRowsAt_domainExponent
+        formal PublicInputs.layout)
   obtain ⟨hs2, hm1, hm2, hlookup⟩ := configuredTableSharing
   obtain ⟨hfull, hshort, hbaseField, hdistinct⟩ :=
     configured_pureEnvironmentAssumptions env
@@ -140,24 +148,20 @@ def actionCircuit : TopLevelCircuit Fp Config PublicInputs where
     dsimp
     intro env
     change combine
-      (PublicInputs.layout.extract
-        (configure Specs.Sinsemilla.orchardGenerators {}).1 env.env)
+      (PublicInputs.layout.extract env.env)
       (PrivateWitness.ofActionData
         (extractPost
           (configure Specs.Sinsemilla.orchardGenerators {}).1 () 0 env)) =
       extractPost
         (configure Specs.Sinsemilla.orchardGenerators {}).1 () 0 env
-    rw [← PublicInputs.ofActionData_extractPost]
+    have hprimary :
+        (configure Specs.Sinsemilla.orchardGenerators {}).1.primary = ⟨0⟩ := by
+      rfl
+    rw [← PublicInputs.ofActionData_extractPost _ _ _ hprimary]
     exact combine_parts
       (extractPost
         (configure Specs.Sinsemilla.orchardGenerators {}).1 () 0 env)
   assumptions_eq := rfl
-  lookupRelevantSelectorActivationsExact :=
-    actionCircuit_lookupRelevantSelectorActivationsExact
-      Specs.Sinsemilla.orchardGenerators orchardBases
-  lookupInputsNoSimpleSelectors :=
-    actionCircuit_lookupInputsNoSimpleSelectors
-      Specs.Sinsemilla.orchardGenerators orchardBases
   closesEnvironment := configured_closesEnvironment
 
 /-- The semantic conclusion for every Action proved in one Halo 2 bundle. -/
