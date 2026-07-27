@@ -1,4 +1,5 @@
 import Zcash.Circuits.Integration.InstanceColumns
+import Zcash.Common.RelationWitness
 import Zcash.Circuits.Integration.QueryLayouts
 import Zcash.Circuits.Integration.TopLevelCorrectness
 import Mathlib.Util.AssertNoSorry
@@ -133,7 +134,7 @@ variable
 Verifier acceptance binds one cell's circuit-derived instance column to its
 layout-derived row polynomial, or yields the augmented-basis relation.
 -/
-theorem acceptedColumn_eq_rowPolynomial_or_relation
+noncomputable def acceptedColumn_eq_rowPolynomial_or_relation
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (index : Fin (size PublicInput))
     (hrows : Function.Injective
@@ -146,11 +147,15 @@ theorem acceptedColumn_eq_rowPolynomial_or_relation
       instanceRowPolynomial (2 ^ top.domainExponent)
         (Zcash.Arithmetic.omegaOf top.domainExponent)
         (top.publicInputRows (inputs proofIndex)
-          (top.publicInputLayout.cells index).1) ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+          (top.publicInputLayout.cells index).1) ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  classical
   let column := (top.publicInputLayout.cells index).1
-  obtain ⟨instanceRotation, hregistered⟩ :=
+  -- The registered rotation is an `∃` and the conclusion is data, so it is chosen.
+  have hrotation :=
     top.exists_rotation_mem_instanceQueries_of_publicInputLayout_cell index
+  let instanceRotation := Classical.choose hrotation
+  have hregistered := Classical.choose_spec hrotation
   have hbound :=
     CanonicalMemberConstraintRelation.acceptedInstanceColumn_eq_rowPolynomial_or_relation
       (pU := pU) (pW := pW) (a := a)
@@ -177,7 +182,7 @@ assert_no_sorry
 Verifier acceptance binds one decoded assignment to the public input supplied for
 that proof, or yields the augmented-basis relation.
 -/
-theorem publicInputEncoding_or_relation
+noncomputable def publicInputEncoding_or_relation
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (domainExponent_lt : top.domainExponent < 33) :
     (let assignment : TopLevelAssignment top
@@ -185,35 +190,33 @@ theorem publicInputEncoding_or_relation
         { polynomial :=
             CanonicalMemberConstraintRelation.acceptedPolynomial
               (memberDecode := memberDecode) haccepts };
-      assignment.PublicInputEncoding (inputs proofIndex)) ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+      assignment.PublicInputEncoding (inputs proofIndex)) ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   let assignment : TopLevelAssignment top
       (pp.mergeDerived top).numProofs proofIndex :=
     { polynomial :=
         CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts }
-  change assignment.PublicInputEncoding (inputs proofIndex) ∨
-    HasNontrivialRelation (F := Fp) urs.g urs.u urs.w
-  by_cases hrelation :
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w
-  · exact Or.inr hrelation
-  · apply Or.inl
-    apply TopLevelAssignment.publicInputEncoding_of_publicInputRowPolynomials
-        (assignment := assignment) (inputs proofIndex)
-    · intro index
-      exact
-        (acceptedColumn_eq_rowPolynomial_or_relation
-          top pp urs hk inputs ps ch pU pW a batchOpenings
-          memberDecode haccepts proofIndex index
-          (by
-            change Function.Injective
-              fun i : Fin (2 ^ urs.k) =>
-                Zcash.Arithmetic.omegaOf top.domainExponent ^ (i : ℕ)
-            rw [← hk]
-            exact Zcash.Arithmetic.omegaOf_powers_injective
-              top.domainExponent (by omega))).resolve_right hrelation
-    · exact Zcash.Arithmetic.omegaOf_powers_injective
-        top.domainExponent (by omega)
+  change assignment.PublicInputEncoding (inputs proofIndex) ⊕'
+    NontrivialRelation (F := Fp) urs.g urs.u urs.w
+  refine bindOrRelationWitness
+    (finForallOrRelationWitness fun index =>
+      acceptedColumn_eq_rowPolynomial_or_relation
+        top pp urs hk inputs ps ch pU pW a batchOpenings
+        memberDecode haccepts proofIndex index
+        (by
+          change Function.Injective
+            fun i : Fin (2 ^ urs.k) =>
+              Zcash.Arithmetic.omegaOf top.domainExponent ^ (i : ℕ)
+          rw [← hk]
+          exact Zcash.Arithmetic.omegaOf_powers_injective
+            top.domainExponent (by omega)))
+    fun hcolumns => ?_
+  apply TopLevelAssignment.publicInputEncoding_of_publicInputRowPolynomials
+      (assignment := assignment) (inputs proofIndex)
+  · exact hcolumns
+  · exact Zcash.Arithmetic.omegaOf_powers_injective
+      top.domainExponent (by omega)
 
 assert_no_sorry publicInputEncoding_or_relation
 
@@ -225,34 +228,32 @@ Acceptance binds every circuit-derived public instance column to its layout-deri
 row polynomial, or yields the shared augmented-basis relation. No assumption is made
 about proof multiplicity, column count, column indices, or query rotations.
 -/
-theorem statements_or_relation_of_accepted_topLevelBundleStatement
+noncomputable def statements_or_relation_of_accepted_topLevelBundleStatement
     (domainExponent_lt : top.domainExponent < 33)
     (htop :
       TopLevelBundleStatement top pp
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts)) :
-    (∀ proofIndex, top.Statement (inputs proofIndex)) ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+    (∀ proofIndex, top.Statement (inputs proofIndex)) ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   let poly :=
     CanonicalMemberConstraintRelation.acceptedPolynomial
       (memberDecode := memberDecode) haccepts
   change TopLevelBundleStatement top pp poly at htop
-  by_cases hrelation :
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w
-  · exact Or.inr hrelation
-  · have hencoding : ∀ proofIndex,
+  refine bindOrRelationWitness
+    (finForallOrRelationWitness
+      (A := fun proofIndex : Fin (pp.mergeDerived top).numProofs =>
         let assignment : TopLevelAssignment top
             (pp.mergeDerived top).numProofs proofIndex :=
           { polynomial := poly }
-        assignment.PublicInputEncoding (inputs proofIndex) := by
-      intro proofIndex
-      exact
-        (publicInputEncoding_or_relation
+        assignment.PublicInputEncoding (inputs proofIndex))
+      fun proofIndex =>
+        publicInputEncoding_or_relation
           top pp urs hk inputs ps ch pU pW a batchOpenings memberDecode
-          haccepts proofIndex domainExponent_lt).resolve_right hrelation
-    exact Or.inl
-      (TopLevelBundleStatement.of_publicInputEncoding
-        top pp poly inputs hencoding htop)
+          haccepts proofIndex domainExponent_lt)
+    fun hencoding =>
+      TopLevelBundleStatement.of_publicInputEncoding
+        top pp poly inputs hencoding htop
 
 assert_no_sorry
   statements_or_relation_of_accepted_topLevelBundleStatement
