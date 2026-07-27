@@ -233,9 +233,6 @@ assert_computable classifyAction +choice
 assert_axioms value_positive
 assert_axioms value_negative
 assert_axioms value_equal
--- The concrete Pallas refinements inherit the explicit `pallas_natCard` trust
--- declaration (and native certificate checks).  They are therefore audited by
--- `lean_verify` rather than asserted against the smaller standard/native budget.
 assert_axioms zero_encodings_distinct
 assert_axioms zero_encodings_decode_equal
 assert_axioms dummy_spend_merkle_vacuous
@@ -245,6 +242,18 @@ assert_axioms cross_address_flag_one
 assert_axioms cross_address_flag_arbitrary_nonzero
 assert_axioms enable_spend_disabled_forces_zero
 assert_axioms enable_output_disabled_forces_zero
+
+-- The refinements instantiated at the deployed Pallas bases sit one tier up: their proofs
+-- consume `native_decide` certificates — the fixed-base window tables and CompElliptic's
+-- Pallas point count (`pallas_natCard`) — so `+native` is the whole of the extra budget.
+assert_axioms alpha_scaling +native
+assert_axioms value_commit_positive_scaling +native
+assert_axioms value_commit_negative_scaling +native
+assert_axioms or_break_iff_guarded_smoke +native
+assert_axioms path_iff_guarded_smoke +native
+assert_axioms guardedPath_of_exact +native
+assert_axioms spec_post_bridge_smoke +native
+assert_axioms circuit_soundness_bridge_smoke +native
 
 -- The onward reduction from classified break data to the games-facing
 -- discrete-log-relation object is likewise a computation: the coefficients are a
@@ -257,13 +266,11 @@ assert_no_sorry classify_query_inr
 assert_no_sorry classifyRelation_isSome_iff
 assert_no_sorry classifyRelation_site
 assert_computable breakCoeffs +choice
--- `relationOfBreakData` and `classifyRelation` are likewise plain compiled `def`s,
--- but their erased `Prop` fields carry the deployed base points' validity
--- certificates, which live at the concrete Pallas trust tier (`pallas_natCard`
--- plus the native certificate checks).  `assert_computable` has no budget for a
--- declared axiom, so — exactly like the `zero_encodings_*` exclusions above —
--- they are audited by `lean_verify` rather than asserted here; once
--- `pallas_natCard` becomes a `native_decide`-backed theorem they can rejoin as
--- `assert_computable … +choice +native`.
+-- `relationOfBreakData` and `classifyRelation` are likewise plain compiled `def`s, asserted
+-- computable per the breaks-as-computed-data convention.  Their erased `Prop` fields
+-- additionally carry the deployed base points' on-curve certificates, which are
+-- `native_decide` checks, so they sit one tier up at `+choice +native`.
+assert_computable relationOfBreakData +choice +native
+assert_computable classifyRelation +choice +native
 
 end Zcash.Security.Ledger.BridgeTests
