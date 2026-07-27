@@ -1,5 +1,6 @@
 import Clean.Halo2.TopLevel
 import Zcash.Circuits.Integration.CircuitIntegration
+import Zcash.Common.RelationWitness
 
 /-!
 # Generic SNARK-to-top-level-circuit endpoint
@@ -41,21 +42,20 @@ variable
     {Config : Type} {PublicInput : TypeMap}
     [ProvableType PublicInput]
     {cell : Type} [DecidableEq cell] [Fintype cell]
-    {Bad : Prop}
+    {Bad : Type}
 
 /--
 The generic semantic last mile: reconstructed full constraints imply the top-level
 circuit's own statement, preserving the bridge's shared exceptional event.
 -/
-theorem topLevelSoundness_or_bad
+def topLevelSoundness_or_bad
     (top : TopLevelCircuit Fp Config PublicInput)
     (assignment : ProofAssignment Fp)
     (bridge : FullCircuitBridge top.placement (top.environment assignment)
       top.operations 0 cell Bad) :
-    top.Statement (top.extractPublicInput (top.environment assignment)) ∨ Bad := by
-  rcases bridge.satisfaction_or_bad with hsatisfied | hbad
-  · exact Or.inl (hsatisfied.topLevelSoundness top assignment)
-  · exact Or.inr hbad
+    top.Statement (top.extractPublicInput (top.environment assignment)) ⊕' Bad :=
+  bindOrRelationWitness bridge.satisfaction_or_bad
+    fun hsatisfied => hsatisfied.topLevelSoundness top assignment
 
 end FullCircuitBridge
 
