@@ -4,7 +4,7 @@ import Zcash.Snark.Soundness.Forking.PinnedSqueeze
 /-!
 # The prefixed `x` squeeze
 
-The concrete constraint bad set reads the pre-`x` transcript and the four earlier Fiat--Shamir
+The concrete constraint bad set reads the pre-`x` transcript and the four earlier Fiat–Shamir
 answers.  These facts prove that the earlier points remain pinned when the `x` answer is
 resampled, then price the resulting one-level bad-root event directly.  No multiopen rewind or
 fourth-root continuation threshold is involved.

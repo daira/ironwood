@@ -56,16 +56,17 @@ assert_axioms vk_fixed_layout_length +native
 assert_axioms vk_omega_order +native
 assert_axioms vk_n_cast_ne_zero +native
 assert_axioms deployedConstraintStaticChecks_of_captured +native
--- The `x`-squeeze schedule at the captured key: the degree caps discharged, so `epsilonX` is
--- the concrete `20470 / |𝔽|`; exact leave-one-`x` invariance is the named input.
+-- The `x`-squeeze schedule at the captured key: the degree caps are discharged, so `epsilonX` is
+-- the concrete `20470 / |𝔽|`; exact leave-one-`x` invariance follows from the family's
+-- fresh-query constraint trace.
 assert_axioms deployedConstraintXSqueezeSchedule_captured +native
 -- The deployed compressed-identity extraction bound at the captured key: the rewind-free
 -- capstone with the static checks and degree caps discharged, so the bad-`x` term is the concrete
 -- `(Q + 1) · 20470 / |𝔽|` and the multiopen term is the additive root budget.  Semantic
 -- circuit satisfaction additionally uses the four-budget promotion in the core trust census.
 assert_axioms orchard_deployed_knowledge_error_captured +native
--- The same bound on the interpolation-free route: the deployed root family built by `ofCovered`,
--- so the statement rests on no field-capacity premise and no offline interpolation.
+-- The same bound on the interpolation-free route: the deployed constraint family is built by
+-- `ofCovered` from the two fresh-query traces, with no field-capacity premise or interpolation.
 assert_axioms orchard_deployed_knowledge_error_captured_direct +native
 
 -- The instance-commitment derivation: the two captured claims, plus the data and functions they

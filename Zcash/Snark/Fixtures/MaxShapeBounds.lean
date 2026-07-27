@@ -121,8 +121,7 @@ theorem snarkConstraintsDeployed_prob_le_of_consensus_bound
       (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           snarkExtractionFailureEventDeployed family.toFamily
-            (deployedConstraintDecodedOfOutcome family
-              (deployedConstraintOutcomeProviderOfRoot family static)))
+            (deployedConstraintDecodedOfRoot family static))
       ≤ ((T + 11) * (3 / Fintype.card Fp) +
           (T + 1 : ℕ) * (1 / Fintype.card Fp) +
           (dlogBound + 1 / Fintype.card Fp))
@@ -156,8 +155,7 @@ theorem snarkConstraintsDeployed_prob_le_at_consensus_max
       (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           snarkExtractionFailureEventDeployed family.toFamily
-            (deployedConstraintDecodedOfOutcome family
-              (deployedConstraintOutcomeProviderOfRoot family static)))
+            (deployedConstraintDecodedOfRoot family static))
       ≤ ((T + 11) * (3 / Fintype.card Fp) +
           (T + 1 : ℕ) * (1 / Fintype.card Fp) +
           (dlogBound + 1 / Fintype.card Fp))

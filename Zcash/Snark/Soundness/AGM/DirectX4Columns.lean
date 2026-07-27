@@ -185,15 +185,16 @@ The same batch-or-relation walk as the compatibility adapter, with the `x₄` le
 direct decode above instead of the offline interpolation. Nothing here rewinds and nothing
 interpolates: the `x₄` columns come from online coverage, the per-set `x₁` columns from the same
 member representations, and every disagreement returns explicit relation coefficients.
+-/
 
+/-
 TODO(#115): Equip this executable direct-coordinate postprocessing with an explicit polynomial
 total-cost bound.  Computability here closes the algorithmic seam; the concrete PPT/runtime bound
 is a separate obligation from counting black-box adversary calls.
 -/
 
-/-- **The deployed root outcome, decoded directly.** The interpolation-free counterpart of
-`deployedRootOutcomeOfOnline`: it needs no field-capacity hypothesis, because it never chooses
-ghost evaluation points. -/
+/-- **The deployed root outcome, decoded directly.** It needs no field-capacity hypothesis,
+because it never chooses ghost evaluation points. -/
 def deployedRootOutcomeOfCovered
     (family : ComputedOnlineMemberFSFamily shape) :
     DeployedRootOutcomeProvider family.toFamily := by
@@ -231,18 +232,17 @@ def deployedRootOutcomeOfCovered
               memberU := fun i hi => (results ⟨i, hi⟩).uComp_eq
               memberW := fun i hi => (results ⟨i, hi⟩).wComp_eq }
 
-/-- **A deployed root family on the direct route.** The interpolation-free counterpart of
-`ComputedDeployedRootFSFamily.ofOnline`: the outcome is decoded from online coverage, so no
-field-capacity hypothesis is needed and no ghost evaluation points are chosen. The remaining
-input is exact leave-one-squeeze invariance. Reverse unbatching may depend on later challenges,
-so strict chronological prefix determination is not required. -/
+/-- **A deployed root family on the direct route.** The outcome is decoded from online coverage,
+so no field-capacity hypothesis is needed and no ghost evaluation points are chosen. Its
+chronology input is the staged root trace; exact leave-one-squeeze invariance is derived from that
+trace. Reverse unbatching may depend on later challenges. -/
 def ComputedDeployedRootFSFamily.ofCovered
     (family : ComputedOnlineMemberFSFamily shape)
-    (hpinned : DeployedRootSqueezeInvariance family.toFamily
+    (trace : DeployedRootOnlineTrace family.toFamily
       (deployedRootOutcomeOfCovered family)) :
     ComputedDeployedRootFSFamily shape where
   toComputedOnlineMemberFSFamily := family
   outcome := deployedRootOutcomeOfCovered family
-  squeezeInvariant := hpinned
+  rootTrace := trace
 
 end Zcash.Snark

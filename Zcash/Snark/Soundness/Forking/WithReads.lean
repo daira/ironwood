@@ -31,6 +31,16 @@ def readFin : ∀ {n : ℕ}, (Fin n → T) → OracleComp T F (Fin n → F)
       · rw [Fin.cons_zero]
       · rw [Fin.cons_succ]
 
+/-- The finite reader's query log is exactly the supplied point vector. -/
+@[simp] theorem queries_readFin : ∀ {n : ℕ} (ts : Fin n → T) (O : T → F),
+    (readFin (F := F) ts).queries O = List.ofFn ts
+  | 0, ts, O => by
+      simp [readFin, OracleComp.queries]
+  | n + 1, ts, O => by
+      simp only [readFin, OracleComp.queries, OracleComp.queries_bind, queries_readFin,
+        List.append_nil]
+      rw [List.ofFn_succ]
+
 /-- The reader queries one point per index. -/
 theorem queryBound_readFin : ∀ {n : ℕ} (ts : Fin n → T),
     (readFin (F := F) ts).QueryBound n

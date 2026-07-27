@@ -6,11 +6,12 @@ import Zcash.Snark.Soundness.Forking.PinnedRoots
 /-!
 # The deployed pinned AGM root family
 
-The adapter from rewind-free algebraic batch data to `PinnedRootFamily`. The family condition is
-the exact leave-one-squeeze invariance consumed by the probability layer. Root sets produced by
-reverse unbatching may legitimately depend on later batching challenges, so strict chronological
-prefix determination is a sufficient toolkit property, not the live interface. The bad sets are
-the two IPA shift polynomials and the deployed `x4`, `x3`, `x2`, and per-set `x1` polynomials.
+The adapter from rewind-free algebraic batch data to `PinnedRootFamily`. The live family carries
+an oracle computation of each root set that does not query that event's priced squeeze point;
+the exact leave-one-squeeze invariance consumed by the probability layer is derived. Such a
+computation may query later batching challenges, so strict-prefix determination is only a
+sufficient toolkit property. The bad sets are the two IPA shift polynomials and the deployed
+`x4`, `x3`, `x2`, and per-set `x1` polynomials.
 -/
 
 namespace Zcash.Snark
@@ -116,117 +117,6 @@ abbrev DeployedRootOutcomeProvider (family : ComputedAlgebraicFSFamily shape) :=
         (ursOfAugmentedBasis shape.k basis).g
         (ursOfAugmentedBasis shape.k basis).u
         (ursOfAugmentedBasis shape.k basis).w
-
-/-- Distinct offline interpolation points for recovering the represented `x4` columns.  The
-current challenge is included explicitly, so decoding returns the actual aggregate coordinates. -/
-structure DeployedX4InterpolationData
-    (family : ComputedAlgebraicFSFamily shape)
-    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
-    (pnu : WrappedAlgebraicOutput family basis) where
-  points : Fin (deployedX4PairCount (family.vk basis) (family.instanceCommitment basis)
-    pnu.1.proof.1
-    (chRecord (wrappedPreIpaReads pnu) (fun _ => 0)) + 1) -> Fp
-  pointsInjective : Function.Injective points
-  current : Fin (deployedX4PairCount (family.vk basis) (family.instanceCommitment basis)
-    pnu.1.proof.1
-    (chRecord (wrappedPreIpaReads pnu) (fun _ => 0)) + 1)
-  currentPoint : points current = wrappedPreIpaReads pnu 8
-
-/-- The deployed shape has enough field elements for offline interpolation whenever its fixed
-point-set arity plus one fits in `Fp`.  The construction permutes an arbitrary embedding so that
-its first point is the execution's actual `x4` challenge. -/
-def deployedX4InterpolationDataOfCapacity
-    (family : ComputedAlgebraicFSFamily shape)
-    (hcapacity : shape.numPointSets + 1 <= Fintype.card Fp)
-    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
-    (pnu : WrappedAlgebraicOutput family basis) :
-    DeployedX4InterpolationData family basis pnu := by
-  let count := deployedX4PairCount (family.vk basis) (family.instanceCommitment basis)
-    pnu.1.proof.1
-    (chRecord (wrappedPreIpaReads pnu) (fun _ => 0))
-  have hcount : count + 1 <= Fintype.card Fp := by
-    exact (Nat.add_le_add_right
-      (deployedX4PairCount_le_numPointSets (family.vk basis)
-        (family.instanceCommitment basis) pnu.1.proof.1
-        (chRecord (wrappedPreIpaReads pnu) (fun _ => 0))) 1).trans hcapacity
-  let embedding : Fin (count + 1) ↪ Fp :=
-    { toFun := fun i => (i.val : Fp)
-      inj' := fun i j hij => Fin.ext (CharP.natCast_injOn_Iio Fp scalarFieldOrder
-        (by simpa only [card_Fp] using i.isLt.trans_le hcount)
-        (by simpa only [card_Fp] using j.isLt.trans_le hcount)
-        hij) }
-  let current : Fin (count + 1) := ⟨0, Nat.zero_lt_succ count⟩
-  let swap := Equiv.swap (embedding current) (wrappedPreIpaReads pnu 8)
-  refine
-    { points := fun i => swap (embedding i)
-      pointsInjective := swap.injective.comp embedding.injective
-      current := current
-      currentPoint := ?_ }
-  simp [swap]
-
-/-- The complete deployed batch-or-relation outcome from the online AGM representations:
-`aMulti` is evaluated at distinct ghost `x4` values and every within-set member is resolved from
-a pre-`x1` point representation.  No accepting execution is rewound. -/
-noncomputable def deployedRootOutcomeOfOnline
-    (family : ComputedOnlineMemberFSFamily shape)
-    (hcapacity : shape.numPointSets + 1 <= Fintype.card Fp) :
-    DeployedRootOutcomeProvider family.toFamily := by
-  intro basis O
-  let pnu := (wrappedAdversary family.toFamily basis).run O
-  let p := pnu.1
-  let nu := wrappedPreIpaReads pnu
-  have hp : p = (family.adversary basis).run O := by
-    exact wrappedAdversary_run_fst family.toFamily basis O
-  have hcovered : DeployedMembersCovered (family.vk basis)
-      (family.instanceCommitment basis) p.algebraicProof
-      (family.fixedRepresentations basis) := by
-    rw [hp]
-    exact family.membersCovered basis O
-  have hcanonical : CanonicalOnlineMultiopenCoordinates p
-      (family.fixedRepresentations basis) := by
-    rw [hp]
-    exact family.canonical basis O
-  let interpolation :=
-    deployedX4InterpolationDataOfCapacity family.toFamily hcapacity basis pnu
-  let x4Batch := deployedX4BatchOfRepresentations p nu interpolation.points
-    interpolation.pointsInjective interpolation.current interpolation.currentPoint
-  let count := deployedX4PairCount (family.vk basis) (family.instanceCommitment basis)
-    p.proof.1 (wrappedPreIpaRecord pnu)
-  let x1Result := fun i : Fin count =>
-    deployedX1BatchOfCoveredWithSourceOrRelation p (family.fixedRepresentations basis) hcovered nu
-      x4Batch i i.isLt
-  cases hall : finForallOrRelationWitness x1Result with
-  | inr relation => exact PSum.inr relation
-  | inl results =>
-      let x1 := fun (i : Nat) (hi : i < count) => (results ⟨i, hi⟩).batch
-      have hx1Coeffs : forall i (hi : i < count),
-          (x1 i hi).coeffs =
-            (deployedMemberRepresentationsOfCovered p
-              (family.fixedRepresentations basis) hcovered nu i hi).coeffs := by
-        intro i hi
-        exact (results ⟨i, hi⟩).coeffs_eq
-      have hx1U : forall i (hi : i < count),
-          (x1 i hi).uComp =
-            (deployedMemberRepresentationsOfCovered p
-              (family.fixedRepresentations basis) hcovered nu i hi).uComp := by
-        intro i hi
-        exact (results ⟨i, hi⟩).uComp_eq
-      have hx1W : forall i (hi : i < count),
-          (x1 i hi).wComp =
-            (deployedMemberRepresentationsOfCovered p
-              (family.fixedRepresentations basis) hcovered nu i hi).wComp := by
-        intro i hi
-        exact (results ⟨i, hi⟩).wComp_eq
-      exact PSum.inl
-        { fixedRepresentations := family.fixedRepresentations basis
-          canonical := hcanonical
-          membersCovered := hcovered
-          batches :=
-            { x4 := x4Batch
-              x1 := x1 }
-          memberCoeffs := hx1Coeffs
-          memberU := hx1U
-          memberW := hx1W }
 
 /-- Squeeze index used by one root event: `xi`, `z`, `x4`, `x3`, `x2`, and the union of all
 `x1` roots. -/
@@ -373,7 +263,7 @@ theorem deployedRootEventBudget_sum_le (shape : Shape) :
 
 /-- **Transcript-stage causality for deployed root data.** The bad set for event `i` is determined
 by oracle answers at transcripts strictly shorter than its own squeeze prefix. This is the natural
-property exported by a sequential Fiat--Shamir implementation: later answers, including the answer
+property exported by a sequential Fiat–Shamir implementation: later answers, including the answer
 being priced, cannot affect data already emitted before that squeeze. -/
 def DeployedRootPrefixDetermined (family : ComputedAlgebraicFSFamily shape)
     (outcome : DeployedRootOutcomeProvider family) : Prop :=
@@ -426,51 +316,74 @@ theorem deployedRootSqueezeInvariance_of_prefixDetermined
   rw [hEq, hlen] at ht
   exact lt_irrefl _ ht
 
-/-- An online AGM family carrying a concrete batch-or-relation outcome whose root set is invariant
-under changing only the answer being priced. Reverse unbatching may use later challenges, so this
-is intentionally the exact property required by `PinnedRootEvent`. -/
+/-- Reprogramming a point that a computation did not query leaves its result unchanged. -/
+theorem OracleComp.run_update_of_not_mem_queries {T F α : Type*} [DecidableEq T]
+    (A : OracleComp T F α) (O : T → F) (t : T) (v : F)
+    (hfresh : t ∉ A.queries O) :
+    A.run (Function.update O t v) = A.run O := by
+  induction A with
+  | pure a => rfl
+  | query q k ih =>
+      simp only [OracleComp.queries, List.mem_cons, not_or] at hfresh
+      have hqt : q ≠ t := Ne.symm hfresh.1
+      rw [OracleComp.run_query, OracleComp.run_query, Function.update_apply, if_neg hqt]
+      exact ih (O q) hfresh.2
+
+/-- A representation-carrying root-set computation that stops short of each priced squeeze.
+
+`stage` is an actual oracle computation, `fresh` proves that it has not queried the squeeze point
+selected by the deployed run, and `agrees` connects its result to the final direct decoder. The
+pinning equation is therefore a consequence of query chronology, not a renamed equality field. -/
+structure DeployedRootOnlineTrace (family : ComputedAlgebraicFSFamily shape)
+    (outcome : DeployedRootOutcomeProvider family) where
+  stage :
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) -> Fin 6 ->
+      OracleComp
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k)) Fp (Set Fp)
+  agrees : forall (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) (i : Fin 6)
+      (O : BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp),
+    (stage basis i).run O =
+      deployedRootBad family outcome basis ((wrappedAdversary family basis).run O) O i
+  fresh : forall (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) (i : Fin 6)
+      (O : BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp),
+    deployedRootPoint family ((wrappedAdversary family basis).run O) i ∉
+      (stage basis i).queries O
+
+/-- The online root trace derives the exact squeeze invariance consumed by probability pricing. -/
+theorem DeployedRootOnlineTrace.toSqueezeInvariance
+    {family : ComputedAlgebraicFSFamily shape}
+    {outcome : DeployedRootOutcomeProvider family}
+    (trace : DeployedRootOnlineTrace family outcome) :
+    DeployedRootSqueezeInvariance family outcome := by
+  intro basis i O v
+  let point := deployedRootPoint family ((wrappedAdversary family basis).run O) i
+  let updated := Function.update O point v
+  calc
+    deployedRootBad family outcome basis ((wrappedAdversary family basis).run updated)
+        updated i = (trace.stage basis i).run updated :=
+      (trace.agrees basis i updated).symm
+    _ = (trace.stage basis i).run O :=
+      OracleComp.run_update_of_not_mem_queries _ _ _ _ (trace.fresh basis i O)
+    _ = deployedRootBad family outcome basis ((wrappedAdversary family basis).run O) O i :=
+      trace.agrees basis i O
+
+/-- An online AGM family carrying a concrete batch-or-relation outcome and the emission-stage
+trace from which root squeeze invariance is derived. Reverse unbatching may use later challenges;
+only each event's own answer is excluded from its retained pre-squeeze set. -/
 structure ComputedDeployedRootFSFamily (shape : Shape)
     extends ComputedOnlineMemberFSFamily shape where
   outcome : DeployedRootOutcomeProvider toComputedAlgebraicFSFamily
-  squeezeInvariant : DeployedRootSqueezeInvariance toComputedAlgebraicFSFamily outcome
-
-/-- Mathematical compatibility adapter using the offline Vandermonde decoder.  Intentionally
-`noncomputable`: it proves the batch-or-relation dichotomy but does not instantiate an executable
-DLOG adversary; a concrete-security capstone must supply the outcome through a computable
-direct-coordinate implementation.
-
-The final-output `OracleComp` interface does not encode when each AGM representation was emitted,
-so the constructor requires exact squeeze invariance from a staged implementation. Strict prefix
-determination remains a sufficient adapter where it is actually true, but is not required here:
-reverse unbatching sets can consume later batching answers while remaining blind to their own.
-
-The direct-coordinate route is `ComputedDeployedRootFSFamily.ofCovered`
-(`AGM.DirectX4Columns`): it reads the `x4` columns off the online coverage instead of
-interpolating them, so it carries no field-capacity premise and this adapter is no longer the
-only way to supply an outcome.  `AGM.PinnedRootWitness` shows that the weaker derived
-reprogramming invariant and the stronger strict-prefix property are satisfiable at the family
-level (a constant-output family packaged as `witnessDeployedRootFamily`;
-`tableReadingPinnedRootEvent` is the event-level witness).
-
-What remains for a deployed family is the exact leave-one-squeeze property, exported by its staged
-AGM implementation. -/
-noncomputable def ComputedDeployedRootFSFamily.ofOnline
-    (family : ComputedOnlineMemberFSFamily shape)
-    (hcapacity : shape.numPointSets + 1 <= Fintype.card Fp)
-    (hpinned : DeployedRootSqueezeInvariance family.toFamily
-      (deployedRootOutcomeOfOnline family hcapacity)) :
-    ComputedDeployedRootFSFamily shape where
-  toComputedOnlineMemberFSFamily := family
-  outcome := deployedRootOutcomeOfOnline family hcapacity
-  squeezeInvariant := hpinned
-
+  rootTrace : DeployedRootOnlineTrace toComputedAlgebraicFSFamily outcome
 
 namespace ComputedDeployedRootFSFamily
 
 /-- The reprogramming invariant consumed by the pinned-root probability theorem. -/
 theorem pinned (family : ComputedDeployedRootFSFamily shape) :
     DeployedRootSqueezeInvariance family.toComputedAlgebraicFSFamily family.outcome :=
-  family.squeezeInvariant
+  family.rootTrace.toSqueezeInvariance
 
 /-- Forget the tighter root data. -/
 abbrev toFamily (family : ComputedDeployedRootFSFamily shape) :

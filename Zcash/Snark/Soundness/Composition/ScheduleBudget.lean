@@ -13,9 +13,10 @@ Lagrange selector (degree `< n`), so the degree walk caps the constraint differe
 to the family's own outcome at the table, so the root set collapses across fork tapes and the
 bound applies to the whole set.
 
-The live constructor accepts exact leave-one-squeeze pinning. A stronger
-`DeployedConstraintXPrefixDetermined` adapter remains available, but reverse unbatching is allowed
-to depend on later challenges and therefore need not satisfy strict chronology.
+The generic pricing constructor accepts exact leave-one-squeeze pinning. Captured deployed
+families instead carry a `DeployedConstraintXOnlineTrace`, from which that equation is derived.
+The explicit fresh-query computation may depend on later challenges; no classical truth-table
+adapter is installed on the executable path.
 -/
 
 namespace Zcash.Snark
@@ -262,9 +263,8 @@ theorem deployedConstraintXBadSet_measure_le
 /-! ## The schedule, priced -/
 
 /-- **The deployed `x`-squeeze schedule from the degree caps.** The pricing half is discharged
-outright at `epsilonX = max D Dq / |𝔽|`; the causal half (`pinned`) is the named premise this
-constructor consumes — its deployed discharge from the transcript stages is tracked at
-`ComputedDeployedRootFSFamily.ofOnline`. -/
+outright at `epsilonX = max D Dq / |𝔽|`. This generic constructor consumes the derived
+pinning equation; captured deployed families obtain it from `DeployedConstraintXOnlineTrace`. -/
 def deployedConstraintXSqueezeSchedule_of_pinned
     (family : ComputedDeployedRootFSFamily shape)
     {B W Dc D Dq : ℕ} (hB : 1 ≤ B) (hkB : 2 ^ shape.k - 1 ≤ B)

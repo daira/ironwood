@@ -3,10 +3,10 @@ import Zcash.Snark.Soundness.AGM.DeployedPinnedRoots
 /-!
 # The strict-prefix root premise is satisfiable
 
-`DeployedRootSqueezeInvariance` is the causal premise of the rewind-free multiopen layer.
-This module pins it satisfiable: a constant-output family over a degenerate shape, with a constant
-batch witness, has five empty deployed root sets; the remaining `x₃` set depends only on answers
-read at strict earlier prefixes.  The weaker self-reprogramming equality follows as a corollary.
+This module exhibits a `DeployedRootOnlineTrace`: a constant-output family over a degenerate shape,
+with a constant batch witness, has five empty deployed root sets; the remaining `x₃` set is
+computed using only strict earlier-prefix answers. The probability layer's reprogramming equality
+follows from the trace's fresh-query property.
 -/
 
 namespace Zcash.Snark
@@ -337,7 +337,7 @@ theorem witnessFamily_pairCount_at_run
 
 /-- **An all-zero power batch exists whenever every column commitment vanishes.** The zero
 coordinates commit to the zero point, and every power sum of zeros is zero. -/
-noncomputable def zeroPowerBatch {G : Type*} [AddCommGroup G] [Module Fp G]
+def zeroPowerBatch {G : Type*} [AddCommGroup G] [Module Fp G]
     (urs : URS G) {n : ℕ} (cols : Fin n → G) (hcols : ∀ i, cols i = 0) (challenge : Fp) :
     AlgebraicPowerBatch urs cols (fun _ => 0) 0 0 challenge where
   coeffs := fun _ _ => 0
@@ -365,7 +365,7 @@ theorem x4BatchCommitments_witness (ν : Fin 11 → Fp)
   simp only [x4BatchCommitments, if_neg hi, witnessPs_multiopenQPrime]
 
 /-- The witness `x₄` power batch: all coordinates zero. -/
-noncomputable def witnessX4Batch (ν : Fin 11 → Fp)
+def witnessX4Batch (ν : Fin 11 → Fp)
     (basis : AugmentedIndex (2 ^ witnessShape.k) → VestaG) :
     AlgebraicPowerBatch (ursOfAugmentedBasis witnessShape.k basis)
       (x4BatchCommitments (ursOfAugmentedBasis witnessShape.k basis) rfl witnessVk witnessIc
@@ -376,7 +376,7 @@ noncomputable def witnessX4Batch (ν : Fin 11 → Fp)
 /-- The all-zero power batch against aggregates given by hypothesis rather than syntactically.
 Taking the aggregates as equations keeps the use site rewrite-free, so the constructed batch's
 coordinates stay definitionally zero. -/
-noncomputable def zeroPowerBatchOf {G : Type*} [AddCommGroup G] [Module Fp G]
+def zeroPowerBatchOf {G : Type*} [AddCommGroup G] [Module Fp G]
     (urs : URS G) {n : ℕ} (cols : Fin n → G) (hcols : ∀ i, cols i = 0)
     (agg : Fin (2 ^ urs.k) → Fp) (aggU aggW : Fp)
     (hagg : agg = fun _ => 0) (haggU : aggU = 0) (haggW : aggW = 0) (challenge : Fp) :
@@ -396,7 +396,7 @@ noncomputable def zeroPowerBatchOf {G : Type*} [AddCommGroup G] [Module Fp G]
   reconstructW := by subst haggW; simp
 
 /-- All-zero deployed batches with the aggregates supplied as equations. -/
-noncomputable def zeroDeployedBatchesOf {G : Type*} [AddCommGroup G] [Module Fp G]
+def zeroDeployedBatchesOf {G : Type*} [AddCommGroup G] [Module Fp G]
     [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (instanceCommitment : Fin shape.numProofs → ℕ → G)
@@ -413,7 +413,7 @@ noncomputable def zeroDeployedBatchesOf {G : Type*} [AddCommGroup G] [Module Fp 
 commitment is zero.** With no pairs the per-member family is vacuous, so only the `x₄` batch
 carries data — and that is the all-zero power batch. Stating it over variables keeps the pair
 count an opaque atom, which is what lets the vacuity discharge by `omega`. -/
-noncomputable def zeroDeployedBatches {G : Type*} [AddCommGroup G] [Module Fp G]
+def zeroDeployedBatches {G : Type*} [AddCommGroup G] [Module Fp G]
     [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (instanceCommitment : Fin shape.numProofs → ℕ → G)
@@ -465,7 +465,7 @@ theorem x4BatchCommitments_witness_at_run
 /-- **The witness family's batch witness.** Everything is zero or vacuous: the canonical
 coordinates are the proved ones, the batches are the all-zero deployed batches, and every
 per-member field is empty because the `x₄` pair count vanishes. -/
-noncomputable def witnessBatchWitness
+def witnessBatchWitness
     (basis : AugmentedIndex (2 ^ witnessShape.k) → VestaG)
     (O : BTranscript Fp VestaG
       (preIpaLen witnessShape witnessFamily.init.length 10 + 3 * witnessShape.k) → Fp) :
@@ -493,7 +493,7 @@ noncomputable def witnessBatchWitness
     absurd (absurd_lt_of_eq_zero (witnessFamily_pairCount_at_run basis O) hi) not_false
 
 /-- The witness family's outcome provider: always the batch branch, never a relation. -/
-noncomputable def witnessOutcome : DeployedRootOutcomeProvider witnessFamily :=
+def witnessOutcome : DeployedRootOutcomeProvider witnessFamily :=
   fun basis O => PSum.inl (witnessBatchWitness basis O)
 
 /-! ## Reprogramming moves exactly one read
@@ -588,6 +588,8 @@ theorem isEmpty_fin_pairCount_witness (ν : Fin 11 → Fp) :
   rw [deployedX4PairCount_witness]
   infer_instance
 
+section RootSetCollapse
+
 variable {G : Type*} [AddCommGroup G] [Module Fp G] [DecidableEq G] [Inhabited G]
 variable (urs : URS G) (hk : witnessShape.k = urs.k)
   (vk : VerifyingKey witnessShape Fp G) (ic : Fin witnessShape.numProofs → ℕ → G)
@@ -646,6 +648,10 @@ theorem deployedX3RootSet_of_zero
       simp [deployedX3ErrorPolynomial, clearedQuotientErrorPolynomial,
         deployedAlgebraicQPrime, hc, coeffsToPoly, Finset.univ_eq_empty]]
   simp [szBadSet]
+
+end RootSetCollapse
+
+section DegenerateRootSets
 
 variable {basis : AugmentedIndex (2 ^ witnessShape.k) → VestaG}
 
@@ -808,6 +814,130 @@ theorem deployedRootBad_witness (basis : AugmentedIndex (2 ^ witnessShape.k) →
       (witnessFamily_pairCount_at_run basis O)
   · simpa using deployedX1AllRootSet_witnessShape _ rfl _ _ _ _ _
 
+end DegenerateRootSets
+
+/-! ## An executable causal trace
+
+The only nonempty root set is the `x₃` event, and its point-set data uses exactly the five
+pre-multiopen challenges `θ`, `β`, `γ`, `y`, and `x`.  The stage below reads those five concrete
+squeeze points and computes that set directly.  It therefore avoids the classical truth-table
+enumeration formerly used to turn an extensional prefix-determination proposition into a program.
+-/
+
+/-- The five squeeze points whose answers determine the witness family's `x₃` root set. -/
+def witnessPreMultiopenPoint
+    (b : AugmentedIndex (2 ^ witnessShape.k) → VestaG) (j : Fin 5) :
+    BTranscript Fp VestaG
+      (preIpaLen witnessShape witnessFamily.init.length 10 + 3 * witnessShape.k) :=
+  algebraicFullPrefixesPre witnessFamily.init (witnessProof b) ⟨j, by omega⟩
+
+/-- Rebuild the challenge record prefix consumed by `deployedAllPts`. -/
+def witnessPreMultiopenRecord (answers : Fin 5 → Fp) : Challenges witnessShape.k Fp :=
+  { theta := answers 0
+    beta := answers 1
+    gamma := answers 2
+    y := answers 3
+    x := answers 4
+    x1 := 0
+    x2 := 0
+    x3 := 0
+    x4 := 0
+    xi := 0
+    z := 0
+    ipaRound := fun _ => 0 }
+
+/-- The executable pre-`x₃` root-set computation for the witness family. -/
+def witnessRootStage
+    (basis : AugmentedIndex (2 ^ witnessShape.k) → VestaG) (i : Fin 6) :
+    OracleComp
+      (BTranscript Fp VestaG
+        (preIpaLen witnessShape witnessFamily.init.length 10 + 3 * witnessShape.k))
+      Fp (Set Fp) :=
+  if i.val = 3 then
+    (OracleComp.readFin (F := Fp) (witnessPreMultiopenPoint basis)).bind fun answers =>
+      .pure (↑(deployedAllPts witnessVk witnessIc witnessPs
+        (witnessPreMultiopenRecord answers)) : Set Fp)
+  else
+    .pure ∅
+
+/-- Reading one of the stage's five points returns the corresponding wrapped-run challenge. -/
+theorem witnessPreMultiopenPoint_read
+    (basis : AugmentedIndex (2 ^ witnessShape.k) → VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen witnessShape witnessFamily.init.length 10 + 3 * witnessShape.k) → Fp)
+    (j : Fin 5) :
+    O (witnessPreMultiopenPoint basis j) =
+      wrappedPreIpaReads ((wrappedAdversary witnessFamily basis).run O) ⟨j, by omega⟩ := by
+  rw [wrappedPreIpaReads_run]
+  rfl
+
+/-- The five stage reads compute the same deployed point set as the wrapped run. -/
+theorem witnessPreMultiopenAllPts
+    (basis : AugmentedIndex (2 ^ witnessShape.k) → VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen witnessShape witnessFamily.init.length 10 + 3 * witnessShape.k) → Fp) :
+    deployedAllPts witnessVk witnessIc witnessPs
+        (witnessPreMultiopenRecord (fun j => O (witnessPreMultiopenPoint basis j))) =
+      deployedAllPts witnessVk witnessIc witnessPs
+        (wrappedPreIpaRecord ((wrappedAdversary witnessFamily basis).run O)) :=
+  deployedAllPts_congr_preMultiopen witnessVk witnessIc witnessPs _ _
+    (witnessPreMultiopenPoint_read basis O 0)
+    (witnessPreMultiopenPoint_read basis O 1)
+    (witnessPreMultiopenPoint_read basis O 2)
+    (witnessPreMultiopenPoint_read basis O 3)
+    (witnessPreMultiopenPoint_read basis O 4)
+
+/-- The five queried answers reproduce the final run's pre-multiopen challenge prefix. -/
+theorem witnessRootStage_agrees
+    (basis : AugmentedIndex (2 ^ witnessShape.k) → VestaG) (i : Fin 6)
+    (O : BTranscript Fp VestaG
+      (preIpaLen witnessShape witnessFamily.init.length 10 + 3 * witnessShape.k) → Fp) :
+    (witnessRootStage basis i).run O =
+      deployedRootBad witnessFamily witnessOutcome basis
+        ((wrappedAdversary witnessFamily basis).run O) O i := by
+  rw [deployedRootBad_witness]
+  by_cases h3 : i.val = 3
+  · rw [witnessRootStage, if_pos h3, OracleComp.run_bind, OracleComp.run_readFin,
+      OracleComp.run_pure, if_pos h3]
+    rw [witnessPreMultiopenAllPts]
+    rw [witnessFamily_wrapped_run]
+    change (↑(deployedAllPts witnessVk witnessIc witnessPs _) : Set Fp) =
+      ↑(deployedAllPts witnessVk witnessIc (witnessAps basis).erase _)
+    rw [witnessAps_erase]
+  · rw [witnessRootStage, if_neg h3, OracleComp.run_pure, if_neg h3]
+
+/-- The `x₃` squeeze point is not among the five points queried by `witnessRootStage`. -/
+theorem witnessRootStage_fresh
+    (basis : AugmentedIndex (2 ^ witnessShape.k) → VestaG) (i : Fin 6)
+    (O : BTranscript Fp VestaG
+      (preIpaLen witnessShape witnessFamily.init.length 10 + 3 * witnessShape.k) → Fp) :
+    deployedRootPoint witnessFamily ((wrappedAdversary witnessFamily basis).run O) i ∉
+      (witnessRootStage basis i).queries O := by
+  by_cases h3 : i.val = 3
+  · have hi : i = 3 := Fin.ext h3
+    subst i
+    change deployedRootPoint witnessFamily
+        ((wrappedAdversary witnessFamily basis).run O) (3 : Fin 6) ∉
+      List.ofFn (witnessPreMultiopenPoint basis)
+    intro hmem
+    obtain ⟨j, hj⟩ := List.mem_ofFn.mp hmem
+    have hpoint : deployedRootPoint witnessFamily
+        ((wrappedAdversary witnessFamily basis).run O) (3 : Fin 6) =
+        algebraicFullPrefixesPre witnessFamily.init (witnessProof basis) 7 := by
+      unfold deployedRootPoint
+      rw [witnessFamily_wrapped_run]
+      rfl
+    rw [hpoint] at hj
+    fin_cases j <;> exact witnessProof_prefixesPre_injective basis (by decide) hj
+  · rw [witnessRootStage, if_neg h3]
+    exact List.not_mem_nil
+
+/-- A fully executable staged root trace for the degenerate witness family. -/
+def witnessRootTrace : DeployedRootOnlineTrace witnessFamily witnessOutcome where
+  stage := witnessRootStage
+  agrees := witnessRootStage_agrees
+  fresh := witnessRootStage_fresh
+
 /-- The update point of event `i` is the squeeze point at its challenge index. -/
 theorem deployedRootPoint_witness (basis : AugmentedIndex (2 ^ witnessShape.k) → VestaG)
     (O : BTranscript Fp VestaG
@@ -881,7 +1011,7 @@ theorem deployedRootPrefixDetermined_witness :
     simp only [if_neg h3]
 
 /-- The witness family with its online multiopen and member-coverage evidence packaged. -/
-noncomputable def witnessOnlineMemberFamily :
+def witnessOnlineMemberFamily :
     ComputedOnlineMemberFSFamily witnessShape where
   toComputedOnlineMultiopenFSFamily :=
     { toComputedAlgebraicFSFamily := witnessFamily
@@ -897,14 +1027,14 @@ noncomputable def witnessOnlineMemberFamily :
     exact absurd (absurd_lt_of_eq_zero (deployedX4PairCount_witness nu) hi) not_false
 
 /-- **An inhabitant of the actual deployed-root family interface.** This packages the zero online
-family, its concrete batch outcome, and the strict-prefix proof above; satisfiability is therefore
-proved for the strong constructor premise, not merely for its weaker invariance consequence. -/
-noncomputable def witnessDeployedRootFamily :
+family, its concrete batch outcome, and the executable five-query root trace above; satisfiability
+is therefore proved for the strong constructor premise, not merely for its weaker invariance
+consequence. -/
+def witnessDeployedRootFamily :
     ComputedDeployedRootFSFamily witnessShape where
   toComputedOnlineMemberFSFamily := witnessOnlineMemberFamily
   outcome := witnessOutcome
-  squeezeInvariant := deployedRootSqueezeInvariance_of_prefixDetermined _ _
-    deployedRootPrefixDetermined_witness
+  rootTrace := witnessRootTrace
 
 /-- The weaker self-reprogramming equation follows from the strict-prefix witness above. -/
 theorem deployedRootSqueezeInvariance_witness :
