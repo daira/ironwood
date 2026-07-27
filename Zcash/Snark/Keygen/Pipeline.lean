@@ -764,8 +764,8 @@ query counts from the derived pinned CS layouts (`TopLevelCircuit.pinnedCS`), th
 verifier's permutation chunking `⌈columns / chunkLen⌉` (`permutation/verifier.rs:43-47`),
 and the quotient split `cs.degree() − 1` (`vk.domain.get_quotient_poly_degree()`). -/
 def ProofParams.mergeDerived (pp : ProofParams)
-    {ConfigInput Config : Type} {Output : TypeMap} [CircuitType Output]
-    (top : TopLevelCircuit Fp ConfigInput Config Output) : Shape :=
+    {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput) : Shape :=
   let cs := top.constraintSystem
   let pinned :=
     PinnedConstraintSystem.derive top.constraintSystem top.selectorMap
@@ -792,11 +792,11 @@ open Halo2
 open CompElliptic.Curves.Pasta
 
 variable {G : Type} [AddCommGroup G] [Inhabited G]
-variable {ConfigInput Config : Type} {Output : TypeMap} [CircuitType Output]
+variable {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
 
 /-- The dense fixed rows keygen commits for a closed circuit. -/
 def fixedRows
-    (top : TopLevelCircuit Fp ConfigInput Config Output) : List (List Fp) :=
+    (top : TopLevelCircuit Fp Config PublicInput) : List (List Fp) :=
   denseColumns (2 ^ top.domainExponent)
     (PinnedConstraintSystem.derive
       top.constraintSystem top.selectorMap).numFixedColumns
@@ -805,7 +805,7 @@ def fixedRows
 
 /-- Keygen produces one dense row vector for every derived fixed column. -/
 theorem fixedRows_length
-    (top : TopLevelCircuit Fp ConfigInput Config Output) :
+    (top : TopLevelCircuit Fp Config PublicInput) :
     top.fixedRows.length = top.pinnedCS.numFixedColumns := by
   change
     (denseColumns (2 ^ top.domainExponent)
@@ -817,7 +817,7 @@ theorem fixedRows_length
 
 /-- Every derived fixed row vector spans the complete keygen domain. -/
 theorem fixedRows_getD_length
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (column : ℕ) (hcolumn : column < top.pinnedCS.numFixedColumns) :
     (top.fixedRows.getD column []).length = 2 ^ top.domainExponent := by
   apply denseColumns_getD_length
@@ -825,7 +825,7 @@ theorem fixedRows_getD_length
 
 /-- The derived fixed-column commitments of a closed circuit against a URS. -/
 def fixedCommitments
-    (top : TopLevelCircuit Fp ConfigInput Config Output) (urs : URS G) : List G :=
+    (top : TopLevelCircuit Fp Config PublicInput) (urs : URS G) : List G :=
   top.fixedRows.parMap
     (Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow urs.w
       (derivedUrsGLagrange urs))
@@ -833,7 +833,7 @@ def fixedCommitments
 /-- The named top-level fixed-row view is exactly the fixed-commitment computation
 used by generic keygen. -/
 @[simp] theorem fixedCommitments_eq_fixedCommitmentsOf
-    (top : TopLevelCircuit Fp ConfigInput Config Output) (urs : URS G) :
+    (top : TopLevelCircuit Fp Config PublicInput) (urs : URS G) :
     top.fixedCommitments urs =
       fixedCommitmentsOf urs.w (derivedUrsGLagrange urs)
         top.selectorMap top.domainExponent
@@ -842,7 +842,7 @@ used by generic keygen. -/
 
 /-- The derived permutation common commitments of a closed circuit against a URS. -/
 def permutationCommitments
-    (top : TopLevelCircuit Fp ConfigInput Config Output) (urs : URS G) : List G :=
+    (top : TopLevelCircuit Fp Config PublicInput) (urs : URS G) : List G :=
   permutationCommitmentsOf urs.w (derivedUrsGLagrange urs) top.domainExponent
     top.constraintSystem (top.operations 0)
 
@@ -850,13 +850,13 @@ def permutationCommitments
 shape-explicit core `Certificate.lean` certifies; `toVerifierKey` below supplies the
 derived shape). -/
 def verifierKeyAt
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (shape : Shape) (urs : URS G) : VerifyingKey shape Fp G :=
   .ofOperations shape urs top.constraintSystem (top.operations 0)
 
 /-- Projection API for the fixed commitments of the shape-explicit top-level key. -/
 @[simp] theorem verifierKeyAt_fixedCommitment
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (shape : Shape) (urs : URS G) (column : ℕ) :
     (top.verifierKeyAt shape urs).fixedCommitment column =
       (top.fixedCommitments urs).getD column 0 := by
@@ -865,11 +865,11 @@ def verifierKeyAt
     selectorActivations, regionStarts]
 
 /-- **The verifying key of a closed top-level circuit**: the `TopLevelCircuit` carries
-its own `configInput` and unit input, so the only remaining inputs are the proof-shape
-counts and the URS — `keygen_vk` at the `TopLevelCircuit` level, with the derived
-`Shape` in the return type. -/
+unit configuration and synthesis inputs, so the only remaining inputs are the
+proof-shape counts and the URS — `keygen_vk` at the `TopLevelCircuit` level, with the
+derived `Shape` in the return type. -/
 def toVerifierKey
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G) :
     VerifyingKey (pp.mergeDerived top) Fp G :=
   top.verifierKeyAt (pp.mergeDerived top) urs
@@ -877,7 +877,7 @@ def toVerifierKey
 /-- The derived key uses the circuit-owned fitting domain size. -/
 @[simp]
 theorem toVerifierKey_n
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G) :
     (top.toVerifierKey pp urs).n = 2 ^ top.domainExponent := by
   simp [toVerifierKey, verifierKeyAt, VerifyingKey.ofOperations,
@@ -886,7 +886,7 @@ theorem toVerifierKey_n
 /-- The derived key preserves the closed constraint system's blinding count. -/
 @[simp]
 theorem toVerifierKey_blindingFactors
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G) :
     (top.toVerifierKey pp urs).blindingFactors = top.blindingFactors := by
   simp [toVerifierKey, verifierKeyAt, VerifyingKey.ofOperations,
@@ -894,7 +894,7 @@ theorem toVerifierKey_blindingFactors
 
 /-- The derived key exposes the fixed commitments computed from its own dense rows. -/
 theorem toVerifierKey_fixedCommitment
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G) (column : ℕ) :
     (top.toVerifierKey pp urs).fixedCommitment column =
       (top.fixedCommitments urs).getD column 0 := by
@@ -903,7 +903,7 @@ theorem toVerifierKey_fixedCommitment
 /-- The derived key exposes the common permutation commitments computed from
 its own keygen permutation rows. -/
 theorem toVerifierKey_permutationCommonCommitment
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
     (column : Fin (pp.mergeDerived top).numPermutationColumns) :
     (top.toVerifierKey pp urs).permutationCommonCommitment column =
@@ -915,7 +915,7 @@ theorem toVerifierKey_permutationCommonCommitment
 /-- The derived key exposes exactly the advice-query layout of its selector-map
 derivation. -/
 theorem toVerifierKey_adviceQueryLayout_derived
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G) :
     (top.toVerifierKey pp urs).adviceQueryLayout =
       (PinnedConstraintSystem.derive
@@ -925,7 +925,7 @@ theorem toVerifierKey_adviceQueryLayout_derived
 /-- The derived key exposes exactly the fixed-query layout of its selector-map
 derivation. -/
 theorem toVerifierKey_fixedQueryLayout_derived
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G) :
     (top.toVerifierKey pp urs).fixedQueryLayout =
       (PinnedConstraintSystem.derive
@@ -935,7 +935,7 @@ theorem toVerifierKey_fixedQueryLayout_derived
 /-- The derived key exposes exactly the instance-query layout of its selector-map
 derivation. -/
 theorem toVerifierKey_instanceQueryLayout_derived
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G) :
     (top.toVerifierKey pp urs).instanceQueryLayout =
       (PinnedConstraintSystem.derive
@@ -945,7 +945,7 @@ theorem toVerifierKey_instanceQueryLayout_derived
 /-- The derived key's advice-query layout has the shape count computed from the same
 top-level pinned constraint system. -/
 theorem toVerifierKey_adviceQueryCount
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G) :
     (top.toVerifierKey pp urs).adviceQueryLayout.length =
       (pp.mergeDerived top).numAdviceQueries := by
@@ -959,7 +959,7 @@ theorem toVerifierKey_adviceQueryCount
 /-- The derived key's fixed-query layout has the shape count computed from the same
 top-level pinned constraint system. -/
 theorem toVerifierKey_fixedQueryCount
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G) :
     (top.toVerifierKey pp urs).fixedQueryLayout.length =
       (pp.mergeDerived top).numFixedQueries := by
@@ -973,7 +973,7 @@ theorem toVerifierKey_fixedQueryCount
 /-- The derived key's instance-query layout has the shape count computed from the same
 top-level pinned constraint system. -/
 theorem toVerifierKey_instanceQueryCount
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G) :
     (top.toVerifierKey pp urs).instanceQueryLayout.length =
       (pp.mergeDerived top).numInstanceQueries := by

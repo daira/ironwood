@@ -20,17 +20,17 @@ The statement owned by a top-level circuit, simultaneously for every polynomial
 assignment decoded from one accepted proof bundle.
 -/
 def TopLevelBundleStatement
-    {ConfigInput Config : Type} {Output : TypeMap}
-    [CircuitType Output]
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams)
     (poly : CommitmentId → Polynomial Fp) : Prop :=
   ∀ proofIndex : Fin (pp.mergeDerived top).numProofs,
-    top.Statement 0
-      (({
+    let environment := (({
         polynomial := poly
       } : TopLevelAssignment top
             (pp.mergeDerived top).numProofs proofIndex).placedEnvironment)
+    top.Statement (top.extractPublicInput environment.env)
 
 /--
 The representation-boundary facts needed to interpret one canonical polynomial
@@ -42,9 +42,9 @@ joined without turning this record into an opaque statement-level hypothesis.
 -/
 structure TopLevelCircuitCorrectness
     {G : Type} [AddCommGroup G] [Inhabited G]
-    {ConfigInput Config : Type} {Output : TypeMap}
-    [CircuitType Output]
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)

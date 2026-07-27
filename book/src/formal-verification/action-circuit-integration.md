@@ -115,17 +115,20 @@ Correspondingly, `Bridge.actionOperations` is synthesized from the real
 `orchardActionCircuit` at unit input. The separate synthetic
 `Bridge.keygenWitnesses` value has been removed.
 
-The intended final adapter is small once the remaining premises are available:
+The final adapter is now:
 
 ```text
 placed Clean environment satisfying `mainPost`
-  -> ActionStatement public
-  -> the hencodes conclusion expected by SnarkRelation.
+  -> TopLevelCircuit.Spec extractedPublic extractedPrivate
+  -> Action.Statement extractedPublic.
 ```
 
-The final implementation should define the high-level public input/statement types and
-the direct `soundnessPost` adapter alongside the concrete decoded-member-to-Clean
-construction. The following work items decompose that construction.
+`TopLevelCircuit` owns the public/private boundary. It declares the instance cells
+encoding its public input, derives environment extraction from that layout, separately
+extracts the private witness, and proves that recombining the two agrees with the
+formal circuit's native extractor. The Action instance specializes this interface with
+ten public field elements and a private witness containing only the remaining
+`ActionData` fields.
 
 ### 1. Recover the committed columns from multiopen
 
@@ -966,14 +969,15 @@ From the recovered per-column row values, build:
 - the unit input of the closed Action circuit.
 
 The generic top-level boundary and the Action-side closure are now implemented.
-`TopLevelCircuit` holds a unit-input `FormalCircuit`, requires its public
-`Assumptions` predicate to be exactly `True`, fixes the result of its own `configure`
-run, and provides verifier- and prover-side theorems with no exposed
-`EnvAssumptions` premise. `SynthesisWellFormed` currently records the generic layout
-fact needed by table loaders: every declared table block fits in `usableRows`.
-`TopLevelCircuit.Statement` names the semantic proposition extracted from a placed
-environment, so the SNARK bridge can target an arbitrary closed formal circuit
-without mentioning its circuit-specific `Spec`.
+`TopLevelCircuit` holds a `FormalCircuit` with unit configuration input, synthesis
+input, and output; requires its public `Assumptions` predicate to be exactly `True`;
+and provides verifier- and prover-side theorems with no exposed `EnvAssumptions`
+premise. `SynthesisWellFormed` currently records the generic layout fact needed by
+table loaders: every declared table block fits in `usableRows`.
+`TopLevelCircuit.Statement` receives the circuit's explicit public-input value and
+existentially hides only its private witness. The generic SNARK bridge extracts that
+public value through the circuit-declared instance-cell layout; the Action adapter
+then identifies it with the ten values committed by the verifier.
 
 The generic keygen layer now derives from the top-level circuit itself:
 

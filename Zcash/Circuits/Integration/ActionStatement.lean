@@ -25,12 +25,12 @@ one Action's rows, reading that column through Clean produces exactly that Actio
 structured public inputs.
 -/
 theorem actionPublicInputs_of_instanceRowPolynomial
-    {TopConfigInput TopConfig : Type} {Output : TypeMap}
-    [CircuitType Output]
-    {top : TopLevelCircuit Fp TopConfigInput TopConfig Output}
+    {TopConfig : Type} {TopPublicInput : TypeMap}
+    [ProvableType TopPublicInput]
+    {top : TopLevelCircuit Fp TopConfig TopPublicInput}
     {numProofs : ℕ} {proofIndex : Fin numProofs}
     (assignment : TopLevelAssignment top numProofs proofIndex)
-    (cfg : Config) (inputs : PublicInputs)
+    (cfg : Config) (inputs : PublicInputs Fp)
     (hsize : 10 ≤ 2 ^ top.domainExponent)
     (hpoly : assignment.polynomial
         (.instanceCol proofIndex cfg.primary.index) =
@@ -48,17 +48,15 @@ theorem actionPublicInputs_of_instanceRowPolynomial
       ⟨row, lt_of_lt_of_le row.isLt hsize⟩
     rw [TopLevelAssignment.environment_instance, hpoly]
     simpa only [domainRow] using instanceRowPolynomial_eval hrows domainRow
-  apply PublicInputs.ext
-  · simpa [PublicInputs.ofEnvironment, PublicInputs.rows, ANCHOR] using hread 0
-  · simpa [PublicInputs.ofEnvironment, PublicInputs.rows, CV_NET_X] using hread 1
-  · simpa [PublicInputs.ofEnvironment, PublicInputs.rows, CV_NET_Y] using hread 2
-  · simpa [PublicInputs.ofEnvironment, PublicInputs.rows, NF_OLD] using hread 3
-  · simpa [PublicInputs.ofEnvironment, PublicInputs.rows, RK_X] using hread 4
-  · simpa [PublicInputs.ofEnvironment, PublicInputs.rows, RK_Y] using hread 5
-  · simpa [PublicInputs.ofEnvironment, PublicInputs.rows, CMX] using hread 6
-  · simpa [PublicInputs.ofEnvironment, PublicInputs.rows, ENABLE_SPEND] using hread 7
-  · simpa [PublicInputs.ofEnvironment, PublicInputs.rows, ENABLE_OUTPUT] using hread 8
-  · simpa [PublicInputs.ofEnvironment, PublicInputs.rows, DISABLE_CROSS_ADDRESS] using hread 9
+  unfold PublicInputs.ofEnvironment
+  apply PublicInputs.layout.extract_eq
+  intro row
+  change assignment.environment.inst cfg.primary (row : ℤ) =
+    (toElements inputs)[row]
+  rw [hread row]
+  rw [List.getD_eq_getElem inputs.rows 0 (by
+    simpa only [PublicInputs.rows, Vector.length_toList] using row.isLt)]
+  simp [PublicInputs.rows]
 
 /--
 Present the generic top-level bundle statement as the public Orchard Action
@@ -69,7 +67,7 @@ theorem actionBundleStatement_of_topLevelBundle
     (poly : CommitmentId → Polynomial Fp)
     (inputs :
       Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs →
-        PublicInputs)
+        PublicInputs Fp)
     (hbound : orchardActionTopLevelCircuit.domainExponent < 33)
     (hsize : 10 ≤ 2 ^ orchardActionTopLevelCircuit.domainExponent)
     (hinstance : ∀
@@ -93,10 +91,10 @@ theorem actionBundleStatement_of_topLevelBundle
         (pp.mergeDerived orchardActionTopLevelCircuit).numProofs proofIndex :=
     { polynomial := poly }
   have hstatement :=
-    statement_of_topLevelStatement
+    (topLevelStatement_iff
       Specs.Sinsemilla.orchardGenerators orchardBases
-      orchardActionTopLevelCircuit rfl 0
-      assignment.placedEnvironment (htop proofIndex)
+      (orchardActionTopLevelCircuit.extractPublicInput
+        assignment.environment)).mp (htop proofIndex)
   have hpublic :
       PublicInputs.ofEnvironment
           (Circuit.configure

@@ -19,19 +19,19 @@ set_option maxHeartbeats 20000
 namespace FullCircuitSatisfaction
 
 variable
-    {ConfigInput Config : Type} {Output : TypeMap}
-    [CircuitType Output]
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
 
 /-- Exact full operation satisfaction implies the circuit-owned semantic statement. -/
 theorem topLevelSoundness
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (i : RegionIndex) (env : Placed Environment Fp)
     (hwellFormed :
       SynthesisWellFormed env.env (top.operations i))
     (hsatisfied :
       FullCircuitSatisfaction env.place env.env (top.operations i) i) :
-    top.Statement i env := by
-  apply top.soundness i env hwellFormed
+    top.Statement (top.extractPublicInput env.env) := by
+  apply top.statement_soundness i env hwellFormed
   exact FullCircuitSatisfaction.constraints hsatisfied
 
 end FullCircuitSatisfaction
@@ -39,8 +39,8 @@ end FullCircuitSatisfaction
 namespace FullCircuitBridge
 
 variable
-    {ConfigInput Config : Type} {Output : TypeMap}
-    [CircuitType Output]
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
     {cell : Type} [DecidableEq cell] [Fintype cell]
     {Bad : Prop}
 
@@ -49,13 +49,13 @@ The generic semantic last mile: reconstructed full constraints imply the top-lev
 circuit's own statement, preserving the bridge's shared exceptional event.
 -/
 theorem topLevelSoundness_or_bad
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (i : RegionIndex) (env : Placed Environment Fp)
     (hwellFormed :
       SynthesisWellFormed env.env (top.operations i))
     (bridge : FullCircuitBridge env.place env.env
       (top.operations i) i cell Bad) :
-    top.Statement i env ∨ Bad := by
+    top.Statement (top.extractPublicInput env.env) ∨ Bad := by
   rcases bridge.satisfaction_or_bad with hsatisfied | hbad
   · exact Or.inl (hsatisfied.topLevelSoundness top i env hwellFormed)
   · exact Or.inr hbad

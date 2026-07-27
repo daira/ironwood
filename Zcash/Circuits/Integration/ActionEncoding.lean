@@ -257,7 +257,7 @@ theorem actionBundleStatement_of_canonicalRelation
           vk.n j))
     (inputs :
       Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs →
-        PublicInputs)
+        PublicInputs Fp)
     (hsize :
       10 ≤ 2 ^ orchardActionTopLevelCircuit.domainExponent)
     (hinstance : ∀
@@ -352,17 +352,14 @@ theorem actionBundleStatement_of_canonicalRelation
         hblinding proofIndex hsatisfaction hdomain
         (selectors proofIndex)
     simpa [TopLevelAssignment.environment, resolverEnvironment] using hgates
-  have htop :
-      orchardActionTopLevelCircuit.Statement 0
-        assignment.placedEnvironment := by
-    apply orchardActionTopLevelCircuit.soundness
-    · exact assignment.synthesisWellFormed hbound
-    · exact hconstraints
+  have htop := orchardActionTopLevelCircuit.statement_soundness
+    0 assignment.placedEnvironment
+    (assignment.synthesisWellFormed hbound) hconstraints
   have hstatement :=
-    statement_of_topLevelStatement
+    (topLevelStatement_iff
       Specs.Sinsemilla.orchardGenerators orchardBases
-      orchardActionTopLevelCircuit rfl 0
-      assignment.placedEnvironment htop
+      (orchardActionTopLevelCircuit.extractPublicInput
+        assignment.environment)).mp htop
   have hpublic :
       PublicInputs.ofEnvironment
           (Circuit.configure
@@ -438,7 +435,7 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
           vk.n j))
     (inputs :
       Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs →
-        PublicInputs)
+        PublicInputs Fp)
     (hsize :
       10 ≤ 2 ^ orchardActionTopLevelCircuit.domainExponent)
     (instanceKey :

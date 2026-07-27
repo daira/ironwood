@@ -87,7 +87,7 @@ Lagrange commitment of that proof's public rows, every other column index
 commits to zero — with the index left as an ordinary parameter.
 -/
 noncomputable def deployedInstanceCommitment (s : Shape)
-    (inputs : Fin s.numProofs → PublicInputs) :
+    (inputs : Fin s.numProofs → PublicInputs Fp) :
     Fin s.numProofs → ℕ → G :=
   fun proofIndex column =>
     if column =
@@ -101,7 +101,7 @@ noncomputable def deployedInstanceCommitment (s : Shape)
 theorem deployedInstanceCommitment_eq
     (inputs :
       Fin (actionProofParams.mergeDerived
-        orchardActionTopLevelCircuit).numProofs → PublicInputs) :
+        orchardActionTopLevelCircuit).numProofs → PublicInputs Fp) :
     deployedInstanceCommitment
         (actionProofParams.mergeDerived orchardActionTopLevelCircuit) inputs
       = commitment actionProofParams capturedURS inputs := rfl
@@ -122,7 +122,7 @@ private theorem actionAcceptedCircuitSatDeployed_transport
     (hK : K = derivedActionVk s capturedURS)
     (hk : s.k = capturedURS.k)
     (hbl : K.blindingFactors < K.n)
-    (inputs : Fin s.numProofs → PublicInputs)
+    (inputs : Fin s.numProofs → PublicInputs Fp)
     (ps : ProofString s Fp G)
     (ch : Challenges s.k Fp)
     (pU pW : Fp) (a : Fin (2 ^ capturedURS.k) → Fp)
@@ -206,7 +206,7 @@ The accepted-circuit-satisfaction Action endpoint at the deployed verifying key.
 This is the concrete `hencodes` target for the Vesta constraint-carrying relation.
 -/
 theorem actionBundleStatement_or_relation_of_acceptedCircuitSat_deployed
-    (inputs : Fin Fixture.shape.numProofs → PublicInputs)
+    (inputs : Fin Fixture.shape.numProofs → PublicInputs Fp)
     (ps : ProofString Fixture.shape Fp G)
     (ch : Challenges Fixture.shape.k Fp)
     (pU pW : Fp) (a : Fin (2 ^ capturedURS.k) → Fp)
@@ -301,7 +301,7 @@ private theorem actionDeployed_transport
     (hK : K = derivedActionVk s capturedURS)
     (hk : s.k = capturedURS.k)
     (hbl : K.blindingFactors < K.n)
-    (inputs : Fin s.numProofs → PublicInputs)
+    (inputs : Fin s.numProofs → PublicInputs Fp)
     (ps : ProofString s Fp G)
     (ch : Challenges s.k Fp)
     (pU pW : Fp) (a : Fin (2 ^ capturedURS.k) → Fp)
@@ -453,7 +453,7 @@ the fixture facts `shape_k_eq_capturedURS_k` and `vk_blindingFactors_lt`,
 discharged here rather than assumed.
 -/
 theorem actionBundleStatement_or_relation_of_acceptedNodeBinding_deployed
-    (inputs : Fin Fixture.shape.numProofs → PublicInputs)
+    (inputs : Fin Fixture.shape.numProofs → PublicInputs Fp)
     (ps : ProofString Fixture.shape Fp G)
     (ch : Challenges Fixture.shape.k Fp)
     (pU pW : Fp) (a : Fin (2 ^ capturedURS.k) → Fp)

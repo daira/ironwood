@@ -30,8 +30,8 @@ variable {G : Type} [AddCommGroup G] [Module Fp G]
   [DecidableEq G] [Inhabited G]
 
 variable
-    {ConfigInput Config : Type} {Output : TypeMap}
-    [CircuitType Output]
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
 
 omit [AddCommGroup G] [Module Fp G] [DecidableEq G] in
 /--
@@ -68,7 +68,7 @@ theorem fixedQuery_of_layout
 
 /-- Sparse table and region-local fixed assignments emitted by top-level keygen. -/
 def topLevelFixedOperationEntries
-    (top : TopLevelCircuit Fp ConfigInput Config Output) :
+    (top : TopLevelCircuit Fp Config PublicInput) :
     List (ℕ × ℕ × ℕ) :=
   Layout.tableFixed (ZMod.val : Fp → ℕ)
       (top.usableRowsAt top.domainExponent) (top.operations 0) ++
@@ -85,7 +85,7 @@ opaque. The structural replacement should instead derive non-overlap (or compati
 composition) from selector packing and region-placement invariants.
 -/
 def topLevelSelectorEntries
-    (top : TopLevelCircuit Fp ConfigInput Config Output) :
+    (top : TopLevelCircuit Fp Config PublicInput) :
     List (ℕ × ℕ × ℕ) :=
   Layout.selectorFixed top.selectorMap top.selectorActivations
 
@@ -101,7 +101,7 @@ accepted zero entries. The structural replacement derives singleton ownership an
 disabled-row zero from compiler invariants instead.
 -/
 def topLevelSingletonLookupSelectorEntries
-    (top : TopLevelCircuit Fp ConfigInput Config Output) :
+    (top : TopLevelCircuit Fp Config PublicInput) :
     List (ℕ × ℕ × ℕ) :=
   let operations := top.operations 0
   let selectorMap := top.selectorMap
@@ -132,7 +132,7 @@ def topLevelSingletonLookupSelectorEntries
 
 /-- Fixed cells allocated for `constrainConstant` values by the V1 floor planner. -/
 def topLevelConstantEntries
-    (top : TopLevelCircuit Fp ConfigInput Config Output) :
+    (top : TopLevelCircuit Fp Config PublicInput) :
     List (ℕ × ℕ × ℕ) :=
   Layout.constantsFixed
     (Keygen.constantsOf top.constraintSystem (top.operations 0))
@@ -143,7 +143,7 @@ region, constant, and selector assignments, plus the interim exact cells needed 
 lookup-selector projection.
 -/
 def topLevelRequiredFixedEntries
-    (top : TopLevelCircuit Fp ConfigInput Config Output) :
+    (top : TopLevelCircuit Fp Config PublicInput) :
     List (ℕ × ℕ × ℕ) :=
   topLevelFixedOperationEntries top ++
     topLevelConstantEntries top ++
@@ -159,7 +159,7 @@ registration compiler is given a structural coverage theorem.  New generic
 interfaces should consume that theorem, not this computation.
 -/
 def interimFixedQueryCoverageFailures
-    (top : TopLevelCircuit Fp ConfigInput Config Output) : List ℕ :=
+    (top : TopLevelCircuit Fp Config PublicInput) : List ℕ :=
   let pinned := top.pinnedCS
   let queried := pinned.fixedQueryLayout.map Prod.fst
   (List.range pinned.numFixedColumns).filter fun column =>
@@ -170,7 +170,7 @@ An empty interim query-coverage diagnostic supplies the current
 `TopLevelFixedCoherence` coverage field.
 -/
 theorem fixedQueryCoverage_of_interimFailures_eq_nil
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (hfail : interimFixedQueryCoverageFailures top = []) :
     ∀ column,
       column < top.pinnedCS.numFixedColumns →
@@ -208,7 +208,7 @@ This diagnostic is deliberately named `interim` so a successful whole-circuit
 `native_decide` certificate cannot silently become the permanent architecture.
 -/
 def interimFixedRealizationFailures
-    (top : TopLevelCircuit Fp ConfigInput Config Output) :
+    (top : TopLevelCircuit Fp Config PublicInput) :
     List (ℕ × ℕ × ℕ) :=
   let n := 2 ^ top.domainExponent
   let numFixedColumns := top.pinnedCS.numFixedColumns
@@ -226,7 +226,7 @@ An empty interim realization diagnostic proves the exact sparse-to-dense fact
 used by `TopLevelFixedCoherence`.
 -/
 theorem fixedRowsRealize_of_interimFailures_eq_nil
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (hfail : interimFixedRealizationFailures top = []) :
     ∀ column row value,
       (column, row, value) ∈
@@ -262,9 +262,9 @@ sparse-to-dense correctness statement for exactly the entries consumed by Clean
 fixed/table semantics and selector activation.
 -/
 structure TopLevelFixedCoherence
-    {ConfigInput Config : Type} {Output : TypeMap}
-    [CircuitType Output]
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G) where
   key :
     LagrangeCommitmentKey urs (top.toVerifierKey pp urs).omega
@@ -294,9 +294,9 @@ omit [DecidableEq G] in
 /-- The circuit-derived VK's fixed commitment at one in-range column is the
 full-list commitment of the corresponding keygen row vector. -/
 theorem fixedCommitment_eq_commitInstance
-    {ConfigInput Config : Type} {Output : TypeMap}
-    [CircuitType Output]
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
     (hk : top.domainExponent = urs.k)
     (hlen : (Keygen.derivedUrsGLagrange urs).length = 2 ^ urs.k)
@@ -343,9 +343,9 @@ query layout, and preservation of the sparse assignments after last-write
 deduplication and dense scattering.
 -/
 def ofKeygen
-    {ConfigInput Config : Type} {Output : TypeMap}
-    [CircuitType Output]
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
     (hk : top.domainExponent = urs.k)
     (hlen : (Keygen.derivedUrsGLagrange urs).length = 2 ^ urs.k)
@@ -390,9 +390,9 @@ This is the pointwise form used by consumers such as constant-copy replay; the
 family theorem below merely applies it to selectors and fixed/table operations.
 -/
 theorem topLevelFixedEntryRead_or_bad
-    {ConfigInput Config : Type} {Output : TypeMap}
-    [CircuitType Output]
-    {top : TopLevelCircuit Fp ConfigInput Config Output}
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    {top : TopLevelCircuit Fp Config PublicInput}
     {pp : Keygen.ProofParams} {urs : URS G}
     (poly : CommitmentId → Polynomial Fp)
     (rows : ℕ → List Fp)
@@ -440,9 +440,9 @@ semantics. This lemma is independent of decoded-member provenance; callers choos
 the exceptional event carried by `binding`.
 -/
 theorem topLevelFixedConstraints_or_bad
-    {ConfigInput Config : Type} {Output : TypeMap}
-    [CircuitType Output]
-    {top : TopLevelCircuit Fp ConfigInput Config Output}
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    {top : TopLevelCircuit Fp Config PublicInput}
     {pp : Keygen.ProofParams} {urs : URS G}
     (poly : CommitmentId → Polynomial Fp)
     (rows : ℕ → List Fp)
@@ -632,9 +632,9 @@ packed selector activations and explicit fixed/table operations. Commitment bind
 is retained as an explicit alternative.
 -/
 theorem topLevelFixedConstraints_or_relation
-    {ConfigInput Config : Type} {Output : TypeMap}
-    [CircuitType Output]
-    {top : TopLevelCircuit Fp ConfigInput Config Output}
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    {top : TopLevelCircuit Fp Config PublicInput}
     {pp : Keygen.ProofParams}
     {urs : URS G}
     {hk : (pp.mergeDerived top).k = urs.k}
@@ -704,9 +704,9 @@ Constants replay uses this theorem for the V1-allocated constants cells; selecto
 and fixed/table family proofs use its bundled sibling above.
 -/
 theorem topLevelFixedEntryRead_or_relation
-    {ConfigInput Config : Type} {Output : TypeMap}
-    [CircuitType Output]
-    {top : TopLevelCircuit Fp ConfigInput Config Output}
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    {top : TopLevelCircuit Fp Config PublicInput}
     {pp : Keygen.ProofParams}
     {urs : URS G}
     {hk : (pp.mergeDerived top).k = urs.k}

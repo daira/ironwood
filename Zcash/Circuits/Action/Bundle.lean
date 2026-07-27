@@ -1897,6 +1897,59 @@ def extractPost (cfg : Config) (_ : Var unit Fp) (i : RegionIndex)
     (env : Placed Environment Fp) : ActionData :=
   extractBase cfg () i env
 
+@[simp] theorem extractPost_anchor (cfg : Config) (i : RegionIndex)
+    (env : Placed Environment Fp) :
+    (extractPost cfg () i env).anchor = env.env.get cfg.primary (ANCHOR : ℤ) :=
+  rfl
+
+@[simp] theorem extractPost_cvX (cfg : Config) (i : RegionIndex)
+    (env : Placed Environment Fp) :
+    (extractPost cfg () i env).cvX = env.env.get cfg.primary (CV_NET_X : ℤ) :=
+  rfl
+
+@[simp] theorem extractPost_cvY (cfg : Config) (i : RegionIndex)
+    (env : Placed Environment Fp) :
+    (extractPost cfg () i env).cvY = env.env.get cfg.primary (CV_NET_Y : ℤ) :=
+  rfl
+
+@[simp] theorem extractPost_nfOld (cfg : Config) (i : RegionIndex)
+    (env : Placed Environment Fp) :
+    (extractPost cfg () i env).nfOld = env.env.get cfg.primary (NF_OLD : ℤ) :=
+  rfl
+
+@[simp] theorem extractPost_rkX (cfg : Config) (i : RegionIndex)
+    (env : Placed Environment Fp) :
+    (extractPost cfg () i env).rkX = env.env.get cfg.primary (RK_X : ℤ) :=
+  rfl
+
+@[simp] theorem extractPost_rkY (cfg : Config) (i : RegionIndex)
+    (env : Placed Environment Fp) :
+    (extractPost cfg () i env).rkY = env.env.get cfg.primary (RK_Y : ℤ) :=
+  rfl
+
+@[simp] theorem extractPost_cmx (cfg : Config) (i : RegionIndex)
+    (env : Placed Environment Fp) :
+    (extractPost cfg () i env).cmx = env.env.get cfg.primary (CMX : ℤ) :=
+  rfl
+
+@[simp] theorem extractPost_enableSpend (cfg : Config) (i : RegionIndex)
+    (env : Placed Environment Fp) :
+    (extractPost cfg () i env).enableSpend =
+      env.env.get cfg.primary (ENABLE_SPEND : ℤ) :=
+  rfl
+
+@[simp] theorem extractPost_enableOutput (cfg : Config) (i : RegionIndex)
+    (env : Placed Environment Fp) :
+    (extractPost cfg () i env).enableOutput =
+      env.env.get cfg.primary (ENABLE_OUTPUT : ℤ) :=
+  rfl
+
+@[simp] theorem extractPost_disableCrossAddress (cfg : Config) (i : RegionIndex)
+    (env : Placed Environment Fp) :
+    (extractPost cfg () i env).disableCrossAddress =
+      env.env.get cfg.primary (DISABLE_CROSS_ADDRESS : ℤ) :=
+  rfl
+
 /-- The ironwood Action statement: the base §4.17.4 statement, plus the post-NU 6.3
 cross-address binding — a nonzero `DISABLE_CROSS_ADDRESS` instance row forces the new
 note's diversified address to equal the old note's. -/

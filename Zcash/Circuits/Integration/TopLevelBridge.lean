@@ -20,9 +20,9 @@ namespace FullCircuitBridge
 
 variable
     {G : Type} [AddCommGroup G] [Inhabited G]
-    {ConfigInput Config : Type} {Output : TypeMap}
-    [CircuitType Output]
-    {top : TopLevelCircuit Fp ConfigInput Config Output}
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    {top : TopLevelCircuit Fp Config PublicInput}
     {pp : Keygen.ProofParams} {urs : URS G}
     {cell : Type} [DecidableEq cell] [Fintype cell]
     {Bad : Prop}
@@ -109,7 +109,7 @@ This is the generic finite-family join used by the Action adapter: the proof doe
 not inspect the circuit statement and does not introduce an `hencodes` predicate.
 -/
 theorem bundleTopLevelSoundness_or_bad
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (i : RegionIndex) {numProofs : ℕ}
     (environment : Fin numProofs → Placed Environment Fp)
     (hwellFormed : ∀ proofIndex,
@@ -120,7 +120,8 @@ theorem bundleTopLevelSoundness_or_bad
         (environment proofIndex).place
         (environment proofIndex).env
         (top.operations i) i cell Bad) :
-    (∀ proofIndex, top.Statement i (environment proofIndex)) ∨ Bad := by
+    (∀ proofIndex,
+      top.Statement (top.extractPublicInput (environment proofIndex).env)) ∨ Bad := by
   classical
   by_cases hbad : Bad
   · exact Or.inr hbad

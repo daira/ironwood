@@ -35,9 +35,9 @@ construction.
 -/
 structure TopLevelGateCoherence
     {G : Type} [AddCommGroup G] [Inhabited G]
-    {ConfigInput Config : Type} {Output : TypeMap}
-    [CircuitType Output]
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G) : Prop where
   gateSelectorsAllocated :
     top.constraintSystem.GateSelectorsAllocated
@@ -58,9 +58,9 @@ namespace TopLevelGateCoherence
 
 variable
     {G : Type} [AddCommGroup G] [Inhabited G]
-    {ConfigInput Config : Type} {Output : TypeMap}
-    [CircuitType Output]
-    {top : TopLevelCircuit Fp ConfigInput Config Output}
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    {top : TopLevelCircuit Fp Config PublicInput}
     {pp : ProofParams} {urs : URS G}
 
 /--

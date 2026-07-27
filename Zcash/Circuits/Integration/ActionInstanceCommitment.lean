@@ -44,7 +44,7 @@ noncomputable def commitment
     (pp : ProofParams) (urs : URS G)
     (inputs :
       Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs →
-        PublicInputs) :
+        PublicInputs Fp) :
     Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs →
       ℕ → G :=
   fun proofIndex column =>
@@ -59,7 +59,7 @@ omit [DecidableEq G] in
     (pp : ProofParams) (urs : URS G)
     (inputs :
       Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs →
-        PublicInputs)
+        PublicInputs Fp)
     (proofIndex :
       Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs) :
     commitment pp urs inputs proofIndex
@@ -77,7 +77,7 @@ theorem commitment_primary_eq_commit
     (pp : ProofParams) (urs : URS G)
     (inputs :
       Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs →
-        PublicInputs)
+        PublicInputs Fp)
     (proofIndex :
       Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs) :
     commitment pp urs inputs proofIndex
@@ -106,7 +106,7 @@ noncomputable def topLevelCorrectnessOfAcceptedCircuitSat
       (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
     (inputs :
       Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs →
-        PublicInputs)
+        PublicInputs Fp)
     (ps : ProofString
       (pp.mergeDerived orchardActionTopLevelCircuit) Fp G)
     (ch : Challenges
@@ -205,7 +205,7 @@ theorem actionBundleStatement_or_relation_of_acceptedTopLevelBundle
       (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
     (inputs :
       Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs →
-        PublicInputs)
+        PublicInputs Fp)
     (ps : ProofString
       (pp.mergeDerived orchardActionTopLevelCircuit) Fp G)
     (ch : Challenges
@@ -319,7 +319,7 @@ theorem actionBundleStatement_or_relation_of_canonicalRelation
       (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
     (inputs :
       Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs →
-        PublicInputs)
+        PublicInputs Fp)
     (ps : ProofString
       (pp.mergeDerived orchardActionTopLevelCircuit) Fp G)
     (ch : Challenges
@@ -396,7 +396,7 @@ theorem actionBundleStatement_or_relation_of_acceptedCircuitSat
       (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
     (inputs :
       Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs →
-        PublicInputs)
+        PublicInputs Fp)
     (ps : ProofString
       (pp.mergeDerived orchardActionTopLevelCircuit) Fp G)
     (ch : Challenges

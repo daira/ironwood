@@ -72,7 +72,7 @@ selected feeds. The result is canonical Action-model circuit satisfaction or
 the standard discrete-log-relation alternative.
 -/
 theorem actionAcceptedCircuitSat_or_relation_of_vestaTerminalDerived
-    (inputs : Fin Fixture.shape.numProofs → PublicInputs)
+    (inputs : Fin Fixture.shape.numProofs → PublicInputs Fp)
     (ps : ProofString Fixture.shape Fp Fixture.G)
     (ch : Challenges Fixture.shape.k Fp)
     (pU pW : Fp)
@@ -188,7 +188,7 @@ assert_no_sorry actionAcceptedCircuitSat_or_relation_of_vestaTerminalDerived
 
 set_option maxRecDepth 1000000 in
 private theorem actionBundleStatement_or_relation_of_vestaCircuitSat_or_relation
-    (inputs : Fin Fixture.shape.numProofs → PublicInputs)
+    (inputs : Fin Fixture.shape.numProofs → PublicInputs Fp)
     (ps : ProofString Fixture.shape Fp Fixture.G)
     (ch : Challenges Fixture.shape.k Fp)
     (pU pW : Fp)
@@ -304,7 +304,7 @@ Deployed acceptance determines the decoder and canonical constraint model;
 the accepted route determines the advice and instance member selections.
 -/
 theorem actionBundleStatement_or_relation_of_vestaTerminalDerived
-    (inputs : Fin Fixture.shape.numProofs → PublicInputs)
+    (inputs : Fin Fixture.shape.numProofs → PublicInputs Fp)
     (ps : ProofString Fixture.shape Fp Fixture.G)
     (ch : Challenges Fixture.shape.k Fp)
     (pU pW : Fp)

@@ -25,14 +25,14 @@ set_option maxHeartbeats 20000
 
 variable
     {G : Type} [AddCommGroup G] [Inhabited G]
-    {ConfigInput Config : Type} {Output : TypeMap}
-    [CircuitType Output]
-    {top : TopLevelCircuit Fp ConfigInput Config Output}
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    {top : TopLevelCircuit Fp Config PublicInput}
     {pp : ProofParams} {urs : URS G}
 
 /-- A synthesis-enabled lookup routed to its configured lookup index. -/
 structure EnabledLookup.TopLevelRoute
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (lookup : EnabledLookup Fp) where
   index : Fin (pp.mergeDerived top).numLookups
   argument :
@@ -102,7 +102,7 @@ expressions are selector-free because Halo 2 constructs them from lookup-table
 columns. Arity is inherited from the list-of-pairs lookup constructor.
 -/
 structure TopLevelLookupCoherence
-    (top : TopLevelCircuit Fp ConfigInput Config Output) : Prop where
+    (top : TopLevelCircuit Fp Config PublicInput) : Prop where
   inputsCovered : ∀ argument ∈ top.constraintSystem.lookups,
     ∀ expression ∈ argument.inputs,
       expression.selectorsCovered
@@ -168,7 +168,7 @@ operation's zero/one selector valuation. Tables usually discharge the second
 field structurally because Halo 2 tables are selector-free.
 -/
 structure EnabledLookup.SelectorProjection
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (environment : Environment Fp) (lookup : EnabledLookup Fp) : Prop where
   input :
     lookup.argument.inputs.map
@@ -227,7 +227,7 @@ selectors. A gate selector can legitimately be active on the same absolute row
 without occurring in this lookup's inputs.
 -/
 def EnabledLookup.InputSelectorValuesRealized
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (environment : Environment Fp) (lookup : EnabledLookup Fp) : Prop :=
   ∀ expression ∈ lookup.argument.inputs,
     expression.eval
@@ -318,7 +318,7 @@ theorem resolverInterpretsPinned
 end TopLevelGateCoherence
 
 @[simp] theorem toVerifierKey_lookupInputExprs
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
     (lookup : Fin (pp.mergeDerived top).numLookups) :
     (top.toVerifierKey pp urs).lookupInputExprs lookup =
@@ -328,7 +328,7 @@ end TopLevelGateCoherence
   rfl
 
 @[simp] theorem toVerifierKey_lookupTableExprs
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
     (lookup : Fin (pp.mergeDerived top).numLookups) :
     (top.toVerifierKey pp urs).lookupTableExprs lookup =
@@ -338,14 +338,14 @@ end TopLevelGateCoherence
   rfl
 
 @[simp] theorem toVerifierKey_n
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G) :
     (top.toVerifierKey pp urs).n =
       2 ^ top.domainExponent := by
   rfl
 
 @[simp] theorem toVerifierKey_blindingFactors
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G) :
     (top.toVerifierKey pp urs).blindingFactors =
       top.blindingFactors := by
@@ -760,7 +760,7 @@ fit are derived from the top-level circuit; this record contains only selector- 
 challenge-dependent facts.
 -/
 structure TopLevelLookupWitnessConditions
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
@@ -794,7 +794,7 @@ Index every lookup activation in every proof of a top-level bundle. The activati
 list is shared by all proofs, while the resolver environment is proof-indexed.
 -/
 abbrev TopLevelLookupActivationIndex
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) :=
   Fin (pp.mergeDerived top).numProofs ×
     Fin (operationEnabledLookups (top.operations 0) 0).length
@@ -805,7 +805,7 @@ transcript challenge is shared by every proof and every enabled lookup activatio
 so the event must be unioned across both indices.
 -/
 noncomputable def allTopLevelLookupThetaBadSet
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp) : Finset Fp :=
   enabledLookupThetaBadSetFamily
@@ -820,7 +820,7 @@ noncomputable def allTopLevelLookupThetaBadSet
 
 /-- The row-by-arity root budget for the top-level bundle's `θ` surface. -/
 noncomputable def topLevelLookupThetaBudget
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp) : ℕ :=
   ∑ index : TopLevelLookupActivationIndex top pp,
@@ -868,7 +868,7 @@ These are transcript/probability-layer facts, independent of fixed-column select
 realization.
 -/
 structure TopLevelLookupChallengeExclusions
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp) : Prop where

@@ -1,4 +1,5 @@
 import Clean.Halo2.TopLevel
+import Zcash.Circuits.Action.PublicInput
 import Zcash.Circuits.Action.RealBases
 import Zcash.Circuits.Action.TopLevelSynthesisLaws
 
@@ -224,9 +225,27 @@ a deployable `TopLevelCircuit`: unit public synthesis input, `True` verifier
 assumptions, and no unfulfilled environment contract at its boundary.
 -/
 def topLevelCircuit (G : Generators) (B : Bases) :
-    TopLevelCircuit Fp Unit Config unit where
+    TopLevelCircuit Fp Config PublicInputs where
   formalCircuit := circuit G B
-  configInput := ()
+  publicInputLayout := PublicInputs.layout
+  PrivateWitness := PrivateWitness
+  extractPrivate := fun cfg i env =>
+    PrivateWitness.ofActionData (extractPost cfg () i env)
+  combine := combine
+  Spec := fun inputs privateWitness =>
+    SpecPost G B () () (combine inputs privateWitness)
+  spec_iff := by
+    intros
+    rfl
+  extract_factorization := by
+    dsimp
+    intro i env
+    change combine
+      (PublicInputs.ofEnvironment (configure G {}).1 env.env)
+      (PrivateWitness.ofActionData (extractPost (configure G {}).1 () i env)) =
+      extractPost (configure G {}).1 () i env
+    rw [← PublicInputs.ofActionData_extractPost]
+    exact combine_parts (extractPost (configure G {}).1 () i env)
   assumptions_eq := rfl
   lookupRelevantSelectorActivationsExact :=
     actionCircuit_lookupRelevantSelectorActivationsExact G B
@@ -245,7 +264,7 @@ def topLevelCircuit (G : Generators) (B : Bases) :
 
 /-- The deployed Orchard Action circuit, instantiated at its real proven constants. -/
 def orchardActionTopLevelCircuit :
-    TopLevelCircuit Fp Unit Config unit :=
+    TopLevelCircuit Fp Config PublicInputs :=
   topLevelCircuit Specs.Sinsemilla.orchardGenerators orchardBases
 
 end Zcash.Circuits.Action

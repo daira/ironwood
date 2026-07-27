@@ -42,7 +42,7 @@ theorem actionBundleStatement_or_relation_of_acceptedNodeBinding
       (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
     (inputs :
       Fin (pp.mergeDerived orchardActionTopLevelCircuit).numProofs →
-        PublicInputs)
+        PublicInputs Fp)
     (ps : ProofString
       (pp.mergeDerived orchardActionTopLevelCircuit) Fp G)
     (ch : Challenges

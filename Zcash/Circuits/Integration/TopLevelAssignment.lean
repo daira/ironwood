@@ -32,9 +32,9 @@ caller-supplied domain exponent or `VerifyingKey`: decoded constructors use the 
 derived from `top.formalCircuit`.
 -/
 structure TopLevelAssignment
-    {ConfigInput Config : Type} {Output : TypeMap}
-    [CircuitType Output]
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
     (numProofs : ℕ) (proofIndex : Fin numProofs) where
   polynomial : CommitmentId → Polynomial Fp
 
@@ -47,17 +47,17 @@ The dependent member index ensures that the assignment at `proofIndex` resolves
 exactly that member's advice and instance columns.
 -/
 abbrev Bundle
-    {ConfigInput Config : Type} {Output : TypeMap}
-    [CircuitType Output]
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
     (numProofs : ℕ) :=
   (proofIndex : Fin numProofs) →
     TopLevelAssignment top numProofs proofIndex
 
 variable
-    {ConfigInput Config : Type} {Output : TypeMap}
-    [CircuitType Output]
-    {top : TopLevelCircuit Fp ConfigInput Config Output}
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    {top : TopLevelCircuit Fp Config PublicInput}
     {numProofs : ℕ} {proofIndex : Fin numProofs}
 
 /-- The circuit-derived domain generator has exact order `2^k`. -/
