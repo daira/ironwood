@@ -1,3 +1,4 @@
+import Zcash.Common.RelationWitness
 import Mathlib
 import Zcash.Snark.Soundness.Multiopen.ConstraintResolver
 import Zcash.Snark.Soundness.PermutationRows
@@ -719,7 +720,7 @@ theorem permutationLastEvalsWellFormed_of_assemble?_eq_some
 /-- The decoded multiopen resolver simultaneously instantiates the permutation running products
 and chunk pairs.  If member-node binding fails, the existing nontrivial-relation branch is
 retained. -/
-theorem eval_permutationDataOfDecodedResolver_or_relation
+noncomputable def eval_permutationDataOfDecodedResolver_or_relation
     {shape : Shape} {G : Type*} [AddCommGroup G] [Module Fp G]
     (instanceCommitment : Fin shape.numProofs → ℕ → G)
     [DecidableEq G] [Inhabited G]
@@ -749,7 +750,7 @@ theorem eval_permutationDataOfDecodedResolver_or_relation
           urs hk vk ps ch memberDecode slot).eval point
           = deployedMemberClaim (instanceCommitment := instanceCommitment)
               vk ps ch slot point
-        ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
+        ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w)
     (p : Fin shape.numProofs) :
     let route := assembledQueryMemberRoute (instanceCommitment := instanceCommitment)
       vk ps ch hcount hdup
@@ -761,9 +762,10 @@ theorem eval_permutationDataOfDecodedResolver_or_relation
           (chunk.1.map fun q => q.eval ch.x,
             chunk.2.map fun pair => (pair.1.eval ch.x, pair.2.eval ch.x)))
         = subProofPermChunks vk ps p)
-      ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+      ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   dsimp only
-  rcases decodedPolynomialResolver_opens_or_relation
+  refine bindOrRelationWitness
+    (decodedPolynomialResolver_opens_or_relation
       (instanceCommitment := instanceCommitment)
       urs hk vk ps ch memberDecode
       (assembledQueryMemberRoute (instanceCommitment := instanceCommitment)
@@ -771,11 +773,10 @@ theorem eval_permutationDataOfDecodedResolver_or_relation
       (assembleQueries vk instanceCommitment ps ch)
       (fun q hq => assembledQueryMemberRoute_faithful
         (instanceCommitment := instanceCommitment) vk ps ch hcount hdup q hq)
-      hbind with hopen | hrel
-  · exact Or.inl
-      ⟨eval_permutationSetsOfResolver vk instanceCommitment ps ch _ hwf p hopen,
-       eval_permutationChunksOfResolver
-        vk instanceCommitment ps ch _ hwf hcoherent p hopen⟩
-  · exact Or.inr hrel
+      hbind) fun hopen => ?_
+  exact
+    ⟨eval_permutationSetsOfResolver vk instanceCommitment ps ch _ hwf p hopen,
+     eval_permutationChunksOfResolver
+      vk instanceCommitment ps ch _ hwf hcoherent p hopen⟩
 
 end Zcash.Snark
