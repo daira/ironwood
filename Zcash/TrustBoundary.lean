@@ -589,7 +589,7 @@ assert_axioms exists_accepting_good_challenge
 assert_axioms exists_accepting_good_challenge_quotient
 -- The deployed Vesta capstone family: the decoded-column rungs and the terminal, alongside the
 -- derived capstone already pinned below.
-assert_axioms orchard_verifier_vesta_member_constraint_deployed_x4 +native
+assert_axioms orchard_verifier_vesta_decoded_constraint_of_forked_x4 +native
 
 -- Deterministic verifier routing used by the rewind-free deployed constraint decoder.
 assert_axioms vanishing_query_mem_assembleQueries
