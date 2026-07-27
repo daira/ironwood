@@ -213,13 +213,16 @@ noncomputable def actionTopLevelCircuitCorrectness
             fixedCoherence lookup henabled
         have hvalues :=
           lookup.inputSelectorValuesRealized_or_bad
-            relation.polynomial fixedCoherence.rows hfixedRows hdomainSize
+            relation.polynomial
+            (fun column =>
+              orchardActionTopLevelCircuit.fixedRows.getD column [])
+            hfixedRows hdomainSize
             (Bad :=
               HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
             (fun column hcolumn =>
               relation.fixedColumn_eq_rowPolynomial_or_relation
                 column fixedCoherence.key
-                (fixedCoherence.rows column)
+                (orchardActionTopLevelCircuit.fixedRows.getD column [])
                 (fixedCoherence.commitment column hcolumn)
                 hfixedRows
                 (by

@@ -429,7 +429,8 @@ theorem toVerifierKey_n
     (pp : ProofParams) (urs : URS G) :
     (top.toVerifierKey pp urs).n = 2 ^ top.domainExponent := by
   simp [toVerifierKey, verifierKeyAt, VerifyingKey.ofOperations,
-    TopLevelCircuit.domainExponent]
+    TopLevelCircuit.domainExponent, TopLevelCompilation.domainExponent,
+    TopLevelCircuit.constraintSystem, TopLevelCircuit.operations]
 
 /-- The derived key preserves the closed constraint system's blinding count. -/
 @[simp]
@@ -458,7 +459,8 @@ theorem toVerifierKey_permutationCommonCommitment
       (top.permutationCommitments urs).getD column.val 0 := by
   simp only [toVerifierKey, verifierKeyAt,
     VerifyingKey.ofOperations_permutationCommonCommitment,
-    permutationCommitments, domainExponent]
+    permutationCommitments, domainExponent,
+    TopLevelCompilation.domainExponent, constraintSystem, operations]
 
 /-- The derived key exposes exactly the advice-query layout of its selector-map
 derivation. -/

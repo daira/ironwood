@@ -269,11 +269,10 @@ structure TopLevelFixedCoherence
     (pp : Keygen.ProofParams) (urs : URS G) where
   key :
     LagrangeCommitmentKey urs (top.toVerifierKey pp urs).omega
-  rows : ℕ → List Fp
   commitment : ∀ column,
     column < top.pinnedCS.numFixedColumns →
       (top.toVerifierKey pp urs).fixedCommitment column =
-        key.commitInstance (rows column) 1
+        key.commitInstance (top.fixedRows.getD column []) 1
   fixedQueryCount :
     (top.toVerifierKey pp urs).fixedQueryLayout.length =
       (pp.mergeDerived top).numFixedQueries
@@ -285,9 +284,9 @@ structure TopLevelFixedCoherence
   realizes : ∀ column row value,
     (column, row, value) ∈
         topLevelRequiredFixedEntries top →
-      row < (top.toVerifierKey pp urs).n ∧
+        row < (top.toVerifierKey pp urs).n ∧
         column < top.pinnedCS.numFixedColumns ∧
-        (rows column).getD row 0 = (value : Fp)
+        (top.fixedRows.getD column []).getD row 0 = (value : Fp)
 
 namespace TopLevelFixedCoherence
 
@@ -372,7 +371,6 @@ def ofKeygen
     LagrangeCommitmentKey.ofFullList
       urs (top.toVerifierKey pp urs).omega
       (derivedUrsGLagrange urs) hgenerators
-  rows := fun column => top.fixedRows.getD column []
   commitment :=
     fixedCommitment_eq_commitInstance
       top pp urs hk hlen hgenerators
@@ -687,10 +685,12 @@ theorem topLevelFixedConstraints_or_relation
       HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   subst vk
   apply topLevelFixedConstraints_or_bad
-    relation.polynomial coherence.rows hrows hn coherence.realizes
+    relation.polynomial
+      (fun column => top.fixedRows.getD column [])
+      hrows hn coherence.realizes
   · intro column hcolumn
     exact relation.fixedColumn_eq_rowPolynomial_or_relation
-      column coherence.key (coherence.rows column)
+      column coherence.key (top.fixedRows.getD column [])
       (coherence.commitment column hcolumn) hrows
       (by
         obtain ⟨rotation, hlayout⟩ :=
@@ -756,10 +756,12 @@ theorem topLevelFixedEntryRead_or_relation
       HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   subst vk
   apply topLevelFixedEntryRead_or_bad
-    relation.polynomial coherence.rows hrows hn coherence.realizes
+    relation.polynomial
+      (fun column => top.fixedRows.getD column [])
+      hrows hn coherence.realizes
   · intro fixedColumn hcolumn
     exact relation.fixedColumn_eq_rowPolynomial_or_relation
-      fixedColumn coherence.key (coherence.rows fixedColumn)
+      fixedColumn coherence.key (top.fixedRows.getD fixedColumn [])
       (coherence.commitment fixedColumn hcolumn) hrows
       (by
         obtain ⟨rotation, hlayout⟩ :=
