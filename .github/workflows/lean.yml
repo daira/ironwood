@@ -75,6 +75,12 @@ jobs:
       # native_decide axiom tracking (lean4#7463).
       - name: Verify csimp lemmas are axiom-censused
         run: scripts/check_csimp_census.sh
+      # Executing a check through a locally compiled precompileModules dylib is a
+      # coarse-grained compiler-trust event with no axiom trace, so it must be an
+      # explicit opt-in: no module reaching a lane module by imports may contain an
+      # evaluation-based check without an entry in the script's opt-in list.
+      - name: Verify native-executing checks are opt-in
+        run: python3 scripts/check_native_optin.py
           diff Stamp.lean <(./stamp.sh) \
             || { echo "::error::Stamp.lean is stale; regenerate with ./stamp.sh > Stamp.lean"; exit 1; }
       # Installs the toolchain from lean-toolchain, fetches the Mathlib olean

@@ -82,6 +82,15 @@ precompiled native code actually trust — is
 [`design/lean-native-trust-research.md`](https://github.com/daira/CompElliptic/blob/main/design/lean-native-trust-research.md)
 in the CompElliptic repository.
 
+**Native-executing checks are opt-in.** Executing a check through locally compiled native
+code (a `precompileModules` dylib — ours, or the CompElliptic pin's) trusts the C emitter,
+the local C toolchain, and the loader, coarse-grained and with no axiom trace. Loading a
+lane's dylib is inseparable from elaborating modules that import it, so the enforced
+invariant sits at the level of checks: no module whose import closure reaches a lane module
+may contain an evaluation-based check (`#eval`, `#guard`, `native_decide`) unless explicitly
+opted in, enforced by `scripts/check_native_optin.py` in CI. Appendix C of the research
+document linked above records the observed Lake behaviour behind this rule.
+
 **Concrete, closed facts with no free variables** may additionally use `native_decide`
 (which discharges a goal by running compiled native code, adding a compiler-trust axiom) and
 the kernel's GMP-backed bignum arithmetic. The principal such fact in this repository is the
