@@ -72,7 +72,7 @@ member selections. The terminal's remaining relation is then precisely
 `CircuitSat` for the canonical accepted model, apart from the standard
 discrete-log-relation alternative.
 -/
-theorem acceptedModel_circuitSat_or_relation_of_feed_eq
+noncomputable def acceptedModel_circuitSat_or_relation_of_feed_eq
     {shape : Shape}
     (urs : URS VestaG) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp VestaG)
@@ -189,8 +189,8 @@ theorem acceptedModel_circuitSat_or_relation_of_feed_eq
     (CanonicalMemberConstraintRelation.acceptedModel
         (memberDecode := memberDecode)
         (hblinding := hblinding) haccepts).CircuitSat
-          ch.y hpoly vk.n a₀ ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+          ch.y hpoly vk.n a₀ ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   let model :=
     CanonicalMemberConstraintRelation.acceptedModel
       (memberDecode := memberDecode) (hblinding := hblinding) haccepts
@@ -234,7 +234,7 @@ member slots or prove feed equalities. The construction selects the appropriate
 member separately for every proof and query index, so this theorem applies to
 arbitrary `shape.numProofs`.
 -/
-theorem acceptedModel_circuitSat_or_relation_of_acceptedSelections
+noncomputable def acceptedModel_circuitSat_or_relation_of_acceptedSelections
     {shape : Shape}
     (urs : URS VestaG) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp VestaG)
@@ -314,8 +314,8 @@ theorem acceptedModel_circuitSat_or_relation_of_acceptedSelections
           vestaExtractedMemberDecode urs hk vk instanceCommitment ps ch
             pbatch hlen hprob1 haccepts)
         (hblinding := hblinding) haccepts).CircuitSat
-          ch.y hpoly vk.n a₀ ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+          ch.y hpoly vk.n a₀ ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   let memberDecode :=
     vestaExtractedMemberDecode urs hk vk instanceCommitment ps ch
       pbatch hlen hprob1 haccepts

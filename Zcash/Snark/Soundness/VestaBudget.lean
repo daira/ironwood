@@ -1542,7 +1542,7 @@ open Classical in
 `SnarkRelation` at `circuitSatViaConstraints` on the decoded member columns — the opening the
 batch family already carries, paired with satisfaction of the whole constraint system. This is
 the endpoint the circuit bridge composes with. -/
-theorem orchard_verifier_vesta_member_constraints_terminal {shape : Shape}
+def orchard_verifier_vesta_member_constraints_terminal {shape : Shape}
     (urs : URS VestaG) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp VestaG)
     (instanceCommitment : Fin shape.numProofs → ℕ → VestaG)
@@ -1630,8 +1630,8 @@ theorem orchard_verifier_vesta_member_constraints_terminal {shape : Shape}
               (hprob1 _ (hinstanceSet p j)) hacc0).cols (instanceMem p j))))
           gates sets chunks lookups beta gamma delta theta y chunkLen l0 lLast lBlind hpoly deg)
         a → S) :
-    S ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w :=
-  Or.inl (hencodes a₀
+    S ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w :=
+  PSum.inl (hencodes a₀
     ⟨pbatch.ipaRelation_of_x4Current hξcur,
       circuitSatViaConstraints_of_check fixedCols _ _ gates sets chunks lookups
         beta gamma delta theta y chunkLen l0 lLast lBlind hpoly deg a₀ x hquotC hgoodC⟩)
@@ -1647,7 +1647,8 @@ the quotient check over the full constraint list follows from the vanishing-slot
 so the capstone hands over `SnarkRelation` at `circuitSatViaConstraints` with no assumed check.
 Producing these bindings and the good squeeze from acceptance, with their failure probabilities
 composed, is the computed-path re-instantiation. -/
-theorem orchard_verifier_vesta_member_constraints_terminal_derived {shape : Shape}
+noncomputable def orchard_verifier_vesta_member_constraints_terminal_derived
+    {shape : Shape}
     (urs : URS VestaG) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp VestaG)
     (instanceCommitment : Fin shape.numProofs → ℕ → VestaG)
@@ -1754,7 +1755,7 @@ theorem orchard_verifier_vesta_member_constraints_terminal_derived {shape : Shap
           vk.gates sets chunks lookups ch.beta ch.gamma vk.delta ch.theta ch.y vk.chunkLen
           l0P lLastP lBlindP hpoly vk.n)
         a → S) :
-    S ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+    S ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   rcases hfold_of_constraint_polys urs hk vk instanceCommitment ps ch fixedCols
       (fun p => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
         coeffsToPoly ((openedMemberDecode_of_x1Prob urs hk vk instanceCommitment ps ch pbatch
@@ -1772,7 +1773,6 @@ theorem orchard_verifier_vesta_member_constraints_terminal_derived {shape : Shap
       lookups ch.beta ch.gamma vk.delta ch.theta ch.y vk.chunkLen l0P lLastP lBlindP hpoly vk.n
       ch.x pbatch hξcur hlen hprob1 hacc0 hfold
       (hgood_of_good_challenge _ hpoly vk.n hxgood) hencodes
-  · -- Propositional lane, as above: demoted here, deleted upstream.
-    exact Or.inr (HasNontrivialRelation.of_nontrivialRelation hrel)
+  · exact PSum.inr hrel
 
 end Zcash.Snark
