@@ -35,12 +35,9 @@ that point the goal is literally the generic terminal. The public theorem
 instantiates the lemma with the two certificate equalities verbatim
 (`shape_eq_mergeDerived`, `vk_eq_derived`).
 
-The instance-commitment family is the one object of the terminal whose
-circuit-native spelling (`ActionInstanceCommitment.commitment pp urs`) is TYPED
-at the derived shape and therefore cannot be written at the fixture `shape`. It
-is respelled here shape-generically as `deployedInstanceCommitment`, whose type
-mentions only the ambient `Shape`; at the derived shape it is `commitment
-actionProofParams capturedURS` by `deployedInstanceCommitment_eq` (`rfl`).
+The public-instance commitment is `ActionInstanceCommitment.commitment
+actionProofParams capturedURS`. Its proof-count index is generic, so the same
+definition is used directly at both the circuit-derived and captured fixture shapes.
 
 The `k`-match and blinding-factor premises of the generic terminal are
 discharged internally from the fixture data (`shape_k_eq_capturedURS_k`,
@@ -76,35 +73,6 @@ set_option maxRecDepth 100000 in
 theorem vk_blindingFactors_lt : Fixture.vk.blindingFactors < Fixture.vk.n := by
   decide
 
-/--
-The deployed public-instance commitment family, spelled at an arbitrary `Shape`
-index.
-
-`ActionInstanceCommitment.commitment` has the derived `Shape` baked into its
-type, so it cannot be applied to public inputs indexed by the fixture `shape`.
-This is the same family — the Action circuit's single primary column carries the
-Lagrange commitment of that proof's public rows, every other column index
-commits to zero — with the index left as an ordinary parameter.
--/
-noncomputable def deployedInstanceCommitment (s : Shape)
-    (inputs : Fin s.numProofs → PublicInputs Fp) :
-    Fin s.numProofs → ℕ → G :=
-  fun proofIndex column =>
-    if column =
-        actionCircuit.config.primary.index then
-      (instanceKey actionProofParams capturedURS).commitInstance
-        (inputs proofIndex).rows 1
-    else 0
-
-/-- At the derived `Shape` the respelled family is the circuit-native one. -/
-theorem deployedInstanceCommitment_eq
-    (inputs :
-      Fin (actionProofParams.mergeDerived
-        actionCircuit).numProofs → PublicInputs Fp) :
-    deployedInstanceCommitment
-        (actionProofParams.mergeDerived actionCircuit) inputs
-      = commitment actionProofParams capturedURS inputs := rfl
-
 set_option maxRecDepth 1000000 in
 /--
 Transport the accepted-circuit-satisfaction Action endpoint to an arbitrary
@@ -128,22 +96,22 @@ private theorem acceptedModel_circuitSat_deployed_transport
     (batchOpenings :
       OpenedBatchOpenings capturedURS (evalVector capturedURS.k ch.x3)
         (x4BatchCommitments
-          (instanceCommitment := deployedInstanceCommitment s inputs)
+          (instanceCommitment := commitment actionProofParams capturedURS inputs)
           capturedURS hk K ps ch)
         (x4BatchEvals
-          (instanceCommitment := deployedInstanceCommitment s inputs)
+          (instanceCommitment := commitment actionProofParams capturedURS inputs)
           K ps ch)
         a pU pW)
     (memberDecode : ∀ i (hi : i <
         deployedX4PairCount
-          (instanceCommitment := deployedInstanceCommitment s inputs)
+          (instanceCommitment := commitment actionProofParams capturedURS inputs)
           K ps ch),
       OpenedMemberDecode
-        (instanceCommitment := deployedInstanceCommitment s inputs)
+        (instanceCommitment := commitment actionProofParams capturedURS inputs)
         capturedURS hk K ps ch batchOpenings i hi)
     (haccepts :
       DeployedAccepts capturedURS hk K
-        (deployedInstanceCommitment s inputs) ps ch)
+        (commitment actionProofParams capturedURS inputs) ps ch)
     (hpoly : Polynomial Fp)
     (hsatisfied :
       (CanonicalMemberConstraintRelation.acceptedModel
@@ -194,7 +162,6 @@ private theorem acceptedModel_circuitSat_deployed_transport
       (actionCircuit.toVerifierKey
         actionProofParams capturedURS)
       rfl pU pW a
-  rw [← deployedInstanceCommitment_eq inputs] at terminal
   exact terminal batchOpenings memberDecode haccepts hbl hpoly hsatisfied hgoodY
     ⟨permGamma, permBeta⟩
     ⟨lookupGamma, lookupBeta, lookupTheta⟩
@@ -213,26 +180,26 @@ theorem action_bundleStatement_or_relation_of_acceptedModel_circuitSat_deployed
       OpenedBatchOpenings capturedURS (evalVector capturedURS.k ch.x3)
         (x4BatchCommitments
           (instanceCommitment :=
-            deployedInstanceCommitment Fixture.shape inputs)
+            commitment actionProofParams capturedURS inputs)
           capturedURS shape_k_eq_capturedURS_k Fixture.vk ps ch)
         (x4BatchEvals
           (instanceCommitment :=
-            deployedInstanceCommitment Fixture.shape inputs)
+            commitment actionProofParams capturedURS inputs)
           Fixture.vk ps ch)
         a pU pW)
     (memberDecode : ∀ i (hi : i <
         deployedX4PairCount
           (instanceCommitment :=
-            deployedInstanceCommitment Fixture.shape inputs)
+            commitment actionProofParams capturedURS inputs)
           Fixture.vk ps ch),
       OpenedMemberDecode
         (instanceCommitment :=
-          deployedInstanceCommitment Fixture.shape inputs)
+          commitment actionProofParams capturedURS inputs)
         capturedURS shape_k_eq_capturedURS_k Fixture.vk ps ch
         batchOpenings i hi)
     (haccepts :
       DeployedAccepts capturedURS shape_k_eq_capturedURS_k Fixture.vk
-        (deployedInstanceCommitment Fixture.shape inputs) ps ch)
+        (commitment actionProofParams capturedURS inputs) ps ch)
     (hpoly : Polynomial Fp)
     (hsatisfied :
       (CanonicalMemberConstraintRelation.acceptedModel
@@ -307,22 +274,22 @@ private theorem actionDeployed_transport
     (batchOpenings :
       OpenedBatchOpenings capturedURS (evalVector capturedURS.k ch.x3)
         (x4BatchCommitments
-          (instanceCommitment := deployedInstanceCommitment s inputs)
+          (instanceCommitment := commitment actionProofParams capturedURS inputs)
           capturedURS hk K ps ch)
         (x4BatchEvals
-          (instanceCommitment := deployedInstanceCommitment s inputs)
+          (instanceCommitment := commitment actionProofParams capturedURS inputs)
           K ps ch)
         a pU pW)
     (memberDecode : ∀ i (hi : i <
         deployedX4PairCount
-          (instanceCommitment := deployedInstanceCommitment s inputs)
+          (instanceCommitment := commitment actionProofParams capturedURS inputs)
           K ps ch),
       OpenedMemberDecode
-        (instanceCommitment := deployedInstanceCommitment s inputs)
+        (instanceCommitment := commitment actionProofParams capturedURS inputs)
         capturedURS hk K ps ch batchOpenings i hi)
     (haccepts :
       DeployedAccepts capturedURS hk K
-        (deployedInstanceCommitment s inputs) ps ch)
+        (commitment actionProofParams capturedURS inputs) ps ch)
     (hpoly : Polynomial Fp)
     (hquot :
       hpoly =
@@ -330,16 +297,16 @@ private theorem actionDeployed_transport
           (memberDecode := memberDecode) haccepts .vanishingH)
     (hbind : ∀
       (slot : DeployedMemberSlot
-        (instanceCommitment := deployedInstanceCommitment s inputs) K ps ch)
+        (instanceCommitment := commitment actionProofParams capturedURS inputs) K ps ch)
       (point : Fp),
       point ∈ deployedSetPts
-          (instanceCommitment := deployedInstanceCommitment s inputs)
+          (instanceCommitment := commitment actionProofParams capturedURS inputs)
           K ps ch slot.setIndex →
       (decodedMemberPolynomial
-        (instanceCommitment := deployedInstanceCommitment s inputs)
+        (instanceCommitment := commitment actionProofParams capturedURS inputs)
         capturedURS hk K ps ch memberDecode slot).eval point =
           deployedMemberClaim
-            (instanceCommitment := deployedInstanceCommitment s inputs)
+            (instanceCommitment := commitment actionProofParams capturedURS inputs)
             K ps ch slot point
         ∨ HasNontrivialRelation (F := Fp)
             capturedURS.g capturedURS.u capturedURS.w)
@@ -434,7 +401,6 @@ private theorem actionDeployed_transport
   have terminal :=
     action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
       actionProofParams capturedURS hk inputs ps ch pU pW a
-  rw [← deployedInstanceCommitment_eq inputs] at terminal
   exact terminal batchOpenings memberDecode haccepts hpoly hquot hbind
     hxgood hgoodY ⟨permGamma, permBeta⟩
     ⟨lookupGamma, lookupBeta, lookupTheta⟩
@@ -459,23 +425,23 @@ theorem action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq_deploye
     (batchOpenings :
       OpenedBatchOpenings capturedURS (evalVector capturedURS.k ch.x3)
         (x4BatchCommitments
-          (instanceCommitment := deployedInstanceCommitment Fixture.shape inputs)
+          (instanceCommitment := commitment actionProofParams capturedURS inputs)
           capturedURS shape_k_eq_capturedURS_k Fixture.vk ps ch)
         (x4BatchEvals
-          (instanceCommitment := deployedInstanceCommitment Fixture.shape inputs)
+          (instanceCommitment := commitment actionProofParams capturedURS inputs)
           Fixture.vk ps ch)
         a pU pW)
     (memberDecode : ∀ i (hi : i <
         deployedX4PairCount
-          (instanceCommitment := deployedInstanceCommitment Fixture.shape inputs)
+          (instanceCommitment := commitment actionProofParams capturedURS inputs)
           Fixture.vk ps ch),
       OpenedMemberDecode
-        (instanceCommitment := deployedInstanceCommitment Fixture.shape inputs)
+        (instanceCommitment := commitment actionProofParams capturedURS inputs)
         capturedURS shape_k_eq_capturedURS_k Fixture.vk ps ch
         batchOpenings i hi)
     (haccepts :
       DeployedAccepts capturedURS shape_k_eq_capturedURS_k Fixture.vk
-        (deployedInstanceCommitment Fixture.shape inputs) ps ch)
+        (commitment actionProofParams capturedURS inputs) ps ch)
     (hpoly : Polynomial Fp)
     (hquot :
       hpoly =
@@ -483,18 +449,18 @@ theorem action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq_deploye
           (memberDecode := memberDecode) haccepts .vanishingH)
     (hbind : ∀
       (slot : DeployedMemberSlot
-        (instanceCommitment := deployedInstanceCommitment Fixture.shape inputs)
+        (instanceCommitment := commitment actionProofParams capturedURS inputs)
         Fixture.vk ps ch)
       (point : Fp),
       point ∈ deployedSetPts
-          (instanceCommitment := deployedInstanceCommitment Fixture.shape inputs)
+          (instanceCommitment := commitment actionProofParams capturedURS inputs)
           Fixture.vk ps ch slot.setIndex →
       (decodedMemberPolynomial
-        (instanceCommitment := deployedInstanceCommitment Fixture.shape inputs)
+        (instanceCommitment := commitment actionProofParams capturedURS inputs)
         capturedURS shape_k_eq_capturedURS_k Fixture.vk ps ch
         memberDecode slot).eval point =
           deployedMemberClaim
-            (instanceCommitment := deployedInstanceCommitment Fixture.shape inputs)
+            (instanceCommitment := commitment actionProofParams capturedURS inputs)
             Fixture.vk ps ch slot point
         ∨ HasNontrivialRelation (F := Fp)
             capturedURS.g capturedURS.u capturedURS.w)
