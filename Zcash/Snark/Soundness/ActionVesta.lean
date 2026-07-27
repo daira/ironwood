@@ -57,70 +57,70 @@ theorem action_bundleStatement_or_relation_of_deployedAccepts
     (pbatch :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
         (x4BatchCommitments
-          (instanceCommitment := commitment pp urs inputs)
+          (instanceCommitment := actionCircuit.instanceCommitment pp urs inputs)
           urs hk (actionCircuit.toVerifierKey pp urs) ps ch)
         (x4BatchEvals
-          (instanceCommitment := commitment pp urs inputs)
+          (instanceCommitment := actionCircuit.instanceCommitment pp urs inputs)
           (actionCircuit.toVerifierKey pp urs) ps ch)
         a₀ pU pW)
     (hξcur : pbatch.batchChallenge pbatch.current = ch.x4)
     (hlen : ∀ i, i <
         deployedX4PairCount
           (actionCircuit.toVerifierKey pp urs)
-          (commitment pp urs inputs) ps ch →
+          (actionCircuit.instanceCommitment pp urs inputs) ps ch →
       0 < (deployedSetQueries
         (actionCircuit.toVerifierKey pp urs)
-        (commitment pp urs inputs) ps ch i).length)
+        (actionCircuit.instanceCommitment pp urs inputs) ps ch i).length)
     (hprob1 : ∀ i, i <
         deployedX4PairCount
           (actionCircuit.toVerifierKey pp urs)
-          (commitment pp urs inputs) ps ch →
+          (actionCircuit.instanceCommitment pp urs inputs) ps ch →
       (((deployedSetQueries
           (actionCircuit.toVerifierKey pp urs)
-          (commitment pp urs inputs) ps ch i).length - 1 : ℕ) : ℝ≥0∞) /
+          (actionCircuit.instanceCommitment pp urs inputs) ps ch i).length - 1 : ℕ) : ℝ≥0∞) /
           Fintype.card Fp
         < (PMF.uniformOfFintype Fp).toOuterMeasure
           (Finset.univ.filter
             (OpenedX1Accept urs hk
               (actionCircuit.toVerifierKey pp urs)
-              (commitment pp urs inputs) ps ch)))
+              (actionCircuit.instanceCommitment pp urs inputs) ps ch)))
     (haccepts :
       DeployedAccepts urs hk
         (actionCircuit.toVerifierKey pp urs)
-        (commitment pp urs inputs) ps ch)
+        (actionCircuit.instanceCommitment pp urs inputs) ps ch)
     (i m : ℕ)
     (hm : m < (deployedSetQueries
       (actionCircuit.toVerifierKey pp urs)
-      (commitment pp urs inputs) ps ch i).length)
+      (actionCircuit.instanceCommitment pp urs inputs) ps ch i).length)
     (colPoly : Fin (deployedSetQueries
       (actionCircuit.toVerifierKey pp urs)
-      (commitment pp urs inputs) ps ch i).length → Polynomial Fp)
+      (actionCircuit.instanceCommitment pp urs inputs) ps ch i).length → Polynomial Fp)
     (hbindAll : ∀ (idx : Fin ((constructIntermediateSets
           (assembleQueries
             (actionCircuit.toVerifierKey pp urs)
-            (commitment pp urs inputs) ps ch)).points.getD i []).length)
+            (actionCircuit.instanceCommitment pp urs inputs) ps ch)).points.getD i []).length)
         (m₀ : Fin (deployedSetQueries
           (actionCircuit.toVerifierKey pp urs)
-          (commitment pp urs inputs) ps ch i).length),
+          (actionCircuit.instanceCommitment pp urs inputs) ps ch i).length),
       (colPoly m₀).eval
           (((constructIntermediateSets
             (assembleQueries
               (actionCircuit.toVerifierKey pp urs)
-              (commitment pp urs inputs) ps ch)).points.getD i [])[idx]) =
+              (actionCircuit.instanceCommitment pp urs inputs) ps ch)).points.getD i [])[idx]) =
         ((deployedSetQueries
           (actionCircuit.toVerifierKey pp urs)
-          (commitment pp urs inputs) ps ch i).getD
+          (actionCircuit.instanceCommitment pp urs inputs) ps ch i).getD
             (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0
         ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
     (hquot : hpoly = colPoly ⟨m, hm⟩)
     (hroute : (constructIntermediateSets
       (assembleQueries
         (actionCircuit.toVerifierKey pp urs)
-        (commitment pp urs inputs) ps ch)).points.getD i [] = [ch.x])
+        (actionCircuit.instanceCommitment pp urs inputs) ps ch)).points.getD i [] = [ch.x])
     (hevals : ∀ d₀,
       ((deployedSetQueries
         (actionCircuit.toVerifierKey pp urs)
-        (commitment pp urs inputs) ps ch i).getD m d₀).2 =
+        (actionCircuit.instanceCommitment pp urs inputs) ps ch i).getD m d₀).2 =
         [expectedHEval
           (allExpressions
             (actionCircuit.toVerifierKey pp urs) ps ch
@@ -152,7 +152,7 @@ theorem action_bundleStatement_or_relation_of_deployedAccepts
         (memberDecode :=
           vestaExtractedMemberDecode urs hk
             (actionCircuit.toVerifierKey pp urs)
-            (commitment pp urs inputs) ps ch
+            (actionCircuit.instanceCommitment pp urs inputs) ps ch
             pbatch hlen hprob1 haccepts)
         (hblinding := ActionPermutationDomain.blindingFactors_lt pp urs)
         haccepts)
@@ -163,7 +163,7 @@ theorem action_bundleStatement_or_relation_of_deployedAccepts
             (memberDecode :=
               vestaExtractedMemberDecode urs hk
                 (actionCircuit.toVerifierKey pp urs)
-                (commitment pp urs inputs) ps ch
+                (actionCircuit.instanceCommitment pp urs inputs) ps ch
                 pbatch hlen hprob1 haccepts)
             (hblinding := ActionPermutationDomain.blindingFactors_lt pp urs)
             haccepts
@@ -180,7 +180,7 @@ theorem action_bundleStatement_or_relation_of_deployedAccepts
             (memberDecode :=
               vestaExtractedMemberDecode urs hk
                 (actionCircuit.toVerifierKey pp urs)
-                (commitment pp urs inputs) ps ch
+                (actionCircuit.instanceCommitment pp urs inputs) ps ch
                 pbatch hlen hprob1 haccepts)
             (hblinding := ActionPermutationDomain.blindingFactors_lt pp urs)
             haccepts).constraints
@@ -193,7 +193,7 @@ theorem action_bundleStatement_or_relation_of_deployedAccepts
           (memberDecode :=
             vestaExtractedMemberDecode urs hk
               (actionCircuit.toVerifierKey pp urs)
-              (commitment pp urs inputs) ps ch
+              (actionCircuit.instanceCommitment pp urs inputs) ps ch
               pbatch hlen hprob1 haccepts)
           haccepts)
         actionActiveRows)
@@ -204,13 +204,13 @@ theorem action_bundleStatement_or_relation_of_deployedAccepts
           (memberDecode :=
             vestaExtractedMemberDecode urs hk
               (actionCircuit.toVerifierKey pp urs)
-              (commitment pp urs inputs) ps ch
+              (actionCircuit.instanceCommitment pp urs inputs) ps ch
               pbatch hlen hprob1 haccepts)
           haccepts)) :
     BundleStatement inputs ∨
       HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   let vk := actionCircuit.toVerifierKey pp urs
-  let instanceCommitment := commitment pp urs inputs
+  let instanceCommitment := actionCircuit.instanceCommitment pp urs inputs
   let memberDecode :=
     vestaExtractedMemberDecode urs hk vk instanceCommitment ps ch
       pbatch hlen hprob1 haccepts
@@ -228,10 +228,11 @@ theorem action_bundleStatement_or_relation_of_deployedAccepts
           haccepts hpoly hsatisfied hgoodY
           permutationExclusions lookupExclusions)
   rcases hgeneric with htop | hrelation
-  · exact
-      action_bundleStatement_or_relation_of_accepted_topLevelBundleStatement
-        pp urs hk inputs ps ch pU pW a₀ pbatch memberDecode
-        haccepts htop
+  · simpa only [BundleStatement] using
+      (TopLevelInstanceCommitment.statements_or_relation_of_accepted_topLevelBundleStatement
+        actionCircuit pp urs hk inputs ps ch pU pW a₀ pbatch
+        memberDecode haccepts
+        ActionPermutationDomain.domainExponent_lt htop)
   · exact Or.inr hrelation
 
 assert_no_sorry action_bundleStatement_or_relation_of_deployedAccepts

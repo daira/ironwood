@@ -51,29 +51,29 @@ theorem action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
     (batchOpenings :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
         (x4BatchCommitments
-          (instanceCommitment := commitment pp urs inputs)
+          (instanceCommitment := actionCircuit.instanceCommitment pp urs inputs)
           urs hk
           (actionCircuit.toVerifierKey pp urs)
           ps ch)
         (x4BatchEvals
-          (instanceCommitment := commitment pp urs inputs)
+          (instanceCommitment := actionCircuit.instanceCommitment pp urs inputs)
           (actionCircuit.toVerifierKey pp urs)
           ps ch)
         a pU pW)
     (memberDecode : ∀ i (hi : i <
         deployedX4PairCount
-          (instanceCommitment := commitment pp urs inputs)
+          (instanceCommitment := actionCircuit.instanceCommitment pp urs inputs)
           (actionCircuit.toVerifierKey pp urs)
           ps ch),
       OpenedMemberDecode
-        (instanceCommitment := commitment pp urs inputs)
+        (instanceCommitment := actionCircuit.instanceCommitment pp urs inputs)
         urs hk
         (actionCircuit.toVerifierKey pp urs)
         ps ch batchOpenings i hi)
     (haccepts :
       DeployedAccepts urs hk
         (actionCircuit.toVerifierKey pp urs)
-        (commitment pp urs inputs) ps ch)
+        (actionCircuit.instanceCommitment pp urs inputs) ps ch)
     (hpoly : Polynomial Fp)
     (hquot :
       hpoly =
@@ -81,20 +81,20 @@ theorem action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
           (memberDecode := memberDecode) haccepts .vanishingH)
     (hbind : ∀
       (slot : DeployedMemberSlot
-        (instanceCommitment := commitment pp urs inputs)
+        (instanceCommitment := actionCircuit.instanceCommitment pp urs inputs)
         (actionCircuit.toVerifierKey pp urs) ps ch)
       (point : Fp),
       point ∈ deployedSetPts
-          (instanceCommitment := commitment pp urs inputs)
+          (instanceCommitment := actionCircuit.instanceCommitment pp urs inputs)
           (actionCircuit.toVerifierKey pp urs)
           ps ch slot.setIndex →
       (decodedMemberPolynomial
-        (instanceCommitment := commitment pp urs inputs)
+        (instanceCommitment := actionCircuit.instanceCommitment pp urs inputs)
         urs hk
         (actionCircuit.toVerifierKey pp urs)
         ps ch memberDecode slot).eval point =
           deployedMemberClaim
-            (instanceCommitment := commitment pp urs inputs)
+            (instanceCommitment := actionCircuit.instanceCommitment pp urs inputs)
             (actionCircuit.toVerifierKey pp urs)
             ps ch slot point
         ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w)
@@ -215,7 +215,7 @@ theorem action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
       ActionPermutationDomain.domainExponent_lt
   rcases
       acceptedModel_circuitSat_or_relation_of_decodedMemberPolynomial_eq
-        urs hk vk (commitment pp urs inputs) ps ch memberDecode
+        urs hk vk (actionCircuit.instanceCommitment pp urs inputs) ps ch memberDecode
         haccepts hblinding hpoly hquot
         gateCoherence.fixedQueryCount
         gateCoherence.adviceQueryCount

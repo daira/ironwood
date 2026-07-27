@@ -37,6 +37,7 @@ import Zcash.Circuits.Integration.TopLevelCircuit
 import Zcash.Circuits.Integration.TopLevelCoherence
 import Zcash.Circuits.Integration.TopLevelCorrectness
 import Zcash.Circuits.Integration.TopLevelGates
+import Zcash.Circuits.Integration.TopLevelInstanceCommitment
 import Zcash.Circuits.Integration.TopLevelLookups
 
 /-!
