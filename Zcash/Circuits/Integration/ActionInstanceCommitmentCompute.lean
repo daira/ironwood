@@ -12,17 +12,16 @@ namespace Zcash.Snark
 
 open Halo2
 open Zcash.Circuits
-open Zcash.Circuits.Action (orchardActionTopLevelCircuit)
+open Zcash.Circuits.Action (actionCircuit)
 
 namespace ActionInstanceCommitment
 
 /-- The configured primary Action instance column is present at rotation zero in the
 synthesis-closed constraint system. -/
 theorem primaryRegistered :
-    ((Action.Circuit.configure
-          Specs.Sinsemilla.orchardGenerators {}).1.primary,
+    (actionCircuit.config.primary,
         (0 : Rotation)) ∈
-      orchardActionTopLevelCircuit.constraintSystem.instanceQueries := by
+      actionCircuit.constraintSystem.instanceQueries := by
   native_decide
 
 assert_no_sorry primaryRegistered

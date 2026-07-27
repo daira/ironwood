@@ -114,13 +114,13 @@ namespace QueryLayouts
 
 variable
     {G : Type} [AddCommGroup G] [Inhabited G]
-    {ConfigInput Config : Type} {Output : TypeMap}
-    [CircuitType Output]
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
 
 /-- A query present in the synthesis-closed top-level constraint system remains in
 its derived verifying key's instance-query layout. -/
 theorem instanceQueryLayout_of_constraintSystem
-    (top : TopLevelCircuit Fp ConfigInput Config Output)
+    (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
     (column : Column .instance) (rotation : Rotation)
     (hquery :
