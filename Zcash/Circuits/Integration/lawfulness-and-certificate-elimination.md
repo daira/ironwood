@@ -25,12 +25,12 @@ obligations. The count excludes the intentional deployed-VK equality and does no
 double-count the bundle's `K = 11`, which is already represented by
 `domainExponent_eq`.
 
-Two further synthesis laws are already proved, but at the wrong abstraction layer:
-`LookupRelevantSelectorActivationsExact` and `LookupInputsNoSimpleSelectors` are
-fields of `TopLevelCircuit`, not `FormalCircuit`. Their roughly 3,000-line
-Action/NoteCommit proof stack is therefore also architectural debt. They are not
-additional concrete computations and are not included in the count of 26, but moving
-them onto every formal circuit is part of this arc's completion criteria.
+Two further synthesis laws, `LookupRelevantSelectorActivationsExact` and
+`LookupInputsNoSimpleSelectors`, were once proved here — at the wrong abstraction
+layer, as fields of `TopLevelCircuit` rather than of `FormalCircuit`, backed by a
+roughly 3,000-line Action/NoteCommit proof stack. Since nothing consumed them they
+have been withdrawn rather than relocated; the residual fidelity gap that leaves is
+recorded below. They were never included in the count of 26.
 
 The guiding rule is:
 
@@ -162,11 +162,9 @@ formal circuit rather than in the circuit package or the construction API whose
 lawfulness it establishes. It is therefore an interim implementation of obligation
 25, not the endpoint.
 
-## Existing synthesis-law sidecars
+## Withdrawn synthesis-law sidecars and the residual fidelity gap
 
-The following properties are currently established by
-`Action/SynthesisLaws.lean`, `NoteCommit/SynthesisLaws.lean`, and
-`Action/TopLevelSynthesisLaws.lean`:
+`TopLevelCircuit` once carried two static synthesis obligations:
 
 * `LookupRelevantSelectorActivationsExact`: every lookup operation's recorded enabled
   selectors exactly match the relevant selectors activated in its complete region at
@@ -174,24 +172,27 @@ The following properties are currently established by
 * `LookupInputsNoSimpleSelectors`: lookup input expressions contain no simple
   selectors.
 
-The final proofs are inserted into `TopLevelCircuit`, but that is not correct
-packaging. These are laws of `FormalCircuit.synthesize`, so every `FormalCircuit`
-should carry them, preferably as an `Operations.SynthesisLaws` field specialized to
-the configuration produced by that circuit:
+Both fields, together with the sidecars that discharged them for Action
+(`Action/SynthesisLaws.lean`, `NoteCommit/SynthesisLaws.lean`, and
+`Action/TopLevelSynthesisLaws.lean`, which retraced the entire Action and NoteCommit
+synthesis call graphs because circuit and subcircuit constructors do not preserve
+this evidence), have been withdrawn as consumerless: no keygen or verifier theorem
+ever read them. Lookup projection coverage is established independently, by counting
+selector indices rather than by appealing to a region-local activation law.
 
-```text
-FormalCircuit.synthesisLaws :=
-  ∀ configInput input i,
-    let config := (configure configInput {}).1
-    Operations.SynthesisLaws ((synthesize config input).operations i)
-```
+That withdrawal leaves a known fidelity gap. Halo 2 rejects simple selectors supplied
+to a lookup argument — lookup registration panics on one — and Clean no longer models
+that rejection anywhere. Nothing in the present chain becomes unsound as a result,
+because nothing claims it; but a keygen-fidelity theorem relating Clean's
+`configure`/`synthesize` output to halo2's own key generation cannot be stated
+faithfully without it. Such a theorem will need a no-simple-selectors premise
+reintroduced explicitly.
 
-The current files retrace the entire Action and NoteCommit synthesis call graphs
-because circuit and subcircuit constructors do not preserve this evidence. During
-migration those proofs may discharge the new field, but the endpoint is local proof
-obligations on lookup-emitting bundles plus automatic preservation by circuit
-combinators. Merely retaining the large proofs and attaching their results at the
-top-level wrapper does not satisfy the lawfulness architecture.
+When that happens, the premise should not be reinstated in the withdrawn shape. The
+lesson of the sidecars is that these are laws of `FormalCircuit.synthesize`: the
+obligation belongs locally on lookup-emitting bundles, preserved compositionally by
+the circuit combinators, rather than reproved across a whole synthesis call graph and
+reattached at the top-level wrapper.
 
 ## Current compile-cost baseline
 

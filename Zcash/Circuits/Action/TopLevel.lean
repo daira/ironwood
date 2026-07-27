@@ -1,7 +1,7 @@
 import Clean.Halo2.TopLevel
 import Zcash.Circuits.Action.PublicInput
 import Zcash.Circuits.Action.RealBases
-import Zcash.Circuits.Action.TopLevelSynthesisLaws
+import Zcash.Circuits.Action.Bundle
 
 /-!
 # The deployed Orchard Action as a closed top-level circuit
@@ -152,12 +152,6 @@ def actionCircuit : TopLevelCircuit Fp Config PublicInputs where
       (extractPost
         (configure Specs.Sinsemilla.orchardGenerators {}).1 () 0 env)
   assumptions_eq := rfl
-  lookupRelevantSelectorActivationsExact :=
-    actionCircuit_lookupRelevantSelectorActivationsExact
-      Specs.Sinsemilla.orchardGenerators orchardBases
-  lookupInputsNoSimpleSelectors :=
-    actionCircuit_lookupInputsNoSimpleSelectors
-      Specs.Sinsemilla.orchardGenerators orchardBases
   closesEnvironment := configured_closesEnvironment
 
 /-- The semantic conclusion for every Action proved in one Halo 2 bundle. -/

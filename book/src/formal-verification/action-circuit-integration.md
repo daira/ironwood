@@ -666,21 +666,17 @@ The generic boundary now quantifies only selector leaves that actually occur in 
 selected lookup's input expressions; unrelated gate selectors may legitimately be
 active at the same absolute row. `LookupSelectorRows` transports exact dense packed
 rows through fixed-polynomial binding into that expression-level projection.
-The within-synthesis half of the remaining compiler argument is now closed.
-`TopLevelCircuit` carries two generic operation-stream laws:
-`lookupRelevantSelectorActivationsExact` says that every selector leaf used by a
+`TopLevelCircuit` briefly carried two generic operation-stream laws for this seam:
+`lookupRelevantSelectorActivationsExact`, saying that every selector leaf used by a
 lookup input is activated at the lookup row exactly when it appears in that
-operation's enabled-selector list, while `lookupInputsNoSimpleSelectors` rules out
+operation's enabled-selector list, and `lookupInputsNoSimpleSelectors`, ruling out
 the simple-selector overlap case that selector packing cannot represent exactly.
-
-The concrete Action proofs are compositional rather than computational.
-`Action/SynthesisLaws.lean` proves reusable laws for the range-check, Sinsemilla,
-Merkle, ECC, fixed-base, CommitIvk, and Action check stages;
-`NoteCommit/SynthesisLaws.lean` proves the corresponding old/new NoteCommit
-decomposition; and `Action/TopLevelSynthesisLaws.lean` combines them for the complete
-unit-input synthesis. The resulting proofs are installed directly in
-`Action.actionCircuit`, so downstream generic bridges consume the law through the
-single `TopLevelCircuit` interface rather than an Action sidecar certificate.
+Neither field was ever read by a keygen or verifier theorem — lookup projection
+coverage is obtained by counting selector indices instead — so both fields and the
+compositional Action proofs that discharged them have been withdrawn. Halo 2's
+rejection of simple selectors in lookup arguments is consequently not modelled; see
+`Zcash/Circuits/Integration/lawfulness-and-certificate-elimination.md` for the shape
+a future keygen-fidelity theorem would need to restore.
 
 The remaining placement half is deliberately narrower: transport this exact
 operation-level accounting through V1's concrete region starts and the derived
