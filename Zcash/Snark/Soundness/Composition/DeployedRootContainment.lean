@@ -88,7 +88,8 @@ def deployedRootDecoded (family : ComputedDeployedRootFSFamily shape)
 
 /-- The concrete output delivered by the rewind-free multiopen layer: either the complete computed
 relation finder returns a witness, or all deployed member-polynomial values are decoded.  This is
-deliberately not phrased using the bare existential `HasNontrivialRelation`. -/
+deliberately phrased as computed data rather than an ∃-closed relation, which a prime-order group
+satisfies unconditionally. -/
 def deployedRootExtracted (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (coins : family.toFamily.Coins) : Prop :=

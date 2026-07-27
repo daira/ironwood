@@ -1,5 +1,3 @@
-import Zcash.Snark.Soundness.Composition.GoodX
-import Zcash.Snark.Soundness.Multiopen.Decode
 import Zcash.Snark.Soundness.AGM.Peel
 
 /-!
@@ -147,21 +145,6 @@ def decodedQuotientEqReassembledOrRelationWitness (urs : URS G) (xn : Fp)
         rw [heq.1]
         exact coeffsToPoly_scaledSum xn hp)
 
-/-- **The decoded quotient column is the reassembly of the piece openings, or binding breaks.**
-Given openings of each piece commitment `Hᵢ` and a decoded column opening the reassembled
-`Σᵢ (xⁿ)ⁱ·Hᵢ`, the decoded column's polynomial is `reassembledQuotient (xⁿ)` of the piece
-polynomials, or a nontrivial `(g, u, w)` relation exists. -/
-theorem decodedQuotient_eq_reassembled_or_relation (urs : URS G) (xn : Fp)
-    {a : Fin (2 ^ urs.k) → Fp} {cu cw : Fp}
-    {hp : Fin d → Fin (2 ^ urs.k) → Fp} {hpu hpw : Fin d → Fp} {H : Fin d → G}
-    (hpiece : ∀ i, commit urs (hp i) + hpu i • urs.u + hpw i • urs.w = H i)
-    (hopen : commit urs a + cu • urs.u + cw • urs.w = ∑ i : Fin d, xn ^ (i : ℕ) • H i) :
-    coeffsToPoly a = reassembledQuotient xn (fun i => coeffsToPoly (hp i))
-    ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  exact match decodedQuotientEqReassembledOrRelationWitness urs xn hpiece hopen with
-    | PSum.inl h => Or.inl h
-    | PSum.inr relation => Or.inr (HasNontrivialRelation.of_nontrivialRelation relation)
-
 omit [AddCommGroup G] [Module Fp G] in
 /-- The reassembly fold as a `foldr`: `List.foldl` over the reversed pieces is `List.foldr` over
 the pieces (`List.foldl_reverse`), which inducts forward without reverse-index bookkeeping. -/
@@ -186,33 +169,5 @@ theorem vanishingHCommitment_eval (urs : URS G) (xn : Fp) :
       rw [show (∑ j ∈ Finset.range l.length, (xn * xn ^ j) • l.getD j 0)
             = ∑ j ∈ Finset.range l.length, (xn ^ j * xn) • l.getD j 0 from
           Finset.sum_congr rfl (fun j _ => by rw [mul_comm]), add_comm]
-
-/-! ## The quotient connector
-
-Packaging the reconstruction and the bad-set transport: a bad challenge for the verifier's
-`x`-dependent quotient check either lands in the pinned pre-`x` bad set, witnesses the constraint
-polynomial identity, or breaks binding. This is the whole quotient contribution to the
-good-challenge argument — stated at the decoded column, discharged into pre-`x` data. -/
-
-/-- **The quotient connector.** For a decoded column opening the reassembled `Σⱼ (xⁿ)ʲ·Hⱼ` (each
-`Hⱼ` opened by the pieces), if `x` is bad for the verifier's check `combine − hpolyP·(Xⁿ−1)`
-(with `hpolyP` that decoded column), then `x` lands in the pinned pre-`x` bad set of
-`combine − Hpoly·(Xⁿ−1)`, or that pre-`x` polynomial is identically zero (the constraint holds as
-polynomials), or a nontrivial relation exists. -/
-theorem mem_szBadSet_decodedQuotient_imp (urs : URS G) (combine : Polynomial Fp) (n : ℕ) (x : Fp)
-    {a : Fin (2 ^ urs.k) → Fp} {cu cw : Fp}
-    {hp : Fin d → Fin (2 ^ urs.k) → Fp} {hpu hpw : Fin d → Fp} {H : Fin d → G}
-    (hpiece : ∀ i, commit urs (hp i) + hpu i • urs.u + hpw i • urs.w = H i)
-    (hopen : commit urs a + cu • urs.u + cw • urs.w = ∑ i : Fin d, (x ^ n) ^ (i : ℕ) • H i)
-    (hx : x ∈ szBadSet (combine - coeffsToPoly a * (Polynomial.X ^ n - 1))) :
-    x ∈ szBadSet (combine
-        - preXQuotient n (fun i => coeffsToPoly (hp i)) * (Polynomial.X ^ n - 1))
-    ∨ combine - preXQuotient n (fun i => coeffsToPoly (hp i)) * (Polynomial.X ^ n - 1) = 0
-    ∨ HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  rcases decodedQuotient_eq_reassembled_or_relation urs (x ^ n) hpiece hopen with hEq | hR
-  · rw [hEq] at hx
-    exact (mem_szBadSet_reassembled_imp combine n (fun i => coeffsToPoly (hp i)) hx).imp
-      id Or.inl
-  · exact Or.inr (Or.inr hR)
 
 end Zcash.Snark

@@ -1715,7 +1715,7 @@ theorem constructIntermediateSets_member_commitment_eq_of_id
 
 /-! ### Per-class query membership, with the claimed evaluation
 
-`advice_query_mem_assembleQueries` (`Soundness.Multiopen.NodeBinding`) locates a class's queries
+The per-class query-membership lemmas locate a class's queries
 by slot and point. The feed bindings also need the third component — each query's claimed
 evaluation is the proof string's own claim — so the lemmas below restate membership for every
 class with the evaluation included: the column families, the permutation products at their three
@@ -1758,7 +1758,7 @@ theorem fixed_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F] 
   · rw [hqev, List.getD_eq_getElem _ _ (by rw [List.length_ofFn]; exact hje), List.getElem_ofFn,
       finFn, dif_pos hje]
 
-/-- `advice_query_mem_assembleQueries` with the claimed evaluation. -/
+/-- Advice-query membership in `assembleQueries`, with the claimed evaluation. -/
 
 theorem advice_query_mem_assembleQueries_eval {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
@@ -1781,7 +1781,7 @@ theorem advice_query_mem_assembleQueries_eval {shape : Shape} {F G : Type*} [Fie
   · rw [hqev, List.getD_eq_getElem _ _ (by rw [List.length_ofFn]; exact hje), List.getElem_ofFn,
       finFn, dif_pos hje]
 
-/-- `instance_query_mem_assembleQueries` with the claimed evaluation. -/
+/-- Instance-query membership in `assembleQueries`, with the claimed evaluation. -/
 
 theorem instance_query_mem_assembleQueries_eval {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)

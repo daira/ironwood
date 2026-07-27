@@ -431,8 +431,9 @@ abbrev toFamily (family : ComputedDeployedRootFSFamily shape) :
 
 /-- The complete relation producer used by the rewind-free deployed layer: the recursive
 extractor's `relationFinder` extended by the `outcome` relation.  Both branches stay in one
-data-returning finder — a bare `HasNontrivialRelation` would be vacuous in a prime-order group
-and could not be charged to DLOG.  Computable relative to `family.outcome`; #96 must supply a
+data-returning finder — an ∃-closed relation would be vacuous in a prime-order group, where such
+a relation always exists, and so could not be charged to DLOG.  Computable relative to
+`family.outcome`; #96 must supply a
 computable direct-coordinate outcome before applying a concrete DLOG assumption. -/
 def deployedRelationFinder (family : ComputedDeployedRootFSFamily shape) :
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) -> family.toFamily.Coins ->

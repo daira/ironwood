@@ -67,9 +67,8 @@ import Zcash.Snark.Soundness.Main
 -- Multiopen decode reconstruction: bind the IPA witness to real verifier columns recovered from
 -- batched openings (`Multiopen.Decode`), the compatibility layer exposing the propositional binding
 -- interface over fs-adversary's `NontrivialRelation`/`ForkedTranscript` apparatus (`Multiopen.Compat`),
--- the `x₄` multiopen rewinding (`Multiopen.Deployed`), the opened chain threading the fork's declared
--- `U`/`W` components through the batch decode (`Multiopen.Opened`), and the discharge fixtures
--- (`Multiopen.DecodeFixture`).
+-- the `x₄` multiopen rewinding (`Multiopen.Deployed`), and the opened chain threading the fork's
+-- declared `U`/`W` components through the batch decode (`Multiopen.Opened`).
 -- Schwartz–Zippel good-challenge budgets and production (kills `hgood` at the `_xgood` rungs).
 import Zcash.Snark.Soundness.GoodChallenge
 import Zcash.Snark.Soundness.Multiopen.Decode
@@ -78,7 +77,6 @@ import Zcash.Snark.Soundness.Multiopen.Deployed
 import Zcash.Snark.Soundness.Multiopen.Opened
 import Zcash.Snark.Soundness.Multiopen.RPoly
 import Zcash.Snark.Soundness.Multiopen.Claimed
-import Zcash.Snark.Soundness.Multiopen.DecodeFixture
 import Zcash.Snark.Soundness.Vesta
 -- Concrete fork-tree knowledge error over the deployed Orchard parameters.
 import Zcash.Snark.Soundness.Deployed.ConcreteBounds

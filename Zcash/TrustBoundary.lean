@@ -486,27 +486,18 @@ assert_axioms kerr_div_card
 assert_axioms deployed_forking_knowledge_error
 assert_axioms deployed_forking_knowledge_error_captured
 
-/-! ### Legacy multiopen decode and forking composition
+/-! ### Multiopen decode and forking composition
 
-These declarations retain the historical rewind-based compatibility surface. Several conclusions
-use the proposition `HasNontrivialRelation`; they are logical disjunctions, not computed break
-producers, and must not be fed directly to a DLOG advantage bound. The active rewind-free route is
-censused below through explicit `PSum` relation data and computable finders. Theorems throughout,
-so `assert_axioms`, with `+native` on the Vesta-instantiated endpoints. -/
-
--- The multiopen value-check chain: the deployed value check derived from the nested
--- forking floors, the x₁ member un-batch on top of it, and the terminal with `hadvice`/`hinstance`
--- produced rather than assumed (`Soundness.Multiopen.NodeBinding`, `Soundness.Vesta`). Their
--- `HasNontrivialRelation` branch is compatibility-only, not an executable finder.
-assert_axioms deployed_value_check_node_binding
-assert_axioms deployed_member_node_binding
-assert_axioms orchard_verifier_vesta_member_constraint_derived +native
+The decode layer's surviving surface: the Vandermonde column recovery, the `x₄` flat-power-batch
+collapse, and the forking-extraction composition. The rewind-based compatibility layer that once
+sat here — the propositional binding disjunct and the accept-event ladders it fed — has been
+removed, so every break the deployed route charges to DLOG is computed relation data, censused
+below through explicit `PSum` outcomes and computable finders. Theorems throughout, so
+`assert_axioms`, with `+native` on the Vesta-instantiated endpoints. -/
 
 -- The forking-extraction ∘ decoded-capstone composition (`Soundness.Composition.Bridge`): the algebraic
--- clean opening identified with the deployed capstone's shape (`ipaRelation_deployed_of_instance`),
--- the witness-tie composition (`member_snark_of_instance`), and the historical computed-path
--- endpoint (`orchard_verifier_sound_vesta_computed`) that concludes the plain `SnarkRelation` with
--- NO `ExtractableFromAcceptance` hypothesis. On the witness tie the opened-value shift is derived
+-- clean opening identified with the deployed capstone's shape (`ipaRelation_deployed_of_instance`).
+-- On the witness tie the opened-value shift is derived
 -- (`shift_eq_zero_of_openings_agree`), so `hshift` survives only on the standalone single-opening
 -- bridge. `snarkExtraction_prob_le_of_generatorRO_textbookDL` is the CONDITIONAL knowledge-error
 -- bound: the SNARK-extraction failure is contained in the clean-opening failure and inherits its
@@ -515,9 +506,7 @@ assert_axioms orchard_verifier_vesta_member_constraint_derived +native
 -- budget below — is the remaining reconciliation. This stack is not consumed by the rewind-free
 -- constraint capstone below.
 assert_axioms ipaRelation_deployed_of_instance +native
-assert_axioms member_snark_of_instance +native
 assert_axioms snarkRelation_of_memberColumns
-assert_axioms orchard_verifier_sound_vesta_computed +native
 assert_axioms snarkExtraction_prob_le_of_generatorRO_textbookDL +native
 assert_axioms instanceAttempt_provenance +native
 assert_axioms ipaRelation_deployed_of_openings_agree +native
@@ -529,10 +518,7 @@ assert_axioms shift_eq_zero_of_openings_agree +native
 assert_axioms decodedColumnFamily_of_batch_openings
 assert_axioms deployedCommitment_x4_batch
 assert_axioms multiopenValue_x4_batch
-assert_axioms x1_batch_open_soundV
 assert_axioms member_binding_of_x1_samples
-assert_axioms deployed_witness_member_binding
-assert_axioms deployed_witness_two_level
 assert_axioms node_binding_of_samples
 -- The multiopen support modules, pinned directly rather than transitively through the capstones
 -- above. `Opened` holds the rewind accept events and the three `Classical.choose` witness
@@ -546,27 +532,19 @@ assert_axioms openedColumnDecode
 assert_axioms openedDecodedCols
 assert_axioms openedDecodedCols_eval_x3
 assert_axioms openedDecodedCols_top_eval_x3
-assert_axioms OpenedColumnDecode.currentWitness_eq
-assert_axioms openedRewindForRelation_of_batch
 assert_axioms openedX4Batch_of_witnessFamily
 assert_axioms OpenedX4Accept
-assert_axioms openedX4Accept_of_deployedAccepts
 assert_axioms OpenedX3Accept
-assert_axioms openedX3Accept_of_deployedAccepts
 assert_axioms OpenedX2Accept
-assert_axioms openedX2Accept_of_deployedAccepts
 assert_axioms openedX4Rewind_of_x4Prob
 assert_axioms openedX4Rewind_of_x4Prob_forked
-assert_axioms OpenedBatchOpenings.ipaRelation_of_x4Current
 assert_axioms opened_constraint_of_relation_and_batch
 assert_axioms x1DecodeComp
 assert_axioms opened_witness_member_binding
 assert_axioms OpenedX1Accept
-assert_axioms openedX1Accept_of_deployedAccepts
 assert_axioms openedMemberDecode_of_x1Prob
 assert_axioms rotatedFeed
 assert_axioms member_constraint_of_relation_and_batch
-assert_axioms member_constraint_of_relation_and_batch_xgood
 assert_axioms poly_eq_of_agree_on_family
 assert_axioms foldl_range_add_eq_sum
 assert_axioms foldl_range_guardProd_eq_prod
@@ -584,20 +562,11 @@ assert_axioms col_eval_node_eq_claimed
 assert_axioms Msm.eval_zero
 assert_axioms Msm.eval_scale
 assert_axioms Msm.eval_add
-assert_axioms HasNontrivialRelation
-assert_axioms HasNontrivialRelation.of_nontrivialRelation
-assert_axioms deployed_to_acceptV
-assert_axioms hasNontrivialRelation_of_two_openings
-assert_axioms decoded_constraint_of_relation_and_batch
-assert_axioms decoded_constraint_of_opening_or_relation
 assert_axioms claimedEval_of_x3Prob
-assert_axioms claimedCombined_of_x2Prob
 assert_axioms gateGood_of_xProb
-assert_axioms hgood_of_xProb
 assert_axioms deployedSetPts
 assert_axioms deployedAllPts
 assert_axioms deployedSetPts_subset
-assert_axioms member_aggregate_eval_bridge
 assert_axioms deployed_query_point_mem
 -- The avoidance-strengthened forking count (`Soundness.Forking.Probability`): the counting lemma
 -- that buys the multiopen grid's interpolation samples off the opened set points, so the value
@@ -614,9 +583,6 @@ assert_axioms exists_accepting_good_challenge_quotient
 -- The deployed Vesta capstone family: the decoded-column rungs and the terminal, alongside the
 -- derived capstone already pinned below.
 assert_axioms orchard_verifier_vesta_decoded_constraint_of_forked_x4 +native
-assert_axioms orchard_verifier_vesta_forking_constraint_deployed_x4 +native
-assert_axioms orchard_verifier_vesta_member_constraint_deployed_x4 +native
-assert_axioms orchard_verifier_vesta_member_constraint_deployed_terminal +native
 
 -- Deterministic verifier routing used by the rewind-free deployed constraint decoder.
 assert_axioms vanishing_query_mem_assembleQueries

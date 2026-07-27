@@ -139,7 +139,7 @@ moves. Both halves of what the `{ch with x4 := ξ}` runs then owe the terminal c
 (`Soundness.Multiopen.Deployed`): the flat-batch power form of the deployed statement in `x₄` is proven
 over the fingerprinted grouping's aggregates (`deployedCommitment_x4_batch`/`multiopenValue_x4_batch`),
 and the accept-probability step is the single-squeeze counting floor
-(`exists_injective_accepting_of_measure`, consumed by `deployedMultiopenRewind_of_x4Prob`) — the same
+(`exists_injective_accepting_of_measure`) — the same
 seam shape the round-forking ladder carries, extending the IPA-round ordering treatment to the
 multiopen squeeze points. -/
 
@@ -204,7 +204,7 @@ multiopen-squeeze analogue of `roChallenges_reprogramRounds` for the IPA rounds.
 Packaging this as a single `Challenges`-record equality (as `roChallenges_reprogramRounds` does) is
 left implicit: each field projection forces whnf of the entire `deriveChallenges` record, and unlike
 the round case the batching challenge's inlined `x₄` prefix makes that packaging prohibitively
-expensive to elaborate. Downstream (`acceptedBatchFamily_of_rewinds`) consumes the per-run accept
+expensive to elaborate. Downstream consumers take the per-run accept
 facts, not the record identity, so the pointwise lemmas above are the operative form. -/
 
 /-! ## Redrawing the compression challenge is reprogramming at the `x₁` squeeze

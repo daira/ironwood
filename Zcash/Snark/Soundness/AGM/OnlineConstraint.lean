@@ -157,7 +157,7 @@ def deployedConstraintPieceRepresentations
 
 /-- Computed comparison between the online representation of the reassembled quotient MSM and
 the power sum of the online quotient-piece representations.  A disagreement returns its actual
-augmented-basis coefficients; it is never recovered from `HasNontrivialRelation` or `Nonempty`. -/
+augmented-basis coefficients; it is never recovered from an ∃-closed relation or `Nonempty`. -/
 def deployedConstraintQuotientAgreementOrRelation
     (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
