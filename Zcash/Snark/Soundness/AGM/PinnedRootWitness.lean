@@ -11,6 +11,8 @@ follows from the trace's fresh-query property.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (Msm Msm.zero Msm.eval Msm.appendTerm Msm.scale Msm.add)
+
 open scoped ENNReal
 
 local instance vestaInhabitedPinnedRootWitness : Inhabited VestaG := ⟨0⟩
