@@ -1,4 +1,5 @@
 import Zcash.Circuits.Integration.TopLevelBridge
+import Zcash.Common.RelationWitness
 import Zcash.Circuits.Integration.TopLevelAssignment
 
 /-!
@@ -66,13 +67,20 @@ theorem of_publicInputEncoding
 
 end TopLevelBundleStatement
 
+set_option maxHeartbeats 400000 in
 /--
 The representation-boundary facts needed to interpret one canonical polynomial
 assignment as an execution of a top-level circuit.
 
 Each field names one of the four Clean constraint families.  The shared `Bad`
 alternative is retained componentwise so that commitment-binding failures can be
-joined without turning this record into an opaque statement-level hypothesis.
+joined without turning this record into an opaque statement-level hypothesis, and
+is carried as data: a field that cannot be discharged returns the break rather
+than asserting one exists.
+
+The copy field previously squashed its witness under `Nonempty`.  With `Bad` a
+type the witness is already data, so it is carried directly and the terminal no
+longer has to recover it by choice.
 -/
 structure TopLevelCircuitCorrectness
     {G : Type} [AddCommGroup G] [Inhabited G]
@@ -83,13 +91,13 @@ structure TopLevelCircuitCorrectness
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (cell : Type) [DecidableEq cell] [Fintype cell]
-    (Bad : Prop) : Prop where
+    (Bad : Type) : Type where
   gates : TopLevelGateCoherence top pp urs
   fixedEncoding : ∀ proofIndex,
     let assignment :
         TopLevelAssignment top (pp.mergeDerived top).numProofs proofIndex :=
       { polynomial := poly }
-    assignment.FixedColumnEncoding pp urs ∨ Bad
+    assignment.FixedColumnEncoding pp urs ⊕' Bad
   fixed : ∀ proofIndex,
     (SelectorActivationsRealized
         top.selectorMap top.selectorActivations
@@ -100,16 +108,15 @@ structure TopLevelCircuitCorrectness
         (resolverEnvironment
           (top.toVerifierKey pp urs) poly proofIndex
           (top.usableRowsAt top.domainExponent))
-        (top.operations) 0) ∨ Bad
+        (top.operations) 0) ⊕' Bad
   copies : ∀ proofIndex,
-    Nonempty
-      (CopyReplayWitness top.placement
-        (resolverEnvironment
-          (top.toVerifierKey pp urs) poly proofIndex
-          (top.usableRowsAt top.domainExponent))
-        (top.operations) cell Bad) ∨ Bad
+    CopyReplayWitness top.placement
+      (resolverEnvironment
+        (top.toVerifierKey pp urs) poly proofIndex
+        (top.usableRowsAt top.domainExponent))
+      (top.operations) cell Bad ⊕' Bad
   lookups : ∀ proofIndex,
     TopLevelLookupCoherence.TopLevelLookupWitnessConditions
-      top pp urs ch poly proofIndex ∨ Bad
+      top pp urs ch poly proofIndex ⊕' Bad
 
 end Zcash.Snark
