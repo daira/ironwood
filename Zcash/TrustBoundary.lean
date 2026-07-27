@@ -835,13 +835,15 @@ The end-to-end refinement from a satisfying Action assignment to the games-facin
 statement (`ActionBreak … ∨ ∃ inst w, …`), together with the two correctness directions of the
 break classifier `classifyAction`: an escape it returns is a break of the witness's own hash
 query, and a `none` return — no escape at any of the four sites — means every Sinsemilla query
-of the witness is defined. Same budget as the circuit layer above: standard tier plus
+of the witness is defined. `actionBreak_iff_classify_isSome` packages both directions as the
+consumer-boundary equivalence. Same budget as the circuit layer above: standard tier plus
 `native_decide` certificates (including the Pallas point-count witness). -/
 
 assert_axioms Zcash.Security.Ledger.Bridge.specPost_to_ledger +native
 assert_axioms Zcash.Security.Ledger.Bridge.circuit_soundness_to_ledger +native
 assert_axioms Zcash.Security.Ledger.Bridge.actionBreak_of_classify +native
 assert_axioms Zcash.Security.Ledger.Bridge.classify_none_defined +native
+assert_axioms Zcash.Security.Ledger.Bridge.actionBreak_iff_classify_isSome +native
 
 /-! ## The Sinsemilla discrete-log-relation reduction
 

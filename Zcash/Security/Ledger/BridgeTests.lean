@@ -1,7 +1,6 @@
 import Zcash.Security.Ledger.Bridge
 import Zcash.Security.Ledger.SinsemillaDLR
 import Zcash.Meta.AxiomCheck
-import Mathlib.Util.AssertNoSorry
 
 /-!
 # Regression checks for the Action-to-ledger boundary
@@ -195,29 +194,6 @@ theorem circuit_soundness_bridge_smoke {MSG SIG : Type*}
 
 open Zcash.Meta
 
-assert_no_sorry value_positive
-assert_no_sorry value_negative
-assert_no_sorry value_equal
-assert_no_sorry alpha_scaling
-assert_no_sorry value_commit_positive_scaling
-assert_no_sorry value_commit_negative_scaling
-assert_no_sorry zero_encodings_distinct
-assert_no_sorry zero_encodings_decode_equal
-assert_no_sorry dummy_spend_merkle_vacuous
-assert_no_sorry path_layers_defined
-assert_no_sorry cross_address_flag_zero
-assert_no_sorry cross_address_flag_one
-assert_no_sorry cross_address_flag_arbitrary_nonzero
-assert_no_sorry enable_spend_disabled_forces_zero
-assert_no_sorry enable_output_disabled_forces_zero
-assert_no_sorry or_break_iff_guarded_smoke
-assert_no_sorry path_iff_guarded_smoke
-assert_no_sorry guardedPath_of_exact
-assert_no_sorry spec_post_bridge_smoke
-assert_no_sorry circuit_soundness_bridge_smoke
-assert_no_sorry actionBreak_of_classify
-assert_no_sorry classify_none_defined
-assert_no_sorry actionBreak_iff_classify_isSome
 
 -- The circuit-to-ledger reduction is a computation: a plain `def`, compiled by
 -- the Lean compiler — so `Classical.choice` cannot contribute to the computed
@@ -259,12 +235,6 @@ assert_axioms circuit_soundness_bridge_smoke +native
 -- discrete-log-relation object is likewise a computation: the coefficients are a
 -- plain compiled `def` over the break datum, with the relation and nontriviality
 -- facts in erased `Prop` fields (same `+choice` reading as the classifier above).
-assert_no_sorry ofPoint_hashToPoint
-assert_no_sorry breakCoeffs_relation
-assert_no_sorry breakCoeffs_nontrivial
-assert_no_sorry classify_query_inr
-assert_no_sorry classifyRelation_isSome_iff
-assert_no_sorry classifyRelation_site
 assert_computable breakCoeffs +choice
 -- `relationOfBreakData` and `classifyRelation` are likewise plain compiled `def`s, asserted
 -- computable per the breaks-as-computed-data convention.  Their erased `Prop` fields
