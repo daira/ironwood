@@ -37,7 +37,7 @@ by `deployed_member_budget`, the residual `hcont` pays for. -/
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic
+open Zcash.Arithmetic (Msm scalarFieldOrder)
 
 -- The deployed grouping definitions appear inside index types, so a defeq check on an index can
 -- pull the whole `constructIntermediateSets (assembleQueries …)` computation through `whnf`.

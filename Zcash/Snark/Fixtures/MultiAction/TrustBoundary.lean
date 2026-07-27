@@ -24,14 +24,14 @@ functions it ranges over; see the single-action sibling for why this is the fixt
 surface.
 -/
 
-open Zcash.Arithmetic Zcash.Snark Zcash.Snark.Fixture2
+open Zcash.Snark Zcash.Snark.Fixture2
 
 assert_axioms capturedPointCoordinatesValid_eq_true +native
 assert_axioms capturedInit_startsWith_vkTranscriptRepr +native
 assert_axioms fingerprint_matches +native
 assert_axioms capturedMsm_eval_eq_zero +native
 assert_axioms assembledMsm_eval_eq_zero +native
-assert_axioms Msm.evalNat
+assert_axioms Zcash.Arithmetic.Msm.evalNat
 assert_axioms assemble
 
 -- The instance-commitment derivation: the two captured claims, plus the data and functions they

@@ -27,8 +27,6 @@ is a plain computable `def` producing the break — see `The reduction form` in
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic
-
 variable {F G : Type*} [Field F] [AddCommGroup G] [Module F G]
 
 /-- The clean IPA accept is decidable (given decidable equality on scalars and points): it is a

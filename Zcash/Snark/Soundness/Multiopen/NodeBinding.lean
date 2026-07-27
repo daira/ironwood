@@ -30,7 +30,7 @@ end-to-end from the accept floors. The capstones consume that chain.
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic
+open Zcash.Arithmetic (Msm Msm.zero)
 
 -- The deployed grouping definitions appear inside index types, so a defeq check on an index can
 -- pull the whole `constructIntermediateSets (assembleQueries …)` computation through `whnf`.

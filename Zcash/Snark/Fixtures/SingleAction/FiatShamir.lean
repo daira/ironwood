@@ -14,7 +14,7 @@ ordering is proved elsewhere; the multi-action fixture checks per-proof interlea
 
 namespace Zcash.Snark.Fixture
 
-open Zcash.Arithmetic Zcash.Snark
+open Zcash.Snark
 
 /-- The challenge values as emitted by the Rust transcript-event capture. -/
 def capturedChallengeValues : List Fp :=

@@ -1,6 +1,6 @@
 import Mathlib.Probability.Distributions.Uniform
 import Zcash.Snark.Verifier.FiatShamir
-import Zcash.Arithmetic.Field
+import Zcash.Arithmetic
 
 /-!
 # Random-oracle model for Fiat–Shamir
@@ -51,8 +51,6 @@ Two scope notes, both part of that floor, not the derived uniformity:
 -/
 
 namespace Zcash.Snark
-
-open Zcash.Arithmetic
 
 open scoped ENNReal
 

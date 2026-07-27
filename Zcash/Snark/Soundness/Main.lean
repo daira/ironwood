@@ -48,7 +48,7 @@ This conditional family leaves those components opaque. The computed route is in
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic
+open Zcash.Arithmetic (Msm)
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 

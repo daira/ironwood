@@ -23,7 +23,7 @@ permutation, lookups; then shared: fixed, permutation-common, vanishing); that c
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic
+open Zcash.Arithmetic (Msm)
 
 /-- halo2 `domain.rotate_omega(x, Rotation(rot))`: the rotated evaluation point `x · ω^rot`, with `ω`
 the domain generator (VK-fixed). Negative rotations use the field's integer power. -/

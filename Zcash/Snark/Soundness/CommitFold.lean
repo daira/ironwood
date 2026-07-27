@@ -18,8 +18,6 @@ sends the parent commitment to the folded one plus the cross terms `L`/`R` the v
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic
-
 variable {F G : Type*} [Field F] [AddCommGroup G] [Module F G]
 
 /-- The commitment over arbitrary generators `g`: `⟨a, g⟩ = Σᵢ aᵢ • gᵢ`. Specialises to the URS

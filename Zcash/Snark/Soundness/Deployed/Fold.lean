@@ -25,8 +25,6 @@ deployed `u`-convention with `ipa_soundV`'s `u⁻¹`-convention.
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic
-
 variable {F : Type*} [Field F]
 
 /-- The round recursion of `computeS` (in the `foldr` direction): one challenge doubles the

@@ -26,8 +26,6 @@ Everything here is about the deployed `permChunkExpression`, not a restatement o
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic
-
 open Polynomial Finset
 
 /-- A constraint that vanishes on the whole domain vanishes at each row. -/

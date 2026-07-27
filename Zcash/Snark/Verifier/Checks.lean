@@ -1,4 +1,5 @@
 import Mathlib
+import Zcash.Arithmetic
 import Zcash.Arithmetic.Msm
 
 /-!
@@ -23,7 +24,7 @@ folds and the combined value `v`) is computed here.
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic
+open Zcash.Arithmetic (Msm Msm.zero)
 
 /-- A multiopen query's commitment reference (halo2 `CommitmentReference`): either a single group
 element, or an MSM — the vanishing argument's folded `h` commitment is supplied as an MSM. -/

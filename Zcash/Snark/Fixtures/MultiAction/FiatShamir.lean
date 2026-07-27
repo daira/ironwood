@@ -16,7 +16,7 @@ this remains a concrete full-schedule regression.
 
 namespace Zcash.Snark.Fixture2
 
-open Zcash.Arithmetic Zcash.Snark
+open Zcash.Snark
 
 /-- The challenge values as emitted by the Rust transcript-event capture. -/
 def capturedChallengeValues : List Fp :=

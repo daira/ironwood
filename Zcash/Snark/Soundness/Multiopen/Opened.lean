@@ -58,7 +58,7 @@ evaluations at the original rotated points and the gate/`x`→`x₃` transport
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic
+open Zcash.Arithmetic (Msm.zero)
 
 -- The deployed grouping definitions appear inside index types (`Fin (deployedSetQueries …).length`),
 -- so every defeq check on an index invites `whnf` to unfold the whole

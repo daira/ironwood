@@ -21,8 +21,6 @@ adjusted points.
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic
-
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 
 /-- Compute a deployed IPA opening or relation from an algebraic fork certificate.

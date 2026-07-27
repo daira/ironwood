@@ -8,7 +8,7 @@ Every point appended by the deployed multiopen MSM comes from the proof or verif
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic
+open Zcash.Arithmetic (Msm)
 
 /-- The first component of a zipped pair is a member of the first list. -/
 private theorem mem_of_mem_zip_fst {α β : Type*} {a : α} {b : β}

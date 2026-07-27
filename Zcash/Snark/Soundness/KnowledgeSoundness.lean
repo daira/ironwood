@@ -22,7 +22,7 @@ and `2^k`. The fallback is `(2·|F|+1)^k`; adversary PPT time remains external.
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic
+open Zcash.Arithmetic (scalarFieldOrder)
 
 open Polynomial
 

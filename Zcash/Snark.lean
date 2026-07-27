@@ -4,8 +4,8 @@
 -- * `Core/` — the shared objects that are specific to the verifier: the typed proof string and
 --   the challenges. The arithmetic-tier objects the verifier is built from (the scalar field
 --   `F_p`, the verifier group and URS, the fingerprint MSM and its Pippenger accelerator) live
---   one tier down, in `Zcash/Arithmetic/`; `Core/{Field,Group,Msm}.lean` are compatibility
---   shims for the byte-locked fixture captures and nothing else.
+--   one tier down, in `Zcash/Arithmetic/`; `Core.lean` is a one-name compatibility alias for
+--   the byte-locked fixture captures and nothing else.
 -- * `Verifier/` — the transcription layer: the deployed halo2 verifier's MSM assembly as a pure
 --   Lean function (queries, expressions, multiopen, IPA fold, Fiat–Shamir schedule).
 -- * `Fingerprint/` — the faithfulness cross-check: the captured-fixture match (`native_decide`,
@@ -16,16 +16,14 @@
 --
 -- Import modules here that should be built as part of the library.
 
--- The arithmetic tier the verifier is stated over.
-import Zcash.Arithmetic.Field
-import Zcash.Arithmetic.Group
+-- The arithmetic tier the verifier is stated over. The umbrella also re-exports `Fp` and `URS`
+-- at the `Zcash` root, which is how they resolve unqualified across the repository.
+import Zcash.Arithmetic
 import Zcash.Arithmetic.Msm
 import Zcash.Arithmetic.FastMsm
--- The `Zcash.Snark`-namespace compatibility shims for the byte-locked fixture captures. Kept in
--- the closure so the captures still elaborate; no editable module depends on them.
-import Zcash.Snark.Core.Field
-import Zcash.Snark.Core.Group
-import Zcash.Snark.Core.Msm
+-- The `Zcash.Snark`-namespace compatibility alias for the byte-locked fixture captures. Kept in
+-- the closure so the captures still elaborate; no editable module depends on it.
+import Zcash.Snark.Core
 import Zcash.Snark.Core.ProofString
 import Zcash.Snark.Core.Challenges
 import Zcash.Snark.Fingerprint.SchwartzZippel

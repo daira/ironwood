@@ -19,8 +19,6 @@ open Classical
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic
-
 /-- **Fiber bound for a general independent product.** If every first-factor fiber of the second
 factor has outer measure at most `β`, the product event `{x | x.2 ∈ S x.1}` does too. This
 generalises `uniformOfFintype_prod_fiber_bound` (`Forking.Probability`) to an *arbitrary*

@@ -19,8 +19,6 @@ query-point membership bridge `deployed_query_point_mem` and the member↔aggreg
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic
-
 open Polynomial
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]

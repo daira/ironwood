@@ -23,8 +23,6 @@ with no `∀`-over-runs floor hypotheses.
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic
-
 open scoped ENNReal
 open Classical
 

@@ -17,8 +17,6 @@ to the full canonical pinned key.
 
 namespace Zcash.Snark.PostNu63Fixture
 
-open Zcash.Arithmetic
-
 /-- Halo2's transcript representation of the canonical Post-NU6.3 pinned verifying key. -/
 def canonicalVkTranscriptRepr : Fp :=
   (8223501628842095769 : Fp)

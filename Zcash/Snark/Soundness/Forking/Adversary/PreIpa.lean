@@ -9,8 +9,6 @@ unchanged by IPA splicing, and read exactly by the deployed challenge derivation
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic
-
 variable {G : Type*}
 
 /-! Each squeeze has a small definition so prefix and length proofs need not unfold the absorb

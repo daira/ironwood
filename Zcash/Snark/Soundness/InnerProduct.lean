@@ -1,5 +1,5 @@
 import Mathlib
-import Zcash.Arithmetic.Group
+import Zcash.Arithmetic
 
 /-!
 # Inner-product opening relation
@@ -20,8 +20,6 @@ is used only at the computational boundary.
 -/
 
 namespace Zcash.Snark
-
-open Zcash.Arithmetic
 
 variable {F G : Type*} [Field F] [AddCommGroup G] [Module F G]
 

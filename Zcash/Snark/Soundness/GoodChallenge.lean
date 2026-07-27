@@ -25,8 +25,6 @@ already absorbed the advice commitments and the quotient pieces (sealed by `deri
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic
-
 open Polynomial
 open scoped ENNReal
 

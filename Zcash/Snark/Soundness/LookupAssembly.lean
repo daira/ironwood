@@ -22,8 +22,6 @@ the multiset identities place in the real table.
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic
-
 open Polynomial Finset
 
 /-- **The lookup assembly.** Every input value occurs in the table. The input identity moves an input

@@ -19,7 +19,7 @@ field conversion with it is external. Fixtures use trusted typed captures, not t
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic
+open Zcash.Arithmetic (Msm)
 
 /-- A point, scalar, or challenge-domain marker written to the Fiat–Shamir transcript.
 

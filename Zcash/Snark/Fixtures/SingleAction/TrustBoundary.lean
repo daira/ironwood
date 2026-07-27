@@ -34,7 +34,7 @@ captured points. The derivation's supporting data and functions (`capturedUrsGLa
 `native_decide` claims cannot be narrowed by quietly widening what they range over.
 -/
 
-open Zcash.Arithmetic Zcash.Snark Zcash.Snark.Fixture
+open Zcash.Snark Zcash.Snark.Fixture
 
 -- Every captured fixture and the verifier assembly it runs are bounded at the standard tier — no
 -- `sorry`, no unexpected axiom (whole dependency graph). The `native_decide` fixtures carry the
@@ -44,7 +44,7 @@ assert_axioms capturedPointCoordinatesValid_eq_true +native
 assert_axioms capturedInit_startsWith_vkTranscriptRepr +native
 assert_axioms capturedMsm_eval_eq_zero +native
 assert_axioms assembledMsm_eval_eq_zero +native
-assert_axioms Msm.evalNat
+assert_axioms Zcash.Arithmetic.Msm.evalNat
 assert_axioms assemble
 
 -- The instance-commitment derivation: the two captured claims, plus the data and functions they
