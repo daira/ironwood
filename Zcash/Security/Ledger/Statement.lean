@@ -58,7 +58,12 @@ structure Note (G RHO PSI : Type*) where
 
 /-- The public inputs of an Action that the games consume: the anchor, the revealed
 nullifier, the randomized verification key, the net value commitment, and the new note
-commitment's extracted coordinate. -/
+commitment's extracted coordinate. The deployed circuit's instance additionally copies
+the bundle-level flags (`enable_spend`, `enable_output`, `disable_cross_address`) into
+every action; the games-facing instance deliberately omits them — the bridge reports
+their exact circuit semantics as side facts (`Bridge.EnableFlagsSatisfied`,
+`Bridge.CrossAddressSatisfied`) pending the games' actual interface (see the TODO on
+`ActionSatisfied`). -/
 structure ActionInstance (G MHASH RHO : Type*) where
   rt : MHASH
   /-- `⦂ RHO`: nullifiers share ρ's type, forced by ρ-uniqueness (`ρ_new = nf_old`). -/
@@ -147,9 +152,18 @@ structure ActionWitness (KW F G RHO PSI MHASH MENC : Type*) (d : ℕ) where
 `w`. Both the deployed Orchard Action statement and the ZIP 2005 Recovery Statement
 satisfy this interface (the latter enforces strictly more).
 
-TODO: It's unclear how well this will compose with Gregor's approach to the circuit proof.
-In particular, should this be `Prop`-only or will we need to apply the break-as-computed-data
-pattern here? -/
+This is the security-game statement — the abstract ledger meaning of a successful
+action — and it is deliberately separate from the circuit-facing `SpecPost`:
+`Bridge.specPost_to_ledger` verifies that every `SpecPost` case becomes either this
+statement or an exhibited `Bridge.ActionBreak`. The interface itself stays
+`Prop`-only; the breaks-as-computed-data pattern applies at the bridge
+(`Bridge.classifyAction`, reduced onward to the games-facing discrete-log-relation
+object by `Bridge.relationOfBreakData`), not here.
+
+TODO: Verify the exact Action interface the Balance and Spendability games consume.
+The NU6.3 flag conditions belong in the game instance rather than a circuit-facing
+wrapper — the adversary must be allowed to submit transactions both before and after
+NU6.3 — so `ActionInstance` grows the flag fields when those games land. -/
 structure ActionSatisfied (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
     (kv : KeyBindingInterface KW G IVK NK) (inst : ActionInstance G MHASH RHO)
     (w : ActionWitness KW F G RHO PSI MHASH MENC P.depth) : Prop where
@@ -187,7 +201,14 @@ convention in `Zcash.Security.RandomOracle`): two distinct `(rcm, note)` tuples 
 equal extracted coordinates. Computed by the games' reductions; nothing in this
 development reduces it further. The intended onward reductions are a Sinsemilla/DLR
 relation pre-quantum (spec Theorems 5.4.3 and 5.4.4), and an `H^rcm` ±-collision for the
-Recovery Statement (via the Pedersen lift and the `extract` ±-property). -/
+Recovery Statement (via the Pedersen lift and the `extract` ±-property).
+
+The value bounds travel with the break object: `Note.v` is an unbounded `ℕ` while the
+concrete commitment consumes it through a 64-bit encoding, so without them the structure
+would be inhabitable by value-overflow aliasing (`v` versus `v + 2^64`) with no
+cryptographic content, and the onward reductions above would be false as stated.  The
+producers mint breaks from `ActionSatisfied` pairs, whose `v_old_lt`/`v_new_lt` conjuncts
+supply the bounds directly. -/
 structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG) where
   rcm₁ : F
   n₁ : Note G RHO PSI
@@ -199,6 +220,8 @@ structure NoteCommitBreak (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
   open₁ : P.noteCommit rcm₁ n₁ = some cm₁
   open₂ : P.noteCommit rcm₂ n₂ = some cm₂
   extract_eq : P.extract cm₁ = P.extract cm₂
+  v₁_lt : n₁.v < P.valueBound
+  v₂_lt : n₂.v < P.valueBound
 
 section Pinning
 
@@ -244,7 +267,7 @@ def noteCommitBreakOfNe
     (hx : P.extract w₁.cm_old = P.extract w₂.cm_old)
     (hne : (w₁.rcm_old, w₁.note_old) ≠ (w₂.rcm_old, w₂.note_old)) :
     NoteCommitBreak P :=
-  ⟨_, _, _, _, _, _, hne, h₁.commit_old, h₂.commit_old, hx⟩
+  ⟨_, _, _, _, _, _, hne, h₁.commit_old, h₂.commit_old, hx, h₁.v_old_lt, h₂.v_old_lt⟩
 
 /-- **Nullifier determinism up to a break** — **nf-pinning** (ZIP 2005 `lemma-nf-pinning`,
 consumed by the Spendability argument), as computed data per the breaks-as-computed-data

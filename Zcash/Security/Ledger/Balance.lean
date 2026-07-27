@@ -183,7 +183,7 @@ def noteCommitBreakOfOutputNe {inst₁ inst₂ : ActionInstance G MHASH RHO}
     (hx : P.extract w₁.cm_old = P.extract w₂.cm_new)
     (hne : (w₁.rcm_old, w₁.note_old) ≠ (w₂.rcm_new, w₂.note_new)) :
     NoteCommitBreak P :=
-  ⟨_, _, _, _, _, _, hne, h₁.commit_old, h₂.commit_new, hx⟩
+  ⟨_, _, _, _, _, _, hne, h₁.commit_old, h₂.commit_new, hx, h₁.v_old_lt, h₂.v_new_lt⟩
 
 /-- Membership in the spends carries statement satisfaction and nonzero value. -/
 theorem satisfied_of_spendMem

@@ -5,6 +5,10 @@ import Zcash.Security.BindingSignature.Balance
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
 import Zcash.Security.Ledger.Merkle
+import Zcash.Security.Ledger.Pool
+import Zcash.Security.Ledger.Bridge
+import Zcash.Security.Ledger.SinsemillaDLR
+import Zcash.Security.Ledger.BridgeTests
 import Zcash.Security.Ledger.Statement
 import Zcash.Security.Ledger.Model
 import Zcash.Security.Ledger.Effects
