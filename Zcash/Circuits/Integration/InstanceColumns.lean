@@ -1,3 +1,4 @@
+import Zcash.Common.RelationWitness
 import Zcash.Snark.Soundness.Canonical.InstanceCommitment
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 
@@ -83,9 +84,9 @@ variable
 
 /--
 A canonically routed instance-column opening is the polynomial interpolating the
-verifier-supplied public rows, or it exhibits an augmented commitment relation.
+verifier-supplied public rows, or it computes an augmented commitment relation.
 -/
-theorem instanceColumn_eq_rowPolynomial_or_relation
+noncomputable def instanceColumn_eq_rowPolynomial_or_relation
     (relation : CanonicalMemberConstraintRelation
       urs hk vk instanceCommitment ps ch pU pW a
       batchOpenings memberDecode hblinding y hpoly deg)
@@ -101,10 +102,13 @@ theorem instanceColumn_eq_rowPolynomial_or_relation
     (hquery : ∃ q ∈ assembleQueries vk instanceCommitment ps ch,
       q.commId = .instanceCol proofIndex column) :
     relation.polynomial (.instanceCol proofIndex column) =
-        instanceRowPolynomial (2 ^ urs.k) vk.omega rows ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+        instanceRowPolynomial (2 ^ urs.k) vk.omega rows ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   classical
-  obtain ⟨q, hq, hqid⟩ := hquery
+  let q := Classical.choose hquery
+  have hq : q ∈ assembleQueries vk instanceCommitment ps ch :=
+    (Classical.choose_spec hquery).1
+  have hqid : q.commId = _ := (Classical.choose_spec hquery).2
   have routed :=
     assembledQueryMemberRoute_faithful
       (instanceCommitment := instanceCommitment)
@@ -156,19 +160,17 @@ theorem instanceColumn_eq_rowPolynomial_or_relation
       (decoded.uComp routed.slot.memberIndex)
       (decoded.wComp routed.slot.memberIndex)
       hrows hopen
-  rcases hbound with heq | hrelation
-  · apply Or.inl
-    rw [CanonicalMemberConstraintRelation.polynomial,
-      decodedPolynomialResolver, routedInstance]
-    exact heq
-  · exact Or.inr hrelation
+  refine bindOrRelationWitness hbound fun heq => ?_
+  rw [CanonicalMemberConstraintRelation.polynomial,
+    decodedPolynomialResolver, routedInstance]
+  exact heq
 
 /--
 The accepting run's canonical resolver identifies a queried instance column with
 the polynomial committed by the verifier's public-instance commitment, without
 requiring circuit satisfaction.
 -/
-theorem acceptedInstanceColumn_eq_rowPolynomial_or_relation
+noncomputable def acceptedInstanceColumn_eq_rowPolynomial_or_relation
     {shape : Shape}
     {urs : URS G} {hk : shape.k = urs.k}
     {vk : VerifyingKey shape Fp G}
@@ -208,8 +210,8 @@ theorem acceptedInstanceColumn_eq_rowPolynomial_or_relation
     acceptedPolynomial
           (memberDecode := memberDecode) haccepts
           (.instanceCol proofIndex column) =
-        instanceRowPolynomial (2 ^ urs.k) vk.omega rows ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+        instanceRowPolynomial (2 ^ urs.k) vk.omega rows ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   classical
   let routing :=
     canonicalRoutingConditions_of_accepts
@@ -218,7 +220,10 @@ theorem acceptedInstanceColumn_eq_rowPolynomial_or_relation
     assembledQueryMemberRoute
       (instanceCommitment := instanceCommitment)
       vk ps ch routing.1 routing.2
-  obtain ⟨q, hq, hqid⟩ := hquery
+  let q := Classical.choose hquery
+  have hq : q ∈ assembleQueries vk instanceCommitment ps ch :=
+    (Classical.choose_spec hquery).1
+  have hqid : q.commId = _ := (Classical.choose_spec hquery).2
   have routed :=
     assembledQueryMemberRoute_faithful
       (instanceCommitment := instanceCommitment)
@@ -269,12 +274,10 @@ theorem acceptedInstanceColumn_eq_rowPolynomial_or_relation
       (decoded.uComp routed.slot.memberIndex)
       (decoded.wComp routed.slot.memberIndex)
       hrows hopen
-  rcases hbound with heq | hrelation
-  · apply Or.inl
-    simpa only [
-      acceptedPolynomial, acceptedRoute, routing, route,
-      decodedPolynomialResolver, routedInstance] using heq
-  · exact Or.inr hrelation
+  refine bindOrRelationWitness hbound fun heq => ?_
+  simpa only [
+    acceptedPolynomial, acceptedRoute, routing, route,
+    decodedPolynomialResolver, routedInstance] using heq
 
 end CanonicalMemberConstraintRelation
 
