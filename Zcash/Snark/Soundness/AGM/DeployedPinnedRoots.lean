@@ -6,12 +6,13 @@ import Zcash.Snark.Soundness.Forking.PinnedRoots
 /-!
 # The deployed pinned AGM root family
 
-The adapter from rewind-free algebraic batch data to `PinnedRootFamily`. The live family carries
-an oracle computation of each root set that does not query that event's priced squeeze point;
-the exact leave-one-squeeze invariance consumed by the probability layer is derived. Such a
-computation may query later batching challenges, so strict-prefix determination is only a
-sufficient toolkit property. The bad sets are the two IPA shift polynomials and the deployed
-`x4`, `x3`, `x2`, and per-set `x1` polynomials.
+The adapter from rewind-free algebraic batch data to `PinnedRootFamily`. Its bad sets are the two
+IPA shift polynomials and the deployed `x4`, `x3`, `x2`, and per-set `x1` polynomials.
+
+A live family carries an oracle computation of each root set that never queries that event's own
+priced squeeze point, and the leave-one-squeeze invariance the probability layer needs follows from
+that. The computation may query later batching challenges, so strict-prefix determination is a
+sufficient condition rather than the interface.
 -/
 
 namespace Zcash.Snark
@@ -280,9 +281,10 @@ def DeployedRootPrefixDetermined (family : ComputedAlgebraicFSFamily shape)
 /-- The causal consequence needed by `PinnedRootEvent`: reprogramming a root event's own squeeze
 answer leaves that event's bad set unchanged.
 
-Bad sets may consume anything fixed before the squeeze — the prefix, the earlier squeeze answers
-(halo2 never reabsorbs them, so the prefix alone does not determine them), and the retained
-representations.  Only the answer being priced is barred. -/
+Bad sets may consume anything fixed before the squeeze: the prefix, the earlier squeeze answers,
+and the retained representations. Only the answer being priced is barred. Earlier answers need
+naming separately because halo2 never reabsorbs them, so the prefix alone does not determine
+them. -/
 def DeployedRootSqueezeInvariance (family : ComputedAlgebraicFSFamily shape)
     (outcome : DeployedRootOutcomeProvider family) : Prop :=
   forall basis (i : Fin 6)

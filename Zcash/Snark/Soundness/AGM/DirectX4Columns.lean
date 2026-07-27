@@ -7,14 +7,13 @@ import Zcash.Snark.Soundness.AGM.DeployedPinnedRoots
 # Direct `x₄` column representations
 
 The rewind-free decoder needs AGM coordinates for the `x₄` batch columns. The offline route
-interpolates them out of the representation function; this module reads them straight off the
-online data instead.
+interpolates them out of the representation function; this module reads them off the online data
+instead, so the columns feed a computable batch-or-relation decision.
 
 Each column below the pair count is the `x₁`-compressed aggregate of one point set, so its
-coordinates are the `x₁` power sum of that set's member representations — which
-`deployedMemberRepresentationsOfCovered` already supplies. The final column is the prover's `q′`
-commitment, which carries its own representation in the algebraic proof string. No interpolation
-and no rewind is involved, so the resulting columns feed a computable batch-or-relation decision.
+coordinates are that set's `x₁` power sum of member representations, which
+`deployedMemberRepresentationsOfCovered` supplies. The last column is the prover's `q′`, which
+carries its own representation.
 -/
 
 namespace Zcash.Snark
@@ -182,9 +181,9 @@ def deployedX4BatchOfCoveredOrRelation
 /-! ## The direct outcome provider
 
 The same batch-or-relation walk as the compatibility adapter, with the `x₄` level supplied by the
-direct decode above instead of the offline interpolation. Nothing here rewinds and nothing
-interpolates: the `x₄` columns come from online coverage, the per-set `x₁` columns from the same
-member representations, and every disagreement returns explicit relation coefficients.
+direct decode above instead of the offline interpolation. The `x₄` columns come from online
+coverage, the per-set `x₁` columns from the same member representations, and every disagreement
+returns explicit relation coefficients.
 -/
 
 /-

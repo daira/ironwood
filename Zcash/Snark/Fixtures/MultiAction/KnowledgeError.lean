@@ -7,13 +7,13 @@ import Zcash.Snark.Soundness.AGM.DirectConstraintFamily
 
 `snarkConstraintsDeployed_prob_le_of_root_schedule` bounds extraction failure for the verifier's
 compressed constraint identity by five additive terms. This module instantiates it at the captured
-Post-NU6.3 key: the static checks and degree caps are discharged from the verifying key
-(`StaticChecks`, `Schedule`), so the bad-`x` term is the concrete `(Q + 1) · 20470 / |𝔽|` and the
-multiopen term is the shape's own root budget — no continuation threshold or fourth-root
-conversion. What remains named: single-instance DLOG for the combined finder (`hDL`) and the two
-staged pre-squeeze traces, from which exact pinning is derived (their chronology scope is stated
-at the trace structures). The captured premise pins scalar metadata, layouts, and expressions
-only — verifier commitments are AGM points and must carry representations over each sampled
+Post-NU6.3 key: the static checks and degree caps come from the verifying key (`StaticChecks`,
+`Schedule`), so the bad-`x` term is the concrete `(Q + 1) · 20470 / |𝔽|` and the multiopen term is
+the shape's own root budget. No continuation threshold and no fourth root.
+
+Named inputs: single-instance DLOG for the combined finder (`hDL`), and the two staged pre-squeeze
+traces exact pinning is derived from. The captured premise pins scalar metadata, layouts, and
+expressions only — verifier commitments are AGM points carrying representations over each sampled
 basis, so literal point equality is deliberately not required.
 -/
 

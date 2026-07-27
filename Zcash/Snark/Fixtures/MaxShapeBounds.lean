@@ -91,14 +91,14 @@ theorem consensusPinnedRootMultiopenModel_at_2pow122 :
 
 /-! ## Reduction efficiency
 
-The `dlogBound` premise below is the advantage of the *combined finder*, not of the raw
-adversary. Its cost model, kept outside Lean like the random-oracle model itself: one run of the
-wrapped adversary (`Q + 11 + k` oracle reads), the direct-coordinate decode of the retained
-representations (field operations linear in the representation lists, once per run), and a
-constant number of field solves (the challenge-programming reduction solves by one field
-division). A quantitative time-success model for DLOG — e.g. Pollard-rho work `t²/|group|` —
-should therefore be instantiated at `t ≈ T` plus that per-run overhead; at `T = 2¹²²` the
-comparison above is unaffected. -/
+The `dlogBound` premise below is the advantage of the *combined finder*, not of the raw adversary.
+Its cost model is kept outside Lean, like the random-oracle model itself: one run of the wrapped
+adversary (`Q + 11 + k` oracle reads), one direct-coordinate decode of the retained representations
+(field operations linear in the representation lists), and a constant number of field solves.
+
+A quantitative time-success model for DLOG — Pollard-rho work `t²/|group|`, say — should therefore
+be instantiated at `t ≈ T` plus that per-run overhead. At `T = 2¹²²` the comparison above is
+unaffected. -/
 
 /-- **The composite bound for every consensus-valid captured shape.** For any action count
 `n ≤ 2¹⁶ − 1` and adversary query budget `Q ≤ T`, monotonicity bounds the shape's multiopen

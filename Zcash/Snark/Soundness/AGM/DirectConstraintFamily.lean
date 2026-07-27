@@ -4,9 +4,9 @@ import Zcash.Snark.Soundness.Composition.DeployedConstraintContainment
 /-!
 # Computable direct deployed-constraint family
 
-This small adapter packages the interpolation-free root decoder with its two staged chronology
-traces.  The construction is executable: the traces are proof-layer inputs, while the outcome is
-the computable `deployedRootOutcomeOfCovered`.
+Packages the interpolation-free root decoder with its two staged chronology traces. The
+construction is executable: the traces are proof-layer inputs, and the outcome is the computable
+`deployedRootOutcomeOfCovered`.
 -/
 
 namespace Zcash.Snark

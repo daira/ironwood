@@ -5,13 +5,14 @@ import Zcash.Snark.Soundness.Composition.ScheduleBudget
 /-!
 # The `x`-squeeze schedule at the captured key
 
-`deployedConstraintXSqueezeSchedule_of_pinned` prices the constraint-difference root set from
-the verifying key's degree caps. This module discharges those caps at the captured Post-NU6.3
-key (`Fixtures.MultiAction.Degree`): with `B = 2047`, `W = 7`, `Dc = 8188` and
-`D = Dq = 20470`, every cap holds, so for any deployed root family carrying the captured
-non-group key profile, the schedule's `epsilonX` is the concrete `20470 / |𝔽|`. Exact
-leave-one-`x` invariance is derived from the family's staged trace; later unbatching challenges
-remain free.
+`deployedConstraintXSqueezeSchedule_of_pinned` prices the constraint-difference root set from the
+verifying key's degree caps. This module discharges those caps at the captured Post-NU6.3 key
+(`Fixtures.MultiAction.Degree`): with `B = 2047`, `W = 7`, `Dc = 8188` and `D = Dq = 20470` every
+cap holds, so `epsilonX` is the concrete `20470 / |𝔽|` for any family with the captured key
+profile.
+
+Exact leave-one-`x` invariance comes from the family's staged trace; later unbatching challenges
+stay free.
 -/
 
 namespace Zcash.Snark.Fixture2

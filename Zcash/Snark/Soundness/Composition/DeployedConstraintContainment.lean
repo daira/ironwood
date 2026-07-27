@@ -704,12 +704,12 @@ theorem snarkConstraintsDeployed_prob_le_of_root_schedule
 
 /-! ## Promotion from the compressed identity to circuit semantics
 
-The constraint witness above proves the verifier's single identity after the constraint list has
-been compressed by `y`, and after permutation and lookup values have been compressed by `beta`,
-`gamma`, and `theta`. It is not sound to call that event semantic circuit satisfaction without
-pricing collisions at those four earlier squeezes. The following interface makes that last step
-explicit: the caller supplies the concrete semantic predicate, the four failure events, and the
-deterministic proof that a compressed witness outside those events has the intended semantics.
+The constraint witness above proves the verifier's identity only after `y` has compressed the
+constraint list and `beta`, `gamma`, and `theta` have compressed the permutation and lookup values.
+Calling that semantic circuit satisfaction is unsound without pricing collisions at those four
+earlier squeezes. The interface below makes the step explicit: the caller supplies the semantic
+predicate, the four failure events, and a proof that a compressed witness outside them has the
+intended semantics.
 -/
 
 /-- Outside the four challenge-failure events, a compressed constraint witness upgrades to the

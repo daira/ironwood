@@ -3,9 +3,9 @@ import Zcash.Snark.Soundness.AGM.DeployedPinnedRoots
 /-!
 # The strict-prefix root premise is satisfiable
 
-This module exhibits a `DeployedRootOnlineTrace`: a constant-output family over a degenerate shape,
-with a constant batch witness, has five empty deployed root sets; the remaining `x₃` set is
-computed using only strict earlier-prefix answers. The probability layer's reprogramming equality
+This module exhibits a `DeployedRootOnlineTrace`. A constant-output family over a degenerate shape,
+with a constant batch witness, has five empty deployed root sets; the sixth, at `x₃`, is computed
+from strict earlier-prefix answers alone. The probability layer's reprogramming equality then
 follows from the trace's fresh-query property.
 -/
 
@@ -575,10 +575,9 @@ theorem deployedBaseEval_witness_zero (ch : Challenges witnessShape.k Fp) :
 
 /-! ## Every deployed root set collapses
 
-With no `x₄` pairs the per-set index type is empty, so every polynomial built by folding over it
-is zero; and the zero coordinates make the two IPA shift polynomials zero as well. Only the `x₃`
-set keeps content — the point set `deployedAllPts`, which is read off the `x` squeeze and so is
-fixed before the `x₃` answer it is priced against.
+With no `x₄` pairs the per-set index type is empty, so every polynomial folded over it is zero, and
+the zero coordinates flatten the two IPA shift polynomials too. Only the `x₃` set keeps content: the
+point set `deployedAllPts`, read off the `x` squeeze and so fixed before the `x₃` answer prices it.
 -/
 
 /-- The per-set index type is empty at the witness data. -/
@@ -746,10 +745,9 @@ theorem ipaShiftZPolynomial_witness_at_run
 
 /-! ## Blindness of the assembly to the later squeezes
 
-The deployed query assembly reads the challenge record only through `θ, β, γ, y, x` — the
-answers absorbed before the multiopen squeezes. So replacing a later field leaves the assembly,
-and hence the point sets, definitionally unchanged. This is the causal content the `x₃` event
-needs: its bad set is `deployedAllPts`, fixed before the `x₃` answer prices it.
+The deployed query assembly reads the challenge record only through `θ, β, γ, y, x`, the answers
+absorbed before the multiopen squeezes. Replacing a later field therefore leaves the assembly, and
+hence the point sets, definitionally unchanged — the causal content the `x₃` event needs.
 -/
 
 /-- The query assembly never reads `x₃`. -/
@@ -819,9 +817,9 @@ end DegenerateRootSets
 /-! ## An executable causal trace
 
 The only nonempty root set is the `x₃` event, and its point-set data uses exactly the five
-pre-multiopen challenges `θ`, `β`, `γ`, `y`, and `x`.  The stage below reads those five concrete
-squeeze points and computes that set directly.  It therefore avoids the classical truth-table
-enumeration formerly used to turn an extensional prefix-determination proposition into a program.
+pre-multiopen challenges `θ`, `β`, `γ`, `y`, and `x`. The stage below reads those five squeeze
+points and computes the set directly, so no classical truth-table enumeration is needed to turn
+prefix determination into a program.
 -/
 
 /-- The five squeeze points whose answers determine the witness family's `x₃` root set. -/

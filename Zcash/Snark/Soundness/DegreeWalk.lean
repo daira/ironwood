@@ -4,13 +4,13 @@ import Zcash.Snark.Soundness.Constraints
 # Degree accounting for the combined constraint polynomial
 
 The good-challenge term prices the squeeze bad set at `εx`, the Schwartz–Zippel measure of the
-combined constraint difference. This module walks the constraint builders and bounds the
-difference's `natDegree` by an explicit `D`, so `εx = D / |𝔽|`: a syntactic degree per gate
-expression (`Expr.degreeBound`), per-member bounds for the permutation and lookup constraint
-values, the `acc·y + v` fold, and the pre-`x` quotient tail.
+combined constraint difference. This module walks the constraint builders and bounds that
+difference's `natDegree` by an explicit `D`, giving `εx = D / |𝔽|`.
 
-Throughout, `B` bounds every polynomial input (column feeds, carrier evaluations, the Lagrange
-selectors), and the caller supplies a cap `D` dominating each family's product depth times `B`.
+The walk covers a syntactic degree per gate expression (`Expr.degreeBound`), per-member bounds for
+the permutation and lookup values, the `acc·y + v` fold, and the pre-`x` quotient tail. Throughout,
+`B` bounds every polynomial input and the caller supplies a `D` dominating each family's product
+depth times `B`.
 -/
 
 namespace Zcash.Snark

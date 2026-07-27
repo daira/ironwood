@@ -6,10 +6,12 @@ import Zcash.Snark.Soundness.DegreeWalk
 
 The `x`-squeeze schedule constructor (`deployedConstraintXSqueezeSchedule_of_pinned`) takes the
 verifying key's degree arithmetic as `ℕ` hypotheses. This module evaluates them at the captured
-Post-NU6.3 key: with `B = 2047` (both the opening degree `2¹¹ − 1` and the selector degree
-`n − 1`), every gate has `degreeBound ≤ 9`, every permutation chunk has width `≤ 7`, and every
-lookup expression compresses at `degreeBound ≤ 4` — so one literal `D = Dq = 20470` dominates
-every family, and the bad-set term is `(Q + 1) · 20470 / |𝔽|`.
+Post-NU6.3 key.
+
+Take `B = 2047`, which is both the opening degree `2¹¹ − 1` and the selector degree `n − 1`. Every
+gate then has `degreeBound ≤ 9`, every permutation chunk width `≤ 7`, and every lookup expression
+compresses at `degreeBound ≤ 4`, so the single literal `D = Dq = 20470` dominates every family and
+the bad-set term is `(Q + 1) · 20470 / |𝔽|`.
 -/
 
 namespace Zcash.Snark.Fixture2

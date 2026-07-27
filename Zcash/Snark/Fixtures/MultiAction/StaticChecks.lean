@@ -5,12 +5,13 @@ import Zcash.Snark.Soundness.Composition.DeployedConstraintContainment
 # The captured verifying key's static checks
 
 `DeployedConstraintStaticChecks` collects the verifying-key facts the rewind-free constraint
-capstone needs independently of the adversary run: the three query layouts cover the shape's
-query counts, `ω` has exact order `n`, and `n` does not vanish in `𝔽`. This module evaluates
-all five at the captured Post-NU6.3 key and packages them for any deployed root family whose
-verifying key has the captured scalar and query-layout profile. Group commitments are deliberately
-excluded: in the AGM game they must be represented over the sampled basis, so requiring literal
-equality with the fixture's fixed Vesta points would make the premise uninhabited for some bases.
+capstone needs independently of the adversary run: the three query layouts cover the shape's query
+counts, `ω` has order dividing `n`, and `n` does not vanish in `𝔽`. This module evaluates all five
+at the captured Post-NU6.3 key and packages them for any family with the captured key profile.
+
+Group commitments are deliberately outside that profile. In the AGM game they must be represented
+over the sampled basis, so demanding literal equality with the fixture's fixed Vesta points would
+leave the premise uninhabited for some bases.
 -/
 
 namespace Zcash.Snark.Fixture2

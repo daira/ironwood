@@ -4,19 +4,18 @@ import Zcash.Snark.Soundness.DegreeWalk
 /-!
 # Pricing the deployed `x`-squeeze schedule
 
-`DeployedConstraintXSqueezeSchedule` asks for two facts about the constraint-difference root set:
-a uniform measure bound (`measure_le`) and invariance under reprogramming the run's own `x`
-answer (`pinned`). This module discharges the pricing half outright: every committed carrier is a
-point polynomial of degree below the basis size, a rotation of one (degree preserved), or a
-Lagrange selector (degree `< n`), so the degree walk caps the constraint difference at
-`max D Dq` and its Schwartz–Zippel set at `max D Dq / |𝔽|`. The root decode pins the batch data
-to the family's own outcome at the table, so the root set collapses across fork tapes and the
-bound applies to the whole set.
+`DeployedConstraintXSqueezeSchedule` asks two things of the constraint-difference root set: a
+uniform measure bound (`measure_le`) and invariance under reprogramming the run's own `x` answer
+(`pinned`).
 
-The generic pricing constructor accepts exact leave-one-squeeze pinning. Captured deployed
-families instead carry a `DeployedConstraintXOnlineTrace`, from which that equation is derived.
-The explicit fresh-query computation may depend on later challenges; no classical truth-table
-adapter is installed on the executable path.
+The measure half is discharged here. Every committed carrier is a point polynomial, a rotation of
+one, or a Lagrange selector, so the degree walk caps the difference at `max D Dq` and its
+Schwartz–Zippel set at `max D Dq / |𝔽|`. Root witnesses at one oracle table share the family's own
+outcome, so the set collapses across fork tapes and the bound covers all of it.
+
+The pinning half is derived, not assumed: a captured family carries a
+`DeployedConstraintXOnlineTrace` and the equation follows from its query log. That computation may
+read later challenges, so no classical truth-table adapter sits on the executable path.
 -/
 
 namespace Zcash.Snark
