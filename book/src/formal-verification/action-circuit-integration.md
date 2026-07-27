@@ -1024,16 +1024,16 @@ the type has neither an arbitrary domain nor a `VerifyingKey` argument, and
 `TopLevelAssignment.synthesisWellFormed` discharges the layout premise directly from
 `TopLevelCircuit.FitsAt k`.
 
-`TopLevelAssignment.ofActionDecodedMembers` now constructs this shell directly from
-the deployed decoded-member resolver. It never accepts an arbitrary verifying key:
-the decoder uses
-`orchardActionTopLevelCircuit.toVerifierKey pp urs`, whose shape, scalar, gates,
+The deployed capstone constructs this shell internally through the canonical
+accepted-member route, so the decoder never accepts an arbitrary verifying key: it
+uses `orchardActionTopLevelCircuit.toVerifierKey pp urs`, whose shape, scalar, gates,
 query layouts, fixed commitments, permutation commitments and lookup data are all
-derived from the configured Action circuit and supplied URS. The constructor no
-longer accepts a separate shape or a shape/domain coherence premise. The reusable
-derivation remains independent of the captured fixture; the deliberately expensive
-`VkCommit.Certificate` separately proves that the captured deployed key equals that
-derived key.
+derived from the configured Action circuit and supplied URS, with no separate shape
+or shape/domain coherence premise. (The former standalone constructor,
+`TopLevelAssignment.ofActionDecodedMembers`, was deleted once the capstone chain left
+it without a consumer.) The reusable derivation remains independent of the captured
+fixture; the deliberately expensive `Keygen.Certificate` separately proves that the
+captured deployed key equals that derived key.
 
 On the SNARK side, `FullCircuitSatisfaction.topLevelSoundness` composes exact
 gate/copy/lookup/fixed satisfaction with that generic top-level endpoint.

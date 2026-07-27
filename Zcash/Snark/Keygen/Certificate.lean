@@ -41,8 +41,9 @@ EVALUATION-SHARING DISCIPLINE (each rule was measured, the hard way):
   The monomial basis in Montgomery form (`monomialBasis`), the twiddle table and the `n⁻¹`
   scale are nullary shares: the coordinate conversion and the 1024 root powers happen once
   per process, not once per column.
-  Profiling note: THIS module gets both dylibs automatically (the `ZcashKeygen` lib
-  reaches the lanes, so lake passes `--load-dynlib` for each); a SCRATCH probe through
+  Profiling note: THIS module gets both dylibs automatically (the lib target building it
+  reaches the lanes through its import closure, so lake passes `--load-dynlib` for each);
+  a SCRATCH probe through
   `lake env lean` does NOT, and must pass
   `--load-dynlib=.lake/packages/CompElliptic/.lake/build/lib/libCompElliptic_FastFieldNative.so`
   and `--load-dynlib=.lake/build/lib/libZcash_Zcash_FastFieldNative.so` explicitly or it
@@ -57,8 +58,9 @@ instantly. `vk_eq_derived`/`vk_eq_toVerifierKey` assemble the record equality by
 `simp only` unfolding of the named definitions on both sides until the spellings
 coincide — no defeq bridges.
 
-The `ZcashKeygen` target builds this module explicitly; ordinary clients of
-`derivedActionVk` only need `Derivation`.
+The `FixtureCheck` target builds this module (as an import of its deployed
+Action/Vesta capstone entry); ordinary clients of `derivedActionVk` only need
+`Derivation`.
 -/
 
 namespace Zcash.Snark.Keygen
