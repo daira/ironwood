@@ -1,3 +1,4 @@
+import Zcash.Common.RelationWitness
 import Zcash.Snark.Soundness.Canonical.InstanceCommitment
 import Zcash.Circuits.Integration.FixedLayout
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
@@ -553,7 +554,7 @@ polynomial, or the caller's shared exceptional branch fires.
 This is the pointwise form used by consumers such as constant-copy replay; the
 family theorem below merely applies it to selectors and fixed/table operations.
 -/
-theorem topLevelFixedEntryRead_or_bad
+theorem topLevelFixedEntryRead_of_column
     {Config : Type} {PublicInput : TypeMap}
     [ProvableType PublicInput]
     {top : TopLevelCircuit Fp Config PublicInput}
@@ -569,12 +570,53 @@ theorem topLevelFixedEntryRead_or_bad
         row < (top.toVerifierKey pp urs).n ∧
           column < top.pinnedCS.numFixedColumns ∧
           (rows column).getD row 0 = (value : Fp))
-    {Bad : Prop}
+    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    {column row value : ℕ}
+    (hentry :
+      (column, row, value) ∈ topLevelRequiredFixedEntries top)
+    (hpolyEq : poly (.fixedCol column) =
+      instanceRowPolynomial (2 ^ urs.k)
+        (top.toVerifierKey pp urs).omega (rows column)) :
+    (resolverEnvironment
+        (top.toVerifierKey pp urs) poly proofIndex
+        (top.usableRowsAt top.domainExponent)).fixed
+          ⟨column⟩ (row : ℤ) = (value : Fp) := by
+  obtain ⟨hrow, hcolumn, hvalue⟩ :=
+    realizes column row value hentry
+  have hrow' : row < 2 ^ urs.k := by
+    rwa [← hn]
+  rw [resolverEnvironment_fixed, hpolyEq]
+  simpa using
+    (instanceRowPolynomial_eval hrows
+      ⟨row, hrow'⟩).trans hvalue
+
+omit [Module Fp G] [DecidableEq G] in
+/--
+The same entry read, carrying the caller's shared exceptional branch as data: either the entry
+reads back, or the binding family has computed a break at this entry's column.
+-/
+def topLevelFixedEntryRead_or_bad
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    {top : TopLevelCircuit Fp Config PublicInput}
+    {pp : Keygen.ProofParams} {urs : URS G}
+    (poly : CommitmentId → Polynomial Fp)
+    (rows : ℕ → List Fp)
+    (hrows : Function.Injective
+      fun i : Fin (2 ^ urs.k) =>
+        (top.toVerifierKey pp urs).omega ^ (i : ℕ))
+    (hn : (top.toVerifierKey pp urs).n = 2 ^ urs.k)
+    (realizes : ∀ column row value,
+      (column, row, value) ∈ topLevelRequiredFixedEntries top →
+        row < (top.toVerifierKey pp urs).n ∧
+          column < top.pinnedCS.numFixedColumns ∧
+          (rows column).getD row 0 = (value : Fp))
+    {Bad : Type}
     (binding : ∀ column,
       column < top.pinnedCS.numFixedColumns →
         poly (.fixedCol column) =
             instanceRowPolynomial (2 ^ urs.k)
-              (top.toVerifierKey pp urs).omega (rows column) ∨
+              (top.toVerifierKey pp urs).omega (rows column) ⊕'
           Bad)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     {column row value : ℕ}
@@ -583,19 +625,11 @@ theorem topLevelFixedEntryRead_or_bad
     (resolverEnvironment
         (top.toVerifierKey pp urs) poly proofIndex
         (top.usableRowsAt top.domainExponent)).fixed
-          ⟨column⟩ (row : ℤ) = (value : Fp) ∨
-      Bad := by
-  obtain ⟨hrow, hcolumn, hvalue⟩ :=
-    realizes column row value hentry
-  rcases binding column hcolumn with hpolyEq | hbad
-  · apply Or.inl
-    have hrow' : row < 2 ^ urs.k := by
-      rwa [← hn]
-    rw [resolverEnvironment_fixed, hpolyEq]
-    simpa using
-      (instanceRowPolynomial_eval hrows
-        ⟨row, hrow'⟩).trans hvalue
-  · exact Or.inr hbad
+          ⟨column⟩ (row : ℤ) = (value : Fp) ⊕'
+      Bad :=
+  bindOrRelationWitness
+    (binding column (realizes column row value hentry).2.1)
+    (topLevelFixedEntryRead_of_column poly rows hrows hn realizes proofIndex hentry)
 
 omit [Module Fp G] [DecidableEq G] in
 /--
@@ -603,7 +637,7 @@ Polynomial binding for every used fixed column supplies selector and fixed/table
 semantics. This lemma is independent of decoded-member provenance; callers choose
 the exceptional event carried by `binding`.
 -/
-theorem topLevelFixedConstraints_or_bad
+def topLevelFixedConstraints_or_bad
     {Config : Type} {PublicInput : TypeMap}
     [ProvableType PublicInput]
     {top : TopLevelCircuit Fp Config PublicInput}
@@ -620,12 +654,12 @@ theorem topLevelFixedConstraints_or_bad
         row < (top.toVerifierKey pp urs).n ∧
           column < top.pinnedCS.numFixedColumns ∧
           (rows column).getD row 0 = (value : Fp))
-    {Bad : Prop}
+    {Bad : Type}
     (binding : ∀ column,
       column < top.pinnedCS.numFixedColumns →
         poly (.fixedCol column) =
             instanceRowPolynomial (2 ^ urs.k)
-              (top.toVerifierKey pp urs).omega (rows column) ∨
+              (top.toVerifierKey pp urs).omega (rows column) ⊕'
           Bad)
     (proofIndex : Fin (pp.mergeDerived top).numProofs) :
     (SelectorActivationsRealized
@@ -637,11 +671,10 @@ theorem topLevelFixedConstraints_or_bad
         (resolverEnvironment
           (top.toVerifierKey pp urs) poly proofIndex
           (top.usableRowsAt top.domainExponent))
-        (top.operations) 0) ∨ Bad := by
-  classical
-  by_cases hbad : Bad
-  · exact Or.inr hbad
-  · apply Or.inl
+        (top.operations) 0) ⊕' Bad :=
+  bindOrRelationWitness
+    (boundedForallOrRelationWitness (n := top.pinnedCS.numFixedColumns) binding)
+    fun hbinding => by
     let environment :=
       resolverEnvironment
         (top.toVerifierKey pp urs) poly proofIndex
@@ -653,9 +686,9 @@ theorem topLevelFixedConstraints_or_bad
             environment.fixed ⟨column⟩ (row : ℤ) = (value : Fp) := by
       intro column row value hentry
       exact
-        (topLevelFixedEntryRead_or_bad
-          poly rows hrows hn realizes binding proofIndex hentry).resolve_right
-            hbad
+        topLevelFixedEntryRead_of_column
+          poly rows hrows hn realizes proofIndex hentry
+          (hbinding column (realizes column row value hentry).2.1)
     change
       SelectorActivationsRealized
           top.selectorMap top.selectorActivations environment ∧
@@ -730,7 +763,7 @@ in the derived VK is the Lagrange commitment to `rows` with Halo 2's default bli
 `1`. It is independent of the proof and can be established once for the generic
 `TopLevelCircuit.toVerifierKey` construction.
 -/
-theorem fixedColumn_eq_rowPolynomial_or_relation
+noncomputable def fixedColumn_eq_rowPolynomial_or_relation
     (relation : CanonicalMemberConstraintRelation
       urs hk vk instanceCommitment ps ch pU pW a
       batchOpenings memberDecode hblinding y hpoly deg)
@@ -745,10 +778,13 @@ theorem fixedColumn_eq_rowPolynomial_or_relation
     (hquery : ∃ q ∈ assembleQueries vk instanceCommitment ps ch,
       q.commId = .fixedCol column) :
     relation.polynomial (.fixedCol column) =
-        instanceRowPolynomial (2 ^ urs.k) vk.omega rows ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+        instanceRowPolynomial (2 ^ urs.k) vk.omega rows ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   classical
-  obtain ⟨q, hq, hqid⟩ := hquery
+  let q := Classical.choose hquery
+  have hq : q ∈ assembleQueries vk instanceCommitment ps ch :=
+    (Classical.choose_spec hquery).1
+  have hqid : q.commId = _ := (Classical.choose_spec hquery).2
   have routed :=
     assembledQueryMemberRoute_faithful
       (instanceCommitment := instanceCommitment)
@@ -799,12 +835,10 @@ theorem fixedColumn_eq_rowPolynomial_or_relation
       (decoded.uComp routed.slot.memberIndex)
       (decoded.wComp routed.slot.memberIndex)
       hrows hopen
-  rcases hbound with heq | hrelation
-  · apply Or.inl
-    rw [CanonicalMemberConstraintRelation.polynomial,
-      decodedPolynomialResolver, routedFixed]
-    exact heq
-  · exact Or.inr hrelation
+  refine bindOrRelationWitness hbound fun heq => ?_
+  rw [CanonicalMemberConstraintRelation.polynomial,
+    decodedPolynomialResolver, routedFixed]
+  exact heq
 
 /--
 All fixed-column resolver polynomials encode the circuit's complete dense fixed
@@ -814,7 +848,7 @@ In-range columns use the circuit-derived fixed commitments. Out-of-range
 identities are absent from the bounded fixed-query layout, so both the resolver
 polynomial and the circuit's `getD` row vector are zero.
 -/
-theorem fixedColumns_eq_rowPolynomials_or_relation
+noncomputable def fixedColumns_eq_rowPolynomials_or_relation
     (relation : CanonicalMemberConstraintRelation
       urs hk vk instanceCommitment ps ch pU pW a
       batchOpenings memberDecode hblinding y hpoly deg)
@@ -840,25 +874,23 @@ theorem fixedColumns_eq_rowPolynomials_or_relation
     (∀ column,
       relation.polynomial (.fixedCol column) =
         instanceRowPolynomial (2 ^ urs.k)
-          vk.omega (rows.getD column [])) ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  by_cases hrelation :
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w
-  · exact Or.inr hrelation
-  · apply Or.inl
+          vk.omega (rows.getD column [])) ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w :=
+  bindOrRelationWitness
+    (boundedForallOrRelationWitness (n := numFixedColumns) fun column hcolumn =>
+      relation.fixedColumn_eq_rowPolynomial_or_relation
+        column key (rows.getD column [])
+        (commitment column hcolumn) hrows
+        (by
+          obtain ⟨rotation, hlayout⟩ :=
+            queryLayout column hcolumn
+          exact fixedQuery_of_layout
+            vk instanceCommitment ps ch
+            column rotation fixedQueryCount hlayout))
+    fun hinrange => by
     intro column
     by_cases hcolumn : column < numFixedColumns
-    · exact
-        (relation.fixedColumn_eq_rowPolynomial_or_relation
-          column key (rows.getD column [])
-          (commitment column hcolumn) hrows
-          (by
-            obtain ⟨rotation, hlayout⟩ :=
-              queryLayout column hcolumn
-            exact fixedQuery_of_layout
-              vk instanceCommitment ps ch
-              column rotation fixedQueryCount hlayout)).resolve_right
-            hrelation
+    · exact hinrange column hcolumn
     · have habsent :
           ¬ ∃ q ∈ assembleQueries vk instanceCommitment ps ch,
               q.commId = .fixedCol column := by
@@ -882,7 +914,7 @@ Circuit-derived fixed rows discharge both consumers of fixed-column semantics:
 packed selector activations and explicit fixed/table operations. Commitment binding
 is retained as an explicit alternative.
 -/
-theorem topLevelFixedConstraints_or_relation
+noncomputable def topLevelFixedConstraints_or_relation
     {Config : Type} {PublicInput : TypeMap}
     [ProvableType PublicInput]
     {top : TopLevelCircuit Fp Config PublicInput}
@@ -933,8 +965,8 @@ theorem topLevelFixedConstraints_or_relation
         (resolverEnvironment
           (top.toVerifierKey pp urs) relation.polynomial proofIndex
           (top.usableRowsAt top.domainExponent))
-        (top.operations) 0) ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+        (top.operations) 0) ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   subst vk
   apply topLevelFixedConstraints_or_bad
     relation.polynomial
@@ -956,7 +988,7 @@ Pointwise fixed-cell realization at the canonical decoded-member relation.
 Constants replay uses this theorem for the V1-allocated constants cells; selector
 and fixed/table family proofs use its bundled sibling above.
 -/
-theorem topLevelFixedEntryRead_or_relation
+noncomputable def topLevelFixedEntryRead_or_relation
     {Config : Type} {PublicInput : TypeMap}
     [ProvableType PublicInput]
     {top : TopLevelCircuit Fp Config PublicInput}
@@ -1004,8 +1036,8 @@ theorem topLevelFixedEntryRead_or_relation
     (resolverEnvironment
         (top.toVerifierKey pp urs) relation.polynomial proofIndex
         (top.usableRowsAt top.domainExponent)).fixed
-          ⟨column⟩ (row : ℤ) = (value : Fp) ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+          ⟨column⟩ (row : ℤ) = (value : Fp) ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   subst vk
   apply topLevelFixedEntryRead_or_bad
     relation.polynomial

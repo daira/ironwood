@@ -51,6 +51,16 @@ def finForallOrRelationWitness {n : ℕ} {A : Fin n → Sort v} {R : Sort w}
           | inr relation => exact PSum.inr relation
           | inl tail => exact PSum.inl (Fin.cases head tail)
 
+/-- The bounded-`ℕ` analogue of `finForallOrRelationWitness`. Column and row families in the
+compiled constraint system are indexed by a natural number under a bound rather than by `Fin n`,
+so this is the shape their folds actually have. -/
+def boundedForallOrRelationWitness {n : ℕ} {A : ℕ → Sort v} {R : Sort w}
+    (outcome : ∀ i, i < n → A i ⊕' R) : (∀ i, i < n → A i) ⊕' R :=
+  bindOrRelationWitness
+    (finForallOrRelationWitness (A := fun i : Fin n => A i.val)
+      fun i => outcome i.val i.isLt)
+    fun h i hi => h ⟨i, hi⟩
+
 /-- The `List` membership analogue of `finForallOrRelationWitness`: the outcomes for every member
 of `l`, or the first break as data. Constraint families quantify over membership in a compiled
 list — query layouts, declared copies, enabled lookups — rather than over an index range.
