@@ -28,71 +28,69 @@ functions it ranges over; see the single-action sibling for why this is the fixt
 surface.
 -/
 
-open Zcash.Snark Zcash.Snark.Fixture2
-
-assert_axioms capturedPointCoordinatesValid_eq_true +native
-assert_axioms capturedInit_startsWith_vkTranscriptRepr +native
-assert_axioms fingerprint_matches +native
-assert_axioms capturedMsm_eval_eq_zero +native
-assert_axioms assembledMsm_eval_eq_zero +native
+assert_axioms Zcash.Snark.Fixture2.capturedPointCoordinatesValid_eq_true +native
+assert_axioms Zcash.Snark.Fixture2.capturedInit_startsWith_vkTranscriptRepr +native
+assert_axioms Zcash.Snark.Fixture2.fingerprint_matches +native
+assert_axioms Zcash.Snark.Fixture2.capturedMsm_eval_eq_zero +native
+assert_axioms Zcash.Snark.Fixture2.assembledMsm_eval_eq_zero +native
 assert_axioms Zcash.Arithmetic.Msm.evalNat
-assert_axioms assemble
+assert_axioms Zcash.Snark.assemble
 -- The captured key's degree budget: one literal (`20470`) dominates every constraint family,
 -- so the `x`-squeeze schedule's `epsilonX` is the concrete `20470 / |𝔽|` at this key.
-assert_axioms vk_gates_degree_le +native
-assert_axioms vk_chunk_width_le +native
-assert_axioms vk_lookup_input_degree_le +native
-assert_axioms vk_lookup_table_degree_le +native
-assert_axioms vk_quotient_tail_le +native
-assert_axioms vk_n_pred_le +native
-assert_axioms shape_k_pred_le +native
+assert_axioms Zcash.Snark.Fixture2.vk_gates_degree_le +native
+assert_axioms Zcash.Snark.Fixture2.vk_chunk_width_le +native
+assert_axioms Zcash.Snark.Fixture2.vk_lookup_input_degree_le +native
+assert_axioms Zcash.Snark.Fixture2.vk_lookup_table_degree_le +native
+assert_axioms Zcash.Snark.Fixture2.vk_quotient_tail_le +native
+assert_axioms Zcash.Snark.Fixture2.vk_n_pred_le +native
+assert_axioms Zcash.Snark.Fixture2.shape_k_pred_le +native
 -- The captured key's static checks: the query layouts cover the shape's counts, `ω` has order
 -- dividing `n`, and `n` does not vanish in `𝔽` — packaged for any family carrying the
 -- captured non-group profile. Literal equality of fixed Vesta commitments is intentionally absent.
-assert_axioms capturedVerifierKeyProfile_vk
-assert_axioms vk_advice_layout_length +native
-assert_axioms vk_instance_layout_length +native
-assert_axioms vk_fixed_layout_length +native
-assert_axioms vk_omega_order +native
-assert_axioms vk_n_cast_ne_zero +native
-assert_axioms deployedConstraintStaticChecks_of_captured +native
+assert_axioms Zcash.Snark.Fixture2.capturedVerifierKeyProfile_vk
+assert_axioms Zcash.Snark.Fixture2.vk_advice_layout_length +native
+assert_axioms Zcash.Snark.Fixture2.vk_instance_layout_length +native
+assert_axioms Zcash.Snark.Fixture2.vk_fixed_layout_length +native
+assert_axioms Zcash.Snark.Fixture2.vk_omega_order +native
+assert_axioms Zcash.Snark.Fixture2.vk_n_cast_ne_zero +native
+assert_axioms Zcash.Snark.Fixture2.deployedConstraintStaticChecks_of_captured +native
 -- The `x`-squeeze schedule at the captured key: the degree caps are discharged, so `epsilonX` is
 -- the concrete `20470 / |𝔽|`; exact leave-one-`x` invariance follows from the family's
 -- fresh-query constraint trace.
-assert_axioms deployedConstraintXSqueezeSchedule_captured +native
+assert_axioms Zcash.Snark.Fixture2.deployedConstraintXSqueezeSchedule_captured +native
 -- The deployed compressed-identity extraction bound at the captured key: the rewind-free
 -- capstone with the static checks and degree caps discharged, so the bad-`x` term is the concrete
 -- `(Q + 1) · 20470 / |𝔽|` and the multiopen term is the additive root budget.  Semantic
 -- circuit satisfaction additionally uses the four-budget promotion in the core trust census.
-assert_axioms orchard_deployed_knowledge_error_captured +native
+assert_axioms Zcash.Snark.Fixture2.orchard_deployed_knowledge_error_captured +native
 -- The same bound on the interpolation-free route: the deployed constraint family is built by
 -- `ofCovered` from the two fresh-query traces, with no field-capacity premise or interpolation.
-assert_axioms orchard_deployed_knowledge_error_captured_direct +native
+assert_axioms Zcash.Snark.Fixture2.orchard_deployed_knowledge_error_captured_direct +native
 
 -- The instance-commitment derivation: the two captured claims, plus the data and functions they
 -- range over. The latter are flagless — they are ordinary definitions, so compiler trust must not
 -- reach them; only the two claims about them may spend it.
-assert_axioms instance_commitments_derived +native
-assert_axioms capturedPublicInstances_within_lagrange +native
-assert_axioms capturedUrsGLagrange
-assert_axioms capturedPublicInstances
-assert_axioms commitLagrange
-assert_axioms derivedInstanceCommitment
+assert_axioms Zcash.Snark.Fixture2.instance_commitments_derived +native
+assert_axioms Zcash.Snark.Fixture2.capturedPublicInstances_within_lagrange +native
+assert_axioms Zcash.Snark.Fixture2.capturedUrsGLagrange
+assert_axioms Zcash.Snark.Fixture2.capturedPublicInstances
+assert_axioms Zcash.Snark.Fixture2.commitLagrange
+assert_axioms Zcash.Snark.Fixture2.derivedInstanceCommitment
 
 -- `whitespace := lax` collapses all whitespace, so the pin is insensitive to how
 -- `#print axioms` line-wraps the list (a formatting artifact of the axiom-name lengths).
-/-- info: 'Zcash.Snark.Fixture2.fingerprint_matches' depends on axioms: [propext, Classical.choice, Quot.sound, fingerprint_matches._native.native_decide.ax_1_1] -/
+/-- info: 'Zcash.Snark.Fixture2.fingerprint_matches' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.Fixture2.fingerprint_matches._native.native_decide.ax_1_1] -/
 #guard_msgs (whitespace := lax) in
-#print axioms fingerprint_matches
+#print axioms Zcash.Snark.Fixture2.fingerprint_matches
 
-/-- info: 'Zcash.Snark.Fixture2.capturedMsm_eval_eq_zero' depends on axioms: [propext, Classical.choice, Quot.sound, capturedMsm_eval_eq_zero._native.native_decide.ax_1_1] -/
+/-- info: 'Zcash.Snark.Fixture2.capturedMsm_eval_eq_zero' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.Fixture2.capturedMsm_eval_eq_zero._native.native_decide.ax_1_1] -/
 #guard_msgs (whitespace := lax) in
-#print axioms capturedMsm_eval_eq_zero
+#print axioms Zcash.Snark.Fixture2.capturedMsm_eval_eq_zero
 
-/-- info: 'Zcash.Snark.Fixture2.instance_commitments_derived' depends on axioms: [propext, Classical.choice, Quot.sound, instance_commitments_derived._native.native_decide.ax_1_1] -/
+/-- info: 'Zcash.Snark.Fixture2.instance_commitments_derived' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.Fixture2.instance_commitments_derived._native.native_decide.ax_1_1] -/
 #guard_msgs (whitespace := lax) in
-#print axioms instance_commitments_derived
+#print axioms Zcash.Snark.Fixture2.instance_commitments_derived
 
-/-- info: 'Zcash.Snark.Fixture2.capturedPublicInstances_within_lagrange' depends on axioms: [propext, Classical.choice, Quot.sound, capturedPublicInstances_within_lagrange._native.native_decide.ax_1_1] -/
+/-- info: 'Zcash.Snark.Fixture2.capturedPublicInstances_within_lagrange' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.Fixture2.capturedPublicInstances_within_lagrange._native.native_decide.ax_1_1] -/
 #guard_msgs (whitespace := lax) in
-#print axioms capturedPublicInstances_within_lagrange
+#print axioms Zcash.Snark.Fixture2.capturedPublicInstances_within_lagrange
