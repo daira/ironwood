@@ -10,27 +10,30 @@ set_option linter.unusedSectionVars false
 # The key-binding arm's ε, discharged in the oracle model
 
 The capstone layer bounds each game's break arms by named ε hypotheses. This module
-discharges the Balance-subset key-binding arm in the key-binding oracle model:
-`(n + 4) · (n + 3) / |RIVK|` for any `n`-query-bounded adversary — the bound of
-`toInterface_break_measure_le`, inherited at an unchanged query count because the
-reduction makes no oracle queries.
+bounds the key-binding arms in the key-binding oracle model at the reductions' own
+events: `(n + 4) · (n + 3) / |RIVK|` for any `n`-query-bounded adversary — the bound
+of `toInterface_break_measure_le`, inherited at an unchanged query count because
+recovering the arm's witness pair makes no oracle queries.
 
-The adversary is pair-annotated: an oracle machine producing a ledger together with a
-candidate witness pair. It cannot run the reduction itself — `balanceSubsetOrBreak`
-consumes a validity proof whose meaning depends on the sampled oracle (through the
-sampled interface `kvAt`), and an oracle machine's result type cannot depend on the
-table it is run against. The bad event ties the annotation to the reduction instead:
-the output ledger is valid, and the reduction at that validity lands in the
-key-binding arm with exactly the output pair (`BalanceBreak.kbPair`). Proof
-irrelevance makes the tie independent of which validity proof the event exhibits.
-That event is contained in "the output pair breaks the sampled interface", so the
-key-binding bound applies to the composite machine that returns the pair.
+The adversary outputs a ledger; it cannot run the reduction itself, because
+`balanceSubsetOrBreak` consumes a validity proof whose meaning depends on the sampled
+oracle (through the sampled interface `kvAt`) and an oracle machine's result type
+cannot depend on the table it is run against. But the machine does not need to: the
+arm's witness pair is an oracle-free function of the ledger. For Balance it is
+`kbPairOf` — the duplicate positioned opening `findPair` locates, projected to its
+key witnesses — and `balanceSubsetOrBreak_kbPair` identifies it with the pair of
+whatever break the reduction computes, so the bounded event is simply "the reduction
+lands in the key-binding arm". The composite machine returning the pair is covered by
+the key-binding bound, and validity lives only inside the event.
 
-Spend Authority's key-binding arm is discharged the same way
-(`spendAuthority_keyBindingArm_measure_le`): the victim's key witness is a theorem
-parameter — the `Witness` type is oracle-independent — while its `KB` certificate,
-whose meaning is oracle-dependent, moves inside the event, and the break data's own
-fields supply the pair.
+Spend Authority's arm differs in one respect: its selection criterion includes the
+undecidable `¬ Signed`, so no computable scan can locate the offending action. The
+adversary therefore announces a transaction and action index alongside its ledger —
+pointing at its own break, as is standard in security games — and the machine reads
+the first witness off the announced indices (`kwAt`, oracle-free) with the victim
+`wV` as the second. `spendAuthorityOrBreak_pair` identifies the reduction's pair with
+that output, and the event is the bundled `SpendAuthorityKBArm` at the announced
+indices.
 -/
 
 namespace Zcash.Security.Ledger.Model
@@ -107,13 +110,19 @@ theorem balanceSubset_keyBindingArm_measure_le {ι : Type u}
   · exact OracleComp.queryBound_bind (hQ j Hask Hnk)
       fun L => OracleComp.QueryBound.pure _ 0
 
-/-- **The Spend Authority key-binding arm's ε, discharged.** For any
-`n`-query-bounded pair-annotated ledger adversary in the key-binding oracle model,
-the probability that its output ledger is valid and the Spend Authority reduction —
-at some Action spending a note addressed to the victim `wV` over an unsigned
-sighash — lands in the key-binding arm with exactly its output pair is at most
-`(n + 4) · (n + 3) / |RIVK|`. -/
+/-- **The Spend Authority key-binding arm's ε, discharged.** For any `n`-query-bounded
+ledger adversary in the key-binding oracle model that announces its ledger together with
+a transaction and action index — pointing at its own break, as is standard in security
+games — the probability that the ledger is valid and the Spend Authority reduction, at
+the announced action spending a note addressed to the victim `wV` over an unsigned
+sighash, lands in the key-binding arm is at most `(n + 4) · (n + 3) / |RIVK|`. The
+indices are announced because the arm's selection criterion includes the undecidable
+`¬ Signed`, so no computable scan can locate the action the way `kbPairOf` does for
+Balance; the arm's pair is still derived, never announced — `kwAt` reads the first
+witness off the announced indices (oracle-free) and `spendAuthorityOrBreak_pair`
+identifies the reduction's pair with `(kwAt …, wV)`. -/
 theorem spendAuthority_keyBindingArm_measure_le {ι : Type u}
+    [Inhabited (KeyBinding.Witness G IVK AK NK RIVK QK SK)]
     (Extract : Extractor G IVK AK) (S : G) (hfn : AK → NK → RIVK) (Ggen : G) (hS : S ≠ 0)
     (p : PMF ι)
     (P : Primitives RIVK G IVK NK RHO PSI MHASH MENC MSG SIG)
@@ -123,34 +132,30 @@ theorem spendAuthority_keyBindingArm_measure_le {ι : Type u}
       OracleComp (FinalQuery AK NK RIVK QK SK) RIVK
         (Ledger (KeyBinding.Witness G IVK AK NK RIVK QK SK) RIVK G RHO PSI MHASH MENC
             MSG SIG P.depth
-          × (KeyBinding.Witness G IVK AK NK RIVK QK SK
-            × KeyBinding.Witness G IVK AK NK RIVK QK SK))}
+          × ℕ × ℕ)}
     {n : ℕ} (hQ : ∀ j Hask Hnk, (LA j Hask Hnk).QueryBound n) :
     ((kbExperiment p)).toOuterMeasure
         (setOf fun (j, Hask, Hnk, O) =>
-          ∃ hval : ValidLedger P (kvAt Extract S hfn Ggen Hask Hnk O)
-              issuance maxActions ((LA j Hask Hnk).run O).1,
-            ∃ tx, ∃ htx : tx ∈ ((LA j Hask Hnk).run O).1, ∃ a, ∃ ha : a ∈ tx.actions,
-              ∃ hKB : (kvAt Extract S hfn Ggen Hask Hnk O).KB wV,
-                ∃ hrecv : a.w.note_old.pkd
-                    = P.emb ((kvAt Extract S hfn Ggen Hask Hnk O).ivk wV)
-                      • a.w.note_old.gd,
-                  ∃ hfresh : ¬ Signed tx.sighash,
-                    ∃ b, spendAuthorityOrBreak hval htx ha hKB hrecv hfresh = PSum.inr b
-                      ∧ b.w₁ = ((LA j Hask Hnk).run O).2.1
-                      ∧ b.w₂ = ((LA j Hask Hnk).run O).2.2)
+          Nonempty (SpendAuthorityKBArm P (kvAt Extract S hfn Ggen Hask Hnk O)
+            issuance maxActions ((LA j Hask Hnk).run O).1
+            ((LA j Hask Hnk).run O).2.1 ((LA j Hask Hnk).run O).2.2 wV Signed))
       ≤ ((n + 4) * (n + 3) : ℕ) / Fintype.card RIVK := by
   refine le_trans (MeasureTheory.measure_mono ?_)
     (toInterface_break_measure_le Extract S hfn Ggen hS p
-      (A := fun j Hask Hnk => (LA j Hask Hnk).bind fun out => .pure out.2)
+      (A := fun j Hask Hnk => (LA j Hask Hnk).bind fun out =>
+        .pure ((kwAt out.1 out.2.1 out.2.2).getD default, wV))
       (n := n) (fun j Hask Hnk => ?_))
-  · rintro ⟨j, Hask, Hnk, O⟩
-      ⟨hval, tx, htx, a, ha, hKB, hrecv, hfresh, b, heq, hw₁, hw₂⟩
+  · rintro ⟨j, Hask, Hnk, O⟩ ⟨hf⟩
     simp only [Set.mem_setOf_eq, OracleComp.run_bind, OracleComp.run_pure]
-    rw [← hw₁, ← hw₂]
-    exact b.h
+    obtain ⟨hw₁, hw₂⟩ :=
+      spendAuthorityOrBreak_pair hf.hval _ _ hf.hKB hf.hrecv hf.hfresh hf.hb
+    have hkw : kwAt ((LA j Hask Hnk).run O).1 ((LA j Hask Hnk).run O).2.1
+        ((LA j Hask Hnk).run O).2.2 = some hf.a.w.kw := by
+      simp [kwAt, hf.htx, hf.ha]
+    rw [hkw]
+    simpa [hw₁, hw₂] using hf.b.h
   · exact OracleComp.queryBound_bind (hQ j Hask Hnk)
-      fun out => OracleComp.QueryBound.pure out.2 0
+      fun out => OracleComp.QueryBound.pure _ 0
 
 end OracleModel
 
