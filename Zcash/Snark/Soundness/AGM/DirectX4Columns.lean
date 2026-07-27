@@ -234,15 +234,15 @@ def deployedRootOutcomeOfCovered
 /-- **A deployed root family on the direct route.** The interpolation-free counterpart of
 `ComputedDeployedRootFSFamily.ofOnline`: the outcome is decoded from online coverage, so no
 field-capacity hypothesis is needed and no ghost evaluation points are chosen. The remaining
-input is the strict transcript-stage premise `DeployedRootPrefixDetermined`; the exact squeeze
-invariance used by the probability layer is derived from it. -/
+input is exact leave-one-squeeze invariance. Reverse unbatching may depend on later challenges,
+so strict chronological prefix determination is not required. -/
 def ComputedDeployedRootFSFamily.ofCovered
     (family : ComputedOnlineMemberFSFamily shape)
-    (hcausal : DeployedRootPrefixDetermined family.toFamily
+    (hpinned : DeployedRootSqueezeInvariance family.toFamily
       (deployedRootOutcomeOfCovered family)) :
     ComputedDeployedRootFSFamily shape where
   toComputedOnlineMemberFSFamily := family
   outcome := deployedRootOutcomeOfCovered family
-  causal := hcausal
+  squeezeInvariant := hpinned
 
 end Zcash.Snark

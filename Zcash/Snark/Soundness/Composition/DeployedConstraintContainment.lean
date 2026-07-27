@@ -159,6 +159,53 @@ def deployedConstraintXBadSet (family : ComputedDeployedRootFSFamily shape)
       (root : DeployedRootDecodeWitness family basis (O, tape)),
     x ∈ szBadSet (deployedConstraintDifferenceOfRoot family basis (O, tape) root)}
 
+/-- A sufficient chronological condition for the constraint root set. This is stronger than the
+live interface below: a reverse-unbatching decoder may legitimately consume challenges after `x`
+while still being invariant under changing `x` itself. -/
+def DeployedConstraintXPrefixDetermined
+    (family : ComputedDeployedRootFSFamily shape) : Prop :=
+  forall basis
+    (O O' : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp),
+    (forall t : BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k),
+      t.val.length < preIpaLen shape family.init.length 4 -> O t = O' t) ->
+    deployedConstraintXBadSet family basis O =
+      deployedConstraintXBadSet family basis O'
+
+/-- **The exact causal property at `x`.** Changing only the run's priced `x` answer leaves the
+constraint-difference bad set unchanged. Unlike strict prefix determination, this permits the
+reverse-unbatching decoder to use later batching challenges. -/
+def DeployedConstraintXPinning
+    (family : ComputedDeployedRootFSFamily shape) : Prop :=
+  forall basis
+    (O : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) (v : Fp),
+    deployedConstraintXBadSet family basis
+        (Function.update O (algebraicFullPrefixesPre family.init
+          ((family.adversary basis).run O) 4) v) =
+      deployedConstraintXBadSet family basis O
+
+/-- Strict pre-`x` determination implies the exact self-reprogramming equality consumed by
+`PinnedRootEvent`.  The update point has the `x` prefix's own length, hence is outside the strict
+prefix restriction. -/
+theorem deployedConstraintXPinning_of_prefixDetermined
+    (family : ComputedDeployedRootFSFamily shape)
+    (hcausal : DeployedConstraintXPrefixDetermined family) :
+    DeployedConstraintXPinning family := by
+  intro basis O v
+  apply hcausal basis _ O
+  intro t ht
+  rw [Function.update_apply, if_neg]
+  intro hEq
+  have hlen : (algebraicFullPrefixesPre family.init
+      ((family.adversary basis).run O) 4).val.length =
+      preIpaLen shape family.init.length 4 :=
+    preIpaSqueezePoints_length_eq family.init _
+      ((family.adversary basis).run O).proof.2 4
+  rw [hEq, hlen] at ht
+  exact lt_irrefl _ ht
+
 /-- Causal condition at the `x` squeeze: the constraint-difference root set carries a uniform
 bound and is unchanged when the run's own `x` answer is reprogrammed.  It may consume the earlier
 `θ`/`β`/`γ`/`y` answers and the retained representations, but cannot be chosen after seeing
@@ -168,13 +215,7 @@ structure DeployedConstraintXSqueezeSchedule (family : ComputedDeployedRootFSFam
   measure_le : forall basis O,
     (PMF.uniformOfFintype Fp).toOuterMeasure
       (deployedConstraintXBadSet family basis O) <= epsilonX
-  pinned : forall basis
-      (O : BTranscript Fp VestaG
-        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) (v : Fp),
-    deployedConstraintXBadSet family basis
-        (Function.update O (algebraicFullPrefixesPre family.init
-          ((family.adversary basis).run O) 4) v) =
-      deployedConstraintXBadSet family basis O
+  pinned : DeployedConstraintXPinning family
 
 /-- The single pinned event for the constraint evaluation challenge. -/
 noncomputable def deployedConstraintXPinnedEvent

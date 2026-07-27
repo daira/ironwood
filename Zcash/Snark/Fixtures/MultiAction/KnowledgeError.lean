@@ -10,9 +10,12 @@ compressed constraint identity by five additive terms. This module instantiates 
 Post-NU6.3 key: the static checks and the schedule's degree caps are discharged from the verifying key
 (`StaticChecks`, `Schedule`), so the bad-`x` term is the concrete `(Q + 1) · 20470 / |𝔽|` and
 the multiopen term is the shape's own root budget — additive, with no continuation threshold or
-fourth-root conversion. What remains named: single-instance DLOG for the combined finder
-(`hDL`), and the `x`-squeeze pinning premise the schedule carries (`hpinned`); the family's strict
-pre-squeeze root causality travels inside `ComputedDeployedRootFSFamily`.
+fourth-root conversion. What remains named: single-instance DLOG for the combined finder (`hDL`)
+and exact leave-one-squeeze invariance for both the root and constraint bad sets. Reverse
+unbatching may use later challenges; only the answer currently being priced is excluded.
+The captured premise pins only scalar metadata, layouts, and expressions. It intentionally does
+not equate the family's verifier commitments with the fixture's fixed Vesta points: public AGM
+points must instead carry representations over each sampled basis.
 -/
 
 namespace Zcash.Snark.Fixture2
@@ -29,18 +32,12 @@ theorem orchard_deployed_knowledge_error_captured
     {T' : Type*} [DecidableEq T'] (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ shape.k) → T') (hquery : Function.Injective query)
     (family : ComputedDeployedRootFSFamily shape)
-    (hvk : ∀ basis, family.vk basis = vk)
+    (hvk : ∀ basis, CapturedVerifierKeyProfile (family.vk basis))
     {dlogBound : ENNReal}
     (hDL : TextbookDLWithCoinsAdvantageLE B
       (deployedConstraintRelationFinder family
         (deployedConstraintQuotientFinder family)) dlogBound)
-    (hpinned : ∀ basis
-      (O : BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp)
-      (v : Fp),
-      deployedConstraintXBadSet family basis
-          (Function.update O (algebraicFullPrefixesPre family.init
-            ((family.adversary basis).run O) 4) v) =
-        deployedConstraintXBadSet family basis O) :
+    (hpinnedX : DeployedConstraintXPinning family) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
@@ -55,52 +52,45 @@ theorem orchard_deployed_knowledge_error_captured
         + (family.Q + 1 : ℕ) * ((20470 : ℕ) / (Fintype.card Fp : ℝ≥0∞)) :=
   snarkConstraintsDeployed_prob_le_of_root_schedule B hB query hquery family
     (deployedConstraintStaticChecks_of_captured family hvk)
-    (deployedConstraintXSqueezeSchedule_captured family hvk hpinned) hDL
+    (deployedConstraintXSqueezeSchedule_captured family hvk hpinnedX) hDL
 
 /-- **The captured compressed-identity bound on the interpolation-free route.** The same capstone,
 with the deployed root family built by `ofCovered`: its outcome is decoded from online coverage, so
 the statement rests on no field-capacity premise and no offline interpolation — only single-instance
-DLOG for the combined finder, strict pre-squeeze root causality, and `x`-squeeze pinning. -/
+DLOG for the combined finder and exact leave-one-squeeze invariance for both root families. -/
 theorem orchard_deployed_knowledge_error_captured_direct
     {T' : Type*} [DecidableEq T'] (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ shape.k) → T') (hquery : Function.Injective query)
     (online : ComputedOnlineMemberFSFamily shape)
-    (hcausal : DeployedRootPrefixDetermined online.toFamily
+    (hpinned : DeployedRootSqueezeInvariance online.toFamily
       (deployedRootOutcomeOfCovered online))
-    (hvk : ∀ basis, (ComputedDeployedRootFSFamily.ofCovered online hcausal).vk basis = vk)
+    (hvk : ∀ basis, CapturedVerifierKeyProfile
+      ((ComputedDeployedRootFSFamily.ofCovered online hpinned).vk basis))
     {dlogBound : ENNReal}
     (hDL : TextbookDLWithCoinsAdvantageLE B
-      (deployedConstraintRelationFinder (ComputedDeployedRootFSFamily.ofCovered online hcausal)
+      (deployedConstraintRelationFinder (ComputedDeployedRootFSFamily.ofCovered online hpinned)
         (deployedConstraintQuotientFinder
-          (ComputedDeployedRootFSFamily.ofCovered online hcausal))) dlogBound)
-    (hbadX : ∀ basis
-      (O : BTranscript Fp VestaG (preIpaLen shape
-        (ComputedDeployedRootFSFamily.ofCovered online hcausal).init.length 10
-          + 3 * shape.k) → Fp) (v : Fp),
-      deployedConstraintXBadSet (ComputedDeployedRootFSFamily.ofCovered online hcausal) basis
-          (Function.update O (algebraicFullPrefixesPre
-            (ComputedDeployedRootFSFamily.ofCovered online hcausal).init
-            (((ComputedDeployedRootFSFamily.ofCovered online hcausal).adversary basis).run O) 4) v)
-        = deployedConstraintXBadSet
-            (ComputedDeployedRootFSFamily.ofCovered online hcausal) basis O) :
+          (ComputedDeployedRootFSFamily.ofCovered online hpinned))) dlogBound)
+    (hpinnedX : DeployedConstraintXPinning
+      (ComputedDeployedRootFSFamily.ofCovered online hpinned)) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
-        (ComputedDeployedRootFSFamily.ofCovered online hcausal).toFamily.Coins)).toOuterMeasure
+        (ComputedDeployedRootFSFamily.ofCovered online hpinned).toFamily.Coins)).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           snarkExtractionFailureEventDeployed
-            (ComputedDeployedRootFSFamily.ofCovered online hcausal).toFamily
+            (ComputedDeployedRootFSFamily.ofCovered online hpinned).toFamily
             (deployedConstraintDecodedOfOutcome _
               (deployedConstraintOutcomeProviderOfRoot _
                 (deployedConstraintStaticChecks_of_captured _ hvk))))
-      ≤ (((ComputedDeployedRootFSFamily.ofCovered online hcausal).Q + shape.k) *
+      ≤ (((ComputedDeployedRootFSFamily.ofCovered online hpinned).Q + shape.k) *
             (3 / Fintype.card Fp) +
-          ((ComputedDeployedRootFSFamily.ofCovered online hcausal).Q + 1 : ℕ) *
+          ((ComputedDeployedRootFSFamily.ofCovered online hpinned).Q + 1 : ℕ) *
             (1 / Fintype.card Fp) +
           (dlogBound + 1 / Fintype.card Fp))
-        + ((ComputedDeployedRootFSFamily.ofCovered online hcausal).Q + (11 + shape.k) + 1 : ℕ) *
+        + ((ComputedDeployedRootFSFamily.ofCovered online hpinned).Q + (11 + shape.k) + 1 : ℕ) *
             algebraicRootBudget shape shape.k
-        + ((ComputedDeployedRootFSFamily.ofCovered online hcausal).Q + 1 : ℕ) *
+        + ((ComputedDeployedRootFSFamily.ofCovered online hpinned).Q + 1 : ℕ) *
             ((20470 : ℕ) / (Fintype.card Fp : ℝ≥0∞)) :=
-  orchard_deployed_knowledge_error_captured B hB query hquery _ hvk hDL hbadX
+  orchard_deployed_knowledge_error_captured B hB query hquery _ hvk hDL hpinnedX
 
 end Zcash.Snark.Fixture2

@@ -745,8 +745,9 @@ assert_axioms tableReadingPinnedRootEvent
 assert_axioms tableReadingPinnedRootEvent_landing_measure_le
 assert_axioms deployedRootEventBudget_sum_le
 assert_axioms badX_le_via_squeeze_prefixed +native
--- The stability input derived from Fiat–Shamir prefix-determinism: the `x` squeeze point reads
--- only answers at strictly shorter transcripts, so resampling at the point itself moves nothing.
+-- Squeeze-point toolkit: prefix-determinism makes the `x` point stable under self-reprogramming.
+-- This is not the live constraint schedule's chronology discharge: point stability alone does not
+-- prove that the bad set was fixed before `x`.
 assert_axioms hstab_of_xPrefixDetermined +native
 -- Prefix injectivity at the multiopen squeeze points (`Forking.Adversary.PreIpa`): each point
 -- pins every field absorbed before it — the toolkit for the deployed squeeze-invariance
@@ -762,26 +763,32 @@ assert_axioms preX4SqueezePoint_inj
 assert_axioms natDegree_combineConstraints_le
 -- The schedule, priced (`Composition.ScheduleBudget`): the committed carriers stay under the
 -- walk's caps, root witnesses at one table share the family's own outcome so the root set
--- collapses across fork tapes, and the schedule constructor discharges `measure_le` outright —
--- `pinned` stays the named causal premise.
+-- collapses across fork tapes, and the schedule constructor discharges `measure_le` outright.
+-- The live constructor takes strict bad-set prefix determination and derives exact pinning; the
+-- direct-pinning constructor remains only as a compatibility lemma.
 assert_axioms natDegree_committedPreXConstraintDifference_le
 assert_axioms natDegree_deployedConstraintDifferenceOfRoot_le +native
 assert_axioms deployedConstraintDifference_witness_congr +native
 assert_axioms deployedConstraintXBadSet_measure_le +native
+assert_axioms DeployedConstraintXPrefixDetermined +native
+assert_axioms deployedConstraintXPinning_of_prefixDetermined +native
 assert_axioms deployedConstraintXSqueezeSchedule_of_pinned +native
+assert_axioms deployedConstraintXSqueezeSchedule_of_prefixDetermined +native
 -- The pinned-root witness family (`AGM.PinnedRootWitness`): the zero data over the degenerate
--- shape, whose assembled multiopen commitment is the zero point for every basis and record —
--- the evaluations consumed by the weaker, derived `DeployedRootSqueezeInvariance` property.
+-- shape, whose assembled multiopen commitment is the zero point for every basis and record.
 assert_axioms multiopenCommitment_witness_zero +native
 assert_axioms witnessProof +native
 assert_axioms witnessFamily +native
--- That derived property is satisfiable: the constant family's root sets are empty except at
--- `x₃`, where the set is the deployed point set — and the assembly never reads `x₃`, so
--- reprogramming an event's own squeeze answer moves nothing.  A deployed family must instead
--- provide the stronger strict-prefix property above; its constructor derives this equality.
+-- The actual strict-prefix property is satisfiable: the constant family's root sets are empty
+-- except at `x₃`, whose point set consumes only earlier answers.  It is packaged as an inhabitant
+-- of `ComputedDeployedRootFSFamily`; the weaker invariance theorem is a corollary.
 assert_axioms witnessFamily_reads_update +native
 assert_axioms deployedRootBad_witness +native
 assert_axioms deployedAllPts_x3_blind
+assert_axioms deployedAllPts_congr_preMultiopen
+assert_axioms deployedRootPrefixDetermined_witness +native
+assert_axioms witnessOnlineMemberFamily +native
+assert_axioms witnessDeployedRootFamily +native
 assert_axioms deployedRootSqueezeInvariance_witness +native
 -- The direct route (`AGM.DirectX4Columns`): the `x₄` columns are read off the online coverage —
 -- a column below the pair count is its set's `x₁` power sum, the last is the prover's `q′` — so

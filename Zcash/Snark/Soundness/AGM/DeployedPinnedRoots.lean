@@ -6,11 +6,11 @@ import Zcash.Snark.Soundness.Forking.PinnedRoots
 /-!
 # The deployed pinned AGM root family
 
-The adapter from rewind-free algebraic batch data to `PinnedRootFamily`.  The family condition is
-strict transcript-stage causality (`DeployedRootPrefixDetermined`): each root set is fixed by
-answers before its own squeeze.  This implies the exact reprogramming invariance consumed by the
-probability layer.  The bad sets are the two IPA shift polynomials and the deployed `x4`, `x3`,
-`x2`, and per-set `x1` polynomials.
+The adapter from rewind-free algebraic batch data to `PinnedRootFamily`. The family condition is
+the exact leave-one-squeeze invariance consumed by the probability layer. Root sets produced by
+reverse unbatching may legitimately depend on later batching challenges, so strict chronological
+prefix determination is a sufficient toolkit property, not the live interface. The bad sets are
+the two IPA shift polynomials and the deployed `x4`, `x3`, `x2`, and per-set `x1` polynomials.
 -/
 
 namespace Zcash.Snark
@@ -426,51 +426,51 @@ theorem deployedRootSqueezeInvariance_of_prefixDetermined
   rw [hEq, hlen] at ht
   exact lt_irrefl _ ht
 
-/-- An online AGM family carrying a concrete batch-or-relation outcome whose exact root data is
-determined before each event's squeeze. The weaker reprogramming equality used by the probability
-layer is derived from `causal`; it cannot be supplied independently. -/
+/-- An online AGM family carrying a concrete batch-or-relation outcome whose root set is invariant
+under changing only the answer being priced. Reverse unbatching may use later challenges, so this
+is intentionally the exact property required by `PinnedRootEvent`. -/
 structure ComputedDeployedRootFSFamily (shape : Shape)
     extends ComputedOnlineMemberFSFamily shape where
   outcome : DeployedRootOutcomeProvider toComputedAlgebraicFSFamily
-  causal : DeployedRootPrefixDetermined toComputedAlgebraicFSFamily outcome
+  squeezeInvariant : DeployedRootSqueezeInvariance toComputedAlgebraicFSFamily outcome
 
 /-- Mathematical compatibility adapter using the offline Vandermonde decoder.  Intentionally
 `noncomputable`: it proves the batch-or-relation dichotomy but does not instantiate an executable
 DLOG adversary; a concrete-security capstone must supply the outcome through a computable
 direct-coordinate implementation.
 
-The sole remaining multiopen-specific proof is `DeployedRootPrefixDetermined`. The final-output
-`OracleComp` interface does not encode when the data a root set reads was emitted, so the constructor
-requires the natural strict-prefix statement exported by the staged implementation; the exact
-reprogramming equality is then derived rather than assumed.
+The final-output `OracleComp` interface does not encode when each AGM representation was emitted,
+so the constructor requires exact squeeze invariance from a staged implementation. Strict prefix
+determination remains a sufficient adapter where it is actually true, but is not required here:
+reverse unbatching sets can consume later batching answers while remaining blind to their own.
 
 The direct-coordinate route is `ComputedDeployedRootFSFamily.ofCovered`
 (`AGM.DirectX4Columns`): it reads the `x4` columns off the online coverage instead of
 interpolating them, so it carries no field-capacity premise and this adapter is no longer the
 only way to supply an outcome.  `AGM.PinnedRootWitness` shows that the weaker derived
-reprogramming invariant is satisfiable at the family level (a constant-output family;
+reprogramming invariant and the stronger strict-prefix property are satisfiable at the family
+level (a constant-output family packaged as `witnessDeployedRootFamily`;
 `tableReadingPinnedRootEvent` is the event-level witness).
 
-What remains for a deployed family is strict prefix determination, read off the Rust transcript
-stages — each datum in a root set is emitted or read strictly before that event's squeeze. -/
+What remains for a deployed family is the exact leave-one-squeeze property, exported by its staged
+AGM implementation. -/
 noncomputable def ComputedDeployedRootFSFamily.ofOnline
     (family : ComputedOnlineMemberFSFamily shape)
     (hcapacity : shape.numPointSets + 1 <= Fintype.card Fp)
-    (hcausal : DeployedRootPrefixDetermined family.toFamily
+    (hpinned : DeployedRootSqueezeInvariance family.toFamily
       (deployedRootOutcomeOfOnline family hcapacity)) :
     ComputedDeployedRootFSFamily shape where
   toComputedOnlineMemberFSFamily := family
   outcome := deployedRootOutcomeOfOnline family hcapacity
-  causal := hcausal
+  squeezeInvariant := hpinned
 
 
 namespace ComputedDeployedRootFSFamily
 
-/-- Strict transcript-stage causality supplies the reprogramming invariant consumed by the pinned
-root-family probability theorem. -/
+/-- The reprogramming invariant consumed by the pinned-root probability theorem. -/
 theorem pinned (family : ComputedDeployedRootFSFamily shape) :
     DeployedRootSqueezeInvariance family.toComputedAlgebraicFSFamily family.outcome :=
-  deployedRootSqueezeInvariance_of_prefixDetermined _ _ family.causal
+  family.squeezeInvariant
 
 /-- Forget the tighter root data. -/
 abbrev toFamily (family : ComputedDeployedRootFSFamily shape) :

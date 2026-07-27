@@ -47,7 +47,9 @@ assert_axioms vk_quotient_tail_le +native
 assert_axioms vk_n_pred_le +native
 assert_axioms shape_k_pred_le +native
 -- The captured key's static checks: the query layouts cover the shape's counts, `ω` has order
--- dividing `n`, and `n` does not vanish in `𝔽` — packaged for any family carrying this key.
+-- dividing `n`, and `n` does not vanish in `𝔽` — packaged for any family carrying the
+-- captured non-group profile. Literal equality of fixed Vesta commitments is intentionally absent.
+assert_axioms capturedVerifierKeyProfile_vk
 assert_axioms vk_advice_layout_length +native
 assert_axioms vk_instance_layout_length +native
 assert_axioms vk_fixed_layout_length +native
@@ -55,7 +57,7 @@ assert_axioms vk_omega_order +native
 assert_axioms vk_n_cast_ne_zero +native
 assert_axioms deployedConstraintStaticChecks_of_captured +native
 -- The `x`-squeeze schedule at the captured key: the degree caps discharged, so `epsilonX` is
--- the concrete `20470 / |𝔽|`; the squeeze-pinning premise passes through as the named input.
+-- the concrete `20470 / |𝔽|`; exact leave-one-`x` invariance is the named input.
 assert_axioms deployedConstraintXSqueezeSchedule_captured +native
 -- The deployed compressed-identity extraction bound at the captured key: the rewind-free
 -- capstone with the static checks and degree caps discharged, so the bad-`x` term is the concrete

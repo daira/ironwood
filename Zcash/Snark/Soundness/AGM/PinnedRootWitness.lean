@@ -1,12 +1,12 @@
 import Zcash.Snark.Soundness.AGM.DeployedPinnedRoots
 
 /-!
-# The pinned-root causal premise is satisfiable
+# The strict-prefix root premise is satisfiable
 
-`DeployedRootSqueezeInvariance` is the stated causal premise of the rewind-free multiopen layer.
-This module pins its shape satisfiable: a constant-output family over a degenerate shape, with a
-constant batch witness, has every deployed root set empty — so reprogramming any squeeze answer
-moves nothing.
+`DeployedRootSqueezeInvariance` is the causal premise of the rewind-free multiopen layer.
+This module pins it satisfiable: a constant-output family over a degenerate shape, with a constant
+batch witness, has five empty deployed root sets; the remaining `x₃` set depends only on answers
+read at strict earlier prefixes.  The weaker self-reprogramming equality follows as a corollary.
 -/
 
 namespace Zcash.Snark
@@ -759,13 +759,29 @@ theorem deployedAllPts_x3_blind {G : Type*} [AddCommGroup G] [Module Fp G] [Deci
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) (v : Fp) :
     deployedAllPts vk ic ps {ch with x3 := v} = deployedAllPts vk ic ps ch := rfl
 
+/-- The deployed point sets depend on a challenge record only through the fields used before the
+multiopen squeezes. -/
+theorem deployedAllPts_congr_preMultiopen
+    {G : Type*} [AddCommGroup G] [Module Fp G] [DecidableEq G] [Inhabited G]
+    {shape : Shape} (vk : VerifyingKey shape Fp G) (ic : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape Fp G) (ch ch' : Challenges shape.k Fp)
+    (htheta : ch.theta = ch'.theta) (hbeta : ch.beta = ch'.beta)
+    (hgamma : ch.gamma = ch'.gamma) (hy : ch.y = ch'.y) (hx : ch.x = ch'.x) :
+    deployedAllPts vk ic ps ch = deployedAllPts vk ic ps ch' := by
+  rcases ch with ⟨theta, beta, gamma, y, x, x1, x2, x3, x4, xi, z, rounds⟩
+  rcases ch' with
+    ⟨theta', beta', gamma', y', x', x1', x2', x3', x4', xi', z', rounds'⟩
+  simp only at htheta hbeta hgamma hy hx
+  subst theta'; subst beta'; subst gamma'; subst y'; subst x'
+  rfl
+
 /-- Reprogramming the `x₃` read is exactly a record update of the `x₃` field. -/
 theorem chRecord_update_seven (ν : Fin 11 → Fp) (v : Fp) :
     chRecord (k := witnessShape.k) (Function.update ν 7 v) (fun _ => 0)
       = {chRecord (k := witnessShape.k) ν (fun _ => 0) with x3 := v} := by
   simp [chRecord]
 
-/-! ## The invariance -/
+/-! ## Strict-prefix causality and its invariance corollary -/
 
 /-- **Every deployed root set at the witness family, evaluated.** Five of the six are empty; the
 `x₃` event's set is exactly the deployed point set, which the assembly reads off the `x` squeeze
@@ -827,21 +843,73 @@ theorem deployedAllPts_witness_update
   rw [witnessFamily_reads_update basis O 7 v, chRecord_update_seven]
   exact deployedAllPts_x3_blind _ _ _ _ v
 
-/-- **The pinned-root causal premise is satisfiable.** For the constant witness family every
-deployed root set is either empty or the deployed point set, and reprogramming an event's own
-squeeze answer moves neither — so `DeployedRootSqueezeInvariance` holds. -/
-theorem deployedRootSqueezeInvariance_witness :
-    DeployedRootSqueezeInvariance witnessFamily witnessOutcome := by
-  intro basis i O v
-  rw [deployedRootPoint_witness basis O i]
+/-- **The deployed strict-prefix root premise is satisfiable.** The witness adversary is constant.
+At the sole nonempty event (`x₃`), all challenge fields consumed by the point-set assembly are
+read at prefixes strictly shorter than the `x₃` prefix. -/
+theorem deployedRootPrefixDetermined_witness :
+    DeployedRootPrefixDetermined witnessFamily witnessOutcome := by
+  intro basis i O O' hagree
   by_cases h3 : i.val = 3
-  · have hidx : deployedRootChallengeIndex i = 7 := by
-      have : i = 3 := Fin.ext h3
-      subst this; rfl
-    rw [hidx, deployedRootBad_witness, deployedRootBad_witness]
-    simp only [h3]
-    rw [deployedAllPts_witness_update basis O v]
+  · have hi : i = 3 := Fin.ext h3
+    subst i
+    rw [deployedRootBad_witness, deployedRootBad_witness]
+    have hread (j : Fin 11)
+        (hlen : preIpaLen witnessShape 0 j < preIpaLen witnessShape 0 7) :
+        wrappedPreIpaReads ((wrappedAdversary witnessFamily basis).run O) j =
+          wrappedPreIpaReads ((wrappedAdversary witnessFamily basis).run O') j := by
+      rw [wrappedPreIpaReads_run, wrappedPreIpaReads_run]
+      apply hagree
+      change (preIpaSqueezePoints witnessFamily.init
+          (runProof witnessFamily basis O).proof.1 j).length < _
+      rw [preIpaSqueezePoints_length_eq witnessFamily.init _
+        (runProof witnessFamily basis O).proof.2 j]
+      simpa only [show witnessFamily.init.length = 0 by rfl] using hlen
+    rw [witnessFamily_wrapped_run, witnessFamily_wrapped_run]
+    refine congrArg (fun s : Finset Fp => (↑s : Set Fp)) ?_
+    apply deployedAllPts_congr_preMultiopen
+    · simpa only [wrappedPreIpaRecord, chRecord] using
+        hread 0 (by decide)
+    · simpa only [wrappedPreIpaRecord, chRecord] using
+        hread 1 (by decide)
+    · simpa only [wrappedPreIpaRecord, chRecord] using
+        hread 2 (by decide)
+    · simpa only [wrappedPreIpaRecord, chRecord] using
+        hread 3 (by decide)
+    · simpa only [wrappedPreIpaRecord, chRecord] using
+        hread 4 (by decide)
   · rw [deployedRootBad_witness, deployedRootBad_witness]
     simp only [if_neg h3]
+
+/-- The witness family with its online multiopen and member-coverage evidence packaged. -/
+noncomputable def witnessOnlineMemberFamily :
+    ComputedOnlineMemberFSFamily witnessShape where
+  toComputedOnlineMultiopenFSFamily :=
+    { toComputedAlgebraicFSFamily := witnessFamily
+      fixedRepresentations := fun _ => []
+      canonical := by
+        intro basis O
+        rw [witnessFamily_run]
+        exact witnessProof_canonical basis }
+  membersCovered := by
+    intro basis O
+    rw [witnessFamily_run]
+    intro nu i hi
+    exact absurd (absurd_lt_of_eq_zero (deployedX4PairCount_witness nu) hi) not_false
+
+/-- **An inhabitant of the actual deployed-root family interface.** This packages the zero online
+family, its concrete batch outcome, and the strict-prefix proof above; satisfiability is therefore
+proved for the strong constructor premise, not merely for its weaker invariance consequence. -/
+noncomputable def witnessDeployedRootFamily :
+    ComputedDeployedRootFSFamily witnessShape where
+  toComputedOnlineMemberFSFamily := witnessOnlineMemberFamily
+  outcome := witnessOutcome
+  squeezeInvariant := deployedRootSqueezeInvariance_of_prefixDetermined _ _
+    deployedRootPrefixDetermined_witness
+
+/-- The weaker self-reprogramming equation follows from the strict-prefix witness above. -/
+theorem deployedRootSqueezeInvariance_witness :
+    DeployedRootSqueezeInvariance witnessFamily witnessOutcome :=
+  deployedRootSqueezeInvariance_of_prefixDetermined _ _
+    deployedRootPrefixDetermined_witness
 
 end Zcash.Snark

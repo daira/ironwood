@@ -13,9 +13,9 @@ Lagrange selector (degree `< n`), so the degree walk caps the constraint differe
 to the family's own outcome at the table, so the root set collapses across fork tapes and the
 bound applies to the whole set.
 
-`pinned` remains the named causal premise — the deployed discharge from the Rust transcript
-stages is tracked at `ComputedDeployedRootFSFamily.ofOnline`. The constructor at the end takes it
-as a hypothesis and produces the schedule with the concrete `epsilonX`.
+The live constructor accepts exact leave-one-squeeze pinning. A stronger
+`DeployedConstraintXPrefixDetermined` adapter remains available, but reverse unbatching is allowed
+to depend on later challenges and therefore need not satisfy strict chronology.
 -/
 
 namespace Zcash.Snark
@@ -278,13 +278,7 @@ def deployedConstraintXSqueezeSchedule_of_pinned
     (hq : ∀ basis, (family.vk basis).n * shape.numQuotientPieces + B ≤ Dq)
     (h3 : 3 * B ≤ D) (hWD : (W + 2) * B ≤ D) (h4 : 4 * B ≤ D)
     (hcomp : 2 * B + 2 * Dc ≤ D)
-    (hpinned : ∀ basis
-      (O : BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp)
-      (v : Fp),
-      deployedConstraintXBadSet family basis
-          (Function.update O (algebraicFullPrefixesPre family.init
-            ((family.adversary basis).run O) 4) v) =
-        deployedConstraintXBadSet family basis O) :
+    (hpinned : DeployedConstraintXPinning family) :
     DeployedConstraintXSqueezeSchedule family
       ((max D Dq : ℕ) / (Fintype.card Fp : ℝ≥0∞)) where
   measure_le basis O :=
@@ -293,5 +287,25 @@ def deployedConstraintXSqueezeSchedule_of_pinned
         (hnB basis) (hgates basis) (hW basis) (hlin basis) (hltab basis) (hq basis)
         h3 hWD h4 hcomp)
   pinned := hpinned
+
+/-- A stronger convenience constructor deriving exact pinning from strict prefix determination. -/
+def deployedConstraintXSqueezeSchedule_of_prefixDetermined
+    (family : ComputedDeployedRootFSFamily shape)
+    (hcausal : DeployedConstraintXPrefixDetermined family)
+    {B W Dc D Dq : ℕ} (hB : 1 ≤ B) (hkB : 2 ^ shape.k - 1 ≤ B)
+    (hnB : ∀ basis, (family.vk basis).n - 1 ≤ B)
+    (hgates : ∀ basis, ∀ e ∈ (family.vk basis).gates, e.degreeBound * B ≤ D)
+    (hW : ∀ basis, ∀ c ∈ (family.vk basis).permutationChunks, c.length ≤ W)
+    (hlin : ∀ basis, ∀ l : Fin shape.numLookups,
+      ∀ e ∈ (family.vk basis).lookupInputExprs l, e.degreeBound * B ≤ Dc)
+    (hltab : ∀ basis, ∀ l : Fin shape.numLookups,
+      ∀ e ∈ (family.vk basis).lookupTableExprs l, e.degreeBound * B ≤ Dc)
+    (hq : ∀ basis, (family.vk basis).n * shape.numQuotientPieces + B ≤ Dq)
+    (h3 : 3 * B ≤ D) (hWD : (W + 2) * B ≤ D) (h4 : 4 * B ≤ D)
+    (hcomp : 2 * B + 2 * Dc ≤ D) :
+    DeployedConstraintXSqueezeSchedule family
+      ((max D Dq : ℕ) / (Fintype.card Fp : ℝ≥0∞)) :=
+  deployedConstraintXSqueezeSchedule_of_pinned family hB hkB hnB hgates hW hlin hltab hq
+    h3 hWD h4 hcomp (deployedConstraintXPinning_of_prefixDetermined family hcausal)
 
 end Zcash.Snark
