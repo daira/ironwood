@@ -231,42 +231,6 @@ theorem ipaRelation_deployed_of_openings_agree
 
 
 
-/-- **The computed member relation yields the `KnowledgeSoundness.SnarkRelation`.** The
-`SnarkRelationWithMemberColumns` the composition produces projects onto the plain `SnarkRelation`
-(`Soundness.KnowledgeSoundness`) at `circuitSat := circuitSatViaGates …` on the decoded member
-columns: its `opens` field is the IPA opening and its `satisfiesCircuit` field is exactly the gate
-check. This is the payload `ExtractableFromAcceptance` (`Soundness.Main`) *assumed* — an `IpaRelation`
-together with circuit satisfaction — now delivered on the computed path.
-
-That does *not* retire `ExtractableFromAcceptance`: what is delivered here is the payload's *shape*,
-from a `SnarkRelationWithMemberColumns` that the computed path still takes as supplied data
-(`pbatch`/`mdec`/`hquot`/`hgood` are supplied, not consequences of an accepting run). Producing
-them from a bare accepting run is the open composition surface. -/
-theorem snarkRelation_of_memberColumns {G : Type*} [AddCommGroup G] [Module Fp G]
-    [DecidableEq G] [Inhabited G] {shp : Shape} {urs : URS G} {hk : shp.k = urs.k}
-    {vk : VerifyingKey shp Fp G} {instanceCommitment : Fin shp.numProofs → ℕ → G} {ps : ProofString shp Fp G} {ch : Challenges shp.k Fp}
-    {P : G} {b : Fin (2 ^ urs.k) → Fp} {v : Fp} {pp : Fin shp.numProofs}
-    {numAdvice numInstance : ℕ} {adviceSet : Fin numAdvice → ℕ}
-    {hadviceSet : ∀ j, adviceSet j < deployedX4PairCount vk instanceCommitment ps ch}
-    {adviceMem : ∀ j : Fin numAdvice, Fin (deployedSetQueries vk instanceCommitment ps ch (adviceSet j)).length}
-    {instanceSet : Fin numInstance → ℕ}
-    {hinstanceSet : ∀ j, instanceSet j < deployedX4PairCount vk instanceCommitment ps ch}
-    {instanceMem : ∀ j : Fin numInstance,
-      Fin (deployedSetQueries vk instanceCommitment ps ch (instanceSet j)).length}
-    {fixedCols : ℕ → Polynomial Fp} {y : Fp} {ng : ℕ} {gates : Fin ng → Expr Fp}
-    {hpoly : Polynomial Fp} {deg : ℕ} {pU pW : Fp} {a : Fin (2 ^ urs.k) → Fp}
-    (hmem : SnarkRelationWithMemberColumns urs hk vk instanceCommitment ps ch P b v pp adviceSet hadviceSet adviceMem
-      instanceSet hinstanceSet instanceMem fixedCols y gates hpoly deg pU pW a) :
-    SnarkRelation urs P b v
-      (circuitSatViaGates fixedCols
-        (fun _ => rotatedFeed vk.omega vk.adviceQueryLayout (fun j : Fin numAdvice =>
-          coeffsToPoly ((hmem.memberDecode (adviceSet j) (hadviceSet j)).cols (adviceMem j))))
-        (fun _ => rotatedFeed vk.omega vk.instanceQueryLayout (fun j : Fin numInstance =>
-          coeffsToPoly ((hmem.memberDecode (instanceSet j) (hinstanceSet j)).cols (instanceMem j))))
-        y gates hpoly deg) a :=
-  ⟨hmem.opens, hmem.satisfiesCircuit⟩
-
-
 /-! ## G4 — the quantitative knowledge-error bound (conditional)
 
 The clean-opening failure `snarkFailureEvent` is already bounded

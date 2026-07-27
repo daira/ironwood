@@ -44,6 +44,8 @@ assert_axioms vk_chunk_width_le +native
 assert_axioms vk_lookup_input_degree_le +native
 assert_axioms vk_lookup_table_degree_le +native
 assert_axioms vk_quotient_tail_le +native
+assert_axioms vk_n_pred_le +native
+assert_axioms shape_k_pred_le +native
 -- The captured key's static checks: the query layouts cover the shape's counts, `ω` has order
 -- dividing `n`, and `n` does not vanish in `𝔽` — packaged for any family carrying this key.
 assert_axioms vk_advice_layout_length +native

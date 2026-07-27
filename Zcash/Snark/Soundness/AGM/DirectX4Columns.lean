@@ -25,10 +25,6 @@ variable {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
 
 local instance vestaInhabitedDirectX4 : Inhabited VestaG := ⟨0⟩
 
--- The same sealing the `x₁` unbatch uses: these unfold into the whole query assembly, and the
--- proofs below need only their equation lemmas.
-attribute [local irreducible] deployedSetQueries deployedX4PairCount x4BatchCommitments
-  deployedSetMemberCommitments
 
 /-- The set index whose compressed aggregate is `x₄` batch column `j`: the batch reads the pair
 list in reverse. -/
@@ -81,7 +77,6 @@ theorem x4BatchCommitments_eq_memberPowerSum {G : Type*} [AddCommGroup G] [Modul
 
 /-! ## The direct column representations -/
 
-set_option maxHeartbeats 1000000 in
 /-- **AGM coordinates for every `x₄` batch column, read off the online data.** Columns below the
 pair count take the `x₁` power sum of their set's member representations; the final column is the
 prover's `q′`, which carries its own representation. No interpolation, no rewind. -/
@@ -147,7 +142,6 @@ noncomputable def deployedX4ColumnRepresentationsOfCovered
 
 /-! ## The direct batch, without interpolation -/
 
-set_option maxHeartbeats 1000000 in
 /-- The aggregate coordinates an `AlgebraicWfProof` declares open to the deployed commitment. -/
 theorem aggregate_opens_deployedCommitment
     {vk : VerifyingKey shape Fp VestaG}
@@ -161,7 +155,6 @@ theorem aggregate_opens_deployedCommitment
   rw [p.multiopen_repr nu]
   exact (deployedCommitment_eq_multiopen vk instanceCommitment p.proof.1 _).symm
 
-set_option maxHeartbeats 1000000 in
 /-- **The deployed `x₄` batch, decoded directly.** The columns are read off the online coverage
 and the aggregate equation comes from the proof's own multiopen representation, so the
 batch-or-relation decision needs no offline interpolation — the drop-in replacement for the
@@ -194,7 +187,6 @@ interpolates: the `x₄` columns come from online coverage, the per-set `x₁` c
 member representations, and every disagreement returns explicit relation coefficients.
 -/
 
-set_option maxHeartbeats 4000000 in
 /-- **The deployed root outcome, decoded directly.** The interpolation-free counterpart of
 `deployedRootOutcomeOfOnline`: it needs no field-capacity hypothesis, because it never chooses
 ghost evaluation points. -/

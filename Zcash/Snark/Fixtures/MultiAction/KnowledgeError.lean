@@ -56,7 +56,6 @@ theorem orchard_deployed_knowledge_error_captured
     (deployedConstraintStaticChecks_of_captured family hvk)
     (deployedConstraintXSqueezeSchedule_captured family hvk hpinned) hDL
 
-set_option maxHeartbeats 4000000 in
 /-- **The captured-key bound on the interpolation-free route.** The same capstone, with the
 deployed root family built by `ofCovered`: its outcome is decoded from online coverage, so the
 statement rests on no field-capacity premise and no offline interpolation — only single-instance

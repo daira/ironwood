@@ -405,13 +405,15 @@ The sole remaining multiopen-specific proof is `DeployedRootSqueezeInvariance`. 
 final-output `OracleComp` interface does not encode when the data a root set reads was emitted,
 so the invariance is a stated causal premise, not derived from a final-output equality.
 
-TODO(#96): construct the deployed squeeze-invariance schedules from the deployed Rust transcript
-stages — each datum in a root set is emitted or read strictly before that event's squeeze — supply
-the concrete bounds, and wire them into the final concrete `constraintsBadAccept` capstone through
-a computable direct-coordinate outcome.  Discharge the premise for a degenerate family first
-(`tableReadingPinnedRootEvent` is the event-level witness; a constant-output family is the
-family-level one) so the premise shape is pinned satisfiable before the deployed construction.
-#96 must complete that construction before claiming a concrete executable DLOG solver. -/
+The direct-coordinate route is `ComputedDeployedRootFSFamily.ofCovered`
+(`AGM.DirectX4Columns`): it reads the `x4` columns off the online coverage instead of
+interpolating them, so it carries no field-capacity premise and this adapter is no longer the
+only way to supply an outcome.  `AGM.PinnedRootWitness` pins the invariance satisfiable at the
+family level (a constant-output family; `tableReadingPinnedRootEvent` is the event-level
+witness).
+
+What remains for a deployed family is the invariance itself, read off the Rust transcript
+stages — each datum in a root set is emitted or read strictly before that event's squeeze. -/
 noncomputable def ComputedDeployedRootFSFamily.ofOnline
     (family : ComputedOnlineMemberFSFamily shape)
     (hcapacity : shape.numPointSets + 1 <= Fintype.card Fp)

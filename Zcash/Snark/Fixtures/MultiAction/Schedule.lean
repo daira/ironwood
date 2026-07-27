@@ -34,7 +34,7 @@ noncomputable def deployedConstraintXSqueezeSchedule_captured
   have hk : 2 ^ shape.k - 1 = 2047 := by norm_num [shape]
   have h := deployedConstraintXSqueezeSchedule_of_pinned family
     (B := 2047) (W := 7) (Dc := 8188) (D := 20470) (Dq := 20470)
-    (by norm_num) (by omega)
+    (by norm_num) shape_k_pred_le
     (fun basis => by rw [hvk basis]; exact vk_n_pred_le)
     (fun basis => by rw [hvk basis]; exact vk_gates_degree_le)
     (fun basis => by rw [hvk basis]; exact vk_chunk_width_le)

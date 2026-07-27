@@ -4,8 +4,8 @@ import Zcash.Snark.Soundness.DegreeWalk
 /-!
 # The captured verifying key's degree budget
 
-The priced deployed capstone (`orchard_deployed_knowledge_error_priced`) takes the verifying
-key's degree arithmetic as `ℕ` hypotheses. This module evaluates them at the captured
+The `x`-squeeze schedule constructor (`deployedConstraintXSqueezeSchedule_of_pinned`) takes the
+verifying key's degree arithmetic as `ℕ` hypotheses. This module evaluates them at the captured
 Post-NU6.3 key: with `B = 2047` (both the opening degree `2¹¹ − 1` and the selector degree
 `n − 1`), every gate has `degreeBound ≤ 9`, every permutation chunk has width `≤ 7`, and every
 lookup expression compresses at `degreeBound ≤ 4` — so one literal `D = Dq = 20470` dominates

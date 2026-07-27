@@ -334,7 +334,6 @@ theorem witnessFamily_pairCount_at_run
   rw [witnessFamily_wrapped_run]
   exact deployedX4PairCount_witness _
 
-attribute [local irreducible] witnessVk witnessPs witnessIc
 
 /-- **An all-zero power batch exists whenever every column commitment vanishes.** The zero
 coordinates commit to the zero point, and every power sum of zeros is zero. -/
@@ -352,7 +351,6 @@ noncomputable def zeroPowerBatch {G : Type*} [AddCommGroup G] [Module Fp G]
   reconstructU := by simp
   reconstructW := by simp
 
-set_option maxHeartbeats 1000000 in
 /-- With no `x₄` pairs, the batch's only column is the prover's `q′`: the zero point. -/
 theorem x4BatchCommitments_witness (ν : Fin 11 → Fp)
     (basis : AugmentedIndex (2 ^ witnessShape.k) → VestaG)
@@ -427,10 +425,6 @@ noncomputable def zeroDeployedBatches {G : Type*} [AddCommGroup G] [Module Fp G]
   x1 := fun i hi => absurd hi (by omega)
 
 
--- The sealing above kept the heavy `x4BatchCommitments` lemma inside its budget; the
--- assembly below needs the witness data transparent again to match the family's fields.
-attribute [local semireducible] witnessVk witnessPs witnessIc
-
 /-- The wrapped run's aggregate coordinates are zero. -/
 theorem witnessFamily_run_aMulti (basis : AugmentedIndex (2 ^ witnessShape.k) → VestaG)
     (O : BTranscript Fp VestaG
@@ -455,7 +449,6 @@ theorem witnessFamily_run_multiBlind (basis : AugmentedIndex (2 ^ witnessShape.k
         (wrappedPreIpaReads ((wrappedAdversary witnessFamily basis).run O)) = 0 := by
   rw [witnessFamily_wrapped_run]; rfl
 
-set_option maxHeartbeats 2000000 in
 /-- Every `x₄` batch column at the wrapped run is the zero point. -/
 theorem x4BatchCommitments_witness_at_run
     (basis : AugmentedIndex (2 ^ witnessShape.k) → VestaG)
@@ -469,7 +462,6 @@ theorem x4BatchCommitments_witness_at_run
   rw [witnessFamily_wrapped_run]
   exact x4BatchCommitments_witness _ basis
 
-set_option maxHeartbeats 2000000 in
 /-- **The witness family's batch witness.** Everything is zero or vacuous: the canonical
 coordinates are the proved ones, the batches are the all-zero deployed batches, and every
 per-member field is empty because the `x₄` pair count vanishes. -/
@@ -535,7 +527,6 @@ theorem witnessProof_prefixesPre_injective
   revert this
   fin_cases i <;> fin_cases j <;> simp_all [preIpaLen, witnessShape, witnessFamily]
 
-set_option maxHeartbeats 2000000 in
 /-- **Reprogramming at one squeeze point moves only that read.** The proof is constant, so the
 points do not shift, and the points are pairwise distinct — so the other ten answers survive. -/
 theorem witnessFamily_reads_update
@@ -562,7 +553,6 @@ theorem witnessFamily_reads_update
 
 /-! ## The witness evaluations vanish -/
 
-set_option maxHeartbeats 1000000 in
 /-- The multiopen value of the zero data is zero, at every challenge record. -/
 theorem multiopenValue_witness_zero (ch : Challenges witnessShape.k Fp) :
     multiopenValue witnessVk witnessIc witnessPs ch = 0 := by
@@ -573,7 +563,6 @@ theorem multiopenValue_witness_zero (ch : Challenges witnessShape.k Fp) :
     Msm.add, expectedHEval, allExpressions, subProofExpressions, List.findIdx,
     multiopenEval]
 
-set_option maxHeartbeats 1000000 in
 /-- The recomputed base evaluation of the zero data is zero, at every challenge record. -/
 theorem deployedBaseEval_witness_zero (ch : Challenges witnessShape.k Fp) :
     deployedBaseEval witnessVk witnessIc witnessPs ch = 0 := by
@@ -660,7 +649,6 @@ theorem deployedX3RootSet_of_zero
 
 variable {basis : AugmentedIndex (2 ^ witnessShape.k) → VestaG}
 
-set_option maxHeartbeats 1000000 in
 /-- The `ξ` shift polynomial vanishes: every coordinate it is built from is zero. -/
 theorem ipaShiftXiPolynomial_witness (ν : Fin 11 → Fp) :
     ipaShiftXiPolynomial
@@ -672,7 +660,6 @@ theorem ipaShiftXiPolynomial_witness (ν : Fin 11 → Fp) :
   rw [multiopenValue_witness_zero]
   simp [ipaShiftXiPolynomial, witnessProof, commitGen]
 
-set_option maxHeartbeats 1000000 in
 /-- The `z` shift polynomial vanishes for the same reason. -/
 theorem ipaShiftZPolynomial_witness (ν : Fin 11 → Fp) :
     ipaShiftZPolynomial
@@ -686,7 +673,6 @@ theorem ipaShiftZPolynomial_witness (ν : Fin 11 → Fp) :
   rw [multiopenValue_witness_zero]
   simp [ipaShiftZPolynomial, witnessProof, commitGen]
 
-set_option maxHeartbeats 1000000 in
 /-- With no pairs, every `x₄` batch evaluation is the base evaluation — which vanishes. -/
 theorem x4BatchEvals_witness (ν : Fin 11 → Fp) :
     x4BatchEvals witnessVk witnessIc witnessPs (chRecord (k := witnessShape.k) ν (fun _ => 0))
@@ -699,7 +685,6 @@ theorem x4BatchEvals_witness (ν : Fin 11 → Fp) :
   simp only [x4BatchEvals, if_neg hi]
   exact deployedBaseEval_witness_zero _
 
-set_option maxHeartbeats 2000000 in
 /-- The `x₄` batch evaluations vanish at the wrapped run. -/
 theorem x4BatchEvals_witness_at_run
     (basis : AugmentedIndex (2 ^ witnessShape.k) → VestaG)
@@ -711,7 +696,6 @@ theorem x4BatchEvals_witness_at_run
   rw [witnessFamily_wrapped_run]
   exact x4BatchEvals_witness _
 
-set_option maxHeartbeats 4000000 in
 /-- The `ξ` shift polynomial vanishes at the wrapped run. -/
 theorem ipaShiftXiPolynomial_witness_at_run
     (basis : AugmentedIndex (2 ^ witnessShape.k) → VestaG)
@@ -731,7 +715,6 @@ theorem ipaShiftXiPolynomial_witness_at_run
   rw [witnessFamily_wrapped_run]
   exact ipaShiftXiPolynomial_witness _
 
-set_option maxHeartbeats 4000000 in
 /-- The `z` shift polynomial vanishes at the wrapped run. -/
 theorem ipaShiftZPolynomial_witness_at_run
     (basis : AugmentedIndex (2 ^ witnessShape.k) → VestaG)
@@ -784,7 +767,6 @@ theorem chRecord_update_seven (ν : Fin 11 → Fp) (v : Fp) :
 
 /-! ## The invariance -/
 
-set_option maxHeartbeats 8000000 in
 /-- **Every deployed root set at the witness family, evaluated.** Five of the six are empty; the
 `x₃` event's set is exactly the deployed point set, which the assembly reads off the `x` squeeze
 alone. -/
@@ -810,7 +792,6 @@ theorem deployedRootBad_witness (basis : AugmentedIndex (2 ^ witnessShape.k) →
       (witnessFamily_pairCount_at_run basis O)
   · simpa using deployedX1AllRootSet_witnessShape _ rfl _ _ _ _ _
 
-set_option maxHeartbeats 4000000 in
 /-- The update point of event `i` is the squeeze point at its challenge index. -/
 theorem deployedRootPoint_witness (basis : AugmentedIndex (2 ^ witnessShape.k) → VestaG)
     (O : BTranscript Fp VestaG
@@ -823,7 +804,6 @@ theorem deployedRootPoint_witness (basis : AugmentedIndex (2 ^ witnessShape.k) �
   rw [witnessFamily_wrapped_run]
   exact rfl
 
-set_option maxHeartbeats 8000000 in
 /-- Reprogramming the `x₃` answer leaves the deployed point set alone: the reads move only at
 index `7`, which is exactly an `x₃` record update, and the assembly never reads `x₃`. -/
 theorem deployedAllPts_witness_update
@@ -847,7 +827,6 @@ theorem deployedAllPts_witness_update
   rw [witnessFamily_reads_update basis O 7 v, chRecord_update_seven]
   exact deployedAllPts_x3_blind _ _ _ _ v
 
-set_option maxHeartbeats 8000000 in
 /-- **The pinned-root causal premise is satisfiable.** For the constant witness family every
 deployed root set is either empty or the deployed point set, and reprogramming an event's own
 squeeze answer moves neither — so `DeployedRootSqueezeInvariance` holds. -/

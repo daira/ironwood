@@ -265,11 +265,8 @@ assert_computable NontrivialDLRelation.ofIpaOpenings +choice
 /-! ### Verifier-soundness capstones -/
 
 assert_axioms deployedAccepts_verifierEq
-assert_axioms orchard_verifier_sound_conditional
 assert_axioms orchard_verifier_deployed_opening_of_forked
 assert_axioms orchard_verifier_deployed_constraint_of_forked
-assert_axioms orchard_verifier_sound_vesta_conditional +native
-assert_axioms orchard_verifier_vesta_opening_of_forked +native
 assert_axioms orchard_verifier_vesta_constraint_of_forked +native
 
 /-! ### Deployed binding-reduction breaks
@@ -508,7 +505,6 @@ below through explicit `PSum` outcomes and computable finders. Theorems througho
 -- budget below — is the remaining reconciliation. This stack is not consumed by the rewind-free
 -- constraint capstone below.
 assert_axioms ipaRelation_deployed_of_instance +native
-assert_axioms snarkRelation_of_memberColumns
 assert_axioms snarkExtraction_prob_le_of_generatorRO_textbookDL +native
 assert_axioms instanceAttempt_provenance +native
 assert_axioms ipaRelation_deployed_of_openings_agree +native
@@ -584,7 +580,7 @@ assert_axioms exists_accepting_good_challenge
 assert_axioms exists_accepting_good_challenge_quotient
 -- The deployed Vesta capstone family: the decoded-column rungs and the terminal, alongside the
 -- derived capstone already pinned below.
-assert_axioms orchard_verifier_vesta_decoded_constraint_of_forked_x4 +native
+assert_axioms orchard_verifier_vesta_member_constraint_deployed_x4 +native
 
 -- Deterministic verifier routing used by the rewind-free deployed constraint decoder.
 assert_axioms vanishing_query_mem_assembleQueries
@@ -689,7 +685,6 @@ assert_axioms perm_copy_constraints_of_chunk_products
 assert_axioms chunkName_injective_of_coset
 assert_axioms deployed_declared_equalities_of_identity_chunks
 assert_axioms circuitSatViaConstraints_of_check
-assert_axioms orchard_verifier_sound_vesta_constraints +native
 -- Closing the loop: the capstone hands over an opening paired with satisfaction of the whole
 -- constraint list, and the two arguments' relations are read back out of that same predicate.
 assert_axioms snarkRelation_constraints
