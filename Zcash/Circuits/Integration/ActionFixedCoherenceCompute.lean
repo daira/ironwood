@@ -1,7 +1,7 @@
 import Zcash.Circuits.Action.TopLevel
 import Zcash.Circuits.Integration.FixedColumns
 import Zcash.Circuits.Integration.ActionPermutationDomainCompute
-import Zcash.Snark.Keygen.FftSpec
+import Zcash.Snark.Keygen.Lagrange
 
 /-!
 # Interim closed computations for Action fixed-column coherence
@@ -23,7 +23,7 @@ Delete these computations once those compiler theorems construct the same facts.
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic (derivedUrsGLagrange omegaOf)
+open Zcash.Arithmetic (derivedUrsGLagrange derivedUrsGLagrange_length omegaOf)
 
 open Halo2
 open Zcash.Circuits.Action (orchardActionTopLevelCircuit)
@@ -127,13 +127,13 @@ noncomputable def ofDerived
       omegaOf orchardActionTopLevelCircuit.domainExponent =
         omegaOf urs.k
     rw [hk]
-  apply ofKeygen pp urs hk (Keygen.derivedUrsGLagrange_length urs)
+  apply ofKeygen pp urs hk (derivedUrsGLagrange_length urs)
   intro i
   simpa only [homega] using
     Keygen.ofPrefix_setup_of_closed urs hkUrs
       (Keygen.derivedUrsGLagrange_generator_eq urs hkUrs) i
       (by
-        rw [Keygen.derivedUrsGLagrange_length]
+        rw [derivedUrsGLagrange_length]
         exact i.isLt)
 
 assert_no_sorry queryCoverageFailures_eq_nil

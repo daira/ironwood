@@ -3,7 +3,7 @@ import Zcash.Circuits.Integration.FixedLayout
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 import Zcash.Circuits.Integration.SelectorCoherence
 import Zcash.Circuits.Integration.OperationLookups
-import Zcash.Snark.Keygen.LagrangeBasisKey
+import Zcash.Snark.Keygen.Lagrange
 
 /-!
 # Fixed-column commitment provenance

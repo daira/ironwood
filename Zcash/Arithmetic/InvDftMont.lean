@@ -3,7 +3,7 @@ Copyright (c) 2026 Ironwood Contributors.
 Released under the Apache License, Version 2.0.
 -/
 import Zcash.Arithmetic.ScalarFftEquiv
-import Zcash.Snark.Keygen.InvDft
+import Zcash.Arithmetic.InvDft
 import Zcash.Arithmetic.CommitLagrange
 import Zcash.Arithmetic.VestaModule
 
@@ -28,11 +28,7 @@ Everything is proven against `Fast.Msm.commitLagrangeSpec`, the naive `commit_la
 is where the bilinearity theorem lives.
 -/
 
-namespace Zcash.Snark.Keygen
-
-open Zcash.Arithmetic (WFs derivedUrsGLagrange fftS fftS_spec montValS montValS_mul montValS_ofNat ofPVesM omegaInvOf toNat_toLimbs8 toPVesM_ofPVesM val_lt_two_pow_256 valid_toPVesM_ofPVesM_ofAffine vestaFpModuleDef wfp_ofPVesM wfs_default wfs_mul wfs_ofNat)
-
-open Zcash.Snark
+namespace Zcash.Arithmetic
 open CompElliptic.Curves.Pasta.Fast
 open CompElliptic.Curves.Pasta.Fast.ProjectiveMont
 open CompElliptic.Curves.Pasta.Fast.ProjectiveMont (PM)
@@ -217,4 +213,4 @@ theorem take_derivedUrsGLagrange_montPre (c : ℕ) (hc : 0 < c) (urs : URS G) (h
   rw [commitMontPre_eq c hc 0 (List.ofFn urs.g) _
     (by rw [lagrangeRow_length, List.length_ofFn])]
 
-end Zcash.Snark.Keygen
+end Zcash.Arithmetic

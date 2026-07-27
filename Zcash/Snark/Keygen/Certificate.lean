@@ -1,5 +1,5 @@
 import Zcash.Snark.Keygen.Derivation
-import Zcash.Snark.Keygen.InvDftMont
+import Zcash.Arithmetic.InvDftMont
 import Zcash.Snark.Fixtures.SingleAction.Fixture
 
 /-!
@@ -63,7 +63,9 @@ The `ZcashKeygen` target builds this module explicitly; ordinary clients of
 
 namespace Zcash.Snark.Keygen
 
-open Zcash.Arithmetic (deltaFp derivedUrsGLagrange ofPVesM omegaOf)
+open Zcash.Arithmetic (commitInvDftMontWith commitInvDftMontWith_eq commitMontPre deltaFp
+  derivedUrsGLagrange invDftScaleMont invDftTwiddlesMont lagrangeRow ofPVesM omegaOf
+  take_derivedUrsGLagrange_montPre)
 
 open Zcash.Snark
 open Zcash.Snark.Fixture

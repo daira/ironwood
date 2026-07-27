@@ -1,5 +1,5 @@
 import Zcash.Circuits.Integration.FixedColumns
-import Zcash.Snark.Keygen.FftSpec
+import Zcash.Snark.Keygen.Lagrange
 import Zcash.Snark.Soundness.Canonical.PermutationSemantics
 
 /-!
@@ -26,7 +26,7 @@ every σ commitment unconditionally (`assembleQueries_permCommon_query`).
 
 namespace Zcash.Snark
 
-open Zcash.Arithmetic (derivedUrsGLagrange omegaOf)
+open Zcash.Arithmetic (derivedUrsGLagrange derivedUrsGLagrange_length omegaOf)
 
 open Halo2 Polynomial
 
@@ -100,7 +100,7 @@ namespace LagrangePrefixSetup
 setup for every supported Halo 2 domain. -/
 def ofDerived (urs : URS G) (hk : urs.k ≤ 32) :
     LagrangePrefixSetup urs where
-  length_eq := Keygen.derivedUrsGLagrange_length urs
+  length_eq := derivedUrsGLagrange_length urs
   generator_eq :=
     Keygen.ofPrefix_setup_of_closed urs hk
       (Keygen.derivedUrsGLagrange_generator_eq urs hk)

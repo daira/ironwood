@@ -2,8 +2,7 @@
 Copyright (c) 2026 Ironwood Contributors.
 Released under the Apache License, Version 2.0.
 -/
-import Zcash.Snark.Keygen.Pipeline
-import Zcash.Snark.Soundness.InnerProduct
+import Zcash.Arithmetic.Fft
 
 /-!
 # The DFT specification of `bestFftG`
@@ -38,18 +37,19 @@ generic in an `Fp`-module `G`. The `Module Fp G` premise is what lets the algori
 
 ## Wiring corollaries
 
-`derivedUrsGLagrange` is the scaled inverse FFT of the monomial URS. With
-`omegaInvOf_isPrimitiveRoot` (from `omegaInvOf_eq_inv` and the certified domain root) the DFT
-spec yields `derivedUrsGLagrange_generator_eq`: the `i`-th derived Lagrange generator is the
-monomial commitment to the closed Lagrange coefficient row `n⁻¹ · ω^(−i·t)`. Together with
-`derivedUrsGLagrange_length` this discharges — via `ofPrefix_setup_of_closed`
-(`Keygen/LagrangeBasisKey.lean`) — the per-URS setup obligations (`hgenerators`/`hprefix`) of
-the fixed- and permutation-commitment identification theorems, with no native certificate.
+`derivedUrsGLagrange` is the scaled inverse FFT of the monomial URS, and this module supplies
+what the verifier side spends on it: the DFT spec itself, `derivedUrsGLagrange_length`, and
+`omegaInvOf_isPrimitiveRoot` (from `omegaInvOf_eq_inv` and the certified domain root).
+
+`Zcash/Snark/Keygen/Lagrange.lean` puts them together into
+`derivedUrsGLagrange_generator_eq` — the `i`-th derived Lagrange generator is the monomial
+commitment to the closed Lagrange coefficient row `n⁻¹ · ω^(−i·t)` — and from there into the
+per-URS setup obligations of the fixed- and permutation-commitment identification theorems,
+with no native certificate. That step names `commit`, which is verifier-side vocabulary, so it
+cannot live here.
 -/
 
-namespace Zcash.Snark.Keygen
-
-open Zcash.Arithmetic (bestFftG bitreverse derivedUrsGLagrange omegaInvOf omegaOf omegaOf_isPrimitiveRoot powFast_eq_pow)
+namespace Zcash.Arithmetic
 
 /-! ## The pure bit-reversal function -/
 
@@ -915,31 +915,4 @@ theorem omegaInvOf_isPrimitiveRoot (k : ℕ) (hk : k ≤ 32) :
   rw [omegaInvOf_eq_inv k hk]
   exact (omegaOf_isPrimitiveRoot k hk).inv
 
-/-- **The derived Lagrange generators in closed form** (the roadmap's `generator_eq`): the
-`i`-th entry of `derivedUrsGLagrange` is the monomial commitment to the closed Lagrange
-coefficient row `n⁻¹ · ω^(−i·t)`. This is exactly the `hgen` input of
-`ofPrefix_setup_of_closed` (`Keygen/LagrangeBasisKey.lean`), which turns it into the
-`hgenerators`/`hprefix` setup obligations of the fixed- and permutation-commitment
-identification theorems. -/
-theorem derivedUrsGLagrange_generator_eq {G : Type} [AddCommGroup G] [Inhabited G]
-    [Module Fp G] (urs : URS G) (hk : urs.k ≤ 32) (i : Fin (2 ^ urs.k)) :
-    (derivedUrsGLagrange urs).getD (i : ℕ) 0 =
-      commit urs fun t : Fin (2 ^ urs.k) =>
-        (2 ^ urs.k : Fp)⁻¹ * (omegaOf urs.k)⁻¹ ^ ((i : ℕ) * (t : ℕ)) := by
-  have hsize0 : (List.ofFn urs.g).toArray.size = 2 ^ urs.k := by simp
-  have hdft := bestFftG_dft (List.ofFn urs.g).toArray (omegaInvOf urs.k) urs.k hsize0
-    (omegaInvOf_isPrimitiveRoot urs.k hk) i
-  have hlen : (bestFftG (List.ofFn urs.g).toArray (omegaInvOf urs.k) urs.k).toList.length =
-      2 ^ urs.k := by
-    simp [bestFftG_size]
-  rw [derivedUrsGLagrange, List.getD_eq_getElem?_getD, List.getElem?_map,
-    List.getElem?_eq_getElem (by rw [hlen]; exact i.isLt)]
-  simp only [Option.map_some, Option.getD_some, Array.getElem_toList]
-  rw [← getElem!_pos _ (i : ℕ) (by rw [bestFftG_size, hsize0]; exact i.isLt), hdft, val_smul,
-    Finset.smul_sum, commit]
-  refine Finset.sum_congr rfl fun t _ => ?_
-  rw [getElem!_pos _ (t : ℕ) (by rw [hsize0]; exact t.isLt)]
-  simp only [List.getElem_toArray, List.getElem_ofFn]
-  rw [smul_smul, omegaInvOf_eq_inv urs.k hk]
-
-end Zcash.Snark.Keygen
+end Zcash.Arithmetic
