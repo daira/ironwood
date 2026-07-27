@@ -1192,16 +1192,12 @@ duplicate-query rejection directly from `DeployedAccepts`.
 `CanonicalMemberConstraintRelation.ofAcceptedCircuitSat` uses those facts to turn
 satisfaction of the accepted run's canonical decoded-member model into the exact
 relation consumed by circuit integration.
-`Soundness/Deployed/ActionVk` now transports that closed terminal to the captured
-Action proof shape and verifying key using the keygen certificate. It no longer
-accepts lookup-selector realization: fixed coherence constructs those values inside
-the terminal. The module is imported by the root `Zcash` module, so `lake build Zcash` checks
-this deployed seam rather than leaving the capstone outside the build graph.
-The same module now also exports the captured-artifact
-`action_bundleStatement_or_relation_of_acceptedModel_circuitSat_deployed`. This is the
-entry point for the Vesta constraint-carrying relation: when the upstream capstone
-already supplies satisfaction of the canonical accepted model, it bypasses the
-node-binding reconstruction and consumes that satisfaction directly.
+`Soundness/Deployed/ActionVesta` carries the transport ingredients for the deployed
+seam — the fixture `k`-match and blinding-factor facts (`shape_k_eq_capturedURS_k`,
+`vk_blindingFactors_lt`) and the shape-generic `deployedInstanceCommitment` family —
+used to carry the generic Action/Vesta statements to the captured artifacts along
+the keygen certificate. The deployed capstone in `Soundness/Deployed/ActionVesta`
+consumes satisfaction of the canonical accepted model through that transport.
 `AcceptedModelClaimedEvaluations` is the corresponding verifier-native node-binding
 fingerprint: it states once that the canonical model's fixed/advice/instance,
 permutation, lookup, and row-selector polynomials evaluate to the accepted proof
@@ -1244,10 +1240,10 @@ or the shared augmented-basis relation. The theorem has no arbitrary key, decode
 constraint model, `S`, or `hencodes`; only explicitly priced good-challenge facts
 remain.
 
-At the captured artifacts,
-`action_bundleStatement_or_relation_of_acceptedModel_circuitSat_deployed` is the
-corresponding direct receiver for a `CircuitSat` proof over the canonical accepted
-model. `Soundness/Multiopen/CanonicalSelection` now constructs the advice and
+At the captured artifacts, the deployed capstone is the corresponding direct
+receiver for a `CircuitSat` proof over the canonical accepted model, obtained by
+transporting the generic Action/Vesta capstone.
+`Soundness/Multiopen/CanonicalSelection` now constructs the advice and
 instance slots forced by `CanonicalMemberConstraintRelation.acceptedRoute` and proves
 that their full polynomial feeds equal the canonical accepted model's feeds.
 `Soundness/Canonical/Vesta` specializes the verifier-native terminal's former free
