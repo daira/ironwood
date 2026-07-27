@@ -72,6 +72,16 @@ axiom: CompElliptic's curve point-count, a closed computational fact discharged 
 soundness (Pallas). The `+native` flag on the corresponding build-time checks records
 exactly which endpoints carry it.
 
+**`@[csimp]` replacement lemmas** get their own `assert_axioms` entries in
+`Zcash/TrustBoundary.lean`, enforced by `scripts/check_csimp_census.sh` in CI: the compiler
+applies a csimp substitution in all downstream compiled code, but the axioms of the lemma's
+own proof are not propagated into downstream `native_decide` axiom tracking (
+[lean4#7463](https://github.com/leanprover/lean4/issues/7463)), so the check must sit on the
+lemma itself. The underlying mechanism study — what `native_decide`, the interpreter, and
+precompiled native code actually trust — is
+[`design/lean-native-trust-research.md`](https://github.com/daira/CompElliptic/blob/main/design/lean-native-trust-research.md)
+in the CompElliptic repository.
+
 **Concrete, closed facts with no free variables** may additionally use `native_decide`
 (which discharges a goal by running compiled native code, adding a compiler-trust axiom) and
 the kernel's GMP-backed bignum arithmetic. The principal such fact in this repository is the
