@@ -1,5 +1,6 @@
 import Zcash.Snark.Fixtures.MaxShape
 import Zcash.Snark.Soundness.Composition.AlgebraicRootBudget
+import Zcash.Snark.Soundness.Composition.DeployedConstraintContainment
 
 /-!
 # Concrete composite-bound inputs for the captured Orchard shape
@@ -79,5 +80,51 @@ theorem consensusPinnedRootMultiopenModel_at_2pow122 :
     (by norm_num)
     (by norm_num [scalarFieldOrder, CompElliptic.Fields.Pasta.PALLAS_BASE_CARD]) using 1 <;>
     norm_num
+
+/-! ## Reduction efficiency
+
+The `dlogBound` premise below is the advantage of the *combined finder*, not of the raw
+adversary. Its cost model, kept outside Lean like the random-oracle model itself: one run of the
+wrapped adversary (`Q + 11 + k` oracle reads), the direct-coordinate decode of the retained
+representations (field operations linear in the representation lists, once per run), and a
+constant number of field solves (the challenge-programming reduction solves by one field
+division). A quantitative time-success model for DLOG — e.g. Pollard-rho work `t²/|group|` —
+should therefore be instantiated at `t ≈ T` plus that per-run overhead; at `T = 2¹²²` the
+comparison above is unaffected. -/
+
+/-- **The composite bound at the consensus maximum.** The rewind-free capstone specialized to
+the consensus-maximum shape (`numProofs = 2¹⁶ − 1`, `k = 11`) with the adversary's query budget
+capped at `Q ≤ T`: the multiopen contribution is exactly
+`consensusPinnedRootMultiopenModel T`, the term evaluated at `≤ 2⁻⁸⁶` for `T = 2¹²²` above. -/
+theorem snarkConstraintsDeployed_prob_le_at_consensus_max
+    {T' : Type*} [DecidableEq T'] (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex (2 ^ (shape orchardConsensusMaxProofs).k) → T')
+    (hquery : Function.Injective query)
+    (family : ComputedDeployedRootFSFamily (shape orchardConsensusMaxProofs))
+    (static : DeployedConstraintStaticChecks family)
+    {epsilonX dlogBound : ENNReal}
+    (schedule : DeployedConstraintXSqueezeSchedule family epsilonX)
+    (hDL : TextbookDLWithCoinsAdvantageLE B
+      (deployedConstraintRelationFinder family
+        (deployedConstraintQuotientFinder family)) dlogBound)
+    {T : ℕ} (hQ : family.Q ≤ T) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          snarkExtractionFailureEventDeployed family.toFamily
+            (deployedConstraintDecodedOfOutcome family
+              (deployedConstraintOutcomeProviderOfRoot family static)))
+      ≤ ((T + 11) * (3 / Fintype.card Fp) +
+          (T + 1 : ℕ) * (1 / Fintype.card Fp) +
+          (dlogBound + 1 / Fintype.card Fp))
+        + consensusPinnedRootMultiopenModel T
+        + (T + 1 : ℕ) * epsilonX := by
+  refine le_trans (snarkConstraintsDeployed_prob_le_of_root_schedule B hB query hquery
+    family static schedule hDL) ?_
+  rw [consensusPinnedRootMultiopenModel]
+  have hk : (shape orchardConsensusMaxProofs).k = 11 := rfl
+  simp only [hk]
+  gcongr
+  exact le_rfl
 
 end Zcash.Snark.FixtureMax

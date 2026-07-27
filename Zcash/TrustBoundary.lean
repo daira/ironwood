@@ -31,6 +31,7 @@ import Zcash.Snark.Soundness.PermutationRows
 import Zcash.Snark.Soundness.ConstraintRelations
 import Zcash.Snark.Soundness.ChallengePricing
 import Zcash.Snark.Soundness.DegreeWalk
+import Zcash.Snark.Soundness.Composition.ScheduleBudget
 
 /-!
 # Trust boundary, build-checked
@@ -747,6 +748,15 @@ assert_axioms preX4SqueezePoint_inj
 -- explicit cap — gates by `Expr.degreeBound`, permutation chunks by width, lookups by their
 -- compressed expressions — the combined bound the `x`-squeeze schedule's `epsilonX` prices.
 assert_axioms natDegree_combineConstraints_le
+-- The schedule, priced (`Composition.ScheduleBudget`): the committed carriers stay under the
+-- walk's caps, root witnesses at one table share the family's own outcome so the root set
+-- collapses across fork tapes, and the schedule constructor discharges `measure_le` outright —
+-- `pinned` stays the named causal premise.
+assert_axioms natDegree_committedPreXConstraintDifference_le
+assert_axioms natDegree_deployedConstraintDifferenceOfRoot_le +native
+assert_axioms deployedConstraintDifference_witness_congr +native
+assert_axioms deployedConstraintXBadSet_measure_le +native
+assert_axioms deployedConstraintXSqueezeSchedule_of_pinned +native
 assert_axioms snarkExtractionDeployed_prob_le_via_wrapped_pinned_roots +native
 assert_axioms ComputedDeployedRootFSFamily.deployedRelation_prob_le_of_generatorRO_textbookDL +native
 assert_axioms deployedRootFailure_subset_landing +native
