@@ -49,6 +49,8 @@ the fixed- and permutation-commitment identification theorems, with no native ce
 
 namespace Zcash.Snark.Keygen
 
+open Zcash.Arithmetic (bestFftG bitreverse derivedUrsGLagrange omegaInvOf omegaOf omegaOf_isPrimitiveRoot powFast_eq_pow)
+
 /-! ## The pure bit-reversal function -/
 
 /-- Pure structural spelling of `bitreverse`: peel the low bit of `n` onto the top of the

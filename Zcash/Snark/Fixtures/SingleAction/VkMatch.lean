@@ -1,5 +1,5 @@
 import Zcash.Snark.Fixtures.SingleAction.Fixture
-import Zcash.Snark.Core.Domain
+import Zcash.Arithmetic.Domain
 import Zcash.Snark.Keygen.Pipeline
 import Zcash.Circuits.Action.TopLevel
 import Clean.Halo2.TopLevelKeygen
@@ -39,6 +39,8 @@ directory for the discipline).
 -/
 
 namespace Zcash.Snark.Fixture
+
+open Zcash.Arithmetic (deltaFp omegaOf)
 
 open Halo2
 open Zcash.Circuits.Action (orchardActionTopLevelCircuit)

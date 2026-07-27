@@ -1,4 +1,4 @@
-import Zcash.Snark.Core.Domain
+import Zcash.Arithmetic.Domain
 import Clean.Halo2.TopLevelKeygen
 import Zcash.Circuits.Integration.PolynomialEnvironment
 
@@ -63,24 +63,24 @@ variable
 /-- The circuit-derived domain generator has exact order `2^k`. -/
 theorem domainRoot
     (hbound : top.domainExponent < 33) :
-    Zcash.Snark.omegaOf top.domainExponent ^
+    Zcash.Arithmetic.omegaOf top.domainExponent ^
       (2 ^ top.domainExponent) = 1 := by
-  simpa using Zcash.Snark.omegaOf_domain
+  simpa using Zcash.Arithmetic.omegaOf_domain
     top.domainExponent 1 (by omega)
 
 /-- Circuit-derived domain row names are injective. -/
 theorem domainRowsInjective
     (hbound : top.domainExponent < 33) :
     Function.Injective fun row : Fin (2 ^ top.domainExponent) =>
-      Zcash.Snark.omegaOf top.domainExponent ^ (row : ℕ) :=
-  Zcash.Snark.omegaOf_powers_injective
+      Zcash.Arithmetic.omegaOf top.domainExponent ^ (row : ℕ) :=
+  Zcash.Arithmetic.omegaOf_powers_injective
     top.domainExponent (by omega)
 
 /-- The circuit-derived domain size is nonzero in the verifier scalar field. -/
 theorem domainSizeCastNeZero
     (hbound : top.domainExponent < 33) :
     (((2 ^ top.domainExponent : ℕ) : Fp)) ≠ 0 :=
-  Zcash.Snark.domainSize_cast_ne_zero
+  Zcash.Arithmetic.domainSize_cast_ne_zero
     top.domainExponent (by omega)
 
 /-- A fitting top-level circuit has fewer blinding rows than domain rows. -/
@@ -104,7 +104,7 @@ theorem blindingFactors_succ_lt_domainSize
 /-- The row-indexed Clean environment for this bundle member. -/
 def environment
     (assignment : TopLevelAssignment top numProofs proofIndex) : Environment Fp :=
-  polynomialEnvironment (Zcash.Snark.omegaOf top.domainExponent)
+  polynomialEnvironment (Zcash.Arithmetic.omegaOf top.domainExponent)
     (top.usableRowsAt top.domainExponent)
     (fun column => assignment.polynomial (.fixedCol column))
     (fun column => assignment.polynomial
@@ -129,7 +129,7 @@ def placedEnvironment
     (column : Column .fixed) (row : ℤ) :
     assignment.environment.fixed column row =
       (assignment.polynomial (.fixedCol column.index)).eval
-        (Zcash.Snark.omegaOf top.domainExponent ^ row) :=
+        (Zcash.Arithmetic.omegaOf top.domainExponent ^ row) :=
   rfl
 
 @[simp] theorem environment_advice
@@ -138,7 +138,7 @@ def placedEnvironment
     assignment.environment.advice column row =
       (assignment.polynomial
         (.adviceCol proofIndex column.index)).eval
-          (Zcash.Snark.omegaOf top.domainExponent ^ row) :=
+          (Zcash.Arithmetic.omegaOf top.domainExponent ^ row) :=
   rfl
 
 @[simp] theorem environment_instance
@@ -147,7 +147,7 @@ def placedEnvironment
     assignment.environment.inst column row =
       (assignment.polynomial
         (.instanceCol proofIndex column.index)).eval
-          (Zcash.Snark.omegaOf top.domainExponent ^ row) :=
+          (Zcash.Arithmetic.omegaOf top.domainExponent ^ row) :=
   rfl
 
 /--

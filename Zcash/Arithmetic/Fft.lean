@@ -2,8 +2,8 @@
 Copyright (c) 2026 Ironwood Contributors.
 Released under the Apache License, Version 2.0.
 -/
-import Zcash.Snark.Core.Domain
-import Zcash.Snark.Core.Group
+import Zcash.Arithmetic.Domain
+import Zcash.Arithmetic.Group
 
 /-!
 # The Rust-mirroring group FFT and the derived Lagrange basis
@@ -25,9 +25,7 @@ The last section abstracts the loop nest itself (`fftGen`) and reduces it to pur
 proven against — currently the scalar Montgomery one, `Zcash/Arithmetic/ScalarFftEquiv.lean`.
 -/
 
-namespace Zcash.Snark.Keygen
-
-open Zcash.Snark
+namespace Zcash.Arithmetic
 
 variable {G : Type} [AddCommGroup G] [Inhabited G]
 
@@ -251,4 +249,4 @@ theorem fftGen_eq_folds {α τ : Type} [Inhabited α] [Inhabited τ] (add sub : 
           ((List.range a0.size).foldl (permStep logN) a0) := by
   rw [fftGen_decompose, roundsGen_eq_foldl, foldl_rounds_half, brPermGen_eq_foldl]
 
-end Zcash.Snark.Keygen
+end Zcash.Arithmetic

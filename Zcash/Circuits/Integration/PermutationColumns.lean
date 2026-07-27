@@ -26,6 +26,8 @@ every σ commitment unconditionally (`assembleQueries_permCommon_query`).
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (derivedUrsGLagrange omegaOf)
+
 open Halo2 Polynomial
 
 set_option maxHeartbeats 20000
@@ -83,11 +85,11 @@ theorem permutationCommonCommitmentAt_of_lt
 /-- The setup facts needed by prefix-based Lagrange commitments. -/
 structure LagrangePrefixSetup (urs : URS G) : Prop where
   length_eq :
-    (Keygen.derivedUrsGLagrange urs).length = 2 ^ urs.k
+    (derivedUrsGLagrange urs).length = 2 ^ urs.k
   generator_eq :
     ∀ i : Fin (2 ^ urs.k),
-      (i : ℕ) < (Keygen.derivedUrsGLagrange urs).length →
-        (Keygen.derivedUrsGLagrange urs).getD (i : ℕ) 0 =
+      (i : ℕ) < (derivedUrsGLagrange urs).length →
+        (derivedUrsGLagrange urs).getD (i : ℕ) 0 =
           commit urs (polynomialCoefficients (2 ^ urs.k)
             (rowPolynomial (omegaOf urs.k)
               (Pi.single i (1 : Fp))))
@@ -146,7 +148,7 @@ theorem commitment_ofKeygen
     topLevelPermutationCommitment top urs column =
       (LagrangeCommitmentKey.ofPrefix urs
         (omegaOf urs.k)
-        (Keygen.derivedUrsGLagrange urs)
+        (derivedUrsGLagrange urs)
         setup.generator_eq).commitInstance
           (topLevelPermutationRows top column) 1 := by
   unfold topLevelPermutationColumnCount at hcolumn

@@ -18,6 +18,8 @@ decoded multiopen resolver is one downstream instance.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (Msm)
+
 open Polynomial
 
 set_option maxHeartbeats 20000

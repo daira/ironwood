@@ -21,6 +21,7 @@ the circuit-owned instance.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (derivedUrsGLagrange)
 open Halo2 Polynomial
 open CompElliptic.Curves.Pasta
 
@@ -299,9 +300,9 @@ theorem fixedCommitment_eq_commitInstance
     (top : TopLevelCircuit Fp ConfigInput Config Output)
     (pp : Keygen.ProofParams) (urs : URS G)
     (hk : top.domainExponent = urs.k)
-    (hlen : (Keygen.derivedUrsGLagrange urs).length = 2 ^ urs.k)
+    (hlen : (derivedUrsGLagrange urs).length = 2 ^ urs.k)
     (hgenerators : ∀ i : Fin (2 ^ urs.k),
-      (Keygen.derivedUrsGLagrange urs).getD (i : ℕ) 0 =
+      (derivedUrsGLagrange urs).getD (i : ℕ) 0 =
         commit urs (polynomialCoefficients (2 ^ urs.k)
           (rowPolynomial (top.toVerifierKey pp urs).omega
             (Pi.single i (1 : Fp)))))
@@ -309,7 +310,7 @@ theorem fixedCommitment_eq_commitInstance
     (top.toVerifierKey pp urs).fixedCommitment column =
       (LagrangeCommitmentKey.ofFullList
         urs (top.toVerifierKey pp urs).omega
-        (Keygen.derivedUrsGLagrange urs) hgenerators).commitInstance
+        (derivedUrsGLagrange urs) hgenerators).commitInstance
           (top.fixedRows.getD column []) 1 := by
   rw [top.toVerifierKey_fixedCommitment]
   have hcolumnRows : column < top.fixedRows.length := by
@@ -318,10 +319,10 @@ theorem fixedCommitment_eq_commitInstance
       (top.fixedRows.map
         (Fast.Msm.commitLagrangeFastWith
           Fast.Msm.defaultWindow urs.w
-          (Keygen.derivedUrsGLagrange urs))).getD column 0 =
+          (derivedUrsGLagrange urs))).getD column 0 =
         Fast.Msm.commitLagrangeFastWith
           Fast.Msm.defaultWindow urs.w
-          (Keygen.derivedUrsGLagrange urs)
+          (derivedUrsGLagrange urs)
           (top.fixedRows.getD column []) := by
     rw [List.getD_eq_getElem?_getD, List.getElem?_map,
       List.getElem?_eq_getElem hcolumnRows,
@@ -348,9 +349,9 @@ def ofKeygen
     (top : TopLevelCircuit Fp ConfigInput Config Output)
     (pp : Keygen.ProofParams) (urs : URS G)
     (hk : top.domainExponent = urs.k)
-    (hlen : (Keygen.derivedUrsGLagrange urs).length = 2 ^ urs.k)
+    (hlen : (derivedUrsGLagrange urs).length = 2 ^ urs.k)
     (hgenerators : ∀ i : Fin (2 ^ urs.k),
-      (Keygen.derivedUrsGLagrange urs).getD (i : ℕ) 0 =
+      (derivedUrsGLagrange urs).getD (i : ℕ) 0 =
         commit urs (polynomialCoefficients (2 ^ urs.k)
           (rowPolynomial (top.toVerifierKey pp urs).omega
             (Pi.single i (1 : Fp)))))
@@ -370,7 +371,7 @@ def ofKeygen
   key :=
     LagrangeCommitmentKey.ofFullList
       urs (top.toVerifierKey pp urs).omega
-      (Keygen.derivedUrsGLagrange urs) hgenerators
+      (derivedUrsGLagrange urs) hgenerators
   rows := fun column => top.fixedRows.getD column []
   commitment :=
     fixedCommitment_eq_commitInstance

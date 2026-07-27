@@ -1,34 +1,46 @@
 /-
-Copyright (c) 2026 Ironwood Contributors.
-Released under the Apache License, Version 2.0.
+Copyright (c) 2026 CompPoly Contributors. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Gregor Mitscha-Baude
 -/
 import CompElliptic.Vendor.CompPoly.Montgomery.Native64x8Defs
 
-/-!
-# The radix-2 DIT FFT over the scalar field: runtime definitions (core-only)
+/-
+Vendored **verbatim** from CompPoly branch `fast_multilimb_fields`
+(`CompPoly/Fields/Montgomery/ScalarFft.lean`); see `README.md` in this directory.
 
-The **scalar** twin of `CompElliptic.Curves.Pasta.Fast.ProjectiveMontDefs`' group FFT: the very same
-bit-reversal-plus-butterflies loop nest, with the group operations replaced by the field
-operations of the Vesta scalar field (`= PALLAS_BASE_CARD`, the Pallas *base* field in the
-Pasta naming) over eight-limb Montgomery residues — a twiddle multiply where the group
-version runs a 256-step double-and-add ladder, and field add/sub where it runs complete
-projective addition.
-
-The certificate uses it to trade the group-side inverse FFT that builds the derived Lagrange
-basis for a scalar-side one on the commitment coefficients
-(`Zcash.Snark.Keygen.commitLagrangeSpec_derivedUrsGLagrange`).
-
-Like its group sibling this module is core-only: it is part of the `FastFieldNative`
-precompiled lane, so it must import nothing beyond Lean core.  All proofs live in
-`Zcash.Arithmetic.ScalarFftEquiv`.
+The single edit is the import line: upstream imports its own
+`CompPoly.Fields.Montgomery.Native64x8Defs`, whereas on this branch the eight-limb definitions
+(same `Montgomery.Native64x8` namespace) arrive through the CompElliptic pin's vendored copy,
+`CompElliptic.Vendor.CompPoly.Montgomery.Native64x8Defs`. Everything below — including the
+`Montgomery.ScalarFft` namespace and the explicit `(q, negInv)` parameters — is upstream's text,
+so a pin bump that carries the scalar FFT is an import-line change only. The monomorphic entry
+point ironwood needs lives mathlib-side in `Zcash.Arithmetic.ScalarFftEquiv`.
 -/
 
-namespace Zcash.Vendor.ScalarMont
+/-!
+# Radix-2 DIT FFT over eight-limb Montgomery elements (zero-import)
 
-open Montgomery.Native64x8 (Limbs8)
-open Montgomery.Native64x8.PallasFq
+An in-place radix-2 decimation-in-time FFT over `Limbs8` Montgomery residues: a bit-reversal
+permutation followed by `logN` rounds of butterflies against a precomputed Montgomery-form
+twiddle table.  Like the arithmetic in `CompPoly.Fields.Montgomery.Native64x8Defs`, the loop
+nest is generic over the modulus, taking `q` and `negInv` explicitly.
 
-/-- Bit-reversal permutation index (mirrors `PM.bitreverse`). -/
+As explained in `CompPoly.Fields.Montgomery.Native64x8Defs`, this module deliberately imports
+nothing beyond that (itself zero-import) module: downstream consumers put it into
+`precompileModules` native-compilation lanes, and `precompileModules` compiles the
+entire import closure — so the runtime definitions must not pull in mathlib.
+
+This module contains runtime definitions only; correctness specifications live downstream
+for now.
+-/
+
+namespace Montgomery
+namespace ScalarFft
+
+open Native64x8 (Limbs8 add sub mul)
+
+/-- Bit-reversal permutation index. -/
 def bitreverse (n l : Nat) : Nat := Id.run do
   let mut r := 0
   let mut m := n
@@ -37,10 +49,10 @@ def bitreverse (n l : Nat) : Nat := Id.run do
     m := m >>> 1
   return r
 
-/-- In-place radix-2 DIT FFT over the scalar field (mirrors `PM.fft` butterfly for butterfly):
-bit-reversal permutation, then `logN` rounds of butterflies against the Montgomery-form
-twiddles `tw`, with `mul`/`add`/`sub` where the group version has `pnsmul`/`padd`/`pneg`. -/
-def fft (a0 : Array Limbs8) (tw : Array Limbs8) (logN : Nat) : Array Limbs8 := Id.run do
+/-- In-place radix-2 DIT FFT over eight-limb Montgomery residues modulo `q`: bit-reversal
+permutation, then `logN` rounds of butterflies against the Montgomery-form twiddles `tw`. -/
+def fft (q : Limbs8) (negInv : UInt64) (a0 : Array Limbs8) (tw : Array Limbs8)
+    (logN : Nat) : Array Limbs8 := Id.run do
   let n := a0.size
   let mut a := a0
   for k in [0:n] do
@@ -60,10 +72,11 @@ def fft (a0 : Array Limbs8) (tw : Array Limbs8) (logN : Nat) : Array Limbs8 := I
         let aIdx := s + j
         let bIdx := s + half + j
         let aOld := a[aIdx]!
-        let t := mul twdl a[bIdx]!
-        a := a.set! aIdx (add aOld t)
-        a := a.set! bIdx (sub aOld t)
+        let t := mul q negInv twdl a[bIdx]!
+        a := a.set! aIdx (add q aOld t)
+        a := a.set! bIdx (sub q aOld t)
     half := chunk
   return a
 
-end Zcash.Vendor.ScalarMont
+end ScalarFft
+end Montgomery
