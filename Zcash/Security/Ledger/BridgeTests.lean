@@ -222,14 +222,57 @@ assert_axioms Zcash.Security.Ledger.BridgeTests.enable_output_disabled_forces_ze
 -- The refinements instantiated at the deployed Pallas bases sit one tier up: their proofs
 -- consume `native_decide` certificates — the fixed-base window tables and CompElliptic's
 -- Pallas point count (`pallas_natCard`) — so `+native` is the whole of the extra budget.
-assert_axioms Zcash.Security.Ledger.BridgeTests.alpha_scaling +native
-assert_axioms Zcash.Security.Ledger.BridgeTests.value_commit_positive_scaling +native
-assert_axioms Zcash.Security.Ledger.BridgeTests.value_commit_negative_scaling +native
-assert_axioms Zcash.Security.Ledger.BridgeTests.or_break_iff_guarded_smoke +native
-assert_axioms Zcash.Security.Ledger.BridgeTests.path_iff_guarded_smoke +native
-assert_axioms Zcash.Security.Ledger.Bridge.guardedPath_of_exact +native
-assert_axioms Zcash.Security.Ledger.BridgeTests.spec_post_bridge_smoke +native
-assert_axioms Zcash.Security.Ledger.BridgeTests.circuit_soundness_bridge_smoke +native
+assert_axioms Zcash.Security.Ledger.BridgeTests.alpha_scaling +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check)
+assert_axioms Zcash.Security.Ledger.BridgeTests.value_commit_positive_scaling +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_axioms Zcash.Security.Ledger.BridgeTests.value_commit_negative_scaling +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_axioms Zcash.Security.Ledger.BridgeTests.or_break_iff_guarded_smoke +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_axioms Zcash.Security.Ledger.BridgeTests.path_iff_guarded_smoke
+assert_axioms Zcash.Security.Ledger.Bridge.guardedPath_of_exact +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_axioms Zcash.Security.Ledger.BridgeTests.spec_post_bridge_smoke +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Concrete.PallasGroup.pallas_base_card_lt_scalar_card,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_axioms Zcash.Security.Ledger.BridgeTests.circuit_soundness_bridge_smoke +native(
+  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Security.Concrete.PallasGroup.pallas_base_card_lt_scalar_card,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 
 -- The onward reduction from classified break data to the games-facing
 -- discrete-log-relation object is likewise a computation: the coefficients are a
@@ -240,7 +283,21 @@ assert_computable Zcash.Security.Ledger.Bridge.breakCoeffs +choice
 -- computable per the breaks-as-computed-data convention.  Their erased `Prop` fields
 -- additionally carry the deployed base points' on-curve certificates, which are
 -- `native_decide` checks, so they sit one tier up at `+choice +native`.
-assert_computable Zcash.Security.Ledger.Bridge.relationOfBreakData +choice +native
-assert_computable Zcash.Security.Ledger.Bridge.classifyRelation +choice +native
+assert_computable Zcash.Security.Ledger.Bridge.relationOfBreakData +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_computable Zcash.Security.Ledger.Bridge.classifyRelation +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
 
 end Zcash.Security.Ledger.BridgeTests
