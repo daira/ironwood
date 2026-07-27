@@ -40,7 +40,7 @@ determine their verifier commitments. If all challenge exclusions hold, the
 accepted proof bundle satisfies the Action specification, unless the supplied
 URS admits a nontrivial discrete-log relation.
 -/
-theorem actionBundleStatement_or_relation_of_deployedAccepts
+theorem action_bundleStatement_or_relation_of_deployedAccepts
     (pp : ProofParams) (urs : URS VestaG)
     (hk :
       (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
@@ -229,11 +229,11 @@ theorem actionBundleStatement_or_relation_of_deployedAccepts
           permutationExclusions lookupExclusions)
   rcases hgeneric with htop | hrelation
   · exact
-      actionBundleStatement_or_relation_of_acceptedTopLevelBundle
+      action_bundleStatement_or_relation_of_accepted_topLevelBundleStatement
         pp urs hk inputs ps ch pU pW a₀ pbatch memberDecode
         haccepts htop
   · exact Or.inr hrelation
 
-assert_no_sorry actionBundleStatement_or_relation_of_deployedAccepts
+assert_no_sorry action_bundleStatement_or_relation_of_deployedAccepts
 
 end Zcash.Snark

@@ -64,7 +64,7 @@ theorem actionPublicInputs_of_instanceRowPolynomial
 Present the generic top-level bundle statement as the public Orchard Action
 statement once the accepted primary-instance polynomial has been identified.
 -/
-theorem actionBundleStatement_of_topLevelBundle
+theorem action_bundleStatement_of_topLevelBundleStatement
     (pp : Keygen.ProofParams)
     (poly : CommitmentId → Polynomial Fp)
     (inputs :
@@ -118,6 +118,6 @@ theorem actionBundleStatement_of_topLevelBundle
         assignment.environment) at hstatement
   rwa [hpublic] at hstatement
 
-assert_no_sorry actionBundleStatement_of_topLevelBundle
+assert_no_sorry action_bundleStatement_of_topLevelBundleStatement
 
 end Zcash.Snark

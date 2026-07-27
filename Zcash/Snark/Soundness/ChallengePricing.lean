@@ -516,7 +516,7 @@ noncomputable def allResolverLookupBetaBadSet
 
 /-- Avoiding the bundle-wide lookup bad sets supplies the good-challenge record for every proof
 and every deployed lookup argument. -/
-theorem allResolverLookupGoodChallenges_of_not_mem
+theorem resolverLookupGoodChallenges_of_not_mem
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → Polynomial Fp) (u : ℕ)
@@ -805,7 +805,7 @@ structure ResolverPermutationChallengeExclusions
 
 /-- Avoiding the bundle-wide permutation bad sets supplies the good-challenge record for every
 proof. -/
-theorem allResolverPermutationGoodChallenges_of_not_mem
+theorem resolverPermutationGoodChallenges_of_not_mem
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → Polynomial Fp) (m : ℕ)
@@ -832,7 +832,7 @@ theorem ResolverPermutationChallengeExclusions.good
       ResolverPermutationChallengeExclusions vk ch poly m) :
     ∀ p : Fin shape.numProofs,
       ResolverPermutationGoodChallenges vk ch poly p m :=
-  allResolverPermutationGoodChallenges_of_not_mem
+  resolverPermutationGoodChallenges_of_not_mem
     vk ch poly m exclusions.gamma exclusions.beta
 
 /-- One resolver permutation `γ` exclusion costs at most two challenge values per active

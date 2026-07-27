@@ -204,7 +204,7 @@ commitment with the verifier-supplied instance commitment, and concludes that th
 decoded polynomial is the canonical row polynomial or computes the shared nontrivial
 relation. The binding-aware Action endpoint invokes this theorem internally; it no
 longer accepts the decoded-polynomial equality as a premise.
-`ActionInstanceCommitment.actionBundleStatement_or_relation_of_canonicalRelation`
+`ActionInstanceCommitment.action_bundleStatement_or_relation_of_canonicalMemberConstraintRelation`
 constructs the Lagrange key from the monomial URS, derives the commitment from the
 ten supplied rows, and discharges primary-column registration. The generic query
 compiler proves that configure-registered layouts survive
@@ -345,7 +345,7 @@ That endpoint now has a canonical, bundle-wide type.
 from the decoded members and the deployed assembled-query route, then constructs the
 entire constraint model from the accepted VK. Fixed columns, permutation sets/chunks,
 lookups, and selector polynomials are no longer free relation parameters.
-`actionBundleStatement_of_canonicalRelation` consumes this relation and concludes
+`action_bundleStatement_of_canonicalMemberConstraintRelation` consumes this relation and concludes
 the concrete `Action.BundleStatement`, with no abstract `S` or `hencodes` premise and
 with the key locked to `orchardActionTopLevelCircuit.toVerifierKey`. It now derives
 the complete gate family internally from canonical constraint satisfaction and the
@@ -353,7 +353,7 @@ circuit-owned gate/selector coherence package. The binding-aware endpoint additi
 constructs the fixed and copy families; exact lookup-selector projection is the last
 deterministic family input.
 The binding-aware
-`actionBundleStatement_or_relation_of_canonicalRelation` constructs
+`action_bundleStatement_or_relation_of_canonicalMemberConstraintRelation` constructs
 `TopLevelFixedCoherence` from the Action circuit, its derived key, and the symbolic
 Lagrange-basis theorem, then derives the selector-activation and fixed/table families.
 It also constructs copy replay from the canonical permutation semantics, preserving
@@ -1134,7 +1134,7 @@ per-member.
 sub-proof commitment slots remain disjoint. The accepted-route selector and Vesta
 terminal now reconstruct advice and instance feeds separately for every
 `Fin shape.numProofs`; there is no distinguished proof index or singleton-shape
-premise. `actionBundleStatement_or_relation_of_deployedAccepts` exposes that fact at
+premise. `action_bundleStatement_or_relation_of_deployedAccepts` exposes that fact at
 the public API over arbitrary `ProofParams` and returns the bundle-wide Action
 statement.
 
@@ -1147,7 +1147,7 @@ the circuit-generic
 for an arbitrary `TopLevelCircuit`. `TopLevelCircuitCorrectness` exposes the named
 gate, fixed/selector, copy, and lookup representation boundaries and deliberately
 contains neither the desired statement nor an opaque encoding implication.
-`actionBundleStatement_or_relation_of_deployedAccepts` specializes that theorem with
+`action_bundleStatement_or_relation_of_deployedAccepts` specializes that theorem with
 the Action correctness constructor, then identifies the primary instance
 polynomial and presents the circuit-owned statement as `Action.BundleStatement`.
 Both the generic and Action theorems quantify over arbitrary proof parameters and
@@ -1192,7 +1192,7 @@ accepts lookup-selector realization: fixed coherence constructs those values ins
 the terminal. The module is imported by the root `Zcash` module, so `lake build Zcash` checks
 this deployed seam rather than leaving the capstone outside the build graph.
 The same module now also exports the captured-artifact
-`actionBundleStatement_or_relation_of_acceptedCircuitSat_deployed`. This is the
+`action_bundleStatement_or_relation_of_acceptedModel_circuitSat_deployed`. This is the
 entry point for the Vesta constraint-carrying relation: when the upstream capstone
 already supplies satisfaction of the canonical accepted model, it bypasses the
 node-binding reconstruction and consumes that satisfaction directly.
@@ -1219,7 +1219,7 @@ quotient-member theorem and returns satisfaction of the same canonical model, or
 shared augmented commitment relation. The terminal no longer needs to choose
 unrelated advice and instance decoder functions or independently supply the derived
 permutation/lookup/selector evaluations.
-`ActionInstanceCommitment.actionBundleStatement_or_relation_of_acceptedCircuitSat`
+`ActionInstanceCommitment.action_bundleStatement_or_relation_of_acceptedModel_circuitSat`
 then constructs the concrete Action bundle statement from that satisfaction result,
 with no free `S`, `hencodes`, relation, or operation-constraint family. Fixed/table
 coherence, exact packed lookup-selector realization, and the complete copy replay
@@ -1229,7 +1229,7 @@ is the function to substitute at the live constraint terminal's `hencodes` argum
 
 That substitution is now expressed directly, without preserving the abstract
 argument.
-`ActionInstanceCommitment.actionBundleStatement_or_relation_of_acceptedNodeBinding`
+`ActionInstanceCommitment.action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq`
 specializes the canonical terminal to
 `orchardActionTopLevelCircuit.toVerifierKey`, derives all query-layout, permutation,
 and domain facts from that circuit-owned key, and feeds canonical satisfaction into
@@ -1239,7 +1239,7 @@ constraint model, `S`, or `hencodes`; only explicitly priced good-challenge fact
 remain.
 
 At the captured artifacts,
-`actionBundleStatement_or_relation_of_acceptedCircuitSat_deployed` is the
+`action_bundleStatement_or_relation_of_acceptedModel_circuitSat_deployed` is the
 corresponding direct receiver for a `CircuitSat` proof over the canonical accepted
 model. `Soundness/Multiopen/CanonicalSelection` now constructs the advice and
 instance slots forced by `CanonicalMemberConstraintRelation.acceptedRoute` and proves
@@ -1300,7 +1300,7 @@ whose public inputs were committed by the verifier.
    `AcceptedModelClaimedEvaluations` from accepted decoded-member node binding, the
    circuit-derived query-layout counts, and standard permutation/domain facts; then
    obtain canonical model satisfaction or the shared relation and compose it with
-   `actionBundleStatement_or_relation_of_acceptedCircuitSat` in the Action-owned
+   `action_bundleStatement_or_relation_of_acceptedModel_circuitSat` in the Action-owned
    integration boundary. The resulting accepted-node-binding theorem constructs
    fixed coherence, selector realization, and copy replay internally.
 6. **Complete:** replace the live constraint terminal's free `S`/`hencodes`
@@ -1326,11 +1326,11 @@ append-only merge flow.
 | **[DONE: copy]** | Instantiate pairwise value agreement on decoded `actionCopies` from σ semantics. | `actionResolverPermutationCycle_or_relation` constructs the exact Action cycle; `actionCopyPairValue_of_resolverPermutation` proves each pair's value equality; `actionCopyReplayWitness_or_relation` packages all copies, constants, and endpoint reads. The terminal no longer accepts a copy witness. | The copy field is internal to the Action endpoint. |
 | **[DONE: Action fixed/VK]** | Supply the generic Lagrange-basis setup equations to `ActionFixedCoherence.ofKeygen` and feed the resulting record into the terminal. | `ActionFixedCoherence.ofDerived` constructs the record from the circuit-owned key and symbolic FFT result. Action query coverage and sparse-to-dense realization remain closed by two explicitly interim diagnostics, but no fixed-coherence premise reaches the terminal. | The fixed/table family and its exact lookup-selector projection are internal. |
 | **[DONE: instance]** | No independent work remains in the deterministic instance stream. | `ActionInstanceCommitment.instanceKey` and `.commitment` derive the key and public commitment from the URS and ten Action rows; the binding-aware bundle endpoint consumes them internally and preserves only the shared nontrivial-relation branch. | Public-instance provenance is ready for the one-proof/bundle join. |
-| **[DONE: terminal API]** | Keep the canonical quotient terminal in polynomial language and perform the concrete join in `Circuits/Integration`. | `acceptedModel_circuitSat_or_relation_of_nodeBinding` reconstructs the complete accepted model and `actionBundleStatement_or_relation_of_acceptedNodeBinding` specializes it to the circuit-derived Action key and concrete bundle statement. Its signature has no free `S`/`hencodes`, fixed record, copy record, or selector-value premise. The deployed accepted-`CircuitSat` endpoint is also exported. | The deterministic semantic function is ready for invocation by the live probability capstone. |
+| **[DONE: terminal API]** | Keep the canonical quotient terminal in polynomial language and perform the concrete join in `Circuits/Integration`. | `acceptedModel_circuitSat_or_relation_of_decodedMemberPolynomial_eq` reconstructs the complete accepted model and `action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq` specializes it to the circuit-derived Action key and concrete bundle statement. Its signature has no free `S`/`hencodes`, fixed record, copy record, or selector-value premise. The deployed accepted-`CircuitSat` endpoint is also exported. | The deterministic semantic function is ready for invocation by the live probability capstone. |
 | **[SEPARATE: ledger]** | Continue [#98](https://github.com/zcash/ironwood/pull/98)'s `SpecPost`-to-ledger refinement. | Independent of polynomial reconstruction and Clean constraint satisfaction. | The games-facing conclusion that should follow after the circuit statement is recovered. |
 | **[SEPARATE: probability]** | Connect [#96](https://github.com/zcash/ironwood/pull/96)'s extraction/coupling result to the deterministic terminal and place the already-priced lookup/permutation exclusions at their transcript squeezes. | The deterministic terminal consumes decoded openings and explicit good-challenge facts; it does not solve the family-wide adaptive `hExtract` supply problem. | A quantitative live theorem around the deterministic #99 result, without reintroducing a free semantic encoding. |
 | **[DONE: bundle]** | Apply the internal gate/fixed/copy/instance/lookup adapters to every accepted canonical model in the proof bundle. | The Action canonical endpoint constructs fixed coherence, exact selector projection, and copy replay per proof index. Only explicitly priced exclusions remain. | A concrete `Action.BundleStatement` over every `Fin numProofs`, with only explicitly priced exceptional events. |
-| **[DONE: Vesta join]** | Invoke the accepted-`CircuitSat` Action endpoint from the live Vesta constraint theorem. | `acceptedModel_circuitSat_or_relation_of_acceptedSelections` constructs canonical advice/instance slots for every proof index. `actionBundleStatement_or_relation_of_deployedAccepts` composes the resulting `CircuitSat` fact with the circuit-derived Action theorem for arbitrary `ProofParams`; the captured theorem is only a deployed corollary. The public signature contains no free `S`/`hencodes`, decoder, selected-member feeds, separate VK, or singleton-proof premise. #96 remains adjacent quantitative work rather than a dependency of this deterministic theorem. | #99's deterministic completion criterion is met for single- and multi-proof shapes. |
+| **[DONE: Vesta join]** | Invoke the accepted-`CircuitSat` Action endpoint from the live Vesta constraint theorem. | `acceptedModel_circuitSat_or_relation_of_acceptedSelections` constructs canonical advice/instance slots for every proof index. `action_bundleStatement_or_relation_of_deployedAccepts` composes the resulting `CircuitSat` fact with the circuit-derived Action theorem for arbitrary `ProofParams`; the captured theorem is only a deployed corollary. The public signature contains no free `S`/`hencodes`, decoder, selected-member feeds, separate VK, or singleton-proof premise. #96 remains adjacent quantitative work rather than a dependency of this deterministic theorem. | #99's deterministic completion criterion is met for single- and multi-proof shapes. |
 
 The shortest dependency chain to removing `hencodes` is therefore:
 

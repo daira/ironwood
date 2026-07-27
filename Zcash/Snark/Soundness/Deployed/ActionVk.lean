@@ -4,7 +4,7 @@ import Zcash.Snark.Keygen.Certificate
 /-!
 # The Action soundness terminal at the deployed verifying key
 
-`actionBundleStatement_or_relation_of_acceptedNodeBinding` is stated at the
+`action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq` is stated at the
 circuit-derived verifying key `orchardActionTopLevelCircuit.toVerifierKey pp urs`
 for generic proof parameters and URS, with every object indexed by the derived
 `Shape` `pp.mergeDerived orchardActionTopLevelCircuit`. The keygen certificate
@@ -115,7 +115,7 @@ Unlike the node-binding terminal below, this endpoint consumes circuit satisfact
 that an upstream constraint capstone has already established. It is the form needed
 by the live Vesta constraint relation.
 -/
-private theorem actionAcceptedCircuitSatDeployed_transport
+private theorem acceptedModel_circuitSat_deployed_transport
     (s : Shape)
     (hs : actionProofParams.mergeDerived orchardActionTopLevelCircuit = s)
     (K : VerifyingKey s Fp G)
@@ -190,7 +190,7 @@ private theorem actionAcceptedCircuitSatDeployed_transport
   rw [← Keygen.toVerifierKey_action actionProofParams capturedURS] at hK
   subst hK
   have terminal :=
-    actionBundleStatement_or_relation_of_acceptedCircuitSat
+    action_bundleStatement_or_relation_of_acceptedModel_circuitSat
       actionProofParams capturedURS hk inputs ps ch
       (orchardActionTopLevelCircuit.toVerifierKey
         actionProofParams capturedURS)
@@ -205,7 +205,7 @@ set_option maxRecDepth 1000000 in
 The accepted-circuit-satisfaction Action endpoint at the deployed verifying key.
 This is the concrete `hencodes` target for the Vesta constraint-carrying relation.
 -/
-theorem actionBundleStatement_or_relation_of_acceptedCircuitSat_deployed
+theorem action_bundleStatement_or_relation_of_acceptedModel_circuitSat_deployed
     (inputs : Fin Fixture.shape.numProofs → PublicInputs)
     (ps : ProofString Fixture.shape Fp G)
     (ch : Challenges Fixture.shape.k Fp)
@@ -275,7 +275,7 @@ theorem actionBundleStatement_or_relation_of_acceptedCircuitSat_deployed
     BundleStatement Specs.Sinsemilla.orchardGenerators orchardBases inputs ∨
       HasNontrivialRelation (F := Fp)
         capturedURS.g capturedURS.u capturedURS.w :=
-  actionAcceptedCircuitSatDeployed_transport
+  acceptedModel_circuitSat_deployed_transport
     Fixture.shape Keygen.shape_eq_mergeDerived
     Fixture.vk Keygen.vk_eq_derived
     shape_k_eq_capturedURS_k vk_blindingFactors_lt
@@ -283,7 +283,7 @@ theorem actionBundleStatement_or_relation_of_acceptedCircuitSat_deployed
     hgoodY permGamma permBeta lookupGamma lookupBeta lookupTheta
 
 assert_no_sorry
-  actionBundleStatement_or_relation_of_acceptedCircuitSat_deployed
+  action_bundleStatement_or_relation_of_acceptedModel_circuitSat_deployed
 
 set_option maxRecDepth 1000000 in
 /--
@@ -433,7 +433,7 @@ private theorem actionDeployed_transport
   rw [← Keygen.toVerifierKey_action actionProofParams capturedURS] at hK
   subst hK
   have terminal :=
-    actionBundleStatement_or_relation_of_acceptedNodeBinding
+    action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
       actionProofParams capturedURS hk inputs ps ch pU pW a
   rw [← deployedInstanceCommitment_eq inputs] at terminal
   exact terminal batchOpenings memberDecode haccepts hpoly hquot hbind
@@ -443,7 +443,7 @@ private theorem actionDeployed_transport
 set_option maxRecDepth 1000000 in
 /--
 **The Action soundness terminal at the deployed verifier.** The generic terminal
-`actionBundleStatement_or_relation_of_acceptedNodeBinding` with every verifier
+`action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq` with every verifier
 object at the deployed artifacts: the captured verifying key `Fixture.vk`, the
 fixture `shape` in every index position, the captured URS, and the deployed
 proof-shape parameters. The `Shape`/key transport comes from the keygen
@@ -452,7 +452,7 @@ certificate (`shape_eq_mergeDerived`, `vk_eq_derived`), applied by `subst` insid
 the fixture facts `shape_k_eq_capturedURS_k` and `vk_blindingFactors_lt`,
 discharged here rather than assumed.
 -/
-theorem actionBundleStatement_or_relation_of_acceptedNodeBinding_deployed
+theorem action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq_deployed
     (inputs : Fin Fixture.shape.numProofs → PublicInputs)
     (ps : ProofString Fixture.shape Fp G)
     (ch : Challenges Fixture.shape.k Fp)
@@ -592,6 +592,6 @@ theorem actionBundleStatement_or_relation_of_acceptedNodeBinding_deployed
     hxgood hgoodY permGamma permBeta
     lookupGamma lookupBeta lookupTheta
 
-assert_no_sorry actionBundleStatement_or_relation_of_acceptedNodeBinding_deployed
+assert_no_sorry action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq_deployed
 
 end Zcash.Snark

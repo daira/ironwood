@@ -910,7 +910,7 @@ noncomputable def TopLevelLookupWitnessConditions.ofChallengeExclusions
       resolverGood := ?_
       thetaGood := ?_ }
   · intro lookup henabled
-    exact allResolverLookupGoodChallenges_of_not_mem
+    exact resolverLookupGoodChallenges_of_not_mem
       (top.toVerifierKey pp urs) ch poly
       ((top.toVerifierKey pp urs).n -
         (top.toVerifierKey pp urs).blindingFactors - 2)
