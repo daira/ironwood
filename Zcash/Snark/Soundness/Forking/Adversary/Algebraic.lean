@@ -10,6 +10,15 @@ import Zcash.Snark.Soundness.Forking.Adversary.DomainReduction
 
 Run the recursive extractor on a bounded-query adversary and package its certificate for the AGM
 reduction. Acceptance with an opening mismatch yields a relation.
+
+## Why the route ends in several endpoints
+
+The `snarkFailure_prob_le_of_*` bounds are a cross-product, not restatements of one another: the
+discrete-log flavour (textbook, folded, uniform-URS, generator-RO) against the adversary model
+(query-bounded, unbounded, privately randomized). Each names a different hypothesis set, so a caller
+picks the one whose assumptions it can actually supply. A handful of endpoints here is the intended
+shape; what is not intended is two endpoints proving the same thing because a stacked branch left an
+earlier form behind.
 -/
 
 namespace Zcash.Snark

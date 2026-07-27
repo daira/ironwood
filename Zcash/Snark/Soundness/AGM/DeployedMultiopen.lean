@@ -16,7 +16,7 @@ variable {G : Type*} [AddCommGroup G] [Module Fp G]
 /-- At the deployed `x₄` collapse, online representations of the individual aggregate columns
 either reconstruct the aggregate AGM coordinates immediately or expose an augmented-basis relation.
 No accepting `x₄` rewinds are used. -/
-noncomputable def deployedX4AlgebraicBatchOrRelation [DecidableEq G] [Inhabited G] {shape : Shape}
+def deployedX4AlgebraicBatchOrRelation [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (instanceCommitment : Fin shape.numProofs -> Nat -> G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)

@@ -120,29 +120,26 @@ theorem deployedConstraintOutcomeOfRoot_relation_eq_online
     (static.fixedLength basis) (static.omegaOrder basis) (static.characteristic basis) hxgood relation
   simpa [deployedConstraintOutcomeOfRoot, pnu, checks] using hout
 
-/-- Provider obtained from the actual root-decode data.  A bad `x`, a non-accepting run, or a root
-decode failure returns `none`; every good accepting root decode returns the concrete constraint
-witness or its explicit relation coefficients. -/
-noncomputable def deployedConstraintOutcomeProviderOfRoot
+/-- Proposition that the actual root-decode data yields a concrete constraint witness.  The
+noncomputable polynomial witness stays under `Prop`; every relation branch is instead exposed by
+the standalone computable `deployedConstraintQuotientFinder`. -/
+def deployedConstraintDecodedOfRoot
     (family : ComputedDeployedRootFSFamily shape)
-    (static : DeployedConstraintStaticChecks family) :
-    DeployedConstraintOutcomeProvider family :=
-  fun basis coins =>
-    if haccept : fsWinsFull (family.adversary basis)
-        (fullAlgebraicAcceptDeployed basis (family.vk basis)
-          (family.instanceCommitment basis))
-        (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) coins.1 then
-      if hroot : deployedRootDecoded family basis coins then
-        let root := Classical.choice hroot
-        if hxgood : (wrappedPreIpaRecord
-            (deployedRootRunOutput family basis coins)).x ∉
-            szBadSet (deployedConstraintDifferenceOfRoot family basis coins root) then
-          some (deployedConstraintOutcomeOfRoot family static basis coins haccept root hxgood)
-        else none
-      else none
-    else none
+    (static : DeployedConstraintStaticChecks family)
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
+    (coins : family.toFamily.Coins) : Prop :=
+  ∃ (haccept : fsWinsFull (family.adversary basis)
+      (fullAlgebraicAcceptDeployed basis (family.vk basis)
+        (family.instanceCommitment basis))
+      (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) coins.1)
+    (root : DeployedRootDecodeWitness family basis coins)
+    (hxgood : (wrappedPreIpaRecord
+        (deployedRootRunOutput family basis coins)).x ∉
+        szBadSet (deployedConstraintDifferenceOfRoot family basis coins root)),
+    ∃ witness, deployedConstraintOutcomeOfRoot family static basis coins haccept root hxgood =
+      PSum.inl witness
 
-/-- The concrete pre-`x` failure event selected by the automatic provider. -/
+/-- The concrete pre-`x` failure event selected by the root-backed construction. -/
 def deployedConstraintBadXEvent (family : ComputedDeployedRootFSFamily shape) :
     Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) × family.toFamily.Coins) :=
   {p | ∃ root : DeployedRootDecodeWitness family p.1 p.2,
@@ -159,6 +156,124 @@ def deployedConstraintXBadSet (family : ComputedDeployedRootFSFamily shape)
       (root : DeployedRootDecodeWitness family basis (O, tape)),
     x ∈ szBadSet (deployedConstraintDifferenceOfRoot family basis (O, tape) root)}
 
+/-- A sufficient chronological condition for the constraint root set. This is stronger than the
+live interface below: a reverse-unbatching decoder may legitimately consume challenges after `x`
+while still being invariant under changing `x` itself. -/
+def DeployedConstraintXPrefixDetermined
+    (family : ComputedDeployedRootFSFamily shape) : Prop :=
+  forall basis
+    (O O' : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp),
+    (forall t : BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k),
+      t.val.length < preIpaLen shape family.init.length 4 -> O t = O' t) ->
+    deployedConstraintXBadSet family basis O =
+      deployedConstraintXBadSet family basis O'
+
+/-- **The exact causal property at `x`.** Changing only the run's priced `x` answer leaves the
+constraint-difference bad set unchanged. Unlike strict prefix determination, this permits the
+reverse-unbatching decoder to use later batching challenges. -/
+def DeployedConstraintXPinning
+    (family : ComputedDeployedRootFSFamily shape) : Prop :=
+  forall basis
+    (O : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) (v : Fp),
+    deployedConstraintXBadSet family basis
+        (Function.update O (algebraicFullPrefixesPre family.init
+          ((family.adversary basis).run O) 4) v) =
+      deployedConstraintXBadSet family basis O
+
+/-- Strict pre-`x` determination implies the exact self-reprogramming equality consumed by
+`PinnedRootEvent`.  The update point has the `x` prefix's own length, hence is outside the strict
+prefix restriction. -/
+theorem deployedConstraintXPinning_of_prefixDetermined
+    (family : ComputedDeployedRootFSFamily shape)
+    (hcausal : DeployedConstraintXPrefixDetermined family) :
+    DeployedConstraintXPinning family := by
+  intro basis O v
+  apply hcausal basis _ O
+  intro t ht
+  rw [Function.update_apply, if_neg]
+  intro hEq
+  have hlen : (algebraicFullPrefixesPre family.init
+      ((family.adversary basis).run O) 4).val.length =
+      preIpaLen shape family.init.length 4 :=
+    preIpaSqueezePoints_length_eq family.init _
+      ((family.adversary basis).run O).proof.2 4
+  rw [hEq, hlen] at ht
+  exact lt_irrefl _ ht
+
+/-- A computation of the constraint-difference root set that stops short of the deployed `x`
+squeeze. `fresh` records that the selected `x` point was not queried, while `agrees` connects the
+stage result to the final decoded root witness. -/
+structure DeployedConstraintXOnlineTrace
+    (family : ComputedDeployedRootFSFamily shape) where
+  stage :
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) ->
+      OracleComp
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k)) Fp (Set Fp)
+  agrees : forall (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
+      (O : BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp),
+    (stage basis).run O = deployedConstraintXBadSet family basis O
+  fresh : forall (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
+      (O : BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp),
+    algebraicFullPrefixesPre family.init ((family.adversary basis).run O) 4 ∉
+      (stage basis).queries O
+
+/-- The staged pre-`x` trace derives the exact pinning equation used by the schedule. -/
+theorem DeployedConstraintXOnlineTrace.toPinning
+    {family : ComputedDeployedRootFSFamily shape}
+    (trace : DeployedConstraintXOnlineTrace family) :
+    DeployedConstraintXPinning family := by
+  intro basis O v
+  let updated := Function.update O (algebraicFullPrefixesPre family.init
+    ((family.adversary basis).run O) 4) v
+  calc
+    deployedConstraintXBadSet family basis updated = (trace.stage basis).run updated :=
+      (trace.agrees basis updated).symm
+    _ = (trace.stage basis).run O :=
+      OracleComp.run_update_of_not_mem_queries _ _ _ _ (trace.fresh basis O)
+    _ = deployedConstraintXBadSet family basis O := trace.agrees basis O
+
+/-- The deployed constraint family: direct root extraction plus the staged trace at `x`.
+Both pinning equations used by the capstone are derived projections of its two traces. -/
+/-
+TODO(#115): When the runtime-aware straight-line endpoint instantiates a captured-shape prover,
+exhibit its concrete root and constraint-`x` stage computations. The immutable key fixture supplies
+verifier metadata, not an `OracleComp` prover trace.
+-/
+structure ComputedDeployedConstraintFSFamily (shape : Shape)
+    extends ComputedDeployedRootFSFamily shape where
+  constraintXTrace :
+    DeployedConstraintXOnlineTrace toComputedDeployedRootFSFamily
+
+namespace ComputedDeployedConstraintFSFamily
+
+/-- Forget the constraint-`x` trace while retaining the deployed root trace. -/
+abbrev toRootFamily (family : ComputedDeployedConstraintFSFamily shape) :
+    ComputedDeployedRootFSFamily shape := family.toComputedDeployedRootFSFamily
+
+/-- Forget both deployed chronology refinements. -/
+abbrev toFamily (family : ComputedDeployedConstraintFSFamily shape) :
+    ComputedAlgebraicFSFamily shape := family.toRootFamily.toFamily
+
+/-- Package a deployed root family with its staged constraint-`x` trace. -/
+def ofRoot (family : ComputedDeployedRootFSFamily shape)
+    (trace : DeployedConstraintXOnlineTrace family) :
+    ComputedDeployedConstraintFSFamily shape where
+  toComputedDeployedRootFSFamily := family
+  constraintXTrace := trace
+
+/-- Exact constraint-`x` pinning derived from the family's staged trace. -/
+theorem pinnedX (family : ComputedDeployedConstraintFSFamily shape) :
+    DeployedConstraintXPinning family.toRootFamily :=
+  family.constraintXTrace.toPinning
+
+end ComputedDeployedConstraintFSFamily
+
 /-- Causal condition at the `x` squeeze: the constraint-difference root set carries a uniform
 bound and is unchanged when the run's own `x` answer is reprogrammed.  It may consume the earlier
 `θ`/`β`/`γ`/`y` answers and the retained representations, but cannot be chosen after seeing
@@ -168,13 +283,7 @@ structure DeployedConstraintXSqueezeSchedule (family : ComputedDeployedRootFSFam
   measure_le : forall basis O,
     (PMF.uniformOfFintype Fp).toOuterMeasure
       (deployedConstraintXBadSet family basis O) <= epsilonX
-  pinned : forall basis
-      (O : BTranscript Fp VestaG
-        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) (v : Fp),
-    deployedConstraintXBadSet family basis
-        (Function.update O (algebraicFullPrefixesPre family.init
-          ((family.adversary basis).run O) 4) v) =
-      deployedConstraintXBadSet family basis O
+  pinned : DeployedConstraintXPinning family
 
 /-- The single pinned event for the constraint evaluation challenge. -/
 noncomputable def deployedConstraintXPinnedEvent
@@ -188,7 +297,7 @@ noncomputable def deployedConstraintXPinnedEvent
   measure_le := fun _p O => schedule.measure_le basis O
   pinned := fun O v => schedule.pinned basis O v
 
-/-- The bad-`x` event selected by the provider lands in its run's exact pinned root set. -/
+/-- The root-backed bad-`x` event lands in its run's exact pinned root set. -/
 theorem deployedConstraintBadX_subset_landing
     (family : ComputedDeployedRootFSFamily shape) {epsilonX : ENNReal}
     (schedule : DeployedConstraintXSqueezeSchedule family epsilonX)
@@ -370,19 +479,19 @@ def DeployedConstraintUpgradeContained (family : ComputedDeployedRootFSFamily sh
     deployedRootDecoded family p.1 p.2 ∧ ¬ constraintDecoded p.1 p.2} <=
     deployedConstraintRelationEvent family constraintFinder ∪ badX
 
-/-- The automatic root-backed provider closes the deterministic upgrade seam: on an accepting
-root-decode run, it either returns the constraint witness, exposes concrete relation coefficients,
-or records that the run's `x` challenge lies in the exact constraint-difference root set. -/
+/-- The root-backed decoded predicate closes the deterministic upgrade seam: on an accepting
+root-decode run, either the constraint witness exists, the computable quotient finder exposes
+concrete relation coefficients, or the run's `x` challenge lies in the exact constraint-difference
+root set. -/
 theorem deployedConstraintUpgradeContained_of_root
     (family : ComputedDeployedRootFSFamily shape)
     (static : DeployedConstraintStaticChecks family) :
     DeployedConstraintUpgradeContained family
       (deployedConstraintQuotientFinder family)
-      (deployedConstraintDecodedOfOutcome family
-        (deployedConstraintOutcomeProviderOfRoot family static))
+      (deployedConstraintDecodedOfRoot family static)
       (deployedConstraintBadXEvent family) := by
   rintro ⟨basis, coins⟩ ⟨haccept, hroot, hnotDecoded⟩
-  let root := Classical.choice hroot
+  rcases hroot with ⟨root⟩
   by_cases hxgood : (wrappedPreIpaRecord
       (deployedRootRunOutput family basis coins)).x ∉
       szBadSet (deployedConstraintDifferenceOfRoot family basis coins root)
@@ -390,8 +499,7 @@ theorem deployedConstraintUpgradeContained_of_root
     | inl witness =>
         exfalso
         apply hnotDecoded
-        refine ⟨witness, ?_⟩
-        simp [deployedConstraintOutcomeProviderOfRoot, haccept, hroot, root, hxgood, hout]
+        exact ⟨haccept, root, hxgood, witness, hout⟩
     | inr relation =>
         apply Or.inl
         simp only [deployedConstraintRelationEvent, Set.mem_setOf_eq,
@@ -562,9 +670,10 @@ theorem snarkConstraintsDeployed_prob_le_of_online_outcome
     (deployedConstraintFinderOfOutcome family provider)
     (deployedConstraintDecodedOfOutcome family provider) badX hupgrade hDL hbadX
 
-/-- Concrete rewind-free constraint capstone.  The only computational premise is textbook
-single-instance DLOG for the executable combined finder; the schedule prices the bad-`x` event
-additively at `(Q + 1) * epsilonX`. -/
+/-- Concrete rewind-free **compressed-identity** capstone.  The only computational premise is
+textbook single-instance DLOG for the executable combined finder; the schedule prices the bad-`x`
+event additively at `(Q + 1) * epsilonX`.  This theorem does not claim row-level circuit semantics;
+that conclusion is the separately budgeted semantic capstone below. -/
 theorem snarkConstraintsDeployed_prob_le_of_root_schedule
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -580,8 +689,7 @@ theorem snarkConstraintsDeployed_prob_le_of_root_schedule
       (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           snarkExtractionFailureEventDeployed family.toFamily
-            (deployedConstraintDecodedOfOutcome family
-              (deployedConstraintOutcomeProviderOfRoot family static)))
+            (deployedConstraintDecodedOfRoot family static))
       <= ((family.Q + shape.k) * (3 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
           (dlogBound + 1 / Fintype.card Fp))
@@ -589,10 +697,146 @@ theorem snarkConstraintsDeployed_prob_le_of_root_schedule
         + (family.Q + 1 : Nat) * epsilonX := by
   exact snarkConstraintsDeployed_prob_le_via_deployed_roots B hB query hquery family
     (deployedConstraintQuotientFinder family)
-    (deployedConstraintDecodedOfOutcome family
-      (deployedConstraintOutcomeProviderOfRoot family static))
+    (deployedConstraintDecodedOfRoot family static)
     (deployedConstraintBadXEvent family)
     (deployedConstraintUpgradeContained_of_root family static) hDL
     (deployedConstraintBadX_prob_le query family schedule)
+
+/-! ## Promotion from the compressed identity to circuit semantics
+
+The constraint witness above proves the verifier's identity only after `y` has compressed the
+constraint list and `beta`, `gamma`, and `theta` have compressed the permutation and lookup values.
+Calling that semantic circuit satisfaction is unsound without pricing collisions at those four
+earlier squeezes. The interface below makes the step explicit: the caller supplies the semantic
+predicate, the four failure events, and a proof that a compressed witness outside them has the
+intended semantics.
+-/
+
+/-- Outside the four challenge-failure events, a compressed constraint witness upgrades to the
+caller's row-level semantic predicate. In a concrete Orchard instantiation, `ConstraintRelations`
+supplies this implication from the good-`y` fold split, good permutation `beta`/`gamma`, and good
+lookup-tuple `theta` hypotheses. -/
+def DeployedConstraintSemanticUpgradeContained
+    (family : ComputedDeployedRootFSFamily shape)
+    (compressedDecoded semanticDecoded :
+      (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) -> family.toFamily.Coins -> Prop)
+    (badY badBeta badGamma badTheta :
+      Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) × family.toFamily.Coins)) : Prop :=
+  {p | compressedDecoded p.1 p.2 ∧ ¬ semanticDecoded p.1 p.2} <=
+    badY ∪ (badBeta ∪ (badGamma ∪ badTheta))
+
+/-- Failure of the semantic predicate is either failure of the compressed-identity extractor or
+one of the four explicitly priced challenge surfaces. -/
+theorem deployedConstraintSemanticFailure_subset_union
+    (family : ComputedDeployedRootFSFamily shape)
+    (compressedDecoded semanticDecoded :
+      (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) -> family.toFamily.Coins -> Prop)
+    (badY badBeta badGamma badTheta :
+      Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) × family.toFamily.Coins))
+    (hsemantic : DeployedConstraintSemanticUpgradeContained family compressedDecoded
+      semanticDecoded badY badBeta badGamma badTheta) :
+    snarkExtractionFailureEventDeployed family.toFamily semanticDecoded <=
+      snarkExtractionFailureEventDeployed family.toFamily compressedDecoded ∪
+        (badY ∪ (badBeta ∪ (badGamma ∪ badTheta))) := by
+  rintro p ⟨haccept, hnotSemantic⟩
+  by_cases hcompressed : compressedDecoded p.1 p.2
+  · exact Or.inr (hsemantic ⟨hcompressed, hnotSemantic⟩)
+  · exact Or.inl ⟨haccept, hcompressed⟩
+
+/-- **Semantic constraint capstone.** The compressed-identity knowledge error is augmented by
+four named additive budgets. No conclusion about row-level gate, permutation, or lookup semantics
+is available from the compressed payload unless `hsemantic` and all four measure bounds are
+provided. -/
+/-
+TODO(#115): When layering the runtime-aware capstone, verify that it either passes through this
+semantic promotion (including all four budgets) or is explicitly scoped to the compressed identity.
+-/
+theorem snarkConstraintsSemanticDeployed_prob_le_of_root_schedule
+    {T : Type*} [DecidableEq T]
+    (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex (2 ^ shape.k) -> T) (hquery : Function.Injective query)
+    (family : ComputedDeployedRootFSFamily shape)
+    (static : DeployedConstraintStaticChecks family)
+    (semanticDecoded :
+      (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) -> family.toFamily.Coins -> Prop)
+    (badY badBeta badGamma badTheta :
+      Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) × family.toFamily.Coins))
+    {epsilonX dlogBound yBound betaBound gammaBound thetaBound : ENNReal}
+    (schedule : DeployedConstraintXSqueezeSchedule family epsilonX)
+    (hDL : TextbookDLWithCoinsAdvantageLE B
+      (deployedConstraintRelationFinder family
+        (deployedConstraintQuotientFinder family)) dlogBound)
+    (hsemantic : DeployedConstraintSemanticUpgradeContained family
+      (deployedConstraintDecodedOfRoot family static)
+      semanticDecoded badY badBeta badGamma badTheta)
+    (hY : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' badY) <= yBound)
+    (hBeta : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' badBeta) <= betaBound)
+    (hGamma : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' badGamma) <= gammaBound)
+    (hTheta : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' badTheta) <= thetaBound) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          snarkExtractionFailureEventDeployed family.toFamily semanticDecoded)
+      <= (((family.Q + shape.k) * (3 / Fintype.card Fp) +
+          (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
+          (dlogBound + 1 / Fintype.card Fp))
+        + (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k
+        + (family.Q + 1 : Nat) * epsilonX)
+        + (yBound + (betaBound + (gammaBound + thetaBound))) := by
+  let mu := (independentProductPMF (orchardGeneratorROSetup query)
+    (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
+  let basisCoins : ((↥(Set.range query) -> VestaG) × family.toFamily.Coins) ->
+      ((AugmentedIndex (2 ^ shape.k) -> VestaG) × family.toFamily.Coins) :=
+    fun p => (orchardGeneratorROBasis query p.1, p.2)
+  let compressedDecoded := deployedConstraintDecodedOfRoot family static
+  change mu (basisCoins ⁻¹'
+      snarkExtractionFailureEventDeployed family.toFamily semanticDecoded) <= _
+  have hcompressed := snarkConstraintsDeployed_prob_le_of_root_schedule B hB query hquery
+    family static schedule hDL
+  have hsubset : basisCoins ⁻¹'
+        snarkExtractionFailureEventDeployed family.toFamily semanticDecoded <=
+      basisCoins ⁻¹'
+        (snarkExtractionFailureEventDeployed family.toFamily compressedDecoded ∪
+          (badY ∪ (badBeta ∪ (badGamma ∪ badTheta)))) :=
+    Set.preimage_mono
+      (deployedConstraintSemanticFailure_subset_union family compressedDecoded semanticDecoded
+        badY badBeta badGamma badTheta hsemantic)
+  calc
+    mu (basisCoins ⁻¹'
+        snarkExtractionFailureEventDeployed family.toFamily semanticDecoded)
+        <= mu (basisCoins ⁻¹'
+          (snarkExtractionFailureEventDeployed family.toFamily compressedDecoded ∪
+            (badY ∪ (badBeta ∪ (badGamma ∪ badTheta))))) :=
+      MeasureTheory.measure_mono hsubset
+    _ = mu ((basisCoins ⁻¹'
+          snarkExtractionFailureEventDeployed family.toFamily compressedDecoded) ∪
+        ((basisCoins ⁻¹' badY) ∪
+          ((basisCoins ⁻¹' badBeta) ∪
+            ((basisCoins ⁻¹' badGamma) ∪ (basisCoins ⁻¹' badTheta))))) := by
+      simp only [Set.preimage_union]
+    _ <= mu (basisCoins ⁻¹'
+          snarkExtractionFailureEventDeployed family.toFamily compressedDecoded) +
+        (mu (basisCoins ⁻¹' badY) +
+          (mu (basisCoins ⁻¹' badBeta) +
+            (mu (basisCoins ⁻¹' badGamma) + mu (basisCoins ⁻¹' badTheta)))) := by
+      exact (MeasureTheory.measure_union_le _ _).trans
+        (add_le_add le_rfl ((MeasureTheory.measure_union_le _ _).trans
+          (add_le_add le_rfl ((MeasureTheory.measure_union_le _ _).trans
+            (add_le_add le_rfl (MeasureTheory.measure_union_le _ _))))))
+    _ <= (((family.Q + shape.k) * (3 / Fintype.card Fp) +
+          (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
+          (dlogBound + 1 / Fintype.card Fp))
+        + (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k
+        + (family.Q + 1 : Nat) * epsilonX)
+        + (yBound + (betaBound + (gammaBound + thetaBound))) :=
+      add_le_add hcompressed (add_le_add hY (add_le_add hBeta (add_le_add hGamma hTheta)))
 
 end Zcash.Snark

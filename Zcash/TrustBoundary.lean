@@ -35,6 +35,10 @@ import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.PermutationRows
 import Zcash.Snark.Soundness.ConstraintRelations
 import Zcash.Snark.Soundness.ChallengePricing
+import Zcash.Snark.Soundness.DegreeWalk
+import Zcash.Snark.Soundness.Composition.ScheduleBudget
+import Zcash.Snark.Soundness.AGM.PinnedRootWitness
+import Zcash.Snark.Soundness.AGM.DirectConstraintFamily
 
 /-!
 # Trust boundary, build-checked
@@ -337,11 +341,8 @@ assert_computable NontrivialDLRelation.ofIpaOpenings +choice
 /-! ### Verifier-soundness capstones -/
 
 assert_axioms deployedAccepts_verifierEq
-assert_axioms orchard_verifier_sound_conditional
 assert_axioms orchard_verifier_deployed_opening_of_forked
 assert_axioms orchard_verifier_deployed_constraint_of_forked
-assert_axioms orchard_verifier_sound_vesta_conditional +native
-assert_axioms orchard_verifier_vesta_opening_of_forked +native
 assert_axioms orchard_verifier_vesta_constraint_of_forked +native
 
 /-! ### Deployed binding-reduction breaks
@@ -380,11 +381,20 @@ assert_computable finForallOrRelationWitness +choice
 assert_computable constructIntermediateSets_comm_route +choice
 assert_computable deployed_slot_route_of_checks +choice
 assert_computable deployedRouteSelectorOfSpecs +choice
-assert_computable deployedX4InterpolationDataOfCapacity +choice +native
 assert_computable deployedConstraintQuotientAgreementOrRelation +choice +native
 assert_computable deployedConstraintQuotientFinder +choice +native
 assert_computable decodedQuotientEqReassembledOrRelationWitness +choice
 assert_computable DeployedAlgebraicDecode.quotientEvalEqCommittedPreXOrRelationWitness +choice
+assert_computable x4BatchCommitments +choice +native
+assert_computable deployedSetMemberCommitments +choice +native
+assert_computable deployedX4AlgebraicBatchOrRelation +choice +native
+assert_computable deployedX1AlgebraicBatchWithSourceOrRelation +choice +native
+assert_computable deployedX1BatchOfCoveredWithSourceOrRelation +choice +native
+assert_computable deployedX4ColumnRepresentationsOfCovered +choice +native
+assert_computable deployedX4BatchOfCoveredOrRelation +choice +native
+assert_computable deployedRootOutcomeOfCovered +choice +native
+assert_computable ComputedDeployedRootFSFamily.ofCovered +choice +native
+assert_computable ComputedDeployedConstraintFSFamily.ofCovered +choice +native
 assert_computable ComputedDeployedRootFSFamily.deployedRelationFinder +choice +native
 assert_computable deployedConstraintFinderOfOutcome +choice +native
 assert_computable deployedConstraintRelationFinder +choice +native
@@ -580,7 +590,6 @@ below through explicit `PSum` outcomes and computable finders. Theorems througho
 -- budget below — is the remaining reconciliation. This stack is not consumed by the rewind-free
 -- constraint capstone below.
 assert_axioms ipaRelation_deployed_of_instance +native
-assert_axioms snarkRelation_of_memberColumns
 assert_axioms snarkExtraction_prob_le_of_generatorRO_textbookDL +native
 assert_axioms instanceAttempt_provenance +native
 assert_axioms ipaRelation_deployed_of_openings_agree +native
@@ -761,7 +770,6 @@ assert_axioms perm_copy_constraints_of_chunk_products
 assert_axioms chunkName_injective_of_coset
 assert_axioms deployed_declared_equalities_of_identity_chunks
 assert_axioms circuitSatViaConstraints_of_check
-assert_axioms orchard_verifier_sound_vesta_constraints +native
 -- Closing the loop: the capstone hands over an opening paired with satisfaction of the whole
 -- constraint list, and the two arguments' relations are read back out of that same predicate.
 assert_axioms snarkRelation_constraints
@@ -802,11 +810,78 @@ assert_axioms xEscAtPoint_measure_le
 assert_axioms PinnedRootEvent.landing_measure_le
 assert_axioms PinnedRootFamily.landing_measure_le
 assert_axioms deployedRootBad_measure_le +native
+-- The shape-only root budget is monotone, so its consensus-maximum specialization bounds every
+-- smaller captured Orchard bundle rather than only the exact endpoint shape.
+assert_axioms algebraicRootBudget_mono
+assert_axioms DeployedRootPrefixDetermined +native
 assert_axioms DeployedRootSqueezeInvariance +native
+assert_axioms deployedRootSqueezeInvariance_of_prefixDetermined +native
+assert_axioms DeployedRootOnlineTrace.toSqueezeInvariance +native
+assert_axioms ComputedDeployedRootFSFamily.pinned +native
+assert_axioms DeployedConstraintXOnlineTrace.toPinning +native
+assert_axioms ComputedDeployedConstraintFSFamily.pinnedX +native
 assert_axioms tableReadingPinnedRootEvent
 assert_axioms tableReadingPinnedRootEvent_landing_measure_le
 assert_axioms deployedRootEventBudget_sum_le
 assert_axioms badX_le_via_squeeze_prefixed +native
+-- Squeeze-point toolkit: prefix-determinism makes the `x` point stable under self-reprogramming.
+-- This is not the live constraint schedule's chronology discharge: point stability alone does not
+-- prove that the bad set was fixed before `x`.
+assert_axioms hstab_of_xPrefixDetermined +native
+-- Prefix injectivity at the multiopen squeeze points (`Forking.Adversary.PreIpa`): each point
+-- pins every field absorbed before it — the toolkit for the deployed squeeze-invariance
+-- schedules, which need each root-set datum emitted strictly before its own squeeze.
+assert_axioms preXSqueezePoint_inj
+assert_axioms preX1SqueezePoint_inj
+assert_axioms preX2SqueezePoint_inj
+assert_axioms preX3SqueezePoint_inj
+assert_axioms preX4SqueezePoint_inj
+-- The degree walk (`Soundness.DegreeWalk`): every constraint family's polynomial stays under an
+-- explicit cap — gates by `Expr.degreeBound`, permutation chunks by width, lookups by their
+-- compressed expressions — the combined bound the `x`-squeeze schedule's `epsilonX` prices.
+assert_axioms natDegree_combineConstraints_le
+-- The schedule, priced (`Composition.ScheduleBudget`): the committed carriers stay under the
+-- walk's caps, root witnesses at one table share the family's own outcome so the root set
+-- collapses across fork tapes, and the schedule constructor discharges `measure_le` outright.
+-- The captured family carries an explicit fresh-query `OracleComp` trace and derives exact
+-- pinning from its query log. The lower-level direct-pinning constructor remains generic plumbing;
+-- it is not a standalone captured-capstone premise.
+assert_axioms natDegree_committedPreXConstraintDifference_le
+assert_axioms natDegree_deployedConstraintDifferenceOfRoot_le +native
+assert_axioms deployedConstraintDifference_witness_congr +native
+assert_axioms deployedConstraintXBadSet_measure_le +native
+assert_axioms DeployedConstraintXPrefixDetermined +native
+assert_axioms deployedConstraintXPinning_of_prefixDetermined +native
+assert_axioms deployedConstraintXSqueezeSchedule_of_pinned +native
+assert_axioms deployedConstraintXSqueezeSchedule_of_prefixDetermined +native
+-- The pinned-root witness family (`AGM.PinnedRootWitness`): the zero data over the degenerate
+-- shape, whose assembled multiopen commitment is the zero point for every basis and record.
+assert_axioms multiopenCommitment_witness_zero +native
+assert_axioms witnessProof +native
+assert_axioms witnessFamily +native
+-- The actual strict-prefix property is satisfiable: the constant family's root sets are empty
+-- except at `x₃`, whose point set consumes only earlier answers.  It is packaged as an inhabitant
+-- of `ComputedDeployedRootFSFamily`; the weaker invariance theorem is a corollary.
+assert_axioms witnessFamily_reads_update +native
+assert_axioms deployedRootBad_witness +native
+assert_axioms deployedAllPts_x3_blind
+assert_axioms deployedAllPts_congr_preMultiopen
+assert_axioms deployedRootPrefixDetermined_witness +native
+assert_axioms witnessOnlineMemberFamily +native
+assert_axioms witnessDeployedRootFamily +native
+assert_axioms deployedRootSqueezeInvariance_witness +native
+-- The satisfiability witness is itself an executable five-query stage, not a classical
+-- enumeration of the finite oracle domain.
+assert_computable witnessOutcome +choice +native
+assert_computable witnessOnlineMemberFamily +choice +native
+assert_computable witnessRootStage +choice +native
+assert_computable witnessRootTrace +choice +native
+assert_computable witnessDeployedRootFamily +choice +native
+-- The direct route (`AGM.DirectX4Columns`): the `x₄` columns are read off the online coverage —
+-- a column below the pair count is its set's `x₁` power sum, the last is the prover's `q′` — so
+-- the batch-or-relation decision needs no offline interpolation and no field-capacity premise.
+assert_axioms x4BatchCommitments_eq_memberPowerSum
+assert_axioms aggregate_opens_deployedCommitment +native
 assert_axioms snarkExtractionDeployed_prob_le_via_wrapped_pinned_roots +native
 assert_axioms ComputedDeployedRootFSFamily.deployedRelation_prob_le_of_generatorRO_textbookDL +native
 assert_axioms deployedRootFailure_subset_landing +native
@@ -824,9 +899,13 @@ assert_axioms snarkConstraintsDeployed_prob_le_via_deployed_roots +native
 assert_axioms snarkConstraintsDeployed_prob_le_of_online_outcome +native
 assert_axioms deployedConstraintUpgradeContained_of_root +native
 assert_axioms deployedConstraintOutcomeOfRoot_relation_eq_online +native
+assert_axioms deployedConstraintDecodedOfRoot +native
 assert_axioms deployedConstraintBadX_subset_landing +native
 assert_axioms deployedConstraintBadX_prob_le +native
 assert_axioms snarkConstraintsDeployed_prob_le_of_root_schedule +native
+assert_axioms DeployedConstraintSemanticUpgradeContained +native
+assert_axioms deployedConstraintSemanticFailure_subset_union +native
+assert_axioms snarkConstraintsSemanticDeployed_prob_le_of_root_schedule +native
 
 /-! ## The Action circuit — the halo2-native soundness trust surface
 

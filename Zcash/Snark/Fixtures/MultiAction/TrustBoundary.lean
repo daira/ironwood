@@ -1,4 +1,8 @@
 import Zcash.Snark.Fixtures.MultiAction.Fixture
+import Zcash.Snark.Fixtures.MultiAction.Degree
+import Zcash.Snark.Fixtures.MultiAction.StaticChecks
+import Zcash.Snark.Fixtures.MultiAction.Schedule
+import Zcash.Snark.Fixtures.MultiAction.KnowledgeError
 import Zcash.Meta.AxiomCheck
 
 /-!
@@ -33,6 +37,37 @@ assert_axioms capturedMsm_eval_eq_zero +native
 assert_axioms assembledMsm_eval_eq_zero +native
 assert_axioms Zcash.Arithmetic.Msm.evalNat
 assert_axioms assemble
+-- The captured key's degree budget: one literal (`20470`) dominates every constraint family,
+-- so the `x`-squeeze schedule's `epsilonX` is the concrete `20470 / |𝔽|` at this key.
+assert_axioms vk_gates_degree_le +native
+assert_axioms vk_chunk_width_le +native
+assert_axioms vk_lookup_input_degree_le +native
+assert_axioms vk_lookup_table_degree_le +native
+assert_axioms vk_quotient_tail_le +native
+assert_axioms vk_n_pred_le +native
+assert_axioms shape_k_pred_le +native
+-- The captured key's static checks: the query layouts cover the shape's counts, `ω` has order
+-- dividing `n`, and `n` does not vanish in `𝔽` — packaged for any family carrying the
+-- captured non-group profile. Literal equality of fixed Vesta commitments is intentionally absent.
+assert_axioms capturedVerifierKeyProfile_vk
+assert_axioms vk_advice_layout_length +native
+assert_axioms vk_instance_layout_length +native
+assert_axioms vk_fixed_layout_length +native
+assert_axioms vk_omega_order +native
+assert_axioms vk_n_cast_ne_zero +native
+assert_axioms deployedConstraintStaticChecks_of_captured +native
+-- The `x`-squeeze schedule at the captured key: the degree caps are discharged, so `epsilonX` is
+-- the concrete `20470 / |𝔽|`; exact leave-one-`x` invariance follows from the family's
+-- fresh-query constraint trace.
+assert_axioms deployedConstraintXSqueezeSchedule_captured +native
+-- The deployed compressed-identity extraction bound at the captured key: the rewind-free
+-- capstone with the static checks and degree caps discharged, so the bad-`x` term is the concrete
+-- `(Q + 1) · 20470 / |𝔽|` and the multiopen term is the additive root budget.  Semantic
+-- circuit satisfaction additionally uses the four-budget promotion in the core trust census.
+assert_axioms orchard_deployed_knowledge_error_captured +native
+-- The same bound on the interpolation-free route: the deployed constraint family is built by
+-- `ofCovered` from the two fresh-query traces, with no field-capacity premise or interpolation.
+assert_axioms orchard_deployed_knowledge_error_captured_direct +native
 
 -- The instance-commitment derivation: the two captured claims, plus the data and functions they
 -- range over. The latter are flagless — they are ordinary definitions, so compiler trust must not
