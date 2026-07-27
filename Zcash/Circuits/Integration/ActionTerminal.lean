@@ -214,7 +214,7 @@ theorem actionBundleStatement_or_relation_of_acceptedNodeBinding
     exact TopLevelAssignment.domainSizeCastNeZero
       ActionPermutationDomain.domainExponent_lt
   rcases
-      acceptedModelCircuitSat_or_relation_of_nodeBinding
+      acceptedModel_circuitSat_or_relation_of_nodeBinding
         urs hk vk (commitment pp urs inputs) ps ch memberDecode
         haccepts hblinding hpoly hquot
         gateCoherence.fixedQueryCount

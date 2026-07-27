@@ -387,7 +387,7 @@ The deployed quotient-member binding, instantiated at the accepted canonical
 decoded model, proves that model's complete circuit identity or returns the shared
 augmented commitment relation.
 -/
-theorem acceptedModelCircuitSat_or_relation
+theorem acceptedModel_circuitSat_or_relation
     {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp G)
@@ -551,11 +551,11 @@ theorem acceptedModelCircuitSat_or_relation
 Uniform openings of the accepted canonical resolver prove satisfaction directly
 when `hpoly` is that resolver's vanishing-quotient polynomial.
 
-Unlike `acceptedModelCircuitSat_or_relation`, this formulation does not expose a
+Unlike `acceptedModel_circuitSat_or_relation`, this formulation does not expose a
 point-set index, member index, or an independently selected member-polynomial
 family. The unique assembled `vanishingH` query supplies the quotient evaluation.
 -/
-theorem acceptedModelCircuitSat_of_openings
+theorem acceptedModel_circuitSat_of_openings
     {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp G)
@@ -735,7 +735,7 @@ All query evaluations and the quotient carrier are fixed by the accepted
 `CommitmentId` resolver. The only exceptional branch is the existing
 augmented-basis relation produced by node binding.
 -/
-theorem acceptedModelCircuitSat_or_relation_of_nodeBinding
+theorem acceptedModel_circuitSat_or_relation_of_nodeBinding
     {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp G)
@@ -862,7 +862,7 @@ theorem acceptedModelCircuitSat_or_relation_of_nodeBinding
         (deployedAccepts_xn_ne_one
           urs hk vk instanceCommitment ps ch haccepts)
     exact Or.inl <|
-      acceptedModelCircuitSat_of_openings
+      acceptedModel_circuitSat_of_openings
         urs hk vk instanceCommitment ps ch memberDecode
         haccepts hblinding hpoly hquot hopen claimed hxgood
   · exact Or.inr hrelation
