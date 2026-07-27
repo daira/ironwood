@@ -725,6 +725,36 @@ assert_axioms member_constraints_of_relation_and_batch
 assert_axioms orchard_verifier_vesta_member_constraints_deployed_x4 +native
 assert_axioms orchard_verifier_vesta_member_constraints_terminal +native
 assert_axioms orchard_verifier_vesta_member_constraints_terminal_derived +native
+/-! ### Break-branch machinery — computed
+
+The circuit-integration stack carries its binding break as computed `NontrivialRelation` data
+rather than as the `∃`-closed proposition that is unconditionally true at the concrete curve.
+The declarations below are the part of that stack which is genuinely computable, so they are
+pinned at the `assert_computable` tier: a plain `def`, never marked `noncomputable`. Pinning
+them is what stops the discipline regressing silently — a break that stopped being computed
+would still typecheck, and `assert_axioms` alone would not notice.
+
+The combinators are at the strict tier: they introduce no choice at all. The adapters below
+them take `+choice`, which the plain-`def` check turns into the assertion that choice enters
+only through erased `Prop` certificate fields.
+
+The capstone endpoints are *not* here. They are `noncomputable` — their decisions run through
+Mathlib polynomials, which are noncomputable by construction — and so are pinned with
+`assert_axioms` above. Moving them to this tier means deciding on coefficient vectors and
+stating the result in polynomials, as `decodedQuotientEqReassembledOrRelationWitness` does. -/
+
+assert_computable bindOrRelationWitness
+assert_computable finForallOrRelationWitness
+assert_computable listForallOrRelationWitness
+assert_computable boundedForallOrRelationWitness
+assert_computable FullCircuitSatisfaction.of_components_or_bad
+assert_computable declaredCopies_satisfied_or_bad_of_replay +choice
+assert_computable copy_constraints_or_bad_of_replay +choice
+assert_computable CopyReplayWitness.constraints_or_bad +choice
+assert_computable FullCircuitBridge.satisfaction_or_bad +choice
+assert_computable FullCircuitBridge.constraints_or_bad +choice
+assert_computable decodedPolynomialResolver_opens_or_relation +choice
+
 -- The accepted-route adapter fixes the advice and instance member feeds, then the
 -- deployed Action boundary consumes the resulting canonical `CircuitSat`. The final
 -- theorem has no free semantic callback, decoder, or selected-column feed.
