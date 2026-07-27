@@ -159,7 +159,7 @@ The remaining work is:
 
 **Status: polynomial/query-level decoding is implemented by
 [#30](https://github.com/zcash/ironwood/pull/30); the generic Clean row decoder and
-the concrete Action public-instance commitment provenance are now implemented on this
+generic top-level public-instance commitment provenance are now implemented on this
 branch.**
 
 The deployed/member capstones use canonical decoding through `coeffsToPoly`,
@@ -215,14 +215,16 @@ commitment with the verifier-supplied instance commitment, and concludes that th
 decoded polynomial is the canonical row polynomial or computes the shared nontrivial
 relation. The binding-aware Action endpoint invokes this theorem internally; it no
 longer accepts the decoded-polynomial equality as a premise.
-`ActionInstanceCommitment.action_bundleStatement_or_relation_of_accepted_topLevelBundleStatement`
-constructs the Lagrange key from the monomial URS, derives the commitment from the
-ten supplied rows, and binds the verifier-supplied instance polynomial to the
-generic top-level statement. The generic query compiler proves that
+`TopLevelInstanceCommitment.statements_or_relation_of_accepted_topLevelBundleStatement`
+constructs the Lagrange key from the monomial URS, derives every instance-column
+commitment from the circuit's declared public-input layout, and binds the
+verifier-supplied instance polynomials to the generic top-level statement. It is
+generic over the `TopLevelCircuit`, proof multiplicity, instance columns, column
+indices, and query rotations. The generic query compiler proves that
 configure-registered layouts survive
 packed-selector insertion and the gate/lookup erasure walks, and then the generic
 layout-to-assembly lemma supplies the actual proof- and challenge-dependent query.
-The endpoint also derives evaluation-domain injectivity and size equalities from
+The endpoint also derives evaluation-domain injectivity and size equalities from the
 `TopLevelCircuit` plus the existing supported-`k` bound.
 
 The exported fixture contains only the ten Lagrange generators reachable by Action
@@ -238,15 +240,15 @@ difference between the fixture's executable `c.val • point` natural-scalar sum
 the abstract `Fp`-module commitment, leaving only the ten actual generator equations
 as concrete setup data.
 
-The concrete Action construction is now closed in
-`ActionInstanceCommitment`. `instanceKey` derives the compatible Lagrange key from
-the monomial URS, `commitment` computes the verifier's instance commitment from each
-Action's ten public rows, and `commitment_primary_eq_commit` identifies it with the
-zero-padded row polynomial plus Halo 2's default blind. The Action endpoint constructs
-this key and commitment internally, discharges primary-query registration and the
-Action domain bounds, and no longer accepts an instance key, commitment equation, or
-registration premise from its caller. A commitment mismatch remains visible only as
-the shared `HasNontrivialRelation` exceptional branch.
+The construction is now owned by `TopLevelCircuit`.
+`instanceCommitmentKey` derives the compatible Lagrange key from the monomial URS,
+`instanceCommitment` computes every proof's verifier commitment from the circuit's
+public rows, and `instanceCommitment_column_eq_commit` identifies each column with
+its zero-padded row polynomial plus Halo 2's default blind. The generic endpoint
+constructs these objects internally and derives query registration from the
+public-input layout; the Action specialization supplies only its existing
+supported-domain bound. A commitment mismatch remains visible only as the shared
+`HasNontrivialRelation` exceptional branch.
 
 Then expose the result as the row-indexed Clean `Environment` used by
 `Action.Circuit.soundnessPost`. The remaining gap is not the old free-polynomial
@@ -1191,7 +1193,7 @@ relation consumed by circuit integration.
 `Soundness/Deployed/ActionVesta` carries the transport ingredients for the deployed
 seam — the fixture `k`-match and blinding-factor facts (`shape_k_eq_capturedURS_k`,
 `vk_blindingFactors_lt`); the public-instance commitment is the circuit-native
-`ActionInstanceCommitment.commitment`, used directly at the captured shape. They carry
+`actionCircuit.instanceCommitment`, used directly at the captured shape. They carry
 the generic Action/Vesta statements to the captured artifacts along
 the keygen certificate. The deployed capstone in `Soundness/Deployed/ActionVesta`
 consumes satisfaction of the canonical accepted model through that transport.
@@ -1325,7 +1327,7 @@ append-only merge flow.
 | **[DONE: lookup join]** | Derive exact packed-selector zero/one values for only the selector leaves occurring in each lookup input. | The guarded V1 packing path emits either the exact singleton selector row or an out-of-bounds sentinel. Shared fixed realization rules out the sentinel, and `EnabledLookup.inputSelectorLeafRowsExact_of_realizes` supplies the generic exact-row result. `ActionLookupSelectorRows` is only the thin circuit instantiation; no Action-specific planner theorem or free selector-value premise remains. | The lookup field of `FullCircuitBridge` for every Action proof index is internal to the terminal. |
 | **[DONE: copy]** | Instantiate pairwise value agreement on decoded `actionCopies` from σ semantics. | `actionResolverPermutationCycle_or_relation` constructs the exact Action cycle; `actionCopyPairValue_of_resolverPermutation` proves each pair's value equality; `actionCopyReplayWitness_or_relation` packages all copies, constants, and endpoint reads. The terminal no longer accepts a copy witness. | The copy field is internal to the Action endpoint. |
 | **[DONE: Action fixed/VK]** | Supply the generic Lagrange-basis setup equations to `ActionFixedCoherence.ofKeygen` and feed the resulting record into the terminal. | `ActionFixedCoherence.ofDerived` constructs the record from the circuit-owned key and symbolic FFT result. Action query coverage and sparse-to-dense realization remain closed by two explicitly interim diagnostics, but no fixed-coherence premise reaches the terminal. | The fixed/table family and its exact lookup-selector projection are internal. |
-| **[DONE: instance]** | No independent work remains in the deterministic instance stream. | `ActionInstanceCommitment.instanceKey` and `.commitment` derive the key and public commitment from the URS and ten Action rows; the binding-aware bundle endpoint consumes them internally and preserves only the shared nontrivial-relation branch. | Public-instance provenance is ready for the one-proof/bundle join. |
+| **[DONE: instance]** | No independent work remains in the deterministic instance stream. | `TopLevelCircuit.instanceCommitmentKey` and `.instanceCommitment` derive the key and all public commitments from the URS and the circuit's public-input layout. `TopLevelInstanceCommitment.statements_or_relation_of_accepted_topLevelBundleStatement` performs the binding generically for arbitrary proof multiplicity and instance-column layouts, preserving only the shared nontrivial-relation branch. | Public-instance provenance is circuit-generic and ready for each concrete soundness specialization. |
 | **[DONE: terminal API]** | Keep the canonical quotient terminal in polynomial language and perform the concrete join in `Circuits/Integration`. | `acceptedModel_circuitSat_or_relation_of_decodedMemberPolynomial_eq` reconstructs the complete accepted model and `action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq` specializes it to the circuit-derived Action key and concrete bundle statement. Its signature has no free `S`/`hencodes`, fixed record, copy record, or selector-value premise. The deployed accepted-`CircuitSat` endpoint is also exported. | The deterministic semantic function is ready for invocation by the live probability capstone. |
 | **[SEPARATE: ledger]** | Continue [#98](https://github.com/zcash/ironwood/pull/98)'s `SpecPost`-to-ledger refinement. | Independent of polynomial reconstruction and Clean constraint satisfaction. | The games-facing conclusion that should follow after the circuit statement is recovered. |
 | **[SEPARATE: probability]** | Connect [#96](https://github.com/zcash/ironwood/pull/96)'s extraction/coupling result to the deterministic terminal and place the already-priced lookup/permutation exclusions at their transcript squeezes. | The deterministic terminal consumes decoded openings and explicit good-challenge facts; it does not solve the family-wide adaptive `hExtract` supply problem. | A quantitative live theorem around the deterministic #99 result, without reintroducing a free semantic encoding. |

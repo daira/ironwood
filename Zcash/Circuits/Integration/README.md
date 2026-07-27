@@ -53,6 +53,10 @@ The lookup bridge is split deliberately:
   packages the named gate, fixed/selector, copy, and lookup representation facts
   for one canonical assignment, but contains neither the desired circuit statement
   nor an opaque encoding implication.
+* `TopLevelInstanceCommitment.lean` derives the verifier's instance commitments
+  from any top-level circuit's public-input layout and binds accepted instance
+  polynomials back to the supplied public inputs, for arbitrary column and proof
+  counts.
 * `ActionTerminal.lean` retains the accepted-node-binding specialization. It
   specializes the verifier-native decoded-model terminal to the circuit-derived
   Action verification key and produces `Action.BundleStatement` (or the shared
@@ -64,7 +68,7 @@ turns canonical constraint satisfaction plus `TopLevelCircuitCorrectness` into t
 circuit-owned statement for every proof. `Snark/Soundness/TopLevelVesta` composes
 that result with the verifier-native Vesta terminal for an arbitrary
 `TopLevelCircuit`. `Snark/Soundness/ActionVesta` supplies the Action correctness
-constructor and public-instance presentation, while
+constructor and invokes the generic public-instance binding, while
 `Snark/Soundness/Deployed/ActionVesta` only transports captured artifacts. None of
 these public capstones has a free semantic proposition, encoding callback, decoder,
 or column-feed choice.
