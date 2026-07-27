@@ -12,6 +12,8 @@ Action configure proofs to the synthesis-closed top-level constraint system.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (scalarFieldOrder)
+
 open Halo2 Keygen
 open Zcash.Circuits
 open Zcash.Circuits.Action (orchardActionTopLevelCircuit)

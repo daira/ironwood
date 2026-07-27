@@ -23,6 +23,8 @@ Delete these computations once those compiler theorems construct the same facts.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (derivedUrsGLagrange omegaOf)
+
 open Halo2
 open Zcash.Circuits.Action (orchardActionTopLevelCircuit)
 

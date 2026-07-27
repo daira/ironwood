@@ -1,8 +1,11 @@
 -- The Orchard SNARK verifier: transcription and soundness.
 --
 -- Library layout:
--- * `Core/` — the shared objects: the scalar field `F_p`, the verifier group and URS, the typed
---   proof string, the challenges, and the fingerprint MSM.
+-- * `Core/` — the shared objects that are specific to the verifier: the typed proof string and
+--   the challenges. The arithmetic-tier objects the verifier is built from (the scalar field
+--   `F_p`, the verifier group and URS, the fingerprint MSM and its Pippenger accelerator) live
+--   one tier down, in `Zcash/Arithmetic/`; `Core.lean` is a one-name compatibility alias for
+--   the byte-locked fixture captures and nothing else.
 -- * `Verifier/` — the transcription layer: the deployed halo2 verifier's MSM assembly as a pure
 --   Lean function (queries, expressions, multiopen, IPA fold, Fiat–Shamir schedule).
 -- * `Fingerprint/` — the faithfulness cross-check: the captured-fixture match (`native_decide`,
@@ -13,11 +16,16 @@
 --
 -- Import modules here that should be built as part of the library.
 
-import Zcash.Snark.Core.Field
-import Zcash.Snark.Core.Group
+-- The arithmetic tier the verifier is stated over. The umbrella also re-exports `Fp` and `URS`
+-- at the `Zcash` root, which is how they resolve unqualified across the repository.
+import Zcash.Arithmetic
+import Zcash.Arithmetic.Msm
+import Zcash.Arithmetic.FastMsm
+-- The `Zcash.Snark`-namespace compatibility alias for the byte-locked fixture captures. Kept in
+-- the closure so the captures still elaborate; no editable module depends on it.
+import Zcash.Snark.Core
 import Zcash.Snark.Core.ProofString
 import Zcash.Snark.Core.Challenges
-import Zcash.Snark.Core.Msm
 import Zcash.Snark.Fingerprint.SchwartzZippel
 import Zcash.Snark.Fingerprint.Batch
 import Zcash.Snark.Verifier.Ipa
@@ -28,7 +36,6 @@ import Zcash.Snark.Verifier.Assemble
 import Zcash.Snark.Verifier.FiatShamir
 import Zcash.Snark.Verifier.Parametric
 import Zcash.Snark.Fingerprint.Match
-import Zcash.Snark.Fingerprint.FastMsm
 import Zcash.Snark.Soundness.GrandProduct
 import Zcash.Snark.Soundness.Lookup
 import Zcash.Snark.Soundness.Permutation

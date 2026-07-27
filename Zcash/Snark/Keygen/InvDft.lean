@@ -29,6 +29,8 @@ multiplications, and the monomial basis is URS data that needs no derivation at 
 
 namespace Zcash.Snark.Keygen
 
+open Zcash.Arithmetic (bestFftG derivedUrsGLagrange omegaInvOf)
+
 open Zcash.Snark
 open CompElliptic.Curves.Pasta
 

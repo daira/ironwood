@@ -15,6 +15,8 @@ closed form, each required generator equation becomes a computable commitment id
 
 namespace Zcash.Snark.Keygen
 
+open Zcash.Arithmetic (derivedUrsGLagrange domainSize_cast_ne_zero omegaOf omegaOf_isPrimitiveRoot omegaOf_powers_injective)
+
 open Polynomial
 open CompElliptic.Curves.Pasta
 

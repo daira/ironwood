@@ -17,6 +17,8 @@ the restriction equation, and the common-column identification explicitly.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (deltaFp omegaOf omegaOf_isPrimitiveRoot powFast_eq_pow scalarFieldOrder)
+
 open Polynomial
 open Halo2
 open Zcash.Circuits.Action (orchardActionTopLevelCircuit)

@@ -15,6 +15,8 @@ polynomial resolver.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (scalarFieldOrder)
+
 open Halo2 Polynomial
 
 set_option maxHeartbeats 20000

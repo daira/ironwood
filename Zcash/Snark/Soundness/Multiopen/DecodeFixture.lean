@@ -41,6 +41,9 @@ challenge.
 -/
 
 namespace Zcash.Snark
+
+open Zcash.Arithmetic (Msm.zero)
+
 namespace MultiopenDecodeFixture
 
 open Polynomial

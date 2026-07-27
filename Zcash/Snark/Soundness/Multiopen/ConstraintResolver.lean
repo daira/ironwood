@@ -25,6 +25,8 @@ member-node binding.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (Msm)
+
 open Polynomial
 
 set_option maxHeartbeats 20000

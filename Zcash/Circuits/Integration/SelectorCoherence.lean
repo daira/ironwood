@@ -12,6 +12,8 @@ captured Action selector map.
 
 namespace Halo2
 
+open Zcash.Arithmetic (scalarFieldOrder)
+
 set_option maxHeartbeats 20000
 
 /--
@@ -1765,6 +1767,7 @@ end Halo2.Layout
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (scalarFieldOrder)
 open Halo2
 open Halo2.Layout
 
