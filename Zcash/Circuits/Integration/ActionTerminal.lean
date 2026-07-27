@@ -36,7 +36,7 @@ permutation, lookup, and selector claimed evaluations are reconstructed internal
 from the accepted assembled queries. No free semantic proposition, `hencodes`,
 constraint family, or decoded-column feed remains.
 -/
-theorem actionBundleStatement_or_relation_of_acceptedNodeBinding
+theorem action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
     (pp : ProofParams) (urs : URS G)
     (hk :
       (pp.mergeDerived orchardActionTopLevelCircuit).k = urs.k)
@@ -214,7 +214,7 @@ theorem actionBundleStatement_or_relation_of_acceptedNodeBinding
     exact TopLevelAssignment.domainSizeCastNeZero
       ActionPermutationDomain.domainExponent_lt
   rcases
-      acceptedModel_circuitSat_or_relation_of_nodeBinding
+      acceptedModel_circuitSat_or_relation_of_decodedMemberPolynomial_eq
         urs hk vk (commitment pp urs inputs) ps ch memberDecode
         haccepts hblinding hpoly hquot
         gateCoherence.fixedQueryCount
@@ -227,14 +227,14 @@ theorem actionBundleStatement_or_relation_of_acceptedNodeBinding
         hnFp hxgood with
     hsatisfied | hrelation
   · exact
-      actionBundleStatement_or_relation_of_acceptedCircuitSat
+      action_bundleStatement_or_relation_of_acceptedModel_circuitSat
         pp urs hk inputs ps ch vk rfl pU pW a
         batchOpenings memberDecode haccepts hblinding hpoly
         hsatisfied hgoodY permutationExclusions
         lookupExclusions
   · exact Or.inr hrelation
 
-assert_no_sorry actionBundleStatement_or_relation_of_acceptedNodeBinding
+assert_no_sorry action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
 
 end ActionInstanceCommitment
 

@@ -735,7 +735,7 @@ All query evaluations and the quotient carrier are fixed by the accepted
 `CommitmentId` resolver. The only exceptional branch is the existing
 augmented-basis relation produced by node binding.
 -/
-theorem acceptedModel_circuitSat_or_relation_of_nodeBinding
+theorem acceptedModel_circuitSat_or_relation_of_decodedMemberPolynomial_eq
     {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k)
     (vk : VerifyingKey shape Fp G)
