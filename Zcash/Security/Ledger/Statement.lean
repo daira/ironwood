@@ -160,9 +160,10 @@ statement or an exhibited `Bridge.ActionBreak`. The interface itself stays
 (`Bridge.classifyAction`, reduced onward to the games-facing discrete-log-relation
 object by `Bridge.relationOfBreakData`), not here.
 
-TODO: Verify the exact Action interface the Balance and Spendability games consume,
-including whether the NU6.3 flag conditions belong in the game instance or a
-circuit-facing wrapper. -/
+TODO: Verify the exact Action interface the Balance and Spendability games consume.
+The NU6.3 flag conditions belong in the game instance rather than a circuit-facing
+wrapper — the adversary must be allowed to submit transactions both before and after
+NU6.3 — so `ActionInstance` grows the flag fields when those games land. -/
 structure ActionSatisfied (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
     (kv : KeyBindingInterface KW G IVK NK) (inst : ActionInstance G MHASH RHO)
     (w : ActionWitness KW F G RHO PSI MHASH MENC P.depth) : Prop where

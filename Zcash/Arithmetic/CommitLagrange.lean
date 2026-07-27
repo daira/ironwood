@@ -17,8 +17,8 @@ that leaf's glob: it holds the `ZMod`-typed entry points — coordinates into Mo
 kernel, affine reading back — and chains the kernel's simulation theorem `msmM_spec` into the
 `_eq` ladder that lands on `Msm.commitLagrangeSpec`.
 
-`ofPVesM` must never be compared definitionally: unfolding it exposes the CIOS rounds, so the
-equalities below are stated and proved by rewriting only.
+`ofPVesM` must never be compared definitionally: unfolding it exposes the CIOS (Coarsely
+Integrated Operand Scanning) rounds, so the equalities below are stated and proved by rewriting only.
 -/
 
 namespace Zcash.Arithmetic

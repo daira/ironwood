@@ -14,8 +14,8 @@ rev = "63efe407"
 
 [[require]]
 name = "CompElliptic"
-git = "https://github.com/mitschabaude-bot/CompElliptic.git"
-rev = "53b35333cb00b664e3cccabd0bc7f50700ff7929"
+git = "https://github.com/daira/CompElliptic"
+rev = "fd9977340d728b704436894f87f9967f117ad5f7"
 
 # mathlib last, so that its pinned versions of the common transitive dependencies
 # (batteries, aesop, Qq, proofwidgets, ...) take precedence over CompPoly's.
@@ -44,10 +44,14 @@ name = "Zcash"
 name = "FixtureCheck"
 globs = ["Zcash.Snark.Fixtures.+", "Zcash.Snark.Soundness.Deployed.ActionVesta"]
 
-# The circuit-side VK-match and layout tests: fixture comparisons (`#guard`/`#eval`) of the
-# projected constraint system and reconstructed keygen layout against the in-repo Rust dumps.
-# Instance-level like `FixtureCheck`, so not imported by the `Zcash` library; this target
-# keeps them exercised by plain `lake build` (they were previously in no target at all).
+# The circuit-side VK matching and layout tests: `Zcash/Circuits/Tests/TestVk*` compare the
+# ported `configure`/`synthesize` against the CS and layout fixtures dumped from the actual
+# Rust circuit (see `Zcash/Circuits/Fixtures/`). Like `FixtureCheck`, these are `#eval`-checked
+# empirical bindings kept out of `lake build Zcash`, but compiled by plain `lake build`
+# (what CI runs) so a divergence between the Lean circuit model and the deployed VK fails the
+# build. The glob covers the whole directory, so a newly added test cannot land in no target
+# at all; that also pulls in `BenchFixedBase`, a pure kernel-`decide` benchmark, which is
+# cheap enough at its current size to keep honest alongside the rest.
 [[lean_lib]]
 name = "CircuitCheck"
 globs = ["Zcash.Circuits.Tests.+"]

@@ -1,6 +1,7 @@
 import Clean.Halo2.TopLevel
 import Zcash.Circuits.Action.PublicInput
 import Zcash.Circuits.Action.RealBases
+import Zcash.Circuits.Action.Bundle
 
 /-!
 # The deployed Orchard Action as a closed top-level circuit

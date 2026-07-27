@@ -28,6 +28,15 @@ open Zcash.Circuits
 open Zcash.Circuits.Specs.Sinsemilla
 open Zcash.Security.Concrete
 
+/-! ## Sinsemilla domain points
+
+The `SinsemillaHashToPoint` initial points `Q(D) = GroupHash("z.cash:SinsemillaQ", D)`
+(protocol spec §5.4.1.9) for the three deployed Orchard domains, inlined as affine
+constants and proved on-curve.  The coordinates are the deployed values from
+`zcash/orchard`'s `src/constants/sinsemilla.rs`.
+-/
+
+/-- `Q("z.cash:Orchard-MerkleCRH")` — `Q_MERKLE_CRH` in `zcash/orchard`. -/
 def merkleQ : Point Fp :=
   { x := (9991206725476878888751475603038274618448000607209514551456795194094072219296 :
       Fp),
@@ -38,6 +47,7 @@ theorem merkleQ_onCurve : merkleQ.OnCurve := by
   show merkleQ.y ^ 2 = merkleQ.x ^ 3 + pallasB
   decide
 
+/-- `Q("z.cash:Orchard-CommitIvk-M")` — `Q_COMMIT_IVK_M_GENERATOR` in `zcash/orchard`. -/
 def ivkQ : Point Fp :=
   { x := (2593820817260930114322133467408868473290945477826616247349533151445648376562 :
       Fp),
@@ -48,6 +58,7 @@ theorem ivkQ_onCurve : ivkQ.OnCurve := by
   show ivkQ.y ^ 2 = ivkQ.x ^ 3 + pallasB
   decide
 
+/-- `Q("z.cash:Orchard-NoteCommit-M")` — `Q_NOTE_COMMITMENT_M_GENERATOR` in `zcash/orchard`. -/
 def noteQ : Point Fp :=
   { x := (10629404576683096409262958701336170057000067777256141967953463442979689100381 :
       Fp),
@@ -160,13 +171,12 @@ def noteHash (n : Note PallasGroup Fp Fp) : Option (Point Fp) :=
 /-- The deployed note commitment: the Sinsemilla hash of the note message, plus the
 blinding term `[rcm] NoteCommitR`.
 
-The final blinding addition is modeled as the *complete* group addition — faithful to
-the deployed `halo2_gadgets` `CommitDomain::commit`, whose Sinsemilla chain ends before
-the blinding term is added with complete addition.  The protocol spec's literal
-`SinsemillaCommit` (§5.4.8.4) composes the blinding with incomplete `⸭` instead, so a
-future lemma equating this function with the spec-text one carries the negligible
-exceptional-case caveat on that last addition.  The same modeling choice applies to the
-`Commit^ivk` opening consumed by `keyBinding`. -/
+The blinding addition is the complete group addition, matching both the protocol spec's
+`SinsemillaCommit` (§5.4.8.4, complete addition since spec version 2021.2.16) and the
+deployed `halo2_gadgets` `CommitDomain::commit`.  Completeness there is
+soundness-relevant: an incomplete addition would let a prover choose `rcm` to force an
+exceptional case.  The same applies to the `Commit^ivk` opening consumed by
+`keyBinding`. -/
 def noteCommit (rcm : Fq) (n : Note PallasGroup Fp Fp) : Option PallasGroup :=
   noteHash n >>= fun bp =>
     PallasGroup.ofPoint? (bp + rcm.val • Ecc.MulFixed.Certs.noteCommitR.point)
@@ -227,8 +237,8 @@ theorem commitIvkHash_eq_some_of_hashToPoint {ak nk : Fp} {p : Point Fp}
 
 /-- The deployed circuit's key-binding interface: the bare `Commit^ivk` opening
 `Extract(hashPoint + [rivk] CommitIvkR)` plus `ivk ≠ 0`.  As with `noteCommit`, the
-blinding addition is the complete group addition (deployed-gadget-faithful), not the
-spec text's incomplete `⸭`. -/
+blinding addition is the complete group addition, matching both §5.4.8.4 and the
+deployed gadget. -/
 def keyBinding : KeyBindingInterface (KeyBinding.Pool.Witness Fq PallasGroup Fp)
     PallasGroup Fp Fp :=
   KeyBinding.Pool.toInterface extract commitIvkHash

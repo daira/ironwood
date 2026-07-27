@@ -1,7 +1,6 @@
 import Zcash.Security.Ledger.Bridge
 import Zcash.Security.Ledger.SinsemillaDLR
 import Zcash.Meta.AxiomCheck
-import Mathlib.Util.AssertNoSorry
 
 /-!
 # Regression checks for the Action-to-ledger boundary
@@ -179,29 +178,6 @@ theorem spec_post_bridge_smoke {MSG SIG : Type*}
 
 open Zcash.Meta
 
-assert_no_sorry value_positive
-assert_no_sorry value_negative
-assert_no_sorry value_equal
-assert_no_sorry alpha_scaling
-assert_no_sorry value_commit_positive_scaling
-assert_no_sorry value_commit_negative_scaling
-assert_no_sorry zero_encodings_distinct
-assert_no_sorry zero_encodings_decode_equal
-assert_no_sorry dummy_spend_merkle_vacuous
-assert_no_sorry path_layers_defined
-assert_no_sorry cross_address_flag_zero
-assert_no_sorry cross_address_flag_one
-assert_no_sorry cross_address_flag_arbitrary_nonzero
-assert_no_sorry enable_spend_disabled_forces_zero
-assert_no_sorry enable_output_disabled_forces_zero
-assert_no_sorry or_break_iff_guarded_smoke
-assert_no_sorry path_iff_guarded_smoke
-assert_no_sorry guardedPath_of_exact
-assert_no_sorry spec_post_bridge_smoke
-assert_no_sorry actionBreak_of_classify
-assert_no_sorry classify_none_defined
-assert_no_sorry actionBreak_iff_classify_isSome
-
 -- The circuit-to-ledger reduction is a computation: a plain `def`, compiled by
 -- the Lean compiler — so `Classical.choice` cannot contribute to the computed
 -- break data.  The `+choice` allowance is forced by Mathlib's `ZMod` instances:
@@ -216,9 +192,6 @@ assert_computable classifyAction +choice
 assert_axioms value_positive
 assert_axioms value_negative
 assert_axioms value_equal
--- The concrete Pallas refinements inherit the explicit `pallas_natCard` trust
--- declaration (and native certificate checks).  They are therefore audited by
--- `lean_verify` rather than asserted against the smaller standard/native budget.
 assert_axioms zero_encodings_distinct
 assert_axioms zero_encodings_decode_equal
 assert_axioms dummy_spend_merkle_vacuous
@@ -229,24 +202,27 @@ assert_axioms cross_address_flag_arbitrary_nonzero
 assert_axioms enable_spend_disabled_forces_zero
 assert_axioms enable_output_disabled_forces_zero
 
+-- The refinements instantiated at the deployed Pallas bases sit one tier up: their proofs
+-- consume `native_decide` certificates — the fixed-base window tables and CompElliptic's
+-- Pallas point count (`pallas_natCard`) — so `+native` is the whole of the extra budget.
+assert_axioms alpha_scaling +native
+assert_axioms value_commit_positive_scaling +native
+assert_axioms value_commit_negative_scaling +native
+assert_axioms or_break_iff_guarded_smoke +native
+assert_axioms path_iff_guarded_smoke +native
+assert_axioms guardedPath_of_exact +native
+assert_axioms spec_post_bridge_smoke +native
+
 -- The onward reduction from classified break data to the games-facing
 -- discrete-log-relation object is likewise a computation: the coefficients are a
 -- plain compiled `def` over the break datum, with the relation and nontriviality
 -- facts in erased `Prop` fields (same `+choice` reading as the classifier above).
-assert_no_sorry ofPoint_hashToPoint
-assert_no_sorry breakCoeffs_relation
-assert_no_sorry breakCoeffs_nontrivial
-assert_no_sorry classify_query_inr
-assert_no_sorry classifyRelation_isSome_iff
-assert_no_sorry classifyRelation_site
 assert_computable breakCoeffs +choice
--- `relationOfBreakData` and `classifyRelation` are likewise plain compiled `def`s,
--- but their erased `Prop` fields carry the deployed base points' validity
--- certificates, which live at the concrete Pallas trust tier (`pallas_natCard`
--- plus the native certificate checks).  `assert_computable` has no budget for a
--- declared axiom, so — exactly like the `zero_encodings_*` exclusions above —
--- they are audited by `lean_verify` rather than asserted here; once
--- `pallas_natCard` becomes a `native_decide`-backed theorem they can rejoin as
--- `assert_computable … +choice +native`.
+-- `relationOfBreakData` and `classifyRelation` are likewise plain compiled `def`s, asserted
+-- computable per the breaks-as-computed-data convention.  Their erased `Prop` fields
+-- additionally carry the deployed base points' on-curve certificates, which are
+-- `native_decide` checks, so they sit one tier up at `+choice +native`.
+assert_computable relationOfBreakData +choice +native
+assert_computable classifyRelation +choice +native
 
 end Zcash.Security.Ledger.BridgeTests

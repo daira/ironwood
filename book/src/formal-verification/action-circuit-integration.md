@@ -666,21 +666,17 @@ The generic boundary now quantifies only selector leaves that actually occur in 
 selected lookup's input expressions; unrelated gate selectors may legitimately be
 active at the same absolute row. `LookupSelectorRows` transports exact dense packed
 rows through fixed-polynomial binding into that expression-level projection.
-The within-synthesis half of the remaining compiler argument is now closed.
-`TopLevelCircuit` carries two generic operation-stream laws:
-`lookupRelevantSelectorActivationsExact` says that every selector leaf used by a
+`TopLevelCircuit` briefly carried two generic operation-stream laws for this seam:
+`lookupRelevantSelectorActivationsExact`, saying that every selector leaf used by a
 lookup input is activated at the lookup row exactly when it appears in that
-operation's enabled-selector list, while `lookupInputsNoSimpleSelectors` rules out
+operation's enabled-selector list, and `lookupInputsNoSimpleSelectors`, ruling out
 the simple-selector overlap case that selector packing cannot represent exactly.
-
-The concrete Action proofs are compositional rather than computational.
-`Action/SynthesisLaws.lean` proves reusable laws for the range-check, Sinsemilla,
-Merkle, ECC, fixed-base, CommitIvk, and Action check stages;
-`NoteCommit/SynthesisLaws.lean` proves the corresponding old/new NoteCommit
-decomposition; and `Action/TopLevelSynthesisLaws.lean` combines them for the complete
-unit-input synthesis. The resulting proofs are installed directly in
-`Action.actionCircuit`, so downstream generic bridges consume the law through the
-single `TopLevelCircuit` interface rather than an Action sidecar certificate.
+Neither field was ever read by a keygen or verifier theorem — lookup projection
+coverage is obtained by counting selector indices instead — so both fields and the
+compositional Action proofs that discharged them have been withdrawn. Halo 2's
+rejection of simple selectors in lookup arguments is consequently not modelled; see
+`Zcash/Circuits/Integration/lawfulness-and-certificate-elimination.md` for the shape
+a future keygen-fidelity theorem would need to restore.
 
 The remaining placement half is deliberately narrower: transport this exact
 operation-level accounting through V1's concrete region starts and the derived
@@ -1192,16 +1188,13 @@ duplicate-query rejection directly from `DeployedAccepts`.
 `CanonicalMemberConstraintRelation.ofAcceptedCircuitSat` uses those facts to turn
 satisfaction of the accepted run's canonical decoded-member model into the exact
 relation consumed by circuit integration.
-`Soundness/Deployed/ActionVk` now transports that closed terminal to the captured
-Action proof shape and verifying key using the keygen certificate. It no longer
-accepts lookup-selector realization: fixed coherence constructs those values inside
-the terminal. The module is imported by the root `Zcash` module, so `lake build Zcash` checks
-this deployed seam rather than leaving the capstone outside the build graph.
-The same module now also exports the captured-artifact
-`action_bundleStatement_or_relation_of_acceptedModel_circuitSat_deployed`. This is the
-entry point for the Vesta constraint-carrying relation: when the upstream capstone
-already supplies satisfaction of the canonical accepted model, it bypasses the
-node-binding reconstruction and consumes that satisfaction directly.
+`Soundness/Deployed/ActionVesta` carries the transport ingredients for the deployed
+seam — the fixture `k`-match and blinding-factor facts (`shape_k_eq_capturedURS_k`,
+`vk_blindingFactors_lt`); the public-instance commitment is the circuit-native
+`ActionInstanceCommitment.commitment`, used directly at the captured shape. They carry
+the generic Action/Vesta statements to the captured artifacts along
+the keygen certificate. The deployed capstone in `Soundness/Deployed/ActionVesta`
+consumes satisfaction of the canonical accepted model through that transport.
 `AcceptedModelClaimedEvaluations` is the corresponding verifier-native node-binding
 fingerprint: it states once that the canonical model's fixed/advice/instance,
 permutation, lookup, and row-selector polynomials evaluate to the accepted proof
@@ -1244,10 +1237,10 @@ or the shared augmented-basis relation. The theorem has no arbitrary key, decode
 constraint model, `S`, or `hencodes`; only explicitly priced good-challenge facts
 remain.
 
-At the captured artifacts,
-`action_bundleStatement_or_relation_of_acceptedModel_circuitSat_deployed` is the
-corresponding direct receiver for a `CircuitSat` proof over the canonical accepted
-model. `Soundness/Multiopen/CanonicalSelection` now constructs the advice and
+At the captured artifacts, the deployed capstone is the corresponding direct
+receiver for a `CircuitSat` proof over the canonical accepted model, obtained by
+transporting the generic Action/Vesta capstone.
+`Soundness/Multiopen/CanonicalSelection` now constructs the advice and
 instance slots forced by `CanonicalMemberConstraintRelation.acceptedRoute` and proves
 that their full polynomial feeds equal the canonical accepted model's feeds.
 `Soundness/Canonical/Vesta` specializes the verifier-native terminal's former free

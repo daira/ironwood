@@ -1,3 +1,6 @@
+import Zcash.Circuits.Action.RealBases
+import Zcash.Security.Ledger.Bridge
+import Zcash.Security.Ledger.SinsemillaDLR
 import Zcash.Security.KeyBinding.Instance
 import Zcash.Security.KeyBinding.Probability
 import Zcash.Security.Ledger.Balance
@@ -729,7 +732,7 @@ assert_axioms acceptedAdviceSelection_feed_eq
 assert_axioms acceptedInstanceSelection_feed_eq
 assert_axioms acceptedModel_circuitSat_or_relation_of_feed_eq +native
 assert_axioms acceptedModel_circuitSat_or_relation_of_acceptedSelections +native
-assert_axioms action_bundleStatement_or_relation_of_deployedAccepts +native +pallas
+assert_axioms action_bundleStatement_or_relation_of_deployedAccepts +native
 -- The last links: the point check lifted to the polynomial identity, the permutation taken to be the
 -- one keygen builds from the circuit's copy constraints, the cells of every chunk covered at once,
 -- and circuit satisfaction defined by the whole constraint list rather than the gates alone.
@@ -821,3 +824,65 @@ assert_axioms updEsc_escapesDuringC_measure_le
 assert_axioms adaptEsc
 assert_axioms adapt_decomposition
 assert_axioms adaptEsc_measure_le
+
+/-! ## The Action circuit — the halo2-native soundness trust surface
+
+The circuit-layer soundness theorems live at the `native_decide` tier: they consume
+`native_decide` certificates only — the six fixed-base window tables, small `interval_cases`
+facts, and CompElliptic's Pallas point-count witness (`pallas_natCard`). These assertions pin
+exactly that budget for the generic soundness theorems and for the fully-instantiated deployed
+bundle — a `sorry` or any further axiom reached anywhere in the Action stack fails the build
+here. -/
+
+assert_axioms Zcash.Circuits.Action.Circuit.soundness +native
+assert_axioms Zcash.Circuits.Action.Circuit.soundnessPost +native
+assert_axioms Zcash.Circuits.Action.orchardActionCircuit +native
+
+/-! ## The circuit → ledger bridge — exported refinement theorems
+
+The refinement from the Action circuit's postcondition to the games-facing ledger statement
+(`ActionBreak … ∨ ∃ inst w, …`), together with the two correctness directions of the
+break classifier `classifyAction`: an escape it returns is a break of the witness's own hash
+query, and a `none` return — no escape at any of the four sites — means every Sinsemilla query
+of the witness is defined. `actionBreak_iff_classify_isSome` packages both directions as the
+consumer-boundary equivalence. Same budget as the circuit layer above: standard tier plus
+`native_decide` certificates (including the Pallas point-count witness).
+
+`specPost_to_ledger` is the bridge's whole consumer surface: composition with circuit
+satisfaction lives on the Circuits side, where the `Constraints` predicate it would consume
+is actually produced. -/
+
+assert_axioms Zcash.Security.Ledger.Bridge.specPost_to_ledger +native
+assert_axioms Zcash.Security.Ledger.Bridge.actionBreak_of_classify +native
+assert_axioms Zcash.Security.Ledger.Bridge.classify_none_defined +native
+assert_axioms Zcash.Security.Ledger.Bridge.actionBreak_iff_classify_isSome +native
+
+/-! ## The Sinsemilla discrete-log-relation reduction
+
+The onward step from a classified Action escape to the games-facing relation object, which
+the census above stops short of: the escaped chain is turned into an explicit generator
+combination (`ofPoint_hashToPoint`), the coefficient vector is computed from the break data
+(`breakCoeffs`, with its relation and nontriviality facts), and the two headline reductions
+package that as a `NontrivialRelationOne` at the escaped site's domain point.
+
+`relationOfBreakData` and `classifyRelation` are asserted computable, per the
+breaks-as-computed-data convention. `+native` covers the deployed bases' on-curve certificates
+carried in their erased `Prop` fields; `+choice` is the same erased-positions tier the classifier
+itself sits at.
+
+`ofPoint_hashToPoint` and `breakCoeffs_nontrivial` stay at the standard tier: the chain
+combination reasons in `ℕ`-multiples of the lifted table, and nontriviality only in the scalar
+field. `breakCoeffs_relation` needs `+native` because it scales group elements by field
+elements, and the `Module Fq PallasGroup` instance is built from the Pallas point count. That
+is the same witness the circuit layer above carries, reaching this file through the group's
+scalar action rather than a certificate check. -/
+
+assert_computable Zcash.Security.Ledger.Bridge.breakCoeffs +choice
+assert_computable Zcash.Security.Ledger.Bridge.relationOfBreakData +choice +native
+assert_computable Zcash.Security.Ledger.Bridge.classifyRelation +choice +native
+assert_axioms Zcash.Security.Ledger.Bridge.ofPoint_hashToPoint
+assert_axioms Zcash.Security.Ledger.Bridge.breakCoeffs_relation +native
+assert_axioms Zcash.Security.Ledger.Bridge.breakCoeffs_nontrivial
+assert_axioms Zcash.Security.Ledger.Bridge.classify_query_inr +native
+assert_axioms Zcash.Security.Ledger.Bridge.classifyRelation_isSome_iff +native
+assert_axioms Zcash.Security.Ledger.Bridge.classifyRelation_site +native
