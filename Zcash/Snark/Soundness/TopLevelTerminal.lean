@@ -21,6 +21,35 @@ open Halo2 Polynomial
 
 set_option maxHeartbeats 20000
 
+/-! ## Why this file disables `cleanup.letToHave`
+
+`topLevelBundleStatement_or_bad_of_constraintSatisfaction` was a `theorem` concluding
+`… ∨ Bad`. Carrying the break as data made it a `noncomputable def` concluding `… ⊕' Bad`,
+and that alone made it fail to elaborate — `(deterministic) timeout at 'whnf'`, reported
+against the declaration name, and unaffected by raising `maxHeartbeats` to two million.
+
+The cause is not in the proof. `Meta.letToHave` is a post-elaboration pass that rewrites
+nondependent `let` into `have` in definition *values*. It is skipped for theorems and for
+declarations whose type is a `Prop`, so it never ran here before; a `Type`-valued `def`
+switches it on. Under a `let` it re-typechecks the body from scratch, outside the
+elaborator's unification context. That re-check re-derives the domain equality at the
+`hrows` argument of `ofTopLevelCanonical` — `Fin (2 ^ top.domainExponent)` against
+`Fin (top.toVerifierKey pp urs).n` — down a path where `whnf` attacks the `2 ^ …` side and
+unfolds `top.domainExponent` into `minimalKForRows` and on into `FormalCircuit.synthesize`,
+i.e. it tries to run the Clean circuit compiler on an abstract `top`. That does not
+terminate on a symbolic circuit, which is why no heartbeat budget helps. The kernel is not
+involved: it checks the same equality without trouble.
+
+**This is a hazard for the rest of the breaks-as-data conversion, not a quirk of this file.**
+Any declaration moved from `Prop` to `Type` whose proof combines a tactic `let` with a
+unification-heavy defeq below it can hit the same pass. The alternatives, if disabling the
+pass is unwelcome, are to keep such facts ascribed and *above* every `let`, or to avoid the
+`let` entirely.
+
+Diagnosis credit: traced with `trace.profiler` and `set_option diagnostics true`, which
+showed `TopLevelCircuit.formalCircuit` unfolding 62,561 times.
+-/
+
 set_option cleanup.letToHave false in
 /--
 Canonical constraint satisfaction plus the component-level circuit correctness
@@ -72,8 +101,9 @@ noncomputable def topLevelBundleStatement_or_bad_of_constraintSatisfaction
   let assignment :
       TopLevelAssignment top (pp.mergeDerived top).numProofs proofIndex :=
     { polynomial := poly }
-  -- Ascribed to the form `ofTopLevelCanonical` expects. Left to unification, matching
-  -- `Fin (2 ^ top.domainExponent)` against `Fin (top.toVerifierKey pp urs).n` diverges.
+  -- Ascribed to the form `ofTopLevelCanonical` expects, so the domain equality is settled
+  -- here rather than at the argument position. Not sufficient on its own — see the note on
+  -- `cleanup.letToHave` above, which is what actually makes this declaration elaborate.
   have hrows : Function.Injective
       fun row : Fin (top.toVerifierKey pp urs).n =>
         (top.toVerifierKey pp urs).omega ^ (row : ℕ) :=
