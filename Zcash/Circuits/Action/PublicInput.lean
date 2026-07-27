@@ -74,12 +74,9 @@ namespace PublicInputs
   simp_all
 
 /-- The Action circuit's public input occupies rows 0 through 9 of `primary`. -/
-def layout : PublicInputLayout Config PublicInputs where
-  cells := fun cfg i => (cfg.primary, i)
-
-/-- Serialize the structured statement in its declared instance-cell order. -/
-def rows (inputs : PublicInputs Fp) : List Fp :=
-  (toElements inputs).toList
+def layout : PublicInputLayout PublicInputs [⟨0⟩] where
+  columnSizes := #v[10]
+  size_eq := rfl
 
 /-- Project the public part of the circuit's extracted semantic witness. -/
 def ofActionData (data : ActionData) : PublicInputs Fp where
@@ -95,11 +92,13 @@ def ofActionData (data : ActionData) : PublicInputs Fp where
   disableCrossAddress := data.disableCrossAddress
 
 theorem ofActionData_extractPost
-    (cfg : Config) (i : RegionIndex) (env : Placed Environment Fp) :
-    ofActionData (extractPost cfg () i env) = layout.extract cfg env.env := by
+    (cfg : Config) (i : RegionIndex) (env : Placed Environment Fp)
+    (hprimary :
+      cfg.primary = (layout.cells ⟨0, by decide⟩).1) :
+    ofActionData (extractPost cfg () i env) = layout.extract env.env := by
   apply PublicInputs.ext <;>
     simp [ofActionData, layout, PublicInputLayout.extract,
-      ProvableType.fromElements] <;>
+      ProvableType.fromElements, hprimary] <;>
     rw [Environment.get_inst] <;>
     rfl
 

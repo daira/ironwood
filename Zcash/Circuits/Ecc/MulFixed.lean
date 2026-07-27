@@ -162,6 +162,64 @@ theorem interpolate_congr_params {p q : CoordsParams Fp}
   unfold Ecc.MulFixed.interpolate
   rw [h0, h1, h2, h3, h4, h5, h6, h7]
 
+def configureProgram (window : Column .advice) (qRunningSum : Selector) :
+    Configure Fp (DecomposeRunningSum.Config × Column .fixed) := do
+  let runningSumConfig ← DecomposeRunningSum.configure 3 qRunningSum window
+  let fixedZ ← fixedColumn
+  return (runningSumConfig, fixedZ)
+
+instance (window : Column .advice) (qRunningSum : Selector) :
+    ElaboratedConfigure (configureProgram window qRunningSum) := by
+  unfold configureProgram
+  infer_instance
+
+def configureResult
+    (lagrangeCoeffs : Fin 8 → Column .fixed)
+    (window u : Column .advice)
+    (addConfig : Add.Config)
+    (addIncompleteConfig : AddIncomplete.Config)
+    (_ : Selector)
+    (value : DecomposeRunningSum.Config × Column .fixed) : Config :=
+  { runningSumConfig := value.1
+    lagrangeCoeffs
+    fixedZ := value.2
+    window
+    u
+    addConfig
+    addIncompleteConfig }
+
+def configureGate
+    (lagrangeCoeffs : Fin 8 → Column .fixed)
+    (window u : Column .advice)
+    (addConfig : Add.Config)
+    (addIncompleteConfig : AddIncomplete.Config)
+    (qRunningSum : Selector)
+    (value : DecomposeRunningSum.Config × Column .fixed) : Gate Fp :=
+  coordsGate (configureResult lagrangeCoeffs window u
+    addConfig addIncompleteConfig qRunningSum value)
+
+def configureTail
+    (lagrangeCoeffs : Fin 8 → Column .fixed)
+    (window u : Column .advice)
+    (addConfig : Add.Config)
+    (addIncompleteConfig : AddIncomplete.Config) :
+    Configure Fp Config := do
+  let qRunningSum ← selector
+  let value ← configureProgram window qRunningSum
+  createGate (configureGate lagrangeCoeffs window u
+    addConfig addIncompleteConfig qRunningSum value)
+  return configureResult lagrangeCoeffs window u
+    addConfig addIncompleteConfig qRunningSum value
+
+instance (lagrangeCoeffs : Fin 8 → Column .fixed)
+    (window u : Column .advice)
+    (addConfig : Add.Config)
+    (addIncompleteConfig : AddIncomplete.Config) :
+    ElaboratedConfigure
+      (configureTail lagrangeCoeffs window u addConfig addIncompleteConfig) := by
+  unfold configureTail
+  infer_instance
+
 /-- Equality on `window` and `u`, a fresh selector for the running-sum config (whose `configure`
 registers the "range check" gate and re-enables equality on `window` — a dedup no-op), a fresh
 `fixed_z` column, then the coords gate on the same selector. The cross-config column identities
@@ -172,13 +230,14 @@ def configure (lagrangeCoeffs : Fin 8 → Column .fixed) (window u : Column .adv
     Configure Fp Config := do
   enableEquality window
   enableEquality u
-  let qRunningSum ← selector
-  let runningSumConfig ← DecomposeRunningSum.configure 3 qRunningSum window
-  let fixedZ ← fixedColumn
-  let cfg : Config :=
-    { runningSumConfig, lagrangeCoeffs, fixedZ, window, u, addConfig, addIncompleteConfig }
-  createGate (coordsGate cfg)
-  return cfg
+  configureTail lagrangeCoeffs window u addConfig addIncompleteConfig
+
+instance (lagrangeCoeffs : Fin 8 → Column .fixed) (window u : Column .advice)
+    (addConfig : Add.Config) (addIncompleteConfig : AddIncomplete.Config) :
+    ElaboratedConfigure
+      (configure lagrangeCoeffs window u addConfig addIncompleteConfig) := by
+  unfold configure
+  infer_instance
 
 /-! ## Region-relative synthesize pieces
 

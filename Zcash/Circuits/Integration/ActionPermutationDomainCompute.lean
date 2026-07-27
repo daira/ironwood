@@ -104,25 +104,25 @@ theorem routingCoherent :
           ref.2 <
             actionCircuit.constraintSystem.permutationColumns.length := by
   rw [chunks_eq]
-  simp only [List.mem_cons, List.not_mem_nil, or_false]
-  rintro chunk (rfl | rfl | rfl)
-  · intro ref href
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at href
-    rcases href with rfl | rfl | rfl | rfl | rfl | rfl | rfl
-    all_goals
-      simp only [ColumnRefCoherent]
-      native_decide
-  · intro ref href
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at href
-    rcases href with rfl | rfl | rfl | rfl | rfl | rfl | rfl
-    all_goals
-      simp only [ColumnRefCoherent]
-      native_decide
-  · intro ref href
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at href
-    rcases href with rfl
-    simp only [ColumnRefCoherent]
+  let chunks : List (List (ColumnRef × ℕ)) :=
+    [[(.instance 0, 0), (.advice 0, 1), (.advice 1, 2),
+        (.advice 2, 3), (.advice 3, 4), (.advice 4, 5),
+        (.advice 5, 6)],
+      [(.advice 6, 7), (.advice 7, 8), (.advice 8, 9),
+        (.advice 9, 10), (.fixed 0, 11), (.fixed 7, 12),
+        (.fixed 8, 13)],
+      [(.fixed 9, 14)]]
+  have hall :
+      chunks.flatten.Forall fun ref =>
+        ColumnRefCoherent ref.1 ∧
+          ref.2 <
+            actionCircuit.constraintSystem.permutationColumns.length := by
+    simp [chunks, ColumnRefCoherent]
     native_decide
+  intro chunk hchunk ref href
+  apply List.forall_iff_forall_mem.mp hall
+  apply List.mem_flatten.mpr
+  exact ⟨chunk, by simpa only [chunks] using hchunk, href⟩
 
 /-- The first 21 powers of Pasta's permutation coset generator are distinct.
 Twenty-one is `3 * 7`, the padded Action permutation-column range. -/

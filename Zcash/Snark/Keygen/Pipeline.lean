@@ -5,7 +5,8 @@ import Zcash.Arithmetic.Fft
 import CompElliptic.Curves.Pasta.Fast.Msm
 import Zcash.Circuits.Integration.ExprRich
 import Clean.Halo2.Keygen.Layout
-import Clean.Halo2.TopLevelKeygen
+import Clean.Halo2.Keygen
+import Clean.Halo2.TopLevel
 import Zcash.Arithmetic
 import Zcash.Snark.Verifier.Assemble
 
@@ -221,10 +222,9 @@ URS (which must be sized for the circuit, `urs.k = minimalK cs ops` — orchard'
 exponent, gates/query layouts/lookups from the pinned CS (carried across the
 `RichExpression → Expr` boundary), and the two commitment families from the derived
 layout over the URS's Lagrange basis. -/
-def ofOperations (shape : Shape) (urs : URS G)
+def ofOperations (shape : Shape) (urs : URS G) (k : ℕ)
     (cs : ConstraintSystem Fp) (ops : Operations Fp)
     (fixedRows : List (List Fp)) : VerifyingKey shape Fp G :=
-  let k := minimalK cs ops
   let selMap := deriveSelCompressMap cs (2 ^ k)
     (activations (FloorPlanner.V1.starts ops) (indexedRegions ops 0).1)
   let pinned := PinnedConstraintSystem.derive cs selMap
@@ -253,11 +253,11 @@ def ofOperations (shape : Shape) (urs : URS G)
 Downstream proofs should rewrite with this lemma instead of asking definitional
 equality to unfold the complete verifying-key constructor. -/
 @[simp] theorem ofOperations_fixedCommitment
-    (shape : Shape) (urs : URS G)
+    (shape : Shape) (urs : URS G) (k : ℕ)
     (cs : ConstraintSystem Fp) (ops : Operations Fp)
     (fixedRows : List (List Fp))
     (column : ℕ) :
-    (ofOperations shape urs cs ops fixedRows).fixedCommitment column =
+    (ofOperations shape urs k cs ops fixedRows).fixedCommitment column =
       (fixedCommitmentsOf urs.w (derivedUrsGLagrange urs)
         fixedRows).getD column 0 := by
   simp only [ofOperations]
@@ -265,13 +265,13 @@ equality to unfold the complete verifying-key constructor. -/
 /-- Projection API for common permutation commitments produced by
 `ofOperations`. -/
 @[simp] theorem ofOperations_permutationCommonCommitment
-    (shape : Shape) (urs : URS G)
+    (shape : Shape) (urs : URS G) (k : ℕ)
     (cs : ConstraintSystem Fp) (ops : Operations Fp)
     (fixedRows : List (List Fp))
     (column : Fin shape.numPermutationColumns) :
-    (ofOperations shape urs cs ops fixedRows).permutationCommonCommitment column =
+    (ofOperations shape urs k cs ops fixedRows).permutationCommonCommitment column =
       (permutationCommitmentsOf urs.w (derivedUrsGLagrange urs)
-        (minimalK cs ops) cs ops).getD column.val 0 := by
+        k cs ops).getD column.val 0 := by
   simp only [ofOperations]
 
 /-- **A verifying key whose gate list is a derivation's evaluates like the source
@@ -316,11 +316,11 @@ variable {G : Type} [AddCommGroup G] [Inhabited G]
 /-- Transporting `ofOperations` along a shape equality is `ofOperations` at the other
 shape — the record mentions the shape only in its `Fin`-domain types, never in a field
 value. -/
-theorem ofOperations_cast {s₁ s₂ : Shape} (hs : s₁ = s₂) (urs : URS G)
+theorem ofOperations_cast {s₁ s₂ : Shape} (hs : s₁ = s₂) (urs : URS G) (k : ℕ)
     (cs : ConstraintSystem Fp) (ops : Operations Fp)
     (fixedRows : List (List Fp)) :
-    hs ▸ VerifyingKey.ofOperations s₁ urs cs ops fixedRows
-      = VerifyingKey.ofOperations s₂ urs cs ops fixedRows := by
+    hs ▸ VerifyingKey.ofOperations s₁ urs k cs ops fixedRows
+      = VerifyingKey.ofOperations s₂ urs k cs ops fixedRows := by
   cases hs; rfl
 
 /-! ## The method form -/
@@ -401,7 +401,8 @@ derived shape). -/
 def verifierKeyAt
     (top : TopLevelCircuit Fp Config PublicInput)
     (shape : Shape) (urs : URS G) : VerifyingKey shape Fp G :=
-  .ofOperations shape urs top.constraintSystem top.operations top.fixedRows
+  .ofOperations shape urs top.domainExponent
+    top.constraintSystem top.operations top.fixedRows
 
 /-- Projection API for the fixed commitments of the shape-explicit top-level key. -/
 @[simp] theorem verifierKeyAt_fixedCommitment

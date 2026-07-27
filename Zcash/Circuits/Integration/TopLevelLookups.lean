@@ -77,9 +77,11 @@ theorem EnabledLookup.activationRow_lt_usedRows
     top.placement lookup.region + lookup.row < top.usedRows := by
   obtain ⟨body, hregion, hoperation⟩ :=
     (mem_operationEnabledLookups_iff lookup (top.operations) 0).mp henabled
-  exact absoluteRow_lt_usedRows_of_enableLookup_mem
-    (top.operations) lookup.region body hregion
-    lookup.argument lookup.enabled lookup.row hoperation
+  exact
+    (absoluteRow_lt_usedRows_of_enableLookup_mem
+      (top.operations) lookup.region body hregion
+      lookup.argument lookup.enabled lookup.row hoperation).trans_le
+      top.operations_usedRows_le_usedRows
 
 /--
 A fitting circuit-derived domain places every lookup activation in the usable-row
@@ -92,8 +94,7 @@ theorem EnabledLookup.activationRow_lt_usableRows
     top.placement lookup.region + lookup.row <
       top.usableRowsAt top.domainExponent :=
   (lookup.activationRow_lt_usedRows henabled).trans_le
-    (top.usedRows_le_usableRowsAt top.domainExponent
-      top.fitsAt_domainExponent)
+    top.usedRows_le_usableRowsAt_domainExponent
 
 /--
 Static lookup facts at the circuit-derived projection boundary.
