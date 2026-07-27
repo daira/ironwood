@@ -30,6 +30,7 @@ import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.PermutationRows
 import Zcash.Snark.Soundness.ConstraintRelations
 import Zcash.Snark.Soundness.ChallengePricing
+import Zcash.Snark.Soundness.DegreeWalk
 
 /-!
 # Trust boundary, build-checked
@@ -731,6 +732,21 @@ assert_axioms tableReadingPinnedRootEvent
 assert_axioms tableReadingPinnedRootEvent_landing_measure_le
 assert_axioms deployedRootEventBudget_sum_le
 assert_axioms badX_le_via_squeeze_prefixed +native
+-- The stability input derived from Fiat–Shamir prefix-determinism: the `x` squeeze point reads
+-- only answers at strictly shorter transcripts, so resampling at the point itself moves nothing.
+assert_axioms hstab_of_xPrefixDetermined +native
+-- Prefix injectivity at the multiopen squeeze points (`Forking.Adversary.PreIpa`): each point
+-- pins every field absorbed before it — the toolkit for the deployed squeeze-invariance
+-- schedules, which need each root-set datum emitted strictly before its own squeeze.
+assert_axioms preXSqueezePoint_inj
+assert_axioms preX1SqueezePoint_inj
+assert_axioms preX2SqueezePoint_inj
+assert_axioms preX3SqueezePoint_inj
+assert_axioms preX4SqueezePoint_inj
+-- The degree walk (`Soundness.DegreeWalk`): every constraint family's polynomial stays under an
+-- explicit cap — gates by `Expr.degreeBound`, permutation chunks by width, lookups by their
+-- compressed expressions — the combined bound the `x`-squeeze schedule's `epsilonX` prices.
+assert_axioms natDegree_combineConstraints_le
 assert_axioms snarkExtractionDeployed_prob_le_via_wrapped_pinned_roots +native
 assert_axioms ComputedDeployedRootFSFamily.deployedRelation_prob_le_of_generatorRO_textbookDL +native
 assert_axioms deployedRootFailure_subset_landing +native

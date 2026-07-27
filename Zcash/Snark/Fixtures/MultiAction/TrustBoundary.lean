@@ -1,4 +1,5 @@
 import Zcash.Snark.Fixtures.MultiAction.Fixture
+import Zcash.Snark.Fixtures.MultiAction.Degree
 import Zcash.Meta.AxiomCheck
 
 /-!
@@ -33,6 +34,13 @@ assert_axioms capturedMsm_eval_eq_zero +native
 assert_axioms assembledMsm_eval_eq_zero +native
 assert_axioms Zcash.Arithmetic.Msm.evalNat
 assert_axioms assemble
+-- The captured key's degree budget: one literal (`20470`) dominates every constraint family,
+-- so the `x`-squeeze schedule's `epsilonX` is the concrete `20470 / |𝔽|` at this key.
+assert_axioms vk_gates_degree_le +native
+assert_axioms vk_chunk_width_le +native
+assert_axioms vk_lookup_input_degree_le +native
+assert_axioms vk_lookup_table_degree_le +native
+assert_axioms vk_quotient_tail_le +native
 
 -- The instance-commitment derivation: the two captured claims, plus the data and functions they
 -- range over. The latter are flagless — they are ordinary definitions, so compiler trust must not

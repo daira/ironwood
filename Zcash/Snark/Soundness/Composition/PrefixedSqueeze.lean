@@ -169,4 +169,48 @@ theorem badX_le_via_squeeze_prefixed {T' : Type*} [DecidableEq T']
       (algebraicFullPrefixesPre_ne_x family.init _
         (show ((i.castLE (by omega) : Fin 11) : Nat) < 4 from i.isLt))]
 
+/-! ## Discharging the stability input
+
+`badX_le_via_squeeze_prefixed`'s `hstab` is resampling-shaped: updating the oracle at the run's own `x` squeeze
+point leaves the point unchanged. For a Fiat–Shamir prover this is a consequence of a more
+natural property — the pre-`x` prefix reads only answers at strictly shorter transcripts — and
+that property implies `hstab` outright: the update point has exactly the `x` prefix's length, so
+no strictly shorter answer moves. -/
+
+/-- **Fiat–Shamir prefix-determinism.** The adversary's `x` squeeze point reads only oracle
+answers at transcripts strictly shorter than the `x` prefix: two tables agreeing below that
+length produce the same `x` squeeze point. Every sequential Fiat–Shamir prover has this shape —
+its pre-`x` commitments are functions of the earlier challenges alone. -/
+def XPrefixDetermined (family : ComputedAlgebraicFSFamily shape) : Prop :=
+  ∀ basis (O O' : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp),
+    (∀ t : BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k),
+      t.val.length < preIpaLen shape family.init.length 4 → O t = O' t) →
+    algebraicFullPrefixesPre family.init ((family.adversary basis).run O) 4
+      = algebraicFullPrefixesPre family.init ((family.adversary basis).run O') 4
+
+/-- Prefix-determinism discharges the squeeze-point stability input: the update point is the `x`
+prefix itself, of exactly the `x` prefix's length, so every strictly shorter answer is untouched
+and the determinism hypothesis applies. -/
+theorem hstab_of_xPrefixDetermined (family : ComputedAlgebraicFSFamily shape)
+    (hdet : XPrefixDetermined family) :
+    ∀ basis (O : BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp) (v : Fp),
+      algebraicFullPrefixesPre family.init ((family.adversary basis).run
+          (Function.update O (algebraicFullPrefixesPre family.init
+            ((family.adversary basis).run O) 4) v)) 4
+        = algebraicFullPrefixesPre family.init ((family.adversary basis).run O) 4 := by
+  intro basis O v
+  refine hdet basis _ O ?_
+  intro t ht
+  rw [Function.update_apply, if_neg]
+  intro hEq
+  have hlen : (algebraicFullPrefixesPre family.init
+      ((family.adversary basis).run O) 4).val.length
+      = preIpaLen shape family.init.length 4 :=
+    preIpaSqueezePoints_length_eq family.init _
+      ((family.adversary basis).run O).proof.2 4
+  rw [hEq, hlen] at ht
+  exact lt_irrefl _ ht
+
 end Zcash.Snark
