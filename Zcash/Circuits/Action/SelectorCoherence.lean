@@ -1,13 +1,13 @@
-import Zcash.Circuits.Action.GateCoherence
+import Zcash.Circuits.Action.Circuit
 import Zcash.Circuits.Integration.SelectorCoherence
 
 /-!
 # Action configure selector coherence
 
 Compositional certificates that every selector reference registered by the Orchard
-Action configure program was allocated by that same program.  This is the syntactic
-companion to `Action.GateCoherence`: semantic gate shape and selector allocation are
-kept separate because neither implies the other.
+Action configure program was allocated by that same program. Semantic gate
+well-formedness is intrinsic to `Gate`; this module supplies the distinct syntactic
+selector-allocation invariant.
 -/
 
 namespace Zcash.Circuits
@@ -389,12 +389,7 @@ theorem rangeCheckGate_selectorsOwned
     (W : ℕ) (cfg : Config) :
     (rangeCheckGate W cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  rw [List.forall_iff_forall_mem]
-  intro constraint hconstraint
-  simp only [List.mem_singleton] at hconstraint
-  subst constraint
-  apply rangeCheckExpr_selectorFree
-  simp [Expression.SelectorFree, queryAdvice]
+  selector_free
 
 /--
 Relational preservation for the child configure program whose selector is allocated
@@ -1092,9 +1087,7 @@ namespace Ecc.MulFixed.BaseFieldElem
 theorem canonGate_selectorsOwned (cfg : Config) :
     (canonGate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [DecomposeRunningSum.rangeCheckExpr_selectorFree,
-    Expression.mulConstant, Expression.SelectorFree,
-    queryAdvice]
+  selector_free
 
 theorem configure_preservesGateSelectorsAllocated
     (canonAdvices : Fin 3 → Column .advice)
@@ -1134,8 +1127,7 @@ namespace Ecc.MulFixed.Short
 theorem shortGate_selectorsOwned (cfg : Config) :
     (shortGate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  simp [DecomposeRunningSum.rangeCheckExpr_selectorFree,
-    Expression.SelectorFree, queryAdvice]
+  selector_free
 
 theorem configure_preservesGateSelectorsAllocated
     (superConfig : MulFixed.Config) :
@@ -1161,16 +1153,7 @@ namespace Ecc.MulFixed.FullWidth
 theorem fullWidthGate_selectorsOwned (cfg : Config) :
     (fullWidthGate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  rw [List.forall_append]
-  constructor
-  · apply MulFixed.coordsCheck_selectorFree
-    simp [Expression.SelectorFree, queryAdvice]
-  · rw [List.forall_iff_forall_mem]
-    intro constraint hconstraint
-    simp only [List.mem_singleton] at hconstraint
-    subst constraint
-    apply DecomposeRunningSum.rangeCheckExpr_selectorFree
-    simp [Expression.SelectorFree, queryAdvice]
+  selector_free
 
 theorem configure_preservesGateSelectorsAllocated
     (superConfig : MulFixed.Config) :
@@ -1196,8 +1179,7 @@ namespace Ecc.MulFixed
 theorem coordsGate_selectorsOwned (cfg : Config) :
     (coordsGate cfg).SelectorsOwned := by
   apply Gate.selectorsOwned_of_withSelector
-  apply coordsCheck_selectorFree
-  simp [Expression.SelectorFree, queryAdvice]
+  selector_free
 
 theorem configure_preservesGateSelectorsAllocated
     (lagrangeCoeffs : Fin 8 → Column .fixed)

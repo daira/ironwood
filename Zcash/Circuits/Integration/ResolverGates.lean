@@ -209,7 +209,6 @@ noncomputable def enabledGatePolynomialWitnessOfResolver
     (enabled : EnabledGate Fp) (constraint : Constraint Fp)
     (hgate : enabled.gate ∈ cs.gates)
     (hconstraint : constraint ∈ enabled.gate.constraints)
-    (hwellFormed : cs.GatesWellFormed)
     (hgates : vk.gates =
       (PinnedConstraintSystem.derive cs map).gates.map
         RichExpression.toExpr)
@@ -276,14 +275,14 @@ noncomputable def enabledGatePolynomialWitnessOfResolver
   refine
     { polynomial := witnessPolynomial
       member := ?_
-      scale := (selReplacement compressed).eval valuation
-      scale_ne_zero := hscale
-      evaluation := ?_ }
+      zero_imp := ?_ }
   · exact resolverGatePolynomial_mem vk ch poly sets chunks
       l0 lLast lBlind proofIndex index
-  · rw [show witnessPolynomial =
+  · intro hzero
+    rw [show witnessPolynomial =
       resolverGatePolynomial vk poly proofIndex index from rfl]
-    rw [resolverGatePolynomial_eval]
+      at hzero
+    rw [resolverGatePolynomial_eval] at hzero
     have hderived := vk.gates_eval_of_gates_eq
       cs map hgates
       (fun query =>
@@ -297,19 +296,18 @@ noncomputable def enabledGatePolynomialWitnessOfResolver
           (vk.omega ^ (place enabled.region + enabled.row)))
       valuation hcoverage hinterpret
       gateIndex hgateIndexVk hgateIndex
-    have hprojection :=
-      Expression.eval_substSelectorMap_eq_scale_queryEval
-        map.lookup valuation
-        (resolverEnvironment vk poly proofIndex usableRows)
-        constraint.poly enabled.gate.selector compressed
-        (place enabled.region + enabled.row)
-        (hwellFormed.constraint hgate hconstraint)
-        hcompressed
-        (by intros; rfl)
-        (by intros; rfl)
-        (by intros; rfl)
-    rw [substSelectorMap_eval] at hprojection
     rw [hsource] at hderived
-    exact hderived.trans hprojection
+    apply Expression.eval_substSelectorMap_zero_imp_queryEval_zero
+      map.lookup valuation
+      (resolverEnvironment vk poly proofIndex usableRows)
+      constraint.poly enabled.gate.selector compressed
+      (place enabled.region + enabled.row)
+      (enabled.gate.wellFormed constraint hconstraint)
+      hcompressed hscale
+      (by intros; rfl)
+      (by intros; rfl)
+      (by intros; rfl)
+    rw [substSelectorMap_eval]
+    exact hderived.symm.trans hzero
 
 end Zcash.Snark

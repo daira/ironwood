@@ -39,7 +39,6 @@ structure TopLevelGateCoherence
     [CircuitType Output]
     (top : TopLevelCircuit Fp ConfigInput Config Output)
     (pp : ProofParams) (urs : URS G) : Prop where
-  gatesWellFormed : top.constraintSystem.GatesWellFormed
   gateSelectorsAllocated :
     top.constraintSystem.GateSelectorsAllocated
   adviceQueryCount :
@@ -229,7 +228,7 @@ noncomputable def polynomialWitness
     top.constraintSystem top.selectorMap ch poly sets chunks
     l0 lLast lBlind proofIndex top.placement usableRows
     enabled constraint hgate hconstraint
-    coherence.gatesWellFormed hgates hcoverage
+    hgates hcoverage
     compressed hcompressed hinterpret hscale
 
 /--

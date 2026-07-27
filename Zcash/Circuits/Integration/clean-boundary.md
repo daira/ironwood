@@ -176,6 +176,7 @@ reintroduced as an arbitrary caller-supplied coherence record.
 The current `TopLevelGateCoherence` is useful scaffolding while the adapter is being
 built, but it should not survive as part of the public interface. Its definitional
 fields should be discharged directly from `toVerifierKey`; genuine semantic facts
-such as gate well-formedness, selector allocation, supported domain size, and degree
-bounds remain internal circuit/compiler obligations. They should be derived or
-packaged once inside the boundary rather than supplied beside every soundness call.
+such as selector allocation, supported domain size, and degree bounds remain internal
+circuit/compiler obligations. Gate well-formedness is already intrinsic to `Gate`.
+The remaining facts should be derived or packaged once inside the boundary rather
+than supplied beside every soundness call.

@@ -34,24 +34,12 @@ theorem configureProgram_eq :
     configureProgram = configureProgramSource :=
   configureHandle.2
 
-theorem configureProgram_preservesGateWellFormedness :
-    Configure.PreservesGateWellFormedness configureProgram := by
-  rw [configureProgram_eq]
-  simpa only [configureProgramSource] using
-    (Action.Circuit.configure_preservesGateWellFormedness
-      Specs.Sinsemilla.orchardGenerators)
-
 theorem configureProgram_preservesGateSelectorsAllocated :
     Configure.PreservesGateSelectorsAllocated configureProgram := by
   rw [configureProgram_eq]
   simpa only [configureProgramSource] using
     (Action.Circuit.configure_preservesGateSelectorsAllocated
       Specs.Sinsemilla.orchardGenerators)
-
-theorem configureProgram_gatesWellFormed :
-    (configureProgram {}).2.GatesWellFormed :=
-  Configure.PreservesGateWellFormedness.fromEmpty
-    configureProgram_preservesGateWellFormedness
 
 theorem configureProgram_gateSelectorsAllocated :
     (configureProgram {}).2.GateSelectorsAllocated :=
@@ -72,14 +60,6 @@ namespace ActionGateCoherence
 
 set_option maxRecDepth 100000
 
-private theorem gatesWellFormed_of_gates_eq
-    {F : Type} [Field F] {source target : ConstraintSystem F}
-    (heq : source.gates = target.gates)
-    (h : target.GatesWellFormed) :
-    source.GatesWellFormed := by
-  unfold ConstraintSystem.GatesWellFormed at h ⊢
-  rwa [heq]
-
 private theorem gateSelectorsAllocated_of_data_eq
     {F : Type} {source target : ConstraintSystem F}
     (hgates : source.gates = target.gates)
@@ -88,14 +68,6 @@ private theorem gateSelectorsAllocated_of_data_eq
     source.GateSelectorsAllocated := by
   unfold ConstraintSystem.GateSelectorsAllocated at h ⊢
   rwa [hgates, hselectors]
-
-private theorem gatesWellFormed :
-    orchardActionTopLevelCircuit.constraintSystem.GatesWellFormed :=
-  gatesWellFormed_of_gates_eq
-    (gateData_eq.1.trans (congrArg
-      (fun program => (program {}).2.gates)
-      Circuits.ActionGateCoherence.configureProgram_eq.symm))
-    Circuits.ActionGateCoherence.configureProgram_gatesWellFormed
 
 private theorem gateSelectorsAllocated :
     orchardActionTopLevelCircuit.constraintSystem.GateSelectorsAllocated :=
@@ -137,7 +109,6 @@ theorem topLevelGateCoherence
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G) :
     TopLevelGateCoherence orchardActionTopLevelCircuit pp urs where
-  gatesWellFormed := gatesWellFormed
   gateSelectorsAllocated := gateSelectorsAllocated
   adviceQueryCount := adviceQueryCount pp urs
   fixedQueryCount := fixedQueryCount pp urs
