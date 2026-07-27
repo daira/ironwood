@@ -11,6 +11,8 @@ constraint decoder.  They contain no accepting-multiopen sampling or floor premi
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (Msm Msm.zero)
+
 open Classical Polynomial
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]

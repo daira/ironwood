@@ -11,6 +11,8 @@ explicit augmented-basis relation; no accepting `x₁` rewinds are used.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (Msm Msm.zero)
+
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 
 -- These deployed grouping definitions occur inside index types.  Sealing them prevents elaboration

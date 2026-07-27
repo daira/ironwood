@@ -11,6 +11,8 @@ there is no continuation threshold or fourth-root conversion in this path.
 
 namespace Zcash.Snark.FixtureMax
 
+open Zcash.Arithmetic (card_Fp scalarFieldOrder)
+
 open Zcash.Snark
 open scoped ENNReal
 

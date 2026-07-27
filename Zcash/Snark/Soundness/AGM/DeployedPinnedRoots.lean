@@ -14,6 +14,8 @@ deployed `x4`, `x3`, `x2`, and per-set `x1` polynomials.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (card_Fp scalarFieldOrder)
+
 open Classical Polynomial
 open scoped ENNReal
 

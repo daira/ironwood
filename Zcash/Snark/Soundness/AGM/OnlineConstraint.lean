@@ -13,6 +13,8 @@ only remaining disagreement branch is the explicit quotient-piece collision retu
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (Msm.otherPoints)
+
 open Classical Polynomial
 
 universe u v

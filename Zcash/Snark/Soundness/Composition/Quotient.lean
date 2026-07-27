@@ -21,6 +21,8 @@ bad set is fixed before the squeeze.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (Msm Msm.zero Msm.eval_appendTerm)
+
 open Polynomial
 
 variable {d : ℕ}
