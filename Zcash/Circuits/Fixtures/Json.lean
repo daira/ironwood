@@ -1,5 +1,6 @@
 import Lean.Data.Json
 import Zcash.Circuits.Fixtures.FixtureTypes
+import Zcash.Circuits.Fixtures.Stamp
 
 /-!
 # JSON codecs and the loader for VK fixtures
@@ -19,14 +20,18 @@ fast SHA-256 exists in the toolchain, and a hand-rolled one is not worth maintai
 * *Content* — every fixture's SHA-256 is pinned in `Zcash/Circuits/Fixtures/SHA256SUMS`
   and enforced by the `Fixtures/*.json` guard in `.github/workflows/lean.yml`
   (`sha256sum -c`, the OS tool). SHA-256 (rather than a non-cryptographic checksum) means
-  the pin also resists a *crafted* swap, not just accidental drift.
+  the pin also resists a *crafted* swap, not just accidental drift. The loaders resolve a
+  fixture by name through the pins (`pinnedPath`), so an unpinned file cannot be read.
 
-Because Lake does not track the `.json` as a dependency of this `.lean`, a *local*
-incremental `lake build` after regenerating a fixture may reuse a cached olean and skip
-the semantic `#eval` above — so CI (a clean build, which always re-elaborates, plus the
-`sha256sum` guard) is the authority. After regenerating a fixture locally, refresh
-`SHA256SUMS` (`sha256sum <files> > SHA256SUMS`) and, to re-run the check locally, force a
-rebuild (e.g. `touch` the consuming test or `lake clean`).
+**Rebuild tracking**: Lake tracks a module's imports, not the `.json` files a `#eval` reads,
+so a regenerated fixture on its own leaves the semantic check cached and unrun locally.
+`Stamp.lean` — the pins as Lean data, generated from `SHA256SUMS` by `stamp.sh` — puts the
+fixture content in the import graph. Refreshing a fixture obliges refreshing `SHA256SUMS`,
+and the stamp with it (CI diffs the two), which is a source change Lake follows: the tests
+below re-elaborate and their checks re-run. Regenerate both from this directory, listing the
+files in the committed order (the stamp follows it):
+
+    sha256sum <files> > SHA256SUMS && ./stamp.sh > Stamp.lean
 
 Small fixtures (the Add/Mul doc-test pairs, the SelMaps) stay as readable Lean
 literals; only the whole-circuit Action dumps use this path.
@@ -36,6 +41,18 @@ namespace Zcash.Circuits.Fixtures.Json
 
 open Lean (Json JsonNumber)
 open Fixtures
+
+/-- The fixture directory, relative to the repository root — where `lake` runs, and so the
+working directory of an elaborating `#eval`. -/
+def fixtureDir : System.FilePath := "Zcash/Circuits/Fixtures"
+
+/-- The path of a content-pinned fixture, by file name. A name the stamp does not list is
+an `IO` error, so a test cannot consume a fixture that `SHA256SUMS` leaves unpinned. -/
+def pinnedPath (file : String) : IO System.FilePath := do
+  unless Stamp.entries.any (fun e => e.1 == file) do
+    throw <| IO.userError
+      s!"fixture {file} is not pinned in {fixtureDir}/SHA256SUMS (see PROVENANCE.md)"
+  return fixtureDir / file
 
 /-- Read a JSON fixture and parse it. A missing file or parse error is an `IO` error → a
 build failure at the consuming `#eval`. Content integrity is enforced out of band (see the
@@ -212,13 +229,17 @@ def getLayoutFixture (j : Json) : Except String LayoutFixture := do
     constants := ← decodeList (← field j "constants") getTriple,
     fixed := ← decodeList (← field j "fixed") getTriple }
 
-/-! ## Checked loaders -/
+/-! ## Checked loaders
 
-def loadCsFixture (path : System.FilePath) : IO CsFixture := do
-  IO.ofExcept ((getCsFixture (← loadJson path)).mapError IO.userError)
+Both take a fixture's file name and resolve it through `pinnedPath`, so the only fixtures
+a test can read are the ones `SHA256SUMS` pins.
+-/
 
-def loadLayoutFixture (path : System.FilePath) : IO LayoutFixture := do
-  IO.ofExcept ((getLayoutFixture (← loadJson path)).mapError IO.userError)
+def loadCsFixture (file : String) : IO CsFixture := do
+  IO.ofExcept ((getCsFixture (← loadJson (← pinnedPath file))).mapError IO.userError)
+
+def loadLayoutFixture (file : String) : IO LayoutFixture := do
+  IO.ofExcept ((getLayoutFixture (← loadJson (← pinnedPath file))).mapError IO.userError)
 
 /-- `#eval`-check helper: named boolean checks, first failure reported. -/
 def runChecks (checks : List (String × Bool)) : IO Unit := do

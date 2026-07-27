@@ -14,8 +14,8 @@ map applied mechanically, post-`compress_selectors` (`actionPost.json`). `config
 version-independent (post-NU 6.2 and 6.3 share the CS), so this single test covers both
 top-level circuits.
 
-The fixtures are JSON data files loaded at `#eval` time (see `Fixtures/Json.lean` for
-the codec, the pinned-content-hash scheme, and why the data is not a Lean term); a
+The fixtures are JSON data files loaded by name at `#eval` time (see `Fixtures/Json.lean`
+for the codec, the SHA-256 pinning scheme, and why the data is not a Lean term); a
 mismatch or failed load is a build failure, exactly like the former `#guard`s.
 -/
 
@@ -34,8 +34,8 @@ def seedOf (f : CsFixture) : List Query :=
     ++ f.instanceQueryLayout.map (fun (c, r) => Query.instance ⟨c⟩ r)
 
 #eval show IO Unit from do
-  let actionPre ← loadCsFixture "Zcash/Circuits/Fixtures/actionPre.json"
-  let actionPost ← loadCsFixture "Zcash/Circuits/Fixtures/actionPost.json"
+  let actionPre ← loadCsFixture "actionPre.json"
+  let actionPost ← loadCsFixture "actionPost.json"
   runChecks [
     -- Pre-compression: projected CS equals the dumped fixture.
     ("actionPre: projected CS = dump", projectCS (seedOf actionPre) actionCS == actionPre),

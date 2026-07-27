@@ -59,8 +59,8 @@ Every JSON fixture is pinned by a SHA-256 content hash in
 crafted swap, not just accidental drift. The hash is **not** recomputed inside the Lean
 build: no fast SHA-256 exists in the toolchain (Clean's `Specs.SHA256` reference spec does
 not finish over even the 33 KB fixture at `#eval` time), and a hand-rolled one is not worth
-maintaining. Regenerate the pins with `sha256sum <files> > SHA256SUMS` from this directory.
-Current artifacts:
+maintaining. Regenerate the pins with `sha256sum <files> > SHA256SUMS` from this directory,
+then refresh the Lean stamp below with `./stamp.sh > Stamp.lean`. Current artifacts:
 
 | File | SHA-256 | Bytes | Consumed by |
 |---|---|---|---|
@@ -72,6 +72,16 @@ Current artifacts:
 The Add/Mul fixtures and the SelMaps are small enough to live as Lean literals; they
 are pinned by being source files (any edit is a reviewable diff), and their headers
 carry the generating tool.
+
+**Rebuild tracking.** Lake tracks a module's imports, not the `.json` files a `#eval`
+reads, so a regenerated fixture on its own leaves the `CircuitVkCheck` reconstruction
+cached and unrun on a local incremental build. [`Stamp.lean`](./Stamp.lean) — the pins
+rendered as Lean data by [`stamp.sh`](./stamp.sh) and imported by the loader the tests go
+through — puts the fixture content in the import graph, so refreshing `SHA256SUMS` and the
+stamp together is a source change Lake follows and the check re-runs. CI diffs the stamp
+against a fresh rendering, so it cannot fall behind `SHA256SUMS` unnoticed. The loaders
+also resolve a fixture by name through the stamp, so a file `SHA256SUMS` does not list
+cannot be read by a test at all.
 
 **What the hash does and does not guarantee.** The pin guarantees the bytes have not
 drifted since the hash was recorded; it does **not** by itself certify the bytes were
