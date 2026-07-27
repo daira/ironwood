@@ -1,4 +1,5 @@
 import Zcash.Circuits.Integration.FixedColumns
+import Zcash.Common.RelationWitness
 import Zcash.Circuits.Integration.ActionPermutationDomain
 import Zcash.Circuits.Integration.CopyListMembership
 
@@ -977,25 +978,26 @@ theorem actionNonconstantEndpointRead
 A declared constant endpoint reads back through its allocated fixed cell, or the
 shared fixed-commitment exceptional branch fires.
 -/
-theorem actionConstantEndpointRead_or_bad
-    (env : Environment Fp) {Bad : Prop}
+def actionConstantEndpointRead_or_bad
+    (env : Environment Fp) {Bad : Type}
     (fixedRead : ∀ {column row value : ℕ},
       (column, row, value) ∈
           topLevelRequiredFixedEntries actionCircuit →
-        env.fixed ⟨column⟩ (row : ℤ) = (value : Fp) ∨ Bad)
+        env.fixed ⟨column⟩ (row : ℤ) = (value : Fp) ⊕' Bad)
     (value : Fp)
     (hendpoint :
       CopyEndpoint.constant value ∈ actionDeclaredEndpoints) :
     (CopyEndpoint.constant value).eval
         actionCircuit.placement env =
           actionCopyValue env
-            (actionCopyEncode (.constant value)) ∨
+            (actionCopyEncode (.constant value)) ⊕'
       Bad := by
-  obtain ⟨witness, hwitnessMem, hwitnessValue⟩ :=
-    exists_actionConst_of_declared hendpoint
   cases hfind :
       actionConsts.find? (fun entry => entry.1 = value.val) with
   | none =>
+      exfalso
+      obtain ⟨witness, hwitnessMem, hwitnessValue⟩ :=
+        exists_actionConst_of_declared hendpoint
       have hsome :
           (actionConsts.find? (fun entry => entry.1 = value.val)).isSome =
             true := by
@@ -1017,14 +1019,12 @@ theorem actionConstantEndpointRead_or_bad
             topLevelRequiredFixedEntries actionCircuit := by
         simp only [topLevelRequiredFixedEntries, List.mem_append]
         exact Or.inl (Or.inl (Or.inr hconstantEntry))
-      rcases fixedRead hrequired with hread | hbad
-      · apply Or.inl
-        have haddress := actionEncodedAddress_eq hendpoint
-        rw [actionCopyValue_eq_encodedAddress, haddress,
-          actionEndpointAddress, hfind]
-        change value = env.fixed ⟨entry.2.1⟩ (entry.2.2 : ℤ)
-        simpa [hentryValue] using hread.symm
-      · exact Or.inr hbad
+      refine bindOrRelationWitness (fixedRead hrequired) fun hread => ?_
+      have haddress := actionEncodedAddress_eq hendpoint
+      rw [actionCopyValue_eq_encodedAddress, haddress,
+        actionEndpointAddress, hfind]
+      change value = env.fixed ⟨entry.2.1⟩ (entry.2.2 : ℤ)
+      simpa [hentryValue] using hread.symm
 
 /-- A typed cell is its raw coordinate pair, so the `mod` totalization is inert. -/
 theorem mkActionCell_eq_of_pair {fc : FlatCell actionNumPermCols actionDomainSize}
@@ -1091,14 +1091,14 @@ the concrete data: value agreement along each decoded keygen copy (the σ-semant
 transport), value agreement of each declared constant copy (two constants-column
 reads), and the declared-endpoint read equations (resolution coordinates). -/
 noncomputable def actionCopyReplayWitness
-    (env : Environment Fp) {Bad : Prop}
+    (env : Environment Fp) {Bad : Type}
     (hpairval : ∀ pr ∈ actionCopies,
-      actionCopyValue env pr.1 = actionCopyValue env pr.2 ∨ Bad)
+      actionCopyValue env pr.1 = actionCopyValue env pr.2 ⊕' Bad)
     (hconstval : ∀ copy ∈ operationDeclaredCopies
         (actionCircuit.operations),
       ∀ c v, copy = (.cell c, .constant v) →
         actionCopyValue env (actionCopyEncode (.cell c)) =
-          actionCopyValue env (actionCopyEncode (.constant v)) ∨ Bad)
+          actionCopyValue env (actionCopyEncode (.constant v)) ⊕' Bad)
     (hread : ∀ copy ∈ operationDeclaredCopies
         (actionCircuit.operations),
       copy.1.eval actionCircuit.placement env =
@@ -1110,16 +1110,35 @@ noncomputable def actionCopyReplayWitness
       (FlatCell actionNumPermCols actionDomainSize) Bad :=
   Zcash.Snark.Layout.Asm.CopyReplayWitness.ofPairValues actionCopyEncode (actionCopyValue env)
     (by
+      classical
       intro pr hpr
       rw [encodeDeclaredCopies, List.mem_map] at hpr
-      obtain ⟨copy, hcopy, rfl⟩ := hpr
-      rcases declared_shape (actionCircuit.operations)
-          actionPermCols actionCircuit.regionStarts copy hcopy with
-        ⟨tuple, hres⟩ | ⟨c, v, hcv⟩
-      · exact Zcash.Snark.Layout.Asm.value_eq_or_bad_of_replay_sameCycle (actionCopyValue env) _
-          hpairval (actionCopyLink copy hcopy tuple hres)
-      · subst hcv
-        exact hconstval _ hcopy c v rfl)
+      -- `ofPairValues` wants the alternative per pair, so the declaring copy has to be recovered
+      -- here; `hpr` is an `∃` and the pair value is data, so it is recovered by choice.
+      let copy := Classical.choose hpr
+      have hcopy : copy ∈ operationDeclaredCopies (actionCircuit.operations) :=
+        (Classical.choose_spec hpr).1
+      have henc :
+          (actionCopyEncode copy.1, actionCopyEncode copy.2) = pr :=
+        (Classical.choose_spec hpr).2
+      rw [← henc]
+      -- Dispatch on the resolution itself, an `Option`; `declared_shape` is an `Or` and only
+      -- serves to name the constant shape once resolution has already failed.
+      match hres : resolveDeclared actionPermCols actionCircuit.regionStarts copy with
+      | some tuple =>
+          exact Zcash.Snark.Layout.Asm.value_eq_or_bad_of_replay_sameCycle (actionCopyValue env) _
+            hpairval (actionCopyLink copy hcopy tuple hres)
+      | none =>
+          have hconstant : ∃ c v, copy = (.cell c, .constant v) := by
+            rcases declared_shape (actionCircuit.operations)
+                actionPermCols actionCircuit.regionStarts copy hcopy with
+              ⟨tuple, htuple⟩ | hshape
+            · rw [hres] at htuple
+              exact absurd htuple (by simp)
+            · exact hshape
+          have hcv := Classical.choose_spec (Classical.choose_spec hconstant)
+          rw [hcv]
+          exact hconstval copy hcopy _ _ hcv)
     hread
 
 /--
@@ -1130,78 +1149,89 @@ The keygen copy pair relates the advice cell to its *positional* constant
 allocation. Both that allocation and the canonical same-value allocation read
 the declared literal through fixed-row coherence.
 -/
-theorem actionConstantCopyValue_or_bad
-    (env : Environment Fp) {Bad : Prop}
+noncomputable def actionConstantCopyValue_or_bad
+    (env : Environment Fp) {Bad : Type}
     (hpairval : ∀ pair ∈ actionCopies,
-      actionCopyValue env pair.1 = actionCopyValue env pair.2 ∨ Bad)
+      actionCopyValue env pair.1 = actionCopyValue env pair.2 ⊕' Bad)
     (fixedRead : ∀ {column row value : ℕ},
       (column, row, value) ∈
           topLevelRequiredFixedEntries actionCircuit →
-        env.fixed ⟨column⟩ (row : ℤ) = (value : Fp) ∨ Bad)
+        env.fixed ⟨column⟩ (row : ℤ) = (value : Fp) ⊕' Bad)
     (copy : DeclaredCopy Fp)
     (hcopy : copy ∈ operationDeclaredCopies
       (actionCircuit.operations))
     (cell : Cell) (value : Fp)
     (hshape : copy = (.cell cell, .constant value)) :
     actionCopyValue env (actionCopyEncode (.cell cell)) =
-        actionCopyValue env (actionCopyEncode (.constant value)) ∨
+        actionCopyValue env (actionCopyEncode (.constant value)) ⊕'
       Bad := by
   classical
   subst copy
-  by_cases hbad : Bad
-  · exact Or.inr hbad
-  · apply Or.inl
-    obtain ⟨entry, hentry, hentryValue, hraw⟩ :=
-      actionConstantRawPair hcopy
-    obtain ⟨pair, hpair, hpairLeft, hpairRight⟩ :=
-      exists_actionCopy_of_raw hraw
-    let constantCoordinate : ℕ × ℕ :=
-      (permIndex actionPermCols
-          (ColRef.toAny (.fixed entry.2.1)),
-        entry.2.2)
-    let cellCoordinate : ℕ × ℕ :=
-      resolveCell actionPermCols
-        actionCircuit.regionStarts cell
-    have hleft :
-        mkActionCell constantCoordinate = pair.1 := by
-      apply mkActionCell_eq_of_pair
-      simpa [constantCoordinate] using hpairLeft
-    have hright :
-        actionCopyEncode (.cell cell) = pair.2 := by
-      apply mkActionCell_eq_of_pair
-      simpa [actionCopyEncode, cellCoordinate] using hpairRight
-    have hpairEq :
-        actionCopyValue env (mkActionCell constantCoordinate) =
-          actionCopyValue env (actionCopyEncode (.cell cell)) := by
-      simpa only [hleft, hright] using
-        (hpairval pair hpair).resolve_right hbad
-    have hconstantEntry :
-        (entry.2.1, entry.2.2, entry.1) ∈
-          topLevelConstantEntries actionCircuit := by
-      rw [topLevelConstantEntries, Layout.constantsFixed, List.mem_map]
-      exact ⟨entry, hentry, rfl⟩
-    have hrequired :
-        (entry.2.1, entry.2.2, entry.1) ∈
-          topLevelRequiredFixedEntries actionCircuit := by
-      simp only [topLevelRequiredFixedEntries, List.mem_append]
-      exact Or.inl (Or.inl (Or.inr hconstantEntry))
-    have hfixed :=
-      (fixedRead hrequired).resolve_right hbad
-    have hpositional :
-        actionCopyValue env (mkActionCell constantCoordinate) = value := by
-      rw [actionCopyValue_mkActionCell,
-        show actionRawCellAddress constantCoordinate =
-            (ColRef.toAny (.fixed entry.2.1), entry.2.2) by
-          simpa [constantCoordinate] using actionConstantCellAddress hentry]
-      change env.fixed ⟨entry.2.1⟩ (entry.2.2 : ℤ) = value
-      simpa [hentryValue] using hfixed
-    have hendpoint :
-        CopyEndpoint.constant value ∈ actionDeclaredEndpoints :=
-      (mem_actionDeclaredEndpoints hcopy).2
-    have hcanonical :=
-      (actionConstantEndpointRead_or_bad
-        env fixedRead value hendpoint).resolve_right hbad
-    exact hpairEq.symm.trans (hpositional.trans hcanonical)
+  -- The allocated constant entry and its replay pair are recovered by choice, as elsewhere in
+  -- this stack: both provably exist, and the break itself is still computed downstream.
+  have hrawPair := actionConstantRawPair hcopy
+  let entry := Classical.choose hrawPair
+  have hentry : entry ∈ actionConsts := (Classical.choose_spec hrawPair).1
+  have hentryValue : entry.1 = value.val := (Classical.choose_spec hrawPair).2.1
+  have hraw := (Classical.choose_spec hrawPair).2.2
+  have hcopyPair := exists_actionCopy_of_raw hraw
+  let pair := Classical.choose hcopyPair
+  have hpair : pair ∈ actionCopies := (Classical.choose_spec hcopyPair).1
+  have hpairLeft := (Classical.choose_spec hcopyPair).2.1
+  have hpairRight := (Classical.choose_spec hcopyPair).2.2
+  have hconstantEntry :
+      (entry.2.1, entry.2.2, entry.1) ∈
+        topLevelConstantEntries actionCircuit := by
+    rw [topLevelConstantEntries, Layout.constantsFixed, List.mem_map]
+    exact ⟨entry, hentry, rfl⟩
+  have hrequired :
+      (entry.2.1, entry.2.2, entry.1) ∈
+        topLevelRequiredFixedEntries actionCircuit := by
+    simp only [topLevelRequiredFixedEntries, List.mem_append]
+    exact Or.inl (Or.inl (Or.inr hconstantEntry))
+  have hendpoint :
+      CopyEndpoint.constant value ∈ actionDeclaredEndpoints :=
+    (mem_actionDeclaredEndpoints hcopy).2
+  -- Sequence the three reductions this proof consumes before descending into `Prop`.
+  rcases hpairval pair hpair with hpairvalue | hbad
+  swap
+  · exact PSum.inr hbad
+  rcases fixedRead hrequired with hfixed | hbad
+  swap
+  · exact PSum.inr hbad
+  rcases actionConstantEndpointRead_or_bad env fixedRead value hendpoint with
+    hcanonical | hbad
+  swap
+  · exact PSum.inr hbad
+  refine PSum.inl ?_
+  let constantCoordinate : ℕ × ℕ :=
+    (permIndex actionPermCols
+        (ColRef.toAny (.fixed entry.2.1)),
+      entry.2.2)
+  let cellCoordinate : ℕ × ℕ :=
+    resolveCell actionPermCols
+      actionCircuit.regionStarts cell
+  have hleft :
+      mkActionCell constantCoordinate = pair.1 := by
+    apply mkActionCell_eq_of_pair
+    simpa [constantCoordinate] using hpairLeft
+  have hright :
+      actionCopyEncode (.cell cell) = pair.2 := by
+    apply mkActionCell_eq_of_pair
+    simpa [actionCopyEncode, cellCoordinate] using hpairRight
+  have hpairEq :
+      actionCopyValue env (mkActionCell constantCoordinate) =
+        actionCopyValue env (actionCopyEncode (.cell cell)) := by
+    simpa only [hleft, hright] using hpairvalue
+  have hpositional :
+      actionCopyValue env (mkActionCell constantCoordinate) = value := by
+    rw [actionCopyValue_mkActionCell,
+      show actionRawCellAddress constantCoordinate =
+          (ColRef.toAny (.fixed entry.2.1), entry.2.2) by
+        simpa [constantCoordinate] using actionConstantCellAddress hentry]
+    change env.fixed ⟨entry.2.1⟩ (entry.2.2 : ℤ) = value
+    simpa [hentryValue] using hfixed
+  exact hpairEq.symm.trans (hpositional.trans hcanonical)
 
 /--
 Construct the Action copy witness, or return the shared exceptional branch,
@@ -1213,66 +1243,69 @@ remaining semantic inputs are pairwise σ-copy value agreement and linkage of a
 constant declaration to its allocated copy pair.
 -/
 noncomputable def actionCopyReplayWitness_or_bad
-    (env : Environment Fp) {Bad : Prop}
+    (env : Environment Fp) {Bad : Type}
     (hpairval : ∀ pr ∈ actionCopies,
-      actionCopyValue env pr.1 = actionCopyValue env pr.2 ∨ Bad)
+      actionCopyValue env pr.1 = actionCopyValue env pr.2 ⊕' Bad)
     (hconstval : ∀ copy ∈ operationDeclaredCopies
         (actionCircuit.operations),
       ∀ c v, copy = (.cell c, .constant v) →
         actionCopyValue env (actionCopyEncode (.cell c)) =
-          actionCopyValue env (actionCopyEncode (.constant v)) ∨ Bad)
+          actionCopyValue env (actionCopyEncode (.constant v)) ⊕' Bad)
     (fixedRead : ∀ {column row value : ℕ},
       (column, row, value) ∈
           topLevelRequiredFixedEntries actionCircuit →
-        env.fixed ⟨column⟩ (row : ℤ) = (value : Fp) ∨ Bad) :
-    Nonempty
-        (CopyReplayWitness actionCircuit.placement env
-          (actionCircuit.operations)
-          (FlatCell actionNumPermCols actionDomainSize) Bad) ∨
+        env.fixed ⟨column⟩ (row : ℤ) = (value : Fp) ⊕' Bad) :
+    CopyReplayWitness actionCircuit.placement env
+        (actionCircuit.operations)
+        (FlatCell actionNumPermCols actionDomainSize) Bad ⊕'
       Bad := by
   classical
-  by_cases hbad : Bad
-  · exact Or.inr hbad
-  · apply Or.inl
-    constructor
-    apply actionCopyReplayWitness env hpairval hconstval
-    intro copy hcopy
-    have hendpoints := mem_actionDeclaredEndpoints hcopy
-    rcases declared_shape
-        (actionCircuit.operations)
-        actionPermCols actionCircuit.regionStarts
-        copy hcopy with hresolved | hconstant
-    · obtain ⟨tuple, hresolve⟩ := hresolved
-      rcases copy with ⟨left, right⟩
-      cases left with
-      | cell leftCell =>
-          cases right with
-          | cell rightCell =>
-              constructor
-              · exact actionNonconstantEndpointRead env hendpoints.1
-                  (by intro value h; cases h)
-              · exact actionNonconstantEndpointRead env hendpoints.2
-                  (by intro value h; cases h)
-          | «instance» column row =>
-              constructor
-              · exact actionNonconstantEndpointRead env hendpoints.1
-                  (by intro value h; cases h)
-              · exact actionNonconstantEndpointRead env hendpoints.2
-                  (by intro value h; cases h)
-          | constant value =>
-              simp [resolveDeclared] at hresolve
+  refine bindOrRelationWitness
+    (listForallOrRelationWitness
+      (operationDeclaredCopies (actionCircuit.operations))
+      fun copy hcopy => ?_)
+    (fun hread => actionCopyReplayWitness env hpairval hconstval hread)
+  have hendpoints := mem_actionDeclaredEndpoints hcopy
+  have hshape := declared_shape
+    (actionCircuit.operations)
+    actionPermCols actionCircuit.regionStarts
+    copy hcopy
+  -- Dispatch on the copy's own constructors rather than on `declared_shape`, which is an `Or`
+  -- and so cannot be eliminated into the witness. The shapes it rules out are discharged as
+  -- `False` instead, entirely within `Prop`.
+  rcases copy with ⟨left, right⟩
+  cases left with
+  | cell leftCell =>
+      cases right with
+      | cell rightCell =>
+          exact PSum.inl
+            ⟨actionNonconstantEndpointRead env hendpoints.1
+              (by intro value h; cases h),
+             actionNonconstantEndpointRead env hendpoints.2
+              (by intro value h; cases h)⟩
       | «instance» column row =>
-          simp [resolveDeclared] at hresolve
+          exact PSum.inl
+            ⟨actionNonconstantEndpointRead env hendpoints.1
+              (by intro value h; cases h),
+             actionNonconstantEndpointRead env hendpoints.2
+              (by intro value h; cases h)⟩
       | constant value =>
-          simp [resolveDeclared] at hresolve
-    · obtain ⟨cell, value, hcopyShape⟩ := hconstant
-      subst hcopyShape
-      constructor
-      · exact actionNonconstantEndpointRead env hendpoints.1
-          (by intro other h; cases h)
-      · exact
-          (actionConstantEndpointRead_or_bad
-            env fixedRead value hendpoints.2).resolve_right hbad
+          refine bindOrRelationWitness
+            (actionConstantEndpointRead_or_bad
+              env fixedRead value hendpoints.2) fun hconst => ?_
+          exact
+            ⟨actionNonconstantEndpointRead env hendpoints.1
+              (by intro other h; cases h), hconst⟩
+  | «instance» column row =>
+      exfalso
+      rcases hshape with ⟨tuple, hresolve⟩ | ⟨c, v, hcv⟩
+      · simp [resolveDeclared] at hresolve
+      · simp at hcv
+  | constant value =>
+      exfalso
+      rcases hshape with ⟨tuple, hresolve⟩ | ⟨c, v, hcv⟩
+      · simp [resolveDeclared] at hresolve
+      · simp at hcv
 
 /--
 The Action copy witness from the sole remaining semantic leaf: value agreement
@@ -1280,17 +1313,16 @@ on each decoded keygen copy pair. Constant-copy linkage and all declared endpoin
 reads are derived internally from the compiler pipeline and fixed-row realization.
 -/
 noncomputable def actionCopyReplayWitness_ofPairValues_or_bad
-    (env : Environment Fp) {Bad : Prop}
+    (env : Environment Fp) {Bad : Type}
     (hpairval : ∀ pair ∈ actionCopies,
-      actionCopyValue env pair.1 = actionCopyValue env pair.2 ∨ Bad)
+      actionCopyValue env pair.1 = actionCopyValue env pair.2 ⊕' Bad)
     (fixedRead : ∀ {column row value : ℕ},
       (column, row, value) ∈
           topLevelRequiredFixedEntries actionCircuit →
-        env.fixed ⟨column⟩ (row : ℤ) = (value : Fp) ∨ Bad) :
-    Nonempty
-        (CopyReplayWitness actionCircuit.placement env
-          (actionCircuit.operations)
-          (FlatCell actionNumPermCols actionDomainSize) Bad) ∨
+        env.fixed ⟨column⟩ (row : ℤ) = (value : Fp) ⊕' Bad) :
+    CopyReplayWitness actionCircuit.placement env
+        (actionCircuit.operations)
+        (FlatCell actionNumPermCols actionDomainSize) Bad ⊕'
       Bad :=
   actionCopyReplayWitness_or_bad env hpairval
     (fun copy hcopy cell value hshape =>
