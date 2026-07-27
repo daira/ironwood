@@ -1,3 +1,4 @@
+import Zcash.Common.RelationWitness
 import Zcash.Snark.Soundness.Canonical.PolynomialEnvironment
 import Zcash.Snark.Soundness.Multiopen.Decode
 import Zcash.Snark.Soundness.Deployed.Binding
@@ -338,8 +339,18 @@ end LagrangeCommitmentKey
 /--
 Binding an augmented opening of a public-instance commitment identifies all three coordinates, or
 computes a nontrivial relation among `(urs.g, urs.u, urs.w)`.
+
+This is where the break enters the circuit-integration stack, so it is where the coordinates are
+compared: everything above only threads the outcome. The comparison is a real decision, not a
+classical case split — `DecidableEq Fp` is pinned through `ZMod` so the `Fin (2 ^ urs.k) → Fp`
+instance synthesises, and the refuted branch hands its disagreement to
+`NontrivialRelation.ofCombinationCollision`, which computes the coordinate differences.
+
+Still `noncomputable`, and so not yet `assert_computable`-pinnable: the comparison target
+`instanceCoefficients` is itself `noncomputable`. Giving it a computable twin over the Lagrange
+machinery in the arithmetic tier is what would close that gap.
 -/
-theorem instanceOpening_eq_or_relation
+noncomputable def instanceOpening_eq_or_relation
     {urs : URS G} {omega : Fp}
     (key : LagrangeCommitmentKey urs omega)
     (values : List Fp) (blind : Fp)
@@ -348,25 +359,26 @@ theorem instanceOpening_eq_or_relation
       commit urs decoded + uComp • urs.u + wComp • urs.w =
         key.commitInstance values blind) :
     (decoded = instanceCoefficients (2 ^ urs.k) omega values ∧
-      uComp = 0 ∧ wComp = blind) ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  classical
+      uComp = 0 ∧ wComp = blind) ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  haveI : DecidableEq Fp := inferInstanceAs (DecidableEq (ZMod Zcash.Arithmetic.scalarFieldOrder))
   let expected := instanceCoefficients (2 ^ urs.k) omega values
   have hcollision :
       commitGen urs.g decoded + uComp • urs.u + wComp • urs.w =
         commitGen urs.g expected + (0 : Fp) • urs.u + blind • urs.w := by
     rw [← commit_eq_commitGen, ← commit_eq_commitGen]
     simpa [expected, key.commitInstance_eq values blind] using hopen
-  by_cases heq : decoded = expected ∧ uComp = 0 ∧ wComp = blind
-  · exact Or.inl heq
-  · exact Or.inr <| HasNontrivialRelation.of_nontrivialRelation <|
-      NontrivialRelation.ofCombinationCollision hcollision heq
+  exact
+    if heq : decoded = expected ∧ uComp = 0 ∧ wComp = blind then
+      PSum.inl heq
+    else
+      PSum.inr (NontrivialRelation.ofCombinationCollision hcollision heq)
 
 /--
 At the polynomial interface, an augmented opening of the statement-derived instance commitment is
 the canonical zero-padded row polynomial, or it computes the same AGM relation.
 -/
-theorem coeffsToPoly_eq_instanceRowPolynomial_or_relation
+noncomputable def coeffsToPoly_eq_instanceRowPolynomial_or_relation
     {urs : URS G} {omega : Fp}
     (key : LagrangeCommitmentKey urs omega)
     (values : List Fp) (blind : Fp)
@@ -377,13 +389,12 @@ theorem coeffsToPoly_eq_instanceRowPolynomial_or_relation
       commit urs decoded + uComp • urs.u + wComp • urs.w =
         key.commitInstance values blind) :
     coeffsToPoly decoded =
-        instanceRowPolynomial (2 ^ urs.k) omega values ∨
-      HasNontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  rcases instanceOpening_eq_or_relation key values blind decoded uComp wComp hopen with
-    hcoordinates | hrelation
-  · exact Or.inl <| by
+        instanceRowPolynomial (2 ^ urs.k) omega values ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w :=
+  bindOrRelationWitness
+    (instanceOpening_eq_or_relation key values blind decoded uComp wComp hopen)
+    fun hcoordinates => by
       rw [hcoordinates.1]
       exact coeffsToPoly_instanceCoefficients hrows (Nat.two_pow_pos urs.k)
-  · exact Or.inr hrelation
 
 end Zcash.Snark
