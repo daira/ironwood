@@ -42,11 +42,13 @@ structure Action (KW F G RHO PSI MHASH MENC SIG : Type*) (d : ℕ) where
   sig : SIG
 
 /-- A transaction: its Actions, the net value flowing out of the pool (positive
-`vBalance` means value leaving), and the sighash its signatures are over. -/
+`vBalance` means value leaving), the sighash its signatures are over, and its binding
+signature (verified under `Tx.bvk` by validity). -/
 structure Tx (KW F G RHO PSI MHASH MENC MSG SIG : Type*) (d : ℕ) where
   actions : List (Action KW F G RHO PSI MHASH MENC SIG d)
   vBalance : ℤ
   sighash : MSG
+  bindingSig : SIG
 
 /-- A ledger: a linearization of transactions (design doc, "Modelling decisions"). -/
 abbrev Ledger (KW F G RHO PSI MHASH MENC MSG SIG : Type*) (d : ℕ) :=
@@ -114,9 +116,51 @@ theorem rootAfter_prefix (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
   obtain ⟨t, rfl⟩ := hpre
   rw [rootAfter, rootAfter, List.take_append_of_le_length hj]
 
+/-- The leaf list distributes over ledger concatenation. -/
+theorem leafList_append (ledger ledger' : Ledger KW F G RHO PSI MHASH MENC MSG SIG d) :
+    leafList (ledger ++ ledger') = leafList ledger ++ leafList ledger' := by
+  simp [leafList]
+
+/-- A prefix balance ignores an extension: the first `i` transactions of `ledger ++ ledger'`
+are those of `ledger` when `i` is within `ledger`. -/
+theorem transparentPoolBalance_append_of_le (issuance : ℕ → ℕ)
+    {ledger : Ledger KW F G RHO PSI MHASH MENC MSG SIG d} {i : ℕ} (hi : i ≤ ledger.length)
+    (ledger' : Ledger KW F G RHO PSI MHASH MENC MSG SIG d) :
+    transparentPoolBalance issuance (ledger ++ ledger') i =
+      transparentPoolBalance issuance ledger i := by
+  rw [transparentPoolBalance, transparentPoolBalance, List.take_append_of_le_length hi]
+
+/-- The balance saturates at the ledger's length: taking more transactions than exist
+changes nothing. -/
+theorem transparentPoolBalance_of_length_le (issuance : ℕ → ℕ)
+    {ledger : Ledger KW F G RHO PSI MHASH MENC MSG SIG d} {i : ℕ} (hi : ledger.length ≤ i) :
+    transparentPoolBalance issuance ledger i =
+      transparentPoolBalance issuance ledger ledger.length := by
+  rw [transparentPoolBalance, transparentPoolBalance, List.take_of_length_le hi,
+    List.take_length]
+
+/-- The balance across an appended transaction: the previous total, plus the issuance
+minted at the new index, plus the transaction's declared net value. -/
+theorem transparentPoolBalance_append_singleton (issuance : ℕ → ℕ)
+    (ledger : Ledger KW F G RHO PSI MHASH MENC MSG SIG d)
+    (tx : Tx KW F G RHO PSI MHASH MENC MSG SIG d) :
+    transparentPoolBalance issuance (ledger ++ [tx]) (ledger.length + 1) =
+      transparentPoolBalance issuance ledger ledger.length
+        + ((issuance ledger.length : ℤ) + tx.vBalance) := by
+  rw [transparentPoolBalance, transparentPoolBalance, List.take_length,
+    List.take_of_length_le (by simp), List.zipIdx_append, List.map_append, List.sum_append]
+  simp
+
 section Validity
 
 variable [Field F] [AddCommGroup G] [Module F G]
+
+/-- The binding verification key of a transaction: the sum of its actions' net value
+commitments, minus a zero-randomness commitment to its declared `vBalance`
+(`bvk = ∑ cv_net − ValueCommit_0(vBalance)`). -/
+def Tx.bvk (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
+    (tx : Tx KW F G RHO PSI MHASH MENC MSG SIG d) : G :=
+  (tx.actions.map fun a => a.inst.cv_net).sum - P.valueCommit tx.vBalance 0
 
 /-- Validity of a witness-annotated ledger — the premiss of every game. `issuance` is the
 intended issuance schedule and `maxActions` bounds each transaction's action count; both
@@ -132,7 +176,10 @@ structure ValidLedger (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
   /-- Each anchor is the root after some earlier transaction boundary: an action of
   transaction `i` (zero-based) may reference the tree after any `j ≤ i` transactions,
   so only outputs of strictly earlier transactions. The equation also asserts that the
-  referenced tree is defined (no compression along it escapes). -/
+  referenced tree is defined (no compression along it escapes). Anchors are
+  per-action, a documented simplification: deployed Orchard encodes one anchor for
+  the whole transaction (Sapling v4 allowed per-spend anchors), and per-action
+  anchors only widen what the adversary may do. -/
   anchor_valid : ∀ i : Fin ledger.length, ∀ a ∈ (ledger.get i).actions,
     ∃ j ≤ (i : ℕ), rootAfter P ledger j = some a.inst.rt
   /-- The tree never overflows (the consensus capacity rule). -/
@@ -140,6 +187,15 @@ structure ValidLedger (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
   /-- Each action's spend-authorization signature verifies under its `rk`, over its
   transaction's sighash. -/
   sig_verifies : ∀ tx ∈ ledger, ∀ a ∈ tx.actions, P.spendAuthVerify a.inst.rk tx.sighash a.sig
+  /-- Each transaction's binding signature verifies under its binding verification key,
+  over its sighash (the consensus binding-signature rule). -/
+  binding_verified : ∀ tx ∈ ledger, P.bindingVerify (tx.bvk P) tx.sighash tx.bindingSig
+  /-- Each transaction's declared value balance is in range. The consensus rule
+  (§7.1.2, [NU5 onward]) is `valueBalanceOrchard ∈ {-MAX_MONEY .. MAX_MONEY}` (inclusive;
+  MAX_MONEY ~2^51 zatoshi), i.e. `|vBalance| <= MAX_MONEY`. This conjunct states the
+  weaker `natAbs < valueBound` (= 2^64 at the intended instantiation), a loose consequence
+  that suffices for the no-overflow bound in the integer-balance lift. -/
+  vbalance_bound : ∀ tx ∈ ledger, tx.vBalance.natAbs < P.valueBound
   /-- The transparent pool balance never goes negative: a transaction can move value
   into the shielded pool only from issuance already minted, less what earlier
   transactions consumed. This is the consensus non-negative chain value balance rule for

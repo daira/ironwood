@@ -7,6 +7,11 @@ import Zcash.Security.KeyBinding.Probability
 import Zcash.Security.Ledger.Balance
 import Zcash.Security.Ledger.Spendability
 import Zcash.Security.Ledger.SpendAuthority
+import Zcash.Security.Ledger.Completeness
+import Zcash.Security.Ledger.Capstone
+import Zcash.Security.Ledger.Nullifier
+import Zcash.Security.Ledger.Value
+import Zcash.Security.Ledger.KeyBindingArm
 import Zcash.Security.Common.Birthday
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
@@ -50,7 +55,7 @@ Two commands from `Zcash.Meta.AxiomCheck`, per the breaks-as-computed-data disci
   (`propext` / `Classical.choice` / `Quot.sound`). Both commands reject `sorryAx`.
 -/
 
-open Zcash.Security.KeyBinding Zcash.Security.RandomOracle Zcash.Security.Birthday
+open Zcash.Security.RandomOracle
 open Zcash.Security.Ledger Zcash.Security.Ledger.Model Zcash.Security.BindingSignature
 open Zcash.Meta
 
@@ -111,8 +116,11 @@ assert_axioms Zcash.Security.toInterface_break_measure_le
 
 /-! ## Ledger-layer break reductions
 
-These data-producing reductions rest on `propext` and `Quot.sound` only — no `Classical.choice`
-even in erased positions, which is the strict (flagless) `assert_computable` tier. -/
+Most of these data-producing reductions rest on `propext` and `Quot.sound` only — no
+`Classical.choice` even in erased positions, the strict (flagless) `assert_computable`
+tier. The exception is `nfOldEqOrBreak`: it decides the `nk`-equality branch on
+`DecidableEq NK`, so choice arrives with its proof terms in erased positions (the
+`+choice` tier). The reduction data is still a direct term of the inputs. -/
 
 assert_computable Collision.upToSign
 assert_computable Merkle.collisionOfWrongLeaf
@@ -206,6 +214,29 @@ assert_computable faerieGoldCore
 assert_computable respendOrBreak
 assert_axioms validLedger_append
 
+/-! ## The nullifier-binding reduction
+
+Computed break reduction: a nullifier collision between distinct notes, over the
+additive shape of the deployed derivation, computes a nontrivial relation among the
+commitment bases, the nullifier base, and the randomness base — the balance
+argument's terminal. `+choice` is the erased-positions tier: choice arrives with the
+`abel`/`simp` proof terms in the relation's `Prop` fields, never the data path. -/
+
+assert_computable Zcash.Security.Ledger.Model.NontrivialRelation.ofNullifierCollision +choice
+
+/-! ## The value-premiss discharge
+
+Computed reductions at the Pedersen value-commitment shape: the Balance-value
+premiss lands in the binding-signature layer's nontrivial `(V, R)` relation via
+`ofBundleIntImbalance`, with the no-overflow bound discharged from the statement's
+value ranges, validity's action-count and `vBalance` range rules, and the named
+numeric hypothesis `(maxActions + 1) * valueBound ≤ r`. `+choice` is the
+erased-positions tier. -/
+
+assert_computable Zcash.Security.Ledger.Model.ValueShape.premissOrBreak +choice
+assert_computable Zcash.Security.Ledger.Model.ValueShape.conservationOrBreak +choice
+assert_computable Zcash.Security.Ledger.Model.ValueShape.balanceOrBreak +choice
+
 /-! ## Spend Authority
 
 The per-action core and the valid-ledger capstone are computable reductions; the
@@ -217,6 +248,51 @@ data path. -/
 assert_axioms ivk_eq_of_receivable
 assert_computable spendAuthForgeryOrBreak +choice
 assert_computable spendAuthorityOrBreak +choice
+
+/-! ## Honest-spend completeness and the Spendability capstone
+
+The honest construction is computable data (the wallet's own algorithm, including the
+authentication data recovered from the defined tree); the two completeness endpoints
+are theorems over it. The Spendability capstone is a computed reduction: the
+roadblock branch decides nullifier membership and searches out the revealing action.
+Its `+choice` is the erased-positions tier — choice arrives with proof terms in
+`Prop` positions, never the data path. -/
+
+assert_computable Zcash.Security.Ledger.Model.honestTx
+assert_computable Zcash.Security.Ledger.Model.HonestAction.withDummySpend
+assert_axioms Zcash.Security.Ledger.Model.HonestAction.satisfied
+assert_axioms Zcash.Security.Ledger.Model.honestTx_valid
+assert_computable Zcash.Security.Ledger.Model.spendabilityOrBreak +choice
+
+/-! ## Probabilistic capstones
+
+The game-level probability statements: pure event algebra over an adversary
+distribution of valid annotated ledgers, with a named ε hypothesis per break arm. -/
+
+assert_axioms Zcash.Security.Ledger.Model.balanceSubset_measure_le
+assert_axioms Zcash.Security.Ledger.Model.valueConservation_measure_le
+assert_axioms Zcash.Security.Ledger.Model.balanceValue_measure_le
+assert_axioms Zcash.Security.Ledger.Model.spendAuthority_measure_le
+
+/-! ## The key-binding arms' ε, discharged
+
+The Balance-subset and Spend Authority key-binding arms' probability in the
+key-binding oracle model: `(n + 4)(n + 3)/|RIVK|` for any `n`-query-bounded ledger
+adversary, inherited from the key-binding layer's bound at an unchanged query count.
+The bounded events are the reductions' own; the composite machine recovers the arm's
+witness pair from the adversary's output by an oracle-free computable lookup
+(`kbPairOf` from the ledger for Balance; `kwAt` at the announced indices for Spend
+Authority), identified with the reduction's pair by the localization theorems. -/
+
+assert_computable Zcash.Security.Ledger.Model.BalanceBreak.kbPair
+assert_computable Zcash.Security.Ledger.Model.kbPairOf
+assert_axioms Zcash.Security.Ledger.Model.spendPinnedOrBreak_kbPair
+assert_axioms Zcash.Security.Ledger.Model.allPinnedOrBreak_kbPair
+assert_axioms Zcash.Security.Ledger.Model.balanceSubsetOrBreak_kbPair
+assert_computable Zcash.Security.Ledger.Model.kwAt
+assert_axioms Zcash.Security.Ledger.Model.spendAuthorityOrBreak_pair
+assert_axioms Zcash.Security.Ledger.Model.balanceSubset_keyBindingArm_measure_le
+assert_axioms Zcash.Security.Ledger.Model.spendAuthority_keyBindingArm_measure_le
 
 /-! ## Binding-signature relation reductions
 

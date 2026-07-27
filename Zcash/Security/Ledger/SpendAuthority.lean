@@ -119,6 +119,54 @@ def spendAuthorityOrBreak [DecidableEq G] [NoZeroSMulDivisors F G]
   spendAuthForgeryOrBreak (hval.satisfied tx htx a ha) hKB hrecv
     (hval.sig_verifies tx htx a ha) hfresh
 
+/-- The key witness of the action at transaction index `t`, action index `i` — the
+oracle-free lookup an oracle machine uses to output the Spend Authority key-binding
+arm's first witness, given the indices the adversary announces. -/
+def kwAt {d : ℕ} (ledger : Ledger KW F G RHO PSI MHASH MENC MSG SIG d) (t i : ℕ) : Option KW :=
+  (ledger[t]?.bind fun tx => tx.actions[i]?).map fun a => a.w.kw
+
+/-- **Spend Authority key-binding localization.** Whatever break the reduction computes,
+its witnesses are the spending action's key witness and the victim: the sole `.inr` site
+packages exactly `⟨a.w.kw, wV, _⟩`. -/
+theorem spendAuthorityOrBreak_pair [DecidableEq G] [NoZeroSMulDivisors F G]
+    (hval : ValidLedger P kv issuance maxActions ledger)
+    {tx : Tx KW F G RHO PSI MHASH MENC MSG SIG P.depth} (htx : tx ∈ ledger)
+    {a : Action KW F G RHO PSI MHASH MENC SIG P.depth} (ha : a ∈ tx.actions)
+    {wV : KW} (hKB : kv.KB wV)
+    (hrecv : a.w.note_old.pkd = P.emb (kv.ivk wV) • a.w.note_old.gd)
+    {Signed : MSG → Prop} (hfresh : ¬ Signed tx.sighash)
+    {b : KeyBindingBreakData kv}
+    (hb : spendAuthorityOrBreak hval htx ha hKB hrecv hfresh = .inr b) :
+    b.w₁ = a.w.kw ∧ b.w₂ = wV := by
+  rw [spendAuthorityOrBreak, spendAuthForgeryOrBreak] at hb
+  split_ifs at hb
+  simp_all only [PSum.inr.injEq]
+  subst hb
+  exact ⟨rfl, rfl⟩
+
+/-- **The Spend Authority key-binding arm fires at announced indices** — the bundled
+event: the ledger is valid, transaction index `t` and action index `i` locate an action
+spending a note addressed to the victim `wV`, the transaction's sighash was never
+signed, and the reduction lands in the key-binding arm. A probability event over this
+structure is its `Nonempty`. Bundling the data and the premisses as named fields keeps
+the arm theorem's event to a single application. -/
+structure SpendAuthorityKBArm [DecidableEq G] [NoZeroSMulDivisors F G]
+    (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
+    (kv : KeyBindingInterface KW G IVK NK) (issuance : ℕ → ℕ) (maxActions : ℕ)
+    (ledger : Ledger KW F G RHO PSI MHASH MENC MSG SIG P.depth) (t i : ℕ)
+    (wV : KW) (Signed : MSG → Prop) where
+  hval : ValidLedger P kv issuance maxActions ledger
+  tx : Tx KW F G RHO PSI MHASH MENC MSG SIG P.depth
+  htx : ledger[t]? = some tx
+  a : Action KW F G RHO PSI MHASH MENC SIG P.depth
+  ha : tx.actions[i]? = some a
+  hKB : kv.KB wV
+  hrecv : a.w.note_old.pkd = P.emb (kv.ivk wV) • a.w.note_old.gd
+  hfresh : ¬ Signed tx.sighash
+  b : KeyBindingBreakData kv
+  hb : spendAuthorityOrBreak hval (List.mem_of_getElem? htx)
+    (List.mem_of_getElem? ha) hKB hrecv hfresh = .inr b
+
 end Validity
 
 end Zcash.Security.Ledger.Model

@@ -332,6 +332,79 @@ def balanceSubsetOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq RHO]
             obtain ⟨a, haL, rfl⟩ := List.mem_map.mp (by simpa using hx)
             simpa using hall a haL)
 
+/-- The key-binding arm's witness pair, when the break lies in that arm. -/
+def BalanceBreak.kbPair : BalanceBreak P kv → Option (KW × KW)
+  | .keyBinding w₁ w₂ _ => some (w₁, w₂)
+  | .merkle _ => none
+  | .noteCommit _ => none
+
+/-- The key-binding pair read directly off the ledger: the two key witnesses of the
+duplicate positioned opening that `findPair` locates. Oracle-free — it consumes no
+validity proof — so an oracle machine can output it. `balanceSubsetOrBreak_kbPair` shows
+it is exactly the pair of whatever break the reduction computes. -/
+def kbPairOf [DecidableEq F] [DecidableEq G] [DecidableEq RHO] [DecidableEq PSI]
+    (ledger : Ledger KW F G RHO PSI MHASH MENC MSG SIG P.depth) (i : ℕ) :
+    Option (KW × KW) :=
+  (findPair spendRecord (spendActions ledger (i + 1))).map fun p => (p.1.w.kw, p.2.w.kw)
+
+/-- Per-spend pinning never computes a key-binding break: its breaks are the
+note-commitment collision (`hop` fails) and the Merkle collision (`hleaf` fails). -/
+theorem spendPinnedOrBreak_kbPair [DecidableEq F] [DecidableEq G] [DecidableEq RHO]
+    [DecidableEq PSI] [DecidableEq MHASH] [DecidableEq MENC]
+    (hval : ValidLedger P kv issuance maxActions ledger) {i : ℕ}
+    {a : Action KW F G RHO PSI MHASH MENC SIG P.depth}
+    (ha : a ∈ spendActions ledger (i + 1)) {b : BalanceBreak P kv} :
+    spendPinnedOrBreak hval ha = .inr b → b.kbPair = none := by
+  revert b
+  fun_cases spendPinnedOrBreak hval ha <;>
+    intro b hb <;>
+    (try simp_all only [reduceCtorEq, PSum.inr.injEq, BalanceBreak.kbPair]) <;>
+    (subst hb; rfl)
+
+/-- The pinning scan never computes a key-binding break (`spendPinnedOrBreak_kbPair`,
+propagated through the recursion). -/
+theorem allPinnedOrBreak_kbPair [DecidableEq F] [DecidableEq G] [DecidableEq RHO]
+    [DecidableEq PSI] [DecidableEq MHASH] [DecidableEq MENC]
+    (hval : ValidLedger P kv issuance maxActions ledger) {i : ℕ} :
+    ∀ (L : List (Action KW F G RHO PSI MHASH MENC SIG P.depth))
+      (hL : ∀ a ∈ L, a ∈ spendActions ledger (i + 1)) {b : BalanceBreak P kv},
+      allPinnedOrBreak hval L hL = .inr b → b.kbPair = none := by
+  intro L
+  induction L with
+  | nil => intro hL b hb; simp only [allPinnedOrBreak, reduceCtorEq] at hb
+  | cons a t ih =>
+      intro hL b hb
+      rw [allPinnedOrBreak] at hb
+      split at hb
+      · rename_i b' hsp
+        rw [PSum.inr.injEq] at hb; subst hb
+        exact spendPinnedOrBreak_kbPair hval _ hsp
+      · split at hb
+        · rename_i b' hall
+          rw [PSum.inr.injEq] at hb; subst hb
+          exact ih (fun x hx => hL x (by simp [hx])) hall
+        · simp only [reduceCtorEq] at hb
+
+/-- **Key-binding-arm localization.** Whatever break `balanceSubsetOrBreak` computes, its
+key-binding pair is the oracle-free `kbPairOf`: a key-binding break arises only from the
+`findPair` duplicate, whose pair is `kbPairOf`, and every other break has no pair. This is
+what lets an oracle machine output the arm's pair without running the reduction. -/
+theorem balanceSubsetOrBreak_kbPair [DecidableEq F] [DecidableEq G] [DecidableEq RHO]
+    [DecidableEq PSI] [DecidableEq MHASH] [DecidableEq MENC] [DecidableEq NK]
+    [NoZeroSMulDivisors F G]
+    (hval : ValidLedger P kv issuance maxActions ledger) (i : ℕ) {b : BalanceBreak P kv} :
+    balanceSubsetOrBreak hval i = .inr b → b.kbPair = kbPairOf ledger i := by
+  revert b
+  fun_cases balanceSubsetOrBreak hval i <;> intro b hb <;>
+    (try (rw [PSum.inr.injEq] at hb; subst hb)) <;>
+    (try simp_all only [reduceCtorEq])
+  · -- key-binding break from a `findPair` duplicate: its pair is `kbPairOf`
+    simp_all [BalanceBreak.kbPair, kbPairOf]
+  · -- no duplicate: the pinning scan's break has no pair, and `kbPairOf` is `none`
+    rename_i hfpNone _ _ hallp
+    have hnone := allPinnedOrBreak_kbPair hval _ _ hallp
+    simp [kbPairOf, hfpNone, hnone]
+
 end Validity
 
 /-! ## Balance-value, in conservation form
