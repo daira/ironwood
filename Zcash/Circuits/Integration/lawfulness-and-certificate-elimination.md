@@ -25,6 +25,13 @@ obligations. The count excludes the intentional deployed-VK equality and does no
 double-count the bundle's `K = 11`, which is already represented by
 `domainExponent_eq`.
 
+Two further synthesis laws are already proved, but at the wrong abstraction layer:
+`LookupRelevantSelectorActivationsExact` and `LookupInputsNoSimpleSelectors` are
+fields of `TopLevelCircuit`, not `FormalCircuit`. Their roughly 3,000-line
+Action/NoteCommit proof stack is therefore also architectural debt. They are not
+additional concrete computations and are not included in the count of 26, but moving
+them onto every formal circuit is part of this arc's completion criteria.
+
 The guiding rule is:
 
 > A concrete VK comparison may establish deployment identity. It must not establish
@@ -154,6 +161,37 @@ program. It remains architectural debt because the result lives beside the Actio
 formal circuit rather than in the circuit package or the construction API whose
 lawfulness it establishes. It is therefore an interim implementation of obligation
 25, not the endpoint.
+
+## Existing synthesis-law sidecars
+
+The following properties are currently established by
+`Action/SynthesisLaws.lean`, `NoteCommit/SynthesisLaws.lean`, and
+`Action/TopLevelSynthesisLaws.lean`:
+
+* `LookupRelevantSelectorActivationsExact`: every lookup operation's recorded enabled
+  selectors exactly match the relevant selectors activated in its complete region at
+  that row; and
+* `LookupInputsNoSimpleSelectors`: lookup input expressions contain no simple
+  selectors.
+
+The final proofs are inserted into `TopLevelCircuit`, but that is not correct
+packaging. These are laws of `FormalCircuit.synthesize`, so every `FormalCircuit`
+should carry them, preferably as an `Operations.SynthesisLaws` field specialized to
+the configuration produced by that circuit:
+
+```text
+FormalCircuit.synthesisLaws :=
+  ∀ configInput input i,
+    let config := (configure configInput {}).1
+    Operations.SynthesisLaws ((synthesize config input).operations i)
+```
+
+The current files retrace the entire Action and NoteCommit synthesis call graphs
+because circuit and subcircuit constructors do not preserve this evidence. During
+migration those proofs may discharge the new field, but the endpoint is local proof
+obligations on lookup-emitting bundles plus automatic preservation by circuit
+combinators. Merely retaining the large proofs and attaching their results at the
+top-level wrapper does not satisfy the lawfulness architecture.
 
 ## Current compile-cost baseline
 
@@ -287,7 +325,9 @@ showing that its writes do not conflict with region writes or with the other sta
 
 ### 6. Operation-stream lawfulness
 
-The existing Action synthesis laws should grow or be generalized to cover:
+Move the two existing lookup synthesis laws from `TopLevelCircuit` to
+`FormalCircuit`, with compositional support in circuit and subcircuit constructors.
+The same formal-circuit lawfulness package should grow to cover:
 
 * table loads for the same destination are consistent;
 * constants are allocatable;
@@ -374,6 +414,8 @@ This arc is complete when:
 
 * the canonical Clean keygen pipeline does not repair configure/synthesis mismatch;
 * all 26 lawfulness obligations are discharged generically or compositionally;
+* lookup synthesis laws are carried by every `FormalCircuit`, rather than proved by
+  Action/NoteCommit sidecars and attached only at `TopLevelCircuit`;
 * the Action integration capstone imports none of the listed concrete certificate
   theorems;
 * no whole-Action `native_decide` remains for circuit correctness, layout
