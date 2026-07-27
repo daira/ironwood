@@ -891,14 +891,14 @@ def snarkRelationFinder (family : ComputedAlgebraicFSFamily shape) :
       | PSum.inr rel => some rel
       | PSum.inl _ => none
 
-/-- Bound the direct relation branch by `|basis|` times the textbook-DL advantage. -/
+/-- Bound the direct relation branch by the textbook-DL advantage plus `1/|Fp|`. -/
 theorem snarkRelation_prob_le_of_textbookDL
     (B : VestaG) (family : ComputedAlgebraicFSFamily shape) {bound : ℝ≥0∞}
     (hDL : TextbookDLWithCoinsAdvantageLE B family.snarkRelationFinder bound) :
     (PMF.uniformOfFintype
         ((AugmentedIndex (2 ^ shape.k) → Fp) × family.Coins)).toOuterMeasure
         (relSetWithCoins B family.snarkRelationFinder)
-      ≤ Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound :=
+      ≤ (bound + 1 / Fintype.card Fp) :=
   relationWithCoins_prob_le_of_textbookDL B family.snarkRelationFinder hDL
 
 /-- The modeled deployed binding-attack event for one oracle table. -/
@@ -1059,12 +1059,12 @@ theorem successfulBinding_prob_le_of_textbookDL
     (PMF.uniformOfFintype
         ((AugmentedIndex (2 ^ shape.k) → Fp) × family.Coins)).toOuterMeasure
         (successfulBindingSet B family)
-      ≤ Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+      ≤ (bound + 1 / Fintype.card Fp) := by
   refine le_trans (MeasureTheory.measure_mono (successfulBindingSet_subset_relSet B family)) ?_
   exact relationWithCoins_prob_le_of_textbookDL B family.relationFinder hDL
 
 /-- Composed probability bound: the modeled deployed binding event is at most the
-recursive query loss, the adaptive `z = 0` loss, and the fixed-slot plain-DL term. -/
+recursive query loss, the adaptive `z = 0` loss, and the programmed-basis plain-DL term. -/
 theorem binding_prob_le_of_textbookDL
     (B : VestaG) (family : ComputedAlgebraicFSFamily shape) {bound : ℝ≥0∞}
     (hDL : TextbookDLWithCoinsAdvantageLE B family.relationFinder bound) :
@@ -1073,7 +1073,7 @@ theorem binding_prob_le_of_textbookDL
         (bindingSet B family)
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+        (bound + 1 / Fintype.card Fp) := by
   refine le_trans (MeasureTheory.measure_mono
     (bindingSet_subset_success_union_failure B family)) ?_
   refine le_trans (MeasureTheory.measure_union_le _ _) ?_
@@ -1138,7 +1138,7 @@ theorem binding_prob_le_of_uniformURS_textbookDL {Ω : Type*} (setup : PMF Ω)
         ((fun p => (basisOf p.1, p.2)) ⁻¹' family.bindingEvent)
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+        (bound + 1 / Fintype.card Fp) := by
   rw [binding_prob_eq_of_uniformURS setup B family basisOf hURS]
   exact binding_prob_le_of_textbookDL B family hDL
 
@@ -1153,7 +1153,7 @@ theorem binding_prob_le_of_generatorRO_textbookDL
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' family.bindingEvent)
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound :=
+        (bound + 1 / Fintype.card Fp) :=
   binding_prob_le_of_uniformURS_textbookDL (orchardGeneratorROSetup query) B family
     (orchardGeneratorROBasis query)
     (orchard_uniformURSIdentification_of_generatorRO shape.k B hB query hquery) hDL
@@ -1217,7 +1217,7 @@ theorem snarkNonRelationFailure_measure_le (family : ComputedAlgebraicFSFamily s
     (family.queryBound basis)
 
 /-- On `z ≠ 0` accepting runs, bound failure to return a clean opening by
-`(Q+k)·3/|Fp| + |basis|·DLadv`. -/
+`(Q+k)·3/|Fp| + DLadv + 1/|Fp|`. -/
 theorem snarkFailure_prob_le_of_textbookDL
     (B : VestaG) (family : ComputedAlgebraicFSFamily shape) {bound : ℝ≥0∞}
     (hDL : TextbookDLWithCoinsAdvantageLE B family.snarkRelationFinder bound) :
@@ -1228,7 +1228,7 @@ theorem snarkFailure_prob_le_of_textbookDL
               (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) p.2.1 ∧
             ¬ family.hasCleanOpening (scalarBasis B p.1) p.2}
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+        (bound + 1 / Fintype.card Fp) := by
   refine le_trans (MeasureTheory.measure_mono
     (show {p : (AugmentedIndex (2 ^ shape.k) → Fp) × family.Coins |
         fsWinsFull (family.adversary (scalarBasis B p.1))
@@ -1270,7 +1270,7 @@ theorem snarkFailure_prob_le_of_textbookDL_full
             ¬ family.hasCleanOpening (scalarBasis B p.1) p.2}
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+        (bound + 1 / Fintype.card Fp) := by
   refine le_trans (MeasureTheory.measure_mono
     (show {p : (AugmentedIndex (2 ^ shape.k) → Fp) × family.Coins |
         fsWinsFull (family.adversary (scalarBasis B p.1))
@@ -1379,7 +1379,7 @@ theorem snarkFailure_prob_le_of_uniformURS_textbookDL {Ω : Type*} (setup : PMF 
         ((fun p => (basisOf p.1, p.2)) ⁻¹' family.snarkFailureEvent)
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+        (bound + 1 / Fintype.card Fp) := by
   rw [snarkFailure_prob_eq_of_uniformURS setup B family basisOf hURS]
   exact snarkFailure_prob_le_of_textbookDL_full B family hDL
 
@@ -1394,7 +1394,7 @@ theorem snarkFailure_prob_le_of_generatorRO_textbookDL
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' family.snarkFailureEvent)
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound :=
+        (bound + 1 / Fintype.card Fp) :=
   snarkFailure_prob_le_of_uniformURS_textbookDL (orchardGeneratorROSetup query) B family
     (orchardGeneratorROBasis query)
     (orchard_uniformURSIdentification_of_generatorRO shape.k B hB query hquery) hDL
@@ -1446,7 +1446,7 @@ theorem reductionEfficient_exponential (family : ComputedAlgebraicFSFamily shape
     (fun p => (p.proof.1.ipaC, p.proof.1.ipaF))
     (algebraicTableAcceptZ basis (family.vk basis) (family.instanceCommitment basis) family.init) _
 
-/-- Fixed-slot DL hardness at advantage `ε`, as it applies to *one* reduction family with expected
+/-- Textbook DL hardness at advantage `ε`, as it applies to *one* reduction family with expected
 call bound `R`: if the family's extractor meets the call bound, its two derived solvers have
 advantage at most `ε`.  Stated per family, not `∀`-quantified over families: a family's adversary
 is an arbitrary Lean function whose own running time is not encoded, so a family-universal form
@@ -1460,7 +1460,7 @@ def DiscreteLogRelationHardFor (B : VestaG) (family : ComputedAlgebraicFSFamily 
     TextbookDLWithCoinsAdvantageLE B family.snarkRelationFinder ε
 
 /-- Under DL hardness for this family and call bound `R`, bound clean-opening failure by the
-recursive losses and `|basis|·ε`; a polynomial AFK instantiation of `R` remains open. -/
+recursive losses and `ε + 1/|Fp|`; a polynomial AFK instantiation of `R` remains open. -/
 theorem knowledgeSoundness_under_DL
     (B : VestaG) (family : ComputedAlgebraicFSFamily shape) {R : ℕ} {ε : ℝ≥0∞}
     (hHard : DiscreteLogRelationHardFor B family R ε)
@@ -1473,7 +1473,7 @@ theorem knowledgeSoundness_under_DL
             ¬ family.hasCleanOpening (scalarBasis B p.1) p.2}
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * ε :=
+        (ε + 1 / Fintype.card Fp) :=
   snarkFailure_prob_le_of_textbookDL_full B family (hHard hEff).2
 
 /-- Binding dual of `knowledgeSoundness_under_DL`. -/
@@ -1486,7 +1486,7 @@ theorem binding_under_DL
         (bindingSet B family)
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * ε :=
+        (ε + 1 / Fintype.card Fp) :=
   binding_prob_le_of_textbookDL B family (hHard hEff).1
 
 end ComputedAlgebraicFSFamily
@@ -1575,7 +1575,7 @@ theorem binding_prob_le_of_textbookDL_rand [Fintype R] [Nonempty R]
             Set ((AugmentedIndex (2 ^ shape.k) → Fp) × fam.Coins))}
       ≤ (fam.Q + shape.k) * (3 / Fintype.card Fp) +
         (fam.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+        (bound + 1 / Fintype.card Fp) := by
   apply uniformOfFintype_prod_fiber_bound
     (fun r => (ComputedAlgebraicFSFamily.bindingSet B (fam.determinize r) :
       Set ((AugmentedIndex (2 ^ shape.k) → Fp) × fam.Coins)))
@@ -1599,7 +1599,7 @@ theorem binding_prob_le_of_foldedTextbookDL_rand [Fintype R] [Nonempty R]
             (scalarBasis B p.1) p.2.1}
       ≤ (fam.Q + shape.k) * (3 / Fintype.card Fp) +
         (fam.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+        (bound + 1 / Fintype.card Fp) := by
   refine le_trans (MeasureTheory.measure_mono
     (show {p : (AugmentedIndex (2 ^ shape.k) → Fp) × (fam.Coins × R) |
         ComputedAlgebraicFSFamily.bindingWin (fam.determinize p.2.2)
@@ -1624,7 +1624,7 @@ theorem binding_prob_le_of_foldedTextbookDL_rand [Fintype R] [Nonempty R]
             (scalarBasis B p.1) p.2.1 ∧
           (ComputedAlgebraicFSFamily.instanceAttempt (fam.determinize p.2.2)
             (scalarBasis B p.1) p.2.1).output.isSome}
-      ≤ Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+      ≤ (bound + 1 / Fintype.card Fp) := by
     refine le_trans (MeasureTheory.measure_mono ?_)
       (relationWithCoins_prob_le_of_textbookDL B fam.foldedRelationFinder hDL)
     intro p hp
@@ -1673,7 +1673,7 @@ theorem snarkFailure_prob_le_of_textbookDL_rand [Fintype R] [Nonempty R]
           ¬ (fam.determinize p.2).hasCleanOpening (scalarBasis B p.1.1) p.1.2}
       ≤ (fam.Q + shape.k) * (3 / Fintype.card Fp) +
         (fam.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+        (bound + 1 / Fintype.card Fp) := by
   apply uniformOfFintype_prod_fiber_bound
     (fun r => {q : (AugmentedIndex (2 ^ shape.k) → Fp) × fam.Coins |
       fsWinsFull ((fam.determinize r).adversary (scalarBasis B q.1))
@@ -1706,7 +1706,7 @@ theorem snarkFailure_prob_le_of_foldedTextbookDL_rand [Fintype R] [Nonempty R]
           ¬ (fam.determinize p.2.2).hasCleanOpening (scalarBasis B p.1) p.2.1}
       ≤ (fam.Q + shape.k) * (3 / Fintype.card Fp) +
         (fam.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+        (bound + 1 / Fintype.card Fp) := by
   refine le_trans (MeasureTheory.measure_mono
     (show {p : (AugmentedIndex (2 ^ shape.k) → Fp) × (fam.Coins × R) |
         fsWinsFull ((fam.determinize p.2.2).adversary (scalarBasis B p.1))
@@ -1755,7 +1755,7 @@ theorem snarkFailure_prob_le_of_foldedTextbookDL_rand [Fintype R] [Nonempty R]
 
 end ComputedAlgebraicFSFamilyRand
 
-/-! ## Unbounded-domain fixed-slot endpoint
+/-! ## Unbounded-domain programmed-basis endpoint
 
 A common reachable-support split makes the finite junk table private randomness. The endpoint uses
 one private-coin-folded DL solver, not a separate assumption for each junk table. -/
@@ -1880,7 +1880,7 @@ theorem binding_prob_le_of_unbounded_foldedTextbookDL
         (family.splitFamilyRand.determinize p.2.2) (scalarBasis B p.1) p.2.1}
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+        (bound + 1 / Fintype.card Fp) := by
   exact ComputedAlgebraicFSFamilyRand.binding_prob_le_of_foldedTextbookDL_rand
     B family.splitFamilyRand hDL
 
@@ -1903,7 +1903,7 @@ theorem snarkFailure_prob_le_of_unbounded_foldedTextbookDL
         ¬ (family.splitFamilyRand.determinize p.2.2).hasCleanOpening (scalarBasis B p.1) p.2.1}
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+        (bound + 1 / Fintype.card Fp) := by
   exact ComputedAlgebraicFSFamilyRand.snarkFailure_prob_le_of_foldedTextbookDL_rand
     B family.splitFamilyRand hDL
 
@@ -1934,7 +1934,7 @@ theorem snarkFailure_prob_le_of_unbounded_uniformURS_textbookDL {Ω : Type*} (se
         ((fun p => (basisOf p.1, p.2)) ⁻¹' family.snarkFailureEventUnbounded)
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+        (bound + 1 / Fintype.card Fp) := by
   rw [uniformURS_basis_transfer setup B basisOf family.snarkFailureEventUnbounded hURS]
   exact snarkFailure_prob_le_of_unbounded_foldedTextbookDL B family hDL
 
@@ -1952,7 +1952,7 @@ theorem snarkFailure_prob_le_of_unbounded_generatorRO_textbookDL
           family.snarkFailureEventUnbounded)
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound :=
+        (bound + 1 / Fintype.card Fp) :=
   snarkFailure_prob_le_of_unbounded_uniformURS_textbookDL (orchardGeneratorROSetup query) B family
     (orchardGeneratorROBasis query)
     (orchard_uniformURSIdentification_of_generatorRO shape.k B hB query hquery) hDL
@@ -1976,7 +1976,7 @@ theorem binding_prob_le_of_unbounded_uniformURS_textbookDL {Ω : Type*} (setup :
         ((fun p => (basisOf p.1, p.2)) ⁻¹' family.bindingEventUnbounded)
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+        (bound + 1 / Fintype.card Fp) := by
   rw [uniformURS_basis_transfer setup B basisOf family.bindingEventUnbounded hURS]
   exact binding_prob_le_of_unbounded_foldedTextbookDL B family hDL
 
@@ -1994,7 +1994,7 @@ theorem binding_prob_le_of_unbounded_generatorRO_textbookDL
           family.bindingEventUnbounded)
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound :=
+        (bound + 1 / Fintype.card Fp) :=
   binding_prob_le_of_unbounded_uniformURS_textbookDL (orchardGeneratorROSetup query) B family
     (orchardGeneratorROBasis query)
     (orchard_uniformURSIdentification_of_generatorRO shape.k B hB query hquery) hDL
@@ -2103,7 +2103,7 @@ theorem binding_prob_le_of_unboundedRand_foldedTextbookDL [Fintype R] [Nonempty 
         (family.splitFamilyRand.determinize p.2.2) (scalarBasis B p.1) p.2.1}
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+        (bound + 1 / Fintype.card Fp) := by
   exact ComputedAlgebraicFSFamilyRand.binding_prob_le_of_foldedTextbookDL_rand
     B family.splitFamilyRand hDL
 
@@ -2128,7 +2128,7 @@ theorem snarkFailure_prob_le_of_unboundedRand_foldedTextbookDL [Fintype R] [None
         ¬ (family.splitFamilyRand.determinize p.2.2).hasCleanOpening (scalarBasis B p.1) p.2.1}
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+        (bound + 1 / Fintype.card Fp) := by
   exact ComputedAlgebraicFSFamilyRand.snarkFailure_prob_le_of_foldedTextbookDL_rand
     B family.splitFamilyRand hDL
 
@@ -2160,7 +2160,7 @@ theorem snarkFailure_prob_le_of_unboundedRand_uniformURS_textbookDL [Fintype R] 
         ((fun p => (basisOf p.1, p.2)) ⁻¹' family.snarkFailureEventUnboundedRand)
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+        (bound + 1 / Fintype.card Fp) := by
   rw [uniformURS_basis_transfer setup B basisOf family.snarkFailureEventUnboundedRand hURS]
   exact snarkFailure_prob_le_of_unboundedRand_foldedTextbookDL B family hDL
 
@@ -2178,7 +2178,7 @@ theorem snarkFailure_prob_le_of_unboundedRand_generatorRO_textbookDL [Fintype R]
           family.snarkFailureEventUnboundedRand)
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound :=
+        (bound + 1 / Fintype.card Fp) :=
   snarkFailure_prob_le_of_unboundedRand_uniformURS_textbookDL (orchardGeneratorROSetup query)
     B family (orchardGeneratorROBasis query)
     (orchard_uniformURSIdentification_of_generatorRO shape.k B hB query hquery) hDL
@@ -2205,7 +2205,7 @@ theorem binding_prob_le_of_unboundedRand_uniformURS_textbookDL [Fintype R] [None
         ((fun p => (basisOf p.1, p.2)) ⁻¹' family.bindingEventUnboundedRand)
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+        (bound + 1 / Fintype.card Fp) := by
   rw [uniformURS_basis_transfer setup B basisOf family.bindingEventUnboundedRand hURS]
   exact binding_prob_le_of_unboundedRand_foldedTextbookDL B family hDL
 
@@ -2223,7 +2223,7 @@ theorem binding_prob_le_of_unboundedRand_generatorRO_textbookDL [Fintype R] [Non
           family.bindingEventUnboundedRand)
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound :=
+        (bound + 1 / Fintype.card Fp) :=
   binding_prob_le_of_unboundedRand_uniformURS_textbookDL (orchardGeneratorROSetup query)
     B family (orchardGeneratorROBasis query)
     (orchard_uniformURSIdentification_of_generatorRO shape.k B hB query hquery) hDL
@@ -2357,6 +2357,12 @@ private theorem eval_urs_eta (m : Msm shape.k Fp VestaG) :
 
 attribute [local irreducible] multiopenCommitment Msm.eval
 
+/-- Representations for every point appended by an arbitrary MSM. -/
+structure RepresentedMsm (m : Msm shape.k Fp VestaG)
+    (basis : AugmentedIndex (2 ^ shape.k) → VestaG) where
+  reps : List (Fp × AlgebraicPoint (F := Fp) basis)
+  covers : m.other = reps.map (fun t => (t.1, t.2.point))
+
 /-- Representations for every point appended by the multiopen assembly. -/
 structure RepresentedMultiopen
     (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (ps : ProofString shape Fp VestaG)
@@ -2382,6 +2388,21 @@ private theorem list_eq_map_pmap_lookup {β : Type*} (point : β → VestaG)
           (H pr (List.mem_cons_self ..))) = pr.2 := by
         simpa using hp
       exact Prod.ext rfl hpt.symm
+
+/-- Build an arbitrary represented MSM from a list covering every appended point. -/
+def RepresentedMsm.ofCoveredList (m : Msm shape.k Fp VestaG)
+    (L : List (AlgebraicPoint (F := Fp) basis))
+    (hcover : ∀ pr ∈ m.other, ∃ ap ∈ L, ap.point = pr.2) :
+    RepresentedMsm m basis :=
+  have H : ∀ pr ∈ m.other,
+      (L.find? (fun ap => ap.point = pr.2)).isSome := by
+    intro pr hpr
+    rw [List.find?_isSome]
+    obtain ⟨ap, hapL, hap⟩ := hcover pr hpr
+    exact ⟨ap, hapL, by simp [hap]⟩
+  { reps := m.other.pmap
+      (fun pr h => (pr.1, (L.find? (fun ap => ap.point = pr.2)).get h)) H
+    covers := list_eq_map_pmap_lookup AlgebraicPoint.point L _ H }
 
 /-- Build the represented assembly from a list covering every appended point. -/
 def RepresentedMultiopen.ofCoveredList

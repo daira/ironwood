@@ -21,6 +21,7 @@ variable {G : Type} [AddCommGroup G] [Module Fp G]
   [DecidableEq G] [Inhabited G]
 
 omit [AddCommGroup G] [Module Fp G] in
+omit [DecidableEq G] in
 /--
 An instance-column entry in the accepted key's query layout is enough to produce
 the assembled query consumed by canonical member routing.
@@ -43,11 +44,10 @@ theorem instanceQuery_of_layout
       q.commId = .instanceCol proofIndex column := by
   obtain ⟨queryIndex, hqueryIndex, hentry⟩ :=
     List.mem_iff_getElem.mp hlayout
-  have hevalIndex :
-      queryIndex < (List.ofFn (ps.instanceEvals proofIndex)).length := by
-    simpa only [List.length_ofFn, ← hcount] using hqueryIndex
+  have hevalIndex : queryIndex < shape.numInstanceQueries := by
+    simpa only [← hcount] using hqueryIndex
   obtain ⟨q, hq, hqid, -⟩ :=
-    instance_query_mem_assembleQueries
+    instance_query_mem_assembleQueries_eval
       vk instanceCommitment ps ch proofIndex hqueryIndex hevalIndex
   refine ⟨q, hq, ?_⟩
   rw [List.getD_eq_getElem _ _ hqueryIndex, hentry] at hqid

@@ -72,9 +72,8 @@ import Zcash.Snark.Soundness.Main
 -- Multiopen decode reconstruction: bind the IPA witness to real verifier columns recovered from
 -- batched openings (`Multiopen.Decode`), the compatibility layer exposing the propositional binding
 -- interface over fs-adversary's `NontrivialRelation`/`ForkedTranscript` apparatus (`Multiopen.Compat`),
--- the `x₄` multiopen rewinding (`Multiopen.Deployed`), the opened chain threading the fork's declared
--- `U`/`W` components through the batch decode (`Multiopen.Opened`), and the discharge fixtures
--- (`Multiopen.DecodeFixture`).
+-- the `x₄` multiopen rewinding (`Multiopen.Deployed`), and the opened chain threading the fork's
+-- declared `U`/`W` components through the batch decode (`Multiopen.Opened`).
 -- Schwartz–Zippel good-challenge budgets and production (kills `hgood` at the `_xgood` rungs).
 import Zcash.Snark.Soundness.GoodChallenge
 import Zcash.Snark.Soundness.Multiopen.Decode
@@ -83,7 +82,6 @@ import Zcash.Snark.Soundness.Multiopen.Deployed
 import Zcash.Snark.Soundness.Multiopen.Opened
 import Zcash.Snark.Soundness.Multiopen.RPoly
 import Zcash.Snark.Soundness.Multiopen.Claimed
-import Zcash.Snark.Soundness.Multiopen.DecodeFixture
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 import Zcash.Snark.Soundness.Multiopen.CanonicalSelection
 import Zcash.Snark.Soundness.Canonical.Terminal
@@ -94,8 +92,8 @@ import Zcash.Snark.Soundness.ActionVesta
 import Zcash.Snark.Soundness.Vesta
 -- Concrete fork-tree knowledge error over the deployed Orchard parameters.
 import Zcash.Snark.Soundness.Deployed.ConcreteBounds
--- AGM binding reduction: consume computed deployed relations through the fixed-slot discrete-log
--- adapter and representation-carrying algebraic-prover model.
+-- AGM binding reduction: consume computed deployed relations through the programmed-basis
+-- discrete-log adapter and representation-carrying algebraic-prover model.
 import Zcash.Snark.Soundness.AGM.Adapter
 import Zcash.Snark.Soundness.AGM.Probability
 import Zcash.Snark.Soundness.AGM.ProbabilityVesta
@@ -103,3 +101,5 @@ import Zcash.Snark.Soundness.AGM.Peel
 import Zcash.Snark.Soundness.AGM.Prover
 import Zcash.Snark.Soundness.AGM.Capstone
 import Zcash.Snark.Soundness.AGM.BindingSignature
+-- Rewind-free deployed multiopen decoding and additive pinned-root composition.
+import Zcash.Snark.Soundness.Composition.DeployedRootContainment

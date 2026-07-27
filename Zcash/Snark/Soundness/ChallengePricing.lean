@@ -27,7 +27,7 @@ event, from `uniformChallenge_badSet` and a root count.
 Sequential conditioning across the squeezes is the same coupling hook `hgood` carries — the data
 each root set is built from is pinned in the transcript before its challenge is squeezed (θ after
 the advice commitments, β and γ after θ, y after the lookup commitments, x last) — documented with
-the `hfold`/`hgood` surfaces in `Soundness.VestaBudget` and not re-derived here.
+the deployed constraint decoder's `hfold`/`hgood` surfaces and not re-derived here.
 
 The final section collects the bundle-wide resolver *permutation* prices — the `β` and `γ` surfaces
 for every proof's copy argument — alongside the generic and lookup surfaces above, so a single module

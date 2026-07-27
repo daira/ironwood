@@ -1,6 +1,6 @@
 import Zcash.Common.RelationWitness
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
-import Zcash.Snark.Soundness.VestaBudget
+import Zcash.Snark.Soundness.VanishingSlotFold
 
 /-!
 # Canonical decoded-model constraint terminal

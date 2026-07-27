@@ -34,8 +34,7 @@ variable {G : Type*} [AddCommGroup G] [Module Fp G]
 -- capstones close this by stating `circuitSat` at the canonical decode of the extracted witness —
 -- the rewound-opening decode chain of `Soundness.Multiopen.Decode` (the `batch_open_soundV`-shaped
 -- premises carried by `OpenedBatchOpenings`, unbatched to member columns by
--- `openedMemberDecode_of_x1Prob`), consumed by
--- `Soundness.Vesta.orchard_verifier_vesta_member_constraint_derived`.
+-- `openedMemberDecode_of_x1Prob`), consumed by the deployed Vesta constraint capstones.
 /-- A witness that both opens the IPA commitment and satisfies the circuit predicate. -/
 structure SnarkRelation (urs : URS G) (P : G) (b : Fin (2 ^ urs.k) → Fp) (v : Fp)
     (circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop) (a : Fin (2 ^ urs.k) → Fp) : Prop where

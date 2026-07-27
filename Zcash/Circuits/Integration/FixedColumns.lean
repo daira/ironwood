@@ -59,7 +59,7 @@ theorem fixedQuery_of_layout
       queryIndex < (List.ofFn ps.fixedEvals).length := by
     simpa only [List.length_ofFn, ← hcount] using hqueryIndex
   obtain ⟨q, hq, hqid, -⟩ :=
-    columnQueries_layout_mem
+    columnQueries_layout_mem_eval
       (k' := shape.k) vk.omega ch.x vk.fixedCommitment
       CommitmentId.fixedCol vk.fixedQueryLayout
       (List.ofFn ps.fixedEvals) hqueryIndex hevalIndex

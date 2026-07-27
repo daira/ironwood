@@ -4,15 +4,16 @@ import Zcash.Snark.Soundness.Multiopen.CanonicalSelection
 /-!
 # Canonical accepted-model adapter for the Vesta terminal
 
-The budgeted Vesta terminal still exposes independently selected advice and
-instance member feeds and a free proposition callback. This module gives that
-boundary verifier-native names:
+This module gives the canonical constraint terminal
+(`Canonical.Terminal.acceptedModel_circuitSat_or_relation`) verifier-native
+Vesta names:
 
 * `vestaExtractedMemberDecode` is the decoder forced by the accepted `x₁`
   extraction route.
-* `acceptedModel_circuitSat_or_relation_of_feed_eq` replaces the free callback
-  with canonical accepted-model circuit satisfaction whenever the selected
-  feeds are proved equal to the canonical advice and instance feeds.
+* `acceptedModel_circuitSat_or_relation_of_feed_eq` states the terminal at
+  caller-chosen advice and instance member selections; the terminal itself
+  works at the canonical model's own columns, so the selection premises are
+  interface-compatibility data.
 
 No formal-circuit or Action concept appears here.
 -/
@@ -64,13 +65,14 @@ noncomputable def vestaExtractedMemberDecode
 
 set_option maxRecDepth 1000000 in
 /--
-The Vesta constraint terminal with its free callback specialized to canonical
-accepted-model circuit satisfaction.
+The Vesta constraint terminal at caller-chosen member selections: *either* the
+canonical accepted model satisfies `CircuitSat`, *or* a `NontrivialRelation` on
+`(urs.g, urs.u, urs.w)` is computed.
 
-The caller supplies exact polynomial-feed equalities for the advice and instance
-member selections. The terminal's remaining relation is then precisely
-`CircuitSat` for the canonical accepted model, apart from the standard
-discrete-log-relation alternative.
+The proof is `acceptedModel_circuitSat_or_relation`, which works at the
+canonical model's own columns; the selection arguments and their feed
+equalities (`hAdvice`/`hInstance`) are retained for interface stability with
+the selection-based callers and are not consumed.
 -/
 noncomputable def acceptedModel_circuitSat_or_relation_of_feed_eq
     {shape : Shape}
@@ -190,37 +192,10 @@ noncomputable def acceptedModel_circuitSat_or_relation_of_feed_eq
         (memberDecode := memberDecode)
         (hblinding := hblinding) haccepts).CircuitSat
           ch.y hpoly vk.n a₀ ⊕'
-      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  let model :=
-    CanonicalMemberConstraintRelation.acceptedModel
-      (memberDecode := memberDecode) (hblinding := hblinding) haccepts
-  have result :=
-    orchard_verifier_vesta_member_constraints_terminal_derived
-      urs hk vk instanceCommitment ps ch pU pW
-      adviceSet hadviceSet adviceMem instanceSet hinstanceSet instanceMem
-      model.fixedCols model.sets model.chunks model.lookups
-      model.l0 model.lLast model.lBlind hpoly pbatch hξcur hlen hprob1
-      haccepts i m hm colPoly hbindAll hquot hroute hevals
-      claimed.fixed
-      (fun proofIndex query => by
-        have h := claimed.advice proofIndex query
-        rw [← congrFun hAdvice proofIndex] at h
-        exact h)
-      (fun proofIndex query => by
-        have h := claimed.«instance» proofIndex query
-        rw [← congrFun hInstance proofIndex] at h
-        exact h)
-      claimed.sets claimed.chunks claimed.lookups
-      claimed.l0 claimed.lLast claimed.lBlind
-      (by
-        rw [hAdvice, hInstance]
-        exact hxgood)
-      (S := model.CircuitSat ch.y hpoly vk.n a₀)
-      (fun _ relation => by
-        have h := relation.2
-        rw [hAdvice, hInstance] at h
-        exact h)
-  exact result
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w :=
+  acceptedModel_circuitSat_or_relation
+    urs hk vk instanceCommitment ps ch memberDecode haccepts hblinding hpoly
+    i m hm colPoly hbindAll hquot hroute hevals claimed hxgood
 
 assert_no_sorry acceptedModel_circuitSat_or_relation_of_feed_eq
 

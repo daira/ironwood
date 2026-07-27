@@ -53,10 +53,10 @@ private theorem adviceQueryExists
       query.point =
         rotateOmega vk.omega ch.x
           (vk.adviceQueryLayout.getD queryIndex (0, 0)).2 := by
-  apply advice_query_mem_assembleQueries
-  · rw [hLayout]
-    exact queryIndex.isLt
-  · simp
+  obtain ⟨query, hmem, hid, hpt, -⟩ :=
+    advice_query_mem_assembleQueries_eval vk instanceCommitment ps ch proofIndex
+      (by rw [hLayout]; exact queryIndex.isLt) queryIndex.isLt
+  exact ⟨query, hmem, hid, hpt⟩
 
 private noncomputable def acceptedAdviceQuery
     (hLayout :
@@ -295,10 +295,10 @@ private theorem instanceQueryExists
       query.point =
         rotateOmega vk.omega ch.x
           (vk.instanceQueryLayout.getD queryIndex (0, 0)).2 := by
-  apply instance_query_mem_assembleQueries
-  · rw [hLayout]
-    exact queryIndex.isLt
-  · simp
+  obtain ⟨query, hmem, hid, hpt, -⟩ :=
+    instance_query_mem_assembleQueries_eval vk instanceCommitment ps ch proofIndex
+      (by rw [hLayout]; exact queryIndex.isLt) queryIndex.isLt
+  exact ⟨query, hmem, hid, hpt⟩
 
 private noncomputable def acceptedInstanceQuery
     (hLayout :
