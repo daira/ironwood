@@ -71,7 +71,7 @@ the resulting exact feed equalities replace the terminal's independently
 selected feeds. The result is canonical Action-model circuit satisfaction or
 the standard discrete-log-relation alternative.
 -/
-theorem actionAcceptedCircuitSat_or_relation_of_vestaTerminalDerived
+theorem actionAcceptedCircuitSat_or_relation_of_deployedAccepts
     (inputs : Fin Fixture.shape.numProofs → PublicInputs)
     (ps : ProofString Fixture.shape Fp Fixture.G)
     (ch : Challenges Fixture.shape.k Fp)
@@ -177,14 +177,14 @@ theorem actionAcceptedCircuitSat_or_relation_of_vestaTerminalDerived
       HasNontrivialRelation (F := Fp)
         capturedURS.g capturedURS.u capturedURS.w := by
   exact
-    vestaTerminal_circuitSat_or_relation_of_acceptedSelections
+    acceptedModelCircuitSat_or_relation_of_acceptedSelections
       capturedURS shape_k_eq_capturedURS_k Fixture.vk
       (deployedInstanceCommitment Fixture.shape inputs) ps ch pU pW hpoly
       pbatch hξcur hlen hprob1 haccepts vk_blindingFactors_lt
       actionCapturedAdviceQueryCount actionCapturedInstanceQueryCount
       i m hm colPoly hbindAll hquot hroute hevals claimed hxgood
 
-assert_no_sorry actionAcceptedCircuitSat_or_relation_of_vestaTerminalDerived
+assert_no_sorry actionAcceptedCircuitSat_or_relation_of_deployedAccepts
 
 set_option maxRecDepth 1000000 in
 private theorem actionBundleStatement_or_relation_of_vestaCircuitSat_or_relation
@@ -303,7 +303,7 @@ proposition `S`, no encoding callback, and no freely chosen member decoder.
 Deployed acceptance determines the decoder and canonical constraint model;
 the accepted route determines the advice and instance member selections.
 -/
-theorem actionBundleStatement_or_relation_of_vestaTerminalDerived
+theorem actionBundleStatement_or_relation_of_capturedDeployedAccepts
     (inputs : Fin Fixture.shape.numProofs → PublicInputs)
     (ps : ProofString Fixture.shape Fp Fixture.G)
     (ch : Challenges Fixture.shape.k Fp)
@@ -453,7 +453,7 @@ theorem actionBundleStatement_or_relation_of_vestaTerminalDerived
       HasNontrivialRelation (F := Fp)
         capturedURS.g capturedURS.u capturedURS.w := by
   have hterminal :=
-    actionAcceptedCircuitSat_or_relation_of_vestaTerminalDerived
+    actionAcceptedCircuitSat_or_relation_of_deployedAccepts
       inputs ps ch pU pW hpoly pbatch hξcur hlen hprob1 haccepts
       i m hm colPoly hbindAll hquot hroute hevals claimed hxgood
   exact
@@ -461,6 +461,6 @@ theorem actionBundleStatement_or_relation_of_vestaTerminalDerived
       inputs ps ch pU pW hpoly pbatch hlen hprob1 haccepts hterminal
       hgoodY permGamma permBeta lookupGamma lookupBeta lookupTheta
 
-assert_no_sorry actionBundleStatement_or_relation_of_vestaTerminalDerived
+assert_no_sorry actionBundleStatement_or_relation_of_capturedDeployedAccepts
 
 end Zcash.Snark

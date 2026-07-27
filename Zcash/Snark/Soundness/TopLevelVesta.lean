@@ -34,7 +34,7 @@ Acceptance fixes the canonical polynomial assignment.  The caller supplies the
 circuit's named component-level correctness package for that assignment, not an
 opaque implication to the desired statement.
 -/
-theorem topLevelBundleStatement_or_relation_of_vestaTerminal
+theorem topLevelBundleStatement_or_relation_of_deployedAccepts
     {ConfigInput Config : Type} {Output : TypeMap}
     [CircuitType Output]
     (top : TopLevelCircuit Fp ConfigInput Config Output)
@@ -191,7 +191,7 @@ theorem topLevelBundleStatement_or_relation_of_vestaTerminal
     vestaExtractedMemberDecode urs hk vk instanceCommitment ps ch
       pbatch hlen hprob1 haccepts
   have hterminal :=
-    vestaTerminal_circuitSat_or_relation_of_acceptedSelections
+    acceptedModelCircuitSat_or_relation_of_acceptedSelections
       urs hk vk instanceCommitment ps ch pU pW hpoly
       pbatch hξcur hlen hprob1 haccepts hblinding
       gateCoherence.adviceQueryCount gateCoherence.instanceQueryCount
@@ -222,6 +222,6 @@ theorem topLevelBundleStatement_or_relation_of_vestaTerminal
     · exact correctness hsatisfied
   · exact Or.inr hrelation
 
-assert_no_sorry topLevelBundleStatement_or_relation_of_vestaTerminal
+assert_no_sorry topLevelBundleStatement_or_relation_of_deployedAccepts
 
 end Zcash.Snark

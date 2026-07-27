@@ -727,9 +727,9 @@ assert_axioms orchard_verifier_vesta_member_constraints_terminal_derived +native
 -- theorem has no free semantic callback, decoder, or selected-column feed.
 assert_axioms acceptedAdviceSelection_feed_eq
 assert_axioms acceptedInstanceSelection_feed_eq
-assert_axioms vestaTerminal_circuitSat_or_relation_of_feed_eq +native
-assert_axioms vestaTerminal_circuitSat_or_relation_of_acceptedSelections +native
-assert_axioms actionBundleStatement_or_relation_of_vestaTerminal +native +pallas
+assert_axioms acceptedModelCircuitSat_or_relation_of_feed_eq +native
+assert_axioms acceptedModelCircuitSat_or_relation_of_acceptedSelections +native
+assert_axioms actionBundleStatement_or_relation_of_deployedAccepts +native +pallas
 -- The last links: the point check lifted to the polynomial identity, the permutation taken to be the
 -- one keygen builds from the circuit's copy constraints, the cells of every chunk covered at once,
 -- and circuit satisfaction defined by the whole constraint list rather than the gates alone.
