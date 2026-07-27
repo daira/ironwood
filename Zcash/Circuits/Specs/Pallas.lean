@@ -428,11 +428,11 @@ open CompElliptic.Fields.Pasta (PALLAS_SCALAR_CARD)
 /--
 The Pallas curve group has exactly `q = PALLAS_SCALAR_CARD` points.
 
-CompElliptic now proves this unconditionally (`CompElliptic.Curves.Pasta.Pallas.card_eq`:
-the fibre bound `#E ≤ 2p + 1` sits below `2q`, and the prime-order witness `G = (-1, 2)`
-pins the order), so the scalar-multiplication circuit proofs no longer rest on a curve-order
-axiom — they inherit only CompElliptic's `native_decide` witness through this result. All
-consumers needing order facts derive them from here (see `addOrderOf_eq`).
+CompElliptic proves this unconditionally (`CompElliptic.Curves.Pasta.Pallas.card_eq`: the
+fibre bound `#E ≤ 2p + 1` sits below `2q`, and the prime-order witness `G = (-1, 2)` pins the
+order), so the scalar-multiplication circuit proofs rest on no curve-order axiom — they
+inherit only CompElliptic's `native_decide` witness through this result. All consumers
+needing order facts derive them from here (see `addOrderOf_eq`).
 -/
 theorem pallas_natCard :
     Nat.card (ShortWeierstrass.SWPoint Pallas.curve) = PALLAS_SCALAR_CARD :=

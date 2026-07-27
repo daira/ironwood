@@ -243,10 +243,8 @@ assert_axioms enable_spend_disabled_forces_zero
 assert_axioms enable_output_disabled_forces_zero
 
 -- The refinements instantiated at the deployed Pallas bases sit one tier up: their proofs
--- consume `native_decide` certificates — the fixed-base window tables, and CompElliptic's
--- Pallas point count (`pallas_natCard`, now a theorem rather than a declared axiom, so
--- `+native` is the whole of the extra budget).  Asserting them here rather than deferring
--- them keeps every theorem in this file inside a build-checked bound.
+-- consume `native_decide` certificates — the fixed-base window tables and CompElliptic's
+-- Pallas point count (`pallas_natCard`) — so `+native` is the whole of the extra budget.
 assert_axioms alpha_scaling +native
 assert_axioms value_commit_positive_scaling +native
 assert_axioms value_commit_negative_scaling +native
@@ -267,13 +265,10 @@ assert_no_sorry classify_query_inr
 assert_no_sorry classifyRelation_isSome_iff
 assert_no_sorry classifyRelation_site
 assert_computable breakCoeffs +choice
--- `relationOfBreakData` and `classifyRelation` are likewise plain compiled `def`s.  Their
--- erased `Prop` fields additionally carry the deployed base points' on-curve certificates,
--- which are `native_decide` checks, so they sit one tier up at `+choice +native`.  No
--- declared axiom is involved: the Pallas point count enters as CompElliptic's
--- `pallas_natCard` theorem.  The plain-`def` half of the check is the point of asserting
--- them at all — it is what stops a later `noncomputable` marking from silently voiding the
--- breaks-as-computed-data convention for the onward reduction.
+-- `relationOfBreakData` and `classifyRelation` are likewise plain compiled `def`s, asserted
+-- computable per the breaks-as-computed-data convention.  Their erased `Prop` fields
+-- additionally carry the deployed base points' on-curve certificates, which are
+-- `native_decide` checks, so they sit one tier up at `+choice +native`.
 assert_computable relationOfBreakData +choice +native
 assert_computable classifyRelation +choice +native
 

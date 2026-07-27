@@ -75,7 +75,8 @@ carry the generating tool.
 
 **What the hash does and does not guarantee.** The pin guarantees the bytes have not
 drifted since the hash was recorded; it does **not** by itself certify the bytes were
-produced from the claimed circuit. That certification is currently the one-time
-generation event plus the `CircuitVkCheck` equality checks (the projected Lean CS must
-equal the dump — a divergence in either side surfaces as a build failure); it becomes
-reproducible once the generator pins above are recorded.
+produced from the claimed circuit. That certification rests on the one-time generation
+event plus the `CircuitVkCheck` equality checks (the projected Lean CS must equal the
+dump — a divergence in either side surfaces as a build failure). Reproducing the bytes
+from public sources would need the dump instrumentation upstreamed, which is not planned
+(see [Source versions](#source-versions)).

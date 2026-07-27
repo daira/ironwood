@@ -820,11 +820,10 @@ assert_axioms adaptEsc_measure_le
 
 The circuit-layer soundness theorems live at the `native_decide` tier: they consume
 `native_decide` certificates only — the six fixed-base window tables, small `interval_cases`
-facts, and CompElliptic's Pallas point-count witness (`pallas_natCard`, now a theorem backed
-by `CompElliptic.Curves.Pasta.Pallas.card_eq` rather than a curve-order axiom). These
-assertions pin exactly that budget for the generic soundness theorems and for the
-fully-instantiated deployed bundle — a `sorry` or any further axiom reached anywhere in the
-Action stack fails the build here. -/
+facts, and CompElliptic's Pallas point-count witness (`pallas_natCard`). These assertions pin
+exactly that budget for the generic soundness theorems and for the fully-instantiated deployed
+bundle — a `sorry` or any further axiom reached anywhere in the Action stack fails the build
+here. -/
 
 assert_axioms Zcash.Circuits.Action.Circuit.soundness +native
 assert_axioms Zcash.Circuits.Action.Circuit.soundnessPost +native
@@ -833,9 +832,10 @@ assert_axioms Zcash.Circuits.Action.orchardActionCircuit +native
 /-! ## The circuit → ledger bridge — exported refinement theorems
 
 The end-to-end refinement from a satisfying Action assignment to the games-facing ledger
-statement (`ActionBreak … ∨ ∃ inst w, …`), and the break classifier's two correctness
-directions (a classified escape is a witness-tied break; a `none` verdict leaves every
-Sinsemilla query defined). Same budget as the circuit layer above: standard tier plus
+statement (`ActionBreak … ∨ ∃ inst w, …`), together with the two correctness directions of the
+break classifier `classifyAction`: an escape it returns is a break of the witness's own hash
+query, and a `none` return — no escape at any of the four sites — means every Sinsemilla query
+of the witness is defined. Same budget as the circuit layer above: standard tier plus
 `native_decide` certificates (including the Pallas point-count witness). -/
 
 assert_axioms Zcash.Security.Ledger.Bridge.specPost_to_ledger +native
@@ -847,16 +847,14 @@ assert_axioms Zcash.Security.Ledger.Bridge.classify_none_defined +native
 
 The onward step from a classified Action escape to the games-facing relation object, which
 the census above stops short of: the escaped chain is turned into an explicit generator
-combination (`ofPoint_hashToPoint`), the coefficient vector is computed from the break datum
+combination (`ofPoint_hashToPoint`), the coefficient vector is computed from the break data
 (`breakCoeffs`, with its relation and nontriviality facts), and the two headline reductions
 package that as a `NontrivialRelationOne` at the escaped site's domain point.
 
-`relationOfBreakData` and `classifyRelation` are asserted computable rather than merely
-axiom-bounded: they are the reduction's data path, so the plain-`def` half of the check is
-what stops a later `noncomputable` marking from silently voiding the
-breaks-as-computed-data convention. `+native` covers the deployed bases' on-curve
-certificates carried in their erased `Prop` fields; `+choice` is the same erased-positions
-tier the classifier itself sits at.
+`relationOfBreakData` and `classifyRelation` are asserted computable, per the
+breaks-as-computed-data convention. `+native` covers the deployed bases' on-curve certificates
+carried in their erased `Prop` fields; `+choice` is the same erased-positions tier the classifier
+itself sits at.
 
 `ofPoint_hashToPoint` and `breakCoeffs_nontrivial` stay at the standard tier: the chain
 combination reasons in `ℕ`-multiples of the lifted table, and nontriviality only in the scalar

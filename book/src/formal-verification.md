@@ -69,10 +69,8 @@ their abstract form over an arbitrary `Fp`-module, only on the standard classica
 trust. Instantiated at a concrete Pasta curve they additionally inherit one compiler-trust
 axiom: CompElliptic's curve point-count, a closed computational fact discharged by `native_decide`
 (below). This applies to both the SNARK soundness endpoints (Vesta) and the Action circuit
-soundness (Pallas); the Pallas point count was formerly an explicit curve-order axiom and is now
-this same `native_decide`-backed CompElliptic result, so removing that axiom did not shrink the
-trusted base to nothing — it swapped a bespoke axiom for a re-checkable compiler-trust certificate.
-The `+native` flag on the corresponding build-time checks records exactly which endpoints carry it.
+soundness (Pallas). The `+native` flag on the corresponding build-time checks records
+exactly which endpoints carry it.
 
 **Concrete, closed facts with no free variables** may additionally use `native_decide`
 (which discharges a goal by running compiled native code, adding a compiler-trust axiom) and
@@ -93,7 +91,7 @@ capstones) — as build-time obligations expressed through two commands from `Zc
 * `assert_axioms d` fails the build unless `d` rests only on the standard classical axioms
   (`propext`, `Classical.choice`, `Quot.sound`) — in particular no `sorry` and no `native_decide`;
   `assert_axioms d +native` additionally permits the toolchain-dependent `native_decide`
-  compiler-trust axiom that the Vesta-instantiated endpoints carry. Unlike a `#guard_msgs`-pinned
+  compiler-trust axiom that the curve-instantiated endpoints carry. Unlike a `#guard_msgs`-pinned
   `#print axioms`, it states the expected tier in one line and stays green across toolchain bumps
   that rename the `native_decide` axiom, while still failing the moment a declaration reaches beyond
   its tier. It covers the general soundness theorems, probability bounds, and run-time/query-charge
