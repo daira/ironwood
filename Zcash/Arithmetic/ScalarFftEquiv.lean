@@ -9,11 +9,12 @@ import Zcash.Arithmetic.Fft
 /-!
 # The scalar Montgomery FFT is the proven group FFT at `G := Fp`
 
-`Zcash.Vendor.CompPoly.ScalarFftDefs` is a zero-import transplant of the radix-2 DIT FFT onto the
-eight-limb Montgomery representation of the Vesta **scalar** field, so that it can sit in the
-`FastFieldNative` `precompileModules` leaf.  This module — mathlib-side, and therefore *not*
-in that lane — proves that the transplant computes `Keygen.bestFftG` instantiated at the
-`Fp`-module `Fp`.
+`Zcash.Vendor.CompPoly.ScalarFftDefs` is a zero-import transplant of the radix-2 DIT FFT onto
+eight-limb Montgomery residues, generic over the modulus, so that it can sit in the
+`FastFieldNative` `precompileModules` leaf.  `fftS` below is its monomorphization at the Vesta
+**scalar** field (`PALLAS_BASE_CARD`, the Pallas *base* field in the Pasta naming), and this
+module — mathlib-side, and therefore *not* in that lane — proves that the transplant computes
+`bestFftG` instantiated at the `Fp`-module `Fp`.
 
 The bridge is the value map `montValS : Limbs8 → Fp`, `x ↦ x.toNat / 2 ^ 256`, which is
 `Montgomery.Native64x8.FastField.toField` read off raw limbs; it is correct on **well-formed**
@@ -22,23 +23,25 @@ residues (`WFs x := x.Bounded ∧ x.toNat < p`), the carrier property of the pro
 `FastField` operation on the nose, so the per-operation cast lemmas are the vendored field's
 `toField_*` homomorphism lemmas.
 
-`ScalarFftDefs.fft` and `bestFftG` are recognized as the same generic loop nest `Keygen.fftGen`
-(`Zcash/Arithmetic/Fft.lean`, `rfl` on both sides), which `Keygen.fftGen_eq_folds` turns into
+`fftS` and `bestFftG` are recognized as the same generic loop nest `fftGen`
+(`Zcash/Arithmetic/Fft.lean`, `rfl` on both sides), which `fftGen_eq_folds` turns into
 pure `List.foldl`s; the simulation invariant `SimS` is then pushed through the permutation and
 each butterfly.  The twiddle table of `bestFftG` is the only piece that differs: the kernel
 receives it in Montgomery form from the caller, so the butterflies compare `mul` against
 `t.val • ·` at corresponding entries.
 -/
 
-namespace Zcash.Vendor.ScalarMont
+namespace Zcash.Arithmetic
 
 open Montgomery.Native64x8
 open Montgomery.Native64x8 (Limbs8)
-open Zcash.Snark.Keygen
 open CompElliptic.Fields.Pasta (PALLAS_BASE_CARD)
 
-/-- The Vesta scalar field — `PALLAS_BASE_CARD` in the Pasta naming. -/
-local notation "Fp" => Zcash.Snark.Fp
+/-- The vendored generic scalar FFT at the Vesta scalar field.  Its modulus limbs and Montgomery
+`negInv` are `Montgomery.Native64x8.PallasFq`'s: the Vesta scalar field *is* the Pallas base
+field (`PALLAS_BASE_CARD`), which is what `Fp` denotes — the Pasta naming swap, not a typo. -/
+def fftS (a0 : Array Limbs8) (tw : Array Limbs8) (logN : ℕ) : Array Limbs8 :=
+  Montgomery.ScalarFft.fft PallasFq.modulusLimbs PallasFq.negInv a0 tw logN
 
 /-! ## The field level -/
 
@@ -161,7 +164,7 @@ private theorem twArrS_get (omega : Fp) (m i : ℕ) :
 
 /-- The kernel FFT is the generic loop nest at the scalar field operations. -/
 private theorem fftS_eq_gen (a0 : Array Limbs8) (tw : Array Limbs8) (logN : ℕ) :
-    fft a0 tw logN
+    fftS a0 tw logN
       = fftGen PallasFq.add PallasFq.sub PallasFq.mul a0 tw logN := rfl
 
 /-- `bestFftG` at `G := Fp` is the generic loop nest at the field's own operations, with the
@@ -277,8 +280,8 @@ theorem fftS_spec (a0 : Array Limbs8) (tw : Array Limbs8) (omega : Fp) (logN : �
     (hwf : ∀ x ∈ a0, WFs x) (hwtw : ∀ i : ℕ, WFs tw[i]!)
     (htwsize : tw.size = a0.size / 2)
     (htw : ∀ i, i < a0.size / 2 → montValS tw[i]! = omega ^ i) :
-    (∀ x ∈ fft a0 tw logN, WFs x)
-      ∧ (fft a0 tw logN).map montValS
+    (∀ x ∈ fftS a0 tw logN, WFs x)
+      ∧ (fftS a0 tw logN).map montValS
           = bestFftG (a0.map montValS) omega logN := by
   have hsize : (a0.map montValS).size = a0.size := Array.size_map ..
   have htw' : ∀ i : ℕ, montValS tw[i]! = (twArrS omega (a0.size / 2))[i]! := by
@@ -306,4 +309,4 @@ theorem fftS_spec (a0 : Array Limbs8) (tw : Array Limbs8) (omega : Fp) (logN : �
     hsize]
   exact hrounds
 
-end Zcash.Vendor.ScalarMont
+end Zcash.Arithmetic

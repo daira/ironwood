@@ -12,7 +12,7 @@ cardinality, which appears in the Schwartz–Zippel bounds. `Soundness.Vesta` pr
 order separately.
 -/
 
-namespace Zcash.Snark
+namespace Zcash.Arithmetic
 
 /-- The Vesta scalar-field order, equal to the Pallas base-field order. -/
 @[reducible] def scalarFieldOrder : ℕ := CompElliptic.Fields.Pasta.PALLAS_BASE_CARD
@@ -30,4 +30,4 @@ instance : NeZero scalarFieldOrder :=
 theorem card_Fp : Fintype.card Fp = scalarFieldOrder :=
   ZMod.card scalarFieldOrder
 
-end Zcash.Snark
+end Zcash.Arithmetic

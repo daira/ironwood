@@ -34,6 +34,8 @@ turns the curve into an `Fp`-module and the abstract theorems specialize to Vest
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (Msm Msm.evalNat_eq_eval scalarFieldOrder)
+
 -- The deployed grouping definitions appear inside index types, so a defeq check on an index can
 -- pull the whole `constructIntermediateSets (assembleQueries …)` computation through `whnf`.
 -- Sealing them keeps those checks syntactic; the proofs below use their equation lemmas.

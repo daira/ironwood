@@ -11,6 +11,8 @@ from `orchardActionTopLevelCircuit`, never the captured verifying-key fixture.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (deltaFp)
+
 open Zcash.Circuits.Action (orchardActionTopLevelCircuit)
 
 namespace ActionPermutationDomain

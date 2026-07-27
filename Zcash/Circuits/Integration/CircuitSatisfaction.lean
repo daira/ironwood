@@ -1,6 +1,6 @@
 import Mathlib
 import Clean.Halo2.Operations
-import Zcash.Snark.Core.Field
+import Zcash.Arithmetic
 
 /-!
 # Full Halo2 circuit satisfaction, split by constraint family

@@ -21,6 +21,8 @@ representative-agnostic.
 
 namespace Zcash.Snark
 
+open Zcash.Arithmetic (deltaFp omegaOf)
+
 open Halo2 Halo2.Layout
 open Equiv (Perm swap)
 

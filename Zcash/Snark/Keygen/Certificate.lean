@@ -24,13 +24,13 @@ EVALUATION-SHARING DISCIPLINE (each rule was measured, the hard way):
   to `bestFftG_dft`) moves the inverse transform off the curve and onto the coefficients:
   each column is inverse-DFT'd as SCALARS and then committed against the MONOMIAL URS. The
   scalar transform is the same `bestFftG` at `G := Fp`, run on the Montgomery lane
-  (`Fast.invDftScalarsMontWith`, `ScalarMont.fft`); the 2048-point group FFT it replaces was
+  (`invDftScalarsMontWith`, `fftS`); the 2048-point group FFT it replaces was
   measured at 206.8 s of the module's former 258 s. The 10-generator Lagrange prefix the
   bundle cross-checks is likewise 10 monomial MSMs of the closed coefficient rows
-  (`Fast.take_derivedUrsGLagrange_montPre`), not a prefix of an FFT output — otherwise the
+  (`take_derivedUrsGLagrange_montPre`), not a prefix of an FFT output — otherwise the
   group FFT would still be forced.
 * The basis and the per-column committer run through the MONTGOMERY LANE
-  (`Fast.msmMontPre` / `Fast.commitInvDftMontWith`): the zero-import `ProjectiveMontDefs`
+  (`msmMontPre` / `commitInvDftMontWith`): the zero-import `ProjectiveMontDefs`
   and `ScalarFftDefs` twins over the eight-limb Montgomery field, proven equal to the
   statement-surface functions via the kernel simulation theorems (`msmM_spec`, `fftS_spec`)
   — which ride in turn on the field's ring isomorphism, so the certificate's group work runs
@@ -63,6 +63,8 @@ The `ZcashKeygen` target builds this module explicitly; ordinary clients of
 
 namespace Zcash.Snark.Keygen
 
+open Zcash.Arithmetic (deltaFp derivedUrsGLagrange ofPVesM omegaOf)
+
 open Zcash.Snark
 open Zcash.Snark.Fixture
 open Halo2
@@ -80,25 +82,25 @@ def actionProofParams : ProofParams := { numProofs := 1, numPointSets := 5 }
 44 columns and the 10 Lagrange-prefix generators). Nullary, so the coordinate conversion
 runs once on the main evaluation thread (all uses are single-threaded). -/
 private def monomialBasis : List PM :=
-  (List.ofFn capturedURS.g).map fun g => Fast.ofPVesM (ofAffine g)
+  (List.ofFn capturedURS.g).map fun g => ofPVesM (ofAffine g)
 
 /-- The inverse-DFT twiddle table in Montgomery form. Nullary — 1024 root powers, shared. -/
-private def invDftTwiddles : Array Limbs8 := Fast.invDftTwiddlesMont capturedURS.k
+private def invDftTwiddles : Array Limbs8 := invDftTwiddlesMont capturedURS.k
 
 /-- The inverse-DFT `n⁻¹` scale in Montgomery form. Nullary — one field inversion, shared. -/
-private def invDftScale : Limbs8 := Fast.invDftScaleMont capturedURS.k
+private def invDftScale : Limbs8 := invDftScaleMont capturedURS.k
 
 /-- The per-column committer: the column's scalar inverse DFT on the Montgomery lane, then
 one scatter Pippenger against the shared monomial basis. -/
 private def commitProj : List Fp → G :=
-  Fast.commitInvDftMontWith Fast.Msm.defaultWindow invDftTwiddles invDftScale
+  commitInvDftMontWith Fast.Msm.defaultWindow invDftTwiddles invDftScale
     capturedURS.k capturedURS.w monomialBasis
 
 /-- The derived Lagrange URS prefix the bundle cross-checks: one monomial MSM per generator
 of the closed coefficient row `n⁻¹·ω^(−j·t)`. -/
 private def lagrangeBasis : List G :=
   List.ofFn fun j : Fin capturedUrsGLagrange.length =>
-    Fast.commitMontPre Fast.Msm.defaultWindow 0 monomialBasis
+    commitMontPre Fast.Msm.defaultWindow 0 monomialBasis
       (lagrangeRow capturedURS.k (j : ℕ))
 
 /-- The derived pinned CS at the circuit-owned selector map — `ofOperations`' internal
@@ -187,7 +189,7 @@ private theorem domainExponent_eq :
 
 set_option maxRecDepth 1000000 in
 /-- **The bundle's per-column committer IS the pipeline's affine default at the derived
-Lagrange basis**, on every full-domain column: `Fast.commitInvDftMontWith_eq` is the
+Lagrange basis**, on every full-domain column: `commitInvDftMontWith_eq` is the
 bilinearity theorem run through the Montgomery lane on both halves. -/
 private theorem committer_eq (l : List Fp)
     (hl : l.length = 2 ^ orchardActionTopLevelCircuit.domainExponent) :
@@ -195,7 +197,7 @@ private theorem committer_eq (l : List Fp)
       (derivedUrsGLagrange capturedURS) l := by
   rw [Fast.Msm.commitLagrangeFastWith_eq _ (by decide)]
   simp only [commitProj, monomialBasis]
-  rw [Fast.commitInvDftMontWith_eq Fast.Msm.defaultWindow (by decide) invDftTwiddles
+  rw [commitInvDftMontWith_eq Fast.Msm.defaultWindow (by decide) invDftTwiddles
     invDftScale capturedURS (by decide) rfl rfl l (by rw [hl, domainExponent_eq])]
 
 set_option maxRecDepth 1000000 in
@@ -208,7 +210,7 @@ theorem derivedUrsGLagrange_prefix_eq :
   have h1 := h.1
   simp only [lagrangeBasis, monomialBasis] at h1
   rw [List.take_of_length_le (by simp)] at h1
-  rw [Fast.take_derivedUrsGLagrange_montPre Fast.Msm.defaultWindow (by decide) capturedURS
+  rw [take_derivedUrsGLagrange_montPre Fast.Msm.defaultWindow (by decide) capturedURS
     (by decide) capturedUrsGLagrange.length (by decide)]
   exact h1
 

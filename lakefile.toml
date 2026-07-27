@@ -68,7 +68,8 @@ globs = [
   "Zcash.Snark.Soundness.Deployed.ActionVesta",
 ]
 
-# The fast Pasta arithmetic: `Zcash/Arithmetic/` (ironwood-permanent, mathlib-side) and the
+# The fast Pasta arithmetic: the umbrella root `Zcash/Arithmetic.lean` (which re-exports `Fp`
+# and `URS` at the `Zcash` root), the tree below it (ironwood-permanent, mathlib-side), and the
 # remaining temporary vendoring `Zcash/Vendor/CompPoly/` (the scalar FFT definitions), whose
 # README states its deletion criteria. These trees are not reachable from the `Zcash` library;
 # only the keygen certificate lane pulls them in. Giving them a target of their own means they
@@ -77,7 +78,7 @@ globs = [
 # so plain `lake build` -- what CI runs -- keeps every module honest.
 [[lean_lib]]
 name = "Arithmetic"
-globs = ["Zcash.Arithmetic.+", "Zcash.Vendor.CompPoly.+"]
+globs = ["Zcash.Arithmetic", "Zcash.Arithmetic.+", "Zcash.Vendor.CompPoly.+"]
 
 # The ONLY library in this repo with `precompileModules`. It is a core-only leaf: its modules
 # import nothing beyond Lean core, so native compilation covers a couple of files rather than a

@@ -253,7 +253,7 @@ theorem actionBundleStatement_or_relation_of_acceptedTopLevelBundle
                 Specs.Sinsemilla.orchardGenerators {}).1.primary.index) =
           instanceRowPolynomial
             (2 ^ orchardActionTopLevelCircuit.domainExponent)
-            (Zcash.Snark.omegaOf
+            (Zcash.Arithmetic.omegaOf
               orchardActionTopLevelCircuit.domainExponent)
             (inputs proofIndex).rows := by
       intro proofIndex
@@ -289,7 +289,7 @@ theorem actionBundleStatement_or_relation_of_acceptedTopLevelBundle
               (Circuit.configure
                 Specs.Sinsemilla.orchardGenerators {}).1.primary.index) =
           instanceRowPolynomial (2 ^ urs.k)
-            (Zcash.Snark.omegaOf
+            (Zcash.Arithmetic.omegaOf
               orchardActionTopLevelCircuit.domainExponent)
             (inputs proofIndex).rows at hrowPolynomial
       simpa only [← hk] using hrowPolynomial
