@@ -14,8 +14,8 @@ rev = "fca63dc777ca9de7f533a50196cdd1357d569f4f"
 
 [[require]]
 name = "CompElliptic"
-git = "https://github.com/mitschabaude-bot/CompElliptic.git"
-rev = "53b35333cb00b664e3cccabd0bc7f50700ff7929"
+git = "https://github.com/daira/CompElliptic"
+rev = "fd9977340d728b704436894f87f9967f117ad5f7"
 
 # mathlib last, so that its pinned versions of the common transitive dependencies
 # (batteries, aesop, Qq, proofwidgets, ...) take precedence over CompPoly's.
