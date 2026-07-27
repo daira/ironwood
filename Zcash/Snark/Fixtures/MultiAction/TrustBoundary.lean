@@ -59,6 +59,9 @@ assert_axioms deployedConstraintXSqueezeSchedule_captured +native
 -- static checks and degree caps discharged, so the bad-`x` term is the concrete
 -- `(Q + 1) · 20470 / |𝔽|` and the multiopen term is the additive root budget.
 assert_axioms orchard_deployed_knowledge_error_captured +native
+-- The same bound on the interpolation-free route: the deployed root family built by `ofCovered`,
+-- so the statement rests on no field-capacity premise and no offline interpolation.
+assert_axioms orchard_deployed_knowledge_error_captured_direct +native
 
 -- The instance-commitment derivation: the two captured claims, plus the data and functions they
 -- range over. The latter are flagless — they are ordinary definitions, so compiler trust must not

@@ -179,7 +179,7 @@ theorem natDegree_committedPreXConstraintDifference_le {G : Type*} [Inhabited G]
 
 variable {shape : Shape}
 
-local instance : Inhabited VestaG := ⟨0⟩
+local instance vestaInhabitedScheduleBudget : Inhabited VestaG := ⟨0⟩
 
 /-- The deployed constraint difference's degree cap: the point polynomials and quotient pieces
 are coordinate polynomials of degree below the basis size `2^k`. -/

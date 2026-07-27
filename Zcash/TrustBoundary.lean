@@ -32,6 +32,8 @@ import Zcash.Snark.Soundness.ConstraintRelations
 import Zcash.Snark.Soundness.ChallengePricing
 import Zcash.Snark.Soundness.DegreeWalk
 import Zcash.Snark.Soundness.Composition.ScheduleBudget
+import Zcash.Snark.Soundness.AGM.PinnedRootWitness
+import Zcash.Snark.Soundness.AGM.DirectX4Columns
 
 /-!
 # Trust boundary, build-checked
@@ -757,6 +759,28 @@ assert_axioms natDegree_deployedConstraintDifferenceOfRoot_le +native
 assert_axioms deployedConstraintDifference_witness_congr +native
 assert_axioms deployedConstraintXBadSet_measure_le +native
 assert_axioms deployedConstraintXSqueezeSchedule_of_pinned +native
+-- The pinned-root witness family (`AGM.PinnedRootWitness`): the zero data over the degenerate
+-- shape, whose assembled multiopen commitment is the zero point for every basis and record —
+-- the evaluations the satisfiability pin of `DeployedRootSqueezeInvariance` consumes.
+assert_axioms multiopenCommitment_witness_zero +native
+assert_axioms witnessProof +native
+assert_axioms witnessFamily +native
+-- The premise itself, discharged: the constant family's root sets are empty except at `x₃`,
+-- where the set is the deployed point set — and the assembly never reads `x₃`, so reprogramming
+-- an event's own squeeze answer moves nothing. `DeployedRootSqueezeInvariance` is satisfiable.
+assert_axioms witnessFamily_reads_update +native
+assert_axioms deployedRootBad_witness +native
+assert_axioms deployedAllPts_x3_blind
+assert_axioms deployedRootSqueezeInvariance_witness +native
+-- The direct route (`AGM.DirectX4Columns`): the `x₄` columns are read off the online coverage —
+-- a column below the pair count is its set's `x₁` power sum, the last is the prover's `q′` — so
+-- the batch-or-relation decision needs no offline interpolation and no field-capacity premise.
+assert_axioms x4BatchCommitments_eq_memberPowerSum
+assert_axioms deployedX4ColumnRepresentationsOfCovered +native
+assert_axioms aggregate_opens_deployedCommitment +native
+assert_axioms deployedX4BatchOfCoveredOrRelation +native
+assert_axioms deployedRootOutcomeOfCovered +native
+assert_axioms ComputedDeployedRootFSFamily.ofCovered +native
 assert_axioms snarkExtractionDeployed_prob_le_via_wrapped_pinned_roots +native
 assert_axioms ComputedDeployedRootFSFamily.deployedRelation_prob_le_of_generatorRO_textbookDL +native
 assert_axioms deployedRootFailure_subset_landing +native
