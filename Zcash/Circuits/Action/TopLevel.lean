@@ -72,7 +72,7 @@ private theorem circuit_synthesize_eq (G : Generators) (B : Bases) (cfg : Config
   rfl
 
 private theorem circuit_envAssumptions_eq (G : Generators) (B : Bases) (cfg : Config) :
-    (circuit G B).EnvAssumptions cfg = TopLevelEnvAssumptions cfg :=
+    (circuit G B).EnvAssumptions cfg = EnvAssumptions cfg :=
   rfl
 
 /--
@@ -88,7 +88,7 @@ private theorem configured_closesEnvironment
       (TopLevelCompilation.placedEnvironment formal assignment) := by
   let formal := circuit G B
   let env := TopLevelCompilation.placedEnvironment formal assignment
-  change TopLevelEnvAssumptions (configure G {}).1 env
+  change EnvAssumptions (configure G {}).1 env
   have htable :
       2 ^ Specs.K ≤ TopLevelCompilation.usedRows formal := by
     have hlength := Operations.loadTable_length_le_usedRows
