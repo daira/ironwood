@@ -1,4 +1,5 @@
 import Zcash.Snark.Soundness.AGM.Peel
+import Zcash.Snark.Soundness.Multiopen.Compat
 
 /-!
 # The pre-`x` quotient reconstruction
