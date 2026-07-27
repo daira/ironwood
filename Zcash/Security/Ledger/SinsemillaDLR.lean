@@ -440,10 +440,10 @@ theorem break_bounds {wit : ActionData} {s : BreakSite} {br : BreakData}
   exact ⟨fun m hm => hb m (List.mem_append_left _ hm),
     hb br.chunk (List.mem_append_right _ List.mem_cons_self)⟩
 
-/-- **The conversion requested by the break-reduction plan**: a plain `def` turning
-a classified `ActionBreakData` into the games-facing discrete-log-relation object at
-the escaped site's domain point.  The hypothesis ties the datum to the witness's own
-query; `classify_query_inr` discharges it for the classifier's output. -/
+/-- **Reduction from a classified `ActionBreakData` into the games-facing
+discrete-log-relation** at the escaped site's domain point.  The hypothesis ties the
+datum to the witness's own query; `classify_query_inr` discharges it for the
+classifier's output. -/
 def relationOfBreakData (wit : ActionData) (abr : ActionBreakData)
     (h : hashToPointB orchardGenerators.S (siteQ abr.site) (siteQuery wit abr.site) =
       .inr abr.data) :
