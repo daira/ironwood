@@ -346,7 +346,7 @@ theorem deployedConstraintRelation_prob_le_of_generatorRO_textbookDL
       (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           deployedConstraintRelationEvent family constraintFinder)
-      <= Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+      <= (bound + 1 / Fintype.card Fp) := by
   rw [deployedConstraintRelation_prob_eq_of_uniformURS
     (orchardGeneratorROSetup query) B family constraintFinder
     (orchardGeneratorROBasis query)
@@ -462,7 +462,7 @@ theorem snarkConstraintsDeployed_prob_le_via_deployed_roots
           snarkExtractionFailureEventDeployed family.toFamily constraintDecoded)
       <= ((family.Q + shape.k) * (3 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
-          Fintype.card (AugmentedIndex (2 ^ shape.k)) * dlogBound)
+          (dlogBound + 1 / Fintype.card Fp))
         + (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k
         + badXBound := by
   let setup := orchardGeneratorROSetup query
@@ -472,7 +472,7 @@ theorem snarkConstraintsDeployed_prob_le_via_deployed_roots
     (family.Q + shape.k) * (3 / Fintype.card Fp) +
       (family.Q + 1 : Nat) * (1 / Fintype.card Fp)
   let relationBound : ENNReal :=
-    Fintype.card (AugmentedIndex (2 ^ shape.k)) * dlogBound
+    (dlogBound + 1 / Fintype.card Fp)
   let rootBound : ENNReal :=
     (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k
   have hnonRelation := deployedNonRelationFailure_prob_le_of_generatorRO query family
@@ -524,7 +524,7 @@ theorem snarkConstraintsDeployed_prob_le_via_deployed_roots
       add_le_add hnonRelation (add_le_add hrelation (add_le_add hroots hbadX))
     _ = ((family.Q + shape.k) * (3 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
-          Fintype.card (AugmentedIndex (2 ^ shape.k)) * dlogBound)
+          (dlogBound + 1 / Fintype.card Fp))
         + (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k
         + badXBound := by
       simp only [nonRelationBound, relationBound, rootBound]
@@ -555,7 +555,7 @@ theorem snarkConstraintsDeployed_prob_le_of_online_outcome
             (deployedConstraintDecodedOfOutcome family provider))
       <= ((family.Q + shape.k) * (3 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
-          Fintype.card (AugmentedIndex (2 ^ shape.k)) * dlogBound)
+          (dlogBound + 1 / Fintype.card Fp))
         + (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k
         + badXBound :=
   snarkConstraintsDeployed_prob_le_via_deployed_roots B hB query hquery family
@@ -584,7 +584,7 @@ theorem snarkConstraintsDeployed_prob_le_of_root_schedule
               (deployedConstraintOutcomeProviderOfRoot family static)))
       <= ((family.Q + shape.k) * (3 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
-          Fintype.card (AugmentedIndex (2 ^ shape.k)) * dlogBound)
+          (dlogBound + 1 / Fintype.card Fp))
         + (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k
         + (family.Q + 1 : Nat) * epsilonX := by
   exact snarkConstraintsDeployed_prob_le_via_deployed_roots B hB query hquery family

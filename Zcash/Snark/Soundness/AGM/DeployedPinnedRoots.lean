@@ -454,14 +454,14 @@ def deployedRelationEvent (family : ComputedDeployedRootFSFamily shape) :
   {p | (family.deployedRelationFinder p.1 p.2).isSome}
 
 /-- Conditional textbook single-instance DLOG pricing for every relation branch of the recursive
-and rewind-free extractors.  The only reduction loss is the augmented-basis cardinality factor. -/
+and rewind-free extractors.  The only reduction loss is the additive `1/|Fp|`. -/
 theorem deployedRelation_prob_le_of_textbookDL
     (B : VestaG) (family : ComputedDeployedRootFSFamily shape) {bound : ENNReal}
     (hDL : TextbookDLWithCoinsAdvantageLE B family.deployedRelationFinder bound) :
     (PMF.uniformOfFintype
         ((AugmentedIndex (2 ^ shape.k) -> Fp) × family.toFamily.Coins)).toOuterMeasure
         (relSetWithCoins B family.deployedRelationFinder)
-      <= Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound :=
+      <= (bound + 1 / Fintype.card Fp) :=
   relationWithCoins_prob_le_of_textbookDL B family.deployedRelationFinder hDL
 
 /-- Transfer the complete relation event across a uniform-URS basis identification. -/
@@ -523,7 +523,7 @@ theorem deployedRelation_prob_le_of_generatorRO_textbookDL
       (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           family.deployedRelationEvent)
-      <= Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound := by
+      <= (bound + 1 / Fintype.card Fp) := by
   rw [family.deployedRelation_prob_eq_of_uniformURS
     (orchardGeneratorROSetup query) B (orchardGeneratorROBasis query)
     (orchard_uniformURSIdentification_of_generatorRO shape.k B hB query hquery)]

@@ -293,8 +293,8 @@ theorem deployedNonRelationFailure_prob_le_of_generatorRO
 /-- The DLOG-based deployed capstone for the concrete rewind-free decode endpoint.
 
 All explicit relations returned by either the recursive extractor or algebraic multiopen
-unbatching are charged to the same single-instance textbook-DLOG assumption.  The
-augmented-basis cardinality is a reduction loss, not an n-DLOG assumption. -/
+unbatching are charged to the same single-instance textbook-DLOG assumption, whose reduction
+loses only an additive `1/|Fp|`. -/
 theorem snarkExtractionDeployed_prob_le_via_deployed_roots
     {T' : Type*} [DecidableEq T']
     (B : VestaG) (hB : B ≠ 0)
@@ -308,7 +308,7 @@ theorem snarkExtractionDeployed_prob_le_via_deployed_roots
             (deployedRootDecoded family))
       <= ((family.Q + shape.k) * (3 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
-          Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound)
+          (bound + 1 / Fintype.card Fp))
         + (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k := by
   let setup := orchardGeneratorROSetup query
   let coinPMF := PMF.uniformOfFintype family.toFamily.Coins
@@ -317,7 +317,7 @@ theorem snarkExtractionDeployed_prob_le_via_deployed_roots
     (family.Q + shape.k) * (3 / Fintype.card Fp) +
       (family.Q + 1 : Nat) * (1 / Fintype.card Fp)
   let relationBound : ENNReal :=
-    Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound
+    (bound + 1 / Fintype.card Fp)
   let rootBound : ENNReal :=
     (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k
   have hnonRelation :
@@ -379,7 +379,7 @@ theorem snarkExtractionDeployed_prob_le_via_deployed_roots
       add_le_add le_rfl (add_le_add hrelation hroots)
     _ = ((family.Q + shape.k) * (3 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
-          Fintype.card (AugmentedIndex (2 ^ shape.k)) * bound)
+          (bound + 1 / Fintype.card Fp))
         + (family.Q + (11 + shape.k) + 1 : Nat) *
           algebraicRootBudget shape shape.k := by
       simp only [nonRelationBound, relationBound, rootBound]

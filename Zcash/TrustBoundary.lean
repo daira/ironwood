@@ -293,8 +293,8 @@ as data (`assert_computable`); the probability layer, the knowledge-soundness an
 and the run-time bounds are theorems (`assert_axioms`). -/
 
 assert_computable discreteLogOfBasis_of_relation +choice
-assert_computable DLChallengeGame.solveFromRelation +choice
-assert_computable fixedSlotExtractOrMiss +choice
+assert_computable discreteLogOfChallenge_of_relation +choice
+assert_computable programmedExtractOrMiss +choice
 assert_computable AugmentedRelationWitness.toAlgebraicRelationWitness +choice
 assert_computable relationWitnessOfCollision +choice
 assert_computable discreteLogOfAugmentedRelationAtChallenge +choice
@@ -322,7 +322,7 @@ assert_axioms algebraicProverAccept_forkValid
 assert_computable deployedAlgebraicForkingRelation +choice
 assert_axioms deployed_forking_relation_shifted
 assert_axioms deployedAlgebraicForkingRelation_shifted
-assert_computable deployedAlgebraicForkingFixedSlot +choice
+assert_computable deployedAlgebraicForkingProgrammed +choice
 assert_axioms DeployedAlgebraicForkingInstance.run
 assert_axioms DeployedAlgebraicForkingInstance.ProducesRelation
 assert_axioms deployedAlgebraicRelationProduced
@@ -331,7 +331,7 @@ assert_computable deployedAlgebraicRelationFinder +choice
 assert_axioms deployedAlgebraicRelationFinder_isSome_iff
 assert_computable deployedAlgebraicRelation +choice
 assert_computable deployedAlgebraicRelationWitness +choice
-assert_axioms orchardDeployedAlgebraicForkingFixedSlot +native
+assert_axioms orchardDeployedAlgebraicForkingProgrammed +native
 assert_axioms orchardDeployedRelationSet +native
 assert_axioms OrchardUniformURSIdentification +native
 assert_axioms orchardGeneratorROSetup
@@ -455,18 +455,16 @@ assert_computable Zcash.Security.BindingSignature.NontrivialRelation.toAlgebraic
 assert_computable Zcash.Security.BindingSignature.NontrivialRelation.toDiscreteLog +choice
 assert_axioms Zcash.Security.BindingSignature.orchardImbalanceToDiscreteLog
 assert_axioms Zcash.Security.BindingSignature.saplingImbalanceToDiscreteLog
-assert_axioms hitProb_ge_inv_card
-assert_axioms relSet_card_le_succSet_card
-assert_axioms reduction_advantage_ge
-assert_axioms relation_prob_le_of_DL
-assert_axioms winSet_card
-assert_axioms textbook_winProb_eq_succProb
+assert_axioms programmedRelSet_card
+assert_axioms programmedRelSet_subset_win_union_miss
+assert_axioms missSet_card_le
 assert_axioms relation_prob_le_of_textbookDL
-assert_axioms orchard_relation_prob_le_of_DL +native
-assert_axioms orchard_reduction_advantage_ge +native
+assert_axioms programmedRelSetWithCoins_card
+assert_axioms programmedRelSetWithCoins_subset_win_union_miss
+assert_axioms missSetWithCoins_card_le
+assert_axioms relationWithCoins_prob_le_of_textbookDL
 assert_axioms orchard_relation_prob_le_of_textbookDL +native
 assert_axioms commitment_binding_prob_le_of_textbookDL +native
-assert_axioms orchard_deployed_reduction_advantage_ge +native
 assert_axioms orchard_deployed_relation_prob_le_of_textbookDL +native
 assert_axioms orchard_deployed_relation_set_eq_relSet +native
 assert_axioms orchard_deployed_relation_event_prob_le_of_textbookDL +native
@@ -501,7 +499,7 @@ below through explicit `PSum` outcomes and computable finders. Theorems througho
 -- (`shift_eq_zero_of_openings_agree`), so `hshift` survives only on the standalone single-opening
 -- bridge. `snarkExtraction_prob_le_of_generatorRO_textbookDL` is the CONDITIONAL knowledge-error
 -- bound: the SNARK-extraction failure is contained in the clean-opening failure and inherits its
--- `(Q+k)·3/|Fp| + (Q+1)/|Fp| + |basis|·ε` bound, conditional on `hExtract` (clean opening ⟹
+-- `(Q+k)·3/|Fp| + (Q+1)/|Fp| + ε + 1/|Fp|` bound, conditional on `hExtract` (clean opening ⟹
 -- extraction). Discharging `hExtract` — coupling the AGM family's coin measure to the multiopen
 -- budget below — is the remaining reconciliation. This stack is not consumed by the rewind-free
 -- constraint capstone below.
