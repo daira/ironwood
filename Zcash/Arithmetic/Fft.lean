@@ -22,7 +22,7 @@ definition, so no scalar-vs-group agreement lemma ever needs to exist.
 
 The last section abstracts the loop nest itself (`fftGen`) and reduces it to pure folds
 (`fftGen_eq_folds`). That is the shared vocabulary every carrier transplant of this FFT is
-proven against — currently the scalar Montgomery one, `Zcash/Arithmetic/ScalarFftEquiv.lean`.
+proven against.
 -/
 
 namespace Zcash.Arithmetic
@@ -98,8 +98,7 @@ def derivedUrsGLagrange (urs : URS G) : List G :=
 
 /-! ## The loop nest, abstracted
 
-Every transplant of `bestFftG` onto a faster carrier (`Zcash/Vendor/CompPoly/ScalarFftDefs.lean`
-and the group kernels under `CompElliptic.Curves.Pasta.Fast`) is the *same* loop nest with the element
+Every transplant of `bestFftG` onto a faster carrier is the *same* loop nest with the element
 type, the butterfly operations and the twiddle type swapped out. `fftGen` is that nest, so a
 transplant and its statement surface are recognized as two instances of it — both by `rfl`, since
 the loop bodies are textually the schedule below — and `fftGen_eq_folds` then converts the whole

@@ -1,5 +1,5 @@
 import Zcash.Snark.Keygen.Derivation
-import Zcash.Arithmetic.InvDftMont
+import Zcash.Arithmetic.CommitLagrange
 import Zcash.Snark.Fixtures.SingleAction.Fixture
 
 /-!
@@ -23,40 +23,22 @@ EVALUATION-SHARING DISCIPLINE (each rule was measured, the hard way):
 * There is NO GROUP FFT. `commitLagrangeSpec_derivedUrsGLagrange` (MSM bilinearity applied
   to `bestFftG_dft`) moves the inverse transform off the curve and onto the coefficients:
   each column is inverse-DFT'd as SCALARS and then committed against the MONOMIAL URS. The
-  scalar transform is the same `bestFftG` at `G := Fp`, run on the Montgomery lane
-  (`invDftScalarsMontWith`, `fftS`); the 2048-point group FFT it replaces was
-  measured at 206.8 s of the module's former 258 s. The 10-generator Lagrange prefix the
+  scalar transform is the same `bestFftG` at `G := Fp`, evaluated directly — `ZMod`
+  multiplication dispatches to GMP, so it needs no kernel; the 2048-point group FFT it
+  replaces was measured at 206.8 s of the module's former 258 s. The 10-generator
+Lagrange prefix the
   bundle cross-checks is likewise 10 monomial MSMs of the closed coefficient rows
-  (`take_derivedUrsGLagrange_montPre`), not a prefix of an FFT output — otherwise the
+  (`take_derivedUrsGLagrange_natPre`), not a prefix of an FFT output — otherwise the
   group FFT would still be forced.
 * The basis and the per-column committer run through the MONTGOMERY LANE
-  (`msmMontPre` / `commitInvDftMontWith`): the zero-import `ProjectiveMontDefs`
-  and `ScalarFftDefs` twins over the eight-limb Montgomery field, proven equal to the
-  statement-surface functions via the kernel simulation theorems (`msmM_spec`, `fftS_spec`)
-  — which ride in turn on the field's ring isomorphism, so the certificate's group work runs
-  on a PROVEN field implementation rather than on `%`-reduced `Nat`s.
-  Both twins are natively compiled, by two `precompileModules` leaves: the CompElliptic pin's
-  own `FastFieldNative` carries the field and the projective kernels, ironwood's
-  `Zcash.FastFieldNative` carries the scalar FFT.
-  The monomial basis in Montgomery form (`monomialBasis`), the twiddle table and the `n⁻¹`
-  scale are nullary shares: the coordinate conversion and the 1024 root powers happen once
-  per process, not once per column.
-  Profiling note: THIS module gets both dylibs automatically (the lib target building it
-  reaches the lanes through its import closure, so lake passes `--load-dynlib` for each);
-  a SCRATCH probe through
-  `lake env lean` does NOT, and must pass
-  `--load-dynlib=.lake/packages/CompElliptic/.lake/build/lib/libCompElliptic_FastFieldNative.so`
-  and `--load-dynlib=.lake/build/lib/libZcash_Zcash_FastFieldNative.so` explicitly or it
-  measures the interpreted tier.
-* `actionPinned` stays a nullary share: it is only touched from the main evaluation
-  thread, where nullary init-once sharing does hold (the `VkMatch` fix).
+  (`msmNatPre` / `commitInvDftNatWith`): the dictionary-free `Nat` kernel
+  (`Zcash.Arithmetic.NatKernel`) — projective points as canonical-`ℕ` triples whose field
+  steps dispatch to GMP under the interpreter, proven equal to the statement-surface
+  functions via the kernel simulation theorem (`msm_spec`). No `precompileModules`
+  lane and no plugin loading anywhere: this module evaluates entirely in the interpreter.
 
-The `Decidable` instance for the bundle is CONSTRUCTED leaf-by-leaf (`bundleDecEq`):
-instance search on products mixing the `Fp`-typed scalars with the group-element
-lists spins out in the `Fp` reducibility diamond, while every leaf synthesizes
-instantly. `vk_eq_derived`/`vk_eq_toVerifierKey` assemble the record equality by
-`simp only` unfolding of the named definitions on both sides until the spellings
-coincide — no defeq bridges.
+  The monomial basis as `ℕ` triples (`monomialBasis`) is nullary and shared by every MSM
+  in the bundle — the sharing discipline below is unchanged.
 
 The `FixtureCheck` target builds this module (as an import of its deployed
 Action/Vesta capstone entry); ordinary clients of `derivedActionVk` only need
@@ -65,46 +47,39 @@ Action/Vesta capstone entry); ordinary clients of `derivedActionVk` only need
 
 namespace Zcash.Snark.Keygen
 
-open Zcash.Arithmetic (commitInvDftMontWith commitInvDftMontWith_eq commitMontPre deltaFp
-  derivedUrsGLagrange invDftScaleMont invDftTwiddlesMont lagrangeRow ofPVesM omegaOf
-  take_derivedUrsGLagrange_montPre)
+open Zcash.Arithmetic (commitInvDftNatWith commitInvDftNatWith_eq commitNatPre deltaFp
+  derivedUrsGLagrange lagrangeRow ofPVes omegaOf
+  take_derivedUrsGLagrange_natPre)
 
 open Zcash.Snark
 open Zcash.Snark.Fixture
 open Halo2
 open Zcash.Circuits.Action (actionCircuit)
 open CompElliptic.Curves.Pasta
-open CompElliptic.Curves.Pasta.Fast.ProjectiveMont (PM)
-open Montgomery.Native64x8 (Limbs8)
+open CompElliptic.Curves.Pasta.Fast.NatKernel (P3)
 open CompElliptic.Curves.Pasta.Fast.Projective.PVes (ofAffine)
 
 /-- The Action circuit's proof-shape parameters — the only two `Shape` counts that are
 not circuit data (orchard: one Action proof per statement, five multiopen point sets). -/
 def actionProofParams : ProofParams := { numProofs := 1, numPointSets := 5 }
 
-/-- The MONOMIAL URS in Montgomery form — THE shared basis of every MSM in the bundle (all
-44 columns and the 10 Lagrange-prefix generators). Nullary, so the coordinate conversion
+/-- The MONOMIAL URS as canonical-`ℕ` triples — THE shared basis of every MSM in the bundle
+(all 44 columns and the 10 Lagrange-prefix generators). Nullary, so the coordinate conversion
 runs once on the main evaluation thread (all uses are single-threaded). -/
-private def monomialBasis : List PM :=
-  (List.ofFn capturedURS.g).map fun g => ofPVesM (ofAffine g)
+private def monomialBasis : List P3 :=
+  (List.ofFn capturedURS.g).map fun g => ofPVes (ofAffine g)
 
-/-- The inverse-DFT twiddle table in Montgomery form. Nullary — 1024 root powers, shared. -/
-private def invDftTwiddles : Array Limbs8 := invDftTwiddlesMont capturedURS.k
-
-/-- The inverse-DFT `n⁻¹` scale in Montgomery form. Nullary — one field inversion, shared. -/
-private def invDftScale : Limbs8 := invDftScaleMont capturedURS.k
-
-/-- The per-column committer: the column's scalar inverse DFT on the Montgomery lane, then
-one scatter Pippenger against the shared monomial basis. -/
+/-- The per-column committer: the column's scalar inverse DFT (`bestFftG` at `Fp`,
+GMP-backed), then one scatter Pippenger on the `Nat` kernel against the shared monomial
+basis. -/
 private def commitProj : List Fp → G :=
-  commitInvDftMontWith Fast.Msm.defaultWindow invDftTwiddles invDftScale
-    capturedURS.k capturedURS.w monomialBasis
+  commitInvDftNatWith Fast.Msm.defaultWindow capturedURS.k capturedURS.w monomialBasis
 
 /-- The derived Lagrange URS prefix the bundle cross-checks: one monomial MSM per generator
 of the closed coefficient row `n⁻¹·ω^(−j·t)`. -/
 private def lagrangeBasis : List G :=
   List.ofFn fun j : Fin capturedUrsGLagrange.length =>
-    commitMontPre Fast.Msm.defaultWindow 0 monomialBasis
+    commitNatPre Fast.Msm.defaultWindow 0 monomialBasis
       (lagrangeRow capturedURS.k (j : ℕ))
 
 /-- The derived pinned CS at the circuit-owned selector map — `ofOperations`' internal
@@ -190,16 +165,16 @@ private theorem domainExponent_eq :
 
 set_option maxRecDepth 1000000 in
 /-- **The bundle's per-column committer IS the pipeline's affine default at the derived
-Lagrange basis**, on every full-domain column: `commitInvDftMontWith_eq` is the
-bilinearity theorem run through the Montgomery lane on both halves. -/
+Lagrange basis**, on every full-domain column: `commitInvDftNatWith_eq` is the
+bilinearity theorem with the kernel MSM on the group half. -/
 private theorem committer_eq (l : List Fp)
     (hl : l.length = 2 ^ actionCircuit.domainExponent) :
     commitProj l = Fast.Msm.commitLagrangeFastWith Fast.Msm.defaultWindow capturedURS.w
       (derivedUrsGLagrange capturedURS) l := by
   rw [Fast.Msm.commitLagrangeFastWith_eq _ (by decide)]
   simp only [commitProj, monomialBasis]
-  rw [commitInvDftMontWith_eq Fast.Msm.defaultWindow (by decide) invDftTwiddles
-    invDftScale capturedURS (by decide) rfl rfl l (by rw [hl, domainExponent_eq])]
+  rw [commitInvDftNatWith_eq Fast.Msm.defaultWindow (by decide)
+    capturedURS (by decide) l (by rw [hl, domainExponent_eq])]
 
 /-- Every Clean-compiled Action fixed row spans the full evaluation domain. -/
 private theorem fixedRowLength (row : List Fp)
@@ -226,7 +201,7 @@ theorem derivedUrsGLagrange_prefix_eq :
   have h1 := h.1
   simp only [lagrangeBasis, monomialBasis] at h1
   rw [List.take_of_length_le (by simp)] at h1
-  rw [take_derivedUrsGLagrange_montPre Fast.Msm.defaultWindow (by decide) capturedURS
+  rw [take_derivedUrsGLagrange_natPre Fast.Msm.defaultWindow (by decide) capturedURS
     (by decide) capturedUrsGLagrange.length (by decide)]
   exact h1
 

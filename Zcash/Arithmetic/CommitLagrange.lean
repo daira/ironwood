@@ -1,38 +1,35 @@
-import CompElliptic.Curves.Pasta.Fast.ProjectiveMontEquiv
+import Zcash.Arithmetic.NatKernelEquiv
+import Zcash.Arithmetic.InvDft
+import Zcash.Arithmetic.VestaModule
 
 /-!
 # The fast Lagrange commitment
 
 `commit_lagrange` — a Pedersen vector commitment against a fixed basis, plus a blind — is the
 operation the verifying-key derivation runs 44 times over 2048-term columns, and it dominates
-that computation. This module gives the fast evaluation path for it (`commitLagrangeMontWith`)
-together with the PROVEN equality to the naive spec (`commitLagrangeMontWith_eq`), so a caller
-gets the speed without the statement ever mentioning the fast route.
+that computation. This module gives the evaluation path for it together with the PROVEN
+equalities to the naive spec, so a caller gets the speed without the statement ever mentioning
+the fast route.
 
-The speed comes from running the MSM over the **proven eight-limb Montgomery field**:
-`CompElliptic.Curves.Pasta.Fast.ProjectiveMontDefs` is the core-only twin of the group kernels
-(RCB addition, double-and-add, scatter Pippenger) there, compiled to native code through the
-`FastFieldNative` `precompileModules` leaf. This module is mathlib-side and deliberately NOT in
-that leaf's glob: it holds the `ZMod`-typed entry points — coordinates into Montgomery form,
-kernel, affine reading back — and chains the kernel's simulation theorem `msmM_spec` into the
-`_eq` ladder that lands on `Msm.commitLagrangeSpec`.
+The evaluation carrier is the dictionary-free `Nat` kernel (`Zcash.Arithmetic.NatKernel`):
+projective Vesta points as canonical-`ℕ` triples, whose field steps dispatch to GMP's native
+bignum arithmetic under the interpreter. The scalar inverse DFT needs no kernel at all —
+`scalarInvDft` is `bestFftG` at `G := Fp`, and `ZMod` multiplication is likewise GMP-backed.
 
-`ofPVesM` must never be compared definitionally: unfolding it exposes the CIOS (Coarsely
-Integrated Operand Scanning) rounds, so the equalities below are stated and proved by rewriting only.
+* `msmNatPre` / `commitNatPre` — the kernel MSM against a basis already converted to `ℕ`
+  triples, so a nullary sharing site pays the coordinate conversion once for all columns.
+* `commitInvDftNatWith` — the per-column committer the certificate runs: the scalar inverse
+  DFT of the coefficients, then one MSM against the pre-converted MONOMIAL basis.
+* `take_derivedUrsGLagrange_natPre` — a prefix of the derived Lagrange basis as monomial
+  MSMs, so no group FFT is evaluated anywhere.
 -/
 
 namespace Zcash.Arithmetic
 
 open CompElliptic.Curves.Pasta.Fast
-open CompElliptic.Curves.Pasta.Fast.ProjectiveMont
-open CompElliptic.Curves.Pasta.Fast.ProjectiveMont (PM)
-open Montgomery.Native64x8
+open CompElliptic.Curves.Pasta.Fast.NatKernel (P3)
 open CompElliptic.Curves.Pasta.Fast.Projective
 open CompElliptic.Curves.Pasta.Fast.Projective.PVes
--- The vendored `Msm` imported ironwood's scalar field, so `Fp` used to arrive here through the
--- enclosing namespace. Upstream's `Msm` is standalone and carries its own (reducibly equal)
--- `Fp := CompElliptic.Fields.Pasta.VestaScalarField`, which this module takes instead of
--- importing `Zcash.Arithmetic.Field`.
 open CompElliptic.Curves.Pasta.Fast.Msm (Fp)
 
 local instance : Inhabited G := ⟨0⟩
@@ -41,73 +38,111 @@ local instance : Inhabited G := ⟨0⟩
 theorem val_lt_two_pow_256 (a : Fp) : a.val < 2 ^ 256 :=
   lt_of_lt_of_le (ZMod.val_lt a) (by decide)
 
-/-- `PVes → PM`: each coordinate's canonical representative, entered into Montgomery form. -/
-def ofPVesM (P : PVes) : PM :=
-  ⟨VestaFq.ofNat P.X.val, VestaFq.ofNat P.Y.val, VestaFq.ofNat P.Z.val⟩
+/-- `PVes → P3`: canonical `ℕ` representatives of the projective coordinates. -/
+def ofPVes (P : PVes) : P3 := ⟨P.X.val, P.Y.val, P.Z.val⟩
 
-theorem wfp_ofPVesM (P : PVes) : WFP (ofPVesM P) :=
-  ⟨wf_ofNat (ZMod.val_lt _), wf_ofNat (ZMod.val_lt _), wf_ofNat (ZMod.val_lt _)⟩
-
-theorem toPVesM_ofPVesM (P : PVes) : toPVesM (ofPVesM P) = P := by
+theorem toPVes_ofPVes (P : PVes) : NatKernel.toPVes (ofPVes P) = P := by
   cases P with
   | mk X Y Z =>
-    simp only [toPVesM, ofPVesM, PVes.mk.injEq]
-    refine ⟨?_, ?_, ?_⟩ <;>
-      rw [montVal_ofNat (ZMod.val_lt _)]
-    exacts [ZMod.natCast_rightInverse X, ZMod.natCast_rightInverse Y, ZMod.natCast_rightInverse Z]
+    simp only [NatKernel.toPVes, ofPVes]
+    rw [ZMod.natCast_rightInverse X, ZMod.natCast_rightInverse Y,
+      ZMod.natCast_rightInverse Z]
 
-theorem toGM_ofPVesM_ofAffine (g : G) : toGM (ofPVesM (ofAffine g)) = g := by
-  rw [toGM, toPVesM_ofPVesM, toAffine_ofAffine]
+theorem toG_ofPVes_ofAffine (g : G) : NatKernel.toG (ofPVes (ofAffine g)) = g := by
+  rw [NatKernel.toG_eq, Function.comp_apply, toPVes_ofPVes, toAffine_ofAffine]
 
-theorem valid_toPVesM_ofPVesM_ofAffine (g : G) : Valid (toPVesM (ofPVesM (ofAffine g))) := by
-  rw [toPVesM_ofPVesM]
+theorem valid_toPVes_ofPVes_ofAffine (g : G) :
+    Valid (NatKernel.toPVes (ofPVes (ofAffine g))) := by
+  rw [toPVes_ofPVes]
   exact valid_ofAffine g
 
-/-- Entering Montgomery form and reading back is the identity, pointwise along a list.  Stated
-and proved by `rw` alone: the elaborator must never be asked for a *definitional* comparison
-across `ofPVesM`, since unfolding it exposes the CIOS rounds. -/
-theorem map_toGM_ofPVesM_ofAffine :
-    ∀ l : List G, (l.map fun g => ofPVesM (ofAffine g)).map toGM = l
-  | [] => rfl
-  | a :: l => by
-    rw [List.map_cons, List.map_cons, map_toGM_ofPVesM_ofAffine l, toGM_ofPVesM_ofAffine]
+/-! ## The MSM against a pre-converted basis -/
 
-/-- `commit_lagrange` through the Montgomery-lane kernel MSM. -/
-def commitLagrangeMontWith (c : ℕ) (blind : G) (basis : List G)
-    (coeffs : List Fp) : G :=
-  toGM (PM.msm c
-    ((coeffs.zip (basis ++ List.replicate (coeffs.length - basis.length) 0)).map
-      fun t => (t.1.val, ofPVesM (ofAffine t.2)))) + blind
+/-- The kernel MSM against a basis **already** held as canonical-`ℕ` projective triples, plus
+the blind.  The basis conversion is the caller's, so it can be shared across columns. -/
+def msmNatPre (c : ℕ) (blind : G) (basisN : List P3) (scalars : List ℕ) : G :=
+  NatKernel.toG (NatKernel.msm c (scalars.zip basisN)) + blind
 
-/-- **The Montgomery committer equals the naive `commit_lagrange` spec.** -/
-theorem commitLagrangeMontWith_eq (c : ℕ) (hc : 0 < c)
-    (blind : G) (basis : List G) (coeffs : List Fp) :
-    commitLagrangeMontWith c blind basis coeffs
+/-- **The pre-converted MSM is the naive `commit_lagrange` spec**, for a coefficient list as
+long as the basis. -/
+theorem msmNatPre_eq (c : ℕ) (hc : 0 < c) (blind : G) (basis : List G) (coeffs : List Fp)
+    (hlen : coeffs.length = basis.length) :
+    msmNatPre c blind (basis.map fun g => ofPVes (ofAffine g)) (coeffs.map ZMod.val)
       = Msm.commitLagrangeSpec blind basis coeffs := by
-  unfold commitLagrangeMontWith
-  rw [toGM, ProjectiveMont.msmM_spec c hc _
+  unfold msmNatPre
+  rw [NatKernel.toG_eq, Function.comp_apply, NatKernel.msm_spec c hc _
     (by intro t ht
-        rw [List.mem_map] at ht
-        obtain ⟨s, -, rfl⟩ := ht
-        exact wfp_ofPVesM _)
+        obtain ⟨-, h2⟩ := List.of_mem_zip ht
+        rw [List.mem_map] at h2
+        obtain ⟨g, -, hg⟩ := h2
+        rw [← hg]
+        exact valid_toPVes_ofPVes_ofAffine g)
     (by intro t ht
-        rw [List.mem_map] at ht
-        obtain ⟨s, -, rfl⟩ := ht
-        exact valid_toPVesM_ofPVesM_ofAffine s.2)
-    (by intro t ht
-        rw [List.mem_map] at ht
-        obtain ⟨s, -, rfl⟩ := ht
-        exact val_lt_two_pow_256 s.1)]
+        obtain ⟨h1, -⟩ := List.of_mem_zip ht
+        rw [List.mem_map] at h1
+        obtain ⟨e, -, he⟩ := h1
+        rw [← he]
+        exact val_lt_two_pow_256 e)]
   have hterms :
-      ((coeffs.zip (basis ++ List.replicate (coeffs.length - basis.length) 0)).map
-          fun t => (t.1.val, ofPVesM (ofAffine t.2))).map
-        (fun t => (t.1, toAffine (toPVesM t.2)))
-      = (coeffs.zip (basis ++ List.replicate (coeffs.length - basis.length) 0)).map
-          fun t => (t.1.val, t.2) := by
-    rw [List.map_map]
+      ((coeffs.map ZMod.val).zip (basis.map fun g => ofPVes (ofAffine g))).map
+          (fun t => (t.1, toAffine (NatKernel.toPVes t.2)))
+        = (coeffs.zip (basis ++ List.replicate (coeffs.length - basis.length) 0)).map
+            fun t => (t.1.val, t.2) := by
+    rw [hlen, Nat.sub_self, List.replicate_zero, List.append_nil, List.zip_map, List.map_map]
     refine List.map_congr_left fun t _ => ?_
-    simp only [Function.comp_apply, toPVesM_ofPVesM, toAffine_ofAffine]
+    simp only [Function.comp_apply, Prod.map_fst, Prod.map_snd, toPVes_ofPVes,
+      toAffine_ofAffine]
   rw [hterms, Msm.zip_terms_eq, Msm.pippenger_eq_msm c hc, List.map_map]
   rfl
+
+/-- The pre-converted committer at `Fp` coefficients. -/
+def commitNatPre (c : ℕ) (blind : G) (basisN : List P3) (coeffs : List Fp) : G :=
+  msmNatPre c blind basisN (coeffs.map ZMod.val)
+
+theorem commitNatPre_eq (c : ℕ) (hc : 0 < c) (blind : G) (basis : List G) (coeffs : List Fp)
+    (hlen : coeffs.length = basis.length) :
+    commitNatPre c blind (basis.map fun g => ofPVes (ofAffine g)) coeffs
+      = Msm.commitLagrangeSpec blind basis coeffs :=
+  msmNatPre_eq c hc blind basis coeffs hlen
+
+/-! ## The composed per-column committer -/
+
+/-- **The certificate's per-column committer**: the scalar inverse DFT of the coefficients
+(`bestFftG` at `G := Fp`, GMP-backed), then one kernel MSM against the pre-converted MONOMIAL
+basis.  No group FFT anywhere, no kernel on the scalar half. -/
+def commitInvDftNatWith (c : ℕ) (k : ℕ) (blind : G) (basisN : List P3)
+    (coeffs : List Fp) : G :=
+  msmNatPre c blind basisN ((scalarInvDft k coeffs).map ZMod.val)
+
+/-- **The composed committer IS `commit_lagrange` at the derived Lagrange basis** — the
+bilinearity theorem, with the kernel MSM on the group half. -/
+theorem commitInvDftNatWith_eq (c : ℕ) (hc : 0 < c)
+    (urs : URS G) (hk : urs.k ≤ 32)
+    (coeffs : List Fp) (hlen : coeffs.length = 2 ^ urs.k) :
+    commitInvDftNatWith c urs.k urs.w
+        ((List.ofFn urs.g).map fun g => ofPVes (ofAffine g)) coeffs
+      = Msm.commitLagrangeSpec urs.w (derivedUrsGLagrange urs) coeffs := by
+  haveI := vestaFpModuleDef
+  rw [commitInvDftNatWith,
+    msmNatPre_eq c hc urs.w (List.ofFn urs.g) _
+      (by rw [scalarInvDft_length, hlen, List.length_ofFn]),
+    ← commitLagrangeSpec_derivedUrsGLagrange urs hk urs.w coeffs hlen]
+
+/-! ## The Lagrange prefix without a group FFT -/
+
+/-- **A prefix of the derived Lagrange basis as monomial MSMs**: the `m`-generator prefix
+costs `m` MSMs against the same pre-converted monomial basis the columns use, instead of the
+full `2 ^ k`-point group FFT. -/
+theorem take_derivedUrsGLagrange_natPre (c : ℕ) (hc : 0 < c) (urs : URS G) (hk : urs.k ≤ 32)
+    (m : ℕ) (hm : m ≤ 2 ^ urs.k) :
+    (derivedUrsGLagrange urs).take m
+      = List.ofFn fun j : Fin m =>
+          commitNatPre c 0 ((List.ofFn urs.g).map fun g => ofPVes (ofAffine g))
+            (lagrangeRow urs.k (j : ℕ)) := by
+  haveI := vestaFpModuleDef
+  rw [derivedUrsGLagrange_take urs hk m hm]
+  refine congrArg List.ofFn (funext fun j => ?_)
+  rw [commitNatPre_eq c hc 0 (List.ofFn urs.g) _
+    (by rw [lagrangeRow_length, List.length_ofFn])]
 
 end Zcash.Arithmetic
