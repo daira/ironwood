@@ -479,7 +479,7 @@ theorem classify_none_defined {wit : ActionData} (h : classifyAction wit = none)
 
 /-- **The Prop-level break and the computed classifier cannot diverge, at the consumer
 boundary either**: an exhibited `ActionBreak` holds exactly when the classifier reports
-an escape.  A consumer landing in the break arm of `circuit_soundness_to_ledger` can
+an escape.  A consumer landing in the break arm of `specPost_to_ledger` can
 therefore pass to `classifyAction`'s (and hence `classifyRelation`'s) computed data
 without reconstructing the glue: forward, each break constructor's
 `hashToPointB … = .inr` equation contradicts the defined hashes of a `none` verdict;
@@ -649,8 +649,8 @@ def MerkleSuccess (wit : ActionData) : Prop :=
 the classifier: either the witness's own queries compute an exhibited break, or
 every query is defined and each guarded clause of `SpecPost` lands in its
 successful branch. -/
-theorem successes_or_break {wit : ActionData} {input : Value PrivateInputs Fp}
-    (h : SpecPost orchardGenerators orchardBases input () wit) :
+theorem successes_or_break {wit : ActionData}
+    (h : SpecPost orchardGenerators orchardBases () () wit) :
     (CommitIvkSuccess wit ∧ NoteCommitOldSuccess wit ∧ NoteCommitNewSuccess wit ∧
       MerkleSuccess wit) ∨ ActionBreak wit := by
   cases hcl : classifyAction wit with
@@ -666,8 +666,8 @@ theorem successes_or_break {wit : ActionData} {input : Value PrivateInputs Fp}
 /-- If the caller rules out all four exhibited exceptional cases, the circuit's
 guarded clauses reduce to their successful openings.  The exact-Merkle export
 subsequently turns the final component into a ledger `Merkle.Path`. -/
-theorem successes_of_noBreak {wit : ActionData} {input : Value PrivateInputs Fp}
-    (h : SpecPost orchardGenerators orchardBases input () wit)
+theorem successes_of_noBreak {wit : ActionData}
+    (h : SpecPost orchardGenerators orchardBases () () wit)
     (hno : ¬ ActionBreak wit) :
     CommitIvkSuccess wit ∧ NoteCommitOldSuccess wit ∧ NoteCommitNewSuccess wit ∧
       MerkleSuccess wit :=
@@ -781,8 +781,8 @@ Sinsemilla escapes or a fully satisfied concrete Orchard ledger action.  The led
 alternative additionally reports the spend/output enable gates as a side fact
 (`EnableFlagsSatisfied`), with their exact circuit semantics. -/
 theorem specPost_to_ledger (verify bverify : PallasGroup → MSG → SIG → Prop)
-    {input : Halo2.Value PrivateInputs Fp} {wit : ActionData}
-    (h : SpecPost orchardGenerators orchardBases input () wit) :
+    {wit : ActionData}
+    (h : SpecPost orchardGenerators orchardBases () () wit) :
     ActionBreak wit ∨
       ∃ inst w, PublicProjection wit inst ∧
         ActionSatisfied (Pool.primitives verify bverify) Pool.keyBinding inst w ∧
@@ -924,24 +924,5 @@ theorem specPost_to_ledger (verify bverify : PallasGroup → MSG → SIG → Pro
           simp [hz]
         exact (sub_eq_zero.mp ((mul_eq_zero.mp heo).resolve_left hvNew0)).symm
   · exact Or.inl hbreak
-
-/-- End-to-end refinement for a satisfying run of the deployed post-NU6.3
-Action circuit.  This is the direct composition of the circuit soundness
-contract with `specPost_to_ledger`; it deliberately leaves the exceptional
-Sinsemilla branch explicit and reports the enable gates as `EnableFlagsSatisfied`. -/
-theorem circuit_soundness_to_ledger (verify bverify : PallasGroup → MSG → SIG → Prop)
-    (cfg : Config) (i₀ : RegionIndex)
-    (env : Placed Environment Fp) (input : Var PrivateInputs Fp)
-    (henv : EnvAssumptions orchardGenerators cfg env)
-    (hconstraints : Constraints env.place env.env
-      ((mainPost orchardGenerators orchardBases cfg input).operations i₀) i₀) :
-    ActionBreak (extract cfg input i₀ env) ∨
-      ∃ inst w, PublicProjection (extract cfg input i₀ env) inst ∧
-        ActionSatisfied (Pool.primitives verify bverify) Pool.keyBinding inst w ∧
-        CrossAddressSatisfied (extract cfg input i₀ env) w ∧
-        EnableFlagsSatisfied (extract cfg input i₀ env) w := by
-  have hpost := soundnessPost orchardGenerators orchardBases cfg i₀ env input
-    henv trivial hconstraints
-  exact specPost_to_ledger verify bverify (by simpa using hpost)
 
 end Zcash.Security.Ledger.Bridge

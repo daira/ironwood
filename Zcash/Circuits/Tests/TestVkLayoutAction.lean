@@ -23,7 +23,7 @@ the dumped window tables, and every other child called through its bundle.
 
 namespace Zcash.Circuits.Fixtures.Test.LayoutAction
 
-open Halo2 Fixtures Fixtures.Layout
+open Halo2 Fixtures Fixtures.Layout Halo2.Layout
 open Specs.Sinsemilla (Generators)
 open Action.Circuit (Config configure orchardGate loadPrivate
   ANCHOR ENABLE_SPEND ENABLE_OUTPUT CV_NET_X CV_NET_Y NF_OLD RK_X RK_Y CMX)

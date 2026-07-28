@@ -3,7 +3,7 @@
 The files in this directory are the empirical binding between the Lean circuit model
 (`Zcash/Circuits/Action/Circuit.lean` and the isolated Add/Mul chains) and the actual
 Rust halo2 circuit. They were dumped from instrumented Rust checkouts, **not** written
-by hand, and are consumed by the `CircuitVkCheck` build target
+by hand, and are consumed by the `CircuitCheck` build target
 (`Zcash/Circuits/Tests/TestVk*`). This file records where each artifact came from, how
 it is pinned, and what is — and is not — currently reproducible.
 
@@ -14,7 +14,7 @@ Two custom dump entry points, living in **sibling checkouts** of the Rust reposi
 
 | Tool | Location (in the instrumented checkout) | Produces |
 |---|---|---|
-| `dump_lean` | `halo2_proofs::plonk::dump_lean` (a fork of github.com/zcash/halo2, halo2_proofs 0.3.2 era — not upstream `main`) | `CsFixture` / `LayoutFixture` dumps: `AddPre/AddPost/MulPre/MulPost.lean`, `AddLayout/MulLayout.lean`, `action{Pre,Post}.json`, `action{,Base}Layout.json` |
+| `dump_lean` | `halo2_proofs::plonk::dump_lean` (a fork of github.com/zcash/halo2, halo2_proofs 0.3.2 era — not upstream `main`) | `CsFixture` / `LayoutFixture` dumps: `AddPre/AddPost/MulPre/MulPost.lean`, `AddLayout/MulLayout.lean`, `actionPost.json`, `action{,Base}Layout.json` |
 | `layout_dump` | `halo2_gadgets/src/ecc/chip/layout_dump.rs` (`dump_layout_add`, `dump_layout_mul`) and `dump_layout_action` (orchard checkout) | the `*SelMap.lean` selector-compression maps |
 
 Example regeneration command (Add chain, from the instrumented halo2 checkout):
@@ -45,7 +45,7 @@ reproducible from pinned public sources the way the `Zcash/Snark/Fixtures/` veri
 fingerprint captures are (those regenerate in CI from a pinned orchard release —
 `.github/workflows/fixtures.yml`). What certifies them instead is the pair of guards under
 [Content pinning](#content-pinning): the SHA-256 pin in `SHA256SUMS` (a CI `sha256sum -c`
-drift/tamper guard) and the `CircuitVkCheck` reconstruction (`TestVk*`), which asserts the
+drift/tamper guard) and the `CircuitCheck` reconstruction (`TestVk*`), which asserts the
 projected Lean CS/layout equals the dumped bytes — a divergence on either side fails the
 build. Making regeneration reproducible would mean upstreaming the dump behind a feature
 flag; there is no current plan to do that.
@@ -64,7 +64,6 @@ then refresh the Lean stamp below with `./stamp.sh > Stamp.lean`. Current artifa
 
 | File | SHA-256 | Bytes | Consumed by |
 |---|---|---|---|
-| `actionPre.json` | `8cd36834ba575d83035e1369ea71cc6f6fdae17ba116e425de6c67989b51d448` | 33,120 | `TestVkMatchAction.lean` |
 | `actionPost.json` | `a6083ecd2abc72ea3641fa0d066aabcd91ecb89a1554ef31aa31ab6d7591ff68` | 67,143 | `TestVkMatchAction.lean` |
 | `actionLayout.json` | `7ac082324c93ef6c097ad26dfe7a166d1a74e41a5a6b4c0e250bf3e3d2163a87` | 943,608 | `TestVkLayoutAction.lean` |
 | `actionBaseLayout.json` | `1c155864b0256ad93b9c4d09394dcf7b302ef5fcf9a7ac356ae15988ba09aa08` | 941,568 | `TestVkLayoutActionBase.lean` |
@@ -74,7 +73,7 @@ are pinned by being source files (any edit is a reviewable diff), and their head
 carry the generating tool.
 
 **Rebuild tracking.** Lake tracks a module's imports, not the `.json` files a `#eval`
-reads, so a regenerated fixture on its own leaves the `CircuitVkCheck` reconstruction
+reads, so a regenerated fixture on its own leaves the `CircuitCheck` reconstruction
 cached and unrun on a local incremental build. [`Stamp.lean`](./Stamp.lean) — the pins
 rendered as Lean data by [`stamp.sh`](./stamp.sh) and imported by the loader the tests go
 through — puts the fixture content in the import graph, so refreshing `SHA256SUMS` and the
@@ -86,7 +85,7 @@ cannot be read by a test at all.
 **What the hash does and does not guarantee.** The pin guarantees the bytes have not
 drifted since the hash was recorded; it does **not** by itself certify the bytes were
 produced from the claimed circuit. That certification rests on the one-time generation
-event plus the `CircuitVkCheck` equality checks (the projected Lean CS must equal the
+event plus the `CircuitCheck` equality checks (the projected Lean CS must equal the
 dump — a divergence in either side surfaces as a build failure). Reproducing the bytes
 from public sources would need the dump instrumentation upstreamed, which is not planned
 (see [Source versions](#source-versions)).

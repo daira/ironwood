@@ -14,7 +14,7 @@ a parse failure (or a failed load) is a build failure exactly as with `#guard`.
 **Integrity**: two independent guards, neither of which recomputes a hash inside Lean (no
 fast SHA-256 exists in the toolchain, and a hand-rolled one is not worth maintaining):
 
-* *Semantic* — the `CircuitVkCheck` `#eval`s reconstruct the Lean CS/layout and assert it
+* *Semantic* — the `CircuitCheck` `#eval`s reconstruct the Lean CS/layout and assert it
   equals the parsed fixture (`TestVk*`), so a fixture that drifts from the Lean circuit
   model fails the build.
 * *Content* — every fixture's SHA-256 is pinned in `Zcash/Circuits/Fixtures/SHA256SUMS`
@@ -41,6 +41,7 @@ namespace Zcash.Circuits.Fixtures.Json
 
 open Lean (Json JsonNumber)
 open Fixtures
+open Halo2 (RichExpression)
 
 /-- The fixture directory, relative to the repository root — where `lake` runs, and so the
 working directory of an elaborating `#eval`. -/
@@ -56,7 +57,7 @@ def pinnedPath (file : String) : IO System.FilePath := do
 
 /-- Read a JSON fixture and parse it. A missing file or parse error is an `IO` error → a
 build failure at the consuming `#eval`. Content integrity is enforced out of band (see the
-module header): the SHA-256 pin in `SHA256SUMS` + the `CircuitVkCheck` reconstruction. -/
+module header): the SHA-256 pin in `SHA256SUMS` + the `CircuitCheck` reconstruction. -/
 def loadJson (path : System.FilePath) : IO Json := do
   let bytes ← IO.FS.readBinFile path
   IO.ofExcept (Json.parse (String.fromUTF8! bytes) |>.mapError IO.userError)
@@ -129,9 +130,11 @@ def getQuad (j : Json) : Except String (ℕ × ℕ × ℕ × ℕ) := do
   | #[a, b, c, d] => pure (← getNat a, ← getNat b, ← getNat c, ← getNat d)
   | _ => .error "expected [nat, nat, nat, nat]"
 
-/-! ## Gate-polynomial `Expr` (tagged arrays) -/
+/-! ## Gate-polynomial `RichExpression` (tagged arrays)
 
-def jExpr : Expr Fp → Json
+The dumped gates are post-compression, hence selector-free, so no `selector` tag occurs. -/
+
+def jExpr : RichExpression Fp → Json
   | .constant c => Json.arr #["c", jFp c]
   | .fixed i => Json.arr #["f", jNat i]
   | .advice i => Json.arr #["a", jNat i]
@@ -140,9 +143,9 @@ def jExpr : Expr Fp → Json
   | .sum a b => Json.arr #["+", jExpr a, jExpr b]
   | .product a b => Json.arr #["*", jExpr a, jExpr b]
   | .scaled e c => Json.arr #["s", jExpr e, jFp c]
-  | .selector i => Json.arr #["q", jNat i]
+  | .selector i => Json.arr #["sel", jNat i]
 
-partial def getExpr (j : Json) : Except String (Expr Fp) := do
+partial def getExpr (j : Json) : Except String (RichExpression Fp) := do
   match ← getArr j with
   | #[.str "c", c] => pure (.constant (← getFp c))
   | #[.str "f", i] => pure (.fixed (← getNat i))
@@ -152,8 +155,7 @@ partial def getExpr (j : Json) : Except String (Expr Fp) := do
   | #[.str "+", a, b] => pure (.sum (← getExpr a) (← getExpr b))
   | #[.str "*", a, b] => pure (.product (← getExpr a) (← getExpr b))
   | #[.str "s", e, c] => pure (.scaled (← getExpr e) (← getFp c))
-  | #[.str "q", i] => pure (.selector (← getNat i))
-  | _ => .error s!"unknown Expr node {j.compress}"
+  | _ => .error s!"unknown RichExpression node {j.compress}"
 
 /-! ## `CsFixture` -/
 

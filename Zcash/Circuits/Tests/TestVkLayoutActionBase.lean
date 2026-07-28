@@ -12,7 +12,7 @@ shared between the two versions.
 
 namespace Zcash.Circuits.Fixtures.Test.LayoutActionBase
 
-open Halo2 Fixtures Fixtures.Layout
+open Halo2 Fixtures Fixtures.Layout Halo2.Layout
 open Fixtures.Test.LayoutAction (aProgramBase)
 
 /-! All checks live in ONE `#eval` so the shared reconstruction (ops → regions → copy

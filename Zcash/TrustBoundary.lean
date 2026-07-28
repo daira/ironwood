@@ -35,6 +35,7 @@ import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.PermutationRows
 import Zcash.Snark.Soundness.ConstraintRelations
 import Zcash.Snark.Soundness.ChallengePricing
+import Zcash.Snark.Soundness.ActionVesta
 import Zcash.Snark.Soundness.DegreeWalk
 import Zcash.Snark.Soundness.Composition.ScheduleBudget
 import Zcash.Snark.Soundness.AGM.PinnedRootWitness
@@ -839,6 +840,80 @@ assert_axioms Zcash.Snark.perm_gamma_failure_measure_le
 assert_axioms Zcash.Snark.perm_beta_failure_measure_le
 assert_axioms Zcash.Snark.escape_measure_le
 assert_axioms Zcash.Snark.theta_failure_measure_le
+/-! ### Break-branch machinery — computed
+
+The circuit-integration stack carries its binding break as computed `NontrivialRelation` data
+rather than as the `∃`-closed proposition that is unconditionally true at the concrete curve.
+The declarations below are the part of that stack which is genuinely computable, so they are
+pinned at the `assert_computable` tier: a plain `def`, never marked `noncomputable`. Pinning
+them is what stops the discipline regressing silently — a break that stopped being computed
+would still typecheck, and `assert_axioms` alone would not notice.
+
+The combinators are at the strict tier: they introduce no choice at all. The adapters below
+them take `+choice`, which the plain-`def` check turns into the assertion that choice enters
+only through erased `Prop` certificate fields.
+
+The capstone endpoints are *not* here. They are `noncomputable` — their decisions run through
+Mathlib polynomials, which are noncomputable by construction — and so are pinned with
+`assert_axioms` above. Moving them to this tier means deciding on coefficient vectors and
+stating the result in polynomials, as `decodedQuotientEqReassembledOrRelationWitness` does. -/
+
+assert_computable Zcash.Snark.bindOrRelationWitness
+assert_computable Zcash.Snark.finForallOrRelationWitness
+assert_computable Zcash.Snark.listForallOrRelationWitness
+assert_computable Zcash.Snark.boundedForallOrRelationWitness
+assert_computable Zcash.Snark.FullCircuitSatisfaction.of_components_or_bad
+assert_computable Zcash.Snark.declaredCopies_satisfied_or_bad_of_replay +choice
+assert_computable Zcash.Snark.copy_constraints_or_bad_of_replay +choice
+assert_computable Zcash.Snark.CopyReplayWitness.constraints_or_bad +choice
+assert_computable Zcash.Snark.FullCircuitBridge.satisfaction_or_bad +choice
+assert_computable Zcash.Snark.FullCircuitBridge.constraints_or_bad +choice
+assert_computable Zcash.Snark.decodedPolynomialResolver_opens_or_relation +choice
+
+-- The accepted-route adapter fixes the advice and instance member feeds, then the deployed Action
+-- boundary consumes the resulting canonical `CircuitSat`. The final theorem has no free semantic
+-- callback, decoder, or selected-column feed.
+assert_axioms Zcash.Snark.acceptedAdviceSelection_feed_eq
+assert_axioms Zcash.Snark.acceptedInstanceSelection_feed_eq
+assert_axioms Zcash.Snark.acceptedModel_circuitSat_or_relation_of_feed_eq +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.acceptedModel_circuitSat_or_relation_of_acceptedSelections +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.action_bundleStatement_or_relation_of_deployedAccepts +native(
+  Zcash.Snark.actionConstantCellAddressFailures_eq_nil,
+  Zcash.Snark.actionConstantSites_fit,
+  Zcash.Snark.actionConstantValueFailures_eq_nil,
+  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil,
+  Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionMissingConstantAllocations_eq_nil,
+  Zcash.Snark.actionNumPermCols_eq,
+  Zcash.Snark.actionNumPermCols_pos,
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
+  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
+  Zcash.Snark.ActionGateCoherence.domainExponent_lt,
+  Zcash.Snark.ActionGateCoherence.gateData_eq,
+  Zcash.Snark.ActionGateCoherence.selectorDegree,
+  Zcash.Snark.ActionPermutationDomain.chunks_eq,
+  Zcash.Snark.ActionPermutationDomain.columnCount_chunkLen_eq,
+  Zcash.Snark.ActionPermutationDomain.deltaPowers_injective,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_eq,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_lt,
+  Zcash.Snark.ActionPermutationDomain.queryLayouts_eq,
+  Zcash.Snark.ActionPermutationDomain.routingCoherent,
+  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 -- The last links: the point check lifted to the polynomial identity, the permutation taken to be the
 -- one keygen builds from the circuit's copy constraints, the cells of every chunk covered at once,
 -- and circuit satisfaction defined by the whole constraint list rather than the gates alone.
@@ -1077,13 +1152,17 @@ assert_axioms Zcash.Circuits.Action.orchardActionCircuit +native(
 
 /-! ## The circuit → ledger bridge — exported refinement theorems
 
-The end-to-end refinement from a satisfying Action assignment to the games-facing ledger
-statement (`ActionBreak … ∨ ∃ inst w, …`), together with the two correctness directions of the
+The refinement from the Action circuit's postcondition to the games-facing ledger statement
+(`ActionBreak … ∨ ∃ inst w, …`), together with the two correctness directions of the
 break classifier `classifyAction`: an escape it returns is a break of the witness's own hash
 query, and a `none` return — no escape at any of the four sites — means every Sinsemilla query
 of the witness is defined. `actionBreak_iff_classify_isSome` packages both directions as the
 consumer-boundary equivalence. Same budget as the circuit layer above: standard tier plus
-`native_decide` certificates (including the Pallas point-count witness). -/
+`native_decide` certificates (including the Pallas point-count witness).
+
+`specPost_to_ledger` is the bridge's whole consumer surface: composition with circuit
+satisfaction lives on the Circuits side, where the `Constraints` predicate it would consume
+is actually produced. -/
 
 assert_axioms Zcash.Security.Ledger.Bridge.specPost_to_ledger +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
@@ -1095,19 +1174,6 @@ assert_axioms Zcash.Security.Ledger.Bridge.specPost_to_ledger +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
-assert_axioms Zcash.Security.Ledger.Bridge.circuit_soundness_to_ledger +native(
-  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
-  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
-  Zcash.Security.Concrete.PallasGroup.pallas_base_card_lt_scalar_card,
-  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
-  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Security.Ledger.Bridge.actionBreak_of_classify +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,

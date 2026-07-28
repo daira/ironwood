@@ -54,6 +54,11 @@ import Zcash.Snark.Soundness.CommitFold
 import Zcash.Snark.Soundness.Consistency
 import Zcash.Snark.Soundness.KnowledgeSoundness
 import Zcash.Snark.Soundness.IpaSoundness
+-- Verifier-native semantic models used by the Clean integration boundary.  These
+-- belong to the core SNARK library even when no capstone imports them incidentally.
+import Zcash.Snark.Soundness.Canonical.ConstraintSatisfaction
+import Zcash.Snark.Soundness.Canonical.ConstraintModel
+import Zcash.Snark.Soundness.Canonical.InstanceCommitment
 -- Deployed halo2-verifier soundness path: peel the deployed IPA (U/W/S apparatus) onto the clean
 -- `ipa_soundV`, with commitment binding expressed as a discrete-log-relation reduction.
 import Zcash.Snark.Soundness.Deployed.Binding
@@ -77,6 +82,13 @@ import Zcash.Snark.Soundness.Multiopen.Deployed
 import Zcash.Snark.Soundness.Multiopen.Opened
 import Zcash.Snark.Soundness.Multiopen.RPoly
 import Zcash.Snark.Soundness.Multiopen.Claimed
+import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
+import Zcash.Snark.Soundness.Multiopen.CanonicalSelection
+import Zcash.Snark.Soundness.Canonical.Terminal
+import Zcash.Snark.Soundness.Canonical.Vesta
+import Zcash.Snark.Soundness.TopLevelTerminal
+import Zcash.Snark.Soundness.TopLevelVesta
+import Zcash.Snark.Soundness.ActionVesta
 import Zcash.Snark.Soundness.Vesta
 -- Concrete fork-tree knowledge error over the deployed Orchard parameters.
 import Zcash.Snark.Soundness.Deployed.ConcreteBounds

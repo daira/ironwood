@@ -13,7 +13,6 @@ namespace Zcash.Circuits.Fixtures.Stamp
 
 /-- The committed `SHA256SUMS` pins, as `(file, SHA-256)` pairs. -/
 def entries : List (String × String) := [
-  ("actionPre.json", "8cd36834ba575d83035e1369ea71cc6f6fdae17ba116e425de6c67989b51d448"),
   ("actionPost.json", "a6083ecd2abc72ea3641fa0d066aabcd91ecb89a1554ef31aa31ab6d7591ff68"),
   ("actionLayout.json", "7ac082324c93ef6c097ad26dfe7a166d1a74e41a5a6b4c0e250bf3e3d2163a87"),
   ("actionBaseLayout.json", "1c155864b0256ad93b9c4d09394dcf7b302ef5fcf9a7ac356ae15988ba09aa08")

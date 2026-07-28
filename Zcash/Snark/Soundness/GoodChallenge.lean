@@ -161,4 +161,41 @@ theorem uniformChallenge_szBadSet_union (C : Polynomial Fp) (extra : Finset Fp) 
   gcongr
   exact_mod_cast le_trans (Finset.card_union_le _ _) (Nat.add_le_add_right (szBadSet_card_le C) _)
 
+/-! ## Named additive-factor exclusions
+
+`ChallengePricing.escape_measure_le` prices the same vanishing-factor event as a set.
+The circuit bridge also needs a finite, reusable set that can be carried as a
+good-challenge hypothesis, so retain this equivalent indexed presentation. -/
+
+/-- Challenge values that make at least one member of a finite family
+`offset i + challenge` vanish. -/
+def additiveZeroBadSet {ι : Type*} [Fintype ι] [DecidableEq ι]
+    (offset : ι → Fp) : Finset Fp :=
+  Finset.univ.image fun i => -offset i
+
+/-- Membership in the additive bad set is exactly the existence of a vanishing factor. -/
+theorem mem_additiveZeroBadSet_iff {ι : Type*} [Fintype ι] [DecidableEq ι]
+    (offset : ι → Fp) (challenge : Fp) :
+    challenge ∈ additiveZeroBadSet offset ↔
+      ∃ i, offset i + challenge = 0 := by
+  simp [additiveZeroBadSet, neg_eq_iff_add_eq_zero]
+
+/-- One challenge value per index is the complete additive-factor exclusion budget. -/
+theorem additiveZeroBadSet_card_le {ι : Type*} [Fintype ι] [DecidableEq ι]
+    (offset : ι → Fp) :
+    (additiveZeroBadSet offset).card ≤ Fintype.card ι := by
+  simpa [additiveZeroBadSet] using
+    (Finset.card_image_le :
+      (Finset.univ.image fun i : ι => -offset i).card ≤ (Finset.univ : Finset ι).card)
+
+/-- A fresh field challenge makes one of a finite family of additive factors vanish with
+probability at most `|ι| / |Fp|`. -/
+theorem uniformChallenge_additiveZeroBadSet
+    {ι : Type*} [Fintype ι] [DecidableEq ι] (offset : ι → Fp) :
+    uniformChallenge.toOuterMeasure (additiveZeroBadSet offset)
+      ≤ (Fintype.card ι : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞) := by
+  rw [uniformChallenge_badSet]
+  gcongr
+  exact_mod_cast additiveZeroBadSet_card_le offset
+
 end Zcash.Snark

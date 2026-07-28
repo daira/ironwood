@@ -1,4 +1,5 @@
 import Mathlib
+import Zcash.Common.Expr
 import Zcash.Snark.Core.ProofString
 
 /-!
@@ -10,8 +11,9 @@ divides by `xⁿ − 1` to get the value `expected_h_eval` it opens the folded `
 `plonk/verifier.rs` `expressions` + `vanishing/verifier.rs` `verify`). This module transcribes that
 recomputation:
 
-* `Expr` / `Expr.eval` — the gate-polynomial AST and its evaluation at the claimed evals (halo2
-  `Expression::evaluate`; virtual selectors are removed before verification, so they are absent).
+* `Expr` / `Expr.eval` — the gate-polynomial AST and its evaluation at the claimed evals, from
+  the shared leaf `Zcash/Common/Expr.lean` (also the target of the circuit-side VK-match
+  projection, `Zcash.Circuits.Fixtures`).
 * `permutationExpressions` — the permutation argument's constraint values (`permutation/verifier.rs`).
 * `lookupExpressions` — the lookup argument's constraint values (`lookup/verifier.rs`).
 * `expectedHEval` — fold all constraint values by `y` and divide by `xⁿ − 1`.
@@ -21,54 +23,6 @@ VK-fixed circuit data, supplied as inputs.
 -/
 
 namespace Zcash.Snark
-
-/-- A gate (or lookup input/table) polynomial as halo2 evaluates it during verification
-(`Expression::evaluate`): a constant, a fixed/advice/instance query (by query index into the claimed
-evals), or a negation / sum / product / scaling. Virtual selectors are removed during circuit
-optimization, so they never appear here. -/
-inductive Expr (F : Type*) where
-  | constant : F → Expr F
-  | fixed : ℕ → Expr F
-  | advice : ℕ → Expr F
-  | instance : ℕ → Expr F
-  | negated : Expr F → Expr F
-  | sum : Expr F → Expr F → Expr F
-  | product : Expr F → Expr F → Expr F
-  | scaled : Expr F → F → Expr F
-
-/-- Carry a gate expression along a ring hom, leaf by leaf. -/
-def Expr.map {F G : Type*} (f : F → G) : Expr F → Expr G
-  | .constant c => .constant (f c)
-  | .fixed i => .fixed i
-  | .advice i => .advice i
-  | .instance i => .instance i
-  | .negated e => .negated (e.map f)
-  | .sum a b => .sum (a.map f) (b.map f)
-  | .product a b => .product (a.map f) (b.map f)
-  | .scaled e c => .scaled (e.map f) (f c)
-
-/-- Mapping an expression twice is mapping once along the composite. -/
-theorem Expr.map_map {F G H : Type*} (f : F → G) (g : G → H) (e : Expr F) :
-    (e.map f).map g = e.map (fun c => g (f c)) := by
-  induction e <;> simp_all [Expr.map]
-
-/-- Mapping an expression along the identity leaves it unchanged. -/
-@[simp] theorem Expr.map_id {F : Type*} (e : Expr F) : (e.map fun c => c) = e := by
-  induction e <;> simp_all [Expr.map]
-
-/-- Evaluate a gate polynomial at the claimed evaluations (halo2 `Expression::evaluate` with the
-verifier's closures): queries resolve to `fixedEvals`/`adviceEvals`/`instanceEvals` at their index. -/
-def Expr.eval {F : Type*} [CommRing F] (fixedEvals adviceEvals instanceEvals : ℕ → F) :
-    Expr F → F
-  | .constant c => c
-  | .fixed i => fixedEvals i
-  | .advice i => adviceEvals i
-  | .instance i => instanceEvals i
-  | .negated a => -(a.eval fixedEvals adviceEvals instanceEvals)
-  | .sum a b => a.eval fixedEvals adviceEvals instanceEvals + b.eval fixedEvals adviceEvals instanceEvals
-  | .product a b =>
-      a.eval fixedEvals adviceEvals instanceEvals * b.eval fixedEvals adviceEvals instanceEvals
-  | .scaled a c => a.eval fixedEvals adviceEvals instanceEvals * c
 
 /-- Compress a list of expressions by `theta` (halo2 lookup `compress_expressions`):
 `(((e₀)·θ + e₁)·θ + …)`. -/
@@ -170,7 +124,7 @@ theorem permChunk_left_eq_prod {F : Type*} [CommRing F] (beta gamma : F) (pairs 
   | cons a t ih =>
       rw [List.foldl_cons, ih, List.length_cons, Finset.prod_range_succ']
       simp only [List.getD_cons_zero, List.getD_cons_succ]
-      ring
+      ring_nf
 
 /-- The step rule's right fold is the same running product with the columns named by their
 `δ`-coset position: column `j` of chunk `c` carries the name `d₀·δ^j`, where `d₀` already holds the
@@ -186,7 +140,7 @@ theorem permChunk_right_eq_prod {F : Type*} [CommRing F] (gamma delta : F) (pair
   | cons a t ih =>
       rw [List.foldl_cons, ih, List.length_cons, Finset.prod_range_succ']
       simp only [List.getD_cons_zero, List.getD_cons_succ, pow_zero, mul_one, pow_succ]
-      ring
+      ring_nf
 
 /-- **The step rule is a one-row recurrence.** `permChunkExpression` vanishes exactly when the
 running product at the next row times the `σ`-named factors equals the running product at this row

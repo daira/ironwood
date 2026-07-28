@@ -209,6 +209,16 @@ noncomputable def cellPairs (m k : ℕ) (value nm : ℕ → ℕ → Fp) : Multis
   (Finset.univ : Finset (Fin m × Fin k)).val.map
     (fun c => (value (c.1 : ℕ) (c.2 : ℕ), nm (c.1 : ℕ) (c.2 : ℕ)))
 
+/-- A cell of a variable-width chunked table: a chunk, a row, and a column valid for that chunk. -/
+abbrev ChunkCell (nc m : ℕ) (width : ℕ → ℕ) :=
+  Σ c : Fin nc, Fin m × Fin (width c)
+
+/-- The `(value, name)` pair of every cell across a variable-width chunked table. -/
+noncomputable def chunkedCellPairs (nc m : ℕ) (width : ℕ → ℕ)
+    (value nm : ℕ → ℕ → ℕ → Fp) : Multiset (Fp × Fp) :=
+  (Finset.univ : Finset (ChunkCell nc m width)).val.map
+    (fun c => (value c.1 c.2.1 c.2.2, nm c.1 c.2.1 c.2.2))
+
 open Finset in
 /-- A product over the cell pairs is the row-by-row product the telescoping produces. -/
 theorem prod_map_cellPairs (m k : ℕ) (value nm : ℕ → ℕ → Fp) (f : Fp × Fp → Fp) :
@@ -219,6 +229,26 @@ theorem prod_map_cellPairs (m k : ℕ) (value nm : ℕ → ℕ → Fp) (f : Fp �
   rw [← Fin.prod_univ_eq_prod_range (fun i => ∏ j ∈ range k, f (value i j, nm i j)) m]
   exact prod_congr rfl fun i _ => Fin.prod_univ_eq_prod_range
     (fun j => f (value (i : ℕ) j, nm (i : ℕ) j)) k
+
+open Finset in
+/-- A product over variable-width chunked cells is the chunk-by-row product used by stitching. -/
+theorem prod_map_chunkedCellPairs (nc m : ℕ) (width : ℕ → ℕ)
+    (value nm : ℕ → ℕ → ℕ → Fp) (f : Fp × Fp → Fp) :
+    ((chunkedCellPairs nc m width value nm).map f).prod
+      = ∏ c ∈ range nc, ∏ i ∈ range m, ∏ j ∈ range (width c),
+          f (value c i j, nm c i j) := by
+  rw [chunkedCellPairs, Multiset.map_map, ← Finset.prod_eq_multiset_prod, Fintype.prod_sigma]
+  simp only [Function.comp_apply]
+  simp_rw [Fintype.prod_prod_type]
+  rw [Fin.prod_univ_eq_prod_range
+    (fun c => ∏ i : Fin m, ∏ j : Fin (width c),
+      f (value c i j, nm c i j)) nc]
+  refine prod_congr rfl fun c _ => ?_
+  rw [Fin.prod_univ_eq_prod_range
+    (fun i => ∏ j : Fin (width c), f (value c i j, nm c i j)) m]
+  refine prod_congr rfl fun i _ => ?_
+  exact Fin.prod_univ_eq_prod_range
+    (fun j => f (value c i j, nm c i j)) (width c)
 
 open Finset in
 /-- **The permutation argument's multiset identity.** The verifier's per-row recurrence on the
@@ -252,6 +282,48 @@ theorem cellPairs_eq_of_running_product {m k : ℕ} (z : ℕ → Fp)
   · exact Or.inr hzero
 
 open Finset in
+/-- **The variable-width permutation multiset identity.** Per-chunk row recurrences and the
+inter-chunk running-product chain give equality of the `(value, name)` multisets over the complete
+chunked table, or expose an identity-side factor that vanished. -/
+theorem chunkedCellPairs_eq_of_running_product {nc m : ℕ} (width : ℕ → ℕ)
+    (Z : ℕ → ℕ → Fp) (value nm sigmaName : ℕ → ℕ → ℕ → Fp) (β γ : Fp)
+    (hrec : ∀ c < nc, ∀ i < m,
+      Z c (i + 1) * ∏ j ∈ range (width c),
+          (value c i j + β * sigmaName c i j + γ)
+        = Z c i * ∏ j ∈ range (width c), (value c i j + β * nm c i j + γ))
+    (hchain : ∀ c < nc, Z (c + 1) 0 = Z c m)
+    (hz0 : Z 0 0 = 1) (hzend : Z nc 0 = 0 ∨ Z nc 0 = 1)
+    (hgoodγ : γ ∉ szBadSet (linProdDiff
+      ((chunkedCellPairs nc m width value sigmaName).map (fun p => p.1 + p.2 * β))
+      ((chunkedCellPairs nc m width value nm).map (fun p => p.1 + p.2 * β))))
+    (hgoodβ : ∀ j, β ∉ szBadSet ((pairProdDiff
+      (chunkedCellPairs nc m width value sigmaName)
+      (chunkedCellPairs nc m width value nm)).coeff j)) :
+    chunkedCellPairs nc m width value sigmaName = chunkedCellPairs nc m width value nm
+      ∨ ∃ c ∈ range nc, ∃ i ∈ range m, ∃ j ∈ range (width c),
+          value c i j + β * nm c i j + γ = 0 := by
+  rcases chunkedGrandProduct_eq_or_cell_eq_zero Z
+      (fun c i j => value c i j + β * nm c i j + γ)
+      (fun c i j => value c i j + β * sigmaName c i j + γ)
+      width hrec hchain hz0 hzend with hprod | hzero
+  · refine Or.inl (multiset_pair_eq_of_prod_eval_eq hgoodγ hgoodβ ?_)
+    rw [prod_map_chunkedCellPairs, prod_map_chunkedCellPairs]
+    calc
+      ∏ c ∈ range nc, ∏ i ∈ range m, ∏ j ∈ range (width c),
+          (γ + (value c i j + sigmaName c i j * β))
+          = ∏ c ∈ range nc, ∏ i ∈ range m, ∏ j ∈ range (width c),
+              (value c i j + β * sigmaName c i j + γ) := by
+                exact prod_congr rfl fun c _ => prod_congr rfl fun i _ =>
+                  prod_congr rfl fun j _ => by ring
+      _ = ∏ c ∈ range nc, ∏ i ∈ range m, ∏ j ∈ range (width c),
+              (value c i j + β * nm c i j + γ) := hprod
+      _ = ∏ c ∈ range nc, ∏ i ∈ range m, ∏ j ∈ range (width c),
+          (γ + (value c i j + nm c i j * β)) := by
+            exact prod_congr rfl fun c _ => prod_congr rfl fun i _ =>
+              prod_congr rfl fun j _ => by ring
+  · exact Or.inr hzero
+
+open Finset in
 /-- **The copy constraints, from the verifier's checks.** Cells in the same cycle of `σ` hold equal
 values. `hσ` says the left-hand names are the `σ`-relabelled ones, `hnm` is the name distinctness the
 keygen provides, and the surviving branch is a vanishing factor. This is the permutation argument's
@@ -281,6 +353,47 @@ theorem perm_copy_constraints_of_running_product {m k : ℕ} (z : ℕ → Fp)
             (fun c => (value (c.1 : ℕ) (c.2 : ℕ), nm (c.1 : ℕ) (c.2 : ℕ)))
         = (Finset.univ : Finset (Fin m × Fin k)).val.map
             (fun c => (value (c.1 : ℕ) (c.2 : ℕ), sigmaName (c.1 : ℕ) (c.2 : ℕ))) := hmulti'
+      _ = _ := Multiset.map_congr rfl fun c _ => by rw [hσ c]
+  · exact Or.inr hzero
+
+open Finset in
+/-- **Global copy constraints across variable-width chunks.** Unlike the single-chunk wrapper, this
+uses the verifier's chain between running products and one permutation over all chunked cells, so
+cycles may cross chunk boundaries. -/
+theorem perm_copy_constraints_of_chunked_running_product {nc m : ℕ} (width : ℕ → ℕ)
+    (Z : ℕ → ℕ → Fp) (value nm sigmaName : ℕ → ℕ → ℕ → Fp) (β γ : Fp)
+    (σ : Equiv.Perm (ChunkCell nc m width))
+    (hσ : ∀ c : ChunkCell nc m width,
+      sigmaName c.1 c.2.1 c.2.2 = nm (σ c).1 (σ c).2.1 (σ c).2.2)
+    (hnm : Function.Injective fun c : ChunkCell nc m width => nm c.1 c.2.1 c.2.2)
+    (hrec : ∀ c < nc, ∀ i < m,
+      Z c (i + 1) * ∏ j ∈ range (width c),
+          (value c i j + β * sigmaName c i j + γ)
+        = Z c i * ∏ j ∈ range (width c), (value c i j + β * nm c i j + γ))
+    (hchain : ∀ c < nc, Z (c + 1) 0 = Z c m)
+    (hz0 : Z 0 0 = 1) (hzend : Z nc 0 = 0 ∨ Z nc 0 = 1)
+    (hgoodγ : γ ∉ szBadSet (linProdDiff
+      ((chunkedCellPairs nc m width value sigmaName).map (fun p => p.1 + p.2 * β))
+      ((chunkedCellPairs nc m width value nm).map (fun p => p.1 + p.2 * β))))
+    (hgoodβ : ∀ j, β ∉ szBadSet ((pairProdDiff
+      (chunkedCellPairs nc m width value sigmaName)
+      (chunkedCellPairs nc m width value nm)).coeff j))
+    {c d : ChunkCell nc m width} (hcd : σ.SameCycle c d) :
+    value c.1 c.2.1 c.2.2 = value d.1 d.2.1 d.2.2
+      ∨ ∃ c ∈ range nc, ∃ i ∈ range m, ∃ j ∈ range (width c),
+          value c i j + β * nm c i j + γ = 0 := by
+  rcases chunkedCellPairs_eq_of_running_product width Z value nm sigmaName β γ
+      hrec hchain hz0 hzend hgoodγ hgoodβ with hmulti | hzero
+  · have hmulti' : chunkedCellPairs nc m width value nm
+        = chunkedCellPairs nc m width value sigmaName := hmulti.symm
+    simp only [chunkedCellPairs] at hmulti'
+    refine Or.inl (perm_copy_constraints σ hnm
+      (fun c => value c.1 c.2.1 c.2.2) ?_ hcd)
+    calc
+      (Finset.univ : Finset (ChunkCell nc m width)).val.map
+          (fun c => (value c.1 c.2.1 c.2.2, nm c.1 c.2.1 c.2.2))
+        = (Finset.univ : Finset (ChunkCell nc m width)).val.map
+          (fun c => (value c.1 c.2.1 c.2.2, sigmaName c.1 c.2.1 c.2.2)) := hmulti'
       _ = _ := Multiset.map_congr rfl fun c _ => by rw [hσ c]
   · exact Or.inr hzero
 

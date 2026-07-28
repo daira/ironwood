@@ -50,6 +50,7 @@ structure Shape where
   numAdviceQueries : ℕ
   numFixedQueries : ℕ
   numPointSets : ℕ
+deriving DecidableEq, Repr
 
 /-- Per-set permutation product evaluations (halo2 `EvaluatedSet`): the product polynomial `zᵢ` at
 `x` (`eval`) and `ω x` (`nextEval`), plus — for every set except the last — at `ω^{last} x`

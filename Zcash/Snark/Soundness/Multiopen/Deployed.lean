@@ -340,6 +340,20 @@ def deployedSetCommIds [DecidableEq G] [Inhabited G] {shape : Shape} (vk : Verif
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) (i : ℕ) : List CommitmentId :=
   (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).ids.getD i []
 
+omit [AddCommGroup G] [Module Fp G] in
+/-- The commitment-identifier list of a deployed point set has one entry per member query.
+Restored after the upstream multiopen prune: the canonical resolver bounds member indices with
+it, and no replacement was carried over. -/
+theorem deployedSetCommIds_length [DecidableEq G] [Inhabited G] {shape : Shape}
+    (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
+    (i : ℕ) :
+    (deployedSetCommIds vk instanceCommitment ps ch i).length
+      = (deployedSetQueries vk instanceCommitment ps ch i).length := by
+  simp only [deployedSetCommIds, deployedSetQueries]
+  rw [constructIntermediateSets_zip_sets_getD]
+  exact constructIntermediateSets_sets_ids_aligned (assembleQueries vk instanceCommitment ps ch) i
+
 
 /-- **The two-level batch structure, made explicit.** The `x₄`-level batch column `i` (a point-set
 aggregate of `deployedX4Qs`) is itself a flat power batch in the `x₁` squeeze of the member commitments

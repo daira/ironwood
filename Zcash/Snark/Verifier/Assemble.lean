@@ -40,6 +40,7 @@ inductive ColumnRef where
   | advice : ℕ → ColumnRef
   | fixed : ℕ → ColumnRef
   | instance : ℕ → ColumnRef
+deriving DecidableEq, Repr
 
 /-- Resolve a permutation column reference to its claimed evaluation. -/
 def ColumnRef.resolve {F : Type*} (cr : ColumnRef) (instanceEvals adviceEvals fixedEvals : ℕ → F) : F :=
@@ -206,6 +207,267 @@ def assembleQueries {shape : Shape} {F G : Type*} [Field F] [Inhabited G] (vk : 
     (List.ofFn (fun c => (vk.permutationCommonCommitment c, ps.permutationCommonEvals c)))
   let vanishingQ := vanishingQueries x hComm eHEval ps.vanishingRandom ps.vanishingRandomEval
   perProof ++ fixedQ ++ permCommonQ ++ vanishingQ
+
+/-- An assembled query carrying an instance-column identity uses that statement-derived commitment. -/
+theorem assembleQueries_instance_commitment
+    {shape : Shape} {F G : Type*} [Field F] [Inhabited G]
+    (vk : VerifyingKey shape F G)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) (ch : Challenges shape.k F)
+    (q : VerifierQuery shape.k F G)
+    (hq : q ∈ assembleQueries vk instanceCommitment ps ch)
+    (p : Fin shape.numProofs) (column : ℕ)
+    (hid : q.commId = .instanceCol p column) :
+    q.commitment = .point (instanceCommitment p column) := by
+  simp only [assembleQueries, List.mem_append] at hq
+  rcases hq with (((hperProof | hfixed) | hcommon) | hvanishing)
+  · obtain ⟨proofQueries, hproofQueries, hq⟩ := List.mem_flatten.mp hperProof
+    obtain ⟨proofIndex, hproofQueries⟩ := List.mem_ofFn.mp hproofQueries
+    rw [← hproofQueries] at hq
+    simp only [List.mem_append] at hq
+    rcases hq with hleft | hlookup
+    · rcases hleft with hleft | hpermutation
+      · rcases hleft with hinstance | hadvice
+        · rw [columnQueries, List.mem_map] at hinstance
+          obtain ⟨entry, _, hq⟩ := hinstance
+          subst q
+          injection hid with hproofIndex hcolumn
+          have : proofIndex = p := Fin.ext hproofIndex
+          subst proofIndex
+          subst column
+          rfl
+        · rw [columnQueries, List.mem_map] at hadvice
+          obtain ⟨entry, _, hq⟩ := hadvice
+          subst q
+          simp at hid
+      · simp only [permutationQueries, List.mem_append] at hpermutation
+        rcases hpermutation with hregular | hlast
+        · simp only [List.mem_flatMap, List.mem_cons, List.mem_nil_iff,
+            or_false] at hregular
+          obtain ⟨entry, _, hq | hq⟩ := hregular
+          · subst q
+            simp at hid
+          · subst q
+            simp at hid
+        · rw [List.mem_filterMap] at hlast
+          obtain ⟨entry, _, hentry⟩ := hlast
+          cases hlastEval : entry.1.2.lastEval with
+          | none => simp [hlastEval] at hentry
+          | some lastEvaluation =>
+            simp [hlastEval] at hentry
+            subst q
+            simp at hid
+    · simp only [lookupQueries, List.mem_flatMap, List.mem_cons,
+        List.mem_nil_iff, or_false] at hlookup
+      obtain ⟨entry, _, hq | hq | hq | hq | hq⟩ := hlookup
+      all_goals
+        subst q
+        simp at hid
+  · rw [columnQueries, List.mem_map] at hfixed
+    obtain ⟨entry, _, hq⟩ := hfixed
+    subst q
+    simp at hid
+  · rw [permutationCommonQueries, List.mem_map] at hcommon
+    obtain ⟨entry, _, hq⟩ := hcommon
+    subst q
+    simp at hid
+  · simp [vanishingQueries] at hvanishing
+    rcases hvanishing with hq | hq
+    · subst q
+      simp at hid
+    · subst q
+      simp at hid
+
+/-- An assembled query carrying a fixed-column identity uses the corresponding
+verifying-key commitment. -/
+theorem assembleQueries_fixed_commitment
+    {shape : Shape} {F G : Type*} [Field F] [Inhabited G]
+    (vk : VerifyingKey shape F G)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) (ch : Challenges shape.k F)
+    (q : VerifierQuery shape.k F G)
+    (hq : q ∈ assembleQueries vk instanceCommitment ps ch)
+    (column : ℕ)
+    (hid : q.commId = .fixedCol column) :
+    q.commitment = .point (vk.fixedCommitment column) := by
+  simp only [assembleQueries, List.mem_append] at hq
+  rcases hq with (((hperProof | hfixed) | hcommon) | hvanishing)
+  · obtain ⟨proofQueries, hproofQueries, hq⟩ :=
+      List.mem_flatten.mp hperProof
+    obtain ⟨proofIndex, hproofQueries⟩ :=
+      List.mem_ofFn.mp hproofQueries
+    rw [← hproofQueries] at hq
+    simp only [List.mem_append] at hq
+    rcases hq with hleft | hlookup
+    · rcases hleft with hleft | hpermutation
+      · rcases hleft with hinstance | hadvice
+        · rw [columnQueries, List.mem_map] at hinstance
+          obtain ⟨entry, _, hq⟩ := hinstance
+          subst q
+          simp at hid
+        · rw [columnQueries, List.mem_map] at hadvice
+          obtain ⟨entry, _, hq⟩ := hadvice
+          subst q
+          simp at hid
+      · simp only [permutationQueries, List.mem_append] at hpermutation
+        rcases hpermutation with hregular | hlast
+        · simp only [List.mem_flatMap, List.mem_cons, List.mem_nil_iff,
+            or_false] at hregular
+          obtain ⟨entry, _, hq | hq⟩ := hregular
+          · subst q
+            simp at hid
+          · subst q
+            simp at hid
+        · rw [List.mem_filterMap] at hlast
+          obtain ⟨entry, _, hentry⟩ := hlast
+          cases hlastEval : entry.1.2.lastEval with
+          | none => simp [hlastEval] at hentry
+          | some lastEvaluation =>
+            simp [hlastEval] at hentry
+            subst q
+            simp at hid
+    · simp only [lookupQueries, List.mem_flatMap, List.mem_cons,
+        List.mem_nil_iff, or_false] at hlookup
+      obtain ⟨entry, _, hq | hq | hq | hq | hq⟩ := hlookup
+      all_goals
+        subst q
+        simp at hid
+  · rw [columnQueries, List.mem_map] at hfixed
+    obtain ⟨entry, _, hq⟩ := hfixed
+    subst q
+    injection hid with hcolumn
+    subst column
+    rfl
+  · rw [permutationCommonQueries, List.mem_map] at hcommon
+    obtain ⟨entry, _, hq⟩ := hcommon
+    subst q
+    simp at hid
+  · simp [vanishingQueries] at hvanishing
+    rcases hvanishing with hq | hq
+    · subst q
+      simp at hid
+    · subst q
+      simp at hid
+
+/-- An assembled query carrying a common-permutation identity uses the corresponding
+verifying-key σ-column commitment. -/
+theorem assembleQueries_permCommon_commitment
+    {shape : Shape} {F G : Type*} [Field F] [Inhabited G]
+    (vk : VerifyingKey shape F G)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) (ch : Challenges shape.k F)
+    (q : VerifierQuery shape.k F G)
+    (hq : q ∈ assembleQueries vk instanceCommitment ps ch)
+    (c : Fin shape.numPermutationColumns)
+    (hid : q.commId = .permCommon (c : ℕ)) :
+    q.commitment = .point (vk.permutationCommonCommitment c) := by
+  simp only [assembleQueries, List.mem_append] at hq
+  rcases hq with (((hperProof | hfixed) | hcommon) | hvanishing)
+  · obtain ⟨proofQueries, hproofQueries, hq⟩ :=
+      List.mem_flatten.mp hperProof
+    obtain ⟨proofIndex, hproofQueries⟩ :=
+      List.mem_ofFn.mp hproofQueries
+    rw [← hproofQueries] at hq
+    simp only [List.mem_append] at hq
+    rcases hq with hleft | hlookup
+    · rcases hleft with hleft | hpermutation
+      · rcases hleft with hinstance | hadvice
+        · rw [columnQueries, List.mem_map] at hinstance
+          obtain ⟨entry, _, hq⟩ := hinstance
+          subst q
+          simp at hid
+        · rw [columnQueries, List.mem_map] at hadvice
+          obtain ⟨entry, _, hq⟩ := hadvice
+          subst q
+          simp at hid
+      · simp only [permutationQueries, List.mem_append] at hpermutation
+        rcases hpermutation with hregular | hlast
+        · simp only [List.mem_flatMap, List.mem_cons, List.mem_nil_iff,
+            or_false] at hregular
+          obtain ⟨entry, _, hq | hq⟩ := hregular
+          · subst q
+            simp at hid
+          · subst q
+            simp at hid
+        · rw [List.mem_filterMap] at hlast
+          obtain ⟨entry, _, hentry⟩ := hlast
+          cases hlastEval : entry.1.2.lastEval with
+          | none => simp [hlastEval] at hentry
+          | some lastEvaluation =>
+            simp [hlastEval] at hentry
+            subst q
+            simp at hid
+    · simp only [lookupQueries, List.mem_flatMap, List.mem_cons,
+        List.mem_nil_iff, or_false] at hlookup
+      obtain ⟨entry, _, hq | hq | hq | hq | hq⟩ := hlookup
+      all_goals
+        subst q
+        simp at hid
+  · rw [columnQueries, List.mem_map] at hfixed
+    obtain ⟨entry, _, hq⟩ := hfixed
+    subst q
+    simp at hid
+  · rw [permutationCommonQueries, List.mem_map] at hcommon
+    obtain ⟨ce, hce, hq⟩ := hcommon
+    subst q
+    obtain ⟨k, hk, hcek⟩ := List.getElem_of_mem hce
+    rw [List.getElem_zip] at hcek
+    have hkn : k < shape.numPermutationColumns := by
+      have hkzip := hk
+      simp only [List.length_zip, List.length_range, List.length_ofFn,
+        Nat.min_self] at hkzip
+      exact hkzip
+    have hce1 : ce.1 = (vk.permutationCommonCommitment ⟨k, hkn⟩,
+        ps.permutationCommonEvals ⟨k, hkn⟩) := by
+      rw [← hcek]
+      simp
+    have hce2 : ce.2 = k := by
+      rw [← hcek]
+      simp
+    have hkc : k = (c : ℕ) := by
+      simpa [hce2] using hid
+    have hfin : (⟨k, hkn⟩ : Fin shape.numPermutationColumns) = c :=
+      Fin.ext hkc
+    simp [hce1, hfin]
+  · simp [vanishingQueries] at hvanishing
+    rcases hvanishing with hq | hq
+    · subst q
+      simp at hid
+    · subst q
+      simp at hid
+
+/-- The common-permutation query list covers every index below its input length. -/
+private theorem permutationCommonQueries_getElem_mem {k : ℕ} {F G : Type*} [Field F]
+    (x : F) (mkId : ℕ → CommitmentId) (ces : List (G × F)) (i : ℕ)
+    (hi : i < ces.length) :
+    ∃ q ∈ permutationCommonQueries (k := k) x mkId ces, q.commId = mkId i := by
+  have hz : i < (ces.zip (List.range ces.length)).length := by simpa using hi
+  have hmem := List.mem_map_of_mem
+    (f := fun ce : (G × F) × ℕ =>
+      ({ point := x, commitment := .point ce.1.1, eval := ce.1.2,
+         commId := mkId ce.2 } : VerifierQuery k F G))
+    (List.getElem_mem hz)
+  rw [permutationCommonQueries]
+  refine ⟨_, hmem, ?_⟩
+  simp [List.getElem_zip]
+
+/-- Every verifying-key σ column is opened by the assembled queries: the common-permutation
+queries cover the whole column family by construction. -/
+theorem assembleQueries_permCommon_query
+    {shape : Shape} {F G : Type*} [Field F] [Inhabited G]
+    (vk : VerifyingKey shape F G)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) (ch : Challenges shape.k F)
+    (c : Fin shape.numPermutationColumns) :
+    ∃ q ∈ assembleQueries vk instanceCommitment ps ch,
+      q.commId = .permCommon (c : ℕ) := by
+  obtain ⟨q, hqmem, hqid⟩ := permutationCommonQueries_getElem_mem (k := shape.k)
+    ch.x CommitmentId.permCommon
+    (List.ofFn fun c => (vk.permutationCommonCommitment c, ps.permutationCommonEvals c))
+    (c : ℕ) (by simp)
+  refine ⟨q, ?_, hqid⟩
+  simp only [assembleQueries, List.mem_append]
+  exact Or.inl (Or.inr hqmem)
 
 /-- The multiopen point-set grouping (halo2 `construct_intermediate_sets` output): per point set,
 the routed queries as `(commitment, evaluations)`, the set's points, and the routed members' slot
@@ -965,12 +1227,15 @@ private theorem lookupQueries_commId_form {k : ℕ} {F G : Type*} [Field F] {x x
 /-- **Vanishing-slot uniqueness.** Any two queries of `assembleQueries` on the `vanishingH` slot are
 equal — the vanishing-`h` query is the sole carrier of its slot. -/
 theorem assembleQueries_vanishingH_unique {shape : Shape} {F G : Type*} [Field F] [Inhabited G]
-    (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape F G) (ch : Challenges shape.k F)
+    (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) (ch : Challenges shape.k F)
     {q₁ q₂ : VerifierQuery shape.k F G}
-    (hq₁ : q₁ ∈ assembleQueries vk instanceCommitment ps ch) (hq₂ : q₂ ∈ assembleQueries vk instanceCommitment ps ch)
+    (hq₁ : q₁ ∈ assembleQueries vk instanceCommitment ps ch)
+    (hq₂ : q₂ ∈ assembleQueries vk instanceCommitment ps ch)
     (hv₁ : q₁.commId = CommitmentId.vanishingH) (hv₂ : q₂.commId = CommitmentId.vanishingH) :
     q₁ = q₂ := by
-  have hvan : ∀ q : VerifierQuery shape.k F G, q ∈ assembleQueries vk instanceCommitment ps ch →
+  have hvan : ∀ q : VerifierQuery shape.k F G,
+      q ∈ assembleQueries vk instanceCommitment ps ch →
       q.commId = CommitmentId.vanishingH →
       q ∈ vanishingQueries (k := shape.k) ch.x
         (vanishingHCommitment shape.k (ch.x ^ vk.n) (List.ofFn ps.hPieces))
@@ -1019,11 +1284,412 @@ def hasDuplicateCommitmentPoint {k : ℕ} {F G : Type*} [DecidableEq F] :
       qs.any (fun r => decide (r.commId = q.commId ∧ r.point = q.point))
         || hasDuplicateCommitmentPoint qs
 
+/-- On the non-duplicate path, a commitment-slot/opening-point pair identifies at most one query.
+This is the semantic form of the guard used by grouping eval faithfulness below. -/
+theorem query_eq_of_noDuplicateCommitmentPoint {k : ℕ} {F G : Type*} [DecidableEq F]
+    {queries : List (VerifierQuery k F G)}
+    (hdup : hasDuplicateCommitmentPoint queries = false)
+    {q₁ q₂ : VerifierQuery k F G} (hq₁ : q₁ ∈ queries) (hq₂ : q₂ ∈ queries)
+    (hid : q₁.commId = q₂.commId) (hpoint : q₁.point = q₂.point) :
+    q₁ = q₂ := by
+  induction queries generalizing q₁ q₂ with
+  | nil => exact absurd hq₁ List.not_mem_nil
+  | cons q queries ih =>
+      simp only [hasDuplicateCommitmentPoint, Bool.or_eq_false_iff, List.any_eq_false] at hdup
+      rcases hdup with ⟨hhead, htail⟩
+      rcases List.mem_cons.mp hq₁ with hq₁ | hq₁
+      · subst q₁
+        rcases List.mem_cons.mp hq₂ with hq₂ | hq₂
+        · exact hq₂.symm
+        · have hn := hhead q₂ hq₂
+          exfalso
+          apply hn
+          simp [hid, hpoint]
+      · rcases List.mem_cons.mp hq₂ with hq₂ | hq₂
+        · subst q₂
+          have hn := hhead q₁ hq₁
+          exfalso
+          apply hn
+          simp [hid, hpoint]
+        · exact ih htail hq₁ hq₂ hid hpoint
+
+/-- Two everywhere-defined `filterMap` projections preserve the position of a selected source
+element when the first projection identifies it uniquely. -/
+private theorem filterMap_getD_idxOf {α β γ : Type*} [DecidableEq β]
+    {l : List α} {f : α → Option β} {g : α → Option γ}
+    {a : α} {b : β} {c d : γ}
+    (ha : a ∈ l)
+    (hfAll : ∀ x ∈ l, (f x).isSome)
+    (hgAll : ∀ x ∈ l, (g x).isSome)
+    (hf : f a = some b) (hg : g a = some c)
+    (huniq : ∀ x ∈ l, f x = some b → x = a) :
+    (l.filterMap g).getD ((l.filterMap f).idxOf b) d = c := by
+  induction l with
+  | nil => exact absurd ha List.not_mem_nil
+  | cons x xs ih =>
+      have hfx := hfAll x (List.mem_cons_self ..)
+      have hgx := hgAll x (List.mem_cons_self ..)
+      rcases hfxEq : f x with _ | fx
+      · rw [hfxEq] at hfx
+        exact absurd hfx (by simp)
+      rcases hgxEq : g x with _ | gx
+      · rw [hgxEq] at hgx
+        exact absurd hgx (by simp)
+      by_cases hxa : x = a
+      · subst x
+        simp [hf, hg]
+      · have ha' : a ∈ xs := (List.mem_cons.mp ha).resolve_left (Ne.symm hxa)
+        have hfxb : fx ≠ b := by
+          intro heq
+          apply hxa
+          exact huniq x (List.mem_cons_self ..) (hfxEq.trans (congrArg some heq))
+        have hi := ih ha'
+          (fun y hy => hfAll y (List.mem_cons_of_mem _ hy))
+          (fun y hy => hgAll y (List.mem_cons_of_mem _ hy))
+          (fun y hy => huniq y (List.mem_cons_of_mem _ hy))
+        simp only [List.filterMap_cons, hfxEq, hgxEq]
+        rw [List.idxOf_cons_ne _ hfxb, List.getD_cons_succ, hi]
+
+/-- `find?` returns a present satisfying element when it is the only satisfying value in the list. -/
+private theorem find?_eq_some_of_unique {α : Type*} {l : List α} {p : α → Bool} {a : α}
+    (ha : a ∈ l) (hpa : p a = true)
+    (huniq : ∀ x ∈ l, p x = true → x = a) :
+    l.find? p = some a := by
+  induction l with
+  | nil => exact absurd ha List.not_mem_nil
+  | cons x xs ih =>
+      by_cases hx : p x = true
+      · have hxa := huniq x (List.mem_cons_self ..) hx
+        subst x
+        exact List.find?_cons_of_pos hpa
+      · rw [List.find?_cons_of_neg hx]
+        apply ih
+        · exact (List.mem_cons.mp ha).resolve_left
+            (fun h => hx (h ▸ hpa))
+        · exact fun y hy => huniq y (List.mem_cons_of_mem _ hy)
+
+/-- A query's per-commitment data entry records its claimed evaluation at the position of its
+opening point.  The non-duplicate guard makes the `find?` used by grouping faithful to that query. -/
+private theorem cisData_query_eval {k : ℕ} {F G : Type*} [DecidableEq F] [Zero F]
+    (queries : List (VerifierQuery k F G))
+    {q : VerifierQuery k F G} (hq : q ∈ queries)
+    (hdup : hasDuplicateCommitmentPoint queries = false)
+    {cd : CommitmentId × CommitmentRef k F G × List ℕ × List F}
+    (hcd : cd ∈ cisData queries) (hid : cd.1 = q.commId) :
+    cd.2.2.2.getD
+      ((cd.2.2.1.filterMap fun i => (cisPts queries)[i]?).idxOf q.point) 0 = q.eval := by
+  classical
+  obtain ⟨c, hc, rfl⟩ := List.mem_map.mp hcd
+  simp only at hid ⊢
+  let qs := queries.filter fun q' => decide (q'.commId = c.1)
+  let idxSet := (List.range (cisPts queries).length).filter fun i =>
+    (qs.map fun q' => cisPIdx queries q'.point).contains i
+  have hqQs : q ∈ qs := by
+    exact List.mem_filter.mpr ⟨hq, by simp [hid]⟩
+  have hqPts : q.point ∈ cisPts queries :=
+    mem_dedup_foldl queries (·.point) [] hq
+  have hpointIdx : cisPIdx queries q.point < (cisPts queries).length :=
+    List.findIdx_lt_length_of_exists ⟨q.point, hqPts, by simp⟩
+  have hidx : cisPIdx queries q.point ∈ idxSet := by
+    simp only [idxSet, List.mem_filter, List.mem_range]
+    exact ⟨hpointIdx, (List.contains_iff_mem).mpr
+      (List.mem_map.mpr ⟨q, hqQs, rfl⟩)⟩
+  have hptsNodup : (cisPts queries).Nodup := by
+    exact nodup_dedup_foldl queries (·.point) [] List.nodup_nil
+  have hpointGet : (cisPts queries)[cisPIdx queries q.point]? = some q.point :=
+    getElem?_findIdx_self hqPts
+  have hpointUnique : ∀ i ∈ idxSet,
+      (cisPts queries)[i]? = some q.point → i = cisPIdx queries q.point := by
+    intro i hi hget
+    rw [List.mem_filter, List.mem_range] at hi
+    have heq : (⟨i, hi.1⟩ : Fin _) = ⟨cisPIdx queries q.point, hpointIdx⟩ := by
+      apply List.nodup_iff_injective_getElem.mp hptsNodup
+      rw [List.getElem?_eq_getElem hi.1] at hget
+      rw [List.getElem?_eq_getElem hpointIdx] at hpointGet
+      exact Option.some.inj (hget.trans hpointGet.symm)
+    exact congrArg Fin.val heq
+  have heveryPoint : ∀ i ∈ idxSet, ((cisPts queries)[i]?).isSome := by
+    intro i hi
+    rw [List.mem_filter, List.mem_range] at hi
+    rw [List.getElem?_eq_getElem hi.1]
+    simp
+  have heveryEval : ∀ i ∈ idxSet,
+      ((qs.find? fun q' => decide (cisPIdx queries q'.point = i)).map (·.eval)).isSome := by
+    intro i hi
+    rw [List.mem_filter] at hi
+    obtain ⟨q', hq', hq'i⟩ := List.mem_map.mp ((List.contains_iff_mem).mp hi.2)
+    rw [Option.isSome_map, List.find?_isSome]
+    exact ⟨q', hq', by simp [hq'i]⟩
+  have hfind : (qs.find? fun q' =>
+      decide (cisPIdx queries q'.point = cisPIdx queries q.point)) = some q := by
+    apply find?_eq_some_of_unique hqQs (by simp)
+    intro q' hq' hpred
+    simp only [decide_eq_true_eq] at hpred
+    have hq'query := (List.mem_filter.mp hq').1
+    have hq'id : q'.commId = q.commId := by
+      have h := (List.mem_filter.mp hq').2
+      simp only [decide_eq_true_eq] at h
+      exact h.trans hid
+    have hq'Pts : q'.point ∈ cisPts queries :=
+      mem_dedup_foldl queries (·.point) [] hq'query
+    have hq'get := getElem?_findIdx_self hq'Pts
+    change (cisPts queries)[cisPIdx queries q'.point]? = some q'.point at hq'get
+    rw [hpred] at hq'get
+    have hq'point : q'.point = q.point :=
+      Option.some.inj (hq'get.symm.trans hpointGet)
+    exact query_eq_of_noDuplicateCommitmentPoint hdup hq'query hq hq'id hq'point
+  change
+    (idxSet.filterMap fun i =>
+      (qs.find? fun q' => decide (cisPIdx queries q'.point = i)).map (·.eval)).getD
+      ((idxSet.filterMap fun i => (cisPts queries)[i]?).idxOf q.point) 0 = q.eval
+  exact filterMap_getD_idxOf hidx heveryPoint heveryEval hpointGet
+    (by rw [hfind]; rfl) hpointUnique
+
 /-- Rejecting version of `constructIntermediateSets`, matching halo2's `Option` guard for duplicate
 queries with the same commitment slot and point. -/
 def constructIntermediateSets? {k : ℕ} {F G : Type*} [DecidableEq F] [DecidableEq G]
     (queries : List (VerifierQuery k F G)) : Option (MultiopenGrouped k F G) :=
   if hasDuplicateCommitmentPoint queries then none else some (constructIntermediateSets queries)
+
+/-- **Faithful query routing.** On the verifier's non-duplicate path, every flat query is routed to
+a concrete grouped member with the same commitment identity; its point occurs in the group's point
+list, and the member's claimed value at that point is exactly the flat query's claimed evaluation. -/
+theorem constructIntermediateSets_query_routed {k : ℕ} {F G : Type*}
+    [DecidableEq F] [DecidableEq G] [Zero F] [Zero G]
+    (queries : List (VerifierQuery k F G)) {q : VerifierQuery k F G}
+    (hq : q ∈ queries) (hdup : hasDuplicateCommitmentPoint queries = false) :
+    ∃ si, si < (constructIntermediateSets queries).sets.length ∧
+      ∃ m, m < ((constructIntermediateSets queries).sets.getD si []).length ∧
+        ((constructIntermediateSets queries).ids.getD si []).getD m .vanishingH = q.commId ∧
+        q.point ∈ (constructIntermediateSets queries).points.getD si [] ∧
+        (((constructIntermediateSets queries).sets.getD si []).getD m (.point 0, [])).2.getD
+          (((constructIntermediateSets queries).points.getD si []).idxOf q.point) 0 = q.eval := by
+  classical
+  obtain ⟨e, he, heid⟩ := cisComms_fold_covers queries [] hq
+  rcases cisComms_fold_prov queries [] he with hnil | ⟨q', hq', rfl⟩
+  · exact absurd hnil List.not_mem_nil
+  let qs := queries.filter fun r => decide (r.commId = q'.commId)
+  let idxSet := (List.range (cisPts queries).length).filter fun i =>
+    (qs.map fun r => cisPIdx queries r.point).contains i
+  let evals := idxSet.filterMap fun i =>
+    (qs.find? fun r => decide (cisPIdx queries r.point = i)).map (·.eval)
+  let cd : CommitmentId × CommitmentRef k F G × List ℕ × List F :=
+    (q'.commId, q'.commitment, idxSet, evals)
+  have hcd : cd ∈ cisData queries := by
+    refine List.mem_map.mpr ⟨(q'.commId, q'.commitment), he, ?_⟩
+    rfl
+  have hcdid : cd.1 = q.commId := heid
+  have hcdeval := cisData_query_eval queries hq hdup hcd hcdid
+  have hsetmem : cd.2.2.1 ∈ cisSetList queries := by
+    have h := mem_dedup_foldl (cisData queries) (fun x => x.2.2.1) ([] : List (List ℕ)) hcd
+    simpa using h
+  let si := (cisSetList queries).findIdx fun x => decide (x = cd.2.2.1)
+  have hsiLt : si < (cisSetList queries).length :=
+    List.findIdx_lt_length_of_exists ⟨cd.2.2.1, hsetmem, by simp⟩
+  have hsiGet : (cisSetList queries)[si]? = some cd.2.2.1 :=
+    getElem?_findIdx_self hsetmem
+  have hrouted : cd ∈ cisRouted queries si := by
+    rw [cisRouted]
+    refine List.mem_filter.mpr ⟨List.mem_reverse.mpr hcd, ?_⟩
+    simp [si]
+  obtain ⟨m, hm, hmget⟩ := List.mem_iff_getElem.mp hrouted
+  have hsetLt : si < (constructIntermediateSets queries).sets.length := by
+    show si < ((List.range (cisSetList queries).length).map fun si' =>
+      (cisRouted queries si').map fun data => (data.2.1, data.2.2.2)).length
+    rw [List.length_map, List.length_range]
+    exact hsiLt
+  have hmembers :
+      (constructIntermediateSets queries).sets.getD si []
+        = (cisRouted queries si).map fun data => (data.2.1, data.2.2.2) := by
+    show ((List.range (cisSetList queries).length).map fun si' =>
+      (cisRouted queries si').map fun data => (data.2.1, data.2.2.2)).getD si []
+        = _
+    have hi : si < ((List.range (cisSetList queries).length).map fun si' =>
+        (cisRouted queries si').map fun data => (data.2.1, data.2.2.2)).length := by
+      rw [List.length_map, List.length_range]
+      exact hsiLt
+    rw [List.getD_eq_getElem _ _ hi, List.getElem_map, List.getElem_range]
+  have hmemLt : m < ((constructIntermediateSets queries).sets.getD si []).length := by
+    rw [hmembers, List.length_map]
+    exact hm
+  have hids :
+      (constructIntermediateSets queries).ids.getD si []
+        = (cisRouted queries si).map (·.1) := by
+    show ((List.range (cisSetList queries).length).map fun si' =>
+      (cisRouted queries si').map (·.1)).getD si [] = _
+    have hi : si < ((List.range (cisSetList queries).length).map fun si' =>
+        (cisRouted queries si').map (·.1)).length := by
+      rw [List.length_map, List.length_range]
+      exact hsiLt
+    rw [List.getD_eq_getElem _ _ hi, List.getElem_map, List.getElem_range]
+  have hid :
+      ((constructIntermediateSets queries).ids.getD si []).getD m .vanishingH = q.commId := by
+    rw [hids, List.getD_eq_getElem _ _ (by rw [List.length_map]; exact hm),
+      List.getElem_map, hmget]
+    exact hcdid
+  have hpoint :
+      q.point ∈ (constructIntermediateSets queries).points.getD si [] :=
+    constructIntermediateSets_point_mem queries hq
+      (by rw [constructIntermediateSets_sets_ids_aligned queries si]; exact hmemLt) hid
+  have hpoints :
+      (constructIntermediateSets queries).points.getD si []
+        = cd.2.2.1.filterMap fun i => (cisPts queries)[i]? := by
+    show ((cisSetList queries).map fun s =>
+      s.filterMap fun i => (cisPts queries)[i]?).getD si [] = _
+    rw [List.getD_eq_getElem?_getD, List.getElem?_map, hsiGet]
+    rfl
+  have hmember :
+      ((constructIntermediateSets queries).sets.getD si []).getD m (.point 0, [])
+        = (cd.2.1, cd.2.2.2) := by
+    rw [hmembers, List.getD_eq_getElem _ _ (by rw [List.length_map]; exact hm),
+      List.getElem_map, hmget]
+  refine ⟨si, hsetLt, m, hmemLt, hid, hpoint, ?_⟩
+  rw [hmember, hpoints]
+  exact hcdeval
+
+/-- A query routed to any member carrying its commitment identity reads back its own claimed
+evaluation.  This is the reusable eval-faithfulness companion to
+`constructIntermediateSets_point_mem`. -/
+theorem constructIntermediateSets_query_eval {k : ℕ} {F G : Type*}
+    [DecidableEq F] [DecidableEq G] [Zero F] [Zero G]
+    (queries : List (VerifierQuery k F G)) {q : VerifierQuery k F G}
+    (hq : q ∈ queries) (hdup : hasDuplicateCommitmentPoint queries = false)
+    {si m : ℕ}
+    (hlt : m < ((constructIntermediateSets queries).ids.getD si []).length)
+    (hid : ((constructIntermediateSets queries).ids.getD si []).getD m .vanishingH
+      = q.commId) :
+    (((constructIntermediateSets queries).sets.getD si []).getD m (.point 0, [])).2.getD
+      (((constructIntermediateSets queries).points.getD si []).idxOf q.point) 0 = q.eval := by
+  classical
+  have hsiIds : si < (constructIntermediateSets queries).ids.length := by
+    by_contra hn
+    have hge := Nat.le_of_not_gt hn
+    rw [List.getD_eq_default _ _ hge] at hlt
+    simp at hlt
+  have hsiSet : si < (cisSetList queries).length := by
+    change si < ((List.range (cisSetList queries).length).map fun si' =>
+      (cisRouted queries si').map (·.1)).length at hsiIds
+    rw [List.length_map, List.length_range] at hsiIds
+    exact hsiIds
+  have hids :
+      (constructIntermediateSets queries).ids.getD si []
+        = (cisRouted queries si).map (·.1) := by
+    show ((List.range (cisSetList queries).length).map fun si' =>
+      (cisRouted queries si').map (·.1)).getD si [] = _
+    have hi : si < ((List.range (cisSetList queries).length).map fun si' =>
+        (cisRouted queries si').map (·.1)).length := by
+      rw [List.length_map, List.length_range]
+      exact hsiSet
+    rw [List.getD_eq_getElem _ _ hi, List.getElem_map, List.getElem_range]
+  have hm : m < (cisRouted queries si).length := by
+    rw [hids, List.length_map] at hlt
+    exact hlt
+  let cd := (cisRouted queries si)[m]
+  have hcdRouted : cd ∈ cisRouted queries si := List.getElem_mem hm
+  have hcdData : cd ∈ cisData queries := by
+    have h := (List.mem_filter.mp hcdRouted).1
+    exact List.mem_reverse.mp h
+  have hcdId : cd.1 = q.commId := by
+    rw [hids, List.getD_eq_getElem _ _ (by rw [List.length_map]; exact hm),
+      List.getElem_map] at hid
+    exact hid
+  have hcdeval := cisData_query_eval queries hq hdup hcdData hcdId
+  have hrouteEq : (cisSetList queries).findIdx
+      (fun x => decide (x = cd.2.2.1)) = si := by
+    have h := (List.mem_filter.mp hcdRouted).2
+    simpa [cisRouted] using h
+  have hcdSetMem : cd.2.2.1 ∈ cisSetList queries := by
+    have h := mem_dedup_foldl (cisData queries) (fun x => x.2.2.1)
+      ([] : List (List ℕ)) hcdData
+    simpa using h
+  have hsetGet : (cisSetList queries)[si]? = some cd.2.2.1 := by
+    rw [← hrouteEq]
+    exact getElem?_findIdx_self hcdSetMem
+  have hmembers :
+      (constructIntermediateSets queries).sets.getD si []
+        = (cisRouted queries si).map fun data => (data.2.1, data.2.2.2) := by
+    show ((List.range (cisSetList queries).length).map fun si' =>
+      (cisRouted queries si').map fun data => (data.2.1, data.2.2.2)).getD si [] = _
+    have hi : si < ((List.range (cisSetList queries).length).map fun si' =>
+        (cisRouted queries si').map fun data => (data.2.1, data.2.2.2)).length := by
+      rw [List.length_map, List.length_range]
+      exact hsiSet
+    rw [List.getD_eq_getElem _ _ hi, List.getElem_map, List.getElem_range]
+  have hmember :
+      ((constructIntermediateSets queries).sets.getD si []).getD m (.point 0, [])
+        = (cd.2.1, cd.2.2.2) := by
+    rw [hmembers, List.getD_eq_getElem _ _ (by rw [List.length_map]; exact hm),
+      List.getElem_map]
+  have hpoints :
+      (constructIntermediateSets queries).points.getD si []
+        = cd.2.2.1.filterMap fun i => (cisPts queries)[i]? := by
+    show ((cisSetList queries).map fun s =>
+      s.filterMap fun i => (cisPts queries)[i]?).getD si [] = _
+    rw [List.getD_eq_getElem?_getD, List.getElem?_map, hsetGet]
+    rfl
+  rw [hmember, hpoints]
+  exact hcdeval
+
+/--
+The grouped commitment and identity views at one member position come from the same flat query.
+This indexed provenance statement preserves the `CommitmentId` aligned with the group element.
+-/
+theorem constructIntermediateSets_member_provenance {k : ℕ} {F G : Type*}
+    [DecidableEq F] [DecidableEq G]
+    (queries : List (VerifierQuery k F G))
+    (i m : ℕ)
+    (hi : i < (constructIntermediateSets queries).sets.length)
+    (hm : m < ((constructIntermediateSets queries).sets.getD i []).length)
+    (defaultMember : CommitmentRef k F G × List F)
+    (defaultId : CommitmentId) :
+    ∃ q ∈ queries,
+      (((constructIntermediateSets queries).sets.getD i []).getD m defaultMember).1 =
+          q.commitment ∧
+        ((constructIntermediateSets queries).ids.getD i []).getD m defaultId =
+          q.commId := by
+  classical
+  have hiSetList : i < (cisSetList queries).length := by
+    change i < ((List.range (cisSetList queries).length).map fun si =>
+      (cisRouted queries si).map fun cd => (cd.2.1, cd.2.2.2)).length at hi
+    simpa using hi
+  have hsets :
+      (constructIntermediateSets queries).sets.getD i [] =
+        (cisRouted queries i).map fun cd => (cd.2.1, cd.2.2.2) := by
+    change ((List.range (cisSetList queries).length).map fun si =>
+      (cisRouted queries si).map fun cd => (cd.2.1, cd.2.2.2)).getD i [] = _
+    rw [List.getD_eq_getElem _ _ (by simpa using hiSetList),
+      List.getElem_map, List.getElem_range]
+  have hids :
+      (constructIntermediateSets queries).ids.getD i [] =
+        (cisRouted queries i).map (·.1) := by
+    change ((List.range (cisSetList queries).length).map fun si =>
+      (cisRouted queries si).map (·.1)).getD i [] = _
+    rw [List.getD_eq_getElem _ _ (by simpa using hiSetList),
+      List.getElem_map, List.getElem_range]
+  have hmRouted : m < (cisRouted queries i).length := by
+    rw [hsets, List.length_map] at hm
+    exact hm
+  let cd := (cisRouted queries i)[m]
+  have hcdRouted : cd ∈ cisRouted queries i :=
+    List.getElem_mem hmRouted
+  have hcdData : cd ∈ cisData queries := by
+    exact List.mem_reverse.mp (List.mem_filter.mp hcdRouted).1
+  obtain ⟨c, hc, hcd⟩ := List.mem_map.mp hcdData
+  rcases cisComms_fold_prov queries [] hc with hnil | ⟨q, hq, hcq⟩
+  · exact absurd hnil List.not_mem_nil
+  · have hcommitment : cd.2.1 = q.commitment :=
+      (congrArg (fun entry => entry.2.1) hcd).symm.trans
+        (congrArg (fun entry => entry.2) hcq)
+    have hidentity : cd.1 = q.commId :=
+      (congrArg (fun entry => entry.1) hcd).symm.trans
+        (congrArg (fun entry => entry.1) hcq)
+    refine ⟨q, hq, ?_, ?_⟩
+    · rw [hsets, List.getD_eq_getElem _ _ (by simpa using hmRouted),
+        List.getElem_map]
+      simpa [cd] using hcommitment
+    · rw [hids, List.getD_eq_getElem _ _ (by simpa using hmRouted),
+        List.getElem_map]
+      simpa [cd] using hidentity
 
 /-- Rejecting version of `assembleOpening`. Halo2 derives the number of `u` evaluations from the grouped
 point sets and reads exactly that many scalars; a mismatch means the typed proof string is not the deployed

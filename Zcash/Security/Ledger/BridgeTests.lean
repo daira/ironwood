@@ -168,29 +168,14 @@ theorem path_iff_guarded_smoke
 /-- The circuit-level postcondition refines directly to the ledger action alternative. -/
 theorem spec_post_bridge_smoke {MSG SIG : Type*}
     (verify bverify : PallasGroup → MSG → SIG → Prop)
-    {input : Halo2.Value PrivateInputs Fp} {wit : ActionData}
-    (h : SpecPost orchardGenerators orchardBases input () wit) :
+    {wit : ActionData}
+    (h : SpecPost orchardGenerators orchardBases () () wit) :
     ActionBreak wit ∨
       ∃ inst w, PublicProjection wit inst ∧
         ActionSatisfied (Pool.primitives verify bverify) Pool.keyBinding inst w ∧
         CrossAddressSatisfied wit w ∧
         EnableFlagsSatisfied wit w :=
   specPost_to_ledger verify bverify h
-
-/-- Keep the exported end-to-end soundness theorem at its intended public shape. -/
-theorem circuit_soundness_bridge_smoke {MSG SIG : Type*}
-    (verify bverify : PallasGroup → MSG → SIG → Prop)
-    (cfg : Config) (i₀ : RegionIndex)
-    (env : Placed Environment Fp) (input : Var PrivateInputs Fp)
-    (henv : EnvAssumptions orchardGenerators cfg env)
-    (hconstraints : Constraints env.place env.env
-      ((mainPost orchardGenerators orchardBases cfg input).operations i₀) i₀) :
-    ActionBreak (extract cfg input i₀ env) ∨
-      ∃ inst w, PublicProjection (extract cfg input i₀ env) inst ∧
-        ActionSatisfied (Pool.primitives verify bverify) Pool.keyBinding inst w ∧
-        CrossAddressSatisfied (extract cfg input i₀ env) w ∧
-        EnableFlagsSatisfied (extract cfg input i₀ env) w :=
-  circuit_soundness_to_ledger verify bverify cfg i₀ env input henv hconstraints
 
 open Zcash.Meta
 
@@ -260,19 +245,6 @@ assert_axioms Zcash.Security.Ledger.BridgeTests.spec_post_bridge_smoke +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
-assert_axioms Zcash.Security.Ledger.BridgeTests.circuit_soundness_bridge_smoke +native(
-  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
-  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
-  Zcash.Security.Concrete.PallasGroup.pallas_base_card_lt_scalar_card,
-  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
-  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 
 -- The onward reduction from classified break data to the games-facing
 -- discrete-log-relation object is likewise a computation: the coefficients are a

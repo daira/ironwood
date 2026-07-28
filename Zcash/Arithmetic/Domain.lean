@@ -65,7 +65,7 @@ CompElliptic's certified Pasta root. This is the sole native-tier bridge in the 
 facts below; `omegaOf` itself remains pure data and does not infect assignment
 definitions with the certificate's native axiom.
 -/
-private theorem omegaOf_eq_certifiedRootPow :
+theorem omegaOf_eq_certifiedRootPow :
     ∀ k : Fin 33,
       omegaOf k =
         powFast CompElliptic.Fields.Pasta.pallasBase.rootOfUnity

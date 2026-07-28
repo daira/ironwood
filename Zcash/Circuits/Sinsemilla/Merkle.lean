@@ -80,20 +80,21 @@ structure Config where
 - `left_check`: `z1_a + (b_0 + b_1·2^10)·2^240 − left`, with `b_0 = b_whole − z1_b·2^10`
 - `right_check`: `b_2 + c_whole·2^5 − right`
 - `b1_b2_check`: `z1_b − (b_1 + b_2·2^5)` -/
-def decomposeGate (cfg : Config) : Gate Fp where
-  name := "Decomposition check"
-  selector := cfg.qDecompose
-  constraints :=
-    let aWhole : Expression Fp Query := queryAdvice cfg.aWhole 0
-    let bWhole : Expression Fp Query := queryAdvice cfg.bWhole 0
-    let cWhole : Expression Fp Query := queryAdvice cfg.cWhole 0
-    let leftNode : Expression Fp Query := queryAdvice cfg.leftNode 0
-    let rightNode : Expression Fp Query := queryAdvice cfg.rightNode 0
-    let z1A : Expression Fp Query := queryAdvice cfg.z1A 1
-    let z1B : Expression Fp Query := queryAdvice cfg.z1B 1
-    let b1 : Expression Fp Query := queryAdvice cfg.b1 1
-    let b2 : Expression Fp Query := queryAdvice cfg.b2 1
-    let l : Expression Fp Query := queryAdvice cfg.lWhole 1
+def decomposeGate (cfg : Config) : Gate Fp :=
+  let aWhole : Expression Fp Query := queryAdvice cfg.aWhole 0
+  let bWhole : Expression Fp Query := queryAdvice cfg.bWhole 0
+  let cWhole : Expression Fp Query := queryAdvice cfg.cWhole 0
+  let leftNode : Expression Fp Query := queryAdvice cfg.leftNode 0
+  let rightNode : Expression Fp Query := queryAdvice cfg.rightNode 0
+  let z1A : Expression Fp Query := queryAdvice cfg.z1A 1
+  let z1B : Expression Fp Query := queryAdvice cfg.z1B 1
+  let b1 : Expression Fp Query := queryAdvice cfg.b1 1
+  let b2 : Expression Fp Query := queryAdvice cfg.b2 1
+  let l : Expression Fp Query := queryAdvice cfg.lWhole 1
+  Gate.withSelector "Decomposition check" cfg.qDecompose
+    -- `l_whole` (advices[4] @ next) is queried first in the Rust closure, ahead of the
+    -- cur-row cells and the remaining next-row cells.
+    [l, aWhole, bWhole, cWhole, leftNode, rightNode, z1A, z1B, b1, b2] <|
     let twoPow5 : Expression Fp Query := (2 ^ 5 : Fp)
     let twoPow10 : Expression Fp Query := (2 ^ 10 : Fp)
     let twoPow240 : Expression Fp Query := (2 ^ 240 : Fp)
@@ -103,9 +104,8 @@ def decomposeGate (cfg : Config) : Gate Fp where
     let leftCheck := z1A + (b0 + b1 * twoPow10) * twoPow240 - leftNode
     let rightCheck := b2 + cWhole * twoPow5 - rightNode
     let b1b2Check := z1B - (b1 + b2 * twoPow5)
-    Constraints.withSelector cfg.qDecompose
-      [ ("l_check", lCheck), ("left_check", leftCheck),
-        ("right_check", rightCheck), ("b1_b2_check", b1b2Check) ]
+    [ ("l_check", lCheck), ("left_check", leftCheck),
+      ("right_check", rightCheck), ("b1_b2_check", b1b2Check) ]
 
 /-- The value-level decomposition spec, over the ten cell values.
 Uses the plain `(2^k : Fp)` literals (definitionally the `twoPow*` constants). -/
@@ -155,6 +155,13 @@ def configure (aWhole bWhole cWhole leftNode rightNode z1A z1B b1 b2 lWhole : Co
     Config.mk qDecompose aWhole bWhole cWhole leftNode rightNode z1A z1B b1 b2 lWhole
   createGate (decomposeGate cfg)
   return cfg
+
+instance (aWhole bWhole cWhole leftNode rightNode z1A z1B b1 b2 lWhole :
+    Column .advice) :
+    ElaboratedConfigure
+      (configure aWhole bWhole cWhole leftNode rightNode z1A z1B b1 b2 lWhole) := by
+  unfold configure
+  infer_instance
 
 /-! ### The gate gadget (pure region-level assertion)
 
@@ -271,6 +278,11 @@ def configure (scfg : HashPiece.Config) : Configure Fp Config := do
   let gate ← Gate.configure scfg.xA scfg.xP scfg.bits scfg.lambda1 scfg.lambda2
     scfg.xA scfg.xP scfg.bits scfg.lambda1 scfg.lambda2
   return { condSwap, gate, sinsemilla := scfg }
+
+instance (scfg : HashPiece.Config) :
+    ElaboratedConfigure (configure scfg) := by
+  unfold configure
+  infer_instance
 
 /-! ### Digit toolkit
 
@@ -2322,6 +2334,20 @@ def circuit :
       Nat.mod_eq_of_lt (show l₀ + (↑i : ℕ) < 2 ^ 10 from by
         have := i.isLt; omega)]
     exact ⟨B, hB⟩
+
+/--
+Expose the operation stream of `CalculateRoot.circuit` at its folded-call boundary.
+This keeps structural consumers from reducing the concrete fold or its closed-form
+accumulator merely to see that the trailing output projection emits no operations.
+-/
+theorem circuit_synthesize_operations
+    (cfg : CondSwap.Config × Config × LookupRangeCheck.Config 10)
+    (input : Var Layer.Input Fp) (i : RegionIndex) :
+    ((circuit G Q hQ l₀ d hld wsib wswap).synthesize cfg input).operations i =
+      (FormalCircuit.foldCall (layerAt G Q hQ l₀ wsib wswap) toInput
+        cfg input d).operations i := by
+  simp only [circuit, Circuit.operations_bind, Circuit.operations_pure,
+    List.append_nil]
 
 derive_contract_bridges circuit (G : Generators) (Q : Point Fp) (hQ : Q.OnCurve)
   (l₀ d : ℕ) (hld : l₀ + d ≤ 2 ^ 10) (wsib : ℕ → WitgenIR Fp 1)

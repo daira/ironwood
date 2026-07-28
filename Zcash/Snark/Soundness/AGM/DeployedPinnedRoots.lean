@@ -1,3 +1,4 @@
+import Zcash.Common.RelationWitness
 import Zcash.Snark.Soundness.AGM.DeployedRootDecode
 import Zcash.Snark.Soundness.AGM.OnlineMembers
 import Zcash.Snark.Soundness.Composition.DeployedRuntime
@@ -29,20 +30,6 @@ variable {shape : Shape}
 attribute [local irreducible] deployedX4PairCount deployedSetQueries
   x4BatchCommitments deployedSetMemberCommitments
 
-/-- Traverse computed sum outcomes left to right: every left-hand value, or the first right-hand
-value as data — no existential search. -/
-def finForallOrRelationWitness {n : Nat} {A : Fin n -> Type*} {R : Type*}
-    (outcome : forall i, A i ⊕' R) : (forall i, A i) ⊕' R := by
-  induction n with
-  | zero =>
-      exact PSum.inl fun i => Fin.elim0 i
-  | succ n ih =>
-      cases hhead : outcome 0 with
-      | inr relation => exact PSum.inr relation
-      | inl head =>
-          cases htail : ih (fun i => outcome i.succ) with
-          | inr relation => exact PSum.inr relation
-          | inl tail => exact PSum.inl (Fin.cases head tail)
 
 /-- Output type of the challenge-read wrapper used by the composition. -/
 abbrev WrappedAlgebraicOutput (family : ComputedAlgebraicFSFamily shape)
