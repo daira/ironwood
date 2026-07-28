@@ -8,18 +8,19 @@ import Zcash.Security.Ledger.MerkleDLR
 # The deployed instantiation: every Balance-subset arm computes a discrete-log relation
 
 At the deployed Orchard primitives, each of the three Balance-subset break arms reduces
-to a nontrivial discrete-log relation among the fixed Sinsemilla bases. These are the
-event-level reductions that discharge the capstone's three named ε hypotheses at the
-deployed instantiation. Each takes a sample on which the reduction lands in one arm and
-returns the arm's relation, so the arm's probability is the probability that the
-composite produces a relation. Under the pre-quantum hardness of the deployed bases
-(their independence, spec Theorems 5.4.3 and 5.4.4), that probability is the
-discrete-log-relation advantage — the same terminal the Merkle and note-commitment arms
-already share, with no random-oracle model.
+to a nontrivial discrete-log relation among the fixed Sinsemilla bases. Each reducer is a
+total, hypothesis-free function from the arm's break to its relation, so it needs no
+random-oracle model. `deployedBalanceSubsetOrRelation` runs all three: from a valid
+deployed ledger it computes either the Balance-subset containment or a nontrivial relation
+among the fixed bases.
 
-Composing these with `balanceSubset_measure_le` replaces the three opaque arm ε's with
-one discrete-log-relation assumption per domain point, and the key-binding arm no longer
-needs the oracle model at the deployed instantiation.
+This is the deterministic core of the deployed ε discharge. The probability that a sampled
+ledger produces a relation is the discrete-log-relation advantage for the fixed bases,
+under their pre-quantum hardness (their independence, spec Theorems 5.4.3 and 5.4.4). That
+is the same terminal as the Merkle and note-commitment arms, and the key-binding arm
+reaches it here without the oracle model. Turning this deterministic reduction into a bound
+on the capstone's named ε — composing it with `balanceSubset_measure_le` over a `PMF` of
+deployed ledgers — is not yet formalized.
 -/
 
 namespace Zcash.Security.Ledger.Bridge
@@ -50,8 +51,8 @@ inductive DeployedBalanceRelation where
 nonzero spends of the first `i + 1` transactions are covered by the positioned outputs
 of the first `i`, or the ledger's own data computes a nontrivial discrete-log relation
 among the fixed Sinsemilla bases. Each Balance-subset break arm is routed through its
-deployed reducer, so the three named ε hypotheses collapse to one discrete-log-relation
-assumption per domain point, with no random-oracle model. -/
+deployed reducer, so a break in any arm becomes a nontrivial relation among the fixed
+bases, with no random-oracle model. -/
 def deployedBalanceSubsetOrRelation {ledger : Ledger _ Fq PallasGroup Fp Fp Fp Encoding MSG SIG _}
     (hval : ValidLedger (primitives (MSG := MSG) (SIG := SIG) verify bverify) keyBinding
       issuance maxActions ledger) (i : ℕ) :

@@ -307,10 +307,10 @@ assert_axioms Zcash.Security.Ledger.Model.spendAuthority_measure_le
 /-! ## The deployed discrete-log-relation discharges
 
 Each deployed Balance-subset break arm reduces to a nontrivial discrete-log relation
-among the fixed Sinsemilla bases (`deployedBalanceSubsetOrRelation`), routing the three
-named ε hypotheses to one discrete-log-relation assumption per domain point. The
-reductions are computable, so they get assert_computable. The encoding-injectivity and
-coefficient-injectivity facts they consume are theorems. -/
+among the fixed Sinsemilla bases, and `deployedBalanceSubsetOrRelation` routes all three
+from a valid deployed ledger. The reductions are computable, so they get
+assert_computable. The encoding-injectivity and coefficient-injectivity facts they
+consume are theorems. -/
 
 assert_axioms Zcash.NontrivialRelation.toOne
 assert_axioms Zcash.Circuits.Specs.Sinsemilla.chunksOf_inj
