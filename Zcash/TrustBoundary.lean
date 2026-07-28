@@ -1192,6 +1192,13 @@ assert_computable Zcash.Snark.deployedDirectDecodeOps +choice
 -- The semantic challenge remainder (`Composition.SemanticChallengeRemainder`): the bundle-wide
 -- permutation and lookup exclusions priced from their card bounds, summed with the `y` fold-split
 -- term.  These terms are charged separately from the compressed-identity ceiling.
+-- The index-generic squeeze bridge (`Composition.PrefixedSqueeze`): a bad-root event at any
+-- pre-IPA squeeze costs `(Q + 1) * epsilon`, so the y/beta/gamma/theta surfaces are priced the
+-- same way the x surface already was.
+assert_axioms Zcash.Snark.preIpaLen_strictMono
+assert_axioms Zcash.Snark.algebraicFullPrefixesPre_eq_of_eq_at +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.algebraicFullPrefixesPre_ne_at +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.badAt_le_via_squeeze_prefixed +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.allResolverPermutationGammaBadSet_measure_le
 assert_axioms Zcash.Snark.allResolverPermutationBetaBadSet_measure_le
 assert_axioms Zcash.Snark.allResolverLookupGammaBadSet_measure_le

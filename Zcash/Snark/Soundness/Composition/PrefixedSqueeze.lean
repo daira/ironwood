@@ -17,6 +17,18 @@ open Classical
 
 variable {shape : Shape}
 
+/-- The eleven pre-IPA prefix lengths strictly increase: each stage absorbs before it squeezes. -/
+theorem preIpaLen_strictMono (shape : Shape) (n0 : Nat) : StrictMono (preIpaLen shape n0) := by
+  rw [Fin.strictMono_iff_lt_succ]
+  intro j
+  fin_cases j <;> simp [preIpaLen]
+  all_goals omega
+
+/-- A squeeze point strictly before index `n` is a strict prefix of the index-`n` point. -/
+theorem preIpaLen_lt_at (shape : Shape) (n0 : Nat) {i n : Fin 11} (hi : (i : Nat) < (n : Nat)) :
+    preIpaLen shape n0 i < preIpaLen shape n0 n :=
+  preIpaLen_strictMono shape n0 hi
+
 /-- Every pre-`x` squeeze point is a strict prefix of the `x` squeeze point. -/
 theorem preIpaLen_lt_x (shape : Shape) (n0 : Nat) {i : Fin 11} (hi : (i : Nat) < 4) :
     preIpaLen shape n0 i < preIpaLen shape n0 4 := by
@@ -81,6 +93,55 @@ theorem algebraicFullPrefixesPre_ne_x
   rw [preIpaSqueezePoints_length_eq init p.proof.1 p.proof.2,
     preIpaSqueezePoints_length_eq init p.proof.1 p.proof.2] at hlen
   exact absurd hlen (Nat.ne_of_lt (preIpaLen_lt_x shape init.length hi))
+
+/-- Equal squeeze points at index `n` imply equal squeeze points at every earlier index. -/
+theorem algebraicFullPrefixesPre_eq_of_eq_at
+    {basis : AugmentedIndex (2 ^ shape.k) -> VestaG}
+    {vk : VerifyingKey shape Fp VestaG}
+    {instanceCommitment : Fin shape.numProofs -> Nat -> VestaG}
+    (init : List (TranscriptElt Fp VestaG))
+    (p q : AlgebraicWfProof basis vk instanceCommitment) {n : Fin 11}
+    (h : algebraicFullPrefixesPre init p n = algebraicFullPrefixesPre init q n)
+    {i : Fin 11} (hi : (i : Nat) < (n : Nat)) :
+    algebraicFullPrefixesPre init p i = algebraicFullPrefixesPre init q i := by
+  apply Subtype.ext
+  have hval : preIpaSqueezePoints init p.proof.1 n = preIpaSqueezePoints init q.proof.1 n :=
+    congrArg Subtype.val h
+  have hpreP := List.prefix_of_prefix_length_le
+    (preIpaSqueezePoints_prefix init p.proof.1 i)
+    (preIpaSqueezePoints_prefix init p.proof.1 n)
+    (by
+      rw [preIpaSqueezePoints_length_eq init p.proof.1 p.proof.2,
+        preIpaSqueezePoints_length_eq init p.proof.1 p.proof.2]
+      exact le_of_lt (preIpaLen_lt_at shape init.length hi))
+  have hpreQ := List.prefix_of_prefix_length_le
+    (preIpaSqueezePoints_prefix init q.proof.1 i)
+    (preIpaSqueezePoints_prefix init q.proof.1 n)
+    (by
+      rw [preIpaSqueezePoints_length_eq init q.proof.1 q.proof.2,
+        preIpaSqueezePoints_length_eq init q.proof.1 q.proof.2]
+      exact le_of_lt (preIpaLen_lt_at shape init.length hi))
+  show preIpaSqueezePoints init p.proof.1 i = preIpaSqueezePoints init q.proof.1 i
+  rw [List.prefix_iff_eq_take.mp hpreP, List.prefix_iff_eq_take.mp hpreQ,
+    preIpaSqueezePoints_length_eq init p.proof.1 p.proof.2,
+    preIpaSqueezePoints_length_eq init q.proof.1 q.proof.2, hval]
+
+/-- An earlier squeeze point differs from the index-`n` point: their lengths differ. -/
+theorem algebraicFullPrefixesPre_ne_at
+    {basis : AugmentedIndex (2 ^ shape.k) -> VestaG}
+    {vk : VerifyingKey shape Fp VestaG}
+    {instanceCommitment : Fin shape.numProofs -> Nat -> VestaG}
+    (init : List (TranscriptElt Fp VestaG))
+    (p : AlgebraicWfProof basis vk instanceCommitment) {n i : Fin 11}
+    (hi : (i : Nat) < (n : Nat)) :
+    algebraicFullPrefixesPre init p i ≠ algebraicFullPrefixesPre init p n := by
+  intro hEq
+  have hlen : (preIpaSqueezePoints init p.proof.1 i).length =
+      (preIpaSqueezePoints init p.proof.1 n).length :=
+    congrArg (fun t : List (TranscriptElt Fp VestaG) => t.length) (congrArg Subtype.val hEq)
+  rw [preIpaSqueezePoints_length_eq init p.proof.1 p.proof.2,
+    preIpaSqueezePoints_length_eq init p.proof.1 p.proof.2] at hlen
+  exact absurd hlen (Nat.ne_of_lt (preIpaLen_lt_at shape init.length hi))
 
 open ComputedAlgebraicFSFamily in
 /-- The pre-`x` transcript and earlier answers remain pinned while resampling `x`, so a bad-root
@@ -168,6 +229,95 @@ theorem badX_le_via_squeeze_prefixed {T' : Type*} [DecidableEq T']
     Function.update_of_ne
       (algebraicFullPrefixesPre_ne_x family.init _
         (show ((i.castLE (by omega) : Fin 11) : Nat) < 4 from i.isLt))]
+
+open ComputedAlgebraicFSFamily in
+/-- **A bad-root event at any pre-IPA squeeze costs `(Q + 1) * epsilon`.**  The index-`n`
+generalization of `badX_le_via_squeeze_prefixed`: once the index-`n` prefix is stable under
+reprogramming (`hstab`), every earlier answer is too, because their squeeze points are strict
+sub-prefixes.  Instantiate at `n = 3` for `y`, `n = 2` for `γ`, `n = 1` for `β`, `n = 0` for `θ`;
+`n = 4` recovers the `x` statement. -/
+theorem badAt_le_via_squeeze_prefixed {T' : Type*} [DecidableEq T'] (n : Fin 11)
+    (query : AugmentedIndex (2 ^ shape.k) -> T')
+    (family : ComputedAlgebraicFSFamily shape)
+    (good : (AugmentedIndex (2 ^ shape.k) -> VestaG) -> family.Coins -> Prop)
+    (badF : (AugmentedIndex (2 ^ shape.k) -> VestaG) ->
+      BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) ->
+      (Fin (n : Nat) -> Fp) -> Set Fp)
+    (hstab : forall basis (O : BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) (v : Fp),
+      algebraicFullPrefixesPre family.init ((family.adversary basis).run
+          (Function.update O (algebraicFullPrefixesPre family.init
+            ((family.adversary basis).run O) n) v)) n =
+        algebraicFullPrefixesPre family.init ((family.adversary basis).run O) n)
+    {epsilon : ENNReal}
+    (hbad : forall basis t nu,
+      (PMF.uniformOfFintype Fp).toOuterMeasure (badF basis t nu) <= epsilon)
+    (hcont : forall basis, {coins : family.Coins | ¬ good basis coins} <=
+      {coins : family.Coins |
+        coins.1 (algebraicFullPrefixesPre family.init
+            ((family.adversary basis).run coins.1) n) ∈
+          badF basis (algebraicFullPrefixesPre family.init
+              ((family.adversary basis).run coins.1) n)
+            (fun i : Fin (n : Nat) => coins.1 (algebraicFullPrefixesPre family.init
+              ((family.adversary basis).run coins.1)
+              (i.castLE (le_of_lt n.isLt))))}) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          {q : (AugmentedIndex (2 ^ shape.k) -> VestaG) × family.Coins | ¬ good q.1 q.2})
+      <= (family.Q + 1 : Nat) * epsilon := by
+  have hset : (fun p : (↥(Set.range query) -> VestaG) × family.Coins =>
+        (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+        {q : (AugmentedIndex (2 ^ shape.k) -> VestaG) × family.Coins | ¬ good q.1 q.2} =
+      {x : (↥(Set.range query) -> VestaG) × family.Coins | x.2 ∈
+        (fun setup => {coins : family.Coins |
+          ¬ good (orchardGeneratorROBasis query setup) coins}) x.1} := by
+    ext p
+    simp only [Set.mem_preimage, Set.mem_setOf_eq]
+  rw [hset]
+  refine independentProductPMF_fiber_bound (orchardGeneratorROSetup query)
+    (PMF.uniformOfFintype family.Coins)
+    (fun setup => {coins : family.Coins |
+      ¬ good (orchardGeneratorROBasis query setup) coins}) ?_
+  intro setup
+  set basis' := orchardGeneratorROBasis query setup with hbasis'
+  refine le_trans (MeasureTheory.measure_mono (hcont basis')) ?_
+  refine uniformOfFintype_prod_fiber_bound
+    (fun _ : RecursiveForkTape Fp shape.k =>
+      {O | O (algebraicFullPrefixesPre family.init ((family.adversary basis').run O) n) ∈
+        badF basis' (algebraicFullPrefixesPre family.init
+            ((family.adversary basis').run O) n)
+          (fun i : Fin (n : Nat) => O (algebraicFullPrefixesPre family.init
+            ((family.adversary basis').run O) (i.castLE (le_of_lt n.isLt))))})
+    (fun _ => ?_)
+  refine xEscTable_measure_le (family.adversary basis')
+    (fun p => algebraicFullPrefixesPre family.init p n)
+    (fun p O => badF basis' (algebraicFullPrefixesPre family.init p n)
+      (fun i : Fin (n : Nat) => O (algebraicFullPrefixesPre family.init p
+        (i.castLE (le_of_lt n.isLt)))))
+    ?_ (fun p O => hbad basis' _ _) (family.queryBound basis')
+  intro O v
+  have hx := hstab basis' O v
+  show badF basis' (algebraicFullPrefixesPre family.init ((family.adversary basis').run
+        (Function.update O (algebraicFullPrefixesPre family.init
+          ((family.adversary basis').run O) n) v)) n)
+      (fun i : Fin (n : Nat) => (Function.update O (algebraicFullPrefixesPre family.init
+          ((family.adversary basis').run O) n) v)
+        (algebraicFullPrefixesPre family.init ((family.adversary basis').run
+          (Function.update O (algebraicFullPrefixesPre family.init
+            ((family.adversary basis').run O) n) v))
+          (i.castLE (le_of_lt n.isLt)))) =
+    badF basis' (algebraicFullPrefixesPre family.init ((family.adversary basis').run O) n)
+      (fun i : Fin (n : Nat) => O (algebraicFullPrefixesPre family.init
+        ((family.adversary basis').run O) (i.castLE (le_of_lt n.isLt))))
+  rw [hx]
+  congr 1
+  funext i
+  rw [algebraicFullPrefixesPre_eq_of_eq_at family.init _ _ hx
+      (show ((i.castLE (le_of_lt n.isLt) : Fin 11) : Nat) < (n : Nat) from i.isLt),
+    Function.update_of_ne
+      (algebraicFullPrefixesPre_ne_at family.init _
+        (show ((i.castLE (le_of_lt n.isLt) : Fin 11) : Nat) < (n : Nat) from i.isLt))]
 
 /-! ## Discharging the stability input
 
