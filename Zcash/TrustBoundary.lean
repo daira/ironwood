@@ -1138,19 +1138,6 @@ assert_axioms Zcash.Security.Ledger.Bridge.specPost_to_ledger +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
-assert_axioms Zcash.Security.Ledger.Bridge.circuit_soundness_to_ledger +native(
-  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
-  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
-  Zcash.Security.Concrete.PallasGroup.pallas_base_card_lt_scalar_card,
-  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
-  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Security.Ledger.Bridge.actionBreak_of_classify +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,

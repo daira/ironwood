@@ -479,7 +479,7 @@ theorem classify_none_defined {wit : ActionData} (h : classifyAction wit = none)
 
 /-- **The Prop-level break and the computed classifier cannot diverge, at the consumer
 boundary either**: an exhibited `ActionBreak` holds exactly when the classifier reports
-an escape.  A consumer landing in the break arm of `circuit_soundness_to_ledger` can
+an escape.  A consumer landing in the break arm of `specPost_to_ledger` can
 therefore pass to `classifyAction`'s (and hence `classifyRelation`'s) computed data
 without reconstructing the glue: forward, each break constructor's
 `hashToPointB … = .inr` equation contradicts the defined hashes of a `none` verdict;
@@ -924,24 +924,5 @@ theorem specPost_to_ledger (verify bverify : PallasGroup → MSG → SIG → Pro
           simp [hz]
         exact (sub_eq_zero.mp ((mul_eq_zero.mp heo).resolve_left hvNew0)).symm
   · exact Or.inl hbreak
-
-/-- End-to-end refinement for a satisfying run of the deployed post-NU6.3
-Action circuit.  This is the direct composition of the circuit soundness
-contract with `specPost_to_ledger`; it deliberately leaves the exceptional
-Sinsemilla branch explicit and reports the enable gates as `EnableFlagsSatisfied`. -/
-theorem circuit_soundness_to_ledger (verify bverify : PallasGroup → MSG → SIG → Prop)
-    (cfg : Config) (i₀ : RegionIndex)
-    (env : Placed Environment Fp)
-    (henv : EnvAssumptions cfg env)
-    (hconstraints : Constraints env.place env.env
-      ((mainPost orchardGenerators orchardBases cfg ()).operations i₀) i₀) :
-    ActionBreak (extractPost cfg () i₀ env) ∨
-      ∃ inst w, PublicProjection (extractPost cfg () i₀ env) inst ∧
-        ActionSatisfied (Pool.primitives verify bverify) Pool.keyBinding inst w ∧
-        CrossAddressSatisfied (extractPost cfg () i₀ env) w ∧
-        EnableFlagsSatisfied (extractPost cfg () i₀ env) w := by
-  have hpost := soundnessPost orchardGenerators orchardBases cfg i₀ env ()
-    henv trivial hconstraints
-  exact specPost_to_ledger verify bverify (by simpa using hpost)
 
 end Zcash.Security.Ledger.Bridge
