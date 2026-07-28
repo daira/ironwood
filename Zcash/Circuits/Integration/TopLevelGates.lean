@@ -288,14 +288,12 @@ theorem canonicalConstraints
     (coherence : TopLevelGateCoherence top pp urs)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
-    (hblinding :
-      (top.toVerifierKey pp urs).blindingFactors <
-        (top.toVerifierKey pp urs).n)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (satisfaction :
       ConstraintSatisfaction
         (canonicalConstraintModelOfPermutationResolver
-          (top.toVerifierKey pp urs) ch poly hblinding)
+          (top.toVerifierKey pp urs) ch poly
+          (top.toVerifierKey_blindingFactors_lt_n pp urs))
         (top.toVerifierKey pp urs).n)
     (domain : ∀ row : ℕ,
       ((top.toVerifierKey pp urs).omega ^ row) ^
@@ -312,7 +310,8 @@ theorem canonicalConstraints
       (top.operations) 0 := by
   let selectors :=
     canonicalLagrangePolynomials
-      (top.toVerifierKey pp urs).omega hblinding
+      (top.toVerifierKey pp urs).omega
+        (top.toVerifierKey_blindingFactors_lt_n pp urs)
   apply coherence.constraints ch poly
     (permutationSetsOfResolver
       (top.toVerifierKey pp urs) poly)

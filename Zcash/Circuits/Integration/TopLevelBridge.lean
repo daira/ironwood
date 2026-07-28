@@ -46,13 +46,11 @@ noncomputable def ofTopLevelCanonical
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
-    (hblinding :
-      (top.toVerifierKey pp urs).blindingFactors <
-        (top.toVerifierKey pp urs).n)
     (satisfaction :
       ConstraintSatisfaction
         (canonicalConstraintModelOfPermutationResolver
-          (top.toVerifierKey pp urs) ch poly hblinding)
+          (top.toVerifierKey pp urs) ch poly
+          (top.toVerifierKey_blindingFactors_lt_n pp urs))
         (top.toVerifierKey pp urs).n)
     (hrows : Function.Injective
       fun row : Fin (top.toVerifierKey pp urs).n =>
@@ -94,13 +92,13 @@ noncomputable def ofTopLevelCanonical
       copies := copies
       theta := ch.theta
       lookups := ?_ }
-  · apply gateCoherence.canonicalConstraints ch poly hblinding proofIndex
+  · apply gateCoherence.canonicalConstraints ch poly proofIndex
       satisfaction
     · intro row
       rw [← pow_mul, Nat.mul_comm, pow_mul, hroot, one_pow]
     · exact selectorActivations
   · exact lookupCoherence.deployedWitnesses gateCoherence ch poly proofIndex
-      hblinding satisfaction hrows hroot lookupConditions
+      satisfaction hrows hroot lookupConditions
 
 /--
 Lift per-proof full bridges to a bundle of circuit-owned statements while

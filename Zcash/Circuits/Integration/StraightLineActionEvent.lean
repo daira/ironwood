@@ -82,7 +82,7 @@ noncomputable abbrev actionRunModel
     (memberDecode := fun i hi =>
       (actionRunDecode pp family static basis O inputs (hvk basis) (hI basis) h).toMemberDecode
         (hchar basis O) i hi)
-    (hblinding := ActionPermutationDomain.blindingFactors_lt pp
+    (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
     (actionRunAccepts pp family static basis O inputs (hvk basis) (hI basis) h)
 

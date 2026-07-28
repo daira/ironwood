@@ -46,13 +46,11 @@ noncomputable def topLevelBundleStatement_or_bad_of_components
     {poly : CommitmentId → Polynomial Fp}
     {cell : Type} [DecidableEq cell] [Fintype cell]
     {Bad : Type}
-    (hblinding :
-      (top.toVerifierKey pp urs).blindingFactors <
-        (top.toVerifierKey pp urs).n)
     (satisfaction :
       ConstraintSatisfaction
         (canonicalConstraintModelOfPermutationResolver
-          (top.toVerifierKey pp urs) ch poly hblinding)
+          (top.toVerifierKey pp urs) ch poly
+          (top.toVerifierKey_blindingFactors_lt_n pp urs))
         (top.toVerifierKey pp urs).n)
     (gates : TopLevelGateCoherence top pp urs)
     (fixedEncoding : ∀ proofIndex,
@@ -76,7 +74,7 @@ noncomputable def topLevelBundleStatement_or_bad_of_components
             (top.environment assignment.proofAssignment)))
       fun proofIndex =>
         (TopLevelAssignment.bridgeWitness_of_components
-            proofIndex hblinding satisfaction gates
+            proofIndex satisfaction gates
             (fixedEncoding proofIndex)
             (fixed proofIndex).1 (fixed proofIndex).2
             (copies proofIndex) (lookups proofIndex)).statement_or_bad
@@ -96,13 +94,11 @@ noncomputable def topLevelBundleStatement_or_bad_of_constraintSatisfaction
     {poly : CommitmentId → Polynomial Fp}
     {cell : Type} [DecidableEq cell] [Fintype cell]
     {Bad : Type}
-    (hblinding :
-      (top.toVerifierKey pp urs).blindingFactors <
-        (top.toVerifierKey pp urs).n)
     (satisfaction :
       ConstraintSatisfaction
         (canonicalConstraintModelOfPermutationResolver
-          (top.toVerifierKey pp urs) ch poly hblinding)
+          (top.toVerifierKey pp urs) ch poly
+          (top.toVerifierKey_blindingFactors_lt_n pp urs))
         (top.toVerifierKey pp urs).n)
     (correctness :
       TopLevelCircuitCorrectness top pp urs ch poly cell Bad) :
@@ -133,7 +129,7 @@ noncomputable def topLevelBundleStatement_or_bad_of_constraintSatisfaction
       bindOutcome copiesOutcome fun hcopies =>
         bindOutcome lookupsOutcome fun hlookups =>
           topLevelBundleStatement_or_bad_of_components
-            hblinding satisfaction correctness.gates
+            satisfaction correctness.gates
             hfixedEncoding hfixed hcopies hlookups
 
 assert_no_sorry topLevelBundleStatement_or_bad_of_constraintSatisfaction

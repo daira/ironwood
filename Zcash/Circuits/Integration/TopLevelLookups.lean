@@ -608,14 +608,11 @@ noncomputable def deployedWitness
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
-    (hblinding :
-      (top.toVerifierKey pp urs).blindingFactors <
-        (top.toVerifierKey pp urs).n)
     (satisfaction :
       ConstraintSatisfaction
         (canonicalConstraintModelOfPermutationResolver
           (top.toVerifierKey pp urs) ch poly
-          hblinding)
+          (top.toVerifierKey_blindingFactors_lt_n pp urs))
         (top.toVerifierKey pp urs).n)
     (hrows : Function.Injective
       fun row : Fin (top.toVerifierKey pp urs).n =>
@@ -695,7 +692,9 @@ noncomputable def deployedWitness
     simpa only [List.length_map] using harity'
   let selectorPolynomials :=
     canonicalLagrangePolynomials vk.omega
-      (by simpa only [vk] using hblinding)
+      (by
+        simpa only [vk] using
+          top.toVerifierKey_blindingFactors_lt_n pp urs)
   have domain :
       ResolverLookupDomain vk selectorPolynomials.1
         selectorPolynomials.2.1 selectorPolynomials.2.2
@@ -941,13 +940,11 @@ noncomputable def deployedWitnesses
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
-    (hblinding :
-      (top.toVerifierKey pp urs).blindingFactors <
-        (top.toVerifierKey pp urs).n)
     (satisfaction :
       ConstraintSatisfaction
         (canonicalConstraintModelOfPermutationResolver
-          (top.toVerifierKey pp urs) ch poly hblinding)
+          (top.toVerifierKey pp urs) ch poly
+          (top.toVerifierKey_blindingFactors_lt_n pp urs))
         (top.toVerifierKey pp urs).n)
     (hrows : Function.Injective
       fun row : Fin (top.toVerifierKey pp urs).n =>
@@ -978,7 +975,7 @@ noncomputable def deployedWitnesses
       (conditions.inputSelectorValues lookup henabled)
       (coherence.tablesFree lookup.argument hargument)
   exact coherence.deployedWitness gateCoherence ch poly proofIndex
-    hblinding satisfaction hrows hroot lookup henabled
+    satisfaction hrows hroot lookup henabled
     selectorProjection
     (lookup.activationRow_lt_usableRows henabled)
     (conditions.resolverGood lookup henabled)
@@ -991,13 +988,11 @@ theorem constraints
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
-    (hblinding :
-      (top.toVerifierKey pp urs).blindingFactors <
-        (top.toVerifierKey pp urs).n)
     (satisfaction :
       ConstraintSatisfaction
         (canonicalConstraintModelOfPermutationResolver
-          (top.toVerifierKey pp urs) ch poly hblinding)
+          (top.toVerifierKey pp urs) ch poly
+          (top.toVerifierKey_blindingFactors_lt_n pp urs))
         (top.toVerifierKey pp urs).n)
     (hrows : Function.Injective
       fun row : Fin (top.toVerifierKey pp urs).n =>
@@ -1014,7 +1009,7 @@ theorem constraints
       (top.operations) 0 := by
   apply lookup_constraints_of_deployed_witnesses
   exact coherence.deployedWitnesses gateCoherence ch poly proofIndex
-    hblinding satisfaction hrows hroot conditions
+    satisfaction hrows hroot conditions
 
 end TopLevelLookupCoherence
 

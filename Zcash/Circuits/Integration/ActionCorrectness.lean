@@ -69,7 +69,7 @@ noncomputable def ofAcceptedCircuitSat
       (CanonicalMemberConstraintRelation.acceptedModel
         (memberDecode := memberDecode)
         (hblinding :=
-          ActionPermutationDomain.blindingFactors_lt pp urs)
+          actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
         haccepts).CircuitSat
           ch.y hpoly
           (actionCircuit.toVerifierKey pp urs).n a)
@@ -79,7 +79,7 @@ noncomputable def ofAcceptedCircuitSat
           (CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode := memberDecode)
             (hblinding :=
-              ActionPermutationDomain.blindingFactors_lt pp urs)
+              actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).constraints
           (actionCircuit.toVerifierKey pp urs).n j))
     (permutationExclusions :

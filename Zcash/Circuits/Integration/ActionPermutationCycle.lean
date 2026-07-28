@@ -292,7 +292,8 @@ noncomputable def actionResolverPermutationCycle_or_relation
     (relation : CanonicalMemberConstraintRelation
       urs hk (actionVk pp urs) instanceCommitment ps ch pU pW a
       batchOpenings memberDecode
-        (blindingFactors_lt pp urs) y hpoly deg)
+        (actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
+        y hpoly deg)
     (proofIndex : Fin (actionShape pp).numProofs) :
     (∃ cycle : ResolverPermutationCycle
         (actionVk pp urs) relation.polynomial proofIndex actionActiveRows,

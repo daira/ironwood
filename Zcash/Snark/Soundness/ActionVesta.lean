@@ -159,7 +159,7 @@ noncomputable def action_bundleStatement_or_relation_of_deployedAccepts
             (actionCircuit.toVerifierKey pp urs)
             (actionCircuit.instanceCommitment pp urs inputs) ps ch
             pbatch hlen hprob1 haccepts)
-        (hblinding := ActionPermutationDomain.blindingFactors_lt pp urs)
+        (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
         haccepts)
     (hxgood :
       ch.x ∉ szBadSet
@@ -170,7 +170,7 @@ noncomputable def action_bundleStatement_or_relation_of_deployedAccepts
                 (actionCircuit.toVerifierKey pp urs)
                 (actionCircuit.instanceCommitment pp urs inputs) ps ch
                 pbatch hlen hprob1 haccepts)
-            (hblinding := ActionPermutationDomain.blindingFactors_lt pp urs)
+            (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts
         combineConstraints model.fixedCols model.adviceCols model.instanceCols
           model.gates model.sets model.chunks model.lookups
@@ -187,7 +187,7 @@ noncomputable def action_bundleStatement_or_relation_of_deployedAccepts
                 (actionCircuit.toVerifierKey pp urs)
                 (actionCircuit.instanceCommitment pp urs inputs) ps ch
                 pbatch hlen hprob1 haccepts)
-            (hblinding := ActionPermutationDomain.blindingFactors_lt pp urs)
+            (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).constraints
           (actionCircuit.toVerifierKey pp urs).n j))
     (permutationExclusions :
@@ -223,7 +223,6 @@ noncomputable def action_bundleStatement_or_relation_of_deployedAccepts
     topLevelStatements_or_relation_of_deployedAccepts
       actionCircuit pp urs hk inputs
       ps ch pU pW hpoly pbatch hξcur hlen hprob1 haccepts
-      (ActionPermutationDomain.blindingFactors_lt pp urs)
       (ActionGateCoherence.topLevelGateCoherence pp urs)
       i m hm colPoly hbindAll hquot hroute hevals claimed hxgood hgoodY
       (cell := FlatCell actionNumPermCols actionDomainSize)

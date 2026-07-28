@@ -56,21 +56,21 @@ Canonical circuit satisfaction and the circuit's named correctness package yield
 its statements at the supplied public inputs, or a computed nontrivial relation.
 -/
 noncomputable def statements_or_relation_of_circuitSat
-    (hblinding :
-      (top.toVerifierKey pp urs).blindingFactors <
-        (top.toVerifierKey pp urs).n)
     (hpoly : Polynomial Fp)
     (hsatisfied :
       (CanonicalMemberConstraintRelation.acceptedModel
         (memberDecode := memberDecode)
-        (hblinding := hblinding) haccepts).CircuitSat
+        (hblinding :=
+          top.toVerifierKey_blindingFactors_lt_n pp urs) haccepts).CircuitSat
           ch.y hpoly (top.toVerifierKey pp urs).n a)
     (hgoodY : ∀ j,
       ch.y ∉ szBadSet
         (foldSplitWitness
           (CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode := memberDecode)
-            (hblinding := hblinding) haccepts).constraints
+            (hblinding :=
+              top.toVerifierKey_blindingFactors_lt_n pp urs)
+            haccepts).constraints
           (top.toVerifierKey pp urs).n j))
     {cell : Type} [DecidableEq cell] [Fintype cell]
     (correctness :
@@ -102,7 +102,7 @@ noncomputable def statements_or_relation_of_circuitSat
   have htop :=
     topLevelBundleStatement_or_bad_of_constraintSatisfaction
       (top := top) (pp := pp) (urs := urs) (ch := ch)
-      (cell := cell) hblinding
+      (cell := cell)
       (by simpa only [hpolynomial] using hsatisfaction)
       correctness
   rcases htop with htop | hrelation

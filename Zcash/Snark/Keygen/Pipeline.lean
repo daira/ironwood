@@ -466,6 +466,18 @@ theorem toVerifierKey_blindingFactors
   simp [toVerifierKey, verifierKeyAt, VerifyingKey.ofOperations,
     TopLevelCircuit.blindingFactors]
 
+/--
+The fitting domain of a circuit-derived verification key has room for all of
+the circuit's blinding rows.
+-/
+theorem toVerifierKey_blindingFactors_lt_n
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (pp : ProofParams) (urs : URS G) :
+    (top.toVerifierKey pp urs).blindingFactors <
+      (top.toVerifierKey pp urs).n := by
+  rw [top.toVerifierKey_blindingFactors, top.toVerifierKey_n]
+  exact top.blindingFactors_lt_domainSize
+
 /-- The derived key exposes the fixed commitments computed from its own dense rows. -/
 theorem toVerifierKey_fixedCommitment
     (top : TopLevelCircuit Fp Config PublicInput)

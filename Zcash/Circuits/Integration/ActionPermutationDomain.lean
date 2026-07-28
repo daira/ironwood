@@ -281,12 +281,6 @@ theorem root (pp : Keygen.ProofParams) (urs : URS G) :
     (2 ^ actionCircuit.domainExponent) = 1
   exact TopLevelAssignment.domainRoot domainExponent_lt
 
-theorem blindingFactors_lt (pp : Keygen.ProofParams) (urs : URS G) :
-    (actionVk pp urs).blindingFactors < (actionVk pp urs).n := by
-  change actionCircuit.blindingFactors <
-    2 ^ actionCircuit.domainExponent
-  exact TopLevelAssignment.blindingFactors_lt_domainSize
-
 /-- The active permutation prefix ends at the last usable Action row. -/
 abbrev activeRows (pp : Keygen.ProofParams) (urs : URS G) : ℕ :=
   (actionVk pp urs).n - (actionVk pp urs).blindingFactors - 1
@@ -303,7 +297,8 @@ theorem domain
     (pp : Keygen.ProofParams) (urs : URS G)
     (ch : Challenges (actionShape pp).k Fp)
     (poly : CommitmentId → Polynomial Fp) :
-    let hblinding := blindingFactors_lt pp urs
+    let hblinding :=
+      actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs
     let model :=
       canonicalConstraintModelOfPermutationResolver
         (actionVk pp urs) ch poly hblinding
@@ -312,7 +307,8 @@ theorem domain
       (actionVk pp urs).n
       ((actionVk pp urs).n - (actionVk pp urs).blindingFactors - 1) := by
   exact ResolverPermutationDomain.ofCanonicalConstraintModel
-    (actionVk pp urs) ch poly (blindingFactors_lt pp urs)
+    (actionVk pp urs) ch poly
+      (actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
       (rowsInjective pp urs) (root pp urs) (nonempty pp)
       (chunkCount pp urs)
 

@@ -77,9 +77,6 @@ noncomputable def topLevelStatements_or_relation_of_deployedAccepts
     (haccepts :
       DeployedAccepts urs hk
         (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch)
-    (hblinding :
-      (top.toVerifierKey pp urs).blindingFactors <
-        (top.toVerifierKey pp urs).n)
     (gateCoherence : TopLevelGateCoherence top pp urs)
     (i m : ℕ)
     (hm : m < (deployedSetQueries
@@ -135,7 +132,8 @@ noncomputable def topLevelStatements_or_relation_of_deployedAccepts
           vestaExtractedMemberDecode urs hk
             (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch
             pbatch hlen hprob1 haccepts)
-        (hblinding := hblinding) haccepts)
+        (hblinding :=
+          top.toVerifierKey_blindingFactors_lt_n pp urs) haccepts)
     (hxgood :
       ch.x ∉ szBadSet
         (let model :=
@@ -144,7 +142,8 @@ noncomputable def topLevelStatements_or_relation_of_deployedAccepts
               vestaExtractedMemberDecode urs hk
                 (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch
                 pbatch hlen hprob1 haccepts)
-            (hblinding := hblinding) haccepts
+            (hblinding :=
+              top.toVerifierKey_blindingFactors_lt_n pp urs) haccepts
         combineConstraints model.fixedCols model.adviceCols model.instanceCols
           model.gates model.sets model.chunks model.lookups
           model.beta model.gamma model.delta model.theta ch.y model.chunkLen
@@ -158,7 +157,9 @@ noncomputable def topLevelStatements_or_relation_of_deployedAccepts
               vestaExtractedMemberDecode urs hk
                 (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch
                 pbatch hlen hprob1 haccepts)
-            (hblinding := hblinding) haccepts).constraints
+            (hblinding :=
+              top.toVerifierKey_blindingFactors_lt_n pp urs)
+            haccepts).constraints
           (top.toVerifierKey pp urs).n j))
     {cell : Type} [DecidableEq cell] [Fintype cell]
     (correctness : ∀
@@ -168,7 +169,8 @@ noncomputable def topLevelStatements_or_relation_of_deployedAccepts
             vestaExtractedMemberDecode urs hk
               (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch
               pbatch hlen hprob1 haccepts)
-          (hblinding := hblinding) haccepts).CircuitSat
+          (hblinding :=
+            top.toVerifierKey_blindingFactors_lt_n pp urs) haccepts).CircuitSat
             ch.y hpoly (top.toVerifierKey pp urs).n a₀),
       TopLevelCircuitCorrectness top pp urs ch
         (CanonicalMemberConstraintRelation.acceptedPolynomial
@@ -188,14 +190,15 @@ noncomputable def topLevelStatements_or_relation_of_deployedAccepts
   have hterminal :=
     acceptedModel_circuitSat_or_relation_of_acceptedSelections
       urs hk vk (top.instanceCommitment pp urs inputs) ps ch pU pW hpoly
-      pbatch hξcur hlen hprob1 haccepts hblinding
+      pbatch hξcur hlen hprob1 haccepts
+      (top.toVerifierKey_blindingFactors_lt_n pp urs)
       gateCoherence.adviceQueryCount gateCoherence.instanceQueryCount
       i m hm colPoly hbindAll hquot hroute hevals claimed hxgood
   rcases hterminal with hsatisfied | hrelation
   · exact
       TopLevelAcceptedModel.statements_or_relation_of_circuitSat
         top pp urs hk inputs ps ch pU pW a₀ pbatch memberDecode
-        haccepts hblinding hpoly hsatisfied hgoodY
+        haccepts hpoly hsatisfied hgoodY
         (correctness hsatisfied)
   · exact PSum.inr hrelation
 

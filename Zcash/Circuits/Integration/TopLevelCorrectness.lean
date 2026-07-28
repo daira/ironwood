@@ -143,13 +143,11 @@ noncomputable def bridgeWitness_of_components
     {cell : Type} [DecidableEq cell] [Fintype cell]
     {Bad : Type}
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
-    (hblinding :
-      (top.toVerifierKey pp urs).blindingFactors <
-        (top.toVerifierKey pp urs).n)
     (satisfaction :
       ConstraintSatisfaction
         (canonicalConstraintModelOfPermutationResolver
-          (top.toVerifierKey pp urs) ch poly hblinding)
+          (top.toVerifierKey pp urs) ch poly
+          (top.toVerifierKey_blindingFactors_lt_n pp urs))
         (top.toVerifierKey pp urs).n)
     (gates : TopLevelGateCoherence top pp urs)
     (fixedEncoding :
@@ -207,7 +205,7 @@ noncomputable def bridgeWitness_of_components
     FullCircuitBridge.ofTopLevelCanonical
       (top := top) (pp := pp) (urs := urs)
       (cell := cell) (Bad := Bad)
-      gates ch poly proofIndex hblinding satisfaction
+      gates ch poly proofIndex satisfaction
       hrowsVk hrootVk selectorActivations fixed copies lookups
   clear_value bridge
   generalize henvironmentValue :

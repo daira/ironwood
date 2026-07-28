@@ -105,78 +105,78 @@ noncomputable def action_bundleStatement_or_relation_of_decodedMemberPolynomial_
           (CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode := memberDecode)
             (hblinding :=
-              ActionPermutationDomain.blindingFactors_lt pp urs)
+              actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).fixedCols
           (CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode := memberDecode)
             (hblinding :=
-              ActionPermutationDomain.blindingFactors_lt pp urs)
+              actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).adviceCols
           (CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode := memberDecode)
             (hblinding :=
-              ActionPermutationDomain.blindingFactors_lt pp urs)
+              actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).instanceCols
           (CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode := memberDecode)
             (hblinding :=
-              ActionPermutationDomain.blindingFactors_lt pp urs)
+              actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).gates
           (CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode := memberDecode)
             (hblinding :=
-              ActionPermutationDomain.blindingFactors_lt pp urs)
+              actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).sets
           (CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode := memberDecode)
             (hblinding :=
-              ActionPermutationDomain.blindingFactors_lt pp urs)
+              actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).chunks
           (CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode := memberDecode)
             (hblinding :=
-              ActionPermutationDomain.blindingFactors_lt pp urs)
+              actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).lookups
           (CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode := memberDecode)
             (hblinding :=
-              ActionPermutationDomain.blindingFactors_lt pp urs)
+              actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).beta
           (CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode := memberDecode)
             (hblinding :=
-              ActionPermutationDomain.blindingFactors_lt pp urs)
+              actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).gamma
           (CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode := memberDecode)
             (hblinding :=
-              ActionPermutationDomain.blindingFactors_lt pp urs)
+              actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).delta
           (CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode := memberDecode)
             (hblinding :=
-              ActionPermutationDomain.blindingFactors_lt pp urs)
+              actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).theta
           ch.y
           (CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode := memberDecode)
             (hblinding :=
-              ActionPermutationDomain.blindingFactors_lt pp urs)
+              actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).chunkLen
           (CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode := memberDecode)
             (hblinding :=
-              ActionPermutationDomain.blindingFactors_lt pp urs)
+              actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).l0
           (CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode := memberDecode)
             (hblinding :=
-              ActionPermutationDomain.blindingFactors_lt pp urs)
+              actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).lLast
           (CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode := memberDecode)
             (hblinding :=
-              ActionPermutationDomain.blindingFactors_lt pp urs)
+              actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).lBlind -
           hpoly *
             (X ^
@@ -187,7 +187,7 @@ noncomputable def action_bundleStatement_or_relation_of_decodedMemberPolynomial_
           (CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode := memberDecode)
             (hblinding :=
-              ActionPermutationDomain.blindingFactors_lt pp urs)
+              actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).constraints
           (actionCircuit.toVerifierKey pp urs).n j))
     (permutationExclusions :
@@ -206,7 +206,7 @@ noncomputable def action_bundleStatement_or_relation_of_decodedMemberPolynomial_
       NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   let vk := actionCircuit.toVerifierKey pp urs
   let hblinding : vk.blindingFactors < vk.n :=
-    ActionPermutationDomain.blindingFactors_lt pp urs
+    actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs
   let gateCoherence :=
     ActionGateCoherence.topLevelGateCoherence pp urs
   have hnFp : (vk.n : Fp) ≠ 0 := by
@@ -230,7 +230,7 @@ noncomputable def action_bundleStatement_or_relation_of_decodedMemberPolynomial_
   · simpa only [BundleStatement] using
       (TopLevelAcceptedModel.statements_or_relation_of_circuitSat
         actionCircuit pp urs hk inputs ps ch pU pW a
-        batchOpenings memberDecode haccepts hblinding hpoly
+        batchOpenings memberDecode haccepts hpoly
         hsatisfied hgoodY
         (cell := FlatCell actionNumPermCols actionDomainSize)
         (ActionCorrectness.ofAcceptedCircuitSat

@@ -52,6 +52,19 @@ theorem vk_blindingFactors_lt : Fixture.vk.blindingFactors < Fixture.vk.n := by
 
 namespace Deployed
 
+private theorem blindingFactors_lt_of_eq_derived
+    (s : Shape)
+    (hs : actionProofParams.mergeDerived actionCircuit = s)
+    (K : VerifyingKey s Fp G)
+    (hK : K = derivedActionVk s capturedURS) :
+    K.blindingFactors < K.n := by
+  subst hs
+  rw [← Keygen.toVerifierKey_action actionProofParams capturedURS] at hK
+  subst hK
+  exact
+    actionCircuit.toVerifierKey_blindingFactors_lt_n
+      actionProofParams capturedURS
+
 set_option maxRecDepth 1000000 in
 /--
 Transport of the generic Action/Vesta capstone to a shape/key pair identified
@@ -66,7 +79,6 @@ private noncomputable def action_bundleStatement_or_relation_of_deployedAccepts_
     (K : VerifyingKey s Fp G)
     (hK : K = derivedActionVk s capturedURS)
     (hk : s.k = capturedURS.k)
-    (hbl : K.blindingFactors < K.n)
     (inputs : Fin s.numProofs → PublicInputs Fp)
     (ps : ProofString s Fp G)
     (ch : Challenges s.k Fp)
@@ -147,7 +159,8 @@ private noncomputable def action_bundleStatement_or_relation_of_deployedAccepts_
           vestaExtractedMemberDecode capturedURS hk
             K (actionCircuit.instanceCommitment actionProofParams capturedURS inputs) ps ch
             pbatch hlen hprob1 haccepts)
-        (hblinding := hbl) haccepts)
+        (hblinding :=
+          blindingFactors_lt_of_eq_derived s hs K hK) haccepts)
     (hxgood :
       ch.x ∉ szBadSet
         (let model :=
@@ -156,7 +169,8 @@ private noncomputable def action_bundleStatement_or_relation_of_deployedAccepts_
               vestaExtractedMemberDecode capturedURS hk
                 K (actionCircuit.instanceCommitment actionProofParams capturedURS inputs) ps ch
                 pbatch hlen hprob1 haccepts)
-            (hblinding := hbl) haccepts
+            (hblinding :=
+              blindingFactors_lt_of_eq_derived s hs K hK) haccepts
         combineConstraints model.fixedCols model.adviceCols model.instanceCols
           model.gates model.sets model.chunks model.lookups
           model.beta model.gamma model.delta model.theta ch.y model.chunkLen
@@ -170,7 +184,9 @@ private noncomputable def action_bundleStatement_or_relation_of_deployedAccepts_
               vestaExtractedMemberDecode capturedURS hk
                 K (actionCircuit.instanceCommitment actionProofParams capturedURS inputs)
                 ps ch pbatch hlen hprob1 haccepts)
-            (hblinding := hbl) haccepts).constraints
+            (hblinding :=
+              blindingFactors_lt_of_eq_derived s hs K hK)
+            haccepts).constraints
           K.n j))
     (permGamma :
       ch.gamma ∉ allResolverPermutationGammaBadSet K ch
@@ -392,7 +408,7 @@ noncomputable def action_bundleStatement_or_relation_of_deployedAccepts
   action_bundleStatement_or_relation_of_deployedAccepts_transport
     Fixture.shape Keygen.shape_eq_mergeDerived
     Fixture.vk Keygen.vk_eq_derived
-    shape_k_eq_capturedURS_k vk_blindingFactors_lt
+    shape_k_eq_capturedURS_k
     inputs ps ch pU pW hpoly pbatch hξcur hlen hprob1 haccepts
     i m hm colPoly hbindAll hquot hroute hevals claimed hxgood hgoodY
     permGamma permBeta lookupGamma lookupBeta lookupTheta

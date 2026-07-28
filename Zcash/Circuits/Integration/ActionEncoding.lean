@@ -77,7 +77,7 @@ noncomputable def actionTopLevelCircuitCorrectness
       CanonicalMemberConstraintRelation
         urs hk (actionCircuit.toVerifierKey pp urs)
         instanceCommitment ps ch pU pW a batchOpenings memberDecode
-        (ActionPermutationDomain.blindingFactors_lt pp urs)
+        (actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
         ch.y hpoly
         (actionCircuit.toVerifierKey pp urs).n)
     (hgoodY : ∀ j,
