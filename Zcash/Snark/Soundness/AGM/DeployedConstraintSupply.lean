@@ -223,7 +223,7 @@ def deployedRouteSelectorOfSpecs [DecidableEq G] [Inhabited G] {shape : Shape}
         deployed_slot_route_of_checks vk instanceCommitment ps ch checks (hmem i) rfl }
 
 /-- The polynomial represented by member `m` of deployed point set `i`. -/
-noncomputable def DeployedAlgebraicDecode.memberPoly [DecidableEq G] [Inhabited G]
+def DeployedAlgebraicDecode.memberPoly [DecidableEq G] [Inhabited G]
     {shape : Shape} {urs : URS G} {hk : shape.k = urs.k} {vk : VerifyingKey shape Fp G} {instanceCommitment : Fin shape.numProofs → Nat → G}
     {ps : ProofString shape Fp G} {ch : Challenges shape.k Fp}
     {aggregate : Fin (2 ^ urs.k) -> Fp} {aggregateU aggregateW : Fp}
@@ -287,7 +287,7 @@ structure DeployedMemberPolynomials [DecidableEq G] [Inhabited G] {shape : Shape
         (((constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.getD i []).idxOf p) 0
 
 /-- Package the rewind-free AGM decode as the deterministic member-polynomial interface. -/
-noncomputable def DeployedAlgebraicDecode.toMemberPolynomials [DecidableEq G] [Inhabited G]
+def DeployedAlgebraicDecode.toMemberPolynomials [DecidableEq G] [Inhabited G]
     {shape : Shape} {urs : URS G} {hk : shape.k = urs.k} {vk : VerifyingKey shape Fp G} {instanceCommitment : Fin shape.numProofs → Nat → G}
     {ps : ProofString shape Fp G} {ch : Challenges shape.k Fp}
     {aggregate : Fin (2 ^ urs.k) -> Fp} {aggregateU aggregateW : Fp}
@@ -348,7 +348,7 @@ theorem DeployedAlgebraicDecode.ipaRelation [DecidableEq G] [Inhabited G]
 /-! ## The canonical pre-`x` constraint polynomial -/
 
 /-- Advice feeds built from an arbitrary pre-`x` polynomial source for committed points. -/
-noncomputable def committedAdviceFeed [Inhabited G] {shape : Shape}
+def committedAdviceFeed [Inhabited G] {shape : Shape}
     (poly : G -> Polynomial Fp) (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) :
     Fin shape.numProofs -> Nat -> Polynomial Fp := fun q =>
   rotatedFeed vk.omega vk.adviceQueryLayout fun j : Fin shape.numAdviceQueries =>
@@ -356,14 +356,14 @@ noncomputable def committedAdviceFeed [Inhabited G] {shape : Shape}
       (vk.adviceQueryLayout.getD (j : Nat) (0, 0)).1)
 
 /-- Instance feeds built from a pre-`x` polynomial source. -/
-noncomputable def committedInstanceFeed {shape : Shape} (poly : G -> Polynomial Fp)
+def committedInstanceFeed {shape : Shape} (poly : G -> Polynomial Fp)
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G) :
     Fin shape.numProofs -> Nat -> Polynomial Fp := fun q =>
   rotatedFeed vk.omega vk.instanceQueryLayout fun j : Fin shape.numInstanceQueries =>
     poly (instanceCommitment q (vk.instanceQueryLayout.getD (j : Nat) (0, 0)).1)
 
 /-- Fixed-column feed built from a pre-`x` polynomial source. -/
-noncomputable def committedFixedFeed {shape : Shape} (poly : G -> Polynomial Fp)
+def committedFixedFeed {shape : Shape} (poly : G -> Polynomial Fp)
     (vk : VerifyingKey shape Fp G) : Nat -> Polynomial Fp :=
   rotatedFeed vk.omega vk.fixedQueryLayout fun j : Fin shape.numFixedQueries =>
     poly (vk.fixedCommitment (vk.fixedQueryLayout.getD (j : Nat) (0, 0)).1)
@@ -372,7 +372,7 @@ noncomputable def committedFixedFeed {shape : Shape} (poly : G -> Polynomial Fp)
 
 The final set's `else` branch is dead: halo2 reads a last-rotation evaluation only for the sets
 before the final one, so its `lastEval` is `none`. -/
-noncomputable def committedPermSets {shape : Shape} (poly : G -> Polynomial Fp)
+def committedPermSets {shape : Shape} (poly : G -> Polynomial Fp)
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) :
     Fin shape.numProofs -> List (PermSetEval (Polynomial Fp)) := fun q =>
   List.ofFn fun s : Fin shape.numPermutationSets =>
@@ -385,13 +385,13 @@ noncomputable def committedPermSets {shape : Shape} (poly : G -> Polynomial Fp)
         else Polynomial.C le)
 
 /-- Common permutation columns built from a pre-`x` polynomial source. -/
-noncomputable def committedPermCommonFeed [Inhabited G] {shape : Shape}
+def committedPermCommonFeed [Inhabited G] {shape : Shape}
     (poly : G -> Polynomial Fp) (vk : VerifyingKey shape Fp G) : Nat -> Polynomial Fp := fun c =>
   if h : c < shape.numPermutationColumns then poly (vk.permutationCommonCommitment ⟨c, h⟩)
   else 0
 
 /-- Permutation chunks built from a pre-`x` polynomial source. -/
-noncomputable def committedPermChunks [Inhabited G] {shape : Shape}
+def committedPermChunks [Inhabited G] {shape : Shape}
     (poly : G -> Polynomial Fp) (vk : VerifyingKey shape Fp G)
     (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape Fp G) :
     Fin shape.numProofs ->
@@ -405,7 +405,7 @@ noncomputable def committedPermChunks [Inhabited G] {shape : Shape}
        committedPermCommonFeed poly vk cr.2))
 
 /-- Lookup carriers built from a pre-`x` polynomial source. -/
-noncomputable def committedLookups {shape : Shape} (poly : G -> Polynomial Fp)
+def committedLookups {shape : Shape} (poly : G -> Polynomial Fp)
     (vk : VerifyingKey shape Fp G) (ps : ProofString shape Fp G) :
     Fin shape.numProofs ->
       List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)) := fun q =>
@@ -419,12 +419,12 @@ noncomputable def committedLookups {shape : Shape} (poly : G -> Polynomial Fp)
      vk.lookupInputExprs l, vk.lookupTableExprs l)
 
 /-- Pre-`x` quotient assembled from explicit represented quotient-piece polynomials. -/
-noncomputable def committedPreXQuotient {shape : Shape} (vk : VerifyingKey shape Fp G)
+def committedPreXQuotient {shape : Shape} (vk : VerifyingKey shape Fp G)
     (piecePoly : Fin shape.numQuotientPieces -> Polynomial Fp) : Polynomial Fp :=
   preXQuotient vk.n piecePoly
 
 /-- The pre-`x` constraint difference built entirely from explicit online AGM coordinates. -/
-noncomputable def committedPreXConstraintDifference [Inhabited G] {shape : Shape}
+def committedPreXConstraintDifference [Inhabited G] {shape : Shape}
     (poly : G -> Polynomial Fp)
     (piecePoly : Fin shape.numQuotientPieces -> Polynomial Fp)
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
@@ -1017,9 +1017,9 @@ open Polynomial in
 open Classical in
 /-- Constraint-witness adapter produced directly from `DeployedAlgebraicDecode`, with no opened
 or joint-acceptance premises.  The relation branch is the computable quotient comparison of
-`deployedConstraintQuotientFinder`; only the success branch's Mathlib polynomials keep this
-`noncomputable`. -/
-noncomputable def deployedConstraintOutcomeOfDecode
+`deployedConstraintQuotientFinder`.  The polynomial success branch is finite executable arithmetic
+over `Fp`, so the complete outcome remains computed data. -/
+def deployedConstraintOutcomeOfDecode
     [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)

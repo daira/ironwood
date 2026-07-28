@@ -131,6 +131,29 @@ theorem not_mem_szBadSet {C : Polynomial Fp} {x : Fp} :
     x ∉ szBadSet C ↔ (C ≠ 0 → C.eval x ≠ 0) := by
   rw [mem_szBadSet, not_and]
 
+/-- Compute avoidance of one Schwartz--Zippel bad set without computing the root set itself.
+The branch decision uses only polynomial equality and evaluation at the sampled point; the
+equivalence with `x ∉ szBadSet C` is retained in the erased proof returned on success.  This is
+the executable form reductions should use when a successful branch returns break data. -/
+def szBadSetAvoidance? (C : Polynomial Fp) (x : Fp) :
+    Option (x ∉ szBadSet C) :=
+  if hzero : C = 0 then
+    some ((not_mem_szBadSet.mpr fun hne => False.elim (hne hzero)))
+  else if heval : C.eval x = 0 then
+    none
+  else
+    some (not_mem_szBadSet.mpr fun _ => heval)
+
+/-- The computed point test succeeds exactly outside the specification-level root set. -/
+theorem szBadSetAvoidance?_isSome_iff (C : Polynomial Fp) (x : Fp) :
+    (szBadSetAvoidance? C x).isSome ↔ x ∉ szBadSet C := by
+  unfold szBadSetAvoidance?
+  split <;> rename_i hzero
+  · simp [not_mem_szBadSet, hzero]
+  · split <;> rename_i heval
+    · simp [not_mem_szBadSet, hzero, heval]
+    · simp [not_mem_szBadSet, heval]
+
 /-- **Root counting: the bad set is small.** One Schwartz–Zippel use site over `F_p` excludes at
 most `natDegree C` challenges — the `d` of the `d / p` budget (`uniformChallenge_szBadSet` in
 `Zcash.Snark.Soundness.GoodChallenge`). -/
@@ -183,7 +206,7 @@ theorem natDegree_comp_rotate (col : Polynomial Fp) {w : Fp} (hw : w ≠ 0) :
   rw [Polynomial.natDegree_comp, hq, mul_one]
 
 /-- Lift a gate `Expr` to a univariate polynomial, replacing each query with its column polynomial. -/
-noncomputable def Expr.toPoly (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp) :
+def Expr.toPoly (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp) :
     Expr Fp → Polynomial Fp
   | .constant c => Polynomial.C c
   | .fixed i => fixedCols i
@@ -224,13 +247,13 @@ theorem eval_foldByY (y x : Fp) (acc : Polynomial Fp) (ps : List (Polynomial Fp)
         ih (acc * Polynomial.C y + p)
 
 /-- The gate expressions lifted to polynomials, in verifier order. -/
-noncomputable def gatePolys {n : ℕ} (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
+def gatePolys {n : ℕ} (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
     (gates : Fin n → Expr Fp) : List (Polynomial Fp) :=
   List.ofFn (fun i : Fin n => Expr.toPoly fixedCols adviceCols instanceCols (gates i))
 
 /-- The constraint `numerator`: the gate polynomials (`Expr.toPoly`) combined by the same
 `acc * y + v` fold that halo2 uses in `vanishing/verifier.rs`. -/
-noncomputable def combineGates {n : ℕ} (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
+def combineGates {n : ℕ} (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
     (y : Fp) (gates : Fin n → Expr Fp) : Polynomial Fp :=
   (gatePolys fixedCols adviceCols instanceCols gates).foldl (fun acc p => acc * Polynomial.C y + p) 0
 
@@ -255,7 +278,7 @@ open Polynomial in
 /-- Every constraint value across the sub-proofs, as polynomials. The gates and lookup expressions
 carry scalar constants, so they are lifted with `C`; the gate point becomes `X`, since evaluating the
 result at `x` has to give `x` back. -/
-noncomputable def constraintPolys {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
+def constraintPolys {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
     (adviceCols instanceCols : Fin np → ℕ → Polynomial Fp) (gates : List (Expr Fp))
     (sets : Fin np → List (PermSetEval (Polynomial Fp)))
     (chunks : Fin np → List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
@@ -293,7 +316,7 @@ theorem eval_constraintPolys {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
 open Polynomial in
 /-- The constraint numerator with the permutation and lookup arguments folded in: the same `acc·y + v`
 order `combineGates` uses, over the full constraint list. -/
-noncomputable def combineConstraints {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
+def combineConstraints {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
     (adviceCols instanceCols : Fin np → ℕ → Polynomial Fp) (gates : List (Expr Fp))
     (sets : Fin np → List (PermSetEval (Polynomial Fp)))
     (chunks : Fin np → List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))

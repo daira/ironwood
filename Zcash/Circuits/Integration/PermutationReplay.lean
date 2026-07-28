@@ -905,7 +905,7 @@ theorem widen_mk_of_lt
 /-- Restrict a full-domain cell permutation to the active rows, given that it maps
 active cells to active cells: injectivity survives the restriction, and a finite
 injection is a permutation. -/
-noncomputable def restrictActivePerm
+def restrictActivePerm
     {nc activeRows domainSize : ℕ} {width : ℕ → ℕ}
     (hactive : activeRows ≤ domainSize)
     (π : Perm (ChunkCell nc domainSize width))
@@ -1055,7 +1055,7 @@ over the keygen copy list: each copy pair agrees in value (or the shared branch 
 via `chunkRowValue_eq_of_mem_copies`), each declared copy's encoded endpoints are
 linked by the replayed list (via the membership lemmas), and the declared endpoints
 read back (resolution and the constants realization). -/
-noncomputable def CopyReplayWitness.ofLinkedPairs
+def CopyReplayWitness.ofLinkedPairs
     {numCols n : ℕ} {place : RegionIndex → ℕ} {env : Environment Fp}
     {ops : Operations Fp} {Bad : Type}
     (copies' : List (FlatCell numCols n × FlatCell numCols n))

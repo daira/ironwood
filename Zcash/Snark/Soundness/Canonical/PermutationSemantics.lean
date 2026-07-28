@@ -244,7 +244,7 @@ def chunkPermutationOfFlat
 At row `i`, its interpolation value is the identity name of the cell to which keygen's global
 permutation sends `(chunk, i, column)`. This is the mathematical form of Halo2's σ-column
 construction; commitment encoding and comparison with a concrete VK are deliberately downstream. -/
-noncomputable def keygenSigmaColumn
+def keygenSigmaColumn
     {nc m : ℕ} {width : ℕ → ℕ}
     (omega delta : Fp) (chunkLen : ℕ)
     (sigma : Equiv.Perm (ChunkCell nc m width))
@@ -298,7 +298,7 @@ theorem keygenSigmaColumn_natDegree_lt
   · exact (Polynomial.natDegree_lt_iff_degree_lt hzero).mpr hd
 
 /-- The polynomial pairs, indexed by permutation chunk, selected from one resolver-backed proof. -/
-noncomputable abbrev ResolverPermutationPairs
+abbrev ResolverPermutationPairs
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (poly : CommitmentId → Polynomial Fp)
     (p : Fin shape.numProofs) : ℕ → List (Polynomial Fp × Polynomial Fp) :=
@@ -384,7 +384,7 @@ its generated common columns.
 `hrestrict` says the full keygen permutation preserves the active cells and restricts to `sigma`.
 The main equality left to a concrete VK is `hcolumns`: each resolver-selected common polynomial is
 the corresponding degree-`< domainSize` generated σ column. -/
-noncomputable def ResolverPermutationCycle.ofKeygenColumns
+def ResolverPermutationCycle.ofKeygenColumns
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (poly : CommitmentId → Polynomial Fp)
     (p : Fin shape.numProofs) {domainSize activeRows : ℕ}
@@ -448,7 +448,7 @@ noncomputable def ResolverPermutationCycle.ofKeygenColumns
 
 /-- The polynomial in `γ` whose non-roots let the grand-product identity recover the multiset of
 `(value, name)` pairs.  Its coefficients are fixed after `β` is squeezed. -/
-noncomputable def resolverPermutationGammaDifference
+def resolverPermutationGammaDifference
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → Polynomial Fp)
@@ -466,7 +466,7 @@ noncomputable def resolverPermutationGammaDifference
         (fun q => q.1 + q.2 * ch.beta))
 
 /-- The part of a source-cell permutation factor fixed before `γ` is squeezed. -/
-noncomputable def resolverPermutationFactorOffset
+def resolverPermutationFactorOffset
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → Polynomial Fp)
@@ -478,7 +478,7 @@ noncomputable def resolverPermutationFactorOffset
       cell.1 cell.2.1 cell.2.2
 
 /-- Values of `γ` that make at least one source-cell permutation factor vanish. -/
-noncomputable def resolverPermutationZeroFactorBadSet
+def resolverPermutationZeroFactorBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → Polynomial Fp)
@@ -516,7 +516,7 @@ theorem uniformChallenge_resolverPermutationZeroFactorBadSet
 
 /-- The complete `γ` exclusion: roots needed for multiset recovery together with the individual
 source-cell factors that must stay nonzero while propagating equality around a cycle. -/
-noncomputable def resolverPermutationGammaBadSet
+def resolverPermutationGammaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → Polynomial Fp)

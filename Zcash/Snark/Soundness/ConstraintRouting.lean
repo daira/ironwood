@@ -130,7 +130,7 @@ theorem permChunks_bind_of_feeds {shape : Shape} {G' : Type*}
   · exact hinstanceF i
 
 /-- The public Lagrange-basis polynomial. -/
-noncomputable def lagrangeBasisPoly (omega : Fp) (n : Nat) (i : Int) : Polynomial Fp :=
+def lagrangeBasisPoly (omega : Fp) (n : Nat) (i : Int) : Polynomial Fp :=
   Polynomial.C (omega ^ i / (n : Fp)) *
     ∑ k ∈ Finset.range n,
       Polynomial.C ((omega ^ i) ^ (n - 1 - k)) * Polynomial.X ^ k

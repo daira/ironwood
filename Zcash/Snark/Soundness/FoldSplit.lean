@@ -29,7 +29,7 @@ open Polynomial Finset
 
 /-- The `acc·y + v` fold read as a polynomial in `y`: `[c₀, …, c_{m-1}]` becomes
 `c₀·y^{m-1} + ⋯ + c_{m-1}`. -/
-noncomputable def foldPoly (l : List Fp) : Polynomial Fp :=
+def foldPoly (l : List Fp) : Polynomial Fp :=
   l.foldl (fun acc v => acc * X + C v) 0
 
 @[simp] theorem foldPoly_nil : foldPoly [] = 0 := rfl
@@ -131,7 +131,7 @@ theorem foldl_modByMonic (cs : List (Polynomial Fp)) (y : Fp) {r : Polynomial Fp
 /-- The `j`-th coefficient of the reduced constraints, folded as a polynomial in `y`. The combined
 check forces `y` to be one of its roots, so a nonzero witness is what makes splitting cost
 something. -/
-noncomputable def foldSplitWitness (cs : List (Polynomial Fp)) (n j : ℕ) : Polynomial Fp :=
+def foldSplitWitness (cs : List (Polynomial Fp)) (n j : ℕ) : Polynomial Fp :=
   foldPoly (cs.map (fun c => (c %ₘ (X ^ n - 1)).coeff j))
 
 /-- The witness has degree below the list length, so it excludes at most `length − 1` challenges. -/

@@ -6,6 +6,7 @@ import Zcash.Snark.Soundness.LookupAssembly
 import Zcash.Snark.Soundness.Canonical.LookupSemantics
 import Zcash.Snark.Soundness.Canonical.PermutationSemantics
 import Zcash.Circuits.Integration.OperationLookups
+import Zcash.Common.RelationWitness
 
 /-!
 # Pricing the new challenge surfaces
@@ -534,6 +535,121 @@ theorem resolverLookupGoodChallenges_of_not_mem
     apply hbeta
     exact Finset.mem_biUnion.mpr ⟨(p, l), Finset.mem_univ _, hmem⟩
 
+/-- Compute one lookup good-challenge package from finite point tests.  As with the permutation
+adapter, the specification-level root sets appear only in erased proofs. -/
+def resolverLookupGoodChallenges?
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) :
+    Option (ResolverLookupGoodChallenges vk ch poly p l u) := by
+  let difference := resolverLookupProductDifference vk ch poly p l u
+  let input := lookupInputPolyOfResolver vk ch poly p l
+  let table := lookupTablePolyOfResolver vk ch poly p l
+  match hgamma : szBadSetAvoidance? (difference.map (evalRingHom ch.beta)) ch.gamma with
+  | none => exact none
+  | some hgammaProof =>
+      match hbeta : finForallOption (fun j : Fin (u + 2) =>
+          szBadSetAvoidance? (difference.coeff j.1) ch.beta) with
+      | none => exact none
+      | some hbetaProof =>
+          if hinput : ∀ i : Fin (u + 1),
+              input.eval (vk.omega ^ (i : Nat)) + ch.beta ≠ 0 then
+            if htable : ∀ i : Fin (u + 1),
+                table.eval (vk.omega ^ (i : Nat)) + ch.gamma ≠ 0 then
+              exact some
+                { gamma := hgammaProof
+                  beta := fun j => by
+                    by_cases hj : j < u + 2
+                    · exact hbetaProof ⟨j, hj⟩
+                    · have hzero : difference.coeff j = 0 := by
+                        apply lookupProdDiff_coeff_eq_zero_of_le
+                        simpa [difference, resolverLookupProductDifference] using
+                          (show u + 1 < j by omega)
+                      exact not_mem_szBadSet.mpr fun hne => False.elim (hne hzero)
+                  inputNonzero := by
+                    intro hmem
+                    obtain ⟨i, hi⟩ :=
+                      (mem_lookupColumnZeroBadSet_iff vk.omega input (u + 1) ch.beta).mp hmem
+                    exact hinput i hi
+                  tableNonzero := by
+                    intro hmem
+                    obtain ⟨i, hi⟩ :=
+                      (mem_lookupColumnZeroBadSet_iff vk.omega table (u + 1) ch.gamma).mp hmem
+                    exact htable i hi }
+            else exact none
+          else exact none
+
+/-- Executable bundle-wide lookup `β`/`γ` exclusions. -/
+def resolverLookupBundleExclusions?
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp) (u : ℕ) :
+    Option ((ch.gamma ∉ allResolverLookupGammaBadSet vk ch poly u) ∧
+      ch.beta ∉ allResolverLookupBetaBadSet vk ch poly u) :=
+  match hgood : fintypeForallOption
+      (fun q : Fin shape.numProofs × Fin shape.numLookups =>
+        resolverLookupGoodChallenges? vk ch poly q.1 q.2 u) with
+  | none => none
+  | some good => some
+      ⟨by
+        intro hmem
+        obtain ⟨q, _, hq⟩ := Finset.mem_biUnion.mp hmem
+        exact (good q).gamma
+          (Finset.mem_union.mp hq).resolve_right (good q).tableNonzero,
+       by
+        intro hmem
+        obtain ⟨q, _, hq⟩ := Finset.mem_biUnion.mp hmem
+        rcases Finset.mem_union.mp hq with hroots | hzero
+        · obtain ⟨j, _, hj⟩ := Finset.mem_biUnion.mp hroots
+          exact (good q).beta j hj
+        · exact (good q).inputNonzero hzero⟩
+
+theorem resolverLookupGoodChallenges?_isSome_of
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ)
+    (hgood : ResolverLookupGoodChallenges vk ch poly p l u) :
+    (resolverLookupGoodChallenges? vk ch poly p l u).isSome := by
+  let difference := resolverLookupProductDifference vk ch poly p l u
+  let input := lookupInputPolyOfResolver vk ch poly p l
+  let table := lookupTablePolyOfResolver vk ch poly p l
+  obtain ⟨gammaProof, hgammaEq⟩ := Option.isSome_iff_exists.mp
+    ((szBadSetAvoidance?_isSome_iff _ _).2 hgood.gamma)
+  have hbetaFinite : ∀ j : Fin (u + 2),
+      (szBadSetAvoidance? (difference.coeff j.1) ch.beta).isSome :=
+    fun j => (szBadSetAvoidance?_isSome_iff _ _).2 (hgood.beta j.1)
+  obtain ⟨betaProof, hbetaEq⟩ := Option.isSome_iff_exists.mp
+    (finForallOption_isSome_of _ hbetaFinite)
+  have hinput : ∀ i : Fin (u + 1),
+      input.eval (vk.omega ^ (i : Nat)) + ch.beta ≠ 0 := by
+    intro i hzero
+    exact hgood.inputNonzero
+      ((mem_lookupColumnZeroBadSet_iff vk.omega input (u + 1) ch.beta).2 ⟨i, hzero⟩)
+  have htable : ∀ i : Fin (u + 1),
+      table.eval (vk.omega ^ (i : Nat)) + ch.gamma ≠ 0 := by
+    intro i hzero
+    exact hgood.tableNonzero
+      ((mem_lookupColumnZeroBadSet_iff vk.omega table (u + 1) ch.gamma).2 ⟨i, hzero⟩)
+  simp [resolverLookupGoodChallenges?, difference, input, table,
+    hgammaEq, hbetaEq, hinput, htable]
+
+theorem resolverLookupBundleExclusions?_isSome_of
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp) (u : ℕ)
+    (hgamma : ch.gamma ∉ allResolverLookupGammaBadSet vk ch poly u)
+    (hbeta : ch.beta ∉ allResolverLookupBetaBadSet vk ch poly u) :
+    (resolverLookupBundleExclusions? vk ch poly u).isSome := by
+  have hall : ∀ q : Fin shape.numProofs × Fin shape.numLookups,
+      (resolverLookupGoodChallenges? vk ch poly q.1 q.2 u).isSome :=
+    fun q => resolverLookupGoodChallenges?_isSome_of vk ch poly q.1 q.2 u
+      (resolverLookupGoodChallenges_of_not_mem vk ch poly u hgamma hbeta q.1 q.2)
+  obtain ⟨good, hgood⟩ := Option.isSome_iff_exists.mp
+    (fintypeForallOption_isSome_of _ hall)
+  simp [resolverLookupBundleExclusions?, hgood]
+
 /-- The bundle-wide lookup `γ` surface is the number of proof/lookup pairs times the per-argument
 two-values-per-row budget. -/
 theorem uniformChallenge_allResolverLookupGammaBadSet
@@ -835,6 +951,144 @@ theorem ResolverPermutationChallengeExclusions.good
       ResolverPermutationGoodChallenges vk ch poly p m :=
   resolverPermutationGoodChallenges_of_not_mem
     vk ch poly m exclusions.gamma exclusions.beta
+
+/-- Compute one permutation good-challenge package using point evaluations and finite factor
+checks.  Root sets occur only in the erased certificate; no root enumeration is performed. -/
+def resolverPermutationGoodChallenges?
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) (m : ℕ) :
+    Option (ResolverPermutationGoodChallenges vk ch poly p m) := by
+  let source :=
+    chunkedCellPairs shape.numPermutationSets m
+      (fun c => (ResolverPermutationPairs vk poly p c).length)
+      (chunkRowValue vk.omega (ResolverPermutationPairs vk poly p))
+      (chunkRowSigmaName vk.omega (ResolverPermutationPairs vk poly p))
+  let target :=
+    chunkedCellPairs shape.numPermutationSets m
+      (fun c => (ResolverPermutationPairs vk poly p c).length)
+      (chunkRowValue vk.omega (ResolverPermutationPairs vk poly p))
+      (chunkRowName vk.omega vk.delta vk.chunkLen)
+  let d := Fintype.card (ResolverPermutationCell vk poly p m)
+  match hgammaRoot : szBadSetAvoidance?
+      (resolverPermutationGammaDifference vk ch poly p m) ch.gamma with
+  | none => exact none
+  | some hgammaRootProof =>
+      if hfactor : ∀ cell : ResolverPermutationCell vk poly p m,
+          chunkRowValue vk.omega (ResolverPermutationPairs vk poly p)
+              cell.1 cell.2.1 cell.2.2 +
+            ch.beta * chunkRowName vk.omega vk.delta vk.chunkLen
+              cell.1 cell.2.1 cell.2.2 + ch.gamma ≠ 0 then
+        match hbeta : finForallOption (fun j : Fin (d + 1) =>
+            szBadSetAvoidance? ((pairProdDiff source target).coeff j.1) ch.beta) with
+        | none => exact none
+        | some hbetaProof =>
+            exact some
+              { gamma := by
+                  intro hmem
+                  rcases Finset.mem_union.mp hmem with hroot | hzero
+                  · exact hgammaRootProof hroot
+                  · obtain ⟨cell, hcell⟩ :=
+                      (mem_resolverPermutationZeroFactorBadSet_iff
+                        vk ch poly p m).mp hzero
+                    exact hfactor cell hcell
+                beta := fun j => by
+                  by_cases hj : j < d + 1
+                  · exact hbetaProof ⟨j, hj⟩
+                  · have hsource : Multiset.card source = d := by
+                      simpa only [source, d] using
+                        card_chunkedCellPairs_eq_fintypeCard shape.numPermutationSets m
+                          (fun c => (ResolverPermutationPairs vk poly p c).length)
+                          (chunkRowValue vk.omega (ResolverPermutationPairs vk poly p))
+                          (chunkRowSigmaName vk.omega (ResolverPermutationPairs vk poly p))
+                    have htarget : Multiset.card target = d := by
+                      simpa only [target, d] using
+                        card_chunkedCellPairs_eq_fintypeCard shape.numPermutationSets m
+                          (fun c => (ResolverPermutationPairs vk poly p c).length)
+                          (chunkRowValue vk.omega (ResolverPermutationPairs vk poly p))
+                          (chunkRowName vk.omega vk.delta vk.chunkLen)
+                    have hzero : (pairProdDiff source target).coeff j = 0 := by
+                      apply pairProdDiff_coeff_eq_zero_of_le
+                      simp only [hsource, htarget, max_self]
+                      omega
+                    exact not_mem_szBadSet.mpr fun hne => False.elim (hne hzero) }
+      else exact none
+
+/-- Bundle-wide executable permutation exclusions, obtained by traversing every proof. -/
+def resolverPermutationChallengeExclusions?
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp) (m : ℕ) :
+    Option (ResolverPermutationChallengeExclusions vk ch poly m) :=
+  match hgood : finForallOption (fun p : Fin shape.numProofs =>
+      resolverPermutationGoodChallenges? vk ch poly p m) with
+  | none => none
+  | some good => some
+      { gamma := by
+          intro hmem
+          obtain ⟨p, _, hp⟩ := Finset.mem_biUnion.mp hmem
+          exact (good p).gamma hp
+        beta := by
+          intro hmem
+          obtain ⟨p, _, hp⟩ := Finset.mem_biUnion.mp hmem
+          rw [resolverPermutationBetaBadSet] at hp
+          obtain ⟨j, _, hj⟩ := Finset.mem_biUnion.mp hp
+          exact (good p).beta j hj }
+
+theorem resolverPermutationGoodChallenges?_isSome_of
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) (m : ℕ)
+    (hgood : ResolverPermutationGoodChallenges vk ch poly p m) :
+    (resolverPermutationGoodChallenges? vk ch poly p m).isSome := by
+  have hroot : ch.gamma ∉ szBadSet
+      (resolverPermutationGammaDifference vk ch poly p m) := by
+    intro hmem
+    exact hgood.gamma (Finset.mem_union_left _ hmem)
+  obtain ⟨rootProof, hrootEq⟩ := Option.isSome_iff_exists.mp
+    ((szBadSetAvoidance?_isSome_iff _ _).2 hroot)
+  have hfactor : ∀ cell : ResolverPermutationCell vk poly p m,
+      chunkRowValue vk.omega (ResolverPermutationPairs vk poly p)
+          cell.1 cell.2.1 cell.2.2 +
+        ch.beta * chunkRowName vk.omega vk.delta vk.chunkLen
+          cell.1 cell.2.1 cell.2.2 + ch.gamma ≠ 0 := by
+    intro cell hzero
+    apply hgood.gamma
+    exact Finset.mem_union_right _
+      ((mem_resolverPermutationZeroFactorBadSet_iff vk ch poly p m).2 ⟨cell, hzero⟩)
+  let source :=
+    chunkedCellPairs shape.numPermutationSets m
+      (fun c => (ResolverPermutationPairs vk poly p c).length)
+      (chunkRowValue vk.omega (ResolverPermutationPairs vk poly p))
+      (chunkRowSigmaName vk.omega (ResolverPermutationPairs vk poly p))
+  let target :=
+    chunkedCellPairs shape.numPermutationSets m
+      (fun c => (ResolverPermutationPairs vk poly p c).length)
+      (chunkRowValue vk.omega (ResolverPermutationPairs vk poly p))
+      (chunkRowName vk.omega vk.delta vk.chunkLen)
+  let d := Fintype.card (ResolverPermutationCell vk poly p m)
+  have hbetaFinite : ∀ j : Fin (d + 1),
+      (szBadSetAvoidance? ((pairProdDiff source target).coeff j.1) ch.beta).isSome :=
+    fun j => (szBadSetAvoidance?_isSome_iff _ _).2 (hgood.beta j.1)
+  obtain ⟨betaProof, hbetaEq⟩ := Option.isSome_iff_exists.mp
+    (finForallOption_isSome_of _ hbetaFinite)
+  simp [resolverPermutationGoodChallenges?, source, target, d, hrootEq, hfactor, hbetaEq]
+
+theorem resolverPermutationChallengeExclusions?_isSome_of
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp) (m : ℕ)
+    (hexclusions : ResolverPermutationChallengeExclusions vk ch poly m) :
+    (resolverPermutationChallengeExclusions? vk ch poly m).isSome := by
+  have hall : ∀ p : Fin shape.numProofs,
+      (resolverPermutationGoodChallenges? vk ch poly p m).isSome :=
+    fun p => resolverPermutationGoodChallenges?_isSome_of vk ch poly p m
+      (hexclusions.good p)
+  obtain ⟨good, hgood⟩ := Option.isSome_iff_exists.mp
+    (finForallOption_isSome_of _ hall)
+  simp [resolverPermutationChallengeExclusions?, hgood]
 
 /-- One resolver permutation `γ` exclusion costs at most two challenge values per active
 permutation cell: one for multiset recovery and one for source-factor nonvanishing. -/

@@ -76,7 +76,7 @@ hypotheses `run_structure` consumes. -/
 
 /-- The lookup evaluations as polynomials: the running product with its next-row rotation, and the
 permuted input with its previous-row rotation. -/
-noncomputable def lookupEvalPolys (omega : Fp) (z aP sP : Polynomial Fp) :
+def lookupEvalPolys (omega : Fp) (z aP sP : Polynomial Fp) :
     LookupEval (Polynomial Fp) :=
   { productEval := z
     productNextEval := z.comp (C omega * X)
@@ -325,7 +325,7 @@ back to the tuples: the compression is the `foldPoly` of the row's expression va
 outside each pair's collision root set turns compressed equality into tuple equality. -/
 
 /-- The values of a row of expressions at `ωⁱ` — the tuple the compression folds. -/
-noncomputable def rowTuple (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp) (omega : Fp)
+def rowTuple (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp) (omega : Fp)
     (exprs : List (Expr Fp)) (i : ℕ) : List Fp :=
   exprs.map (fun e => e.eval (fun t => (fixedCols t).eval (omega ^ i))
     (fun t => (adviceCols t).eval (omega ^ i)) (fun t => (instanceCols t).eval (omega ^ i)))

@@ -33,7 +33,7 @@ open Polynomial
 
 /-- The difference of the two pair-encoded products, a polynomial in `γ` with coefficients in
 `Fp[β]`. -/
-noncomputable def pairProdDiff (sp tp : Multiset (Fp × Fp)) : Polynomial (Polynomial Fp) :=
+def pairProdDiff (sp tp : Multiset (Fp × Fp)) : Polynomial (Polynomial Fp) :=
   (sp.map (fun p => X + C (encPair p))).prod - (tp.map (fun p => X + C (encPair p))).prod
 
 /-- The difference is nonzero whenever the multisets of pairs differ — this is `prod_pair_inj` read
@@ -43,7 +43,7 @@ theorem pairProdDiff_ne_zero {sp tp : Multiset (Fp × Fp)} (h : sp ≠ tp) :
   fun h0 => h (prod_pair_inj (sub_eq_zero.mp h0))
 
 /-- The difference of the two `γ`-products once `β` is fixed. -/
-noncomputable def linProdDiff (s t : Multiset Fp) : Polynomial Fp :=
+def linProdDiff (s t : Multiset Fp) : Polynomial Fp :=
   (s.map (fun u => X + C u)).prod - (t.map (fun u => X + C u)).prod
 
 /-- **The `γ` step.** A challenge outside the difference's roots turns the verifier's field product
@@ -119,7 +119,7 @@ columns. -/
 
 /-- The difference of the two lookup products, in `γ` over `Fp[β]`. The input columns enter as
 constants in `γ`; the table columns as the linear factors. -/
-noncomputable def lookupProdDiff (a s inp tbl : Multiset Fp) : Polynomial (Polynomial Fp) :=
+def lookupProdDiff (a s inp tbl : Multiset Fp) : Polynomial (Polynomial Fp) :=
   C (a.map (fun u => X + C u)).prod * (s.map (fun u => X + C (C u))).prod
     - C (inp.map (fun u => X + C u)).prod * (tbl.map (fun u => X + C (C u))).prod
 
@@ -205,7 +205,7 @@ branch survives all the way: a vanishing factor, meaning the running product end
 `value + β·name + γ` collided. It stays in the conclusion rather than being assumed away. -/
 
 /-- The `(value, name)` pair of every cell of an `m × k` table. -/
-noncomputable def cellPairs (m k : ℕ) (value nm : ℕ → ℕ → Fp) : Multiset (Fp × Fp) :=
+def cellPairs (m k : ℕ) (value nm : ℕ → ℕ → Fp) : Multiset (Fp × Fp) :=
   (Finset.univ : Finset (Fin m × Fin k)).val.map
     (fun c => (value (c.1 : ℕ) (c.2 : ℕ), nm (c.1 : ℕ) (c.2 : ℕ)))
 
@@ -214,7 +214,7 @@ abbrev ChunkCell (nc m : ℕ) (width : ℕ → ℕ) :=
   Σ c : Fin nc, Fin m × Fin (width c)
 
 /-- The `(value, name)` pair of every cell across a variable-width chunked table. -/
-noncomputable def chunkedCellPairs (nc m : ℕ) (width : ℕ → ℕ)
+def chunkedCellPairs (nc m : ℕ) (width : ℕ → ℕ)
     (value nm : ℕ → ℕ → ℕ → Fp) : Multiset (Fp × Fp) :=
   (Finset.univ : Finset (ChunkCell nc m width)).val.map
     (fun c => (value c.1 c.2.1 c.2.2, nm c.1 c.2.1 c.2.2))
