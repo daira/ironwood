@@ -6,11 +6,11 @@ import Zcash.Security.Ledger.Effects
 
 The first Balance theorem, as a computed reduction. For a valid ledger, the nonzero
 spends of the first `i + 1` transactions form a sub-multiset of the positioned outputs
-of the first `i` — outputs of *strictly earlier* transactions, since an anchor
-references the tree at a transaction boundary, so a spend can never match an output of
-its own transaction. Each spend is the opening of the output that created its
-commitment, at that output's leaf position, and no positioned opening is spent twice —
-or the ledger's own data computes a `BalanceBreak`:
+of the first `i` — outputs of *strictly earlier* transactions (since an anchor
+references the tree at a transaction boundary, a spend can never match an output of
+its own transaction). Each spend is the opening of the output that created its
+commitment, at that output's leaf position, and no positioned opening is spent twice;
+otherwise the ledger's own data computes a `BalanceBreak`:
 
 * a Merkle `Collision` — one height's compression collided, with both evaluations
   successful — when a spend's authentication path validates a leaf that is not the
@@ -20,15 +20,19 @@ or the ledger's own data computes a `BalanceBreak`:
 * a key-binding break, when two spends of one note tuple would otherwise have to reveal
   the same nullifier twice.
 
-The shape of the argument (design doc, "The theorems"): the anchor pins each spend's
-path to a prefix tree; position binding pins the leaf; `uncommitted_ne` rules out the
-padding; and the opening comparison pins the output or computes the note-commitment
-break. Duplicate spends of one positioned opening are found by `findPair`. Its result
-is certified as a two-element *sublist*, which carries "two distinct occurrences" with
-no index arithmetic, so `nfOldEqOrBreak` and nullifier uniqueness finish.
+The shape of the argument (design doc, "The theorems"):
 
-Everything is a plain computable `def` per breaks-as-computed-data; the anchor index and
-the duplicate pair are found by decidable search, so no data is conjured from the
+* the anchor pins each spend's path to a prefix tree;
+* position binding pins the leaf;
+* `uncommitted_ne` rules out the note commitment tree padding; and
+* the opening comparison pins the output or computes the note-commitment break.
+
+Duplicate spends of one positioned opening are found by `findPair`. Its result is
+certified as a two-element *sublist*, which carries "two distinct occurrences" with
+no index arithmetic.
+
+Everything is a plain computable `def` per breaks-as-computed-data; the anchor index
+and the duplicate pair are found by decidable search, so no data is conjured from the
 validity hypothesis's existentials.
 -/
 
@@ -212,8 +216,8 @@ theorem anchor_of_spendMem
   exact ⟨j, lt_of_le_of_lt hjk hki, hrt⟩
 
 /-- **Per-spend pinning.** A nonzero spend of a valid ledger is the positioned opening
-of the output that created its commitment — or the ledger data computes a break. The
-anchor prefix is recovered by decidable search (`Nat.find`), so the branches stay
+of the output that created its commitment — or the ledger data computes a `BalanceBreak`.
+The anchor prefix is recovered by decidable search (`Nat.find`), so the branches stay
 computable. -/
 def spendPinnedOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq RHO]
     [DecidableEq PSI] [DecidableEq MHASH] [DecidableEq MENC]
@@ -288,9 +292,9 @@ of the first `i + 1` transactions are a sub-multiset of the positioned outputs o
 first `i` — or the ledger data computes a `BalanceBreak`. The one-transaction lag is the
 strictly-earlier constraint: an anchor references a transaction boundary, so a spend
 never matches an output of its own transaction. Duplicate spends are located by
-`findPair`; sharing a positioned opening
-forces sharing a revealed nullifier (`nfOldEqOrBreak`), which nullifier uniqueness
-forbids, so the surviving branch is a key-binding break. -/
+`findPair`; sharing a positioned opening forces sharing a revealed nullifier
+(`nfOldEqOrBreak`), which nullifier uniqueness forbids, so the surviving branch is a
+key-binding break. -/
 def balanceSubsetOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq RHO]
     [DecidableEq PSI] [DecidableEq MHASH] [DecidableEq MENC] [DecidableEq NK]
     [NoZeroSMulDivisors F G]
@@ -646,17 +650,25 @@ theorem shieldedPoolBalance_nonneg
     rw [Multiset.map_coe, Multiset.sum_coe]
   exact le_trans h1 (positionedOutputs_value_sum_mono ledger (Nat.le_succ i))
 
-/-- **Balance integrity.** In a valid ledger, either the value after the first `i + 1`
-transactions is accounted for exactly — the shielded and transparent pools are both
-non-negative and sum to the minted issuance — or the ledger's own data computes a break:
-a Balance-subset break (a Merkle, note-commitment, or key-binding break) or the
-transaction-balance premiss's break. The three facts come from three places. The
-shielded pool is non-negative by spend-integrity (`shieldedPoolBalance_nonneg`, from
-Balance-subset: no value is spent that was not created). The transparent pool is
-non-negative by validity (`transparent_nonneg`). The two pools sum to issuance by
-balance conservation (`balanceConservationOrBreak`, from the binding signature: no
-value is created within a transaction). Together they place each pool in
-`[0, issuanceTotal]` and compose the two arguments into one statement. -/
+/-- **Balance integrity.** In a valid ledger, either the value after the first
+`i + 1` transactions is accounted for exactly —the shielded and transparent pools
+are both non-negative and sum to the minted issuance— or the ledger's own data
+computes a break: a Balance-subset break (a Merkle, note-commitment, or key-binding
+break) or the transaction-balance premiss's break.
+
+In the absence of a break, this matches (modulo the simplification of only one
+shielded pool made in the modelling) the rules in ZIP 209. More specifically
+it ensures that those rules only reinforce properties that are in any case
+cryptographically guaranteed. That is, there will be no "turnstile violation".
+
+Facts from three places come together to ensure balance integrity:
+
+* The shielded pool is non-negative by `shieldedPoolBalance_nonneg`, from
+  Balance-subset: no value is spent that was not created.
+* The transparent pool is non-negative by validity (`transparent_nonneg`).
+* The two pools sum to issuance by balance conservation
+  (`balanceConservationOrBreak`, from the binding signature: value balances within
+  a transaction). -/
 def balanceIntegrityOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq RHO]
     [DecidableEq PSI] [DecidableEq MHASH] [DecidableEq MENC] [DecidableEq NK]
     [NoZeroSMulDivisors F G] {VB : Type*}
