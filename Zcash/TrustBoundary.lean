@@ -1137,6 +1137,11 @@ assert_axioms Zcash.Snark.SequentialPreXProver.lift +native(CompElliptic.Curves.
 assert_axioms Zcash.Snark.SequentialPreXProver.lift_adversary +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.SequentialPreXProver.lift_Q +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- Uniform sequential cuts (#128 F6, first brick): prefix-determinism at every squeeze index
+-- is derived from the prover's execution order, never assumed.
+assert_axioms Zcash.Snark.OracleComp.run_congr_of_agree
+assert_axioms Zcash.Snark.SequentialCut.toPrefixDeterminedAt +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 -- The captured Action capstone assembly (issue #128): the exact terminal event, the
 -- derived-key checks and schedule, and the composed bound.
 assert_axioms Zcash.Snark.Fixture.actionAcceptFalseEvent +native(

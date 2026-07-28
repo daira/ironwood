@@ -1,4 +1,5 @@
 import Zcash.Snark.Soundness.Composition.StraightLineDeployed
+import Zcash.Snark.Soundness.Composition.PrefixedSqueeze
 
 /-!
 # Sequential online-AGM provers lift to the staged family
@@ -345,5 +346,66 @@ theorem lift_vk (sp : SequentialPreXProver family)
   ⟨rfl, rfl⟩
 
 end SequentialPreXProver
+
+/-! ## Cuts at arbitrary squeeze indices
+
+The constraint-`x` lifting above is the cut at index `4`.  The semantic challenge budgets need
+the same discipline at the four folding squeezes, so the cut is packaged uniformly: a prover's
+computation up to its `n`-th squeeze query, with every pre-cut query strictly shorter than the
+prefix it is about to squeeze.  Prefix-determinism at `n` — the pricing input the squeeze
+machinery consumes — is derived, never assumed.
+-/
+
+/-- Two tables agreeing on every point a computation queries produce the same run and the same
+query log. -/
+theorem OracleComp.run_congr_of_agree {T F α : Type*} (A : OracleComp T F α)
+    (O O' : T → F) (h : ∀ t ∈ A.queries O, O t = O' t) :
+    A.run O = A.run O' ∧ A.queries O = A.queries O' := by
+  induction A with
+  | pure a => exact ⟨rfl, rfl⟩
+  | query t k ih =>
+      have ht : O t = O' t := h t (by simp [OracleComp.queries])
+      obtain ⟨hr, hq⟩ := ih (O t) (fun u hu => h u (by simp [OracleComp.queries, hu]))
+      constructor
+      · rw [OracleComp.run_query, OracleComp.run_query, ← ht, hr]
+      · rw [OracleComp.queries, OracleComp.queries, ← ht, hq]
+
+/-- **A sequential cut at pre-IPA squeeze index `n`**: the prover's computation up to its `n`-th
+squeeze query.  Purely structural — an internal state, the pre-cut computation, and the squeeze
+point read off the state — plus the execution-order discipline: every pre-cut query is strictly
+shorter than the prefix about to be squeezed. -/
+structure SequentialCut (family : ComputedAlgebraicFSFamily shape) (n : Fin 11) where
+  /-- The prover's internal state at its `n`-th squeeze query. -/
+  State : Type
+  /-- The computation up to (excluding) the `n`-th squeeze query. -/
+  pre : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) →
+    OracleComp
+      (BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k))
+      Fp State
+  /-- The prover's own `n`-th squeeze point, read off its state. -/
+  point : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) → State →
+    BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k)
+  /-- The state's point is the run's `n`-th squeeze prefix. -/
+  point_run : ∀ basis O, point basis ((pre basis).run O) =
+    algebraicFullPrefixesPre family.init ((family.adversary basis).run O) n
+  /-- Every pre-cut query is strictly shorter than the `n`-th squeeze prefix. -/
+  pre_short : ∀ basis O t, t ∈ (pre basis).queries O →
+    t.val.length < preIpaLen shape family.init.length n
+
+/-- **Prefix-determinism from execution order.**  A cut at `n` yields the index-`n`
+prefix-determinism the squeeze pricing consumes: tables agreeing below the prefix length agree
+on every pre-cut query, so the state — and with it the squeeze point — is unchanged. -/
+theorem SequentialCut.toPrefixDeterminedAt {family : ComputedAlgebraicFSFamily shape}
+    {n : Fin 11} (c : SequentialCut family n) :
+    PrefixDeterminedAt family n := by
+  intro basis O O' hagree
+  have hpre : (c.pre basis).run O = (c.pre basis).run O' :=
+    (OracleComp.run_congr_of_agree _ O O' (fun t ht =>
+      hagree t (c.pre_short basis O t ht))).1
+  calc algebraicFullPrefixesPre family.init ((family.adversary basis).run O) n
+      = c.point basis ((c.pre basis).run O) := (c.point_run basis O).symm
+    _ = c.point basis ((c.pre basis).run O') := by rw [hpre]
+    _ = algebraicFullPrefixesPre family.init ((family.adversary basis).run O') n :=
+      c.point_run basis O'
 
 end Zcash.Snark
