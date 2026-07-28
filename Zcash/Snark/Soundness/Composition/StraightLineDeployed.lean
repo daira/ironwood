@@ -1,3 +1,4 @@
+import Zcash.Snark.Soundness.AGM.DirectX4Columns
 import Zcash.Snark.Soundness.AGM.StraightLinePinnedRoots
 import Zcash.Snark.Soundness.Composition.DeployedRootContainment
 import Zcash.Snark.Soundness.Composition.DeployedConstraintContainment
@@ -29,15 +30,12 @@ structure ComputedStraightLineDeployedFSFamily (shape : Shape)
 
 namespace ComputedStraightLineDeployedFSFamily
 
-/-- **Adapter constructor from the deployed representation-carrying online prover model.**  The
-online family already derives canonical aggregate coordinates and deployed-member coverage from
-`OnlineMemberProofData`.  The three staged traces add, respectively, the six deployed root
-computations, the IPA-round computations, and the constraint-`x` computation.  Callers must supply
-those executable stages and their freshness proofs; this constructor packages them with the same
-represented prover output consumed by the direct-coordinate decoder.
+/-- **Adapter constructor from the online representation-carrying prover model.**  The online
+family already supplies canonical aggregate coordinates and deployed-member coverage; the three
+staged traces add the six deployed root computations, the IPA-round computations, and the
+constraint-`x` computation.  Callers supply those executable stages with their freshness proofs.
 
-The captured Orchard key profile is applied to the resulting family by the fixture endpoint; no
-new proof fixture or honest-prover fixture is part of this constructor. -/
+The captured Orchard key profile is applied to the result by the fixture endpoint, not here. -/
 def ofCovered
     (online : ComputedOnlineMemberFSFamily shape)
     (rootTrace : DeployedRootOnlineTrace online.toFamily

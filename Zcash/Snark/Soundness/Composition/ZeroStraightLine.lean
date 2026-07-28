@@ -4,19 +4,20 @@ import Zcash.Snark.Soundness.Composition.StraightLineWitness
 /-!
 # The straight-line deployed interface, inhabited with live IPA rounds
 
-`Composition.StraightLineWitness` inhabits this interface at the degenerate witness shape, where
-`k = 0` makes every IPA-round obligation quantify over `Fin 0`.  This module inhabits it over the
-shape-generic zero prover instead, so the IPA-round obligations are real: at `k = 11` the staged
-trace carries eleven live rounds, each discharged by
-`straightLineIpaRootPolynomial_of_zero_coordinates` rather than by emptiness of the index type.
+`zeroStraightLineDeployedFamily` inhabits the straight-line deployed interface over the
+shape-generic zero prover, with the IPA-round obligations live: at `k = 11` the staged trace
+carries eleven rounds, each discharged by `straightLineIpaRootPolynomial_of_zero_coordinates`
+rather than by an empty index type.  `Composition.StraightLineWitness` inhabits the same
+interface at the witness shape, where `k = 0` empties those obligations.
 
-Two hypotheses carry the construction.  The key's two group-valued commitment families are zero —
-that is what the zero prover's assembly needs — and the shape is instance-free.  The second is
-what makes the constraint layer discharge: with no sub-proofs the folded constraint list is empty
-and the decoded quotient pieces have zero coordinates, so the pre-`x` constraint difference is the
-zero polynomial and the constraint-`x` root set is empty on every table.  The honest reading is
-that this exercises the multiopen grouping, the six root events and the IPA rounds at real key
-layouts, and leaves the constraint system trivial; a prover with sub-proofs would have to commit
+Two hypotheses carry it.  The key's two group-valued commitment families are zero, which is what
+the zero prover's assembly needs.  And the shape is instance-free, which is what discharges the
+constraint layer: with no sub-proofs the folded constraint list is empty and the decoded quotient
+pieces have zero coordinates, so the pre-`x` constraint difference is the zero polynomial and the
+constraint-`x` root set is empty on every table.
+
+So this exercises the multiopen grouping, the six root events and the IPA rounds at real key
+layouts, and leaves the constraint system trivial.  A prover with sub-proofs would have to commit
 columns that actually satisfy Orchard's gates.
 -/
 
@@ -59,9 +60,9 @@ theorem constraintPolys_nil_of_no_proofs (hproofs : shape.numProofs = 0)
   rw [hnil]
   rfl
 
-/-- The zero family's pre-`x` constraint difference is the zero polynomial at an instance-free
-shape: no sub-proof contributes a constraint, and the decoded quotient pieces read the all-zero
-assembly source. -/
+/-- At an instance-free shape the zero family's pre-`x` constraint difference is the zero
+polynomial: no sub-proof contributes a constraint, and the decoded quotient pieces read the
+all-zero assembly source. -/
 theorem zeroConstraintDifference_eq_zero (hproofs : shape.numProofs = 0)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
     (coins : (zeroDeployedRootFamily vkS hfixed hperm).toFamily.Coins)
@@ -127,9 +128,9 @@ variable (vkS : VerifyingKey shape Fp VestaG)
   (hfixed : ∀ i, vkS.fixedCommitment i = 0)
   (hperm : ∀ i, vkS.permutationCommonCommitment i = 0)
 
-/-- Every straight-line IPA round polynomial of the zero prover is the zero polynomial — at every
-round of every `k`, not only at shapes with no rounds.  The multiopen value vanishes because the
-instance-free zero proof claims only zero evaluations. -/
+/-- Every straight-line IPA round polynomial of the zero prover is the zero polynomial, at every
+round of every `k`.  The walk starts at zero because an instance-free zero proof claims only zero
+evaluations, so its multiopen value vanishes. -/
 theorem zeroWfProof_straightLineIpaRootPolynomial (hproofs : shape.numProofs = 0)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
     (ν : Fin 11 → Fp) (χ : Fin shape.k → Fp) (j : Fin shape.k) :
@@ -145,9 +146,9 @@ theorem zeroWfProof_straightLineIpaRootPolynomial (hproofs : shape.numProofs = 0
   · intro r
     exact ⟨rfl, rfl, rfl, rfl⟩
 
-/-- **The zero family's staged IPA trace.**  Unlike the witness family's, this one has live
-rounds: the staged polynomial is the zero polynomial at every one of the shape's `k` rounds, so
-`agrees` is a theorem about the discrepancy walk rather than an empty quantification. -/
+/-- **The zero family's staged IPA trace.**  The staged polynomial is zero at every one of the
+shape's `k` rounds, so `agrees` is a theorem about the discrepancy walk rather than an empty
+quantification. -/
 noncomputable def zeroStraightLineIpaTrace (hproofs : shape.numProofs = 0) :
     StraightLineIpaOnlineTrace (zeroDeployedRootFamily vkS hfixed hperm).toFamily where
   stage := fun _basis _j => .pure 0

@@ -70,7 +70,7 @@ def straightLineConstraintRelationFinderCalls
       | PSum.inr _ => 2
       | PSum.inl _ => 4
 
-/-- The new combined finder has a pointwise four-invocation bound—independent of the field, `k`,
+/-- The new combined finder has a pointwise four-invocation bound — independent of the field, `k`,
 and the adversary's success distribution. -/
 theorem straightLineConstraintRelationFinderCalls_le_four
     (family : ComputedStraightLineDeployedFSFamily shape)

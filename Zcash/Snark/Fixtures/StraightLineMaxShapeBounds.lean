@@ -182,8 +182,8 @@ the represented source consumed on that run. -/
 theorem straightLineDirectDecodeOps_at_consensus_max_of_source
     (family : ComputedStraightLineDeployedFSFamily (shape orchardConsensusMaxProofs))
     (hsource : forall basis O,
-      ((((wrappedAdversary family.toFamily basis).run O).1.algebraicProof
-        .preX1AssemblySource (family.fixedRepresentations basis)).length) <= 2 ^ 90) :
+      (((wrappedAdversary family.toFamily basis).run O).1.algebraicProof.preX1AssemblySource
+        (family.fixedRepresentations basis)).length <= 2 ^ 90) :
     forall basis O, family.straightLineDirectDecodeOps basis O <= 2 ^ 122 := by
   intro basis O
   unfold ComputedStraightLineDeployedFSFamily.straightLineDirectDecodeOps
@@ -195,8 +195,8 @@ theorem straightLineDirectDecodeOps_at_consensus_max_of_source
 theorem straightLineDirectDecodeOps_twice_at_consensus_max_of_source
     (family : ComputedStraightLineDeployedFSFamily (shape orchardConsensusMaxProofs))
     (hsource : forall basis O,
-      ((((wrappedAdversary family.toFamily basis).run O).1.algebraicProof
-        .preX1AssemblySource (family.fixedRepresentations basis)).length) <= 2 ^ 90) :
+      (((wrappedAdversary family.toFamily basis).run O).1.algebraicProof.preX1AssemblySource
+        (family.fixedRepresentations basis)).length <= 2 ^ 90) :
     forall basis O, 2 * family.straightLineDirectDecodeOps basis O <= 2 ^ 123 := by
   intro basis O
   calc

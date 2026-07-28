@@ -305,19 +305,6 @@ theorem deployedRootSqueezeInvariance_of_prefixDetermined
   rw [hEq, hlen] at ht
   exact lt_irrefl _ ht
 
-/-- Reprogramming a point that a computation did not query leaves its result unchanged. -/
-theorem OracleComp.run_update_of_not_mem_queries {T F α : Type*} [DecidableEq T]
-    (A : OracleComp T F α) (O : T → F) (t : T) (v : F)
-    (hfresh : t ∉ A.queries O) :
-    A.run (Function.update O t v) = A.run O := by
-  induction A with
-  | pure a => rfl
-  | query q k ih =>
-      simp only [OracleComp.queries, List.mem_cons, not_or] at hfresh
-      have hqt : q ≠ t := Ne.symm hfresh.1
-      rw [OracleComp.run_query, OracleComp.run_query, Function.update_apply, if_neg hqt]
-      exact ih (O q) hfresh.2
-
 /-- A representation-carrying root-set computation that stops short of each priced squeeze.
 
 `stage` is an actual oracle computation, `fresh` proves that it has not queried the squeeze point

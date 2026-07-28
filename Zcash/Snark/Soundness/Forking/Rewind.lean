@@ -509,25 +509,8 @@ def deployed_forking_relation [DecidableEq G] [Inhabited G] (urs : URS G)
 
 /-! ## Propositional extraction
 
-This legacy path turns high acceptance into a fork certificate. The executable adversary path is in
-`Soundness.Forking.Adversary.Algebraic`.
-
-### Why the ladder is still here
-
-The `legacy_*` rungs are superseded by the computed Fiat–Shamir endpoints and were scoped for
-deletion once the stack landed. They cannot go yet: `orchard_verifier_vesta_forking_constraint_deployed_x4`
-— a non-legacy capstone pinned in `TrustBoundary` — consumes
-`legacy_orchard_verifier_vesta_forking_opening_deployed`, which chains through
-`legacy_orchard_verifier_vesta_forking_opening` and `legacy_deployed_forking_soundness_of_bridge`
-down to `legacy_deployed_forking_soundness` here. The book's proof map and proof journey also
-document the ladder as a live capstone family.
-
-Genuinely dead rungs today (definition-only, unpinned): `legacy_orchard_verifier_vesta_forking_constraint`,
-`…_constraint_adaptive`, `…_opening_rewind`, `…_constraint_rewind`, `…_constraint_adaptive_rewind`,
-and `legacy_deployed_forking_soundness_of_{fixed,staged}_adversary` /
-`legacy_deployed_forking_soundness_of_adversary`. Deleting those also frees
-`OracleComp.fsAdvantage_pure`, whose only consumer is the fixed-adversary rung. That is a scoping
-call on how much of the documented ladder to retire, not a mechanical cleanup. -/
+This path turns high acceptance into a fork certificate. The executable adversary path is in
+`Soundness.Forking.Adversary.Algebraic`. -/
 
 open scoped ENNReal in
 open Classical in
@@ -606,72 +589,6 @@ theorem proverAccept_iff_flatAccept {U W : G} {z : Fp} : {d : ℕ} → (P : Prov
       have htail : (Fin.tail fun i => (χ i)⁻¹) = (fun i => ((Fin.tail χ) i)⁻¹) := by
         funext i; rfl
       rw [htail, show Pwhole + (χ 0) • R + (χ 0)⁻¹ • L = Pwhole + (χ 0)⁻¹ • L + (χ 0) • R from by abel]
-
-open scoped ENNReal in
-open Classical in
-/-- `proverAccept` and `flatAccept` have equal probability under uniform challenges. -/
-theorem proverAccept_measure_eq_flatAccept {d : ℕ} {U W : G} {z : Fp} (P : Prover Fp G d)
-    (g : Fin (2 ^ d) → G) (b : Fin (2 ^ d) → Fp) (Pwhole : G) :
-    (PMF.uniformOfFintype (Fin d → Fp)).toOuterMeasure
-        (Finset.univ.filter (proverAccept P g b U W z Pwhole))
-      = (PMF.uniformOfFintype (Fin d → Fp)).toOuterMeasure
-        (Finset.univ.filter (flatAccept (invProver P) g b U W z Pwhole)) := by
-  have hset : (Finset.univ.filter (proverAccept P g b U W z Pwhole))
-      = Finset.univ.filter
-          (fun χ : Fin d → Fp => flatAccept (invProver P) g b U W z Pwhole (fun i => (χ i)⁻¹)) := by
-    ext χ
-    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
-    exact proverAccept_iff_flatAccept P g b Pwhole χ
-  rw [hset, uniformOfFintype_measure_inv]
-
-open scoped ENNReal in
-/-- Legacy opening-or-relation result from high acceptance of an abstract prover strategy. -/
-noncomputable def legacy_deployed_forking_soundness [DecidableEq G] [Inhabited G] (urs : URS G)
-    (b : Fin (2 ^ urs.k) → Fp) (v ξ z blind : Fp) (aMulti aDep s : Fin (2 ^ urs.k) → Fp)
-    (P : Prover Fp G urs.k) (hz : z ≠ 0) (hb0 : b 0 = 1)
-    (hP : commit urs aDep = commit urs aMulti - v • urs.g 0 + ξ • commit urs s)
-    [DecidablePred (proverAccept P urs.g b urs.u urs.w z
-      (commit urs aDep + (z * 0) • urs.u + blind • urs.w))]
-    (hprob : (kerr (Fintype.card Fp) urs.k : ℝ≥0∞) / Fintype.card (Fin urs.k → Fp)
-        < (PMF.uniformOfFintype (Fin urs.k → Fp)).toOuterMeasure
-            (Finset.univ.filter (proverAccept P urs.g b urs.u urs.w z
-              (commit urs aDep + (z * 0) • urs.u + blind • urs.w)))) :
-    (∃ a, IpaRelation urs (commit urs aMulti) b (v - ξ * innerProduct s b) a)
-      ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  -- `proverAccept_forkValid` yields the certificate behind a `Prop` `∃`; naming it as data (`Classical.choose`)
-  -- is what makes this composition `noncomputable` — the honest random-oracle floor (`Forking.Oracle`). The
-  -- deterministic `deployed_forking_relation` it wraps is a genuine *computed* reduction returning the opening
-  -- as data; here that data is forgotten to `∃` since the certificate itself is only classically obtained.
-  --
-  -- The computed path no longer forgets it. `algebraicForkCertAttempt` returns the certificate as data, so
-  -- `ComputedAlgebraicFSFamily.cleanOpening` returns the opening itself and
-  -- `knowledgeSoundness_under_DL_computed` prices its absence. The loss below is specific to this legacy
-  -- rung, whose `hprob` hypothesis supplies no certificate to compute with.
-  have hpf := proverAccept_forkValid P urs.g b
-    (commit urs aDep + (z * 0) • urs.u + blind • urs.w) (extractable_of_prob _ hprob)
-  rcases deployed_forking_relation urs b v ξ z blind aMulti aDep s hpf.choose hz hb0 hP hpf.choose_spec
-    with ⟨a, ha⟩ | r
-  · exact PSum.inl ⟨a, ha⟩
-  · exact PSum.inr r
-
-open scoped ENNReal in
-open Classical in
-/-- **Legacy propositional capstone.** State abstract forking soundness using the deployed verifier's
-inverse-challenge fold convention. -/
-noncomputable def legacy_deployed_forking_soundness_flat [DecidableEq G] [Inhabited G] (urs : URS G)
-    (b : Fin (2 ^ urs.k) → Fp) (v ξ z blind : Fp) (aMulti aDep s : Fin (2 ^ urs.k) → Fp)
-    (Q : Prover Fp G urs.k) (hz : z ≠ 0) (hb0 : b 0 = 1)
-    (hP : commit urs aDep = commit urs aMulti - v • urs.g 0 + ξ • commit urs s)
-    (hprob : (kerr (Fintype.card Fp) urs.k : ℝ≥0∞) / Fintype.card (Fin urs.k → Fp)
-        < (PMF.uniformOfFintype (Fin urs.k → Fp)).toOuterMeasure
-            (Finset.univ.filter (flatAccept Q urs.g b urs.u urs.w z
-              (commit urs aDep + (z * 0) • urs.u + blind • urs.w)))) :
-    (∃ a, IpaRelation urs (commit urs aMulti) b (v - ξ * innerProduct s b) a)
-      ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  refine legacy_deployed_forking_soundness urs b v ξ z blind aMulti aDep s (invProver Q) hz hb0 hP ?_
-  rw [proverAccept_measure_eq_flatAccept (invProver Q) urs.g b
-        (commit urs aDep + (z * 0) • urs.u + blind • urs.w), invProver_invProver Q]
-  exact hprob
 
 /-! ## The deterministic prover-to-verifier bridge
 
@@ -859,30 +776,5 @@ theorem deployedVerifierEq_iff_flatAccept_adaptive {shape : Shape} [DecidableEq 
 theorems above establish this identity for the deployed verifier. The executable adversary path uses
 the corresponding bridge in `Soundness.Forking.Adversary.Algebraic`.
 -/
-
-open scoped ENNReal in
-open Classical in
-/-- **Legacy propositional capstone.** Derive the deployed opening from a prover strategy, a pointwise
-accept-event bridge, and acceptance above the knowledge error. -/
-noncomputable def legacy_deployed_forking_soundness_of_bridge [DecidableEq G] [Inhabited G]
-    (urs : URS G)
-    (b : Fin (2 ^ urs.k) → Fp) (v ξ z blind : Fp) (aMulti aDep s : Fin (2 ^ urs.k) → Fp)
-    (Q : Prover Fp G urs.k) (accepts : (Fin urs.k → Fp) → Prop)
-    (hz : z ≠ 0) (hb0 : b 0 = 1)
-    (hP : commit urs aDep = commit urs aMulti - v • urs.g 0 + ξ • commit urs s)
-    (hbridge : ∀ χ, accepts χ ↔ flatAccept Q urs.g b urs.u urs.w z
-        (commit urs aDep + (z * 0) • urs.u + blind • urs.w) χ)
-    (hprob : (kerr (Fintype.card Fp) urs.k : ℝ≥0∞) / Fintype.card (Fin urs.k → Fp)
-        < (PMF.uniformOfFintype (Fin urs.k → Fp)).toOuterMeasure (Finset.univ.filter accepts)) :
-    (∃ a, IpaRelation urs (commit urs aMulti) b (v - ξ * innerProduct s b) a)
-      ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  refine legacy_deployed_forking_soundness_flat urs b v ξ z blind aMulti aDep s Q hz hb0 hP ?_
-  have hset : Finset.univ.filter accepts
-      = Finset.univ.filter (flatAccept Q urs.g b urs.u urs.w z
-          (commit urs aDep + (z * 0) • urs.u + blind • urs.w)) := by
-    ext χ
-    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
-    exact hbridge χ
-  rwa [hset] at hprob
 
 end Zcash.Snark

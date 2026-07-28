@@ -3,14 +3,14 @@ import Zcash.Snark.Soundness.AGM.OnlineMultiopen
 /-!
 # Straight-line AGM extraction for the deployed IPA
 
-This module is deliberately additive to the recursive/reprogramming AGM extractor.  It uses the
-representation-carrying `AlgebraicWfProof` interface to build the symbolic IPA equation from one
-adversary execution.  No declaration here weakens, replaces, or is imported by the recursive AFK
-path.
+One accepting algebraic transcript is classified as a clean opening, an explicit augmented-basis
+relation, or a squeeze-pinned bad-challenge event — from a single adversary execution, with no
+rewinding.  `straightLineIpaZeroOrRelation` and `straightLineBindingAttackZRootOrRelation` are the
+endpoints; the symbolic IPA equation they read is built from the representation-carrying
+`AlgebraicWfProof` interface.
 
-The eventual concrete endpoint will classify one accepting algebraic transcript as a clean
-opening, an explicit augmented-basis relation, or a squeeze-pinned bad-challenge event.  The first
-step is to expose the exact represented point at which the deployed IPA starts.
+The module is additive to the recursive AFK extractor: no declaration here weakens, replaces, or
+is imported by that path.
 -/
 
 namespace Zcash.Snark

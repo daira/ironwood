@@ -5,89 +5,57 @@ import Zcash.Arithmetic
 /-!
 # Random-oracle model for Fiat–Shamir
 
-`Verifier.FiatShamir` derives challenges with an abstract `squeeze`. The deployed verifier uses
-Blake2b. The soundness proof models it as a random function with uniform answers that can be changed
-at one query.
-
-This module supplies the random-oracle primitives the forking development is framed with:
-
-* `reprogram` changes the answer at one transcript prefix. Rewinding reruns the prover with that
-  changed answer.
-* `uniformChallenge` and `uniformChallenge_badSet` model a fresh field challenge and its probability
-  of landing in a finite bad set.
+`Verifier.FiatShamir` derives challenges with an abstract `squeeze`; the deployed verifier uses
+Blake2b. The soundness proof models it as a random function with uniform answers, changeable at
+one query. This module supplies the two primitives the forking development is framed with:
+`reprogram`, which changes the answer at one transcript prefix, and `uniformChallenge` with
+`uniformChallenge_badSet`, a fresh field challenge and its chance of landing in a finite bad set.
 
 ## Challenge-vector distribution
 
-The forking proof uses the uniform distribution on IPA challenge vectors.
-`Soundness.Forking.Rewind.roChallenges_ipaRound_uniform` derives that distribution for a fixed proof
-from one assumption:
-
-> **Random oracle.** The Blake2b squeeze is idealized as a *uniform random function* `O` over its query domain.
-
-Each round reads `O` at a distinct transcript prefix, so the answers are independent and uniform.
-This also assumes that transcript encoding is injective and that halo2's `Challenge255 → Fp`
-conversion is exactly uniform.
-
-Thus the challenge distribution is proved inside the random-oracle model, while the model itself
-remains an assumption about Blake2b.
+`Rewind.roChallenges_ipaRound_uniform` derives the uniform distribution on IPA challenge vectors
+for a fixed proof from one assumption: the Blake2b squeeze is a uniform random function `O` over
+its query domain. Each round reads `O` at a distinct prefix, so the answers are independent and
+uniform. This also assumes injective transcript encoding and an exactly uniform
+`Challenge255 → Fp` conversion. The distribution is therefore proved inside the model; the model
+itself stays an assumption about Blake2b.
 
 ## The `Challenge255 → Fp` conversion bias
 
-`uniformChallenge` is *defined* as `PMF.uniformOfFintype Fp`. The deployed conversion is not exactly
-uniform: halo2 squeezes a fixed-width byte string and reduces it modulo `p`, and reduction of a
-uniform `w`-bit integer modulo `p` leaves each residue with probability `⌊2^w/p⌋/2^w` or
-`⌈2^w/p⌉/2^w` rather than `1/p`. Summed over `Fp` this is a total-variation distance of at most
-`|Fp| / 2^w` per squeeze, and a `q`-squeeze run loses at most `q · |Fp| / 2^w` by the usual hybrid
-over squeezes — the *same* `q` that `Soundness.Forking.Adversary.OracleComp` already charges query
-loss against.
+The deployed conversion is not exactly uniform. Halo2 reduces a fixed-width byte string modulo
+`p`, which leaves each residue with probability `⌊2^w/p⌋/2^w` or `⌈2^w/p⌉/2^w`. Summed over `Fp`
+that is a total-variation distance of at most `|Fp| / 2^w` per squeeze, so a `q`-squeeze run loses
+at most `q · |Fp| / 2^w` — the same `q` that `Adversary.OracleComp` already charges query loss
+against.
 
-`badSet_measure_le_of_bias` below is where that term attaches: it carries any bad-set bound proved
-against `uniformChallenge` over to a biased conversion law at an additive `ε`. Instantiating `ε`
-requires pinning `w` for the deployed transcript, which is a fact about halo2's transcript code and
-not about this development — it belongs on the same side of the boundary as Blake2b itself, and is
-recorded in the trust boundary rather than proved here. What this module no longer does is call the
-bias "negligible" without saying what it is or where it would be charged.
+`badSet_measure_le_of_bias` is where the term attaches: it carries any bad-set bound proved
+against `uniformChallenge` over to a biased law at an additive `ε`. Instantiating `ε` needs `w`
+for the deployed transcript, a fact about halo2's transcript code recorded in the trust boundary
+rather than proved here.
 
-## Remaining adversary model
+## What the adversary model still assumes
 
-The querying-adversary experiment this module's floor used to defer is now present:
-`Soundness.Forking.Adversary.OracleComp` models a bounded-query adversary (`OracleComp`,
-`QueryBound`), `Soundness.Forking.Adversary.Algebraic` runs the recursive extractor against it, and
+The querying-adversary experiment is present: `Adversary.OracleComp` models a bounded-query
+adversary, `Adversary.Algebraic` runs the recursive extractor against it, and
 `ComputedAlgebraicFSFamily.knowledgeSoundness_under_DL` and `.binding_under_DL` price extraction
-failure from the adversary's own advantage. Query loss is charged explicitly — `(Q + k) · (3/p)` for
-the extractor's escape slice plus `(Q + 1) · (1/p)` for the adaptive `z = 0` slice — rather than
-assumed away. The Fiat–Shamir layer also produces `DeployedAlgebraicForkingInstance` values and
-relates its acceptance event to the relation event, which was the gap tracked by issue #15; that
-issue's scope (binding ⟶ plain DL in the AGM) is discharged by `Soundness.AGM.Adapter` and
-`.Probability`.
+failure from the adversary's own advantage. Query loss is charged explicitly: `(Q + k) · (3/p)`
+for the extractor's escape slice and `(Q + 1) · (1/p)` for the adaptive `z = 0` slice. What
+remains is:
 
-What is left of the floor is therefore *not* "there is no adversary experiment". It is:
+* **Efficiency modeling.** The generic endpoints take `ReductionEfficient R`; their `_poly` forms
+  discharge it unconditionally at `R = (8·Q+1)·10^k`, the Attema–Fehr–Klooß-style expected
+  black-box call bound of the recursive extractor
+  (`recursiveAlgebraicFork_oracle_tape_sum_runs_le_poly`, with `Q` the query bound and `k` the IPA
+  depth). `reductionEfficient_of_forkSpread` is the conditional density-sensitive alternative.
+  PPT-ness of the adversary family is external to Lean.
+* **The idealizations.** Blake2b as a random function, the conversion bias above, the AGM,
+  plain-DL hardness, and the generator random-oracle model.
 
-* **Efficiency modeling.** The generic endpoints are parameterized by
-  `ComputedAlgebraicFSFamily.ReductionEfficient R`, and their `_poly` forms discharge it
-  unconditionally via `reductionEfficient_poly` at `R = (8·Q+1)·10^k` — the Attema–Fehr–Klooß-style
-  expected black-box call bound of the recursive extractor
-  (`recursiveAlgebraicFork_oracle_tape_sum_runs_le_poly`: expected adversary runs averaged over
-  oracle tables and extractor tapes, with `Q` the adversary's query bound and `k` the IPA depth).
-  `reductionEfficient_of_forkSpread` remains as a conditional density-sensitive alternative.
-  PPT-ness of the adversary family itself is external to Lean.
-* **The idealizations.** Blake2b as a random function, the conversion bias above, the AGM, plain-DL
-  hardness, and the generator random-oracle model.
-* **The legacy fixed-proof rungs.** `legacy_deployed_forking_soundness` and the
-  `legacy_orchard_verifier_vesta_*` ladder still take `hprob` as a hypothesis: they measure one
-  proof over all challenge vectors, not a querying attack. The computed endpoints above supersede
-  them; the ladder is retained because `orchard_verifier_vesta_forking_constraint_deployed_x4`
-  still routes through it.
-
-`uniformChallenge_badSet` is used directly for the `1/p` blinding budget.
-
-One scope note, part of that floor and not of the derived uniformity: the `Fp`-squeeze exclusions —
-the Schwartz–Zippel `d / p`, the `z ≠ 0` and `ξ`-recovery `1 / p` singletons, and any further point
-exclusions — are combined into one subadditive bound by
-`Soundness.GoodChallenge.uniformChallenge_szBadSet_union`, whereas the `kerr` tree count lives over
-the round-*vector* domain and is charged separately.
+The `Fp`-squeeze exclusions — the Schwartz–Zippel `d / p`, the `z ≠ 0` and `ξ`-recovery `1 / p`
+singletons, and any further point exclusions — combine into one subadditive bound by
+`GoodChallenge.uniformChallenge_szBadSet_union`. The `kerr` tree count lives over the
+round-*vector* domain and is charged separately.
 -/
-
 namespace Zcash.Snark
 
 open scoped ENNReal

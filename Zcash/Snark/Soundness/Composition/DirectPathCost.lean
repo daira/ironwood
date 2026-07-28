@@ -4,24 +4,21 @@ import Zcash.Snark.Soundness.Composition.ActionBudget
 /-!
 # Total-cost model for the direct-coordinate postprocessing
 
-`DirectX4Columns` closes the algorithmic seam: the direct decode is an executable program over
-the covered representations, not a classical choice.  This module supplies the runtime half of
-that claim — an explicit field-independent polynomial bound on the arithmetic the decode performs,
-in the same modeled-count style as `deployedConstraintRelationFinderCalls`.
+`DirectX4Columns` makes the direct decode an executable program over the covered representations
+rather than a classical choice.  This module supplies the runtime half of that claim: a
+field-independent polynomial bound on the arithmetic the decode performs, in the modeled-count
+style of `deployedConstraintRelationFinderCalls`.
 
-The model charges, per `x₄` batch column (including the final `q′` column): one traversal of the
-column's member list, where each member pays a covered-source lookup (at most `sourceLen` data
-steps), one challenge-power update, a scalar multiply-add on each of the `2^k` generator
-coordinates, and the `u`/`w` coordinate multiply-adds; plus one aggregate fold-and-compare over
-the `2^k + 2` coordinates of the column's contribution.  Group operations never appear on the
-decode's data path — commitments enter only through the proof-layer identities — so field
-operations and data traversal are the whole cost.
+Per `x₄` batch column, including the final `q′` column, the model charges one traversal of the
+column's member list — each member paying a covered-source lookup of at most `sourceLen` steps, a
+challenge-power update, a scalar multiply-add on each of the `2^k` generator coordinates, and the
+`u`/`w` multiply-adds — plus one fold-and-compare over the column's `2^k + 2` coordinates.  Group
+operations never touch this path, so field operations and data traversal are the whole cost.
 
-The bounds are stated against the actual per-run quantities (`deployedX4PairCount`,
-`deployedSetQueries`), then discharged shape-polynomially through the existing
-`deployedX4PairCount_le_numPointSets` and `deployedSetQueries_length_le`.  No term depends on
-`|F|`; the captured-shape corollaries in `Fixtures.MaxShapeBounds` evaluate the bound to a count
-linear in the action count.
+The bounds are stated at the actual per-run quantities (`deployedX4PairCount`,
+`deployedSetQueries`) and discharged shape-polynomially by `deployedX4PairCount_le_numPointSets`
+and `deployedSetQueries_length_le`.  No term depends on `|F|`, and the captured-shape corollaries
+in `Fixtures.MaxShapeBounds` evaluate the bound to a count linear in the action count.
 -/
 
 namespace Zcash.Snark

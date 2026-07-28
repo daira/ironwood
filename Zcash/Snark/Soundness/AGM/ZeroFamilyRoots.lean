@@ -3,12 +3,14 @@ import Zcash.Snark.Soundness.AGM.ZeroFamily
 /-!
 # The zero family's deployed root layer
 
-The witness family carried its root outcome and staged trace at the degenerate shape, where five
-of the six root sets are empty.  This module rebuilds the layer over `zeroOnlineMemberFamily` at
-an arbitrary shape: the batch witness packages the all-zero deployed batches against the family's
-(provably zero) canonical aggregate coordinates, and the outcome provider always returns it — so
-`deployedRootBad`'s outcome match reduces definitionally, leaving six value-side root sets that
-are explicit functions of the pre-IPA reads.
+`zeroDeployedRootFamily` inhabits the deployed root interface at every shape, over the constant
+zero prover.
+
+The batch witness holds all-zero deployed batches against the run's canonical aggregate
+coordinates, which are themselves zero, and the outcome provider always returns it.  So
+`deployedRootBad`'s outcome match reduces definitionally, leaving six root sets that are explicit
+functions of the pre-IPA reads.  `PinnedRootWitness` builds the same layer at the degenerate
+shape, where five of the six sets are empty.
 -/
 
 namespace Zcash.Snark
@@ -247,10 +249,10 @@ end BatchWitness
 
 /-! ## Batch-free forms of the four batched root sets
 
-Each batched root set, applied to batches whose coordinate columns are all zero, equals a formula
-mentioning no batch structure — only the verifying key, instance commitments, proof string, and
-challenge record.  These are the transport vehicles across the propositional equality between the
-wrapped run's proof string and the zero proof string.
+At all-zero coordinate columns each batched root set equals a formula naming no batch structure —
+only the key, the instance commitments, the proof string and the challenge record.  That is what
+carries the sets across the propositional equality between the wrapped run's proof string and the
+zero proof string.
 -/
 
 section BatchFree
@@ -531,9 +533,9 @@ end ClosedFormLemma
 
 /-! ## Prefix injectivity, at any shape
 
-The eleven pre-IPA squeeze prefixes have strictly increasing lengths — every stage of the
-transcript absorbs at least one element before squeezing — so the squeeze points are pairwise
-distinct at every shape, not only at the decidable witness shape.
+Each transcript stage absorbs before it squeezes, so the eleven pre-IPA prefixes have strictly
+increasing lengths and the squeeze points are pairwise distinct — at every shape, not only at the
+decidable witness shape.
 -/
 
 section Injectivity
@@ -575,10 +577,10 @@ end Injectivity
 
 /-! ## Blindness of each closed form to its own squeeze
 
-Every root event's closed form is a function of the assembled queries and of the challenge fields
-squeezed strictly before that event.  Rather than compare two whole records — a kernel defeq the
-multiopen assembly makes hopeless — each proof rewrites the one shared source of dependence,
-`assembleQueries`, and lets the remaining projections reduce.
+Every root event's set reads only the assembled queries and the challenge fields squeezed before
+that event.  Each proof rewrites the one dependence they share, `assembleQueries`, and lets the
+remaining projections reduce.  Comparing two whole challenge records instead is a kernel defeq
+the multiopen assembly makes hopeless.
 -/
 
 section Blindness
@@ -614,8 +616,8 @@ section BlindForms
 variable (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
   (vkS : VerifyingKey shape Fp VestaG) (ch : Challenges shape.k Fp) (v : Fp)
 
-/-- Changing `x₁` moves neither the grouped point sets nor the claimed set evaluations, only the
-compressed evaluation vectors — so the point lists routed to each set are unchanged. -/
+/-- Changing `x₁` moves only the compressed evaluation vectors, so the point list routed to each
+set is unchanged. -/
 private theorem getD_setsForEval_fst
     (pts : List (List Fp)) (e e' : List (List Fp)) (u : List Fp)
     (hlen : e.length = e'.length) :
@@ -701,8 +703,8 @@ theorem zeroX2RootSet_blind :
     deployedX4Pairs deployedX4Qs
   rw [assembleQueries_x2_blind]
 
-/-- The `x₁` event's closed form is fixed before the `x₁` squeeze: the compression by `x₁` moves
-only the evaluation vectors, which the member-binding polynomial does not read. -/
+/-- The `x₁` event's closed form is fixed before the `x₁` squeeze.  Compressing by `x₁` moves only
+the evaluation vectors, which the member-binding polynomial never reads. -/
 theorem zeroX1RootSet_blind :
     zeroX1RootSet basis vkS {ch with x1 := v} = zeroX1RootSet basis vkS ch := by
   have hcount := deployedX4PairCount_x1_blind vkS ch v
@@ -733,9 +735,8 @@ variable (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
   (hfixed : ∀ i, vkS.fixedCommitment i = 0)
   (hperm : ∀ i, vkS.permutationCommonCommitment i = 0)
 
-/-- Read-index dodge: a stage reads every pre-IPA squeeze point except its own event's, whose slot
-it fills by re-reading index `0`.  No root challenge index is `0`, so the dodge never returns the
-event's own index. -/
+/-- A stage reads every pre-IPA squeeze point except its own event's, re-reading index `0` in that
+slot.  No root challenge index is `0`, so the dodge never returns the event's own index. -/
 def rootDodge (i : Fin 6) (j : Fin 11) : Fin 11 :=
   if j = deployedRootChallengeIndex i then 0 else j
 

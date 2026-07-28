@@ -77,16 +77,13 @@ end AlgebraicPoint
 theorem representationEval_fin {n : ℕ} (basis : Fin n → G) (coeffs : Fin n → F) :
     representationEval basis coeffs = commitGen basis coeffs := rfl
 
-/-- A scalar `log` such that `log • B = target`.
+/-- A scalar `log` such that `log • B = target`.  The cryptographic reading requires `B ≠ 0`; at
+`B = 0` only `target = 0` is representable.
 
-The cryptographic reading requires `B ≠ 0`. If `B = 0`, only `target = 0` is representable.
-
-Named `…Witness`, not `…Representation`: the CompElliptic naming survey
-(<https://github.com/daira/CompElliptic/blob/main/design/naming-survey.md>) records that
-"representation"/`Repr` already carries at least four unrelated meanings across widely used
-libraries (byte serialization in zkcrypto `ff`, the opaque fast group form in arkworks, affine and
-other coordinate forms, and circuit representations). `GroupRepresentation` below keeps that word
-because it *is* an AGM representation over a basis; this scalar is a witness, so it does not. -/
+Named `…Witness` rather than `…Representation` because "representation" already carries at least
+four unrelated meanings across widely used libraries, per the CompElliptic naming survey
+(<https://github.com/daira/CompElliptic/blob/main/design/naming-survey.md>).
+`GroupRepresentation` below keeps the word: it *is* an AGM representation over a basis. -/
 structure DiscreteLogWitness (B target : G) where
   log : F
   hEq : log • B = target

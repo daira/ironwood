@@ -15,11 +15,11 @@ interfaces layered above it:
 * `ComputedStraightLineDeployedFSFamily`, additionally carrying the staged IPA trace.  The witness
   shape has no IPA rounds (`k = 0`), so the per-round trace obligations are vacuous.
 
-The second point is the honest limit of this witness: it proves the straight-line interface is
-consistent and its constraint-`x` stage concrete, but it does not exercise the IPA-round stages,
-which quantify over `Fin 0` here.  `Composition.ZeroStraightLine` is the model with live rounds,
-instantiated at captured key data by `Fixtures.MultiAction.CapturedZeroFamily`; the zero-coordinate
-keystone at the end of this module is what its staged IPA trace consumes.
+That second point is this witness's limit: the interface is consistent and its constraint-`x`
+stage concrete, but the IPA-round stages quantify over `Fin 0` and so go unexercised.
+`Composition.ZeroStraightLine` is the model with live rounds, instantiated at captured key data by
+`Fixtures.MultiAction.CapturedZeroFamily`, and it consumes the zero-coordinate keystone at the end
+of this module.
 -/
 
 namespace Zcash.Snark

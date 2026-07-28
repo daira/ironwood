@@ -128,26 +128,22 @@ theorem consensusPinnedRootMultiopenModel_at_2pow122 :
 /-! ## Reduction efficiency
 
 The `dlogBound` premise below is the advantage of the *combined finder*, not of the raw adversary.
-Its per-run cost model is kept outside Lean, like the random-oracle model itself: one run of the
-wrapped adversary (`Q + 11 + k` oracle reads), one direct-coordinate decode of the retained
-representations (field operations linear in the representation lists), and a constant number of
-field solves.
+Its per-run cost model stays outside Lean, like the random-oracle model: one run of the wrapped
+adversary (`Q + 11 + k` oracle reads), one direct-coordinate decode of the retained
+representations, and a constant number of field solves.
 
-`T = 2^122` cannot also be used as the combined finder's call budget.  At `k = 11`, the proved
-Attema–Fehr–Klooß-style (AFK) expectation is between `2^161` and `2^162` calls.  Making the
-generic Markov tail at most `2^-86` would require `L+1` at least that expectation times `2^86`, a
-number between `2^247` and `2^248`.  These facts correct the old `t ≈ T` interpretation; they do
-not claim that such a large budget gives a useful concrete DLOG advantage — a solver allowed
-either budget can Pollard-rho Vesta directly, so at the deployed parameters the recursive
-endpoint is a structural polynomial bound, not a concrete security margin.  The concrete margin
-is the straight-line endpoint's (`StraightLineMaxShapeBounds`).
+`T = 2^122` cannot double as that finder's call budget. At `k = 11` the proved
+Attema–Fehr–Klooß-style (AFK) expectation is between `2^161` and `2^162` calls, and pushing the
+generic Markov tail below `2^-86` would need an `L+1` between `2^247` and `2^248`. So the
+recursive endpoint at deployed parameters is a structural polynomial bound, not a concrete
+security margin — a solver with either budget can Pollard-rho Vesta directly. The concrete margin
+is the straight-line endpoint's, in `StraightLineMaxShapeBounds`.
 
-The combined finder, not the raw adversary, is the DLOG solver.  Its unconditional expected
-black-box call bound is `afkRunBound Q 11 + 3`: the AFK recursive bound plus the direct-coordinate
-and quotient fallbacks.  The theorems below truncate that solver at the separate fixed budget `L`;
-standard fixed-call DLOG hardness supplies `dlogBound`, and finite Markov conversion contributes
-`(afkRunBound Q 11 + 3)/(L+1)`.  The query cap `T` still controls the statistical terms, but is not
-itself the combined finder's running time. -/
+The finder's unconditional expected call bound is `afkRunBound Q 11 + 3`: the AFK recursive bound
+plus the direct-coordinate and quotient fallbacks. The theorems below truncate the solver at a
+separate fixed budget `L`, so fixed-call DLOG hardness supplies `dlogBound` and Markov conversion
+contributes `(afkRunBound Q 11 + 3)/(L+1)`. The query cap `T` controls the statistical terms
+only. -/
 
 /-- Expected black-box calls of the combined finder at the consensus shape, bounded using `Q <= T`.
 The additive three is the direct-coordinate and quotient fallback overhead. -/

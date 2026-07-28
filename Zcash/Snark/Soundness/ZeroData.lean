@@ -3,16 +3,16 @@ import Zcash.Snark.Soundness.Deployed.Verification
 /-!
 # Zero-data multiopen assembly
 
-The multiopen commitment is an MSM assembled from commitment references.  When every referenced
-group element is zero — a zero proof string, zero instance commitments, and a verifying key whose
-two group-valued commitment families are zero — the assembled MSM evaluates to the zero point for
-*every* challenge record and every basis, whatever the (real, nonzero) scalar layout data says.
-The layouts choose *which* zero point each query references; they never introduce a nonzero one.
+When every group element a query references is zero, the assembled multiopen MSM evaluates to the
+zero point — for every challenge record, every basis, and whatever the key's real scalar layouts
+say.  Zero data means a zero proof string, zero instance commitments, and a key whose two
+group-valued commitment families are zero.  The layouts choose *which* zero point each query
+references; they never introduce a nonzero one.
 
-This is the keystone a constant zero-data prover family needs at a non-degenerate shape: its
-`multiopen_repr` obligation becomes `0 = 0`.  The proof is structural — a zero-data invariant
-carried through `assembleQueries`, `constructIntermediateSets`, `compressSet`, and
-`multiopenCombine` — so no literal layout list is ever unfolded.
+A constant zero-data prover at a non-degenerate shape needs exactly this: its `multiopen_repr`
+obligation becomes `0 = 0`.  The proof carries a zero-data invariant through `assembleQueries`,
+`constructIntermediateSets`, `compressSet` and `multiopenCombine`, so no literal layout list is
+ever unfolded.
 -/
 
 namespace Zcash.Snark
@@ -374,10 +374,9 @@ theorem multiopenCommitment_zeroData {shape : Shape} [Field F] [DecidableEq F]
 
 /-! ## The value side
 
-The commitment keystone above says the assembled MSM is the zero point.  Its twin says the
-assembled *value* is the zero scalar, from the same data: every claimed evaluation the queries
-carry is zero, so the `x₁` compression, the Lagrange interpolation at `x₃`, the `x₂` fold and the
-`x₄` collapse all stay at zero.  The straight-line IPA walk needs exactly this.
+The assembled *value* is the zero scalar, from the same data.  Every claimed evaluation the
+queries carry is zero, so the `x₁` compression, the Lagrange interpolation at `x₃`, the `x₂` fold
+and the `x₄` collapse all stay at zero.  This is what starts the straight-line IPA walk at zero.
 -/
 
 /-- Every element of an all-zero replicate is zero. -/

@@ -6,12 +6,12 @@ import Zcash.Snark.Soundness.AGM.DirectX4Columns
 /-!
 # The constant zero-data prover family, at any shape
 
-`PinnedRootWitness` built the constant family at the degenerate witness shape, where every
-assembly list is empty.  This module rebuilds it at an *arbitrary* shape over an arbitrary
-verifying key whose two group-valued commitment families are zero: the `ZeroData` keystone makes
-the multiopen representation obligation `0 = 0`, and the zero-data invariant covers every routed
-member by one zero source point.  Instantiated at the captured key's scalar metadata this yields
-a captured-shape constant prover with live IPA rounds.
+`zeroOnlineMemberFamily` is the constant prover at an *arbitrary* shape, over any verifying key
+whose two group-valued commitment families are zero.  The `ZeroData` keystone makes its multiopen
+representation obligation `0 = 0`, and the zero-data invariant covers every routed member by one
+zero source point.  Instantiated at the captured key's scalar metadata it gives a captured-shape
+prover with live IPA rounds; `PinnedRootWitness` builds the same thing at the witness shape, where
+every assembly list is empty.
 -/
 
 namespace Zcash.Snark

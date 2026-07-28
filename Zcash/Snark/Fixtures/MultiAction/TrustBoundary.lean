@@ -152,11 +152,14 @@ assert_axioms Zcash.Snark.Fixture2.derivedInstanceCommitment
 -- which is what makes the constraint-`x` stage discharge.
 -- The key data itself stays executable; the families above it are noncomputable only because a
 -- root set is a `szBadSet` of a polynomial, so they are censused for their axiom base instead.
-assert_computable capturedZeroVk +choice +native
-assert_axioms capturedZeroStraightLineFamily +native
-assert_axioms capturedZeroDeployedConstraintFamily +native
-assert_axioms capturedZeroStaticChecks +native
-assert_axioms capturedZeroConstraintSchedule +native
+assert_computable Zcash.Snark.Fixture2.capturedZeroVk +choice
+assert_axioms Zcash.Snark.Fixture2.capturedZeroStraightLineFamily +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.Fixture2.capturedZeroDeployedConstraintFamily +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.Fixture2.capturedZeroStaticChecks +native(
+  Zcash.Snark.Fixture2.vk_advice_layout_length, Zcash.Snark.Fixture2.vk_fixed_layout_length,
+  Zcash.Snark.Fixture2.vk_instance_layout_length, Zcash.Snark.Fixture2.vk_n_cast_ne_zero,
+  Zcash.Snark.Fixture2.vk_omega_order, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.Fixture2.capturedZeroConstraintSchedule +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- `whitespace := lax` collapses all whitespace, so the pin is insensitive to how
 -- `#print axioms` line-wraps the list (a formatting artifact of the axiom-name lengths).

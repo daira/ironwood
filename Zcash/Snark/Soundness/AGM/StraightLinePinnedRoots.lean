@@ -8,11 +8,11 @@ import Zcash.Snark.Soundness.Forking.PinnedRoots
 `StraightLineIpa.lean` proves the deterministic one-run dichotomy.  This module exposes its
 quadratic round events through `PinnedRootFamily`.
 
-The final-output `OracleComp` interface does not record when an AGM representation was emitted.
-Consequently `StraightLineIpaOnlineTrace` is the stronger interface boundary here: it exposes an
-actual pre-squeeze computation, proves that the computation has not queried the squeeze point, and
-connects its result to the final `AlgebraicWfProof`.  `StraightLineIpaSqueezeInvariance` is derived
-from that query chronology, never inferred merely from the final proof value.
+`StraightLineIpaOnlineTrace` is the interface boundary, because the final-output `OracleComp`
+interface never records when an AGM representation was emitted.  The trace exposes a pre-squeeze
+computation, proves it has not queried the squeeze point, and connects its result to the final
+`AlgebraicWfProof`.  `StraightLineIpaSqueezeInvariance` follows from that query chronology, never
+from the final proof value alone.
 -/
 
 namespace Zcash.Snark
@@ -58,7 +58,7 @@ def StraightLineIpaSqueezeInvariance (family : ComputedAlgebraicFSFamily shape) 
 /-- Representation-carrying computation exposed before each IPA squeeze.  `stage` computes the
 discrepancy polynomial from the AGM representations emitted up to that point; `fresh` proves that
 it has not queried the squeeze point, while `agrees` connects its result to the final proof value.
-This is the chronology interface—the final `AlgebraicWfProof` alone does not provide it. -/
+This is the chronology interface; the final `AlgebraicWfProof` alone does not provide it. -/
 structure StraightLineIpaOnlineTrace (family : ComputedAlgebraicFSFamily shape) where
   stage :
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) -> Fin shape.k ->

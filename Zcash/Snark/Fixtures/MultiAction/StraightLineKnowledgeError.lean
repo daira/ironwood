@@ -95,7 +95,8 @@ theorem orchard_deployed_knowledge_error_captured_straightLine_direct_generatorR
     (xTrace : DeployedConstraintXOnlineTrace
       (ComputedDeployedRootFSFamily.ofCovered online rootTrace))
     (hvk : forall basis, CapturedVerifierKeyProfile (online.vk basis))
-    (profile : let family := ComputedStraightLineDeployedFSFamily.ofCovered
+    (profile :
+      let family := ComputedStraightLineDeployedFSFamily.ofCovered
         online rootTrace ipaTrace xTrace
       family.StraightLineConstraintDlogProfile B) :
     let family := ComputedStraightLineDeployedFSFamily.ofCovered

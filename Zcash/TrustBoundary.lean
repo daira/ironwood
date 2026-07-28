@@ -492,12 +492,21 @@ assert_axioms Zcash.Snark.ComputedAlgebraicFSFamily.instanceAttempt_runs_eq +nat
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.ComputedAlgebraicFSFamily.reductionEfficient_exponential +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedAlgebraicFSFamily.reductionEfficient_poly +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedAlgebraicFSFamily.FamilyForkSpread +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedAlgebraicFSFamily.reductionEfficient_of_forkSpread +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.ComputedAlgebraicFSFamily.DiscreteLogRelationHardFor +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.ComputedAlgebraicFSFamily.knowledgeSoundness_under_DL +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedAlgebraicFSFamily.knowledgeSoundness_under_DL_poly +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedAlgebraicFSFamily.cleanOpening +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedAlgebraicFSFamily.cleanOpening_isSome_iff +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedAlgebraicFSFamily.knowledgeSoundness_under_DL_computed +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedAlgebraicFSFamily.knowledgeSoundness_under_DL_computed_poly +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.ComputedAlgebraicFSFamily.binding_under_DL +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedAlgebraicFSFamily.binding_under_DL_poly +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.bindingWin_unbounded_measure_le +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.queryCharge
@@ -524,6 +533,24 @@ assert_axioms Zcash.Snark.scanCandidateAt_update
 assert_axioms Zcash.Snark.goodChallengesAt_fork
 assert_axioms Zcash.Snark.goodChallengesAt_update
 assert_axioms Zcash.Snark.sum_card_scanRank_erase_lt_le
+assert_axioms Zcash.Snark.afkScanCharge
+assert_axioms Zcash.Snark.afkScanCharge_update
+assert_axioms Zcash.Snark.sum_afkScanCharge_le
+assert_axioms Zcash.Snark.OracleComp.run_update_eq_of_not_mem_queries
+assert_axioms Zcash.Snark.OracleComp.mem_queries_of_run_update_ne
+assert_axioms Zcash.Snark.OracleComp.card_filter_mem_queries_le
+assert_axioms Zcash.Snark.sum_steered_blind_mul_card
+assert_axioms Zcash.Snark.sum_steered_rank_stable_le
+assert_axioms Zcash.Snark.sum_steered_rank_abort_le
+assert_axioms Zcash.Snark.scanCandidateAt_runs_split
+assert_axioms Zcash.Snark.goodChallengesAt_stable
+assert_axioms Zcash.Snark.goodChallengesAt_nonempty_changed_query
+assert_axioms Zcash.Snark.sum_afkScanCharge_steered_le
+assert_axioms Zcash.Snark.recursiveAlgebraicForkFrom_tape_sum_runs_le_afk
+assert_axioms Zcash.Snark.recursiveAlgebraicForkFrom_oracle_tape_sum_runs_le_step
+assert_axioms Zcash.Snark.afkRunBound
+assert_axioms Zcash.Snark.recursiveAlgebraicForkFrom_oracle_tape_sum_runs_le_poly
+assert_axioms Zcash.Snark.recursiveAlgebraicFork_oracle_tape_sum_runs_le_poly
 assert_axioms Zcash.Snark.OracleComp.restrictSum
 assert_axioms Zcash.Snark.fsWinsFull_restrictSum_le
 assert_axioms Zcash.Snark.ComputedAlgebraicFSFamilyRand.determinize
@@ -589,6 +616,7 @@ assert_axioms Zcash.Snark.recursiveAlgebraicFork_sum_runs_le_unconditional
 assert_axioms Zcash.Snark.recursiveAlgebraicFork_oracle_tape_sum_runs_le_unconditional
 assert_axioms Zcash.Snark.recursiveAlgebraicForkFrom_sum_runs_le_of_forkSpread
 assert_axioms Zcash.Snark.recursiveAlgebraicFork_sum_runs_le_of_forkSpread
+assert_axioms Zcash.Snark.recursiveAlgebraicFork_oracle_tape_sum_runs_le_of_forkSpread
 assert_axioms Zcash.Snark.AlgebraicPoint.point_eq_components +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.Msm.eval_repr +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
@@ -622,6 +650,17 @@ assert_axioms Zcash.Snark.programmedRelSetWithCoins_card
 assert_axioms Zcash.Snark.programmedRelSetWithCoins_subset_win_union_miss
 assert_axioms Zcash.Snark.missSetWithCoins_card_le
 assert_axioms Zcash.Snark.relationWithCoins_prob_le_of_textbookDL
+assert_axioms Zcash.Snark.truncateRelationFinder
+assert_axioms Zcash.Snark.truncatedRelationFinderCalls
+assert_axioms Zcash.Snark.truncatedRelationFinderCalls_le
+assert_axioms Zcash.Snark.TextbookDLWithCoinsFixedCallsAdvantageLE
+assert_axioms Zcash.Snark.TextbookDLWithCoinsTruncatedAdvantageLE
+assert_axioms Zcash.Snark.textbookDLWithCoinsTruncatedAdvantageLE_iff
+assert_axioms Zcash.Snark.RelationFinderExpectedCallsLE
+assert_axioms Zcash.Snark.relationFinderCallTail
+assert_axioms Zcash.Snark.relSetWithCoins_subset_truncate_union_tail
+assert_axioms Zcash.Snark.relationFinderCallTail_prob_le
+assert_axioms Zcash.Snark.relationWithCoins_prob_le_of_truncated_textbookDL
 assert_axioms Zcash.Snark.orchard_relation_prob_le_of_textbookDL +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.commitment_binding_prob_le_of_textbookDL +native(
@@ -1059,6 +1098,71 @@ assert_axioms Zcash.Snark.witnessOnlineMemberFamily +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.witnessDeployedRootFamily +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- The constraint-level and straight-line interfaces are inhabited on the same witness
+-- (`Composition.StraightLineWitness`): the constraint difference of the zero data is the zero
+-- polynomial, so the constraint-`x` stage is a read-free executable computation, and the
+-- degenerate shape's IPA trace is round-free.
+assert_axioms Zcash.Snark.deployedConstraintDifferenceOfRoot_witness +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.deployedConstraintXBadSet_witness +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Snark.witnessConstraintXTrace +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Snark.witnessDeployedConstraintFamily +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Snark.witnessStraightLineIpaTrace +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Snark.witnessStraightLineDeployedFamily +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- The shape-generic keystone for a captured-shape constant family's staged IPA trace: a
+-- zero-coordinate proof pins the zero polynomial at every round.
+assert_axioms Zcash.Snark.ipaDiscrepancyPolynomialAt_zero
+assert_axioms Zcash.Snark.straightLineIpaRootPolynomial_of_zero_coordinates +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- The zero-data assembly keystone (`Soundness/ZeroData`) and the constant zero prover family at
+-- any shape (`Soundness/AGM/ZeroFamily`): the assembled multiopen MSM of zero data is zero-data
+-- whatever the scalar layouts, so the captured key's scalar metadata carries a concrete constant
+-- prover with live IPA rounds.  The grouping-provenance lemma feeds both the keystone and member
+-- coverage.
+assert_axioms Zcash.Snark.assembleQueries_refZeroData
+assert_axioms Zcash.Snark.constructIntermediateSets_sets_ref_provenance
+assert_axioms Zcash.Snark.assembledMsm_zeroData
+assert_axioms Zcash.Snark.multiopenCommitment_zeroData
+assert_computable Zcash.Snark.zeroProofString
+assert_computable Zcash.Snark.zeroAlgebraicProofString +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.zeroProofString_wellFormed
+assert_computable Zcash.Snark.zeroWfProof +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.zeroWfProof_canonical +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.zeroWfProof_aMulti +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.zeroFamily_membersCovered +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Snark.zeroOnlineMemberFamily +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- The zero data's deployed batches exist at every pair count: zero column and member
+-- commitments, with the `x₄` batch's own coordinates as the `x₁` aggregates.
+assert_axioms Zcash.Snark.refZeroData_eval
+assert_axioms Zcash.Snark.deployedSetMemberCommitments_zeroData +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.x4BatchCommitments_zeroData +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Snark.zeroDeployedBatchesFull +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- The zero family's deployed root layer (`Soundness/AGM/ZeroFamilyRoots`): six staged root
+-- computations at any shape, each blind to its own squeeze because the only challenge dependence
+-- the closed forms share is `assembleQueries`, which reads the pre-multiopen prefix alone.
+assert_axioms Zcash.Snark.assembleQueries_x4_blind
+assert_axioms Zcash.Snark.deployedSetsForEval_fst_x1_blind
+assert_axioms Zcash.Snark.deployedRootBad_zeroFamily +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.preIpaLen_strictMono
+assert_axioms Zcash.Snark.zeroRootStage_agrees +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.zeroRootStage_fresh +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- The staged root sets are `szBadSet`s of polynomials, so the family is noncomputable; its
+-- axiom base is censused instead.
+assert_axioms Zcash.Snark.zeroDeployedRootFamily +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- The value side of the zero-data keystone (`Soundness/ZeroData`): all-zero claimed evaluations
+-- survive the `x₁` compression, the Lagrange interpolation at `x₃`, the `x₂` fold and the `x₄`
+-- collapse, so an instance-free zero proof's multiopen value is the zero scalar.  This is what
+-- starts the straight-line discrepancy walk at zero.
+assert_axioms Zcash.Snark.constructIntermediateSets_sets_eval_provenance
+assert_axioms Zcash.Snark.multiopenEval_zero
+assert_axioms Zcash.Snark.multiopenValue_of_zeroEvals
+assert_axioms Zcash.Snark.multiopenValue_zeroProofString
+-- The straight-line deployed interface, inhabited with live IPA rounds
+-- (`Composition/ZeroStraightLine`): the constraint-`x` root set is empty at an instance-free
+-- shape, and the staged IPA polynomial is zero at every one of the shape's `k` rounds — unlike
+-- the witness shape, where `k = 0` empties the obligation.
+assert_axioms Zcash.Snark.zeroConstraintDifference_eq_zero +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.zeroConstraintXBadSet_empty +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.zeroWfProof_straightLineIpaRootPolynomial +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.zeroStraightLineDeployedFamily +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.deployedRootSqueezeInvariance_witness +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 -- The satisfiability witness is itself an executable five-query stage, not a classical
@@ -1079,6 +1183,12 @@ assert_computable Zcash.Snark.witnessDeployedRootFamily +choice +native(
 assert_axioms Zcash.Snark.x4BatchCommitments_eq_memberPowerSum
 assert_axioms Zcash.Snark.aggregate_opens_deployedCommitment +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- The direct path's total-cost model (`Composition.DirectPathCost`): executable modeled counts,
+-- and a shape-polynomial bound with no fork-spread, adversary-dependent, or `|F|` term.  Choice
+-- enters the total only through erased `Prop` positions of the finite sum.
+assert_computable Zcash.Snark.directColumnDecodeOps
+assert_computable Zcash.Snark.deployedDirectDecodeOps +choice
+assert_axioms Zcash.Snark.deployedDirectDecodeOps_le
 assert_axioms Zcash.Snark.snarkExtractionDeployed_prob_le_via_wrapped_pinned_roots +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.ComputedDeployedRootFSFamily.deployedRelation_prob_le_of_generatorRO_textbookDL +native(
@@ -1102,6 +1212,12 @@ assert_axioms Zcash.Snark.deployedConstraintFailure_subset_union +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.deployedConstraintRelation_prob_le_of_generatorRO_textbookDL +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.deployedConstraintRelationFinderCalls +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.deployedConstraintRelationFinderCalls_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.DeployedConstraintReductionEfficient +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.deployedConstraintReductionEfficient_poly +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.deployedConstraintRelation_prob_le_of_generatorRO_truncated_textbookDL +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.snarkConstraintsDeployed_prob_le_via_deployed_roots_of_relation_bound +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.snarkConstraintsDeployed_prob_le_via_deployed_roots +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.snarkConstraintsDeployed_prob_le_of_online_outcome +native(
@@ -1118,45 +1234,81 @@ assert_axioms Zcash.Snark.deployedConstraintBadX_prob_le +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.snarkConstraintsDeployed_prob_le_of_root_schedule +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.snarkConstraintsDeployed_prob_le_of_root_schedule_runtime +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.DeployedConstraintSemanticUpgradeContained +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.deployedConstraintSemanticFailure_subset_union +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.snarkConstraintsSemanticDeployed_prob_le_of_compressed_bound +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.snarkConstraintsSemanticDeployed_prob_le_of_root_schedule +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.snarkConstraintsSemanticDeployed_prob_le_of_root_schedule_runtime +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- Primary straight-line AGM capstone. The staged representation trace, not the final
 -- `AlgebraicWfProof` alone, supplies IPA squeeze chronology, and the family's own constraint-`x`
 -- trace derives exact `x` pinning rather than assuming it. Its complete deployed constraint
 -- finder has a pointwise four-invocation bound and therefore needs no AFK truncation or Markov
 -- term. Representations remain ghost extractor data, outside the Halo2 proof and verifier.
-assert_axioms StraightLineIpaOnlineTrace.toSqueezeInvariance +native
-assert_axioms AlgebraicWfProof.straightLineIpaZeroOrRelation +native
-assert_computable ComputedStraightLineDeployedFSFamily.ofCovered +choice +native
-assert_axioms ComputedStraightLineDeployedFSFamily.pinnedX +native
-assert_computable ComputedStraightLineIpaFSFamily.straightLineIpaRelationFinder +choice +native
-assert_computable ComputedStraightLineDeployedFSFamily.straightLineDeployedRelationFinder +choice +native
-assert_computable ComputedStraightLineDeployedFSFamily.straightLineConstraintRelationFinder +choice +native
-assert_axioms ComputedStraightLineDeployedFSFamily.straightLineConstraintRelationFinderCalls_le_four +native
-assert_axioms ComputedStraightLineDeployedFSFamily.straightLineConstraintFailureSet_subset +native
-assert_axioms ComputedStraightLineDeployedFSFamily.straightLineConstraintFailure_prob_le_of_generatorRO_dlogProfile +native
+assert_axioms Zcash.Snark.StraightLineIpaOnlineTrace.toSqueezeInvariance +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.AlgebraicWfProof.straightLineIpaZeroOrRelation +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Snark.ComputedDeployedConstraintFSFamily.ofCovered +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedDeployedConstraintFSFamily.pinnedX +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Snark.ComputedStraightLineIpaFSFamily.straightLineIpaRelationFinder +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDeployedRelationFinder +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintRelationFinder +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintRelationFinderCalls_le_four +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintFailureSet_subset +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintFailure_prob_le_of_generatorRO_dlogProfile +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 -- The straight-line four-budget semantic promotion, mirroring the recursive side.
-assert_axioms ComputedStraightLineDeployedFSFamily.StraightLineConstraintSemanticUpgradeContained +native
-assert_axioms ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_subset_union +native
-assert_axioms ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_prob_le_of_compressed_bound +native
-assert_axioms ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_prob_le_of_generatorRO_dlogProfile +native
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.StraightLineConstraintSemanticUpgradeContained +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_subset_union +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_prob_le_of_compressed_bound +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_prob_le_of_generatorRO_dlogProfile +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 -- Direct-route costs: both possible direct decodes charge their represented source traversal, the
 -- query ceiling loses three bits, and the complete group-work allowance includes the verifier MSM
 -- and other reduction postprocessing rather than treating the whole reduction as group-free.
-assert_computable ComputedStraightLineDeployedFSFamily.straightLineDirectDecodeOps +choice +native
-assert_axioms ComputedStraightLineDeployedFSFamily.straightLineDirectDecodeOps_le +native
-assert_axioms ComputedStraightLineDeployedFSFamily.straightLineDlogRandomOracleQueries_le_eight_mul
-assert_axioms ComputedStraightLineDeployedFSFamily.straightLineDlogGroupWork_le_eight_mul
-assert_axioms ComputedStraightLineDeployedFSFamily.StraightLineDirectDlogProfile.solverCost_le +native
+assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDirectDecodeOps +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDirectDecodeOps_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDlogRandomOracleQueries_le_eight_mul +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDlogGroupWork_le_eight_mul
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.StraightLineDirectDlogProfile.solverCost_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 -- Compatibility only: the older envelope allows caller-supplied reduction work and is not the
 -- primary deployed interpretation.
-assert_axioms ComputedStraightLineDeployedFSFamily.straightLineDlogGroupWork_le_32_mul
-assert_axioms ComputedStraightLineDeployedFSFamily.five_bit_overhead_at_2pow122
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDlogGroupWork_le_32_mul
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.five_bit_overhead_at_2pow122
+
+-- Primary straight-line AGM capstone. The staged representation trace, not the final
+-- `AlgebraicWfProof` alone, supplies IPA squeeze chronology, and the family's own constraint-`x`
+-- trace derives exact `x` pinning rather than assuming it. Its complete deployed constraint
+-- finder has a pointwise four-invocation bound and therefore needs no AFK truncation or Markov
+-- term. Representations remain ghost extractor data, outside the Halo2 proof and verifier.
+assert_axioms Zcash.Snark.StraightLineIpaOnlineTrace.toSqueezeInvariance +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.AlgebraicWfProof.straightLineIpaZeroOrRelation +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Snark.ComputedDeployedConstraintFSFamily.ofCovered +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedDeployedConstraintFSFamily.pinnedX +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Snark.ComputedStraightLineIpaFSFamily.straightLineIpaRelationFinder +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDeployedRelationFinder +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintRelationFinder +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintRelationFinderCalls_le_four +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintFailureSet_subset +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintFailure_prob_le_of_generatorRO_dlogProfile +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- The straight-line four-budget semantic promotion, mirroring the recursive side.
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.StraightLineConstraintSemanticUpgradeContained +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_subset_union +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_prob_le_of_compressed_bound +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_prob_le_of_generatorRO_dlogProfile +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- Direct-route costs: both possible direct decodes charge their represented source traversal, the
+-- query ceiling loses three bits, and the complete group-work allowance includes the verifier MSM
+-- and other reduction postprocessing rather than treating the whole reduction as group-free.
+assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDirectDecodeOps +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDirectDecodeOps_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDlogRandomOracleQueries_le_eight_mul +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDlogGroupWork_le_eight_mul
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.StraightLineDirectDlogProfile.solverCost_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- Compatibility only: the older envelope allows caller-supplied reduction work and is not the
+-- primary deployed interpretation.
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDlogGroupWork_le_32_mul
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.five_bit_overhead_at_2pow122
 
 /-! ## The Action circuit — the halo2-native soundness trust surface
 

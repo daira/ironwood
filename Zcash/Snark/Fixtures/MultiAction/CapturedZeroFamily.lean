@@ -4,34 +4,30 @@ import Zcash.Snark.Soundness.Composition.ZeroStraightLine
 /-!
 # Captured-data straight-line interface test, with eleven live IPA rounds
 
-`Composition.StraightLineWitness` inhabits the straight-line deployed interface at the degenerate
-witness shape, where `k = 0` empties every IPA-round obligation.  This module instantiates the
-shape-generic zero prover of `Composition.ZeroStraightLine` at the captured Post-NU6.3 key's own
-scalar data — its `ω`, `n`, blinding count, `δ`, chunk length, gates, three query layouts,
-permutation chunks and lookup expressions — over the captured domain `k = 11`.
+This instantiates the shape-generic zero prover of `Composition.ZeroStraightLine` at the captured
+Post-NU6.3 key's own scalar data — `ω`, `n`, blinding count, `δ`, chunk length, gates, the three
+query layouts, permutation chunks and lookup expressions — over the captured domain `k = 11`.  So
+the staged IPA trace carries **eleven live rounds**, and the six deployed root events run against
+the captured query layouts instead of an empty grouping.  `Composition.StraightLineWitness` does
+the same at the witness shape, where `k = 0` empties the round obligations.
 
-The staged IPA trace therefore carries **eleven live rounds**, each discharged by the discrepancy
-walk of `straightLineIpaRootPolynomial_of_zero_coordinates`, and the six deployed root events run
-against the captured query layouts rather than against an empty grouping.
+## What the instantiation gives up
 
-Two departures from the captured fixture are deliberate and are what the construction pays for:
+* The group commitment families are zero, not the captured Vesta points.
+  `CapturedVerifierKeyProfile` already omits them: in the AGM the verifier's points need
+  representations over the *sampled* basis, so pinning them to fixture constants would leave the
+  premise uninhabited for most bases.
+* The shape is instance-free.  All-zero columns do not satisfy Orchard's permutation and lookup
+  constraints, so with sub-proofs the pre-`x` constraint difference is nonzero and the
+  constraint-`x` stage cannot be discharged.  That layer needs an honest prover.
 
-* The group-valued commitment families are zero rather than the captured Vesta points.  This is
-  the same choice `Fixture2.CapturedVerifierKeyProfile` already makes when it omits them — in the
-  AGM the verifier's points must be supplied with representations over the *sampled* basis, so
-  pinning them to fixture constants would leave the premise uninhabited for most bases.
-* The shape is instance-free (`numProofs = 0`).  A prover that commits all-zero columns does not
-  satisfy Orchard's permutation and lookup constraints, so with sub-proofs present the pre-`x`
-  constraint difference would be a nonzero polynomial and the constraint-`x` stage could not be
-  discharged.  Exhibiting that layer with sub-proofs needs an honest prover, not a degenerate one.
+## Scope
 
-So this is an interface test that exercises the multiopen grouping, all six root events and all
-eleven IPA rounds at captured key data, with a trivial constraint system.  It is not the deployed
-family: `ComputedStraightLineDeployedFSFamily.ofCovered` packages an online representation-carrying
-prover model with caller-supplied executable root, IPA, and constraint-`x` stages, and the
-captured-key direct endpoint applies the existing fixture metadata to the result.
+This is an interface test, not the deployed family.  The deployed family comes from
+`ComputedStraightLineDeployedFSFamily.ofCovered`, which packages an online
+representation-carrying prover with caller-supplied stages; the captured-key endpoint applies the
+fixture metadata to that.
 -/
-
 namespace Zcash.Snark.Fixture2
 
 open Zcash.Snark

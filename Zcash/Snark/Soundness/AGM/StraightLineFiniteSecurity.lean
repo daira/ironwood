@@ -14,6 +14,8 @@ namespace Zcash.Snark
 
 open scoped ENNReal
 
+local instance vestaInhabitedStraightLineFiniteSecurity : Inhabited VestaG := ⟨0⟩
+
 variable {shape : Shape}
 
 namespace ComputedStraightLineDeployedFSFamily
@@ -54,8 +56,8 @@ theorem straightLineDirectDecodeOps_le
     family.straightLineDirectDecodeOps basis O <=
       (shape.numPointSets + 1) *
         (queryBudget shape *
-            (((((wrappedAdversary family.toFamily basis).run O).1.algebraicProof
-              .preX1AssemblySource (family.fixedRepresentations basis)).length) +
+            ((((wrappedAdversary family.toFamily basis).run O).1.algebraicProof.preX1AssemblySource
+                (family.fixedRepresentations basis)).length +
               2 * 2 ^ shape.k + 5) +
           (2 ^ shape.k + 2)) := by
   exact deployedDirectDecodeOps_le _ _ _ _ _

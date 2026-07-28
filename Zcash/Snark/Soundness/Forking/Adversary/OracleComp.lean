@@ -37,6 +37,19 @@ def queries : OracleComp T F α → (T → F) → List T
   | .pure _, _ => []
   | .query t k, O => t :: (k (O t)).queries O
 
+/-- Reprogramming a point that a computation did not query leaves its result unchanged. -/
+theorem run_update_of_not_mem_queries [DecidableEq T]
+    (A : OracleComp T F α) (O : T → F) (t : T) (v : F)
+    (hfresh : t ∉ A.queries O) :
+    A.run (Function.update O t v) = A.run O := by
+  induction A with
+  | pure a => rfl
+  | query q k ih =>
+      simp only [queries, List.mem_cons, not_or] at hfresh
+      have hqt : q ≠ t := Ne.symm hfresh.1
+      rw [run_query, run_query, Function.update_apply, if_neg hqt]
+      exact ih (O q) hfresh.2
+
 /-- The machine makes at most `Q` queries on every path (VCVio's structural `IsQueryBound`). The
 forking reduction charges its query loss against this `Q`. -/
 inductive QueryBound : OracleComp T F α → ℕ → Prop
@@ -1103,42 +1116,7 @@ noncomputable def fsAdvantage (A : OracleComp T F P) (accept : P → (Fin k → 
     (prefixes : P → Fin k → T) : ℝ≥0∞ :=
   (PMF.uniformOfFintype (T → F)).toOuterMeasure {O | fsWins A accept prefixes O}
 
-/-- A query-free adversary's advantage equals its fixed output's accept measure over uniform
-challenges. -/
-theorem fsAdvantage_pure (p : P) (accept : P → (Fin k → F) → Prop)
-    (prefixes : P → Fin k → T) (hinj : Function.Injective (prefixes p)) :
-    fsAdvantage (.pure p) accept prefixes
-      = (PMF.uniformOfFintype (Fin k → F)).toOuterMeasure {χ | accept p χ} := by
-  rw [fsAdvantage, ← uniformOfFintype_map_precomp_injective (prefixes p) hinj,
-    PMF.toOuterMeasure_map_apply]
-  rfl
-
 end Game
-
-open scoped ENNReal in
-open Classical in
-/-- Legacy fixed-strategy wrapper: advantage above `kerr/Nᵏ` yields an IPA opening or relation. -/
-noncomputable def legacy_deployed_forking_soundness_of_fixed_adversary
-    {G : Type*} [AddCommGroup G]
-    [Module Fp G] [DecidableEq G] [Inhabited G]
-    (urs : URS G) (b : Fin (2 ^ urs.k) → Fp) (v ξ z blind : Fp)
-    (aMulti aDep s : Fin (2 ^ urs.k) → Fp) (P : Prover Fp G urs.k)
-    {T : Type*} [Fintype T] [DecidableEq T] (prefixes : Fin urs.k → T)
-    (hinj : Function.Injective prefixes)
-    (hz : z ≠ 0) (hb0 : b 0 = 1)
-    (hP : commit urs aDep = commit urs aMulti - v • urs.g 0 + ξ • commit urs s)
-    (hadv : (kerr (Fintype.card Fp) urs.k : ℝ≥0∞) / Fintype.card (Fin urs.k → Fp)
-        < fsAdvantage (.pure P)
-            (fun P' => proverAccept P' urs.g b urs.u urs.w z
-              (commit urs aDep + (z * 0) • urs.u + blind • urs.w))
-            (fun _ => prefixes)) :
-    (∃ a, IpaRelation urs (commit urs aMulti) b (v - ξ * innerProduct s b) a)
-      ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  rw [fsAdvantage_pure P _ (fun _ => prefixes) hinj] at hadv
-  refine legacy_deployed_forking_soundness urs b v ξ z blind aMulti aDep s P hz hb0 hP ?_
-  convert hadv using 2
-  ext χ
-  simp
 
 section StagedAdversary
 
@@ -1178,32 +1156,6 @@ theorem schedOfProver_fresh {d : ℕ} (P : Prover Fp G d) (t : List (TranscriptE
       = ((schedOfProver P t).points χ c).length := congrArg List.length hac
   rw [schedOfProver_points_length P t χ a, schedOfProver_points_length P t χ c] at hlen
   exact Fin.ext (by omega)
-
-open Classical in
-/-- Legacy staged-strategy wrapper: advantage above `kerr/Nᵏ` yields an IPA opening or relation. -/
-noncomputable def legacy_deployed_forking_soundness_of_staged_adversary
-    [AddCommGroup G] [Module Fp G]
-    [DecidableEq G] [Inhabited G]
-    (urs : URS G) (b : Fin (2 ^ urs.k) → Fp) (v ξ z blind : Fp)
-    (aMulti aDep s : Fin (2 ^ urs.k) → Fp) (Q : Prover Fp G urs.k)
-    {T : Type*} [Fintype T] [DecidableEq T] (sched : AdSched T Fp urs.k) (hfresh : sched.Fresh)
-    (hz : z ≠ 0) (hb0 : b 0 = 1)
-    (hP : commit urs aDep = commit urs aMulti - v • urs.g 0 + ξ • commit urs s)
-    (hadv : (kerr (Fintype.card Fp) urs.k : ℝ≥0∞) / Fintype.card (Fin urs.k → Fp)
-        < (PMF.uniformOfFintype (T → Fp)).toOuterMeasure
-            {O | flatAccept Q urs.g b urs.u urs.w z
-                  (commit urs aDep + (z * 0) • urs.u + blind • urs.w) (sched.read O)}) :
-    (∃ a, IpaRelation urs (commit urs aMulti) b (v - ξ * innerProduct s b) a)
-      ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  refine legacy_deployed_forking_soundness_flat urs b v ξ z blind aMulti aDep s Q hz hb0 hP ?_
-  rw [show {O : T → Fp | flatAccept Q urs.g b urs.u urs.w z
-        (commit urs aDep + (z * 0) • urs.u + blind • urs.w) (sched.read O)}
-      = sched.read ⁻¹' {χ | flatAccept Q urs.g b urs.u urs.w z
-          (commit urs aDep + (z * 0) • urs.u + blind • urs.w) χ} from rfl,
-    ← PMF.toOuterMeasure_map_apply, AdSched.map_read_uniform sched hfresh] at hadv
-  convert hadv using 2
-  ext χ
-  simp
 
 end StagedAdversary
 
@@ -1283,45 +1235,7 @@ theorem fsAdvantage_le [Fintype T] [DecidableEq T] [Fintype F] [Nonempty F]
     (OracleComp.queryBound_completing prefixes hQ)
   exact_mod_cast h
 
-/-- Advantage above `(Q+k)·3/|F|` yields an extractable output. -/
-theorem extractable_of_lt_fsAdvantage [Fintype T] [DecidableEq T] [Fintype F] [Nonempty F]
-    (D : StagedDecode T F P k accept prefixes) {A : OracleComp T F P} {Q : ℕ}
-    (hQ : A.QueryBound Q)
-    (h : (Q + k) * (3 / Fintype.card F) < fsAdvantage A accept prefixes) :
-    ∃ O : T → F, Extractable (accept (A.run O)) := by
-  by_contra hno
-  push Not at hno
-  exact absurd (D.fsAdvantage_le hQ hno) (not_le.mpr h)
-
 end StagedDecode
 
-
-/-- Legacy staged-adversary wrapper: advantage above `(Q + k) · 3/p` yields an IPA opening or
-relation. -/
-noncomputable def legacy_deployed_forking_soundness_of_adversary
-    {G : Type*} [AddCommGroup G]
-    [Module Fp G] [DecidableEq G] [Inhabited G]
-    (urs : URS G) (b : Fin (2 ^ urs.k) → Fp) (v ξ z blind : Fp)
-    (aMulti aDep s : Fin (2 ^ urs.k) → Fp)
-    {T : Type*} [Fintype T] [DecidableEq T]
-    (A : OracleComp T Fp (Prover Fp G urs.k)) (prefixes : Prover Fp G urs.k → Fin urs.k → T)
-    (D : StagedDecode T Fp (Prover Fp G urs.k) urs.k
-      (fun P χ => proverAccept P urs.g b urs.u urs.w z
-        (commit urs aDep + (z * 0) • urs.u + blind • urs.w) χ) prefixes)
-    (hz : z ≠ 0) (hb0 : b 0 = 1)
-    (hP : commit urs aDep = commit urs aMulti - v • urs.g 0 + ξ • commit urs s)
-    {Q : ℕ} (hQ : A.QueryBound Q)
-    (hadv : (Q + urs.k) * (3 / Fintype.card Fp)
-        < fsAdvantage A (fun P χ => proverAccept P urs.g b urs.u urs.w z
-            (commit urs aDep + (z * 0) • urs.u + blind • urs.w) χ) prefixes) :
-    (∃ a, IpaRelation urs (commit urs aMulti) b (v - ξ * innerProduct s b) a)
-      ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  have hext := D.extractable_of_lt_fsAdvantage hQ hadv
-  have hpf := proverAccept_forkValid (A.run hext.choose) urs.g b
-    (commit urs aDep + (z * 0) • urs.u + blind • urs.w) hext.choose_spec
-  rcases deployed_forking_relation urs b v ξ z blind aMulti aDep s hpf.choose hz hb0 hP
-    hpf.choose_spec with ⟨a, ha⟩ | r
-  · exact PSum.inl ⟨a, ha⟩
-  · exact PSum.inr r
 
 end Zcash.Snark
