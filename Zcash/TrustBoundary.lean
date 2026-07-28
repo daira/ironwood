@@ -1068,9 +1068,9 @@ assert_axioms Zcash.Snark.natDegree_combineConstraints_le
 -- pinning from its query log. The lower-level direct-pinning constructor remains generic plumbing;
 -- it is not a standalone captured-capstone premise.
 assert_axioms Zcash.Snark.natDegree_committedPreXConstraintDifference_le
-assert_axioms Zcash.Snark.natDegree_deployedConstraintDifferenceOfRoot_le +native(
+assert_axioms Zcash.Snark.natDegree_deployedConstraintDifferencePreX_le +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.deployedConstraintDifference_witness_congr +native(
+assert_axioms Zcash.Snark.deployedConstraintDifference_tape_congr +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.deployedConstraintXBadSet_measure_le +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
@@ -1107,7 +1107,7 @@ assert_axioms Zcash.Snark.witnessDeployedRootFamily +native(
 -- (`Composition.StraightLineWitness`): the constraint difference of the zero data is the zero
 -- polynomial, so the constraint-`x` stage is a read-free executable computation, and the
 -- degenerate shape's IPA trace is round-free.
-assert_axioms Zcash.Snark.deployedConstraintDifferenceOfRoot_witness +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.deployedConstraintDifferencePreX_witness +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.deployedConstraintXBadSet_witness +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.witnessConstraintXTrace +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.witnessDeployedConstraintFamily +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)

@@ -33,16 +33,19 @@ structure DeployedConstraintStaticChecks (family : ComputedDeployedRootFSFamily 
   omegaOrder : forall basis, (family.vk basis).omega ^ (family.vk basis).n = 1
   characteristic : forall basis, (((family.vk basis).n : Nat) : Fp) ≠ 0
 
-/-- The exact pre-`x` constraint polynomial attached to retained root-decode provenance. -/
-noncomputable def deployedConstraintDifferenceOfRoot
+/-- **The total pre-`x` constraint difference** (issue #127): built from the run's own pre-`x`
+representation source over the family's retained list.  It mentions no root witness, batch
+witness, decode, or outcome branch, so it is defined on every run — honest, cheating, or
+degenerate. -/
+noncomputable def deployedConstraintDifferencePreX
     (family : ComputedDeployedRootFSFamily shape)
-    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) (coins : family.toFamily.Coins)
-    (root : DeployedRootDecodeWitness family basis coins) : Polynomial Fp :=
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) (coins : family.toFamily.Coins) :
+    Polynomial Fp :=
   let pnu := deployedRootRunOutput family basis coins
   committedPreXConstraintDifference
-    (deployedConstraintPointPolynomial family basis pnu root.batchWitness)
+    (deployedConstraintPointPolynomial family basis pnu)
     (fun i => coeffsToPoly
-      (deployedConstraintPieceCoordinates family basis pnu root.batchWitness i).1)
+      (deployedConstraintPieceCoordinates family basis pnu i).1)
     (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
     (wrappedPreIpaRecord pnu)
 
@@ -58,7 +61,7 @@ noncomputable def deployedConstraintOutcomeOfRoot
       (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) coins.1)
     (root : DeployedRootDecodeWitness family basis coins)
     (hxgood : (wrappedPreIpaRecord (deployedRootRunOutput family basis coins)).x ∉
-      szBadSet (deployedConstraintDifferenceOfRoot family basis coins root)) :
+      szBadSet (deployedConstraintDifferencePreX family basis coins)) :
     let pnu := deployedRootRunOutput family basis coins
     DeployedConstraintWitness (ursOfAugmentedBasis shape.k basis) rfl
         (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
@@ -79,7 +82,8 @@ noncomputable def deployedConstraintOutcomeOfRoot
     (ursOfAugmentedBasis shape.k basis) rfl (family.vk basis)
     (family.instanceCommitment basis) pnu.1.proof.1 (wrappedPreIpaReads pnu)
     (runRounds family.toFamily basis coins.1) hdeployed'
-  exact deployedOnlineConstraintOutcomeOfDecode family basis pnu root.batchWitness root.decoded
+  exact deployedOnlineConstraintOutcomeOfDecode family basis pnu root.batchWitness
+    (family.outcome_source basis coins.1 root.batchWitness root.outcome_eq) root.decoded
     root.batches_eq checks (static.adviceLength basis) (static.instanceLength basis)
     (static.fixedLength basis) (static.omegaOrder basis) (static.characteristic basis) hxgood
 
@@ -95,7 +99,7 @@ theorem deployedConstraintOutcomeOfRoot_relation_eq_online
       (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) coins.1)
     (root : DeployedRootDecodeWitness family basis coins)
     (hxgood : (wrappedPreIpaRecord (deployedRootRunOutput family basis coins)).x ∉
-      szBadSet (deployedConstraintDifferenceOfRoot family basis coins root))
+      szBadSet (deployedConstraintDifferencePreX family basis coins))
     (relation : AugmentedRelationWitness (F := Fp)
       (ursOfAugmentedBasis shape.k basis).g
       (ursOfAugmentedBasis shape.k basis).u
@@ -103,7 +107,7 @@ theorem deployedConstraintOutcomeOfRoot_relation_eq_online
     (hout : deployedConstraintOutcomeOfRoot family static basis coins haccept root hxgood =
       PSum.inr relation) :
     deployedConstraintQuotientAgreementOrRelation family basis
-      (deployedRootRunOutput family basis coins) root.batchWitness = PSum.inr relation := by
+      (deployedRootRunOutput family basis coins) = PSum.inr relation := by
   let pnu := deployedRootRunOutput family basis coins
   have hdeployed := deployedAccepts_of_fsWinsFull family.toFamily basis coins.1 haccept
   have hdeployed' : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl
@@ -116,6 +120,7 @@ theorem deployedConstraintOutcomeOfRoot_relation_eq_online
     (family.instanceCommitment basis) pnu.1.proof.1 (wrappedPreIpaReads pnu)
     (runRounds family.toFamily basis coins.1) hdeployed'
   apply deployedOnlineConstraintOutcome_relation_eq_online family basis pnu root.batchWitness
+    (family.outcome_source basis coins.1 root.batchWitness root.outcome_eq)
     root.decoded root.batches_eq checks (static.adviceLength basis) (static.instanceLength basis)
     (static.fixedLength basis) (static.omegaOrder basis) (static.characteristic basis) hxgood relation
   simpa [deployedConstraintOutcomeOfRoot, pnu, checks] using hout
@@ -135,26 +140,26 @@ def deployedConstraintDecodedOfRoot
     (root : DeployedRootDecodeWitness family basis coins)
     (hxgood : (wrappedPreIpaRecord
         (deployedRootRunOutput family basis coins)).x ∉
-        szBadSet (deployedConstraintDifferenceOfRoot family basis coins root)),
+        szBadSet (deployedConstraintDifferencePreX family basis coins)),
     ∃ witness, deployedConstraintOutcomeOfRoot family static basis coins haccept root hxgood =
       PSum.inl witness
 
-/-- The concrete pre-`x` failure event selected by the root-backed construction. -/
+/-- The concrete pre-`x` failure event: the run's `x` answer lands in the total constraint
+difference's root set.  No decode or witness guard (issue #127). -/
 def deployedConstraintBadXEvent (family : ComputedDeployedRootFSFamily shape) :
     Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) × family.toFamily.Coins) :=
-  {p | ∃ root : DeployedRootDecodeWitness family p.1 p.2,
-    (wrappedPreIpaRecord (deployedRootRunOutput family p.1 p.2)).x ∈
-      szBadSet (deployedConstraintDifferenceOfRoot family p.1 p.2 root)}
+  {p | (wrappedPreIpaRecord (deployedRootRunOutput family p.1 p.2)).x ∈
+    szBadSet (deployedConstraintDifferencePreX family p.1 p.2)}
 
-/-- The exact constraint-difference root set of one oracle table.  Root witnesses for the same
-table carry the same batch data, so the union over tapes adds no new roots. -/
+/-- **The total constraint-difference root set of one oracle table** (issue #127): `szBadSet` of
+the total pre-`x` difference, with no existential or success guard.  The run output ignores the
+recursive tape, so the tape below is a dummy index, not a choice. -/
 def deployedConstraintXBadSet (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (O : BTranscript Fp VestaG
       (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) : Set Fp :=
-  {x | ∃ (tape : RecursiveForkTape Fp shape.k)
-      (root : DeployedRootDecodeWitness family basis (O, tape)),
-    x ∈ szBadSet (deployedConstraintDifferenceOfRoot family basis (O, tape) root)}
+  {x | ∃ tape : RecursiveForkTape Fp shape.k,
+    x ∈ szBadSet (deployedConstraintDifferencePreX family basis (O, tape))}
 
 /-- A sufficient chronological condition for the constraint root set. This is stronger than the
 live interface below: a reverse-unbatching decoder may legitimately consume challenges after `x`
@@ -313,12 +318,12 @@ theorem deployedConstraintBadX_subset_landing
     {coins : family.toFamily.Coins | (basis, coins) ∈ deployedConstraintBadXEvent family} <=
       {coins : family.toFamily.Coins |
         (deployedConstraintXPinnedEvent family schedule basis).Landing coins.1} := by
-  rintro coins ⟨root, hx⟩
+  rintro coins hx
   change coins.1 (algebraicFullPrefixesPre family.init
       ((family.adversary basis).run coins.1) 4) ∈
     deployedConstraintXBadSet family basis coins.1
-  refine ⟨coins.2, root, ?_⟩
-  simpa [deployedRootRunOutput, wrappedPreIpaRecord, chRecord,
+  refine ⟨coins.2, ?_⟩
+  simpa [deployedConstraintBadXEvent, deployedRootRunOutput, wrappedPreIpaRecord, chRecord,
     wrappedPreIpaReads_run, runReads, runProof] using hx
 
 /-- The exact constraint bad-root event has the direct additive cost `(Q + 1) * epsilonX`.
@@ -593,7 +598,7 @@ theorem deployedConstraintUpgradeContained_of_root
   rcases hroot with ⟨root⟩
   by_cases hxgood : (wrappedPreIpaRecord
       (deployedRootRunOutput family basis coins)).x ∉
-      szBadSet (deployedConstraintDifferenceOfRoot family basis coins root)
+      szBadSet (deployedConstraintDifferencePreX family basis coins)
   · cases hout : deployedConstraintOutcomeOfRoot family static basis coins haccept root hxgood with
     | inl witness =>
         exfalso
@@ -610,7 +615,6 @@ theorem deployedConstraintUpgradeContained_of_root
               basis coins haccept root hxgood relation hout
             simp [deployedConstraintQuotientFinder, root.outcome_eq, hrelation]
   · apply Or.inr
-    refine ⟨root, ?_⟩
     exact Classical.not_not.mp hxgood
 
 /-- Full deterministic decomposition for the concrete constraint endpoint. -/

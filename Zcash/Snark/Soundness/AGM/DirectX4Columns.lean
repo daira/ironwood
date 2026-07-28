@@ -193,41 +193,59 @@ traversal, separate from the black-box adversary call count — is
 `deployedDirectDecodeOps_le` and the captured-shape evaluations in `Fixtures.MaxShapeBounds`.
 -/
 
+/-- The coverage certificate transported to the wrapped run. -/
+theorem ComputedOnlineMemberFSFamily.membersCovered_wrapped
+    (family : ComputedOnlineMemberFSFamily shape)
+    (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp) :
+    DeployedMembersCovered (family.vk basis) (family.instanceCommitment basis)
+      ((wrappedAdversary family.toFamily basis).run O).1.algebraicProof
+      (family.fixedRepresentations basis) := by
+  rw [wrappedAdversary_run_fst family.toFamily basis O]
+  exact family.membersCovered basis O
+
+/-- The canonicity certificate transported to the wrapped run. -/
+theorem ComputedOnlineMemberFSFamily.canonical_wrapped
+    (family : ComputedOnlineMemberFSFamily shape)
+    (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp) :
+    CanonicalOnlineMultiopenCoordinates
+      ((wrappedAdversary family.toFamily basis).run O).1
+      (family.fixedRepresentations basis) := by
+  rw [wrappedAdversary_run_fst family.toFamily basis O]
+  exact family.canonical basis O
+
 /-- **The deployed root outcome, decoded directly.** It needs no field-capacity hypothesis,
 because it never chooses ghost evaluation points. -/
 def deployedRootOutcomeOfCovered
     (family : ComputedOnlineMemberFSFamily shape) :
-    DeployedRootOutcomeProvider family.toFamily := by
-  intro basis O
-  let pnu := (wrappedAdversary family.toFamily basis).run O
-  let p := pnu.1
-  let nu := wrappedPreIpaReads pnu
-  have hp : p = (family.adversary basis).run O :=
-    wrappedAdversary_run_fst family.toFamily basis O
-  have hcovered : DeployedMembersCovered (family.vk basis)
-      (family.instanceCommitment basis) p.algebraicProof
-      (family.fixedRepresentations basis) := by
-    rw [hp]; exact family.membersCovered basis O
-  have hcanonical : CanonicalOnlineMultiopenCoordinates p
-      (family.fixedRepresentations basis) := by
-    rw [hp]; exact family.canonical basis O
-  cases deployedX4BatchOfCoveredOrRelation p (family.fixedRepresentations basis) hcovered nu with
-  | inr relation => exact PSum.inr relation
-  | inl x4Batch =>
-      let count := deployedX4PairCount (family.vk basis) (family.instanceCommitment basis)
-        p.proof.1 (wrappedPreIpaRecord pnu)
-      let x1Result := fun i : Fin count =>
-        deployedX1BatchOfCoveredWithSourceOrRelation p (family.fixedRepresentations basis)
-          hcovered nu x4Batch i i.isLt
-      cases hall : finForallOrRelationWitness x1Result with
-      | inr relation => exact PSum.inr relation
-      | inl results =>
-          let x1 := fun (i : Nat) (hi : i < count) => (results ⟨i, hi⟩).batch
-          exact PSum.inl
+    DeployedRootOutcomeProvider family.toFamily := fun basis O =>
+  match deployedX4BatchOfCoveredOrRelation
+      ((wrappedAdversary family.toFamily basis).run O).1
+      (family.fixedRepresentations basis) (family.membersCovered_wrapped basis O)
+      (wrappedPreIpaReads ((wrappedAdversary family.toFamily basis).run O)) with
+  | PSum.inr relation => PSum.inr relation
+  | PSum.inl x4Batch =>
+      match finForallOrRelationWitness (fun i :
+          Fin (deployedX4PairCount (family.vk basis) (family.instanceCommitment basis)
+            ((wrappedAdversary family.toFamily basis).run O).1.proof.1
+            (wrappedPreIpaRecord ((wrappedAdversary family.toFamily basis).run O))) =>
+          deployedX1BatchOfCoveredWithSourceOrRelation
+            ((wrappedAdversary family.toFamily basis).run O).1
+            (family.fixedRepresentations basis) (family.membersCovered_wrapped basis O)
+            (wrappedPreIpaReads ((wrappedAdversary family.toFamily basis).run O))
+            x4Batch i i.isLt) with
+      | PSum.inr relation => PSum.inr relation
+      | PSum.inl results =>
+          PSum.inl
             { fixedRepresentations := family.fixedRepresentations basis
-              canonical := hcanonical
-              membersCovered := hcovered
-              batches := { x4 := x4Batch, x1 := x1 }
+              canonical := family.canonical_wrapped basis O
+              membersCovered := family.membersCovered_wrapped basis O
+              batches :=
+                { x4 := x4Batch
+                  x1 := fun i hi => (results ⟨i, hi⟩).batch }
               memberCoeffs := fun i hi => (results ⟨i, hi⟩).coeffs_eq
               memberU := fun i hi => (results ⟨i, hi⟩).uComp_eq
               memberW := fun i hi => (results ⟨i, hi⟩).wComp_eq }
@@ -244,5 +262,13 @@ def ComputedDeployedRootFSFamily.ofCovered
   toComputedOnlineMemberFSFamily := family
   outcome := deployedRootOutcomeOfCovered family
   rootTrace := trace
+  outcome_source := fun basis O witness h => by
+    unfold deployedRootOutcomeOfCovered at h
+    split at h
+    · exact absurd h (by simp)
+    · split at h
+      · exact absurd h (by simp)
+      · cases PSum.inl.inj h
+        rfl
 
 end Zcash.Snark

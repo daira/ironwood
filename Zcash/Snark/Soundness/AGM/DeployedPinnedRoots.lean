@@ -348,11 +348,16 @@ theorem DeployedRootOnlineTrace.toSqueezeInvariance
 
 /-- An online AGM family carrying a concrete batch-or-relation outcome and the emission-stage
 trace from which root squeeze invariance is derived. Reverse unbatching may use later challenges;
-only each event's own answer is excluded from its retained pre-squeeze set. -/
+only each event's own answer is excluded from its retained pre-squeeze set.
+
+`outcome_source` pins every batch outcome to the family's own retained representation list, so
+the constraint layer's pre-`x` source is a family-level object rather than a per-witness one. -/
 structure ComputedDeployedRootFSFamily (shape : Shape)
     extends ComputedOnlineMemberFSFamily shape where
   outcome : DeployedRootOutcomeProvider toComputedAlgebraicFSFamily
   rootTrace : DeployedRootOnlineTrace toComputedAlgebraicFSFamily outcome
+  outcome_source : ∀ basis O witness, outcome basis O = PSum.inl witness →
+    witness.fixedRepresentations = fixedRepresentations basis
 
 namespace ComputedDeployedRootFSFamily
 

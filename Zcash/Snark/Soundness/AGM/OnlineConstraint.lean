@@ -58,30 +58,30 @@ private theorem relationOption_separateOrRelationWitness_congr {n : Nat}
   cases he
   rfl
 
-/-- The deterministic pre-`x` representation source retained by one deployed batch witness. -/
+/-- **The total pre-`x` representation source** (issue #127): the run's pre-`x₁` assembly
+commitments over the family's own retained representation list.  No witness, decode, or outcome
+is consulted, so the source — and everything the constraint layer builds from it — is defined on
+every run. -/
 def deployedConstraintSource (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
-    (pnu : WrappedAlgebraicOutput family.toFamily basis)
-    (witness : DeployedBatchWitness family.toFamily basis pnu) :
+    (pnu : WrappedAlgebraicOutput family.toFamily basis) :
     List (AlgebraicPoint (F := Fp) basis) :=
-  pnu.1.algebraicProof.preX1AssemblySource witness.fixedRepresentations
+  pnu.1.algebraicProof.preX1AssemblySource (family.fixedRepresentations basis)
 
 /-- Polynomial of the first online representation of a committed point. -/
 noncomputable def deployedConstraintPointPolynomial
     (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
-    (pnu : WrappedAlgebraicOutput family.toFamily basis)
-    (witness : DeployedBatchWitness family.toFamily basis pnu) (P : VestaG) : Polynomial Fp :=
-  onlinePointPolynomial (deployedConstraintSource family basis pnu witness) P
+    (pnu : WrappedAlgebraicOutput family.toFamily basis) (P : VestaG) : Polynomial Fp :=
+  onlinePointPolynomial (deployedConstraintSource family basis pnu) P
 
 /-- Coordinates of one quotient-piece commitment from the same deterministic source. -/
 def deployedConstraintPieceCoordinates
     (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (pnu : WrappedAlgebraicOutput family.toFamily basis)
-    (witness : DeployedBatchWitness family.toFamily basis pnu)
     (i : Fin shape.numQuotientPieces) : (Fin (2 ^ shape.k) -> Fp) × Fp × Fp :=
-  onlinePointCoordinates (deployedConstraintSource family basis pnu witness)
+  onlinePointCoordinates (deployedConstraintSource family basis pnu)
     (pnu.1.algebraicProof.hPieces i).point
 
 /-- Every quotient piece is covered by the retained pre-`x` source. -/
@@ -89,12 +89,11 @@ theorem deployedConstraintPieceCovered
     (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (pnu : WrappedAlgebraicOutput family.toFamily basis)
-    (witness : DeployedBatchWitness family.toFamily basis pnu)
     (i : Fin shape.numQuotientPieces) :
-    CommitmentRefCovered (deployedConstraintSource family basis pnu witness)
+    CommitmentRefCovered (deployedConstraintSource family basis pnu)
       (.point (pnu.1.algebraicProof.hPieces i).point) :=
   ⟨pnu.1.algebraicProof.hPieces i,
-    pnu.1.algebraicProof.hPiece_mem_preX1AssemblySource witness.fixedRepresentations i,
+    pnu.1.algebraicProof.hPiece_mem_preX1AssemblySource (family.fixedRepresentations basis) i,
     rfl⟩
 
 /-- The online quotient-piece coordinates open the emitted quotient-piece commitment. -/
@@ -102,28 +101,26 @@ theorem deployedConstraintPieceCoordinates_open
     (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (pnu : WrappedAlgebraicOutput family.toFamily basis)
-    (witness : DeployedBatchWitness family.toFamily basis pnu)
     (i : Fin shape.numQuotientPieces) :
     commit (ursOfAugmentedBasis shape.k basis)
-        (deployedConstraintPieceCoordinates family basis pnu witness i).1 +
-      (deployedConstraintPieceCoordinates family basis pnu witness i).2.1 •
+        (deployedConstraintPieceCoordinates family basis pnu i).1 +
+      (deployedConstraintPieceCoordinates family basis pnu i).2.1 •
           (ursOfAugmentedBasis shape.k basis).u +
-      (deployedConstraintPieceCoordinates family basis pnu witness i).2.2 •
+      (deployedConstraintPieceCoordinates family basis pnu i).2.2 •
           (ursOfAugmentedBasis shape.k basis).w = pnu.1.proof.1.hPieces i := by
   simpa [deployedConstraintPieceCoordinates, deployedConstraintSource] using
     onlinePointCoordinates_commitment
-      (deployedConstraintSource family basis pnu witness)
+      (deployedConstraintSource family basis pnu)
       (pnu.1.algebraicProof.hPieces i).point
-      (deployedConstraintPieceCovered family basis pnu witness i)
+      (deployedConstraintPieceCovered family basis pnu i)
 
 /-- The reassembled quotient MSM is covered directly by the pre-`x` quotient-piece
 representations.  This proof does not select a routed member or an opening witness. -/
 theorem deployedConstraintVanishingCovered
     (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
-    (pnu : WrappedAlgebraicOutput family.toFamily basis)
-    (witness : DeployedBatchWitness family.toFamily basis pnu) :
-    CommitmentRefCovered (deployedConstraintSource family basis pnu witness)
+    (pnu : WrappedAlgebraicOutput family.toFamily basis) :
+    CommitmentRefCovered (deployedConstraintSource family basis pnu)
       (.msm (vanishingHCommitment shape.k
         ((wrappedPreIpaRecord pnu).x ^ (family.vk basis).n)
         (List.ofFn pnu.1.proof.1.hPieces))) := by
@@ -138,7 +135,7 @@ theorem deployedConstraintVanishingCovered
     (List.ofFn pnu.1.proof.1.hPieces) pr.2 hpoint
   obtain ⟨i, hi⟩ := List.mem_ofFn.mp hpiece
   refine ⟨pnu.1.algebraicProof.hPieces i,
-    pnu.1.algebraicProof.hPiece_mem_preX1AssemblySource witness.fixedRepresentations i, ?_⟩
+    pnu.1.algebraicProof.hPiece_mem_preX1AssemblySource (family.fixedRepresentations basis) i, ?_⟩
   change (pnu.1.algebraicProof.hPieces i).point = pr.2 at hi
   exact hi
 
@@ -146,14 +143,13 @@ theorem deployedConstraintVanishingCovered
 def deployedConstraintPieceRepresentations
     (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
-    (pnu : WrappedAlgebraicOutput family.toFamily basis)
-    (witness : DeployedBatchWitness family.toFamily basis pnu) :
+    (pnu : WrappedAlgebraicOutput family.toFamily basis) :
     AlgebraicColumnRepresentations (ursOfAugmentedBasis shape.k basis)
       pnu.1.proof.1.hPieces :=
-  { coeffs := fun i => (deployedConstraintPieceCoordinates family basis pnu witness i).1
-    uComp := fun i => (deployedConstraintPieceCoordinates family basis pnu witness i).2.1
-    wComp := fun i => (deployedConstraintPieceCoordinates family basis pnu witness i).2.2
-    commitment := deployedConstraintPieceCoordinates_open family basis pnu witness }
+  { coeffs := fun i => (deployedConstraintPieceCoordinates family basis pnu i).1
+    uComp := fun i => (deployedConstraintPieceCoordinates family basis pnu i).2.1
+    wComp := fun i => (deployedConstraintPieceCoordinates family basis pnu i).2.2
+    commitment := deployedConstraintPieceCoordinates_open family basis pnu }
 
 /-- Computed comparison between the online representation of the reassembled quotient MSM and
 the power sum of the online quotient-piece representations.  A disagreement returns its actual
@@ -161,15 +157,14 @@ augmented-basis coefficients; it is never recovered from an ∃-closed relation 
 def deployedConstraintQuotientAgreementOrRelation
     (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
-    (pnu : WrappedAlgebraicOutput family.toFamily basis)
-    (witness : DeployedBatchWitness family.toFamily basis pnu) :
+    (pnu : WrappedAlgebraicOutput family.toFamily basis) :
     let urs := ursOfAugmentedBasis shape.k basis
     let xn := (wrappedPreIpaRecord pnu).x ^ (family.vk basis).n
     let represented := coveredCommitmentRepresentation
-      (deployedConstraintSource family basis pnu witness)
+      (deployedConstraintSource family basis pnu)
       (.msm (vanishingHCommitment shape.k xn (List.ofFn pnu.1.proof.1.hPieces)))
-      (deployedConstraintVanishingCovered family basis pnu witness)
-    let pieces := deployedConstraintPieceRepresentations family basis pnu witness
+      (deployedConstraintVanishingCovered family basis pnu)
+    let pieces := deployedConstraintPieceRepresentations family basis pnu
     (represented.coeffs = ∑ i : Fin shape.numQuotientPieces,
         xn ^ (i : Nat) • pieces.coeffs i ∧
       represented.uComp = ∑ i : Fin shape.numQuotientPieces,
@@ -181,9 +176,9 @@ def deployedConstraintQuotientAgreementOrRelation
   let xn := (wrappedPreIpaRecord pnu).x ^ (family.vk basis).n
   let msm := vanishingHCommitment shape.k xn (List.ofFn pnu.1.proof.1.hPieces)
   let represented := coveredCommitmentRepresentation
-    (deployedConstraintSource family basis pnu witness) (.msm msm)
-    (deployedConstraintVanishingCovered family basis pnu witness)
-  let pieces := deployedConstraintPieceRepresentations family basis pnu witness
+    (deployedConstraintSource family basis pnu) (.msm msm)
+    (deployedConstraintVanishingCovered family basis pnu)
+  let pieces := deployedConstraintPieceRepresentations family basis pnu
   let pieceCoeffs := ∑ i : Fin shape.numQuotientPieces,
     xn ^ (i : Nat) • pieces.coeffs i
   let pieceU := ∑ i : Fin shape.numQuotientPieces,
@@ -226,20 +221,32 @@ def deployedConstraintQuotientFinder
     let pnu := (wrappedAdversary family.toFamily basis).run coins.1
     match family.outcome basis coins.1 with
     | PSum.inr _ => none
-    | PSum.inl witness =>
-        match deployedConstraintQuotientAgreementOrRelation family basis pnu witness with
+    | PSum.inl _ =>
+        match deployedConstraintQuotientAgreementOrRelation family basis pnu with
         | PSum.inl _ => none
         | PSum.inr relation =>
             some (augmentedBasis_ursOfAugmentedBasis shape.k basis ▸
               relation.toAlgebraicRelationWitness)
 
+/-- Representation extraction only reads the list, so equal lists extract equal
+representations. -/
+private theorem coveredCommitmentRepresentation_list_congr
+    {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    {L₁ L₂ : List (AlgebraicPoint (F := Fp) basis)} (hL : L₁ = L₂)
+    (c : CommitmentRef shape.k Fp VestaG)
+    (h₁ : CommitmentRefCovered L₁ c) (h₂ : CommitmentRefCovered L₂ c) :
+    coveredCommitmentRepresentation L₁ c h₁ =
+      coveredCommitmentRepresentation L₂ c h₂ := by
+  cases hL; rfl
+
 /-- Retained source provenance pins every plain decoded member to its pre-`x` polynomial without a
-new relation branch. -/
+new relation branch.  The outcome witness's list is identified with the family's by `hsrc`. -/
 theorem deployedConstraint_memberPoly_eq_online
     (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (pnu : WrappedAlgebraicOutput family.toFamily basis)
     (witness : DeployedBatchWitness family.toFamily basis pnu)
+    (hsrc : witness.fixedRepresentations = family.fixedRepresentations basis)
     (decoded : DeployedAlgebraicDecode (ursOfAugmentedBasis shape.k basis) rfl
       (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
       (wrappedPreIpaRecord pnu) (pnu.1.aMulti (wrappedPreIpaReads pnu))
@@ -253,8 +260,10 @@ theorem deployedConstraint_memberPoly_eq_online
       pnu.1.proof.1 (wrappedPreIpaRecord pnu) i).getD (m : Nat) (.point 0, [])).1 =
       .point P) :
     decoded.memberPoly i hi m =
-      deployedConstraintPointPolynomial family basis pnu witness P := by
+      deployedConstraintPointPolynomial family basis pnu P := by
   unfold DeployedAlgebraicDecode.memberPoly deployedConstraintPointPolynomial
+    deployedConstraintSource
+  rw [← hsrc]
   rw [hbatches]
   rw [congrFun (witness.memberCoeffs i hi) m]
   exact congrArg coeffsToPoly
@@ -269,6 +278,7 @@ theorem deployedConstraint_vanishing_components_eq_online
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (pnu : WrappedAlgebraicOutput family.toFamily basis)
     (witness : DeployedBatchWitness family.toFamily basis pnu)
+    (hsrc : witness.fixedRepresentations = family.fixedRepresentations basis)
     (decoded : DeployedAlgebraicDecode (ursOfAugmentedBasis shape.k basis) rfl
       (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
       (wrappedPreIpaRecord pnu) (pnu.1.aMulti (wrappedPreIpaReads pnu))
@@ -284,36 +294,41 @@ theorem deployedConstraint_vanishing_components_eq_online
         ((wrappedPreIpaRecord pnu).x ^ (family.vk basis).n)
         (List.ofFn pnu.1.proof.1.hPieces))) :
     let represented := coveredCommitmentRepresentation
-      (deployedConstraintSource family basis pnu witness)
+      (deployedConstraintSource family basis pnu)
       (.msm (vanishingHCommitment shape.k
         ((wrappedPreIpaRecord pnu).x ^ (family.vk basis).n)
         (List.ofFn pnu.1.proof.1.hPieces)))
-      (deployedConstraintVanishingCovered family basis pnu witness)
+      (deployedConstraintVanishingCovered family basis pnu)
     (decoded.batches.x1 i hi).coeffs m = represented.coeffs ∧
       (decoded.batches.x1 i hi).uComp m = represented.uComp ∧
       (decoded.batches.x1 i hi).wComp m = represented.wComp := by
-  let represented := coveredCommitmentRepresentation
-    (deployedConstraintSource family basis pnu witness)
+  have hsource : deployedConstraintSource family basis pnu =
+      pnu.1.algebraicProof.preX1AssemblySource witness.fixedRepresentations := by
+    unfold deployedConstraintSource
+    rw [hsrc]
+  have hcovW : CommitmentRefCovered
+      (pnu.1.algebraicProof.preX1AssemblySource witness.fixedRepresentations)
+      (.msm (vanishingHCommitment shape.k
+        ((wrappedPreIpaRecord pnu).x ^ (family.vk basis).n)
+        (List.ofFn pnu.1.proof.1.hPieces))) :=
+    hsource ▸ deployedConstraintVanishingCovered family basis pnu
+  rw [coveredCommitmentRepresentation_list_congr hsource
     (.msm (vanishingHCommitment shape.k
       ((wrappedPreIpaRecord pnu).x ^ (family.vk basis).n)
       (List.ofFn pnu.1.proof.1.hPieces)))
-    (deployedConstraintVanishingCovered family basis pnu witness)
+    (deployedConstraintVanishingCovered family basis pnu) hcovW]
   have hmember := deployedMemberRepresentationsOfCovered_components pnu.1
     witness.fixedRepresentations witness.membersCovered (wrappedPreIpaReads pnu) i hi m
     (.msm (vanishingHCommitment shape.k
       ((wrappedPreIpaRecord pnu).x ^ (family.vk basis).n)
-      (List.ofFn pnu.1.proof.1.hPieces))) hcommit
-    (deployedConstraintVanishingCovered family basis pnu witness)
-  have hcoeffs : (decoded.batches.x1 i hi).coeffs m = represented.coeffs := by
-    rw [hbatches]
+      (List.ofFn pnu.1.proof.1.hPieces))) hcommit hcovW
+  refine ⟨?_, ?_, ?_⟩
+  · rw [hbatches]
     exact (congrFun (witness.memberCoeffs i hi) m).trans hmember.1
-  have hu : (decoded.batches.x1 i hi).uComp m = represented.uComp := by
-    rw [hbatches]
+  · rw [hbatches]
     exact (congrFun (witness.memberU i hi) m).trans hmember.2.1
-  have hw : (decoded.batches.x1 i hi).wComp m = represented.wComp := by
-    rw [hbatches]
+  · rw [hbatches]
     exact (congrFun (witness.memberW i hi) m).trans hmember.2.2
-  exact ⟨hcoeffs, hu, hw⟩
 
 /-- Any quotient relation returned by the decoded constraint adapter is the same relation returned
 by the standalone online quotient comparison.  This is the bridge that lets the probability layer
@@ -323,6 +338,7 @@ theorem deployedConstraint_quotient_relation_eq_online
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (pnu : WrappedAlgebraicOutput family.toFamily basis)
     (witness : DeployedBatchWitness family.toFamily basis pnu)
+    (hsrc : witness.fixedRepresentations = family.fixedRepresentations basis)
     (decoded : DeployedAlgebraicDecode (ursOfAugmentedBasis shape.k basis) rfl
       (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
       (wrappedPreIpaRecord pnu) (pnu.1.aMulti (wrappedPreIpaReads pnu))
@@ -342,17 +358,17 @@ theorem deployedConstraint_quotient_relation_eq_online
       (ursOfAugmentedBasis shape.k basis).u
       (ursOfAugmentedBasis shape.k basis).w)
     (hrelation : decoded.quotientEvalEqCommittedPreXOrRelationWitness
-      (fun j => (deployedConstraintPieceCoordinates family basis pnu witness j).1)
-      (fun j => (deployedConstraintPieceCoordinates family basis pnu witness j).2.1)
-      (fun j => (deployedConstraintPieceCoordinates family basis pnu witness j).2.2)
+      (fun j => (deployedConstraintPieceCoordinates family basis pnu j).1)
+      (fun j => (deployedConstraintPieceCoordinates family basis pnu j).2.1)
+      (fun j => (deployedConstraintPieceCoordinates family basis pnu j).2.2)
       (fun j => coeffsToPoly
-        (deployedConstraintPieceCoordinates family basis pnu witness j).1)
-      (deployedConstraintPieceCoordinates_open family basis pnu witness) (fun _ => rfl)
+        (deployedConstraintPieceCoordinates family basis pnu j).1)
+      (deployedConstraintPieceCoordinates_open family basis pnu) (fun _ => rfl)
       hi m hcommit = PSum.inr relation) :
-    deployedConstraintQuotientAgreementOrRelation family basis pnu witness =
+    deployedConstraintQuotientAgreementOrRelation family basis pnu =
       PSum.inr relation := by
   have hcomponents := deployedConstraint_vanishing_components_eq_online family basis pnu witness
-    decoded hbatches hi m (hcommit (.point 0, []))
+    hsrc decoded hbatches hi m (hcommit (.point 0, []))
   unfold DeployedAlgebraicDecode.quotientEvalEqCommittedPreXOrRelationWitness at hrelation
   unfold decodedQuotientEqReassembledOrRelationWitness at hrelation
   simp only at hrelation
@@ -376,15 +392,15 @@ theorem deployedConstraint_quotient_relation_eq_online
             ((decoded.batches.x1 i hi).coeffs m)
             (∑ j : Fin shape.numQuotientPieces,
               ((wrappedPreIpaRecord pnu).x ^ (family.vk basis).n) ^ (j : Nat) •
-                (deployedConstraintPieceCoordinates family basis pnu witness j).1)
+                (deployedConstraintPieceCoordinates family basis pnu j).1)
             ((decoded.batches.x1 i hi).uComp m)
             (∑ j : Fin shape.numQuotientPieces,
               ((wrappedPreIpaRecord pnu).x ^ (family.vk basis).n) ^ (j : Nat) *
-                (deployedConstraintPieceCoordinates family basis pnu witness j).2.1)
+                (deployedConstraintPieceCoordinates family basis pnu j).2.1)
             ((decoded.batches.x1 i hi).wComp m)
             (∑ j : Fin shape.numQuotientPieces,
               ((wrappedPreIpaRecord pnu).x ^ (family.vk basis).n) ^ (j : Nat) *
-                (deployedConstraintPieceCoordinates family basis pnu witness j).2.2) _) := by
+                (deployedConstraintPieceCoordinates family basis pnu j).2.2) _) := by
               apply relationOption_separateOrRelationWitness_congr
               · exact hcomponents.1.symm
               · rfl
@@ -405,6 +421,7 @@ noncomputable def deployedOnlineConstraintOutcomeOfDecode
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (pnu : WrappedAlgebraicOutput family.toFamily basis)
     (witness : DeployedBatchWitness family.toFamily basis pnu)
+    (hsrc : witness.fixedRepresentations = family.fixedRepresentations basis)
     (decoded : DeployedAlgebraicDecode (ursOfAugmentedBasis shape.k basis) rfl
       (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
       (wrappedPreIpaRecord pnu) (pnu.1.aMulti (wrappedPreIpaReads pnu))
@@ -419,9 +436,9 @@ noncomputable def deployedOnlineConstraintOutcomeOfDecode
     (hn : ((family.vk basis).n : Fp) ≠ 0)
     (hxgood : (wrappedPreIpaRecord pnu).x ∉ szBadSet
       (committedPreXConstraintDifference
-        (deployedConstraintPointPolynomial family basis pnu witness)
+        (deployedConstraintPointPolynomial family basis pnu)
         (fun i => coeffsToPoly
-          (deployedConstraintPieceCoordinates family basis pnu witness i).1)
+          (deployedConstraintPieceCoordinates family basis pnu i).1)
         (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
         (wrappedPreIpaRecord pnu))) :
     DeployedConstraintWitness (ursOfAugmentedBasis shape.k basis) rfl
@@ -433,14 +450,14 @@ noncomputable def deployedOnlineConstraintOutcomeOfDecode
   deployedConstraintOutcomeOfDecode (ursOfAugmentedBasis shape.k basis) rfl
     (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
     (wrappedPreIpaRecord pnu) decoded
-    (deployedConstraintPointPolynomial family basis pnu witness)
-    (fun i => (deployedConstraintPieceCoordinates family basis pnu witness i).1)
-    (fun i => (deployedConstraintPieceCoordinates family basis pnu witness i).2.1)
-    (fun i => (deployedConstraintPieceCoordinates family basis pnu witness i).2.2)
+    (deployedConstraintPointPolynomial family basis pnu)
+    (fun i => (deployedConstraintPieceCoordinates family basis pnu i).1)
+    (fun i => (deployedConstraintPieceCoordinates family basis pnu i).2.1)
+    (fun i => (deployedConstraintPieceCoordinates family basis pnu i).2.2)
     (fun i => coeffsToPoly
-      (deployedConstraintPieceCoordinates family basis pnu witness i).1)
-    (deployedConstraintPieceCoordinates_open family basis pnu witness) (fun _ => rfl)
-    (deployedConstraint_memberPoly_eq_online family basis pnu witness decoded hbatches)
+      (deployedConstraintPieceCoordinates family basis pnu i).1)
+    (deployedConstraintPieceCoordinates_open family basis pnu) (fun _ => rfl)
+    (deployedConstraint_memberPoly_eq_online family basis pnu witness hsrc decoded hbatches)
     checks hAdvLen hInstLen hFixedLen homega hn hxgood
 
 /-- Project any relation branch of the full constraint outcome onto the standalone online
@@ -450,6 +467,7 @@ theorem deployedOnlineConstraintOutcome_relation_eq_online
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (pnu : WrappedAlgebraicOutput family.toFamily basis)
     (witness : DeployedBatchWitness family.toFamily basis pnu)
+    (hsrc : witness.fixedRepresentations = family.fixedRepresentations basis)
     (decoded : DeployedAlgebraicDecode (ursOfAugmentedBasis shape.k basis) rfl
       (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
       (wrappedPreIpaRecord pnu) (pnu.1.aMulti (wrappedPreIpaReads pnu))
@@ -464,18 +482,18 @@ theorem deployedOnlineConstraintOutcome_relation_eq_online
     (hn : ((family.vk basis).n : Fp) ≠ 0)
     (hxgood : (wrappedPreIpaRecord pnu).x ∉ szBadSet
       (committedPreXConstraintDifference
-        (deployedConstraintPointPolynomial family basis pnu witness)
+        (deployedConstraintPointPolynomial family basis pnu)
         (fun i => coeffsToPoly
-          (deployedConstraintPieceCoordinates family basis pnu witness i).1)
+          (deployedConstraintPieceCoordinates family basis pnu i).1)
         (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
         (wrappedPreIpaRecord pnu)))
     (relation : AugmentedRelationWitness (F := Fp)
       (ursOfAugmentedBasis shape.k basis).g
       (ursOfAugmentedBasis shape.k basis).u
       (ursOfAugmentedBasis shape.k basis).w)
-    (hout : deployedOnlineConstraintOutcomeOfDecode family basis pnu witness decoded hbatches
-      checks hAdvLen hInstLen hFixedLen homega hn hxgood = PSum.inr relation) :
-    deployedConstraintQuotientAgreementOrRelation family basis pnu witness =
+    (hout : deployedOnlineConstraintOutcomeOfDecode family basis pnu witness hsrc decoded
+      hbatches checks hAdvLen hInstLen hFixedLen homega hn hxgood = PSum.inr relation) :
+    deployedConstraintQuotientAgreementOrRelation family basis pnu =
       PSum.inr relation := by
   simp only [deployedOnlineConstraintOutcomeOfDecode, deployedConstraintOutcomeOfDecode,
     bindOrRelationWitness] at hout
@@ -483,7 +501,7 @@ theorem deployedOnlineConstraintOutcome_relation_eq_online
   · simp_all only [reduceCtorEq]
   · rename_i quotientRelation hquotient
     have honline := deployedConstraint_quotient_relation_eq_online family basis pnu witness
-      decoded hbatches _ _ _ quotientRelation hquotient
+      hsrc decoded hbatches _ _ _ quotientRelation hquotient
     injection hout with hreln
     exact hreln ▸ honline
 

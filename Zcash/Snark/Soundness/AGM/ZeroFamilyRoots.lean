@@ -881,6 +881,8 @@ noncomputable def zeroDeployedRootFamily :
   toComputedOnlineMemberFSFamily := zeroOnlineMemberFamily vkS hfixed hperm
   outcome := zeroRootOutcome vkS hfixed hperm
   rootTrace := zeroRootTrace vkS hfixed hperm
+  outcome_source := fun basis _O witness h => by
+    cases PSum.inl.inj h; rfl
 
 end Stages
 

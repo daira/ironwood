@@ -33,12 +33,11 @@ local instance vestaInhabitedStraightLineWitness : Inhabited VestaG := ⟨0⟩
 /-- **The witness constraint difference is the zero polynomial.**  The witness shape has no
 proofs, so the folded constraint list is empty, and the zero key's `n = 0` collapses the
 quotient-side product `q · (X^n - 1)`. -/
-theorem deployedConstraintDifferenceOfRoot_witness
+theorem deployedConstraintDifferencePreX_witness
     (basis : AugmentedIndex (2 ^ witnessShape.k) → VestaG)
-    (coins : witnessDeployedRootFamily.toFamily.Coins)
-    (root : DeployedRootDecodeWitness witnessDeployedRootFamily basis coins) :
-    deployedConstraintDifferenceOfRoot witnessDeployedRootFamily basis coins root = 0 := by
-  unfold deployedConstraintDifferenceOfRoot committedPreXConstraintDifference
+    (coins : witnessDeployedRootFamily.toFamily.Coins) :
+    deployedConstraintDifferencePreX witnessDeployedRootFamily basis coins = 0 := by
+  unfold deployedConstraintDifferencePreX committedPreXConstraintDifference
   have hn : (witnessDeployedRootFamily.vk basis).n = 0 := rfl
   rw [hn]
   simp [combineConstraints, constraintPolys, allConstraints, witnessShape]
@@ -52,8 +51,8 @@ theorem deployedConstraintXBadSet_witness
     deployedConstraintXBadSet witnessDeployedRootFamily basis O = ∅ := by
   ext x
   simp only [deployedConstraintXBadSet, Set.mem_setOf_eq, Set.mem_empty_iff_false, iff_false]
-  rintro ⟨tape, root, hx⟩
-  rw [deployedConstraintDifferenceOfRoot_witness basis (O, tape) root] at hx
+  rintro ⟨tape, hx⟩
+  rw [deployedConstraintDifferencePreX_witness basis (O, tape)] at hx
   exact (mem_szBadSet.mp hx).1 rfl
 
 /-! ## The executable constraint-`x` stage -/

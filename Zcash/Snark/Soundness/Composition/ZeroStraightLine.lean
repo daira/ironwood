@@ -67,16 +67,12 @@ polynomial: no sub-proof contributes a constraint, and the decoded quotient piec
 all-zero assembly source. -/
 theorem zeroConstraintDifference_eq_zero (hproofs : shape.numProofs = 0)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (coins : (zeroDeployedRootFamily vkS hfixed hperm).toFamily.Coins)
-    (root : DeployedRootDecodeWitness (zeroDeployedRootFamily vkS hfixed hperm) basis coins) :
-    deployedConstraintDifferenceOfRoot (zeroDeployedRootFamily vkS hfixed hperm) basis coins
-      root = 0 := by
-  have hbw : root.batchWitness = zeroBatchWitness basis vkS hfixed hperm coins.1 :=
-    PSum.inl.inj root.outcome_eq.symm
+    (coins : (zeroDeployedRootFamily vkS hfixed hperm).toFamily.Coins) :
+    deployedConstraintDifferencePreX (zeroDeployedRootFamily vkS hfixed hperm) basis coins
+      = 0 := by
   have hsource : ∀ ap ∈ deployedConstraintSource (zeroDeployedRootFamily vkS hfixed hperm) basis
-      (deployedRootRunOutput (zeroDeployedRootFamily vkS hfixed hperm) basis coins)
-      root.batchWitness, ap = zeroAlgebraicPoint basis := by
-    rw [hbw]
+      (deployedRootRunOutput (zeroDeployedRootFamily vkS hfixed hperm) basis coins),
+      ap = zeroAlgebraicPoint basis := by
     intro ap hap
     refine zeroAlgebraicProofString_source_eq basis ?_
     have hrun : (deployedRootRunOutput (zeroDeployedRootFamily vkS hfixed hperm) basis
@@ -87,14 +83,13 @@ theorem zeroConstraintDifference_eq_zero (hproofs : shape.numProofs = 0)
     exact hap
   have hpieces : ∀ i, coeffsToPoly (deployedConstraintPieceCoordinates
       (zeroDeployedRootFamily vkS hfixed hperm) basis
-      (deployedRootRunOutput (zeroDeployedRootFamily vkS hfixed hperm) basis coins)
-      root.batchWitness i).1 = 0 := by
+      (deployedRootRunOutput (zeroDeployedRootFamily vkS hfixed hperm) basis coins) i).1 = 0 := by
     intro i
     unfold deployedConstraintPieceCoordinates
     rw [onlinePointCoordinates_zeroSource basis hsource]
     show coeffsToPoly (fun _ => (0 : Fp)) = 0
     simp [coeffsToPoly]
-  simp only [deployedConstraintDifferenceOfRoot, committedPreXConstraintDifference,
+  simp only [deployedConstraintDifferencePreX, committedPreXConstraintDifference,
     combineConstraints, constraintPolys_nil_of_no_proofs hproofs, List.foldl_nil,
     committedPreXQuotient, preXQuotient]
   rw [Finset.sum_congr rfl (fun i (_ : i ∈ Finset.univ) => by rw [hpieces i, mul_zero])]
@@ -109,8 +104,8 @@ theorem zeroConstraintXBadSet_empty (hproofs : shape.numProofs = 0)
     deployedConstraintXBadSet (zeroDeployedRootFamily vkS hfixed hperm) basis O = ∅ := by
   ext x
   simp only [deployedConstraintXBadSet, Set.mem_setOf_eq, Set.mem_empty_iff_false, iff_false]
-  rintro ⟨tape, root, hx⟩
-  rw [zeroConstraintDifference_eq_zero vkS hfixed hperm hproofs basis (O, tape) root] at hx
+  rintro ⟨tape, hx⟩
+  rw [zeroConstraintDifference_eq_zero vkS hfixed hperm hproofs basis (O, tape)] at hx
   exact (mem_szBadSet.mp hx).1 rfl
 
 /-- **The zero family's executable constraint-`x` stage.**  The root set is empty, so the stage

@@ -17,6 +17,8 @@ open scoped ENNReal
 
 local instance vestaInhabitedStraightLineConstraint : Inhabited VestaG := ⟨0⟩
 
+attribute [local irreducible] deployedConstraintDifferencePreX
+
 variable {shape : Shape}
 
 namespace ComputedStraightLineDeployedFSFamily
@@ -32,9 +34,9 @@ def straightLineConstraintQuotientFinder
     let pnu := (wrappedAdversary family.toFamily basis).run O
     match family.outcome basis O with
     | PSum.inr _ => none
-    | PSum.inl witness =>
+    | PSum.inl _ =>
         match deployedConstraintQuotientAgreementOrRelation
-            family.toRootFamily basis pnu witness with
+            family.toRootFamily basis pnu with
         | PSum.inl _ => none
         | PSum.inr relation =>
             some (augmentedBasis_ursOfAugmentedBasis shape.k basis ▸
@@ -221,7 +223,7 @@ theorem straightLineConstraintFailureSet_subset
   · let root := Classical.choice hroot
     by_cases hxgood : (wrappedPreIpaRecord
         (deployedRootRunOutput family.toRootFamily basis coins)).x ∉
-        szBadSet (deployedConstraintDifferenceOfRoot family.toRootFamily basis coins root)
+        szBadSet (deployedConstraintDifferencePreX family.toRootFamily basis coins)
     · cases hout : deployedConstraintOutcomeOfRoot family.toRootFamily static basis coins
           hfailure.1 root hxgood with
       | inl witness =>
@@ -246,19 +248,17 @@ theorem straightLineConstraintFailureSet_subset
                 PSum.inl root.batchWitness := root.outcome_eq
               have hrel : deployedConstraintQuotientAgreementOrRelation family.toRootFamily
                   (scalarBasis B q.1)
-                  ((wrappedAdversary family.toFamily (scalarBasis B q.1)).run q.2)
-                  root.batchWitness = PSum.inr relation := hrelation
+                  ((wrappedAdversary family.toFamily (scalarBasis B q.1)).run q.2) =
+                  PSum.inr relation := hrelation
               simp [straightLineConstraintQuotientFinder, houtcome, hrel]
     · apply Or.inr
       apply Or.inr
       apply Or.inr
       apply Or.inr
-      change ∃ root : DeployedRootDecodeWitness family.toRootFamily basis coins,
-        (wrappedPreIpaRecord
+      change (wrappedPreIpaRecord
           (deployedRootRunOutput family.toRootFamily basis coins)).x ∈
-            szBadSet (deployedConstraintDifferenceOfRoot
-              family.toRootFamily basis coins root)
-      exact ⟨root, Classical.not_not.mp hxgood⟩
+        szBadSet (deployedConstraintDifferencePreX family.toRootFamily basis coins)
+      exact Classical.not_not.mp hxgood
   · by_cases hrelation :
         (family.straightLineDeployedRelationFinder basis q.2).isSome
     · apply Or.inr
