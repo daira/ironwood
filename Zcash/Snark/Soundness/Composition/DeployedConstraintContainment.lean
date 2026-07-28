@@ -363,6 +363,66 @@ def deployedConstraintRelationFinder (family : ComputedDeployedRootFSFamily shap
     | some relation => some relation
     | none => constraintFinder basis coins
 
+/-- Black-box adversary calls made by the concrete combined finder.  The recursive branch is
+charged by `instanceAttempt.runs`.  If it fails, the direct-coordinate outcome costs one wrapped
+run; if that also returns no relation, `deployedConstraintQuotientFinder` costs two further runs
+(one wrapped output and one repeat of the direct-coordinate outcome).  Algebraic postprocessing is
+not a black-box call and remains part of the external PPT premise. -/
+def deployedConstraintRelationFinderCalls (family : ComputedDeployedRootFSFamily shape)
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) (coins : family.toFamily.Coins) : Nat :=
+  (family.toFamily.instanceAttempt basis coins).runs +
+    match family.toFamily.relationFinder basis coins with
+    | some _ => 0
+    | none =>
+        match family.outcome basis coins.1 with
+        | PSum.inr _ => 1
+        | PSum.inl _ => 3
+
+/-- The concrete combined finder has at most three black-box calls beyond the recursive
+extractor: one direct-coordinate attempt, then the wrapped-output and repeated-outcome calls in
+the quotient fallback. -/
+theorem deployedConstraintRelationFinderCalls_le
+    (family : ComputedDeployedRootFSFamily shape)
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) (coins : family.toFamily.Coins) :
+    deployedConstraintRelationFinderCalls family basis coins <=
+      (family.toFamily.instanceAttempt basis coins).runs + 3 := by
+  unfold deployedConstraintRelationFinderCalls
+  cases hrecursive : family.toFamily.relationFinder basis coins with
+  | some relation => simp [hrecursive]
+  | none =>
+      cases houtcome : family.outcome basis coins.1 with
+      | inl witness => simp [hrecursive, houtcome]
+      | inr relation => simp [hrecursive, houtcome]
+
+/-- Expected black-box call bound for the concrete deployed combined relation finder. -/
+def DeployedConstraintReductionEfficient (family : ComputedDeployedRootFSFamily shape)
+    (R : Nat) : Prop :=
+  forall basis : AugmentedIndex (2 ^ shape.k) -> VestaG,
+    ∑ coins : family.toFamily.Coins, deployedConstraintRelationFinderCalls family basis coins
+      <= R * Fintype.card family.toFamily.Coins
+
+/-- The unconditional AFK bound survives the direct-coordinate and quotient fallbacks with an
+additive three-call overhead. -/
+theorem deployedConstraintReductionEfficient_poly
+    (family : ComputedDeployedRootFSFamily shape) :
+    DeployedConstraintReductionEfficient family (afkRunBound family.Q shape.k + 3) := by
+  intro basis
+  calc
+    ∑ coins : family.toFamily.Coins, deployedConstraintRelationFinderCalls family basis coins
+        <= ∑ coins : family.toFamily.Coins,
+            (family.toFamily.instanceAttempt basis coins).runs + 3 :=
+      Finset.sum_le_sum fun coins _ =>
+        deployedConstraintRelationFinderCalls_le family basis coins
+    _ = (∑ coins : family.toFamily.Coins,
+          (family.toFamily.instanceAttempt basis coins).runs) +
+          Fintype.card family.toFamily.Coins * 3 := by
+      rw [Finset.sum_add_distrib, Finset.sum_const, Finset.card_univ, smul_eq_mul]
+    _ <= afkRunBound family.Q shape.k * Fintype.card family.toFamily.Coins +
+          Fintype.card family.toFamily.Coins * 3 :=
+      Nat.add_le_add_right (family.toFamily.reductionEfficient_poly basis) _
+    _ = (afkRunBound family.Q shape.k + 3) * Fintype.card family.toFamily.Coins := by
+      ring
+
 /-- The combined relation event used by the constraint capstone. -/
 def deployedConstraintRelationEvent (family : ComputedDeployedRootFSFamily shape)
     (constraintFinder : (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) ->
@@ -463,6 +523,37 @@ theorem deployedConstraintRelation_prob_le_of_generatorRO_textbookDL
   exact relationWithCoins_prob_le_of_textbookDL B
     (deployedConstraintRelationFinder family constraintFinder) hDL
 
+/-- Runtime-aware generator-random-oracle relation bound for the concrete combined finder.  The
+fixed-budget DLOG solver pays the programmed-basis `1/|Fp|` term, while truncating the unconditional
+expected call bound contributes `(afkRunBound Q k + 3)/(L+1)`. -/
+theorem deployedConstraintRelation_prob_le_of_generatorRO_truncated_textbookDL
+    {T : Type*} [DecidableEq T] (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex (2 ^ shape.k) -> T) (hquery : Function.Injective query)
+    (family : ComputedDeployedRootFSFamily shape) {L : Nat} {bound : ENNReal}
+    (hDL : TextbookDLWithCoinsTruncatedAdvantageLE B
+      (deployedConstraintRelationFinder family
+        (deployedConstraintQuotientFinder family))
+      (deployedConstraintRelationFinderCalls family) L bound) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          deployedConstraintRelationEvent family
+            (deployedConstraintQuotientFinder family))
+      <= bound + 1 / Fintype.card Fp +
+        ((afkRunBound family.Q shape.k + 3 : Nat) : ENNReal) / (L + 1 : Nat) := by
+  rw [deployedConstraintRelation_prob_eq_of_uniformURS
+    (orchardGeneratorROSetup query) B family (deployedConstraintQuotientFinder family)
+    (orchardGeneratorROBasis query)
+    (orchard_uniformURSIdentification_of_generatorRO shape.k B hB query hquery)]
+  have hExpected : RelationFinderExpectedCallsLE
+      (deployedConstraintRelationFinderCalls family)
+      (afkRunBound family.Q shape.k + 3) := by
+    simpa only [RelationFinderExpectedCallsLE, DeployedConstraintReductionEfficient] using
+      deployedConstraintReductionEfficient_poly family
+  exact relationWithCoins_prob_le_of_truncated_textbookDL B
+    (deployedConstraintRelationFinder family (deployedConstraintQuotientFinder family))
+    (deployedConstraintRelationFinderCalls family) hExpected hDL
+
 /-- Deterministic containment needed by the final constraint capstone.  Once the root decode is
 available, failure to obtain the constraint relation must either make the combined finder return
 an explicit relation or hit the pre-`x` bad event. -/
@@ -544,12 +635,12 @@ theorem deployedConstraintFailure_subset_union
         (deployedRelationEvent_subset_constraintRelationEvent family constraintFinder hrelation))
     · exact Or.inr (Or.inr (Or.inl hresidual))
 
-/-- DLOG-based composite bound for the concrete constraint endpoint.  `badXBound` is additive and
-is intended to be instantiated by the pre-`x` prefix schedule. -/
-theorem snarkConstraintsDeployed_prob_le_via_deployed_roots
+/-- Composite bound for the concrete constraint endpoint, factored over an explicit bound for the
+combined relation event.  DLOG reductions, including fixed-budget truncations, enter only through
+`hrelation`; `badXBound` is instantiated separately by the pre-`x` prefix schedule. -/
+theorem snarkConstraintsDeployed_prob_le_via_deployed_roots_of_relation_bound
     {T : Type*} [DecidableEq T]
-    (B : VestaG) (hB : B ≠ 0)
-    (query : AugmentedIndex (2 ^ shape.k) -> T) (hquery : Function.Injective query)
+    (query : AugmentedIndex (2 ^ shape.k) -> T)
     (family : ComputedDeployedRootFSFamily shape)
     (constraintFinder : (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) ->
       family.toFamily.Coins -> Option (AlgebraicRelationWitness (F := Fp) basis))
@@ -558,9 +649,11 @@ theorem snarkConstraintsDeployed_prob_le_via_deployed_roots
     (badX : Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) × family.toFamily.Coins))
     (hupgrade : DeployedConstraintUpgradeContained family constraintFinder
       constraintDecoded badX)
-    {dlogBound badXBound : ENNReal}
-    (hDL : TextbookDLWithCoinsAdvantageLE B
-      (deployedConstraintRelationFinder family constraintFinder) dlogBound)
+    {relationBound badXBound : ENNReal}
+    (hrelation : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          deployedConstraintRelationEvent family constraintFinder) <= relationBound)
     (hbadX : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' badX) <= badXBound) :
@@ -570,7 +663,7 @@ theorem snarkConstraintsDeployed_prob_le_via_deployed_roots
           snarkExtractionFailureEventDeployed family.toFamily constraintDecoded)
       <= ((family.Q + shape.k) * (3 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
-          (dlogBound + 1 / Fintype.card Fp))
+          relationBound)
         + (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k
         + badXBound := by
   let setup := orchardGeneratorROSetup query
@@ -579,13 +672,9 @@ theorem snarkConstraintsDeployed_prob_le_via_deployed_roots
   let nonRelationBound : ENNReal :=
     (family.Q + shape.k) * (3 / Fintype.card Fp) +
       (family.Q + 1 : Nat) * (1 / Fintype.card Fp)
-  let relationBound : ENNReal :=
-    (dlogBound + 1 / Fintype.card Fp)
   let rootBound : ENNReal :=
     (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k
   have hnonRelation := deployedNonRelationFailure_prob_le_of_generatorRO query family
-  have hrelation := deployedConstraintRelation_prob_le_of_generatorRO_textbookDL
-    B hB query hquery family constraintFinder hDL
   have hroots :
       (independentProductPMF setup coinPMF).toOuterMeasure
           ((fun p => (basisOf p.1, p.2)) ⁻¹'
@@ -632,11 +721,46 @@ theorem snarkConstraintsDeployed_prob_le_via_deployed_roots
       add_le_add hnonRelation (add_le_add hrelation (add_le_add hroots hbadX))
     _ = ((family.Q + shape.k) * (3 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
+          relationBound)
+        + (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k
+        + badXBound := by
+      simp only [nonRelationBound, rootBound]
+      ac_rfl
+
+/-- DLOG-based composite bound for the concrete constraint endpoint.  This runtime-free wrapper is
+retained for callers that already supply hardness for the untruncated combined finder. -/
+theorem snarkConstraintsDeployed_prob_le_via_deployed_roots
+    {T : Type*} [DecidableEq T]
+    (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex (2 ^ shape.k) -> T) (hquery : Function.Injective query)
+    (family : ComputedDeployedRootFSFamily shape)
+    (constraintFinder : (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) ->
+      family.toFamily.Coins -> Option (AlgebraicRelationWitness (F := Fp) basis))
+    (constraintDecoded : (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) ->
+      family.toFamily.Coins -> Prop)
+    (badX : Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) × family.toFamily.Coins))
+    (hupgrade : DeployedConstraintUpgradeContained family constraintFinder
+      constraintDecoded badX)
+    {dlogBound badXBound : ENNReal}
+    (hDL : TextbookDLWithCoinsAdvantageLE B
+      (deployedConstraintRelationFinder family constraintFinder) dlogBound)
+    (hbadX : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' badX) <= badXBound) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          snarkExtractionFailureEventDeployed family.toFamily constraintDecoded)
+      <= ((family.Q + shape.k) * (3 / Fintype.card Fp) +
+          (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
           (dlogBound + 1 / Fintype.card Fp))
         + (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k
         + badXBound := by
-      simp only [nonRelationBound, relationBound, rootBound]
-      ac_rfl
+  apply snarkConstraintsDeployed_prob_le_via_deployed_roots_of_relation_bound query family
+    constraintFinder constraintDecoded badX hupgrade
+  · exact deployedConstraintRelation_prob_le_of_generatorRO_textbookDL
+      B hB query hquery family constraintFinder hDL
+  · exact hbadX
 
 /-- Specialization of the composite bound to the concrete online constraint outcome provider. -/
 theorem snarkConstraintsDeployed_prob_le_of_online_outcome
@@ -702,6 +826,43 @@ theorem snarkConstraintsDeployed_prob_le_of_root_schedule
     (deployedConstraintUpgradeContained_of_root family static) hDL
     (deployedConstraintBadX_prob_le query family schedule)
 
+/-- Runtime-aware rewind-free **compressed-identity** capstone.  Standard fixed-call DLOG hardness
+is applied to the combined finder truncated at `L`; finite Markov conversion from its unconditional
+expected call bound contributes the explicit tail `(afkRunBound Q k + 3)/(L+1)`.  Like the
+schedule-only capstone above, this is a compressed-identity statement: it says nothing about
+row-level gate, permutation, or lookup semantics. -/
+theorem snarkConstraintsDeployed_prob_le_of_root_schedule_runtime
+    {T : Type*} [DecidableEq T]
+    (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex (2 ^ shape.k) -> T) (hquery : Function.Injective query)
+    (family : ComputedDeployedRootFSFamily shape)
+    (static : DeployedConstraintStaticChecks family)
+    {L : Nat} {epsilonX dlogBound : ENNReal}
+    (schedule : DeployedConstraintXSqueezeSchedule family epsilonX)
+    (hDL : TextbookDLWithCoinsTruncatedAdvantageLE B
+      (deployedConstraintRelationFinder family
+        (deployedConstraintQuotientFinder family))
+      (deployedConstraintRelationFinderCalls family) L dlogBound) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.toFamily.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          snarkExtractionFailureEventDeployed family.toFamily
+            (deployedConstraintDecodedOfRoot family static))
+      <= ((family.Q + shape.k) * (3 / Fintype.card Fp) +
+          (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
+          (dlogBound + 1 / Fintype.card Fp +
+            ((afkRunBound family.Q shape.k + 3 : Nat) : ENNReal) / (L + 1 : Nat)))
+        + (family.Q + (11 + shape.k) + 1 : Nat) * algebraicRootBudget shape shape.k
+        + (family.Q + 1 : Nat) * epsilonX := by
+  apply snarkConstraintsDeployed_prob_le_via_deployed_roots_of_relation_bound query family
+    (deployedConstraintQuotientFinder family)
+    (deployedConstraintDecodedOfRoot family static)
+    (deployedConstraintBadXEvent family)
+    (deployedConstraintUpgradeContained_of_root family static)
+  · exact deployedConstraintRelation_prob_le_of_generatorRO_truncated_textbookDL
+      B hB query hquery family hDL
+  · exact deployedConstraintBadX_prob_le query family schedule
+
 /-! ## Promotion from the compressed identity to circuit semantics
 
 The constraint witness above proves the verifier's identity only after `y` has compressed the
@@ -748,8 +909,9 @@ four named additive budgets. No conclusion about row-level gate, permutation, or
 is available from the compressed payload unless `hsemantic` and all four measure bounds are
 provided. -/
 /-
-TODO(#115): When layering the runtime-aware capstone, verify that it either passes through this
-semantic promotion (including all four budgets) or is explicitly scoped to the compressed identity.
+TODO(#115): `snarkConstraintsDeployed_prob_le_of_root_schedule_runtime` is scoped strictly to the
+compressed identity, so it does not yet pass through this promotion.  Routing the runtime-aware
+capstone through here with concrete `y`, `beta`, `gamma`, and `theta` events remains open.
 -/
 theorem snarkConstraintsSemanticDeployed_prob_le_of_root_schedule
     {T : Type*} [DecidableEq T]

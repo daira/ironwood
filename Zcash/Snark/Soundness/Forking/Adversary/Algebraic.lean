@@ -4,6 +4,7 @@ import Zcash.Snark.Soundness.AGM.ProbabilityCoins
 import Zcash.Snark.Soundness.Forking.Adversary.PreIpa
 import Zcash.Snark.Soundness.Forking.Adversary.Recursive
 import Zcash.Snark.Soundness.Forking.Adversary.ExpectedRuns
+import Zcash.Snark.Soundness.Forking.Adversary.ExpectedRunsPoly
 import Zcash.Snark.Soundness.Forking.Adversary.DomainReduction
 
 /-!
@@ -1444,14 +1445,12 @@ theorem snarkFailure_prob_le_of_generatorRO_textbookDL
 
 /-! ### Discrete-log hardness and runtime
 
-Probability bounds need no runtime premise. The DL-hardness endpoint still needs a polynomial AFK
-black-box call bound; adversary PPT time remains external.
+Probability bounds need no runtime premise. A time-success DLOG endpoint additionally needs an
+explicit black-box call bound; adversary PPT time remains external.
 
-Two discharges of that call bound are available. `reductionEfficient_exponential` is unconditional
-but exponential in the field, `(2·|F|+1)^k`. `reductionEfficient_of_forkSpread` is polynomial —
-`(6/δ)^k` at good-challenge density `δ` — but conditional on `FamilyForkSpread`. The gap between
-them is exactly `FamilyForkSpread`; nothing else stands between the geometric run bound of
-`Forking.Adversary.ExpectedRuns` and a polynomial AFK instantiation of `R`. -/
+`reductionEfficient_poly` supplies that call bound unconditionally from the adversary's existing
+query bound.  `reductionEfficient_of_forkSpread` remains as an optional density-sensitive bound,
+while `reductionEfficient_exponential` records the older coarse field-dependent analysis. -/
 
 /-- The extractor makes at most `R` expected black-box adversary calls for every basis. -/
 def ReductionEfficient (family : ComputedAlgebraicFSFamily shape) (R : ℕ) : Prop :=
@@ -1488,10 +1487,8 @@ theorem instanceAttempt_runs_eq (family : ComputedAlgebraicFSFamily shape)
 /-- Fork spread for this family's extractor, at every basis: every reachable extractor node offers
 at least `σ₀` nonzero trunk-stable successful continuations.
 
-This is the *only* remaining hypothesis between the proven geometric run bound and a polynomial
-call bound. `reductionEfficient_of_forkSpread` discharges `ReductionEfficient` from it, so the
-efficiency floor is now a Lean predicate on the soundness DAG rather than a docstring: what is open
-is `FamilyForkSpread` (or an unconditional field-independent polynomial bound), not the plumbing. -/
+It is not required by the unconditional AFK bound; it supports the separate density-sensitive
+geometric estimate below. -/
 def FamilyForkSpread (family : ComputedAlgebraicFSFamily shape) (σ₀ : ℕ) : Prop :=
   ∀ basis : AugmentedIndex (2 ^ shape.k) → VestaG,
     ForkSpread basis shape.k (family.adversary basis) (algebraicFullPrefixes family.init)
@@ -1505,10 +1502,8 @@ def FamilyForkSpread (family : ComputedAlgebraicFSFamily shape) (σ₀ : ℕ) : 
 /-- Under fork spread at `σ₀`, any `R` dominating the geometric ratio `(6·|F|)^k / (σ₀−1)^k`
 discharges the extractor call bound.
 
-This is the load-bearing efficiency gap of the endpoints, stated as a theorem: with a fork spread
-of density `δ = (σ₀−1)/|F|` the call bound is `(6/δ)^k`, polynomial in the instance length, where
-`reductionEfficient_exponential` only offers `(2·|F|+1)^k`. What remains open is establishing
-`FamilyForkSpread` for the deployed family. -/
+With fork spread of density `δ = (σ₀−1)/|F|`, the call bound is `(6/δ)^k`.  This theorem is
+retained as a potentially sharper conditional alternative to `reductionEfficient_poly`. -/
 theorem reductionEfficient_of_forkSpread (family : ComputedAlgebraicFSFamily shape) {σ₀ R : ℕ}
     (h2 : 2 ≤ σ₀) (hspread : family.FamilyForkSpread σ₀)
     (hR : (6 * Fintype.card Fp) ^ shape.k ≤ (σ₀ - 1) ^ shape.k * R) :
@@ -1539,6 +1534,18 @@ theorem reductionEfficient_exponential (family : ComputedAlgebraicFSFamily shape
     (fun p => (p.proof.1.ipaC, p.proof.1.ipaF))
     (algebraicTableAcceptZ basis (family.vk basis) (family.instanceCommitment basis) family.init) _
 
+/-- The unconditional AFK analysis turns the family's query bound into a field-independent
+polynomial expected call bound. -/
+theorem reductionEfficient_poly (family : ComputedAlgebraicFSFamily shape) :
+    family.ReductionEfficient (afkRunBound family.Q shape.k) := by
+  intro basis
+  rw [Finset.sum_congr rfl (fun coins _ ↦ family.instanceAttempt_runs_eq basis coins)]
+  exact recursiveAlgebraicFork_oracle_tape_sum_runs_le_poly basis shape.k
+    (family.adversary basis) (algebraicFullPrefixes family.init) (fun p ↦ p.rounds)
+    (fun p ↦ (p.proof.1.ipaC, p.proof.1.ipaF))
+    (algebraicTableAcceptZ basis (family.vk basis) (family.instanceCommitment basis) family.init)
+    _ (family.queryBound basis)
+
 /-- Textbook DL hardness at advantage `ε`, as it applies to *one* reduction family with expected
 call bound `R`: if the family's extractor meets the call bound, its two derived solvers have
 advantage at most `ε`.  Stated per family, not `∀`-quantified over families: a family's adversary
@@ -1553,7 +1560,8 @@ def DiscreteLogRelationHardFor (B : VestaG) (family : ComputedAlgebraicFSFamily 
     TextbookDLWithCoinsAdvantageLE B family.snarkRelationFinder ε
 
 /-- Under DL hardness for this family and call bound `R`, bound clean-opening failure by the
-recursive losses and `ε + 1/|Fp|`; a polynomial AFK instantiation of `R` remains open. -/
+recursive losses and `ε + 1/|Fp|`. `reductionEfficient_poly` supplies the unconditional
+polynomial instantiation of `R`. -/
 theorem knowledgeSoundness_under_DL
     (B : VestaG) (family : ComputedAlgebraicFSFamily shape) {R : ℕ} {ε : ℝ≥0∞}
     (hHard : DiscreteLogRelationHardFor B family R ε)
@@ -1568,6 +1576,22 @@ theorem knowledgeSoundness_under_DL
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
         (ε + 1 / Fintype.card Fp) :=
   snarkFailure_prob_le_of_textbookDL_full B family (hHard hEff).2
+
+/-- `knowledgeSoundness_under_DL` with the unconditional AFK call bound discharged. -/
+theorem knowledgeSoundness_under_DL_poly
+    (B : VestaG) (family : ComputedAlgebraicFSFamily shape) {ε : ℝ≥0∞}
+    (hHard : DiscreteLogRelationHardFor B family (afkRunBound family.Q shape.k) ε) :
+    (PMF.uniformOfFintype
+        ((AugmentedIndex (2 ^ shape.k) → Fp) × family.Coins)).toOuterMeasure
+        {p | fsWinsFull (family.adversary (scalarBasis B p.1))
+              (fullAlgebraicAccept (scalarBasis B p.1) (family.vk (scalarBasis B p.1))
+                (family.instanceCommitment (scalarBasis B p.1)))
+              (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) p.2.1 ∧
+            ¬ family.hasCleanOpening (scalarBasis B p.1) p.2}
+      ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
+        (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
+        (ε + 1 / Fintype.card Fp) :=
+  knowledgeSoundness_under_DL B family hHard family.reductionEfficient_poly
 
 /-- `knowledgeSoundness_under_DL` stated on the *computed* opening.
 
@@ -1586,7 +1610,7 @@ theorem knowledgeSoundness_under_DL_computed
             ¬ (family.cleanOpening (scalarBasis B p.1) p.2).isSome}
       ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-        Fintype.card (AugmentedIndex (2 ^ shape.k)) * ε := by
+        (ε + 1 / Fintype.card Fp) := by
   have hset : {p : (AugmentedIndex (2 ^ shape.k) → Fp) × family.Coins |
         fsWinsFull (family.adversary (scalarBasis B p.1))
           (fullAlgebraicAccept (scalarBasis B p.1) (family.vk (scalarBasis B p.1)) (family.instanceCommitment (scalarBasis B p.1)))
@@ -1601,6 +1625,22 @@ theorem knowledgeSoundness_under_DL_computed
   rw [hset]
   exact knowledgeSoundness_under_DL B family hHard hEff
 
+/-- Computed-opening form with the unconditional AFK call bound discharged. -/
+theorem knowledgeSoundness_under_DL_computed_poly
+    (B : VestaG) (family : ComputedAlgebraicFSFamily shape) {ε : ℝ≥0∞}
+    (hHard : DiscreteLogRelationHardFor B family (afkRunBound family.Q shape.k) ε) :
+    (PMF.uniformOfFintype
+        ((AugmentedIndex (2 ^ shape.k) → Fp) × family.Coins)).toOuterMeasure
+        {p | fsWinsFull (family.adversary (scalarBasis B p.1))
+              (fullAlgebraicAccept (scalarBasis B p.1) (family.vk (scalarBasis B p.1))
+                (family.instanceCommitment (scalarBasis B p.1)))
+              (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) p.2.1 ∧
+            ¬ (family.cleanOpening (scalarBasis B p.1) p.2).isSome}
+      ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
+        (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
+        (ε + 1 / Fintype.card Fp) :=
+  knowledgeSoundness_under_DL_computed B family hHard family.reductionEfficient_poly
+
 /-- Binding dual of `knowledgeSoundness_under_DL`. -/
 theorem binding_under_DL
     (B : VestaG) (family : ComputedAlgebraicFSFamily shape) {R : ℕ} {ε : ℝ≥0∞}
@@ -1613,6 +1653,18 @@ theorem binding_under_DL
         (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
         (ε + 1 / Fintype.card Fp) :=
   binding_prob_le_of_textbookDL B family (hHard hEff).1
+
+/-- Binding form with the unconditional AFK call bound discharged. -/
+theorem binding_under_DL_poly
+    (B : VestaG) (family : ComputedAlgebraicFSFamily shape) {ε : ℝ≥0∞}
+    (hHard : DiscreteLogRelationHardFor B family (afkRunBound family.Q shape.k) ε) :
+    (PMF.uniformOfFintype
+        ((AugmentedIndex (2 ^ shape.k) → Fp) × family.Coins)).toOuterMeasure
+        (bindingSet B family)
+      ≤ (family.Q + shape.k) * (3 / Fintype.card Fp) +
+        (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
+        (ε + 1 / Fintype.card Fp) :=
+  binding_under_DL B family hHard family.reductionEfficient_poly
 
 end ComputedAlgebraicFSFamily
 

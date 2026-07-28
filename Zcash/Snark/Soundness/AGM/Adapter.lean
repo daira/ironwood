@@ -33,9 +33,10 @@ proves the operational prover, certificate, and reductions used here.
 `Soundness.AGM.Probability` prices the reduction's single failure hyperplane at `1/|F|`, and
 `.ProbabilityVesta` applies it to Vesta.
 
-The explicit-certificate path is computable. Its boundary is AGM, plain-DL hardness, ideal random
-oracles, the conversion from the proved polynomial expected-call bound to a chosen fixed-time
-model, and an external PPT-adversary restriction.
+The explicit-certificate path is computable. The deployed combined capstone converts its proved
+polynomial expected-call bound to a fixed call budget with an explicit truncation tail. Its
+remaining boundary is AGM, fixed-call plain-DL hardness, ideal random oracles, and an external
+PPT-adversary restriction for non-oracle work.
 -/
 
 namespace Zcash.Snark

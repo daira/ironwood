@@ -89,8 +89,9 @@ assert_axioms Zcash.Snark.Fixture2.deployedConstraintXSqueezeSchedule_captured +
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 -- The deployed compressed-identity extraction bound at the captured key: the rewind-free
 -- capstone with the static checks and degree caps discharged, so the bad-`x` term is the concrete
--- `(Q + 1) · 20470 / |𝔽|` and the multiopen term is the additive root budget.  Semantic
--- circuit satisfaction additionally uses the four-budget promotion in the core trust census.
+-- `(Q + 1) · 20470 / |𝔽|`, the multiopen term is the additive root budget, and the fixed-call
+-- DLOG solver pays the explicit AFK truncation tail.  Semantic circuit satisfaction additionally
+-- uses the four-budget promotion in the core trust census.
 assert_axioms Zcash.Snark.Fixture2.orchard_deployed_knowledge_error_captured +native(
   Zcash.Snark.Fixture2.shape_k_pred_le,
   Zcash.Snark.Fixture2.vk_advice_layout_length,
