@@ -77,18 +77,21 @@ jobs:
       # native_decide axiom tracking (lean4#7463).
       - name: Verify csimp lemmas are axiom-censused
         run: scripts/check_csimp_census.sh
-      # Installs the toolchain from lean-toolchain, fetches the Mathlib olean
-      # cache, and runs `lake build --wfail`, which rejects all warnings and builds
-      # the lakefile's `defaultTargets`. Building `FixtureCheck` also covers the
-      # deployed Action/Vesta capstone lane, whose `Keygen/Certificate.lean`
-      # natively certifies the deployed verifying key against the derivation
-      # (~45 s), and it
-      # elaborates `Zcash.Snark.Fingerprint.Fixture`, whose
-      # `fingerprint_matches := by native_decide` compiles and *runs* the Lean
-      # verifier `assemble` on the captured proof. This is the authoritative,
-      # whole-path computability check (anything noncomputable on that path
-      # fails to compile), and `Zcash.Snark.Fingerprint.TrustBoundary`
-      # additionally pins the theorem's sorry-freeness and axiom set.
+      # Installs the toolchain from lean-toolchain, fetches the Mathlib olean cache, and runs
+      # `lake build --wfail`, which rejects all warnings and builds the lakefile's
+      # `defaultTargets`: `Zcash`, `FixtureCheck` and `CircuitCheck`.
+      #
+      # `FixtureCheck` covers the deployed Action/Vesta capstone lane, whose
+      # `Keygen/Certificate.lean` natively certifies the deployed verifying key against the
+      # derivation (~45 s). It also elaborates `Zcash.Snark.Fingerprint.Fixture`, whose
+      # `fingerprint_matches := by native_decide` compiles and *runs* the Lean verifier
+      # `assemble` on the captured proof — the authoritative whole-path computability check,
+      # since anything noncomputable on that path fails to compile. Its sorry-freeness and
+      # axiom set are pinned by `Zcash.Snark.Fingerprint.TrustBoundary`.
+      #
+      # `CircuitCheck` covers `Zcash/Circuits/Tests/TestVk*`, which compare the ported
+      # `configure`/`synthesize` against the CS and layout fixtures dumped from the Rust
+      # circuit, so a divergence between the Lean circuit model and the deployed VK fails here.
       - uses: leanprover/lean-action@38fbc41a8c28c4cbaec22d7f7de508ec2e7c0dd9 # v1.5.0
         with:
           build-args: "--wfail"

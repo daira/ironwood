@@ -24,7 +24,7 @@
     },
     "runtimeAgmStack": {
       "label": "PR #114 runtime AGM head",
-      "ref": "1b1b0e2a8271e2aae4d4347812dde42ddce2dfd1",
+      "ref": "75ac89a3212d8ebb2aff22ef4e307353a45ed2d3",
       "fetch": "pull/114/head"
     }
   },

@@ -1,7 +1,3 @@
-/-
-Copyright (c) 2026 Ironwood Contributors.
-Released under the Apache License, Version 2.0.
--/
 import Zcash.Arithmetic.FftSpec
 import CompElliptic.Curves.Pasta.Fast.Msm
 
