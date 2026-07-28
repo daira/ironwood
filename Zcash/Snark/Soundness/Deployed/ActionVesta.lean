@@ -1,6 +1,7 @@
 import Zcash.Snark.Soundness.ActionVesta
 import Zcash.Circuits.Integration.ActionTerminal
 import Zcash.Snark.Keygen.Certificate
+import Zcash.Snark.Keygen.InstanceCapture
 import Zcash.Snark.Soundness.Canonical.Vesta
 import Zcash.Snark.Soundness.Multiopen.CanonicalSelection
 
@@ -397,6 +398,352 @@ noncomputable def action_bundleStatement_or_relation_of_deployedAccepts
     permGamma permBeta lookupGamma lookupBeta lookupTheta
 
 assert_no_sorry action_bundleStatement_or_relation_of_deployedAccepts
+
+set_option maxRecDepth 1000000 in
+/--
+**The deployed Action capstone over an abstract instance-commitment family.**
+
+Identical to `action_bundleStatement_or_relation_of_deployedAccepts`, except that the
+public-instance commitments are a supplied family `icf` together with the equation `hicf`
+identifying it with the circuit-derived one. Callers holding a *differently spelled* family —
+the fixture's `Fixture.derivedInstanceCommitment`, say — can then state acceptance and the
+challenge exclusions in their own vocabulary instead of the circuit's.
+
+The generalization is free: `hicf` is substituted away, so this is the same theorem.
+-/
+noncomputable def action_bundleStatement_or_relation_of_deployedAccepts_family
+    (inputs : Fin Fixture.shape.numProofs → PublicInputs Fp)
+    (icf : Fin Fixture.shape.numProofs → ℕ → Fixture.G)
+    (hicf : icf = actionCircuit.instanceCommitment actionProofParams capturedURS inputs)
+    (ps : ProofString Fixture.shape Fp Fixture.G)
+    (ch : Challenges Fixture.shape.k Fp)
+    (pU pW : Fp)
+    (hpoly : Polynomial Fp)
+    {a₀ : Fin (2 ^ capturedURS.k) → Fp}
+    (pbatch :
+      OpenedBatchOpenings capturedURS (evalVector capturedURS.k ch.x3)
+        (x4BatchCommitments
+          (instanceCommitment := icf)
+          capturedURS shape_k_eq_capturedURS_k Fixture.vk ps ch)
+        (x4BatchEvals
+          (instanceCommitment := icf)
+          Fixture.vk ps ch)
+        a₀ pU pW)
+    (hξcur : pbatch.batchChallenge pbatch.current = ch.x4)
+    (hlen : ∀ i, i < deployedX4PairCount Fixture.vk
+        (icf) ps ch →
+      0 < (deployedSetQueries Fixture.vk
+        (icf) ps ch i).length)
+    (hprob1 : ∀ i, i < deployedX4PairCount Fixture.vk
+        (icf) ps ch →
+      (((deployedSetQueries Fixture.vk
+          (icf) ps ch i).length - 1 :
+          ℕ) : ℝ≥0∞) / Fintype.card Fp
+        < (PMF.uniformOfFintype Fp).toOuterMeasure
+          (Finset.univ.filter
+            (OpenedX1Accept capturedURS shape_k_eq_capturedURS_k Fixture.vk
+              (icf) ps ch)))
+    (haccepts :
+      DeployedAccepts capturedURS shape_k_eq_capturedURS_k Fixture.vk
+        (icf) ps ch)
+    (i m : ℕ)
+    (hm : m < (deployedSetQueries Fixture.vk
+      (icf) ps ch i).length)
+    (colPoly : Fin (deployedSetQueries Fixture.vk
+      (icf) ps ch i).length →
+        Polynomial Fp)
+    (hbindAll : ∀ (idx : Fin ((constructIntermediateSets
+          (assembleQueries Fixture.vk
+            (icf) ps ch)).points.getD
+              i []).length)
+        (m₀ : Fin (deployedSetQueries Fixture.vk
+          (icf) ps ch i).length),
+      (colPoly m₀).eval
+          (((constructIntermediateSets
+            (assembleQueries Fixture.vk
+              (icf) ps ch)).points.getD
+                i [])[idx]) =
+        ((deployedSetQueries Fixture.vk
+          (icf) ps ch i).getD
+            (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0 ⊕'
+        NontrivialRelation (F := Fp)
+          capturedURS.g capturedURS.u capturedURS.w)
+    (hquot : hpoly = colPoly ⟨m, hm⟩)
+    (hroute : (constructIntermediateSets
+      (assembleQueries Fixture.vk
+        (icf) ps ch)).points.getD
+          i [] = [ch.x])
+    (hevals : ∀ d₀,
+      ((deployedSetQueries Fixture.vk
+        (icf) ps ch i).getD
+          m d₀).2 =
+        [expectedHEval
+          (allExpressions Fixture.vk ps ch
+            (lagrangeBasis Fixture.vk.omega Fixture.vk.n
+              Fixture.vk.blindingFactors (ch.x ^ Fixture.vk.n) ch.x).1
+            (lagrangeBasis Fixture.vk.omega Fixture.vk.n
+              Fixture.vk.blindingFactors
+              (ch.x ^ Fixture.vk.n) ch.x).2.1
+            (lagrangeBasis Fixture.vk.omega Fixture.vk.n
+              Fixture.vk.blindingFactors
+              (ch.x ^ Fixture.vk.n) ch.x).2.2)
+          ch.y (ch.x ^ Fixture.vk.n)])
+    (claimed :
+      AcceptedModelClaimedEvaluations
+        (memberDecode :=
+          vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
+            Fixture.vk (icf) ps ch
+            pbatch hlen hprob1 haccepts)
+        (hblinding := vk_blindingFactors_lt) haccepts)
+    (hxgood :
+      ch.x ∉ szBadSet
+        (let model :=
+          CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode :=
+              vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
+                Fixture.vk (icf) ps ch
+                pbatch hlen hprob1 haccepts)
+            (hblinding := vk_blindingFactors_lt) haccepts
+        combineConstraints model.fixedCols model.adviceCols model.instanceCols
+          model.gates model.sets model.chunks model.lookups
+          model.beta model.gamma model.delta model.theta ch.y model.chunkLen
+          model.l0 model.lLast model.lBlind -
+            hpoly * (X ^ Fixture.vk.n - 1)))
+    (hgoodY : ∀ j,
+      ch.y ∉ szBadSet
+        (foldSplitWitness
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode :=
+              vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
+                Fixture.vk (icf)
+                ps ch pbatch hlen hprob1 haccepts)
+            (hblinding := vk_blindingFactors_lt) haccepts).constraints
+          Fixture.vk.n j))
+    (permGamma :
+      ch.gamma ∉ allResolverPermutationGammaBadSet Fixture.vk ch
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode :=
+            vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
+              Fixture.vk (icf)
+              ps ch pbatch hlen hprob1 haccepts) haccepts)
+        actionActiveRows)
+    (permBeta :
+      ch.beta ∉ allResolverPermutationBetaBadSet Fixture.vk
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode :=
+            vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
+              Fixture.vk (icf)
+              ps ch pbatch hlen hprob1 haccepts) haccepts)
+        actionActiveRows)
+    (lookupGamma :
+      ch.gamma ∉ allResolverLookupGammaBadSet Fixture.vk ch
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode :=
+            vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
+              Fixture.vk (icf)
+              ps ch pbatch hlen hprob1 haccepts) haccepts)
+        (Fixture.vk.n - Fixture.vk.blindingFactors - 2))
+    (lookupBeta :
+      ch.beta ∉ allResolverLookupBetaBadSet Fixture.vk ch
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode :=
+            vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
+              Fixture.vk (icf)
+              ps ch pbatch hlen hprob1 haccepts) haccepts)
+        (Fixture.vk.n - Fixture.vk.blindingFactors - 2))
+    (lookupTheta :
+      ch.theta ∉ TopLevelLookupCoherence.allTopLevelLookupThetaBadSet
+        actionCircuit actionProofParams capturedURS
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode :=
+            vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
+              Fixture.vk (icf)
+              ps ch pbatch hlen hprob1 haccepts) haccepts)) :
+    BundleStatement inputs ⊕'
+      NontrivialRelation (F := Fp)
+        capturedURS.g capturedURS.u capturedURS.w := by
+  subst hicf
+  exact action_bundleStatement_or_relation_of_deployedAccepts
+    inputs ps ch pU pW hpoly pbatch hξcur hlen hprob1 haccepts
+    i m hm colPoly hbindAll hquot hroute hevals claimed hxgood hgoodY
+    permGamma permBeta lookupGamma lookupBeta lookupTheta
+
+assert_no_sorry action_bundleStatement_or_relation_of_deployedAccepts_family
+
+/--
+**The deployed Action capstone at the captured instance commitments.**
+
+The capstones above read their instance commitments from `actionCircuit.instanceCommitment`, computed
+from the public inputs the way halo2's `verify_proof` computes them from its `instances` argument.
+The captured artifacts are exercised against the fixture's own family
+`Fixture.derivedInstanceCommitment`, which `Fixture.instance_commitments_derived` pins to the captured
+points `capturedInstanceCommitments` (ironwood#65/#85). Nothing joined the two, so the capstone could
+not be instantiated at the captured proof.
+
+`Keygen.instanceCommitment_capturedActionInputs` is that join, and supplying it here as `hicf` carries
+the whole capstone — every acceptance premise, every challenge exclusion, and the conclusion — onto
+the captured family. This is the last step of ironwood#86: sound handling of public instances now
+reaches the deployed artifacts, not merely a derived commitment family the capture was never tied to.
+
+The statement is written out rather than inferred: this is the deployed endpoint, and a reader
+should be able to see what is claimed without elaborating it.
+-/
+noncomputable def action_bundleStatement_or_relation_at_capturedInstances
+    (ps : ProofString Fixture.shape Fp Fixture.G)
+    (ch : Challenges Fixture.shape.k Fp)
+    (pU pW : Fp)
+    (hpoly : Polynomial Fp)
+    {a₀ : Fin (2 ^ capturedURS.k) → Fp}
+    (pbatch :
+      OpenedBatchOpenings capturedURS (evalVector capturedURS.k ch.x3)
+        (x4BatchCommitments
+          (instanceCommitment := Fixture.derivedInstanceCommitment)
+          capturedURS shape_k_eq_capturedURS_k Fixture.vk ps ch)
+        (x4BatchEvals
+          (instanceCommitment := Fixture.derivedInstanceCommitment)
+          Fixture.vk ps ch)
+        a₀ pU pW)
+    (hξcur : pbatch.batchChallenge pbatch.current = ch.x4)
+    (hlen : ∀ i, i < deployedX4PairCount Fixture.vk
+        Fixture.derivedInstanceCommitment ps ch →
+      0 < (deployedSetQueries Fixture.vk
+        Fixture.derivedInstanceCommitment ps ch i).length)
+    (hprob1 : ∀ i, i < deployedX4PairCount Fixture.vk
+        Fixture.derivedInstanceCommitment ps ch →
+      (((deployedSetQueries Fixture.vk
+          Fixture.derivedInstanceCommitment ps ch i).length - 1 :
+          ℕ) : ℝ≥0∞) / Fintype.card Fp
+        < (PMF.uniformOfFintype Fp).toOuterMeasure
+          (Finset.univ.filter
+            (OpenedX1Accept capturedURS shape_k_eq_capturedURS_k Fixture.vk
+              Fixture.derivedInstanceCommitment ps ch)))
+    (haccepts :
+      DeployedAccepts capturedURS shape_k_eq_capturedURS_k Fixture.vk
+        Fixture.derivedInstanceCommitment ps ch)
+    (i m : ℕ)
+    (hm : m < (deployedSetQueries Fixture.vk
+      Fixture.derivedInstanceCommitment ps ch i).length)
+    (colPoly : Fin (deployedSetQueries Fixture.vk
+      Fixture.derivedInstanceCommitment ps ch i).length →
+        Polynomial Fp)
+    (hbindAll : ∀ (idx : Fin ((constructIntermediateSets
+          (assembleQueries Fixture.vk
+            Fixture.derivedInstanceCommitment ps ch)).points.getD
+              i []).length)
+        (m₀ : Fin (deployedSetQueries Fixture.vk
+          Fixture.derivedInstanceCommitment ps ch i).length),
+      (colPoly m₀).eval
+          (((constructIntermediateSets
+            (assembleQueries Fixture.vk
+              Fixture.derivedInstanceCommitment ps ch)).points.getD
+                i [])[idx]) =
+        ((deployedSetQueries Fixture.vk
+          Fixture.derivedInstanceCommitment ps ch i).getD
+            (m₀ : ℕ) (.point 0, [])).2.getD (idx : ℕ) 0 ⊕'
+        NontrivialRelation (F := Fp)
+          capturedURS.g capturedURS.u capturedURS.w)
+    (hquot : hpoly = colPoly ⟨m, hm⟩)
+    (hroute : (constructIntermediateSets
+      (assembleQueries Fixture.vk
+        Fixture.derivedInstanceCommitment ps ch)).points.getD
+          i [] = [ch.x])
+    (hevals : ∀ d₀,
+      ((deployedSetQueries Fixture.vk
+        Fixture.derivedInstanceCommitment ps ch i).getD
+          m d₀).2 =
+        [expectedHEval
+          (allExpressions Fixture.vk ps ch
+            (lagrangeBasis Fixture.vk.omega Fixture.vk.n
+              Fixture.vk.blindingFactors (ch.x ^ Fixture.vk.n) ch.x).1
+            (lagrangeBasis Fixture.vk.omega Fixture.vk.n
+              Fixture.vk.blindingFactors
+              (ch.x ^ Fixture.vk.n) ch.x).2.1
+            (lagrangeBasis Fixture.vk.omega Fixture.vk.n
+              Fixture.vk.blindingFactors
+              (ch.x ^ Fixture.vk.n) ch.x).2.2)
+          ch.y (ch.x ^ Fixture.vk.n)])
+    (claimed :
+      AcceptedModelClaimedEvaluations
+        (memberDecode :=
+          vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
+            Fixture.vk Fixture.derivedInstanceCommitment ps ch
+            pbatch hlen hprob1 haccepts)
+        (hblinding := vk_blindingFactors_lt) haccepts)
+    (hxgood :
+      ch.x ∉ szBadSet
+        (let model :=
+          CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode :=
+              vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
+                Fixture.vk Fixture.derivedInstanceCommitment ps ch
+                pbatch hlen hprob1 haccepts)
+            (hblinding := vk_blindingFactors_lt) haccepts
+        combineConstraints model.fixedCols model.adviceCols model.instanceCols
+          model.gates model.sets model.chunks model.lookups
+          model.beta model.gamma model.delta model.theta ch.y model.chunkLen
+          model.l0 model.lLast model.lBlind -
+            hpoly * (X ^ Fixture.vk.n - 1)))
+    (hgoodY : ∀ j,
+      ch.y ∉ szBadSet
+        (foldSplitWitness
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode :=
+              vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
+                Fixture.vk Fixture.derivedInstanceCommitment
+                ps ch pbatch hlen hprob1 haccepts)
+            (hblinding := vk_blindingFactors_lt) haccepts).constraints
+          Fixture.vk.n j))
+    (permGamma :
+      ch.gamma ∉ allResolverPermutationGammaBadSet Fixture.vk ch
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode :=
+            vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
+              Fixture.vk Fixture.derivedInstanceCommitment
+              ps ch pbatch hlen hprob1 haccepts) haccepts)
+        actionActiveRows)
+    (permBeta :
+      ch.beta ∉ allResolverPermutationBetaBadSet Fixture.vk
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode :=
+            vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
+              Fixture.vk Fixture.derivedInstanceCommitment
+              ps ch pbatch hlen hprob1 haccepts) haccepts)
+        actionActiveRows)
+    (lookupGamma :
+      ch.gamma ∉ allResolverLookupGammaBadSet Fixture.vk ch
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode :=
+            vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
+              Fixture.vk Fixture.derivedInstanceCommitment
+              ps ch pbatch hlen hprob1 haccepts) haccepts)
+        (Fixture.vk.n - Fixture.vk.blindingFactors - 2))
+    (lookupBeta :
+      ch.beta ∉ allResolverLookupBetaBadSet Fixture.vk ch
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode :=
+            vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
+              Fixture.vk Fixture.derivedInstanceCommitment
+              ps ch pbatch hlen hprob1 haccepts) haccepts)
+        (Fixture.vk.n - Fixture.vk.blindingFactors - 2))
+    (lookupTheta :
+      ch.theta ∉ TopLevelLookupCoherence.allTopLevelLookupThetaBadSet
+        actionCircuit actionProofParams capturedURS
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode :=
+            vestaExtractedMemberDecode capturedURS shape_k_eq_capturedURS_k
+              Fixture.vk Fixture.derivedInstanceCommitment
+              ps ch pbatch hlen hprob1 haccepts) haccepts)) :
+    BundleStatement Keygen.capturedActionInputs ⊕'
+      NontrivialRelation (F := Fp)
+        capturedURS.g capturedURS.u capturedURS.w :=
+  action_bundleStatement_or_relation_of_deployedAccepts_family
+    Keygen.capturedActionInputs Fixture.derivedInstanceCommitment
+    Keygen.instanceCommitment_capturedActionInputs.symm
+    ps ch pU pW hpoly pbatch hξcur hlen hprob1 haccepts
+    i m hm colPoly hbindAll hquot hroute hevals claimed hxgood hgoodY
+    permGamma permBeta lookupGamma lookupBeta lookupTheta
+
+assert_no_sorry action_bundleStatement_or_relation_at_capturedInstances
 
 end Deployed
 

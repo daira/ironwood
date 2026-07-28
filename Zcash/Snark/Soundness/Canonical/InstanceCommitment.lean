@@ -111,6 +111,17 @@ field is proof-irrelevant. -/
   cases right
   simp_all
 
+/-- **A URS and a domain generator admit at most one commitment key.** `generator_eq` pins every
+generator to the monomial commitment of its Lagrange row, so the structure records no choice: the
+constructors below (`ofPrefix`, `ofFullList`) and any circuit-supplied key agree on the nose.
+
+This is what lets a fixture discharge a setup obligation against whichever key a downstream
+statement happens to name. -/
+instance instSubsingleton {urs : URS G} {omega : Fp} :
+    Subsingleton (LagrangeCommitmentKey urs omega) :=
+  ⟨fun left right =>
+    ext (funext fun i => by rw [left.generator_eq, right.generator_eq])⟩
+
 /--
 Build a full commitment key from a certified exported prefix.
 
