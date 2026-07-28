@@ -1242,7 +1242,8 @@ noncomputable def deployedConstraintOutcomeOfDecode
     funext q
     change rotatedFeed vk.omega vk.adviceQueryLayout
         (fun j => src.poly (aSet q j) (haSet q j) (aMem q j)) =
-      rotatedFeed vk.omega vk.adviceQueryLayout (fun j =>
+      rotatedFeed vk.omega vk.adviceQueryLayout
+        (fun j : Fin shape.numAdviceQueries =>
         poly (finFnG (ps.adviceCommitments q)
           (vk.adviceQueryLayout.getD (j : Nat) (0, 0)).1))
     exact congrArg (rotatedFeed vk.omega vk.adviceQueryLayout)
@@ -1251,7 +1252,8 @@ noncomputable def deployedConstraintOutcomeOfDecode
     funext q
     change rotatedFeed vk.omega vk.instanceQueryLayout
         (fun j => src.poly (iSet q j) (hiSet q j) (iMem q j)) =
-      rotatedFeed vk.omega vk.instanceQueryLayout (fun j =>
+      rotatedFeed vk.omega vk.instanceQueryLayout
+        (fun j : Fin shape.numInstanceQueries =>
         poly (instanceCommitment q
           (vk.instanceQueryLayout.getD (j : Nat) (0, 0)).1))
     exact congrArg (rotatedFeed vk.omega vk.instanceQueryLayout)
@@ -1259,7 +1261,8 @@ noncomputable def deployedConstraintOutcomeOfDecode
   have hfixedCanonical : fixedF = committedFixedFeed poly vk := by
     change rotatedFeed vk.omega vk.fixedQueryLayout
         (fun j => src.poly (fSet j) (hfSet j) (fMem j)) =
-      rotatedFeed vk.omega vk.fixedQueryLayout (fun j =>
+      rotatedFeed vk.omega vk.fixedQueryLayout
+        (fun j : Fin shape.numFixedQueries =>
         poly (vk.fixedCommitment
           (vk.fixedQueryLayout.getD (j : Nat) (0, 0)).1))
     exact congrArg (rotatedFeed vk.omega vk.fixedQueryLayout) (funext hfixedBase)

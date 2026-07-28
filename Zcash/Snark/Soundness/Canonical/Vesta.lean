@@ -88,7 +88,7 @@ noncomputable def acceptedModel_circuitSat_or_relation_of_feed_eq
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
         (x4BatchCommitments urs hk vk instanceCommitment ps ch)
         (x4BatchEvals vk instanceCommitment ps ch) a₀ pU pW)
-    (hξcur : pbatch.batchChallenge pbatch.current = ch.x4)
+    (_hξcur : pbatch.batchChallenge pbatch.current = ch.x4)
     (hlen : ∀ i, i < deployedX4PairCount vk instanceCommitment ps ch →
       0 < (deployedSetQueries vk instanceCommitment ps ch i).length)
     (hprob1 : ∀ i, i < deployedX4PairCount vk instanceCommitment ps ch →
@@ -149,7 +149,7 @@ noncomputable def acceptedModel_circuitSat_or_relation_of_feed_eq
       AcceptedModelClaimedEvaluations
         (memberDecode := memberDecode)
         (hblinding := hblinding) haccepts)
-    (hAdvice :
+    (_hAdvice :
       (fun proofIndex : Fin shape.numProofs =>
         rotatedFeed vk.omega vk.adviceQueryLayout
           (fun query : Fin numAdvice =>
@@ -163,7 +163,7 @@ noncomputable def acceptedModel_circuitSat_or_relation_of_feed_eq
         (CanonicalMemberConstraintRelation.acceptedModel
           (memberDecode := memberDecode)
           (hblinding := hblinding) haccepts).adviceCols)
-    (hInstance :
+    (_hInstance :
       (fun proofIndex : Fin shape.numProofs =>
         rotatedFeed vk.omega vk.instanceQueryLayout
           (fun query : Fin numInstance =>
