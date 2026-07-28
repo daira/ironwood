@@ -285,6 +285,23 @@ theorem resolverEnvironment_congr
   rw [show (fun column => poly₁ (CommitmentId.instanceCol p column)) =
     (fun column => poly₂ (CommitmentId.instanceCol p column)) from funext fun _ => h _ trivial]
 
+/-- **The `θ` budget is a length count.**  Row count times input arity per activation — the
+polynomial map and the URS never enter, so the per-state `θ` epsilon is one number per
+circuit. -/
+theorem TopLevelLookupCoherence.topLevelLookupThetaBudget_eq
+    {G' : Type} [AddCommGroup G'] [Inhabited G']
+    {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
+    (top : Halo2.TopLevelCircuit Fp Config PublicInput)
+    (pp : Keygen.ProofParams) (urs : URS G')
+    (poly : CommitmentId → Polynomial Fp) :
+    TopLevelLookupCoherence.topLevelLookupThetaBudget top pp urs poly =
+      ∑ index : TopLevelLookupCoherence.TopLevelLookupActivationIndex top pp,
+        top.usableRowsAt top.domainExponent *
+          ((operationEnabledLookups top.operations 0).get index.2).argument.inputs.length := by
+  unfold TopLevelLookupCoherence.topLevelLookupThetaBudget
+  refine Finset.sum_congr rfl fun index _ => ?_
+  exact congrArg (top.usableRowsAt top.domainExponent * ·) (List.length_map _)
+
 /-- **The top-level `θ` exclusion reads only the query columns.** -/
 theorem TopLevelLookupCoherence.allTopLevelLookupThetaBadSet_congr
     {G' : Type} [AddCommGroup G'] [Inhabited G']

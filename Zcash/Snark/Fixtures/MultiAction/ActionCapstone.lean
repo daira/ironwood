@@ -3,6 +3,8 @@ import Zcash.Snark.Soundness.Composition.ScheduleBudget
 import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
 import Zcash.Snark.Keygen.Certificate
 import Zcash.Circuits.Integration.StraightLineActionEvent
+import Zcash.Circuits.Integration.StraightLineActionBudgets
+import Zcash.Circuits.Integration.StraightLineActionBudgets
 
 /-!
 # The captured Action capstone event and its composed bound
@@ -16,8 +18,15 @@ shape the Action semantics are stated at — with no shape casts in any statemen
 verifying key's scalar fields never read the URS, so the single-Action captured facts transfer
 through nine field equalities.
 
-The four semantic challenge budgets remain premises at this stage; instantiating them concretely
-is the remaining #128 pricing work.
+## The adversary model
+
+The endpoint quantifies over a family equipped with `ActionSequentialCuts`: a bounded
+sequential online-AGM Fiat–Shamir adversary in the random-oracle model, against Vesta DLOG.
+Sequential means each commitment and its algebraic representation are emitted before the next
+challenge is squeezed — the cuts and views are that execution order made structural, and the
+views' well-formedness (fold degree, constraint count) is the online-AGM decode's own shape.
+The four semantic budgets are discharged inside the endpoint from decided counting caps; the
+hash-function boundary of the compressed model is unchanged.
 -/
 
 namespace Zcash.Snark.Fixture
@@ -284,5 +293,449 @@ theorem orchard_action_acceptFalse_prob_le_captured
     (family.straightLineConstraintFailure_prob_le_of_generatorRO_dlogProfile B hB query hquery
       (staticChecks_of_derived family hvk) (schedule_of_derived family hvk) profile)
     hXY hBeta hGamma hTheta
+
+/-! ## The sequential endpoint: every semantic budget discharged and counted
+
+The counting caps below are decided at the captured key and transferred through the derived
+key's field equalities, so the endpoint takes a bundle of cuts and views — the sequential
+adversary — and nothing else numeric.  The caps are generous round powers of two: each sits
+orders of magnitude under the field size, and the final margin analysis only needs
+`(Q + 1) · Σcaps / |Fp|` small at `Q ≤ 2^123`.
+-/
+
+private theorem castVk_blinding {s₁ s₂ : Shape} (h : s₁ = s₂)
+    (K : VerifyingKey s₁ Fp VestaG) :
+    K.blindingFactors = (h ▸ K : VerifyingKey s₂ Fp VestaG).blindingFactors := by
+  cases h
+  rfl
+
+/-- The derived key's blinding count is the captured one at every URS. -/
+theorem derived_blinding (urs : URS VestaG) :
+    (actionCircuit.toVerifierKey actionProofParams urs).blindingFactors =
+      vk.blindingFactors := by
+  have hcast := castVk_blinding shape_eq_mergeDerived
+    (actionCircuit.toVerifierKey actionProofParams capturedURS)
+  have hvk : (shape_eq_mergeDerived ▸
+      actionCircuit.toVerifierKey actionProofParams capturedURS :
+      VerifyingKey shape Fp VestaG) = vk := vk_eq_toVerifierKey.symm
+  exact hcast.trans (congrArg VerifyingKey.blindingFactors hvk)
+
+private theorem cap_theta :
+    ∀ (basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG)
+      (poly : CommitmentId → Polynomial Fp),
+      TopLevelLookupCoherence.topLevelLookupThetaBudget actionCircuit actionProofParams
+        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) poly ≤
+        2 ^ 25 := by
+  intro basis poly
+  rw [TopLevelLookupCoherence.topLevelLookupThetaBudget_eq]
+  native_decide
+
+private theorem cap_beta :
+    ∀ (basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG)
+      (poly : CommitmentId → Polynomial Fp),
+      (∑ p : Fin (actionProofParams.mergeDerived actionCircuit).numProofs,
+        (Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
+            actionActiveRows) + 1) *
+          Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
+            actionActiveRows)) +
+      (actionProofParams.mergeDerived actionCircuit).numProofs *
+        (actionProofParams.mergeDerived actionCircuit).numLookups *
+        (((vkAt actionProofParams basis).n - (vkAt actionProofParams basis).blindingFactors -
+              2 + 2) *
+            ((vkAt actionProofParams basis).n - (vkAt actionProofParams basis).blindingFactors -
+              2 + 1) +
+          ((vkAt actionProofParams basis).n - (vkAt actionProofParams basis).blindingFactors -
+            2 + 1)) ≤ 2 ^ 35 := by
+  intro basis poly
+  simp only [resolverPermutationCell_card, ActionTerminal.vkAt,
+    (derived_scalars (ursOfAugmentedBasis
+      (actionProofParams.mergeDerived actionCircuit).k basis)).2.2.2.2.2.2,
+    (derived_scalars (ursOfAugmentedBasis
+      (actionProofParams.mergeDerived actionCircuit).k basis)).2.1,
+    derived_blinding (ursOfAugmentedBasis
+      (actionProofParams.mergeDerived actionCircuit).k basis)]
+  native_decide
+
+private theorem cap_gamma :
+    ∀ (basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG)
+      (poly : CommitmentId → Polynomial Fp),
+      (∑ p : Fin (actionProofParams.mergeDerived actionCircuit).numProofs,
+        2 * Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
+          actionActiveRows)) +
+      (actionProofParams.mergeDerived actionCircuit).numProofs *
+        (actionProofParams.mergeDerived actionCircuit).numLookups *
+        (2 * ((vkAt actionProofParams basis).n - (vkAt actionProofParams basis).blindingFactors -
+          2 + 1)) ≤ 2 ^ 21 := by
+  intro basis poly
+  simp only [resolverPermutationCell_card, ActionTerminal.vkAt,
+    (derived_scalars (ursOfAugmentedBasis
+      (actionProofParams.mergeDerived actionCircuit).k basis)).2.2.2.2.2.2,
+    (derived_scalars (ursOfAugmentedBasis
+      (actionProofParams.mergeDerived actionCircuit).k basis)).2.1,
+    derived_blinding (ursOfAugmentedBasis
+      (actionProofParams.mergeDerived actionCircuit).k basis)]
+  native_decide
+
+private theorem derived_n_ne_zero :
+    ∀ basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG,
+      (vkAt actionProofParams basis).n ≠ 0 := by
+  intro basis
+  simp only [ActionTerminal.vkAt,
+    (derived_scalars (ursOfAugmentedBasis
+      (actionProofParams.mergeDerived actionCircuit).k basis)).2.1]
+  native_decide
+
+private theorem derived_n_yn {L : ℕ} (hL : L ≤ 2 ^ 12) :
+    ∀ basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG,
+      (vkAt actionProofParams basis).n * L ≤ 2 ^ 23 := by
+  intro basis
+  simp only [ActionTerminal.vkAt,
+    (derived_scalars (ursOfAugmentedBasis
+      (actionProofParams.mergeDerived actionCircuit).k basis)).2.1]
+  have hn : vk.n ≤ 2 ^ 11 := by native_decide
+  calc vk.n * L ≤ 2 ^ 11 * 2 ^ 12 := Nat.mul_le_mul hn hL
+    _ = 2 ^ 23 := by norm_num
+
+
+/-- **The semantic counts at the query ceiling** (issue #128 F7): at `Q ≤ 2^123` the five
+counted caps total at most `2^160`. -/
+theorem action_semantic_count_le {Q : ℕ} (hQ : Q ≤ 2 ^ 123) :
+    (Q + 1) * 20470 + (Q + 1) * 2 ^ 23 + ((Q + 1) * 2 ^ 35 +
+      ((Q + 1) * 2 ^ 21 + (Q + 1) * 2 ^ 25)) ≤ 2 ^ 160 := by
+  have h1 : 1 ≤ (2 : ℕ) ^ 123 := Nat.one_le_two_pow
+  have h2 : (2 : ℕ) ^ 124 = 2 ^ 123 * 2 := pow_succ 2 123
+  have hs : (20470 + 2 ^ 23 + (2 ^ 35 + (2 ^ 21 + 2 ^ 25)) : ℕ) ≤ 2 ^ 36 := by norm_num
+  have h3 : (2 : ℕ) ^ 160 = 2 ^ 124 * 2 ^ 36 := by rw [← pow_add]
+  calc (Q + 1) * 20470 + (Q + 1) * 2 ^ 23 + ((Q + 1) * 2 ^ 35 +
+        ((Q + 1) * 2 ^ 21 + (Q + 1) * 2 ^ 25))
+      = (Q + 1) * (20470 + 2 ^ 23 + (2 ^ 35 + (2 ^ 21 + 2 ^ 25))) := by ring
+    _ ≤ 2 ^ 124 * 2 ^ 36 := Nat.mul_le_mul (by omega) hs
+    _ = 2 ^ 160 := h3.symm
+
+/-- The scalar field clears `2^254`: the counted remainder is at most `2^160 / |Fp| ≤ 2^-94`,
+ten bits under the compressed model's `2^-84` ceiling. -/
+theorem two_pow_254_le_card : 2 ^ 254 ≤ Fintype.card Fp := by
+  rw [Zcash.Arithmetic.card_Fp]
+  native_decide
+
+/-- **The five semantic terms collapse to one count over the field** (issue #128 F7): the
+endpoint's added tail is at most `2^160 / |Fp|`, with the count proven at the ceiling and no
+absorption assumed. -/
+theorem action_semantic_terms_le {Q : ℕ} (hQ : Q ≤ 2 ^ 123) :
+    (((Q + 1 : ℕ) : ℝ≥0∞) * (((20470 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
+        ((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 23 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞))) +
+      (((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 35 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
+        (((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 21 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
+          ((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 25 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞))))
+      ≤ ((2 ^ 160 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞) := by
+  have hcollapse :
+      (((Q + 1 : ℕ) : ℝ≥0∞) * (((20470 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
+          ((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 23 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞))) +
+        (((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 35 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
+          (((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 21 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
+            ((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 25 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)))) =
+        (((Q + 1) * 20470 + (Q + 1) * 2 ^ 23 + ((Q + 1) * 2 ^ 35 +
+          ((Q + 1) * 2 ^ 21 + (Q + 1) * 2 ^ 25)) : ℕ) : ℝ≥0∞) /
+          (Fintype.card Fp : ℝ≥0∞) := by
+    rw [mul_div_assoc', mul_div_assoc', mul_div_assoc', mul_div_assoc', mul_div_assoc',
+      ENNReal.div_add_div_same, ENNReal.div_add_div_same, ENNReal.div_add_div_same,
+      ENNReal.div_add_div_same]
+    norm_cast
+  rw [hcollapse]
+  gcongr
+  exact_mod_cast action_semantic_count_le hQ
+
+/-- **The captured Action bound for sequential adversaries** (issue #128 F8).  A family
+equipped with cuts and views at the five semantic squeeze indices — the bounded sequential
+online-AGM Fiat–Shamir adversary — admits the full capstone bound with every semantic budget
+discharged and counted: the four abstract bounds become
+`(Q + 1) · N / |Fp|` for the decided caps `N = 2^25` (`θ`), `2^35` (`β`), `2^21` (`γ`),
+`20470` (the `x` fold degree) and `2^23` (`y`, from the view's constraint count `L ≤ 2^12`).
+
+Named assumptions: `hvk`/`hI` pin the family's key and instance commitments to the deployed
+Action artifacts; `hchar` bounds the run's pair count below the field characteristic;
+`profile` supplies the DLOG reduction; `cuts` is the sequential adversary itself, with its
+views' well-formedness (`xdeg` at `20470`, `ylen` at `L`). -/
+theorem orchard_action_acceptFalse_prob_le_sequential
+    {T : Type*} [DecidableEq T]
+    (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → T)
+    (hquery : Function.Injective query)
+    (family : ComputedStraightLineDeployedFSFamily
+      (actionProofParams.mergeDerived actionCircuit))
+    (inputs : Fin (actionProofParams.mergeDerived actionCircuit).numProofs →
+      PublicInputs Fp)
+    (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey actionProofParams
+      (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis))
+    (hI : ∀ basis, family.instanceCommitment basis =
+      actionCircuit.instanceCommitment actionProofParams
+        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) inputs)
+    (hchar : ∀ basis O, deployedX4PairCount
+      (actionCircuit.toVerifierKey actionProofParams
+        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment actionProofParams
+        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) inputs)
+      (straightLineRunOutput family basis O).1.proof.1
+      (straightLineRunRecord family basis O) < scalarFieldOrder)
+    (profile : family.StraightLineConstraintDlogProfile B)
+    {L : ℕ} (hL : L ≤ 2 ^ 12)
+    (cuts : ActionSequentialCuts actionProofParams family
+      (staticChecks_of_derived family hvk) inputs hvk hI hchar 20470 L) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
+            + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          actionAcceptFalseEvent family inputs)
+      ≤ ((family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
+          (family.Q + 1 : ℕ) *
+            ((actionProofParams.mergeDerived actionCircuit).k *
+              (2 / (Fintype.card Fp : ENNReal))) +
+          (family.Q + (11 + (actionProofParams.mergeDerived actionCircuit).k) + 1 : ℕ) *
+            algebraicRootBudget (actionProofParams.mergeDerived actionCircuit)
+              (actionProofParams.mergeDerived actionCircuit).k +
+          (profile.advantage family.straightLineDlogRandomOracleQueries
+              (ComputedStraightLineDeployedFSFamily.straightLineDlogGroupWork
+                profile.proverGroupWork profile.reductionGroupWork) +
+            1 / Fintype.card Fp) +
+          (family.Q + 1 : ℕ) * ((20470 : ℕ) / (Fintype.card Fp : ℝ≥0∞))) +
+        (((family.Q + 1 : ℕ) * (((20470 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
+            (family.Q + 1 : ℕ) * (((2 ^ 23 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞))) +
+          ((family.Q + 1 : ℕ) * (((2 ^ 35 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
+            ((family.Q + 1 : ℕ) * (((2 ^ 21 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
+              (family.Q + 1 : ℕ) * (((2 ^ 25 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞))))) :=
+  orchard_action_acceptFalse_prob_le_captured B hB query hquery family inputs hvk hI hchar
+    profile
+    (cuts.xy_prob_le actionProofParams family (staticChecks_of_derived family hvk) inputs
+      hvk hI hchar query derived_n_ne_zero (derived_n_yn hL))
+    (cuts.beta_prob_le actionProofParams family (staticChecks_of_derived family hvk) inputs
+      hvk hI hchar query cap_beta)
+    (cuts.gamma_prob_le actionProofParams family (staticChecks_of_derived family hvk) inputs
+      hvk hI hchar query cap_gamma)
+    (cuts.theta_prob_le actionProofParams family (staticChecks_of_derived family hvk) inputs
+      hvk hI hchar query cap_theta)
+
+/-! ## The sequential endpoint: every semantic budget discharged and counted
+
+The counting caps below are decided at the captured key and transferred through the derived
+key's field equalities, so the endpoint takes a bundle of cuts and views — the sequential
+adversary — and nothing else numeric.  The caps are generous round powers of two: each sits
+orders of magnitude under the field size, and the final margin analysis only needs
+`(Q + 1) · Σcaps / |Fp|` small at `Q ≤ 2^123`.
+-/
+
+private theorem castVk_blinding {s₁ s₂ : Shape} (h : s₁ = s₂)
+    (K : VerifyingKey s₁ Fp VestaG) :
+    K.blindingFactors = (h ▸ K : VerifyingKey s₂ Fp VestaG).blindingFactors := by
+  cases h
+  rfl
+
+/-- The derived key's blinding count is the captured one at every URS. -/
+theorem derived_blinding (urs : URS VestaG) :
+    (actionCircuit.toVerifierKey actionProofParams urs).blindingFactors =
+      vk.blindingFactors := by
+  have hcast := castVk_blinding shape_eq_mergeDerived
+    (actionCircuit.toVerifierKey actionProofParams capturedURS)
+  have hvk : (shape_eq_mergeDerived ▸
+      actionCircuit.toVerifierKey actionProofParams capturedURS :
+      VerifyingKey shape Fp VestaG) = vk := vk_eq_toVerifierKey.symm
+  exact hcast.trans (congrArg VerifyingKey.blindingFactors hvk)
+
+private theorem cap_theta :
+    ∀ (basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG)
+      (poly : CommitmentId → Polynomial Fp),
+      TopLevelLookupCoherence.topLevelLookupThetaBudget actionCircuit actionProofParams
+        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) poly ≤
+        2 ^ 25 := by
+  intro basis poly
+  rw [TopLevelLookupCoherence.topLevelLookupThetaBudget_eq]
+  native_decide
+
+private theorem cap_beta :
+    ∀ (basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG)
+      (poly : CommitmentId → Polynomial Fp),
+      (∑ p : Fin (actionProofParams.mergeDerived actionCircuit).numProofs,
+        (Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
+            actionActiveRows) + 1) *
+          Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
+            actionActiveRows)) +
+      (actionProofParams.mergeDerived actionCircuit).numProofs *
+        (actionProofParams.mergeDerived actionCircuit).numLookups *
+        (((vkAt actionProofParams basis).n - (vkAt actionProofParams basis).blindingFactors -
+              2 + 2) *
+            ((vkAt actionProofParams basis).n - (vkAt actionProofParams basis).blindingFactors -
+              2 + 1) +
+          ((vkAt actionProofParams basis).n - (vkAt actionProofParams basis).blindingFactors -
+            2 + 1)) ≤ 2 ^ 35 := by
+  intro basis poly
+  simp only [resolverPermutationCell_card, ActionTerminal.vkAt,
+    (derived_scalars (ursOfAugmentedBasis
+      (actionProofParams.mergeDerived actionCircuit).k basis)).2.2.2.2.2.2,
+    (derived_scalars (ursOfAugmentedBasis
+      (actionProofParams.mergeDerived actionCircuit).k basis)).2.1,
+    derived_blinding (ursOfAugmentedBasis
+      (actionProofParams.mergeDerived actionCircuit).k basis)]
+  native_decide
+
+private theorem cap_gamma :
+    ∀ (basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG)
+      (poly : CommitmentId → Polynomial Fp),
+      (∑ p : Fin (actionProofParams.mergeDerived actionCircuit).numProofs,
+        2 * Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
+          actionActiveRows)) +
+      (actionProofParams.mergeDerived actionCircuit).numProofs *
+        (actionProofParams.mergeDerived actionCircuit).numLookups *
+        (2 * ((vkAt actionProofParams basis).n - (vkAt actionProofParams basis).blindingFactors -
+          2 + 1)) ≤ 2 ^ 21 := by
+  intro basis poly
+  simp only [resolverPermutationCell_card, ActionTerminal.vkAt,
+    (derived_scalars (ursOfAugmentedBasis
+      (actionProofParams.mergeDerived actionCircuit).k basis)).2.2.2.2.2.2,
+    (derived_scalars (ursOfAugmentedBasis
+      (actionProofParams.mergeDerived actionCircuit).k basis)).2.1,
+    derived_blinding (ursOfAugmentedBasis
+      (actionProofParams.mergeDerived actionCircuit).k basis)]
+  native_decide
+
+private theorem derived_n_ne_zero :
+    ∀ basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG,
+      (vkAt actionProofParams basis).n ≠ 0 := by
+  intro basis
+  simp only [ActionTerminal.vkAt,
+    (derived_scalars (ursOfAugmentedBasis
+      (actionProofParams.mergeDerived actionCircuit).k basis)).2.1]
+  native_decide
+
+private theorem derived_n_yn {L : ℕ} (hL : L ≤ 2 ^ 12) :
+    ∀ basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG,
+      (vkAt actionProofParams basis).n * L ≤ 2 ^ 23 := by
+  intro basis
+  simp only [ActionTerminal.vkAt,
+    (derived_scalars (ursOfAugmentedBasis
+      (actionProofParams.mergeDerived actionCircuit).k basis)).2.1]
+  have hn : vk.n ≤ 2 ^ 11 := by native_decide
+  calc vk.n * L ≤ 2 ^ 11 * 2 ^ 12 := Nat.mul_le_mul hn hL
+    _ = 2 ^ 23 := by norm_num
+
+
+/-- **The semantic counts at the query ceiling** (issue #128 F7): at `Q ≤ 2^123` the five
+counted caps total at most `2^160`. -/
+theorem action_semantic_count_le {Q : ℕ} (hQ : Q ≤ 2 ^ 123) :
+    (Q + 1) * 20470 + (Q + 1) * 2 ^ 23 + ((Q + 1) * 2 ^ 35 +
+      ((Q + 1) * 2 ^ 21 + (Q + 1) * 2 ^ 25)) ≤ 2 ^ 160 := by
+  have h1 : 1 ≤ (2 : ℕ) ^ 123 := Nat.one_le_two_pow
+  have h2 : (2 : ℕ) ^ 124 = 2 ^ 123 * 2 := pow_succ 2 123
+  have hs : (20470 + 2 ^ 23 + (2 ^ 35 + (2 ^ 21 + 2 ^ 25)) : ℕ) ≤ 2 ^ 36 := by norm_num
+  have h3 : (2 : ℕ) ^ 160 = 2 ^ 124 * 2 ^ 36 := by rw [← pow_add]
+  calc (Q + 1) * 20470 + (Q + 1) * 2 ^ 23 + ((Q + 1) * 2 ^ 35 +
+        ((Q + 1) * 2 ^ 21 + (Q + 1) * 2 ^ 25))
+      = (Q + 1) * (20470 + 2 ^ 23 + (2 ^ 35 + (2 ^ 21 + 2 ^ 25))) := by ring
+    _ ≤ 2 ^ 124 * 2 ^ 36 := Nat.mul_le_mul (by omega) hs
+    _ = 2 ^ 160 := h3.symm
+
+/-- The scalar field clears `2^254`: the counted remainder is at most `2^160 / |Fp| ≤ 2^-94`,
+ten bits under the compressed model's `2^-84` ceiling. -/
+theorem two_pow_254_le_card : 2 ^ 254 ≤ Fintype.card Fp := by
+  rw [Zcash.Arithmetic.card_Fp]
+  native_decide
+
+/-- **The five semantic terms collapse to one count over the field** (issue #128 F7): the
+endpoint's added tail is at most `2^160 / |Fp|`, with the count proven at the ceiling and no
+absorption assumed. -/
+theorem action_semantic_terms_le {Q : ℕ} (hQ : Q ≤ 2 ^ 123) :
+    (((Q + 1 : ℕ) : ℝ≥0∞) * (((20470 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
+        ((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 23 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞))) +
+      (((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 35 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
+        (((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 21 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
+          ((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 25 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞))))
+      ≤ ((2 ^ 160 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞) := by
+  have hcollapse :
+      (((Q + 1 : ℕ) : ℝ≥0∞) * (((20470 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
+          ((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 23 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞))) +
+        (((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 35 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
+          (((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 21 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
+            ((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 25 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)))) =
+        (((Q + 1) * 20470 + (Q + 1) * 2 ^ 23 + ((Q + 1) * 2 ^ 35 +
+          ((Q + 1) * 2 ^ 21 + (Q + 1) * 2 ^ 25)) : ℕ) : ℝ≥0∞) /
+          (Fintype.card Fp : ℝ≥0∞) := by
+    rw [mul_div_assoc', mul_div_assoc', mul_div_assoc', mul_div_assoc', mul_div_assoc',
+      ENNReal.div_add_div_same, ENNReal.div_add_div_same, ENNReal.div_add_div_same,
+      ENNReal.div_add_div_same]
+    norm_cast
+  rw [hcollapse]
+  gcongr
+  exact_mod_cast action_semantic_count_le hQ
+
+/-- **The captured Action bound for sequential adversaries** (issue #128 F8).  A family
+equipped with cuts and views at the five semantic squeeze indices — the bounded sequential
+online-AGM Fiat–Shamir adversary — admits the full capstone bound with every semantic budget
+discharged and counted: the four abstract bounds become
+`(Q + 1) · N / |Fp|` for the decided caps `N = 2^25` (`θ`), `2^35` (`β`), `2^21` (`γ`),
+`20470` (the `x` fold degree) and `2^23` (`y`, from the view's constraint count `L ≤ 2^12`).
+
+Named assumptions: `hvk`/`hI` pin the family's key and instance commitments to the deployed
+Action artifacts; `hchar` bounds the run's pair count below the field characteristic;
+`profile` supplies the DLOG reduction; `cuts` is the sequential adversary itself, with its
+views' well-formedness (`xdeg` at `20470`, `ylen` at `L`). -/
+theorem orchard_action_acceptFalse_prob_le_sequential
+    {T : Type*} [DecidableEq T]
+    (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → T)
+    (hquery : Function.Injective query)
+    (family : ComputedStraightLineDeployedFSFamily
+      (actionProofParams.mergeDerived actionCircuit))
+    (inputs : Fin (actionProofParams.mergeDerived actionCircuit).numProofs →
+      PublicInputs Fp)
+    (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey actionProofParams
+      (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis))
+    (hI : ∀ basis, family.instanceCommitment basis =
+      actionCircuit.instanceCommitment actionProofParams
+        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) inputs)
+    (hchar : ∀ basis O, deployedX4PairCount
+      (actionCircuit.toVerifierKey actionProofParams
+        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment actionProofParams
+        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) inputs)
+      (straightLineRunOutput family basis O).1.proof.1
+      (straightLineRunRecord family basis O) < scalarFieldOrder)
+    (profile : family.StraightLineConstraintDlogProfile B)
+    {L : ℕ} (hL : L ≤ 2 ^ 12)
+    (cuts : ActionSequentialCuts actionProofParams family
+      (staticChecks_of_derived family hvk) inputs hvk hI hchar 20470 L) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
+            + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          actionAcceptFalseEvent family inputs)
+      ≤ ((family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
+          (family.Q + 1 : ℕ) *
+            ((actionProofParams.mergeDerived actionCircuit).k *
+              (2 / (Fintype.card Fp : ENNReal))) +
+          (family.Q + (11 + (actionProofParams.mergeDerived actionCircuit).k) + 1 : ℕ) *
+            algebraicRootBudget (actionProofParams.mergeDerived actionCircuit)
+              (actionProofParams.mergeDerived actionCircuit).k +
+          (profile.advantage family.straightLineDlogRandomOracleQueries
+              (ComputedStraightLineDeployedFSFamily.straightLineDlogGroupWork
+                profile.proverGroupWork profile.reductionGroupWork) +
+            1 / Fintype.card Fp) +
+          (family.Q + 1 : ℕ) * ((20470 : ℕ) / (Fintype.card Fp : ℝ≥0∞))) +
+        (((family.Q + 1 : ℕ) * (((20470 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
+            (family.Q + 1 : ℕ) * (((2 ^ 23 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞))) +
+          ((family.Q + 1 : ℕ) * (((2 ^ 35 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
+            ((family.Q + 1 : ℕ) * (((2 ^ 21 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
+              (family.Q + 1 : ℕ) * (((2 ^ 25 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞))))) :=
+  orchard_action_acceptFalse_prob_le_captured B hB query hquery family inputs hvk hI hchar
+    profile
+    (cuts.xy_prob_le actionProofParams family (staticChecks_of_derived family hvk) inputs
+      hvk hI hchar query derived_n_ne_zero (derived_n_yn hL))
+    (cuts.beta_prob_le actionProofParams family (staticChecks_of_derived family hvk) inputs
+      hvk hI hchar query cap_beta)
+    (cuts.gamma_prob_le actionProofParams family (staticChecks_of_derived family hvk) inputs
+      hvk hI hchar query cap_gamma)
+    (cuts.theta_prob_le actionProofParams family (staticChecks_of_derived family hvk) inputs
+      hvk hI hchar query cap_theta)
 
 end Zcash.Snark.Fixture
