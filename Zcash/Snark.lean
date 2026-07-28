@@ -108,5 +108,7 @@ import Zcash.Snark.Soundness.Composition.DeployedRootContainment
 import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
 -- The constraint-level and straight-line family interfaces are inhabited at the witness shape.
 import Zcash.Snark.Soundness.Composition.StraightLineWitness
+-- The zero-data keystone and the constant zero prover family, at any shape.
+import Zcash.Snark.Soundness.AGM.ZeroFamily
 -- The direct-coordinate postprocessing carries an explicit polynomial total-cost model.
 import Zcash.Snark.Soundness.Composition.DirectPathCost

@@ -41,6 +41,7 @@ import Zcash.Snark.Soundness.Composition.ScheduleBudget
 import Zcash.Snark.Soundness.AGM.PinnedRootWitness
 import Zcash.Snark.Soundness.Composition.StraightLineWitness
 import Zcash.Snark.Soundness.Composition.DirectPathCost
+import Zcash.Snark.Soundness.AGM.ZeroFamily
 import Zcash.Snark.Soundness.AGM.DirectConstraintFamily
 import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
 
