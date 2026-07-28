@@ -927,6 +927,16 @@ assert_computable Zcash.Snark.decodedPolynomialResolver_opens_or_relation +choic
 -- The accepted-route adapter fixes the advice and instance member feeds, then the deployed Action
 -- boundary consumes the resulting canonical `CircuitSat`. The final theorem has no free semantic
 -- callback, decoder, or selected-column feed.
+assert_axioms Zcash.Snark.topLevelBundleStatement_or_bad_of_constraintSatisfaction +native(
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  CompElliptic.Fields.Pasta.pallasBase)
+assert_axioms Zcash.Snark.TopLevelAcceptedModel.statements_or_relation_of_circuitSat +native(
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  CompElliptic.Fields.Pasta.pallasBase)
+assert_axioms Zcash.Snark.topLevelStatements_or_relation_of_deployedAccepts +native(
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.acceptedAdviceSelection_feed_eq
 assert_axioms Zcash.Snark.acceptedInstanceSelection_feed_eq
 assert_axioms Zcash.Snark.acceptedModel_circuitSat_or_relation_of_feed_eq +native(

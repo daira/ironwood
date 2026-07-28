@@ -1,7 +1,7 @@
 name = "Zcash"
 version = "0.1.0"
 keywords = ["cryptography", "math", "protocols"]
-defaultTargets = ["Zcash", "FixtureCheck", "CircuitCheck"]
+defaultTargets = ["Zcash", "FixtureCheck", "CircuitCheck", "MetaCheck"]
 
 [leanOptions]
 pp.unicode.fun = true # pretty-prints `fun a ↦ b`
@@ -26,6 +26,13 @@ rev = "v4.30.0"
 
 [[lean_lib]]
 name = "Zcash"
+
+# Test-only adversarial declarations for `Zcash.Meta.AxiomCheck`. This is a separate library so
+# forged axioms used to exercise the rejection paths never enter the production `Zcash` import
+# graph, while the default build still runs the regression checks in CI.
+[[lean_lib]]
+name = "MetaCheck"
+globs = ["Zcash.Meta.Tests.+"]
 
 # Everything under `Zcash/Snark/Fixtures/` is instance-level: the generated Rust<->Lean captures
 # (per-capture subdirectories like `SingleAction`/`MultiAction`, holding the fixture data plus its
