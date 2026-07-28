@@ -19,11 +19,11 @@ through nine field equalities.
 
 ## The adversary model
 
-The endpoints quantify over a family equipped with `ActionSequentialCuts`: a bounded
-sequential online-AGM Fiat–Shamir adversary in the random-oracle model, against Vesta DLOG.
-Sequential means each commitment and its algebraic representation are emitted before the next
-challenge is squeezed — the cuts and views are that execution order made structural, and the
-views' well-formedness (fold degree, constraint count) is the online-AGM decode's own shape.
+The public endpoint quantifies over `SequentialOnlineAGMProver`, a bounded sequential online-AGM
+Fiat–Shamir adversary in the random-oracle model, against Vesta DLOG, together with its phased
+Action execution.  The prover's stopped computations generate the deployed-root, IPA, and
+constraint-`x` traces.  The Action phases emit typed snapshots before the five semantic squeezes;
+their cuts and views are generated projections, never caller-supplied trace/cut objects.
 The four semantic budgets are discharged inside the sequential endpoint from decided counting
 caps; the hash-function boundary of the compressed model is unchanged.  The exact endpoint uses
 the literal `accept ∧ ¬BundleStatement` event and one DLOG profile for all computed relation
@@ -651,20 +651,22 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured
       (schedule_of_derived family hvk) profile)
     hXY hBeta hGamma hTheta
 
-/-- **Final sequential Action capstone.**  For every query-bounded online algebraic FS family with
-the staged cuts, deployed verifier acceptance of a false Action statement is bounded by the
-extraction terms, one combined Vesta-DLOG advantage, and the five counted semantic tails. -/
+/-- **Final sequential Action capstone.**  For every query-bounded sequential online-AGM prover
+with executable root, IPA, constraint-`x`, and Action phases, deployed verifier acceptance of a
+false Action statement is bounded by the extraction terms, one combined Vesta-DLOG advantage,
+and the five counted semantic tails.  All traces, cuts, and views consumed below are generated
+from `prover` and `execution`. -/
 theorem orchard_action_acceptFalseStatement_prob_le_sequential
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → T)
     (hquery : Function.Injective query)
-    (family : ComputedStraightLineDeployedFSFamily
+    (prover : SequentialOnlineAGMProver
       (actionProofParams.mergeDerived actionCircuit))
     (inputs : Fin (actionProofParams.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
-    (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey actionProofParams
+    (hvk : ∀ basis, prover.toFamily.vk basis = actionCircuit.toVerifierKey actionProofParams
       (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis))
-    (hI : ∀ basis, family.instanceCommitment basis =
+    (hI : ∀ basis, prover.toFamily.instanceCommitment basis =
       actionCircuit.instanceCommitment actionProofParams
         (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
@@ -672,50 +674,54 @@ theorem orchard_action_acceptFalseStatement_prob_le_sequential
         (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis))
       (actionCircuit.instanceCommitment actionProofParams
         (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) inputs)
-      (straightLineRunOutput family basis O).1.proof.1
-      (straightLineRunRecord family basis O) < scalarFieldOrder)
-    (profile : StraightLineActionDlogProfile actionProofParams family
-      (staticChecks_of_derived family hvk) inputs hvk hI hchar B)
+      (straightLineRunOutput prover.toFamily basis O).1.proof.1
+      (straightLineRunRecord prover.toFamily basis O) < scalarFieldOrder)
+    (profile : StraightLineActionDlogProfile actionProofParams prover.toFamily
+      (staticChecks_of_derived prover.toFamily hvk) inputs hvk hI hchar B)
     {L : Nat} (hL : L ≤ 2 ^ 12)
-    (cuts : ActionSequentialCuts actionProofParams family
-      (staticChecks_of_derived family hvk) inputs hvk hI hchar 20470 L) :
+    (execution : ActionSequentialExecution actionProofParams prover.toFamily
+      (staticChecks_of_derived prover.toFamily hvk) inputs hvk hI hchar 20470 L) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
+          (preIpaLen (actionProofParams.mergeDerived actionCircuit) prover.toFamily.init.length 10
             + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionAcceptFalseStatementEvent family inputs) ≤
-      ((family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
-          (family.Q + 1 : Nat) *
+          actionAcceptFalseStatementEvent prover.toFamily inputs) ≤
+      ((prover.toFamily.Q + 1 : Nat) * (1 / Fintype.card Fp) +
+          (prover.toFamily.Q + 1 : Nat) *
             ((actionProofParams.mergeDerived actionCircuit).k *
               (2 / (Fintype.card Fp : ENNReal))) +
-          (family.Q + (11 + (actionProofParams.mergeDerived actionCircuit).k) + 1 : Nat) *
+          (prover.toFamily.Q + (11 + (actionProofParams.mergeDerived actionCircuit).k) + 1 : Nat) *
             algebraicRootBudget (actionProofParams.mergeDerived actionCircuit)
               (actionProofParams.mergeDerived actionCircuit).k +
-          (profile.advantage (actionDlogRandomOracleQueries actionProofParams family)
+          (profile.advantage (actionDlogRandomOracleQueries actionProofParams prover.toFamily)
               (actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
             1 / Fintype.card Fp) +
-          (family.Q + 1 : Nat) * ((20470 : Nat) / (Fintype.card Fp : ENNReal))) +
-        (((family.Q + 1 : Nat) * (((20470 : Nat) : ENNReal) /
+          (prover.toFamily.Q + 1 : Nat) * ((20470 : Nat) / (Fintype.card Fp : ENNReal))) +
+        (((prover.toFamily.Q + 1 : Nat) * (((20470 : Nat) : ENNReal) /
               (Fintype.card Fp : ENNReal)) +
-            (family.Q + 1 : Nat) * (((2 ^ 23 : Nat) : ENNReal) /
+            (prover.toFamily.Q + 1 : Nat) * (((2 ^ 23 : Nat) : ENNReal) /
               (Fintype.card Fp : ENNReal))) +
-          ((family.Q + 1 : Nat) * (((2 ^ 35 : Nat) : ENNReal) /
+          ((prover.toFamily.Q + 1 : Nat) * (((2 ^ 35 : Nat) : ENNReal) /
               (Fintype.card Fp : ENNReal)) +
-            ((family.Q + 1 : Nat) * (((2 ^ 21 : Nat) : ENNReal) /
+            ((prover.toFamily.Q + 1 : Nat) * (((2 ^ 21 : Nat) : ENNReal) /
                 (Fintype.card Fp : ENNReal)) +
-              (family.Q + 1 : Nat) * (((2 ^ 25 : Nat) : ENNReal) /
+              (prover.toFamily.Q + 1 : Nat) * (((2 ^ 25 : Nat) : ENNReal) /
                 (Fintype.card Fp : ENNReal)))) :=
-  orchard_action_acceptFalseStatement_prob_le_captured B hB query hquery family inputs hvk hI
+  orchard_action_acceptFalseStatement_prob_le_captured B hB query hquery prover.toFamily inputs hvk hI
     hchar profile
-    (cuts.xy_prob_le actionProofParams family (staticChecks_of_derived family hvk) inputs
+    (execution.toCuts.xy_prob_le actionProofParams prover.toFamily
+      (staticChecks_of_derived prover.toFamily hvk) inputs
       hvk hI hchar query derived_n_ne_zero (derived_n_yn hL))
-    (cuts.beta_prob_le actionProofParams family (staticChecks_of_derived family hvk) inputs
+    (execution.toCuts.beta_prob_le actionProofParams prover.toFamily
+      (staticChecks_of_derived prover.toFamily hvk) inputs
       hvk hI hchar query cap_beta)
-    (cuts.gamma_prob_le actionProofParams family (staticChecks_of_derived family hvk) inputs
+    (execution.toCuts.gamma_prob_le actionProofParams prover.toFamily
+      (staticChecks_of_derived prover.toFamily hvk) inputs
       hvk hI hchar query cap_gamma)
-    (cuts.theta_prob_le actionProofParams family (staticChecks_of_derived family hvk) inputs
+    (execution.toCuts.theta_prob_le actionProofParams prover.toFamily
+      (staticChecks_of_derived prover.toFamily hvk) inputs
       hvk hI hchar query cap_theta)
 
 end Zcash.Snark.Fixture
