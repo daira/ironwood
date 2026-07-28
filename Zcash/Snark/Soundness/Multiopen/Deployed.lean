@@ -272,7 +272,7 @@ def deployedBaseEval [DecidableEq G] [Inhabited G] {shape : Shape} (vk : Verifyi
 /-- The deployed `x₄` batch column commitments: ascending `ξ`-powers carry the point-set aggregates in
 reverse fold order, the top power the quotient commitment `q′`. These are the "columns" the `x₄`-level
 decode recovers — the fingerprinted grouping's own aggregates, not a modeled flat batch. -/
-noncomputable def x4BatchCommitments [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
+def x4BatchCommitments [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
     (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) : Fin (deployedX4PairCount vk instanceCommitment ps ch + 1) → G :=
   fun j =>

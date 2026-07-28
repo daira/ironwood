@@ -274,7 +274,7 @@ noncomputable def deployedX1BatchOfCoveredOrRelation
     (deployedMemberRepresentationsOfCovered p fixed hcovered nu i hi)
 
 /-- Provenance-preserving covered-member unbatch used by the deployed root capstone. -/
-noncomputable def deployedX1BatchOfCoveredWithSourceOrRelation
+def deployedX1BatchOfCoveredWithSourceOrRelation
     {vk : VerifyingKey shape Fp VestaG}
     {instanceCommitment : Fin shape.numProofs → Nat → VestaG}
     (p : AlgebraicWfProof basis vk instanceCommitment)

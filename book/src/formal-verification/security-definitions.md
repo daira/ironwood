@@ -69,16 +69,16 @@ flowchart TD
   STMT -. "<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/Composition/Bridge.lean'>justified by<br/>the extractor;<br/>hencodes gap</a>" .-> KS["Knowledge soundness:<br/>accepting proof yields<br/>witness or break data"]
   NCBK --> SDLR["Sinsemilla<br/>discrete-log<br/>relation"]
 
-  NDLR --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/AGM/BindingSignature.lean'>independent<br/>hash-to-curve bases</a>"| DL
+  NDLR -->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/AGM/BindingSignature.lean'>independent<br/>hash-to-curve bases</a>"| DL
   SDLR -->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/AGM/BindingSignature.lean'>independent<br/>hash-to-curve bases</a>"| DL
   KS --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/AGM/Capstone.lean'>AGM heuristic +<br/>independent<br/>hash-to-curve bases</a>"| DL
-  KS --->|"<a target='_blank' href='https://github.com/zcash/ironwood/tree/main/Zcash/Snark/Soundness/Forking'>Fiat–Shamir<br/>heuristic</a>"| ROM
+  KS -->|"<a target='_blank' href='https://github.com/zcash/ironwood/tree/main/Zcash/Snark/Soundness/Forking'>Fiat–Shamir<br/>heuristic</a>"| ROM
   MC --> SDLR
   CUS --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Common/Birthday.lean'>birthday counting<br/>q(q-1)/r,<br/>no assumption</a>"| ROM
-  NFC --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Spendability.lean'>nullifier base<br/>independent of<br/>commitment bases</a>"| DL
+  NFC -->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Nullifier.lean'>distinct-note openings<br/>compute</a>"| SDLR
   SAF --> RDSA["RedDSA unforgeability,<br/>±-randomized keys"]
-  RDSA --->|"re-rand reduction<br/><a target='_blank' href='https://eprint.iacr.org/2015/395'>[FKMSSS2016]</a> +<br/>forking extraction"| DL
-  RDSA --->|"challenge hash<br/>as random oracle"| ROM
+  RDSA -->|"re-rand reduction<br/><a target='_blank' href='https://eprint.iacr.org/2015/395'>[FKMSSS2016]</a> +<br/>forking extraction"| DL
+  RDSA -->|"challenge hash<br/>as random oracle"| ROM
 
   click BAL "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Balance.lean" _blank
   click SPEND "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Spendability.lean" _blank
@@ -121,13 +121,10 @@ flowchart TD
 </p>
 
 This picture is a deliberate approximation, and is likely to change as the formalization
-proceeds. Some edges are coarser than the eventual argument — for example, the
-`NullifierCollision` edge to discrete log is a named hypothesis whose `PRF^nf` component
-is not yet decomposed, and may not reduce to discrete log alone. The RedDSA node is a
-named hypothesis rather than a terminal assumption: its discharge edge names the
-reduction for security of signatures with re-randomizable keys
-[<a href="https://eprint.iacr.org/2015/395">FKMSSS2016</a>, section 3], adapted
-to the ±-randomized variant, together with forking extraction of the Schnorr witness.
+proceeds. The RedDSA node is a named hypothesis rather than a terminal assumption: its
+discharge edge names the reduction for security of signatures with re-randomizable keys
+[<a href="https://eprint.iacr.org/2015/395">FKMSSS2016</a>, section 3], adapted to the
+±-randomized variant, together with forking extraction of the Schnorr witness.
 
 Every solid arrow reads "rests on"; where an edge carries a label, the label names the
 computed break object flowing along it, or the adversary model or side condition under which
@@ -209,7 +206,7 @@ circuit soundness proof.
 
 <section>
 <div class="grp">Shared foundation · Zcash/Security/Common</div>
-<div class="g"><div class="g-head"><span class="term">collision vocabulary</span><span class="anchor">Security.RandomOracle.Collision · CollisionUpToSign</span></div><div class="def">Layer-A break events for the classical ROM: a <code>Collision</code> is two distinct queries with equal outputs; a <code>CollisionUpToSign</code> (<code>a =± b</code>) is the shape produced by arguments passing through the <code>Extract</code> coordinate extractor, whose fibres are <code>{P, −P}</code>. Both key binding and the nullifier (Faerie-Gold) argument bottom out here.</div></div>
+<div class="g"><div class="g-head"><span class="term">collision vocabulary</span><span class="anchor">Security.RandomOracle.Collision · CollisionUpToSign</span></div><div class="def">Layer-A break events for the classical ROM: a <code>Collision</code> is two distinct queries with equal outputs; a <code>CollisionUpToSign</code> (<code>a =± b</code>) is the shape produced by arguments passing through the <code>Extract</code> coordinate extractor, whose fibres are <code>{P, −P}</code>. Key binding bottoms out here, as does the nullifier (Faerie-Gold) argument for the Recovery Statement; the deployed nullifier argument bottoms out in the Sinsemilla discrete-log relation instead.</div></div>
 <div class="g"><div class="g-head"><span class="term">birthday bound</span><span class="anchor">Security.Birthday.birthday_closed_form</span></div><div class="def">The Layer-C probability: the shifted <code>±</code>-collision event over <code>q</code> uniform oracle outputs has probability at most <code>q(q-1)/|F|</code>, by union-bounding the per-pair fraction <code>2/|F|</code>. Counted in the random-oracle model with no hardness assumption; proven as a probability statement over the uniform oracle table (#73).</div></div>
 </section>
 

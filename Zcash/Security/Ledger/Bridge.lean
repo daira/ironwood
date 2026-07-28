@@ -32,6 +32,7 @@ open Zcash.Circuits.Action.Circuit
 open Zcash.Circuits.Specs.Sinsemilla
 open Zcash.Security.Concrete
 open CompElliptic.Fields.Pasta (PALLAS_BASE_CARD)
+open Halo2
 
 /- The Action circuit neither constrains nor witnesses spend-authorization
 signatures, so every bridge statement holds for an arbitrary sighash/signature
@@ -161,13 +162,13 @@ private theorem commitIvkHash_of_action_hash {ak nk : Fp} {bp : Point Fp}
 
 /-- The circuit's randomized-key public coordinates are the affine view of the
 concrete ledger randomization. -/
-theorem public_rk_eq_randomizePublic (verify : PallasGroup → MSG → SIG → Prop)
+theorem public_rk_eq_randomizePublic (verify bverify : PallasGroup → MSG → SIG → Prop)
     {wit : ActionData}
     (hak : wit.akP.OnCurve)
     (h : ({ x := wit.rkX, y := wit.rkY } : Point Fp) =
       wit.alpha.2 • orchardBases.spendAuthG + wit.akP) :
     PallasGroup.toPoint
-      ((Pool.primitives verify).randomizePublic wit.alpha.2
+      ((Pool.primitives verify bverify).randomizePublic wit.alpha.2
         (PallasGroup.ofPoint wit.akP (.inl hak))) =
       ({ x := wit.rkX, y := wit.rkY } : Point Fp) := by
   change PallasGroup.toPoint
@@ -180,7 +181,7 @@ theorem public_rk_eq_randomizePublic (verify : PallasGroup → MSG → SIG → P
 /-- The circuit's signed-magnitude value-commitment equation has the same
 affine public coordinates as the ledger's integer-valued commitment.  The
 64-bit bounds are precisely what make the field subtraction no-wrap. -/
-theorem public_cv_net_eq_valueCommit (verify : PallasGroup → MSG → SIG → Prop)
+theorem public_cv_net_eq_valueCommit (verify bverify : PallasGroup → MSG → SIG → Prop)
     {wit : ActionData}
     (hvOld : wit.vOld.val < 2 ^ 64) (hvNew : wit.vNew.val < 2 ^ 64)
     (hmag : wit.magnitude.val < 2 ^ 64)
@@ -193,7 +194,7 @@ theorem public_cv_net_eq_valueCommit (verify : PallasGroup → MSG → SIG → P
         -(wit.magnitude.val : Fq) • orchardBases.valueCommitV +
           wit.rcv.2 • orchardBases.valueCommitR)) :
     PallasGroup.toPoint
-      ((Pool.primitives verify).valueCommit
+      ((Pool.primitives verify bverify).valueCommit
         ((wit.vOld.val : ℤ) - (wit.vNew.val : ℤ)) wit.rcv.2) =
       ({ x := wit.cvX, y := wit.cvY } : Point Fp) := by
   change PallasGroup.toPoint
@@ -478,7 +479,7 @@ theorem classify_none_defined {wit : ActionData} (h : classifyAction wit = none)
 
 /-- **The Prop-level break and the computed classifier cannot diverge, at the consumer
 boundary either**: an exhibited `ActionBreak` holds exactly when the classifier reports
-an escape.  A consumer landing in the break arm of `specPost_to_ledger` can
+an escape.  A consumer landing in the break arm of `circuit_soundness_to_ledger` can
 therefore pass to `classifyAction`'s (and hence `classifyRelation`'s) computed data
 without reconstructing the glue: forward, each break constructor's
 `hashToPointB … = .inr` equation contradicts the defined hashes of a `none` verdict;
@@ -602,13 +603,13 @@ def NoteCommitNewSuccess (wit : ActionData) : Prop :=
 into the concrete ledger commitment.  Unlike the circuit public input, the
 ledger keeps the full commitment point; this lemma supplies that point together
 with the coordinate equation used for `cmx_new_eq`. -/
-theorem noteCommitNewSuccess_to_ledger (verify : PallasGroup → MSG → SIG → Prop)
+theorem noteCommitNewSuccess_to_ledger (verify bverify : PallasGroup → MSG → SIG → Prop)
     {wit : ActionData}
     (hgd : wit.gdNew.OnCurve) (hpkd : wit.pkdNew.OnCurve)
     (h : NoteCommitNewSuccess wit) :
     ∃ (cmNewP : Point Fp) (hcmNewP : cmNewP.Valid),
       cmNewP.x = wit.cmx ∧
-      (Pool.primitives verify).noteCommit wit.rcmNew.2
+      (Pool.primitives verify bverify).noteCommit wit.rcmNew.2
         { gd := PallasGroup.ofPoint wit.gdNew (.inl hgd),
           pkd := PallasGroup.ofPoint wit.pkdNew (.inl hpkd),
           v := wit.vNew.val, ρ := wit.nfOld, ψ := wit.psiNew } =
@@ -648,8 +649,8 @@ def MerkleSuccess (wit : ActionData) : Prop :=
 the classifier: either the witness's own queries compute an exhibited break, or
 every query is defined and each guarded clause of `SpecPost` lands in its
 successful branch. -/
-theorem successes_or_break {wit : ActionData}
-    (h : SpecPost orchardGenerators orchardBases () () wit) :
+theorem successes_or_break {wit : ActionData} {input : Value PrivateInputs Fp}
+    (h : SpecPost orchardGenerators orchardBases input () wit) :
     (CommitIvkSuccess wit ∧ NoteCommitOldSuccess wit ∧ NoteCommitNewSuccess wit ∧
       MerkleSuccess wit) ∨ ActionBreak wit := by
   cases hcl : classifyAction wit with
@@ -665,8 +666,8 @@ theorem successes_or_break {wit : ActionData}
 /-- If the caller rules out all four exhibited exceptional cases, the circuit's
 guarded clauses reduce to their successful openings.  The exact-Merkle export
 subsequently turns the final component into a ledger `Merkle.Path`. -/
-theorem successes_of_noBreak {wit : ActionData}
-    (h : SpecPost orchardGenerators orchardBases () () wit)
+theorem successes_of_noBreak {wit : ActionData} {input : Value PrivateInputs Fp}
+    (h : SpecPost orchardGenerators orchardBases input () wit)
     (hno : ¬ ActionBreak wit) :
     CommitIvkSuccess wit ∧ NoteCommitOldSuccess wit ∧ NoteCommitNewSuccess wit ∧
       MerkleSuccess wit :=
@@ -779,12 +780,12 @@ theorem merkle_path_of_exact {wit : ActionData} {root : Fp}
 Sinsemilla escapes or a fully satisfied concrete Orchard ledger action.  The ledger
 alternative additionally reports the spend/output enable gates as a side fact
 (`EnableFlagsSatisfied`), with their exact circuit semantics. -/
-theorem specPost_to_ledger (verify : PallasGroup → MSG → SIG → Prop)
-    {wit : ActionData}
-    (h : SpecPost orchardGenerators orchardBases () () wit) :
+theorem specPost_to_ledger (verify bverify : PallasGroup → MSG → SIG → Prop)
+    {input : Halo2.Value PrivateInputs Fp} {wit : ActionData}
+    (h : SpecPost orchardGenerators orchardBases input () wit) :
     ActionBreak wit ∨
       ∃ inst w, PublicProjection wit inst ∧
-        ActionSatisfied (Pool.primitives verify) Pool.keyBinding inst w ∧
+        ActionSatisfied (Pool.primitives verify bverify) Pool.keyBinding inst w ∧
         CrossAddressSatisfied wit w ∧
         EnableFlagsSatisfied wit w := by
   rcases successes_or_break h with hs | hbreak
@@ -797,7 +798,7 @@ theorem specPost_to_ledger (verify : PallasGroup → MSG → SIG → Prop)
     rcases commitIvkSuccess_to_ledger hgdOld hakP hpkdOld hivk with
       ⟨ivk, kw, hkb, hivne, hkwivk, hkwNk, hkwAk, hpkdLedger⟩
     have hkwNk' : kw.nk = wit.nk := hkwNk
-    rcases noteCommitNewSuccess_to_ledger verify hgdNew hpkdNew hnew with
+    rcases noteCommitNewSuccess_to_ledger verify bverify hgdNew hpkdNew hnew with
       ⟨cmNewP, hcmNewP, hcmNewX, hcommitNew⟩
     have hcmOldEq' : wit.cmOld =
         bold + wit.rcmOld.2.val • Ecc.MulFixed.Certs.noteCommitR.point := by
@@ -824,9 +825,9 @@ theorem specPost_to_ledger (verify : PallasGroup → MSG → SIG → Prop)
     let inst : ActionInstance PallasGroup Fp Fp :=
       { rt := wit.anchor,
         nf_old := wit.nfOld,
-        rk := (Pool.primitives verify).randomizePublic wit.alpha.2
+        rk := (Pool.primitives verify bverify).randomizePublic wit.alpha.2
           (PallasGroup.ofPoint wit.akP (.inl hakP)),
-        cv_net := (Pool.primitives verify).valueCommit
+        cv_net := (Pool.primitives verify bverify).valueCommit
           ((wit.vOld.val : ℤ) - (wit.vNew.val : ℤ)) wit.rcv.2,
         cmx_new := wit.cmx }
     let w : LedgerWitness :=
@@ -849,9 +850,9 @@ theorem specPost_to_ledger (verify : PallasGroup → MSG → SIG → Prop)
         rcm_new := wit.rcmNew.2 }
     refine Or.inr ⟨inst, w, ?_, ?_, ?_, ?_⟩
     · refine ⟨rfl, rfl, ?_, ?_, rfl⟩
-      · simpa [inst] using public_rk_eq_randomizePublic verify hakP hrk
+      · simpa [inst] using public_rk_eq_randomizePublic verify bverify hakP hrk
       · simpa [inst] using
-          public_cv_net_eq_valueCommit verify hvOld hvNew hmag hvalue hcv
+          public_cv_net_eq_valueCommit verify bverify hvOld hvNew hmag hvalue hcv
     · refine
         { commit_old := ?_,
           merkle_path := ?_,
@@ -888,9 +889,9 @@ theorem specPost_to_ledger (verify : PallasGroup → MSG → SIG → Prop)
           have hz := congrArg PallasGroup.toPoint hzero
           simpa [w] using hz
         exact Point.ne_zero_of_onCurve hgdOld hpzero
-      · change (Pool.primitives verify).randomizePublic wit.alpha.2
+      · change (Pool.primitives verify bverify).randomizePublic wit.alpha.2
             (PallasGroup.ofPoint wit.akP (.inl hakP)) =
-          (Pool.primitives verify).randomizePublic wit.alpha.2
+          (Pool.primitives verify bverify).randomizePublic wit.alpha.2
             (Pool.keyBinding.akP kw)
         rw [hkwAk]
       · simpa [w] using hcommitNew
@@ -923,5 +924,24 @@ theorem specPost_to_ledger (verify : PallasGroup → MSG → SIG → Prop)
           simp [hz]
         exact (sub_eq_zero.mp ((mul_eq_zero.mp heo).resolve_left hvNew0)).symm
   · exact Or.inl hbreak
+
+/-- End-to-end refinement for a satisfying run of the deployed post-NU6.3
+Action circuit.  This is the direct composition of the circuit soundness
+contract with `specPost_to_ledger`; it deliberately leaves the exceptional
+Sinsemilla branch explicit and reports the enable gates as `EnableFlagsSatisfied`. -/
+theorem circuit_soundness_to_ledger (verify bverify : PallasGroup → MSG → SIG → Prop)
+    (cfg : Config) (i₀ : RegionIndex)
+    (env : Placed Environment Fp) (input : Var PrivateInputs Fp)
+    (henv : EnvAssumptions orchardGenerators cfg env)
+    (hconstraints : Constraints env.place env.env
+      ((mainPost orchardGenerators orchardBases cfg input).operations i₀) i₀) :
+    ActionBreak (extract cfg input i₀ env) ∨
+      ∃ inst w, PublicProjection (extract cfg input i₀ env) inst ∧
+        ActionSatisfied (Pool.primitives verify bverify) Pool.keyBinding inst w ∧
+        CrossAddressSatisfied (extract cfg input i₀ env) w ∧
+        EnableFlagsSatisfied (extract cfg input i₀ env) w := by
+  have hpost := soundnessPost orchardGenerators orchardBases cfg i₀ env input
+    henv trivial hconstraints
+  exact specPost_to_ledger verify bverify (by simpa using hpost)
 
 end Zcash.Security.Ledger.Bridge

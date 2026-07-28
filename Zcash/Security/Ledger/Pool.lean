@@ -111,7 +111,7 @@ def extract (P : PallasGroup) : Fp := (PallasGroup.toPoint P).x
   simp [extract]
 
 /-- `13` is a quadratic non-residue in the Pallas base field, so it is not a square. -/
-private theorem unc_thirteen_not_isSquare : ¬ IsSquare (13 : Fp) := by
+theorem unc_thirteen_not_isSquare : ¬ IsSquare (13 : Fp) := by
   have h : ¬ IsSquare ((13 : ℕ) : Fp) :=
     Zcash.Circuits.Ecc.MulFixed.Cert.Chain.checkNonSquare_sound (by native_decide)
   simpa using h
@@ -204,11 +204,11 @@ def uncommitted : Fp := 2
 
 variable {MSG SIG : Type*}
 
-/-- The deployed pool's concrete primitives.  The spend-authorization verification
-predicate is a parameter: the Action circuit neither constrains nor witnesses
-signatures, so every bridge statement holds for an arbitrary scheme; the concrete
-RedPallas instantiation composes downstream. -/
-def primitives (spendAuthVerify : PallasGroup → MSG → SIG → Prop) :
+/-- The deployed pool's concrete primitives.  The spend-authorization and
+binding-signature verification predicates are parameters: the Action circuit neither
+constrains nor witnesses signatures, so every bridge statement holds for arbitrary
+schemes; the concrete RedPallas instantiations compose downstream. -/
+def primitives (spendAuthVerify bindingVerify : PallasGroup → MSG → SIG → Prop) :
     Primitives Fq PallasGroup Fp Fp Fp Fp Fp Encoding MSG SIG where
   valueBound := 2 ^ 64
   emb := PallasGroup.embedFp
@@ -222,6 +222,7 @@ def primitives (spendAuthVerify : PallasGroup → MSG → SIG → Prop) :
   randomizePublic := randomizePublic
   valueCommit := valueCommit
   spendAuthVerify := spendAuthVerify
+  bindingVerify := bindingVerify
 
 def commitIvkHash (ak nk : Fp) : Option PallasGroup :=
   (hashToPoint orchardGenerators.S ivkQ

@@ -9,7 +9,8 @@ import Zcash.Snark.Soundness.Composition.Bridge
 Varying only `x4` in the ghost representation function of `AlgebraicWfProof` and applying the
 offline decoder recovers represented `x4` columns without an additional accepting execution.
 This file proves only the algebraic decode; `CanonicalOnlineMultiopenCoordinates` pins the
-construction and `DeployedRootSqueezeInvariance` carries the causal condition.
+construction, while `DeployedRootOnlineTrace` supplies the query-chronology condition used to
+derive squeeze invariance.
 -/
 
 namespace Zcash.Snark

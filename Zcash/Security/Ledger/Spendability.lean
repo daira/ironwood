@@ -9,11 +9,11 @@ pin note tuples: two satisfied spends with distinct openings and equal revealed
 nullifiers compute a break — a `NoteCommitBreak` when their derive-inputs coincide (the
 same commitment opened two ways), and otherwise a `NullifierCollision`: two distinct
 note openings whose nullifiers agree. It carries the openings, so `cm` is pinned to a
-real commitment and the collision is a genuine discrete-log relation at the
-instantiation, not a coincidence a free `cm` could fabricate. That reduction — collision
-to a DLR break (deployed), or to an `H^rcm` ±-collision for the Recovery Statement via
-ZIP 2005's Spendability theorem — is nonobvious and not yet formalized; it is planned
-for the stacked capstone PR.
+real commitment and `NontrivialRelation.ofNullifierCollision` reduces the collision to a
+nontrivial discrete-log relation — no fabrication by a free `cm`, and no separate
+distinct-notes premiss (the opening distinctness suffices; see `Nullifier.lean`). For
+the Recovery Statement the analogue is an `H^rcm` ±-collision via ZIP 2005's
+Spendability theorem, which is not formalized here.
 
 Persistence says a transaction valid immediately after `ledger` stays valid when
 appended to any valid extension `ledger'`, under the conditions of nullifier freshness
@@ -49,20 +49,18 @@ variable {ledger ledger' : Ledger KW F G RHO PSI MHASH MENC MSG SIG P.depth}
 variable {T : Tx KW F G RHO PSI MHASH MENC MSG SIG P.depth}
 variable {issuance : ℕ → ℕ} {maxActions : ℕ}
 
-/-- A nullifier-derivation collision, as data: two note openings — each a note with its
-commitment (`open₁`, `open₂`) — whose derive-inputs `(nk, ρ, ψ, cm)` differ (`ne`) but
-whose `deriveNullifier` outputs agree (`eq`).
+/-- A nullifier collision, as data: two *distinct* note openings (`ne`: the
+`(rcm, note)` pairs differ) whose commitments open (`open₁`, `open₂`) and whose
+`deriveNullifier` outputs agree (`eq`).
 
-The openings are what make this self-certifying. They pin each `cm` to a genuine note
-commitment, so at the Orchard instantiation the collision expands to a nontrivial
-discrete-log relation among the nullifier base 𝒦^Orchard, the note-commitment base, and
-the two commitments' hash images. Drop them and `cm` is a free group element: the affine
-`extract` (an x-coordinate) lets `cm₂` be solved to match, so the bare `(nk, ρ, ψ, cm)`
-collision is fabricable and certifies nothing.
-
-Reducing this collision to a nontrivial discrete-log relation (independence of 𝒦^Orchard
-from the note-commitment bases) is nonobvious and not yet formalized; it is planned for
-the stacked capstone PR. -/
+The openings make this self-certifying: they pin each `cm` to a genuine note
+commitment, so `NontrivialRelation.ofNullifierCollision` reduces the collision to a
+nontrivial discrete-log relation among the commitment bases, the nullifier base, and
+the randomness base. The opening distinctness `ne` is exactly what that reduction
+consumes for nontriviality — distinct notes give distinct coefficient vectors, and
+equal notes force distinct randomness — so no separate distinct-notes premiss is
+needed. Drop the openings and `cm` is a free group element the affine `extract` lets
+`cm₂` be solved to match, certifying nothing. -/
 structure NullifierCollision (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG) where
   nk₁ : NK
   rcm₁ : F
@@ -74,7 +72,7 @@ structure NullifierCollision (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG S
   note₂ : Note G RHO PSI
   cm₂ : G
   open₂ : P.noteCommit rcm₂ note₂ = some cm₂
-  ne : (nk₁, note₁.ρ, note₁.ψ, cm₁) ≠ (nk₂, note₂.ρ, note₂.ψ, cm₂)
+  ne : (rcm₁, note₁) ≠ (rcm₂, note₂)
   eq : P.deriveNullifier nk₁ note₁.ρ note₁.ψ cm₁
     = P.deriveNullifier nk₂ note₂.ρ note₂.ψ cm₂
 
@@ -96,7 +94,7 @@ def faerieGoldCore [DecidableEq G] [DecidableEq NK] [DecidableEq RHO] [Decidable
       exact noteCommitBreakOfNe h₁ h₂ (congrArg P.extract hin.2.2.2) hne)
   else
     .inr ⟨kv.nk w₁.kw, w₁.rcm_old, w₁.note_old, w₁.cm_old, h₁.commit_old,
-          kv.nk w₂.kw, w₂.rcm_old, w₂.note_old, w₂.cm_old, h₂.commit_old, hin, by
+          kv.nk w₂.kw, w₂.rcm_old, w₂.note_old, w₂.cm_old, h₂.commit_old, hne, by
       rw [← h₁.nf_old_eq, ← h₂.nf_old_eq]
       exact hnf⟩
 
@@ -117,7 +115,8 @@ def respendOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq NK] [DecidableEq
 /-- **Persistence.** A transaction valid immediately after `ledger` remains valid when
 appended to any valid extension `ledger'`, given that its nullifiers are still fresh
 and the boundary conjuncts hold for the appended ledger. Anchors persist because prefix
-roots do; satisfaction, signatures, and the action bound are per-transaction. -/
+roots do; satisfaction, the signature rules, the value-balance range, and the action
+bound are per-transaction. -/
 theorem validLedger_append
     (hval' : ValidLedger P kv issuance maxActions ledger')
     (hpre : ledger <+: ledger')
@@ -132,7 +131,7 @@ theorem validLedger_append
     rcases List.mem_append.mp htx with h | h
     · exact Or.inl h
     · exact Or.inr (by simpa using h)
-  refine ⟨?_, ?_, ?_, hcap, ?_, htrans, ?_⟩
+  refine ⟨?_, ?_, ?_, hcap, ?_, ?_, ?_, htrans, ?_⟩
   · intro tx htx a ha
     rcases hmem tx htx with h | rfl
     · exact hval'.satisfied tx h a ha
@@ -178,6 +177,14 @@ theorem validLedger_append
     rcases hmem tx htx with h | rfl
     · exact hval'.sig_verifies tx h a ha
     · exact hvalT.sig_verifies tx hTmem a ha
+  · intro tx htx
+    rcases hmem tx htx with h | rfl
+    · exact hval'.binding_verified tx h
+    · exact hvalT.binding_verified tx hTmem
+  · intro tx htx
+    rcases hmem tx htx with h | rfl
+    · exact hval'.vbalance_bound tx h
+    · exact hvalT.vbalance_bound tx hTmem
   · intro tx htx
     rcases hmem tx htx with h | rfl
     · exact hval'.action_bound tx h

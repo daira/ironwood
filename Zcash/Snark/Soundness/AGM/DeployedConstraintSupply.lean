@@ -916,9 +916,11 @@ def permCommonBindingOfMemberPolynomials [DecidableEq G] [Inhabited G] {shape : 
 
 /-! ## Complete deterministic constraint supply -/
 
-/-- The successful constraint-side output for one decoded run.  It retains the concrete carrier
-polynomials used by `circuitSatViaConstraints`, so the left branch is directly composable with a
-knowledge-soundness endpoint while the right branch remains an explicit relation witness. -/
+/-- The successful constraint-side output for one decoded run. It retains the concrete carrier
+polynomials used by `circuitSatViaConstraints`, so the left branch carries the verifier's compressed
+full-list identity while the right branch remains an explicit relation witness. The identity is
+not yet row-level semantic satisfaction: that promotion also needs the `y`, `beta`, `gamma`, and
+`theta` good-challenge conditions priced by the semantic capstone. -/
 structure DeployedConstraintWitness [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (instanceCommitment : Fin shape.numProofs → Nat → G)

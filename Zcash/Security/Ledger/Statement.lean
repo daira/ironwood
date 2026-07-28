@@ -102,6 +102,9 @@ structure Primitives (F G IVK NK RHO PSI MHASH MENC MSG SIG : Type*) where
   /-- Verification of a spend-authorization signature under the randomized key `rk`, over
   a transaction sighash. -/
   spendAuthVerify : G → MSG → SIG → Prop
+  /-- Verification of a transaction's binding signature under the binding verification
+  key, over a transaction sighash. -/
+  bindingVerify : G → MSG → SIG → Prop
 
 /-- The tree depth, read off the Merkle interface. -/
 abbrev Primitives.depth (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG) : ℕ :=

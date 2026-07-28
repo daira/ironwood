@@ -47,10 +47,9 @@ verifier computes over the same `vk` — is the fingerprint (`Fingerprint.Match`
 
 The forking-floor accept measures (the RO-uniformity axiom, as everywhere), `hfold`/`hgood` at the
 terminal, the layout identities, and the bookkeeping floors. Producing the batch and member decode
-from a bare accepting run — coupling the coin measure to the multiopen budget — is the open surface
-of the composition that turns *the verifier accepted* into *a witness can be extracted*
-(`Soundness.Composition`). Do **not** generalize the free-decode
-endpoints (`orchard_verifier_vesta_constraint_of_forked`, the `legacy_*` rungs); they stay
+from a bare accepting run — coupling the coin measure to the multiopen budget, so that *the verifier
+accepted* becomes *a witness can be extracted* — is done in `Soundness.Composition`. Do **not**
+generalize the free-decode endpoint `orchard_verifier_vesta_constraint_of_forked`; it stays
 compatibility-shaped.
 -/
 
