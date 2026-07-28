@@ -74,7 +74,7 @@ theorem straightLineConstraintDecoded_nonempty_decode
         (wrappedPreIpaReads (straightLineRunOutput family basis O)))
       ((straightLineRunOutput family basis O).1.multiBlind
         (wrappedPreIpaReads (straightLineRunOutput family basis O)))) :=
-  ⟨(family.straightLineConstraintWitness static basis O h).decode⟩
+  ⟨(straightLineConstraintWitness family static basis O h).decode⟩
 
 /-- The decode projected from the computed straight-line constraint witness. -/
 def straightLineDecode
@@ -84,7 +84,7 @@ def straightLineDecode
     (O : BTranscript Fp VestaG
       (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp)
     (h : family.straightLineConstraintDecoded static basis O) :=
-  (family.straightLineConstraintWitness static basis O h).decode
+  (straightLineConstraintWitness family static basis O h).decode
 
 /-- The run's complete challenge record: the squeezed pre-IPA reads and the true IPA rounds.
 The root layer's `wrappedPreIpaRecord` zeroes the rounds; acceptance holds at this record. -/

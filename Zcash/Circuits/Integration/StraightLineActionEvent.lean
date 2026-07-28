@@ -274,6 +274,7 @@ def actionTerminalRelationFinderCovers
     ¬BundleStatement inputs →
     (finder basis O).isSome
 
+set_option maxHeartbeats 800000 in
 /-- The concrete combined finder covers every false-statement branch of the Action terminal.  The
 proof identifies the success value returned by the executable constraint adapter, then uses the
 four event complements as the exact finite checks performed by the terminal fallback. -/
@@ -299,13 +300,62 @@ theorem actionRelationFinder_covers :
     simp only [actionRunDecode, straightLineDecode, straightLineConstraintWitness, hsuccess]
   have haccepts := actionRunAccepts pp family static basis O inputs
     (hvk basis) (hI basis) hdecoded
+  have hacceptsEq : actionRunAccepts pp family static basis O inputs
+      (hvk basis) (hI basis) hdecoded =
+      hI basis ▸ hvk basis ▸ success.accepts :=
+    Subsingleton.elim _ _
+  let successDecode : DeployedAlgebraicDecode
+      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) rfl
+      (actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      (straightLineRunOutput family basis O).1.proof.1
+      (straightLineRunRecord family basis O)
+      ((straightLineRunOutput family basis O).1.aMulti
+        (wrappedPreIpaReads (straightLineRunOutput family basis O)))
+      ((straightLineRunOutput family basis O).1.multiU
+        (wrappedPreIpaReads (straightLineRunOutput family basis O)))
+      ((straightLineRunOutput family basis O).1.multiBlind
+        (wrappedPreIpaReads (straightLineRunOutput family basis O))) :=
+    hI basis ▸ hvk basis ▸
+      success.witness.decode.reRound (runRounds family.toFamily basis O)
+  let successAccepts : DeployedAccepts
+      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) rfl
+      (actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      (straightLineRunOutput family basis O).1.proof.1
+      (straightLineRunRecord family basis O) :=
+    hI basis ▸ hvk basis ▸ success.accepts
+  have hdecodeEq : actionRunDecode pp family static basis O inputs
+      (hvk basis) (hI basis) hdecoded = successDecode := hdecode
+  have hacceptsEq' : actionRunAccepts pp family static basis O inputs
+      (hvk basis) (hI basis) hdecoded = successAccepts :=
+    Subsingleton.elim _ _
+  have hmodelEq : actionRunModel pp family static inputs hvk hI hchar basis O hdecoded =
+      CanonicalMemberConstraintRelation.acceptedModel
+        (memberDecode := fun i hi =>
+          successDecode.toMemberDecode (hchar basis O) i hi)
+        (hblinding := ActionPermutationDomain.blindingFactors_lt pp
+          (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+        successAccepts := by
+    unfold actionRunModel
+    rw [hdecodeEq]
+  have hpolyEq : actionRunPolynomial pp family static inputs hvk hI hchar basis O hdecoded =
+      CanonicalMemberConstraintRelation.acceptedPolynomial
+        (memberDecode := fun i hi =>
+          successDecode.toMemberDecode (hchar basis O) i hi)
+        successAccepts := by
+    unfold actionRunPolynomial
+    rw [hdecodeEq]
   unfold actionRelationFinder
   split
   · rfl
   · unfold actionTerminalRelationFinder
     rw [hout]
     simp only
-    rw [dif_pos haccepts]
     have hxgood : (straightLineRunRecord family basis O).x ∉ szBadSet
         (combineConstraints
           (actionRunModel pp family static inputs hvk hI hchar basis O hdecoded).fixedCols
@@ -328,62 +378,61 @@ theorem actionRelationFinder_covers :
               CommitmentId.vanishingH *
             (Polynomial.X ^ (actionCircuit.toVerifierKey pp
               (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)).n - 1)) := hxy.1
-    have hxgood' := by
-      simpa [actionRunModel, actionRunPolynomial, hdecode] using hxgood
-    obtain ⟨hxgoodProof, hxgoodEq⟩ := Option.isSome_iff_exists.mp
-      ((szBadSetAvoidance?_isSome_iff _ _).2 hxgood')
-    rw [hxgoodEq]
-    have hgoodY' := by
-      simpa [actionRunModel, hdecode] using hxy.2
-    let hn : (actionCircuit.toVerifierKey pp
-      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)).n ≠ 0 := by
-      change 2 ^ actionCircuit.domainExponent ≠ 0
-      positivity
-    obtain ⟨hgoodYProof, hgoodYEq⟩ := Option.isSome_iff_exists.mp
-      (foldSplitAvoidance?_isSome_of _ _ hn _ hgoodY')
-    rw [hgoodYEq]
-    have hpermutation' := by
-      simpa [actionRunPolynomial, hdecode] using
-        (show ResolverPermutationChallengeExclusions
-            (actionCircuit.toVerifierKey pp
-              (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-            (straightLineRunRecord family basis O)
-            (actionRunPolynomial pp family static inputs hvk hI hchar
-              basis O hdecoded) actionActiveRows from
-          ⟨hgamma.1, hbeta.1⟩)
-    obtain ⟨hpermutationProof, hpermutationEq⟩ := Option.isSome_iff_exists.mp
-      (resolverPermutationChallengeExclusions?_isSome_of _ _ _ _ hpermutation')
-    rw [hpermutationEq]
-    have hlookup' := by
-      simpa [actionRunPolynomial, hdecode] using
-        (show TopLevelLookupCoherence.TopLevelLookupChallengeExclusions
-            actionCircuit pp
-            (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)
-            (straightLineRunRecord family basis O)
-            (actionRunPolynomial pp family static inputs hvk hI hchar
-              basis O hdecoded) from
-          ⟨hgamma.2, hbeta.2, htheta⟩)
-    obtain ⟨hlookupProof, hlookupEq⟩ := Option.isSome_iff_exists.mp
-      (TopLevelLookupCoherence.topLevelLookupChallengeExclusions?_isSome_of
-        actionCircuit pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) _ _ hlookup')
-    rw [hlookupEq]
-    cases hterminal : action_bundleStatement_or_relation_of_decode pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) rfl inputs
-        ((wrappedAdversary family.toFamily basis).run O).1.proof.1
-        (straightLineRunRecord family basis O)
-        (((wrappedAdversary family.toFamily basis).run O).1.multiU
-          (wrappedPreIpaReads ((wrappedAdversary family.toFamily basis).run O)))
-        (((wrappedAdversary family.toFamily basis).run O).1.multiBlind
-          (wrappedPreIpaReads ((wrappedAdversary family.toFamily basis).run O)))
-        (((wrappedAdversary family.toFamily basis).run O).1.aMulti
-          (wrappedPreIpaReads ((wrappedAdversary family.toFamily basis).run O)))
-        (hI basis ▸ hvk basis ▸
-          success.witness.decode.reRound (runRounds family.toFamily basis O))
-        (hchar basis O) haccepts hxgoodProof hgoodYProof
-        hpermutationProof hlookupProof with
-    | inl statement => exact False.elim (hfalse statement)
-    | inr relation => rfl
+    rw [hmodelEq, hpolyEq] at hxgood
+    have hxgoodData := hxgood
+    rw [← combineConstraintsData_eq, ← ComputablePolynomial.sub_eq,
+      ← ComputablePolynomial.mul_eq, ← ComputablePolynomial.sub_eq,
+      ← ComputablePolynomial.pow_eq, ← ComputablePolynomial.X_eq] at hxgoodData
+    have hone : (1 : Polynomial Fp) = ComputablePolynomial.const 1 := by
+      rw [ComputablePolynomial.const_eq, Polynomial.C_1]
+    rw [hone] at hxgoodData
+    unfold straightLineRunRecord straightLineRunOutput at hxgoodData
+    have hxgoodSome := (szBadSetAvoidance?_isSome_iff _ _).2 hxgoodData
+    split
+    · rename_i hxgoodProof _
+      have hgoodY' := hxy.2
+      rw [hmodelEq] at hgoodY'
+      let hn : (actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)).n ≠ 0 := by
+        change 2 ^ actionCircuit.domainExponent ≠ 0
+        positivity
+      have hgoodYSome := foldSplitAvoidance?_isSome_of _ _ hn _ hgoodY'
+      split
+      · rename_i hgoodYProof _
+        have hpermutation' : ResolverPermutationChallengeExclusions
+                (actionCircuit.toVerifierKey pp
+                  (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+                (straightLineRunRecord family basis O)
+                (actionRunPolynomial pp family static inputs hvk hI hchar
+                  basis O hdecoded) actionActiveRows := ⟨hgamma.1, hbeta.1⟩
+        rw [hpolyEq] at hpermutation'
+        have hpermutationSome := resolverPermutationChallengeExclusions?_isSome_of
+          _ _ _ _ hpermutation'
+        split
+        · have hlookup' : TopLevelLookupCoherence.TopLevelLookupChallengeExclusions
+                  actionCircuit pp
+                  (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)
+                  (straightLineRunRecord family basis O)
+                  (actionRunPolynomial pp family static inputs hvk hI hchar
+                    basis O hdecoded) := ⟨hgamma.2, hbeta.2, htheta⟩
+          rw [hpolyEq] at hlookup'
+          have hlookupSome :=
+            TopLevelLookupCoherence.topLevelLookupChallengeExclusions?_isSome_of
+              actionCircuit pp
+              (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) _ _ hlookup'
+          split
+          · split
+            · rename_i statement _
+              exact False.elim (hfalse statement)
+            · rfl
+          · rename_i hlookupEq
+            simpa only [hlookupEq] using hlookupSome
+        · rename_i hpermutationEq
+          simpa only [hpermutationEq] using hpermutationSome
+      · rename_i hgoodYEq
+        simpa only [hgoodYEq] using hgoodYSome
+    · rename_i hxgoodEq
+      simpa only [hxgoodEq] using hxgoodSome
 
 /-- Conservative black-box calls of the combined finder: the existing constraint finder has its
 proved four-call bound, and the terminal fallback performs at most two further represented-run
@@ -402,11 +451,13 @@ theorem actionRelationFinderCalls_le_six
         + 3 * (pp.mergeDerived actionCircuit).k) → Fp) :
     actionRelationFinderCalls pp family basis O ≤ 6 := by
   unfold actionRelationFinderCalls
+  have hcalls := family.straightLineConstraintRelationFinderCalls_le_four basis O
   omega
 
-/-- Random-oracle work of the combined constraint-plus-Action solver. -/
+/-- Random-oracle work of the combined constraint-plus-Action solver.  The terminal fallback adds
+two represented prover runs, each including its own `11+k` designated transcript reads. -/
 def actionDlogRandomOracleQueries : Nat :=
-  6 * family.Q + 3 * (11 + (pp.mergeDerived actionCircuit).k)
+  6 * family.Q + 5 * (11 + (pp.mergeDerived actionCircuit).k)
 
 /-- Group-work envelope of the combined solver.  Terminal comparison work is included in the
 explicit reduction component. -/

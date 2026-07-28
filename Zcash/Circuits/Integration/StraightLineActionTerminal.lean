@@ -44,14 +44,14 @@ indices `j ≥ n` are zero by degree, so this finite traversal returns the full 
 avoidance certificate without computing any root set. -/
 def foldSplitAvoidance?
     (cs : List (Polynomial Fp)) (n : Nat) (hn : n ≠ 0) (y : Fp) :
-    Option (∀ j, y ∉ szBadSet (foldSplitWitness cs n j)) :=
+    Option (PLift (∀ j, y ∉ szBadSet (foldSplitWitness cs n j))) :=
   match finForallOption (fun j : Fin n =>
       szBadSetAvoidance? (foldSplitWitness cs n j.1) y) with
   | none => none
-  | some hgood => some fun j =>
-      if hj : j < n then hgood ⟨j, hj⟩
+  | some hgood => some ⟨fun j =>
+      if hj : j < n then (hgood ⟨j, hj⟩).down
       else not_mem_szBadSet.mpr fun hne =>
-        False.elim (hne (foldSplitWitness_eq_zero_of_le hn (Nat.le_of_not_gt hj)))
+        False.elim (hne (foldSplitWitness_eq_zero_of_le hn (Nat.le_of_not_gt hj)))⟩
 
 theorem foldSplitAvoidance?_isSome_of
     (cs : List (Polynomial Fp)) (n : Nat) (hn : n ≠ 0) (y : Fp)
@@ -201,6 +201,7 @@ def action_bundleStatement_or_relation_of_straightLineDecoded
     hchar
     (actionRunAccepts pp family static basis O inputs hvk hI hdecoded)
 
+set_option maxHeartbeats 800000 in
 /-- **Executable Action-terminal relation finder.**  The constraint adapter first reconstructs
 the decoded run from the family's retained batch coordinates.  This finder then checks the four
 terminal exclusion packages as finite propositions and executes the same Action terminal used by
@@ -242,54 +243,69 @@ def actionTerminalRelationFinder
     | none => none
     | some (PSum.inr relation) =>
         some (augmentedBasis_ursOfAugmentedBasis
-          (pp.mergeDerived actionCircuit).k basis ▸ relation.toAlgebraicRelationWitness)
+          (pp.mergeDerived actionCircuit).k basis ▸
+            AugmentedRelationWitness.toAlgebraicRelationWitness relation)
     | some (PSum.inl success) =>
-        let decode := hI basis ▸ hvk basis ▸
-          success.witness.decode.reRound (runRounds family.toFamily basis O)
-        if haccepts : DeployedAccepts urs rfl
+        let decode : DeployedAlgebraicDecode urs rfl
             (actionCircuit.toVerifierKey pp urs)
-            (actionCircuit.instanceCommitment pp urs inputs) pnu.1.proof.1 ch then
-          let model := CanonicalMemberConstraintRelation.acceptedModel
-            (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi)
-            (hblinding := ActionPermutationDomain.blindingFactors_lt pp urs) haccepts
-          let polynomial := CanonicalMemberConstraintRelation.acceptedPolynomial
-            (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi) haccepts
-          match hxgood : szBadSetAvoidance?
-              (combineConstraints model.fixedCols model.adviceCols model.instanceCols model.gates
+            (actionCircuit.instanceCommitment pp urs inputs) pnu.1.proof.1 ch
+            (pnu.1.aMulti (wrappedPreIpaReads pnu))
+            (pnu.1.multiU (wrappedPreIpaReads pnu))
+            (pnu.1.multiBlind (wrappedPreIpaReads pnu)) := hI basis ▸ hvk basis ▸
+          success.witness.decode.reRound (runRounds family.toFamily basis O)
+        let haccepts : DeployedAccepts urs rfl
+            (actionCircuit.toVerifierKey pp urs)
+            (actionCircuit.instanceCommitment pp urs inputs) pnu.1.proof.1 ch :=
+          hI basis ▸ hvk basis ▸ success.accepts
+        let model := CanonicalMemberConstraintRelation.acceptedModel
+          (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi)
+          (hblinding := ActionPermutationDomain.blindingFactors_lt pp urs) haccepts
+        let polynomial := CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi) haccepts
+        match hxgood : szBadSetAvoidance?
+            (ComputablePolynomial.sub
+              (combineConstraintsData model.fixedCols model.adviceCols model.instanceCols model.gates
                 model.sets model.chunks model.lookups model.beta model.gamma model.delta model.theta
-                ch.y model.chunkLen model.l0 model.lLast model.lBlind -
-                polynomial CommitmentId.vanishingH *
-                  (Polynomial.X ^ (actionCircuit.toVerifierKey pp urs).n - 1)) ch.x with
-          | some hxgoodProof =>
-            let hn : (actionCircuit.toVerifierKey pp urs).n ≠ 0 := by
-              change 2 ^ actionCircuit.domainExponent ≠ 0
-              positivity
-            match hgoodY : foldSplitAvoidance? model.constraints
-                (actionCircuit.toVerifierKey pp urs).n hn ch.y with
-            | some hgoodYProof =>
-              match hpermutation : resolverPermutationChallengeExclusions?
-                  (actionCircuit.toVerifierKey pp urs) ch polynomial actionActiveRows with
-              | some hpermutationProof =>
-                match hlookup : TopLevelLookupCoherence.topLevelLookupChallengeExclusions?
-                    actionCircuit pp urs ch polynomial with
-                | some hlookupProof =>
-                  match action_bundleStatement_or_relation_of_decode pp urs rfl inputs
-                      pnu.1.proof.1 ch
-                      (pnu.1.multiU (wrappedPreIpaReads pnu))
-                      (pnu.1.multiBlind (wrappedPreIpaReads pnu))
-                      (pnu.1.aMulti (wrappedPreIpaReads pnu)) decode
-                      (hchar basis O) haccepts hxgoodProof hgoodYProof
-                      hpermutationProof hlookupProof with
-                  | PSum.inl _ => none
-                  | PSum.inr relation =>
-                      some (augmentedBasis_ursOfAugmentedBasis
-                        (pp.mergeDerived actionCircuit).k basis ▸
-                          relation.toAlgebraicRelationWitness)
-                | none => none
+                ch.y model.chunkLen model.l0 model.lLast model.lBlind)
+              (ComputablePolynomial.mul (polynomial CommitmentId.vanishingH)
+                (ComputablePolynomial.sub
+                  (ComputablePolynomial.pow ComputablePolynomial.X
+                    (actionCircuit.toVerifierKey pp urs).n)
+                  (ComputablePolynomial.const 1)))) ch.x with
+        | some hxgoodProof =>
+          let hn : (actionCircuit.toVerifierKey pp urs).n ≠ 0 := by
+            change 2 ^ actionCircuit.domainExponent ≠ 0
+            positivity
+          match hgoodY : foldSplitAvoidance? model.constraints
+              (actionCircuit.toVerifierKey pp urs).n hn ch.y with
+          | some hgoodYProof =>
+            match hpermutation : resolverPermutationChallengeExclusions?
+                (actionCircuit.toVerifierKey pp urs) ch polynomial actionActiveRows with
+            | some hpermutationProof =>
+              match hlookup : TopLevelLookupCoherence.topLevelLookupChallengeExclusions?
+                  actionCircuit pp urs ch polynomial with
+              | some hlookupProof =>
+                match action_bundleStatement_or_relation_of_decode pp urs rfl inputs
+                    pnu.1.proof.1 ch
+                    (pnu.1.multiU (wrappedPreIpaReads pnu))
+                    (pnu.1.multiBlind (wrappedPreIpaReads pnu))
+                    (pnu.1.aMulti (wrappedPreIpaReads pnu)) decode
+                    (hchar basis O) haccepts (by
+                      simpa only [ComputablePolynomial.sub_eq, ComputablePolynomial.mul_eq,
+                        ComputablePolynomial.pow_eq, ComputablePolynomial.X_eq,
+                        ComputablePolynomial.const_eq, Polynomial.C_1,
+                        combineConstraintsData_eq] using hxgoodProof.down)
+                    hgoodYProof.down
+                    hpermutationProof.down hlookupProof.down with
+                | PSum.inl _ => none
+                | PSum.inr relation =>
+                    some (augmentedBasis_ursOfAugmentedBasis
+                      (pp.mergeDerived actionCircuit).k basis ▸
+                        AugmentedRelationWitness.toAlgebraicRelationWitness relation)
               | none => none
             | none => none
           | none => none
-        else none
+        | none => none
 
 /-- The single relation finder priced by the final Action capstone: the existing IPA/unbatching/
 quotient finder first, followed by the executable Action-terminal finder. -/

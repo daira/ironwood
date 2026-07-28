@@ -244,7 +244,7 @@ def chunkPermutationOfFlat
 At row `i`, its interpolation value is the identity name of the cell to which keygen's global
 permutation sends `(chunk, i, column)`. This is the mathematical form of Halo2's σ-column
 construction; commitment encoding and comparison with a concrete VK are deliberately downstream. -/
-def keygenSigmaColumn
+noncomputable def keygenSigmaColumn
     {nc m : ℕ} {width : ℕ → ℕ}
     (omega delta : Fp) (chunkLen : ℕ)
     (sigma : Equiv.Perm (ChunkCell nc m width))
@@ -516,7 +516,7 @@ theorem uniformChallenge_resolverPermutationZeroFactorBadSet
 
 /-- The complete `γ` exclusion: roots needed for multiset recovery together with the individual
 source-cell factors that must stay nonzero while propagating equality around a cycle. -/
-def resolverPermutationGammaBadSet
+noncomputable def resolverPermutationGammaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → Polynomial Fp)

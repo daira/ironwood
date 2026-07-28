@@ -181,7 +181,8 @@ theorem instanceRowPolynomial_eq_keygenSigmaColumn
         (sigma ⟨chunk, i, column⟩).2.2) :
     instanceRowPolynomial n omega rows =
       keygenSigmaColumn omega delta chunkLen sigma chunk column := by
-  unfold instanceRowPolynomial rowPolynomial keygenSigmaColumn zeroPaddedRows
+  unfold instanceRowPolynomial zeroPaddedRows keygenSigmaColumn
+  rw [rowPolynomial_eq_lagrange]
   exact congrArg _ (funext fun i => hval i)
 
 namespace CanonicalMemberConstraintRelation
@@ -244,11 +245,12 @@ def permCommon_eq_rowPolynomial_or_relation
     have routed := assembledQueryMemberRoute_faithful
       (instanceCommitment := instanceCommitment) vk ps ch relation.groupingCount
       relation.noDuplicateQueries q hq
+    unfold CanonicalMemberConstraintRelation.route
     rw [← hqid, routed.route_eq]
     rfl
   let slot := (relation.route (.permCommon (c : Nat))).get hsome
   have routedCommon :
-      relation.route (.permCommon (c : ℕ)) = some slot := Option.some_get hsome
+      relation.route (.permCommon (c : ℕ)) = some slot := (Option.some_get hsome).symm
   have hid :
       (deployedSetCommIds (instanceCommitment := instanceCommitment)
         vk ps ch slot.setIndex).getD

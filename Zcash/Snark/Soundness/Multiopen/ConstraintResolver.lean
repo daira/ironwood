@@ -2,6 +2,7 @@ import Mathlib
 import Zcash.Common.RelationWitness
 import Zcash.Snark.Soundness.Canonical.LookupInstantiation
 import Zcash.Snark.Soundness.Multiopen.NodeBinding
+import Zcash.Snark.Verifier.QueryCommitment
 
 /-!
 # Routing decoded multiopen members into constraint polynomials
@@ -30,7 +31,7 @@ open Zcash.Arithmetic (Msm)
 
 open Polynomial
 
-set_option maxHeartbeats 20000
+set_option maxHeartbeats 200000
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 variable {shape : Shape} (instanceCommitment : Fin shape.numProofs → ℕ → G)
@@ -91,7 +92,7 @@ def decodedPolynomialResolver [DecidableEq G] [Inhabited G]
     | some slot =>
         decodedMemberPolynomial (instanceCommitment := instanceCommitment)
           urs hk vk ps ch memberDecode slot
-    | none => 0
+    | none => ComputablePolynomial.zero
 
 /-- The claimed value stored by the deployed grouping for a member at a point of its point set. -/
 def deployedMemberClaim [DecidableEq G] [Inhabited G]
@@ -184,7 +185,7 @@ def assembledQueryMemberRoute_faithful [DecidableEq G] [Inhabited G]
     exact ⟨q, hq, by simp⟩
   let q' := (queries.find? (fun q' => decide (q'.commId = q.commId))).get hsome
   have hfind : queries.find? (fun q' => decide (q'.commId = q.commId)) = some q' :=
-    Option.some_get hsome
+    (Option.some_get hsome).symm
   have hq'mem : q' ∈ queries := List.mem_of_find?_eq_some hfind
   have hq'id : q'.commId = q.commId := by simpa using List.find?_some hfind
   let route := constructIntermediateSets_comm_route queries hq'mem hq'id
@@ -206,7 +207,18 @@ def assembledQueryMemberRoute_faithful [DecidableEq G] [Inhabited G]
       route_eq := ?_
       point_mem := ?_
       claim_eq := ?_ }
-  · simp only [assembledQueryMemberRoute, queries, hfind]
+  · have hfind' : (assembleQueries vk instanceCommitment ps ch).find?
+        (fun candidate => decide (candidate.commId = q.commId)) = some q' := by
+      simpa only [queries] using hfind
+    dsimp only [assembledQueryMemberRoute]
+    split
+    · rename_i hnone
+      rw [hnone] at hfind'
+      contradiction
+    · rename_i found hfound
+      have hfoundEq : found = q' := Option.some.inj (hfound.symm.trans hfind')
+      subst found
+      rfl
   · rw [deployedSetPts, List.mem_toFinset]
     exact hall.1
   · simpa only [deployedMemberClaim, deployedSetQueries,
@@ -232,7 +244,7 @@ theorem assembledQueryMemberRoute_id [DecidableEq G] [Inhabited G]
         vk ps ch hcount hdup id = some slot) :
     (deployedSetCommIds (instanceCommitment := instanceCommitment)
       vk ps ch slot.setIndex).getD (slot.memberIndex : ℕ) .vanishingH = id := by
-  unfold assembledQueryMemberRoute at hroute
+  dsimp only [assembledQueryMemberRoute] at hroute
   split at hroute
   · cases hroute
   · rename_i q hfind

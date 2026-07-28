@@ -123,10 +123,28 @@ def resolverGatePolynomial
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex : Fin shape.numProofs)
     (gateIndex : Fin vk.gates.length) : Polynomial Fp :=
-  (vk.gates[gateIndex].map C).eval
+  letI : CommRing (Polynomial Fp) := ComputablePolynomial.commRing
+  (vk.gates[gateIndex].map ComputablePolynomial.const).eval
     (fixedQueryFeedOfResolver vk poly)
     (adviceQueryFeedOfResolver vk poly proofIndex)
     (instanceQueryFeedOfResolver vk poly proofIndex)
+
+theorem resolverGatePolynomial_eq
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G)
+    (poly : CommitmentId → Polynomial Fp)
+    (proofIndex : Fin shape.numProofs)
+    (gateIndex : Fin vk.gates.length) :
+    resolverGatePolynomial vk poly proofIndex gateIndex =
+      (vk.gates[gateIndex].map C).eval
+        (fixedQueryFeedOfResolver vk poly)
+        (adviceQueryFeedOfResolver vk poly proofIndex)
+        (instanceQueryFeedOfResolver vk poly proofIndex) := by
+  have hconst : (ComputablePolynomial.const : Fp → Polynomial Fp) = C := by
+    funext c
+    exact ComputablePolynomial.const_eq c
+  unfold resolverGatePolynomial
+  rw [← ComputablePolynomial.commRing_eq (R := Fp), hconst]
 
 /-- Polynomial evaluation commutes with lifting a verifier expression by `C`. -/
 private theorem eval_map_C
@@ -154,6 +172,7 @@ theorem resolverGatePolynomial_eval
           (adviceQueryFeedOfResolver vk poly proofIndex query).eval x)
         (fun query =>
           (instanceQueryFeedOfResolver vk poly proofIndex query).eval x) := by
+  rw [resolverGatePolynomial_eq]
   exact eval_map_C
     (fixedQueryFeedOfResolver vk poly)
     (adviceQueryFeedOfResolver vk poly proofIndex)
@@ -176,12 +195,11 @@ theorem resolverGatePolynomial_mem
     resolverGatePolynomial vk poly proofIndex gateIndex ∈
       (constraintModelOfResolver vk ch poly sets chunks
         l0 lLast lBlind).gateConstraints proofIndex := by
-  rw [List.mem_iff_getElem]
+  rw [ConstraintPolyModel.gateConstraints_eq, List.mem_iff_getElem]
   refine ⟨gateIndex, ?_, ?_⟩
-  · simp [ConstraintPolyModel.gateConstraints,
+  · simp [
       constraintModelOfResolver]
-  · simp [ConstraintPolyModel.gateConstraints,
-      constraintModelOfResolver, resolverGatePolynomial]
+  · simp [constraintModelOfResolver, resolverGatePolynomial_eq]
 
 /--
 One enabled Clean constraint produces its resolver-model polynomial witness.

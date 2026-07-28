@@ -644,10 +644,13 @@ theorem deployedX3RootSet_of_zero
     deployedX3RootSet urs hk vk ic ps ch b = ↑(deployedAllPts vk ic ps ch) := by
   haveI : IsEmpty (Fin (deployedX4PairCount vk ic ps ch)) := by
     rw [hcount]; infer_instance
+  have hq : deployedAlgebraicQPrime urs hk vk ic ps ch b.x4 = 0 := by
+    rw [deployedAlgebraicQPrime, hc, coeffsToPoly_eq_sum]
+    simp [Finset.univ_eq_empty]
   rw [deployedX3RootSet,
     show deployedX3ErrorPolynomial urs hk vk ic ps ch b.x4 = 0 from by
-      simp [deployedX3ErrorPolynomial, clearedQuotientErrorPolynomial,
-        deployedAlgebraicQPrime, hc, coeffsToPoly, Finset.univ_eq_empty]]
+      rw [deployedX3ErrorPolynomial, clearedQuotientErrorPolynomial, hq]
+      simp [Finset.univ_eq_empty]]
   simp [szBadSet]
 
 end RootSetCollapse

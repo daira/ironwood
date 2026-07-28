@@ -177,7 +177,7 @@ def polynomialWitness
     (top.selectorMap.lookup enabled.gate.selector.index).get hlookupPresent
   have hcompressed :
       top.selectorMap.lookup enabled.gate.selector.index =
-        some compressed := Option.some_get hlookupPresent
+        some compressed := (Option.some_get hlookupPresent).symm
   have hroots :
       SelectorRootsWellFormed top.selectorMap := by
     change SelectorRootsWellFormed

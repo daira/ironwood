@@ -473,7 +473,7 @@ theorem action_dlog_queries_le_2pow126
   unfold actionDlogRandomOracleQueries
   simp only [show (actionProofParams.mergeDerived actionCircuit).k = 11 from rfl]
   calc
-    6 * family.Q + 3 * (11 + 11) ≤ 6 * 2 ^ 123 + 3 * (11 + 11) := by omega
+    6 * family.Q + 5 * (11 + 11) ≤ 6 * 2 ^ 123 + 5 * (11 + 11) := by omega
     _ ≤ 8 * 2 ^ 123 := by norm_num
     _ = 2 ^ 126 := by norm_num
 
