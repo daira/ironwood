@@ -3,6 +3,7 @@ import Zcash.Snark.Fixtures.MultiAction.Degree
 import Zcash.Snark.Fixtures.MultiAction.StaticChecks
 import Zcash.Snark.Fixtures.MultiAction.Schedule
 import Zcash.Snark.Fixtures.MultiAction.KnowledgeError
+import Zcash.Snark.Fixtures.MultiAction.StraightLineKnowledgeError
 import Zcash.Meta.AxiomCheck
 
 /-!
@@ -26,6 +27,13 @@ The instance-commitment derivation (`instance_commitments_derived`,
 `capturedPublicInstances_within_lagrange`) is pinned on the same footing, together with the data and
 functions it ranges over; see the single-action sibling for why this is the fixture's new trust
 surface.
+
+Two AGM capstones are retained.  The recursive/reprogramming endpoint uses the unconditional AFK
+expectation, fixed-budget truncation, and an explicit Markov tail.  The parallel straight-line
+endpoint instead consumes an online representation trace and has a pointwise four-invocation
+bound.  Those representations are ghost extractor data: they are neither transmitted nor checked
+by the Halo2 verifier.  Accordingly the tighter endpoint is only an AGM-and-random-oracle result
+under the supplied finite-security Vesta DLOG profile.
 -/
 
 assert_axioms Zcash.Snark.Fixture2.capturedPointCoordinatesValid_eq_true +native(

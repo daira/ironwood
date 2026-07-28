@@ -1119,6 +1119,21 @@ assert_axioms Zcash.Snark.deployedConstraintSemanticFailure_subset_union +native
 assert_axioms Zcash.Snark.snarkConstraintsSemanticDeployed_prob_le_of_root_schedule +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
+-- Parallel straight-line AGM capstone. The staged representation trace, not the final
+-- `AlgebraicWfProof` alone, supplies IPA squeeze chronology. Its complete deployed constraint
+-- finder has a pointwise four-invocation bound and therefore needs no AFK truncation or Markov
+-- term. Representations remain ghost extractor data, outside the Halo2 proof and verifier.
+assert_axioms StraightLineIpaOnlineTrace.toSqueezeInvariance +native
+assert_axioms AlgebraicWfProof.straightLineIpaZeroOrRelation +native
+assert_computable ComputedStraightLineIpaFSFamily.straightLineIpaRelationFinder +choice +native
+assert_computable ComputedStraightLineDeployedFSFamily.straightLineDeployedRelationFinder +choice +native
+assert_computable ComputedStraightLineDeployedFSFamily.straightLineConstraintRelationFinder +choice +native
+assert_axioms ComputedStraightLineDeployedFSFamily.straightLineConstraintRelationFinderCalls_le_four +native
+assert_axioms ComputedStraightLineDeployedFSFamily.straightLineConstraintFailureSet_subset +native
+assert_axioms ComputedStraightLineDeployedFSFamily.straightLineConstraintFailure_prob_le_of_generatorRO_dlogProfile +native
+assert_axioms ComputedStraightLineDeployedFSFamily.straightLineDlogGroupWork_le_32_mul
+assert_axioms ComputedStraightLineDeployedFSFamily.five_bit_overhead_at_2pow122
+
 /-! ## The Action circuit — the halo2-native soundness trust surface
 
 The circuit-layer soundness theorems live at the `native_decide` tier: they consume

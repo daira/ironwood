@@ -1009,6 +1009,7 @@ variable (basis : ι → G) (k : ℕ) (A : OracleComp T F P) (prefixes : P → F
   (rounds : P → Fin k → AlgebraicPoint (F := F) basis × AlgebraicPoint (F := F) basis)
   (final : P → F × F) (win : (T → F) → P → Prop) (decideWin : ∀ O p, Decidable (win O p))
 
+omit [Fintype T] in
 /-- After summing a node over sampling orders and child tapes, its scan term is exactly the
 explicit AFK charge.  This is the bridge between the pointwise gated accounting and the
 output-steered oracle-table argument. -/
@@ -1276,7 +1277,6 @@ theorem recursiveAlgebraicForkFrom_oracle_tape_sum_runs_le_step {Q d m : ℕ}
                   · congr 1
                     · rw [Finset.sum_const, Finset.card_univ, smul_eq_mul]
                     · rw [← Finset.mul_sum, ← Finset.mul_sum]
-                      rfl
                   · rw [← Finset.mul_sum]
     _ ≤ CO * (CP * CT ^ Fintype.card F)
         + CP * (CT ^ (Fintype.card F - 1) * childSum)
@@ -1320,12 +1320,9 @@ theorem recursiveAlgebraicForkFrom_oracle_tape_sum_runs_le_poly {Q : ℕ}
         simp [RecursiveForkTape.toCoins, recursiveAlgebraicForkFrom]
       rw [Finset.sum_congr rfl (fun O _ ↦
         Finset.sum_congr rfl (fun tape _ ↦ hone O tape))]
-      rw [Finset.sum_const, Finset.sum_const, Finset.card_univ, smul_eq_mul, mul_one]
-      simp only [afkRunBound, pow_zero, mul_one]
-      have hfactor : 1 ≤ 8 * Q + 1 := by omega
-      simpa only [one_mul, mul_assoc] using
-        Nat.mul_le_mul_right (Fintype.card (RecursiveForkTape F 0))
-          (Nat.mul_le_mul_right (Fintype.card (T → F)) hfactor)
+      simp only [Finset.sum_const, Finset.card_univ, smul_eq_mul, afkRunBound, pow_zero, mul_one]
+      rw [mul_assoc]
+      exact Nat.le_mul_of_pos_left _ (by omega)
   | succ d ih =>
       intro m hmk
       let N := Fintype.card F
@@ -1376,7 +1373,6 @@ theorem recursiveAlgebraicForkFrom_oracle_tape_sum_runs_le_poly {Q : ℕ}
         _ = afkRunBound Q (d + 1) * Fintype.card (T → F) *
               Fintype.card (RecursiveForkTape F (d + 1)) := by
                 rw [hcard]
-                rfl
 
 /-- Root-level form of the unconditional polynomial AFK call bound. -/
 theorem recursiveAlgebraicFork_oracle_tape_sum_runs_le_poly {Q : ℕ}

@@ -335,7 +335,8 @@ def truncatedRelationFinderCalls
     (calls : (ι -> G) -> ρ -> Nat) (L : Nat) : (ι -> G) -> ρ -> Nat :=
   fun basis coins => min (calls basis coins) L
 
-omit [Fintype ι] [DecidableEq ι] [Nonempty ι] [Fintype F] [Fintype ρ] [Nonempty ρ] in
+omit [AddCommGroup G] [Fintype ι] [DecidableEq ι] [Nonempty ι] [Fintype F] [Fintype ρ]
+  [Nonempty ρ] in
 /-- Truncation enforces the fixed call budget pointwise. -/
 theorem truncatedRelationFinderCalls_le
     (calls : (ι -> G) -> ρ -> Nat) (L : Nat) (basis : ι -> G) (coins : ρ) :
@@ -355,6 +356,7 @@ def TextbookDLWithCoinsTruncatedAdvantageLE
   TextbookDLWithCoinsFixedCallsAdvantageLE B
     (truncateRelationFinder A calls L) (truncatedRelationFinderCalls calls L) L bound
 
+omit [Nonempty ι] in
 /-- The call-budget component of the truncated DLOG premise is discharged by construction; its
 only computational assumption is the textbook-DLOG advantage of the truncated finder. -/
 theorem textbookDLWithCoinsTruncatedAdvantageLE_iff
@@ -379,6 +381,7 @@ noncomputable def relationFinderCallTail
     (calls : (ι -> G) -> ρ -> Nat) (L : Nat) : Finset ((ι -> F) × ρ) :=
   Finset.univ.filter (fun p => L < calls (scalarBasis B p.1) p.2)
 
+omit [Nonempty ι] [Nonempty ρ] in
 /-- Every relation returned by the original finder is either returned by its fixed-budget
 truncation or lies in the over-budget tail. -/
 theorem relSetWithCoins_subset_truncate_union_tail
@@ -394,13 +397,14 @@ theorem relSetWithCoins_subset_truncate_union_tail
     simp only [relationFinderCallTail, Finset.mem_filter, Finset.mem_univ, true_and]
     exact Nat.lt_of_not_ge hbudget
 
+omit [Nonempty ι] in
 /-- Finite Markov inequality for the modeled call count.  If its expectation is at most `R`, the
 probability of exceeding `L` calls is at most `R/(L+1)`. -/
 theorem relationFinderCallTail_prob_le
     (calls : (ι -> G) -> ρ -> Nat) {R L : Nat}
     (hExpected : RelationFinderExpectedCallsLE calls R) :
     (PMF.uniformOfFintype ((ι -> F) × ρ)).toOuterMeasure
-        (relationFinderCallTail B calls L)
+        (relationFinderCallTail (F := F) B calls L)
       <= (R : ℝ≥0∞) / (L + 1 : Nat) := by
   have hfiber : forall s : ι -> F,
       (PMF.uniformOfFintype ρ).toOuterMeasure
@@ -411,9 +415,9 @@ theorem relationFinderCallTail_prob_le
       Finset.univ.filter (fun coins => L < calls (scalarBasis B s) coins)
     have htail : (L + 1) * tail.card <= R * Fintype.card ρ := by
       calc
-        (L + 1) * tail.card = ∑ _coins in tail, (L + 1) := by
-          rw [Finset.sum_const, nsmul_eq_mul, Nat.mul_comm]
-        _ <= ∑ coins in tail, calls (scalarBasis B s) coins := by
+        (L + 1) * tail.card = ∑ _coins ∈ tail, (L + 1) := by
+          rw [Finset.sum_const, nsmul_eq_mul, Nat.mul_comm, Nat.cast_id]
+        _ <= ∑ coins ∈ tail, calls (scalarBasis B s) coins := by
           apply Finset.sum_le_sum
           intro coins hcoins
           have hlarge : L < calls (scalarBasis B s) coins :=
@@ -442,7 +446,7 @@ theorem relationFinderCallTail_prob_le
     rw [ENNReal.le_div_iff_mul_le (Or.inl hL0) (Or.inl hLtop)]
     simpa only [mul_comm] using htailE
   have htailSet :
-      (↑(relationFinderCallTail B calls L) : Set ((ι -> F) × ρ)) =
+      (↑(relationFinderCallTail (F := F) B calls L) : Set ((ι -> F) × ρ)) =
         {p | p.2 ∈ {coins : ρ | L < calls (scalarBasis B p.1) coins}} := by
     ext p
     simp [relationFinderCallTail]
@@ -462,7 +466,7 @@ theorem relationWithCoins_prob_le_of_truncated_textbookDL
       (↑(relSetWithCoins B A) : Set ((ι -> F) × ρ)) <=
         (↑(relSetWithCoins B (truncateRelationFinder A calls L)) :
             Set ((ι -> F) × ρ)) ∪
-          (↑(relationFinderCallTail B calls L) : Set ((ι -> F) × ρ)) := by
+          (↑(relationFinderCallTail (F := F) B calls L) : Set ((ι -> F) × ρ)) := by
     intro p hp
     change p ∈ relSetWithCoins B A at hp
     have hout := relSetWithCoins_subset_truncate_union_tail B A calls L hp

@@ -410,7 +410,7 @@ theorem deployedConstraintReductionEfficient_poly
   calc
     ∑ coins : family.toFamily.Coins, deployedConstraintRelationFinderCalls family basis coins
         <= ∑ coins : family.toFamily.Coins,
-            (family.toFamily.instanceAttempt basis coins).runs + 3 :=
+            ((family.toFamily.instanceAttempt basis coins).runs + 3) :=
       Finset.sum_le_sum fun coins _ =>
         deployedConstraintRelationFinderCalls_le family basis coins
     _ = (∑ coins : family.toFamily.Coins,

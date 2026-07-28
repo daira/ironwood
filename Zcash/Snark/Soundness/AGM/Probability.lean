@@ -364,38 +364,26 @@ def discreteLogOfRandomizedRelation (X : G) (α t : ι → F)
 
 variable (A : (b : ι → G) → Option (AlgebraicRelationWitness (F := F) b))
 
-/-- The coefficient vector the finder returns on the presented basis, `0` when it returns
-nothing. -/
-noncomputable def returnedCoeffs (s : ι → F) : ι → F :=
-  match A (scalarBasis B s) with
-  | some r => r.coeffs
-  | none => 0
+/-! The randomized reduction reads the finder's output through the same `returnedCoeffs` and
+`pivotSlot` the programmed reduction uses. `pivotSlot` is chosen *after* the adversary runs and
+serves only to count annihilating hiding vectors; this reduction plants no slot. -/
 
 omit [DecidableEq ι] [Nonempty ι] [Fintype F] in
 /-- On a relation-producing scalar vector, the returned coefficients are nontrivial. -/
 theorem returnedCoeffs_ne_zero {s : ι → F} (hs : (A (scalarBasis B s)).isSome) :
     returnedCoeffs B A s ≠ 0 := by
   obtain ⟨r, hr⟩ := Option.isSome_iff_exists.mp hs
-  have h : returnedCoeffs B A s = r.coeffs := by simp only [returnedCoeffs, hr]
-  rw [h]
+  rw [returnedCoeffs_of_eq_some B A hr]
   exact r.nontrivial
-
-/-- A slot at which the returned relation has a nonzero coefficient.
-
-This is chosen *after* the adversary runs and is used only to count annihilating hiding vectors;
-the reduction itself plants no slot. -/
-noncomputable def pivotSlot (s : ι → F) : ι :=
-  if h : ∃ i, returnedCoeffs B A s i ≠ 0 then h.choose else Classical.arbitrary ι
 
 omit [DecidableEq ι] [Fintype F] in
 /-- The pivot slot really carries a nonzero coefficient. -/
 theorem returnedCoeffs_pivotSlot {s : ι → F} (hs : returnedCoeffs B A s ≠ 0) :
     returnedCoeffs B A s (pivotSlot B A s) ≠ 0 := by
-  have hex : ∃ i, returnedCoeffs B A s i ≠ 0 := by
-    by_contra h
-    exact hs (funext fun i => not_not.mp (not_exists.mp h i))
-  rw [pivotSlot, dif_pos hex]
-  exact hex.choose_spec
+  refine returnedCoeffs_pivotSlot_ne_zero B A ?_
+  by_contra hnone
+  rw [Option.not_isSome_iff_eq_none] at hnone
+  exact hs (by simp [returnedCoeffs, hnone])
 
 /-- Scalar vectors and hiding vectors on which the randomized reduction extracts. -/
 noncomputable def tightSuccSet : Finset ((ι → F) × (ι → F)) :=

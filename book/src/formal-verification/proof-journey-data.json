@@ -279,7 +279,7 @@
       "chapter": "AGM to discrete log",
       "title": "Price the relation branch",
       "claim": "The algebraic Fiat-Shamir game produces PR #28's deployed instances, states binding as a computable value mismatch against the carried aggregate opening (never as nonexistence of an opening, which holds vacuously in a prime-order group), and feeds every mismatch run's explicit relation to the plain-DL probability bound.",
-      "summary": "PR #28 defines AlgebraicDForkCert and the deployed AGM instance. The programmed-basis relation-to-DL reduction plants the challenge in every basis slot and loses only one 1/|F| hyperplane. PR #56 supplies the executable adaptive side: every adversary-emitted group point carries a basis representation; recursiveAlgebraicFork computes the fork tree from an oracle table and finite tape; algebraicForkCertAttempt_valid proves the resulting certificate valid; and computedDeployedAlgebraicInstance packages it for PR #28. The unconditional AFK analysis bounds expected black-box calls, and the final deployed combined finder converts that expectation to a fixed call budget with an explicit truncation tail.",
+      "summary": "PR #28 defines AlgebraicDForkCert and the deployed AGM instance. The programmed-basis relation-to-DL reduction plants the challenge in every basis slot and loses only one 1/|F| hyperplane. PR #56 supplies the executable adaptive side: every adversary-emitted group point carries a basis representation; recursiveAlgebraicFork computes the fork tree from an oracle table and finite tape; algebraicForkCertAttempt_valid proves the resulting certificate valid; and computedDeployedAlgebraicInstance packages it for PR #28. The unconditional AFK analysis bounds expected black-box calls, and the recursive deployed combined finder converts that expectation to a fixed call budget with an explicit truncation tail. A parallel straight-line AGM finder consumes a staged representation trace, has a pointwise four-invocation bound, and prices each IPA discrepancy as a pinned quadratic without AFK truncation.",
       "nodes": [
         "relation",
         "fsAdversary",
@@ -410,10 +410,13 @@
         "The programmed-basis relation-to-discrete-log transformation is deterministic and its miss refers to the same relation; the miss costs exactly one 1/|F| hyperplane.",
         "The recursive extractor has the unconditional field-independent expected-call bound (8·Q+1)·10^k, with no FamilyForkSpread premise.",
         "The deployed combined finder adds at most three black-box calls, truncates at the fixed budget L, and charges the tail ((8·Q+1)·10^k+3)/(L+1).",
-        "For distinct parameter queries, the Fiat-Shamir binding event in the uniform generator-RO model is bounded by the fixed-call discrete-log advantage plus the explicit truncation tail."
+        "For distinct parameter queries, the recursive Fiat-Shamir binding event in the uniform generator-RO model is bounded by the fixed-call discrete-log advantage plus the explicit truncation tail.",
+        "The additive straight-line AGM endpoint derives each IPA pinned-root invariant from a staged representation trace and covers accepting failure by the zero slice, 2k IPA roots, deployed multiopen roots, the constraint-x root, or one explicit DLOG relation.",
+        "The straight-line combined finder uses at most four prover invocations, so its DLOG capstone has no AFK expectation, truncation, or Markov term.",
+        "At the consensus maximum and T=2^122, its non-DLOG statistical terms are below 2^-85; an explicitly profiled five-bit reduction overhead maps the 2^122 adversary-work target to the 2^127 DLOG-solver scale."
       ],
       "residuals": [
-        "Identify deployed Blake2b and halo2's concrete hash-to-curve with their modeled random oracles, assume fixed-call Vesta DL hardness, and supply the external PPT bound for non-oracle work."
+        "Identify deployed Blake2b and halo2's concrete hash-to-curve with their modeled random oracles; instantiate the staged AGM representation trace from the concrete prover schedule; assume finite-security Vesta DL hardness; and supply the external group-work bound for algebraic postprocessing."
       ],
       "durationMs": 10000
     },
