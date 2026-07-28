@@ -68,17 +68,12 @@ theorem commitIvkHash_get_spec {a n : Fp} {g : PallasGroup}
 /-- **The deployed key-binding break computes a discrete-log relation.** Two valid
 `Commit^ivk` openings of the same `ivk` disagreeing on their opening projection land in
 the chain-collision reducer at the `CommitIvk` domain point and randomness base.
-`hcoeffs` is the chunk-coefficient injectivity at the break's own two chunk lists —
-the binary-expansion core of spec Theorem 5.4.3, and the one named hypothesis left;
-the chunk-encoding injectivity is discharged by `commitIvkChunks_inj`. -/
+The reduction is hypothesis-free: the chunk-coefficient
+injectivity is `preCoeffs_inj` (spec Theorem 5.4.3's binary-expansion core, proven)
+and the chunk-encoding injectivity is `commitIvkChunks_inj`. -/
 def relationOfKeyBindingBreak
     {w₁ w₂ : KeyBinding.Pool.Witness Fq PallasGroup Fp}
     (b : KeyBinding.Pool.Break extract commitIvkHash commitIvkRpt w₁ w₂)
-    (hcoeffs :
-      preCoeffs (commitIvkChunks (extract w₁.akP).val w₁.nk.val)
-          = preCoeffs (commitIvkChunks (extract w₂.akP).val w₂.nk.val) →
-        commitIvkChunks (extract w₁.akP).val w₁.nk.val
-          = commitIvkChunks (extract w₂.akP).val w₂.nk.val)
  :
     NontrivialRelation (F := Fq) pallasS ivkQpt commitIvkRpt :=
   let hs₁ := commitIvkHash_isSome b.kb₁.hash_eq
@@ -96,7 +91,7 @@ def relationOfKeyBindingBreak
       have hpm := (PallasGroup.toPoint_x_eq_iff _ _).mp hx
       rwa [(commitIvkHash_get_spec b.kb₁.hash_eq).choose_spec,
         (commitIvkHash_get_spec b.kb₂.hash_eq).choose_spec] at hpm)
-    hcoeffs
+    (by simp)
     (by
       rintro ⟨hl, hr⟩
       obtain ⟨hak, hnk⟩ := commitIvkChunks_inj
