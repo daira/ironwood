@@ -16,8 +16,10 @@ open Zcash.Snark
 open Zcash.Snark.ComputedStraightLineDeployedFSFamily (straightLineDlogGroupWork)
 open scoped ENNReal
 
-/-- Captured-key straight-line AGM **compressed-identity** capstone.  The family supplies the
-staged IPA representation trace, the deployed root chronology, and the constraint-`x` chronology
+/-- Captured-key straight-line AGM **compressed-identity** capstone: soundness against every
+bounded sequential online-AGM Fiat–Shamir adversary — `SequentialPreXProver.lift` presents any
+such prover as a family, and this bound applies to the result.  The family supplies the staged
+IPA representation trace, the deployed root chronology, and the constraint-`x` chronology
 `x` pinning is derived from; the captured key discharges the static checks and degree budget.
 The captured premise pins scalar metadata, layouts, and expressions only — no literal fixture
 commitment equality across sampled AGM bases.  The only computational term is the explicit

@@ -121,4 +121,5 @@ import Zcash.Snark.Soundness.Composition.ZeroStraightLine
 import Zcash.Snark.Soundness.AGM.DecodeToOpened
 import Zcash.Snark.Soundness.Composition.SemanticChallengeRemainder
 import Zcash.Snark.Soundness.Composition.StraightLineDecodeSupply
+import Zcash.Snark.Soundness.Composition.SequentialLift
 import Zcash.Snark.Soundness.Composition.DirectPathCost

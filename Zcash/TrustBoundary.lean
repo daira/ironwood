@@ -46,6 +46,7 @@ import Zcash.Circuits.Integration.StraightLineActionTerminal
 import Zcash.Circuits.Integration.StraightLineActionEvent
 import Zcash.Snark.Soundness.Composition.SemanticChallengeRemainder
 import Zcash.Snark.Soundness.Composition.StraightLineDecodeSupply
+import Zcash.Snark.Soundness.Composition.SequentialLift
 import Zcash.Snark.Soundness.AGM.ZeroFamily
 import Zcash.Snark.Soundness.AGM.ZeroFamilyRoots
 import Zcash.Snark.Soundness.Composition.ZeroStraightLine
@@ -1122,6 +1123,19 @@ assert_axioms Zcash.Snark.zeroConstraintDifference_explicit +native(
 assert_axioms Zcash.Snark.zeroConstConstraintXTrace +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.zeroConstStraightLineDeployedFamily +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- Adversary coverage (#127 C8): the sequential online-AGM prover model and its lifting to
+-- the staged family; the total difference reads only the pre-x view.
+assert_axioms Zcash.Snark.committedPreXConstraintDifference_ps_congr
+assert_axioms Zcash.Snark.committedPreXConstraintDifference_challenge_congr
+assert_axioms Zcash.Snark.PreXView.difference +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.SequentialPreXProver.view_difference_eq +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.SequentialPreXProver.toConstraintXTrace +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.SequentialPreXProver.lift +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.SequentialPreXProver.lift_adversary +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.SequentialPreXProver.lift_Q +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.deployedConstraintXBadSet_witness +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.witnessConstraintXTrace +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.witnessDeployedConstraintFamily +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
