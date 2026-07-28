@@ -68,14 +68,20 @@ def ownersText (owners : List Name) : String :=
 def positionLE (a b : Position) : Bool :=
   decide (a.line < b.line ∨ (a.line = b.line ∧ a.column ≤ b.column))
 
-/-- Whether `inner` lies inside `outer`. -/
-def rangeContains (outer inner : DeclarationRange) : Bool :=
-  positionLE outer.pos inner.pos && positionLE inner.endPos outer.endPos
+/-- Whether `inner` *starts* inside `outer`. Only the start position is compared: Lean records an
+auxiliary's end position at the start of the next token, so it runs past the end of the declaration
+that emitted it whenever the emitting syntax is followed by whitespace or a comment — the shape a
+`native_decide` auto-param discharged inside a structure instance always has. The start is still a
+faithful witness of where the auxiliary was elaborated, and that is all the check needs: a
+hand-written `axiom` is a top-level command of its own, and one the owner depends on must be
+declared before the owner, so its start never lands inside the owner's range. -/
+def rangeStartsInside (outer inner : DeclarationRange) : Bool :=
+  positionLE outer.pos inner.pos && positionLE inner.pos outer.endPos
 
 /-- The `native_decide` axioms genuinely owned by `owner`: each must occur in the owner's own
 transitive axiom footprint, have the compiler-generated owner prefix, come from the same module,
-and have a source range inside the owner's declaration. The range condition distinguishes an
-auxiliary emitted while elaborating the owner from an arbitrary axiom merely given the same name. -/
+and start inside the owner's declaration. The range condition distinguishes an auxiliary emitted
+while elaborating the owner from an arbitrary axiom merely given the same name. -/
 def nativeAxiomsOwnedBy (owner : Name) : CommandElabM (Array Name) := do
   let env ← getEnv
   let ownerAxioms ← collectAxioms owner
@@ -86,7 +92,7 @@ def nativeAxiomsOwnedBy (owner : Name) : CommandElabM (Array Name) := do
     let ownerRanges? ← findDeclarationRanges? owner
     let axRanges? ← findDeclarationRanges? ax
     let rangeValid := match ownerRanges?, axRanges? with
-      | some ownerRanges, some axRanges => rangeContains ownerRanges.range axRanges.range
+      | some ownerRanges, some axRanges => rangeStartsInside ownerRanges.range axRanges.range
       | _, _ => false
     unless sameModule && rangeValid do
       throwError "'{ax}' looks like a native_decide axiom owned by '{owner}', but it was not \

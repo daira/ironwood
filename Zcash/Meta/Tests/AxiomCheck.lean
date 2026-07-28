@@ -19,6 +19,25 @@ assert_axioms Zcash.Meta.Tests.AxiomCheck.Genuine.owner +native(
 
 end Genuine
 
+namespace GenuineAutoParam
+
+/-- The certificate lives in an auto-param, so the axiom is emitted while elaborating the
+structure instance below rather than a tactic block of its own. Lean then records the auxiliary's
+end position at the start of the *next* token — past the end of the owning declaration — which is
+why ownership is decided by the auxiliary's start position. `CompElliptic`'s Tonelli–Shanks data
+(`pallasBase`, `vestaBase`) is the census entry with this shape. -/
+structure Certified where
+  value : Nat
+  small : value < 123457 := by native_decide
+
+def owner : Certified where
+  value := 123456
+
+assert_axioms Zcash.Meta.Tests.AxiomCheck.GenuineAutoParam.owner +native(
+  Zcash.Meta.Tests.AxiomCheck.GenuineAutoParam.owner)
+
+end GenuineAutoParam
+
 namespace NonexistentOwner
 
 axiom owner._native.native_decide.ax_1_1 : False
