@@ -1,7 +1,3 @@
-/-
-Copyright (c) 2026 Ironwood Contributors.
-Released under the Apache License, Version 2.0.
--/
 import CompElliptic.Curves.Pasta.Fast.Projective
 import CompElliptic.Curves.Pasta.Fast.MsmProj
 import Zcash.Arithmetic.NatKernel
