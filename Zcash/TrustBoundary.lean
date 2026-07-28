@@ -36,6 +36,10 @@ import Zcash.Snark.Soundness.PermutationRows
 import Zcash.Snark.Soundness.ConstraintRelations
 import Zcash.Snark.Soundness.ChallengePricing
 import Zcash.Snark.Soundness.ActionVesta
+import Zcash.Security.Ledger.KeyBindingDLR
+import Zcash.Security.Ledger.NoteCommitDLR
+import Zcash.Security.Ledger.MerkleDLR
+import Zcash.Security.Ledger.DeployedCapstone
 import Zcash.Snark.Soundness.DegreeWalk
 import Zcash.Snark.Soundness.Composition.ScheduleBudget
 import Zcash.Snark.Soundness.AGM.PinnedRootWitness
@@ -274,6 +278,51 @@ assert_axioms Zcash.Security.Ledger.Model.balanceSubset_measure_le
 assert_axioms Zcash.Security.Ledger.Model.valueConservation_measure_le
 assert_axioms Zcash.Security.Ledger.Model.balanceValue_measure_le
 assert_axioms Zcash.Security.Ledger.Model.spendAuthority_measure_le
+
+/-! ## The deployed discrete-log-relation discharges
+
+Each deployed Balance-subset break arm reduces to a nontrivial discrete-log relation
+among the fixed Sinsemilla bases (`deployedBalanceSubsetOrRelation`), routing the three
+named ε hypotheses to one discrete-log-relation assumption per domain point. The
+reductions are computable, so they get assert_computable. The encoding-injectivity and
+coefficient-injectivity facts they consume are theorems. -/
+
+assert_axioms Zcash.NontrivialRelation.toOne
+assert_axioms Zcash.Circuits.Specs.Sinsemilla.chunksOf_inj
+assert_axioms Zcash.Circuits.Specs.Sinsemilla.commitIvkChunks_inj
+assert_axioms Zcash.Circuits.Specs.Sinsemilla.noteCommitChunks_inj
+assert_axioms Zcash.Circuits.Specs.Sinsemilla.merkleChunks_inj
+assert_axioms Zcash.Security.Ledger.Bridge.preCoeffs_inj
+assert_axioms Zcash.Security.Concrete.PallasGroup.eq_of_toPoint_x_eq_of_y_parity_eq +native(
+  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube)
+assert_computable Zcash.Security.Ledger.Bridge.relationOfChainPmEq +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
+assert_computable Zcash.Security.Ledger.Bridge.relationOfKeyBindingBreak +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check)
+assert_computable Zcash.Security.Ledger.Bridge.relationOfNoteCommitBreak +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Concrete.PallasGroup.pallas_base_card_lt_scalar_card,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_computable Zcash.Security.Ledger.Bridge.relationOfMerkleCollision +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
+assert_computable Zcash.Security.Ledger.Bridge.deployedBalanceSubsetOrRelation +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Concrete.PallasGroup.pallas_base_card_lt_scalar_card,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
 
 /-! ## The key-binding arms' ε, discharged
 
