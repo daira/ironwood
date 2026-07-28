@@ -482,4 +482,77 @@ theorem classifyRelation_site {wit : ActionData} {dlb : ActionDLBreak}
   · exact absurd h (by simp)
   · next abr heq => exact ⟨abr, heq, by injection h with h'; rw [← h']⟩
 
+/-! ## The chain-collision reducer
+
+Shared by every arm whose break compares two blinded Sinsemilla outputs: the
+key-binding break compares two `Commit^ivk` openings, the note-commitment break two
+note commitments, and a Merkle collision two compressions (with zero blinding). Two
+defined chains at the same domain point whose blinded outputs agree up to sign
+compute a relation among the table, the domain point, and the blinding base. -/
+
+/-- A defined, blinded Sinsemilla chain as the explicit `(table, Q, W)`-combination
+determined by its chunk list. -/
+theorem blinded_chain_eq {Q : Point Fp} (hQ : Q.Valid) (W : PallasGroup)
+    {l : List ℕ} (hb : ∀ m ∈ l, m < 2 ^ K)
+    {p : Point Fp} (h : hashToPoint orchardGenerators.S Q l = some p) (hv : p.Valid)
+    (r : Fq) :
+    PallasGroup.ofPoint p hv + r • W =
+      commitGen pallasS (preCoeffs l)
+        + ((2 : Fq) ^ l.length) • PallasGroup.ofPoint Q hQ + r • W := by
+  rw [ofPoint_hashToPoint hQ hb h hv]
+  simp only [← two_pow_smul_eq_nsmul, commitGen]
+  rw [sum_preCoeffs_smul hb]
+  abel
+
+/-- **The chain-collision reducer.** Two defined Sinsemilla chains at the same domain
+point, blinded by `r₁ • W` and `r₂ • W`, whose outputs agree up to sign, compute a
+nontrivial relation among the table, the domain point, and `W` — provided the pair
+`(chunk list, blinding scalar)` differs. `hcoeffs` is the injectivity of the
+chunk-coefficient encoding, the binary-expansion core of spec Theorem 5.4.3; it is
+consumed only in the equality case. The negation case is unconditional: the
+domain-point coefficients `2^n` and `-2^n` cannot agree because `2^(n+1) ≠ 0` in the
+odd-order scalar field. -/
+def relationOfChainPmEq {Q : Point Fp} (hQ : Q.Valid) {W : PallasGroup}
+    {l₁ l₂ : List ℕ} (hb₁ : ∀ m ∈ l₁, m < 2 ^ K) (hb₂ : ∀ m ∈ l₂, m < 2 ^ K)
+    (hlen : l₁.length = l₂.length)
+    {p₁ p₂ : Point Fp}
+    (h₁ : hashToPoint orchardGenerators.S Q l₁ = some p₁) (hv₁ : p₁.Valid)
+    (h₂ : hashToPoint orchardGenerators.S Q l₂ = some p₂) (hv₂ : p₂.Valid)
+    {r₁ r₂ : Fq}
+    (heq : PallasGroup.ofPoint p₁ hv₁ + r₁ • W = PallasGroup.ofPoint p₂ hv₂ + r₂ • W ∨
+      PallasGroup.ofPoint p₁ hv₁ + r₁ • W = -(PallasGroup.ofPoint p₂ hv₂ + r₂ • W))
+    (hcoeffs : preCoeffs l₁ = preCoeffs l₂ → l₁ = l₂)
+    (hne : ¬(l₁ = l₂ ∧ r₁ = r₂)) :
+    NontrivialRelation (F := Fq) pallasS (PallasGroup.ofPoint Q hQ) W :=
+  if hplus : PallasGroup.ofPoint p₁ hv₁ + r₁ • W = PallasGroup.ofPoint p₂ hv₂ + r₂ • W then
+    NontrivialRelation.ofCombinationCollision
+      (a := preCoeffs l₁) (a' := preCoeffs l₂)
+      (α := (2 : Fq) ^ l₁.length) (α' := (2 : Fq) ^ l₂.length)
+      (β := r₁) (β' := r₂)
+      (by
+        have h := hplus
+        rw [blinded_chain_eq hQ W hb₁ h₁ hv₁ r₁,
+          blinded_chain_eq hQ W hb₂ h₂ hv₂ r₂] at h
+        exact h)
+      (by rintro ⟨ha, -, hr⟩; exact hne ⟨hcoeffs ha, hr⟩)
+  else
+    NontrivialRelation.ofCombinationCollision
+      (a := preCoeffs l₁) (a' := -(preCoeffs l₂))
+      (α := (2 : Fq) ^ l₁.length) (α' := -((2 : Fq) ^ l₂.length))
+      (β := r₁) (β' := -r₂)
+      (by
+        have h := heq.resolve_left hplus
+        rw [blinded_chain_eq hQ W hb₁ h₁ hv₁ r₁,
+          blinded_chain_eq hQ W hb₂ h₂ hv₂ r₂] at h
+        rw [h, commitGen_neg, neg_smul, neg_smul]
+        abel)
+      (by
+        rintro ⟨-, hα, -⟩
+        rw [hlen] at hα
+        have h0 : (2 : Fq) ^ (l₂.length + 1) = 0 := by
+          rw [pow_succ, mul_two]
+          exact add_eq_zero_iff_eq_neg.mpr hα
+        exact two_pow_ne_zero _ h0)
+
+
 end Zcash.Security.Ledger.Bridge
