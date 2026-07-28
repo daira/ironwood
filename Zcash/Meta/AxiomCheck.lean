@@ -13,6 +13,10 @@ declared tier (a `sorry`, an unexpected axiom, or `native_decide` where none was
 
 The `#guard_msgs`-pinned form remains the right tool when the *exact* axiom set is the claim.
 
+Scope: these commands catch *inadvertent* drift — an entry silently reaching more than it
+claims. They are not a defense against a deliberately deceptive author, and there may be
+obscure elaboration corners in which an axiom is still misattributed.
+
 Both commands require their argument to be written fully qualified (`checkFullyQualified`):
 an unqualified name resolves through the census file's `open`s, so a same-base-name cousin in
 an opened namespace can silently capture an entry meant for a declaration that is not in scope
@@ -44,7 +48,7 @@ def nativeAxiomOwner? (ax : Name) : Option Name :=
   go [] ax.components none
 
 /-- A syntactically plausible `native_decide` auxiliary axiom. `checkNativeAllowance` additionally
-authenticates its owner, dependency, module, and source range before permitting it. -/
+checks its owner, dependency, module, and source range before permitting it. -/
 def isNativeDecideAxiom (n : Name) : Bool :=
   (nativeAxiomOwner? n).isSome
 
@@ -102,7 +106,7 @@ def nativeAxiomsOwnedBy (owner : Name) : CommandElabM (Array Name) := do
 
 /-- `+native` must name the owning declaration(s) of exactly the `native_decide` axioms the
 entry actually reaches, fully qualified. A bare `+native` would permit a `native_decide`
-axiom smuggled in by *any* declaration entering the dependency cone; naming the owners makes
+axiom brought in by *any* declaration entering the dependency cone; naming the owners makes
 the census state precisely which native certificates are trusted, and a new native axiom —
 or a stale annotation — fails the build with the list to write. -/
 def checkNativeAllowance (n : Ident) (axs : Array Name) (allowed : Option (Array Name)) :
@@ -139,7 +143,7 @@ def nativeAnnotation (native : Option (TSyntax ``nativeFlag)) : Option (Array Id
   native.map fun stx => stx.raw[2].getSepArgs.map fun arg => ⟨arg⟩
 
 /-- Resolve and fully qualify every owner named by `+native`. Besides preventing namespace
-capture, resolution ensures an annotation cannot invent a nonexistent owner whose text happens
+capture, resolution rejects an annotation that names a nonexistent owner whose text happens
 to prefix an arbitrary axiom. -/
 def resolveNativeAnnotation (native : Option (TSyntax ``nativeFlag)) :
     CommandElabM (Option (Array Name)) := do
