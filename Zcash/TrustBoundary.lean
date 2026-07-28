@@ -1125,6 +1125,18 @@ assert_axioms Zcash.Snark.straightLineInitialDiscrepancy_of_zero_coordinates +na
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.straightLineIpaRootPolynomial_of_zero_group_coordinates +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- The constant-walk staged IPA trace at any shape: the zero prover's rounds contribute
+-- nothing, so the staged polynomial is C(-(nu10 * v)) * X with v its multiopen value.
+assert_axioms Zcash.Snark.zeroWfProof_straightLineIpaRootPolynomial_const +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.zeroConstIpaStage +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.zeroConstIpaStage_agrees +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.zeroConstIpaStage_fresh +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.zeroConstStraightLineIpaTrace +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 -- The zero-data assembly keystone (`Soundness/ZeroData`) and the constant zero prover family at
 -- any shape (`Soundness/AGM/ZeroFamily`): the assembled multiopen MSM of zero data is zero-data
 -- whatever the scalar layouts, so the captured key's scalar metadata carries a concrete constant

@@ -169,6 +169,115 @@ noncomputable def zeroStraightLineDeployedFamily (hproofs : shape.numProofs = 0)
   ipaTrace := zeroStraightLineIpaTrace vkS hfixed hperm hproofs
   constraintXTrace := zeroConstraintXTrace vkS hfixed hperm hproofs
 
+/-! ### The constant walk, without the instance-free hypothesis
+
+With sub-proofs the zero prover's multiopen value `v` survives, and its walk is the constant
+`c = -(ν₁₀ · v)`: every staged IPA polynomial is `C c * X`.  The trace below carries that walk at
+any shape — the remaining instance-bearing obligation is the constraint-`x` stage, not the IPA
+rounds.
+-/
+
+/-- Every straight-line IPA root polynomial of the zero prover is `C (-(ν₁₀ · v)) * X`, `v` the
+zero proof's multiopen value.  No instance-free hypothesis: at `numProofs = 0` the constant
+vanishes and this reduces to the zero walk. -/
+theorem zeroWfProof_straightLineIpaRootPolynomial_const
+    (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
+    (ν : Fin 11 → Fp) (χ : Fin shape.k → Fp) (j : Fin shape.k) :
+    (zeroWfProof basis vkS hfixed hperm).straightLineIpaRootPolynomial ν χ j =
+      Polynomial.C (-(ν 10 * multiopenValue vkS (fun _ _ => 0)
+        (zeroProofString shape Fp VestaG) (chRecord ν (fun _ => 0)))) * Polynomial.X := by
+  rw [straightLineIpaRootPolynomial_of_zero_group_coordinates _ ν χ
+    (fun _ => ⟨rfl, rfl, rfl, rfl⟩) j]
+  rw [straightLineInitialDiscrepancy_of_zero_coordinates _ ν
+    (zeroWfProof_aMulti basis vkS hfixed hperm ν)
+    (zeroWfProof_multiU basis vkS hfixed hperm ν)
+    (zeroWfProof_s basis vkS hfixed hperm)
+    (zeroWfProof_sU basis vkS hfixed hperm)]
+  have hps : (zeroWfProof basis vkS hfixed hperm).proof.1 =
+      zeroProofString shape Fp VestaG := rfl
+  rw [hps]
+
+/-- The constant-walk staged polynomial: read the eleven pre-IPA squeezes, then return
+`C (-(ν₁₀ · v)) * X`.  No IPA-round point is read. -/
+noncomputable def zeroConstIpaStage (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
+    (_j : Fin shape.k) :
+    OracleComp
+      (BTranscript Fp VestaG
+        (preIpaLen shape (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init.length 10 +
+          3 * shape.k)) Fp (Polynomial Fp) :=
+  (OracleComp.readFin (F := Fp)
+    (fun i : Fin 11 =>
+      algebraicFullPrefixesPre (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init
+        (zeroWfProof basis vkS hfixed hperm) i)).bind
+    fun ν => .pure (Polynomial.C (-(ν 10 * multiopenValue vkS (fun _ _ => 0)
+      (zeroProofString shape Fp VestaG) (chRecord ν (fun _ => 0)))) * Polynomial.X)
+
+/-- The staged polynomial is the run's actual root polynomial: both are the constant walk at the
+oracle's answers on the fixed squeeze points. -/
+theorem zeroConstIpaStage_agrees (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
+    (j : Fin shape.k)
+    (O : BTranscript Fp VestaG
+      (preIpaLen shape (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init.length 10 +
+        3 * shape.k) → Fp) :
+    (zeroConstIpaStage vkS hfixed hperm basis j).run O =
+      AlgebraicWfProof.straightLineIpaRootPolynomial
+        (((zeroDeployedRootFamily vkS hfixed hperm).toFamily.adversary basis).run O)
+        (fun i => O (algebraicFullPrefixesPre
+          (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init
+          (((zeroDeployedRootFamily vkS hfixed hperm).toFamily.adversary basis).run O) i))
+        (fun r => O (algebraicFullPrefixes
+          (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init
+          (((zeroDeployedRootFamily vkS hfixed hperm).toFamily.adversary basis).run O) r))
+        j := by
+  rw [zeroConstIpaStage, OracleComp.run_bind, OracleComp.run_readFin, OracleComp.run_pure]
+  rw [show (((zeroDeployedRootFamily vkS hfixed hperm).toFamily.adversary basis).run O) =
+    zeroWfProof basis vkS hfixed hperm from rfl]
+  show _ = AlgebraicWfProof.straightLineIpaRootPolynomial
+    (vk := vkS) (instanceCommitment := fun _ _ => 0)
+    (zeroWfProof basis vkS hfixed hperm) _ _ j
+  exact (zeroWfProof_straightLineIpaRootPolynomial_const vkS hfixed hperm basis
+    (fun i => O (algebraicFullPrefixesPre
+      (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init
+      (zeroWfProof basis vkS hfixed hperm) i))
+    (fun r => O (algebraicFullPrefixes
+      (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init
+      (zeroWfProof basis vkS hfixed hperm) r)) j).symm
+
+/-- The stage reads only pre-IPA squeeze points, which are strictly shorter than any IPA round
+prefix. -/
+theorem zeroConstIpaStage_fresh (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
+    (j : Fin shape.k)
+    (O : BTranscript Fp VestaG
+      (preIpaLen shape (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init.length 10 +
+        3 * shape.k) → Fp) :
+    straightLineIpaRootPoint (zeroDeployedRootFamily vkS hfixed hperm).toFamily
+        (((zeroDeployedRootFamily vkS hfixed hperm).toFamily.adversary basis).run O) j ∉
+      (zeroConstIpaStage vkS hfixed hperm basis j).queries O := by
+  have hpoint : straightLineIpaRootPoint (zeroDeployedRootFamily vkS hfixed hperm).toFamily
+      (((zeroDeployedRootFamily vkS hfixed hperm).toFamily.adversary basis).run O) j =
+      algebraicFullPrefixes (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init
+        (zeroWfProof basis vkS hfixed hperm) j := rfl
+  rw [hpoint]
+  simp only [zeroConstIpaStage, OracleComp.queries_bind, OracleComp.queries_readFin,
+    OracleComp.queries, List.append_nil]
+  intro hmem
+  obtain ⟨i, hi⟩ := List.mem_ofFn.mp hmem
+  have hlen := congrArg (fun t : BTranscript Fp VestaG _ => t.val.length) hi
+  simp only [algebraicFullPrefixesPre, algebraicFullPrefixes,
+    fullPrefixesPre, fullPrefixes, roundTranscriptFin_length] at hlen
+  have hle := preIpaSqueezePoints_length_le
+    (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init
+    (zeroWfProof basis vkS hfixed hperm).proof.1 i
+  omega
+
+/-- **The constant-walk staged IPA trace, at any shape.**  The instance-free zero trace above is
+its special case; this one leaves the multiopen value free. -/
+noncomputable def zeroConstStraightLineIpaTrace :
+    StraightLineIpaOnlineTrace (zeroDeployedRootFamily vkS hfixed hperm).toFamily where
+  stage := fun basis j => zeroConstIpaStage vkS hfixed hperm basis j
+  agrees := fun basis j O => zeroConstIpaStage_agrees vkS hfixed hperm basis j O
+  fresh := fun basis j O => zeroConstIpaStage_fresh vkS hfixed hperm basis j O
+
 /-- The zero family also inhabits the intermediate deployed constraint interface. -/
 noncomputable def zeroDeployedConstraintFamily (hproofs : shape.numProofs = 0) :
     ComputedDeployedConstraintFSFamily shape :=
