@@ -116,4 +116,6 @@ import Zcash.Snark.Soundness.AGM.ZeroFamilyRoots
 -- The straight-line deployed interface, inhabited with live IPA rounds at any instance-free shape.
 import Zcash.Snark.Soundness.Composition.ZeroStraightLine
 -- The direct-coordinate postprocessing carries an explicit polynomial total-cost model.
+-- The Action-level semantic challenge exclusions, priced and summed.
+import Zcash.Snark.Soundness.Composition.SemanticChallengeRemainder
 import Zcash.Snark.Soundness.Composition.DirectPathCost

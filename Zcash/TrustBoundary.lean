@@ -41,6 +41,7 @@ import Zcash.Snark.Soundness.Composition.ScheduleBudget
 import Zcash.Snark.Soundness.AGM.PinnedRootWitness
 import Zcash.Snark.Soundness.Composition.StraightLineWitness
 import Zcash.Snark.Soundness.Composition.DirectPathCost
+import Zcash.Snark.Soundness.Composition.SemanticChallengeRemainder
 import Zcash.Snark.Soundness.AGM.ZeroFamily
 import Zcash.Snark.Soundness.AGM.ZeroFamilyRoots
 import Zcash.Snark.Soundness.Composition.ZeroStraightLine
@@ -1188,6 +1189,14 @@ assert_axioms Zcash.Snark.aggregate_opens_deployedCommitment +native(
 -- enters the total only through erased `Prop` positions of the finite sum.
 assert_computable Zcash.Snark.directColumnDecodeOps
 assert_computable Zcash.Snark.deployedDirectDecodeOps +choice
+-- The semantic challenge remainder (`Composition.SemanticChallengeRemainder`): the bundle-wide
+-- permutation and lookup exclusions priced from their card bounds, summed with the `y` fold-split
+-- term.  These terms are charged separately from the compressed-identity ceiling.
+assert_axioms Zcash.Snark.allResolverPermutationGammaBadSet_measure_le
+assert_axioms Zcash.Snark.allResolverPermutationBetaBadSet_measure_le
+assert_axioms Zcash.Snark.allResolverLookupGammaBadSet_measure_le
+assert_axioms Zcash.Snark.allResolverLookupBetaBadSet_measure_le
+assert_axioms Zcash.Snark.semanticChallengeRemainder_covers
 assert_axioms Zcash.Snark.deployedDirectDecodeOps_le
 assert_axioms Zcash.Snark.snarkExtractionDeployed_prob_le_via_wrapped_pinned_roots +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
