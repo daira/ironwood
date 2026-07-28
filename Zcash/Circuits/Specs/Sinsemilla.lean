@@ -460,6 +460,43 @@ def noteCommitMessage (gdX gdY pkdX pkdY v rho psi : ℕ) : ℕ :=
 def noteCommitChunks (gdX gdY pkdX pkdY v rho psi : ℕ) : List ℕ :=
   chunksOf (noteCommitMessage gdX gdY pkdX pkdY v rho psi) 109
 
+/-- The note-commit message packing is injective on components within their widths. -/
+theorem noteCommitMessage_inj
+    {gdX gdY pkdX pkdY v rho psi gdX' gdY' pkdX' pkdY' v' rho' psi' : ℕ}
+    (h1 : gdX < 2 ^ 255) (h2 : gdY < 2) (h3 : pkdX < 2 ^ 255) (h4 : pkdY < 2)
+    (h5 : v < 2 ^ 64) (h6 : rho < 2 ^ 255) (h7 : psi < 2 ^ 255)
+    (h1' : gdX' < 2 ^ 255) (h2' : gdY' < 2) (h3' : pkdX' < 2 ^ 255) (h4' : pkdY' < 2)
+    (h5' : v' < 2 ^ 64) (h6' : rho' < 2 ^ 255) (h7' : psi' < 2 ^ 255)
+    (h : noteCommitMessage gdX gdY pkdX pkdY v rho psi
+        = noteCommitMessage gdX' gdY' pkdX' pkdY' v' rho' psi') :
+    gdX = gdX' ∧ gdY = gdY' ∧ pkdX = pkdX' ∧ pkdY = pkdY' ∧ v = v' ∧ rho = rho'
+      ∧ psi = psi' := by
+  unfold noteCommitMessage at h
+  omega
+
+/-- The 109-chunk note-commit encoding is injective on components within their widths. -/
+theorem noteCommitChunks_inj
+    {gdX gdY pkdX pkdY v rho psi gdX' gdY' pkdX' pkdY' v' rho' psi' : ℕ}
+    (h1 : gdX < 2 ^ 255) (h2 : gdY < 2) (h3 : pkdX < 2 ^ 255) (h4 : pkdY < 2)
+    (h5 : v < 2 ^ 64) (h6 : rho < 2 ^ 255) (h7 : psi < 2 ^ 255)
+    (h1' : gdX' < 2 ^ 255) (h2' : gdY' < 2) (h3' : pkdX' < 2 ^ 255) (h4' : pkdY' < 2)
+    (h5' : v' < 2 ^ 64) (h6' : rho' < 2 ^ 255) (h7' : psi' < 2 ^ 255)
+    (h : noteCommitChunks gdX gdY pkdX pkdY v rho psi
+        = noteCommitChunks gdX' gdY' pkdX' pkdY' v' rho' psi') :
+    gdX = gdX' ∧ gdY = gdY' ∧ pkdX = pkdX' ∧ pkdY = pkdY' ∧ v = v' ∧ rho = rho'
+      ∧ psi = psi' := by
+  have hK : (2 : ℕ) ^ (K * 109) = 2 ^ 1090 := by norm_num [K]
+  have hbound : ∀ {a b c d e f g : ℕ}, a < 2 ^ 255 → b < 2 → c < 2 ^ 255 → d < 2 →
+      e < 2 ^ 64 → f < 2 ^ 255 → g < 2 ^ 255 →
+      noteCommitMessage a b c d e f g < 2 ^ (K * 109) := by
+    intro a b c d e f g ha hb hc hd he hf hg
+    unfold noteCommitMessage
+    rw [hK]
+    omega
+  have hmsg := chunksOf_inj (hbound h1 h2 h3 h4 h5 h6 h7)
+    (hbound h1' h2' h3' h4' h5' h6' h7') h
+  exact noteCommitMessage_inj h1 h2 h3 h4 h5 h6 h7 h1' h2' h3' h4' h5' h6' h7' hmsg
+
 /-- The 109 message chunks tile into the 8 Sinsemilla message pieces `a..h` at their
 `K`-bit boundaries: piece sizes `25, 1, 25, 6, 1, 25, 25, 1` chunks starting at bits
 `0, 250, 260, 510, 570, 580, 830, 1080`. -/
