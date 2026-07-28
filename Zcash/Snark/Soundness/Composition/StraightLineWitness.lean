@@ -123,6 +123,27 @@ theorem ipaDiscrepancyPolynomialAt_zero :
       exact ipaDiscrepancyPolynomialAt_zero rounds challenges j
         (fun r hr => h r (List.mem_cons_of_mem _ hr))
 
+/-- Any constant survives a zero round, for every challenge. -/
+theorem ipaDiscrepancyStep_const (v c : Fp) : ipaDiscrepancyStep v (0, 0) c = v := by
+  simp [ipaDiscrepancyStep]
+
+/-- Every in-range prefix-selected polynomial of the constant walk over all-zero rounds is
+`C v * X`: the round terms contribute nothing, so only the linear discrepancy term remains. -/
+theorem ipaDiscrepancyPolynomialAt_const (v : Fp) :
+    ∀ (rounds : List (Fp × Fp)) (challenges : List Fp) (j : ℕ),
+      (∀ r ∈ rounds, r = (0, 0)) → j < rounds.length → j < challenges.length →
+      ipaDiscrepancyPolynomialAt v rounds challenges j = Polynomial.C v * Polynomial.X
+  | [], _, j, _, hj, _ => absurd hj (Nat.not_lt_zero j)
+  | _round :: _rounds, [], j, _, _, hj => absurd hj (Nat.not_lt_zero j)
+  | round :: _rounds, _c :: _challenges, 0, h, _, _ => by
+      rw [ipaDiscrepancyPolynomialAt, h round List.mem_cons_self]
+      simp [ipaDiscrepancyPolynomial]
+  | round :: rounds, c :: challenges, j + 1, h, hr, hc => by
+      rw [ipaDiscrepancyPolynomialAt, h round List.mem_cons_self, ipaDiscrepancyStep_const]
+      exact ipaDiscrepancyPolynomialAt_const v rounds challenges j
+        (fun r hr' => h r (List.mem_cons_of_mem _ hr'))
+        (Nat.lt_of_succ_lt_succ hr) (Nat.lt_of_succ_lt_succ hc)
+
 /-- **A zero-coordinate proof pins the zero polynomial at every IPA round.**  The hypotheses are
 exactly the coordinates a constant zero-data prover declares: zero aggregate witness and `U`
 components, zero blinding vector, zero multiopen value, and zero round-point coordinates. -/
@@ -156,5 +177,53 @@ theorem straightLineIpaRootPolynomial_of_zero_coordinates
       innerProduct]
   rw [AlgebraicWfProof.straightLineIpaRootPolynomial, hinit]
   exact ipaDiscrepancyPolynomialAt_zero _ _ _ hdisc
+
+/-- The initial discrepancy of a zero-coordinate prover is `-(ν₁₀ · v)`: only the multiopen
+value survives when the aggregate witness, its `U` component, and the blinding vector vanish. -/
+theorem straightLineInitialDiscrepancy_of_zero_coordinates
+    {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    {vk : VerifyingKey shape Fp VestaG}
+    {instanceCommitment : Fin shape.numProofs → Nat → VestaG}
+    (p : AlgebraicWfProof basis vk instanceCommitment) (nu : Fin 11 → Fp)
+    (haMulti : p.aMulti nu = 0) (hmultiU : p.multiU nu = 0)
+    (hs : p.s = 0) (hsU : p.sU = 0) :
+    p.straightLineInitialDiscrepancy nu =
+      -(nu 10 * multiopenValue vk instanceCommitment p.proof.1
+        (chRecord nu (fun _ => 0))) := by
+  rw [p.straightLineInitialDiscrepancy_eq nu, haMulti, hmultiU, hs, hsU]
+  simp [innerProduct]
+
+/-- **A zero-group-coordinate proof walks a constant discrepancy.**  With sub-proofs the
+multiopen value is not zero, so the zero-coordinate keystone above does not apply; but the
+rounds still contribute nothing, and every straight-line IPA root polynomial is the linear
+`C (initial discrepancy) * X`.  The `numProofs = 0` keystone is the special case where that
+constant vanishes. -/
+theorem straightLineIpaRootPolynomial_of_zero_group_coordinates
+    {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    {vk : VerifyingKey shape Fp VestaG}
+    {instanceCommitment : Fin shape.numProofs → Nat → VestaG}
+    (p : AlgebraicWfProof basis vk instanceCommitment) (nu : Fin 11 → Fp)
+    (chi : Fin shape.k → Fp)
+    (hrounds : ∀ j, (p.rounds j).1.gPart = 0 ∧
+      (p.rounds j).1.coeffs AugmentedIndex.u = 0 ∧
+      (p.rounds j).2.gPart = 0 ∧
+      (p.rounds j).2.coeffs AugmentedIndex.u = 0)
+    (j : Fin shape.k) :
+    p.straightLineIpaRootPolynomial nu chi j =
+      Polynomial.C (p.straightLineInitialDiscrepancy nu) * Polynomial.X := by
+  have hdisc : ∀ r ∈ p.straightLineRoundDiscrepancies nu, r = (0, 0) := by
+    intro r hr
+    unfold AlgebraicWfProof.straightLineRoundDiscrepancies at hr
+    obtain ⟨pair, hpair, hrEq⟩ := List.mem_map.mp hr
+    obtain ⟨i, hi⟩ := List.mem_ofFn.mp hpair
+    subst hrEq
+    subst hi
+    obtain ⟨hg1, hu1, hg2, hu2⟩ := hrounds i
+    simp [representedRoundDiscrepancy, representedPointDiscrepancy, hg1, hu1, hg2, hu2,
+      innerProduct]
+  rw [AlgebraicWfProof.straightLineIpaRootPolynomial]
+  refine ipaDiscrepancyPolynomialAt_const _ _ _ _ hdisc ?_ ?_
+  · simp [AlgebraicWfProof.straightLineRoundDiscrepancies]
+  · simp
 
 end Zcash.Snark
