@@ -319,6 +319,61 @@ theorem badAt_le_via_squeeze_prefixed {T' : Type*} [DecidableEq T'] (n : Fin 11)
       (algebraicFullPrefixesPre_ne_at family.init _
         (show ((i.castLE (le_of_lt n.isLt) : Fin 11) : Nat) < (n : Nat) from i.isLt))]
 
+open ComputedAlgebraicFSFamily in
+/-- **The table-level form of the index-`n` squeeze price.**  The semantic endpoint states its
+`y`, `β`, `γ` and `θ` premises over oracle tables alone, without the fork tape, so this states the
+same `(Q + 1) * epsilon` bound at that measure.  It is the shorter statement: the coins-level form
+above reduces to it through a tape fiber. -/
+theorem badAt_table_le_via_squeeze_prefixed (n : Fin 11)
+    (family : ComputedAlgebraicFSFamily shape)
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
+    (badF : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) ->
+      (Fin (n : Nat) -> Fp) -> Set Fp)
+    (hstab : forall (O : BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) (v : Fp),
+      algebraicFullPrefixesPre family.init ((family.adversary basis).run
+          (Function.update O (algebraicFullPrefixesPre family.init
+            ((family.adversary basis).run O) n) v)) n =
+        algebraicFullPrefixesPre family.init ((family.adversary basis).run O) n)
+    {epsilon : ENNReal}
+    (hbad : forall t nu, (PMF.uniformOfFintype Fp).toOuterMeasure (badF t nu) <= epsilon) :
+    (PMF.uniformOfFintype (BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp)).toOuterMeasure
+      {O | O (algebraicFullPrefixesPre family.init ((family.adversary basis).run O) n) ∈
+        badF (algebraicFullPrefixesPre family.init ((family.adversary basis).run O) n)
+          (fun i : Fin (n : Nat) => O (algebraicFullPrefixesPre family.init
+            ((family.adversary basis).run O) (i.castLE (le_of_lt n.isLt))))}
+      <= (family.Q + 1 : Nat) * epsilon := by
+  refine xEscTable_measure_le (family.adversary basis)
+    (fun p => algebraicFullPrefixesPre family.init p n)
+    (fun p O => badF (algebraicFullPrefixesPre family.init p n)
+      (fun i : Fin (n : Nat) => O (algebraicFullPrefixesPre family.init p
+        (i.castLE (le_of_lt n.isLt)))))
+    ?_ (fun p O => hbad _ _) (family.queryBound basis)
+  intro O v
+  have hx := hstab O v
+  show badF (algebraicFullPrefixesPre family.init ((family.adversary basis).run
+        (Function.update O (algebraicFullPrefixesPre family.init
+          ((family.adversary basis).run O) n) v)) n)
+      (fun i : Fin (n : Nat) => (Function.update O (algebraicFullPrefixesPre family.init
+          ((family.adversary basis).run O) n) v)
+        (algebraicFullPrefixesPre family.init ((family.adversary basis).run
+          (Function.update O (algebraicFullPrefixesPre family.init
+            ((family.adversary basis).run O) n) v))
+          (i.castLE (le_of_lt n.isLt)))) =
+    badF (algebraicFullPrefixesPre family.init ((family.adversary basis).run O) n)
+      (fun i : Fin (n : Nat) => O (algebraicFullPrefixesPre family.init
+        ((family.adversary basis).run O) (i.castLE (le_of_lt n.isLt))))
+  rw [hx]
+  congr 1
+  funext i
+  rw [algebraicFullPrefixesPre_eq_of_eq_at family.init _ _ hx
+      (show ((i.castLE (le_of_lt n.isLt) : Fin 11) : Nat) < (n : Nat) from i.isLt),
+    Function.update_of_ne
+      (algebraicFullPrefixesPre_ne_at family.init _
+        (show ((i.castLE (le_of_lt n.isLt) : Fin 11) : Nat) < (n : Nat) from i.isLt))]
+
 /-! ## Discharging the stability input
 
 `badX_le_via_squeeze_prefixed`'s `hstab` is resampling-shaped: updating the oracle at the run's own `x` squeeze

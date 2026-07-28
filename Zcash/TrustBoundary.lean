@@ -1245,6 +1245,7 @@ assert_computable Zcash.Snark.pinnedPoints +choice
 assert_axioms Zcash.Snark.pinnedPoints_injective
 assert_axioms Zcash.Snark.PrefixDeterminedAt +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.hstab_of_prefixDeterminedAt +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.badAt_table_le_via_squeeze_prefixed +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.badAt_le_via_squeeze_prefixed +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.allResolverPermutationGammaBadSet_measure_le
 assert_axioms Zcash.Snark.allResolverPermutationBetaBadSet_measure_le
