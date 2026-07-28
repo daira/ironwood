@@ -13,8 +13,35 @@ deterministic downstream constraints are reused without the old rewind loss.
 namespace Zcash.Snark
 
 open Classical
+open Zcash.Arithmetic (scalarFieldOrder)
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
+
+/-- `n + 1` distinct interpolation points with index `0` pinned to `x`.
+
+`toSyntheticOpened` needs an injective point family containing the actual batching challenge, and
+the points are extractor-side data — nothing forces them to be oracle answers, so they can simply
+walk up from the challenge. -/
+def pinnedPoints (x : Fp) (n : Nat) : Fin (n + 1) -> Fp := fun j => x + ((j : Nat) : Fp)
+
+@[simp] theorem pinnedPoints_zero (x : Fp) (n : Nat) : pinnedPoints x n 0 = x := by
+  simp [pinnedPoints]
+
+/-- The walk stays injective while it is shorter than the field's characteristic. -/
+theorem pinnedPoints_injective (x : Fp) {n : Nat} (hn : n < scalarFieldOrder) :
+    Function.Injective (pinnedPoints x n) := by
+  intro a b hab
+  have hcast : (((a : Nat) : Fp)) = (((b : Nat) : Fp)) := by
+    have h := hab
+    unfold pinnedPoints at h
+    exact add_left_cancel h
+  have ha : (a : Nat) < scalarFieldOrder :=
+    lt_of_le_of_lt (Nat.lt_succ_iff.mp a.isLt) hn
+  have hb : (b : Nat) < scalarFieldOrder :=
+    lt_of_le_of_lt (Nat.lt_succ_iff.mp b.isLt) hn
+  have hval := congrArg ZMod.val hcast
+  rw [ZMod.val_cast_of_lt ha, ZMod.val_cast_of_lt hb] at hval
+  exact Fin.ext hval
 
 /-- Build an opened-batch compatibility object locally from a represented algebraic power batch,
 with one interpolation point pinned to the actual batching challenge. -/
