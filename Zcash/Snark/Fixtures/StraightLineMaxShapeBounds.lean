@@ -85,7 +85,9 @@ theorem consensusStraightLineStatisticalModel_at_2pow123 :
 /-- Consensus-maximum straight-line **compressed-identity** capstone with the query cap `Q <= T`.
 The right side is the caller-supplied finite-security DLOG advantage plus the concrete statistical
 model above; row-level semantics are the four-budget promotion
-`straightLineConstraintSemanticFailure_prob_le_of_generatorRO_dlogProfile`. -/
+`straightLineConstraintSemanticFailure_prob_le_of_generatorRO_dlogProfile`.  At the deployed
+Action shape those four budgets are discharged and counted for sequential adversaries by
+`Fixture.orchard_action_acceptFalse_prob_le_sequential`. -/
 theorem straightLineConstraintFailure_prob_le_at_consensus_max
     (B : VestaG)
     (family : ComputedStraightLineDeployedFSFamily (shape orchardConsensusMaxProofs))
