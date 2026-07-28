@@ -39,7 +39,7 @@ theorem rowSelectorPolynomial_eq_basis {n : ℕ}
     rowSelectorPolynomial omega selected =
       Lagrange.basis Finset.univ (fun i : Fin n => omega ^ (i : ℕ)) selected := by
   classical
-  rw [rowSelectorPolynomial, rowPolynomial, Lagrange.interpolate_apply]
+  rw [rowSelectorPolynomial, rowPolynomial_eq_lagrange, Lagrange.interpolate_apply]
   rw [Finset.sum_eq_single selected]
   · simp
   · intro row _ hne
@@ -188,7 +188,7 @@ theorem blindSelectorPolynomial_eq_sum {n : ℕ}
           (fun row => lastUsable.val < row.val),
         rowSelectorPolynomial omega row := by
   classical
-  rw [blindSelectorPolynomial, rowPolynomial, Lagrange.interpolate_apply]
+  rw [blindSelectorPolynomial, rowPolynomial_eq_lagrange, Lagrange.interpolate_apply]
   simp_rw [rowSelectorPolynomial_eq_basis]
   rw [Finset.sum_filter]
   apply Finset.sum_congr rfl

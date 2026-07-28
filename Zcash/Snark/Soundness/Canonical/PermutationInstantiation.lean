@@ -67,6 +67,7 @@ total claimed-evaluation feeds: an out-of-range evaluation reference reads zero.
 def permutationColumnPolynomialOfResolver {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (poly : CommitmentId → Polynomial Fp)
     (p : Fin shape.numProofs) (cr : ColumnRef) : Polynomial Fp :=
+  letI : Zero (Polynomial Fp) := ⟨ComputablePolynomial.zero⟩
   cr.resolve
     (finFn fun i : Fin shape.numInstanceQueries =>
       poly (permutationColumnCommitmentId vk p (.instance i)))
@@ -82,11 +83,15 @@ def permutationSetOfResolver {shape : Shape} {G : Type*}
     (p : Fin shape.numProofs) (s : Fin shape.numPermutationSets) :
     PermSetEval (Polynomial Fp) :=
   { eval := poly (.permProduct p s)
-    nextEval := (poly (.permProduct p s)).comp (C vk.omega * X)
+    nextEval := ComputablePolynomial.comp (poly (.permProduct p s))
+      (ComputablePolynomial.mul (ComputablePolynomial.const vk.omega)
+        ComputablePolynomial.X)
     lastEval :=
       if s.val + 1 = shape.numPermutationSets then none
-      else some ((poly (.permProduct p s)).comp
-        (C (vk.omega ^ (-((vk.blindingFactors : ℤ) + 1))) * X)) }
+      else some (ComputablePolynomial.comp (poly (.permProduct p s))
+        (ComputablePolynomial.mul
+          (ComputablePolynomial.const (vk.omega ^ (-((vk.blindingFactors : ℤ) + 1))))
+          ComputablePolynomial.X)) }
 
 /-- One sub-proof's permutation running products, in verifier order. -/
 def permutationSetsOfResolver {shape : Shape} {G : Type*}
@@ -335,15 +340,22 @@ theorem eval_permutationSetsOfResolver
   apply PermSetEval.ext
   · change (poly (.permProduct p s)).eval ch.x = (ps.permutationSetEvals p s).eval
     simpa using heval
-  · change ((poly (.permProduct p s)).comp (C vk.omega * X)).eval ch.x =
+  · change (ComputablePolynomial.comp (poly (.permProduct p s))
+        (ComputablePolynomial.mul (ComputablePolynomial.const vk.omega)
+          ComputablePolynomial.X)).eval ch.x =
       (ps.permutationSetEvals p s).nextEval
+    rw [ComputablePolynomial.comp_eq, ComputablePolynomial.mul_eq,
+      ComputablePolynomial.const_eq, ComputablePolynomial.X_eq]
     rw [eval_comp_rotate, mul_comm]
     simpa only [rotateOmega, zpow_one] using hnext
   · have hschedule := permutationLastEval_isSome ps hwf p s
     change
       (if s.val + 1 = shape.numPermutationSets then none
-        else some ((poly (.permProduct p s)).comp
-          (C (vk.omega ^ (-((vk.blindingFactors : ℤ) + 1))) * X))).map
+        else some (ComputablePolynomial.comp (poly (.permProduct p s))
+          (ComputablePolynomial.mul
+            (ComputablePolynomial.const
+              (vk.omega ^ (-((vk.blindingFactors : ℤ) + 1))))
+            ComputablePolynomial.X))).map
             (fun q => q.eval ch.x)
         = (ps.permutationSetEvals p s).lastEval
     by_cases hfinal : s.val + 1 = shape.numPermutationSets
@@ -370,6 +382,8 @@ theorem eval_permutationSetsOfResolver
           (permutation_last_query_mem vk ps ch p s hlt hlast))
       rw [if_neg hfinal, hlast]
       simp only [Option.map_some, Option.some.injEq]
+      rw [ComputablePolynomial.comp_eq, ComputablePolynomial.mul_eq,
+        ComputablePolynomial.const_eq, ComputablePolynomial.X_eq]
       rw [eval_comp_rotate, mul_comm]
       simpa only [rotateOmega] using hopenLast
 
@@ -656,7 +670,7 @@ theorem ConstraintSatisfaction.resolverPermutationConstraints
       rw [show chunks[c]'(by omega) = chunk from by
         simpa only [chunks, chunk] using
           permutationChunksOfResolver_getElem vk poly p hc hcv]
-    have hdvd := h.permutation p _ (permutation_step_mem
+    have hdvd := h.permutationExpression p (permutation_step_mem
       sets chunks (C ch.beta) (C ch.gamma) X (C vk.delta) vk.chunkLen
       l0 lLast lBlind hchunk)
     simpa [constraintModelOfPermutationResolver, constraintModelOfResolver,
@@ -671,19 +685,21 @@ theorem ConstraintSatisfaction.resolverPermutationConstraints
       · simp [sets]
         omega
       simp [sets, current, previous, permutationSetsOfResolver]
-    have hdvd := h.permutation p _ (permutation_chain_mem
+    have hdvd := h.permutationExpression p (permutation_chain_mem
       sets chunks (C ch.beta) (C ch.gamma) X (C vk.delta) vk.chunkLen
       l0 lLast lBlind hpair)
     simpa [constraintModelOfPermutationResolver, constraintModelOfResolver,
       ConstraintPolyModel.permutationConstraints, sets, chunks, current, previous,
       permutationSetOfResolver, hrotation,
+      ComputablePolynomial.comp_eq, ComputablePolynomial.mul_eq,
+      ComputablePolynomial.const_eq, ComputablePolynomial.X_eq,
       show c + 1 ≠ shape.numPermutationSets by omega] using hdvd
   · let first := permutationSetOfResolver vk poly p ⟨0, hnonempty⟩
     have hfirst : sets.head? = some first := by
       dsimp only [sets]
       rw [permutationSetsOfResolver, List.head?_eq_getElem?, List.getElem?_ofFn]
       simp [hnonempty, first]
-    have hdvd := h.permutation p _ (permutation_start_mem
+    have hdvd := h.permutationExpression p (permutation_start_mem
       sets chunks (C ch.beta) (C ch.gamma) X (C vk.delta) vk.chunkLen
       l0 lLast lBlind hfirst)
     simpa [constraintModelOfPermutationResolver, constraintModelOfResolver,
@@ -695,7 +711,7 @@ theorem ConstraintSatisfaction.resolverPermutationConstraints
       dsimp only [sets]
       rw [permutationSetsOfResolver, List.getLast?_eq_getElem?, List.getElem?_ofFn]
       simp [hnonempty, last]
-    have hdvd := h.permutation p _ (permutation_end_mem
+    have hdvd := h.permutationExpression p (permutation_end_mem
       sets chunks (C ch.beta) (C ch.gamma) X (C vk.delta) vk.chunkLen
       l0 lLast lBlind hlast)
     simpa [constraintModelOfPermutationResolver, constraintModelOfResolver,

@@ -79,9 +79,11 @@ permuted input with its previous-row rotation. -/
 def lookupEvalPolys (omega : Fp) (z aP sP : Polynomial Fp) :
     LookupEval (Polynomial Fp) :=
   { productEval := z
-    productNextEval := z.comp (C omega * X)
+    productNextEval := ComputablePolynomial.comp z
+      (ComputablePolynomial.mul (ComputablePolynomial.const omega) ComputablePolynomial.X)
     permutedInputEval := aP
-    permutedInputInvEval := aP.comp (C omega⁻¹ * X)
+    permutedInputInvEval := ComputablePolynomial.comp aP
+      (ComputablePolynomial.mul (ComputablePolynomial.const omega⁻¹) ComputablePolynomial.X)
     permutedTableEval := sP }
 
 /-- The last-row rule in the lookup's order, `ℓ_last·(z² − z)`. -/
@@ -175,7 +177,8 @@ theorem lookup_rules_dvd_of_identity (omega beta gamma delta theta y : Fp) (chun
     hall v (mem_constraintPolys_of_mem_lookupExpressions fixedCols adviceCols instanceCols gates
       sets chunks lookups beta gamma delta theta chunkLen l0P lLastP lBlindP p hlk hv)
   refine ⟨hmem _ ?_, hmem _ ?_, hmem _ ?_, hmem _ ?_, hmem _ ?_⟩ <;>
-    simp [lookupExpressions_eq, lookupEvalPolys]
+    simp [lookupExpressions_eq, lookupEvalPolys, ComputablePolynomial.comp_eq,
+      ComputablePolynomial.mul_eq, ComputablePolynomial.const_eq, ComputablePolynomial.X_eq]
 
 open Finset in
 /-- **The lookup relation from the constraint identity.** Every hypothesis is either the verifier's

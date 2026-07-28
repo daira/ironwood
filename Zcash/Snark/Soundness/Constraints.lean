@@ -1,5 +1,6 @@
 import Mathlib
 import Zcash.Arithmetic
+import Zcash.Common.ComputablePolynomial
 import Zcash.Snark.Verifier.Expressions
 import Zcash.Snark.Verifier.Assemble
 
@@ -135,24 +136,46 @@ theorem not_mem_szBadSet {C : Polynomial Fp} {x : Fp} :
 The branch decision uses only polynomial equality and evaluation at the sampled point; the
 equivalence with `x ∉ szBadSet C` is retained in the erased proof returned on success.  This is
 the executable form reductions should use when a successful branch returns break data. -/
+def polynomialEvalData (C : Polynomial Fp) (x : Fp) : Fp :=
+  ∑ i ∈ C.toFinsupp.support, C.toFinsupp.toFun i * x ^ i
+
+/-- The data-level coefficient fold is Mathlib polynomial evaluation, but unlike
+`Polynomial.eval` it does not pass through Mathlib's deliberately noncomputable polynomial
+instances. -/
+theorem polynomialEvalData_eq_eval (C : Polynomial Fp) (x : Fp) :
+    polynomialEvalData C x = C.eval x := by
+  rw [Polynomial.eval_eq_sum]
+  rfl
+
 def szBadSetAvoidance? (C : Polynomial Fp) (x : Fp) :
-    Option (x ∉ szBadSet C) :=
-  if hzero : C = 0 then
-    some ((not_mem_szBadSet.mpr fun hne => False.elim (hne hzero)))
-  else if heval : C.eval x = 0 then
+    Option (PLift (x ∉ szBadSet C)) :=
+  if hsupport : C.toFinsupp.support = ∅ then
+    some ⟨not_mem_szBadSet.mpr fun hne =>
+      False.elim (hne (Polynomial.toFinsupp_injective (Finsupp.support_eq_empty.mp hsupport)))⟩
+  else if heval : polynomialEvalData C x = 0 then
     none
   else
-    some (not_mem_szBadSet.mpr fun _ => heval)
+    some ⟨not_mem_szBadSet.mpr fun _ => fun hzero =>
+      heval (polynomialEvalData_eq_eval C x ▸ hzero)⟩
 
 /-- The computed point test succeeds exactly outside the specification-level root set. -/
 theorem szBadSetAvoidance?_isSome_iff (C : Polynomial Fp) (x : Fp) :
     (szBadSetAvoidance? C x).isSome ↔ x ∉ szBadSet C := by
   unfold szBadSetAvoidance?
-  split <;> rename_i hzero
-  · simp [not_mem_szBadSet, hzero]
-  · split <;> rename_i heval
-    · simp [not_mem_szBadSet, hzero, heval]
-    · simp [not_mem_szBadSet, heval]
+  split <;> rename_i hsupport
+  · have hzero : C = 0 :=
+      Polynomial.toFinsupp_injective (Finsupp.support_eq_empty.mp hsupport)
+    simp [not_mem_szBadSet, hzero]
+  · have hne : C ≠ 0 := by
+      intro hzero
+      apply hsupport
+      rw [hzero]
+      rfl
+    split <;> rename_i heval
+    · simp [not_mem_szBadSet, hne, polynomialEvalData_eq_eval] at heval ⊢
+      exact heval
+    · simp [not_mem_szBadSet, hne, polynomialEvalData_eq_eval] at heval ⊢
+      exact heval
 
 /-- **Root counting: the bad set is small.** One Schwartz–Zippel use site over `F_p` excludes at
 most `natDegree C` challenges — the `d` of the `d / p` budget (`uniformChallenge_szBadSet` in
@@ -206,7 +229,7 @@ theorem natDegree_comp_rotate (col : Polynomial Fp) {w : Fp} (hw : w ≠ 0) :
   rw [Polynomial.natDegree_comp, hq, mul_one]
 
 /-- Lift a gate `Expr` to a univariate polynomial, replacing each query with its column polynomial. -/
-def Expr.toPoly (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp) :
+noncomputable def Expr.toPoly (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp) :
     Expr Fp → Polynomial Fp
   | .constant c => Polynomial.C c
   | .fixed i => fixedCols i
@@ -247,13 +270,13 @@ theorem eval_foldByY (y x : Fp) (acc : Polynomial Fp) (ps : List (Polynomial Fp)
         ih (acc * Polynomial.C y + p)
 
 /-- The gate expressions lifted to polynomials, in verifier order. -/
-def gatePolys {n : ℕ} (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
+noncomputable def gatePolys {n : ℕ} (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
     (gates : Fin n → Expr Fp) : List (Polynomial Fp) :=
   List.ofFn (fun i : Fin n => Expr.toPoly fixedCols adviceCols instanceCols (gates i))
 
 /-- The constraint `numerator`: the gate polynomials (`Expr.toPoly`) combined by the same
 `acc * y + v` fold that halo2 uses in `vanishing/verifier.rs`. -/
-def combineGates {n : ℕ} (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
+noncomputable def combineGates {n : ℕ} (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
     (y : Fp) (gates : Fin n → Expr Fp) : Polynomial Fp :=
   (gatePolys fixedCols adviceCols instanceCols gates).foldl (fun acc p => acc * Polynomial.C y + p) 0
 
@@ -278,7 +301,7 @@ open Polynomial in
 /-- Every constraint value across the sub-proofs, as polynomials. The gates and lookup expressions
 carry scalar constants, so they are lifted with `C`; the gate point becomes `X`, since evaluating the
 result at `x` has to give `x` back. -/
-def constraintPolys {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
+noncomputable def constraintPolys {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
     (adviceCols instanceCols : Fin np → ℕ → Polynomial Fp) (gates : List (Expr Fp))
     (sets : Fin np → List (PermSetEval (Polynomial Fp)))
     (chunks : Fin np → List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
@@ -289,6 +312,42 @@ def constraintPolys {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
     (fun p => (lookups p).map (fun lk =>
       (lk.1, lk.2.1.map (Expr.map C), lk.2.2.map (Expr.map C))))
     (C beta) (C gamma) X (C delta) (C theta) chunkLen l0 lLast lBlind
+
+/-- Executable coefficient-data implementation of `constraintPolys`. -/
+def constraintPolysData {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
+    (adviceCols instanceCols : Fin np → ℕ → Polynomial Fp) (gates : List (Expr Fp))
+    (sets : Fin np → List (PermSetEval (Polynomial Fp)))
+    (chunks : Fin np → List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
+    (lookups : Fin np → List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (beta gamma delta theta : Fp) (chunkLen : ℕ) (l0 lLast lBlind : Polynomial Fp) :
+    List (Polynomial Fp) :=
+  letI : CommRing (Polynomial Fp) := ComputablePolynomial.commRing
+  allConstraints fixedCols adviceCols instanceCols
+    (gates.map (Expr.map ComputablePolynomial.const)) sets chunks
+    (fun p => (lookups p).map (fun lk =>
+      (lk.1, lk.2.1.map (Expr.map ComputablePolynomial.const),
+        lk.2.2.map (Expr.map ComputablePolynomial.const))))
+    (ComputablePolynomial.const beta) (ComputablePolynomial.const gamma)
+    ComputablePolynomial.X (ComputablePolynomial.const delta)
+    (ComputablePolynomial.const theta) chunkLen l0 lLast lBlind
+
+theorem constraintPolysData_eq {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
+    (adviceCols instanceCols : Fin np → ℕ → Polynomial Fp) (gates : List (Expr Fp))
+    (sets : Fin np → List (PermSetEval (Polynomial Fp)))
+    (chunks : Fin np → List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
+    (lookups : Fin np → List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (beta gamma delta theta : Fp) (chunkLen : ℕ) (l0 lLast lBlind : Polynomial Fp) :
+    constraintPolysData fixedCols adviceCols instanceCols gates sets chunks lookups
+        beta gamma delta theta chunkLen l0 lLast lBlind =
+      constraintPolys fixedCols adviceCols instanceCols gates sets chunks lookups
+        beta gamma delta theta chunkLen l0 lLast lBlind := by
+  unfold constraintPolysData constraintPolys
+  rw [← ComputablePolynomial.commRing_eq (R := Fp)]
+  have hconst :
+      (ComputablePolynomial.const : Fp → Polynomial Fp) = Polynomial.C := by
+    funext c
+    exact ComputablePolynomial.const_eq c
+  rw [hconst, ComputablePolynomial.X_eq]
 
 open Polynomial in
 /-- Evaluating the polynomial constraints at `x` gives the verifier's constraint values at the
@@ -316,7 +375,7 @@ theorem eval_constraintPolys {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
 open Polynomial in
 /-- The constraint numerator with the permutation and lookup arguments folded in: the same `acc·y + v`
 order `combineGates` uses, over the full constraint list. -/
-def combineConstraints {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
+noncomputable def combineConstraints {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
     (adviceCols instanceCols : Fin np → ℕ → Polynomial Fp) (gates : List (Expr Fp))
     (sets : Fin np → List (PermSetEval (Polynomial Fp)))
     (chunks : Fin np → List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
@@ -325,6 +384,35 @@ def combineConstraints {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
     Polynomial Fp :=
   (constraintPolys fixedCols adviceCols instanceCols gates sets chunks lookups
     beta gamma delta theta chunkLen l0 lLast lBlind).foldl (fun acc q => acc * C y + q) 0
+
+/-- Executable coefficient-data implementation of `combineConstraints`. -/
+def combineConstraintsData {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
+    (adviceCols instanceCols : Fin np → ℕ → Polynomial Fp) (gates : List (Expr Fp))
+    (sets : Fin np → List (PermSetEval (Polynomial Fp)))
+    (chunks : Fin np → List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
+    (lookups : Fin np → List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (beta gamma delta theta y : Fp) (chunkLen : ℕ) (l0 lLast lBlind : Polynomial Fp) :
+    Polynomial Fp :=
+  (constraintPolysData fixedCols adviceCols instanceCols gates sets chunks lookups
+    beta gamma delta theta chunkLen l0 lLast lBlind).foldl
+      (fun acc q => ComputablePolynomial.add
+        (ComputablePolynomial.mul acc (ComputablePolynomial.const y)) q)
+      ComputablePolynomial.zero
+
+theorem combineConstraintsData_eq {np : ℕ} (fixedCols : ℕ → Polynomial Fp)
+    (adviceCols instanceCols : Fin np → ℕ → Polynomial Fp) (gates : List (Expr Fp))
+    (sets : Fin np → List (PermSetEval (Polynomial Fp)))
+    (chunks : Fin np → List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
+    (lookups : Fin np → List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
+    (beta gamma delta theta y : Fp) (chunkLen : ℕ) (l0 lLast lBlind : Polynomial Fp) :
+    combineConstraintsData fixedCols adviceCols instanceCols gates sets chunks lookups
+        beta gamma delta theta y chunkLen l0 lLast lBlind =
+      combineConstraints fixedCols adviceCols instanceCols gates sets chunks lookups
+        beta gamma delta theta y chunkLen l0 lLast lBlind := by
+  unfold combineConstraintsData combineConstraints
+  rw [constraintPolysData_eq]
+  simp only [ComputablePolynomial.add_eq, ComputablePolynomial.mul_eq,
+    ComputablePolynomial.const_eq, ComputablePolynomial.zero_eq]
 
 open Polynomial in
 /-- The numerator at `x` is the `y` fold of the verifier's own constraint values. -/

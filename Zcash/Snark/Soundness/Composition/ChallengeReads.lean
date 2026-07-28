@@ -73,21 +73,12 @@ theorem permutationColumnPolynomialOfResolver_congr
     permutationColumnPolynomialOfResolver vk poly₁ p cr =
       permutationColumnPolynomialOfResolver vk poly₂ p cr := by
   unfold permutationColumnPolynomialOfResolver
-  rw [show (finFn fun i : Fin shape.numInstanceQueries =>
-        poly₁ (permutationColumnCommitmentId vk p (.instance i))) =
-      (finFn fun i : Fin shape.numInstanceQueries =>
-        poly₂ (permutationColumnCommitmentId vk p (.instance i))) from
-    congrArg finFn (funext fun i => h _ trivial)]
-  rw [show (finFn fun i : Fin shape.numAdviceQueries =>
-        poly₁ (permutationColumnCommitmentId vk p (.advice i))) =
-      (finFn fun i : Fin shape.numAdviceQueries =>
-        poly₂ (permutationColumnCommitmentId vk p (.advice i))) from
-    congrArg finFn (funext fun i => h _ trivial)]
-  rw [show (finFn fun i : Fin shape.numFixedQueries =>
-        poly₁ (permutationColumnCommitmentId vk p (.fixed i))) =
-      (finFn fun i : Fin shape.numFixedQueries =>
-        poly₂ (permutationColumnCommitmentId vk p (.fixed i))) from
-    congrArg finFn (funext fun i => h _ trivial)]
+  cases cr <;> simp only [ColumnRef.resolve]
+  all_goals
+    unfold finFn
+    split
+    · exact h _ trivial
+    · rfl
 
 /-- **The permutation pairs read only the permutation input slots.** -/
 theorem resolverPermutationPairs_congr

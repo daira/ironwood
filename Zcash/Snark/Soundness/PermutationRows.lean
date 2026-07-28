@@ -38,7 +38,10 @@ theorem eval_eq_zero_of_dvd_vanishing {n : ℕ} {c : Polynomial Fp}
 polynomial composed with the rotation `ω·X`), and `lastEval` is supplied by the caller. -/
 def permSetPolys (omega : Fp) (z : Polynomial Fp)
     (last : Option (Polynomial Fp)) : PermSetEval (Polynomial Fp) :=
-  { eval := z, nextEval := z.comp (C omega * X), lastEval := last }
+  { eval := z
+    nextEval := ComputablePolynomial.comp z
+      (ComputablePolynomial.mul (ComputablePolynomial.const omega) ComputablePolynomial.X)
+    lastEval := last }
 
 @[simp] theorem permSetPolys_eval (omega : Fp) (z : Polynomial Fp) (last) :
     (permSetPolys omega z last).eval = z := rfl
@@ -46,7 +49,9 @@ def permSetPolys (omega : Fp) (z : Polynomial Fp)
 /-- The next-row component really is the next row: at `ωⁱ` it reads `z(ω^{i+1})`. -/
 theorem eval_permSetPolys_nextEval (omega : Fp) (z : Polynomial Fp) (last) (i : ℕ) :
     ((permSetPolys omega z last).nextEval).eval (omega ^ i) = z.eval (omega ^ (i + 1)) := by
-  rw [permSetPolys, eval_comp_rotate, pow_succ, mul_comm]
+  rw [permSetPolys, ComputablePolynomial.comp_eq, ComputablePolynomial.mul_eq,
+    ComputablePolynomial.const_eq, ComputablePolynomial.X_eq,
+    eval_comp_rotate, pow_succ, mul_comm]
 
 /-- **The step rule is the recurrence.** At a row the verifier has switched on, the deployed
 `permChunkExpression` vanishing says exactly that the running product advances by the ratio of the
@@ -148,11 +153,13 @@ identity name `ωⁱ·δ^{offset + j}` halo2 assigns the cell. -/
 
 /-- The committed column's value at row `ωⁱ`, column `j`. -/
 def rowValue (omega : Fp) (pairs : List (Polynomial Fp × Polynomial Fp)) :
-    ℕ → ℕ → Fp := fun i j => (pairs.getD j (0, 0)).1.eval (omega ^ i)
+    ℕ → ℕ → Fp := fun i j =>
+  (pairs.getD j (ComputablePolynomial.zero, ComputablePolynomial.zero)).1.eval (omega ^ i)
 
 /-- The permutation column's value at row `ωⁱ`, column `j` — the name `σ` sends the cell to. -/
 def rowSigmaName (omega : Fp) (pairs : List (Polynomial Fp × Polynomial Fp)) :
-    ℕ → ℕ → Fp := fun i j => (pairs.getD j (0, 0)).2.eval (omega ^ i)
+    ℕ → ℕ → Fp := fun i j =>
+  (pairs.getD j (ComputablePolynomial.zero, ComputablePolynomial.zero)).2.eval (omega ^ i)
 
 /-- The identity name halo2 assigns to row `ωⁱ`, column `j` of a chunk starting at `off`. -/
 def rowName (omega delta : Fp) (off : ℕ) : ℕ → ℕ → Fp :=

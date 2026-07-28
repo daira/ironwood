@@ -69,7 +69,7 @@ def onlinePointCoordinates (source : List (AlgebraicPoint (F := Fp) basis)) (P :
   | none => (0, 0, 0)
 
 /-- Polynomial carried by the deterministic online representation of a point. -/
-noncomputable def onlinePointPolynomial
+def onlinePointPolynomial
     (source : List (AlgebraicPoint (F := Fp) basis)) (P : VestaG) : Polynomial Fp :=
   coeffsToPoly (onlinePointCoordinates source P).1
 

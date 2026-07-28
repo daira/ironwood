@@ -109,12 +109,13 @@ def instanceColumn_eq_rowPolynomial_or_relation
     have routed := assembledQueryMemberRoute_faithful
       (instanceCommitment := instanceCommitment) vk ps ch relation.groupingCount
       relation.noDuplicateQueries q hq
+    unfold CanonicalMemberConstraintRelation.route
     rw [← hqid, routed.route_eq]
     rfl
   let slot := (relation.route (.instanceCol proofIndex column)).get hsome
   have routedInstance :
       relation.route (.instanceCol proofIndex column) =
-        some slot := Option.some_get hsome
+        some slot := (Option.some_get hsome).symm
   have hid :
       (deployedSetCommIds (instanceCommitment := instanceCommitment)
         vk ps ch slot.setIndex).getD
@@ -220,11 +221,12 @@ def acceptedInstanceColumn_eq_rowPolynomial_or_relation
     obtain ⟨q, hq, hqid⟩ := hquery
     have routed := assembledQueryMemberRoute_faithful
       (instanceCommitment := instanceCommitment) vk ps ch routing.1 routing.2 q hq
+    dsimp only [route]
     rw [← hqid, routed.route_eq]
     rfl
   let slot := (route (.instanceCol proofIndex column)).get hsome
   have routedInstance :
-      route (.instanceCol proofIndex column) = some slot := Option.some_get hsome
+      route (.instanceCol proofIndex column) = some slot := (Option.some_get hsome).symm
   have hid :
       (deployedSetCommIds (instanceCommitment := instanceCommitment)
         vk ps ch slot.setIndex).getD

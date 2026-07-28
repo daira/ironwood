@@ -750,15 +750,20 @@ theorem polynomial_eq_zero_of_not_assembled
           q.commId = id) :
     relation.polynomial id = 0 := by
   unfold CanonicalMemberConstraintRelation.polynomial
-  unfold CanonicalMemberConstraintRelation.route
-  unfold assembledQueryMemberRoute
-  split
-  · rename_i q hfind
-    exfalso
-    apply habsent
-    refine ⟨q, List.mem_of_find?_eq_some hfind, ?_⟩
-    simpa using List.find?_some hfind
-  · rfl
+  have hnone : relation.route id = none := by
+    unfold CanonicalMemberConstraintRelation.route
+    unfold assembledQueryMemberRoute
+    simp only
+    split
+    · rfl
+    · rename_i q hfind
+      exfalso
+      apply habsent
+      refine ⟨q, List.mem_of_find?_eq_some hfind, ?_⟩
+      simpa using List.find?_some hfind
+  unfold decodedPolynomialResolver
+  rw [hnone]
+  exact ComputablePolynomial.zero_eq
 
 /--
 A canonically routed fixed-column opening is the polynomial interpolating its
@@ -791,11 +796,12 @@ def fixedColumn_eq_rowPolynomial_or_relation
     have routed := assembledQueryMemberRoute_faithful
       (instanceCommitment := instanceCommitment) vk ps ch relation.groupingCount
       relation.noDuplicateQueries q hq
+    unfold CanonicalMemberConstraintRelation.route
     rw [← hqid, routed.route_eq]
     rfl
   let slot := (relation.route (.fixedCol column)).get hsome
   have routedFixed :
-      relation.route (.fixedCol column) = some slot := Option.some_get hsome
+      relation.route (.fixedCol column) = some slot := (Option.some_get hsome).symm
   have hid :
       (deployedSetCommIds (instanceCommitment := instanceCommitment)
         vk ps ch slot.setIndex).getD
@@ -910,7 +916,9 @@ def fixedColumns_eq_rowPolynomials_or_relation
         rw [rowsLength]
         exact Nat.le_of_not_gt hcolumn
       rw [hrowsDefault]
-      simp [instanceRowPolynomial, zeroPaddedRows, rowPolynomial]
+      simp [instanceRowPolynomial, zeroPaddedRows, rowPolynomial,
+        ComputablePolynomial.sumList_eq, ComputablePolynomial.mul_eq,
+        ComputablePolynomial.const_eq]
 
 /--
 Circuit-derived fixed rows discharge both consumers of fixed-column semantics:

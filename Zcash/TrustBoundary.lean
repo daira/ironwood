@@ -969,7 +969,6 @@ point evaluations, while root-set membership occurs only in erased certificates,
 assert_computable Zcash.Snark.bindOrRelationWitness
 assert_computable Zcash.Snark.finForallOrRelationWitness
 assert_computable Zcash.Snark.finForallOption
-assert_computable Zcash.Snark.fintypeForallOption +choice
 assert_computable Zcash.Snark.listForallOrRelationWitness
 assert_computable Zcash.Snark.boundedForallOrRelationWitness
 assert_computable Zcash.Snark.szBadSetAvoidance? +choice

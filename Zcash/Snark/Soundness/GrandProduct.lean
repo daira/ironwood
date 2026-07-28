@@ -98,7 +98,7 @@ theorem card_eval_prod_eq_le {F : Type*} [Field F] [Fintype F] [DecidableEq F]
 
 /-- Encode a pair `(v, n)` as the `F[β]`-element `v + n·β` (here `β = X` in `Polynomial F`).
 Injective, since `v` and `n` are its degree-0 and degree-1 coefficients. -/
-def encPair {F : Type*} [Field F] (p : F × F) : Polynomial F := C p.1 + C p.2 * X
+noncomputable def encPair {F : Type*} [Field F] (p : F × F) : Polynomial F := C p.1 + C p.2 * X
 
 theorem encPair_injective {F : Type*} [Field F] : Function.Injective (encPair (F := F)) := by
   intro p q hpq

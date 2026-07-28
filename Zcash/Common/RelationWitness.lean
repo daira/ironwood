@@ -53,7 +53,7 @@ def finForallOrRelationWitness {n : ℕ} {A : Fin n → Sort v} {R : Sort w}
 
 /-- Traverse a finite family of optional certificates.  The returned function contains the
 exact certificates produced by the individual checks; failure at any index returns `none`. -/
-def finForallOption {n : ℕ} {A : Fin n → Sort v}
+def finForallOption {n : ℕ} {A : Fin n → Type v}
     (outcome : ∀ i, Option (A i)) : Option (∀ i, A i) := by
   induction n with
   | zero => exact some fun i => Fin.elim0 i
@@ -65,16 +65,7 @@ def finForallOption {n : ℕ} {A : Fin n → Sort v}
           | none => exact none
           | some tail => exact some (Fin.cases head tail)
 
-/-- `finForallOption` transported across the canonical enumeration of a finite type. -/
-def fintypeForallOption {ι : Type u} [Fintype ι] [DecidableEq ι]
-    {A : ι → Sort v} (outcome : ∀ i, Option (A i)) : Option (∀ i, A i) :=
-  match finForallOption (fun j : Fin (Fintype.card ι) =>
-      outcome ((Fintype.equivFin ι).symm j)) with
-  | none => none
-  | some found => some fun i => by
-      simpa using found ((Fintype.equivFin ι) i)
-
-theorem finForallOption_isSome_of {n : ℕ} {A : Fin n → Sort v}
+theorem finForallOption_isSome_of {n : ℕ} {A : Fin n → Type v}
     (outcome : ∀ i, Option (A i)) (h : ∀ i, (outcome i).isSome) :
     (finForallOption outcome).isSome := by
   induction n with
@@ -84,18 +75,15 @@ theorem finForallOption_isSome_of {n : ℕ} {A : Fin n → Sort v}
       have htail : ∀ i : Fin n, (outcome i.succ).isSome := fun i => h i.succ
       obtain ⟨tail, htailEq⟩ := Option.isSome_iff_exists.mp
         (ih (fun i => outcome i.succ) htail)
-      simp [finForallOption, hhead, htailEq]
-
-theorem fintypeForallOption_isSome_of {ι : Type u} [Fintype ι] [DecidableEq ι]
-    {A : ι → Sort v} (outcome : ∀ i, Option (A i))
-    (h : ∀ i, (outcome i).isSome) :
-    (fintypeForallOption outcome).isSome := by
-  unfold fintypeForallOption
-  have hfin : ∀ j : Fin (Fintype.card ι),
-      (outcome ((Fintype.equivFin ι).symm j)).isSome := fun j => h _
-  obtain ⟨found, hfound⟩ := Option.isSome_iff_exists.mp
-    (finForallOption_isSome_of _ hfin)
-  simp [hfound]
+      have hstep : finForallOption outcome =
+          match outcome 0 with
+          | none => none
+          | some head =>
+              match finForallOption (fun i : Fin n => outcome i.succ) with
+              | none => none
+              | some tail => some (Fin.cases head tail) := rfl
+      rw [hstep, hhead, htailEq]
+      rfl
 
 /-- The bounded-`ℕ` analogue of `finForallOrRelationWitness`. Column and row families in the
 compiled constraint system are indexed by a natural number under a bound rather than by `Fin n`,

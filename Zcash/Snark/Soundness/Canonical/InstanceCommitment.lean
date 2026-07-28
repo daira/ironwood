@@ -29,7 +29,7 @@ def polynomialCoefficients (n : ℕ) (p : Polynomial Fp) : Fin n → Fp :=
 theorem coeffsToPoly_polynomialCoefficients {n : ℕ} {p : Polynomial Fp}
     (hdegree : p.natDegree < n) :
     coeffsToPoly (polynomialCoefficients n p) = p := by
-  rw [coeffsToPoly]
+  rw [coeffsToPoly_eq_sum]
   simpa only [polynomialCoefficients, ← Fin.sum_univ_eq_sum_range] using
     (p.as_sum_range_C_mul_X_pow' hdegree).symm
 
@@ -40,6 +40,8 @@ theorem rowPolynomial_eq_sum_single {n : ℕ}
       ∑ i : Fin n, values i • rowPolynomial omega (Pi.single i 1) := by
   let interpolation :=
     Lagrange.interpolate Finset.univ (fun i : Fin n => omega ^ (i : ℕ))
+  rw [rowPolynomial_eq_lagrange]
+  simp_rw [rowPolynomial_eq_lagrange]
   change interpolation values =
     ∑ i : Fin n, values i • interpolation (Pi.single i 1)
   calc

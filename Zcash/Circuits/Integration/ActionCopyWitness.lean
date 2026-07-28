@@ -1113,16 +1113,16 @@ def actionCopyReplayWitness
       intro pr hpr
       rw [encodeDeclaredCopies, List.mem_map] at hpr
       let copies := operationDeclaredCopies (actionCircuit.operations)
-      match hfind : copies.find? (fun copy =>
+      cases hfind : copies.find? (fun copy =>
           decide ((actionCopyEncode copy.1, actionCopyEncode copy.2) = pr)) with
-      | none => by
+      | none =>
           exfalso
           have hsome : (copies.find? (fun copy =>
               decide ((actionCopyEncode copy.1, actionCopyEncode copy.2) = pr))).isSome := by
             rw [List.find?_isSome]
             simpa only [decide_eq_true_eq] using hpr
           simp [hfind] at hsome
-      | some copy => by
+      | some copy =>
           have hcopy : copy ∈ copies := List.mem_of_find?_eq_some hfind
           have henc : (actionCopyEncode copy.1, actionCopyEncode copy.2) = pr := by
             simpa using List.find?_some hfind
@@ -1202,7 +1202,7 @@ def actionConstantCopyValue_or_bad
     decide (entry.1 = value.val ∧ rawTuple entry ∈ actionCopyRaw))).get hentrySome
   have hentryFind : actionConsts.find? (fun candidate =>
       decide (candidate.1 = value.val ∧ rawTuple candidate ∈ actionCopyRaw)) =
-      some entry := Option.some_get hentrySome
+      some entry := (Option.some_get hentrySome).symm
   have hentry : entry ∈ actionConsts := List.mem_of_find?_eq_some hentryFind
   have hentryFacts : entry.1 = value.val ∧ rawTuple entry ∈ actionCopyRaw := by
     simpa using List.find?_some hentryFind
@@ -1221,7 +1221,7 @@ def actionConstantCopyValue_or_bad
   have hpairFind : actionCopies.find? (fun candidate => decide
       (candidate.1.pair = ((rawTuple entry).1, (rawTuple entry).2.1) ∧
         candidate.2.pair = ((rawTuple entry).2.2.1, (rawTuple entry).2.2.2))) =
-      some pair := Option.some_get hpairSome
+      some pair := (Option.some_get hpairSome).symm
   have hpair : pair ∈ actionCopies := List.mem_of_find?_eq_some hpairFind
   have hpairFacts :
       pair.1.pair = ((rawTuple entry).1, (rawTuple entry).2.1) ∧

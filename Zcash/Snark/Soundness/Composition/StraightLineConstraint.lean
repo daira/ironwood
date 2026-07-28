@@ -23,6 +23,45 @@ variable {shape : Shape}
 
 namespace ComputedStraightLineDeployedFSFamily
 
+/-- A data-wrapped equality certificate whose check is executable whenever equality is. -/
+def equalityCertificate? {A : Type*} [DecidableEq A] (x y : A) : Option (PLift (x = y)) :=
+  if h : x = y then some ⟨h⟩ else none
+
+theorem algebraicPoint_eq_of_point_coeffs {k : Nat}
+    {basis : AugmentedIndex (2 ^ k) → VestaG}
+    (P Q : AlgebraicPoint (F := Fp) basis)
+    (hpoint : P.point = Q.point) (hcoeffs : P.coeffs = Q.coeffs) : P = Q := by
+  cases P with
+  | mk pointP reprP =>
+    cases Q with
+    | mk pointQ reprQ =>
+      dsimp only [AlgebraicPoint.point] at hpoint
+      subst pointQ
+      cases reprP with
+      | mk coeffsP eqP =>
+        cases reprQ with
+        | mk coeffsQ eqQ =>
+          dsimp only [AlgebraicPoint.coeffs, GroupRepresentation.coeffs] at hcoeffs
+          subst coeffsQ
+          rfl
+
+/-- Executable equality for AGM points: compare the point and the finite coefficient vector;
+the representation equation is a proof field and is therefore irrelevant to equality. -/
+def algebraicPointDecidableEq {k : Nat}
+    (basis : AugmentedIndex (2 ^ k) → VestaG) :
+    DecidableEq (AlgebraicPoint (F := Fp) basis) := fun P Q =>
+  if hpoint : P.point = Q.point then
+    if hcoeffs : P.coeffs = Q.coeffs then
+      isTrue (algebraicPoint_eq_of_point_coeffs P Q hpoint hcoeffs)
+    else isFalse fun h => hcoeffs (congrArg AlgebraicPoint.coeffs h)
+  else isFalse fun h => hpoint (congrArg AlgebraicPoint.point h)
+
+def fixedRepresentationsEqualityCertificate? {k : Nat}
+    (basis : AugmentedIndex (2 ^ k) → VestaG)
+    (xs ys : List (AlgebraicPoint (F := Fp) basis)) : Option (PLift (xs = ys)) :=
+  letI := algebraicPointDecidableEq basis
+  equalityCertificate? xs ys
+
 /-- The total pre-`x` constraint difference on a straight-line oracle table.  This is the same
 polynomial as `deployedConstraintDifferencePreX`, written without manufacturing the proof-only
 recursive tape used by the legacy containment statement. -/
@@ -39,6 +78,7 @@ def straightLineConstraintDifferencePreX
     (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
     (wrappedPreIpaRecord pnu)
 
+set_option maxHeartbeats 800000 in
 /-- Reconstruct a deployed decode by checking the finite equations carried by a computed batch
 outcome.  This deliberately checks the data fields themselves instead of selecting a proof-only
 `DeployedRootDecodeWitness`: if the equations hold, the returned decode contains exactly the
@@ -50,7 +90,7 @@ def straightLineDecodeOfOutcome?
       (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp)
     (witness : DeployedBatchWitness family.toFamily basis
       ((wrappedAdversary family.toFamily basis).run O)) :
-    Option (DeployedAlgebraicDecode (ursOfAugmentedBasis shape.k basis) rfl
+    Option { decoded : DeployedAlgebraicDecode (ursOfAugmentedBasis shape.k basis) rfl
       (family.vk basis) (family.instanceCommitment basis)
       ((wrappedAdversary family.toFamily basis).run O).1.proof.1
       (wrappedPreIpaRecord ((wrappedAdversary family.toFamily basis).run O))
@@ -59,30 +99,85 @@ def straightLineDecodeOfOutcome?
       (((wrappedAdversary family.toFamily basis).run O).1.multiU
         (wrappedPreIpaReads ((wrappedAdversary family.toFamily basis).run O)))
       (((wrappedAdversary family.toFamily basis).run O).1.multiBlind
-        (wrappedPreIpaReads ((wrappedAdversary family.toFamily basis).run O)))) := by
+        (wrappedPreIpaReads ((wrappedAdversary family.toFamily basis).run O))) //
+      decoded.batches = witness.batches } := by
   let pnu := (wrappedAdversary family.toFamily basis).run O
   let ch := wrappedPreIpaRecord pnu
-  if hx4Values : ∀ j,
-      commitGen (evalVector shape.k ch.x3) (witness.batches.x4.coeffs j) =
-        x4BatchEvals (family.vk basis) (family.instanceCommitment basis)
-          pnu.1.proof.1 ch j then
-    if hmemberValues : ∀ i : Fin (deployedX4PairCount (family.vk basis)
-          (family.instanceCommitment basis) pnu.1.proof.1 ch)
-        (idx : Fin ((deployedSetsForEval (family.vk basis)
-          (family.instanceCommitment basis) pnu.1.proof.1 ch).getD i.1 ([], [], 0)).1.length)
-        (m : Fin (deployedSetQueries (family.vk basis)
-          (family.instanceCommitment basis) pnu.1.proof.1 ch i.1).length),
-      (coeffsToPoly ((witness.batches.x1 i.1 i.2).coeffs m)).eval
-          ((deployedSetsForEval (family.vk basis) (family.instanceCommitment basis)
-            pnu.1.proof.1 ch).getD i.1 ([], [], 0)).1[idx] =
-        ((deployedSetQueries (family.vk basis) (family.instanceCommitment basis)
-          pnu.1.proof.1 ch i.1).getD (m : Nat) (.point 0, [])).2.getD (idx : Nat) 0 then
-      some
-        { batches := witness.batches
-          x4Values := hx4Values
-          memberValues := fun i hi => hmemberValues ⟨i, hi⟩ }
-    else none
-  else none
+  let x4Check := fun j : Fin (deployedX4PairCount (family.vk basis)
+      (family.instanceCommitment basis) pnu.1.proof.1 ch + 1) =>
+    equalityCertificate?
+      (commitGen (evalVector shape.k ch.x3) (witness.batches.x4.coeffs j))
+      (x4BatchEvals (family.vk basis) (family.instanceCommitment basis)
+        pnu.1.proof.1 ch j)
+  match finForallOption x4Check with
+  | none => exact none
+  | some hx4Values =>
+      let memberCheck := fun i : Fin (deployedX4PairCount (family.vk basis)
+          (family.instanceCommitment basis) pnu.1.proof.1 ch) =>
+        let points := ((deployedSetsForEval (family.vk basis)
+          (family.instanceCommitment basis) pnu.1.proof.1 ch).getD
+            i.1 ([], [], 0)).1
+        let queries := deployedSetQueries (family.vk basis)
+          (family.instanceCommitment basis) pnu.1.proof.1 ch i.1
+        finForallOption (fun idx : Fin points.length =>
+          finForallOption (fun m : Fin queries.length => equalityCertificate?
+            ((coeffsToPoly ((witness.batches.x1 i.1 i.2).coeffs m)).eval points[idx])
+            ((queries.getD (m : Nat) (.point 0, [])).2.getD (idx : Nat) 0)))
+      match finForallOption memberCheck with
+      | none => exact none
+      | some hmemberValues => exact some ⟨
+          ⟨witness.batches,
+            (fun j => (hx4Values j).down),
+            (fun i hi idx m => (hmemberValues ⟨i, hi⟩ idx m).down)⟩,
+          rfl⟩
+
+/-- Executable acceptance certificate for the exact run consumed by the constraint adapter. -/
+def straightLineAccepts?
+    (family : ComputedStraightLineDeployedFSFamily shape)
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) :
+    let pnu := (wrappedAdversary family.toFamily basis).run O
+    Option (PLift (DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl
+      (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
+      (chRecord (wrappedPreIpaReads pnu) (runRounds family.toFamily basis O)))) := by
+  let pnu := (wrappedAdversary family.toFamily basis).run O
+  let fullCh := chRecord (wrappedPreIpaReads pnu) (runRounds family.toFamily basis O)
+  match hassemble : assemble? (family.vk basis) (family.instanceCommitment basis)
+      pnu.1.proof.1 fullCh with
+  | none => exact none
+  | some msm =>
+      if hzero : msm.eval (ursOfAugmentedBasis shape.k basis) = 0 then
+        exact some ⟨by
+          unfold DeployedAccepts
+          rw [hassemble]
+          exact hzero⟩
+      else exact none
+
+theorem straightLineAccepts?_isSome_of
+    (family : ComputedStraightLineDeployedFSFamily shape)
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp)
+    (haccepts : let pnu := (wrappedAdversary family.toFamily basis).run O
+      DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl
+        (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
+        (chRecord (wrappedPreIpaReads pnu) (runRounds family.toFamily basis O))) :
+    (family.straightLineAccepts? basis O).isSome := by
+  let pnu := (wrappedAdversary family.toFamily basis).run O
+  let fullCh := chRecord (wrappedPreIpaReads pnu) (runRounds family.toFamily basis O)
+  change DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl
+    (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1 fullCh at haccepts
+  unfold DeployedAccepts at haccepts
+  unfold straightLineAccepts?
+  dsimp only
+  split
+  · rename_i hassemble
+    rw [hassemble] at haccepts
+    exact False.elim haccepts
+  · rename_i msm hassemble
+    rw [hassemble] at haccepts
+    simp [haccepts]
 
 /-- Successful computed constraint data, paired with the deployed acceptance proof checked on the
 same run and its complete IPA-round record. -/
@@ -120,14 +215,20 @@ def straightLineConstraintOutcome?
   let pnu := (wrappedAdversary family.toFamily basis).run O
   let ch := wrappedPreIpaRecord pnu
   let fullCh := chRecord (wrappedPreIpaReads pnu) (runRounds family.toFamily basis O)
-  match hout : family.outcome basis O with
+  match family.outcome basis O with
   | PSum.inr relation => exact some (PSum.inr relation)
   | PSum.inl witness =>
-      match hdecode : family.straightLineDecodeOfOutcome? basis O witness with
+      match fixedRepresentationsEqualityCertificate? basis witness.fixedRepresentations
+          (family.fixedRepresentations basis) with
       | none => exact none
-      | some decoded =>
-          if haccepts : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl
-              (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1 fullCh then
+      | some hsource =>
+        match family.straightLineDecodeOfOutcome? basis O witness with
+        | none => exact none
+        | some decoded =>
+          match family.straightLineAccepts? basis O with
+          | none => exact none
+          | some hacceptsProof =>
+            let haccepts := hacceptsProof.down
             let checks := DeployedConstraintChecks.of_accepts_chRecord
               (ursOfAugmentedBasis shape.k basis) rfl (family.vk basis)
               (family.instanceCommitment basis) pnu.1.proof.1
@@ -136,23 +237,14 @@ def straightLineConstraintOutcome?
                 (family.straightLineConstraintDifferencePreX basis O) ch.x with
             | some hxgoodProof =>
               match deployedOnlineConstraintOutcomeOfDecode family.toRootFamily basis pnu
-                  witness (family.outcome_source basis O witness hout) decoded
-                  (by
-                    unfold straightLineDecodeOfOutcome? at hdecode
-                    split at hdecode
-                    · split at hdecode
-                      · exact (congrArg DeployedAlgebraicDecode.batches
-                          (Option.some.inj hdecode)).symm
-                      · contradiction
-                    · contradiction)
+                  witness hsource.down decoded.1 decoded.2
                   checks (static.adviceLength basis) (static.instanceLength basis)
                   (static.fixedLength basis) (static.omegaOrder basis)
-                  (static.characteristic basis) hxgoodProof with
+                  (static.characteristic basis) hxgoodProof.down with
               | PSum.inl constraint => exact some (PSum.inl
                   { witness := constraint, accepts := haccepts })
               | PSum.inr relation => exact some (PSum.inr relation)
             | none => exact none
-          else exact none
 
 /-- Successful constraint witness projected as data from the total straight-line adapter. -/
 def straightLineConstraintSuccess?
@@ -267,7 +359,7 @@ theorem straightLineConstraintOutcome?_eq_some_of_decoded
   | none => simp [hout] at hdecoded
   | some outcome =>
       cases outcome with
-      | inl success => exact ⟨success, hout⟩
+      | inl success => exact ⟨success, rfl⟩
       | inr relation => simp [hout] at hdecoded
 
 /-- The `Option.get` success is the same value exposed by the outcome branch. -/
@@ -284,6 +376,7 @@ theorem straightLineConstraintSuccess_eq_of_outcome
     (family.straightLineConstraintSuccess? static basis O).get hdecoded = success := by
   simp [straightLineConstraintSuccess?, hout]
 
+set_option maxHeartbeats 800000 in
 /-- The legacy root-containment construction lands in the same computed success option.  This is
 the proof bridge used by the existing probability decomposition; all data in the conclusion is
 nevertheless the value returned by `straightLineConstraintOutcome?`. -/
@@ -331,27 +424,51 @@ theorem straightLineConstraintDecoded_of_root
       dsimp only [DeployedAlgebraicDecode.batches] at batches_eq
       cases batches_eq
       have hdecode : family.straightLineDecodeOfOutcome? basis O batchWitness =
-          some { batches := batchWitness.batches
-            x4Values := x4Values
-            memberValues := memberValues } := by
-        have hmemberValues : ∀ i : Fin (deployedX4PairCount (family.vk basis)
-            (family.instanceCommitment basis)
-            ((wrappedAdversary family.toFamily basis).run O).1.proof.1
-            (wrappedPreIpaRecord ((wrappedAdversary family.toFamily basis).run O)),
-            ∀ idx m,
-              (coeffsToPoly ((batchWitness.batches.x1 i.1 i.2).coeffs m)).eval
-                  ((deployedSetsForEval (family.vk basis) (family.instanceCommitment basis)
-                    ((wrappedAdversary family.toFamily basis).run O).1.proof.1
-                    (wrappedPreIpaRecord
-                      ((wrappedAdversary family.toFamily basis).run O))).getD
-                        i.1 ([], [], 0)).1[idx] =
-                ((deployedSetQueries (family.vk basis) (family.instanceCommitment basis)
-                  ((wrappedAdversary family.toFamily basis).run O).1.proof.1
-                  (wrappedPreIpaRecord ((wrappedAdversary family.toFamily basis).run O))
-                  i.1).getD (m : Nat) (.point 0, [])).2.getD (idx : Nat) 0 :=
-          fun i => memberValues i.1 i.2
-        simp only [straightLineDecodeOfOutcome?, dif_pos x4Values, dif_pos hmemberValues]
+          some ⟨⟨batchWitness.batches, x4Values, memberValues⟩, rfl⟩ := by
+        let pnu := (wrappedAdversary family.toFamily basis).run O
+        let ch := wrappedPreIpaRecord pnu
+        let x4Check := fun j : Fin (deployedX4PairCount (family.vk basis)
+            (family.instanceCommitment basis) pnu.1.proof.1 ch + 1) =>
+          equalityCertificate?
+            (commitGen (evalVector shape.k ch.x3) (batchWitness.batches.x4.coeffs j))
+            (x4BatchEvals (family.vk basis) (family.instanceCommitment basis)
+              pnu.1.proof.1 ch j)
+        have hx4Some : (finForallOption x4Check).isSome :=
+          finForallOption_isSome_of _ fun j => by
+            simp [x4Check, equalityCertificate?]
+            simpa using x4Values j
+        obtain ⟨hx4Certificates, hx4Eq⟩ := Option.isSome_iff_exists.mp hx4Some
+        let memberCheck := fun i : Fin (deployedX4PairCount (family.vk basis)
+            (family.instanceCommitment basis) pnu.1.proof.1 ch) =>
+          let points := ((deployedSetsForEval (family.vk basis)
+            (family.instanceCommitment basis) pnu.1.proof.1 ch).getD
+              i.1 ([], [], 0)).1
+          let queries := deployedSetQueries (family.vk basis)
+            (family.instanceCommitment basis) pnu.1.proof.1 ch i.1
+          finForallOption (fun idx : Fin points.length =>
+            finForallOption (fun m : Fin queries.length => equalityCertificate?
+              ((coeffsToPoly ((batchWitness.batches.x1 i.1 i.2).coeffs m)).eval points[idx])
+              ((queries.getD (m : Nat) (.point 0, [])).2.getD (idx : Nat) 0)))
+        have hmemberSome : (finForallOption memberCheck).isSome :=
+          finForallOption_isSome_of _ fun i =>
+            finForallOption_isSome_of _ fun idx =>
+              finForallOption_isSome_of _ fun m => by
+                simp [memberCheck, equalityCertificate?]
+                simpa [pnu, ch, deployedRootRunOutput] using
+                  memberValues i.1 i.2 idx m
+        obtain ⟨memberCertificates, hmemberEq⟩ :=
+          Option.isSome_iff_exists.mp hmemberSome
+        simp only [straightLineDecodeOfOutcome?]
+        rw [hx4Eq, hmemberEq]
       have haccepts := deployedAccepts_of_fsWinsFull family.toFamily basis O haccept
+      have haccepts' : let pnu := (wrappedAdversary family.toFamily basis).run O
+          DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl
+            (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
+            (chRecord (wrappedPreIpaReads pnu) (runRounds family.toFamily basis O)) := by
+        simpa [runProof, runRecord, wrappedAdversary_run_fst, wrappedPreIpaReads_run]
+          using haccepts
+      have hacceptsSome := family.straightLineAccepts?_isSome_of basis O haccepts'
+      obtain ⟨hacceptsProof, hacceptsEq⟩ := Option.isSome_iff_exists.mp hacceptsSome
       have hxgood' : (wrappedPreIpaRecord
           ((wrappedAdversary family.toFamily basis).run O)).x ∉
           szBadSet (family.straightLineConstraintDifferencePreX basis O) := by
@@ -363,11 +480,26 @@ theorem straightLineConstraintDecoded_of_root
             ((wrappedAdversary family.toFamily basis).run O)).x).isSome :=
         (szBadSetAvoidance?_isSome_iff _ _).2 hxgood'
       obtain ⟨hxgoodProof, hxgoodEq⟩ := Option.isSome_iff_exists.mp hxgoodSome
+      have hxgoodEq' := hxgoodEq
+      simp only [straightLineConstraintDifferencePreX] at hxgoodEq'
+      have outcome_eq' : family.outcome basis O = PSum.inl batchWitness := by
+        simpa [deployedRootRunOutput] using outcome_eq
+      have hsource := family.outcome_source basis O batchWitness outcome_eq'
+      have hsourceSome : (fixedRepresentationsEqualityCertificate? basis
+          batchWitness.fixedRepresentations (family.fixedRepresentations basis)).isSome := by
+        simp [fixedRepresentationsEqualityCertificate?, equalityCertificate?, hsource]
+      obtain ⟨hsourceProof, hsourceEq⟩ := Option.isSome_iff_exists.mp hsourceSome
+      have hout' := hout
+      simp only [deployedConstraintOutcomeOfRoot] at hout'
       unfold straightLineConstraintDecoded straightLineConstraintSuccess?
-      simp only [straightLineConstraintOutcome?, outcome_eq, hdecode, haccepts, dif_pos,
-        hxgoodEq, deployedConstraintOutcomeOfRoot] at hout ⊢
-      simpa [straightLineConstraintDifferencePreX, deployedConstraintDifferencePreX,
-        deployedRootRunOutput] using hout
+      unfold straightLineConstraintOutcome?
+      simp +zetaDelta only [outcome_eq']
+      simp +zetaDelta only [hsourceEq]
+      simp +zetaDelta only [hdecode]
+      simp +zetaDelta only [hacceptsEq]
+      rw [hxgoodEq]
+      simp [straightLineConstraintDifferencePreX, deployedConstraintDifferencePreX,
+        deployedRootRunOutput, hout']
 
 /-- Basis/oracle pairs on which the one-run endpoint accepts but does not return the concrete
 constraint witness. -/
@@ -524,7 +656,15 @@ theorem straightLineConstraintFailure_union_relation_prob_eq_of_uniformURS
               family.straightLineRelationEvent finder)) := hmeasure
     _ = _ := by
       rw [independentProductPMF_uniform]
-      rfl
+      have hsets :
+          ((fun p => (scalarBasis B p.1, p.2)) ⁻¹'
+              (family.straightLineConstraintFailureEvent static ∪
+                family.straightLineRelationEvent finder)) =
+            family.straightLineConstraintFailureSet B static ∪
+              relSetWithCoins B finder := by
+        ext q
+        simp [straightLineConstraintFailureSet, straightLineRelationEvent, relSetWithCoins]
+      rw [hsets]
 
 /-- The exact pre-`x` bad event, restricted to the fixed proof-only tape used by the straight-line
 decode. -/
@@ -710,9 +850,13 @@ theorem straightLineConstraintFailure_union_relation_prob_le_of_relationSuperset
   let badXSet := family.straightLineConstraintBadXSet B
   have hrelationSubset : oldRelationSet ⊆ relationSet := by
     intro q hq
+    have hq' :
+        (family.straightLineConstraintRelationFinder (scalarBasis B q.1) q.2).isSome := by
+      simpa only [oldRelationSet, relSetWithCoins, Finset.mem_coe,
+        Finset.mem_filter, Finset.mem_univ, true_and] using hq
     simpa only [oldRelationSet, relationSet, relSetWithCoins, Finset.mem_coe,
       Finset.mem_filter, Finset.mem_univ, true_and] using
-      hextends (scalarBasis B q.1) q.2 hq
+      hextends (scalarBasis B q.1) q.2 hq'
   have hcontain : family.straightLineConstraintFailureSet B static ∪ relationSet <=
       zeroSet ∪ (ipaSet ∪ (rootSet ∪ (relationSet ∪ badXSet))) :=
     fun q hq => by
