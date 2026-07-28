@@ -12,24 +12,21 @@ capstone, while this file selects the fixed-call straight-line relation finder.
 namespace Zcash.Snark.Fixture2
 
 open Zcash.Snark
+open Zcash.Snark.ComputedStraightLineDeployedFSFamily (straightLineDlogGroupWork)
 open scoped ENNReal
 
-/-- Captured-key straight-line AGM capstone.  The family supplies the staged IPA representation
-trace and deployed root chronology; the captured key discharges the static checks and degree
-budget.  The only computational term is the explicit finite-security Vesta DLOG profile. -/
+/-- Captured-key straight-line AGM **compressed-identity** capstone.  The family supplies the
+staged IPA representation trace, the deployed root chronology, and the constraint-`x` chronology
+`x` pinning is derived from; the captured key discharges the static checks and degree budget.
+The captured premise pins scalar metadata, layouts, and expressions only — no literal fixture
+commitment equality across sampled AGM bases.  The only computational term is the explicit
+finite-security Vesta DLOG profile.  Row-level semantics require the four additional budgets of
+`straightLineConstraintSemanticFailure_prob_le_of_generatorRO_dlogProfile`. -/
 theorem orchard_deployed_knowledge_error_captured_straightLine
     (B : VestaG)
     (family : ComputedStraightLineDeployedFSFamily shape)
-    (hvk : forall basis, family.vk basis = vk)
-    (profile : family.StraightLineConstraintDlogProfile B)
-    (hpinned : forall basis
-      (O : BTranscript Fp VestaG
-        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp)
-      (v : Fp),
-      deployedConstraintXBadSet family.toRootFamily basis
-          (Function.update O (algebraicFullPrefixesPre family.init
-            ((family.adversary basis).run O) 4) v) =
-        deployedConstraintXBadSet family.toRootFamily basis O) :
+    (hvk : forall basis, CapturedVerifierKeyProfile (family.vk basis))
+    (profile : family.StraightLineConstraintDlogProfile B) :
     (PMF.uniformOfFintype
       ((AugmentedIndex (2 ^ shape.k) -> Fp) ×
         (BTranscript Fp VestaG
@@ -48,24 +45,18 @@ theorem orchard_deployed_knowledge_error_captured_straightLine
           ((20470 : Nat) / (Fintype.card Fp : ENNReal)) :=
   family.straightLineConstraintFailure_prob_le_of_dlogProfile B
     (deployedConstraintStaticChecks_of_captured family.toRootFamily hvk)
-    (deployedConstraintXSqueezeSchedule_captured family.toRootFamily hvk hpinned) profile
+    (deployedConstraintXSqueezeSchedule_captured family.toConstraintFamily hvk) profile
 
-/-- Generator-random-oracle form of the captured straight-line endpoint. -/
+/-- Generator-random-oracle form of the captured straight-line **compressed-identity** endpoint;
+row-level semantics are the four-budget promotion
+`straightLineConstraintSemanticFailure_prob_le_of_generatorRO_dlogProfile`. -/
 theorem orchard_deployed_knowledge_error_captured_straightLine_generatorRO
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ shape.k) -> T) (hquery : Function.Injective query)
     (family : ComputedStraightLineDeployedFSFamily shape)
-    (hvk : forall basis, family.vk basis = vk)
-    (profile : family.StraightLineConstraintDlogProfile B)
-    (hpinned : forall basis
-      (O : BTranscript Fp VestaG
-        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp)
-      (v : Fp),
-      deployedConstraintXBadSet family.toRootFamily basis
-          (Function.update O (algebraicFullPrefixesPre family.init
-            ((family.adversary basis).run O) 4) v) =
-        deployedConstraintXBadSet family.toRootFamily basis O) :
+    (hvk : forall basis, CapturedVerifierKeyProfile (family.vk basis))
+    (profile : family.StraightLineConstraintDlogProfile B) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
@@ -85,6 +76,6 @@ theorem orchard_deployed_knowledge_error_captured_straightLine_generatorRO
           ((20470 : Nat) / (Fintype.card Fp : ENNReal)) :=
   family.straightLineConstraintFailure_prob_le_of_generatorRO_dlogProfile
     B hB query hquery (deployedConstraintStaticChecks_of_captured family.toRootFamily hvk)
-    (deployedConstraintXSqueezeSchedule_captured family.toRootFamily hvk hpinned) profile
+    (deployedConstraintXSqueezeSchedule_captured family.toConstraintFamily hvk) profile
 
 end Zcash.Snark.Fixture2

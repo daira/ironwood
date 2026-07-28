@@ -109,6 +109,69 @@ theorem straightLineConstraintFailure_prob_le_of_generatorRO_dlogProfile
     (orchard_uniformURSIdentification_of_generatorRO shape.k B hB query hquery)]
   exact family.straightLineConstraintFailure_prob_le_of_dlogProfile B static schedule profile
 
+/-- **Semantic straight-line capstone.** The compressed-identity finite-security bound is
+augmented by the four named challenge budgets; `hsemantic` supplies the row-level upgrade exactly
+as on the recursive side. -/
+theorem straightLineConstraintSemanticFailure_prob_le_of_generatorRO_dlogProfile
+    {T : Type*} [DecidableEq T]
+    (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex (2 ^ shape.k) -> T) (hquery : Function.Injective query)
+    (family : ComputedStraightLineDeployedFSFamily shape)
+    (static : DeployedConstraintStaticChecks family.toRootFamily)
+    (semanticDecoded : (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) ->
+      (BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) -> Prop)
+    (badY badBeta badGamma badTheta :
+      Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) ×
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp)))
+    {epsilonX yBound betaBound gammaBound thetaBound : ENNReal}
+    (schedule : DeployedConstraintXSqueezeSchedule family.toRootFamily epsilonX)
+    (profile : StraightLineConstraintDlogProfile B family)
+    (hsemantic : family.StraightLineConstraintSemanticUpgradeContained static
+      semanticDecoded badY badBeta badGamma badTheta)
+    (hY : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' badY) <= yBound)
+    (hBeta : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' badBeta) <= betaBound)
+    (hGamma : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' badGamma) <= gammaBound)
+    (hTheta : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' badTheta) <= thetaBound) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          family.straightLineConstraintSemanticFailureEvent semanticDecoded)
+      <= ((family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
+          (family.Q + 1 : Nat) *
+            (shape.k * (2 / (Fintype.card Fp : ENNReal))) +
+          (family.Q + (11 + shape.k) + 1 : Nat) *
+            algebraicRootBudget shape shape.k +
+          (profile.advantage family.straightLineDlogRandomOracleQueries
+              (straightLineDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
+            1 / Fintype.card Fp) +
+          (family.Q + 1 : Nat) * epsilonX)
+        + (yBound + (betaBound + (gammaBound + thetaBound))) :=
+  family.straightLineConstraintSemanticFailure_prob_le_of_compressed_bound query static
+    semanticDecoded badY badBeta badGamma badTheta hsemantic
+    (family.straightLineConstraintFailure_prob_le_of_generatorRO_dlogProfile
+      B hB query hquery static schedule profile)
+    hY hBeta hGamma hTheta
+
 /-! ## Work-factor arithmetic -/
 
 /-- A four-call reduction with at most twenty-eight adversary-work units of postprocessing has at

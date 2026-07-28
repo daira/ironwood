@@ -413,10 +413,12 @@
         "For distinct parameter queries, the recursive Fiat-Shamir binding event in the uniform generator-RO model is bounded by the fixed-call discrete-log advantage plus the explicit truncation tail.",
         "The additive straight-line AGM endpoint derives each IPA pinned-root invariant from a staged representation trace and covers accepting failure by the zero slice, 2k IPA roots, deployed multiopen roots, the constraint-x root, or one explicit DLOG relation.",
         "The straight-line combined finder uses at most four prover invocations, so its DLOG capstone has no AFK expectation, truncation, or Markov term.",
-        "At the consensus maximum and T=2^122, its non-DLOG statistical terms are below 2^-85; an explicitly profiled five-bit reduction overhead maps the 2^122 adversary-work target to the 2^127 DLOG-solver scale."
+        "At the consensus maximum and T=2^122, its non-DLOG statistical terms are below 2^-85; an explicitly profiled five-bit reduction overhead maps the 2^122 adversary-work target to the 2^127 DLOG-solver scale.",
+        "Both the recursive and straight-line runtime endpoints pass through the four-budget semantic promotion, so row-level gate, permutation, and lookup semantics carry explicit y, beta, gamma, and theta prices on top of the compressed identity.",
+        "The direct-coordinate postprocessing has a proved field-independent polynomial total-cost model: at most numPointSets+1 columns, each traversing at most queryBudget members - linear in the action count at the captured shape and negligible against the 2^122 work target."
       ],
       "residuals": [
-        "Identify deployed Blake2b and halo2's concrete hash-to-curve with their modeled random oracles; instantiate the staged AGM representation trace from the concrete prover schedule; assume finite-security Vesta DL hardness; and supply the external group-work bound for algebraic postprocessing."
+        "Identify deployed Blake2b and halo2's concrete hash-to-curve with their modeled random oracles; instantiate the staged AGM representation trace from the concrete prover schedule at the captured shape (the interfaces are inhabited at the degenerate witness shape); assume finite-security Vesta DL hardness; and supply the external bound on the prover's own group work — the direct-coordinate postprocessing itself now carries a proved field-independent polynomial cost model, linear in the action count at the captured shape."
       ],
       "durationMs": 10000
     },

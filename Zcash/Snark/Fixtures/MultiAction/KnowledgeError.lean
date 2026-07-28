@@ -29,7 +29,7 @@ capstone with the captured key's static checks and degree caps discharged: extra
 that identity is at most the challenge-pricing terms, the fixed-budget DLOG term with its explicit
 AFK truncation tail, the additive root budget, and the concrete `(Q + 1) · 20470 / |𝔽|` bad-`x`
 term. Row-level semantics require the four additional budgets of
-`snarkConstraintsSemanticDeployed_prob_le_of_root_schedule`. -/
+`snarkConstraintsSemanticDeployed_prob_le_of_root_schedule_runtime`. -/
 theorem orchard_deployed_knowledge_error_captured
     {T' : Type*} [DecidableEq T'] (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ shape.k) → T') (hquery : Function.Injective query)

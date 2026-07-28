@@ -85,6 +85,7 @@ structure StraightLineIpaOnlineTrace (family : ComputedAlgebraicFSFamily shape) 
 /-- The staged representation trace derives the pinned-squeeze property used by probability
 pricing. -/
 theorem StraightLineIpaOnlineTrace.toSqueezeInvariance
+    {family : ComputedAlgebraicFSFamily shape}
     (trace : StraightLineIpaOnlineTrace family) :
     StraightLineIpaSqueezeInvariance family := by
   intro basis j O v
@@ -96,14 +97,12 @@ theorem StraightLineIpaOnlineTrace.toSqueezeInvariance
     straightLineIpaRootBad family basis ((family.adversary basis).run updated) updated j =
         szBadSet (trace.rootPolynomialBefore basis j updated) := by
       unfold straightLineIpaRootBad
-      congr 1
-      exact (trace.agrees basis j updated).symm
+      rw [trace.agrees basis j updated]
     _ = szBadSet (trace.rootPolynomialBefore basis j O) := by
       rw [trace.invariant basis j O v]
     _ = straightLineIpaRootBad family basis actual O j := by
       unfold straightLineIpaRootBad
-      congr 1
-      exact trace.agrees basis j O
+      rw [trace.agrees basis j O]
 
 /-- An algebraic FS family whose IPA representations carry an online squeeze trace. -/
 structure ComputedStraightLineIpaFSFamily (shape : Shape)
@@ -133,13 +132,13 @@ theorem straightLineIpaRootBad_measure_le (family : ComputedStraightLineIpaFSFam
         (straightLineIpaRootBad family.toFamily basis p O j) <=
       2 / (Fintype.card Fp : ENNReal) := by
   unfold straightLineIpaRootBad
-  exact le_trans (uniformChallenge_szBadSet _) <| ENNReal.div_le_div_right
-    (by exact_mod_cast ipaDiscrepancyPolynomialAt_natDegree_le
-      (p.straightLineInitialDiscrepancy
-        (fun i => O (algebraicFullPrefixesPre family.init p i)))
-      (p.straightLineRoundDiscrepancies
-        (fun i => O (algebraicFullPrefixesPre family.init p i)))
-      (List.ofFn fun r => O (algebraicFullPrefixes family.init p r)) j.val) _
+  refine le_trans (uniformChallenge_szBadSet _) (ENNReal.div_le_div_right ?_ _)
+  exact_mod_cast ipaDiscrepancyPolynomialAt_natDegree_le
+    (p.straightLineInitialDiscrepancy
+      (fun i => O (algebraicFullPrefixesPre family.init p i)))
+    (p.straightLineRoundDiscrepancies
+      (fun i => O (algebraicFullPrefixesPre family.init p i)))
+    (List.ofFn fun r => O (algebraicFullPrefixes family.init p r)) j.val
 
 /-- The `shape.k` pinned quadratic events for the straight-line IPA layer. -/
 noncomputable def pinnedIpaRoots (family : ComputedStraightLineIpaFSFamily shape)
@@ -184,6 +183,19 @@ def straightLineCanonicalRelation
       (ursOfAugmentedBasis shape.k basis).w) :
     AlgebraicRelationWitness (F := Fp) basis := by
   simpa only [augmentedBasis_ursOfAugmentedBasis] using relation.toAlgebraicRelationWitness
+
+/-- The one-run binding predicate is an explicit conjunction of Vesta-point and field
+comparisons.  Naming its decision procedure keeps the finder below an ordinary executable
+definition instead of letting the ambient `open Classical` supply `propDecidable`. -/
+instance decidableFullAlgebraicBindingAttackZ
+    {basis : AugmentedIndex (2 ^ shape.k) -> VestaG}
+    {vk : VerifyingKey shape Fp VestaG}
+    {instanceCommitment : Fin shape.numProofs -> Nat -> VestaG}
+    (p : AlgebraicWfProof basis vk instanceCommitment)
+    (nu : Fin 11 -> Fp) (chi : Fin shape.k -> Fp) :
+    Decidable (fullAlgebraicBindingAttackZ basis vk instanceCommitment p nu chi) := by
+  unfold fullAlgebraicBindingAttackZ fullAlgebraicBindingAttack DeployedIpaVerifierEq
+  infer_instance
 
 /-- The one-run IPA relation finder.  It executes the algebraic adversary once, returns the
 explicit relation branch, and leaves quadratic-root runs to `pinnedIpaRoots`. -/
@@ -233,7 +245,23 @@ theorem pinnedIpaRoots_landing_or_relation
   cases hsplit : p.straightLineBindingAttackZIndexedRootOrRelation nu chi hattack with
   | inr relation =>
       apply Or.inr
-      simp [straightLineIpaRelationFinder, p, nu, chi, hattack, hsplit]
+      -- Restate the run in the finder's own spelling; `runProof`/`runReads`/`runRounds` are
+      -- definitionally the single adversary execution the finder performs.
+      have hattack' : fullAlgebraicBindingAttackZ basis (family.vk basis)
+          (family.instanceCommitment basis) ((family.adversary basis).run O)
+          (fun i => O (algebraicFullPrefixesPre family.init
+            ((family.adversary basis).run O) i))
+          (fun j => O (algebraicFullPrefixes family.init
+            ((family.adversary basis).run O) j)) := hattack
+      have hsplit' :
+          ((family.adversary basis).run O).straightLineBindingAttackZIndexedRootOrRelation
+            (fun i => O (algebraicFullPrefixesPre family.init
+              ((family.adversary basis).run O) i))
+            (fun j => O (algebraicFullPrefixes family.init
+              ((family.adversary basis).run O) j)) hattack' = PSum.inr relation := hsplit
+      simp only [straightLineIpaRelationFinder]
+      rw [dif_pos hattack', hsplit']
+      simp
   | inl root =>
       apply Or.inl
       obtain ⟨j, hroot⟩ := root

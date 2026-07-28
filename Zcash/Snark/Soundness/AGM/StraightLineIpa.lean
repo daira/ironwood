@@ -17,6 +17,8 @@ namespace Zcash.Snark
 
 open Classical
 
+local instance vestaInhabitedStraightLineIpa : Inhabited VestaG := ⟨0⟩
+
 variable {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) -> VestaG}
 
 /-! ## The scalar discrepancy walk -/
@@ -29,7 +31,7 @@ def ipaDiscrepancyStep (current : Fp) (round : Fp × Fp) (challenge : Fp) : Fp :
   current + challenge⁻¹ * round.1 + challenge * round.2
 
 /-- The quadratic whose root records a nonzero discrepancy becoming zero in one round. -/
-def ipaDiscrepancyPolynomial (current : Fp) (round : Fp × Fp) : Polynomial Fp :=
+noncomputable def ipaDiscrepancyPolynomial (current : Fp) (round : Fp × Fp) : Polynomial Fp :=
   C round.1 + C current * X + C round.2 * X ^ 2
 
 /-- The discrepancy polynomial is nonzero whenever the incoming discrepancy is nonzero. -/
@@ -45,14 +47,14 @@ theorem ipaDiscrepancyPolynomial_natDegree_le (current : Fp) (round : Fp × Fp) 
     (ipaDiscrepancyPolynomial current round).natDegree ≤ 2 := by
   unfold ipaDiscrepancyPolynomial
   refine (Polynomial.natDegree_add_le _ _).trans (max_le ?_ ?_)
-  · exact (Polynomial.natDegree_C round.1).le.trans (by omega)
   · refine (Polynomial.natDegree_add_le _ _).trans (max_le ?_ ?_)
-    · exact (Polynomial.natDegree_mul_le _ _).trans
+    · exact (Polynomial.natDegree_C round.1).le.trans (by omega)
+    · exact Polynomial.natDegree_mul_le.trans
         ((Nat.add_le_add (Polynomial.natDegree_C current).le
           Polynomial.natDegree_X_le).trans (by omega))
-    · exact (Polynomial.natDegree_mul_le _ _).trans
-        ((Nat.add_le_add (Polynomial.natDegree_C round.2).le
-          (by rw [Polynomial.natDegree_X_pow])).trans (by omega))
+  · exact Polynomial.natDegree_mul_le.trans
+      ((Nat.add_le_add (Polynomial.natDegree_C round.2).le
+        (Polynomial.natDegree_X_pow 2).le).trans (by omega))
 
 /-- If a nonzero discrepancy becomes zero, the round challenge is a root of its quadratic. -/
 theorem ipaDiscrepancyPolynomial_eval_eq_zero {current challenge : Fp} (round : Fp × Fp)
@@ -61,11 +63,13 @@ theorem ipaDiscrepancyPolynomial_eval_eq_zero {current challenge : Fp} (round : 
   have hchallenge : challenge ≠ 0 := by
     intro hzero
     subst challenge
-    simpa [ipaDiscrepancyStep] using hstep
+    exact hcurrent (by simpa [ipaDiscrepancyStep] using hstep)
   calc
     (ipaDiscrepancyPolynomial current round).eval challenge =
         challenge * ipaDiscrepancyStep current round challenge := by
-      simp [ipaDiscrepancyPolynomial, ipaDiscrepancyStep, hchallenge]
+      simp only [ipaDiscrepancyPolynomial, ipaDiscrepancyStep, Polynomial.eval_add,
+        Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+      field_simp
       ring
     _ = 0 := by rw [hstep, mul_zero]
 
@@ -92,7 +96,7 @@ def ipaDiscrepancyFold : Fp -> List (Fp × Fp) -> List Fp -> Fp
   | current, _, _ => current
 
 /-- The challenge and pinned polynomial encountered at every step of the discrepancy walk. -/
-def ipaDiscrepancyRootEvents : Fp -> List (Fp × Fp) -> List Fp ->
+noncomputable def ipaDiscrepancyRootEvents : Fp -> List (Fp × Fp) -> List Fp ->
     List (Fp × Polynomial Fp)
   | current, round :: rounds, challenge :: challenges =>
       (challenge, ipaDiscrepancyPolynomial current round) ::
@@ -100,7 +104,8 @@ def ipaDiscrepancyRootEvents : Fp -> List (Fp × Fp) -> List Fp ->
   | _, _, _ => []
 
 /-- The polynomial fixed immediately before the `j`-th discrepancy challenge. -/
-def ipaDiscrepancyPolynomialAt : Fp -> List (Fp × Fp) -> List Fp -> Nat -> Polynomial Fp
+noncomputable def ipaDiscrepancyPolynomialAt :
+    Fp -> List (Fp × Fp) -> List Fp -> Nat -> Polynomial Fp
   | current, round :: _, _ :: _, 0 => ipaDiscrepancyPolynomial current round
   | current, round :: rounds, challenge :: challenges, j + 1 =>
       ipaDiscrepancyPolynomialAt (ipaDiscrepancyStep current round challenge)
@@ -137,8 +142,11 @@ theorem ipaDiscrepancyRootEvents_getElem (initial : Fp) (rounds : List (Fp × Fp
           cases j with
           | zero => simp [ipaDiscrepancyRootEvents, ipaDiscrepancyPolynomialAt]
           | succ j =>
+              have hj' : j < (ipaDiscrepancyRootEvents
+                  (ipaDiscrepancyStep initial round challenge) rounds challenges).length := by
+                simpa [ipaDiscrepancyRootEvents] using hj
               simpa [ipaDiscrepancyRootEvents, ipaDiscrepancyPolynomialAt] using
-                ih (ipaDiscrepancyStep initial round challenge) challenges j (by simpa using hj)
+                ih (ipaDiscrepancyStep initial round challenge) challenges j hj'
 
 /-- Equal-length round and challenge lists produce one root event per round. -/
 theorem ipaDiscrepancyRootEvents_length (initial : Fp) (rounds : List (Fp × Fp))
@@ -150,9 +158,10 @@ theorem ipaDiscrepancyRootEvents_length (initial : Fp) (rounds : List (Fp × Fp)
       cases challenges with
       | nil => simp at hlength
       | cons challenge challenges =>
-          simp only [List.length_cons, Nat.succ_injEq] at hlength
+          simp only [List.length_cons] at hlength
+          have hlength' : rounds.length = challenges.length := by omega
           simp [ipaDiscrepancyRootEvents,
-            ih (ipaDiscrepancyStep initial round challenge) challenges hlength]
+            ih (ipaDiscrepancyStep initial round challenge) challenges hlength']
 
 /-- If a nonzero initial discrepancy finishes at zero, some round challenge is in its pinned
 quadratic root set.  This is the deterministic core of the straight-line IPA error term. -/
@@ -177,14 +186,16 @@ theorem ipaDiscrepancyFold_zero_has_root (initial : Fp) (rounds : List (Fp × Fp
             · simp [ipaDiscrepancyRootEvents]
             · exact ipaDiscrepancyStep_mem_badSet round hinitial hnext
           · obtain ⟨event, hevent, hroot⟩ := ih next challenges hnext hfinal
-            exact ⟨event, by simp [ipaDiscrepancyRootEvents, hevent], hroot⟩
+            refine ⟨event, ?_, hroot⟩
+            simp only [ipaDiscrepancyRootEvents, List.mem_cons]
+            exact Or.inr hevent
 
 /-! ## Represented IPA round sum -/
 
 /-- Expand represented IPA round pairs into the two scalar-point terms contributed by each
 challenge.  Recursing on lists makes the truncation behavior agree definitionally with
 `List.zip`, which is used by the deployed verifier. -/
-def representedRoundTerms {basis : AugmentedIndex n -> VestaG} :
+def representedRoundTerms {n : Nat} {basis : AugmentedIndex n -> VestaG} :
     List (AlgebraicPoint (F := Fp) basis × AlgebraicPoint (F := Fp) basis) -> List Fp ->
       List (Fp × AlgebraicPoint (F := Fp) basis)
   | (L, R) :: rounds, u :: challenges =>
@@ -192,7 +203,7 @@ def representedRoundTerms {basis : AugmentedIndex n -> VestaG} :
   | _, _ => []
 
 /-- The represented round terms evaluate to the verifier's ordinary IPA round sum. -/
-theorem representedRoundTerms_point_sum {basis : AugmentedIndex n -> VestaG}
+theorem representedRoundTerms_point_sum {n : Nat} {basis : AugmentedIndex n -> VestaG}
     (rounds : List (AlgebraicPoint (F := Fp) basis × AlgebraicPoint (F := Fp) basis))
     (challenges : List Fp) :
     (((representedRoundTerms rounds challenges).map fun t => (t.1, t.2.point)).map
@@ -205,7 +216,9 @@ theorem representedRoundTerms_point_sum {basis : AugmentedIndex n -> VestaG}
       cases challenges with
       | nil => simp [representedRoundTerms]
       | cons u challenges =>
-          simp [representedRoundTerms, roundSum_cons, ih]
+          simp only [representedRoundTerms, List.map_cons, List.sum_cons, roundSum_cons]
+          rw [ih challenges]
+          abel
 
 /-- The scalar mismatch between the generator coordinates and `U` coordinate of one represented
 point, at evaluation vector `b` and deployed IPA scale `z`. -/
@@ -231,11 +244,11 @@ theorem ipaDiscrepancyFold_representedRounds
       initial + z * innerProduct (repsGPart (representedRoundTerms rounds challenges)) b -
         repsU (representedRoundTerms rounds challenges) := by
   induction rounds generalizing initial challenges with
-  | nil => simp [ipaDiscrepancyFold, representedRoundTerms, repsGPart, repsU]
+  | nil => simp [ipaDiscrepancyFold, representedRoundTerms, repsGPart, repsU, innerProduct]
   | cons round rounds ih =>
       rcases round with ⟨L, R⟩
       cases challenges with
-      | nil => simp [ipaDiscrepancyFold, representedRoundTerms, repsGPart, repsU]
+      | nil => simp [ipaDiscrepancyFold, representedRoundTerms, repsGPart, repsU, innerProduct]
       | cons challenge challenges =>
           rw [List.map_cons, ipaDiscrepancyFold, representedRoundTerms,
             ih (ipaDiscrepancyStep initial
@@ -243,7 +256,7 @@ theorem ipaDiscrepancyFold_representedRounds
             repsGPart_cons, repsGPart_cons, repsU_cons, repsU_cons,
             innerProduct_add, innerProduct_add, innerProduct_smul, innerProduct_smul]
           simp only [ipaDiscrepancyStep, representedRoundDiscrepancy,
-            representedPointDiscrepancy, Prod.fst, Prod.snd, smul_eq_mul]
+            representedPointDiscrepancy]
           ring
 
 namespace AlgebraicWfProof
@@ -266,8 +279,11 @@ def straightLineAdjustedPoint
     repr :=
       { coeffs := augmentedCoeffs a pU pW
         hEq := by
-          rw [← augmentedBasis_ursOfAugmentedBasis shape.k basis,
-            representationEval_augmentedBasis, commit_eq_commitGen] } }
+          have h := representationEval_augmentedBasis
+            (ursOfAugmentedBasis shape.k basis).g (ursOfAugmentedBasis shape.k basis).u
+            (ursOfAugmentedBasis shape.k basis).w a pU pW
+          rw [augmentedBasis_ursOfAugmentedBasis] at h
+          simpa [commit_eq_commitGen] using h } }
 
 /-- The straight-line adjusted point is exactly the initial point in Halo2's deployed IPA
 verification equation.  In particular, changing only the IPA-round challenge vector does not
@@ -286,9 +302,8 @@ theorem straightLineAdjustedPoint_eq_verifierInitial
             (chRecord nu chi)].getD i.val 0) •
               (ursOfAugmentedBasis shape.k basis).g i)
         + (chRecord nu chi : Challenges shape.k Fp).xi • p.proof.1.ipaS := by
-  let urs := ursOfAugmentedBasis shape.k basis
-  rw [straightLineAdjustedPoint]
-  dsimp only
+  symm
+  dsimp only [straightLineAdjustedPoint, AlgebraicWfProof.proof]
   rw [← chRecord_update nu chi, multiopenValue_ipaRound,
     multiopenCommitment_ipaRound,
     show ({chRecord nu (fun _ => (0 : Fp)) with ipaRound := chi} :
@@ -298,8 +313,23 @@ theorem straightLineAdjustedPoint_eq_verifierInitial
     ← p.ipaS_repr,
     sum_getD_single (ursOfAugmentedBasis shape.k basis).g
       (multiopenValue vk instanceCommitment p.algebraicProof.erase
-        (chRecord nu (fun _ => 0))),
-    commit_adjustedWitness]
+        (chRecord nu (fun _ => 0)))]
+  -- Pin the witness index to `2 ^ shape.k` so the rewrite matches the point's own coordinates.
+  have hadj : ∀ a s : Fin (2 ^ shape.k) -> Fp, ∀ v xi : Fp,
+      commit (ursOfAugmentedBasis shape.k basis) (adjustedWitness a s v xi) =
+        commit (ursOfAugmentedBasis shape.k basis) a -
+          v • (ursOfAugmentedBasis shape.k basis).g 0 +
+          xi • commit (ursOfAugmentedBasis shape.k basis) s :=
+    fun a s v xi =>
+      commit_adjustedWitness (ursOfAugmentedBasis shape.k basis) a s v xi
+  -- Restate the adjusted side in this file's own spelling so `hadj` matches syntactically.
+  change _ = commit (ursOfAugmentedBasis shape.k basis)
+        (adjustedWitness (p.aMulti nu) p.s
+          (multiopenValue vk instanceCommitment p.algebraicProof.erase
+            (chRecord nu (fun _ => 0))) (nu 9)) +
+      (p.multiU nu + nu 9 * p.sU) • (ursOfAugmentedBasis shape.k basis).u +
+      (p.multiBlind nu + nu 9 * p.sBlind) • (ursOfAugmentedBasis shape.k basis).w
+  rw [hadj]
   module
 
 /-! ## The symbolic coordinates of the accepted IPA equation -/
@@ -322,7 +352,27 @@ theorem straightLineRoundTerms_point_sum
       roundSum (List.ofFn p.proof.1.ipaRounds) (List.ofFn chi) := by
   rw [straightLineRoundTerms, representedRoundTerms_point_sum]
   congr 1
-  simp [AlgebraicWfProof.rounds]
+  simp only [List.map_ofFn]
+  rfl
+
+/-- The generator coordinates of the adjusted point are the deployed adjusted witness. -/
+theorem straightLineAdjustedPoint_gPart
+    {vk : VerifyingKey shape Fp VestaG}
+    {instanceCommitment : Fin shape.numProofs -> Nat -> VestaG}
+    (p : AlgebraicWfProof basis vk instanceCommitment) (nu : Fin 11 -> Fp) :
+    (p.straightLineAdjustedPoint nu).gPart =
+      adjustedWitness (p.aMulti nu) p.s
+        (multiopenValue vk instanceCommitment p.proof.1 (chRecord nu (fun _ => 0))) (nu 9) := by
+  funext i
+  rfl
+
+/-- The `U` coordinate of the adjusted point is the aggregate declared `U` component. -/
+theorem straightLineAdjustedPoint_coeffs_u
+    {vk : VerifyingKey shape Fp VestaG}
+    {instanceCommitment : Fin shape.numProofs -> Nat -> VestaG}
+    (p : AlgebraicWfProof basis vk instanceCommitment) (nu : Fin 11 -> Fp) :
+    (p.straightLineAdjustedPoint nu).coeffs AugmentedIndex.u =
+      p.multiU nu + nu 9 * p.sU := rfl
 
 /-- The discrepancy of the adjusted point before the first IPA round. -/
 def straightLineInitialDiscrepancy
@@ -354,9 +404,8 @@ theorem straightLineInitialDiscrepancy_eq
     rw [adjustedWitness, innerProduct_add, hsub, innerProduct_single, innerProduct_smul]
     simp [b, evalVector_zero]
   unfold straightLineInitialDiscrepancy representedPointDiscrepancy
-  simp only [straightLineAdjustedPoint, AlgebraicPoint.gPart, AlgebraicPoint.coeffs,
-    augmentedCoeffs, AugmentedIndex.gen, AugmentedIndex.u, if_pos]
-  rw [hadjusted]
+  rw [p.straightLineAdjustedPoint_gPart nu, p.straightLineAdjustedPoint_coeffs_u nu]
+  rw [show evalVector shape.k (nu 7) = b from rfl, hadjusted]
 
 /-- A deployed binding mismatch with `z ≠ 0` starts the discrepancy walk away from zero. -/
 theorem straightLineInitialDiscrepancy_ne_zero_of_bindingAttackZ
@@ -379,7 +428,7 @@ theorem straightLineInitialDiscrepancy_ne_zero_of_bindingAttackZ
               multiopenValue vk instanceCommitment p.proof.1 (chRecord nu (fun _ => 0)) +
               nu 9 * innerProduct p.s (evalVector shape.k (nu 7)))) -
           nu 9 * innerProduct p.s (evalVector shape.k (nu 7)) := by
-            rw [inv_mul_cancel₀ hz]
+            rw [← mul_assoc, inv_mul_cancel₀ hz]
             ring
     _ = multiopenValue vk instanceCommitment p.proof.1 (chRecord nu (fun _ => 0)) +
           (nu 10)⁻¹ * (p.multiU nu + nu 9 * p.sU) -
@@ -395,7 +444,7 @@ def straightLineRoundDiscrepancies
     (representedRoundDiscrepancy (evalVector shape.k (nu 7)) (nu 10))
 
 /-- The challenge-polynomial pairs encountered by the one-run IPA discrepancy walk. -/
-def straightLineIpaRootEvents
+noncomputable def straightLineIpaRootEvents
     {vk : VerifyingKey shape Fp VestaG}
     {instanceCommitment : Fin shape.numProofs -> Nat -> VestaG}
     (p : AlgebraicWfProof basis vk instanceCommitment) (nu : Fin 11 -> Fp)
@@ -404,7 +453,7 @@ def straightLineIpaRootEvents
     (p.straightLineRoundDiscrepancies nu) (List.ofFn chi)
 
 /-- The quadratic fixed before one concrete IPA-round squeeze. -/
-def straightLineIpaRootPolynomial
+noncomputable def straightLineIpaRootPolynomial
     {vk : VerifyingKey shape Fp VestaG}
     {instanceCommitment : Fin shape.numProofs -> Nat -> VestaG}
     (p : AlgebraicWfProof basis vk instanceCommitment) (nu : Fin 11 -> Fp)
@@ -419,8 +468,10 @@ theorem straightLineIpaRootEvents_length
     (p : AlgebraicWfProof basis vk instanceCommitment) (nu : Fin 11 -> Fp)
     (chi : Fin shape.k -> Fp) :
     (p.straightLineIpaRootEvents nu chi).length = shape.k := by
-  rw [straightLineIpaRootEvents]
-  apply ipaDiscrepancyRootEvents_length
+  have hlength : (p.straightLineRoundDiscrepancies nu).length = (List.ofFn chi).length := by
+    simp [straightLineRoundDiscrepancies]
+  rw [straightLineIpaRootEvents,
+    ipaDiscrepancyRootEvents_length _ _ _ hlength]
   simp [straightLineRoundDiscrepancies]
 
 /-- Looking up round `j` yields its actual challenge and its prefix-fixed quadratic. -/
@@ -432,12 +483,16 @@ theorem straightLineIpaRootEvents_getElem
     (p.straightLineIpaRootEvents nu chi)[j.val]'(by
       rw [p.straightLineIpaRootEvents_length nu chi]
       exact j.isLt) = (chi j, p.straightLineIpaRootPolynomial nu chi j) := by
-  rw [straightLineIpaRootEvents, straightLineIpaRootPolynomial]
-  simpa using ipaDiscrepancyRootEvents_getElem
-    (p.straightLineInitialDiscrepancy nu) (p.straightLineRoundDiscrepancies nu)
-    (List.ofFn chi) j.val (by
-      rw [p.straightLineIpaRootEvents_length nu chi]
-      exact j.isLt)
+  have hj : j.val < (ipaDiscrepancyRootEvents (p.straightLineInitialDiscrepancy nu)
+      (p.straightLineRoundDiscrepancies nu) (List.ofFn chi)).length := by
+    have hlen := p.straightLineIpaRootEvents_length nu chi
+    simp only [straightLineIpaRootEvents] at hlen
+    rw [hlen]
+    exact j.isLt
+  simpa [straightLineIpaRootEvents, straightLineIpaRootPolynomial] using
+    ipaDiscrepancyRootEvents_getElem
+      (p.straightLineInitialDiscrepancy nu) (p.straightLineRoundDiscrepancies nu)
+      (List.ofFn chi) j.val hj
 
 /-- Generator coordinates of the deployed final folded-generator term. -/
 def straightLineFoldGCoords (chi : Fin shape.k -> Fp) (c : Fp) :
@@ -529,15 +584,16 @@ theorem straightLineIpaCoordinates_eval
     {instanceCommitment : Fin shape.numProofs -> Nat -> VestaG}
     (p : AlgebraicWfProof basis vk instanceCommitment) (nu : Fin 11 -> Fp)
     (chi : Fin shape.k -> Fp) :
-    let urs := ursOfAugmentedBasis shape.k basis
-    commit urs (p.straightLineIpaGCoords nu chi) +
-        (p.straightLineIpaUCoord nu chi) • urs.u +
-        (p.straightLineIpaWCoord nu chi) • urs.w =
+    commit (ursOfAugmentedBasis shape.k basis) (p.straightLineIpaGCoords nu chi) +
+        (p.straightLineIpaUCoord nu chi) • (ursOfAugmentedBasis shape.k basis).u +
+        (p.straightLineIpaWCoord nu chi) • (ursOfAugmentedBasis shape.k basis).w =
       CF (List.ofFn p.proof.1.ipaRounds) (List.ofFn chi)
-        (fun j => urs.g (Fin.cast (congrArg (2 ^ ·) List.length_ofFn) j))
+        (fun j => (ursOfAugmentedBasis shape.k basis).g
+          (Fin.cast (congrArg (2 ^ ·) List.length_ofFn) j))
         (p.straightLineAdjustedPoint nu).point p.proof.1.ipaC
-        (-p.proof.1.ipaC * computeB (nu 7) (List.ofFn chi) * nu 10) urs.u
-        (-p.proof.1.ipaF) urs.w := by
+        (-p.proof.1.ipaC * computeB (nu 7) (List.ofFn chi) * nu 10)
+        (ursOfAugmentedBasis shape.k basis).u
+        (-p.proof.1.ipaF) (ursOfAugmentedBasis shape.k basis).w := by
   let urs := ursOfAugmentedBasis shape.k basis
   let adjusted := p.straightLineAdjustedPoint nu
   let terms := p.straightLineRoundTerms chi
@@ -561,9 +617,15 @@ theorem straightLineIpaCoordinates_eval
       (adjusted.coeffs AugmentedIndex.u + repsU terms +
         (-p.proof.1.ipaC * computeB (nu 7) (List.ofFn chi) * nu 10)) • urs.u +
       (adjusted.coeffs AugmentedIndex.w + repsW terms - p.proof.1.ipaF) • urs.w = _
-  rw [commit_add, commit_add]
+  have hsplitOuter : commit urs (adjusted.gPart + repsGPart terms + folded) =
+      commit urs (adjusted.gPart + repsGPart terms) + commit urs folded :=
+    commit_add urs _ _
+  have hsplitInner : commit urs (adjusted.gPart + repsGPart terms) =
+      commit urs adjusted.gPart + commit urs (repsGPart terms) :=
+    commit_add urs _ _
   unfold CF gPart
-  linear_combination (norm := module) hadjusted + hrounds + hfolded
+  linear_combination (norm := module)
+    hsplitOuter + hsplitInner + hadjusted + hrounds + hfolded
 
 /-- An accepted algebraic transcript makes the complete symbolic IPA MSM vanish. -/
 theorem straightLineIpaCoordinates_eval_eq_zero
@@ -572,18 +634,16 @@ theorem straightLineIpaCoordinates_eval_eq_zero
     (p : AlgebraicWfProof basis vk instanceCommitment) (nu : Fin 11 -> Fp)
     (chi : Fin shape.k -> Fp)
     (haccept : fullAlgebraicAccept basis vk instanceCommitment p nu chi) :
-    let urs := ursOfAugmentedBasis shape.k basis
-    commit urs (p.straightLineIpaGCoords nu chi) +
-        (p.straightLineIpaUCoord nu chi) • urs.u +
-        (p.straightLineIpaWCoord nu chi) • urs.w = 0 := by
-  let urs := ursOfAugmentedBasis shape.k basis
-  rw [p.straightLineIpaCoordinates_eval nu chi]
+    commit (ursOfAugmentedBasis shape.k basis) (p.straightLineIpaGCoords nu chi) +
+        (p.straightLineIpaUCoord nu chi) • (ursOfAugmentedBasis shape.k basis).u +
+        (p.straightLineIpaWCoord nu chi) • (ursOfAugmentedBasis shape.k basis).w = 0 := by
+  rw [p.straightLineIpaCoordinates_eval nu chi,
+    p.straightLineAdjustedPoint_eq_verifierInitial nu chi]
   apply (deployedVerifierEq_cf
     (ursOfAugmentedBasis shape.k basis).g
     (ursOfAugmentedBasis shape.k basis).w
     (ursOfAugmentedBasis shape.k basis).u
     vk instanceCommitment p.proof.1 (chRecord nu chi)).mp at haccept
-  rw [← p.straightLineAdjustedPoint_eq_verifierInitial nu chi] at haccept
   exact haccept
 
 /-- From one accepting algebraic transcript, either every symbolic IPA coordinate is zero or those
@@ -599,12 +659,15 @@ def straightLineIpaZeroOrRelation
         p.straightLineIpaWCoord nu chi = 0) ⊕'
       AugmentedRelationWitness (F := Fp) (ursOfAugmentedBasis shape.k basis).g
         (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w := by
-  let urs := ursOfAugmentedBasis shape.k basis
-  exact separateOrRelationWitness urs.g urs.u urs.w
+  exact separateOrRelationWitness (ursOfAugmentedBasis shape.k basis).g
+    (ursOfAugmentedBasis shape.k basis).u (ursOfAugmentedBasis shape.k basis).w
     (p.straightLineIpaGCoords nu chi) 0
     (p.straightLineIpaUCoord nu chi) 0
     (p.straightLineIpaWCoord nu chi) 0
-    (by simpa using p.straightLineIpaCoordinates_eval_eq_zero nu chi haccept)
+    (by
+      have h := p.straightLineIpaCoordinates_eval_eq_zero nu chi haccept
+      rw [commit_eq_commitGen] at h
+      simpa [commitGen] using h)
 
 /-- The one-run binding dichotomy: a false accepted opening with `z ≠ 0` exposes either one of the
 round-local quadratic root events or an explicit nonzero relation over the public basis. -/
@@ -641,6 +704,7 @@ def straightLineBindingAttackZIndexedRootOrRelation
   cases p.straightLineBindingAttackZRootOrRelation nu chi hattack with
   | inr relation => exact PSum.inr relation
   | inl root =>
+      refine PSum.inl ?_
       obtain ⟨event, hevent, hroot⟩ := root
       obtain ⟨j, hj, heventEq⟩ := List.mem_iff_getElem.mp hevent
       have hjk : j < shape.k := by
@@ -652,7 +716,7 @@ def straightLineBindingAttackZIndexedRootOrRelation
         rw [← heventEq]
         exact hlookup
       rw [heq] at hroot
-      exact PSum.inl ⟨jf, hroot⟩
+      exact ⟨jf, hroot⟩
 
 end AlgebraicWfProof
 

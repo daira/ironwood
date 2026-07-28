@@ -10,7 +10,9 @@ information-theoretic terms and records the exact five-bit work-factor arithmeti
 
 namespace Zcash.Snark.FixtureMax
 
+open Zcash.Arithmetic (card_Fp scalarFieldOrder)
 open Zcash.Snark
+open Zcash.Snark.ComputedStraightLineDeployedFSFamily (straightLineDlogGroupWork)
 open scoped ENNReal
 
 /-- Cross-multiplication helper for the concrete finite-field arithmetic. -/
@@ -59,11 +61,13 @@ theorem consensusStraightLineStatisticalModel_at_2pow122 :
     (p := scalarFieldOrder) (m := 2 ^ 85)
     (by norm_num [scalarFieldOrder, CompElliptic.Fields.Pasta.PALLAS_BASE_CARD])
     (by norm_num)
-    (by norm_num [scalarFieldOrder, CompElliptic.Fields.Pasta.PALLAS_BASE_CARD]) using 1 <;>
-    norm_num
+    (by norm_num [scalarFieldOrder, CompElliptic.Fields.Pasta.PALLAS_BASE_CARD]) using 1
+  norm_num
 
-/-- Consensus-maximum straight-line capstone with the query cap `Q <= T`.  The right side is the
-caller-supplied finite-security DLOG advantage plus the concrete statistical model above. -/
+/-- Consensus-maximum straight-line **compressed-identity** capstone with the query cap `Q <= T`.
+The right side is the caller-supplied finite-security DLOG advantage plus the concrete statistical
+model above; row-level semantics are the four-budget promotion
+`straightLineConstraintSemanticFailure_prob_le_of_generatorRO_dlogProfile`. -/
 theorem straightLineConstraintFailure_prob_le_at_consensus_max
     (B : VestaG)
     (family : ComputedStraightLineDeployedFSFamily (shape orchardConsensusMaxProofs))
@@ -93,9 +97,21 @@ theorem straightLineConstraintFailure_prob_le_at_consensus_max
       (T + 1 : Nat) * ((20470 : Nat) / (Fintype.card Fp : ENNReal)))
   rw [consensusPinnedRootMultiopenModel]
   simp only [show (shape orchardConsensusMaxProofs).k = 11 from rfl]
-  gcongr
+  -- Relax `Q` to `T` in the capstone's own association, then reassociate the shared DLOG term.
+  calc
+    _ <= (T + 1 : Nat) * (1 / (Fintype.card Fp : ENNReal)) +
+          (T + 1 : Nat) * (((11 : Nat) : ENNReal) * (2 / (Fintype.card Fp : ENNReal))) +
+          ((T + 23 : Nat) : ENNReal) *
+            algebraicRootBudget (shape orchardConsensusMaxProofs) 11 +
+          (profile.advantage family.straightLineDlogRandomOracleQueries
+              (straightLineDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
+            1 / (Fintype.card Fp : ENNReal)) +
+          (T + 1 : Nat) * (((20470 : Nat) : ENNReal) / (Fintype.card Fp : ENNReal)) := by
+      gcongr
+    _ = _ := by push_cast; ring
 
-/-- Generator-random-oracle form of the consensus-maximum straight-line endpoint. -/
+/-- Generator-random-oracle form of the consensus-maximum straight-line **compressed-identity**
+endpoint. -/
 theorem straightLineConstraintFailure_prob_le_at_consensus_max_generatorRO
     {T' : Type*} [DecidableEq T']
     (B : VestaG) (hB : B ≠ 0)
@@ -130,7 +146,18 @@ theorem straightLineConstraintFailure_prob_le_at_consensus_max_generatorRO
       (T + 1 : Nat) * ((20470 : Nat) / (Fintype.card Fp : ENNReal)))
   rw [consensusPinnedRootMultiopenModel]
   simp only [show (shape orchardConsensusMaxProofs).k = 11 from rfl]
-  gcongr
+  -- Relax `Q` to `T` in the capstone's own association, then reassociate the shared DLOG term.
+  calc
+    _ <= (T + 1 : Nat) * (1 / (Fintype.card Fp : ENNReal)) +
+          (T + 1 : Nat) * (((11 : Nat) : ENNReal) * (2 / (Fintype.card Fp : ENNReal))) +
+          ((T + 23 : Nat) : ENNReal) *
+            algebraicRootBudget (shape orchardConsensusMaxProofs) 11 +
+          (profile.advantage family.straightLineDlogRandomOracleQueries
+              (straightLineDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
+            1 / (Fintype.card Fp : ENNReal)) +
+          (T + 1 : Nat) * (((20470 : Nat) : ENNReal) / (Fintype.card Fp : ENNReal)) := by
+      gcongr
+    _ = _ := by push_cast; ring
 
 /-- Concrete 122-bit work-factor package.  It combines the probability capstone, the `2^-85`
 statistical bound, and the separately checked `2^127` solver-resource ceiling.  The DLOG advantage

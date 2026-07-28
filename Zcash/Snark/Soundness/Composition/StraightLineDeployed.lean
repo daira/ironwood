@@ -1,5 +1,6 @@
 import Zcash.Snark.Soundness.AGM.StraightLinePinnedRoots
 import Zcash.Snark.Soundness.Composition.DeployedRootContainment
+import Zcash.Snark.Soundness.Composition.DeployedConstraintContainment
 
 /-!
 # Straight-line AGM composition through deployed multiopen decoding
@@ -17,17 +18,29 @@ local instance vestaInhabitedStraightLineDeployed : Inhabited VestaG := ⟨0⟩
 
 variable {shape : Shape}
 
-/-- A deployed online-AGM family carrying both the existing six-root multiopen chronology and the
-new per-IPA-round chronology. -/
+/-- A deployed online-AGM family carrying the existing six-root multiopen chronology, the staged
+constraint-`x` chronology, and the new per-IPA-round chronology.  Carrying the constraint-`x` trace
+here is what lets the captured endpoints derive exact `x` pinning instead of assuming it. -/
 structure ComputedStraightLineDeployedFSFamily (shape : Shape)
     extends ComputedDeployedRootFSFamily shape where
   ipaTrace : StraightLineIpaOnlineTrace toComputedAlgebraicFSFamily
+  constraintXTrace : DeployedConstraintXOnlineTrace toComputedDeployedRootFSFamily
 
 namespace ComputedStraightLineDeployedFSFamily
 
 /-- Forget the IPA chronology while retaining the deployed multiopen root family. -/
 abbrev toRootFamily (family : ComputedStraightLineDeployedFSFamily shape) :
     ComputedDeployedRootFSFamily shape := family.toComputedDeployedRootFSFamily
+
+/-- Forget the IPA chronology while retaining both deployed chronology refinements. -/
+abbrev toConstraintFamily (family : ComputedStraightLineDeployedFSFamily shape) :
+    ComputedDeployedConstraintFSFamily shape :=
+  .ofRoot family.toRootFamily family.constraintXTrace
+
+/-- Exact constraint-`x` pinning derived from the family's own staged trace. -/
+theorem pinnedX (family : ComputedStraightLineDeployedFSFamily shape) :
+    DeployedConstraintXPinning family.toRootFamily :=
+  family.constraintXTrace.toPinning
 
 /-- Forget both chronology refinements. -/
 abbrev toFamily (family : ComputedStraightLineDeployedFSFamily shape) :
@@ -53,7 +66,8 @@ def straightLineDeployedRelationFinder
     | none =>
         match family.outcome basis O with
         | PSum.inl _ => none
-        | PSum.inr relation => some (straightLineCanonicalRelation relation)
+        | PSum.inr relation =>
+            some (ComputedStraightLineIpaFSFamily.straightLineCanonicalRelation relation)
 
 /-- A fixed tape used only to reuse the existing root-decode witness type.  The retained decoded
 batch data depends on the oracle table and `outcome`, not on recursive extractor coins. -/
@@ -119,8 +133,11 @@ theorem straightLineShiftedValue_of_accept_not_attack
           (evalVector shape.k (runReads family.toFamily basis O 7)) := by
     by_contra hmismatch
     exact hnot ⟨⟨haccept, hmismatch⟩, hz⟩
-  simpa [StraightLineShiftedValue, wrappedPreIpaRecord,
-    wrappedAdversary_run_fst, wrappedPreIpaReads_run, commitGen, innerProduct] using heq
+  constructor
+  · simpa [StraightLineShiftedValue, wrappedPreIpaRecord, wrappedAdversary_run_fst,
+      wrappedPreIpaReads_run, chRecord] using hz
+  · simpa [StraightLineShiftedValue, wrappedPreIpaRecord, wrappedAdversary_run_fst,
+      wrappedPreIpaReads_run, commitGen, innerProduct] using heq
 
 /-- Avoiding the existing six multiopen root sets turns the straight-line shifted value into the
 complete deployed member decode. -/
@@ -223,7 +240,7 @@ theorem straightLineRootFailure
         unfold straightLineDeployedRelationFinder
         cases hipa : family.toIpaFamily.straightLineIpaRelationFinder basis O with
         | none => simp [hipa] at hrelation
-        | some relation => simp [hipa]
+        | some relation => simp
     · have hshifted := family.straightLineShiftedValue_of_accept_not_attack
         basis O haccept hz hattack
       cases hout : family.outcome basis O with
@@ -233,7 +250,7 @@ theorem straightLineRootFailure
           apply Or.inl
           unfold straightLineDeployedRelationFinder
           cases hipa : family.toIpaFamily.straightLineIpaRelationFinder basis O <;>
-            simp [hipa, hout]
+            simp [hout]
       | inl witness =>
           by_cases hroots : (family.toRootFamily.pinnedRoots basis).Landing O
           · exact Or.inr hroots

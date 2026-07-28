@@ -187,9 +187,10 @@ returns explicit relation coefficients.
 -/
 
 /-
-TODO(#115): Equip this executable direct-coordinate postprocessing with an explicit polynomial
-total-cost bound.  Computability here closes the algorithmic seam; the concrete PPT/runtime bound
-is a separate obligation from counting black-box adversary calls.
+The explicit polynomial total-cost model for this postprocessing — field operations and data
+traversal, separate from the black-box adversary call count — is
+`Composition.DirectPathCost.deployedDirectDecodeOps` with its shape-polynomial bound
+`deployedDirectDecodeOps_le` and the captured-shape evaluations in `Fixtures.MaxShapeBounds`.
 -/
 
 /-- **The deployed root outcome, decoded directly.** It needs no field-capacity hypothesis,

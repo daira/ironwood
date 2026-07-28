@@ -39,7 +39,10 @@ import Zcash.Snark.Soundness.ActionVesta
 import Zcash.Snark.Soundness.DegreeWalk
 import Zcash.Snark.Soundness.Composition.ScheduleBudget
 import Zcash.Snark.Soundness.AGM.PinnedRootWitness
+import Zcash.Snark.Soundness.Composition.StraightLineWitness
+import Zcash.Snark.Soundness.Composition.DirectPathCost
 import Zcash.Snark.Soundness.AGM.DirectConstraintFamily
+import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
 
 /-!
 # Trust boundary, build-checked
@@ -1120,17 +1123,24 @@ assert_axioms Zcash.Snark.snarkConstraintsSemanticDeployed_prob_le_of_root_sched
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- Parallel straight-line AGM capstone. The staged representation trace, not the final
--- `AlgebraicWfProof` alone, supplies IPA squeeze chronology. Its complete deployed constraint
+-- `AlgebraicWfProof` alone, supplies IPA squeeze chronology, and the family's own constraint-`x`
+-- trace derives exact `x` pinning rather than assuming it. Its complete deployed constraint
 -- finder has a pointwise four-invocation bound and therefore needs no AFK truncation or Markov
 -- term. Representations remain ghost extractor data, outside the Halo2 proof and verifier.
 assert_axioms StraightLineIpaOnlineTrace.toSqueezeInvariance +native
 assert_axioms AlgebraicWfProof.straightLineIpaZeroOrRelation +native
+assert_axioms ComputedStraightLineDeployedFSFamily.pinnedX +native
 assert_computable ComputedStraightLineIpaFSFamily.straightLineIpaRelationFinder +choice +native
 assert_computable ComputedStraightLineDeployedFSFamily.straightLineDeployedRelationFinder +choice +native
 assert_computable ComputedStraightLineDeployedFSFamily.straightLineConstraintRelationFinder +choice +native
 assert_axioms ComputedStraightLineDeployedFSFamily.straightLineConstraintRelationFinderCalls_le_four +native
 assert_axioms ComputedStraightLineDeployedFSFamily.straightLineConstraintFailureSet_subset +native
 assert_axioms ComputedStraightLineDeployedFSFamily.straightLineConstraintFailure_prob_le_of_generatorRO_dlogProfile +native
+-- The straight-line four-budget semantic promotion, mirroring the recursive side.
+assert_axioms ComputedStraightLineDeployedFSFamily.StraightLineConstraintSemanticUpgradeContained +native
+assert_axioms ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_subset_union +native
+assert_axioms ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_prob_le_of_compressed_bound +native
+assert_axioms ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_prob_le_of_generatorRO_dlogProfile +native
 assert_axioms ComputedStraightLineDeployedFSFamily.straightLineDlogGroupWork_le_32_mul
 assert_axioms ComputedStraightLineDeployedFSFamily.five_bit_overhead_at_2pow122
 

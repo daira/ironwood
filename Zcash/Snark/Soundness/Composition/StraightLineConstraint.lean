@@ -97,17 +97,16 @@ theorem straightLineConstraint_fixedCalls_iff
   · intro h
     exact ⟨family.straightLineConstraintRelationFinderCalls_le_four, h⟩
 
-/-- Concrete constraint witness returned by the existing root-backed online provider, restricted
-to the one-run oracle table. -/
+/-- The existing root-backed constraint decode, restricted to the one-run oracle table.  Like its
+recursive counterpart this is proposition-only: it asserts that the root decode yields a concrete
+constraint witness, and hands out no relation data. -/
 def straightLineConstraintDecoded
     (family : ComputedStraightLineDeployedFSFamily shape)
     (static : DeployedConstraintStaticChecks family.toRootFamily)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (O : BTranscript Fp VestaG
       (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) : Prop :=
-  deployedConstraintDecodedOfOutcome family.toRootFamily
-    (deployedConstraintOutcomeProviderOfRoot family.toRootFamily static)
-    basis (O, straightLineDummyTape)
+  deployedConstraintDecodedOfRoot family.toRootFamily static basis (O, straightLineDummyTape)
 
 /-- Basis/oracle pairs on which the one-run endpoint accepts but does not return the concrete
 constraint witness. -/
@@ -228,23 +227,28 @@ theorem straightLineConstraintFailureSet_subset
       | inl witness =>
           exfalso
           apply hfailure.2
-          refine ⟨witness, ?_⟩
-          simp [straightLineConstraintDecoded, deployedConstraintOutcomeProviderOfRoot,
-            coins, hfailure.1, hroot, root, hxgood, hout]
+          exact ⟨hfailure.1, root, hxgood, witness, hout⟩
       | inr relation =>
           apply Or.inr
           apply Or.inr
           apply Or.inr
           apply Or.inl
-          change (family.straightLineConstraintRelationFinder basis q.2).isSome
+          simp only [relSetWithCoins, Finset.mem_coe, Finset.mem_filter, Finset.mem_univ,
+            true_and]
           unfold straightLineConstraintRelationFinder
           cases hbase : family.straightLineDeployedRelationFinder basis q.2 with
           | some baseRelation => simp
           | none =>
               have hrelation := deployedConstraintOutcomeOfRoot_relation_eq_online
                 family.toRootFamily static basis coins hfailure.1 root hxgood relation hout
-              simp [straightLineConstraintQuotientFinder, coins, hbase,
-                root.outcome_eq, hrelation]
+              -- Restate both equations with the `let`s expanded so `simp` can use them.
+              have houtcome : family.outcome (scalarBasis B q.1) q.2 =
+                PSum.inl root.batchWitness := root.outcome_eq
+              have hrel : deployedConstraintQuotientAgreementOrRelation family.toRootFamily
+                  (scalarBasis B q.1)
+                  ((wrappedAdversary family.toFamily (scalarBasis B q.1)).run q.2)
+                  root.batchWitness = PSum.inr relation := hrelation
+              simp [straightLineConstraintQuotientFinder, houtcome, hrel]
     · apply Or.inr
       apply Or.inr
       apply Or.inr
@@ -261,10 +265,11 @@ theorem straightLineConstraintFailureSet_subset
       apply Or.inr
       apply Or.inr
       apply Or.inl
+      simp only [relSetWithCoins, Finset.mem_coe, Finset.mem_filter, Finset.mem_univ, true_and]
       unfold straightLineConstraintRelationFinder
       cases hbase : family.straightLineDeployedRelationFinder basis q.2 with
       | none => simp [hbase] at hrelation
-      | some relation => simp [hbase]
+      | some relation => simp
     · have hnotExtracted : ¬family.straightLineRootExtracted basis q.2 := by
         rintro (hfound | hdecoded)
         · exact hrelation hfound
@@ -296,12 +301,15 @@ theorem straightLineConstraintBadX_prob_le
       {O | (scalarBasis B logs, (O, straightLineDummyTape)) ∈
         deployedConstraintBadXEvent family.toRootFamily})
   intro logs
-  let basis := scalarBasis B logs
-  refine le_trans (MeasureTheory.measure_mono ?_) ?_
-  · intro O hbad
-    exact deployedConstraintBadX_subset_landing family.toRootFamily schedule basis hbad
-  · exact (deployedConstraintXPinnedEvent family.toRootFamily schedule basis).landing_measure_le
-      (family.queryBound basis)
+  refine le_trans (MeasureTheory.measure_mono
+    (show {O | (scalarBasis B logs, (O, straightLineDummyTape)) ∈
+          deployedConstraintBadXEvent family.toRootFamily} <=
+        {O | (deployedConstraintXPinnedEvent family.toRootFamily schedule
+          (scalarBasis B logs)).Landing O}
+      from fun O hbad => deployedConstraintBadX_subset_landing family.toRootFamily schedule
+        (scalarBasis B logs) hbad)) ?_
+  exact (deployedConstraintXPinnedEvent family.toRootFamily schedule
+    (scalarBasis B logs)).landing_measure_le (family.queryBound (scalarBasis B logs))
 
 /-- The complete straight-line constraint relation event reduces to textbook DLOG with only the
 programmed-slot loss. -/
@@ -412,6 +420,161 @@ theorem straightLineConstraintFailure_prob_le_of_fixedCallsTextbookDL
         (bound + 1 / Fintype.card Fp) +
         (family.Q + 1 : Nat) * epsilonX :=
   family.straightLineConstraintFailure_prob_le_of_textbookDL B static schedule hDL.2
+
+/-! ## Promotion from the compressed identity to circuit semantics
+
+The one-run decode proves the verifier's compressed constraint identity, exactly as on the
+recursive side.  Row-level semantics additionally price collisions at the four earlier squeezes:
+the caller supplies the semantic predicate, the four failure events, and a proof that a compressed
+witness outside them has the intended semantics.
+-/
+
+/-- Outside the four challenge-failure events, the one-run compressed constraint decode upgrades
+to the caller's row-level semantic predicate. -/
+def StraightLineConstraintSemanticUpgradeContained
+    (family : ComputedStraightLineDeployedFSFamily shape)
+    (static : DeployedConstraintStaticChecks family.toRootFamily)
+    (semanticDecoded : (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) ->
+      (BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) -> Prop)
+    (badY badBeta badGamma badTheta :
+      Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) ×
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp))) : Prop :=
+  {q | family.straightLineConstraintDecoded static q.1 q.2 ∧ ¬ semanticDecoded q.1 q.2} <=
+    badY ∪ (badBeta ∪ (badGamma ∪ badTheta))
+
+/-- Basis/oracle pairs on which the one-run endpoint accepts but the caller's semantic predicate
+fails. -/
+def straightLineConstraintSemanticFailureEvent
+    (family : ComputedStraightLineDeployedFSFamily shape)
+    (semanticDecoded : (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) ->
+      (BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) -> Prop) :
+    Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) ×
+      (BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp)) :=
+  {q | fsWinsFull (family.adversary q.1)
+      (fullAlgebraicAcceptDeployed q.1 (family.vk q.1)
+        (family.instanceCommitment q.1))
+      (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) q.2 ∧
+    ¬ semanticDecoded q.1 q.2}
+
+/-- One-run semantic failure is compressed-identity failure or one of the four explicitly priced
+challenge surfaces. -/
+theorem straightLineConstraintSemanticFailure_subset_union
+    (family : ComputedStraightLineDeployedFSFamily shape)
+    (static : DeployedConstraintStaticChecks family.toRootFamily)
+    (semanticDecoded : (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) ->
+      (BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) -> Prop)
+    (badY badBeta badGamma badTheta :
+      Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) ×
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp)))
+    (hsemantic : family.StraightLineConstraintSemanticUpgradeContained static
+      semanticDecoded badY badBeta badGamma badTheta) :
+    family.straightLineConstraintSemanticFailureEvent semanticDecoded <=
+      family.straightLineConstraintFailureEvent static ∪
+        (badY ∪ (badBeta ∪ (badGamma ∪ badTheta))) := by
+  rintro q ⟨haccept, hnotSemantic⟩
+  by_cases hcompressed : family.straightLineConstraintDecoded static q.1 q.2
+  · exact Or.inr (hsemantic ⟨hcompressed, hnotSemantic⟩)
+  · exact Or.inl ⟨haccept, hcompressed⟩
+
+/-- The four-budget straight-line semantic promotion, factored over an arbitrary bound for the
+compressed-identity failure event in the generator-random-oracle model. -/
+theorem straightLineConstraintSemanticFailure_prob_le_of_compressed_bound
+    {T : Type*} [DecidableEq T]
+    (query : AugmentedIndex (2 ^ shape.k) -> T)
+    (family : ComputedStraightLineDeployedFSFamily shape)
+    (static : DeployedConstraintStaticChecks family.toRootFamily)
+    (semanticDecoded : (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) ->
+      (BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) -> Prop)
+    (badY badBeta badGamma badTheta :
+      Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) ×
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp)))
+    {compressedBound yBound betaBound gammaBound thetaBound : ENNReal}
+    (hsemantic : family.StraightLineConstraintSemanticUpgradeContained static
+      semanticDecoded badY badBeta badGamma badTheta)
+    (hcompressed : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          family.straightLineConstraintFailureEvent static) <= compressedBound)
+    (hY : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' badY) <= yBound)
+    (hBeta : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' badBeta) <= betaBound)
+    (hGamma : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' badGamma) <= gammaBound)
+    (hTheta : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' badTheta) <= thetaBound) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          family.straightLineConstraintSemanticFailureEvent semanticDecoded)
+      <= compressedBound + (yBound + (betaBound + (gammaBound + thetaBound))) := by
+  let mu := (independentProductPMF (orchardGeneratorROSetup query)
+    (PMF.uniformOfFintype
+      (BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp))).toOuterMeasure
+  let basisOracle : ((↥(Set.range query) -> VestaG) ×
+      (BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp)) ->
+      ((AugmentedIndex (2 ^ shape.k) -> VestaG) ×
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp)) :=
+    fun p => (orchardGeneratorROBasis query p.1, p.2)
+  change mu (basisOracle ⁻¹'
+      family.straightLineConstraintSemanticFailureEvent semanticDecoded) <= _
+  have hsubset : basisOracle ⁻¹'
+        family.straightLineConstraintSemanticFailureEvent semanticDecoded <=
+      basisOracle ⁻¹'
+        (family.straightLineConstraintFailureEvent static ∪
+          (badY ∪ (badBeta ∪ (badGamma ∪ badTheta)))) :=
+    Set.preimage_mono
+      (family.straightLineConstraintSemanticFailure_subset_union static semanticDecoded
+        badY badBeta badGamma badTheta hsemantic)
+  calc
+    mu (basisOracle ⁻¹'
+        family.straightLineConstraintSemanticFailureEvent semanticDecoded)
+        <= mu (basisOracle ⁻¹'
+          (family.straightLineConstraintFailureEvent static ∪
+            (badY ∪ (badBeta ∪ (badGamma ∪ badTheta))))) :=
+      MeasureTheory.measure_mono hsubset
+    _ = mu ((basisOracle ⁻¹' family.straightLineConstraintFailureEvent static) ∪
+        ((basisOracle ⁻¹' badY) ∪
+          ((basisOracle ⁻¹' badBeta) ∪
+            ((basisOracle ⁻¹' badGamma) ∪ (basisOracle ⁻¹' badTheta))))) := by
+      simp only [Set.preimage_union]
+    _ <= mu (basisOracle ⁻¹' family.straightLineConstraintFailureEvent static) +
+        (mu (basisOracle ⁻¹' badY) +
+          (mu (basisOracle ⁻¹' badBeta) +
+            (mu (basisOracle ⁻¹' badGamma) + mu (basisOracle ⁻¹' badTheta)))) := by
+      exact (MeasureTheory.measure_union_le _ _).trans
+        (add_le_add le_rfl ((MeasureTheory.measure_union_le _ _).trans
+          (add_le_add le_rfl ((MeasureTheory.measure_union_le _ _).trans
+            (add_le_add le_rfl (MeasureTheory.measure_union_le _ _))))))
+    _ <= compressedBound + (yBound + (betaBound + (gammaBound + thetaBound))) :=
+      add_le_add hcompressed (add_le_add hY (add_le_add hBeta (add_le_add hGamma hTheta)))
 
 end ComputedStraightLineDeployedFSFamily
 

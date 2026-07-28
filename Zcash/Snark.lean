@@ -106,3 +106,7 @@ import Zcash.Snark.Soundness.Composition.DeployedRootContainment
 -- Additive straight-line AGM alternative: staged IPA representations, fixed-call deployed
 -- constraint extraction, and an explicit finite-security DLOG work profile.
 import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
+-- The constraint-level and straight-line family interfaces are inhabited at the witness shape.
+import Zcash.Snark.Soundness.Composition.StraightLineWitness
+-- The direct-coordinate postprocessing carries an explicit polynomial total-cost model.
+import Zcash.Snark.Soundness.Composition.DirectPathCost
