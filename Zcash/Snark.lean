@@ -117,5 +117,7 @@ import Zcash.Snark.Soundness.AGM.ZeroFamilyRoots
 import Zcash.Snark.Soundness.Composition.ZeroStraightLine
 -- The direct-coordinate postprocessing carries an explicit polynomial total-cost model.
 -- The Action-level semantic challenge exclusions, priced and summed.
+-- A rewind-free decode presented through the opened-batch interface the Action terminal takes.
+import Zcash.Snark.Soundness.AGM.DecodeToOpened
 import Zcash.Snark.Soundness.Composition.SemanticChallengeRemainder
 import Zcash.Snark.Soundness.Composition.DirectPathCost

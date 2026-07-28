@@ -41,6 +41,7 @@ import Zcash.Snark.Soundness.Composition.ScheduleBudget
 import Zcash.Snark.Soundness.AGM.PinnedRootWitness
 import Zcash.Snark.Soundness.Composition.StraightLineWitness
 import Zcash.Snark.Soundness.Composition.DirectPathCost
+import Zcash.Snark.Soundness.AGM.DecodeToOpened
 import Zcash.Snark.Soundness.Composition.SemanticChallengeRemainder
 import Zcash.Snark.Soundness.AGM.ZeroFamily
 import Zcash.Snark.Soundness.AGM.ZeroFamilyRoots
@@ -1201,6 +1202,11 @@ assert_axioms Zcash.Snark.algebraicFullPrefixesPre_ne_at +native(CompElliptic.Cu
 -- The interpolation points the synthetic opened-batch adapters take as a hypothesis
 -- (`AGM.SyntheticOpened`): a walk up from the batching challenge, injective while shorter than
 -- the field characteristic.
+-- The decode-to-opened bridge (`AGM.DecodeToOpened`): the rewind-free decode's own coordinates
+-- presented as the opened-batch object and member decodes the Action terminal consumes.
+assert_axioms Zcash.Snark.decodePoints_injective
+assert_axioms Zcash.Snark.decodePoints_zero
+assert_axioms Zcash.Snark.DeployedAlgebraicDecode.toOpenedBatch_current
 assert_computable Zcash.Snark.pinnedPoints +choice
 assert_axioms Zcash.Snark.pinnedPoints_injective
 assert_axioms Zcash.Snark.PrefixDeterminedAt +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
