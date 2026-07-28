@@ -10,9 +10,25 @@ and `γ` resolvers, and the lookup `β`, `γ` and `θ` resolvers.  `ChallengePri
 exclusion set; this module prices the bundle-wide unions those exclusions are stated against and
 adds them into one remainder.
 
-The terms are kept separate and named because they are *not* known to fit inside the compressed
-model's existing ceiling: each is a count of circuit-sized quantities over `|Fp|`, so the total
-has to be evaluated at the deployed shape before any end-to-end exponent is claimed.
+The terms are kept separate and named because each is a count of circuit-sized quantities over
+`|Fp|`, and the total has to be evaluated at the deployed shape rather than assumed to fit.
+
+Evaluated at the captured key it does fit, with room.  The cell count is
+`Σ_c (active rows) · (chunk width) = 3 chunks over 15 columns at 2048 rows = 30720 ≈ 2^14.9`, so
+with `|Fp| ≈ 2^254` the four surfaces cost
+
+* permutation `γ`: `2·C` per proof — about `2^-237`
+* permutation `β`: `(C+1)·C` per proof — about `2^-223`, the dominant term
+* lookup `γ`: `2(u+1)` per proof-lookup pair — about `2^-239`
+* lookup `β`: `(u+2)(u+1) + (u+1)` per pair — about `2^-229`
+
+summing to about `2^-223`.  Charged at `(Q+1)` with `Q = 2^123` that is about `2^-100`, roughly
+sixteen bits below the compressed model's `2^-84` ceiling, so exposing these terms does not move
+the headline.  The `y` term adds `n · |constraints|`, far below the permutation `β` term unless
+the constraint count were astronomically large.
+
+The permutation `β` surface is the one to re-check if the key changes: it is quadratic in the cell
+count, so it is where headroom would be lost first.
 
 Each challenge is its own squeeze, so the events are priced independently and added.  That is the
 same accounting the deployed capstones already use for their separate squeezes.
