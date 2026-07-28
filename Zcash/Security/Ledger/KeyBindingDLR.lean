@@ -5,12 +5,13 @@ import Zcash.Security.Ledger.SinsemillaDLR
 /-!
 # The deployed key-binding break computes a discrete-log relation
 
-The pre-quantum discharge of the key-binding arm's ε: a `KeyBinding.Pool.Break` — two
-valid `Commit^ivk` openings of the same `ivk` disagreeing on their opening projection —
-computes a nontrivial discrete-log relation among the Sinsemilla table generators, the
-`CommitIvk` domain point, and the `CommitIvk` randomness base. This folds ε_kb into the
-same DL terminal as the Merkle and note-commitment arms, with no random-oracle model
-and no probability accounting: the reduction is deterministic.
+The pre-quantum discharge of the key-binding arm's ε: a
+`KeyBinding.Pool.CommitIvkCollision` — two valid `Commit^ivk` openings of the same `ivk`
+disagreeing on their opening projection — computes a nontrivial discrete-log relation
+among the Sinsemilla table generators, the `CommitIvk` domain point, and the `CommitIvk`
+randomness base. This folds ε_kb into the same DL terminal as the Merkle and
+note-commitment arms, with no random-oracle model and no probability accounting: the
+reduction is deterministic.
 
 The shared machinery is `Bridge.relationOfChainPmEq` (`SinsemillaDLR`); this module
 instantiates it at the `CommitIvk` domain point and randomness base, unpacking the
@@ -70,7 +71,7 @@ injectivity is `preCoeffs_inj` (spec Theorem 5.4.3's binary-expansion core, prov
 and the chunk-encoding injectivity is `commitIvkChunks_inj`. -/
 def relationOfKeyBindingBreak
     {w₁ w₂ : KeyBinding.Pool.Witness Fq PallasGroup Fp}
-    (b : KeyBinding.Pool.Break extract commitIvkHash commitIvkRpt w₁ w₂)
+    (b : KeyBinding.Pool.CommitIvkCollision extract commitIvkHash commitIvkRpt w₁ w₂)
  :
     NontrivialRelation (F := Fq) pallasS ivkQpt commitIvkRpt :=
   let hs₁ := commitIvkHash_isSome b.kb₁.hash_eq

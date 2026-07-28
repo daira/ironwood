@@ -180,7 +180,7 @@ assert_computable Zcash.Security.Ledger.Model.outputActions
 assert_computable Zcash.Security.Ledger.Model.outputOpenings
 assert_computable Zcash.Security.Ledger.Model.positionedOutputs
 assert_computable Zcash.Security.Ledger.Model.nonZeroSpends
-assert_computable Zcash.Security.Ledger.Model.poolValueBalance
+assert_computable Zcash.Security.Ledger.Model.shieldedPoolBalance
 assert_axioms Zcash.Security.Ledger.Model.posVal_lt
 assert_axioms Zcash.Security.Ledger.Model.rootAfter_prefix
 assert_axioms Zcash.Security.Ledger.Model.output_rho_eq_nullifiers
@@ -214,9 +214,9 @@ assert_computable Zcash.Security.Ledger.Model.spendPinnedOrBreak +choice
 assert_computable Zcash.Security.Ledger.Model.allPinnedOrBreak +choice
 assert_computable Zcash.Security.Ledger.Model.balanceSubsetOrBreak +choice
 
-/-! ## Balance-value (conservation form)
+/-! ## Balance integrity
 
-`+choice` on the two endpoints is again the erased-positions tier: choice arrives with
+`+choice` on the three endpoints is again the erased-positions tier: choice arrives with
 the `ring`/`omega` proof terms in their `Prop` fields, never the data path. -/
 
 assert_computable Zcash.Security.Ledger.Model.txNetValue
@@ -224,14 +224,14 @@ assert_computable Zcash.Security.Ledger.Model.issuanceTotal
 assert_axioms Zcash.Security.Ledger.Model.transparentPoolBalance_eq
 assert_axioms Zcash.Security.Ledger.Model.positionedOutputs_value_sum
 assert_axioms Zcash.Security.Ledger.Model.nonZeroSpends_value_sum
-assert_axioms Zcash.Security.Ledger.Model.poolValueBalance_eq_neg
-assert_computable Zcash.Security.Ledger.Model.allValueOrBreak
-assert_computable Zcash.Security.Ledger.Model.valueConservationOrBreak +choice
-assert_computable Zcash.Security.Ledger.Model.balanceValueOrBreak +choice
+assert_axioms Zcash.Security.Ledger.Model.shieldedPoolBalance_eq_neg
+assert_computable Zcash.Security.Ledger.Model.allConservedOrBreak
+assert_computable Zcash.Security.Ledger.Model.balanceConservationOrBreak +choice
+assert_computable Zcash.Security.Ledger.Model.shieldedBalanceCapOrBreak +choice
 assert_axioms Zcash.Security.Ledger.Model.sum_val_le_of_le
 assert_axioms Zcash.Security.Ledger.Model.positionedOutputs_value_sum_mono
-assert_axioms Zcash.Security.Ledger.Model.poolValueBalance_nonneg
-assert_computable Zcash.Security.Ledger.Model.balanceOrBreak +choice
+assert_axioms Zcash.Security.Ledger.Model.shieldedPoolBalance_nonneg
+assert_computable Zcash.Security.Ledger.Model.balanceIntegrityOrBreak +choice
 
 /-! ## Spendability
 
@@ -254,9 +254,9 @@ argument's terminal. `+choice` is the erased-positions tier: choice arrives with
 
 assert_computable Zcash.Security.Ledger.Model.NontrivialRelation.ofNullifierCollision +choice
 
-/-! ## The value-premiss discharge
+/-! ## The transaction-balance premiss discharge
 
-Computed reductions at the Pedersen value-commitment shape: the Balance-value
+Computed reductions at the Pedersen value-commitment shape: the transaction-balance
 premiss lands in the binding-signature layer's nontrivial `(V, R)` relation via
 `ofBundleIntImbalance`, with the no-overflow bound discharged from the statement's
 value ranges, validity's action-count and `vBalance` range rules, and the named
@@ -265,7 +265,7 @@ erased-positions tier. -/
 
 assert_computable Zcash.Security.Ledger.Model.ValueShape.premissOrBreak +choice
 assert_computable Zcash.Security.Ledger.Model.ValueShape.conservationOrBreak +choice
-assert_computable Zcash.Security.Ledger.Model.ValueShape.balanceOrBreak +choice
+assert_computable Zcash.Security.Ledger.Model.ValueShape.capOrBreak +choice
 
 /-! ## Spend Authority
 
@@ -300,8 +300,8 @@ The game-level probability statements: pure event algebra over an adversary
 distribution of valid annotated ledgers, with a named ε hypothesis per break arm. -/
 
 assert_axioms Zcash.Security.Ledger.Model.balanceSubset_measure_le
-assert_axioms Zcash.Security.Ledger.Model.valueConservation_measure_le
-assert_axioms Zcash.Security.Ledger.Model.balanceValue_measure_le
+assert_axioms Zcash.Security.Ledger.Model.balanceConservation_measure_le
+assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCap_measure_le
 assert_axioms Zcash.Security.Ledger.Model.spendAuthority_measure_le
 
 /-! ## The deployed discrete-log-relation discharges
