@@ -1,5 +1,6 @@
 import Zcash.Snark.Soundness.ChallengePricing
 import Zcash.Snark.Soundness.Composition.PrefixedSqueeze
+import Zcash.Snark.Soundness.Composition.StraightLineConstraint
 
 /-!
 # The semantic challenge remainder
@@ -275,5 +276,81 @@ theorem resolverPermutationCell_card_congr {shape : Shape} {G : Type*}
       Fintype.card (ResolverPermutationCell vk poly' p m) := by
   unfold ResolverPermutationCell
   simp only [resolverPermutationPairs_length]
+
+
+/-! ## The semantic endpoint with its surfaces supplied
+
+`straightLineConstraintSemanticFailure_prob_le_of_compressed_bound` takes the four semantic
+exclusions as abstract sets with abstract bounds.  The theorem below instantiates them at the four
+surfaces and discharges the bounds from `semanticSurfaces_prob_le`, so a caller supplies only a
+per-challenge exclusion measure and prefix-determinism at each of the four squeeze indices.
+-/
+
+/-- **The semantic failure bound at the four surfaces.**  Each semantic exclusion costs `(Q + 1)`
+times its per-challenge measure, on top of the compressed bound:
+`compressedBound + (Q+1)·(epsY + epsBeta + epsGamma + epsTheta)`.
+
+Prefix-determinism at index `n` says the first `n` squeezed prefixes depend only on oracle answers
+strictly shorter than the index-`n` prefix, which is what lets one challenge be resampled in
+place. -/
+theorem straightLineConstraintSemanticFailure_prob_le_of_surfaces
+    {T : Type*} [DecidableEq T]
+    (query : AugmentedIndex (2 ^ shape.k) → T)
+    (family : ComputedStraightLineDeployedFSFamily shape)
+    (static : DeployedConstraintStaticChecks family.toRootFamily)
+    (semanticDecoded : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) →
+      (BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp) → Prop)
+    (badTheta : (AugmentedIndex (2 ^ shape.k) → VestaG) →
+      BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) →
+      (Fin 0 → Fp) → Set Fp)
+    (badBeta : (AugmentedIndex (2 ^ shape.k) → VestaG) →
+      BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) →
+      (Fin 1 → Fp) → Set Fp)
+    (badGamma : (AugmentedIndex (2 ^ shape.k) → VestaG) →
+      BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) →
+      (Fin 2 → Fp) → Set Fp)
+    (badY : (AugmentedIndex (2 ^ shape.k) → VestaG) →
+      BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) →
+      (Fin 3 → Fp) → Set Fp)
+    {compressedBound epsTheta epsBeta epsGamma epsY : ENNReal}
+    (hsemantic : family.StraightLineConstraintSemanticUpgradeContained static semanticDecoded
+      (ySurface family.toFamily badY) (betaSurface family.toFamily badBeta)
+      (gammaSurface family.toFamily badGamma) (thetaSurface family.toFamily badTheta))
+    (hcompressed : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          family.straightLineConstraintFailureEvent static) ≤ compressedBound)
+    (hdetTheta : PrefixDeterminedAt family.toFamily 0)
+    (hdetBeta : PrefixDeterminedAt family.toFamily 1)
+    (hdetGamma : PrefixDeterminedAt family.toFamily 2)
+    (hdetY : PrefixDeterminedAt family.toFamily 3)
+    (hTheta : ∀ basis t nu,
+      (PMF.uniformOfFintype Fp).toOuterMeasure (badTheta basis t nu) ≤ epsTheta)
+    (hBeta : ∀ basis t nu,
+      (PMF.uniformOfFintype Fp).toOuterMeasure (badBeta basis t nu) ≤ epsBeta)
+    (hGamma : ∀ basis t nu,
+      (PMF.uniformOfFintype Fp).toOuterMeasure (badGamma basis t nu) ≤ epsGamma)
+    (hY : ∀ basis t nu,
+      (PMF.uniformOfFintype Fp).toOuterMeasure (badY basis t nu) ≤ epsY) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          family.straightLineConstraintSemanticFailureEvent semanticDecoded)
+      ≤ compressedBound + ((family.Q + 1 : ℕ) * epsY + ((family.Q + 1 : ℕ) * epsBeta +
+          ((family.Q + 1 : ℕ) * epsGamma + (family.Q + 1 : ℕ) * epsTheta))) :=
+  have hsurfaces := semanticSurfaces_prob_le query family.toFamily badTheta badBeta badGamma badY
+    (hstab_of_prefixDeterminedAt family.toFamily 0 hdetTheta)
+    (hstab_of_prefixDeterminedAt family.toFamily 1 hdetBeta)
+    (hstab_of_prefixDeterminedAt family.toFamily 2 hdetGamma)
+    (hstab_of_prefixDeterminedAt family.toFamily 3 hdetY)
+    hTheta hBeta hGamma hY
+  family.straightLineConstraintSemanticFailure_prob_le_of_compressed_bound
+    query static semanticDecoded _ _ _ _ hsemantic hcompressed
+    hsurfaces.2.2.2 hsurfaces.2.1 hsurfaces.2.2.1 hsurfaces.1
 
 end Zcash.Snark
