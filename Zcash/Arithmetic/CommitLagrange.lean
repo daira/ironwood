@@ -1,5 +1,5 @@
 import Zcash.Arithmetic.NatKernelEquiv
-import Zcash.Arithmetic.InvDft
+import Zcash.Arithmetic.ScalarInvDft
 import Zcash.Arithmetic.VestaModule
 
 /-!
@@ -112,7 +112,7 @@ theorem commitNatPre_eq (c : ℕ) (hc : 0 < c) (blind : G) (basis : List G) (coe
 basis.  No group FFT anywhere, no kernel on the scalar half. -/
 def commitInvDftNatWith (c : ℕ) (k : ℕ) (blind : G) (basisN : List P3)
     (coeffs : List Fp) : G :=
-  msmNatPre c blind basisN ((scalarInvDft k coeffs).map ZMod.val)
+  msmNatPre c blind basisN (invDftScalars k coeffs)
 
 /-- **The composed committer IS `commit_lagrange` at the derived Lagrange basis** — the
 bilinearity theorem, with the kernel MSM on the group half. -/
@@ -123,7 +123,7 @@ theorem commitInvDftNatWith_eq (c : ℕ) (hc : 0 < c)
         ((List.ofFn urs.g).map fun g => ofPVes (ofAffine g)) coeffs
       = Msm.commitLagrangeSpec urs.w (derivedUrsGLagrange urs) coeffs := by
   haveI := vestaFpModuleDef
-  rw [commitInvDftNatWith,
+  rw [commitInvDftNatWith, invDftScalars_eq,
     msmNatPre_eq c hc urs.w (List.ofFn urs.g) _
       (by rw [scalarInvDft_length, hlen, List.length_ofFn]),
     ← commitLagrangeSpec_derivedUrsGLagrange urs hk urs.w coeffs hlen]
