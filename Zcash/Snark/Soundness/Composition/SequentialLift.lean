@@ -408,4 +408,99 @@ theorem SequentialCut.toPrefixDeterminedAt {family : ComputedAlgebraicFSFamily s
     _ = algebraicFullPrefixesPre family.init ((family.adversary basis).run O') n :=
       c.point_run basis O'
 
+/-- The cut state is unchanged when the oracle is re-answered at the cut's own squeeze point:
+that point has exactly the prefix length, and every pre-cut query is strictly shorter. -/
+theorem SequentialCut.state_stable {family : ComputedAlgebraicFSFamily shape}
+    {n : Fin 11} (c : SequentialCut family n)
+    (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp) (v : Fp) :
+    (c.pre basis).run (Function.update O (algebraicFullPrefixesPre family.init
+        ((family.adversary basis).run O) n) v) = (c.pre basis).run O := by
+  refine ((OracleComp.run_congr_of_agree _ O _ (fun t ht => ?_)).1).symm
+  rw [Function.update_apply, if_neg]
+  intro hEq
+  have hshort := c.pre_short basis O t ht
+  have hlen : (algebraicFullPrefixesPre family.init
+      ((family.adversary basis).run O) n).val.length
+      = preIpaLen shape family.init.length n :=
+    preIpaSqueezePoints_length_eq family.init _
+      ((family.adversary basis).run O).proof.2 n
+  rw [hEq, hlen] at hshort
+  exact lt_irrefl _ hshort
+
+/-- The basis/table pairs whose index-`n` squeeze answer lands in a bad set computed from the
+cut state.  This is the shape a semantic exclusion event takes once its set is rewritten to the
+cut's own view: the set may read anything the prover has computed before the squeeze, and
+nothing after it. -/
+def SequentialCut.surfaceEvent {family : ComputedAlgebraicFSFamily shape}
+    {n : Fin 11} (c : SequentialCut family n)
+    (bad : (AugmentedIndex (2 ^ shape.k) → VestaG) → c.State → Set Fp) :
+    Set ((AugmentedIndex (2 ^ shape.k) → VestaG) ×
+      (BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp)) :=
+  {q | q.2 (algebraicFullPrefixesPre family.init ((family.adversary q.1).run q.2) n) ∈
+    bad q.1 ((c.pre q.1).run q.2)}
+
+/-- One basis's index-`n` state surface costs `(Q + 1) * epsilon`: the squeeze answer is fresh
+for the state that chose the bad set, so each of the at most `Q + 1` candidate points pays the
+per-state measure. -/
+theorem SequentialCut.surfaceEvent_basis_le {family : ComputedAlgebraicFSFamily shape}
+    {n : Fin 11} (c : SequentialCut family n)
+    (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
+    (bad : (AugmentedIndex (2 ^ shape.k) → VestaG) → c.State → Set Fp)
+    {epsilon : ENNReal}
+    (hbad : ∀ basis s, (PMF.uniformOfFintype Fp).toOuterMeasure (bad basis s) ≤ epsilon) :
+    (PMF.uniformOfFintype (BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp)).toOuterMeasure
+      {O | O (algebraicFullPrefixesPre family.init ((family.adversary basis).run O) n) ∈
+        bad basis ((c.pre basis).run O)}
+      ≤ (family.Q + 1 : ℕ) * epsilon := by
+  refine xEscTable_measure_le (family.adversary basis)
+    (fun p => algebraicFullPrefixesPre family.init p n)
+    (fun _p O => bad basis ((c.pre basis).run O))
+    (fun O v => ?_) (fun _p O => hbad basis _) (family.queryBound basis)
+  show bad basis ((c.pre basis).run (Function.update O (algebraicFullPrefixesPre family.init
+      ((family.adversary basis).run O) n) v)) = bad basis ((c.pre basis).run O)
+  rw [c.state_stable basis O v]
+
+/-- **A state surface costs `(Q + 1) * epsilon`.**  The generator random oracle's basis draw is
+averaged over the per-basis squeeze price.  Instantiate at `n = 3` for `y`, `2` for `γ`, `1`
+for `β`, `0` for `θ`, with `bad` the semantic exclusion set read off the cut state. -/
+theorem SequentialCut.surfaceEvent_prob_le {T' : Type*} [DecidableEq T']
+    {family : ComputedAlgebraicFSFamily shape}
+    {n : Fin 11} (c : SequentialCut family n)
+    (query : AugmentedIndex (2 ^ shape.k) → T')
+    (bad : (AugmentedIndex (2 ^ shape.k) → VestaG) → c.State → Set Fp)
+    {epsilon : ENNReal}
+    (hbad : ∀ basis s, (PMF.uniformOfFintype Fp).toOuterMeasure (bad basis s) ≤ epsilon) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype (BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' c.surfaceEvent bad)
+      ≤ (family.Q + 1 : ℕ) * epsilon := by
+  have hset : (fun p : (↥(Set.range query) → VestaG) ×
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp) =>
+        (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' c.surfaceEvent bad =
+      {x : (↥(Set.range query) → VestaG) ×
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp) | x.2 ∈
+        (fun setup => {O | O (algebraicFullPrefixesPre family.init
+            ((family.adversary (orchardGeneratorROBasis query setup)).run O) n) ∈
+          bad (orchardGeneratorROBasis query setup)
+            ((c.pre (orchardGeneratorROBasis query setup)).run O)}) x.1} := by
+    ext p
+    simp only [Set.mem_preimage, Set.mem_setOf_eq, SequentialCut.surfaceEvent]
+  rw [hset]
+  refine independentProductPMF_fiber_bound (orchardGeneratorROSetup query)
+    (PMF.uniformOfFintype (BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp))
+    (fun setup => {O | O (algebraicFullPrefixesPre family.init
+        ((family.adversary (orchardGeneratorROBasis query setup)).run O) n) ∈
+      bad (orchardGeneratorROBasis query setup)
+        ((c.pre (orchardGeneratorROBasis query setup)).run O)}) ?_
+  intro setup
+  exact c.surfaceEvent_basis_le (orchardGeneratorROBasis query setup) bad hbad
+
 end Zcash.Snark

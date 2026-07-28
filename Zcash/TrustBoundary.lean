@@ -48,6 +48,7 @@ import Zcash.Snark.Fixtures.MultiAction.ActionCapstone
 import Zcash.Snark.Soundness.Composition.SemanticChallengeRemainder
 import Zcash.Snark.Soundness.Composition.StraightLineDecodeSupply
 import Zcash.Snark.Soundness.Composition.SequentialLift
+import Zcash.Snark.Soundness.Composition.ChallengeReads
 import Zcash.Snark.Soundness.AGM.ZeroFamily
 import Zcash.Snark.Soundness.AGM.ZeroFamilyRoots
 import Zcash.Snark.Soundness.Composition.ZeroStraightLine
@@ -1142,6 +1143,41 @@ assert_axioms Zcash.Snark.SequentialPreXProver.lift_Q +native(CompElliptic.Curve
 assert_axioms Zcash.Snark.OracleComp.run_congr_of_agree
 assert_axioms Zcash.Snark.SequentialCut.toPrefixDeterminedAt +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- State surfaces (#128 F6): a semantic exclusion set read off the cut state costs
+-- `(Q + 1) * epsilon`, with stability derived from the cut's execution order.
+assert_axioms Zcash.Snark.SequentialCut.state_stable +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.SequentialCut.surfaceEvent +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.SequentialCut.surfaceEvent_basis_le +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.SequentialCut.surfaceEvent_prob_le +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- Challenge reads (#128 F6): what each semantic exclusion set consumes — congruences over
+-- polynomial maps agreeing on the named slot classes and over the named earlier challenges.
+assert_axioms Zcash.Snark.CommitmentId.isColumnInput
+assert_axioms Zcash.Snark.CommitmentId.isPermutationInput
+assert_axioms Zcash.Snark.CommitmentId.isLookupInput
+assert_axioms Zcash.Snark.CommitmentId.isColumnInput.toPermutation
+assert_axioms Zcash.Snark.CommitmentId.isColumnInput.toLookup
+assert_axioms Zcash.Snark.permutationColumnPolynomialOfResolver_congr
+assert_axioms Zcash.Snark.resolverPermutationPairs_congr
+assert_axioms Zcash.Snark.resolverPermutationBetaBadSet_congr
+assert_axioms Zcash.Snark.resolverPermutationGammaBadSet_congr
+assert_axioms Zcash.Snark.allResolverPermutationBetaBadSet_congr
+assert_axioms Zcash.Snark.allResolverPermutationGammaBadSet_congr
+assert_axioms Zcash.Snark.fixedQueryFeedOfResolver_congr
+assert_axioms Zcash.Snark.adviceQueryFeedOfResolver_congr
+assert_axioms Zcash.Snark.instanceQueryFeedOfResolver_congr
+assert_axioms Zcash.Snark.lookupInputPolyOfResolver_congr
+assert_axioms Zcash.Snark.lookupTablePolyOfResolver_congr
+assert_axioms Zcash.Snark.resolverLookupProductDifference_congr
+assert_axioms Zcash.Snark.resolverLookupBetaBadSet_congr
+assert_axioms Zcash.Snark.resolverLookupGammaBadSet_congr
+assert_axioms Zcash.Snark.allResolverLookupBetaBadSet_congr
+assert_axioms Zcash.Snark.allResolverLookupGammaBadSet_congr
+assert_axioms Zcash.Snark.resolverEnvironment_congr
+assert_axioms Zcash.Snark.TopLevelLookupCoherence.allTopLevelLookupThetaBadSet_congr
 -- The captured Action capstone assembly (issue #128): the exact terminal event, the
 -- derived-key checks and schedule, and the composed bound.
 assert_axioms Zcash.Snark.Fixture.actionAcceptFalseEvent +native(
