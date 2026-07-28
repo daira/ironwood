@@ -160,6 +160,11 @@ assert_axioms Zcash.Snark.Fixture2.capturedZeroStaticChecks +native(
   Zcash.Snark.Fixture2.vk_instance_layout_length, Zcash.Snark.Fixture2.vk_n_cast_ne_zero,
   Zcash.Snark.Fixture2.vk_omega_order, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.Fixture2.capturedZeroConstraintSchedule +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- The live-instance layers at the full captured shape: the root and IPA layers run with both
+-- sub-proofs; the constraint-x stage is the honest-prover boundary and is deliberately absent.
+assert_computable Zcash.Snark.Fixture2.capturedLiveZeroVk +choice
+assert_axioms Zcash.Snark.Fixture2.capturedLiveZeroRootFamily +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.Fixture2.capturedLiveZeroIpaTrace +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- `whitespace := lax` collapses all whitespace, so the pin is insensitive to how
 -- `#print axioms` line-wraps the list (a formatting artifact of the axiom-name lengths).

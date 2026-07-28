@@ -16,9 +16,11 @@ constraint layer: with no sub-proofs the folded constraint list is empty and the
 pieces have zero coordinates, so the pre-`x` constraint difference is the zero polynomial and the
 constraint-`x` root set is empty on every table.
 
-So this exercises the multiopen grouping, the six root events and the IPA rounds at real key
-layouts, and leaves the constraint system trivial.  A prover with sub-proofs would have to commit
-columns that actually satisfy Orchard's gates.
+The instance-free hypothesis is confined to that one layer.  The staged IPA trace also comes in a
+constant-walk form with the multiopen value free (`zeroConstStraightLineIpaTrace` below), so at a
+shape with sub-proofs the zero prover still carries everything except the constraint-`x` stage —
+`Fixtures.MultiAction.CapturedZeroFamily` instantiates those live layers at the full captured
+shape and records why that last stage is exactly the honest-prover boundary.
 -/
 
 namespace Zcash.Snark

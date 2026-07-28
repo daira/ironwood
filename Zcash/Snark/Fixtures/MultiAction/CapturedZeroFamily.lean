@@ -17,9 +17,10 @@ the same at the witness shape, where `k = 0` empties the round obligations.
   `CapturedVerifierKeyProfile` already omits them: in the AGM the verifier's points need
   representations over the *sampled* basis, so pinning them to fixture constants would leave the
   premise uninhabited for most bases.
-* The shape is instance-free.  All-zero columns do not satisfy Orchard's permutation and lookup
-  constraints, so with sub-proofs the pre-`x` constraint difference is nonzero and the
-  constraint-`x` stage cannot be discharged.  That layer needs an honest prover.
+* The shape is instance-free — but only the constraint-`x` stage needs that.  The root and IPA
+  layers run with both sub-proofs live (`§ The live-instance layers at the full captured shape`
+  below), and that section records why the constraint-`x` stage is exactly the honest-prover
+  boundary.
 
 ## Scope
 
@@ -121,5 +122,54 @@ noncomputable def capturedZeroConstraintSchedule :
         basis O]
     simp
   pinned := capturedZeroStraightLineFamily.pinnedX
+
+/-! ## The live-instance layers at the full captured shape
+
+The instance-free restriction above is needed by exactly one layer.  At the full captured shape —
+two sub-proofs, eleven rounds — the zero prover still carries the online member family, the six
+staged root events, and the constant-walk staged IPA trace.  What it cannot carry is the
+constraint-`x` stage: the assembled `h` query's claimed value is the verifier-recomputed
+`expectedHEval`, which for zero columns is a nonzero function of `θ`, `β`, `γ`, `y` *and* `x`, so
+the run's decode witness exists only where that value vanishes — a condition on the very `x`
+answer the stage must not read.  Staging that layer demands columns whose `h` claim is honest:
+an honest-prover artifact, not an interface gap.
+-/
+
+/-- The captured key at the full captured shape — `numProofs = 2` live — with zero group
+commitment families. -/
+def capturedLiveZeroVk : VerifyingKey shape Fp VestaG where
+  omega := vk.omega
+  n := vk.n
+  blindingFactors := vk.blindingFactors
+  delta := vk.delta
+  chunkLen := vk.chunkLen
+  gates := vk.gates
+  instanceQueryLayout := vk.instanceQueryLayout
+  adviceQueryLayout := vk.adviceQueryLayout
+  fixedQueryLayout := vk.fixedQueryLayout
+  fixedCommitment := fun _ => 0
+  permutationCommonCommitment := fun _ => 0
+  permutationChunks := vk.permutationChunks
+  lookupInputExprs := vk.lookupInputExprs
+  lookupTableExprs := vk.lookupTableExprs
+
+/-- The live key's fixed-column commitments vanish. -/
+theorem capturedLiveZeroVk_fixed : ∀ i, capturedLiveZeroVk.fixedCommitment i = 0 := fun _ => rfl
+
+/-- The live key's common permutation commitments vanish. -/
+theorem capturedLiveZeroVk_perm :
+    ∀ i, capturedLiveZeroVk.permutationCommonCommitment i = 0 := fun _ => rfl
+
+/-- **The deployed root family at the full captured shape**: six staged root events with both
+sub-proofs live. -/
+noncomputable def capturedLiveZeroRootFamily : ComputedDeployedRootFSFamily shape :=
+  zeroDeployedRootFamily capturedLiveZeroVk capturedLiveZeroVk_fixed capturedLiveZeroVk_perm
+
+/-- **The staged IPA trace at the full captured shape**: the constant walk over the captured
+domain's eleven rounds, with the multiopen value free. -/
+noncomputable def capturedLiveZeroIpaTrace :
+    StraightLineIpaOnlineTrace capturedLiveZeroRootFamily.toFamily :=
+  zeroConstStraightLineIpaTrace capturedLiveZeroVk capturedLiveZeroVk_fixed
+    capturedLiveZeroVk_perm
 
 end Zcash.Snark.Fixture2
