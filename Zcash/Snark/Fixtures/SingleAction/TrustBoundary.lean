@@ -1,4 +1,5 @@
 import Zcash.Snark.Fixtures.SingleAction.Fixture
+import Zcash.Snark.Fixtures.SingleAction.StaticChecks
 import Zcash.Meta.AxiomCheck
 
 /-!
@@ -37,6 +38,23 @@ captured points. The derivation's supporting data and functions (`capturedUrsGLa
 -- Every captured fixture and the verifier assembly it runs are bounded at the standard tier — no
 -- `sorry`, no unexpected axiom (whole dependency graph). The `native_decide` fixtures carry the
 -- compiler-trust axiom, permitted by `+native` and pinned exactly by the `#print axioms` guards below.
+-- The static checks and degree budget at the single-Action captured key (issue #128):
+-- the eleven decided facts the Action-level capstone's derived-key checks transfer through.
+assert_axioms Zcash.Snark.Fixture.vk_advice_layout_length +native(Zcash.Snark.Fixture.vk_advice_layout_length)
+assert_axioms Zcash.Snark.Fixture.vk_instance_layout_length +native(
+  Zcash.Snark.Fixture.vk_instance_layout_length)
+assert_axioms Zcash.Snark.Fixture.vk_fixed_layout_length +native(Zcash.Snark.Fixture.vk_fixed_layout_length)
+assert_axioms Zcash.Snark.Fixture.vk_omega_order +native(Zcash.Snark.Fixture.vk_omega_order)
+assert_axioms Zcash.Snark.Fixture.vk_n_cast_ne_zero +native(Zcash.Snark.Fixture.vk_n_cast_ne_zero)
+assert_axioms Zcash.Snark.Fixture.vk_gates_degree_le +native(Zcash.Snark.Fixture.vk_gates_degree_le)
+assert_axioms Zcash.Snark.Fixture.vk_chunk_width_le +native(Zcash.Snark.Fixture.vk_chunk_width_le)
+assert_axioms Zcash.Snark.Fixture.vk_lookup_input_degree_le +native(
+  Zcash.Snark.Fixture.vk_lookup_input_degree_le)
+assert_axioms Zcash.Snark.Fixture.vk_lookup_table_degree_le +native(
+  Zcash.Snark.Fixture.vk_lookup_table_degree_le)
+assert_axioms Zcash.Snark.Fixture.vk_quotient_tail_le +native(Zcash.Snark.Fixture.vk_quotient_tail_le)
+assert_axioms Zcash.Snark.Fixture.vk_n_pred_le +native(Zcash.Snark.Fixture.vk_n_pred_le)
+assert_axioms Zcash.Snark.Fixture.shape_k_pred_le +native(Zcash.Snark.Fixture.shape_k_pred_le)
 assert_axioms Zcash.Snark.Fixture.fingerprint_matches +native(
   Zcash.Snark.Fixture.fingerprint_matches)
 assert_axioms Zcash.Snark.Fixture.capturedPointCoordinatesValid_eq_true +native(
