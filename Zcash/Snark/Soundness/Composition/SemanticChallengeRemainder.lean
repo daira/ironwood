@@ -234,4 +234,30 @@ theorem semanticSurfaces_prob_le {T' : Type*} [DecidableEq T']
    squeezeSurfaceEvent_prob_le 2 query family badGamma hstabGamma hGamma,
    squeezeSurfaceEvent_prob_le 3 query family badY hstabY hY⟩
 
+
+/-! ## Run-uniformity of the epsilons
+
+`semanticSurfaces_prob_le` takes bounds uniform over runs, while the card bounds are stated against
+a resolver `poly`.  For the permutation surfaces the dependence is only apparent: the chunk pair
+list is a `map` over the key's own `permutationChunks`, so its length — and hence the cell count
+the bound is stated in — is the same for every `poly`.  The lookup bounds are already stated in
+the usable-row count alone.
+-/
+
+/-- The resolver's chunk pair count is the key's, not the run's. -/
+theorem resolverPermutationPairs_length {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (poly : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) (c : ℕ) :
+    (ResolverPermutationPairs vk poly p c).length = (vk.permutationChunks.getD c []).length :=
+  List.length_map _
+
+/-- Hence two runs give the same permutation cell count, so the epsilon is run-uniform. -/
+theorem resolverPermutationCell_card_congr {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (poly poly' : CommitmentId → Polynomial Fp)
+    (p : Fin shape.numProofs) (m : ℕ) :
+    Fintype.card (ResolverPermutationCell vk poly p m) =
+      Fintype.card (ResolverPermutationCell vk poly' p m) := by
+  unfold ResolverPermutationCell
+  simp only [resolverPermutationPairs_length]
+
 end Zcash.Snark
