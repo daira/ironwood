@@ -347,7 +347,7 @@ The binding reductions return computed data (plain `def`s); the same treatment c
 reductions `ipa_extractV`, `ipaRelation_extract`, `produceDeployed`, `deployed_forking_tree`, and
 `deployed_forking_relation`, each computing its witness from an explicit certificate. -/
 
-assert_computable Zcash.Snark.NontrivialRelation.ofCombinationCollision +choice
+assert_computable Zcash.NontrivialRelation.ofCombinationCollision +choice
 assert_computable Zcash.Snark.NontrivialRelation.ofFoldedGens +choice
 assert_computable Zcash.Snark.NontrivialRelation.ofLeafPeel +choice
 assert_computable Zcash.Snark.NontrivialRelation.ofDeployedTree +choice

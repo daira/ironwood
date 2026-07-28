@@ -40,4 +40,61 @@ structure NontrivialRelationOne {n : ℕ} (g : Fin n → G) (U : G) where
   nontrivial : a ≠ 0 ∨ α ≠ 0
   relation : (∑ i, a i • g i) + α • U = 0
 
+/-- The commitment over arbitrary generators `g`: `⟨a, g⟩ = Σᵢ aᵢ • gᵢ`. -/
+def commitGen {n : ℕ} (g : Fin n → G) (a : Fin n → F) : G := ∑ i, a i • g i
+
+/-- Additivity in the witness. -/
+theorem commitGen_add_left {n : ℕ} (g : Fin n → G) (a a' : Fin n → F) :
+    commitGen g (a + a') = commitGen g a + commitGen g a' := by
+  simp only [commitGen, Pi.add_apply, add_smul, Finset.sum_add_distrib]
+
+/-- Homogeneity in the witness. -/
+theorem commitGen_smul_left {n : ℕ} (g : Fin n → G) (c : F) (a : Fin n → F) :
+    commitGen g (c • a) = c • commitGen g a := by
+  simp only [commitGen, Pi.smul_apply, smul_eq_mul, mul_smul, Finset.smul_sum]
+
+/-- Additivity in the generators. -/
+theorem commitGen_add_gen {n : ℕ} (g g' : Fin n → G) (a : Fin n → F) :
+    commitGen (g + g') a = commitGen g a + commitGen g' a := by
+  simp only [commitGen, Pi.add_apply, smul_add, Finset.sum_add_distrib]
+
+/-- Homogeneity in the generators. -/
+theorem commitGen_smul_gen {n : ℕ} (c : F) (g : Fin n → G) (a : Fin n → F) :
+    commitGen (c • g) a = c • commitGen g a := by
+  simp only [commitGen, Pi.smul_apply, Finset.smul_sum]
+  exact Finset.sum_congr rfl fun i _ => smul_comm (a i) c (g i)
+
+/-- Subtractivity in the witness. -/
+theorem commitGen_sub {n : ℕ} (g : Fin n → G) (a a' : Fin n → F) :
+    commitGen g (a - a') = commitGen g a - commitGen g a' := by
+  simp only [commitGen, Pi.sub_apply, sub_smul, Finset.sum_sub_distrib]
+
+/-- Negation in the witness. -/
+theorem commitGen_neg {n : ℕ} (g : Fin n → G) (a : Fin n → F) :
+    commitGen g (-a) = -commitGen g a := by
+  simpa using commitGen_smul_left g (-1) a
+
+/-- **The combination-collision assembler.** Two `(g, U, W)`-combinations equal as group
+elements, with coordinates that do not all agree, compute a nontrivial discrete-log
+relation: the coordinate differences `(a − a', α − α', β − β')`. -/
+def NontrivialRelation.ofCombinationCollision [DecidableEq F] {n : ℕ} {g : Fin n → G} {U W : G}
+    {a a' : Fin n → F} {α α' β β' : F}
+    (e : commitGen g a + α • U + β • W = commitGen g a' + α' • U + β' • W)
+    (hne : ¬(a = a' ∧ α = α' ∧ β = β')) : NontrivialRelation (F := F) g U W where
+  a := a - a'
+  α := α - α'
+  β := β - β'
+  nontrivial := by
+    by_cases ha : a = a'
+    · by_cases hα : α = α'
+      · exact Or.inr (Or.inr (sub_ne_zero.mpr (fun hβ => hne ⟨ha, hα, hβ⟩)))
+      · exact Or.inr (Or.inl (sub_ne_zero.mpr hα))
+    · exact Or.inl (sub_ne_zero.mpr ha)
+  relation := by
+    show commitGen g (a - a') + (α - α') • U + (β - β') • W = 0
+    have hrw : commitGen g (a - a') + (α - α') • U + (β - β') • W
+        = (commitGen g a + α • U + β • W) - (commitGen g a' + α' • U + β' • W) := by
+      rw [commitGen_sub, sub_smul, sub_smul]; abel
+    rw [hrw, e, sub_self]
+
 end Zcash

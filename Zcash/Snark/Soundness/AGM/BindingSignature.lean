@@ -51,7 +51,7 @@ def NontrivialRelation.toAlgebraicRelationWitness (V R : M)
         · exact hβ' hβ
     relation := by
       rw [representationEval_bindingSignatureBasis]
-      simpa [Zcash.Snark.commitGen] using r.relation }
+      simpa [Zcash.commitGen] using r.relation }
 
 /-- Compute the discrete log of `V` base `R` from a two-base relation, assuming `R ≠ 0`. -/
 def NontrivialRelation.toDiscreteLog [DecidableEq F] (V R : M)
@@ -66,7 +66,7 @@ def NontrivialRelation.toDiscreteLog [DecidableEq F] (V R : M)
         · exact False.elim (hα' hα)
         · exact hβ'
     have hβR : r.β • R = 0 := by
-      simpa [Zcash.Snark.commitGen, hα] using r.relation
+      simpa [Zcash.commitGen, hα] using r.relation
     have hR0 : R = 0 := by
       have h := congrArg (fun X : M => r.β⁻¹ • X) hβR
       simpa [smul_smul, inv_mul_cancel₀ hβ] using h
