@@ -9,10 +9,10 @@ import Zcash.Snark.Soundness.Forking.PinnedRoots
 quadratic round events through `PinnedRootFamily`.
 
 The final-output `OracleComp` interface does not record when an AGM representation was emitted.
-Consequently `StraightLineIpaOnlineTrace` is the stronger interface boundary here: it exposes a
-pre-squeeze polynomial, connects it to the final `AlgebraicWfProof`, and derives
-`StraightLineIpaSqueezeInvariance` from its own-squeeze invariance.  Chronology is never inferred
-merely from the final proof value.
+Consequently `StraightLineIpaOnlineTrace` is the stronger interface boundary here: it exposes an
+actual pre-squeeze computation, proves that the computation has not queried the squeeze point, and
+connects its result to the final `AlgebraicWfProof`.  `StraightLineIpaSqueezeInvariance` is derived
+from that query chronology, never inferred merely from the final proof value.
 -/
 
 namespace Zcash.Snark
@@ -55,32 +55,30 @@ def StraightLineIpaSqueezeInvariance (family : ComputedAlgebraicFSFamily shape) 
         updated j =
       straightLineIpaRootBad family basis actual O j
 
-/-- Representation-carrying trace exposed before each IPA squeeze.  `rootPolynomialBefore` is
-computed from the AGM representations emitted up to that stage; `agrees` connects it to the final
-proof value, while `invariant` states that changing the not-yet-seen squeeze answer cannot change
-the staged polynomial.  This is the chronology interface—the final `AlgebraicWfProof` alone does
-not provide it. -/
+/-- Representation-carrying computation exposed before each IPA squeeze.  `stage` computes the
+discrepancy polynomial from the AGM representations emitted up to that point; `fresh` proves that
+it has not queried the squeeze point, while `agrees` connects its result to the final proof value.
+This is the chronology interface—the final `AlgebraicWfProof` alone does not provide it. -/
 structure StraightLineIpaOnlineTrace (family : ComputedAlgebraicFSFamily shape) where
-  rootPolynomialBefore :
+  stage :
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) -> Fin shape.k ->
-      (BTranscript Fp VestaG
-        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) -> Polynomial Fp
+      OracleComp
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k)) Fp (Polynomial Fp)
   agrees : forall (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) (j : Fin shape.k)
       (O : BTranscript Fp VestaG
         (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp),
-    rootPolynomialBefore basis j O =
+    (stage basis j).run O =
       ((family.adversary basis).run O).straightLineIpaRootPolynomial
         (fun i => O (algebraicFullPrefixesPre family.init
           ((family.adversary basis).run O) i))
         (fun r => O (algebraicFullPrefixes family.init
           ((family.adversary basis).run O) r)) j
-  invariant : forall (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) (j : Fin shape.k)
+  fresh : forall (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) (j : Fin shape.k)
       (O : BTranscript Fp VestaG
-        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) (v : Fp),
-    rootPolynomialBefore basis j
-        (Function.update O (straightLineIpaRootPoint family
-          ((family.adversary basis).run O) j) v) =
-      rootPolynomialBefore basis j O
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp),
+    straightLineIpaRootPoint family ((family.adversary basis).run O) j ∉
+      (stage basis j).queries O
 
 /-- The staged representation trace derives the pinned-squeeze property used by probability
 pricing. -/
@@ -95,11 +93,11 @@ theorem StraightLineIpaOnlineTrace.toSqueezeInvariance
   let updated := Function.update O point v
   calc
     straightLineIpaRootBad family basis ((family.adversary basis).run updated) updated j =
-        szBadSet (trace.rootPolynomialBefore basis j updated) := by
+        szBadSet ((trace.stage basis j).run updated) := by
       unfold straightLineIpaRootBad
       rw [trace.agrees basis j updated]
-    _ = szBadSet (trace.rootPolynomialBefore basis j O) := by
-      rw [trace.invariant basis j O v]
+    _ = szBadSet ((trace.stage basis j).run O) := by
+      rw [OracleComp.run_update_of_not_mem_queries _ _ _ _ (trace.fresh basis j O)]
     _ = straightLineIpaRootBad family basis actual O j := by
       unfold straightLineIpaRootBad
       rw [trace.agrees basis j O]

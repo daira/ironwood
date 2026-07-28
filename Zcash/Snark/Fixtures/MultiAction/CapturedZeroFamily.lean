@@ -2,7 +2,7 @@ import Zcash.Snark.Fixtures.MultiAction.StaticChecks
 import Zcash.Snark.Soundness.Composition.ZeroStraightLine
 
 /-!
-# The captured key's straight-line family, with eleven live IPA rounds
+# Captured-data straight-line interface test, with eleven live IPA rounds
 
 `Composition.StraightLineWitness` inhabits the straight-line deployed interface at the degenerate
 witness shape, where `k = 0` empties every IPA-round obligation.  This module instantiates the
@@ -25,9 +25,11 @@ Two departures from the captured fixture are deliberate and are what the constru
   constraint difference would be a nonzero polynomial and the constraint-`x` stage could not be
   discharged.  Exhibiting that layer with sub-proofs needs an honest prover, not a degenerate one.
 
-So this is an inhabitant that exercises the multiopen grouping, all six root events and all eleven
-IPA rounds at captured key data, with a trivial constraint system — strictly more than the witness
-shape provides, and short of a full honest Orchard prover.
+So this is an interface test that exercises the multiopen grouping, all six root events and all
+eleven IPA rounds at captured key data, with a trivial constraint system.  It is not the deployed
+family: `ComputedStraightLineDeployedFSFamily.ofCovered` packages an online representation-carrying
+prover model with caller-supplied executable root, IPA, and constraint-`x` stages, and the
+captured-key direct endpoint applies the existing fixture metadata to the result.
 -/
 
 namespace Zcash.Snark.Fixture2

@@ -103,8 +103,9 @@ import Zcash.Snark.Soundness.AGM.Capstone
 import Zcash.Snark.Soundness.AGM.BindingSignature
 -- Rewind-free deployed multiopen decoding and additive pinned-root composition.
 import Zcash.Snark.Soundness.Composition.DeployedRootContainment
--- Additive straight-line AGM alternative: staged IPA representations, fixed-call deployed
--- constraint extraction, and an explicit finite-security DLOG work profile.
+-- Primary straight-line AGM route: staged IPA representations, fixed-call deployed constraint
+-- extraction, and an explicit finite-security DLOG work profile. The recursive AFK route remains
+-- available as a separately priced alternative.
 import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
 -- The constraint-level and straight-line family interfaces are inhabited at the witness shape.
 import Zcash.Snark.Soundness.Composition.StraightLineWitness

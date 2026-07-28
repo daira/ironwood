@@ -1,12 +1,13 @@
 import Zcash.Snark.Soundness.Composition.StraightLineConstraint
+import Zcash.Snark.Soundness.Composition.DirectPathCost
 
 /-!
-# Finite-security profile for the straight-line AGM reduction
+# Finite-security profiles for the primary straight-line AGM reduction
 
 The probability capstone and the work-factor interpretation are deliberately separate.  This
-module records random-oracle queries, group work, and reduction overhead as distinct quantities.
-It does not assert a generic-group DLOG success formula.  A caller supplies the finite-security
-Vesta DLOG advantage for the resulting concrete solver cost.
+module records random-oracle queries, group work, and the actual direct-coordinate field/data work
+as distinct quantities.  It does not assert a generic-group DLOG success formula.  A caller
+supplies the finite-security Vesta DLOG advantage for the resulting concrete solver cost.
 -/
 
 namespace Zcash.Snark
@@ -27,6 +28,37 @@ def straightLineDlogRandomOracleQueries
 postprocessing performed by the reduction. -/
 def straightLineDlogGroupWork (proverGroupWork reductionGroupWork : Nat) : Nat :=
   4 * proverGroupWork + reductionGroupWork
+
+/-- The modeled non-group work of the actual direct-coordinate decode on one oracle table.  The
+source length is not a caller-chosen reduction-work number: it is read from the represented proof
+and verifier-fixed representations that the finder itself consumes. -/
+def straightLineDirectDecodeOps
+    (family : ComputedStraightLineDeployedFSFamily shape)
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) : Nat :=
+  let pnu := (wrappedAdversary family.toFamily basis).run O
+  deployedDirectDecodeOps (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
+    (wrappedPreIpaRecord pnu)
+    (pnu.1.algebraicProof.preX1AssemblySource
+      (family.fixedRepresentations basis)).length
+
+/-- The direct-coordinate component of the reduction has the proved field-independent
+shape-polynomial cost, instantiated at the exact source traversed on this run.  Group operations
+are absent from this path; this counts its field operations and data traversal. -/
+theorem straightLineDirectDecodeOps_le
+    (family : ComputedStraightLineDeployedFSFamily shape)
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) :
+    family.straightLineDirectDecodeOps basis O <=
+      (shape.numPointSets + 1) *
+        (queryBudget shape *
+            (((((wrappedAdversary family.toFamily basis).run O).1.algebraicProof
+              .preX1AssemblySource (family.fixedRepresentations basis)).length) +
+              2 * 2 ^ shape.k + 5) +
+          (2 ^ shape.k + 2)) := by
+  exact deployedDirectDecodeOps_le _ _ _ _ _
 
 /-- Finite-security DLOG premise for the complete straight-line finder.  The advantage function
 receives random-oracle queries and group operations separately; the profile also records the
@@ -194,9 +226,80 @@ theorem straightLineDlogRandomOracleQueries_le_32_mul
   unfold straightLineDlogRandomOracleQueries
   omega
 
-/-- A fully explicit five-bit-overhead profile.  The bounds on prover work and algebraic
-postprocessing are named obligations; no implementation-cost claim is smuggled into the
-probability theorem. -/
+/-- At the consensus IPA depth, the exact query formula needs only three overhead bits once the
+work target is at least seventeen: `4*Q + 66 <= 8*T`. -/
+theorem straightLineDlogRandomOracleQueries_le_eight_mul
+    (family : ComputedStraightLineDeployedFSFamily shape) {T : Nat}
+    (hk : shape.k = 11) (hT : 17 <= T) (hQ : family.Q <= T) :
+    family.straightLineDlogRandomOracleQueries <= 8 * T := by
+  unfold straightLineDlogRandomOracleQueries
+  omega
+
+/-- Four prover invocations plus an explicitly bounded postprocessing allowance fit an eightfold
+group-work envelope.  The allowance covers the verifier MSM evaluated by the IPA relation finder;
+only the direct-coordinate decoder itself is group-free. -/
+theorem straightLineDlogGroupWork_le_eight_mul
+    {T proverGroupWork reductionGroupWork : Nat}
+    (hprover : proverGroupWork <= T) (hreduction : reductionGroupWork <= T) :
+    straightLineDlogGroupWork proverGroupWork reductionGroupWork <= 8 * T := by
+  unfold straightLineDlogGroupWork
+  omega
+
+/-- Primary cost profile for the direct straight-line route.  It keeps the direct decoder's
+group-free cost separate from the complete relation finder: `reductionGroupWork` explicitly
+accounts for the verifier MSM and other group postprocessing outside the prover invocations.  The
+field/data certificate covers both possible direct-decode executions on the fallback path.  The
+reduction group-work bound remains an explicit profile premise until the verifier MSM is
+instrumented with an operational counter. -/
+structure StraightLineDirectDlogProfile (B : VestaG)
+    (family : ComputedStraightLineDeployedFSFamily shape) (T : Nat) where
+  proverGroupWork : Nat
+  reductionGroupWork : Nat
+  advantage : Nat -> Nat -> ENNReal
+  advantage_mono : forall {q q' g g'}, q <= q' -> g <= g' ->
+    advantage q g <= advantage q' g'
+  hardness : TextbookDLWithCoinsAdvantageLE B
+    family.straightLineConstraintRelationFinder
+    (advantage family.straightLineDlogRandomOracleQueries
+      (straightLineDlogGroupWork proverGroupWork reductionGroupWork))
+  ipaDepth : shape.k = 11
+  targetAtLeastSeventeen : 17 <= T
+  queryBound : family.Q <= T
+  proverWorkBound : proverGroupWork <= T
+  reductionWorkBound : reductionGroupWork <= T
+  directDecodeWorkBound : forall basis O,
+    2 * family.straightLineDirectDecodeOps basis O <= T
+
+/-- Forget the explicit direct-route cost certificates while retaining the DLOG premise. -/
+def StraightLineDirectDlogProfile.toStraightLineConstraintDlogProfile
+    {B : VestaG} {family : ComputedStraightLineDeployedFSFamily shape} {T : Nat}
+    (profile : StraightLineDirectDlogProfile B family T) :
+    StraightLineConstraintDlogProfile B family where
+  proverGroupWork := profile.proverGroupWork
+  reductionGroupWork := profile.reductionGroupWork
+  advantage := profile.advantage
+  advantage_mono := profile.advantage_mono
+  hardness := profile.hardness
+
+/-- Solver-resource consequences of the direct profile: three bits for oracle queries and complete
+group work, plus a pointwise bound covering both possible direct-decode executions. -/
+theorem StraightLineDirectDlogProfile.solverCost_le
+    {B : VestaG} {family : ComputedStraightLineDeployedFSFamily shape} {T : Nat}
+    (profile : StraightLineDirectDlogProfile B family T) :
+    family.straightLineDlogRandomOracleQueries <= 8 * T ∧
+      straightLineDlogGroupWork profile.proverGroupWork profile.reductionGroupWork <= 8 * T ∧
+      forall basis O, 2 * family.straightLineDirectDecodeOps basis O <= T := by
+  exact
+    ⟨family.straightLineDlogRandomOracleQueries_le_eight_mul
+        profile.ipaDepth profile.targetAtLeastSeventeen profile.queryBound,
+      straightLineDlogGroupWork_le_eight_mul
+        profile.proverWorkBound profile.reductionWorkBound,
+      profile.directDecodeWorkBound⟩
+
+/-- Compatibility profile for a caller-supplied five-bit envelope.  This is not the primary
+deployed interpretation: its `reductionWorkBound` is deliberately abstract, whereas
+`StraightLineDirectDlogProfile` separately accounts for reduction group work and carries the
+two-execution direct-decode cost. -/
 structure StraightLineFiveBitDlogProfile (B : VestaG)
     (family : ComputedStraightLineDeployedFSFamily shape) (T : Nat)
     extends StraightLineConstraintDlogProfile B family where

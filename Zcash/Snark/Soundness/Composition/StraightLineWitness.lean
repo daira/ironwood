@@ -78,9 +78,9 @@ def witnessDeployedConstraintFamily : ComputedDeployedConstraintFSFamily witness
 /-- The staged IPA trace of the witness family.  The witness shape has no IPA rounds, so every
 obligation quantifies over `Fin 0`. -/
 def witnessStraightLineIpaTrace : StraightLineIpaOnlineTrace witnessFamily where
-  rootPolynomialBefore := fun _ j => j.elim0
+  stage := fun _ j => j.elim0
   agrees := fun _ j => j.elim0
-  invariant := fun _ j => j.elim0
+  fresh := fun _ j => j.elim0
 
 /-- **An inhabitant of the straight-line deployed family interface**: the witness root family,
 its executable constraint-`x` stage, and the (round-free) staged IPA trace. -/
@@ -95,7 +95,7 @@ The witness shape has no IPA rounds, so its staged trace is vacuous.  The lemmas
 shape-generic keystone a captured-shape constant family will need instead: a proof whose aggregate
 and round coordinates vanish walks the zero discrepancy, so every straight-line IPA root
 polynomial — at any `k`, for every challenge vector — is the zero polynomial, and
-`rootPolynomialBefore := 0` satisfies `agrees` and `invariant` outright.
+`stage := pure 0` satisfies `agrees` and `fresh` outright.
 -/
 
 /-- The discrepancy quadratic of the zero state over a zero round is the zero polynomial. -/

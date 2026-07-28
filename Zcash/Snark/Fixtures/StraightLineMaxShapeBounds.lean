@@ -2,10 +2,12 @@ import Zcash.Snark.Fixtures.MaxShapeBounds
 import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
 
 /-!
-# Consensus-maximum concrete inputs for the straight-line AGM capstone
+# Consensus-maximum concrete inputs for the primary straight-line AGM capstone
 
-The DLOG advantage remains an explicit finite-security profile.  This file evaluates only the
-information-theoretic terms and records the exact five-bit work-factor arithmetic.
+The DLOG advantage remains an explicit finite-security profile.  This file evaluates the
+information-theoretic terms, connects the implemented direct-coordinate cost, and records the
+tight three-bit query/group-work interpretation.  The older caller-supplied five-bit
+envelope remains only as a compatibility theorem.
 -/
 
 namespace Zcash.Snark.FixtureMax
@@ -59,6 +61,22 @@ theorem consensusStraightLineStatisticalModel_at_2pow122 :
     (a := ((2 ^ 122 + 1) * (1 + 11 * 2 + 20470) +
       (2 ^ 122 + 23) * 53_686_986_342_456 + 1))
     (p := scalarFieldOrder) (m := 2 ^ 85)
+    (by norm_num [scalarFieldOrder, CompElliptic.Fields.Pasta.PALLAS_BASE_CARD])
+    (by norm_num)
+    (by norm_num [scalarFieldOrder, CompElliptic.Fields.Pasta.PALLAS_BASE_CARD]) using 1
+  norm_num
+
+/-- At the largest work target supported by the explicit direct profile under a conservative
+three-bit total-resource loss, the non-DLOG terms are below `2^-84`.  This is a probability
+exponent, not the computational-security work factor. -/
+theorem consensusStraightLineStatisticalModel_at_2pow123 :
+    consensusStraightLineStatisticalModel (2 ^ 123) <=
+      1 / (2 ^ 84 : ENNReal) := by
+  rw [consensusStraightLineStatisticalModel_eq, card_Fp]
+  convert ennreal_nat_div_le_one_div_straightLine
+    (a := ((2 ^ 123 + 1) * (1 + 11 * 2 + 20470) +
+      (2 ^ 123 + 23) * 53_686_986_342_456 + 1))
+    (p := scalarFieldOrder) (m := 2 ^ 84)
     (by norm_num [scalarFieldOrder, CompElliptic.Fields.Pasta.PALLAS_BASE_CARD])
     (by norm_num)
     (by norm_num [scalarFieldOrder, CompElliptic.Fields.Pasta.PALLAS_BASE_CARD]) using 1
@@ -159,11 +177,89 @@ theorem straightLineConstraintFailure_prob_le_at_consensus_max_generatorRO
       gcongr
     _ = _ := by push_cast; ring
 
-/-- Concrete 122-bit work-factor package.  It combines the probability capstone, the `2^-85`
-statistical bound, and the separately checked `2^127` solver-resource ceiling.  The DLOG advantage
-at that solver cost remains the explicit cryptographic premise carried by `profile`; since Vesta's
-expected Pollard-rho cost is about `2^126.0`, that premise is restrictive only for adversary work
-up to about `2^121`. -/
+/-- One execution of the actual direct-coordinate decode at the consensus shape, specialized to
+the represented source consumed on that run. -/
+theorem straightLineDirectDecodeOps_at_consensus_max_of_source
+    (family : ComputedStraightLineDeployedFSFamily (shape orchardConsensusMaxProofs))
+    (hsource : forall basis O,
+      ((((wrappedAdversary family.toFamily basis).run O).1.algebraicProof
+        .preX1AssemblySource (family.fixedRepresentations basis)).length) <= 2 ^ 90) :
+    forall basis O, family.straightLineDirectDecodeOps basis O <= 2 ^ 122 := by
+  intro basis O
+  unfold ComputedStraightLineDeployedFSFamily.straightLineDirectDecodeOps
+  exact deployedDirectDecodeOps_at_consensus_max (Nat.le_refl orchardConsensusMaxProofs)
+    _ _ _ _ (hsource basis O)
+
+/-- Both possible direct-decode executions on the complete finder's fallback path fit the
+`2^123` field/data budget under the same represented-source premise. -/
+theorem straightLineDirectDecodeOps_twice_at_consensus_max_of_source
+    (family : ComputedStraightLineDeployedFSFamily (shape orchardConsensusMaxProofs))
+    (hsource : forall basis O,
+      ((((wrappedAdversary family.toFamily basis).run O).1.algebraicProof
+        .preX1AssemblySource (family.fixedRepresentations basis)).length) <= 2 ^ 90) :
+    forall basis O, 2 * family.straightLineDirectDecodeOps basis O <= 2 ^ 123 := by
+  intro basis O
+  calc
+    2 * family.straightLineDirectDecodeOps basis O <= 2 * 2 ^ 122 :=
+      Nat.mul_le_mul_left 2
+        (straightLineDirectDecodeOps_at_consensus_max_of_source family hsource basis O)
+    _ = 2 ^ 123 := by norm_num
+
+/-- **Primary profiled work-factor package for the direct route.**  At adversary target `2^123`,
+the exact query formula and complete group-work profile each reach at most `2^126`; both possible
+direct-decode executions remain below `2^123` modeled field/data operations.  The probability
+bound is therefore
+
+`Pr[failure] <= Adv_DLOG(2^126, 2^126) + 2^-84`.
+
+This records a conservative **123-bit protocol work-factor target**, not 126-bit end-to-end
+security.  With Vesta itself estimated at about 126 bits, the present three-bit resource loss
+cannot justify a 126-bit protocol claim. -/
+theorem straightLine_consensus_2pow123_workFactor_generatorRO
+    {T' : Type*} [DecidableEq T']
+    (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex (2 ^ (shape orchardConsensusMaxProofs).k) -> T')
+    (hquery : Function.Injective query)
+    (family : ComputedStraightLineDeployedFSFamily (shape orchardConsensusMaxProofs))
+    (static : DeployedConstraintStaticChecks family.toRootFamily)
+    (schedule : DeployedConstraintXSqueezeSchedule family.toRootFamily
+      ((20470 : Nat) / (Fintype.card Fp : ENNReal)))
+    (profile : family.StraightLineDirectDlogProfile B (2 ^ 123)) :
+    ((independentProductPMF (orchardGeneratorROSetup query)
+        (PMF.uniformOfFintype
+          (BTranscript Fp VestaG
+            (preIpaLen (shape orchardConsensusMaxProofs) family.init.length 10 +
+              3 * (shape orchardConsensusMaxProofs).k) -> Fp))).toOuterMeasure
+          ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+            family.straightLineConstraintFailureEvent static) <=
+        profile.advantage (2 ^ 126) (2 ^ 126) +
+          1 / (2 ^ 84 : ENNReal)) ∧
+      family.straightLineDlogRandomOracleQueries <= 2 ^ 126 ∧
+      straightLineDlogGroupWork profile.proverGroupWork profile.reductionGroupWork <= 2 ^ 126 ∧
+      forall basis O, 2 * family.straightLineDirectDecodeOps basis O <= 2 ^ 123 := by
+  have hcost := profile.solverCost_le
+  have hqueries : family.straightLineDlogRandomOracleQueries <= 2 ^ 126 := by
+    calc
+      family.straightLineDlogRandomOracleQueries <= 8 * 2 ^ 123 := hcost.1
+      _ = 2 ^ 126 := by norm_num
+  have hgroup : straightLineDlogGroupWork profile.proverGroupWork
+      profile.reductionGroupWork <= 2 ^ 126 := by
+    calc
+      straightLineDlogGroupWork profile.proverGroupWork profile.reductionGroupWork <=
+          8 * 2 ^ 123 := hcost.2.1
+      _ = 2 ^ 126 := by norm_num
+  refine ⟨?_, hqueries, hgroup, hcost.2.2⟩
+  refine le_trans
+    (straightLineConstraintFailure_prob_le_at_consensus_max_generatorRO
+      B hB query hquery family static schedule
+      profile.toStraightLineConstraintDlogProfile profile.queryBound) ?_
+  exact add_le_add
+    (profile.advantage_mono hqueries hgroup)
+    consensusStraightLineStatisticalModel_at_2pow123
+
+/-- Compatibility package for the older caller-supplied five-bit envelope.  The primary direct
+endpoint above removes the free reduction-group-work allowance and states the tighter, honest
+123-bit protocol work target. -/
 theorem straightLine_consensus_2pow122_workFactor_generatorRO
     {T' : Type*} [DecidableEq T']
     (B : VestaG) (hB : B ≠ 0)

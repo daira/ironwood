@@ -86,13 +86,6 @@ machine makes `11 + k = 22` extra reads and a one-squeeze root event costs
 `Q + 22 + 1 = Q + 23` at `k = 11`.
 -/
 
-/-- The captured verifier shape has ample field capacity for the offline `x4` interpolation used by
-the AGM decoder.  This is a structural fact, not a cryptographic assumption. -/
-theorem interpolationCapacity_at_captured_shape (n : Nat) :
-    (shape n).numPointSets + 1 <= Fintype.card Fp := by
-  norm_num [shape, card_Fp, scalarFieldOrder,
-    CompElliptic.Fields.Pasta.PALLAS_BASE_CARD]
-
 /-- Exact conservative sum of all AGM root budgets at the consensus maximum. -/
 theorem algebraicRootBudget_at_consensus_max :
     algebraicRootBudget (shape orchardConsensusMaxProofs) 11 =

@@ -21,6 +21,11 @@
       "label": "PR #30 decode head",
       "ref": "d2a01b30c4475827e8a2620dea6cfb876561c716",
       "fetch": "pull/30/head"
+    },
+    "runtimeAgmStack": {
+      "label": "PR #114 runtime AGM head",
+      "ref": "1b1b0e2a8271e2aae4d4347812dde42ddce2dfd1",
+      "fetch": "pull/114/head"
     }
   },
   "prs": {
@@ -71,6 +76,13 @@
       "title": "Fully adaptive Fiat-Shamir adversary",
       "url": "https://github.com/zcash/ironwood/pull/56",
       "sha": "456c386",
+      "lane": "stack"
+    },
+    "114": {
+      "label": "PR #114",
+      "title": "Primary straight-line AGM and runtime bounds",
+      "url": "https://github.com/zcash/ironwood/pull/114",
+      "sha": "1b1b0e2",
       "lane": "stack"
     },
     "27": {
@@ -279,10 +291,13 @@
       "chapter": "AGM to discrete log",
       "title": "Price the relation branch",
       "claim": "The algebraic Fiat-Shamir game produces PR #28's deployed instances, states binding as a computable value mismatch against the carried aggregate opening (never as nonexistence of an opening, which holds vacuously in a prime-order group), and feeds every mismatch run's explicit relation to the plain-DL probability bound.",
-      "summary": "PR #28 defines AlgebraicDForkCert and the deployed AGM instance. The programmed-basis relation-to-DL reduction plants the challenge in every basis slot and loses only one 1/|F| hyperplane. PR #56 supplies the executable adaptive side: every adversary-emitted group point carries a basis representation; recursiveAlgebraicFork computes the fork tree from an oracle table and finite tape; algebraicForkCertAttempt_valid proves the resulting certificate valid; and computedDeployedAlgebraicInstance packages it for PR #28. The unconditional AFK (Attema-Fehr-Klooß-style) analysis bounds expected black-box calls, and the recursive deployed combined finder converts that expectation to a fixed call budget with an explicit truncation tail. A parallel straight-line AGM finder consumes a staged representation trace, has a pointwise four-invocation bound, and prices each IPA discrepancy as a pinned quadratic without AFK truncation.",
+      "summary": "PR #28 defines AlgebraicDForkCert and the deployed AGM instance. The programmed-basis relation-to-DL reduction plants the challenge in every basis slot and loses only one 1/|F| hyperplane. PR #56 supplies the executable adaptive side: every adversary-emitted group point carries a basis representation; recursiveAlgebraicFork computes the fork tree from an oracle table and finite tape; algebraicForkCertAttempt_valid proves the resulting certificate valid; and computedDeployedAlgebraicInstance packages it for PR #28. The primary straight-line AGM finder is assembled from the representation-carrying online prover and its staged root, IPA, and constraint-x traces; it has a pointwise four-invocation bound and prices each IPA discrepancy as a pinned quadratic without AFK truncation. The recursive deployed finder remains a separately priced alternative using the unconditional AFK (Attema-Fehr-Klooß-style) expectation, a fixed call budget, and an explicit truncation tail.",
       "nodes": [
         "relation",
         "fsAdversary",
+        "straightAdapter",
+        "directCost",
+        "securityBound",
         "recursiveExtractor",
         "algCert",
         "algInstance",
@@ -293,7 +308,8 @@
         "dlbound",
         "agm_dl",
         "DLhard",
-        "h2cRO"
+        "h2cRO",
+        "actionTerminal"
       ],
       "theorems": [
         {
@@ -329,12 +345,12 @@
         {
           "symbol": "orchardDeployedAlgebraicForkingProgrammed",
           "path": "Zcash/Snark/Soundness/AGM/ProbabilityVesta.lean",
-          "source": "agmStack"
+          "source": "runtimeAgmStack"
         },
         {
           "symbol": "programmedExtractOrMiss",
           "path": "Zcash/Snark/Soundness/AGM/Adapter.lean",
-          "source": "agmStack"
+          "source": "runtimeAgmStack"
         },
         {
           "symbol": "orchard_deployed_relation_set_eq_relSet",
@@ -384,22 +400,43 @@
         {
           "symbol": "recursiveAlgebraicFork_oracle_tape_sum_runs_le_poly",
           "path": "Zcash/Snark/Soundness/Forking/Adversary/ExpectedRunsPoly.lean",
-          "source": "fsStack"
+          "source": "runtimeAgmStack"
         },
         {
           "symbol": "relationWithCoins_prob_le_of_truncated_textbookDL",
           "path": "Zcash/Snark/Soundness/AGM/ProbabilityCoins.lean",
-          "source": "fsStack"
+          "source": "runtimeAgmStack"
         },
         {
           "symbol": "snarkConstraintsDeployed_prob_le_of_root_schedule_runtime",
           "path": "Zcash/Snark/Soundness/Composition/DeployedConstraintContainment.lean",
-          "source": "fsStack"
+          "source": "runtimeAgmStack"
+        },
+        {
+          "symbol": "def ofCovered",
+          "path": "Zcash/Snark/Soundness/Composition/StraightLineDeployed.lean",
+          "source": "runtimeAgmStack"
+        },
+        {
+          "symbol": "orchard_deployed_knowledge_error_captured_straightLine_direct_generatorRO",
+          "path": "Zcash/Snark/Fixtures/MultiAction/StraightLineKnowledgeError.lean",
+          "source": "runtimeAgmStack"
+        },
+        {
+          "symbol": "straightLine_consensus_2pow123_workFactor_generatorRO",
+          "path": "Zcash/Snark/Fixtures/StraightLineMaxShapeBounds.lean",
+          "source": "runtimeAgmStack"
+        },
+        {
+          "symbol": "StraightLineDirectDlogProfile.solverCost_le",
+          "path": "Zcash/Snark/Soundness/AGM/StraightLineFiniteSecurity.lean",
+          "source": "runtimeAgmStack"
         }
       ],
       "prs": [
         "28",
-        "56"
+        "56",
+        "114"
       ],
       "proves": [
         "Every group point in the adaptive Fiat-Shamir adversary's proof output carries its representation over (g,U,W).",
@@ -413,12 +450,12 @@
         "For distinct parameter queries, the recursive Fiat-Shamir binding event in the uniform generator-RO model is bounded by the fixed-call discrete-log advantage plus the explicit truncation tail.",
         "The additive straight-line AGM endpoint derives each IPA pinned-root invariant from a staged representation trace and covers accepting failure by the zero slice, 2k IPA roots, deployed multiopen roots, the constraint-x root, or one explicit DLOG relation.",
         "The straight-line combined finder uses at most four prover invocations, so its DLOG capstone has no AFK expectation, truncation, or Markov term.",
-        "At the consensus maximum and T=2^122, its non-DLOG statistical terms are below 2^-85; an explicitly profiled five-bit reduction overhead maps the 2^122 adversary-work target to the 2^127 DLOG-solver scale. Vesta's expected Pollard-rho cost is about 2^126.0, so the hardness premise is restrictive only for adversary work up to about 2^121.",
+        "The direct profile separately accounts for reduction group work and both possible direct-coordinate decodes. At the consensus maximum and T=2^123, oracle work and the profiled complete group-work allowance are each at most 2^126, the two direct decodes share at most 2^123 modeled field/data operations, and the non-DLOG statistical terms are below 2^-84. The reduction group-work allowance remains an explicit profile premise. Thus Pr[failure] <= Adv_DLOG(2^126,2^126) + 2^-84. This is a DLOG-conditional 123-bit protocol work-factor target, not an unconditional failure-probability exponent.",
         "Both the recursive and straight-line runtime endpoints pass through the four-budget semantic promotion, so row-level gate, permutation, and lookup semantics carry explicit y, beta, gamma, and theta prices on top of the compressed identity.",
-        "The direct-coordinate postprocessing has a proved field-independent polynomial total-cost model: at most numPointSets+1 columns, each traversing at most queryBudget members - linear in the action count at the captured shape and negligible against the 2^122 work target."
+        "The direct-coordinate postprocessing has a proved field-independent polynomial total-cost model over the exact represented source consumed by the finder: at most numPointSets+1 columns, each traversing at most queryBudget members. At the captured shape it is linear in the action count, and the primary finite-security profile carries its pointwise bound rather than accepting a free reduction-work number."
       ],
       "residuals": [
-        "Identify deployed Blake2b and halo2's concrete hash-to-curve with their modeled random oracles; instantiate the staged AGM representation trace from the concrete prover schedule at the captured shape (the interfaces are inhabited at the captured key's scalar data with all eleven IPA rounds live, but by a zero-column prover over an instance-free shape, not yet by an instance-bearing one); assume finite-security Vesta DL hardness; and supply the external bound on the prover's own group work — the direct-coordinate postprocessing itself now carries a proved field-independent polynomial cost model, linear in the action count at the captured shape."
+        "Identify deployed Blake2b and halo2's concrete hash-to-curve with their modeled random oracles; supply finite-security Vesta DL hardness and external bounds on the prover and reduction group work; construct the executable root, IPA, and constraint-x stages packaged by ComputedStraightLineDeployedFSFamily.ofCovered; and compose the primary straight-line failure event through the Action terminal with concrete y, beta, gamma, and theta budgets. The captured endpoint reuses existing fixture metadata, while the zero-column captured-data family remains only an interface test."
       ],
       "durationMs": 10000
     },

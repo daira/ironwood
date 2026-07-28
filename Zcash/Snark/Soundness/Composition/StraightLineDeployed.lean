@@ -6,7 +6,8 @@ import Zcash.Snark.Soundness.Composition.DeployedConstraintContainment
 # Straight-line AGM composition through deployed multiopen decoding
 
 This module combines the one-run IPA extractor with the existing rewind-free deployed batch/root
-decoder.  It is parallel to, and does not replace, the recursive/AFK composition.
+decoder.  This is the primary deployed AGM route; the recursive/AFK composition remains available
+as a separately priced alternative.
 -/
 
 namespace Zcash.Snark
@@ -27,6 +28,28 @@ structure ComputedStraightLineDeployedFSFamily (shape : Shape)
   constraintXTrace : DeployedConstraintXOnlineTrace toComputedDeployedRootFSFamily
 
 namespace ComputedStraightLineDeployedFSFamily
+
+/-- **Adapter constructor from the deployed representation-carrying online prover model.**  The
+online family already derives canonical aggregate coordinates and deployed-member coverage from
+`OnlineMemberProofData`.  The three staged traces add, respectively, the six deployed root
+computations, the IPA-round computations, and the constraint-`x` computation.  Callers must supply
+those executable stages and their freshness proofs; this constructor packages them with the same
+represented prover output consumed by the direct-coordinate decoder.
+
+The captured Orchard key profile is applied to the resulting family by the fixture endpoint; no
+new proof fixture or honest-prover fixture is part of this constructor. -/
+def ofCovered
+    (online : ComputedOnlineMemberFSFamily shape)
+    (rootTrace : DeployedRootOnlineTrace online.toFamily
+      (deployedRootOutcomeOfCovered online))
+    (ipaTrace : StraightLineIpaOnlineTrace online.toFamily)
+    (xTrace : DeployedConstraintXOnlineTrace
+      (ComputedDeployedRootFSFamily.ofCovered online rootTrace)) :
+    ComputedStraightLineDeployedFSFamily shape where
+  toComputedDeployedRootFSFamily :=
+    ComputedDeployedRootFSFamily.ofCovered online rootTrace
+  ipaTrace := ipaTrace
+  constraintXTrace := xTrace
 
 /-- Forget the IPA chronology while retaining the deployed multiopen root family. -/
 abbrev toRootFamily (family : ComputedStraightLineDeployedFSFamily shape) :

@@ -5,8 +5,9 @@ import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
 /-!
 # Captured-key straight-line AGM knowledge-error endpoint
 
-This is parallel to `MultiAction.KnowledgeError`: the existing file retains the recursive AFK
-capstone, while this file selects the fixed-call straight-line relation finder.
+This is the primary deployed AGM endpoint.  `MultiAction.KnowledgeError` retains the recursive AFK
+capstone as a separately priced alternative, while this file selects the fixed-call straight-line
+relation finder.
 -/
 
 namespace Zcash.Snark.Fixture2
@@ -77,5 +78,49 @@ theorem orchard_deployed_knowledge_error_captured_straightLine_generatorRO
   family.straightLineConstraintFailure_prob_le_of_generatorRO_dlogProfile
     B hB query hquery (deployedConstraintStaticChecks_of_captured family.toRootFamily hvk)
     (deployedConstraintXSqueezeSchedule_captured family.toConstraintFamily hvk) profile
+
+/-- **Direct captured-key adapter endpoint.**  Unlike the theorem above, this form does not ask a
+caller to supply an already assembled `ComputedStraightLineDeployedFSFamily`.  It starts at the
+representation-carrying online prover model produced by `ComputedOnlineMemberFSFamily.ofProofData`
+and combines its deployed-root, IPA-round, and constraint-`x` traces with `ofCovered`.  The
+captured fixture supplies the verifier's scalar/layout profile; no new proof fixture is needed. -/
+theorem orchard_deployed_knowledge_error_captured_straightLine_direct_generatorRO
+    {T : Type*} [DecidableEq T]
+    (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex (2 ^ shape.k) -> T) (hquery : Function.Injective query)
+    (online : ComputedOnlineMemberFSFamily shape)
+    (rootTrace : DeployedRootOnlineTrace online.toFamily
+      (deployedRootOutcomeOfCovered online))
+    (ipaTrace : StraightLineIpaOnlineTrace online.toFamily)
+    (xTrace : DeployedConstraintXOnlineTrace
+      (ComputedDeployedRootFSFamily.ofCovered online rootTrace))
+    (hvk : forall basis, CapturedVerifierKeyProfile (online.vk basis))
+    (profile : let family := ComputedStraightLineDeployedFSFamily.ofCovered
+        online rootTrace ipaTrace xTrace
+      family.StraightLineConstraintDlogProfile B) :
+    let family := ComputedStraightLineDeployedFSFamily.ofCovered
+      online rootTrace ipaTrace xTrace
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          family.straightLineConstraintFailureEvent
+            (deployedConstraintStaticChecks_of_captured family.toRootFamily hvk)) <=
+      (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
+        (family.Q + 1 : Nat) *
+          (shape.k * (2 / (Fintype.card Fp : ENNReal))) +
+        (family.Q + (11 + shape.k) + 1 : Nat) *
+          algebraicRootBudget shape shape.k +
+        (profile.advantage family.straightLineDlogRandomOracleQueries
+            (straightLineDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
+          1 / Fintype.card Fp) +
+        (family.Q + 1 : Nat) *
+          ((20470 : Nat) / (Fintype.card Fp : ENNReal)) := by
+  dsimp only
+  exact orchard_deployed_knowledge_error_captured_straightLine_generatorRO
+    B hB query hquery
+    (ComputedStraightLineDeployedFSFamily.ofCovered online rootTrace ipaTrace xTrace)
+    hvk profile
 
 end Zcash.Snark.Fixture2

@@ -150,13 +150,14 @@ rounds: the staged polynomial is the zero polynomial at every one of the shape's
 `agrees` is a theorem about the discrepancy walk rather than an empty quantification. -/
 noncomputable def zeroStraightLineIpaTrace (hproofs : shape.numProofs = 0) :
     StraightLineIpaOnlineTrace (zeroDeployedRootFamily vkS hfixed hperm).toFamily where
-  rootPolynomialBefore := fun _basis _j _O => 0
+  stage := fun _basis _j => .pure 0
   agrees := fun basis j O => by
+    rw [OracleComp.run_pure]
     show (0 : Polynomial Fp) = _
     rw [show ((zeroDeployedRootFamily vkS hfixed hperm).toFamily.adversary basis).run O =
       zeroWfProof basis vkS hfixed hperm from rfl]
     exact (zeroWfProof_straightLineIpaRootPolynomial vkS hfixed hperm hproofs basis _ _ j).symm
-  invariant := fun _basis _j _O _v => rfl
+  fresh := fun _basis _j _O => List.not_mem_nil
 
 /-- **An inhabitant of the straight-line deployed family interface with live IPA rounds**: the
 zero prover's root family, its empty constraint-`x` stage, and the staged IPA trace over all `k`

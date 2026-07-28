@@ -29,12 +29,13 @@ The instance-commitment derivation (`instance_commitments_derived`,
 functions it ranges over; see the single-action sibling for why this is the fixture's new trust
 surface.
 
-Two AGM capstones are retained.  The recursive/reprogramming endpoint uses the unconditional AFK
-expectation, fixed-budget truncation, and an explicit Markov tail.  The parallel straight-line
-endpoint instead consumes an online representation trace and has a pointwise four-invocation
-bound.  Those representations are ghost extractor data: they are neither transmitted nor checked
-by the Halo2 verifier.  Accordingly the tighter endpoint is only an AGM-and-random-oracle result
-under the supplied finite-security Vesta DLOG profile.
+Two AGM capstones are retained.  The primary straight-line endpoint consumes an online
+representation trace and has a pointwise four-invocation bound.  The recursive/reprogramming
+endpoint remains a separately priced alternative using the unconditional AFK expectation,
+fixed-budget truncation, and an explicit Markov tail.  Those representations are ghost extractor
+data: they are neither transmitted nor checked by the Halo2 verifier.  Accordingly the tighter
+endpoint is only an AGM-and-random-oracle result under the supplied finite-security Vesta DLOG
+profile.
 -/
 
 assert_axioms Zcash.Snark.Fixture2.capturedPointCoordinatesValid_eq_true +native(
@@ -144,12 +145,11 @@ assert_axioms Zcash.Snark.Fixture2.capturedPublicInstances
 assert_axioms Zcash.Snark.Fixture2.commitLagrange
 assert_axioms Zcash.Snark.Fixture2.derivedInstanceCommitment
 
--- The captured key's straight-line family with eleven live IPA rounds
--- (`MultiAction/CapturedZeroFamily`): the captured scalar metadata, layouts and domain carry a
--- concrete inhabitant of the straight-line deployed interface, so the capstones' family premise
--- is exercised at captured data rather than only at the round-free witness shape.  The group
--- commitment families are zero (as `CapturedVerifierKeyProfile` already allows) and the shape is
--- instance-free, which is what makes the constraint-`x` stage discharge.
+-- The captured key's zero-family test with eleven live IPA rounds
+-- (`MultiAction/CapturedZeroFamily`): this exercises the interface at the captured scalar
+-- metadata, layouts, and domain rather than only at the round-free witness shape.  It is not the
+-- deployed adapter above: its group commitment families are zero and its shape is instance-free,
+-- which is what makes the constraint-`x` stage discharge.
 -- The key data itself stays executable; the families above it are noncomputable only because a
 -- root set is a `szBadSet` of a polynomial, so they are censused for their axiom base instead.
 assert_computable capturedZeroVk +choice +native

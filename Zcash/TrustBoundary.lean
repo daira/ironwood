@@ -1125,13 +1125,14 @@ assert_axioms Zcash.Snark.deployedConstraintSemanticFailure_subset_union +native
 assert_axioms Zcash.Snark.snarkConstraintsSemanticDeployed_prob_le_of_root_schedule +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
--- Parallel straight-line AGM capstone. The staged representation trace, not the final
+-- Primary straight-line AGM capstone. The staged representation trace, not the final
 -- `AlgebraicWfProof` alone, supplies IPA squeeze chronology, and the family's own constraint-`x`
 -- trace derives exact `x` pinning rather than assuming it. Its complete deployed constraint
 -- finder has a pointwise four-invocation bound and therefore needs no AFK truncation or Markov
 -- term. Representations remain ghost extractor data, outside the Halo2 proof and verifier.
 assert_axioms StraightLineIpaOnlineTrace.toSqueezeInvariance +native
 assert_axioms AlgebraicWfProof.straightLineIpaZeroOrRelation +native
+assert_computable ComputedStraightLineDeployedFSFamily.ofCovered +choice +native
 assert_axioms ComputedStraightLineDeployedFSFamily.pinnedX +native
 assert_computable ComputedStraightLineIpaFSFamily.straightLineIpaRelationFinder +choice +native
 assert_computable ComputedStraightLineDeployedFSFamily.straightLineDeployedRelationFinder +choice +native
@@ -1144,6 +1145,16 @@ assert_axioms ComputedStraightLineDeployedFSFamily.StraightLineConstraintSemanti
 assert_axioms ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_subset_union +native
 assert_axioms ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_prob_le_of_compressed_bound +native
 assert_axioms ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_prob_le_of_generatorRO_dlogProfile +native
+-- Direct-route costs: both possible direct decodes charge their represented source traversal, the
+-- query ceiling loses three bits, and the complete group-work allowance includes the verifier MSM
+-- and other reduction postprocessing rather than treating the whole reduction as group-free.
+assert_computable ComputedStraightLineDeployedFSFamily.straightLineDirectDecodeOps +choice +native
+assert_axioms ComputedStraightLineDeployedFSFamily.straightLineDirectDecodeOps_le +native
+assert_axioms ComputedStraightLineDeployedFSFamily.straightLineDlogRandomOracleQueries_le_eight_mul
+assert_axioms ComputedStraightLineDeployedFSFamily.straightLineDlogGroupWork_le_eight_mul
+assert_axioms ComputedStraightLineDeployedFSFamily.StraightLineDirectDlogProfile.solverCost_le +native
+-- Compatibility only: the older envelope allows caller-supplied reduction work and is not the
+-- primary deployed interpretation.
 assert_axioms ComputedStraightLineDeployedFSFamily.straightLineDlogGroupWork_le_32_mul
 assert_axioms ComputedStraightLineDeployedFSFamily.five_bit_overhead_at_2pow122
 
