@@ -279,6 +279,30 @@ theorem chunksOf_inj {a b n : ℕ} (ha : a < 2 ^ (K * n)) (hb : b < 2 ^ (K * n))
   have hfin := hmod n le_rfl
   rwa [Nat.mod_eq_of_lt ha, Nat.mod_eq_of_lt hb] at hfin
 
+set_option exponentiation.threshold 600 in
+/-- `merkleChunks` is the 52-chunk decomposition of its packed message. -/
+theorem merkleChunks_eq_chunksOf (l lv rv : ℕ) :
+    merkleChunks l lv rv = chunksOf (l + 2 ^ 10 * lv + 2 ^ 265 * rv) 52 := by
+  simp [merkleChunks, chunksOf, bitrange]
+
+set_option exponentiation.threshold 600 in
+/-- The 52-chunk Merkle compression encoding is injective on components within
+their widths. -/
+theorem merkleChunks_inj {l lv rv l' lv' rv' : ℕ}
+    (h1 : l < 2 ^ 10) (h2 : lv < 2 ^ 255) (h3 : rv < 2 ^ 255)
+    (h1' : l' < 2 ^ 10) (h2' : lv' < 2 ^ 255) (h3' : rv' < 2 ^ 255)
+    (h : merkleChunks l lv rv = merkleChunks l' lv' rv') :
+    l = l' ∧ lv = lv' ∧ rv = rv' := by
+  rw [merkleChunks_eq_chunksOf, merkleChunks_eq_chunksOf] at h
+  have hK : (2 : ℕ) ^ (K * 52) = 2 ^ 520 := by norm_num [K]
+  have hbound : ∀ {a b c : ℕ}, a < 2 ^ 10 → b < 2 ^ 255 → c < 2 ^ 255 →
+      a + 2 ^ 10 * b + 2 ^ 265 * c < 2 ^ (K * 52) := by
+    intro a b c ha hb hc
+    rw [hK]
+    omega
+  have hmsg := chunksOf_inj (hbound h1 h2 h3) (hbound h1' h2' h3') h
+  omega
+
 /-- Chunks below position `n` are unaffected by reducing `val` mod `2 ^ (K * n)`. -/
 theorem chunksOf_mod (val n : ℕ) : chunksOf (val % 2 ^ (K * n)) n = chunksOf val n := by
   unfold chunksOf
@@ -464,9 +488,9 @@ def noteCommitChunks (gdX gdY pkdX pkdY v rho psi : ℕ) : List ℕ :=
 theorem noteCommitMessage_inj
     {gdX gdY pkdX pkdY v rho psi gdX' gdY' pkdX' pkdY' v' rho' psi' : ℕ}
     (h1 : gdX < 2 ^ 255) (h2 : gdY < 2) (h3 : pkdX < 2 ^ 255) (h4 : pkdY < 2)
-    (h5 : v < 2 ^ 64) (h6 : rho < 2 ^ 255) (h7 : psi < 2 ^ 255)
+    (h5 : v < 2 ^ 64) (h6 : rho < 2 ^ 255) (_h7 : psi < 2 ^ 255)
     (h1' : gdX' < 2 ^ 255) (h2' : gdY' < 2) (h3' : pkdX' < 2 ^ 255) (h4' : pkdY' < 2)
-    (h5' : v' < 2 ^ 64) (h6' : rho' < 2 ^ 255) (h7' : psi' < 2 ^ 255)
+    (h5' : v' < 2 ^ 64) (h6' : rho' < 2 ^ 255) (_h7' : psi' < 2 ^ 255)
     (h : noteCommitMessage gdX gdY pkdX pkdY v rho psi
         = noteCommitMessage gdX' gdY' pkdX' pkdY' v' rho' psi') :
     gdX = gdX' ∧ gdY = gdY' ∧ pkdX = pkdX' ∧ pkdY = pkdY' ∧ v = v' ∧ rho = rho'

@@ -14,7 +14,7 @@ the two openings into their defined Sinsemilla chains and blinding scalars and a
 chain-collision reducer `relationOfChainPmEq`.
 
 The reduction is hypothesis-free. The chunk-coefficient injectivity is `preCoeffs_inj`
-and the 109-chunk message encoding is injective by `noteCommitChunks_inj`; recovering
+and the 109-chunk message encoding is injective by `noteCommitChunks_inj`. Recovering
 the note from its scalars additionally uses `eq_of_toPoint_x_eq_of_y_parity_eq`,
 because the message carries each point as its `x`-coordinate and `y`-parity bit.
 -/

@@ -611,7 +611,7 @@ point, blinded by `r₁ • W` and `r₂ • W`, whose outputs agree up to sign,
 nontrivial relation among the table, the domain point, and `W` — provided the pair
 `(chunk list, blinding scalar)` differs. The equality case rests on
 `preCoeffs_inj` — chunk lists of length at most 253 are determined by their
-coefficients; every deployed Sinsemilla message is far shorter. The negation case is
+coefficients, and every deployed Sinsemilla message is far shorter. The negation case is
 unconditional: the domain-point coefficients `2^n` and `-2^n` cannot agree because
 `2^(n+1) ≠ 0` in the odd-order scalar field. -/
 def relationOfChainPmEq {Q : Point Fp} (hQ : Q.Valid) {W : PallasGroup}
@@ -655,6 +655,23 @@ def relationOfChainPmEq {Q : Point Fp} (hQ : Q.Valid) {W : PallasGroup}
           rw [pow_succ, mul_two]
           exact add_eq_zero_iff_eq_neg.mpr hα
         exact two_pow_ne_zero _ h0)
+
+
+/-- With zero blinding scalars, the reducer's randomness-base coefficient is zero. -/
+theorem relationOfChainPmEq_zero_beta {Q : Point Fp} (hQ : Q.Valid) {W : PallasGroup}
+    {l₁ l₂ : List ℕ} (hb₁ : ∀ m ∈ l₁, m < 2 ^ K) (hb₂ : ∀ m ∈ l₂, m < 2 ^ K)
+    (hlen : l₁.length = l₂.length)
+    {p₁ p₂ : Point Fp}
+    (h₁ : hashToPoint orchardGenerators.S Q l₁ = some p₁) (hv₁ : p₁.Valid)
+    (h₂ : hashToPoint orchardGenerators.S Q l₂ = some p₂) (hv₂ : p₂.Valid)
+    (heq : PallasGroup.ofPoint p₁ hv₁ + (0 : Fq) • W
+        = PallasGroup.ofPoint p₂ hv₂ + (0 : Fq) • W ∨
+      PallasGroup.ofPoint p₁ hv₁ + (0 : Fq) • W
+        = -(PallasGroup.ofPoint p₂ hv₂ + (0 : Fq) • W))
+    (hn : l₁.length ≤ 253) (hne : ¬(l₁ = l₂ ∧ (0 : Fq) = 0)) :
+    (relationOfChainPmEq hQ hb₁ hb₂ hlen h₁ hv₁ h₂ hv₂ heq hn hne).β = 0 := by
+  unfold relationOfChainPmEq
+  split <;> simp [Zcash.NontrivialRelation.ofCombinationCollision]
 
 
 end Zcash.Security.Ledger.Bridge

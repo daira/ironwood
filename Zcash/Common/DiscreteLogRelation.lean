@@ -97,4 +97,18 @@ def NontrivialRelation.ofCombinationCollision [DecidableEq F] {n : ℕ} {g : Fin
       rw [commitGen_sub, sub_smul, sub_smul]; abel
     rw [hrw, e, sub_self]
 
+/-- Over a zero third generator, a relation with a nonzero table-coefficient vector
+or a nonzero distinguished coefficient converts to the one-generator form. The third
+coefficient contributes nothing — it scales the zero point — so it cannot carry the
+nontriviality. -/
+def NontrivialRelation.toOne {n : ℕ} {g : Fin n → G} {U : G}
+    (rel : NontrivialRelation (F := F) g U (0 : G))
+    (h : rel.a ≠ 0 ∨ rel.α ≠ 0) : NontrivialRelationOne (F := F) g U where
+  a := rel.a
+  α := rel.α
+  nontrivial := h
+  relation := by
+    have hr := rel.relation
+    simpa [smul_zero] using hr
+
 end Zcash
