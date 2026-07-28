@@ -35,6 +35,10 @@ def commitIvkRpt : PallasGroup :=
   PallasGroup.ofPoint Ecc.MulFixed.Certs.commitIvkR.point
     (Or.inl Ecc.MulFixed.Certs.commitIvkR.onCurve)
 
+/-- Every `Fp` value is below `2^255`: the Pallas base field's order is. -/
+private theorem fp_val_lt (x : Fp) : x.val < 2 ^ 255 :=
+  lt_trans (ZMod.val_lt x) (by norm_num [CompElliptic.Fields.Pasta.PALLAS_BASE_CARD])
+
 /-- A defined `commitIvkHash` hit names a defined, valid `hashToPoint` chain. -/
 theorem commitIvkHash_isSome {a n : Fp} {g : PallasGroup}
     (h : commitIvkHash a n = some g) :
@@ -64,10 +68,9 @@ theorem commitIvkHash_get_spec {a n : Fp} {g : PallasGroup}
 /-- **The deployed key-binding break computes a discrete-log relation.** Two valid
 `Commit^ivk` openings of the same `ivk` disagreeing on their opening projection land in
 the chain-collision reducer at the `CommitIvk` domain point and randomness base.
-`hcoeffs` is the chunk-coefficient injectivity (the binary-expansion core of spec
-Theorem 5.4.3) and `hchunks` the injectivity of the 51-chunk `(ak, nk)` encoding, both
-at the break's own two chunk lists; discharging them from the digit machinery is
-tracked alongside this reduction. -/
+`hcoeffs` is the chunk-coefficient injectivity at the break's own two chunk lists —
+the binary-expansion core of spec Theorem 5.4.3, and the one named hypothesis left;
+the chunk-encoding injectivity is discharged by `commitIvkChunks_inj`. -/
 def relationOfKeyBindingBreak
     {w₁ w₂ : KeyBinding.Pool.Witness Fq PallasGroup Fp}
     (b : KeyBinding.Pool.Break extract commitIvkHash commitIvkRpt w₁ w₂)
@@ -76,10 +79,7 @@ def relationOfKeyBindingBreak
           = preCoeffs (commitIvkChunks (extract w₂.akP).val w₂.nk.val) →
         commitIvkChunks (extract w₁.akP).val w₁.nk.val
           = commitIvkChunks (extract w₂.akP).val w₂.nk.val)
-    (hchunks :
-      commitIvkChunks (extract w₁.akP).val w₁.nk.val
-          = commitIvkChunks (extract w₂.akP).val w₂.nk.val →
-        extract w₁.akP = extract w₂.akP ∧ w₁.nk = w₂.nk) :
+ :
     NontrivialRelation (F := Fq) pallasS ivkQpt commitIvkRpt :=
   let hs₁ := commitIvkHash_isSome b.kb₁.hash_eq
   let hs₂ := commitIvkHash_isSome b.kb₂.hash_eq
@@ -99,9 +99,10 @@ def relationOfKeyBindingBreak
     hcoeffs
     (by
       rintro ⟨hl, hr⟩
-      obtain ⟨hak, hnk⟩ := hchunks hl
+      obtain ⟨hak, hnk⟩ := commitIvkChunks_inj
+        (fp_val_lt _) (fp_val_lt _) (fp_val_lt _) (fp_val_lt _) hl
       refine b.projection_ne ?_
       unfold KeyBinding.Pool.Witness.breakProjection
-      rw [hak, hnk, hr])
+      rw [ZMod.val_injective _ hak, ZMod.val_injective _ hnk, hr])
 
 end Zcash.Security.Ledger.Bridge

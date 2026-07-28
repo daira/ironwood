@@ -258,6 +258,27 @@ theorem chunksOf_add (val m n : ℕ) :
   congr 2
   ring
 
+/-- `chunksOf` is injective below `2 ^ (K * n)`: the `K`-bit digits determine the value. -/
+theorem chunksOf_inj {a b n : ℕ} (ha : a < 2 ^ (K * n)) (hb : b < 2 ^ (K * n))
+    (h : chunksOf a n = chunksOf b n) : a = b := by
+  have hdig : ∀ i, i < n → bitrange a (K * i) K = bitrange b (K * i) K := by
+    intro i hi
+    have hgd := congrArg (fun l => l.getD i 0) h
+    simpa [chunksOf, List.getD_eq_getElem?_getD, List.getElem?_map, List.getElem?_range, hi]
+      using hgd
+  have hmod : ∀ m, m ≤ n → a % 2 ^ (K * m) = b % 2 ^ (K * m) := by
+    intro m
+    induction m with
+    | zero => simp [Nat.mod_one]
+    | succ i ih =>
+      intro hi
+      have hstep := hdig i (by omega)
+      simp only [bitrange] at hstep
+      rw [show K * (i + 1) = K * i + K from by ring, pow_add, Nat.mod_mul, Nat.mod_mul,
+        ih (by omega), hstep]
+  have hfin := hmod n le_rfl
+  rwa [Nat.mod_eq_of_lt ha, Nat.mod_eq_of_lt hb] at hfin
+
 /-- Chunks below position `n` are unaffected by reducing `val` mod `2 ^ (K * n)`. -/
 theorem chunksOf_mod (val n : ℕ) : chunksOf (val % 2 ^ (K * n)) n = chunksOf val n := by
   unfold chunksOf
@@ -474,6 +495,32 @@ def commitIvkMessage (ak nk : ℕ) : ℕ :=
 /-- The 51 `K`-bit chunks of the `CommitIvk` message (510 bits = 51 chunks). -/
 def commitIvkChunks (ak nk : ℕ) : List ℕ :=
   chunksOf (commitIvkMessage ak nk) 51
+
+/-- The 51-chunk `CommitIvk` message encoding is injective on 255-bit components. -/
+theorem commitIvkChunks_inj {ak nk ak' nk' : ℕ}
+    (ha : ak < 2 ^ 255) (hn : nk < 2 ^ 255) (ha' : ak' < 2 ^ 255) (hn' : nk' < 2 ^ 255)
+    (h : commitIvkChunks ak nk = commitIvkChunks ak' nk') : ak = ak' ∧ nk = nk' := by
+  have hbound : ∀ {x y : ℕ}, x < 2 ^ 255 → y < 2 ^ 255 →
+      commitIvkMessage x y < 2 ^ (K * 51) := by
+    intro x y hx hy
+    unfold commitIvkMessage
+    have hK : (2 : ℕ) ^ (K * 51) = 2 ^ 255 * 2 ^ 255 := by
+      rw [← pow_add]; norm_num [K]
+    calc x + 2 ^ 255 * y < 2 ^ 255 + 2 ^ 255 * y := by omega
+      _ = 2 ^ 255 * (y + 1) := by ring
+      _ ≤ 2 ^ 255 * 2 ^ 255 := Nat.mul_le_mul_left _ hy
+      _ = 2 ^ (K * 51) := hK.symm
+  have hmsg : commitIvkMessage ak nk = commitIvkMessage ak' nk' :=
+    chunksOf_inj (hbound ha hn) (hbound ha' hn') h
+  unfold commitIvkMessage at hmsg
+  have hak : ak = ak' := by
+    have hcong := congrArg (· % 2 ^ 255) hmsg
+    simp only [Nat.add_mul_mod_self_left] at hcong
+    rwa [Nat.mod_eq_of_lt ha, Nat.mod_eq_of_lt ha'] at hcong
+  refine ⟨hak, ?_⟩
+  subst hak
+  have hmul : 2 ^ 255 * nk = 2 ^ 255 * nk' := by omega
+  exact Nat.eq_of_mul_eq_mul_left (Nat.two_pow_pos 255) hmul
 
 /-- The 51 message chunks tile into the 4 Sinsemilla message pieces `a, b, c, d` at their
 `K`-bit boundaries: piece sizes `25, 1, 24, 1` chunks starting at bits `0, 250, 260, 500`. -/
