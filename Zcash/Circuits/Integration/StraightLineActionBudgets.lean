@@ -471,18 +471,89 @@ theorem actionYBadSet_measure_le
   rw [hset]
   exact goodY_failure_measure_le constraints hn
 
-/-! ## The bundled sequential adversary
+/-! ## The phased Action execution and its generated cuts
 
-`ActionSequentialCuts` is the extended adversary model in one object: a cut at each semantic
-squeeze index, the views that read each exclusion set's inputs off the cut state, and the
-views' well-formedness — the `x` fold degree and the constraint count, which for decoded
-representations are facts of the online-AGM decode (coefficients over the `2^k`-element basis).
-The four corollaries below turn the object plus per-circuit counting caps into the exact
-premises the captured capstone takes.
+The public adversary model supplies executable phases whose *outputs* are the data emitted before
+each semantic squeeze.  `ActionSequentialExecution.toCuts` below generates the five cuts and all
+state views.  `ActionSequentialCuts` remains only the internal product consumed by the four
+counting lemmas; it is no longer an input to the public capstone.
 -/
 
-/-- A sequential prover's cuts and views at the five semantic squeeze indices.  `Dx` caps the
-`x` fold degree and `L` the constraint count of the `y` view. -/
+/-- Data emitted before `θ`: the represented query-column polynomials. -/
+structure ActionThetaSnapshot where
+  polynomial : CommitmentId → Polynomial Fp
+
+/-- Data emitted before `β`: the relevant represented polynomials and the earlier `θ` answer. -/
+structure ActionBetaSnapshot where
+  polynomial : CommitmentId → Polynomial Fp
+  theta : Fp
+
+/-- Data emitted before `γ`: the relevant represented polynomials and earlier challenge answers. -/
+structure ActionGammaSnapshot where
+  polynomial : CommitmentId → Polynomial Fp
+  theta : Fp
+  beta : Fp
+
+/-- Data emitted before `y`: the accepted constraint model fixed by the earlier challenges. -/
+structure ActionYSnapshot (np : ℕ) where
+  model : ConstraintPolyModel np
+
+/-- Data emitted before `x`: the accepted model, `y`, and represented vanishing polynomial. -/
+structure ActionXSnapshot (np : ℕ) where
+  model : ConstraintPolyModel np
+  y : Fp
+  vanishing : Polynomial Fp
+
+/-- One phased sequential Action execution.  Each phase is an actual `OracleComp` stopped before
+its squeeze and returns precisely the snapshot later used by the exclusion-set proof.  The
+agreement fields connect those emitted snapshots to the final decoded run; the cut and every
+view function are generated projections. -/
+structure ActionSequentialExecution (Dx L : ℕ) where
+  thetaPhase : SequentialPhase family.toComputedAlgebraicFSFamily 0 ActionThetaSnapshot
+  betaPhase : SequentialPhase family.toComputedAlgebraicFSFamily 1 ActionBetaSnapshot
+  gammaPhase : SequentialPhase family.toComputedAlgebraicFSFamily 2 ActionGammaSnapshot
+  yPhase : SequentialPhase family.toComputedAlgebraicFSFamily 3
+    (ActionYSnapshot (pp.mergeDerived actionCircuit).numProofs)
+  xPhase : SequentialPhase family.toComputedAlgebraicFSFamily 4
+    (ActionXSnapshot (pp.mergeDerived actionCircuit).numProofs)
+  hthetaPolynomial : ∀ basis O (h : family.straightLineConstraintDecoded static basis O),
+    ∀ id, id.isColumnInput →
+      actionRunPolynomial pp family static inputs hvk hI hchar basis O h id =
+        ((thetaPhase.pre basis).run O).polynomial id
+  hbetaPolynomial : ∀ basis O (h : family.straightLineConstraintDecoded static basis O),
+    ∀ id, id.isPermutationInput ∨ id.isLookupInput →
+      actionRunPolynomial pp family static inputs hvk hI hchar basis O h id =
+        ((betaPhase.pre basis).run O).polynomial id
+  hbetaTheta : ∀ basis O, (straightLineRunRecord family basis O).theta =
+    ((betaPhase.pre basis).run O).theta
+  hgammaPolynomial : ∀ basis O (h : family.straightLineConstraintDecoded static basis O),
+    ∀ id, id.isPermutationInput ∨ id.isLookupInput →
+      actionRunPolynomial pp family static inputs hvk hI hchar basis O h id =
+        ((gammaPhase.pre basis).run O).polynomial id
+  hgammaTheta : ∀ basis O, (straightLineRunRecord family basis O).theta =
+    ((gammaPhase.pre basis).run O).theta
+  hgammaBeta : ∀ basis O, (straightLineRunRecord family basis O).beta =
+    ((gammaPhase.pre basis).run O).beta
+  hyModel : ∀ basis O (h : family.straightLineConstraintDecoded static basis O),
+    actionRunModel pp family static inputs hvk hI hchar basis O h =
+      ((yPhase.pre basis).run O).model
+  ylen : ∀ s : ActionYSnapshot (pp.mergeDerived actionCircuit).numProofs,
+    s.model.constraints.length ≤ L
+  hxModel : ∀ basis O (h : family.straightLineConstraintDecoded static basis O),
+    actionRunModel pp family static inputs hvk hI hchar basis O h =
+      ((xPhase.pre basis).run O).model
+  hxY : ∀ basis O, (straightLineRunRecord family basis O).y =
+    ((xPhase.pre basis).run O).y
+  hxVanishing : ∀ basis O (h : family.straightLineConstraintDecoded static basis O),
+    actionRunPolynomial pp family static inputs hvk hI hchar basis O h
+        CommitmentId.vanishingH = ((xPhase.pre basis).run O).vanishing
+  xdeg : ∀ basis (s : ActionXSnapshot (pp.mergeDerived actionCircuit).numProofs),
+    (combineConstraints s.model.fixedCols s.model.adviceCols s.model.instanceCols
+      s.model.gates s.model.sets s.model.chunks s.model.lookups s.model.beta s.model.gamma
+      s.model.delta s.model.theta s.y s.model.chunkLen s.model.l0 s.model.lLast
+      s.model.lBlind - s.vanishing * (X ^ (vkAt pp basis).n - 1)).natDegree ≤ Dx
+
+/-- Internal generated cuts and views at the five semantic squeeze indices. -/
 structure ActionSequentialCuts (Dx L : ℕ) where
   /-- The cut at the `θ` squeeze. -/
   cut0 : SequentialCut family.toComputedAlgebraicFSFamily 0
@@ -564,6 +635,38 @@ structure ActionSequentialCuts (Dx L : ℕ) where
       (modelX s).theta (yOf s) (modelX s).chunkLen (modelX s).l0 (modelX s).lLast
       (modelX s).lBlind -
       vanishingOf s * (X ^ (vkAt pp basis).n - 1)).natDegree ≤ Dx
+
+/-- Generate all five cuts and views from one phased Action execution. -/
+def ActionSequentialExecution.toCuts {Dx L : ℕ}
+    (execution : ActionSequentialExecution pp family static inputs hvk hI hchar Dx L) :
+    ActionSequentialCuts pp family static inputs hvk hI hchar Dx L where
+  cut0 := execution.thetaPhase.toCut
+  view0 := ActionThetaSnapshot.polynomial
+  hview0 := execution.hthetaPolynomial
+  cut1 := execution.betaPhase.toCut
+  view1 := ActionBetaSnapshot.polynomial
+  theta1 := ActionBetaSnapshot.theta
+  hview1 := execution.hbetaPolynomial
+  htheta1 := execution.hbetaTheta
+  cut2 := execution.gammaPhase.toCut
+  view2 := ActionGammaSnapshot.polynomial
+  theta2 := ActionGammaSnapshot.theta
+  beta2 := ActionGammaSnapshot.beta
+  hview2 := execution.hgammaPolynomial
+  htheta2 := execution.hgammaTheta
+  hbeta2 := execution.hgammaBeta
+  cut3 := execution.yPhase.toCut
+  modelY := ActionYSnapshot.model
+  hmodelY := execution.hyModel
+  ylen := execution.ylen
+  cut4 := execution.xPhase.toCut
+  modelX := ActionXSnapshot.model
+  yOf := ActionXSnapshot.y
+  vanishingOf := ActionXSnapshot.vanishing
+  hmodelX := execution.hxModel
+  hy := execution.hxY
+  hvanishing := execution.hxVanishing
+  xdeg := execution.xdeg
 
 /-- The `θ` premise from the bundle: `(Q + 1) · Nθ / |Fp|`, `Nθ` capping the row-by-arity
 budget. -/
