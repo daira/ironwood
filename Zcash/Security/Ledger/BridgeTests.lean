@@ -168,8 +168,8 @@ theorem path_iff_guarded_smoke
 /-- The circuit-level postcondition refines directly to the ledger action alternative. -/
 theorem spec_post_bridge_smoke {MSG SIG : Type*}
     (verify bverify : PallasGroup → MSG → SIG → Prop)
-    {input : Halo2.Value PrivateInputs Fp} {wit : ActionData}
-    (h : SpecPost orchardGenerators orchardBases input () wit) :
+    {wit : ActionData}
+    (h : SpecPost orchardGenerators orchardBases () () wit) :
     ActionBreak wit ∨
       ∃ inst w, PublicProjection wit inst ∧
         ActionSatisfied (Pool.primitives verify bverify) Pool.keyBinding inst w ∧
@@ -177,7 +177,6 @@ theorem spec_post_bridge_smoke {MSG SIG : Type*}
         EnableFlagsSatisfied wit w :=
   specPost_to_ledger verify bverify h
 
-/-- Keep the exported end-to-end soundness theorem at its intended public shape. -/
 open Zcash.Meta
 
 
