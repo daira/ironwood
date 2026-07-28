@@ -59,14 +59,8 @@ evaluation, so the bundles below are stated over these once-per-process definiti
 The public theorems restate the facts in method spelling via `simp only` unfolding. -/
 
 private def actionCS : ConstraintSystem Fp := actionCircuit.constraintSystem
-private def actionOps : Operations Fp := actionCircuit.operations
--- raw spellings over the shares: the METHOD chain (`selectorMap` → `domainExponent` →
--- `constraintSystem`/`operations`, `selectorActivations` → `regionStarts` → `operations`)
--- re-runs configure/synthesize internally at every step; these run each exactly once
-private def actionK : ℕ := Halo2.minimalK actionCS actionOps
-private def actionSelMap : Halo2.SelCompressMap :=
-  deriveSelCompressMap actionCS (2 ^ actionK)
-    (activations (FloorPlanner.V1.starts actionOps) (indexedRegions actionOps 0).1)
+private def actionK : ℕ := actionCircuit.domainExponent
+private def actionSelMap : Halo2.SelCompressMap := actionCircuit.selectorMap
 
 /-- The capture's permutation columns, in raw column space. The captured
 `vk.permutationChunks` stores the verifier view — `ColumnRef`s in QUERY-INDEX space
@@ -117,10 +111,7 @@ theorem capturedPinnedView_eq_derived_and_wellFormed :
         (·.selectorsCovered (fun i => (actionCircuit.selectorMap.lookup i).isSome)))
       = (actionPinnedCs, 11, true, true) := by
   have h := bundle_pinned
-  simp only [actionSelMap, actionK, actionCS, actionOps] at h
-  simp only [Halo2.TopLevelCircuit.selectorMap,
-    Halo2.TopLevelCircuit.domainExponent]
-  exact h
+  simpa only [actionSelMap, actionK, actionCS] using h
 
 /-- **The capture is the derived Action circuit** (pinned CS, captured families). -/
 theorem capturedPinnedView_eq_derived : capturedPinnedView = actionPinnedCs := by
@@ -217,10 +208,7 @@ theorem vk_scalars_and_chunks_derived :
           Keygen.permutationChunksOf actionCircuit.selectorMap
             actionCircuit.constraintSystem) := by
   have h := bundle_scalars
-  simp only [actionSelMap, actionK, actionCS, actionOps] at h
-  simp only [Halo2.TopLevelCircuit.selectorMap,
-    Halo2.TopLevelCircuit.domainExponent]
-  exact h
+  simpa only [actionSelMap, actionK, actionCS] using h
 
 theorem vk_scalars_derived :
     (vk.omega, vk.n, vk.blindingFactors, vk.delta, vk.chunkLen)
