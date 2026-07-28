@@ -117,7 +117,7 @@ theorem selectorScale_ne_zero_of_enabledGate
     hvalue hpositive hrootBound hlengthBound
 
 /-- The polynomial obtained by evaluating one VK gate over the rotated resolver feeds. -/
-noncomputable def resolverGatePolynomial
+def resolverGatePolynomial
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
     (poly : CommitmentId → Polynomial Fp)
@@ -195,7 +195,7 @@ The premises are exactly the static representation boundary:
 
 No circuit, placement algorithm, or concrete verification key is selected here.
 -/
-noncomputable def enabledGatePolynomialWitnessOfResolver
+def enabledGatePolynomialWitnessOfResolver
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
     (cs : ConstraintSystem Fp) (map : SelCompressMap)
@@ -253,11 +253,11 @@ noncomputable def enabledGatePolynomialWitnessOfResolver
     rw [flatGates, List.mem_flatMap]
     exact ⟨enabled.gate, hgate,
       List.mem_map.mpr ⟨constraint, hconstraint, rfl⟩⟩
-  let hindex := List.mem_iff_getElem.mp hflat
-  let gateIndex := Classical.choose hindex
-  let hindexData := Classical.choose_spec hindex
-  let hgateIndex := Classical.choose hindexData
-  have hsource := Classical.choose_spec hindexData
+  let gateIndex := (flatGates cs).idxOf constraint.poly
+  have hgateIndex : gateIndex < (flatGates cs).length :=
+    List.idxOf_lt_length_iff.mpr hflat
+  have hsource : (flatGates cs)[gateIndex] = constraint.poly :=
+    List.getElem_idxOf hgateIndex
   have hgateLength :
       vk.gates.length = (flatGates cs).length := by
     have hlength := congrArg List.length hgates

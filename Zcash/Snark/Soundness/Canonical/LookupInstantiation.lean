@@ -27,7 +27,7 @@ entry names a base column and a rotation, so its polynomial is the resolved base
 column composed with `ω^rotation · X`.  As in the verifier's `finFn` evaluation
 feeds, indices outside the shape-level query count read zero.
 -/
-noncomputable def resolverQueryFeed
+def resolverQueryFeed
     {n : ℕ} (omega : Fp) (layout : List (ℕ × ℤ))
     (column : ℕ → Polynomial Fp) : ℕ → Polynomial Fp :=
   finFn fun query : Fin n =>
@@ -100,7 +100,7 @@ theorem resolverQueryFeed_eval_of_columnQueries
     simp [finFn, hquery]
 
 /-- Fixed-query polynomials selected from commitment identities and the VK layout. -/
-noncomputable def fixedQueryFeedOfResolver
+def fixedQueryFeedOfResolver
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
     (poly : CommitmentId → Polynomial Fp) : ℕ → Polynomial Fp :=
@@ -108,7 +108,7 @@ noncomputable def fixedQueryFeedOfResolver
     vk.omega vk.fixedQueryLayout fun column => poly (.fixedCol column)
 
 /-- Advice-query polynomials for one proof, selected from the VK layout. -/
-noncomputable def adviceQueryFeedOfResolver
+def adviceQueryFeedOfResolver
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
     (poly : CommitmentId → Polynomial Fp)
@@ -117,7 +117,7 @@ noncomputable def adviceQueryFeedOfResolver
     vk.omega vk.adviceQueryLayout fun column => poly (.adviceCol p column)
 
 /-- Instance-query polynomials for one proof, selected from the VK layout. -/
-noncomputable def instanceQueryFeedOfResolver
+def instanceQueryFeedOfResolver
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
     (poly : CommitmentId → Polynomial Fp)
@@ -169,7 +169,7 @@ theorem mem_assembleQueries_of_mem_subProofLookupQueries
 
 /-- Polynomial lookup entries built from an arbitrary commitment-ID resolver.  Coherence of the
 rotations is definitional through `lookupEvalPolys`. -/
-noncomputable def lookupEntriesOfResolver {shape : Shape} {G : Type*}
+def lookupEntriesOfResolver {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (poly : CommitmentId → Polynomial Fp)
     (p : Fin shape.numProofs) :
     List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)) :=
@@ -182,7 +182,7 @@ noncomputable def lookupEntriesOfResolver {shape : Shape} {G : Type*}
      vk.lookupTableExprs l)
 
 /-- The selected lookup's compressed input polynomial under the resolver-backed column feeds. -/
-noncomputable def lookupInputPolyOfResolver {shape : Shape} {G : Type*}
+def lookupInputPolyOfResolver {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) : Polynomial Fp :=
@@ -193,7 +193,7 @@ noncomputable def lookupInputPolyOfResolver {shape : Shape} {G : Type*}
     (C ch.theta) ((vk.lookupInputExprs l).map (Expr.map C))
 
 /-- The selected lookup's compressed table polynomial under the same resolver-backed feeds. -/
-noncomputable def lookupTablePolyOfResolver {shape : Shape} {G : Type*}
+def lookupTablePolyOfResolver {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) : Polynomial Fp :=
@@ -206,7 +206,7 @@ noncomputable def lookupTablePolyOfResolver {shape : Shape} {G : Type*}
 /-- A full constraint model whose column polynomials and lookup arguments are resolved by stable
 commitment identities.  The permutation sets/chunks remain parameters until their analogous
 canonical routing layer is installed. -/
-noncomputable def constraintModelOfResolver {shape : Shape} {G : Type*}
+def constraintModelOfResolver {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (sets : Fin shape.numProofs → List (PermSetEval (Polynomial Fp)))

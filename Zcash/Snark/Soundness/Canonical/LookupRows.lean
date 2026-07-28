@@ -156,11 +156,11 @@ theorem lookup_product_eq_or_factor_eq_zero
   · exact running_product_end (by simpa [mul_comm] using hend) (hrow m) hlast
 
 /-- A polynomial column read over the first `m` powers of the evaluation-domain generator. -/
-noncomputable def lookupColumnRows (omega : Fp) (p : Polynomial Fp) (m : ℕ) : Fin m → Fp :=
+def lookupColumnRows (omega : Fp) (p : Polynomial Fp) (m : ℕ) : Fin m → Fp :=
   fun i => p.eval (omega ^ (i : ℕ))
 
 /-- Challenge values that make one row of a compressed lookup column's additive factor vanish. -/
-noncomputable def lookupColumnZeroBadSet
+def lookupColumnZeroBadSet
     (omega : Fp) (p : Polynomial Fp) (m : ℕ) : Finset Fp :=
   additiveZeroBadSet (lookupColumnRows omega p m)
 

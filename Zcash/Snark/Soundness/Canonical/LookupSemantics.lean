@@ -59,7 +59,7 @@ theorem ResolverLookupDomain.ofCanonicalSelectors
 
 /-- The product-difference polynomial whose roots are excluded at the selected lookup's `γ`
 squeeze.  It is fixed after `β`. -/
-noncomputable def resolverLookupProductDifference
+def resolverLookupProductDifference
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → Polynomial Fp)

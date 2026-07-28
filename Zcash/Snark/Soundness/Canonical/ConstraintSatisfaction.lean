@@ -40,19 +40,19 @@ structure ConstraintPolyModel (np : ℕ) where
 namespace ConstraintPolyModel
 
 /-- One sub-proof's lifted custom-gate constraints. -/
-noncomputable def gateConstraints {np : ℕ} (M : ConstraintPolyModel np) (p : Fin np) :
+def gateConstraints {np : ℕ} (M : ConstraintPolyModel np) (p : Fin np) :
     List (Polynomial Fp) :=
   (M.gates.map (Expr.map C)).map
     (fun g => g.eval M.fixedCols (M.adviceCols p) (M.instanceCols p))
 
 /-- One sub-proof's permutation constraints. -/
-noncomputable def permutationConstraints {np : ℕ} (M : ConstraintPolyModel np) (p : Fin np) :
+def permutationConstraints {np : ℕ} (M : ConstraintPolyModel np) (p : Fin np) :
     List (Polynomial Fp) :=
   permutationExpressions (M.sets p) (M.chunks p) (C M.beta) (C M.gamma) X (C M.delta)
     M.chunkLen M.l0 M.lLast M.lBlind
 
 /-- One sub-proof's lookup constraints. -/
-noncomputable def lookupConstraints {np : ℕ} (M : ConstraintPolyModel np) (p : Fin np) :
+def lookupConstraints {np : ℕ} (M : ConstraintPolyModel np) (p : Fin np) :
     List (Polynomial Fp) :=
   ((M.lookups p).map fun lk =>
     lookupExpressions lk.1 (lk.2.1.map (Expr.map C)) (lk.2.2.map (Expr.map C))
@@ -60,12 +60,12 @@ noncomputable def lookupConstraints {np : ℕ} (M : ConstraintPolyModel np) (p :
       (C M.theta) (C M.beta) (C M.gamma) M.l0 M.lLast M.lBlind).flatten
 
 /-- One sub-proof's constraints, split into the same three consecutive families as the verifier. -/
-noncomputable def subProofConstraints {np : ℕ} (M : ConstraintPolyModel np) (p : Fin np) :
+def subProofConstraints {np : ℕ} (M : ConstraintPolyModel np) (p : Fin np) :
     List (Polynomial Fp) :=
   M.gateConstraints p ++ M.permutationConstraints p ++ M.lookupConstraints p
 
 /-- The complete flat constraint list across all sub-proofs. -/
-noncomputable def constraints {np : ℕ} (M : ConstraintPolyModel np) : List (Polynomial Fp) :=
+def constraints {np : ℕ} (M : ConstraintPolyModel np) : List (Polynomial Fp) :=
   (List.ofFn fun p => M.subProofConstraints p).flatten
 
 /-- The packaged list is definitionally the existing deployed polynomial builder. -/

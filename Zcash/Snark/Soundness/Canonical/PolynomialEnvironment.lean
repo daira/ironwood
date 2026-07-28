@@ -20,7 +20,7 @@ set_option maxHeartbeats 20000
 The canonical coefficient-form polynomial whose values on the `omega` domain are
 the supplied rows.
 -/
-noncomputable def rowPolynomial {n : ℕ}
+def rowPolynomial {n : ℕ}
     (omega : Fp) (values : Fin n → Fp) : Polynomial Fp :=
   Lagrange.interpolate Finset.univ
     (fun i : Fin n => omega ^ (i : ℕ)) values
@@ -56,7 +56,7 @@ def zeroPaddedRows {n : ℕ} (values : List Fp) : Fin n → Fp :=
   fun i => values.getD (i : ℕ) 0
 
 /-- The coefficient-form instance polynomial for a zero-padded public column. -/
-noncomputable def instanceRowPolynomial (n : ℕ)
+def instanceRowPolynomial (n : ℕ)
     (omega : Fp) (values : List Fp) : Polynomial Fp :=
   rowPolynomial omega (zeroPaddedRows (n := n) values)
 

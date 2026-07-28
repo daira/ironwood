@@ -4,14 +4,13 @@ import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
 import Zcash.Snark.Keygen.Certificate
 import Zcash.Circuits.Integration.StraightLineActionEvent
 import Zcash.Circuits.Integration.StraightLineActionBudgets
-import Zcash.Circuits.Integration.StraightLineActionBudgets
 
 /-!
-# The captured Action capstone event and its composed bound
+# The captured exact Action soundness capstone
 
-Issue #128's assembly, first stage: the exact terminal event, the captured static checks and
-`x`-squeeze schedule rebuilt at the circuit-derived shape, and the composition of the compressed
-straight-line bound with the Action bundle-statement fusion.
+Issue #128's assembly: the captured static checks and `x`-squeeze schedule rebuilt at the
+circuit-derived shape, the retained statement-or-relation intermediate, and the exact accepting
+false-Action-statement endpoint closed by the combined computed relation finder.
 
 Everything here lives at `actionProofParams.mergeDerived actionCircuit` — the derived one-proof
 shape the Action semantics are stated at — with no shape casts in any statement: the derived
@@ -20,13 +19,15 @@ through nine field equalities.
 
 ## The adversary model
 
-The endpoint quantifies over a family equipped with `ActionSequentialCuts`: a bounded
+The endpoints quantify over a family equipped with `ActionSequentialCuts`: a bounded
 sequential online-AGM Fiat–Shamir adversary in the random-oracle model, against Vesta DLOG.
 Sequential means each commitment and its algebraic representation are emitted before the next
 challenge is squeezed — the cuts and views are that execution order made structural, and the
 views' well-formedness (fold degree, constraint count) is the online-AGM decode's own shape.
-The four semantic budgets are discharged inside the endpoint from decided counting caps; the
-hash-function boundary of the compressed model is unchanged.
+The four semantic budgets are discharged inside the sequential endpoint from decided counting
+caps; the hash-function boundary of the compressed model is unchanged.  The exact endpoint uses
+the literal `accept ∧ ¬BundleStatement` event and one DLOG profile for all computed relation
+branches.
 -/
 
 namespace Zcash.Snark.Fixture
@@ -38,12 +39,13 @@ open Zcash.Circuits Zcash.Circuits.Action
 open Zcash.Arithmetic (scalarFieldOrder URS)
 open scoped ENNReal
 
-/-! ## The exact terminal event -/
+/-! ## The statement-or-relation intermediate and exact target -/
 
-/-- **The end-to-end failure event** (issue #128 F1): the deployed verifier accepts and the
-Orchard Action bundle statement does not hold — modulo the explicit nontrivial-relation branch,
-which the reduction converts into a Vesta DLOG break rather than assuming away. -/
-noncomputable def actionAcceptFalseEvent
+/-- **The existing statement-or-relation failure event** (issue #128 F1): the deployed verifier
+accepts and the terminal produces neither the Orchard Action bundle statement nor a nontrivial
+relation.  This is an intermediate event, strictly narrower than false Action-statement
+acceptance until the terminal relation branch is exposed as a computed DLOG break. -/
+noncomputable def actionNoStatementOrRelationEvent
     (family : ComputedStraightLineDeployedFSFamily
       (actionProofParams.mergeDerived actionCircuit))
     (inputs : Fin (actionProofParams.mergeDerived actionCircuit).numProofs →
@@ -53,7 +55,22 @@ noncomputable def actionAcceptFalseEvent
         (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
           + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp)) :=
   family.straightLineConstraintSemanticFailureEvent
-    (actionStatementDecoded actionProofParams family inputs)
+    (actionStatementOrRelationDecoded actionProofParams family inputs)
+
+/-- **The exact public Action-soundness event.**  The deployed verifier accepts while the Orchard
+Action bundle statement at its supplied public inputs is false.  The final #128 capstone must
+bound this set, rather than only `actionNoStatementOrRelationEvent`. -/
+def actionAcceptFalseStatementEvent
+    (family : ComputedStraightLineDeployedFSFamily
+      (actionProofParams.mergeDerived actionCircuit))
+    (inputs : Fin (actionProofParams.mergeDerived actionCircuit).numProofs →
+      PublicInputs Fp) :
+    Set ((AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG) ×
+      (BTranscript Fp VestaG
+        (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
+          + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp)) :=
+  family.straightLineConstraintSemanticFailureEvent
+    (actionBundleStatementDecoded actionProofParams family inputs)
 
 /-! ## The derived key's captured scalars -/
 
@@ -205,15 +222,16 @@ noncomputable def schedule_of_derived
 
 /-! ## The composed bound -/
 
-/-- **The captured Action failure bound, composed** (issue #128 F4/F5): the probability of the
-end-to-end failure event is at most the compressed straight-line knowledge error at the derived
-key plus the four semantic challenge budgets.  The terminal data — batch openings, member
-decodes, acceptance, and the canonical quotient — all come from the same straight-line decoded
-run, via the fusion this bound instantiates.
+/-- **The captured statement-or-relation failure bound, composed** (issue #128 F4/F5): the
+probability that acceptance yields neither the Action statement nor a relation is at most the
+compressed straight-line knowledge error at the derived key plus the four semantic challenge
+budgets.  The terminal data — batch openings, member decodes, acceptance, and the canonical
+quotient — all come from the same straight-line decoded run, via the fusion this bound
+instantiates.
 
 The four budgets remain premises here; the remaining #128 pricing work discharges them
 concretely. -/
-theorem orchard_action_acceptFalse_prob_le_captured
+theorem orchard_action_noStatementOrRelation_prob_le_captured
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → T)
@@ -274,7 +292,7 @@ theorem orchard_action_acceptFalse_prob_le_captured
           (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
             + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionAcceptFalseEvent family inputs)
+          actionNoStatementOrRelationEvent family inputs)
       ≤ ((family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
           (family.Q + 1 : ℕ) *
             ((actionProofParams.mergeDerived actionCircuit).k *
@@ -288,7 +306,7 @@ theorem orchard_action_acceptFalse_prob_le_captured
             1 / Fintype.card Fp) +
           (family.Q + 1 : ℕ) * ((20470 : ℕ) / (Fintype.card Fp : ℝ≥0∞))) +
         (xyBound + (betaBound + (gammaBound + thetaBound))) :=
-  actionBundleStatementFailure_prob_le_of_compressed_bound actionProofParams family
+  actionNoStatementOrRelation_prob_le_of_compressed_bound actionProofParams family
     (staticChecks_of_derived family hvk) inputs hvk hI hchar query
     (family.straightLineConstraintFailure_prob_le_of_generatorRO_dlogProfile B hB query hquery
       (staticChecks_of_derived family hvk) (schedule_of_derived family hvk) profile)
@@ -445,7 +463,34 @@ theorem action_semantic_terms_le {Q : ℕ} (hQ : Q ≤ 2 ^ 123) :
   gcongr
   exact_mod_cast action_semantic_count_le hQ
 
-/-- **The captured Action bound for sequential adversaries** (issue #128 F8).  A family
+/-- The combined constraint-plus-Action finder stays within the same conservative three-bit
+query envelope at the `2^123` adversary target. -/
+theorem action_dlog_queries_le_2pow126
+    (family : ComputedStraightLineDeployedFSFamily
+      (actionProofParams.mergeDerived actionCircuit))
+    (hQ : family.Q ≤ 2 ^ 123) :
+    actionDlogRandomOracleQueries actionProofParams family ≤ 2 ^ 126 := by
+  unfold actionDlogRandomOracleQueries
+  simp only [show (actionProofParams.mergeDerived actionCircuit).k = 11 from rfl]
+  calc
+    6 * family.Q + 3 * (11 + 11) ≤ 6 * 2 ^ 123 + 3 * (11 + 11) := by omega
+    _ ≤ 8 * 2 ^ 123 := by norm_num
+    _ = 2 ^ 126 := by norm_num
+
+/-- If prover and terminal-reduction group work each fit the `2^123` target, the combined
+six-call finder fits the matching `2^126` DLOG-solver envelope. -/
+theorem action_dlog_groupWork_le_2pow126
+    {proverGroupWork reductionGroupWork : Nat}
+    (hprover : proverGroupWork ≤ 2 ^ 123)
+    (hreduction : reductionGroupWork ≤ 2 ^ 123) :
+    actionDlogGroupWork proverGroupWork reductionGroupWork ≤ 2 ^ 126 := by
+  unfold actionDlogGroupWork
+  calc
+    6 * proverGroupWork + reductionGroupWork ≤ 6 * 2 ^ 123 + 2 ^ 123 := by omega
+    _ ≤ 8 * 2 ^ 123 := by norm_num
+    _ = 2 ^ 126 := by norm_num
+
+/-- **The captured statement-or-relation bound for sequential adversaries** (issue #128 F8).  A family
 equipped with cuts and views at the five semantic squeeze indices — the bounded sequential
 online-AGM Fiat–Shamir adversary — admits the full capstone bound with every semantic budget
 discharged and counted: the four abstract bounds become
@@ -456,7 +501,7 @@ Named assumptions: `hvk`/`hI` pin the family's key and instance commitments to t
 Action artifacts; `hchar` bounds the run's pair count below the field characteristic;
 `profile` supplies the DLOG reduction; `cuts` is the sequential adversary itself, with its
 views' well-formedness (`xdeg` at `20470`, `ylen` at `L`). -/
-theorem orchard_action_acceptFalse_prob_le_sequential
+theorem orchard_action_noStatementOrRelation_prob_le_sequential
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → T)
@@ -487,7 +532,7 @@ theorem orchard_action_acceptFalse_prob_le_sequential
           (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
             + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionAcceptFalseEvent family inputs)
+          actionNoStatementOrRelationEvent family inputs)
       ≤ ((family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
           (family.Q + 1 : ℕ) *
             ((actionProofParams.mergeDerived actionCircuit).k *
@@ -505,7 +550,7 @@ theorem orchard_action_acceptFalse_prob_le_sequential
           ((family.Q + 1 : ℕ) * (((2 ^ 35 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
             ((family.Q + 1 : ℕ) * (((2 ^ 21 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
               (family.Q + 1 : ℕ) * (((2 ^ 25 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞))))) :=
-  orchard_action_acceptFalse_prob_le_captured B hB query hquery family inputs hvk hI hchar
+  orchard_action_noStatementOrRelation_prob_le_captured B hB query hquery family inputs hvk hI hchar
     profile
     (cuts.xy_prob_le actionProofParams family (staticChecks_of_derived family hvk) inputs
       hvk hI hchar query derived_n_ne_zero (derived_n_yn hL))
@@ -516,177 +561,19 @@ theorem orchard_action_acceptFalse_prob_le_sequential
     (cuts.theta_prob_le actionProofParams family (staticChecks_of_derived family hvk) inputs
       hvk hI hchar query cap_theta)
 
-/-! ## The sequential endpoint: every semantic budget discharged and counted
+/-! ## Exact false-Action-statement endpoints -/
 
-The counting caps below are decided at the captured key and transferred through the derived
-key's field equalities, so the endpoint takes a bundle of cuts and views — the sequential
-adversary — and nothing else numeric.  The caps are generous round powers of two: each sits
-orders of magnitude under the field size, and the final margin analysis only needs
-`(Q + 1) · Σcaps / |Fp|` small at `Q ≤ 2^123`.
--/
-
-private theorem castVk_blinding {s₁ s₂ : Shape} (h : s₁ = s₂)
-    (K : VerifyingKey s₁ Fp VestaG) :
-    K.blindingFactors = (h ▸ K : VerifyingKey s₂ Fp VestaG).blindingFactors := by
-  cases h
-  rfl
-
-/-- The derived key's blinding count is the captured one at every URS. -/
-theorem derived_blinding (urs : URS VestaG) :
-    (actionCircuit.toVerifierKey actionProofParams urs).blindingFactors =
-      vk.blindingFactors := by
-  have hcast := castVk_blinding shape_eq_mergeDerived
-    (actionCircuit.toVerifierKey actionProofParams capturedURS)
-  have hvk : (shape_eq_mergeDerived ▸
-      actionCircuit.toVerifierKey actionProofParams capturedURS :
-      VerifyingKey shape Fp VestaG) = vk := vk_eq_toVerifierKey.symm
-  exact hcast.trans (congrArg VerifyingKey.blindingFactors hvk)
-
-private theorem cap_theta :
-    ∀ (basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG)
-      (poly : CommitmentId → Polynomial Fp),
-      TopLevelLookupCoherence.topLevelLookupThetaBudget actionCircuit actionProofParams
-        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) poly ≤
-        2 ^ 25 := by
-  intro basis poly
-  rw [TopLevelLookupCoherence.topLevelLookupThetaBudget_eq]
-  native_decide
-
-private theorem cap_beta :
-    ∀ (basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG)
-      (poly : CommitmentId → Polynomial Fp),
-      (∑ p : Fin (actionProofParams.mergeDerived actionCircuit).numProofs,
-        (Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
-            actionActiveRows) + 1) *
-          Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
-            actionActiveRows)) +
-      (actionProofParams.mergeDerived actionCircuit).numProofs *
-        (actionProofParams.mergeDerived actionCircuit).numLookups *
-        (((vkAt actionProofParams basis).n - (vkAt actionProofParams basis).blindingFactors -
-              2 + 2) *
-            ((vkAt actionProofParams basis).n - (vkAt actionProofParams basis).blindingFactors -
-              2 + 1) +
-          ((vkAt actionProofParams basis).n - (vkAt actionProofParams basis).blindingFactors -
-            2 + 1)) ≤ 2 ^ 35 := by
-  intro basis poly
-  simp only [resolverPermutationCell_card, ActionTerminal.vkAt,
-    (derived_scalars (ursOfAugmentedBasis
-      (actionProofParams.mergeDerived actionCircuit).k basis)).2.2.2.2.2.2,
-    (derived_scalars (ursOfAugmentedBasis
-      (actionProofParams.mergeDerived actionCircuit).k basis)).2.1,
-    derived_blinding (ursOfAugmentedBasis
-      (actionProofParams.mergeDerived actionCircuit).k basis)]
-  native_decide
-
-private theorem cap_gamma :
-    ∀ (basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG)
-      (poly : CommitmentId → Polynomial Fp),
-      (∑ p : Fin (actionProofParams.mergeDerived actionCircuit).numProofs,
-        2 * Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
-          actionActiveRows)) +
-      (actionProofParams.mergeDerived actionCircuit).numProofs *
-        (actionProofParams.mergeDerived actionCircuit).numLookups *
-        (2 * ((vkAt actionProofParams basis).n - (vkAt actionProofParams basis).blindingFactors -
-          2 + 1)) ≤ 2 ^ 21 := by
-  intro basis poly
-  simp only [resolverPermutationCell_card, ActionTerminal.vkAt,
-    (derived_scalars (ursOfAugmentedBasis
-      (actionProofParams.mergeDerived actionCircuit).k basis)).2.2.2.2.2.2,
-    (derived_scalars (ursOfAugmentedBasis
-      (actionProofParams.mergeDerived actionCircuit).k basis)).2.1,
-    derived_blinding (ursOfAugmentedBasis
-      (actionProofParams.mergeDerived actionCircuit).k basis)]
-  native_decide
-
-private theorem derived_n_ne_zero :
-    ∀ basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG,
-      (vkAt actionProofParams basis).n ≠ 0 := by
-  intro basis
-  simp only [ActionTerminal.vkAt,
-    (derived_scalars (ursOfAugmentedBasis
-      (actionProofParams.mergeDerived actionCircuit).k basis)).2.1]
-  native_decide
-
-private theorem derived_n_yn {L : ℕ} (hL : L ≤ 2 ^ 12) :
-    ∀ basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG,
-      (vkAt actionProofParams basis).n * L ≤ 2 ^ 23 := by
-  intro basis
-  simp only [ActionTerminal.vkAt,
-    (derived_scalars (ursOfAugmentedBasis
-      (actionProofParams.mergeDerived actionCircuit).k basis)).2.1]
-  have hn : vk.n ≤ 2 ^ 11 := by native_decide
-  calc vk.n * L ≤ 2 ^ 11 * 2 ^ 12 := Nat.mul_le_mul hn hL
-    _ = 2 ^ 23 := by norm_num
-
-
-/-- **The semantic counts at the query ceiling** (issue #128 F7): at `Q ≤ 2^123` the five
-counted caps total at most `2^160`. -/
-theorem action_semantic_count_le {Q : ℕ} (hQ : Q ≤ 2 ^ 123) :
-    (Q + 1) * 20470 + (Q + 1) * 2 ^ 23 + ((Q + 1) * 2 ^ 35 +
-      ((Q + 1) * 2 ^ 21 + (Q + 1) * 2 ^ 25)) ≤ 2 ^ 160 := by
-  have h1 : 1 ≤ (2 : ℕ) ^ 123 := Nat.one_le_two_pow
-  have h2 : (2 : ℕ) ^ 124 = 2 ^ 123 * 2 := pow_succ 2 123
-  have hs : (20470 + 2 ^ 23 + (2 ^ 35 + (2 ^ 21 + 2 ^ 25)) : ℕ) ≤ 2 ^ 36 := by norm_num
-  have h3 : (2 : ℕ) ^ 160 = 2 ^ 124 * 2 ^ 36 := by rw [← pow_add]
-  calc (Q + 1) * 20470 + (Q + 1) * 2 ^ 23 + ((Q + 1) * 2 ^ 35 +
-        ((Q + 1) * 2 ^ 21 + (Q + 1) * 2 ^ 25))
-      = (Q + 1) * (20470 + 2 ^ 23 + (2 ^ 35 + (2 ^ 21 + 2 ^ 25))) := by ring
-    _ ≤ 2 ^ 124 * 2 ^ 36 := Nat.mul_le_mul (by omega) hs
-    _ = 2 ^ 160 := h3.symm
-
-/-- The scalar field clears `2^254`: the counted remainder is at most `2^160 / |Fp| ≤ 2^-94`,
-ten bits under the compressed model's `2^-84` ceiling. -/
-theorem two_pow_254_le_card : 2 ^ 254 ≤ Fintype.card Fp := by
-  rw [Zcash.Arithmetic.card_Fp]
-  native_decide
-
-/-- **The five semantic terms collapse to one count over the field** (issue #128 F7): the
-endpoint's added tail is at most `2^160 / |Fp|`, with the count proven at the ceiling and no
-absorption assumed. -/
-theorem action_semantic_terms_le {Q : ℕ} (hQ : Q ≤ 2 ^ 123) :
-    (((Q + 1 : ℕ) : ℝ≥0∞) * (((20470 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
-        ((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 23 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞))) +
-      (((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 35 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
-        (((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 21 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
-          ((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 25 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞))))
-      ≤ ((2 ^ 160 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞) := by
-  have hcollapse :
-      (((Q + 1 : ℕ) : ℝ≥0∞) * (((20470 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
-          ((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 23 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞))) +
-        (((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 35 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
-          (((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 21 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
-            ((Q + 1 : ℕ) : ℝ≥0∞) * (((2 ^ 25 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)))) =
-        (((Q + 1) * 20470 + (Q + 1) * 2 ^ 23 + ((Q + 1) * 2 ^ 35 +
-          ((Q + 1) * 2 ^ 21 + (Q + 1) * 2 ^ 25)) : ℕ) : ℝ≥0∞) /
-          (Fintype.card Fp : ℝ≥0∞) := by
-    rw [mul_div_assoc', mul_div_assoc', mul_div_assoc', mul_div_assoc', mul_div_assoc',
-      ENNReal.div_add_div_same, ENNReal.div_add_div_same, ENNReal.div_add_div_same,
-      ENNReal.div_add_div_same]
-    norm_cast
-  rw [hcollapse]
-  gcongr
-  exact_mod_cast action_semantic_count_le hQ
-
-/-- **The captured Action bound for sequential adversaries** (issue #128 F8).  A family
-equipped with cuts and views at the five semantic squeeze indices — the bounded sequential
-online-AGM Fiat–Shamir adversary — admits the full capstone bound with every semantic budget
-discharged and counted: the four abstract bounds become
-`(Q + 1) · N / |Fp|` for the decided caps `N = 2^25` (`θ`), `2^35` (`β`), `2^21` (`γ`),
-`20470` (the `x` fold degree) and `2^23` (`y`, from the view's constraint count `L ≤ 2^12`).
-
-Named assumptions: `hvk`/`hI` pin the family's key and instance commitments to the deployed
-Action artifacts; `hchar` bounds the run's pair count below the field characteristic;
-`profile` supplies the DLOG reduction; `cuts` is the sequential adversary itself, with its
-views' well-formedness (`xdeg` at `20470`, `ylen` at `L`). -/
-theorem orchard_action_acceptFalse_prob_le_sequential
+/-- **The exact captured Action soundness bound.**  Its left-hand event is literal deployed
+acceptance with a false `BundleStatement`.  The combined profile prices IPA, unbatching, quotient,
+and Action-terminal relation branches once. -/
+theorem orchard_action_acceptFalseStatement_prob_le_captured
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → T)
     (hquery : Function.Injective query)
     (family : ComputedStraightLineDeployedFSFamily
       (actionProofParams.mergeDerived actionCircuit))
-    (inputs : Fin (actionProofParams.mergeDerived actionCircuit).numProofs →
-      PublicInputs Fp)
+    (inputs : Fin (actionProofParams.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
     (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey actionProofParams
       (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
@@ -699,8 +586,97 @@ theorem orchard_action_acceptFalse_prob_le_sequential
         (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) inputs)
       (straightLineRunOutput family basis O).1.proof.1
       (straightLineRunRecord family basis O) < scalarFieldOrder)
-    (profile : family.StraightLineConstraintDlogProfile B)
-    {L : ℕ} (hL : L ≤ 2 ^ 12)
+    (profile : StraightLineActionDlogProfile actionProofParams family
+      (staticChecks_of_derived family hvk) inputs hvk hI hchar B)
+    {xyBound betaBound gammaBound thetaBound : ENNReal}
+    (hXY : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
+            + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          actionXYFailureEvent actionProofParams family
+            (staticChecks_of_derived family hvk) inputs hvk hI hchar) ≤ xyBound)
+    (hBeta : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
+            + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          actionBetaFailureEvent actionProofParams family
+            (staticChecks_of_derived family hvk) inputs hvk hI hchar) ≤ betaBound)
+    (hGamma : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
+            + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          actionGammaFailureEvent actionProofParams family
+            (staticChecks_of_derived family hvk) inputs hvk hI hchar) ≤ gammaBound)
+    (hTheta : (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
+            + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          actionThetaFailureEvent actionProofParams family
+            (staticChecks_of_derived family hvk) inputs hvk hI hchar) ≤ thetaBound) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
+            + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          actionAcceptFalseStatementEvent family inputs) ≤
+      ((family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
+          (family.Q + 1 : Nat) *
+            ((actionProofParams.mergeDerived actionCircuit).k *
+              (2 / (Fintype.card Fp : ENNReal))) +
+          (family.Q + (11 + (actionProofParams.mergeDerived actionCircuit).k) + 1 : Nat) *
+            algebraicRootBudget (actionProofParams.mergeDerived actionCircuit)
+              (actionProofParams.mergeDerived actionCircuit).k +
+          (profile.advantage (actionDlogRandomOracleQueries actionProofParams family)
+              (actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
+            1 / Fintype.card Fp) +
+          (family.Q + 1 : Nat) * ((20470 : Nat) / (Fintype.card Fp : ENNReal))) +
+        (xyBound + (betaBound + (gammaBound + thetaBound))) :=
+  actionBundleStatementFailure_prob_le_of_base_union_bound actionProofParams family
+    (staticChecks_of_derived family hvk) inputs hvk hI hchar query
+    (actionRelationFinder actionProofParams family (staticChecks_of_derived family hvk)
+      inputs hvk hI hchar)
+    (actionRelationFinder_covers actionProofParams family
+      (staticChecks_of_derived family hvk) inputs hvk hI hchar)
+    (actionBaseUnion_prob_le_of_dlogProfile actionProofParams family
+      (staticChecks_of_derived family hvk) inputs hvk hI hchar B hB query hquery
+      (schedule_of_derived family hvk) profile)
+    hXY hBeta hGamma hTheta
+
+/-- **Final sequential Action capstone.**  For every query-bounded online algebraic FS family with
+the staged cuts, deployed verifier acceptance of a false Action statement is bounded by the
+extraction terms, one combined Vesta-DLOG advantage, and the five counted semantic tails. -/
+theorem orchard_action_acceptFalseStatement_prob_le_sequential
+    {T : Type*} [DecidableEq T]
+    (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → T)
+    (hquery : Function.Injective query)
+    (family : ComputedStraightLineDeployedFSFamily
+      (actionProofParams.mergeDerived actionCircuit))
+    (inputs : Fin (actionProofParams.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey actionProofParams
+      (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis))
+    (hI : ∀ basis, family.instanceCommitment basis =
+      actionCircuit.instanceCommitment actionProofParams
+        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) inputs)
+    (hchar : ∀ basis O, deployedX4PairCount
+      (actionCircuit.toVerifierKey actionProofParams
+        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment actionProofParams
+        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) inputs)
+      (straightLineRunOutput family basis O).1.proof.1
+      (straightLineRunRecord family basis O) < scalarFieldOrder)
+    (profile : StraightLineActionDlogProfile actionProofParams family
+      (staticChecks_of_derived family hvk) inputs hvk hI hchar B)
+    {L : Nat} (hL : L ≤ 2 ^ 12)
     (cuts : ActionSequentialCuts actionProofParams family
       (staticChecks_of_derived family hvk) inputs hvk hI hchar 20470 L) :
     (independentProductPMF (orchardGeneratorROSetup query)
@@ -709,26 +685,30 @@ theorem orchard_action_acceptFalse_prob_le_sequential
           (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
             + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionAcceptFalseEvent family inputs)
-      ≤ ((family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-          (family.Q + 1 : ℕ) *
+          actionAcceptFalseStatementEvent family inputs) ≤
+      ((family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
+          (family.Q + 1 : Nat) *
             ((actionProofParams.mergeDerived actionCircuit).k *
               (2 / (Fintype.card Fp : ENNReal))) +
-          (family.Q + (11 + (actionProofParams.mergeDerived actionCircuit).k) + 1 : ℕ) *
+          (family.Q + (11 + (actionProofParams.mergeDerived actionCircuit).k) + 1 : Nat) *
             algebraicRootBudget (actionProofParams.mergeDerived actionCircuit)
               (actionProofParams.mergeDerived actionCircuit).k +
-          (profile.advantage family.straightLineDlogRandomOracleQueries
-              (ComputedStraightLineDeployedFSFamily.straightLineDlogGroupWork
-                profile.proverGroupWork profile.reductionGroupWork) +
+          (profile.advantage (actionDlogRandomOracleQueries actionProofParams family)
+              (actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
             1 / Fintype.card Fp) +
-          (family.Q + 1 : ℕ) * ((20470 : ℕ) / (Fintype.card Fp : ℝ≥0∞))) +
-        (((family.Q + 1 : ℕ) * (((20470 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
-            (family.Q + 1 : ℕ) * (((2 ^ 23 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞))) +
-          ((family.Q + 1 : ℕ) * (((2 ^ 35 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
-            ((family.Q + 1 : ℕ) * (((2 ^ 21 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
-              (family.Q + 1 : ℕ) * (((2 ^ 25 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞))))) :=
-  orchard_action_acceptFalse_prob_le_captured B hB query hquery family inputs hvk hI hchar
-    profile
+          (family.Q + 1 : Nat) * ((20470 : Nat) / (Fintype.card Fp : ENNReal))) +
+        (((family.Q + 1 : Nat) * (((20470 : Nat) : ENNReal) /
+              (Fintype.card Fp : ENNReal)) +
+            (family.Q + 1 : Nat) * (((2 ^ 23 : Nat) : ENNReal) /
+              (Fintype.card Fp : ENNReal))) +
+          ((family.Q + 1 : Nat) * (((2 ^ 35 : Nat) : ENNReal) /
+              (Fintype.card Fp : ENNReal)) +
+            ((family.Q + 1 : Nat) * (((2 ^ 21 : Nat) : ENNReal) /
+                (Fintype.card Fp : ENNReal)) +
+              (family.Q + 1 : Nat) * (((2 ^ 25 : Nat) : ENNReal) /
+                (Fintype.card Fp : ENNReal)))) :=
+  orchard_action_acceptFalseStatement_prob_le_captured B hB query hquery family inputs hvk hI
+    hchar profile
     (cuts.xy_prob_le actionProofParams family (staticChecks_of_derived family hvk) inputs
       hvk hI hchar query derived_n_ne_zero (derived_n_yn hL))
     (cuts.beta_prob_le actionProofParams family (staticChecks_of_derived family hvk) inputs

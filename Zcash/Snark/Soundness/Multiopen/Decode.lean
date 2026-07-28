@@ -59,8 +59,12 @@ open Polynomial
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 
-/-- Interpret a coefficient vector as the corresponding polynomial. -/
-noncomputable def coeffsToPoly {n : ℕ} (a : Fin n → Fp) : Polynomial Fp :=
+/-- Interpret a coefficient vector as the corresponding polynomial.
+
+This is ordinary executable data: `Fp` supplies decidable equality and the finite sum is over the
+canonical `Fin n` enumeration.  Keeping this a plain `def` is important for reductions that return
+commitment collisions as computed coefficient vectors. -/
+def coeffsToPoly {n : ℕ} (a : Fin n → Fp) : Polynomial Fp :=
   ∑ i, Polynomial.C (a i) * Polynomial.X ^ (i : ℕ)
 
 /-- Evaluating `coeffsToPoly` is the same linear form as committing to the powers evaluation vector. -/

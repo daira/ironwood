@@ -64,7 +64,7 @@ def PermutationChunkRoutingCoherent {shape : Shape} {F G : Type*}
 
 /-- Resolve a permutation column reference to its polynomial.  `finFn` mirrors the verifier's
 total claimed-evaluation feeds: an out-of-range evaluation reference reads zero. -/
-noncomputable def permutationColumnPolynomialOfResolver {shape : Shape} {G : Type*}
+def permutationColumnPolynomialOfResolver {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (poly : CommitmentId → Polynomial Fp)
     (p : Fin shape.numProofs) (cr : ColumnRef) : Polynomial Fp :=
   cr.resolve
@@ -77,7 +77,7 @@ noncomputable def permutationColumnPolynomialOfResolver {shape : Shape} {G : Typ
 
 /-- The polynomial-valued evaluation record for one permutation running product.  Its optional
 last-row opening follows the shape-level Halo2 read schedule. -/
-noncomputable def permutationSetOfResolver {shape : Shape} {G : Type*}
+def permutationSetOfResolver {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (poly : CommitmentId → Polynomial Fp)
     (p : Fin shape.numProofs) (s : Fin shape.numPermutationSets) :
     PermSetEval (Polynomial Fp) :=
@@ -89,14 +89,14 @@ noncomputable def permutationSetOfResolver {shape : Shape} {G : Type*}
         (C (vk.omega ^ (-((vk.blindingFactors : ℤ) + 1))) * X)) }
 
 /-- One sub-proof's permutation running products, in verifier order. -/
-noncomputable def permutationSetsOfResolver {shape : Shape} {G : Type*}
+def permutationSetsOfResolver {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (poly : CommitmentId → Polynomial Fp)
     (p : Fin shape.numProofs) : List (PermSetEval (Polynomial Fp)) :=
   List.ofFn fun s => permutationSetOfResolver vk poly p s
 
 /-- One sub-proof's permutation chunks, with the value and common-permutation columns selected by
 their stable commitment identities. -/
-noncomputable def permutationChunksOfResolver {shape : Shape} {G : Type*}
+def permutationChunksOfResolver {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (poly : CommitmentId → Polynomial Fp)
     (p : Fin shape.numProofs) :
     List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)) :=
@@ -105,7 +105,7 @@ noncomputable def permutationChunksOfResolver {shape : Shape} {G : Type*}
       (permutationColumnPolynomialOfResolver vk poly p cr.1, poly (.permCommon cr.2)))
 
 /-- The value/σ polynomial pairs of chunk `c`, totalized by the empty chunk out of range. -/
-noncomputable def permutationChunkPairsOfResolver {shape : Shape} {G : Type*}
+def permutationChunkPairsOfResolver {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (poly : CommitmentId → Polynomial Fp)
     (p : Fin shape.numProofs) (c : ℕ) : List (Polynomial Fp × Polynomial Fp) :=
   (vk.permutationChunks.getD c []).map fun cr =>
@@ -572,7 +572,7 @@ theorem eval_permutationChunksOfResolver
 
 /-- The full constraint model with permutation sets and chunks selected by the same commitment-ID
 resolver already used for gates and lookups. -/
-noncomputable def constraintModelOfPermutationResolver
+def constraintModelOfPermutationResolver
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → Polynomial Fp)
@@ -720,7 +720,7 @@ theorem permutationLastEvalsWellFormed_of_assemble?_eq_some
 /-- The decoded multiopen resolver simultaneously instantiates the permutation running products
 and chunk pairs.  If member-node binding fails, the existing nontrivial-relation branch is
 retained. -/
-noncomputable def eval_permutationDataOfDecodedResolver_or_relation
+def eval_permutationDataOfDecodedResolver_or_relation
     {shape : Shape} {G : Type*} [AddCommGroup G] [Module Fp G]
     (instanceCommitment : Fin shape.numProofs → ℕ → G)
     [DecidableEq G] [Inhabited G]
