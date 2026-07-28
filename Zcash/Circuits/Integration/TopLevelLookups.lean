@@ -610,7 +610,7 @@ noncomputable def deployedWitness
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (satisfaction :
       ConstraintSatisfaction
-        (top.canonicalConstraintModel pp urs ch poly)
+        (top.constraintModel pp urs ch poly)
         (top.toVerifierKey pp urs).n)
     (hrows : Function.Injective
       fun row : Fin (top.toVerifierKey pp urs).n =>
@@ -688,13 +688,12 @@ noncomputable def deployedWitness
     intro row _
     unfold EnabledLookup.inputValues EnabledLookup.tableValues
     simpa only [List.length_map] using harity'
-  let model := top.canonicalConstraintModel pp urs ch poly
+  let model := top.constraintModel pp urs ch poly
   have domain :
       ResolverLookupDomain vk model.l0 model.lLast model.lBlind
         vk.n u := by
-    simpa [vk, u, model, TopLevelCircuit.canonicalConstraintModel,
-      canonicalConstraintModelOfPermutationResolver,
-      constraintModelOfPermutationResolver,
+    simpa [vk, u, model, TopLevelCircuit.constraintModel,
+      VerifyingKey.constraintModel,
       constraintModelOfResolver] using
       (ResolverLookupDomain.ofCanonicalConstraintModel
         vk ch poly husable hrows hroot)
@@ -704,9 +703,8 @@ noncomputable def deployedWitness
           (permutationSetsOfResolver vk poly)
           (permutationChunksOfResolver vk poly)
           model.l0 model.lLast model.lBlind) vk.n := by
-    simpa [vk, model, TopLevelCircuit.canonicalConstraintModel,
-      canonicalConstraintModelOfPermutationResolver,
-      constraintModelOfPermutationResolver] using
+    simpa [vk, model, TopLevelCircuit.constraintModel,
+      VerifyingKey.constraintModel] using
       satisfaction
   have scalarSubset :
       ∀ row : Fin (u + 1), ∃ tableRow : Fin (u + 1),
@@ -932,7 +930,7 @@ noncomputable def deployedWitnesses
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (satisfaction :
       ConstraintSatisfaction
-        (top.canonicalConstraintModel pp urs ch poly)
+        (top.constraintModel pp urs ch poly)
         (top.toVerifierKey pp urs).n)
     (hrows : Function.Injective
       fun row : Fin (top.toVerifierKey pp urs).n =>
@@ -978,7 +976,7 @@ theorem constraints
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (satisfaction :
       ConstraintSatisfaction
-        (top.canonicalConstraintModel pp urs ch poly)
+        (top.constraintModel pp urs ch poly)
         (top.toVerifierKey pp urs).n)
     (hrows : Function.Injective
       fun row : Fin (top.toVerifierKey pp urs).n =>

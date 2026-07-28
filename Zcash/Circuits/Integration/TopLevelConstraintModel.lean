@@ -28,14 +28,13 @@ The canonical resolver model for a circuit's own verification key.
 Unlike the arbitrary-key constructor, this interface has no domain-law
 argument: domain fitting follows from the `TopLevelCircuit` compilation.
 -/
-noncomputable def canonicalConstraintModel
+noncomputable def constraintModel
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp) :
     ConstraintPolyModel (pp.mergeDerived top).numProofs :=
-  canonicalConstraintModelOfPermutationResolver
-    (top.toVerifierKey pp urs) ch poly
+  (top.toVerifierKey pp urs).constraintModel ch poly
     (top.toVerifierKey_blindingFactors_lt_n pp urs)
 
 end Halo2.TopLevelCircuit

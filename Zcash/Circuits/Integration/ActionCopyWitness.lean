@@ -558,9 +558,13 @@ theorem actionCopyPairValue_of_resolverPermutation
       Fin (ActionPermutationDomain.actionShape pp).numProofs)
     {n : ℕ}
     (hsat : ConstraintSatisfaction
-      (constraintModelOfPermutationResolver
-        (ActionPermutationDomain.actionVk pp urs)
-        ch poly l0 lLast lBlind) n)
+      (constraintModelOfResolver
+        (ActionPermutationDomain.actionVk pp urs) ch poly
+        (permutationSetsOfResolver
+          (ActionPermutationDomain.actionVk pp urs) poly)
+        (permutationChunksOfResolver
+          (ActionPermutationDomain.actionVk pp urs) poly)
+        l0 lLast lBlind) n)
     (hdom : ResolverPermutationDomain
       (ActionPermutationDomain.actionVk pp urs)
       l0 lLast lBlind n actionActiveRows)

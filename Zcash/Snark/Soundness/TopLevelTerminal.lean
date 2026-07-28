@@ -48,7 +48,7 @@ noncomputable def topLevelBundleStatement_or_bad_of_components
     {Bad : Type}
     (satisfaction :
       ConstraintSatisfaction
-        (top.canonicalConstraintModel pp urs ch poly)
+        (top.constraintModel pp urs ch poly)
         (top.toVerifierKey pp urs).n)
     (gates : TopLevelGateCoherence top pp urs)
     (fixedEncoding : ∀ proofIndex,
@@ -94,7 +94,7 @@ noncomputable def topLevelBundleStatement_or_bad_of_constraintSatisfaction
     {Bad : Type}
     (satisfaction :
       ConstraintSatisfaction
-        (top.canonicalConstraintModel pp urs ch poly)
+        (top.constraintModel pp urs ch poly)
         (top.toVerifierKey pp urs).n)
     (correctness :
       TopLevelCircuitCorrectness top pp urs ch poly cell Bad) :

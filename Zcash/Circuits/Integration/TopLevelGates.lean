@@ -290,7 +290,7 @@ theorem canonicalConstraints
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (satisfaction :
       ConstraintSatisfaction
-        (top.canonicalConstraintModel pp urs ch poly)
+        (top.constraintModel pp urs ch poly)
         (top.toVerifierKey pp urs).n)
     (domain : ∀ row : ℕ,
       ((top.toVerifierKey pp urs).omega ^ row) ^
@@ -305,7 +305,7 @@ theorem canonicalConstraints
         (top.toVerifierKey pp urs) poly proofIndex
         (top.usableRowsAt top.domainExponent))
       (top.operations) 0 := by
-  let model := top.canonicalConstraintModel pp urs ch poly
+  let model := top.constraintModel pp urs ch poly
   apply coherence.constraints ch poly
     (permutationSetsOfResolver
       (top.toVerifierKey pp urs) poly)
@@ -314,9 +314,8 @@ theorem canonicalConstraints
     model.l0 model.lLast model.lBlind proofIndex
     (top.usableRowsAt top.domainExponent)
     (top.toVerifierKey pp urs).n
-  · simpa [model, TopLevelCircuit.canonicalConstraintModel,
-      canonicalConstraintModelOfPermutationResolver,
-      constraintModelOfPermutationResolver] using satisfaction
+  · simpa [model, TopLevelCircuit.constraintModel,
+      VerifyingKey.constraintModel] using satisfaction
   · exact domain
   · exact hfixed
 

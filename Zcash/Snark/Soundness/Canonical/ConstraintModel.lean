@@ -21,11 +21,13 @@ open Polynomial
 
 set_option maxHeartbeats 20000
 
+namespace VerifyingKey
+
 /--
 The full commitment-ID resolver model with its selector polynomials determined
 by the verification key's domain and blinding count.
 -/
-noncomputable def canonicalConstraintModelOfPermutationResolver
+noncomputable def constraintModel
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → Polynomial Fp)
@@ -33,36 +35,35 @@ noncomputable def canonicalConstraintModelOfPermutationResolver
     ConstraintPolyModel shape.numProofs :=
   let selectors :=
     canonicalLagrangePolynomials vk.omega hblinding
-  constraintModelOfPermutationResolver vk ch poly
+  constraintModelOfResolver vk ch poly
+    (permutationSetsOfResolver vk poly)
+    (permutationChunksOfResolver vk poly)
     selectors.1 selectors.2.1 selectors.2.2
 
-@[simp] theorem canonicalConstraintModelOfPermutationResolver_l0
+@[simp] theorem constraintModel_l0
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (hblinding : vk.blindingFactors < vk.n) :
-    (canonicalConstraintModelOfPermutationResolver
-      vk ch poly hblinding).l0 =
+    (vk.constraintModel ch poly hblinding).l0 =
       (canonicalLagrangePolynomials vk.omega hblinding).1 :=
   rfl
 
-@[simp] theorem canonicalConstraintModelOfPermutationResolver_lLast
+@[simp] theorem constraintModel_lLast
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (hblinding : vk.blindingFactors < vk.n) :
-    (canonicalConstraintModelOfPermutationResolver
-      vk ch poly hblinding).lLast =
+    (vk.constraintModel ch poly hblinding).lLast =
       (canonicalLagrangePolynomials vk.omega hblinding).2.1 :=
   rfl
 
-@[simp] theorem canonicalConstraintModelOfPermutationResolver_lBlind
+@[simp] theorem constraintModel_lBlind
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (hblinding : vk.blindingFactors < vk.n) :
-    (canonicalConstraintModelOfPermutationResolver
-      vk ch poly hblinding).lBlind =
+    (vk.constraintModel ch poly hblinding).lBlind =
       (canonicalLagrangePolynomials vk.omega hblinding).2.2 :=
   rfl
 
@@ -71,7 +72,7 @@ The canonical resolver model's fixed selector polynomials evaluate to the
 verifier's exact deployed selector triple at every challenge outside the
 evaluation domain.
 -/
-theorem canonicalConstraintModelOfPermutationResolver_selectorEvaluations
+theorem constraintModel_selectorEvaluations
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → Polynomial Fp)
@@ -81,16 +82,16 @@ theorem canonicalConstraintModelOfPermutationResolver_selectorEvaluations
     (hroot : vk.omega ^ vk.n = 1)
     (hnFp : (vk.n : Fp) ≠ 0)
     (hxDomain : ch.x ^ vk.n ≠ 1) :
-    let model :=
-      canonicalConstraintModelOfPermutationResolver
-        vk ch poly hblinding
+    let model := vk.constraintModel ch poly hblinding
     (model.l0.eval ch.x, model.lLast.eval ch.x,
       model.lBlind.eval ch.x) =
         lagrangeBasis vk.omega vk.n vk.blindingFactors
           (ch.x ^ vk.n) ch.x := by
-  simpa [canonicalConstraintModelOfPermutationResolver] using
+  simpa [VerifyingKey.constraintModel] using
     canonicalLagrangePolynomials_eval
       hblinding hrows hroot hnFp hxDomain
+
+end VerifyingKey
 
 /--
 The canonical model satisfies the generic permutation-domain interface. Its
@@ -108,9 +109,7 @@ theorem ResolverPermutationDomain.ofCanonicalConstraintModel
     (hnonempty : 0 < shape.numPermutationSets)
     (hchunkCount :
       vk.permutationChunks.length = shape.numPermutationSets) :
-    let model :=
-      canonicalConstraintModelOfPermutationResolver
-        vk ch poly hblinding
+    let model := vk.constraintModel ch poly hblinding
     ResolverPermutationDomain vk model.l0 model.lLast model.lBlind
       vk.n (vk.n - vk.blindingFactors - 1) := by
   have hn : 0 < vk.n := Nat.zero_lt_of_lt hblinding
@@ -123,7 +122,7 @@ theorem ResolverPermutationDomain.ofCanonicalConstraintModel
       vk.n - (vk.blindingFactors + 1) by omega]
     exact domain_pow_sub_eq_zpow_neg
       (t := vk.blindingFactors + 1) (by omega) hroot
-  simpa [canonicalConstraintModelOfPermutationResolver,
+  simpa [VerifyingKey.constraintModel,
     canonicalLagrangePolynomials, lastUsableDomainRow] using
       ResolverPermutationDomain.ofCanonicalSelectors vk hn hm hrows
         hnonempty hchunkCount hlastRotation hroot
@@ -141,9 +140,7 @@ theorem ResolverLookupDomain.ofCanonicalConstraintModel
       vk.omega ^ (i : ℕ))
     (hroot : vk.omega ^ vk.n = 1) :
     let hblinding : vk.blindingFactors < vk.n := by omega
-    let model :=
-      canonicalConstraintModelOfPermutationResolver
-        vk ch poly hblinding
+    let model := vk.constraintModel ch poly hblinding
     ResolverLookupDomain vk model.l0 model.lLast model.lBlind
       vk.n (vk.n - vk.blindingFactors - 2) := by
   let hblinding : vk.blindingFactors < vk.n := by omega
@@ -164,8 +161,8 @@ theorem ResolverLookupDomain.ofCanonicalConstraintModel
     ResolverLookupDomain.ofCanonicalSelectors vk hlast hrows
       homega hroot
   rw [hlastRow] at hdomain
-  simpa [hblinding, canonicalConstraintModelOfPermutationResolver,
-    canonicalLagrangePolynomials, constraintModelOfPermutationResolver,
+  simpa [hblinding, VerifyingKey.constraintModel,
+    canonicalLagrangePolynomials,
     constraintModelOfResolver] using hdomain
 
 end Zcash.Snark

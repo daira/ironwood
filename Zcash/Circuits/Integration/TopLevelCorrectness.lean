@@ -145,7 +145,7 @@ noncomputable def bridgeWitness_of_components
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (satisfaction :
       ConstraintSatisfaction
-        (top.canonicalConstraintModel pp urs ch poly)
+        (top.constraintModel pp urs ch poly)
         (top.toVerifierKey pp urs).n)
     (gates : TopLevelGateCoherence top pp urs)
     (fixedEncoding :

@@ -298,7 +298,7 @@ theorem domain
     (ch : Challenges (actionShape pp).k Fp)
     (poly : CommitmentId → Polynomial Fp) :
     let model :=
-      actionCircuit.canonicalConstraintModel pp urs ch poly
+      actionCircuit.constraintModel pp urs ch poly
     ResolverPermutationDomain (actionVk pp urs)
       model.l0 model.lLast model.lBlind
       (actionVk pp urs).n
