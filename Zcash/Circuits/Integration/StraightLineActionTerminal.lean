@@ -15,6 +15,11 @@ two together: supply a decode and acceptance, and what remains are the challenge
 `hxgood`, `hgoodY`, and the permutation and lookup exclusions — which are priced separately, not
 discharged here.
 
+The rewind-based route to the same conclusion is `Soundness.ActionVesta` (generic) and
+`Soundness.Deployed.ActionVesta` (at the captured artifacts), which take an `OpenedBatchOpenings`
+supplied by `x₄` rewinding and pay accept-measure premises for it.  Neither supersedes the other:
+that route assumes rewinds and measures, this one assumes a represented decode.
+
 The terminal is used unchanged.  Nothing in this module weakens its statement: the verifying key
 is still `actionCircuit.toVerifierKey`, and no free semantic proposition, `hencodes`, or decoded
 column feed is reintroduced.
