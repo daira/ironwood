@@ -327,6 +327,41 @@ natural property — the pre-`x` prefix reads only answers at strictly shorter t
 that property implies `hstab` outright: the update point has exactly the `x` prefix's length, so
 no strictly shorter answer moves. -/
 
+/-- **Fiat–Shamir prefix-determinism at index `n`.** The adversary's index-`n` squeeze point reads
+only oracle answers at transcripts strictly shorter than that prefix, so two tables agreeing below
+that length produce the same point.  Every sequential Fiat–Shamir prover has this shape. -/
+def PrefixDeterminedAt (family : ComputedAlgebraicFSFamily shape) (n : Fin 11) : Prop :=
+  ∀ basis (O O' : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp),
+    (∀ t : BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k),
+      t.val.length < preIpaLen shape family.init.length n → O t = O' t) →
+    algebraicFullPrefixesPre family.init ((family.adversary basis).run O) n
+      = algebraicFullPrefixesPre family.init ((family.adversary basis).run O') n
+
+/-- Prefix-determinism at `n` discharges the index-`n` stability input of
+`badAt_le_via_squeeze_prefixed`: the update point is that prefix itself, of exactly its own
+length, so every strictly shorter answer is untouched. -/
+theorem hstab_of_prefixDeterminedAt (family : ComputedAlgebraicFSFamily shape) (n : Fin 11)
+    (hdet : PrefixDeterminedAt family n) :
+    ∀ basis (O : BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp) (v : Fp),
+      algebraicFullPrefixesPre family.init ((family.adversary basis).run
+          (Function.update O (algebraicFullPrefixesPre family.init
+            ((family.adversary basis).run O) n) v)) n
+        = algebraicFullPrefixesPre family.init ((family.adversary basis).run O) n := by
+  intro basis O v
+  refine hdet basis _ O ?_
+  intro t ht
+  rw [Function.update_apply, if_neg]
+  intro hEq
+  have hlen : (algebraicFullPrefixesPre family.init
+      ((family.adversary basis).run O) n).val.length
+      = preIpaLen shape family.init.length n :=
+    preIpaSqueezePoints_length_eq family.init _
+      ((family.adversary basis).run O).proof.2 n
+  rw [hEq, hlen] at ht
+  exact lt_irrefl _ ht
+
 /-- **Fiat–Shamir prefix-determinism.** The adversary's `x` squeeze point reads only oracle
 answers at transcripts strictly shorter than the `x` prefix: two tables agreeing below that
 length produce the same `x` squeeze point. Every sequential Fiat–Shamir prover has this shape —
