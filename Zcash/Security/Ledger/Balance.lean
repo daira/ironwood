@@ -589,6 +589,85 @@ def balanceValueOrBreak {VB : Type*}
       have hnn := hval.transparent_nonneg i
       omega)
 
+omit [Field F] [AddCommGroup G] [Module F G] in
+/-- A sub-multiset of positioned openings sums to no more value: the opening values are
+non-negative. -/
+theorem sum_val_le_of_le
+    {s t : Multiset (PositionedOpening F G RHO PSI)} (h : s ≤ t) :
+    (s.map fun p => (p.opening.note.v : ℤ)).sum
+      ≤ (t.map fun p => (p.opening.note.v : ℤ)).sum := by
+  obtain ⟨u, rfl⟩ := Multiset.le_iff_exists_add.mp h
+  rw [Multiset.map_add, Multiset.sum_add]
+  have hu : 0 ≤ (u.map fun p => (p.opening.note.v : ℤ)).sum :=
+    Multiset.sum_nonneg fun x hx => by
+      obtain ⟨p, -, rfl⟩ := Multiset.mem_map.mp hx
+      exact Int.natCast_nonneg _
+  linarith
+
+omit [Field F] [AddCommGroup G] [Module F G] in
+/-- The positioned outputs' total value is monotone in the prefix length: outputs only
+accumulate, and their values are non-negative. -/
+theorem positionedOutputs_value_sum_mono
+    (ledger : Ledger KW F G RHO PSI MHASH MENC MSG SIG d) {i j : ℕ} (hij : i ≤ j) :
+    ((positionedOutputs ledger i).map fun p => (p.opening.note.v : ℤ)).sum
+      ≤ ((positionedOutputs ledger j).map fun p => (p.opening.note.v : ℤ)).sum := by
+  rw [positionedOutputs_value_sum, positionedOutputs_value_sum]
+  obtain ⟨r, hr⟩ := take_prefix_take (l := ledger) hij
+  rw [← hr, List.map_append, List.sum_append]
+  have : 0 ≤ (r.map fun tx =>
+      (tx.actions.map fun a => (a.w.note_new.v : ℤ)).sum).sum :=
+    List.sum_nonneg fun x hx => by
+      obtain ⟨tx, -, rfl⟩ := List.mem_map.mp hx
+      exact List.sum_nonneg fun y hy => by
+        obtain ⟨a, -, rfl⟩ := List.mem_map.mp hy
+        exact Int.natCast_nonneg _
+  linarith
+
+omit [Field F] [AddCommGroup G] [Module F G] in
+/-- **Balance-value, lower bound.** When the nonzero spends of the first `i + 1`
+transactions are covered by the positioned outputs of the first `i` — the Balance-subset
+conclusion — the shielded pool holds non-negative value: no value is spent that was not
+created. -/
+theorem poolValueBalance_nonneg
+    (ledger : Ledger KW F G RHO PSI MHASH MENC MSG SIG d) (i : ℕ)
+    (hsub : nonZeroSpends ledger (i + 1) ≤ (↑(positionedOutputs ledger i) : Multiset _)) :
+    0 ≤ poolValueBalance ledger (i + 1) := by
+  rw [poolValueBalance, sub_nonneg]
+  have h1 : ((nonZeroSpends ledger (i + 1)).map fun p => (p.opening.note.v : ℤ)).sum
+      ≤ ((positionedOutputs ledger i).map fun p => (p.opening.note.v : ℤ)).sum := by
+    refine le_trans (sum_val_le_of_le hsub) ?_
+    rw [Multiset.map_coe, Multiset.sum_coe]
+  exact le_trans h1 (positionedOutputs_value_sum_mono ledger (Nat.le_succ i))
+
+/-- **Balance.** In a valid ledger, either the value after the first `i + 1`
+transactions is accounted for exactly — the shielded and transparent pools are both
+non-negative and sum to the minted issuance — or the ledger's own data computes a break:
+a Balance-subset break (a Merkle, note-commitment, or key-binding break) or the value
+premiss's break. The three facts come from three places. The shielded pool is
+non-negative by spend-integrity (`poolValueBalance_nonneg`, from Balance-subset: no value
+is spent that was not created). The transparent pool is non-negative by validity
+(`transparent_nonneg`). The two pools sum to issuance by per-transaction value
+conservation (`valueConservationOrBreak`, from the binding signature: no value is created
+within a transaction). Together they place each pool in `[0, issuanceTotal]` and compose
+the two arguments into one statement. -/
+def balanceOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq RHO]
+    [DecidableEq PSI] [DecidableEq MHASH] [DecidableEq MENC] [DecidableEq NK]
+    [NoZeroSMulDivisors F G] {VB : Type*}
+    (hval : ValidLedger P kv issuance maxActions ledger)
+    (perTx : (tx : Tx KW F G RHO PSI MHASH MENC MSG SIG P.depth) → tx ∈ ledger →
+      (txNetValue tx = tx.vBalance) ⊕' VB) (i : ℕ) :
+    (0 ≤ poolValueBalance ledger (i + 1)
+        ∧ 0 ≤ transparentPoolBalance issuance ledger (i + 1)
+        ∧ poolValueBalance ledger (i + 1) + transparentPoolBalance issuance ledger (i + 1)
+            = issuanceTotal issuance ledger (i + 1))
+      ⊕' (BalanceBreak P kv ⊕' VB) :=
+  match balanceSubsetOrBreak hval i,
+      valueConservationOrBreak (issuance := issuance) perTx (i + 1) with
+  | .inr b, _ => .inr (.inl b)
+  | _, .inr vb => .inr (.inr vb)
+  | .inl hsub, .inl hcons =>
+      .inl ⟨poolValueBalance_nonneg ledger i hsub, hval.transparent_nonneg (i + 1), hcons⟩
+
 end Conservation
 
 end Zcash.Security.Ledger.Model

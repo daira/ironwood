@@ -207,6 +207,10 @@ assert_axioms Zcash.Security.Ledger.Model.poolValueBalance_eq_neg
 assert_computable Zcash.Security.Ledger.Model.allValueOrBreak
 assert_computable Zcash.Security.Ledger.Model.valueConservationOrBreak +choice
 assert_computable Zcash.Security.Ledger.Model.balanceValueOrBreak +choice
+assert_axioms Zcash.Security.Ledger.Model.sum_val_le_of_le
+assert_axioms Zcash.Security.Ledger.Model.positionedOutputs_value_sum_mono
+assert_axioms Zcash.Security.Ledger.Model.poolValueBalance_nonneg
+assert_computable Zcash.Security.Ledger.Model.balanceOrBreak +choice
 
 /-! ## Spendability
 
