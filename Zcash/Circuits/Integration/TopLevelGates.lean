@@ -1,9 +1,8 @@
-import Zcash.Snark.Keygen.Pipeline
 import Zcash.Arithmetic.Domain
 import Zcash.Circuits.Integration.ResolverGates
 import Zcash.Circuits.Integration.ResolverQueryEnvironment
 import Zcash.Circuits.Integration.SelectorCoherence
-import Zcash.Snark.Soundness.Canonical.ConstraintModel
+import Zcash.Circuits.Integration.TopLevelConstraintModel
 
 /-!
 # Generic top-level gate bridge
@@ -291,9 +290,7 @@ theorem canonicalConstraints
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (satisfaction :
       ConstraintSatisfaction
-        (canonicalConstraintModelOfPermutationResolver
-          (top.toVerifierKey pp urs) ch poly
-          (top.toVerifierKey_blindingFactors_lt_n pp urs))
+        (top.canonicalConstraintModel pp urs ch poly)
         (top.toVerifierKey pp urs).n)
     (domain : ∀ row : ℕ,
       ((top.toVerifierKey pp urs).omega ^ row) ^
@@ -308,20 +305,18 @@ theorem canonicalConstraints
         (top.toVerifierKey pp urs) poly proofIndex
         (top.usableRowsAt top.domainExponent))
       (top.operations) 0 := by
-  let selectors :=
-    canonicalLagrangePolynomials
-      (top.toVerifierKey pp urs).omega
-        (top.toVerifierKey_blindingFactors_lt_n pp urs)
+  let model := top.canonicalConstraintModel pp urs ch poly
   apply coherence.constraints ch poly
     (permutationSetsOfResolver
       (top.toVerifierKey pp urs) poly)
     (permutationChunksOfResolver
       (top.toVerifierKey pp urs) poly)
-    selectors.1 selectors.2.1 selectors.2.2 proofIndex
+    model.l0 model.lLast model.lBlind proofIndex
     (top.usableRowsAt top.domainExponent)
     (top.toVerifierKey pp urs).n
-  · simpa [canonicalConstraintModelOfPermutationResolver,
-      constraintModelOfPermutationResolver, selectors] using satisfaction
+  · simpa [model, TopLevelCircuit.canonicalConstraintModel,
+      canonicalConstraintModelOfPermutationResolver,
+      constraintModelOfPermutationResolver] using satisfaction
   · exact domain
   · exact hfixed
 

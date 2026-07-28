@@ -48,9 +48,7 @@ noncomputable def topLevelBundleStatement_or_bad_of_components
     {Bad : Type}
     (satisfaction :
       ConstraintSatisfaction
-        (canonicalConstraintModelOfPermutationResolver
-          (top.toVerifierKey pp urs) ch poly
-          (top.toVerifierKey_blindingFactors_lt_n pp urs))
+        (top.canonicalConstraintModel pp urs ch poly)
         (top.toVerifierKey pp urs).n)
     (gates : TopLevelGateCoherence top pp urs)
     (fixedEncoding : ∀ proofIndex,
@@ -96,9 +94,7 @@ noncomputable def topLevelBundleStatement_or_bad_of_constraintSatisfaction
     {Bad : Type}
     (satisfaction :
       ConstraintSatisfaction
-        (canonicalConstraintModelOfPermutationResolver
-          (top.toVerifierKey pp urs) ch poly
-          (top.toVerifierKey_blindingFactors_lt_n pp urs))
+        (top.canonicalConstraintModel pp urs ch poly)
         (top.toVerifierKey pp urs).n)
     (correctness :
       TopLevelCircuitCorrectness top pp urs ch poly cell Bad) :

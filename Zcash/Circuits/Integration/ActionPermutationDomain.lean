@@ -1,7 +1,7 @@
 import Zcash.Circuits.Integration.ActionPermutationDomainCompute
 import Zcash.Circuits.Integration.PermutationCompiler
-import Zcash.Snark.Soundness.Canonical.ConstraintModel
 import Zcash.Circuits.Integration.TopLevelAssignment
+import Zcash.Circuits.Integration.TopLevelConstraintModel
 
 /-!
 # Action permutation domain and verifier layout
@@ -297,11 +297,8 @@ theorem domain
     (pp : Keygen.ProofParams) (urs : URS G)
     (ch : Challenges (actionShape pp).k Fp)
     (poly : CommitmentId → Polynomial Fp) :
-    let hblinding :=
-      actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs
     let model :=
-      canonicalConstraintModelOfPermutationResolver
-        (actionVk pp urs) ch poly hblinding
+      actionCircuit.canonicalConstraintModel pp urs ch poly
     ResolverPermutationDomain (actionVk pp urs)
       model.l0 model.lLast model.lBlind
       (actionVk pp urs).n

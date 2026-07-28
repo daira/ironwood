@@ -610,9 +610,7 @@ noncomputable def deployedWitness
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (satisfaction :
       ConstraintSatisfaction
-        (canonicalConstraintModelOfPermutationResolver
-          (top.toVerifierKey pp urs) ch poly
-          (top.toVerifierKey_blindingFactors_lt_n pp urs))
+        (top.canonicalConstraintModel pp urs ch poly)
         (top.toVerifierKey pp urs).n)
     (hrows : Function.Injective
       fun row : Fin (top.toVerifierKey pp urs).n =>
@@ -690,16 +688,11 @@ noncomputable def deployedWitness
     intro row _
     unfold EnabledLookup.inputValues EnabledLookup.tableValues
     simpa only [List.length_map] using harity'
-  let selectorPolynomials :=
-    canonicalLagrangePolynomials vk.omega
-      (by
-        simpa only [vk] using
-          top.toVerifierKey_blindingFactors_lt_n pp urs)
+  let model := top.canonicalConstraintModel pp urs ch poly
   have domain :
-      ResolverLookupDomain vk selectorPolynomials.1
-        selectorPolynomials.2.1 selectorPolynomials.2.2
+      ResolverLookupDomain vk model.l0 model.lLast model.lBlind
         vk.n u := by
-    simpa [vk, u, selectorPolynomials,
+    simpa [vk, u, model, TopLevelCircuit.canonicalConstraintModel,
       canonicalConstraintModelOfPermutationResolver,
       constraintModelOfPermutationResolver,
       constraintModelOfResolver] using
@@ -710,10 +703,8 @@ noncomputable def deployedWitness
         (constraintModelOfResolver vk ch poly
           (permutationSetsOfResolver vk poly)
           (permutationChunksOfResolver vk poly)
-          selectorPolynomials.1
-          selectorPolynomials.2.1
-          selectorPolynomials.2.2) vk.n := by
-    simpa [vk, selectorPolynomials,
+          model.l0 model.lLast model.lBlind) vk.n := by
+    simpa [vk, model, TopLevelCircuit.canonicalConstraintModel,
       canonicalConstraintModelOfPermutationResolver,
       constraintModelOfPermutationResolver] using
       satisfaction
@@ -731,8 +722,7 @@ noncomputable def deployedWitness
       vk ch poly
       (permutationSetsOfResolver vk poly)
       (permutationChunksOfResolver vk poly)
-      selectorPolynomials.1 selectorPolynomials.2.1
-      selectorPolynomials.2.2 proofIndex route.index
+      model.l0 model.lLast model.lBlind proofIndex route.index
       domain resolverGood
   exact
     { omega := vk.omega
@@ -942,9 +932,7 @@ noncomputable def deployedWitnesses
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (satisfaction :
       ConstraintSatisfaction
-        (canonicalConstraintModelOfPermutationResolver
-          (top.toVerifierKey pp urs) ch poly
-          (top.toVerifierKey_blindingFactors_lt_n pp urs))
+        (top.canonicalConstraintModel pp urs ch poly)
         (top.toVerifierKey pp urs).n)
     (hrows : Function.Injective
       fun row : Fin (top.toVerifierKey pp urs).n =>
@@ -990,9 +978,7 @@ theorem constraints
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (satisfaction :
       ConstraintSatisfaction
-        (canonicalConstraintModelOfPermutationResolver
-          (top.toVerifierKey pp urs) ch poly
-          (top.toVerifierKey_blindingFactors_lt_n pp urs))
+        (top.canonicalConstraintModel pp urs ch poly)
         (top.toVerifierKey pp urs).n)
     (hrows : Function.Injective
       fun row : Fin (top.toVerifierKey pp urs).n =>
