@@ -34,7 +34,8 @@ proves the operational prover, certificate, and reductions used here.
 `.ProbabilityVesta` applies it to Vesta.
 
 The explicit-certificate path is computable. Its boundary is AGM, plain-DL hardness, ideal random
-oracles, an unproved polynomial AFK call bound, and an external PPT-adversary restriction.
+oracles, the conversion from the proved polynomial expected-call bound to a chosen fixed-time
+model, and an external PPT-adversary restriction.
 -/
 
 namespace Zcash.Snark
@@ -77,8 +78,15 @@ theorem representationEval_fin {n : ℕ} (basis : Fin n → G) (coeffs : Fin n �
 
 /-- A scalar `log` such that `log • B = target`.
 
-The cryptographic reading requires `B ≠ 0`. If `B = 0`, only `target = 0` is representable. -/
-structure DiscreteLogRepresentation (B target : G) where
+The cryptographic reading requires `B ≠ 0`. If `B = 0`, only `target = 0` is representable.
+
+Named `…Witness`, not `…Representation`: the CompElliptic naming survey
+(<https://github.com/daira/CompElliptic/blob/main/design/naming-survey.md>) records that
+"representation"/`Repr` already carries at least four unrelated meanings across widely used
+libraries (byte serialization in zkcrypto `ff`, the opaque fast group form in arkworks, affine and
+other coordinate forms, and circuit representations). `GroupRepresentation` below keeps that word
+because it *is* an AGM representation over a basis; this scalar is a witness, so it does not. -/
+structure DiscreteLogWitness (B target : G) where
   log : F
   hEq : log • B = target
 
@@ -161,7 +169,7 @@ def discreteLogOfBasis_of_relation {ι : Type*} [Fintype ι] [DecidableEq ι]
     (r : AlgebraicRelationWitness (F := F) basis)
     (hknown : ∀ i, i ≠ challenge → basis i = logs i • B)
     (hcoeff : r.coeffs challenge ≠ 0) :
-    DiscreteLogRepresentation (F := F) B (basis challenge) := by
+    DiscreteLogWitness (F := F) B (basis challenge) := by
   let known : F := relationLogExcept logs r.coeffs challenge
   refine ⟨(r.coeffs challenge)⁻¹ * (-known), ?_⟩
   have hsplit := representationEval_eq_challenge_add_known B basis logs r.coeffs challenge hknown
@@ -217,7 +225,7 @@ def discreteLogOfChallenge_of_relation {ι : Type*} [Fintype ι]
     (r : AlgebraicRelationWitness (F := F) basis)
     (hprog : ∀ i, basis i = x i • B + y i • C)
     (hpair : (∑ i, r.coeffs i * y i) ≠ 0) :
-    DiscreteLogRepresentation (F := F) B C := by
+    DiscreteLogWitness (F := F) B C := by
   refine ⟨(∑ i, r.coeffs i * y i)⁻¹ * (-(∑ i, r.coeffs i * x i)), ?_⟩
   have hzero : (∑ i, r.coeffs i * x i) • B + (∑ i, r.coeffs i * y i) • C = 0 := by
     rw [← representationEval_programmed B C basis x y r.coeffs hprog]
@@ -238,7 +246,7 @@ against `y` is zero. -/
 abbrev ProgrammedRelationOutcome {ι : Type*} [Fintype ι] (B C : G) (basis : ι → G)
     (y : ι → F) : Type _ :=
   Σ' r : AlgebraicRelationWitness (F := F) basis,
-    DiscreteLogRepresentation (F := F) B C ⊕' ((∑ i, r.coeffs i * y i) = 0)
+    DiscreteLogWitness (F := F) B C ⊕' ((∑ i, r.coeffs i * y i) = 0)
 
 /-- Extract the challenge's discrete log, or return proof that the same relation has zero
 challenge component. -/
@@ -380,7 +388,7 @@ def discreteLogOfAugmentedRelationAtChallenge {n : ℕ} (B : G) (g : Fin n → G
     (r : AugmentedRelationWitness (F := F) g U W)
     (hknown : ∀ i, i ≠ challenge → augmentedBasis g U W i = logs i • B)
     (hcoeff : augmentedCoeffs r.a r.α r.β challenge ≠ 0) :
-    DiscreteLogRepresentation (F := F) B (augmentedBasis g U W challenge) :=
+    DiscreteLogWitness (F := F) B (augmentedBasis g U W challenge) :=
   discreteLogOfBasis_of_relation B (augmentedBasis g U W) logs challenge
     r.toAlgebraicRelationWitness hknown hcoeff
 
@@ -390,7 +398,7 @@ The logs of every URS generator and `W` over `B` must be known. -/
 def discreteLogOfU_of_augmentedRelation {n : ℕ} (B : G) (g : Fin n → G) (U W : G)
     (gLog : Fin n → F) (wLog : F) (r : AugmentedRelationWitness (F := F) g U W)
     (hg : ∀ i, g i = gLog i • B) (hW : W = wLog • B) (halpha : r.α ≠ 0) :
-    DiscreteLogRepresentation (F := F) B U :=
+    DiscreteLogWitness (F := F) B U :=
   discreteLogOfAugmentedRelationAtChallenge B g U W (augmentedCoeffs gLog 0 wLog)
     AugmentedIndex.u r
     (fun i hi => by
@@ -407,7 +415,7 @@ The logs of every URS generator and `U` over `B` must be known. -/
 def discreteLogOfW_of_augmentedRelation {n : ℕ} (B : G) (g : Fin n → G) (U W : G)
     (gLog : Fin n → F) (uLog : F) (r : AugmentedRelationWitness (F := F) g U W)
     (hg : ∀ i, g i = gLog i • B) (hU : U = uLog • B) (hbeta : r.β ≠ 0) :
-    DiscreteLogRepresentation (F := F) B W :=
+    DiscreteLogWitness (F := F) B W :=
   discreteLogOfAugmentedRelationAtChallenge B g U W (augmentedCoeffs gLog uLog 0)
     AugmentedIndex.w r
     (fun i hi => by
