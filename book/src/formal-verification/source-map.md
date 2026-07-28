@@ -40,8 +40,7 @@ directory level, naming the notable modules as entry points.
   requires the declaration to be a plain `def`.
 - **`Arithmetic.lean`** — the tier's root module, and the only place in the repository that earns
   root vocabulary: `Fp` and `URS` are re-exported at `Zcash` so every module finds them by the
-  enclosing-namespace walk. There is deliberately no `G` — the verifier group is a type *variable*
-  throughout, so there is no declaration to export.
+  enclosing-namespace walk.
 - **`TrustBoundary.lean`** — the library-wide census that makes the trust claims build-time
   checks rather than prose: a change that widens any checked declaration's trusted base — a
   reachable `sorry`, an unexpected axiom, or `native_decide` where none was permitted — fails
@@ -162,9 +161,9 @@ multiset identity), `Permutation`, `PermutationConstruction`, `PermutationRows`,
 `CommitFold`. `InstanceBinding` closes the public-instance gap — a decoded instance column is the
 polynomial halo2 committed from its `instances` argument, on pain of a computed `(g, U, W)`
 relation — and `ZeroData` supplies the zero-data multiopen keystone the constant prover families
-are built on. `Vesta` pins the abstract group to the actual Vesta curve, `ActionVesta` states the
-same over a circuit-derived key rather than a captured one, and `TopLevelTerminal`/`TopLevelVesta`
-are the circuit-generic endpoints. Six subtrees carry the heavier machinery:
+are built on. `Vesta` pins the abstract group to the actual Vesta curve. `TopLevelTerminal` and `TopLevelVesta` connect verifier acceptance to the Spec of an arbitrary top-level circuit, using that circuit's derived verifier key. `ActionVesta` specializes them to our concrete Lean model of the Action circuit.
+
+Six subtrees carry the heavier machinery:
 
 - **`AGM/`** — the algebraic-group-model layer. It turns the relation coefficients computed
   from algebraic prover data (`Peel`, `Capstone`) into a discrete-log solution over the
@@ -279,7 +278,7 @@ them as data (`SpecOrBreak`) rather than assuming them away.
   contract at the extracted window scalar.
 - **`Action/`** — the top-level Orchard Action circuit. `Circuit` is the ironwood `configure`
   and `synthesize` in exact region-creation order; `CircuitPreIronwood` is the post-NU 6.2
-  circuit without the cross-address region (both share `configure`, hence all VK fixtures);
+  circuit without the cross-address region (both share `configure`);
   `RealBases` instantiates everything at the actual deployed constants; `PublicInput` declares the
   public instance-cell layout and splits the semantic witness into public and private halves;
   `SelectorCoherence` certifies that every selector reference the configure program registers was
@@ -306,8 +305,8 @@ them as data (`SpecOrBreak`) rather than assuming them away.
   purely and computably, the layout products a keygen-view dump pins (the ordered copy list, the
   permutation σ, the fixed assignments) from a circuit's `Operations`, with the dumps carried as
   JSON data files (`Json`) and their SHA-256 pins as Lean data (`Stamp`, generated, the module that
-  carries a fixture change into Lake's import graph); `Tests/` checks the ported `configure` equal
-  to those dumps both pre- and post-`compress_selectors`, and is the `CircuitCheck` lake target —
+  carries a fixture change into Lake's import graph); `Tests/` checks that the ported `configure` is equal
+  to those dumps' post-`compress_selectors`, and is the `CircuitCheck` lake target —
   like `FixtureCheck`, kept out of `lake build Zcash` but compiled by CI, with the glob covering the
   whole directory so a newly added test cannot land in no target at all.
 
