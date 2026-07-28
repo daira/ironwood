@@ -102,6 +102,18 @@ noncomputable abbrev straightLineRunRecord
   chRecord (wrappedPreIpaReads (straightLineRunOutput family basis O))
     (runRounds family.toFamily basis O)
 
+/-- The run's pre-IPA reads are the oracle's answers at the squeeze prefixes.  This is what lets
+a per-challenge event embed into the index-generic squeeze surface. -/
+theorem straightLineRunReads_eq
+    (family : ComputedStraightLineDeployedFSFamily shape)
+    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) :
+    wrappedPreIpaReads (straightLineRunOutput family basis O) =
+      fun i => O (algebraicFullPrefixesPre family.init
+        ((family.adversary basis).run O) i) := by
+  simpa [runReads, runProof] using wrappedPreIpaReads_run family.toFamily basis O
+
 /-- A decoding run is an accepting run: the event's own acceptance component, restated at the
 run's proof string and complete challenge record. -/
 theorem straightLineAccepts_of_decoded
