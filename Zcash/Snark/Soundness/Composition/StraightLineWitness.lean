@@ -17,8 +17,9 @@ interfaces layered above it:
 
 The second point is the honest limit of this witness: it proves the straight-line interface is
 consistent and its constraint-`x` stage concrete, but it does not exercise the IPA-round stages,
-which quantify over `Fin 0` here.  A captured-shape model with live IPA rounds remains #115's
-concrete-instantiation obligation.
+which quantify over `Fin 0` here.  `Composition.ZeroStraightLine` is the model with live rounds,
+instantiated at captured key data by `Fixtures.MultiAction.CapturedZeroFamily`; the zero-coordinate
+keystone at the end of this module is what its staged IPA trace consumes.
 -/
 
 namespace Zcash.Snark

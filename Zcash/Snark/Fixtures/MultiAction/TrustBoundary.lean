@@ -4,6 +4,7 @@ import Zcash.Snark.Fixtures.MultiAction.StaticChecks
 import Zcash.Snark.Fixtures.MultiAction.Schedule
 import Zcash.Snark.Fixtures.MultiAction.KnowledgeError
 import Zcash.Snark.Fixtures.MultiAction.StraightLineKnowledgeError
+import Zcash.Snark.Fixtures.MultiAction.CapturedZeroFamily
 import Zcash.Meta.AxiomCheck
 
 /-!
@@ -142,6 +143,20 @@ assert_axioms Zcash.Snark.Fixture2.capturedUrsGLagrange
 assert_axioms Zcash.Snark.Fixture2.capturedPublicInstances
 assert_axioms Zcash.Snark.Fixture2.commitLagrange
 assert_axioms Zcash.Snark.Fixture2.derivedInstanceCommitment
+
+-- The captured key's straight-line family with eleven live IPA rounds
+-- (`MultiAction/CapturedZeroFamily`): the captured scalar metadata, layouts and domain carry a
+-- concrete inhabitant of the straight-line deployed interface, so the capstones' family premise
+-- is exercised at captured data rather than only at the round-free witness shape.  The group
+-- commitment families are zero (as `CapturedVerifierKeyProfile` already allows) and the shape is
+-- instance-free, which is what makes the constraint-`x` stage discharge.
+-- The key data itself stays executable; the families above it are noncomputable only because a
+-- root set is a `szBadSet` of a polynomial, so they are censused for their axiom base instead.
+assert_computable capturedZeroVk +choice +native
+assert_axioms capturedZeroStraightLineFamily +native
+assert_axioms capturedZeroDeployedConstraintFamily +native
+assert_axioms capturedZeroStaticChecks +native
+assert_axioms capturedZeroConstraintSchedule +native
 
 -- `whitespace := lax` collapses all whitespace, so the pin is insensitive to how
 -- `#print axioms` line-wraps the list (a formatting artifact of the axiom-name lengths).

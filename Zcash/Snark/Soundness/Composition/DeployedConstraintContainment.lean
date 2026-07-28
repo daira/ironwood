@@ -241,13 +241,17 @@ theorem DeployedConstraintXOnlineTrace.toPinning
 /-- The deployed constraint family: direct root extraction plus the staged trace at `x`.
 Both pinning equations used by the capstone are derived projections of its two traces. -/
 /-
-TODO(#115): This interface is inhabited at the degenerate witness shape
-(`Composition.StraightLineWitness`), with a read-free executable constraint-`x` stage; the
-shape-generic IPA keystone `straightLineIpaRootPolynomial_of_zero_coordinates` there covers the
-staged IPA trace of any zero-coordinate prover.  What remains is a captured-shape prover:
-exhibiting its concrete root and constraint-`x` stage computations with live IPA rounds against
-the real key layouts.  The immutable key fixture supplies verifier metadata, not an `OracleComp`
-prover trace.
+Inhabited twice.  `Composition.StraightLineWitness` does it at the degenerate witness shape;
+`Composition.ZeroStraightLine` does it over the shape-generic zero prover, and
+`Fixtures.MultiAction.CapturedZeroFamily` instantiates that at the captured key's own scalar
+metadata, layouts and domain — so the six staged root events run against captured query layouts
+and the staged IPA trace carries eleven live rounds rather than quantifying over `Fin 0`.
+
+What the captured instantiation still does not supply is a prover with sub-proofs.  Its columns
+are all zero, which no instance-bearing Orchard constraint system accepts, so the shape it is
+instantiated at is instance-free; with sub-proofs present the pre-`x` constraint difference is a
+nonzero polynomial and a root decode's existence would hinge on `expectedHEval = 0`, an equation
+in the very `x` answer this event prices.  Inhabiting that layer needs an honest prover.
 -/
 structure ComputedDeployedConstraintFSFamily (shape : Shape)
     extends ComputedDeployedRootFSFamily shape where

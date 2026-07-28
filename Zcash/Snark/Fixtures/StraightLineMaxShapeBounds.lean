@@ -161,7 +161,9 @@ theorem straightLineConstraintFailure_prob_le_at_consensus_max_generatorRO
 
 /-- Concrete 122-bit work-factor package.  It combines the probability capstone, the `2^-85`
 statistical bound, and the separately checked `2^127` solver-resource ceiling.  The DLOG advantage
-at that solver cost remains the explicit cryptographic premise carried by `profile`. -/
+at that solver cost remains the explicit cryptographic premise carried by `profile`; since Vesta's
+expected Pollard-rho cost is about `2^126.0`, that premise is restrictive only for adversary work
+up to about `2^121`. -/
 theorem straightLine_consensus_2pow122_workFactor_generatorRO
     {T' : Type*} [DecidableEq T']
     (B : VestaG) (hB : B ≠ 0)
@@ -195,7 +197,10 @@ theorem straightLine_consensus_2pow122_workFactor_generatorRO
   · exact profile.solverCost_at_2pow122
 
 /-- The final work-factor arithmetic used in prose: an explicit five-bit overhead takes the
-`2^122` adversary target exactly to the `2^127` DLOG-solver scale. -/
+`2^122` adversary target exactly to the `2^127` DLOG-solver scale.  Vesta's expected
+endomorphism-accelerated Pollard-rho cost is about `2^126.0`, one bit below that ceiling, so the
+hardness premise is genuinely restrictive only for adversary work up to about `2^121`: the
+five-bit overhead costs the guarantee one bit against the `2^122` target. -/
 theorem consensus_five_bit_overhead_at_2pow122 :
     32 * 2 ^ 122 = 2 ^ 127 :=
   ComputedStraightLineDeployedFSFamily.five_bit_overhead_at_2pow122

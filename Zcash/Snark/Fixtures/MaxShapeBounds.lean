@@ -141,10 +141,13 @@ representations (field operations linear in the representation lists), and a con
 field solves.
 
 `T = 2^122` cannot also be used as the combined finder's call budget.  At `k = 11`, the proved
-AFK expectation is between `2^161` and `2^162` calls.  Making the generic Markov tail at most
-`2^-86` would require `L+1` at least that expectation times `2^86`, a number between `2^247` and
-`2^248`.  These facts correct the old `t ≈ T` interpretation; they do not claim that such a large
-budget gives a useful concrete DLOG advantage.
+Attema–Fehr–Klooß-style (AFK) expectation is between `2^161` and `2^162` calls.  Making the
+generic Markov tail at most `2^-86` would require `L+1` at least that expectation times `2^86`, a
+number between `2^247` and `2^248`.  These facts correct the old `t ≈ T` interpretation; they do
+not claim that such a large budget gives a useful concrete DLOG advantage — a solver allowed
+either budget can Pollard-rho Vesta directly, so at the deployed parameters the recursive
+endpoint is a structural polynomial bound, not a concrete security margin.  The concrete margin
+is the straight-line endpoint's (`StraightLineMaxShapeBounds`).
 
 The combined finder, not the raw adversary, is the DLOG solver.  Its unconditional expected
 black-box call bound is `afkRunBound Q 11 + 3`: the AFK recursive bound plus the direct-coordinate

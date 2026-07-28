@@ -372,4 +372,223 @@ theorem multiopenCommitment_zeroData {shape : Shape} [Field F] [DecidableEq F]
   unfold multiopenCommitment
   exact msmZeroData_eval (assembledMsm_zeroData hdefault vk hfixed hperm ic hic ch)
 
+/-! ## The value side
+
+The commitment keystone above says the assembled MSM is the zero point.  Its twin says the
+assembled *value* is the zero scalar, from the same data: every claimed evaluation the queries
+carry is zero, so the `x₁` compression, the Lagrange interpolation at `x₃`, the `x₂` fold and the
+`x₄` collapse all stay at zero.  The straight-line IPA walk needs exactly this.
+-/
+
+/-- Every element of an all-zero replicate is zero. -/
+private theorem mem_replicate_zero [Zero F] (n : ℕ) {e : F} (he : e ∈ List.replicate n (0 : F)) :
+    e = 0 := (List.eq_of_mem_replicate he)
+
+/-- Compression by `x₁` preserves an all-zero evaluation vector. -/
+theorem compressSet_snd_zero [Field F] [Zero G] (x1 : F)
+    (setQueries : List (CommitmentRef k F G × List F)) (numPoints : ℕ)
+    (hzero : ∀ qc ∈ setQueries, ∀ e ∈ qc.2, e = 0) :
+    ∀ e ∈ (compressSet x1 setQueries numPoints).2, e = 0 := by
+  unfold compressSet
+  have hgen : ∀ (l : List (CommitmentRef k F G × List F)),
+      (∀ qc ∈ l, ∀ e ∈ qc.2, e = 0) → ∀ (st : Msm k F G × List F × F),
+      (∀ e ∈ st.2.1, e = 0) →
+      ∀ e ∈ (l.foldl (fun (st : Msm k F G × List F × F) qc =>
+        (accumulateCommitment st.2.2 qc.1 st.1,
+         (st.2.1.zip qc.2).map (fun e => e.1 + e.2 * st.2.2),
+         st.2.2 * x1)) st).2.1, e = 0 := by
+    intro l
+    induction l with
+    | nil => exact fun _ _st h => h
+    | cons qc l ih =>
+        intro hl st hst
+        rw [List.foldl_cons]
+        refine ih (fun qc' hqc' => hl qc' (List.mem_cons_of_mem _ hqc')) _ ?_
+        intro e he
+        obtain ⟨pair, hpair, rfl⟩ := List.mem_map.mp he
+        obtain ⟨h1, h2⟩ := List.of_mem_zip hpair
+        rw [hst _ h1, hl qc List.mem_cons_self _ h2]
+        ring
+  exact hgen _ hzero _ (fun e he => mem_replicate_zero numPoints he)
+
+/-- Interpolating all-zero claimed values gives the zero value. -/
+theorem lagrangeEval_zero [Field F] (x : F) (points evals : List F)
+    (hzero : ∀ e ∈ evals, e = 0) : lagrangeEval x points evals = 0 := by
+  unfold lagrangeEval
+  have hgetD : ∀ i : ℕ, evals.getD i 0 = 0 := by
+    intro i
+    rcases lt_or_ge i evals.length with hi | hi
+    · rw [List.getD_eq_getElem _ _ hi]
+      exact hzero _ (List.getElem_mem hi)
+    · exact List.getD_eq_default _ _ hi
+  have hgen : ∀ (l : List ℕ) (acc : F), acc = 0 →
+      l.foldl (fun acc i =>
+        acc + evals.getD i 0 *
+          (List.range points.length).foldl (fun p j =>
+            if j = i then p else p * (x - points.getD j 0) / (points.getD i 0 - points.getD j 0))
+            (1 : F)) acc = 0 := by
+    intro l
+    induction l with
+    | nil => exact fun _acc h => h
+    | cons i l ih =>
+        intro acc hacc
+        rw [List.foldl_cons]
+        exact ih _ (by rw [hacc, hgetD i]; ring)
+  exact hgen _ _ rfl
+
+/-- Dividing zero through a set's vanishing factors stays zero. -/
+private theorem foldl_div_zero [Field F] (x3 : F) :
+    ∀ (pts : List F) (e : F), e = 0 → pts.foldl (fun e point => e * (x3 - point)⁻¹) e = 0
+  | [], _e, he => he
+  | _pt :: pts, e, he => foldl_div_zero x3 pts _ (by rw [he]; ring)
+
+/-- The multiopen combined evaluation of all-zero point sets vanishes. -/
+theorem multiopenEval_zero [Field F] (x2 x3 : F) (sets : List (List F × List F × F))
+    (hzero : ∀ s ∈ sets, (∀ e ∈ s.2.1, e = 0) ∧ s.2.2 = 0) :
+    multiopenEval x2 x3 sets = 0 := by
+  unfold multiopenEval
+  have hgen : ∀ (l : List (List F × List F × F)),
+      (∀ s ∈ l, (∀ e ∈ s.2.1, e = 0) ∧ s.2.2 = 0) → ∀ acc : F, acc = 0 →
+      l.foldl (fun msmEval s =>
+        msmEval * x2 + s.1.foldl (fun e point => e * (x3 - point)⁻¹)
+          (s.2.2 - lagrangeEval x3 s.1 s.2.1)) acc = 0 := by
+    intro l
+    induction l with
+    | nil => exact fun _ acc h => h
+    | cons s l ih =>
+        intro hl acc hacc
+        rw [List.foldl_cons]
+        refine ih (fun s' hs' => hl s' (List.mem_cons_of_mem _ hs')) _ ?_
+        obtain ⟨hevals, hu⟩ := hl s List.mem_cons_self
+        rw [hacc, foldl_div_zero x3 s.1 _ (by rw [hu, lagrangeEval_zero x3 s.1 s.2.1 hevals]; ring)]
+        ring
+  exact hgen _ hzero _ rfl
+
+/-- The `x₄` collapse of a zero base value against zero claimed set values vanishes. -/
+theorem multiopenCombine_snd_zero [Field F] [Zero G] (x4 : F) (qPrime : G)
+    (qCommitments : List (Msm k F G)) (u : List F) (msmEval : F) (incoming : Msm k F G)
+    (hu : ∀ e ∈ u, e = 0) (hbase : msmEval = 0) :
+    (multiopenCombine x4 qPrime qCommitments u msmEval incoming).2 = 0 := by
+  unfold multiopenCombine
+  have hgen : ∀ (l : List (Msm k F G × F)), (∀ p ∈ l, p.2 = 0) →
+      ∀ (st : Msm k F G × F), st.2 = 0 →
+      (l.foldl (fun (st : Msm k F G × F) p =>
+        ((st.1.scale x4).add p.1, st.2 * x4 + p.2)) st).2 = 0 := by
+    intro l
+    induction l with
+    | nil => exact fun _ _st h => h
+    | cons p l ih =>
+        intro hl st hst
+        rw [List.foldl_cons]
+        refine ih (fun p' hp' => hl p' (List.mem_cons_of_mem _ hp')) _ ?_
+        show st.2 * x4 + p.2 = 0
+        rw [hst, hl p List.mem_cons_self]
+        ring
+  exact hgen _ (fun p hp => hu p.2 (List.of_mem_zip hp).2) _ hbase
+
+/-- Every evaluation routed into a point set is the claimed evaluation of one assembled query:
+the grouping reorders and deduplicates, but never invents a value. -/
+theorem constructIntermediateSets_sets_eval_provenance [DecidableEq F] [DecidableEq G]
+    (queries : List (VerifierQuery k F G))
+    {set : List (CommitmentRef k F G × List F)}
+    (hset : set ∈ (constructIntermediateSets queries).sets)
+    {qc : CommitmentRef k F G × List F} (hqc : qc ∈ set) {e : F} (he : e ∈ qc.2) :
+    ∃ q ∈ queries, e = q.eval := by
+  simp only [constructIntermediateSets] at hset
+  obtain ⟨si, _hsi, rfl⟩ := List.mem_map.mp hset
+  obtain ⟨cd, hcd, rfl⟩ := List.mem_map.mp hqc
+  have hcd' := List.mem_reverse.mp (List.mem_of_mem_filter hcd)
+  obtain ⟨c, _hc, rfl⟩ := List.mem_map.mp hcd'
+  obtain ⟨i, _hi, hsome⟩ := List.mem_filterMap.mp he
+  obtain ⟨q, hq, rfl⟩ := Option.map_eq_some_iff.mp hsome
+  exact ⟨q, List.mem_of_mem_filter (List.mem_of_find?_eq_some hq), rfl⟩
+
+/-- **The multiopen value of zero claimed data is the zero scalar, at every shape.**  If every
+assembled query claims a zero evaluation and the prover's claimed set quotient evaluations vanish,
+the whole value side collapses. -/
+theorem multiopenValue_of_zeroEvals {shape : Shape} [Field F] [DecidableEq F]
+    [DecidableEq G] [Inhabited G] [Zero G]
+    (vk : VerifyingKey shape F G) (ic : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) (ch : Challenges shape.k F)
+    (hevals : ∀ q ∈ assembleQueries vk ic ps ch, q.eval = 0)
+    (hu : ∀ i, ps.multiopenU i = 0) :
+    multiopenValue vk ic ps ch = 0 := by
+  unfold multiopenValue assembleOpening
+  refine multiopenCombine_snd_zero _ _ _ _ _ _ ?_ ?_
+  · intro e he
+    obtain ⟨i, rfl⟩ := List.mem_ofFn.mp he
+    exact hu i
+  · refine multiopenEval_zero _ _ _ ?_
+    intro s hs
+    obtain ⟨pu, hpu, rfl⟩ := List.mem_map.mp hs
+    obtain ⟨hp, hu'⟩ := List.of_mem_zip hpu
+    refine ⟨?_, ?_⟩
+    · intro e he
+      obtain ⟨-, hcomp⟩ := List.of_mem_zip hp
+      obtain ⟨cs, hcs, hcseq⟩ := List.mem_map.mp hcomp
+      obtain ⟨sp, hsp, rfl⟩ := List.mem_map.mp hcs
+      obtain ⟨hsets, -⟩ := List.of_mem_zip hsp
+      refine compressSet_snd_zero (k := shape.k) ch.x1 sp.1 sp.2.length ?_ e ?_
+      · intro qc hqcmem e' he'
+        obtain ⟨q, hq, rfl⟩ :=
+          constructIntermediateSets_sets_eval_provenance _ hsets hqcmem he'
+        exact hevals q hq
+      · rw [hcseq]; exact he
+    · obtain ⟨i, hi⟩ := List.mem_ofFn.mp hu'
+      show pu.2 = 0
+      rw [← hi]
+      exact hu i
+
+/-- The queries assembled from the zero proof string at an instance-free shape all claim zero. -/
+theorem assembleQueries_zeroEval {shape : Shape} [Field F] [Inhabited G] [Zero G]
+    (hproofs : shape.numProofs = 0)
+    (vk : VerifyingKey shape F G) (ic : Fin shape.numProofs → ℕ → G)
+    (ch : Challenges shape.k F) :
+    ∀ q ∈ assembleQueries vk ic (zeroProofString shape F G) ch, q.eval = 0 := by
+  intro q hq
+  simp only [assembleQueries] at hq
+  rcases List.mem_append.mp hq with hq | hq
+  · rcases List.mem_append.mp hq with hq | hq
+    · rcases List.mem_append.mp hq with hq | hq
+      · obtain ⟨lqs, hlqs, -⟩ := List.mem_flatten.mp hq
+        obtain ⟨p, -⟩ := List.mem_ofFn.mp hlqs
+        exact absurd p.isLt (by omega)
+      · obtain ⟨e, he, rfl⟩ := List.mem_map.mp hq
+        obtain ⟨-, hev⟩ := List.of_mem_zip he
+        obtain ⟨c, hc⟩ := List.mem_ofFn.mp hev
+        show e.2 = 0
+        rw [← hc]
+        rfl
+    · obtain ⟨ce, hce, rfl⟩ := List.mem_map.mp hq
+      obtain ⟨hmem, -⟩ := List.of_mem_zip hce
+      obtain ⟨c, hc⟩ := List.mem_ofFn.mp hmem
+      show ce.1.2 = 0
+      rw [← hc]
+      rfl
+  · have hexpr : allExpressions vk (zeroProofString shape F G) ch
+        (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1
+        (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.1
+        (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2 = [] := by
+      unfold allExpressions
+      refine List.eq_nil_of_length_eq_zero ?_
+      simp [hproofs]
+    rcases List.mem_cons.mp hq with h0 | hq
+    · rw [h0]
+      show expectedHEval _ _ _ = 0
+      rw [hexpr]
+      simp [expectedHEval]
+    · rcases List.mem_cons.mp hq with h0 | hq
+      · rw [h0]; rfl
+      · exact absurd hq List.not_mem_nil
+
+/-- **The multiopen value of the zero proof string vanishes at every instance-free shape.** -/
+theorem multiopenValue_zeroProofString {shape : Shape} [Field F] [DecidableEq F]
+    [DecidableEq G] [Inhabited G] [Zero G]
+    (hproofs : shape.numProofs = 0)
+    (vk : VerifyingKey shape F G) (ic : Fin shape.numProofs → ℕ → G)
+    (ch : Challenges shape.k F) :
+    multiopenValue vk ic (zeroProofString shape F G) ch = 0 :=
+  multiopenValue_of_zeroEvals vk ic _ ch (assembleQueries_zeroEval hproofs vk ic ch)
+    (fun _ => rfl)
+
 end Zcash.Snark

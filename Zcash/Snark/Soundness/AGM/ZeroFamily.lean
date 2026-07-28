@@ -340,25 +340,29 @@ theorem x4BatchCommitments_zeroData
   · simp only [x4BatchCommitments, if_neg hj]
     rfl
 
-/-- **All-zero deployed batches at any pair count**, against aggregates supplied as equations.
-The `x₄` batch is the all-zero power batch against zero column commitments; every per-set `x₁`
-batch is the all-zero power batch against zero member commitments, and its aggregate columns are
-the `x₄` batch's own (definitionally zero) coordinates. -/
+/-- **All-zero deployed batches at any pair count**, against aggregates, column commitments, and
+member commitments supplied as equations — so the construction instantiates directly at a wrapped
+run's own proof string.  The `x₄` batch is the all-zero power batch against zero column
+commitments; every per-set `x₁` batch is the all-zero power batch against zero member
+commitments, and its aggregate columns are the `x₄` batch's own (definitionally zero)
+coordinates. -/
 def zeroDeployedBatchesFull
-    (hfixed : ∀ i, vkS.fixedCommitment i = 0)
-    (hperm : ∀ i, vkS.permutationCommonCommitment i = 0)
+    (ic : Fin shape.numProofs → ℕ → VestaG) (ps : ProofString shape Fp VestaG)
     (ch : Challenges shape.k Fp)
+    (hcols : ∀ j, x4BatchCommitments (ursOfAugmentedBasis shape.k basis) rfl vkS
+      ic ps ch j = 0)
+    (hmembers : ∀ (i : ℕ) (m : Fin (deployedSetQueries vkS ic ps ch i).length),
+      deployedSetMemberCommitments (ursOfAugmentedBasis shape.k basis) rfl vkS
+        ic ps ch i m = 0)
     (agg : Fin (2 ^ shape.k) → Fp) (aggU aggW : Fp)
     (hagg : agg = fun _ => 0) (haggU : aggU = 0) (haggW : aggW = 0) :
     DeployedAlgebraicBatches (ursOfAugmentedBasis shape.k basis) rfl vkS
-      (fun _ _ => 0) (zeroProofString shape Fp VestaG) ch agg aggU aggW := by
+      ic ps ch agg aggU aggW := by
   refine DeployedAlgebraicBatches.mk
-    (zeroPowerBatchOf (ursOfAugmentedBasis shape.k basis) _
-      (x4BatchCommitments_zeroData basis vkS hfixed hperm ch)
+    (zeroPowerBatchOf (ursOfAugmentedBasis shape.k basis) _ hcols
       agg aggU aggW hagg haggU haggW ch.x4) ?_
   intro i hi
-  exact zeroPowerBatchOf (ursOfAugmentedBasis shape.k basis) _
-    (deployedSetMemberCommitments_zeroData basis vkS hfixed hperm ch i)
+  exact zeroPowerBatchOf (ursOfAugmentedBasis shape.k basis) _ (hmembers i)
     _ _ _ rfl rfl rfl ch.x1
 
 end Batches

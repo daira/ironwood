@@ -65,7 +65,10 @@ What is left of the floor is therefore *not* "there is no adversary experiment".
 
 * **Efficiency modeling.** The generic endpoints are parameterized by
   `ComputedAlgebraicFSFamily.ReductionEfficient R`, and their `_poly` forms discharge it
-  unconditionally via `reductionEfficient_poly` at `(8·Q+1)·10^k`.
+  unconditionally via `reductionEfficient_poly` at `R = (8·Q+1)·10^k` — the Attema–Fehr–Klooß-style
+  expected black-box call bound of the recursive extractor
+  (`recursiveAlgebraicFork_oracle_tape_sum_runs_le_poly`: expected adversary runs averaged over
+  oracle tables and extractor tapes, with `Q` the adversary's query bound and `k` the IPA depth).
   `reductionEfficient_of_forkSpread` remains as a conditional density-sensitive alternative.
   PPT-ness of the adversary family itself is external to Lean.
 * **The idealizations.** Blake2b as a random function, the conversion bias above, the AGM, plain-DL

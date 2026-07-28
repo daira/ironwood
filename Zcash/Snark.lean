@@ -110,5 +110,9 @@ import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
 import Zcash.Snark.Soundness.Composition.StraightLineWitness
 -- The zero-data keystone and the constant zero prover family, at any shape.
 import Zcash.Snark.Soundness.AGM.ZeroFamily
+-- The zero family's deployed root layer: six staged root events at any shape.
+import Zcash.Snark.Soundness.AGM.ZeroFamilyRoots
+-- The straight-line deployed interface, inhabited with live IPA rounds at any instance-free shape.
+import Zcash.Snark.Soundness.Composition.ZeroStraightLine
 -- The direct-coordinate postprocessing carries an explicit polynomial total-cost model.
 import Zcash.Snark.Soundness.Composition.DirectPathCost
