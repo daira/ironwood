@@ -504,6 +504,10 @@ theorem blinded_chain_eq {Q : Point Fp} (hQ : Q.Valid) (W : PallasGroup)
   rw [sum_preCoeffs_smul hb]
   abel
 
+/-- Every Pallas base-field value is below `2^255`: the field's order is. -/
+theorem fp_val_lt (x : Fp) : x.val < 2 ^ 255 :=
+  lt_trans (ZMod.val_lt x) (by norm_num [CompElliptic.Fields.Pasta.PALLAS_BASE_CARD])
+
 /-- The `ℕ`-level chunk coefficients: generator `t` receives `2^(n−1−j)` for every
 position `j` holding chunk value `t`, summed in `ℕ`. -/
 def natCoeffs (l : List ℕ) (t : ℕ) : ℕ :=

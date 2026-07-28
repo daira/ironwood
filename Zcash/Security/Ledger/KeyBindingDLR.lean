@@ -14,7 +14,7 @@ and no probability accounting: the reduction is deterministic.
 
 The shared machinery is `Bridge.relationOfChainPmEq` (`SinsemillaDLR`); this module
 instantiates it at the `CommitIvk` domain point and randomness base, unpacking the
-break's two openings into their defined hash chains and turning the equal-`ivk`
+break's two openings into their defined Sinsemilla chains and turning the equal-`ivk`
 extraction into the up-to-sign equation via the `Extract_ℙ` ±-fibre property.
 -/
 
@@ -34,10 +34,6 @@ the deployed `keyBinding` interface. -/
 def commitIvkRpt : PallasGroup :=
   PallasGroup.ofPoint Ecc.MulFixed.Certs.commitIvkR.point
     (Or.inl Ecc.MulFixed.Certs.commitIvkR.onCurve)
-
-/-- Every `Fp` value is below `2^255`: the Pallas base field's order is. -/
-private theorem fp_val_lt (x : Fp) : x.val < 2 ^ 255 :=
-  lt_trans (ZMod.val_lt x) (by norm_num [CompElliptic.Fields.Pasta.PALLAS_BASE_CARD])
 
 /-- A defined `commitIvkHash` hit names a defined, valid `hashToPoint` chain. -/
 theorem commitIvkHash_isSome {a n : Fp} {g : PallasGroup}
@@ -66,7 +62,8 @@ theorem commitIvkHash_get_spec {a n : Fp} {g : PallasGroup}
   · exact absurd hop (by simp)
 
 /-- **The deployed key-binding break computes a discrete-log relation.** Two valid
-`Commit^ivk` openings of the same `ivk` disagreeing on their opening projection land in
+`Commit^ivk` openings of the same `ivk` disagreeing on their opening projection: the
+reduction unpacks them into their defined Sinsemilla chains and blinding scalars and applies
 the chain-collision reducer at the `CommitIvk` domain point and randomness base.
 The reduction is hypothesis-free: the chunk-coefficient
 injectivity is `preCoeffs_inj` (spec Theorem 5.4.3's binary-expansion core, proven)
