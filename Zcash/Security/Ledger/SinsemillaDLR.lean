@@ -482,4 +482,196 @@ theorem classifyRelation_site {wit : ActionData} {dlb : ActionDLBreak}
   · exact absurd h (by simp)
   · next abr heq => exact ⟨abr, heq, by injection h with h'; rw [← h']⟩
 
+/-! ## The chain-collision reducer
+
+Shared by every arm whose break compares two blinded Sinsemilla outputs: the
+key-binding break compares two `Commit^ivk` openings, the note-commitment break two
+note commitments, and a Merkle collision two compressions (with zero blinding). Two
+defined chains at the same domain point whose blinded outputs agree up to sign
+compute a relation among the table, the domain point, and the blinding base. -/
+
+/-- A defined, blinded Sinsemilla chain as the explicit `(table, Q, W)`-combination
+determined by its chunk list. -/
+theorem blinded_chain_eq {Q : Point Fp} (hQ : Q.Valid) (W : PallasGroup)
+    {l : List ℕ} (hb : ∀ m ∈ l, m < 2 ^ K)
+    {p : Point Fp} (h : hashToPoint orchardGenerators.S Q l = some p) (hv : p.Valid)
+    (r : Fq) :
+    PallasGroup.ofPoint p hv + r • W =
+      commitGen pallasS (preCoeffs l)
+        + ((2 : Fq) ^ l.length) • PallasGroup.ofPoint Q hQ + r • W := by
+  rw [ofPoint_hashToPoint hQ hb h hv]
+  simp only [← two_pow_smul_eq_nsmul, commitGen]
+  rw [sum_preCoeffs_smul hb]
+  abel
+
+/-- Every Pallas base-field value is below `2^255`: the field's order is. -/
+theorem fp_val_lt (x : Fp) : x.val < 2 ^ 255 :=
+  lt_trans (ZMod.val_lt x) (by norm_num [CompElliptic.Fields.Pasta.PALLAS_BASE_CARD])
+
+/-- The `ℕ`-level chunk coefficients: generator `t` receives `2^(n−1−j)` for every
+position `j` holding chunk value `t`, summed in `ℕ`. -/
+def natCoeffs (l : List ℕ) (t : ℕ) : ℕ :=
+  ∑ j ∈ Finset.range l.length,
+    if l.getD j 0 = t then 2 ^ (l.length - 1 - j) else 0
+
+/-- The scalar-field coefficients are the `ℕ`-level coefficients, cast. -/
+theorem preCoeffs_eq_natCoeffs (l : List ℕ) (t : Fin (2 ^ K)) :
+    preCoeffs l t = ((natCoeffs l t.1 : ℕ) : Fq) := by
+  simp [preCoeffs, natCoeffs, apply_ite (Nat.cast : ℕ → Fq)]
+
+/-- Head decomposition of the `ℕ`-level coefficients. -/
+theorem natCoeffs_cons (c : ℕ) (rest : List ℕ) (t : ℕ) :
+    natCoeffs (c :: rest) t
+      = (if c = t then 2 ^ rest.length else 0) + natCoeffs rest t := by
+  simp only [natCoeffs, List.length_cons, Finset.sum_range_succ', List.getD_cons_succ,
+    List.getD_cons_zero, Nat.add_sub_cancel, Nat.sub_zero]
+  rw [Nat.add_comm]
+  congr 1
+  apply Finset.sum_congr rfl
+  intro j hj
+  have he : rest.length - (j + 1) = rest.length - 1 - j := by omega
+  rw [he]
+
+/-- The `ℕ`-level coefficients stay below `2^n`: the exponents are distinct. -/
+theorem natCoeffs_lt (l : List ℕ) (t : ℕ) : natCoeffs l t < 2 ^ l.length := by
+  induction l with
+  | nil => simp [natCoeffs]
+  | cons c rest ih =>
+    rw [natCoeffs_cons, List.length_cons, pow_succ]
+    split <;> omega
+
+/-- **The `ℕ`-level coefficients determine the list** (same lengths): the head's
+`2^n` term dominates the tail's `≤ 2^n − 1`, forcing head equality, and the tails
+follow by cancellation. -/
+theorem natCoeffs_inj : ∀ {l₁ l₂ : List ℕ}, l₁.length = l₂.length →
+    (∀ t, natCoeffs l₁ t = natCoeffs l₂ t) → l₁ = l₂ := by
+  intro l₁
+  induction l₁ with
+  | nil =>
+    intro l₂ hlen _
+    exact (List.length_eq_zero_iff.mp hlen.symm).symm ▸ rfl
+  | cons c₁ rest₁ ih =>
+    intro l₂ hlen h
+    obtain ⟨c₂, rest₂, rfl⟩ : ∃ c₂ rest₂, l₂ = c₂ :: rest₂ := by
+      cases l₂ with
+      | nil => simp at hlen
+      | cons c₂ rest₂ => exact ⟨c₂, rest₂, rfl⟩
+    have hrl : rest₁.length = rest₂.length := by simpa using hlen
+    have hc : c₂ = c₁ := by
+      by_contra hne
+      have h₁ := h c₁
+      rw [natCoeffs_cons, natCoeffs_cons, if_pos rfl, if_neg hne] at h₁
+      have hb₂ := natCoeffs_lt rest₂ c₁
+      rw [← hrl] at hb₂
+      omega
+    subst hc
+    have htail : ∀ t, natCoeffs rest₁ t = natCoeffs rest₂ t := by
+      intro t
+      have ht := h t
+      rw [natCoeffs_cons, natCoeffs_cons, hrl] at ht
+      exact Nat.add_left_cancel ht
+    rw [ih hrl htail]
+
+/-- **The chunk coefficients determine the list** — the binary-expansion core of spec
+Theorem 5.4.3, over the scalar field: for chunk lists of equal length at most 253, the
+`ℕ`-level coefficient sums stay below the field order, so the cast is faithful and
+`natCoeffs_inj` applies. -/
+theorem preCoeffs_inj {l₁ l₂ : List ℕ}
+    (hb₁ : ∀ m ∈ l₁, m < 2 ^ K) (hb₂ : ∀ m ∈ l₂, m < 2 ^ K)
+    (hlen : l₁.length = l₂.length) (hn : l₁.length ≤ 253)
+    (h : preCoeffs l₁ = preCoeffs l₂) : l₁ = l₂ := by
+  refine natCoeffs_inj hlen fun t => ?_
+  by_cases ht : t < 2 ^ K
+  · have hcast := congrFun h ⟨t, ht⟩
+    rw [preCoeffs_eq_natCoeffs, preCoeffs_eq_natCoeffs] at hcast
+    have hlt : ∀ (l : List ℕ), l.length ≤ 253 →
+        natCoeffs l t < CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD := by
+      intro l hl
+      calc natCoeffs l t < 2 ^ l.length := natCoeffs_lt l t
+        _ ≤ 2 ^ 253 := Nat.pow_le_pow_right (by norm_num) hl
+        _ < _ := by norm_num [CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD]
+    have hv := congrArg ZMod.val hcast
+    rwa [ZMod.val_natCast_of_lt (hlt l₁ hn), ZMod.val_natCast_of_lt (hlt l₂ (hlen ▸ hn))]
+      at hv
+  · -- Out-of-table values never occur in bounded lists, so both coefficients vanish.
+    have hz : ∀ (l : List ℕ), (∀ m ∈ l, m < 2 ^ K) → natCoeffs l t = 0 := by
+      intro l hbl
+      refine Finset.sum_eq_zero fun j hj => ?_
+      have hjl : j < l.length := Finset.mem_range.mp hj
+      have hmem : l.getD j 0 ∈ l := by
+        rw [List.getD_eq_getElem _ _ hjl]
+        exact List.getElem_mem _
+      rw [if_neg]
+      intro hEq
+      exact ht (hEq ▸ hbl _ hmem)
+    rw [hz l₁ hb₁, hz l₂ hb₂]
+
+/-- **The chain-collision reducer.** Two defined Sinsemilla chains at the same domain
+point, blinded by `r₁ • W` and `r₂ • W`, whose outputs agree up to sign, compute a
+nontrivial relation among the table, the domain point, and `W` — provided the pair
+`(chunk list, blinding scalar)` differs. The equality case rests on
+`preCoeffs_inj` — chunk lists of length at most 253 are determined by their
+coefficients, and every deployed Sinsemilla message is far shorter. The negation case is
+unconditional: the domain-point coefficients `2^n` and `-2^n` cannot agree because
+`2^(n+1) ≠ 0` in the odd-order scalar field. -/
+def relationOfChainPmEq {Q : Point Fp} (hQ : Q.Valid) {W : PallasGroup}
+    {l₁ l₂ : List ℕ} (hb₁ : ∀ m ∈ l₁, m < 2 ^ K) (hb₂ : ∀ m ∈ l₂, m < 2 ^ K)
+    (hlen : l₁.length = l₂.length)
+    {p₁ p₂ : Point Fp}
+    (h₁ : hashToPoint orchardGenerators.S Q l₁ = some p₁) (hv₁ : p₁.Valid)
+    (h₂ : hashToPoint orchardGenerators.S Q l₂ = some p₂) (hv₂ : p₂.Valid)
+    {r₁ r₂ : Fq}
+    (heq : PallasGroup.ofPoint p₁ hv₁ + r₁ • W = PallasGroup.ofPoint p₂ hv₂ + r₂ • W ∨
+      PallasGroup.ofPoint p₁ hv₁ + r₁ • W = -(PallasGroup.ofPoint p₂ hv₂ + r₂ • W))
+    (hn : l₁.length ≤ 253)
+    (hne : ¬(l₁ = l₂ ∧ r₁ = r₂)) :
+    NontrivialRelation (F := Fq) pallasS (PallasGroup.ofPoint Q hQ) W :=
+  if hplus : PallasGroup.ofPoint p₁ hv₁ + r₁ • W = PallasGroup.ofPoint p₂ hv₂ + r₂ • W then
+    NontrivialRelation.ofCombinationCollision
+      (a := preCoeffs l₁) (a' := preCoeffs l₂)
+      (α := (2 : Fq) ^ l₁.length) (α' := (2 : Fq) ^ l₂.length)
+      (β := r₁) (β' := r₂)
+      (by
+        have h := hplus
+        rw [blinded_chain_eq hQ W hb₁ h₁ hv₁ r₁,
+          blinded_chain_eq hQ W hb₂ h₂ hv₂ r₂] at h
+        exact h)
+      (by rintro ⟨ha, -, hr⟩; exact hne ⟨preCoeffs_inj hb₁ hb₂ hlen hn ha, hr⟩)
+  else
+    NontrivialRelation.ofCombinationCollision
+      (a := preCoeffs l₁) (a' := -(preCoeffs l₂))
+      (α := (2 : Fq) ^ l₁.length) (α' := -((2 : Fq) ^ l₂.length))
+      (β := r₁) (β' := -r₂)
+      (by
+        have h := heq.resolve_left hplus
+        rw [blinded_chain_eq hQ W hb₁ h₁ hv₁ r₁,
+          blinded_chain_eq hQ W hb₂ h₂ hv₂ r₂] at h
+        rw [h, commitGen_neg, neg_smul, neg_smul]
+        abel)
+      (by
+        rintro ⟨-, hα, -⟩
+        rw [hlen] at hα
+        have h0 : (2 : Fq) ^ (l₂.length + 1) = 0 := by
+          rw [pow_succ, mul_two]
+          exact add_eq_zero_iff_eq_neg.mpr hα
+        exact two_pow_ne_zero _ h0)
+
+
+/-- With zero blinding scalars, the reducer's randomness-base coefficient is zero. -/
+theorem relationOfChainPmEq_zero_beta {Q : Point Fp} (hQ : Q.Valid) {W : PallasGroup}
+    {l₁ l₂ : List ℕ} (hb₁ : ∀ m ∈ l₁, m < 2 ^ K) (hb₂ : ∀ m ∈ l₂, m < 2 ^ K)
+    (hlen : l₁.length = l₂.length)
+    {p₁ p₂ : Point Fp}
+    (h₁ : hashToPoint orchardGenerators.S Q l₁ = some p₁) (hv₁ : p₁.Valid)
+    (h₂ : hashToPoint orchardGenerators.S Q l₂ = some p₂) (hv₂ : p₂.Valid)
+    (heq : PallasGroup.ofPoint p₁ hv₁ + (0 : Fq) • W
+        = PallasGroup.ofPoint p₂ hv₂ + (0 : Fq) • W ∨
+      PallasGroup.ofPoint p₁ hv₁ + (0 : Fq) • W
+        = -(PallasGroup.ofPoint p₂ hv₂ + (0 : Fq) • W))
+    (hn : l₁.length ≤ 253) (hne : ¬(l₁ = l₂ ∧ (0 : Fq) = 0)) :
+    (relationOfChainPmEq hQ hb₁ hb₂ hlen h₁ hv₁ h₂ hv₂ heq hn hne).β = 0 := by
+  unfold relationOfChainPmEq
+  split <;> simp [Zcash.NontrivialRelation.ofCombinationCollision]
+
+
 end Zcash.Security.Ledger.Bridge

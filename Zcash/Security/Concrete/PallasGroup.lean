@@ -208,6 +208,40 @@ theorem embedFp_injective : Function.Injective embedFp := by
   apply ZMod.val_injective PALLAS_BASE_CARD
   simpa only [embedFp_val] using congrArg ZMod.val hxy
 
+/-- Equal `x`-coordinate and equal `y`-parity pin the group element. Two elements
+with equal `x`-coordinates are equal up to sign, so their `y`-coordinates agree up
+to negation; the parities of `y` and `-y` differ for `y ≠ 0` in the odd-order base
+field; and `y = 0` occurs only at the identity encoding, which is alone in its
+fibre. -/
+theorem eq_of_toPoint_x_eq_of_y_parity_eq {P Q : PallasGroup}
+    (hx : (toPoint P).x = (toPoint Q).x)
+    (hy : (toPoint P).y.val % 2 = (toPoint Q).y.val % 2) : P = Q := by
+  rcases (toPoint_x_eq_iff P Q).mp hx with h | h
+  · exact h
+  · subst h
+    by_cases hy0 : (toPoint Q).y = 0
+    · have hQ0 : toPoint Q = 0 := by
+        rcases toPoint_valid Q with hoc | hz
+        · exfalso
+          have h3 : (toPoint Q).x ^ 3 = -(5 : Zcash.Circuits.Fp) := by
+            have h := hoc
+            rw [Point.OnCurve, hy0] at h
+            simp only [pallasB] at h
+            linear_combination -h
+          exact CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube ⟨_, h3⟩
+        · exact hz
+      have hQ : Q = 0 := pmfib_toPoint_injective (hQ0.trans toPoint_zero.symm)
+      rw [hQ, neg_zero]
+    · exfalso
+      haveI : NeZero (toPoint Q).y := ⟨hy0⟩
+      rw [show ((-Q).toPoint.y) = -(Q.toPoint.y) from rfl,
+        ZMod.val_neg_of_ne_zero _] at hy
+      have hlt := ZMod.val_lt (toPoint Q).y
+      have hpos : 0 < (toPoint Q).y.val := ZMod.val_pos.mpr hy0
+      have hodd : CompElliptic.Fields.Pasta.PALLAS_BASE_CARD % 2 = 1 := by
+        norm_num [CompElliptic.Fields.Pasta.PALLAS_BASE_CARD]
+      omega
+
 end PallasGroup
 
 end Zcash.Security.Concrete
