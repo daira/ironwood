@@ -1,6 +1,7 @@
 import Zcash.Circuits.Integration.StraightLineActionEvent
 import Zcash.Snark.Soundness.Composition.SequentialLift
 import Zcash.Snark.Soundness.Composition.ChallengeReads
+import Zcash.Snark.Soundness.Composition.SemanticChallengeRemainder
 
 /-!
 # Pricing the Action semantic failure events from sequential cuts
@@ -378,6 +379,87 @@ theorem actionXYFailureEvent_prob_le {T : Type*} [DecidableEq T]
   refine le_trans (measure_union_le _ _) (add_le_add ?_ ?_)
   · exact cutX.surfaceEvent_prob_le query _ hbadX
   · exact cutY.surfaceEvent_prob_le query _ hbadY
+
+/-! ## Per-state measures
+
+Each surface's `hbad` premise is a counting statement at one state.  The counts are the staged
+remainder's: the row-by-arity budget for `θ`, cell counts for the permutation sets, `(u + 1)`
+polynomials of the lookup sets, and `n` times the constraint count for `y`.  The `x` set is one
+Schwartz–Zippel exclusion, priced by `uniformChallenge_szBadSet` at its fold degree.
+-/
+
+/-- The per-state `θ` measure: the row-by-arity budget over the field size. -/
+theorem actionThetaBadSet_measure_le
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (poly : CommitmentId → Polynomial Fp) :
+    (PMF.uniformOfFintype Fp).toOuterMeasure
+      ↑(TopLevelLookupCoherence.allTopLevelLookupThetaBadSet actionCircuit pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) poly) ≤
+      (TopLevelLookupCoherence.topLevelLookupThetaBudget actionCircuit pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) poly : ℝ≥0∞) /
+        (Fintype.card Fp : ℝ≥0∞) :=
+  TopLevelLookupCoherence.uniformChallenge_allTopLevelLookupThetaBadSet
+    TopLevelLookupCoherence.ofTopLevel poly
+
+/-- The per-state `β` measure: permutation cells plus lookup pair counts. -/
+theorem actionBetaBadSets_measure_le
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (theta : Fp) (poly : CommitmentId → Polynomial Fp) :
+    (PMF.uniformOfFintype Fp).toOuterMeasure
+      (↑(allResolverPermutationBetaBadSet (vkAt pp basis) poly actionActiveRows) ∪
+        ↑(allResolverLookupBetaBadSet (vkAt pp basis) (semanticChRecord theta 0) poly
+          ((vkAt pp basis).n - (vkAt pp basis).blindingFactors - 2))) ≤
+      ((∑ p : Fin (pp.mergeDerived actionCircuit).numProofs,
+        (Fintype.card (ResolverPermutationCell (vkAt pp basis) poly p actionActiveRows) + 1) *
+          Fintype.card (ResolverPermutationCell (vkAt pp basis) poly p actionActiveRows) :
+            ℕ) : ℝ≥0∞) / Fintype.card Fp +
+      (((pp.mergeDerived actionCircuit).numProofs * (pp.mergeDerived actionCircuit).numLookups *
+        (((vkAt pp basis).n - (vkAt pp basis).blindingFactors - 2 + 2) *
+            ((vkAt pp basis).n - (vkAt pp basis).blindingFactors - 2 + 1) +
+          ((vkAt pp basis).n - (vkAt pp basis).blindingFactors - 2 + 1)) : ℕ) : ℝ≥0∞) /
+        Fintype.card Fp :=
+  le_trans (measure_union_le _ _)
+    (add_le_add
+      (allResolverPermutationBetaBadSet_measure_le (vkAt pp basis) poly actionActiveRows)
+      (allResolverLookupBetaBadSet_measure_le (vkAt pp basis) (semanticChRecord theta 0) poly
+        ((vkAt pp basis).n - (vkAt pp basis).blindingFactors - 2)))
+
+/-- The per-state `γ` measure: doubled permutation cells plus lookup pair counts. -/
+theorem actionGammaBadSets_measure_le
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (theta beta : Fp) (poly : CommitmentId → Polynomial Fp) :
+    (PMF.uniformOfFintype Fp).toOuterMeasure
+      (↑(allResolverPermutationGammaBadSet (vkAt pp basis)
+          (semanticChRecord theta beta) poly actionActiveRows) ∪
+        ↑(allResolverLookupGammaBadSet (vkAt pp basis) (semanticChRecord theta beta) poly
+          ((vkAt pp basis).n - (vkAt pp basis).blindingFactors - 2))) ≤
+      ((∑ p : Fin (pp.mergeDerived actionCircuit).numProofs,
+        2 * Fintype.card (ResolverPermutationCell (vkAt pp basis) poly p actionActiveRows) :
+          ℕ) : ℝ≥0∞) / Fintype.card Fp +
+      (((pp.mergeDerived actionCircuit).numProofs * (pp.mergeDerived actionCircuit).numLookups *
+        (2 * ((vkAt pp basis).n - (vkAt pp basis).blindingFactors - 2 + 1)) : ℕ) : ℝ≥0∞) /
+        Fintype.card Fp :=
+  le_trans (measure_union_le _ _)
+    (add_le_add
+      (allResolverPermutationGammaBadSet_measure_le (vkAt pp basis)
+        (semanticChRecord theta beta) poly actionActiveRows)
+      (allResolverLookupGammaBadSet_measure_le (vkAt pp basis) (semanticChRecord theta beta)
+        poly ((vkAt pp basis).n - (vkAt pp basis).blindingFactors - 2)))
+
+/-- The per-state `y` measure: `n` times the constraint count over the field size. -/
+theorem actionYBadSet_measure_le
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (constraints : List (Polynomial Fp)) (hn : (vkAt pp basis).n ≠ 0) :
+    (PMF.uniformOfFintype Fp).toOuterMeasure
+      (⋃ j, ↑(szBadSet (foldSplitWitness constraints (vkAt pp basis).n j))) ≤
+      (((vkAt pp basis).n * constraints.length : ℕ) : ℝ≥0∞) /
+        (Fintype.card Fp : ℝ≥0∞) := by
+  have hset : (⋃ j, ↑(szBadSet (foldSplitWitness constraints (vkAt pp basis).n j))) =
+      {y : Fp | ∃ j, y ∈ szBadSet (foldSplitWitness constraints (vkAt pp basis).n j)} := by
+    ext y
+    simp [Set.mem_iUnion]
+  rw [hset]
+  exact goodY_failure_measure_le constraints hn
 
 end ActionTerminal
 
