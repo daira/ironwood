@@ -122,7 +122,8 @@ theorem deployedConstraintOutcomeOfRoot_relation_eq_online
   apply deployedOnlineConstraintOutcome_relation_eq_online family basis pnu root.batchWitness
     (family.outcome_source basis coins.1 root.batchWitness root.outcome_eq)
     root.decoded root.batches_eq checks (static.adviceLength basis) (static.instanceLength basis)
-    (static.fixedLength basis) (static.omegaOrder basis) (static.characteristic basis) hxgood relation
+    (static.fixedLength basis) (static.omegaOrder basis) (static.characteristic basis) hxgood
+    relation
   simpa [deployedConstraintOutcomeOfRoot, pnu, checks] using hout
 
 /-- Proposition that the actual root-decode data yields a concrete constraint witness.  The
@@ -252,11 +253,10 @@ Inhabited twice.  `Composition.StraightLineWitness` does it at the degenerate wi
 metadata, layouts and domain — so the six staged root events run against captured query layouts
 and the staged IPA trace carries eleven live rounds rather than quantifying over `Fin 0`.
 
-What the captured instantiation still does not supply is a prover with sub-proofs.  Its columns
-are all zero, which no instance-bearing Orchard constraint system accepts, so the shape it is
-instantiated at is instance-free; with sub-proofs present the pre-`x` constraint difference is a
-nonzero polynomial and a root decode's existence would hinge on `expectedHEval = 0`, an equation
-in the very `x` answer this event prices.  Inhabiting that layer needs an honest prover.
+The total event of issue #127 removed this interface's old decode guard, so the zero prover
+also inhabits it at the full captured shape (`Fixtures.MultiAction.CapturedZeroFamily`): with
+sub-proofs the pre-`x` difference is a nonzero polynomial, and the stage prices its root set
+from the four folding squeezes alone.
 -/
 structure ComputedDeployedConstraintFSFamily (shape : Shape)
     extends ComputedDeployedRootFSFamily shape where

@@ -16,11 +16,11 @@ constraint layer: with no sub-proofs the folded constraint list is empty and the
 pieces have zero coordinates, so the pre-`x` constraint difference is the zero polynomial and the
 constraint-`x` root set is empty on every table.
 
-The instance-free hypothesis is confined to that one layer.  The staged IPA trace also comes in a
-constant-walk form with the multiopen value free (`zeroConstStraightLineIpaTrace` below), so at a
-shape with sub-proofs the zero prover still carries everything except the constraint-`x` stage —
-`Fixtures.MultiAction.CapturedZeroFamily` instantiates those live layers at the full captured
-shape and records why that last stage is exactly the honest-prover boundary.
+The instance-free hypothesis is a simplification, not a boundary.  With issue #127's total
+constraint-`x` event, `zeroConstStraightLineDeployedFamily` below discharges every obligation at
+any shape: the constant-walk IPA trace leaves the multiopen value free, and the constraint-`x`
+stage prices the explicit zero-data difference from the four folding squeezes alone.
+`Fixtures.MultiAction.CapturedZeroFamily` instantiates it with both sub-proofs live.
 -/
 
 namespace Zcash.Snark
@@ -116,6 +116,152 @@ noncomputable def zeroConstraintXTrace (hproofs : shape.numProofs = 0) :
   agrees := fun basis O => by
     rw [OracleComp.run_pure, zeroConstraintXBadSet_empty vkS hfixed hperm hproofs basis O]
   fresh := fun _basis _O => List.not_mem_nil
+
+/-! ### The constraint-`x` stage without the instance-free hypothesis
+
+With sub-proofs the zero prover's difference does not vanish, but the total event needs no
+witness: the stage computes the explicit zero-data difference from the `θ`, `β`, `γ`, `y`
+squeezes alone — indices `0`–`3`, all before the `x` prefix.
+-/
+
+/-- The zero prover's constraint difference, as an explicit function of the four folding
+challenges: every feed reads the all-zero source, so only the key's own polynomials and the
+challenge scalars remain. -/
+noncomputable def zeroExplicitConstraintDifference (ν : Fin 11 → Fp) : Polynomial Fp :=
+  committedPreXConstraintDifference (fun _ => 0) (fun _ => 0)
+    vkS (fun _ _ => 0) (zeroProofString shape Fp VestaG) (chRecord ν (fun _ => 0))
+
+/-- The total difference of the zero family is the explicit zero-data difference at the run's
+pre-IPA reads.  No instance-free hypothesis. -/
+theorem zeroConstraintDifference_explicit
+    (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
+    (coins : (zeroDeployedRootFamily vkS hfixed hperm).toFamily.Coins) :
+    deployedConstraintDifferencePreX (zeroDeployedRootFamily vkS hfixed hperm) basis coins =
+      zeroExplicitConstraintDifference vkS
+        (wrappedPreIpaReads
+          (deployedRootRunOutput (zeroDeployedRootFamily vkS hfixed hperm) basis coins)) := by
+  have hsource : ∀ ap ∈ deployedConstraintSource (zeroDeployedRootFamily vkS hfixed hperm) basis
+      (deployedRootRunOutput (zeroDeployedRootFamily vkS hfixed hperm) basis coins),
+      ap = zeroAlgebraicPoint basis := by
+    intro ap hap
+    refine zeroAlgebraicProofString_source_eq basis ?_
+    have hrun : (deployedRootRunOutput (zeroDeployedRootFamily vkS hfixed hperm) basis
+        coins).1 = zeroWfProof basis vkS hfixed hperm :=
+      zeroFamily_wrapped_run basis vkS hfixed hperm coins.1
+    unfold deployedConstraintSource at hap
+    rw [hrun] at hap
+    exact hap
+  have hpoint : deployedConstraintPointPolynomial (zeroDeployedRootFamily vkS hfixed hperm)
+      basis (deployedRootRunOutput (zeroDeployedRootFamily vkS hfixed hperm) basis coins) =
+      fun _ => 0 := by
+    funext P
+    unfold deployedConstraintPointPolynomial onlinePointPolynomial
+    rw [onlinePointCoordinates_zeroSource basis hsource]
+    show coeffsToPoly (fun _ => (0 : Fp)) = 0
+    simp [coeffsToPoly]
+  have hpieces : (fun i => coeffsToPoly (deployedConstraintPieceCoordinates
+      (zeroDeployedRootFamily vkS hfixed hperm) basis
+      (deployedRootRunOutput (zeroDeployedRootFamily vkS hfixed hperm) basis coins) i).1) =
+      fun _ => (0 : Polynomial Fp) := by
+    funext i
+    unfold deployedConstraintPieceCoordinates
+    rw [onlinePointCoordinates_zeroSource basis hsource]
+    show coeffsToPoly (fun _ => (0 : Fp)) = 0
+    simp [coeffsToPoly]
+  have hps : (deployedRootRunOutput (zeroDeployedRootFamily vkS hfixed hperm) basis
+      coins).1.proof.1 = zeroProofString shape Fp VestaG := by
+    show ((wrappedAdversary (zeroOnlineMemberFamily vkS hfixed hperm).toFamily basis).run
+      coins.1).1.proof.1 = _
+    rw [zeroFamily_wrapped_run basis vkS hfixed hperm coins.1]
+    rfl
+  simp only [deployedConstraintDifferencePreX, zeroExplicitConstraintDifference]
+  rw [hpoint, hpieces, hps]
+  rfl
+
+/-- The explicit difference reads only the four folding challenges. -/
+theorem zeroExplicitConstraintDifference_reads (ν ν' : Fin 11 → Fp)
+    (h0 : ν 0 = ν' 0) (h1 : ν 1 = ν' 1) (h2 : ν 2 = ν' 2) (h3 : ν 3 = ν' 3) :
+    zeroExplicitConstraintDifference vkS ν = zeroExplicitConstraintDifference vkS ν' := by
+  unfold zeroExplicitConstraintDifference committedPreXConstraintDifference
+  simp only [chRecord]
+  rw [h0, h1, h2, h3]
+
+/-- The constraint-`x` stage at any shape: read the four folding squeezes and return the explicit
+difference's root set.  The `x` prefix — index `4` — is never queried. -/
+noncomputable def zeroConstConstraintXStage (basis : AugmentedIndex (2 ^ shape.k) → VestaG) :
+    OracleComp
+      (BTranscript Fp VestaG
+        (preIpaLen shape (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init.length 10 +
+          3 * shape.k)) Fp (Set Fp) :=
+  (OracleComp.readFin (F := Fp)
+    (fun i : Fin 4 =>
+      algebraicFullPrefixesPre (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init
+        (zeroWfProof basis vkS hfixed hperm) (i.castLE (by omega)))).bind
+    fun ν₄ => .pure ↑(szBadSet (zeroExplicitConstraintDifference vkS
+      (fun i => if h : (i : ℕ) < 4 then ν₄ ⟨i, h⟩ else 0)))
+
+/-- The staged set is the run's actual total bad set. -/
+theorem zeroConstConstraintXStage_agrees (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen shape (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init.length 10 +
+        3 * shape.k) → Fp) :
+    (zeroConstConstraintXStage vkS hfixed hperm basis).run O =
+      deployedConstraintXBadSet (zeroDeployedRootFamily vkS hfixed hperm) basis O := by
+  rw [zeroConstConstraintXStage, OracleComp.run_bind, OracleComp.run_readFin,
+    OracleComp.run_pure]
+  ext x
+  constructor
+  · intro hx
+    refine ⟨Classical.arbitrary _, ?_⟩
+    rw [zeroConstraintDifference_explicit vkS hfixed hperm basis]
+    rw [zeroExplicitConstraintDifference_reads vkS
+      (fun i => wrappedPreIpaReads (deployedRootRunOutput
+        (zeroDeployedRootFamily vkS hfixed hperm) basis (O, Classical.arbitrary _)) i)
+      (fun i => if h : (i : ℕ) < 4 then O (algebraicFullPrefixesPre
+        (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init
+        (zeroWfProof basis vkS hfixed hperm) ((⟨i, h⟩ : Fin 4).castLE (by omega))) else 0)]
+    · exact hx
+    all_goals
+      exact congrFun (zeroFamily_reads_eq basis vkS hfixed hperm O) _
+  · rintro ⟨tape, hx⟩
+    rw [zeroConstraintDifference_explicit vkS hfixed hperm basis] at hx
+    rw [zeroExplicitConstraintDifference_reads vkS
+      (fun i => if h : (i : ℕ) < 4 then O (algebraicFullPrefixesPre
+        (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init
+        (zeroWfProof basis vkS hfixed hperm) ((⟨i, h⟩ : Fin 4).castLE (by omega))) else 0)
+      (fun i => wrappedPreIpaReads (deployedRootRunOutput
+        (zeroDeployedRootFamily vkS hfixed hperm) basis (O, tape)) i)]
+    · exact hx
+    all_goals
+      exact (congrFun (zeroFamily_reads_eq basis vkS hfixed hperm O) _).symm
+
+/-- The stage queries only the four folding prefixes, never the `x` prefix. -/
+theorem zeroConstConstraintXStage_fresh (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen shape (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init.length 10 +
+        3 * shape.k) → Fp) :
+    algebraicFullPrefixesPre (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init
+        (((zeroDeployedRootFamily vkS hfixed hperm).toFamily.adversary basis).run O) 4 ∉
+      (zeroConstConstraintXStage vkS hfixed hperm basis).queries O := by
+  have hpoint : algebraicFullPrefixesPre (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init
+      (((zeroDeployedRootFamily vkS hfixed hperm).toFamily.adversary basis).run O) 4 =
+      algebraicFullPrefixesPre (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init
+        (zeroWfProof basis vkS hfixed hperm) 4 := rfl
+  rw [hpoint]
+  simp only [zeroConstConstraintXStage, OracleComp.queries_bind, OracleComp.queries_readFin,
+    OracleComp.queries, List.append_nil]
+  intro hmem
+  obtain ⟨i, hi⟩ := List.mem_ofFn.mp hmem
+  exact zeroFamily_prefixesPre_injective basis vkS hfixed hperm
+    (by exact Fin.ne_of_val_ne (by have := i.isLt; simp; omega)) hi
+
+/-- **The zero family's constraint-`x` trace at any shape** (issue #127 C10): the total event
+needs no decode, so the stage prices the explicit zero-data difference with sub-proofs live. -/
+noncomputable def zeroConstConstraintXTrace :
+    DeployedConstraintXOnlineTrace (zeroDeployedRootFamily vkS hfixed hperm) where
+  stage := fun basis => zeroConstConstraintXStage vkS hfixed hperm basis
+  agrees := fun basis O => zeroConstConstraintXStage_agrees vkS hfixed hperm basis O
+  fresh := fun basis O => zeroConstConstraintXStage_fresh vkS hfixed hperm basis O
 
 end ConstraintX
 
@@ -279,6 +425,16 @@ noncomputable def zeroConstStraightLineIpaTrace :
 noncomputable def zeroDeployedConstraintFamily (hproofs : shape.numProofs = 0) :
     ComputedDeployedConstraintFSFamily shape :=
   .ofRoot (zeroDeployedRootFamily vkS hfixed hperm) (zeroConstraintXTrace vkS hfixed hperm hproofs)
+
+/-- **The zero prover inhabits the full straight-line interface at any shape** (issue #127 C10):
+the six root events, the constant-walk IPA trace, and the total constraint-`x` stage, with no
+instance-free hypothesis.  This is the interface smoke test — it is not the deployed Action
+adversary. -/
+noncomputable def zeroConstStraightLineDeployedFamily :
+    ComputedStraightLineDeployedFSFamily shape where
+  toComputedDeployedRootFSFamily := zeroDeployedRootFamily vkS hfixed hperm
+  ipaTrace := zeroConstStraightLineIpaTrace vkS hfixed hperm
+  constraintXTrace := zeroConstConstraintXTrace vkS hfixed hperm
 
 end IpaTrace
 

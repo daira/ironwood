@@ -1108,6 +1108,20 @@ assert_axioms Zcash.Snark.witnessDeployedRootFamily +native(
 -- polynomial, so the constraint-`x` stage is a read-free executable computation, and the
 -- degenerate shape's IPA trace is round-free.
 assert_axioms Zcash.Snark.deployedConstraintDifferencePreX_witness +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- The total pre-x constraint event of issue #127: the difference from the family's own
+-- source, the unguarded bad set, and the zero prover's any-shape constraint-x stage.
+assert_axioms Zcash.Snark.deployedConstraintDifferencePreX +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedOnlineMemberFSFamily.membersCovered_wrapped +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedOnlineMemberFSFamily.canonical_wrapped +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.zeroExplicitConstraintDifference
+assert_axioms Zcash.Snark.zeroConstraintDifference_explicit +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.zeroConstConstraintXTrace +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.zeroConstStraightLineDeployedFamily +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.deployedConstraintXBadSet_witness +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.witnessConstraintXTrace +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.witnessDeployedConstraintFamily +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)

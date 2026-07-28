@@ -17,10 +17,9 @@ the same at the witness shape, where `k = 0` empties the round obligations.
   `CapturedVerifierKeyProfile` already omits them: in the AGM the verifier's points need
   representations over the *sampled* basis, so pinning them to fixture constants would leave the
   premise uninhabited for most bases.
-* The shape is instance-free — but only the constraint-`x` stage needs that.  The root and IPA
-  layers run with both sub-proofs live (`§ The live-instance layers at the full captured shape`
-  below), and that section records why the constraint-`x` stage is exactly the honest-prover
-  boundary.
+* The instance-free instantiation is kept as the simplest model; the full-shape family
+  (`§ The full family at the full captured shape` below) discharges every layer with both
+  sub-proofs live, using issue #127's total constraint-`x` event.
 
 ## Scope
 
@@ -123,16 +122,17 @@ noncomputable def capturedZeroConstraintSchedule :
     simp
   pinned := capturedZeroStraightLineFamily.pinnedX
 
-/-! ## The live-instance layers at the full captured shape
+/-! ## The full family at the full captured shape
 
-The instance-free restriction above is needed by exactly one layer.  At the full captured shape —
-two sub-proofs, eleven rounds — the zero prover still carries the online member family, the six
-staged root events, and the constant-walk staged IPA trace.  What it cannot carry is the
-constraint-`x` stage: the assembled `h` query's claimed value is the verifier-recomputed
-`expectedHEval`, which for zero columns is a nonzero function of `θ`, `β`, `γ`, `y` *and* `x`, so
-the run's decode witness exists only where that value vanishes — a condition on the very `x`
-answer the stage must not read.  Staging that layer demands columns whose `h` claim is honest:
-an honest-prover artifact, not an interface gap.
+With the total constraint-`x` event of issue #127 the instance-free restriction is gone: the
+stage prices the explicit zero-data difference from the `θ`/`β`/`γ`/`y` squeezes alone, so the
+zero prover carries every layer — member family, six root events, constant-walk IPA trace, and
+the constraint-`x` stage — with both sub-proofs live.  (Under the previous decode-guarded event
+this layer was unstageable for zero columns, because witness existence read the verifier-computed
+`expectedHEval`, a function of the `x` answer itself.)
+
+This family is the interface smoke test.  It is not, and must not be described as, the deployed
+Action adversary.
 -/
 
 /-- The captured key at the full captured shape — `numProofs = 2` live — with zero group
@@ -171,5 +171,28 @@ noncomputable def capturedLiveZeroIpaTrace :
     StraightLineIpaOnlineTrace capturedLiveZeroRootFamily.toFamily :=
   zeroConstStraightLineIpaTrace capturedLiveZeroVk capturedLiveZeroVk_fixed
     capturedLiveZeroVk_perm
+
+/-- **The full straight-line family with both sub-proofs live** (issue #127 C10): every interface
+obligation discharged at the captured key's scalar data over `numProofs = 2`, `k = 11`.  Smoke
+test only. -/
+noncomputable def capturedLiveZeroStraightLineFamily :
+    ComputedStraightLineDeployedFSFamily shape :=
+  zeroConstStraightLineDeployedFamily capturedLiveZeroVk capturedLiveZeroVk_fixed
+    capturedLiveZeroVk_perm
+
+/-- The static checks hold at the live key: its layouts and domain data are the captured ones. -/
+theorem capturedLiveZeroStaticChecks :
+    DeployedConstraintStaticChecks capturedLiveZeroStraightLineFamily.toRootFamily where
+  adviceLength := fun _basis => vk_advice_layout_length
+  instanceLength := fun _basis => vk_instance_layout_length
+  fixedLength := fun _basis => vk_fixed_layout_length
+  omegaOrder := fun _basis => vk_omega_order
+  characteristic := fun _basis => vk_n_cast_ne_zero
+
+/-- **The straight-line interface is inhabited at the full captured shape** — the non-vacuity
+smoke test of issue #127. -/
+theorem straightLineInterface_nonempty_at_captured_shape :
+    Nonempty (ComputedStraightLineDeployedFSFamily shape) :=
+  ⟨capturedLiveZeroStraightLineFamily⟩
 
 end Zcash.Snark.Fixture2
