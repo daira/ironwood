@@ -374,6 +374,81 @@ theorem badAt_table_le_via_squeeze_prefixed (n : Fin 11)
       (algebraicFullPrefixesPre_ne_at family.init _
         (show ((i.castLE (le_of_lt n.isLt) : Fin 11) : Nat) < (n : Nat) from i.isLt))]
 
+/-- The basis/table pairs whose index-`n` squeeze answer lands in a per-run bad set.  This is the
+shape the semantic endpoint's `badY`, `badBeta`, `badGamma` and `badTheta` take. -/
+def squeezeSurfaceEvent (n : Fin 11) (family : ComputedAlgebraicFSFamily shape)
+    (badF : (AugmentedIndex (2 ^ shape.k) -> VestaG) ->
+      BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) ->
+      (Fin (n : Nat) -> Fp) -> Set Fp) :
+    Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) ×
+      (BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp)) :=
+  {q | q.2 (algebraicFullPrefixesPre family.init ((family.adversary q.1).run q.2) n) ∈
+    badF q.1 (algebraicFullPrefixesPre family.init ((family.adversary q.1).run q.2) n)
+      (fun i : Fin (n : Nat) => q.2 (algebraicFullPrefixesPre family.init
+        ((family.adversary q.1).run q.2) (i.castLE (le_of_lt n.isLt))))}
+
+open ComputedAlgebraicFSFamily in
+/-- **A semantic surface costs `(Q + 1) * epsilon`.**  Each basis pays the index-`n` squeeze price
+of `badAt_table_le_via_squeeze_prefixed`, and the generator random oracle's basis draw is averaged
+over.  Instantiate at `n = 3` for `y`, `2` for `γ`, `1` for `β`, `0` for `θ` to obtain the four
+premises the semantic endpoint takes. -/
+theorem squeezeSurfaceEvent_prob_le {T' : Type*} [DecidableEq T'] (n : Fin 11)
+    (query : AugmentedIndex (2 ^ shape.k) -> T')
+    (family : ComputedAlgebraicFSFamily shape)
+    (badF : (AugmentedIndex (2 ^ shape.k) -> VestaG) ->
+      BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) ->
+      (Fin (n : Nat) -> Fp) -> Set Fp)
+    (hstab : forall basis (O : BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) (v : Fp),
+      algebraicFullPrefixesPre family.init ((family.adversary basis).run
+          (Function.update O (algebraicFullPrefixesPre family.init
+            ((family.adversary basis).run O) n) v)) n =
+        algebraicFullPrefixesPre family.init ((family.adversary basis).run O) n)
+    {epsilon : ENNReal}
+    (hbad : forall basis t nu,
+      (PMF.uniformOfFintype Fp).toOuterMeasure (badF basis t nu) <= epsilon) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype (BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          squeezeSurfaceEvent n family badF)
+      <= (family.Q + 1 : Nat) * epsilon := by
+  have hset : (fun p : (↥(Set.range query) -> VestaG) ×
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) =>
+        (orchardGeneratorROBasis query p.1, p.2)) ⁻¹' squeezeSurfaceEvent n family badF =
+      {x : (↥(Set.range query) -> VestaG) ×
+        (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) | x.2 ∈
+        (fun setup => {O | O (algebraicFullPrefixesPre family.init
+            ((family.adversary (orchardGeneratorROBasis query setup)).run O) n) ∈
+          badF (orchardGeneratorROBasis query setup)
+            (algebraicFullPrefixesPre family.init
+              ((family.adversary (orchardGeneratorROBasis query setup)).run O) n)
+            (fun i : Fin (n : Nat) => O (algebraicFullPrefixesPre family.init
+              ((family.adversary (orchardGeneratorROBasis query setup)).run O)
+              (i.castLE (le_of_lt n.isLt))))}) x.1} := by
+    ext p
+    simp only [Set.mem_preimage, Set.mem_setOf_eq, squeezeSurfaceEvent]
+  rw [hset]
+  refine independentProductPMF_fiber_bound (orchardGeneratorROSetup query)
+    (PMF.uniformOfFintype (BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp))
+    (fun setup => {O | O (algebraicFullPrefixesPre family.init
+        ((family.adversary (orchardGeneratorROBasis query setup)).run O) n) ∈
+      badF (orchardGeneratorROBasis query setup)
+        (algebraicFullPrefixesPre family.init
+          ((family.adversary (orchardGeneratorROBasis query setup)).run O) n)
+        (fun i : Fin (n : Nat) => O (algebraicFullPrefixesPre family.init
+          ((family.adversary (orchardGeneratorROBasis query setup)).run O)
+          (i.castLE (le_of_lt n.isLt))))}) ?_
+  intro setup
+  exact badAt_table_le_via_squeeze_prefixed n family (orchardGeneratorROBasis query setup)
+    (badF (orchardGeneratorROBasis query setup))
+    (hstab (orchardGeneratorROBasis query setup))
+    (fun t nu => hbad (orchardGeneratorROBasis query setup) t nu)
+
 /-! ## Discharging the stability input
 
 `badX_le_via_squeeze_prefixed`'s `hstab` is resampling-shaped: updating the oracle at the run's own `x` squeeze

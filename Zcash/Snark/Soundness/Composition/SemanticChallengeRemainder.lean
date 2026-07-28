@@ -1,4 +1,5 @@
 import Zcash.Snark.Soundness.ChallengePricing
+import Zcash.Snark.Soundness.Composition.PrefixedSqueeze
 
 /-!
 # The semantic challenge remainder
@@ -123,5 +124,114 @@ theorem semanticChallengeRemainder_covers
   · exact allResolverPermutationBetaBadSet_measure_le vk poly m
   · exact allResolverLookupGammaBadSet_measure_le vk ch poly u
   · exact allResolverLookupBetaBadSet_measure_le vk ch poly u
+
+
+/-! ## The four surfaces at their squeeze indices
+
+`theta` is squeezed first, then `beta`, then `gamma`, then `y` — indices `0`, `1`, `2`, `3` of the
+pre-IPA record.  Each surface is priced by the index-generic squeeze bound, so the four premises
+the semantic endpoint takes are one application apiece.
+-/
+
+/-- The `theta` surface: index `0`. -/
+abbrev thetaSurface (family : ComputedAlgebraicFSFamily shape)
+    (badF : (AugmentedIndex (2 ^ shape.k) → VestaG) →
+      BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) →
+      (Fin 0 → Fp) → Set Fp) :=
+  squeezeSurfaceEvent 0 family badF
+
+/-- The `beta` surface: index `1`. -/
+abbrev betaSurface (family : ComputedAlgebraicFSFamily shape)
+    (badF : (AugmentedIndex (2 ^ shape.k) → VestaG) →
+      BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) →
+      (Fin 1 → Fp) → Set Fp) :=
+  squeezeSurfaceEvent 1 family badF
+
+/-- The `gamma` surface: index `2`. -/
+abbrev gammaSurface (family : ComputedAlgebraicFSFamily shape)
+    (badF : (AugmentedIndex (2 ^ shape.k) → VestaG) →
+      BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) →
+      (Fin 2 → Fp) → Set Fp) :=
+  squeezeSurfaceEvent 2 family badF
+
+/-- The `y` surface: index `3`. -/
+abbrev ySurface (family : ComputedAlgebraicFSFamily shape)
+    (badF : (AugmentedIndex (2 ^ shape.k) → VestaG) →
+      BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) →
+      (Fin 3 → Fp) → Set Fp) :=
+  squeezeSurfaceEvent 3 family badF
+
+/-- **The four semantic surfaces, priced together.**  Each costs `(Q + 1)` times its own
+per-challenge bound, so the semantic endpoint's `hY`, `hBeta`, `hGamma` and `hTheta` premises are
+supplied at once.  The per-challenge bounds are the bundle-wide exclusion measures above; the
+stability inputs come from `hstab_of_prefixDeterminedAt` at the matching index. -/
+theorem semanticSurfaces_prob_le {T' : Type*} [DecidableEq T']
+    (query : AugmentedIndex (2 ^ shape.k) → T')
+    (family : ComputedAlgebraicFSFamily shape)
+    (badTheta : (AugmentedIndex (2 ^ shape.k) → VestaG) →
+      BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) →
+      (Fin 0 → Fp) → Set Fp)
+    (badBeta : (AugmentedIndex (2 ^ shape.k) → VestaG) →
+      BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) →
+      (Fin 1 → Fp) → Set Fp)
+    (badGamma : (AugmentedIndex (2 ^ shape.k) → VestaG) →
+      BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) →
+      (Fin 2 → Fp) → Set Fp)
+    (badY : (AugmentedIndex (2 ^ shape.k) → VestaG) →
+      BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) →
+      (Fin 3 → Fp) → Set Fp)
+    {epsTheta epsBeta epsGamma epsY : ENNReal}
+    (hstabTheta : ∀ basis O v,
+      algebraicFullPrefixesPre family.init ((family.adversary basis).run
+          (Function.update O (algebraicFullPrefixesPre family.init
+            ((family.adversary basis).run O) 0) v)) 0 =
+        algebraicFullPrefixesPre family.init ((family.adversary basis).run O) 0)
+    (hstabBeta : ∀ basis O v,
+      algebraicFullPrefixesPre family.init ((family.adversary basis).run
+          (Function.update O (algebraicFullPrefixesPre family.init
+            ((family.adversary basis).run O) 1) v)) 1 =
+        algebraicFullPrefixesPre family.init ((family.adversary basis).run O) 1)
+    (hstabGamma : ∀ basis O v,
+      algebraicFullPrefixesPre family.init ((family.adversary basis).run
+          (Function.update O (algebraicFullPrefixesPre family.init
+            ((family.adversary basis).run O) 2) v)) 2 =
+        algebraicFullPrefixesPre family.init ((family.adversary basis).run O) 2)
+    (hstabY : ∀ basis O v,
+      algebraicFullPrefixesPre family.init ((family.adversary basis).run
+          (Function.update O (algebraicFullPrefixesPre family.init
+            ((family.adversary basis).run O) 3) v)) 3 =
+        algebraicFullPrefixesPre family.init ((family.adversary basis).run O) 3)
+    (hTheta : ∀ basis t nu,
+      (PMF.uniformOfFintype Fp).toOuterMeasure (badTheta basis t nu) ≤ epsTheta)
+    (hBeta : ∀ basis t nu,
+      (PMF.uniformOfFintype Fp).toOuterMeasure (badBeta basis t nu) ≤ epsBeta)
+    (hGamma : ∀ basis t nu,
+      (PMF.uniformOfFintype Fp).toOuterMeasure (badGamma basis t nu) ≤ epsGamma)
+    (hY : ∀ basis t nu,
+      (PMF.uniformOfFintype Fp).toOuterMeasure (badY basis t nu) ≤ epsY) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+        (PMF.uniformOfFintype (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          thetaSurface family badTheta) ≤ (family.Q + 1 : ℕ) * epsTheta ∧
+      (independentProductPMF (orchardGeneratorROSetup query)
+        (PMF.uniformOfFintype (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          betaSurface family badBeta) ≤ (family.Q + 1 : ℕ) * epsBeta ∧
+      (independentProductPMF (orchardGeneratorROSetup query)
+        (PMF.uniformOfFintype (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          gammaSurface family badGamma) ≤ (family.Q + 1 : ℕ) * epsGamma ∧
+      (independentProductPMF (orchardGeneratorROSetup query)
+        (PMF.uniformOfFintype (BTranscript Fp VestaG
+          (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          ySurface family badY) ≤ (family.Q + 1 : ℕ) * epsY :=
+  ⟨squeezeSurfaceEvent_prob_le 0 query family badTheta hstabTheta hTheta,
+   squeezeSurfaceEvent_prob_le 1 query family badBeta hstabBeta hBeta,
+   squeezeSurfaceEvent_prob_le 2 query family badGamma hstabGamma hGamma,
+   squeezeSurfaceEvent_prob_le 3 query family badY hstabY hY⟩
 
 end Zcash.Snark

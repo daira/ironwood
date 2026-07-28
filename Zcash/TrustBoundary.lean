@@ -1251,6 +1251,8 @@ assert_axioms Zcash.Snark.allResolverPermutationGammaBadSet_measure_le
 assert_axioms Zcash.Snark.allResolverPermutationBetaBadSet_measure_le
 assert_axioms Zcash.Snark.allResolverLookupGammaBadSet_measure_le
 assert_axioms Zcash.Snark.allResolverLookupBetaBadSet_measure_le
+assert_axioms Zcash.Snark.squeezeSurfaceEvent_prob_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.semanticSurfaces_prob_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.semanticChallengeRemainder_covers
 assert_axioms Zcash.Snark.deployedDirectDecodeOps_le
 assert_axioms Zcash.Snark.snarkExtractionDeployed_prob_le_via_wrapped_pinned_roots +native(
