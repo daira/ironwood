@@ -120,4 +120,5 @@ import Zcash.Snark.Soundness.Composition.ZeroStraightLine
 -- A rewind-free decode presented through the opened-batch interface the Action terminal takes.
 import Zcash.Snark.Soundness.AGM.DecodeToOpened
 import Zcash.Snark.Soundness.Composition.SemanticChallengeRemainder
+import Zcash.Snark.Soundness.Composition.StraightLineDecodeSupply
 import Zcash.Snark.Soundness.Composition.DirectPathCost

@@ -1,5 +1,6 @@
 import Zcash.Circuits.Integration.ActionTerminal
 import Zcash.Snark.Soundness.AGM.DecodeToOpened
+import Zcash.Snark.Soundness.Composition.StraightLineDecodeSupply
 
 /-!
 # The rewind-free decode at the Action terminal
@@ -36,6 +37,8 @@ open Zcash.Arithmetic (scalarFieldOrder)
 
 variable {G : Type} [AddCommGroup G] [Module Fp G] [DecidableEq G] [Inhabited G]
 
+local instance vestaInhabitedStraightLineActionTerminal : Inhabited VestaG := ⟨0⟩
+
 /-- **The Action bundle statement from a rewind-free decode.**  The decode supplies the batch
 openings, the member decodes, the `x₄` designation and the member-binding premise; the caller
 supplies acceptance and the challenge exclusions.
@@ -65,6 +68,57 @@ noncomputable def action_bundleStatement_or_relation_of_decode
     (fun i hi => decode.toMemberDecode hchar i hi)
     haccepts _ rfl
     (fun slot point hpoint => PSum.inl (decode.memberBinding hchar slot point hpoint))
+
+/-- **The Action terminal reached from the straight-line constraint event.**  A family at the
+Action shape supplies the decode from its own accepting run, so the terminal is reached without a
+rewind.
+
+`hvk` and `hI` identify the family's verifying key and instance commitment with the Action
+circuit's, and the decode is transported along them.  The challenge exclusions are still open,
+exactly as in `action_bundleStatement_or_relation_of_decode`. -/
+noncomputable def action_bundleStatement_or_relation_of_straightLineDecoded
+    (pp : ProofParams)
+    (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived actionCircuit))
+    (static : DeployedConstraintStaticChecks family.toRootFamily)
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+        + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
+    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (hvk : family.vk basis =
+      actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+    (hI : family.instanceCommitment basis =
+      actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+    (hdecoded : family.straightLineConstraintDecoded static basis O)
+    (hchar : deployedX4PairCount
+      (actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      (straightLineRunOutput family basis O).1.proof.1
+      (wrappedPreIpaRecord (straightLineRunOutput family basis O)) < scalarFieldOrder)
+    (haccepts :
+      DeployedAccepts (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) rfl
+        (actionCircuit.toVerifierKey pp
+          (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+        (actionCircuit.instanceCommitment pp
+          (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+        (straightLineRunOutput family basis O).1.proof.1
+        (wrappedPreIpaRecord (straightLineRunOutput family basis O))) :=
+  action_bundleStatement_or_relation_of_decode pp
+    (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) rfl inputs
+    (straightLineRunOutput family basis O).1.proof.1
+    (wrappedPreIpaRecord (straightLineRunOutput family basis O))
+    ((straightLineRunOutput family basis O).1.multiU
+      (wrappedPreIpaReads (straightLineRunOutput family basis O)))
+    ((straightLineRunOutput family basis O).1.multiBlind
+      (wrappedPreIpaReads (straightLineRunOutput family basis O)))
+    ((straightLineRunOutput family basis O).1.aMulti
+      (wrappedPreIpaReads (straightLineRunOutput family basis O)))
+    (hI ▸ hvk ▸ straightLineDecode family static basis O hdecoded)
+    hchar haccepts
 
 end ActionTerminal
 
