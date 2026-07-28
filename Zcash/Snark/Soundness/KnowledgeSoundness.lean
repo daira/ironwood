@@ -16,8 +16,10 @@ conversion (and, on the generator-RO endpoints, for the hash-to-curve URS deriva
 CompElliptic's Vesta point-count axiom, and correctness of the supplied verifying key.
 The computed reduction models oracle queries, reprogramming, and query loss.
 
-Efficiency counts black-box calls and still lacks a field-independent polynomial AFK bound in `Q`
-and `2^k`. The fallback is `(2·|F|+1)^k`; adversary PPT time remains external.
+Efficiency counts black-box calls.  The unconditional AFK analysis gives the field-independent
+expected bound `(8·Q+1)·10^k`; the deployed combined capstone adds its three fallback calls,
+truncates at a fixed budget `L`, and prices the tail explicitly by finite Markov.  Adversary PPT
+time and the concrete DLOG hardness bound remain external.
 -/
 
 namespace Zcash.Snark

@@ -18,6 +18,11 @@ artifacts along the keygen certificate equalities (`shape_eq_mergeDerived`,
 The capstone has no free proposition, encoding callback, or member decoder. Its
 circuit model and decoder are both determined by deployed acceptance.
 
+Like its generic parent this is the **rewind-based** route, and it additionally pays the `x₁`
+accept-measure premises.  `Circuits.Integration.StraightLineActionTerminal` reaches the same
+conclusion from a represented decode with no rewind and no accept measure; the two are retained
+side by side because their assumption sets differ.
+
 The transport ingredients are local: the fixture `k`-match and blinding-factor
 side conditions. The public-instance commitment is the generic circuit-derived
 `actionCircuit.instanceCommitment actionProofParams capturedURS`, used directly

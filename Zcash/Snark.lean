@@ -103,3 +103,23 @@ import Zcash.Snark.Soundness.AGM.Capstone
 import Zcash.Snark.Soundness.AGM.BindingSignature
 -- Rewind-free deployed multiopen decoding and additive pinned-root composition.
 import Zcash.Snark.Soundness.Composition.DeployedRootContainment
+-- Primary straight-line AGM route: staged IPA representations, fixed-call deployed constraint
+-- extraction, and an explicit finite-security DLOG work profile. The recursive AFK route remains
+-- available as a separately priced alternative.
+import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
+-- The constraint-level and straight-line family interfaces are inhabited at the witness shape.
+import Zcash.Snark.Soundness.Composition.StraightLineWitness
+-- The zero-data keystone and the constant zero prover family, at any shape.
+import Zcash.Snark.Soundness.AGM.ZeroFamily
+-- The zero family's deployed root layer: six staged root events at any shape.
+import Zcash.Snark.Soundness.AGM.ZeroFamilyRoots
+-- The straight-line deployed interface, inhabited with live IPA rounds at any instance-free shape.
+import Zcash.Snark.Soundness.Composition.ZeroStraightLine
+-- The direct-coordinate postprocessing carries an explicit polynomial total-cost model.
+-- The Action-level semantic challenge exclusions, priced and summed.
+-- A rewind-free decode presented through the opened-batch interface the Action terminal takes.
+import Zcash.Snark.Soundness.AGM.DecodeToOpened
+import Zcash.Snark.Soundness.Composition.SemanticChallengeRemainder
+import Zcash.Snark.Soundness.Composition.StraightLineDecodeSupply
+import Zcash.Snark.Soundness.Composition.SequentialLift
+import Zcash.Snark.Soundness.Composition.DirectPathCost

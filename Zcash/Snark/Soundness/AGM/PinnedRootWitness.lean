@@ -1035,6 +1035,8 @@ def witnessDeployedRootFamily :
   toComputedOnlineMemberFSFamily := witnessOnlineMemberFamily
   outcome := witnessOutcome
   rootTrace := witnessRootTrace
+  outcome_source := fun _basis _O witness h => by
+    cases PSum.inl.inj h; rfl
 
 /-- The weaker self-reprogramming equation follows from the strict-prefix witness above. -/
 theorem deployedRootSqueezeInvariance_witness :

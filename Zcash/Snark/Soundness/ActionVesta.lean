@@ -10,6 +10,12 @@ derived from the supplied proof parameters, URS, and public inputs.
 
 In particular, the statement is not tied to a captured fixture and does not
 assume that `numProofs = 1`.
+
+This is the **rewind-based** route: the caller supplies an `OpenedBatchOpenings`, which in practice
+comes from `x₄` rewinding against an accept measure.  The rewind-free route to the same conclusion
+is `Circuits.Integration.StraightLineActionTerminal`, which builds that object from one execution's
+AGM coordinates instead.  Both are kept because they assume different things — rewinds and accept
+measures here, a represented decode there — not because one supersedes the other.
 -/
 
 namespace Zcash.Snark

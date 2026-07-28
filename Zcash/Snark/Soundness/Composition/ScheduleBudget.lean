@@ -183,10 +183,9 @@ local instance vestaInhabitedScheduleBudget : Inhabited VestaG := ⟨0⟩
 
 /-- The deployed constraint difference's degree cap: the point polynomials and quotient pieces
 are coordinate polynomials of degree below the basis size `2^k`. -/
-theorem natDegree_deployedConstraintDifferenceOfRoot_le
+theorem natDegree_deployedConstraintDifferencePreX_le
     (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (coins : family.toFamily.Coins)
-    (root : DeployedRootDecodeWitness family basis coins)
     {B W Dc D Dq : ℕ} (hB : 1 ≤ B) (hkB : 2 ^ shape.k - 1 ≤ B)
     (hnB : (family.vk basis).n - 1 ≤ B)
     (hgates : ∀ e ∈ (family.vk basis).gates, e.degreeBound * B ≤ D)
@@ -198,35 +197,28 @@ theorem natDegree_deployedConstraintDifferenceOfRoot_le
     (hq : (family.vk basis).n * shape.numQuotientPieces + B ≤ Dq)
     (h3 : 3 * B ≤ D) (hWD : (W + 2) * B ≤ D) (h4 : 4 * B ≤ D)
     (hcomp : 2 * B + 2 * Dc ≤ D) :
-    (deployedConstraintDifferenceOfRoot family basis coins root).natDegree ≤ max D Dq := by
-  rw [deployedConstraintDifferenceOfRoot]
+    (deployedConstraintDifferencePreX family basis coins).natDegree ≤ max D Dq := by
+  rw [deployedConstraintDifferencePreX]
   refine natDegree_committedPreXConstraintDifference_le _ _ _ _ _ _ hB
     (fun g => ?_) (fun j => ?_) hnB hgates hW hlin hltab hq h3 hWD h4 hcomp
   · rw [deployedConstraintPointPolynomial, onlinePointPolynomial]
     have h := coeffsToPoly_natDegree_lt (n := 2 ^ shape.k) (by positivity)
       (onlinePointCoordinates (deployedConstraintSource family basis
-        (deployedRootRunOutput family basis coins) root.batchWitness) g).1
+        (deployedRootRunOutput family basis coins)) g).1
     omega
   · have h := coeffsToPoly_natDegree_lt (n := 2 ^ shape.k) (by positivity)
       (deployedConstraintPieceCoordinates family basis
-        (deployedRootRunOutput family basis coins) root.batchWitness j).1
+        (deployedRootRunOutput family basis coins) j).1
     omega
 
-/-- Root witnesses at the same oracle table carry the same batch data: both are pinned to the
-family's own outcome at that table, so the constraint difference does not depend on the fork
-tape or the witness choice. -/
-theorem deployedConstraintDifference_witness_congr
+/-- The run output ignores the fork tape, so the total constraint difference does too. -/
+theorem deployedConstraintDifference_tape_congr
     (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
     {O : BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp}
-    {tape tape' : RecursiveForkTape Fp shape.k}
-    (root : DeployedRootDecodeWitness family basis (O, tape))
-    (root' : DeployedRootDecodeWitness family basis (O, tape')) :
-    deployedConstraintDifferenceOfRoot family basis (O, tape) root
-      = deployedConstraintDifferenceOfRoot family basis (O, tape') root' := by
-  have hbw : root.batchWitness = root'.batchWitness :=
-    PSum.inl.inj (root.outcome_eq.symm.trans root'.outcome_eq)
-  rw [deployedConstraintDifferenceOfRoot, deployedConstraintDifferenceOfRoot, hbw]
+    (tape tape' : RecursiveForkTape Fp shape.k) :
+    deployedConstraintDifferencePreX family basis (O, tape)
+      = deployedConstraintDifferencePreX family basis (O, tape') := rfl
 
 /-- **The exact constraint-difference root set's measure.** The set collapses across fork tapes
 to one Schwartz–Zippel set, priced by the degree cap. -/
@@ -235,29 +227,19 @@ theorem deployedConstraintXBadSet_measure_le
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
     (O : BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp)
     {D : ℕ}
-    (hdeg : ∀ (tape : RecursiveForkTape Fp shape.k)
-      (root : DeployedRootDecodeWitness family basis (O, tape)),
-      (deployedConstraintDifferenceOfRoot family basis (O, tape) root).natDegree ≤ D) :
+    (hdeg : ∀ tape : RecursiveForkTape Fp shape.k,
+      (deployedConstraintDifferencePreX family basis (O, tape)).natDegree ≤ D) :
     (PMF.uniformOfFintype Fp).toOuterMeasure (deployedConstraintXBadSet family basis O)
       ≤ (D : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞) := by
-  by_cases h : ∃ tape : RecursiveForkTape Fp shape.k,
-      Nonempty (DeployedRootDecodeWitness family basis (O, tape))
-  · obtain ⟨tape₀, ⟨root₀⟩⟩ := h
-    have hsub : deployedConstraintXBadSet family basis O
-        ⊆ ↑(szBadSet (deployedConstraintDifferenceOfRoot family basis (O, tape₀) root₀)) := by
-      rintro x ⟨tape, root, hx⟩
-      rwa [deployedConstraintDifference_witness_congr family basis root root₀] at hx
-    refine le_trans ((PMF.uniformOfFintype Fp).toOuterMeasure.mono hsub) ?_
-    refine le_trans (uniformChallenge_szBadSet _) ?_
-    gcongr
-    exact_mod_cast hdeg tape₀ root₀
-  · have hempty : deployedConstraintXBadSet family basis O = ∅ := by
-      ext x
-      simp only [deployedConstraintXBadSet, Set.mem_setOf_eq, Set.mem_empty_iff_false,
-        iff_false, not_exists]
-      intro tape root _
-      exact h ⟨tape, ⟨root⟩⟩
-    simp [hempty]
+  let tape₀ : RecursiveForkTape Fp shape.k := Classical.arbitrary _
+  have hsub : deployedConstraintXBadSet family basis O
+      ⊆ ↑(szBadSet (deployedConstraintDifferencePreX family basis (O, tape₀))) := by
+    rintro x ⟨tape, hx⟩
+    rwa [deployedConstraintDifference_tape_congr family basis tape tape₀] at hx
+  refine le_trans ((PMF.uniformOfFintype Fp).toOuterMeasure.mono hsub) ?_
+  refine le_trans (uniformChallenge_szBadSet _) ?_
+  gcongr
+  exact_mod_cast hdeg tape₀
 
 /-! ## The schedule, priced -/
 
@@ -281,8 +263,8 @@ def deployedConstraintXSqueezeSchedule_of_pinned
     DeployedConstraintXSqueezeSchedule family
       ((max D Dq : ℕ) / (Fintype.card Fp : ℝ≥0∞)) where
   measure_le basis O :=
-    deployedConstraintXBadSet_measure_le family basis O (fun tape root =>
-      natDegree_deployedConstraintDifferenceOfRoot_le family basis (O, tape) root hB hkB
+    deployedConstraintXBadSet_measure_le family basis O (fun tape =>
+      natDegree_deployedConstraintDifferencePreX_le family basis (O, tape) hB hkB
         (hnB basis) (hgates basis) (hW basis) (hlin basis) (hltab basis) (hq basis)
         h3 hWD h4 hcomp)
   pinned := hpinned

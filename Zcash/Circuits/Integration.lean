@@ -9,6 +9,8 @@ import Zcash.Circuits.Integration.ActionPermutationCycle
 import Zcash.Circuits.Integration.ActionCopyReplay
 import Zcash.Circuits.Integration.ActionPermutationDomainCompute
 import Zcash.Circuits.Integration.ActionTerminal
+import Zcash.Circuits.Integration.StraightLineActionTerminal
+import Zcash.Circuits.Integration.StraightLineActionEvent
 import Zcash.Circuits.Integration.CircuitIntegration
 import Zcash.Circuits.Integration.CircuitSatisfaction
 import Zcash.Circuits.Integration.CopyListMembership
