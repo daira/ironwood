@@ -93,7 +93,7 @@ def NontrivialRelation.ofUnopenedForkVesta [DecidableEq VestaG]
     NontrivialRelation (F := Fp) urs.g urs.u urs.w :=
   NontrivialRelation.ofUnopenedFork urs hk vk instanceCommitment ps ch hz fs hne
 
-open Polynomial in
+open CompPoly CompPoly.CPolynomial in
 /-- **Deployed opening and constraint over Vesta, given a clean fork.**
 `orchard_verifier_deployed_constraint_of_forked` specialised to `SWPoint Vesta.curve`: the opening
 for the declared `fs.openedCommitment` and the pinned `multiopenValue`, and `circuitSat` (concrete
@@ -104,9 +104,9 @@ theorem orchard_verifier_vesta_constraint_of_forked [DecidableEq VestaG] [Inhabi
     {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG)
     (ps : ProofString shape Fp VestaG) (ch : Challenges shape.k Fp)
     {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp}
-    (fixedCols : ℕ → Polynomial Fp)
-    (decodeAdvice decodeInstance : (Fin (2 ^ urs.k) → Fp) → (ℕ → Polynomial Fp))
-    (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp)
+    (fixedCols : ℕ → CPoly)
+    (decodeAdvice decodeInstance : (Fin (2 ^ urs.k) → Fp) → (ℕ → CPoly))
+    (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : CPoly) (deg : ℕ) (x : Fp)
     (fs : ForkedTranscript urs hk vk instanceCommitment ps ch b z blind)
     (hclean : IpaAcceptV urs.g b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
       (projTree fs.tree))
@@ -163,7 +163,7 @@ theorem sum_getD_single {k : ℕ} {G : Type*} [AddCommGroup G] [Module Fp G] (gg
     simp only [List.length_cons, List.length_nil, Nat.zero_add]
     omega
   · intro h; exact absurd (Finset.mem_univ _) h
-open Polynomial in
+open CompPoly CompPoly.CPolynomial in
 open scoped ENNReal in
 open Classical in
 /-- **Deployed decoded constraint, per fork, batch produced by `x₄` rewinding.** The circuit is
@@ -180,8 +180,8 @@ theorem orchard_verifier_vesta_decoded_constraint_of_forked_x4 [DecidableEq Vest
     {numAdvice numInstance : ℕ}
     (adviceIndex : Fin numAdvice → Fin (deployedX4PairCount vk instanceCommitment ps ch + 1))
     (instanceIndex : Fin numInstance → Fin (deployedX4PairCount vk instanceCommitment ps ch + 1))
-    (fixedCols : ℕ → Polynomial Fp)
-    (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp)
+    (fixedCols : ℕ → CPoly)
+    (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : CPoly) (deg : ℕ) (x : Fp)
     (fs : ForkedTranscript urs hk vk instanceCommitment ps ch b z blind)
     (hclean : IpaAcceptV urs.g b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
       (projTree fs.tree))
