@@ -3,7 +3,7 @@ import Zcash.Security.Ledger.Pool
 import Zcash.Security.Ledger.SinsemillaDLR
 
 /-!
-# The deployed key-binding break computes a discrete-log relation
+# The Orchard-protocol key-binding break computes a discrete-log relation
 
 The pre-quantum discharge of the key-binding arm's ε: a
 `KeyBinding.Pool.CommitIvkCollision` — two valid `Commit^ivk` openings of the same `ivk`
@@ -31,7 +31,7 @@ open Zcash.Security.Ledger.Pool
 def ivkQpt : PallasGroup := PallasGroup.ofPoint ivkQ (Or.inl ivkQ_onCurve)
 
 /-- The `CommitIvk` randomness base, as a group element — the `commitIvkR` argument of
-the deployed `keyBinding` interface. -/
+the Orchard-protocol `keyBinding` interface. -/
 def commitIvkRpt : PallasGroup :=
   PallasGroup.ofPoint Ecc.MulFixed.Certs.commitIvkR.point
     (Or.inl Ecc.MulFixed.Certs.commitIvkR.onCurve)
@@ -62,13 +62,13 @@ theorem commitIvkHash_get_spec {a n : Fp} {g : PallasGroup}
     exact ⟨hv, (Option.some_inj.mp hop).symm⟩
   · exact absurd hop (by simp)
 
-/-- **The deployed key-binding break computes a discrete-log relation.** Two valid
-`Commit^ivk` openings of the same `ivk` disagreeing on their opening projection: the
-reduction unpacks them into their defined Sinsemilla chains and blinding scalars and applies
-the chain-collision reducer at the `CommitIvk` domain point and randomness base.
-The reduction is hypothesis-free: the chunk-coefficient
-injectivity is `preCoeffs_inj` (spec Theorem 5.4.3's binary-expansion core, proven)
-and the chunk-encoding injectivity is `commitIvkChunks_inj`. -/
+/-- **The Orchard-protocol key-binding break computes a discrete-log relation.** Two
+valid `Commit^ivk` openings of the same `ivk` disagreeing on their opening projection:
+the reduction unpacks them into their defined Sinsemilla chains and blinding scalars
+and applies the chain-collision reducer at the `CommitIvk` domain point and randomness
+base. The reduction is hypothesis-free: the chunk-coefficient injectivity is
+`preCoeffs_inj` (spec Theorem 5.4.3's binary-expansion core, proven) and the
+chunk-encoding injectivity is `commitIvkChunks_inj`. -/
 def relationOfKeyBindingBreak
     {w₁ w₂ : KeyBinding.Pool.Witness Fq PallasGroup Fp}
     (b : KeyBinding.Pool.CommitIvkCollision extract commitIvkHash commitIvkRpt w₁ w₂)

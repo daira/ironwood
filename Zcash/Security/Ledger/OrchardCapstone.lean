@@ -5,22 +5,23 @@ import Zcash.Security.Ledger.NoteCommitDLR
 import Zcash.Security.Ledger.MerkleDLR
 
 /-!
-# The deployed instantiation: every Balance-subset arm computes a discrete-log relation
+# The Orchard instantiation: every Balance-subset arm computes a discrete-log relation
 
-At the deployed Orchard primitives, each of the three Balance-subset break arms reduces
-to a nontrivial discrete-log relation among the fixed Sinsemilla bases. Each reducer is a
-total, hypothesis-free function from the arm's break to its relation, so it needs no
-random-oracle model. `deployedBalanceSubsetOrRelation` runs all three: from a valid
-deployed ledger it computes either the Balance-subset containment or a nontrivial relation
-among the fixed bases.
+These are the instantiations that use the Orchard-protocol bases and parameters. At
+them, each of the three Balance-subset break arms reduces to a nontrivial discrete-log
+relation among the fixed Sinsemilla bases. Each reducer is a total, hypothesis-free
+function from the arm's break to its relation, so it needs no random-oracle model.
+`orchardBalanceSubsetOrRelation` runs all three: from a valid Orchard ledger it
+computes either the Balance-subset containment or a nontrivial relation among the
+fixed bases.
 
-This is the deterministic core of the deployed ε discharge. The probability that a sampled
-ledger produces a relation is the discrete-log-relation advantage for the fixed bases,
-under their pre-quantum hardness (their independence, spec Theorems 5.4.3 and 5.4.4). That
-is the same terminal as the Merkle and note-commitment arms, and the key-binding arm
-reaches it here without the oracle model. Turning this deterministic reduction into a bound
-on the capstone's named ε — composing it with `balanceSubset_measure_le` over a `PMF` of
-deployed ledgers — is not yet formalized.
+This is the deterministic core of the Orchard ε discharge. The probability that a
+sampled ledger produces a relation is the discrete-log-relation advantage for the
+fixed bases, under their pre-quantum hardness (their independence, spec Theorems 5.4.3
+and 5.4.4). That is the same terminal as the Merkle and note-commitment arms, and the
+key-binding arm reaches it here without the oracle model. Turning this deterministic
+reduction into a bound on the capstone's named ε — composing it with
+`balanceSubset_measure_le` over a `PMF` of Orchard ledgers — is not yet formalized.
 -/
 
 namespace Zcash.Security.Ledger.Bridge
@@ -34,30 +35,30 @@ variable {MSG SIG : Type*}
   (verify bverify : PallasGroup → MSG → SIG → Prop)
   (issuance : ℕ → ℕ) (maxActions : ℕ)
 
-/-- The deployed instantiation's sample space. -/
-abbrev DeployedAnnotated :=
+/-- The Orchard instantiation's sample space. -/
+abbrev OrchardAnnotated :=
   ValidAnnotated (primitives (MSG := MSG) (SIG := SIG) verify bverify) keyBinding
     issuance maxActions
 
-/-- The three deployed Balance-subset relation targets: the key-binding and
+/-- The three Orchard Balance-subset relation targets: the key-binding and
 note-commitment arms land in two-generator relations at their domain points, the
 Merkle arm in a one-generator relation. -/
-inductive DeployedBalanceRelation where
+inductive OrchardBalanceRelation where
   | keyBinding (r : NontrivialRelation (F := Fq) pallasS ivkQpt commitIvkRpt)
   | noteCommit (r : NontrivialRelation (F := Fq) pallasS noteQpt noteCommitRpt)
   | merkle (r : NontrivialRelationOne (F := Fq) pallasS merkleQpt)
 
-/-- **The deployed Balance-subset reduction.** In a valid deployed ledger, either the
+/-- **The Orchard Balance-subset reduction.** In a valid Orchard ledger, either the
 nonzero spends of the first `i + 1` transactions are covered by the positioned outputs
 of the first `i`, or the ledger's own data computes a nontrivial discrete-log relation
 among the fixed Sinsemilla bases. Each Balance-subset break arm is routed through its
-deployed reducer, so a break in any arm becomes a nontrivial relation among the fixed
+Orchard reducer, so a break in any arm becomes a nontrivial relation among the fixed
 bases, with no random-oracle model. -/
-def deployedBalanceSubsetOrRelation {ledger : Ledger _ Fq PallasGroup Fp Fp Fp Encoding MSG SIG _}
+def orchardBalanceSubsetOrRelation {ledger : Ledger _ Fq PallasGroup Fp Fp Fp Encoding MSG SIG _}
     (hval : ValidLedger (primitives (MSG := MSG) (SIG := SIG) verify bverify) keyBinding
       issuance maxActions ledger) (i : ℕ) :
     (nonZeroSpends ledger (i + 1) ≤ ↑(positionedOutputs ledger i))
-      ⊕' DeployedBalanceRelation :=
+      ⊕' OrchardBalanceRelation :=
   match balanceSubsetOrBreak hval i with
   | .inl hsub => .inl hsub
   | .inr (.keyBinding _ _ h) => .inr (.keyBinding (relationOfKeyBindingBreak h))

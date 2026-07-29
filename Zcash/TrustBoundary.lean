@@ -37,7 +37,7 @@ import Zcash.Snark.Soundness.ActionVesta
 import Zcash.Security.Ledger.KeyBindingDLR
 import Zcash.Security.Ledger.NoteCommitDLR
 import Zcash.Security.Ledger.MerkleDLR
-import Zcash.Security.Ledger.DeployedCapstone
+import Zcash.Security.Ledger.OrchardCapstone
 import Zcash.Snark.Soundness.DegreeWalk
 import Zcash.Snark.Soundness.Composition.ScheduleBudget
 import Zcash.Snark.Soundness.AGM.PinnedRootWitness
@@ -304,11 +304,11 @@ assert_axioms Zcash.Security.Ledger.Model.balanceConservation_measure_le
 assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCap_measure_le
 assert_axioms Zcash.Security.Ledger.Model.spendAuthority_measure_le
 
-/-! ## The deployed discrete-log-relation discharges
+/-! ## The Orchard-protocol discrete-log-relation discharges
 
-Each deployed Balance-subset break arm reduces to a nontrivial discrete-log relation
-among the fixed Sinsemilla bases, and `deployedBalanceSubsetOrRelation` routes all three
-from a valid deployed ledger. The reductions are computable, so they get
+Each Orchard-protocol Balance-subset break arm reduces to a nontrivial discrete-log
+relation among the fixed Sinsemilla bases, and `orchardBalanceSubsetOrRelation` routes
+all three from a valid Orchard ledger. The reductions are computable, so they get
 assert_computable. The encoding-injectivity and coefficient-injectivity facts they
 consume are theorems. -/
 
@@ -334,7 +334,7 @@ assert_computable Zcash.Security.Ledger.Bridge.relationOfNoteCommitBreak +choice
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
 assert_computable Zcash.Security.Ledger.Bridge.relationOfMerkleCollision +choice +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
-assert_computable Zcash.Security.Ledger.Bridge.deployedBalanceSubsetOrRelation +choice +native(
+assert_computable Zcash.Security.Ledger.Bridge.orchardBalanceSubsetOrRelation +choice +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
