@@ -19,7 +19,8 @@ namespace Zcash.Snark
 
 open Zcash.Arithmetic (derivedUrsGLagrange omegaOf)
 
-open Halo2 Polynomial
+open Halo2
+open CompPoly CompPoly.CPolynomial
 open Keygen
 open ActionPermutationDomain
 open Zcash.Circuits.Action (actionCircuit)
@@ -53,7 +54,7 @@ theorem actionCopyList_decoded :
 omit [Module Fp G] [DecidableEq G] in
 theorem actionPermutationRows_eq_chunkRowName
     (pp : ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex : Fin (actionShape pp).numProofs)
     (chunk : Fin (actionShape pp).numPermutationSets)
     (column : Fin
@@ -126,7 +127,7 @@ set_option maxRecDepth 100000 in
 omit [Module Fp G] [DecidableEq G] in
 theorem actionChunkCommonIndex
     (pp : ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex : Fin (actionShape pp).numProofs)
     (chunk : Fin (actionShape pp).numPermutationSets)
     (column : Fin
@@ -288,7 +289,7 @@ def actionResolverPermutationCycle_or_relation
       OpenedMemberDecode
         (instanceCommitment := instanceCommitment)
         urs hk (actionVk pp urs) ps ch batchOpenings i hi}
-    {y : Fp} {hpoly : Polynomial Fp} {deg : ℕ}
+    {y : Fp} {hpoly : CPoly} {deg : ℕ}
     (relation : CanonicalMemberConstraintRelation
       urs hk (actionVk pp urs) instanceCommitment ps ch pU pW a
       batchOpenings memberDecode

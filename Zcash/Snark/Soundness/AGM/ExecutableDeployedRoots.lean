@@ -11,28 +11,22 @@ run the decoder and terminal without selecting a proposition-level witness.
 
 namespace Zcash.Snark
 
-open Polynomial
+open CompPoly CompPoly.CPolynomial
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 
 /-- Executable coefficient polynomial for a finite power sum. -/
-def powerErrorPolynomialData {n : Nat} (c : Fin n → Fp) : Polynomial Fp :=
-  ComputablePolynomial.sumList (List.ofFn fun i : Fin n =>
-    ComputablePolynomial.mul (ComputablePolynomial.const (c i))
-      (ComputablePolynomial.pow ComputablePolynomial.X (i : Nat)))
+def powerErrorPolynomialData {n : Nat} (c : Fin n → Fp) : CPoly :=
+  powerErrorPolynomial c
 
 theorem powerErrorPolynomialData_eq {n : Nat} (c : Fin n → Fp) :
-    powerErrorPolynomialData c = powerErrorPolynomial c := by
-  rw [powerErrorPolynomialData, ComputablePolynomial.sumList_eq, List.sum_ofFn,
-    powerErrorPolynomial]
-  simp only [ComputablePolynomial.mul_eq, ComputablePolynomial.const_eq,
-    ComputablePolynomial.pow_eq, ComputablePolynomial.X_eq]
+    powerErrorPolynomialData c = powerErrorPolynomial c := rfl
 
 /-- Executable value-error polynomial for a represented power batch. -/
 def algebraicBatchErrorPolynomialData {urs : URS G} {numColumns : Nat}
     (b : Fin (2 ^ urs.k) → Fp)
     (cols : Fin numColumns → Fin (2 ^ urs.k) → Fp)
-    (columnEvals : Fin numColumns → Fp) : Polynomial Fp :=
+    (columnEvals : Fin numColumns → Fp) : CPoly :=
   powerErrorPolynomialData fun i => commitGen b (cols i) - columnEvals i
 
 omit [AddCommGroup G] [Module Fp G] in
@@ -46,76 +40,40 @@ theorem algebraicBatchErrorPolynomialData_eq {urs : URS G} {numColumns : Nat}
     algebraicBatchErrorPolynomial, powerErrorPolynomial]
 
 /-- Executable vanishing polynomial over a finite point set. -/
-def vanishingProdData (pts : Finset Fp) : Polynomial Fp :=
-  letI : CommMonoid (Polynomial Fp) := ComputablePolynomial.commRing.toCommMonoid
-  ∏ p ∈ pts,
-    ComputablePolynomial.sub ComputablePolynomial.X (ComputablePolynomial.const p)
+def vanishingProdData (pts : Finset Fp) : CPoly :=
+  vanishingProd pts
 
 theorem vanishingProdData_eq (pts : Finset Fp) :
-    vanishingProdData pts = vanishingProd pts := by
-  unfold vanishingProdData vanishingProd
-  simp only [ComputablePolynomial.sub_eq, ComputablePolynomial.X_eq,
-    ComputablePolynomial.const_eq]
-  rw [← ComputablePolynomial.commRing_eq (R := Fp)]
+    vanishingProdData pts = vanishingProd pts := rfl
 
 /-- Executable complementary vanishing polynomial. -/
-def coProdData (all pts : Finset Fp) : Polynomial Fp :=
+def coProdData (all pts : Finset Fp) : CPoly :=
   vanishingProdData (all \ pts)
 
 theorem coProdData_eq (all pts : Finset Fp) : coProdData all pts = coProd all pts := by
   rw [coProdData, vanishingProdData_eq, coProd]
 
 /-- One executable Lagrange basis polynomial. -/
-def lagrangeBasisData (points : List Fp) (i : Fin points.length) : Polynomial Fp :=
-  ComputablePolynomial.prodList (List.ofFn fun j : Fin points.length =>
-    if j = i then ComputablePolynomial.const 1
-    else ComputablePolynomial.mul
-      (ComputablePolynomial.const (points[i] - points[j])⁻¹)
-      (ComputablePolynomial.sub ComputablePolynomial.X
-        (ComputablePolynomial.const points[j])))
+def lagrangeBasisData (points : List Fp) (i : Fin points.length) : CPoly :=
+  CPolynomial.CLagrange.basis Finset.univ (fun j : Fin points.length => points[j]) i
 
 theorem lagrangeBasisData_eq (points : List Fp) (i : Fin points.length) :
-    lagrangeBasisData points i =
-      Lagrange.basis Finset.univ (fun j : Fin points.length => points[j]) i := by
-  rw [lagrangeBasisData, ComputablePolynomial.prodList_eq, List.prod_ofFn,
-    Lagrange.basis]
-  simp only [ComputablePolynomial.const_eq, ComputablePolynomial.mul_eq,
-    ComputablePolynomial.sub_eq, ComputablePolynomial.X_eq, Polynomial.C_1]
-  let f : Fin points.length → Polynomial Fp := fun j =>
-    if j = i then 1
-    else Polynomial.C (points[i] - points[j])⁻¹ *
-      (Polynomial.X - Polynomial.C points[j])
-  calc
-    ∏ j, f j = f i * ∏ j ∈ Finset.univ.erase i, f j :=
-      (Finset.mul_prod_erase Finset.univ f (Finset.mem_univ i)).symm
-    _ = ∏ j ∈ Finset.univ.erase i, Lagrange.basisDivisor points[i] points[j] := by
-      rw [show f i = 1 by simp [f]]
-      simp only [one_mul]
-      apply Finset.prod_congr rfl
-      intro j hj
-      have hji : j ≠ i := Finset.ne_of_mem_erase hj
-      simp [f, hji, Lagrange.basisDivisor, mul_comm]
+    (lagrangeBasisData points i).toPoly =
+      Lagrange.basis Finset.univ (fun j : Fin points.length => points[j]) i :=
+  CPolynomial.CLagrange.cbasis_eq_basis _ _ _
 
 /-- Executable interpolant for a deployed point/value list. -/
-def lagrangePolyData (points evals : List Fp) : Polynomial Fp :=
-  ComputablePolynomial.sumList (List.ofFn fun i : Fin points.length =>
-    ComputablePolynomial.mul (ComputablePolynomial.const (evals.getD (i : Nat) 0))
-      (lagrangeBasisData points i))
+def lagrangePolyData (points evals : List Fp) : CPoly :=
+  lagrangePoly points evals
 
 theorem lagrangePolyData_eq (points evals : List Fp) :
-    lagrangePolyData points evals = lagrangePoly points evals := by
-  rw [lagrangePolyData, ComputablePolynomial.sumList_eq, List.sum_ofFn,
-    lagrangePoly, Lagrange.interpolate_apply]
-  apply Finset.sum_congr rfl
-  intro i _
-  rw [ComputablePolynomial.mul_eq, ComputablePolynomial.const_eq,
-    lagrangeBasisData_eq]
+    lagrangePolyData points evals = lagrangePoly points evals := rfl
 
 /-- Executable denominator-cleared quotient mismatch. -/
 def clearedQuotientErrorPolynomialData {numSets : Nat}
     (allPts : Finset Fp) (pts : Fin numSets → Finset Fp)
-    (col r : Fin numSets → Polynomial Fp) (a : Fin numSets → Fp)
-    (qCol : Polynomial Fp) : Polynomial Fp :=
+    (col r : Fin numSets → CPoly) (a : Fin numSets → Fp)
+    (qCol : CPoly) : CPoly :=
   ComputablePolynomial.sub
     (ComputablePolynomial.mul qCol (vanishingProdData allPts))
     (ComputablePolynomial.sumList (List.ofFn fun j : Fin numSets =>
@@ -125,8 +83,8 @@ def clearedQuotientErrorPolynomialData {numSets : Nat}
 
 theorem clearedQuotientErrorPolynomialData_eq {numSets : Nat}
     (allPts : Finset Fp) (pts : Fin numSets → Finset Fp)
-    (col r : Fin numSets → Polynomial Fp) (a : Fin numSets → Fp)
-    (qCol : Polynomial Fp) :
+    (col r : Fin numSets → CPoly) (a : Fin numSets → Fp)
+    (qCol : CPoly) :
     clearedQuotientErrorPolynomialData allPts pts col r a qCol =
       clearedQuotientErrorPolynomial allPts pts col r a qCol := by
   rw [clearedQuotientErrorPolynomialData, ComputablePolynomial.sub_eq,
@@ -142,14 +100,14 @@ theorem clearedQuotientErrorPolynomialData_eq {numSets : Nat}
 /-- Executable set-separation polynomial at one node. -/
 def nodeBindingErrorPolynomialData {numSets : Nat}
     (allPts : Finset Fp) (pts : Fin numSets → Finset Fp)
-    (col r : Fin numSets → Polynomial Fp) (node : Fp) : Polynomial Fp :=
+    (col r : Fin numSets → CPoly) (node : Fp) : CPoly :=
   powerErrorPolynomialData fun j =>
     (polynomialEvalData (ComputablePolynomial.sub (col j) (r j)) node) *
       polynomialEvalData (coProdData allPts (pts j)) node
 
 theorem nodeBindingErrorPolynomialData_eq {numSets : Nat}
     (allPts : Finset Fp) (pts : Fin numSets → Finset Fp)
-    (col r : Fin numSets → Polynomial Fp) (node : Fp) :
+    (col r : Fin numSets → CPoly) (node : Fp) :
     nodeBindingErrorPolynomialData allPts pts col r node =
       nodeBindingErrorPolynomial allPts pts col r node := by
   rw [nodeBindingErrorPolynomialData, powerErrorPolynomialData_eq,
@@ -162,12 +120,12 @@ theorem nodeBindingErrorPolynomialData_eq {numSets : Nat}
 
 /-- Executable member-separation polynomial at one node. -/
 def memberBindingErrorPolynomialData {numMem : Nat}
-    (mem : Fin numMem → Polynomial Fp) (claimed : Fin numMem → Fp)
-    (node : Fp) : Polynomial Fp :=
+    (mem : Fin numMem → CPoly) (claimed : Fin numMem → Fp)
+    (node : Fp) : CPoly :=
   powerErrorPolynomialData fun m => polynomialEvalData (mem m) node - claimed m
 
 theorem memberBindingErrorPolynomialData_eq {numMem : Nat}
-    (mem : Fin numMem → Polynomial Fp) (claimed : Fin numMem → Fp)
+    (mem : Fin numMem → CPoly) (claimed : Fin numMem → Fp)
     (node : Fp) :
     memberBindingErrorPolynomialData mem claimed node =
       memberBindingErrorPolynomial mem claimed node := by
@@ -179,7 +137,7 @@ theorem memberBindingErrorPolynomialData_eq {numMem : Nat}
   rw [polynomialEvalData_eq_eval]
 
 /-- Executable `ξ` shift polynomial. -/
-def ipaShiftXiPolynomialData (delta sEval : Fp) : Polynomial Fp :=
+def ipaShiftXiPolynomialData (delta sEval : Fp) : CPoly :=
   ComputablePolynomial.add (ComputablePolynomial.const delta)
     (ComputablePolynomial.mul (ComputablePolynomial.const sEval) ComputablePolynomial.X)
 
@@ -190,7 +148,7 @@ theorem ipaShiftXiPolynomialData_eq (delta sEval : Fp) :
     ComputablePolynomial.X_eq, ipaShiftXiPolynomial]
 
 /-- Executable `z` shift polynomial. -/
-def ipaShiftZPolynomialData (delta pU sU sEval xi : Fp) : Polynomial Fp :=
+def ipaShiftZPolynomialData (delta pU sU sEval xi : Fp) : CPoly :=
   ComputablePolynomial.add (ComputablePolynomial.const (-(pU + xi * sU)))
     (ComputablePolynomial.mul (ComputablePolynomial.const (delta + xi * sEval))
       ComputablePolynomial.X)
@@ -212,7 +170,7 @@ def deployedAlgebraicSetColumnsData [DecidableEq G] [Inhabited G] {shape : Shape
     {aggregate : Fin (2 ^ urs.k) → Fp} {aggregateU aggregateW : Fp}
     (batch : AlgebraicPowerBatch urs (x4BatchCommitments urs hk vk instanceCommitment ps ch)
       aggregate aggregateU aggregateW ch.x4) :
-    Fin (deployedX4PairCount vk instanceCommitment ps ch) → Polynomial Fp :=
+    Fin (deployedX4PairCount vk instanceCommitment ps ch) → CPoly :=
   fun j => coeffsToPoly (batch.coeffs ⟨(j : Nat), Nat.lt_succ_of_lt j.isLt⟩)
 
 theorem deployedAlgebraicSetColumnsData_eq [DecidableEq G] [Inhabited G] {shape : Shape}
@@ -232,7 +190,7 @@ def deployedAlgebraicQPrimeData [DecidableEq G] [Inhabited G] {shape : Shape}
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     {aggregate : Fin (2 ^ urs.k) → Fp} {aggregateU aggregateW : Fp}
     (batch : AlgebraicPowerBatch urs (x4BatchCommitments urs hk vk instanceCommitment ps ch)
-      aggregate aggregateU aggregateW ch.x4) : Polynomial Fp :=
+      aggregate aggregateU aggregateW ch.x4) : CPoly :=
   coeffsToPoly (batch.coeffs
     ⟨deployedX4PairCount vk instanceCommitment ps ch, Nat.lt_succ_self _⟩)
 
@@ -251,7 +209,7 @@ def deployedAlgebraicSetInterpolantsData [DecidableEq G] [Inhabited G] {shape : 
     (vk : VerifyingKey shape Fp G)
     (instanceCommitment : Fin shape.numProofs → Nat → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) :
-    Fin (deployedX4PairCount vk instanceCommitment ps ch) → Polynomial Fp :=
+    Fin (deployedX4PairCount vk instanceCommitment ps ch) → CPoly :=
   fun j => lagrangePolyData
     ((deployedSetsForEval vk instanceCommitment ps ch).reverse.getD
       (j : Nat) ([], [], 0)).1
@@ -292,7 +250,7 @@ def deployedX3ErrorPolynomialData [DecidableEq G] [Inhabited G] {shape : Shape}
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     {aggregate : Fin (2 ^ urs.k) → Fp} {aggregateU aggregateW : Fp}
     (batch : AlgebraicPowerBatch urs (x4BatchCommitments urs hk vk instanceCommitment ps ch)
-      aggregate aggregateU aggregateW ch.x4) : Polynomial Fp :=
+      aggregate aggregateU aggregateW ch.x4) : CPoly :=
   clearedQuotientErrorPolynomialData (deployedAllPts vk instanceCommitment ps ch)
     (deployedAlgebraicSetPointsData vk instanceCommitment ps ch)
     (deployedAlgebraicSetColumnsData urs hk vk instanceCommitment ps ch batch)
@@ -324,7 +282,7 @@ def deployedX1RootPolynomialData [DecidableEq G] [Inhabited G] {shape : Shape}
       aggregate aggregateU aggregateW)
     (i : Nat) (hi : i < deployedX4PairCount vk instanceCommitment ps ch)
     (idx : Fin ((deployedSetsForEval vk instanceCommitment ps ch).getD
-      i ([], [], 0)).1.length) : Polynomial Fp :=
+      i ([], [], 0)).1.length) : CPoly :=
   memberBindingErrorPolynomialData
     (fun m : Fin (deployedSetQueries vk instanceCommitment ps ch i).length =>
       coeffsToPoly ((batches.x1 i hi).coeffs m))
@@ -465,7 +423,7 @@ def deployedX2RootPolynomialData [DecidableEq G] [Inhabited G] {shape : Shape}
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     {aggregate : Fin (2 ^ urs.k) → Fp} {aggregateU aggregateW : Fp}
     (batches : DeployedAlgebraicBatches urs hk vk instanceCommitment ps ch
-      aggregate aggregateU aggregateW) (node : Fp) : Polynomial Fp :=
+      aggregate aggregateU aggregateW) (node : Fp) : CPoly :=
   nodeBindingErrorPolynomialData (deployedAllPts vk instanceCommitment ps ch)
     (deployedAlgebraicSetPointsData vk instanceCommitment ps ch)
     (deployedAlgebraicSetColumnsData urs hk vk instanceCommitment ps ch batches.x4)
