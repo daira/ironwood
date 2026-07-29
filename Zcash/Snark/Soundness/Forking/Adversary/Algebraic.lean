@@ -365,7 +365,10 @@ namespace ComputedAlgebraicFSFamily
 
 variable {shape : Shape}
 
-/-- The random-oracle table one run reads. -/
+/-- The random-oracle table one run reads.
+
+Collapsing the sampling tape out of this left a bare alias for the table type. It is kept as the
+name every consumer spells, so inlining it is a separate mechanical pass. -/
 abbrev Coins (family : ComputedAlgebraicFSFamily shape) :=
   BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp
 
@@ -376,7 +379,10 @@ end ComputedAlgebraicFSFamily
 Bounded-query adversaries over transcript lists reduce to their finite reachable-support split.
 Blake2b remains idealized; `truncateTranscript` is only the deployed bounded-transcript retraction. -/
 
-/-- Transfer a uniform bounded-transcript binding bound to the reachable-support split. -/
+/-- Transfer a uniform bounded-transcript binding bound to the reachable-support split.
+
+No in-tree consumer since the recursive extractor was retired; kept deliberately as the named
+reduction from the unbounded oracle domain to its finite reachable-support split. -/
 theorem bindingWin_unbounded_measure_le {shape : Shape}
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG} {vk : VerifyingKey shape Fp VestaG} {instanceCommitment : Fin shape.numProofs → ℕ → VestaG}
     (init : List (TranscriptElt Fp VestaG))
@@ -410,22 +416,13 @@ theorem bindingWin_unbounded_measure_le {shape : Shape}
     A hQ (fullAlgebraicBindingAttack basis vk instanceCommitment)
     (algebraicFullPrefixesPre init) (algebraicFullPrefixes init) hβ
 
-/-! ## Unbounded-domain programmed-basis endpoint
+/-! ## Uniform-URS basis transfer -/
 
-A common reachable-support split makes the finite junk table private randomness. The endpoint uses
-one private-coin-folded DL solver, not a separate assumption for each junk table. -/
+/-- Transfer any finite-coin event across a uniform-URS basis identification.
 
-/-- A basis-indexed computed adversary over arbitrary transcript lists. -/
-structure ComputedAlgebraicFSFamilyUnbounded (shape : Shape) where
-  init : List (TranscriptElt Fp VestaG)
-  vk : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) → VerifyingKey shape Fp VestaG
-  instanceCommitment : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) → Fin shape.numProofs → ℕ → VestaG
-  adversary : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) → OracleComp
-    (List (TranscriptElt Fp VestaG)) Fp (AlgebraicWfProof basis (vk basis) (instanceCommitment basis))
-  Q : ℕ
-  queryBound : ∀ basis, (adversary basis).QueryBound Q
-
-/-- Transfer any finite-coin event across a uniform-URS basis identification. -/
+The programmed-basis endpoint that consumed this was retired with the recursive extractor, so the
+trust-boundary pin is now its only reference. Kept deliberately: the statement is route-independent
+and is what a future programmed-basis argument reuses. -/
 theorem uniformURS_basis_transfer {k : ℕ} {C : Type*} [Fintype C] [Nonempty C]
     {Ω : Type*} (setup : PMF Ω) (B : VestaG)
     (basisOf : Ω → AugmentedIndex (2 ^ k) → VestaG)
@@ -459,54 +456,6 @@ theorem uniformURS_basis_transfer {k : ℕ} {C : Type*} [Fintype C] [Nonempty C]
         (fun p => (scalarBasis B p.1, p.2))).toOuterMeasure E at hmeasure
   rw [PMF.toOuterMeasure_map_apply, PMF.toOuterMeasure_map_apply] at hmeasure
   rw [hmeasure, independentProductPMF_uniform]
-
-namespace ComputedAlgebraicFSFamilyUnbounded
-
-variable {shape : Shape}
-
-
-
-
-
-
-
-
-
-
-
-
-
-end ComputedAlgebraicFSFamilyUnbounded
-
-/-- Arbitrary-domain adversary with genuine independent private coins `R`, on top of the
-transcript-list oracle domain. -/
-structure ComputedAlgebraicFSFamilyUnboundedRand (shape : Shape) (R : Type*) where
-  init : List (TranscriptElt Fp VestaG)
-  vk : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) → VerifyingKey shape Fp VestaG
-  instanceCommitment : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) → Fin shape.numProofs → ℕ → VestaG
-  adversary : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) → R → OracleComp
-    (List (TranscriptElt Fp VestaG)) Fp (AlgebraicWfProof basis (vk basis) (instanceCommitment basis))
-  Q : ℕ
-  queryBound : ∀ basis r, (adversary basis r).QueryBound Q
-
-namespace ComputedAlgebraicFSFamilyUnboundedRand
-
-variable {shape : Shape} {R : Type*}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-end ComputedAlgebraicFSFamilyUnboundedRand
 
 /-! ## Standard AGM adapter
 
