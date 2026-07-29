@@ -1033,6 +1033,20 @@ structure ComputedAdaptiveOnlineAGMFSFamily (shape : Shape) where
     Fin shape.numProofs → ℕ → VestaG
   fixedRepresentations : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) →
     List (AlgebraicPoint (F := Fp) basis)
+  /-- Public-instance commitments are verifier-known AGM points available before every squeeze. -/
+  instanceRepresented : ∀ basis (p : Fin shape.numProofs) i,
+    (∃ rotation, (i, rotation) ∈ (vk basis).instanceQueryLayout) →
+    ∃ ap ∈ fixedRepresentations basis,
+      ap.point = instanceCommitment basis p i
+  /-- Fixed-column commitments are verifier-known AGM points available before every squeeze. -/
+  fixedRepresented : ∀ basis i,
+    (∃ rotation, (i, rotation) ∈ (vk basis).fixedQueryLayout) →
+    ∃ ap ∈ fixedRepresentations basis,
+      ap.point = (vk basis).fixedCommitment i
+  /-- Common permutation commitments are likewise part of the verifier-known source. -/
+  permutationCommonRepresented : ∀ basis (c : Fin shape.numPermutationColumns),
+    ∃ ap ∈ fixedRepresentations basis,
+      ap.point = (vk basis).permutationCommonCommitment c
   adversary : (basis : AugmentedIndex (2 ^ shape.k) → VestaG) →
     AdaptiveOnlineAGMComp init basis
       (OnlineMemberProofData (vk := vk basis)
