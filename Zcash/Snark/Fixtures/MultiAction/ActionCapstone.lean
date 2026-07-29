@@ -3,9 +3,9 @@ import Zcash.Snark.Soundness.Composition.ScheduleBudget
 import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
 import Zcash.Snark.Fixtures.StraightLineMaxShapeBounds
 import Zcash.Snark.Keygen.Certificate
-import Zcash.Circuits.Integration.StraightLineActionEvent
-import Zcash.Circuits.Integration.StraightLineActionBudgets
-import Zcash.Circuits.Integration.AdaptiveActionEvent
+import Zcash.Snark.Soundness.Action.StraightLineEvent
+import Zcash.Snark.Soundness.Action.StraightLineBudgets
+import Zcash.Snark.Soundness.Action.AdaptiveEvent
 
 /-!
 # Exact Action soundness capstones

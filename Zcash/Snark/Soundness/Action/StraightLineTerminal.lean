@@ -1,4 +1,4 @@
-import Zcash.Circuits.Integration.ActionTerminal
+import Zcash.Snark.Soundness.Action.Terminal
 import Zcash.Snark.Soundness.AGM.DecodeToOpened
 import Zcash.Snark.Soundness.Composition.StraightLineDecodeSupply
 

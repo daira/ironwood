@@ -1,4 +1,4 @@
-import Zcash.Circuits.Integration.AdaptiveActionSurfaces
+import Zcash.Snark.Soundness.Action.AdaptiveSurfaces
 import Zcash.Snark.Soundness.AGM.AdaptiveComposition
 
 /-!

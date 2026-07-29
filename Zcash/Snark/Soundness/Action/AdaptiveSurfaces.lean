@@ -1,5 +1,5 @@
-import Zcash.Circuits.Integration.AdaptiveActionTerminal
-import Zcash.Circuits.Integration.StraightLineActionBudgets
+import Zcash.Snark.Soundness.Action.AdaptiveTerminal
+import Zcash.Snark.Soundness.Action.StraightLineBudgets
 import Zcash.Snark.Soundness.AGM.AdaptiveSurfaces
 
 /-!

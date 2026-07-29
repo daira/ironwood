@@ -1,4 +1,4 @@
-import Zcash.Circuits.Integration.StraightLineActionTerminal
+import Zcash.Snark.Soundness.Action.StraightLineTerminal
 import Zcash.Snark.Soundness.Composition.PrefixedSqueeze
 import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
 
