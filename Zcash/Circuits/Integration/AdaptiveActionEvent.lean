@@ -1,4 +1,4 @@
-import Zcash.Circuits.Integration.AdaptiveActionTerminal
+import Zcash.Circuits.Integration.AdaptiveActionSurfaces
 import Zcash.Snark.Soundness.AGM.AdaptiveComposition
 
 /-!
@@ -55,9 +55,40 @@ def adaptiveActionRelationFinder :
         + 3 * (pp.mergeDerived actionCircuit).k) → Fp) →
     Option (AlgebraicRelationWitness (F := Fp) basis) :=
   fun basis O =>
-    match family.adaptiveStraightLineDeployedRelationFinder basis O with
+    match family.adaptiveActionRepresentationRelationFinder basis O with
     | some relation => some relation
-    | none => adaptiveActionTerminalRelationFinder pp family inputs hvk hI hchar basis O
+    | none =>
+        match family.adaptiveStraightLineDeployedRelationFinder basis O with
+        | some relation => some relation
+        | none => adaptiveActionTerminalRelationFinder pp family inputs hvk hI hchar basis O
+
+/-- An empty combined finder excludes every stage-local Action provenance mismatch. -/
+theorem adaptiveActionRelationFinder_none_actionProvenance
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+        + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
+    (hnone : adaptiveActionRelationFinder pp family inputs hvk hI hchar basis O = none) :
+    family.adaptiveActionRepresentationRelationFinder basis O = none := by
+  unfold adaptiveActionRelationFinder at hnone
+  split at hnone
+  · simp_all
+  · assumption
+
+/-- An empty combined finder also excludes every pre-IPA/IPA/deployed-root relation branch. -/
+theorem adaptiveActionRelationFinder_none_straightLine
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+        + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
+    (hnone : adaptiveActionRelationFinder pp family inputs hvk hI hchar basis O = none) :
+    family.adaptiveStraightLineDeployedRelationFinder basis O = none := by
+  unfold adaptiveActionRelationFinder at hnone
+  split at hnone
+  · simp_all
+  · split at hnone
+    · simp_all
+    · assumption
 
 /-- Explicit relation-producing runs of the combined adaptive Action finder. -/
 def adaptiveActionRelationEvent :
