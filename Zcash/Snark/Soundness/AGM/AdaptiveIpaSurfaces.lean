@@ -11,7 +11,8 @@ three pieces of algebraic data that can affect the quadratic: the canonical mult
 
 namespace Zcash.Snark
 
-open Classical Polynomial
+open Classical
+open CompPoly CompPoly.CPolynomial
 open scoped ENNReal
 
 variable {shape : Shape}
@@ -293,7 +294,7 @@ noncomputable def adaptiveIpaRootPolynomial
         (chRecord nu (fun _ => 0))).other →
         ∃ ap ∈ coordinates.multiopenSource, ap.point = pr.2)
     (nu : Fin 11 → Fp) (chi : Fin shape.k → Fp) (j : Fin shape.k) :
-    Polynomial Fp :=
+    CPoly :=
   ipaDiscrepancyPolynomialAt
     (adaptiveIpaInitialDiscrepancy vk instanceCommitment ps coordinates hcover nu)
     ((List.ofFn coordinates.rounds).map

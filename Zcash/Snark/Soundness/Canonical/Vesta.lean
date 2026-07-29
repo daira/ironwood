@@ -20,7 +20,7 @@ No formal-circuit or Action concept appears here.
 
 namespace Zcash.Snark
 
-open Polynomial
+open CompPoly CompPoly.CPolynomial
 open Classical
 open scoped ENNReal
 
@@ -82,7 +82,7 @@ noncomputable def acceptedModel_circuitSat_or_relation_of_feed_eq
     (ps : ProofString shape Fp VestaG)
     (ch : Challenges shape.k Fp)
     (pU pW : Fp)
-    (hpoly : Polynomial Fp)
+    (hpoly : CPoly)
     {a₀ : Fin (2 ^ urs.k) → Fp}
     (pbatch :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
@@ -121,7 +121,7 @@ noncomputable def acceptedModel_circuitSat_or_relation_of_feed_eq
     (i m : ℕ)
     (hm : m < (deployedSetQueries vk instanceCommitment ps ch i).length)
     (colPoly : Fin (deployedSetQueries vk instanceCommitment ps ch i).length →
-      Polynomial Fp)
+      CPoly)
     (hbindAll : ∀ (idx : Fin ((constructIntermediateSets
           (assembleQueries vk instanceCommitment ps ch)).points.getD i []).length)
         (m₀ : Fin (deployedSetQueries vk instanceCommitment ps ch i).length),
@@ -217,7 +217,7 @@ noncomputable def acceptedModel_circuitSat_or_relation_of_acceptedSelections
     (ps : ProofString shape Fp VestaG)
     (ch : Challenges shape.k Fp)
     (pU pW : Fp)
-    (hpoly : Polynomial Fp)
+    (hpoly : CPoly)
     {a₀ : Fin (2 ^ urs.k) → Fp}
     (pbatch :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
@@ -241,7 +241,7 @@ noncomputable def acceptedModel_circuitSat_or_relation_of_acceptedSelections
     (i m : ℕ)
     (hm : m < (deployedSetQueries vk instanceCommitment ps ch i).length)
     (colPoly : Fin (deployedSetQueries vk instanceCommitment ps ch i).length →
-      Polynomial Fp)
+      CPoly)
     (hbindAll : ∀ (idx : Fin ((constructIntermediateSets
           (assembleQueries vk instanceCommitment ps ch)).points.getD i []).length)
         (m₀ : Fin (deployedSetQueries vk instanceCommitment ps ch i).length),
