@@ -23,9 +23,11 @@ the same at the witness shape, where `k = 0` empties the round obligations.
 
 ## Scope
 
-This is an interface test, not the deployed family.  The deployed family comes from
-`ComputedStraightLineDeployedFSFamily.ofCovered`, which packages an online
-representation-carrying prover with caller-supplied stages; the captured-key endpoint applies the
+This is a fixture-local interface test, not the deployed Action family.  Its declarations are
+nevertheless checked by `Fixtures.MultiAction.TrustBoundary`: trust-census coverage records the
+axioms used by a test and does not designate that test as the deployed adversary.  The deployed
+family comes from `ComputedStraightLineDeployedFSFamily.ofCovered`, which packages an online
+representation-carrying prover with its staged traces; the captured-key endpoint applies the
 fixture metadata to that.
 -/
 namespace Zcash.Snark.Fixture2
@@ -131,8 +133,8 @@ the constraint-`x` stage — with both sub-proofs live.  (Under the previous dec
 this layer was unstageable for zero columns, because witness existence read the verifier-computed
 `expectedHEval`, a function of the `x` answer itself.)
 
-This family is the interface smoke test.  It is not, and must not be described as, the deployed
-Action adversary.
+This family remains a fixture-local interface smoke test.  Its explicit fixture-census entries
+check its trust base without reclassifying it as the deployed Action adversary.
 -/
 
 /-- The captured key at the full captured shape — `numProofs = 2` live — with zero group

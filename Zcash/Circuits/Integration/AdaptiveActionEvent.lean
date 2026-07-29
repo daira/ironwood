@@ -251,7 +251,7 @@ theorem adaptiveActionPreXIdentityRelationFinder_isSome_of
         (family.instanceCommitment basis) data.algebraicProof.erase source
         (adaptiveActionRunRecord family basis O) hblinding
       difference.toFinsupp.support = ∅)
-    (hgoodY : let pnu := adaptiveActionRunOutput family basis O
+    (hgoodY : let _pnu := adaptiveActionRunOutput family basis O
       let decode := hI basis ▸ hvk basis ▸
         (family.adaptiveAlgebraicDecode_of_deployedGoodRoots
           basis O witness hroots hshifted).reRound (runRounds family.toFamily basis O)
@@ -1064,7 +1064,7 @@ theorem adaptiveActionSemanticResidual_prob_le
       (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
       (n : Fin 5)
       (ps : ProofString (pp.mergeDerived actionCircuit) Fp VestaG)
-      (hwf : PsWellFormed ps)
+      (_hwf : PsWellFormed ps)
       (source : List (AlgebraicPoint (F := Fp) basis))
       (earlier : Fin (n : Nat) → Fp),
       uniformChallenge.toOuterMeasure
@@ -1096,7 +1096,7 @@ theorem adaptiveActionAcceptFalseStatement_prob_le
       (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
       (n : Fin 5)
       (ps : ProofString (pp.mergeDerived actionCircuit) Fp VestaG)
-      (hwf : PsWellFormed ps)
+      (_hwf : PsWellFormed ps)
       (source : List (AlgebraicPoint (F := Fp) basis))
       (earlier : Fin (n : Nat) → Fp),
       uniformChallenge.toOuterMeasure

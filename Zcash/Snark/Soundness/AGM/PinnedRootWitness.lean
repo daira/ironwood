@@ -657,11 +657,11 @@ theorem deployedX3RootSet_of_zero
     rw [hcount]; infer_instance
   have hq : deployedAlgebraicQPrime urs hk vk ic ps ch b.x4 = 0 := by
     rw [deployedAlgebraicQPrime, hc, coeffsToPoly_eq_sum]
-    simp [Finset.univ_eq_empty]
+    simp
   rw [deployedX3RootSet,
     show deployedX3ErrorPolynomial urs hk vk ic ps ch b.x4 = 0 from by
       rw [deployedX3ErrorPolynomial, clearedQuotientErrorPolynomial, hq]
-      simp [Finset.univ_eq_empty]]
+      simp]
   simp [szBadSet]
 
 end RootSetCollapse

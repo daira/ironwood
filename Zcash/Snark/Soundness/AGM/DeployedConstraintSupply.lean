@@ -433,6 +433,7 @@ def committedPreXQuotient {shape : Shape} (vk : VerifyingKey shape Fp G)
     (piecePoly : Fin shape.numQuotientPieces -> Polynomial Fp) : Polynomial Fp :=
   preXQuotientData vk.n piecePoly
 
+omit [AddCommGroup G] [Module Fp G] in
 theorem committedPreXQuotient_eq {shape : Shape} (vk : VerifyingKey shape Fp G)
     (piecePoly : Fin shape.numQuotientPieces -> Polynomial Fp) :
     committedPreXQuotient vk piecePoly = preXQuotient vk.n piecePoly :=
@@ -443,6 +444,7 @@ def committedBlindSelector {shape : Shape} (vk : VerifyingKey shape Fp G) : Poly
   ComputablePolynomial.sumList ((List.range vk.blindingFactors).map
     (fun j => lagrangeBasisPoly vk.omega vk.n (-((j : Int) + 1))))
 
+omit [AddCommGroup G] [Module Fp G] in
 theorem committedBlindSelector_eq {shape : Shape} (vk : VerifyingKey shape Fp G) :
     committedBlindSelector vk =
       ((List.range vk.blindingFactors).map
@@ -479,6 +481,7 @@ def committedPreXConstraintDifference [Inhabited G] {shape : Shape}
         (ComputablePolynomial.pow ComputablePolynomial.X vk.n)
         (ComputablePolynomial.const 1)))
 
+omit [AddCommGroup G] [Module Fp G] in
 theorem committedPreXConstraintDifference_eq [Inhabited G] {shape : Shape}
     (poly : G -> Polynomial Fp)
     (piecePoly : Fin shape.numQuotientPieces -> Polynomial Fp)

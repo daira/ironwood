@@ -909,7 +909,7 @@ theorem adaptiveActionCommittedModel_challenge_congr
     funext id
     by_cases hvanishing : id = .vanishingH
     · subst id
-      simp [adaptiveActionCommitmentPolynomial, adaptiveActionCommitmentPolynomialOf,
+      simp [adaptiveActionCommitmentPolynomialOf,
         adaptiveActionCommitmentActive]
     · exact adaptiveActionCommitmentPolynomial_challenge_congr
         pp basis inputs ps source ch₁ ch₂ id hvanishing
@@ -1105,7 +1105,7 @@ theorem onlinePointPolynomial_eq_of_sourceMismatch_none
     simpa using List.find?_some hstage
   have hsourceSome : (source.find? (fun candidate => candidate.point = ap.point)).isSome := by
     rw [List.find?_isSome]
-    exact ⟨stage, hsub stage hstageMem, by simpa [hstagePoint]⟩
+    exact ⟨stage, hsub stage hstageMem, by simp [hstagePoint]⟩
   obtain ⟨first, hfirst⟩ := Option.isSome_iff_exists.mp hsourceSome
   have hall := (ComputedAdaptiveOnlineAGMFSFamily.firstAdaptiveRelation?_eq_none_iff _).1 hnone
   have hmismatch : representationAgainstSourceMismatch? source stage = none := by
@@ -1147,20 +1147,20 @@ noncomputable def adaptiveActionSurfaceAt
   let urs := ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis
   let vk := ActionTerminal.vkAt pp basis
   let poly := adaptiveActionCommitmentPolynomial pp basis inputs ps source ch
-  if h0 : (n : Nat) = 0 then
+  if _h0 : (n : Nat) = 0 then
     ↑(TopLevelLookupCoherence.allTopLevelLookupThetaBadSet
       actionCircuit pp urs poly)
-  else if h1 : (n : Nat) = 1 then
+  else if _h1 : (n : Nat) = 1 then
     ↑(allResolverPermutationBetaBadSet vk poly actionActiveRows) ∪
       ↑(allResolverLookupBetaBadSet vk (ActionTerminal.semanticChRecord ch.theta 0) poly
         (vk.n - vk.blindingFactors - 2))
-  else if h2 : (n : Nat) = 2 then
+  else if _h2 : (n : Nat) = 2 then
     ↑(allResolverPermutationGammaBadSet vk
         (ActionTerminal.semanticChRecord ch.theta ch.beta) poly actionActiveRows) ∪
       ↑(allResolverLookupGammaBadSet vk
         (ActionTerminal.semanticChRecord ch.theta ch.beta) poly
           (vk.n - vk.blindingFactors - 2))
-  else if h3 : (n : Nat) = 3 then
+  else if _h3 : (n : Nat) = 3 then
     let model := adaptiveActionCommittedModel pp basis inputs ps source ch
     ⋃ j, ↑(szBadSet (foldSplitWitness model.constraints vk.n j))
   else
@@ -1202,7 +1202,7 @@ theorem adaptiveActionCommitmentPolynomial_column_eq
   cases id <;>
     simp_all [CommitmentId.isColumnInput, adaptiveActionCommitmentPolynomial,
       adaptiveActionCommitmentPolynomialOf,
-      adaptiveActionPointPolynomial, assembledCommitment, hadvice]
+      adaptiveActionPointPolynomial, assembledCommitment]
 
 theorem adaptiveActionCommitmentPolynomial_lookup_eq
     (pp : ProofParams)
@@ -1222,7 +1222,7 @@ theorem adaptiveActionCommitmentPolynomial_lookup_eq
   cases id <;>
     simp_all [CommitmentId.isLookupInput, adaptiveActionCommitmentPolynomial,
       adaptiveActionCommitmentPolynomialOf,
-      adaptiveActionPointPolynomial, assembledCommitment, hadvice, hinput, htable]
+      adaptiveActionPointPolynomial, assembledCommitment]
 
 theorem adaptiveActionCommitmentPolynomial_permutation_eq
     (pp : ProofParams)
@@ -1240,7 +1240,7 @@ theorem adaptiveActionCommitmentPolynomial_permutation_eq
   cases id <;>
     simp_all [CommitmentId.isPermutationInput, adaptiveActionCommitmentPolynomial,
       adaptiveActionCommitmentPolynomialOf,
-      adaptiveActionPointPolynomial, assembledCommitment, hadvice]
+      adaptiveActionPointPolynomial, assembledCommitment]
 
 theorem adaptiveActionCommitmentPolynomial_eq_of_preY_fields
     (pp : ProofParams)
@@ -1273,7 +1273,7 @@ theorem adaptiveActionSurfaceAt_congr
     (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
     (n : Fin 5)
     (ps ps' : ProofString (pp.mergeDerived actionCircuit) Fp VestaG)
-    (hwf : PsWellFormed ps) (hwf' : PsWellFormed ps')
+    (_hwf : PsWellFormed ps) (_hwf' : PsWellFormed ps')
     (source source' : List (AlgebraicPoint (F := Fp) basis))
     (earlier : Fin (n : Nat) → Fp)
     (hprefix : preIpaSqueezePoints init ps
@@ -2464,7 +2464,7 @@ theorem adaptiveActionExclusions_of_no_surface
         (data.algebraicProof.actionRepresentationsBefore n ++
           family.fixedRepresentations basis)
         (fun i => nu (i.castLE (le_of_lt n11.isLt)))) :
-    let pnu := ActionTerminal.adaptiveActionRunOutput family basis O
+    let _pnu := ActionTerminal.adaptiveActionRunOutput family basis O
     let ch := ActionTerminal.adaptiveActionRunRecord family basis O
     let data := (family.adversary basis).run O
     let source := data.algebraicProof.preX1AssemblySource (family.fixedRepresentations basis)
@@ -2570,7 +2570,7 @@ theorem adaptiveActionExclusions_of_no_surface
         adaptiveActionCommitmentAvailable n id := by
     intro hactive
     cases id <;>
-      simp [CommitmentId.isPermutationInput, adaptiveActionCommitmentAvailable, hn1] at hid ⊢
+      simp [CommitmentId.isPermutationInput, adaptiveActionCommitmentAvailable] at hid ⊢
   have hlookupAvailable (n : Fin 5) (hn1 : 1 ≤ (n : Nat))
       (id : CommitmentId) (hid : id.isLookupInput) :
       adaptiveActionCommitmentActive (ActionTerminal.vkAt pp basis) id →
@@ -2871,11 +2871,11 @@ theorem adaptiveActionAcceptedDifference_eval_eq_preX
       (ActionTerminal.adaptiveActionRunOutput family basis O).1.proof.1
       (wrappedPreIpaRecord (ActionTerminal.adaptiveActionRunOutput family basis O)) <
         Zcash.Arithmetic.scalarFieldOrder) :
-    let pnu := ActionTerminal.adaptiveActionRunOutput family basis O
+    let _pnu := ActionTerminal.adaptiveActionRunOutput family basis O
     let ch := ActionTerminal.adaptiveActionRunRecord family basis O
     let data := (family.adversary basis).run O
     let source := data.algebraicProof.preX1AssemblySource (family.fixedRepresentations basis)
-    let piecePoly := fun i => onlinePointPolynomial source (data.algebraicProof.hPieces i).point
+    let _piecePoly := fun i => onlinePointPolynomial source (data.algebraicProof.hPieces i).point
     let decode := hI basis ▸ hvk basis ▸
       rawDecode.reRound (runRounds family.toFamily basis O)
     let hacceptsAction := ActionTerminal.adaptiveActionRunAccepts
@@ -3017,7 +3017,7 @@ end ComputedAdaptiveOnlineAGMFSFamily
 def adaptiveActionEarlier (n : Fin 5)
     (earlier : Fin ((Fin.castLE (by omega) n : Fin 11) : Nat) → Fp) :
     Fin (n : Nat) → Fp :=
-  fun i => earlier ⟨i, by simpa using i.isLt⟩
+  fun i => earlier ⟨i, by simp⟩
 
 /-- Decode a semantic surface at an actual algebraic pre-IPA prefix without unfolding the
 surface itself. -/
@@ -3108,7 +3108,7 @@ theorem ComputedAdaptiveOnlineAGMFSFamily.adaptiveFinalActionBadWithoutRelation_
     (n : Fin 5) {epsilon : ENNReal}
     (hsurface : ∀
       (ps : ProofString (pp.mergeDerived actionCircuit) Fp VestaG)
-      (hwf : PsWellFormed ps)
+      (_hwf : PsWellFormed ps)
       (source : List (AlgebraicPoint (F := Fp) basis))
       (earlier : Fin (n : Nat) → Fp),
       uniformChallenge.toOuterMeasure
@@ -3316,7 +3316,7 @@ theorem ComputedAdaptiveOnlineAGMFSFamily.adaptiveActionBadWithoutRelation_measu
     (n : Fin 5) {epsilon : ENNReal}
     (hsurface : ∀
       (ps : ProofString (pp.mergeDerived actionCircuit) Fp VestaG)
-      (hwf : PsWellFormed ps)
+      (_hwf : PsWellFormed ps)
       (source : List (AlgebraicPoint (F := Fp) basis))
       (earlier : Fin (n : Nat) → Fp),
       uniformChallenge.toOuterMeasure
@@ -3339,7 +3339,7 @@ theorem ComputedAdaptiveOnlineAGMFSFamily.adaptiveActionBadWithoutRelation_all_m
     (epsilon : Fin 5 → ENNReal)
     (hsurface : ∀ (n : Fin 5)
       (ps : ProofString (pp.mergeDerived actionCircuit) Fp VestaG)
-      (hwf : PsWellFormed ps)
+      (_hwf : PsWellFormed ps)
       (source : List (AlgebraicPoint (F := Fp) basis))
       (earlier : Fin (n : Nat) → Fp),
       uniformChallenge.toOuterMeasure

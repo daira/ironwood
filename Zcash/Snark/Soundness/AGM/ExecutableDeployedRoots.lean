@@ -35,6 +35,7 @@ def algebraicBatchErrorPolynomialData {urs : URS G} {numColumns : Nat}
     (columnEvals : Fin numColumns → Fp) : Polynomial Fp :=
   powerErrorPolynomialData fun i => commitGen b (cols i) - columnEvals i
 
+omit [AddCommGroup G] [Module Fp G] in
 theorem algebraicBatchErrorPolynomialData_eq {urs : URS G} {numColumns : Nat}
     (b : Fin (2 ^ urs.k) → Fp)
     (cols : Fin numColumns → Fin (2 ^ urs.k) → Fp)
@@ -257,6 +258,7 @@ def deployedAlgebraicSetInterpolantsData [DecidableEq G] [Inhabited G] {shape : 
     ((deployedSetsForEval vk instanceCommitment ps ch).reverse.getD
       (j : Nat) ([], [], 0)).2.1
 
+omit [AddCommGroup G] [Module Fp G] in
 theorem deployedAlgebraicSetInterpolantsData_eq [DecidableEq G] [Inhabited G]
     {shape : Shape} (vk : VerifyingKey shape Fp G)
     (instanceCommitment : Fin shape.numProofs → Nat → G)
@@ -275,6 +277,7 @@ def deployedAlgebraicSetPointsData [DecidableEq G] [Inhabited G] {shape : Shape}
   fun j => deployedSetPts vk instanceCommitment ps ch
     (deployedX4PairCount vk instanceCommitment ps ch - 1 - (j : Nat))
 
+omit [AddCommGroup G] [Module Fp G] in
 theorem deployedAlgebraicSetPointsData_eq [DecidableEq G] [Inhabited G]
     {shape : Shape} (vk : VerifyingKey shape Fp G)
     (instanceCommitment : Fin shape.numProofs → Nat → G)
@@ -352,6 +355,7 @@ def deployedAllPointList [DecidableEq G] [Inhabited G] {shape : Shape}
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp) : List Fp :=
   (constructIntermediateSets (assembleQueries vk instanceCommitment ps ch)).points.flatten
 
+omit [AddCommGroup G] [Module Fp G] in
 theorem mem_deployedAllPointList_iff [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G)
     (instanceCommitment : Fin shape.numProofs → Nat → G)

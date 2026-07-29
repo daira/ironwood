@@ -206,7 +206,7 @@ def straightLineConstraintOutcome?
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (O : BTranscript Fp VestaG
       (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) :
-    let pnu := (wrappedAdversary family.toFamily basis).run O
+    let _pnu := (wrappedAdversary family.toFamily basis).run O
     Option (StraightLineConstraintSuccess family basis O ⊕'
       AugmentedRelationWitness (F := Fp) (ursOfAugmentedBasis shape.k basis).g
         (ursOfAugmentedBasis shape.k basis).u
@@ -451,7 +451,7 @@ theorem straightLineConstraintDecoded_of_root
           finForallOption_isSome_of _ fun i =>
             finForallOption_isSome_of _ fun idx =>
               finForallOption_isSome_of _ fun m => by
-                simp [memberCheck, equalityCertificate?]
+                simp [equalityCertificate?]
                 simpa [pnu, ch, deployedRootRunOutput] using
                   memberValues i.1 i.2 idx m
         obtain ⟨memberCertificates, hmemberEq⟩ :=
@@ -496,8 +496,7 @@ theorem straightLineConstraintDecoded_of_root
       simp +zetaDelta only [hdecode]
       simp +zetaDelta only [hacceptsEq]
       rw [hxgoodEq]
-      simp [straightLineConstraintDifferencePreX, deployedConstraintDifferencePreX,
-        deployedRootRunOutput, hout']
+      simp [deployedRootRunOutput, hout']
 
 /-- Basis/oracle pairs on which the one-run endpoint accepts but does not return the concrete
 constraint witness. -/

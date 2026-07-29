@@ -31,7 +31,7 @@ def resolverQueryFeed
     {n : ℕ} (omega : Fp) (layout : List (ℕ × ℤ))
     (column : ℕ → Polynomial Fp) : ℕ → Polynomial Fp :=
   fun query =>
-    if hquery : query < n then
+    if _hquery : query < n then
       let entry := layout.getD query (0, 0)
       ComputablePolynomial.comp (column entry.1)
         (ComputablePolynomial.mul (ComputablePolynomial.const (omega ^ entry.2))

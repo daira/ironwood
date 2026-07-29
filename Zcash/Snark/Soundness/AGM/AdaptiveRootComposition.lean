@@ -76,26 +76,26 @@ noncomputable def adaptiveRootSurfaceAt
   let qSource := adaptiveRootQSource ps source
   let sSource := adaptiveRootSSource ps source
   if hmembers : AdaptiveMembersCovered vk instanceCommitment ps memberSource then
-    if h5 : (n : Nat) = 5 then
+    if _h5 : (n : Nat) = 5 then
       adaptiveX1AllRootSet vk instanceCommitment ps memberSource hmembers nu
-    else if h6 : (n : Nat) = 6 then
+    else if _h6 : (n : Nat) = 6 then
       adaptiveX2RootSet vk instanceCommitment ps memberSource hmembers nu
-    else if h7 : (n : Nat) = 7 then
+    else if _h7 : (n : Nat) = 7 then
       if hq : CommitmentRefCovered qSource (.point ps.multiopenQPrime) then
         adaptiveX3RootSet vk instanceCommitment ps memberSource qSource hmembers hq nu
       else ∅
-    else if h8 : (n : Nat) = 8 then
+    else if _h8 : (n : Nat) = 8 then
       if hq : CommitmentRefCovered qSource (.point ps.multiopenQPrime) then
         adaptiveX4RootSet vk instanceCommitment ps memberSource qSource hmembers hq nu
       else ∅
-    else if h9 : (n : Nat) = 9 then
+    else if _h9 : (n : Nat) = 9 then
       if hq : CommitmentRefCovered qSource (.point ps.multiopenQPrime) then
         if hs : CommitmentRefCovered sSource (.point ps.ipaS) then
           adaptiveXiRootSet vk instanceCommitment ps memberSource qSource sSource
             hmembers hq hs nu
         else ∅
       else ∅
-    else if h10 : (n : Nat) = 10 then
+    else if _h10 : (n : Nat) = 10 then
       if hq : CommitmentRefCovered qSource (.point ps.multiopenQPrime) then
         if hs : CommitmentRefCovered sSource (.point ps.ipaS) then
           adaptiveZRootSet vk instanceCommitment ps memberSource qSource sSource

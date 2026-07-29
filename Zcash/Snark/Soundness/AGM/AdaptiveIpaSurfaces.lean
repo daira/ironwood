@@ -362,7 +362,7 @@ theorem adaptiveIpaRootPolynomial_prefix
     have hij : i ≤ j.val := by
       simp only [List.length_take, List.length_ofFn] at hi
       omega
-    simp [hij]
+    simp
     intro hji
     have hji' : j.val < i := hji
     omega
@@ -545,7 +545,7 @@ theorem adaptiveIpaQueryCoordinates_eq_of_pinned
         intro h
         exact hij h
       simp [adaptiveIpaQueryCoordinates, OnlineMemberProofData.adaptiveIpaCoordinates,
-        AdaptiveIpaCoordinateData.prefix, hijFin, data]
+        AdaptiveIpaCoordinateData.prefix, hijFin]
 
 /-! ## Blind round-local bad sets -/
 
@@ -599,7 +599,7 @@ def adaptiveIpaRoundRecord
     (init : List (TranscriptElt Fp VestaG)) {L : Nat}
     (j : Fin shape.k) (t : BTranscript Fp VestaG L)
     (O : BTranscript Fp VestaG L → Fp) : Fin shape.k → Fp :=
-  fun i => if h : i.val < j.val then
+  fun i => if _h : i.val < j.val then
     O (adaptiveEarlierRoundPrefix (shape := shape) init t i)
   else 0
 

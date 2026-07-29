@@ -68,7 +68,7 @@ def actionProofParamsFor (numProofs : ℕ) : ProofParams :=
 /-- The captured fixture's one-Action proof-shape parameters.  Keeping this name as the captured
 specialization lets the expensive certificate below remain a single computation; consensus-sized
 capstones transport its circuit-owned fields instead of re-running key generation. -/
-def actionProofParams : ProofParams := { numProofs := 1, numPointSets := 5 }
+def actionProofParams : ProofParams := actionProofParamsFor 1
 
 @[simp] theorem actionProofParamsFor_numProofs (numProofs : ℕ) :
     (actionProofParamsFor numProofs).numProofs = numProofs := rfl

@@ -427,11 +427,11 @@ theorem OnlineMemberProofData.adaptiveAggregates_eq
       (x4BatchCommitments (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment
         data.algebraicProof.erase (chRecord nu (fun _ => 0)))
       aggregate aggregateU aggregateW (nu 8))
-    (hcoeffs : batch.coeffs =
+    (_hcoeffs : batch.coeffs =
       (adaptiveX4ColumnRepresentations vk instanceCommitment data.algebraicProof.erase
         (data.algebraicProof.preX1AssemblySource fixed)
         [data.algebraicProof.multiopenQPrime] data.adaptivePreX1MembersCovered qCovered nu).coeffs)
-    (hu : batch.uComp =
+    (_hu : batch.uComp =
       (adaptiveX4ColumnRepresentations vk instanceCommitment data.algebraicProof.erase
         (data.algebraicProof.preX1AssemblySource fixed)
         [data.algebraicProof.multiopenQPrime] data.adaptivePreX1MembersCovered qCovered nu).uComp)
@@ -603,7 +603,7 @@ theorem adaptiveEarlierRecord_actual
       (preIpaLen shape init.length 10 + 3 * shape.k) → Fp) :
     adaptiveEarlierRecord n (fun i => O (adaptiveEarlierPrefix (shape := shape) init
       (algebraicFullPrefixesPre init p n) (i.castLE (le_of_lt n.isLt)))) =
-      fun i : Fin 11 => if h : (i : Nat) < (n : Nat) then
+      fun i : Fin 11 => if _h : (i : Nat) < (n : Nat) then
         O (algebraicFullPrefixesPre init p i) else 0 := by
   funext i
   unfold adaptiveEarlierRecord
@@ -735,7 +735,7 @@ private theorem deployedSetsForEval_getD_points_prefix5
     (nu : Fin 11 → Fp) (i : Nat)
     (hi : i < deployedX4PairCount vk instanceCommitment ps
       (chRecord nu (fun _ => 0))) :
-    let hiPrefix : i < deployedX4PairCount vk instanceCommitment
+    let _hiPrefix : i < deployedX4PairCount vk instanceCommitment
         (adaptiveRootPrefixProof 5 ps) (chRecord nu (fun _ => 0)) := by
       rwa [deployedX4PairCount_prefix5]
     ((deployedSetsForEval vk instanceCommitment (adaptiveRootPrefixProof 5 ps)
@@ -756,7 +756,7 @@ private theorem deployedSetsForEval_getD_evals_prefix5
     (nu : Fin 11 → Fp) (i : Nat)
     (hi : i < deployedX4PairCount vk instanceCommitment ps
       (chRecord nu (fun _ => 0))) :
-    let hiPrefix : i < deployedX4PairCount vk instanceCommitment
+    let _hiPrefix : i < deployedX4PairCount vk instanceCommitment
         (adaptiveRootPrefixProof 5 ps) (chRecord nu (fun _ => 0)) := by
       rwa [deployedX4PairCount_prefix5]
     ((deployedSetsForEval vk instanceCommitment (adaptiveRootPrefixProof 5 ps)
@@ -2150,7 +2150,7 @@ theorem adaptiveEarlierRecord_preIpaReads
       (preIpaLen shape init.length 10 + 3 * shape.k) → Fp) :
     adaptiveEarlierRecord n (fun i =>
       O (algebraicFullPrefixesPre init p (i.castLE (le_of_lt n.isLt)))) =
-      fun i : Fin 11 => if h : (i : Nat) < (n : Nat) then
+      fun i : Fin 11 => if _h : (i : Nat) < (n : Nat) then
         O (algebraicFullPrefixesPre init p i) else 0 := by
   funext i
   unfold adaptiveEarlierRecord
@@ -2174,7 +2174,7 @@ theorem OnlineMemberProofData.adaptiveFinalRootBad_five
         data.algebraicProof.erase
         (data.algebraicProof.preX1AssemblySource (family.fixedRepresentations basis))
         data.adaptivePreX1MembersCovered
-        (fun i : Fin 11 => if h : (i : Nat) < 5 then
+        (fun i : Fin 11 => if _h : (i : Nat) < 5 then
           O (algebraicFullPrefixesPre family.init data.toAlgebraicWfProof i) else 0) := by
   dsimp only
   rw [data.adaptiveFinalRootBad_eq_fallback O 5]
@@ -2197,7 +2197,7 @@ theorem OnlineMemberProofData.adaptiveFinalRootBad_six
         data.algebraicProof.erase
         (data.algebraicProof.preX1AssemblySource (family.fixedRepresentations basis))
         data.adaptivePreX1MembersCovered
-        (fun i : Fin 11 => if h : (i : Nat) < 6 then
+        (fun i : Fin 11 => if _h : (i : Nat) < 6 then
           O (algebraicFullPrefixesPre family.init data.toAlgebraicWfProof i) else 0) := by
   dsimp only
   rw [data.adaptiveFinalRootBad_eq_fallback O 6]
@@ -2221,7 +2221,7 @@ theorem OnlineMemberProofData.adaptiveFinalRootBad_seven
         (data.algebraicProof.preX1AssemblySource (family.fixedRepresentations basis))
         [data.algebraicProof.multiopenQPrime] data.adaptivePreX1MembersCovered
         ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩
-        (fun i : Fin 11 => if h : (i : Nat) < 7 then
+        (fun i : Fin 11 => if _h : (i : Nat) < 7 then
           O (algebraicFullPrefixesPre family.init data.toAlgebraicWfProof i) else 0) := by
   dsimp only
   rw [data.adaptiveFinalRootBad_eq_fallback O 7]
@@ -2245,7 +2245,7 @@ theorem OnlineMemberProofData.adaptiveFinalRootBad_eight
         (data.algebraicProof.preX1AssemblySource (family.fixedRepresentations basis))
         [data.algebraicProof.multiopenQPrime] data.adaptivePreX1MembersCovered
         ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩
-        (fun i : Fin 11 => if h : (i : Nat) < 8 then
+        (fun i : Fin 11 => if _h : (i : Nat) < 8 then
           O (algebraicFullPrefixesPre family.init data.toAlgebraicWfProof i) else 0) := by
   dsimp only
   rw [data.adaptiveFinalRootBad_eq_fallback O 8]
@@ -2271,7 +2271,7 @@ theorem OnlineMemberProofData.adaptiveFinalRootBad_nine
         data.adaptivePreX1MembersCovered
         ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩
         ⟨data.algebraicProof.ipaS, by simp, rfl⟩
-        (fun i : Fin 11 => if h : (i : Nat) < 9 then
+        (fun i : Fin 11 => if _h : (i : Nat) < 9 then
           O (algebraicFullPrefixesPre family.init data.toAlgebraicWfProof i) else 0) := by
   dsimp only
   rw [data.adaptiveFinalRootBad_eq_fallback O 9]
@@ -2297,7 +2297,7 @@ theorem OnlineMemberProofData.adaptiveFinalRootBad_ten
         data.adaptivePreX1MembersCovered
         ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩
         ⟨data.algebraicProof.ipaS, by simp, rfl⟩
-        (fun i : Fin 11 => if h : (i : Nat) < 10 then
+        (fun i : Fin 11 => if _h : (i : Nat) < 10 then
           O (algebraicFullPrefixesPre family.init data.toAlgebraicWfProof i) else 0) := by
   dsimp only
   rw [data.adaptiveFinalRootBad_eq_fallback O 10]
@@ -2366,7 +2366,7 @@ private theorem deployedSetsForEval_getD_points_strictPrefix5
     (ps : ProofString shape Fp VestaG) (nu : Fin 11 → Fp) (i : Nat)
     (hi : i < deployedX4PairCount vk instanceCommitment ps
       (chRecord nu (fun _ => 0))) :
-    let hiPrefix : i < deployedX4PairCount vk instanceCommitment ps
+    let _hiPrefix : i < deployedX4PairCount vk instanceCommitment ps
         (chRecord (adaptiveStrictPrefixRecord 5 nu) (fun _ => 0)) := by
       rwa [deployedX4PairCount_strictPrefix5]
     ((deployedSetsForEval vk instanceCommitment ps
@@ -3016,7 +3016,7 @@ def AdaptiveXiRootSetMatchesWitness
     (data : OnlineMemberProofData (vk := family.vk basis)
       (instanceCommitment := family.instanceCommitment basis) basis fixed)
     (pnu : WrappedAlgebraicOutput family basis)
-    (witness : DeployedBatchWitness family basis pnu) (nu : Fin 11 → Fp) : Prop :=
+    (_witness : DeployedBatchWitness family basis pnu) (nu : Fin 11 → Fp) : Prop :=
   adaptiveXiRootSet (family.vk basis) (family.instanceCommitment basis)
       data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
       [data.algebraicProof.multiopenQPrime] [data.algebraicProof.ipaS]
@@ -3037,7 +3037,7 @@ def AdaptiveZRootSetMatchesWitness
     (data : OnlineMemberProofData (vk := family.vk basis)
       (instanceCommitment := family.instanceCommitment basis) basis fixed)
     (pnu : WrappedAlgebraicOutput family basis)
-    (witness : DeployedBatchWitness family basis pnu) (nu : Fin 11 → Fp) : Prop :=
+    (_witness : DeployedBatchWitness family basis pnu) (nu : Fin 11 → Fp) : Prop :=
   adaptiveZRootSet (family.vk basis) (family.instanceCommitment basis)
       data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
       [data.algebraicProof.multiopenQPrime] [data.algebraicProof.ipaS]
