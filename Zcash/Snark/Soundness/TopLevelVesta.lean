@@ -1,5 +1,4 @@
 import Zcash.Snark.Soundness.Canonical.Vesta
-import Zcash.Circuits.Integration.TopLevelAcceptedModel
 import Zcash.Snark.Soundness.TopLevelTerminal
 
 /-!
@@ -196,7 +195,7 @@ noncomputable def topLevelStatements_or_relation_of_deployedAccepts
       i m hm colPoly hbindAll hquot hroute hevals claimed hxgood
   rcases hterminal with hsatisfied | hrelation
   · exact
-      TopLevelAcceptedModel.statements_or_relation_of_circuitSat
+      topLevelStatements_or_relation_of_circuitSat
         top pp urs hk inputs ps ch pU pW a₀ pbatch memberDecode
         haccepts hpoly hsatisfied hgoodY
         (correctness hsatisfied)

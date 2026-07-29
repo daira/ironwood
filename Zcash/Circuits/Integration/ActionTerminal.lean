@@ -1,7 +1,7 @@
 import Zcash.Circuits.Integration.ActionCorrectness
-import Zcash.Circuits.Integration.TopLevelAcceptedModel
 import Zcash.Circuits.Integration.ActionPermutationDomain
 import Zcash.Snark.Soundness.Canonical.Terminal
+import Zcash.Snark.Soundness.TopLevelTerminal
 import Mathlib.Util.AssertNoSorry
 
 /-!
@@ -226,7 +226,7 @@ noncomputable def action_bundleStatement_or_relation_of_decodedMemberPolynomial_
         hnFp hxgood with
     hsatisfied | hrelation
   · simpa only [BundleStatement] using
-      (TopLevelAcceptedModel.statements_or_relation_of_circuitSat
+      (topLevelStatements_or_relation_of_circuitSat
         actionCircuit pp urs hk inputs ps ch pU pW a
         batchOpenings memberDecode haccepts hpoly
         hsatisfied hgoodY

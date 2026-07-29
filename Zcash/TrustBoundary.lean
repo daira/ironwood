@@ -982,7 +982,7 @@ assert_computable Zcash.Snark.decodedPolynomialResolver_opens_or_relation +choic
 -- callback, decoder, or selected-column feed.
 assert_axioms Zcash.Snark.topLevelBundleStatement_or_bad_of_constraintSatisfaction +native(
   CompElliptic.Fields.Pasta.pallasBase)
-assert_axioms Zcash.Snark.TopLevelAcceptedModel.statements_or_relation_of_circuitSat +native(
+assert_axioms Zcash.Snark.topLevelStatements_or_relation_of_circuitSat +native(
   CompElliptic.Fields.Pasta.pallasBase)
 assert_axioms Zcash.Snark.topLevelStatements_or_relation_of_deployedAccepts +native(
   CompElliptic.Fields.Pasta.pallasBase,

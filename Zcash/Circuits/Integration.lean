@@ -34,7 +34,6 @@ import Zcash.Circuits.Integration.ResolverGates
 import Zcash.Circuits.Integration.ResolverQueryEnvironment
 import Zcash.Circuits.Integration.SelectorCoherence
 import Zcash.Circuits.Integration.TopLevelAssignment
-import Zcash.Circuits.Integration.TopLevelAcceptedModel
 import Zcash.Circuits.Integration.TopLevelBridge
 import Zcash.Circuits.Integration.TopLevelCircuit
 import Zcash.Circuits.Integration.TopLevelCoherence

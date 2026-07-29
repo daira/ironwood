@@ -1,4 +1,5 @@
 import Zcash.Circuits.Integration.TopLevelCorrectness
+import Zcash.Circuits.Integration.TopLevelInstanceCommitment
 import Zcash.Common.RelationWitness
 import Zcash.Circuits.Integration.TopLevelAssignment
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
@@ -6,9 +7,10 @@ import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 /-!
 # Generic top-level circuit soundness terminal
 
-This module is the core soundness endpoint for a Clean `TopLevelCircuit`.  It
+This module is the core soundness endpoint for a Clean `TopLevelCircuit`. It
 turns satisfaction of the verifier-native canonical constraint model into the
-circuit's own statement for every proof in the bundle.
+circuit's own statement for every proof in the bundle, and binds that statement
+to the public inputs supplied to an accepting verifier.
 
 The Clean/Ironwood representation work remains exposed as named component
 conditions.  In particular, `TopLevelCircuitCorrectness` does not contain the
@@ -129,5 +131,103 @@ noncomputable def topLevelBundleStatement_or_bad_of_constraintSatisfaction
             hfixedEncoding hfixed hcopies hlookups
 
 assert_no_sorry topLevelBundleStatement_or_bad_of_constraintSatisfaction
+
+variable
+    {G : Type} [AddCommGroup G] [Module Fp G]
+    [DecidableEq G] [Inhabited G]
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (pp : Keygen.ProofParams) (urs : URS G)
+    (hk : (pp.mergeDerived top).k = urs.k)
+    (inputs : Fin (pp.mergeDerived top).numProofs → PublicInput Fp)
+    (ps : ProofString (pp.mergeDerived top) Fp G)
+    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
+    (batchOpenings :
+      OpenedBatchOpenings urs (evalVector urs.k ch.x3)
+        (x4BatchCommitments
+          (instanceCommitment := top.instanceCommitment pp urs inputs)
+          urs hk (top.toVerifierKey pp urs) ps ch)
+        (x4BatchEvals
+          (instanceCommitment := top.instanceCommitment pp urs inputs)
+          (top.toVerifierKey pp urs) ps ch)
+        a pU pW)
+    (memberDecode : ∀ i (hi : i <
+        deployedX4PairCount
+          (instanceCommitment := top.instanceCommitment pp urs inputs)
+          (top.toVerifierKey pp urs) ps ch),
+      OpenedMemberDecode
+        (instanceCommitment := top.instanceCommitment pp urs inputs)
+        urs hk (top.toVerifierKey pp urs)
+        ps ch batchOpenings i hi)
+    (haccepts :
+      DeployedAccepts urs hk
+        (top.toVerifierKey pp urs)
+        (top.instanceCommitment pp urs inputs) ps ch)
+
+/--
+Satisfaction of the canonical model selected by an accepting verifier run,
+together with the circuit's named correctness package, yields its statements at
+the public inputs supplied to the verifier.
+-/
+noncomputable def topLevelStatements_or_relation_of_circuitSat
+    (hpoly : Polynomial Fp)
+    (hsatisfied :
+      (CanonicalMemberConstraintRelation.acceptedModel
+        (memberDecode := memberDecode)
+        (hblinding :=
+          top.toVerifierKey_blindingFactors_lt_n pp urs) haccepts).CircuitSat
+          ch.y hpoly (top.toVerifierKey pp urs).n a)
+    (hgoodY : ∀ j,
+      ch.y ∉ szBadSet
+        (foldSplitWitness
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding :=
+              top.toVerifierKey_blindingFactors_lt_n pp urs)
+            haccepts).constraints
+          (top.toVerifierKey pp urs).n j))
+    {cell : Type} [DecidableEq cell] [Fintype cell]
+    (correctness :
+      TopLevelCircuitCorrectness top pp urs ch
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts)
+        cell
+        (NontrivialRelation (F := Fp) urs.g urs.u urs.w)) :
+    (∀ proofIndex, top.Statement (inputs proofIndex)) ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  let relation :=
+    CanonicalMemberConstraintRelation.ofAcceptedCircuitSat
+      haccepts hsatisfied
+  have hpolynomial :
+      relation.polynomial =
+        CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts := by
+    rfl
+  have hn :
+      (top.toVerifierKey pp urs).n ≠ 0 := by
+    change 2 ^ top.domainExponent ≠ 0
+    positivity
+  have hsatisfaction :=
+    relation.constraintSatisfaction hn
+      (by
+        simpa only [
+          CanonicalMemberConstraintRelation.model,
+          hpolynomial] using hgoodY)
+  have htop :=
+    topLevelBundleStatement_or_bad_of_constraintSatisfaction
+      (top := top) (pp := pp) (urs := urs) (ch := ch)
+      (cell := cell)
+      (by simpa only [hpolynomial] using hsatisfaction)
+      correctness
+  rcases htop with htop | hrelation
+  · exact
+      TopLevelInstanceCommitment.statements_or_relation_of_accepted_topLevelBundleStatement
+        top pp urs hk inputs ps ch pU pW a batchOpenings memberDecode
+        haccepts correctness.gates.domainExponent_lt htop
+  · exact PSum.inr hrelation
+
+assert_no_sorry topLevelStatements_or_relation_of_circuitSat
 
 end Zcash.Snark
