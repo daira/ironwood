@@ -153,11 +153,11 @@ variable (x : Fp)
 attribute [simp] CPolynomial.eval_C CPolynomial.eval_mul CPolynomial.eval_one
   CPolynomial.eval_sub
 
-/-- `toPoly` is injective: it is the forward map of a ring isomorphism.  This is the workhorse for
-transporting any equation from the Mathlib image back to the computable representation. -/
-theorem toPoly_injective {p q : CPoly} (h : p.toPoly = q.toPoly) : p = q := by
-  apply Subtype.ext
-  rw [← CPolynomial.toImpl_toPoly_of_canonical p, ← CPolynomial.toImpl_toPoly_of_canonical q, h]
+/-- `toPoly` is injective.  CompPoly states this as `toPolyLinearEquiv.injective`, whose hypothesis
+is phrased through the bundled coercion; this restates it directly on `toPoly` so callers do not
+need a `change` at every use. -/
+theorem toPoly_injective {p q : CPoly} (h : p.toPoly = q.toPoly) : p = q :=
+  CPolynomial.toPolyLinearEquiv.injective h
 
 /-- The constant embedding as a ring hom.  Mathlib has `Polynomial.C` bundled; CompPoly's `C` is a
 bare function, and the bundled form is what every `eval₂`/`comp`-shaped construction needs. -/
