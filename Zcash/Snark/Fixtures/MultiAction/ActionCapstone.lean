@@ -913,7 +913,7 @@ private theorem derived_n_yn_for (numProofs : ℕ) {L : ℕ}
 
 /-- The adaptive Action model has the same captured, shape-determined constraint count for every
 prover polynomial assignment. -/
-private theorem adaptive_action_constraint_count_le
+theorem adaptive_action_constraint_count_le
     (basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG)
     (inputs : Fin (actionProofParams.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
     (ps : ProofString (actionProofParams.mergeDerived actionCircuit) Fp VestaG)

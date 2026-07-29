@@ -182,6 +182,14 @@ noncomputable def capturedLiveZeroStraightLineFamily :
   zeroConstStraightLineDeployedFamily capturedLiveZeroVk capturedLiveZeroVk_fixed
     capturedLiveZeroVk_perm
 
+/-- **The bare adaptive interface is inhabited at the full captured shape.**  This is a
+query-free, explicitly represented smoke adversary at `numProofs = 2` and `k = 11`; like the
+straight-line smoke family above, it retains the captured scalar/layout data while deliberately
+using zero group commitments. -/
+def capturedLiveZeroAdaptiveFamily : ComputedAdaptiveOnlineAGMFSFamily shape :=
+  zeroAdaptiveOnlineMemberFamily capturedLiveZeroVk capturedLiveZeroVk_fixed
+    capturedLiveZeroVk_perm
+
 /-- The static checks hold at the live key: its layouts and domain data are the captured ones. -/
 theorem capturedLiveZeroStaticChecks :
     DeployedConstraintStaticChecks capturedLiveZeroStraightLineFamily.toRootFamily where
@@ -196,5 +204,11 @@ smoke test of issue #127. -/
 theorem straightLineInterface_nonempty_at_captured_shape :
     Nonempty (ComputedStraightLineDeployedFSFamily shape) :=
   ⟨capturedLiveZeroStraightLineFamily⟩
+
+/-- The three verifier-known representation obligations and the adaptive adversary are jointly
+inhabited at the captured full shape. -/
+theorem adaptiveInterface_nonempty_at_captured_shape :
+    Nonempty (ComputedAdaptiveOnlineAGMFSFamily shape) :=
+  ⟨capturedLiveZeroAdaptiveFamily⟩
 
 end Zcash.Snark.Fixture2
