@@ -4,6 +4,7 @@ import Zcash.Snark.Verifier.Expressions
 import Zcash.Snark.Verifier.Assemble
 import CompPoly.Univariate.ToPoly
 import CompPoly.Univariate.Linear
+import CompPoly.Univariate.Roots.Enumeration
 
 /-!
 # Pilot: `Constraints` on the computable representation
@@ -21,31 +22,50 @@ single definition serves both roles.
 namespace Zcash.Snark.PilotC
 
 open CompPoly
+open CPolynomial.Roots.FiniteField
 open Zcash.Arithmetic (scalarFieldOrder)
 
 abbrev CPoly := CPolynomial Fp
 
 /-! ## Root theory
 
-Mathlib's root API, ported to `CPolynomial` once here.  A root multiset has no computational
-content, so `roots` is defined on the Mathlib image and is noncomputable; the point of porting is
-that nothing downstream has to mention `toPoly`. -/
+Mathlib's root API, ported to `CPolynomial` once here.  `roots` is *computable*: it is an
+enumeration filter, guarded at zero so it keeps Mathlib's convention that the zero polynomial has
+no roots.  Nobody runs it -- the bad-set predicate is decided by a single evaluation -- but keeping
+it computable means it can never poison a downstream `def`, which is the failure mode that
+dominates this codebase. -/
 
-/-- The root multiset of a computable polynomial. -/
-noncomputable def roots (p : CPoly) : Multiset Fp := p.toPoly.roots
+/-- `Fp` enumerated by its residues. -/
+def fpEnumeration : FieldEnumeration Fp where
+  size := scalarFieldOrder
+  elem := fun i => (i.val : Fp)
+  complete := fun a => ⟨⟨a.val, ZMod.val_lt a⟩, by simp⟩
 
-@[simp] theorem roots_zero : roots (0 : CPoly) = 0 := by
-  rw [roots, CPolynomial.toPoly_zero, Polynomial.roots_zero]
+/-- The distinct roots of a computable polynomial. -/
+def roots (p : CPoly) : Finset Fp :=
+  if p = 0 then ∅ else (rootsInFieldByEnumeration fpEnumeration p).toList.toFinset
+
+@[simp] theorem roots_zero : roots (0 : CPoly) = ∅ := by simp [roots]
 
 theorem mem_roots {p : CPoly} {x : Fp} (hp : p ≠ 0) :
     x ∈ roots p ↔ CPolynomial.eval x p = 0 := by
-  rw [roots, Polynomial.mem_roots (by rwa [Ne, CPolynomial.toPoly_eq_zero_iff]),
-    Polynomial.IsRoot.def, ← CPolynomial.eval_toPoly]
+  rw [roots, if_neg hp, List.mem_toFinset]
+  exact ⟨fun h => rootsInFieldByEnumeration_sound h,
+    fun h => rootsInFieldByEnumeration_complete _ h⟩
 
-/-- **Root counting.** A nonzero polynomial has at most `natDegree` roots. -/
-theorem card_roots_le (p : CPoly) : Multiset.card (roots p) ≤ p.natDegree := by
-  rw [roots, CPolynomial.natDegree_toPoly]
-  exact Polynomial.card_roots' _
+/-- The bridge to the Mathlib image: the two agree, so every Mathlib root theorem transfers. -/
+theorem roots_eq_toFinset (p : CPoly) : roots p = p.toPoly.roots.toFinset := by
+  by_cases hp : p = 0
+  · simp [hp, CPolynomial.toPoly_zero]
+  · ext x
+    rw [mem_roots hp, Multiset.mem_toFinset,
+      Polynomial.mem_roots (by rwa [Ne, CPolynomial.toPoly_eq_zero_iff]),
+      Polynomial.IsRoot.def, ← CPolynomial.eval_toPoly]
+
+/-- **Root counting.** A polynomial has at most `natDegree` distinct roots. -/
+theorem card_roots_le (p : CPoly) : (roots p).card ≤ p.natDegree := by
+  rw [roots_eq_toFinset, CPolynomial.natDegree_toPoly]
+  exact le_trans (Multiset.toFinset_card_le _) (Polynomial.card_roots' _)
 
 /-! ## Degree arithmetic -/
 
@@ -77,11 +97,11 @@ theorem natDegree_one_le : ((1 : CPoly)).natDegree ≤ 0 := by
 /-- The Schwartz–Zippel bad set: the roots of the difference polynomial.  A root multiset is a
 specification notion, so this stays on the Mathlib image and is noncomputable — it only ever
 appears inside `Prop`s. -/
-noncomputable def szBadSet (C : CPoly) : Finset Fp := (roots C).toFinset
+def szBadSet (C : CPoly) : Finset Fp := roots C
 
 theorem mem_szBadSet {C : CPoly} {x : Fp} :
     x ∈ szBadSet C ↔ C ≠ 0 ∧ CPolynomial.eval x C = 0 := by
-  rw [szBadSet, Multiset.mem_toFinset]
+  rw [szBadSet]
   constructor
   · intro h
     have hC : C ≠ 0 := by
@@ -126,7 +146,7 @@ theorem szBadSetAvoidance?_isSome_iff (C : CPoly) (x : Fp) :
 
 /-- Root counting is unchanged: it is a fact about the Mathlib image. -/
 theorem szBadSet_card_le (C : CPoly) : (szBadSet C).card ≤ C.natDegree :=
-  le_trans (Multiset.toFinset_card_le _) (card_roots_le C)
+  card_roots_le C
 
 /-- Lift a gate `Expr` to a polynomial.  This was `noncomputable`; it is now a plain `def`. -/
 def Expr.toCPoly (fixedCols adviceCols instanceCols : ℕ → CPoly) :
