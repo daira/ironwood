@@ -37,25 +37,8 @@ on the full path covers gates, the permutation argument, and the lookup argument
 
 Polynomials here are `Zcash.CPoly = CompPoly.CPolynomial Fp`: canonical coefficient arrays with an
 executable `CommRing` and a proven ring isomorphism to Mathlib's `Polynomial Fp`
-(`CPolynomial.ringEquiv`).  Nothing in this file is `noncomputable`.
-
-Against Mathlib's representation this module needed a second, parallel copy of each definition,
-each with an equation relating it back to its specification.  Two different mechanisms were in play.
-
-`constraintPolysData` and `combineConstraintsData` swapped the *instance*: they re-ran the same
-ring-generic `allConstraints` under `letI : CommRing (Polynomial Fp) :=
-ComputablePolynomial.commRing`, a second, hand-built `CommRing` on Mathlib's type whose operations
-are executable, and `…Data_eq` closed the gap by `rw [← ComputablePolynomial.commRing_eq]`.  So the
-same type carried two ring structures, and any fact proved about one needed an explicit rewrite to
-apply to the other.
-
-`polynomialEvalData` bypassed `Polynomial.eval` instead, computing `∑ i ∈ C.toFinsupp.support,
-C.toFinsupp.toFun i * x ^ i` straight off the coefficient data, with `polynomialEvalData_eq_eval`
-proving it agrees.
-
-Both are gone.  `allConstraints` is ring-generic, so instantiating it at `CPolynomial Fp` uses that
-type's own executable `CommRing` — there is one ring structure, and one definition serving as both
-specification and implementation.
+(`CPolynomial.ringEquiv`).  `allConstraints` is ring-generic, so one instantiation serves as both
+the specification and the executable assembly, and nothing in this file is `noncomputable`.
 -/
 
 namespace Zcash.Snark
@@ -107,10 +90,7 @@ instance decidableMemSzBadSet (C : CPoly) (x : Fp) : Decidable (x ∈ szBadSet C
 /-- Compute avoidance of one Schwartz–Zippel bad set without computing the root set itself.
 The branch decision uses only polynomial equality and evaluation at the sampled point; the
 equivalence with `x ∉ szBadSet C` is retained in the erased proof returned on success.  This is
-the executable form reductions should use when a successful branch returns break data.
-
-Against Mathlib's representation the zero test had to be spelled `C.toFinsupp.support = ∅`, because
-decidable equality on polynomials is unavailable there. -/
+the executable form reductions should use when a successful branch returns break data. -/
 def szBadSetAvoidance? (C : CPoly) (x : Fp) :
     Option (PLift (x ∉ szBadSet C)) :=
   if hzero : C = 0 then

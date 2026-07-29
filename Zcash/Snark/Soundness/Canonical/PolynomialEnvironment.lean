@@ -9,9 +9,7 @@ domain, its evaluation and degree facts, and the zero-padded public-instance
 polynomial. The Clean-facing environments built on top live in
 `Zcash.Circuits.Integration.PolynomialEnvironment`.
 
-The constructions are plain `def`s on `Zcash.CPoly`.  Against Mathlib's representation they had to
-be spelled through `ComputablePolynomial`'s parallel operations and then routed back to the
-specification by `_eq` lemmas at every step; here the interpolation facts are borrowed from
+The constructions are plain `def`s on `Zcash.CPoly`; the interpolation facts are borrowed from
 Mathlib's `Lagrange` theory across `toPoly`, which is a ring isomorphism.
 -/
 
