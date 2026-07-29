@@ -32,7 +32,7 @@ at both the circuit-derived and captured fixture shapes.
 
 namespace Zcash.Snark
 
-open Polynomial
+open CompPoly CompPoly.CPolynomial
 open Classical
 open scoped ENNReal
 open Keygen
@@ -71,7 +71,7 @@ private noncomputable def action_bundleStatement_or_relation_of_deployedAccepts_
     (ps : ProofString s Fp G)
     (ch : Challenges s.k Fp)
     (pU pW : Fp)
-    (hpoly : Polynomial Fp)
+    (hpoly : CPoly)
     {a₀ : Fin (2 ^ capturedURS.k) → Fp}
     (pbatch :
       OpenedBatchOpenings capturedURS (evalVector capturedURS.k ch.x3)
@@ -104,7 +104,7 @@ private noncomputable def action_bundleStatement_or_relation_of_deployedAccepts_
       (actionCircuit.instanceCommitment actionProofParams capturedURS inputs) ps ch i).length)
     (colPoly : Fin (deployedSetQueries K
       (actionCircuit.instanceCommitment actionProofParams capturedURS inputs) ps ch i).length →
-        Polynomial Fp)
+        CPoly)
     (hbindAll : ∀ (idx : Fin ((constructIntermediateSets
           (assembleQueries K
             (actionCircuit.instanceCommitment actionProofParams capturedURS inputs) ps ch)).points.getD
@@ -245,7 +245,7 @@ noncomputable def action_bundleStatement_or_relation_of_deployedAccepts
     (ps : ProofString Fixture.shape Fp Fixture.G)
     (ch : Challenges Fixture.shape.k Fp)
     (pU pW : Fp)
-    (hpoly : Polynomial Fp)
+    (hpoly : CPoly)
     {a₀ : Fin (2 ^ capturedURS.k) → Fp}
     (pbatch :
       OpenedBatchOpenings capturedURS (evalVector capturedURS.k ch.x3)
@@ -278,7 +278,7 @@ noncomputable def action_bundleStatement_or_relation_of_deployedAccepts
       (actionCircuit.instanceCommitment actionProofParams capturedURS inputs) ps ch i).length)
     (colPoly : Fin (deployedSetQueries Fixture.vk
       (actionCircuit.instanceCommitment actionProofParams capturedURS inputs) ps ch i).length →
-        Polynomial Fp)
+        CPoly)
     (hbindAll : ∀ (idx : Fin ((constructIntermediateSets
           (assembleQueries Fixture.vk
             (actionCircuit.instanceCommitment actionProofParams capturedURS inputs) ps ch)).points.getD
@@ -418,7 +418,7 @@ noncomputable def action_bundleStatement_or_relation_of_deployedAccepts_family
     (ps : ProofString Fixture.shape Fp Fixture.G)
     (ch : Challenges Fixture.shape.k Fp)
     (pU pW : Fp)
-    (hpoly : Polynomial Fp)
+    (hpoly : CPoly)
     {a₀ : Fin (2 ^ capturedURS.k) → Fp}
     (pbatch :
       OpenedBatchOpenings capturedURS (evalVector capturedURS.k ch.x3)
@@ -451,7 +451,7 @@ noncomputable def action_bundleStatement_or_relation_of_deployedAccepts_family
       (icf) ps ch i).length)
     (colPoly : Fin (deployedSetQueries Fixture.vk
       (icf) ps ch i).length →
-        Polynomial Fp)
+        CPoly)
     (hbindAll : ∀ (idx : Fin ((constructIntermediateSets
           (assembleQueries Fixture.vk
             (icf) ps ch)).points.getD
@@ -592,7 +592,7 @@ noncomputable def action_bundleStatement_or_relation_at_capturedInstances
     (ps : ProofString Fixture.shape Fp Fixture.G)
     (ch : Challenges Fixture.shape.k Fp)
     (pU pW : Fp)
-    (hpoly : Polynomial Fp)
+    (hpoly : CPoly)
     {a₀ : Fin (2 ^ capturedURS.k) → Fp}
     (pbatch :
       OpenedBatchOpenings capturedURS (evalVector capturedURS.k ch.x3)
@@ -625,7 +625,7 @@ noncomputable def action_bundleStatement_or_relation_at_capturedInstances
       Fixture.derivedInstanceCommitment ps ch i).length)
     (colPoly : Fin (deployedSetQueries Fixture.vk
       Fixture.derivedInstanceCommitment ps ch i).length →
-        Polynomial Fp)
+        CPoly)
     (hbindAll : ∀ (idx : Fin ((constructIntermediateSets
           (assembleQueries Fixture.vk
             Fixture.derivedInstanceCommitment ps ch)).points.getD

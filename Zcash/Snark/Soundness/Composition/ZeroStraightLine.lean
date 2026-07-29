@@ -88,7 +88,7 @@ theorem zeroConstraintDifference_eq_zero (hproofs : shape.numProofs = 0)
     unfold deployedConstraintPieceCoordinates
     rw [onlinePointCoordinates_zeroSource basis hsource]
     show coeffsToPoly (fun _ => (0 : Fp)) = 0
-    rw [coeffsToPoly_eq_sum]
+    rw [coeffsToPoly]
     simp
   unfold deployedConstraintDifferencePreX
   rw [committedPreXConstraintDifference_eq, committedPreXQuotient_eq]
@@ -160,7 +160,7 @@ theorem zeroConstraintDifference_explicit
     unfold deployedConstraintPointPolynomial onlinePointPolynomial
     rw [onlinePointCoordinates_zeroSource basis hsource]
     show coeffsToPoly (fun _ => (0 : Fp)) = 0
-    rw [coeffsToPoly_eq_sum]
+    rw [coeffsToPoly]
     simp
   have hpieces : (fun i => coeffsToPoly (deployedConstraintPieceCoordinates
       (zeroDeployedRootFamily vkS hfixed hperm) basis
@@ -170,7 +170,7 @@ theorem zeroConstraintDifference_explicit
     unfold deployedConstraintPieceCoordinates
     rw [onlinePointCoordinates_zeroSource basis hsource]
     show coeffsToPoly (fun _ => (0 : Fp)) = 0
-    rw [coeffsToPoly_eq_sum]
+    rw [coeffsToPoly]
     simp
   have hps : (deployedRootRunOutput (zeroDeployedRootFamily vkS hfixed hperm) basis
       coins).1.proof.1 = zeroProofString shape Fp VestaG := by
@@ -331,8 +331,8 @@ theorem zeroWfProof_straightLineIpaRootPolynomial_const
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
     (ν : Fin 11 → Fp) (χ : Fin shape.k → Fp) (j : Fin shape.k) :
     (zeroWfProof basis vkS hfixed hperm).straightLineIpaRootPolynomial ν χ j =
-      Polynomial.C (-(ν 10 * multiopenValue vkS (fun _ _ => 0)
-        (zeroProofString shape Fp VestaG) (chRecord ν (fun _ => 0)))) * Polynomial.X := by
+      C (-(ν 10 * multiopenValue vkS (fun _ _ => 0)
+        (zeroProofString shape Fp VestaG) (chRecord ν (fun _ => 0)))) * X := by
   rw [straightLineIpaRootPolynomial_of_zero_group_coordinates _ ν χ
     (fun _ => ⟨rfl, rfl, rfl, rfl⟩) j]
   rw [straightLineInitialDiscrepancy_of_zero_coordinates _ ν
@@ -356,8 +356,8 @@ noncomputable def zeroConstIpaStage (basis : AugmentedIndex (2 ^ shape.k) → Ve
     (fun i : Fin 11 =>
       algebraicFullPrefixesPre (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init
         (zeroWfProof basis vkS hfixed hperm) i)).bind
-    fun ν => .pure (Polynomial.C (-(ν 10 * multiopenValue vkS (fun _ _ => 0)
-      (zeroProofString shape Fp VestaG) (chRecord ν (fun _ => 0)))) * Polynomial.X)
+    fun ν => .pure (C (-(ν 10 * multiopenValue vkS (fun _ _ => 0)
+      (zeroProofString shape Fp VestaG) (chRecord ν (fun _ => 0)))) * X)
 
 /-- The staged polynomial is the run's actual root polynomial: both are the constant walk at the
 oracle's answers on the fixed squeeze points. -/
