@@ -97,7 +97,7 @@ theorem natDegree_sub_le [Ring R] [BEq R] [LawfulBEq R] (p q : CPolynomial R) :
   rw [natDegree_toPoly, natDegree_toPoly, natDegree_toPoly, toPoly_sub]
   exact Polynomial.natDegree_sub_le _ _
 
-theorem natDegree_mul_le [Semiring R] [BEq R] [LawfulBEq R] (p q : CPolynomial R) :
+theorem natDegree_mul_le [Semiring R] [BEq R] [LawfulBEq R] {p q : CPolynomial R} :
     (p * q).natDegree ≤ p.natDegree + q.natDegree := by
   rw [natDegree_toPoly, natDegree_toPoly, natDegree_toPoly, toPoly_mul]
   exact Polynomial.natDegree_mul_le
@@ -112,6 +112,52 @@ theorem natDegree_one_le [Semiring R] [BEq R] [LawfulBEq R] [Nontrivial R] :
   rw [natDegree_toPoly, toPoly_one]
   simp
 
+@[simp]
+theorem natDegree_zero [Semiring R] [BEq R] [LawfulBEq R] :
+    (0 : CPolynomial R).natDegree = 0 := by
+  rw [natDegree_toPoly, toPoly_zero, Polynomial.natDegree_zero]
+
+@[simp]
+theorem natDegree_one [Semiring R] [BEq R] [LawfulBEq R] [Nontrivial R] :
+    (1 : CPolynomial R).natDegree = 0 := by
+  rw [natDegree_toPoly, toPoly_one, Polynomial.natDegree_one]
+
+@[simp]
+theorem natDegree_X [Semiring R] [BEq R] [LawfulBEq R] [Nontrivial R] :
+    (X : CPolynomial R).natDegree = 1 := by
+  rw [natDegree_toPoly, X_toPoly, Polynomial.natDegree_X]
+
+theorem natDegree_X_le [Semiring R] [BEq R] [LawfulBEq R] [Nontrivial R] :
+    (X : CPolynomial R).natDegree ≤ 1 := natDegree_X.le
+
+@[simp]
+theorem natDegree_neg [Ring R] [BEq R] [LawfulBEq R] (p : CPolynomial R) :
+    (-p).natDegree = p.natDegree := by
+  rw [natDegree_toPoly, natDegree_toPoly, toPoly_neg, Polynomial.natDegree_neg]
+
+theorem natDegree_pow_le [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    {p : CPolynomial R} {n : ℕ} : (p ^ n).natDegree ≤ n * p.natDegree := by
+  rw [natDegree_toPoly, natDegree_toPoly, toPoly_pow]
+  exact Polynomial.natDegree_pow_le
+
+theorem natDegree_C_mul_le [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    (a : R) (p : CPolynomial R) : (C a * p).natDegree ≤ p.natDegree := by
+  rw [natDegree_toPoly, natDegree_toPoly, toPoly_mul, C_toPoly]
+  exact Polynomial.natDegree_C_mul_le a p.toPoly
+
+theorem natDegree_prod_le {ι : Type*} [DecidableEq ι] [CommSemiring R] [BEq R] [LawfulBEq R]
+    [Nontrivial R] (s : Finset ι) (f : ι → CPolynomial R) :
+    (∏ i ∈ s, f i).natDegree ≤ ∑ i ∈ s, (f i).natDegree := by
+  rw [natDegree_toPoly, toPoly_prod]
+  simpa [natDegree_toPoly] using Polynomial.natDegree_prod_le s (fun i => (f i).toPoly)
+
+theorem natDegree_sum_le {ι : Type*} [DecidableEq ι] [Semiring R] [BEq R] [LawfulBEq R]
+    (s : Finset ι) (f : ι → CPolynomial R) :
+    (∑ i ∈ s, f i).natDegree ≤ s.fold max 0 fun i => (f i).natDegree := by
+  rw [natDegree_toPoly, toPoly_sum]
+  simpa [Function.comp_def, natDegree_toPoly] using
+    Polynomial.natDegree_sum_le s (fun i => (f i).toPoly)
+
 /-! ## Bundled homomorphisms
 
 Mathlib's `Polynomial.C` and `Polynomial.evalRingHom` are bundled; CompPoly's `C` and `eval` are
@@ -125,6 +171,20 @@ def CRingHom [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] : R →+* CPo
   map_mul' := by intro a b; apply toPoly_injective; simp
   map_zero' := by apply toPoly_injective; simp
   map_add' := by intro a b; apply toPoly_injective; simp
+
+/-- `C` is multiplicative and respects powers.  The bundled `CRingHom` says so; these are the
+unbundled spellings `simp` needs at the use sites. -/
+@[simp]
+theorem C_mul [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (a b : R) :
+    (C (a * b) : CPolynomial R) = C a * C b := by
+  apply toPoly_injective; simp
+
+@[simp]
+theorem C_pow [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (a : R) (n : ℕ) :
+    (C (a ^ n) : CPolynomial R) = C a ^ n := by
+  apply toPoly_injective; simp [toPoly_pow]
+
+attribute [simp] natDegree_C
 
 @[simp]
 theorem coe_CRingHom [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] :

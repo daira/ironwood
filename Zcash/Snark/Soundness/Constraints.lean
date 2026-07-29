@@ -39,12 +39,23 @@ Polynomials here are `Zcash.CPoly = CompPoly.CPolynomial Fp`: canonical coeffici
 executable `CommRing` and a proven ring isomorphism to Mathlib's `Polynomial Fp`
 (`CPolynomial.ringEquiv`).  Nothing in this file is `noncomputable`.
 
-Against Mathlib's representation this module needed a second, parallel copy of each definition —
-`constraintPolysData`, `combineConstraintsData`, `polynomialEvalData` — built under a hand-rolled
-computable `CommRing` instance, plus an equation relating each copy to its specification.  The
-constraint assembly (`allConstraints`) is ring-generic, so instantiating it at `CPolynomial Fp` uses
-that type's own executable ring and the single definition serves both roles.  The `…Data` twins are
-therefore gone.
+Against Mathlib's representation this module needed a second, parallel copy of each definition,
+each with an equation relating it back to its specification.  Two different mechanisms were in play.
+
+`constraintPolysData` and `combineConstraintsData` swapped the *instance*: they re-ran the same
+ring-generic `allConstraints` under `letI : CommRing (Polynomial Fp) :=
+ComputablePolynomial.commRing`, a second, hand-built `CommRing` on Mathlib's type whose operations
+are executable, and `…Data_eq` closed the gap by `rw [← ComputablePolynomial.commRing_eq]`.  So the
+same type carried two ring structures, and any fact proved about one needed an explicit rewrite to
+apply to the other.
+
+`polynomialEvalData` bypassed `Polynomial.eval` instead, computing `∑ i ∈ C.toFinsupp.support,
+C.toFinsupp.toFun i * x ^ i` straight off the coefficient data, with `polynomialEvalData_eq_eval`
+proving it agrees.
+
+Both are gone.  `allConstraints` is ring-generic, so instantiating it at `CPolynomial Fp` uses that
+type's own executable `CommRing` — there is one ring structure, and one definition serving as both
+specification and implementation.
 -/
 
 namespace Zcash.Snark
@@ -130,9 +141,8 @@ theorem szBadSet_quotient_card_le (numerator h : CPoly) (n : ℕ) :
     (szBadSet (numerator - h * (X ^ n - 1))).card
       ≤ max numerator.natDegree (h.natDegree + n) := by
   refine (szBadSet_card_le _).trans ((natDegree_sub_le _ _).trans ?_)
-  refine max_le_max le_rfl ((natDegree_mul_le _ _).trans (Nat.add_le_add_left ?_ _))
-  exact (natDegree_sub_le _ _).trans (by
-    simpa using max_le (natDegree_X_pow_le n) (le_trans natDegree_one_le (Nat.zero_le n)))
+  refine max_le_max le_rfl (natDegree_mul_le.trans (Nat.add_le_add_left ?_ _))
+  exact (natDegree_sub_le _ _).trans (max_le (natDegree_X_pow_le n) (by simp))
 
 /-! ## The quotient check -/
 
