@@ -250,6 +250,11 @@ theorem C_mul [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (a b : R) :
     (C (a * b) : CPolynomial R) = C a * C b := by
   apply toPoly_injective; simp
 
+@[simp]
+theorem C_add [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (a b : R) :
+    (C (a + b) : CPolynomial R) = C a + C b := by
+  apply toPoly_injective; simp
+
 theorem C_pow [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (a : R) (n : ℕ) :
     (C (a ^ n) : CPolynomial R) = C a ^ n := by
   apply toPoly_injective; simp [toPoly_pow]
