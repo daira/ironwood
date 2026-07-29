@@ -34,7 +34,8 @@ namespace Zcash.Snark
 
 namespace ActionTerminal
 
-open Halo2 Polynomial Keygen
+open Halo2 Keygen
+open CompPoly CompPoly.CPolynomial
 open Zcash.Circuits
 open Zcash.Circuits.Action
 open Zcash.Arithmetic (scalarFieldOrder)
@@ -376,16 +377,10 @@ theorem actionRelationFinder_covers :
           (actionRunModel pp family static inputs hvk hI hchar basis O hdecoded).lBlind -
           actionRunPolynomial pp family static inputs hvk hI hchar basis O hdecoded
               CommitmentId.vanishingH *
-            (Polynomial.X ^ (actionCircuit.toVerifierKey pp
+            (X ^ (actionCircuit.toVerifierKey pp
               (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)).n - 1)) := hxy.1
     rw [hmodelEq, hpolyEq] at hxgood
     have hxgoodData := hxgood
-    rw [← combineConstraintsData_eq, ← ComputablePolynomial.sub_eq,
-      ← ComputablePolynomial.mul_eq, ← ComputablePolynomial.sub_eq,
-      ← ComputablePolynomial.pow_eq, ← ComputablePolynomial.X_eq] at hxgoodData
-    have hone : (1 : Polynomial Fp) = ComputablePolynomial.const 1 := by
-      rw [ComputablePolynomial.const_eq, Polynomial.C_1]
-    rw [hone] at hxgoodData
     unfold straightLineRunRecord straightLineRunOutput at hxgoodData
     have hxgoodSome := (szBadSetAvoidance?_isSome_iff _ _).2 hxgoodData
     split
