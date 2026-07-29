@@ -55,7 +55,8 @@ def constraintModel
     (poly : CommitmentId → Polynomial Fp)
     (hblinding : vk.blindingFactors < vk.n) :
     (vk.constraintModel ch poly hblinding).adviceCols =
-      adviceQueryFeedOfResolver vk poly :=
+      fun proofIndex : Fin shape.numProofs =>
+        adviceQueryFeedOfResolver vk poly proofIndex :=
   rfl
 
 @[simp] theorem constraintModel_instanceCols
@@ -64,7 +65,8 @@ def constraintModel
     (poly : CommitmentId → Polynomial Fp)
     (hblinding : vk.blindingFactors < vk.n) :
     (vk.constraintModel ch poly hblinding).instanceCols =
-      instanceQueryFeedOfResolver vk poly :=
+      fun proofIndex : Fin shape.numProofs =>
+        instanceQueryFeedOfResolver vk poly proofIndex :=
   rfl
 
 @[simp] theorem constraintModel_gates

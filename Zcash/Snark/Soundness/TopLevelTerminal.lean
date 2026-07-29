@@ -45,7 +45,7 @@ def topLevelBundleStatement_or_bad_of_components
     [ProvableType PublicInput]
     {top : TopLevelCircuit Fp Config PublicInput}
     {pp : Keygen.ProofParams} {urs : URS G}
-    {ch : Challenges (pp.mergeDerived top).k Fp}
+    {k : ℕ} {ch : Challenges k Fp}
     {poly : CommitmentId → Polynomial Fp}
     {cell : Type} [DecidableEq cell] [Fintype cell]
     {Bad : Type}
@@ -68,7 +68,7 @@ def topLevelBundleStatement_or_bad_of_components
       (A := fun proofIndex =>
         let assignment :
             TopLevelAssignment top
-              (pp.mergeDerived top).numProofs proofIndex :=
+              pp.numProofs proofIndex :=
           { polynomial := poly }
         top.Statement
           (top.extractPublicInput
@@ -91,7 +91,7 @@ def topLevelBundleStatement_or_bad_of_constraintSatisfaction
     [ProvableType PublicInput]
     {top : TopLevelCircuit Fp Config PublicInput}
     {pp : Keygen.ProofParams} {urs : URS G}
-    {ch : Challenges (pp.mergeDerived top).k Fp}
+    {k : ℕ} {ch : Challenges k Fp}
     {poly : CommitmentId → Polynomial Fp}
     {cell : Type} [DecidableEq cell] [Fintype cell]
     {Bad : Type}

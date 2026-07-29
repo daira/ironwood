@@ -41,7 +41,7 @@ value equations, so `memberBinding` lands on the left for every slot and point. 
 def action_bundleStatement_or_relation_of_decode
     (pp : ProofParams) (urs : URS G)
     (hk : (pp.mergeDerived actionCircuit).k = urs.k)
-    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (inputs : Fin pp.numProofs → PublicInputs Fp)
     (ps : ProofString (pp.mergeDerived actionCircuit) Fp G)
     (ch : Challenges (pp.mergeDerived actionCircuit).k Fp)
     (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
@@ -67,7 +67,7 @@ satisfaction.  This avoids re-testing the `x`-dependent reassembled quotient pol
 def action_bundleStatement_or_relation_of_decode_circuitSat
     (pp : ProofParams) (urs : URS G)
     (hk : (pp.mergeDerived actionCircuit).k = urs.k)
-    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (inputs : Fin pp.numProofs → PublicInputs Fp)
     (ps : ProofString (pp.mergeDerived actionCircuit) Fp G)
     (ch : Challenges (pp.mergeDerived actionCircuit).k Fp)
     (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
@@ -132,7 +132,7 @@ def action_bundleStatement_or_relation_of_straightLineDecoded
     (O : BTranscript Fp VestaG
       (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
         + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
-    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (inputs : Fin pp.numProofs → PublicInputs Fp)
     (hvk : family.vk basis =
       actionCircuit.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
@@ -183,7 +183,7 @@ def actionTerminalRelationFinder
     (pp : ProofParams)
     (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived actionCircuit))
     (static : DeployedConstraintStaticChecks family.toRootFamily)
-    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (inputs : Fin pp.numProofs → PublicInputs Fp)
     (hvk : ∀ basis, family.vk basis =
       actionCircuit.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
@@ -282,7 +282,7 @@ def actionRelationFinder
     (pp : ProofParams)
     (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived actionCircuit))
     (static : DeployedConstraintStaticChecks family.toRootFamily)
-    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (inputs : Fin pp.numProofs → PublicInputs Fp)
     (hvk : ∀ basis, family.vk basis =
       actionCircuit.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))

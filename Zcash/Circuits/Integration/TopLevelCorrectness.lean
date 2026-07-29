@@ -24,11 +24,11 @@ def TopLevelBundleStatement
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams)
     (poly : CommitmentId → Polynomial Fp) : Prop :=
-  ∀ proofIndex : Fin (pp.mergeDerived top).numProofs,
+  ∀ proofIndex : Fin pp.numProofs,
     let environment := ({
         polynomial := poly
       } : TopLevelAssignment top
-            (pp.mergeDerived top).numProofs proofIndex).environment
+            pp.numProofs proofIndex).environment
     top.Statement (top.extractPublicInput environment)
 
 namespace TopLevelBundleStatement
@@ -44,17 +44,17 @@ theorem of_publicInputEncoding
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams)
     (poly : CommitmentId → Polynomial Fp)
-    (inputs : Fin (pp.mergeDerived top).numProofs → PublicInput Fp)
+    (inputs : Fin pp.numProofs → PublicInput Fp)
     (hencoding : ∀ proofIndex,
       let assignment : TopLevelAssignment top
-          (pp.mergeDerived top).numProofs proofIndex :=
+          pp.numProofs proofIndex :=
         { polynomial := poly }
       assignment.PublicInputEncoding (inputs proofIndex))
     (htop : TopLevelBundleStatement top pp poly) :
     ∀ proofIndex, top.Statement (inputs proofIndex) := by
   intro proofIndex
   let assignment : TopLevelAssignment top
-      (pp.mergeDerived top).numProofs proofIndex :=
+      pp.numProofs proofIndex :=
     { polynomial := poly }
   have hstatement := htop proofIndex
   change top.Statement
@@ -72,9 +72,9 @@ abbrev TopLevelFixedEncoding
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs) : Prop :=
+    (proofIndex : Fin pp.numProofs) : Prop :=
   let assignment :
-      TopLevelAssignment top (pp.mergeDerived top).numProofs proofIndex :=
+      TopLevelAssignment top pp.numProofs proofIndex :=
     { polynomial := poly }
   assignment.FixedColumnEncoding pp urs
 
@@ -85,7 +85,7 @@ abbrev TopLevelFixed
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs) : Prop :=
+    (proofIndex : Fin pp.numProofs) : Prop :=
   (SelectorActivationsRealized
       top.selectorMap top.selectorActivations
       (resolverEnvironment
@@ -106,7 +106,7 @@ abbrev TopLevelCopies
     (poly : CommitmentId → Polynomial Fp)
     (cell : Type) [DecidableEq cell] [Fintype cell]
     (Bad : Type)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs) : Type :=
+    (proofIndex : Fin pp.numProofs) : Type :=
   CopyReplayWitness top.placement
     (resolverEnvironment
       (top.toVerifierKey pp urs) poly proofIndex
@@ -114,14 +114,15 @@ abbrev TopLevelCopies
     top.operations cell Bad
 
 abbrev TopLevelLookups
+    {k : ℕ}
     {G : Type} [AddCommGroup G] [Inhabited G]
     {Config : Type} {PublicInput : TypeMap}
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
-    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (ch : Challenges k Fp)
     (poly : CommitmentId → Polynomial Fp)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs) : Prop :=
+    (proofIndex : Fin pp.numProofs) : Prop :=
   TopLevelLookup.WitnessConditions
     top pp urs ch poly proofIndex
 
@@ -138,11 +139,11 @@ def bridgeWitness_of_components
     [ProvableType PublicInput]
     {top : TopLevelCircuit Fp Config PublicInput}
     {pp : Keygen.ProofParams} {urs : URS G}
-    {ch : Challenges (pp.mergeDerived top).k Fp}
+    {k : ℕ} {ch : Challenges k Fp}
     {poly : CommitmentId → Polynomial Fp}
     {cell : Type} [DecidableEq cell] [Fintype cell]
     {Bad : Type}
-    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    (proofIndex : Fin pp.numProofs)
     (satisfaction :
       ConstraintSatisfaction
         (top.constraintModel pp urs ch poly)
@@ -151,7 +152,7 @@ def bridgeWitness_of_components
     (fixedEncoding :
       let assignment :
           TopLevelAssignment top
-            (pp.mergeDerived top).numProofs proofIndex :=
+            pp.numProofs proofIndex :=
         { polynomial := poly }
       assignment.FixedColumnEncoding pp urs)
     (selectorActivations :
@@ -178,10 +179,10 @@ def bridgeWitness_of_components
     TopLevelBridgeWitness top
       (({ polynomial := poly } :
         TopLevelAssignment top
-          (pp.mergeDerived top).numProofs proofIndex).proofAssignment)
+          pp.numProofs proofIndex).proofAssignment)
       cell Bad := by
   let assignment :
-      TopLevelAssignment top (pp.mergeDerived top).numProofs proofIndex :=
+      TopLevelAssignment top pp.numProofs proofIndex :=
     { polynomial := poly }
   change TopLevelBridgeWitness top assignment.proofAssignment cell Bad
   have hrows :=
@@ -252,7 +253,7 @@ structure TopLevelCircuitCorrectness
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
-    (ch : Challenges (pp.mergeDerived top).k Fp)
+    {k : ℕ} (ch : Challenges k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (cell : Type) [DecidableEq cell] [Fintype cell]
     (Bad : Type) : Type where

@@ -55,7 +55,7 @@ set_option maxRecDepth 100000 in
 /-- The derived Action VK has one verifier permutation set per chunk. -/
 theorem chunkCount (pp : Keygen.ProofParams) (urs : URS G) :
     (actionVk pp urs).permutationChunks.length =
-      (actionShape pp).numPermutationSets := by
+      actionCircuit.permutationSetCount := by
   rw [permutationChunks_eq]
   change 3 =
     (actionCircuit.constraintSystem.permutationColumns.length +
@@ -71,8 +71,8 @@ theorem chunkCount (pp : Keygen.ProofParams) (urs : URS G) :
 
 set_option maxRecDepth 100000 in
 /-- The Action verifier's permutation chunk family is nonempty. -/
-theorem nonempty (pp : Keygen.ProofParams) :
-    0 < (actionShape pp).numPermutationSets := by
+theorem nonempty :
+    0 < actionCircuit.permutationSetCount := by
   change 0 <
     (actionCircuit.constraintSystem.permutationColumns.length +
       actionCircuit.constraintSystem.chunkLen - 1) /
@@ -95,7 +95,7 @@ theorem chunkLengths (pp : Keygen.ProofParams) (urs : URS G) :
 set_option maxRecDepth 100000 in
 /-- Every derived Action permutation chunk has width at most `vk.chunkLen`. -/
 theorem chunkLength_le (pp : Keygen.ProofParams) (urs : URS G) :
-    ∀ i, i < (actionShape pp).numPermutationSets →
+    ∀ i, i < actionCircuit.permutationSetCount →
       ((actionVk pp urs).permutationChunks.getD i []).length ≤
         (actionVk pp urs).chunkLen := by
   intro i hi
@@ -110,7 +110,7 @@ theorem chunkLength_le (pp : Keygen.ProofParams) (urs : URS G) :
         [(.fixed 9, 14)]].getD i []).length ≤
       actionCircuit.constraintSystem.chunkLen
   have hdata := columnCount_chunkLen_eq
-  have hsets : (actionShape pp).numPermutationSets = 3 := by
+  have hsets : actionCircuit.permutationSetCount = 3 := by
     simpa using (chunkCount pp urs).symm.trans (by simp [permutationChunks_eq])
   rw [hsets] at hi
   have hlen :
@@ -123,8 +123,8 @@ theorem chunkLength_le (pp : Keygen.ProofParams) (urs : URS G) :
 theorem resolverPairsLength_le
     (pp : Keygen.ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
-    (p : Fin (actionShape pp).numProofs) :
-    ∀ i, i < (actionShape pp).numPermutationSets →
+    (p : Fin pp.numProofs) :
+    ∀ i, i < actionCircuit.permutationSetCount →
       (ResolverPermutationPairs (actionVk pp urs) poly p i).length ≤
         (actionVk pp urs).chunkLen := by
   intro i hi
@@ -163,9 +163,12 @@ theorem routingCoherent_of_derived
           (actionVk pp urs) (.advice i)
         simp only [PermutationColumnRef.Coherent]
         refine ⟨?_, ?_, ?_⟩
-        · rw [← actionCircuit.toVerifierKey_adviceQueryCount
-            pp urs, hadviceLayout]
-          exact hi
+        · simpa only [actionShape,
+            Keygen.ProofParams.mergeDerived_numAdviceQueries] using
+            (show i < actionCircuit.adviceQueryCount from by
+              rw [← actionCircuit.toVerifierKey_adviceQueryCount
+                pp urs, hadviceLayout]
+              exact hi)
         · simpa only [hadviceLayout] using hi
         · simpa only [hadviceLayout] using hrotation
     | fixed i =>
@@ -174,9 +177,12 @@ theorem routingCoherent_of_derived
           (actionVk pp urs) (.fixed i)
         simp only [PermutationColumnRef.Coherent]
         refine ⟨?_, ?_, ?_⟩
-        · rw [← actionCircuit.toVerifierKey_fixedQueryCount
-            pp urs, hfixedLayout]
-          exact hi
+        · simpa only [actionShape,
+            Keygen.ProofParams.mergeDerived_numFixedQueries] using
+            (show i < actionCircuit.fixedQueryCount from by
+              rw [← actionCircuit.toVerifierKey_fixedQueryCount
+                pp urs, hfixedLayout]
+              exact hi)
         · simpa only [hfixedLayout] using hi
         · simpa only [hfixedLayout] using hrotation
     | «instance» i =>
@@ -185,9 +191,12 @@ theorem routingCoherent_of_derived
           (actionVk pp urs) (.instance i)
         simp only [PermutationColumnRef.Coherent]
         refine ⟨?_, ?_, ?_⟩
-        · rw [← actionCircuit.toVerifierKey_instanceQueryCount
-            pp urs, hinstanceLayout]
-          exact hi
+        · simpa only [actionShape,
+            Keygen.ProofParams.mergeDerived_numInstanceQueries] using
+            (show i < actionCircuit.instanceQueryCount from by
+              rw [← actionCircuit.toVerifierKey_instanceQueryCount
+                pp urs, hinstanceLayout]
+              exact hi)
         · simpa only [hinstanceLayout] using hi
         · simpa only [hinstanceLayout] using hrotation
   · simpa [actionShape, Keygen.ProofParams.mergeDerived] using hcommon
@@ -295,7 +304,7 @@ generic permutation-domain record. In particular its `lastRotation` field is
 the verifier's `omega^(-(blindingFactors + 1))` rotation. -/
 theorem domain
     (pp : Keygen.ProofParams) (urs : URS G)
-    (ch : Challenges (actionShape pp).k Fp)
+    (ch : Challenges actionCircuit.domainExponent Fp)
     (poly : CommitmentId → Polynomial Fp) :
     let model :=
       actionCircuit.constraintModel pp urs ch poly
@@ -306,7 +315,7 @@ theorem domain
   exact ResolverPermutationDomain.ofCanonicalConstraintModel
     (actionVk pp urs) ch poly
       (actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
-      (rowsInjective pp urs) (root pp urs) (nonempty pp)
+      (rowsInjective pp urs) (root pp urs) nonempty
       (chunkCount pp urs)
 
 /-- The last usable Action row is exactly the verifier's negative rotation. -/
@@ -315,7 +324,7 @@ theorem lastRowRotation (pp : Keygen.ProofParams) (urs : URS G) :
         ((actionVk pp urs).n - (actionVk pp urs).blindingFactors - 1) =
       (actionVk pp urs).omega ^
         (-(((actionVk pp urs).blindingFactors : ℤ) + 1)) := by
-  let ch : Challenges (actionShape pp).k Fp :=
+  let ch : Challenges actionCircuit.domainExponent Fp :=
     { theta := 0
       beta := 0
       gamma := 0
@@ -338,7 +347,7 @@ evaluation domain. This is the `hnames` premise retained by
 theorem namesInjective
     (pp : Keygen.ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
-    (p : Fin (actionShape pp).numProofs)
+    (p : Fin pp.numProofs)
     {activeRows : ℕ} (hactive : activeRows ≤ (actionVk pp urs).n) :
     Function.Injective fun c :
         ResolverPermutationCell (actionVk pp urs) poly p activeRows =>
@@ -371,7 +380,7 @@ theorem namesInjective
             deltaFp ^ (j' : ℕ) at hcoset
       rw [domainExponent_eq] at hcoset
       have hsize :
-          (actionShape pp).numPermutationSets *
+          actionCircuit.permutationSetCount *
               (actionVk pp urs).chunkLen = 21 := by
         change
           ((actionCircuit.constraintSystem.permutationColumns.length +
@@ -398,7 +407,7 @@ theorem namesInjective
       exact congrArg (fun x : Fin 21 => x.val) heq21
   intro c d hname
   have hwiden := widenPermutationChunkCell_injective
-    (nc := (actionShape pp).numPermutationSets)
+    (nc := actionCircuit.permutationSetCount)
     (width := fun i =>
       (ResolverPermutationPairs (actionVk pp urs) poly p i).length)
     hactive
@@ -423,7 +432,7 @@ replayed full permutation. -/
 def cycleOfKeygenColumnsAt
     (pp : Keygen.ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
-    (p : Fin (actionShape pp).numProofs)
+    (p : Fin pp.numProofs)
     {m : ℕ}
     (hactive : m ≤ (actionVk pp urs).n)
     (fullSigma : Equiv.Perm
@@ -433,7 +442,7 @@ def cycleOfKeygenColumnsAt
       (ResolverPermutationCell (actionVk pp urs) poly p
         m))
     (hcolumns : ∀
-      (chunk : Fin (actionShape pp).numPermutationSets)
+      (chunk : Fin actionCircuit.permutationSetCount)
       (column : Fin
         (ResolverPermutationPairs (actionVk pp urs) poly p chunk).length),
       (ResolverPermutationPairs
@@ -456,7 +465,7 @@ def cycleOfKeygenColumnsAt
 def cycleOfKeygenColumns
     (pp : Keygen.ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
-    (p : Fin (actionShape pp).numProofs)
+    (p : Fin pp.numProofs)
     (fullSigma : Equiv.Perm
       (ResolverPermutationCell (actionVk pp urs) poly p
         (actionVk pp urs).n))
@@ -464,7 +473,7 @@ def cycleOfKeygenColumns
       (ResolverPermutationCell (actionVk pp urs) poly p
         (activeRows pp urs)))
     (hcolumns : ∀
-      (chunk : Fin (actionShape pp).numPermutationSets)
+      (chunk : Fin actionCircuit.permutationSetCount)
       (column : Fin
         (ResolverPermutationPairs (actionVk pp urs) poly p chunk).length),
       (ResolverPermutationPairs

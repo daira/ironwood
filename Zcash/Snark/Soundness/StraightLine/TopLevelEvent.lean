@@ -24,7 +24,7 @@ noncomputable abbrev topLevelRunModel
     (pp : ProofParams)
     (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived top))
     (static : DeployedConstraintStaticChecks family.toRootFamily)
-    (inputs : Fin (pp.mergeDerived top).numProofs → PublicInput Fp)
+    (inputs : Fin pp.numProofs → PublicInput Fp)
     (hvk : ∀ basis, family.vk basis =
       top.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived top).k basis))
@@ -68,7 +68,7 @@ noncomputable abbrev topLevelRunPolynomial
     (pp : ProofParams)
     (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived top))
     (static : DeployedConstraintStaticChecks family.toRootFamily)
-    (inputs : Fin (pp.mergeDerived top).numProofs → PublicInput Fp)
+    (inputs : Fin pp.numProofs → PublicInput Fp)
     (hvk : ∀ basis, family.vk basis =
       top.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived top).k basis))
@@ -111,7 +111,7 @@ variable
     (pp : ProofParams)
     (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived top))
     (static : DeployedConstraintStaticChecks family.toRootFamily)
-    (inputs : Fin (pp.mergeDerived top).numProofs → PublicInput Fp)
+    (inputs : Fin pp.numProofs → PublicInput Fp)
     (hvk : ∀ basis, family.vk basis =
       top.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived top).k basis))
@@ -169,6 +169,7 @@ noncomputable def topLevelBetaFailureEvent :
           (top.usableRowsAt top.domainExponent)) ∧
       (straightLineRunRecord family q.1 q.2).beta ∉
         allResolverLookupBetaBadSet
+          pp.numProofs
           (top.toVerifierKey pp
             (ursOfAugmentedBasis (pp.mergeDerived top).k q.1))
           (straightLineRunRecord family q.1 q.2)
@@ -196,6 +197,7 @@ noncomputable def topLevelGammaFailureEvent :
           (top.usableRowsAt top.domainExponent)) ∧
       (straightLineRunRecord family q.1 q.2).gamma ∉
         allResolverLookupGammaBadSet
+          pp.numProofs
           (top.toVerifierKey pp
             (ursOfAugmentedBasis (pp.mergeDerived top).k q.1))
           (straightLineRunRecord family q.1 q.2)
@@ -233,7 +235,7 @@ def topLevelTerminalRelationFinderCovers
     (pp : ProofParams)
     (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived top))
     (static : DeployedConstraintStaticChecks family.toRootFamily)
-    (inputs : Fin (pp.mergeDerived top).numProofs → PublicInput Fp)
+    (inputs : Fin pp.numProofs → PublicInput Fp)
     (hvk : ∀ basis, family.vk basis =
       top.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived top).k basis))
@@ -273,7 +275,7 @@ def topLevelStatementOrRelationDecoded
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams)
     (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived top))
-    (inputs : Fin (pp.mergeDerived top).numProofs → PublicInput Fp) :
+    (inputs : Fin pp.numProofs → PublicInput Fp) :
     (AugmentedIndex (2 ^ (pp.mergeDerived top).k) → VestaG) →
     (BTranscript Fp VestaG
       (preIpaLen (pp.mergeDerived top) family.init.length 10
@@ -292,7 +294,7 @@ def topLevelBundleStatementDecoded
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams)
     (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived top))
-    (inputs : Fin (pp.mergeDerived top).numProofs → PublicInput Fp) :
+    (inputs : Fin pp.numProofs → PublicInput Fp) :
     (AugmentedIndex (2 ^ (pp.mergeDerived top).k) → VestaG) →
     (BTranscript Fp VestaG
       (preIpaLen (pp.mergeDerived top) family.init.length 10

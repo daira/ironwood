@@ -422,7 +422,7 @@ def EnabledLookup.inputSelectorValuesRealized_or_bad
             instanceRowPolynomial (2 ^ urs.k)
               (top.toVerifierKey pp urs).omega (rows column) ⊕'
           Bad)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    (proofIndex : Fin pp.numProofs)
     (lookup : EnabledLookup Fp)
     (hrow :
       top.placement lookup.region + lookup.row <

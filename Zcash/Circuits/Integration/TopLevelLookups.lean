@@ -23,8 +23,6 @@ open Zcash.Arithmetic (omegaOf)
 
 open Halo2 Polynomial Keygen
 
-set_option maxHeartbeats 20000
-
 variable
     {G : Type} [AddCommGroup G] [Inhabited G]
     {Config : Type} {PublicInput : TypeMap}
@@ -36,7 +34,7 @@ variable
 structure EnabledLookup.TopLevelRoute
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (lookup : EnabledLookup Fp) where
-  index : Fin (pp.mergeDerived top).numLookups
+  index : Fin top.lookupCount
   argument :
     top.constraintSystem.lookups[index.val] = lookup.argument
 
@@ -250,7 +248,7 @@ namespace TopLevelGateCoherence
 theorem resolverInterpretsPinned
     (coherence : TopLevelGateCoherence top)
     (poly : CommitmentId → Polynomial Fp)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    (proofIndex : Fin pp.numProofs)
     (usableRows row : ℕ) :
     Interprets
       (pinnedQueryState
@@ -296,7 +294,7 @@ end TopLevelGateCoherence
 @[simp] theorem toVerifierKey_lookupInputExprs
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
-    (lookup : Fin (pp.mergeDerived top).numLookups) :
+    (lookup : Fin top.lookupCount) :
     (top.toVerifierKey pp urs).lookupInputExprs lookup =
       ((PinnedConstraintSystem.derive
           top.constraintSystem top.selectorMap).lookupInputExprs.getD
@@ -306,7 +304,7 @@ end TopLevelGateCoherence
 @[simp] theorem toVerifierKey_lookupTableExprs
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
-    (lookup : Fin (pp.mergeDerived top).numLookups) :
+    (lookup : Fin top.lookupCount) :
     (top.toVerifierKey pp urs).lookupTableExprs lookup =
       ((PinnedConstraintSystem.derive
           top.constraintSystem top.selectorMap).lookupTableExprs.getD
@@ -366,7 +364,7 @@ enabled Clean lookup's concrete input and table tuples.
 theorem projectedValues
     (gateCoherence : TopLevelGateCoherence top)
     (poly : CommitmentId → Polynomial Fp)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    (proofIndex : Fin pp.numProofs)
     (lookup : EnabledLookup Fp)
     (henabled :
       lookup ∈ operationEnabledLookups (top.operations) 0)
@@ -503,10 +501,11 @@ The resolver's compressed input and table polynomials evaluate to the concrete
 Clean tuples compressed with the transcript challenge.
 -/
 theorem projectedPolynomialValues
+    {k : ℕ}
     (gateCoherence : TopLevelGateCoherence top)
-    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (ch : Challenges k Fp)
     (poly : CommitmentId → Polynomial Fp)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    (proofIndex : Fin pp.numProofs)
     (lookup : EnabledLookup Fp)
     (henabled :
       lookup ∈ operationEnabledLookups (top.operations) 0)
@@ -573,10 +572,11 @@ static projection, exact selector values, row fit, and explicitly priced
 challenge exclusions are supplied.
 -/
 def deployedWitness
+    {k : ℕ}
     (gateCoherence : TopLevelGateCoherence top)
-    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (ch : Challenges k Fp)
     (poly : CommitmentId → Polynomial Fp)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    (proofIndex : Fin pp.numProofs)
     (satisfaction :
       ConstraintSatisfaction
         (top.constraintModel pp urs ch poly)
@@ -656,22 +656,38 @@ def deployedWitness
     intro row _
     unfold EnabledLookup.inputValues EnabledLookup.tableValues
     simpa only [List.length_map] using harity'
-  let model := top.constraintModel pp urs ch poly
+  let canonical :=
+    canonicalLagrangePolynomials vk.omega
+      (top.toVerifierKey_blindingFactors_lt_n pp urs)
+  let domainChallenges : Challenges top.domainExponent Fp :=
+    { theta := ch.theta
+      beta := ch.beta
+      gamma := ch.gamma
+      y := ch.y
+      x := ch.x
+      x1 := ch.x1
+      x2 := ch.x2
+      x3 := ch.x3
+      x4 := ch.x4
+      xi := ch.xi
+      z := ch.z
+      ipaRound := fun _ => 0 }
   have domain :
-      ResolverLookupDomain vk model.l0 model.lLast model.lBlind
+      ResolverLookupDomain vk canonical.1 canonical.2.1 canonical.2.2
         vk.n u := by
-    simpa only [vk, u, model, TopLevelCircuit.constraintModel] using
-      (ResolverLookupDomain.ofCanonicalConstraintModel
-        vk ch poly husable hrows hroot)
+    simpa only [vk, u, canonical, TopLevelCircuit.constraintModel_l0,
+      TopLevelCircuit.constraintModel_lLast,
+      TopLevelCircuit.constraintModel_lBlind] using
+      top.resolverLookupDomain pp urs domainChallenges poly
+        husable hrows hroot
   have satisfaction' :
       ConstraintSatisfaction
         (constraintModelOfResolver vk ch poly
           (permutationSetsOfResolver vk poly)
           (permutationChunksOfResolver vk poly)
-          model.l0 model.lLast model.lBlind) vk.n := by
-    rw [TopLevelCircuit.constraintModel,
-      VerifyingKey.constraintModel_eq_constraintModelOfResolver] at satisfaction
-    simpa only [vk, model] using satisfaction
+          canonical.1 canonical.2.1 canonical.2.2) vk.n := by
+    rw [top.constraintModel_eq_constraintModelOfResolver] at satisfaction
+    simpa only [vk, canonical] using satisfaction
   have scalarSubset :
       ∀ row : Fin (u + 1), ∃ tableRow : Fin (u + 1),
         lookupColumnRows vk.omega
@@ -686,7 +702,7 @@ def deployedWitness
       vk ch poly
       (permutationSetsOfResolver vk poly)
       (permutationChunksOfResolver vk poly)
-      model.l0 model.lLast model.lBlind proofIndex route.index
+      canonical.1 canonical.2.1 canonical.2.2 proofIndex route.index
       domain resolverGood
   exact
     { omega := vk.omega
@@ -715,11 +731,12 @@ fit are derived from the top-level circuit; this record contains only selector- 
 challenge-dependent facts.
 -/
 structure WitnessConditions
+    {k : ℕ}
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
-    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (ch : Challenges k Fp)
     (poly : CommitmentId → Polynomial Fp)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs) : Prop where
+    (proofIndex : Fin pp.numProofs) : Prop where
   inputSelectorValues : ∀ lookup
       (_henabled :
         lookup ∈ operationEnabledLookups (top.operations) 0),
@@ -751,7 +768,7 @@ list is shared by all proofs, while the resolver environment is proof-indexed.
 abbrev ActivationIndex
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) :=
-  Fin (pp.mergeDerived top).numProofs ×
+  Fin pp.numProofs ×
     Fin (operationEnabledLookups (top.operations) 0).length
 
 /--
@@ -816,18 +833,19 @@ These are transcript/probability-layer facts, independent of fixed-column select
 realization.
 -/
 structure ChallengeExclusions
+    {k : ℕ}
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
-    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (ch : Challenges k Fp)
     (poly : CommitmentId → Polynomial Fp) : Prop where
   gamma :
     ch.gamma ∉ allResolverLookupGammaBadSet
-      (top.toVerifierKey pp urs) ch poly
+      pp.numProofs (top.toVerifierKey pp urs) ch poly
       ((top.toVerifierKey pp urs).n -
         (top.toVerifierKey pp urs).blindingFactors - 2)
   beta :
     ch.beta ∉ allResolverLookupBetaBadSet
-      (top.toVerifierKey pp urs) ch poly
+      pp.numProofs (top.toVerifierKey pp urs) ch poly
       ((top.toVerifierKey pp urs).n -
         (top.toVerifierKey pp urs).blindingFactors - 2)
   theta :
@@ -837,18 +855,19 @@ structure ChallengeExclusions
 adapter traverses configured lookup arguments; the `θ` adapter traverses synthesized lookup
 activations and their usable rows. -/
 def topLevelLookupChallengeExclusions?
+    {k : ℕ}
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
-    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (ch : Challenges k Fp)
     (poly : CommitmentId → Polynomial Fp) :
     Option (PLift (ChallengeExclusions top pp urs ch poly)) :=
   let vk := top.toVerifierKey pp urs
   let u := vk.n - vk.blindingFactors - 2
-  match hresolver : resolverLookupBundleExclusions? vk ch poly u with
+  match hresolver : resolverLookupBundleExclusions? pp.numProofs vk ch poly u with
   | none => none
   | some resolver =>
       match htheta : finForallOption
-          (fun p : Fin (pp.mergeDerived top).numProofs =>
+          (fun p : Fin pp.numProofs =>
             finForallOption (fun l : Fin (operationEnabledLookups (top.operations) 0).length =>
               let environment := resolverEnvironment vk poly p
                 (top.usableRowsAt top.domainExponent)
@@ -871,16 +890,17 @@ def topLevelLookupChallengeExclusions?
               exact (theta index.1 index.2).down }⟩
 
 theorem topLevelLookupChallengeExclusions?_isSome_of
+    {k : ℕ}
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
-    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (ch : Challenges k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (hexclusions : ChallengeExclusions top pp urs ch poly) :
     (topLevelLookupChallengeExclusions? top pp urs ch poly).isSome := by
   let vk := top.toVerifierKey pp urs
   let u := vk.n - vk.blindingFactors - 2
   obtain ⟨resolver, hresolver⟩ := Option.isSome_iff_exists.mp
-    (resolverLookupBundleExclusions?_isSome_of vk ch poly u
+    (resolverLookupBundleExclusions?_isSome_of pp.numProofs vk ch poly u
       hexclusions.gamma hexclusions.beta)
   have hthetaSpec : ∀ index : ActivationIndex top pp,
       ch.theta ∉ ((operationEnabledLookups (top.operations) 0).get index.2).thetaBadSet
@@ -908,7 +928,7 @@ theorem topLevelLookupChallengeExclusions?_isSome_of
   simp only
   rw [hresolver]
   generalize hresult : finForallOption
-      (fun p : Fin (pp.mergeDerived top).numProofs =>
+      (fun p : Fin pp.numProofs =>
         finForallOption (fun l : Fin (operationEnabledLookups (top.operations) 0).length =>
           let environment := resolverEnvironment vk poly p
             (top.usableRowsAt top.domainExponent)
@@ -921,9 +941,10 @@ Bundle-wide challenge exclusions and exact selector realization construct the
 per-proof conditions consumed by the deployed lookup witnesses.
 -/
 def WitnessConditions.ofChallengeExclusions
-    (ch : Challenges (pp.mergeDerived top).k Fp)
+    {k : ℕ}
+    (ch : Challenges k Fp)
     (poly : CommitmentId → Polynomial Fp)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    (proofIndex : Fin pp.numProofs)
     (inputSelectorValues : ∀ lookup
       (_henabled :
         lookup ∈ operationEnabledLookups (top.operations) 0),
@@ -940,7 +961,7 @@ def WitnessConditions.ofChallengeExclusions
       thetaGood := ?_ }
   · intro lookup henabled
     exact resolverLookupGoodChallenges_of_not_mem
-      (top.toVerifierKey pp urs) ch poly
+      pp.numProofs (top.toVerifierKey pp urs) ch poly
       ((top.toVerifierKey pp urs).n -
         (top.toVerifierKey pp urs).blindingFactors - 2)
       exclusions.gamma exclusions.beta proofIndex
@@ -965,10 +986,11 @@ def WitnessConditions.ofChallengeExclusions
 
 /-- Construct the complete deployed-witness family for one top-level proof. -/
 def deployedWitnesses
+    {k : ℕ}
     (gateCoherence : TopLevelGateCoherence top)
-    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (ch : Challenges k Fp)
     (poly : CommitmentId → Polynomial Fp)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    (proofIndex : Fin pp.numProofs)
     (satisfaction :
       ConstraintSatisfaction
         (top.constraintModel pp urs ch poly)
@@ -1007,10 +1029,11 @@ def deployedWitnesses
 
 /-- The deployed family discharges Clean's complete lookup constraint family. -/
 theorem constraints
+    {k : ℕ}
     (gateCoherence : TopLevelGateCoherence top)
-    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (ch : Challenges k Fp)
     (poly : CommitmentId → Polynomial Fp)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    (proofIndex : Fin pp.numProofs)
     (satisfaction :
       ConstraintSatisfaction
         (top.constraintModel pp urs ch poly)

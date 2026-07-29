@@ -341,6 +341,67 @@ structure ProofParams where
   numPointSets : ℕ
 deriving DecidableEq, Repr
 
+end Zcash.Snark.Keygen
+
+namespace Halo2.TopLevelCircuit
+
+open Zcash.Arithmetic (Fp)
+open CompElliptic.Curves.Pasta
+
+variable {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
+
+/-- The number of advice columns configured by the circuit. -/
+abbrev adviceColumnCount
+    (top : TopLevelCircuit Fp Config PublicInput) : ℕ :=
+  top.constraintSystem.numAdviceColumns
+
+/-- The number of lookup arguments configured by the circuit. -/
+abbrev lookupCount
+    (top : TopLevelCircuit Fp Config PublicInput) : ℕ :=
+  top.constraintSystem.lookups.length
+
+/-- The number of verifier permutation chunks derived from the circuit. -/
+abbrev permutationSetCount
+    (top : TopLevelCircuit Fp Config PublicInput) : ℕ :=
+  (top.constraintSystem.permutationColumns.length +
+    top.constraintSystem.chunkLen - 1) /
+    top.constraintSystem.chunkLen
+
+/-- The number of columns participating in the circuit's permutation argument. -/
+abbrev permutationColumnCount
+    (top : TopLevelCircuit Fp Config PublicInput) : ℕ :=
+  top.constraintSystem.permutationColumns.length
+
+/-- The number of quotient-polynomial pieces required by the circuit. -/
+abbrev quotientPieceCount
+    (top : TopLevelCircuit Fp Config PublicInput) : ℕ :=
+  csDegree top.constraintSystem - 1
+
+/-- The number of instance queries in the circuit's pinned constraint system. -/
+abbrev instanceQueryCount
+    (top : TopLevelCircuit Fp Config PublicInput) : ℕ :=
+  (PinnedConstraintSystem.derive
+    top.constraintSystem top.selectorMap).instanceQueryLayout.length
+
+/-- The number of advice queries in the circuit's pinned constraint system. -/
+abbrev adviceQueryCount
+    (top : TopLevelCircuit Fp Config PublicInput) : ℕ :=
+  (PinnedConstraintSystem.derive
+    top.constraintSystem top.selectorMap).adviceQueryLayout.length
+
+/-- The number of fixed queries in the circuit's pinned constraint system. -/
+abbrev fixedQueryCount
+    (top : TopLevelCircuit Fp Config PublicInput) : ℕ :=
+  (PinnedConstraintSystem.derive
+    top.constraintSystem top.selectorMap).fixedQueryLayout.length
+
+end Halo2.TopLevelCircuit
+
+namespace Zcash.Snark.Keygen
+
+open Zcash.Snark
+open Halo2
+
 /-- The `Shape` of a top-level circuit's proofs: the proof-shape counts merged with
 everything the circuit derives — the domain exponent (`TopLevelCircuit.domainExponent`),
 column/lookup/permutation counts from the configure-recorded constraint system, the
@@ -365,6 +426,85 @@ def ProofParams.mergeDerived (pp : ProofParams)
     numAdviceQueries := pinned.adviceQueryLayout.length
     numFixedQueries := pinned.fixedQueryLayout.length
     numPointSets := pp.numPointSets }
+
+theorem ProofParams.mergeDerived_k
+    (pp : ProofParams)
+    {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput) :
+    (pp.mergeDerived top).k = top.domainExponent := by
+  simp [ProofParams.mergeDerived]
+
+theorem ProofParams.mergeDerived_numProofs
+    (pp : ProofParams)
+    {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput) :
+    (pp.mergeDerived top).numProofs = pp.numProofs := by
+  simp [ProofParams.mergeDerived]
+
+theorem ProofParams.mergeDerived_numAdviceColumns
+    (pp : ProofParams)
+    {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput) :
+    (pp.mergeDerived top).numAdviceColumns = top.adviceColumnCount := by
+  simp [ProofParams.mergeDerived]
+
+theorem ProofParams.mergeDerived_numLookups
+    (pp : ProofParams)
+    {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput) :
+    (pp.mergeDerived top).numLookups = top.lookupCount := by
+  simp [ProofParams.mergeDerived]
+
+theorem ProofParams.mergeDerived_numPermutationSets
+    (pp : ProofParams)
+    {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput) :
+    (pp.mergeDerived top).numPermutationSets =
+      top.permutationSetCount := by
+  simp [ProofParams.mergeDerived]
+
+theorem ProofParams.mergeDerived_numPermutationColumns
+    (pp : ProofParams)
+    {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput) :
+    (pp.mergeDerived top).numPermutationColumns =
+      top.permutationColumnCount := by
+  simp [ProofParams.mergeDerived]
+
+theorem ProofParams.mergeDerived_numQuotientPieces
+    (pp : ProofParams)
+    {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput) :
+    (pp.mergeDerived top).numQuotientPieces = top.quotientPieceCount := by
+  simp [ProofParams.mergeDerived]
+
+theorem ProofParams.mergeDerived_numInstanceQueries
+    (pp : ProofParams)
+    {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput) :
+    (pp.mergeDerived top).numInstanceQueries = top.instanceQueryCount := by
+  simp [ProofParams.mergeDerived]
+
+theorem ProofParams.mergeDerived_numAdviceQueries
+    (pp : ProofParams)
+    {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput) :
+    (pp.mergeDerived top).numAdviceQueries = top.adviceQueryCount := by
+  simp [ProofParams.mergeDerived]
+
+theorem ProofParams.mergeDerived_numFixedQueries
+    (pp : ProofParams)
+    {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput) :
+    (pp.mergeDerived top).numFixedQueries = top.fixedQueryCount := by
+  simp [ProofParams.mergeDerived]
+
+theorem ProofParams.mergeDerived_numPointSets
+    (pp : ProofParams)
+    {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput) :
+    (pp.mergeDerived top).numPointSets = pp.numPointSets := by
+  simp [ProofParams.mergeDerived]
 
 end Zcash.Snark.Keygen
 
@@ -491,7 +631,7 @@ its own keygen permutation rows. -/
 theorem toVerifierKey_permutationCommonCommitment
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
-    (column : Fin (pp.mergeDerived top).numPermutationColumns) :
+    (column : Fin top.permutationColumnCount) :
     (top.toVerifierKey pp urs).permutationCommonCommitment column =
       (top.permutationCommitments urs).getD column.val 0 := by
   simp only [toVerifierKey, verifierKeyAt,
@@ -535,13 +675,9 @@ theorem toVerifierKey_adviceQueryCount
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G) :
     (top.toVerifierKey pp urs).adviceQueryLayout.length =
-      (pp.mergeDerived top).numAdviceQueries := by
-  change
-    (PinnedConstraintSystem.derive
-      top.constraintSystem top.selectorMap).adviceQueryLayout.length =
-    (PinnedConstraintSystem.derive
-      top.constraintSystem top.selectorMap).adviceQueryLayout.length
-  rw [show top.selectorMap = top.selectorMap by rfl]
+      top.adviceQueryCount := by
+  simpa only [adviceQueryCount] using
+    congrArg List.length (top.toVerifierKey_adviceQueryLayout_derived pp urs)
 
 /-- The derived key's fixed-query layout has the shape count computed from the same
 top-level pinned constraint system. -/
@@ -549,13 +685,9 @@ theorem toVerifierKey_fixedQueryCount
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G) :
     (top.toVerifierKey pp urs).fixedQueryLayout.length =
-      (pp.mergeDerived top).numFixedQueries := by
-  change
-    (PinnedConstraintSystem.derive
-      top.constraintSystem top.selectorMap).fixedQueryLayout.length =
-    (PinnedConstraintSystem.derive
-      top.constraintSystem top.selectorMap).fixedQueryLayout.length
-  rw [show top.selectorMap = top.selectorMap by rfl]
+      top.fixedQueryCount := by
+  simpa only [fixedQueryCount] using
+    congrArg List.length (top.toVerifierKey_fixedQueryLayout_derived pp urs)
 
 /-- The derived key's instance-query layout has the shape count computed from the same
 top-level pinned constraint system. -/
@@ -563,12 +695,8 @@ theorem toVerifierKey_instanceQueryCount
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G) :
     (top.toVerifierKey pp urs).instanceQueryLayout.length =
-      (pp.mergeDerived top).numInstanceQueries := by
-  change
-    (PinnedConstraintSystem.derive
-      top.constraintSystem top.selectorMap).instanceQueryLayout.length =
-    (PinnedConstraintSystem.derive
-      top.constraintSystem top.selectorMap).instanceQueryLayout.length
-  rw [show top.selectorMap = top.selectorMap by rfl]
+      top.instanceQueryCount := by
+  simpa only [instanceQueryCount] using
+    congrArg List.length (top.toVerifierKey_instanceQueryLayout_derived pp urs)
 
 end Halo2.TopLevelCircuit

@@ -104,7 +104,7 @@ variable
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
     (hk : (pp.mergeDerived top).k = urs.k)
-    (inputs : Fin (pp.mergeDerived top).numProofs → PublicInput Fp)
+    (inputs : Fin pp.numProofs → PublicInput Fp)
     (ps : ProofString (pp.mergeDerived top) Fp G)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
@@ -135,7 +135,7 @@ Verifier acceptance binds one cell's circuit-derived instance column to its
 layout-derived row polynomial, or yields the augmented-basis relation.
 -/
 def acceptedColumn_eq_rowPolynomial_or_relation
-    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    (proofIndex : Fin pp.numProofs)
     (index : Fin (size PublicInput))
     (hrows : Function.Injective
       fun i : Fin (2 ^ urs.k) =>
@@ -181,17 +181,17 @@ Verifier acceptance binds one decoded assignment to the public input supplied fo
 that proof, or yields the augmented-basis relation.
 -/
 def publicInputEncoding_or_relation
-    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    (proofIndex : Fin pp.numProofs)
     (domainExponent_lt : top.domainExponent < 33) :
     (let assignment : TopLevelAssignment top
-          (pp.mergeDerived top).numProofs proofIndex :=
+          pp.numProofs proofIndex :=
         { polynomial :=
             CanonicalMemberConstraintRelation.acceptedPolynomial
               (memberDecode := memberDecode) haccepts };
       assignment.PublicInputEncoding (inputs proofIndex)) ⊕'
       NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   let assignment : TopLevelAssignment top
-      (pp.mergeDerived top).numProofs proofIndex :=
+      pp.numProofs proofIndex :=
     { polynomial :=
         CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts }
@@ -240,9 +240,9 @@ def statements_or_relation_of_accepted_topLevelBundleStatement
   change TopLevelBundleStatement top pp poly at htop
   refine bindOrRelationWitness
     (finForallOrRelationWitness
-      (A := fun proofIndex : Fin (pp.mergeDerived top).numProofs =>
+      (A := fun proofIndex : Fin pp.numProofs =>
         let assignment : TopLevelAssignment top
-            (pp.mergeDerived top).numProofs proofIndex :=
+            pp.numProofs proofIndex :=
           { polynomial := poly }
         assignment.PublicInputEncoding (inputs proofIndex))
       fun proofIndex =>

@@ -51,7 +51,7 @@ def topLevelStatements_or_relation_of_decode
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
     (hk : (pp.mergeDerived top).k = urs.k)
-    (inputs : Fin (pp.mergeDerived top).numProofs → PublicInput Fp)
+    (inputs : Fin pp.numProofs → PublicInput Fp)
     (ps : ProofString (pp.mergeDerived top) Fp G)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)

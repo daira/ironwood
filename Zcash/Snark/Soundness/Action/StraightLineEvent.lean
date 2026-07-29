@@ -46,7 +46,7 @@ local instance vestaInhabitedStraightLineActionEvent : Inhabited VestaG := ⟨0�
 variable (pp : ProofParams)
   (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived actionCircuit))
   (static : DeployedConstraintStaticChecks family.toRootFamily)
-  (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+  (inputs : Fin pp.numProofs → PublicInputs Fp)
 
 variable
   (hvk : ∀ basis, family.vk basis =
@@ -94,6 +94,7 @@ theorem actionRelationFinder_covers :
         success.witness.decode.reRound (runRounds family.toFamily basis O) := by
     simp only [straightLineRunDecodeAt, straightLineDecode,
       straightLineConstraintWitness, hsuccess]
+    rfl
   have haccepts := straightLineRunAcceptsAt family static basis O
     (actionCircuit.toVerifierKey pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
@@ -270,7 +271,7 @@ theorem actionRelationFinderCalls_le_six
 runs include their own `11+k` designated transcript reads; no cache-sharing convention is assumed.
 -/
 def actionDlogRandomOracleQueries : Nat :=
-  6 * family.Q + 6 * (11 + (pp.mergeDerived actionCircuit).k)
+  6 * family.Q + 6 * (11 + actionCircuit.domainExponent)
 
 /-- Group-work envelope of the combined solver.  Terminal comparison work is included in the
 explicit reduction component. -/
@@ -296,7 +297,7 @@ direct-coordinate decoder executions.  The small lower bound is exactly what is 
 `6Q + 6(11+k) <= 8T` at the deployed IPA depth. -/
 structure StraightLineActionDirectDlogProfile (B : VestaG) (T : Nat)
     extends StraightLineActionDlogProfile pp family static inputs hvk hI hchar B where
-  ipaDepth : (pp.mergeDerived actionCircuit).k = 11
+  ipaDepth : actionCircuit.domainExponent = 11
   targetAtLeastSixtySix : 66 <= T
   queryBound : family.Q <= T
   proverWorkBound : toStraightLineActionDlogProfile.proverGroupWork <= T
@@ -368,11 +369,11 @@ theorem actionBaseUnion_prob_le_of_dlogProfile
               (actionRelationFinder pp family static inputs hvk hI hchar))) ≤
       (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
         (family.Q + 1 : Nat) *
-          ((pp.mergeDerived actionCircuit).k *
+          (actionCircuit.domainExponent *
             (2 / (Fintype.card Fp : ENNReal))) +
-        (family.Q + (11 + (pp.mergeDerived actionCircuit).k) + 1 : Nat) *
+        (family.Q + (11 + actionCircuit.domainExponent) + 1 : Nat) *
           algebraicRootBudget (pp.mergeDerived actionCircuit)
-            (pp.mergeDerived actionCircuit).k +
+            actionCircuit.domainExponent +
         (profile.advantage (actionDlogRandomOracleQueries pp family)
             (actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
           1 / Fintype.card Fp) +
@@ -383,10 +384,11 @@ theorem actionBaseUnion_prob_le_of_dlogProfile
     (orchardGeneratorROBasis query)
     (orchard_uniformURSIdentification_of_generatorRO
       (pp.mergeDerived actionCircuit).k B hB query hquery)]
-  exact family.straightLineConstraintFailure_union_relation_prob_le_of_relationSupersetTextbookDL
-    B static (actionRelationFinder pp family static inputs hvk hI hchar)
-    (actionRelationFinder_extends_constraint pp family static inputs hvk hI hchar)
-    schedule profile.hardness
+  simpa only [ProofParams.mergeDerived_k] using
+    family.straightLineConstraintFailure_union_relation_prob_le_of_relationSupersetTextbookDL
+      B static (actionRelationFinder pp family static inputs hvk hI hchar)
+      (actionRelationFinder_extends_constraint pp family static inputs hvk hI hchar)
+      schedule profile.hardness
 
 /-- **The containment behind the fusion.**  A decoding run without the bundle statement or a
 relation must have a challenge in one of the terminal's exclusion sets: otherwise the terminal
@@ -747,6 +749,7 @@ theorem actionBetaFailureEvent_subset_surface
           (topLevelRunPolynomial actionCircuit pp family static inputs hvk hI hchar basis O h)
           actionActiveRows ∪
         allResolverLookupBetaBadSet
+          pp.numProofs
           (actionCircuit.toVerifierKey pp
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
           (straightLineRunRecord family basis O)
@@ -788,6 +791,7 @@ theorem actionGammaFailureEvent_subset_surface
           (topLevelRunPolynomial actionCircuit pp family static inputs hvk hI hchar basis O h)
           actionActiveRows ∪
         allResolverLookupGammaBadSet
+          pp.numProofs
           (actionCircuit.toVerifierKey pp
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
           (straightLineRunRecord family basis O)
@@ -954,6 +958,7 @@ theorem actionNoStatementOrRelation_prob_le_of_surfaces
           (topLevelRunPolynomial actionCircuit pp family static inputs hvk hI hchar basis O h)
           actionActiveRows ∪
         allResolverLookupBetaBadSet
+          pp.numProofs
           (actionCircuit.toVerifierKey pp
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
           (straightLineRunRecord family basis O)
@@ -974,6 +979,7 @@ theorem actionNoStatementOrRelation_prob_le_of_surfaces
           (topLevelRunPolynomial actionCircuit pp family static inputs hvk hI hchar basis O h)
           actionActiveRows ∪
         allResolverLookupGammaBadSet
+          pp.numProofs
           (actionCircuit.toVerifierKey pp
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
           (straightLineRunRecord family basis O)

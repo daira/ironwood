@@ -48,7 +48,7 @@ def actionTopLevelCircuitCorrectness
     (hk :
       (pp.mergeDerived actionCircuit).k = urs.k)
     (instanceCommitment :
-      Fin (pp.mergeDerived actionCircuit).numProofs →
+      Fin pp.numProofs →
         ℕ → G)
     (ps : ProofString
       (pp.mergeDerived actionCircuit) Fp G)
@@ -127,7 +127,7 @@ def actionTopLevelCircuitCorrectness
       fun hbinding => ?_
     let assignment :
         TopLevelAssignment actionCircuit
-          (pp.mergeDerived actionCircuit).numProofs
+          pp.numProofs
           proofIndex :=
       { polynomial := relation.polynomial }
     apply topLevelFixedColumnEncoding_of_binding

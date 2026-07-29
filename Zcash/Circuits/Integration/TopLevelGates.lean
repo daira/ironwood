@@ -23,8 +23,6 @@ open Zcash.Arithmetic (omegaOf scalarFieldOrder)
 
 open Halo2 Polynomial Keygen
 
-set_option maxHeartbeats 20000
-
 /--
 Static coherence for a top-level circuit's own derived verifying key.
 
@@ -60,7 +58,7 @@ intermediate gate-erasure state because lookup erasure only appends query entrie
 theorem resolverInterpretsGates
     (coherence : TopLevelGateCoherence top)
     (poly : CommitmentId → Polynomial Fp)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    (proofIndex : Fin pp.numProofs)
     (usableRows row : ℕ) :
     Interprets
       (eraseGates
@@ -109,21 +107,46 @@ theorem resolverInterpretsGates
     PinnedConstraintSystem.derive_queryState_extends_gates
       top.constraintSystem top.selectorMap
 
+/-- The circuit-derived selector map has the roots required by gate scaling. -/
+theorem selectorRootsWellFormed
+    (coherence : TopLevelGateCoherence top) :
+    SelectorRootsWellFormed top.selectorMap := by
+  simp only [TopLevelCircuit.selectorMap]
+  exact selectorRootsWellFormed_deriveSelCompressMap
+    top.constraintSystem
+    (2 ^ top.domainExponent)
+    top.selectorActivations coherence.selectorDegree
+
+/-- Selector compression covers every configured gate expression. -/
+theorem gateSelectorsCovered
+    (coherence : TopLevelGateCoherence top) :
+    ∀ expression ∈ flatGates top.constraintSystem,
+      expression.selectorsCovered
+        (fun selector =>
+          (top.selectorMap.lookup selector).isSome) = true := by
+  simpa only [TopLevelCircuit.selectorMap] using
+    gateSelectorsCovered_deriveSelCompressMap
+      top.constraintSystem
+      (2 ^ top.domainExponent)
+      top.selectorActivations
+      coherence.gateSelectorsAllocated
+
 /--
 Every enabled constraint in the top-level operation stream has the corresponding
 resolver gate polynomial witness.
 -/
-def polynomialWitness
+opaque polynomialWitness
+    {k : ℕ}
     (coherence : TopLevelGateCoherence top)
-    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (ch : Challenges k Fp)
     (poly : CommitmentId → Polynomial Fp)
-    (sets : Fin (pp.mergeDerived top).numProofs →
+    (sets : Fin pp.numProofs →
       List (PermSetEval (Polynomial Fp)))
-    (chunks : Fin (pp.mergeDerived top).numProofs →
+    (chunks : Fin pp.numProofs →
       List (PermSetEval (Polynomial Fp) ×
         List (Polynomial Fp × Polynomial Fp)))
     (l0 lLast lBlind : Polynomial Fp)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    (proofIndex : Fin pp.numProofs)
     (usableRows : ℕ)
     (hfixed : SelectorActivationsRealized top.selectorMap
       top.selectorActivations
@@ -136,9 +159,12 @@ def polynomialWitness
     (hconstraint : constraint ∈ enabled.gate.constraints) :
     EnabledGate.PolynomialWitness
       (constraintModelOfResolver
+        (numProofs := pp.numProofs)
+        (k := k)
         (top.toVerifierKey pp urs) ch poly sets chunks
         l0 lLast lBlind)
-      proofIndex (top.toVerifierKey pp urs).omega top.placement
+      proofIndex
+      (top.toVerifierKey pp urs).omega top.placement
       (resolverEnvironment
         (top.toVerifierKey pp urs) poly proofIndex usableRows)
       enabled constraint := by
@@ -166,26 +192,6 @@ def polynomialWitness
   have hcompressed :
       top.selectorMap.lookup enabled.gate.selector.index =
         some compressed := (Option.some_get hlookupPresent).symm
-  have hroots :
-      SelectorRootsWellFormed top.selectorMap := by
-    change SelectorRootsWellFormed
-      (deriveSelCompressMap top.constraintSystem
-        (2 ^ top.domainExponent) top.selectorActivations)
-    exact selectorRootsWellFormed_deriveSelCompressMap
-        top.constraintSystem
-        (2 ^ top.domainExponent)
-        top.selectorActivations coherence.selectorDegree
-  have hcoverage :
-      ∀ expression ∈ flatGates top.constraintSystem,
-        expression.selectorsCovered
-          (fun selector =>
-            (top.selectorMap.lookup selector).isSome) = true := by
-    simpa [TopLevelCircuit.selectorMap] using
-      gateSelectorsCovered_deriveSelCompressMap
-        top.constraintSystem
-        (2 ^ top.domainExponent)
-        top.selectorActivations
-        coherence.gateSelectorsAllocated
   have hgates :
       (top.toVerifierKey pp urs).gates =
         (PinnedConstraintSystem.derive
@@ -207,61 +213,20 @@ def polynomialWitness
       top.selectorMap top.regionStarts (top.operations) 0
       (resolverEnvironment
         (top.toVerifierKey pp urs) poly proofIndex usableRows)
-      (fun _ => 0) hroots
+      (fun _ => 0) coherence.selectorRootsWellFormed
     · exact hfixed
     · exact henabled
     · exact hcompressed
   exact enabledGatePolynomialWitnessOfResolver
+    (numProofs := pp.numProofs)
+    (k := k)
     (top.toVerifierKey pp urs)
     top.constraintSystem top.selectorMap ch poly sets chunks
-    l0 lLast lBlind proofIndex top.placement usableRows
+    l0 lLast lBlind proofIndex
+    top.placement usableRows
     enabled constraint hgate hconstraint
-    hgates hcoverage
+    hgates coherence.gateSelectorsCovered
     compressed hcompressed hinterpret hscale
-
-/--
-Deployed gate divisibility therefore supplies the complete gate component of the
-top-level circuit's Clean constraints.
--/
-theorem constraints
-    (coherence : TopLevelGateCoherence top)
-    (ch : Challenges (pp.mergeDerived top).k Fp)
-    (poly : CommitmentId → Polynomial Fp)
-    (sets : Fin (pp.mergeDerived top).numProofs →
-      List (PermSetEval (Polynomial Fp)))
-    (chunks : Fin (pp.mergeDerived top).numProofs →
-      List (PermSetEval (Polynomial Fp) ×
-        List (Polynomial Fp × Polynomial Fp)))
-    (l0 lLast lBlind : Polynomial Fp)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs)
-    (usableRows n : ℕ)
-    (satisfaction :
-      ConstraintSatisfaction
-        (constraintModelOfResolver
-          (top.toVerifierKey pp urs) ch poly sets chunks
-          l0 lLast lBlind) n)
-    (domain : ∀ row : ℕ,
-      ((top.toVerifierKey pp urs).omega ^ row) ^ n = 1)
-    (hfixed : SelectorActivationsRealized top.selectorMap
-      top.selectorActivations
-      (resolverEnvironment
-        (top.toVerifierKey pp urs) poly proofIndex usableRows)) :
-    CircuitConstraintFamily.constraints .gate top.placement
-      (resolverEnvironment
-        (top.toVerifierKey pp urs) poly proofIndex usableRows)
-      (top.operations) 0 := by
-  apply gate_constraints_of_polynomial_witnesses
-    (constraintModelOfResolver
-      (top.toVerifierKey pp urs) ch poly sets chunks
-      l0 lLast lBlind)
-    proofIndex (top.toVerifierKey pp urs).omega top.placement
-    (resolverEnvironment
-      (top.toVerifierKey pp urs) poly proofIndex usableRows)
-    (top.operations) 0 satisfaction domain
-  intro enabled henabled constraint hconstraint
-  exact coherence.polynomialWitness
-    ch poly sets chunks l0 lLast lBlind proofIndex usableRows
-    hfixed enabled henabled constraint hconstraint
 
 /--
 Specialize the top-level gate bridge to the canonical resolver model.
@@ -271,10 +236,11 @@ families or Lagrange-selector polynomials: they are the ones derived from the sa
 resolver and circuit-owned verification key.
 -/
 theorem canonicalConstraints
+    {k : ℕ}
     (coherence : TopLevelGateCoherence top)
-    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (ch : Challenges k Fp)
     (poly : CommitmentId → Polynomial Fp)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    (proofIndex : Fin pp.numProofs)
     (satisfaction :
       ConstraintSatisfaction
         (top.constraintModel pp urs ch poly)
@@ -292,20 +258,27 @@ theorem canonicalConstraints
         (top.toVerifierKey pp urs) poly proofIndex
         (top.usableRowsAt top.domainExponent))
       (top.operations) 0 := by
-  let model := top.constraintModel pp urs ch poly
-  apply coherence.constraints ch poly
+  apply gate_constraints_of_polynomial_witnesses
+    (top.constraintModel pp urs ch poly)
+    proofIndex (top.toVerifierKey pp urs).omega top.placement
+    (resolverEnvironment
+      (top.toVerifierKey pp urs) poly proofIndex
+      (top.usableRowsAt top.domainExponent))
+    (top.operations) 0 satisfaction domain
+  intro enabled henabled constraint hconstraint
+  let selectors :=
+    canonicalLagrangePolynomials
+      (top.toVerifierKey pp urs).omega
+      (top.toVerifierKey_blindingFactors_lt_n pp urs)
+  rw [top.constraintModel_eq_constraintModelOfResolver]
+  exact coherence.polynomialWitness ch poly
     (permutationSetsOfResolver
       (top.toVerifierKey pp urs) poly)
     (permutationChunksOfResolver
       (top.toVerifierKey pp urs) poly)
-    model.l0 model.lLast model.lBlind proofIndex
-    (top.usableRowsAt top.domainExponent)
-    (top.toVerifierKey pp urs).n
-  · rw [TopLevelCircuit.constraintModel,
-      VerifyingKey.constraintModel_eq_constraintModelOfResolver] at satisfaction
-    simpa only [model] using satisfaction
-  · exact domain
-  · exact hfixed
+    selectors.1 selectors.2.1 selectors.2.2
+    proofIndex (top.usableRowsAt top.domainExponent)
+    hfixed enabled henabled constraint hconstraint
 
 end TopLevelGateCoherence
 

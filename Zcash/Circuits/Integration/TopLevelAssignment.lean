@@ -140,9 +140,9 @@ circuit-owned environment built from the corresponding proof assignment.
 theorem resolverEnvironment_eq_environment
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : Keygen.ProofParams) (urs : URS G)
-    {proofIndex : Fin (pp.mergeDerived top).numProofs}
+    {proofIndex : Fin pp.numProofs}
     (assignment :
-      TopLevelAssignment top (pp.mergeDerived top).numProofs proofIndex)
+      TopLevelAssignment top pp.numProofs proofIndex)
     (hfixed : assignment.FixedColumnEncoding pp urs) :
     resolverEnvironment
         (top.toVerifierKey pp urs) assignment.polynomial proofIndex

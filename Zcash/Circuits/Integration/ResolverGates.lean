@@ -121,7 +121,7 @@ def resolverGatePolynomial
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
     (poly : CommitmentId → Polynomial Fp)
-    (proofIndex : Fin shape.numProofs)
+    (proofIndex : ℕ)
     (gateIndex : Fin vk.gates.length) : Polynomial Fp :=
   letI : CommRing (Polynomial Fp) := ComputablePolynomial.commRing
   (vk.gates[gateIndex].map ComputablePolynomial.const).eval
@@ -133,7 +133,7 @@ theorem resolverGatePolynomial_eq
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
     (poly : CommitmentId → Polynomial Fp)
-    (proofIndex : Fin shape.numProofs)
+    (proofIndex : ℕ)
     (gateIndex : Fin vk.gates.length) :
     resolverGatePolynomial vk poly proofIndex gateIndex =
       (vk.gates[gateIndex].map C).eval
@@ -162,7 +162,7 @@ theorem resolverGatePolynomial_eval
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
     (poly : CommitmentId → Polynomial Fp)
-    (proofIndex : Fin shape.numProofs)
+    (proofIndex : ℕ)
     (gateIndex : Fin vk.gates.length) (x : Fp) :
     (resolverGatePolynomial vk poly proofIndex gateIndex).eval x =
       vk.gates[gateIndex].eval
@@ -181,16 +181,16 @@ theorem resolverGatePolynomial_eval
 
 /-- The selected lifted VK gate occurs in the resolver model's gate family. -/
 theorem resolverGatePolynomial_mem
-    {shape : Shape} {G : Type*}
+    {shape : Shape} {numProofs k : ℕ} {G : Type*}
     (vk : VerifyingKey shape Fp G)
-    (ch : Challenges shape.k Fp)
+    (ch : Challenges k Fp)
     (poly : CommitmentId → Polynomial Fp)
-    (sets : Fin shape.numProofs → List (PermSetEval (Polynomial Fp)))
-    (chunks : Fin shape.numProofs →
+    (sets : Fin numProofs → List (PermSetEval (Polynomial Fp)))
+    (chunks : Fin numProofs →
       List (PermSetEval (Polynomial Fp) ×
         List (Polynomial Fp × Polynomial Fp)))
     (l0 lLast lBlind : Polynomial Fp)
-    (proofIndex : Fin shape.numProofs)
+    (proofIndex : Fin numProofs)
     (gateIndex : Fin vk.gates.length) :
     resolverGatePolynomial vk poly proofIndex gateIndex ∈
       (constraintModelOfResolver vk ch poly sets chunks
@@ -214,17 +214,17 @@ The premises are exactly the static representation boundary:
 No circuit, placement algorithm, or concrete verification key is selected here.
 -/
 def enabledGatePolynomialWitnessOfResolver
-    {shape : Shape} {G : Type*}
+    {shape : Shape} {numProofs k : ℕ} {G : Type*}
     (vk : VerifyingKey shape Fp G)
     (cs : ConstraintSystem Fp) (map : SelCompressMap)
-    (ch : Challenges shape.k Fp)
+    (ch : Challenges k Fp)
     (poly : CommitmentId → Polynomial Fp)
-    (sets : Fin shape.numProofs → List (PermSetEval (Polynomial Fp)))
-    (chunks : Fin shape.numProofs →
+    (sets : Fin numProofs → List (PermSetEval (Polynomial Fp)))
+    (chunks : Fin numProofs →
       List (PermSetEval (Polynomial Fp) ×
         List (Polynomial Fp × Polynomial Fp)))
     (l0 lLast lBlind : Polynomial Fp)
-    (proofIndex : Fin shape.numProofs)
+    (proofIndex : Fin numProofs)
     (place : RegionIndex → ℕ) (usableRows : ℕ)
     (enabled : EnabledGate Fp) (constraint : Constraint Fp)
     (hgate : enabled.gate ∈ cs.gates)

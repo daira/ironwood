@@ -127,8 +127,7 @@ theorem actionReplayPreservesActive
 set_option maxRecDepth 100000 in
 /-- The Action permutation argument has three chunks. -/
 theorem actionNumPermutationSets_eq
-    (pp : ProofParams) :
-    (ActionPermutationDomain.actionShape pp).numPermutationSets = 3 := by
+    : actionCircuit.permutationSetCount = 3 := by
   change
     (actionCircuit.constraintSystem.permutationColumns.length +
         actionCircuit.constraintSystem.chunkLen - 1) /
@@ -164,9 +163,9 @@ theorem actionResolverChunkWidth
     (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex :
-      Fin (ActionPermutationDomain.actionShape pp).numProofs)
+      Fin pp.numProofs)
     (chunk :
-      Fin (ActionPermutationDomain.actionShape pp).numPermutationSets) :
+      Fin actionCircuit.permutationSetCount) :
     (ResolverPermutationPairs
         (ActionPermutationDomain.actionVk pp urs)
         poly proofIndex chunk).length =
@@ -194,13 +193,13 @@ def actionChunkFlatten
     (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex :
-      Fin (ActionPermutationDomain.actionShape pp).numProofs) :
+      Fin pp.numProofs) :
     ResolverPermutationCell
         (ActionPermutationDomain.actionVk pp urs)
         poly proofIndex actionDomainSize ≃
       Fin actionDomainSize × Fin actionNumPermCols :=
   Layout.Asm.chunkFlatten
-    (ActionPermutationDomain.actionShape pp).numPermutationSets
+    actionCircuit.permutationSetCount
     actionNumPermCols
     (ActionPermutationDomain.actionVk pp urs).chunkLen
     actionDomainSize
@@ -221,7 +220,7 @@ def actionFullSigma
     (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex :
-      Fin (ActionPermutationDomain.actionShape pp).numProofs) :
+      Fin pp.numProofs) :
     Equiv.Perm
       (ResolverPermutationCell
         (ActionPermutationDomain.actionVk pp urs)
@@ -240,7 +239,7 @@ theorem actionFullSigma_preservesActive
     (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex :
-      Fin (ActionPermutationDomain.actionShape pp).numProofs)
+      Fin pp.numProofs)
     (cell : ResolverPermutationCell
       (ActionPermutationDomain.actionVk pp urs)
       poly proofIndex actionActiveRows) :
@@ -270,7 +269,7 @@ def actionActiveSigma
     (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex :
-      Fin (ActionPermutationDomain.actionShape pp).numProofs) :
+      Fin pp.numProofs) :
     Equiv.Perm
       (ResolverPermutationCell
         (ActionPermutationDomain.actionVk pp urs)
@@ -285,7 +284,7 @@ theorem actionActiveSigma_widen
     (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex :
-      Fin (ActionPermutationDomain.actionShape pp).numProofs)
+      Fin pp.numProofs)
     (cell : ResolverPermutationCell
       (ActionPermutationDomain.actionVk pp urs)
       poly proofIndex actionActiveRows) :
@@ -305,7 +304,7 @@ def actionActiveChunkCell
     (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex :
-      Fin (ActionPermutationDomain.actionShape pp).numProofs)
+      Fin pp.numProofs)
     (flat : FlatCell actionNumPermCols actionDomainSize)
     (hrow : (flat.2 : ℕ) < actionActiveRows) :
     ResolverPermutationCell
@@ -325,7 +324,7 @@ theorem actionActiveChunkCell_widen
     (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex :
-      Fin (ActionPermutationDomain.actionShape pp).numProofs)
+      Fin pp.numProofs)
     (flat : FlatCell actionNumPermCols actionDomainSize)
     (hrow : (flat.2 : ℕ) < actionActiveRows) :
     widenPermutationChunkCell actionActiveRows_le_domainSize
@@ -340,7 +339,7 @@ theorem actionActiveChunkCell_flatten
     (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex :
-      Fin (ActionPermutationDomain.actionShape pp).numProofs)
+      Fin pp.numProofs)
     (flat : FlatCell actionNumPermCols actionDomainSize)
     (hrow : (flat.2 : ℕ) < actionActiveRows) :
     actionChunkFlatten pp urs poly proofIndex
@@ -366,7 +365,7 @@ theorem actionActiveChunkCell_columnAddress
     (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex :
-      Fin (ActionPermutationDomain.actionShape pp).numProofs)
+      Fin pp.numProofs)
     (flat : FlatCell actionNumPermCols actionDomainSize)
     (hrow : (flat.2 : ℕ) < actionActiveRows) :
     let cell :=
@@ -409,7 +408,9 @@ theorem actionActiveChunkCell_columnAddress
           (cell.2.2 : ℕ) =
         (flat.1 : ℕ) := by
     have hcellChunk : (cell.1 : ℕ) < 3 := by
-      simpa only [cell, actionNumPermutationSets_eq] using cell.1.isLt
+      simpa only [cell, ActionPermutationDomain.actionShape,
+        Keygen.ProofParams.mergeDerived_numPermutationSets,
+        actionNumPermutationSets_eq] using cell.1.isLt
     have hcases :
         (cell.1 : ℕ) = 0 ∨ (cell.1 : ℕ) = 1 ∨
           (cell.1 : ℕ) = 2 := by
@@ -456,7 +457,7 @@ theorem actionCopyValue_eq_activeChunkRowValue
     (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex :
-      Fin (ActionPermutationDomain.actionShape pp).numProofs)
+      Fin pp.numProofs)
     (flat : FlatCell actionNumPermCols actionDomainSize)
     (hrow : (flat.2 : ℕ) < actionActiveRows) :
     let vk := ActionPermutationDomain.actionVk pp urs
@@ -551,11 +552,11 @@ the abstract `ResolverPermutationCycle`: the cycle is the Action active replay.
 theorem actionCopyPairValue_of_resolverPermutation
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G)
-    (ch : Challenges (ActionPermutationDomain.actionShape pp).k Fp)
+    (ch : Challenges actionCircuit.domainExponent Fp)
     (poly : CommitmentId → Polynomial Fp)
     (l0 lLast lBlind : Polynomial Fp)
     (proofIndex :
-      Fin (ActionPermutationDomain.actionShape pp).numProofs)
+      Fin pp.numProofs)
     {n : ℕ}
     (hsat : ConstraintSatisfaction
       (constraintModelOfResolver

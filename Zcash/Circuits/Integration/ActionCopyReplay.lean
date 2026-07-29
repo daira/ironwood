@@ -30,11 +30,11 @@ canonical relation, or retain the shared augmented-commitment relation branch.
 -/
 def actionCopyReplayWitness_or_relation
     (pp : Keygen.ProofParams) (urs : URS G)
-    (hk : (actionShape pp).k = urs.k)
+    (hk : actionCircuit.domainExponent = urs.k)
     {instanceCommitment :
-      Fin (actionShape pp).numProofs → ℕ → G}
+      Fin pp.numProofs → ℕ → G}
     {ps : ProofString (actionShape pp) Fp G}
-    {ch : Challenges (actionShape pp).k Fp}
+    {ch : Challenges actionCircuit.domainExponent Fp}
     {pU pW : Fp} {a : Fin (2 ^ urs.k) → Fp}
     {batchOpenings :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
@@ -66,7 +66,7 @@ def actionCopyReplayWitness_or_relation
       TopLevelFixedCoherence actionCircuit pp urs)
     (exclusions : ResolverPermutationChallengeExclusions
       (actionVk pp urs) ch relation.polynomial actionActiveRows)
-    (proofIndex : Fin (actionShape pp).numProofs) :
+    (proofIndex : Fin pp.numProofs) :
     CopyReplayWitness actionCircuit.placement
         (resolverEnvironment
           (actionVk pp urs) relation.polynomial proofIndex

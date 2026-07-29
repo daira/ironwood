@@ -27,8 +27,6 @@ open Zcash.Arithmetic (derivedUrsGLagrange)
 open Halo2 Polynomial
 open CompElliptic.Curves.Pasta
 
-set_option maxHeartbeats 20000
-
 variable {G : Type} [AddCommGroup G] [Module Fp G]
   [DecidableEq G] [Inhabited G]
 
@@ -381,7 +379,7 @@ structure TopLevelFixedCoherence
         key.commitInstance (top.fixedRows.getD column []) 1
   fixedQueryCount :
     (top.toVerifierKey pp urs).fixedQueryLayout.length =
-      (pp.mergeDerived top).numFixedQueries
+      top.fixedQueryCount
   queryLayout : ∀ column,
     column < top.pinnedCS.numFixedColumns →
       ∃ rotation,
@@ -505,9 +503,9 @@ theorem topLevelFixedColumnEncoding_of_binding
     [ProvableType PublicInput]
     {top : TopLevelCircuit Fp Config PublicInput}
     {pp : Keygen.ProofParams} {urs : URS G}
-    {proofIndex : Fin (pp.mergeDerived top).numProofs}
+    {proofIndex : Fin pp.numProofs}
     (assignment :
-      TopLevelAssignment top (pp.mergeDerived top).numProofs proofIndex)
+      TopLevelAssignment top pp.numProofs proofIndex)
     (hrows : Function.Injective
       fun row : Fin (2 ^ top.domainExponent) =>
         (top.toVerifierKey pp urs).omega ^ (row : ℕ))
@@ -570,7 +568,7 @@ theorem topLevelFixedEntryRead_of_column
         row < (top.toVerifierKey pp urs).n ∧
           column < top.pinnedCS.numFixedColumns ∧
           (rows column).getD row 0 = (value : Fp))
-    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    (proofIndex : Fin pp.numProofs)
     {column row value : ℕ}
     (hentry :
       (column, row, value) ∈ topLevelRequiredFixedEntries top)
@@ -618,7 +616,7 @@ def topLevelFixedEntryRead_or_bad
             instanceRowPolynomial (2 ^ urs.k)
               (top.toVerifierKey pp urs).omega (rows column) ⊕'
           Bad)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    (proofIndex : Fin pp.numProofs)
     {column row value : ℕ}
     (hentry :
       (column, row, value) ∈ topLevelRequiredFixedEntries top) :
@@ -661,7 +659,7 @@ def topLevelFixedConstraints_or_bad
             instanceRowPolynomial (2 ^ urs.k)
               (top.toVerifierKey pp urs).omega (rows column) ⊕'
           Bad)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs) :
+    (proofIndex : Fin pp.numProofs) :
     (SelectorActivationsRealized
         top.selectorMap top.selectorActivations
         (resolverEnvironment
@@ -934,7 +932,7 @@ def topLevelFixedConstraints_or_relation
     {hk : (pp.mergeDerived top).k = urs.k}
     {vk : VerifyingKey (pp.mergeDerived top) Fp G}
     {instanceCommitment :
-      Fin (pp.mergeDerived top).numProofs → ℕ → G}
+      Fin pp.numProofs → ℕ → G}
     {ps : ProofString (pp.mergeDerived top) Fp G}
     {ch : Challenges (pp.mergeDerived top).k Fp}
     {pU pW : Fp} {a : Fin (2 ^ urs.k) → Fp}
@@ -966,7 +964,7 @@ def topLevelFixedConstraints_or_relation
       fun i : Fin (2 ^ urs.k) =>
         (top.toVerifierKey pp urs).omega ^ (i : ℕ))
     (hn : (top.toVerifierKey pp urs).n = 2 ^ urs.k)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs) :
+    (proofIndex : Fin pp.numProofs) :
     (SelectorActivationsRealized
         top.selectorMap top.selectorActivations
         (resolverEnvironment
@@ -1008,7 +1006,7 @@ def topLevelFixedEntryRead_or_relation
     {hk : (pp.mergeDerived top).k = urs.k}
     {vk : VerifyingKey (pp.mergeDerived top) Fp G}
     {instanceCommitment :
-      Fin (pp.mergeDerived top).numProofs → ℕ → G}
+      Fin pp.numProofs → ℕ → G}
     {ps : ProofString (pp.mergeDerived top) Fp G}
     {ch : Challenges (pp.mergeDerived top).k Fp}
     {pU pW : Fp} {a : Fin (2 ^ urs.k) → Fp}
@@ -1040,7 +1038,7 @@ def topLevelFixedEntryRead_or_relation
       fun i : Fin (2 ^ urs.k) =>
         (top.toVerifierKey pp urs).omega ^ (i : ℕ))
     (hn : (top.toVerifierKey pp urs).n = 2 ^ urs.k)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs)
+    (proofIndex : Fin pp.numProofs)
     {column row value : ℕ}
     (hentry :
       (column, row, value) ∈ topLevelRequiredFixedEntries top) :
