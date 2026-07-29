@@ -14,10 +14,10 @@ node binding `colⱼ(p) = rⱼ(p)` (`node_binding_of_samples`).
 
 namespace Zcash.Snark
 
-open Polynomial
+open CompPoly CompPoly.CPolynomial
 
 /-- The vanishing polynomial of a finite point set, `∏_{p ∈ pts} (X − p)`. -/
-noncomputable def vanishingProd (pts : Finset Fp) : Polynomial Fp :=
+noncomputable def vanishingProd (pts : Finset Fp) : CPoly :=
   ∏ p ∈ pts, (X - C p)
 
 @[simp] theorem vanishingProd_eval (pts : Finset Fp) (x : Fp) :
@@ -38,7 +38,7 @@ theorem vanishingProd_eval_ne {pts : Finset Fp} {p : Fp} (hp : p ∉ pts) :
   exact sub_ne_zero.mpr (by rintro rfl; exact hp hq)
 
 /-- The complementary product `Wⱼ = ∏_{p ∈ all \ pts} (X − p)`. -/
-noncomputable def coProd (all pts : Finset Fp) : Polynomial Fp :=
+noncomputable def coProd (all pts : Finset Fp) : CPoly :=
   vanishingProd (all \ pts)
 
 /-- The full vanishing polynomial splits as `D = Wⱼ · ∏(pts j)` when `pts j ⊆ all`. -/
@@ -52,8 +52,8 @@ that turns the multiopen fold's `∏(x₃ − node)⁻¹` into the polynomial `W
 theorem clear_denom_eval {all pts : Finset Fp} (hsub : pts ⊆ all) {x : Fp}
     (hx : (vanishingProd pts).eval x ≠ 0) :
     (vanishingProd all).eval x * (∏ p ∈ pts, (x - p))⁻¹ = (coProd all pts).eval x := by
-  rw [vanishingProd_split hsub, eval_mul, vanishingProd_eval, mul_assoc,
-    mul_inv_cancel₀ (by rw [← vanishingProd_eval]; exact hx), mul_one]
+  rw [vanishingProd_split hsub, eval_mul, vanishingProd_eval, _root_.mul_assoc,
+    mul_inv_cancel₀ (by rw [← vanishingProd_eval]; exact hx), _root_.mul_one]
 
 /-- **Per-set node binding, from the cleared quotient identities over the `x₂` family.** Given fixed
 per-set columns `col`, interpolants `r`, and point sets `pts` (all inside `allPts`), together with a
@@ -63,8 +63,8 @@ quotient identity holds as polynomials, every point `p` of every set `j₀` sati
 the interpolant of the claimed evaluations at every node of its set. -/
 theorem node_binding_of_cleared_identities {numSets : ℕ}
     (allPts : Finset Fp) (pts : Fin numSets → Finset Fp)
-    (col r : Fin numSets → Polynomial Fp)
-    (qCol : Fin numSets → Polynomial Fp)
+    (col r : Fin numSets → CPoly)
+    (qCol : Fin numSets → CPoly)
     (ζ : Fin numSets → Fp) (hζ : Function.Injective ζ)
     (hid : ∀ s : Fin numSets,
       qCol s * vanishingProd allPts
@@ -77,8 +77,8 @@ theorem node_binding_of_cleared_identities {numSets : ℕ}
   -- Each identity, evaluated at `p`, is a vanishing power sum in `ζ s`.
   have hsum : ∀ s : Fin numSets, ∑ j ∈ Finset.range numSets, ζ s ^ j * c j = 0 := by
     intro s
-    have h := congrArg (Polynomial.eval p) (hid s)
-    rw [eval_mul, vanishingProd_eval_mem hpall, mul_zero, eval_finsetSum] at h
+    have h := congrArg (CPolynomial.eval p) (hid s)
+    rw [eval_mul, vanishingProd_eval_mem hpall, MulZeroClass.mul_zero, eval_finsetSum] at h
     have key : (∑ j : Fin numSets, ζ s ^ (j : ℕ) * c (j : ℕ)) = 0 := by
       rw [h]
       refine Finset.sum_congr rfl (fun j _ => ?_)
@@ -103,8 +103,8 @@ samples `χ` and the difference has degree `≤ d`, the cleared identity `qCol·
 holds as polynomials. -/
 theorem cleared_identity_of_samples {numSets : ℕ}
     (allPts : Finset Fp) (pts : Fin numSets → Finset Fp) (hsub : ∀ j, pts j ⊆ allPts)
-    (col r : Fin numSets → Polynomial Fp) (a : Fin numSets → Fp)
-    (qCol : Polynomial Fp) (d : ℕ)
+    (col r : Fin numSets → CPoly) (a : Fin numSets → Fp)
+    (qCol : CPoly) (d : ℕ)
     (hdeg : (qCol * vanishingProd allPts
         - ∑ j : Fin numSets, C (a j) * ((col j - r j) * coProd allPts (pts j))).natDegree ≤ d)
     (χ : Fin (d + 1) → Fp) (hχinj : Function.Injective χ)
@@ -113,7 +113,7 @@ theorem cleared_identity_of_samples {numSets : ℕ}
         = ∑ j : Fin numSets, a j * (col j - r j).eval (χ t) * (∏ p ∈ pts j, (χ t - p))⁻¹) :
     qCol * vanishingProd allPts
       = ∑ j : Fin numSets, C (a j) * ((col j - r j) * coProd allPts (pts j)) := by
-  refine poly_eq_of_agree_on_family hdeg χ hχinj (fun t => ?_)
+  refine cpoly_eq_of_agree_on_family hdeg χ hχinj (fun t => ?_)
   rw [eval_mul, hsamp t, eval_finsetSum, Finset.sum_mul]
   refine Finset.sum_congr rfl (fun j _ => ?_)
   have hcd := clear_denom_eval (hsub j) (hnode t j) (x := χ t)
@@ -127,7 +127,7 @@ This is the deployed multiopen value check, stated purely over the fixed committ
 rewind sample families. -/
 theorem node_binding_of_samples {numSets : ℕ}
     (allPts : Finset Fp) (pts : Fin numSets → Finset Fp) (hsub : ∀ j, pts j ⊆ allPts)
-    (col r : Fin numSets → Polynomial Fp) (qCol : Fin numSets → Polynomial Fp)
+    (col r : Fin numSets → CPoly) (qCol : Fin numSets → CPoly)
     (ζ : Fin numSets → Fp) (hζ : Function.Injective ζ) (d : ℕ)
     (hdeg : ∀ s, (qCol s * vanishingProd allPts
         - ∑ j : Fin numSets, C (ζ s ^ (j : ℕ)) *
@@ -152,7 +152,7 @@ family), then each member column takes its claimed evaluation at the node: `mem�
 The members and claimed values are fixed before `x₁`, so this is again `coeffs_zero_of_power_sum_vanishes`
 — the `x₁`-Vandermonde separating the members. -/
 theorem member_binding_of_x1_samples {numMem : ℕ}
-    (mem : Fin numMem → Polynomial Fp) (claimed : Fin numMem → Fp) (node : Fp)
+    (mem : Fin numMem → CPoly) (claimed : Fin numMem → Fp) (node : Fp)
     (x1 : Fin numMem → Fp) (hx1 : Function.Injective x1)
     (hagg : ∀ s : Fin numMem,
       ∑ m : Fin numMem, x1 s ^ (m : ℕ) * (mem m).eval node

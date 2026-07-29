@@ -38,6 +38,19 @@ theorem poly_eq_of_agree_on_family {d : ℕ} {P Q : Polynomial Fp}
     · simpa using Nat.lt_succ_of_le hdeg
   exact sub_eq_zero.mp h0
 
+/-- Identity from samples on the computable representation: `poly_eq_of_agree_on_family`
+read across `toPoly`. -/
+theorem cpoly_eq_of_agree_on_family {d : ℕ} {P Q : CPoly}
+    (hdeg : (P - Q).natDegree ≤ d)
+    (ξ : Fin (d + 1) → Fp) (hξ : Function.Injective ξ)
+    (heval : ∀ r, CPolynomial.eval (ξ r) P = CPolynomial.eval (ξ r) Q) : P = Q := by
+  apply CPolynomial.toPoly_injective
+  refine poly_eq_of_agree_on_family ?_ ξ hξ (fun r => ?_)
+  · rw [← CPolynomial.toPoly_sub, ← CPolynomial.natDegree_toPoly]
+    exact hdeg
+  · rw [← CPolynomial.eval_toPoly, ← CPolynomial.eval_toPoly]
+    exact heval r
+
 /-- The `foldl`-accumulated sum over `List.range` is the finite sum — the outer fold of the
 deployed combined evaluation. -/
 theorem foldl_range_add_eq_sum (f : ℕ → Fp) (n : ℕ) :
