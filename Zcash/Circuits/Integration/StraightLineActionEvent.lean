@@ -454,10 +454,11 @@ theorem actionRelationFinderCalls_le_six
   have hcalls := family.straightLineConstraintRelationFinderCalls_le_four basis O
   omega
 
-/-- Random-oracle work of the combined constraint-plus-Action solver.  The terminal fallback adds
-two represented prover runs, each including its own `11+k` designated transcript reads. -/
+/-- Random-oracle work of the combined constraint-plus-Action solver.  All six represented prover
+runs include their own `11+k` designated transcript reads; no cache-sharing convention is assumed.
+-/
 def actionDlogRandomOracleQueries : Nat :=
-  6 * family.Q + 5 * (11 + (pp.mergeDerived actionCircuit).k)
+  6 * family.Q + 6 * (11 + (pp.mergeDerived actionCircuit).k)
 
 /-- Group-work envelope of the combined solver.  Terminal comparison work is included in the
 explicit reduction component. -/
@@ -475,6 +476,49 @@ structure StraightLineActionDlogProfile (B : VestaG) where
     (actionRelationFinder pp family static inputs hvk hI hchar)
     (advantage (actionDlogRandomOracleQueries pp family)
       (actionDlogGroupWork proverGroupWork reductionGroupWork))
+
+/-- Concrete resource profile for the direct constraint-plus-Action route.  In addition to the
+single DLOG premise for the combined executable finder, it prices the underlying prover, all
+postprocessing group operations (including the Action-terminal comparison), and both possible
+direct-coordinate decoder executions.  The small lower bound is exactly what is needed for
+`6Q + 6(11+k) <= 8T` at the deployed IPA depth. -/
+structure StraightLineActionDirectDlogProfile (B : VestaG) (T : Nat)
+    extends StraightLineActionDlogProfile pp family static inputs hvk hI hchar B where
+  ipaDepth : (pp.mergeDerived actionCircuit).k = 11
+  targetAtLeastSixtySix : 66 <= T
+  queryBound : family.Q <= T
+  proverWorkBound : toStraightLineActionDlogProfile.proverGroupWork <= T
+  reductionWorkBound : toStraightLineActionDlogProfile.reductionGroupWork <= T
+  directDecodeWorkBound : forall basis O,
+    2 * family.straightLineDirectDecodeOps basis O <= T
+
+/-- The concrete Action profile bounds both DLOG-solver resources by an eightfold envelope and
+retains the direct-decoder certificate used by the straight-line implementation. -/
+theorem StraightLineActionDirectDlogProfile.solverCost_le
+    {B : VestaG} {T : Nat}
+    (profile : StraightLineActionDirectDlogProfile pp family static inputs
+      hvk hI hchar B T) :
+    actionDlogRandomOracleQueries pp family <= 8 * T /\
+      actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork <= 8 * T /\
+      forall basis O, 2 * family.straightLineDirectDecodeOps basis O <= T := by
+  constructor
+  · unfold actionDlogRandomOracleQueries
+    rw [profile.ipaDepth]
+    have hT := profile.targetAtLeastSixtySix
+    calc
+      6 * family.Q + 6 * (11 + 11) <= 6 * T + 6 * (11 + 11) := by
+        gcongr
+        exact profile.queryBound
+      _ <= 8 * T := by omega
+  constructor
+  · unfold actionDlogGroupWork
+    calc
+      6 * profile.proverGroupWork + profile.reductionGroupWork <= 6 * T + T := by
+        gcongr
+        · exact profile.proverWorkBound
+        · exact profile.reductionWorkBound
+      _ <= 8 * T := by omega
+  · exact profile.directDecodeWorkBound
 
 /-- The combined finder exactly extends the old constraint finder on every successful old branch.
 -/
