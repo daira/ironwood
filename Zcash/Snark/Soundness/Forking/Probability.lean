@@ -1,4 +1,5 @@
-import Mathlib
+import Mathlib.Tactic
+import Mathlib.Algebra.Order.Chebyshev
 import Zcash.Snark.Soundness.Forking.Oracle
 import Zcash.Snark.Soundness.Forking.Tree
 

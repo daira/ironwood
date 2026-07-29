@@ -1,4 +1,4 @@
-import Mathlib
+import Mathlib.Tactic
 import Zcash.Arithmetic
 import Zcash.Snark.Verifier.Expressions
 import Zcash.Snark.Verifier.Assemble
