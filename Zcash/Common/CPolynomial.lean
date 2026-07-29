@@ -2,6 +2,7 @@ import Zcash.Arithmetic
 import CompPoly.Univariate.ToPoly
 import CompPoly.Univariate.Linear
 import CompPoly.Univariate.Roots.Enumeration
+import CompPoly.Univariate.DivisionCorrectness
 
 /-!
 # General theory for the computable polynomial representation
@@ -157,6 +158,38 @@ theorem natDegree_sum_le {ι : Type*} [DecidableEq ι] [Semiring R] [BEq R] [Law
   rw [natDegree_toPoly, toPoly_sum]
   simpa [Function.comp_def, natDegree_toPoly] using
     Polynomial.natDegree_sum_le s (fun i => (f i).toPoly)
+
+/-! ## Divisibility and division by a monic polynomial
+
+`toPoly` is a ring isomorphism, so divisibility transports.  `modByMonic` is CompPoly's own
+executable remainder; the algebra it satisfies is Mathlib's, read across the isomorphism. -/
+
+theorem dvd_iff_toPoly_dvd [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    {p q : CPolynomial R} : p ∣ q ↔ p.toPoly ∣ q.toPoly :=
+  (map_dvd_iff (ringEquiv : CPolynomial R ≃+* Polynomial R)).symm
+
+theorem zero_modByMonic [Field R] [BEq R] [LawfulBEq R] {r : CPolynomial R} (hr : r.monic) :
+    modByMonic 0 r = 0 := by
+  apply toPoly_injective
+  simp [modByMonic_toPoly_eq_modByMonic _ _ hr, Polynomial.zero_modByMonic]
+
+theorem add_modByMonic [Field R] [BEq R] [LawfulBEq R] (p q : CPolynomial R)
+    {r : CPolynomial R} (hr : r.monic) :
+    modByMonic (p + q) r = modByMonic p r + modByMonic q r := by
+  apply toPoly_injective
+  simp only [toPoly_add, modByMonic_toPoly_eq_modByMonic _ _ hr, Polynomial.add_modByMonic]
+
+theorem C_mul_modByMonic [Field R] [BEq R] [LawfulBEq R] (a : R) (p : CPolynomial R)
+    {r : CPolynomial R} (hr : r.monic) :
+    modByMonic (C a * p) r = C a * modByMonic p r := by
+  apply toPoly_injective
+  simp only [toPoly_mul, C_toPoly, modByMonic_toPoly_eq_modByMonic _ _ hr,
+    ← Polynomial.smul_eq_C_mul, Polynomial.smul_modByMonic]
+
+theorem modByMonic_eq_zero_iff_dvd [Field R] [BEq R] [LawfulBEq R] {p r : CPolynomial R}
+    (hr : r.monic) : modByMonic p r = 0 ↔ r ∣ p := by
+  rw [← toPoly_eq_zero_iff, modByMonic_toPoly_eq_modByMonic _ _ hr, dvd_iff_toPoly_dvd]
+  exact Polynomial.modByMonic_eq_zero_iff_dvd ((monic_toPoly_iff r).mp hr)
 
 /-! ## Bundled homomorphisms
 
