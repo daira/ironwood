@@ -542,6 +542,198 @@ private theorem derived_n_yn {L : ℕ} (hL : L ≤ 2 ^ 12) :
   calc 2 ^ 11 * L ≤ 2 ^ 11 * 2 ^ 12 := Nat.mul_le_mul_left _ hL
     _ = 2 ^ 23 := by norm_num
 
+/-- The adaptive Action model has the same captured, shape-determined constraint count for every
+prover polynomial assignment. -/
+private theorem adaptive_action_constraint_count_le
+    (basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG)
+    (inputs : Fin (actionProofParams.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (ps : ProofString (actionProofParams.mergeDerived actionCircuit) Fp VestaG)
+    (source : List (AlgebraicPoint (F := Fp) basis))
+    (ch : Challenges (actionProofParams.mergeDerived actionCircuit).k Fp) :
+    (adaptiveActionCommittedModel actionProofParams basis inputs ps source ch).constraints.length
+      ≤ 2 ^ 12 := by
+  unfold adaptiveActionCommittedModel adaptiveActionCommittedModelOf
+    canonicalConstraintModelOfPermutationResolver
+    constraintModelOfPermutationResolver constraintModelOfResolver
+    ConstraintPolyModel.constraints ConstraintPolyModel.subProofConstraints
+    ConstraintPolyModel.gateConstraints ConstraintPolyModel.permutationConstraints
+    ConstraintPolyModel.lookupConstraints
+  simp only [List.length_flatten, permutationExpressions, lookupExpressions,
+    permutationChunksOfResolver_length, lookupEntriesOfResolver]
+  rw [(derived_scalars _).2.2.1, (derived_scalars _).2.2.2.2.2.2]
+  have hproofs := congrArg Shape.numProofs shape_eq_mergeDerived
+  have hsets := congrArg Shape.numPermutationSets shape_eq_mergeDerived
+  have hlookups := congrArg Shape.numLookups shape_eq_mergeDerived
+  norm_num [shape] at hproofs hsets hlookups
+  simp [hproofs, hsets, hlookups, permutationSetsOfResolver,
+    permutationChunksOfResolver]
+  have hm : min vk.permutationChunks.length
+      (min 3 (vkAt actionProofParams basis).permutationChunks.length) ≤
+      vk.permutationChunks.length := Nat.min_le_left _ _
+  have hc : vk.gates.length + (vk.permutationChunks.length + 19) ≤ 2 ^ 12 := by
+    native_decide
+  omega
+
+/-- The adaptive pre-`x` polynomial is assembled from coordinate vectors of degree below the
+captured basis size, so the existing captured degree walk applies without a trace premise. -/
+private theorem adaptive_action_x_degree_le
+    (basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG)
+    (inputs : Fin (actionProofParams.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (ps : ProofString (actionProofParams.mergeDerived actionCircuit) Fp VestaG)
+    (source : List (AlgebraicPoint (F := Fp) basis))
+    (ch : Challenges (actionProofParams.mergeDerived actionCircuit).k Fp) :
+    (adaptiveActionPreXDifference actionProofParams basis inputs ps source ch).natDegree ≤
+      20470 := by
+  let avk := ActionTerminal.vkAt actionProofParams basis
+  let ic := actionCircuit.instanceCommitment actionProofParams
+    (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) inputs
+  let poly := adaptiveActionCommitmentPolynomial actionProofParams basis inputs ps source ch
+  have hk : 2 ^ (actionProofParams.mergeDerived actionCircuit).k - 1 = 2047 := by
+    rw [md_counts.1]
+    norm_num [shape]
+  have hpoint : ∀ g, (onlinePointPolynomial source g).natDegree ≤ 2047 := by
+    intro g
+    unfold onlinePointPolynomial
+    have h := coeffsToPoly_natDegree_lt
+      (n := 2 ^ (actionProofParams.mergeDerived actionCircuit).k) (by positivity)
+      (onlinePointCoordinates source g).1
+    omega
+  have hpoly : ∀ id, (poly id).natDegree ≤ 2047 := by
+    intro id
+    unfold poly adaptiveActionCommitmentPolynomial
+      adaptiveActionCommitmentPolynomialOf adaptiveActionPointPolynomial
+    split
+    · split
+      · exact hpoint _
+      · rw [ComputablePolynomial.zero_eq]
+        simp
+    · rw [ComputablePolynomial.zero_eq]
+      simp
+  have hresolver : ∀ {n : ℕ} (omega : Fp) (layout : List (ℕ × ℤ))
+      (column : ℕ → Polynomial Fp),
+      (∀ i, (column i).natDegree ≤ 2047) →
+      ∀ i, (resolverQueryFeed (n := n) omega layout column i).natDegree ≤ 2047 := by
+    intro n omega layout column hcolumn i
+    unfold resolverQueryFeed
+    split
+    · exact natDegree_comp_rotateData_le _ _ (hcolumn _)
+    · rw [ComputablePolynomial.zero_eq]
+      simp
+  have hfixed : ∀ i, (fixedQueryFeedOfResolver avk poly i).natDegree ≤ 2047 :=
+    hresolver avk.omega avk.fixedQueryLayout _ (fun _ => hpoly _)
+  have hadvice : ∀ p i, (adviceQueryFeedOfResolver avk poly p i).natDegree ≤ 2047 :=
+    fun p => hresolver avk.omega avk.adviceQueryLayout _ (fun _ => hpoly _)
+  have hinstance : ∀ p i, (instanceQueryFeedOfResolver avk poly p i).natDegree ≤ 2047 :=
+    fun p => hresolver avk.omega avk.instanceQueryLayout _ (fun _ => hpoly _)
+  have hpermutationColumn : ∀ p cr,
+      (permutationColumnPolynomialOfResolver avk poly p cr).natDegree ≤ 2047 := by
+    intro p cr
+    rcases cr with i | i | i <;>
+      simp only [permutationColumnPolynomialOfResolver, ColumnRef.resolve] <;>
+      unfold finFn <;> split
+    all_goals
+      first
+      | exact hpoly _
+      | change ComputablePolynomial.zero.natDegree ≤ 2047
+        rw [ComputablePolynomial.zero_eq]
+        simp
+  have hnB : avk.n - 1 ≤ 2047 := by
+    dsimp only [avk]
+    rw [(derived_scalars _).2.1]
+    exact vk_n_pred_le
+  have hrows : Function.Injective fun i : Fin avk.n => avk.omega ^ (i : ℕ) := by
+    exact ActionPermutationDomain.rowsInjective actionProofParams
+      (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis)
+  have hblinding : avk.blindingFactors < avk.n :=
+    ActionPermutationDomain.blindingFactors_lt actionProofParams
+      (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis)
+  have hn : 0 < avk.n := Nat.zero_lt_of_lt hblinding
+  have hlookups : ∀ p, ∀ lk ∈ lookupEntriesOfResolver avk poly p,
+      (lk.1.productEval.natDegree ≤ 2047 ∧ lk.1.productNextEval.natDegree ≤ 2047 ∧
+        lk.1.permutedInputEval.natDegree ≤ 2047 ∧
+        lk.1.permutedInputInvEval.natDegree ≤ 2047 ∧
+        lk.1.permutedTableEval.natDegree ≤ 2047) ∧
+      (∀ e ∈ lk.2.1, e.degreeBound * 2047 ≤ 8188) ∧
+      ∀ e ∈ lk.2.2, e.degreeBound * 2047 ≤ 8188 := by
+    intro p lk hlk
+    obtain ⟨l, rfl⟩ := List.mem_ofFn.mp hlk
+    refine ⟨⟨hpoly _, natDegree_comp_rotateData_le _ _ (hpoly _), hpoly _,
+      natDegree_comp_rotateData_le _ _ (hpoly _), hpoly _⟩, ?_, ?_⟩
+    · dsimp only [avk]
+      rw [(derived_lookups _ l).1]
+      exact vk_lookup_input_degree_le _
+    · dsimp only [avk]
+      rw [(derived_lookups _ l).2]
+      exact vk_lookup_table_degree_le _
+  have hmodel :
+      adaptiveActionCommittedModel actionProofParams basis inputs ps source ch =
+        canonicalConstraintModelOfPermutationResolver avk ch poly hblinding := by
+    rfl
+  rw [adaptiveActionPreXDifference_eq]
+  rw [hmodel]
+  refine le_trans (Polynomial.natDegree_sub_le _ _) (max_le ?_ ?_)
+  · apply natDegree_combineConstraints_le (B := 2047) (W := 7)
+      (Dc := 8188) (D := 20470)
+    · norm_num
+    · simpa [canonicalConstraintModelOfPermutationResolver,
+        constraintModelOfPermutationResolver, constraintModelOfResolver] using hfixed
+    · simpa [canonicalConstraintModelOfPermutationResolver,
+        constraintModelOfPermutationResolver, constraintModelOfResolver] using hadvice
+    · simpa [canonicalConstraintModelOfPermutationResolver,
+        constraintModelOfPermutationResolver, constraintModelOfResolver] using hinstance
+    · simpa only [canonicalConstraintModelOfPermutationResolver,
+        constraintModelOfPermutationResolver, constraintModelOfResolver] using
+        (show ∀ e ∈ avk.gates, e.degreeBound * 2047 ≤ 20470 by
+          dsimp only [avk]
+          rw [(derived_scalars _).2.2.1]
+          exact vk_gates_degree_le)
+    · intro p s hs
+      change s ∈ permutationSetsOfResolver avk poly p at hs
+      obtain ⟨j, rfl⟩ := List.mem_ofFn.mp hs
+      dsimp only [permutationSetOfResolver]
+      refine ⟨hpoly _, ?_⟩
+      split
+      · simp
+      · exact natDegree_comp_rotateData_le _ _ (hpoly _)
+    · intro p c hc
+      change c ∈ permutationChunksOfResolver avk poly p at hc
+      obtain ⟨sc, hsc, rfl⟩ := List.mem_map.mp hc
+      obtain ⟨s1, s2⟩ := sc
+      obtain ⟨hs1, hs2⟩ := List.of_mem_zip hsc
+      dsimp only
+      refine ⟨?_, ?_, ?_⟩
+      · obtain ⟨j, rfl⟩ := List.mem_ofFn.mp hs1
+        exact ⟨hpoly _, natDegree_comp_rotateData_le _ _ (hpoly _)⟩
+      · dsimp only [avk] at hs2
+        rw [(derived_scalars _).2.2.2.2.2.2] at hs2
+        simpa using vk_chunk_width_le _ hs2
+      · intro pr hpr
+        obtain ⟨cr, -, hpr'⟩ := List.mem_map.mp hpr
+        rw [← hpr']
+        exact ⟨hpermutationColumn _ _, hpoly _⟩
+    · simpa only [canonicalConstraintModelOfPermutationResolver,
+        constraintModelOfPermutationResolver, constraintModelOfResolver] using hlookups
+    · change (rowSelectorPolynomial avk.omega _).natDegree ≤ 2047
+      exact le_trans (Nat.le_pred_of_lt (by
+        simpa [rowSelectorPolynomial] using rowPolynomial_natDegree_lt hrows hn)) hnB
+    · change (rowSelectorPolynomial avk.omega _).natDegree ≤ 2047
+      exact le_trans (Nat.le_pred_of_lt (by
+        simpa [rowSelectorPolynomial] using rowPolynomial_natDegree_lt hrows hn)) hnB
+    · change (blindSelectorPolynomial avk.omega _).natDegree ≤ 2047
+      exact le_trans (Nat.le_pred_of_lt (by
+        simpa [blindSelectorPolynomial] using rowPolynomial_natDegree_lt hrows hn)) hnB
+    · norm_num
+    · norm_num
+    · norm_num
+    · norm_num
+  · rw [committedPreXQuotient_eq]
+    refine le_trans (natDegree_preXQuotient_mul_le (Bq := 2047) _ _ ?_) ?_
+    · intro j
+      exact hpoint _
+    · dsimp only [avk]
+      rw [(derived_scalars _).2.1, md_counts.2.2.2.2, ← hk, md_counts.1]
+      exact vk_quotient_tail_le
+
 
 /-- **The semantic counts at the query ceiling** (issue #128 F7): at `Q ≤ 2^123` the five
 counted caps total at most `2^160`. -/
@@ -899,8 +1091,8 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured
 /-- **Bare adaptive Action composition.**  This is the arbitrary adaptive-RO/online-AGM sibling
 of `orchard_action_acceptFalseStatement_prob_le_captured`.  Its quantified adversary is only
 `ComputedAdaptiveOnlineAGMFSFamily`: there is no sequential prover, execution, phase, trace, or
-cut input.  The executable combined finder closes every algebraic relation branch once; the sole
-remaining premise is the aggregate price of the five annotation-aware Action semantic surfaces.
+cut input.  The executable combined finder closes every algebraic relation branch once, and the
+five annotation-aware Action semantic surfaces are discharged from the captured key below.
 -/
 theorem orchard_action_acceptFalseStatement_prob_le_adaptive
     {T : Type*} [DecidableEq T]
@@ -922,18 +1114,9 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive
         (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) inputs)
       (adaptiveActionRunOutput family basis O).1.proof.1
       (adaptiveActionRunRecord family basis O) < scalarFieldOrder)
-    {dlogBound semanticBound : ENNReal}
+    {dlogBound : ENNReal}
     (hDL : TextbookDLWithCoinsAdvantageLE B
-      (adaptiveActionRelationFinder actionProofParams family inputs hvk hI hchar) dlogBound)
-    (hsemantic :
-      (independentProductPMF (orchardGeneratorROSetup query)
-        (PMF.uniformOfFintype
-          (BTranscript Fp VestaG
-            (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
-              + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
-        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          adaptiveActionSemanticResidualEvent actionProofParams family inputs hvk hI hchar) ≤
-        semanticBound) :
+      (adaptiveActionRelationFinder actionProofParams family inputs hvk hI hchar) dlogBound) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
@@ -947,18 +1130,81 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive
         ((family.Q + 1 : Nat) *
           algebraicRootBudget (actionProofParams.mergeDerived actionCircuit)
             (actionProofParams.mergeDerived actionCircuit).k +
-        ((dlogBound + 1 / Fintype.card Fp) + semanticBound))) := by
+        ((dlogBound + 1 / Fintype.card Fp) +
+          (family.Q + 1 : Nat) * ∑ n : Fin 5,
+            ((![2 ^ 25, 2 ^ 35, 2 ^ 21, 2 ^ 23, 20470] n : Nat) : ENNReal) /
+              Fintype.card Fp))) := by
+  let epsilon : Fin 5 → ENNReal := fun n =>
+    ((![2 ^ 25, 2 ^ 35, 2 ^ 21, 2 ^ 23, 20470] n : Nat) : ENNReal) /
+      Fintype.card Fp
+  have hsurface : ∀
+      (basis : AugmentedIndex
+        (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG)
+      (n : Fin 5)
+      (ps : ProofString (actionProofParams.mergeDerived actionCircuit) Fp VestaG)
+      (_hwf : PsWellFormed ps)
+      (source : List (AlgebraicPoint (F := Fp) basis))
+      (earlier : Fin (n : Nat) → Fp),
+      uniformChallenge.toOuterMeasure
+          (adaptiveActionSurfaceAt actionProofParams basis inputs n ps source earlier) ≤
+        epsilon n := by
+    intro basis n ps _hwf source earlier
+    fin_cases n
+    · refine le_trans
+        (adaptiveActionThetaSurface_measure_le actionProofParams basis inputs ps source earlier) ?_
+      dsimp only [epsilon]
+      gcongr
+      exact_mod_cast cap_theta basis
+        (adaptiveActionCommitmentPolynomial actionProofParams basis inputs ps source
+          (chRecord (fun _ => 0) (fun _ => 0)))
+    · have h := adaptiveActionBetaSurface_measure_le
+        actionProofParams basis inputs ps source earlier
+      dsimp only at h
+      refine le_trans h ?_
+      dsimp only [epsilon]
+      rw [ENNReal.div_add_div_same]
+      gcongr
+      exact_mod_cast cap_beta basis
+        (adaptiveActionCommitmentPolynomial actionProofParams basis inputs ps source
+          (chRecord (fun i => if h : (i : Nat) < 1 then earlier ⟨i, h⟩ else 0)
+            (fun _ => 0)))
+    · have h := adaptiveActionGammaSurface_measure_le
+        actionProofParams basis inputs ps source earlier
+      dsimp only at h
+      refine le_trans h ?_
+      dsimp only [epsilon]
+      rw [ENNReal.div_add_div_same]
+      gcongr
+      exact_mod_cast cap_gamma basis
+        (adaptiveActionCommitmentPolynomial actionProofParams basis inputs ps source
+          (chRecord (fun i => if h : (i : Nat) < 2 then earlier ⟨i, h⟩ else 0)
+            (fun _ => 0)))
+    · have h := adaptiveActionYSurface_measure_le
+        actionProofParams basis inputs ps source earlier (derived_n_ne_zero basis)
+      dsimp only at h
+      refine le_trans h ?_
+      dsimp only [epsilon]
+      gcongr
+      exact_mod_cast derived_n_yn
+        (adaptive_action_constraint_count_le basis inputs ps source
+          (chRecord (fun i => if h : (i : Nat) < 3 then earlier ⟨i, h⟩ else 0)
+            (fun _ => 0))) basis
+    · have h := adaptiveActionXSurface_measure_le
+        actionProofParams basis inputs ps source earlier
+      dsimp only at h
+      refine le_trans h ?_
+      dsimp only [epsilon]
+      gcongr
+      exact_mod_cast adaptive_action_x_degree_le basis inputs ps source
+        (chRecord (fun i => if h : (i : Nat) < 4 then earlier ⟨i, h⟩ else 0)
+          (fun _ => 0))
   rw [adaptiveActionEvent_prob_eq_of_uniformURS actionProofParams family
     (orchardGeneratorROSetup query) B (orchardGeneratorROBasis query)
     (orchard_uniformURSIdentification_of_generatorRO
       (actionProofParams.mergeDerived actionCircuit).k B hB query hquery)]
-  apply adaptiveActionAcceptFalseStatement_prob_le actionProofParams family inputs hvk hI hchar
-    B hDL
-  rw [← adaptiveActionEvent_prob_eq_of_uniformURS actionProofParams family
-    (orchardGeneratorROSetup query) B (orchardGeneratorROBasis query)
-    (orchard_uniformURSIdentification_of_generatorRO
-      (actionProofParams.mergeDerived actionCircuit).k B hB query hquery)]
-  exact hsemantic
+  simpa only [epsilon] using
+    (adaptiveActionAcceptFalseStatement_prob_le actionProofParams family inputs hvk hI hchar
+      B epsilon hDL hsurface)
 
 /-- **Final sequential Action capstone.**  For every query-bounded sequential online-AGM prover
 with executable root, IPA, constraint-`x`, and Action phases, deployed verifier acceptance of a
