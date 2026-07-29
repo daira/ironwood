@@ -13,7 +13,7 @@ the polynomial identity, and a good `x2` then separates the point sets at each n
 
 namespace Zcash.Snark
 
-open Polynomial
+open CompPoly CompPoly.CPolynomial
 open Classical
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
@@ -29,7 +29,7 @@ noncomputable def deployedAlgebraicSetColumns [DecidableEq G] [Inhabited G] {sha
     {aggregate : Fin (2 ^ urs.k) -> Fp} {aggregateU aggregateW : Fp}
     (batch : AlgebraicPowerBatch urs (x4BatchCommitments urs hk vk instanceCommitment ps ch)
       aggregate aggregateU aggregateW ch.x4) :
-    Fin (deployedX4PairCount vk instanceCommitment ps ch) -> Polynomial Fp :=
+    Fin (deployedX4PairCount vk instanceCommitment ps ch) -> CPoly :=
   fun j => coeffsToPoly (batch.coeffs ⟨(j : Nat), Nat.lt_succ_of_lt j.isLt⟩)
 
 /-- The represented top `x4` slot is the fixed `qPrime` polynomial. -/
@@ -39,7 +39,7 @@ noncomputable def deployedAlgebraicQPrime [DecidableEq G] [Inhabited G] {shape :
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     {aggregate : Fin (2 ^ urs.k) -> Fp} {aggregateU aggregateW : Fp}
     (batch : AlgebraicPowerBatch urs (x4BatchCommitments urs hk vk instanceCommitment ps ch)
-      aggregate aggregateU aggregateW ch.x4) : Polynomial Fp :=
+      aggregate aggregateU aggregateW ch.x4) : CPoly :=
   coeffsToPoly (batch.coeffs
     ⟨deployedX4PairCount vk instanceCommitment ps ch, Nat.lt_succ_self _⟩)
 
@@ -47,7 +47,7 @@ noncomputable def deployedAlgebraicQPrime [DecidableEq G] [Inhabited G] {shape :
 noncomputable def deployedAlgebraicSetInterpolants [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) :
-    Fin (deployedX4PairCount vk instanceCommitment ps ch) -> Polynomial Fp :=
+    Fin (deployedX4PairCount vk instanceCommitment ps ch) -> CPoly :=
   fun j => lagrangePoly
     ((deployedSetsForEval vk instanceCommitment ps ch).reverse.getD (j : Nat) ([], [], 0)).1
     ((deployedSetsForEval vk instanceCommitment ps ch).reverse.getD (j : Nat) ([], [], 0)).2.1
@@ -68,7 +68,7 @@ noncomputable def deployedX3ErrorPolynomial [DecidableEq G] [Inhabited G] {shape
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
     {aggregate : Fin (2 ^ urs.k) -> Fp} {aggregateU aggregateW : Fp}
     (batch : AlgebraicPowerBatch urs (x4BatchCommitments urs hk vk instanceCommitment ps ch)
-      aggregate aggregateU aggregateW ch.x4) : Polynomial Fp :=
+      aggregate aggregateU aggregateW ch.x4) : CPoly :=
   clearedQuotientErrorPolynomial (deployedAllPts vk instanceCommitment ps ch)
     (deployedAlgebraicSetPoints vk instanceCommitment ps ch)
     (deployedAlgebraicSetColumns urs hk vk instanceCommitment ps ch batch)
@@ -94,7 +94,7 @@ theorem deployedX3ErrorPolynomial_natDegree_le
     exact le_trans (le_of_lt (coeffsToPoly_natDegree_lt (by positivity) _))
       (le_max_left _ _)
   · intro j
-    refine le_trans (Polynomial.natDegree_sub_le _ _) (max_le ?_ ?_)
+    refine le_trans (natDegree_sub_le _ _) (max_le ?_ ?_)
     · exact le_trans (le_of_lt (coeffsToPoly_natDegree_lt (by positivity) _))
         (le_max_left _ _)
     · have hnd := deployedSetsForEval_reverse_getD_nodup vk instanceCommitment ps ch j.isLt
@@ -127,7 +127,7 @@ theorem deployedClearedQuotientIdentity_of_good_x3
     (hgood : ch.x3 ∉ szBadSet (deployedX3ErrorPolynomial urs hk vk instanceCommitment ps ch batch)) :
     deployedAlgebraicQPrime urs hk vk instanceCommitment ps ch batch * vanishingProd (deployedAllPts vk instanceCommitment ps ch) =
       ∑ j : Fin (deployedX4PairCount vk instanceCommitment ps ch),
-        Polynomial.C (ch.x2 ^ (j : Nat)) *
+        C (ch.x2 ^ (j : Nat)) *
           ((deployedAlgebraicSetColumns urs hk vk instanceCommitment ps ch batch j -
               deployedAlgebraicSetInterpolants vk instanceCommitment ps ch j) *
             coProd (deployedAllPts vk instanceCommitment ps ch) (deployedAlgebraicSetPoints vk instanceCommitment ps ch j)) := by
@@ -175,7 +175,7 @@ theorem deployedAggregateNodeBinding_of_good_x2
     (hid : deployedAlgebraicQPrime urs hk vk instanceCommitment ps ch batch *
         vanishingProd (deployedAllPts vk instanceCommitment ps ch) =
       ∑ j : Fin (deployedX4PairCount vk instanceCommitment ps ch),
-        Polynomial.C (ch.x2 ^ (j : Nat)) *
+        C (ch.x2 ^ (j : Nat)) *
           ((deployedAlgebraicSetColumns urs hk vk instanceCommitment ps ch batch j -
               deployedAlgebraicSetInterpolants vk instanceCommitment ps ch j) *
             coProd (deployedAllPts vk instanceCommitment ps ch) (deployedAlgebraicSetPoints vk instanceCommitment ps ch j)))

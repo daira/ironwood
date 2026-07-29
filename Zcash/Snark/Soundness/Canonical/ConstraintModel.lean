@@ -17,7 +17,7 @@ fixed polynomials with the verifier's deployed `lagrangeBasis` computation.
 
 namespace Zcash.Snark
 
-open Polynomial
+open CompPoly CompPoly.CPolynomial
 
 set_option maxHeartbeats 20000
 
@@ -28,7 +28,7 @@ by the verification key's domain and blinding count.
 def canonicalConstraintModelOfPermutationResolver
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (hblinding : vk.blindingFactors < vk.n) :
     ConstraintPolyModel shape.numProofs :=
   let selectors :=
@@ -39,7 +39,7 @@ def canonicalConstraintModelOfPermutationResolver
 @[simp] theorem canonicalConstraintModelOfPermutationResolver_l0
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (hblinding : vk.blindingFactors < vk.n) :
     (canonicalConstraintModelOfPermutationResolver
       vk ch poly hblinding).l0 =
@@ -49,7 +49,7 @@ def canonicalConstraintModelOfPermutationResolver
 @[simp] theorem canonicalConstraintModelOfPermutationResolver_lLast
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (hblinding : vk.blindingFactors < vk.n) :
     (canonicalConstraintModelOfPermutationResolver
       vk ch poly hblinding).lLast =
@@ -59,7 +59,7 @@ def canonicalConstraintModelOfPermutationResolver
 @[simp] theorem canonicalConstraintModelOfPermutationResolver_lBlind
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (hblinding : vk.blindingFactors < vk.n) :
     (canonicalConstraintModelOfPermutationResolver
       vk ch poly hblinding).lBlind =
@@ -74,7 +74,7 @@ evaluation domain.
 theorem canonicalConstraintModelOfPermutationResolver_selectorEvaluations
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (hblinding : vk.blindingFactors < vk.n)
     (hrows : Function.Injective fun i : Fin vk.n =>
       vk.omega ^ (i : ℕ))
@@ -100,7 +100,7 @@ the actual VK chunk facts and root-domain facts.
 theorem ResolverPermutationDomain.ofCanonicalConstraintModel
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (hblinding : vk.blindingFactors < vk.n)
     (hrows : Function.Injective fun i : Fin vk.n =>
       vk.omega ^ (i : ℕ))
@@ -135,7 +135,7 @@ row strictly before its final usable row.
 theorem ResolverLookupDomain.ofCanonicalConstraintModel
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (husable : vk.blindingFactors + 1 < vk.n)
     (hrows : Function.Injective fun i : Fin vk.n =>
       vk.omega ^ (i : ℕ))
