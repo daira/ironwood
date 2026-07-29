@@ -487,6 +487,17 @@ def witnessBatchWitness
       (witnessFamily_run_multiBlind basis O)
       (witnessFamily_pairCount_at_run basis O)
       (x4BatchCommitments_witness_at_run basis O)
+  x4Source :=
+    { coeffs := fun _ _ => 0
+      uComp := fun _ => 0
+      wComp := fun _ => 0
+      commitment := by
+        intro i
+        rw [x4BatchCommitments_witness_at_run basis O i]
+        simp [commit] }
+  x4Coeffs := rfl
+  x4U := rfl
+  x4W := rfl
   memberCoeffs := fun i hi =>
     absurd (absurd_lt_of_eq_zero (witnessFamily_pairCount_at_run basis O) hi) not_false
   memberU := fun i hi =>

@@ -94,6 +94,59 @@ def action_bundleStatement_or_relation_of_decode
     haccepts _ rfl
     (fun slot point hpoint => PSum.inl (decode.memberBinding hchar slot point hpoint))
 
+/-- The Action endpoint when a pre-`x` constraint identity has already supplied canonical circuit
+satisfaction.  This avoids re-testing the `x`-dependent reassembled quotient polynomial. -/
+def action_bundleStatement_or_relation_of_decode_circuitSat
+    (pp : ProofParams) (urs : URS G)
+    (hk : (pp.mergeDerived actionCircuit).k = urs.k)
+    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (ps : ProofString (pp.mergeDerived actionCircuit) Fp G)
+    (ch : Challenges (pp.mergeDerived actionCircuit).k Fp)
+    (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
+    (decode : DeployedAlgebraicDecode urs hk
+      (actionCircuit.toVerifierKey pp urs)
+      (actionCircuit.instanceCommitment pp urs inputs) ps ch a pU pW)
+    (hchar : deployedX4PairCount
+      (actionCircuit.toVerifierKey pp urs)
+      (actionCircuit.instanceCommitment pp urs inputs) ps ch < scalarFieldOrder)
+    (haccepts : DeployedAccepts urs hk
+      (actionCircuit.toVerifierKey pp urs)
+      (actionCircuit.instanceCommitment pp urs inputs) ps ch)
+    (hpoly : Polynomial Fp)
+    (hsatisfied :
+      (CanonicalMemberConstraintRelation.acceptedModel
+        (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
+        (hblinding := ActionPermutationDomain.blindingFactors_lt pp urs)
+        haccepts).CircuitSat ch.y hpoly
+          (actionCircuit.toVerifierKey pp urs).n a)
+    (hgoodY : ∀ j, ch.y ∉ szBadSet
+      (foldSplitWitness
+        (CanonicalMemberConstraintRelation.acceptedModel
+          (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
+          (hblinding := ActionPermutationDomain.blindingFactors_lt pp urs)
+          haccepts).constraints
+        (actionCircuit.toVerifierKey pp urs).n j))
+    (permutationExclusions : ResolverPermutationChallengeExclusions
+      (actionCircuit.toVerifierKey pp urs) ch
+      (CanonicalMemberConstraintRelation.acceptedPolynomial
+        (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts)
+      actionActiveRows)
+    (lookupExclusions : TopLevelLookupCoherence.TopLevelLookupChallengeExclusions
+      actionCircuit pp urs ch
+      (CanonicalMemberConstraintRelation.acceptedPolynomial
+        (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts)) :
+    BundleStatement inputs ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  exact TopLevelAcceptedModel.statements_or_relation_of_circuitSat
+    actionCircuit pp urs hk inputs ps ch pU pW a
+    (decode.toOpenedBatch hchar)
+    (fun i hi => decode.toMemberDecode hchar i hi) haccepts
+    (ActionPermutationDomain.blindingFactors_lt pp urs) hpoly hsatisfied hgoodY
+    (ActionCorrectness.ofAcceptedCircuitSat pp urs hk inputs ps ch pU pW a
+      (decode.toOpenedBatch hchar)
+      (fun i hi => decode.toMemberDecode hchar i hi) haccepts hpoly hsatisfied hgoodY
+      permutationExclusions lookupExclusions)
+
 /-- The run's decode at the Action circuit's artifacts: extracted from the event, re-rounded to
 the run's complete challenge record, and transported along the key and instance identifications. -/
 def actionRunDecode
@@ -201,7 +254,6 @@ def action_bundleStatement_or_relation_of_straightLineDecoded
     hchar
     (actionRunAccepts pp family static basis O inputs hvk hI hdecoded)
 
-set_option maxHeartbeats 800000 in
 /-- **Executable Action-terminal relation finder.**  The constraint adapter first reconstructs
 the decoded run from the family's retained batch coordinates.  This finder then checks the four
 terminal exclusion packages as finite propositions and executes the same Action terminal used by
