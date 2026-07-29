@@ -84,6 +84,17 @@ theorem toPoly_list_sum [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
     (l : List (CPolynomial R)) : l.sum.toPoly = (l.map toPoly).sum :=
   map_list_sum (ringEquiv : CPolynomial R ≃+* Polynomial R) l
 
+/-- `toPoly` of an elementary symmetric polynomial in a multiset of polynomials.  `Multiset.esymm`
+is a sum of products, so it commutes with any ring hom. -/
+theorem toPoly_multiset_esymm [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    (m : Multiset (CPolynomial R)) (n : ℕ) :
+    (m.esymm n).toPoly = (m.map toPoly).esymm n := by
+  simp only [Multiset.esymm, Multiset.powersetCard_map, Multiset.map_map, Function.comp_def]
+  refine (map_multiset_sum (ringEquiv : CPolynomial R ≃+* Polynomial R) _).trans ?_
+  rw [Multiset.map_map]
+  refine congrArg Multiset.sum (Multiset.map_congr rfl fun t _ => ?_)
+  exact map_multiset_prod (ringEquiv : CPolynomial R ≃+* Polynomial R) t
+
 /-- `toPoly` is injective.  CompPoly states this as `toPolyLinearEquiv.injective`, whose hypothesis
 is phrased through the bundled coercion; this restates it directly on `toPoly` so callers do not
 need a `change` at every use. -/
