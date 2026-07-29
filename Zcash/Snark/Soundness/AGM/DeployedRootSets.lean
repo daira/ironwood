@@ -14,7 +14,8 @@ separate in the computed-family adapter.
 
 namespace Zcash.Snark
 
-open Classical Polynomial
+open Classical
+open CompPoly CompPoly.CPolynomial
 open scoped ENNReal
 
 set_option maxRecDepth 10000
@@ -83,7 +84,7 @@ noncomputable def deployedX1RootPolynomial [DecidableEq G] [Inhabited G] {shape 
     (batches : DeployedAlgebraicBatches urs hk vk instanceCommitment ps ch aggregate aggregateU aggregateW)
     (i : Nat) (hi : i < deployedX4PairCount vk instanceCommitment ps ch)
     (idx : Fin ((deployedSetsForEval vk instanceCommitment ps ch).getD i ([], [], 0)).1.length) :
-    Polynomial Fp :=
+    CPoly :=
   memberBindingErrorPolynomial
     (fun m : Fin (deployedSetQueries vk instanceCommitment ps ch i).length =>
       coeffsToPoly ((batches.x1 i hi).coeffs m))
