@@ -55,7 +55,7 @@ compatibility-shaped.
 
 namespace Zcash.Snark
 
-open Polynomial
+open CompPoly.CPolynomial (eval C X toPoly eval_finsetSum)
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 
@@ -64,22 +64,13 @@ variable {G : Type*} [AddCommGroup G] [Module Fp G]
 This is ordinary executable data: `Fp` supplies decidable equality and the finite sum is over the
 canonical `Fin n` enumeration.  Keeping this a plain `def` is important for reductions that return
 commitment collisions as computed coefficient vectors. -/
-def coeffsToPoly {n : ℕ} (a : Fin n → Fp) : Polynomial Fp :=
-  ComputablePolynomial.sumList
-    (List.ofFn fun i => ComputablePolynomial.mul
-      (ComputablePolynomial.const (a i))
-      (ComputablePolynomial.pow ComputablePolynomial.X (i : ℕ)))
-
-theorem coeffsToPoly_eq_sum {n : ℕ} (a : Fin n → Fp) :
-    coeffsToPoly a = ∑ i, Polynomial.C (a i) * Polynomial.X ^ (i : ℕ) := by
-  rw [coeffsToPoly, ComputablePolynomial.sumList_eq]
-  simp only [ComputablePolynomial.mul_eq, ComputablePolynomial.const_eq,
-    ComputablePolynomial.pow_eq, ComputablePolynomial.X_eq, List.sum_ofFn]
+def coeffsToPoly {n : ℕ} (a : Fin n → Fp) : CPoly :=
+  ∑ i, C (a i) * X ^ (i : ℕ)
 
 /-- Evaluating `coeffsToPoly` is the same linear form as committing to the powers evaluation vector. -/
 theorem coeffsToPoly_eval {k : ℕ} (a : Fin (2 ^ k) → Fp) (x : Fp) :
-    (coeffsToPoly a).eval x = commitGen (evalVector k x) a := by
-  rw [coeffsToPoly_eq_sum, Polynomial.eval_finsetSum]
+    eval x (coeffsToPoly a) = commitGen (evalVector k x) a := by
+  rw [coeffsToPoly, eval_finsetSum]
   simp [commitGen, evalVector, smul_eq_mul]
 
 /-- A family of rewound batched openings for one batch of column commitments.
@@ -111,7 +102,7 @@ structure BatchOpeningsForWitness (urs : URS G) (b : Fin (2 ^ urs.k) → Fp) {nu
 /-- The recovered per-column polynomials and their opening facts. -/
 structure DecodedColumnFamily (urs : URS G) (b : Fin (2 ^ urs.k) → Fp) {numColumns : ℕ}
     (columnCommitments : Fin numColumns → G) (columnEvals : Fin numColumns → Fp)
-    (cols : Fin numColumns → Polynomial Fp) where
+    (cols : Fin numColumns → CPoly) where
   coeffs : Fin numColumns → (Fin (2 ^ urs.k) → Fp)
   commitment : ∀ i, commit urs (coeffs i) = columnCommitments i
   value : ∀ i, commitGen b (coeffs i) = columnEvals i
@@ -122,7 +113,7 @@ structure DecodedColumnFamilyOfBatch {urs : URS G} {b : Fin (2 ^ urs.k) → Fp} 
     {columnCommitments : Fin numColumns → G} {columnEvals : Fin numColumns → Fp}
     {currentWitness : Fin (2 ^ urs.k) → Fp}
     (hbatch : BatchOpeningsForWitness urs b columnCommitments columnEvals currentWitness)
-    (cols : Fin numColumns → Polynomial Fp) where
+    (cols : Fin numColumns → CPoly) where
   decodedColumns : DecodedColumnFamily urs b columnCommitments columnEvals cols
   reconstruct :
     ∀ r, hbatch.batched r
@@ -133,7 +124,7 @@ theorem DecodedColumnFamilyOfBatch.currentWitness_eq {urs : URS G} {b : Fin (2 ^
     {numColumns : ℕ} {columnCommitments : Fin numColumns → G} {columnEvals : Fin numColumns → Fp}
     {currentWitness : Fin (2 ^ urs.k) → Fp}
     {hbatch : BatchOpeningsForWitness urs b columnCommitments columnEvals currentWitness}
-    {cols : Fin numColumns → Polynomial Fp} (hdecoded : DecodedColumnFamilyOfBatch hbatch cols) :
+    {cols : Fin numColumns → CPoly} (hdecoded : DecodedColumnFamilyOfBatch hbatch cols) :
     currentWitness
       = ∑ i : Fin numColumns, hbatch.batchChallenge hbatch.current ^ (i : ℕ)
           • hdecoded.decodedColumns.coeffs i := by
@@ -183,7 +174,7 @@ noncomputable def decodedColumnFamily_of_batch_openings {urs : URS G} {b : Fin (
     {numColumns : ℕ} {columnCommitments : Fin numColumns → G}
     {columnEvals : Fin numColumns → Fp} {currentWitness : Fin (2 ^ urs.k) → Fp}
     (hbatch : BatchOpeningsForWitness urs b columnCommitments columnEvals currentWitness) :
-    Σ cols : Fin numColumns → Polynomial Fp,
+    Σ cols : Fin numColumns → CPoly,
       DecodedColumnFamilyOfBatch hbatch cols := by
   have haC :
       ∀ r, commitGen urs.g (hbatch.batched r)
@@ -233,24 +224,24 @@ namespace DecodedColumnFamily
 
 /-- A decoded column's claimed evaluation is the value of the recovered polynomial at the opened point. -/
 theorem eval_eq {urs : URS G} {numColumns : ℕ} {columnCommitments : Fin numColumns → G}
-    {columnEvals : Fin numColumns → Fp} {cols : Fin numColumns → Polynomial Fp}
+    {columnEvals : Fin numColumns → Fp} {cols : Fin numColumns → CPoly}
     {x : Fp}
     (hcols : DecodedColumnFamily urs (evalVector urs.k x) columnCommitments columnEvals cols)
     (i : Fin numColumns) :
-    (cols i).eval x = columnEvals i := by
+    eval x (cols i) = columnEvals i := by
   rw [hcols.polynomial i, coeffsToPoly_eval, hcols.value i]
 
 end DecodedColumnFamily
 
 /-- Select a finite family of recovered columns and totalize it for gate-expression evaluation. -/
-noncomputable def selectedPolys {numColumns numSelected : ℕ} (cols : Fin numColumns → Polynomial Fp)
-    (idx : Fin numSelected → Fin numColumns) : ℕ → Polynomial Fp :=
+def selectedPolys {numColumns numSelected : ℕ} (cols : Fin numColumns → CPoly)
+    (idx : Fin numSelected → Fin numColumns) : ℕ → CPoly :=
   finFn fun i : Fin numSelected => cols (idx i)
 
 /-- A witness-indexed decode function that ignores the witness after the columns have been recovered. -/
-noncomputable def selectedPolysDecode {k numColumns numSelected : ℕ}
-    (cols : Fin numColumns → Polynomial Fp) (idx : Fin numSelected → Fin numColumns) :
-    (Fin (2 ^ k) → Fp) → ℕ → Polynomial Fp :=
+def selectedPolysDecode {k numColumns numSelected : ℕ}
+    (cols : Fin numColumns → CPoly) (idx : Fin numSelected → Fin numColumns) :
+    (Fin (2 ^ k) → Fp) → ℕ → CPoly :=
   fun _ => selectedPolys cols idx
 
 
