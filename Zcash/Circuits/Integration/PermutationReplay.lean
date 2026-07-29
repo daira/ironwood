@@ -834,8 +834,8 @@ copy-replay witness consumes, with every coordinate translation explicit. -/
 theorem chunkRowValue_eq_of_mem_copies
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
-    (l0 lLast lBlind : Polynomial Fp) (p : Fin shape.numProofs) {n m : ℕ}
+    (poly : CommitmentId → CPoly)
+    (l0 lLast lBlind : CPoly) (p : Fin shape.numProofs) {n m : ℕ}
     (h : ConstraintSatisfaction
       (constraintModelOfPermutationResolver vk ch poly l0 lLast lBlind) n)
     (hdom : ResolverPermutationDomain vk l0 lLast lBlind n m)

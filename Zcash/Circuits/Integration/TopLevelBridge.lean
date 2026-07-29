@@ -13,7 +13,8 @@ finished here before the resulting bridge is handed to the semantic endpoint.
 
 namespace Zcash.Snark
 
-open Halo2 Polynomial
+open Halo2
+open CompPoly CompPoly.CPolynomial
 
 set_option maxHeartbeats 20000
 
@@ -44,7 +45,7 @@ only the representation boundaries that genuinely come from other streams:
 def ofTopLevelCanonical
     (gateCoherence : TopLevelGateCoherence top pp urs)
     (ch : Challenges (pp.mergeDerived top).k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (hblinding :
       (top.toVerifierKey pp urs).blindingFactors <

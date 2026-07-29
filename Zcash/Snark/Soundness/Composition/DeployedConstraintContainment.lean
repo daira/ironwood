@@ -40,7 +40,7 @@ degenerate. -/
 def deployedConstraintDifferencePreX
     (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) (coins : family.toFamily.Coins) :
-    Polynomial Fp :=
+    CPoly :=
   let pnu := deployedRootRunOutput family basis coins
   committedPreXConstraintDifference
     (deployedConstraintPointPolynomial family basis pnu)

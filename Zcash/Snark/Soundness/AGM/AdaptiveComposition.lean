@@ -10,7 +10,8 @@ an input: chronology comes from the actual transcript prefix and online-AGM quer
 
 namespace Zcash.Snark
 
-open Classical Polynomial
+open Classical
+open CompPoly CompPoly.CPolynomial
 open scoped ENNReal
 
 variable {shape : Shape}
@@ -162,7 +163,7 @@ theorem ComputedAdaptiveOnlineAGMFSFamily.adaptiveIpaFallbackBad_actual
       (algebraicFullPrefixes family.init p j) O = nu := by
     exact adaptiveIpaPreRecord_fullPrefixes family.init p j O
   rw [hnu]
-  apply congrArg (fun polynomial : Polynomial Fp => (szBadSet polynomial : Set Fp))
+  apply congrArg (fun polynomial : CPoly => (szBadSet polynomial : Set Fp))
   calc
     adaptiveIpaRootPolynomial (family.vk basis) (family.instanceCommitment basis)
         (adaptiveIpaCanonicalProof data.algebraicProof.erase)
