@@ -70,6 +70,14 @@ theorem eval_finsetSum {ι : Type*} [DecidableEq ι] [CommSemiring R] [BEq R] [L
   | empty => simp
   | insert a s ha ih => rw [Finset.sum_insert ha, Finset.sum_insert ha, eval_add, ih]
 
+theorem eval_prod {ι : Type*} [DecidableEq ι] [CommSemiring R] [BEq R] [LawfulBEq R]
+    [Nontrivial R] (s : Finset ι) (f : ι → CPolynomial R) (x : R) :
+    eval x (∏ i ∈ s, f i) = ∏ i ∈ s, eval x (f i) := by
+  classical
+  induction s using Finset.induction_on with
+  | empty => simp [eval_one]
+  | insert a s ha ih => rw [Finset.prod_insert ha, Finset.prod_insert ha, eval_mul, ih]
+
 attribute [simp] eval_C eval_mul eval_one eval_sub
 
 /-! ## Transport to the Mathlib image
@@ -235,13 +243,12 @@ def CRingHom [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] : R →+* CPo
   map_add' := by intro a b; apply toPoly_injective; simp
 
 /-- `C` is multiplicative and respects powers.  The bundled `CRingHom` says so; these are the
-unbundled spellings `simp` needs at the use sites. -/
-@[simp]
+unbundled spellings.  Deliberately not `simp`: pushing `C` inwards turns `C (ω ^ m)` into
+`C ω ^ m`, which no longer matches the rotation lemmas. -/
 theorem C_mul [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (a b : R) :
     (C (a * b) : CPolynomial R) = C a * C b := by
   apply toPoly_injective; simp
 
-@[simp]
 theorem C_pow [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (a : R) (n : ℕ) :
     (C (a ^ n) : CPolynomial R) = C a ^ n := by
   apply toPoly_injective; simp [toPoly_pow]
