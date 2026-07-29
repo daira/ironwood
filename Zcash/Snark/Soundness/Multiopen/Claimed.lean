@@ -21,7 +21,7 @@ This module produces those samples from an accept *measure*:
 
 namespace Zcash.Snark
 
-open Polynomial
+open CompPoly CompPoly.CPolynomial
 open scoped ENNReal
 
 /-- **The `x₃` forking floor for claimed-evaluation binding.** Given the per-accepting-run value
@@ -30,7 +30,7 @@ check), an honest accepting run `x₀`, and an accept measure beating `(|points|
 rotated query point's value of the decoded column is the proof string's claimed evaluation. The
 counting floor turns the measure into `|points|` distinct interpolation samples and
 `col_eval_node_eq_claimed` (`Soundness.Multiopen.RPoly`) forces the `r`-polynomial identity. -/
-theorem claimedEval_of_x3Prob {points evals : List Fp} {col : Polynomial Fp}
+theorem claimedEval_of_x3Prob {points evals : List Fp} {col : CPoly}
     (hlen : 0 < points.length)
     (hnode : Function.Injective (fun i : Fin points.length => points[i]))
     (hdeg : col.natDegree < points.length)
@@ -54,7 +54,7 @@ claimed evaluations pinned (`claimedEval_of_x3Prob`), the gate-check difference 
 function of the committed data, so an accept measure over the deployed `x`-squeeze beating
 `natDegree C / p` produces a good gate-check challenge outside `szBadSet C` — the `_xgood` rungs'
 `accX`, derived from the deployed measure rather than assumed. -/
-theorem gateGood_of_xProb {acc : Fp → Prop} [DecidablePred acc] (C : Polynomial Fp)
+theorem gateGood_of_xProb {acc : Fp → Prop} [DecidablePred acc] (C : CPoly)
     (hprob : (C.natDegree : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)
       < uniformChallenge.toOuterMeasure (Finset.univ.filter acc)) :
     ∃ xv, acc xv ∧ xv ∉ szBadSet C :=
