@@ -543,7 +543,7 @@ def resolverLookupGoodChallenges?
     (poly : CommitmentId → Polynomial Fp)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) :
     Option (PLift (ResolverLookupGoodChallenges vk ch poly p l u)) := by
-  let gammaDifference := resolverLookupProductDifferenceGammaData vk ch poly p l u
+  let gammaDifference := resolverLookupProductDifferenceGamma vk ch poly p l u
   let input := lookupInputPolyOfResolver vk ch poly p l
   let table := lookupTablePolyOfResolver vk ch poly p l
   match szBadSetAvoidance? gammaDifference ch.gamma with
@@ -551,7 +551,7 @@ def resolverLookupGoodChallenges?
   | some hgammaProof =>
       match finForallOption (fun j : Fin (u + 2) =>
           szBadSetAvoidance?
-            (resolverLookupProductDifferenceCoeffData vk ch poly p l u j.1) ch.beta) with
+            (resolverLookupProductDifferenceCoeff vk ch poly p l u j.1) ch.beta) with
       | none => exact none
       | some hbetaProof =>
           if hinput : ∀ i : Fin (u + 1),
@@ -560,11 +560,11 @@ def resolverLookupGoodChallenges?
                 table.eval (vk.omega ^ (i : Nat)) + ch.gamma ≠ 0 then
               exact some ⟨{
                 gamma := by
-                  rw [← resolverLookupProductDifferenceGammaData_eq vk ch poly p l u]
+                  rw [← toPoly_resolverLookupProductDifferenceGamma vk ch poly p l u]
                   exact hgammaProof.down
                 beta := fun j => by
                   by_cases hj : j < u + 2
-                  · rw [← resolverLookupProductDifferenceCoeffData_eq
+                  · rw [← toPoly_resolverLookupProductDifferenceCoeff
                         vk ch poly p l u j (by omega)]
                     exact (hbetaProof ⟨j, hj⟩).down
                   · have hzero :
@@ -618,21 +618,21 @@ theorem resolverLookupGoodChallenges?_isSome_of
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ)
     (hgood : ResolverLookupGoodChallenges vk ch poly p l u) :
     (resolverLookupGoodChallenges? vk ch poly p l u).isSome := by
-  let gammaDifference := resolverLookupProductDifferenceGammaData vk ch poly p l u
+  let gammaDifference := resolverLookupProductDifferenceGamma vk ch poly p l u
   let input := lookupInputPolyOfResolver vk ch poly p l
   let table := lookupTablePolyOfResolver vk ch poly p l
   have hgammaGood : ch.gamma ∉ szBadSet gammaDifference := by
     dsimp only [gammaDifference]
-    rw [resolverLookupProductDifferenceGammaData_eq]
+    rw [toPoly_resolverLookupProductDifferenceGamma]
     exact hgood.gamma
   dsimp only [gammaDifference] at hgammaGood
   obtain ⟨gammaProof, hgammaEq⟩ := Option.isSome_iff_exists.mp
     ((szBadSetAvoidance?_isSome_iff _ _).2 hgammaGood)
   have hbetaFinite : ∀ j : Fin (u + 2),
       (szBadSetAvoidance?
-        (resolverLookupProductDifferenceCoeffData vk ch poly p l u j.1) ch.beta).isSome :=
+        (resolverLookupProductDifferenceCoeff vk ch poly p l u j.1) ch.beta).isSome :=
     fun j => (szBadSetAvoidance?_isSome_iff _ _).2 (by
-      rw [resolverLookupProductDifferenceCoeffData_eq vk ch poly p l u j.1 (by omega)]
+      rw [toPoly_resolverLookupProductDifferenceCoeff vk ch poly p l u j.1 (by omega)]
       exact hgood.beta j.1)
   have hinput : ∀ i : Fin (u + 1),
       input.eval (vk.omega ^ (i : Nat)) + ch.beta ≠ 0 := by
