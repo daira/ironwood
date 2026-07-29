@@ -27,7 +27,7 @@ namespace VerifyingKey
 The full commitment-ID resolver model with its selector polynomials determined
 by the verification key's domain and blinding count.
 -/
-noncomputable def constraintModel
+def constraintModel
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → Polynomial Fp)
@@ -39,6 +39,89 @@ noncomputable def constraintModel
     (permutationSetsOfResolver vk poly)
     (permutationChunksOfResolver vk poly)
     selectors.1 selectors.2.1 selectors.2.2
+
+@[simp] theorem constraintModel_fixedCols
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (hblinding : vk.blindingFactors < vk.n) :
+    (vk.constraintModel ch poly hblinding).fixedCols =
+      fixedQueryFeedOfResolver vk poly :=
+  rfl
+
+@[simp] theorem constraintModel_adviceCols
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (hblinding : vk.blindingFactors < vk.n) :
+    (vk.constraintModel ch poly hblinding).adviceCols =
+      adviceQueryFeedOfResolver vk poly :=
+  rfl
+
+@[simp] theorem constraintModel_instanceCols
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (hblinding : vk.blindingFactors < vk.n) :
+    (vk.constraintModel ch poly hblinding).instanceCols =
+      instanceQueryFeedOfResolver vk poly :=
+  rfl
+
+@[simp] theorem constraintModel_gates
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (hblinding : vk.blindingFactors < vk.n) :
+    (vk.constraintModel ch poly hblinding).gates = vk.gates :=
+  rfl
+
+@[simp] theorem constraintModel_sets
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (hblinding : vk.blindingFactors < vk.n)
+    (proofIndex : Fin shape.numProofs) :
+    (vk.constraintModel ch poly hblinding).sets proofIndex =
+      permutationSetsOfResolver vk poly proofIndex :=
+  rfl
+
+@[simp] theorem constraintModel_chunks
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (hblinding : vk.blindingFactors < vk.n)
+    (proofIndex : Fin shape.numProofs) :
+    (vk.constraintModel ch poly hblinding).chunks proofIndex =
+      permutationChunksOfResolver vk poly proofIndex :=
+  rfl
+
+@[simp] theorem constraintModel_lookups
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (hblinding : vk.blindingFactors < vk.n)
+    (proofIndex : Fin shape.numProofs) :
+    (vk.constraintModel ch poly hblinding).lookups proofIndex =
+      lookupEntriesOfResolver vk poly proofIndex :=
+  rfl
+
+/--
+Expose the resolver-backed construction without forcing downstream proofs to
+unfold the computable polynomial implementation.
+-/
+theorem constraintModel_eq_constraintModelOfResolver
+    {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (hblinding : vk.blindingFactors < vk.n) :
+    vk.constraintModel ch poly hblinding =
+      constraintModelOfResolver vk ch poly
+        (permutationSetsOfResolver vk poly)
+        (permutationChunksOfResolver vk poly)
+        (vk.constraintModel ch poly hblinding).l0
+        (vk.constraintModel ch poly hblinding).lLast
+        (vk.constraintModel ch poly hblinding).lBlind := by
+  rfl
 
 @[simp] theorem constraintModel_l0
     {shape : Shape} {G : Type*}

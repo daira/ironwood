@@ -113,7 +113,7 @@ theorem resolverInterpretsGates
 Every enabled constraint in the top-level operation stream has the corresponding
 resolver gate polynomial witness.
 -/
-noncomputable def polynomialWitness
+def polynomialWitness
     (coherence : TopLevelGateCoherence top)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
@@ -162,13 +162,10 @@ noncomputable def polynomialWitness
         enabled.gate.selector.index).isSome := by
     simpa using hlookupSome
   let compressed :=
-    Classical.choose
-      (Option.isSome_iff_exists.mp hlookupPresent)
+    (top.selectorMap.lookup enabled.gate.selector.index).get hlookupPresent
   have hcompressed :
       top.selectorMap.lookup enabled.gate.selector.index =
-        some compressed :=
-    Classical.choose_spec
-      (Option.isSome_iff_exists.mp hlookupPresent)
+        some compressed := (Option.some_get hlookupPresent).symm
   have hroots :
       SelectorRootsWellFormed top.selectorMap := by
     change SelectorRootsWellFormed
@@ -304,8 +301,9 @@ theorem canonicalConstraints
     model.l0 model.lLast model.lBlind proofIndex
     (top.usableRowsAt top.domainExponent)
     (top.toVerifierKey pp urs).n
-  · simpa [model, TopLevelCircuit.constraintModel,
-      VerifyingKey.constraintModel] using satisfaction
+  · rw [TopLevelCircuit.constraintModel,
+      VerifyingKey.constraintModel_eq_constraintModelOfResolver] at satisfaction
+    simpa only [model] using satisfaction
   · exact domain
   · exact hfixed
 

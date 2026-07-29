@@ -52,6 +52,14 @@ def derivedPinnedCS : Halo2.PinnedConstraintSystem Fp :=
     actionCircuit.constraintSystem
     actionCircuit.selectorMap
 
+/-- Every advice-column index occurring in the derived Action query layout names an actual
+advice column.  This is the finite layout fact needed to turn a verifier query back into the
+corresponding pre-squeeze commitment. -/
+theorem adviceQueryLayout_columns_lt :
+    ∀ entry ∈ derivedPinnedCS.adviceQueryLayout,
+      entry.1 < actionCircuit.constraintSystem.numAdviceColumns := by
+  native_decide
+
 /-- The two pinned-CS construction paths agree on the three query layouts used
 by permutation routing. This is intentionally narrower than full pinned-CS
 equality: no gate or lookup expression is part of this computation. -/

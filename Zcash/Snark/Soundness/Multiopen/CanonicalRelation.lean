@@ -144,7 +144,7 @@ variable
     {y : Fp} {hpoly : Polynomial Fp} {deg : ℕ}
 
 /-- The canonical commitment-ID route selected by an accepting verifier run. -/
-noncomputable def acceptedRoute
+def acceptedRoute
     (haccepts :
       DeployedAccepts urs hk vk instanceCommitment ps ch) :
     CommitmentId →
@@ -159,7 +159,7 @@ noncomputable def acceptedRoute
     vk ps ch routing.1 routing.2
 
 /-- Decoded member polynomials routed by the accepting assembler. -/
-noncomputable def acceptedPolynomial
+def acceptedPolynomial
     (haccepts :
       DeployedAccepts urs hk vk instanceCommitment ps ch) :
     CommitmentId → Polynomial Fp :=
@@ -174,7 +174,7 @@ canonical resolver, or computes the existing augmented-basis relation.
 This is the verifier-native source of the uniform opening family used by the
 canonical constraint terminal; no caller-selected route or resolver remains.
 -/
-noncomputable def acceptedPolynomial_opens_or_relation
+def acceptedPolynomial_opens_or_relation
     (haccepts :
       DeployedAccepts urs hk vk instanceCommitment ps ch)
     (hbind : ∀
@@ -214,7 +214,7 @@ noncomputable def acceptedPolynomial_opens_or_relation
       hbind
 
 /-- The complete constraint model canonically determined by an accepting run. -/
-noncomputable def acceptedModel
+def acceptedModel
     (haccepts :
       DeployedAccepts urs hk vk instanceCommitment ps ch) :
     ConstraintPolyModel shape.numProofs :=
@@ -228,7 +228,7 @@ Satisfaction of the accepted canonical model constructs the exact relation consu
 by the circuit integration boundary. No fixed, permutation, lookup, or selector
 polynomial family is supplied independently.
 -/
-noncomputable def ofAcceptedCircuitSat
+def ofAcceptedCircuitSat
     (haccepts :
       DeployedAccepts urs hk vk instanceCommitment ps ch)
     (hsatisfied :
@@ -259,7 +259,7 @@ noncomputable def ofAcceptedCircuitSat
     hsatisfied
 
 /-- The unique commitment-ID route selected by the deployed grouping. -/
-noncomputable def route
+def route
     (relation : CanonicalMemberConstraintRelation
       urs hk vk instanceCommitment ps ch pU pW a
       batchOpenings memberDecode hblinding y hpoly deg) :
@@ -272,7 +272,7 @@ noncomputable def route
     vk ps ch relation.groupingCount relation.noDuplicateQueries
 
 /-- The decoded polynomial resolver determined by the relation's member openings. -/
-noncomputable def polynomial
+def polynomial
     (relation : CanonicalMemberConstraintRelation
       urs hk vk instanceCommitment ps ch pU pW a
       batchOpenings memberDecode hblinding y hpoly deg) :
@@ -282,7 +282,7 @@ noncomputable def polynomial
     urs hk vk ps ch memberDecode relation.route
 
 /-- The complete verifier-native constraint model determined by the relation. -/
-noncomputable def model
+def model
     (relation : CanonicalMemberConstraintRelation
       urs hk vk instanceCommitment ps ch pU pW a
       batchOpenings memberDecode hblinding y hpoly deg) :

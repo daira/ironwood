@@ -28,7 +28,7 @@ The canonical resolver model for a circuit's own verification key.
 Unlike the arbitrary-key constructor, this interface has no domain-law
 argument: domain fitting follows from the `TopLevelCircuit` compilation.
 -/
-noncomputable def constraintModel
+def constraintModel
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
     (ch : Challenges (pp.mergeDerived top).k Fp)
