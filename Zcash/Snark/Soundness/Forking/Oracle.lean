@@ -46,8 +46,7 @@ remains is:
   discharge it unconditionally at `R = (8·Q+1)·10^k`, the Attema–Fehr–Klooß-style expected
   black-box call bound of the recursive extractor
   (`recursiveAlgebraicFork_oracle_tape_sum_runs_le_poly`, with `Q` the query bound and `k` the IPA
-  depth). `reductionEfficient_of_forkSpread` is the conditional density-sensitive alternative.
-  PPT-ness of the adversary family is external to Lean.
+  depth). PPT-ness of the adversary family is external to Lean.
 * **The idealizations.** Blake2b as a random function, the conversion bias above, the AGM,
   plain-DL hardness, and the generator random-oracle model.
 

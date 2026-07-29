@@ -164,8 +164,7 @@ theorem consensusCombinedFinderBudgetForTail86_at_2pow122_bounds :
   norm_num [consensusCombinedFinderExpectedCallsModel, afkRunBound]
 
 /-- **The composite compressed-identity bound for every consensus-valid captured shape** —
-row-level semantics remain the four-budget promotion
-`snarkConstraintsSemanticDeployed_prob_le_of_root_schedule_runtime`. For any action count
+row-level semantics remain the four-budget promotion. For any action count
 `n ≤ 2¹⁶ − 1` and adversary query budget `Q ≤ T`, monotonicity bounds the shape's multiopen
 contribution by `consensusPinnedRootMultiopenModel T`, the consensus-maximum term evaluated at
 `≤ 2⁻⁸⁶` for `T = 2¹²²` above. The independent fixed solver budget `L` and its truncation tail

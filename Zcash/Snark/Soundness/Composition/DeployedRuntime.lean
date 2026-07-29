@@ -177,18 +177,5 @@ def cleanButNotExtractedDeployed (family : ComputedAlgebraicFSFamily shape)
       (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) q.2.1 ∧
     family.hasCleanOpening q.1 q.2 ∧ ¬ extracted q.1 q.2}
 
-open ComputedAlgebraicFSFamily in
-/-- Split deployed extraction failure into recursive-IPA failure and the clean residual. -/
-theorem snarkExtractionFailureEventDeployed_subset_union
-    (family : ComputedAlgebraicFSFamily shape)
-    (extracted : (AugmentedIndex (2 ^ shape.k) → VestaG) → family.Coins → Prop) :
-    snarkExtractionFailureEventDeployed family extracted ⊆
-      family.snarkFailureEvent ∪ cleanButNotExtractedDeployed family extracted := by
-  rintro ⟨basis, coins⟩ ⟨hacc, hnex⟩
-  by_cases hclean : family.hasCleanOpening basis coins
-  · exact Or.inr ⟨hacc, hclean, hnex⟩
-  · exact Or.inl ⟨fullAlgebraicAccept_of_deployed basis (family.vk basis)
-      (family.instanceCommitment basis) ((family.adversary basis).run coins.1) _ _ hacc,
-      hclean⟩
 
 end Zcash.Snark

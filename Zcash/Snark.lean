@@ -47,7 +47,7 @@ import Zcash.Snark.Soundness.PermutationRows
 import Zcash.Snark.Soundness.ConstraintRelations
 import Zcash.Snark.Soundness.ChallengePricing
 import Zcash.Snark.Soundness.InnerProduct
-import Zcash.Snark.Soundness.Extraction
+import Zcash.Snark.Soundness.Halves
 import Zcash.Snark.Soundness.Constraints
 import Zcash.Snark.Soundness.FoldSplit
 import Zcash.Snark.Soundness.CommitFold
@@ -90,8 +90,6 @@ import Zcash.Snark.Soundness.TopLevelTerminal
 import Zcash.Snark.Soundness.TopLevelVesta
 import Zcash.Snark.Soundness.ActionVesta
 import Zcash.Snark.Soundness.Vesta
--- Concrete fork-tree knowledge error over the deployed Orchard parameters.
-import Zcash.Snark.Soundness.Deployed.ConcreteBounds
 -- AGM binding reduction: consume computed deployed relations through the programmed-basis
 -- discrete-log adapter and representation-carrying algebraic-prover model.
 import Zcash.Snark.Soundness.AGM.Adapter

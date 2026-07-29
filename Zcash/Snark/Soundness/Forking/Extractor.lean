@@ -1,7 +1,7 @@
 import Zcash.Snark.Soundness.IpaSoundness
 import Zcash.Snark.Soundness.Deployed.IpaPeel
 import Zcash.Snark.Soundness.Forking.Tree
-import Zcash.Snark.Soundness.Forking.Probability
+import Zcash.Snark.Soundness.UniformMeasure
 
 /-!
 # Recover a deployed IPA tree from three forks

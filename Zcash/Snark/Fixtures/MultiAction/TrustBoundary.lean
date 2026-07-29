@@ -2,7 +2,6 @@ import Zcash.Snark.Fixtures.MultiAction.Fixture
 import Zcash.Snark.Fixtures.MultiAction.Degree
 import Zcash.Snark.Fixtures.MultiAction.StaticChecks
 import Zcash.Snark.Fixtures.MultiAction.Schedule
-import Zcash.Snark.Fixtures.MultiAction.KnowledgeError
 import Zcash.Snark.Fixtures.MultiAction.StraightLineKnowledgeError
 import Zcash.Snark.Fixtures.MultiAction.CapturedZeroFamily
 import Zcash.Meta.AxiomCheck
@@ -102,36 +101,8 @@ assert_axioms Zcash.Snark.Fixture2.deployedConstraintXSqueezeSchedule_captured +
 -- `(Q + 1) · 20470 / |𝔽|`, the multiopen term is the additive root budget, and the fixed-call
 -- DLOG solver pays the explicit AFK truncation tail.  Semantic circuit satisfaction additionally
 -- uses the four-budget promotion in the core trust census.
-assert_axioms Zcash.Snark.Fixture2.orchard_deployed_knowledge_error_captured +native(
-  Zcash.Snark.Fixture2.shape_k_pred_le,
-  Zcash.Snark.Fixture2.vk_advice_layout_length,
-  Zcash.Snark.Fixture2.vk_chunk_width_le,
-  Zcash.Snark.Fixture2.vk_fixed_layout_length,
-  Zcash.Snark.Fixture2.vk_gates_degree_le,
-  Zcash.Snark.Fixture2.vk_instance_layout_length,
-  Zcash.Snark.Fixture2.vk_lookup_input_degree_le,
-  Zcash.Snark.Fixture2.vk_lookup_table_degree_le,
-  Zcash.Snark.Fixture2.vk_n_cast_ne_zero,
-  Zcash.Snark.Fixture2.vk_n_pred_le,
-  Zcash.Snark.Fixture2.vk_omega_order,
-  Zcash.Snark.Fixture2.vk_quotient_tail_le,
-  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 -- The same bound on the interpolation-free route: the deployed constraint family is built by
 -- `ofCovered` from the two fresh-query traces, with no field-capacity premise or interpolation.
-assert_axioms Zcash.Snark.Fixture2.orchard_deployed_knowledge_error_captured_direct +native(
-  Zcash.Snark.Fixture2.shape_k_pred_le,
-  Zcash.Snark.Fixture2.vk_advice_layout_length,
-  Zcash.Snark.Fixture2.vk_chunk_width_le,
-  Zcash.Snark.Fixture2.vk_fixed_layout_length,
-  Zcash.Snark.Fixture2.vk_gates_degree_le,
-  Zcash.Snark.Fixture2.vk_instance_layout_length,
-  Zcash.Snark.Fixture2.vk_lookup_input_degree_le,
-  Zcash.Snark.Fixture2.vk_lookup_table_degree_le,
-  Zcash.Snark.Fixture2.vk_n_cast_ne_zero,
-  Zcash.Snark.Fixture2.vk_n_pred_le,
-  Zcash.Snark.Fixture2.vk_omega_order,
-  Zcash.Snark.Fixture2.vk_quotient_tail_le,
-  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- The instance-commitment derivation: the two captured claims, plus the data and functions they
 -- range over. The latter are flagless — they are ordinary definitions, so compiler trust must not

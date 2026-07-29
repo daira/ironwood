@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.Composition.Decomposition
+import Zcash.Snark.Soundness.Composition.Bridge
 import Zcash.Snark.Soundness.Multiopen.Deployed
 
 /-!

@@ -29,18 +29,6 @@ theorem scanCandidate_self [Fintype F] {d m : ℕ} (hmk : m + (d + 1) = k) (O : 
   simp only [scanCandidate, Function.update_eq_self]
   rw [if_pos trivial]
 
-/-- A *nonzero* incumbent challenge is good exactly when the first branch extracts. -/
-theorem self_mem_goodChallenges_iff [Fintype F] {d m : ℕ} (hmk : m + (d + 1) = k) (O : T → F)
-    (childC : F → RecursiveForkCoins F d)
-    (h0 : O (prefixes (A.run O) ⟨m, by omega⟩) ≠ 0) :
-    O (prefixes (A.run O) ⟨m, by omega⟩) ∈
-        goodChallenges basis k A prefixes rounds final win decideWin m hmk O childC
-      ↔ (recursiveAlgebraicForkFrom basis k A prefixes rounds final win decideWin (m + 1)
-          (by omega) O (A.run O)
-          (childC (O (prefixes (A.run O) ⟨m, by omega⟩)))).output.isSome := by
-  rw [goodChallenges, Finset.mem_filter,
-    scanCandidate_self basis k A prefixes rounds final win decideWin hmk O childC]
-  simp [h0]
 
 omit [Field F] in
 /-- A candidate's low-rank test only counts *other* challenges sampled before it: its own
@@ -747,78 +735,7 @@ noncomputable def afkScanCharge (t₀ : T) {d m : ℕ} (hmk : m + (d + 1) = k)
             t₀ m hmk O childC u).runs
     else 0
 
-omit [Fintype T] in
-/-- `afkScanCharge` is coordinate-blind at its explicit reprogramming anchor. -/
-theorem afkScanCharge_update (t₀ : T) {d m : ℕ} (hmk : m + (d + 1) = k)
-    (O : T → F) (x y : F) :
-    afkScanCharge basis k A prefixes rounds final win decideWin t₀ hmk
-        (Function.update O t₀ y) x
-      = afkScanCharge basis k A prefixes rounds final win decideWin t₀ hmk O x := by
-  unfold afkScanCharge
-  apply Finset.sum_congr rfl
-  intro childT _
-  simp only
-  rw [goodChallengesAt_update basis k A prefixes rounds final win decideWin
-    t₀ m hmk O y (fun u ↦ (childT u).toCoins)]
-  congr 1
-  apply Finset.sum_congr rfl
-  intro u _
-  rw [scanCandidateAt_update basis k A prefixes rounds final win decideWin
-    t₀ m hmk O y (fun w ↦ (childT w).toCoins) u]
 
-omit [Fintype T] in
-/-- The total incumbent charge is bounded by four order-spaces' worth of candidate costs.  This
-is the weighted double-counting step: it removes all dependence on the size of the good set and
-is the local combinatorial heart of the unconditional AFK bound. -/
-theorem sum_afkScanCharge_le (t₀ : T) {d m : ℕ} (hmk : m + (d + 1) = k)
-    (O : T → F) :
-    ∑ x : F, afkScanCharge basis k A prefixes rounds final win decideWin t₀ hmk O x
-      ≤ 4 * Fintype.card (Fin (Fintype.card F) ≃ F) *
-        ∑ childT : F → RecursiveForkTape F d, ∑ u : F,
-          (scanCandidateAt basis k A prefixes rounds final win decideWin
-            t₀ m hmk O (fun w ↦ (childT w).toCoins) u).runs := by
-  unfold afkScanCharge
-  rw [Finset.sum_comm]
-  calc
-    _ ≤ ∑ childT : F → RecursiveForkTape F d,
-          4 * Fintype.card (Fin (Fintype.card F) ≃ F) * ∑ u : F,
-            (scanCandidateAt basis k A prefixes rounds final win decideWin
-              t₀ m hmk O (fun w ↦ (childT w).toCoins) u).runs := by
-        apply Finset.sum_le_sum
-        intro childT _
-        let childC := fun u ↦ (childT u).toCoins
-        let good := goodChallengesAt basis k A prefixes rounds final win decideWin
-          t₀ m hmk O childC
-        let cost := fun u ↦
-          (scanCandidateAt basis k A prefixes rounds final win decideWin
-            t₀ m hmk O childC u).runs
-        change (∑ x : F, if x ∈ good then
-            ∑ u : F,
-              (Finset.univ.filter (fun order : Fin (Fintype.card F) ≃ F ↦
-                scanRank order (insert u ((good.erase x).erase u)) u < 2)).card * cost u
-            else 0)
-          ≤ 4 * Fintype.card (Fin (Fintype.card F) ≃ F) * ∑ u : F, cost u
-        rw [← Finset.sum_filter, Finset.filter_univ_mem]
-        calc
-          _ = ∑ u : F, (∑ x ∈ good,
-                (Finset.univ.filter (fun order : Fin (Fintype.card F) ≃ F ↦
-                  scanRank order (insert u ((good.erase x).erase u)) u < 2)).card) * cost u := by
-                rw [Finset.sum_comm]
-                apply Finset.sum_congr rfl
-                intro u _
-                rw [Finset.sum_mul]
-          _ ≤ ∑ u : F,
-              (4 * Fintype.card (Fin (Fintype.card F) ≃ F)) * cost u := by
-                apply Finset.sum_le_sum
-                intro u _
-                exact Nat.mul_le_mul_right (cost u) (sum_card_scanRank_erase_lt_le good u)
-          _ = 4 * Fintype.card (Fin (Fintype.card F) ≃ F) * ∑ u : F, cost u := by
-                rw [Finset.mul_sum]
-    _ = 4 * Fintype.card (Fin (Fintype.card F) ≃ F) *
-        ∑ childT : F → RecursiveForkTape F d, ∑ u : F,
-          (scanCandidateAt basis k A prefixes rounds final win decideWin
-            t₀ m hmk O (fun w ↦ (childT w).toCoins) u).runs := by
-      rw [Finset.mul_sum]
 
 /-- The full output-steered scan charge has the AFK weighted form: a constant-times recursive
 cost plus a constant-times `Q` unit-abort cost.  In particular, `Q` does not multiply the

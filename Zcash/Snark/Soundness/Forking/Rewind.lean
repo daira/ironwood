@@ -493,24 +493,6 @@ def deployed_forking_relation_shifted [DecidableEq G] [Inhabited G] (urs : URS G
           blind' t ht hclean)
   | .inr hrel => PSum.inr hrel
 
-/-- Compute an opening or relation when the whole commitment has no `U` component. -/
-def deployed_forking_relation [DecidableEq G] [Inhabited G] (urs : URS G)
-    (b : Fin (2 ^ urs.k) → Fp) (v ξ z blind : Fp) (aMulti aDep s : Fin (2 ^ urs.k) → Fp)
-    (cert : DForkCert Fp G urs.k) (hz : z ≠ 0) (hb0 : b 0 = 1)
-    (hP : commit urs aDep = commit urs aMulti - v • urs.g 0 + ξ • commit urs s)
-    (hvalid : DeployedForkValid urs.g b urs.u urs.w z
-        (commit urs aDep + (z * 0) • urs.u + blind • urs.w) cert) :
-    (Σ' a, IpaRelation urs (commit urs aMulti) b (v - ξ * innerProduct s b) a)
-      ⊕' NontrivialRelation (F := Fp) urs.g urs.u urs.w :=
-  match deployed_forking_relation_shifted urs b v ξ z (z * 0) blind aMulti aDep s cert
-      hz hb0 hP hvalid with
-  | .inl ⟨a, ha⟩ => PSum.inl ⟨a, ha.1, ha.2.trans (by ring)⟩
-  | .inr hrel => PSum.inr hrel
-
-/-! ## Propositional extraction
-
-This path turns high acceptance into a fork certificate. The executable adversary path is in
-`Soundness.Forking.Adversary.Algebraic`. -/
 
 open scoped ENNReal in
 open Classical in

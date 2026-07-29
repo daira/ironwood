@@ -530,10 +530,5 @@ def deployedConstraintFinderOfOutcome (family : ComputedDeployedRootFSFamily sha
           relation.toAlgebraicRelationWitness)
     | _ => none
 
-/-- Successful left branch of the run-level constraint provider. -/
-def deployedConstraintDecodedOfOutcome (family : ComputedDeployedRootFSFamily shape)
-    (provider : DeployedConstraintOutcomeProvider family)
-    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) (coins : family.toFamily.Coins) : Prop :=
-  ∃ witness, provider basis coins = some (PSum.inl witness)
 
 end Zcash.Snark

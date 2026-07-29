@@ -153,16 +153,6 @@ theorem RecursiveForkTape.toCoins_complete {F : Type*} [Fintype F] [DecidableEq 
       · intro u
         exact toCoins_complete (child u)
 
-/-- A finite tape tries exactly one permutation of the challenge set at every node. -/
-theorem RecursiveForkTape.toCoins_bounded {F : Type*} [Fintype F] [DecidableEq F] :
-    {d : ℕ} → (tape : RecursiveForkTape F d) →
-      tape.toCoins.Bounded (Fintype.card F)
-  | 0, .leaf => trivial
-  | _ + 1, .node order child => by
-      constructor
-      · simp [RecursiveForkTape.orderList]
-      · intro u
-        exact toCoins_bounded (child u)
 
 /-- Three distinct nonzero challenges whose recursive attempts all succeed. -/
 def ThreeForkSuccess {F : Type*} [Zero F] (good : F → Prop) : Prop :=
@@ -366,50 +356,7 @@ theorem nextForkChallenge_output_attempt {F α : Type*} [Zero F] [DecidableEq F]
             subst result
             exact hu
 
-/-- The scanner charges at most one bounded attempt per challenge in its input order. -/
-theorem nextForkChallenge_runs_le {F α : Type*} [Zero F] [DecidableEq F]
-    (attempt : F → RecursiveForkAttempt α) (seen order : List F) (C : ℕ)
-    (hC : ∀ u, (attempt u).runs ≤ C) :
-    (nextForkChallenge attempt seen order).runs ≤ order.length * C := by
-  induction order generalizing seen with
-  | nil => simp [nextForkChallenge]
-  | cons u order ih =>
-      simp only [nextForkChallenge]
-      split
-      · simpa only [List.length_cons] using
-          le_trans (ih seen) (Nat.mul_le_mul_right C (Nat.le_succ order.length))
-      · cases hu : (attempt u).output with
-        | some result =>
-            simp only [List.length_cons]
-            exact le_trans (hC u) (Nat.le_mul_of_pos_left C (Nat.succ_pos _))
-        | none =>
-            simp only [RecursiveForkAttempt.addRuns, List.length_cons]
-            calc
-              _ ≤ C + order.length * C := Nat.add_le_add (hC u) (ih seen)
-              _ = (order.length + 1) * C := by ring
 
-/-- A successful scan returns a suffix of its input order. -/
-theorem nextForkChallenge_output_rest_length_le {F α : Type*} [Zero F] [DecidableEq F]
-    (attempt : F → RecursiveForkAttempt α) (seen : List F)
-    {order rest : List F} {selected : F} {result : α} {seen' : List F}
-    (hout : (nextForkChallenge attempt seen order).output =
-      some ((selected, result), (rest, seen'))) :
-    rest.length ≤ order.length := by
-  induction order with
-  | nil => simp [nextForkChallenge] at hout
-  | cons u order ih =>
-      simp only [nextForkChallenge] at hout
-      split at hout
-      · exact (ih hout).trans (Nat.le_succ _)
-      · cases hu : (attempt u).output with
-        | none =>
-            simp only [hu, RecursiveForkAttempt.addRuns] at hout
-            exact (ih hout).trans (Nat.le_succ _)
-        | some value =>
-            simp only [hu, Option.some.injEq, Prod.mk.injEq] at hout
-            obtain ⟨_, hrest, _⟩ := hout
-            subst rest
-            exact Nat.le_succ _
 
 /-- If three distinct nonzero challenges succeed, two scans after any successful first challenge
 find the two additional branches. -/
@@ -573,143 +520,9 @@ def recursiveAlgebraicFork
 
 /-! ## Worst-case run bound -/
 
-/-- A bounded recursive tape makes at most `(2n+1)^d` adversary runs. -/
-theorem recursiveAlgebraicForkFrom_runs_le
-    (basis : ι → G) (k : ℕ)
-    (A : OracleComp T F P) (prefixes : P → Fin k → T)
-    (rounds : P → Fin k → AlgebraicPoint (F := F) basis × AlgebraicPoint (F := F) basis)
-    (final : P → F × F) (win : (T → F) → P → Prop)
-    (decideWin : ∀ O p, Decidable (win O p)) (n : ℕ) :
-    {d : ℕ} → (m : ℕ) → (hmk : m + d = k) → (O : T → F) → (p : P) →
-      (coins : RecursiveForkCoins F d) → coins.Bounded n →
-      (recursiveAlgebraicForkFrom basis k A prefixes rounds final win decideWin
-        m hmk O p coins).runs ≤ (2 * n + 1) ^ d
-  | 0, m, hmk, O, p, .leaf, _ => by
-      simp [recursiveAlgebraicForkFrom]
-  | d + 1, m, hmk, O, p, .node order child, hbounded => by
-      have hm : m < k := by omega
-      have htail : m + 1 + d = k := by omega
-      let j : Fin k := ⟨m, hm⟩
-      let t : T := prefixes (A.run O) j
-      let u₁ : F := O t
-      let C := (2 * n + 1) ^ d
-      have hchild : ∀ u, (recursiveAlgebraicForkFrom basis k A prefixes rounds final
-          win decideWin (m + 1) htail (Function.update O t u)
-          (A.run (Function.update O t u)) (child u)).runs ≤ C := by
-        intro u
-        exact recursiveAlgebraicForkFrom_runs_le basis k A prefixes rounds final win decideWin n
-          (m + 1) htail _ _ (child u) (hbounded.2 u)
-      have hfirst : (recursiveAlgebraicForkFrom basis k A prefixes rounds final
-          win decideWin (m + 1) htail O p (child u₁)).runs ≤ C :=
-        recursiveAlgebraicForkFrom_runs_le basis k A prefixes rounds final win decideWin n
-          (m + 1) htail O p (child u₁) (hbounded.2 u₁)
-      let candidate := fun u =>
-        let O' := Function.update O t u
-        let p' := A.run O'
-        if prefixes p' j = t then
-          recursiveAlgebraicForkFrom basis k A prefixes rounds final win decideWin
-            (m + 1) htail O' p' (child u)
-        else { output := none, runs := 1 }
-      have hcandidate : ∀ u, (candidate u).runs ≤ C := by
-        intro u
-        dsimp only [candidate]
-        split
-        · exact hchild u
-        · simp only
-          exact one_le_pow₀ (by omega)
-      have hsecondRuns : (nextForkChallenge candidate [u₁] order).runs ≤ n * C := by
-        refine (nextForkChallenge_runs_le candidate [u₁] order C hcandidate).trans ?_
-        exact Nat.mul_le_mul_right C hbounded.1
-      simp only [recursiveAlgebraicForkFrom]
-      split
-      · simp only
-        have hC : 1 ≤ C := one_le_pow₀ (by omega)
-        rw [Nat.pow_succ]
-        exact hC.trans (Nat.le_mul_of_pos_right C (by omega))
-      · split
-        · rename_i hfirstNone
-          simp only
-          rw [Nat.pow_succ]
-          exact hfirst.trans (Nat.le_mul_of_pos_right C (by omega))
-        · rename_i c₁ hfirstSome
-          split
-          · rename_i hsecondNone
-            simp only
-            rw [Nat.pow_succ]
-            calc
-              _ ≤ C + n * C := Nat.add_le_add hfirst hsecondRuns
-              _ ≤ C + 2 * (n * C) := by omega
-              _ = C * (2 * n + 1) := by ring
-          · rename_i u₂ c₂ rest seen hsecondSome
-            have hrest := nextForkChallenge_output_rest_length_le candidate [u₁] hsecondSome
-            have hthirdRuns : (nextForkChallenge candidate seen rest).runs ≤ n * C := by
-              refine (nextForkChallenge_runs_le candidate seen rest C hcandidate).trans ?_
-              exact Nat.mul_le_mul_right C (hrest.trans hbounded.1)
-            split
-            · simp only
-              rw [Nat.pow_succ]
-              calc
-                _ ≤ C + n * C + n * C :=
-                  Nat.add_le_add (Nat.add_le_add hfirst hsecondRuns) hthirdRuns
-                _ = C * (2 * n + 1) := by ring
-            · simp only
-              rw [Nat.pow_succ]
-              calc
-                _ ≤ C + n * C + n * C :=
-                  Nat.add_le_add (Nat.add_le_add hfirst hsecondRuns) hthirdRuns
-                _ = C * (2 * n + 1) := by ring
 
-/-- The complete deployed tape gives a deterministic run bound, hence the same bound on its
-expectation under any distribution of oracle tables and tapes. -/
-theorem recursiveAlgebraicFork_runs_le
-    (basis : ι → G) (k : ℕ)
-    (A : OracleComp T F P) (prefixes : P → Fin k → T)
-    (rounds : P → Fin k → AlgebraicPoint (F := F) basis × AlgebraicPoint (F := F) basis)
-    (final : P → F × F) (win : (T → F) → P → Prop)
-    (decideWin : ∀ O p, Decidable (win O p)) [Fintype F]
-    (O : T → F) (tape : RecursiveForkTape F k) :
-    (recursiveAlgebraicFork basis k A prefixes rounds final win decideWin O tape.toCoins).runs
-      ≤ (2 * Fintype.card F + 1) ^ k := by
-  exact recursiveAlgebraicForkFrom_runs_le basis k A prefixes rounds final win decideWin
-    (Fintype.card F) 0 (by omega) O (A.run O) tape.toCoins tape.toCoins_bounded
 
-/-- The complete-tape expectation is at most `(2·|F|+1)^k`, not polynomial AFK. -/
-theorem recursiveAlgebraicFork_sum_runs_le_unconditional
-    (basis : ι → G) (k : ℕ)
-    (A : OracleComp T F P) (prefixes : P → Fin k → T)
-    (rounds : P → Fin k → AlgebraicPoint (F := F) basis × AlgebraicPoint (F := F) basis)
-    (final : P → F × F) (win : (T → F) → P → Prop)
-    (decideWin : ∀ O p, Decidable (win O p)) [Fintype F]
-    (O : T → F) :
-    ∑ tape : RecursiveForkTape F k,
-        (recursiveAlgebraicFork basis k A prefixes rounds final win decideWin
-          O tape.toCoins).runs
-      ≤ (2 * Fintype.card F + 1) ^ k * Fintype.card (RecursiveForkTape F k) := by
-  calc
-    _ ≤ ∑ _tape : RecursiveForkTape F k, (2 * Fintype.card F + 1) ^ k :=
-      Finset.sum_le_sum (fun tape _ =>
-        recursiveAlgebraicFork_runs_le basis k A prefixes rounds final win decideWin O tape)
-    _ = _ := by rw [Finset.sum_const, Finset.card_univ, smul_eq_mul, Nat.mul_comm]
 
-/-- The unconditional run bound over uniform oracle-table and extractor-tape coins. -/
-theorem recursiveAlgebraicFork_oracle_tape_sum_runs_le_unconditional [Fintype T]
-    (basis : ι → G) (k : ℕ)
-    (A : OracleComp T F P) (prefixes : P → Fin k → T)
-    (rounds : P → Fin k → AlgebraicPoint (F := F) basis × AlgebraicPoint (F := F) basis)
-    (final : P → F × F) (win : (T → F) → P → Prop)
-    (decideWin : ∀ O p, Decidable (win O p)) [Fintype F] :
-    ∑ coins : (T → F) × RecursiveForkTape F k,
-        (recursiveAlgebraicFork basis k A prefixes rounds final win decideWin
-          coins.1 coins.2.toCoins).runs
-      ≤ (2 * Fintype.card F + 1) ^ k *
-        Fintype.card ((T → F) × RecursiveForkTape F k) := by
-  calc
-    _ ≤ ∑ _coins : (T → F) × RecursiveForkTape F k,
-          (2 * Fintype.card F + 1) ^ k :=
-      Finset.sum_le_sum (fun coins _ =>
-        recursiveAlgebraicFork_runs_le basis k A prefixes rounds final win decideWin
-          coins.1 coins.2)
-    _ = _ := by rw [Finset.sum_const, Finset.card_univ, smul_eq_mul, Nat.mul_comm]
 
 /-! ## Certificate semantics -/
 
