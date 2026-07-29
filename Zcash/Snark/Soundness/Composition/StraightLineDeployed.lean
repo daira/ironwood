@@ -6,9 +6,8 @@ import Zcash.Snark.Soundness.Composition.DeployedConstraintContainment
 /-!
 # Straight-line AGM composition through deployed multiopen decoding
 
-This module combines the one-run IPA extractor with the existing rewind-free deployed batch/root
-decoder.  This is the primary deployed AGM route; the recursive/AFK composition remains available
-as a separately priced alternative.
+This module combines the one-run IPA extractor with the deployed batch/root decoder.  Since
+ironwood#133 retired the rewinding route, this is the deployed AGM composition.
 -/
 
 namespace Zcash.Snark
@@ -74,7 +73,7 @@ def toIpaFamily (family : ComputedStraightLineDeployedFSFamily shape) :
   ipaTrace := family.ipaTrace
 
 /-- The direct deployed relation finder: first the one-run IPA branch, then the existing online
-multiopen outcome.  It never invokes the recursive extractor. -/
+multiopen outcome.  It reads the run's own oracle table and rewinds nothing. -/
 def straightLineDeployedRelationFinder
     (family : ComputedStraightLineDeployedFSFamily shape) :
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) ->
@@ -397,7 +396,7 @@ theorem straightLineDeployedRoots_prob_le
   exact mul_le_mul_right (family.toRootFamily.pinnedRoots_budget_le basis) _
 
 /-- Straight-line deployed root capstone.  It charges the relation finder once and contains no
-recursive AFK expectation, truncation budget, or Markov tail. -/
+expectation, truncation budget, or Markov tail. -/
 theorem straightLineRootDecodeFailure_prob_le_of_textbookDL
     (B : VestaG) (family : ComputedStraightLineDeployedFSFamily shape) {bound : ENNReal}
     (hDL : TextbookDLWithCoinsAdvantageLE B

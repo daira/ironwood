@@ -28,11 +28,9 @@ The instance-commitment derivation (`instance_commitments_derived`,
 functions it ranges over; see the single-action sibling for why this is the fixture's new trust
 surface.
 
-Two AGM capstones are retained.  The primary straight-line endpoint consumes an online
-representation trace and has a pointwise four-invocation bound.  The recursive/reprogramming
-endpoint remains a separately priced alternative using the unconditional AFK expectation,
-fixed-budget truncation, and an explicit Markov tail.  Those representations are ghost extractor
-data: they are neither transmitted nor checked by the Halo2 verifier.  Accordingly the tighter
+One AGM capstone is retained: the straight-line endpoint, which consumes an online
+representation trace and has a pointwise four-invocation bound.  Those representations are ghost
+extractor data: they are neither transmitted nor checked by the Halo2 verifier.  Accordingly the
 endpoint is only an AGM-and-random-oracle result under the supplied finite-security Vesta DLOG
 profile.
 -/
@@ -96,11 +94,10 @@ assert_axioms Zcash.Snark.Fixture2.deployedConstraintXSqueezeSchedule_captured +
   Zcash.Snark.Fixture2.vk_n_pred_le,
   Zcash.Snark.Fixture2.vk_quotient_tail_le,
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
--- The deployed compressed-identity extraction bound at the captured key: the rewind-free
+-- The deployed compressed-identity extraction bound at the captured key: the straight-line
 -- capstone with the static checks and degree caps discharged, so the bad-`x` term is the concrete
--- `(Q + 1) · 20470 / |𝔽|`, the multiopen term is the additive root budget, and the fixed-call
--- DLOG solver pays the explicit AFK truncation tail.  Semantic circuit satisfaction additionally
--- uses the four-budget promotion in the core trust census.
+-- `(Q + 1) · 20470 / |𝔽|` and the multiopen term is the additive root budget.  Semantic circuit
+-- satisfaction additionally uses the four-budget promotion in the core trust census.
 -- The same bound on the interpolation-free route: the deployed constraint family is built by
 -- `ofCovered` from the two fresh-query traces, with no field-capacity premise or interpolation.
 

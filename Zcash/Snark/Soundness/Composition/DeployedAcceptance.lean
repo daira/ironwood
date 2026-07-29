@@ -22,7 +22,7 @@ def fullAlgebraicAcceptDeployed {shape : Shape}
   DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl vk instanceCommitment p.proof.1
     (chRecord nu rounds)
 
-/-- Deployed acceptance implies the verifier-equation predicate used by the recursive extractor. -/
+/-- Deployed acceptance implies the explicit verifier-equation predicate. -/
 theorem fullAlgebraicAccept_of_deployed {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
     (vk : VerifyingKey shape Fp VestaG)

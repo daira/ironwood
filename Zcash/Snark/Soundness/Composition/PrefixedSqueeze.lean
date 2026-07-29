@@ -305,7 +305,7 @@ theorem badAt_le_via_squeeze_prefixed {T' : Type*} [DecidableEq T'] (n : Fin 11)
 
 open ComputedAlgebraicFSFamily in
 /-- **The table-level form of the index-`n` squeeze price.**  The semantic endpoint states its
-`y`, `β`, `γ` and `θ` premises over oracle tables alone, without the fork tape, so this states the
+`y`, `β`, `γ` and `θ` premises over oracle tables alone, so this states the
 same `(Q + 1) * epsilon` bound at that measure.  It is the shorter statement: the coins-level form
 above reduces to it through a tape fiber. -/
 theorem badAt_table_le_via_squeeze_prefixed (n : Fin 11)

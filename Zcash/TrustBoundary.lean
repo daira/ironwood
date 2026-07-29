@@ -891,8 +891,8 @@ assert_axioms Zcash.Snark.preX4SqueezePoint_inj
 -- compressed expressions — the combined bound the `x`-squeeze schedule's `epsilonX` prices.
 assert_axioms Zcash.Snark.natDegree_combineConstraints_le
 -- The schedule, priced (`Composition.ScheduleBudget`): the committed carriers stay under the
--- walk's caps, root witnesses at one table share the family's own outcome so the root set
--- collapses across fork tapes, and the schedule constructor discharges `measure_le` outright.
+-- walk's caps, root witnesses at one table share the family's own outcome, and the schedule
+-- constructor discharges `measure_le` outright.
 -- The captured family carries an explicit fresh-query `OracleComp` trace and derives exact
 -- pinning from its query log. The lower-level direct-pinning constructor remains generic plumbing;
 -- it is not a standalone captured-capstone premise.

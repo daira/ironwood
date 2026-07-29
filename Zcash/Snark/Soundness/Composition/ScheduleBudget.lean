@@ -11,7 +11,7 @@ uniform measure bound (`measure_le`) and invariance under reprogramming the run'
 The measure half is discharged here. Every committed carrier is a point polynomial, a rotation of
 one, or a Lagrange selector, so the degree walk caps the difference at `max D Dq` and its
 Schwartz–Zippel set at `max D Dq / |𝔽|`. Root witnesses at one oracle table share the family's own
-outcome, so the set collapses across fork tapes and the bound covers all of it.
+outcome, so one Schwartz–Zippel set covers it.
 
 The pinning half is derived, not assumed: a captured family carries a
 `DeployedConstraintXOnlineTrace` and the equation follows from its query log. That computation may
@@ -175,7 +175,7 @@ theorem natDegree_committedPreXConstraintDifference_le {G : Type*} [Inhabited G]
     rw [committedPreXQuotient]
     exact le_trans (natDegree_preXQuotient_mul_le _ _ hpiece) hq
 
-/-! ## The deployed constraint difference, collapsed across fork tapes -/
+/-! ## The deployed constraint difference, degree-capped -/
 
 variable {shape : Shape}
 

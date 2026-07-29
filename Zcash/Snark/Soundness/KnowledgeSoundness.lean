@@ -15,9 +15,8 @@ conversion (and, on the generator-RO endpoints, for the hash-to-curve URS deriva
 CompElliptic's Vesta point-count axiom, and correctness of the supplied verifying key.
 The computed reduction models oracle queries, reprogramming, and query loss.
 
-Efficiency counts black-box calls.  The unconditional AFK analysis gives the field-independent
-expected bound `(8·Q+1)·10^k`; the deployed combined capstone adds its three fallback calls,
-truncates at a fixed budget `L`, and prices the tail explicitly by finite Markov.  Adversary PPT
+Efficiency counts black-box calls.  The deployed combined finder has a pointwise four-invocation
+bound, so no expectation, truncation budget, or Markov tail enters the accounting.  Adversary PPT
 time and the concrete DLOG hardness bound remain external.
 -/
 

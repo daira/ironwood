@@ -4,10 +4,9 @@ import Zcash.Snark.Soundness.Composition.DeployedConstraintContainment
 /-!
 # Straight-line AGM composition through the deployed constraint relation
 
-This module lifts the one-table straight-line IPA/root extractor through the existing online
-constraint adapter.  It is additive to the recursive/reprogramming AGM capstone.  The fixed dummy
-tape below is only an index used to reuse proof-only decode provenance; the new relation finder
-never invokes the recursive extractor.
+This module lifts the one-table straight-line IPA/root extractor through the online constraint
+adapter.  Every branch of the relation finder reads a single accepting execution and rewinds
+nothing.
 -/
 
 namespace Zcash.Snark
@@ -43,7 +42,7 @@ def straightLineConstraintQuotientFinder
               relation.toAlgebraicRelationWitness)
 
 /-- Complete straight-line relation finder: IPA, deployed unbatching, then quotient collision.
-Every branch returns explicit relation coefficients and no branch calls the recursive extractor. -/
+Every branch returns explicit relation coefficients and no branch rewinds the adversary. -/
 def straightLineConstraintRelationFinder
     (family : ComputedStraightLineDeployedFSFamily shape) :
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) ->
@@ -326,7 +325,7 @@ theorem straightLineConstraintRelation_prob_le_of_textbookDL
   relationWithCoins_prob_le_of_textbookDL B family.straightLineConstraintRelationFinder hDL
 
 /-- Straight-line AGM deployed-constraint capstone.  The bound is linear in `Q`, uses a fixed
-finite relation finder, and contains no recursive AFK or Markov term. -/
+finite relation finder, and contains no expectation or Markov term. -/
 theorem straightLineConstraintFailure_prob_le_of_textbookDL
     (B : VestaG) (family : ComputedStraightLineDeployedFSFamily shape)
     (static : DeployedConstraintStaticChecks family.toRootFamily)

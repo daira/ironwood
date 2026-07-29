@@ -621,7 +621,7 @@ theorem escapesDuringC_measure_le' {T F : Type*} [Fintype T] [DecidableEq T] [Fi
 
 /-! ## Weighted query charges
 
-Bound natural-number query charges by the query budget for AFK accounting. -/
+Bound natural-number query charges by the query budget. -/
 
 /-- Accumulate a per-query charge along the run: each query `t` contributes `v t O (O t)`. -/
 def queryCharge {T F α : Type*} (v : T → (T → F) → F → ℕ) :
