@@ -2340,6 +2340,34 @@ assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineC
 assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintSuccess? +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 -- The headline adaptive reduction depends on this combined provenance/IPA/terminal finder being
 -- executable, so guard that property independently of the endpoint's axiom census.
+-- Its provenance stages evaluate once, retain their annotation log, and perform every stage-local
+-- lookup over that data. The pointwise log bound and eight-slot arithmetic are pinned alongside
+-- executable finder closure so the advertised adaptive resource interpretation cannot drift.
+assert_axioms Zcash.Snark.ActionTerminal.adaptiveActionCachedProvenanceLog_length_le +native(
+  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_axioms Zcash.Snark.ActionTerminal.adaptiveActionDlogTraversalSlots_eq_eight
+assert_axioms Zcash.Snark.ActionTerminal.adaptiveActionRelationFinderCalls_le_traversalSlots +native(
+  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_computable Zcash.Snark.ActionTerminal.adaptiveActionRelationFinder +choice +native(
   Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
