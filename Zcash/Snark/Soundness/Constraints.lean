@@ -51,7 +51,7 @@ open CompPoly CompPoly.CPolynomial Finset
 constraint identity `numerator(x) = h(x) · (xⁿ − 1)`. `numerator` is the gate/permutation/lookup
 combination; the verifier opens `h` to `numerator(x) / (xⁿ − 1)`. -/
 @[reducible] def quotientCheck (numerator h : CPoly) (n : ℕ) (x : Fp) : Prop :=
-  eval x numerator = eval x h * (x ^ n - 1)
+  numerator.eval x = h.eval x * (x ^ n - 1)
 
 /-! ## The Schwartz–Zippel bad set -/
 
@@ -61,9 +61,9 @@ polynomials) nothing is excluded, and otherwise exactly the `≤ natDegree C` ro
 def szBadSet (C : CPoly) : Finset Fp := roots C
 
 /-- Membership in the bad set: `x` is bad for `C` exactly when the identity fails (`C ≠ 0`) and `x`
-fails to witness it (`eval x C = 0`). -/
+fails to witness it (`C.eval x = 0`). -/
 theorem mem_szBadSet {C : CPoly} {x : Fp} :
-    x ∈ szBadSet C ↔ C ≠ 0 ∧ eval x C = 0 := by
+    x ∈ szBadSet C ↔ C ≠ 0 ∧ C.eval x = 0 := by
   rw [szBadSet]
   constructor
   · intro h
@@ -79,7 +79,7 @@ theorem mem_szBadSet {C : CPoly} {x : Fp} :
 the `hgood` shape the constraint layer consumes: if the identity fails as polynomials, the
 challenge evaluation does not vanish. -/
 theorem not_mem_szBadSet {C : CPoly} {x : Fp} :
-    x ∉ szBadSet C ↔ (C ≠ 0 → eval x C ≠ 0) := by
+    x ∉ szBadSet C ↔ (C ≠ 0 → C.eval x ≠ 0) := by
   rw [mem_szBadSet, not_and]
 
 /-- Bad-set membership is decidable without ever forming the root set: `C = 0` is decidable because
@@ -95,7 +95,7 @@ def szBadSetAvoidance? (C : CPoly) (x : Fp) :
     Option (PLift (x ∉ szBadSet C)) :=
   if hzero : C = 0 then
     some ⟨not_mem_szBadSet.mpr fun hne => absurd hzero hne⟩
-  else if heval : eval x C = 0 then
+  else if heval : C.eval x = 0 then
     none
   else
     some ⟨not_mem_szBadSet.mpr fun _ => heval⟩
@@ -162,7 +162,7 @@ then the identity holds as polynomials. This is the contrapositive that puts
 `quotientCheck_sound` on the soundness path. -/
 theorem constraint_identity_of_accept (numerator h : CPoly) (n : ℕ) (x : Fp)
     (hcheck : quotientCheck numerator h n x)
-    (hgood : numerator ≠ h * (X ^ n - 1) → eval x (numerator - h * (X ^ n - 1)) ≠ 0) :
+    (hgood : numerator ≠ h * (X ^ n - 1) → (numerator - h * (X ^ n - 1)).eval x ≠ 0) :
     numerator = h * (X ^ n - 1) := by
   by_contra hne
   apply hgood hne
@@ -174,8 +174,8 @@ equations end in a disjunction — the equation, or a nontrivial group relation 
 good-challenge premise turns the equation half into the identity the constraint layer needs. This is
 `constraint_identity_of_accept` shaped for those callers. -/
 theorem constraint_identity_of_hfold {numerator hpoly : CPoly} {n : ℕ} {x : Fp} {R : Prop}
-    (hfold : eval x numerator = eval x hpoly * (x ^ n - 1) ∨ R)
-    (hgood : numerator ≠ hpoly * (X ^ n - 1) → eval x (numerator - hpoly * (X ^ n - 1)) ≠ 0) :
+    (hfold : numerator.eval x = hpoly.eval x * (x ^ n - 1) ∨ R)
+    (hgood : numerator ≠ hpoly * (X ^ n - 1) → (numerator - hpoly * (X ^ n - 1)).eval x ≠ 0) :
     numerator = hpoly * (X ^ n - 1) ∨ R := by
   rcases hfold with h | hr
   · exact Or.inl (constraint_identity_of_accept numerator hpoly n x h hgood)
@@ -193,7 +193,7 @@ degree bounds for the quotient check carry over. -/
 /-- Rotating the argument by an invertible factor `w`: `(col ∘ (w·X))(x) = col (w·x)`. So the rotated
 column, evaluated at the gate point `x`, is the column's value at the rotated point `ω^rot · x`. -/
 theorem eval_comp_rotate (col : CPoly) (w x : Fp) :
-    eval x (comp col (C w * X)) = eval (w * x) col :=
+    (comp col (C w * X)).eval x = col.eval (w * x) :=
   eval_comp_C_mul_X col w x
 
 /-- Rotation by a nonzero factor preserves degree (it rescales `X`), so the quotient-check degree
@@ -244,8 +244,8 @@ what `quotientCheck_sound` bounds. -/
 
 /-- Evaluation commutes with Halo2's `acc * y + v` fold. -/
 theorem eval_foldByY (y x : Fp) (acc : CPoly) (ps : List CPoly) :
-    eval x (ps.foldl (fun acc p => acc * C y + p) acc)
-      = (ps.map (fun p => eval x p)).foldl (fun acc v => acc * y + v) (eval x acc) := by
+    (ps.foldl (fun acc p => acc * C y + p) acc).eval x
+      = (ps.map (fun p => p.eval x)).foldl (fun acc v => acc * y + v) (acc.eval x) := by
   induction ps generalizing acc with
   | nil => simp
   | cons p ps ih =>
@@ -263,11 +263,11 @@ def combineGates {n : ℕ} (fixedCols adviceCols instanceCols : ℕ → CPoly)
   (gatePolys fixedCols adviceCols instanceCols gates).foldl (fun acc p => acc * C y + p) 0
 
 /-- The combined numerator is the Halo2-order `y` fold of the gate evaluations: the verifier's
-assembled gate value at `x` is `eval x (combineGates …)`, a single polynomial evaluation. -/
+assembled gate value at `x` is `(combineGates …).eval x`, a single polynomial evaluation. -/
 theorem eval_combineGates {n : ℕ} (fixedCols adviceCols instanceCols : ℕ → CPoly)
     (y : Fp) (gates : Fin n → Expr Fp) (x : Fp) :
-    eval x (combineGates fixedCols adviceCols instanceCols y gates)
-      = ((gatePolys fixedCols adviceCols instanceCols gates).map (fun p => eval x p)).foldl
+    (combineGates fixedCols adviceCols instanceCols y gates).eval x
+      = ((gatePolys fixedCols adviceCols instanceCols gates).map (fun p => p.eval x)).foldl
           (fun acc v => acc * y + v) 0 := by
   simp [combineGates, eval_foldByY]
 
@@ -306,15 +306,15 @@ theorem eval_constraintPolys {np : ℕ} (fixedCols : ℕ → CPoly)
     (lookups : Fin np → List (LookupEval CPoly × List (Expr Fp) × List (Expr Fp)))
     (beta gamma delta theta : Fp) (chunkLen : ℕ) (l0 lLast lBlind : CPoly) (x : Fp) :
     (constraintPolys fixedCols adviceCols instanceCols gates sets chunks lookups
-        beta gamma delta theta chunkLen l0 lLast lBlind).map (fun q => eval x q)
-      = allConstraints (fun i => eval x (fixedCols i)) (fun p i => eval x (adviceCols p i))
-          (fun p i => eval x (instanceCols p i)) gates
-          (fun p => (sets p).map (PermSetEval.map (fun q => eval x q)))
-          (fun p => (chunks p).map (fun c => (c.1.map (fun q => eval x q),
-            c.2.map (fun q => (eval x q.1, eval x q.2)))))
-          (fun p => (lookups p).map (fun lk => (lk.1.map (fun q => eval x q), lk.2.1, lk.2.2)))
-          beta gamma x delta theta chunkLen (eval x l0) (eval x lLast) (eval x lBlind) := by
-  have hmap : (fun q : CPoly => eval x q) = ⇑(evalRingHom x) := rfl
+        beta gamma delta theta chunkLen l0 lLast lBlind).map (fun q => q.eval x)
+      = allConstraints (fun i => (fixedCols i).eval x) (fun p i => (adviceCols p i).eval x)
+          (fun p i => (instanceCols p i).eval x) gates
+          (fun p => (sets p).map (PermSetEval.map (fun q => q.eval x)))
+          (fun p => (chunks p).map (fun c => (c.1.map (fun q => q.eval x),
+            c.2.map (fun q => (q.1.eval x, q.2.eval x)))))
+          (fun p => (lookups p).map (fun lk => (lk.1.map (fun q => q.eval x), lk.2.1, lk.2.2)))
+          beta gamma x delta theta chunkLen (l0.eval x) (lLast.eval x) (lBlind.eval x) := by
+  have hmap : (fun q : CPoly => q.eval x) = ⇑(evalRingHom x) := rfl
   rw [constraintPolys, hmap, allConstraints_map (evalRingHom x)]
   simp [List.map_map, Function.comp_def, Expr.map_map, Expr.map_id, PermSetEval.map,
     LookupEval.map]
@@ -338,15 +338,15 @@ theorem eval_combineConstraints {np : ℕ} (fixedCols : ℕ → CPoly)
     (chunks : Fin np → List (PermSetEval CPoly × List (CPoly × CPoly)))
     (lookups : Fin np → List (LookupEval CPoly × List (Expr Fp) × List (Expr Fp)))
     (beta gamma delta theta y : Fp) (chunkLen : ℕ) (l0 lLast lBlind : CPoly) (x : Fp) :
-    eval x (combineConstraints fixedCols adviceCols instanceCols gates sets chunks lookups
-        beta gamma delta theta y chunkLen l0 lLast lBlind)
-      = (allConstraints (fun i => eval x (fixedCols i)) (fun p i => eval x (adviceCols p i))
-          (fun p i => eval x (instanceCols p i)) gates
-          (fun p => (sets p).map (PermSetEval.map (fun q => eval x q)))
-          (fun p => (chunks p).map (fun c => (c.1.map (fun q => eval x q),
-            c.2.map (fun q => (eval x q.1, eval x q.2)))))
-          (fun p => (lookups p).map (fun lk => (lk.1.map (fun q => eval x q), lk.2.1, lk.2.2)))
-          beta gamma x delta theta chunkLen (eval x l0) (eval x lLast) (eval x lBlind)).foldl
+    (combineConstraints fixedCols adviceCols instanceCols gates sets chunks lookups
+        beta gamma delta theta y chunkLen l0 lLast lBlind).eval x
+      = (allConstraints (fun i => (fixedCols i).eval x) (fun p i => (adviceCols p i).eval x)
+          (fun p i => (instanceCols p i).eval x) gates
+          (fun p => (sets p).map (PermSetEval.map (fun q => q.eval x)))
+          (fun p => (chunks p).map (fun c => (c.1.map (fun q => q.eval x),
+            c.2.map (fun q => (q.1.eval x, q.2.eval x)))))
+          (fun p => (lookups p).map (fun lk => (lk.1.map (fun q => q.eval x), lk.2.1, lk.2.2)))
+          beta gamma x delta theta chunkLen (l0.eval x) (lLast.eval x) (lBlind.eval x)).foldl
           (fun acc v => acc * y + v) 0 := by
   rw [combineConstraints, eval_foldByY, eval_constraintPolys]
   simp
@@ -410,21 +410,21 @@ theorem eval_combineConstraints_deployed {shape : Shape} {G : Type*}
     (lookups : Fin shape.numProofs →
       List (LookupEval CPoly × List (Expr Fp) × List (Expr Fp)))
     (l0 lLast lBlind : CPoly)
-    (hfixed : ∀ i, eval ch.x (fixedCols i) = finFn ps.fixedEvals i)
-    (hadvice : ∀ p i, eval ch.x (adviceCols p i) = finFn (ps.adviceEvals p) i)
-    (hinstance : ∀ p i, eval ch.x (instanceCols p i) = finFn (ps.instanceEvals p) i)
-    (hsets : ∀ p, (sets p).map (PermSetEval.map (fun q => eval ch.x q)) = subProofPermSets ps p)
-    (hchunks : ∀ p, (chunks p).map (fun c => (c.1.map (fun q => eval ch.x q),
-        c.2.map (fun q => (eval ch.x q.1, eval ch.x q.2)))) = subProofPermChunks vk ps p)
-    (hlookups : ∀ p, (lookups p).map (fun lk => (lk.1.map (fun q => eval ch.x q), lk.2.1, lk.2.2))
+    (hfixed : ∀ i, (fixedCols i).eval ch.x = finFn ps.fixedEvals i)
+    (hadvice : ∀ p i, (adviceCols p i).eval ch.x = finFn (ps.adviceEvals p) i)
+    (hinstance : ∀ p i, (instanceCols p i).eval ch.x = finFn (ps.instanceEvals p) i)
+    (hsets : ∀ p, (sets p).map (PermSetEval.map (fun q => q.eval ch.x)) = subProofPermSets ps p)
+    (hchunks : ∀ p, (chunks p).map (fun c => (c.1.map (fun q => q.eval ch.x),
+        c.2.map (fun q => (q.1.eval ch.x, q.2.eval ch.x)))) = subProofPermChunks vk ps p)
+    (hlookups : ∀ p, (lookups p).map (fun lk => (lk.1.map (fun q => q.eval ch.x), lk.2.1, lk.2.2))
       = subProofLookups vk ps p)
-    (hl0 : eval ch.x l0 = (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1)
-    (hlLast : eval ch.x lLast
+    (hl0 : l0.eval ch.x = (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1)
+    (hlLast : lLast.eval ch.x
       = (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.1)
-    (hlBlind : eval ch.x lBlind
+    (hlBlind : lBlind.eval ch.x
       = (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.2) :
-    eval ch.x (combineConstraints fixedCols adviceCols instanceCols vk.gates sets chunks lookups
-        ch.beta ch.gamma vk.delta ch.theta ch.y vk.chunkLen l0 lLast lBlind)
+    (combineConstraints fixedCols adviceCols instanceCols vk.gates sets chunks lookups
+        ch.beta ch.gamma vk.delta ch.theta ch.y vk.chunkLen l0 lLast lBlind).eval ch.x
       = (allExpressions vk ps ch
           (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).1
           (lagrangeBasis vk.omega vk.n vk.blindingFactors (ch.x ^ vk.n) ch.x).2.1
@@ -445,16 +445,16 @@ theorem quotientCheck_of_claimed {ng : ℕ}
     (fixedCols adviceCols instanceCols : ℕ → CPoly) (y : Fp) (gates : Fin ng → Expr Fp)
     (hpoly : CPoly) (deg : ℕ) (x : Fp)
     (fixedClaimed adviceClaimed instanceClaimed : ℕ → Fp)
-    (hfixed : ∀ i, eval x (fixedCols i) = fixedClaimed i)
-    (hadvice : ∀ i, eval x (adviceCols i) = adviceClaimed i)
-    (hinstance : ∀ i, eval x (instanceCols i) = instanceClaimed i)
+    (hfixed : ∀ i, (fixedCols i).eval x = fixedClaimed i)
+    (hadvice : ∀ i, (adviceCols i).eval x = adviceClaimed i)
+    (hinstance : ∀ i, (instanceCols i).eval x = instanceClaimed i)
     (hfold : (List.ofFn (fun i : Fin ng =>
         (gates i).eval fixedClaimed adviceClaimed instanceClaimed)).foldl
-          (fun acc v => acc * y + v) 0 = eval x hpoly * (x ^ deg - 1)) :
+          (fun acc v => acc * y + v) 0 = hpoly.eval x * (x ^ deg - 1)) :
     quotientCheck (combineGates fixedCols adviceCols instanceCols y gates) hpoly deg x := by
-  have hf : (fun k => eval x (fixedCols k)) = fixedClaimed := funext hfixed
-  have ha : (fun k => eval x (adviceCols k)) = adviceClaimed := funext hadvice
-  have hi : (fun k => eval x (instanceCols k)) = instanceClaimed := funext hinstance
+  have hf : (fun k => (fixedCols k).eval x) = fixedClaimed := funext hfixed
+  have ha : (fun k => (adviceCols k).eval x) = adviceClaimed := funext hadvice
+  have hi : (fun k => (instanceCols k).eval x) = instanceClaimed := funext hinstance
   rw [quotientCheck, eval_combineGates]
   simp only [gatePolys, List.map_ofFn, Function.comp_def, Expr.eval_toPoly, hf, ha, hi]
   exact hfold

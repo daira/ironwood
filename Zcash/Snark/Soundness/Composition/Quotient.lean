@@ -41,7 +41,7 @@ def preXQuotient (n : ℕ) (hp : Fin d → CPoly) : CPoly :=
 `(xⁿ)ⁱ = x^(n·i)`, so the `x`-dependent reassembled `hpolyP` never needs to enter the pinned bad
 set — its evaluation at `x` is the pre-`x` quotient's. -/
 theorem reassembledQuotient_eval_eq_preXQuotient_eval (n : ℕ) (hp : Fin d → CPoly) (x : Fp) :
-    eval x (reassembledQuotient (x ^ n) hp) = eval x (preXQuotient n hp) := by
+    (reassembledQuotient (x ^ n) hp).eval x = (preXQuotient n hp).eval x := by
   rw [reassembledQuotient, preXQuotient, eval_finsetSum, eval_finsetSum]
   refine Finset.sum_congr rfl (fun i _ => ?_)
   rw [eval_mul, eval_mul, eval_C, eval_pow,
@@ -49,12 +49,12 @@ theorem reassembledQuotient_eval_eq_preXQuotient_eval (n : ℕ) (hp : Fin d → 
 
 /-- **The verifier's quotient check equals the pre-`x` check at `x`.** Replacing the reassembled
 `hpolyP` (evaluated at `x`) by the pre-`x` quotient leaves the difference polynomial's value at `x`
-unchanged: `eval x (combine − hpolyP·(Xⁿ−1)) = eval x (combine − Hpoly·(Xⁿ−1))`. So `x` is bad for
+unchanged: `(combine − hpolyP·(Xⁿ−1)).eval x = (combine − Hpoly·(Xⁿ−1)).eval x`. So `x` is bad for
 the `x`-dependent check iff it is bad for the pinned pre-`x` polynomial. -/
 theorem quotientCheck_eval_eq_preX (combine : CPoly) (n : ℕ) (hp : Fin d → CPoly)
     (x : Fp) :
     (combine - reassembledQuotient (x ^ n) hp * (X ^ n - 1)).eval x
-      = eval x (combine - preXQuotient n hp * (X ^ n - 1)) := by
+      = (combine - preXQuotient n hp * (X ^ n - 1)).eval x := by
   rw [eval_sub, eval_sub, eval_mul, eval_mul,
     reassembledQuotient_eval_eq_preXQuotient_eval]
 

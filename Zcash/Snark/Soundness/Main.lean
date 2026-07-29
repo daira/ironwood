@@ -255,8 +255,8 @@ theorem orchard_verifier_deployed_constraint_of_forked [DecidableEq G] [Inhabite
     (hgood : ∀ a, IpaRelation urs fs.openedCommitment b
       (multiopenValue vk instanceCommitment ps ch) a →
       combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates ≠ hpoly * (X ^ deg - 1) →
-      eval x (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates
-        - hpoly * (X ^ deg - 1)) ≠ 0)
+      (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates
+        - hpoly * (X ^ deg - 1)).eval x ≠ 0)
     {S : Prop}
     (hencodes : ∀ a, SnarkRelation urs fs.openedCommitment b (multiopenValue vk instanceCommitment ps ch)
       (circuitSatViaGates fixedCols decodeAdvice decodeInstance y gates hpoly deg) a → S) :

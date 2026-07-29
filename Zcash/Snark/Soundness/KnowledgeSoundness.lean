@@ -58,8 +58,8 @@ theorem circuitSatViaGates_of_check {k : ℕ} (fixedCols : ℕ → CPoly)
     (hcheck : quotientCheck
       (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates) hpoly deg x)
     (hgood : combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates ≠ hpoly * (X ^ deg - 1) →
-      eval x (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates
-        - hpoly * (X ^ deg - 1)) ≠ 0) :
+      (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates
+        - hpoly * (X ^ deg - 1)).eval x ≠ 0) :
     circuitSatViaGates fixedCols decodeAdvice decodeInstance y gates hpoly deg a :=
   constraint_identity_of_accept _ hpoly deg x hcheck hgood
 
@@ -96,9 +96,9 @@ theorem circuitSatViaConstraints_of_check {k np : ℕ} (fixedCols : ℕ → CPol
       gates sets chunks lookups beta gamma delta theta y chunkLen l0 lLast lBlind) hpoly deg x)
     (hgood : combineConstraints fixedCols (decodeAdvice a) (decodeInstance a) gates sets chunks
         lookups beta gamma delta theta y chunkLen l0 lLast lBlind ≠ hpoly * (X ^ deg - 1) →
-      eval x (combineConstraints fixedCols (decodeAdvice a) (decodeInstance a) gates sets chunks
+      (combineConstraints fixedCols (decodeAdvice a) (decodeInstance a) gates sets chunks
         lookups beta gamma delta theta y chunkLen l0 lLast lBlind
-          - hpoly * (X ^ deg - 1)) ≠ 0) :
+          - hpoly * (X ^ deg - 1)).eval x ≠ 0) :
     circuitSatViaConstraints fixedCols decodeAdvice decodeInstance gates sets chunks lookups
       beta gamma delta theta y chunkLen l0 lLast lBlind hpoly deg a :=
   constraint_identity_of_accept _ hpoly deg x hcheck hgood

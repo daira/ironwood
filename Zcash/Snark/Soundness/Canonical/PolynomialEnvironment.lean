@@ -60,7 +60,7 @@ theorem rowPolynomial_eval {n : ℕ}
     {omega : Fp} {values : Fin n → Fp}
     (hrows : Function.Injective fun i : Fin n => omega ^ (i : ℕ))
     (i : Fin n) :
-    eval (omega ^ (i : ℕ)) (rowPolynomial omega values) = values i := by
+    (rowPolynomial omega values).eval (omega ^ (i : ℕ)) = values i := by
   rw [eval_toPoly, toPoly_rowPolynomial]
   exact Lagrange.eval_interpolate_at_node _ hrows.injOn (Finset.mem_univ i)
 
@@ -97,7 +97,7 @@ theorem instanceRowPolynomial_eval {n : ℕ}
     {omega : Fp} {values : List Fp}
     (hrows : Function.Injective fun i : Fin n => omega ^ (i : ℕ))
     (i : Fin n) :
-    eval (omega ^ (i : ℕ)) (instanceRowPolynomial n omega values) =
+    (instanceRowPolynomial n omega values).eval (omega ^ (i : ℕ)) =
       values.getD (i : ℕ) 0 :=
   rowPolynomial_eval hrows i
 

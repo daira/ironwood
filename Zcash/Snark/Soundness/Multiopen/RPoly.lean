@@ -142,7 +142,7 @@ theorem lagrangePoly_eval {points evals : List Fp}
   congr 1
   rw [Lagrange.basis, eval_prod,
     ← guardProd_eq_prod_erase
-      (fun j => eval x (Lagrange.basisDivisor points[i] points[j])) i,
+      (fun j => (Lagrange.basisDivisor points[i] points[j]).eval x) i,
     ← Fin.prod_univ_eq_prod_range (fun j =>
       if j = (i : ℕ) then 1
       else (x - points.getD j 0) / (points.getD (i : ℕ) 0 - points.getD j 0))]

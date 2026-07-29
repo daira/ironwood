@@ -107,7 +107,7 @@ theorem rowSelectorPolynomial_eval_eq_lagrangeBasisValue
     (hnFp : (n : Fp) ≠ 0)
     (selected : Fin n)
     (hx : x ≠ omega ^ (selected : ℕ)) :
-    eval x (rowSelectorPolynomial omega selected) =
+    (rowSelectorPolynomial omega selected).eval x =
       lagrangeBasisValue omega n (x ^ n) x (selected : ℤ) := by
   rw [eval_toPoly, toPoly_rowSelectorPolynomial,
     Lagrange.eval_basis_not_at_node (Finset.mem_univ selected) hx,
@@ -127,7 +127,7 @@ theorem rowSelectorPolynomial_eval_eq_lagrangeBasisValue_of_rotation
     (selected : Fin n) (rotation : ℤ)
     (hrotation : omega ^ (selected : ℕ) = omega ^ rotation)
     (hx : x ≠ omega ^ rotation) :
-    eval x (rowSelectorPolynomial omega selected) =
+    (rowSelectorPolynomial omega selected).eval x =
       lagrangeBasisValue omega n (x ^ n) x rotation := by
   have hxSelected : x ≠ omega ^ (selected : ℕ) := by
     simpa [hrotation] using hx
@@ -219,7 +219,7 @@ theorem blindSelectorPolynomial_eval_eq_lagrangeBasis
     (hroot : omega ^ n = 1)
     (hnFp : (n : Fp) ≠ 0)
     (hxDomain : x ^ n ≠ 1) :
-    eval x (blindSelectorPolynomial omega (lastUsableDomainRow hblinding)) =
+    (blindSelectorPolynomial omega (lastUsableDomainRow hblinding)).eval x =
       ((List.range blinding).map (fun j : ℕ =>
         lagrangeBasisValue omega n (x ^ n) x
           (-((j : ℤ) + 1)))).foldl (· + ·) 0 := by
@@ -239,10 +239,10 @@ theorem blindSelectorPolynomial_eval_eq_lagrangeBasis
       (lastUsableDomainRow hblinding).val < row.val)
     ((Finset.univ : Finset (Fin n)).filter
       (fun row => (lastUsableDomainRow hblinding).val < row.val))
-    (by simp) (fun row => eval x (rowSelectorPolynomial omega row))]
+    (by simp) (fun row => (rowSelectorPolynomial omega row).eval x)]
   rw [← e.sum_comp]
   rw [show (∑ j : Fin blinding,
-      eval x (rowSelectorPolynomial omega (e j).val)) =
+      (rowSelectorPolynomial omega (e j).val).eval x) =
       ∑ j : Fin blinding,
         lagrangeBasisValue omega n (x ^ n) x
           (-((j : ℤ) + 1)) by
@@ -294,7 +294,7 @@ theorem canonicalLagrangePolynomials_eval
     rw [heq]
     rw [← pow_mul, Nat.mul_comm, pow_mul, hroot, one_pow]
   have hfirst :
-      eval x (rowSelectorPolynomial omega ⟨0, hn⟩) =
+      (rowSelectorPolynomial omega ⟨0, hn⟩).eval x =
         lagrangeBasisValue omega n (x ^ n) x 0 := by
     apply rowSelectorPolynomial_eval_eq_lagrangeBasisValue_of_rotation
       hn hrows hroot hnFp _ 0
@@ -309,8 +309,8 @@ theorem canonicalLagrangePolynomials_eval
     exact domain_pow_sub_eq_zpow_neg (omega := omega)
       (t := blinding + 1) (by omega) hroot
   have hlast :
-      eval x (rowSelectorPolynomial omega
-          (lastUsableDomainRow hblinding)) =
+      (rowSelectorPolynomial omega
+          (lastUsableDomainRow hblinding)).eval x =
         lagrangeBasisValue omega n (x ^ n) x
           (-((blinding : ℤ) + 1)) := by
     apply rowSelectorPolynomial_eval_eq_lagrangeBasisValue_of_rotation
@@ -355,7 +355,7 @@ theorem canonicalLagrangePolynomials_eval
 theorem firstSelectorPolynomial_nonzero {n : ℕ}
     {omega : Fp} (first : Fin n) (hfirst : (first : ℕ) = 0)
     (hrows : Function.Injective fun i : Fin n => omega ^ (i : ℕ)) :
-    eval (omega ^ 0) (rowSelectorPolynomial omega first) ≠ 0 := by
+    (rowSelectorPolynomial omega first).eval (omega ^ 0) ≠ 0 := by
   have hpow : omega ^ (first : ℕ) = omega ^ 0 := by rw [hfirst]
   rw [← hpow, rowSelectorPolynomial_eval first first hrows]
   norm_num

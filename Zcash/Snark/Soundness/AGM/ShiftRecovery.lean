@@ -25,12 +25,12 @@ def ipaShiftZPolynomial
     C (delta + xi * sEval) * X
 
 @[simp] theorem ipaShiftXiPolynomial_eval (delta sEval xi : Fp) :
-    eval xi (ipaShiftXiPolynomial delta sEval) = delta + xi * sEval := by
+    (ipaShiftXiPolynomial delta sEval).eval xi = delta + xi * sEval := by
   simp [ipaShiftXiPolynomial]
   ring
 
 @[simp] theorem ipaShiftZPolynomial_eval (delta pU sU sEval xi z : Fp) :
-    eval z (ipaShiftZPolynomial delta pU sU sEval xi) =
+    (ipaShiftZPolynomial delta pU sU sEval xi).eval z =
       z * (delta + xi * sEval) - (pU + xi * sU) := by
   simp [ipaShiftZPolynomial]
   ring

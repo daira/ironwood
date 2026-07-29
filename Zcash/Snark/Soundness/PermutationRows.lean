@@ -48,7 +48,7 @@ def permSetPolys (omega : Fp) (z : CPoly)
 
 /-- The next-row component really is the next row: at `ωⁱ` it reads `z(ω^{i+1})`. -/
 theorem eval_permSetPolys_nextEval (omega : Fp) (z : CPoly) (last) (i : ℕ) :
-    eval (omega ^ i) ((permSetPolys omega z last).nextEval) = eval (omega ^ (i + 1)) z := by
+    ((permSetPolys omega z last).nextEval).eval (omega ^ i) = z.eval (omega ^ (i + 1)) := by
   rw [permSetPolys, eval_comp_rotate, pow_succ, _root_.mul_comm]
 
 /-- **The step rule is the recurrence.** At a row the verifier has switched on, the deployed
@@ -62,7 +62,7 @@ theorem perm_row_recurrence (omega beta gamma delta : Fp) (chunkLen chunkIndex :
       chunkLen chunkIndex (permSetPolys omega z last) pairs lLastP lBlindP)
     {i : ℕ} (hpow : (omega ^ i) ^ n = 1)
     (hactive : 1 - (lLastP.eval (omega ^ i) + lBlindP.eval (omega ^ i)) ≠ 0) :
-    eval (omega ^ (i + 1)) z * ∏ j ∈ range pairs.length,
+    z.eval (omega ^ (i + 1)) * ∏ j ∈ range pairs.length,
         ((pairs.getD j (0, 0)).1.eval (omega ^ i)
           + beta * (pairs.getD j (0, 0)).2.eval (omega ^ i) + gamma)
       = z.eval (omega ^ i) * ∏ j ∈ range pairs.length,
@@ -264,8 +264,8 @@ theorem deployed_perm_copy_constraints_all_chunks
           chunkRowValue omega pairs c i j
             + beta * chunkRowName omega delta chunkLen c i j + gamma = 0 := by
   let Z : ℕ → ℕ → Fp := fun c i =>
-    if hc : c < nc then eval (omega ^ i) (z c)
-    else eval (omega ^ m) (z (nc - 1))
+    if hc : c < nc then (z c).eval (omega ^ i)
+    else (z (nc - 1)).eval (omega ^ m)
   apply perm_copy_constraints_of_chunked_running_product
     (fun c => (pairs c).length) Z (chunkRowValue omega pairs)
     (chunkRowName omega delta chunkLen) (chunkRowSigmaName omega pairs)
@@ -720,7 +720,7 @@ theorem deployed_copy_constraints_of_identity_chunks
     (hrow : ∀ i : ℕ, (omega ^ i) ^ n = 1)
     (hactive : ∀ i < m, 1 - (lLastP.eval (omega ^ i) + lBlindP.eval (omega ^ i)) ≠ 0)
     (hl0 : l0P.eval (omega ^ 0) ≠ 0) (hlast : lLastP.eval (omega ^ m) ≠ 0)
-    (hlastEval : ∀ c, c + 1 < nc → eval (omega ^ 0) ((lastP c).getD 0) = eval (omega ^ m) (z c))
+    (hlastEval : ∀ c, c + 1 < nc → ((lastP c).getD 0).eval (omega ^ 0) = (z c).eval (omega ^ m))
     (hσ : ∀ cell : (c : Fin nc) × Fin m × Fin (cols (c : ℕ)).length,
       chunkSigma omega cols (cell.1 : ℕ) (cell.2.1 : ℕ) (cell.2.2 : ℕ)
         = chunkName omega delta chunkLen ((σ cell).1 : ℕ) ((σ cell).2.1 : ℕ) ((σ cell).2.2 : ℕ))
@@ -751,7 +751,7 @@ theorem deployed_copy_constraints_of_identity_chunks
       p ?_)
     rw [hsets, hchunks]
     exact hv
-  refine perm_copy_constraints_of_chunk_products hnc (fun c i => eval (omega ^ i) (z c))
+  refine perm_copy_constraints_of_chunk_products hnc (fun c i => (z c).eval (omega ^ i))
     (chunkValue omega cols) (chunkName omega delta chunkLen) (chunkSigma omega cols) beta gamma
     σ hσ hnm ?_ ?_ ?_ ?_ hgoodγ hgoodβ hxw
   · -- each chunk's step rule gives that chunk's recurrence
@@ -815,7 +815,7 @@ theorem deployed_declared_equalities_of_identity_chunks
     (hrow : ∀ i : ℕ, (omega ^ i) ^ n = 1)
     (hactive : ∀ i < m, 1 - (lLastP.eval (omega ^ i) + lBlindP.eval (omega ^ i)) ≠ 0)
     (hl0 : l0P.eval (omega ^ 0) ≠ 0) (hlast : lLastP.eval (omega ^ m) ≠ 0)
-    (hlastEval : ∀ c, c + 1 < nc → eval (omega ^ 0) ((lastP c).getD 0) = eval (omega ^ m) (z c))
+    (hlastEval : ∀ c, c + 1 < nc → ((lastP c).getD 0).eval (omega ^ 0) = (z c).eval (omega ^ m))
     (hσ : ∀ cell : (c : Fin nc) × Fin m × Fin (cols (c : ℕ)).length,
       chunkSigma omega cols (cell.1 : ℕ) (cell.2.1 : ℕ) (cell.2.2 : ℕ)
         = chunkName omega delta chunkLen ((PermConstruction.build cs cell).1 : ℕ)

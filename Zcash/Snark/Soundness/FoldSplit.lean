@@ -57,17 +57,17 @@ theorem toPoly_foldPoly (l : List Fp) :
 
 /-- Evaluating the fold polynomial at `y` is the verifier's fold. -/
 theorem eval_foldPoly (l : List Fp) (y : Fp) :
-    eval y (foldPoly l) = l.foldl (fun acc v => acc * y + v) 0 := by
+    (foldPoly l).eval y = l.foldl (fun acc v => acc * y + v) 0 := by
   suffices h : ∀ (t : List Fp) (acc : CPoly),
-      eval y (t.foldl (fun acc v => acc * X + C v) acc)
-        = t.foldl (fun acc v => acc * y + v) (eval y acc) by
+      (t.foldl (fun acc v => acc * X + C v) acc).eval y
+        = t.foldl (fun acc v => acc * y + v) (acc.eval y) by
     simpa using h l 0
   intro t
   induction t with
   | nil => intro acc; simp
   | cons a s ih =>
       intro acc
-      have hacc : eval y (acc * X + C a) = eval y acc * y + a := by simp
+      have hacc : (acc * X + C a).eval y = acc.eval y * y + a := by simp
       rw [List.foldl_cons, List.foldl_cons, ih, hacc]
 
 /-- The fold polynomial has degree below the list length, so it is determined by fewer than
@@ -189,7 +189,7 @@ theorem exists_foldSplitWitness_ne_zero {cs : List CPoly} {n : ℕ} (hn : n ≠ 
 theorem eval_foldSplitWitness_eq_zero {cs : List CPoly} {hq : CPoly} {n : ℕ}
     (hn : n ≠ 0) {y : Fp}
     (hfold : cs.foldl (fun acc q => acc * C y + q) 0 = hq * ((X : CPoly) ^ n - 1)) (j : ℕ) :
-    eval y (foldSplitWitness cs n j) = 0 := by
+    (foldSplitWitness cs n j).eval y = 0 := by
   have hmonic : ((X : CPoly) ^ n - 1).monic := monic_X_pow_sub_one hn
   have hzero : (cs.map (fun c => vanishingRemainder c n)).foldl
       (fun acc q => acc * C y + q) 0 = 0 := by

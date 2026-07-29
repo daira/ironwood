@@ -37,35 +37,35 @@ verifier layer without any manual transport to the Mathlib image. -/
 
 @[simp]
 theorem eval_zero [Semiring R] [BEq R] [LawfulBEq R] (x : R) :
-    eval x (0 : CPolynomial R) = 0 := by
+    (0 : CPolynomial R).eval x = 0 := by
   rw [eval_toPoly, toPoly_zero, Polynomial.eval_zero]
 
 @[simp]
 theorem eval_add [Semiring R] [BEq R] [LawfulBEq R] (x : R) (p q : CPolynomial R) :
-    eval x (p + q) = eval x p + eval x q := by
+    (p + q).eval x = p.eval x + q.eval x := by
   rw [eval_toPoly, toPoly_add, Polynomial.eval_add, ← eval_toPoly, ← eval_toPoly]
 
 @[simp]
 theorem eval_neg [Ring R] [BEq R] [LawfulBEq R] (x : R) (p : CPolynomial R) :
-    eval x (-p) = -eval x p := by
+    (-p).eval x = -p.eval x := by
   rw [eval_toPoly, toPoly_neg, Polynomial.eval_neg, ← eval_toPoly]
 
 @[simp]
 theorem eval_X [Semiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (x : R) :
-    eval x (X : CPolynomial R) = x := by
+    (X : CPolynomial R).eval x = x := by
   rw [eval_toPoly, X_toPoly, Polynomial.eval_X]
 
 @[simp]
 theorem eval_pow [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
     (x : R) (p : CPolynomial R) (n : ℕ) :
-    eval x (p ^ n) = eval x p ^ n := by
+    (p ^ n).eval x = p.eval x ^ n := by
   induction n with
   | zero => simp [eval_one]
   | succ n ih => rw [pow_succ, pow_succ, eval_mul, ih]
 
 theorem eval_finsetSum {ι : Type*} [DecidableEq ι] [CommSemiring R] [BEq R] [LawfulBEq R]
     [Nontrivial R] (s : Finset ι) (f : ι → CPolynomial R) (x : R) :
-    eval x (∑ i ∈ s, f i) = ∑ i ∈ s, eval x (f i) := by
+    (∑ i ∈ s, f i).eval x = ∑ i ∈ s, (f i).eval x := by
   classical
   induction s using Finset.induction_on with
   | empty => simp
@@ -73,7 +73,7 @@ theorem eval_finsetSum {ι : Type*} [DecidableEq ι] [CommSemiring R] [BEq R] [L
 
 theorem eval_prod {ι : Type*} [DecidableEq ι] [CommSemiring R] [BEq R] [LawfulBEq R]
     [Nontrivial R] (s : Finset ι) (f : ι → CPolynomial R) (x : R) :
-    eval x (∏ i ∈ s, f i) = ∏ i ∈ s, eval x (f i) := by
+    (∏ i ∈ s, f i).eval x = ∏ i ∈ s, (f i).eval x := by
   classical
   induction s using Finset.induction_on with
   | empty => simp [eval_one]
@@ -305,7 +305,7 @@ theorem toPoly_comp [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
 
 theorem eval_comp [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
     (p q : CPolynomial R) (x : R) :
-    eval x (comp p q) = eval (eval x q) p := by
+    (comp p q).eval x = p.eval (eval x q) := by
   rw [eval_toPoly, toPoly_comp, Polynomial.eval_comp, ← eval_toPoly, ← eval_toPoly]
 
 theorem natDegree_comp [CommRing R] [BEq R] [LawfulBEq R] [Nontrivial R] [NoZeroDivisors R]
@@ -322,7 +322,7 @@ because both of its properties are used at every rotated-column site. -/
 /-- Evaluating a rotated column rescales the point. -/
 theorem eval_comp_C_mul_X [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
     (p : CPolynomial R) (w x : R) :
-    eval x (comp p (C w * X)) = eval (w * x) p := by
+    (comp p (C w * X)).eval x = p.eval (w * x) := by
   rw [eval_comp, eval_mul, eval_C, eval_X]
 
 /-- Rotation by a nonzero factor preserves degree. -/
@@ -364,7 +364,7 @@ theorem rootsBy_zero [Field R] [DecidableEq R] [BEq R] [LawfulBEq R] (e : FieldE
 open Roots.FiniteField in
 theorem mem_rootsBy [Field R] [DecidableEq R] [BEq R] [LawfulBEq R] {e : FieldEnumeration R}
     {p : CPolynomial R} {x : R} (hp : p ≠ 0) :
-    x ∈ rootsBy e p ↔ eval x p = 0 := by
+    x ∈ rootsBy e p ↔ p.eval x = 0 := by
   rw [rootsBy, if_neg hp, List.mem_toFinset]
   exact ⟨fun h => rootsInFieldByEnumeration_sound h,
     fun h => rootsInFieldByEnumeration_complete _ h⟩
