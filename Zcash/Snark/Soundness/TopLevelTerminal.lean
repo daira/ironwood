@@ -2,6 +2,7 @@ import Zcash.Circuits.Integration.TopLevelCorrectness
 import Zcash.Circuits.Integration.TopLevelInstanceCommitment
 import Zcash.Common.RelationWitness
 import Zcash.Circuits.Integration.TopLevelAssignment
+import Zcash.Snark.Soundness.Canonical.Terminal
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 
 /-!
@@ -229,5 +230,144 @@ def topLevelStatements_or_relation_of_circuitSat
   · exact PSum.inr hrelation
 
 assert_no_sorry topLevelStatements_or_relation_of_circuitSat
+
+/--
+Accepted decoded-member binding reaches the statement of any top-level circuit.
+
+The verifier-native quotient terminal is circuit-independent. The circuit enters
+only through its derived key, public-input commitment, permutation routing, and
+the constructor for its `TopLevelCircuitCorrectness` package.
+-/
+def topLevelStatements_or_relation_of_decodedMemberPolynomial_eq
+    {G : Type} [AddCommGroup G] [Module Fp G]
+    [DecidableEq G] [Inhabited G]
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (pp : Keygen.ProofParams) (urs : URS G)
+    (hk : (pp.mergeDerived top).k = urs.k)
+    (inputs : Fin (pp.mergeDerived top).numProofs → PublicInput Fp)
+    (ps : ProofString (pp.mergeDerived top) Fp G)
+    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
+    (batchOpenings :
+      OpenedBatchOpenings urs (evalVector urs.k ch.x3)
+        (x4BatchCommitments
+          (instanceCommitment := top.instanceCommitment pp urs inputs)
+          urs hk (top.toVerifierKey pp urs) ps ch)
+        (x4BatchEvals
+          (instanceCommitment := top.instanceCommitment pp urs inputs)
+          (top.toVerifierKey pp urs) ps ch)
+        a pU pW)
+    (memberDecode : ∀ i (hi : i <
+        deployedX4PairCount
+          (instanceCommitment := top.instanceCommitment pp urs inputs)
+          (top.toVerifierKey pp urs) ps ch),
+      OpenedMemberDecode
+        (instanceCommitment := top.instanceCommitment pp urs inputs)
+        urs hk (top.toVerifierKey pp urs)
+        ps ch batchOpenings i hi)
+    (haccepts :
+      DeployedAccepts urs hk
+        (top.toVerifierKey pp urs)
+        (top.instanceCommitment pp urs inputs) ps ch)
+    (hpoly : Polynomial Fp)
+    (hquot :
+      hpoly =
+        CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts .vanishingH)
+    (hbind : ∀
+      (slot : DeployedMemberSlot
+        (instanceCommitment := top.instanceCommitment pp urs inputs)
+        (top.toVerifierKey pp urs) ps ch)
+      (point : Fp),
+      point ∈ deployedSetPts
+          (instanceCommitment := top.instanceCommitment pp urs inputs)
+          (top.toVerifierKey pp urs) ps ch slot.setIndex →
+      (decodedMemberPolynomial
+        (instanceCommitment := top.instanceCommitment pp urs inputs)
+        urs hk (top.toVerifierKey pp urs)
+        ps ch memberDecode slot).eval point =
+          deployedMemberClaim
+            (instanceCommitment := top.instanceCommitment pp urs inputs)
+            (top.toVerifierKey pp urs) ps ch slot point ⊕'
+        NontrivialRelation (F := Fp) urs.g urs.u urs.w)
+    (domainExponent_lt : top.domainExponent < 33)
+    (permutationRouting :
+      PermutationChunkRoutingCoherent (top.toVerifierKey pp urs))
+    (hxgood :
+      let model :=
+        CanonicalMemberConstraintRelation.acceptedModel
+          (memberDecode := memberDecode)
+          (hblinding :=
+            top.toVerifierKey_blindingFactors_lt_n pp urs)
+          haccepts
+      ch.x ∉ szBadSet
+        (combineConstraints
+          model.fixedCols model.adviceCols model.instanceCols model.gates
+          model.sets model.chunks model.lookups
+          model.beta model.gamma model.delta model.theta ch.y
+          model.chunkLen model.l0 model.lLast model.lBlind -
+        hpoly * (X ^ (top.toVerifierKey pp urs).n - 1)))
+    (hgoodY : ∀ j,
+      ch.y ∉ szBadSet
+        (foldSplitWitness
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding :=
+              top.toVerifierKey_blindingFactors_lt_n pp urs)
+            haccepts).constraints
+          (top.toVerifierKey pp urs).n j))
+    {cell : Type} [DecidableEq cell] [Fintype cell]
+    (correctness :
+        (CanonicalMemberConstraintRelation.acceptedModel
+          (memberDecode := memberDecode)
+          (hblinding :=
+            top.toVerifierKey_blindingFactors_lt_n pp urs)
+          haccepts).CircuitSat
+            ch.y hpoly (top.toVerifierKey pp urs).n a →
+      TopLevelCircuitCorrectness top pp urs ch
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts)
+        cell
+        (NontrivialRelation (F := Fp) urs.g urs.u urs.w)) :
+    (∀ proofIndex, top.Statement (inputs proofIndex)) ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  have hrows :
+      Function.Injective
+        (fun row : Fin (top.toVerifierKey pp urs).n =>
+          (top.toVerifierKey pp urs).omega ^ (row : ℕ)) := by
+    simpa only [top.toVerifierKey_n, top.toVerifierKey_omega] using
+      (TopLevelAssignment.domainRowsInjective
+        (top := top) domainExponent_lt)
+  have hroot :
+      (top.toVerifierKey pp urs).omega ^
+        (top.toVerifierKey pp urs).n = 1 := by
+    simpa only [top.toVerifierKey_n, top.toVerifierKey_omega] using
+      (TopLevelAssignment.domainRoot
+        (top := top) domainExponent_lt)
+  have hnFp : ((top.toVerifierKey pp urs).n : Fp) ≠ 0 := by
+    simpa only [top.toVerifierKey_n] using
+      (TopLevelAssignment.domainSizeCastNeZero
+        (top := top) domainExponent_lt)
+  rcases
+      acceptedModel_circuitSat_or_relation_of_decodedMemberPolynomial_eq
+        urs hk (top.toVerifierKey pp urs)
+        (top.instanceCommitment pp urs inputs) ps ch memberDecode
+        haccepts (top.toVerifierKey_blindingFactors_lt_n pp urs)
+        hpoly hquot
+        (top.toVerifierKey_fixedQueryCount pp urs)
+        (top.toVerifierKey_adviceQueryCount pp urs)
+        (top.toVerifierKey_instanceQueryCount pp urs)
+        hbind permutationRouting hrows hroot hnFp hxgood with
+    hsatisfied | relation
+  · exact topLevelStatements_or_relation_of_circuitSat
+      top pp urs hk inputs ps ch pU pW a
+      batchOpenings memberDecode haccepts hpoly
+      hsatisfied hgoodY (correctness hsatisfied)
+  · exact PSum.inr relation
+
+assert_no_sorry
+  topLevelStatements_or_relation_of_decodedMemberPolynomial_eq
 
 end Zcash.Snark

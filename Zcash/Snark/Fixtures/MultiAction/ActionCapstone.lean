@@ -64,7 +64,7 @@ noncomputable def actionNoStatementOrRelationEvent
         (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
           + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp)) :=
   family.straightLineConstraintSemanticFailureEvent
-    (actionStatementOrRelationDecoded actionProofParams family inputs)
+    (topLevelStatementOrRelationDecoded actionCircuit actionProofParams family inputs)
 
 /-- **The exact public Action-soundness event.**  The deployed verifier accepts while the Orchard
 Action bundle statement at its supplied public inputs is false.  The final #128 capstone must
@@ -79,7 +79,7 @@ def actionAcceptFalseStatementEvent
         (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
           + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp)) :=
   family.straightLineConstraintSemanticFailureEvent
-    (actionBundleStatementDecoded actionProofParams family inputs)
+    (topLevelBundleStatementDecoded actionCircuit actionProofParams family inputs)
 
 /-- Statement-or-relation failure at an arbitrary Action bundle size. -/
 noncomputable def actionNoStatementOrRelationEventFor (numProofs : ℕ)
@@ -94,7 +94,7 @@ noncomputable def actionNoStatementOrRelationEventFor (numProofs : ℕ)
           family.init.length 10 +
           3 * ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k) → Fp)) :=
   family.straightLineConstraintSemanticFailureEvent
-    (actionStatementOrRelationDecoded (actionProofParamsFor numProofs) family inputs)
+    (topLevelStatementOrRelationDecoded actionCircuit (actionProofParamsFor numProofs) family inputs)
 
 /-- Literal accepting-false-`BundleStatement` event at an arbitrary Action bundle size. -/
 def actionAcceptFalseStatementEventFor (numProofs : ℕ)
@@ -109,7 +109,7 @@ def actionAcceptFalseStatementEventFor (numProofs : ℕ)
           family.init.length 10 +
           3 * ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k) → Fp)) :=
   family.straightLineConstraintSemanticFailureEvent
-    (actionBundleStatementDecoded (actionProofParamsFor numProofs) family inputs)
+    (topLevelBundleStatementDecoded actionCircuit (actionProofParamsFor numProofs) family inputs)
 
 /-! ## The derived key's captured scalars -/
 

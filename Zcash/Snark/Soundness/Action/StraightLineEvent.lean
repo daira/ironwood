@@ -1,6 +1,7 @@
 import Zcash.Snark.Soundness.Action.StraightLineTerminal
 import Zcash.Snark.Soundness.Composition.PrefixedSqueeze
 import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
+import Zcash.Snark.Soundness.StraightLine.TopLevelEvent
 
 /-!
 # The Action bundle statement as a priced straight-line event
@@ -11,7 +12,7 @@ bounds the older statement-or-relation failure event.  The exact endpoint instea
 acceptance with a false bundle statement: its combined executable finder returns every constraint
 or Action-terminal relation branch as data, so one DLOG profile charges the entire break event.
 
-- `actionStatementOrRelationDecoded` — the intermediate target: the bundle statement or a
+- `topLevelStatementOrRelationDecoded actionCircuit` — the intermediate target: the bundle statement or a
   relation exists.
 - `actionXYFailureEvent`, `actionBetaFailureEvent`, `actionGammaFailureEvent`,
   `actionThetaFailureEvent` — a decoding run whose `x`/`y`, `β`, `γ`, or `θ` challenge lands in
@@ -47,47 +48,6 @@ variable (pp : ProofParams)
   (static : DeployedConstraintStaticChecks family.toRootFamily)
   (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
 
-/-- **The statement-or-relation intermediate.**  *Either* the Action bundle statement holds *or*
-a nontrivial relation over the run's basis is exhibited — the conclusion of the terminal, as a
-proposition.  This is not the final Action soundness target: its relation branch must still be
-converted to a computed DLOG break. -/
-def actionStatementOrRelationDecoded :
-    (AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) →
-    (BTranscript Fp VestaG
-      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
-        + 3 * (pp.mergeDerived actionCircuit).k) → Fp) → Prop :=
-  fun basis _ =>
-    Nonempty (BundleStatement inputs ⊕'
-      NontrivialRelation (F := Fp)
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis).g
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis).u
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis).w)
-
-/-- **The exact Action semantic target.**  The bundle statement itself holds.  Unlike
-`actionStatementOrRelationDecoded`, this predicate does not count mere propositional existence of
-a relation as semantic success. -/
-def actionBundleStatementDecoded :
-    (AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) →
-    (BTranscript Fp VestaG
-      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
-        + 3 * (pp.mergeDerived actionCircuit).k) → Fp) → Prop :=
-  fun _ _ => BundleStatement inputs
-
-/-- Runs on which an executable Action-terminal finder returns explicit augmented-basis relation
-coefficients.  The finder, not propositional relation existence, is the DLOG-priced event. -/
-def actionTerminalRelationEvent
-    (finder :
-      (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) →
-      (BTranscript Fp VestaG
-        (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
-          + 3 * (pp.mergeDerived actionCircuit).k) → Fp) →
-      Option (AlgebraicRelationWitness (F := Fp) basis)) :
-    Set ((AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) ×
-      (BTranscript Fp VestaG
-        (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
-          + 3 * (pp.mergeDerived actionCircuit).k) → Fp)) :=
-  {q | (finder q.1 q.2).isSome}
-
 variable
   (hvk : ∀ basis, family.vk basis =
     actionCircuit.toVerifierKey pp
@@ -112,11 +72,20 @@ noncomputable abbrev actionRunModel
     (h : family.straightLineConstraintDecoded static basis O) :=
   CanonicalMemberConstraintRelation.acceptedModel
     (memberDecode := fun i hi =>
-      (actionRunDecode pp family static basis O inputs (hvk basis) (hI basis) h).toMemberDecode
-        (hchar basis O) i hi)
+      (straightLineRunDecodeAt family static basis O
+        (actionCircuit.toVerifierKey pp
+          (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+        (actionCircuit.instanceCommitment pp
+          (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+        (hvk basis) (hI basis) h).toMemberDecode (hchar basis O) i hi)
     (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-    (actionRunAccepts pp family static basis O inputs (hvk basis) (hI basis) h)
+    (straightLineRunAcceptsAt family static basis O
+      (actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      (hvk basis) (hI basis) h)
 
 /-- The accepted member polynomial at the run's own decode. -/
 noncomputable abbrev actionRunPolynomial
@@ -127,9 +96,18 @@ noncomputable abbrev actionRunPolynomial
     (h : family.straightLineConstraintDecoded static basis O) :=
   CanonicalMemberConstraintRelation.acceptedPolynomial
     (memberDecode := fun i hi =>
-      (actionRunDecode pp family static basis O inputs (hvk basis) (hI basis) h).toMemberDecode
-        (hchar basis O) i hi)
-    (actionRunAccepts pp family static basis O inputs (hvk basis) (hI basis) h)
+      (straightLineRunDecodeAt family static basis O
+        (actionCircuit.toVerifierKey pp
+          (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+        (actionCircuit.instanceCommitment pp
+          (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+        (hvk basis) (hI basis) h).toMemberDecode (hchar basis O) i hi)
+    (straightLineRunAcceptsAt family static basis O
+      (actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      (hvk basis) (hI basis) h)
 
 /-- Decoding runs whose `x` or `y` challenge lands in the terminal's constraint-fold exclusion
 sets: `x` in the combined-constraint difference roots, `y` in a fold-split witness. -/
@@ -294,13 +272,27 @@ theorem actionRelationFinder_covers :
   rw [not_not] at hgamma
   have htheta := not_exists.mp hTheta hdecoded
   rw [not_not] at htheta
-  have hdecode : actionRunDecode pp family static basis O inputs (hvk basis) (hI basis) hdecoded =
+  have hdecode : straightLineRunDecodeAt family static basis O
+      (actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      (hvk basis) (hI basis) hdecoded =
       hI basis ▸ hvk basis ▸
         success.witness.decode.reRound (runRounds family.toFamily basis O) := by
-    simp only [actionRunDecode, straightLineDecode, straightLineConstraintWitness, hsuccess]
-  have haccepts := actionRunAccepts pp family static basis O inputs
+    simp only [straightLineRunDecodeAt, straightLineDecode,
+      straightLineConstraintWitness, hsuccess]
+  have haccepts := straightLineRunAcceptsAt family static basis O
+    (actionCircuit.toVerifierKey pp
+      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+    (actionCircuit.instanceCommitment pp
+      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
     (hvk basis) (hI basis) hdecoded
-  have hacceptsEq : actionRunAccepts pp family static basis O inputs
+  have hacceptsEq : straightLineRunAcceptsAt family static basis O
+      (actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
       (hvk basis) (hI basis) hdecoded =
       hI basis ▸ hvk basis ▸ success.accepts :=
     Subsingleton.elim _ _
@@ -329,9 +321,17 @@ theorem actionRelationFinder_covers :
       (straightLineRunOutput family basis O).1.proof.1
       (straightLineRunRecord family basis O) :=
     hI basis ▸ hvk basis ▸ success.accepts
-  have hdecodeEq : actionRunDecode pp family static basis O inputs
+  have hdecodeEq : straightLineRunDecodeAt family static basis O
+      (actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
       (hvk basis) (hI basis) hdecoded = successDecode := hdecode
-  have hacceptsEq' : actionRunAccepts pp family static basis O inputs
+  have hacceptsEq' : straightLineRunAcceptsAt family static basis O
+      (actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
       (hvk basis) (hI basis) hdecoded = successAccepts :=
     Subsingleton.elim _ _
   have hmodelEq : actionRunModel pp family static inputs hvk hI hchar basis O hdecoded =
@@ -581,7 +581,7 @@ relation must have a challenge in one of the terminal's exclusion sets: otherwis
 bridge produces the statement.  Stepped through in the body. -/
 theorem actionSemanticUpgradeContained :
     family.StraightLineConstraintSemanticUpgradeContained static
-      (actionStatementOrRelationDecoded pp family inputs)
+      (topLevelStatementOrRelationDecoded actionCircuit pp family inputs)
       (actionXYFailureEvent pp family static inputs hvk hI hchar)
       (actionBetaFailureEvent pp family static inputs hvk hI hchar)
       (actionGammaFailureEvent pp family static inputs hvk hI hchar)
@@ -618,12 +618,12 @@ theorem actionBundleStatementUpgradeContained
       Option (AlgebraicRelationWitness (F := Fp) basis))
     (hcovers : actionTerminalRelationFinderCovers pp family static inputs hvk hI hchar finder) :
     family.StraightLineConstraintSemanticUpgradeContained static
-      (actionBundleStatementDecoded pp family inputs)
+      (topLevelBundleStatementDecoded actionCircuit pp family inputs)
       (actionXYFailureEvent pp family static inputs hvk hI hchar)
       (actionBetaFailureEvent pp family static inputs hvk hI hchar)
       (actionGammaFailureEvent pp family static inputs hvk hI hchar)
       (actionThetaFailureEvent pp family static inputs hvk hI hchar ∪
-        actionTerminalRelationEvent pp family finder) := by
+        straightLineTerminalRelationEvent family finder) := by
   rintro q ⟨hdecoded, hfalse⟩
   by_cases hXY : q ∈ actionXYFailureEvent pp family static inputs hvk hI hchar
   · exact Or.inl hXY
@@ -648,7 +648,7 @@ theorem actionBundleStatementFailure_subset_union
       Option (AlgebraicRelationWitness (F := Fp) basis))
     (hcovers : actionTerminalRelationFinderCovers pp family static inputs hvk hI hchar finder) :
     family.straightLineConstraintSemanticFailureEvent
-        (actionBundleStatementDecoded pp family inputs) <=
+        (topLevelBundleStatementDecoded actionCircuit pp family inputs) <=
       (family.straightLineConstraintFailureEvent static ∪
         family.straightLineRelationEvent finder) ∪
       (actionXYFailureEvent pp family static inputs hvk hI hchar ∪
@@ -658,7 +658,7 @@ theorem actionBundleStatementFailure_subset_union
   rintro q ⟨haccept, hfalse⟩
   by_cases hdecoded : family.straightLineConstraintDecoded static q.1 q.2
   · have hsemantic : family.straightLineConstraintDecoded static q.1 q.2 ∧
-        ¬actionBundleStatementDecoded pp family inputs q.1 q.2 := ⟨hdecoded, hfalse⟩
+        ¬topLevelBundleStatementDecoded actionCircuit pp family inputs q.1 q.2 := ⟨hdecoded, hfalse⟩
     rcases actionBundleStatementUpgradeContained pp family static inputs hvk hI hchar
         finder hcovers hsemantic with hXY | hBeta | hGamma | hTheta | hrelation
     · exact Or.inr (Or.inl hXY)
@@ -711,7 +711,7 @@ theorem actionBundleStatementFailure_prob_le_of_base_union_bound
             + 3 * (pp.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           family.straightLineConstraintSemanticFailureEvent
-            (actionBundleStatementDecoded pp family inputs)) <=
+            (topLevelBundleStatementDecoded actionCircuit pp family inputs)) <=
       baseBound + (xyBound + (betaBound + (gammaBound + thetaBound))) := by
   refine le_trans (MeasureTheory.measure_mono
     (Set.preimage_mono (actionBundleStatementFailure_subset_union pp family static inputs
@@ -775,10 +775,10 @@ theorem actionNoStatementOrRelation_prob_le_of_compressed_bound
             + 3 * (pp.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           family.straightLineConstraintSemanticFailureEvent
-            (actionStatementOrRelationDecoded pp family inputs))
+            (topLevelStatementOrRelationDecoded actionCircuit pp family inputs))
       ≤ compressedBound + (xyBound + (betaBound + (gammaBound + thetaBound))) :=
   family.straightLineConstraintSemanticFailure_prob_le_of_compressed_bound query static
-    (actionStatementOrRelationDecoded pp family inputs)
+    (topLevelStatementOrRelationDecoded actionCircuit pp family inputs)
     (actionXYFailureEvent pp family static inputs hvk hI hchar)
     (actionBetaFailureEvent pp family static inputs hvk hI hchar)
     (actionGammaFailureEvent pp family static inputs hvk hI hchar)
@@ -843,7 +843,7 @@ theorem actionBundleStatementFailure_prob_le_of_compressed_bound
           (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
             + 3 * (pp.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionTerminalRelationEvent pp family finder) ≤ relationBound) :
+          straightLineTerminalRelationEvent family finder) ≤ relationBound) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
@@ -851,16 +851,16 @@ theorem actionBundleStatementFailure_prob_le_of_compressed_bound
             + 3 * (pp.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           family.straightLineConstraintSemanticFailureEvent
-            (actionBundleStatementDecoded pp family inputs))
+            (topLevelBundleStatementDecoded actionCircuit pp family inputs))
       ≤ compressedBound +
           (xyBound + (betaBound + (gammaBound + (thetaBound + relationBound)))) := by
   refine family.straightLineConstraintSemanticFailure_prob_le_of_compressed_bound query static
-    (actionBundleStatementDecoded pp family inputs)
+    (topLevelBundleStatementDecoded actionCircuit pp family inputs)
     (actionXYFailureEvent pp family static inputs hvk hI hchar)
     (actionBetaFailureEvent pp family static inputs hvk hI hchar)
     (actionGammaFailureEvent pp family static inputs hvk hI hchar)
     (actionThetaFailureEvent pp family static inputs hvk hI hchar ∪
-      actionTerminalRelationEvent pp family finder)
+      straightLineTerminalRelationEvent family finder)
     (actionBundleStatementUpgradeContained pp family static inputs hvk hI hchar finder hcovers)
     hcompressed hXY hBeta hGamma ?_
   calc
@@ -868,13 +868,13 @@ theorem actionBundleStatementFailure_prob_le_of_compressed_bound
         (PMF.uniformOfFintype _)).toOuterMeasure
       ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
         (actionThetaFailureEvent pp family static inputs hvk hI hchar ∪
-          actionTerminalRelationEvent pp family finder))
+          straightLineTerminalRelationEvent family finder))
         = (independentProductPMF (orchardGeneratorROSetup query)
             (PMF.uniformOfFintype _)).toOuterMeasure
           (((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
               actionThetaFailureEvent pp family static inputs hvk hI hchar) ∪
             ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-              actionTerminalRelationEvent pp family finder)) := by rw [Set.preimage_union]
+              straightLineTerminalRelationEvent family finder)) := by rw [Set.preimage_union]
     _ ≤ (independentProductPMF (orchardGeneratorROSetup query)
             (PMF.uniformOfFintype _)).toOuterMeasure
           ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
@@ -882,7 +882,7 @@ theorem actionBundleStatementFailure_prob_le_of_compressed_bound
         (independentProductPMF (orchardGeneratorROSetup query)
             (PMF.uniformOfFintype _)).toOuterMeasure
           ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-            actionTerminalRelationEvent pp family finder) :=
+            straightLineTerminalRelationEvent family finder) :=
       MeasureTheory.measure_union_le _ _
     _ ≤ thetaBound + relationBound := add_le_add hTheta hRelation
 
@@ -1211,7 +1211,7 @@ theorem actionNoStatementOrRelation_prob_le_of_surfaces
             + 3 * (pp.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           family.straightLineConstraintSemanticFailureEvent
-            (actionStatementOrRelationDecoded pp family inputs))
+            (topLevelStatementOrRelationDecoded actionCircuit pp family inputs))
       ≤ compressedBound +
           (((family.Q + 1 : ℕ) * epsX + (family.Q + 1 : ℕ) * epsY) +
             ((family.Q + 1 : ℕ) * epsBeta +

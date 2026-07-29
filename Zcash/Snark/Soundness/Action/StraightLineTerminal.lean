@@ -1,6 +1,5 @@
 import Zcash.Snark.Soundness.Action.Terminal
-import Zcash.Snark.Soundness.AGM.DecodeToOpened
-import Zcash.Snark.Soundness.Composition.StraightLineDecodeSupply
+import Zcash.Snark.Soundness.StraightLine.TopLevelTerminal
 
 /-!
 # The rewind-free decode at the Action terminal
@@ -32,31 +31,6 @@ open Zcash.Arithmetic (scalarFieldOrder)
 variable {G : Type} [AddCommGroup G] [Module Fp G] [DecidableEq G] [Inhabited G]
 
 local instance vestaInhabitedStraightLineActionTerminal : Inhabited VestaG := ⟨0⟩
-
-/-- Check every potentially nonzero fold-split witness by direct evaluation.  Witnesses at
-indices `j ≥ n` are zero by degree, so this finite traversal returns the full specification-level
-avoidance certificate without computing any root set. -/
-def foldSplitAvoidance?
-    (cs : List (Polynomial Fp)) (n : Nat) (hn : n ≠ 0) (y : Fp) :
-    Option (PLift (∀ j, y ∉ szBadSet (foldSplitWitness cs n j))) :=
-  match finForallOption (fun j : Fin n =>
-      szBadSetAvoidance? (foldSplitWitness cs n j.1) y) with
-  | none => none
-  | some hgood => some ⟨fun j =>
-      if hj : j < n then (hgood ⟨j, hj⟩).down
-      else not_mem_szBadSet.mpr fun hne =>
-        False.elim (hne (foldSplitWitness_eq_zero_of_le hn (Nat.le_of_not_gt hj)))⟩
-
-theorem foldSplitAvoidance?_isSome_of
-    (cs : List (Polynomial Fp)) (n : Nat) (hn : n ≠ 0) (y : Fp)
-    (hgood : ∀ j, y ∉ szBadSet (foldSplitWitness cs n j)) :
-    (foldSplitAvoidance? cs n hn y).isSome := by
-  have hfinite : ∀ j : Fin n,
-      (szBadSetAvoidance? (foldSplitWitness cs n j.1) y).isSome :=
-    fun j => (szBadSetAvoidance?_isSome_iff _ _).2 (hgood j.1)
-  obtain ⟨found, hfound⟩ := Option.isSome_iff_exists.mp
-    (finForallOption_isSome_of _ hfinite)
-  simp [foldSplitAvoidance?, hfound]
 
 /-- **The Action bundle statement from a rewind-free decode.**  The decode supplies the batch
 openings, the member decodes, the `x₄` designation and the member-binding premise; the caller
@@ -141,67 +115,6 @@ def action_bundleStatement_or_relation_of_decode_circuitSat
       (fun i hi => decode.toMemberDecode hchar i hi) haccepts hpoly hsatisfied hgoodY
       permutationExclusions lookupExclusions)
 
-/-- The run's decode at the Action circuit's artifacts: extracted from the event, re-rounded to
-the run's complete challenge record, and transported along the key and instance identifications. -/
-def actionRunDecode
-    (pp : ProofParams)
-    (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived actionCircuit))
-    (static : DeployedConstraintStaticChecks family.toRootFamily)
-    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
-    (O : BTranscript Fp VestaG
-      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
-        + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
-    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
-    (hvk : family.vk basis =
-      actionCircuit.toVerifierKey pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-    (hI : family.instanceCommitment basis =
-      actionCircuit.instanceCommitment pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
-    (hdecoded : family.straightLineConstraintDecoded static basis O) :
-    DeployedAlgebraicDecode
-      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) rfl
-      (actionCircuit.toVerifierKey pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-      (actionCircuit.instanceCommitment pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
-      (straightLineRunOutput family basis O).1.proof.1
-      (straightLineRunRecord family basis O)
-      ((straightLineRunOutput family basis O).1.aMulti
-        (wrappedPreIpaReads (straightLineRunOutput family basis O)))
-      ((straightLineRunOutput family basis O).1.multiU
-        (wrappedPreIpaReads (straightLineRunOutput family basis O)))
-      ((straightLineRunOutput family basis O).1.multiBlind
-        (wrappedPreIpaReads (straightLineRunOutput family basis O))) :=
-  hI ▸ hvk ▸ (straightLineDecode family static basis O hdecoded).reRound
-    (runRounds family.toFamily basis O)
-
-/-- The run's acceptance at the Action circuit's artifacts. -/
-theorem actionRunAccepts
-    (pp : ProofParams)
-    (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived actionCircuit))
-    (static : DeployedConstraintStaticChecks family.toRootFamily)
-    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
-    (O : BTranscript Fp VestaG
-      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
-        + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
-    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
-    (hvk : family.vk basis =
-      actionCircuit.toVerifierKey pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-    (hI : family.instanceCommitment basis =
-      actionCircuit.instanceCommitment pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
-    (hdecoded : family.straightLineConstraintDecoded static basis O) :
-    DeployedAccepts (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) rfl
-      (actionCircuit.toVerifierKey pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-      (actionCircuit.instanceCommitment pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
-      (straightLineRunOutput family basis O).1.proof.1
-      (straightLineRunRecord family basis O) :=
-  hI ▸ hvk ▸ straightLineAccepts_of_decoded family static basis O hdecoded
-
 /-- **The Action terminal reached from the straight-line constraint event.**  A family at the
 Action shape supplies the decode and the acceptance from its own accepting run, so the terminal
 is reached without a rewind.
@@ -244,9 +157,19 @@ def action_bundleStatement_or_relation_of_straightLineDecoded
       (wrappedPreIpaReads (straightLineRunOutput family basis O)))
     ((straightLineRunOutput family basis O).1.aMulti
       (wrappedPreIpaReads (straightLineRunOutput family basis O)))
-    (actionRunDecode pp family static basis O inputs hvk hI hdecoded)
+    (straightLineRunDecodeAt family static basis O
+      (actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      hvk hI hdecoded)
     hchar
-    (actionRunAccepts pp family static basis O inputs hvk hI hdecoded)
+    (straightLineRunAcceptsAt family static basis O
+      (actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      hvk hI hdecoded)
 
 /-- **Executable Action-terminal relation finder.**  The constraint adapter first reconstructs
 the decoded run from the family's retained batch coordinates.  This finder then checks the four

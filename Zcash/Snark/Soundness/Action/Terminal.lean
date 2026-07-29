@@ -204,38 +204,19 @@ def action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
           (memberDecode := memberDecode) haccepts)) :
     BundleStatement inputs ⊕'
       NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  let vk := actionCircuit.toVerifierKey pp urs
-  let hblinding : vk.blindingFactors < vk.n :=
-    actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs
-  have hnFp : (vk.n : Fp) ≠ 0 := by
-    change
-      (((2 ^ actionCircuit.domainExponent : ℕ) : Fp)) ≠ 0
-    exact TopLevelAssignment.domainSizeCastNeZero
+  simpa only [BundleStatement] using
+    topLevelStatements_or_relation_of_decodedMemberPolynomial_eq
+      actionCircuit pp urs hk inputs ps ch pU pW a
+      batchOpenings memberDecode haccepts hpoly hquot hbind
       ActionPermutationDomain.domainExponent_lt
-  rcases
-      acceptedModel_circuitSat_or_relation_of_decodedMemberPolynomial_eq
-        urs hk vk (actionCircuit.instanceCommitment pp urs inputs) ps ch memberDecode
-        haccepts hblinding hpoly hquot
-        (actionCircuit.toVerifierKey_fixedQueryCount pp urs)
-        (actionCircuit.toVerifierKey_adviceQueryCount pp urs)
-        (actionCircuit.toVerifierKey_instanceQueryCount pp urs)
-        hbind
-        (ActionPermutationDomain.routingCoherent_of_derived pp urs)
-        (ActionPermutationDomain.rowsInjective pp urs)
-        (ActionPermutationDomain.root pp urs)
-        hnFp hxgood with
-    hsatisfied | hrelation
-  · simpa only [BundleStatement] using
-      (topLevelStatements_or_relation_of_circuitSat
-        actionCircuit pp urs hk inputs ps ch pU pW a
-        batchOpenings memberDecode haccepts hpoly
-        hsatisfied hgoodY
-        (cell := FlatCell actionNumPermCols actionDomainSize)
-        (ActionCorrectness.ofAcceptedCircuitSat
+      (ActionPermutationDomain.routingCoherent_of_derived pp urs)
+      hxgood hgoodY
+      (cell := FlatCell actionNumPermCols actionDomainSize)
+      fun hsatisfied =>
+        ActionCorrectness.ofAcceptedCircuitSat
           pp urs hk inputs ps ch pU pW a
           batchOpenings memberDecode haccepts hpoly
-          hsatisfied hgoodY permutationExclusions lookupExclusions))
-  · exact PSum.inr hrelation
+          hsatisfied hgoodY permutationExclusions lookupExclusions
 
 assert_no_sorry action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
 
