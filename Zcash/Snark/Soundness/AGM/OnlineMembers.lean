@@ -70,7 +70,7 @@ def onlinePointCoordinates (source : List (AlgebraicPoint (F := Fp) basis)) (P :
 
 /-- Polynomial carried by the deterministic online representation of a point. -/
 def onlinePointPolynomial
-    (source : List (AlgebraicPoint (F := Fp) basis)) (P : VestaG) : Polynomial Fp :=
+    (source : List (AlgebraicPoint (F := Fp) basis)) (P : VestaG) : CPoly :=
   coeffsToPoly (onlinePointCoordinates source P).1
 
 /-- Resolve a covered point by deterministic list lookup, or combine the representations carried

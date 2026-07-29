@@ -42,12 +42,13 @@ carries the whole challenge-pricing story.
 
 namespace Zcash.Snark
 
-open Halo2 Polynomial Finset
+open Halo2 Finset
+open CompPoly CompPoly.CPolynomial
 open scoped ENNReal
 
 /-- **The shared union bound.** Finitely many root-set events, each of degree at most `d`, together
 have measure at most `N·d / p`. -/
-theorem uniformChallenge_szBadSet_iUnion_le {ι : Type*} (s : Finset ι) (f : ι → Polynomial Fp)
+theorem uniformChallenge_szBadSet_iUnion_le {ι : Type*} (s : Finset ι) (f : ι → CPoly)
     (d : ℕ) (hdeg : ∀ i ∈ s, (f i).natDegree ≤ d) :
     uniformChallenge.toOuterMeasure {x : Fp | ∃ i ∈ s, x ∈ szBadSet (f i)}
       ≤ (s.card * d : ℕ) / (Fintype.card Fp : ℝ≥0∞) := by
@@ -70,29 +71,28 @@ theorem uniformChallenge_szBadSet_iUnion_le {ι : Type*} (s : Finset ι) (f : ι
 
 /-- Out-of-range fold-split witnesses vanish: the residues have degree below `n`, so coefficient
 `j ≥ n` folds a list of zeros. -/
-theorem foldSplitWitness_eq_zero_of_le {cs : List (Polynomial Fp)} {n j : ℕ} (hn : n ≠ 0)
+theorem foldSplitWitness_zero_of_le {cs : List (CPoly)} {n j : ℕ} (hn : n ≠ 0)
     (hj : n ≤ j) : foldSplitWitness cs n j = 0 := by
-  rw [foldSplitWitness_eq]
+  rw [foldSplitWitness]
   refine (foldPoly_eq_zero_iff _).mpr fun v hv => ?_
   obtain ⟨c, _, rfl⟩ := List.mem_map.mp hv
-  refine Polynomial.coeff_eq_zero_of_natDegree_lt (lt_of_lt_of_le ?_ hj)
-  rcases eq_or_ne (c %ₘ (X ^ n - 1)) 0 with h0 | h0
+  refine coeff_eq_zero_of_natDegree_lt (lt_of_lt_of_le ?_ hj)
+  have hmonic : ((X : CPoly) ^ n - 1).monic := monic_X_pow_sub_one hn
+  have hmonicP : (((X : CPoly) ^ n - 1).toPoly).Monic := (monic_toPoly_iff _).mp hmonic
+  have hXn : (((X : CPoly) ^ n - 1).toPoly).natDegree = n := by
+    simp only [toPoly_sub, toPoly_pow, X_toPoly, toPoly_one]
+    simpa using Polynomial.natDegree_X_pow_sub_C (n := n) (r := (1 : Fp))
+  rw [natDegree_toPoly, modByMonic_toPoly_eq_modByMonic _ _ hmonic]
+  have hlt := Polynomial.degree_modByMonic_lt c.toPoly hmonicP
+  rw [Polynomial.degree_eq_natDegree hmonicP.ne_zero, hXn] at hlt
+  rcases eq_or_ne (c.toPoly %ₘ ((X : CPoly) ^ n - 1).toPoly) 0 with h0 | h0
   · rw [h0, Polynomial.natDegree_zero]
     exact Nat.pos_of_ne_zero hn
-  · have hdeg := Polynomial.degree_modByMonic_lt c (monic_X_pow_sub_one hn)
-    rw [(Polynomial.natDegree_lt_iff_degree_lt h0)]
-    have hXn : ((X : Polynomial Fp) ^ n - 1).degree = (n : WithBot ℕ) := by
-      rw [Polynomial.degree_eq_natDegree (monic_X_pow_sub_one hn).ne_zero]
-      have h2 : ((X : Polynomial Fp) ^ n - 1).natDegree = n := by
-        have h1 : ((X : Polynomial Fp) ^ n - 1) = X ^ n - C 1 := by rw [map_one]
-        rw [h1, Polynomial.natDegree_X_pow_sub_C]
-      exact_mod_cast congrArg (Nat.cast : ℕ → WithBot ℕ) h2
-    rw [← hXn]
-    exact hdeg
+  · exact (Polynomial.natDegree_lt_iff_degree_lt h0).mpr hlt
 
 /-- **The `y` surface priced.** The fold split's bad event — some coefficient witness roots `y` —
 costs at most `n·length / p`. -/
-theorem goodY_failure_measure_le (cs : List (Polynomial Fp)) {n : ℕ} (hn : n ≠ 0) :
+theorem goodY_failure_measure_le (cs : List (CPoly)) {n : ℕ} (hn : n ≠ 0) :
     uniformChallenge.toOuterMeasure
         {y : Fp | ∃ j, y ∈ szBadSet (foldSplitWitness cs n j)}
       ≤ (n * cs.length : ℕ) / (Fintype.card Fp : ℝ≥0∞) := by
@@ -104,17 +104,17 @@ theorem goodY_failure_measure_le (cs : List (Polynomial Fp)) {n : ℕ} (hn : n �
     · rintro ⟨j, hj⟩
       rcases lt_or_ge j n with hlt | hge
       · exact ⟨j, hlt, hj⟩
-      · rw [foldSplitWitness_eq_zero_of_le hn hge] at hj
+      · rw [foldSplitWitness_zero_of_le hn hge] at hj
         simp [szBadSet] at hj
     · rintro ⟨j, _, hj⟩
       exact ⟨j, hj⟩
   rw [hset]
   refine le_trans (uniformChallenge_szBadSet_iUnion_le (range n) _ cs.length fun j _ => ?_) ?_
   · rcases eq_or_ne cs [] with rfl | hne
-    · simp [foldSplitWitness_eq, foldPoly, ComputablePolynomial.zero_eq]
-    · have hne' : cs.map (fun c => (c %ₘ (X ^ n - 1)).coeff j) ≠ [] := by simpa using hne
+    · simp [foldSplitWitness, foldPoly]
+    · have hne' : cs.map (fun c => (vanishingRemainder c n).coeff j) ≠ [] := by simpa using hne
       have hlt := natDegree_foldPoly_lt hne'
-      rw [foldSplitWitness_eq]
+      rw [foldSplitWitness]
       simpa using le_of_lt hlt
   · rw [Finset.card_range]
 
@@ -136,7 +136,7 @@ theorem perm_gamma_failure_measure_le (sp tp : Multiset (Fp × Fp)) (beta : Fp) 
 theorem natDegree_coeff_pairProdDiff_le (sp tp : Multiset (Fp × Fp)) (j : ℕ) :
     ((pairProdDiff sp tp).coeff j).natDegree ≤ max (Multiset.card sp) (Multiset.card tp) := by
   have key : ∀ (m : Multiset (Fp × Fp)) (j : ℕ),
-      (((m.map (fun q => X + C (encPair q))).prod).coeff j).natDegree ≤ Multiset.card m := by
+      (((m.map (fun q => Polynomial.X + Polynomial.C (encPair q))).prod).coeff j).natDegree ≤ Multiset.card m := by
     intro m
     induction m using Multiset.induction with
     | empty =>
@@ -146,7 +146,7 @@ theorem natDegree_coeff_pairProdDiff_le (sp tp : Multiset (Fp × Fp)) (j : ℕ) 
         · simp [Polynomial.coeff_one, hj]
     | cons q m ih =>
         intro j
-        rw [Multiset.map_cons, Multiset.prod_cons, add_mul, Polynomial.coeff_add]
+        rw [Multiset.map_cons, Multiset.prod_cons, _root_.add_mul, Polynomial.coeff_add]
         refine le_trans (Polynomial.natDegree_add_le _ _) (max_le ?_ ?_)
         · rcases j with _ | j'
           · simp [Polynomial.mul_coeff_zero, Polynomial.coeff_X_zero]
@@ -157,7 +157,7 @@ theorem natDegree_coeff_pairProdDiff_le (sp tp : Multiset (Fp × Fp)) (j : ℕ) 
           have hencp : (encPair q).natDegree ≤ 1 := by
             refine le_trans (Polynomial.natDegree_add_le _ _) (max_le (by simp) ?_)
             exact le_trans Polynomial.natDegree_mul_le (by simp)
-          calc (encPair q).natDegree + (((m.map (fun q => X + C (encPair q))).prod).coeff j).natDegree
+          calc (encPair q).natDegree + (((m.map (fun q => Polynomial.X + Polynomial.C (encPair q))).prod).coeff j).natDegree
               ≤ 1 + Multiset.card m := Nat.add_le_add hencp (ih j)
             _ = Multiset.card (q ::ₘ m) := by rw [Multiset.card_cons]; omega
   rw [pairProdDiff, Polynomial.coeff_sub]
@@ -169,13 +169,13 @@ theorem natDegree_coeff_pairProdDiff_le (sp tp : Multiset (Fp × Fp)) (j : ℕ) 
 theorem pairProdDiff_coeff_eq_zero_of_le (sp tp : Multiset (Fp × Fp)) {j : ℕ}
     (hj : max (Multiset.card sp) (Multiset.card tp) < j) : (pairProdDiff sp tp).coeff j = 0 := by
   have key : ∀ (m : Multiset (Fp × Fp)), Multiset.card m < j →
-      ((m.map (fun q => X + C (encPair q))).prod).coeff j = 0 := by
+      ((m.map (fun q => Polynomial.X + Polynomial.C (encPair q))).prod).coeff j = 0 := by
     intro m hm
     refine Polynomial.coeff_eq_zero_of_natDegree_lt (lt_of_le_of_lt ?_ hm)
     have hmap : ∀ m : Multiset (Fp × Fp),
-        m.map (fun q => X + C (encPair q)) = (m.map encPair).map (fun u => X + C u) := by
+        m.map (fun q => Polynomial.X + Polynomial.C (encPair q)) = (m.map encPair).map (fun u => Polynomial.X + Polynomial.C u) := by
       intro m; simp [Multiset.map_map]
-    rw [hmap, natDegree_prod_X_add_u]
+    rw [hmap, Polynomial.natDegree_prod_X_add_u]
     simp
   rw [pairProdDiff, Polynomial.coeff_sub,
     key sp (lt_of_le_of_lt (le_max_left _ _) hj), key tp (lt_of_le_of_lt (le_max_right _ _) hj),
@@ -185,25 +185,29 @@ theorem pairProdDiff_coeff_eq_zero_of_le (sp tp : Multiset (Fp × Fp)) {j : ℕ}
 `β` — at most `(|cells| + 1) · |cells| / p`. -/
 theorem perm_beta_failure_measure_le (sp tp : Multiset (Fp × Fp)) :
     uniformChallenge.toOuterMeasure
-        {b : Fp | ∃ j, b ∈ szBadSet ((pairProdDiff sp tp).coeff j)}
+        {b : Fp | ∃ j, b ∈ szBadSet (pairProdDiffCoeff sp tp j)}
       ≤ ((max (Multiset.card sp) (Multiset.card tp) + 1)
           * max (Multiset.card sp) (Multiset.card tp) : ℕ) / (Fintype.card Fp : ℝ≥0∞) := by
   set d := max (Multiset.card sp) (Multiset.card tp) with hd
-  have hset : {b : Fp | ∃ j, b ∈ szBadSet ((pairProdDiff sp tp).coeff j)}
-      = {b : Fp | ∃ j ∈ range (d + 1), b ∈ szBadSet ((pairProdDiff sp tp).coeff j)} := by
+  have hset : {b : Fp | ∃ j, b ∈ szBadSet (pairProdDiffCoeff sp tp j)}
+      = {b : Fp | ∃ j ∈ range (d + 1), b ∈ szBadSet (pairProdDiffCoeff sp tp j)} := by
     ext b
     simp only [Set.mem_setOf_eq, mem_range]
     constructor
     · rintro ⟨j, hj⟩
       rcases lt_or_ge j (d + 1) with hlt | hge
       · exact ⟨j, hlt, hj⟩
-      · rw [pairProdDiff_coeff_eq_zero_of_le sp tp (by omega)] at hj
+      · rw [show pairProdDiffCoeff sp tp j = 0 from by
+              rw [← toPoly_eq_zero_iff, toPoly_pairProdDiffCoeff]
+              exact pairProdDiff_coeff_eq_zero_of_le sp tp (by omega)] at hj
         simp [szBadSet] at hj
     · rintro ⟨j, _, hj⟩
       exact ⟨j, hj⟩
   rw [hset]
   refine le_trans (uniformChallenge_szBadSet_iUnion_le (range (d + 1)) _ d
-    fun j _ => natDegree_coeff_pairProdDiff_le sp tp j) ?_
+    fun j _ => by
+      rw [natDegree_toPoly, toPoly_pairProdDiffCoeff]
+      exact natDegree_coeff_pairProdDiff_le sp tp j) ?_
   simp
 
 /-- The lookup product difference has `γ`-degree bounded by the larger table column. The two input
@@ -216,11 +220,11 @@ theorem natDegree_lookupProdDiff_le (a s inp tbl : Multiset Fp) :
   · refine le_trans (Polynomial.natDegree_C_mul_le _ _) ?_
     exact le_trans (by
       simpa [Multiset.map_map] using
-        (natDegree_prod_X_add_u (s.map C)).le) (le_max_left _ _)
+        (natDegree_prod_X_add_u (s.map Polynomial.C)).le) (le_max_left _ _)
   · refine le_trans (Polynomial.natDegree_C_mul_le _ _) ?_
     exact le_trans (by
       simpa [Multiset.map_map] using
-        (natDegree_prod_X_add_u (tbl.map C)).le) (le_max_right _ _)
+        (natDegree_prod_X_add_u (tbl.map Polynomial.C)).le) (le_max_right _ _)
 
 /-- Out-of-range `γ` coefficients of the lookup product difference vanish. -/
 theorem lookupProdDiff_coeff_eq_zero_of_le (a s inp tbl : Multiset Fp) {j : ℕ}
@@ -323,7 +327,7 @@ with the table-column zero factors used to eliminate the residual running-produc
 noncomputable def resolverLookupGammaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) : Finset Fp :=
   szBadSet ((resolverLookupProductDifference vk ch poly p l u).map
     (evalRingHom ch.beta)) ∪
@@ -336,7 +340,7 @@ coefficients because the `γ` degree is at most `u + 1`. -/
 noncomputable def resolverLookupBetaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) : Finset Fp :=
   ((Finset.range (u + 2)).biUnion fun j =>
     szBadSet ((resolverLookupProductDifference vk ch poly p l u).coeff j)) ∪
@@ -348,7 +352,7 @@ resolver-backed lookup endpoint. -/
 theorem ResolverLookupGoodChallenges.ofBadSets
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ)
     (hgamma : ch.gamma ∉ resolverLookupGammaBadSet vk ch poly p l u)
     (hbeta : ch.beta ∉ resolverLookupBetaBadSet vk ch poly p l u) :
@@ -378,7 +382,7 @@ for multiset recovery and one for the table-column zero factor. -/
 theorem resolverLookupGammaBadSet_card_le
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) :
     (resolverLookupGammaBadSet vk ch poly p l u).card ≤ 2 * (u + 1) := by
   have hroot :
@@ -424,7 +428,7 @@ per participating row over the scalar-field size. -/
 theorem uniformChallenge_resolverLookupGammaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) :
     uniformChallenge.toOuterMeasure
         (resolverLookupGammaBadSet vk ch poly p l u)
@@ -438,7 +442,7 @@ theorem uniformChallenge_resolverLookupGammaBadSet
 theorem resolverLookupBetaBadSet_card_le
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) :
     (resolverLookupBetaBadSet vk ch poly p l u).card ≤
       (u + 2) * (u + 1) + (u + 1) := by
@@ -489,7 +493,7 @@ corresponding root-count probability. -/
 theorem uniformChallenge_resolverLookupBetaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) :
     uniformChallenge.toOuterMeasure
         (resolverLookupBetaBadSet vk ch poly p l u)
@@ -504,7 +508,7 @@ proof and lookup argument, so this is the event the transcript squeeze must avoi
 noncomputable def allResolverLookupGammaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp) (u : ℕ) : Finset Fp :=
+    (poly : CommitmentId → CPoly) (u : ℕ) : Finset Fp :=
   (Finset.univ : Finset (Fin shape.numProofs × Fin shape.numLookups)).biUnion fun q =>
     resolverLookupGammaBadSet vk ch poly q.1 q.2 u
 
@@ -512,7 +516,7 @@ noncomputable def allResolverLookupGammaBadSet
 noncomputable def allResolverLookupBetaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp) (u : ℕ) : Finset Fp :=
+    (poly : CommitmentId → CPoly) (u : ℕ) : Finset Fp :=
   (Finset.univ : Finset (Fin shape.numProofs × Fin shape.numLookups)).biUnion fun q =>
     resolverLookupBetaBadSet vk ch poly q.1 q.2 u
 
@@ -521,7 +525,7 @@ and every deployed lookup argument. -/
 theorem resolverLookupGoodChallenges_of_not_mem
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp) (u : ℕ)
+    (poly : CommitmentId → CPoly) (u : ℕ)
     (hgamma : ch.gamma ∉ allResolverLookupGammaBadSet vk ch poly u)
     (hbeta : ch.beta ∉ allResolverLookupBetaBadSet vk ch poly u) :
     ∀ (p : Fin shape.numProofs) (l : Fin shape.numLookups),
@@ -540,7 +544,7 @@ adapter, the specification-level root sets appear only in erased proofs. -/
 def resolverLookupGoodChallenges?
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) :
     Option (PLift (ResolverLookupGoodChallenges vk ch poly p l u)) := by
   let gammaDifference := resolverLookupProductDifferenceGamma vk ch poly p l u
@@ -590,7 +594,7 @@ def resolverLookupGoodChallenges?
 def resolverLookupBundleExclusions?
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp) (u : ℕ) :
+    (poly : CommitmentId → CPoly) (u : ℕ) :
     Option (PLift ((ch.gamma ∉ allResolverLookupGammaBadSet vk ch poly u) ∧
       ch.beta ∉ allResolverLookupBetaBadSet vk ch poly u)) :=
   match finForallOption (fun p : Fin shape.numProofs =>
@@ -614,7 +618,7 @@ def resolverLookupBundleExclusions?
 theorem resolverLookupGoodChallenges?_isSome_of
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ)
     (hgood : ResolverLookupGoodChallenges vk ch poly p l u) :
     (resolverLookupGoodChallenges? vk ch poly p l u).isSome := by
@@ -655,7 +659,7 @@ theorem resolverLookupGoodChallenges?_isSome_of
 theorem resolverLookupBundleExclusions?_isSome_of
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp) (u : ℕ)
+    (poly : CommitmentId → CPoly) (u : ℕ)
     (hgamma : ch.gamma ∉ allResolverLookupGammaBadSet vk ch poly u)
     (hbeta : ch.beta ∉ allResolverLookupBetaBadSet vk ch poly u) :
     (resolverLookupBundleExclusions? vk ch poly u).isSome := by
@@ -680,7 +684,7 @@ two-values-per-row budget. -/
 theorem uniformChallenge_allResolverLookupGammaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp) (u : ℕ) :
+    (poly : CommitmentId → CPoly) (u : ℕ) :
     uniformChallenge.toOuterMeasure
         (allResolverLookupGammaBadSet vk ch poly u)
       ≤ (shape.numProofs * shape.numLookups * (2 * (u + 1)) : ℕ) /
@@ -704,7 +708,7 @@ coefficient-and-zero-factor budget for one argument. -/
 theorem uniformChallenge_allResolverLookupBetaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp) (u : ℕ) :
+    (poly : CommitmentId → CPoly) (u : ℕ) :
     uniformChallenge.toOuterMeasure
         (allResolverLookupBetaBadSet vk ch poly u)
       ≤ (shape.numProofs * shape.numLookups *
@@ -856,7 +860,7 @@ coefficient root set for each potentially nonzero coefficient of `pairProdDiff`.
 noncomputable def resolverPermutationBetaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (m : ℕ) : Finset Fp :=
   (Finset.range (Fintype.card (ResolverPermutationCell vk poly p m) + 1)).biUnion fun j =>
     szBadSet ((pairProdDiff
@@ -874,7 +878,7 @@ the resolver permutation endpoint. -/
 theorem ResolverPermutationGoodChallenges.ofBadSets
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (m : ℕ)
     (hgamma : ch.gamma ∉ resolverPermutationGammaBadSet vk ch poly p m)
     (hbeta : ch.beta ∉ resolverPermutationBetaBadSet vk poly p m) :
@@ -922,7 +926,7 @@ theorem ResolverPermutationGoodChallenges.ofBadSets
 noncomputable def allResolverPermutationGammaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp) (m : ℕ) : Finset Fp :=
+    (poly : CommitmentId → CPoly) (m : ℕ) : Finset Fp :=
   (Finset.univ : Finset (Fin shape.numProofs)).biUnion fun p =>
     resolverPermutationGammaBadSet vk ch poly p m
 
@@ -930,7 +934,7 @@ noncomputable def allResolverPermutationGammaBadSet
 noncomputable def allResolverPermutationBetaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
-    (poly : CommitmentId → Polynomial Fp) (m : ℕ) : Finset Fp :=
+    (poly : CommitmentId → CPoly) (m : ℕ) : Finset Fp :=
   (Finset.univ : Finset (Fin shape.numProofs)).biUnion fun p =>
     resolverPermutationBetaBadSet vk poly p m
 
@@ -939,7 +943,7 @@ This is the verifier-native package consumed by circuit integrations. -/
 structure ResolverPermutationChallengeExclusions
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp) (m : ℕ) : Prop where
+    (poly : CommitmentId → CPoly) (m : ℕ) : Prop where
   gamma :
     ch.gamma ∉ allResolverPermutationGammaBadSet vk ch poly m
   beta :
@@ -950,7 +954,7 @@ proof. -/
 theorem resolverPermutationGoodChallenges_of_not_mem
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp) (m : ℕ)
+    (poly : CommitmentId → CPoly) (m : ℕ)
     (hgamma : ch.gamma ∉ allResolverPermutationGammaBadSet vk ch poly m)
     (hbeta : ch.beta ∉ allResolverPermutationBetaBadSet vk poly m) :
     ∀ p : Fin shape.numProofs,
@@ -969,7 +973,7 @@ permutation semantic endpoint. -/
 theorem ResolverPermutationChallengeExclusions.good
     {shape : Shape} {G : Type*}
     {vk : VerifyingKey shape Fp G} {ch : Challenges shape.k Fp}
-    {poly : CommitmentId → Polynomial Fp} {m : ℕ}
+    {poly : CommitmentId → CPoly} {m : ℕ}
     (exclusions :
       ResolverPermutationChallengeExclusions vk ch poly m) :
     ∀ p : Fin shape.numProofs,
@@ -982,7 +986,7 @@ checks.  Root sets occur only in the erased certificate; no root enumeration is 
 def resolverPermutationGoodChallenges?
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (m : ℕ) :
     Option (PLift (ResolverPermutationGoodChallenges vk ch poly p m)) := by
   let source :=
@@ -1047,7 +1051,7 @@ def resolverPermutationGoodChallenges?
 def resolverPermutationChallengeExclusions?
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp) (m : ℕ) :
+    (poly : CommitmentId → CPoly) (m : ℕ) :
     Option (PLift (ResolverPermutationChallengeExclusions vk ch poly m)) :=
   match finForallOption (fun p : Fin shape.numProofs =>
       resolverPermutationGoodChallenges? vk ch poly p m) with
@@ -1067,7 +1071,7 @@ def resolverPermutationChallengeExclusions?
 theorem resolverPermutationGoodChallenges?_isSome_of
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (m : ℕ)
     (hgood : ResolverPermutationGoodChallenges vk ch poly p m) :
     (resolverPermutationGoodChallenges? vk ch poly p m).isSome := by
@@ -1125,7 +1129,7 @@ theorem resolverPermutationGoodChallenges?_isSome_of
 theorem resolverPermutationChallengeExclusions?_isSome_of
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp) (m : ℕ)
+    (poly : CommitmentId → CPoly) (m : ℕ)
     (hexclusions : ResolverPermutationChallengeExclusions vk ch poly m) :
     (resolverPermutationChallengeExclusions? vk ch poly m).isSome := by
   have hall : ∀ p : Fin shape.numProofs,
@@ -1144,7 +1148,7 @@ permutation cell: one for multiset recovery and one for source-factor nonvanishi
 theorem resolverPermutationGammaBadSet_card_le
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (m : ℕ) :
     (resolverPermutationGammaBadSet vk ch poly p m).card ≤
       2 * Fintype.card (ResolverPermutationCell vk poly p m) := by
@@ -1194,7 +1198,7 @@ of active permutation cells. -/
 theorem resolverPermutationBetaBadSet_card_le
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (m : ℕ) :
     (resolverPermutationBetaBadSet vk poly p m).card ≤
       (Fintype.card (ResolverPermutationCell vk poly p m) + 1) *
@@ -1242,7 +1246,7 @@ budgets. -/
 theorem uniformChallenge_allResolverPermutationGammaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp) (m : ℕ) :
+    (poly : CommitmentId → CPoly) (m : ℕ) :
     uniformChallenge.toOuterMeasure
         (allResolverPermutationGammaBadSet vk ch poly m)
       ≤ (∑ p : Fin shape.numProofs,
@@ -1269,7 +1273,7 @@ budgets. -/
 theorem uniformChallenge_allResolverPermutationBetaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
-    (poly : CommitmentId → Polynomial Fp) (m : ℕ) :
+    (poly : CommitmentId → CPoly) (m : ℕ) :
     uniformChallenge.toOuterMeasure
         (allResolverPermutationBetaBadSet vk poly m)
       ≤ (∑ p : Fin shape.numProofs,

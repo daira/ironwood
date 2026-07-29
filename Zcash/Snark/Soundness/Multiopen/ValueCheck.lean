@@ -17,7 +17,7 @@ namespace Zcash.Snark
 open CompPoly CompPoly.CPolynomial
 
 /-- The vanishing polynomial of a finite point set, `∏_{p ∈ pts} (X − p)`. -/
-noncomputable def vanishingProd (pts : Finset Fp) : CPoly :=
+def vanishingProd (pts : Finset Fp) : CPoly :=
   ∏ p ∈ pts, (X - C p)
 
 @[simp] theorem vanishingProd_eval (pts : Finset Fp) (x : Fp) :
@@ -38,7 +38,7 @@ theorem vanishingProd_eval_ne {pts : Finset Fp} {p : Fp} (hp : p ∉ pts) :
   exact sub_ne_zero.mpr (by rintro rfl; exact hp hq)
 
 /-- The complementary product `Wⱼ = ∏_{p ∈ all \ pts} (X − p)`. -/
-noncomputable def coProd (all pts : Finset Fp) : CPoly :=
+def coProd (all pts : Finset Fp) : CPoly :=
   vanishingProd (all \ pts)
 
 /-- The full vanishing polynomial splits as `D = Wⱼ · ∏(pts j)` when `pts j ⊆ all`. -/

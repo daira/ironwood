@@ -17,7 +17,8 @@ from the final proof value alone.
 
 namespace Zcash.Snark
 
-open Classical Polynomial
+open Classical
+open CompPoly CompPoly.CPolynomial
 open scoped ENNReal
 
 local instance vestaInhabitedStraightLinePinnedRoots : Inhabited VestaG := ⟨0⟩
@@ -64,7 +65,7 @@ structure StraightLineIpaOnlineTrace (family : ComputedAlgebraicFSFamily shape) 
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) -> Fin shape.k ->
       OracleComp
         (BTranscript Fp VestaG
-          (preIpaLen shape family.init.length 10 + 3 * shape.k)) Fp (Polynomial Fp)
+          (preIpaLen shape family.init.length 10 + 3 * shape.k)) Fp (CPoly)
   agrees : forall (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) (j : Fin shape.k)
       (O : BTranscript Fp VestaG
         (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp),

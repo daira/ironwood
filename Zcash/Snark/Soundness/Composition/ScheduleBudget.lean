@@ -59,11 +59,13 @@ theorem natDegree_rotatedFeed_le {n : ℕ} (omega : Fp) (layout : List (ℕ × �
 /-- The Lagrange basis polynomial has degree below the domain size. -/
 theorem natDegree_lagrangeBasisPoly_le (omega : Fp) (n : ℕ) (i : ℤ) :
     (lagrangeBasisPoly omega n i).natDegree ≤ n - 1 := by
-  rw [lagrangeBasisPoly_eq]
-  refine le_trans (natDegree_C_mul_le _ _) (natDegree_sum_le_of_forall_le _ _ ?_)
+  rw [lagrangeBasisPoly, natDegree_toPoly, toPoly_mul, C_toPoly, toPoly_sum]
+  simp only [toPoly_mul, C_toPoly, toPoly_pow, X_toPoly]
+  refine le_trans (Polynomial.natDegree_C_mul_le _ _)
+    (Polynomial.natDegree_sum_le_of_forall_le _ _ ?_)
   intro k hk
-  refine le_trans (natDegree_C_mul_le _ _) ?_
-  rw [natDegree_X_pow]
+  refine le_trans (Polynomial.natDegree_C_mul_le _ _) ?_
+  rw [Polynomial.natDegree_X_pow]
   have := Finset.mem_range.mp hk
   omega
 

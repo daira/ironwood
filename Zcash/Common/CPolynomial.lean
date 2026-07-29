@@ -129,6 +129,39 @@ theorem toPoly_injective [Semiring R] [BEq R] [LawfulBEq R] {p q : CPolynomial R
     (h : p.toPoly = q.toPoly) : p = q :=
   toPolyLinearEquiv.injective h
 
+/-! ## Coefficients -/
+
+theorem coeff_finsetSum {ι : Type*} [DecidableEq ι] [CommSemiring R] [BEq R] [LawfulBEq R]
+    [Nontrivial R] (s : Finset ι) (f : ι → CPolynomial R) (n : ℕ) :
+    (∑ i ∈ s, f i).coeff n = ∑ i ∈ s, (f i).coeff n := by
+  classical
+  induction s using Finset.induction_on with
+  | empty => rw [Finset.sum_empty, Finset.sum_empty, coeff_zero]
+  | insert a s ha ih => rw [Finset.sum_insert ha, Finset.sum_insert ha, coeff_add, ih]
+
+theorem coeff_eq_zero_of_natDegree_lt [Semiring R] [BEq R] [LawfulBEq R] {p : CPolynomial R}
+    {n : ℕ} (h : p.natDegree < n) : p.coeff n = 0 := by
+  rw [coeff_toPoly]
+  exact Polynomial.coeff_eq_zero_of_natDegree_lt (by rwa [← natDegree_toPoly])
+
+theorem coeff_X_pow [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (k n : ℕ) :
+    ((X : CPolynomial R) ^ k).coeff n = if n = k then 1 else 0 := by
+  rw [coeff_toPoly, toPoly_pow, X_toPoly, Polynomial.coeff_X_pow]
+
+theorem natDegree_sum_le_of_forall_le {ι : Type*} [DecidableEq ι] [CommSemiring R] [BEq R]
+    [LawfulBEq R] [Nontrivial R] (s : Finset ι) (f : ι → CPolynomial R) {n : ℕ}
+    (h : ∀ i ∈ s, (f i).natDegree ≤ n) : (∑ i ∈ s, f i).natDegree ≤ n := by
+  rw [natDegree_toPoly, toPoly_sum]
+  refine Polynomial.natDegree_sum_le_of_forall_le _ _ fun i hi => ?_
+  rw [← natDegree_toPoly]
+  exact h i hi
+
+theorem natDegree_le_iff_coeff_eq_zero [Semiring R] [BEq R] [LawfulBEq R]
+    {p : CPolynomial R} {n : ℕ} :
+    p.natDegree ≤ n ↔ ∀ m : ℕ, n < m → p.coeff m = 0 := by
+  rw [natDegree_toPoly, Polynomial.natDegree_le_iff_coeff_eq_zero]
+  exact forall_congr' fun m => forall_congr' fun _ => by rw [coeff_toPoly]
+
 /-! ## Degree arithmetic -/
 
 theorem natDegree_sub_le [Ring R] [BEq R] [LawfulBEq R] (p q : CPolynomial R) :
