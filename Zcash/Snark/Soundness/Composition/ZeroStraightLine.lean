@@ -103,7 +103,7 @@ theorem zeroConstraintXBadSet_empty (hproofs : shape.numProofs = 0)
         3 * shape.k) → Fp) :
     deployedConstraintXBadSet (zeroDeployedRootFamily vkS hfixed hperm) basis O = ∅ := by
   ext x
-  simp only [deployedConstraintXBadSet, Set.mem_setOf_eq, Set.mem_empty_iff_false, iff_false]
+  simp only [deployedConstraintXBadSet, Set.mem_empty_iff_false, iff_false]
   intro hx
   rw [zeroConstraintDifference_eq_zero vkS hfixed hperm hproofs basis O] at hx
   exact (mem_szBadSet.mp hx).1 rfl

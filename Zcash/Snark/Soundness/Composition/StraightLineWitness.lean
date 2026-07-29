@@ -50,7 +50,7 @@ theorem deployedConstraintXBadSet_witness
         3 * witnessShape.k) → Fp) :
     deployedConstraintXBadSet witnessDeployedRootFamily basis O = ∅ := by
   ext x
-  simp only [deployedConstraintXBadSet, Set.mem_setOf_eq, Set.mem_empty_iff_false, iff_false]
+  simp only [deployedConstraintXBadSet, Set.mem_empty_iff_false, iff_false]
   intro hx
   rw [deployedConstraintDifferencePreX_witness basis O] at hx
   exact (mem_szBadSet.mp hx).1 rfl

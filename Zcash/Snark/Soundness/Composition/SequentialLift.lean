@@ -287,7 +287,7 @@ theorem constraintXStage_agrees (sp : SequentialPreXProver family)
     (sp.constraintXStage basis).run O = deployedConstraintXBadSet family basis O := by
   rw [constraintXStage, OracleComp.run_bind, OracleComp.run_pure]
   ext x
-  simp only [Finset.mem_coe, deployedConstraintXBadSet, Set.mem_setOf_eq]
+  simp only [Finset.mem_coe, deployedConstraintXBadSet]
   rw [sp.view_difference_eq basis O]
 
 /-- The lifted stage's queries are the prover's own pre-`x` queries, so the `x` prefix is
