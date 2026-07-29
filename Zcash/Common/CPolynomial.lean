@@ -71,6 +71,18 @@ representation becomes a goal about `Polynomial R` in one `simp` call. -/
 attribute [simp] toPoly_add toPoly_mul toPoly_sub toPoly_neg toPoly_one toPoly_zero
   C_toPoly X_toPoly
 
+/-- `toPoly` of a list product.  CompPoly has the `Finset` versions (`toPoly_prod`, `toPoly_sum`);
+the row-polynomial constructions build their products over `List.ofFn`, where a `Finset` reindexing
+would only be noise. -/
+theorem toPoly_list_prod [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    (l : List (CPolynomial R)) : l.prod.toPoly = (l.map toPoly).prod :=
+  map_list_prod (ringEquiv : CPolynomial R ≃+* Polynomial R) l
+
+/-- `toPoly` of a list sum. -/
+theorem toPoly_list_sum [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    (l : List (CPolynomial R)) : l.sum.toPoly = (l.map toPoly).sum :=
+  map_list_sum (ringEquiv : CPolynomial R ≃+* Polynomial R) l
+
 /-- `toPoly` is injective.  CompPoly states this as `toPolyLinearEquiv.injective`, whose hypothesis
 is phrased through the bundled coercion; this restates it directly on `toPoly` so callers do not
 need a `change` at every use. -/
