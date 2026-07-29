@@ -238,14 +238,14 @@ theorem orchard_verifier_deployed_opening_of_forked [DecidableEq G] [Inhabited G
 challenge avoids the Schwartz–Zippel bad set.
 -/
 
-open Polynomial in
+open CompPoly CompPoly.CPolynomial in
 /-- Add the gate-check conclusion to `orchard_verifier_deployed_opening_of_forked`. -/
 theorem orchard_verifier_deployed_constraint_of_forked [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp}
-    (fixedCols : ℕ → Polynomial Fp)
-    (decodeAdvice decodeInstance : (Fin (2 ^ urs.k) → Fp) → (ℕ → Polynomial Fp))
-    (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp)
+    (fixedCols : ℕ → CPoly)
+    (decodeAdvice decodeInstance : (Fin (2 ^ urs.k) → Fp) → (ℕ → CPoly))
+    (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : CPoly) (deg : ℕ) (x : Fp)
     (fs : ForkedTranscript urs hk vk instanceCommitment ps ch b z blind)
     (hclean : IpaAcceptV urs.g b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
       (projTree fs.tree))
@@ -255,8 +255,8 @@ theorem orchard_verifier_deployed_constraint_of_forked [DecidableEq G] [Inhabite
     (hgood : ∀ a, IpaRelation urs fs.openedCommitment b
       (multiopenValue vk instanceCommitment ps ch) a →
       combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates ≠ hpoly * (X ^ deg - 1) →
-      (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates
-        - hpoly * (X ^ deg - 1)).eval x ≠ 0)
+      eval x (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates
+        - hpoly * (X ^ deg - 1)) ≠ 0)
     {S : Prop}
     (hencodes : ∀ a, SnarkRelation urs fs.openedCommitment b (multiopenValue vk instanceCommitment ps ch)
       (circuitSatViaGates fixedCols decodeAdvice decodeInstance y gates hpoly deg) a → S) :

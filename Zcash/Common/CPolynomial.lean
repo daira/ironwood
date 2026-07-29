@@ -62,6 +62,14 @@ theorem eval_pow [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
   | zero => simp [eval_one]
   | succ n ih => rw [pow_succ, pow_succ, eval_mul, ih]
 
+theorem eval_finsetSum {ι : Type*} [DecidableEq ι] [CommSemiring R] [BEq R] [LawfulBEq R]
+    [Nontrivial R] (s : Finset ι) (f : ι → CPolynomial R) (x : R) :
+    eval x (∑ i ∈ s, f i) = ∑ i ∈ s, eval x (f i) := by
+  classical
+  induction s using Finset.induction_on with
+  | empty => simp
+  | insert a s ha ih => rw [Finset.sum_insert ha, Finset.sum_insert ha, eval_add, ih]
+
 attribute [simp] eval_C eval_mul eval_one eval_sub
 
 /-! ## Transport to the Mathlib image

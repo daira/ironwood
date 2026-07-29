@@ -14,7 +14,8 @@ The underlying row polynomials and their algebra are verifier-native and live in
 
 namespace Zcash.Snark
 
-open Halo2 Polynomial
+open Halo2
+open CompPoly CompPoly.CPolynomial
 
 set_option maxHeartbeats 20000
 
@@ -33,7 +34,7 @@ theorem zpow_eq_pow_natMod
       rw [Int.emod_add_mul_ediv]
     _ = omega ^ (row % (n : ℤ)) := by
       rw [zpow_add₀ homega, zpow_mul, show omega ^ (n : ℤ) = 1 by
-        simpa using hroot, one_zpow, mul_one]
+        simpa using hroot, one_zpow, _root_.mul_one]
     _ = omega ^ row.natMod n := by
       rw [← zpow_natCast]
       congr 1
@@ -45,13 +46,13 @@ theorem zpow_eq_pow_natMod
 /-- Read fixed, advice, and instance column polynomials on the multiplicative `ω` row domain. -/
 def polynomialEnvironment
     (omega : Fp) (usableRows : ℕ)
-    (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp) :
+    (fixedCols adviceCols instanceCols : ℕ → CPoly) :
     Environment Fp where
   get column row :=
     match column.kind with
-    | .fixed => (fixedCols column.index).eval (omega ^ row)
-    | .advice => (adviceCols column.index).eval (omega ^ row)
-    | .instance => (instanceCols column.index).eval (omega ^ row)
+    | .fixed => eval (omega ^ row) (fixedCols column.index)
+    | .advice => eval (omega ^ row) (adviceCols column.index)
+    | .instance => eval (omega ^ row) (instanceCols column.index)
   usableRows := usableRows
 
 /--
@@ -61,84 +62,84 @@ Fixed columns and usable rows intentionally do not appear here: the
 `TopLevelCircuit` compiler supplies them when constructing its environment.
 -/
 def resolverAssignment
-    (omega : Fp) (poly : CommitmentId → Polynomial Fp)
+    (omega : Fp) (poly : CommitmentId → CPoly)
     (proofIndex : ℕ) : ProofAssignment Fp where
   advice := fun column row =>
-    (poly (.adviceCol proofIndex column.index)).eval (omega ^ row)
+    eval (omega ^ row) (poly (.adviceCol proofIndex column.index))
   inst := fun column row =>
-    (poly (.instanceCol proofIndex column.index)).eval (omega ^ row)
+    eval (omega ^ row) (poly (.instanceCol proofIndex column.index))
 
 @[simp] theorem resolverAssignment_advice
-    (omega : Fp) (poly : CommitmentId → Polynomial Fp)
+    (omega : Fp) (poly : CommitmentId → CPoly)
     (proofIndex : ℕ) (column : Column .advice) (row : ℤ) :
     (resolverAssignment omega poly proofIndex).advice column row =
-      (poly (.adviceCol proofIndex column.index)).eval (omega ^ row) :=
+      eval (omega ^ row) (poly (.adviceCol proofIndex column.index)) :=
   rfl
 
 @[simp] theorem resolverAssignment_instance
-    (omega : Fp) (poly : CommitmentId → Polynomial Fp)
+    (omega : Fp) (poly : CommitmentId → CPoly)
     (proofIndex : ℕ) (column : Column .instance) (row : ℤ) :
     (resolverAssignment omega poly proofIndex).inst column row =
-      (poly (.instanceCol proofIndex column.index)).eval (omega ^ row) :=
+      eval (omega ^ row) (poly (.instanceCol proofIndex column.index)) :=
   rfl
 
 @[simp] theorem polynomialEnvironment_usableRows
     (omega : Fp) (usableRows : ℕ)
-    (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp) :
+    (fixedCols adviceCols instanceCols : ℕ → CPoly) :
     (polynomialEnvironment omega usableRows fixedCols adviceCols instanceCols).usableRows =
       usableRows := rfl
 
 @[simp] theorem polynomialEnvironment_fixed
     (omega : Fp) (usableRows : ℕ)
-    (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
+    (fixedCols adviceCols instanceCols : ℕ → CPoly)
     (column : Column .fixed) (row : ℤ) :
     (polynomialEnvironment omega usableRows fixedCols adviceCols instanceCols).fixed column row =
-      (fixedCols column.index).eval (omega ^ row) := rfl
+      eval (omega ^ row) (fixedCols column.index) := rfl
 
 @[simp] theorem polynomialEnvironment_advice
     (omega : Fp) (usableRows : ℕ)
-    (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
+    (fixedCols adviceCols instanceCols : ℕ → CPoly)
     (column : Column .advice) (row : ℤ) :
     (polynomialEnvironment omega usableRows fixedCols adviceCols instanceCols).advice column row =
-      (adviceCols column.index).eval (omega ^ row) := rfl
+      eval (omega ^ row) (adviceCols column.index) := rfl
 
 @[simp] theorem polynomialEnvironment_instance
     (omega : Fp) (usableRows : ℕ)
-    (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
+    (fixedCols adviceCols instanceCols : ℕ → CPoly)
     (column : Column .instance) (row : ℤ) :
     (polynomialEnvironment omega usableRows fixedCols adviceCols instanceCols).inst column row =
-      (instanceCols column.index).eval (omega ^ row) := rfl
+      eval (omega ^ row) (instanceCols column.index) := rfl
 
 /-- Natural row reads agree with the usual evaluation-domain spelling `ω ^ row`. -/
 theorem polynomialEnvironment_fixed_nat
     (omega : Fp) (usableRows : ℕ)
-    (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
+    (fixedCols adviceCols instanceCols : ℕ → CPoly)
     (column : Column .fixed) (row : ℕ) :
     (polynomialEnvironment omega usableRows fixedCols adviceCols instanceCols).fixed
         column (row : ℤ) =
-      (fixedCols column.index).eval (omega ^ row) := by simp
+      eval (omega ^ row) (fixedCols column.index) := by simp
 
 theorem polynomialEnvironment_advice_nat
     (omega : Fp) (usableRows : ℕ)
-    (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
+    (fixedCols adviceCols instanceCols : ℕ → CPoly)
     (column : Column .advice) (row : ℕ) :
     (polynomialEnvironment omega usableRows fixedCols adviceCols instanceCols).advice
         column (row : ℤ) =
-      (adviceCols column.index).eval (omega ^ row) := by simp
+      eval (omega ^ row) (adviceCols column.index) := by simp
 
 theorem polynomialEnvironment_instance_nat
     (omega : Fp) (usableRows : ℕ)
-    (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
+    (fixedCols adviceCols instanceCols : ℕ → CPoly)
     (column : Column .instance) (row : ℕ) :
     (polynomialEnvironment omega usableRows fixedCols adviceCols instanceCols).inst
         column (row : ℤ) =
-      (instanceCols column.index).eval (omega ^ row) := by simp
+      eval (omega ^ row) (instanceCols column.index) := by simp
 
 /-- A rotated advice query is evaluation of the standard rotated column polynomial at the base
 row point. -/
 theorem polynomialEnvironment_query_advice
     (omega : Fp) (usableRows : ℕ)
-    (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
+    (fixedCols adviceCols instanceCols : ℕ → CPoly)
     (homega : omega ≠ 0)
     (selectors : ℕ → Fp) (column : Column .advice) (row rotation : ℤ) :
     Query.eval (polynomialEnvironment omega usableRows fixedCols adviceCols instanceCols)
@@ -146,12 +147,12 @@ theorem polynomialEnvironment_query_advice
       ((adviceCols column.index).comp (C (omega ^ rotation) * X)).eval (omega ^ row) := by
   rw [Query.eval, polynomialEnvironment_advice, eval_comp_rotate]
   congr 1
-  rw [zpow_add₀ homega, mul_comm]
+  rw [zpow_add₀ homega, _root_.mul_comm]
 
 /-- The fixed-column rotation adapter. -/
 theorem polynomialEnvironment_query_fixed
     (omega : Fp) (usableRows : ℕ)
-    (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
+    (fixedCols adviceCols instanceCols : ℕ → CPoly)
     (homega : omega ≠ 0)
     (selectors : ℕ → Fp) (column : Column .fixed) (row rotation : ℤ) :
     Query.eval (polynomialEnvironment omega usableRows fixedCols adviceCols instanceCols)
@@ -159,12 +160,12 @@ theorem polynomialEnvironment_query_fixed
       ((fixedCols column.index).comp (C (omega ^ rotation) * X)).eval (omega ^ row) := by
   rw [Query.eval, polynomialEnvironment_fixed, eval_comp_rotate]
   congr 1
-  rw [zpow_add₀ homega, mul_comm]
+  rw [zpow_add₀ homega, _root_.mul_comm]
 
 /-- The instance-column rotation adapter. -/
 theorem polynomialEnvironment_query_instance
     (omega : Fp) (usableRows : ℕ)
-    (fixedCols adviceCols instanceCols : ℕ → Polynomial Fp)
+    (fixedCols adviceCols instanceCols : ℕ → CPoly)
     (homega : omega ≠ 0)
     (selectors : ℕ → Fp) (column : Column .instance) (row rotation : ℤ) :
     Query.eval (polynomialEnvironment omega usableRows fixedCols adviceCols instanceCols)
@@ -172,14 +173,14 @@ theorem polynomialEnvironment_query_instance
       ((instanceCols column.index).comp (C (omega ^ rotation) * X)).eval (omega ^ row) := by
   rw [Query.eval, polynomialEnvironment_instance, eval_comp_rotate]
   congr 1
-  rw [zpow_add₀ homega, mul_comm]
+  rw [zpow_add₀ homega, _root_.mul_comm]
 
 /-- The canonical Clean environment selected by a commitment-ID polynomial resolver for one
 sub-proof. -/
 def resolverEnvironment
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (usableRows : ℕ) :
     Environment Fp :=
   polynomialEnvironment vk.omega usableRows
@@ -190,29 +191,29 @@ def resolverEnvironment
 @[simp] theorem resolverEnvironment_fixed
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (usableRows : ℕ)
     (column : Column .fixed) (row : ℤ) :
     (resolverEnvironment vk poly p usableRows).fixed column row =
-      (poly (.fixedCol column.index)).eval (vk.omega ^ row) := rfl
+      eval (vk.omega ^ row) (poly (.fixedCol column.index)) := rfl
 
 @[simp] theorem resolverEnvironment_advice
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (usableRows : ℕ)
     (column : Column .advice) (row : ℤ) :
     (resolverEnvironment vk poly p usableRows).advice column row =
-      (poly (.adviceCol p column.index)).eval (vk.omega ^ row) := rfl
+      eval (vk.omega ^ row) (poly (.adviceCol p column.index)) := rfl
 
 @[simp] theorem resolverEnvironment_instance
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (usableRows : ℕ)
     (column : Column .instance) (row : ℤ) :
     (resolverEnvironment vk poly p usableRows).inst column row =
-      (poly (.instanceCol p column.index)).eval (vk.omega ^ row) := rfl
+      eval (vk.omega ^ row) (poly (.instanceCol p column.index)) := rfl
 
 /--
 Once commitment binding identifies a resolved instance column with its canonical
@@ -221,7 +222,7 @@ zero-padded row polynomial, the Clean environment reads the supplied public valu
 theorem resolverEnvironment_instance_of_rowPolynomial
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (usableRows : ℕ)
     (column : Column .instance) (values : List Fp)
     (hpoly : poly (.instanceCol p column.index) =
@@ -248,7 +249,7 @@ def circuitSatViaResolverOperations
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
     (decodePoly :
-      (Fin (2 ^ shape.k) → Fp) → CommitmentId → Polynomial Fp)
+      (Fin (2 ^ shape.k) → Fp) → CommitmentId → CPoly)
     (p : Fin shape.numProofs) (usableRows : ℕ)
     (place : RegionIndex → ℕ) (ops : Operations Fp)
     (initialRegion : RegionIndex)
