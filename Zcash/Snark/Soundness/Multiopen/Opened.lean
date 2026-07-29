@@ -4,7 +4,6 @@ import Zcash.Snark.Soundness.Multiopen.Decode
 import Zcash.Snark.Soundness.Multiopen.Deployed
 import Zcash.Snark.Soundness.Multiopen.Compat
 import Zcash.Snark.Soundness.GoodChallenge
-import Zcash.Common.ComputablePolynomial
 
 /-!
 # The opened `x₄` chain: batch decode through the declared `U`/`W` components
@@ -84,7 +83,7 @@ theorem vandermonde_decode_map {M : Type*} [AddCommMonoid M] [Module Fp M] {n : 
     (hμ : ∀ (i j : Fin n), (∑ k : Fin n, μ i k * z k ^ (j : ℕ)) = if i = j then 1 else 0)
     (hF : ∀ r, F r = ∑ j : Fin n, z r ^ (j : ℕ) • C j) (i : Fin n) :
     (∑ r : Fin n, μ i r • F r) = C i := by
-  simp only [hF, Finset.smul_sum, smul_smul]
+  simp only [hF, Finset.smul_sum, _root_.smul_smul]
   rw [Finset.sum_comm]
   simp only [← Finset.sum_smul, hμ, ite_smul, one_smul, zero_smul, Finset.sum_ite_eq,
     Finset.mem_univ, if_true]
@@ -96,7 +95,7 @@ theorem vandermonde_reconstruct_map {M : Type*} [AddCommMonoid M] [Module Fp M] 
     (hμ : ∀ (i j : Fin n), (∑ k : Fin n, z i ^ (k : ℕ) * μ k j) = if i = j then 1 else 0)
     (i : Fin n) :
     (∑ j : Fin n, z i ^ (j : ℕ) • (∑ k : Fin n, μ j k • F k)) = F i := by
-  simp only [Finset.smul_sum, smul_smul]
+  simp only [Finset.smul_sum, _root_.smul_smul]
   rw [Finset.sum_comm]
   simp only [← Finset.sum_smul, hμ, ite_smul, one_smul, zero_smul, Finset.sum_ite_eq,
     Finset.mem_univ, if_true]
@@ -198,7 +197,7 @@ noncomputable def openedColumnDecode {urs : URS G} {b : Fin (2 ^ urs.k) → Fp} 
       rw [commit_eq_commitGen, commitGen_sum, Finset.sum_smul, Finset.sum_smul,
         ← Finset.sum_add_distrib, ← Finset.sum_add_distrib]
       refine Finset.sum_congr rfl fun r _ => ?_
-      rw [commitGen_smul_left, smul_eq_mul, smul_eq_mul, mul_smul, mul_smul, smul_add, smul_add,
+      rw [commitGen_smul_left, smul_eq_mul, smul_eq_mul, SemigroupAction.mul_smul, SemigroupAction.mul_smul, smul_add, smul_add,
         commit_eq_commitGen]
     rw [hlin]
     exact vandermonde_decode_map μ hleft hbatch.commitment i
@@ -215,7 +214,7 @@ noncomputable def openedDecodedCols {urs : URS G} {b : Fin (2 ^ urs.k) → Fp} {
     {columnCommitments : Fin numColumns → G} {columnEvals : Fin numColumns → Fp}
     {currentWitness : Fin (2 ^ urs.k) → Fp} {pU pW : Fp}
     (hbatch : OpenedBatchOpenings urs b columnCommitments columnEvals currentWitness pU pW) :
-    Fin numColumns → Polynomial Fp :=
+    Fin numColumns → CPoly :=
   fun i => coeffsToPoly ((openedColumnDecode hbatch).coeffs i)
 
 /-- **Each decoded `x₄`-slot column opens to its claimed batch evaluation at `x₃`.** The opened
@@ -445,17 +444,17 @@ noncomputable def openedX4Rewind_of_x4Prob_forked [DecidableEq G] [Inhabited G] 
 
 /-! ## The terminal constraint endpoints -/
 
-open Polynomial in
+open CompPoly CompPoly.CPolynomial in
 /-- The SNARK relation with the circuit side fed by columns decoded from the opened batch family
 containing the extracted witness, with the declared components carried through. -/
 structure SnarkRelationWithOpenedColumns (urs : URS G) (P : G) (b : Fin (2 ^ urs.k) → Fp) (v : Fp)
     {numColumns numAdvice numInstance : ℕ}
     (columnCommitments : Fin numColumns → G) (columnEvals : Fin numColumns → Fp)
     (adviceIndex : Fin numAdvice → Fin numColumns) (instanceIndex : Fin numInstance → Fin numColumns)
-    (fixedCols : ℕ → Polynomial Fp)
-    (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : Polynomial Fp) (deg : ℕ)
+    (fixedCols : ℕ → CPoly)
+    (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : CPoly) (deg : ℕ)
     (pU pW : Fp)
-    (a : Fin (2 ^ urs.k) → Fp) (cols : Fin numColumns → Polynomial Fp) where
+    (a : Fin (2 ^ urs.k) → Fp) (cols : Fin numColumns → CPoly) where
   opens : IpaRelation urs P b v a
   batchOpenings : OpenedBatchOpenings urs b columnCommitments columnEvals a pU pW
   decodedColumns : OpenedColumnDecode batchOpenings
@@ -464,7 +463,7 @@ structure SnarkRelationWithOpenedColumns (urs : URS G) (P : G) (b : Fin (2 ^ urs
     circuitSatViaGates fixedCols (selectedPolysDecode (k := urs.k) cols adviceIndex)
       (selectedPolysDecode (k := urs.k) cols instanceIndex) y gates hpoly deg a
 
-open Polynomial in
+open CompPoly CompPoly.CPolynomial in
 /-- Turn a final opened relation plus its batch family into the opened decoded-column SNARK
 relation. `hquot`/`hgood` are stated for the canonical decode `openedDecodedCols hbatch` — the
 family this proof constructs — with the plain chain's scoping (`Soundness.Multiopen.Decode`, the
@@ -474,8 +473,8 @@ theorem opened_constraint_of_relation_and_batch {urs : URS G} {P : G}
     {numColumns numAdvice numInstance : ℕ}
     (columnCommitments : Fin numColumns → G) (columnEvals : Fin numColumns → Fp)
     (adviceIndex : Fin numAdvice → Fin numColumns) (instanceIndex : Fin numInstance → Fin numColumns)
-    (fixedCols : ℕ → Polynomial Fp)
-    (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp)
+    (fixedCols : ℕ → CPoly)
+    (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : CPoly) (deg : ℕ) (x : Fp)
     {pU pW : Fp} {a : Fin (2 ^ urs.k) → Fp}
     (hrel : IpaRelation urs P b v a)
     (hbatch : OpenedBatchOpenings urs b columnCommitments columnEvals a pU pW)
@@ -586,7 +585,7 @@ theorem opened_witness_member_binding [DecidableEq G] [Inhabited G] {shape : Sha
       rw [commit_eq_commitGen, commitGen_sum, Finset.sum_smul, Finset.sum_smul,
         ← Finset.sum_add_distrib, ← Finset.sum_add_distrib]
       refine Finset.sum_congr rfl fun r _ => ?_
-      rw [commitGen_smul_left, smul_eq_mul, smul_eq_mul, mul_smul, mul_smul, smul_add, smul_add,
+      rw [commitGen_smul_left, smul_eq_mul, smul_eq_mul, SemigroupAction.mul_smul, SemigroupAction.mul_smul, smul_add, smul_add,
         commit_eq_commitGen]
     rw [hlin]
     exact vandermonde_decode_map _ (vandermonde_inv_left χ hχ) haC m
@@ -789,7 +788,7 @@ noncomputable def openedMemberDecode_of_x1Prob [DecidableEq G] [Inhabited G] {sh
 
 /-! ## The member-column constraint endpoint -/
 
-open Polynomial in
+open CompPoly CompPoly.CPolynomial in
 /-- **The halo2-faithful gate feed for one column family.** halo2 evaluates a gate on the claimed
 evaluation `advice_evals[query_index]` of query `j = (column, rotation)`, opened at
 `rotate_omega x rot = ω^rot·x` (`plonk/verifier.rs`). Feeding the gate the decoded column composed
@@ -798,16 +797,13 @@ with its layout rotation — `col_j ∘ (ω^rot_j · X)` — makes its value at 
 (`Soundness.Multiopen.RPoly.col_eval_node_eq_claimed`). The rotation `rot_j` is read from the
 verifying key's query layout (`(column, rotation)` list), so it is not a free choice. -/
 def rotatedFeed {n : ℕ} (omega : Fp) (layout : List (ℕ × ℤ))
-    (col : Fin n → Polynomial Fp) : ℕ → Polynomial Fp :=
+    (col : Fin n → CPoly) : ℕ → CPoly :=
   fun j =>
     if hj : j < n then
-      ComputablePolynomial.comp (col ⟨j, hj⟩)
-        (ComputablePolynomial.mul
-          (ComputablePolynomial.const (omega ^ (layout.getD j (0, 0)).2))
-          ComputablePolynomial.X)
-    else ComputablePolynomial.zero
+      comp (col ⟨j, hj⟩) (C (omega ^ (layout.getD j (0, 0)).2) * X)
+    else 0
 
-open Polynomial in
+open CompPoly CompPoly.CPolynomial in
 /-- The SNARK relation with the circuit side fed by decoded *member* columns — the actual queried
 column commitments' openings, selected per advice/instance index from their point sets. The witness
 chain is carried in full: `a` opens the statement, the opened `x₄` batch contains it, and each
@@ -826,8 +822,8 @@ structure SnarkRelationWithMemberColumns [DecidableEq G] [Inhabited G] {shape : 
     (hinstanceSet : ∀ j, instanceSet j < deployedX4PairCount vk instanceCommitment ps ch)
     (instanceMem : ∀ j : Fin numInstance,
       Fin (deployedSetQueries vk instanceCommitment ps ch (instanceSet j)).length)
-    (fixedCols : ℕ → Polynomial Fp) (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp)
-    (hpoly : Polynomial Fp) (deg : ℕ) (pU pW : Fp)
+    (fixedCols : ℕ → CPoly) (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp)
+    (hpoly : CPoly) (deg : ℕ) (pU pW : Fp)
     (a : Fin (2 ^ urs.k) → Fp) where
   opens : IpaRelation urs P b v a
   batchOpenings : OpenedBatchOpenings urs b (x4BatchCommitments urs hk vk instanceCommitment ps ch)
@@ -864,7 +860,7 @@ structure SnarkRelationWithMemberColumns [DecidableEq G] [Inhabited G] {shape : 
           coeffsToPoly ((memberDecode (instanceSet j) (hinstanceSet j)).cols (instanceMem j))))
       y gates hpoly deg a
 
-open Polynomial in
+open CompPoly CompPoly.CPolynomial in
 /-- Turn a final opened relation, its batch family, and per-set member decodes into the
 member-column SNARK relation: the gate check is stated once, on the member polynomials of the
 supplied decodes — the satisfiable pinned shape. Its truth for the deployed verifier — the claimed
@@ -882,8 +878,8 @@ theorem member_constraint_of_relation_and_batch [DecidableEq G] [Inhabited G] {s
     (hinstanceSet : ∀ j, instanceSet j < deployedX4PairCount vk instanceCommitment ps ch)
     (instanceMem : ∀ j : Fin numInstance,
       Fin (deployedSetQueries vk instanceCommitment ps ch (instanceSet j)).length)
-    (fixedCols : ℕ → Polynomial Fp) (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp)
-    (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp)
+    (fixedCols : ℕ → CPoly) (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp)
+    (hpoly : CPoly) (deg : ℕ) (x : Fp)
     {pU pW : Fp} {a : Fin (2 ^ urs.k) → Fp}
     (hrel : IpaRelation urs P b v a)
     (pbatch : OpenedBatchOpenings urs b (x4BatchCommitments urs hk vk instanceCommitment ps ch)
