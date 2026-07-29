@@ -4,10 +4,8 @@ import Zcash.Snark.Soundness.AGM.ExecutableDeployedRoots
 /-!
 # The Action terminal for arbitrary adaptive online-AGM adversaries
 
-This bridge feeds the represented decode produced from the bare
-`ComputedAdaptiveOnlineAGMFSFamily` directly into the existing Action terminal.  It introduces no
-sequential phase object, stopped execution, or caller-supplied trace.  The decoded batches are
-computed from the adversary's one actual run and then re-rounded to that run's IPA challenges.
+This bridge feeds one represented adaptive run into the Action terminal, with no phased execution
+or caller-supplied trace.
 -/
 
 namespace Zcash.Snark

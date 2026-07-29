@@ -5,19 +5,9 @@ import Zcash.Snark.Soundness.Composition.StraightLineDecodeSupply
 /-!
 # The rewind-free decode at the Action terminal
 
-`ActionTerminal` extracts concrete private Action witnesses or relation data from the opened-batch
-interface: an `OpenedBatchOpenings`, a per-set `OpenedMemberDecode`, deployed acceptance, the
-canonical quotient, and the member-binding premise.
-
-`AGM.DecodeToOpened` presents a rewind-free `DeployedAlgebraicDecode` in exactly that shape, so the
-straight-line route reaches the same terminal from one accepting execution.  This module ties the
-two together: a decoding run supplies its own decode and acceptance, both at the run's complete
-challenge record, and what remains are the challenge exclusions — `hxgood`, `hgoodY`, and the
-permutation and lookup exclusions — which `StraightLineActionEvent` prices, not this module.
-
-The verifying key is still `actionCircuit.toVerifierKey`, and no free semantic proposition,
-`hencodes`, or decoded column feed is reintroduced.  Both the witness extractor and relation
-finder are projections of one data-bearing outcome.
+This bridge feeds one straight-line decode into `ActionTerminal`. The shared executable outcome
+retains either all private witnesses or relation coefficients; `StraightLineActionEvent` prices
+the remaining challenge exclusions.
 -/
 
 namespace Zcash.Snark
@@ -315,13 +305,8 @@ def action_bundleStatement_or_relation_of_straightLineDecoded
     hchar
     (actionRunAccepts pp family static basis O inputs hvk hI hdecoded)
 
-/-- **Executable data-bearing Action terminal.**  The constraint adapter first reconstructs the
-decoded run from the family's retained batch coordinates.  This finder then checks the four
-terminal exclusion packages as finite propositions and retains either all private Action witnesses
-or explicit relation coefficients.
-
-The proof parameters `static`, `hvk`, `hI`, and `hchar` certify the fixed deployed artifacts.  No
-fixture, `Nonempty`, or selected existential witness contributes returned data. -/
+/-- Checks terminal exclusions and returns private witnesses or explicit relation coefficients
+from the reconstructed run. -/
 def actionTerminalWitnessOrRelationFinder
     (pp : ProofParams)
     (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived actionCircuit))

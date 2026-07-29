@@ -4,12 +4,9 @@ import Zcash.Snark.Soundness.AGM.AdaptiveComposition
 /-!
 # Action soundness and knowledge soundness for adaptive online-AGM adversaries
 
-This file exposes one cached executable adaptive Action terminal.  Its two projections return
-either Type-valued private Action witnesses or explicit relation data.  It bounds both the literal
-ordinary-soundness event `accept ∧ ¬ BundleStatement` and the knowledge-soundness event in which
-the verifier accepts but the witness projection returns `none`.  No propositionally closed
-relation is treated as semantic success, and no sequential trace, cut, or phase presentation is
-an input.
+One cached terminal returns private Action witnesses or relation data. The endpoints bound
+accepting false statements and accepting runs whose witness projection fails, without sequential
+traces or propositionally closed relations.
 -/
 
 namespace Zcash.Snark

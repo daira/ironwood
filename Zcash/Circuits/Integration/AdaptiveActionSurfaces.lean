@@ -5,10 +5,8 @@ import Zcash.Snark.Soundness.AGM.AdaptiveSurfaces
 /-!
 # Action semantic surfaces for arbitrary adaptive online-AGM adversaries
 
-The first five deployed squeezes are `theta`, `beta`, `gamma`, `y`, and `x`.  At each point an
-online-AGM annotation fixes exactly the prover commitments already absorbed into that prefix.
-This file records those stage-local representation lists before constructing the corresponding
-finite bad sets.
+Online-AGM annotations fix the commitments present before `theta`, `beta`, `gamma`, `y`, and `x`,
+from which this module constructs finite bad sets.
 -/
 
 namespace Zcash.Snark

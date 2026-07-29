@@ -717,22 +717,9 @@ assert_axioms Zcash.Snark.escape_measure_le
 assert_axioms Zcash.Snark.theta_failure_measure_le
 /-! ### Break-branch machinery — computed
 
-The circuit-integration stack carries its binding break as computed `NontrivialRelation` data
-rather than as the `∃`-closed proposition that is unconditionally true at the concrete curve.
-The declarations below are the part of that stack which is genuinely computable, so they are
-pinned at the `assert_computable` tier: a plain `def`, never marked `noncomputable`. Pinning
-them is what stops the discipline regressing silently — a break that stopped being computed
-would still typecheck, and `assert_axioms` alone would not notice.
-
-The combinators are at the strict tier: they introduce no choice at all. The adapters below
-them take `+choice`, which the plain-`def` check turns into the assertion that choice enters
-only through erased `Prop` certificate fields.
-
-The probabilistic events and capstone theorems are *not* here: their sets, measures, and
-specification-level root sets are intentionally noncomputable and are pinned with `assert_axioms`.
-The finders that those theorems charge are here.  They compute with polynomial coefficients and
-point evaluations, while root-set membership occurs only in erased certificates, as in
-`decodedQuotientEqReassembledOrRelationWitness`. -/
+These checks pin each charged relation finder as a plain executable `def`. `+choice` is allowed
+only through erased proof fields. Noncomputable events and probability theorems are censused
+separately with `assert_axioms`. -/
 
 assert_computable Zcash.Snark.bindOrRelationWitness
 assert_computable Zcash.Snark.finForallOrRelationWitness
@@ -1172,8 +1159,7 @@ assert_axioms Zcash.Snark.allResolverLookupBetaBadSet_congr
 assert_axioms Zcash.Snark.allResolverLookupGammaBadSet_congr
 assert_axioms Zcash.Snark.resolverEnvironment_congr
 assert_axioms Zcash.Snark.TopLevelLookupCoherence.allTopLevelLookupThetaBadSet_congr
--- The bundled sequential adversary (#128 F8): cuts and views at the five squeeze indices,
--- the per-challenge corollaries, and the counted endpoint with its ceiling arithmetic (F7).
+-- Census the bundled sequential adversary and its resource arithmetic.
 assert_axioms Zcash.Snark.resolverPermutationCell_card
 assert_axioms Zcash.Snark.TopLevelLookupCoherence.topLevelLookupThetaBudget_eq
 assert_axioms Zcash.Snark.ActionTerminal.ActionSequentialCuts +native(
@@ -1685,11 +1671,7 @@ assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineC
 assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDecodeOfOutcome? +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintOutcome? +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintSuccess? +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
--- The headline adaptive reduction depends on this combined provenance/IPA/terminal finder being
--- executable, so guard that property independently of the endpoint's axiom census.
--- Its provenance stages evaluate once, retain their annotation log, and perform every stage-local
--- lookup over that data. The pointwise log bound and eight-slot arithmetic are pinned alongside
--- executable finder closure so the advertised adaptive resource interpretation cannot drift.
+-- Census the executable cached adaptive finder and its resource bounds.
 assert_axioms Zcash.Snark.ActionTerminal.adaptiveActionCachedProvenanceLog_length_le +native(
   CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,

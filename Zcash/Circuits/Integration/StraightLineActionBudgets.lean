@@ -473,10 +473,7 @@ theorem actionYBadSet_measure_le
 
 /-! ## The phased Action execution and its generated cuts
 
-The public adversary model supplies executable phases whose *outputs* are the data emitted before
-each semantic squeeze.  `ActionSequentialExecution.toCuts` below generates the five cuts and all
-state views.  `ActionSequentialCuts` remains only the internal product consumed by the four
-counting lemmas; it is no longer an input to the public capstone.
+Executable phases emit pre-squeeze snapshots; `toCuts` derives the five internal cuts and views.
 -/
 
 /-- Data emitted before `θ`: the represented query-column polynomials. -/
@@ -504,10 +501,7 @@ structure ActionXSnapshot (np : ℕ) where
   y : Fp
   vanishing : Polynomial Fp
 
-/-- One phased sequential Action execution.  Each phase is an actual `OracleComp` stopped before
-its squeeze and returns precisely the snapshot later used by the exclusion-set proof.  The
-agreement fields connect those emitted snapshots to the final decoded run; the cut and every
-view function are generated projections. -/
+/-- Five stopped computations whose snapshots agree with the final decoded run. -/
 structure ActionSequentialExecution (Dx L : ℕ) where
   thetaPhase : SequentialPhase family.toComputedAlgebraicFSFamily 0 ActionThetaSnapshot
   betaPhase : SequentialPhase family.toComputedAlgebraicFSFamily 1 ActionBetaSnapshot

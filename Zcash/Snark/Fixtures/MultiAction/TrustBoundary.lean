@@ -102,10 +102,7 @@ assert_axioms Zcash.Snark.Fixture2.deployedConstraintXSqueezeSchedule_captured +
 -- The same bound on the interpolation-free route: the deployed constraint family is built by
 -- `ofCovered` from the two fresh-query traces, with no field-capacity premise or interpolation.
 
--- The captured single-Action assembly and consensus-generic Action capstones are fixture-level
--- claims: their census belongs beside the capture and keygen certificate that they consume.
--- The captured Action assembly (issue #128): the statement-or-relation intermediate, the exact
--- false-statement target, the derived-key checks and schedule, and the factored composition.
+-- Census the captured and consensus-generic Action capstones with their fixtures.
 assert_axioms Zcash.Snark.Fixture.actionNoStatementOrRelationEvent +native(
   CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
@@ -260,8 +257,7 @@ assert_axioms Zcash.Snark.Fixture.orchard_action_noStatementOrRelation_prob_le_c
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
--- Exact #128 endpoints: literal deployed acceptance with a false Action bundle statement.  The
--- terminal relation branch is returned by the one computed finder and charged in its DLOG profile.
+-- Exact false-statement endpoints, with terminal relations charged to DLOG.
 assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_prob_le_captured +native(
   Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
@@ -328,9 +324,7 @@ assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_prob_le_se
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
--- Consensus-generic Action capstones: every Orchard-valid bundle size, the literal false-statement
--- event, concrete sequential/adaptive DLOG resource envelopes, and explicit transcript-bias
--- transport in the final conjunct.
+-- Consensus-generic endpoints with concrete resources and transcript bias.
 assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO_for +native(
   Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
@@ -434,8 +428,7 @@ assert_axioms Zcash.Snark.Fixture.orchard_action_knowledgeFailure_adaptive_2pow1
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
--- Pin the public single-Action compatibility endpoints directly as well as their consensus-generic
--- generalization above.  This keeps the advertised names themselves under census review.
+-- Census the public single-Action compatibility endpoints.
 assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_prob_le_adaptive +native(
   Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,

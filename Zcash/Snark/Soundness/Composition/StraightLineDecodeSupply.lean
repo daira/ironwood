@@ -3,13 +3,8 @@ import Zcash.Snark.Soundness.Composition.StraightLineConstraint
 /-!
 # The algebraic decode behind the straight-line constraint event
 
-`straightLineConstraintDecoded` is the proposition view of an executable option carrying the
-constraint witness.  The Action terminal recovers the exact retained `DeployedAlgebraicDecode`
-with `Option.get`; no existential selection is involved.
-
-The artifacts are the run's, not the Action circuit's.  Identifying the two is the caller's job;
-`ActionTerminal.action_bundleStatement_or_relation_of_straightLineDecoded` does it with the keygen
-certificate equalities.
+The Action terminal projects the exact `DeployedAlgebraicDecode` retained by the executable
+constraint outcome. Callers identify run artifacts with circuit artifacts.
 -/
 
 namespace Zcash.Snark

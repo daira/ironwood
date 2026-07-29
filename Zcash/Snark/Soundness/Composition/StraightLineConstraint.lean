@@ -798,10 +798,7 @@ theorem straightLineConstraintRelation_prob_le_of_textbookDL
       bound + 1 / Fintype.card Fp :=
   relationWithCoins_prob_le_of_textbookDL B family.straightLineConstraintRelationFinder hDL
 
-/-- The compressed constraint failure bound may price any computed finder that extends the
-existing constraint finder pointwise.  This is the composition hook used by the Action capstone:
-the Action finder returns the exact old result on the old finder's success branch, then adds its
-terminal fallback, so the union of relation causes is charged once. -/
+/-- Prices any computed relation finder that pointwise extends the constraint finder. -/
 theorem straightLineConstraintFailure_union_relation_prob_le_of_relationSupersetTextbookDL
     (B : VestaG) (family : ComputedStraightLineDeployedFSFamily shape)
     (static : DeployedConstraintStaticChecks family.toRootFamily)

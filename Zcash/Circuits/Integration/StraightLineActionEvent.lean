@@ -5,31 +5,8 @@ import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
 /-!
 # Action soundness and knowledge soundness as priced straight-line events
 
-`StraightLineActionTerminal` reaches the Action bundle statement from one decoding run, leaving
-the challenge exclusions open.  This module prices the compatibility statement-or-relation event,
-literal acceptance with a false bundle statement, and acceptance when executable private-witness
-extraction fails.  The witness extractor and relation finder project one shared outcome, so one
-DLOG profile charges every relation branch without discarding the successful witness branch.
-
-- `actionStatementOrRelationDecoded` — the intermediate target: the bundle statement or a
-  relation exists.
-- `actionXYFailureEvent`, `actionBetaFailureEvent`, `actionGammaFailureEvent`,
-  `actionThetaFailureEvent` — a decoding run whose `x`/`y`, `β`, `γ`, or `θ` challenge lands in
-  the terminal's exclusion set.  The `x` event is charged here at the terminal's own constraint
-  difference rather than aligned with the decode-level difference the compressed event already
-  prices: the alignment is a deep pipeline equality, and the extra charge is one more
-  per-challenge term.
-- `actionSemanticUpgradeContained` — the containment, proved from the terminal bridge.
-- `actionNoStatementOrRelation_prob_le_of_compressed_bound` — the intermediate endpoint, event bounds as
-  premises.
-- `actionNoStatementOrRelation_prob_le_of_surfaces` — the same intermediate endpoint with every event bound
-  discharged from the squeeze machinery, given prefix-determined covers and per-challenge
-  measures.
-- `actionRelationFinder` — the single computed constraint-plus-Action relation finder.
-- `actionBundleStatementFailure_prob_le_of_base_union_bound` — the exact false-statement endpoint,
-  with the combined relation event already charged in the base union.
-- `actionKnowledgeFailure_prob_le_of_base_union_bound` — the corresponding executable-witness
-  extraction-failure endpoint with the same statistical and DLOG accounting.
+Prices straight-line false-statement and extraction failures. Witness and relation projections
+share one executable outcome.
 -/
 
 namespace Zcash.Snark
@@ -49,10 +26,7 @@ variable (pp : ProofParams)
   (static : DeployedConstraintStaticChecks family.toRootFamily)
   (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
 
-/-- **The statement-or-relation intermediate.**  *Either* the Action bundle statement holds *or*
-a nontrivial relation over the run's basis is exhibited — the conclusion of the terminal, as a
-proposition.  This is not the final Action soundness target: its relation branch must still be
-converted to a computed DLOG break. -/
+/-- Intermediate proposition: the bundle statement holds or a basis relation exists. -/
 def actionStatementOrRelationDecoded :
     (AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) →
     (BTranscript Fp VestaG
@@ -270,10 +244,7 @@ noncomputable def actionTerminalOutcomeOfGood
     basis O inputs (hvk basis) (hI basis) hdecoded (hchar basis O)
     hxy.1 hxy.2 ⟨hgamma.1, hbeta.1⟩ ⟨hgamma.2, hbeta.2, htheta⟩
 
-/-- A computed finder covers the Action terminal when every decoded good run with a false bundle
-statement makes the finder return explicit relation coefficients.  This direct operational
-condition is the implementation obligation that prevents an existentially closed, vacuous DLOG
-branch; it does not compare against a noncomputably selected proposition-level relation. -/
+/-- Coverage requires every decoded good false-statement run to return explicit relation data. -/
 def actionTerminalRelationFinderCovers
     (finder :
       (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) →
@@ -561,11 +532,7 @@ structure StraightLineActionDlogProfile (B : VestaG) where
     (advantage (actionDlogRandomOracleQueries pp family)
       (actionDlogGroupWork proverGroupWork reductionGroupWork))
 
-/-- Concrete resource profile for the direct constraint-plus-Action route.  In addition to the
-single DLOG premise for the combined executable finder, it prices the underlying prover, all
-postprocessing group operations (including the Action-terminal comparison), and both possible
-direct-coordinate decoder executions.  The small lower bound is exactly what is needed for
-`6Q + 6(11+k) <= 8T` at the deployed IPA depth. -/
+/-- Direct-route profile covering prover, postprocessing, and both possible decoder executions. -/
 structure StraightLineActionDirectDlogProfile (B : VestaG) (T : Nat)
     extends StraightLineActionDlogProfile pp family static inputs hvk hI hchar B where
   ipaDepth : (pp.mergeDerived actionCircuit).k = 11
@@ -939,11 +906,8 @@ theorem actionNoStatementOrRelation_prob_le_of_compressed_bound
     (actionSemanticUpgradeContained pp family static inputs hvk hI hchar)
     hcompressed hXY hBeta hGamma hTheta
 
-/-- **The exact Action-statement bound, factored at the computed finder.**  This theorem bounds
-literal accepting false statements.  Its last premise is the probability that the executable
-terminal finder returns relation coefficients; a DLOG profile must discharge that premise.
-Unlike the statement-or-relation intermediate above, no existential relation is accepted as
-semantic success. -/
+/-- Bounds literal false-statement acceptance, leaving the computed relation event to a DLOG
+profile. -/
 theorem actionBundleStatementFailure_prob_le_of_compressed_bound
     {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → T)
