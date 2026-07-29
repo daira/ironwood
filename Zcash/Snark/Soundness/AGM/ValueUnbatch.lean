@@ -151,7 +151,7 @@ theorem clearedQuotientErrorPolynomial_badSet_measure_le {numSets d : Nat}
 /-! ## `x2` set separation at a node -/
 
 /-- At a fixed node, the coefficient of `X^j` is set `j`'s cleared value mismatch. -/
-noncomputable def nodeBindingErrorPolynomial {numSets : Nat}
+def nodeBindingErrorPolynomial {numSets : Nat}
     (allPts : Finset Fp) (pts : Fin numSets -> Finset Fp)
     (col r : Fin numSets -> CPoly) (node : Fp) : CPoly :=
   powerErrorPolynomial fun j =>
@@ -214,7 +214,7 @@ theorem nodeBindingErrorPolynomial_badSet_measure_le {numSets : Nat}
 /-! ## `x1` member separation -/
 
 /-- At a fixed node, the coefficient of `X^m` is member `m`'s claimed-value mismatch. -/
-noncomputable def memberBindingErrorPolynomial {numMem : Nat}
+def memberBindingErrorPolynomial {numMem : Nat}
     (mem : Fin numMem -> CPoly) (claimed : Fin numMem -> Fp)
     (node : Fp) : CPoly :=
   powerErrorPolynomial fun m => (mem m).eval node - claimed m

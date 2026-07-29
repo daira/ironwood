@@ -74,91 +74,53 @@ def clearedQuotientErrorPolynomialData {numSets : Nat}
     (allPts : Finset Fp) (pts : Fin numSets → Finset Fp)
     (col r : Fin numSets → CPoly) (a : Fin numSets → Fp)
     (qCol : CPoly) : CPoly :=
-  ComputablePolynomial.sub
-    (ComputablePolynomial.mul qCol (vanishingProdData allPts))
-    (ComputablePolynomial.sumList (List.ofFn fun j : Fin numSets =>
-      ComputablePolynomial.mul (ComputablePolynomial.const (a j))
-        (ComputablePolynomial.mul
-          (ComputablePolynomial.sub (col j) (r j)) (coProdData allPts (pts j)))))
+  clearedQuotientErrorPolynomial allPts pts col r a qCol
 
 theorem clearedQuotientErrorPolynomialData_eq {numSets : Nat}
     (allPts : Finset Fp) (pts : Fin numSets → Finset Fp)
     (col r : Fin numSets → CPoly) (a : Fin numSets → Fp)
     (qCol : CPoly) :
     clearedQuotientErrorPolynomialData allPts pts col r a qCol =
-      clearedQuotientErrorPolynomial allPts pts col r a qCol := by
-  rw [clearedQuotientErrorPolynomialData, ComputablePolynomial.sub_eq,
-    ComputablePolynomial.mul_eq, vanishingProdData_eq,
-    ComputablePolynomial.sumList_eq, List.sum_ofFn,
-    clearedQuotientErrorPolynomial]
-  apply congrArg (fun p => qCol * vanishingProd allPts - p)
-  apply Finset.sum_congr rfl
-  intro j _
-  rw [ComputablePolynomial.mul_eq, ComputablePolynomial.const_eq,
-    ComputablePolynomial.mul_eq, ComputablePolynomial.sub_eq, coProdData_eq]
+      clearedQuotientErrorPolynomial allPts pts col r a qCol := rfl
 
 /-- Executable set-separation polynomial at one node. -/
 def nodeBindingErrorPolynomialData {numSets : Nat}
     (allPts : Finset Fp) (pts : Fin numSets → Finset Fp)
     (col r : Fin numSets → CPoly) (node : Fp) : CPoly :=
-  powerErrorPolynomialData fun j =>
-    (polynomialEvalData (ComputablePolynomial.sub (col j) (r j)) node) *
-      polynomialEvalData (coProdData allPts (pts j)) node
+  nodeBindingErrorPolynomial allPts pts col r node
 
 theorem nodeBindingErrorPolynomialData_eq {numSets : Nat}
     (allPts : Finset Fp) (pts : Fin numSets → Finset Fp)
     (col r : Fin numSets → CPoly) (node : Fp) :
     nodeBindingErrorPolynomialData allPts pts col r node =
-      nodeBindingErrorPolynomial allPts pts col r node := by
-  rw [nodeBindingErrorPolynomialData, powerErrorPolynomialData_eq,
-    nodeBindingErrorPolynomial, powerErrorPolynomial]
-  apply Finset.sum_congr rfl
-  intro j _
-  congr 2
-  rw [polynomialEvalData_eq_eval, ComputablePolynomial.sub_eq,
-    polynomialEvalData_eq_eval, coProdData_eq]
+      nodeBindingErrorPolynomial allPts pts col r node := rfl
 
 /-- Executable member-separation polynomial at one node. -/
 def memberBindingErrorPolynomialData {numMem : Nat}
     (mem : Fin numMem → CPoly) (claimed : Fin numMem → Fp)
     (node : Fp) : CPoly :=
-  powerErrorPolynomialData fun m => polynomialEvalData (mem m) node - claimed m
+  memberBindingErrorPolynomial mem claimed node
 
 theorem memberBindingErrorPolynomialData_eq {numMem : Nat}
     (mem : Fin numMem → CPoly) (claimed : Fin numMem → Fp)
     (node : Fp) :
     memberBindingErrorPolynomialData mem claimed node =
-      memberBindingErrorPolynomial mem claimed node := by
-  rw [memberBindingErrorPolynomialData, powerErrorPolynomialData_eq,
-    memberBindingErrorPolynomial, powerErrorPolynomial]
-  apply Finset.sum_congr rfl
-  intro m _
-  congr 2
-  rw [polynomialEvalData_eq_eval]
+      memberBindingErrorPolynomial mem claimed node := rfl
 
 /-- Executable `ξ` shift polynomial. -/
 def ipaShiftXiPolynomialData (delta sEval : Fp) : CPoly :=
-  ComputablePolynomial.add (ComputablePolynomial.const delta)
-    (ComputablePolynomial.mul (ComputablePolynomial.const sEval) ComputablePolynomial.X)
+  ipaShiftXiPolynomial delta sEval
 
 theorem ipaShiftXiPolynomialData_eq (delta sEval : Fp) :
-    ipaShiftXiPolynomialData delta sEval = ipaShiftXiPolynomial delta sEval := by
-  simp only [ipaShiftXiPolynomialData, ComputablePolynomial.add_eq,
-    ComputablePolynomial.const_eq, ComputablePolynomial.mul_eq,
-    ComputablePolynomial.X_eq, ipaShiftXiPolynomial]
+    ipaShiftXiPolynomialData delta sEval = ipaShiftXiPolynomial delta sEval := rfl
 
 /-- Executable `z` shift polynomial. -/
 def ipaShiftZPolynomialData (delta pU sU sEval xi : Fp) : CPoly :=
-  ComputablePolynomial.add (ComputablePolynomial.const (-(pU + xi * sU)))
-    (ComputablePolynomial.mul (ComputablePolynomial.const (delta + xi * sEval))
-      ComputablePolynomial.X)
+  ipaShiftZPolynomial delta pU sU sEval xi
 
 theorem ipaShiftZPolynomialData_eq (delta pU sU sEval xi : Fp) :
     ipaShiftZPolynomialData delta pU sU sEval xi =
-      ipaShiftZPolynomial delta pU sU sEval xi := by
-  simp only [ipaShiftZPolynomialData, ComputablePolynomial.add_eq,
-    ComputablePolynomial.const_eq, ComputablePolynomial.mul_eq,
-    ComputablePolynomial.X_eq, ipaShiftZPolynomial]
+      ipaShiftZPolynomial delta pU sU sEval xi := rfl
 
 /-! ## Executable deployed specialization -/
 
