@@ -68,13 +68,9 @@ The lookup bridge is split deliberately:
   No Clean type is introduced into
   `Zcash/Snark/Soundness/Canonical/Terminal.lean`.
 
-The core terminals live outside this boundary. `Snark/Soundness/TopLevelTerminal`
-composes canonical circuit satisfaction, generic circuit correctness, and
-public-instance binding into the circuit's statements at the inputs supplied to
-the verifier. `Snark/Soundness/TopLevelVesta` composes that result with the
-verifier-native Vesta terminal for an arbitrary
-`TopLevelCircuit`. `Snark/Soundness/ActionVesta` supplies only the Action
-correctness constructor to that generic capstone, while
-`Snark/Soundness/Deployed/ActionVesta` only transports captured artifacts. None of
-these public capstones has a free semantic proposition, encoding callback, decoder,
-or column-feed choice.
+The circuit-generic terminal lives outside this boundary.
+`Snark/Soundness/TopLevelTerminal` composes canonical circuit satisfaction,
+generic circuit correctness, and public-instance binding into the circuit's
+statements at the inputs supplied to the verifier. The straight-line Action
+modules above supply its accepted decoded model without a free semantic
+proposition, encoding callback, decoder, or column-feed choice.

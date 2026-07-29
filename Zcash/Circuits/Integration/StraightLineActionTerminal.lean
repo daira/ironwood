@@ -5,21 +5,15 @@ import Zcash.Snark.Soundness.Composition.StraightLineDecodeSupply
 /-!
 # The rewind-free decode at the Action terminal
 
-`ActionTerminal` concludes the concrete Action bundle statement from the historical opened-batch
+`ActionTerminal` concludes the concrete Action bundle statement from the decoded opened-batch
 interface: an `OpenedBatchOpenings`, a per-set `OpenedMemberDecode`, deployed acceptance, the
-canonical quotient, and the member-binding premise.  That interface was written for the rewinding
-route.
+canonical quotient, and the member-binding premise.
 
 `AGM.DecodeToOpened` presents a rewind-free `DeployedAlgebraicDecode` in exactly that shape, so the
 straight-line route reaches the same terminal from one accepting execution.  This module ties the
 two together: a decoding run supplies its own decode and acceptance, both at the run's complete
 challenge record, and what remains are the challenge exclusions — `hxgood`, `hgoodY`, and the
 permutation and lookup exclusions — which `StraightLineActionEvent` prices, not this module.
-
-The rewind-based route to the same conclusion is `Soundness.ActionVesta` (generic) and
-`Soundness.Deployed.ActionVesta` (at the captured artifacts), which take an `OpenedBatchOpenings`
-supplied by `x₄` rewinding and pay accept-measure premises for it.  Neither supersedes the other:
-that route assumes rewinds and measures, this one assumes a represented decode.
 
 The terminal is used unchanged.  Nothing in this module weakens its statement: the verifying key
 is still `actionCircuit.toVerifierKey`, and no free semantic proposition, `hencodes`, or decoded

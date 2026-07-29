@@ -83,12 +83,8 @@ import Zcash.Snark.Soundness.Multiopen.Opened
 import Zcash.Snark.Soundness.Multiopen.RPoly
 import Zcash.Snark.Soundness.Multiopen.Claimed
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
-import Zcash.Snark.Soundness.Multiopen.CanonicalSelection
 import Zcash.Snark.Soundness.Canonical.Terminal
-import Zcash.Snark.Soundness.Canonical.Vesta
 import Zcash.Snark.Soundness.TopLevelTerminal
-import Zcash.Snark.Soundness.TopLevelVesta
-import Zcash.Snark.Soundness.ActionVesta
 import Zcash.Snark.Soundness.Vesta
 -- AGM binding reduction: consume computed deployed relations through the programmed-basis
 -- discrete-log adapter and representation-carrying algebraic-prover model.

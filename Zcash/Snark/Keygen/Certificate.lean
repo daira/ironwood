@@ -40,9 +40,8 @@ Lagrange prefix the
   The monomial basis as `ℕ` triples (`monomialBasis`) is nullary and shared by every MSM
   in the bundle — the sharing discipline below is unchanged.
 
-The `FixtureCheck` target builds this module (as an import of its deployed
-Action/Vesta capstone entry); ordinary clients of `derivedActionVk` only need
-`Derivation`.
+The `FixtureCheck` target builds this module; ordinary clients of
+`derivedActionVk` only need `Derivation`.
 -/
 
 namespace Zcash.Snark.Keygen
