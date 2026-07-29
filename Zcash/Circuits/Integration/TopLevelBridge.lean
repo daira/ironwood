@@ -42,7 +42,7 @@ only the representation boundaries that genuinely come from other streams:
 * one bundle-wide record of lookup challenge exclusions.
 -/
 noncomputable def ofTopLevelCanonical
-    (gateCoherence : TopLevelGateCoherence top pp urs)
+    (gateCoherence : TopLevelGateCoherence top)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)

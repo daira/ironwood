@@ -110,7 +110,7 @@ noncomputable def actionTopLevelCircuitCorrectness
           (i : ℕ) :=
     actionRowsInjectiveAtUrs pp urs hk
   refine
-    { gates := ActionGateCoherence.topLevelGateCoherence pp urs
+    { gates := ActionGateCoherence.topLevel
       fixedEncoding := ?_
       fixed := ?_
       copies := ?_

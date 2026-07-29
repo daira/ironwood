@@ -147,7 +147,7 @@ noncomputable def bridgeWitness_of_components
       ConstraintSatisfaction
         (top.constraintModel pp urs ch poly)
         (top.toVerifierKey pp urs).n)
-    (gates : TopLevelGateCoherence top pp urs)
+    (gates : TopLevelGateCoherence top)
     (fixedEncoding :
       let assignment :
           TopLevelAssignment top
@@ -312,7 +312,7 @@ def TopLevelCircuitCorrectness
     (cell : Type) [DecidableEq cell] [Fintype cell]
     (Bad : Type) : Type :=
   TopLevelCorrectnessData
-    (TopLevelGateCoherence top pp urs)
+    (TopLevelGateCoherence top)
     (∀ proofIndex,
       TopLevelFixedEncodingOutcome top pp urs poly Bad proofIndex)
     (∀ proofIndex,

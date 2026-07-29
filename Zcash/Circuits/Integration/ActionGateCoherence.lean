@@ -84,15 +84,13 @@ private theorem gateSelectorsAllocated :
 The deployed Orchard Action circuit satisfies the complete static gate boundary
 against its own derived verifying key.
 -/
-theorem topLevelGateCoherence
-    {G : Type} [AddCommGroup G] [Inhabited G]
-    (pp : ProofParams) (urs : URS G) :
-    TopLevelGateCoherence actionCircuit pp urs where
+theorem topLevel :
+    TopLevelGateCoherence actionCircuit where
   gateSelectorsAllocated := gateSelectorsAllocated
   domainExponent_lt := domainExponent_lt
   selectorDegree := selectorDegree
 
-assert_no_sorry topLevelGateCoherence
+assert_no_sorry topLevel
 
 end ActionGateCoherence
 

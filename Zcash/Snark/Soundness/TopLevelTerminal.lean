@@ -50,7 +50,7 @@ noncomputable def topLevelBundleStatement_or_bad_of_components
       ConstraintSatisfaction
         (top.constraintModel pp urs ch poly)
         (top.toVerifierKey pp urs).n)
-    (gates : TopLevelGateCoherence top pp urs)
+    (gates : TopLevelGateCoherence top)
     (fixedEncoding : ∀ proofIndex,
       TopLevelFixedEncoding top pp urs poly proofIndex)
     (fixed : ∀ proofIndex,

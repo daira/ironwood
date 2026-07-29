@@ -252,7 +252,7 @@ namespace TopLevelGateCoherence
 
 /-- The resolver feeds interpret the complete circuit-derived pinned query state. -/
 theorem resolverInterpretsPinned
-    (coherence : TopLevelGateCoherence top pp urs)
+    (coherence : TopLevelGateCoherence top)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (usableRows row : ℕ) :
@@ -368,7 +368,7 @@ The circuit-derived verifying key's selected lookup tuples evaluate like the
 enabled Clean lookup's concrete input and table tuples.
 -/
 theorem projectedValues
-    (gateCoherence : TopLevelGateCoherence top pp urs)
+    (gateCoherence : TopLevelGateCoherence top)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (lookup : EnabledLookup Fp)
@@ -456,6 +456,7 @@ theorem projectedValues
       route.index.val route.index.isLt
       hinputCoverage htableCoverage
       (gateCoherence.resolverInterpretsPinned
+        (pp := pp) (urs := urs)
         poly proofIndex
         (top.usableRowsAt top.domainExponent) row)
   have inputProjected :=
@@ -506,7 +507,7 @@ The resolver's compressed input and table polynomials evaluate to the concrete
 Clean tuples compressed with the transcript challenge.
 -/
 theorem projectedPolynomialValues
-    (gateCoherence : TopLevelGateCoherence top pp urs)
+    (gateCoherence : TopLevelGateCoherence top)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
@@ -576,7 +577,7 @@ static projection, exact selector values, row fit, and explicitly priced
 challenge exclusions are supplied.
 -/
 noncomputable def deployedWitness
-    (gateCoherence : TopLevelGateCoherence top pp urs)
+    (gateCoherence : TopLevelGateCoherence top)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
@@ -887,7 +888,7 @@ noncomputable def WitnessConditions.ofChallengeExclusions
 
 /-- Construct the complete deployed-witness family for one top-level proof. -/
 noncomputable def deployedWitnesses
-    (gateCoherence : TopLevelGateCoherence top pp urs)
+    (gateCoherence : TopLevelGateCoherence top)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
@@ -929,7 +930,7 @@ noncomputable def deployedWitnesses
 
 /-- The deployed family discharges Clean's complete lookup constraint family. -/
 theorem constraints
-    (gateCoherence : TopLevelGateCoherence top pp urs)
+    (gateCoherence : TopLevelGateCoherence top)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)

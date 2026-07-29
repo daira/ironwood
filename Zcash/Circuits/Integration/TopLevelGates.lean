@@ -35,11 +35,9 @@ circuit-derived constraint system closes the raw configure result under synthesi
 construction.
 -/
 structure TopLevelGateCoherence
-    {G : Type} [AddCommGroup G] [Inhabited G]
     {Config : Type} {PublicInput : TypeMap}
     [ProvableType PublicInput]
-    (top : TopLevelCircuit Fp Config PublicInput)
-    (pp : ProofParams) (urs : URS G) : Prop where
+    (top : TopLevelCircuit Fp Config PublicInput) : Prop where
   gateSelectorsAllocated :
     top.constraintSystem.GateSelectorsAllocated
   domainExponent_lt : top.domainExponent < 33
@@ -60,7 +58,7 @@ The final pinned query state interprets the resolver feeds, and restricts to the
 intermediate gate-erasure state because lookup erasure only appends query entries.
 -/
 theorem resolverInterpretsGates
-    (coherence : TopLevelGateCoherence top pp urs)
+    (coherence : TopLevelGateCoherence top)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (usableRows row : ℕ) :
@@ -116,7 +114,7 @@ Every enabled constraint in the top-level operation stream has the corresponding
 resolver gate polynomial witness.
 -/
 noncomputable def polynomialWitness
-    (coherence : TopLevelGateCoherence top pp urs)
+    (coherence : TopLevelGateCoherence top)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (sets : Fin (pp.mergeDerived top).numProofs →
@@ -198,6 +196,7 @@ noncomputable def polynomialWitness
             RichExpression.toExpr := by
     rfl
   have hinterpret := coherence.resolverInterpretsGates
+    (pp := pp) (urs := urs)
     poly proofIndex usableRows
     (top.placement enabled.region + enabled.row)
   have hscale :
@@ -228,7 +227,7 @@ Deployed gate divisibility therefore supplies the complete gate component of the
 top-level circuit's Clean constraints.
 -/
 theorem constraints
-    (coherence : TopLevelGateCoherence top pp urs)
+    (coherence : TopLevelGateCoherence top)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (sets : Fin (pp.mergeDerived top).numProofs →
@@ -275,7 +274,7 @@ families or Lagrange-selector polynomials: they are the ones derived from the sa
 resolver and circuit-owned verification key.
 -/
 theorem canonicalConstraints
-    (coherence : TopLevelGateCoherence top pp urs)
+    (coherence : TopLevelGateCoherence top)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
