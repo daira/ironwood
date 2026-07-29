@@ -71,7 +71,7 @@ intermediate gate-erasure state because lookup erasure only appends query entrie
 -/
 theorem resolverInterpretsGates
     (coherence : TopLevelGateCoherence top pp urs)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (usableRows row : ℕ) :
     Interprets
@@ -128,13 +128,13 @@ resolver gate polynomial witness.
 def polynomialWitness
     (coherence : TopLevelGateCoherence top pp urs)
     (ch : Challenges (pp.mergeDerived top).k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (sets : Fin (pp.mergeDerived top).numProofs →
-      List (PermSetEval (Polynomial Fp)))
+      List (PermSetEval (CPoly)))
     (chunks : Fin (pp.mergeDerived top).numProofs →
-      List (PermSetEval (Polynomial Fp) ×
-        List (Polynomial Fp × Polynomial Fp)))
-    (l0 lLast lBlind : Polynomial Fp)
+      List (PermSetEval (CPoly) ×
+        List (CPoly × CPoly)))
+    (l0 lLast lBlind : CPoly)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (usableRows : ℕ)
     (hfixed : SelectorActivationsRealized top.selectorMap
@@ -237,13 +237,13 @@ top-level circuit's Clean constraints.
 theorem constraints
     (coherence : TopLevelGateCoherence top pp urs)
     (ch : Challenges (pp.mergeDerived top).k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (sets : Fin (pp.mergeDerived top).numProofs →
-      List (PermSetEval (Polynomial Fp)))
+      List (PermSetEval (CPoly)))
     (chunks : Fin (pp.mergeDerived top).numProofs →
-      List (PermSetEval (Polynomial Fp) ×
-        List (Polynomial Fp × Polynomial Fp)))
-    (l0 lLast lBlind : Polynomial Fp)
+      List (PermSetEval (CPoly) ×
+        List (CPoly × CPoly)))
+    (l0 lLast lBlind : CPoly)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (usableRows n : ℕ)
     (satisfaction :
@@ -284,7 +284,7 @@ resolver and circuit-owned verification key.
 theorem canonicalConstraints
     (coherence : TopLevelGateCoherence top pp urs)
     (ch : Challenges (pp.mergeDerived top).k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (hblinding :
       (top.toVerifierKey pp urs).blindingFactors <
         (top.toVerifierKey pp urs).n)

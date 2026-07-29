@@ -14,7 +14,7 @@ verifying key. Every proof in the bundle gets its own selections.
 
 namespace Zcash.Snark
 
-open Polynomial
+open CompPoly CompPoly.CPolynomial
 open Classical
 
 set_option maxHeartbeats 20000
@@ -229,7 +229,7 @@ theorem acceptedAdviceSelection_feed_eq
       (ps := ps) (ch := ch) (proofIndex := proofIndex)
       urs hk haccepts hLayout
   let selected :
-      Fin shape.numProofs → Fin shape.numAdviceQueries → Polynomial Fp :=
+      Fin shape.numProofs → Fin shape.numAdviceQueries → CPoly :=
     fun proofIndex queryIndex =>
       coeffsToPoly
         ((memberDecode
@@ -470,7 +470,7 @@ theorem acceptedInstanceSelection_feed_eq
       (ps := ps) (ch := ch) (proofIndex := proofIndex)
       urs hk haccepts hLayout
   let selected :
-      Fin shape.numProofs → Fin shape.numInstanceQueries → Polynomial Fp :=
+      Fin shape.numProofs → Fin shape.numInstanceQueries → CPoly :=
     fun proofIndex queryIndex =>
       coeffsToPoly
         ((memberDecode
