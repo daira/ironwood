@@ -433,8 +433,13 @@
           "source": "runtimeAgmStack"
         },
         {
-          "symbol": "orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generatorRO_for",
+          "symbol": "orchard_action_knowledgeFailure_adaptive_2pow123_workFactor_generatorRO_for",
           "path": "Zcash/Snark/Fixtures/MultiAction/ActionCapstone.lean",
+          "source": "runtimeAgmStack"
+        },
+        {
+          "symbol": "adaptiveActionKnowledgeExtractor",
+          "path": "Zcash/Circuits/Integration/AdaptiveActionEvent.lean",
           "source": "runtimeAgmStack"
         },
         {
@@ -448,7 +453,12 @@
           "source": "runtimeAgmStack"
         },
         {
-          "symbol": "adaptiveActionRelationFinderCalls_le_traversalSlots",
+          "symbol": "adaptiveActionKnowledgeExtractorCalls_le_traversalSlots",
+          "path": "Zcash/Circuits/Integration/AdaptiveActionEvent.lean",
+          "source": "runtimeAgmStack"
+        },
+        {
+          "symbol": "AdaptiveActionDirectDlogProfile.knowledgeExtractorCost_le",
           "path": "Zcash/Circuits/Integration/AdaptiveActionEvent.lean",
           "source": "runtimeAgmStack"
         }
@@ -463,12 +473,13 @@
         "The recursive extractor computes an AlgebraicDForkCert from explicit oracle and tape coins, and every returned certificate records real accepting runs.",
         "Every binding mismatch yields explicit relation data, and the programmed-basis conversion loses only one 1/|F| miss hyperplane.",
         "The recursive extractor has the unconditional field-independent expected-call bound (8·Q+1)·10^k in the style of Attema-Fehr-Klooß 2021, with no FamilyForkSpread premise.",
-        "The straight-line constraint finder has a pointwise four-run bound; the composed sequential Action finder uses six runs, while the bare-adaptive Action finder caches each provenance aggregate's output and annotation log and charges eight independently traversed slots.",
+        "The straight-line constraint finder has a pointwise four-run bound; the composed sequential Action finder uses six runs, while the bare-adaptive Action knowledge outcome caches each provenance aggregate's output and annotation log and charges eight independently traversed slots.",
+        "The Action knowledge extractor is executable and returns the actual private witnesses for every proof in the bundle together with proofs that they satisfy the compiled Action specification; its relation projection shares the same cached outcome.",
         "The direct profiles separately account for random-oracle, group, and direct-coordinate work while leaving the finite-security Vesta DLOG advantage as a caller premise.",
-        "For every numProofs at or below Orchard's consensus maximum, the generic adaptive Action endpoint bounds acceptance of a false literal BundleStatement by Adv_DLOG(2^127,2^127) + 2^-83, prices all five semantic challenge surfaces, and exposes an explicit PMFEventBiasLE transport conjunct; it requires no externally supplied traces, cuts, or views."
+        "For every numProofs at or below Orchard's consensus maximum, the generic adaptive Action knowledge endpoint bounds verifier acceptance when executable private-witness extraction fails by Adv_DLOG(2^127,2^127) + 2^-83, prices all five semantic challenge surfaces, profiles the shared extractor, and exposes an explicit PMFEventBiasLE transport conjunct; it requires no externally supplied traces, cuts, or views."
       ],
       "residuals": [
-        "Identify Blake2b and halo2's concrete hash-to-curve with their modeled random oracles; supply finite-security Vesta DL hardness and implementation work bounds; and connect the circuit-level BundleStatement to the ledger security statement. The result covers represented online-AGM adversaries, not arbitrary non-algebraic random-oracle adversaries."
+        "Identify Blake2b and halo2's concrete hash-to-curve with their modeled random oracles; supply finite-security Vesta DL hardness and implementation work bounds; and identify the extracted circuit private witnesses and compiled Action specification with the ledger-level Orchard witness relation. The result covers represented online-AGM adversaries, not arbitrary non-algebraic random-oracle adversaries."
       ],
       "durationMs": 10000
     },

@@ -2,12 +2,14 @@ import Zcash.Circuits.Integration.AdaptiveActionSurfaces
 import Zcash.Snark.Soundness.AGM.AdaptiveComposition
 
 /-!
-# Literal Action soundness for arbitrary adaptive online-AGM adversaries
+# Action soundness and knowledge soundness for adaptive online-AGM adversaries
 
-This file exposes the executable adaptive Action terminal as one combined relation finder.  Its
-public event is the literal deployed-verifier event `accept ∧ ¬ BundleStatement`; no
-propositionally closed relation is treated as semantic success, and no sequential trace, cut, or
-phase presentation is an input.
+This file exposes one cached executable adaptive Action terminal.  Its two projections return
+either Type-valued private Action witnesses or explicit relation data.  It bounds both the literal
+ordinary-soundness event `accept ∧ ¬ BundleStatement` and the knowledge-soundness event in which
+the verifier accepts but the witness projection returns `none`.  No propositionally closed
+relation is treated as semantic success, and no sequential trace, cut, or phase presentation is
+an input.
 -/
 
 namespace Zcash.Snark
@@ -50,7 +52,7 @@ include inputs hvk hI hchar in
 /-- The zero-pre-`x` identity branch of the adaptive Action terminal.  When the fixed pre-`x`
 difference is identically zero, canonical circuit satisfaction is already available and the
 terminal must not re-test the `x`-dependent reassembled quotient polynomial. -/
-def adaptiveActionPreXIdentityRelationFinder
+def adaptiveActionPreXIdentityWitnessOrRelationFinder
     (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
     (O : BTranscript Fp VestaG
       (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
@@ -62,7 +64,8 @@ def adaptiveActionPreXIdentityRelationFinder
     (hroots : family.AdaptiveDeployedGoodRoots basis O witness)
     (hshifted : family.AdaptiveShiftedValue basis O)
     (haccepts : adaptiveActionAccepts family basis O) :
-    Option (AlgebraicRelationWitness (F := Fp) basis) := by
+    Option (ActionBundleWitness inputs ⊕
+      AlgebraicRelationWitness (F := Fp) basis) := by
   let pnu := adaptiveActionRunOutput family basis O
   let ch := adaptiveActionRunRecord family basis O
   let data := (family.adversary basis).run O
@@ -210,7 +213,7 @@ def adaptiveActionPreXIdentityRelationFinder
             simpa only [actionPoly, decode, hacceptsAction, pnu, ch,
               adaptiveActionRunRecord, adaptiveActionRunAccepts,
               ← hpolyTransport] using hlookupProof.down
-          match action_bundleStatement_or_relation_of_decode_circuitSat pp
+          match action_bundleWitness_or_relation_of_decode_circuitSat pp
               (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) rfl inputs
               pnu.1.proof.1 ch
               (pnu.1.multiU (wrappedPreIpaReads pnu))
@@ -218,17 +221,51 @@ def adaptiveActionPreXIdentityRelationFinder
               (pnu.1.aMulti (wrappedPreIpaReads pnu)) decode (hchar basis O)
               hacceptsAction preXPoly hsatisfied hgoodYAction
               hpermutationAction hlookupAction with
-          | PSum.inl _ => none
-          | PSum.inr relation => some
+          | PSum.inl extracted => some (Sum.inl extracted)
+          | PSum.inr relation => some (Sum.inr
               (augmentedBasis_ursOfAugmentedBasis
                 (pp.mergeDerived actionCircuit).k basis ▸
-                  AugmentedRelationWitness.toAlgebraicRelationWitness relation)
+                  AugmentedRelationWitness.toAlgebraicRelationWitness relation))
   else
     exact none
 
+/-- Relation-only projection used by the existing ordinary-soundness finder. -/
+def adaptiveActionPreXIdentityRelationFinder
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+        + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
+    (hprovenance : family.adaptiveActionRepresentationRelationFinder basis O = none)
+    (witness : DeployedBatchWitness family.toFamily basis
+      (adaptiveActionRunOutput family basis O))
+    (hsrc : witness.fixedRepresentations = family.fixedRepresentations basis)
+    (hroots : family.AdaptiveDeployedGoodRoots basis O witness)
+    (hshifted : family.AdaptiveShiftedValue basis O)
+    (haccepts : adaptiveActionAccepts family basis O) :
+    Option (AlgebraicRelationWitness (F := Fp) basis) :=
+  match adaptiveActionPreXIdentityWitnessOrRelationFinder pp family inputs hvk hI hchar
+      basis O hprovenance witness hsrc hroots hshifted haccepts with
+  | some (Sum.inr relation) => some relation
+  | _ => none
+
+theorem adaptiveActionPreXIdentityRelationFinder_isSome_of_witnessOrRelation
+    (basis) (O) (hprovenance) (witness) (hsrc) (hroots) (hshifted) (haccepts)
+    (hcomplete : (adaptiveActionPreXIdentityWitnessOrRelationFinder pp family inputs hvk hI
+      hchar basis O hprovenance witness hsrc hroots hshifted haccepts).isSome)
+    (hfalse : ¬BundleStatement inputs) :
+    (adaptiveActionPreXIdentityRelationFinder pp family inputs hvk hI hchar basis O
+      hprovenance witness hsrc hroots hshifted haccepts).isSome := by
+  obtain ⟨outcome, houtcome⟩ := Option.isSome_iff_exists.mp hcomplete
+  cases outcome with
+  | inl extracted => exact False.elim (hfalse extracted.statement)
+  | inr relation =>
+      unfold adaptiveActionPreXIdentityRelationFinder
+      rw [houtcome]
+      rfl
+
 /-- On the identically-zero pre-`x` branch, successful semantic exclusions and a false literal
 statement force the executable identity terminal to return relation data. -/
-theorem adaptiveActionPreXIdentityRelationFinder_isSome_of
+theorem adaptiveActionPreXIdentityWitnessOrRelationFinder_isSome_of
     (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
     (O : BTranscript Fp VestaG
       (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
@@ -280,9 +317,8 @@ theorem adaptiveActionPreXIdentityRelationFinder_isSome_of
         (adaptiveActionRunRecord family basis O)
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi)
-          hacceptsAction))
-    (hfalse : ¬BundleStatement inputs) :
-    (adaptiveActionPreXIdentityRelationFinder pp family inputs hvk hI hchar basis O
+          hacceptsAction)) :
+    (adaptiveActionPreXIdentityWitnessOrRelationFinder pp family inputs hvk hI hchar basis O
       hprovenance witness hsrc hroots hshifted haccepts).isSome := by
   let pnu := adaptiveActionRunOutput family basis O
   let rawDecode := family.adaptiveAlgebraicDecode_of_deployedGoodRoots
@@ -344,15 +380,78 @@ theorem adaptiveActionPreXIdentityRelationFinder_isSome_of
   obtain ⟨hgoodYProof, hgoodYEq⟩ := Option.isSome_iff_exists.mp hySome
   obtain ⟨hpermutationProof, hpermutationEq⟩ := Option.isSome_iff_exists.mp hpSome
   obtain ⟨hlookupProof, hlookupEq⟩ := Option.isSome_iff_exists.mp hlSome
-  unfold adaptiveActionPreXIdentityRelationFinder
+  unfold adaptiveActionPreXIdentityWitnessOrRelationFinder
   rw [dif_pos hsupport]
   dsimp only
   rw [hgoodYEq, hpermutationEq, hlookupEq]
   dsimp only
-  split
-  · rename_i statement hstatement
-    exact False.elim (hfalse statement)
-  · simp
+  split <;> rfl
+
+/-- On the identically-zero pre-`x` branch, a false statement projects the complete outcome to
+explicit relation data. -/
+theorem adaptiveActionPreXIdentityRelationFinder_isSome_of
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+        + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
+    (hprovenance : family.adaptiveActionRepresentationRelationFinder basis O = none)
+    (witness : DeployedBatchWitness family.toFamily basis
+      (adaptiveActionRunOutput family basis O))
+    (hsrc : witness.fixedRepresentations = family.fixedRepresentations basis)
+    (hroots : family.AdaptiveDeployedGoodRoots basis O witness)
+    (hshifted : family.AdaptiveShiftedValue basis O)
+    (haccepts : adaptiveActionAccepts family basis O)
+    (hsupport : let data := (family.adversary basis).run O
+      let source := data.algebraicProof.preX1AssemblySource
+        (family.fixedRepresentations basis)
+      let hblinding : (family.vk basis).blindingFactors < (family.vk basis).n := by
+        rw [hvk basis]
+        exact ActionPermutationDomain.blindingFactors_lt pp
+          (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)
+      let difference := adaptiveActionPreXDifferenceOf (family.vk basis)
+        (family.instanceCommitment basis) data.algebraicProof.erase source
+        (adaptiveActionRunRecord family basis O) hblinding
+      difference.toFinsupp.support = ∅)
+    (hgoodY : let _pnu := adaptiveActionRunOutput family basis O
+      let decode := hI basis ▸ hvk basis ▸
+        (family.adaptiveAlgebraicDecode_of_deployedGoodRoots
+          basis O witness hroots hshifted).reRound (runRounds family.toFamily basis O)
+      let hacceptsAction := adaptiveActionRunAccepts pp family basis O inputs hvk hI haccepts
+      let model := CanonicalMemberConstraintRelation.acceptedModel
+        (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi)
+        (hblinding := ActionPermutationDomain.blindingFactors_lt pp
+          (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)) hacceptsAction
+      ∀ j, (adaptiveActionRunRecord family basis O).y ∉
+        szBadSet (foldSplitWitness model.constraints (ActionTerminal.vkAt pp basis).n j))
+    (hpermutation : let decode := hI basis ▸ hvk basis ▸
+        (family.adaptiveAlgebraicDecode_of_deployedGoodRoots
+          basis O witness hroots hshifted).reRound (runRounds family.toFamily basis O)
+      let hacceptsAction := adaptiveActionRunAccepts pp family basis O inputs hvk hI haccepts
+      ResolverPermutationChallengeExclusions (ActionTerminal.vkAt pp basis)
+        (adaptiveActionRunRecord family basis O)
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi)
+          hacceptsAction) actionActiveRows)
+    (hlookup : let decode := hI basis ▸ hvk basis ▸
+        (family.adaptiveAlgebraicDecode_of_deployedGoodRoots
+          basis O witness hroots hshifted).reRound (runRounds family.toFamily basis O)
+      let hacceptsAction := adaptiveActionRunAccepts pp family basis O inputs hvk hI haccepts
+      TopLevelLookupCoherence.TopLevelLookupChallengeExclusions actionCircuit pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)
+        (adaptiveActionRunRecord family basis O)
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi)
+          hacceptsAction))
+    (hfalse : ¬BundleStatement inputs) :
+    (adaptiveActionPreXIdentityRelationFinder pp family inputs hvk hI hchar basis O
+      hprovenance witness hsrc hroots hshifted haccepts).isSome :=
+  adaptiveActionPreXIdentityRelationFinder_isSome_of_witnessOrRelation
+    pp family inputs hvk hI hchar basis O hprovenance witness hsrc hroots hshifted
+      haccepts
+      (adaptiveActionPreXIdentityWitnessOrRelationFinder_isSome_of pp family inputs
+        hvk hI hchar basis O hprovenance witness hsrc hroots hshifted haccepts
+        hsupport hgoodY hpermutation hlookup)
+      hfalse
 
 /-- One executable adaptive Action terminal covering both the zero pre-`x` identity branch and
 the existing nonzero reassembled-quotient branch. -/
@@ -400,13 +499,14 @@ theorem adaptiveActionRootOutcomeWithSource_eq_inl
     subst witness'
     congr
 
-def adaptiveActionCompleteTerminalRelationFinder
+def adaptiveActionCompleteTerminalWitnessOrRelationFinder
     (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
     (O : BTranscript Fp VestaG
       (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
         + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
     (hprovenance : family.adaptiveActionRepresentationRelationFinder basis O = none) :
-    Option (AlgebraicRelationWitness (F := Fp) basis) :=
+    Option (ActionBundleWitness inputs ⊕
+      AlgebraicRelationWitness (F := Fp) basis) :=
   let pnu := adaptiveActionRunOutput family basis O
   let nu := wrappedPreIpaReads pnu
   let rounds := runRounds family.toFamily basis O
@@ -422,7 +522,8 @@ def adaptiveActionCompleteTerminalRelationFinder
       else
         match adaptiveActionRootOutcomeWithSource pp family basis O with
         | PSum.inr relation =>
-            some (ComputedStraightLineIpaFSFamily.straightLineCanonicalRelation relation)
+            some (Sum.inr
+              (ComputedStraightLineIpaFSFamily.straightLineCanonicalRelation relation))
         | PSum.inl sourcedWitness =>
             let witness := sourcedWitness.1
             let hsrc := sourcedWitness.2
@@ -431,9 +532,10 @@ def adaptiveActionCompleteTerminalRelationFinder
             | some hroots =>
                 let hshifted := adaptiveShiftedValue_of_accept_not_attack
                   family basis O haccepts hz hattack
-                match adaptiveActionPreXIdentityRelationFinder pp family inputs hvk hI hchar
+                match adaptiveActionPreXIdentityWitnessOrRelationFinder pp family inputs
+                    hvk hI hchar
                     basis O hprovenance witness hsrc hroots.down hshifted haccepts with
-                | some relation => some relation
+                | some outcome => some outcome
                 | none =>
                     let decode : DeployedAlgebraicDecode
                         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) rfl
@@ -454,13 +556,198 @@ def adaptiveActionCompleteTerminalRelationFinder
                           (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
                         pnu.1.proof.1 (chRecord nu rounds) :=
                       adaptiveActionRunAccepts pp family basis O inputs hvk hI haccepts
-                    adaptiveActionRelationOfDecode? pp family basis O inputs
+                    adaptiveActionWitnessOrRelationOfDecode? pp family basis O inputs
                       (hchar basis O) decode hacceptsAction
     else none
   | none => none
 
-/-- Once the algebraic/root branches are good, avoiding the five Action semantic surfaces and
-falsifying the literal statement forces the complete executable terminal to return a relation. -/
+/-- Relation-only projection used by the ordinary-soundness reduction. -/
+def adaptiveActionCompleteTerminalRelationFinder
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+        + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
+    (hprovenance : family.adaptiveActionRepresentationRelationFinder basis O = none) :
+    Option (AlgebraicRelationWitness (F := Fp) basis) :=
+  match adaptiveActionCompleteTerminalWitnessOrRelationFinder pp family inputs hvk hI hchar
+      basis O hprovenance with
+  | some (Sum.inr relation) => some relation
+  | _ => none
+
+theorem adaptiveActionCompleteTerminalRelationFinder_isSome_of_witnessOrRelation
+    (basis) (O) (hprovenance)
+    (hcomplete : (adaptiveActionCompleteTerminalWitnessOrRelationFinder pp family inputs
+      hvk hI hchar basis O hprovenance).isSome)
+    (hfalse : ¬BundleStatement inputs) :
+    (adaptiveActionCompleteTerminalRelationFinder pp family inputs hvk hI hchar
+      basis O hprovenance).isSome := by
+  obtain ⟨outcome, houtcome⟩ := Option.isSome_iff_exists.mp hcomplete
+  cases outcome with
+  | inl extracted => exact False.elim (hfalse extracted.statement)
+  | inr relation =>
+      unfold adaptiveActionCompleteTerminalRelationFinder
+      rw [houtcome]
+      rfl
+
+/-- Once the algebraic/root branches and five Action semantic surfaces are good, the complete
+terminal returns either extracted witnesses or explicit relation data. -/
+theorem adaptiveActionCompleteTerminalWitnessOrRelationFinder_isSome_of
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+        + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
+    (hprovenance : family.adaptiveActionRepresentationRelationFinder basis O = none)
+    (witness : DeployedBatchWitness family.toFamily basis
+      (adaptiveActionRunOutput family basis O))
+    (hout : deployedRootOutcomeOfCovered family.toOnlineMemberFamily basis O =
+      PSum.inl witness)
+    (hroots : family.AdaptiveDeployedGoodRoots basis O witness)
+    (haccepts : adaptiveActionAccepts family basis O)
+    (hz : wrappedPreIpaReads (adaptiveActionRunOutput family basis O) 10 ≠ 0)
+    (hattack : ¬fullAlgebraicBindingAttackZ basis (family.vk basis)
+      (family.instanceCommitment basis) (adaptiveActionRunOutput family basis O).1
+      (wrappedPreIpaReads (adaptiveActionRunOutput family basis O))
+      (runRounds family.toFamily basis O))
+    (hshifted : family.AdaptiveShiftedValue basis O)
+    (hx : let data := (family.adversary basis).run O
+      let source := data.algebraicProof.preX1AssemblySource
+        (family.fixedRepresentations basis)
+      let hblinding : (family.vk basis).blindingFactors < (family.vk basis).n := by
+        rw [hvk basis]
+        exact ActionPermutationDomain.blindingFactors_lt pp
+          (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)
+      (adaptiveActionRunRecord family basis O).x ∉ szBadSet
+        (adaptiveActionPreXDifferenceOf (family.vk basis)
+          (family.instanceCommitment basis) data.algebraicProof.erase source
+          (adaptiveActionRunRecord family basis O) hblinding))
+    (hgoodY : let decode := hI basis ▸ hvk basis ▸
+        (family.adaptiveAlgebraicDecode_of_deployedGoodRoots
+          basis O witness hroots hshifted).reRound (runRounds family.toFamily basis O)
+      let hacceptsAction := adaptiveActionRunAccepts pp family basis O inputs hvk hI haccepts
+      let model := CanonicalMemberConstraintRelation.acceptedModel
+        (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi)
+        (hblinding := ActionPermutationDomain.blindingFactors_lt pp
+          (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)) hacceptsAction
+      ∀ j, (adaptiveActionRunRecord family basis O).y ∉
+        szBadSet (foldSplitWitness model.constraints (ActionTerminal.vkAt pp basis).n j))
+    (hpermutation : let decode := hI basis ▸ hvk basis ▸
+        (family.adaptiveAlgebraicDecode_of_deployedGoodRoots
+          basis O witness hroots hshifted).reRound (runRounds family.toFamily basis O)
+      let hacceptsAction := adaptiveActionRunAccepts pp family basis O inputs hvk hI haccepts
+      ResolverPermutationChallengeExclusions (ActionTerminal.vkAt pp basis)
+        (adaptiveActionRunRecord family basis O)
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi)
+          hacceptsAction) actionActiveRows)
+    (hlookup : let decode := hI basis ▸ hvk basis ▸
+        (family.adaptiveAlgebraicDecode_of_deployedGoodRoots
+          basis O witness hroots hshifted).reRound (runRounds family.toFamily basis O)
+      let hacceptsAction := adaptiveActionRunAccepts pp family basis O inputs hvk hI haccepts
+      TopLevelLookupCoherence.TopLevelLookupChallengeExclusions actionCircuit pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)
+        (adaptiveActionRunRecord family basis O)
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi)
+          hacceptsAction)) :
+    (adaptiveActionCompleteTerminalWitnessOrRelationFinder pp family inputs hvk hI hchar
+      basis O hprovenance).isSome := by
+  let pnu := adaptiveActionRunOutput family basis O
+  let rawDecode := family.adaptiveAlgebraicDecode_of_deployedGoodRoots
+    basis O witness hroots hshifted
+  let decode := hI basis ▸ hvk basis ▸
+    rawDecode.reRound (runRounds family.toFamily basis O)
+  let hacceptsAction := adaptiveActionRunAccepts pp family basis O inputs hvk hI haccepts
+  let model := CanonicalMemberConstraintRelation.acceptedModel
+    (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi)
+    (hblinding := ActionPermutationDomain.blindingFactors_lt pp
+      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)) hacceptsAction
+  let polynomial := CanonicalMemberConstraintRelation.acceptedPolynomial
+    (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi) hacceptsAction
+  let data := (family.adversary basis).run O
+  let source := data.algebraicProof.preX1AssemblySource (family.fixedRepresentations basis)
+  let pointPoly := onlinePointPolynomial source
+  let piecePoly := fun i => onlinePointPolynomial source (data.algebraicProof.hPieces i).point
+  have hblinding : (family.vk basis).blindingFactors < (family.vk basis).n := by
+    rw [hvk basis]
+    exact ActionPermutationDomain.blindingFactors_lt pp
+      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)
+  let difference := adaptiveActionPreXDifferenceOf (family.vk basis)
+    (family.instanceCommitment basis) data.algebraicProof.erase source
+    (adaptiveActionRunRecord family basis O) hblinding
+  dsimp only at hx hgoodY hpermutation hlookup
+  have hacceptsSome := adaptiveActionAccepts?_isSome_of family basis O haccepts
+  obtain ⟨hacceptsProof, hacceptsEq⟩ := Option.isSome_iff_exists.mp hacceptsSome
+  have hrootsSome := family.adaptiveDeployedGoodRoots?_isSome_of basis O witness hroots
+  obtain ⟨hrootsProof, hrootsEq⟩ := Option.isSome_iff_exists.mp hrootsSome
+  have hsrc : witness.fixedRepresentations = family.fixedRepresentations basis :=
+    deployedRootOutcomeOfCovered_fixedRepresentations family.toOnlineMemberFamily
+      basis O witness hout
+  have hrootSourceEq : adaptiveActionRootOutcomeWithSource pp family basis O =
+      PSum.inl ⟨witness, hsrc⟩ := by
+    simpa only [hsrc] using
+      adaptiveActionRootOutcomeWithSource_eq_inl pp family basis O witness hout
+  by_cases hsupport : difference.toFinsupp.support = ∅
+  · have hidentityDataSome :=
+      adaptiveActionPreXIdentityWitnessOrRelationFinder_isSome_of
+      pp family inputs hvk hI hchar basis O hprovenance witness hsrc hroots hshifted
+      haccepts (by simpa only [difference, source, data] using hsupport)
+      hgoodY hpermutation hlookup
+    obtain ⟨outcome, hidentityEq⟩ := Option.isSome_iff_exists.mp hidentityDataSome
+    unfold adaptiveActionCompleteTerminalWitnessOrRelationFinder
+    rw [hacceptsEq]
+    dsimp only
+    rw [dif_pos hz, dif_neg hattack]
+    rw [hrootSourceEq]
+    dsimp only
+    rw (occs := .pos [1]) [hrootsEq]
+    dsimp only
+    rw [hidentityEq]
+    rfl
+  · have hbatches : rawDecode.batches = witness.batches := by rfl
+    have heval := family.adaptiveActionAcceptedDifference_eval_eq_preX pp basis O inputs
+      hvk hI hprovenance witness hsrc rawDecode hbatches haccepts (hchar basis O)
+    dsimp only at heval
+    have hdiffData := adaptiveActionPreXDifferenceOf_action pp basis inputs
+      (family.vk basis) (family.instanceCommitment basis) data.algebraicProof.erase source
+      (adaptiveActionRunRecord family basis O) hblinding (hvk basis) (hI basis)
+    rw [← hdiffData] at heval
+    have hdifferenceNe : difference ≠ 0 := by
+      intro hzero
+      apply hsupport
+      rw [hzero]
+      rfl
+    have hpreEval : difference.eval (adaptiveActionRunRecord family basis O).x ≠ 0 :=
+      (not_mem_szBadSet.mp hx) hdifferenceNe
+    have hactionGood : (adaptiveActionRunRecord family basis O).x ∉ szBadSet
+        (combineConstraints model.fixedCols model.adviceCols model.instanceCols model.gates
+          model.sets model.chunks model.lookups model.beta model.gamma model.delta model.theta
+          (adaptiveActionRunRecord family basis O).y model.chunkLen model.l0 model.lLast
+          model.lBlind - polynomial .vanishingH *
+            (Polynomial.X ^ (ActionTerminal.vkAt pp basis).n - 1)) := by
+      apply not_mem_szBadSet.mpr
+      intro _
+      rw [heval]
+      exact hpreEval
+    have holdDataSome := adaptiveActionWitnessOrRelationOfDecode?_isSome_of
+      pp family basis O inputs (hchar basis O) decode hacceptsAction hactionGood hgoodY
+      hpermutation hlookup
+    have hidentityNone : adaptiveActionPreXIdentityWitnessOrRelationFinder pp family inputs
+        hvk hI hchar
+        basis O hprovenance witness hsrc hroots hshifted haccepts = none := by
+      unfold adaptiveActionPreXIdentityWitnessOrRelationFinder
+      rw [dif_neg (by simpa only [difference, source, data] using hsupport)]
+    unfold adaptiveActionCompleteTerminalWitnessOrRelationFinder
+    rw [hacceptsEq]
+    dsimp only
+    rw [dif_pos hz, dif_neg hattack]
+    rw [hrootSourceEq]
+    dsimp only
+    rw (occs := .pos [1]) [hrootsEq]
+    dsimp only
+    rw [hidentityNone]
+    simpa only [decode, rawDecode, hacceptsAction, pnu] using holdDataSome
+
+/-- A false statement rules out the extracted-witness branch of the complete outcome. -/
 theorem adaptiveActionCompleteTerminalRelationFinder_isSome_of
     (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
     (O : BTranscript Fp VestaG
@@ -521,118 +808,75 @@ theorem adaptiveActionCompleteTerminalRelationFinder_isSome_of
           (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi)
           hacceptsAction)) :
     (adaptiveActionCompleteTerminalRelationFinder pp family inputs hvk hI hchar
-      basis O hprovenance).isSome := by
-  let pnu := adaptiveActionRunOutput family basis O
-  let rawDecode := family.adaptiveAlgebraicDecode_of_deployedGoodRoots
-    basis O witness hroots hshifted
-  let decode := hI basis ▸ hvk basis ▸
-    rawDecode.reRound (runRounds family.toFamily basis O)
-  let hacceptsAction := adaptiveActionRunAccepts pp family basis O inputs hvk hI haccepts
-  let model := CanonicalMemberConstraintRelation.acceptedModel
-    (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi)
-    (hblinding := ActionPermutationDomain.blindingFactors_lt pp
-      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)) hacceptsAction
-  let polynomial := CanonicalMemberConstraintRelation.acceptedPolynomial
-    (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi) hacceptsAction
-  let data := (family.adversary basis).run O
-  let source := data.algebraicProof.preX1AssemblySource (family.fixedRepresentations basis)
-  let pointPoly := onlinePointPolynomial source
-  let piecePoly := fun i => onlinePointPolynomial source (data.algebraicProof.hPieces i).point
-  have hblinding : (family.vk basis).blindingFactors < (family.vk basis).n := by
-    rw [hvk basis]
-    exact ActionPermutationDomain.blindingFactors_lt pp
-      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)
-  let difference := adaptiveActionPreXDifferenceOf (family.vk basis)
-    (family.instanceCommitment basis) data.algebraicProof.erase source
-    (adaptiveActionRunRecord family basis O) hblinding
-  dsimp only at hx hgoodY hpermutation hlookup
-  have hacceptsSome := adaptiveActionAccepts?_isSome_of family basis O haccepts
-  obtain ⟨hacceptsProof, hacceptsEq⟩ := Option.isSome_iff_exists.mp hacceptsSome
-  have hrootsSome := family.adaptiveDeployedGoodRoots?_isSome_of basis O witness hroots
-  obtain ⟨hrootsProof, hrootsEq⟩ := Option.isSome_iff_exists.mp hrootsSome
-  have hsrc : witness.fixedRepresentations = family.fixedRepresentations basis :=
-    deployedRootOutcomeOfCovered_fixedRepresentations family.toOnlineMemberFamily
-      basis O witness hout
-  have hrootSourceEq : adaptiveActionRootOutcomeWithSource pp family basis O =
-      PSum.inl ⟨witness, hsrc⟩ := by
-    simpa only [hsrc] using
-      adaptiveActionRootOutcomeWithSource_eq_inl pp family basis O witness hout
-  by_cases hsupport : difference.toFinsupp.support = ∅
-  · have hidentitySome := adaptiveActionPreXIdentityRelationFinder_isSome_of
-      pp family inputs hvk hI hchar basis O hprovenance witness hsrc hroots hshifted
-      haccepts (by simpa only [difference, source, data] using hsupport)
-      hgoodY hpermutation hlookup hfalse
-    obtain ⟨relation, hidentityEq⟩ := Option.isSome_iff_exists.mp hidentitySome
-    unfold adaptiveActionCompleteTerminalRelationFinder
-    rw [hacceptsEq]
-    dsimp only
-    rw [dif_pos hz, dif_neg hattack]
-    rw [hrootSourceEq]
-    dsimp only
-    rw (occs := .pos [1]) [hrootsEq]
-    dsimp only
-    rw [hidentityEq]
-    rfl
-  · have hbatches : rawDecode.batches = witness.batches := by rfl
-    have heval := family.adaptiveActionAcceptedDifference_eval_eq_preX pp basis O inputs
-      hvk hI hprovenance witness hsrc rawDecode hbatches haccepts (hchar basis O)
-    dsimp only at heval
-    have hdiffData := adaptiveActionPreXDifferenceOf_action pp basis inputs
-      (family.vk basis) (family.instanceCommitment basis) data.algebraicProof.erase source
-      (adaptiveActionRunRecord family basis O) hblinding (hvk basis) (hI basis)
-    rw [← hdiffData] at heval
-    have hdifferenceNe : difference ≠ 0 := by
-      intro hzero
-      apply hsupport
-      rw [hzero]
-      rfl
-    have hpreEval : difference.eval (adaptiveActionRunRecord family basis O).x ≠ 0 :=
-      (not_mem_szBadSet.mp hx) hdifferenceNe
-    have hactionGood : (adaptiveActionRunRecord family basis O).x ∉ szBadSet
-        (combineConstraints model.fixedCols model.adviceCols model.instanceCols model.gates
-          model.sets model.chunks model.lookups model.beta model.gamma model.delta model.theta
-          (adaptiveActionRunRecord family basis O).y model.chunkLen model.l0 model.lLast
-          model.lBlind - polynomial .vanishingH *
-            (Polynomial.X ^ (ActionTerminal.vkAt pp basis).n - 1)) := by
-      apply not_mem_szBadSet.mpr
-      intro _
-      rw [heval]
-      exact hpreEval
-    have holdSome := adaptiveActionRelationOfDecode?_isSome_of pp family basis O inputs
-      (hchar basis O) decode hacceptsAction hactionGood hgoodY hpermutation hlookup hfalse
-    have hidentityNone : adaptiveActionPreXIdentityRelationFinder pp family inputs hvk hI hchar
-        basis O hprovenance witness hsrc hroots hshifted haccepts = none := by
-      unfold adaptiveActionPreXIdentityRelationFinder
-      rw [dif_neg (by simpa only [difference, source, data] using hsupport)]
-    unfold adaptiveActionCompleteTerminalRelationFinder
-    rw [hacceptsEq]
-    dsimp only
-    rw [dif_pos hz, dif_neg hattack]
-    rw [hrootSourceEq]
-    dsimp only
-    rw (occs := .pos [1]) [hrootsEq]
-    dsimp only
-    rw [hidentityNone]
-    simpa only [decode, rawDecode, hacceptsAction, pnu] using holdSome
+      basis O hprovenance).isSome :=
+  adaptiveActionCompleteTerminalRelationFinder_isSome_of_witnessOrRelation
+    pp family inputs hvk hI hchar basis O hprovenance
+      (adaptiveActionCompleteTerminalWitnessOrRelationFinder_isSome_of
+        pp family inputs hvk hI hchar basis O hprovenance witness hout hroots haccepts
+        hz hattack hshifted hx hgoodY hpermutation hlookup)
+      hfalse
 
-/-- The complete adaptive relation finder: provenance, IPA, deployed unbatching, and the
-executable Action terminal are charged by one DLOG reduction. -/
+/-- One cached adaptive execution returning either extracted Action witnesses or relation data. -/
+def adaptiveActionKnowledgeOutcome :
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) →
+    (BTranscript Fp VestaG
+      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+        + 3 * (pp.mergeDerived actionCircuit).k) → Fp) →
+    Option (ActionBundleWitness inputs ⊕
+      AlgebraicRelationWitness (F := Fp) basis) :=
+  fun basis O =>
+    match hprovenance : family.adaptiveActionRepresentationRelationFinder basis O with
+    | some relation => some (Sum.inr relation)
+    | none =>
+        match family.adaptiveStraightLineDeployedRelationFinder basis O with
+        | some relation => some (Sum.inr relation)
+        | none => adaptiveActionCompleteTerminalWitnessOrRelationFinder pp family inputs
+            hvk hI hchar basis O hprovenance
+
+theorem adaptiveActionKnowledgeOutcome_eq_complete_of_none
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+        + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
+    (hprovenance : family.adaptiveActionRepresentationRelationFinder basis O = none)
+    (hstraight : family.adaptiveStraightLineDeployedRelationFinder basis O = none) :
+    adaptiveActionKnowledgeOutcome pp family inputs hvk hI hchar basis O =
+      adaptiveActionCompleteTerminalWitnessOrRelationFinder pp family inputs hvk hI hchar
+        basis O hprovenance := by
+  unfold adaptiveActionKnowledgeOutcome
+  split
+  · rename_i relation heq
+    rw [heq] at hprovenance
+    contradiction
+  · split
+    · rename_i relation heq
+      rw [heq] at hstraight
+      contradiction
+    · congr
+
+/-- Executable knowledge extractor for every private Action witness in the accepted bundle. -/
+def adaptiveActionKnowledgeExtractor :
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) →
+    (BTranscript Fp VestaG
+      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+        + 3 * (pp.mergeDerived actionCircuit).k) → Fp) →
+    Option (ActionBundleWitness inputs) := fun basis O =>
+  match adaptiveActionKnowledgeOutcome pp family inputs hvk hI hchar basis O with
+  | some (Sum.inl witness) => some witness
+  | _ => none
+
+/-- The complete adaptive relation projection, charged by one DLOG reduction. -/
 def adaptiveActionRelationFinder :
     (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) →
     (BTranscript Fp VestaG
       (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
         + 3 * (pp.mergeDerived actionCircuit).k) → Fp) →
-    Option (AlgebraicRelationWitness (F := Fp) basis) :=
-  fun basis O =>
-    match hprovenance : family.adaptiveActionRepresentationRelationFinder basis O with
-    | some relation => some relation
-    | none =>
-        match family.adaptiveStraightLineDeployedRelationFinder basis O with
-        | some relation => some relation
-        | none => adaptiveActionCompleteTerminalRelationFinder pp family inputs hvk hI hchar
-            basis O hprovenance
+    Option (AlgebraicRelationWitness (F := Fp) basis) := fun basis O =>
+  match adaptiveActionKnowledgeOutcome pp family inputs hvk hI hchar basis O with
+  | some (Sum.inr relation) => some relation
+  | _ => none
 
-/-- Modeled adversary traversals of the executable adaptive finder.  Action provenance performs
+/-- Modeled adversary traversals of the shared executable knowledge outcome.  Action provenance performs
 one output/annotation traversal and one quotient traversal.  The deployed straight-line list adds
 four traversals, and its terminal fallback adds two more. -/
 def adaptiveActionRelationFinderCalls
@@ -668,6 +912,16 @@ theorem adaptiveActionRelationFinderCalls_le_traversalSlots
   · omega
   · split <;> omega
 
+/-- The witness extractor and relation projection share this pointwise traversal bound; neither
+projection reruns the adversary or re-scans a provenance log. -/
+theorem adaptiveActionKnowledgeExtractorCalls_le_traversalSlots
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+        + 3 * (pp.mergeDerived actionCircuit).k) → Fp) :
+    adaptiveActionRelationFinderCalls pp family basis O ≤ adaptiveActionDlogTraversalSlots :=
+  adaptiveActionRelationFinderCalls_le_traversalSlots pp family basis O
+
 /-- Each of the three provenance aggregates retains one output/annotation log of length at most
 `Q`; its five, six, or `k` lookups scan that retained data and make no further oracle calls. -/
 theorem adaptiveActionCachedProvenanceLog_length_le
@@ -684,6 +938,15 @@ designated `11 + k` transcript reads. -/
 def adaptiveActionDlogRandomOracleQueries : Nat :=
   adaptiveActionDlogTraversalSlots * family.Q +
     adaptiveActionDlogTraversalSlots * (11 + (pp.mergeDerived actionCircuit).k)
+
+/-- The knowledge extractor is the other projection of the same cached outcome, so it has the
+same random-oracle envelope and does not add a ninth adversary traversal. -/
+def adaptiveActionKnowledgeExtractorRandomOracleQueries : Nat :=
+  adaptiveActionDlogRandomOracleQueries pp family
+
+@[simp] theorem adaptiveActionKnowledgeExtractorRandomOracleQueries_eq :
+    adaptiveActionKnowledgeExtractorRandomOracleQueries pp family =
+      adaptiveActionDlogRandomOracleQueries pp family := rfl
 
 /-- Group-work envelope of the adaptive combined finder. -/
 def adaptiveActionDlogGroupWork (proverGroupWork reductionGroupWork : Nat) : Nat :=
@@ -752,6 +1015,17 @@ theorem AdaptiveActionDirectDlogProfile.solverCost_le
       _ ≤ 16 * T := by omega
   · exact profile.directDecodeWorkBound
 
+/-- Concrete runtime accounting for the knowledge extractor projection: cached oracle
+traversals, represented group work, and direct deployed-root decoding. -/
+theorem AdaptiveActionDirectDlogProfile.knowledgeExtractorCost_le
+    {B : VestaG} {T : Nat}
+    (profile : AdaptiveActionDirectDlogProfile pp family inputs hvk hI hchar B T) :
+    adaptiveActionKnowledgeExtractorRandomOracleQueries pp family ≤ 16 * T ∧
+      adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
+        16 * T ∧
+      ∀ basis O, 2 * adaptiveActionDirectDecodeOps pp family basis O ≤ T := by
+  simpa only [adaptiveActionKnowledgeExtractorRandomOracleQueries_eq] using profile.solverCost_le
+
 /-- An empty combined finder excludes every stage-local Action provenance mismatch. -/
 theorem adaptiveActionRelationFinder_none_actionProvenance
     (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
@@ -760,10 +1034,24 @@ theorem adaptiveActionRelationFinder_none_actionProvenance
         + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
     (hnone : adaptiveActionRelationFinder pp family inputs hvk hI hchar basis O = none) :
     family.adaptiveActionRepresentationRelationFinder basis O = none := by
-  unfold adaptiveActionRelationFinder at hnone
-  split at hnone
-  · simp_all
-  · assumption
+  generalize hprovenance : family.adaptiveActionRepresentationRelationFinder basis O = outcome
+  cases outcome with
+  | none => rfl
+  | some relation =>
+      have houtcome : adaptiveActionKnowledgeOutcome pp family inputs hvk hI hchar basis O =
+          some (Sum.inr relation) := by
+        unfold adaptiveActionKnowledgeOutcome
+        split
+        · rename_i relation' heq
+          have hr : relation' = relation := Option.some.inj (heq.symm.trans hprovenance)
+          subst relation'
+          rfl
+        · rename_i hnone'
+          rw [hnone'] at hprovenance
+          contradiction
+      unfold adaptiveActionRelationFinder at hnone
+      rw [houtcome] at hnone
+      contradiction
 
 /-- An empty combined finder also excludes every pre-IPA/IPA/deployed-root relation branch. -/
 theorem adaptiveActionRelationFinder_none_straightLine
@@ -773,12 +1061,30 @@ theorem adaptiveActionRelationFinder_none_straightLine
         + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
     (hnone : adaptiveActionRelationFinder pp family inputs hvk hI hchar basis O = none) :
     family.adaptiveStraightLineDeployedRelationFinder basis O = none := by
-  unfold adaptiveActionRelationFinder at hnone
-  split at hnone
-  · simp_all
-  · split at hnone
-    · simp_all
-    · assumption
+  have hprovenance := adaptiveActionRelationFinder_none_actionProvenance
+    pp family inputs hvk hI hchar basis O hnone
+  generalize hstraight : family.adaptiveStraightLineDeployedRelationFinder basis O = outcome
+  cases outcome with
+  | none => rfl
+  | some relation =>
+      have houtcome : adaptiveActionKnowledgeOutcome pp family inputs hvk hI hchar basis O =
+          some (Sum.inr relation) := by
+        unfold adaptiveActionKnowledgeOutcome
+        split
+        · rename_i relation' heq
+          rw [heq] at hprovenance
+          contradiction
+        · split
+          · rename_i relation' heq
+            have hr : relation' = relation := Option.some.inj (heq.symm.trans hstraight)
+            subst relation'
+            rfl
+          · rename_i hnone'
+            rw [hnone'] at hstraight
+            contradiction
+      unfold adaptiveActionRelationFinder at hnone
+      rw [houtcome] at hnone
+      contradiction
 
 /-- Explicit relation-producing runs of the combined adaptive Action finder. -/
 def adaptiveActionRelationEvent :
@@ -849,16 +1155,22 @@ theorem adaptiveActionAcceptFalseStatementEvent_subset :
     simp only [Set.mem_union, not_or]
     exact ⟨hz, hipa, hroot, hrelation⟩
 
-/-- The semantic residual is deterministically contained in the union of the five actual,
-annotation-aware Action surfaces.  No phase object, cut, or caller-supplied semantic bound is
-used. -/
-theorem adaptiveActionSemanticResidualEvent_subset_surfaces :
-    adaptiveActionSemanticResidualEvent pp family inputs hvk hI hchar ⊆
-      {q | ∃ n : Fin 5, q.2 ∈ family.adaptiveActionBadWithoutRelation pp inputs q.1 n} := by
-  rintro ⟨basis, O⟩ hresidual
-  rcases hresidual with ⟨⟨haccepts, hfalse⟩, houtside⟩
-  simp only [Set.mem_union, not_or] at houtside
-  rcases houtside with ⟨hzeroEvent, hipaEvent, hrootEvent, hrelationEvent⟩
+/-- Outside every priced algebraic/statistical event, an accepting run produces executable
+private witnesses for every Action in the bundle. -/
+theorem adaptiveActionKnowledgeExtractor_isSome_of_no_events
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+        + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
+    (haccepts : adaptiveActionAccepts family basis O)
+    (hzeroEvent : (basis, O) ∉ adaptiveActionZeroEvent pp family)
+    (hipaEvent : (basis, O) ∉ adaptiveActionIpaEvent pp family)
+    (hrootEvent : (basis, O) ∉ adaptiveActionRootEvent pp family)
+    (hrelationEvent : (basis, O) ∉
+      adaptiveActionRelationEvent pp family inputs hvk hI hchar)
+    (hnosurface : ∀ n : Fin 5,
+      O ∉ family.adaptiveActionBadWithoutRelation pp inputs basis n) :
+    (adaptiveActionKnowledgeExtractor pp family inputs hvk hI hchar basis O).isSome := by
   change ¬(adaptiveActionRelationFinder pp family inputs hvk hI hchar basis O).isSome
     at hrelationEvent
   have hfinderNone := Option.not_isSome_iff_eq_none.mp hrelationEvent
@@ -866,11 +1178,6 @@ theorem adaptiveActionSemanticResidualEvent_subset_surfaces :
     hvk hI hchar basis O hfinderNone
   have hstraight := adaptiveActionRelationFinder_none_straightLine pp family inputs
     hvk hI hchar basis O hfinderNone
-  by_contra hnosurface
-  have hnosurface' : ∀ n : Fin 5,
-      O ∉ family.adaptiveActionBadWithoutRelation pp inputs basis n := by
-    intro n hbad
-    exact hnosurface ⟨n, hbad⟩
   let data := (family.adversary basis).run O
   let pnu := adaptiveActionRunOutput family basis O
   let nu : Fin 11 → Fp := fun i =>
@@ -885,7 +1192,7 @@ theorem adaptiveActionSemanticResidualEvent_subset_surfaces :
           family.fixedRepresentations basis)
         (fun i => nu (i.castLE (le_of_lt n11.isLt))) := by
     intro n
-    exact fun hbad => hnosurface' n
+    exact fun hbad => hnosurface n
       ((family.mem_adaptiveActionBadWithoutRelation_iff pp inputs basis O n
         hprovenance).2 hbad)
   have hz : wrappedPreIpaReads pnu 10 ≠ 0 := by
@@ -949,22 +1256,106 @@ theorem adaptiveActionSemanticResidualEvent_subset_surfaces :
         (adaptiveActionRunRecord family basis O) hblinding) := by
     rw [hdiffData]
     exact hexclusions.1
-  have hterminalSome := adaptiveActionCompleteTerminalRelationFinder_isSome_of
+  have hterminalSome := adaptiveActionCompleteTerminalWitnessOrRelationFinder_isSome_of
     pp family inputs hvk hI hchar basis O hprovenance witness hwitness hdeployedRoots
-    haccepts hz hattack hshifted hfalse (by simpa only [data, source] using hx)
+    haccepts hz hattack hshifted (by simpa only [data, source] using hx)
     hexclusions.2.1 hexclusions.2.2.1
     hexclusions.2.2.2
-  have hterminalNone : adaptiveActionCompleteTerminalRelationFinder pp family inputs
-      hvk hI hchar basis O hprovenance = none := by
-    have h := hfinderNone
-    unfold adaptiveActionRelationFinder at h
-    split at h
-    · simp_all
-    · split at h
-      · simp_all
-      · simpa only using h
-  rw [hterminalNone] at hterminalSome
-  simp at hterminalSome
+  have houtcomeEq := adaptiveActionKnowledgeOutcome_eq_complete_of_none pp family inputs
+    hvk hI hchar basis O hprovenance hstraight
+  have houtcomeSome :
+      (adaptiveActionKnowledgeOutcome pp family inputs hvk hI hchar basis O).isSome := by
+    rw [houtcomeEq]
+    exact hterminalSome
+  obtain ⟨outcome, houtcome⟩ := Option.isSome_iff_exists.mp houtcomeSome
+  cases outcome with
+  | inl extracted =>
+      unfold adaptiveActionKnowledgeExtractor
+      rw [houtcome]
+      rfl
+  | inr relation =>
+      unfold adaptiveActionRelationFinder at hfinderNone
+      rw [houtcome] at hfinderNone
+      contradiction
+
+/-- The ordinary semantic residual is contained in the same five surfaces, now as a corollary
+of the executable knowledge extractor. -/
+theorem adaptiveActionSemanticResidualEvent_subset_surfaces :
+    adaptiveActionSemanticResidualEvent pp family inputs hvk hI hchar ⊆
+      {q | ∃ n : Fin 5, q.2 ∈ family.adaptiveActionBadWithoutRelation pp inputs q.1 n} := by
+  rintro ⟨basis, O⟩ hresidual
+  rcases hresidual with ⟨⟨haccepts, hfalse⟩, houtside⟩
+  simp only [Set.mem_union, not_or] at houtside
+  rcases houtside with ⟨hzeroEvent, hipaEvent, hrootEvent, hrelationEvent⟩
+  by_contra hnosurface
+  have hnosurface' : ∀ n : Fin 5,
+      O ∉ family.adaptiveActionBadWithoutRelation pp inputs basis n := by
+    intro n hbad
+    exact hnosurface ⟨n, hbad⟩
+  have hextracted := adaptiveActionKnowledgeExtractor_isSome_of_no_events
+    pp family inputs hvk hI hchar basis O haccepts hzeroEvent hipaEvent hrootEvent
+      hrelationEvent hnosurface'
+  obtain ⟨extracted, hextractedEq⟩ := Option.isSome_iff_exists.mp hextracted
+  exact hfalse extracted.statement
+
+/-- Knowledge-soundness failure: the deployed verifier accepts but the executable extractor
+does not return private witnesses for the whole Action bundle. -/
+def adaptiveActionKnowledgeFailureEvent :
+    Set ((AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) ×
+      (BTranscript Fp VestaG
+        (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+          + 3 * (pp.mergeDerived actionCircuit).k) → Fp)) :=
+  {q | adaptiveActionAccepts family q.1 q.2 ∧
+    adaptiveActionKnowledgeExtractor pp family inputs hvk hI hchar q.1 q.2 = none}
+
+def adaptiveActionKnowledgeResidualEvent :
+    Set ((AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) ×
+      (BTranscript Fp VestaG
+        (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+          + 3 * (pp.mergeDerived actionCircuit).k) → Fp)) :=
+  adaptiveActionKnowledgeFailureEvent pp family inputs hvk hI hchar \
+    (adaptiveActionZeroEvent pp family ∪
+      (adaptiveActionIpaEvent pp family ∪
+        (adaptiveActionRootEvent pp family ∪
+          adaptiveActionRelationEvent pp family inputs hvk hI hchar)))
+
+theorem adaptiveActionKnowledgeFailureEvent_subset :
+    adaptiveActionKnowledgeFailureEvent pp family inputs hvk hI hchar ⊆
+      adaptiveActionZeroEvent pp family ∪
+        (adaptiveActionIpaEvent pp family ∪
+          (adaptiveActionRootEvent pp family ∪
+            (adaptiveActionRelationEvent pp family inputs hvk hI hchar ∪
+              adaptiveActionKnowledgeResidualEvent pp family inputs hvk hI hchar))) := by
+  intro q hq
+  by_cases hz : q ∈ adaptiveActionZeroEvent pp family
+  · exact Or.inl hz
+  by_cases hipa : q ∈ adaptiveActionIpaEvent pp family
+  · exact Or.inr (Or.inl hipa)
+  by_cases hroot : q ∈ adaptiveActionRootEvent pp family
+  · exact Or.inr (Or.inr (Or.inl hroot))
+  by_cases hrelation : q ∈ adaptiveActionRelationEvent pp family inputs hvk hI hchar
+  · exact Or.inr (Or.inr (Or.inr (Or.inl hrelation)))
+  · refine Or.inr (Or.inr (Or.inr (Or.inr ⟨hq, ?_⟩)))
+    simp only [Set.mem_union, not_or]
+    exact ⟨hz, hipa, hroot, hrelation⟩
+
+theorem adaptiveActionKnowledgeResidualEvent_subset_surfaces :
+    adaptiveActionKnowledgeResidualEvent pp family inputs hvk hI hchar ⊆
+      {q | ∃ n : Fin 5, q.2 ∈ family.adaptiveActionBadWithoutRelation pp inputs q.1 n} := by
+  rintro ⟨basis, O⟩ hresidual
+  rcases hresidual with ⟨⟨haccepts, hextractorNone⟩, houtside⟩
+  simp only [Set.mem_union, not_or] at houtside
+  rcases houtside with ⟨hzeroEvent, hipaEvent, hrootEvent, hrelationEvent⟩
+  by_contra hnosurface
+  have hnosurface' : ∀ n : Fin 5,
+      O ∉ family.adaptiveActionBadWithoutRelation pp inputs basis n := by
+    intro n hbad
+    exact hnosurface ⟨n, hbad⟩
+  have hextracted := adaptiveActionKnowledgeExtractor_isSome_of_no_events
+    pp family inputs hvk hI hchar basis O haccepts hzeroEvent hipaEvent hrootEvent
+      hrelationEvent hnosurface'
+  rw [hextractorNone] at hextracted
+  contradiction
 
 /-- Transfer any adaptive Action event across a uniform-URS basis identification. -/
 theorem adaptiveActionEvent_prob_eq_of_uniformURS
@@ -1132,6 +1523,82 @@ theorem adaptiveActionSemanticResidual_prob_le
   intro logs
   exact family.adaptiveActionBadWithoutRelation_all_measure_le pp inputs
     (scalarBasis B logs) epsilon (hsurface (scalarBasis B logs))
+
+theorem adaptiveActionKnowledgeResidual_prob_le
+    (B : VestaG) (epsilon : Fin 5 → ENNReal)
+    (hsurface : ∀
+      (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+      (n : Fin 5)
+      (ps : ProofString (pp.mergeDerived actionCircuit) Fp VestaG)
+      (_hwf : PsWellFormed ps)
+      (source : List (AlgebraicPoint (F := Fp) basis))
+      (earlier : Fin (n : Nat) → Fp),
+      uniformChallenge.toOuterMeasure
+          (adaptiveActionSurfaceAt pp basis inputs n ps source earlier) ≤ epsilon n) :
+    (PMF.uniformOfFintype
+      ((AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → Fp) ×
+        (BTranscript Fp VestaG
+          (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+            + 3 * (pp.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
+      ((fun q => (scalarBasis B q.1, q.2)) ⁻¹'
+        adaptiveActionKnowledgeResidualEvent pp family inputs hvk hI hchar) ≤
+      (family.Q + 1 : Nat) * ∑ n : Fin 5, epsilon n := by
+  refine le_trans (MeasureTheory.measure_mono (Set.preimage_mono
+    (adaptiveActionKnowledgeResidualEvent_subset_surfaces
+      pp family inputs hvk hI hchar))) ?_
+  apply uniformOfFintype_prod_fiber_bound_right
+    (fun logs => {O | ∃ n : Fin 5,
+      O ∈ family.adaptiveActionBadWithoutRelation pp inputs (scalarBasis B logs) n})
+  intro logs
+  exact family.adaptiveActionBadWithoutRelation_all_measure_le pp inputs
+    (scalarBasis B logs) epsilon (hsurface (scalarBasis B logs))
+
+/-- End-to-end adaptive Action knowledge soundness.  Failure of the executable private-witness
+extractor is charged to the same cached relation reduction and five statistical surfaces. -/
+theorem adaptiveActionKnowledgeFailure_prob_le
+    (B : VestaG) (epsilon : Fin 5 → ENNReal)
+    (profile : AdaptiveActionDlogProfile pp family inputs hvk hI hchar B)
+    (hsurface : ∀
+      (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+      (n : Fin 5)
+      (ps : ProofString (pp.mergeDerived actionCircuit) Fp VestaG)
+      (_hwf : PsWellFormed ps)
+      (source : List (AlgebraicPoint (F := Fp) basis))
+      (earlier : Fin (n : Nat) → Fp),
+      uniformChallenge.toOuterMeasure
+          (adaptiveActionSurfaceAt pp basis inputs n ps source earlier) ≤ epsilon n) :
+    (PMF.uniformOfFintype
+      ((AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → Fp) ×
+        (BTranscript Fp VestaG
+          (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+            + 3 * (pp.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
+      ((fun q => (scalarBasis B q.1, q.2)) ⁻¹'
+        adaptiveActionKnowledgeFailureEvent pp family inputs hvk hI hchar) ≤
+      (family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
+        ((pp.mergeDerived actionCircuit).k *
+          ((family.Q + 1 : Nat) * (2 / (Fintype.card Fp : ENNReal))) +
+        ((family.Q + 1 : Nat) *
+          algebraicRootBudget (pp.mergeDerived actionCircuit)
+            (pp.mergeDerived actionCircuit).k +
+        ((profile.advantage (adaptiveActionDlogRandomOracleQueries pp family)
+            (adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
+            1 / Fintype.card Fp) +
+          (family.Q + 1 : Nat) * ∑ n : Fin 5, epsilon n))) := by
+  refine le_trans (MeasureTheory.measure_mono
+    (Set.preimage_mono
+      (adaptiveActionKnowledgeFailureEvent_subset pp family inputs hvk hI hchar))) ?_
+  simp only [Set.preimage_union]
+  refine le_trans (MeasureTheory.measure_union_le _ _) ?_
+  refine add_le_add (adaptiveActionZero_prob_le pp family B) ?_
+  refine le_trans (MeasureTheory.measure_union_le _ _) ?_
+  refine add_le_add (adaptiveActionIpa_prob_le pp family B) ?_
+  refine le_trans (MeasureTheory.measure_union_le _ _) ?_
+  refine add_le_add (adaptiveActionRoot_prob_le pp family B) ?_
+  refine le_trans (MeasureTheory.measure_union_le _ _) ?_
+  exact add_le_add
+    (adaptiveActionRelation_prob_le_of_textbookDL pp family inputs hvk hI hchar B
+      profile.hardness)
+    (adaptiveActionKnowledgeResidual_prob_le pp family inputs hvk hI hchar B epsilon hsurface)
 
 /-- Probability composition for the bare adaptive family.  Every algebraic branch is closed by
 the executable combined finder and the remaining semantic term is derived from the five explicit

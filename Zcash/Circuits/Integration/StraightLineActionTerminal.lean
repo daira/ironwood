@@ -39,6 +39,21 @@ variable {G : Type} [AddCommGroup G] [Module Fp G] [DecidableEq G] [Inhabited G]
 
 local instance vestaInhabitedStraightLineActionTerminal : Inhabited VestaG := ⟨0⟩
 
+/-- Type-valued private witnesses for every Action in the accepted bundle. -/
+abbrev ActionBundleWitness {numProofs : ℕ}
+    (inputs : Fin numProofs → PublicInputs Fp) : Type :=
+  TopLevelExternalBundleWitness actionCircuit inputs
+
+namespace ActionBundleWitness
+
+/-- An extracted Action witness bundle entails the ordinary existential statement. -/
+theorem statement
+    {numProofs : ℕ} {inputs : Fin numProofs → PublicInputs Fp}
+    (witness : ActionBundleWitness inputs) : BundleStatement inputs :=
+  fun proofIndex => (witness proofIndex).statement
+
+end ActionBundleWitness
+
 /-- Check every potentially nonzero fold-split witness by direct evaluation.  Witnesses at
 indices `j ≥ n` are zero by degree, so this finite traversal returns the full specification-level
 avoidance certificate without computing any root set. -/
@@ -138,6 +153,58 @@ def action_bundleStatement_or_relation_of_decode_circuitSat
     BundleStatement inputs ⊕'
       NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   exact TopLevelAcceptedModel.statements_or_relation_of_circuitSat
+    actionCircuit pp urs hk inputs ps ch pU pW a
+    (decode.toOpenedBatch hchar)
+    (fun i hi => decode.toMemberDecode hchar i hi) haccepts
+    (ActionPermutationDomain.blindingFactors_lt pp urs) hpoly hsatisfied hgoodY
+    (ActionCorrectness.ofAcceptedCircuitSat pp urs hk inputs ps ch pU pW a
+      (decode.toOpenedBatch hchar)
+      (fun i hi => decode.toMemberDecode hchar i hi) haccepts hpoly hsatisfied hgoodY
+      permutationExclusions lookupExclusions)
+
+/-- The pre-`x` Action endpoint retaining the extracted private witnesses as data. -/
+def action_bundleWitness_or_relation_of_decode_circuitSat
+    (pp : ProofParams) (urs : URS G)
+    (hk : (pp.mergeDerived actionCircuit).k = urs.k)
+    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (ps : ProofString (pp.mergeDerived actionCircuit) Fp G)
+    (ch : Challenges (pp.mergeDerived actionCircuit).k Fp)
+    (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
+    (decode : DeployedAlgebraicDecode urs hk
+      (actionCircuit.toVerifierKey pp urs)
+      (actionCircuit.instanceCommitment pp urs inputs) ps ch a pU pW)
+    (hchar : deployedX4PairCount
+      (actionCircuit.toVerifierKey pp urs)
+      (actionCircuit.instanceCommitment pp urs inputs) ps ch < scalarFieldOrder)
+    (haccepts : DeployedAccepts urs hk
+      (actionCircuit.toVerifierKey pp urs)
+      (actionCircuit.instanceCommitment pp urs inputs) ps ch)
+    (hpoly : Polynomial Fp)
+    (hsatisfied :
+      (CanonicalMemberConstraintRelation.acceptedModel
+        (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
+        (hblinding := ActionPermutationDomain.blindingFactors_lt pp urs)
+        haccepts).CircuitSat ch.y hpoly
+          (actionCircuit.toVerifierKey pp urs).n a)
+    (hgoodY : ∀ j, ch.y ∉ szBadSet
+      (foldSplitWitness
+        (CanonicalMemberConstraintRelation.acceptedModel
+          (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
+          (hblinding := ActionPermutationDomain.blindingFactors_lt pp urs)
+          haccepts).constraints
+        (actionCircuit.toVerifierKey pp urs).n j))
+    (permutationExclusions : ResolverPermutationChallengeExclusions
+      (actionCircuit.toVerifierKey pp urs) ch
+      (CanonicalMemberConstraintRelation.acceptedPolynomial
+        (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts)
+      actionActiveRows)
+    (lookupExclusions : TopLevelLookupCoherence.TopLevelLookupChallengeExclusions
+      actionCircuit pp urs ch
+      (CanonicalMemberConstraintRelation.acceptedPolynomial
+        (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts)) :
+    ActionBundleWitness inputs ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  exact TopLevelAcceptedModel.witnesses_or_relation_of_circuitSat
     actionCircuit pp urs hk inputs ps ch pU pW a
     (decode.toOpenedBatch hchar)
     (fun i hi => decode.toMemberDecode hchar i hi) haccepts
