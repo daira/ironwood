@@ -23,7 +23,7 @@ variable {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) -> VestaG}
 
 /-! ## The scalar discrepancy walk -/
 
-open Polynomial
+open CompPoly CompPoly.CPolynomial
 open scoped ENNReal
 
 /-- Advance the claimed-opening discrepancy through one IPA round. -/
@@ -31,7 +31,7 @@ def ipaDiscrepancyStep (current : Fp) (round : Fp × Fp) (challenge : Fp) : Fp :
   current + challenge⁻¹ * round.1 + challenge * round.2
 
 /-- The quadratic whose root records a nonzero discrepancy becoming zero in one round. -/
-noncomputable def ipaDiscrepancyPolynomial (current : Fp) (round : Fp × Fp) : Polynomial Fp :=
+def ipaDiscrepancyPolynomial (current : Fp) (round : Fp × Fp) : CPoly :=
   C round.1 + C current * X + C round.2 * X ^ 2
 
 /-- The discrepancy polynomial is nonzero whenever the incoming discrepancy is nonzero. -/
@@ -39,22 +39,20 @@ theorem ipaDiscrepancyPolynomial_ne_zero {current : Fp} (round : Fp × Fp)
     (hcurrent : current ≠ 0) : ipaDiscrepancyPolynomial current round ≠ 0 := by
   intro hzero
   apply hcurrent
-  have hcoeff := congrArg (fun p : Polynomial Fp => p.coeff 1) hzero
-  simpa [ipaDiscrepancyPolynomial] using hcoeff
+  have hcoeff := congrArg (fun p : Polynomial Fp => p.coeff 1) (congrArg toPoly hzero)
+  simpa [ipaDiscrepancyPolynomial, toPoly_pow] using hcoeff
 
 /-- Every discrepancy polynomial has degree at most two. -/
 theorem ipaDiscrepancyPolynomial_natDegree_le (current : Fp) (round : Fp × Fp) :
     (ipaDiscrepancyPolynomial current round).natDegree ≤ 2 := by
   unfold ipaDiscrepancyPolynomial
-  refine (Polynomial.natDegree_add_le _ _).trans (max_le ?_ ?_)
-  · refine (Polynomial.natDegree_add_le _ _).trans (max_le ?_ ?_)
-    · exact (Polynomial.natDegree_C round.1).le.trans (by omega)
-    · exact Polynomial.natDegree_mul_le.trans
-        ((Nat.add_le_add (Polynomial.natDegree_C current).le
-          Polynomial.natDegree_X_le).trans (by omega))
-  · exact Polynomial.natDegree_mul_le.trans
-      ((Nat.add_le_add (Polynomial.natDegree_C round.2).le
-        (Polynomial.natDegree_X_pow 2).le).trans (by omega))
+  refine (natDegree_add_le _ _).trans (max_le ?_ ?_)
+  · refine (natDegree_add_le _ _).trans (max_le ?_ ?_)
+    · exact (natDegree_C round.1).le.trans (by omega)
+    · exact natDegree_mul_le.trans
+        ((Nat.add_le_add (natDegree_C current).le natDegree_X_le).trans (by omega))
+  · exact natDegree_mul_le.trans
+      ((Nat.add_le_add (natDegree_C round.2).le (natDegree_X_pow_le 2)).trans (by omega))
 
 /-- If a nonzero discrepancy becomes zero, the round challenge is a root of its quadratic. -/
 theorem ipaDiscrepancyPolynomial_eval_eq_zero {current challenge : Fp} (round : Fp × Fp)
@@ -67,11 +65,11 @@ theorem ipaDiscrepancyPolynomial_eval_eq_zero {current challenge : Fp} (round : 
   calc
     (ipaDiscrepancyPolynomial current round).eval challenge =
         challenge * ipaDiscrepancyStep current round challenge := by
-      simp only [ipaDiscrepancyPolynomial, ipaDiscrepancyStep, Polynomial.eval_add,
-        Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+      simp only [ipaDiscrepancyPolynomial, ipaDiscrepancyStep, eval_add,
+        eval_mul, eval_pow, eval_C, eval_X]
       field_simp
       ring
-    _ = 0 := by rw [hstep, mul_zero]
+    _ = 0 := by rw [hstep, MulZeroClass.mul_zero]
 
 /-- A nonzero-to-zero discrepancy transition lands in the quadratic root set. -/
 theorem ipaDiscrepancyStep_mem_badSet {current challenge : Fp} (round : Fp × Fp)
@@ -97,15 +95,15 @@ def ipaDiscrepancyFold : Fp -> List (Fp × Fp) -> List Fp -> Fp
 
 /-- The challenge and pinned polynomial encountered at every step of the discrepancy walk. -/
 noncomputable def ipaDiscrepancyRootEvents : Fp -> List (Fp × Fp) -> List Fp ->
-    List (Fp × Polynomial Fp)
+    List (Fp × CPoly)
   | current, round :: rounds, challenge :: challenges =>
       (challenge, ipaDiscrepancyPolynomial current round) ::
         ipaDiscrepancyRootEvents (ipaDiscrepancyStep current round challenge) rounds challenges
   | _, _, _ => []
 
 /-- The polynomial fixed immediately before the `j`-th discrepancy challenge. -/
-noncomputable def ipaDiscrepancyPolynomialAt :
-    Fp -> List (Fp × Fp) -> List Fp -> Nat -> Polynomial Fp
+def ipaDiscrepancyPolynomialAt :
+    Fp -> List (Fp × Fp) -> List Fp -> Nat -> CPoly
   | current, round :: _, _ :: _, 0 => ipaDiscrepancyPolynomial current round
   | current, round :: rounds, challenge :: challenges, j + 1 =>
       ipaDiscrepancyPolynomialAt (ipaDiscrepancyStep current round challenge)
@@ -428,7 +426,7 @@ theorem straightLineInitialDiscrepancy_ne_zero_of_bindingAttackZ
               multiopenValue vk instanceCommitment p.proof.1 (chRecord nu (fun _ => 0)) +
               nu 9 * innerProduct p.s (evalVector shape.k (nu 7)))) -
           nu 9 * innerProduct p.s (evalVector shape.k (nu 7)) := by
-            rw [← mul_assoc, inv_mul_cancel₀ hz]
+            rw [← _root_.mul_assoc, inv_mul_cancel₀ hz]
             ring
     _ = multiopenValue vk instanceCommitment p.proof.1 (chRecord nu (fun _ => 0)) +
           (nu 10)⁻¹ * (p.multiU nu + nu 9 * p.sU) -
@@ -448,7 +446,7 @@ noncomputable def straightLineIpaRootEvents
     {vk : VerifyingKey shape Fp VestaG}
     {instanceCommitment : Fin shape.numProofs -> Nat -> VestaG}
     (p : AlgebraicWfProof basis vk instanceCommitment) (nu : Fin 11 -> Fp)
-    (chi : Fin shape.k -> Fp) : List (Fp × Polynomial Fp) :=
+    (chi : Fin shape.k -> Fp) : List (Fp × CPoly) :=
   ipaDiscrepancyRootEvents (p.straightLineInitialDiscrepancy nu)
     (p.straightLineRoundDiscrepancies nu) (List.ofFn chi)
 
@@ -457,7 +455,7 @@ noncomputable def straightLineIpaRootPolynomial
     {vk : VerifyingKey shape Fp VestaG}
     {instanceCommitment : Fin shape.numProofs -> Nat -> VestaG}
     (p : AlgebraicWfProof basis vk instanceCommitment) (nu : Fin 11 -> Fp)
-    (chi : Fin shape.k -> Fp) (j : Fin shape.k) : Polynomial Fp :=
+    (chi : Fin shape.k -> Fp) (j : Fin shape.k) : CPoly :=
   ipaDiscrepancyPolynomialAt (p.straightLineInitialDiscrepancy nu)
     (p.straightLineRoundDiscrepancies nu) (List.ofFn chi) j.val
 
