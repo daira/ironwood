@@ -181,6 +181,7 @@ assert_computable Zcash.Security.Ledger.Model.outputOpenings
 assert_computable Zcash.Security.Ledger.Model.positionedOutputs
 assert_computable Zcash.Security.Ledger.Model.nonZeroSpends
 assert_computable Zcash.Security.Ledger.Model.shieldedPoolBalance
+assert_axioms Zcash.Security.Ledger.Model.shieldedPoolBalance_zero
 assert_axioms Zcash.Security.Ledger.Model.posVal_lt
 assert_axioms Zcash.Security.Ledger.Model.rootAfter_prefix
 assert_axioms Zcash.Security.Ledger.Model.output_rho_eq_nullifiers
@@ -297,11 +298,19 @@ assert_computable Zcash.Security.Ledger.Model.spendabilityOrBreak +choice
 /-! ## Probabilistic capstones
 
 The game-level probability statements: pure event algebra over an adversary
-distribution of valid annotated ledgers, with a named ε hypothesis per break arm. -/
+distribution of valid annotated ledgers, with a named ε hypothesis per break arm.
+The all-prefixes bounds name their ε's on events shared across prefixes, so they
+cost no factor of `k` over the single-prefix bounds. -/
 
+assert_axioms Zcash.Security.Ledger.Model.balanceSubsetPerTx_measure_le
 assert_axioms Zcash.Security.Ledger.Model.balanceSubset_measure_le
+assert_axioms Zcash.Security.Ledger.Model.balanceConservationPerTx_measure_le
 assert_axioms Zcash.Security.Ledger.Model.balanceConservation_measure_le
+assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCapPerTx_measure_le
 assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCap_measure_le
+assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceNonNegative_succ_measure_le
+assert_axioms Zcash.Security.Ledger.Model.balanceIntegrityPerTx_measure_le
+assert_axioms Zcash.Security.Ledger.Model.balanceIntegrity_measure_le
 assert_axioms Zcash.Security.Ledger.Model.spendAuthority_measure_le
 
 /-! ## The Orchard-protocol discrete-log-relation discharges
