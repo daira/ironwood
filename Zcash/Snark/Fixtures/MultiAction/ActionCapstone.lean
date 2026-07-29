@@ -418,7 +418,7 @@ theorem orchard_action_noStatementOrRelation_prob_le_captured
           (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
             + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionXYFailureEvent actionProofParams family
+          topLevelXYFailureEvent actionCircuit actionProofParams family
             (staticChecks_of_derived family hvk) inputs hvk hI hchar) ≤ xyBound)
     (hBeta : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
@@ -426,7 +426,7 @@ theorem orchard_action_noStatementOrRelation_prob_le_captured
           (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
             + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionBetaFailureEvent actionProofParams family
+          topLevelBetaFailureEvent actionCircuit actionProofParams family
             (staticChecks_of_derived family hvk) inputs hvk hI hchar) ≤ betaBound)
     (hGamma : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
@@ -434,7 +434,7 @@ theorem orchard_action_noStatementOrRelation_prob_le_captured
           (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
             + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionGammaFailureEvent actionProofParams family
+          topLevelGammaFailureEvent actionCircuit actionProofParams family
             (staticChecks_of_derived family hvk) inputs hvk hI hchar) ≤ gammaBound)
     (hTheta : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
@@ -442,7 +442,7 @@ theorem orchard_action_noStatementOrRelation_prob_le_captured
           (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
             + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionThetaFailureEvent actionProofParams family
+          topLevelThetaFailureEvent actionCircuit actionProofParams family
             (staticChecks_of_derived family hvk) inputs hvk hI hchar) ≤ thetaBound) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
@@ -1645,7 +1645,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured
           (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
             + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionXYFailureEvent actionProofParams family
+          topLevelXYFailureEvent actionCircuit actionProofParams family
             (staticChecks_of_derived family hvk) inputs hvk hI hchar) ≤ xyBound)
     (hBeta : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
@@ -1653,7 +1653,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured
           (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
             + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionBetaFailureEvent actionProofParams family
+          topLevelBetaFailureEvent actionCircuit actionProofParams family
             (staticChecks_of_derived family hvk) inputs hvk hI hchar) ≤ betaBound)
     (hGamma : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
@@ -1661,7 +1661,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured
           (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
             + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionGammaFailureEvent actionProofParams family
+          topLevelGammaFailureEvent actionCircuit actionProofParams family
             (staticChecks_of_derived family hvk) inputs hvk hI hchar) ≤ gammaBound)
     (hTheta : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
@@ -1669,7 +1669,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured
           (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
             + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionThetaFailureEvent actionProofParams family
+          topLevelThetaFailureEvent actionCircuit actionProofParams family
             (staticChecks_of_derived family hvk) inputs hvk hI hchar) ≤ thetaBound) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
@@ -1741,7 +1741,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured_for
             family.init.length 10 +
             3 * ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionXYFailureEvent (actionProofParamsFor numProofs) family
+          topLevelXYFailureEvent actionCircuit (actionProofParamsFor numProofs) family
             (staticChecks_of_derived_for numProofs family hvk) inputs hvk hI hchar) ≤ xyBound)
     (hBeta : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
@@ -1750,7 +1750,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured_for
             family.init.length 10 +
             3 * ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionBetaFailureEvent (actionProofParamsFor numProofs) family
+          topLevelBetaFailureEvent actionCircuit (actionProofParamsFor numProofs) family
             (staticChecks_of_derived_for numProofs family hvk) inputs hvk hI hchar) ≤ betaBound)
     (hGamma : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
@@ -1759,7 +1759,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured_for
             family.init.length 10 +
             3 * ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionGammaFailureEvent (actionProofParamsFor numProofs) family
+          topLevelGammaFailureEvent actionCircuit (actionProofParamsFor numProofs) family
             (staticChecks_of_derived_for numProofs family hvk) inputs hvk hI hchar) ≤ gammaBound)
     (hTheta : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
@@ -1768,7 +1768,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured_for
             family.init.length 10 +
             3 * ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionThetaFailureEvent (actionProofParamsFor numProofs) family
+          topLevelThetaFailureEvent actionCircuit (actionProofParamsFor numProofs) family
             (staticChecks_of_derived_for numProofs family hvk) inputs hvk hI hchar) ≤ thetaBound) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
