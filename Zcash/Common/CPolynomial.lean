@@ -84,6 +84,16 @@ theorem toPoly_list_sum [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
     (l : List (CPolynomial R)) : l.sum.toPoly = (l.map toPoly).sum :=
   map_list_sum (ringEquiv : CPolynomial R ≃+* Polynomial R) l
 
+/-- `toPoly` of a multiset product. -/
+theorem toPoly_multiset_prod [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    (m : Multiset (CPolynomial R)) : m.prod.toPoly = (m.map toPoly).prod :=
+  map_multiset_prod (ringEquiv : CPolynomial R ≃+* Polynomial R) m
+
+/-- `toPoly` of a multiset sum. -/
+theorem toPoly_multiset_sum [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    (m : Multiset (CPolynomial R)) : m.sum.toPoly = (m.map toPoly).sum :=
+  map_multiset_sum (ringEquiv : CPolynomial R ≃+* Polynomial R) m
+
 /-- `toPoly` of an elementary symmetric polynomial in a multiset of polynomials.  `Multiset.esymm`
 is a sum of products, so it commutes with any ring hom. -/
 theorem toPoly_multiset_esymm [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
