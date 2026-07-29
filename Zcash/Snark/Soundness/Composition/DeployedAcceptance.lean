@@ -41,7 +41,7 @@ def snarkExtractionFailureEventDeployed {shape : Shape}
     Set ((AugmentedIndex (2 ^ shape.k) → VestaG) × family.Coins) :=
   {q | fsWinsFull (family.adversary q.1)
       (fullAlgebraicAcceptDeployed q.1 (family.vk q.1) (family.instanceCommitment q.1))
-      (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) q.2.1 ∧
+      (algebraicFullPrefixesPre family.init) (algebraicFullPrefixes family.init) q.2 ∧
     ¬ extracted q.1 q.2}
 
 end Zcash.Snark

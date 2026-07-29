@@ -90,16 +90,12 @@ def straightLineDeployedRelationFinder
         | PSum.inr relation =>
             some (ComputedStraightLineIpaFSFamily.straightLineCanonicalRelation relation)
 
-/-- A fixed tape used only to reuse the existing root-decode witness type.  The retained decoded
-batch data depends on the oracle table and `outcome`, not on recursive extractor coins. -/
-noncomputable def straightLineDummyTape : RecursiveForkTape Fp shape.k := Classical.arbitrary _
-
-/-- The existing deployed root decode, indexed only by the one-run oracle table. -/
+/-- The existing deployed root decode, indexed by the one-run oracle table. -/
 def straightLineRootDecoded (family : ComputedStraightLineDeployedFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (O : BTranscript Fp VestaG
       (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) : Prop :=
-  deployedRootDecoded family.toRootFamily basis (O, straightLineDummyTape)
+  deployedRootDecoded family.toRootFamily basis O
 
 /-- The direct root-layer output is either an explicit relation or the complete deployed decode. -/
 def straightLineRootExtracted (family : ComputedStraightLineDeployedFSFamily shape)

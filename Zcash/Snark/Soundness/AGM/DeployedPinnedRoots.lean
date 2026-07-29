@@ -370,33 +370,6 @@ theorem pinned (family : ComputedDeployedRootFSFamily shape) :
 abbrev toFamily (family : ComputedDeployedRootFSFamily shape) :
     ComputedAlgebraicFSFamily shape := family.toComputedAlgebraicFSFamily
 
-/-- The complete relation producer used by the rewind-free deployed layer: the recursive
-extractor's `relationFinder` extended by the `outcome` relation.  Both branches stay in one
-data-returning finder — an ∃-closed relation would be vacuous in a prime-order group, where such
-a relation always exists, and so could not be charged to DLOG.  Computable relative to
-`family.outcome`; #96 must supply a
-computable direct-coordinate outcome before applying a concrete DLOG assumption. -/
-def deployedRelationFinder (family : ComputedDeployedRootFSFamily shape) :
-    (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) -> family.toFamily.Coins ->
-      Option (AlgebraicRelationWitness (F := Fp) basis) :=
-  fun basis coins =>
-    match family.toFamily.relationFinder basis coins with
-    | some relation => some relation
-    | none =>
-        match family.outcome basis coins.1 with
-        | PSum.inl _ => none
-        | PSum.inr relation =>
-            some (augmentedBasis_ursOfAugmentedBasis shape.k basis ▸
-              relation.toAlgebraicRelationWitness)
-
-/-- The combined finder returns an explicit relation on this run. -/
-def deployedRelationEvent (family : ComputedDeployedRootFSFamily shape) :
-    Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) × family.toFamily.Coins) :=
-  {p | (family.deployedRelationFinder p.1 p.2).isSome}
-
-
-
-
 /-- The concrete deployed root events, ready for the additive coupling theorem. -/
 noncomputable def pinnedRoots (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) :

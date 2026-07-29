@@ -108,7 +108,7 @@ def straightLineConstraintDecoded
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (O : BTranscript Fp VestaG
       (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) : Prop :=
-  deployedConstraintDecodedOfRoot family.toRootFamily static basis (O, straightLineDummyTape)
+  deployedConstraintDecodedOfRoot family.toRootFamily static basis O
 
 /-- Basis/oracle pairs on which the one-run endpoint accepts but does not return the concrete
 constraint witness. -/
@@ -198,7 +198,7 @@ def straightLineConstraintBadXSet (B : VestaG)
     Set ((AugmentedIndex (2 ^ shape.k) -> Fp) ×
       (BTranscript Fp VestaG
         (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp)) :=
-  {q | (scalarBasis B q.1, (q.2, straightLineDummyTape)) ∈
+  {q | (scalarBasis B q.1, q.2) ∈
     deployedConstraintBadXEvent family.toRootFamily}
 
 /-- Deterministic straight-line constraint containment.  Failure is covered by the root-layer
@@ -218,7 +218,7 @@ theorem straightLineConstraintFailureSet_subset
               family.straightLineConstraintBadXSet B))) := by
   intro q hfailure
   let basis := scalarBasis B q.1
-  let coins : family.toFamily.Coins := (q.2, straightLineDummyTape)
+  let coins : family.toFamily.Coins := q.2
   by_cases hroot : family.straightLineRootDecoded basis q.2
   · let root := Classical.choice hroot
     by_cases hxgood : (wrappedPreIpaRecord
@@ -298,11 +298,11 @@ theorem straightLineConstraintBadX_prob_le
       (family.Q + 1 : Nat) * epsilonX := by
   apply uniformOfFintype_prod_fiber_bound_right
     (fun logs =>
-      {O | (scalarBasis B logs, (O, straightLineDummyTape)) ∈
+      {O | (scalarBasis B logs, O) ∈
         deployedConstraintBadXEvent family.toRootFamily})
   intro logs
   refine le_trans (MeasureTheory.measure_mono
-    (show {O | (scalarBasis B logs, (O, straightLineDummyTape)) ∈
+    (show {O | (scalarBasis B logs, O) ∈
           deployedConstraintBadXEvent family.toRootFamily} <=
         {O | (deployedConstraintXPinnedEvent family.toRootFamily schedule
           (scalarBasis B logs)).Landing O}

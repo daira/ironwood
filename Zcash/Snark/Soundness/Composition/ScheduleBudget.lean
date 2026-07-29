@@ -211,35 +211,17 @@ theorem natDegree_deployedConstraintDifferencePreX_le
         (deployedRootRunOutput family basis coins) j).1
     omega
 
-/-- The run output ignores the fork tape, so the total constraint difference does too. -/
-theorem deployedConstraintDifference_tape_congr
-    (family : ComputedDeployedRootFSFamily shape)
-    (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    {O : BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp}
-    (tape tape' : RecursiveForkTape Fp shape.k) :
-    deployedConstraintDifferencePreX family basis (O, tape)
-      = deployedConstraintDifferencePreX family basis (O, tape') := rfl
-
-/-- **The exact constraint-difference root set's measure.** The set collapses across fork tapes
-to one Schwartz–Zippel set, priced by the degree cap. -/
+/-- **The exact constraint-difference root set's measure**, priced by the degree cap. -/
 theorem deployedConstraintXBadSet_measure_le
     (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
     (O : BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp)
     {D : ℕ}
-    (hdeg : ∀ tape : RecursiveForkTape Fp shape.k,
-      (deployedConstraintDifferencePreX family basis (O, tape)).natDegree ≤ D) :
+    (hdeg : (deployedConstraintDifferencePreX family basis O).natDegree ≤ D) :
     (PMF.uniformOfFintype Fp).toOuterMeasure (deployedConstraintXBadSet family basis O)
       ≤ (D : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞) := by
-  let tape₀ : RecursiveForkTape Fp shape.k := Classical.arbitrary _
-  have hsub : deployedConstraintXBadSet family basis O
-      ⊆ ↑(szBadSet (deployedConstraintDifferencePreX family basis (O, tape₀))) := by
-    rintro x ⟨tape, hx⟩
-    rwa [deployedConstraintDifference_tape_congr family basis tape tape₀] at hx
-  refine le_trans ((PMF.uniformOfFintype Fp).toOuterMeasure.mono hsub) ?_
   refine le_trans (uniformChallenge_szBadSet _) ?_
   gcongr
-  exact_mod_cast hdeg tape₀
 
 /-! ## The schedule, priced -/
 
@@ -263,8 +245,8 @@ def deployedConstraintXSqueezeSchedule_of_pinned
     DeployedConstraintXSqueezeSchedule family
       ((max D Dq : ℕ) / (Fintype.card Fp : ℝ≥0∞)) where
   measure_le basis O :=
-    deployedConstraintXBadSet_measure_le family basis O (fun tape =>
-      natDegree_deployedConstraintDifferencePreX_le family basis (O, tape) hB hkB
+    deployedConstraintXBadSet_measure_le family basis O
+      (natDegree_deployedConstraintDifferencePreX_le family basis O hB hkB
         (hnB basis) (hgates basis) (hW basis) (hlin basis) (hltab basis) (hq basis)
         h3 hWD h4 hcomp)
   pinned := hpinned
