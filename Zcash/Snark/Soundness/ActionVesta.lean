@@ -20,7 +20,7 @@ measures here, a represented decode there — not because one supersedes the oth
 
 namespace Zcash.Snark
 
-open Polynomial
+open CompPoly CompPoly.CPolynomial
 open Classical
 open scoped ENNReal
 
@@ -57,7 +57,7 @@ noncomputable def action_bundleStatement_or_relation_of_deployedAccepts
     (ch :
       Challenges (pp.mergeDerived actionCircuit).k Fp)
     (pU pW : Fp)
-    (hpoly : Polynomial Fp)
+    (hpoly : CPoly)
     {a₀ : Fin (2 ^ urs.k) → Fp}
     (pbatch :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
@@ -99,7 +99,7 @@ noncomputable def action_bundleStatement_or_relation_of_deployedAccepts
       (actionCircuit.instanceCommitment pp urs inputs) ps ch i).length)
     (colPoly : Fin (deployedSetQueries
       (actionCircuit.toVerifierKey pp urs)
-      (actionCircuit.instanceCommitment pp urs inputs) ps ch i).length → Polynomial Fp)
+      (actionCircuit.instanceCommitment pp urs inputs) ps ch i).length → CPoly)
     (hbindAll : ∀ (idx : Fin ((constructIntermediateSets
           (assembleQueries
             (actionCircuit.toVerifierKey pp urs)
