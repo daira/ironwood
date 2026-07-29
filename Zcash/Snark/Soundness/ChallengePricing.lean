@@ -42,8 +42,8 @@ carries the whole challenge-pricing story.
 
 namespace Zcash.Snark
 
-open Halo2 Finset
-open CompPoly CompPoly.CPolynomial
+open Halo2 Polynomial Finset
+open CompPoly
 open scoped ENNReal
 
 /-- **The shared union bound.** Finitely many root-set events, each of degree at most `d`, together
@@ -76,16 +76,16 @@ theorem foldSplitWitness_zero_of_le {cs : List (CPoly)} {n j : ℕ} (hn : n ≠ 
   rw [foldSplitWitness]
   refine (foldPoly_eq_zero_iff _).mpr fun v hv => ?_
   obtain ⟨c, _, rfl⟩ := List.mem_map.mp hv
-  refine coeff_eq_zero_of_natDegree_lt (lt_of_lt_of_le ?_ hj)
-  have hmonic : ((X : CPoly) ^ n - 1).monic := monic_X_pow_sub_one hn
-  have hmonicP : (((X : CPoly) ^ n - 1).toPoly).Monic := (monic_toPoly_iff _).mp hmonic
-  have hXn : (((X : CPoly) ^ n - 1).toPoly).natDegree = n := by
-    simp only [toPoly_sub, toPoly_pow, X_toPoly, toPoly_one]
+  refine CPolynomial.coeff_eq_zero_of_natDegree_lt (lt_of_lt_of_le ?_ hj)
+  have hmonic : ((CPolynomial.X : CPoly) ^ n - 1).monic := monic_X_pow_sub_one hn
+  have hmonicP : (((CPolynomial.X : CPoly) ^ n - 1).toPoly).Monic := (CPolynomial.monic_toPoly_iff _).mp hmonic
+  have hXn : (((CPolynomial.X : CPoly) ^ n - 1).toPoly).natDegree = n := by
+    simp only [CPolynomial.toPoly_sub, CPolynomial.toPoly_pow, CPolynomial.X_toPoly, CPolynomial.toPoly_one]
     simpa using Polynomial.natDegree_X_pow_sub_C (n := n) (r := (1 : Fp))
-  rw [natDegree_toPoly, modByMonic_toPoly_eq_modByMonic _ _ hmonic]
+  rw [CPolynomial.natDegree_toPoly, CPolynomial.modByMonic_toPoly_eq_modByMonic _ _ hmonic]
   have hlt := Polynomial.degree_modByMonic_lt c.toPoly hmonicP
   rw [Polynomial.degree_eq_natDegree hmonicP.ne_zero, hXn] at hlt
-  rcases eq_or_ne (c.toPoly %ₘ ((X : CPoly) ^ n - 1).toPoly) 0 with h0 | h0
+  rcases eq_or_ne (c.toPoly %ₘ ((CPolynomial.X : CPoly) ^ n - 1).toPoly) 0 with h0 | h0
   · rw [h0, Polynomial.natDegree_zero]
     exact Nat.pos_of_ne_zero hn
   · exact (Polynomial.natDegree_lt_iff_degree_lt h0).mpr hlt
@@ -175,7 +175,7 @@ theorem pairProdDiff_coeff_eq_zero_of_le (sp tp : Multiset (Fp × Fp)) {j : ℕ}
     have hmap : ∀ m : Multiset (Fp × Fp),
         m.map (fun q => Polynomial.X + Polynomial.C (encPair q)) = (m.map encPair).map (fun u => Polynomial.X + Polynomial.C u) := by
       intro m; simp [Multiset.map_map]
-    rw [hmap, Polynomial.natDegree_prod_X_add_u]
+    rw [hmap, natDegree_prod_X_add_u]
     simp
   rw [pairProdDiff, Polynomial.coeff_sub,
     key sp (lt_of_le_of_lt (le_max_left _ _) hj), key tp (lt_of_le_of_lt (le_max_right _ _) hj),
@@ -198,7 +198,7 @@ theorem perm_beta_failure_measure_le (sp tp : Multiset (Fp × Fp)) :
       rcases lt_or_ge j (d + 1) with hlt | hge
       · exact ⟨j, hlt, hj⟩
       · rw [show pairProdDiffCoeff sp tp j = 0 from by
-              rw [← toPoly_eq_zero_iff, toPoly_pairProdDiffCoeff]
+              rw [← CPolynomial.toPoly_eq_zero_iff, toPoly_pairProdDiffCoeff]
               exact pairProdDiff_coeff_eq_zero_of_le sp tp (by omega)] at hj
         simp [szBadSet] at hj
     · rintro ⟨j, _, hj⟩
@@ -206,7 +206,7 @@ theorem perm_beta_failure_measure_le (sp tp : Multiset (Fp × Fp)) :
   rw [hset]
   refine le_trans (uniformChallenge_szBadSet_iUnion_le (range (d + 1)) _ d
     fun j _ => by
-      rw [natDegree_toPoly, toPoly_pairProdDiffCoeff]
+      rw [CPolynomial.natDegree_toPoly, toPoly_pairProdDiffCoeff]
       exact natDegree_coeff_pairProdDiff_le sp tp j) ?_
   simp
 
@@ -283,41 +283,45 @@ root per table row at most. -/
 theorem lookup_gamma_failure_measure_le
     (a s inp tbl : Multiset Fp) (beta : Fp) :
     uniformChallenge.toOuterMeasure
-        ↑(szBadSet ((lookupProdDiff a s inp tbl).map (evalRingHom beta)))
+        ↑(szBadSet (lookupProdDiffGamma a s inp tbl beta))
       ≤ (max (Multiset.card s) (Multiset.card tbl) : ℕ) /
           (Fintype.card Fp : ℝ≥0∞) := by
   rw [uniformChallenge_badSet]
   gcongr
-  exact_mod_cast le_trans (szBadSet_card_le _)
-    (le_trans Polynomial.natDegree_map_le (natDegree_lookupProdDiff_le a s inp tbl))
+  refine le_trans (szBadSet_card_le _) ?_
+  rw [CPolynomial.natDegree_toPoly, toPoly_lookupProdDiffGamma]
+  exact le_trans Polynomial.natDegree_map_le (natDegree_lookupProdDiff_le a s inp tbl)
 
 /-- **The lookup `β` surface priced.** There is one root set for each potentially nonzero
 `γ` coefficient, and each such coefficient has degree at most the larger input-column size. -/
 theorem lookup_beta_failure_measure_le (a s inp tbl : Multiset Fp) :
     uniformChallenge.toOuterMeasure
-        {b : Fp | ∃ j, b ∈ szBadSet ((lookupProdDiff a s inp tbl).coeff j)}
+        {b : Fp | ∃ j, b ∈ szBadSet (lookupProdDiffCoeff a s inp tbl j)}
       ≤ ((max (Multiset.card s) (Multiset.card tbl) + 1)
           * max (Multiset.card a) (Multiset.card inp) : ℕ) /
           (Fintype.card Fp : ℝ≥0∞) := by
   set ds := max (Multiset.card s) (Multiset.card tbl) with hds
   set da := max (Multiset.card a) (Multiset.card inp) with hda
-  have hset : {b : Fp | ∃ j, b ∈ szBadSet ((lookupProdDiff a s inp tbl).coeff j)}
+  have hset : {b : Fp | ∃ j, b ∈ szBadSet (lookupProdDiffCoeff a s inp tbl j)}
       = {b : Fp | ∃ j ∈ range (ds + 1),
-          b ∈ szBadSet ((lookupProdDiff a s inp tbl).coeff j)} := by
+          b ∈ szBadSet (lookupProdDiffCoeff a s inp tbl j)} := by
     ext b
     simp only [Set.mem_setOf_eq, mem_range]
     constructor
     · rintro ⟨j, hj⟩
       rcases lt_or_ge j (ds + 1) with hlt | hge
       · exact ⟨j, hlt, hj⟩
-      · rw [lookupProdDiff_coeff_eq_zero_of_le a s inp tbl (by omega)] at hj
+      · rw [show lookupProdDiffCoeff a s inp tbl j = 0 from by
+              rw [← CPolynomial.toPoly_eq_zero_iff, toPoly_lookupProdDiffCoeff]
+              exact lookupProdDiff_coeff_eq_zero_of_le a s inp tbl (by omega)] at hj
         simp [szBadSet] at hj
     · rintro ⟨j, _, hj⟩
       exact ⟨j, hj⟩
   rw [hset]
   refine le_trans (uniformChallenge_szBadSet_iUnion_le (range (ds + 1)) _ da
     fun j _ => ?_) ?_
-  · simpa [hda] using natDegree_coeff_lookupProdDiff_le a s inp tbl j
+  · rw [CPolynomial.natDegree_toPoly, toPoly_lookupProdDiffCoeff]
+    simpa [hda] using natDegree_coeff_lookupProdDiff_le a s inp tbl j
   · simp [hds, hda]
 
 /-! ## Resolver-backed lookup challenge families -/
@@ -329,8 +333,7 @@ noncomputable def resolverLookupGammaBadSet
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) : Finset Fp :=
-  szBadSet ((resolverLookupProductDifference vk ch poly p l u).map
-    (evalRingHom ch.beta)) ∪
+  szBadSet (resolverLookupProductDifferenceGamma vk ch poly p l u) ∪
   lookupColumnZeroBadSet vk.omega
     (lookupTablePolyOfResolver vk ch poly p l) (u + 1)
 
@@ -343,7 +346,7 @@ noncomputable def resolverLookupBetaBadSet
     (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) : Finset Fp :=
   ((Finset.range (u + 2)).biUnion fun j =>
-    szBadSet ((resolverLookupProductDifference vk ch poly p l u).coeff j)) ∪
+    szBadSet (resolverLookupProductDifferenceCoeff vk ch poly p l u j)) ∪
   lookupColumnZeroBadSet vk.omega
     (lookupInputPolyOfResolver vk ch poly p l) (u + 1)
 
@@ -365,8 +368,8 @@ theorem ResolverLookupGoodChallenges.ofBadSets
       rw [resolverLookupBetaBadSet]
       exact Finset.mem_union_left _ (Finset.mem_biUnion.mpr
         ⟨j, Finset.mem_range.mpr hj, hmem⟩)
-    · have hzero :
-          (resolverLookupProductDifference vk ch poly p l u).coeff j = 0 := by
+    · have hzero : resolverLookupProductDifferenceCoeff vk ch poly p l u j = 0 := by
+        rw [← CPolynomial.toPoly_eq_zero_iff, toPoly_resolverLookupProductDifferenceCoeff]
         apply lookupProdDiff_coeff_eq_zero_of_le
         simpa [resolverLookupProductDifference] using (show u + 1 < j by omega)
       simp [hzero, szBadSet]
@@ -386,9 +389,10 @@ theorem resolverLookupGammaBadSet_card_le
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) :
     (resolverLookupGammaBadSet vk ch poly p l u).card ≤ 2 * (u + 1) := by
   have hroot :
-      (szBadSet ((resolverLookupProductDifference vk ch poly p l u).map
-        (evalRingHom ch.beta))).card ≤ u + 1 := by
-    exact le_trans (szBadSet_card_le _)
+      (szBadSet (resolverLookupProductDifferenceGamma vk ch poly p l u)).card ≤ u + 1 := by
+    refine le_trans (szBadSet_card_le _) ?_
+    rw [CPolynomial.natDegree_toPoly, toPoly_resolverLookupProductDifferenceGamma]
+    exact
       (le_trans Polynomial.natDegree_map_le (by
         simpa [resolverLookupProductDifference] using
           natDegree_lookupProdDiff_le
@@ -411,12 +415,10 @@ theorem resolverLookupGammaBadSet_card_le
         (lookupTablePolyOfResolver vk ch poly p l) (u + 1))
   rw [resolverLookupGammaBadSet]
   calc
-    (szBadSet ((resolverLookupProductDifference vk ch poly p l u).map
-          (evalRingHom ch.beta)) ∪
+    (szBadSet (resolverLookupProductDifferenceGamma vk ch poly p l u) ∪
         lookupColumnZeroBadSet vk.omega
           (lookupTablePolyOfResolver vk ch poly p l) (u + 1)).card
-      ≤ (szBadSet ((resolverLookupProductDifference vk ch poly p l u).map
-            (evalRingHom ch.beta))).card +
+      ≤ (szBadSet (resolverLookupProductDifferenceGamma vk ch poly p l u)).card +
           (lookupColumnZeroBadSet vk.omega
             (lookupTablePolyOfResolver vk ch poly p l) (u + 1)).card := by
         exact Finset.card_union_le _ _
@@ -447,10 +449,12 @@ theorem resolverLookupBetaBadSet_card_le
     (resolverLookupBetaBadSet vk ch poly p l u).card ≤
       (u + 2) * (u + 1) + (u + 1) := by
   have hcoeff : ∀ j,
-      (szBadSet ((resolverLookupProductDifference vk ch poly p l u).coeff j)).card
+      (szBadSet (resolverLookupProductDifferenceCoeff vk ch poly p l u j)).card
         ≤ u + 1 := by
     intro j
-    exact le_trans (szBadSet_card_le _) (by
+    refine le_trans (szBadSet_card_le _) ?_
+    rw [CPolynomial.natDegree_toPoly, toPoly_resolverLookupProductDifferenceCoeff]
+    exact (by
       simpa [resolverLookupProductDifference] using
         natDegree_coeff_lookupProdDiff_le
           (Finset.univ.val.map
@@ -473,16 +477,16 @@ theorem resolverLookupBetaBadSet_card_le
   rw [resolverLookupBetaBadSet]
   calc
     (((Finset.range (u + 2)).biUnion fun j =>
-          szBadSet ((resolverLookupProductDifference vk ch poly p l u).coeff j)) ∪
+          szBadSet (resolverLookupProductDifferenceCoeff vk ch poly p l u j)) ∪
         lookupColumnZeroBadSet vk.omega
           (lookupInputPolyOfResolver vk ch poly p l) (u + 1)).card
       ≤ ((Finset.range (u + 2)).biUnion fun j =>
-          szBadSet ((resolverLookupProductDifference vk ch poly p l u).coeff j)).card +
+          szBadSet (resolverLookupProductDifferenceCoeff vk ch poly p l u j)).card +
         (lookupColumnZeroBadSet vk.omega
           (lookupInputPolyOfResolver vk ch poly p l) (u + 1)).card := by
         exact Finset.card_union_le _ _
     _ ≤ (∑ j ∈ Finset.range (u + 2),
-          (szBadSet ((resolverLookupProductDifference vk ch poly p l u).coeff j)).card) +
+          (szBadSet (resolverLookupProductDifferenceCoeff vk ch poly p l u j)).card) +
         (u + 1) := Nat.add_le_add Finset.card_biUnion_le hzero
     _ ≤ (∑ _j ∈ Finset.range (u + 2), (u + 1)) + (u + 1) := by
       exact Nat.add_le_add (Finset.sum_le_sum fun j _ => hcoeff j) (le_refl _)
@@ -563,16 +567,14 @@ def resolverLookupGoodChallenges?
             if htable : ∀ i : Fin (u + 1),
                 table.eval (vk.omega ^ (i : Nat)) + ch.gamma ≠ 0 then
               exact some ⟨{
-                gamma := by
-                  rw [← toPoly_resolverLookupProductDifferenceGamma vk ch poly p l u]
-                  exact hgammaProof.down
+                gamma := hgammaProof.down
                 beta := fun j => by
                   by_cases hj : j < u + 2
-                  · rw [← toPoly_resolverLookupProductDifferenceCoeff
-                        vk ch poly p l u j (by omega)]
-                    exact (hbetaProof ⟨j, hj⟩).down
+                  · exact (hbetaProof ⟨j, hj⟩).down
                   · have hzero :
-                        (resolverLookupProductDifference vk ch poly p l u).coeff j = 0 := by
+                        resolverLookupProductDifferenceCoeff vk ch poly p l u j = 0 := by
+                      rw [← CPolynomial.toPoly_eq_zero_iff,
+                        toPoly_resolverLookupProductDifferenceCoeff]
                       apply lookupProdDiff_coeff_eq_zero_of_le
                       simpa [resolverLookupProductDifference] using
                         (show u + 1 < j by omega)
@@ -627,7 +629,6 @@ theorem resolverLookupGoodChallenges?_isSome_of
   let table := lookupTablePolyOfResolver vk ch poly p l
   have hgammaGood : ch.gamma ∉ szBadSet gammaDifference := by
     dsimp only [gammaDifference]
-    rw [toPoly_resolverLookupProductDifferenceGamma]
     exact hgood.gamma
   dsimp only [gammaDifference] at hgammaGood
   obtain ⟨gammaProof, hgammaEq⟩ := Option.isSome_iff_exists.mp
@@ -635,9 +636,7 @@ theorem resolverLookupGoodChallenges?_isSome_of
   have hbetaFinite : ∀ j : Fin (u + 2),
       (szBadSetAvoidance?
         (resolverLookupProductDifferenceCoeff vk ch poly p l u j.1) ch.beta).isSome :=
-    fun j => (szBadSetAvoidance?_isSome_iff _ _).2 (by
-      rw [toPoly_resolverLookupProductDifferenceCoeff vk ch poly p l u j.1 (by omega)]
-      exact hgood.beta j.1)
+    fun j => (szBadSetAvoidance?_isSome_iff _ _).2 (hgood.beta j.1)
   have hinput : ∀ i : Fin (u + 1),
       input.eval (vk.omega ^ (i : Nat)) + ch.beta ≠ 0 := by
     intro i hzero
@@ -735,25 +734,32 @@ theorem escape_measure_le (vs : Multiset Fp) :
     uniformChallenge.toOuterMeasure {x : Fp | ∃ v ∈ vs, v + x = 0}
       ≤ (Multiset.card vs : ℝ≥0∞) / Fintype.card Fp := by
   have hsub : {x : Fp | ∃ v ∈ vs, v + x = 0}
-      ⊆ ↑(szBadSet ((vs.map (fun v => X + C v)).prod)) := by
+      ⊆ ↑(szBadSet ((vs.map (fun v => CPolynomial.X + CPolynomial.C v)).prod)) := by
     intro x hx
     obtain ⟨v, hv, hvx⟩ := hx
     rw [Finset.mem_coe, mem_szBadSet]
     constructor
-    · exact (monic_multiset_prod_of_monic _ _ fun u _ => monic_X_add_C u).ne_zero
-    · rw [eval_prod_X_add_u]
+    · rw [Ne, ← CPolynomial.toPoly_eq_zero_iff, CPolynomial.toPoly_multiset_prod,
+        Multiset.map_map]
+      simpa [Function.comp_def] using
+        (monic_multiset_prod_of_monic (R := Fp) vs (fun v => X + C v)
+          fun u _ => monic_X_add_C u).ne_zero
+    · rw [eval_cprod_X_add_u]
       refine Multiset.prod_eq_zero ?_
       refine Multiset.mem_map.mpr ⟨v, hv, ?_⟩
       linear_combination hvx
   calc uniformChallenge.toOuterMeasure {x : Fp | ∃ v ∈ vs, v + x = 0}
-      ≤ uniformChallenge.toOuterMeasure ↑(szBadSet ((vs.map (fun v => X + C v)).prod)) :=
+      ≤ uniformChallenge.toOuterMeasure ↑(szBadSet ((vs.map (fun v => CPolynomial.X + CPolynomial.C v)).prod)) :=
         uniformChallenge.toOuterMeasure.mono hsub
     _ ≤ _ := by
         rw [uniformChallenge_badSet]
         gcongr
-        calc (szBadSet ((vs.map (fun v => X + C v)).prod)).card
-            ≤ ((vs.map (fun v => X + C v)).prod).natDegree := szBadSet_card_le _
-          _ ≤ Multiset.card vs := by rw [natDegree_prod_X_add_u]
+        calc (szBadSet ((vs.map (fun v => CPolynomial.X + CPolynomial.C v)).prod)).card
+            ≤ ((vs.map (fun v => CPolynomial.X + CPolynomial.C v)).prod).natDegree := szBadSet_card_le _
+          _ ≤ Multiset.card vs := by
+              rw [CPolynomial.natDegree_toPoly, CPolynomial.toPoly_multiset_prod,
+                Multiset.map_map]
+              simpa [Function.comp_def] using (natDegree_prod_X_add_u (R := Fp) vs).le
 
 /-- **The `θ` surface priced.** The pairwise decompression condition over `N` rows of arity at most
 `r` costs at most `N²·r / p`. -/
@@ -766,13 +772,13 @@ theorem theta_failure_measure_le {N r : ℕ} (inputT tableT : ℕ → List Fp)
   refine le_trans (uniformChallenge_szBadSet_iUnion_le (range N ×ˢ range N)
     (fun q => foldPoly (inputT q.1) - foldPoly (tableT q.2)) r fun q hq => ?_) ?_
   · obtain ⟨h1, h2⟩ := mem_product.mp hq
-    refine le_trans (Polynomial.natDegree_sub_le _ _) (max_le ?_ ?_)
+    refine le_trans (CPolynomial.natDegree_sub_le _ _) (max_le ?_ ?_)
     · rcases eq_or_ne (inputT q.1) [] with h | h
-      · simp [h, foldPoly, ComputablePolynomial.zero_eq]
+      · simp [h, foldPoly]
       · exact le_trans (le_of_lt (natDegree_foldPoly_lt h))
           ((hlen q.1 (mem_range.mp h1)).1)
     · rcases eq_or_ne (tableT q.2) [] with h | h
-      · simp [h, foldPoly, ComputablePolynomial.zero_eq]
+      · simp [h, foldPoly]
       · exact le_trans (le_of_lt (natDegree_foldPoly_lt h))
           ((hlen q.2 (mem_range.mp h2)).2)
   · simp [mul_assoc]
@@ -863,7 +869,7 @@ noncomputable def resolverPermutationBetaBadSet
     (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (m : ℕ) : Finset Fp :=
   (Finset.range (Fintype.card (ResolverPermutationCell vk poly p m) + 1)).biUnion fun j =>
-    szBadSet ((pairProdDiff
+    szBadSet (pairProdDiffCoeff
       (chunkedCellPairs shape.numPermutationSets m
         (fun c => (ResolverPermutationPairs vk poly p c).length)
         (chunkRowValue vk.omega (ResolverPermutationPairs vk poly p))
@@ -871,7 +877,7 @@ noncomputable def resolverPermutationBetaBadSet
       (chunkedCellPairs shape.numPermutationSets m
         (fun c => (ResolverPermutationPairs vk poly p c).length)
         (chunkRowValue vk.omega (ResolverPermutationPairs vk poly p))
-        (chunkRowName vk.omega vk.delta vk.chunkLen))).coeff j)
+        (chunkRowName vk.omega vk.delta vk.chunkLen)) j)
 
 /-- Avoiding the two per-proof bad sets supplies exactly the good-challenge record consumed by
 the resolver permutation endpoint. -/
@@ -896,7 +902,7 @@ theorem ResolverPermutationGoodChallenges.ofBadSets
         (chunkRowValue vk.omega (ResolverPermutationPairs vk poly p))
         (chunkRowName vk.omega vk.delta vk.chunkLen)
     let d := Fintype.card (ResolverPermutationCell vk poly p m)
-    change ch.beta ∉ szBadSet ((pairProdDiff source target).coeff j)
+    change ch.beta ∉ szBadSet (pairProdDiffCoeff source target j)
     by_cases hj : j < d + 1
     · intro hmem
       apply hbeta
@@ -915,7 +921,8 @@ theorem ResolverPermutationGoodChallenges.ofBadSets
           (fun c => (ResolverPermutationPairs vk poly p c).length)
           (chunkRowValue vk.omega (ResolverPermutationPairs vk poly p))
           (chunkRowName vk.omega vk.delta vk.chunkLen)
-      have hzero : (pairProdDiff source target).coeff j = 0 := by
+      have hzero : pairProdDiffCoeff source target j = 0 := by
+        rw [← CPolynomial.toPoly_eq_zero_iff, toPoly_pairProdDiffCoeff]
         apply pairProdDiff_coeff_eq_zero_of_le
         simp only [hsource, htarget, max_self]
         omega
@@ -1022,7 +1029,7 @@ def resolverPermutationGoodChallenges?
             ch.beta * chunkRowName vk.omega vk.delta vk.chunkLen
               cell.1 cell.2.1 cell.2.2 + ch.gamma ≠ 0 then
         match finForallOption (fun j : Fin (d + 1) =>
-            szBadSetAvoidance? (pairProdDiffCoeffData source target j.1) ch.beta) with
+            szBadSetAvoidance? (pairProdDiffCoeff source target j.1) ch.beta) with
         | none => exact none
         | some hbetaProof =>
             exact some ⟨
@@ -1036,11 +1043,10 @@ def resolverPermutationGoodChallenges?
                     exact hfactor cell hcell
                 beta := fun j => by
                   by_cases hj : j < d + 1
-                  · have heq := pairProdDiffCoeffData_eq source target j
-                      (by omega) (by omega)
-                    simpa only [heq] using (hbetaProof ⟨j, hj⟩).down
+                  · exact (hbetaProof ⟨j, hj⟩).down
                   ·
-                    have hzero : (pairProdDiff source target).coeff j = 0 := by
+                    have hzero : pairProdDiffCoeff source target j = 0 := by
+                      rw [← CPolynomial.toPoly_eq_zero_iff, toPoly_pairProdDiffCoeff]
                       apply pairProdDiff_coeff_eq_zero_of_le
                       simp only [hsource, htarget, max_self]
                       omega
@@ -1100,7 +1106,7 @@ theorem resolverPermutationGoodChallenges?_isSome_of
       (chunkRowName vk.omega vk.delta vk.chunkLen)
   let d := Fintype.card (ResolverPermutationCell vk poly p m)
   have hbetaFinite : ∀ j : Fin (d + 1),
-      (szBadSetAvoidance? (pairProdDiffCoeffData source target j.1) ch.beta).isSome := by
+      (szBadSetAvoidance? (pairProdDiffCoeff source target j.1) ch.beta).isSome := by
     intro j
     have hsource : Multiset.card source = d := by
       simpa only [source, d] using
@@ -1114,8 +1120,7 @@ theorem resolverPermutationGoodChallenges?_isSome_of
           (fun c => (ResolverPermutationPairs vk poly p c).length)
           (chunkRowValue vk.omega (ResolverPermutationPairs vk poly p))
           (chunkRowName vk.omega vk.delta vk.chunkLen)
-    rw [szBadSetAvoidance?_isSome_iff,
-      pairProdDiffCoeffData_eq source target j.1 (by omega) (by omega)]
+    rw [szBadSetAvoidance?_isSome_iff]
     exact hgood.beta j.1
   obtain ⟨rootProof, hrootEq⟩ := Option.isSome_iff_exists.mp
     ((szBadSetAvoidance?_isSome_iff _ _).2 hroot)
@@ -1226,16 +1231,17 @@ theorem resolverPermutationBetaBadSet_card_le
       (fun c => (ResolverPermutationPairs vk poly p c).length)
       (chunkRowValue vk.omega (ResolverPermutationPairs vk poly p))
       (chunkRowName vk.omega vk.delta vk.chunkLen)
-  have hcoeff : ∀ j, (szBadSet ((pairProdDiff source target).coeff j)).card ≤ d := by
+  have hcoeff : ∀ j, (szBadSet (pairProdDiffCoeff source target j)).card ≤ d := by
     intro j
-    exact le_trans (szBadSet_card_le _) (by
-      simpa [hsource, htarget] using natDegree_coeff_pairProdDiff_le source target j)
+    refine le_trans (szBadSet_card_le _) ?_
+    rw [CPolynomial.natDegree_toPoly, toPoly_pairProdDiffCoeff]
+    simpa [hsource, htarget] using natDegree_coeff_pairProdDiff_le source target j
   rw [resolverPermutationBetaBadSet]
   calc
     ((Finset.range (d + 1)).biUnion fun j =>
-        szBadSet ((pairProdDiff source target).coeff j)).card
+        szBadSet (pairProdDiffCoeff source target j)).card
       ≤ ∑ j ∈ Finset.range (d + 1),
-          (szBadSet ((pairProdDiff source target).coeff j)).card :=
+          (szBadSet (pairProdDiffCoeff source target j)).card :=
         Finset.card_biUnion_le
     _ ≤ ∑ _j ∈ Finset.range (d + 1), d :=
       Finset.sum_le_sum fun j _ => hcoeff j
