@@ -438,18 +438,23 @@ def fpEnumeration : CPolynomial.Roots.FiniteField.FieldEnumeration Fp where
   elem := fun i => (i.val : Fp)
   complete := fun a => ⟨⟨a.val, ZMod.val_lt a⟩, by simp⟩
 
-/-- The distinct roots of a polynomial over the scalar field. -/
-def roots (p : CPoly) : Finset Fp := CPolynomial.rootsBy fpEnumeration p
+/-- The distinct roots of a polynomial over the scalar field.
 
-@[simp] theorem roots_zero : roots (0 : CPoly) = ∅ := CPolynomial.rootsBy_zero _
+Irreducible on purpose: unfolding it exposes a filter over an enumeration of the whole scalar
+field, which a stray `simp [szBadSet]` will try to evaluate.  The lemmas below are the interface. -/
+@[irreducible] def roots (p : CPoly) : Finset Fp := CPolynomial.rootsBy fpEnumeration p
+
+@[simp] theorem roots_zero : roots (0 : CPoly) = ∅ := by
+  rw [roots]; exact CPolynomial.rootsBy_zero _
 
 theorem mem_roots {p : CPoly} {x : Fp} (hp : p ≠ 0) :
-    x ∈ roots p ↔ CPolynomial.eval x p = 0 := CPolynomial.mem_rootsBy hp
+    x ∈ roots p ↔ CPolynomial.eval x p = 0 := by
+  rw [roots]; exact CPolynomial.mem_rootsBy hp
 
-theorem roots_eq_toFinset (p : CPoly) : roots p = p.toPoly.roots.toFinset :=
-  CPolynomial.rootsBy_eq_toFinset _ p
+theorem roots_eq_toFinset (p : CPoly) : roots p = p.toPoly.roots.toFinset := by
+  rw [roots]; exact CPolynomial.rootsBy_eq_toFinset _ p
 
-theorem card_roots_le (p : CPoly) : (roots p).card ≤ p.natDegree :=
-  CPolynomial.card_rootsBy_le _ p
+theorem card_roots_le (p : CPoly) : (roots p).card ≤ p.natDegree := by
+  rw [roots]; exact CPolynomial.card_rootsBy_le _ p
 
 end Zcash

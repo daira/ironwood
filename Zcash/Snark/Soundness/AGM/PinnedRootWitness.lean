@@ -520,7 +520,11 @@ them leaves every other read untouched. This is the causal fact the invariance p
 theorem witnessFamily_run (basis : AugmentedIndex (2 ^ witnessShape.k) → VestaG)
     (X : BTranscript Fp VestaG
       (preIpaLen witnessShape witnessFamily.init.length 10 + 3 * witnessShape.k) → Fp) :
-    (witnessFamily.adversary basis).run X = witnessProof basis := rfl
+    (witnessFamily.adversary basis).run X = witnessProof basis := by
+  simp only [witnessFamily, OracleComp.run_pure]
+
+/-- The witness family absorbs nothing before the proof. -/
+theorem witnessFamily_init : witnessFamily.init = [] := rfl
 
 /-- **The eleven squeeze points are pairwise distinct.** Their prefix lengths are
 `1, 2, 3, 5, 6, 8, 9, 11, 12, 14, 15` — all different, so no two points coincide. -/
@@ -538,7 +542,7 @@ theorem witnessProof_prefixesPre_injective
     rw [← hli, ← hlj]
     exact congrArg (fun t : BTranscript Fp VestaG _ => t.val.length) hEq
   revert this
-  fin_cases i <;> fin_cases j <;> simp_all [preIpaLen, witnessShape, witnessFamily]
+  fin_cases i <;> fin_cases j <;> simp_all [preIpaLen, witnessShape, witnessFamily_init]
 
 /-- **Reprogramming at one squeeze point moves only that read.** The proof is constant, so the
 points do not shift, and the points are pairwise distinct — so the other ten answers survive. -/
