@@ -232,61 +232,6 @@ noncomputable def bridgeWitness_of_components
 
 end TopLevelAssignment
 
-def TopLevelFixedEncodingOutcome
-    {G : Type} [AddCommGroup G] [Inhabited G]
-    {Config : Type} {PublicInput : TypeMap}
-    [ProvableType PublicInput]
-    (top : TopLevelCircuit Fp Config PublicInput)
-    (pp : Keygen.ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
-    (Bad : Type)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs) : Type :=
-  TopLevelFixedEncoding top pp urs poly proofIndex ⊕' Bad
-
-def TopLevelFixedOutcome
-    {G : Type} [AddCommGroup G] [Inhabited G]
-    {Config : Type} {PublicInput : TypeMap}
-    [ProvableType PublicInput]
-    (top : TopLevelCircuit Fp Config PublicInput)
-    (pp : Keygen.ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
-    (Bad : Type)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs) : Type :=
-  TopLevelFixed top pp urs poly proofIndex ⊕' Bad
-
-def TopLevelCopiesOutcome
-    {G : Type} [AddCommGroup G] [Inhabited G]
-    {Config : Type} {PublicInput : TypeMap}
-    [ProvableType PublicInput]
-    (top : TopLevelCircuit Fp Config PublicInput)
-    (pp : Keygen.ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
-    (cell : Type) [DecidableEq cell] [Fintype cell]
-    (Bad : Type)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs) : Type :=
-  TopLevelCopies top pp urs poly cell Bad proofIndex ⊕' Bad
-
-def TopLevelLookupsOutcome
-    {G : Type} [AddCommGroup G] [Inhabited G]
-    {Config : Type} {PublicInput : TypeMap}
-    [ProvableType PublicInput]
-    (top : TopLevelCircuit Fp Config PublicInput)
-    (pp : Keygen.ProofParams) (urs : URS G)
-    (ch : Challenges (pp.mergeDerived top).k Fp)
-    (poly : CommitmentId → Polynomial Fp)
-    (Bad : Type)
-    (proofIndex : Fin (pp.mergeDerived top).numProofs) : Type :=
-  TopLevelLookups top pp urs ch poly proofIndex ⊕' Bad
-
-structure TopLevelCorrectnessData
-    (Gates : Prop)
-    (FixedEncoding Fixed Copies Lookups : Type) : Type where
-  gates : Gates
-  fixedEncoding : FixedEncoding
-  fixed : Fixed
-  copies : Copies
-  lookups : Lookups
-
 /--
 The representation-boundary data needed to interpret one canonical polynomial
 assignment as an execution of a top-level circuit.
@@ -301,7 +246,7 @@ The copy field previously squashed its witness under `Nonempty`.  With `Bad` a
 type the witness is already data, so it is carried directly and the terminal no
 longer has to recover it by choice.
 -/
-def TopLevelCircuitCorrectness
+structure TopLevelCircuitCorrectness
     {G : Type} [AddCommGroup G] [Inhabited G]
     {Config : Type} {PublicInput : TypeMap}
     [ProvableType PublicInput]
@@ -310,16 +255,15 @@ def TopLevelCircuitCorrectness
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (cell : Type) [DecidableEq cell] [Fintype cell]
-    (Bad : Type) : Type :=
-  TopLevelCorrectnessData
-    (TopLevelGateCoherence top)
-    (∀ proofIndex,
-      TopLevelFixedEncodingOutcome top pp urs poly Bad proofIndex)
-    (∀ proofIndex,
-      TopLevelFixedOutcome top pp urs poly Bad proofIndex)
-    (∀ proofIndex,
-      TopLevelCopiesOutcome top pp urs poly cell Bad proofIndex)
-    (∀ proofIndex,
-      TopLevelLookupsOutcome top pp urs ch poly Bad proofIndex)
+    (Bad : Type) : Type where
+  gates : TopLevelGateCoherence top
+  fixedEncoding : ∀ proofIndex,
+    TopLevelFixedEncoding top pp urs poly proofIndex ⊕' Bad
+  fixed : ∀ proofIndex,
+    TopLevelFixed top pp urs poly proofIndex ⊕' Bad
+  copies : ∀ proofIndex,
+    TopLevelCopies top pp urs poly cell Bad proofIndex ⊕' Bad
+  lookups : ∀ proofIndex,
+    TopLevelLookups top pp urs ch poly proofIndex ⊕' Bad
 
 end Zcash.Snark
