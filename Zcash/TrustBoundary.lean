@@ -1397,7 +1397,7 @@ assert_axioms Zcash.Snark.resolverLookupGammaBadSet_congr
 assert_axioms Zcash.Snark.allResolverLookupBetaBadSet_congr
 assert_axioms Zcash.Snark.allResolverLookupGammaBadSet_congr
 assert_axioms Zcash.Snark.resolverEnvironment_congr
-assert_axioms Zcash.Snark.TopLevelLookupCoherence.allTopLevelLookupThetaBadSet_congr
+assert_axioms Zcash.Snark.TopLevelLookup.thetaBadSet_congr
 -- The captured Action capstone assembly (issue #128): the exact terminal event, the
 -- derived-key checks and schedule, and the composed bound.
 assert_axioms Zcash.Snark.Fixture.actionAcceptFalseEvent +native(

@@ -42,15 +42,6 @@ structure TopLevelGateCoherence
     (pp : ProofParams) (urs : URS G) : Prop where
   gateSelectorsAllocated :
     top.constraintSystem.GateSelectorsAllocated
-  adviceQueryCount :
-    (top.toVerifierKey pp urs).adviceQueryLayout.length =
-      (pp.mergeDerived top).numAdviceQueries
-  fixedQueryCount :
-    (top.toVerifierKey pp urs).fixedQueryLayout.length =
-      (pp.mergeDerived top).numFixedQueries
-  instanceQueryCount :
-    (top.toVerifierKey pp urs).instanceQueryLayout.length =
-      (pp.mergeDerived top).numInstanceQueries
   domainExponent_lt : top.domainExponent < 33
   selectorDegree :
     csDegree top.constraintSystem < scalarFieldOrder
@@ -112,9 +103,9 @@ theorem resolverInterpretsGates
     (by rfl)
     (by rfl)
     (by rfl)
-    coherence.adviceQueryCount
-    coherence.fixedQueryCount
-    coherence.instanceQueryCount
+    (top.toVerifierKey_adviceQueryCount pp urs)
+    (top.toVerifierKey_fixedQueryCount pp urs)
+    (top.toVerifierKey_instanceQueryCount pp urs)
   apply hfinal.mono
   exact
     PinnedConstraintSystem.derive_queryState_extends_gates

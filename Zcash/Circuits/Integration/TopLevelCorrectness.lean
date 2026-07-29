@@ -122,7 +122,7 @@ abbrev TopLevelLookups
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex : Fin (pp.mergeDerived top).numProofs) : Prop :=
-  TopLevelLookupCoherence.TopLevelLookupWitnessConditions
+  TopLevelLookup.WitnessConditions
     top pp urs ch poly proofIndex
 
 namespace TopLevelAssignment
@@ -173,7 +173,7 @@ noncomputable def bridgeWitness_of_components
           (top.usableRowsAt top.domainExponent))
         top.operations cell Bad)
     (lookups :
-      TopLevelLookupCoherence.TopLevelLookupWitnessConditions
+      TopLevelLookup.WitnessConditions
         top pp urs ch poly proofIndex) :
     TopLevelBridgeWitness top
       (({ polynomial := poly } :

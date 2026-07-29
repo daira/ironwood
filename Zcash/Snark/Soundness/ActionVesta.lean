@@ -203,7 +203,7 @@ noncomputable def action_bundleStatement_or_relation_of_deployedAccepts
           haccepts)
         actionActiveRows)
     (lookupExclusions :
-      TopLevelLookupCoherence.TopLevelLookupChallengeExclusions
+      TopLevelLookup.ChallengeExclusions
         actionCircuit pp urs ch
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode :=
@@ -223,7 +223,6 @@ noncomputable def action_bundleStatement_or_relation_of_deployedAccepts
     topLevelStatements_or_relation_of_deployedAccepts
       actionCircuit pp urs hk inputs
       ps ch pU pW hpoly pbatch hξcur hlen hprob1 haccepts
-      (ActionGateCoherence.topLevelGateCoherence pp urs)
       i m hm colPoly hbindAll hquot hroute hevals claimed hxgood hgoodY
       (cell := FlatCell actionNumPermCols actionDomainSize)
       (fun hsatisfied =>

@@ -188,7 +188,7 @@ noncomputable def actionThetaFailureEvent :
           + 3 * (pp.mergeDerived actionCircuit).k) → Fp)) :=
   {q | ∃ h : family.straightLineConstraintDecoded static q.1 q.2,
     ¬((straightLineRunRecord family q.1 q.2).theta ∉
-      TopLevelLookupCoherence.allTopLevelLookupThetaBadSet actionCircuit pp
+      TopLevelLookup.thetaBadSet actionCircuit pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k q.1)
         (actionRunPolynomial pp family static inputs hvk hI hchar q.1 q.2 h))}
 
@@ -299,7 +299,7 @@ theorem actionThetaFailureEvent_subset_surface
           + 3 * (pp.mergeDerived actionCircuit).k) →
       (Fin 0 → Fp) → Set Fp)
     (hcompat : ∀ basis O (h : family.straightLineConstraintDecoded static basis O),
-      ↑(TopLevelLookupCoherence.allTopLevelLookupThetaBadSet actionCircuit pp
+      ↑(TopLevelLookup.thetaBadSet actionCircuit pp
           (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)
           (actionRunPolynomial pp family static inputs hvk hI hchar basis O h)) ⊆
         badF basis (algebraicFullPrefixesPre family.init ((family.adversary basis).run O) 0)
@@ -570,7 +570,7 @@ theorem actionBundleStatementFailure_prob_le_of_surfaces
           (fun i => O (algebraicFullPrefixesPre family.init
             ((family.adversary basis).run O) (i.castLE (le_of_lt (2 : Fin 11).isLt)))))
     (hcompatTheta : ∀ basis O (h : family.straightLineConstraintDecoded static basis O),
-      ↑(TopLevelLookupCoherence.allTopLevelLookupThetaBadSet actionCircuit pp
+      ↑(TopLevelLookup.thetaBadSet actionCircuit pp
           (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)
           (actionRunPolynomial pp family static inputs hvk hI hchar basis O h)) ⊆
         badFTheta basis (algebraicFullPrefixesPre family.init ((family.adversary basis).run O) 0)

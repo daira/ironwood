@@ -94,12 +94,12 @@ theorem actionThetaFailureEvent_subset
           view ((cut.pre basis).run O) id) :
     actionThetaFailureEvent pp family static inputs hvk hI hchar ⊆
       cut.surfaceEvent (fun basis s =>
-        ↑(TopLevelLookupCoherence.allTopLevelLookupThetaBadSet actionCircuit pp
+        ↑(TopLevelLookup.thetaBadSet actionCircuit pp
           (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) (view s))) := by
   rintro ⟨basis, O⟩ ⟨h, hmem⟩
   dsimp only at hmem
   have hin := not_not.mp hmem
-  rw [TopLevelLookupCoherence.allTopLevelLookupThetaBadSet_congr actionCircuit pp
+  rw [TopLevelLookup.thetaBadSet_congr actionCircuit pp
     (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)
     (fun id hid => hview basis O h id hid)] at hin
   have hproj : (straightLineRunRecord family basis O).theta =
@@ -120,7 +120,7 @@ theorem actionThetaFailureEvent_prob_le {T : Type*} [DecidableEq T]
     {epsilon : ENNReal}
     (hbad : ∀ (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
       (s : cut.State), (PMF.uniformOfFintype Fp).toOuterMeasure
-      ↑(TopLevelLookupCoherence.allTopLevelLookupThetaBadSet actionCircuit pp
+      ↑(TopLevelLookup.thetaBadSet actionCircuit pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) (view s)) ≤ epsilon) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype (BTranscript Fp VestaG
@@ -393,13 +393,13 @@ theorem actionThetaBadSet_measure_le
     (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
     (poly : CommitmentId → Polynomial Fp) :
     (PMF.uniformOfFintype Fp).toOuterMeasure
-      ↑(TopLevelLookupCoherence.allTopLevelLookupThetaBadSet actionCircuit pp
+      ↑(TopLevelLookup.thetaBadSet actionCircuit pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) poly) ≤
-      (TopLevelLookupCoherence.topLevelLookupThetaBudget actionCircuit pp
+      (TopLevelLookup.thetaBudget actionCircuit pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) poly : ℝ≥0∞) /
         (Fintype.card Fp : ℝ≥0∞) :=
-  TopLevelLookupCoherence.uniformChallenge_allTopLevelLookupThetaBadSet
-    TopLevelLookupCoherence.ofTopLevel poly
+  TopLevelLookup.uniformChallenge_thetaBadSet
+    poly
 
 /-- The per-state `β` measure: permutation cells plus lookup pair counts. -/
 theorem actionBetaBadSets_measure_le

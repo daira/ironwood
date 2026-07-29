@@ -89,7 +89,7 @@ noncomputable def actionTopLevelCircuitCorrectness
         (actionCircuit.toVerifierKey pp urs)
         ch relation.polynomial actionActiveRows)
     (lookupExclusions :
-      TopLevelLookupCoherence.TopLevelLookupChallengeExclusions
+      TopLevelLookup.ChallengeExclusions
         actionCircuit pp urs ch relation.polynomial) :
     TopLevelCircuitCorrectness
       actionCircuit pp urs ch relation.polynomial
@@ -159,10 +159,7 @@ noncomputable def actionTopLevelCircuitCorrectness
         pp urs hk relation hgoodY fixedCoherence
         permutationExclusions proofIndex
   · intro proofIndex
-    · let lookupCoherence :
-          TopLevelLookupCoherence actionCircuit :=
-        TopLevelLookupCoherence.ofTopLevel
-      have hrows : Function.Injective
+    · have hrows : Function.Injective
           fun i : Fin
               (actionCircuit.toVerifierKey pp urs).n =>
             (actionCircuit.toVerifierKey pp urs).omega ^
@@ -183,7 +180,7 @@ noncomputable def actionTopLevelCircuitCorrectness
           (operationEnabledLookups (actionCircuit.operations) 0)
           fun lookup henabled => ?_)
         fun lookupSelectorValues =>
-          TopLevelLookupCoherence.TopLevelLookupWitnessConditions.ofChallengeExclusions
+          TopLevelLookup.WitnessConditions.ofChallengeExclusions
             ch relation.polynomial proofIndex
             lookupSelectorValues lookupExclusions
       · have hrow :

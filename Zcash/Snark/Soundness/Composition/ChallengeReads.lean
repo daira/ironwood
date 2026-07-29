@@ -286,16 +286,16 @@ theorem resolverEnvironment_congr
     (fun column => poly₂ (CommitmentId.instanceCol p column)) from funext fun _ => h _ trivial]
 
 /-- **The top-level `θ` exclusion reads only the query columns.** -/
-theorem TopLevelLookupCoherence.allTopLevelLookupThetaBadSet_congr
+theorem TopLevelLookup.thetaBadSet_congr
     {G' : Type} [AddCommGroup G'] [Inhabited G']
     {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
     (top : Halo2.TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G')
     {poly₁ poly₂ : CommitmentId → Polynomial Fp}
     (h : ∀ id, id.isColumnInput → poly₁ id = poly₂ id) :
-    TopLevelLookupCoherence.allTopLevelLookupThetaBadSet top pp urs poly₁ =
-      TopLevelLookupCoherence.allTopLevelLookupThetaBadSet top pp urs poly₂ := by
-  unfold TopLevelLookupCoherence.allTopLevelLookupThetaBadSet
+    TopLevelLookup.thetaBadSet top pp urs poly₁ =
+      TopLevelLookup.thetaBadSet top pp urs poly₂ := by
+  unfold TopLevelLookup.thetaBadSet
   exact Finset.biUnion_congr rfl fun index _ =>
     congrArg (fun env => EnabledLookup.thetaBadSet top.placement env
         ((operationEnabledLookups top.operations 0).get index.2))

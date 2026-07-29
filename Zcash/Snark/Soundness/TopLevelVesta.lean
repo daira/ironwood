@@ -77,7 +77,6 @@ noncomputable def topLevelStatements_or_relation_of_deployedAccepts
     (haccepts :
       DeployedAccepts urs hk
         (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch)
-    (gateCoherence : TopLevelGateCoherence top pp urs)
     (i m : ℕ)
     (hm : m < (deployedSetQueries
       (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch i).length)
@@ -192,7 +191,8 @@ noncomputable def topLevelStatements_or_relation_of_deployedAccepts
       urs hk vk (top.instanceCommitment pp urs inputs) ps ch pU pW hpoly
       pbatch hξcur hlen hprob1 haccepts
       (top.toVerifierKey_blindingFactors_lt_n pp urs)
-      gateCoherence.adviceQueryCount gateCoherence.instanceQueryCount
+      (top.toVerifierKey_adviceQueryCount pp urs)
+      (top.toVerifierKey_instanceQueryCount pp urs)
       i m hm colPoly hbindAll hquot hroute hevals claimed hxgood
   rcases hterminal with hsatisfied | hrelation
   · exact

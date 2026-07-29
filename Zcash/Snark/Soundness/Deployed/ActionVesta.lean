@@ -221,7 +221,7 @@ private noncomputable def action_bundleStatement_or_relation_of_deployedAccepts_
               ps ch pbatch hlen hprob1 haccepts) haccepts)
         (K.n - K.blindingFactors - 2))
     (lookupTheta :
-      ch.theta ∉ TopLevelLookupCoherence.allTopLevelLookupThetaBadSet
+      ch.theta ∉ TopLevelLookup.thetaBadSet
         actionCircuit actionProofParams capturedURS
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode :=
@@ -395,7 +395,7 @@ noncomputable def action_bundleStatement_or_relation_of_deployedAccepts
               ps ch pbatch hlen hprob1 haccepts) haccepts)
         (Fixture.vk.n - Fixture.vk.blindingFactors - 2))
     (lookupTheta :
-      ch.theta ∉ TopLevelLookupCoherence.allTopLevelLookupThetaBadSet
+      ch.theta ∉ TopLevelLookup.thetaBadSet
         actionCircuit actionProofParams capturedURS
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode :=
@@ -568,7 +568,7 @@ noncomputable def action_bundleStatement_or_relation_of_deployedAccepts_family
               ps ch pbatch hlen hprob1 haccepts) haccepts)
         (Fixture.vk.n - Fixture.vk.blindingFactors - 2))
     (lookupTheta :
-      ch.theta ∉ TopLevelLookupCoherence.allTopLevelLookupThetaBadSet
+      ch.theta ∉ TopLevelLookup.thetaBadSet
         actionCircuit actionProofParams capturedURS
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode :=
@@ -742,7 +742,7 @@ noncomputable def action_bundleStatement_or_relation_at_capturedInstances
               ps ch pbatch hlen hprob1 haccepts) haccepts)
         (Fixture.vk.n - Fixture.vk.blindingFactors - 2))
     (lookupTheta :
-      ch.theta ∉ TopLevelLookupCoherence.allTopLevelLookupThetaBadSet
+      ch.theta ∉ TopLevelLookup.thetaBadSet
         actionCircuit actionProofParams capturedURS
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode :=

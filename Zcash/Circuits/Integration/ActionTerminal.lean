@@ -198,7 +198,7 @@ noncomputable def action_bundleStatement_or_relation_of_decodedMemberPolynomial_
           (memberDecode := memberDecode) haccepts)
         actionActiveRows)
     (lookupExclusions :
-      TopLevelLookupCoherence.TopLevelLookupChallengeExclusions
+      TopLevelLookup.ChallengeExclusions
         actionCircuit pp urs ch
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts)) :
@@ -207,8 +207,6 @@ noncomputable def action_bundleStatement_or_relation_of_decodedMemberPolynomial_
   let vk := actionCircuit.toVerifierKey pp urs
   let hblinding : vk.blindingFactors < vk.n :=
     actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs
-  let gateCoherence :=
-    ActionGateCoherence.topLevelGateCoherence pp urs
   have hnFp : (vk.n : Fp) ≠ 0 := by
     change
       (((2 ^ actionCircuit.domainExponent : ℕ) : Fp)) ≠ 0
@@ -218,9 +216,9 @@ noncomputable def action_bundleStatement_or_relation_of_decodedMemberPolynomial_
       acceptedModel_circuitSat_or_relation_of_decodedMemberPolynomial_eq
         urs hk vk (actionCircuit.instanceCommitment pp urs inputs) ps ch memberDecode
         haccepts hblinding hpoly hquot
-        gateCoherence.fixedQueryCount
-        gateCoherence.adviceQueryCount
-        gateCoherence.instanceQueryCount
+        (actionCircuit.toVerifierKey_fixedQueryCount pp urs)
+        (actionCircuit.toVerifierKey_adviceQueryCount pp urs)
+        (actionCircuit.toVerifierKey_instanceQueryCount pp urs)
         hbind
         (ActionPermutationDomain.routingCoherent_of_derived pp urs)
         (ActionPermutationDomain.rowsInjective pp urs)

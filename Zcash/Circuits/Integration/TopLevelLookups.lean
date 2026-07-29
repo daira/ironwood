@@ -97,69 +97,47 @@ theorem EnabledLookup.activationRow_lt_usableRows
     top.usedRows_le_usableRowsAt_domainExponent
 
 /--
-Static lookup facts at the circuit-derived projection boundary.
-
-Input coverage says selector compression eliminates every selector leaf. Table
-expressions are selector-free because Halo 2 constructs them from lookup-table
-columns. Arity is inherited from the list-of-pairs lookup constructor.
--/
-structure TopLevelLookupCoherence
-    (top : TopLevelCircuit Fp Config PublicInput) : Prop where
-  inputsCovered : ∀ argument ∈ top.constraintSystem.lookups,
-    ∀ expression ∈ argument.inputs,
-      expression.selectorsCovered
-        (fun selector =>
-          (top.selectorMap.lookup selector).isSome) = true
-  tablesFree : ∀ argument ∈ top.constraintSystem.lookups,
-    argument.tables.Forall Expression.SelectorFree
-  arity : ∀ argument ∈ top.constraintSystem.lookups,
-    argument.inputs.length = argument.tables.length
-
-namespace TopLevelLookupCoherence
-
-/--
-Every top-level circuit supplies the static lookup boundary by construction.
+Selector compression covers every configured lookup input of a top-level circuit.
 
 `FormalCircuit.toConstraintSystem` closes selector allocation over every synthesis
-lookup input. `LookupArgument` itself carries selector-freedom of its table tuple and
-equality of the input/table arities. The generic selector compiler then turns the
-syntactic input bound into coverage by the circuit-derived compression map.
+lookup input, and the generic selector compiler turns that syntactic bound into
+coverage by the circuit-derived compression map.
 -/
-theorem ofTopLevel :
-    TopLevelLookupCoherence top := by
-  have inputAllocated :
-      ∀ argument ∈ top.constraintSystem.lookups,
-        ∀ expression ∈ argument.inputs,
-          expression.selectorBound ≤
-            top.constraintSystem.numSelectors := by
-    exact top.lookupInputsAllocated
-  refine
-    { inputsCovered := ?_
-      tablesFree := ?_
-      arity := ?_ }
-  · intro argument hargument expression hexpression
-    have sourceCoverage :=
-      expression.selectorsCovered_lt_of_selectorBound_le
-        top.constraintSystem.numSelectors
-        (inputAllocated argument hargument expression hexpression)
-    apply Expression.selectorsCovered_mono
+theorem topLevelLookupInputs_selectorsCovered
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (argument : LookupArgument Fp)
+    (hargument : argument ∈ top.constraintSystem.lookups)
+    (expression : Expression Fp Query)
+    (hexpression : expression ∈ argument.inputs) :
+    expression.selectorsCovered
       (fun selector =>
-        decide (selector <
-          top.constraintSystem.numSelectors))
-    · intro selector hselector
-      exact deriveSelCompressMap_lookup_isSome_of_lt
-        top.constraintSystem
-        (2 ^ top.domainExponent)
-        top.selectorActivations
-        (of_decide_eq_true hselector)
-    · exact sourceCoverage
-  · intro argument hargument
-    exact List.forall_iff_forall_mem.mpr
-      (fun table htable => argument.tablesFree table htable)
-  · intro argument hargument
-    exact argument.arity
+        (top.selectorMap.lookup selector).isSome) = true := by
+  have sourceCoverage :=
+    expression.selectorsCovered_lt_of_selectorBound_le
+      top.constraintSystem.numSelectors
+      (top.lookupInputsAllocated
+        argument hargument expression hexpression)
+  apply Expression.selectorsCovered_mono
+    (fun selector =>
+      decide (selector <
+        top.constraintSystem.numSelectors))
+  · intro selector hselector
+    exact deriveSelCompressMap_lookup_isSome_of_lt
+      top.constraintSystem
+      (2 ^ top.domainExponent)
+      top.selectorActivations
+      (of_decide_eq_true hselector)
+  · exact sourceCoverage
 
-end TopLevelLookupCoherence
+/--
+Every configured lookup table expression of a top-level circuit is selector-free.
+This is intrinsic to `LookupArgument`, not an additional coherence assumption.
+-/
+theorem lookupTables_selectorFree
+    (argument : LookupArgument Fp) :
+    argument.tables.Forall Expression.SelectorFree :=
+  List.forall_iff_forall_mem.mpr
+    (fun table htable => argument.tablesFree table htable)
 
 /--
 The exact selector-substitution facts needed by one enabled lookup.
@@ -313,9 +291,9 @@ theorem resolverInterpretsPinned
       (PinnedConstraintSystem.derive
         top.constraintSystem top.selectorMap))
     (by rfl) (by rfl) (by rfl)
-    coherence.adviceQueryCount
-    coherence.fixedQueryCount
-    coherence.instanceQueryCount
+    (top.toVerifierKey_adviceQueryCount pp urs)
+    (top.toVerifierKey_fixedQueryCount pp urs)
+    (top.toVerifierKey_instanceQueryCount pp urs)
 
 end TopLevelGateCoherence
 
@@ -367,13 +345,11 @@ theorem map_eval_toExpr
   exact RichExpression.eval_toExpr
     fixed advice instanceFeed expression
 
-namespace TopLevelLookupCoherence
+namespace TopLevelLookup
 
 /-- Selector-free lookup tables are covered by every compression map. -/
 theorem tablesCovered
-    (coherence : TopLevelLookupCoherence top)
     (argument : LookupArgument Fp)
-    (hargument : argument ∈ top.constraintSystem.lookups)
     (expression : Expression Fp Query)
     (hexpression : expression ∈ argument.tables) :
     expression.selectorsCovered
@@ -384,7 +360,7 @@ theorem tablesCovered
       (top.selectorMap.lookup selector).isSome)
     expression
     (List.forall_iff_forall_mem.mp
-      (coherence.tablesFree argument hargument)
+      (lookupTables_selectorFree argument)
       expression hexpression)
 
 /--
@@ -392,7 +368,6 @@ The circuit-derived verifying key's selected lookup tuples evaluate like the
 enabled Clean lookup's concrete input and table tuples.
 -/
 theorem projectedValues
-    (coherence : TopLevelLookupCoherence top)
     (gateCoherence : TopLevelGateCoherence top pp urs)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
@@ -452,13 +427,12 @@ theorem projectedValues
         top.constraintSystem.lookups :=
     List.getElem_mem ..
   have hinputCoverage :=
-    coherence.inputsCovered
+    topLevelLookupInputs_selectorsCovered top
       top.constraintSystem.lookups[route.index.val]
       hrouteMem
   have htableCoverage :=
-    coherence.tablesCovered
+    tablesCovered (top := top)
       top.constraintSystem.lookups[route.index.val]
-      hrouteMem
   have projectAt (row : ℕ) :=
     PinnedConstraintSystem.derive_lookup_eval
       top.constraintSystem top.selectorMap
@@ -532,7 +506,6 @@ The resolver's compressed input and table polynomials evaluate to the concrete
 Clean tuples compressed with the transcript challenge.
 -/
 theorem projectedPolynomialValues
-    (coherence : TopLevelLookupCoherence top)
     (gateCoherence : TopLevelGateCoherence top pp urs)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
@@ -567,7 +540,7 @@ theorem projectedPolynomialValues
   let route :=
     lookup.topLevelRoute (top := top) (pp := pp) henabled
   have projected :=
-    coherence.projectedValues gateCoherence poly proofIndex
+    projectedValues gateCoherence poly proofIndex
       lookup henabled selectors
   constructor
   · rw [lookupInputPolyOfResolver,
@@ -603,7 +576,6 @@ static projection, exact selector values, row fit, and explicitly priced
 challenge exclusions are supplied.
 -/
 noncomputable def deployedWitness
-    (coherence : TopLevelLookupCoherence top)
     (gateCoherence : TopLevelGateCoherence top pp urs)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
@@ -675,13 +647,12 @@ noncomputable def deployedWitness
     rw [hvkn, hvkBlinding]
     omega
   have projected :=
-    coherence.projectedPolynomialValues gateCoherence ch poly
+    projectedPolynomialValues gateCoherence ch poly
       proofIndex lookup henabled selectors
   have harity' :
       lookup.argument.inputs.length =
         lookup.argument.tables.length :=
-    coherence.arity lookup.argument
-      (OperationsKeygenCoherent.lookup top.keygenCoherent henabled)
+    lookup.argument.arity
   have tupleLength : ∀ row < environment.usableRows,
       (lookup.inputValues top.placement environment).length =
         (lookup.tableValues environment row).length := by
@@ -748,7 +719,7 @@ activation in one proof. Static configured-lookup coverage, arity, and activatio
 fit are derived from the top-level circuit; this record contains only selector- and
 challenge-dependent facts.
 -/
-structure TopLevelLookupWitnessConditions
+structure WitnessConditions
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
     (ch : Challenges (pp.mergeDerived top).k Fp)
@@ -782,7 +753,7 @@ structure TopLevelLookupWitnessConditions
 Index every lookup activation in every proof of a top-level bundle. The activation
 list is shared by all proofs, while the resolver environment is proof-indexed.
 -/
-abbrev TopLevelLookupActivationIndex
+abbrev ActivationIndex
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) :=
   Fin (pp.mergeDerived top).numProofs ×
@@ -793,12 +764,12 @@ The exact bundle-wide `θ` collision surface for a top-level circuit. A single
 transcript challenge is shared by every proof and every enabled lookup activation,
 so the event must be unioned across both indices.
 -/
-noncomputable def allTopLevelLookupThetaBadSet
+noncomputable def thetaBadSet
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp) : Finset Fp :=
   enabledLookupThetaBadSetFamily
-    (ι := TopLevelLookupActivationIndex top pp)
+    (ι := ActivationIndex top pp)
     (fun _ => top.placement)
     (fun index =>
       resolverEnvironment
@@ -808,11 +779,11 @@ noncomputable def allTopLevelLookupThetaBadSet
       (operationEnabledLookups (top.operations) 0).get index.2)
 
 /-- The row-by-arity root budget for the top-level bundle's `θ` surface. -/
-noncomputable def topLevelLookupThetaBudget
+noncomputable def thetaBudget
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp) : ℕ :=
-  ∑ index : TopLevelLookupActivationIndex top pp,
+  ∑ index : ActivationIndex top pp,
     (resolverEnvironment
       (top.toVerifierKey pp urs) poly index.1
       (top.usableRowsAt top.domainExponent)).usableRows *
@@ -829,25 +800,18 @@ The bundle-wide top-level `θ` surface has exactly the generic
 `usableRows × tupleArity` union-bound budget, summed over every proof and
 activation.
 -/
-theorem uniformChallenge_allTopLevelLookupThetaBadSet
-    (coherence : TopLevelLookupCoherence top)
+theorem uniformChallenge_thetaBadSet
     (poly : CommitmentId → Polynomial Fp) :
     uniformChallenge.toOuterMeasure
-        (allTopLevelLookupThetaBadSet top pp urs poly)
-      ≤ (topLevelLookupThetaBudget top pp urs poly : ENNReal) /
+        (thetaBadSet top pp urs poly)
+      ≤ (thetaBudget top pp urs poly : ENNReal) /
         (Fintype.card Fp : ENNReal) := by
-  unfold allTopLevelLookupThetaBadSet topLevelLookupThetaBudget
+  unfold thetaBadSet thetaBudget
   apply uniformChallenge_enabledLookupThetaBadSetFamily
   intro index row _hrow
   let lookup :=
     (operationEnabledLookups (top.operations) 0).get index.2
-  have henabled :
-      lookup ∈ operationEnabledLookups (top.operations) 0 :=
-    List.get_mem ..
-  have hargument :
-      lookup.argument ∈ top.constraintSystem.lookups :=
-    OperationsKeygenCoherent.lookup top.keygenCoherent henabled
-  have harity := coherence.arity lookup.argument hargument
+  have harity := lookup.argument.arity
   unfold EnabledLookup.inputValues EnabledLookup.tableValues
   simpa only [List.length_map] using harity
 
@@ -856,7 +820,7 @@ The three lookup challenge exclusions at their natural bundle-wide granularity.
 These are transcript/probability-layer facts, independent of fixed-column selector
 realization.
 -/
-structure TopLevelLookupChallengeExclusions
+structure ChallengeExclusions
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
     (ch : Challenges (pp.mergeDerived top).k Fp)
@@ -872,13 +836,13 @@ structure TopLevelLookupChallengeExclusions
       ((top.toVerifierKey pp urs).n -
         (top.toVerifierKey pp urs).blindingFactors - 2)
   theta :
-    ch.theta ∉ allTopLevelLookupThetaBadSet top pp urs poly
+    ch.theta ∉ thetaBadSet top pp urs poly
 
 /--
 Bundle-wide challenge exclusions and exact selector realization construct the
 per-proof conditions consumed by the deployed lookup witnesses.
 -/
-noncomputable def TopLevelLookupWitnessConditions.ofChallengeExclusions
+noncomputable def WitnessConditions.ofChallengeExclusions
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
@@ -890,8 +854,8 @@ noncomputable def TopLevelLookupWitnessConditions.ofChallengeExclusions
           (top.toVerifierKey pp urs) poly proofIndex
           (top.usableRowsAt top.domainExponent)))
     (exclusions :
-      TopLevelLookupChallengeExclusions top pp urs ch poly) :
-    TopLevelLookupWitnessConditions top pp urs ch poly proofIndex := by
+      ChallengeExclusions top pp urs ch poly) :
+    WitnessConditions top pp urs ch poly proofIndex := by
   refine
     { inputSelectorValues := inputSelectorValues
       resolverGood := ?_
@@ -909,7 +873,7 @@ noncomputable def TopLevelLookupWitnessConditions.ofChallengeExclusions
       List.mem_iff_getElem.mp henabled
     have hfamily :=
       (not_mem_enabledLookupThetaBadSetFamily_iff
-        (ι := TopLevelLookupActivationIndex top pp)
+        (ι := ActivationIndex top pp)
         (fun _ => top.placement)
         (fun index =>
           resolverEnvironment
@@ -919,11 +883,10 @@ noncomputable def TopLevelLookupWitnessConditions.ofChallengeExclusions
           (operationEnabledLookups (top.operations) 0).get index.2)
         ch.theta).mp exclusions.theta
         (proofIndex, ⟨index, hindex⟩)
-    simpa [allTopLevelLookupThetaBadSet, hlookup] using hfamily
+    simpa [thetaBadSet, hlookup] using hfamily
 
 /-- Construct the complete deployed-witness family for one top-level proof. -/
 noncomputable def deployedWitnesses
-    (coherence : TopLevelLookupCoherence top)
     (gateCoherence : TopLevelGateCoherence top pp urs)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
@@ -939,7 +902,7 @@ noncomputable def deployedWitnesses
       (top.toVerifierKey pp urs).omega ^
         (top.toVerifierKey pp urs).n = 1)
     (conditions :
-      TopLevelLookupWitnessConditions top pp urs ch poly proofIndex) :
+      WitnessConditions top pp urs ch poly proofIndex) :
     ∀ lookup ∈ operationEnabledLookups (top.operations) 0,
       lookup.DeployedWitness top.placement
         (resolverEnvironment
@@ -951,16 +914,13 @@ noncomputable def deployedWitnesses
     resolverEnvironment
       (top.toVerifierKey pp urs) poly proofIndex
       (top.usableRowsAt top.domainExponent)
-  have hargument :
-      lookup.argument ∈ top.constraintSystem.lookups :=
-    OperationsKeygenCoherent.lookup top.keygenCoherent henabled
   have selectorProjection :
       lookup.SelectorProjection top environment :=
     EnabledLookup.SelectorProjection.ofInputSelectorValues
       environment lookup
       (conditions.inputSelectorValues lookup henabled)
-      (coherence.tablesFree lookup.argument hargument)
-  exact coherence.deployedWitness gateCoherence ch poly proofIndex
+      (lookupTables_selectorFree lookup.argument)
+  exact deployedWitness gateCoherence ch poly proofIndex
     satisfaction hrows hroot lookup henabled
     selectorProjection
     (lookup.activationRow_lt_usableRows henabled)
@@ -969,7 +929,6 @@ noncomputable def deployedWitnesses
 
 /-- The deployed family discharges Clean's complete lookup constraint family. -/
 theorem constraints
-    (coherence : TopLevelLookupCoherence top)
     (gateCoherence : TopLevelGateCoherence top pp urs)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (poly : CommitmentId → Polynomial Fp)
@@ -985,16 +944,16 @@ theorem constraints
       (top.toVerifierKey pp urs).omega ^
         (top.toVerifierKey pp urs).n = 1)
     (conditions :
-      TopLevelLookupWitnessConditions top pp urs ch poly proofIndex) :
+      WitnessConditions top pp urs ch poly proofIndex) :
     CircuitConstraintFamily.constraints .lookup top.placement
       (resolverEnvironment
         (top.toVerifierKey pp urs) poly proofIndex
         (top.usableRowsAt top.domainExponent))
       (top.operations) 0 := by
   apply lookup_constraints_of_deployed_witnesses
-  exact coherence.deployedWitnesses gateCoherence ch poly proofIndex
+  exact deployedWitnesses gateCoherence ch poly proofIndex
     satisfaction hrows hroot conditions
 
-end TopLevelLookupCoherence
+end TopLevelLookup
 
 end Zcash.Snark

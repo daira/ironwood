@@ -75,15 +75,13 @@ noncomputable def ofTopLevelCanonical
           (top.usableRowsAt top.domainExponent))
         (top.operations) cell Bad)
     (lookupConditions :
-      TopLevelLookupCoherence.TopLevelLookupWitnessConditions
+      TopLevelLookup.WitnessConditions
         top pp urs ch poly proofIndex) :
     FullCircuitBridge top.placement
       (resolverEnvironment
         (top.toVerifierKey pp urs) poly proofIndex
         (top.usableRowsAt top.domainExponent))
       (top.operations) 0 cell Bad := by
-  let lookupCoherence : TopLevelLookupCoherence top :=
-    TopLevelLookupCoherence.ofTopLevel
   refine
     { gates := ?_
       fixed := fixed
@@ -95,7 +93,7 @@ noncomputable def ofTopLevelCanonical
     · intro row
       rw [← pow_mul, Nat.mul_comm, pow_mul, hroot, one_pow]
     · exact selectorActivations
-  · exact lookupCoherence.deployedWitnesses gateCoherence ch poly proofIndex
+  · exact TopLevelLookup.deployedWitnesses gateCoherence ch poly proofIndex
       satisfaction hrows hroot lookupConditions
 
 /--
