@@ -306,6 +306,54 @@ theorem eval_combineGates {n : ℕ} (fixedCols adviceCols instanceCols : ℕ →
           (fun p => CPolynomial.eval x p)).foldl (fun acc v => acc * y + v) 0 := by
   simp [combineGates, eval_foldByY]
 
+/-! ## Composition
+
+CompPoly has `eval₂` but no `comp`.  With the constant embedding bundled as `CRingHom`,
+composition is `eval₂` at that hom, and the Mathlib characterisation follows from
+`eval₂_toPoly` and `Polynomial.hom_eval₂`. -/
+
+/-- Polynomial composition. -/
+def comp (p q : CPoly) : CPoly := CPolynomial.eval₂ CRingHom q p
+
+theorem toPoly_comp (p q : CPoly) : (comp p q).toPoly = p.toPoly.comp q.toPoly := by
+  have hring :
+      ((CPolynomial.ringEquiv : CPoly ≃+* Polynomial Fp) : CPoly →+* Polynomial Fp).comp CRingHom
+        = Polynomial.C := by
+    refine RingHom.ext fun c => ?_
+    show (CPolynomial.C c : CPoly).toPoly = Polynomial.C c
+    exact CPolynomial.C_toPoly c
+  rw [comp, CPolynomial.eval₂_toPoly]
+  have h := Polynomial.hom_eval₂ p.toPoly CRingHom
+    ((CPolynomial.ringEquiv : CPoly ≃+* Polynomial Fp) : CPoly →+* Polynomial Fp) q
+  rw [hring] at h
+  exact h.trans rfl
+
+theorem eval_comp (p q : CPoly) (x : Fp) :
+    CPolynomial.eval x (comp p q) = CPolynomial.eval (CPolynomial.eval x q) p := by
+  rw [CPolynomial.eval_toPoly, toPoly_comp, Polynomial.eval_comp,
+    ← CPolynomial.eval_toPoly, ← CPolynomial.eval_toPoly]
+
+theorem natDegree_comp (p q : CPoly) :
+    (comp p q).natDegree = p.natDegree * q.natDegree := by
+  rw [CPolynomial.natDegree_toPoly, toPoly_comp, Polynomial.natDegree_comp,
+    ← CPolynomial.natDegree_toPoly, ← CPolynomial.natDegree_toPoly]
+
+/-! ## Rotation -/
+
+/-- Evaluating a rotated column rescales the point. -/
+theorem eval_comp_rotate (col : CPoly) (w x : Fp) :
+    CPolynomial.eval x (comp col (CPolynomial.C w * CPolynomial.X)) =
+      CPolynomial.eval (w * x) col := by
+  rw [eval_comp, CPolynomial.eval_mul, CPolynomial.eval_C, eval_X]
+
+/-- Rotation by a nonzero factor preserves degree. -/
+theorem natDegree_comp_rotate (col : CPoly) {w : Fp} (hw : w ≠ 0) :
+    (comp col (CPolynomial.C w * CPolynomial.X)).natDegree = col.natDegree := by
+  have hq : ((CPolynomial.C w * CPolynomial.X : CPoly)).natDegree = 1 := by
+    rw [CPolynomial.natDegree_toPoly, CPolynomial.toPoly_mul, CPolynomial.C_toPoly,
+      CPolynomial.X_toPoly, Polynomial.natDegree_C_mul hw, Polynomial.natDegree_X]
+  rw [natDegree_comp, hq, mul_one]
+
 /-! ## The vanishing / quotient check -/
 
 /-- The verifier's quotient check at the challenge `x`. -/
