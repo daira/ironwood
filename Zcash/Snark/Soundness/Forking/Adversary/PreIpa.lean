@@ -77,6 +77,13 @@ def preIpaSqueezePoints {shape : Shape} (init : List (TranscriptElt Fp G))
   ![sqPt0 init ps, sqPt1 init ps, sqPt2 init ps, sqPt3 init ps, sqPt4 init ps, sqPt5 init ps,
     sqPt6 init ps, sqPt7 init ps, sqPt8 init ps, sqPt9 init ps, sqPt10 init ps]
 
+/-- Commit-before-challenge at `ξ`: the IPA `S` commitment is already in the index-nine
+squeeze input. -/
+theorem ipaS_mem_preIpaSqueezePoints_nine {shape : Shape}
+    (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) :
+    TranscriptElt.point ps.ipaS ∈ preIpaSqueezePoints init ps 9 := by
+  simp [preIpaSqueezePoints, sqPt9]
+
 /-- The last squeeze point (`z`) is the whole pre-IPA transcript. -/
 theorem preIpaSqueezePoints_last {shape : Shape} (init : List (TranscriptElt Fp G))
     (ps : ProofString shape Fp G) :

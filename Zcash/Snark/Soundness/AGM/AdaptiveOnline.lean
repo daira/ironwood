@@ -220,6 +220,41 @@ theorem firstLabelOrFallbackBad_measure_le
     | none => exact hfallback (A.run O) t O
   · exact OracleComp.queryBound_completing (fun a (_ : Fin 1) => xpt a) hQ
 
+/-- Reduction shell for an output-defined failure event.  Once a computed relation finder covers
+every discrepancy between final data and the first query annotation, the no-relation branch is
+contained in the arbitrary adaptive labeled squeeze and inherits its `(Q+1) * epsilon` bound. -/
+theorem finalBadWithoutRelation_measure_le
+    [Fintype T] [DecidableEq T] [Fintype F] [Nonempty F]
+    (A : LabeledOracleComp T F Label α) (xpt : α → T)
+    (finalBad : α → T → (T → F) → Set F)
+    (finder : (T → F) → Option β)
+    (bad : (t : T) → Label t → (T → F) → Set F)
+    (fallback : α → T → (T → F) → Set F)
+    (hcover : ∀ O,
+      O (xpt (A.run O)) ∈ finalBad (A.run O) (xpt (A.run O)) O →
+      finder O = none →
+      O (xpt (A.run O)) ∈ firstLabelOrFallbackBad A bad fallback
+        (xpt (A.run O)) O)
+    (hbadBlind : ∀ t label O v,
+      bad t label (Function.update O t v) = bad t label O)
+    (hfallbackBlind : ∀ a t O v,
+      fallback a t (Function.update O t v) = fallback a t O)
+    {epsilon : ENNReal}
+    (hbad : ∀ t label O,
+      (PMF.uniformOfFintype F).toOuterMeasure (bad t label O) ≤ epsilon)
+    (hfallback : ∀ a t O,
+      (PMF.uniformOfFintype F).toOuterMeasure (fallback a t O) ≤ epsilon)
+    {Q : ℕ} (hQ : A.QueryBound Q) :
+    (PMF.uniformOfFintype (T → F)).toOuterMeasure
+      {O : T → F | O (xpt (A.run O)) ∈
+          finalBad (A.run O) (xpt (A.run O)) O ∧ finder O = none} ≤
+      (Q + 1 : ℕ) * epsilon := by
+  refine le_trans (MeasureTheory.measure_mono ?_)
+    (firstLabelOrFallbackBad_measure_le A xpt bad fallback hbadBlind hfallbackBlind
+      hbad hfallback hQ)
+  intro O hO
+  exact hcover O hO.1 hO.2
+
 end LabeledOracleComp
 
 /-- Extract the group elements, in order, from a Fiat--Shamir transcript. -/
@@ -227,6 +262,397 @@ def transcriptGroupPoints {F G : Type*} : List (TranscriptElt F G) → List G
   | [] => []
   | .point P :: rest => P :: transcriptGroupPoints rest
   | _ :: rest => transcriptGroupPoints rest
+
+/-- A point absorbed into a transcript occurs in its ordered group-point projection. -/
+theorem mem_transcriptGroupPoints_of_mem_point {F G : Type*} {P : G}
+    {t : List (TranscriptElt F G)} (h : TranscriptElt.point P ∈ t) :
+    P ∈ transcriptGroupPoints t := by
+  induction t with
+  | nil => simp at h
+  | cons e rest ih =>
+      cases e with
+      | scalar x =>
+          simp only [List.mem_cons, reduceCtorEq] at h
+          exact ih (by simpa using h)
+      | point Q =>
+          simp only [List.mem_cons, TranscriptElt.point.injEq] at h
+          simp only [transcriptGroupPoints, List.mem_cons]
+          exact h.imp id ih
+      | challenge =>
+          simp only [List.mem_cons, reduceCtorEq, false_or] at h
+          exact ih h
+
+/-- Projecting group points preserves transcript prefixes. -/
+theorem transcriptGroupPoints_prefix {F G : Type*}
+    {t u : List (TranscriptElt F G)} (h : t <+: u) :
+    transcriptGroupPoints t <+: transcriptGroupPoints u := by
+  obtain ⟨tail, rfl⟩ := h
+  have append_eq : transcriptGroupPoints (t ++ tail) =
+      transcriptGroupPoints t ++ transcriptGroupPoints tail := by
+    induction t with
+    | nil => rfl
+    | cons e rest ih =>
+        cases e <;> simp only [List.cons_append, transcriptGroupPoints, ih]
+  rw [append_eq]
+  exact List.prefix_append _ _
+
+/-- The shape-determined deployed squeeze points are nested in challenge order. -/
+theorem preIpaSqueezePoints_prefix_of_le {G : Type*}
+    {shape : Shape} (init : List (TranscriptElt Fp G))
+    (ps : ProofString shape Fp G) (hwf : PsWellFormed ps)
+    (i j : Fin 11) (hij : (i : ℕ) ≤ (j : ℕ)) :
+    preIpaSqueezePoints init ps i <+: preIpaSqueezePoints init ps j := by
+  let z := preIpaTranscript init ps
+  have hi := List.prefix_iff_eq_take.mp (preIpaSqueezePoints_prefix init ps i)
+  have hj := List.prefix_iff_eq_take.mp (preIpaSqueezePoints_prefix init ps j)
+  have hmono : Monotone (preIpaLen shape init.length) := by
+    intro a b hab
+    fin_cases a <;> fin_cases b <;> simp_all [preIpaLen] <;> omega
+  have hlen : (preIpaSqueezePoints init ps i).length ≤
+      (preIpaSqueezePoints init ps j).length := by
+    rw [preIpaSqueezePoints_length_eq init ps hwf i,
+      preIpaSqueezePoints_length_eq init ps hwf j]
+    exact hmono hij
+  rw [hi, hj]
+  have htake := List.take_prefix (preIpaSqueezePoints init ps i).length
+    (List.take (preIpaSqueezePoints init ps j).length z)
+  simpa only [List.take_take, min_eq_left hlen] using htake
+
+/-- Prover-emitted commitment points fixed before `x₁`, without AGM coordinates. -/
+def ProofString.preX1CommitmentPoints {G : Type*} {shape : Shape}
+    (ps : ProofString shape Fp G) : List G :=
+  (List.ofFn fun p => List.ofFn fun i => ps.adviceCommitments p i).flatten ++
+  (List.ofFn fun p => List.ofFn fun i => ps.lookupPermutedInput p i).flatten ++
+  (List.ofFn fun p => List.ofFn fun i => ps.lookupPermutedTable p i).flatten ++
+  (List.ofFn fun p => List.ofFn fun i => ps.permutationProduct p i).flatten ++
+  (List.ofFn fun p => List.ofFn fun i => ps.lookupProduct p i).flatten ++
+  [ps.vanishingRandom] ++ List.ofFn ps.hPieces
+
+/-- Every pre-`x₁` commitment point occurs in the `x₁` query transcript. -/
+theorem ProofString.preX1CommitmentPoints_coveredAtX1
+    {G : Type*} {shape : Shape} (init : List (TranscriptElt Fp G))
+    (ps : ProofString shape Fp G) (P : G) (hP : P ∈ ps.preX1CommitmentPoints) :
+    P ∈ transcriptGroupPoints (preIpaSqueezePoints init ps 5) := by
+  apply mem_transcriptGroupPoints_of_mem_point
+  change TranscriptElt.point P ∈ preX1Transcript init ps
+  rw [ProofString.preX1CommitmentPoints] at hP
+  rcases List.mem_append.mp hP with hpre | hpiece
+  rcases List.mem_append.mp hpre with hpre | hran
+  rcases List.mem_append.mp hpre with hpre | hlk
+  rcases List.mem_append.mp hpre with hpre | hperm
+  rcases List.mem_append.mp hpre with hpre | htab
+  rcases List.mem_append.mp hpre with hadv | hin
+  · obtain ⟨l, hl, hPl⟩ := List.mem_flatten.mp hadv
+    obtain ⟨p, hp⟩ := List.mem_ofFn.mp hl
+    obtain ⟨i, hi⟩ := List.mem_ofFn.mp (hp ▸ hPl)
+    rw [← hi]
+    simp [preX1Transcript, absorbPoints2, absorbPoints]
+  · obtain ⟨l, hl, hPl⟩ := List.mem_flatten.mp hin
+    obtain ⟨p, hp⟩ := List.mem_ofFn.mp hl
+    obtain ⟨i, hi⟩ := List.mem_ofFn.mp (hp ▸ hPl)
+    rw [← hi]
+    simp [preX1Transcript, absorbLookupPermuted, absorbPoints]
+    exact Or.inr (Or.inr (Or.inl ⟨p, i, Or.inl rfl⟩))
+  · obtain ⟨l, hl, hPl⟩ := List.mem_flatten.mp htab
+    obtain ⟨p, hp⟩ := List.mem_ofFn.mp hl
+    obtain ⟨i, hi⟩ := List.mem_ofFn.mp (hp ▸ hPl)
+    rw [← hi]
+    simp [preX1Transcript, absorbLookupPermuted, absorbPoints]
+    exact Or.inr (Or.inr (Or.inl ⟨p, i, Or.inr rfl⟩))
+  · obtain ⟨l, hl, hPl⟩ := List.mem_flatten.mp hperm
+    obtain ⟨p, hp⟩ := List.mem_ofFn.mp hl
+    obtain ⟨i, hi⟩ := List.mem_ofFn.mp (hp ▸ hPl)
+    rw [← hi]
+    simp [preX1Transcript, absorbPoints2, absorbPoints]
+  · obtain ⟨l, hl, hPl⟩ := List.mem_flatten.mp hlk
+    obtain ⟨p, hp⟩ := List.mem_ofFn.mp hl
+    obtain ⟨i, hi⟩ := List.mem_ofFn.mp (hp ▸ hPl)
+    rw [← hi]
+    simp [preX1Transcript, absorbPoints2, absorbPoints]
+  · rw [List.mem_singleton.mp hran]
+    simp [preX1Transcript]
+  · obtain ⟨i, hi⟩ := List.mem_ofFn.mp hpiece
+    rw [← hi]
+    simp [preX1Transcript, absorbPoints]
+
+/-- Every prover representation used before `x₁` is already represented by the online-AGM
+annotation at the deployed `x₁` squeeze point. -/
+theorem AlgebraicProofString.preX1Points_coveredAtX1
+    {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    (init : List (TranscriptElt Fp VestaG))
+    (aps : AlgebraicProofString shape basis) (ap : AlgebraicPoint (F := Fp) basis)
+    (hap : ap ∈ aps.preX1Points) :
+    ap.point ∈ transcriptGroupPoints (preIpaSqueezePoints init aps.erase 5) := by
+  apply mem_transcriptGroupPoints_of_mem_point
+  change TranscriptElt.point ap.point ∈ preX1Transcript init aps.erase
+  rw [AlgebraicProofString.preX1Points] at hap
+  rcases List.mem_append.mp hap with hpre | hpiece
+  rcases List.mem_append.mp hpre with hpre | hran
+  rcases List.mem_append.mp hpre with hpre | hlk
+  rcases List.mem_append.mp hpre with hpre | hperm
+  rcases List.mem_append.mp hpre with hpre | htab
+  rcases List.mem_append.mp hpre with hadv | hin
+  · obtain ⟨l, hl, hapl⟩ := List.mem_flatten.mp hadv
+    obtain ⟨p, hp⟩ := List.mem_ofFn.mp hl
+    obtain ⟨i, hi⟩ := List.mem_ofFn.mp (hp ▸ hapl)
+    rw [← hi]
+    simp [preX1Transcript, absorbPoints2, absorbPoints, AlgebraicProofString.erase]
+  · obtain ⟨l, hl, hapl⟩ := List.mem_flatten.mp hin
+    obtain ⟨p, hp⟩ := List.mem_ofFn.mp hl
+    obtain ⟨i, hi⟩ := List.mem_ofFn.mp (hp ▸ hapl)
+    rw [← hi]
+    simp [preX1Transcript, absorbLookupPermuted, absorbPoints,
+      AlgebraicProofString.erase]
+    exact Or.inr (Or.inr (Or.inl ⟨p, i, Or.inl rfl⟩))
+  · obtain ⟨l, hl, hapl⟩ := List.mem_flatten.mp htab
+    obtain ⟨p, hp⟩ := List.mem_ofFn.mp hl
+    obtain ⟨i, hi⟩ := List.mem_ofFn.mp (hp ▸ hapl)
+    rw [← hi]
+    simp [preX1Transcript, absorbLookupPermuted, absorbPoints,
+      AlgebraicProofString.erase]
+    exact Or.inr (Or.inr (Or.inl ⟨p, i, Or.inr rfl⟩))
+  · obtain ⟨l, hl, hapl⟩ := List.mem_flatten.mp hperm
+    obtain ⟨p, hp⟩ := List.mem_ofFn.mp hl
+    obtain ⟨i, hi⟩ := List.mem_ofFn.mp (hp ▸ hapl)
+    rw [← hi]
+    simp [preX1Transcript, absorbPoints2, absorbPoints, AlgebraicProofString.erase]
+  · obtain ⟨l, hl, hapl⟩ := List.mem_flatten.mp hlk
+    obtain ⟨p, hp⟩ := List.mem_ofFn.mp hl
+    obtain ⟨i, hi⟩ := List.mem_ofFn.mp (hp ▸ hapl)
+    rw [← hi]
+    simp [preX1Transcript, absorbPoints2, absorbPoints, AlgebraicProofString.erase]
+  · have hr := List.mem_singleton.mp hran
+    rw [hr]
+    simp [preX1Transcript, AlgebraicProofString.erase]
+  · obtain ⟨i, hi⟩ := List.mem_ofFn.mp hpiece
+    rw [← hi]
+    simp [preX1Transcript, absorbPoints, AlgebraicProofString.erase]
+
+/-- The final algebraic representations whose coefficients can affect a deployed pre-IPA
+challenge surface. Later surfaces include commitments emitted since `x₁`. -/
+def AlgebraicProofString.representationsBefore
+    {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    (aps : AlgebraicProofString shape basis) (n : Fin 11) :
+    List (AlgebraicPoint (F := Fp) basis) :=
+  if (n : ℕ) < 7 then aps.preX1Points
+  else if (n : ℕ) < 9 then aps.preX1Points ++ [aps.multiopenQPrime]
+  else aps.preX1Points ++ [aps.multiopenQPrime, aps.ipaS]
+
+/-- Coordinate-free counterpart of `representationsBefore`. -/
+def ProofString.commitmentPointsBefore {G : Type*} {shape : Shape}
+    (ps : ProofString shape Fp G) (n : Fin 11) : List G :=
+  if (n : ℕ) < 7 then ps.preX1CommitmentPoints
+  else if (n : ℕ) < 9 then ps.preX1CommitmentPoints ++ [ps.multiopenQPrime]
+  else ps.preX1CommitmentPoints ++ [ps.multiopenQPrime, ps.ipaS]
+
+/-- Erasing the AGM coordinates of the stage-local representations gives exactly the ordinary
+commitment list available at that stage. -/
+@[simp] theorem AlgebraicProofString.representationsBefore_points
+    {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    (aps : AlgebraicProofString shape basis) (n : Fin 11) :
+    (aps.representationsBefore n).map AlgebraicPoint.point =
+      aps.erase.commitmentPointsBefore n := by
+  unfold AlgebraicProofString.representationsBefore ProofString.commitmentPointsBefore
+  by_cases h7 : (n : ℕ) < 7
+  · simp [h7, AlgebraicProofString.preX1Points,
+      ProofString.preX1CommitmentPoints, AlgebraicProofString.erase, Function.comp_def]
+  · by_cases h9 : (n : ℕ) < 9 <;>
+      simp [h7, h9, AlgebraicProofString.preX1Points,
+        ProofString.preX1CommitmentPoints, AlgebraicProofString.erase, Function.comp_def]
+
+/-- Every coordinate-free stage point occurs in that stage's transcript. -/
+theorem ProofString.commitmentPointsBefore_covered
+    {G : Type*} {shape : Shape} (init : List (TranscriptElt Fp G))
+    (ps : ProofString shape Fp G) (hwf : PsWellFormed ps)
+    (n : Fin 11) (h5n : 5 ≤ (n : ℕ)) (P : G)
+    (hP : P ∈ ps.commitmentPointsBefore n) :
+    P ∈ transcriptGroupPoints (preIpaSqueezePoints init ps n) := by
+  have lift_mem {i : Fin 11}
+      (hin : P ∈ transcriptGroupPoints (preIpaSqueezePoints init ps i))
+      (hin_le : (i : ℕ) ≤ (n : ℕ)) :
+      P ∈ transcriptGroupPoints (preIpaSqueezePoints init ps n) :=
+    (transcriptGroupPoints_prefix
+      (preIpaSqueezePoints_prefix_of_le init ps hwf i n hin_le)).mem hin
+  unfold ProofString.commitmentPointsBefore at hP
+  by_cases h7 : (n : ℕ) < 7
+  · apply lift_mem (i := 5) (ps.preX1CommitmentPoints_coveredAtX1 init P
+      (by simpa [h7] using hP))
+    omega
+  · by_cases h9 : (n : ℕ) < 9
+    · simp only [if_neg h7, if_pos h9, List.mem_append, List.mem_singleton] at hP
+      rcases hP with hpre | hq
+      · apply lift_mem (i := 5) (ps.preX1CommitmentPoints_coveredAtX1 init P hpre)
+        omega
+      · subst P
+        apply lift_mem (i := 7)
+        · apply mem_transcriptGroupPoints_of_mem_point
+          exact qPrime_mem_preX3Transcript init ps
+        · omega
+    · simp only [if_neg h7, if_neg h9, List.mem_append, List.mem_cons] at hP
+      rcases hP with hpre | hq | hs
+      · apply lift_mem (i := 5) (ps.preX1CommitmentPoints_coveredAtX1 init P hpre)
+        omega
+      · subst P
+        apply lift_mem (i := 7)
+        · apply mem_transcriptGroupPoints_of_mem_point
+          exact qPrime_mem_preX3Transcript init ps
+        · omega
+      · rcases hs with rfl | hs
+        · apply lift_mem (i := 9)
+          · apply mem_transcriptGroupPoints_of_mem_point
+            exact ipaS_mem_preIpaSqueezePoints_nine init ps
+          · omega
+        · simp at hs
+
+/-- Every representation used by a deployed surface is already present in that surface's
+transcript. This is commit-before-challenge chronology for a bare adaptive adversary; it does not
+assume an honest execution phase. -/
+theorem AlgebraicProofString.representationsBefore_covered
+    {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    (init : List (TranscriptElt Fp VestaG))
+    (aps : AlgebraicProofString shape basis) (hwf : PsWellFormed aps.erase)
+    (n : Fin 11) (h5n : 5 ≤ (n : ℕ))
+    (ap : AlgebraicPoint (F := Fp) basis)
+    (hap : ap ∈ aps.representationsBefore n) :
+    ap.point ∈ transcriptGroupPoints (preIpaSqueezePoints init aps.erase n) := by
+  have lift_mem {i : Fin 11} (hin : ap.point ∈
+      transcriptGroupPoints (preIpaSqueezePoints init aps.erase i))
+      (hin_le : (i : ℕ) ≤ (n : ℕ)) :
+      ap.point ∈ transcriptGroupPoints (preIpaSqueezePoints init aps.erase n) :=
+    (transcriptGroupPoints_prefix
+      (preIpaSqueezePoints_prefix_of_le init aps.erase hwf i n hin_le)).mem hin
+  unfold AlgebraicProofString.representationsBefore at hap
+  by_cases h7 : (n : ℕ) < 7
+  · apply lift_mem (i := 5) (aps.preX1Points_coveredAtX1 init ap (by simpa [h7] using hap))
+    omega
+  · by_cases h9 : (n : ℕ) < 9
+    · simp only [if_neg h7, if_pos h9, List.mem_append, List.mem_singleton] at hap
+      rcases hap with hpre | hq
+      · apply lift_mem (i := 5) (aps.preX1Points_coveredAtX1 init ap hpre)
+        omega
+      · subst ap
+        apply lift_mem (i := 7)
+        · apply mem_transcriptGroupPoints_of_mem_point
+          change TranscriptElt.point aps.erase.multiopenQPrime ∈
+            preX3Transcript init aps.erase
+          exact qPrime_mem_preX3Transcript init aps.erase
+        · omega
+    · simp only [if_neg h7, if_neg h9, List.mem_append, List.mem_cons] at hap
+      rcases hap with hpre | hq | hs
+      · apply lift_mem (i := 5) (aps.preX1Points_coveredAtX1 init ap hpre)
+        omega
+      · subst ap
+        apply lift_mem (i := 7)
+        · apply mem_transcriptGroupPoints_of_mem_point
+          change TranscriptElt.point aps.erase.multiopenQPrime ∈
+            preX3Transcript init aps.erase
+          exact qPrime_mem_preX3Transcript init aps.erase
+        · omega
+      · rcases hs with rfl | hs
+        · apply lift_mem (i := 9)
+          · apply mem_transcriptGroupPoints_of_mem_point
+            change TranscriptElt.point aps.erase.ipaS ∈
+              preIpaSqueezePoints init aps.erase 9
+            exact ipaS_mem_preIpaSqueezePoints_nine init aps.erase
+          · omega
+        · simp at hs
+
+/-- All final representations that can affect the IPA root at round `j`: the complete pre-IPA
+source followed by every round pair through `j`. -/
+def AlgebraicProofString.representationsBeforeRound
+    {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    (aps : AlgebraicProofString shape basis) (j : Fin shape.k) :
+    List (AlgebraicPoint (F := Fp) basis) :=
+  aps.representationsBefore 10 ++
+    (((List.finRange shape.k).take (j.val + 1)).flatMap fun i =>
+      [(aps.ipaRounds i).1, (aps.ipaRounds i).2])
+
+/-- Coordinate-free points available before IPA round `j`, in the same order as
+`representationsBeforeRound`. -/
+def ProofString.commitmentPointsBeforeRound {G : Type*} {shape : Shape}
+    (ps : ProofString shape Fp G) (j : Fin shape.k) : List G :=
+  ps.commitmentPointsBefore 10 ++
+    (((List.finRange shape.k).take (j.val + 1)).flatMap fun i =>
+      [(ps.ipaRounds i).1, (ps.ipaRounds i).2])
+
+@[simp] theorem AlgebraicProofString.representationsBeforeRound_points
+    {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    (aps : AlgebraicProofString shape basis) (j : Fin shape.k) :
+    (aps.representationsBeforeRound j).map AlgebraicPoint.point =
+      aps.erase.commitmentPointsBeforeRound j := by
+  unfold AlgebraicProofString.representationsBeforeRound
+    ProofString.commitmentPointsBeforeRound
+  rw [List.map_append, aps.representationsBefore_points]
+  congr 1
+  generalize (List.finRange shape.k).take (j.val + 1) = rounds
+  induction rounds with
+  | nil => rfl
+  | cons i rounds ih => simp [ih, AlgebraicProofString.erase]
+
+/-- Every coordinate-free point available at round `j` occurs in its actual query transcript. -/
+theorem ProofString.commitmentPointsBeforeRound_covered
+    {shape : Shape} (init : List (TranscriptElt Fp VestaG))
+    (ps : ProofString shape Fp VestaG) (hwf : PsWellFormed ps)
+    (j : Fin shape.k) (P : VestaG) (hP : P ∈ ps.commitmentPointsBeforeRound j) :
+    P ∈ transcriptGroupPoints
+      (roundTranscriptFin (preIpaTranscript init ps) ps.ipaRounds j) := by
+  rw [ProofString.commitmentPointsBeforeRound] at hP
+  rcases List.mem_append.mp hP with hpre | hround
+  · have hin := ps.commitmentPointsBefore_covered init hwf 10 (by omega) P hpre
+    apply (transcriptGroupPoints_prefix ?_).mem hin
+    unfold roundTranscriptFin
+    exact List.prefix_append _ _
+  · obtain ⟨i, hi, hpair⟩ := List.mem_flatMap.mp hround
+    have hij : i.val ≤ j.val := by
+      obtain ⟨m, hm, hmi⟩ := List.mem_take_iff_getElem.mp hi
+      have him : i.val = m := by
+        have := congrArg Fin.val hmi
+        simpa using this.symm
+      simp only [List.length_finRange] at hm
+      omega
+    apply mem_transcriptGroupPoints_of_mem_point
+    apply (roundTranscriptFin_prefix (preIpaTranscript init ps) ps.ipaRounds hij).mem
+    rw [roundTranscriptFin_eq_append]
+    rcases List.mem_cons.mp hpair with hL | hR
+    · rw [hL]
+      simp
+    · have hR' : P = (ps.ipaRounds i).2 := by simpa using hR
+      rw [hR']
+      simp
+
+/-- Every representation affecting round `j` occurs in the actual round-`j` query transcript. -/
+theorem AlgebraicProofString.representationsBeforeRound_covered
+    {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    (init : List (TranscriptElt Fp VestaG))
+    (aps : AlgebraicProofString shape basis) (hwf : PsWellFormed aps.erase)
+    (j : Fin shape.k) (ap : AlgebraicPoint (F := Fp) basis)
+    (hap : ap ∈ aps.representationsBeforeRound j) :
+    ap.point ∈ transcriptGroupPoints
+      (roundTranscriptFin (preIpaTranscript init aps.erase) aps.erase.ipaRounds j) := by
+  rw [AlgebraicProofString.representationsBeforeRound] at hap
+  rcases List.mem_append.mp hap with hpre | hround
+  · have hin := aps.representationsBefore_covered init hwf 10 (by omega) ap hpre
+    apply (transcriptGroupPoints_prefix ?_).mem hin
+    unfold roundTranscriptFin
+    exact List.prefix_append _ _
+  · obtain ⟨i, hi, hapPair⟩ := List.mem_flatMap.mp hround
+    have hij : i.val ≤ j.val := by
+      obtain ⟨m, hm, hmi⟩ := List.mem_take_iff_getElem.mp hi
+      have him : i.val = m := by
+        have := congrArg Fin.val hmi
+        simpa using this.symm
+      simp only [List.length_finRange] at hm
+      omega
+    apply mem_transcriptGroupPoints_of_mem_point
+    apply (roundTranscriptFin_prefix (preIpaTranscript init aps.erase)
+      aps.erase.ipaRounds hij).mem
+    rw [roundTranscriptFin_eq_append]
+    rcases List.mem_cons.mp hapPair with hL | hR
+    · rw [hL]
+      simp [AlgebraicProofString.erase]
+    · have hR' : ap = (aps.ipaRounds i).2 := by simpa using hR
+      rw [hR']
+      simp [AlgebraicProofString.erase]
 
 /-- Online AGM data attached to one random-oracle query.  The represented points are exactly the
 group elements already absorbed into the queried transcript, in transcript order. -/
@@ -270,6 +696,32 @@ def representationOfPoint {F G ι : Type*} [Field F] [DecidableEq G]
   have hsome := List.find?_some (Option.some_get H).symm
   simpa using hsome
 
+/-- Select query-time AGM representations for an ordered list of transcript points. -/
+def representationsForPoints {F G ι : Type*} [Field F] [DecidableEq G]
+    [AddCommGroup G] [Module F G] [Fintype ι]
+    {basis : ι → G} {L : ℕ} {t : BTranscript F G L}
+    (query : AlgebraicTranscriptQuery (F := F) basis t) :
+    (points : List G) → (∀ P ∈ points, P ∈ transcriptGroupPoints t.val) →
+      List (AlgebraicPoint (F := F) basis)
+  | [], _ => []
+  | P :: rest, hcovered =>
+      query.representationOfPoint P (hcovered P (by simp)) ::
+        query.representationsForPoints rest (fun candidate hmem =>
+          hcovered candidate (by simp [hmem]))
+
+@[simp] theorem representationsForPoints_points {F G ι : Type*}
+    [Field F] [DecidableEq G] [AddCommGroup G] [Module F G] [Fintype ι]
+    {basis : ι → G} {L : ℕ} {t : BTranscript F G L}
+    (query : AlgebraicTranscriptQuery (F := F) basis t)
+    (points : List G) (hcovered : ∀ P ∈ points, P ∈ transcriptGroupPoints t.val) :
+    (query.representationsForPoints points hcovered).map AlgebraicPoint.point = points := by
+  induction points with
+  | nil => rfl
+  | cons P rest ih =>
+      simp only [representationsForPoints, List.map_cons, representationOfPoint_point,
+        List.cons.injEq, true_and]
+      exact ih (fun candidate hmem => hcovered candidate (by simp [hmem]))
+
 /-- Select query-time representations for a final list of points known to occur in the queried
 transcript. -/
 def representationsFor {F G ι : Type*} [Field F] [DecidableEq G]
@@ -301,7 +753,97 @@ theorem representationsFor_points {F G ι : Type*} [Field F] [DecidableEq G]
         List.cons.injEq, true_and]
       exact ih (fun candidate hmem => hcovered candidate (by simp [hmem]))
 
+/-- Selecting by represented algebraic points is the same deterministic lookup as selecting their
+underlying ordinary points. -/
+theorem representationsFor_eq_representationsForPoints
+    {F G ι : Type*} [Field F] [DecidableEq G]
+    [AddCommGroup G] [Module F G] [Fintype ι]
+    {basis : ι → G} {L : ℕ} {t : BTranscript F G L}
+    (query : AlgebraicTranscriptQuery (F := F) basis t)
+    (final : List (AlgebraicPoint (F := F) basis))
+    (hcovered : ∀ ap ∈ final, ap.point ∈ transcriptGroupPoints t.val) :
+    query.representationsFor final hcovered =
+      query.representationsForPoints (final.map AlgebraicPoint.point) (by
+        intro P hP
+        obtain ⟨ap, hap, rfl⟩ := List.mem_map.mp hP
+        exact hcovered ap hap) := by
+  induction final with
+  | nil => rfl
+  | cons ap rest ih =>
+      simp only [representationsFor, List.map_cons, representationsForPoints]
+      congr 1
+      exact ih (fun candidate hmem => hcovered candidate (by simp [hmem]))
+
+/-- If selecting every final representation from the first query reproduces the final list, then
+the query-time representation of each member is that member itself. -/
+theorem representationOfPoint_eq_of_representationsFor_eq
+    {F G ι : Type*} [Field F] [DecidableEq G]
+    [AddCommGroup G] [Module F G] [Fintype ι]
+    {basis : ι → G} {L : ℕ} {t : BTranscript F G L}
+    (query : AlgebraicTranscriptQuery (F := F) basis t)
+    (final : List (AlgebraicPoint (F := F) basis))
+    (hcovered : ∀ ap ∈ final, ap.point ∈ transcriptGroupPoints t.val)
+    (hselected : query.representationsFor final hcovered = final)
+    (ap : AlgebraicPoint (F := F) basis) (hap : ap ∈ final) :
+    query.representationOfPoint ap.point (hcovered ap hap) = ap := by
+  induction final with
+  | nil => simp at hap
+  | cons first rest ih =>
+      have hhead : query.representationOfPoint first.point
+          (hcovered first (by simp)) = first := by
+        exact Option.some.inj (by
+          simpa only [representationsFor, List.head?_cons] using
+            congrArg List.head? hselected)
+      have htail : query.representationsFor rest
+          (fun candidate hmem => hcovered candidate (by simp [hmem])) = rest := by
+        simpa only [representationsFor, List.tail_cons] using congrArg List.tail hselected
+      rcases List.mem_cons.mp hap with rfl | hap
+      · exact hhead
+      · exact ih (fun candidate hmem => hcovered candidate (by simp [hmem]))
+          htail hap
+
 end AlgebraicTranscriptQuery
+
+/-- An algebraic point is determined by its ordinary point and coefficient vector; representation
+equalities themselves are proof-irrelevant. -/
+theorem AlgebraicPoint.eq_of_point_eq_of_coeffs_eq
+    {F G ι : Type*} [Field F] [AddCommGroup G] [Module F G] [Fintype ι]
+    {basis : ι → G} {P Q : AlgebraicPoint (F := F) basis}
+    (hpoint : P.point = Q.point) (hcoeff : P.coeffs = Q.coeffs) : P = Q := by
+  cases P with
+  | mk point repr =>
+      cases Q with
+      | mk point' repr' =>
+          simp only at hpoint
+          subst point'
+          cases repr with
+          | mk coeffs hEq =>
+              cases repr' with
+              | mk coeffs' hEq' =>
+                  simp only [AlgebraicPoint.coeffs] at hcoeff
+                  subst coeffs'
+                  rfl
+
+/-- Pointwise point and coefficient maps jointly determine an algebraic-point list. -/
+theorem algebraicPointList_eq_of_maps_eq
+    {F G ι : Type*} [Field F] [AddCommGroup G] [Module F G] [Fintype ι]
+    {basis : ι → G} {left right : List (AlgebraicPoint (F := F) basis)}
+    (hpoints : left.map AlgebraicPoint.point = right.map AlgebraicPoint.point)
+    (hcoeffs : left.map AlgebraicPoint.coeffs = right.map AlgebraicPoint.coeffs) :
+    left = right := by
+  induction left generalizing right with
+  | nil => simpa using hpoints
+  | cons P ps ih =>
+      cases right with
+      | nil => simp at hpoints
+      | cons Q qs =>
+          have hp : P.point = Q.point := by simpa using congrArg List.head? hpoints
+          have hc : P.coeffs = Q.coeffs := by simpa using congrArg List.head? hcoeffs
+          have hPQ := AlgebraicPoint.eq_of_point_eq_of_coeffs_eq hp hc
+          subst Q
+          congr 1
+          · exact ih (by simpa using congrArg List.tail hpoints)
+              (by simpa using congrArg List.tail hcoeffs)
 
 /-- Compare two valid representations of the same point.  A coefficient mismatch computes an
 explicit relation over the public basis; equality returns no relation. -/
@@ -440,6 +982,39 @@ def selectedQueryRepresentationProvenanceOrRelation
               covered := hcovered
               coefficients_eq := hcoeff })
 
+/-- Executable projection of selected query-time provenance onto its DLOG-relation branch.
+`none` means either the verifier prefix was fresh or every selected final coefficient vector was
+already fixed by the first query at that prefix. -/
+def selectedQueryRepresentationRelation?
+    {F G ι α : Type*} [Field F] [DecidableEq F] [DecidableEq G]
+    [AddCommGroup G] [Module F G] [Fintype ι]
+    {basis : ι → G} {L : ℕ} (t : BTranscript F G L)
+    (A : LabeledOracleComp (BTranscript F G L) F
+      (AlgebraicTranscriptQuery (F := F) basis) α) (O : BTranscript F G L → F)
+    (final : List (AlgebraicPoint (F := F) basis))
+    (hcovered : ∀ ap ∈ final, ap.point ∈ transcriptGroupPoints t.val) :
+    Option (AlgebraicRelationWitness (F := F) basis) :=
+  match selectedQueryRepresentationProvenanceOrRelation t A O final hcovered with
+  | PSum.inr relation => some relation
+  | PSum.inl _ => none
+
+/-- If the selected executable finder returns no relation, the prefix was fresh or the final
+selected coefficients equal their first pre-answer query representations. -/
+def selectedQueryRepresentationRelation?_eq_none
+    {F G ι α : Type*} [Field F] [DecidableEq F] [DecidableEq G]
+    [AddCommGroup G] [Module F G] [Fintype ι]
+    {basis : ι → G} {L : ℕ} (t : BTranscript F G L)
+    (A : LabeledOracleComp (BTranscript F G L) F
+      (AlgebraicTranscriptQuery (F := F) basis) α) (O : BTranscript F G L → F)
+    (final : List (AlgebraicPoint (F := F) basis))
+    (hcovered : ∀ ap ∈ final, ap.point ∈ transcriptGroupPoints t.val)
+    (hnone : selectedQueryRepresentationRelation? t A O final hcovered = none) :
+    A.findLabel O t = none ⊕' SelectedQueryRepresentationPinned t A O final := by
+  unfold selectedQueryRepresentationRelation? at hnone
+  cases hprov : selectedQueryRepresentationProvenanceOrRelation t A O final hcovered with
+  | inl provenance => exact provenance
+  | inr relation => simp [hprov] at hnone
+
 /-- A malicious adaptive online-AGM computation over the Halo2 transcript domain. -/
 abbrev AdaptiveOnlineAGMComp {shape : Shape}
     (init : List (TranscriptElt Fp VestaG))
@@ -471,14 +1046,14 @@ variable {shape : Shape}
 
 /-- Forget only the per-query AGM annotations and assemble the canonical online-member family.
 The erased random-oracle computation has definitionally the same outputs and query budget. -/
-noncomputable def toOnlineMemberFamily (family : ComputedAdaptiveOnlineAGMFSFamily shape) :
+def toOnlineMemberFamily (family : ComputedAdaptiveOnlineAGMFSFamily shape) :
     ComputedOnlineMemberFSFamily shape :=
   ComputedOnlineMemberFSFamily.ofProofData family.init family.vk family.instanceCommitment
     family.fixedRepresentations (fun basis => (family.adversary basis).erase) family.Q
     family.queryBound
 
 /-- Forget member coverage as well, yielding the existing arbitrary-query algebraic family. -/
-noncomputable abbrev toFamily (family : ComputedAdaptiveOnlineAGMFSFamily shape) :
+abbrev toFamily (family : ComputedAdaptiveOnlineAGMFSFamily shape) :
     ComputedAlgebraicFSFamily shape := family.toOnlineMemberFamily.toFamily
 
 @[simp] theorem toOnlineMemberFamily_Q (family : ComputedAdaptiveOnlineAGMFSFamily shape) :

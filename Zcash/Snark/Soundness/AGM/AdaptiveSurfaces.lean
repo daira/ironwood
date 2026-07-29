@@ -102,6 +102,71 @@ theorem adaptivePrefixBad_measure_le (init : List (TranscriptElt Fp VestaG)) (n 
   · exact hbad _ _
   · simp
 
+/-- A prefix bad set computed from the AGM annotation fixed before the selected oracle answer.
+Queries at unrelated transcript lengths receive the empty set. -/
+noncomputable def adaptiveLabeledPrefixBad
+    (init : List (TranscriptElt Fp VestaG))
+    (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (n : Fin 11)
+    (badF : (t : BTranscript Fp VestaG
+      (preIpaLen shape init.length 10 + 3 * shape.k)) →
+      AlgebraicTranscriptQuery (F := Fp) basis t → (Fin (n : ℕ) → Fp) → Set Fp)
+    (t : BTranscript Fp VestaG
+      (preIpaLen shape init.length 10 + 3 * shape.k))
+    (label : AlgebraicTranscriptQuery (F := Fp) basis t)
+    (O : BTranscript Fp VestaG
+      (preIpaLen shape init.length 10 + 3 * shape.k) → Fp) : Set Fp :=
+  if t.val.length = preIpaLen shape init.length n then
+    badF t label (fun i => O (adaptiveEarlierPrefix (shape := shape) init t
+      (i.castLE (le_of_lt n.isLt))))
+  else ∅
+
+/-- Reprogramming the selected point does not change a bad set decoded from its pre-answer AGM
+annotation and strictly earlier prefix answers. -/
+theorem adaptiveLabeledPrefixBad_update_self
+    (init : List (TranscriptElt Fp VestaG))
+    (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (n : Fin 11)
+    (badF : (t : BTranscript Fp VestaG
+      (preIpaLen shape init.length 10 + 3 * shape.k)) →
+      AlgebraicTranscriptQuery (F := Fp) basis t → (Fin (n : ℕ) → Fp) → Set Fp)
+    (t : BTranscript Fp VestaG
+      (preIpaLen shape init.length 10 + 3 * shape.k))
+    (label : AlgebraicTranscriptQuery (F := Fp) basis t)
+    (O : BTranscript Fp VestaG
+      (preIpaLen shape init.length 10 + 3 * shape.k) → Fp) (v : Fp) :
+    adaptiveLabeledPrefixBad (shape := shape) init basis n badF t label
+        (Function.update O t v) =
+      adaptiveLabeledPrefixBad (shape := shape) init basis n badF t label O := by
+  unfold adaptiveLabeledPrefixBad
+  by_cases hlen : t.val.length = preIpaLen shape init.length n
+  · simp only [if_pos hlen]
+    congr 1
+    funext i
+    rw [Function.update_of_ne]
+    exact adaptiveEarlierPrefix_ne init n t hlen i
+  · simp [hlen]
+
+/-- A label-decoded prefix bad set inherits its pointwise single-challenge bound. -/
+theorem adaptiveLabeledPrefixBad_measure_le
+    (init : List (TranscriptElt Fp VestaG))
+    (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (n : Fin 11)
+    (badF : (t : BTranscript Fp VestaG
+      (preIpaLen shape init.length 10 + 3 * shape.k)) →
+      AlgebraicTranscriptQuery (F := Fp) basis t → (Fin (n : ℕ) → Fp) → Set Fp)
+    {epsilon : ENNReal}
+    (hbad : ∀ t label nu,
+      (PMF.uniformOfFintype Fp).toOuterMeasure (badF t label nu) ≤ epsilon)
+    (t : BTranscript Fp VestaG
+      (preIpaLen shape init.length 10 + 3 * shape.k))
+    (label : AlgebraicTranscriptQuery (F := Fp) basis t)
+    (O : BTranscript Fp VestaG
+      (preIpaLen shape init.length 10 + 3 * shape.k) → Fp) :
+    (PMF.uniformOfFintype Fp).toOuterMeasure
+      (adaptiveLabeledPrefixBad (shape := shape) init basis n badF t label O) ≤ epsilon := by
+  unfold adaptiveLabeledPrefixBad
+  split
+  · exact hbad _ _ _
+  · simp
+
 namespace ComputedAdaptiveOnlineAGMFSFamily
 
 /-- **Arbitrary-adversary semantic squeeze bound.**  No `PrefixDeterminedAt`, sequential phase,
@@ -160,6 +225,113 @@ theorem adaptivePrefixSurface_table_le
         ((family.adversary basis).run O).toAlgebraicWfProof n) <;> rfl
   rw [hevent]
   exact hbound
+
+/-- **Arbitrary-adversary, annotation-aware squeeze bound.**  The queried branch uses the first
+online-AGM annotation at the verifier-selected prefix; the unqueried branch uses a final-output
+fallback whose own set is decoded only from the prefix and earlier answers.  Neither arbitrary
+query order nor adaptive continuation after the query requires an execution cut. -/
+theorem adaptiveLabeledPrefixSurface_table_le
+    (family : ComputedAdaptiveOnlineAGMFSFamily shape)
+    (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (n : Fin 11)
+    (badF : (t : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k)) →
+      AlgebraicTranscriptQuery (F := Fp) basis t → (Fin (n : ℕ) → Fp) → Set Fp)
+    (fallbackF : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) →
+      (Fin (n : ℕ) → Fp) → Set Fp)
+    {epsilon : ENNReal}
+    (hbad : ∀ t label nu,
+      (PMF.uniformOfFintype Fp).toOuterMeasure (badF t label nu) ≤ epsilon)
+    (hfallback : ∀ t nu,
+      (PMF.uniformOfFintype Fp).toOuterMeasure (fallbackF t nu) ≤ epsilon) :
+    (PMF.uniformOfFintype (BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp)).toOuterMeasure
+      {O | let t := (algebraicFullPrefixesPre family.init
+          ((family.adversary basis).run O).toAlgebraicWfProof) n
+        O t ∈ LabeledOracleComp.firstLabelOrFallbackBad (family.adversary basis)
+          (fun t label O => adaptiveLabeledPrefixBad (shape := shape)
+            family.init basis n badF t label O)
+          (fun _data t O => adaptivePrefixBad (shape := shape)
+            family.init n fallbackF t O) t O} ≤
+      (family.Q + 1 : ℕ) * epsilon := by
+  apply LabeledOracleComp.firstLabelOrFallbackBad_measure_le
+    (family.adversary basis)
+    (fun data => (algebraicFullPrefixesPre family.init data.toAlgebraicWfProof) n)
+    (fun t label O => adaptiveLabeledPrefixBad (shape := shape)
+      family.init basis n badF t label O)
+    (fun _data t O => adaptivePrefixBad (shape := shape)
+      family.init n fallbackF t O)
+  · exact adaptiveLabeledPrefixBad_update_self family.init basis n badF
+  · intro _data
+    exact adaptivePrefixBad_update_self family.init n fallbackF
+  · exact adaptiveLabeledPrefixBad_measure_le family.init basis n badF hbad
+  · intro _data
+    exact adaptivePrefixBad_measure_le family.init n fallbackF hfallback
+  · exact family.queryBound basis
+
+/-- **Relation-safe arbitrary-adversary prefix bound.**  This is the reusable endpoint for a
+bad set defined from the adversary's final output.  A caller supplies an executable relation
+finder covering every mismatch between that final output and the first query-time AGM
+annotation.  On the `finder = none` branch, the event is charged by the annotation-aware squeeze
+above; no stopped computation, freshness proof, or phase witness is exposed. -/
+theorem adaptiveFinalPrefixBadWithoutRelation_table_le
+    {Relation : Type*}
+    (family : ComputedAdaptiveOnlineAGMFSFamily shape)
+    (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (n : Fin 11)
+    (finalBad : OnlineMemberProofData (vk := family.vk basis)
+        (instanceCommitment := family.instanceCommitment basis) basis
+        (family.fixedRepresentations basis) →
+      BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) →
+      (BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp) → Set Fp)
+    (finder : (BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp) → Option Relation)
+    (badF : (t : BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k)) →
+      AlgebraicTranscriptQuery (F := Fp) basis t → (Fin (n : ℕ) → Fp) → Set Fp)
+    (fallbackF : OnlineMemberProofData (vk := family.vk basis)
+        (instanceCommitment := family.instanceCommitment basis) basis
+        (family.fixedRepresentations basis) →
+      BTranscript Fp VestaG
+        (preIpaLen shape family.init.length 10 + 3 * shape.k) →
+      (Fin (n : ℕ) → Fp) → Set Fp)
+    (hcover : ∀ O,
+      let data := (family.adversary basis).run O
+      let t := (algebraicFullPrefixesPre family.init data.toAlgebraicWfProof) n
+      O t ∈ finalBad data t O → finder O = none →
+        O t ∈ LabeledOracleComp.firstLabelOrFallbackBad (family.adversary basis)
+          (fun t label O => adaptiveLabeledPrefixBad (shape := shape)
+            family.init basis n badF t label O)
+          (fun data t O => adaptivePrefixBad (shape := shape)
+            family.init n (fallbackF data) t O) t O)
+    {epsilon : ENNReal}
+    (hbad : ∀ t label nu,
+      (PMF.uniformOfFintype Fp).toOuterMeasure (badF t label nu) ≤ epsilon)
+    (hfallback : ∀ data t nu,
+      (PMF.uniformOfFintype Fp).toOuterMeasure (fallbackF data t nu) ≤ epsilon) :
+    (PMF.uniformOfFintype (BTranscript Fp VestaG
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp)).toOuterMeasure
+      {O | let data := (family.adversary basis).run O
+        let t := (algebraicFullPrefixesPre family.init data.toAlgebraicWfProof) n
+        O t ∈ finalBad data t O ∧ finder O = none} ≤
+      (family.Q + 1 : ℕ) * epsilon := by
+  apply LabeledOracleComp.finalBadWithoutRelation_measure_le
+    (family.adversary basis)
+    (fun data => (algebraicFullPrefixesPre family.init data.toAlgebraicWfProof) n)
+    finalBad finder
+    (fun t label O => adaptiveLabeledPrefixBad (shape := shape)
+      family.init basis n badF t label O)
+    (fun data t O => adaptivePrefixBad (shape := shape)
+      family.init n (fallbackF data) t O)
+  · exact hcover
+  · exact adaptiveLabeledPrefixBad_update_self family.init basis n badF
+  · intro data
+    exact adaptivePrefixBad_update_self family.init n (fallbackF data)
+  · exact adaptiveLabeledPrefixBad_measure_le family.init basis n badF hbad
+  · intro data
+    exact adaptivePrefixBad_measure_le family.init n (fallbackF data) (hfallback data)
+  · exact family.queryBound basis
 
 end ComputedAdaptiveOnlineAGMFSFamily
 
