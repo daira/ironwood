@@ -189,7 +189,7 @@ theorem actionResolverChunkWidth
   · simp [htwo]
 
 /-- Flatten the derived `[7,7,1]` Action chunks to `(row, global column)`. -/
-noncomputable def actionChunkFlatten
+def actionChunkFlatten
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
@@ -216,7 +216,7 @@ noncomputable def actionChunkFlatten
     (actionResolverChunkWidth pp urs poly proofIndex)
 
 /-- The full-domain Action keygen permutation in resolver chunk coordinates. -/
-noncomputable def actionFullSigma
+def actionFullSigma
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
@@ -265,7 +265,7 @@ theorem actionFullSigma_preservesActive
     _root_.Zcash.Snark.Layout.Asm.chunkFlatten_symm_apply_row, flat] using hreplay
 
 /-- Restrict the full Action keygen replay to the usable-row prefix. -/
-noncomputable def actionActiveSigma
+def actionActiveSigma
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
@@ -300,7 +300,7 @@ theorem actionActiveSigma_widen
     cell
 
 /-- Re-express an active flat keygen cell in resolver chunk coordinates. -/
-noncomputable def actionActiveChunkCell
+def actionActiveChunkCell
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → Polynomial Fp)
@@ -1090,7 +1090,7 @@ theorem actionCopyLink :
 the concrete data: value agreement along each decoded keygen copy (the σ-semantics
 transport), value agreement of each declared constant copy (two constants-column
 reads), and the declared-endpoint read equations (resolution coordinates). -/
-noncomputable def actionCopyReplayWitness
+def actionCopyReplayWitness
     (env : Environment Fp) {Bad : Type}
     (hpairval : ∀ pr ∈ actionCopies,
       actionCopyValue env pr.1 = actionCopyValue env pr.2 ⊕' Bad)
@@ -1110,35 +1110,57 @@ noncomputable def actionCopyReplayWitness
       (FlatCell actionNumPermCols actionDomainSize) Bad :=
   Zcash.Snark.Layout.Asm.CopyReplayWitness.ofPairValues actionCopyEncode (actionCopyValue env)
     (by
-      classical
       intro pr hpr
       rw [encodeDeclaredCopies, List.mem_map] at hpr
-      -- `ofPairValues` wants the alternative per pair, so the declaring copy has to be recovered
-      -- here; `hpr` is an `∃` and the pair value is data, so it is recovered by choice.
-      let copy := Classical.choose hpr
-      have hcopy : copy ∈ operationDeclaredCopies (actionCircuit.operations) :=
-        (Classical.choose_spec hpr).1
-      have henc :
-          (actionCopyEncode copy.1, actionCopyEncode copy.2) = pr :=
-        (Classical.choose_spec hpr).2
-      rw [← henc]
-      -- Dispatch on the resolution itself, an `Option`; `declared_shape` is an `Or` and only
-      -- serves to name the constant shape once resolution has already failed.
-      match hres : resolveDeclared actionPermCols actionCircuit.regionStarts copy with
-      | some tuple =>
-          exact Zcash.Snark.Layout.Asm.value_eq_or_bad_of_replay_sameCycle (actionCopyValue env) _
-            hpairval (actionCopyLink copy hcopy tuple hres)
+      let copies := operationDeclaredCopies (actionCircuit.operations)
+      cases hfind : copies.find? (fun copy =>
+          decide ((actionCopyEncode copy.1, actionCopyEncode copy.2) = pr)) with
       | none =>
-          have hconstant : ∃ c v, copy = (.cell c, .constant v) := by
-            rcases declared_shape (actionCircuit.operations)
-                actionPermCols actionCircuit.regionStarts copy hcopy with
-              ⟨tuple, htuple⟩ | hshape
-            · rw [hres] at htuple
-              exact absurd htuple (by simp)
-            · exact hshape
-          have hcv := Classical.choose_spec (Classical.choose_spec hconstant)
-          rw [hcv]
-          exact hconstval copy hcopy _ _ hcv)
+          exfalso
+          have hsome : (copies.find? (fun copy =>
+              decide ((actionCopyEncode copy.1, actionCopyEncode copy.2) = pr))).isSome := by
+            rw [List.find?_isSome]
+            simpa only [decide_eq_true_eq] using hpr
+          simp [hfind] at hsome
+      | some copy =>
+          have hcopy : copy ∈ copies := List.mem_of_find?_eq_some hfind
+          have henc : (actionCopyEncode copy.1, actionCopyEncode copy.2) = pr := by
+            simpa using List.find?_some hfind
+          rw [← henc]
+          match hres : resolveDeclared actionPermCols actionCircuit.regionStarts copy with
+          | some tuple =>
+              exact Zcash.Snark.Layout.Asm.value_eq_or_bad_of_replay_sameCycle
+                (actionCopyValue env) _ hpairval (actionCopyLink copy hcopy tuple hres)
+          | none =>
+              rcases copy with ⟨left, right⟩
+              cases left with
+              | cell cell =>
+                  cases right with
+                  | constant value => exact hconstval _ hcopy cell value rfl
+                  | cell rightCell =>
+                      exfalso
+                      rcases declared_shape (actionCircuit.operations) actionPermCols
+                          actionCircuit.regionStarts _ hcopy with ⟨tuple, htuple⟩ | hshape
+                      · simp [hres] at htuple
+                      · simp at hshape
+                  | «instance» column row =>
+                      exfalso
+                      rcases declared_shape (actionCircuit.operations) actionPermCols
+                          actionCircuit.regionStarts _ hcopy with ⟨tuple, htuple⟩ | hshape
+                      · simp [hres] at htuple
+                      · simp at hshape
+              | «instance» column row =>
+                  exfalso
+                  rcases declared_shape (actionCircuit.operations) actionPermCols
+                      actionCircuit.regionStarts _ hcopy with ⟨tuple, htuple⟩ | hshape
+                  · simp [hres] at htuple
+                  · simp at hshape
+              | constant value =>
+                  exfalso
+                  rcases declared_shape (actionCircuit.operations) actionPermCols
+                      actionCircuit.regionStarts _ hcopy with ⟨tuple, htuple⟩ | hshape
+                  · simp [hres] at htuple
+                  · simp at hshape)
     hread
 
 /--
@@ -1149,7 +1171,7 @@ The keygen copy pair relates the advice cell to its *positional* constant
 allocation. Both that allocation and the canonical same-value allocation read
 the declared literal through fixed-row coherence.
 -/
-noncomputable def actionConstantCopyValue_or_bad
+def actionConstantCopyValue_or_bad
     (env : Environment Fp) {Bad : Type}
     (hpairval : ∀ pair ∈ actionCopies,
       actionCopyValue env pair.1 = actionCopyValue env pair.2 ⊕' Bad)
@@ -1165,20 +1187,48 @@ noncomputable def actionConstantCopyValue_or_bad
     actionCopyValue env (actionCopyEncode (.cell cell)) =
         actionCopyValue env (actionCopyEncode (.constant value)) ⊕'
       Bad := by
-  classical
   subst copy
-  -- The allocated constant entry and its replay pair are recovered by choice, as elsewhere in
-  -- this stack: both provably exist, and the break itself is still computed downstream.
   have hrawPair := actionConstantRawPair hcopy
-  let entry := Classical.choose hrawPair
-  have hentry : entry ∈ actionConsts := (Classical.choose_spec hrawPair).1
-  have hentryValue : entry.1 = value.val := (Classical.choose_spec hrawPair).2.1
-  have hraw := (Classical.choose_spec hrawPair).2.2
+  let rawTuple := fun entry : Nat × Nat × Nat =>
+    (permIndex actionPermCols (ColRef.toAny (.fixed entry.2.1)), entry.2.2,
+      (resolveCell actionPermCols actionCircuit.regionStarts cell).1,
+      (resolveCell actionPermCols actionCircuit.regionStarts cell).2)
+  have hentrySome : (actionConsts.find? (fun entry =>
+      decide (entry.1 = value.val ∧ rawTuple entry ∈ actionCopyRaw))).isSome := by
+    rw [List.find?_isSome]
+    obtain ⟨entry, hentry, hvalue, hraw⟩ := hrawPair
+    exact ⟨entry, hentry, by simp [hvalue, rawTuple, hraw]⟩
+  let entry := (actionConsts.find? (fun entry =>
+    decide (entry.1 = value.val ∧ rawTuple entry ∈ actionCopyRaw))).get hentrySome
+  have hentryFind : actionConsts.find? (fun candidate =>
+      decide (candidate.1 = value.val ∧ rawTuple candidate ∈ actionCopyRaw)) =
+      some entry := (Option.some_get hentrySome).symm
+  have hentry : entry ∈ actionConsts := List.mem_of_find?_eq_some hentryFind
+  have hentryFacts : entry.1 = value.val ∧ rawTuple entry ∈ actionCopyRaw := by
+    simpa using List.find?_some hentryFind
+  have hentryValue := hentryFacts.1
+  have hraw := hentryFacts.2
   have hcopyPair := exists_actionCopy_of_raw hraw
-  let pair := Classical.choose hcopyPair
-  have hpair : pair ∈ actionCopies := (Classical.choose_spec hcopyPair).1
-  have hpairLeft := (Classical.choose_spec hcopyPair).2.1
-  have hpairRight := (Classical.choose_spec hcopyPair).2.2
+  have hpairSome : (actionCopies.find? (fun pair => decide
+      (pair.1.pair = ((rawTuple entry).1, (rawTuple entry).2.1) ∧
+        pair.2.pair = ((rawTuple entry).2.2.1, (rawTuple entry).2.2.2)))).isSome := by
+    rw [List.find?_isSome]
+    obtain ⟨pair, hpair, hleft, hright⟩ := hcopyPair
+    exact ⟨pair, hpair, by simp [hleft, hright]⟩
+  let pair := (actionCopies.find? (fun pair => decide
+    (pair.1.pair = ((rawTuple entry).1, (rawTuple entry).2.1) ∧
+      pair.2.pair = ((rawTuple entry).2.2.1, (rawTuple entry).2.2.2)))).get hpairSome
+  have hpairFind : actionCopies.find? (fun candidate => decide
+      (candidate.1.pair = ((rawTuple entry).1, (rawTuple entry).2.1) ∧
+        candidate.2.pair = ((rawTuple entry).2.2.1, (rawTuple entry).2.2.2))) =
+      some pair := (Option.some_get hpairSome).symm
+  have hpair : pair ∈ actionCopies := List.mem_of_find?_eq_some hpairFind
+  have hpairFacts :
+      pair.1.pair = ((rawTuple entry).1, (rawTuple entry).2.1) ∧
+        pair.2.pair = ((rawTuple entry).2.2.1, (rawTuple entry).2.2.2) := by
+    simpa using List.find?_some hpairFind
+  have hpairLeft := hpairFacts.1
+  have hpairRight := hpairFacts.2
   have hconstantEntry :
       (entry.2.1, entry.2.2, entry.1) ∈
         topLevelConstantEntries actionCircuit := by
@@ -1214,11 +1264,11 @@ noncomputable def actionConstantCopyValue_or_bad
   have hleft :
       mkActionCell constantCoordinate = pair.1 := by
     apply mkActionCell_eq_of_pair
-    simpa [constantCoordinate] using hpairLeft
+    simpa [constantCoordinate, rawTuple] using hpairLeft
   have hright :
       actionCopyEncode (.cell cell) = pair.2 := by
     apply mkActionCell_eq_of_pair
-    simpa [actionCopyEncode, cellCoordinate] using hpairRight
+    simpa [actionCopyEncode, cellCoordinate, rawTuple] using hpairRight
   have hpairEq :
       actionCopyValue env (mkActionCell constantCoordinate) =
         actionCopyValue env (actionCopyEncode (.cell cell)) := by
@@ -1242,7 +1292,7 @@ reads follow from the fixed compiler's allocated-constant realization. The two
 remaining semantic inputs are pairwise σ-copy value agreement and linkage of a
 constant declaration to its allocated copy pair.
 -/
-noncomputable def actionCopyReplayWitness_or_bad
+def actionCopyReplayWitness_or_bad
     (env : Environment Fp) {Bad : Type}
     (hpairval : ∀ pr ∈ actionCopies,
       actionCopyValue env pr.1 = actionCopyValue env pr.2 ⊕' Bad)
@@ -1312,7 +1362,7 @@ The Action copy witness from the sole remaining semantic leaf: value agreement
 on each decoded keygen copy pair. Constant-copy linkage and all declared endpoint
 reads are derived internally from the compiler pipeline and fixed-row realization.
 -/
-noncomputable def actionCopyReplayWitness_ofPairValues_or_bad
+def actionCopyReplayWitness_ofPairValues_or_bad
     (env : Environment Fp) {Bad : Type}
     (hpairval : ∀ pair ∈ actionCopies,
       actionCopyValue env pair.1 = actionCopyValue env pair.2 ⊕' Bad)

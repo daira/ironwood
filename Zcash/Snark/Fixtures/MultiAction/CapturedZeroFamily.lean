@@ -4,29 +4,8 @@ import Zcash.Snark.Soundness.Composition.ZeroStraightLine
 /-!
 # Captured-data straight-line interface test, with eleven live IPA rounds
 
-This instantiates the shape-generic zero prover of `Composition.ZeroStraightLine` at the captured
-Post-NU6.3 key's own scalar data — `ω`, `n`, blinding count, `δ`, chunk length, gates, the three
-query layouts, permutation chunks and lookup expressions — over the captured domain `k = 11`.  So
-the staged IPA trace carries **eleven live rounds**, and the six deployed root events run against
-the captured query layouts instead of an empty grouping.  `Composition.StraightLineWitness` does
-the same at the witness shape, where `k = 0` empties the round obligations.
-
-## What the instantiation gives up
-
-* The group commitment families are zero, not the captured Vesta points.
-  `CapturedVerifierKeyProfile` already omits them: in the AGM the verifier's points need
-  representations over the *sampled* basis, so pinning them to fixture constants would leave the
-  premise uninhabited for most bases.
-* The instance-free instantiation is kept as the simplest model; the full-shape family
-  (`§ The full family at the full captured shape` below) discharges every layer with both
-  sub-proofs live, using issue #127's total constraint-`x` event.
-
-## Scope
-
-This is an interface test, not the deployed family.  The deployed family comes from
-`ComputedStraightLineDeployedFSFamily.ofCovered`, which packages an online
-representation-carrying prover with caller-supplied stages; the captured-key endpoint applies the
-fixture metadata to that.
+This interface fixture runs the zero prover against captured scalar/layout data at `k = 11`.
+Commitments remain zero because sampled AGM bases need not represent captured points.
 -/
 namespace Zcash.Snark.Fixture2
 
@@ -124,15 +103,8 @@ noncomputable def capturedZeroConstraintSchedule :
 
 /-! ## The full family at the full captured shape
 
-With the total constraint-`x` event of issue #127 the instance-free restriction is gone: the
-stage prices the explicit zero-data difference from the `θ`/`β`/`γ`/`y` squeezes alone, so the
-zero prover carries every layer — member family, six root events, constant-walk IPA trace, and
-the constraint-`x` stage — with both sub-proofs live.  (Under the previous decode-guarded event
-this layer was unstageable for zero columns, because witness existence read the verifier-computed
-`expectedHEval`, a function of the `x` answer itself.)
-
-This family is the interface smoke test.  It is not, and must not be described as, the deployed
-Action adversary.
+The total constraint-`x` event lets the zero prover exercise every stage with both sub-proofs live.
+This remains a fixture-local interface test, pinned by the fixture census.
 -/
 
 /-- The captured key at the full captured shape — `numProofs = 2` live — with zero group
@@ -180,6 +152,14 @@ noncomputable def capturedLiveZeroStraightLineFamily :
   zeroConstStraightLineDeployedFamily capturedLiveZeroVk capturedLiveZeroVk_fixed
     capturedLiveZeroVk_perm
 
+/-- **The bare adaptive interface is inhabited at the full captured shape.**  This is a
+query-free, explicitly represented smoke adversary at `numProofs = 2` and `k = 11`; like the
+straight-line smoke family above, it retains the captured scalar/layout data while deliberately
+using zero group commitments. -/
+def capturedLiveZeroAdaptiveFamily : ComputedAdaptiveOnlineAGMFSFamily shape :=
+  zeroAdaptiveOnlineMemberFamily capturedLiveZeroVk capturedLiveZeroVk_fixed
+    capturedLiveZeroVk_perm
+
 /-- The static checks hold at the live key: its layouts and domain data are the captured ones. -/
 theorem capturedLiveZeroStaticChecks :
     DeployedConstraintStaticChecks capturedLiveZeroStraightLineFamily.toRootFamily where
@@ -194,5 +174,11 @@ smoke test of issue #127. -/
 theorem straightLineInterface_nonempty_at_captured_shape :
     Nonempty (ComputedStraightLineDeployedFSFamily shape) :=
   ⟨capturedLiveZeroStraightLineFamily⟩
+
+/-- The three verifier-known representation obligations and the adaptive adversary are jointly
+inhabited at the captured full shape. -/
+theorem adaptiveInterface_nonempty_at_captured_shape :
+    Nonempty (ComputedAdaptiveOnlineAGMFSFamily shape) :=
+  ⟨capturedLiveZeroAdaptiveFamily⟩
 
 end Zcash.Snark.Fixture2

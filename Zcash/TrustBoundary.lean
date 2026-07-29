@@ -45,7 +45,7 @@ import Zcash.Snark.Soundness.Composition.DirectPathCost
 import Zcash.Snark.Soundness.AGM.DecodeToOpened
 import Zcash.Circuits.Integration.StraightLineActionTerminal
 import Zcash.Circuits.Integration.StraightLineActionEvent
-import Zcash.Snark.Fixtures.MultiAction.ActionCapstone
+import Zcash.Circuits.Integration.AdaptiveActionEvent
 import Zcash.Snark.Soundness.Composition.SemanticChallengeRemainder
 import Zcash.Snark.Soundness.Composition.StraightLineDecodeSupply
 import Zcash.Snark.Soundness.Composition.SequentialLift
@@ -717,26 +717,23 @@ assert_axioms Zcash.Snark.escape_measure_le
 assert_axioms Zcash.Snark.theta_failure_measure_le
 /-! ### Break-branch machinery — computed
 
-The circuit-integration stack carries its binding break as computed `NontrivialRelation` data
-rather than as the `∃`-closed proposition that is unconditionally true at the concrete curve.
-The declarations below are the part of that stack which is genuinely computable, so they are
-pinned at the `assert_computable` tier: a plain `def`, never marked `noncomputable`. Pinning
-them is what stops the discipline regressing silently — a break that stopped being computed
-would still typecheck, and `assert_axioms` alone would not notice.
-
-The combinators are at the strict tier: they introduce no choice at all. The adapters below
-them take `+choice`, which the plain-`def` check turns into the assertion that choice enters
-only through erased `Prop` certificate fields.
-
-The capstone endpoints are *not* here. They are `noncomputable` — their decisions run through
-Mathlib polynomials, which are noncomputable by construction — and so are pinned with
-`assert_axioms` above. Moving them to this tier means deciding on coefficient vectors and
-stating the result in polynomials, as `decodedQuotientEqReassembledOrRelationWitness` does. -/
+These checks pin each charged relation finder as a plain executable `def`. `+choice` is allowed
+only through erased proof fields. Noncomputable events and probability theorems are censused
+separately with `assert_axioms`. -/
 
 assert_computable Zcash.Snark.bindOrRelationWitness
 assert_computable Zcash.Snark.finForallOrRelationWitness
+assert_computable Zcash.Snark.finForallOption
 assert_computable Zcash.Snark.listForallOrRelationWitness
 assert_computable Zcash.Snark.boundedForallOrRelationWitness
+assert_computable Zcash.Snark.szBadSetAvoidance? +choice
+assert_computable Zcash.Snark.ActionTerminal.foldSplitAvoidance? +choice
+assert_computable Zcash.Snark.resolverPermutationGoodChallenges? +choice
+assert_computable Zcash.Snark.resolverPermutationChallengeExclusions? +choice
+assert_computable Zcash.Snark.resolverLookupGoodChallenges? +choice
+assert_computable Zcash.Snark.resolverLookupBundleExclusions? +choice
+assert_computable Zcash.Snark.EnabledLookup.thetaAvoidance? +choice
+assert_computable Zcash.Snark.TopLevelLookupCoherence.topLevelLookupChallengeExclusions? +choice
 assert_computable Zcash.Snark.FullCircuitSatisfaction.of_components_or_bad
 assert_computable Zcash.Snark.declaredCopies_satisfied_or_bad_of_replay +choice
 assert_computable Zcash.Snark.copy_constraints_or_bad_of_replay +choice
@@ -1162,9 +1159,10 @@ assert_axioms Zcash.Snark.allResolverLookupBetaBadSet_congr
 assert_axioms Zcash.Snark.allResolverLookupGammaBadSet_congr
 assert_axioms Zcash.Snark.resolverEnvironment_congr
 assert_axioms Zcash.Snark.TopLevelLookupCoherence.allTopLevelLookupThetaBadSet_congr
--- The captured Action capstone assembly (issue #128): the exact terminal event, the
--- derived-key checks and schedule, and the composed bound.
-assert_axioms Zcash.Snark.Fixture.actionAcceptFalseEvent +native(
+-- Census the bundled sequential adversary and its resource arithmetic.
+assert_axioms Zcash.Snark.resolverPermutationCell_card
+assert_axioms Zcash.Snark.TopLevelLookupCoherence.topLevelLookupThetaBudget_eq
+assert_axioms Zcash.Snark.ActionTerminal.ActionSequentialCuts +native(
   CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
@@ -1175,35 +1173,7 @@ assert_axioms Zcash.Snark.Fixture.actionAcceptFalseEvent +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Fixture.derived_scalars +native(
-  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow, CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.Keygen.certificate, CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
-  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
-  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Fixture.derived_lookups +native(
-  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow, CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.Keygen.certificate, CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
-  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
-  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Fixture.staticChecks_of_derived +native(
-  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow, CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.Fixture.vk_advice_layout_length, Zcash.Snark.Fixture.vk_fixed_layout_length,
-  Zcash.Snark.Fixture.vk_instance_layout_length, Zcash.Snark.Fixture.vk_n_cast_ne_zero,
-  Zcash.Snark.Fixture.vk_omega_order, Zcash.Snark.Keygen.certificate,
+assert_axioms Zcash.Snark.ActionTerminal.ActionSequentialCuts.theta_prob_le +native(
   CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
@@ -1214,12 +1184,8 @@ assert_axioms Zcash.Snark.Fixture.staticChecks_of_derived +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Fixture.schedule_of_derived +native(
-  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow, CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.Fixture.vk_chunk_width_le, Zcash.Snark.Fixture.vk_gates_degree_le,
-  Zcash.Snark.Fixture.vk_lookup_input_degree_le, Zcash.Snark.Fixture.vk_lookup_table_degree_le,
-  Zcash.Snark.Fixture.vk_n_pred_le, Zcash.Snark.Fixture.vk_quotient_tail_le,
-  Zcash.Snark.Keygen.certificate, CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
+assert_axioms Zcash.Snark.ActionTerminal.ActionSequentialCuts.beta_prob_le +native(
+  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
@@ -1229,29 +1195,18 @@ assert_axioms Zcash.Snark.Fixture.schedule_of_derived +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalse_prob_le_captured +native(
-  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
-  Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
-  Zcash.Snark.actionMissingConstantAllocations_eq_nil, Zcash.Snark.actionNumPermCols_eq,
-  Zcash.Snark.actionNumPermCols_pos, CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
-  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
-  Zcash.Snark.ActionGateCoherence.domainExponent_lt, Zcash.Snark.ActionGateCoherence.gateData_eq,
-  Zcash.Snark.ActionGateCoherence.selectorDegree, Zcash.Snark.ActionPermutationDomain.chunks_eq,
-  Zcash.Snark.ActionPermutationDomain.columnCount_chunkLen_eq,
-  Zcash.Snark.ActionPermutationDomain.deltaPowers_injective,
-  Zcash.Snark.ActionPermutationDomain.domainExponent_eq,
-  Zcash.Snark.ActionPermutationDomain.domainExponent_lt,
-  Zcash.Snark.ActionPermutationDomain.queryLayouts_eq,
-  Zcash.Snark.ActionPermutationDomain.routingCoherent,
-  Zcash.Snark.Fixture.vk_advice_layout_length, Zcash.Snark.Fixture.vk_chunk_width_le,
-  Zcash.Snark.Fixture.vk_fixed_layout_length, Zcash.Snark.Fixture.vk_gates_degree_le,
-  Zcash.Snark.Fixture.vk_instance_layout_length, Zcash.Snark.Fixture.vk_lookup_input_degree_le,
-  Zcash.Snark.Fixture.vk_lookup_table_degree_le, Zcash.Snark.Fixture.vk_n_cast_ne_zero,
-  Zcash.Snark.Fixture.vk_n_pred_le, Zcash.Snark.Fixture.vk_omega_order,
-  Zcash.Snark.Fixture.vk_quotient_tail_le, Zcash.Snark.Keygen.certificate,
+assert_axioms Zcash.Snark.ActionTerminal.ActionSequentialCuts.gamma_prob_le +native(
+  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_axioms Zcash.Snark.ActionTerminal.ActionSequentialCuts.xy_prob_le +native(
   CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
@@ -1472,7 +1427,7 @@ assert_axioms Zcash.Snark.ActionTerminal.actionRunAccepts +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.ActionTerminal.actionStatementDecoded +native(
+assert_axioms Zcash.Snark.ActionTerminal.actionStatementOrRelationDecoded +native(
   CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
@@ -1554,7 +1509,7 @@ assert_axioms Zcash.Snark.ActionTerminal.actionSemanticUpgradeContained +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.ActionTerminal.actionBundleStatementFailure_prob_le_of_compressed_bound +native(
+assert_axioms Zcash.Snark.ActionTerminal.actionNoStatementOrRelation_prob_le_of_compressed_bound +native(
   Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
@@ -1629,7 +1584,7 @@ assert_axioms Zcash.Snark.ActionTerminal.actionXYFailureEvent_subset_surfaces +n
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.ActionTerminal.actionBundleStatementFailure_prob_le_of_surfaces +native(
+assert_axioms Zcash.Snark.ActionTerminal.actionNoStatementOrRelation_prob_le_of_surfaces +native(
   Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
@@ -1713,6 +1668,174 @@ assert_axioms Zcash.Snark.ComputedDeployedConstraintFSFamily.pinnedX +native(Com
 assert_computable Zcash.Snark.ComputedStraightLineIpaFSFamily.straightLineIpaRelationFinder +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDeployedRelationFinder +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintRelationFinder +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDecodeOfOutcome? +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintOutcome? +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintSuccess? +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- Census the executable cached adaptive finder and its resource bounds.
+assert_axioms Zcash.Snark.ActionTerminal.adaptiveActionCachedProvenanceLog_length_le +native(
+  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_axioms Zcash.Snark.ActionTerminal.adaptiveActionDlogTraversalSlots_eq_eight
+assert_axioms Zcash.Snark.ActionTerminal.adaptiveActionRelationFinderCalls_le_traversalSlots +native(
+  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_computable Zcash.Snark.ActionTerminal.adaptiveActionRelationFinder +choice +native(
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
+  Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionMissingConstantAllocations_eq_nil, Zcash.Snark.actionNumPermCols_eq,
+  Zcash.Snark.actionNumPermCols_pos, CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
+  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
+  Zcash.Snark.ActionGateCoherence.domainExponent_lt, Zcash.Snark.ActionGateCoherence.gateData_eq,
+  Zcash.Snark.ActionGateCoherence.selectorDegree,
+  Zcash.Snark.ActionPermutationDomain.adviceQueryLayout_columns_lt,
+  Zcash.Snark.ActionPermutationDomain.chunks_eq,
+  Zcash.Snark.ActionPermutationDomain.columnCount_chunkLen_eq,
+  Zcash.Snark.ActionPermutationDomain.deltaPowers_injective,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_eq,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_lt,
+  Zcash.Snark.ActionPermutationDomain.queryLayouts_eq,
+  Zcash.Snark.ActionPermutationDomain.routingCoherent,
+  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_computable Zcash.Snark.ActionTerminal.adaptiveActionKnowledgeExtractor +choice +native(
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
+  Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionMissingConstantAllocations_eq_nil, Zcash.Snark.actionNumPermCols_eq,
+  Zcash.Snark.actionNumPermCols_pos, CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
+  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
+  Zcash.Snark.ActionGateCoherence.domainExponent_lt, Zcash.Snark.ActionGateCoherence.gateData_eq,
+  Zcash.Snark.ActionGateCoherence.selectorDegree,
+  Zcash.Snark.ActionPermutationDomain.adviceQueryLayout_columns_lt,
+  Zcash.Snark.ActionPermutationDomain.chunks_eq,
+  Zcash.Snark.ActionPermutationDomain.columnCount_chunkLen_eq,
+  Zcash.Snark.ActionPermutationDomain.deltaPowers_injective,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_eq,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_lt,
+  Zcash.Snark.ActionPermutationDomain.queryLayouts_eq,
+  Zcash.Snark.ActionPermutationDomain.routingCoherent,
+  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_computable Zcash.Snark.ActionTerminal.actionTerminalRelationFinder +choice +native(
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
+  Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionMissingConstantAllocations_eq_nil, Zcash.Snark.actionNumPermCols_eq,
+  Zcash.Snark.actionNumPermCols_pos, CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
+  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
+  Zcash.Snark.ActionGateCoherence.domainExponent_lt, Zcash.Snark.ActionGateCoherence.gateData_eq,
+  Zcash.Snark.ActionGateCoherence.selectorDegree, Zcash.Snark.ActionPermutationDomain.chunks_eq,
+  Zcash.Snark.ActionPermutationDomain.columnCount_chunkLen_eq,
+  Zcash.Snark.ActionPermutationDomain.deltaPowers_injective,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_eq,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_lt,
+  Zcash.Snark.ActionPermutationDomain.queryLayouts_eq,
+  Zcash.Snark.ActionPermutationDomain.routingCoherent,
+  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_computable Zcash.Snark.ActionTerminal.actionRelationFinder +choice +native(
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
+  Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionMissingConstantAllocations_eq_nil, Zcash.Snark.actionNumPermCols_eq,
+  Zcash.Snark.actionNumPermCols_pos, CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
+  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
+  Zcash.Snark.ActionGateCoherence.domainExponent_lt, Zcash.Snark.ActionGateCoherence.gateData_eq,
+  Zcash.Snark.ActionGateCoherence.selectorDegree, Zcash.Snark.ActionPermutationDomain.chunks_eq,
+  Zcash.Snark.ActionPermutationDomain.columnCount_chunkLen_eq,
+  Zcash.Snark.ActionPermutationDomain.deltaPowers_injective,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_eq,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_lt,
+  Zcash.Snark.ActionPermutationDomain.queryLayouts_eq,
+  Zcash.Snark.ActionPermutationDomain.routingCoherent,
+  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_computable Zcash.Snark.ActionTerminal.actionKnowledgeExtractor +choice +native(
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
+  Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionMissingConstantAllocations_eq_nil, Zcash.Snark.actionNumPermCols_eq,
+  Zcash.Snark.actionNumPermCols_pos, CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
+  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
+  Zcash.Snark.ActionGateCoherence.domainExponent_lt, Zcash.Snark.ActionGateCoherence.gateData_eq,
+  Zcash.Snark.ActionGateCoherence.selectorDegree, Zcash.Snark.ActionPermutationDomain.chunks_eq,
+  Zcash.Snark.ActionPermutationDomain.columnCount_chunkLen_eq,
+  Zcash.Snark.ActionPermutationDomain.deltaPowers_injective,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_eq,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_lt,
+  Zcash.Snark.ActionPermutationDomain.queryLayouts_eq,
+  Zcash.Snark.ActionPermutationDomain.routingCoherent,
+  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintRelationFinderCalls_le_four +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintFailureSet_subset +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintFailure_prob_le_of_generatorRO_dlogProfile +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
@@ -1721,39 +1844,33 @@ assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.StraightLineConst
 assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_subset_union +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_prob_le_of_compressed_bound +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_prob_le_of_generatorRO_dlogProfile +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
--- Direct-route costs: both possible direct decodes charge their represented source traversal, the
--- query ceiling loses three bits, and the complete group-work allowance includes the verifier MSM
--- and other reduction postprocessing rather than treating the whole reduction as group-free.
-assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDirectDecodeOps +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDirectDecodeOps_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDlogRandomOracleQueries_le_eight_mul +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDlogGroupWork_le_eight_mul
-assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.StraightLineDirectDlogProfile.solverCost_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
--- Compatibility only: the older envelope allows caller-supplied reduction work and is not the
--- primary deployed interpretation.
-assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDlogGroupWork_le_32_mul
-assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.five_bit_overhead_at_2pow122
-
--- Primary straight-line AGM capstone. The staged representation trace, not the final
--- `AlgebraicWfProof` alone, supplies IPA squeeze chronology, and the family's own constraint-`x`
--- trace derives exact `x` pinning rather than assuming it. Its complete deployed constraint
--- finder has a pointwise four-invocation bound, so no expected-runs truncation or Markov term
--- appears. Representations remain ghost extractor data, outside the Halo2 proof and verifier.
-assert_axioms Zcash.Snark.StraightLineIpaOnlineTrace.toSqueezeInvariance +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.AlgebraicWfProof.straightLineIpaZeroOrRelation +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_computable Zcash.Snark.ComputedDeployedConstraintFSFamily.ofCovered +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.ComputedDeployedConstraintFSFamily.pinnedX +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_computable Zcash.Snark.ComputedStraightLineIpaFSFamily.straightLineIpaRelationFinder +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDeployedRelationFinder +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintRelationFinder +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintRelationFinderCalls_le_four +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintFailureSet_subset +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintFailure_prob_le_of_generatorRO_dlogProfile +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
--- The straight-line four-budget semantic promotion.
-assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.StraightLineConstraintSemanticUpgradeContained +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_subset_union +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_prob_le_of_compressed_bound +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_prob_le_of_generatorRO_dlogProfile +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ActionTerminal.actionKnowledgeFailure_prob_le_of_base_union_bound +native(
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
+  Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionMissingConstantAllocations_eq_nil, Zcash.Snark.actionNumPermCols_eq,
+  Zcash.Snark.actionNumPermCols_pos, CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
+  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
+  Zcash.Snark.ActionGateCoherence.domainExponent_lt, Zcash.Snark.ActionGateCoherence.gateData_eq,
+  Zcash.Snark.ActionGateCoherence.selectorDegree, Zcash.Snark.ActionPermutationDomain.chunks_eq,
+  Zcash.Snark.ActionPermutationDomain.columnCount_chunkLen_eq,
+  Zcash.Snark.ActionPermutationDomain.deltaPowers_injective,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_eq,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_lt,
+  Zcash.Snark.ActionPermutationDomain.queryLayouts_eq,
+  Zcash.Snark.ActionPermutationDomain.routingCoherent,
+  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 -- Direct-route costs: both possible direct decodes charge their represented source traversal, the
 -- query ceiling loses three bits, and the complete group-work allowance includes the verifier MSM
 -- and other reduction postprocessing rather than treating the whole reduction as group-free.

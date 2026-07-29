@@ -82,10 +82,8 @@ theorem consensusStraightLineStatisticalModel_at_2pow123 :
     (by norm_num [scalarFieldOrder, CompElliptic.Fields.Pasta.PALLAS_BASE_CARD]) using 1
   norm_num
 
-/-- Consensus-maximum straight-line **compressed-identity** capstone with the query cap `Q <= T`.
-The right side is the caller-supplied finite-security DLOG advantage plus the concrete statistical
-model above; row-level semantics are the four-budget promotion
-`straightLineConstraintSemanticFailure_prob_le_of_generatorRO_dlogProfile`. -/
+/-- Consensus-maximum compressed-identity bound with caller-supplied DLOG advantage and concrete
+statistical error. -/
 theorem straightLineConstraintFailure_prob_le_at_consensus_max
     (B : VestaG)
     (family : ComputedStraightLineDeployedFSFamily (shape orchardConsensusMaxProofs))
