@@ -25,19 +25,83 @@ open Zcash.Arithmetic (scalarFieldOrder)
 
 abbrev CPoly := CPolynomial Fp
 
+/-! ## Root theory
+
+Mathlib's root API, ported to `CPolynomial` once here.  A root multiset has no computational
+content, so `roots` is defined on the Mathlib image and is noncomputable; the point of porting is
+that nothing downstream has to mention `toPoly`. -/
+
+/-- The root multiset of a computable polynomial. -/
+noncomputable def roots (p : CPoly) : Multiset Fp := p.toPoly.roots
+
+@[simp] theorem roots_zero : roots (0 : CPoly) = 0 := by
+  rw [roots, CPolynomial.toPoly_zero, Polynomial.roots_zero]
+
+theorem mem_roots {p : CPoly} {x : Fp} (hp : p ≠ 0) :
+    x ∈ roots p ↔ CPolynomial.eval x p = 0 := by
+  rw [roots, Polynomial.mem_roots (by rwa [Ne, CPolynomial.toPoly_eq_zero_iff]),
+    Polynomial.IsRoot.def, ← CPolynomial.eval_toPoly]
+
+/-- **Root counting.** A nonzero polynomial has at most `natDegree` roots. -/
+theorem card_roots_le (p : CPoly) : Multiset.card (roots p) ≤ p.natDegree := by
+  rw [roots, CPolynomial.natDegree_toPoly]
+  exact Polynomial.card_roots' _
+
+/-! ## Degree arithmetic -/
+
+@[simp] theorem toPoly_pow (p : CPoly) (n : ℕ) : (p ^ n).toPoly = p.toPoly ^ n := by
+  induction n with
+  | zero => simp [CPolynomial.toPoly_one]
+  | succ n ih => rw [pow_succ, pow_succ, CPolynomial.toPoly_mul, ih]
+
+theorem natDegree_sub_le (p q : CPoly) :
+    (p - q).natDegree ≤ max p.natDegree q.natDegree := by
+  rw [CPolynomial.natDegree_toPoly, CPolynomial.natDegree_toPoly, CPolynomial.natDegree_toPoly,
+    CPolynomial.toPoly_sub]
+  exact Polynomial.natDegree_sub_le _ _
+
+theorem natDegree_mul_le (p q : CPoly) :
+    (p * q).natDegree ≤ p.natDegree + q.natDegree := by
+  rw [CPolynomial.natDegree_toPoly, CPolynomial.natDegree_toPoly, CPolynomial.natDegree_toPoly,
+    CPolynomial.toPoly_mul]
+  exact Polynomial.natDegree_mul_le
+
+theorem natDegree_X_pow_le (n : ℕ) : ((CPolynomial.X : CPoly) ^ n).natDegree ≤ n := by
+  rw [CPolynomial.natDegree_toPoly]
+  simp [CPolynomial.X_toPoly]
+
+theorem natDegree_one_le : ((1 : CPoly)).natDegree ≤ 0 := by
+  rw [CPolynomial.natDegree_toPoly]
+  simp [CPolynomial.toPoly_one]
+
 /-- The Schwartz–Zippel bad set: the roots of the difference polynomial.  A root multiset is a
 specification notion, so this stays on the Mathlib image and is noncomputable — it only ever
 appears inside `Prop`s. -/
-noncomputable def szBadSet (C : CPoly) : Finset Fp := C.toPoly.roots.toFinset
+noncomputable def szBadSet (C : CPoly) : Finset Fp := (roots C).toFinset
 
 theorem mem_szBadSet {C : CPoly} {x : Fp} :
     x ∈ szBadSet C ↔ C ≠ 0 ∧ CPolynomial.eval x C = 0 := by
-  simp [szBadSet, Polynomial.mem_roots', CPolynomial.toPoly_eq_zero_iff,
-    ← CPolynomial.eval_toPoly]
+  rw [szBadSet, Multiset.mem_toFinset]
+  constructor
+  · intro h
+    have hC : C ≠ 0 := by
+      intro h0
+      rw [h0, roots_zero] at h
+      simp at h
+    exact ⟨hC, (mem_roots hC).mp h⟩
+  · rintro ⟨hC, hx⟩
+    exact (mem_roots hC).mpr hx
 
 theorem not_mem_szBadSet {C : CPoly} {x : Fp} :
     x ∉ szBadSet C ↔ (C ≠ 0 → CPolynomial.eval x C ≠ 0) := by
   rw [mem_szBadSet, not_and]
+
+/-- Bad-set membership is decidable without ever forming the root set: `C = 0` is decidable
+because `CPolynomial` is canonical, and the other conjunct is one evaluation.  This is why
+`szBadSet` itself has no reason to be computable -- nothing needs the set, only this predicate
+and the cardinality bound. -/
+instance decidableMemSzBadSet (C : CPoly) (x : Fp) : Decidable (x ∈ szBadSet C) :=
+  decidable_of_iff _ mem_szBadSet.symm
 
 /-- Compute avoidance of one Schwartz–Zippel bad set.
 
@@ -62,8 +126,7 @@ theorem szBadSetAvoidance?_isSome_iff (C : CPoly) (x : Fp) :
 
 /-- Root counting is unchanged: it is a fact about the Mathlib image. -/
 theorem szBadSet_card_le (C : CPoly) : (szBadSet C).card ≤ C.natDegree :=
-  le_trans (Multiset.toFinset_card_le _)
-    (le_of_le_of_eq (Polynomial.card_roots' C.toPoly) (CPolynomial.natDegree_toPoly C).symm)
+  le_trans (Multiset.toFinset_card_le _) (card_roots_le C)
 
 /-- Lift a gate `Expr` to a polynomial.  This was `noncomputable`; it is now a plain `def`. -/
 def Expr.toCPoly (fixedCols adviceCols instanceCols : ℕ → CPoly) :
@@ -188,11 +251,6 @@ def evalRingHom (x : Fp) : CPoly →+* Fp where
 @[simp] theorem coe_evalRingHom (x : Fp) :
     ⇑(evalRingHom x) = CPolynomial.eval x := rfl
 
-@[simp] theorem toPoly_pow (p : CPoly) (n : ℕ) : (p ^ n).toPoly = p.toPoly ^ n := by
-  induction n with
-  | zero => simp [CPolynomial.toPoly_one]
-  | succ n ih => rw [pow_succ, pow_succ, CPolynomial.toPoly_mul, ih]
-
 attribute [simp] CPolynomial.toPoly_add CPolynomial.toPoly_mul CPolynomial.toPoly_sub
   CPolynomial.toPoly_neg CPolynomial.toPoly_one CPolynomial.toPoly_zero
   CPolynomial.C_toPoly CPolynomial.X_toPoly
@@ -262,14 +320,10 @@ theorem quotientCheck_sound (numerator h : CPoly) (n : ℕ)
 theorem szBadSet_quotient_card_le (numerator h : CPoly) (n : ℕ) :
     (szBadSet (numerator - h * (CPolynomial.X ^ n - 1))).card
       ≤ max numerator.natDegree (h.natDegree + n) := by
-  refine (szBadSet_card_le _).trans ?_
-  rw [CPolynomial.natDegree_toPoly, CPolynomial.natDegree_toPoly,
-    CPolynomial.natDegree_toPoly]
-  simp only [CPolynomial.toPoly_sub, CPolynomial.toPoly_mul, toPoly_pow,
-    CPolynomial.X_toPoly, CPolynomial.toPoly_one]
-  refine (Polynomial.natDegree_sub_le _ _).trans ?_
-  refine max_le_max le_rfl (Polynomial.natDegree_mul_le.trans (Nat.add_le_add_left ?_ _))
-  exact (Polynomial.natDegree_sub_le _ _).trans (by simp)
+  refine (szBadSet_card_le _).trans ((natDegree_sub_le _ _).trans ?_)
+  refine max_le_max le_rfl ((natDegree_mul_le _ _).trans (Nat.add_le_add_left ?_ _))
+  exact (natDegree_sub_le _ _).trans (by
+    simpa using max_le (natDegree_X_pow_le n) (le_trans natDegree_one_le (Nat.zero_le n)))
 
 /-- **The constraint identity, derived from acceptance.** -/
 theorem constraint_identity_of_accept (numerator h : CPoly) (n : ℕ) (x : Fp)
