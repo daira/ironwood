@@ -814,6 +814,54 @@ noncomputable def actionStatisticalModel (Q : Nat) : ENNReal :=
           (Q + 1 : Nat) * (((2 ^ 25 : Nat) : ENNReal) /
             (Fintype.card Fp : ENNReal)))))
 
+/-- The non-DLOG remainder on the bare adaptive route.  Its deployed-root walk uses the original
+run only; the larger sequential model below is therefore a conservative upper bound. -/
+noncomputable def adaptiveActionStatisticalModel (Q : Nat) : ENNReal :=
+  (Q + 1 : Nat) * (1 / Fintype.card Fp) +
+    (actionProofParams.mergeDerived actionCircuit).k *
+      ((Q + 1 : Nat) * (2 / (Fintype.card Fp : ENNReal))) +
+    (Q + 1 : Nat) * algebraicRootBudget
+      (actionProofParams.mergeDerived actionCircuit)
+      (actionProofParams.mergeDerived actionCircuit).k +
+    1 / Fintype.card Fp +
+    (Q + 1 : Nat) *
+      ((((2 ^ 25 : Nat) : ENNReal) / Fintype.card Fp +
+        ((2 ^ 35 : Nat) : ENNReal) / Fintype.card Fp) +
+        (((2 ^ 21 : Nat) : ENNReal) / Fintype.card Fp +
+          (((2 ^ 23 : Nat) : ENNReal) / Fintype.card Fp +
+            (20470 : ENNReal) / Fintype.card Fp)))
+
+theorem adaptiveActionSemanticSum_eq :
+    (∑ n : Fin 5,
+      ((![2 ^ 25, 2 ^ 35, 2 ^ 21, 2 ^ 23, 20470] n : Nat) : ENNReal) /
+        Fintype.card Fp) =
+      ((((2 ^ 25 : Nat) : ENNReal) / Fintype.card Fp +
+        ((2 ^ 35 : Nat) : ENNReal) / Fintype.card Fp) +
+        (((2 ^ 21 : Nat) : ENNReal) / Fintype.card Fp +
+          (((2 ^ 23 : Nat) : ENNReal) / Fintype.card Fp +
+            (20470 : ENNReal) / Fintype.card Fp))) := by
+  rw [Fin.sum_univ_succ, Fin.sum_univ_succ, Fin.sum_univ_succ, Fin.sum_univ_succ,
+    Fin.sum_univ_one]
+  norm_num [Matrix.cons_val_zero, Matrix.cons_val_one, Matrix.cons_val_two,
+    Matrix.cons_val_succ]
+  ring
+
+/-- The sequential statistical model conservatively contains the adaptive remainder. -/
+theorem adaptiveActionStatisticalModel_le_action (Q : Nat) :
+    adaptiveActionStatisticalModel Q ≤ actionStatisticalModel Q := by
+  have hk : (actionProofParams.mergeDerived actionCircuit).k = 11 := by
+    change actionCircuit.domainExponent = 11
+    exact ActionPermutationDomain.domainExponent_eq
+  have hsplit : actionStatisticalModel Q =
+      adaptiveActionStatisticalModel Q +
+        22 * algebraicRootBudget (actionProofParams.mergeDerived actionCircuit) 11 +
+        (Q + 1 : Nat) * ((20470 : Nat) / (Fintype.card Fp : ENNReal)) := by
+    rw [actionStatisticalModel, adaptiveActionStatisticalModel, hk]
+    push_cast
+    ring
+  rw [hsplit]
+  exact le_add_right (le_add_right le_rfl)
+
 /-- At `Q <= 2^123`, the compressed remainder and all five Action semantic tails together fit
 inside `2^-84`.  The semantic numerator is at most `2^160`; the remaining Action-shape terms are
 below `2^140`, leaving a wide margin against the 254-bit scalar field. -/
@@ -1091,8 +1139,9 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured
 /-- **Bare adaptive Action composition.**  This is the arbitrary adaptive-RO/online-AGM sibling
 of `orchard_action_acceptFalseStatement_prob_le_captured`.  Its quantified adversary is only
 `ComputedAdaptiveOnlineAGMFSFamily`: there is no sequential prover, execution, phase, trace, or
-cut input.  The executable combined finder closes every algebraic relation branch once, and the
-five annotation-aware Action semantic surfaces are discharged from the captured key below.
+cut input.  The executable combined finder closes every algebraic relation branch once, its DLOG
+term is evaluated at an explicit adaptive resource profile, and the five annotation-aware Action
+semantic surfaces are discharged from the captured key below.
 -/
 theorem orchard_action_acceptFalseStatement_prob_le_adaptive
     {T : Type*} [DecidableEq T]
@@ -1114,9 +1163,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive
         (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) inputs)
       (adaptiveActionRunOutput family basis O).1.proof.1
       (adaptiveActionRunRecord family basis O) < scalarFieldOrder)
-    {dlogBound : ENNReal}
-    (hDL : TextbookDLWithCoinsAdvantageLE B
-      (adaptiveActionRelationFinder actionProofParams family inputs hvk hI hchar) dlogBound) :
+    (profile : AdaptiveActionDlogProfile actionProofParams family inputs hvk hI hchar B) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
@@ -1130,7 +1177,9 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive
         ((family.Q + 1 : Nat) *
           algebraicRootBudget (actionProofParams.mergeDerived actionCircuit)
             (actionProofParams.mergeDerived actionCircuit).k +
-        ((dlogBound + 1 / Fintype.card Fp) +
+        ((profile.advantage (adaptiveActionDlogRandomOracleQueries actionProofParams family)
+              (adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
+            1 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * ∑ n : Fin 5,
             ((![2 ^ 25, 2 ^ 35, 2 ^ 21, 2 ^ 23, 20470] n : Nat) : ENNReal) /
               Fintype.card Fp))) := by
@@ -1204,7 +1253,76 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive
       (actionProofParams.mergeDerived actionCircuit).k B hB query hquery)]
   simpa only [epsilon] using
     (adaptiveActionAcceptFalseStatement_prob_le actionProofParams family inputs hvk hI hchar
-      B epsilon hDL hsurface)
+      B epsilon profile hsurface)
+
+/-- **Concrete bare-adaptive Action capstone.**  At `Q <= 2^123`, the complete adaptive finder
+fits a conservative `2^127` random-oracle/group-work envelope (eight uncached represented runs),
+while the direct-coordinate decoder fits `2^123`.  The statistical remainder remains `2^-84`. -/
+theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generatorRO
+    {T : Type*} [DecidableEq T]
+    (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → T)
+    (hquery : Function.Injective query)
+    (family : ComputedAdaptiveOnlineAGMFSFamily
+      (actionProofParams.mergeDerived actionCircuit))
+    (inputs : Fin (actionProofParams.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey actionProofParams
+      (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis))
+    (hI : ∀ basis, family.instanceCommitment basis =
+      actionCircuit.instanceCommitment actionProofParams
+        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) inputs)
+    (hchar : ∀ basis O, deployedX4PairCount
+      (actionCircuit.toVerifierKey actionProofParams
+        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment actionProofParams
+        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) inputs)
+      (adaptiveActionRunOutput family basis O).1.proof.1
+      (adaptiveActionRunRecord family basis O) < scalarFieldOrder)
+    (profile : AdaptiveActionDirectDlogProfile actionProofParams family inputs hvk hI hchar B
+      (2 ^ 123)) :
+    ((independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
+            + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          adaptiveActionAcceptFalseStatementEvent actionProofParams family inputs) ≤
+      profile.advantage (2 ^ 127) (2 ^ 127) + 1 / (2 ^ 84 : ENNReal)) ∧
+      adaptiveActionDlogRandomOracleQueries actionProofParams family ≤ 2 ^ 127 ∧
+      adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
+        2 ^ 127 ∧
+      ∀ basis O, 2 * adaptiveActionDirectDecodeOps actionProofParams family basis O ≤
+        2 ^ 123 := by
+  have hcost := profile.solverCost_le
+  have hqueries : adaptiveActionDlogRandomOracleQueries actionProofParams family ≤
+      2 ^ 127 := by
+    calc
+      adaptiveActionDlogRandomOracleQueries actionProofParams family ≤ 16 * 2 ^ 123 :=
+        hcost.1
+      _ = 2 ^ 127 := by norm_num
+  have hgroup :
+      adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
+        2 ^ 127 := by
+    calc
+      adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
+          16 * 2 ^ 123 := hcost.2.1
+      _ = 2 ^ 127 := by norm_num
+  refine ⟨?_, hqueries, hgroup, hcost.2.2⟩
+  refine le_trans
+    (orchard_action_acceptFalseStatement_prob_le_adaptive B hB query hquery family inputs
+      hvk hI hchar profile.toAdaptiveActionDlogProfile) ?_
+  rw [adaptiveActionSemanticSum_eq]
+  calc
+    _ =
+        profile.advantage (adaptiveActionDlogRandomOracleQueries actionProofParams family)
+            (adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
+          adaptiveActionStatisticalModel family.Q := by
+      unfold adaptiveActionStatisticalModel
+      ring
+    _ ≤ profile.advantage (2 ^ 127) (2 ^ 127) + 1 / (2 ^ 84 : ENNReal) :=
+      add_le_add (profile.advantage_mono hqueries hgroup)
+        (le_trans (adaptiveActionStatisticalModel_le_action family.Q)
+          (actionStatisticalModel_at_2pow123 profile.queryBound))
 
 /-- **Final sequential Action capstone.**  For every query-bounded sequential online-AGM prover
 with executable root, IPA, constraint-`x`, and Action phases, deployed verifier acceptance of a
