@@ -632,6 +632,79 @@ def adaptiveActionRelationFinder :
         | none => adaptiveActionCompleteTerminalRelationFinder pp family inputs hvk hI hchar
             basis O hprovenance
 
+/-- Conservative random-oracle work for the adaptive combined finder.  The profile reserves eight
+uncached represented-run slots: two for Action provenance, four for the direct IPA/root walk, and
+two for the terminal fallback.  Every slot includes its own designated `11 + k` transcript reads.
+-/
+def adaptiveActionDlogRandomOracleQueries : Nat :=
+  8 * family.Q + 8 * (11 + (pp.mergeDerived actionCircuit).k)
+
+/-- Group-work envelope of the adaptive combined finder. -/
+def adaptiveActionDlogGroupWork (proverGroupWork reductionGroupWork : Nat) : Nat :=
+  8 * proverGroupWork + reductionGroupWork
+
+/-- Direct-coordinate work of one adaptive deployed-root decode on the actual run. -/
+def adaptiveActionDirectDecodeOps
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+        + 3 * (pp.mergeDerived actionCircuit).k) → Fp) : Nat :=
+  let pnu := adaptiveActionRunOutput family basis O
+  deployedDirectDecodeOps (family.vk basis) (family.instanceCommitment basis)
+    pnu.1.proof.1 (adaptiveActionRunRecord family basis O)
+    (pnu.1.algebraicProof.preX1AssemblySource (family.fixedRepresentations basis)).length
+
+/-- Finite-security premise for the complete adaptive Action finder. -/
+structure AdaptiveActionDlogProfile (B : VestaG) where
+  proverGroupWork : Nat
+  reductionGroupWork : Nat
+  advantage : Nat → Nat → ENNReal
+  advantage_mono : ∀ {q q' g g'}, q ≤ q' → g ≤ g' →
+    advantage q g ≤ advantage q' g'
+  hardness : TextbookDLWithCoinsAdvantageLE B
+    (adaptiveActionRelationFinder pp family inputs hvk hI hchar)
+    (advantage (adaptiveActionDlogRandomOracleQueries pp family)
+      (adaptiveActionDlogGroupWork proverGroupWork reductionGroupWork))
+
+/-- Concrete resource profile for the bare adaptive route.  Unlike the sequential six-call
+profile, this deliberately charges all eight uncached adaptive run slots. -/
+structure AdaptiveActionDirectDlogProfile (B : VestaG) (T : Nat)
+    extends AdaptiveActionDlogProfile pp family inputs hvk hI hchar B where
+  ipaDepth : (pp.mergeDerived actionCircuit).k = 11
+  targetAtLeastTwentyTwo : 22 ≤ T
+  queryBound : family.Q ≤ T
+  proverWorkBound : toAdaptiveActionDlogProfile.proverGroupWork ≤ T
+  reductionWorkBound : toAdaptiveActionDlogProfile.reductionGroupWork ≤ T
+  directDecodeWorkBound : ∀ basis O,
+    2 * adaptiveActionDirectDecodeOps pp family basis O ≤ T
+
+/-- The concrete adaptive profile fits a conservative four-bit solver envelope. -/
+theorem AdaptiveActionDirectDlogProfile.solverCost_le
+    {B : VestaG} {T : Nat}
+    (profile : AdaptiveActionDirectDlogProfile pp family inputs hvk hI hchar B T) :
+    adaptiveActionDlogRandomOracleQueries pp family ≤ 16 * T ∧
+      adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
+        16 * T ∧
+      ∀ basis O, 2 * adaptiveActionDirectDecodeOps pp family basis O ≤ T := by
+  constructor
+  · unfold adaptiveActionDlogRandomOracleQueries
+    rw [profile.ipaDepth]
+    have hT := profile.targetAtLeastTwentyTwo
+    calc
+      8 * family.Q + 8 * (11 + 11) ≤ 8 * T + 8 * (11 + 11) := by
+        gcongr
+        exact profile.queryBound
+      _ ≤ 16 * T := by omega
+  constructor
+  · unfold adaptiveActionDlogGroupWork
+    calc
+      8 * profile.proverGroupWork + profile.reductionGroupWork ≤ 8 * T + T := by
+        gcongr
+        · exact profile.proverWorkBound
+        · exact profile.reductionWorkBound
+      _ ≤ 16 * T := by omega
+  · exact profile.directDecodeWorkBound
+
 /-- An empty combined finder excludes every stage-local Action provenance mismatch. -/
 theorem adaptiveActionRelationFinder_none_actionProvenance
     (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
@@ -1017,9 +1090,8 @@ theorem adaptiveActionSemanticResidual_prob_le
 the executable combined finder and the remaining semantic term is derived from the five explicit
 Action squeeze surfaces. -/
 theorem adaptiveActionAcceptFalseStatement_prob_le
-    (B : VestaG) {dlogBound : ENNReal} (epsilon : Fin 5 → ENNReal)
-    (hDL : TextbookDLWithCoinsAdvantageLE B
-      (adaptiveActionRelationFinder pp family inputs hvk hI hchar) dlogBound)
+    (B : VestaG) (epsilon : Fin 5 → ENNReal)
+    (profile : AdaptiveActionDlogProfile pp family inputs hvk hI hchar B)
     (hsurface : ∀
       (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
       (n : Fin 5)
@@ -1042,7 +1114,9 @@ theorem adaptiveActionAcceptFalseStatement_prob_le
         ((family.Q + 1 : Nat) *
           algebraicRootBudget (pp.mergeDerived actionCircuit)
             (pp.mergeDerived actionCircuit).k +
-        ((dlogBound + 1 / Fintype.card Fp) +
+        ((profile.advantage (adaptiveActionDlogRandomOracleQueries pp family)
+            (adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
+            1 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * ∑ n : Fin 5, epsilon n))) := by
   refine le_trans (MeasureTheory.measure_mono
     (Set.preimage_mono
@@ -1056,7 +1130,8 @@ theorem adaptiveActionAcceptFalseStatement_prob_le
   refine add_le_add (adaptiveActionRoot_prob_le pp family B) ?_
   refine le_trans (MeasureTheory.measure_union_le _ _) ?_
   exact add_le_add
-    (adaptiveActionRelation_prob_le_of_textbookDL pp family inputs hvk hI hchar B hDL)
+    (adaptiveActionRelation_prob_le_of_textbookDL pp family inputs hvk hI hchar B
+      profile.hardness)
     (adaptiveActionSemanticResidual_prob_le pp family inputs hvk hI hchar B epsilon hsurface)
 
 end ActionTerminal
