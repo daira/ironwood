@@ -69,7 +69,7 @@ def straightLineConstraintDifferencePreX
     (family : ComputedStraightLineDeployedFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (O : BTranscript Fp VestaG
-      (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) : Polynomial Fp :=
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) -> Fp) : CPoly :=
   let pnu := (wrappedAdversary family.toFamily basis).run O
   committedPreXConstraintDifference
     (deployedConstraintPointPolynomial family.toRootFamily basis pnu)

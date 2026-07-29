@@ -25,7 +25,7 @@ stage prices the explicit zero-data difference from the four folding squeezes al
 
 namespace Zcash.Snark
 
-open Polynomial
+open CompPoly CompPoly.CPolynomial
 open scoped ENNReal
 
 local instance vestaInhabitedZeroStraightLine : Inhabited VestaG := ⟨0⟩
@@ -40,15 +40,15 @@ variable (vkS : VerifyingKey shape Fp VestaG)
 
 /-- With no sub-proofs the folded constraint list is empty. -/
 theorem constraintPolys_nil_of_no_proofs (hproofs : shape.numProofs = 0)
-    (fixedCols : ℕ → Polynomial Fp)
-    (adviceCols instanceCols : Fin shape.numProofs → ℕ → Polynomial Fp)
+    (fixedCols : ℕ → CPoly)
+    (adviceCols instanceCols : Fin shape.numProofs → ℕ → CPoly)
     (gates : List (Expr Fp))
-    (sets : Fin shape.numProofs → List (PermSetEval (Polynomial Fp)))
+    (sets : Fin shape.numProofs → List (PermSetEval (CPoly)))
     (chunks : Fin shape.numProofs →
-      List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
+      List (PermSetEval (CPoly) × List (CPoly × CPoly)))
     (lookups : Fin shape.numProofs →
-      List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
-    (beta gamma delta theta : Fp) (chunkLen : ℕ) (l0 lLast lBlind : Polynomial Fp) :
+      List (LookupEval (CPoly) × List (Expr Fp) × List (Expr Fp)))
+    (beta gamma delta theta : Fp) (chunkLen : ℕ) (l0 lLast lBlind : CPoly) :
     constraintPolys fixedCols adviceCols instanceCols gates sets chunks lookups
       beta gamma delta theta chunkLen l0 lLast lBlind = [] := by
   unfold constraintPolys allConstraints
@@ -94,7 +94,7 @@ theorem zeroConstraintDifference_eq_zero (hproofs : shape.numProofs = 0)
   rw [committedPreXConstraintDifference_eq, committedPreXQuotient_eq]
   simp only [combineConstraints, constraintPolys_nil_of_no_proofs hproofs, List.foldl_nil,
     preXQuotient]
-  rw [Finset.sum_congr rfl (fun i (_ : i ∈ Finset.univ) => by rw [hpieces i, mul_zero])]
+  rw [Finset.sum_congr rfl (fun i (_ : i ∈ Finset.univ) => by rw [hpieces i, MulZeroClass.mul_zero])]
   simp
 
 /-- Hence the zero family's constraint-`x` root set is empty on every oracle table. -/
@@ -129,7 +129,7 @@ squeezes alone — indices `0`–`3`, all before the `x` prefix.
 /-- The zero prover's constraint difference, as an explicit function of the four folding
 challenges: every feed reads the all-zero source, so only the key's own polynomials and the
 challenge scalars remain. -/
-noncomputable def zeroExplicitConstraintDifference (ν : Fin 11 → Fp) : Polynomial Fp :=
+noncomputable def zeroExplicitConstraintDifference (ν : Fin 11 → Fp) : CPoly :=
   committedPreXConstraintDifference (fun _ => 0) (fun _ => 0)
     vkS (fun _ _ => 0) (zeroProofString shape Fp VestaG) (chRecord ν (fun _ => 0))
 
@@ -165,7 +165,7 @@ theorem zeroConstraintDifference_explicit
   have hpieces : (fun i => coeffsToPoly (deployedConstraintPieceCoordinates
       (zeroDeployedRootFamily vkS hfixed hperm) basis
       (deployedRootRunOutput (zeroDeployedRootFamily vkS hfixed hperm) basis coins) i).1) =
-      fun _ => (0 : Polynomial Fp) := by
+      fun _ => (0 : CPoly) := by
     funext i
     unfold deployedConstraintPieceCoordinates
     rw [onlinePointCoordinates_zeroSource basis hsource]
@@ -301,7 +301,7 @@ noncomputable def zeroStraightLineIpaTrace (hproofs : shape.numProofs = 0) :
   stage := fun _basis _j => .pure 0
   agrees := fun basis j O => by
     rw [OracleComp.run_pure]
-    show (0 : Polynomial Fp) = _
+    show (0 : CPoly) = _
     rw [show ((zeroDeployedRootFamily vkS hfixed hperm).toFamily.adversary basis).run O =
       zeroWfProof basis vkS hfixed hperm from rfl]
     exact (zeroWfProof_straightLineIpaRootPolynomial vkS hfixed hperm hproofs basis _ _ j).symm
@@ -351,7 +351,7 @@ noncomputable def zeroConstIpaStage (basis : AugmentedIndex (2 ^ shape.k) → Ve
     OracleComp
       (BTranscript Fp VestaG
         (preIpaLen shape (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init.length 10 +
-          3 * shape.k)) Fp (Polynomial Fp) :=
+          3 * shape.k)) Fp (CPoly) :=
   (OracleComp.readFin (F := Fp)
     (fun i : Fin 11 =>
       algebraicFullPrefixesPre (zeroDeployedRootFamily vkS hfixed hperm).toFamily.init

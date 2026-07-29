@@ -21,7 +21,8 @@ chronology layer issue #127 changed.
 
 namespace Zcash.Snark
 
-open Classical Polynomial
+open Classical
+open CompPoly CompPoly.CPolynomial
 
 variable {shape : Shape}
 
@@ -54,7 +55,7 @@ def nu (v : PreXView shape basis) : Fin 11 → Fp :=
 noncomputable def difference (v : PreXView shape basis)
     (vk : VerifyingKey shape Fp VestaG)
     (ic : Fin shape.numProofs → ℕ → VestaG)
-    (fixed : List (AlgebraicPoint (F := Fp) basis)) : Polynomial Fp :=
+    (fixed : List (AlgebraicPoint (F := Fp) basis)) : CPoly :=
   committedPreXConstraintDifference
     (onlinePointPolynomial (v.points ++ fixed))
     (fun i => coeffsToPoly (onlinePointCoordinates (v.points ++ fixed) (v.pieces i).point).1)
@@ -65,7 +66,7 @@ end PreXView
 /-! ## Congruences: what the difference reads -/
 
 /-- The advice feed reads only the advice commitments. -/
-private theorem committedAdviceFeed_congr (poly : VestaG → Polynomial Fp)
+private theorem committedAdviceFeed_congr (poly : VestaG → CPoly)
     (vk : VerifyingKey shape Fp VestaG) {ps₁ ps₂ : ProofString shape Fp VestaG}
     (hadv : ∀ q, ps₁.adviceCommitments q = ps₂.adviceCommitments q) :
     committedAdviceFeed poly vk ps₁ = committedAdviceFeed poly vk ps₂ := by
@@ -76,7 +77,7 @@ private theorem committedAdviceFeed_congr (poly : VestaG → Polynomial Fp)
 
 /-- The permutation-set carriers read the products and the `lastEval` schedule only; on the
 schedule both sides' `lastEval` values are never consulted. -/
-private theorem committedPermSets_congr (poly : VestaG → Polynomial Fp)
+private theorem committedPermSets_congr (poly : VestaG → CPoly)
     (vk : VerifyingKey shape Fp VestaG) {ps₁ ps₂ : ProofString shape Fp VestaG}
     (hprod : ∀ q s, ps₁.permutationProduct q s = ps₂.permutationProduct q s)
     (hwf₁ : PsWellFormed ps₁) (hwf₂ : PsWellFormed ps₂) :
@@ -98,7 +99,7 @@ private theorem committedPermSets_congr (poly : VestaG → Polynomial Fp)
     rw [ha, hb]
 
 /-- The lookup carriers read the three lookup commitments. -/
-private theorem committedLookups_congr (poly : VestaG → Polynomial Fp)
+private theorem committedLookups_congr (poly : VestaG → CPoly)
     (vk : VerifyingKey shape Fp VestaG) {ps₁ ps₂ : ProofString shape Fp VestaG}
     (hprod : ∀ q l, ps₁.lookupProduct q l = ps₂.lookupProduct q l)
     (hin : ∀ q l, ps₁.lookupPermutedInput q l = ps₂.lookupPermutedInput q l)
@@ -111,8 +112,8 @@ private theorem committedLookups_congr (poly : VestaG → Polynomial Fp)
 /-- **What the total difference reads from the proof string**: advice commitments, permutation
 products with the `lastEval` schedule, and the lookup commitments.  Everything else — including
 every claimed evaluation — is invisible to it. -/
-theorem committedPreXConstraintDifference_ps_congr (poly : VestaG → Polynomial Fp)
-    (piecePoly : Fin shape.numQuotientPieces → Polynomial Fp)
+theorem committedPreXConstraintDifference_ps_congr (poly : VestaG → CPoly)
+    (piecePoly : Fin shape.numQuotientPieces → CPoly)
     (vk : VerifyingKey shape Fp VestaG) (ic : Fin shape.numProofs → ℕ → VestaG)
     {ps₁ ps₂ : ProofString shape Fp VestaG} (ch : Challenges shape.k Fp)
     (hadv : ∀ q, ps₁.adviceCommitments q = ps₂.adviceCommitments q)
@@ -129,8 +130,8 @@ theorem committedPreXConstraintDifference_ps_congr (poly : VestaG → Polynomial
     committedLookups_congr poly vk hlkProd hlkIn hlkTab]
 
 /-- The total difference reads the challenge record only through `θ`, `β`, `γ`, `y`. -/
-theorem committedPreXConstraintDifference_challenge_congr (poly : VestaG → Polynomial Fp)
-    (piecePoly : Fin shape.numQuotientPieces → Polynomial Fp)
+theorem committedPreXConstraintDifference_challenge_congr (poly : VestaG → CPoly)
+    (piecePoly : Fin shape.numQuotientPieces → CPoly)
     (vk : VerifyingKey shape Fp VestaG) (ic : Fin shape.numProofs → ℕ → VestaG)
     (ps : ProofString shape Fp VestaG) {ch₁ ch₂ : Challenges shape.k Fp}
     (htheta : ch₁.theta = ch₂.theta) (hbeta : ch₁.beta = ch₂.beta)
@@ -402,7 +403,7 @@ structure SequentialStraightLineProver {online : ComputedOnlineMemberFSFamily sh
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) → Fin shape.k →
       OracleComp
         (BTranscript Fp VestaG
-          (preIpaLen shape online.init.length 10 + 3 * shape.k)) Fp (Polynomial Fp)
+          (preIpaLen shape online.init.length 10 + 3 * shape.k)) Fp (CPoly)
   ipaAgrees : ∀ (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (j : Fin shape.k)
       (O : BTranscript Fp VestaG
         (preIpaLen shape online.init.length 10 + 3 * shape.k) → Fp),

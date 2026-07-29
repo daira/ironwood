@@ -393,7 +393,7 @@ def zeroPowerBatchOf {G : Type*} [AddCommGroup G] [Module Fp G]
   reconstruct := by
     subst hagg
     funext j
-    simp only [Finset.sum_apply, Pi.smul_apply, smul_eq_mul, mul_zero, Finset.sum_const_zero]
+    simp only [Finset.sum_apply, Pi.smul_apply, smul_eq_mul, MulZeroClass.mul_zero, Finset.sum_const_zero]
   reconstructU := by subst haggU; simp
   reconstructW := by subst haggW; simp
 
@@ -656,7 +656,7 @@ theorem deployedX3RootSet_of_zero
   haveI : IsEmpty (Fin (deployedX4PairCount vk ic ps ch)) := by
     rw [hcount]; infer_instance
   have hq : deployedAlgebraicQPrime urs hk vk ic ps ch b.x4 = 0 := by
-    rw [deployedAlgebraicQPrime, hc, coeffsToPoly_eq_sum]
+    rw [deployedAlgebraicQPrime, hc, coeffsToPoly]
     simp
   rw [deployedX3RootSet,
     show deployedX3ErrorPolynomial urs hk vk ic ps ch b.x4 = 0 from by
