@@ -3,10 +3,8 @@ import Zcash.Snark.Soundness.AGM.AdaptiveDecode
 /-!
 # Executable certificates for the deployed AGM root decoder
 
-The specification root sets use Mathlib's deliberately noncomputable polynomial instances.
-This file rebuilds the same finite coefficient data with `ComputablePolynomial`, then traverses
-the six deployed checks to return proof certificates as data.  The Action reduction can therefore
-run the decoder and terminal without selecting a proposition-level witness.
+This file traverses the six deployed checks and returns proof certificates as data, so the Action
+reduction runs the decoder and terminal without selecting a proposition-level witness.
 -/
 
 namespace Zcash.Snark
