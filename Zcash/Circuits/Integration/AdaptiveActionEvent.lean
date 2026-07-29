@@ -14,7 +14,8 @@ namespace Zcash.Snark
 
 namespace ActionTerminal
 
-open Halo2 Polynomial Keygen
+open Halo2 Keygen
+open CompPoly CompPoly.CPolynomial
 open Zcash.Circuits
 open Zcash.Circuits.Action
 open Zcash.Arithmetic (scalarFieldOrder)
@@ -75,7 +76,7 @@ def adaptiveActionPreXIdentityRelationFinder
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)
   let difference := adaptiveActionPreXDifferenceOf (family.vk basis)
     (family.instanceCommitment basis) data.algebraicProof.erase source ch hblinding
-  if hsupport : difference.toFinsupp.support = ∅ then
+  if hsupport : difference = 0 then
     let rawDecode := family.adaptiveAlgebraicDecode_of_deployedGoodRoots
       basis O witness hroots hshifted
     let fullDecode := rawDecode.reRound (runRounds family.toFamily basis O)
@@ -126,8 +127,7 @@ def adaptiveActionPreXIdentityRelationFinder
       unfold rawModel adaptiveActionCommittedModelOf
       exact canonicalConstraintModelOfPermutationResolver_congr_nonterminal
         (family.vk basis) ch _ _ _ hpolyStage
-    have hzero : difference = 0 :=
-      Polynomial.toFinsupp_injective (Finsupp.support_eq_empty.mp hsupport)
+    have hzero : difference = 0 := hsupport
     have hdiff := adaptiveActionPreXDifferenceOf_eq (family.vk basis)
       (family.instanceCommitment basis) data.algebraicProof.erase
       (data.algebraicProof.actionRepresentationsBefore (4 : Fin 5) ++
@@ -146,7 +146,7 @@ def adaptiveActionPreXIdentityRelationFinder
         combineConstraints model.fixedCols model.adviceCols model.instanceCols model.gates
             model.sets model.chunks model.lookups model.beta model.gamma model.delta model.theta
             ch.y model.chunkLen model.l0 model.lLast model.lBlind =
-          preXPoly * (Polynomial.X ^ (family.vk basis).n - 1) := by
+          preXPoly * (X ^ (family.vk basis).n - 1) := by
       dsimp only [preXPoly, piecePoly]
       rw [hsource4]
       apply sub_eq_zero.mp
@@ -250,7 +250,7 @@ theorem adaptiveActionPreXIdentityRelationFinder_isSome_of
       let difference := adaptiveActionPreXDifferenceOf (family.vk basis)
         (family.instanceCommitment basis) data.algebraicProof.erase source
         (adaptiveActionRunRecord family basis O) hblinding
-      difference.toFinsupp.support = ∅)
+      difference = 0)
     (hgoodY : let _pnu := adaptiveActionRunOutput family basis O
       let decode := hI basis ▸ hvk basis ▸
         (family.adaptiveAlgebraicDecode_of_deployedGoodRoots
@@ -557,7 +557,7 @@ theorem adaptiveActionCompleteTerminalRelationFinder_isSome_of
       PSum.inl ⟨witness, hsrc⟩ := by
     simpa only [hsrc] using
       adaptiveActionRootOutcomeWithSource_eq_inl pp family basis O witness hout
-  by_cases hsupport : difference.toFinsupp.support = ∅
+  by_cases hsupport : difference = 0
   · have hidentitySome := adaptiveActionPreXIdentityRelationFinder_isSome_of
       pp family inputs hvk hI hchar basis O hprovenance witness hsrc hroots hshifted
       haccepts (by simpa only [difference, source, data] using hsupport)
@@ -581,11 +581,7 @@ theorem adaptiveActionCompleteTerminalRelationFinder_isSome_of
       (family.vk basis) (family.instanceCommitment basis) data.algebraicProof.erase source
       (adaptiveActionRunRecord family basis O) hblinding (hvk basis) (hI basis)
     rw [← hdiffData] at heval
-    have hdifferenceNe : difference ≠ 0 := by
-      intro hzero
-      apply hsupport
-      rw [hzero]
-      rfl
+    have hdifferenceNe : difference ≠ 0 := hsupport
     have hpreEval : difference.eval (adaptiveActionRunRecord family basis O).x ≠ 0 :=
       (not_mem_szBadSet.mp hx) hdifferenceNe
     have hactionGood : (adaptiveActionRunRecord family basis O).x ∉ szBadSet
@@ -593,7 +589,7 @@ theorem adaptiveActionCompleteTerminalRelationFinder_isSome_of
           model.sets model.chunks model.lookups model.beta model.gamma model.delta model.theta
           (adaptiveActionRunRecord family basis O).y model.chunkLen model.l0 model.lLast
           model.lBlind - polynomial .vanishingH *
-            (Polynomial.X ^ (ActionTerminal.vkAt pp basis).n - 1)) := by
+            (X ^ (ActionTerminal.vkAt pp basis).n - 1)) := by
       apply not_mem_szBadSet.mpr
       intro _
       rw [heval]

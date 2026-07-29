@@ -35,6 +35,7 @@ branches.
 namespace Zcash.Snark.Fixture
 
 open Zcash.Snark
+open CompPoly CompPoly.CPolynomial
 open Zcash.Snark.ActionTerminal
 open Zcash.Snark.Keygen (actionProofParams actionProofParamsFor
   actionProofParamsFor_mergeDerived_eq shape_eq_mergeDerived vk_eq_toVerifierKey)
@@ -513,7 +514,7 @@ theorem actionLookupInputArity_le :
 
 private theorem resolverPermutationCell_card_le
     (pp : Keygen.ProofParams) (urs : URS VestaG)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin (pp.mergeDerived actionCircuit).numProofs) :
     Fintype.card
         (ResolverPermutationCell (actionCircuit.toVerifierKey pp urs) poly p actionActiveRows) ≤
@@ -544,7 +545,7 @@ private theorem resolverPermutationCell_card_le
 tight value keeps the consensus-maximum β budget below `2^46`. -/
 theorem resolverPermutationCell_card_eq
     (pp : Keygen.ProofParams) (urs : URS VestaG)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin (pp.mergeDerived actionCircuit).numProofs) :
     Fintype.card
         (ResolverPermutationCell (actionCircuit.toVerifierKey pp urs) poly p actionActiveRows) =
@@ -558,7 +559,7 @@ theorem resolverPermutationCell_card_eq
 private theorem cap_theta_for (numProofs : ℕ) :
     ∀ (basis : AugmentedIndex
         (2 ^ ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k) → VestaG)
-      (poly : CommitmentId → Polynomial Fp),
+      (poly : CommitmentId → CPoly),
       TopLevelLookupCoherence.topLevelLookupThetaBudget actionCircuit
         (actionProofParamsFor numProofs)
         (ursOfAugmentedBasis
@@ -594,14 +595,14 @@ private theorem cap_theta_for (numProofs : ℕ) :
               Nat.mul_le_mul_right _ actionLookupActivationCount_le
             _ = 2 ^ 25 := by norm_num
         simpa only [Keygen.ProofParams.mergeDerived, actionProofParamsFor,
-          Nat.cast_id, mul_assoc] using Nat.mul_le_mul_left numProofs hscaled
+          Nat.cast_id, _root_.mul_assoc] using Nat.mul_le_mul_left numProofs hscaled
 
 /-- The tight β budget is `950835027` per Action, including permutation cells and all three
 lookup arguments. -/
 private theorem cap_beta_for (numProofs : ℕ) :
     ∀ (basis : AugmentedIndex
         (2 ^ ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k) → VestaG)
-      (poly : CommitmentId → Polynomial Fp),
+      (poly : CommitmentId → CPoly),
       (∑ p : Fin ((actionProofParamsFor numProofs).mergeDerived actionCircuit).numProofs,
         (Fintype.card (ResolverPermutationCell
             (vkAt (actionProofParamsFor numProofs) basis) poly p actionActiveRows) + 1) *
@@ -664,7 +665,7 @@ private theorem cap_beta_for (numProofs : ℕ) :
 private theorem cap_gamma_for (numProofs : ℕ) :
     ∀ (basis : AugmentedIndex
         (2 ^ ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k) → VestaG)
-      (poly : CommitmentId → Polynomial Fp),
+      (poly : CommitmentId → CPoly),
       (∑ p : Fin ((actionProofParamsFor numProofs).mergeDerived actionCircuit).numProofs,
         2 * Fintype.card (ResolverPermutationCell
           (vkAt (actionProofParamsFor numProofs) basis) poly p actionActiveRows)) +
@@ -714,7 +715,7 @@ private theorem cap_gamma_for (numProofs : ℕ) :
 
 private theorem cap_theta :
     ∀ (basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG)
-      (poly : CommitmentId → Polynomial Fp),
+      (poly : CommitmentId → CPoly),
       TopLevelLookupCoherence.topLevelLookupThetaBudget actionCircuit actionProofParams
         (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) poly ≤
         2 ^ 25 := by
@@ -748,11 +749,11 @@ private theorem cap_theta :
               Nat.mul_le_mul_right _ actionLookupActivationCount_le
             _ = 2 ^ 25 := by norm_num
         simpa only [Keygen.ProofParams.mergeDerived, actionProofParams, actionProofParamsFor,
-          one_mul, Nat.cast_id] using hscaled
+          _root_.one_mul, Nat.cast_id] using hscaled
 
 private theorem cap_beta :
     ∀ (basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG)
-      (poly : CommitmentId → Polynomial Fp),
+      (poly : CommitmentId → CPoly),
       (∑ p : Fin (actionProofParams.mergeDerived actionCircuit).numProofs,
         (Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
             actionActiveRows) + 1) *
@@ -809,7 +810,7 @@ private theorem cap_beta :
 
 private theorem cap_gamma :
     ∀ (basis : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG)
-      (poly : CommitmentId → Polynomial Fp),
+      (poly : CommitmentId → CPoly),
       (∑ p : Fin (actionProofParams.mergeDerived actionCircuit).numProofs,
         2 * Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
           actionActiveRows)) +
@@ -1027,20 +1028,17 @@ private theorem adaptive_action_x_degree_le_for (numProofs : ℕ)
     split
     · split
       · exact hpoint _
-      · rw [ComputablePolynomial.zero_eq]
-        simp
-    · rw [ComputablePolynomial.zero_eq]
-      simp
+      · simp
+    · simp
   have hresolver : ∀ {n : ℕ} (omega : Fp) (layout : List (ℕ × ℤ))
-      (column : ℕ → Polynomial Fp),
+      (column : ℕ → CPoly),
       (∀ i, (column i).natDegree ≤ 2047) →
       ∀ i, (resolverQueryFeed (n := n) omega layout column i).natDegree ≤ 2047 := by
     intro n omega layout column hcolumn i
     unfold resolverQueryFeed
     split
     · exact natDegree_comp_rotateData_le _ _ (hcolumn _)
-    · rw [ComputablePolynomial.zero_eq]
-      simp
+    · simp
   have hfixed : ∀ i, (fixedQueryFeedOfResolver avk poly i).natDegree ≤ 2047 :=
     hresolver avk.omega avk.fixedQueryLayout _ (fun _ => hpoly _)
   have hadvice : ∀ p i, (adviceQueryFeedOfResolver avk poly p i).natDegree ≤ 2047 :=
@@ -1056,9 +1054,7 @@ private theorem adaptive_action_x_degree_le_for (numProofs : ℕ)
     all_goals
       first
       | exact hpoly _
-      | change ComputablePolynomial.zero.natDegree ≤ 2047
-        rw [ComputablePolynomial.zero_eq]
-        simp
+      | simp
   have hnB : avk.n - 1 ≤ 2047 := by
     dsimp only [avk]
     rw [(derived_scalars_for numProofs _).2.1]
@@ -1095,7 +1091,7 @@ private theorem adaptive_action_x_degree_le_for (numProofs : ℕ)
     rfl
   rw [adaptiveActionPreXDifference_eq]
   rw [hmodel]
-  refine le_trans (Polynomial.natDegree_sub_le _ _) (max_le ?_ ?_)
+  refine le_trans (natDegree_sub_le _ _) (max_le ?_ ?_)
   · apply natDegree_combineConstraints_le (B := 2047) (W := 7)
       (Dc := 8188) (D := 20470)
     · norm_num
@@ -1217,8 +1213,8 @@ theorem actionSemanticModelFor_at_2pow123 {numProofs Q : ℕ}
       rw [ENNReal.div_le_iff (by norm_num) (by norm_num)]
       rw [show ((2 ^ 254 : ℕ) : ENNReal) =
           (2 ^ 84 : ENNReal) * (2 ^ 170 : ENNReal) by norm_num [← pow_add]]
-      rw [div_eq_mul_inv, one_mul, ← mul_assoc,
-        ENNReal.inv_mul_cancel (by norm_num) (by norm_num), one_mul]
+      rw [div_eq_mul_inv, _root_.one_mul, ← _root_.mul_assoc,
+        ENNReal.inv_mul_cancel (by norm_num) (by norm_num), _root_.one_mul]
       norm_num
 
 /-- The compressed straight-line remainder at an arbitrary Action count. -/
@@ -1511,8 +1507,8 @@ theorem actionStatisticalModel_at_2pow123 {Q : Nat} (hQ : Q <= 2 ^ 123) :
       rw [show ((2 ^ 254 : Nat) : ENNReal) =
           (2 ^ 84 : ENNReal) * (2 ^ 170 : ENNReal) by
             norm_num [← pow_add]]
-      rw [div_eq_mul_inv, one_mul, ← mul_assoc,
-        ENNReal.inv_mul_cancel (by norm_num) (by norm_num), one_mul]
+      rw [div_eq_mul_inv, _root_.one_mul, ← _root_.mul_assoc,
+        ENNReal.inv_mul_cancel (by norm_num) (by norm_num), _root_.one_mul]
       norm_num
 
 /-- The combined constraint-plus-Action finder stays within the same conservative three-bit
