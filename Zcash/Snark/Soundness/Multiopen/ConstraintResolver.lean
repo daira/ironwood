@@ -224,7 +224,7 @@ def assembledQueryMemberRoute_faithful [DecidableEq G] [Inhabited G]
   · simpa only [deployedMemberClaim, deployedSetQueries,
       constructIntermediateSets_zip_sets_getD] using hall.2 (.point 0, []) 0
 
-omit [Module Fp G] in
+omit [AddCommGroup G] [Module Fp G] in
 /--
 The member selected by the canonical route carries the routed commitment identity.
 This exposes the positional identity fact retained by `MultiopenGrouped.ids`.

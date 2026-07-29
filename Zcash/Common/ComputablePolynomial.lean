@@ -186,13 +186,13 @@ theorem zsmul_eq (n : Int) (p : Polynomial R) : zsmul n p = n • p := by
 
 theorem pow_eq (p : Polynomial R) (n : Nat) : pow p n = p ^ n := by
   induction n with
-  | zero => simpa [pow, const_eq]
+  | zero => simp [pow, const_eq]
   | succ n ih => simp [pow, ih, mul_eq, _root_.pow_succ]
 
 /-- Executable monic division.  Mathlib's definition installs `Classical.decEq` internally even
 when the coefficient ring already has decidable equality; this is the same recursion with the
 coefficient-data operations supplied explicitly. -/
-def divModByMonicAux : ∀ (p : Polynomial R) {q : Polynomial R}, q.Monic →
+def divModByMonicAux : ∀ (_p : Polynomial R) {q : Polynomial R}, q.Monic →
     Polynomial R × Polynomial R
   | p, q, hq =>
       if h : p.degree ≥ q.degree ∧ p ≠ zero then
@@ -216,12 +216,12 @@ theorem divModByMonicAux_eq (p : Polynomial R) {q : Polynomial R} (hq : q.Monic)
   fun_induction divModByMonicAux p hq
   · rw [Polynomial.divModByMonicAux]
     simp_all +zetaDelta only [zero_eq, add_eq, sub_eq, mul_eq, const_eq, pow_eq, X_eq,
-      true_and, if_pos, Prod.mk.injEq]
+      true_and]
     split
     · rfl
     · aesop
   · rw [Polynomial.divModByMonicAux]
-    simp_all +zetaDelta only [zero_eq, if_neg]
+    simp_all +zetaDelta only [zero_eq]
     split
     · contradiction
     · rfl
@@ -233,10 +233,10 @@ theorem modByMonic_eq (p q : Polynomial R) : modByMonic p q = p %ₘ q := by
   · rfl
 
 theorem natCast_eq (n : Nat) : natCast n = (n : Polynomial R) := by
-  simpa [natCast, const_eq] using (Polynomial.C_eq_natCast (R := R) n)
+  simp [natCast, const_eq]
 
 theorem intCast_eq (n : Int) : intCast n = (n : Polynomial R) := by
-  simpa [intCast, const_eq] using (Polynomial.C_eq_intCast (R := R) n)
+  simp [intCast, const_eq]
 
 /-- Executable list sum using the coefficient-data addition. -/
 def sumList (ps : List (Polynomial R)) : Polynomial R :=
@@ -266,6 +266,7 @@ theorem foldl_mul_eq (ps : List (Polynomial R)) (acc : Polynomial R) :
 theorem prodList_eq (ps : List (Polynomial R)) : prodList ps = ps.prod := by
   rw [prodList, foldl_mul_eq, const_eq, Polynomial.C_1, one_mul]
 
+omit [DecidableEq R] in
 private theorem standard_left_distrib (a b c : Polynomial R) :
     a * (b + c) = a * b + a * c := by
   exact left_distrib a b c

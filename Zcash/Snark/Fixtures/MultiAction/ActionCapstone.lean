@@ -542,7 +542,7 @@ private theorem resolverPermutationCell_card_le
 
 /-- The exact per-Action permutation-cell count.  Unlike the old `2^16` envelope, this
 tight value keeps the consensus-maximum β budget below `2^46`. -/
-private theorem resolverPermutationCell_card_eq
+theorem resolverPermutationCell_card_eq
     (pp : Keygen.ProofParams) (urs : URS VestaG)
     (poly : CommitmentId → Polynomial Fp)
     (p : Fin (pp.mergeDerived actionCircuit).numProofs) :
@@ -955,7 +955,7 @@ private theorem action_length_flatten_ofFn_le {α : Type*} {n : ℕ}
     exact hf i
   · rw [List.length_map, List.length_ofFn, smul_eq_mul]
 
-private theorem adaptive_action_constraint_count_le_for (numProofs : ℕ)
+theorem adaptive_action_constraint_count_le_for (numProofs : ℕ)
     (basis : AugmentedIndex
       (2 ^ ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k) → VestaG)
     (inputs : Fin ((actionProofParamsFor numProofs).mergeDerived actionCircuit).numProofs →
@@ -2134,7 +2134,9 @@ theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generato
 
 /-- **Consensus-generic bare-adaptive Action capstone.**  Every consensus-valid bundle size keeps
 the `2^123` direct-decoding target.  The adaptive DLOG solver has the existing conservative
-`2^127` envelope, and the complete compressed-plus-semantic remainder is at most `2^-83`. -/
+`2^127` envelope, and the complete compressed-plus-semantic remainder is at most `2^-83`.
+The final conjunct transports that event bound to any transcript experiment related by an
+explicit `PMFEventBiasLE`, adding its conversion-bias budget. -/
 theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generatorRO_for
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
@@ -2179,9 +2181,29 @@ theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generato
         2 ^ 127 ∧
       adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
         2 ^ 127 ∧
-      ∀ basis O,
+      (∀ basis O,
         2 * adaptiveActionDirectDecodeOps
-          (actionProofParamsFor numProofs) family basis O ≤ 2 ^ 123 := by
+          (actionProofParamsFor numProofs) family basis O ≤ 2 ^ 123) ∧
+      ∀ (actual : PMF
+          ((↥(Set.range query) → VestaG) ×
+            (BTranscript Fp VestaG
+              (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+                family.init.length 10 +
+                3 * ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k) → Fp)))
+        (εBias : ENNReal),
+        PMFEventBiasLE actual
+          (independentProductPMF (orchardGeneratorROSetup query)
+            (PMF.uniformOfFintype
+              (BTranscript Fp VestaG
+                (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+                  family.init.length 10 +
+                  3 * ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k) → Fp)))
+          εBias →
+        actual.toOuterMeasure
+            ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+              adaptiveActionAcceptFalseStatementEvent
+                (actionProofParamsFor numProofs) family inputs) ≤
+          (profile.advantage (2 ^ 127) (2 ^ 127) + 1 / (2 ^ 83 : ENNReal)) + εBias := by
   have hcost := profile.solverCost_le
   have hqueries :
       adaptiveActionDlogRandomOracleQueries (actionProofParamsFor numProofs) family ≤
@@ -2197,31 +2219,44 @@ theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generato
       adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
           16 * 2 ^ 123 := hcost.2.1
       _ = 2 ^ 127 := by norm_num
-  refine ⟨?_, hqueries, hgroup, hcost.2.2⟩
-  refine le_trans
-    (orchard_action_acceptFalseStatement_prob_le_adaptive_for numProofs B hB query hquery
-      family inputs hvk hI hchar profile.toAdaptiveActionDlogProfile) ?_
-  refine le_trans ?_
-    (add_le_add (profile.advantage_mono hqueries hgroup)
-      (actionStatisticalModelFor_at_2pow123 hn profile.queryBound))
-  refine le_trans ?_ (add_le_add le_rfl
-    (adaptiveActionStatisticalModelFor_le_action numProofs family.Q))
-  have hsum :
-      (∑ i : Fin 5,
-        ((![numProofs * 2 ^ 25, numProofs * 950835027, numProofs * 73554,
-            numProofs * 2 ^ 23, 20470] i : ℕ) : ENNReal) / Fintype.card Fp) =
-        (((numProofs * 992851621 + 20470 : ℕ) : ENNReal) /
-          Fintype.card Fp) := by
-    norm_num [Fin.sum_univ_succ]
+  have hprob :
+      (independentProductPMF (orchardGeneratorROSetup query)
+        (PMF.uniformOfFintype
+          (BTranscript Fp VestaG
+            (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+              family.init.length 10 +
+              3 * ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
+          ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+            adaptiveActionAcceptFalseStatementEvent
+              (actionProofParamsFor numProofs) family inputs) ≤
+        profile.advantage (2 ^ 127) (2 ^ 127) + 1 / (2 ^ 83 : ENNReal) := by
+    refine le_trans
+      (orchard_action_acceptFalseStatement_prob_le_adaptive_for numProofs B hB query hquery
+        family inputs hvk hI hchar profile.toAdaptiveActionDlogProfile) ?_
+    refine le_trans ?_
+      (add_le_add (profile.advantage_mono hqueries hgroup)
+        (actionStatisticalModelFor_at_2pow123 hn profile.queryBound))
+    refine le_trans ?_ (add_le_add le_rfl
+      (adaptiveActionStatisticalModelFor_le_action numProofs family.Q))
+    have hsum :
+        (∑ i : Fin 5,
+          ((![numProofs * 2 ^ 25, numProofs * 950835027, numProofs * 73554,
+              numProofs * 2 ^ 23, 20470] i : ℕ) : ENNReal) / Fintype.card Fp) =
+          (((numProofs * 992851621 + 20470 : ℕ) : ENNReal) /
+            Fintype.card Fp) := by
+      norm_num [Fin.sum_univ_succ]
+      simp only [div_eq_mul_inv]
+      ring
+    rw [hsum]
+    unfold adaptiveActionStatisticalModelFor actionSemanticModelFor
+    dsimp only
+    push_cast
     simp only [div_eq_mul_inv]
-    ring
-  rw [hsum]
-  unfold adaptiveActionStatisticalModelFor actionSemanticModelFor
-  dsimp only
-  push_cast
-  simp only [div_eq_mul_inv]
-  ring_nf
-  exact le_rfl
+    ring_nf
+    exact le_rfl
+  refine ⟨hprob, hqueries, hgroup, hcost.2.2, ?_⟩
+  intro actual εBias hbias
+  exact event_measure_le_of_bias hbias _ hprob
 
 /-- **Final sequential Action capstone.**  For every query-bounded sequential online-AGM prover
 with executable root, IPA, constraint-`x`, and Action phases, deployed verifier acceptance of a
@@ -2465,7 +2500,9 @@ theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO
 /-- **Consensus-generic exact-Action work-factor endpoint.**  For every Orchard-valid bundle
 size, a `2^123`-bounded sequential online-AGM adversary reduces to a Vesta-DLOG adversary with
 `2^126` resources.  Generalizing the five semantic surfaces costs one conservative statistical
-bit, from `2^-84` at the one-Action fixture to `2^-83` uniformly through the consensus maximum. -/
+bit, from `2^-84` at the one-Action fixture to `2^-83` uniformly through the consensus maximum.
+The final conjunct transports that event bound to any transcript experiment related by an
+explicit `PMFEventBiasLE`, adding its conversion-bias budget. -/
 theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO_for
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
@@ -2513,7 +2550,26 @@ theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO_for
       actionDlogRandomOracleQueries (actionProofParamsFor numProofs) prover.toFamily ≤
         2 ^ 126 ∧
       actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤ 2 ^ 126 ∧
-      ∀ basis O, 2 * prover.toFamily.straightLineDirectDecodeOps basis O ≤ 2 ^ 123 := by
+      (∀ basis O, 2 * prover.toFamily.straightLineDirectDecodeOps basis O ≤ 2 ^ 123) ∧
+      ∀ (actual : PMF
+          ((↥(Set.range query) → VestaG) ×
+            (BTranscript Fp VestaG
+              (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+                prover.toFamily.init.length 10 +
+                3 * ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k) → Fp)))
+        (εBias : ENNReal),
+        PMFEventBiasLE actual
+          (independentProductPMF (orchardGeneratorROSetup query)
+            (PMF.uniformOfFintype
+              (BTranscript Fp VestaG
+                (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+                  prover.toFamily.init.length 10 +
+                  3 * ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k) → Fp)))
+          εBias →
+        actual.toOuterMeasure
+            ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+              actionAcceptFalseStatementEventFor numProofs prover.toFamily inputs) ≤
+          (profile.advantage (2 ^ 126) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal)) + εBias := by
   have hcost := profile.solverCost_le
   have hqueries :
       actionDlogRandomOracleQueries (actionProofParamsFor numProofs) prover.toFamily ≤
@@ -2529,11 +2585,23 @@ theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO_for
       actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
           8 * 2 ^ 123 := hcost.2.1
       _ = 2 ^ 126 := by norm_num
-  refine ⟨?_, hqueries, hgroup, hcost.2.2⟩
-  refine le_trans
-    (orchard_action_acceptFalseStatement_prob_le_sequential_for numProofs B hB query hquery
-      prover inputs hvk hI hchar profile.toStraightLineActionDlogProfile hL execution) ?_
-  exact add_le_add (profile.advantage_mono hqueries hgroup)
-    (actionStatisticalModelFor_at_2pow123 hn profile.queryBound)
+  have hprob :
+      (independentProductPMF (orchardGeneratorROSetup query)
+        (PMF.uniformOfFintype
+          (BTranscript Fp VestaG
+            (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+              prover.toFamily.init.length 10 +
+              3 * ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
+          ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+            actionAcceptFalseStatementEventFor numProofs prover.toFamily inputs) ≤
+        profile.advantage (2 ^ 126) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal) := by
+    refine le_trans
+      (orchard_action_acceptFalseStatement_prob_le_sequential_for numProofs B hB query hquery
+        prover inputs hvk hI hchar profile.toStraightLineActionDlogProfile hL execution) ?_
+    exact add_le_add (profile.advantage_mono hqueries hgroup)
+      (actionStatisticalModelFor_at_2pow123 hn profile.queryBound)
+  refine ⟨hprob, hqueries, hgroup, hcost.2.2, ?_⟩
+  intro actual εBias hbias
+  exact event_measure_le_of_bias hbias _ hprob
 
 end Zcash.Snark.Fixture
