@@ -3,6 +3,7 @@ import CompPoly.Univariate.ToPoly
 import CompPoly.Univariate.Linear
 import CompPoly.Univariate.Roots.Enumeration
 import CompPoly.Univariate.DivisionCorrectness
+import CompPoly.Univariate.Lagrange
 
 /-!
 # General theory for the computable polynomial representation
