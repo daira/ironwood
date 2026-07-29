@@ -13,7 +13,7 @@ statement at the public inputs supplied to the verifier.
 
 namespace Zcash.Snark
 
-open Polynomial
+open CompPoly CompPoly.CPolynomial
 open Classical
 open scoped ENNReal
 
@@ -46,7 +46,7 @@ noncomputable def topLevelStatements_or_relation_of_deployedAccepts
     (ps : ProofString (pp.mergeDerived top) Fp VestaG)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (pU pW : Fp)
-    (hpoly : Polynomial Fp)
+    (hpoly : CPoly)
     {a₀ : Fin (2 ^ urs.k) → Fp}
     (pbatch :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
@@ -86,7 +86,7 @@ noncomputable def topLevelStatements_or_relation_of_deployedAccepts
       (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch i).length)
     (colPoly : Fin (deployedSetQueries
       (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch i).length →
-        Polynomial Fp)
+        CPoly)
     (hbindAll : ∀ (idx : Fin ((constructIntermediateSets
           (assembleQueries
             (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch)).points.getD

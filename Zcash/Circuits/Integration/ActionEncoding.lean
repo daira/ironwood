@@ -25,7 +25,8 @@ is handled by the generic assignment layer. The generic terminal theorem remains
 
 namespace Zcash.Snark
 
-open Halo2 Polynomial
+open Halo2
+open CompPoly CompPoly.CPolynomial
 open Zcash.Circuits
 open Zcash.Circuits.Action
 open Keygen
@@ -72,7 +73,7 @@ def actionTopLevelCircuitCorrectness
         (instanceCommitment := instanceCommitment)
         urs hk (actionCircuit.toVerifierKey pp urs)
         ps ch batchOpenings i hi)
-    (hpoly : Polynomial Fp)
+    (hpoly : CPoly)
     (relation :
       CanonicalMemberConstraintRelation
         urs hk (actionCircuit.toVerifierKey pp urs)
