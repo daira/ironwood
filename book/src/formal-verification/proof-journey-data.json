@@ -26,11 +26,6 @@
       "label": "PR #114 runtime AGM head",
       "ref": "9675704b8a953cb7e8a0c33b420fd1818342fe0c",
       "fetch": "pull/114/head"
-    },
-    "actionIntegration": {
-      "label": "PR #99 Action integration head",
-      "ref": "2d292efed13624c4bcb5df351c275cab003340e3",
-      "fetch": "pull/99/head"
     }
   },
   "prs": {
@@ -96,13 +91,6 @@
       "url": "https://github.com/zcash/ironwood/pull/27",
       "sha": "2575fe0",
       "lane": "parallel"
-    },
-    "99": {
-      "label": "PR #99",
-      "title": "Integrate circuit soundness with the verifier soundness stack",
-      "url": "https://github.com/zcash/ironwood/pull/99",
-      "sha": "2d292ef",
-      "lane": "merged"
     }
   },
   "description": "The logical route from the deployed verifier to the formal soundness endpoint.",
@@ -112,7 +100,7 @@
       "chapter": "Faithfulness",
       "title": "Pin Lean to the deployed verifier",
       "claim": "The Lean assembler and a captured Rust verifier MSM agree coefficient-for-coefficient on the checked fixture.",
-      "summary": "The proof starts by fixing the object under study: the verifier's final multi-scalar multiplication. MsmMatch transfers a checked coefficient match to equality of group evaluations. Independently, the Action keygen certificate derives the key from the closed circuit and URS and proves field-for-field equality with the captured key. The Rust correspondence evidence remains fixture-based rather than a universal Rust-to-Lean equivalence.",
+      "summary": "The proof starts by fixing the object under study: the verifier's final multi-scalar multiplication. MsmMatch transfers a checked coefficient match to equality of group evaluations, but the deployed evidence remains fixture-based rather than a universal Rust-to-Lean equivalence.",
       "nodes": [
         "assemble",
         "fingerprint",
@@ -130,25 +118,18 @@
         {
           "symbol": "fingerprint_matches",
           "path": "Zcash/Snark/Fingerprint/Fixture.lean"
-        },
-        {
-          "symbol": "vk_eq_toVerifierKey",
-          "path": "Zcash/Snark/Keygen/Certificate.lean",
-          "source": "actionIntegration"
         }
       ],
       "prs": [
-        "27",
-        "99"
+        "27"
       ],
       "proves": [
         "The checked Lean and captured Rust MSM coefficients match.",
-        "A matching MSM has the same group evaluation under any supplied URS.",
-        "The captured Action verifying key equals the key derived from the closed Action circuit and captured URS, field-for-field."
+        "A matching MSM has the same group evaluation under any supplied URS."
       ],
       "residuals": [
-        "Rust capture provenance, canonical Post-NU6.3 artifact selection, and opaque-tag to Vesta-point faithfulness.",
-        "Halo2 pinned-key byte serialization and Blake2b derivation remain fixture-generation boundaries."
+        "Rust capture provenance and opaque-tag to Vesta-point faithfulness.",
+        "Deriving the deployed verifying key and circuit description inside Lean."
       ],
       "durationMs": 9000
     },
@@ -712,7 +693,7 @@
         "The endpoint records reduction outcomes and residual premises without hiding them."
       ],
       "residuals": [
-        "High-level relation, Rust-capture and canonical-VK provenance, Blake2b-as-RO, generator hash-to-curve-as-RO, the AGM idealization, and DL hardness.",
+        "High-level relation, VK derivation, Rust-capture trust, Blake2b-as-RO, generator hash-to-curve-as-RO, the AGM idealization, and DL hardness.",
         "Runtime extraction, real-adversary execution, oracle-query loss, and combined error budgeting."
       ],
       "durationMs": 11000

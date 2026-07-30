@@ -383,9 +383,9 @@ const nodes = [
   { id:'hlrel', c:4,r:8, w:225, label:'high-level relation', status:'floor',
     anchor:'ActionBundleWitness → Security.Ledger.Statement',
     role:'The output-side floor, moved one step out. The composed knowledge capstone returns an ActionBundleWitness containing each actual circuit PrivateWitness and a proof that it satisfies the deployed Action circuit’s compiled specification. What stays outside Lean is identifying those circuit witnesses and that specification with the abstract Orchard Action witness relation (protocol spec §4.17.4) consumed by the ledger security games: the target is transcribed in Security/Ledger/Statement.lean, but nothing yet connects it to actionCircuit.' },
-  { id:'vkfaith', c:5,r:8, label:'Rust VK provenance', status:'floor',
-    anchor:'Keygen.Certificate.vk_eq_toVerifierKey · Fingerprint.Match',
-    role:'Lean derives the verifying key from the closed Action circuit and URS, and proves field-for-field equality with the captured key. The remaining input-side floor is provenance: identifying the Rust-generated capture with Orchard’s canonical deployed artifact, including the pinned-key byte-serialization boundary.' },
+  { id:'vkfaith', c:5,r:8, label:'VK correctness', status:'floor',
+    anchor:'Verifier.Assemble',
+    role:'The input-side gap: the verifying key and circuit description fed to the verifier faithfully encode the real deployed Ironwood circuit. Dual to the high-level relation on the output side; VK derivation in Lean is not started.' },
 ];
 
 // Each edge is [from, to, kind, via?] where `via` names the Lean lemma/def that
