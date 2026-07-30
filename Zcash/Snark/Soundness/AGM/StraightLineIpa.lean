@@ -9,8 +9,7 @@ rewinding.  `straightLineIpaZeroOrRelation` and `straightLineBindingAttackZRootO
 endpoints; the symbolic IPA equation they read is built from the representation-carrying
 `AlgebraicWfProof` interface.
 
-The module is additive to the recursive AFK extractor: no declaration here weakens, replaces, or
-is imported by that path.
+No declaration here rewinds the adversary: every endpoint reads one accepting execution.
 -/
 
 namespace Zcash.Snark
@@ -94,7 +93,7 @@ def ipaDiscrepancyFold : Fp -> List (Fp × Fp) -> List Fp -> Fp
   | current, _, _ => current
 
 /-- The challenge and pinned polynomial encountered at every step of the discrepancy walk. -/
-noncomputable def ipaDiscrepancyRootEvents : Fp -> List (Fp × Fp) -> List Fp ->
+def ipaDiscrepancyRootEvents : Fp -> List (Fp × Fp) -> List Fp ->
     List (Fp × CPoly)
   | current, round :: rounds, challenge :: challenges =>
       (challenge, ipaDiscrepancyPolynomial current round) ::
@@ -442,7 +441,7 @@ def straightLineRoundDiscrepancies
     (representedRoundDiscrepancy (evalVector shape.k (nu 7)) (nu 10))
 
 /-- The challenge-polynomial pairs encountered by the one-run IPA discrepancy walk. -/
-noncomputable def straightLineIpaRootEvents
+def straightLineIpaRootEvents
     {vk : VerifyingKey shape Fp VestaG}
     {instanceCommitment : Fin shape.numProofs -> Nat -> VestaG}
     (p : AlgebraicWfProof basis vk instanceCommitment) (nu : Fin 11 -> Fp)
@@ -451,7 +450,7 @@ noncomputable def straightLineIpaRootEvents
     (p.straightLineRoundDiscrepancies nu) (List.ofFn chi)
 
 /-- The quadratic fixed before one concrete IPA-round squeeze. -/
-noncomputable def straightLineIpaRootPolynomial
+def straightLineIpaRootPolynomial
     {vk : VerifyingKey shape Fp VestaG}
     {instanceCommitment : Fin shape.numProofs -> Nat -> VestaG}
     (p : AlgebraicWfProof basis vk instanceCommitment) (nu : Fin 11 -> Fp)

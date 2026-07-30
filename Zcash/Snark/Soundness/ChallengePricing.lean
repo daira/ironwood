@@ -35,10 +35,10 @@ for every proof's copy argument — alongside the generic and lookup surfaces ab
 carries the whole challenge-pricing story.
 -/
 
--- The terminal API `snarkConstraintsSemanticDeployed_prob_le_of_root_schedule` consumes four
--- explicit bad-event bounds, one for each surface below. A concrete instantiation must obtain those
--- bounds through the sequential-coupling hook above; the compressed-identity capstone deliberately
--- cannot be presented as semantic soundness without them.
+-- The semantic terminal API consumes four explicit bad-event bounds, one for each surface below.
+-- A concrete instantiation must obtain those bounds through the sequential-coupling hook above;
+-- the compressed-identity capstone deliberately cannot be presented as semantic soundness
+-- without them.
 
 namespace Zcash.Snark
 
@@ -328,7 +328,7 @@ theorem lookup_beta_failure_measure_le (a s inp tbl : Multiset Fp) :
 
 /-- The complete `γ` exclusion for one deployed lookup: the product-difference roots together
 with the table-column zero factors used to eliminate the residual running-product branch. -/
-noncomputable def resolverLookupGammaBadSet
+def resolverLookupGammaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → CPoly)
@@ -340,7 +340,7 @@ noncomputable def resolverLookupGammaBadSet
 /-- The complete `β` exclusion for one deployed lookup: every potentially nonzero coefficient of
 the product difference together with the input-column zero factors. There are at most `u + 2`
 coefficients because the `γ` degree is at most `u + 1`. -/
-noncomputable def resolverLookupBetaBadSet
+def resolverLookupBetaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → CPoly)
@@ -509,7 +509,7 @@ theorem uniformChallenge_resolverLookupBetaBadSet
 
 /-- The union of all lookup `γ` exclusions in one proof bundle. The challenge is shared by every
 proof and lookup argument, so this is the event the transcript squeeze must avoid. -/
-noncomputable def allResolverLookupGammaBadSet
+def allResolverLookupGammaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → CPoly) (u : ℕ) : Finset Fp :=
@@ -517,7 +517,7 @@ noncomputable def allResolverLookupGammaBadSet
     resolverLookupGammaBadSet vk ch poly q.1 q.2 u
 
 /-- The union of all lookup `β` exclusions in one proof bundle. -/
-noncomputable def allResolverLookupBetaBadSet
+def allResolverLookupBetaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → CPoly) (u : ℕ) : Finset Fp :=
@@ -790,7 +790,7 @@ the eventual bridge constructor. -/
 
 /-- The union of the tuple-compression collision sets for an arbitrary finite family of enabled
 lookup activations. -/
-noncomputable def enabledLookupThetaBadSetFamily
+def enabledLookupThetaBadSetFamily
     {ι : Type*} [Fintype ι]
     (place : ι → RegionIndex → ℕ) (env : ι → Environment Fp)
     (lookup : ι → EnabledLookup Fp) : Finset Fp :=
@@ -863,7 +863,7 @@ theorem card_chunkedCellPairs_eq_fintypeCard
 
 /-- The finite `β` exclusion for one resolver-backed permutation argument.  There is one
 coefficient root set for each potentially nonzero coefficient of `pairProdDiff`. -/
-noncomputable def resolverPermutationBetaBadSet
+def resolverPermutationBetaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
     (poly : CommitmentId → CPoly)
@@ -930,7 +930,7 @@ theorem ResolverPermutationGoodChallenges.ofBadSets
       simp [szBadSet]
 
 /-- The union of all resolver permutation `γ` exclusions in one proof bundle. -/
-noncomputable def allResolverPermutationGammaBadSet
+def allResolverPermutationGammaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → CPoly) (m : ℕ) : Finset Fp :=
@@ -938,7 +938,7 @@ noncomputable def allResolverPermutationGammaBadSet
     resolverPermutationGammaBadSet vk ch poly p m
 
 /-- The union of all resolver permutation `β` exclusions in one proof bundle. -/
-noncomputable def allResolverPermutationBetaBadSet
+def allResolverPermutationBetaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
     (poly : CommitmentId → CPoly) (m : ℕ) : Finset Fp :=

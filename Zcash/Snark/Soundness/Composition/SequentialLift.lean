@@ -52,7 +52,7 @@ def nu (v : PreXView shape basis) : Fin 11 → Fp :=
     else if j = 3 then v.y else 0
 
 /-- The total pre-`x` constraint difference computed from a view alone. -/
-noncomputable def difference (v : PreXView shape basis)
+def difference (v : PreXView shape basis)
     (vk : VerifyingKey shape Fp VestaG)
     (ic : Fin shape.numProofs → ℕ → VestaG)
     (fixed : List (AlgebraicPoint (F := Fp) basis)) : CPoly :=
@@ -212,7 +212,7 @@ variable {family : ComputedDeployedRootFSFamily shape}
 
 /-- The lifted constraint-`x` stage: run the prover's own pre-`x` phase and price the view's
 difference. -/
-noncomputable def constraintXStage (sp : SequentialPreXProver family)
+def constraintXStage (sp : SequentialPreXProver family)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) :
     OracleComp
       (BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k))
@@ -228,15 +228,14 @@ challenge congruence at the four folding reads. -/
 theorem view_difference_eq (sp : SequentialPreXProver family)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
     (O : BTranscript Fp VestaG
-      (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp)
-    (tape : RecursiveForkTape Fp shape.k) :
+      (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp) :
     (sp.view basis ((sp.pre basis).run O)).difference (family.vk basis)
         (family.instanceCommitment basis) (family.fixedRepresentations basis) =
-      deployedConstraintDifferencePreX family basis (O, tape) := by
-  have hrun : (deployedRootRunOutput family basis (O, tape)).1 =
+      deployedConstraintDifferencePreX family basis O := by
+  have hrun : (deployedRootRunOutput family basis O).1 =
       (family.adversary basis).run O :=
     wrappedAdversary_run_fst family.toFamily basis O
-  have hreads : ∀ i, wrappedPreIpaReads (deployedRootRunOutput family basis (O, tape)) i =
+  have hreads : ∀ i, wrappedPreIpaReads (deployedRootRunOutput family basis O) i =
       O (algebraicFullPrefixesPre family.init ((family.adversary basis).run O) i) := by
     intro i
     have h := congrFun (wrappedPreIpaReads_run family.toFamily basis O) i
@@ -246,13 +245,13 @@ theorem view_difference_eq (sp : SequentialPreXProver family)
     AlgebraicProofString.preX1AssemblySource]
   rw [show ((sp.view basis ((sp.pre basis).run O)).points :
         List (AlgebraicPoint (F := Fp) basis)) =
-      (deployedRootRunOutput family basis (O, tape)).1.algebraicProof.preX1Points by
+      (deployedRootRunOutput family basis O).1.algebraicProof.preX1Points by
     rw [hrun]; exact sp.view_points basis O]
   rw [show (sp.view basis ((sp.pre basis).run O)).pieces =
-      (deployedRootRunOutput family basis (O, tape)).1.algebraicProof.hPieces by
+      (deployedRootRunOutput family basis O).1.algebraicProof.hPieces by
     funext i; rw [hrun]; exact sp.view_pieces basis O i]
   rw [committedPreXConstraintDifference_ps_congr
-    (ps₂ := (deployedRootRunOutput family basis (O, tape)).1.proof.1) _ _ _ _ _
+    (ps₂ := (deployedRootRunOutput family basis O).1.proof.1) _ _ _ _ _
     (fun q => by rw [hrun]; exact sp.view_advice basis O q)
     (fun q s => by rw [hrun]; exact sp.view_permProduct basis O q s)
     (sp.view_wf basis O)
@@ -289,13 +288,8 @@ theorem constraintXStage_agrees (sp : SequentialPreXProver family)
     (sp.constraintXStage basis).run O = deployedConstraintXBadSet family basis O := by
   rw [constraintXStage, OracleComp.run_bind, OracleComp.run_pure]
   ext x
-  simp only [Finset.mem_coe, deployedConstraintXBadSet, Set.mem_setOf_eq]
-  constructor
-  · intro hx
-    exact ⟨Classical.arbitrary _,
-      sp.view_difference_eq basis O (Classical.arbitrary _) ▸ hx⟩
-  · rintro ⟨tape, hx⟩
-    exact (sp.view_difference_eq basis O tape).symm ▸ hx
+  simp only [Finset.mem_coe, deployedConstraintXBadSet]
+  rw [sp.view_difference_eq basis O]
 
 /-- The lifted stage's queries are the prover's own pre-`x` queries, so the `x` prefix is
 untouched. -/
@@ -311,7 +305,7 @@ theorem constraintXStage_fresh (sp : SequentialPreXProver family)
   simpa [constraintXStage, OracleComp.queries_bind, OracleComp.queries] using hmem
 
 /-- **The lifted constraint-`x` chronology.** -/
-noncomputable def toConstraintXTrace (sp : SequentialPreXProver family) :
+def toConstraintXTrace (sp : SequentialPreXProver family) :
     DeployedConstraintXOnlineTrace family where
   stage := fun basis => sp.constraintXStage basis
   agrees := fun basis O => sp.constraintXStage_agrees basis O
@@ -322,7 +316,7 @@ family lifts to the full staged family: the root and IPA chronologies are intrin
 inputs, and the constraint-`x` chronology is derived from the prover's own execution order.
 The family's adversary, query budget, and hence outputs and acceptance probability are the
 inputs' own — see the `rfl` lemmas below. -/
-noncomputable def lift (sp : SequentialPreXProver family)
+def lift (sp : SequentialPreXProver family)
     (ipaTrace : StraightLineIpaOnlineTrace family.toFamily) :
     ComputedStraightLineDeployedFSFamily shape where
   toComputedDeployedRootFSFamily := family
@@ -350,10 +344,8 @@ end SequentialPreXProver
 
 /-! ## A complete sequential online-AGM prover
 
-`SequentialPreXProver.lift` is the small adapter used by the constraint layer.  The public
-coverage model below starts one layer earlier, at the online member family, and carries the
-actual computations stopped before every deployed-root and IPA squeeze.  Its projections build
-the root and IPA traces and then apply the pre-`x` lift; callers do not provide any trace object.
+The public sequential model carries stopped root and IPA computations and derives all traces
+internally before applying the pre-`x` lift.
 -/
 
 /-- Executable stages of an online member prover stopped before each of the six deployed-root
@@ -434,7 +426,7 @@ def toIpaTrace (sp : SequentialStraightLineProver root) :
 
 /-- The complete staged family generated by one sequential prover.  No root, IPA, or constraint
 trace is accepted as an input to this constructor. -/
-noncomputable def toFamily (sp : SequentialStraightLineProver root) :
+def toFamily (sp : SequentialStraightLineProver root) :
     ComputedStraightLineDeployedFSFamily shape :=
   sp.preX.lift sp.toIpaTrace
 
@@ -451,7 +443,7 @@ structure SequentialOnlineAGMProver (shape : Shape) where
 namespace SequentialOnlineAGMProver
 
 /-- Generate the complete straight-line family from the phased prover. -/
-noncomputable def toFamily (sp : SequentialOnlineAGMProver shape) :
+def toFamily (sp : SequentialOnlineAGMProver shape) :
     ComputedStraightLineDeployedFSFamily shape :=
   sp.straight.toFamily
 

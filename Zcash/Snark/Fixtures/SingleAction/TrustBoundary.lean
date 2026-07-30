@@ -36,26 +36,34 @@ captured points. The derivation's supporting data and functions (`capturedUrsGLa
 `native_decide` claims cannot be narrowed by quietly widening what they range over.
 -/
 
--- Every captured fixture and the verifier assembly it runs are bounded at the standard tier — no
--- `sorry`, no unexpected axiom (whole dependency graph). The `native_decide` fixtures carry the
--- compiler-trust axiom, permitted by `+native` and pinned exactly by the `#print axioms` guards below.
--- The static checks and degree budget at the single-Action captured key (issue #128):
--- the twelve decided facts the Action-level capstone's derived-key checks transfer through.
-assert_axioms Zcash.Snark.Fixture.vk_advice_layout_length +native(Zcash.Snark.Fixture.vk_advice_layout_length)
-assert_axioms Zcash.Snark.Fixture.vk_instance_layout_length +native(
-  Zcash.Snark.Fixture.vk_instance_layout_length)
-assert_axioms Zcash.Snark.Fixture.vk_fixed_layout_length +native(Zcash.Snark.Fixture.vk_fixed_layout_length)
-assert_axioms Zcash.Snark.Fixture.vk_omega_order +native(Zcash.Snark.Fixture.vk_omega_order)
-assert_axioms Zcash.Snark.Fixture.vk_n_cast_ne_zero +native(Zcash.Snark.Fixture.vk_n_cast_ne_zero)
+-- Census the captured single-Action fixtures, including permitted native-code trust.
+assert_axioms Zcash.Snark.Fixture.vk_advice_layout_length
+assert_axioms Zcash.Snark.Fixture.vk_instance_layout_length
+assert_axioms Zcash.Snark.Fixture.vk_fixed_layout_length
+assert_axioms Zcash.Snark.Fixture.vk_omega_order +native(
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.Keygen.certificate,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_axioms Zcash.Snark.Fixture.vk_n_cast_ne_zero
 assert_axioms Zcash.Snark.Fixture.vk_gates_degree_le +native(Zcash.Snark.Fixture.vk_gates_degree_le)
 assert_axioms Zcash.Snark.Fixture.vk_chunk_width_le +native(Zcash.Snark.Fixture.vk_chunk_width_le)
 assert_axioms Zcash.Snark.Fixture.vk_lookup_input_degree_le +native(
   Zcash.Snark.Fixture.vk_lookup_input_degree_le)
 assert_axioms Zcash.Snark.Fixture.vk_lookup_table_degree_le +native(
   Zcash.Snark.Fixture.vk_lookup_table_degree_le)
-assert_axioms Zcash.Snark.Fixture.vk_quotient_tail_le +native(Zcash.Snark.Fixture.vk_quotient_tail_le)
-assert_axioms Zcash.Snark.Fixture.vk_n_pred_le +native(Zcash.Snark.Fixture.vk_n_pred_le)
-assert_axioms Zcash.Snark.Fixture.shape_k_pred_le +native(Zcash.Snark.Fixture.shape_k_pred_le)
+assert_axioms Zcash.Snark.Fixture.vk_quotient_tail_le
+assert_axioms Zcash.Snark.Fixture.vk_n_pred_le
+assert_axioms Zcash.Snark.Fixture.shape_k_pred_le
 assert_axioms Zcash.Snark.Fixture.fingerprint_matches +native(
   Zcash.Snark.Fixture.fingerprint_matches)
 assert_axioms Zcash.Snark.Fixture.capturedPointCoordinatesValid_eq_true +native(
@@ -88,7 +96,6 @@ assert_axioms Zcash.Snark.Fixture.derivedInstanceCommitment
 -- concrete circuit fact on which that comparison depends.
 assert_axioms Zcash.Snark.Keygen.certificate +native(
   Zcash.Snark.Keygen.certificate,
-  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
@@ -100,7 +107,6 @@ assert_axioms Zcash.Snark.Keygen.certificate +native(
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.Keygen.shape_eq_mergeDerived +native(
   Zcash.Snark.Keygen.certificate,
-  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
@@ -114,7 +120,6 @@ assert_axioms Zcash.Snark.Keygen.vk_eq_derived +native(
   Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Keygen.certificate,
-  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
@@ -150,7 +155,6 @@ assert_axioms Zcash.Snark.Deployed.action_bundleStatement_or_relation_of_deploye
   Zcash.Snark.ActionPermutationDomain.queryLayouts_eq,
   Zcash.Snark.ActionPermutationDomain.routingCoherent,
   Zcash.Snark.Keygen.certificate,
-  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
@@ -162,6 +166,82 @@ assert_axioms Zcash.Snark.Deployed.action_bundleStatement_or_relation_of_deploye
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 
+-- The same capstone with the proof multiplicity left free, and its specialization to the
+-- captured public inputs. Both are top-level leaves: nothing censused depends on them, so
+-- without these entries their trusted base would go unbounded (the inline `assert_no_sorry`
+-- in `Deployed/ActionVesta.lean` bounds only sorries, not axioms).
+assert_axioms Zcash.Snark.Deployed.action_bundleStatement_or_relation_of_deployedAccepts_family +native(
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  Zcash.Snark.actionConstantCellAddressFailures_eq_nil,
+  Zcash.Snark.actionConstantSites_fit,
+  Zcash.Snark.actionConstantValueFailures_eq_nil,
+  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil,
+  Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionMissingConstantAllocations_eq_nil,
+  Zcash.Snark.actionNumPermCols_eq,
+  Zcash.Snark.actionNumPermCols_pos,
+  CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
+  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
+  Zcash.Snark.ActionGateCoherence.domainExponent_lt,
+  Zcash.Snark.ActionGateCoherence.gateData_eq,
+  Zcash.Snark.ActionGateCoherence.selectorDegree,
+  Zcash.Snark.ActionPermutationDomain.chunks_eq,
+  Zcash.Snark.ActionPermutationDomain.columnCount_chunkLen_eq,
+  Zcash.Snark.ActionPermutationDomain.deltaPowers_injective,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_eq,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_lt,
+  Zcash.Snark.ActionPermutationDomain.queryLayouts_eq,
+  Zcash.Snark.ActionPermutationDomain.routingCoherent,
+  Zcash.Snark.Keygen.certificate,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_axioms Zcash.Snark.Deployed.action_bundleStatement_or_relation_at_capturedInstances +native(
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  Zcash.Snark.actionConstantCellAddressFailures_eq_nil,
+  Zcash.Snark.actionConstantSites_fit,
+  Zcash.Snark.actionConstantValueFailures_eq_nil,
+  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil,
+  Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionMissingConstantAllocations_eq_nil,
+  Zcash.Snark.actionNumPermCols_eq,
+  Zcash.Snark.actionNumPermCols_pos,
+  CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
+  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
+  Zcash.Snark.ActionGateCoherence.domainExponent_lt,
+  Zcash.Snark.ActionGateCoherence.gateData_eq,
+  Zcash.Snark.ActionGateCoherence.selectorDegree,
+  Zcash.Snark.ActionPermutationDomain.chunks_eq,
+  Zcash.Snark.ActionPermutationDomain.columnCount_chunkLen_eq,
+  Zcash.Snark.ActionPermutationDomain.deltaPowers_injective,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_eq,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_lt,
+  Zcash.Snark.ActionPermutationDomain.queryLayouts_eq,
+  Zcash.Snark.ActionPermutationDomain.routingCoherent,
+  Zcash.Snark.Keygen.certificate,
+  Zcash.Snark.Keygen.instanceCommitment_capturedActionInputs,
+  Zcash.Snark.Keygen.publicInputRows_capturedActionInputs,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 -- `whitespace := lax` collapses all whitespace, so the pin is insensitive to how
 -- `#print axioms` line-wraps the list (a formatting artifact of the axiom-name lengths).
 /-- info: 'Zcash.Snark.Fixture.fingerprint_matches' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.Fixture.fingerprint_matches._native.native_decide.ax_1_1] -/

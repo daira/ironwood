@@ -253,8 +253,38 @@ def statements_or_relation_of_accepted_topLevelBundleStatement
       TopLevelBundleStatement.of_publicInputEncoding
         top pp poly inputs hencoding htop
 
+/-- Present retained private witnesses at the public inputs bound by the accepted instance
+commitments, preserving a computed relation on binding failure. -/
+def witnesses_or_relation_of_accepted_topLevelBundleWitness
+    (domainExponent_lt : top.domainExponent < 33)
+    (witness : TopLevelBundleWitness top pp
+      (CanonicalMemberConstraintRelation.acceptedPolynomial
+        (memberDecode := memberDecode) haccepts)) :
+    TopLevelExternalBundleWitness top inputs ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  let poly :=
+    CanonicalMemberConstraintRelation.acceptedPolynomial
+      (memberDecode := memberDecode) haccepts
+  change TopLevelBundleWitness top pp poly at witness
+  refine bindOrRelationWitness
+    (finForallOrRelationWitness
+      (A := fun proofIndex : Fin (pp.mergeDerived top).numProofs =>
+        let assignment : TopLevelAssignment top
+            (pp.mergeDerived top).numProofs proofIndex :=
+          { polynomial := poly }
+        assignment.PublicInputEncoding (inputs proofIndex))
+      fun proofIndex =>
+        publicInputEncoding_or_relation
+          top pp urs hk inputs ps ch pU pW a batchOpenings memberDecode
+          haccepts proofIndex domainExponent_lt)
+    fun hencoding =>
+      TopLevelBundleWitness.of_publicInputEncoding
+        top pp poly inputs hencoding witness
+
 assert_no_sorry
   statements_or_relation_of_accepted_topLevelBundleStatement
+assert_no_sorry
+  witnesses_or_relation_of_accepted_topLevelBundleWitness
 
 end TopLevelInstanceCommitment
 

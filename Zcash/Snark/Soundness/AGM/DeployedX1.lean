@@ -42,7 +42,7 @@ attribute [local irreducible] deployedSetMemberCommitments
 /-- An in-range `x₄` aggregate is itself an algebraic power batch at the deployed `x₁` squeeze.
 The aggregate coordinates come from the already reconstructed `x₄` batch; the member coordinates
 come from their squeeze-pinned AGM representations. -/
-noncomputable def deployedX1AlgebraicBatchOrRelation
+def deployedX1AlgebraicBatchOrRelation
     [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (instanceCommitment : Fin shape.numProofs → Nat → G)

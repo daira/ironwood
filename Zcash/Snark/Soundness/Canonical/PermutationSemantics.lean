@@ -521,7 +521,7 @@ theorem uniformChallenge_resolverPermutationZeroFactorBadSet
 
 /-- The complete `γ` exclusion: roots needed for multiset recovery together with the individual
 source-cell factors that must stay nonzero while propagating equality around a cycle. -/
-noncomputable def resolverPermutationGammaBadSet
+def resolverPermutationGammaBadSet
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → CPoly)

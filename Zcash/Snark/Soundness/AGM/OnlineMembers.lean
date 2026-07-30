@@ -1,3 +1,4 @@
+import Zcash.Meta.LibrarySuggestionsDeny
 import Zcash.Snark.Soundness.AGM.DeployedCoordinateDecode
 import Zcash.Snark.Soundness.AGM.DeployedX1
 
@@ -242,7 +243,7 @@ theorem deployedMemberRepresentationsOfCovered_components
 /-- The exact deployed within-set `x1` batch, obtained from online-covered member coordinates.
 Any mismatch with the already decoded `x4` aggregate is returned as an explicit augmented-basis
 relation. -/
-noncomputable def deployedX1BatchOfCoveredOrRelation
+def deployedX1BatchOfCoveredOrRelation
     {vk : VerifyingKey shape Fp VestaG}
     {instanceCommitment : Fin shape.numProofs → Nat → VestaG}
     (p : AlgebraicWfProof basis vk instanceCommitment)
