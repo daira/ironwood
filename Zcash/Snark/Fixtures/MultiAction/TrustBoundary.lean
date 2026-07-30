@@ -145,16 +145,6 @@ assert_axioms Zcash.Snark.Fixture2.orchard_deployed_knowledge_error_captured_str
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- Census the captured and consensus-generic Action capstones with their fixtures.
-assert_axioms Zcash.Snark.Fixture.actionNoStatementOrRelationEvent +native(
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
-  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
-  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.Fixture.actionAcceptFalseStatementEvent +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
@@ -180,39 +170,6 @@ assert_axioms Zcash.Snark.Fixture.derived_blinding +native(
 assert_axioms Zcash.Snark.Fixture.action_semantic_count_le
 assert_axioms Zcash.Snark.Fixture.two_pow_254_le_card
 assert_axioms Zcash.Snark.Fixture.action_semantic_terms_le
-assert_axioms Zcash.Snark.Fixture.orchard_action_noStatementOrRelation_prob_le_sequential +native(
-  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
-  Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
-  Zcash.Snark.actionMissingConstantAllocations_eq_nil, Zcash.Snark.actionNumPermCols_eq,
-  Zcash.Snark.actionNumPermCols_pos, CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
-  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
-  Zcash.Snark.ActionGateCoherence.domainExponent_lt, Zcash.Snark.ActionGateCoherence.gateData_eq,
-  Zcash.Snark.ActionGateCoherence.selectorDegree, Zcash.Snark.ActionPermutationDomain.chunks_eq,
-  Zcash.Snark.ActionPermutationDomain.columnCount_chunkLen_eq,
-  Zcash.Snark.ActionPermutationDomain.deltaPowers_injective,
-  Zcash.Snark.ActionPermutationDomain.domainExponent_eq,
-  Zcash.Snark.ActionPermutationDomain.domainExponent_lt,
-  Zcash.Snark.ActionPermutationDomain.queryLayouts_eq,
-  Zcash.Snark.ActionPermutationDomain.routingCoherent,
-  Zcash.Snark.Fixture.vk_chunk_width_le,
-  Zcash.Snark.Fixture.vk_gates_degree_le,
-  Zcash.Snark.Fixture.vk_lookup_input_degree_le,
-  Zcash.Snark.Fixture.vk_lookup_table_degree_le,
-  Zcash.Snark.Keygen.certificate,
-  Zcash.Snark.Fixture.actionLookupActivationCount_le,
-  Zcash.Snark.Fixture.actionLookupInputArity_le,
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
-  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
-  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.Fixture.derived_scalars +native(
   Zcash.Arithmetic.omegaOf_eq_certifiedRootPow, CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Keygen.certificate,
@@ -263,38 +220,6 @@ assert_axioms Zcash.Snark.Fixture.schedule_of_derived +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Fixture.orchard_action_noStatementOrRelation_prob_le_captured +native(
-  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
-  Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
-  Zcash.Snark.actionMissingConstantAllocations_eq_nil, Zcash.Snark.actionNumPermCols_eq,
-  Zcash.Snark.actionNumPermCols_pos, CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
-  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
-  Zcash.Snark.ActionGateCoherence.domainExponent_lt, Zcash.Snark.ActionGateCoherence.gateData_eq,
-  Zcash.Snark.ActionGateCoherence.selectorDegree, Zcash.Snark.ActionPermutationDomain.chunks_eq,
-  Zcash.Snark.ActionPermutationDomain.columnCount_chunkLen_eq,
-  Zcash.Snark.ActionPermutationDomain.deltaPowers_injective,
-  Zcash.Snark.ActionPermutationDomain.domainExponent_eq,
-  Zcash.Snark.ActionPermutationDomain.domainExponent_lt,
-  Zcash.Snark.ActionPermutationDomain.queryLayouts_eq,
-  Zcash.Snark.ActionPermutationDomain.routingCoherent,
-  Zcash.Snark.Fixture.vk_chunk_width_le,
-  Zcash.Snark.Fixture.vk_gates_degree_le,
-  Zcash.Snark.Fixture.vk_lookup_input_degree_le,
-  Zcash.Snark.Fixture.vk_lookup_table_degree_le,
-  Zcash.Snark.Keygen.certificate,
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
-  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
-  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
--- Exact false-statement endpoints, with terminal relations charged to DLOG.
 assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_prob_le_captured +native(
   Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,

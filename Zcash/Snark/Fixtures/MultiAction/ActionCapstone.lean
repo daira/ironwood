@@ -30,24 +30,10 @@ private theorem actionProofShape_eq_maxShape (numProofs : ℕ) :
   rw [actionProofParamsFor_mergeDerived_eq]
   rfl
 
-/-! ## The statement-or-relation intermediate and exact target -/
-
-/-- Acceptance with neither an Action bundle statement nor a nontrivial relation. -/
-noncomputable def actionNoStatementOrRelationEvent
-    (family : ComputedStraightLineDeployedFSFamily
-      (actionProofParams.mergeDerived actionCircuit))
-    (inputs : Fin (actionProofParams.mergeDerived actionCircuit).numProofs →
-      PublicInputs Fp) :
-    Set ((AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → VestaG) ×
-      (BTranscript Fp VestaG
-        (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
-          + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp)) :=
-  family.straightLineConstraintSemanticFailureEvent
-    (actionStatementOrRelationDecoded actionProofParams family inputs)
+/-! ## Exact false-statement events -/
 
 /-- **The exact public Action-soundness event.**  The deployed verifier accepts while the Orchard
-Action bundle statement at its supplied public inputs is false.  The final #128 capstone must
-bound this set, rather than only `actionNoStatementOrRelationEvent`. -/
+Action bundle statement at its supplied public inputs is false. -/
 def actionAcceptFalseStatementEvent
     (family : ComputedStraightLineDeployedFSFamily
       (actionProofParams.mergeDerived actionCircuit))
@@ -59,21 +45,6 @@ def actionAcceptFalseStatementEvent
           + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp)) :=
   family.straightLineConstraintSemanticFailureEvent
     (actionBundleStatementDecoded actionProofParams family inputs)
-
-/-- Statement-or-relation failure at an arbitrary Action bundle size. -/
-noncomputable def actionNoStatementOrRelationEventFor (numProofs : ℕ)
-    (family : ComputedStraightLineDeployedFSFamily
-      ((actionProofParamsFor numProofs).mergeDerived actionCircuit))
-    (inputs : Fin ((actionProofParamsFor numProofs).mergeDerived actionCircuit).numProofs →
-      PublicInputs Fp) :
-    Set ((AugmentedIndex
-      (2 ^ ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k) → VestaG) ×
-      (BTranscript Fp VestaG
-        (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
-          family.init.length 10 +
-          3 * ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k) → Fp)) :=
-  family.straightLineConstraintSemanticFailureEvent
-    (actionStatementOrRelationDecoded (actionProofParamsFor numProofs) family inputs)
 
 /-- Literal accepting-false-`BundleStatement` event at an arbitrary Action bundle size. -/
 def actionAcceptFalseStatementEventFor (numProofs : ℕ)
@@ -356,91 +327,6 @@ noncomputable def schedule_of_derived_for (numProofs : ℕ)
     (by norm_num) (by norm_num) (by norm_num) (by norm_num)
     family.constraintXTrace.toPinning
   simpa using h
-
-/-! ## The composed bound -/
-
-/-- Bounds captured statement-or-relation failure by compressed failure plus four semantic
-challenge budgets. -/
-theorem orchard_action_noStatementOrRelation_prob_le_captured
-    {T : Type*} [DecidableEq T]
-    (B : VestaG) (hB : B ≠ 0)
-    (query : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → T)
-    (hquery : Function.Injective query)
-    (family : ComputedStraightLineDeployedFSFamily
-      (actionProofParams.mergeDerived actionCircuit))
-    (inputs : Fin (actionProofParams.mergeDerived actionCircuit).numProofs →
-      PublicInputs Fp)
-    (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey actionProofParams
-      (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis))
-    (hI : ∀ basis, family.instanceCommitment basis =
-      actionCircuit.instanceCommitment actionProofParams
-        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) inputs)
-    (hchar : ∀ basis O, deployedX4PairCount
-      (actionCircuit.toVerifierKey actionProofParams
-        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis))
-      (actionCircuit.instanceCommitment actionProofParams
-        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) inputs)
-      (straightLineRunOutput family basis O).1.proof.1
-      (straightLineRunRecord family basis O) < scalarFieldOrder)
-    (profile : family.StraightLineConstraintDlogProfile B)
-    {xyBound betaBound gammaBound thetaBound : ENNReal}
-    (hXY : (independentProductPMF (orchardGeneratorROSetup query)
-      (PMF.uniformOfFintype
-        (BTranscript Fp VestaG
-          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
-            + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
-        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionXYFailureEvent actionProofParams family
-            (staticChecks_of_derived family hvk) inputs hvk hI hchar) ≤ xyBound)
-    (hBeta : (independentProductPMF (orchardGeneratorROSetup query)
-      (PMF.uniformOfFintype
-        (BTranscript Fp VestaG
-          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
-            + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
-        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionBetaFailureEvent actionProofParams family
-            (staticChecks_of_derived family hvk) inputs hvk hI hchar) ≤ betaBound)
-    (hGamma : (independentProductPMF (orchardGeneratorROSetup query)
-      (PMF.uniformOfFintype
-        (BTranscript Fp VestaG
-          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
-            + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
-        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionGammaFailureEvent actionProofParams family
-            (staticChecks_of_derived family hvk) inputs hvk hI hchar) ≤ gammaBound)
-    (hTheta : (independentProductPMF (orchardGeneratorROSetup query)
-      (PMF.uniformOfFintype
-        (BTranscript Fp VestaG
-          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
-            + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
-        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionThetaFailureEvent actionProofParams family
-            (staticChecks_of_derived family hvk) inputs hvk hI hchar) ≤ thetaBound) :
-    (independentProductPMF (orchardGeneratorROSetup query)
-      (PMF.uniformOfFintype
-        (BTranscript Fp VestaG
-          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
-            + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
-        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionNoStatementOrRelationEvent family inputs)
-      ≤ ((family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-          (family.Q + 1 : ℕ) *
-            ((actionProofParams.mergeDerived actionCircuit).k *
-              (2 / (Fintype.card Fp : ENNReal))) +
-          (family.Q + (11 + (actionProofParams.mergeDerived actionCircuit).k) + 1 : ℕ) *
-            algebraicRootBudget (actionProofParams.mergeDerived actionCircuit)
-              (actionProofParams.mergeDerived actionCircuit).k +
-          (profile.advantage family.straightLineDlogRandomOracleQueries
-              (ComputedStraightLineDeployedFSFamily.straightLineDlogGroupWork
-                profile.proverGroupWork profile.reductionGroupWork) +
-            1 / Fintype.card Fp) +
-          (family.Q + 1 : ℕ) * ((20470 : ℕ) / (Fintype.card Fp : ℝ≥0∞))) +
-        (xyBound + (betaBound + (gammaBound + thetaBound))) :=
-  actionNoStatementOrRelation_prob_le_of_compressed_bound actionProofParams family
-    (staticChecks_of_derived family hvk) inputs hvk hI hchar query
-    (family.straightLineConstraintFailure_prob_le_of_generatorRO_dlogProfile B hB query hquery
-      (staticChecks_of_derived family hvk) (schedule_of_derived family hvk) profile)
-    hXY hBeta hGamma hTheta
 
 /-! ## The sequential endpoint: every semantic budget discharged and counted
 
@@ -1515,67 +1401,6 @@ theorem action_dlog_groupWork_le_2pow126
     6 * proverGroupWork + reductionGroupWork ≤ 6 * 2 ^ 123 + 2 ^ 123 := by omega
     _ ≤ 8 * 2 ^ 123 := by norm_num
     _ = 2 ^ 126 := by norm_num
-
-/-- Captured sequential statement-or-relation bound with all five semantic budgets counted. -/
-theorem orchard_action_noStatementOrRelation_prob_le_sequential
-    {T : Type*} [DecidableEq T]
-    (B : VestaG) (hB : B ≠ 0)
-    (query : AugmentedIndex (2 ^ (actionProofParams.mergeDerived actionCircuit).k) → T)
-    (hquery : Function.Injective query)
-    (family : ComputedStraightLineDeployedFSFamily
-      (actionProofParams.mergeDerived actionCircuit))
-    (inputs : Fin (actionProofParams.mergeDerived actionCircuit).numProofs →
-      PublicInputs Fp)
-    (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey actionProofParams
-      (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis))
-    (hI : ∀ basis, family.instanceCommitment basis =
-      actionCircuit.instanceCommitment actionProofParams
-        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) inputs)
-    (hchar : ∀ basis O, deployedX4PairCount
-      (actionCircuit.toVerifierKey actionProofParams
-        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis))
-      (actionCircuit.instanceCommitment actionProofParams
-        (ursOfAugmentedBasis (actionProofParams.mergeDerived actionCircuit).k basis) inputs)
-      (straightLineRunOutput family basis O).1.proof.1
-      (straightLineRunRecord family basis O) < scalarFieldOrder)
-    (profile : family.StraightLineConstraintDlogProfile B)
-    {L : ℕ} (hL : L ≤ 2 ^ 12)
-    (cuts : ActionSequentialCuts actionProofParams family
-      (staticChecks_of_derived family hvk) inputs hvk hI hchar 20470 L) :
-    (independentProductPMF (orchardGeneratorROSetup query)
-      (PMF.uniformOfFintype
-        (BTranscript Fp VestaG
-          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
-            + 3 * (actionProofParams.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
-        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionNoStatementOrRelationEvent family inputs)
-      ≤ ((family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-          (family.Q + 1 : ℕ) *
-            ((actionProofParams.mergeDerived actionCircuit).k *
-              (2 / (Fintype.card Fp : ENNReal))) +
-          (family.Q + (11 + (actionProofParams.mergeDerived actionCircuit).k) + 1 : ℕ) *
-            algebraicRootBudget (actionProofParams.mergeDerived actionCircuit)
-              (actionProofParams.mergeDerived actionCircuit).k +
-          (profile.advantage family.straightLineDlogRandomOracleQueries
-              (ComputedStraightLineDeployedFSFamily.straightLineDlogGroupWork
-                profile.proverGroupWork profile.reductionGroupWork) +
-            1 / Fintype.card Fp) +
-          (family.Q + 1 : ℕ) * ((20470 : ℕ) / (Fintype.card Fp : ℝ≥0∞))) +
-        (((family.Q + 1 : ℕ) * (((20470 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
-            (family.Q + 1 : ℕ) * (((2 ^ 23 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞))) +
-          ((family.Q + 1 : ℕ) * (((2 ^ 35 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
-            ((family.Q + 1 : ℕ) * (((2 ^ 21 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
-              (family.Q + 1 : ℕ) * (((2 ^ 25 : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞))))) :=
-  orchard_action_noStatementOrRelation_prob_le_captured B hB query hquery family inputs hvk hI hchar
-    profile
-    (cuts.xy_prob_le actionProofParams family (staticChecks_of_derived family hvk) inputs
-      hvk hI hchar query derived_n_ne_zero (derived_n_yn hL))
-    (cuts.beta_prob_le actionProofParams family (staticChecks_of_derived family hvk) inputs
-      hvk hI hchar query cap_beta)
-    (cuts.gamma_prob_le actionProofParams family (staticChecks_of_derived family hvk) inputs
-      hvk hI hchar query cap_gamma)
-    (cuts.theta_prob_le actionProofParams family (staticChecks_of_derived family hvk) inputs
-      hvk hI hchar query cap_theta)
 
 /-! ## Exact false-Action-statement endpoints -/
 
