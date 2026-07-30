@@ -31,6 +31,29 @@ def TopLevelBundleStatement
             pp.numProofs proofIndex).environment
     top.Statement (top.extractPublicInput environment)
 
+/-- Executable private witnesses, with erased validity certificates, for every decoded member. -/
+def TopLevelBundleWitness
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (pp : Keygen.ProofParams)
+    (poly : CommitmentId → Polynomial Fp) : Type :=
+  ∀ proofIndex : Fin (pp.mergeDerived top).numProofs,
+    let environment := ({
+        polynomial := poly
+      } : TopLevelAssignment top
+            (pp.mergeDerived top).numProofs proofIndex).environment
+    TopLevelSemanticWitness top (top.extractPublicInput environment)
+
+/-- Executable private witnesses for externally supplied bundle inputs. -/
+def TopLevelExternalBundleWitness
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
+    {numProofs : ℕ}
+    (inputs : Fin numProofs → PublicInput Fp) : Type :=
+  ∀ proofIndex, TopLevelSemanticWitness top (inputs proofIndex)
+
 namespace TopLevelBundleStatement
 
 /--
@@ -64,6 +87,46 @@ theorem of_publicInputEncoding
   exact hstatement
 
 end TopLevelBundleStatement
+
+namespace TopLevelBundleWitness
+
+/-- Re-present decoded private witnesses at the verifier's externally supplied inputs. -/
+def of_publicInputEncoding
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (pp : Keygen.ProofParams)
+    (poly : CommitmentId → Polynomial Fp)
+    (inputs : Fin (pp.mergeDerived top).numProofs → PublicInput Fp)
+    (hencoding : ∀ proofIndex,
+      let assignment : TopLevelAssignment top
+          (pp.mergeDerived top).numProofs proofIndex :=
+        { polynomial := poly }
+      assignment.PublicInputEncoding (inputs proofIndex))
+    (witness : TopLevelBundleWitness top pp poly) :
+    TopLevelExternalBundleWitness top inputs := fun proofIndex => by
+  let assignment : TopLevelAssignment top
+      (pp.mergeDerived top).numProofs proofIndex :=
+    { polynomial := poly }
+  refine
+    { privateWitness := (witness proofIndex).privateWitness
+      valid := ?_ }
+  rw [← assignment.extractPublicInput_eq
+    (inputs proofIndex) (hencoding proofIndex)]
+  exact (witness proofIndex).valid
+
+/-- Forget the retained decoded witnesses and recover the ordinary bundle statement. -/
+theorem statement
+    {Config : Type} {PublicInput : TypeMap}
+    [ProvableType PublicInput]
+    {top : TopLevelCircuit Fp Config PublicInput}
+    {pp : Keygen.ProofParams}
+    {poly : CommitmentId → Polynomial Fp}
+    (witness : TopLevelBundleWitness top pp poly) :
+    TopLevelBundleStatement top pp poly :=
+  fun proofIndex => (witness proofIndex).statement
+
+end TopLevelBundleWitness
 
 abbrev TopLevelFixedEncoding
     {Config : Type} {PublicInput : TypeMap}

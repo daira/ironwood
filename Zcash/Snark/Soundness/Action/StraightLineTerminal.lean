@@ -1,22 +1,13 @@
-import Zcash.Snark.Soundness.Action.Terminal
-import Zcash.Snark.Soundness.StraightLine.TopLevelTerminal
+import Zcash.Circuits.Integration.ActionTerminal
+import Zcash.Snark.Soundness.AGM.DecodeToOpened
+import Zcash.Snark.Soundness.Composition.StraightLineDecodeSupply
 
 /-!
 # The rewind-free decode at the Action terminal
 
-`ActionTerminal` concludes the concrete Action bundle statement from the decoded opened-batch
-interface: an `OpenedBatchOpenings`, a per-set `OpenedMemberDecode`, deployed acceptance, the
-canonical quotient, and the member-binding premise.
-
-`AGM.DecodeToOpened` presents a rewind-free `DeployedAlgebraicDecode` in exactly that shape, so the
-straight-line route reaches the same terminal from one accepting execution.  This module ties the
-two together: a decoding run supplies its own decode and acceptance, both at the run's complete
-challenge record, and what remains are the challenge exclusions — `hxgood`, `hgoodY`, and the
-permutation and lookup exclusions — which `StraightLineActionEvent` prices, not this module.
-
-The terminal is used unchanged.  Nothing in this module weakens its statement: the verifying key
-is still `actionCircuit.toVerifierKey`, and no free semantic proposition, `hencodes`, or decoded
-column feed is reintroduced.
+This bridge feeds one straight-line decode into `ActionTerminal`. The shared executable outcome
+retains either all private witnesses or relation coefficients; `StraightLineActionEvent` prices
+the remaining challenge exclusions.
 -/
 
 namespace Zcash.Snark
@@ -32,6 +23,46 @@ variable {G : Type} [AddCommGroup G] [Module Fp G] [DecidableEq G] [Inhabited G]
 
 local instance vestaInhabitedStraightLineActionTerminal : Inhabited VestaG := ⟨0⟩
 
+/-- Type-valued private witnesses for every Action in the accepted bundle. -/
+abbrev ActionBundleWitness {numProofs : ℕ}
+    (inputs : Fin numProofs → PublicInputs Fp) : Type :=
+  TopLevelExternalBundleWitness actionCircuit inputs
+
+namespace ActionBundleWitness
+
+/-- An extracted Action witness bundle entails the ordinary existential statement. -/
+theorem statement
+    {numProofs : ℕ} {inputs : Fin numProofs → PublicInputs Fp}
+    (witness : ActionBundleWitness inputs) : BundleStatement inputs :=
+  fun proofIndex => (witness proofIndex).statement
+
+end ActionBundleWitness
+
+/-- Check every potentially nonzero fold-split witness by direct evaluation.  Witnesses at
+indices `j ≥ n` are zero by degree, so this finite traversal returns the full specification-level
+avoidance certificate without computing any root set. -/
+def foldSplitAvoidance?
+    (cs : List (Polynomial Fp)) (n : Nat) (hn : n ≠ 0) (y : Fp) :
+    Option (PLift (∀ j, y ∉ szBadSet (foldSplitWitness cs n j))) :=
+  match finForallOption (fun j : Fin n =>
+      szBadSetAvoidance? (foldSplitWitness cs n j.1) y) with
+  | none => none
+  | some hgood => some ⟨fun j =>
+      if hj : j < n then (hgood ⟨j, hj⟩).down
+      else not_mem_szBadSet.mpr fun hne =>
+        False.elim (hne (foldSplitWitness_eq_zero_of_le hn (Nat.le_of_not_gt hj)))⟩
+
+theorem foldSplitAvoidance?_isSome_of
+    (cs : List (Polynomial Fp)) (n : Nat) (hn : n ≠ 0) (y : Fp)
+    (hgood : ∀ j, y ∉ szBadSet (foldSplitWitness cs n j)) :
+    (foldSplitAvoidance? cs n hn y).isSome := by
+  have hfinite : ∀ j : Fin n,
+      (szBadSetAvoidance? (foldSplitWitness cs n j.1) y).isSome :=
+    fun j => (szBadSetAvoidance?_isSome_iff _ _).2 (hgood j.1)
+  obtain ⟨found, hfound⟩ := Option.isSome_iff_exists.mp
+    (finForallOption_isSome_of _ hfinite)
+  simp [foldSplitAvoidance?, hfound]
+
 /-- **The Action bundle statement from a rewind-free decode.**  The decode supplies the batch
 openings, the member decodes, the `x₄` designation and the member-binding premise; the caller
 supplies acceptance and the challenge exclusions.
@@ -41,7 +72,7 @@ value equations, so `memberBinding` lands on the left for every slot and point. 
 def action_bundleStatement_or_relation_of_decode
     (pp : ProofParams) (urs : URS G)
     (hk : (pp.mergeDerived actionCircuit).k = urs.k)
-    (inputs : Fin pp.numProofs → PublicInputs Fp)
+    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
     (ps : ProofString (pp.mergeDerived actionCircuit) Fp G)
     (ch : Challenges (pp.mergeDerived actionCircuit).k Fp)
     (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
@@ -67,7 +98,7 @@ satisfaction.  This avoids re-testing the `x`-dependent reassembled quotient pol
 def action_bundleStatement_or_relation_of_decode_circuitSat
     (pp : ProofParams) (urs : URS G)
     (hk : (pp.mergeDerived actionCircuit).k = urs.k)
-    (inputs : Fin pp.numProofs → PublicInputs Fp)
+    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
     (ps : ProofString (pp.mergeDerived actionCircuit) Fp G)
     (ch : Challenges (pp.mergeDerived actionCircuit).k Fp)
     (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
@@ -84,14 +115,14 @@ def action_bundleStatement_or_relation_of_decode_circuitSat
     (hsatisfied :
       (CanonicalMemberConstraintRelation.acceptedModel
         (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
-        (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
+        (hblinding := ActionPermutationDomain.blindingFactors_lt pp urs)
         haccepts).CircuitSat ch.y hpoly
           (actionCircuit.toVerifierKey pp urs).n a)
     (hgoodY : ∀ j, ch.y ∉ szBadSet
       (foldSplitWitness
         (CanonicalMemberConstraintRelation.acceptedModel
           (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
-          (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
+          (hblinding := ActionPermutationDomain.blindingFactors_lt pp urs)
           haccepts).constraints
         (actionCircuit.toVerifierKey pp urs).n j))
     (permutationExclusions : ResolverPermutationChallengeExclusions
@@ -99,21 +130,134 @@ def action_bundleStatement_or_relation_of_decode_circuitSat
       (CanonicalMemberConstraintRelation.acceptedPolynomial
         (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts)
       actionActiveRows)
-    (lookupExclusions : TopLevelLookup.ChallengeExclusions
+    (lookupExclusions : TopLevelLookupCoherence.TopLevelLookupChallengeExclusions
       actionCircuit pp urs ch
       (CanonicalMemberConstraintRelation.acceptedPolynomial
         (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts)) :
     BundleStatement inputs ⊕'
       NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  exact topLevelStatements_or_relation_of_circuitSat
+  exact TopLevelAcceptedModel.statements_or_relation_of_circuitSat
     actionCircuit pp urs hk inputs ps ch pU pW a
     (decode.toOpenedBatch hchar)
     (fun i hi => decode.toMemberDecode hchar i hi) haccepts
-    hpoly hsatisfied hgoodY
+    (ActionPermutationDomain.blindingFactors_lt pp urs) hpoly hsatisfied hgoodY
     (ActionCorrectness.ofAcceptedCircuitSat pp urs hk inputs ps ch pU pW a
       (decode.toOpenedBatch hchar)
       (fun i hi => decode.toMemberDecode hchar i hi) haccepts hpoly hsatisfied hgoodY
       permutationExclusions lookupExclusions)
+
+/-- The pre-`x` Action endpoint retaining the extracted private witnesses as data. -/
+def action_bundleWitness_or_relation_of_decode_circuitSat
+    (pp : ProofParams) (urs : URS G)
+    (hk : (pp.mergeDerived actionCircuit).k = urs.k)
+    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (ps : ProofString (pp.mergeDerived actionCircuit) Fp G)
+    (ch : Challenges (pp.mergeDerived actionCircuit).k Fp)
+    (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
+    (decode : DeployedAlgebraicDecode urs hk
+      (actionCircuit.toVerifierKey pp urs)
+      (actionCircuit.instanceCommitment pp urs inputs) ps ch a pU pW)
+    (hchar : deployedX4PairCount
+      (actionCircuit.toVerifierKey pp urs)
+      (actionCircuit.instanceCommitment pp urs inputs) ps ch < scalarFieldOrder)
+    (haccepts : DeployedAccepts urs hk
+      (actionCircuit.toVerifierKey pp urs)
+      (actionCircuit.instanceCommitment pp urs inputs) ps ch)
+    (hpoly : Polynomial Fp)
+    (hsatisfied :
+      (CanonicalMemberConstraintRelation.acceptedModel
+        (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
+        (hblinding := ActionPermutationDomain.blindingFactors_lt pp urs)
+        haccepts).CircuitSat ch.y hpoly
+          (actionCircuit.toVerifierKey pp urs).n a)
+    (hgoodY : ∀ j, ch.y ∉ szBadSet
+      (foldSplitWitness
+        (CanonicalMemberConstraintRelation.acceptedModel
+          (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
+          (hblinding := ActionPermutationDomain.blindingFactors_lt pp urs)
+          haccepts).constraints
+        (actionCircuit.toVerifierKey pp urs).n j))
+    (permutationExclusions : ResolverPermutationChallengeExclusions
+      (actionCircuit.toVerifierKey pp urs) ch
+      (CanonicalMemberConstraintRelation.acceptedPolynomial
+        (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts)
+      actionActiveRows)
+    (lookupExclusions : TopLevelLookupCoherence.TopLevelLookupChallengeExclusions
+      actionCircuit pp urs ch
+      (CanonicalMemberConstraintRelation.acceptedPolynomial
+        (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts)) :
+    ActionBundleWitness inputs ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  exact TopLevelAcceptedModel.witnesses_or_relation_of_circuitSat
+    actionCircuit pp urs hk inputs ps ch pU pW a
+    (decode.toOpenedBatch hchar)
+    (fun i hi => decode.toMemberDecode hchar i hi) haccepts
+    (ActionPermutationDomain.blindingFactors_lt pp urs) hpoly hsatisfied hgoodY
+    (ActionCorrectness.ofAcceptedCircuitSat pp urs hk inputs ps ch pU pW a
+      (decode.toOpenedBatch hchar)
+      (fun i hi => decode.toMemberDecode hchar i hi) haccepts hpoly hsatisfied hgoodY
+      permutationExclusions lookupExclusions)
+
+/-- The run's decode at the Action circuit's artifacts: extracted from the event, re-rounded to
+the run's complete challenge record, and transported along the key and instance identifications. -/
+def actionRunDecode
+    (pp : ProofParams)
+    (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived actionCircuit))
+    (static : DeployedConstraintStaticChecks family.toRootFamily)
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+        + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
+    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (hvk : family.vk basis =
+      actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+    (hI : family.instanceCommitment basis =
+      actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+    (hdecoded : family.straightLineConstraintDecoded static basis O) :
+    DeployedAlgebraicDecode
+      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) rfl
+      (actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      (straightLineRunOutput family basis O).1.proof.1
+      (straightLineRunRecord family basis O)
+      ((straightLineRunOutput family basis O).1.aMulti
+        (wrappedPreIpaReads (straightLineRunOutput family basis O)))
+      ((straightLineRunOutput family basis O).1.multiU
+        (wrappedPreIpaReads (straightLineRunOutput family basis O)))
+      ((straightLineRunOutput family basis O).1.multiBlind
+        (wrappedPreIpaReads (straightLineRunOutput family basis O))) :=
+  hI ▸ hvk ▸ (straightLineDecode family static basis O hdecoded).reRound
+    (runRounds family.toFamily basis O)
+
+/-- The run's acceptance at the Action circuit's artifacts. -/
+theorem actionRunAccepts
+    (pp : ProofParams)
+    (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived actionCircuit))
+    (static : DeployedConstraintStaticChecks family.toRootFamily)
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (O : BTranscript Fp VestaG
+      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+        + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
+    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (hvk : family.vk basis =
+      actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+    (hI : family.instanceCommitment basis =
+      actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+    (hdecoded : family.straightLineConstraintDecoded static basis O) :
+    DeployedAccepts (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) rfl
+      (actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      (straightLineRunOutput family basis O).1.proof.1
+      (straightLineRunRecord family basis O) :=
+  hI ▸ hvk ▸ straightLineAccepts_of_decoded family static basis O hdecoded
 
 /-- **The Action terminal reached from the straight-line constraint event.**  A family at the
 Action shape supplies the decode and the acceptance from its own accepting run, so the terminal
@@ -132,7 +276,7 @@ def action_bundleStatement_or_relation_of_straightLineDecoded
     (O : BTranscript Fp VestaG
       (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
         + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
-    (inputs : Fin pp.numProofs → PublicInputs Fp)
+    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
     (hvk : family.vk basis =
       actionCircuit.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
@@ -157,33 +301,17 @@ def action_bundleStatement_or_relation_of_straightLineDecoded
       (wrappedPreIpaReads (straightLineRunOutput family basis O)))
     ((straightLineRunOutput family basis O).1.aMulti
       (wrappedPreIpaReads (straightLineRunOutput family basis O)))
-    (straightLineRunDecodeAt family static basis O
-      (actionCircuit.toVerifierKey pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-      (actionCircuit.instanceCommitment pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
-      hvk hI hdecoded)
+    (actionRunDecode pp family static basis O inputs hvk hI hdecoded)
     hchar
-    (straightLineRunAcceptsAt family static basis O
-      (actionCircuit.toVerifierKey pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-      (actionCircuit.instanceCommitment pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
-      hvk hI hdecoded)
+    (actionRunAccepts pp family static basis O inputs hvk hI hdecoded)
 
-/-- **Executable Action-terminal relation finder.**  The constraint adapter first reconstructs
-the decoded run from the family's retained batch coordinates.  This finder then checks the four
-terminal exclusion packages as finite propositions and executes the same Action terminal used by
-the semantic proof.  Only its explicit relation branch is returned; the statement branch returns
-`none`.
-
-The proof parameters `static`, `hvk`, `hI`, and `hchar` certify the fixed deployed artifacts.  No
-fixture, `Nonempty`, or selected existential witness contributes returned data. -/
-def actionTerminalRelationFinder
+/-- Checks terminal exclusions and returns private witnesses or explicit relation coefficients
+from the reconstructed run. -/
+def actionTerminalWitnessOrRelationFinder
     (pp : ProofParams)
     (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived actionCircuit))
     (static : DeployedConstraintStaticChecks family.toRootFamily)
-    (inputs : Fin pp.numProofs → PublicInputs Fp)
+    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
     (hvk : ∀ basis, family.vk basis =
       actionCircuit.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
@@ -203,7 +331,8 @@ def actionTerminalRelationFinder
     (BTranscript Fp VestaG
       (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
         + 3 * (pp.mergeDerived actionCircuit).k) → Fp) →
-    Option (AlgebraicRelationWitness (F := Fp) basis) :=
+    Option (ActionBundleWitness inputs ⊕
+      AlgebraicRelationWitness (F := Fp) basis) :=
   fun basis O =>
     let pnu := (wrappedAdversary family.toFamily basis).run O
     let urs := ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis
@@ -211,9 +340,9 @@ def actionTerminalRelationFinder
     match family.straightLineConstraintOutcome? static basis O with
     | none => none
     | some (PSum.inr relation) =>
-        some (augmentedBasis_ursOfAugmentedBasis
+        some (Sum.inr (augmentedBasis_ursOfAugmentedBasis
           (pp.mergeDerived actionCircuit).k basis ▸
-            AugmentedRelationWitness.toAlgebraicRelationWitness relation)
+            AugmentedRelationWitness.toAlgebraicRelationWitness relation))
     | some (PSum.inl success) =>
         let decode : DeployedAlgebraicDecode urs rfl
             (actionCircuit.toVerifierKey pp urs)
@@ -228,7 +357,7 @@ def actionTerminalRelationFinder
           hI basis ▸ hvk basis ▸ success.accepts
         let model := CanonicalMemberConstraintRelation.acceptedModel
           (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi)
-          (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs) haccepts
+          (hblinding := ActionPermutationDomain.blindingFactors_lt pp urs) haccepts
         let polynomial := CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi) haccepts
         match hxgood : szBadSetAvoidance?
@@ -243,38 +372,151 @@ def actionTerminalRelationFinder
                   (ComputablePolynomial.const 1)))) ch.x with
         | some hxgoodProof =>
           let hn : (actionCircuit.toVerifierKey pp urs).n ≠ 0 := by
-            rw [actionCircuit.toVerifierKey_n]
-            exact actionCircuit.n_ne_zero
+            change 2 ^ actionCircuit.domainExponent ≠ 0
+            positivity
           match hgoodY : foldSplitAvoidance? model.constraints
               (actionCircuit.toVerifierKey pp urs).n hn ch.y with
           | some hgoodYProof =>
             match hpermutation : resolverPermutationChallengeExclusions?
                 (actionCircuit.toVerifierKey pp urs) ch polynomial actionActiveRows with
             | some hpermutationProof =>
-              match hlookup : TopLevelLookup.topLevelLookupChallengeExclusions?
+              match hlookup : TopLevelLookupCoherence.topLevelLookupChallengeExclusions?
                   actionCircuit pp urs ch polynomial with
               | some hlookupProof =>
-                match action_bundleStatement_or_relation_of_decode pp urs rfl inputs
-                    pnu.1.proof.1 ch
-                    (pnu.1.multiU (wrappedPreIpaReads pnu))
-                    (pnu.1.multiBlind (wrappedPreIpaReads pnu))
-                    (pnu.1.aMulti (wrappedPreIpaReads pnu)) decode
-                    (hchar basis O) haccepts (by
+                let hblinding := ActionPermutationDomain.blindingFactors_lt pp urs
+                let gateCoherence := ActionGateCoherence.topLevelGateCoherence pp urs
+                let hnFp : ((actionCircuit.toVerifierKey pp urs).n : Fp) ≠ 0 := by
+                  change (((2 ^ actionCircuit.domainExponent : ℕ) : Fp)) ≠ 0
+                  exact TopLevelAssignment.domainSizeCastNeZero
+                    ActionPermutationDomain.domainExponent_lt
+                match acceptedModel_circuitSat_or_relation_of_decodedMemberPolynomial_eq
+                    urs rfl (actionCircuit.toVerifierKey pp urs)
+                    (actionCircuit.instanceCommitment pp urs inputs) pnu.1.proof.1 ch
+                    (fun i hi => decode.toMemberDecode (hchar basis O) i hi) haccepts hblinding
+                    (polynomial .vanishingH) rfl gateCoherence.fixedQueryCount
+                    gateCoherence.adviceQueryCount gateCoherence.instanceQueryCount
+                    (fun slot point hpoint =>
+                      PSum.inl (decode.memberBinding (hchar basis O) slot point hpoint))
+                    (ActionPermutationDomain.routingCoherent_of_derived pp urs)
+                    (ActionPermutationDomain.rowsInjective pp urs)
+                    (ActionPermutationDomain.root pp urs) hnFp
+                    (by
                       simpa only [ComputablePolynomial.sub_eq, ComputablePolynomial.mul_eq,
                         ComputablePolynomial.pow_eq, ComputablePolynomial.X_eq,
                         ComputablePolynomial.const_eq, Polynomial.C_1,
-                        combineConstraintsData_eq] using hxgoodProof.down)
-                    hgoodYProof.down
-                    hpermutationProof.down hlookupProof.down with
-                | PSum.inl _ => none
+                        combineConstraintsData_eq] using hxgoodProof.down) with
                 | PSum.inr relation =>
-                    some (augmentedBasis_ursOfAugmentedBasis
+                    some (Sum.inr (augmentedBasis_ursOfAugmentedBasis
                       (pp.mergeDerived actionCircuit).k basis ▸
-                        AugmentedRelationWitness.toAlgebraicRelationWitness relation)
+                        AugmentedRelationWitness.toAlgebraicRelationWitness relation))
+                | PSum.inl hsatisfied =>
+                    match action_bundleWitness_or_relation_of_decode_circuitSat pp urs rfl
+                        inputs pnu.1.proof.1 ch
+                        (pnu.1.multiU (wrappedPreIpaReads pnu))
+                        (pnu.1.multiBlind (wrappedPreIpaReads pnu))
+                        (pnu.1.aMulti (wrappedPreIpaReads pnu)) decode (hchar basis O) haccepts
+                        (polynomial .vanishingH) hsatisfied hgoodYProof.down
+                        hpermutationProof.down hlookupProof.down with
+                    | PSum.inl witness => some (Sum.inl witness)
+                    | PSum.inr relation =>
+                        some (Sum.inr (augmentedBasis_ursOfAugmentedBasis
+                          (pp.mergeDerived actionCircuit).k basis ▸
+                            AugmentedRelationWitness.toAlgebraicRelationWitness relation))
               | none => none
             | none => none
           | none => none
         | none => none
+
+/-- Relation-only projection retained for the ordinary-soundness reduction. -/
+def actionTerminalRelationFinder
+    (pp : ProofParams)
+    (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived actionCircuit))
+    (static : DeployedConstraintStaticChecks family.toRootFamily)
+    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (hvk : ∀ basis, family.vk basis =
+      actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+    (hI : ∀ basis, family.instanceCommitment basis =
+      actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+    (hchar : ∀ basis O, deployedX4PairCount
+      (actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      ((wrappedAdversary family.toFamily basis).run O).1.proof.1
+      (chRecord
+        (wrappedPreIpaReads ((wrappedAdversary family.toFamily basis).run O))
+        (runRounds family.toFamily basis O)) < scalarFieldOrder) :
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) →
+    (BTranscript Fp VestaG
+      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+        + 3 * (pp.mergeDerived actionCircuit).k) → Fp) →
+    Option (AlgebraicRelationWitness (F := Fp) basis) := fun basis O =>
+  match actionTerminalWitnessOrRelationFinder pp family static inputs hvk hI hchar basis O with
+  | some (Sum.inr relation) => some relation
+  | _ => none
+
+/-- One executable straight-line outcome shared by the witness extractor and DLOG projection. -/
+def actionKnowledgeOutcome
+    (pp : ProofParams)
+    (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived actionCircuit))
+    (static : DeployedConstraintStaticChecks family.toRootFamily)
+    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (hvk : ∀ basis, family.vk basis =
+      actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+    (hI : ∀ basis, family.instanceCommitment basis =
+      actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+    (hchar : ∀ basis O, deployedX4PairCount
+      (actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      ((wrappedAdversary family.toFamily basis).run O).1.proof.1
+      (chRecord
+        (wrappedPreIpaReads ((wrappedAdversary family.toFamily basis).run O))
+        (runRounds family.toFamily basis O)) < scalarFieldOrder) :
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) →
+    (BTranscript Fp VestaG
+      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+        + 3 * (pp.mergeDerived actionCircuit).k) → Fp) →
+    Option (ActionBundleWitness inputs ⊕
+      AlgebraicRelationWitness (F := Fp) basis) := fun basis O =>
+  match family.straightLineConstraintRelationFinder basis O with
+  | some relation => some (Sum.inr relation)
+  | none => actionTerminalWitnessOrRelationFinder pp family static inputs hvk hI hchar basis O
+
+/-- Executable private-witness extractor for the straight-line/sequential presentation. -/
+def actionKnowledgeExtractor
+    (pp : ProofParams)
+    (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived actionCircuit))
+    (static : DeployedConstraintStaticChecks family.toRootFamily)
+    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (hvk : ∀ basis, family.vk basis =
+      actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+    (hI : ∀ basis, family.instanceCommitment basis =
+      actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+    (hchar : ∀ basis O, deployedX4PairCount
+      (actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      ((wrappedAdversary family.toFamily basis).run O).1.proof.1
+      (chRecord
+        (wrappedPreIpaReads ((wrappedAdversary family.toFamily basis).run O))
+        (runRounds family.toFamily basis O)) < scalarFieldOrder) :
+    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) →
+    (BTranscript Fp VestaG
+      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
+        + 3 * (pp.mergeDerived actionCircuit).k) → Fp) →
+    Option (ActionBundleWitness inputs) := fun basis O =>
+  match actionKnowledgeOutcome pp family static inputs hvk hI hchar basis O with
+  | some (Sum.inl witness) => some witness
+  | _ => none
 
 /-- The single relation finder priced by the final Action capstone: the existing IPA/unbatching/
 quotient finder first, followed by the executable Action-terminal finder. -/
@@ -282,7 +524,7 @@ def actionRelationFinder
     (pp : ProofParams)
     (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived actionCircuit))
     (static : DeployedConstraintStaticChecks family.toRootFamily)
-    (inputs : Fin pp.numProofs → PublicInputs Fp)
+    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
     (hvk : ∀ basis, family.vk basis =
       actionCircuit.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
@@ -304,9 +546,65 @@ def actionRelationFinder
         + 3 * (pp.mergeDerived actionCircuit).k) → Fp) →
     Option (AlgebraicRelationWitness (F := Fp) basis) :=
   fun basis O =>
-    match family.straightLineConstraintRelationFinder basis O with
-    | some relation => some relation
-    | none => actionTerminalRelationFinder pp family static inputs hvk hI hchar basis O
+    match actionKnowledgeOutcome pp family static inputs hvk hI hchar basis O with
+    | some (Sum.inr relation) => some relation
+    | _ => none
+
+/-- The witness projection preserves the left branch of the shared outcome exactly. -/
+theorem actionKnowledgeExtractor_eq_some_of_outcome_eq_inl
+    (pp : ProofParams)
+    (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived actionCircuit))
+    (static : DeployedConstraintStaticChecks family.toRootFamily)
+    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (hvk : ∀ basis, family.vk basis =
+      actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+    (hI : ∀ basis, family.instanceCommitment basis =
+      actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+    (hchar : ∀ basis O, deployedX4PairCount
+      (actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      ((wrappedAdversary family.toFamily basis).run O).1.proof.1
+      (chRecord
+        (wrappedPreIpaReads ((wrappedAdversary family.toFamily basis).run O))
+        (runRounds family.toFamily basis O)) < scalarFieldOrder)
+    (basis) (O) (witness : ActionBundleWitness inputs)
+    (houtcome : actionKnowledgeOutcome pp family static inputs hvk hI hchar basis O =
+      some (Sum.inl witness)) :
+    actionKnowledgeExtractor pp family static inputs hvk hI hchar basis O = some witness := by
+  unfold actionKnowledgeExtractor
+  rw [houtcome]
+
+/-- The relation projection preserves the right branch of the shared outcome exactly. -/
+theorem actionRelationFinder_eq_some_of_outcome_eq_inr
+    (pp : ProofParams)
+    (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived actionCircuit))
+    (static : DeployedConstraintStaticChecks family.toRootFamily)
+    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (hvk : ∀ basis, family.vk basis =
+      actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+    (hI : ∀ basis, family.instanceCommitment basis =
+      actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+    (hchar : ∀ basis O, deployedX4PairCount
+      (actionCircuit.toVerifierKey pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+      (actionCircuit.instanceCommitment pp
+        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      ((wrappedAdversary family.toFamily basis).run O).1.proof.1
+      (chRecord
+        (wrappedPreIpaReads ((wrappedAdversary family.toFamily basis).run O))
+        (runRounds family.toFamily basis O)) < scalarFieldOrder)
+    (basis) (O) (relation : AlgebraicRelationWitness (F := Fp) basis)
+    (houtcome : actionKnowledgeOutcome pp family static inputs hvk hI hchar basis O =
+      some (Sum.inr relation)) :
+    actionRelationFinder pp family static inputs hvk hI hchar basis O = some relation := by
+  unfold actionRelationFinder
+  rw [houtcome]
 
 end ActionTerminal
 

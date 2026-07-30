@@ -897,6 +897,89 @@ theorem topLevelLookupChallengeExclusions?_isSome_of
           lookup.thetaAvoidance? top.placement environment ch.theta)) = result at htheta ⊢
   cases result <;> simp_all
 
+/-- Compute the three bundle-wide lookup exclusions from finite point checks.  The `β`/`γ`
+adapter traverses configured lookup arguments; the `θ` adapter traverses synthesized lookup
+activations and their usable rows. -/
+def topLevelLookupChallengeExclusions?
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (pp : ProofParams) (urs : URS G)
+    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (poly : CommitmentId → Polynomial Fp) :
+    Option (PLift (TopLevelLookupChallengeExclusions top pp urs ch poly)) :=
+  let vk := top.toVerifierKey pp urs
+  let u := vk.n - vk.blindingFactors - 2
+  match hresolver : resolverLookupBundleExclusions? vk ch poly u with
+  | none => none
+  | some resolver =>
+      match htheta : finForallOption
+          (fun p : Fin (pp.mergeDerived top).numProofs =>
+            finForallOption (fun l : Fin (operationEnabledLookups (top.operations) 0).length =>
+              let environment := resolverEnvironment vk poly p
+                (top.usableRowsAt top.domainExponent)
+              let lookup := (operationEnabledLookups (top.operations) 0).get l
+              lookup.thetaAvoidance? top.placement environment ch.theta)) with
+      | none => none
+      | some theta => some ⟨
+          { gamma := resolver.down.1
+            beta := resolver.down.2
+            theta := by
+              apply (not_mem_enabledLookupThetaBadSetFamily_iff
+                (ι := TopLevelLookupActivationIndex top pp)
+                (fun _ => top.placement)
+                (fun index => resolverEnvironment vk poly index.1
+                  (top.usableRowsAt top.domainExponent))
+                (fun index =>
+                  (operationEnabledLookups (top.operations) 0).get index.2)
+                ch.theta).2
+              intro index
+              exact (theta index.1 index.2).down }⟩
+
+theorem topLevelLookupChallengeExclusions?_isSome_of
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (pp : ProofParams) (urs : URS G)
+    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (poly : CommitmentId → Polynomial Fp)
+    (hexclusions : TopLevelLookupChallengeExclusions top pp urs ch poly) :
+    (topLevelLookupChallengeExclusions? top pp urs ch poly).isSome := by
+  let vk := top.toVerifierKey pp urs
+  let u := vk.n - vk.blindingFactors - 2
+  obtain ⟨resolver, hresolver⟩ := Option.isSome_iff_exists.mp
+    (resolverLookupBundleExclusions?_isSome_of vk ch poly u
+      hexclusions.gamma hexclusions.beta)
+  have hthetaSpec : ∀ index : TopLevelLookupActivationIndex top pp,
+      ch.theta ∉ ((operationEnabledLookups (top.operations) 0).get index.2).thetaBadSet
+        top.placement
+        (resolverEnvironment vk poly index.1
+          (top.usableRowsAt top.domainExponent)) := by
+    apply (not_mem_enabledLookupThetaBadSetFamily_iff
+      (ι := TopLevelLookupActivationIndex top pp)
+      (fun _ => top.placement)
+      (fun index => resolverEnvironment vk poly index.1
+        (top.usableRowsAt top.domainExponent))
+      (fun index => (operationEnabledLookups (top.operations) 0).get index.2)
+      ch.theta).1
+    exact hexclusions.theta
+  have hthetaSome : ∀ index : TopLevelLookupActivationIndex top pp,
+      (((operationEnabledLookups (top.operations) 0).get index.2).thetaAvoidance?
+        top.placement
+        (resolverEnvironment vk poly index.1
+          (top.usableRowsAt top.domainExponent)) ch.theta).isSome :=
+    fun index => EnabledLookup.thetaAvoidance?_isSome_of _ _ _ _ (hthetaSpec index)
+  obtain ⟨theta, htheta⟩ := Option.isSome_iff_exists.mp
+    (finForallOption_isSome_of _ (fun p =>
+      finForallOption_isSome_of _ (fun l => hthetaSome (p, l))))
+  unfold topLevelLookupChallengeExclusions?
+  simp only
+  rw [hresolver]
+  generalize hresult : finForallOption
+      (fun p : Fin (pp.mergeDerived top).numProofs =>
+        finForallOption (fun l : Fin (operationEnabledLookups (top.operations) 0).length =>
+          let environment := resolverEnvironment vk poly p
+            (top.usableRowsAt top.domainExponent)
+          let lookup := (operationEnabledLookups (top.operations) 0).get l
+          lookup.thetaAvoidance? top.placement environment ch.theta)) = result at htheta ⊢
+  cases result <;> simp_all
+
 /--
 Bundle-wide challenge exclusions and exact selector realization construct the
 per-proof conditions consumed by the deployed lookup witnesses.
