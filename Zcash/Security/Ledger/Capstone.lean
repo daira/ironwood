@@ -1,4 +1,5 @@
-import Mathlib
+import Mathlib.Tactic
+import Mathlib.Probability.Distributions.Uniform
 import Zcash.Security.Ledger.Balance
 import Zcash.Security.Ledger.SpendAuthority
 

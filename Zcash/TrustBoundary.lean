@@ -57,6 +57,7 @@ import Zcash.Snark.Soundness.AGM.ZeroFamilyRoots
 import Zcash.Snark.Soundness.Composition.ZeroStraightLine
 import Zcash.Snark.Soundness.AGM.DirectConstraintFamily
 import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
+import Mathlib.Util.AssertNoSorry
 
 /-!
 # Trust boundary, build-checked

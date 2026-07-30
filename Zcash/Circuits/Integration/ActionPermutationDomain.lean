@@ -2,6 +2,7 @@ import Zcash.Circuits.Integration.ActionPermutationDomainCompute
 import Zcash.Circuits.Integration.PermutationCompiler
 import Zcash.Snark.Soundness.Canonical.ConstraintModel
 import Zcash.Circuits.Integration.TopLevelAssignment
+import Mathlib.Util.AssertNoSorry
 
 /-!
 # Action permutation domain and verifier layout

@@ -1,6 +1,7 @@
 import Zcash.Snark.Soundness.Canonical.Vesta
 import Zcash.Circuits.Integration.TopLevelAcceptedModel
 import Zcash.Snark.Soundness.TopLevelTerminal
+import Mathlib.Util.AssertNoSorry
 
 /-!
 # Circuit-generic Vesta soundness capstone
