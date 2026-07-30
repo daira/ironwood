@@ -550,7 +550,7 @@ theorem uniformChallenge_resolverPermutationGammaBadSet
 
 /-- The challenge exclusions used both to recover the multiset of `(value, name)` pairs and to
 propagate equality around its cycles.  They are kept separate from VK semantics because the
-forking/bad-set accounting, rather than key generation, supplies them. -/
+random-oracle bad-set accounting, rather than key generation, supplies them. -/
 structure ResolverPermutationGoodChallenges
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
@@ -568,8 +568,8 @@ structure ResolverPermutationGoodChallenges
       (chunkRowName vk.omega vk.delta vk.chunkLen)) j)
 
 /-- Resolver-backed full constraint satisfaction enforces equality on every replayed keygen
-permutation cycle.  The formerly explicit zero-factor branch is excluded by the separately priced
-active-cell component of `ResolverPermutationGoodChallenges.gamma`.
+permutation cycle. The zero-factor branch is excluded by the separately priced active-cell
+component of `ResolverPermutationGoodChallenges.gamma`.
 
 The proof does no new algebra: it joins the polynomial half from
 `ConstraintSatisfaction.resolverPermutationConstraints` to the domain, keygen-semantic, and

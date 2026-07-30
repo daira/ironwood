@@ -6,11 +6,9 @@ import Zcash.Snark.Soundness.Composition.Quotient
 /-!
 # Constraint supply from rewind-free deployed AGM decoding
 
-The historical constraint-supply theorem obtains member polynomials from accepting `x1` rewind
-families.  `DeployedAlgebraicDecode` already supplies the same polynomials directly from
-squeeze-pinned AGM coordinates, together with their values at every routed node.  This module
-connects that deterministic output to the concrete Halo2 constraint layer without reintroducing
-the old multiopen probability floors.
+`DeployedAlgebraicDecode` supplies member polynomials directly from squeeze-pinned AGM coordinates,
+together with their values at every routed node. This module connects that deterministic output to
+the concrete Halo2 constraint layer.
 -/
 
 namespace Zcash.Snark
@@ -144,7 +142,7 @@ def deployed_slot_route_of_checks [DecidableEq G] [Inhabited G]
     simpa only [deployedSetQueries, constructIntermediateSets_zip_sets_getD] using h
 
 omit [Module Fp G] in
-/-- Proposition-valued compatibility wrapper for legacy constraint-routing consumers. -/
+/-- Proposition-valued wrapper for constraint-routing consumers. -/
 theorem deployed_slot_routed_all_of_checks [DecidableEq G] [Inhabited G]
     {shape : Shape} (vk : VerifyingKey shape Fp G)
     (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape Fp G)

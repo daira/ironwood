@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.Forking.Adversary.Adaptive
+import Zcash.Snark.Soundness.FiatShamir.Adversary.Adaptive
 
 /-!
 # Reduce an unbounded oracle domain to finite support

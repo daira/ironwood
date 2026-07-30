@@ -1854,7 +1854,7 @@ def adaptiveActionRepresentationRelationFinder
         (List.ofFn fun n => family.adaptiveActionSourceMismatchAt? basis data n) ++
         [family.adaptiveActionQuotientRelationFinder basis O])
 
-/-- The one-pass Action provenance finder is extensionally the former repeated-scan expression. -/
+/-- The one-pass Action provenance finder is extensionally equal to the uncached repeated scan. -/
 theorem adaptiveActionRepresentationRelationFinder_eq_uncached
     (family : ComputedAdaptiveOnlineAGMFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)

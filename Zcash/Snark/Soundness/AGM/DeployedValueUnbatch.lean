@@ -76,8 +76,8 @@ def deployedX3ErrorPolynomial [DecidableEq G] [Inhabited G] {shape : Shape}
     (fun j => ch.x2 ^ (j : Nat))
     (deployedAlgebraicQPrime urs hk vk instanceCommitment ps ch batch)
 
-/-- The direct `x3` root polynomial has the same deployed degree bound as the historical grid
-argument, but now one root is priced rather than enough accepting samples to interpolate it. -/
+/-- The direct `x3` error polynomial has the deployed degree bound needed to price its sampled
+root. -/
 theorem deployedX3ErrorPolynomial_natDegree_le
     [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
@@ -276,7 +276,7 @@ theorem deployedSetInterpolant_eval_eq_memberPowerSum
     <- Fin.sum_univ_eq_sum_range]
 
 /-- A good single `x1` challenge separates the represented members of a deployed set.  This is
-the value-side companion of `deployedX1AlgebraicBatchOrRelation`; no accepting `x1` rewinds are
+the value-side companion of `deployedX1AlgebraicBatchWithSourceOrRelation`; no accepting `x1` rewinds are
 used. -/
 theorem deployedMemberNodeBinding_of_good_x1
     [DecidableEq G] [Inhabited G] {shape : Shape}

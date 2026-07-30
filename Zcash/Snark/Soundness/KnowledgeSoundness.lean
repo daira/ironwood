@@ -7,13 +7,13 @@ import Zcash.Snark.Soundness.CommitFold
 # Knowledge-soundness relation
 
 `SnarkRelation` requires one witness to open the IPA commitment and satisfy the circuit. This file
-carries that relation, its two circuit-satisfaction predicates, and the Schwartz–Zippel error; the
-computed Fiat–Shamir/AGM reduction is in `Forking.Adversary.Algebraic`.
+carries that relation and the full constraint-list satisfaction predicate; the
+computed Fiat–Shamir/AGM reduction is in `FiatShamir.Adversary.Algebraic`.
 
 The boundary is explicit: DL-relation hardness, an ideal random oracle for Blake2b and challenge
 conversion (and, on the generator-RO endpoints, for the hash-to-curve URS derivation),
 CompElliptic's Vesta point-count axiom, and correctness of the supplied verifying key.
-The computed reduction models oracle queries, reprogramming, and query loss.
+The computed reduction models oracle queries, represented output, and query loss.
 
 Efficiency counts black-box calls.  The deployed combined finder has a pointwise four-invocation
 bound, so no expectation, truncation budget, or Markov tail enters the accounting.  Adversary PPT
@@ -29,40 +29,18 @@ open CompPoly.CPolynomial
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 
 -- Decode gap (closed by the multiopen decode layer): the two conjuncts of `SnarkRelation` share
--- only the symbol `a`, so a free decode function feeding `circuitSatViaGates` could be instantiated
+-- only the symbol `a`, so a free decode function feeding `circuitSatViaConstraints` could be instantiated
 -- independently of `a` and `circuitSat a` would not constrain the extracted witness. The deployed
 -- capstones close this by stating `circuitSat` at the canonical decode of the extracted witness —
--- the rewound-opening decode chain of `Soundness.Multiopen.Decode` (the `batch_open_soundV`-shaped
--- premises carried by `OpenedBatchOpenings`, unbatched to member columns by
--- `openedMemberDecode_of_x1Prob`), consumed by the deployed Vesta constraint capstones.
+-- the opened AGM decode chain carried by `OpenedBatchOpenings`, unbatched to member columns by
+-- `DeployedAlgebraicDecode.toMemberDecode`, consumed by the canonical and Action terminals.
 /-- A witness that both opens the IPA commitment and satisfies the circuit predicate. -/
 structure SnarkRelation (urs : URS G) (P : G) (b : Fin (2 ^ urs.k) → Fp) (v : Fp)
     (circuitSat : (Fin (2 ^ urs.k) → Fp) → Prop) (a : Fin (2 ^ urs.k) → Fp) : Prop where
   opens : IpaRelation urs P b v a
   satisfiesCircuit : circuitSat a
 
-/-- Circuit satisfaction through decoded columns and the combined-gate quotient identity. -/
-def circuitSatViaGates {k : ℕ} (fixedCols : ℕ → CPoly)
-    (decodeAdvice decodeInstance : (Fin (2 ^ k) → Fp) → (ℕ → CPoly))
-    (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : CPoly) (deg : ℕ)
-    (a : Fin (2 ^ k) → Fp) : Prop :=
-  combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates = hpoly * (X ^ deg - 1)
-
-/-- Derive circuit satisfaction from an accepting quotient check at a good challenge. -/
-theorem circuitSatViaGates_of_check {k : ℕ} (fixedCols : ℕ → CPoly)
-    (decodeAdvice decodeInstance : (Fin (2 ^ k) → Fp) → (ℕ → CPoly))
-    (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : CPoly) (deg : ℕ)
-    (a : Fin (2 ^ k) → Fp) (x : Fp)
-    (hcheck : quotientCheck
-      (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates) hpoly deg x)
-    (hgood : combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates ≠ hpoly * (X ^ deg - 1) →
-      (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates
-        - hpoly * (X ^ deg - 1)).eval x ≠ 0) :
-    circuitSatViaGates fixedCols decodeAdvice decodeInstance y gates hpoly deg a :=
-  constraint_identity_of_accept _ hpoly deg x hcheck hgood
-
-/-- **The verifier's compressed identity over the full constraint list.** `circuitSatViaGates`
-asks only that the gate combination is the quotient's multiple. This predicate folds gates,
+/-- **The verifier's compressed identity over the full constraint list.** This predicate folds gates,
 permutation rules, and lookup rules with the sampled `y`, `beta`, `gamma`, and `theta` challenges.
 It is the algebraic identity checked by the verifier, not by itself the row-level semantic
 statement: splitting the `y` fold and recovering permutation/lookup semantics additionally require
@@ -79,8 +57,7 @@ def circuitSatViaConstraints {k np : ℕ} (fixedCols : ℕ → CPoly)
   combineConstraints fixedCols (decodeAdvice a) (decodeInstance a) gates sets chunks lookups
     beta gamma delta theta y chunkLen l0 lLast lBlind = hpoly * (X ^ deg - 1)
 
-/-- Derive the compressed full-list identity from an accepting quotient check at a good `x` —
-`circuitSatViaGates_of_check` with the permutation and lookup expressions folded in. -/
+/-- Derive the compressed full-list identity from an accepting quotient check at a good `x`. -/
 theorem circuitSatViaConstraints_of_check {k np : ℕ} (fixedCols : ℕ → CPoly)
     (decodeAdvice decodeInstance : (Fin (2 ^ k) → Fp) → Fin np → ℕ → CPoly)
     (gates : List (Expr Fp))

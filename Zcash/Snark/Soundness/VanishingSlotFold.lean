@@ -82,7 +82,7 @@ open CompPoly.CPolynomial in
 /-- **`hfold`, with the fingerprint discharged.** `hfold_of_member_budget` run on the full
 constraint list — gates, permutation argument and lookup argument together — instead of an abstract
 gate family. That list is the evaluation of the constraint *polynomials* at `ch.x`, so the
-fingerprint premise is no longer assumed: `eval_combineConstraints_deployed` proves it from the node
+fingerprint premise follows from `eval_combineConstraints_deployed` and the node
 binding alone.
 
 Named assumptions: `hfixed`/`hadvice`/`hinstance` — the fed columns take the claimed evaluations at

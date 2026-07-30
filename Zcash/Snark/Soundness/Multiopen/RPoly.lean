@@ -232,38 +232,7 @@ theorem coeffs_zero_of_power_sum_vanishes {n : ℕ} (c : ℕ → Fp)
   rw [hP0, Polynomial.coeff_zero] at hcoeff
   exact hcoeff.symm
 
-/-- **The `x₂` value-separation floor.** The multiopen combined evaluation is, by
-`multiopenEval_powerForm`, a polynomial of degree `< |sets|` in the set-separation challenge `x₂`,
-its `j`-th coefficient set `j`'s cleared contribution `(qⱼ − r(x₃)) · ∏(x₃−node)⁻¹`. Vanishing at
-`|sets|` pairwise-distinct `x₂` — the `reprogramX2` rewinds resampling `x₂` while the sets and their
-claimed evaluations stay fixed (absorbed before `x₂`) — forces every set's contribution to zero.
-This is the set-separation analogue of `col_eq_lagrangePoly_of_samples`'s `x₃` interpolation: it
-un-batches the deployed value check into the per-set claimed-combined-evaluation binding. -/
-theorem multiopenEval_perSet_zero_of_samples {x3 : Fp} {sets : List (List Fp × List Fp × Fp)}
-    (ξ : Fin sets.length → Fp) (hξ : Function.Injective ξ)
-    (hvanish : ∀ r, multiopenEval (ξ r) x3 sets = 0) (j : Fin sets.length) :
-    ((sets.reverse.getD j ([], [], 0)).2.2
-        - lagrangeEval x3 (sets.reverse.getD j ([], [], 0)).1 (sets.reverse.getD j ([], [], 0)).2.1)
-      * ∏ m ∈ Finset.range (sets.reverse.getD j ([], [], 0)).1.length,
-          (x3 - (sets.reverse.getD j ([], [], 0)).1.getD m 0)⁻¹ = 0 :=
-  coeffs_zero_of_power_sum_vanishes
-    (fun j => ((sets.reverse.getD j ([], [], 0)).2.2
-        - lagrangeEval x3 (sets.reverse.getD j ([], [], 0)).1 (sets.reverse.getD j ([], [], 0)).2.1)
-      * ∏ m ∈ Finset.range (sets.reverse.getD j ([], [], 0)).1.length,
-          (x3 - (sets.reverse.getD j ([], [], 0)).1.getD m 0)⁻¹)
-    ξ hξ (fun r => by rw [← multiopenEval_powerForm (ξ r) x3 sets]; exact hvanish r) j
-
-/-! ## Claimed-evaluation binding: the decoded column is the `r`-polynomial
-
-The verifier's per-set contribution reads the claimed per-point evaluations through
-`lagrangeEval x₃ points evals` — the `r`-polynomial's value at the interpolation challenge
-(`lagrangePoly_eval`). Rewinding `x₃` (`X3Run`, `Soundness.Multiopen.Deployed`) resamples that
-challenge while the point set and its claimed evaluations stay fixed (absorbed before `x₃`). So a
-decoded column of degree `< |points|` that reproduces the deployed `r`-value at enough distinct
-`x₃` samples must *be* the `r`-polynomial — and then its value at each node is exactly the proof
-string's claimed evaluation. This is the sample-forces-identity direction the claimed-eval binding
-rests on; producing the `x₃`-sample family from deployed accepts mirrors the `x₄` opened chain
-(`Soundness.Multiopen.Opened`) and consumes the same rewinding floor. -/
+/-! ## Degree of the deployed `r`-polynomial -/
 
 /-- The `r`-polynomial of a point set has degree below the number of nodes. -/
 theorem lagrangePoly_natDegree_lt {points evals : List Fp} (hlen : 0 < points.length)
@@ -282,44 +251,5 @@ theorem lagrangePoly_natDegree_lt {points evals : List Fp} (hlen : 0 < points.le
   by_cases h0 : P = 0
   · rw [h0, Polynomial.natDegree_zero]; exact hlen
   · exact (Polynomial.natDegree_lt_iff_degree_lt h0).mpr hd
-
-/-- **Claimed-evaluation binding from `x₃` samples.** A polynomial `col` of degree `< |points|`
-that reproduces the deployed combined evaluation `lagrangeEval · points evals` at `|points|`
-pairwise-distinct interpolation challenges *is* the `r`-polynomial `lagrangePoly points evals`. -/
-theorem col_eq_lagrangePoly_of_samples {points evals : List Fp} {col : CPoly}
-    (hlen : 0 < points.length)
-    (hnode : Function.Injective (fun i : Fin points.length => points[i]))
-    (hdeg : col.natDegree < points.length)
-    (ξ : Fin points.length → Fp) (hξ : Function.Injective ξ)
-    (hmatch : ∀ r, CPolynomial.eval (ξ r) col = lagrangeEval (ξ r) points evals) :
-    col = lagrangePoly points evals := by
-  have hn : points.length - 1 + 1 = points.length := Nat.succ_pred_eq_of_pos hlen
-  have hrdeg := lagrangePoly_natDegree_lt (evals := evals) hlen hnode
-  have hdiff : (col.toPoly - (lagrangePoly points evals).toPoly).natDegree
-      ≤ points.length - 1 := by
-    rw [← CPolynomial.toPoly_sub, ← CPolynomial.natDegree_toPoly]
-    refine le_trans (CPolynomial.natDegree_sub_le _ _) (max_le ?_ ?_) <;> omega
-  apply CPolynomial.toPoly_injective
-  exact poly_eq_of_agree_on_family hdiff (fun r => ξ (Fin.cast hn r))
-    (hξ.comp (Fin.cast_injective hn))
-    (fun r => by
-      rw [← CPolynomial.eval_toPoly, ← CPolynomial.eval_toPoly]
-      exact (hmatch (Fin.cast hn r)).trans (lagrangePoly_eval hnode _).symm)
-
-/-- **The decoded column's node values are the claimed evaluations.** Composing
-`col_eq_lagrangePoly_of_samples` with `lagrangePoly_eval_node`: at each rotated query point
-`points[i]` — the `ωⁱ·x` the verifier opens — the sample-bound decoded column takes the proof
-string's claimed evaluation `evals[i]`. This is the per-member claimed-eval binding, delegated to
-the fingerprint before this development. -/
-theorem col_eval_node_eq_claimed {points evals : List Fp} {col : CPoly}
-    (hlen : 0 < points.length)
-    (hnode : Function.Injective (fun i : Fin points.length => points[i]))
-    (hdeg : col.natDegree < points.length)
-    (ξ : Fin points.length → Fp) (hξ : Function.Injective ξ)
-    (hmatch : ∀ r, CPolynomial.eval (ξ r) col = lagrangeEval (ξ r) points evals)
-    (i : Fin points.length) :
-    CPolynomial.eval points[i] col = evals.getD (i : ℕ) 0 := by
-  rw [col_eq_lagrangePoly_of_samples hlen hnode hdeg ξ hξ hmatch]
-  exact lagrangePoly_eval_node hnode i
 
 end Zcash.Snark

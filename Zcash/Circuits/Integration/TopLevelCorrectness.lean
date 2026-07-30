@@ -364,9 +364,8 @@ joined without turning this record into an opaque statement-level hypothesis, an
 is carried as data: a field that cannot be discharged returns the break rather
 than asserting one exists.
 
-The copy field previously squashed its witness under `Nonempty`.  With `Bad` a
-type the witness is already data, so it is carried directly and the terminal no
-longer has to recover it by choice.
+The copy field carries its witness directly because `Bad` is a type, keeping the
+terminal independent of choice.
 -/
 def TopLevelCircuitCorrectness
     {G : Type} [AddCommGroup G] [Inhabited G]

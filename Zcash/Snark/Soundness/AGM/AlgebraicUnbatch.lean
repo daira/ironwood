@@ -1,4 +1,5 @@
 import Zcash.Snark.Soundness.AGM.OnlineMultiopen
+import Zcash.Snark.Soundness.AGM.Peel
 import Zcash.Snark.Soundness.GoodChallenge
 
 /-!

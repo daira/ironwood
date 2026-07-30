@@ -1,6 +1,6 @@
 import Zcash.Snark.Soundness.AGM.DeployedConstraintSupply
 import Zcash.Snark.Soundness.AGM.DeployedPinnedRoots
-import Zcash.Snark.Soundness.Forking.Adversary.Provenance
+import Zcash.Snark.Soundness.FiatShamir.Adversary.Provenance
 
 /-!
 # Constraint supply from retained online AGM provenance
