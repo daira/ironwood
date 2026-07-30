@@ -76,7 +76,7 @@ noncomputable def deployedX2RootSet [DecidableEq G] [Inhabited G] {shape : Shape
       (deployedAlgebraicSetInterpolants vk instanceCommitment ps ch) node)}
 
 /-- The member-binding polynomial for one deployed point set and one node in that set. -/
-noncomputable def deployedX1RootPolynomial [DecidableEq G] [Inhabited G] {shape : Shape}
+def deployedX1RootPolynomial [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (instanceCommitment : Fin shape.numProofs → Nat → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)

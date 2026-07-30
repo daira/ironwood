@@ -22,7 +22,7 @@ attribute [local irreducible] deployedSetQueries deployedX4PairCount x4BatchComm
   x4BatchEvals
 
 /-- The represented deployed point-set aggregate polynomials, in `x2`/`x4` reverse order. -/
-noncomputable def deployedAlgebraicSetColumns [DecidableEq G] [Inhabited G] {shape : Shape}
+def deployedAlgebraicSetColumns [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (instanceCommitment : Fin shape.numProofs → Nat → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -33,7 +33,7 @@ noncomputable def deployedAlgebraicSetColumns [DecidableEq G] [Inhabited G] {sha
   fun j => coeffsToPoly (batch.coeffs ⟨(j : Nat), Nat.lt_succ_of_lt j.isLt⟩)
 
 /-- The represented top `x4` slot is the fixed `qPrime` polynomial. -/
-noncomputable def deployedAlgebraicQPrime [DecidableEq G] [Inhabited G] {shape : Shape}
+def deployedAlgebraicQPrime [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (instanceCommitment : Fin shape.numProofs → Nat → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)
@@ -44,7 +44,7 @@ noncomputable def deployedAlgebraicQPrime [DecidableEq G] [Inhabited G] {shape :
     ⟨deployedX4PairCount vk instanceCommitment ps ch, Nat.lt_succ_self _⟩)
 
 /-- Claimed set interpolants, in the reverse order paired with ascending `x2` powers. -/
-noncomputable def deployedAlgebraicSetInterpolants [DecidableEq G] [Inhabited G] {shape : Shape}
+def deployedAlgebraicSetInterpolants [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) :
     Fin (deployedX4PairCount vk instanceCommitment ps ch) -> CPoly :=
@@ -53,7 +53,7 @@ noncomputable def deployedAlgebraicSetInterpolants [DecidableEq G] [Inhabited G]
     ((deployedSetsForEval vk instanceCommitment ps ch).reverse.getD (j : Nat) ([], [], 0)).2.1
 
 /-- Deployed point sets in the reverse order paired with ascending `x2` powers. -/
-noncomputable def deployedAlgebraicSetPoints [DecidableEq G] [Inhabited G] {shape : Shape}
+def deployedAlgebraicSetPoints [DecidableEq G] [Inhabited G] {shape : Shape}
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) :
     Fin (deployedX4PairCount vk instanceCommitment ps ch) -> Finset Fp :=
@@ -62,7 +62,7 @@ noncomputable def deployedAlgebraicSetPoints [DecidableEq G] [Inhabited G] {shap
 
 /-- The exact deployed `x3` error polynomial.  All of its ingredients are fixed before `x3`
 provided the AGM representations are online and squeeze-pinned. -/
-noncomputable def deployedX3ErrorPolynomial [DecidableEq G] [Inhabited G] {shape : Shape}
+def deployedX3ErrorPolynomial [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G)
     (instanceCommitment : Fin shape.numProofs → Nat → G)
     (ps : ProofString shape Fp G) (ch : Challenges shape.k Fp)

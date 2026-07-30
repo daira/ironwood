@@ -129,7 +129,7 @@ def algebraicPowerBatchOrRelation {urs : URS G} {numColumns : Nat}
 /-- The value-error polynomial of represented columns against the verifier's claimed column
 values.  Its coefficient at `i` is exactly
 `<coeffs i,b> - columnEvals i`. -/
-noncomputable def algebraicBatchErrorPolynomial {urs : URS G} {numColumns : Nat}
+def algebraicBatchErrorPolynomial {urs : URS G} {numColumns : Nat}
     (b : Fin (2 ^ urs.k) -> Fp)
     (cols : Fin numColumns -> (Fin (2 ^ urs.k) -> Fp))
     (columnEvals : Fin numColumns -> Fp) : CPoly :=
