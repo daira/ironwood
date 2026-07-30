@@ -9,7 +9,7 @@
 -- * `Verifier/` — the transcription layer: the deployed halo2 verifier's MSM assembly as a pure
 --   Lean function (queries, expressions, multiopen, IPA fold, Fiat–Shamir schedule).
 -- * `Fingerprint/` — the faithfulness cross-check: the captured-fixture match (`native_decide`,
---   loaded in the auto-generated `Fixture.lean`) plus the Schwartz–Zippel and batch-RLC bounds.
+--   loaded in the auto-generated `Fixture.lean`) plus the Schwartz–Zippel bound.
 -- * `Soundness/` — the soundness argument: IPA special soundness and extraction, binding as a
 --   DLR reduction, the constraint layer, the permutation/lookup kernels, and the composition
 --   (`Soundness/Main.lean`), instantiated at Vesta (`Soundness/Vesta.lean`).
@@ -27,7 +27,6 @@ import Zcash.Snark.Core
 import Zcash.Snark.Core.ProofString
 import Zcash.Snark.Core.Challenges
 import Zcash.Snark.Fingerprint.SchwartzZippel
-import Zcash.Snark.Fingerprint.Batch
 import Zcash.Snark.Verifier.Ipa
 import Zcash.Snark.Verifier.Checks
 import Zcash.Snark.Verifier.Queries

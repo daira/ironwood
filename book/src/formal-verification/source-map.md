@@ -122,9 +122,8 @@ elaboration time of the lane — and so is built only in the fixture lane.
 `Match` is the fingerprint match: running the deployed Rust verifier and the Lean `assemble`
 on the same proof and challenges and comparing the assembled MSMs coefficient-for-coefficient
 — the cross-check that validates the Lean assembly in place of a line-by-line translation
-proof. `SchwartzZippel` and `Batch` supply the soundness bounds: a fingerprint agrees with a
-random evaluation, and a random-linear-combination batch is the identity, only with negligible
-probability.
+proof. `SchwartzZippel` supplies the abstract random-evaluation bound. Outer batching of separate
+proof blobs by Halo2's optional `BatchVerifier` is outside this formalization's scope.
 
 ### `Fixtures/` — captured proofs and boundary checks
 
