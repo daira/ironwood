@@ -2,6 +2,7 @@ import Zcash.Snark.Fixtures.TripleActionRandom.Fixture
 import Zcash.Snark.Fixtures.TripleActionRandom.Faithfulness
 import Zcash.Snark.Fixtures.TripleActionRandom.Negative
 import Zcash.Snark.Fixtures.TripleActionRandom.Boundary
+import Zcash.Snark.Fixtures.TripleActionRandom.Epsilon
 import Zcash.Snark.Fixtures.PostNu63Random
 import Zcash.Meta.AxiomCheck
 
@@ -228,3 +229,54 @@ Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_
 Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_8] -/
 #guard_msgs (whitespace := lax) in
 #print axioms Zcash.Snark.FixtureRandom3.nonInteractiveFingerprint_matches_derived
+
+-- Quantified-match ε at this capture (`Epsilon.lean`): the verifying-key symbolic facts and the
+-- degree/coordinate literals hold at the captured key, the good event contains the captured
+-- point itself, and any competing coefficient family of numerator degree ≤ 16460 over the
+-- walk's denominators that differs anywhere from Lean's agrees with the assembled MSM at a
+-- uniform sample-space point with probability at most (16460 + 2071)/p = 18531/p, p ≈ 2^254.
+assert_axioms Zcash.Snark.FixtureRandom3.vkSymbolicFacts +native(
+  Zcash.Snark.FixtureRandom3.vkSymbolicFacts)
+assert_axioms Zcash.Snark.FixtureRandom3.vk_chunk_width_le +native(
+  Zcash.Snark.FixtureRandom3.vk_chunk_width_le)
+assert_axioms Zcash.Snark.FixtureRandom3.vk_chunks_length_eq +native(
+  Zcash.Snark.FixtureRandom3.vk_chunks_length_eq)
+assert_axioms Zcash.Snark.FixtureRandom3.msmDegreeBudget_eq +native(
+  Zcash.Snark.FixtureRandom3.msmDegreeBudget_eq)
+assert_axioms Zcash.Snark.FixtureRandom3.otherLen_eq +native(
+  Zcash.Snark.FixtureRandom3.otherLen_eq)
+assert_axioms Zcash.Snark.FixtureRandom3.denFactors_degree_sum_eq +native(
+  Zcash.Snark.FixtureRandom3.denFactors_degree_sum_eq)
+assert_axioms Zcash.Snark.FixtureRandom3.card_scalarSlot
+assert_axioms Zcash.Snark.FixtureRandom3.coefficientFamily +native(
+  Zcash.Snark.FixtureRandom3.vkSymbolicFacts,
+  Zcash.Snark.FixtureRandom3.vk_chunk_width_le,
+  Zcash.Snark.FixtureRandom3.vk_chunks_length_eq)
+assert_axioms Zcash.Snark.FixtureRandom3.capturedPoint_goodEvent +native(
+  Zcash.Snark.FixtureRandom3.capturedPoint_goodEvent)
+assert_axioms Zcash.Snark.FixtureRandom3.competing_family_agreement_le +native(
+  Zcash.Snark.FixtureRandom3.vkSymbolicFacts,
+  Zcash.Snark.FixtureRandom3.vk_chunk_width_le,
+  Zcash.Snark.FixtureRandom3.vk_chunks_length_eq,
+  Zcash.Snark.FixtureRandom3.msmDegreeBudget_eq,
+  Zcash.Snark.FixtureRandom3.denFactors_degree_sum_eq)
+
+/-- info: 'Zcash.Snark.FixtureRandom3.competing_family_agreement_le' depends on axioms: [propext,
+Classical.choice,
+Quot.sound,
+Zcash.Snark.FixtureRandom3.denFactors_degree_sum_eq._native.native_decide.ax_1_1,
+Zcash.Snark.FixtureRandom3.msmDegreeBudget_eq._native.native_decide.ax_1_1,
+Zcash.Snark.FixtureRandom3.vkSymbolicFacts._native.native_decide.ax_1_1,
+Zcash.Snark.FixtureRandom3.vkSymbolicFacts._native.native_decide.ax_1_2,
+Zcash.Snark.FixtureRandom3.vkSymbolicFacts._native.native_decide.ax_1_3,
+Zcash.Snark.FixtureRandom3.vkSymbolicFacts._native.native_decide.ax_1_4,
+Zcash.Snark.FixtureRandom3.vkSymbolicFacts._native.native_decide.ax_1_5,
+Zcash.Snark.FixtureRandom3.vkSymbolicFacts._native.native_decide.ax_1_6,
+Zcash.Snark.FixtureRandom3.vk_chunk_width_le._native.native_decide.ax_1_1,
+Zcash.Snark.FixtureRandom3.vk_chunks_length_eq._native.native_decide.ax_1_1] -/
+#guard_msgs (whitespace := lax) in
+#print axioms Zcash.Snark.FixtureRandom3.competing_family_agreement_le
+
+/-- info: 'Zcash.Snark.FixtureRandom3.capturedPoint_goodEvent' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.FixtureRandom3.capturedPoint_goodEvent._native.native_decide.ax_1_1] -/
+#guard_msgs (whitespace := lax) in
+#print axioms Zcash.Snark.FixtureRandom3.capturedPoint_goodEvent
