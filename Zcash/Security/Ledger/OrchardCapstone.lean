@@ -292,7 +292,10 @@ def orchardSpendAuthorityOrRelation
 /-- The Orchard Spend Authority relation event, for a victim key witness `wV` with
 signing history `Signed`: the samples on which the reduction, run on an Action
 spending a note addressed to `wV` over an unsigned sighash, computes a nontrivial
-discrete-log relation at the `CommitIvk` bases. -/
+discrete-log relation at the `CommitIvk` bases. The firing Action is selected
+existentially; #155 tracks the oracle-machine layer that connects the ε named on
+this event to an adversary experiment and recovers the Action from the adversary's
+announced indices. -/
 def orchardSpendAuthorityRelationEvent (wV : KeyBinding.Pool.Witness Fq PallasGroup Fp)
     (hKB : keyBinding.KB wV) (Signed : MSG → Prop) :
     Set (OrchardAnnotated verify bverify issuance maxActions) :=
