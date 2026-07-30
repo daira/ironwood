@@ -1,6 +1,7 @@
 import Lean.Util.CollectAxioms
 import Lean.Elab.Command
 import Lean.DeclarationRange
+import Mathlib.Util.AssertNoSorry
 
 /-!
 # `assert_axioms` — a concise, build-checked trust-boundary bound

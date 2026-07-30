@@ -1,4 +1,4 @@
-import Mathlib
+import Mathlib.Algebra.Group.Nat.Defs
 
 /-!
 # The verifier group `E_q` and the uniform reference string

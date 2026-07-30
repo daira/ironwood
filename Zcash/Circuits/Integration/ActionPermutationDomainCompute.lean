@@ -1,3 +1,4 @@
+import Mathlib.Util.AssertNoSorry
 import Zcash.Snark.Keygen.Derivation
 import Zcash.Snark.Soundness.Canonical.PermutationInstantiation
 

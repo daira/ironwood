@@ -1,6 +1,7 @@
 import Zcash.Snark.Keygen.Certificate
 import Zcash.Snark.Keygen.Lagrange
 import Zcash.Circuits.Integration.TopLevelInstanceCommitment
+import Mathlib.Util.AssertNoSorry
 
 /-!
 # The captured instance commitments are the circuit-derived ones
