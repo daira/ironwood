@@ -1,20 +1,14 @@
 import Mathlib.Tactic
 import Zcash.Snark.Soundness.Main
-import Zcash.Snark.Soundness.Forking.Rewind
-import Zcash.Snark.Soundness.Multiopen.Opened
-import Zcash.Snark.Soundness.Multiopen.ValueCheckDeployed
-import Zcash.Snark.Soundness.Multiopen.NodeBinding
+import Zcash.Snark.Soundness.Multiopen.Deployed
 import CompElliptic.Curves.Pasta
 import CompElliptic.Curves.PastaOrder
 
 /-!
 # Vesta instantiation: the verifier group at the deployed curve
 
-The soundness theorems of `Zcash.Snark.Soundness.Main` are proven for an abstract
-`Fp`-module `G`. Here `G` is pinned to the actual Vesta curve `SWPoint Vesta.curve` (`y² = x³ + 5`),
-whose group law CompElliptic/mathlib have already proven (associativity transported from
-`WeierstrassCurve.Affine.Point`). The deployed Orchard verifier runs over Vesta, so these theorems are
-the concrete-curve forms of the abstract capstones.
+This module pins the abstract verifier group to the actual Vesta curve
+`SWPoint Vesta.curve` (`y² = x³ + 5`) and supplies the arithmetic lemmas used by the AGM reductions.
 
 ## The setting
 
@@ -81,49 +75,6 @@ theorem Msm.evalNat_eq_eval_vesta (urs : URS VestaG)
     (m : Msm urs.k Fp VestaG) : m.evalNat urs = m.eval urs :=
   Msm.evalNat_eq_eval urs m
 
-def NontrivialRelation.ofUnopenedForkVesta [DecidableEq VestaG]
-    [Inhabited VestaG]
-    {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG)
-    (ps : ProofString shape Fp VestaG) (ch : Challenges shape.k Fp)
-    {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp} (hz : z ≠ 0)
-    (fs : ForkedTranscript urs hk vk instanceCommitment ps ch b z blind)
-    (hne : ¬ IpaAcceptV urs.g b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
-      (projTree fs.tree)) :
-    NontrivialRelation (F := Fp) urs.g urs.u urs.w :=
-  NontrivialRelation.ofUnopenedFork urs hk vk instanceCommitment ps ch hz fs hne
-
-open Polynomial in
-/-- **Deployed opening and constraint over Vesta, given a clean fork.**
-`orchard_verifier_deployed_constraint_of_forked` specialised to `SWPoint Vesta.curve`: the opening
-for the declared `fs.openedCommitment` and the pinned `multiopenValue`, and `circuitSat` (concrete
-`circuitSatViaGates`) from the verifier's gate point-check `hquot` lifted by Schwartz–Zippel
-(`hgood`). The `Fp`-module comes from the pinned Vesta point-count result. `hquot`/`hgood` share
-`hcirc`'s unsatisfiable shape (see the section note in `Soundness.Main`). -/
-theorem orchard_verifier_vesta_constraint_of_forked [DecidableEq VestaG] [Inhabited VestaG]
-    {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG)
-    (ps : ProofString shape Fp VestaG) (ch : Challenges shape.k Fp)
-    {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp}
-    (fixedCols : ℕ → Polynomial Fp)
-    (decodeAdvice decodeInstance : (Fin (2 ^ urs.k) → Fp) → (ℕ → Polynomial Fp))
-    (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp)
-    (fs : ForkedTranscript urs hk vk instanceCommitment ps ch b z blind)
-    (hclean : IpaAcceptV urs.g b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
-      (projTree fs.tree))
-    (hquot : ∀ a, IpaRelation urs fs.openedCommitment b
-      (multiopenValue vk instanceCommitment ps ch) a →
-      quotientCheck (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates) hpoly deg x)
-    (hgood : ∀ a, IpaRelation urs fs.openedCommitment b
-      (multiopenValue vk instanceCommitment ps ch) a →
-      combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates ≠ hpoly * (X ^ deg - 1) →
-      (combineGates fixedCols (decodeAdvice a) (decodeInstance a) y gates
-        - hpoly * (X ^ deg - 1)).eval x ≠ 0)
-    {S : Prop}
-    (hencodes : ∀ a, SnarkRelation urs fs.openedCommitment b (multiopenValue vk instanceCommitment ps ch)
-      (circuitSatViaGates fixedCols decodeAdvice decodeInstance y gates hpoly deg) a → S) :
-    S :=
-  orchard_verifier_deployed_constraint_of_forked urs hk vk instanceCommitment ps ch fixedCols
-    decodeAdvice decodeInstance y gates hpoly deg x fs hclean hquot hgood hencodes
-
 /-- The powers evaluation vector has leading entry `1` (`evalVector k x 0 = x⁰ = 1`), discharging the IPA's
 `hb0` structural fact at the concrete deployed `b = evalVector`. -/
 theorem evalVector_zero {F : Type*} [Field F] (k : ℕ) (x : F) : evalVector k x 0 = 1 := by
@@ -141,15 +92,6 @@ theorem commit_adjustedWitness {G : Type*} [AddCommGroup G] [Module Fp G] (urs :
     intro a a'; simp only [commit, Pi.sub_apply, sub_smul, Finset.sum_sub_distrib]
   rw [adjustedWitness, commit_add, csub, commit_single, commit_smul]
 
-open scoped ENNReal in
-/-- A nonzero blinding shift vanishes for at most a `1 / |Fp|` fraction of uniform `ξ` challenges. -/
-theorem blinder_value_recovery_badSet {k : ℕ} (s : Fin (2 ^ k) → Fp) (xEval : Fp)
-    (hδ : innerProduct s (evalVector k xEval) ≠ 0) :
-    uniformChallenge.toOuterMeasure
-        (Finset.univ.filter (fun ξ : Fp => ξ * innerProduct s (evalVector k xEval) = 0))
-      ≤ 1 / (Fintype.card Fp : ℝ≥0∞) :=
-  blinder_shift_badSet_measure (innerProduct s (evalVector k xEval)) 0 hδ
-
 /-- The single-entry value term in the adjusted commitment is `-v • g 0`. -/
 theorem sum_getD_single {k : ℕ} {G : Type*} [AddCommGroup G] [Module Fp G] (gg : Fin (2 ^ k) → G)
     (v : Fp) :
@@ -162,84 +104,4 @@ theorem sum_getD_single {k : ℕ} {G : Type*} [AddCommGroup G] [Module Fp G] (gg
     simp only [List.length_cons, List.length_nil, Nat.zero_add]
     omega
   · intro h; exact absurd (Finset.mem_univ _) h
-open Polynomial in
-open scoped ENNReal in
-open Classical in
-/-- **Deployed decoded constraint, per fork, batch produced by `x₄` rewinding.** The circuit is
-checked on columns decoded from the opened `x₄` batch over the deployed aggregates, not through
-free decode functions; the batch is derived from the fork's clean transcript and the `x₄` accept
-measure (`openedX4Rewind_of_x4Prob_forked`). `hquot`/`hgood` are stated once, for the canonical
-decode at the transcript's own extracted witness — the satisfiable shape (quantifying over every
-opening is vacuous at a nontrivial kernel; see `Multiopen.Decode`'s scope section). -/
-theorem orchard_verifier_vesta_decoded_constraint_of_forked_x4 [DecidableEq VestaG]
-    [Inhabited VestaG] {shape : Shape} (urs : URS VestaG) (hk : shape.k = urs.k)
-    (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (ps : ProofString shape Fp VestaG)
-    (ch : Challenges shape.k Fp)
-    {b : Fin (2 ^ urs.k) → Fp} {z blind : Fp}
-    {numAdvice numInstance : ℕ}
-    (adviceIndex : Fin numAdvice → Fin (deployedX4PairCount vk instanceCommitment ps ch + 1))
-    (instanceIndex : Fin numInstance → Fin (deployedX4PairCount vk instanceCommitment ps ch + 1))
-    (fixedCols : ℕ → Polynomial Fp)
-    (y : Fp) {ng : ℕ} (gates : Fin ng → Expr Fp) (hpoly : Polynomial Fp) (deg : ℕ) (x : Fp)
-    (fs : ForkedTranscript urs hk vk instanceCommitment ps ch b z blind)
-    (hclean : IpaAcceptV urs.g b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
-      (projTree fs.tree))
-    (hprob4 : ((deployedX4PairCount vk instanceCommitment ps ch : ℝ≥0∞)) / Fintype.card Fp
-      < (PMF.uniformOfFintype Fp).toOuterMeasure (Finset.univ.filter
-          (OpenedX4Accept urs hk vk instanceCommitment ps ch b)))
-    (hquot : quotientCheck
-        (combineGates fixedCols
-          (selectedPolys (openedDecodedCols (openedX4Rewind_of_x4Prob_forked urs hk vk instanceCommitment ps ch fs
-            ⟨projTree fs.tree, hclean⟩ hprob4 (ipaRelation_extract urs b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
-            (projTree fs.tree) hclean).1
-          (ipaRelation_extract urs b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
-            (projTree fs.tree) hclean).2)) adviceIndex)
-          (selectedPolys (openedDecodedCols (openedX4Rewind_of_x4Prob_forked urs hk vk instanceCommitment ps ch fs
-            ⟨projTree fs.tree, hclean⟩ hprob4 (ipaRelation_extract urs b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
-            (projTree fs.tree) hclean).1
-          (ipaRelation_extract urs b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
-            (projTree fs.tree) hclean).2)) instanceIndex)
-          y gates) hpoly deg x)
-    (hgood :
-      combineGates fixedCols
-          (selectedPolys (openedDecodedCols (openedX4Rewind_of_x4Prob_forked urs hk vk instanceCommitment ps ch fs
-            ⟨projTree fs.tree, hclean⟩ hprob4 (ipaRelation_extract urs b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
-            (projTree fs.tree) hclean).1
-          (ipaRelation_extract urs b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
-            (projTree fs.tree) hclean).2)) adviceIndex)
-          (selectedPolys (openedDecodedCols (openedX4Rewind_of_x4Prob_forked urs hk vk instanceCommitment ps ch fs
-            ⟨projTree fs.tree, hclean⟩ hprob4 (ipaRelation_extract urs b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
-            (projTree fs.tree) hclean).1
-          (ipaRelation_extract urs b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
-            (projTree fs.tree) hclean).2)) instanceIndex)
-          y gates ≠ hpoly * (X ^ deg - 1) →
-      (combineGates fixedCols
-          (selectedPolys (openedDecodedCols (openedX4Rewind_of_x4Prob_forked urs hk vk instanceCommitment ps ch fs
-            ⟨projTree fs.tree, hclean⟩ hprob4 (ipaRelation_extract urs b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
-            (projTree fs.tree) hclean).1
-          (ipaRelation_extract urs b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
-            (projTree fs.tree) hclean).2)) adviceIndex)
-          (selectedPolys (openedDecodedCols (openedX4Rewind_of_x4Prob_forked urs hk vk instanceCommitment ps ch fs
-            ⟨projTree fs.tree, hclean⟩ hprob4 (ipaRelation_extract urs b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
-            (projTree fs.tree) hclean).1
-          (ipaRelation_extract urs b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
-            (projTree fs.tree) hclean).2)) instanceIndex)
-          y gates - hpoly * (X ^ deg - 1)).eval x ≠ 0)
-    {S : Prop}
-    (hencodes : ∀ a cols,
-      SnarkRelationWithOpenedColumns urs fs.openedCommitment b (multiopenValue vk instanceCommitment ps ch)
-        (x4BatchCommitments urs hk vk instanceCommitment ps ch) (x4BatchEvals vk instanceCommitment ps ch) adviceIndex instanceIndex
-        fixedCols y gates hpoly deg fs.pU fs.pW a cols → S) :
-    S :=
-  opened_constraint_of_relation_and_batch (x4BatchCommitments urs hk vk instanceCommitment ps ch)
-    (x4BatchEvals vk instanceCommitment ps ch) adviceIndex instanceIndex fixedCols y gates hpoly deg x
-    (ipaRelation_extract urs b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
-            (projTree fs.tree) hclean).2
-    (openedX4Rewind_of_x4Prob_forked urs hk vk instanceCommitment ps ch fs
-            ⟨projTree fs.tree, hclean⟩ hprob4 (ipaRelation_extract urs b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
-            (projTree fs.tree) hclean).1
-          (ipaRelation_extract urs b fs.openedCommitment (multiopenValue vk instanceCommitment ps ch)
-            (projTree fs.tree) hclean).2)
-    hquot hgood hencodes
-
 end Zcash.Snark

@@ -24,9 +24,9 @@ to the assembly concrete: `Expr.toPoly` lifts the Orchard gate `Expr`s to `Polyn
 `combineGates` assembles them into the actual `numerator` — so the root-counting bound applies to the
 verifier's real gate check.
 
-Two paths through the file. The gates-only path (`combineGates` / `circuitSatViaGates`) folds just the
-custom-gate portion of `numerator`; it is the compatibility shape, so "circuit satisfaction" there
-means **gate** satisfaction. The full path (`combineConstraints` / `circuitSatViaConstraints`) folds
+Two algebraic builders appear below. `combineGates` folds just the custom-gate portion of
+`numerator` and supports local evaluation lemmas. The deployed path (`combineConstraints` /
+`circuitSatViaConstraints`) folds
 the permutation and lookup constraint values in too — the same list the verifier's `expected_h_eval`
 combines — and those terms *are* connected to the circuit-level copy and lookup constraints: the
 row-level results carry them to the combinatorial relations, which `ConstraintRelations` reads back out
@@ -480,8 +480,7 @@ theorem mem_constraintPolys_of_mem_lookupExpressions {np : ℕ} (fixedCols : ℕ
 
 open Polynomial in
 /-- **The fingerprint, discharged.** The polynomial constraint numerator at the gate point is the
-verifier's own `expected_h_eval` fold — no longer an assumption relating an abstract gate list to the
-deployed one, but an equation between two things built by the same code. The hypotheses are exactly
+verifier's own `expected_h_eval` fold: an equation between two things built by the same code. The hypotheses are exactly
 the node binding: the fed columns, the permutation sets, the lookups and the Lagrange terms all
 evaluate at `ch.x` to the values the proof string claims. -/
 theorem eval_combineConstraints_deployed {shape : Shape} {G : Type*}

@@ -1,27 +1,11 @@
-import Zcash.Snark.Soundness.Multiopen.Claimed
 import Zcash.Snark.Soundness.Multiopen.ValueCheckDeployed
 
 /-!
-# F3: the deployed `x₃` value bridge
+# Deployed multiopen algebra
 
-The multiopen value check binds each decoded aggregate column to its claimed interpolation. The
-counting-floor core (`Soundness.Multiopen.Claimed.claimedEval_of_x3Prob`) already turns an `x₃`
-accept measure plus a per-accepting-run *consistency* — the decoded column reproduces the deployed
-`r`-value at the accepting interpolation challenge — into the node binding: at each rotated set
-point, the aggregate column's value is the claimed evaluation.
-
-Two routes to that instantiation once lived here. The *aggregate route* fixed the decoded column to
-the fingerprinted `x₄`-slot aggregate for point set `j` and the accept event to `OpenedX3Accept`,
-leaving the per-run consistency `hconsistent` — equivalently the inner `hx2cons` — as an open
-obligation. It was abandoned (`X2Run` re-sends `q′` across `x₂`-rewinds, so there is no fixed-`q′`
-anchor at `x₂` to discharge `hx2cons` against) and has been removed.
-
-The *fixed-`q′` route* anchored on the `q′` absorbed before `x₃`
-(`openedDecodedCols_top_eval_x3`), discharging `hconsistent`/`hx2cons` end-to-end from the accept
-floors. Its node-binding chain has been removed: every rung concluded an ∃-closed binding disjunct,
-which a prime-order group satisfies unconditionally and so cannot be charged to DLOG. The deployed
-capstones now take the rewind-free AGM route, which returns explicit augmented-basis coefficients
-on disagreement; what remains here is the grid and decode apparatus that route reads.
+Algebraic identities connecting Halo2's deployed multiopen grouping, compressed evaluations, and
+decoded columns. The live capstones consume these through the AGM route, which returns explicit
+augmented-basis coefficients on disagreement.
 -/
 
 namespace Zcash.Snark
@@ -69,9 +53,9 @@ theorem prod_inv_range_getD_eq_toFinset {l : List Fp} (hnd : l.Nodup) (χ : Fp) 
     (∏ m ∈ Finset.range l.length, (χ - l.getD m 0)⁻¹) = (∏ p ∈ l.toFinset, (χ - p))⁻¹ := by
   rw [← prod_range_getD_eq_toFinset hnd χ, ← Finset.prod_inv_distrib]
 
-/-- **`hsamp` from the value-check power form (reversed convention).** The per-`x₂`-value multiopen
-identity in exactly the shape `node_binding_of_samples` consumes, set index reversed (`ζʲ` pairs
-with `sets.reverse.getD j`, resolving the power/index convention gap): given the run's opening and
+/-- **The value-check power form (reversed convention).** The per-`x₂`-value multiopen identity,
+with set index reversed (`ζʲ` pairs with `sets.reverse.getD j`, resolving the power/index
+convention gap): given the run's opening and
 the field identifications, the value expands to `∑ⱼ ζʲ (colⱼ − rⱼ)(χ)·(∏ p∈pts j, (χ − p))⁻¹`.
 Pure algebra over `multiopenEval_powerForm`. -/
 theorem hsamp_of_multiopenEval_reversed {numSets : ℕ}
@@ -244,8 +228,8 @@ theorem deployedSetsForEval_reverse_getD_u [DecidableEq G] [Inhabited G] {shape 
 
 
 /-- A coefficient-vector polynomial has degree below its length: each summand `C aᵢ · Xⁱ` has
-`natDegree ≤ i < n`. The decoded batch columns (`openedDecodedCols`) are `coeffsToPoly` of
-`Fin (2 ^ k)` vectors, so their degree is below `2 ^ k`. -/
+`natDegree ≤ i < n`. In particular, decoded `Fin (2 ^ k)` coefficient vectors have degree below
+`2 ^ k`. -/
 theorem coeffsToPoly_natDegree_lt {n : ℕ} (hn : 0 < n) (a : Fin n → Fp) :
     (coeffsToPoly a).natDegree < n := by
   have hle : (coeffsToPoly a).natDegree ≤ n - 1 := by

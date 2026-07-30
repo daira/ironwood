@@ -43,13 +43,13 @@ globs = ["Zcash.Meta.Tests.+"]
 # `lake build` (the default targets -- what CI runs) compiles them, so the empirical checks are
 # exercised alongside the parametric verifier obligations in `Zcash`. New modules under `Fixtures/`
 # are picked up by the glob automatically.
-#
-# The deployed Action/Vesta capstone entry extends the same instance-level lane beyond the
-# `Fixtures/` directory. Through its imports it pulls in the verifying-key COMMITMENT certificate
-# chain `Keygen/Certificate`.
 [[lean_lib]]
 name = "FixtureCheck"
-globs = ["Zcash.Snark.Fixtures.+", "Zcash.Snark.Soundness.Deployed.ActionVesta"]
+globs = [
+  "Zcash.Snark.Fixtures.+",
+  "Zcash.Snark.Keygen.Certificate",
+  "Zcash.Snark.Keygen.InstanceCapture",
+]
 
 # The circuit-side VK matching and layout tests: `Zcash/Circuits/Tests/TestVk*` compare the
 # ported `configure`/`synthesize` against the CS and layout fixtures dumped from the actual
