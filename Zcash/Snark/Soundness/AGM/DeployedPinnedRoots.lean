@@ -1,6 +1,7 @@
 import Zcash.Common.RelationWitness
 import Zcash.Snark.Soundness.AGM.DeployedRootDecode
 import Zcash.Snark.Soundness.AGM.OnlineMembers
+import Zcash.Snark.Soundness.AGM.ShiftRecovery
 import Zcash.Snark.Soundness.Composition.DeployedRuntime
 import Zcash.Snark.Soundness.FiatShamir.PinnedRoots
 
