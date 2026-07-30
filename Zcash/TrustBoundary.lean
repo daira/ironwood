@@ -18,6 +18,7 @@ import Zcash.Security.BindingSignature.Sapling
 import Zcash.Meta.AxiomCheck
 import Zcash.Snark.Soundness.CommitFold
 import Zcash.Snark.Soundness.Vesta
+import Zcash.Snark.Soundness.VacuityWitness
 import Zcash.Snark.Soundness.AGM.BindingSignature
 import Zcash.Snark.Soundness.AGM.DeployedConstraintSupply
 import Zcash.Snark.Soundness.AGM.ProbabilityVesta
@@ -400,6 +401,36 @@ through the `Zcash.Meta.AxiomCheck` macros rather than the older `assert_no_sorr
   `assert_axioms`, bounding the trusted base at the standard tier (`propext` / `Classical.choice` /
   `Quot.sound`), with `+native` on the Vesta-instantiated endpoints.
 -/
+
+/-! ### Why the two tiers differ: the vacuity witness
+
+`Zcash.Snark.Soundness.VacuityWitness` proves that a nontrivial relation among *arbitrary* Vesta
+generators exists from the group order alone — no transcript, no verifying key, no acceptance
+hypothesis. That is what makes the tier of an endpoint's pin load-bearing rather than cosmetic:
+
+* `assert_computable` endpoints are plain `def`s, so their relation coefficients are terms of their
+  inputs and the witness below cannot discharge them. These genuinely exhibit an extractor.
+* `noncomputable def` endpoints get only `assert_axioms`. Since the right summand of `… ⊕' relation`
+  is unconditionally inhabited, their *statements* do not force the acceptance hypotheses — only
+  the proofs actually written do. The pin bounds the trusted base, not the extraction.
+
+This is why the `⊕'`-with-data shape is necessary but not sufficient, and why the rewind-free route
+is the stronger one wherever both reach the same conclusion.
+
+**The residual this leaves.** The endpoints that reach the *captured* deployed artifacts
+(`Soundness/Deployed/ActionVesta.lean`, at `Fixture.vk` / `capturedURS` /
+`Keygen.capturedActionInputs`) are the rewind route, hence noncomputable: their decode runs through
+`openedMemberDecode_of_x1Prob`, which turns an `x₁` accept-measure bound into rewound transcripts by
+`Classical.choose`, so no restatement makes them computable. The computable straight-line route and
+the adaptive knowledge bound are stated at `ursOfAugmentedBasis k basis` for a quantified basis
+instead. `ursOfAugmentedBasis_augmentedBasis` supplies the missing join on the URS component — every
+URS is the split of its own augmented basis — but joining the rest needs a straight-line family
+reproducing the captured proof, which does not exist yet. Until it does, "computable extraction at
+the deployed artifacts" is a conjunction of two theorems, not one. -/
+
+assert_axioms Zcash.Snark.ursOfAugmentedBasis_augmentedBasis
+assert_axioms Zcash.Snark.nonempty_nontrivialRelation_vesta +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 /-! ### Binding reductions from IPA/CommitFold collisions -/
 
@@ -1788,7 +1819,12 @@ assert_axioms Zcash.Snark.snarkConstraintsSemanticDeployed_prob_le_of_compressed
 -- finder has a pointwise four-invocation bound, so no expected-runs truncation or Markov term
 -- appears. Representations remain ghost extractor data, outside the Halo2 proof and verifier.
 assert_axioms Zcash.Snark.StraightLineIpaOnlineTrace.toSqueezeInvariance +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.AlgebraicWfProof.straightLineIpaZeroOrRelation +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- The one-run IPA dichotomy and the two root-event forms derived from it. All three hand back
+-- the relation as coefficients over the public basis, so they carry the computable pin: the
+-- coordinates are terms of the transcript, not an inhabitant chosen from an existence proof.
+assert_computable Zcash.Snark.AlgebraicWfProof.straightLineIpaZeroOrRelation +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Snark.AlgebraicWfProof.straightLineBindingAttackZRootOrRelation +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Snark.AlgebraicWfProof.straightLineBindingAttackZIndexedRootOrRelation +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.ComputedDeployedConstraintFSFamily.ofCovered +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.ComputedDeployedConstraintFSFamily.pinnedX +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.ComputedStraightLineIpaFSFamily.straightLineIpaRelationFinder +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
