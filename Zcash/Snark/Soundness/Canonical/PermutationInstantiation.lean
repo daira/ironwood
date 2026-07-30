@@ -21,7 +21,7 @@ namespace Zcash.Snark
 
 open Zcash.Arithmetic (Msm)
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 
 set_option maxHeartbeats 20000
 

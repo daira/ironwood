@@ -13,7 +13,7 @@ the two augmented openings compute a nontrivial relation.
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 
 set_option maxHeartbeats 20000
 

@@ -25,7 +25,7 @@ of this module.
 namespace Zcash.Snark
 
 open scoped ENNReal
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 
 local instance vestaInhabitedStraightLineWitness : Inhabited VestaG := ⟨0⟩
 

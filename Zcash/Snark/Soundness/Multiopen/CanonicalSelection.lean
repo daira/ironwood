@@ -14,7 +14,7 @@ verifying key. Every proof in the bundle gets its own selections.
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open Classical
 
 set_option maxHeartbeats 20000

@@ -14,7 +14,7 @@ row-membership theorem consumed by the operation-level tuple bridge.
 namespace Zcash.Snark
 
 open Finset
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open scoped ENNReal
 
 set_option maxHeartbeats 20000

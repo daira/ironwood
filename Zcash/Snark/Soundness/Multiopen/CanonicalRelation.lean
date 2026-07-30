@@ -19,7 +19,7 @@ one constraint identity covers every proof member, with no selected proof index.
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 
 set_option maxHeartbeats 20000
 

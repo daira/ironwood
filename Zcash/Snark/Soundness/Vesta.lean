@@ -92,7 +92,7 @@ def NontrivialRelation.ofUnopenedForkVesta [DecidableEq VestaG]
     NontrivialRelation (F := Fp) urs.g urs.u urs.w :=
   NontrivialRelation.ofUnopenedFork urs hk vk instanceCommitment ps ch hz fs hne
 
-open CompPoly CompPoly.CPolynomial in
+open CompPoly.CPolynomial in
 /-- **Deployed opening and constraint over Vesta, given a clean fork.**
 `orchard_verifier_deployed_constraint_of_forked` specialised to `SWPoint Vesta.curve`: the opening
 for the declared `fs.openedCommitment` and the pinned `multiopenValue`, and `circuitSat` (concrete
@@ -162,7 +162,7 @@ theorem sum_getD_single {k : ℕ} {G : Type*} [AddCommGroup G] [Module Fp G] (gg
     simp only [List.length_cons, List.length_nil, Nat.zero_add]
     omega
   · intro h; exact absurd (Finset.mem_univ _) h
-open CompPoly CompPoly.CPolynomial in
+open CompPoly.CPolynomial in
 open scoped ENNReal in
 open Classical in
 /-- **Deployed decoded constraint, per fork, batch produced by `x₄` rewinding.** The circuit is

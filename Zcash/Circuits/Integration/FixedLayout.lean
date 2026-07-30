@@ -15,7 +15,7 @@ products; they are not needed for the explicit fixed requirements extracted here
 namespace Zcash.Snark
 
 open Halo2
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 
 set_option maxHeartbeats 20000
 

@@ -17,7 +17,7 @@ fixed polynomials with the verifier's deployed `lagrangeBasis` computation.
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 
 set_option maxHeartbeats 20000
 

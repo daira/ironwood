@@ -10,7 +10,7 @@ Each round quadratic is rebuilt from its first-query representations: the multio
 namespace Zcash.Snark
 
 open Classical
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open scoped ENNReal
 
 variable {shape : Shape}

@@ -20,7 +20,7 @@ read later challenges, so no classical truth-table adapter sits on the executabl
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open scoped ENNReal
 
 /-! ## Degree bounds for the committed carriers -/

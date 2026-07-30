@@ -19,7 +19,7 @@ namespace Zcash.Snark
 
 open Zcash.Arithmetic (deltaFp omegaOf omegaOf_isPrimitiveRoot powFast_eq_pow scalarFieldOrder)
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open Halo2
 open Zcash.Circuits.Action (actionCircuit)
 

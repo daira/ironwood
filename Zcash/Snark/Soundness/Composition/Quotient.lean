@@ -22,7 +22,7 @@ namespace Zcash.Snark
 
 open Zcash.Arithmetic (Msm Msm.zero Msm.eval_appendTerm)
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 
 variable {d : ℕ}
 

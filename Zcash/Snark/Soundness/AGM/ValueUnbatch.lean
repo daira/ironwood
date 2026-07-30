@@ -12,7 +12,7 @@ uniform root-set bounds.
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open Classical
 
 /-! ## A generic power-sum error polynomial -/

@@ -24,7 +24,7 @@ namespace Zcash.Snark
 
 open Zcash.Arithmetic (scalarFieldOrder)
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 

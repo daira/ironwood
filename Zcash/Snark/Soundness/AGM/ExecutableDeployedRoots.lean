@@ -9,7 +9,7 @@ reduction runs the decoder and terminal without selecting a proposition-level wi
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 

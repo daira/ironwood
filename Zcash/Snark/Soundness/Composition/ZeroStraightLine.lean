@@ -25,7 +25,7 @@ stage prices the explicit zero-data difference from the four folding squeezes al
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open scoped ENNReal
 
 local instance vestaInhabitedZeroStraightLine : Inhabited VestaG := ⟨0⟩

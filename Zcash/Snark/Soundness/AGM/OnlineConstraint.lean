@@ -16,7 +16,7 @@ namespace Zcash.Snark
 open Zcash.Arithmetic (Msm.otherPoints)
 
 open Classical
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 
 universe u v
 

@@ -13,7 +13,7 @@ the polynomial identity, and a good `x2` then separates the point sets at each n
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open Classical
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]

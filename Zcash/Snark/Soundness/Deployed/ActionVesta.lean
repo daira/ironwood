@@ -32,7 +32,7 @@ at both the circuit-derived and captured fixture shapes.
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open Classical
 open scoped ENNReal
 open Keygen

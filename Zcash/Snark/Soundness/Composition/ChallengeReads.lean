@@ -21,7 +21,7 @@ claimed evaluation.
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 
 variable {shape : Shape} {G : Type*}
 

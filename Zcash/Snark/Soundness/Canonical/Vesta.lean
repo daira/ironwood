@@ -20,7 +20,7 @@ No formal-circuit or Action concept appears here.
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open Classical
 open scoped ENNReal
 

@@ -14,7 +14,7 @@ finished here before the resulting bridge is handed to the semantic endpoint.
 namespace Zcash.Snark
 
 open Halo2
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 
 set_option maxHeartbeats 20000
 

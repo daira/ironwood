@@ -23,7 +23,7 @@ The last two facts feed `Lookup.run_structure`; the first three telescope throug
 namespace Zcash.Snark
 
 open Finset
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open scoped ENNReal
 
 @[simp] theorem lookupEvalPolys_productEval (omega : Fp) (z a s : CPoly) :

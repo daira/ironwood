@@ -26,7 +26,7 @@ is handled by the generic assignment layer. The generic terminal theorem remains
 namespace Zcash.Snark
 
 open Halo2
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open Zcash.Circuits
 open Zcash.Circuits.Action
 open Keygen

@@ -14,7 +14,7 @@ namespace Zcash.Snark
 namespace ActionTerminal
 
 open Halo2 Keygen
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open Zcash.Circuits
 open Zcash.Circuits.Action
 open Zcash.Arithmetic (scalarFieldOrder)

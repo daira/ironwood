@@ -21,7 +21,7 @@ This module produces those samples from an accept *measure*:
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open scoped ENNReal
 
 /-- **The `x₃` forking floor for claimed-evaluation binding.** Given the per-accepting-run value

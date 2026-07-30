@@ -11,7 +11,7 @@ makes the fresh challenge a root of one explicit error polynomial, priced separa
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open Classical
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]

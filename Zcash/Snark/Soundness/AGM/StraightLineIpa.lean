@@ -22,7 +22,7 @@ variable {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) -> VestaG}
 
 /-! ## The scalar discrepancy walk -/
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open scoped ENNReal
 
 /-- Advance the claimed-opening discrepancy through one IPA round. -/

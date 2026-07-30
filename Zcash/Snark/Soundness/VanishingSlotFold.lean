@@ -20,7 +20,7 @@ premises, not a repair to this fold.
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 
 /-- **`hfold` from the budget's good branch.** `deployed_member_budget` ends in a disjunction:
 *either* the joint accept measure sits inside the four-threshold budget, *or* every decoded member
@@ -78,7 +78,7 @@ def hfold_of_member_budget {G : Type*} [AddCommGroup G] [Module Fp G] [Decidable
   rw [hquot, ← hx]
   exact hb
 
-open CompPoly CompPoly.CPolynomial in
+open CompPoly.CPolynomial in
 /-- **`hfold`, with the fingerprint discharged.** `hfold_of_member_budget` run on the full
 constraint list — gates, permutation argument and lookup argument together — instead of an abstract
 gate family. That list is the evaluation of the constraint *polynomials* at `ch.x`, so the

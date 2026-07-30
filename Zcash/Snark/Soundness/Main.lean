@@ -238,7 +238,7 @@ theorem orchard_verifier_deployed_opening_of_forked [DecidableEq G] [Inhabited G
 challenge avoids the Schwartz–Zippel bad set.
 -/
 
-open CompPoly CompPoly.CPolynomial in
+open CompPoly.CPolynomial in
 /-- Add the gate-check conclusion to `orchard_verifier_deployed_opening_of_forked`. -/
 theorem orchard_verifier_deployed_constraint_of_forked [DecidableEq G] [Inhabited G] {shape : Shape}
     (urs : URS G) (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G)

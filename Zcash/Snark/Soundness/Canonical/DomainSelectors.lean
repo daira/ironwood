@@ -18,7 +18,7 @@ multiopen/domain-polynomial provenance step, not a circuit-specific layout fact.
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 
 set_option maxHeartbeats 20000
 

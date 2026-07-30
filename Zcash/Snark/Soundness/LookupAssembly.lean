@@ -23,7 +23,7 @@ the multiset identities place in the real table.
 namespace Zcash.Snark
 
 open Finset
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 
 /-- **The lookup assembly.** Every input value occurs in the table. The input identity moves an input
 into the permuted columns, the run structure moves it across to the permuted table, and the table

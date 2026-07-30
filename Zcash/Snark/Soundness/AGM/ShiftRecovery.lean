@@ -10,7 +10,7 @@ before `ξ` and `z`, so a raw-value error survives only on two linear root sets 
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open scoped ENNReal
 
 /-- The exceptional `ξ` polynomial.  Its value is the coefficient of `z` after clearing the IPA

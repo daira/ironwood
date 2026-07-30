@@ -444,7 +444,7 @@ noncomputable def openedX4Rewind_of_x4Prob_forked [DecidableEq G] [Inhabited G] 
 
 /-! ## The terminal constraint endpoints -/
 
-open CompPoly CompPoly.CPolynomial in
+open CompPoly.CPolynomial in
 /-- The SNARK relation with the circuit side fed by columns decoded from the opened batch family
 containing the extracted witness, with the declared components carried through. -/
 structure SnarkRelationWithOpenedColumns (urs : URS G) (P : G) (b : Fin (2 ^ urs.k) → Fp) (v : Fp)
@@ -463,7 +463,7 @@ structure SnarkRelationWithOpenedColumns (urs : URS G) (P : G) (b : Fin (2 ^ urs
     circuitSatViaGates fixedCols (selectedPolysDecode (k := urs.k) cols adviceIndex)
       (selectedPolysDecode (k := urs.k) cols instanceIndex) y gates hpoly deg a
 
-open CompPoly CompPoly.CPolynomial in
+open CompPoly.CPolynomial in
 /-- Turn a final opened relation plus its batch family into the opened decoded-column SNARK
 relation. `hquot`/`hgood` are stated for the canonical decode `openedDecodedCols hbatch` — the
 family this proof constructs — with the plain chain's scoping (`Soundness.Multiopen.Decode`, the
@@ -788,7 +788,7 @@ noncomputable def openedMemberDecode_of_x1Prob [DecidableEq G] [Inhabited G] {sh
 
 /-! ## The member-column constraint endpoint -/
 
-open CompPoly CompPoly.CPolynomial in
+open CompPoly.CPolynomial in
 /-- **The halo2-faithful gate feed for one column family.** halo2 evaluates a gate on the claimed
 evaluation `advice_evals[query_index]` of query `j = (column, rotation)`, opened at
 `rotate_omega x rot = ω^rot·x` (`plonk/verifier.rs`). Feeding the gate the decoded column composed
@@ -803,7 +803,7 @@ def rotatedFeed {n : ℕ} (omega : Fp) (layout : List (ℕ × ℤ))
       comp (col ⟨j, hj⟩) (C (omega ^ (layout.getD j (0, 0)).2) * X)
     else 0
 
-open CompPoly CompPoly.CPolynomial in
+open CompPoly.CPolynomial in
 /-- The SNARK relation with the circuit side fed by decoded *member* columns — the actual queried
 column commitments' openings, selected per advice/instance index from their point sets. The witness
 chain is carried in full: `a` opens the statement, the opened `x₄` batch contains it, and each
@@ -860,7 +860,7 @@ structure SnarkRelationWithMemberColumns [DecidableEq G] [Inhabited G] {shape : 
           coeffsToPoly ((memberDecode (instanceSet j) (hinstanceSet j)).cols (instanceMem j))))
       y gates hpoly deg a
 
-open CompPoly CompPoly.CPolynomial in
+open CompPoly.CPolynomial in
 /-- Turn a final opened relation, its batch family, and per-set member decodes into the
 member-column SNARK relation: the gate check is stated once, on the member polynomials of the
 supplied decodes — the satisfiable pinned shape. Its truth for the deployed verifier — the claimed

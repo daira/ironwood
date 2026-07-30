@@ -15,7 +15,7 @@ depth times `B`.
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 
 /-- Syntactic degree of a gate expression, counting column leaves per multiplicative branch:
 leaves are `1`, products add, sums take the max. Evaluated at column polynomials of degree `≤ B`,

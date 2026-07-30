@@ -13,7 +13,7 @@ statement at the public inputs supplied to the verifier.
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open Classical
 open scoped ENNReal
 

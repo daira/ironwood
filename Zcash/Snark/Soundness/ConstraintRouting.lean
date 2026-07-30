@@ -14,7 +14,7 @@ namespace Zcash.Snark
 open Zcash.Arithmetic (Msm Msm.zero)
 
 open Classical
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 

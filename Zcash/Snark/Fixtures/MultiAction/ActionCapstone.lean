@@ -17,7 +17,7 @@ consensus-valid Action bundle size.
 namespace Zcash.Snark.Fixture
 
 open Zcash.Snark
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open Zcash.Snark.ActionTerminal
 open Zcash.Snark.Keygen (actionProofParams actionProofParamsFor
   actionProofParamsFor_mergeDerived_eq shape_eq_mergeDerived vk_eq_toVerifierKey)

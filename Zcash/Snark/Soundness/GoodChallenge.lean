@@ -25,7 +25,7 @@ already absorbed the advice commitments and the quotient pieces (sealed by `deri
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open scoped ENNReal
 
 /-- **The Schwartz–Zippel exclusion budget, derived from challenge uniformity.** A fresh uniform

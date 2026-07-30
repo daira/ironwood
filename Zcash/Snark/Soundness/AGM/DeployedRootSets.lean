@@ -15,7 +15,7 @@ separate in the computed-family adapter.
 namespace Zcash.Snark
 
 open Classical
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open scoped ENNReal
 
 set_option maxRecDepth 10000

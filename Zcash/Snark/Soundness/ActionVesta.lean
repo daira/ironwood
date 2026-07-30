@@ -20,7 +20,7 @@ measures here, a represented decode there — not because one supersedes the oth
 
 namespace Zcash.Snark
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open Classical
 open scoped ENNReal
 

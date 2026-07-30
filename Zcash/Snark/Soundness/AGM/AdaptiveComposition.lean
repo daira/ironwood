@@ -10,7 +10,7 @@ are summed. Chronology comes from transcript prefixes and query annotations.
 namespace Zcash.Snark
 
 open Classical
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open scoped ENNReal
 
 variable {shape : Shape}

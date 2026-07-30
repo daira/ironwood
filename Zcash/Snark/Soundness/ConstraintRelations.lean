@@ -18,7 +18,7 @@ That closes the loop. The capstone hands over `SnarkRelation … circuitSatViaCo
 namespace Zcash.Snark
 
 open Finset
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 
 open Finset in
 /-- **The circuit's declared equalities, read out of the capstone's predicate.** Circuit

@@ -16,7 +16,7 @@ the old multiopen probability floors.
 namespace Zcash.Snark
 
 open Classical
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 
 universe u v w
 
@@ -1000,7 +1000,7 @@ structure DeployedConstraintWitness [DecidableEq G] [Inhabited G] {shape : Shape
       setsC chunksC lookupsC ch.beta ch.gamma vk.delta ch.theta ch.y vk.chunkLen
       l0P lLastP lBlindP hpolyP vk.n) aggregate
 
-open CompPoly CompPoly.CPolynomial in
+open CompPoly.CPolynomial in
 omit [AddCommGroup G] [Module Fp G] in
 /-- Relation-free specialization used by the computed AGM adapter once member-value decoding has
 already supplied the exact routed equality. -/
@@ -1048,7 +1048,7 @@ theorem hfold_of_constraint_polys_of_xn_ne_direct
   rw [eval_combineConstraints] at hfp ⊢
   exact hfold_of_expectedHEval_binding _ ch.y ch.x hpoly vk.n _ hxn hvanishing hfp
 
-open CompPoly CompPoly.CPolynomial in
+open CompPoly.CPolynomial in
 open Classical in
 /-- Constraint-witness adapter produced directly from `DeployedAlgebraicDecode`, with no opened
 or joint-acceptance premises.  The relation branch is the computable quotient comparison of

@@ -34,7 +34,7 @@ open Zcash.Arithmetic (Msm Msm.zero)
 attribute [local irreducible] deployedSetQueries deployedSetCommIds deployedX4PairCount
   x4BatchCommitments x4BatchEvals
 
-open CompPoly CompPoly.CPolynomial
+open CompPoly.CPolynomial
 open scoped ENNReal
 open Classical
 
