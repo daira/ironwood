@@ -33,8 +33,14 @@ cd "$(dirname "$0")/.."
 # A declaration is a deliverable endpoint when its base name matches this pattern. These are the
 # capstone families: the verifier-soundness rungs (`orchard_verifier_*`), the composed Action
 # probability endpoints (`orchard_action_*`), the captured knowledge-error endpoints
-# (`orchard_deployed_*`), and the concrete-statement terminals (`*bundleStatement_or_relation*`).
-ENDPOINT_RE="^(orchard_verifier_|orchard_action_|orchard_deployed_)|bundleStatement_or_relation"
+# (`orchard_deployed_*`), the concrete-statement terminals (`*bundleStatement_or_relation*`), and
+# the profiled work-factor packages (`*workFactor*`), whose consensus-maximum forms are named for
+# the shape rather than for a capstone family and so match none of the prefixes above.
+#
+# `orchard_verifier_*` currently matches nothing: those rungs were retired with the legacy rewind
+# paths. It is retained as a guard, so a reintroduced name in that family is demanded rather than
+# silently unpinned.
+ENDPOINT_RE="^(orchard_verifier_|orchard_action_|orchard_deployed_)|bundleStatement_or_relation|workFactor"
 
 # Sources scanned for endpoint declarations. `Zcash/Meta/Tests/` is excluded: it holds forged
 # adversarial declarations that exercise the rejection paths of the census macros themselves.
