@@ -49,11 +49,12 @@ def ColumnRef.resolve {F : Type*} (cr : ColumnRef) (instanceEvals adviceEvals fi
   | .fixed i => fixedEvals i
   | .instance i => instanceEvals i
 
--- TODO(VK-correctness): a `VerifyingKey` value is populated from the halo2 `dump_lean_fixture`
--- capture (`Fixtures/SingleAction/Fixture.lean`) and trusted verbatim — Lean never re-derives it from the
--- Orchard circuit. So "the dumped VK is the real circuit's" is an assumption, not a theorem: the
--- input-faithfulness boundary. Discharging it means re-running keygen and comparing. Distinct
--- from the output-side semantic-adequacy gap (see `Soundness/Main.lean`).
+-- This circuit-independent assembler deliberately receives a `VerifyingKey` as input. The deployed
+-- Action specialization does not trust the captured key verbatim: `Keygen/Certificate.lean` derives
+-- the key from the closed Action circuit and URS, then proves `vk_eq_toVerifierKey` field-for-field.
+-- What remains external is provenance of the Rust capture and its identification with Orchard's
+-- canonical deployed artifact, not Lean-side key derivation. This is distinct from the output-side
+-- semantic-adequacy gap (see `Soundness/Main.lean`).
 /-- The verifying-key–level circuit structure the assembly needs, mirroring halo2's `VerifyingKey`
 field-for-field: **circuit-fixed data only**. `omega` is the domain generator and `n = 2 ^ k` the
 domain size; `blindingFactors`, `delta`, `chunkLen` are the permutation-argument constants. `gates`

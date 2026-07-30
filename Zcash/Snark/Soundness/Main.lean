@@ -43,9 +43,10 @@ variable {G : Type*} [AddCommGroup G] [Module Fp G]
 -- Tracked semantic-adequacy gap: `S` is a free `Prop` and `hencodes` an assumed hypothesis, so
 -- the chain stops at "the extracted witness satisfies the gates" (`SnarkRelation`) and never
 -- reaches "…therefore a valid Orchard action" (note well-formed, value balanced, nullifier
--- correctly derived, spend authorized). Closing it means instantiating `S` to the concrete
--- Orchard statement and proving `hencodes` — the output-side dual of the input-side
--- VK-correctness gap (see `Verifier/Assemble.lean`). Large; not started.
+-- correctly derived, spend authorized). Closing the generic form means instantiating `S` to the
+-- concrete Orchard statement and proving `hencodes`. The deployed Action key is separately derived
+-- and certified against the capture by `Keygen/Certificate.lean`; only the capture's Rust provenance
+-- remains an input-side boundary. The semantic bridge described here remains open.
 def DeployedAccepts [DecidableEq G] [Inhabited G] {shape : Shape} (urs : URS G)
     (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) : Prop :=

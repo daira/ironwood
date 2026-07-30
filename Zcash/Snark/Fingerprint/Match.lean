@@ -39,9 +39,11 @@ runs the decidable comparison `MsmMatch (assemble vk ps ch) capturedMsm` by `nat
 actual Vesta points. The generator emits every distinct affine coordinate, validates it on
 `Vesta.curve`, and supplies the complete Halo2 URS; `capturedMsm_eval_eq_zero` then computes the
 captured MSM to the identity and `assembledMsm_eval_eq_zero` transfers that result to Lean's
-assembly. Rust key generation, the comparison against Orchard's canonical Post-NU6.3
-`PinnedVerificationKey`, and Halo2's pinned-key serialization/Blake2b derivation remain the
-fixture-generation boundary rather than being reimplemented in Lean.
+assembly. `Keygen/Certificate.lean` independently derives the key from the closed Action circuit
+and captured URS, then proves it equal to the captured `VerifyingKey` field-for-field. What remains
+at the fixture-generation boundary is provenance of the Rust capture and its selection of Orchard's
+canonical Post-NU6.3 `PinnedVerificationKey`, together with Halo2's pinned-key byte
+serialization/Blake2b derivation.
 -/
 
 namespace Zcash.Snark
