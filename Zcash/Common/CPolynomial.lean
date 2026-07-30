@@ -1,4 +1,5 @@
 import Zcash.Arithmetic
+import Mathlib.RingTheory.MvPolynomial.Symmetric.Defs
 import CompPoly.Univariate.ToPoly
 import CompPoly.Univariate.Linear
 import CompPoly.Univariate.Roots.Enumeration

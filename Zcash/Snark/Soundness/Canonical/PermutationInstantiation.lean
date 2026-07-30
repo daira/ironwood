@@ -1,5 +1,4 @@
 import Zcash.Common.RelationWitness
-import Mathlib
 import Zcash.Snark.Soundness.Multiopen.ConstraintResolver
 import Zcash.Snark.Soundness.PermutationRows
 

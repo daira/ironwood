@@ -1,4 +1,5 @@
 import CompElliptic.Curves.Pasta
+import Mathlib.RingTheory.RootsOfUnity.PrimitiveRoots
 import Zcash.Arithmetic.Field
 
 /-!

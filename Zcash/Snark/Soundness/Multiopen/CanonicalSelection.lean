@@ -1,3 +1,4 @@
+import Mathlib.Util.AssertNoSorry
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 
 /-!

@@ -1,4 +1,4 @@
-import Mathlib
+import Mathlib.Tactic
 import Zcash.Snark.Verifier.Assemble
 import Zcash.Snark.Soundness.Deployed.Verification
 

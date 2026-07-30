@@ -13,6 +13,7 @@ import Zcash.Circuits.Integration.ActionFixedCoherenceCompute
 import Zcash.Circuits.Integration.ActionGateCoherence
 import Zcash.Circuits.Integration.ActionLookupSelectorRows
 import Zcash.Snark.Keygen.Pipeline
+import Mathlib.Util.AssertNoSorry
 
 /-!
 # Action correctness instantiation

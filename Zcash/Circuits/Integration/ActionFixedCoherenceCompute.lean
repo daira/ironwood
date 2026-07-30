@@ -2,6 +2,7 @@ import Zcash.Circuits.Action.TopLevel
 import Zcash.Circuits.Integration.FixedColumns
 import Zcash.Circuits.Integration.ActionPermutationDomainCompute
 import Zcash.Snark.Keygen.Lagrange
+import Mathlib.Util.AssertNoSorry
 
 /-!
 # Interim closed computations for Action fixed-column coherence
