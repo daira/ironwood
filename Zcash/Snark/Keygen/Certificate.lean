@@ -1,6 +1,7 @@
 import Zcash.Snark.Keygen.Derivation
 import Zcash.Arithmetic.CommitLagrange
 import Zcash.Snark.Fixtures.SingleAction.Fixture
+import Mathlib.Util.AssertNoSorry
 
 /-!
 # Concrete certificate for the derived Action verifying key

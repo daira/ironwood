@@ -1,4 +1,4 @@
-import Mathlib
+import Mathlib.Tactic
 import Zcash.Security.Ledger.Capstone
 import Zcash.Security.Ledger.KeyBindingDLR
 import Zcash.Security.Ledger.NoteCommitDLR

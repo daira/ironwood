@@ -1,4 +1,5 @@
 import Zcash.Circuits.Integration.ActionGateCoherenceCompute
+import Mathlib.Util.AssertNoSorry
 
 /-!
 # Action top-level gate coherence

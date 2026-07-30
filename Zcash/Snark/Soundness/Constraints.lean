@@ -1,4 +1,4 @@
-import Mathlib
+import Mathlib.Tactic
 import Zcash.Arithmetic
 import Zcash.Common.ComputablePolynomial
 import Zcash.Snark.Verifier.Expressions
