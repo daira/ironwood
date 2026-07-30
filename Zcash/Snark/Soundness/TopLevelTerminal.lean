@@ -17,8 +17,7 @@ desired statement or an opaque encoding implication.
 
 namespace Zcash.Snark
 
-open Halo2
-open CompPoly.CPolynomial
+open Halo2 CompPoly.CPolynomial
 
 universe u v w
 

@@ -20,8 +20,7 @@ adapter only has to identify the compressed polynomial evaluations with the valu
 
 namespace Zcash.Snark
 
-open Halo2
-open CompPoly CompPoly.CPolynomial
+open Halo2 CompPoly CompPoly.CPolynomial
 open scoped ENNReal
 
 set_option maxHeartbeats 20000

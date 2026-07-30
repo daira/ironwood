@@ -9,8 +9,7 @@ Each root surface is rebuilt from the ordinary prefix and its first-query AGM co
 
 namespace Zcash.Snark
 
-open Classical
-open CompPoly.CPolynomial
+open Classical CompPoly.CPolynomial
 open scoped ENNReal
 
 set_option maxRecDepth 10000

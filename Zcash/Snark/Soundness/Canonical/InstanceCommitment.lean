@@ -15,8 +15,7 @@ public row vector; the Action circuit only decides which rows form its external 
 
 namespace Zcash.Snark
 
-open Polynomial
-open CompPoly
+open Polynomial CompPoly
 
 set_option maxHeartbeats 20000
 

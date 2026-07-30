@@ -29,8 +29,7 @@ namespace Zcash.Snark
 
 open Zcash.Arithmetic (derivedUrsGLagrange derivedUrsGLagrange_length omegaOf)
 
-open Halo2
-open CompPoly CompPoly.CPolynomial
+open Halo2 CompPoly CompPoly.CPolynomial
 
 set_option maxHeartbeats 20000
 

@@ -15,8 +15,7 @@ the old multiopen probability floors.
 
 namespace Zcash.Snark
 
-open Classical
-open CompPoly.CPolynomial
+open Classical CompPoly.CPolynomial
 
 universe u v w
 

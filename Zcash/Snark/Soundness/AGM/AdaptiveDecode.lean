@@ -10,8 +10,7 @@ constraint and Action decoders, without phase objects or existential relation wi
 
 namespace Zcash.Snark
 
-open Classical
-open CompPoly.CPolynomial
+open Classical CompPoly.CPolynomial
 
 local instance vestaInhabitedAdaptiveDecode : Inhabited VestaG := ⟨0⟩
 

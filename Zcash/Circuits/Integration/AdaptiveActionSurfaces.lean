@@ -12,8 +12,7 @@ from which this module constructs finite bad sets.
 namespace Zcash.Snark
 
 open Classical
-open Halo2 Keygen
-open CompPoly CompPoly.CPolynomial
+open Halo2 CompPoly CompPoly.CPolynomial Keygen
 open Zcash.Circuits
 open Zcash.Circuits.Action
 open scoped ENNReal

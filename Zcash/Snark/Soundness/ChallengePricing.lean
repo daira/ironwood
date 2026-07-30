@@ -42,8 +42,7 @@ carries the whole challenge-pricing story.
 
 namespace Zcash.Snark
 
-open Halo2 Polynomial Finset
-open CompPoly
+open Halo2 Polynomial Finset CompPoly
 open scoped ENNReal
 
 /-- **The shared union bound.** Finitely many root-set events, each of degree at most `d`, together

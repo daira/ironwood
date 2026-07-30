@@ -26,8 +26,7 @@ Everything here is about the deployed `permChunkExpression`, not a restatement o
 
 namespace Zcash.Snark
 
-open Finset
-open CompPoly.CPolynomial
+open CompPoly.CPolynomial Finset
 
 /-- A constraint that vanishes on the whole domain vanishes at each row. -/
 theorem eval_eq_zero_of_dvd_vanishing {n : ℕ} {c : CPoly}

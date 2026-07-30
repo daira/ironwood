@@ -21,8 +21,7 @@ chronology layer issue #127 changed.
 
 namespace Zcash.Snark
 
-open Classical
-open CompPoly.CPolynomial
+open Classical CompPoly.CPolynomial
 
 variable {shape : Shape}
 

@@ -17,8 +17,7 @@ namespace Zcash.Snark
 
 open Zcash.Arithmetic (scalarFieldOrder)
 
-open Halo2
-open CompPoly.CPolynomial
+open Halo2 CompPoly.CPolynomial
 
 set_option maxHeartbeats 20000
 

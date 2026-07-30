@@ -17,8 +17,7 @@ from the final proof value alone.
 
 namespace Zcash.Snark
 
-open Classical
-open CompPoly.CPolynomial
+open Classical CompPoly.CPolynomial
 open scoped ENNReal
 
 local instance vestaInhabitedStraightLinePinnedRoots : Inhabited VestaG := ⟨0⟩

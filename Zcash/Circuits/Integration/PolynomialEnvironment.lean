@@ -14,8 +14,7 @@ The underlying row polynomials and their algebra are verifier-native and live in
 
 namespace Zcash.Snark
 
-open Halo2
-open CompPoly.CPolynomial
+open Halo2 CompPoly.CPolynomial
 
 set_option maxHeartbeats 20000
 

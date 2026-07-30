@@ -15,8 +15,7 @@ complete Clean copy witness.
 
 namespace Zcash.Snark
 
-open Halo2
-open CompPoly.CPolynomial
+open Halo2 CompPoly.CPolynomial
 open ActionPermutationDomain
 open Zcash.Circuits.Action (actionCircuit)
 

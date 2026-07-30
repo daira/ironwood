@@ -10,8 +10,7 @@ of any accepting-multiopen rewind.  This module isolates those facts for the alg
 
 namespace Zcash.Snark
 
-open Classical
-open CompPoly.CPolynomial
+open Classical CompPoly.CPolynomial
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 

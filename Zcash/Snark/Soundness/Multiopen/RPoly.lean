@@ -22,8 +22,7 @@ switching to it would not remove this bridge.
 
 namespace Zcash.Snark
 
-open Polynomial
-open CompPoly
+open Polynomial CompPoly
 
 /-- **Identity from samples.** Two polynomials whose difference has degree at most `d` and which
 agree at `d + 1` pairwise-distinct points are equal. -/

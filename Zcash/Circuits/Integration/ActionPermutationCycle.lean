@@ -19,8 +19,7 @@ namespace Zcash.Snark
 
 open Zcash.Arithmetic (derivedUrsGLagrange omegaOf)
 
-open Halo2
-open CompPoly.CPolynomial
+open Halo2 CompPoly.CPolynomial
 open Keygen
 open ActionPermutationDomain
 open Zcash.Circuits.Action (actionCircuit)

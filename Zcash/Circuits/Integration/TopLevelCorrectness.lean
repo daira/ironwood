@@ -12,8 +12,7 @@ statement and no opaque encoding implication.
 
 namespace Zcash.Snark
 
-open Halo2
-open CompPoly.CPolynomial
+open Halo2 CompPoly.CPolynomial
 
 /--
 The statement owned by a top-level circuit, simultaneously for every polynomial
