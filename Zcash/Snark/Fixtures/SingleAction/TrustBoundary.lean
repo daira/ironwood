@@ -3,6 +3,7 @@ import Zcash.Snark.Fixtures.SingleAction.FiatShamir
 import Zcash.Snark.Fixtures.SingleAction.StaticChecks
 import Zcash.Snark.Fixtures.SingleAction.Negative
 import Zcash.Snark.Fixtures.SingleAction.Negative.Sweep
+import Zcash.Snark.Fixtures.SingleAction.Boundary
 import Zcash.Meta.AxiomCheck
 import Mathlib.Util.AssertNoSorry
 
@@ -326,6 +327,73 @@ assert_axioms Zcash.Snark.Keygen.vk_eq_toVerifierKey +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+-- The Fiat–Shamir schedule checks, the composed fingerprint, and the boundary statements at the
+-- Lean-derived key (`Boundary.lean`). The oracle/schedule data and the composed-statement
+-- functions are flagless — compiler trust may enter only through the named claims — except
+-- `derivedActionVk`, whose circuit argument itself carries the natively-certified fixed-base
+-- facts.
+assert_axioms Zcash.Snark.Fixture.capturedChallengeValues_eq_expected +native(
+  Zcash.Snark.Fixture.capturedChallengeValues_eq_expected)
+assert_axioms Zcash.Snark.Fixture.missingChallenge_not_captured +native(
+  Zcash.Snark.Fixture.missingChallenge_not_captured)
+assert_axioms Zcash.Snark.Fixture.capturedChallengeValues_nodup +native(
+  Zcash.Snark.Fixture.capturedChallengeValues_nodup)
+assert_axioms Zcash.Snark.Fixture.capturedScheduleIncludesInit_eq_true +native(
+  Zcash.Snark.Fixture.capturedScheduleIncludesInit_eq_true)
+assert_axioms Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule +native(
+  Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule)
+assert_axioms Zcash.Snark.Fixture.nonInteractiveFingerprint_matches +native(
+  Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule,
+  Zcash.Snark.Fixture.fingerprint_matches)
+assert_axioms Zcash.Snark.Fixture.capturedFs
+assert_axioms Zcash.Snark.Fixture.capturedInit
+assert_axioms Zcash.Snark.deriveChallenges
+assert_axioms Zcash.Snark.nonInteractiveFingerprint
+assert_axioms Zcash.Snark.Keygen.derivedActionVk +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_axioms Zcash.Snark.Fixture.nonInteractiveFingerprint_matches_derived +native(
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.Keygen.certificate,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero,
+  Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule,
+  Zcash.Snark.Fixture.fingerprint_matches)
+assert_axioms Zcash.Snark.Fixture.nonInteractiveFingerprint_matches_derived_inputs +native(
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.Keygen.certificate,
+  Zcash.Snark.Keygen.instanceCommitment_capturedActionInputs,
+  Zcash.Snark.Keygen.publicInputRows_capturedActionInputs,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero,
+  Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule,
+  Zcash.Snark.Fixture.fingerprint_matches)
+
 -- `whitespace := lax` collapses all whitespace, so the pin is insensitive to how
 -- `#print axioms` line-wraps the list (a formatting artifact of the axiom-name lengths).
 /-- info: 'Zcash.Snark.Fixture.fingerprint_matches' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.Fixture.fingerprint_matches._native.native_decide.ax_1_1] -/
@@ -343,3 +411,39 @@ assert_axioms Zcash.Snark.Keygen.vk_eq_toVerifierKey +native(
 /-- info: 'Zcash.Snark.Fixture.capturedPublicInstances_within_lagrange' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.Fixture.capturedPublicInstances_within_lagrange._native.native_decide.ax_1_1] -/
 #guard_msgs (whitespace := lax) in
 #print axioms Zcash.Snark.Fixture.capturedPublicInstances_within_lagrange
+
+/-- info: 'Zcash.Snark.Fixture.nonInteractiveFingerprint_matches_derived' depends on axioms: [propext,
+Classical.choice,
+Quot.sound,
+Zcash.Arithmetic.omegaOf_eq_certifiedRootPow._native.native_decide.ax_1_1,
+CompElliptic.Fields.Pasta.pallasBase._native.native_decide.ax_1,
+CompElliptic.Fields.Pasta.pallasBase._native.native_decide.ax_2,
+Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule._native.native_decide.ax_1_1,
+Zcash.Snark.Fixture.fingerprint_matches._native.native_decide.ax_1_1,
+Zcash.Snark.Keygen.certificate._native.native_decide.ax_1_1,
+CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt._native.native_decide.ax_1_1,
+CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_2,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_3,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_4,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_5,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_6,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_7,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_8,
+Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_2,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_3,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_4,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_5,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_6,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_7,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_8] -/
+#guard_msgs (whitespace := lax) in
+#print axioms Zcash.Snark.Fixture.nonInteractiveFingerprint_matches_derived

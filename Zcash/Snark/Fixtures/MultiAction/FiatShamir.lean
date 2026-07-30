@@ -6,7 +6,8 @@ import Zcash.Snark.Verifier.Deployed
 # Fiat–Shamir schedule check for the multi-action capture
 
 This file checks the deployed absorb/squeeze order against a multi-action Rust capture and then
-matches `nonInteractiveFingerprint` to the captured MSM. `capturedFs` returns a captured challenge
+matches `nonInteractiveFingerprint` to the captured MSM; `Boundary.lean` restates that match at the
+Lean-derived verifying key as the statement of record. `capturedFs` returns a captured challenge
 only at its captured transcript prefix, converted by `markerSchedule` to the model's marker encoding.
 
 With `numProofs = 2`, the check covers the per-proof absorb order that the single-action fixture cannot

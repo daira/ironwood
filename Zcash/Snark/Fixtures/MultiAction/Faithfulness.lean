@@ -6,13 +6,14 @@ import Zcash.Circuits.Integration.ActionPermutationDomainCompute
 
 For the single-action capture, Lean re-derives the key: `Keygen/Certificate.lean` proves the
 dumped VK equals the one derived from the ported `configure`/keygen, with per-field checks in
-`Fixtures/SingleAction/VkMatch.lean`. Transporting that certificate to this multi-action key is
-still open, so here the generated fixture remains part of the Rust/Lean boundary.
+`Fixtures/SingleAction/VkMatch.lean`. That certificate transports to this multi-action key in
+`Fixtures/MultiAction/VkCertificate.lean`, along the cross-capture point equalities of
+`Fixtures/PostNu63.lean`, so the checks here are drift-naming diagnostics rather than the boundary.
 The Orchard capture re-runs key generation, compares that exact key against the checked-in
 canonical Post-NU6.3 `PinnedVerificationKey`, and passes the same key to verification and the fixture
-dumper; `Fixtures.PostNu63` pins the emitted transcript representation in Lean. These checks make the
-remaining generated boundary less silent by verifying that the named captured lists, typed accessors,
-query layouts, expression indices, and captured transcript prefix agree with the generated `shape`.
+dumper; `Fixtures.PostNu63` pins the emitted transcript representation in Lean. These checks verify
+that the named captured lists, typed accessors, query layouts, expression indices, and captured
+transcript prefix agree with the generated `shape`.
 
 In particular this catches the totalization hazards called out in `Verifier.Assemble`: an
 out-of-range query index would otherwise route through `finFn`/`finFnG` and alias `0`/`default`.

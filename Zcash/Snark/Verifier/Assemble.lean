@@ -52,12 +52,13 @@ def ColumnRef.resolve {F : Type*} (cr : ColumnRef) (instanceEvals adviceEvals fi
 
 -- VK provenance: this circuit-independent assembler deliberately receives a `VerifyingKey` as
 -- input, populated from the halo2 `dump_vesta_lean_fixture` capture
--- (`Fixtures/SingleAction/Fixture.lean`) — but it is not trusted verbatim: for the
--- single-action capture, `Keygen/Certificate.lean` proves the dumped key equals the one derived
--- end-to-end from the ported `configure`/keygen (`vk_eq_derived`), with per-field checks in
--- `Fixtures/SingleAction/VkMatch.lean`. Still input-side: the URS dump itself, and transporting
--- the certificate to the multi-action key. Distinct from the output-side semantic-adequacy gap
--- (see `Soundness/Main.lean`).
+-- (`Fixtures/SingleAction/Fixture.lean`) — but it is not trusted verbatim:
+-- `Keygen/Certificate.lean` proves the dumped key equals the one derived end-to-end from the
+-- ported `configure`/keygen (`vk_eq_derived`, transported to the multi-action key in
+-- `Fixtures/MultiAction/VkCertificate.lean`), and the boundary statements consume the derived
+-- key (`Fixtures/*/Boundary.lean`). The URS dump is checked in turn by the derived commitments
+-- and the captured bases (see `Fingerprint/Match.lean`). Distinct from the output-side
+-- semantic-adequacy gap (see `Soundness/Main.lean`).
 /-- The verifying-key–level circuit structure the assembly needs, mirroring halo2's `VerifyingKey`
 field-for-field: **circuit-fixed data only**. `omega` is the domain generator and `n = 2 ^ k` the
 domain size; `blindingFactors`, `delta`, `chunkLen` are the permutation-argument constants. `gates`

@@ -8,6 +8,8 @@ import Zcash.Snark.Fixtures.MultiAction.Negative.Sweep
 import Zcash.Snark.Fixtures.MultiAction.StraightLineKnowledgeError
 import Zcash.Snark.Fixtures.MultiAction.CapturedZeroFamily
 import Zcash.Snark.Fixtures.MultiAction.ActionCapstone
+import Zcash.Snark.Fixtures.MultiAction.Boundary
+import Zcash.Snark.Fixtures.PostNu63
 import Zcash.Meta.AxiomCheck
 
 /-!
@@ -816,6 +818,127 @@ assert_axioms Zcash.Snark.Fixture2.capturedPublicInstances
 assert_axioms Zcash.Snark.Fixture2.commitLagrange
 assert_axioms Zcash.Snark.Fixture2.derivedInstanceCommitment
 
+-- Cross-capture provenance (`Fixtures/PostNu63.lean`): the point-level equalities that transport
+-- the single-action keygen certificate to this capture, and the URS record equality assembled
+-- from them.
+assert_axioms Zcash.Snark.PostNu63Fixture.captures_use_same_ursG +native(
+  Zcash.Snark.PostNu63Fixture.captures_use_same_ursG)
+assert_axioms Zcash.Snark.PostNu63Fixture.captures_use_same_wu +native(
+  Zcash.Snark.PostNu63Fixture.captures_use_same_wu)
+assert_axioms Zcash.Snark.PostNu63Fixture.captures_use_same_ursGLagrange +native(
+  Zcash.Snark.PostNu63Fixture.captures_use_same_ursGLagrange)
+assert_axioms Zcash.Snark.PostNu63Fixture.captures_use_same_fixedCommitments +native(
+  Zcash.Snark.PostNu63Fixture.captures_use_same_fixedCommitments)
+assert_axioms Zcash.Snark.PostNu63Fixture.captures_use_same_permutationCommonCommitments +native(
+  Zcash.Snark.PostNu63Fixture.captures_use_same_permutationCommonCommitments)
+assert_axioms Zcash.Snark.PostNu63Fixture.captures_use_same_urs +native(
+  Zcash.Snark.PostNu63Fixture.captures_use_same_ursG,
+  Zcash.Snark.PostNu63Fixture.captures_use_same_wu)
+
+-- The transported keygen certificate (`VkCertificate.lean`): the multi-action key equals its
+-- end-to-end derivation. Owners are the single-action certificate's plus the cross-capture
+-- point equalities — no second keygen evaluation.
+assert_axioms Zcash.Snark.Fixture2.vk_eq_derived +native(
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.Keygen.certificate,
+  Zcash.Snark.PostNu63Fixture.captures_use_same_ursG,
+  Zcash.Snark.PostNu63Fixture.captures_use_same_wu,
+  Zcash.Snark.PostNu63Fixture.captures_use_same_fixedCommitments,
+  Zcash.Snark.PostNu63Fixture.captures_use_same_permutationCommonCommitments,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_axioms Zcash.Snark.Fixture2.actionProofParamsFor_two_mergeDerived +native(
+  Zcash.Snark.Keygen.certificate,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_axioms Zcash.Snark.Fixture2.vk_eq_toVerifierKey +native(
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.Keygen.certificate,
+  Zcash.Snark.PostNu63Fixture.captures_use_same_ursG,
+  Zcash.Snark.PostNu63Fixture.captures_use_same_wu,
+  Zcash.Snark.PostNu63Fixture.captures_use_same_fixedCommitments,
+  Zcash.Snark.PostNu63Fixture.captures_use_same_permutationCommonCommitments,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+
+-- The Fiat–Shamir schedule checks, the composed fingerprint, and the boundary statement at the
+-- Lean-derived key (`Boundary.lean`). The oracle/schedule data and the composed-statement
+-- functions are flagless — compiler trust may enter only through the named claims — except
+-- `derivedActionVk`, whose circuit argument itself carries the natively-certified fixed-base
+-- facts.
+assert_axioms Zcash.Snark.Fixture2.capturedChallengeValues_eq_expected +native(
+  Zcash.Snark.Fixture2.capturedChallengeValues_eq_expected)
+assert_axioms Zcash.Snark.Fixture2.missingChallenge_not_captured +native(
+  Zcash.Snark.Fixture2.missingChallenge_not_captured)
+assert_axioms Zcash.Snark.Fixture2.capturedChallengeValues_nodup +native(
+  Zcash.Snark.Fixture2.capturedChallengeValues_nodup)
+assert_axioms Zcash.Snark.Fixture2.capturedScheduleIncludesInit_eq_true +native(
+  Zcash.Snark.Fixture2.capturedScheduleIncludesInit_eq_true)
+assert_axioms Zcash.Snark.Fixture2.deriveChallenges_matches_captured_schedule +native(
+  Zcash.Snark.Fixture2.deriveChallenges_matches_captured_schedule)
+assert_axioms Zcash.Snark.Fixture2.nonInteractiveFingerprint_matches +native(
+  Zcash.Snark.Fixture2.deriveChallenges_matches_captured_schedule,
+  Zcash.Snark.Fixture2.fingerprint_matches)
+assert_axioms Zcash.Snark.Fixture2.capturedFs
+assert_axioms Zcash.Snark.Fixture2.capturedInit
+assert_axioms Zcash.Snark.deriveChallenges
+assert_axioms Zcash.Snark.nonInteractiveFingerprint
+assert_axioms Zcash.Snark.Keygen.derivedActionVk +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_axioms Zcash.Snark.Fixture2.nonInteractiveFingerprint_matches_derived +native(
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.Keygen.certificate,
+  Zcash.Snark.PostNu63Fixture.captures_use_same_ursG,
+  Zcash.Snark.PostNu63Fixture.captures_use_same_wu,
+  Zcash.Snark.PostNu63Fixture.captures_use_same_fixedCommitments,
+  Zcash.Snark.PostNu63Fixture.captures_use_same_permutationCommonCommitments,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero,
+  Zcash.Snark.Fixture2.deriveChallenges_matches_captured_schedule,
+  Zcash.Snark.Fixture2.fingerprint_matches)
+
 -- The captured key's zero-family test with eleven live IPA rounds
 -- (`MultiAction/CapturedZeroFamily`): this exercises the interface at the captured scalar
 -- metadata, layouts, and domain rather than only at the round-free witness shape.  It is not the
@@ -878,3 +1001,43 @@ assert_axioms Zcash.Snark.FixtureMax.straightLine_consensus_2pow122_workFactor_g
 /-- info: 'Zcash.Snark.Fixture2.capturedPublicInstances_within_lagrange' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.Fixture2.capturedPublicInstances_within_lagrange._native.native_decide.ax_1_1] -/
 #guard_msgs (whitespace := lax) in
 #print axioms Zcash.Snark.Fixture2.capturedPublicInstances_within_lagrange
+
+/-- info: 'Zcash.Snark.Fixture2.nonInteractiveFingerprint_matches_derived' depends on axioms: [propext,
+Classical.choice,
+Quot.sound,
+Zcash.Arithmetic.omegaOf_eq_certifiedRootPow._native.native_decide.ax_1_1,
+CompElliptic.Fields.Pasta.pallasBase._native.native_decide.ax_1,
+CompElliptic.Fields.Pasta.pallasBase._native.native_decide.ax_2,
+Zcash.Snark.Fixture2.deriveChallenges_matches_captured_schedule._native.native_decide.ax_1_1,
+Zcash.Snark.Fixture2.fingerprint_matches._native.native_decide.ax_1_1,
+Zcash.Snark.Keygen.certificate._native.native_decide.ax_1_1,
+Zcash.Snark.PostNu63Fixture.captures_use_same_fixedCommitments._native.native_decide.ax_1_1,
+Zcash.Snark.PostNu63Fixture.captures_use_same_permutationCommonCommitments._native.native_decide.ax_1_1,
+Zcash.Snark.PostNu63Fixture.captures_use_same_ursG._native.native_decide.ax_1_1,
+Zcash.Snark.PostNu63Fixture.captures_use_same_wu._native.native_decide.ax_1_1,
+CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt._native.native_decide.ax_1_1,
+CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_2,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_3,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_4,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_5,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_6,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_7,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_8,
+Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_2,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_3,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_4,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_5,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_6,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_7,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_8] -/
+#guard_msgs (whitespace := lax) in
+#print axioms Zcash.Snark.Fixture2.nonInteractiveFingerprint_matches_derived
