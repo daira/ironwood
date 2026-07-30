@@ -61,6 +61,7 @@ import Zcash.Snark.Fingerprint.Epsilon
 import Zcash.Snark.Fingerprint.Rational.QueryWalk
 import Zcash.Snark.Fingerprint.Rational.QueryTable
 import Zcash.Snark.Fingerprint.Rational.IpaWalk
+import Zcash.Snark.Fingerprint.Rational.OpeningWalk
 import Mathlib.Util.AssertNoSorry
 
 /-!
@@ -967,6 +968,15 @@ assert_axioms Zcash.Snark.computeS_getD_rep
 assert_axioms Zcash.Snark.wScalar_rep
 assert_axioms Zcash.Snark.uScalar_rep
 assert_axioms Zcash.Snark.gScalars_coord_rep
+-- The opening walk (`Fingerprint/Rational/OpeningWalk`): the claimed-evaluation stream factors
+-- through fixed represented functions, the barycentric interpolant and per-set quotients clear
+-- into the enumerated factors, and the multiopen opening value — exactly as `assembleFinalMsm`
+-- invokes it — is represented over `openDen` at the `vBudget` cap on the good event.
+assert_axioms Zcash.Snark.assembleQueries_map_eval
+assert_axioms Zcash.Snark.queryEval_rep
+assert_axioms Zcash.Snark.lagrangeEval_rep
+assert_axioms Zcash.Snark.openingValue_eq
+assert_axioms Zcash.Snark.openingValue_rep
 -- The schedule, priced (`Composition.ScheduleBudget`): the committed carriers stay under the
 -- walk's caps, root witnesses at one table share the family's own outcome, and the schedule
 -- constructor discharges `measure_le` outright.
