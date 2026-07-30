@@ -1,4 +1,4 @@
-import Mathlib
+import Mathlib.Tactic
 import Zcash.Snark.Soundness.Main
 import CompElliptic.Curves.Pasta
 import CompElliptic.Curves.PastaOrder

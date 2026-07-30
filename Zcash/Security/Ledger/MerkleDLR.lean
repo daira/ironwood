@@ -1,4 +1,4 @@
-import Mathlib
+import Mathlib.Tactic
 import Zcash.Security.Common.RandomOracle
 import Zcash.Security.Ledger.Pool
 import Zcash.Security.Ledger.SinsemillaDLR

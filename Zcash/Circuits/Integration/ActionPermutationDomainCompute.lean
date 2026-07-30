@@ -1,5 +1,6 @@
 import Zcash.Snark.Keygen.Pipeline
 import Zcash.Circuits.Action.TopLevel
+import Mathlib.Util.AssertNoSorry
 import Zcash.Snark.Soundness.Canonical.PermutationInstantiation
 
 /-!

@@ -1,4 +1,4 @@
-import Mathlib
+import Mathlib.Tactic
 import Zcash.Snark.Soundness.Canonical.LookupRows
 import Zcash.Snark.Verifier.Parametric
 
