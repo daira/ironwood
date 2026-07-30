@@ -1,10 +1,11 @@
 import Zcash.Snark.Soundness.FiatShamir.Execution
+import Zcash.Snark.Soundness.UniformMeasure
 
 /-!
 # The oracle-querying Fiat–Shamir adversary
 
 Model a `Q`-query adversary as an adaptive query tree with eager whole-table semantics. Query
-query logs support resource accounting; blind escape sets give the adaptive query loss.
+logs support resource accounting; blind escape sets give the adaptive query loss.
 -/
 
 namespace Zcash.Snark

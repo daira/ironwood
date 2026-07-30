@@ -733,8 +733,6 @@ assert_axioms Zcash.Snark.topLevelBundleStatement_or_bad_of_constraintSatisfacti
 assert_computable Zcash.Snark.TopLevelAcceptedModel.statements_or_relation_of_circuitSat +choice +native(
   Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   CompElliptic.Fields.Pasta.pallasBase)
-assert_axioms Zcash.Snark.acceptedAdviceSelection_feed_eq
-assert_axioms Zcash.Snark.acceptedInstanceSelection_feed_eq
 -- The last links: the point check lifted to the polynomial identity, the permutation taken to be the
 -- one keygen builds from the circuit's copy constraints, the cells of every chunk covered at once,
 -- and circuit satisfaction defined by the whole constraint list rather than the gates alone.
