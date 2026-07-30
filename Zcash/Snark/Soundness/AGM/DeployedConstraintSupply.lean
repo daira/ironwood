@@ -6,11 +6,9 @@ import Zcash.Snark.Soundness.Composition.Quotient
 /-!
 # Constraint supply from rewind-free deployed AGM decoding
 
-The historical constraint-supply theorem obtains member polynomials from accepting `x1` rewind
-families.  `DeployedAlgebraicDecode` already supplies the same polynomials directly from
-squeeze-pinned AGM coordinates, together with their values at every routed node.  This module
-connects that deterministic output to the concrete Halo2 constraint layer without reintroducing
-the old multiopen probability floors.
+`DeployedAlgebraicDecode` supplies member polynomials directly from squeeze-pinned AGM coordinates,
+together with their values at every routed node. This module connects that deterministic output to
+the concrete Halo2 constraint layer.
 -/
 
 namespace Zcash.Snark

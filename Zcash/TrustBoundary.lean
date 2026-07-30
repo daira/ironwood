@@ -385,7 +385,7 @@ through the `Zcash.Meta.AxiomCheck` macros rather than the older `assert_no_sorr
 `#guard_msgs`-pinned `#print axioms` idiom:
 
 * **Computed break reductions** — the data-producing `def`s that extract a discrete-log relation
-  from a collision, fold, peel, or fork — get `assert_computable`: a plain `def`, not marked
+  from a collision, fold, or peel — get `assert_computable`: a plain `def`, not marked
   `noncomputable`. `Classical.choice` enters only through erased `Prop` certificate fields
   (`+choice`); the relation coefficients are direct terms of the inputs, so the break data cannot
   have been conjured from mere propositional existence. Vesta-instantiated producers additionally
@@ -763,9 +763,6 @@ assert_axioms Zcash.Snark.chain_mem_permutationExpressions
 assert_axioms Zcash.Snark.running_product_chain
 assert_axioms Zcash.Snark.deployed_copy_constraints_of_identity_chunks
 assert_axioms Zcash.Snark.hgood_of_good_challenge
--- The UNCONDITIONAL decomposition: `hExtract` removed, the residual quantified as the
--- clean-but-not-extracted measure term (bounded by the multiopen budget under the coupling
--- documented in `Composition.Decomposition`, not assumed here).
 -- Product-measure lifting, now used by the direct pinned-root composition.
 assert_axioms Zcash.Snark.independentProductPMF_fiber_bound
 -- Acceptance through `assemble?`, isolated from the historical completeness ladder.
@@ -1243,7 +1240,7 @@ assert_axioms Zcash.Snark.x4BatchCommitments_eq_memberPowerSum
 assert_axioms Zcash.Snark.aggregate_opens_deployedCommitment +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 -- The direct path's total-cost model (`Composition.DirectPathCost`): executable modeled counts,
--- and a shape-polynomial bound with no fork-spread, adversary-dependent, or `|F|` term.  Choice
+-- and a shape-polynomial bound with no adversary-dependent spread premise or `|F|` term. Choice
 -- enters the total only through erased `Prop` positions of the finite sum.
 assert_computable Zcash.Snark.directColumnDecodeOps
 assert_computable Zcash.Snark.deployedDirectDecodeOps +choice
