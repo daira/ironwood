@@ -70,10 +70,9 @@ import Zcash.Snark.Soundness.Deployed.Verification
 import Zcash.Snark.Soundness.Forking
 import Zcash.Snark.Soundness.Main
 -- Multiopen decode reconstruction: bind the IPA witness to real verifier columns recovered from
--- batched openings (`Multiopen.Decode`), the compatibility layer exposing the propositional binding
--- interface over fs-adversary's `NontrivialRelation`/`ForkedTranscript` apparatus (`Multiopen.Compat`),
--- the `x₄` multiopen rewinding (`Multiopen.Deployed`), and the opened chain threading the fork's
--- declared `U`/`W` components through the batch decode (`Multiopen.Opened`).
+-- batched openings (`Multiopen.Decode`), the MSM evaluation spine (`Multiopen.Compat`), the `x₄`
+-- multiopen rewinding (`Multiopen.Deployed`), and the opened chain threading the fork's declared
+-- `U`/`W` components through the batch decode (`Multiopen.Opened`).
 -- Schwartz–Zippel good-challenge budgets and production (kills `hgood` at the `_xgood` rungs).
 import Zcash.Snark.Soundness.GoodChallenge
 import Zcash.Snark.Soundness.Multiopen.Decode
@@ -85,10 +84,7 @@ import Zcash.Snark.Soundness.Multiopen.Claimed
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 import Zcash.Snark.Soundness.Multiopen.CanonicalSelection
 import Zcash.Snark.Soundness.Canonical.Terminal
-import Zcash.Snark.Soundness.Canonical.Vesta
 import Zcash.Snark.Soundness.TopLevelTerminal
-import Zcash.Snark.Soundness.TopLevelVesta
-import Zcash.Snark.Soundness.ActionVesta
 import Zcash.Snark.Soundness.Vesta
 -- AGM binding reduction: consume computed deployed relations through the programmed-basis
 -- discrete-log adapter and representation-carrying algebraic-prover model.

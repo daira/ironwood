@@ -70,12 +70,10 @@ The lookup bridge is split deliberately:
   No Clean type is introduced into
   `Zcash/Snark/Soundness/Canonical/Terminal.lean`.
 
-The core terminals live outside this boundary. `Snark/Soundness/TopLevelTerminal`
-turns canonical constraint satisfaction plus `TopLevelCircuitCorrectness` into the
-circuit-owned statement for every proof. `Snark/Soundness/TopLevelVesta` composes
-that result with the verifier-native Vesta terminal for an arbitrary
-`TopLevelCircuit`. `Snark/Soundness/ActionVesta` supplies only the Action
-correctness constructor to that generic capstone, while
-`Snark/Soundness/Deployed/ActionVesta` only transports captured artifacts. None of
-these public capstones has a free semantic proposition, encoding callback, decoder,
-or column-feed choice.
+The generic semantic terminal lives outside this boundary.
+`Snark/Soundness/TopLevelTerminal` turns canonical constraint satisfaction plus
+`TopLevelCircuitCorrectness` into the circuit-owned statement for every proof. The
+deployed Action route reaches it through `StraightLineActionTerminal.lean` and
+`StraightLineActionEvent.lean`, carrying every relation branch as explicit computed
+data; it has no free semantic proposition, encoding callback, decoder, or
+column-feed choice.

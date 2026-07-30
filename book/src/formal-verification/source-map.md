@@ -130,10 +130,9 @@ probability.
 
 Concrete Orchard captures that exercise the assembly end-to-end and make the Rust/Lean boundary
 less silent. This subtree is the `FixtureCheck` lake target, kept out of `lake build Zcash` (the
-captures are large, generated, and slow) but built by CI; the target's glob also names
-`Soundness.Deployed.ActionVesta`, which extends the same instance-level lane to the verifying-key
-commitment certificate chain. `MaxShape` specializes the verifier shape to the captured column and
-query dimensions while leaving the action count free, and `MaxShapeBounds` and
+captures are large, generated, and slow) but built by CI. `MaxShape` specializes the verifier shape
+to the captured column and query dimensions while leaving the action count free, and
+`MaxShapeBounds` and
 `StraightLineMaxShapeBounds` evaluate the composite bounds at that shape and at the consensus
 maximum; `ScheduleMarker` re-encodes captured Fiat–Shamir schedules into the model's marker form;
 `PostNu63` pins the canonical post-NU 6.3 verifying key and URS so fixture drift is visible here;
@@ -170,7 +169,13 @@ multiset identity), `Permutation`, `PermutationConstruction`, `PermutationRows`,
 `CommitFold`. `InstanceBinding` closes the public-instance gap: a decoded instance column is the
 polynomial halo2 committed from its `instances` argument, or a `(g, U, W)` relation is computed.
 `ZeroData` supplies the zero-data multiopen keystone the constant prover families
-are built on. `Vesta` pins the abstract group to the actual Vesta curve. `TopLevelTerminal` and `TopLevelVesta` connect verifier acceptance to the Spec of an arbitrary top-level circuit, using that circuit's derived verifier key. `ActionVesta` specializes them to our concrete Lean model of the Action circuit.
+are built on. `Vesta` pins the abstract group to the actual Vesta curve. `TopLevelTerminal` turns
+canonical constraint satisfaction into the Spec of an arbitrary top-level circuit.
+`StraightLineActionTerminal` and `StraightLineActionEvent` connect the one-run computed decode to
+the concrete Action statement and carry a failure as explicit relation data. The former
+`Canonical.Vesta` → `TopLevelVesta` → `ActionVesta` → `Deployed.ActionVesta` conditional ladder has
+been removed; it required caller-supplied opened-rewind and residual premises and was not the
+computed deployed endpoint.
 
 Six subtrees carry the heavier machinery:
 
@@ -230,7 +235,7 @@ Six subtrees carry the heavier machinery:
   (`Ipa`, `IpaPeel`), unfolds the flattened deployed MSM into the recursive generator fold
   (`Fold`), shows deployed acceptance implies halo2's explicit IPA verifier equation
   (`Verification`), reduces binding over the augmented generators to discrete-log-relation
-  hardness (`Binding`), and states the Action capstone at the captured artifacts (`ActionVesta`).
+  hardness (`Binding`).
 - **`Forking/`** — the reusable Fiat–Shamir random-oracle kernel: random-oracle primitives
   (`Oracle`), the deployed squeeze ordering (`Ordering`) and the reprogramming lemmas that say
   changing the oracle at one squeeze prefix replaces exactly that challenge (`Rewind`), the
