@@ -417,19 +417,13 @@ hypothesis. That is what makes the tier of an endpoint's pin load-bearing rather
   is unconditionally inhabited, their *statements* do not force the acceptance hypotheses — only
   the proofs actually written do. The pin bounds the trusted base, not the extraction.
 
-This is why the `⊕'`-with-data shape is necessary but not sufficient, and why the rewind-free route
-is the stronger one wherever both reach the same conclusion.
-
-**The residual this leaves.** The endpoints that reach the *captured* deployed artifacts
-(`Soundness/Deployed/ActionVesta.lean`, at `Fixture.vk` / `capturedURS` /
-`Keygen.capturedActionInputs`) are the rewind route, hence noncomputable: their decode runs through
-`openedMemberDecode_of_x1Prob`, which turns an `x₁` accept-measure bound into rewound transcripts by
-`Classical.choose`, so no restatement makes them computable. The computable straight-line route and
-the adaptive knowledge bound are stated at `ursOfAugmentedBasis k basis` for a quantified basis
-instead. `ursOfAugmentedBasis_augmentedBasis` supplies the missing join on the URS component — every
-URS is the split of its own augmented basis — but joining the rest needs a straight-line family
-reproducing the captured proof, which does not exist yet. Until it does, "computable extraction at
-the deployed artifacts" is a conjunction of two theorems, not one. -/
+This is why the `⊕'`-with-data shape is necessary but not sufficient. The former captured-artifact
+capstones depended on a noncomputable opened-rewind route and have been removed. The computable
+straight-line route and adaptive knowledge bound are stated at `ursOfAugmentedBasis k basis` for a
+quantified basis, while the fixture layer separately anchors verifier behavior at `capturedURS`.
+`ursOfAugmentedBasis_augmentedBasis` joins the URS component, but there is currently no theorem
+constructing the straight-line family for the captured proof. The census therefore makes no claim
+of computable extraction at the captured artifacts. -/
 
 assert_axioms Zcash.Snark.ursOfAugmentedBasis_augmentedBasis
 assert_axioms Zcash.Snark.nonempty_nontrivialRelation_vesta +native(
@@ -440,29 +434,15 @@ assert_axioms Zcash.Snark.nonempty_nontrivialRelation_vesta +native(
 assert_computable Zcash.Snark.NontrivialDLRelation.ofCollision +choice
 assert_computable Zcash.Snark.NontrivialDLRelation.ofIpaOpenings +choice
 
-/-! ### Verifier-soundness capstones -/
+/-! ### Verifier-equation correspondence -/
 
 assert_axioms Zcash.Snark.deployedAccepts_verifierEq
-assert_axioms Zcash.Snark.orchard_verifier_deployed_opening_of_forked
-assert_axioms Zcash.Snark.orchard_verifier_deployed_constraint_of_forked
-assert_axioms Zcash.Snark.orchard_verifier_vesta_constraint_of_forked +native(
-  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
-/-! ### Deployed binding-reduction breaks
+/-! ### Generic binding-reduction break
 
-The binding reductions return computed data (plain `def`s); the same treatment covers the IPA
-extraction reductions `ipa_extractV` and `ipaRelation_extract`, each computing its witness from an
-explicit accepting tree. -/
+The combination-collision reduction returns computed relation data as a plain `def`. -/
 
 assert_computable Zcash.NontrivialRelation.ofCombinationCollision +choice
-assert_computable Zcash.Snark.NontrivialRelation.ofFoldedGens +choice
-assert_computable Zcash.Snark.NontrivialRelation.ofLeafPeel +choice
-assert_computable Zcash.Snark.NontrivialRelation.ofDeployedTree +choice
-assert_computable Zcash.Snark.NontrivialRelation.ofUnopenedFork +choice
-assert_computable Zcash.Snark.NontrivialRelation.ofUnopenedForkVesta +choice +native(
-  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_computable Zcash.Snark.ipa_extractV +choice
-assert_computable Zcash.Snark.ipaRelation_extract +choice
 
 /-! ### AGM / Fiat–Shamir soundness
 
@@ -490,12 +470,15 @@ assert_computable Zcash.Snark.DeployedAlgebraicDecode.quotientEvalEqCommittedPre
 assert_computable Zcash.Snark.x4BatchCommitments +choice
 assert_computable Zcash.Snark.deployedSetMemberCommitments +choice
 assert_computable Zcash.Snark.deployedX4AlgebraicBatchOrRelation +choice
+assert_computable Zcash.Snark.deployedX4AlgebraicBatchWithSourceOrRelation +choice
 assert_computable Zcash.Snark.deployedX1AlgebraicBatchWithSourceOrRelation +choice
 assert_computable Zcash.Snark.deployedX1BatchOfCoveredWithSourceOrRelation +choice +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.deployedX4ColumnRepresentationsOfCovered +choice +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.deployedX4BatchOfCoveredOrRelation +choice +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Snark.deployedX4BatchOfCoveredWithSourceOrRelation +choice +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.deployedRootOutcomeOfCovered +choice +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
@@ -505,10 +488,6 @@ assert_computable Zcash.Snark.ComputedDeployedConstraintFSFamily.ofCovered +choi
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.deployedConstraintFinderOfOutcome +choice +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_computable Zcash.Snark.relationOfFoldGensWitness +choice
-assert_computable Zcash.Snark.deployedLeafPeelWitness +choice
-assert_computable Zcash.Snark.deployedToAcceptVWitness +choice
-assert_computable Zcash.Snark.algebraicRelationOfDeployedAccept +choice
 assert_axioms Zcash.Snark.OrchardUniformURSIdentification +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.orchardGeneratorROSetup
@@ -595,36 +574,17 @@ below through explicit `PSum` outcomes and computable finders. Theorems througho
 -- The decode layer (`Soundness.Multiopen.Decode`/`Deployed`): the Vandermonde recovery of the
 -- column witnesses, the deployed x4 collapse proved to be a flat power batch, and the two-level
 -- binding of the extracted witness to the member commitments.
-assert_axioms Zcash.Snark.decodedColumnFamily_of_batch_openings
 assert_axioms Zcash.Snark.deployedCommitment_x4_batch
 assert_axioms Zcash.Snark.multiopenValue_x4_batch
-assert_axioms Zcash.Snark.member_binding_of_x1_samples
-assert_axioms Zcash.Snark.node_binding_of_samples
 -- The multiopen support modules, pinned directly rather than transitively through the capstones
--- above. `Opened` holds the rewind accept events and the three `Classical.choose` witness
--- extractors; `RPoly` the interpolation/power-form algebra; `Compat` the Msm-evaluation and
--- two-openings binding lemmas; `Claimed` the counting cores; `ValueCheckDeployed` the deployed
--- point sets. A stray axiom here would surface at a capstone, but only these pins name the
--- declaration that introduced it.
+-- above. `Opened` holds the augmented batch/member interfaces and canonical column decode;
+-- `RPoly` the interpolation/power-form algebra; `Compat` the Msm-evaluation and two-openings
+-- binding lemmas; `ValueCheckDeployed` the deployed point sets.
+-- A stray axiom here would surface at a capstone, but only these pins name its declaration.
 assert_axioms Zcash.Snark.vandermonde_decode_map
 assert_axioms Zcash.Snark.vandermonde_reconstruct_map
 assert_axioms Zcash.Snark.openedColumnDecode
-assert_axioms Zcash.Snark.openedDecodedCols
-assert_axioms Zcash.Snark.openedDecodedCols_eval_x3
-assert_axioms Zcash.Snark.openedDecodedCols_top_eval_x3
-assert_axioms Zcash.Snark.openedX4Batch_of_witnessFamily
-assert_axioms Zcash.Snark.OpenedX4Accept
-assert_axioms Zcash.Snark.OpenedX3Accept
-assert_axioms Zcash.Snark.OpenedX2Accept
-assert_axioms Zcash.Snark.openedX4Rewind_of_x4Prob
-assert_axioms Zcash.Snark.openedX4Rewind_of_x4Prob_forked
-assert_axioms Zcash.Snark.opened_constraint_of_relation_and_batch
-assert_axioms Zcash.Snark.x1DecodeComp
-assert_axioms Zcash.Snark.opened_witness_member_binding
-assert_axioms Zcash.Snark.OpenedX1Accept
-assert_axioms Zcash.Snark.openedMemberDecode_of_x1Prob
 assert_axioms Zcash.Snark.rotatedFeed
-assert_axioms Zcash.Snark.member_constraint_of_relation_and_batch
 assert_axioms Zcash.Snark.poly_eq_of_agree_on_family
 assert_axioms Zcash.Snark.foldl_range_add_eq_sum
 assert_axioms Zcash.Snark.foldl_range_guardProd_eq_prod
@@ -635,23 +595,14 @@ assert_axioms Zcash.Snark.lagrangePoly_eval
 assert_axioms Zcash.Snark.foldl_mul_inv_eq_prod
 assert_axioms Zcash.Snark.multiopenEval_powerForm
 assert_axioms Zcash.Snark.coeffs_zero_of_power_sum_vanishes
-assert_axioms Zcash.Snark.multiopenEval_perSet_zero_of_samples
 assert_axioms Zcash.Snark.lagrangePoly_natDegree_lt
-assert_axioms Zcash.Snark.col_eq_lagrangePoly_of_samples
-assert_axioms Zcash.Snark.col_eval_node_eq_claimed
 assert_axioms Zcash.Snark.Msm.eval_zero
 assert_axioms Zcash.Snark.Msm.eval_scale
 assert_axioms Zcash.Snark.Msm.eval_add
-assert_axioms Zcash.Snark.claimedEval_of_x3Prob
-assert_axioms Zcash.Snark.gateGood_of_xProb
 assert_axioms Zcash.Snark.deployedSetPts
 assert_axioms Zcash.Snark.deployedAllPts
 assert_axioms Zcash.Snark.deployedSetPts_subset
 assert_axioms Zcash.Snark.deployed_query_point_mem
--- The avoidance-strengthened accepting count (`Soundness.UniformMeasure`): the counting lemma
--- that buys the multiopen grid's interpolation samples off the opened set points, so the value
--- check takes no sample-avoidance hypothesis.
-assert_axioms Zcash.Snark.exists_injective_accepting_avoiding_of_measure
 -- The good-challenge production (`Soundness.GoodChallenge`): the Schwartz-Zippel exclusion budget
 -- and the pigeonhole that produces an accepting challenge outside the bad set.
 assert_axioms Zcash.Snark.uniformChallenge_szBadSet
@@ -660,11 +611,6 @@ assert_axioms Zcash.Snark.uniformChallenge_quotient_szBadSet
 assert_axioms Zcash.Snark.uniformChallenge_szBadSet_union
 assert_axioms Zcash.Snark.exists_accepting_good_challenge
 assert_axioms Zcash.Snark.exists_accepting_good_challenge_quotient
--- The deployed Vesta capstone family: the decoded-column rungs and the terminal, alongside the
--- derived capstone already pinned below.
-assert_axioms Zcash.Snark.orchard_verifier_vesta_decoded_constraint_of_forked_x4 +native(
-  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-
 -- Deterministic verifier routing used by the rewind-free deployed constraint decoder.
 assert_axioms Zcash.Snark.vanishing_query_mem_assembleQueries
 assert_axioms Zcash.Snark.assembleQueries_vanishingH_unique

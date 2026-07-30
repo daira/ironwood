@@ -1,6 +1,5 @@
 import Zcash.Snark.Soundness.Vesta
 import Zcash.Snark.Soundness.Forking.Adversary.Algebraic
-import Zcash.Snark.Soundness.AGM.Peel
 
 /-!
 # Composing the algebraic AGM extraction with the deployed decoded capstone

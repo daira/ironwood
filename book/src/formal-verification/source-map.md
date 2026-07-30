@@ -151,8 +151,8 @@ captured key's own scalar data, so the staged IPA trace carries eleven live roun
 ### `Soundness/` — the soundness argument
 
 The core argument that an accepting proof yields a witness or a computed break. The top-level
-modules cover the argument end to end: `Main` (conditional soundness and the deployed-acceptance
-route), `KnowledgeSoundness` (the `SnarkRelation` knowledge-soundness relation), `Constraints`
+modules cover the argument end to end: `Main` (the deployed-acceptance predicate and explicit
+verifier-equation correspondence), `KnowledgeSoundness` (the `SnarkRelation` knowledge-soundness relation), `Constraints`
 (Schwartz–Zippel soundness of the vanishing check) with `FoldSplit` (recovering the individual
 constraints from the verifier's `y`-fold), `ConstraintCore` and `ConstraintRouting` (the
 rewind-free deterministic identities the algebraic decoder consumes), `ConstraintRelations` (the
@@ -164,8 +164,8 @@ uniformity rather than assuming them). The permutation/lookup stack is `GrandPro
 grand-product-to-multiset kernel — with `RunningProduct` (telescoping the running product),
 `GrandProductBridge` (the two Schwartz–Zippel steps from the verifier's evaluated check to the
 multiset identity), `Permutation`, `PermutationConstruction`, `PermutationRows`, `Lookup`, and
-`LookupAssembly`. The IPA stack is `InnerProduct`, `IpaSoundness`, `Extraction`, `Consistency`,
-`CommitFold`. `InstanceBinding` closes the public-instance gap: a decoded instance column is the
+`LookupAssembly`. The IPA algebra is `InnerProduct`, `Halves`, `IpaSoundness`, `Consistency`, and
+`CommitFold`; the executable extraction route itself lives in `AGM/StraightLineIpa`. `InstanceBinding` closes the public-instance gap: a decoded instance column is the
 polynomial halo2 committed from its `instances` argument, or a `(g, U, W)` relation is computed.
 `ZeroData` supplies the zero-data multiopen keystone the constant prover families
 are built on. `Vesta` pins the abstract group to the actual Vesta curve. `TopLevelTerminal` turns
@@ -178,11 +178,11 @@ computed deployed endpoint.
 
 Six subtrees carry the heavier machinery:
 
-- **`AGM/`** — the algebraic-group-model layer. It turns the relation coefficients computed
-  from algebraic prover data (`Peel`, `Capstone`) into a discrete-log solution over the
+- **`AGM/`** — the algebraic-group-model layer. It turns relation coefficients returned by the
+  represented online and straight-line finders into a discrete-log solution over the
   augmented basis `(g, U, W)` (`Adapter`, following
   [Fuchsbauer–Kiltz–Loss 2018](https://eprint.iacr.org/2017/620)), adds the algebraic
-  coefficients to the prover and forking-certificate interfaces (`Prover`), feeds the
+  coefficients to the online prover interfaces (`OnlineMembers`, `OnlineMultiopen`), feeds the
   binding-signature relations in as AGM inputs (`BindingSignature`), and bounds the reduction's
   probability loss (`Probability`, `ProbabilityCoins`, `ProbabilityVesta`) — programming *every*
   basis slot from the
@@ -190,8 +190,8 @@ Six subtrees carry the heavier machinery:
   `1/|F|` with no multiplicative factor. The bulk of the subtree is the rewind-free deployed
   decoder, consisting of the unbatching chain (`AlgebraicUnbatch`, `DeployedX1`,
   `DeployedMultiopen`,
-  `ValueUnbatch`, `DeployedValueUnbatch`, `ShiftRecovery`), the coordinate decode
-  (`RepresentationDecode`, `DeployedCoordinateDecode`, `DirectX4Columns`, `DirectConstraintFamily`),
+  `ValueUnbatch`, `DeployedValueUnbatch`, `ShiftRecovery`), the direct coordinate decode
+  (`DirectX4Columns`, `DirectConstraintFamily`),
   the explicit root sets it must avoid (`DeployedRootSets`, `DeployedRootDecode`,
   `DeployedPinnedRoots`, `PinnedRootWitness`), the retained-provenance route (`OnlineMembers`,
   `OnlineMultiopen`, `OnlineConstraint`, `DeployedConstraintSupply`), and the adapters back onto
@@ -229,35 +229,29 @@ Six subtrees carry the heavier machinery:
   exclusions the Action-level statement needs, and `DirectPathCost` bounds the direct-coordinate
   postprocessing's field
   operations and data traversal by a shape polynomial with no `|F|` term.
-- **`Deployed/`** — the bridge from the clean, abstract soundness onto halo2's actual deployed
-  IPA. It models the deployed IPA's `U`/`W` apparatus and peels it onto the clean recursive IPA
-  (`Ipa`, `IpaPeel`), unfolds the flattened deployed MSM into the recursive generator fold
-  (`Fold`), shows deployed acceptance implies halo2's explicit IPA verifier equation
-  (`Verification`), reduces binding over the augmented generators to discrete-log-relation
-  hardness (`Binding`).
+- **`Deployed/`** — algebra for halo2's actual deployed IPA. `Fold` rewrites the flattened
+  verifier MSM's generator term into the closed-form fold consumed by the straight-line extractor;
+  `Verification` exposes halo2's explicit IPA verifier equation; and `Binding` supplies the
+  augmented-generator collision reductions shared by the computed AGM path.
 - **`Forking/`** — the reusable Fiat–Shamir random-oracle kernel: random-oracle primitives
-  (`Oracle`), the deployed squeeze ordering (`Ordering`) and the reprogramming lemmas that say
-  changing the oracle at one squeeze prefix replaces exactly that challenge (`Rewind`), the
-  transcript assembly that turns accepting rounds into a deployed IPA tree (`Assembly`), the
+  (`Oracle`), the deployed squeeze ordering (`Ordering`), random-oracle execution and IPA-field
+  splicing (`Rewind`), closed-form IPA assembly algebra (`Assembly`), the
   one-level pinned-squeeze bound and the additive union of pinned root events (`PinnedSqueeze`,
   `PinnedRoots`), and the wrapper that returns a run's own oracle reads with its output
   (`WithReads`).
   **`Forking/Adversary/`** builds the querying-adversary reduction on top: the `Q`-query
   adaptive adversary model (`OracleComp`), the Fiat–Shamir-to-AGM handoff (`Algebraic`),
   oracle-domain reduction to finite support (`DomainReduction`), and the adaptive interface and
-  pre-IPA query accounting (`Adaptive`, `PreIpa`, `Provenance`). The rewinding extractor that once
-  sat here — the ternary fork tree, the executable recursive extractor over a finite sampling
-  tape, and the Attema–Fehr–Klooß-style expected-runs bookkeeping — has been retired (ironwood#133).
-  Its unconditional bound `(8Q + 1) · 10^k` was a ~40-bit cost against the straight-line route's
-  four prover invocations, so it was never the path the headline rested on, and a single deployed
-  extractor is now what the trust boundary reads.
-- **`Multiopen/`** — the multiopen argument's value binding. `Decode` recovers the individual
-  columns from openings of the batch at enough distinct batching challenges, and `Deployed`
-  discharges the flat-power-batch shape those openings are stated in against the deployed verifier
-  rather than assuming it; `Compat` is the MSM evaluation spine; `RPoly` supplies the interpolation
-  core (Mathlib's `Lagrange.interpolate`, plus the bridge to the deployed `foldl`); `Claimed`,
-  `Opened`, `ValueCheck`, `ValueCheckDeployed`, and `NodeBinding` bind each decoded aggregate
-  column to its claimed evaluation; and `ConstraintResolver`, `CanonicalSelection` and
+  pre-IPA query accounting (`Adaptive`, `PreIpa`, `Provenance`). The former transcript-tree,
+  replay/fork, and challenge-reprogramming compatibility APIs have been removed; the live path
+  uses the bounded querying-adversary model to price straight-line pinned-root events.
+- **`Multiopen/`** — the multiopen argument's value binding. `Decode` supplies the coefficient and
+  Vandermonde primitives; `Opened` defines the augmented opened-batch and member-decode interfaces
+  populated by explicit AGM representations; and `Deployed` proves that halo2's `x₄` fold has the
+  required flat power-batch shape. `Compat` is the MSM evaluation spine; `RPoly` supplies the
+  interpolation core (Mathlib's `Lagrange.interpolate`, plus the bridge to the deployed `foldl`);
+  `ValueCheck`, `ValueCheckDeployed`, and `NodeBinding` provide the deployed algebra consumed by the
+  AGM unbatching chain; and `ConstraintResolver`, `CanonicalSelection` and
   `CanonicalRelation` route the decoded members into the canonical constraint model, which is the
   semantic handoff to the formal circuit.
 

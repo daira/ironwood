@@ -18,8 +18,7 @@ The measure is `uniformChallenge`, the random-oracle idealization of one fresh s
 (`Forking.Oracle`). The argument needs the difference polynomial pinned before the challenge is
 sampled, and the deployed schedule provides exactly that: `x` is squeezed from a transcript that has
 already absorbed the advice commitments and the quotient pieces (sealed by `deriveChallenges_x_eq`,
-`Forking.Ordering`). Grounding the accept event over the deployed `x`-squeeze runs is
-`Claimed.gateGood_of_xProb`; the several `d / p` exclusions compose subadditively
+`Forking.Ordering`). The several `d / p` exclusions compose subadditively
 (`uniformChallenge_szBadSet_union`).
 -/
 
@@ -88,10 +87,7 @@ theorem quotientCheck_badSet_measure (numerator h : Polynomial Fp) (n : ℕ)
 The lemmas above *price* the exclusion; the lemmas below *spend* it. An accept event whose uniform
 measure beats `m / p` has more than `m` accepting challenges, so if the bad set has at most `m`
 elements some accepting challenge avoids it — the good-challenge condition is produced from the
-accept measure rather than assumed. This is the x-site instance of the codebase-wide counting
-floor: `exists_injective_accepting_of_measure` forces the `x₄` rewound family, from the same
-measure-beats-count shape. The `_xgood` rungs (`Soundness.Multiopen.Opened`, `Soundness.Vesta`)
-consume these, dropping the `hgood` hypothesis. -/
+accept measure rather than assumed. -/
 
 /-- **The pigeonhole core.** If the accept event's uniform measure beats `m / p` and the bad set has
 at most `m` elements, some accepting challenge avoids the bad set: the accept set has more than `m`

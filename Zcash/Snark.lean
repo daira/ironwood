@@ -10,7 +10,7 @@
 --   Lean function (queries, expressions, multiopen, IPA fold, Fiat–Shamir schedule).
 -- * `Fingerprint/` — the faithfulness cross-check: the captured-fixture match (`native_decide`,
 --   loaded in the auto-generated `Fixture.lean`) plus the Schwartz–Zippel bound.
--- * `Soundness/` — the soundness argument: IPA special soundness and extraction, binding as a
+-- * `Soundness/` — the soundness argument: straight-line and adaptive AGM extraction, binding as a
 --   DLR reduction, the constraint layer, the permutation/lookup kernels, and the composition
 --   (`Soundness/Main.lean`), instantiated at Vesta (`Soundness/Vesta.lean`).
 --
@@ -58,12 +58,9 @@ import Zcash.Snark.Soundness.IpaSoundness
 import Zcash.Snark.Soundness.Canonical.ConstraintSatisfaction
 import Zcash.Snark.Soundness.Canonical.ConstraintModel
 import Zcash.Snark.Soundness.Canonical.InstanceCommitment
--- Deployed halo2-verifier soundness path: peel the deployed IPA (U/W/S apparatus) onto the clean
--- `ipa_soundV`, with commitment binding expressed as a discrete-log-relation reduction.
+-- Deployed halo2-verifier algebra and binding reductions.
 import Zcash.Snark.Soundness.Deployed.Binding
 import Zcash.Snark.Soundness.Deployed.Fold
-import Zcash.Snark.Soundness.Deployed.Ipa
-import Zcash.Snark.Soundness.Deployed.IpaPeel
 import Zcash.Snark.Soundness.Deployed.Verification
 -- The reusable Fiat–Shamir forking kernel and its concrete adversary producer.
 import Zcash.Snark.Soundness.Forking
@@ -79,7 +76,6 @@ import Zcash.Snark.Soundness.Multiopen.Compat
 import Zcash.Snark.Soundness.Multiopen.Deployed
 import Zcash.Snark.Soundness.Multiopen.Opened
 import Zcash.Snark.Soundness.Multiopen.RPoly
-import Zcash.Snark.Soundness.Multiopen.Claimed
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 import Zcash.Snark.Soundness.Multiopen.CanonicalSelection
 import Zcash.Snark.Soundness.Canonical.Terminal

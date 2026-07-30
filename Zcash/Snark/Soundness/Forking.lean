@@ -7,6 +7,6 @@ import Zcash.Snark.Soundness.Forking.Adversary
 /-!
 # Fiat–Shamir random-oracle soundness
 
-Reusable random-oracle lemmas, the deployed transcript ordering and its reprogramming, transcript
-assembly, and the querying-adversary reduction.
+Reusable random-oracle lemmas, deployed transcript ordering, closed-form IPA assembly, and the
+querying-adversary/forking reduction.
 -/

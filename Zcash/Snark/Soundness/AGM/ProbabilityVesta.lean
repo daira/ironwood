@@ -1,6 +1,5 @@
 import Zcash.Snark.Soundness.Vesta
 import Zcash.Snark.Soundness.AGM.Probability
-import Zcash.Snark.Soundness.AGM.Peel
 
 /-!
 # Vesta AGM probability bounds

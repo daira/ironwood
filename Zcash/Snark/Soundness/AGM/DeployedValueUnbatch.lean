@@ -276,7 +276,7 @@ theorem deployedSetInterpolant_eval_eq_memberPowerSum
     <- Fin.sum_univ_eq_sum_range]
 
 /-- A good single `x1` challenge separates the represented members of a deployed set.  This is
-the value-side companion of `deployedX1AlgebraicBatchOrRelation`; no accepting `x1` rewinds are
+the value-side companion of `deployedX1AlgebraicBatchWithSourceOrRelation`; no accepting `x1` rewinds are
 used. -/
 theorem deployedMemberNodeBinding_of_good_x1
     [DecidableEq G] [Inhabited G] {shape : Shape}
