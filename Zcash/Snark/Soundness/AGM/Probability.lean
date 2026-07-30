@@ -206,7 +206,13 @@ theorem missSet_card_le :
 
 /-- The reduction built from `A` wins the textbook single-generator DL game with probability at
 most `bound`. Its winning coins are those on which `discreteLogOfChallenge_of_relation`, applied
-to `programmedEmbedding`, computes the discrete log of `z • B`. -/
+to `programmedEmbedding`, computes the discrete log of `z • B`.
+
+Only a nonzero `B` makes this a hardness claim. At `B = 0` the presented basis is constant and
+carries no challenge, so a fixed nonzero relation wins on all but a `1/|F|` fraction of coins and
+no `bound` below `1 - 1/|F|` holds. The degenerate case is not unsound — the bounds below stay
+true and go trivial — and `B ≠ 0` is demanded where it is load-bearing, at
+`orchard_uniformURSIdentification_of_generatorRO`. -/
 def TextbookDLAdvantageLE (bound : ℝ≥0∞) : Prop :=
   (PMF.uniformOfFintype (F × (ι → F) × (ι → F))).toOuterMeasure (winSet B A) ≤ bound
 
