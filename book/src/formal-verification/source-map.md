@@ -97,7 +97,11 @@ The pure function that assembles the fingerprint MSM in the exact order of halo2
 - `Ipa` is the inner-product-argument opening (`compute_s` / `compute_b`).
 - `FiatShamir` models halo2's Blake2b challenge schedule as an abstract `squeeze`.
 - `Parametric` proves the assembly and schedule traverse every sub-proof for an arbitrary proof
-  count; every consensus-valid Orchard action count is one such count.
+  count; every consensus-valid Orchard action count is one such count. At zero, this describes the
+  transaction-level absence of an Orchard bundle, not a verifier call with an empty bundle. Actual
+  Action-verifier invocations have a positive proof count and the deployed domain exponent `k = 11`.
+  The generic Lean functions remain total at `k = 0`, while halo2's IPA implementation requires a
+  nonempty challenge vector, so behavioral correspondence is scoped to the deployed positive domain.
 
 ### `Keygen/` — the verifying key, derived rather than assumed
 
