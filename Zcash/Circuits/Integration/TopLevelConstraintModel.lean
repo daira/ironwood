@@ -13,9 +13,10 @@ a key derived from `TopLevelCircuit` carries that fact by construction.
 namespace Halo2.TopLevelCircuit
 
 open Zcash.Snark
+open Zcash
 open Zcash.Arithmetic (Fp URS)
 open Zcash.Snark.Keygen
-open Halo2 Polynomial
+open Halo2 CompPoly.CPolynomial
 
 variable
     {G : Type} [AddCommGroup G] [Inhabited G]
@@ -31,7 +32,7 @@ argument: domain fitting follows from the `TopLevelCircuit` compilation.
 def constraintModel {k : ℕ}
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
-    (ch : Challenges k Fp) (poly : CommitmentId → Polynomial Fp) :
+    (ch : Challenges k Fp) (poly : CommitmentId → CPoly) :
     ConstraintPolyModel pp.numProofs :=
   let vk := top.toVerifierKey pp urs
   let selectors := canonicalLagrangePolynomials vk.omega
@@ -49,7 +50,7 @@ verification key without requiring consumers to unfold circuit compilation. -/
 theorem constraintModel_eq_constraintModelOfResolver
     {k : ℕ} (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
-    (ch : Challenges k Fp) (poly : CommitmentId → Polynomial Fp) :
+    (ch : Challenges k Fp) (poly : CommitmentId → CPoly) :
     let selectors := canonicalLagrangePolynomials top.omega
       (top.toVerifierKey_blindingFactors_lt_n pp urs)
     top.constraintModel pp urs ch poly =
@@ -65,7 +66,7 @@ theorem constraintModel_eq_constraintModelOfResolver
 @[simp] theorem constraintModel_l0
     {k : ℕ} (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
-    (ch : Challenges k Fp) (poly : CommitmentId → Polynomial Fp) :
+    (ch : Challenges k Fp) (poly : CommitmentId → CPoly) :
     (top.constraintModel pp urs ch poly).l0 =
       (canonicalLagrangePolynomials top.omega
         (top.toVerifierKey_blindingFactors_lt_n pp urs)).1 := by
@@ -74,7 +75,7 @@ theorem constraintModel_eq_constraintModelOfResolver
 @[simp] theorem constraintModel_lLast
     {k : ℕ} (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
-    (ch : Challenges k Fp) (poly : CommitmentId → Polynomial Fp) :
+    (ch : Challenges k Fp) (poly : CommitmentId → CPoly) :
     (top.constraintModel pp urs ch poly).lLast =
       (canonicalLagrangePolynomials top.omega
         (top.toVerifierKey_blindingFactors_lt_n pp urs)).2.1 := by
@@ -83,7 +84,7 @@ theorem constraintModel_eq_constraintModelOfResolver
 @[simp] theorem constraintModel_lBlind
     {k : ℕ} (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
-    (ch : Challenges k Fp) (poly : CommitmentId → Polynomial Fp) :
+    (ch : Challenges k Fp) (poly : CommitmentId → CPoly) :
     (top.constraintModel pp urs ch poly).lBlind =
       (canonicalLagrangePolynomials top.omega
         (top.toVerifierKey_blindingFactors_lt_n pp urs)).2.2 := by

@@ -24,7 +24,7 @@ namespace Zcash.Snark
 
 open Zcash.Arithmetic (scalarFieldOrder)
 
-open Polynomial
+open CompPoly.CPolynomial
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 
@@ -45,34 +45,35 @@ permutation rules, and lookup rules with the sampled `y`, `beta`, `gamma`, and `
 It is the algebraic identity checked by the verifier, not by itself the row-level semantic
 statement: splitting the `y` fold and recovering permutation/lookup semantics additionally require
 the good-challenge hypotheses in `ConstraintRelations`. -/
-def circuitSatViaConstraints {k np : ℕ} (fixedCols : ℕ → Polynomial Fp)
-    (decodeAdvice decodeInstance : (Fin (2 ^ k) → Fp) → Fin np → ℕ → Polynomial Fp)
+def circuitSatViaConstraints {k np : ℕ} (fixedCols : ℕ → CPoly)
+    (decodeAdvice decodeInstance : (Fin (2 ^ k) → Fp) → Fin np → ℕ → CPoly)
     (gates : List (Expr Fp))
-    (sets : Fin np → List (PermSetEval (Polynomial Fp)))
+    (sets : Fin np → List (PermSetEval (CPoly)))
     (chunks : Fin np →
-      List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
-    (lookups : Fin np → List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
-    (beta gamma delta theta y : Fp) (chunkLen : ℕ) (l0 lLast lBlind hpoly : Polynomial Fp)
+      List (PermSetEval (CPoly) × List (CPoly × CPoly)))
+    (lookups : Fin np → List (LookupEval (CPoly) × List (Expr Fp) × List (Expr Fp)))
+    (beta gamma delta theta y : Fp) (chunkLen : ℕ) (l0 lLast lBlind hpoly : CPoly)
     (deg : ℕ) (a : Fin (2 ^ k) → Fp) : Prop :=
   combineConstraints fixedCols (decodeAdvice a) (decodeInstance a) gates sets chunks lookups
     beta gamma delta theta y chunkLen l0 lLast lBlind = hpoly * (X ^ deg - 1)
 
 /-- Derive the compressed full-list identity from an accepting quotient check at a good `x`. -/
-theorem circuitSatViaConstraints_of_check {k np : ℕ} (fixedCols : ℕ → Polynomial Fp)
-    (decodeAdvice decodeInstance : (Fin (2 ^ k) → Fp) → Fin np → ℕ → Polynomial Fp)
+theorem circuitSatViaConstraints_of_check {k np : ℕ} (fixedCols : ℕ → CPoly)
+    (decodeAdvice decodeInstance : (Fin (2 ^ k) → Fp) → Fin np → ℕ → CPoly)
     (gates : List (Expr Fp))
-    (sets : Fin np → List (PermSetEval (Polynomial Fp)))
+    (sets : Fin np → List (PermSetEval (CPoly)))
     (chunks : Fin np →
-      List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
-    (lookups : Fin np → List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
-    (beta gamma delta theta y : Fp) (chunkLen : ℕ) (l0 lLast lBlind hpoly : Polynomial Fp)
+      List (PermSetEval (CPoly) × List (CPoly × CPoly)))
+    (lookups : Fin np → List (LookupEval (CPoly) × List (Expr Fp) × List (Expr Fp)))
+    (beta gamma delta theta y : Fp) (chunkLen : ℕ) (l0 lLast lBlind hpoly : CPoly)
     (deg : ℕ) (a : Fin (2 ^ k) → Fp) (x : Fp)
     (hcheck : quotientCheck (combineConstraints fixedCols (decodeAdvice a) (decodeInstance a)
       gates sets chunks lookups beta gamma delta theta y chunkLen l0 lLast lBlind) hpoly deg x)
     (hgood : combineConstraints fixedCols (decodeAdvice a) (decodeInstance a) gates sets chunks
         lookups beta gamma delta theta y chunkLen l0 lLast lBlind ≠ hpoly * (X ^ deg - 1) →
-      (combineConstraints fixedCols (decodeAdvice a) (decodeInstance a) gates sets chunks lookups
-        beta gamma delta theta y chunkLen l0 lLast lBlind - hpoly * (X ^ deg - 1)).eval x ≠ 0) :
+      (combineConstraints fixedCols (decodeAdvice a) (decodeInstance a) gates sets chunks
+        lookups beta gamma delta theta y chunkLen l0 lLast lBlind
+          - hpoly * (X ^ deg - 1)).eval x ≠ 0) :
     circuitSatViaConstraints fixedCols decodeAdvice decodeInstance gates sets chunks lookups
       beta gamma delta theta y chunkLen l0 lLast lBlind hpoly deg a :=
   constraint_identity_of_accept _ hpoly deg x hcheck hgood
@@ -83,14 +84,14 @@ payload to row-level gate, permutation, and lookup semantics must separately pri
 `gamma`, and `theta` failure surfaces; see `ConstraintRelations` and the semantic capstone in
 `Composition.DeployedConstraintContainment`. -/
 theorem snarkRelation_constraints {np : ℕ} (urs : URS G) {P : G} {b : Fin (2 ^ urs.k) → Fp} {v : Fp}
-    (fixedCols : ℕ → Polynomial Fp)
-    (decodeAdvice decodeInstance : (Fin (2 ^ urs.k) → Fp) → Fin np → ℕ → Polynomial Fp)
+    (fixedCols : ℕ → CPoly)
+    (decodeAdvice decodeInstance : (Fin (2 ^ urs.k) → Fp) → Fin np → ℕ → CPoly)
     (gates : List (Expr Fp))
-    (sets : Fin np → List (PermSetEval (Polynomial Fp)))
+    (sets : Fin np → List (PermSetEval (CPoly)))
     (chunks : Fin np →
-      List (PermSetEval (Polynomial Fp) × List (Polynomial Fp × Polynomial Fp)))
-    (lookups : Fin np → List (LookupEval (Polynomial Fp) × List (Expr Fp) × List (Expr Fp)))
-    (beta gamma delta theta y : Fp) (chunkLen : ℕ) (l0 lLast lBlind hpoly : Polynomial Fp)
+      List (PermSetEval (CPoly) × List (CPoly × CPoly)))
+    (lookups : Fin np → List (LookupEval (CPoly) × List (Expr Fp) × List (Expr Fp)))
+    (beta gamma delta theta y : Fp) (chunkLen : ℕ) (l0 lLast lBlind hpoly : CPoly)
     (deg : ℕ) {a : Fin (2 ^ urs.k) → Fp}
     (hopen : IpaRelation urs P b v a)
     (hsat : combineConstraints fixedCols (decodeAdvice a) (decodeInstance a) gates sets chunks
@@ -100,7 +101,7 @@ theorem snarkRelation_constraints {np : ℕ} (urs : URS G) {P : G} {b : Fin (2 ^
   ⟨hopen, hsat⟩
 
 /-- Schwartz–Zippel error for an invalid quotient identity. -/
-theorem soundness_error (numerator h : Polynomial Fp) (n : ℕ) (hne : numerator ≠ h * (X ^ n - 1)) :
+theorem soundness_error (numerator h : CPoly) (n : ℕ) (hne : numerator ≠ h * (X ^ n - 1)) :
     ((Finset.univ.filter fun x => quotientCheck numerator h n x).card : ℚ≥0)
         / (scalarFieldOrder : ℚ≥0)
       ≤ ((numerator - h * (X ^ n - 1)).natDegree : ℚ≥0) / (scalarFieldOrder : ℚ≥0) :=

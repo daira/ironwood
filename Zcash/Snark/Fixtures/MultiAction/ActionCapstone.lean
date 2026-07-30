@@ -16,7 +16,7 @@ consensus-valid Action bundle size.
 
 namespace Zcash.Snark.Fixture
 
-open Zcash.Snark
+open Zcash.Snark CompPoly.CPolynomial
 open Zcash.Snark.ActionTerminal
 open Zcash.Snark.Keygen (actionProofParams actionProofParamsFor
   actionProofParamsFor_mergeDerived_eq shape_eq_mergeDerived vk_eq_toVerifierKey)
@@ -396,7 +396,7 @@ theorem actionLookupInputArity_le :
 
 private theorem resolverPermutationCell_card_le
     (pp : Keygen.ProofParams) (urs : URS VestaG)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin pp.numProofs) :
     Fintype.card
         (ResolverPermutationCell (actionCircuit.toVerifierKey pp urs) poly p actionActiveRows) ≤
@@ -429,7 +429,7 @@ private theorem resolverPermutationCell_card_le
 tight value keeps the consensus-maximum β budget below `2^46`. -/
 theorem resolverPermutationCell_card_eq
     (pp : Keygen.ProofParams) (urs : URS VestaG)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (p : Fin pp.numProofs) :
     Fintype.card
         (ResolverPermutationCell (actionCircuit.toVerifierKey pp urs) poly p actionActiveRows) =
@@ -444,7 +444,7 @@ theorem resolverPermutationCell_card_eq
 private theorem cap_theta_for (numProofs : ℕ) :
     ∀ (basis : AugmentedIndex
         actionCircuit.n → VestaG)
-      (poly : CommitmentId → Polynomial Fp),
+      (poly : CommitmentId → CPoly),
       TopLevelLookup.thetaBudget actionCircuit
         (actionProofParamsFor numProofs)
         (ursOfAugmentedBasis
@@ -482,14 +482,14 @@ private theorem cap_theta_for (numProofs : ℕ) :
               Nat.mul_le_mul_right _ actionLookupActivationCount_le
             _ = 2 ^ 25 := by norm_num
         simpa only [Keygen.ProofParams.mergeDerived, actionProofParamsFor,
-          Nat.cast_id, mul_assoc] using Nat.mul_le_mul_left numProofs hscaled
+          Nat.cast_id, _root_.mul_assoc] using Nat.mul_le_mul_left numProofs hscaled
 
 /-- The tight β budget is `950835027` per Action, including permutation cells and all three
 lookup arguments. -/
 private theorem cap_beta_for (numProofs : ℕ) :
     ∀ (basis : AugmentedIndex
         actionCircuit.n → VestaG)
-      (poly : CommitmentId → Polynomial Fp),
+      (poly : CommitmentId → CPoly),
       (∑ p : Fin (actionProofParamsFor numProofs).numProofs,
         (Fintype.card (ResolverPermutationCell
             (vkAt (actionProofParamsFor numProofs) basis) poly p actionActiveRows) + 1) *
@@ -551,7 +551,7 @@ private theorem cap_beta_for (numProofs : ℕ) :
 private theorem cap_gamma_for (numProofs : ℕ) :
     ∀ (basis : AugmentedIndex
         actionCircuit.n → VestaG)
-      (poly : CommitmentId → Polynomial Fp),
+      (poly : CommitmentId → CPoly),
       (∑ p : Fin (actionProofParamsFor numProofs).numProofs,
         2 * Fintype.card (ResolverPermutationCell
           (vkAt (actionProofParamsFor numProofs) basis) poly p actionActiveRows)) +
@@ -600,7 +600,7 @@ private theorem cap_gamma_for (numProofs : ℕ) :
 
 private theorem cap_theta :
     ∀ (basis : AugmentedIndex actionCircuit.n → VestaG)
-      (poly : CommitmentId → Polynomial Fp),
+      (poly : CommitmentId → CPoly),
       TopLevelLookup.thetaBudget actionCircuit actionProofParams
         (ursOfAugmentedBasis actionCircuit.domainExponent basis) poly ≤
         2 ^ 25 := by
@@ -636,11 +636,11 @@ private theorem cap_theta :
               Nat.mul_le_mul_right _ actionLookupActivationCount_le
             _ = 2 ^ 25 := by norm_num
         simpa only [Keygen.ProofParams.mergeDerived, actionProofParams, actionProofParamsFor,
-          one_mul, Nat.cast_id] using hscaled
+          _root_.one_mul, Nat.cast_id] using hscaled
 
 private theorem cap_beta :
     ∀ (basis : AugmentedIndex actionCircuit.n → VestaG)
-      (poly : CommitmentId → Polynomial Fp),
+      (poly : CommitmentId → CPoly),
       (∑ p : Fin actionProofParams.numProofs,
         (Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
             actionActiveRows) + 1) *
@@ -697,7 +697,7 @@ private theorem cap_beta :
 
 private theorem cap_gamma :
     ∀ (basis : AugmentedIndex actionCircuit.n → VestaG)
-      (poly : CommitmentId → Polynomial Fp),
+      (poly : CommitmentId → CPoly),
       (∑ p : Fin actionProofParams.numProofs,
         2 * Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
           actionActiveRows)) +
@@ -905,17 +905,21 @@ private theorem adaptive_action_x_degree_le_for (numProofs : ℕ)
     intro g
     unfold onlinePointPolynomial
     have h := coeffsToPoly_natDegree_lt
-      (n := 2 ^ ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k)
+      (n := 2 ^ actionCircuit.domainExponent)
       (by positivity)
       (onlinePointCoordinates
         (shape := (actionProofParamsFor numProofs).mergeDerived actionCircuit)
         source g).1
     have hsize :
-        2 ^ ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k = 2048 := by
-      rw [(actionProofParamsFor numProofs).mergeDerived_k actionCircuit,
-        ActionPermutationDomain.domainExponent_eq]
+        2 ^ actionCircuit.domainExponent = 2048 := by
+      rw [ActionPermutationDomain.domainExponent_eq]
       norm_num
-    omega
+    calc
+      (onlinePointPolynomial
+          (shape := (actionProofParamsFor numProofs).mergeDerived actionCircuit)
+          source g).natDegree ≤ 2 ^ actionCircuit.domainExponent - 1 :=
+        Nat.le_sub_one_of_lt h
+      _ = 2047 := by rw [hsize]
   have hpoly : ∀ id, (poly id).natDegree ≤ 2047 := by
     intro id
     unfold poly adaptiveActionCommitmentPolynomial
@@ -923,20 +927,17 @@ private theorem adaptive_action_x_degree_le_for (numProofs : ℕ)
     split
     · split
       · exact hpoint _
-      · rw [ComputablePolynomial.zero_eq]
-        simp
-    · rw [ComputablePolynomial.zero_eq]
-      simp
+      · simp
+    · simp
   have hresolver : ∀ {n : ℕ} (omega : Fp) (layout : List (ℕ × ℤ))
-      (column : ℕ → Polynomial Fp),
+      (column : ℕ → CPoly),
       (∀ i, (column i).natDegree ≤ 2047) →
       ∀ i, (resolverQueryFeed (n := n) omega layout column i).natDegree ≤ 2047 := by
     intro n omega layout column hcolumn i
     unfold resolverQueryFeed
     split
     · exact natDegree_comp_rotateData_le _ _ (hcolumn _)
-    · rw [ComputablePolynomial.zero_eq]
-      simp
+    · simp
   have hfixed : ∀ i, (fixedQueryFeedOfResolver avk poly i).natDegree ≤ 2047 :=
     hresolver avk.omega avk.fixedQueryLayout _ (fun _ => hpoly _)
   have hadvice : ∀ p i, (adviceQueryFeedOfResolver avk poly p i).natDegree ≤ 2047 :=
@@ -952,9 +953,7 @@ private theorem adaptive_action_x_degree_le_for (numProofs : ℕ)
     all_goals
       first
       | exact hpoly _
-      | change ComputablePolynomial.zero.natDegree ≤ 2047
-        rw [ComputablePolynomial.zero_eq]
-        simp
+      | simp
   have hnB : avk.n - 1 ≤ 2047 := by
     dsimp only [avk]
     rw [(derived_scalars_for numProofs _).2.1]
@@ -991,7 +990,7 @@ private theorem adaptive_action_x_degree_le_for (numProofs : ℕ)
     rfl
   rw [adaptiveActionPreXDifference_eq]
   rw [hmodel]
-  refine le_trans (Polynomial.natDegree_sub_le _ _) (max_le ?_ ?_)
+  refine le_trans (natDegree_sub_le _ _) (max_le ?_ ?_)
   · apply natDegree_combineConstraints_le (B := 2047) (W := 7)
       (Dc := 8188) (D := 20470)
     · norm_num
@@ -1114,8 +1113,8 @@ theorem actionSemanticModelFor_at_2pow123 {numProofs Q : ℕ}
       rw [ENNReal.div_le_iff (by norm_num) (by norm_num)]
       rw [show ((2 ^ 254 : ℕ) : ENNReal) =
           (2 ^ 84 : ENNReal) * (2 ^ 170 : ENNReal) by norm_num [← pow_add]]
-      rw [div_eq_mul_inv, one_mul, ← mul_assoc,
-        ENNReal.inv_mul_cancel (by norm_num) (by norm_num), one_mul]
+      rw [div_eq_mul_inv, _root_.one_mul, ← _root_.mul_assoc,
+        ENNReal.inv_mul_cancel (by norm_num) (by norm_num), _root_.one_mul]
       norm_num
 
 /-- The compressed straight-line remainder at an arbitrary Action count. -/
@@ -1413,8 +1412,8 @@ theorem actionStatisticalModel_at_2pow123 {Q : Nat} (hQ : Q <= 2 ^ 123) :
       rw [show ((2 ^ 254 : Nat) : ENNReal) =
           (2 ^ 84 : ENNReal) * (2 ^ 170 : ENNReal) by
             norm_num [← pow_add]]
-      rw [div_eq_mul_inv, one_mul, ← mul_assoc,
-        ENNReal.inv_mul_cancel (by norm_num) (by norm_num), one_mul]
+      rw [div_eq_mul_inv, _root_.one_mul, ← _root_.mul_assoc,
+        ENNReal.inv_mul_cancel (by norm_num) (by norm_num), _root_.one_mul]
       norm_num
 
 /-- The combined constraint-plus-Action finder stays within the same conservative three-bit
@@ -1897,6 +1896,163 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive_for
         (adaptiveActionAcceptFalseStatement_prob_le (actionProofParamsFor numProofs)
           family inputs hvk hI hchar B epsilon profile hsurface)
 
+/-- Captured five-surface bound shared by ordinary and knowledge soundness. -/
+theorem orchard_adaptiveActionSurface_measure_le_for
+    (numProofs : ℕ)
+    (basis : AugmentedIndex
+      (2 ^ actionCircuit.domainExponent) → VestaG)
+    (inputs : Fin (actionProofParamsFor numProofs).numProofs →
+      PublicInputs Fp)
+    (i : Fin 5)
+    (ps : ProofString
+      ((actionProofParamsFor numProofs).mergeDerived actionCircuit) Fp VestaG)
+    (_hwf : PsWellFormed ps)
+    (source : List (AlgebraicPoint (F := Fp) basis))
+    (earlier : Fin (i : ℕ) → Fp) :
+    uniformChallenge.toOuterMeasure
+        (adaptiveActionSurfaceAt (actionProofParamsFor numProofs)
+          basis inputs i ps source earlier) ≤
+      ((![numProofs * 2 ^ 25, numProofs * 950835027, numProofs * 73554,
+          numProofs * 2 ^ 23, 20470] i : ℕ) : ENNReal) / Fintype.card Fp := by
+  fin_cases i
+  · refine le_trans
+      (adaptiveActionThetaSurface_measure_le (actionProofParamsFor numProofs)
+        basis inputs ps source earlier) ?_
+    gcongr
+    exact_mod_cast cap_theta_for numProofs basis
+      (adaptiveActionCommitmentPolynomial (actionProofParamsFor numProofs)
+        basis inputs ps source (chRecord (fun _ => 0) (fun _ => 0)))
+  · have h := adaptiveActionBetaSurface_measure_le
+      (actionProofParamsFor numProofs) basis inputs ps source earlier
+    dsimp only at h
+    refine le_trans h ?_
+    rw [ENNReal.div_add_div_same]
+    gcongr
+    exact_mod_cast cap_beta_for numProofs basis
+      (adaptiveActionCommitmentPolynomial (actionProofParamsFor numProofs)
+        basis inputs ps source
+        (chRecord (fun j => if hj : (j : ℕ) < 1 then earlier ⟨j, hj⟩ else 0)
+          (fun _ => 0)))
+  · have h := adaptiveActionGammaSurface_measure_le
+      (actionProofParamsFor numProofs) basis inputs ps source earlier
+    dsimp only at h
+    refine le_trans h ?_
+    rw [ENNReal.div_add_div_same]
+    gcongr
+    exact_mod_cast cap_gamma_for numProofs basis
+      (adaptiveActionCommitmentPolynomial (actionProofParamsFor numProofs)
+        basis inputs ps source
+        (chRecord (fun j => if hj : (j : ℕ) < 2 then earlier ⟨j, hj⟩ else 0)
+          (fun _ => 0)))
+  · have h := adaptiveActionYSurface_measure_le
+      (actionProofParamsFor numProofs) basis inputs ps source earlier
+      (derived_n_ne_zero_for numProofs basis)
+    dsimp only at h
+    refine le_trans h ?_
+    gcongr
+    exact_mod_cast derived_n_yn_for numProofs
+      (adaptive_action_constraint_count_le_for numProofs basis inputs ps source
+        (chRecord (fun j => if hj : (j : ℕ) < 3 then earlier ⟨j, hj⟩ else 0)
+          (fun _ => 0))) basis
+  · have h := adaptiveActionXSurface_measure_le
+      (actionProofParamsFor numProofs) basis inputs ps source earlier
+    dsimp only at h
+    refine le_trans h ?_
+    gcongr
+    exact_mod_cast adaptive_action_x_degree_le_for numProofs basis inputs ps source
+      (chRecord (fun j => if hj : (j : ℕ) < 4 then earlier ⟨j, hj⟩ else 0)
+        (fun _ => 0))
+
+/-- **Consensus-generic adaptive Action knowledge soundness.**  The event is literal acceptance
+with failure of the executable private-witness extractor, not merely a false existential
+statement. -/
+theorem orchard_action_knowledgeFailure_prob_le_adaptive_for
+    (numProofs : ℕ) {T : Type*} [DecidableEq T]
+    (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex
+      (2 ^ actionCircuit.domainExponent) → T)
+    (hquery : Function.Injective query)
+    (family : ComputedAdaptiveOnlineAGMFSFamily
+      ((actionProofParamsFor numProofs).mergeDerived actionCircuit))
+    (inputs : Fin (actionProofParamsFor numProofs).numProofs →
+      PublicInputs Fp)
+    (hvk : ∀ basis, family.vk basis =
+      actionCircuit.toVerifierKey (actionProofParamsFor numProofs)
+        (ursOfAugmentedBasis
+          actionCircuit.domainExponent basis))
+    (hI : ∀ basis, family.instanceCommitment basis =
+      actionCircuit.instanceCommitment (actionProofParamsFor numProofs)
+        (ursOfAugmentedBasis
+          actionCircuit.domainExponent basis) inputs)
+    (hchar : ∀ basis O, deployedX4PairCount
+      (actionCircuit.toVerifierKey (actionProofParamsFor numProofs)
+        (ursOfAugmentedBasis
+          actionCircuit.domainExponent basis))
+      (actionCircuit.instanceCommitment (actionProofParamsFor numProofs)
+        (ursOfAugmentedBasis
+          actionCircuit.domainExponent basis) inputs)
+      (adaptiveActionRunOutput family basis O).1.proof.1
+      (adaptiveActionRunRecord family basis O) < scalarFieldOrder)
+    (profile : AdaptiveActionDlogProfile (actionProofParamsFor numProofs)
+      family inputs hvk hI hchar B) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+            family.init.length 10 +
+            3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
+      ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+        adaptiveActionKnowledgeFailureEvent
+          (actionProofParamsFor numProofs) family inputs hvk hI hchar) ≤
+      (family.Q + 1 : ℕ) * (1 / Fintype.card Fp) +
+        (actionCircuit.domainExponent *
+          ((family.Q + 1 : ℕ) * (2 / (Fintype.card Fp : ENNReal))) +
+        ((family.Q + 1 : ℕ) *
+          algebraicRootBudget
+            ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+            actionCircuit.domainExponent +
+        ((profile.advantage
+              (adaptiveActionDlogRandomOracleQueries (actionProofParamsFor numProofs) family)
+              (adaptiveActionDlogGroupWork
+                profile.proverGroupWork profile.reductionGroupWork) +
+            1 / Fintype.card Fp) +
+          (family.Q + 1 : ℕ) * ∑ i : Fin 5,
+            ((![numProofs * 2 ^ 25, numProofs * 950835027, numProofs * 73554,
+                numProofs * 2 ^ 23, 20470] i : ℕ) : ENNReal) /
+              Fintype.card Fp))) := by
+  let epsilon : Fin 5 → ENNReal := fun i =>
+    ((![numProofs * 2 ^ 25, numProofs * 950835027, numProofs * 73554,
+        numProofs * 2 ^ 23, 20470] i : ℕ) : ENNReal) / Fintype.card Fp
+  have hsurface : ∀
+      (basis : AugmentedIndex
+        (2 ^ actionCircuit.domainExponent) → VestaG)
+      (i : Fin 5)
+      (ps : ProofString
+        ((actionProofParamsFor numProofs).mergeDerived actionCircuit) Fp VestaG)
+      (_hwf : PsWellFormed ps)
+      (source : List (AlgebraicPoint (F := Fp) basis))
+      (earlier : Fin (i : ℕ) → Fp),
+      uniformChallenge.toOuterMeasure
+          (adaptiveActionSurfaceAt (actionProofParamsFor numProofs)
+            basis inputs i ps source earlier) ≤ epsilon i := by
+    intro basis i ps hwf source earlier
+    exact orchard_adaptiveActionSurface_measure_le_for
+      numProofs basis inputs i ps hwf source earlier
+  have hevent := adaptiveActionEvent_prob_eq_of_uniformURS
+    (actionProofParamsFor numProofs) family
+    (orchardGeneratorROSetup query) B (orchardGeneratorROBasis query)
+    (orchard_uniformURSIdentification_of_generatorRO
+      actionCircuit.domainExponent B hB query hquery)
+    (adaptiveActionKnowledgeFailureEvent
+      (actionProofParamsFor numProofs) family inputs hvk hI hchar)
+  calc
+    _ = _ := hevent
+    _ ≤ _ := by
+      simpa only [epsilon] using
+        (adaptiveActionKnowledgeFailure_prob_le (actionProofParamsFor numProofs)
+          family inputs hvk hI hchar B epsilon profile
+          hsurface)
+
 /-- **Concrete bare-adaptive Action capstone.**  At `Q <= 2^123`, the complete adaptive finder
 fits a conservative `2^127` random-oracle/group-work envelope (eight uncached represented runs),
 while the direct-coordinate decoder fits `2^123`.  The statistical remainder remains `2^-84`. -/
@@ -2084,7 +2240,134 @@ theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generato
     push_cast
     simp only [div_eq_mul_inv]
     ring_nf
-    apply le_rfl
+    exact le_rfl
+  refine ⟨hprob, hqueries, hgroup, hcost.2.2, ?_⟩
+  intro actual εBias hbias
+  exact event_measure_le_of_bias hbias _ hprob
+
+/-- Consensus-generic knowledge capstone: extractor failure is bounded by one profiled Vesta-DLOG
+advantage plus `2^-83`. -/
+theorem orchard_action_knowledgeFailure_adaptive_2pow123_workFactor_generatorRO_for
+    (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
+    {T : Type*} [DecidableEq T]
+    (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex
+      (2 ^ actionCircuit.domainExponent) → T)
+    (hquery : Function.Injective query)
+    (family : ComputedAdaptiveOnlineAGMFSFamily
+      ((actionProofParamsFor numProofs).mergeDerived actionCircuit))
+    (inputs : Fin (actionProofParamsFor numProofs).numProofs →
+      PublicInputs Fp)
+    (hvk : ∀ basis, family.vk basis =
+      actionCircuit.toVerifierKey (actionProofParamsFor numProofs)
+        (ursOfAugmentedBasis
+          actionCircuit.domainExponent basis))
+    (hI : ∀ basis, family.instanceCommitment basis =
+      actionCircuit.instanceCommitment (actionProofParamsFor numProofs)
+        (ursOfAugmentedBasis
+          actionCircuit.domainExponent basis) inputs)
+    (hchar : ∀ basis O, deployedX4PairCount
+      (actionCircuit.toVerifierKey (actionProofParamsFor numProofs)
+        (ursOfAugmentedBasis
+          actionCircuit.domainExponent basis))
+      (actionCircuit.instanceCommitment (actionProofParamsFor numProofs)
+        (ursOfAugmentedBasis
+          actionCircuit.domainExponent basis) inputs)
+      (adaptiveActionRunOutput family basis O).1.proof.1
+      (adaptiveActionRunRecord family basis O) < scalarFieldOrder)
+    (profile : AdaptiveActionDirectDlogProfile (actionProofParamsFor numProofs)
+      family inputs hvk hI hchar B (2 ^ 123)) :
+    ((independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype
+        (BTranscript Fp VestaG
+          (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+            family.init.length 10 +
+            3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          adaptiveActionKnowledgeFailureEvent
+            (actionProofParamsFor numProofs) family inputs hvk hI hchar) ≤
+      profile.advantage (2 ^ 127) (2 ^ 127) + 1 / (2 ^ 83 : ENNReal)) ∧
+      adaptiveActionKnowledgeExtractorRandomOracleQueries
+          (actionProofParamsFor numProofs) family ≤ 2 ^ 127 ∧
+      adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
+        2 ^ 127 ∧
+      (∀ basis O,
+        2 * adaptiveActionDirectDecodeOps
+          (actionProofParamsFor numProofs) family basis O ≤ 2 ^ 123) ∧
+      ∀ (actual : PMF
+          ((↥(Set.range query) → VestaG) ×
+            (BTranscript Fp VestaG
+              (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+                family.init.length 10 +
+                3 * actionCircuit.domainExponent) → Fp)))
+        (εBias : ENNReal),
+        PMFEventBiasLE actual
+          (independentProductPMF (orchardGeneratorROSetup query)
+            (PMF.uniformOfFintype
+              (BTranscript Fp VestaG
+                (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+                  family.init.length 10 +
+                  3 * actionCircuit.domainExponent) → Fp)))
+          εBias →
+        actual.toOuterMeasure
+            ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+              adaptiveActionKnowledgeFailureEvent
+                (actionProofParamsFor numProofs) family inputs hvk hI hchar) ≤
+          (profile.advantage (2 ^ 127) (2 ^ 127) + 1 / (2 ^ 83 : ENNReal)) + εBias := by
+  have hcost := profile.knowledgeExtractorCost_le
+  have hqueries :
+      adaptiveActionKnowledgeExtractorRandomOracleQueries
+          (actionProofParamsFor numProofs) family ≤ 2 ^ 127 := by
+    calc
+      adaptiveActionKnowledgeExtractorRandomOracleQueries
+          (actionProofParamsFor numProofs) family ≤ 16 * 2 ^ 123 := hcost.1
+      _ = 2 ^ 127 := by norm_num
+  have hqueriesDlog :
+      adaptiveActionDlogRandomOracleQueries (actionProofParamsFor numProofs) family ≤
+        2 ^ 127 := by
+    simpa only [adaptiveActionKnowledgeExtractorRandomOracleQueries_eq] using hqueries
+  have hgroup :
+      adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
+        2 ^ 127 := by
+    calc
+      adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
+          16 * 2 ^ 123 := hcost.2.1
+      _ = 2 ^ 127 := by norm_num
+  have hprob :
+      (independentProductPMF (orchardGeneratorROSetup query)
+        (PMF.uniformOfFintype
+          (BTranscript Fp VestaG
+            (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+              family.init.length 10 +
+              3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
+          ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+            adaptiveActionKnowledgeFailureEvent
+              (actionProofParamsFor numProofs) family inputs hvk hI hchar) ≤
+        profile.advantage (2 ^ 127) (2 ^ 127) + 1 / (2 ^ 83 : ENNReal) := by
+    refine le_trans
+      (orchard_action_knowledgeFailure_prob_le_adaptive_for numProofs B hB query hquery
+        family inputs hvk hI hchar profile.toAdaptiveActionDlogProfile) ?_
+    refine le_trans ?_
+      (add_le_add (profile.advantage_mono hqueriesDlog hgroup)
+        (actionStatisticalModelFor_at_2pow123 hn profile.queryBound))
+    refine le_trans ?_ (add_le_add le_rfl
+      (adaptiveActionStatisticalModelFor_le_action numProofs family.Q))
+    have hsum :
+        (∑ i : Fin 5,
+          ((![numProofs * 2 ^ 25, numProofs * 950835027, numProofs * 73554,
+              numProofs * 2 ^ 23, 20470] i : ℕ) : ENNReal) / Fintype.card Fp) =
+          (((numProofs * 992851621 + 20470 : ℕ) : ENNReal) /
+            Fintype.card Fp) := by
+      norm_num [Fin.sum_univ_succ]
+      simp only [div_eq_mul_inv]
+      ring
+    rw [hsum]
+    unfold adaptiveActionStatisticalModelFor actionSemanticModelFor
+    dsimp only
+    push_cast
+    simp only [div_eq_mul_inv]
+    ring_nf
+    exact le_rfl
   refine ⟨hprob, hqueries, hgroup, hcost.2.2, ?_⟩
   intro actual εBias hbias
   exact event_measure_le_of_bias hbias _ hprob

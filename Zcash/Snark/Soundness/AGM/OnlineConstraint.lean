@@ -15,7 +15,7 @@ namespace Zcash.Snark
 
 open Zcash.Arithmetic (Msm.otherPoints)
 
-open Classical Polynomial
+open Classical CompPoly.CPolynomial
 
 universe u v
 
@@ -74,7 +74,7 @@ conversion is finite arithmetic over `Fp`. -/
 def deployedConstraintPointPolynomial
     (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
-    (pnu : WrappedAlgebraicOutput family.toFamily basis) (P : VestaG) : Polynomial Fp :=
+    (pnu : WrappedAlgebraicOutput family.toFamily basis) (P : VestaG) : CPoly :=
   onlinePointPolynomial (deployedConstraintSource family basis pnu) P
 
 /-- Coordinates of one quotient-piece commitment from the same deterministic source. -/

@@ -13,7 +13,7 @@ namespace Zcash.Snark
 
 namespace ActionTerminal
 
-open Halo2 Polynomial Keygen
+open Halo2 CompPoly.CPolynomial Keygen
 open Zcash.Circuits
 open Zcash.Circuits.Action
 open Zcash.Arithmetic (scalarFieldOrder)
@@ -81,7 +81,7 @@ def actionKnowledgeFailureEvent :
     actionKnowledgeExtractor pp family static inputs hvk hI hchar q.1 q.2 = none}
 
 /-- The accepted constraint model at the run's own decode. -/
-noncomputable abbrev actionRunModel
+abbrev actionRunModel
     (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
     (O : BTranscript Fp VestaG
       (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
@@ -96,7 +96,7 @@ noncomputable abbrev actionRunModel
     (actionRunAccepts pp family static basis O inputs (hvk basis) (hI basis) h)
 
 /-- The accepted member polynomial at the run's own decode. -/
-noncomputable abbrev actionRunPolynomial
+abbrev actionRunPolynomial
     (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
     (O : BTranscript Fp VestaG
       (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
@@ -110,7 +110,7 @@ noncomputable abbrev actionRunPolynomial
 
 /-- Decoding runs whose `x` or `y` challenge lands in the terminal's constraint-fold exclusion
 sets: `x` in the combined-constraint difference roots, `y` in a fold-split witness. -/
-noncomputable def actionXYFailureEvent :
+def actionXYFailureEvent :
     Set ((AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) ×
       (BTranscript Fp VestaG
         (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
@@ -143,7 +143,7 @@ noncomputable def actionXYFailureEvent :
           actionCircuit.n j))}
 
 /-- Decoding runs whose `β` challenge lands in a permutation or lookup resolver exclusion set. -/
-noncomputable def actionBetaFailureEvent :
+def actionBetaFailureEvent :
     Set ((AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) ×
       (BTranscript Fp VestaG
         (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
@@ -166,7 +166,7 @@ noncomputable def actionBetaFailureEvent :
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k q.1)).blindingFactors - 2))}
 
 /-- Decoding runs whose `γ` challenge lands in a permutation or lookup resolver exclusion set. -/
-noncomputable def actionGammaFailureEvent :
+def actionGammaFailureEvent :
     Set ((AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) ×
       (BTranscript Fp VestaG
         (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
@@ -190,7 +190,7 @@ noncomputable def actionGammaFailureEvent :
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k q.1)).blindingFactors - 2))}
 
 /-- Decoding runs whose `θ` challenge lands in the top-level lookup exclusion set. -/
-noncomputable def actionThetaFailureEvent :
+def actionThetaFailureEvent :
     Set ((AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) ×
       (BTranscript Fp VestaG
         (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
@@ -204,7 +204,7 @@ noncomputable def actionThetaFailureEvent :
 /-- The Action terminal on a decoded run outside all four challenge-failure events.  This is a
 specification object: the DLOG reduction must not project its relation branch noncomputably, but
 must cover that branch with `actionTerminalRelationFinderCovers` below. -/
-noncomputable def actionTerminalOutcomeOfGood
+def actionTerminalOutcomeOfGood
     (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
     (O : BTranscript Fp VestaG
       (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
@@ -356,15 +356,9 @@ theorem actionKnowledgeOutcome_isSome_of_good
           (actionRunModel pp family static inputs hvk hI hchar basis O hdecoded).lBlind -
           actionRunPolynomial pp family static inputs hvk hI hchar basis O hdecoded
               CommitmentId.vanishingH *
-            (Polynomial.X ^ actionCircuit.n - 1)) := hxy.1
+            (X ^ actionCircuit.n - 1)) := hxy.1
     rw [hmodelEq, hpolyEq] at hxgood
     have hxgoodData := hxgood
-    rw [← combineConstraintsData_eq, ← ComputablePolynomial.sub_eq,
-      ← ComputablePolynomial.mul_eq, ← ComputablePolynomial.sub_eq,
-      ← ComputablePolynomial.pow_eq, ← ComputablePolynomial.X_eq] at hxgoodData
-    have hone : (1 : Polynomial Fp) = ComputablePolynomial.const 1 := by
-      rw [ComputablePolynomial.const_eq, Polynomial.C_1]
-    rw [hone] at hxgoodData
     unfold straightLineRunRecord straightLineRunOutput at hxgoodData
     have hxgoodSome := (szBadSetAvoidance?_isSome_iff _ _).2 hxgoodData
     split
