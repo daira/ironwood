@@ -14,4 +14,5 @@
   - [Proof Map](formal-verification/proof-map.md)
   - [Source Map](formal-verification/source-map.md)
   - [Security Definitions](formal-verification/security-definitions.md)
+  - [Trust Boundary](formal-verification/trust-boundary.md)
   - [Glossary](formal-verification/glossary.md)

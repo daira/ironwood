@@ -4,7 +4,7 @@ import Zcash.Snark.Fixtures.MultiActionRandom.Fixture
 # Shape and VK faithfulness checks for the random two-action capture
 
 The length/range/init checks of `Fixtures/MultiAction/Faithfulness.lean`, at the random
-single-action capture: the named captured lists, typed accessors, query layouts, expression
+two-action capture: the named captured lists, typed accessors, query layouts, expression
 indices, and captured transcript prefix agree with the generated `shape`. In particular this
 catches the totalization hazards called out in `Verifier.Assemble`: an out-of-range query index
 would otherwise route through `finFn`/`finFnG` and alias `0`/`default`.

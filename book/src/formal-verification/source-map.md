@@ -115,15 +115,21 @@ built from the closed coefficient rows, and conversely the derived basis's `i`-t
 monomial commitment to that same closed row. `Certificate` holds the one slow check — a single
 bundled
 `native_decide` comparing every field of the derived key against the capture, which dominates the
-elaboration time of the lane — and so is built only in the fixture lane.
+elaboration time of the lane — and so is built only in the fixture lane. `InstanceCapture` joins
+the fixture's captured instance commitments to the circuit-derived family the deployed capstone
+consumes: the Lagrange commitment key is identified with the certified monomial derivation, and
+the captured public-input column is read back as the circuit's own `PublicInputs` record.
 
 ### `Fingerprint/` — the cross-check and its soundness
 
 `Match` is the fingerprint match: running the deployed Rust verifier and the Lean `assemble`
 on the same proof and challenges and comparing the assembled MSMs coefficient-for-coefficient
 — the cross-check that validates the Lean assembly in place of a line-by-line translation
-proof. `SchwartzZippel` supplies the abstract random-evaluation bound. Outer batching of separate
-proof blobs by Halo2's optional `BatchVerifier` is outside this formalization's scope.
+proof; the per-family `Boundary` modules under `Fixtures/` restate it at the Lean-derived key
+and schedule as the statements of record. `SchwartzZippel` supplies the abstract
+random-evaluation bound: a fingerprint agrees with a random evaluation only with negligible
+probability. Outer batching of separate proof blobs by Halo2's optional `BatchVerifier` is
+outside this formalization's scope.
 
 ### `Fixtures/` — captured proofs and boundary checks
 
@@ -134,19 +140,30 @@ to the captured column and query dimensions while leaving the action count free,
 `MaxShapeBounds` and
 `StraightLineMaxShapeBounds` evaluate the composite bounds at that shape and at the consensus
 maximum; `ScheduleMarker` re-encodes captured Fiat–Shamir schedules into the model's marker form;
-`PostNu63` pins the canonical post-NU 6.3 verifying key and URS so fixture drift is visible here;
-`InstanceWitness` computes the inverse DFT of each capture's public inputs in Lean, then checks the
-result two ways: its monomial commitment under halo2's default blind is the commitment the deployed
-verifier used, and its polynomial takes the public inputs on every domain row.
+`TamperSweep` is the shared mutation vocabulary of the per-slot negative sweeps; `PostNu63` pins
+the canonical post-NU 6.3 verifying key and URS so fixture drift is visible here, and
+`PostNu63Random` extends the same point equalities to the random captures — kept separate so the
+honest lane does not depend on compiling the random data modules. (The join between the captured
+instance commitments and the circuit-derived family lives in `Keygen/InstanceCapture`.)
 
-`SingleAction/` and `MultiAction/` hold the captured single- and multi-action proofs, each with its
-**Fiat–Shamir** schedule check and its checked `TrustBoundary` turning the fingerprint match into
+`SingleAction/` and `MultiAction/` hold the captured honest single- and multi-action proofs, each
+with its **Fiat–Shamir** schedule check, its `Boundary` statement of record at the Lean-derived
+key and schedule, its per-slot tamper sweep (`Negative/Sweep`), and its checked `TrustBoundary`
+turning the fingerprint match into
 build-time obligations; `SingleAction/VkMatch` computes the capture's constraint-system fields equal
 to the ones derived end to end from the ported `configure`. The multi-action capture additionally
 carries the shape/VK **faithfulness** checks, the adversarial **negative** fixtures, the degree,
 schedule and static-check modules, the two knowledge-error endpoints (compressed-identity and
 straight-line), and `CapturedZeroFamily` — the shape-generic zero prover instantiated at the
 captured key's own scalar data, so the staged IPA trace carries eleven live rounds.
+
+`SingleActionRandom/`, `MultiActionRandom/`, and `TripleActionRandom/` hold the random match-only
+captures — the deployed verifier run on random proof strings, deliberately non-accepting. Each has
+the same schedule checks and `Faithfulness`, a `VkCertificate` transporting the single-action
+keygen certificate along `PostNu63Random`'s point equalities, its `Boundary` statement of record,
+aliveness guards in `Negative` (the model assembles at the random point, the capture is genuinely
+non-accepting, and one tamper canary), and its own `TrustBoundary` census. What the five families
+jointly check is the [Trust Boundary](trust-boundary.md) chapter.
 
 ### `Soundness/` — the soundness argument
 

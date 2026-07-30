@@ -14,7 +14,11 @@ This module is built by CI (it belongs to the `FixtureCheck` lake target) and tu
 the concrete captured fingerprint into *checked*, build-time obligations. Besides the
 coefficient-and-point match, the generated fixture validates every Vesta coordinate, binds the captured
 transcript prefix to the canonical VK representation emitted by Rust, and computes both the captured and
-Lean-assembled MSMs to the Vesta identity.
+Lean-assembled MSMs to the Vesta identity. Those identity evaluations are the family's non-vacuity
+witness — a real accepting run of the pinned deployed verifier, which the random match-only captures
+cannot provide — and the family's `vk`/`shape`/URS feed the deployed capstone lane
+(`Fixtures/MultiAction/ActionCapstone.lean` with the `Circuits/Integration` terminals); the invariant
+itself rides on the derived boundary statements (see `Fingerprint/Match.lean`).
 
 Both checks below follow Lean's elaborated dependency graph (via `Lean.collectAxioms`), so they see holes
 anywhere in the transitive closure — including the `Soundness/` proof layer and Mathlib — which a

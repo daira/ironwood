@@ -18,7 +18,10 @@ import Zcash.Meta.AxiomCheck
 The multi-action analog of `Fixtures.SingleAction.TrustBoundary`, and checked the same way: CI
 bounds the trusted base of the concrete coordinate validation, verifier fingerprint match, executable
 Vesta MSM identity, and instance-commitment derivation, and pins the exact axiom set of the
-`native_decide` claims among them.
+`native_decide` claims among them. The MSM identity facts are this family's non-vacuity witness — a
+real accepting two-action run of the pinned deployed verifier, which the random match-only captures
+cannot provide; the invariant itself rides on the derived boundary statements (see
+`Fingerprint/Match.lean`).
 
 * `assert_axioms` (from `Zcash.Meta.AxiomCheck`) — bounds the trusted base at the standard tier,
   rejecting `sorryAx` and any unexpected axiom, walking the whole elaborated dependency graph

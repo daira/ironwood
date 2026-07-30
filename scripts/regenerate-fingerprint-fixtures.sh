@@ -19,8 +19,10 @@
 # Sources are cloned from the public forks at the pinned commits; set HALO2_SRC and/or
 # ORCHARD_SRC to local checkout paths to clone from those instead (fully offline).
 # Set REGEN_WORK_DIR to keep/reuse the build tree across runs (much faster); it is
-# reset hard to the pinned commits each run. Random-family artifacts that are not yet
-# committed are copied to REGEN_OUT_DIR (default scripts/generated/, gitignored).
+# reset hard to the pinned commits each run. All five families are committed, so every
+# generated artifact is diffed byte-for-byte; a generated artifact with no committed
+# counterpart (a future not-yet-ingested shape) is copied to REGEN_OUT_DIR (default
+# scripts/generated/, gitignored).
 #
 # The one divergence from the CI regeneration environment: orchard's committed
 # Cargo.lock pins halo2_proofs 0.3.4 from crates.io, so the capture branch's
@@ -126,19 +128,21 @@ mkdir -p "$WORK_DIR/out"
 )
 
 # generated-file : committed-path : requirement
-# "required": the committed file must exist and match byte-for-byte (the honest
-# families; failure means the capture tooling disturbed the pipeline or the pins
-# drifted).
-# "optional": match if committed, otherwise stash in $OUT_DIR.
+# "required": the committed file must exist and match byte-for-byte. Every committed
+# family is required — for the honest pair a mismatch means the capture tooling
+# disturbed the pipeline or the pins drifted; for the random families it means the
+# committed artifact drifted or went missing. "optional" (currently unused) is for
+# generated artifacts with no committed counterpart yet — a future not-yet-ingested
+# shape — which are stashed in $OUT_DIR instead of failing.
 pairs=(
   "SingleAction.Fixture.lean:Zcash/Snark/Fixtures/SingleAction/Fixture.lean:required"
   "MultiAction.Fixture.lean:Zcash/Snark/Fixtures/MultiAction/Fixture.lean:required"
-  "SingleActionRandom.Fixture.lean:Zcash/Snark/Fixtures/SingleActionRandom/Fixture.lean:optional"
-  "MultiActionRandom.Fixture.lean:Zcash/Snark/Fixtures/MultiActionRandom/Fixture.lean:optional"
-  "TripleActionRandom.Fixture.lean:Zcash/Snark/Fixtures/TripleActionRandom/Fixture.lean:optional"
-  "SingleActionRandom.proof-bytes.hex:Zcash/Snark/Fixtures/SingleActionRandom/proof-bytes.hex:optional"
-  "MultiActionRandom.proof-bytes.hex:Zcash/Snark/Fixtures/MultiActionRandom/proof-bytes.hex:optional"
-  "TripleActionRandom.proof-bytes.hex:Zcash/Snark/Fixtures/TripleActionRandom/proof-bytes.hex:optional"
+  "SingleActionRandom.Fixture.lean:Zcash/Snark/Fixtures/SingleActionRandom/Fixture.lean:required"
+  "MultiActionRandom.Fixture.lean:Zcash/Snark/Fixtures/MultiActionRandom/Fixture.lean:required"
+  "TripleActionRandom.Fixture.lean:Zcash/Snark/Fixtures/TripleActionRandom/Fixture.lean:required"
+  "SingleActionRandom.proof-bytes.hex:Zcash/Snark/Fixtures/SingleActionRandom/proof-bytes.hex:required"
+  "MultiActionRandom.proof-bytes.hex:Zcash/Snark/Fixtures/MultiActionRandom/proof-bytes.hex:required"
+  "TripleActionRandom.proof-bytes.hex:Zcash/Snark/Fixtures/TripleActionRandom/proof-bytes.hex:required"
 )
 
 status=0
@@ -166,7 +170,7 @@ for pair in "${pairs[@]}"; do
   else
     mkdir -p "$OUT_DIR"
     cp "$generated" "$OUT_DIR/${pair%%:*}"
-    echo "Generated, not yet committed: $OUT_DIR/${pair%%:*}"
+    echo "Generated, no committed counterpart yet: $OUT_DIR/${pair%%:*}"
     stashed=$((stashed + 1))
   fi
 done
