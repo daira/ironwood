@@ -756,7 +756,7 @@ assert_computable Zcash.Snark.decodedPolynomialResolver_opens_or_relation +choic
 assert_axioms Zcash.Snark.topLevelBundleStatement_or_bad_of_constraintSatisfaction +native(
   Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   CompElliptic.Fields.Pasta.pallasBase)
-assert_axioms Zcash.Snark.TopLevelAcceptedModel.statements_or_relation_of_circuitSat +native(
+assert_computable Zcash.Snark.TopLevelAcceptedModel.statements_or_relation_of_circuitSat +choice +native(
   Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   CompElliptic.Fields.Pasta.pallasBase)
 assert_axioms Zcash.Snark.topLevelStatements_or_relation_of_deployedAccepts +native(
@@ -1350,7 +1350,7 @@ assert_axioms Zcash.Snark.decodePoints_zero
 -- (`Circuits.Integration.ActionTerminal`): the base terminal the routes below delegate to.
 -- The verifying key is not a parameter and no free semantic proposition remains, so this is
 -- where `BundleStatement` first appears as the conclusion rather than an assumed `hencodes`.
-assert_axioms Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq +native(
+assert_computable Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq +choice +native(
   Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
@@ -1379,7 +1379,7 @@ assert_axioms Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_d
 -- The rewind-free decode reaching #99's Action terminal
 -- (`Circuits.Integration.StraightLineActionTerminal`): one accepting execution, no rewind, with
 -- only the challenge exclusions left as premises.
-assert_axioms Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_decode +native(
+assert_computable Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_decode +choice +native(
   Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionConstantValueFailures_eq_nil,
@@ -1410,7 +1410,7 @@ assert_axioms Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_d
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 -- The same rewind-free route, entered one step later: the caller supplies constraint
 -- satisfaction directly instead of the decoded-member polynomial equality.
-assert_axioms Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_decode_circuitSat +native(
+assert_computable Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_decode_circuitSat +choice +native(
   Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
@@ -1438,7 +1438,38 @@ assert_axioms Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_d
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 -- The same terminal, reached from the straight-line constraint event: the family supplies the
 -- decode from its own accepting run.
-assert_axioms Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_straightLineDecoded +native(
+assert_computable Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_straightLineDecoded +choice +native(
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
+  Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionMissingConstantAllocations_eq_nil, Zcash.Snark.actionNumPermCols_eq,
+  Zcash.Snark.actionNumPermCols_pos, CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
+  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
+  Zcash.Snark.ActionGateCoherence.domainExponent_lt, Zcash.Snark.ActionGateCoherence.gateData_eq,
+  Zcash.Snark.ActionGateCoherence.selectorDegree, Zcash.Snark.ActionPermutationDomain.chunks_eq,
+  Zcash.Snark.ActionPermutationDomain.columnCount_chunkLen_eq,
+  Zcash.Snark.ActionPermutationDomain.deltaPowers_injective,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_eq,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_lt,
+  Zcash.Snark.ActionPermutationDomain.queryLayouts_eq,
+  Zcash.Snark.ActionPermutationDomain.routingCoherent,
+  CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+-- The executable form of the rewind-free terminal: it checks the challenge exclusions by
+-- evaluation and hands back either every Action's private witnesses or explicit relation
+-- coefficients. This is the endpoint at which the breaks-as-computed-data discipline is
+-- observable, so it carries the computable pin rather than only an axiom bound.
+assert_computable Zcash.Snark.ActionTerminal.actionTerminalWitnessOrRelationFinder +choice +native(
   Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
