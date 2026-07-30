@@ -48,9 +48,12 @@ rather than inventing pins.
 concerns the *circuit-side* dumps in `Zcash/Circuits/Fixtures/`. The verifier-fingerprint
 captures in `Zcash/Snark/Fixtures/` have none of the missing-lineage problem: the honest
 families regenerate in CI from pinned public sources (`fixtures.yml`), and the random
-match-only families regenerate from the public capture branches described below via
-`scripts/regenerate-fingerprint-fixtures.sh`, which also re-checks the honest families
-byte-for-byte under the capture-branch toolchain.
+match-only families — committed under
+`Zcash/Snark/Fixtures/{SingleActionRandom,MultiActionRandom,TripleActionRandom}/`, each with
+its raw `proof-bytes.hex` sibling — regenerate from the public capture branches described
+below via `scripts/regenerate-fingerprint-fixtures.sh`, which also re-checks the honest
+families byte-for-byte under the capture-branch toolchain and enforces the committed random
+artifacts byte-for-byte.
 
 ## The random-capture branches
 
@@ -132,9 +135,10 @@ scripts/regenerate-fingerprint-fixtures.sh
 clones the capture branches at the pinned commits (set `HALO2_SRC`/`ORCHARD_SRC` to local
 checkout paths for a fully offline run), asserts each is exactly one commit atop its release
 pin, runs all five capture drivers in one pass, and diffs every generated artifact against
-the committed one. Random-family artifacts not yet committed are stashed in
-`scripts/generated/` (gitignored; override with `REGEN_OUT_DIR`). Set `REGEN_WORK_DIR` to
-reuse the build tree across runs.
+the committed one. All four fixture families (plus the three-action random capture) are
+committed under `Zcash/Snark/Fixtures/`, so every diff pair is enforced byte-for-byte; an
+artifact missing from the tree would be stashed in `scripts/generated/` (gitignored;
+override with `REGEN_OUT_DIR`). Set `REGEN_WORK_DIR` to reuse the build tree across runs.
 
 To reproduce by hand instead: check out each branch at its pinned commit, add
 

@@ -1,0 +1,230 @@
+import Zcash.Snark.Fixtures.SingleActionRandom.Fixture
+import Zcash.Snark.Fixtures.SingleActionRandom.Faithfulness
+import Zcash.Snark.Fixtures.SingleActionRandom.Negative
+import Zcash.Snark.Fixtures.SingleActionRandom.Boundary
+import Zcash.Snark.Fixtures.PostNu63Random
+import Zcash.Meta.AxiomCheck
+
+/-!
+# Checked trust boundary of the random single-action fixture
+
+The random-capture analog of the honest `Fixtures.SingleAction`/`Fixtures.MultiAction` trust
+boundaries, and checked the same way: `assert_axioms` (from `Zcash.Meta.AxiomCheck`) bounds the
+trusted base of every captured claim at the standard tier, walking the whole elaborated
+dependency graph, with `+native` naming exactly the declarations that may spend compiler trust;
+`#print axioms` pinned by `#guard_msgs` freezes the exact axiom set of the load-bearing claims.
+
+Two differences from the honest siblings, both consequences of the capture being match-only:
+
+* The census has no MSM-identity evaluations. Their place is taken by
+  `capturedMsm_evalNat_ne_zero`, which pins the capture as genuinely non-accepting, censused with
+  the other aliveness guards of `Negative.lean`.
+* The shape/VK faithfulness checks (`Faithfulness.lean`) are censused here, so every theorem of
+  this family sits under a build-time axiom bound.
+-/
+
+-- Census the captured random single-action fixture, including permitted native-code trust.
+assert_axioms Zcash.Snark.FixtureRandom.capturedPointCoordinatesValid_eq_true +native(
+  Zcash.Snark.FixtureRandom.capturedPointCoordinatesValid_eq_true)
+assert_axioms Zcash.Snark.FixtureRandom.capturedUrsG_length +native(
+  Zcash.Snark.FixtureRandom.capturedUrsG_length)
+assert_axioms Zcash.Snark.FixtureRandom.capturedInit_startsWith_vkTranscriptRepr +native(
+  Zcash.Snark.FixtureRandom.capturedInit_startsWith_vkTranscriptRepr)
+assert_axioms Zcash.Snark.FixtureRandom.fingerprint_matches +native(
+  Zcash.Snark.FixtureRandom.fingerprint_matches)
+assert_axioms Zcash.Arithmetic.Msm.evalNat
+assert_axioms Zcash.Snark.assemble
+
+-- The aliveness guards (`Negative.lean`): a match-only capture has no accepting evaluation, so
+-- these pin what keeps it alive — the model accepts the random point, the captured MSM is not
+-- the identity, and the match still detects a blind-slot tamper at this point.
+assert_axioms Zcash.Snark.FixtureRandom.valid_capture_assembles +native(
+  Zcash.Snark.FixtureRandom.valid_capture_assembles)
+assert_axioms Zcash.Snark.FixtureRandom.capturedMsm_evalNat_ne_zero +native(
+  Zcash.Snark.FixtureRandom.capturedMsm_evalNat_ne_zero)
+assert_axioms Zcash.Snark.FixtureRandom.tampered_fixed_eval_assembles +native(
+  Zcash.Snark.FixtureRandom.tampered_fixed_eval_assembles)
+assert_axioms Zcash.Snark.FixtureRandom.tampered_fixed_eval_fingerprint_mismatch +native(
+  Zcash.Snark.FixtureRandom.tampered_fixed_eval_fingerprint_mismatch)
+
+-- The shape/VK faithfulness checks (`Faithfulness.lean`): the captured lists, layouts,
+-- expression indices, and transcript prefix agree with the generated `shape`, guarding the
+-- `finFn`/`finFnG` totalization hazards.
+assert_axioms Zcash.Snark.FixtureRandom.capturedInit_has_vk_scalar_and_instance_commitments +native(
+  Zcash.Snark.FixtureRandom.capturedInit_has_vk_scalar_and_instance_commitments)
+assert_axioms Zcash.Snark.FixtureRandom.captured_list_lengths_match_shape +native(
+  Zcash.Snark.FixtureRandom.captured_list_lengths_match_shape)
+assert_axioms Zcash.Snark.FixtureRandom.query_layout_columns_in_range +native(
+  Zcash.Snark.FixtureRandom.query_layout_columns_in_range)
+assert_axioms Zcash.Snark.FixtureRandom.vk_expression_refs_in_range +native(
+  Zcash.Snark.FixtureRandom.vk_expression_refs_in_range)
+assert_axioms Zcash.Snark.FixtureRandom.permutation_chunks_match_shape +native(
+  Zcash.Snark.FixtureRandom.permutation_chunks_match_shape)
+assert_axioms Zcash.Snark.FixtureRandom.vk_domain_size_matches_shape +native(
+  Zcash.Snark.FixtureRandom.vk_domain_size_matches_shape)
+
+-- The instance-commitment derivation: the two captured claims, plus the data and functions they
+-- range over. The latter are flagless — they are ordinary definitions, so compiler trust must not
+-- reach them; only the two claims about them may spend it.
+assert_axioms Zcash.Snark.FixtureRandom.instance_commitments_derived +native(
+  Zcash.Snark.FixtureRandom.instance_commitments_derived)
+assert_axioms Zcash.Snark.FixtureRandom.capturedPublicInstances_within_lagrange +native(
+  Zcash.Snark.FixtureRandom.capturedPublicInstances_within_lagrange)
+assert_axioms Zcash.Snark.FixtureRandom.capturedUrsGLagrange
+assert_axioms Zcash.Snark.FixtureRandom.capturedPublicInstances
+assert_axioms Zcash.Snark.FixtureRandom.commitLagrange
+assert_axioms Zcash.Snark.FixtureRandom.derivedInstanceCommitment
+
+-- Cross-capture provenance (`Fixtures/PostNu63Random.lean`): the circuit-id and canonical-VK
+-- pins, the point-level equalities that transport the single-action keygen certificate to this
+-- capture, and the URS record equality assembled from them.
+assert_axioms Zcash.Snark.PostNu63Fixture.randomSingle_uses_postNu63 +native(
+  Zcash.Snark.PostNu63Fixture.randomSingle_uses_postNu63)
+assert_axioms Zcash.Snark.PostNu63Fixture.randomSingle_uses_canonicalVk +native(
+  Zcash.Snark.PostNu63Fixture.randomSingle_uses_canonicalVk)
+assert_axioms Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_ursG +native(
+  Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_ursG)
+assert_axioms Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_wu +native(
+  Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_wu)
+assert_axioms Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_ursGLagrange +native(
+  Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_ursGLagrange)
+assert_axioms Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_fixedCommitments +native(
+  Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_fixedCommitments)
+assert_axioms Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_permutationCommonCommitments +native(
+  Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_permutationCommonCommitments)
+assert_axioms Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_urs +native(
+  Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_ursG,
+  Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_wu)
+
+-- The transported keygen certificate (`VkCertificate.lean`): the random single-action key equals
+-- its end-to-end derivation. Owners are the single-action certificate's plus the cross-capture
+-- point equalities — no second keygen evaluation.
+assert_axioms Zcash.Snark.FixtureRandom.vk_eq_derived +native(
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.Keygen.certificate,
+  Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_ursG,
+  Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_wu,
+  Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_fixedCommitments,
+  Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_permutationCommonCommitments,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+
+-- The Fiat–Shamir schedule checks, the composed fingerprint, and the boundary statement at the
+-- Lean-derived key (`Boundary.lean`). The oracle/schedule data and the composed-statement
+-- functions are flagless — compiler trust may enter only through the named claims — except
+-- `derivedActionVk`, whose circuit argument itself carries the natively-certified fixed-base
+-- facts.
+assert_axioms Zcash.Snark.FixtureRandom.capturedChallengeValues_eq_expected +native(
+  Zcash.Snark.FixtureRandom.capturedChallengeValues_eq_expected)
+assert_axioms Zcash.Snark.FixtureRandom.missingChallenge_not_captured +native(
+  Zcash.Snark.FixtureRandom.missingChallenge_not_captured)
+assert_axioms Zcash.Snark.FixtureRandom.capturedChallengeValues_nodup +native(
+  Zcash.Snark.FixtureRandom.capturedChallengeValues_nodup)
+assert_axioms Zcash.Snark.FixtureRandom.capturedScheduleIncludesInit_eq_true +native(
+  Zcash.Snark.FixtureRandom.capturedScheduleIncludesInit_eq_true)
+assert_axioms Zcash.Snark.FixtureRandom.deriveChallenges_matches_captured_schedule +native(
+  Zcash.Snark.FixtureRandom.deriveChallenges_matches_captured_schedule)
+assert_axioms Zcash.Snark.FixtureRandom.nonInteractiveFingerprint_matches +native(
+  Zcash.Snark.FixtureRandom.deriveChallenges_matches_captured_schedule,
+  Zcash.Snark.FixtureRandom.fingerprint_matches)
+assert_axioms Zcash.Snark.FixtureRandom.capturedFs
+assert_axioms Zcash.Snark.FixtureRandom.capturedInit
+assert_axioms Zcash.Snark.deriveChallenges
+assert_axioms Zcash.Snark.nonInteractiveFingerprint
+assert_axioms Zcash.Snark.Keygen.derivedActionVk +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_axioms Zcash.Snark.FixtureRandom.nonInteractiveFingerprint_matches_derived +native(
+  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+  CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.Keygen.certificate,
+  Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_ursG,
+  Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_wu,
+  Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_fixedCommitments,
+  Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_permutationCommonCommitments,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero,
+  Zcash.Snark.FixtureRandom.deriveChallenges_matches_captured_schedule,
+  Zcash.Snark.FixtureRandom.fingerprint_matches)
+
+-- `whitespace := lax` collapses all whitespace, so the pin is insensitive to how
+-- `#print axioms` line-wraps the list (a formatting artifact of the axiom-name lengths).
+/-- info: 'Zcash.Snark.FixtureRandom.fingerprint_matches' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.FixtureRandom.fingerprint_matches._native.native_decide.ax_1_1] -/
+#guard_msgs (whitespace := lax) in
+#print axioms Zcash.Snark.FixtureRandom.fingerprint_matches
+
+/-- info: 'Zcash.Snark.FixtureRandom.capturedMsm_evalNat_ne_zero' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.FixtureRandom.capturedMsm_evalNat_ne_zero._native.native_decide.ax_1_1] -/
+#guard_msgs (whitespace := lax) in
+#print axioms Zcash.Snark.FixtureRandom.capturedMsm_evalNat_ne_zero
+
+/-- info: 'Zcash.Snark.FixtureRandom.instance_commitments_derived' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.FixtureRandom.instance_commitments_derived._native.native_decide.ax_1_1] -/
+#guard_msgs (whitespace := lax) in
+#print axioms Zcash.Snark.FixtureRandom.instance_commitments_derived
+
+/-- info: 'Zcash.Snark.FixtureRandom.capturedPublicInstances_within_lagrange' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.FixtureRandom.capturedPublicInstances_within_lagrange._native.native_decide.ax_1_1] -/
+#guard_msgs (whitespace := lax) in
+#print axioms Zcash.Snark.FixtureRandom.capturedPublicInstances_within_lagrange
+
+/-- info: 'Zcash.Snark.FixtureRandom.nonInteractiveFingerprint_matches_derived' depends on axioms: [propext,
+Classical.choice,
+Quot.sound,
+Zcash.Arithmetic.omegaOf_eq_certifiedRootPow._native.native_decide.ax_1_1,
+CompElliptic.Fields.Pasta.pallasBase._native.native_decide.ax_1,
+CompElliptic.Fields.Pasta.pallasBase._native.native_decide.ax_2,
+Zcash.Snark.FixtureRandom.deriveChallenges_matches_captured_schedule._native.native_decide.ax_1_1,
+Zcash.Snark.FixtureRandom.fingerprint_matches._native.native_decide.ax_1_1,
+Zcash.Snark.Keygen.certificate._native.native_decide.ax_1_1,
+Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_fixedCommitments._native.native_decide.ax_1_1,
+Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_permutationCommonCommitments._native.native_decide.ax_1_1,
+Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_ursG._native.native_decide.ax_1_1,
+Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_wu._native.native_decide.ax_1_1,
+CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt._native.native_decide.ax_1_1,
+CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_2,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_3,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_4,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_5,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_6,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_7,
+Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero._native.native_decide.ax_1_8,
+Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_1,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_2,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_3,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_4,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_5,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_6,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_7,
+Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_8] -/
+#guard_msgs (whitespace := lax) in
+#print axioms Zcash.Snark.FixtureRandom.nonInteractiveFingerprint_matches_derived
