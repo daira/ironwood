@@ -401,6 +401,17 @@ assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceIntegrity_measure_le +n
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
 
+/-! ## The Orchard Spend Authority key-binding arm
+
+The Spend Authority key-binding break is the same Orchard-protocol `CommitIvkCollision`
+as the Balance key-binding arm. `relationOfSpendAuthorityKBBreak` sends it to a
+nontrivial discrete-log relation at the `CommitIvk` domain point and randomness base —
+the same terminal as the Balance key-binding arm, with no oracle model. -/
+
+assert_computable Zcash.Security.Ledger.Bridge.relationOfSpendAuthorityKBBreak +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check)
+
 /-! ## The key-binding arms' ε, discharged
 
 The Balance-subset and Spend Authority key-binding arms' probability in the

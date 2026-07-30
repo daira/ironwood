@@ -256,4 +256,18 @@ theorem orchardBalanceIntegrity_measure_le
       (balanceIntegrityViolationBefore_subset_relation verify bverify issuance maxActions k))
     (add_le_add hsin hbind)
 
+/-! ## The Orchard Spend Authority key-binding arm -/
+
+/-- **The Orchard-protocol Spend Authority key-binding break computes a discrete-log
+relation.** The Spend Authority reduction's key-binding break is two valid `Commit^ivk`
+openings of the same `ivk` that differ in the extracted `ak` coordinate, `nk`, or
+`rivk` (`Witness.breakProjection`). At the Orchard `keyBinding` interface that break is
+the `CommitIvkCollision` that `relationOfKeyBindingBreak` consumes, so the Spend
+Authority key-binding arm reaches the same discrete-log terminal as the Balance
+key-binding arm. The break is computed from the exhibited witness pair, and the
+reduction needs no oracle model. -/
+def relationOfSpendAuthorityKBBreak (b : KeyBindingBreakData keyBinding) :
+    NontrivialRelation (F := Fq) pallasS ivkQpt commitIvkRpt :=
+  relationOfKeyBindingBreak b.h
+
 end Zcash.Security.Ledger.Bridge
