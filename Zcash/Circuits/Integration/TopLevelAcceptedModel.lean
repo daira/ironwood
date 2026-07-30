@@ -59,7 +59,7 @@ def statements_or_relation_of_circuitSat
     (hblinding :
       (top.toVerifierKey pp urs).blindingFactors <
         (top.toVerifierKey pp urs).n)
-    (hpoly : Polynomial Fp)
+    (hpoly : CPoly)
     (hsatisfied :
       (CanonicalMemberConstraintRelation.acceptedModel
         (memberDecode := memberDecode)
@@ -117,7 +117,7 @@ def witnesses_or_relation_of_circuitSat
     (hblinding :
       (top.toVerifierKey pp urs).blindingFactors <
         (top.toVerifierKey pp urs).n)
-    (hpoly : Polynomial Fp)
+    (hpoly : CPoly)
     (hsatisfied :
       (CanonicalMemberConstraintRelation.acceptedModel
         (memberDecode := memberDecode)

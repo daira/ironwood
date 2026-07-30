@@ -11,10 +11,10 @@ algebraic prover's computed representations.
 
 namespace Zcash.Snark
 
-open Polynomial
+open CompPoly CompPoly.CPolynomial
 
 /-- The vanishing polynomial of a finite point set, `∏_{p ∈ pts} (X − p)`. -/
-noncomputable def vanishingProd (pts : Finset Fp) : Polynomial Fp :=
+def vanishingProd (pts : Finset Fp) : CPoly :=
   ∏ p ∈ pts, (X - C p)
 
 @[simp] theorem vanishingProd_eval (pts : Finset Fp) (x : Fp) :
@@ -35,7 +35,7 @@ theorem vanishingProd_eval_ne {pts : Finset Fp} {p : Fp} (hp : p ∉ pts) :
   exact sub_ne_zero.mpr (by rintro rfl; exact hp hq)
 
 /-- The complementary product `Wⱼ = ∏_{p ∈ all \ pts} (X − p)`. -/
-noncomputable def coProd (all pts : Finset Fp) : Polynomial Fp :=
+def coProd (all pts : Finset Fp) : CPoly :=
   vanishingProd (all \ pts)
 
 /-- The full vanishing polynomial splits as `D = Wⱼ · ∏(pts j)` when `pts j ⊆ all`. -/
@@ -49,7 +49,7 @@ that turns the multiopen fold's `∏(x₃ − node)⁻¹` into the polynomial `W
 theorem clear_denom_eval {all pts : Finset Fp} (hsub : pts ⊆ all) {x : Fp}
     (hx : (vanishingProd pts).eval x ≠ 0) :
     (vanishingProd all).eval x * (∏ p ∈ pts, (x - p))⁻¹ = (coProd all pts).eval x := by
-  rw [vanishingProd_split hsub, eval_mul, vanishingProd_eval, mul_assoc,
-    mul_inv_cancel₀ (by rw [← vanishingProd_eval]; exact hx), mul_one]
+  rw [vanishingProd_split hsub, eval_mul, vanishingProd_eval, _root_.mul_assoc,
+    mul_inv_cancel₀ (by rw [← vanishingProd_eval]; exact hx), _root_.mul_one]
 
 end Zcash.Snark

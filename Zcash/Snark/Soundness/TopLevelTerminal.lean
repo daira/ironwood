@@ -18,7 +18,7 @@ desired statement or an opaque encoding implication.
 
 namespace Zcash.Snark
 
-open Halo2 Polynomial
+open Halo2 CompPoly.CPolynomial
 
 universe u v w
 
@@ -27,7 +27,7 @@ def TopLevelTerminalOutcome
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (Bad : Type) : Type :=
   TopLevelBundleStatement top pp poly ⊕' Bad
 
@@ -37,7 +37,7 @@ def TopLevelWitnessTerminalOutcome
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (Bad : Type) : Type :=
   TopLevelBundleWitness top pp poly ⊕' Bad
 
@@ -54,7 +54,7 @@ def topLevelBundleStatement_or_bad_of_components
     {top : TopLevelCircuit Fp Config PublicInput}
     {pp : Keygen.ProofParams} {urs : URS G}
     {ch : Challenges (pp.mergeDerived top).k Fp}
-    {poly : CommitmentId → Polynomial Fp}
+    {poly : CommitmentId → CPoly}
     {cell : Type} [DecidableEq cell] [Fintype cell]
     {Bad : Type}
     (hblinding :
@@ -100,7 +100,7 @@ def topLevelBundleWitness_or_bad_of_components
     {top : TopLevelCircuit Fp Config PublicInput}
     {pp : Keygen.ProofParams} {urs : URS G}
     {ch : Challenges (pp.mergeDerived top).k Fp}
-    {poly : CommitmentId → Polynomial Fp}
+    {poly : CommitmentId → CPoly}
     {cell : Type} [DecidableEq cell] [Fintype cell]
     {Bad : Type}
     (hblinding :
@@ -140,7 +140,7 @@ def topLevelBundleStatement_or_bad_of_constraintSatisfaction
     {top : TopLevelCircuit Fp Config PublicInput}
     {pp : Keygen.ProofParams} {urs : URS G}
     {ch : Challenges (pp.mergeDerived top).k Fp}
-    {poly : CommitmentId → Polynomial Fp}
+    {poly : CommitmentId → CPoly}
     {cell : Type} [DecidableEq cell] [Fintype cell]
     {Bad : Type}
     (hblinding :
@@ -191,7 +191,7 @@ def topLevelBundleWitness_or_bad_of_constraintSatisfaction
     {top : TopLevelCircuit Fp Config PublicInput}
     {pp : Keygen.ProofParams} {urs : URS G}
     {ch : Challenges (pp.mergeDerived top).k Fp}
-    {poly : CommitmentId → Polynomial Fp}
+    {poly : CommitmentId → CPoly}
     {cell : Type} [DecidableEq cell] [Fintype cell]
     {Bad : Type}
     (hblinding :

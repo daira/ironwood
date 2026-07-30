@@ -40,7 +40,7 @@ degenerate. -/
 def deployedConstraintDifferencePreX
     (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) (coins : family.toFamily.Coins) :
-    Polynomial Fp :=
+    CPoly :=
   let pnu := deployedRootRunOutput family basis coins
   committedPreXConstraintDifference
     (deployedConstraintPointPolynomial family basis pnu)
@@ -297,7 +297,7 @@ structure DeployedConstraintXSqueezeSchedule (family : ComputedDeployedRootFSFam
   pinned : DeployedConstraintXPinning family
 
 /-- The single pinned event for the constraint evaluation challenge. -/
-noncomputable def deployedConstraintXPinnedEvent
+def deployedConstraintXPinnedEvent
     (family : ComputedDeployedRootFSFamily shape) {epsilonX : ENNReal}
     (schedule : DeployedConstraintXSqueezeSchedule family epsilonX)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG) :

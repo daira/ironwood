@@ -271,7 +271,7 @@ namespace TopLevelGateCoherence
 /-- The resolver feeds interpret the complete circuit-derived pinned query state. -/
 theorem resolverInterpretsPinned
     (coherence : TopLevelGateCoherence top pp urs)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (usableRows row : ℕ) :
     Interprets
@@ -390,7 +390,7 @@ enabled Clean lookup's concrete input and table tuples.
 theorem projectedValues
     (coherence : TopLevelLookupCoherence top)
     (gateCoherence : TopLevelGateCoherence top pp urs)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (lookup : EnabledLookup Fp)
     (henabled :
@@ -531,7 +531,7 @@ theorem projectedPolynomialValues
     (coherence : TopLevelLookupCoherence top)
     (gateCoherence : TopLevelGateCoherence top pp urs)
     (ch : Challenges (pp.mergeDerived top).k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (lookup : EnabledLookup Fp)
     (henabled :
@@ -602,7 +602,7 @@ def deployedWitness
     (coherence : TopLevelLookupCoherence top)
     (gateCoherence : TopLevelGateCoherence top pp urs)
     (ch : Challenges (pp.mergeDerived top).k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (hblinding :
       (top.toVerifierKey pp urs).blindingFactors <
@@ -761,7 +761,7 @@ structure TopLevelLookupWitnessConditions
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
     (ch : Challenges (pp.mergeDerived top).k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex : Fin (pp.mergeDerived top).numProofs) : Prop where
   inputSelectorValues : ∀ lookup
       (_henabled :
@@ -805,7 +805,7 @@ so the event must be unioned across both indices.
 noncomputable def allTopLevelLookupThetaBadSet
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp) : Finset Fp :=
+    (poly : CommitmentId → CPoly) : Finset Fp :=
   enabledLookupThetaBadSetFamily
     (ι := TopLevelLookupActivationIndex top pp)
     (fun _ => top.placement)
@@ -820,7 +820,7 @@ noncomputable def allTopLevelLookupThetaBadSet
 def topLevelLookupThetaBudget
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp) : ℕ :=
+    (poly : CommitmentId → CPoly) : ℕ :=
   ∑ index : TopLevelLookupActivationIndex top pp,
     (resolverEnvironment
       (top.toVerifierKey pp urs) poly index.1
@@ -840,7 +840,7 @@ activation.
 -/
 theorem uniformChallenge_allTopLevelLookupThetaBadSet
     (coherence : TopLevelLookupCoherence top)
-    (poly : CommitmentId → Polynomial Fp) :
+    (poly : CommitmentId → CPoly) :
     uniformChallenge.toOuterMeasure
         (allTopLevelLookupThetaBadSet top pp urs poly)
       ≤ (topLevelLookupThetaBudget top pp urs poly : ENNReal) /
@@ -869,7 +869,7 @@ structure TopLevelLookupChallengeExclusions
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
     (ch : Challenges (pp.mergeDerived top).k Fp)
-    (poly : CommitmentId → Polynomial Fp) : Prop where
+    (poly : CommitmentId → CPoly) : Prop where
   gamma :
     ch.gamma ∉ allResolverLookupGammaBadSet
       (top.toVerifierKey pp urs) ch poly
@@ -890,7 +890,7 @@ def topLevelLookupChallengeExclusions?
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
     (ch : Challenges (pp.mergeDerived top).k Fp)
-    (poly : CommitmentId → Polynomial Fp) :
+    (poly : CommitmentId → CPoly) :
     Option (PLift (TopLevelLookupChallengeExclusions top pp urs ch poly)) :=
   let vk := top.toVerifierKey pp urs
   let u := vk.n - vk.blindingFactors - 2
@@ -924,7 +924,7 @@ theorem topLevelLookupChallengeExclusions?_isSome_of
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
     (ch : Challenges (pp.mergeDerived top).k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (hexclusions : TopLevelLookupChallengeExclusions top pp urs ch poly) :
     (topLevelLookupChallengeExclusions? top pp urs ch poly).isSome := by
   let vk := top.toVerifierKey pp urs
@@ -972,7 +972,7 @@ per-proof conditions consumed by the deployed lookup witnesses.
 -/
 def TopLevelLookupWitnessConditions.ofChallengeExclusions
     (ch : Challenges (pp.mergeDerived top).k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (inputSelectorValues : ∀ lookup
       (_henabled :
@@ -1018,7 +1018,7 @@ def deployedWitnesses
     (coherence : TopLevelLookupCoherence top)
     (gateCoherence : TopLevelGateCoherence top pp urs)
     (ch : Challenges (pp.mergeDerived top).k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (hblinding :
       (top.toVerifierKey pp urs).blindingFactors <
@@ -1068,7 +1068,7 @@ theorem constraints
     (coherence : TopLevelLookupCoherence top)
     (gateCoherence : TopLevelGateCoherence top pp urs)
     (ch : Challenges (pp.mergeDerived top).k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
     (hblinding :
       (top.toVerifierKey pp urs).blindingFactors <

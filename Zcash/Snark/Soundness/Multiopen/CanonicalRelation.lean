@@ -19,7 +19,7 @@ one constraint identity covers every proof member, with no selected proof index.
 
 namespace Zcash.Snark
 
-open Polynomial
+open CompPoly.CPolynomial
 
 set_option maxHeartbeats 20000
 
@@ -92,7 +92,7 @@ structure CanonicalMemberConstraintRelation
         (instanceCommitment := instanceCommitment)
         urs hk vk ps ch batchOpenings i hi)
     (hblinding : vk.blindingFactors < vk.n)
-    (y : Fp) (hpoly : Polynomial Fp) (deg : ℕ) : Prop where
+    (y : Fp) (hpoly : CPoly) (deg : ℕ) : Prop where
   groupingCount :
     deployedX4PairCount
       (instanceCommitment := instanceCommitment)
@@ -143,7 +143,7 @@ variable
         (instanceCommitment := instanceCommitment)
         urs hk vk ps ch batchOpenings i hi}
     {hblinding : vk.blindingFactors < vk.n}
-    {y : Fp} {hpoly : Polynomial Fp} {deg : ℕ}
+    {y : Fp} {hpoly : CPoly} {deg : ℕ}
 
 /-- The canonical commitment-ID route selected by an accepting verifier run. -/
 def acceptedRoute
@@ -164,7 +164,7 @@ def acceptedRoute
 def acceptedPolynomial
     (haccepts :
       DeployedAccepts urs hk vk instanceCommitment ps ch) :
-    CommitmentId → Polynomial Fp :=
+    CommitmentId → CPoly :=
   decodedPolynomialResolver
     (instanceCommitment := instanceCommitment)
     urs hk vk ps ch memberDecode (acceptedRoute haccepts)
@@ -280,7 +280,7 @@ def polynomial
     (relation : CanonicalMemberConstraintRelation
       urs hk vk instanceCommitment ps ch pU pW a
       batchOpenings memberDecode hblinding y hpoly deg) :
-    CommitmentId → Polynomial Fp :=
+    CommitmentId → CPoly :=
   decodedPolynomialResolver
     (instanceCommitment := instanceCommitment)
     urs hk vk ps ch memberDecode relation.route

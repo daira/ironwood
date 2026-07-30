@@ -30,7 +30,7 @@ integration layers.
 
 namespace Zcash.Snark
 
-open Polynomial
+open CompPoly.CPolynomial (eval C X toPoly eval_finsetSum)
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 
@@ -39,22 +39,13 @@ variable {G : Type*} [AddCommGroup G] [Module Fp G]
 This is ordinary executable data: `Fp` supplies decidable equality and the finite sum is over the
 canonical `Fin n` enumeration.  Keeping this a plain `def` is important for reductions that return
 commitment collisions as computed coefficient vectors. -/
-def coeffsToPoly {n : ℕ} (a : Fin n → Fp) : Polynomial Fp :=
-  ComputablePolynomial.sumList
-    (List.ofFn fun i => ComputablePolynomial.mul
-      (ComputablePolynomial.const (a i))
-      (ComputablePolynomial.pow ComputablePolynomial.X (i : ℕ)))
-
-theorem coeffsToPoly_eq_sum {n : ℕ} (a : Fin n → Fp) :
-    coeffsToPoly a = ∑ i, Polynomial.C (a i) * Polynomial.X ^ (i : ℕ) := by
-  rw [coeffsToPoly, ComputablePolynomial.sumList_eq]
-  simp only [ComputablePolynomial.mul_eq, ComputablePolynomial.const_eq,
-    ComputablePolynomial.pow_eq, ComputablePolynomial.X_eq, List.sum_ofFn]
+def coeffsToPoly {n : ℕ} (a : Fin n → Fp) : CPoly :=
+  ∑ i, C (a i) * X ^ (i : ℕ)
 
 /-- Evaluating `coeffsToPoly` is the same linear form as committing to the powers evaluation vector. -/
 theorem coeffsToPoly_eval {k : ℕ} (a : Fin (2 ^ k) → Fp) (x : Fp) :
-    (coeffsToPoly a).eval x = commitGen (evalVector k x) a := by
-  rw [coeffsToPoly_eq_sum, Polynomial.eval_finsetSum]
+    eval x (coeffsToPoly a) = commitGen (evalVector k x) a := by
+  rw [coeffsToPoly, eval_finsetSum]
   simp [commitGen, evalVector, smul_eq_mul]
 
 /-- Right inverse of the Vandermonde inverse: the row functional reconstructing a sample. -/

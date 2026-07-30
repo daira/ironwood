@@ -3,7 +3,6 @@ import Zcash.Snark.Soundness.Main
 import Zcash.Snark.Soundness.Multiopen.Decode
 import Zcash.Snark.Soundness.Multiopen.Deployed
 import Zcash.Snark.Soundness.Multiopen.Compat
-import Zcash.Common.ComputablePolynomial
 
 /-!
 # Opened batch and member-decode interfaces
@@ -54,7 +53,7 @@ theorem vandermonde_decode_map {M : Type*} [AddCommMonoid M] [Module Fp M] {n : 
     (hμ : ∀ (i j : Fin n), (∑ k : Fin n, μ i k * z k ^ (j : ℕ)) = if i = j then 1 else 0)
     (hF : ∀ r, F r = ∑ j : Fin n, z r ^ (j : ℕ) • C j) (i : Fin n) :
     (∑ r : Fin n, μ i r • F r) = C i := by
-  simp only [hF, Finset.smul_sum, smul_smul]
+  simp only [hF, Finset.smul_sum, _root_.smul_smul]
   rw [Finset.sum_comm]
   simp only [← Finset.sum_smul, hμ, ite_smul, one_smul, zero_smul, Finset.sum_ite_eq,
     Finset.mem_univ, if_true]
@@ -66,7 +65,7 @@ theorem vandermonde_reconstruct_map {M : Type*} [AddCommMonoid M] [Module Fp M] 
     (hμ : ∀ (i j : Fin n), (∑ k : Fin n, z i ^ (k : ℕ) * μ k j) = if i = j then 1 else 0)
     (i : Fin n) :
     (∑ j : Fin n, z i ^ (j : ℕ) • (∑ k : Fin n, μ j k • F k)) = F i := by
-  simp only [Finset.smul_sum, smul_smul]
+  simp only [Finset.smul_sum, _root_.smul_smul]
   rw [Finset.sum_comm]
   simp only [← Finset.sum_smul, hμ, ite_smul, one_smul, zero_smul, Finset.sum_ite_eq,
     Finset.mem_univ, if_true]
@@ -166,7 +165,7 @@ noncomputable def openedColumnDecode {urs : URS G} {b : Fin (2 ^ urs.k) → Fp} 
       rw [commit_eq_commitGen, commitGen_sum, Finset.sum_smul, Finset.sum_smul,
         ← Finset.sum_add_distrib, ← Finset.sum_add_distrib]
       refine Finset.sum_congr rfl fun r _ => ?_
-      rw [commitGen_smul_left, smul_eq_mul, smul_eq_mul, mul_smul, mul_smul, smul_add, smul_add,
+      rw [commitGen_smul_left, smul_eq_mul, smul_eq_mul, SemigroupAction.mul_smul, SemigroupAction.mul_smul, smul_add, smul_add,
         commit_eq_commitGen]
     rw [hlin]
     exact vandermonde_decode_map μ hleft hbatch.commitment i
@@ -211,7 +210,7 @@ structure OpenedMemberDecode [DecidableEq G] [Inhabited G] {shape : Shape}
 
 /-! ## Layout-rotated polynomial feeds -/
 
-open Polynomial in
+open CompPoly.CPolynomial in
 /-- **The halo2-faithful gate feed for one column family.** halo2 evaluates a gate on the claimed
 evaluation `advice_evals[query_index]` of query `j = (column, rotation)`, opened at
 `rotate_omega x rot = ω^rot·x` (`plonk/verifier.rs`). Feeding the gate the decoded column composed
@@ -219,14 +218,11 @@ with its layout rotation — `col_j ∘ (ω^rot_j · X)` — makes its value at 
 `col_j (ω^rot_j·x)`. The rotation `rot_j` is read from the
 verifying key's query layout (`(column, rotation)` list), so it is not a free choice. -/
 def rotatedFeed {n : ℕ} (omega : Fp) (layout : List (ℕ × ℤ))
-    (col : Fin n → Polynomial Fp) : ℕ → Polynomial Fp :=
+    (col : Fin n → CPoly) : ℕ → CPoly :=
   fun j =>
     if hj : j < n then
-      ComputablePolynomial.comp (col ⟨j, hj⟩)
-        (ComputablePolynomial.mul
-          (ComputablePolynomial.const (omega ^ (layout.getD j (0, 0)).2))
-          ComputablePolynomial.X)
-    else ComputablePolynomial.zero
+      comp (col ⟨j, hj⟩) (C (omega ^ (layout.getD j (0, 0)).2) * X)
+    else 0
 
 end Opened
 

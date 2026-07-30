@@ -12,7 +12,7 @@ statement and no opaque encoding implication.
 
 namespace Zcash.Snark
 
-open Halo2 Polynomial
+open Halo2 CompPoly.CPolynomial
 
 /--
 The statement owned by a top-level circuit, simultaneously for every polynomial
@@ -23,7 +23,7 @@ def TopLevelBundleStatement
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams)
-    (poly : CommitmentId → Polynomial Fp) : Prop :=
+    (poly : CommitmentId → CPoly) : Prop :=
   ∀ proofIndex : Fin (pp.mergeDerived top).numProofs,
     let environment := ({
         polynomial := poly
@@ -37,7 +37,7 @@ def TopLevelBundleWitness
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams)
-    (poly : CommitmentId → Polynomial Fp) : Type :=
+    (poly : CommitmentId → CPoly) : Type :=
   ∀ proofIndex : Fin (pp.mergeDerived top).numProofs,
     let environment := ({
         polynomial := poly
@@ -66,7 +66,7 @@ theorem of_publicInputEncoding
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (inputs : Fin (pp.mergeDerived top).numProofs → PublicInput Fp)
     (hencoding : ∀ proofIndex,
       let assignment : TopLevelAssignment top
@@ -96,7 +96,7 @@ def of_publicInputEncoding
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (inputs : Fin (pp.mergeDerived top).numProofs → PublicInput Fp)
     (hencoding : ∀ proofIndex,
       let assignment : TopLevelAssignment top
@@ -121,7 +121,7 @@ theorem statement
     [ProvableType PublicInput]
     {top : TopLevelCircuit Fp Config PublicInput}
     {pp : Keygen.ProofParams}
-    {poly : CommitmentId → Polynomial Fp}
+    {poly : CommitmentId → CPoly}
     (witness : TopLevelBundleWitness top pp poly) :
     TopLevelBundleStatement top pp poly :=
   fun proofIndex => (witness proofIndex).statement
@@ -134,7 +134,7 @@ abbrev TopLevelFixedEncoding
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex : Fin (pp.mergeDerived top).numProofs) : Prop :=
   let assignment :
       TopLevelAssignment top (pp.mergeDerived top).numProofs proofIndex :=
@@ -147,7 +147,7 @@ abbrev TopLevelFixed
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex : Fin (pp.mergeDerived top).numProofs) : Prop :=
   (SelectorActivationsRealized
       top.selectorMap top.selectorActivations
@@ -166,7 +166,7 @@ abbrev TopLevelCopies
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (cell : Type) [DecidableEq cell] [Fintype cell]
     (Bad : Type)
     (proofIndex : Fin (pp.mergeDerived top).numProofs) : Type :=
@@ -183,7 +183,7 @@ abbrev TopLevelLookups
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
     (ch : Challenges (pp.mergeDerived top).k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex : Fin (pp.mergeDerived top).numProofs) : Prop :=
   TopLevelLookupCoherence.TopLevelLookupWitnessConditions
     top pp urs ch poly proofIndex
@@ -202,7 +202,7 @@ def bridgeWitness_of_components
     {top : TopLevelCircuit Fp Config PublicInput}
     {pp : Keygen.ProofParams} {urs : URS G}
     {ch : Challenges (pp.mergeDerived top).k Fp}
-    {poly : CommitmentId → Polynomial Fp}
+    {poly : CommitmentId → CPoly}
     {cell : Type} [DecidableEq cell] [Fintype cell]
     {Bad : Type}
     (proofIndex : Fin (pp.mergeDerived top).numProofs)
@@ -305,7 +305,7 @@ def TopLevelFixedEncodingOutcome
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (Bad : Type)
     (proofIndex : Fin (pp.mergeDerived top).numProofs) : Type :=
   TopLevelFixedEncoding top pp urs poly proofIndex ⊕' Bad
@@ -316,7 +316,7 @@ def TopLevelFixedOutcome
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (Bad : Type)
     (proofIndex : Fin (pp.mergeDerived top).numProofs) : Type :=
   TopLevelFixed top pp urs poly proofIndex ⊕' Bad
@@ -327,7 +327,7 @@ def TopLevelCopiesOutcome
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (cell : Type) [DecidableEq cell] [Fintype cell]
     (Bad : Type)
     (proofIndex : Fin (pp.mergeDerived top).numProofs) : Type :=
@@ -340,7 +340,7 @@ def TopLevelLookupsOutcome
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
     (ch : Challenges (pp.mergeDerived top).k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (Bad : Type)
     (proofIndex : Fin (pp.mergeDerived top).numProofs) : Type :=
   TopLevelLookups top pp urs ch poly proofIndex ⊕' Bad
@@ -374,7 +374,7 @@ def TopLevelCircuitCorrectness
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
     (ch : Challenges (pp.mergeDerived top).k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (cell : Type) [DecidableEq cell] [Fintype cell]
     (Bad : Type) : Type :=
   TopLevelCorrectnessData

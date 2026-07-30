@@ -162,7 +162,7 @@ set_option maxRecDepth 100000 in
 theorem actionResolverChunkWidth
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex :
       Fin (ActionPermutationDomain.actionShape pp).numProofs)
     (chunk :
@@ -192,7 +192,7 @@ theorem actionResolverChunkWidth
 def actionChunkFlatten
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex :
       Fin (ActionPermutationDomain.actionShape pp).numProofs) :
     ResolverPermutationCell
@@ -219,7 +219,7 @@ def actionChunkFlatten
 def actionFullSigma
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex :
       Fin (ActionPermutationDomain.actionShape pp).numProofs) :
     Equiv.Perm
@@ -238,7 +238,7 @@ and unflattening preserve the row coordinate. -/
 theorem actionFullSigma_preservesActive
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex :
       Fin (ActionPermutationDomain.actionShape pp).numProofs)
     (cell : ResolverPermutationCell
@@ -268,7 +268,7 @@ theorem actionFullSigma_preservesActive
 def actionActiveSigma
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex :
       Fin (ActionPermutationDomain.actionShape pp).numProofs) :
     Equiv.Perm
@@ -283,7 +283,7 @@ def actionActiveSigma
 theorem actionActiveSigma_widen
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex :
       Fin (ActionPermutationDomain.actionShape pp).numProofs)
     (cell : ResolverPermutationCell
@@ -303,7 +303,7 @@ theorem actionActiveSigma_widen
 def actionActiveChunkCell
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex :
       Fin (ActionPermutationDomain.actionShape pp).numProofs)
     (flat : FlatCell actionNumPermCols actionDomainSize)
@@ -323,7 +323,7 @@ def actionActiveChunkCell
 theorem actionActiveChunkCell_widen
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex :
       Fin (ActionPermutationDomain.actionShape pp).numProofs)
     (flat : FlatCell actionNumPermCols actionDomainSize)
@@ -338,7 +338,7 @@ theorem actionActiveChunkCell_widen
 theorem actionActiveChunkCell_flatten
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex :
       Fin (ActionPermutationDomain.actionShape pp).numProofs)
     (flat : FlatCell actionNumPermCols actionDomainSize)
@@ -364,7 +364,7 @@ index.
 theorem actionActiveChunkCell_columnAddress
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex :
       Fin (ActionPermutationDomain.actionShape pp).numProofs)
     (flat : FlatCell actionNumPermCols actionDomainSize)
@@ -454,7 +454,7 @@ the verifier-native `chunkRowValue` at its active resolver chunk coordinate.
 theorem actionCopyValue_eq_activeChunkRowValue
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G)
-    (poly : CommitmentId → Polynomial Fp)
+    (poly : CommitmentId → CPoly)
     (proofIndex :
       Fin (ActionPermutationDomain.actionShape pp).numProofs)
     (flat : FlatCell actionNumPermCols actionDomainSize)
@@ -552,8 +552,8 @@ theorem actionCopyPairValue_of_resolverPermutation
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G)
     (ch : Challenges (ActionPermutationDomain.actionShape pp).k Fp)
-    (poly : CommitmentId → Polynomial Fp)
-    (l0 lLast lBlind : Polynomial Fp)
+    (poly : CommitmentId → CPoly)
+    (l0 lLast lBlind : CPoly)
     (proofIndex :
       Fin (ActionPermutationDomain.actionShape pp).numProofs)
     {n : ℕ}
