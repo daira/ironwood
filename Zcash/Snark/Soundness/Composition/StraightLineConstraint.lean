@@ -61,9 +61,9 @@ def fixedRepresentationsEqualityCertificate? {k : Nat}
   letI := algebraicPointDecidableEq basis
   equalityCertificate? xs ys
 
-/-- The total pre-`x` constraint difference on a straight-line oracle table.  This is the same
-polynomial as `deployedConstraintDifferencePreX`, written without manufacturing the proof-only
-recursive tape used by the legacy containment statement. -/
+/-- The total pre-`x` constraint difference on a straight-line oracle table. This is the same
+polynomial as `deployedConstraintDifferencePreX`, evaluated directly from the represented
+execution. -/
 def straightLineConstraintDifferencePreX
     (family : ComputedStraightLineDeployedFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
@@ -376,9 +376,8 @@ theorem straightLineConstraintSuccess_eq_of_outcome
   simp [straightLineConstraintSuccess?, hout]
 
 set_option maxHeartbeats 800000 in
-/-- The legacy root-containment construction lands in the same computed success option.  This is
-the proof bridge used by the existing probability decomposition; all data in the conclusion is
-nevertheless the value returned by `straightLineConstraintOutcome?`. -/
+/-- The root-containment construction lands in the same computed success option. This bridges the
+root-event probability decomposition to the value returned by `straightLineConstraintOutcome?`. -/
 theorem straightLineConstraintDecoded_of_root
     (family : ComputedStraightLineDeployedFSFamily shape)
     (static : DeployedConstraintStaticChecks family.toRootFamily)
