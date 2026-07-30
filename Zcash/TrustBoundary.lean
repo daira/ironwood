@@ -62,6 +62,7 @@ import Zcash.Snark.Fingerprint.Rational.QueryWalk
 import Zcash.Snark.Fingerprint.Rational.QueryTable
 import Zcash.Snark.Fingerprint.Rational.IpaWalk
 import Zcash.Snark.Fingerprint.Rational.OpeningWalk
+import Zcash.Snark.Fingerprint.Rational.Capstone
 import Mathlib.Util.AssertNoSorry
 
 /-!
@@ -977,6 +978,19 @@ assert_axioms Zcash.Snark.queryEval_rep
 assert_axioms Zcash.Snark.lagrangeEval_rep
 assert_axioms Zcash.Snark.openingValue_eq
 assert_axioms Zcash.Snark.openingValue_rep
+-- The walk capstone (`Fingerprint/Rational/Capstone`): the assembled `other` coefficient
+-- stream equals one fixed positional function list on the good event, every coordinate's
+-- coefficient is represented at the `msmDegreeBudget`/`msmDenBudget` caps, and the whole
+-- family packages into the `RationalCoeffFamily` the ε theorem consumes — from
+-- `VkSymbolicFacts` plus the three walk hypotheses alone.
+assert_axioms Zcash.Snark.assembleQueries_commitment_char
+assert_axioms Zcash.Snark.ipaFold_other
+assert_axioms Zcash.Snark.assembleAt_other_map_fst
+assert_axioms Zcash.Snark.assembleAt_other_length
+assert_axioms Zcash.Snark.otherCoeffFns_rep
+assert_axioms Zcash.Snark.coordFn_rep
+assert_axioms Zcash.Snark.coordFn_agrees
+assert_axioms Zcash.Snark.assembleCoeffFamily
 -- The schedule, priced (`Composition.ScheduleBudget`): the committed carriers stay under the
 -- walk's caps, root witnesses at one table share the family's own outcome, and the schedule
 -- constructor discharges `measure_le` outright.
