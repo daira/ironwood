@@ -60,6 +60,7 @@ import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
 import Zcash.Snark.Fingerprint.Epsilon
 import Zcash.Snark.Fingerprint.Rational.QueryWalk
 import Zcash.Snark.Fingerprint.Rational.QueryTable
+import Zcash.Snark.Fingerprint.Rational.IpaWalk
 import Mathlib.Util.AssertNoSorry
 
 /-!
@@ -953,6 +954,19 @@ assert_axioms Zcash.Snark.grouped_ids_eq
 assert_axioms Zcash.Snark.grouped_points_eq
 assert_axioms Zcash.Snark.grouped_sets_eq
 assert_axioms Zcash.Snark.assembleAt_some
+-- The IPA scalar walk (`Fingerprint/Rational/IpaWalk`): the deployed grouping's members carry
+-- zero scalar blocks (hypothesis-free), so the assembled `w`/`u`/`g` scalars take their closed
+-- IPA forms, each represented — `computeB` at `2^k + k + 1`, the `computeS` entries at `1 + k`,
+-- and every `g`-coordinate given a representation of the opening value.
+assert_axioms Zcash.Snark.assembleQueries_grouped_gwuZero
+assert_axioms Zcash.Snark.assembleFinalMsm_wScalar_of_gwuZero
+assert_axioms Zcash.Snark.assembleFinalMsm_uScalar_of_gwuZero
+assert_axioms Zcash.Snark.assembleFinalMsm_gScalars_of_gwuZero
+assert_axioms Zcash.Snark.computeB_rep
+assert_axioms Zcash.Snark.computeS_getD_rep
+assert_axioms Zcash.Snark.wScalar_rep
+assert_axioms Zcash.Snark.uScalar_rep
+assert_axioms Zcash.Snark.gScalars_coord_rep
 -- The schedule, priced (`Composition.ScheduleBudget`): the committed carriers stay under the
 -- walk's caps, root witnesses at one table share the family's own outcome, and the schedule
 -- constructor discharges `measure_le` outright.
