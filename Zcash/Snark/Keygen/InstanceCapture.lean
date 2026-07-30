@@ -1,5 +1,6 @@
 import Zcash.Snark.Keygen.Certificate
 import Zcash.Snark.Keygen.Lagrange
+import Zcash.Circuits.Integration.TopLevelInstanceCommitment
 
 /-!
 # The captured instance commitments are the circuit-derived ones
