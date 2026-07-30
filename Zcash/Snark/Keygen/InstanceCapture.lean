@@ -225,9 +225,9 @@ theorem instanceCommitment_capturedActionInputs :
       commitLagrange]
     simp
 
-/-- **The capstone's family is the captured commitment points.** Composing the seam with the
-capture's own derivation (`instance_commitments_derived`, ironwood#65/#85): the commitments the
-deployed capstone quantifies over are exactly the points the deployed verifier used. -/
+/-- **The circuit model's family is the captured commitment points.** Composing the seam with the
+capture's own derivation (`instance_commitments_derived`, ironwood#65/#85): at the captured public
+inputs, the circuit-derived commitments are exactly the points the deployed verifier used. -/
 theorem instanceCommitment_eq_capturedInstanceCommitments
     (proofIndex : Fin Fixture.shape.numProofs) {column : ℕ}
     (hcolumn : column < capturedNumInstanceColumns) :

@@ -45,7 +45,11 @@ globs = ["Zcash.Meta.Tests.+"]
 # are picked up by the glob automatically.
 [[lean_lib]]
 name = "FixtureCheck"
-globs = ["Zcash.Snark.Fixtures.+"]
+globs = [
+  "Zcash.Snark.Fixtures.+",
+  "Zcash.Snark.Keygen.Certificate",
+  "Zcash.Snark.Keygen.InstanceCapture",
+]
 
 # The circuit-side VK matching and layout tests: `Zcash/Circuits/Tests/TestVk*` compare the
 # ported `configure`/`synthesize` against the CS and layout fixtures dumped from the actual
