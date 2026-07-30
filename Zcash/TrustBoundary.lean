@@ -58,6 +58,7 @@ import Zcash.Snark.Soundness.Composition.ZeroStraightLine
 import Zcash.Snark.Soundness.AGM.DirectConstraintFamily
 import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
 import Zcash.Snark.Fingerprint.Epsilon
+import Zcash.Snark.Fingerprint.Rational.QueryWalk
 import Mathlib.Util.AssertNoSorry
 
 /-!
