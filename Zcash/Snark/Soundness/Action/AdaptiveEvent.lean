@@ -159,8 +159,8 @@ def adaptiveActionPreXIdentityRelationFinder
       exact hidentity
     let hn : (family.vk basis).n ≠ 0 := by
       rw [hvk basis]
-      change 2 ^ actionCircuit.domainExponent ≠ 0
-      positivity
+      rw [actionCircuit.toVerifierKey_n]
+      exact actionCircuit.n_ne_zero
     exact match hgoodY : foldSplitAvoidance? rawModel.constraints
         (family.vk basis).n hn ch.y with
     | none => none
@@ -334,8 +334,8 @@ theorem adaptiveActionPreXIdentityRelationFinder_isSome_of
       adaptiveActionRunAccepts, ← hpolyTransport] using hlookup
   have hn : (family.vk basis).n ≠ 0 := by
     rw [hvk basis]
-    change 2 ^ actionCircuit.domainExponent ≠ 0
-    positivity
+    rw [actionCircuit.toVerifierKey_n]
+    exact actionCircuit.n_ne_zero
   have hySome := foldSplitAvoidance?_isSome_of rawModel.constraints _ hn _ hgoodYRaw
   have hpSome := resolverPermutationChallengeExclusions?_isSome_of _ _ _ _ hpermutationRaw
   have hlSome := TopLevelLookup.topLevelLookupChallengeExclusions?_isSome_of

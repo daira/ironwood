@@ -1,6 +1,5 @@
 import Zcash.Circuits.Integration.InstanceColumns
 import Zcash.Common.RelationWitness
-import Zcash.Circuits.Integration.QueryLayouts
 import Zcash.Circuits.Integration.TopLevelCorrectness
 import Mathlib.Util.AssertNoSorry
 
@@ -80,11 +79,12 @@ theorem instanceCommitment_column_eq_commit
     top.instanceCommitment pp urs inputs proofIndex column.index =
       commit urs
           (instanceCoefficients (2 ^ urs.k)
-            (top.toVerifierKey pp urs).omega
+            top.omega
             (top.publicInputRows (inputs proofIndex) column)) +
         urs.w := by
   rw [top.instanceCommitment_column,
     LagrangeCommitmentKey.commitInstance_eq, one_smul]
+  rw [top.toVerifierKey_omega]
 
 assert_no_sorry instanceCommitment_column_eq_commit
 
@@ -139,13 +139,13 @@ def acceptedColumn_eq_rowPolynomial_or_relation
     (index : Fin (size PublicInput))
     (hrows : Function.Injective
       fun i : Fin (2 ^ urs.k) =>
-        (top.toVerifierKey pp urs).omega ^ (i : ℕ)) :
+        top.omega ^ (i : ℕ)) :
     CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts
         (.instanceCol proofIndex
           (top.publicInputLayout.cells index).1.index) =
-      instanceRowPolynomial (2 ^ top.domainExponent)
-        (Zcash.Arithmetic.omegaOf top.domainExponent)
+      instanceRowPolynomial top.n
+        (top.omega)
         (top.publicInputRows (inputs proofIndex)
           (top.publicInputLayout.cells index).1) ⊕'
       NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
@@ -158,8 +158,8 @@ def acceptedColumn_eq_rowPolynomial_or_relation
     exact instanceQuery_of_layout
       (top.toVerifierKey pp urs) (top.instanceCommitment pp urs inputs) ps ch proofIndex
       column.index instanceRotation (top.toVerifierKey_instanceQueryCount pp urs)
-      (QueryLayouts.instanceQueryLayout_of_constraintSystem
-        top pp urs column instanceRotation hregistered)
+      (top.mem_instanceQueryLayout_of_mem_constraintSystem
+        column instanceRotation hregistered)
   have hbound :=
     CanonicalMemberConstraintRelation.acceptedInstanceColumn_eq_rowPolynomial_or_relation
       (pU := pU) (pW := pW) (a := a)
@@ -169,7 +169,7 @@ def acceptedColumn_eq_rowPolynomial_or_relation
       (top.instanceCommitmentKey pp urs)
       (top.publicInputRows (inputs proofIndex) column) 1
       (top.instanceCommitment_column pp urs inputs proofIndex column)
-      hrows
+      (by simpa only [top.toVerifierKey_omega] using hrows)
       hquery
   simpa only [← hk, column] using hbound
 
@@ -203,9 +203,6 @@ def publicInputEncoding_or_relation
         top pp urs hk inputs ps ch pU pW a batchOpenings
         memberDecode haccepts proofIndex index
         (by
-          change Function.Injective
-            fun i : Fin (2 ^ urs.k) =>
-              Zcash.Arithmetic.omegaOf top.domainExponent ^ (i : ℕ)
           rw [← hk]
           exact Zcash.Arithmetic.omegaOf_powers_injective
             top.domainExponent (by omega)))

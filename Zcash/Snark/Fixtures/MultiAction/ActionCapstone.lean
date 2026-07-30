@@ -59,7 +59,7 @@ noncomputable def actionNoStatementOrRelationEvent
       (actionProofParams.mergeDerived actionCircuit))
     (inputs : Fin actionProofParams.numProofs →
       PublicInputs Fp) :
-    Set ((AugmentedIndex (2 ^ actionCircuit.domainExponent) → VestaG) ×
+    Set ((AugmentedIndex actionCircuit.n → VestaG) ×
       (BTranscript Fp VestaG
         (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
           + 3 * actionCircuit.domainExponent) → Fp)) :=
@@ -74,7 +74,7 @@ def actionAcceptFalseStatementEvent
       (actionProofParams.mergeDerived actionCircuit))
     (inputs : Fin actionProofParams.numProofs →
       PublicInputs Fp) :
-    Set ((AugmentedIndex (2 ^ actionCircuit.domainExponent) → VestaG) ×
+    Set ((AugmentedIndex actionCircuit.n → VestaG) ×
       (BTranscript Fp VestaG
         (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
           + 3 * actionCircuit.domainExponent) → Fp)) :=
@@ -88,7 +88,7 @@ noncomputable def actionNoStatementOrRelationEventFor (numProofs : ℕ)
     (inputs : Fin (actionProofParamsFor numProofs).numProofs →
       PublicInputs Fp) :
     Set ((AugmentedIndex
-      (2 ^ actionCircuit.domainExponent) → VestaG) ×
+      actionCircuit.n → VestaG) ×
       (BTranscript Fp VestaG
         (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
           family.init.length 10 +
@@ -103,7 +103,7 @@ def actionAcceptFalseStatementEventFor (numProofs : ℕ)
     (inputs : Fin (actionProofParamsFor numProofs).numProofs →
       PublicInputs Fp) :
     Set ((AugmentedIndex
-      (2 ^ actionCircuit.domainExponent) → VestaG) ×
+      actionCircuit.n → VestaG) ×
       (BTranscript Fp VestaG
         (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
           family.init.length 10 +
@@ -269,7 +269,7 @@ noncomputable def schedule_of_derived
       (ursOfAugmentedBasis actionCircuit.domainExponent basis)) :
     DeployedConstraintXSqueezeSchedule family.toRootFamily
       ((20470 : ℕ) / (Fintype.card Fp : ℝ≥0∞)) := by
-  have hk : 2 ^ actionCircuit.domainExponent - 1 = 2047 := by
+  have hk : actionCircuit.n - 1 = 2047 := by
     rw [md_counts.1]
     norm_num [shape]
   have h := deployedConstraintXSqueezeSchedule_of_pinned family.toRootFamily
@@ -348,7 +348,7 @@ noncomputable def schedule_of_derived_for (numProofs : ℕ)
           actionCircuit.domainExponent basis)) :
     DeployedConstraintXSqueezeSchedule family.toRootFamily
       ((20470 : ℕ) / (Fintype.card Fp : ℝ≥0∞)) := by
-  have hk : 2 ^ actionCircuit.domainExponent - 1 =
+  have hk : actionCircuit.n - 1 =
       2047 := by
     rw [(md_counts_for numProofs).1]
     norm_num [shape]
@@ -392,7 +392,7 @@ concretely. -/
 theorem orchard_action_noStatementOrRelation_prob_le_captured
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
-    (query : AugmentedIndex (2 ^ actionCircuit.domainExponent) → T)
+    (query : AugmentedIndex actionCircuit.n → T)
     (hquery : Function.Injective query)
     (family : ComputedStraightLineDeployedFSFamily
       (actionProofParams.mergeDerived actionCircuit))
@@ -557,7 +557,7 @@ theorem resolverPermutationCell_card_eq
 /-- The θ budget is linear in the number of Actions. -/
 private theorem cap_theta_for (numProofs : ℕ) :
     ∀ (basis : AugmentedIndex
-        (2 ^ actionCircuit.domainExponent) → VestaG)
+        actionCircuit.n → VestaG)
       (poly : CommitmentId → Polynomial Fp),
       TopLevelLookup.thetaBudget actionCircuit
         (actionProofParamsFor numProofs)
@@ -600,7 +600,7 @@ private theorem cap_theta_for (numProofs : ℕ) :
 lookup arguments. -/
 private theorem cap_beta_for (numProofs : ℕ) :
     ∀ (basis : AugmentedIndex
-        (2 ^ actionCircuit.domainExponent) → VestaG)
+        actionCircuit.n → VestaG)
       (poly : CommitmentId → Polynomial Fp),
       (∑ p : Fin (actionProofParamsFor numProofs).numProofs,
         (Fintype.card (ResolverPermutationCell
@@ -663,7 +663,7 @@ private theorem cap_beta_for (numProofs : ℕ) :
 /-- The tight γ budget is `73554` per Action. -/
 private theorem cap_gamma_for (numProofs : ℕ) :
     ∀ (basis : AugmentedIndex
-        (2 ^ actionCircuit.domainExponent) → VestaG)
+        actionCircuit.n → VestaG)
       (poly : CommitmentId → Polynomial Fp),
       (∑ p : Fin (actionProofParamsFor numProofs).numProofs,
         2 * Fintype.card (ResolverPermutationCell
@@ -713,7 +713,7 @@ private theorem cap_gamma_for (numProofs : ℕ) :
       omega
 
 private theorem cap_theta :
-    ∀ (basis : AugmentedIndex (2 ^ actionCircuit.domainExponent) → VestaG)
+    ∀ (basis : AugmentedIndex actionCircuit.n → VestaG)
       (poly : CommitmentId → Polynomial Fp),
       TopLevelLookup.thetaBudget actionCircuit actionProofParams
         (ursOfAugmentedBasis actionCircuit.domainExponent basis) poly ≤
@@ -751,7 +751,7 @@ private theorem cap_theta :
           one_mul, Nat.cast_id] using hscaled
 
 private theorem cap_beta :
-    ∀ (basis : AugmentedIndex (2 ^ actionCircuit.domainExponent) → VestaG)
+    ∀ (basis : AugmentedIndex actionCircuit.n → VestaG)
       (poly : CommitmentId → Polynomial Fp),
       (∑ p : Fin actionProofParams.numProofs,
         (Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
@@ -808,7 +808,7 @@ private theorem cap_beta :
       norm_num [shape]
 
 private theorem cap_gamma :
-    ∀ (basis : AugmentedIndex (2 ^ actionCircuit.domainExponent) → VestaG)
+    ∀ (basis : AugmentedIndex actionCircuit.n → VestaG)
       (poly : CommitmentId → Polynomial Fp),
       (∑ p : Fin actionProofParams.numProofs,
         2 * Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
@@ -853,7 +853,7 @@ private theorem cap_gamma :
       norm_num [shape]
 
 private theorem derived_n_ne_zero :
-    ∀ basis : AugmentedIndex (2 ^ actionCircuit.domainExponent) → VestaG,
+    ∀ basis : AugmentedIndex actionCircuit.n → VestaG,
       (vkAt actionProofParams basis).n ≠ 0 := by
   intro basis
   let urs := ursOfAugmentedBasis
@@ -864,7 +864,7 @@ private theorem derived_n_ne_zero :
   norm_num
 
 private theorem derived_n_yn {L : ℕ} (hL : L ≤ 2 ^ 12) :
-    ∀ basis : AugmentedIndex (2 ^ actionCircuit.domainExponent) → VestaG,
+    ∀ basis : AugmentedIndex actionCircuit.n → VestaG,
       (vkAt actionProofParams basis).n * L ≤ 2 ^ 23 := by
   intro basis
   let urs := ursOfAugmentedBasis
@@ -879,7 +879,7 @@ private theorem derived_n_yn {L : ℕ} (hL : L ≤ 2 ^ 12) :
 
 private theorem derived_n_ne_zero_for (numProofs : ℕ) :
     ∀ basis : AugmentedIndex
-        (2 ^ actionCircuit.domainExponent) → VestaG,
+        actionCircuit.n → VestaG,
       (vkAt (actionProofParamsFor numProofs) basis).n ≠ 0 := by
   intro basis
   let pp := actionProofParamsFor numProofs
@@ -893,7 +893,7 @@ private theorem derived_n_ne_zero_for (numProofs : ℕ) :
 private theorem derived_n_yn_for (numProofs : ℕ) {L : ℕ}
     (hL : L ≤ numProofs * 2 ^ 12) :
     ∀ basis : AugmentedIndex
-        (2 ^ actionCircuit.domainExponent) → VestaG,
+        actionCircuit.n → VestaG,
       (vkAt (actionProofParamsFor numProofs) basis).n * L ≤
         numProofs * 2 ^ 23 := by
   intro basis
@@ -914,7 +914,7 @@ private theorem derived_n_yn_for (numProofs : ℕ) {L : ℕ}
 /-- The adaptive Action model has the same captured, shape-determined constraint count for every
 prover polynomial assignment. -/
 theorem adaptive_action_constraint_count_le
-    (basis : AugmentedIndex (2 ^ actionCircuit.domainExponent) → VestaG)
+    (basis : AugmentedIndex actionCircuit.n → VestaG)
     (inputs : Fin actionProofParams.numProofs → PublicInputs Fp)
     (ps : ProofString (actionProofParams.mergeDerived actionCircuit) Fp VestaG)
     (source : List (AlgebraicPoint (F := Fp) basis))
@@ -957,7 +957,7 @@ private theorem action_length_flatten_ofFn_le {α : Type*} {n : ℕ}
 
 theorem adaptive_action_constraint_count_le_for (numProofs : ℕ)
     (basis : AugmentedIndex
-      (2 ^ actionCircuit.domainExponent) → VestaG)
+      actionCircuit.n → VestaG)
     (inputs : Fin (actionProofParamsFor numProofs).numProofs →
       PublicInputs Fp)
     (ps : ProofString ((actionProofParamsFor numProofs).mergeDerived actionCircuit) Fp VestaG)
@@ -996,7 +996,7 @@ theorem adaptive_action_constraint_count_le_for (numProofs : ℕ)
 captured basis size, so the existing captured degree walk applies without a trace premise. -/
 private theorem adaptive_action_x_degree_le_for (numProofs : ℕ)
     (basis : AugmentedIndex
-      (2 ^ actionCircuit.domainExponent) → VestaG)
+      actionCircuit.n → VestaG)
     (inputs : Fin (actionProofParamsFor numProofs).numProofs →
       PublicInputs Fp)
     (ps : ProofString ((actionProofParamsFor numProofs).mergeDerived actionCircuit) Fp VestaG)
@@ -1010,14 +1010,14 @@ private theorem adaptive_action_x_degree_le_for (numProofs : ℕ)
       actionCircuit.domainExponent basis) inputs
   let poly := adaptiveActionCommitmentPolynomial
     (actionProofParamsFor numProofs) basis inputs ps source ch
-  have hk : 2 ^ actionCircuit.domainExponent - 1 = 2047 := by
+  have hk : actionCircuit.n - 1 = 2047 := by
     rw [(md_counts_for numProofs).1]
     norm_num [shape]
   have hpoint : ∀ g, (onlinePointPolynomial source g).natDegree ≤ 2047 := by
     intro g
     unfold onlinePointPolynomial
     have h := coeffsToPoly_natDegree_lt
-      (n := 2 ^ actionCircuit.domainExponent) (by positivity)
+      (n := actionCircuit.n) (by positivity)
       (onlinePointCoordinates source g).1
     omega
   have hpoly : ∀ id, (poly id).natDegree ≤ 2047 := by
@@ -1554,7 +1554,7 @@ views' well-formedness (`xdeg` at `20470`, `ylen` at `L`). -/
 theorem orchard_action_noStatementOrRelation_prob_le_sequential
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
-    (query : AugmentedIndex (2 ^ actionCircuit.domainExponent) → T)
+    (query : AugmentedIndex actionCircuit.n → T)
     (hquery : Function.Injective query)
     (family : ComputedStraightLineDeployedFSFamily
       (actionProofParams.mergeDerived actionCircuit))
@@ -1619,7 +1619,7 @@ and Action-terminal relation branches once. -/
 theorem orchard_action_acceptFalseStatement_prob_le_captured
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
-    (query : AugmentedIndex (2 ^ actionCircuit.domainExponent) → T)
+    (query : AugmentedIndex actionCircuit.n → T)
     (hquery : Function.Injective query)
     (family : ComputedStraightLineDeployedFSFamily
       (actionProofParams.mergeDerived actionCircuit))
@@ -1708,7 +1708,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured_for
     (numProofs : ℕ) {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex
-      (2 ^ actionCircuit.domainExponent) → T)
+      actionCircuit.n → T)
     (hquery : Function.Injective query)
     (family : ComputedStraightLineDeployedFSFamily
       ((actionProofParamsFor numProofs).mergeDerived actionCircuit))
@@ -1815,7 +1815,7 @@ semantic surfaces are discharged from the captured key below.
 theorem orchard_action_acceptFalseStatement_prob_le_adaptive
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
-    (query : AugmentedIndex (2 ^ actionCircuit.domainExponent) → T)
+    (query : AugmentedIndex actionCircuit.n → T)
     (hquery : Function.Injective query)
     (family : ComputedAdaptiveOnlineAGMFSFamily
       (actionProofParams.mergeDerived actionCircuit))
@@ -1857,7 +1857,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive
       Fintype.card Fp
   have hsurface : ∀
       (basis : AugmentedIndex
-        (2 ^ actionCircuit.domainExponent) → VestaG)
+        actionCircuit.n → VestaG)
       (n : Fin 5)
       (ps : ProofString (actionProofParams.mergeDerived actionCircuit) Fp VestaG)
       (_hwf : PsWellFormed ps)
@@ -1931,7 +1931,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive_for
     (numProofs : ℕ) {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex
-      (2 ^ actionCircuit.domainExponent) → T)
+      actionCircuit.n → T)
     (hquery : Function.Injective query)
     (family : ComputedAdaptiveOnlineAGMFSFamily
       ((actionProofParamsFor numProofs).mergeDerived actionCircuit))
@@ -1986,7 +1986,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive_for
         numProofs * 2 ^ 23, 20470] i : ℕ) : ENNReal) / Fintype.card Fp
   have hsurface : ∀
       (basis : AugmentedIndex
-        (2 ^ actionCircuit.domainExponent) → VestaG)
+        actionCircuit.n → VestaG)
       (i : Fin 5)
       (ps : ProofString
         ((actionProofParamsFor numProofs).mergeDerived actionCircuit) Fp VestaG)
@@ -2064,7 +2064,7 @@ while the direct-coordinate decoder fits `2^123`.  The statistical remainder rem
 theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generatorRO
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
-    (query : AugmentedIndex (2 ^ actionCircuit.domainExponent) → T)
+    (query : AugmentedIndex actionCircuit.n → T)
     (hquery : Function.Injective query)
     (family : ComputedAdaptiveOnlineAGMFSFamily
       (actionProofParams.mergeDerived actionCircuit))
@@ -2137,7 +2137,7 @@ theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generato
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex
-      (2 ^ actionCircuit.domainExponent) → T)
+      actionCircuit.n → T)
     (hquery : Function.Injective query)
     (family : ComputedAdaptiveOnlineAGMFSFamily
       ((actionProofParamsFor numProofs).mergeDerived actionCircuit))
@@ -2261,7 +2261,7 @@ from `prover` and `execution`. -/
 theorem orchard_action_acceptFalseStatement_prob_le_sequential
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
-    (query : AugmentedIndex (2 ^ actionCircuit.domainExponent) → T)
+    (query : AugmentedIndex actionCircuit.n → T)
     (hquery : Function.Injective query)
     (prover : SequentialOnlineAGMProver
       (actionProofParams.mergeDerived actionCircuit))
@@ -2333,7 +2333,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_sequential_for
     (numProofs : ℕ) {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex
-      (2 ^ actionCircuit.domainExponent) → T)
+      actionCircuit.n → T)
     (hquery : Function.Injective query)
     (prover : SequentialOnlineAGMProver
       ((actionProofParamsFor numProofs).mergeDerived actionCircuit))
@@ -2411,7 +2411,7 @@ solver, and the compressed plus semantic statistical remainder is composed into 
 theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
-    (query : AugmentedIndex (2 ^ actionCircuit.domainExponent) → T)
+    (query : AugmentedIndex actionCircuit.n → T)
     (hquery : Function.Injective query)
     (prover : SequentialOnlineAGMProver
       (actionProofParams.mergeDerived actionCircuit))
@@ -2503,7 +2503,7 @@ theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO_for
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex
-      (2 ^ actionCircuit.domainExponent) → T)
+      actionCircuit.n → T)
     (hquery : Function.Injective query)
     (prover : SequentialOnlineAGMProver
       ((actionProofParamsFor numProofs).mergeDerived actionCircuit))

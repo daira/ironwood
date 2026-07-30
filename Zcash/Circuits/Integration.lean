@@ -26,7 +26,6 @@ import Zcash.Circuits.Integration.PermutationColumns
 import Zcash.Circuits.Integration.PermutationCompiler
 import Zcash.Circuits.Integration.PermutationReplay
 import Zcash.Circuits.Integration.PolynomialEnvironment
-import Zcash.Circuits.Integration.QueryLayouts
 import Zcash.Circuits.Integration.ResolverGates
 import Zcash.Circuits.Integration.ResolverQueryEnvironment
 import Zcash.Circuits.Integration.SelectorCoherence

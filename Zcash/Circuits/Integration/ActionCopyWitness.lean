@@ -28,7 +28,7 @@ def actionPermCols : List ColRef :=
 def actionNumPermCols : ℕ := actionPermCols.length
 
 /-- The evaluation-domain size at the derived exponent. -/
-def actionDomainSize : ℕ := 2 ^ actionCircuit.domainExponent
+def actionDomainSize : ℕ := actionCircuit.n
 
 /-- The V1 constants allocation of the Action operation stream. -/
 def actionConsts : List (ℕ × ℕ × ℕ) :=
@@ -129,16 +129,16 @@ set_option maxRecDepth 100000 in
 theorem actionNumPermutationSets_eq
     : actionCircuit.permutationSetCount = 3 := by
   change
-    (actionCircuit.constraintSystem.permutationColumns.length +
-        actionCircuit.constraintSystem.chunkLen - 1) /
-      actionCircuit.constraintSystem.chunkLen = 3
+    (actionCircuit.permutationColumnCount +
+        actionCircuit.chunkLen - 1) /
+      actionCircuit.chunkLen = 3
   have hdata := ActionPermutationDomain.columnCount_chunkLen_eq
   have hcolumns :
-      actionCircuit.constraintSystem.permutationColumns.length =
+      actionCircuit.permutationColumnCount =
         15 :=
     congrArg Prod.fst hdata
   have hchunkLen :
-      actionCircuit.constraintSystem.chunkLen = 7 :=
+      actionCircuit.chunkLen = 7 :=
     congrArg Prod.snd hdata
   rw [hcolumns, hchunkLen]
 
@@ -152,7 +152,7 @@ theorem actionChunkLen_eq
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G) :
     (ActionPermutationDomain.actionVk pp urs).chunkLen = 7 := by
-  change actionCircuit.constraintSystem.chunkLen = 7
+  rw [actionCircuit.toVerifierKey_chunkLen]
   exact congrArg Prod.snd
     ActionPermutationDomain.columnCount_chunkLen_eq
 

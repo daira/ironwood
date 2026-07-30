@@ -66,17 +66,16 @@ theorem of_publicInputEncoding
 end TopLevelBundleStatement
 
 abbrev TopLevelFixedEncoding
-    {G : Type} [AddCommGroup G] [Inhabited G]
     {Config : Type} {PublicInput : TypeMap}
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
-    (pp : Keygen.ProofParams) (urs : URS G)
+    (pp : Keygen.ProofParams)
     (poly : CommitmentId → Polynomial Fp)
     (proofIndex : Fin pp.numProofs) : Prop :=
   let assignment :
       TopLevelAssignment top pp.numProofs proofIndex :=
     { polynomial := poly }
-  assignment.FixedColumnEncoding pp urs
+  assignment.FixedColumnEncoding
 
 abbrev TopLevelFixed
     {G : Type} [AddCommGroup G] [Inhabited G]
@@ -147,14 +146,14 @@ def bridgeWitness_of_components
     (satisfaction :
       ConstraintSatisfaction
         (top.constraintModel pp urs ch poly)
-        (top.toVerifierKey pp urs).n)
+        top.n)
     (gates : TopLevelGateCoherence top)
     (fixedEncoding :
       let assignment :
           TopLevelAssignment top
             pp.numProofs proofIndex :=
         { polynomial := poly }
-      assignment.FixedColumnEncoding pp urs)
+      assignment.FixedColumnEncoding)
     (selectorActivations :
       SelectorActivationsRealized
         top.selectorMap top.selectorActivations
@@ -193,12 +192,12 @@ def bridgeWitness_of_components
       (top := top) gates.domainExponent_lt
   have hrowsVk :
       Function.Injective
-        (fun row : Fin (top.toVerifierKey pp urs).n =>
-          (top.toVerifierKey pp urs).omega ^ (row : ℕ)) := by
+        (fun row : Fin top.n =>
+          top.omega ^ (row : ℕ)) := by
     simpa only [top.toVerifierKey_n, top.toVerifierKey_omega] using hrows
   have hrootVk :
-      (top.toVerifierKey pp urs).omega ^
-        (top.toVerifierKey pp urs).n = 1 := by
+      top.omega ^
+        top.n = 1 := by
     simpa only [top.toVerifierKey_n, top.toVerifierKey_omega] using hroot
   let bridge :=
     FullCircuitBridge.ofTopLevelCanonical
@@ -259,7 +258,7 @@ structure TopLevelCircuitCorrectness
     (Bad : Type) : Type where
   gates : TopLevelGateCoherence top
   fixedEncoding : ∀ proofIndex,
-    TopLevelFixedEncoding top pp urs poly proofIndex ⊕' Bad
+    TopLevelFixedEncoding top pp poly proofIndex ⊕' Bad
   fixed : ∀ proofIndex,
     TopLevelFixed top pp urs poly proofIndex ⊕' Bad
   copies : ∀ proofIndex,

@@ -27,7 +27,7 @@ change the selector allocation bound.
 theorem gateData_eq :
     actionCircuit.constraintSystem.gates =
         (Action.Circuit.configure Specs.Sinsemilla.orchardGenerators {}).2.gates ∧
-      actionCircuit.constraintSystem.numSelectors =
+      actionCircuit.selectorCount =
         (Action.Circuit.configure
           Specs.Sinsemilla.orchardGenerators {}).2.numSelectors := by
   native_decide

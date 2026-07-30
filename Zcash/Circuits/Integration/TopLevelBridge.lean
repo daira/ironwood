@@ -50,13 +50,13 @@ def ofTopLevelCanonical
     (satisfaction :
       ConstraintSatisfaction
         (top.constraintModel pp urs ch poly)
-        (top.toVerifierKey pp urs).n)
+        top.n)
     (hrows : Function.Injective
-      fun row : Fin (top.toVerifierKey pp urs).n =>
-        (top.toVerifierKey pp urs).omega ^ (row : ℕ))
+      fun row : Fin top.n =>
+        top.omega ^ (row : ℕ))
     (hroot :
-      (top.toVerifierKey pp urs).omega ^
-        (top.toVerifierKey pp urs).n = 1)
+      top.omega ^
+        top.n = 1)
     (selectorActivations :
       SelectorActivationsRealized top.selectorMap
         top.selectorActivations

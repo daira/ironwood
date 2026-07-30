@@ -63,7 +63,7 @@ def actionCopyReplayWitness_or_relation
         (foldSplitWitness relation.model.constraints
           (actionVk pp urs).n j))
     (fixedCoherence :
-      TopLevelFixedCoherence actionCircuit pp urs)
+      TopLevelFixedCoherence actionCircuit urs)
     (exclusions : ResolverPermutationChallengeExclusions
       (actionVk pp urs) ch relation.polynomial actionActiveRows)
     (proofIndex : Fin pp.numProofs) :
@@ -76,8 +76,8 @@ def actionCopyReplayWitness_or_relation
         (NontrivialRelation (F := Fp) urs.g urs.u urs.w) ⊕'
       NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   have hn : (actionVk pp urs).n ≠ 0 := by
-    change 2 ^ actionCircuit.domainExponent ≠ 0
-    positivity
+    rw [actionCircuit.toVerifierKey_n]
+    exact actionCircuit.n_ne_zero
   have hsatisfaction :=
     relation.constraintSatisfaction hn hgoodY
   have hdomain : ResolverPermutationDomain
@@ -104,7 +104,7 @@ def actionCopyReplayWitness_or_relation
     have hdomainSize :
         (actionVk pp urs).n = 2 ^ urs.k := by
       change
-        2 ^ actionCircuit.domainExponent = 2 ^ urs.k
+        actionCircuit.n = 2 ^ urs.k
       exact congrArg (2 ^ ·) hk
     have hfixedRead : ∀ {column row value : ℕ},
         (column, row, value) ∈

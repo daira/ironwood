@@ -57,7 +57,7 @@ theorem constraintModel_eq_constraintModelOfResolver
     (poly : CommitmentId → Polynomial Fp) :
     let selectors :=
       canonicalLagrangePolynomials
-        (top.toVerifierKey pp urs).omega
+        top.omega
         (top.toVerifierKey_blindingFactors_lt_n pp urs)
     top.constraintModel pp urs ch poly =
       constraintModelOfResolver
@@ -79,7 +79,7 @@ theorem constraintModel_eq_constraintModelOfResolver
     (poly : CommitmentId → Polynomial Fp) :
     (top.constraintModel pp urs ch poly).l0 =
       (canonicalLagrangePolynomials
-        (top.toVerifierKey pp urs).omega
+        top.omega
         (top.toVerifierKey_blindingFactors_lt_n pp urs)).1 := by
   rfl
 
@@ -91,7 +91,7 @@ theorem constraintModel_eq_constraintModelOfResolver
     (poly : CommitmentId → Polynomial Fp) :
     (top.constraintModel pp urs ch poly).lLast =
       (canonicalLagrangePolynomials
-        (top.toVerifierKey pp urs).omega
+        top.omega
         (top.toVerifierKey_blindingFactors_lt_n pp urs)).2.1 := by
   rfl
 
@@ -103,7 +103,7 @@ theorem constraintModel_eq_constraintModelOfResolver
     (poly : CommitmentId → Polynomial Fp) :
     (top.constraintModel pp urs ch poly).lBlind =
       (canonicalLagrangePolynomials
-        (top.toVerifierKey pp urs).omega
+        top.omega
         (top.toVerifierKey_blindingFactors_lt_n pp urs)).2.2 := by
   rfl
 
@@ -112,32 +112,42 @@ domain laws. -/
 theorem resolverLookupDomain
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
-    (ch : Challenges top.domainExponent Fp)
-    (poly : CommitmentId → Polynomial Fp)
     (husable :
-      (top.toVerifierKey pp urs).blindingFactors + 1 <
-        (top.toVerifierKey pp urs).n)
+      top.blindingFactors + 1 <
+        top.n)
     (hrows : Function.Injective
-      fun row : Fin (top.toVerifierKey pp urs).n =>
-        (top.toVerifierKey pp urs).omega ^ (row : ℕ))
+      fun row : Fin top.n =>
+        top.omega ^ (row : ℕ))
     (hroot :
-      (top.toVerifierKey pp urs).omega ^
-        (top.toVerifierKey pp urs).n = 1) :
+      top.omega ^
+        top.n = 1) :
     ResolverLookupDomain
       (top.toVerifierKey pp urs)
-      (top.constraintModel pp urs ch poly).l0
-      (top.constraintModel pp urs ch poly).lLast
-      (top.constraintModel pp urs ch poly).lBlind
-      (top.toVerifierKey pp urs).n
-      ((top.toVerifierKey pp urs).n -
-        (top.toVerifierKey pp urs).blindingFactors - 2) := by
+      (canonicalLagrangePolynomials
+        top.omega
+        (top.toVerifierKey_blindingFactors_lt_n pp urs)).1
+      (canonicalLagrangePolynomials
+        top.omega
+        (top.toVerifierKey_blindingFactors_lt_n pp urs)).2.1
+      (canonicalLagrangePolynomials
+        top.omega
+        (top.toVerifierKey_blindingFactors_lt_n pp urs)).2.2
+      top.n
+      (top.n -
+        top.blindingFactors - 2) := by
   have hdomain :=
-    ResolverLookupDomain.ofCanonicalConstraintModel
+    ResolverLookupDomain.ofCanonicalPolynomials
       (top.toVerifierKey pp urs)
       (by
-        simpa only [Keygen.ProofParams.mergeDerived_k] using ch)
-      poly husable hrows hroot
-  simpa only [constraintModel, VerifyingKey.constraintModel,
-    constraintModelOfResolver] using hdomain
+        simpa only [top.toVerifierKey_blindingFactors,
+          top.toVerifierKey_n] using husable)
+      (by
+        simpa only [top.toVerifierKey_n,
+          top.toVerifierKey_omega] using hrows)
+      (by
+        simpa only [top.toVerifierKey_n,
+          top.toVerifierKey_omega] using hroot)
+  simpa only [top.toVerifierKey_blindingFactors,
+    top.toVerifierKey_n, top.toVerifierKey_omega] using hdomain
 
 end Halo2.TopLevelCircuit

@@ -47,8 +47,7 @@ theorem permutationChunks_eq (pp : Keygen.ProofParams) (urs : URS G) :
           (.fixed 8, 13)],
         [(.fixed 9, 14)]] := by
   change
-    Keygen.permutationChunksOf actionCircuit.selectorMap
-        actionCircuit.constraintSystem = _
+    actionCircuit.verifierCS.permutationChunks = _
   exact chunks_eq
 
 set_option maxRecDepth 100000 in
@@ -58,14 +57,14 @@ theorem chunkCount (pp : Keygen.ProofParams) (urs : URS G) :
       actionCircuit.permutationSetCount := by
   rw [permutationChunks_eq]
   change 3 =
-    (actionCircuit.constraintSystem.permutationColumns.length +
-      actionCircuit.constraintSystem.chunkLen - 1) /
-      actionCircuit.constraintSystem.chunkLen
+    (actionCircuit.permutationColumnCount +
+      actionCircuit.chunkLen - 1) /
+      actionCircuit.chunkLen
   have hcolumns :
-      actionCircuit.constraintSystem.permutationColumns.length = 15 :=
+      actionCircuit.permutationColumnCount = 15 :=
     congrArg Prod.fst columnCount_chunkLen_eq
   have hchunkLen :
-      actionCircuit.constraintSystem.chunkLen = 7 :=
+      actionCircuit.chunkLen = 7 :=
     congrArg Prod.snd columnCount_chunkLen_eq
   rw [hcolumns, hchunkLen]
 
@@ -74,14 +73,14 @@ set_option maxRecDepth 100000 in
 theorem nonempty :
     0 < actionCircuit.permutationSetCount := by
   change 0 <
-    (actionCircuit.constraintSystem.permutationColumns.length +
-      actionCircuit.constraintSystem.chunkLen - 1) /
-      actionCircuit.constraintSystem.chunkLen
+    (actionCircuit.permutationColumnCount +
+      actionCircuit.chunkLen - 1) /
+      actionCircuit.chunkLen
   have hcolumns :
-      actionCircuit.constraintSystem.permutationColumns.length = 15 :=
+      actionCircuit.permutationColumnCount = 15 :=
     congrArg Prod.fst columnCount_chunkLen_eq
   have hchunkLen :
-      actionCircuit.constraintSystem.chunkLen = 7 :=
+      actionCircuit.chunkLen = 7 :=
     congrArg Prod.snd columnCount_chunkLen_eq
   rw [hcolumns, hchunkLen]
   decide
@@ -108,13 +107,14 @@ theorem chunkLength_le (pp : Keygen.ProofParams) (urs : URS G) :
           (.advice 9, 10), (.fixed 0, 11), (.fixed 7, 12),
           (.fixed 8, 13)],
         [(.fixed 9, 14)]].getD i []).length ≤
-      actionCircuit.constraintSystem.chunkLen
+      actionCircuit.chunkLen
   have hdata := columnCount_chunkLen_eq
   have hsets : actionCircuit.permutationSetCount = 3 := by
-    simpa using (chunkCount pp urs).symm.trans (by simp [permutationChunks_eq])
+    rw [← chunkCount pp urs, permutationChunks_eq]
+    decide
   rw [hsets] at hi
   have hlen :
-      actionCircuit.constraintSystem.chunkLen = 7 :=
+      actionCircuit.chunkLen = 7 :=
     congrArg Prod.snd hdata
   rw [hlen]
   interval_cases i <;> decide
@@ -139,19 +139,16 @@ theorem routingCoherent_of_derived
     PermutationChunkRoutingCoherent (actionVk pp urs) := by
   have hadviceLayout :
       (actionVk pp urs).adviceQueryLayout =
-        actionCircuit.pinnedCS.adviceQueryLayout :=
-    (actionCircuit.toVerifierKey_adviceQueryLayout_derived
-      pp urs).trans adviceQueryLayout_eq
+        actionCircuit.adviceQueryLayout :=
+    actionCircuit.toVerifierKey_adviceQueryLayout pp urs
   have hfixedLayout :
       (actionVk pp urs).fixedQueryLayout =
-        actionCircuit.pinnedCS.fixedQueryLayout :=
-    (actionCircuit.toVerifierKey_fixedQueryLayout_derived
-      pp urs).trans fixedQueryLayout_eq
+        actionCircuit.fixedQueryLayout :=
+    actionCircuit.toVerifierKey_fixedQueryLayout pp urs
   have hinstanceLayout :
       (actionVk pp urs).instanceQueryLayout =
-        actionCircuit.pinnedCS.instanceQueryLayout :=
-    (actionCircuit.toVerifierKey_instanceQueryLayout_derived
-      pp urs).trans instanceQueryLayout_eq
+        actionCircuit.instanceQueryLayout :=
+    actionCircuit.toVerifierKey_instanceQueryLayout pp urs
   rintro chunk hchunk ⟨ref, common⟩ href
   have hroute := routingCoherent chunk hchunk (ref, common) href
   rcases hroute with ⟨hrefCoherent, hcommon⟩
@@ -279,16 +276,17 @@ theorem deltaFp_actionCosets
 theorem rowsInjective (pp : Keygen.ProofParams) (urs : URS G) :
     Function.Injective fun i : Fin (actionVk pp urs).n =>
       (actionVk pp urs).omega ^ (i : ℕ) := by
-  change Function.Injective fun i :
-      Fin (2 ^ actionCircuit.domainExponent) =>
-    omegaOf actionCircuit.domainExponent ^ (i : ℕ)
-  exact TopLevelAssignment.domainRowsInjective domainExponent_lt
+  simpa only [actionCircuit.toVerifierKey_n,
+    actionCircuit.toVerifierKey_omega] using
+    TopLevelAssignment.domainRowsInjective
+      (top := actionCircuit) domainExponent_lt
 
 theorem root (pp : Keygen.ProofParams) (urs : URS G) :
     (actionVk pp urs).omega ^ (actionVk pp urs).n = 1 := by
-  change omegaOf actionCircuit.domainExponent ^
-    (2 ^ actionCircuit.domainExponent) = 1
-  exact TopLevelAssignment.domainRoot domainExponent_lt
+  simpa only [actionCircuit.toVerifierKey_n,
+    actionCircuit.toVerifierKey_omega] using
+    TopLevelAssignment.domainRoot
+      (top := actionCircuit) domainExponent_lt
 
 /-- The active permutation prefix ends at the last usable Action row. -/
 abbrev activeRows (pp : Keygen.ProofParams) (urs : URS G) : ℕ :=
@@ -374,25 +372,20 @@ theorem namesInjective
         rowsInjective pp urs heq
       exact Fin.ext_iff.mp hfin
     · intro j j' t hcoset
-      change
-        deltaFp ^ (j : ℕ) =
-          omegaOf actionCircuit.domainExponent ^ t *
-            deltaFp ^ (j' : ℕ) at hcoset
-      rw [domainExponent_eq] at hcoset
+      simp only [actionVk, actionCircuit.toVerifierKey_omega,
+        actionCircuit.toVerifierKey_delta, TopLevelCircuit.omega,
+        domainExponent_eq] at hcoset
       have hsize :
           actionCircuit.permutationSetCount *
               (actionVk pp urs).chunkLen = 21 := by
-        change
-          ((actionCircuit.constraintSystem.permutationColumns.length +
-              actionCircuit.constraintSystem.chunkLen - 1) /
-              actionCircuit.constraintSystem.chunkLen) *
-            actionCircuit.constraintSystem.chunkLen = 21
         have hcolumns :
-            actionCircuit.constraintSystem.permutationColumns.length = 15 :=
+            actionCircuit.permutationColumnCount = 15 :=
           congrArg Prod.fst columnCount_chunkLen_eq
         have hchunkLen :
-            actionCircuit.constraintSystem.chunkLen = 7 :=
+            actionCircuit.chunkLen = 7 :=
           congrArg Prod.snd columnCount_chunkLen_eq
+        simp only [actionVk, actionCircuit.toVerifierKey_chunkLen,
+          TopLevelCircuit.permutationSetCount]
         rw [hcolumns, hchunkLen]
       have hj : (j : ℕ) < 21 := by
         have hlt := j.isLt

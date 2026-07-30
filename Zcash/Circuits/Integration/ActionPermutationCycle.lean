@@ -24,8 +24,6 @@ open Keygen
 open ActionPermutationDomain
 open Zcash.Circuits.Action (actionCircuit)
 
-set_option maxHeartbeats 20000
-
 variable {G : Type} [AddCommGroup G] [Module Fp G]
   [DecidableEq G] [Inhabited G]
 
@@ -162,7 +160,7 @@ theorem actionChunkCommonIndex
     · norm_num [htwo]
   have hglobal :
       global <
-        actionCircuit.constraintSystem.permutationColumns.length := by
+        actionCircuit.permutationColumnCount := by
     have h := (flatten ⟨chunk, row, column⟩).2.isLt
     simpa only [global, Zcash.Snark.actionNumPermCols,
       Zcash.Snark.actionPermCols, Keygen.permColsOf,
@@ -172,10 +170,13 @@ theorem actionChunkCommonIndex
           (column : ℕ) =
         global := by
     rw [hprefix]
-    change
-      (chunk : ℕ) * vk.chunkLen + (column : ℕ) =
-        ((flatten ⟨chunk, row, column⟩).2 : ℕ)
-    rfl
+    have hvkChunkLen :
+        vk.chunkLen = (actionVk pp urs).chunkLen := by
+      simp only [vk]
+    rw [hvkChunkLen]
+    simp only [global, flatten, Zcash.Snark.actionChunkFlatten]
+    symm
+    apply Zcash.Snark.Layout.Asm.chunkFlatten_apply_column
   have hlocal :=
     Zcash.Snark.flatten_getD_at_chunk
       ((.advice 0), 0) vk.permutationChunks
@@ -185,16 +186,21 @@ theorem actionChunkCommonIndex
         exact chunk.isLt)
       hcolumn
   rw [hglobalIndex] at hlocal
-  have hflatten :=
-    Zcash.Snark.permutationChunksOf_flatten
-      actionCircuit.selectorMap
-      actionCircuit.constraintSystem
-  change
-    vk.permutationChunks.flatten =
-      (actionCircuit.constraintSystem.permutationColumns.map
+  have hvkChunks :
+      vk.permutationChunks =
+        actionCircuit.verifierCS.permutationChunks := by
+    simpa only [vk] using
+      actionCircuit.toVerifierKey_permutationChunks pp urs
+  have hflatten :
+      vk.permutationChunks.flatten =
+      (actionCircuit.permutationColumns.map
         (Zcash.Snark.permutationQueryReference
-          (projectCS actionCircuit.selectorMap
-            actionCircuit.constraintSystem))).zipIdx at hflatten
+          actionCircuit.adviceQueryLayout
+          actionCircuit.fixedQueryLayout
+          actionCircuit.instanceQueryLayout)).zipIdx := by
+    rw [hvkChunks]
+    exact
+      Zcash.Snark.verifierCS_permutationChunks_flatten actionCircuit
   calc
     ((vk.permutationChunks.getD chunk []).getD
         column ((.advice 0), 0)).2 =
@@ -202,10 +208,11 @@ theorem actionChunkCommonIndex
           global ((.advice 0), 0)).2 := by
       exact congrArg Prod.snd hlocal.symm
     _ =
-        (((actionCircuit.constraintSystem.permutationColumns.map
+        (((actionCircuit.permutationColumns.map
           (Zcash.Snark.permutationQueryReference
-            (projectCS actionCircuit.selectorMap
-              actionCircuit.constraintSystem))).zipIdx).getD
+            actionCircuit.adviceQueryLayout
+            actionCircuit.fixedQueryLayout
+            actionCircuit.instanceQueryLayout)).zipIdx).getD
           global ((.advice 0), 0)).2 := by
       rw [hflatten]
     _ = global := zipIdx_getD_snd _ (ColumnRef.advice 0) global
@@ -240,19 +247,13 @@ theorem actionRowsInjectiveAtUrs
   intro left right heq
   let left' : Fin (actionVk pp urs).n :=
     ⟨left, by
-      change (left : ℕ) <
-        2 ^ actionCircuit.domainExponent
-      have hdomain :
-          actionCircuit.domainExponent = urs.k := hk
-      rw [hdomain]
+      rw [actionCircuit.toVerifierKey_n,
+        actionCircuit.n_eq_two_pow_domainExponent, hk]
       exact left.isLt⟩
   let right' : Fin (actionVk pp urs).n :=
     ⟨right, by
-      change (right : ℕ) <
-        2 ^ actionCircuit.domainExponent
-      have hdomain :
-          actionCircuit.domainExponent = urs.k := hk
-      rw [hdomain]
+      rw [actionCircuit.toVerifierKey_n,
+        actionCircuit.n_eq_two_pow_domainExponent, hk]
       exact right.isLt⟩
   have hfin := rowsInjective pp urs
     (show (actionVk pp urs).omega ^ (left' : ℕ) =
@@ -344,7 +345,7 @@ def actionResolverPermutationCycle_or_relation
   have homega :
       vk.omega = omegaOf urs.k := by
     change
-      omegaOf actionCircuit.domainExponent =
+      actionCircuit.omega =
         omegaOf urs.k
     exact congrArg omegaOf hk
   let key : LagrangeCommitmentKey urs vk.omega := by

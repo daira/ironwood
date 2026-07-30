@@ -243,8 +243,8 @@ def actionTerminalRelationFinder
                   (ComputablePolynomial.const 1)))) ch.x with
         | some hxgoodProof =>
           let hn : (actionCircuit.toVerifierKey pp urs).n ≠ 0 := by
-            change 2 ^ actionCircuit.domainExponent ≠ 0
-            positivity
+            rw [actionCircuit.toVerifierKey_n]
+            exact actionCircuit.n_ne_zero
           match hgoodY : foldSplitAvoidance? model.constraints
               (actionCircuit.toVerifierKey pp urs).n hn ch.y with
           | some hgoodYProof =>

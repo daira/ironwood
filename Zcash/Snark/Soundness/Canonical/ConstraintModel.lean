@@ -213,22 +213,22 @@ theorem ResolverPermutationDomain.ofCanonicalConstraintModel
         hnonempty hchunkCount hlastRotation hroot
 
 /--
-The same canonical model satisfies the lookup-domain interface through every
-row strictly before its final usable row.
+The canonical row-selector polynomials satisfy the lookup-domain interface
+through every row strictly before its final usable row.
 -/
-theorem ResolverLookupDomain.ofCanonicalConstraintModel
+theorem ResolverLookupDomain.ofCanonicalPolynomials
     {shape : Shape} {G : Type*}
-    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
-    (poly : CommitmentId → Polynomial Fp)
+    (vk : VerifyingKey shape Fp G)
     (husable : vk.blindingFactors + 1 < vk.n)
     (hrows : Function.Injective fun i : Fin vk.n =>
       vk.omega ^ (i : ℕ))
     (hroot : vk.omega ^ vk.n = 1) :
-    let hblinding : vk.blindingFactors < vk.n := by omega
-    let model := vk.constraintModel ch poly hblinding
-    ResolverLookupDomain vk model.l0 model.lLast model.lBlind
+    let selectors := canonicalLagrangePolynomials vk.omega
+      (Nat.lt_of_succ_lt husable)
+    ResolverLookupDomain vk selectors.1 selectors.2.1 selectors.2.2
       vk.n (vk.n - vk.blindingFactors - 2) := by
-  let hblinding : vk.blindingFactors < vk.n := by omega
+  let hblinding : vk.blindingFactors < vk.n :=
+    Nat.lt_of_succ_lt husable
   have hlast :
       vk.n - vk.blindingFactors - 2 + 1 < vk.n := by
     omega
@@ -246,8 +246,6 @@ theorem ResolverLookupDomain.ofCanonicalConstraintModel
     ResolverLookupDomain.ofCanonicalSelectors vk hlast hrows
       homega hroot
   rw [hlastRow] at hdomain
-  simpa [hblinding, VerifyingKey.constraintModel,
-    canonicalLagrangePolynomials,
-    constraintModelOfResolver] using hdomain
+  simpa [hblinding, canonicalLagrangePolynomials] using hdomain
 
 end Zcash.Snark

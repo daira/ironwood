@@ -52,10 +52,10 @@ def topLevelBundleStatement_or_bad_of_components
     (satisfaction :
       ConstraintSatisfaction
         (top.constraintModel pp urs ch poly)
-        (top.toVerifierKey pp urs).n)
+        top.n)
     (gates : TopLevelGateCoherence top)
     (fixedEncoding : ∀ proofIndex,
-      TopLevelFixedEncoding top pp urs poly proofIndex)
+      TopLevelFixedEncoding top pp poly proofIndex)
     (fixed : ∀ proofIndex,
       TopLevelFixed top pp urs poly proofIndex)
     (copies : ∀ proofIndex,
@@ -98,7 +98,7 @@ def topLevelBundleStatement_or_bad_of_constraintSatisfaction
     (satisfaction :
       ConstraintSatisfaction
         (top.constraintModel pp urs ch poly)
-        (top.toVerifierKey pp urs).n)
+        top.n)
     (correctness :
       TopLevelCircuitCorrectness top pp urs ch poly cell Bad) :
     TopLevelTerminalOutcome top pp poly Bad := by
@@ -106,7 +106,7 @@ def topLevelBundleStatement_or_bad_of_constraintSatisfaction
   let fixedEncodingOutcome :=
     finForallOrRelationWitness
       (A := fun proofIndex =>
-        TopLevelFixedEncoding top pp urs poly proofIndex)
+        TopLevelFixedEncoding top pp poly proofIndex)
       correctness.fixedEncoding
   let fixedOutcome :=
     finForallOrRelationWitness
@@ -179,7 +179,7 @@ def topLevelStatements_or_relation_of_circuitSat
         (memberDecode := memberDecode)
         (hblinding :=
           top.toVerifierKey_blindingFactors_lt_n pp urs) haccepts).CircuitSat
-          ch.y hpoly (top.toVerifierKey pp urs).n a)
+          ch.y hpoly top.n a)
     (hgoodY : ∀ j,
       ch.y ∉ szBadSet
         (foldSplitWitness
@@ -188,7 +188,7 @@ def topLevelStatements_or_relation_of_circuitSat
             (hblinding :=
               top.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).constraints
-          (top.toVerifierKey pp urs).n j))
+          top.n j))
     {cell : Type} [DecidableEq cell] [Fintype cell]
     (correctness :
       TopLevelCircuitCorrectness top pp urs ch
@@ -207,9 +207,8 @@ def topLevelStatements_or_relation_of_circuitSat
           (memberDecode := memberDecode) haccepts := by
     rfl
   have hn :
-      (top.toVerifierKey pp urs).n ≠ 0 := by
-    change 2 ^ top.domainExponent ≠ 0
-    positivity
+      top.n ≠ 0 := by
+    exact top.n_ne_zero
   have hsatisfaction :=
     relation.constraintSatisfaction hn
       (by
@@ -308,7 +307,7 @@ def topLevelStatements_or_relation_of_decodedMemberPolynomial_eq
           model.sets model.chunks model.lookups
           model.beta model.gamma model.delta model.theta ch.y
           model.chunkLen model.l0 model.lLast model.lBlind -
-        hpoly * (X ^ (top.toVerifierKey pp urs).n - 1)))
+        hpoly * (X ^ top.n - 1)))
     (hgoodY : ∀ j,
       ch.y ∉ szBadSet
         (foldSplitWitness
@@ -317,7 +316,7 @@ def topLevelStatements_or_relation_of_decodedMemberPolynomial_eq
             (hblinding :=
               top.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).constraints
-          (top.toVerifierKey pp urs).n j))
+          top.n j))
     {cell : Type} [DecidableEq cell] [Fintype cell]
     (correctness :
         (CanonicalMemberConstraintRelation.acceptedModel
@@ -325,7 +324,7 @@ def topLevelStatements_or_relation_of_decodedMemberPolynomial_eq
           (hblinding :=
             top.toVerifierKey_blindingFactors_lt_n pp urs)
           haccepts).CircuitSat
-            ch.y hpoly (top.toVerifierKey pp urs).n a →
+            ch.y hpoly top.n a →
       TopLevelCircuitCorrectness top pp urs ch
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts)
@@ -335,18 +334,18 @@ def topLevelStatements_or_relation_of_decodedMemberPolynomial_eq
       NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   have hrows :
       Function.Injective
-        (fun row : Fin (top.toVerifierKey pp urs).n =>
-          (top.toVerifierKey pp urs).omega ^ (row : ℕ)) := by
+        (fun row : Fin top.n =>
+          top.omega ^ (row : ℕ)) := by
     simpa only [top.toVerifierKey_n, top.toVerifierKey_omega] using
       (TopLevelAssignment.domainRowsInjective
         (top := top) domainExponent_lt)
   have hroot :
-      (top.toVerifierKey pp urs).omega ^
-        (top.toVerifierKey pp urs).n = 1 := by
+      top.omega ^
+        top.n = 1 := by
     simpa only [top.toVerifierKey_n, top.toVerifierKey_omega] using
       (TopLevelAssignment.domainRoot
         (top := top) domainExponent_lt)
-  have hnFp : ((top.toVerifierKey pp urs).n : Fp) ≠ 0 := by
+  have hnFp : (top.n : Fp) ≠ 0 := by
     simpa only [top.toVerifierKey_n] using
       (TopLevelAssignment.domainSizeCastNeZero
         (top := top) domainExponent_lt)

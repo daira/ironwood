@@ -382,11 +382,10 @@ theorem adaptiveActionAdviceLayout_column_lt
     (column : ℕ) (rotation : ℤ)
     (hmem : (column, rotation) ∈ (ActionTerminal.vkAt pp basis).adviceQueryLayout) :
     column < (pp.mergeDerived actionCircuit).numAdviceColumns := by
-  change column < actionCircuit.constraintSystem.numAdviceColumns
+  rw [ProofParams.mergeDerived_numAdviceColumns]
   apply ActionPermutationDomain.adviceQueryLayout_columns_lt (column, rotation)
   simpa only [ActionTerminal.vkAt,
-    actionCircuit.toVerifierKey_adviceQueryLayout_derived,
-    ActionPermutationDomain.derivedPinnedCS] using hmem
+    actionCircuit.toVerifierKey_adviceQueryLayout] using hmem
 
 /-- Every active Action commitment identity has a concrete query in the deployed assembly. -/
 theorem adaptiveActionActive_query
@@ -1435,7 +1434,9 @@ theorem adaptiveActionBetaSurface_measure_le
             (ActionTerminal.vkAt pp basis).blindingFactors - 2 + 1)) : Nat) : ENNReal) /
         Fintype.card Fp := by
   dsimp only
-  simpa [adaptiveActionSurfaceAt] using
+  simpa [adaptiveActionSurfaceAt, actionActiveRows,
+    ProofParams.mergeDerived_numProofs,
+    ProofParams.mergeDerived_numLookups] using
     (ActionTerminal.actionBetaBadSets_measure_le pp basis (earlier 0)
       (adaptiveActionCommitmentPolynomial pp basis inputs ps source
         (chRecord (fun i => if h : (i : Nat) < 1 then earlier ⟨i, h⟩ else 0)
@@ -1462,7 +1463,9 @@ theorem adaptiveActionGammaSurface_measure_le
           (ActionTerminal.vkAt pp basis).blindingFactors - 2 + 1)) : Nat) : ENNReal) /
         Fintype.card Fp := by
   dsimp only
-  simpa [adaptiveActionSurfaceAt] using
+  simpa [adaptiveActionSurfaceAt, actionActiveRows,
+    ProofParams.mergeDerived_numProofs,
+    ProofParams.mergeDerived_numLookups] using
     (ActionTerminal.actionGammaBadSets_measure_le pp basis (earlier 0) (earlier ⟨1, by omega⟩)
       (adaptiveActionCommitmentPolynomial pp basis inputs ps source
         (chRecord (fun i => if h : (i : Nat) < 2 then earlier ⟨i, h⟩ else 0)

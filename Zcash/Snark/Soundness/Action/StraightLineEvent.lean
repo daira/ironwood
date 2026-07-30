@@ -207,8 +207,8 @@ theorem actionRelationFinder_covers :
       rw [hmodelEq] at hgoodY'
       let hn : (actionCircuit.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)).n ≠ 0 := by
-        change 2 ^ actionCircuit.domainExponent ≠ 0
-        positivity
+        rw [actionCircuit.toVerifierKey_n]
+        exact actionCircuit.n_ne_zero
       have hgoodYSome := foldSplitAvoidance?_isSome_of _ _ hn _ hgoodY'
       split
       · rename_i hgoodYProof _

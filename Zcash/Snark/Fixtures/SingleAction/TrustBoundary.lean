@@ -121,7 +121,7 @@ assert_axioms Zcash.Snark.Keygen.shape_eq_mergeDerived +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Keygen.vk_eq_derived +native(
+assert_axioms Zcash.Snark.Keygen.vk_eq_toVerifierKey +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Keygen.certificate,
   CompElliptic.Curves.Pasta.Pallas.neg_five_not_isCube,

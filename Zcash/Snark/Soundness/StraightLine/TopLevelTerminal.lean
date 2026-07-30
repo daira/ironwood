@@ -84,7 +84,7 @@ def topLevelStatements_or_relation_of_decode
           model.chunkLen model.l0 model.lLast model.lBlind -
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts) .vanishingH *
-          (X ^ (top.toVerifierKey pp urs).n - 1)))
+          (X ^ top.n - 1)))
     (hgoodY :
       let memberDecode := fun i hi => decode.toMemberDecode hchar i hi
       ∀ j, ch.y ∉ szBadSet
@@ -94,7 +94,7 @@ def topLevelStatements_or_relation_of_decode
             (hblinding :=
               top.toVerifierKey_blindingFactors_lt_n pp urs)
             haccepts).constraints
-          (top.toVerifierKey pp urs).n j))
+          top.n j))
     {cell : Type} [DecidableEq cell] [Fintype cell]
     (correctness :
       let memberDecode := fun i hi => decode.toMemberDecode hchar i hi
@@ -106,7 +106,7 @@ def topLevelStatements_or_relation_of_decode
           ch.y
           (CanonicalMemberConstraintRelation.acceptedPolynomial
             (memberDecode := memberDecode) haccepts .vanishingH)
-          (top.toVerifierKey pp urs).n a →
+          top.n a →
       TopLevelCircuitCorrectness top pp urs ch
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts)

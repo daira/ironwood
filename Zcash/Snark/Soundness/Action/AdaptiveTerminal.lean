@@ -257,8 +257,8 @@ def adaptiveActionRelationOfDecode?
   | none => none
   | some hxgoodProof =>
       let hn : (actionCircuit.toVerifierKey pp urs).n ≠ 0 := by
-        change 2 ^ actionCircuit.domainExponent ≠ 0
-        positivity
+        rw [actionCircuit.toVerifierKey_n]
+        exact actionCircuit.n_ne_zero
       match hgoodY : foldSplitAvoidance? model.constraints
           (actionCircuit.toVerifierKey pp urs).n hn ch.y with
       | none => none
@@ -381,8 +381,8 @@ theorem adaptiveActionRelationOfDecode?_isSome_of
   have hxSome := (szBadSetAvoidance?_isSome_iff _ _).2 hxgoodData
   have hn : (actionCircuit.toVerifierKey pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)).n ≠ 0 := by
-    change 2 ^ actionCircuit.domainExponent ≠ 0
-    positivity
+    rw [actionCircuit.toVerifierKey_n]
+    exact actionCircuit.n_ne_zero
   have hySome := foldSplitAvoidance?_isSome_of model.constraints _ hn _ hgoodY
   have hpSome := resolverPermutationChallengeExclusions?_isSome_of _ _ _ _ hpermutation
   have hlSome := TopLevelLookup.topLevelLookupChallengeExclusions?_isSome_of

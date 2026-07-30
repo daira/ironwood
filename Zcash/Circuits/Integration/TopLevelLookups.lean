@@ -108,17 +108,17 @@ theorem topLevelLookupInputs_selectorsCovered
         (top.selectorMap.lookup selector).isSome) = true := by
   have sourceCoverage :=
     expression.selectorsCovered_lt_of_selectorBound_le
-      top.constraintSystem.numSelectors
+      top.selectorCount
       (top.lookupInputsAllocated
         argument hargument expression hexpression)
   apply Expression.selectorsCovered_mono
     (fun selector =>
       decide (selector <
-        top.constraintSystem.numSelectors))
+        top.selectorCount))
   · intro selector hselector
     exact deriveSelCompressMap_lookup_isSome_of_lt
       top.constraintSystem
-      (2 ^ top.domainExponent)
+      top.n
       top.selectorActivations
       (of_decide_eq_true hselector)
   · exact sourceCoverage
@@ -251,79 +251,46 @@ theorem resolverInterpretsPinned
     (proofIndex : Fin pp.numProofs)
     (usableRows row : ℕ) :
     Interprets
-      (pinnedQueryState
-        (PinnedConstraintSystem.derive
-          top.constraintSystem top.selectorMap))
+      (pinnedQueryState top.pinnedCS)
       (fun query =>
         (fixedQueryFeedOfResolver
           (top.toVerifierKey pp urs) poly query).eval
-          ((top.toVerifierKey pp urs).omega ^ row))
+          (top.omega ^ row))
       (fun query =>
         (adviceQueryFeedOfResolver
           (top.toVerifierKey pp urs) poly proofIndex query).eval
-          ((top.toVerifierKey pp urs).omega ^ row))
+          (top.omega ^ row))
       (fun query =>
         (instanceQueryFeedOfResolver
           (top.toVerifierKey pp urs) poly proofIndex query).eval
-          ((top.toVerifierKey pp urs).omega ^ row))
+          (top.omega ^ row))
       (Query.eval
         (resolverEnvironment
           (top.toVerifierKey pp urs) poly proofIndex usableRows)
         (fun _ => 0) row) := by
-  have homega : (top.toVerifierKey pp urs).omega ≠ 0 := by
-    change Zcash.Arithmetic.omegaOf top.domainExponent ≠ 0
+  have homega : top.omega ≠ 0 := by
     have hk : top.domainExponent ≤ 32 :=
       Nat.le_of_lt_succ (by
         simpa using coherence.domainExponent_lt)
-    exact
-      (Zcash.Arithmetic.omegaOf_isPrimitiveRoot
-        top.domainExponent hk).isUnit (by positivity) |>.ne_zero
+    exact top.omega_ne_zero hk
   exact resolverQueryFeeds_interpret
     (top.toVerifierKey pp urs) poly proofIndex usableRows
     (fun _ => 0) row homega
-    (pinnedQueryState
-      (PinnedConstraintSystem.derive
-        top.constraintSystem top.selectorMap))
-    (by rfl) (by rfl) (by rfl)
+    (pinnedQueryState top.pinnedCS)
+    (by
+      simp only [top.toVerifierKey_adviceQueryLayout,
+        TopLevelCircuit.adviceQueryLayout, pinnedQueryState])
+    (by
+      simp only [top.toVerifierKey_fixedQueryLayout,
+        TopLevelCircuit.fixedQueryLayout, pinnedQueryState])
+    (by
+      simp only [top.toVerifierKey_instanceQueryLayout,
+        TopLevelCircuit.instanceQueryLayout, pinnedQueryState])
     (top.toVerifierKey_adviceQueryCount pp urs)
     (top.toVerifierKey_fixedQueryCount pp urs)
     (top.toVerifierKey_instanceQueryCount pp urs)
 
 end TopLevelGateCoherence
-
-@[simp] theorem toVerifierKey_lookupInputExprs
-    (top : TopLevelCircuit Fp Config PublicInput)
-    (pp : ProofParams) (urs : URS G)
-    (lookup : Fin top.lookupCount) :
-    (top.toVerifierKey pp urs).lookupInputExprs lookup =
-      ((PinnedConstraintSystem.derive
-          top.constraintSystem top.selectorMap).lookupInputExprs.getD
-        lookup.val []).map RichExpression.toExpr := by
-  rfl
-
-@[simp] theorem toVerifierKey_lookupTableExprs
-    (top : TopLevelCircuit Fp Config PublicInput)
-    (pp : ProofParams) (urs : URS G)
-    (lookup : Fin top.lookupCount) :
-    (top.toVerifierKey pp urs).lookupTableExprs lookup =
-      ((PinnedConstraintSystem.derive
-          top.constraintSystem top.selectorMap).lookupTableExprs.getD
-        lookup.val []).map RichExpression.toExpr := by
-  rfl
-
-@[simp] theorem toVerifierKey_n
-    (top : TopLevelCircuit Fp Config PublicInput)
-    (pp : ProofParams) (urs : URS G) :
-    (top.toVerifierKey pp urs).n =
-      2 ^ top.domainExponent := by
-  rfl
-
-@[simp] theorem toVerifierKey_blindingFactors
-    (top : TopLevelCircuit Fp Config PublicInput)
-    (pp : ProofParams) (urs : URS G) :
-    (top.toVerifierKey pp urs).blindingFactors =
-      top.blindingFactors := by
-  rfl
 
 /-- Mapping a projected lookup tuple into `Expr` does not change its evaluations. -/
 theorem map_eval_toExpr
@@ -379,39 +346,39 @@ theorem projectedValues
       resolverEnvironment
         (top.toVerifierKey pp urs) poly proofIndex
         (top.usableRowsAt top.domainExponent)
-    (((top.toVerifierKey pp urs).lookupInputExprs route.index).map
+    ((top.verifierCS.lookupInputExprs route.index).map
         (Expr.eval
           (fun query =>
             (fixedQueryFeedOfResolver
               (top.toVerifierKey pp urs) poly query).eval
-              ((top.toVerifierKey pp urs).omega ^
+              (top.omega ^
                 (top.placement lookup.region + lookup.row)))
           (fun query =>
             (adviceQueryFeedOfResolver
               (top.toVerifierKey pp urs) poly proofIndex query).eval
-              ((top.toVerifierKey pp urs).omega ^
+              (top.omega ^
                 (top.placement lookup.region + lookup.row)))
           (fun query =>
             (instanceQueryFeedOfResolver
               (top.toVerifierKey pp urs) poly proofIndex query).eval
-              ((top.toVerifierKey pp urs).omega ^
+              (top.omega ^
                 (top.placement lookup.region + lookup.row)))) =
       lookup.inputValues top.placement environment) ∧
     (∀ row < environment.usableRows,
-      ((top.toVerifierKey pp urs).lookupTableExprs route.index).map
+      (top.verifierCS.lookupTableExprs route.index).map
           (Expr.eval
             (fun query =>
               (fixedQueryFeedOfResolver
                 (top.toVerifierKey pp urs) poly query).eval
-                ((top.toVerifierKey pp urs).omega ^ row))
+                (top.omega ^ row))
             (fun query =>
               (adviceQueryFeedOfResolver
                 (top.toVerifierKey pp urs) poly proofIndex query).eval
-                ((top.toVerifierKey pp urs).omega ^ row))
+                (top.omega ^ row))
             (fun query =>
               (instanceQueryFeedOfResolver
                 (top.toVerifierKey pp urs) poly proofIndex query).eval
-                ((top.toVerifierKey pp urs).omega ^ row))) =
+                (top.omega ^ row))) =
         lookup.tableValues environment row) := by
   dsimp only
   let route :=
@@ -428,26 +395,25 @@ theorem projectedValues
     tablesCovered (top := top)
       top.constraintSystem.lookups[route.index.val]
   have projectAt (row : ℕ) :=
-    PinnedConstraintSystem.derive_lookup_eval
-      top.constraintSystem top.selectorMap
+    top.lookup_eval
       (fun query =>
         (fixedQueryFeedOfResolver
           (top.toVerifierKey pp urs) poly query).eval
-          ((top.toVerifierKey pp urs).omega ^ row))
+          (top.omega ^ row))
       (fun query =>
         (adviceQueryFeedOfResolver
           (top.toVerifierKey pp urs) poly proofIndex query).eval
-          ((top.toVerifierKey pp urs).omega ^ row))
+          (top.omega ^ row))
       (fun query =>
         (instanceQueryFeedOfResolver
           (top.toVerifierKey pp urs) poly proofIndex query).eval
-          ((top.toVerifierKey pp urs).omega ^ row))
+          (top.omega ^ row))
       (Query.eval
         (resolverEnvironment
           (top.toVerifierKey pp urs) poly proofIndex
           (top.usableRowsAt top.domainExponent))
         (fun _ => 0) row)
-      route.index.val route.index.isLt
+      route.index
       hinputCoverage htableCoverage
       (gateCoherence.resolverInterpretsPinned
         (pp := pp) (urs := urs)
@@ -475,7 +441,7 @@ theorem projectedValues
         hargument)
   constructor
   · rw [← selectors.input]
-    rw [toVerifierKey_lookupInputExprs, map_eval_toExpr]
+    rw [top.verifierCS_lookupInputExprs, map_eval_toExpr]
     simpa only [route, Nat.cast_add] using
       inputProjected'
   · intro row hrow
@@ -493,7 +459,7 @@ theorem projectedValues
                     (fun _ => 0) row))))
           hargument)
     rw [← selectors.table row hrow]
-    rw [toVerifierKey_lookupTableExprs, map_eval_toExpr]
+    rw [top.verifierCS_lookupTableExprs, map_eval_toExpr]
     simpa only [route] using tableProjectedRow
 
 /--
@@ -522,14 +488,14 @@ theorem projectedPolynomialValues
         (top.usableRowsAt top.domainExponent)
     (lookupInputPolyOfResolver
         (top.toVerifierKey pp urs) ch poly proofIndex route.index).eval
-        ((top.toVerifierKey pp urs).omega ^
+        (top.omega ^
           (top.placement lookup.region + lookup.row)) =
       compressValues ch.theta
         (lookup.inputValues top.placement environment) ∧
     (∀ row < environment.usableRows,
       (lookupTablePolyOfResolver
           (top.toVerifierKey pp urs) ch poly proofIndex route.index).eval
-          ((top.toVerifierKey pp urs).omega ^ row) =
+          (top.omega ^ row) =
         compressValues ch.theta
           (lookup.tableValues environment row)) := by
   dsimp only
@@ -543,7 +509,7 @@ theorem projectedPolynomialValues
       compress_eval_eq_foldPoly,
       eval_foldPoly_eq_compressValues]
     change compressValues ch.theta
-        (((top.toVerifierKey pp urs).lookupInputExprs
+        ((top.verifierCS.lookupInputExprs
           route.index).map _) =
       compressValues ch.theta
         (lookup.inputValues top.placement
@@ -556,7 +522,7 @@ theorem projectedPolynomialValues
       compress_eval_eq_foldPoly,
       eval_foldPoly_eq_compressValues]
     change compressValues ch.theta
-        (((top.toVerifierKey pp urs).lookupTableExprs
+        ((top.verifierCS.lookupTableExprs
           route.index).map _) =
       compressValues ch.theta
         (lookup.tableValues
@@ -580,13 +546,13 @@ def deployedWitness
     (satisfaction :
       ConstraintSatisfaction
         (top.constraintModel pp urs ch poly)
-        (top.toVerifierKey pp urs).n)
+        top.n)
     (hrows : Function.Injective
-      fun row : Fin (top.toVerifierKey pp urs).n =>
-        (top.toVerifierKey pp urs).omega ^ (row : ℕ))
+      fun row : Fin top.n =>
+        top.omega ^ (row : ℕ))
     (hroot :
-      (top.toVerifierKey pp urs).omega ^
-        (top.toVerifierKey pp urs).n = 1)
+      top.omega ^
+        top.n = 1)
     (lookup : EnabledLookup Fp)
     (henabled :
       lookup ∈ operationEnabledLookups (top.operations) 0)
@@ -603,8 +569,8 @@ def deployedWitness
         (top := top) (pp := pp) henabled
       ResolverLookupGoodChallenges
         (top.toVerifierKey pp urs) ch poly proofIndex route.index
-        ((top.toVerifierKey pp urs).n -
-          (top.toVerifierKey pp urs).blindingFactors - 2))
+        (top.n -
+          top.blindingFactors - 2))
     (thetaGood :
       ch.theta ∉ lookup.thetaBadSet top.placement
         (resolverEnvironment
@@ -614,7 +580,7 @@ def deployedWitness
       (resolverEnvironment
         (top.toVerifierKey pp urs) poly proofIndex
         (top.usableRowsAt top.domainExponent))
-      ch.theta := by
+  ch.theta := by
   let vk := top.toVerifierKey pp urs
   let environment :=
     resolverEnvironment vk poly proofIndex
@@ -622,26 +588,24 @@ def deployedWitness
   let route :=
     lookup.topLevelRoute (top := top) (pp := pp) henabled
   let u := vk.n - vk.blindingFactors - 2
+  have hn : vk.n = top.n := by
+    simpa only [vk] using top.toVerifierKey_n pp urs
+  have homega : vk.omega = top.omega := by
+    simpa only [vk] using top.toVerifierKey_omega pp urs
+  have hblinding :
+      vk.blindingFactors = top.blindingFactors := by
+    simpa only [vk] using top.toVerifierKey_blindingFactors pp urs
+  have hu :
+      u = top.n - top.blindingFactors - 2 := by
+    simp only [u, hn, hblinding]
   have husable :
       vk.blindingFactors + 1 < vk.n := by
-    have hpositive :
-        0 < top.usableRowsAt top.domainExponent :=
-      (Nat.zero_le
-        (top.placement lookup.region + lookup.row)).trans_lt
-        activationRow
-    change top.blindingFactors + 1 < 2 ^ top.domainExponent
-    unfold TopLevelCircuit.usableRowsAt at hpositive
-    omega
+    rw [hn, hblinding]
+    exact top.blindingFactors_succ_lt_domainSize
   have husableRows : environment.usableRows = u + 1 := by
-    change 2 ^ top.domainExponent -
-        top.blindingFactors - 1 =
-      vk.n - vk.blindingFactors - 2 + 1
-    have hvkn : vk.n = 2 ^ top.domainExponent := by
-      simp only [vk, toVerifierKey_n]
-    have hvkBlinding :
-        vk.blindingFactors = top.blindingFactors := by
-      simp only [vk, toVerifierKey_blindingFactors]
-    rw [hvkn, hvkBlinding]
+    simp only [environment, resolverEnvironment,
+      polynomialEnvironment_usableRows]
+    rw [hu, top.usableRowsAt_domainExponent]
     omega
   have projected :=
     projectedPolynomialValues gateCoherence ch poly
@@ -658,36 +622,32 @@ def deployedWitness
     simpa only [List.length_map] using harity'
   let canonical :=
     canonicalLagrangePolynomials vk.omega
-      (top.toVerifierKey_blindingFactors_lt_n pp urs)
-  let domainChallenges : Challenges top.domainExponent Fp :=
-    { theta := ch.theta
-      beta := ch.beta
-      gamma := ch.gamma
-      y := ch.y
-      x := ch.x
-      x1 := ch.x1
-      x2 := ch.x2
-      x3 := ch.x3
-      x4 := ch.x4
-      xi := ch.xi
-      z := ch.z
-      ipaRound := fun _ => 0 }
+      (Nat.lt_of_succ_lt husable)
+  have hrows' : Function.Injective
+      fun row : Fin vk.n =>
+        vk.omega ^ (row : ℕ) := by
+    simpa only [hn, homega] using hrows
+  have hroot' :
+      vk.omega ^ vk.n = 1 := by
+    simpa only [hn, homega] using hroot
   have domain :
       ResolverLookupDomain vk canonical.1 canonical.2.1 canonical.2.2
         vk.n u := by
-    simpa only [vk, u, canonical, TopLevelCircuit.constraintModel_l0,
-      TopLevelCircuit.constraintModel_lLast,
-      TopLevelCircuit.constraintModel_lBlind] using
-      top.resolverLookupDomain pp urs domainChallenges poly
-        husable hrows hroot
+    simpa only [canonical] using
+      ResolverLookupDomain.ofCanonicalPolynomials
+        vk husable hrows' hroot'
+  have satisfactionAtVk :
+      ConstraintSatisfaction
+        (top.constraintModel pp urs ch poly) vk.n := by
+    simpa only [hn] using satisfaction
   have satisfaction' :
       ConstraintSatisfaction
         (constraintModelOfResolver vk ch poly
           (permutationSetsOfResolver vk poly)
           (permutationChunksOfResolver vk poly)
           canonical.1 canonical.2.1 canonical.2.2) vk.n := by
-    rw [top.constraintModel_eq_constraintModelOfResolver] at satisfaction
-    simpa only [vk, canonical] using satisfaction
+    rw [top.constraintModel_eq_constraintModelOfResolver] at satisfactionAtVk
+    simpa only [vk, canonical] using satisfactionAtVk
   have scalarSubset :
       ∀ row : Fin (u + 1), ∃ tableRow : Fin (u + 1),
         lookupColumnRows vk.omega
@@ -703,8 +663,8 @@ def deployedWitness
       (permutationSetsOfResolver vk poly)
       (permutationChunksOfResolver vk poly)
       canonical.1 canonical.2.1 canonical.2.2 proofIndex route.index
-      domain resolverGood
-  exact
+      domain (by simpa only [hu] using resolverGood)
+  simpa only [vk, environment] using
     { omega := vk.omega
       input :=
         lookupInputPolyOfResolver vk ch poly
@@ -717,9 +677,10 @@ def deployedWitness
       activationRow := by
         rw [← husableRows]
         exact activationRow
-      inputEval := projected.1.symm
+      inputEval := by
+        simpa only [homega] using projected.1.symm
       tableEval := fun row hrow =>
-        (projected.2 row hrow).symm
+        by simpa only [homega] using (projected.2 row hrow).symm
       tupleLength := tupleLength
       scalarSubset := scalarSubset
       thetaGood := thetaGood }
@@ -751,8 +712,8 @@ structure WitnessConditions
       (top.toVerifierKey pp urs) ch poly proofIndex
       (lookup.topLevelRoute
         (top := top) (pp := pp) henabled).index
-      ((top.toVerifierKey pp urs).n -
-        (top.toVerifierKey pp urs).blindingFactors - 2)
+      (top.n -
+        top.blindingFactors - 2)
   thetaGood : ∀ lookup
       (_henabled :
         lookup ∈ operationEnabledLookups (top.operations) 0),
@@ -841,13 +802,13 @@ structure ChallengeExclusions
   gamma :
     ch.gamma ∉ allResolverLookupGammaBadSet
       pp.numProofs (top.toVerifierKey pp urs) ch poly
-      ((top.toVerifierKey pp urs).n -
-        (top.toVerifierKey pp urs).blindingFactors - 2)
+      (top.n -
+        top.blindingFactors - 2)
   beta :
     ch.beta ∉ allResolverLookupBetaBadSet
       pp.numProofs (top.toVerifierKey pp urs) ch poly
-      ((top.toVerifierKey pp urs).n -
-        (top.toVerifierKey pp urs).blindingFactors - 2)
+      (top.n -
+        top.blindingFactors - 2)
   theta :
     ch.theta ∉ thetaBadSet top pp urs poly
 
@@ -962,8 +923,8 @@ def WitnessConditions.ofChallengeExclusions
   · intro lookup henabled
     exact resolverLookupGoodChallenges_of_not_mem
       pp.numProofs (top.toVerifierKey pp urs) ch poly
-      ((top.toVerifierKey pp urs).n -
-        (top.toVerifierKey pp urs).blindingFactors - 2)
+      (top.n -
+        top.blindingFactors - 2)
       exclusions.gamma exclusions.beta proofIndex
       (lookup.topLevelRoute
         (top := top) (pp := pp) henabled).index
@@ -994,13 +955,13 @@ def deployedWitnesses
     (satisfaction :
       ConstraintSatisfaction
         (top.constraintModel pp urs ch poly)
-        (top.toVerifierKey pp urs).n)
+        top.n)
     (hrows : Function.Injective
-      fun row : Fin (top.toVerifierKey pp urs).n =>
-        (top.toVerifierKey pp urs).omega ^ (row : ℕ))
+      fun row : Fin top.n =>
+        top.omega ^ (row : ℕ))
     (hroot :
-      (top.toVerifierKey pp urs).omega ^
-        (top.toVerifierKey pp urs).n = 1)
+      top.omega ^
+        top.n = 1)
     (conditions :
       WitnessConditions top pp urs ch poly proofIndex) :
     ∀ lookup ∈ operationEnabledLookups (top.operations) 0,
@@ -1037,13 +998,13 @@ theorem constraints
     (satisfaction :
       ConstraintSatisfaction
         (top.constraintModel pp urs ch poly)
-        (top.toVerifierKey pp urs).n)
+        top.n)
     (hrows : Function.Injective
-      fun row : Fin (top.toVerifierKey pp urs).n =>
-        (top.toVerifierKey pp urs).omega ^ (row : ℕ))
+      fun row : Fin top.n =>
+        top.omega ^ (row : ℕ))
     (hroot :
-      (top.toVerifierKey pp urs).omega ^
-        (top.toVerifierKey pp urs).n = 1)
+      top.omega ^
+        top.n = 1)
     (conditions :
       WitnessConditions top pp urs ch poly proofIndex) :
     CircuitConstraintFamily.constraints .lookup top.placement
