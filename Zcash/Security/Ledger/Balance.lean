@@ -415,8 +415,12 @@ premiss says each transaction's witnessed net value matches its declared `vBalan
 a value break of the caller's type is exhibited. The intended deployed discharge is the
 binding-signature machinery (`NontrivialRelation.ofBundleIntImbalance` with the
 statement's value ranges and the action-count bound), with a nontrivial discrete-log
-relation as the break; that glue is not yet formalized, and validity does not yet carry
-binding-signature verification. Balance is then the corollary: given the transparent
+relation as the break. That glue *is* formalized — `ValueShape.premissOrBreak` in
+`Value.lean`, against `ValidLedger.binding_verified` — but only relative to the named
+`extractBsk`/`hextract` extractability hypothesis, which is a placeholder rather than a
+theorem: as a total hypothesis it is classically satisfiable, and carries computational
+force only for an efficient `extractBsk` (see `Value.lean`'s module doc). Balance is then
+the corollary: given the transparent
 pool never goes negative (`ValidLedger.transparent_nonneg`), the shielded pool holds at
 most what was minted. -/
 
