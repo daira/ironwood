@@ -76,6 +76,30 @@ assert_axioms Zcash.Meta.Tests.AxiomCheck.ForgedDependency.owner +native(
 
 end ForgedDependency
 
+namespace MacroForged
+
+/-! The forgery `ForgedDependency` cannot express. A top-level `axiom` command is necessarily its
+own command, so its start lands *before* the owner's — which is what makes that case detectable.
+Macro expansion removes exactly that tell: every declaration a macro emits inherits the macro
+*invocation site* as its declaration range, so the axiom and the theorem using it share one
+identical range. A non-strict start comparison accepts that automatically, and the census would
+then certify an arbitrary axiom — here `False` — as a `native_decide` compiler-trust certificate.
+`rangeStartsInside` therefore requires the auxiliary to start *strictly* after the owner, which no
+macro-emitted sibling can do while both genuine shapes (`Genuine`, `GenuineAutoParam`) still can. -/
+
+macro "forge " n:ident " : " t:term : command =>
+  `(axiom $(Lean.mkIdent (n.getId ++ `_native ++ `native_decide ++ `ax_1_1)) : $t
+    theorem $n : $t := $(Lean.mkIdent (n.getId ++ `_native ++ `native_decide ++ `ax_1_1)))
+
+forge owner : False
+
+/-- error: 'Zcash.Meta.Tests.AxiomCheck.MacroForged.owner._native.native_decide.ax_1_1' looks like a native_decide axiom owned by 'Zcash.Meta.Tests.AxiomCheck.MacroForged.owner', but it was not emitted inside that declaration -/
+#guard_msgs (whitespace := lax) in
+assert_axioms Zcash.Meta.Tests.AxiomCheck.MacroForged.owner +native(
+  Zcash.Meta.Tests.AxiomCheck.MacroForged.owner)
+
+end MacroForged
+
 namespace SecondCertificate
 
 /-! Two genuine certificates in one cone. The allowance compares the exact *set* of native axioms
