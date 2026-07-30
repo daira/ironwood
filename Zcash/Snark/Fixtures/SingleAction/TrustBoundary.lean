@@ -1,6 +1,7 @@
 import Zcash.Snark.Fixtures.SingleAction.Fixture
 import Zcash.Snark.Fixtures.SingleAction.FiatShamir
 import Zcash.Snark.Fixtures.SingleAction.StaticChecks
+import Zcash.Snark.Fixtures.SingleAction.Negative
 import Zcash.Meta.AxiomCheck
 import Mathlib.Util.AssertNoSorry
 
@@ -96,6 +97,43 @@ assert_axioms Zcash.Snark.Fixture.assembledMsm_eval_eq_zero +native(
   Zcash.Snark.Fixture.fingerprint_matches)
 assert_axioms Zcash.Arithmetic.Msm.evalNat
 assert_axioms Zcash.Snark.assemble
+
+-- The negative suite (`SingleAction/Negative.lean`): modeled rejection paths, schedule
+-- sensitivity, and per-slot tamper sensitivity of the fingerprint match — including the blind
+-- slots, whose honest values are recomputable from the key, publics, and challenges, so only
+-- tamper sensitivity detects a sourcing error in `assemble` on honest captures.
+assert_axioms Zcash.Snark.Fixture.valid_capture_assembles +native(
+  Zcash.Snark.Fixture.valid_capture_assembles)
+assert_axioms Zcash.Snark.Fixture.unexpected_last_permutation_eval_rejected +native(
+  Zcash.Snark.Fixture.unexpected_last_permutation_eval_rejected)
+assert_axioms Zcash.Snark.Fixture.missing_nonlast_permutation_eval_rejected +native(
+  Zcash.Snark.Fixture.missing_nonlast_permutation_eval_rejected)
+assert_axioms Zcash.Snark.Fixture.x_power_one_rejected +native(
+  Zcash.Snark.Fixture.x_power_one_rejected)
+assert_axioms Zcash.Snark.Fixture.x3_collision_rejected +native(
+  Zcash.Snark.Fixture.x3_collision_rejected)
+assert_axioms Zcash.Snark.Fixture.duplicate_advice_query_rejected +native(
+  Zcash.Snark.Fixture.duplicate_advice_query_rejected)
+assert_axioms Zcash.Snark.Fixture.tampered_advice_eval_assembles +native(
+  Zcash.Snark.Fixture.tampered_advice_eval_assembles)
+assert_axioms Zcash.Snark.Fixture.tampered_advice_eval_fingerprint_mismatch +native(
+  Zcash.Snark.Fixture.tampered_advice_eval_fingerprint_mismatch)
+assert_axioms Zcash.Snark.Fixture.malformed_u_count_rejected +native(
+  Zcash.Snark.Fixture.malformed_u_count_rejected)
+assert_axioms Zcash.Snark.Fixture.swapped_lookup_permuted_breaks_schedule +native(
+  Zcash.Snark.Fixture.swapped_lookup_permuted_breaks_schedule)
+assert_axioms Zcash.Snark.Fixture.tampered_fixed_eval_assembles +native(
+  Zcash.Snark.Fixture.tampered_fixed_eval_assembles)
+assert_axioms Zcash.Snark.Fixture.tampered_fixed_eval_fingerprint_mismatch +native(
+  Zcash.Snark.Fixture.tampered_fixed_eval_fingerprint_mismatch)
+assert_axioms Zcash.Snark.Fixture.tampered_permutation_common_eval_assembles +native(
+  Zcash.Snark.Fixture.tampered_permutation_common_eval_assembles)
+assert_axioms Zcash.Snark.Fixture.tampered_permutation_common_eval_fingerprint_mismatch +native(
+  Zcash.Snark.Fixture.tampered_permutation_common_eval_fingerprint_mismatch)
+assert_axioms Zcash.Snark.Fixture.tampered_instance_eval_assembles +native(
+  Zcash.Snark.Fixture.tampered_instance_eval_assembles)
+assert_axioms Zcash.Snark.Fixture.tampered_instance_eval_fingerprint_mismatch +native(
+  Zcash.Snark.Fixture.tampered_instance_eval_fingerprint_mismatch)
 
 -- The instance-commitment derivation: the two captured claims, plus the data and functions they
 -- range over. The latter are flagless — they are ordinary definitions, so compiler trust must not

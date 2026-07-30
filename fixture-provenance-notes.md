@@ -23,7 +23,7 @@ rather than inventing pins.
 
 1. The Lean `configure` was ported by hand from the orchard source (with line-level
    citations), and the projected constraint system matches the dump exactly — now
-   build-verified by the `CircuitVkCheck` target. A fabricated or drifted dump would
+   build-verified by the `CircuitCheck` target. A fabricated or drifted dump would
    have to coincidentally agree with an independent port of the real source across
    193 gate polynomials, all lookup arguments, the query layouts, ~3,000 ordered copy
    constraints, and ~17k fixed cells.
@@ -38,7 +38,7 @@ rather than inventing pins.
   job that regenerates the JSON fixtures from those pins and diffs them against the
   checked-in bytes — the circuit-side analogue of what `fixtures.yml` already does
   for the `Zcash/Snark/Fixtures/` verifier-fingerprint captures (pinned
-  orchard 0.15.1 / halo2 0.3.3 via `orchard-fingerprint-instances`).
+  orchard 0.15.3 / halo2_proofs 0.3.4 via the `verifier-fingerprint` feature).
 - For the base (pre-NU 6.3) circuit, a stronger check is available: verify the
   dumped constraint system against the actual mainnet Orchard verifying key — a
   fixed public artifact — tying the chain to the deployed network rather than to

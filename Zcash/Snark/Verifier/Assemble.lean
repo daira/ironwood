@@ -50,12 +50,14 @@ def ColumnRef.resolve {F : Type*} (cr : ColumnRef) (instanceEvals adviceEvals fi
   | .fixed i => fixedEvals i
   | .instance i => instanceEvals i
 
--- This circuit-independent assembler deliberately receives a `VerifyingKey` as input. The deployed
--- Action specialization does not trust the captured key verbatim: `Keygen/Certificate.lean` derives
--- the key from the closed Action circuit and URS, then proves `vk_eq_toVerifierKey` field-for-field.
--- What remains external is provenance of the Rust capture and its identification with Orchard's
--- canonical deployed artifact, not Lean-side key derivation. This is distinct from the output-side
--- semantic-adequacy gap (see `Soundness/Main.lean`).
+-- VK provenance: this circuit-independent assembler deliberately receives a `VerifyingKey` as
+-- input, populated from the halo2 `dump_vesta_lean_fixture` capture
+-- (`Fixtures/SingleAction/Fixture.lean`) — but it is not trusted verbatim: for the
+-- single-action capture, `Keygen/Certificate.lean` proves the dumped key equals the one derived
+-- end-to-end from the ported `configure`/keygen (`vk_eq_derived`), with per-field checks in
+-- `Fixtures/SingleAction/VkMatch.lean`. Still input-side: the URS dump itself, and transporting
+-- the certificate to the multi-action key. Distinct from the output-side semantic-adequacy gap
+-- (see `Soundness/Main.lean`).
 /-- The verifying-key–level circuit structure the assembly needs, mirroring halo2's `VerifyingKey`
 field-for-field: **circuit-fixed data only**. `omega` is the domain generator and `n = 2 ^ k` the
 domain size; `blindingFactors`, `delta`, `chunkLen` are the permutation-argument constants. `gates`

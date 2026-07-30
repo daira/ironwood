@@ -4,8 +4,11 @@ import Zcash.Circuits.Integration.ActionPermutationDomainCompute
 /-!
 # Shape and VK faithfulness checks for the multi-action capture
 
-The generated fixture remains the Rust/Lean boundary: Lean does not re-run Orchard key generation.
-The Orchard capture now re-runs key generation, compares that exact key against the checked-in
+For the single-action capture, Lean re-derives the key: `Keygen/Certificate.lean` proves the
+dumped VK equals the one derived from the ported `configure`/keygen, with per-field checks in
+`Fixtures/SingleAction/VkMatch.lean`. Transporting that certificate to this multi-action key is
+still open, so here the generated fixture remains part of the Rust/Lean boundary.
+The Orchard capture re-runs key generation, compares that exact key against the checked-in
 canonical Post-NU6.3 `PinnedVerificationKey`, and passes the same key to verification and the fixture
 dumper; `Fixtures.PostNu63` pins the emitted transcript representation in Lean. These checks make the
 remaining generated boundary less silent by verifying that the named captured lists, typed accessors,

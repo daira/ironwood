@@ -3,6 +3,7 @@ import Zcash.Snark.Fixtures.MultiAction.FiatShamir
 import Zcash.Snark.Fixtures.MultiAction.Degree
 import Zcash.Snark.Fixtures.MultiAction.StaticChecks
 import Zcash.Snark.Fixtures.MultiAction.Schedule
+import Zcash.Snark.Fixtures.MultiAction.Negative
 import Zcash.Snark.Fixtures.MultiAction.StraightLineKnowledgeError
 import Zcash.Snark.Fixtures.MultiAction.CapturedZeroFamily
 import Zcash.Snark.Fixtures.MultiAction.ActionCapstone
@@ -70,6 +71,50 @@ assert_axioms Zcash.Snark.Fixture2.assembledMsm_eval_eq_zero +native(
   Zcash.Snark.Fixture2.fingerprint_matches)
 assert_axioms Zcash.Arithmetic.Msm.evalNat
 assert_axioms Zcash.Snark.assemble
+
+-- The negative suite (`MultiAction/Negative.lean`): modeled rejection paths, schedule
+-- sensitivity, and per-slot tamper sensitivity of the fingerprint match — including the blind
+-- slots, whose honest values are recomputable from the key, publics, and challenges, so only
+-- tamper sensitivity detects a sourcing error in `assemble` on honest captures.
+assert_axioms Zcash.Snark.Fixture2.valid_capture_assembles +native(
+  Zcash.Snark.Fixture2.valid_capture_assembles)
+assert_axioms Zcash.Snark.Fixture2.unexpected_last_permutation_eval_rejected +native(
+  Zcash.Snark.Fixture2.unexpected_last_permutation_eval_rejected)
+assert_axioms Zcash.Snark.Fixture2.missing_nonlast_permutation_eval_rejected +native(
+  Zcash.Snark.Fixture2.missing_nonlast_permutation_eval_rejected)
+assert_axioms Zcash.Snark.Fixture2.x_power_one_rejected +native(
+  Zcash.Snark.Fixture2.x_power_one_rejected)
+assert_axioms Zcash.Snark.Fixture2.x3_collision_rejected +native(
+  Zcash.Snark.Fixture2.x3_collision_rejected)
+assert_axioms Zcash.Snark.Fixture2.duplicate_advice_query_rejected +native(
+  Zcash.Snark.Fixture2.duplicate_advice_query_rejected)
+assert_axioms Zcash.Snark.Fixture2.tampered_advice_eval_assembles +native(
+  Zcash.Snark.Fixture2.tampered_advice_eval_assembles)
+assert_axioms Zcash.Snark.Fixture2.tampered_advice_eval_fingerprint_mismatch +native(
+  Zcash.Snark.Fixture2.tampered_advice_eval_fingerprint_mismatch)
+assert_axioms Zcash.Snark.Fixture2.malformed_u_count_rejected +native(
+  Zcash.Snark.Fixture2.malformed_u_count_rejected)
+assert_axioms Zcash.Snark.Fixture2.swapped_advice_absorb_breaks_schedule +native(
+  Zcash.Snark.Fixture2.swapped_advice_absorb_breaks_schedule)
+assert_axioms Zcash.Snark.Fixture2.swapped_lookup_permuted_breaks_schedule +native(
+  Zcash.Snark.Fixture2.swapped_lookup_permuted_breaks_schedule)
+assert_axioms Zcash.Snark.Fixture2.swapped_sub_proofs_assemble +native(
+  Zcash.Snark.Fixture2.swapped_sub_proofs_assemble)
+assert_axioms Zcash.Snark.Fixture2.swapped_sub_proofs_fingerprint_mismatch +native(
+  Zcash.Snark.Fixture2.swapped_sub_proofs_fingerprint_mismatch)
+assert_axioms Zcash.Snark.Fixture2.tampered_fixed_eval_assembles +native(
+  Zcash.Snark.Fixture2.tampered_fixed_eval_assembles)
+assert_axioms Zcash.Snark.Fixture2.tampered_fixed_eval_fingerprint_mismatch +native(
+  Zcash.Snark.Fixture2.tampered_fixed_eval_fingerprint_mismatch)
+assert_axioms Zcash.Snark.Fixture2.tampered_permutation_common_eval_assembles +native(
+  Zcash.Snark.Fixture2.tampered_permutation_common_eval_assembles)
+assert_axioms Zcash.Snark.Fixture2.tampered_permutation_common_eval_fingerprint_mismatch +native(
+  Zcash.Snark.Fixture2.tampered_permutation_common_eval_fingerprint_mismatch)
+assert_axioms Zcash.Snark.Fixture2.tampered_instance_eval_assembles +native(
+  Zcash.Snark.Fixture2.tampered_instance_eval_assembles)
+assert_axioms Zcash.Snark.Fixture2.tampered_instance_eval_fingerprint_mismatch +native(
+  Zcash.Snark.Fixture2.tampered_instance_eval_fingerprint_mismatch)
+
 -- The captured key's degree budget: one literal (`20470`) dominates every constraint family,
 -- so the `x`-squeeze schedule's `epsilonX` is the concrete `20470 / |𝔽|` at this key.
 assert_axioms Zcash.Snark.Fixture2.vk_gates_degree_le +native(

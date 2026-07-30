@@ -13,10 +13,11 @@ name: Fixtures
 # is platform-independent, so regeneration is bit-reproducible -- a diff means the
 # fixtures genuinely drifted from the pinned upstream, not run-to-run noise.
 #
-# Pins: `ORCHARD_REF` below is the upstream `zcash/orchard` 0.15.3 release tag
-# (zcash/orchard#538 instance-commitment derivation capture); its capture harness
-# resolves the released `halo2_proofs` 0.3.4 from crates.io, whose
-# `dump_vesta_lean_fixture` emitted the checked-in fixtures. No fork pins.
+# Pins: `ORCHARD_REF` below is the commit the upstream `zcash/orchard` 0.15.3 release
+# tag points at (zcash/orchard#538 instance-commitment derivation capture). Its
+# `Cargo.toml` requires a floating `halo2_proofs = "0.3"`; the released 0.3.4 — whose
+# `dump_vesta_lean_fixture` emitted the checked-in fixtures — is pinned transitively by
+# orchard's committed `Cargo.lock`, enforced with `--locked` below. No fork pins.
 
 # Always triggers, so the `Fixtures CI` gate always reports (a workflow skipped by
 # `on.paths` would leave a required check pending). The heavy regeneration is instead
@@ -35,9 +36,10 @@ permissions: {}
 
 env:
   # Orchard release 0.15.3 (zcash/orchard#538 instance-commitment derivation capture),
-  # pinned by the release tag's commit SHA.
+  # pinned by the release commit SHA (`git rev-parse '0.15.3^{commit}'` — the tag
+  # object itself is 13e119a360c4034d23b7de08d15432748f65b9b9).
   ORCHARD_REPO: zcash/orchard
-  ORCHARD_REF: 13e119a360c4034d23b7de08d15432748f65b9b9
+  ORCHARD_REF: ae3511076ec8ecb39ffc02d9cdaf19c441c5b53d
 
 jobs:
   changes:
@@ -91,15 +93,17 @@ jobs:
         with:
           workspaces: orchard-capture
       # Emits both fixture modules directly over the checked-in copies. `halo2_proofs`
-      # resolves to the released 0.3.4 from crates.io, so no Halo2 checkout is needed. The
-      # filter matches both accepting captures (`fingerprint_capture` and
-      # `fingerprint_capture_two_actions`) and not the Rust-only rejection tests.
+      # resolves to the released 0.3.4 from crates.io via orchard's committed
+      # `Cargo.lock` (`--locked` makes any lockfile drift a hard error), so no Halo2
+      # checkout is needed. The filter matches both accepting captures
+      # (`fingerprint_capture` and `fingerprint_capture_two_actions`) and not the
+      # Rust-only rejection tests.
       - name: Regenerate the fixtures from the pinned capture
         working-directory: orchard-capture
         env:
           ORCHARD_LEAN_SINGLE_FIXTURE_OUT: ${{ github.workspace }}/ironwood/Zcash/Snark/Fixtures/SingleAction/Fixture.lean
           ORCHARD_LEAN_MULTI_FIXTURE_OUT: ${{ github.workspace }}/ironwood/Zcash/Snark/Fixtures/MultiAction/Fixture.lean
-        run: cargo test --lib --features verifier-fingerprint circuit::fingerprint::fingerprint_capture -- --nocapture
+        run: cargo test --locked --lib --features verifier-fingerprint circuit::fingerprint::fingerprint_capture -- --nocapture
       - name: Enforce the checked-in fixtures match the regenerated capture
         working-directory: ironwood
         run: |

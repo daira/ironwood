@@ -1,18 +1,22 @@
-import Zcash.Snark.Fixtures.MultiAction.FiatShamir
+import Zcash.Snark.Fixtures.SingleAction.FiatShamir
 
 /-!
-# Negative fixtures for the multi-action capture
+# Negative fixtures for the single-action capture
 
-These adversarial fixtures start from the Rust-captured multi-action proof and mutate the typed Lean data
-to exercise modeled verifier rejection paths. They are not byte-level malformed proof captures: invalid
-encodings and Rust-side decode failures sit below `ProofString`. The point here is concrete
-regression coverage for non-accepting verifier states that the Lean model already exposes through
-`assemble?` and `assembleOpening?`, plus tamper sensitivity for the two
-positive checks: the fingerprint match (`MsmMatch`) and the captured Fiat–Shamir schedule
+These adversarial fixtures start from the Rust-captured single-action proof and mutate the typed
+Lean data to exercise modeled verifier rejection paths. They are not byte-level malformed proof
+captures: invalid encodings and Rust-side decode failures sit below `ProofString`. The point here
+is concrete regression coverage for non-accepting verifier states that the Lean model already
+exposes through `assemble?` and `assembleOpening?`, plus tamper sensitivity for the two positive
+checks: the fingerprint match (`MsmMatch`) and the captured Fiat–Shamir schedule
 (`deriveChallenges_matches_captured_schedule`).
+
+The multi-action suite (`Fixtures/MultiAction/Negative.lean`) additionally swaps data between its
+two sub-proofs; those negatives have no content at one proof (`Fin.rev` is the identity on
+`Fin 1`) and are deliberately absent here.
 -/
 
-namespace Zcash.Snark.Fixture2
+namespace Zcash.Snark.Fixture
 
 open Zcash.Snark
 open Zcash.Arithmetic (Msm)
@@ -92,19 +96,8 @@ theorem malformed_u_count_rejected :
       validGrouped (Msm.zero shape.k Fp G) = none := by
   native_decide
 
-/-- Swap the two sub-proofs' advice commitments (`Fin.rev` swaps the indices at `numProofs = 2`). The
-Fiat–Shamir oracle then sees a transcript prefix that differs from the Rust-captured one at the very
-first proof-derived absorb block, so the schedule check fails: cross-sub-proof absorb order is
-detected, not just argued. -/
-def psSwappedAdviceCommitments : ProofString shape Fp G :=
-  { ps with adviceCommitments := fun p => ps.adviceCommitments p.rev }
-
-theorem swapped_advice_absorb_breaks_schedule :
-    deriveChallenges capturedFs capturedInit psSwappedAdviceCommitments ≠ ch := by
-  native_decide
-
-/-- Swap each lookup's permuted-input and permuted-table commitments: the transcript then presents the
-`(table, input)` interleaving instead of the deployed `(input, table)`, so the schedule check
+/-- Swap each lookup's permuted-input and permuted-table commitments: the transcript then presents
+the `(table, input)` interleaving instead of the deployed `(input, table)`, so the schedule check
 fails. -/
 def psSwappedLookupPermuted : ProofString shape Fp G :=
   { ps with
@@ -113,29 +106,6 @@ def psSwappedLookupPermuted : ProofString shape Fp G :=
 
 theorem swapped_lookup_permuted_breaks_schedule :
     deriveChallenges capturedFs capturedInit psSwappedLookupPermuted ≠ ch := by
-  native_decide
-
-/-- Swap the two sub-proofs' data wholesale (instance commitments are statement-derived and stay). The
-mutated proof still assembles — the typed read schedule is position-based — but the fingerprint no
-longer matches the capture: the assembled MSM is sensitive to which sub-proof sits at which
-position. -/
-def psSwappedSubProofs : ProofString shape Fp G :=
-  { ps with
-    adviceCommitments := fun p => ps.adviceCommitments p.rev,
-    lookupPermutedInput := fun p => ps.lookupPermutedInput p.rev,
-    lookupPermutedTable := fun p => ps.lookupPermutedTable p.rev,
-    permutationProduct := fun p => ps.permutationProduct p.rev,
-    lookupProduct := fun p => ps.lookupProduct p.rev,
-    instanceEvals := fun p => ps.instanceEvals p.rev,
-    adviceEvals := fun p => ps.adviceEvals p.rev,
-    permutationSetEvals := fun p => ps.permutationSetEvals p.rev,
-    lookupEvals := fun p => ps.lookupEvals p.rev }
-
-theorem swapped_sub_proofs_assemble : (assemble? vk derivedInstanceCommitment psSwappedSubProofs ch).isSome = true := by
-  native_decide
-
-theorem swapped_sub_proofs_fingerprint_mismatch :
-    ¬ MsmMatch (assemble vk derivedInstanceCommitment psSwappedSubProofs ch) capturedMsm := by
   native_decide
 
 /-! ## Blind-slot tampers
@@ -196,4 +166,4 @@ theorem tampered_instance_eval_fingerprint_mismatch :
     ¬ MsmMatch (assemble vk derivedInstanceCommitment psTamperedInstanceEval ch) capturedMsm := by
   native_decide
 
-end Zcash.Snark.Fixture2
+end Zcash.Snark.Fixture
