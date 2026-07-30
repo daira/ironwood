@@ -1,5 +1,6 @@
 import Zcash.Snark.Soundness.TopLevelVesta
 import Zcash.Circuits.Integration.ActionCorrectness
+import Mathlib.Util.AssertNoSorry
 
 /-!
 # Action soundness over a circuit-derived Vesta verifying key

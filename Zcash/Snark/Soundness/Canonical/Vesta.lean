@@ -1,5 +1,6 @@
 import Zcash.Snark.Soundness.Canonical.Terminal
 import Zcash.Snark.Soundness.Multiopen.CanonicalSelection
+import Mathlib.Util.AssertNoSorry
 
 /-!
 # Canonical accepted-model adapter for the Vesta terminal

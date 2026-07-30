@@ -2,6 +2,7 @@ import Zcash.Snark.Fixtures.SingleAction.Fixture
 import Zcash.Snark.Fixtures.SingleAction.StaticChecks
 import Zcash.Snark.Soundness.Deployed.ActionVesta
 import Zcash.Meta.AxiomCheck
+import Mathlib.Util.AssertNoSorry
 
 /-!
 # Checked trust boundary of the concrete fingerprint fixture

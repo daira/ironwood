@@ -1,4 +1,5 @@
-import Mathlib
+import Mathlib.Tactic
+import Mathlib.Data.List.GetD
 import Zcash.Security.Ledger.Effects
 
 /-!

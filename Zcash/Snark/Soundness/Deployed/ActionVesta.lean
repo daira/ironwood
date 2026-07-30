@@ -4,6 +4,7 @@ import Zcash.Snark.Keygen.Certificate
 import Zcash.Snark.Keygen.InstanceCapture
 import Zcash.Snark.Soundness.Canonical.Vesta
 import Zcash.Snark.Soundness.Multiopen.CanonicalSelection
+import Mathlib.Util.AssertNoSorry
 
 /-!
 # Deployed Action soundness capstone

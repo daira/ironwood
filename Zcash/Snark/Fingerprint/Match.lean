@@ -1,4 +1,4 @@
-import Mathlib
+import Mathlib.Tactic
 import Zcash.Arithmetic.Msm
 import Zcash.Snark.Fingerprint.SchwartzZippel
 import Zcash.Snark.Verifier.Assemble
