@@ -11,7 +11,7 @@ uniform measure bound (`measure_le`) and invariance under reprogramming the run'
 The measure half is discharged here. Every committed carrier is a point polynomial, a rotation of
 one, or a Lagrange selector, so the degree walk caps the difference at `max D Dq` and its
 Schwartz–Zippel set at `max D Dq / |𝔽|`. Root witnesses at one oracle table share the family's own
-outcome, so the set collapses across fork tapes and the bound covers all of it.
+outcome, so one Schwartz–Zippel set covers it.
 
 The pinning half is derived, not assumed: a captured family carries a
 `DeployedConstraintXOnlineTrace` and the equation follows from its query log. That computation may
@@ -34,19 +34,32 @@ theorem natDegree_comp_rotate_le (col : Polynomial Fp) (w : Fp) {B : ℕ}
       ≤ B * 1 := Nat.mul_le_mul h (le_trans (natDegree_C_mul_le _ _) natDegree_X_le)
     _ = B := mul_one B
 
+/-- The executable polynomial wrapper for rotation has the same degree bound. -/
+theorem natDegree_comp_rotateData_le (col : Polynomial Fp) (w : Fp) {B : ℕ}
+    (h : col.natDegree ≤ B) :
+    (ComputablePolynomial.comp col
+      (ComputablePolynomial.mul (ComputablePolynomial.const w)
+        ComputablePolynomial.X)).natDegree ≤ B := by
+  rw [ComputablePolynomial.comp_eq, ComputablePolynomial.mul_eq,
+    ComputablePolynomial.const_eq, ComputablePolynomial.X_eq]
+  exact natDegree_comp_rotate_le col w h
+
 /-- A rotated feed keeps its columns' degree bound. -/
 theorem natDegree_rotatedFeed_le {n : ℕ} (omega : Fp) (layout : List (ℕ × ℤ))
     (col : Fin n → Polynomial Fp) {B : ℕ} (h : ∀ j, (col j).natDegree ≤ B) (i : ℕ) :
     (rotatedFeed omega layout col i).natDegree ≤ B := by
-  rw [rotatedFeed, finFn]
+  unfold rotatedFeed
   split
-  · exact natDegree_comp_rotate_le _ _ (h _)
-  · simp
+  · rw [ComputablePolynomial.comp_eq, ComputablePolynomial.mul_eq,
+      ComputablePolynomial.const_eq, ComputablePolynomial.X_eq]
+    exact natDegree_comp_rotate_le _ _ (h _)
+  · rw [ComputablePolynomial.zero_eq]
+    simp
 
 /-- The Lagrange basis polynomial has degree below the domain size. -/
 theorem natDegree_lagrangeBasisPoly_le (omega : Fp) (n : ℕ) (i : ℤ) :
     (lagrangeBasisPoly omega n i).natDegree ≤ n - 1 := by
-  rw [lagrangeBasisPoly]
+  rw [lagrangeBasisPoly_eq]
   refine le_trans (natDegree_C_mul_le _ _) (natDegree_sum_le_of_forall_le _ _ ?_)
   intro k hk
   refine le_trans (natDegree_C_mul_le _ _) ?_
@@ -91,11 +104,13 @@ theorem natDegree_preXQuotient_mul_le {d : ℕ} (n : ℕ) (hp : Fin d → Polyno
     rw [Nat.mul_succ]
     omega
 
+set_option maxHeartbeats 800000 in
 /-- **The committed constraint difference's degree cap.** With every point polynomial and
 quotient piece of degree `≤ B`, the selector degree `n − 1 ≤ B`, and the caps `D`/`Dq` dominating
 the constraint families and the quotient tail, the pre-`x` constraint difference has degree at
 most `max D Dq`. -/
 theorem natDegree_committedPreXConstraintDifference_le {G : Type*} [Inhabited G]
+    [AddCommGroup G] [Module Fp G]
     {shape : Shape} (poly : G → Polynomial Fp)
     (piecePoly : Fin shape.numQuotientPieces → Polynomial Fp)
     (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
@@ -121,11 +136,12 @@ theorem natDegree_committedPreXConstraintDifference_le {G : Type*} [Inhabited G]
     fun q i => natDegree_rotatedFeed_le _ _ _ (fun _ => hpoly _) i
   have hcommon : ∀ c, (committedPermCommonFeed poly vk c).natDegree ≤ B := by
     intro c
-    rw [committedPermCommonFeed]
+    unfold committedPermCommonFeed
     split
     · exact hpoly _
-    · simp
-  rw [committedPreXConstraintDifference]
+    · rw [ComputablePolynomial.zero_eq]
+      simp
+  rw [committedPreXConstraintDifference_eq]
   refine le_trans (natDegree_sub_le _ _) (max_le_max ?_ ?_)
   · refine natDegree_combineConstraints_le hB _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
       hfix hfeed hinstF hgates ?_ ?_ ?_
@@ -137,11 +153,13 @@ theorem natDegree_committedPreXConstraintDifference_le {G : Type*} [Inhabited G]
       dsimp only
       refine ⟨hpoly _, ?_⟩
       rcases (ps.permutationSetEvals p j).lastEval with _ | le
-      · simp
+      · change (0 : Polynomial Fp).natDegree ≤ B
+        simp
       · simp only [Option.map_some, Option.getD_some]
         split
-        · exact natDegree_comp_rotate_le _ _ (hpoly _)
-        · simp
+        · exact natDegree_comp_rotateData_le _ _ (hpoly _)
+        · rw [ComputablePolynomial.const_eq]
+          simp
     · -- permutation chunks
       intro p c hc
       obtain ⟨sc, hsc, rfl⟩ := List.mem_map.mp hc
@@ -150,7 +168,7 @@ theorem natDegree_committedPreXConstraintDifference_le {G : Type*} [Inhabited G]
       dsimp only
       refine ⟨?_, ?_, ?_⟩
       · obtain ⟨j, rfl⟩ := List.mem_ofFn.mp hs1
-        exact ⟨hpoly _, natDegree_comp_rotate_le _ _ (hpoly _)⟩
+        exact ⟨hpoly _, natDegree_comp_rotateData_le _ _ (hpoly _)⟩
       · simpa using hW _ hs2
       · intro pr hpr
         obtain ⟨cr, -, hpr'⟩ := List.mem_map.mp hpr
@@ -164,18 +182,18 @@ theorem natDegree_committedPreXConstraintDifference_le {G : Type*} [Inhabited G]
     · -- lookup carriers
       intro p lk hlk
       obtain ⟨l, rfl⟩ := List.mem_ofFn.mp hlk
-      exact ⟨⟨hpoly _, natDegree_comp_rotate_le _ _ (hpoly _), hpoly _,
-        natDegree_comp_rotate_le _ _ (hpoly _), hpoly _⟩, hlin l, hltab l⟩
+      exact ⟨⟨hpoly _, natDegree_comp_rotateData_le _ _ (hpoly _), hpoly _,
+        natDegree_comp_rotateData_le _ _ (hpoly _), hpoly _⟩, hlin l, hltab l⟩
     · -- the blind selector: a fold of Lagrange polynomials
       refine natDegree_foldl_add_le _ ?_
       intro q hq'
       obtain ⟨j, _, rfl⟩ := List.mem_map.mp hq'
       exact le_trans (natDegree_lagrangeBasisPoly_le _ _ _) hnB
   · -- the quotient tail
-    rw [committedPreXQuotient]
+    rw [committedPreXQuotient_eq]
     exact le_trans (natDegree_preXQuotient_mul_le _ _ hpiece) hq
 
-/-! ## The deployed constraint difference, collapsed across fork tapes -/
+/-! ## The deployed constraint difference, degree-capped -/
 
 variable {shape : Shape}
 
@@ -211,35 +229,17 @@ theorem natDegree_deployedConstraintDifferencePreX_le
         (deployedRootRunOutput family basis coins) j).1
     omega
 
-/-- The run output ignores the fork tape, so the total constraint difference does too. -/
-theorem deployedConstraintDifference_tape_congr
-    (family : ComputedDeployedRootFSFamily shape)
-    (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    {O : BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp}
-    (tape tape' : RecursiveForkTape Fp shape.k) :
-    deployedConstraintDifferencePreX family basis (O, tape)
-      = deployedConstraintDifferencePreX family basis (O, tape') := rfl
-
-/-- **The exact constraint-difference root set's measure.** The set collapses across fork tapes
-to one Schwartz–Zippel set, priced by the degree cap. -/
+/-- **The exact constraint-difference root set's measure**, priced by the degree cap. -/
 theorem deployedConstraintXBadSet_measure_le
     (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
     (O : BTranscript Fp VestaG (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp)
     {D : ℕ}
-    (hdeg : ∀ tape : RecursiveForkTape Fp shape.k,
-      (deployedConstraintDifferencePreX family basis (O, tape)).natDegree ≤ D) :
+    (hdeg : (deployedConstraintDifferencePreX family basis O).natDegree ≤ D) :
     (PMF.uniformOfFintype Fp).toOuterMeasure (deployedConstraintXBadSet family basis O)
       ≤ (D : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞) := by
-  let tape₀ : RecursiveForkTape Fp shape.k := Classical.arbitrary _
-  have hsub : deployedConstraintXBadSet family basis O
-      ⊆ ↑(szBadSet (deployedConstraintDifferencePreX family basis (O, tape₀))) := by
-    rintro x ⟨tape, hx⟩
-    rwa [deployedConstraintDifference_tape_congr family basis tape tape₀] at hx
-  refine le_trans ((PMF.uniformOfFintype Fp).toOuterMeasure.mono hsub) ?_
   refine le_trans (uniformChallenge_szBadSet _) ?_
   gcongr
-  exact_mod_cast hdeg tape₀
 
 /-! ## The schedule, priced -/
 
@@ -263,8 +263,8 @@ def deployedConstraintXSqueezeSchedule_of_pinned
     DeployedConstraintXSqueezeSchedule family
       ((max D Dq : ℕ) / (Fintype.card Fp : ℝ≥0∞)) where
   measure_le basis O :=
-    deployedConstraintXBadSet_measure_le family basis O (fun tape =>
-      natDegree_deployedConstraintDifferencePreX_le family basis (O, tape) hB hkB
+    deployedConstraintXBadSet_measure_le family basis O
+      (natDegree_deployedConstraintDifferencePreX_le family basis O hB hkB
         (hnB basis) (hgates basis) (hW basis) (hlin basis) (hltab basis) (hq basis)
         h3 hWD h4 hcomp)
   pinned := hpinned

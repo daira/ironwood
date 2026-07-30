@@ -20,11 +20,12 @@ variable {shape : Shape}
 
 namespace ComputedStraightLineDeployedFSFamily
 
-/-- Conservative random-oracle work of the complete straight-line finder.  One direct IPA run
-uses `Q` queries.  The three possible wrapped replays each add the `11+k` designated reads. -/
+/-- Conservative random-oracle work of the complete straight-line finder.  The initial IPA run
+and each of the three wrapped replays use `Q` adversary queries and read all `11+k` designated
+challenges.  Without a proved cache-sharing convention this is `4Q + 4(11+k)`. -/
 def straightLineDlogRandomOracleQueries
     (family : ComputedStraightLineDeployedFSFamily shape) : Nat :=
-  4 * family.Q + 3 * (11 + shape.k)
+  4 * family.Q + 4 * (11 + shape.k)
 
 /-- Concrete group-work accounting: at most four prover invocations plus the algebraic
 postprocessing performed by the reduction. -/
@@ -64,9 +65,11 @@ theorem straightLineDirectDecodeOps_le
 
 /-- Finite-security DLOG premise for the complete straight-line finder.  The advantage function
 receives random-oracle queries and group operations separately; the profile also records the
-prover and postprocessing components used to obtain the latter. -/
+prover and postprocessing components used to obtain the latter.  `hB` keeps the generator
+nondegenerate, without which `hardness` bounds nothing (see `TextbookDLAdvantageLE`). -/
 structure StraightLineConstraintDlogProfile (B : VestaG)
     (family : ComputedStraightLineDeployedFSFamily shape) where
+  hB : B ≠ 0
   proverGroupWork : Nat
   reductionGroupWork : Nat
   advantage : Nat -> Nat -> ENNReal
@@ -219,20 +222,20 @@ theorem straightLineDlogGroupWork_le_32_mul
   unfold straightLineDlogGroupWork
   omega
 
-/-- At the consensus IPA depth, the random-oracle side also fits the same five-bit overhead for
-every nonzero work target. -/
+/-- At the consensus IPA depth, the random-oracle side also fits the same five-bit overhead once
+the work target is at least four. -/
 theorem straightLineDlogRandomOracleQueries_le_32_mul
     (family : ComputedStraightLineDeployedFSFamily shape) {T : Nat}
-    (hk : shape.k = 11) (hT : 3 <= T) (hQ : family.Q <= T) :
+    (hk : shape.k = 11) (hT : 4 <= T) (hQ : family.Q <= T) :
     family.straightLineDlogRandomOracleQueries <= 32 * T := by
   unfold straightLineDlogRandomOracleQueries
   omega
 
 /-- At the consensus IPA depth, the exact query formula needs only three overhead bits once the
-work target is at least seventeen: `4*Q + 66 <= 8*T`. -/
+work target is at least twenty-two: `4*Q + 88 <= 8*T`. -/
 theorem straightLineDlogRandomOracleQueries_le_eight_mul
     (family : ComputedStraightLineDeployedFSFamily shape) {T : Nat}
-    (hk : shape.k = 11) (hT : 17 <= T) (hQ : family.Q <= T) :
+    (hk : shape.k = 11) (hT : 22 <= T) (hQ : family.Q <= T) :
     family.straightLineDlogRandomOracleQueries <= 8 * T := by
   unfold straightLineDlogRandomOracleQueries
   omega
@@ -255,6 +258,7 @@ reduction group-work bound remains an explicit profile premise until the verifie
 instrumented with an operational counter. -/
 structure StraightLineDirectDlogProfile (B : VestaG)
     (family : ComputedStraightLineDeployedFSFamily shape) (T : Nat) where
+  hB : B ≠ 0
   proverGroupWork : Nat
   reductionGroupWork : Nat
   advantage : Nat -> Nat -> ENNReal
@@ -265,7 +269,7 @@ structure StraightLineDirectDlogProfile (B : VestaG)
     (advantage family.straightLineDlogRandomOracleQueries
       (straightLineDlogGroupWork proverGroupWork reductionGroupWork))
   ipaDepth : shape.k = 11
-  targetAtLeastSeventeen : 17 <= T
+  targetAtLeastTwentyTwo : 22 <= T
   queryBound : family.Q <= T
   proverWorkBound : proverGroupWork <= T
   reductionWorkBound : reductionGroupWork <= T
@@ -277,6 +281,7 @@ def StraightLineDirectDlogProfile.toStraightLineConstraintDlogProfile
     {B : VestaG} {family : ComputedStraightLineDeployedFSFamily shape} {T : Nat}
     (profile : StraightLineDirectDlogProfile B family T) :
     StraightLineConstraintDlogProfile B family where
+  hB := profile.hB
   proverGroupWork := profile.proverGroupWork
   reductionGroupWork := profile.reductionGroupWork
   advantage := profile.advantage
@@ -293,7 +298,7 @@ theorem StraightLineDirectDlogProfile.solverCost_le
       forall basis O, 2 * family.straightLineDirectDecodeOps basis O <= T := by
   exact
     ⟨family.straightLineDlogRandomOracleQueries_le_eight_mul
-        profile.ipaDepth profile.targetAtLeastSeventeen profile.queryBound,
+        profile.ipaDepth profile.targetAtLeastTwentyTwo profile.queryBound,
       straightLineDlogGroupWork_le_eight_mul
         profile.proverWorkBound profile.reductionWorkBound,
       profile.directDecodeWorkBound⟩
@@ -306,7 +311,7 @@ structure StraightLineFiveBitDlogProfile (B : VestaG)
     (family : ComputedStraightLineDeployedFSFamily shape) (T : Nat)
     extends StraightLineConstraintDlogProfile B family where
   ipaDepth : shape.k = 11
-  targetAtLeastThree : 3 <= T
+  targetAtLeastFour : 4 <= T
   queryBound : family.Q <= T
   proverWorkBound : toStraightLineConstraintDlogProfile.proverGroupWork <= T
   reductionWorkBound :
@@ -321,7 +326,7 @@ theorem StraightLineFiveBitDlogProfile.solverCost_le
       straightLineDlogGroupWork profile.proverGroupWork profile.reductionGroupWork <= 32 * T := by
   constructor
   · exact family.straightLineDlogRandomOracleQueries_le_32_mul
-      profile.ipaDepth profile.targetAtLeastThree profile.queryBound
+      profile.ipaDepth profile.targetAtLeastFour profile.queryBound
   · exact straightLineDlogGroupWork_le_32_mul
       profile.proverWorkBound profile.reductionWorkBound
 

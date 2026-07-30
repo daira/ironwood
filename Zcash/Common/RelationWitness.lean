@@ -1,3 +1,5 @@
+import Mathlib.Data.Nat.Notation
+
 /-!
 # Sequencing a computed break branch
 
@@ -48,6 +50,40 @@ def finForallOrRelationWitness {n : Nat} {A : Fin n → Sort v} {R : Sort w}
           cases htail : ih (fun i => outcome i.succ) with
           | inr relation => exact PSum.inr relation
           | inl tail => exact PSum.inl (Fin.cases head tail)
+
+/-- Traverse a finite family of optional certificates.  The returned function contains the
+exact certificates produced by the individual checks; failure at any index returns `none`. -/
+def finForallOption {n : ℕ} {A : Fin n → Type v}
+    (outcome : ∀ i, Option (A i)) : Option (∀ i, A i) := by
+  induction n with
+  | zero => exact some fun i => Fin.elim0 i
+  | succ n ih =>
+      match outcome 0 with
+      | none => exact none
+      | some head =>
+          match ih (fun i => outcome i.succ) with
+          | none => exact none
+          | some tail => exact some (Fin.cases head tail)
+
+theorem finForallOption_isSome_of {n : ℕ} {A : Fin n → Type v}
+    (outcome : ∀ i, Option (A i)) (h : ∀ i, (outcome i).isSome) :
+    (finForallOption outcome).isSome := by
+  induction n with
+  | zero => rfl
+  | succ n ih =>
+      obtain ⟨head, hhead⟩ := Option.isSome_iff_exists.mp (h 0)
+      have htail : ∀ i : Fin n, (outcome i.succ).isSome := fun i => h i.succ
+      obtain ⟨tail, htailEq⟩ := Option.isSome_iff_exists.mp
+        (ih (fun i => outcome i.succ) htail)
+      have hstep : finForallOption outcome =
+          match outcome 0 with
+          | none => none
+          | some head =>
+              match finForallOption (fun i : Fin n => outcome i.succ) with
+              | none => none
+              | some tail => some (Fin.cases head tail) := rfl
+      rw [hstep, hhead, htailEq]
+      rfl
 
 /-- The bounded-`ℕ` analogue of `finForallOrRelationWitness`. Column and row families in the
 compiled constraint system are indexed by a natural number under a bound rather than by `Fin n`,
