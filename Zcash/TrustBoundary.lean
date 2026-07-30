@@ -406,11 +406,34 @@ assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceIntegrity_measure_le +n
 The Spend Authority key-binding break is the same Orchard-protocol `CommitIvkCollision`
 as the Balance key-binding arm. `relationOfSpendAuthorityKBBreak` sends it to a
 nontrivial discrete-log relation at the `CommitIvk` domain point and randomness base —
-the same terminal as the Balance key-binding arm, with no oracle model. -/
+the same terminal as the Balance key-binding arm, with no oracle model.
+`orchardSpendAuthorityOrRelation` composes it into the Spend Authority reduction, and
+`orchardSpendAuthority_measure_le` names the key-binding arm's hypothesis on that
+composed reduction's relation event, so the bound is the forgery arm's ε plus a
+discrete-log-relation advantage; the forgery arm's ε is RedDSA ±-randomized
+unforgeability. -/
 
 assert_computable Zcash.Security.Ledger.Bridge.relationOfSpendAuthorityKBBreak +choice +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check)
+assert_computable Zcash.Security.Ledger.Bridge.orchardSpendAuthorityOrRelation +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_axioms Zcash.Security.Ledger.Bridge.orchardSpendAuthority_measure_le +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
 
 /-! ## The key-binding arms' ε, discharged
 

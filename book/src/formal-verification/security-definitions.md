@@ -33,7 +33,7 @@ flowchart TD
   subgraph GAMES["Ledger security games — the capstones"]
     BAL["Balance integrity<br/>orchardBalanceIntegrity_measure_le"]
     SPEND["Spendability<br/>faerieGoldCore<br/>validLedger_append"]
-    SPENDAUTH["Spend authority<br/>spendAuthority_measure_le"]
+    SPENDAUTH["Spend authority<br/>orchardSpendAuthority_measure_le"]
   end
 
   BAL --> BS["Binding-signature<br/>balance"]

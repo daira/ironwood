@@ -270,4 +270,74 @@ def relationOfSpendAuthorityKBBreak (b : KeyBindingBreakData keyBinding) :
     NontrivialRelation (F := Fq) pallasS ivkQpt commitIvkRpt :=
   relationOfKeyBindingBreak b.h
 
+/-- The Orchard Spend Authority reduction with its key-binding arm routed to the
+discrete-log terminal: as `spendAuthorityOrBreak`, with a key-binding break converted
+to its nontrivial relation at the `CommitIvk` bases by
+`relationOfSpendAuthorityKBBreak`. -/
+def orchardSpendAuthorityOrRelation
+    {ledger : Ledger _ Fq PallasGroup Fp Fp Fp Encoding MSG SIG _}
+    (hval : ValidLedger (primitives (MSG := MSG) (SIG := SIG) verify bverify) keyBinding
+      issuance maxActions ledger)
+    {tx} (htx : tx ∈ ledger) {a} (ha : a ∈ tx.actions)
+    {wV : KeyBinding.Pool.Witness Fq PallasGroup Fp} (hKB : keyBinding.KB wV)
+    (hrecv : a.w.note_old.pkd
+      = (primitives verify bverify).emb (keyBinding.ivk wV) • a.w.note_old.gd)
+    {Signed : MSG → Prop} (hfresh : ¬ Signed tx.sighash) :
+    SpendAuthForgery (primitives verify bverify) (keyBinding.akP wV) Signed
+      ⊕' NontrivialRelation (F := Fq) pallasS ivkQpt commitIvkRpt :=
+  match spendAuthorityOrBreak hval htx ha hKB hrecv hfresh with
+  | .inl f => .inl f
+  | .inr b => .inr (relationOfSpendAuthorityKBBreak b)
+
+/-- The Orchard Spend Authority relation event, for a victim key witness `wV` with
+signing history `Signed`: the samples on which the reduction, run on an Action
+spending a note addressed to `wV` over an unsigned sighash, computes a nontrivial
+discrete-log relation at the `CommitIvk` bases. -/
+def orchardSpendAuthorityRelationEvent (wV : KeyBinding.Pool.Witness Fq PallasGroup Fp)
+    (hKB : keyBinding.KB wV) (Signed : MSG → Prop) :
+    Set (OrchardAnnotated verify bverify issuance maxActions) :=
+  {ω | ∃ tx, ∃ htx : tx ∈ ω.1, ∃ a, ∃ ha : a ∈ tx.actions,
+    ∃ hrecv : a.w.note_old.pkd
+      = (primitives verify bverify).emb (keyBinding.ivk wV) • a.w.note_old.gd,
+    ∃ hfresh : ¬ Signed tx.sighash, ∃ r,
+    orchardSpendAuthorityOrRelation verify bverify issuance maxActions ω.2 htx ha hKB
+      hrecv hfresh = .inr r}
+
+/-- A break-arm sample lands in the relation event: on it, the reduction's key-binding
+break converts to a relation, so the composed reduction returns one. -/
+theorem spendAuthorityBreakEvent_subset_relation
+    (wV : KeyBinding.Pool.Witness Fq PallasGroup Fp) (hKB : keyBinding.KB wV)
+    (Signed : MSG → Prop) :
+    spendAuthorityBreakEvent (P := primitives verify bverify) wV hKB Signed
+      ⊆ orchardSpendAuthorityRelationEvent verify bverify issuance maxActions wV hKB
+          Signed := by
+  rintro ω ⟨tx, htx, a, ha, hrecv, hfresh, b, hb⟩
+  refine ⟨tx, htx, a, ha, hrecv, hfresh, relationOfSpendAuthorityKBBreak b, ?_⟩
+  unfold orchardSpendAuthorityOrRelation
+  rw [hb]
+
+/-- **The Orchard Spend Authority probability bound.** For any adversary over valid
+Orchard ledgers, the probability that some Action spends a note addressed to `wV` over
+a sighash the holder of `wV` never signed is at most the forgery arm's ε plus the
+discrete-log-relation advantage at the `CommitIvk` bases: the key-binding arm's
+hypothesis is named on the relation event — every break-arm sample computes a relation
+(`spendAuthorityBreakEvent_subset_relation`) — with no oracle model. The forgery arm's
+ε is RedDSA ±-randomized unforgeability, a named hypothesis. -/
+theorem orchardSpendAuthority_measure_le
+    (A : PMF (OrchardAnnotated verify bverify issuance maxActions))
+    (wV : KeyBinding.Pool.Witness Fq PallasGroup Fp) (hKB : keyBinding.KB wV)
+    (Signed : MSG → Prop) {εf ε_sinsemilladlr : ℝ≥0∞}
+    (hf : A.toOuterMeasure
+      (spendAuthorityForgeryEvent (P := primitives verify bverify) wV hKB Signed) ≤ εf)
+    (hsin : A.toOuterMeasure
+      (orchardSpendAuthorityRelationEvent verify bverify issuance maxActions wV hKB
+        Signed) ≤ ε_sinsemilladlr) :
+    A.toOuterMeasure
+      (spendAuthorityViolation (P := primitives verify bverify) wV Signed)
+      ≤ εf + ε_sinsemilladlr :=
+  spendAuthority_measure_le A wV hKB Signed hf
+    (le_trans (MeasureTheory.measure_mono
+      (spendAuthorityBreakEvent_subset_relation verify bverify issuance maxActions wV
+        hKB Signed)) hsin)
+
 end Zcash.Security.Ledger.Bridge
