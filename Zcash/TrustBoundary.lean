@@ -181,6 +181,7 @@ assert_computable Zcash.Security.Ledger.Model.outputOpenings
 assert_computable Zcash.Security.Ledger.Model.positionedOutputs
 assert_computable Zcash.Security.Ledger.Model.nonZeroSpends
 assert_computable Zcash.Security.Ledger.Model.shieldedPoolBalance
+assert_axioms Zcash.Security.Ledger.Model.shieldedPoolBalance_zero
 assert_axioms Zcash.Security.Ledger.Model.posVal_lt
 assert_axioms Zcash.Security.Ledger.Model.rootAfter_prefix
 assert_axioms Zcash.Security.Ledger.Model.output_rho_eq_nullifiers
@@ -297,20 +298,31 @@ assert_computable Zcash.Security.Ledger.Model.spendabilityOrBreak +choice
 /-! ## Probabilistic capstones
 
 The game-level probability statements: pure event algebra over an adversary
-distribution of valid annotated ledgers, with a named ε hypothesis per break arm. -/
+distribution of valid annotated ledgers, with a named ε hypothesis per break arm.
+The all-prefixes bounds name their ε's on events shared across prefixes, so they
+cost no factor of `k` over the single-prefix bounds. -/
 
+assert_axioms Zcash.Security.Ledger.Model.balanceSubsetPerTx_measure_le
 assert_axioms Zcash.Security.Ledger.Model.balanceSubset_measure_le
+assert_axioms Zcash.Security.Ledger.Model.balanceConservationPerTx_measure_le
 assert_axioms Zcash.Security.Ledger.Model.balanceConservation_measure_le
+assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCapPerTx_measure_le
 assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCap_measure_le
+assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceNonNegative_succ_measure_le
+assert_axioms Zcash.Security.Ledger.Model.balanceIntegrityPerTx_measure_le
+assert_axioms Zcash.Security.Ledger.Model.balanceIntegrity_measure_le
 assert_axioms Zcash.Security.Ledger.Model.spendAuthority_measure_le
 
 /-! ## The Orchard-protocol discrete-log-relation discharges
 
 Each Orchard-protocol Balance-subset break arm reduces to a nontrivial discrete-log
 relation among the fixed Sinsemilla bases, and `orchardBalanceSubsetOrRelation` routes
-all three from a valid Orchard ledger. The reductions are computable, so they get
-assert_computable. The encoding-injectivity and coefficient-injectivity facts they
-consume are theorems. -/
+all three from a valid Orchard ledger. The probability layer bounds each capstone
+violation by the relation event — the branch preimage of that reduction — so a single
+`ε_sinsemilladlr` replaces the abstract capstones' per-arm ε's, and the all-prefixes
+bounds cost no factor of `k`. The reductions are computable, so they get
+assert_computable. The probability bounds and the encoding-injectivity and
+coefficient-injectivity facts they consume are theorems, so they get assert_axioms. -/
 
 assert_axioms Zcash.NontrivialRelation.toOne
 assert_axioms Zcash.Circuits.Specs.Sinsemilla.chunksOf_inj
@@ -335,6 +347,85 @@ assert_computable Zcash.Security.Ledger.Bridge.relationOfNoteCommitBreak +choice
 assert_computable Zcash.Security.Ledger.Bridge.relationOfMerkleCollision +choice +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 assert_computable Zcash.Security.Ledger.Bridge.orchardBalanceSubsetOrRelation +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceSubsetPerTx_measure_le +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceSubset_measure_le +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_axioms Zcash.Security.Ledger.Bridge.orchardShieldedBalanceNonNegative_succ_measure_le +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceIntegrityPerTx_measure_le +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceIntegrity_measure_le +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+
+/-! ## The Orchard Spend Authority key-binding arm
+
+The Spend Authority key-binding break is the same Orchard-protocol `CommitIvkCollision`
+as the Balance key-binding arm. `relationOfSpendAuthorityKBBreak` sends it to a
+nontrivial discrete-log relation at the `CommitIvk` domain point and randomness base —
+the same terminal as the Balance key-binding arm, with no oracle model.
+`orchardSpendAuthorityOrRelation` composes it into the Spend Authority reduction, and
+`orchardSpendAuthority_measure_le` names the key-binding arm's hypothesis on that
+composed reduction's relation event, so the bound is the forgery arm's ε plus a
+discrete-log-relation advantage; the forgery arm's ε is RedDSA ±-randomized
+unforgeability. -/
+
+assert_computable Zcash.Security.Ledger.Bridge.relationOfSpendAuthorityKBBreak +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check)
+assert_computable Zcash.Security.Ledger.Bridge.orchardSpendAuthorityOrRelation +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_axioms Zcash.Security.Ledger.Bridge.orchardSpendAuthority_measure_le +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
