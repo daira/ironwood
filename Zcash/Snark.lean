@@ -42,6 +42,7 @@ import Zcash.Snark.Fingerprint.Match
 import Zcash.Snark.Fingerprint.Rational.Vars
 import Zcash.Snark.Fingerprint.Rational.Event
 import Zcash.Snark.Fingerprint.Rational.Rep
+import Zcash.Snark.Fingerprint.Rational.QueryWalk
 import Zcash.Snark.Fingerprint.Epsilon
 import Zcash.Snark.Soundness.GrandProduct
 import Zcash.Snark.Soundness.Lookup

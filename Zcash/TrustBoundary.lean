@@ -931,6 +931,13 @@ assert_axioms Zcash.Snark.fingerprint_schwartz_zippel_index
 assert_axioms Zcash.Snark.card_exists_eval_zero_le
 assert_axioms Zcash.Snark.goodEvent_compl_card_le
 assert_axioms Zcash.Snark.competing_coefficient_family_agreement_le
+-- The query-side representation walk (`Fingerprint/Rational/QueryWalk`): the constraint list
+-- factors through fixed represented functions over the Lagrange denominator, its length is the
+-- shape-polynomial `constraintBudget`, and `expected_h_eval` is represented over the vanishing
+-- denominator at the `hEvalBudget` degree cap.
+assert_axioms Zcash.Snark.allExpressions_listRep
+assert_axioms Zcash.Snark.allExpressions_length
+assert_axioms Zcash.Snark.expectedHEval_rep
 -- The schedule, priced (`Composition.ScheduleBudget`): the committed carriers stay under the
 -- walk's caps, root witnesses at one table share the family's own outcome, and the schedule
 -- constructor discharges `measure_le` outright.
