@@ -131,6 +131,20 @@ random-evaluation bound: a fingerprint agrees with a random evaluation only with
 probability. Outer batching of separate proof blobs by Halo2's optional `BatchVerifier` is
 outside this formalization's scope.
 
+`Rational/` instantiates the Schwartz–Zippel bound at `assemble`'s own coefficients — the
+quantified random match. `Vars` encodes the proof-string scalars and challenges as one product
+sample space (`ScalarSlot`, with the deployed read schedule's `lastEval` shape baked into the
+type); `Event` enumerates the challenge-only denominator factors whose joint nonvanishing is
+the good event; `Rep` is the representation toolkit (cleared `num/den` identities on the
+event, with challenge folds costing one degree unit per element); `QueryWalk`, `QueryTable`
+(with `Verifier/GroupingRef`), `OpeningWalk`, `IpaWalk`, and `Capstone` walk the whole
+assembly — grouping stability through a fixed reference table, the opening value, the IPA
+scalars, and the positional `other` coefficient stream — into `assembleCoeffFamily`: every
+MSM coefficient as a polynomial numerator over enumerated denominators with one degree budget.
+`Epsilon` then prices it: a competing coefficient family that differs from Lean's anywhere
+agrees at a uniform point with probability at most `(D + B)/p` — the invariant's concrete ε —
+with per-capture literals in the random families' `Epsilon` modules.
+
 ### `Fixtures/` — captured proofs and boundary checks
 
 Concrete Orchard captures that exercise the assembly end-to-end and make the Rust/Lean boundary

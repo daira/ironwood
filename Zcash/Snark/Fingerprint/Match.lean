@@ -19,9 +19,12 @@ This module provides the match's logical content:
   captured proof's own commitments as bases, so the match is a comparison of `F_p` scalars.
 * `fingerprint_match_random_eval_sound` — soundness of the cheaper random-evaluation match: a
   nonzero coefficient difference evades a uniformly random evaluation with probability `≤ d / p`
-  (Schwartz–Zippel). Stated for an abstract polynomial, not `assemble`'s actual coefficients, so
-  it is not yet a Lean link; the `native_decide` fixture match is what establishes agreement, on
-  each of the five captured proofs — three of them at random inputs — full stop.
+  (Schwartz–Zippel). Instantiated at `assemble`'s realized coefficients by the representation
+  walk (`Fingerprint/Rational/`, priced in `Fingerprint/Epsilon.lean`): a competing coefficient
+  family that differs from Lean's anywhere agrees at a uniform point with probability
+  `≤ (D + B) / p`, with per-capture literals beside the random fixtures
+  (`Fixtures/*Random/Epsilon.lean`; ε ≈ 2⁻²⁴⁰). The `native_decide` fixture match is what
+  establishes agreement, on each of the five captured proofs — three of them at random inputs.
 * `gScalars_card` — the structural cross-check: the assembled MSM carries `2 ^ k` URS-generator
   coefficients, matching the captured Orchard fingerprint's `2 ^ 11 = 2048`.
 
@@ -33,10 +36,15 @@ checkable Rust↔Lean trust boundary. Everything else transcribed from halo2/orc
 exists to make the Lean development writable and is checked rather than trusted: a transcription
 error that admits a proof the deployed verifier accepts but the Lean model does not must break
 some fingerprint-match theorem, except with probability `≤ ε` over the randomness of the captured
-inputs and conditional on enumerated premises. Today ε is priced generically by
-`fingerprint_match_random_eval_sound`; its instantiation at `assemble`'s actual coefficients is
-open. The premises, and the audit table mapping each transcribed artifact to the theorem that
-falsifies it, live in the book's Trust Boundary chapter
+inputs and conditional on enumerated premises. ε is priced at `assemble`'s own coefficients: on a
+good event of assignments every assembled coefficient is a rational function of the proof-string
+scalars and challenges with enumerated challenge-only denominators (`assembleCoeffFamily`,
+`Fingerprint/Rational/Capstone.lean`), and `competing_coefficient_family_agreement_le`
+(`Fingerprint/Epsilon.lean`) makes ε = `(D + B) / p` a theorem about these functions — `D` the
+coefficient-family degree budget, `B` the summed denominator-factor degrees, `p ≈ 2²⁵⁴`. The
+uniformity premise behind "a uniformly random point", the remaining premises, and the audit table
+mapping each transcribed artifact to the theorem that falsifies it live in the book's Trust
+Boundary chapter
 (`book/src/formal-verification/trust-boundary.md`). Only that direction
 (deployed-accepts ⊆ model-accepts) is soundness-relevant; completeness is not a goal. The
 boundary artifact is per-proof: halo2's optional `BatchVerifier` — random-linear-combination

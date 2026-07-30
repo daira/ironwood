@@ -115,23 +115,65 @@ lineage, never the unrelated AGM query-provenance concept of
 
 ## The modality: ε and its premises
 
-The invariant's "except with probability ≤ ε" is honest about its current status. The generic
-price is proven: `fingerprint_match_random_eval_sound` (`Zcash/Snark/Fingerprint/Match.lean`)
-bounds the probability that a nonzero coefficient-difference polynomial of degree `d` evades a
-uniformly random evaluation by `d / p`, with `p ≈ 2²⁵⁴`. What is *not* yet done is
-instantiating it at `assemble`'s actual coefficients — exhibiting them as polynomials in the
-proof-string scalars and challenges with a concrete total-degree literal `D`, making
-ε = `D / p` a theorem about these functions. Until then the random match is a `native_decide`
-fact plus a generic bound, and two premises stay prose either way:
+The invariant's "except with probability ≤ ε" is a theorem about these functions. The generic
+price — `fingerprint_match_random_eval_sound` (`Zcash/Snark/Fingerprint/Match.lean`) bounds the
+probability that a nonzero coefficient-difference polynomial of degree `d` evades a uniformly
+random evaluation by `d / p`, `p ≈ 2²⁵⁴` — is instantiated at `assemble`'s own coefficients by
+the representation walk (`Zcash/Snark/Fingerprint/Rational/`). On a *good event* of assignments
+— `xⁿ ≠ 1`, `x ≠ 0`, `x` off the Lagrange rotations, `x₃` off the opened points, every IPA
+round challenge nonzero; each conjunct the nonvanishing of one enumerated denominator factor —
+the multiopen grouping is a single fixed combinatorial object, `assemble?` returns `some`, and
+every coefficient of the assembled MSM is a rational function of the proof-string scalars and
+challenges with challenge-only denominators drawn from the factor list (`assembleCoeffFamily`,
+`Rational/Capstone.lean`). `competing_coefficient_family_agreement_le`
+(`Zcash/Snark/Fingerprint/Epsilon.lean`) then prices the match: a competing coefficient family
+of the same degree budget over the same denominators that differs from Lean's *anywhere* agrees
+with the assembled MSM at a uniform point with probability at most `(D + B) / p` — either the
+point falls off the good event (`B = 2071`, the summed factor degrees:
+`2048 + 1 + 7 + 4 + 11`), or the nonzero difference polynomial vanishes
+(`D = msmDegreeBudget`, pinned per capture: `16452 / 16456 / 16460` at 1/2/3 actions, dominated
+by the `h`-piece coefficients `xnⁱ·x₁ʲ·x₄ˢ`). The per-capture headliners with literal numerals
+— ε = `18523 / 18527 / 18531` over `p`, about `2⁻²⁴⁰` — live beside the random fixtures
+(`Fixtures/*Random/Epsilon.lean`), censused with exact `native_decide` owner lists, and the
+good event provably contains each captured point (`capturedPoint_goodEvent`). Two premises stay
+prose:
 
-- **Rust-side polynomiality.** That the deployed coefficients are polynomials of comparable
-  degree in the same inputs is an audit of the Rust source — necessarily, since that side has
-  no Lean text.
-- **Uniformity.** The captured challenges are Blake2b outputs of the random proof string;
-  treating the capture as a uniform evaluation point models Blake2b as a random function fixed
-  independently of the code under test. Code written *after* the seeds were fixed could in
-  principle special-case the published point — the pinned-point caveat below, excluded by
-  review rather than probability.
+- **Rust-side polynomiality.** That the deployed coefficients are the same rational family —
+  the same enumerated challenge-only denominators, comparable numerator degree — is an audit of
+  the Rust source; necessarily, since that side has no Lean text.
+- **Uniformity.** The subsection below.
+
+### The uniformity premise
+
+The Lean theorem samples one uniform point of a product space: every proof-string scalar slot
+and every challenge is an independent uniform `F_p` value
+(`competing_coefficient_family_agreement_le` counts over the full function space). The captures
+are not sampled that way — the challenges are Blake2b squeezes of the proof string,
+`ch = FS(ps)`. Under the random-oracle model the two experiments assign the *same* probability
+to a false agreement, exactly. Fix the discrepancy polynomial (both implementations, hence the
+polynomial, predate the seeds). Model each squeeze as a call to a random function at the
+transcript prefix so far: within one run the squeeze keys are pairwise distinct — each prefix
+strictly extends the last — so, conditioned on any value of the proof string, the challenge
+vector is uniform. A pair whose first component is uniform and whose second is uniform
+conditioned on every value of the first is exactly product-uniform, so
+`P[q(ps, FS(ps)) = 0] = #{(ps, ch) : q(ps, ch) = 0} / pᴺ` — precisely the fraction the theorem
+bounds. No two-stage Schwartz–Zippel over "bad proof strings" is needed; the identity is exact.
+The group-valued slots need no distributional assumption at all: the theorem holds for every
+fixed assignment of them, so conditioning on the captured commitments is sound.
+
+What the premise assumes, enumerated:
+
+1. the fabricated proof-string scalars are uniform — seeded-RNG outputs whose seeds were fixed
+   before any of this Lean development existed (the seed table in
+   `fixture-provenance-notes.md`);
+2. Blake2b behaves as a random function chosen independently of the code under test — code
+   written *after* the seeds could special-case the published point: the pinned-point caveat
+   below, excluded by review, not probability;
+3. squeeze-key distinctness at the byte level — the typed-prefix distinctness is proven; byte
+   serialization is premise 4 of the enumerated premises below;
+4. each squeeze reduces a 512-bit hash into `F_p`, within total statistical distance well under
+   `2⁻²⁵⁰` across a run — absorbed into ε;
+5. Rust-side polynomiality, the bullet above.
 
 ## How each transcription is falsified
 
@@ -140,10 +182,10 @@ error breaks a check. Rows marked *prob. ≥ 1 − ε* are the probabilistic one
 
 | Transcribed artifact | Enters the fingerprint via | A soundness-relevant error causes | Checked by |
 |---|---|---|---|
-| Gate expressions (`configure` port) | coefficients at a random point | coefficient mismatch, prob. ≥ 1 − ε | the three random `Boundary.lean` theorems; `Keygen/Certificate.lean`; `SingleAction/VkMatch.lean` |
+| Gate expressions (`configure` port) | coefficients at a random point | coefficient mismatch, prob. ≥ 1 − ε | the three random `Boundary.lean` theorems, priced by `Fixtures/*Random/Epsilon.lean`; `Keygen/Certificate.lean`; `SingleAction/VkMatch.lean` |
 | σ / fixed-column content (keygen port) | Lean-derived commitments as MSM bases | base-point mismatch (a deliberate collision must solve discrete log) | `vk_eq_derived` + each family's `VkCertificate.lean` |
 | Query layouts, permutation chunks, lookup expressions | term structure and coefficients | term-list / coefficient mismatch | random `fingerprint_matches`; per-slot naming by the honest `Negative/Sweep.lean` |
-| Proof-slot sourcing (`fixedEvals`, `permutationCommonEvals`, `instanceEvals`) | random slot values in coefficients | coefficient mismatch, prob. ≥ 1 − ε | the random families (their reason to exist); blind-slot tampers in both sweeps |
+| Proof-slot sourcing (`fixedEvals`, `permutationCommonEvals`, `instanceEvals`) | random slot values in coefficients | coefficient mismatch, prob. ≥ 1 − ε | the random families (their reason to exist), priced by `Fixtures/*Random/Epsilon.lean`; blind-slot tampers in both sweeps |
 | Witness-dependent slots (advice/lookup evals, commitments, `ipaC`/`ipaF`, …) | pinned by every capture | mismatch; the sweeps name the broken slot | all five `fingerprint_matches`; the per-slot sweeps |
 | Fiat–Shamir schedule model (`deriveChallenges`) | folded into the composed statement | oracle miss (`missingChallenge_not_captured`) or wrong distinct challenge (`capturedChallengeValues_nodup`) → mismatch | the five `nonInteractiveFingerprint_matches_derived` |
 | Captured challenge values | the real verifier computed the captured MSM from its real challenges | recorder drift mismatches the MSM | cross-tied by every match (this row's documentation is this table) |
@@ -253,9 +295,12 @@ A reviewer can verify the Rust↔Lean seam of the soundness stack by reading:
 
 1. the five `nonInteractiveFingerprint_matches_derived` theorems and their `TrustBoundary`
    censuses;
-2. the audit table above, row by row, checking each falsification mechanism exists in the
+2. the quantified match — `competing_coefficient_family_agreement_le` and the three
+   `Fixtures/*Random/Epsilon.lean` headliners with their literal ε — together with the
+   uniformity premise above;
+3. the audit table above, row by row, checking each falsification mechanism exists in the
    tree;
-3. the seven premises above, checking each is as small as claimed —
+4. the seven premises above, checking each is as small as claimed —
 
 without ever having to trust that any hand transcription from halo2/orchard is correct, and
 with the residual ε and its premises stated rather than implied. Coined terms are in the
