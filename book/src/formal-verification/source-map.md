@@ -171,10 +171,7 @@ polynomial halo2 committed from its `instances` argument, or a `(g, U, W)` relat
 are built on. `Vesta` pins the abstract group to the actual Vesta curve. `TopLevelTerminal` turns
 canonical constraint satisfaction into the Spec of an arbitrary top-level circuit.
 `StraightLineActionTerminal` and `StraightLineActionEvent` connect the one-run computed decode to
-the concrete Action statement and carry a failure as explicit relation data. The former
-`Canonical.Vesta` → `TopLevelVesta` → `ActionVesta` → `Deployed.ActionVesta` conditional ladder has
-been removed; it required caller-supplied opened-rewind and residual premises and was not the
-computed deployed endpoint.
+the concrete Action statement and carry a failure as explicit relation data.
 
 Six subtrees carry the heavier machinery:
 
@@ -195,7 +192,7 @@ Six subtrees carry the heavier machinery:
   the explicit root sets it must avoid (`DeployedRootSets`, `DeployedRootDecode`,
   `DeployedPinnedRoots`, `PinnedRootWitness`), the retained-provenance route (`OnlineMembers`,
   `OnlineMultiopen`, `OnlineConstraint`, `DeployedConstraintSupply`), and the adapters back onto
-  the historical opened-batch interface (`SyntheticOpened`, `DeployedSyntheticOpened`,
+  the opened-batch interfaces (`SyntheticOpened`, `DeployedSyntheticOpened`,
   `DecodeToOpened`). `StraightLineIpa` and `StraightLinePinnedRoots` classify one accepting
   algebraic transcript as a clean opening, an explicit relation, or a squeeze-pinned bad-challenge
   event, from a single execution with no rewinding; `StraightLineFiniteSecurity` records group
@@ -242,9 +239,8 @@ Six subtrees carry the heavier machinery:
   **`FiatShamir/Adversary/`** builds the querying-adversary reduction on top: the `Q`-query
   adaptive adversary model (`OracleComp`), the Fiat–Shamir-to-AGM handoff (`Algebraic`),
   oracle-domain reduction to finite support (`DomainReduction`), and the adaptive interface and
-  pre-IPA query accounting (`Adaptive`, `PreIpa`, `Provenance`). The former transcript-tree,
-  replay/fork, and challenge-reprogramming compatibility APIs have been removed; the live path
-  uses the bounded querying-adversary model to price straight-line pinned-root events.
+  pre-IPA query accounting (`Adaptive`, `PreIpa`, `Provenance`). These components use the bounded
+  querying-adversary model to price straight-line pinned-root events.
 - **`Multiopen/`** — the multiopen argument's value binding. `Decode` supplies the coefficient and
   Vandermonde primitives; `Opened` defines the augmented opened-batch and member-decode interfaces
   populated by explicit AGM representations; and `Deployed` proves that halo2's `x₄` fold has the

@@ -379,10 +379,8 @@ assert_computable Zcash.Security.BindingSignature.NontrivialRelation.ofSaplingIm
 /-!
 ## SNARK soundness stack
 
-The census also carries the SNARK binding and knowledge-soundness reductions, consolidated here
-from the former per-directory files and, like the key-binding and ledger sections above, expressed
-through the `Zcash.Meta.AxiomCheck` macros rather than the older `assert_no_sorry` +
-`#guard_msgs`-pinned `#print axioms` idiom:
+The census also carries the SNARK binding and knowledge-soundness reductions and, like the
+key-binding and ledger sections above, expresses them through the `Zcash.Meta.AxiomCheck` macros:
 
 * **Computed break reductions** — the data-producing `def`s that extract a discrete-log relation
   from a collision, fold, or peel — get `assert_computable`: a plain `def`, not marked
@@ -417,9 +415,8 @@ hypothesis. That is what makes the tier of an endpoint's pin load-bearing rather
   is unconditionally inhabited, their *statements* do not force the acceptance hypotheses — only
   the proofs actually written do. The pin bounds the trusted base, not the extraction.
 
-This is why the `⊕'`-with-data shape is necessary but not sufficient. The former captured-artifact
-capstones depended on a noncomputable opened-rewind route and have been removed. The computable
-straight-line route and adaptive knowledge bound are stated at `ursOfAugmentedBasis k basis` for a
+This is why the `⊕'`-with-data shape is necessary but not sufficient. The computable straight-line
+route and adaptive knowledge bound are stated at `ursOfAugmentedBasis k basis` for a
 quantified basis, while the fixture layer separately anchors verifier behavior at `capturedURS`.
 `ursOfAugmentedBasis_augmentedBasis` joins the URS component, but there is currently no theorem
 constructing the straight-line family for the captured proof. The census therefore makes no claim
@@ -564,11 +561,9 @@ assert_axioms Zcash.Snark.commitment_binding_prob_le_of_textbookDL +native(
 
 /-! ### Multiopen decode and straight-line composition
 
-The decode layer's surviving surface: the Vandermonde column recovery, the `x₄` flat-power-batch
-collapse, and the straight-line extraction composition. The rewind-based compatibility layer that
-once sat here — the propositional binding disjunct and the accept-event ladders it fed — has been
-removed, so every break the deployed route charges to DLOG is computed relation data, censused
-below through explicit `PSum` outcomes and computable finders. Theorems throughout, so
+The decode layer covers Vandermonde column recovery, the `x₄` flat-power-batch collapse, and the
+straight-line extraction composition. Every break the deployed route charges to DLOG is computed
+relation data, censused below through explicit `PSum` outcomes and computable finders. Theorems throughout, so
 `assert_axioms`, with `+native` on the Vesta-instantiated endpoints. -/
 
 -- The decode layer (`Soundness.Multiopen.Decode`/`Deployed`): the Vandermonde recovery of the
@@ -765,7 +760,7 @@ assert_axioms Zcash.Snark.deployed_copy_constraints_of_identity_chunks
 assert_axioms Zcash.Snark.hgood_of_good_challenge
 -- Product-measure lifting, now used by the direct pinned-root composition.
 assert_axioms Zcash.Snark.independentProductPMF_fiber_bound
--- Acceptance through `assemble?`, isolated from the historical completeness ladder.
+-- Acceptance through `assemble?` and its explicit verifier equation.
 assert_axioms Zcash.Snark.fullAlgebraicAcceptDeployed +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.fullAlgebraicAccept_of_deployed +native(

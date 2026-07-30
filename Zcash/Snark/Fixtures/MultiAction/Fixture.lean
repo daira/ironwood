@@ -77,7 +77,7 @@ def commitLagrange (coeffs : List Fp) : G :=
 
 /-- The instance commitment the verifier uses, computed per proof and column from the
 public inputs — halo2 `verify_proof` derives this from its `instances` argument, not the
-VK. `assemble` consumes this in place of the removed `vk.instanceCommitment` field; by
+VK. `assemble` consumes this as a per-proof input rather than a VK field; by
 `instance_commitments_derived` it equals the captured commitment the deployed verifier used. -/
 def derivedInstanceCommitment (p : Fin shape.numProofs) (i : ℕ) : G :=
   commitLagrange (capturedPublicInstances.getD (p.val * capturedNumInstanceColumns + i) [])

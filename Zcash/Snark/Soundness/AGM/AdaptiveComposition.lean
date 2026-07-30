@@ -250,7 +250,7 @@ theorem ComputedAdaptiveOnlineAGMFSFamily.adaptiveIpaBadWithoutRelation_all_meas
     _ = shape.k * ((family.Q + 1 : Nat) *
         (2 / (Fintype.card Fp : ENNReal))) := by simp
 
-/-- The adaptive index translation is inverse to the historical six-root ordering. -/
+/-- The adaptive index translation is inverse to the deployed six-root ordering. -/
 @[simp] theorem adaptiveRootEventIndex_deployedRootChallengeIndex (i : Fin 6) :
     adaptiveRootEventIndex (deployedRootChallengeIndex i) = i := by
   fin_cases i <;> rfl

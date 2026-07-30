@@ -1116,9 +1116,9 @@ def adaptiveActionRootEvent :
           + 3 * (pp.mergeDerived actionCircuit).k) → Fp)) :=
   {q | ∃ i : Fin 6, q.2 ∈ family.adaptiveRootBadWithoutRelation q.1 i}
 
-/-- The remaining semantic-squeeze obligation after the executable algebraic branches have been
-removed.  Subsequent Action surface lemmas refine this residual into the `x/y/β/γ/θ` finite
-bad sets; importantly, it is stated directly on the bare adaptive family. -/
+/-- The semantic-squeeze obligation outside the executable algebraic branches. Subsequent Action
+surface lemmas refine this residual into the `x/y/β/γ/θ` finite bad sets; importantly, it is stated
+directly on the bare adaptive family. -/
 def adaptiveActionSemanticResidualEvent :
     Set ((AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) ×
       (BTranscript Fp VestaG

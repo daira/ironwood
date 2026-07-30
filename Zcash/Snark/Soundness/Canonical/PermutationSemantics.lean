@@ -563,8 +563,8 @@ structure ResolverPermutationGoodChallenges
       (chunkRowName vk.omega vk.delta vk.chunkLen))).coeff j)
 
 /-- Resolver-backed full constraint satisfaction enforces equality on every replayed keygen
-permutation cycle.  The formerly explicit zero-factor branch is excluded by the separately priced
-active-cell component of `ResolverPermutationGoodChallenges.gamma`.
+permutation cycle. The zero-factor branch is excluded by the separately priced active-cell
+component of `ResolverPermutationGoodChallenges.gamma`.
 
 The proof does no new algebra: it joins the polynomial half from
 `ConstraintSatisfaction.resolverPermutationConstraints` to the domain, keygen-semantic, and

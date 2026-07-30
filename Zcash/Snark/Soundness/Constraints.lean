@@ -480,8 +480,7 @@ theorem mem_constraintPolys_of_mem_lookupExpressions {np : ℕ} (fixedCols : ℕ
 
 open Polynomial in
 /-- **The fingerprint, discharged.** The polynomial constraint numerator at the gate point is the
-verifier's own `expected_h_eval` fold — no longer an assumption relating an abstract gate list to the
-deployed one, but an equation between two things built by the same code. The hypotheses are exactly
+verifier's own `expected_h_eval` fold: an equation between two things built by the same code. The hypotheses are exactly
 the node binding: the fed columns, the permutation sets, the lookups and the Lagrange terms all
 evaluate at `ch.x` to the values the proof string claims. -/
 theorem eval_combineConstraints_deployed {shape : Shape} {G : Type*}

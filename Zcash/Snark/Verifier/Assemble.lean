@@ -2094,8 +2094,8 @@ structure ConstructIntermediateSetsRoute {k : ℕ} {F G : Type*} [DecidableEq F]
         (((constructIntermediateSets queries).points.getD setIndex []).idxOf q.point) z₀ = q.eval
 
 /-- **Computed general slot routing, all queries of one slot.** The slot named by `c` is routed to
-a single member of a single point set, and *every* query on that slot lands there.  Unlike the
-legacy existential theorem, this definition returns the actual `findIdx` choices as data. -/
+a single member of a single point set, and *every* query on that slot lands there. The definition
+returns the actual `findIdx` choices as data. -/
 def constructIntermediateSets_comm_route {k : ℕ} {F G : Type*} [DecidableEq F]
     [DecidableEq G] (queries : List (VerifierQuery k F G)) {c : CommitmentId}
     {q₀ : VerifierQuery k F G} (hq₀ : q₀ ∈ queries) (hq₀c : q₀.commId = c)

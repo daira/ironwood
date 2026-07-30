@@ -5,9 +5,8 @@ import Zcash.Snark.Soundness.Multiopen.RPoly
 # Multiopen vanishing-polynomial algebra
 
 Reusable vanishing-polynomial and denominator-clearing identities used by the deployed AGM
-multiopen analysis. The former rewind-sample reconstruction theorems have been removed; the live
-soundness path derives explicit augmented-basis relations from the algebraic prover's computed
-representations.
+multiopen analysis. The soundness path derives explicit augmented-basis relations from the
+algebraic prover's computed representations.
 -/
 
 namespace Zcash.Snark

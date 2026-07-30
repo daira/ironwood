@@ -142,7 +142,7 @@ def deployed_slot_route_of_checks [DecidableEq G] [Inhabited G]
     simpa only [deployedSetQueries, constructIntermediateSets_zip_sets_getD] using h
 
 omit [Module Fp G] in
-/-- Proposition-valued compatibility wrapper for legacy constraint-routing consumers. -/
+/-- Proposition-valued wrapper for constraint-routing consumers. -/
 theorem deployed_slot_routed_all_of_checks [DecidableEq G] [Inhabited G]
     {shape : Shape} (vk : VerifyingKey shape Fp G)
     (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape Fp G)
