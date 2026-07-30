@@ -193,7 +193,8 @@ theorem actionCircuit_domainExponent : actionCircuit.domainExponent = capturedUR
 `omega` is a key at the captured domain. -/
 theorem toVerifierKey_omega_captured :
     (actionCircuit.toVerifierKey actionProofParams capturedURS).omega = omegaOf capturedURS.k := by
-  rw [TopLevelCircuit.toVerifierKey_omega, actionCircuit_domainExponent]
+  rw [TopLevelCircuit.toVerifierKey_omega, TopLevelCircuit.omega,
+    actionCircuit_domainExponent]
 
 /-- **The circuit-derived public-instance family is the fixture's.** The soundness stack reads its
 instance commitments from

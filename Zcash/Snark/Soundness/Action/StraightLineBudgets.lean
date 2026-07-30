@@ -1,4 +1,5 @@
 import Zcash.Snark.Soundness.Action.StraightLineEvent
+import Zcash.Snark.Soundness.StraightLine.TopLevelEvent
 import Zcash.Snark.Soundness.Composition.SequentialLift
 import Zcash.Snark.Soundness.Composition.ChallengeReads
 import Zcash.Snark.Soundness.Composition.SemanticChallengeRemainder

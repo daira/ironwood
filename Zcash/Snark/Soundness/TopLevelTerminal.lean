@@ -5,6 +5,8 @@ import Zcash.Circuits.Integration.TopLevelAssignment
 import Zcash.Snark.Soundness.Canonical.Terminal
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 
+set_option maxHeartbeats 20000
+
 /-!
 # Generic top-level circuit soundness terminal
 
@@ -97,21 +99,17 @@ def topLevelBundleWitness_or_bad_of_components
     [ProvableType PublicInput]
     {top : TopLevelCircuit Fp Config PublicInput}
     {pp : Keygen.ProofParams} {urs : URS G}
-    {ch : Challenges (pp.mergeDerived top).k Fp}
+    {k : ℕ} {ch : Challenges k Fp}
     {poly : CommitmentId → Polynomial Fp}
     {cell : Type} [DecidableEq cell] [Fintype cell]
     {Bad : Type}
-    (hblinding :
-      (top.toVerifierKey pp urs).blindingFactors <
-        (top.toVerifierKey pp urs).n)
     (satisfaction :
       ConstraintSatisfaction
-        (canonicalConstraintModelOfPermutationResolver
-          (top.toVerifierKey pp urs) ch poly hblinding)
-        (top.toVerifierKey pp urs).n)
-    (gates : TopLevelGateCoherence top pp urs)
+        (top.constraintModel pp urs ch poly)
+        top.n)
+    (gates : TopLevelGateCoherence top)
     (fixedEncoding : ∀ proofIndex,
-      TopLevelFixedEncoding top pp urs poly proofIndex)
+      TopLevelFixedEncoding top pp poly proofIndex)
     (fixed : ∀ proofIndex,
       TopLevelFixed top pp urs poly proofIndex)
     (copies : ∀ proofIndex,
@@ -121,7 +119,7 @@ def topLevelBundleWitness_or_bad_of_components
     TopLevelWitnessTerminalOutcome top pp poly Bad := by
   exact finForallOrRelationWitness fun proofIndex =>
     (TopLevelAssignment.bridgeWitness_of_components
-      proofIndex hblinding satisfaction gates
+      proofIndex satisfaction gates
       (fixedEncoding proofIndex)
       (fixed proofIndex).1 (fixed proofIndex).2
       (copies proofIndex) (lookups proofIndex)).semanticWitness_or_bad
@@ -184,18 +182,14 @@ def topLevelBundleWitness_or_bad_of_constraintSatisfaction
     [ProvableType PublicInput]
     {top : TopLevelCircuit Fp Config PublicInput}
     {pp : Keygen.ProofParams} {urs : URS G}
-    {ch : Challenges (pp.mergeDerived top).k Fp}
+    {k : ℕ} {ch : Challenges k Fp}
     {poly : CommitmentId → Polynomial Fp}
     {cell : Type} [DecidableEq cell] [Fintype cell]
     {Bad : Type}
-    (hblinding :
-      (top.toVerifierKey pp urs).blindingFactors <
-        (top.toVerifierKey pp urs).n)
     (satisfaction :
       ConstraintSatisfaction
-        (canonicalConstraintModelOfPermutationResolver
-          (top.toVerifierKey pp urs) ch poly hblinding)
-        (top.toVerifierKey pp urs).n)
+        (top.constraintModel pp urs ch poly)
+        top.n)
     (correctness :
       TopLevelCircuitCorrectness top pp urs ch poly cell Bad) :
     TopLevelWitnessTerminalOutcome top pp poly Bad := by
@@ -203,7 +197,7 @@ def topLevelBundleWitness_or_bad_of_constraintSatisfaction
   let fixedEncodingOutcome :=
     finForallOrRelationWitness
       (A := fun proofIndex =>
-        TopLevelFixedEncoding top pp urs poly proofIndex)
+        TopLevelFixedEncoding top pp poly proofIndex)
       correctness.fixedEncoding
   let fixedOutcome :=
     finForallOrRelationWitness
@@ -225,7 +219,7 @@ def topLevelBundleWitness_or_bad_of_constraintSatisfaction
       bindOutcome copiesOutcome fun hcopies =>
         bindOutcome lookupsOutcome fun hlookups =>
           topLevelBundleWitness_or_bad_of_components
-            hblinding satisfaction correctness.gates
+            satisfaction correctness.gates
             hfixedEncoding hfixed hcopies hlookups
 
 assert_no_sorry topLevelBundleStatement_or_bad_of_constraintSatisfaction
@@ -239,7 +233,7 @@ variable
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
     (hk : (pp.mergeDerived top).k = urs.k)
-    (inputs : Fin (pp.mergeDerived top).numProofs → PublicInput Fp)
+    (inputs : Fin pp.numProofs → PublicInput Fp)
     (ps : ProofString (pp.mergeDerived top) Fp G)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
@@ -267,9 +261,68 @@ variable
 
 /--
 Satisfaction of the canonical model selected by an accepting verifier run,
-together with the circuit's named correctness package, yields its statements at
-the public inputs supplied to the verifier.
+together with the circuit's named correctness package, retains private witnesses
+at the public inputs supplied to the verifier.
 -/
+def topLevelWitnesses_or_relation_of_circuitSat
+    (hpoly : Polynomial Fp)
+    (hsatisfied :
+      (CanonicalMemberConstraintRelation.acceptedModel
+        (memberDecode := memberDecode)
+        (hblinding :=
+          top.toVerifierKey_blindingFactors_lt_n pp urs) haccepts).CircuitSat
+          ch.y hpoly top.n a)
+    (hgoodY : ∀ j,
+      ch.y ∉ szBadSet
+        (foldSplitWitness
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding :=
+              top.toVerifierKey_blindingFactors_lt_n pp urs)
+            haccepts).constraints
+          top.n j))
+    {cell : Type} [DecidableEq cell] [Fintype cell]
+    (correctness :
+      TopLevelCircuitCorrectness top pp urs ch
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts)
+        cell
+        (NontrivialRelation (F := Fp) urs.g urs.u urs.w)) :
+    TopLevelExternalBundleWitness top inputs ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  let relation :=
+    CanonicalMemberConstraintRelation.ofAcceptedCircuitSat
+      haccepts hsatisfied
+  have hpolynomial :
+      relation.polynomial =
+        CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts := by
+    rfl
+  have hn :
+      top.n ≠ 0 := by
+    exact top.n_ne_zero
+  have hsatisfaction :=
+    relation.constraintSatisfaction hn
+      (by
+        simpa only [
+          CanonicalMemberConstraintRelation.model,
+          hpolynomial] using hgoodY)
+  have hwitness :=
+    topLevelBundleWitness_or_bad_of_constraintSatisfaction
+      (top := top) (pp := pp) (urs := urs) (ch := ch)
+      (cell := cell)
+      (by simpa only [hpolynomial] using hsatisfaction)
+      correctness
+  rcases hwitness with hwitness | hrelation
+  · exact
+      TopLevelInstanceCommitment.witnesses_or_relation_of_accepted_topLevelBundleWitness
+        top pp urs hk inputs ps ch pU pW a batchOpenings memberDecode
+        haccepts correctness.gates.domainExponent_lt hwitness
+  · exact PSum.inr hrelation
+
+assert_no_sorry topLevelWitnesses_or_relation_of_circuitSat
+
+/-- Forget the retained private witnesses to obtain the statement-only terminal. -/
 def topLevelStatements_or_relation_of_circuitSat
     (hpoly : Polynomial Fp)
     (hsatisfied :
@@ -295,36 +348,13 @@ def topLevelStatements_or_relation_of_circuitSat
         cell
         (NontrivialRelation (F := Fp) urs.g urs.u urs.w)) :
     (∀ proofIndex, top.Statement (inputs proofIndex)) ⊕'
-      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  let relation :=
-    CanonicalMemberConstraintRelation.ofAcceptedCircuitSat
-      haccepts hsatisfied
-  have hpolynomial :
-      relation.polynomial =
-        CanonicalMemberConstraintRelation.acceptedPolynomial
-          (memberDecode := memberDecode) haccepts := by
-    rfl
-  have hn :
-      top.n ≠ 0 := by
-    exact top.n_ne_zero
-  have hsatisfaction :=
-    relation.constraintSatisfaction hn
-      (by
-        simpa only [
-          CanonicalMemberConstraintRelation.model,
-          hpolynomial] using hgoodY)
-  have htop :=
-    topLevelBundleStatement_or_bad_of_constraintSatisfaction
-      (top := top) (pp := pp) (urs := urs) (ch := ch)
-      (cell := cell)
-      (by simpa only [hpolynomial] using hsatisfaction)
-      correctness
-  rcases htop with htop | hrelation
-  · exact
-      TopLevelInstanceCommitment.statements_or_relation_of_accepted_topLevelBundleStatement
-        top pp urs hk inputs ps ch pU pW a batchOpenings memberDecode
-        haccepts correctness.gates.domainExponent_lt htop
-  · exact PSum.inr hrelation
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w :=
+  match topLevelWitnesses_or_relation_of_circuitSat
+      top pp urs hk inputs ps ch pU pW a batchOpenings memberDecode
+      haccepts hpoly hsatisfied hgoodY correctness with
+  | .inl witnesses => .inl fun proofIndex =>
+      (witnesses proofIndex).statement
+  | .inr relation => .inr relation
 
 assert_no_sorry topLevelStatements_or_relation_of_circuitSat
 
@@ -343,7 +373,7 @@ def topLevelStatements_or_relation_of_decodedMemberPolynomial_eq
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams) (urs : URS G)
     (hk : (pp.mergeDerived top).k = urs.k)
-    (inputs : Fin (pp.mergeDerived top).numProofs → PublicInput Fp)
+    (inputs : Fin pp.numProofs → PublicInput Fp)
     (ps : ProofString (pp.mergeDerived top) Fp G)
     (ch : Challenges (pp.mergeDerived top).k Fp)
     (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)

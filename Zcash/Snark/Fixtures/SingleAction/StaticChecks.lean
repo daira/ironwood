@@ -42,10 +42,11 @@ private theorem action_domainExponent_eq : actionCircuit.domainExponent = 11 := 
 private theorem vk_domain_eq :
     (vk.omega, vk.n) =
       (actionCircuit.omega, actionCircuit.n) := by
-  have h := Keygen.certificate
-  simp only [Prod.mk.injEq] at h
-  have hscalars := h.2.2.2.1
-  exact ⟨hscalars.1.symm, hscalars.2.1.symm⟩
+  have hscalars :=
+    congrArg (fun bundle => bundle.2.2.2.1) Keygen.certificate
+  apply Prod.ext
+  · exact (congrArg (fun scalars => scalars.1) hscalars).symm
+  · exact (congrArg (fun scalars => scalars.2.1) hscalars).symm
 
 /-- The captured advice query layout covers the shape's advice query count. -/
 theorem vk_advice_layout_length : shape.numAdviceQueries ≤ vk.adviceQueryLayout.length := by

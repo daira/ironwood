@@ -230,19 +230,16 @@ and the quotient split `cs.degree() − 1` (`vk.domain.get_quotient_poly_degree(
 def ProofParams.mergeDerived (pp : ProofParams)
     {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput) : Shape :=
-  let cs := top.constraintSystem
-  let pinned := top.pinnedCS
   { k := top.domainExponent
     numProofs := pp.numProofs
-    numAdviceColumns := cs.numAdviceColumns
-    numLookups := cs.lookups.length
-    numPermutationSets :=
-      (cs.permutationColumns.length + cs.chunkLen - 1) / cs.chunkLen
-    numPermutationColumns := cs.permutationColumns.length
-    numQuotientPieces := csDegree cs - 1
-    numInstanceQueries := pinned.instanceQueryLayout.length
-    numAdviceQueries := pinned.adviceQueryLayout.length
-    numFixedQueries := pinned.fixedQueryLayout.length
+    numAdviceColumns := top.adviceColumnCount
+    numLookups := top.lookupCount
+    numPermutationSets := top.permutationSetCount
+    numPermutationColumns := top.permutationColumnCount
+    numQuotientPieces := top.quotientPieceCount
+    numInstanceQueries := top.instanceQueryCount
+    numAdviceQueries := top.adviceQueryCount
+    numFixedQueries := top.fixedQueryCount
     numPointSets := pp.numPointSets }
 
 theorem ProofParams.mergeDerived_k

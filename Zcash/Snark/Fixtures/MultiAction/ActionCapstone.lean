@@ -202,19 +202,19 @@ theorem derived_scalars_for (numProofs : ℕ) (urs : URS VestaG) :
       vk.permutationChunks := by
   simpa only [actionProofParamsFor, actionProofParams] using derived_scalars urs
 
-private theorem action_numLookups_eq (numProofs : ℕ) :
+private theorem action_numLookups_eq :
     actionCircuit.lookupCount =
       shape.numLookups := by
-  simpa only [actionProofParamsFor, actionProofParams] using
-    congrArg Shape.numLookups shape_eq_mergeDerived
+  exact (actionProofParams.mergeDerived_numLookups actionCircuit).symm.trans
+    (congrArg Shape.numLookups shape_eq_mergeDerived)
 
 /-- Every Action bundle size has the captured lookup expressions. -/
 theorem derived_lookups_for (numProofs : ℕ) (urs : URS VestaG)
     (l : Fin actionCircuit.lookupCount) :
     (actionCircuit.toVerifierKey (actionProofParamsFor numProofs) urs).lookupInputExprs l =
-      vk.lookupInputExprs (Fin.cast (action_numLookups_eq numProofs) l) ∧
+      vk.lookupInputExprs (Fin.cast action_numLookups_eq l) ∧
     (actionCircuit.toVerifierKey (actionProofParamsFor numProofs) urs).lookupTableExprs l =
-      vk.lookupTableExprs (Fin.cast (action_numLookups_eq numProofs) l) := by
+      vk.lookupTableExprs (Fin.cast action_numLookups_eq l) := by
   simpa only [actionProofParamsFor, actionProofParams] using derived_lookups urs l
 
 /-! ## The captured checks and schedule at the derived shape -/
@@ -230,11 +230,16 @@ private theorem md_counts :
       shape.numFixedQueries ∧
     actionCircuit.quotientPieceCount =
       shape.numQuotientPieces :=
-  ⟨congrArg Shape.k shape_eq_mergeDerived,
-    congrArg Shape.numAdviceQueries shape_eq_mergeDerived,
-    congrArg Shape.numInstanceQueries shape_eq_mergeDerived,
-    congrArg Shape.numFixedQueries shape_eq_mergeDerived,
-    congrArg Shape.numQuotientPieces shape_eq_mergeDerived⟩
+  ⟨(actionProofParams.mergeDerived_k actionCircuit).symm.trans
+      (congrArg Shape.k shape_eq_mergeDerived),
+    (actionProofParams.mergeDerived_numAdviceQueries actionCircuit).symm.trans
+      (congrArg Shape.numAdviceQueries shape_eq_mergeDerived),
+    (actionProofParams.mergeDerived_numInstanceQueries actionCircuit).symm.trans
+      (congrArg Shape.numInstanceQueries shape_eq_mergeDerived),
+    (actionProofParams.mergeDerived_numFixedQueries actionCircuit).symm.trans
+      (congrArg Shape.numFixedQueries shape_eq_mergeDerived),
+    (actionProofParams.mergeDerived_numQuotientPieces actionCircuit).symm.trans
+      (congrArg Shape.numQuotientPieces shape_eq_mergeDerived)⟩
 
 /-- **The captured static checks at the derived key** (issue #128 F3): the five decided facts,
 transferred through the derived key's scalar equalities. -/
@@ -245,13 +250,16 @@ theorem staticChecks_of_derived
       (ursOfAugmentedBasis actionCircuit.domainExponent basis)) :
     DeployedConstraintStaticChecks family.toRootFamily where
   adviceLength := fun basis => by
-    rw [hvk basis, (derived_scalars _).2.2.2.2.1, md_counts.2.1]
+    rw [hvk basis, (derived_scalars _).2.2.2.2.1,
+      actionProofParams.mergeDerived_numAdviceQueries, md_counts.2.1]
     exact vk_advice_layout_length
   instanceLength := fun basis => by
-    rw [hvk basis, (derived_scalars _).2.2.2.1, md_counts.2.2.1]
+    rw [hvk basis, (derived_scalars _).2.2.2.1,
+      actionProofParams.mergeDerived_numInstanceQueries, md_counts.2.2.1]
     exact vk_instance_layout_length
   fixedLength := fun basis => by
-    rw [hvk basis, (derived_scalars _).2.2.2.2.2.1, md_counts.2.2.2.1]
+    rw [hvk basis, (derived_scalars _).2.2.2.2.2.1,
+      actionProofParams.mergeDerived_numFixedQueries, md_counts.2.2.2.1]
     exact vk_fixed_layout_length
   omegaOrder := fun basis => by
     rw [hvk basis, (derived_scalars _).1, (derived_scalars _).2.1]
@@ -270,7 +278,7 @@ noncomputable def schedule_of_derived
     DeployedConstraintXSqueezeSchedule family.toRootFamily
       ((20470 : ℕ) / (Fintype.card Fp : ℝ≥0∞)) := by
   have hk : actionCircuit.n - 1 = 2047 := by
-    rw [md_counts.1]
+    rw [actionCircuit.n_eq_two_pow_domainExponent, md_counts.1]
     norm_num [shape]
   have h := deployedConstraintXSqueezeSchedule_of_pinned family.toRootFamily
     (B := 2047) (W := 7) (Dc := 8188) (D := 20470) (Dq := 20470)
@@ -286,7 +294,10 @@ noncomputable def schedule_of_derived
       rw [hvk basis, (derived_lookups _ l).2]
       exact vk_lookup_table_degree_le _)
     (fun basis => by
-      rw [hvk basis, (derived_scalars _).2.1, md_counts.2.2.2.2, ← hk, md_counts.1]
+      rw [hvk basis, (derived_scalars _).2.1,
+        actionProofParams.mergeDerived_numQuotientPieces,
+        md_counts.2.2.2.2, ← hk,
+        actionCircuit.n_eq_two_pow_domainExponent, md_counts.1]
       exact vk_quotient_tail_le)
     (by norm_num) (by norm_num) (by norm_num) (by norm_num)
     family.constraintXTrace.toPinning
@@ -303,11 +314,21 @@ private theorem md_counts_for (numProofs : ℕ) :
     actionCircuit.quotientPieceCount =
       shape.numQuotientPieces := by
   have h := actionProofParamsFor_mergeDerived_eq numProofs
-  exact ⟨by simpa using congrArg Shape.k h,
-    by simpa using congrArg Shape.numAdviceQueries h,
-    by simpa using congrArg Shape.numInstanceQueries h,
-    by simpa using congrArg Shape.numFixedQueries h,
-    by simpa using congrArg Shape.numQuotientPieces h⟩
+  exact
+    ⟨((actionProofParamsFor numProofs).mergeDerived_k actionCircuit).symm.trans
+        (by simpa using congrArg Shape.k h),
+      ((actionProofParamsFor numProofs).mergeDerived_numAdviceQueries
+        actionCircuit).symm.trans
+        (by simpa using congrArg Shape.numAdviceQueries h),
+      ((actionProofParamsFor numProofs).mergeDerived_numInstanceQueries
+        actionCircuit).symm.trans
+        (by simpa using congrArg Shape.numInstanceQueries h),
+      ((actionProofParamsFor numProofs).mergeDerived_numFixedQueries
+        actionCircuit).symm.trans
+        (by simpa using congrArg Shape.numFixedQueries h),
+      ((actionProofParamsFor numProofs).mergeDerived_numQuotientPieces
+        actionCircuit).symm.trans
+        (by simpa using congrArg Shape.numQuotientPieces h)⟩
 
 /-- The captured static checks transported to an arbitrary Action bundle size. -/
 theorem staticChecks_of_derived_for (numProofs : ℕ)
@@ -320,14 +341,17 @@ theorem staticChecks_of_derived_for (numProofs : ℕ)
     DeployedConstraintStaticChecks family.toRootFamily where
   adviceLength := fun basis => by
     rw [hvk basis, (derived_scalars_for numProofs _).2.2.2.2.1,
+      (actionProofParamsFor numProofs).mergeDerived_numAdviceQueries,
       (md_counts_for numProofs).2.1]
     exact vk_advice_layout_length
   instanceLength := fun basis => by
     rw [hvk basis, (derived_scalars_for numProofs _).2.2.2.1,
+      (actionProofParamsFor numProofs).mergeDerived_numInstanceQueries,
       (md_counts_for numProofs).2.2.1]
     exact vk_instance_layout_length
   fixedLength := fun basis => by
     rw [hvk basis, (derived_scalars_for numProofs _).2.2.2.2.2.1,
+      (actionProofParamsFor numProofs).mergeDerived_numFixedQueries,
       (md_counts_for numProofs).2.2.2.1]
     exact vk_fixed_layout_length
   omegaOrder := fun basis => by
@@ -350,7 +374,8 @@ noncomputable def schedule_of_derived_for (numProofs : ℕ)
       ((20470 : ℕ) / (Fintype.card Fp : ℝ≥0∞)) := by
   have hk : actionCircuit.n - 1 =
       2047 := by
-    rw [(md_counts_for numProofs).1]
+    rw [actionCircuit.n_eq_two_pow_domainExponent,
+      (md_counts_for numProofs).1]
     norm_num [shape]
   have h := deployedConstraintXSqueezeSchedule_of_pinned family.toRootFamily
     (B := 2047) (W := 7) (Dc := 8188) (D := 20470) (Dq := 20470)
@@ -372,7 +397,10 @@ noncomputable def schedule_of_derived_for (numProofs : ℕ)
       exact vk_lookup_table_degree_le _)
     (fun basis => by
       rw [hvk basis, (derived_scalars_for numProofs _).2.1,
-        (md_counts_for numProofs).2.2.2.2, ← hk, (md_counts_for numProofs).1]
+        (actionProofParamsFor numProofs).mergeDerived_numQuotientPieces,
+        (md_counts_for numProofs).2.2.2.2, ← hk,
+        actionCircuit.n_eq_two_pow_domainExponent,
+        (md_counts_for numProofs).1]
       exact vk_quotient_tail_le)
     (by norm_num) (by norm_num) (by norm_num) (by norm_num)
     family.constraintXTrace.toPinning
@@ -535,8 +563,10 @@ private theorem resolverPermutationCell_card_le
     _ = 3 * (actionActiveRows * 7) := by
           rw [actionNumPermutationSets_eq]
     _ ≤ 2 ^ 16 := by
-          have hrows := actionActiveRows_le_domainSize
-          rw [actionDomainSize, ActionPermutationDomain.domainExponent_eq] at hrows
+          have hrows : actionActiveRows ≤ actionCircuit.n := by
+            simpa only [actionDomainSize] using actionActiveRows_le_domainSize
+          rw [actionCircuit.n_eq_two_pow_domainExponent,
+            ActionPermutationDomain.domainExponent_eq] at hrows
           norm_num at hrows ⊢
           omega
 
@@ -550,8 +580,9 @@ theorem resolverPermutationCell_card_eq
         (ResolverPermutationCell (actionCircuit.toVerifierKey pp urs) poly p actionActiveRows) =
       30630 := by
   rw [resolverPermutationCell_card]
-  rw [actionNumPermutationSets_eq]
+  rw [pp.mergeDerived_numPermutationSets actionCircuit]
   rw [ActionPermutationDomain.permutationChunks_eq]
+  clear p poly urs pp
   native_decide
 
 /-- The θ budget is linear in the number of Actions. -/
@@ -576,8 +607,10 @@ private theorem cap_theta_for (numProofs : ℕ) :
           actionCircuit (actionProofParamsFor numProofs), 2 ^ 11 * 4 := by
         gcongr with index
         · change actionActiveRows ≤ 2 ^ 11
-          have hrows := actionActiveRows_le_domainSize
-          rw [actionDomainSize, ActionPermutationDomain.domainExponent_eq] at hrows
+          have hrows : actionActiveRows ≤ actionCircuit.n := by
+            simpa only [actionDomainSize] using actionActiveRows_le_domainSize
+          rw [actionCircuit.n_eq_two_pow_domainExponent,
+            ActionPermutationDomain.domainExponent_eq] at hrows
           norm_num at hrows ⊢
           exact hrows
         · exact actionLookupInputArity_le index.2
@@ -626,7 +659,7 @@ private theorem cap_beta_for (numProofs : ℕ) :
     exact resolverPermutationCell_card_eq pp urs poly p
   have hn : (vkAt pp basis).n = 2 ^ 11 := by
     change (actionCircuit.toVerifierKey pp urs).n = 2 ^ 11
-    rw [← actionDomainSize_eq pp urs, actionDomainSize,
+    rw [actionCircuit.toVerifierKey_n, actionCircuit.n_eq_two_pow_domainExponent,
       ActionPermutationDomain.domainExponent_eq]
   have hu : (vkAt pp basis).n - (vkAt pp basis).blindingFactors - 2 ≤ 2 ^ 11 := by
     omega
@@ -652,9 +685,8 @@ private theorem cap_beta_for (numProofs : ℕ) :
       have hproofs : pp.numProofs = numProofs := by
         rfl
       have hlookups : actionCircuit.lookupCount = 3 := by
-        dsimp only [pp]
-        rw [actionProofParamsFor_mergeDerived_eq]
-        rfl
+        rw [action_numLookups_eq]
+        norm_num [shape]
       rw [hproofs, hlookups]
       simp only [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul,
         Nat.cast_id]
@@ -683,7 +715,7 @@ private theorem cap_gamma_for (numProofs : ℕ) :
     exact resolverPermutationCell_card_eq pp urs poly p
   have hn : (vkAt pp basis).n = 2 ^ 11 := by
     change (actionCircuit.toVerifierKey pp urs).n = 2 ^ 11
-    rw [← actionDomainSize_eq pp urs, actionDomainSize,
+    rw [actionCircuit.toVerifierKey_n, actionCircuit.n_eq_two_pow_domainExponent,
       ActionPermutationDomain.domainExponent_eq]
   have hu : (vkAt pp basis).n - (vkAt pp basis).blindingFactors - 2 ≤ 2 ^ 11 := by
     omega
@@ -704,9 +736,8 @@ private theorem cap_gamma_for (numProofs : ℕ) :
       have hproofs : pp.numProofs = numProofs := by
         rfl
       have hlookups : actionCircuit.lookupCount = 3 := by
-        dsimp only [pp]
-        rw [actionProofParamsFor_mergeDerived_eq]
-        rfl
+        rw [action_numLookups_eq]
+        norm_num [shape]
       rw [hproofs, hlookups]
       simp only [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul,
         Nat.cast_id]
@@ -730,8 +761,10 @@ private theorem cap_theta :
           actionCircuit actionProofParams, 2 ^ 11 * 4 := by
         gcongr with index
         · change actionActiveRows ≤ 2 ^ 11
-          have hrows := actionActiveRows_le_domainSize
-          rw [actionDomainSize, ActionPermutationDomain.domainExponent_eq] at hrows
+          have hrows : actionActiveRows ≤ actionCircuit.n := by
+            simpa only [actionDomainSize] using actionActiveRows_le_domainSize
+          rw [actionCircuit.n_eq_two_pow_domainExponent,
+            ActionPermutationDomain.domainExponent_eq] at hrows
           norm_num at hrows ⊢
           exact hrows
         · exact actionLookupInputArity_le index.2
@@ -776,7 +809,7 @@ private theorem cap_beta :
     exact resolverPermutationCell_card_le actionProofParams urs poly p
   have hn : (vkAt actionProofParams basis).n = 2 ^ 11 := by
     change (actionCircuit.toVerifierKey actionProofParams urs).n = 2 ^ 11
-    rw [← actionDomainSize_eq actionProofParams urs, actionDomainSize,
+    rw [actionCircuit.toVerifierKey_n, actionCircuit.n_eq_two_pow_domainExponent,
       ActionPermutationDomain.domainExponent_eq]
   have hu : (vkAt actionProofParams basis).n -
       (vkAt actionProofParams basis).blindingFactors - 2 ≤ 2 ^ 11 := by
@@ -804,8 +837,8 @@ private theorem cap_beta :
       gcongr with p
       all_goals exact hcell p
     _ ≤ 2 ^ 35 := by
-      rw [shape_eq_mergeDerived]
-      norm_num [shape]
+      rw [action_numLookups_eq]
+      norm_num [actionProofParams, actionProofParamsFor, shape]
 
 private theorem cap_gamma :
     ∀ (basis : AugmentedIndex actionCircuit.n → VestaG)
@@ -827,7 +860,7 @@ private theorem cap_gamma :
     exact resolverPermutationCell_card_le actionProofParams urs poly p
   have hn : (vkAt actionProofParams basis).n = 2 ^ 11 := by
     change (actionCircuit.toVerifierKey actionProofParams urs).n = 2 ^ 11
-    rw [← actionDomainSize_eq actionProofParams urs, actionDomainSize,
+    rw [actionCircuit.toVerifierKey_n, actionCircuit.n_eq_two_pow_domainExponent,
       ActionPermutationDomain.domainExponent_eq]
   have hu : (vkAt actionProofParams basis).n -
       (vkAt actionProofParams basis).blindingFactors - 2 ≤ 2 ^ 11 := by
@@ -849,8 +882,8 @@ private theorem cap_gamma :
       gcongr with p
       all_goals exact hcell p
     _ ≤ 2 ^ 21 := by
-      rw [shape_eq_mergeDerived]
-      norm_num [shape]
+      rw [action_numLookups_eq]
+      norm_num [actionProofParams, actionProofParamsFor, shape]
 
 private theorem derived_n_ne_zero :
     ∀ basis : AugmentedIndex actionCircuit.n → VestaG,
@@ -859,9 +892,7 @@ private theorem derived_n_ne_zero :
   let urs := ursOfAugmentedBasis
     actionCircuit.domainExponent basis
   change (actionCircuit.toVerifierKey actionProofParams urs).n ≠ 0
-  rw [← actionDomainSize_eq actionProofParams urs, actionDomainSize,
-    ActionPermutationDomain.domainExponent_eq]
-  norm_num
+  simpa only [actionCircuit.toVerifierKey_n] using actionCircuit.n_ne_zero
 
 private theorem derived_n_yn {L : ℕ} (hL : L ≤ 2 ^ 12) :
     ∀ basis : AugmentedIndex actionCircuit.n → VestaG,
@@ -871,7 +902,7 @@ private theorem derived_n_yn {L : ℕ} (hL : L ≤ 2 ^ 12) :
     actionCircuit.domainExponent basis
   have hn : (vkAt actionProofParams basis).n = 2 ^ 11 := by
     change (actionCircuit.toVerifierKey actionProofParams urs).n = 2 ^ 11
-    rw [← actionDomainSize_eq actionProofParams urs, actionDomainSize,
+    rw [actionCircuit.toVerifierKey_n, actionCircuit.n_eq_two_pow_domainExponent,
       ActionPermutationDomain.domainExponent_eq]
   rw [hn]
   calc 2 ^ 11 * L ≤ 2 ^ 11 * 2 ^ 12 := Nat.mul_le_mul_left _ hL
@@ -885,9 +916,7 @@ private theorem derived_n_ne_zero_for (numProofs : ℕ) :
   let pp := actionProofParamsFor numProofs
   let urs := ursOfAugmentedBasis actionCircuit.domainExponent basis
   change (actionCircuit.toVerifierKey pp urs).n ≠ 0
-  rw [← actionDomainSize_eq pp urs, actionDomainSize,
-    ActionPermutationDomain.domainExponent_eq]
-  norm_num
+  simpa only [actionCircuit.toVerifierKey_n] using actionCircuit.n_ne_zero
 
 /-- The `y` fold cap is linear in the bundle size once its constraint list is. -/
 private theorem derived_n_yn_for (numProofs : ℕ) {L : ℕ}
@@ -901,7 +930,7 @@ private theorem derived_n_yn_for (numProofs : ℕ) {L : ℕ}
   let urs := ursOfAugmentedBasis actionCircuit.domainExponent basis
   have hn : (vkAt pp basis).n = 2 ^ 11 := by
     change (actionCircuit.toVerifierKey pp urs).n = 2 ^ 11
-    rw [← actionDomainSize_eq pp urs, actionDomainSize,
+    rw [actionCircuit.toVerifierKey_n, actionCircuit.n_eq_two_pow_domainExponent,
       ActionPermutationDomain.domainExponent_eq]
   change (vkAt pp basis).n * L ≤ numProofs * 2 ^ 23
   rw [hn]
@@ -1011,14 +1040,26 @@ private theorem adaptive_action_x_degree_le_for (numProofs : ℕ)
   let poly := adaptiveActionCommitmentPolynomial
     (actionProofParamsFor numProofs) basis inputs ps source ch
   have hk : actionCircuit.n - 1 = 2047 := by
-    rw [(md_counts_for numProofs).1]
-    norm_num [shape]
-  have hpoint : ∀ g, (onlinePointPolynomial source g).natDegree ≤ 2047 := by
+    rw [actionCircuit.n_eq_two_pow_domainExponent,
+      ActionPermutationDomain.domainExponent_eq]
+    norm_num
+  have hpoint : ∀ g : VestaG,
+      (onlinePointPolynomial
+        (shape := (actionProofParamsFor numProofs).mergeDerived actionCircuit)
+        source g).natDegree ≤ 2047 := by
     intro g
     unfold onlinePointPolynomial
     have h := coeffsToPoly_natDegree_lt
-      (n := actionCircuit.n) (by positivity)
-      (onlinePointCoordinates source g).1
+      (n := 2 ^ ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k)
+      (by positivity)
+      (onlinePointCoordinates
+        (shape := (actionProofParamsFor numProofs).mergeDerived actionCircuit)
+        source g).1
+    have hsize :
+        2 ^ ((actionProofParamsFor numProofs).mergeDerived actionCircuit).k = 2048 := by
+      rw [(actionProofParamsFor numProofs).mergeDerived_k actionCircuit,
+        ActionPermutationDomain.domainExponent_eq]
+      norm_num
     omega
   have hpoly : ∀ id, (poly id).natDegree ≤ 2047 := by
     intro id
@@ -1100,8 +1141,10 @@ private theorem adaptive_action_x_degree_le_for (numProofs : ℕ)
       (Dc := 8188) (D := 20470)
     · norm_num
     · simpa only [VerifyingKey.constraintModel_fixedCols] using hfixed
-    · simpa only [VerifyingKey.constraintModel_adviceCols] using hadvice
-    · simpa only [VerifyingKey.constraintModel_instanceCols] using hinstance
+    · intro p i
+      simpa only [VerifyingKey.constraintModel_adviceCols] using hadvice p i
+    · intro p i
+      simpa only [VerifyingKey.constraintModel_instanceCols] using hinstance p i
     · simpa only [VerifyingKey.constraintModel_gates] using
         (show ∀ e ∈ avk.gates, e.degreeBound * 2047 ≤ 20470 by
           dsimp only [avk]
@@ -1131,7 +1174,8 @@ private theorem adaptive_action_x_degree_le_for (numProofs : ℕ)
         obtain ⟨cr, -, hpr'⟩ := List.mem_map.mp hpr
         rw [← hpr']
         exact ⟨hpermutationColumn _ _, hpoly _⟩
-    · simpa only [VerifyingKey.constraintModel_lookups] using hlookups
+    · intro p
+      simpa only [VerifyingKey.constraintModel_lookups] using hlookups p
     · change (rowSelectorPolynomial avk.omega _).natDegree ≤ 2047
       exact le_trans (Nat.le_pred_of_lt (by
         simpa [rowSelectorPolynomial] using rowPolynomial_natDegree_lt hrows hn)) hnB
@@ -1150,9 +1194,12 @@ private theorem adaptive_action_x_degree_le_for (numProofs : ℕ)
     · intro j
       exact hpoint _
     · dsimp only [avk]
-      rw [(derived_scalars_for numProofs _).2.1, (md_counts_for numProofs).2.2.2.2,
-        ← hk, (md_counts_for numProofs).1]
-      exact vk_quotient_tail_le
+      rw [(derived_scalars_for numProofs _).2.1,
+        (actionProofParamsFor numProofs).mergeDerived_numQuotientPieces actionCircuit,
+        (md_counts_for numProofs).2.2.2.2]
+      have hshape : 2 ^ shape.k - 1 = 2047 := by
+        norm_num [shape]
+      simpa only [hshape] using vk_quotient_tail_le
 
 
 /-- **The semantic counts at the query ceiling** (issue #128 F7): at `Q ≤ 2^123` the five
@@ -1220,8 +1267,9 @@ theorem actionSemanticModelFor_at_2pow123 {numProofs Q : ℕ}
 noncomputable def actionCompressedStatisticalModelFor (numProofs Q : ℕ) : ENNReal :=
   let shape := (actionProofParamsFor numProofs).mergeDerived actionCircuit
   (Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-    (Q + 1 : ℕ) * (shape.k * (2 / (Fintype.card Fp : ENNReal))) +
-    (Q + (11 + shape.k) + 1 : ℕ) * algebraicRootBudget shape shape.k +
+    (Q + 1 : ℕ) * (actionCircuit.domainExponent * (2 / (Fintype.card Fp : ENNReal))) +
+    (Q + (11 + actionCircuit.domainExponent) + 1 : ℕ) *
+      algebraicRootBudget shape actionCircuit.domainExponent +
     1 / Fintype.card Fp +
     (Q + 1 : ℕ) * ((20470 : ℕ) / (Fintype.card Fp : ENNReal))
 
@@ -1234,8 +1282,8 @@ bundle-linear semantic terms and one `x` term, but only one execution of the pin
 noncomputable def adaptiveActionStatisticalModelFor (numProofs Q : ℕ) : ENNReal :=
   let shape := (actionProofParamsFor numProofs).mergeDerived actionCircuit
   (Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-    (Q + 1 : ℕ) * (shape.k * (2 / (Fintype.card Fp : ENNReal))) +
-    (Q + 1 : ℕ) * algebraicRootBudget shape shape.k +
+    (Q + 1 : ℕ) * (actionCircuit.domainExponent * (2 / (Fintype.card Fp : ENNReal))) +
+    (Q + 1 : ℕ) * algebraicRootBudget shape actionCircuit.domainExponent +
     1 / Fintype.card Fp +
     actionSemanticModelFor numProofs Q
 
@@ -1246,27 +1294,30 @@ private theorem adaptiveActionStatisticalModelFor_le_action (numProofs Q : ℕ) 
       actionStatisticalModelFor numProofs Q := by
   let shape := (actionProofParamsFor numProofs).mergeDerived actionCircuit
   have hcoeff : ((Q + 1 : ℕ) : ENNReal) ≤
-      ((Q + (11 + shape.k) + 1 : ℕ) : ENNReal) := by
+      ((Q + (11 + actionCircuit.domainExponent) + 1 : ℕ) : ENNReal) := by
     exact Nat.cast_le.mpr (by omega)
   have hroot :
-      (Q + 1 : ℕ) * algebraicRootBudget shape shape.k ≤
-        (Q + (11 + shape.k) + 1 : ℕ) * algebraicRootBudget shape shape.k := by
-    exact mul_le_mul_left hcoeff (algebraicRootBudget shape shape.k)
+      (Q + 1 : ℕ) * algebraicRootBudget shape actionCircuit.domainExponent ≤
+        (Q + (11 + actionCircuit.domainExponent) + 1 : ℕ) *
+          algebraicRootBudget shape actionCircuit.domainExponent := by
+    exact mul_le_mul_left hcoeff (algebraicRootBudget shape actionCircuit.domainExponent)
   unfold adaptiveActionStatisticalModelFor actionStatisticalModelFor
     actionCompressedStatisticalModelFor
   dsimp only
   let a : ENNReal :=
     (Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-      (Q + 1 : ℕ) * (shape.k * (2 / (Fintype.card Fp : ENNReal)))
+      (Q + 1 : ℕ) *
+        (actionCircuit.domainExponent * (2 / (Fintype.card Fp : ENNReal)))
   let e : ENNReal := 1 / Fintype.card Fp
   let x : ENNReal :=
     (Q + 1 : ℕ) * ((20470 : ℕ) / (Fintype.card Fp : ENNReal))
   let s : ENNReal := actionSemanticModelFor numProofs Q
-  change a + (Q + 1 : ℕ) * algebraicRootBudget shape shape.k + e + s ≤
-    a + (Q + (11 + shape.k) + 1 : ℕ) * algebraicRootBudget shape shape.k + e + x + s
+  change a + (Q + 1 : ℕ) * algebraicRootBudget shape actionCircuit.domainExponent + e + s ≤
+    a + (Q + (11 + actionCircuit.domainExponent) + 1 : ℕ) *
+      algebraicRootBudget shape actionCircuit.domainExponent + e + x + s
   calc
-    _ ≤ a + (Q + (11 + shape.k) + 1 : ℕ) *
-          algebraicRootBudget shape shape.k + e + s :=
+    _ ≤ a + (Q + (11 + actionCircuit.domainExponent) + 1 : ℕ) *
+          algebraicRootBudget shape actionCircuit.domainExponent + e + s :=
       add_le_add_left (add_le_add_left (add_le_add_right hroot a) e) s
     _ ≤ _ := add_le_add_left
       (le_add_of_nonneg_right (show 0 ≤ x from bot_le)) s
@@ -1277,8 +1328,7 @@ private theorem actionCompressedStatisticalModelFor_le_consensus
     actionCompressedStatisticalModelFor numProofs Q ≤
       Zcash.Snark.FixtureMax.consensusStraightLineStatisticalModel (2 ^ 123) := by
   have hk : actionCircuit.domainExponent = 11 := by
-    rw [actionProofShape_eq_maxShape]
-    rfl
+    exact ActionPermutationDomain.domainExponent_eq
   have hroot :
       algebraicRootBudget
           ((actionProofParamsFor numProofs).mergeDerived actionCircuit) 11 ≤
@@ -1288,7 +1338,8 @@ private theorem actionCompressedStatisticalModelFor_le_consensus
     exact Zcash.Snark.FixtureMax.algebraicRootBudget_at_captured_shape_le_consensus_max hn
   rw [actionCompressedStatisticalModelFor,
     Zcash.Snark.FixtureMax.consensusStraightLineStatisticalModel,
-    Zcash.Snark.FixtureMax.consensusPinnedRootMultiopenModel, hk]
+    Zcash.Snark.FixtureMax.consensusPinnedRootMultiopenModel,
+    hk]
   gcongr
   all_goals first | exact hroot | assumption_mod_cast | norm_num
 
@@ -1355,6 +1406,7 @@ theorem action_algebraicRootBudget_eq :
         actionCircuit.domainExponent =
       (48808 : ENNReal) / Fintype.card Fp := by
   rw [shape_eq_mergeDerived]
+  rw [ActionPermutationDomain.domainExponent_eq]
   norm_num [algebraicRootBudget, queryBudget, shape]
 
 /-- All non-DLOG terms in the exact Action endpoint, including the five semantic tails. -/
@@ -1519,7 +1571,6 @@ theorem action_dlog_queries_le_2pow126
     actionDlogRandomOracleQueries actionProofParams family ≤ 2 ^ 126 := by
   unfold actionDlogRandomOracleQueries
   have hk : actionCircuit.domainExponent = 11 := by
-    change actionCircuit.domainExponent = 11
     exact ActionPermutationDomain.domainExponent_eq
   rw [hk]
   calc
@@ -1917,13 +1968,17 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive
         (adaptive_action_x_degree_le_for 1 basis inputs ps source
           (chRecord (fun i => if h : (i : Nat) < 4 then earlier ⟨i, h⟩ else 0)
             (fun _ => 0)))
-  rw [adaptiveActionEvent_prob_eq_of_uniformURS actionProofParams family
+  have hevent := adaptiveActionEvent_prob_eq_of_uniformURS actionProofParams family
     (orchardGeneratorROSetup query) B (orchardGeneratorROBasis query)
     (orchard_uniformURSIdentification_of_generatorRO
-      actionCircuit.domainExponent B hB query hquery)]
-  simpa only [epsilon] using
-    (adaptiveActionAcceptFalseStatement_prob_le actionProofParams family inputs hvk hI hchar
-      B epsilon profile hsurface)
+      actionCircuit.domainExponent B hB query hquery)
+    (adaptiveActionAcceptFalseStatementEvent actionProofParams family inputs)
+  calc
+    _ = _ := hevent
+    _ ≤ _ := by
+      simpa only [epsilon] using
+        (adaptiveActionAcceptFalseStatement_prob_le actionProofParams family inputs hvk hI hchar
+          B epsilon profile hsurface)
 
 /-- Bare adaptive Action composition for every bundle size.  The five surface bounds are derived
 from the captured circuit data and scale only where the verifier processes one item per Action. -/
@@ -2050,13 +2105,18 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive_for
       exact_mod_cast adaptive_action_x_degree_le_for numProofs basis inputs ps source
         (chRecord (fun j => if hj : (j : ℕ) < 4 then earlier ⟨j, hj⟩ else 0)
           (fun _ => 0))
-  rw [adaptiveActionEvent_prob_eq_of_uniformURS (actionProofParamsFor numProofs) family
+  have hevent := adaptiveActionEvent_prob_eq_of_uniformURS
+    (actionProofParamsFor numProofs) family
     (orchardGeneratorROSetup query) B (orchardGeneratorROBasis query)
     (orchard_uniformURSIdentification_of_generatorRO
-      actionCircuit.domainExponent B hB query hquery)]
-  simpa only [epsilon] using
-    (adaptiveActionAcceptFalseStatement_prob_le (actionProofParamsFor numProofs)
-      family inputs hvk hI hchar B epsilon profile hsurface)
+      actionCircuit.domainExponent B hB query hquery)
+    (adaptiveActionAcceptFalseStatementEvent (actionProofParamsFor numProofs) family inputs)
+  calc
+    _ = _ := hevent
+    _ ≤ _ := by
+      simpa only [epsilon] using
+        (adaptiveActionAcceptFalseStatement_prob_le (actionProofParamsFor numProofs)
+          family inputs hvk hI hchar B epsilon profile hsurface)
 
 /-- **Concrete bare-adaptive Action capstone.**  At `Q <= 2^123`, the complete adaptive finder
 fits a conservative `2^127` random-oracle/group-work envelope (eight uncached represented runs),
@@ -2248,7 +2308,7 @@ theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generato
     push_cast
     simp only [div_eq_mul_inv]
     ring_nf
-    exact le_rfl
+    apply le_rfl
   refine ⟨hprob, hqueries, hgroup, hcost.2.2, ?_⟩
   intro actual εBias hbias
   exact event_measure_le_of_bias hbias _ hprob
@@ -2400,10 +2460,11 @@ theorem orchard_action_acceptFalseStatement_prob_le_sequential_for
       static inputs hvk hI hchar query (cap_theta_for numProofs)
   · unfold actionStatisticalModelFor actionCompressedStatisticalModelFor
       actionSemanticModelFor
+    dsimp only
     push_cast
     simp only [div_eq_mul_inv]
     ring_nf
-    exact le_rfl
+    apply le_rfl
 
 /-- **Concrete exact-Action work-factor endpoint.**  The query ceiling is carried by the direct
 profile, all six prover runs and terminal postprocessing are charged once to the combined DLOG

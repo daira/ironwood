@@ -38,11 +38,11 @@ def TopLevelBundleWitness
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams)
     (poly : CommitmentId → Polynomial Fp) : Type :=
-  ∀ proofIndex : Fin (pp.mergeDerived top).numProofs,
+  ∀ proofIndex : Fin pp.numProofs,
     let environment := ({
         polynomial := poly
       } : TopLevelAssignment top
-            (pp.mergeDerived top).numProofs proofIndex).environment
+            pp.numProofs proofIndex).environment
     TopLevelSemanticWitness top (top.extractPublicInput environment)
 
 /-- Executable private witnesses for externally supplied bundle inputs. -/
@@ -97,16 +97,16 @@ def of_publicInputEncoding
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : Keygen.ProofParams)
     (poly : CommitmentId → Polynomial Fp)
-    (inputs : Fin (pp.mergeDerived top).numProofs → PublicInput Fp)
+    (inputs : Fin pp.numProofs → PublicInput Fp)
     (hencoding : ∀ proofIndex,
       let assignment : TopLevelAssignment top
-          (pp.mergeDerived top).numProofs proofIndex :=
+          pp.numProofs proofIndex :=
         { polynomial := poly }
       assignment.PublicInputEncoding (inputs proofIndex))
     (witness : TopLevelBundleWitness top pp poly) :
     TopLevelExternalBundleWitness top inputs := fun proofIndex => by
   let assignment : TopLevelAssignment top
-      (pp.mergeDerived top).numProofs proofIndex :=
+      pp.numProofs proofIndex :=
     { polynomial := poly }
   refine
     { privateWitness := (witness proofIndex).privateWitness

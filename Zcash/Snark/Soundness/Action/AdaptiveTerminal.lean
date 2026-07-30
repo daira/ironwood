@@ -1,4 +1,4 @@
-import Zcash.Circuits.Integration.StraightLineActionTerminal
+import Zcash.Snark.Soundness.Action.StraightLineTerminal
 import Zcash.Snark.Soundness.AGM.ExecutableDeployedRoots
 
 /-!
@@ -103,7 +103,7 @@ noncomputable def adaptiveActionRunDecode
     (O : BTranscript Fp VestaG
       (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
         + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
-    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (inputs : Fin pp.numProofs → PublicInputs Fp)
     (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
@@ -141,7 +141,7 @@ theorem adaptiveActionRunAccepts
     (O : BTranscript Fp VestaG
       (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
         + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
-    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (inputs : Fin pp.numProofs → PublicInputs Fp)
     (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
@@ -204,7 +204,7 @@ def adaptiveActionWitnessOrRelationOfDecode?
     (O : BTranscript Fp VestaG
       (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
         + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
-    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (inputs : Fin pp.numProofs → PublicInputs Fp)
     (hchar : deployedX4PairCount
       (actionCircuit.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
@@ -241,7 +241,7 @@ def adaptiveActionWitnessOrRelationOfDecode?
   let ch := adaptiveActionRunRecord family basis O
   let model := CanonicalMemberConstraintRelation.acceptedModel
     (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
-    (hblinding := ActionPermutationDomain.blindingFactors_lt pp urs) haccepts
+    (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs) haccepts
   let polynomial := CanonicalMemberConstraintRelation.acceptedPolynomial
     (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts
   match hxgood : szBadSetAvoidance?
@@ -252,37 +252,35 @@ def adaptiveActionWitnessOrRelationOfDecode?
         (ComputablePolynomial.mul (polynomial CommitmentId.vanishingH)
           (ComputablePolynomial.sub
             (ComputablePolynomial.pow ComputablePolynomial.X
-              (actionCircuit.toVerifierKey pp urs).n)
+              actionCircuit.n)
             (ComputablePolynomial.const 1)))) ch.x with
   | none => none
   | some hxgoodProof =>
-      let hn : (actionCircuit.toVerifierKey pp urs).n ≠ 0 := by
-        change 2 ^ actionCircuit.domainExponent ≠ 0
-        positivity
+      let hn : actionCircuit.n ≠ 0 := actionCircuit.n_ne_zero
       match hgoodY : foldSplitAvoidance? model.constraints
-          (actionCircuit.toVerifierKey pp urs).n hn ch.y with
+          actionCircuit.n hn ch.y with
       | none => none
       | some hgoodYProof =>
           match hpermutation : resolverPermutationChallengeExclusions?
               (actionCircuit.toVerifierKey pp urs) ch polynomial actionActiveRows with
           | none => none
           | some hpermutationProof =>
-              match hlookup : TopLevelLookupCoherence.topLevelLookupChallengeExclusions?
+              match hlookup : TopLevelLookup.topLevelLookupChallengeExclusions?
                   actionCircuit pp urs ch polynomial with
               | none => none
               | some hlookupProof =>
-                  let hblinding := ActionPermutationDomain.blindingFactors_lt pp urs
-                  let gateCoherence := ActionGateCoherence.topLevelGateCoherence pp urs
-                  let hnFp : ((actionCircuit.toVerifierKey pp urs).n : Fp) ≠ 0 := by
-                    change (((2 ^ actionCircuit.domainExponent : ℕ) : Fp)) ≠ 0
-                    exact TopLevelAssignment.domainSizeCastNeZero
+                  let hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs
+                  let hnFp : (actionCircuit.n : Fp) ≠ 0 :=
+                    TopLevelAssignment.domainSizeCastNeZero
                       ActionPermutationDomain.domainExponent_lt
                   match acceptedModel_circuitSat_or_relation_of_decodedMemberPolynomial_eq
                       urs rfl (actionCircuit.toVerifierKey pp urs)
                       (actionCircuit.instanceCommitment pp urs inputs) pnu.1.proof.1 ch
                       (fun i hi => decode.toMemberDecode hchar i hi) haccepts hblinding
-                      (polynomial .vanishingH) rfl gateCoherence.fixedQueryCount
-                      gateCoherence.adviceQueryCount gateCoherence.instanceQueryCount
+                      (polynomial .vanishingH) rfl
+                      (actionCircuit.toVerifierKey_fixedQueryCount pp urs)
+                      (actionCircuit.toVerifierKey_adviceQueryCount pp urs)
+                      (actionCircuit.toVerifierKey_instanceQueryCount pp urs)
                       (fun slot point hpoint =>
                         PSum.inl (decode.memberBinding hchar slot point hpoint))
                       (ActionPermutationDomain.routingCoherent_of_derived pp urs)
@@ -320,7 +318,7 @@ def adaptiveActionRelationOfDecode?
     (O : BTranscript Fp VestaG
       (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
         + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
-    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (inputs : Fin pp.numProofs → PublicInputs Fp)
     (hchar : deployedX4PairCount
       (actionCircuit.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
@@ -365,7 +363,7 @@ theorem adaptiveActionRelationOfDecode?_isSome_of_witnessOrRelation
     (O : BTranscript Fp VestaG
       (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
         + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
-    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (inputs : Fin pp.numProofs → PublicInputs Fp)
     (hchar) (decode) (haccepts)
     (hcomplete : (adaptiveActionWitnessOrRelationOfDecode?
       pp family basis O inputs hchar decode haccepts).isSome)
@@ -389,7 +387,7 @@ theorem adaptiveActionWitnessOrRelationOfDecode?_isSome_of
     (O : BTranscript Fp VestaG
       (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
         + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
-    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (inputs : Fin pp.numProofs → PublicInputs Fp)
     (hchar : deployedX4PairCount
       (actionCircuit.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
@@ -422,7 +420,7 @@ theorem adaptiveActionWitnessOrRelationOfDecode?_isSome_of
     (hxgood :
       let model := CanonicalMemberConstraintRelation.acceptedModel
           (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
-          (hblinding := ActionPermutationDomain.blindingFactors_lt pp
+          (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)) haccepts
       let polynomial := CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts
@@ -431,17 +429,15 @@ theorem adaptiveActionWitnessOrRelationOfDecode?_isSome_of
           model.sets model.chunks model.lookups model.beta model.gamma model.delta model.theta
           (adaptiveActionRunRecord family basis O).y model.chunkLen model.l0 model.lLast
           model.lBlind - polynomial .vanishingH *
-            (Polynomial.X ^ (actionCircuit.toVerifierKey pp
-              (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)).n - 1)))
+            (Polynomial.X ^ actionCircuit.n - 1)))
     (hgoodY :
       let model := CanonicalMemberConstraintRelation.acceptedModel
           (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
-          (hblinding := ActionPermutationDomain.blindingFactors_lt pp
+          (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)) haccepts
       ∀ j, (adaptiveActionRunRecord family basis O).y ∉
         szBadSet (foldSplitWitness model.constraints
-          (actionCircuit.toVerifierKey pp
-            (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)).n j))
+          actionCircuit.n j))
     (hpermutation : ResolverPermutationChallengeExclusions
       (actionCircuit.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
@@ -449,7 +445,7 @@ theorem adaptiveActionWitnessOrRelationOfDecode?_isSome_of
       (CanonicalMemberConstraintRelation.acceptedPolynomial
         (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts)
       actionActiveRows)
-    (hlookup : TopLevelLookupCoherence.TopLevelLookupChallengeExclusions actionCircuit pp
+    (hlookup : TopLevelLookup.ChallengeExclusions actionCircuit pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)
       (adaptiveActionRunRecord family basis O)
       (CanonicalMemberConstraintRelation.acceptedPolynomial
@@ -458,7 +454,7 @@ theorem adaptiveActionWitnessOrRelationOfDecode?_isSome_of
       pp family basis O inputs hchar decode haccepts).isSome := by
   let model := CanonicalMemberConstraintRelation.acceptedModel
     (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
-    (hblinding := ActionPermutationDomain.blindingFactors_lt pp
+    (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)) haccepts
   dsimp only at hxgood hgoodY
   have hxgoodData := hxgood
@@ -469,13 +465,10 @@ theorem adaptiveActionWitnessOrRelationOfDecode?_isSome_of
     rw [ComputablePolynomial.const_eq, Polynomial.C_1]
   rw [hone] at hxgoodData
   have hxSome := (szBadSetAvoidance?_isSome_iff _ _).2 hxgoodData
-  have hn : (actionCircuit.toVerifierKey pp
-      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)).n ≠ 0 := by
-    change 2 ^ actionCircuit.domainExponent ≠ 0
-    positivity
+  have hn : actionCircuit.n ≠ 0 := actionCircuit.n_ne_zero
   have hySome := foldSplitAvoidance?_isSome_of model.constraints _ hn _ hgoodY
   have hpSome := resolverPermutationChallengeExclusions?_isSome_of _ _ _ _ hpermutation
-  have hlSome := TopLevelLookupCoherence.topLevelLookupChallengeExclusions?_isSome_of
+  have hlSome := TopLevelLookup.topLevelLookupChallengeExclusions?_isSome_of
     actionCircuit pp (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)
       _ _ hlookup
   obtain ⟨hxProof, hxEq⟩ := Option.isSome_iff_exists.mp hxSome
@@ -483,7 +476,7 @@ theorem adaptiveActionWitnessOrRelationOfDecode?_isSome_of
   obtain ⟨hpProof, hpEq⟩ := Option.isSome_iff_exists.mp hpSome
   obtain ⟨hlProof, hlEq⟩ := Option.isSome_iff_exists.mp hlSome
   unfold adaptiveActionWitnessOrRelationOfDecode?
-  dsimp only
+  simp only
   rw [hxEq, hyEq, hpEq, hlEq]
   dsimp only
   split
@@ -497,7 +490,7 @@ theorem adaptiveActionRelationOfDecode?_isSome_of
     (O : BTranscript Fp VestaG
       (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
         + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
-    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (inputs : Fin pp.numProofs → PublicInputs Fp)
     (hchar : deployedX4PairCount
       (actionCircuit.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
@@ -530,7 +523,7 @@ theorem adaptiveActionRelationOfDecode?_isSome_of
     (hxgood :
       let model := CanonicalMemberConstraintRelation.acceptedModel
           (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
-          (hblinding := ActionPermutationDomain.blindingFactors_lt pp
+          (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)) haccepts
       let polynomial := CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts
@@ -544,7 +537,7 @@ theorem adaptiveActionRelationOfDecode?_isSome_of
     (hgoodY :
       let model := CanonicalMemberConstraintRelation.acceptedModel
           (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
-          (hblinding := ActionPermutationDomain.blindingFactors_lt pp
+          (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)) haccepts
       ∀ j, (adaptiveActionRunRecord family basis O).y ∉
         szBadSet (foldSplitWitness model.constraints
@@ -557,7 +550,7 @@ theorem adaptiveActionRelationOfDecode?_isSome_of
       (CanonicalMemberConstraintRelation.acceptedPolynomial
         (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts)
       actionActiveRows)
-    (hlookup : TopLevelLookupCoherence.TopLevelLookupChallengeExclusions actionCircuit pp
+    (hlookup : TopLevelLookup.ChallengeExclusions actionCircuit pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)
       (adaptiveActionRunRecord family basis O)
       (CanonicalMemberConstraintRelation.acceptedPolynomial
@@ -574,7 +567,7 @@ the adversary's one actual run; the only relation result is explicit coefficient
 def adaptiveActionTerminalRelationFinder
     (pp : ProofParams)
     (family : ComputedAdaptiveOnlineAGMFSFamily (pp.mergeDerived actionCircuit))
-    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (inputs : Fin pp.numProofs → PublicInputs Fp)
     (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
@@ -648,7 +641,7 @@ noncomputable def action_bundleStatement_or_relation_of_adaptiveDecode
     (O : BTranscript Fp VestaG
       (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
         + 3 * (pp.mergeDerived actionCircuit).k) → Fp)
-    (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
+    (inputs : Fin pp.numProofs → PublicInputs Fp)
     (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
