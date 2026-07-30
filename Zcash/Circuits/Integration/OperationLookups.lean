@@ -294,7 +294,7 @@ theorem tupleCompressionBadSet_card_le_length
   · exact (tupleCompressionBadSet_card_lt hlength heq).le
 
 /-- All `θ` collisions between one enabled input tuple and the usable table rows. -/
-noncomputable def EnabledLookup.thetaBadSet
+def EnabledLookup.thetaBadSet
     (place : RegionIndex → ℕ) (env : Environment Fp)
     (lookup : EnabledLookup Fp) : Finset Fp :=
   (Finset.range env.usableRows).biUnion fun row =>

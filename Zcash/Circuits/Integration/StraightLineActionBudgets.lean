@@ -66,13 +66,13 @@ variable (pp : ProofParams)
     (straightLineRunRecord family basis O) < scalarFieldOrder)
 
 /-- The deployed Action key at one basis. -/
-noncomputable abbrev vkAt
+abbrev vkAt
     (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) :
     VerifyingKey (pp.mergeDerived actionCircuit) Fp VestaG :=
   actionCircuit.toVerifierKey pp (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)
 
 /-- A challenge record carrying only `θ` and `β` — the fields a pre-`x` exclusion set reads. -/
-noncomputable def semanticChRecord (theta beta : Fp) {k : ℕ} : Challenges k Fp :=
+def semanticChRecord (theta beta : Fp) {k : ℕ} : Challenges k Fp :=
   chRecord (fun i => if i = 0 then theta else if i = 1 then beta else 0) (fun _ => 0)
 
 @[simp] theorem semanticChRecord_theta (theta beta : Fp) {k : ℕ} :
