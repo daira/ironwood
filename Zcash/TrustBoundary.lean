@@ -57,6 +57,7 @@ import Zcash.Snark.Soundness.AGM.ZeroFamilyRoots
 import Zcash.Snark.Soundness.Composition.ZeroStraightLine
 import Zcash.Snark.Soundness.AGM.DirectConstraintFamily
 import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
+import Zcash.Snark.Fingerprint.Epsilon
 import Mathlib.Util.AssertNoSorry
 
 /-!
@@ -915,6 +916,21 @@ assert_axioms Zcash.Snark.preX4SqueezePoint_inj
 -- explicit cap — gates by `Expr.degreeBound`, permutation chunks by width, lookups by their
 -- compressed expressions — the combined bound the `x`-squeeze schedule's `epsilonX` prices.
 assert_axioms Zcash.Snark.natDegree_combineConstraints_le
+-- The quantified random match, generic half (`Fingerprint/Rational/{Vars,Event,Rep}`,
+-- `Fingerprint/Epsilon`): the structured sample space rebuilds a well-formed proof string at
+-- every point; the good event's enumerated denominator factors are individually nonzero,
+-- jointly priced by per-factor Schwartz–Zippel, and nonvanishing under products; and the ε
+-- theorem bounds a competing coefficient family's agreement with `assemble?` at a uniform
+-- point by `(D + Σ totalDegree (denFactors vk)) / p`.
+assert_axioms Zcash.Snark.proofStringWellFormed_toProofString
+assert_axioms Zcash.Snark.toProofString_ofInputs
+assert_axioms Zcash.Snark.denFactors_ne_zero
+assert_axioms Zcash.Snark.denFactors_totalDegree_sum_le
+assert_axioms Zcash.Snark.den_eval_ne_zero
+assert_axioms Zcash.Snark.fingerprint_schwartz_zippel_index
+assert_axioms Zcash.Snark.card_exists_eval_zero_le
+assert_axioms Zcash.Snark.goodEvent_compl_card_le
+assert_axioms Zcash.Snark.competing_coefficient_family_agreement_le
 -- The schedule, priced (`Composition.ScheduleBudget`): the committed carriers stay under the
 -- walk's caps, root witnesses at one table share the family's own outcome, and the schedule
 -- constructor discharges `measure_le` outright.

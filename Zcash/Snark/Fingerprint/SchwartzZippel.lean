@@ -34,4 +34,31 @@ theorem fingerprint_schwartz_zippel {n : ℕ} {p : MvPolynomial (Fin n) Fp} (hp 
   have h := schwartz_zippel_totalDegree hp (univ : Finset Fp)
   simpa only [Finset.card_univ, card_Fp] using h
 
+/-- `fingerprint_schwartz_zippel` over an arbitrary finite variable index — the form the
+structured sample space (`ScalarSlot`, `Fingerprint/Rational/Vars.lean`) consumes. Transported
+along `Fintype.equivFin` by `MvPolynomial.rename`, which preserves nonzeroness and total
+degree. -/
+theorem fingerprint_schwartz_zippel_index {σ : Type*} [Fintype σ] [DecidableEq σ]
+    {p : MvPolynomial σ Fp} (hp : p ≠ 0) :
+    (#{f ∈ piFinset fun _ : σ => (univ : Finset Fp) | eval f p = 0} : ℚ≥0)
+        / (scalarFieldOrder : ℚ≥0) ^ Fintype.card σ
+      ≤ (p.totalDegree : ℚ≥0) / scalarFieldOrder := by
+  classical
+  let e : σ ≃ Fin (Fintype.card σ) := Fintype.equivFin σ
+  have hq0 : rename (⇑e) p ≠ 0 := fun h =>
+    hp (rename_injective (⇑e) e.injective (by simpa using h))
+  have hdeg : (rename (⇑e) p).totalDegree = p.totalDegree := totalDegree_renameEquiv e p
+  have hcard : #{f ∈ piFinset fun _ : σ => (univ : Finset Fp) | eval f p = 0}
+      = #{g ∈ piFinset fun _ : Fin (Fintype.card σ) => (univ : Finset Fp) |
+          eval g (rename (⇑e) p) = 0} := by
+    refine Finset.card_equiv (e.arrowCongr (Equiv.refl Fp)) fun f => ?_
+    have hcomp : eval (⇑(e.arrowCongr (Equiv.refl Fp)) f) (rename (⇑e) p) = eval f p := by
+      have hfe : (⇑(e.arrowCongr (Equiv.refl Fp)) f) ∘ ⇑e = f := by
+        funext v
+        simp [Equiv.arrowCongr]
+      rw [eval_rename, hfe]
+    simp only [Finset.mem_filter, mem_piFinset, Finset.mem_univ, implies_true, true_and, hcomp]
+  rw [hcard, ← hdeg]
+  exact fingerprint_schwartz_zippel hq0
+
 end Zcash.Snark
