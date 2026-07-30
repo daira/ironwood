@@ -39,7 +39,7 @@ flowchart TD
   BAL --> BS["Binding-signature<br/>balance"]
   BAL --> NCB["Note-commitment<br/>binding"]
   BAL --> MERK["Merkle-path<br/>binding"]
-  BAL --> KB["Key binding<br/>ZIP 2005 (ROM)"]
+  BAL --> KB["Key binding<br/>ZIP 2005"]
   SPEND --> NCB
   SPEND --> MERK
   SPEND --> KB
