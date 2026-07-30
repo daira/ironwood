@@ -28,7 +28,7 @@ proves the operational prover, certificate, and reductions used here.
 
 ## Computational boundary
 
-`Forking.Adversary.Provenance` and the online AGM modules attach representations to the prover's
+`FiatShamir.Adversary.Provenance` and the online AGM modules attach representations to the prover's
 emitted points. `StraightLineIpa` and `Composition.StraightLineDeployed` consume one represented
 execution and return either decoded opening data or an explicit relation. `ProbabilityCoins` and
 the finite-security profiles price the reduction's single programmed-slot miss at `1/|F|` and

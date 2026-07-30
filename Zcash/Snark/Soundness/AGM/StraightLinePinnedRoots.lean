@@ -1,6 +1,6 @@
 import Zcash.Snark.Soundness.AGM.StraightLineIpa
 import Zcash.Snark.Soundness.Composition.DeployedRuntime
-import Zcash.Snark.Soundness.Forking.PinnedRoots
+import Zcash.Snark.Soundness.FiatShamir.PinnedRoots
 
 /-!
 # Pinned IPA-round roots for the straight-line AGM extractor

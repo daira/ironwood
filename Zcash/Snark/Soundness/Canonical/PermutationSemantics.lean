@@ -545,7 +545,7 @@ theorem uniformChallenge_resolverPermutationGammaBadSet
 
 /-- The challenge exclusions used both to recover the multiset of `(value, name)` pairs and to
 propagate equality around its cycles.  They are kept separate from VK semantics because the
-forking/bad-set accounting, rather than key generation, supplies them. -/
+random-oracle bad-set accounting, rather than key generation, supplies them. -/
 structure ResolverPermutationGoodChallenges
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)

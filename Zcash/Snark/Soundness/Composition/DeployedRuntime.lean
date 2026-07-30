@@ -1,5 +1,5 @@
 import Zcash.Snark.Soundness.Composition.DeployedAcceptance
-import Zcash.Snark.Soundness.Forking.WithReads
+import Zcash.Snark.Soundness.FiatShamir.WithReads
 
 /-!
 # Runtime helpers for deployed algebraic extraction

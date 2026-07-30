@@ -1,6 +1,6 @@
 import Mathlib
 import Zcash.Snark.Soundness.Constraints
-import Zcash.Snark.Soundness.Forking.Oracle
+import Zcash.Snark.Soundness.FiatShamir.Oracle
 
 /-!
 # Schwartz–Zippel good-challenge exclusions from challenge uniformity
@@ -15,10 +15,10 @@ accept measure, not assumed.
 ## Scope
 
 The measure is `uniformChallenge`, the random-oracle idealization of one fresh squeeze
-(`Forking.Oracle`). The argument needs the difference polynomial pinned before the challenge is
+(`FiatShamir.Oracle`). The argument needs the difference polynomial pinned before the challenge is
 sampled, and the deployed schedule provides exactly that: `x` is squeezed from a transcript that has
 already absorbed the advice commitments and the quotient pieces (sealed by `deriveChallenges_x_eq`,
-`Forking.Ordering`). The several `d / p` exclusions compose subadditively
+`FiatShamir.Ordering`). The several `d / p` exclusions compose subadditively
 (`uniformChallenge_szBadSet_union`).
 -/
 
@@ -134,12 +134,10 @@ theorem exists_accepting_good_challenge_quotient {acc : Fp → Prop} [DecidableP
 
 The lemmas above price each Schwartz–Zippel / point exclusion separately (`d / p`, `1 / p`). The two
 below combine any finite collection of `Fp`-challenge exclusions into a single subadditive bound, so
-a run that avoids *all* of them is priced once. This is the composition the
-`Soundness.Forking.Oracle` scope note asked for, for the exclusions living over one fresh `Fp`
+a run that avoids *all* of them is priced once. This lemma covers exclusions over one fresh `Fp`
 squeeze — the `z ≠ 0` and `ξ`-recovery singletons, the vanishing-check Schwartz–Zippel set, and any
-further per-hypothesis point exclusions. The cross-domain forking budgets (`kerr` over the round
-*vector* domain and the random-oracle query loss) belong to the adversary-experiment floor
-(`Soundness.Forking.Oracle`, the accepted random-oracle floor) and are not combined here. -/
+further point exclusions. Other transcript surfaces and adaptive query loss are accounted for by
+their composition modules. -/
 
 open scoped ENNReal in
 /-- **The composed exclusion budget.** A uniform challenge avoids *both* the Schwartz–Zippel bad set
@@ -148,7 +146,7 @@ of the constraint difference `C` *and* a finite set `extra` of additional exclud
 set of measure at most `(natDegree C + |extra|) / p`. The several `d / p` and `1 / p` budgets over
 one fresh `Fp` squeeze, combined by subadditivity into a single bound: a run avoiding all of them at
 once is priced once. (`extra` is an arbitrary finite set, so any collection of point exclusions
-composes; the cross-domain forking budgets stay with the accepted random-oracle floor.) -/
+composes; challenge surfaces over other squeeze domains are priced separately.) -/
 theorem uniformChallenge_szBadSet_union (C : Polynomial Fp) (extra : Finset Fp) :
     uniformChallenge.toOuterMeasure ((szBadSet C ∪ extra : Finset Fp))
       ≤ ((C.natDegree + extra.card : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞) := by

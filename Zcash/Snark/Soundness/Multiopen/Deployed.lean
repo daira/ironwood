@@ -205,8 +205,8 @@ theorem compressSet_fold_eval (urs : URS G) (x1 : F)
 /-- **The within-set aggregate is a flat power batch in `x₁`.** The compressed point-set commitment
 evaluates to the `x₁`-power combination of its member commitments' group values, in processing order —
 the `x₁` half of the two-level un-batching. At the `x₄` level the decoded columns are these aggregates
-(`x4BatchCommitments`), and rewinding the `x₁` squeeze un-batches them into the member commitments
-(the values are heterogeneous across `x₁` runs because `x₃` re-randomizes). -/
+(`x4BatchCommitments`); the represented `x₁` coordinates un-batch each aggregate into its member
+commitments. -/
 theorem compressSet_fst_eval (urs : URS G) (x1 : F)
     (sq : List (CommitmentRef urs.k F G × List F)) (np : ℕ) :
     (compressSet x1 sq np).1.eval urs

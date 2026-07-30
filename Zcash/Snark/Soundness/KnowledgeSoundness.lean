@@ -8,7 +8,7 @@ import Zcash.Snark.Soundness.CommitFold
 
 `SnarkRelation` requires one witness to open the IPA commitment and satisfy the circuit. This file
 carries that relation and the full constraint-list satisfaction predicate; the
-computed Fiat–Shamir/AGM reduction is in `Forking.Adversary.Algebraic`.
+computed Fiat–Shamir/AGM reduction is in `FiatShamir.Adversary.Algebraic`.
 
 The boundary is explicit: DL-relation hardness, an ideal random oracle for Blake2b and challenge
 conversion (and, on the generator-RO endpoints, for the hash-to-curve URS derivation),

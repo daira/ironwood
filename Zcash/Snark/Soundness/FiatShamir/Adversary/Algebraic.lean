@@ -1,8 +1,8 @@
 import Zcash.Snark.Soundness.Vesta
 import Zcash.Snark.Soundness.AGM.ProbabilityVesta
 import Zcash.Snark.Soundness.AGM.ProbabilityCoins
-import Zcash.Snark.Soundness.Forking.Adversary.PreIpa
-import Zcash.Snark.Soundness.Forking.Adversary.DomainReduction
+import Zcash.Snark.Soundness.FiatShamir.Adversary.PreIpa
+import Zcash.Snark.Soundness.FiatShamir.Adversary.DomainReduction
 
 /-!
 # Fiat–Shamir to AGM handoff
@@ -311,7 +311,7 @@ def fullAlgebraicBindingAttack {shape : Shape}
         (ν 10)⁻¹ * (p.multiU ν + ν 9 * p.sU) -
         ν 9 * innerProduct p.s (evalVector shape.k (ν 7))
 
-/-- The binding attack with the `z ≠ 0` guard required by the fork kernel. -/
+/-- The binding attack with the `z ≠ 0` guard used by the straight-line classifier. -/
 def fullAlgebraicBindingAttackZ {shape : Shape}
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
     (vk : VerifyingKey shape Fp VestaG) (instanceCommitment : Fin shape.numProofs → ℕ → VestaG) (p : AlgebraicWfProof basis vk instanceCommitment)

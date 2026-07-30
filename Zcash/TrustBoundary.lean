@@ -22,7 +22,7 @@ import Zcash.Snark.Soundness.VacuityWitness
 import Zcash.Snark.Soundness.AGM.BindingSignature
 import Zcash.Snark.Soundness.AGM.DeployedConstraintSupply
 import Zcash.Snark.Soundness.AGM.ProbabilityVesta
-import Zcash.Snark.Soundness.Forking.Adversary
+import Zcash.Snark.Soundness.FiatShamir.Adversary
 import Zcash.Snark.Soundness.Composition.Bridge
 import Zcash.Snark.Soundness.Composition.DeployedConstraintContainment
 import Zcash.Snark.Soundness.Composition.DeployedRootContainment
@@ -819,7 +819,7 @@ assert_axioms Zcash.Snark.badX_le_via_squeeze_prefixed +native(
 -- prove that the bad set was fixed before `x`.
 assert_axioms Zcash.Snark.hstab_of_xPrefixDetermined +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
--- Prefix injectivity at the multiopen squeeze points (`Forking.Adversary.PreIpa`): each point
+-- Prefix injectivity at the multiopen squeeze points (`FiatShamir.Adversary.PreIpa`): each point
 -- pins every field absorbed before it — the toolkit for the deployed squeeze-invariance
 -- schedules, which need each root-set datum emitted strictly before its own squeeze.
 assert_axioms Zcash.Snark.preXSqueezePoint_inj

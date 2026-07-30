@@ -9,8 +9,8 @@ import Zcash.Snark.Verifier.FiatShamir
         let t := t ++ [.point Lⱼ, .point Rⱼ, .challenge]
         (t, us ++ [squeeze t])) (t₀, [])
 
-This module proves that the deployed schedule has the prefix ordering the reprogramming proofs
-assume.
+This module proves the deployed schedule's prefix ordering, used by the represented-execution and
+pinned-squeeze bounds.
 
 * `roundTranscript` is the prefix used to squeeze one round challenge.
 * `roundTranscript_succ` and `roundTranscript_prefix_mono` show how those prefixes grow.
@@ -420,8 +420,8 @@ theorem deriveChallenges_x2_eq {shape : Shape} [Zero F] (fs : FiatShamir F G)
     (init : List (TranscriptElt F G)) (ps : ProofString shape F G) :
     (deriveChallenges fs init ps).x2 = fs.squeeze (preX2Transcript init ps) := rfl
 
-/-- Commit-before-challenge at `x₁`: every claimed advice evaluation is inside the `x₁` squeeze input,
-fixed before the compression challenge — so it is shared across `x₁` rewinds. -/
+/-- Commit-before-challenge at `x₁`: every claimed advice evaluation is inside the `x₁` squeeze input
+and therefore fixed before the compression challenge. -/
 theorem adviceEvals_mem_preX1Transcript {shape : Shape} (init : List (TranscriptElt F G))
     (ps : ProofString shape F G) (p : Fin shape.numProofs) (i : Fin shape.numAdviceQueries) :
     TranscriptElt.scalar (ps.adviceEvals p i) ∈ preX1Transcript init ps := by
@@ -462,17 +462,15 @@ theorem fixedEvals_mem_preX1Transcript {shape : Shape} (init : List (TranscriptE
     (List.mem_append_left _ (List.mem_append_left _ (List.mem_append_left _
       (List.mem_append_left _ (List.mem_append_right _ hmem))))))
 
-/-- The `x₂` prefix is the `x₁` prefix plus its marker: nothing is absorbed between the compression
-squeezes, so an `x₁` reprogram leaves the `x₂` input at a different length (and every later squeeze
-longer still). -/
+/-- The `x₂` prefix is the `x₁` prefix plus its marker: nothing is absorbed between the two
+compression squeezes, and every later squeeze has a strictly longer input. -/
 theorem preX2Transcript_length_eq {shape : Shape} (init : List (TranscriptElt F G))
     (ps : ProofString shape F G) :
     (preX2Transcript init ps).length = (preX1Transcript init ps).length + 1 := by
   simp only [preX2Transcript, preX1Transcript, List.length_append, List.length_cons,
     List.length_nil]
 
-/-- The `x₃` prefix is the `x₂` prefix extended by the `q′` commitment and the `x₃` marker — the
-rewound prover's fresh `q′` is exactly what re-randomizes `x₃` across `x₁` rewinds. -/
+/-- The `x₃` prefix is the `x₂` prefix extended by the `q′` commitment and the `x₃` marker. -/
 theorem preX3Transcript_length_eq {shape : Shape} (init : List (TranscriptElt F G))
     (ps : ProofString shape F G) :
     (preX3Transcript init ps).length = (preX2Transcript init ps).length + 2 := by
@@ -525,9 +523,8 @@ theorem adviceCommitments_mem_preXTranscript {shape : Shape} (init : List (Trans
   simp only [preXTranscript, List.mem_append]
   tauto
 
-/-- The `x₁` prefix strictly extends the `x` prefix (by the claimed evaluations and the `x₁`
-marker): the gate-check squeeze sits strictly inside every later squeeze input, so an `x` reprogram
-leaves them untouched. -/
+/-- The `x₁` prefix strictly extends the `x` prefix by the claimed evaluations and the `x₁` marker,
+so the gate-check squeeze occurs strictly before every later squeeze. -/
 theorem preXTranscript_length_lt_preX1Transcript {shape : Shape} (init : List (TranscriptElt F G))
     (ps : ProofString shape F G) :
     (preXTranscript init ps).length < (preX1Transcript init ps).length := by

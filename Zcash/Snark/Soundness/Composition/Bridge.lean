@@ -1,10 +1,10 @@
 import Zcash.Snark.Soundness.Vesta
-import Zcash.Snark.Soundness.Forking.Adversary.Algebraic
+import Zcash.Snark.Soundness.FiatShamir.Adversary.Algebraic
 
 /-!
 # Composing the algebraic AGM extraction with the deployed decoded capstone
 
-`Soundness.Forking.Adversary.Algebraic` models the algebraic adversary family; `Soundness.Vesta`
+`Soundness.FiatShamir.Adversary.Algebraic` models the algebraic adversary family; `Soundness.Vesta`
 proves the deployed decoded capstone. The two are architecturally
 disjoint — one runs over an adversary-produced `AlgebraicWfProof` at oracle-derived challenges
 `chRecord ν`, the other over a deployed `(vk, ps, ch)` run. This module builds the identification
@@ -36,10 +36,10 @@ attribute [local irreducible] deployedSetQueries deployedSetCommIds deployedX4Pa
   x4BatchCommitments x4BatchEvals
 
 -- Match the instance set `AlgebraicWfProof.multiopen_repr` is stated against
--- (`Forking.Adversary.Algebraic` uses the same concrete `Inhabited VestaG`); a local `[Inhabited]`
+-- (`FiatShamir.Adversary.Algebraic` uses the same concrete `Inhabited VestaG`); a local `[Inhabited]`
 -- binder would be a *different* instance term, forcing the `multiopenCommitment` fold through `whnf`.
 -- Named (not anonymous) to avoid an auto-generated-name collision with the identical
--- `local instance` in `Forking.Adversary.Provenance` when both are imported into `TrustBoundary`.
+-- `local instance` in `FiatShamir.Adversary.Provenance` when both are imported into `TrustBoundary`.
 local instance vestaInhabitedCompositionBridge : Inhabited VestaG := ⟨0⟩
 
 variable {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) → VestaG}

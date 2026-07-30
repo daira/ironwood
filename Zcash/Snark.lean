@@ -62,13 +62,12 @@ import Zcash.Snark.Soundness.Canonical.InstanceCommitment
 import Zcash.Snark.Soundness.Deployed.Binding
 import Zcash.Snark.Soundness.Deployed.Fold
 import Zcash.Snark.Soundness.Deployed.Verification
--- The reusable Fiat–Shamir forking kernel and its concrete adversary producer.
-import Zcash.Snark.Soundness.Forking
+-- The reusable Fiat–Shamir oracle kernel and its represented adversary model.
+import Zcash.Snark.Soundness.FiatShamir
 import Zcash.Snark.Soundness.Main
 -- Multiopen decode reconstruction: bind the IPA witness to real verifier columns recovered from
--- batched openings (`Multiopen.Decode`), the MSM evaluation spine (`Multiopen.Compat`), the `x₄`
--- multiopen rewinding (`Multiopen.Deployed`), and the opened chain threading the fork's declared
--- `U`/`W` components through the batch decode (`Multiopen.Opened`).
+-- the represented `x₄` power batch (`Multiopen.Decode`, `Multiopen.Deployed`), the MSM evaluation
+-- spine (`Multiopen.Compat`), and the explicit opened/member interfaces (`Multiopen.Opened`).
 -- Schwartz–Zippel good-challenge budgets and production (kills `hgood` at the `_xgood` rungs).
 import Zcash.Snark.Soundness.GoodChallenge
 import Zcash.Snark.Soundness.Multiopen.Decode

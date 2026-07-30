@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.Forking.Rewind
+import Zcash.Snark.Soundness.FiatShamir.Execution
 
 /-!
 # The oracle-querying Fiat–Shamir adversary

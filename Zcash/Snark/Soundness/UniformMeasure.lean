@@ -7,9 +7,9 @@ Distribution facts about `PMF.uniformOfFintype`, kept independent of any extract
 pushforwards along equivalences and injections, product and fibre bounds, and point and blind-set
 measures.
 
-These were factored out of `Soundness.Forking.Probability` so the straight-line consumers
-(`Soundness.GoodChallenge`, `Soundness.Multiopen.*`, `Security.KeyBinding.Probability`,
-`Soundness.AGM.*`) do not depend on the forking development.
+These are factored into a standalone module so the straight-line consumers
+(`Soundness.GoodChallenge`, `Soundness.Multiopen.*`, `Security.KeyBinding.Probability`, and
+`Soundness.AGM.*`) depend only on the distribution facts they use.
 -/
 
 namespace Zcash.Snark

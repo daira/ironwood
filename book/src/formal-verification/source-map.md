@@ -233,13 +233,13 @@ Six subtrees carry the heavier machinery:
   verifier MSM's generator term into the closed-form fold consumed by the straight-line extractor;
   `Verification` exposes halo2's explicit IPA verifier equation; and `Binding` supplies the
   augmented-generator collision reductions shared by the computed AGM path.
-- **`Forking/`** — the reusable Fiat–Shamir random-oracle kernel: random-oracle primitives
+- **`FiatShamir/`** — the reusable Fiat–Shamir random-oracle kernel: random-oracle primitives
   (`Oracle`), the deployed squeeze ordering (`Ordering`), random-oracle execution and IPA-field
-  splicing (`Rewind`), closed-form IPA assembly algebra (`Assembly`), the
+  splicing (`Execution`), closed-form IPA assembly algebra (`Assembly`), the
   one-level pinned-squeeze bound and the additive union of pinned root events (`PinnedSqueeze`,
   `PinnedRoots`), and the wrapper that returns a run's own oracle reads with its output
   (`WithReads`).
-  **`Forking/Adversary/`** builds the querying-adversary reduction on top: the `Q`-query
+  **`FiatShamir/Adversary/`** builds the querying-adversary reduction on top: the `Q`-query
   adaptive adversary model (`OracleComp`), the Fiat–Shamir-to-AGM handoff (`Algebraic`),
   oracle-domain reduction to finite support (`DomainReduction`), and the adaptive interface and
   pre-IPA query accounting (`Adaptive`, `PreIpa`, `Provenance`). The former transcript-tree,
