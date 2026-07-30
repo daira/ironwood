@@ -8,28 +8,10 @@ import Zcash.Snark.Soundness.Action.StraightLineBudgets
 import Zcash.Snark.Soundness.Action.AdaptiveEvent
 
 /-!
-# Exact Action soundness capstones
+# Exact Action soundness and knowledge-soundness capstones
 
-Issue #128's assembly: the captured static checks and `x`-squeeze schedule rebuilt at the
-circuit-derived shape, the retained statement-or-relation intermediate, and the exact accepting
-false-Action-statement endpoint closed by the combined computed relation finder.
-
-The captured certificate remains at `actionProofParams.mergeDerived actionCircuit`, the derived
-one-proof shape.  Its circuit-owned verifying-key fields never read `numProofs` or the URS, so the
-captured facts transport to `actionProofParamsFor numProofs`.  The consensus-generic endpoints
-therefore cover every permitted Orchard bundle size without rerunning key generation or capture.
-
-## The adversary model
-
-The public endpoint quantifies over `SequentialOnlineAGMProver`, a bounded sequential online-AGM
-Fiat–Shamir adversary in the random-oracle model, against Vesta DLOG, together with its phased
-Action execution.  The prover's stopped computations generate the deployed-root, IPA, and
-constraint-`x` traces.  The Action phases emit typed snapshots before the five semantic squeezes;
-their cuts and views are generated projections, never caller-supplied trace/cut objects.
-The four semantic budgets are discharged inside the sequential endpoint from decided counting
-caps; the hash-function boundary of the compressed model is unchanged.  The exact endpoint uses
-the literal `accept ∧ ¬BundleStatement` event and one DLOG profile for all computed relation
-branches.
+Captured checks and executable terminals yield ordinary- and knowledge-soundness bounds for every
+consensus-valid Action bundle size.
 -/
 
 namespace Zcash.Snark.Fixture
@@ -50,10 +32,7 @@ private theorem actionProofShape_eq_maxShape (numProofs : ℕ) :
 
 /-! ## The statement-or-relation intermediate and exact target -/
 
-/-- **The existing statement-or-relation failure event** (issue #128 F1): the deployed verifier
-accepts and the terminal produces neither the Orchard Action bundle statement nor a nontrivial
-relation.  This is an intermediate event, strictly narrower than false Action-statement
-acceptance until the terminal relation branch is exposed as a computed DLOG break. -/
+/-- Acceptance with neither an Action bundle statement nor a nontrivial relation. -/
 noncomputable def actionNoStatementOrRelationEvent
     (family : ComputedStraightLineDeployedFSFamily
       (actionProofParams.mergeDerived actionCircuit))
@@ -408,15 +387,8 @@ noncomputable def schedule_of_derived_for (numProofs : ℕ)
 
 /-! ## The composed bound -/
 
-/-- **The captured statement-or-relation failure bound, composed** (issue #128 F4/F5): the
-probability that acceptance yields neither the Action statement nor a relation is at most the
-compressed straight-line knowledge error at the derived key plus the four semantic challenge
-budgets.  The terminal data — batch openings, member decodes, acceptance, and the canonical
-quotient — all come from the same straight-line decoded run, via the fusion this bound
-instantiates.
-
-The four budgets remain premises here; the remaining #128 pricing work discharges them
-concretely. -/
+/-- Bounds captured statement-or-relation failure by compressed failure plus four semantic
+challenge budgets. -/
 theorem orchard_action_noStatementOrRelation_prob_le_captured
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -500,11 +472,8 @@ theorem orchard_action_noStatementOrRelation_prob_le_captured
 
 /-! ## The sequential endpoint: every semantic budget discharged and counted
 
-The counting caps below are decided at the captured key and transferred through the derived
-key's field equalities, so the endpoint takes a bundle of cuts and views — the sequential
-adversary — and nothing else numeric.  The caps are generous round powers of two: each sits
-orders of magnitude under the field size, and the final margin analysis only needs
-`(Q + 1) · Σcaps / |Fp|` small at `Q ≤ 2^123`.
+Captured counting caps transfer to the derived key and discharge every sequential semantic
+budget.
 -/
 
 private theorem castVk_blinding {s₁ s₂ : Shape} (h : s₁ = s₂)
@@ -1591,17 +1560,7 @@ theorem action_dlog_groupWork_le_2pow126
     _ ≤ 8 * 2 ^ 123 := by norm_num
     _ = 2 ^ 126 := by norm_num
 
-/-- **The captured statement-or-relation bound for sequential adversaries** (issue #128 F8).  A family
-equipped with cuts and views at the five semantic squeeze indices — the bounded sequential
-online-AGM Fiat–Shamir adversary — admits the full capstone bound with every semantic budget
-discharged and counted: the four abstract bounds become
-`(Q + 1) · N / |Fp|` for the decided caps `N = 2^25` (`θ`), `2^35` (`β`), `2^21` (`γ`),
-`20470` (the `x` fold degree) and `2^23` (`y`, from the view's constraint count `L ≤ 2^12`).
-
-Named assumptions: `hvk`/`hI` pin the family's key and instance commitments to the deployed
-Action artifacts; `hchar` bounds the run's pair count below the field characteristic;
-`profile` supplies the DLOG reduction; `cuts` is the sequential adversary itself, with its
-views' well-formedness (`xdeg` at `20470`, `ylen` at `L`). -/
+/-- Captured sequential statement-or-relation bound with all five semantic budgets counted. -/
 theorem orchard_action_noStatementOrRelation_prob_le_sequential
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -1856,13 +1815,8 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured_for
       (schedule_of_derived_for numProofs family hvk) profile)
     hXY hBeta hGamma hTheta
 
-/-- **Bare adaptive Action composition.**  This is the arbitrary adaptive-RO/online-AGM sibling
-of `orchard_action_acceptFalseStatement_prob_le_captured`.  Its quantified adversary is only
-`ComputedAdaptiveOnlineAGMFSFamily`: there is no sequential prover, execution, phase, trace, or
-cut input.  The executable combined finder closes every algebraic relation branch once, its DLOG
-term is evaluated at an explicit adaptive resource profile, and the five annotation-aware Action
-semantic surfaces are discharged from the captured key below.
--/
+/-- Captured false-statement bound for a bare adaptive online-AGM family, with one profiled finder
+and five annotation-aware semantic surfaces. -/
 theorem orchard_action_acceptFalseStatement_prob_le_adaptive
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -2187,11 +2141,8 @@ theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generato
         (le_trans (adaptiveActionStatisticalModel_le_action family.Q)
           (actionStatisticalModel_at_2pow123 profile.queryBound))
 
-/-- **Consensus-generic bare-adaptive Action capstone.**  Every consensus-valid bundle size keeps
-the `2^123` direct-decoding target.  The adaptive DLOG solver has the existing conservative
-`2^127` envelope, and the complete compressed-plus-semantic remainder is at most `2^-83`.
-The final conjunct transports that event bound to any transcript experiment related by an
-explicit `PMFEventBiasLE`, adding its conversion-bias budget. -/
+/-- Consensus-generic adaptive capstone: `2^123` direct work, `2^127` DLOG resources, `2^-83`
+statistical remainder, and explicit transcript bias. -/
 theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generatorRO_for
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
@@ -2313,11 +2264,8 @@ theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generato
   intro actual εBias hbias
   exact event_measure_le_of_bias hbias _ hprob
 
-/-- **Final sequential Action capstone.**  For every query-bounded sequential online-AGM prover
-with executable root, IPA, constraint-`x`, and Action phases, deployed verifier acceptance of a
-false Action statement is bounded by the extraction terms, one combined Vesta-DLOG advantage,
-and the five counted semantic tails.  All traces, cuts, and views consumed below are generated
-from `prover` and `execution`. -/
+/-- Sequential false-statement capstone generated from executable root, IPA, constraint-`x`, and
+Action phases. -/
 theorem orchard_action_acceptFalseStatement_prob_le_sequential
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -2553,12 +2501,8 @@ theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO
       add_le_add (profile.advantage_mono hqueries hgroup)
         (actionStatisticalModel_at_2pow123 profile.queryBound)
 
-/-- **Consensus-generic exact-Action work-factor endpoint.**  For every Orchard-valid bundle
-size, a `2^123`-bounded sequential online-AGM adversary reduces to a Vesta-DLOG adversary with
-`2^126` resources.  Generalizing the five semantic surfaces costs one conservative statistical
-bit, from `2^-84` at the one-Action fixture to `2^-83` uniformly through the consensus maximum.
-The final conjunct transports that event bound to any transcript experiment related by an
-explicit `PMFEventBiasLE`, adding its conversion-bias budget. -/
+/-- Consensus-generic sequential capstone: `2^123` work reduces to `2^126` DLOG resources with a
+`2^-83` statistical remainder and explicit transcript bias. -/
 theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO_for
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
