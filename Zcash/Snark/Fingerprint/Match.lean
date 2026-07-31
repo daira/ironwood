@@ -36,7 +36,10 @@ checkable Rust↔Lean trust boundary. Everything else transcribed from halo2/orc
 exists to make the Lean development writable and is checked rather than trusted: a transcription
 error that admits a proof the deployed verifier accepts but the Lean model does not must break
 some fingerprint-match theorem, except with probability `≤ ε` over the randomness of the captured
-inputs and conditional on enumerated premises. ε is priced at `assemble`'s own coefficients: on a
+inputs and conditional on enumerated premises — premises that include the sampled-point
+distribution behind that probability (the captures' proof scalars come from fixed public seeds)
+and the currently-prose `Perm`→positional bridge, both recorded honestly in the Trust Boundary
+chapter. ε is priced at `assemble`'s own coefficients: on a
 good event of assignments every assembled coefficient is a rational function of the proof-string
 scalars and challenges with enumerated challenge-only denominators (`assembleCoeffFamily`,
 `Fingerprint/Rational/Capstone.lean`), and `competing_coefficient_family_agreement_le`

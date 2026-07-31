@@ -40,6 +40,59 @@ Three scoping rules give the invariant its precise shape:
   `.invert().unwrap()` panics and an `OpeningError` in halo2). Each capture witnesses this
   containment empirically with a `valid_capture_assembles` theorem.
 
+## The retroactive-audit model
+
+Zcash blocks commit the Orchard proofs and the public inputs they were verified against, so
+the invariant above serves a specific security target:
+
+> If the deployed verifier has a soundness bug that is ever exploited, the exploiting proofs
+> can be identified retroactively from chain data.
+
+The identification procedure is an audit: for every committed bundle, decode the proof bytes,
+re-derive the challenges with the schedule model, and evaluate `DeployedAccepts` at the
+Lean-derived verifying key against the committed public inputs. Every bundle receives either
+a **certificate** (the model accepts) or a **flag** (the model rejects, or the bytes fail to
+decode). Today this is an *algebraic adjudication predicate plus the premises on this page*,
+not an operational audit — byte-level Blake2b, proof-byte decode, public-input derivation,
+and a chain-sweep harness are exactly the enumerated premises — but the predicate and its
+trusted remainder are what this repository can pin down.
+
+The two verdicts have different standing:
+
+- A **certificate** places the proof inside the acceptance predicate that the soundness
+  stack's theorems govern. Those theorems are game-based — an explicit adversary, oracle
+  model, extractor, and knowledge error — so a certificate is *not* a per-proof verdict that
+  the statement is true or that anyone knew a witness. Prover knowledge is not a predicate of
+  the historical proof string: attacks inside the certificate regime (knowledge-error events,
+  broken idealizations or assumptions, no-knowledge acceptances of true statements) are
+  excluded by the reductions, up to their error — never identified by auditing, this one or
+  any other.
+- A **flag** is the absence of a certificate: a deployed/model divergence on an accepted
+  proof, computable without ever consulting the deployed verifier, and the place
+  investigation starts.
+
+The guarantee this supports is conditional, and the conditions are this page:
+
+> Assuming leg 1 — knowledge soundness for the *intended* relation — and assuming the
+> byte-input, Fiat–Shamir, public-input, capture, and compiler premises, every committed
+> accepted proof either is flagged by the model or lies within leg 1's security theorem and
+> its knowledge error.
+
+The flag half is nearly definitional — a flag *is* a divergence — so the content lives in the
+certificate half's conditions and in flag economy: flags are informative only if rare on
+honest traffic, which two honest accepting captures make an expectation rather than a
+theorem; the measurement would be a full-chain dry run. Sorting defects by where they live:
+a deployed-only divergence is flagged at audit by construction, however invisible it was to
+every capture; a *faithfully ported* bug yields certificates, not flags, and is caught only
+where leg 1's obligations confront it — at proof time if the stack reaches the relevant
+statement, and never if the formalized relation itself is inadequate (statement adequacy is a
+premise, not a theorem); a model-only strict divergence costs benign flags; a model-only
+lenient one never reaches the chain. The boundary work on this page exists so that the
+*audit's own inputs* — the key, the schedule, the instance commitments — are the model's
+derivations rather than artifacts of the pipeline under audit: that is the seam the
+derived-form statements close on the key side and enumerate on the Fiat–Shamir side
+(premise 4).
+
 ## The boundary artifact
 
 The statement of record is per-family and per-proof: the
@@ -135,8 +188,20 @@ point falls off the good event (`B = 2071`, the summed factor degrees:
 by the `h`-piece coefficients `xnⁱ·x₁ʲ·x₄ˢ`). The per-capture headliners with literal numerals
 — ε = `18523 / 18527 / 18531` over `p`, about `2⁻²⁴⁰` — live beside the random fixtures
 (`Fixtures/*Random/Epsilon.lean`), censused with exact `native_decide` owner lists, and the
-good event provably contains each captured point (`capturedPoint_goodEvent`). Two premises stay
-prose:
+good event provably contains each captured point (`capturedPoint_goodEvent`).
+
+One step between the landed theorems is currently prose, recorded here rather than implied:
+the per-family headliners bound a *positional* agreement event over `MsmCoord`, while the
+observed boundary theorems state `MsmMatch`, whose commitment-term lists are compared up to
+`List.Perm` — and the headliners mention neither `capturedMsm` nor the match. Connecting a
+passing capture to the positionally-bounded event uses the re-indexing remark in
+`Fingerprint/Epsilon.lean`'s module doc, which holds here because the captured `other` bases
+are pairwise distinct (100/123/146 distinct bases at the three random captures, observed on
+the committed artifacts; the bases are constants of the sample space, so a `Perm` match is
+forced to the unique base-matching bijection) — but that is an observation, not a landed
+theorem. The mechanical follow-up: a per-family `Nodup` fact on the captured bases plus a
+bridge lemma. Until it lands, the ε statements bound the positional event, and a capture's
+membership in that event rests on this audited step. Two further premises stay prose:
 
 - **Rust-side polynomiality.** That the deployed coefficients are the same rational family —
   the same enumerated challenge-only denominators, comparable numerator degree — is an audit of
@@ -147,25 +212,50 @@ prose:
 
 The Lean theorem samples one uniform point of a product space: every proof-string scalar slot
 and every challenge is an independent uniform `F_p` value
-(`competing_coefficient_family_agreement_le` counts over the full function space). The captures
-are not sampled that way — the challenges are Blake2b squeezes of the proof string,
-`ch = FS(ps)`. Under the random-oracle model the two experiments assign the *same* probability
-to a false agreement, exactly. Fix the discrepancy polynomial (both implementations, hence the
-polynomial, predate the seeds). Model each squeeze as a call to a random function at the
-transcript prefix so far: within one run the squeeze keys are pairwise distinct — each prefix
-strictly extends the last — so, conditioned on any value of the proof string, the challenge
-vector is uniform. A pair whose first component is uniform and whose second is uniform
-conditioned on every value of the first is exactly product-uniform, so
-`P[q(ps, FS(ps)) = 0] = #{(ps, ch) : q(ps, ch) = 0} / pᴺ` — precisely the fraction the theorem
-bounds. No two-stage Schwartz–Zippel over "bad proof strings" is needed; the identity is exact.
+(`competing_coefficient_family_agreement_le` counts over the full function space). The
+captures are not sampled that way, in two respects: the challenges are Blake2b squeezes of
+the proof string, `ch = FS(ps)`, and the proof-string scalars are the output of `ChaCha20Rng`
+at *fixed, public* seeds (the table in `fixture-provenance-notes.md`) — constants, not random
+variables. Honesty requires splitting the claim in two.
+
+**What the random-oracle premise alone buys.** Model each squeeze as a call to a random
+function at the transcript prefix so far: within one run the squeeze keys are pairwise
+distinct — each prefix strictly extends the last — so, *conditioned on the fixed proof
+string* `ps*`, the challenge vector is exactly uniform, with no two-stage Schwartz–Zippel
+needed for that block. Restricting a discrepancy polynomial `q` to `ps*` leaves `q(ps*, ·)`
+in the challenge coordinates at no greater degree, and the enumerated denominator factors are
+challenge-only, so a Schwartz–Zippel bound of the same shape and budgets prices its agreement
+over the challenge randomness. What this covers: every divergence whose discrepancy does
+**not vanish identically at the fabricated scalars**. What it cannot cover: a discrepancy in
+the proof-slot coordinates alone that vanishes at `ps*` — over the remaining oracle
+randomness it agrees with probability one. (This challenge-restricted reading is prose; the
+landed theorem counts over the full product space and is not conditioned on `ps*`.)
+
+**What the full product-space ε needs.** Reading the literal per-family ε over *all*
+coordinates additionally treats the seeded `ChaCha20Rng` expansion as a random function
+evaluated at a point chosen independently of the discrepancy — a nothing-up-my-sleeve
+idealization, **not** a reduction: pseudorandomness is a property of secret random seeds, and
+these seeds are fixed and public. The mnemonic choice rules out adversarial seed selection;
+it does not manufacture a distribution. A reduction-backed ε is available and cheap if ever
+wanted: freeze both implementations, draw one seed from a future public randomness beacon,
+and regenerate (~17 s, no prover runs) — a fixed discrepancy vanishing at the expansion of a
+random seed is then a ChaCha distinguisher, and the stated error becomes ε plus the PRG
+advantage plus the sampler's reduction distances. Recorded as a follow-up in
+`fixture-provenance-notes.md`.
+
 The group-valued slots need no distributional assumption at all: the theorem holds for every
-fixed assignment of them, so conditioning on the captured commitments is sound.
+fixed assignment of them, so conditioning on the captured commitments is sound — with the
+matching scope note that each capture certifies the scalar coefficient functions *at the
+captured commitments*; that the deployed side treats commitments only as MSM bases is part of
+premise 2 below, not of the theorem.
 
-What the premise assumes, enumerated:
+What the sampled-point premise assumes, enumerated:
 
-1. the fabricated proof-string scalars are uniform — seeded-RNG outputs whose seeds were fixed
-   before any of this Lean development existed (the seed table in
-   `fixture-provenance-notes.md`);
+1. the seeded-expansion idealization above — fixed public `ChaCha20Rng` outputs (seeds chosen
+   before any of this Lean development existed; the seed table in
+   `fixture-provenance-notes.md`) standing in for uniform proof-string scalars, including the
+   generator's canonical-sampling step; heuristic, with beacon regeneration as the
+   reduction-backed alternative;
 2. Blake2b behaves as a random function chosen independently of the code under test — code
    written *after* the seeds could special-case the published point: the pinned-point caveat
    below, excluded by review, not probability;
@@ -178,7 +268,9 @@ What the premise assumes, enumerated:
 ## How each transcription is falsified
 
 For every artifact transcribed from halo2/orchard, the mechanism by which a soundness-relevant
-error breaks a check. Rows marked *prob. ≥ 1 − ε* are the probabilistic ones priced above.
+error breaks a check. Rows marked *prob. ≥ 1 − ε* are the probabilistic ones priced above —
+under the modality section's premises, including the sampled-point premise and the
+`Perm`→positional bridge recorded there.
 
 | Transcribed artifact | Enters the fingerprint via | A soundness-relevant error causes | Checked by |
 |---|---|---|---|
