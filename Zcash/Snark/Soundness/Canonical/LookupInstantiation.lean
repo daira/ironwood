@@ -18,7 +18,6 @@ circuit fixture or concrete verification key occurs here.
 namespace Zcash.Snark
 
 open CompPoly.CPolynomial
-
 /--
 The polynomial feed for one verifier query family.
 

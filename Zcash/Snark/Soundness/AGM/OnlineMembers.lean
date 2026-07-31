@@ -15,7 +15,6 @@ point.  This file states that concrete coverage predicate and turns it into the 
 namespace Zcash.Snark
 
 open Classical
-
 local instance vestaInhabitedOnlineMembers : Inhabited VestaG := ⟨0⟩
 
 variable {shape : Shape} {basis : AugmentedIndex (2 ^ shape.k) -> VestaG}

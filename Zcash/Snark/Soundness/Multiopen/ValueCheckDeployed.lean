@@ -17,7 +17,6 @@ chain consumes.
 
 namespace Zcash.Snark
 
-open Polynomial
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 

@@ -26,7 +26,6 @@ namespace Zcash.Snark
 open Zcash.Arithmetic (derivedUrsGLagrange)
 open Halo2 CompPoly.CPolynomial
 open CompElliptic.Curves.Pasta
-
 set_option maxHeartbeats 20000
 
 variable {G : Type} [AddCommGroup G] [Module Fp G]

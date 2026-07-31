@@ -13,8 +13,7 @@ commitment binding and preserves computed break witnesses as data.
 
 namespace Zcash.Snark
 
-open Halo2 Polynomial Keygen
-
+open Halo2 Keygen
 namespace TopLevelAcceptedModel
 
 variable

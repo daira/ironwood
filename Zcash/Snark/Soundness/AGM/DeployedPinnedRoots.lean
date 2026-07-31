@@ -20,10 +20,8 @@ sufficient condition rather than the interface.
 namespace Zcash.Snark
 
 open Zcash.Arithmetic (card_Fp scalarFieldOrder)
-
-open Classical Polynomial
+open Classical
 open scoped ENNReal
-
 local instance vestaInhabitedDeployedPinnedRoots : Inhabited VestaG := ⟨0⟩
 
 variable {shape : Shape}

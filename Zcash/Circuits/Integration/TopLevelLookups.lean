@@ -20,9 +20,7 @@ packed-selector rows.
 namespace Zcash.Snark
 
 open Zcash.Arithmetic (omegaOf)
-
-open Halo2 Polynomial Keygen
-
+open Halo2 Keygen
 set_option maxHeartbeats 20000
 
 variable

@@ -31,7 +31,6 @@ integration layers.
 namespace Zcash.Snark
 
 open CompPoly.CPolynomial (eval C X toPoly eval_finsetSum)
-
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 
 /-- Interpret a coefficient vector as the corresponding polynomial.
