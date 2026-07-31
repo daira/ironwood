@@ -1,5 +1,6 @@
 import Mathlib.Tactic
 import Zcash.Security.Ledger.Capstone
+import Zcash.Security.Ledger.ExtractionArm
 import Zcash.Security.Ledger.KeyBindingDLR
 import Zcash.Security.Ledger.NoteCommitDLR
 import Zcash.Security.Ledger.MerkleDLR
@@ -30,9 +31,13 @@ re-proved as `relation_prob_le_of_textbookDL`). The witness-level model quantifi
 over valid annotated ledgers, so it abstracts away Halo 2 knowledge soundness — a
 separate, lossy reduction on the different Halo 2 bases; that is where the end-to-end
 reduction loss lives. In the protocol's design, value conservation rests on the
-binding signature; the formalized connection of `ε_bindsig` to a binding-signature
-break is tracked in #107 — at this layer it is a named hypothesis on the
-conservation events.
+binding signature. `ε_bindsig` is a named hypothesis on the conservation events. The
+extractor-plus-knowledge-error form replaces it with named bounds further down the
+reduction: with the binding-signature primitives pinned to a RedDSA shape,
+`orchardBalanceConservationBefore_measure_le_kerr` and
+`orchardBalanceIntegrity_measure_le_kerr` bound the same events by `εdlr + κ`, a
+`(V, R)` discrete-log-relation advantage plus the extractor's knowledge error
+(#107 tracks the remaining glue).
 -/
 
 namespace Zcash.Security.Ledger.Bridge
@@ -343,5 +348,57 @@ theorem orchardSpendAuthority_measure_le
     (le_trans (MeasureTheory.measure_mono
       (spendAuthorityBreakEvent_subset_relation verify bverify issuance maxActions wV
         hKB Signed)) hsin)
+
+/-! ## The Orchard conservation arm in extractor-plus-knowledge-error form -/
+
+/-- **Orchard value conservation with a fallible extractor.** For any adversary, any
+Pedersen shape `S` and RedDSA shape `B` of the binding-signature primitives, and any
+candidate extractor `E`, the probability that the ledger fails to balance at some
+prefix `i < k` is at most `εdlr + κ`: the `(V, R)` discrete-log-relation advantage
+plus the knowledge error, with no factor of `k`. The no-overflow premiss bounds the
+net value against the Pallas scalar order `r_ℙ`. Nothing is assumed of the extractor:
+its failures are exhibited on the extraction-failure arm. -/
+theorem orchardBalanceConservationBefore_measure_le_kerr
+    (A : PMF (OrchardAnnotated verify bverify issuance maxActions))
+    (S : ValueShape (primitives (MSG := MSG) (SIG := SIG) verify bverify))
+    (B : BindingSigShape (primitives verify bverify) S)
+    (hr : (maxActions + 1) * (primitives (MSG := MSG) (SIG := SIG) verify
+        bverify).valueBound ≤ CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD)
+    (E : RedDSA.Extractor Fq PallasGroup MSG) (k : ℕ) {εdlr κ : ℝ≥0∞}
+    (hdlr : A.toOuterMeasure (valueRelationEventBefore keyBinding S B hr E k) ≤ εdlr)
+    (hκ : A.toOuterMeasure (extractFailEventBefore keyBinding S B hr E k) ≤ κ) :
+    A.toOuterMeasure (balanceConservationViolationBefore
+        (P := primitives verify bverify) (kv := keyBinding) (issuance := issuance)
+        (maxActions := maxActions) k)
+      ≤ εdlr + κ :=
+  balanceConservationBefore_measure_le_kerr A S B hr E k hdlr hκ
+
+/-- **Orchard Balance integrity in extractor-plus-knowledge-error form.** Balance
+integrity holds at every prefix `i < k`, except with probability at most
+`ε_sinsemilladlr + εdlr + κ`: the Sinsemilla discrete-log-relation advantage covers
+the non-negativity side, and the conservation side is covered by the `(V, R)`
+discrete-log-relation advantage plus the extractor's knowledge error, in place of
+`orchardBalanceIntegrity_measure_le`'s named `ε_bindsig`. -/
+theorem orchardBalanceIntegrity_measure_le_kerr
+    (A : PMF (OrchardAnnotated verify bverify issuance maxActions))
+    (S : ValueShape (primitives (MSG := MSG) (SIG := SIG) verify bverify))
+    (B : BindingSigShape (primitives verify bverify) S)
+    (hr : (maxActions + 1) * (primitives (MSG := MSG) (SIG := SIG) verify
+        bverify).valueBound ≤ CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD)
+    (E : RedDSA.Extractor Fq PallasGroup MSG) (k : ℕ)
+    {ε_sinsemilladlr εdlr κ : ℝ≥0∞}
+    (hsin : A.toOuterMeasure
+      (orchardRelationEventUpTo verify bverify issuance maxActions k) ≤ ε_sinsemilladlr)
+    (hdlr : A.toOuterMeasure (valueRelationEventBefore keyBinding S B hr E k) ≤ εdlr)
+    (hκ : A.toOuterMeasure (extractFailEventBefore keyBinding S B hr E k) ≤ κ) :
+    A.toOuterMeasure (balanceIntegrityViolationBefore (P := primitives verify bverify)
+        (kv := keyBinding) (issuance := issuance) (maxActions := maxActions) k)
+      ≤ ε_sinsemilladlr + εdlr + κ := by
+  rw [add_assoc]
+  exact le_trans
+    (toOuterMeasure_le_add₂ A
+      (balanceIntegrityViolationBefore_subset_relation verify bverify issuance
+        maxActions k))
+    (add_le_add hsin (balanceConservationBefore_measure_le_kerr A S B hr E k hdlr hκ))
 
 end Zcash.Security.Ledger.Bridge

@@ -458,7 +458,9 @@ assert_axioms Zcash.Security.RedDSA.Scheme.verify_sign_randomized
 The fallible-extractor restatement of the transaction-balance premiss discharge: the extractor is
 an arbitrary function, its failures are exhibited `RedDSA.ExtractionFailure` data,
 and the Balance capstones bound the violation by `εdlr + κ`, per prefix and at all
-prefixes with no factor of `k`. `+choice` is the erased-positions tier. -/
+prefixes with no factor of `k`. The Orchard instantiation names the same bounds at
+the Orchard-protocol primitives, deepening the integrity bound's `ε_bindsig` cut to
+`εdlr + κ`. `+choice` is the erased-positions tier. -/
 
 assert_computable Zcash.Security.Ledger.Model.ValueShape.premissOrBreakFallible +choice
 assert_computable Zcash.Security.Ledger.Model.txBalancePremissFallible +choice
@@ -468,6 +470,24 @@ assert_axioms Zcash.Security.Ledger.Model.balanceConservation_measure_le_kerr
 assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCap_measure_le_kerr
 assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_measure_le_kerr
 assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCapBefore_measure_le_kerr
+assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceConservationBefore_measure_le_kerr +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceIntegrity_measure_le_kerr +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
 
 /-! ## The key-binding arms' ε, discharged
 
