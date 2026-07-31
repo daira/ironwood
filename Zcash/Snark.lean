@@ -91,7 +91,7 @@ import Zcash.Snark.Soundness.Multiopen.Opened
 import Zcash.Snark.Soundness.Multiopen.RPoly
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 import Zcash.Snark.Soundness.Canonical.Terminal
-import Zcash.Snark.Soundness.TopLevelTerminal
+import Zcash.Snark.Soundness.Circuit.Terminal
 import Zcash.Snark.Soundness.Vesta
 -- AGM binding reduction: consume computed deployed relations through the programmed-basis
 -- discrete-log adapter and representation-carrying algebraic-prover model.
@@ -123,7 +123,7 @@ import Zcash.Snark.Soundness.Composition.SequentialLift
 import Zcash.Snark.Soundness.Composition.DirectPathCost
 -- Circuit soundness specializations consume the Clean/Ironwood integration
 -- boundary; they do not belong to that boundary's import graph.
-import Zcash.Snark.Soundness.StraightLine.TopLevelTerminal
-import Zcash.Snark.Soundness.StraightLine.TopLevelEvent
+import Zcash.Snark.Soundness.StraightLine.Terminal
+import Zcash.Snark.Soundness.StraightLine.Event
 import Zcash.Snark.Soundness.Action.StraightLineTerminal
 import Zcash.Snark.Soundness.Action.StraightLineEvent

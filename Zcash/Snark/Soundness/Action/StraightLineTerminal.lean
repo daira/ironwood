@@ -2,7 +2,7 @@ import Zcash.Circuits.Integration.ActionCorrectness
 import Zcash.Circuits.Integration.ActionPermutationDomain
 import Zcash.Snark.Soundness.AGM.DecodeToOpened
 import Zcash.Snark.Soundness.Composition.StraightLineDecodeSupply
-import Zcash.Snark.Soundness.StraightLine.TopLevelTerminal
+import Zcash.Snark.Soundness.StraightLine.Terminal
 
 /-!
 # The rewind-free decode at the Action terminal
