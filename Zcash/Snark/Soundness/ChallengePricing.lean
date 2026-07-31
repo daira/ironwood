@@ -133,7 +133,8 @@ theorem perm_gamma_failure_measure_le (sp tp : Multiset (Fp × Fp)) (beta : Fp) 
 /-- Each coefficient of the pair-product difference has degree at most the cell count: the factors
 `X + C (encPair q)` carry `β`-degree at most one each. -/
 theorem natDegree_coeff_pairProdDiff_le (sp tp : Multiset (Fp × Fp)) (j : ℕ) :
-    ((pairProdDiff sp tp).coeff j).natDegree ≤ max (Multiset.card sp) (Multiset.card tp) := by
+    ((nestedPoly (pairProdDiff sp tp)).coeff j).natDegree
+      ≤ max (Multiset.card sp) (Multiset.card tp) := by
   have key : ∀ (m : Multiset (Fp × Fp)) (j : ℕ),
       (((m.map (fun q => Polynomial.X + Polynomial.C (encPair q))).prod).coeff j).natDegree ≤ Multiset.card m := by
     intro m
@@ -159,14 +160,15 @@ theorem natDegree_coeff_pairProdDiff_le (sp tp : Multiset (Fp × Fp)) (j : ℕ) 
           calc (encPair q).natDegree + (((m.map (fun q => Polynomial.X + Polynomial.C (encPair q))).prod).coeff j).natDegree
               ≤ 1 + Multiset.card m := Nat.add_le_add hencp (ih j)
             _ = Multiset.card (q ::ₘ m) := by rw [Multiset.card_cons]; omega
-  rw [pairProdDiff, Polynomial.coeff_sub]
+  rw [nestedPoly_pairProdDiff, Polynomial.coeff_sub]
   refine le_trans (Polynomial.natDegree_sub_le _ _) (max_le ?_ ?_)
   · exact le_trans (key sp j) (le_max_left _ _)
   · exact le_trans (key tp j) (le_max_right _ _)
 
 /-- Out-of-range coefficients of the pair-product difference vanish. -/
 theorem pairProdDiff_coeff_eq_zero_of_le (sp tp : Multiset (Fp × Fp)) {j : ℕ}
-    (hj : max (Multiset.card sp) (Multiset.card tp) < j) : (pairProdDiff sp tp).coeff j = 0 := by
+    (hj : max (Multiset.card sp) (Multiset.card tp) < j) :
+    (nestedPoly (pairProdDiff sp tp)).coeff j = 0 := by
   have key : ∀ (m : Multiset (Fp × Fp)), Multiset.card m < j →
       ((m.map (fun q => Polynomial.X + Polynomial.C (encPair q))).prod).coeff j = 0 := by
     intro m hm
@@ -176,7 +178,7 @@ theorem pairProdDiff_coeff_eq_zero_of_le (sp tp : Multiset (Fp × Fp)) {j : ℕ}
       intro m; simp [Multiset.map_map]
     rw [hmap, natDegree_prod_X_add_u]
     simp
-  rw [pairProdDiff, Polynomial.coeff_sub,
+  rw [nestedPoly_pairProdDiff, Polynomial.coeff_sub,
     key sp (lt_of_le_of_lt (le_max_left _ _) hj), key tp (lt_of_le_of_lt (le_max_right _ _) hj),
     sub_self]
 

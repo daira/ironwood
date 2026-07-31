@@ -433,6 +433,12 @@ open Zcash.Arithmetic (scalarFieldOrder)
 /-- The computable polynomial ring over the scalar field. -/
 abbrev CPoly := CPolynomial Fp
 
+/-- Two indeterminates over the scalar field, `Fp[β][γ]`: the outer variable is `γ`, the
+coefficients are polynomials in `β`.  An `abbrev`, so the univariate API applies to the outer
+layer unchanged — CompPoly's own `CBivariate` is a `def` whose `coeff`, `toPoly`, `X` and `C`
+shadow the univariate ones. -/
+abbrev CBiPoly := CPolynomial CPoly
+
 /-- `Fp` enumerated by its residues. -/
 def fpEnumeration : CPolynomial.Roots.FiniteField.FieldEnumeration Fp where
   size := scalarFieldOrder
