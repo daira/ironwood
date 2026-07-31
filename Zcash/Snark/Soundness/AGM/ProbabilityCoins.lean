@@ -65,7 +65,7 @@ variable {ι : Type*} [Fintype ι] [DecidableEq ι] [Nonempty ι]
 variable (A : (b : ι → G) → ρ → Option (AlgebraicRelationWitness (F := F) b))
 
 /-- Basis scalars and extractor coins on which the computed producer returns a relation. -/
-noncomputable def relSetWithCoins : Finset ((ι → F) × ρ) :=
+def relSetWithCoins : Finset ((ι → F) × ρ) :=
   Finset.univ.filter (fun p => (A (scalarBasis B p.1) p.2).isSome)
 
 /-! ## The programmed experiment with extractor coins
@@ -102,7 +102,7 @@ theorem returnedCoeffsWithCoins_pivotSlot_ne_zero {s : ι → F} {c : ρ}
   exact r.exists_nonzero_coeff.choose_spec
 
 /-- Programmed coins on which the randomized producer returns a relation. -/
-noncomputable def programmedRelSetWithCoins : Finset (F × (ι → F) × (ι → F) × ρ) :=
+def programmedRelSetWithCoins : Finset (F × (ι → F) × (ι → F) × ρ) :=
   Finset.univ.filter (fun t =>
     (A (scalarBasis B (programmedLogs t.1 t.2.1 t.2.2.1)) t.2.2.2).isSome)
 
@@ -378,7 +378,7 @@ def RelationFinderExpectedCallsLE
 
 /-- Basis-log and extractor-coin pairs on which the original finder exceeds the fixed call
 budget. -/
-noncomputable def relationFinderCallTail
+def relationFinderCallTail
     (calls : (ι -> G) -> ρ -> Nat) (L : Nat) : Finset ((ι -> F) × ρ) :=
   Finset.univ.filter (fun p => L < calls (scalarBasis B p.1) p.2)
 

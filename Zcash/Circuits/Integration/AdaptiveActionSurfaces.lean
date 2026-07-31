@@ -702,7 +702,7 @@ def adaptiveActionCommitmentPolynomialOf
     else 0
 
 /-- Action specialization of the executable commitment resolver. -/
-noncomputable def adaptiveActionCommitmentPolynomial
+def adaptiveActionCommitmentPolynomial
     (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
     (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
@@ -766,7 +766,7 @@ def adaptiveActionCommittedModelOf
   canonicalConstraintModelOfPermutationResolver vk ch
     (adaptiveActionCommitmentPolynomialOf vk ic ps source ch) hblinding
 
-noncomputable def adaptiveActionCommittedModel
+def adaptiveActionCommittedModel
     (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
     (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
@@ -799,7 +799,7 @@ def adaptiveActionPreXDifferenceOf
         * (X ^ vk.n - 1)
 
 /-- Action specialization of the executable fixed pre-`x` difference. -/
-noncomputable def adaptiveActionPreXDifference
+def adaptiveActionPreXDifference
     (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
     (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
@@ -1122,7 +1122,7 @@ theorem onlinePointPolynomial_eq_of_sourceMismatch_none
 
 /-- One of the five exact Action semantic bad sets, reconstructed only from the stage prefix,
 earlier oracle answers, and stage-local AGM coordinates. -/
-noncomputable def adaptiveActionSurfaceAt
+def adaptiveActionSurfaceAt
     (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
     (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
@@ -1588,7 +1588,7 @@ theorem adaptiveActionQuerySource_eq_of_pinned
 
 /-- Query-time Action surface reconstructed from the exact ordinary prefix and its pre-answer AGM
 annotation. -/
-noncomputable def adaptiveQueriedActionSurface
+def adaptiveQueriedActionSurface
     (pp : ProofParams)
     (family : ComputedAdaptiveOnlineAGMFSFamily (pp.mergeDerived actionCircuit))
     (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
@@ -1609,7 +1609,7 @@ noncomputable def adaptiveQueriedActionSurface
 
 /-- Fresh-prefix fallback reconstructed from the final output's own stage-local AGM
 representations. -/
-noncomputable def adaptiveFallbackActionSurface
+def adaptiveFallbackActionSurface
     (pp : ProofParams)
     (family : ComputedAdaptiveOnlineAGMFSFamily (pp.mergeDerived actionCircuit))
     (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
@@ -3094,7 +3094,7 @@ theorem adaptivePrefixBad_algebraicFullPrefixesPre
 
 /-- The final-output semantic event at one of the five Action squeezes, decoded through the same
 strict-prefix wrapper used by the arbitrary-adaptive squeeze theorem. -/
-noncomputable def adaptiveFinalActionBad
+def adaptiveFinalActionBad
     (pp : ProofParams)
     (family : ComputedAdaptiveOnlineAGMFSFamily (pp.mergeDerived actionCircuit))
     (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)
@@ -3301,7 +3301,7 @@ theorem ComputedAdaptiveOnlineAGMFSFamily.adaptiveFinalActionBadWithoutRelation_
       (adaptiveActionEarlier n earlier)
 
 /-- One actual Action semantic bad event, excluding the executable stage-provenance relation. -/
-noncomputable def ComputedAdaptiveOnlineAGMFSFamily.adaptiveActionBadWithoutRelation
+def ComputedAdaptiveOnlineAGMFSFamily.adaptiveActionBadWithoutRelation
     (pp : ProofParams)
     (family : ComputedAdaptiveOnlineAGMFSFamily (pp.mergeDerived actionCircuit))
     (inputs : Fin (pp.mergeDerived actionCircuit).numProofs → PublicInputs Fp)

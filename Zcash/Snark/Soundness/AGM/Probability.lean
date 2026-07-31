@@ -36,7 +36,7 @@ def programmedEmbedding (z : F) (x y : ι → F) :
 variable (A : (b : ι → G) → Option (AlgebraicRelationWitness (F := F) b))
 
 /-- Relation-finding event: on the presented basis, `A` returns a (nontrivial) relation. -/
-noncomputable def relSet : Finset (ι → F) :=
+def relSet : Finset (ι → F) :=
   Finset.univ.filter (fun s => (A (scalarBasis B s)).isSome)
 
 /-! ### The programmed experiment
@@ -72,7 +72,7 @@ theorem returnedCoeffs_pivotSlot_ne_zero {s : ι → F}
   exact r.exists_nonzero_coeff.choose_spec
 
 /-- Programmed coins on which `A` returns a relation. -/
-noncomputable def programmedRelSet : Finset (F × (ι → F) × (ι → F)) :=
+def programmedRelSet : Finset (F × (ι → F) × (ι → F)) :=
   Finset.univ.filter (fun t =>
     (A (scalarBasis B (programmedLogs t.1 t.2.1 t.2.2))).isSome)
 

@@ -32,7 +32,7 @@ def straightLineIpaRootPoint (family : ComputedAlgebraicFSFamily shape)
   algebraicFullPrefixes family.init p j
 
 /-- The quadratic bad set computed from the representations and earlier challenges of one run. -/
-noncomputable def straightLineIpaRootBad (family : ComputedAlgebraicFSFamily shape)
+def straightLineIpaRootBad (family : ComputedAlgebraicFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (p : AlgebraicWfProof basis (family.vk basis) (family.instanceCommitment basis))
     (O : BTranscript Fp VestaG

@@ -143,7 +143,7 @@ def adaptiveX1Batch
     (nu 5)
 
 /-- One stage-local `x₁` member-binding polynomial. -/
-noncomputable def adaptiveX1RootPolynomial
+def adaptiveX1RootPolynomial
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (vk : VerifyingKey shape Fp VestaG)
     (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
@@ -168,7 +168,7 @@ noncomputable def adaptiveX1RootPolynomial
       (chRecord nu (fun _ => 0))).getD i ([], [], 0)).1[idx]
 
 /-- All query-time `x₁` roots for one set. -/
-noncomputable def adaptiveX1RootSet
+def adaptiveX1RootSet
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (vk : VerifyingKey shape Fp VestaG)
     (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
@@ -186,7 +186,7 @@ noncomputable def adaptiveX1RootSet
   else ∅
 
 /-- The single union charged at the adaptive `x₁` squeeze. -/
-noncomputable def adaptiveX1AllRootSet
+def adaptiveX1AllRootSet
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (vk : VerifyingKey shape Fp VestaG)
     (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
@@ -264,7 +264,7 @@ theorem adaptiveX1AllRootSet_measure_le
       ring
 
 /-- Direct `x₁`-compressed coordinate polynomial of one point set, fixed before `x₂`. -/
-noncomputable def adaptiveSetColumn
+def adaptiveSetColumn
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (vk : VerifyingKey shape Fp VestaG)
     (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
@@ -283,7 +283,7 @@ noncomputable def adaptiveSetColumn
       (nu 5) ^ (m : Nat) • members.coeffs m)
 
 /-- The `x₂` separation surface rebuilt solely from pre-`x₂` query data. -/
-noncomputable def adaptiveX2RootSet
+def adaptiveX2RootSet
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (vk : VerifyingKey shape Fp VestaG)
     (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
@@ -475,7 +475,7 @@ def adaptiveX4Batch
     (nu 8)
 
 /-- The `x₄` value-binding surface rebuilt from the pre-`x₄` annotation. -/
-noncomputable def adaptiveX4RootSet
+def adaptiveX4RootSet
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (vk : VerifyingKey shape Fp VestaG)
     (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
@@ -514,7 +514,7 @@ theorem adaptiveX4RootSet_measure_le
         (chRecord nu (fun _ => 0))) 1)
 
 /-- The cleared-quotient/collision surface rebuilt from the pre-`x₃` annotation. -/
-noncomputable def adaptiveX3RootSet
+def adaptiveX3RootSet
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (vk : VerifyingKey shape Fp VestaG)
     (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
@@ -602,7 +602,7 @@ def adaptiveAggregateU
       (nu 8) ^ (j : Nat) * cols.uComp j
 
 /-- The `ξ` shift-recovery surface uses only data present before `ξ`. -/
-noncomputable def adaptiveXiRootSet
+def adaptiveXiRootSet
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (vk : VerifyingKey shape Fp VestaG)
     (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
@@ -622,7 +622,7 @@ noncomputable def adaptiveXiRootSet
     (commitGen (evalVector shape.k ch.x3) s.coeffs))
 
 /-- The `z` shift-recovery surface uses only data present before `z`. -/
-noncomputable def adaptiveZRootSet
+def adaptiveZRootSet
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (vk : VerifyingKey shape Fp VestaG)
     (instanceCommitment : Fin shape.numProofs → Nat → VestaG)

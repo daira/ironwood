@@ -66,17 +66,17 @@ theorem capturedZeroVk_data :
 
 /-- **The captured key's straight-line deployed family.**  Six staged root events, an empty
 constraint-`x` stage, and a staged IPA trace over the captured domain's eleven rounds. -/
-noncomputable def capturedZeroStraightLineFamily :
+def capturedZeroStraightLineFamily :
     ComputedStraightLineDeployedFSFamily capturedZeroShape :=
   zeroStraightLineDeployedFamily capturedZeroVk capturedZeroVk_fixed capturedZeroVk_perm rfl
 
 /-- The captured key's deployed constraint family, one interface below. -/
-noncomputable def capturedZeroDeployedConstraintFamily :
+def capturedZeroDeployedConstraintFamily :
     ComputedDeployedConstraintFSFamily capturedZeroShape :=
   zeroDeployedConstraintFamily capturedZeroVk capturedZeroVk_fixed capturedZeroVk_perm rfl
 
 /-- The captured key's deployed root family, two interfaces below. -/
-noncomputable def capturedZeroDeployedRootFamily :
+def capturedZeroDeployedRootFamily :
     ComputedDeployedRootFSFamily capturedZeroShape :=
   zeroDeployedRootFamily capturedZeroVk capturedZeroVk_fixed capturedZeroVk_perm
 
@@ -92,7 +92,7 @@ theorem capturedZeroStaticChecks :
 
 /-- **The constraint-`x` squeeze schedule at budget zero.**  The stage's root set is empty on
 every table, so the event costs nothing and its pinning is the staged trace's. -/
-noncomputable def capturedZeroConstraintSchedule :
+def capturedZeroConstraintSchedule :
     DeployedConstraintXSqueezeSchedule capturedZeroStraightLineFamily.toRootFamily 0 where
   measure_le := fun basis O => by
     rw [show deployedConstraintXBadSet capturedZeroStraightLineFamily.toRootFamily basis O = ∅ from
@@ -134,12 +134,12 @@ theorem capturedLiveZeroVk_perm :
 
 /-- **The deployed root family at the full captured shape**: six staged root events with both
 sub-proofs live. -/
-noncomputable def capturedLiveZeroRootFamily : ComputedDeployedRootFSFamily shape :=
+def capturedLiveZeroRootFamily : ComputedDeployedRootFSFamily shape :=
   zeroDeployedRootFamily capturedLiveZeroVk capturedLiveZeroVk_fixed capturedLiveZeroVk_perm
 
 /-- **The staged IPA trace at the full captured shape**: the constant walk over the captured
 domain's eleven rounds, with the multiopen value free. -/
-noncomputable def capturedLiveZeroIpaTrace :
+def capturedLiveZeroIpaTrace :
     StraightLineIpaOnlineTrace capturedLiveZeroRootFamily.toFamily :=
   zeroConstStraightLineIpaTrace capturedLiveZeroVk capturedLiveZeroVk_fixed
     capturedLiveZeroVk_perm
@@ -147,7 +147,7 @@ noncomputable def capturedLiveZeroIpaTrace :
 /-- **The full straight-line family with both sub-proofs live** (issue #127 C10): every interface
 obligation discharged at the captured key's scalar data over `numProofs = 2`, `k = 11`.  Smoke
 test only. -/
-noncomputable def capturedLiveZeroStraightLineFamily :
+def capturedLiveZeroStraightLineFamily :
     ComputedStraightLineDeployedFSFamily shape :=
   zeroConstStraightLineDeployedFamily capturedLiveZeroVk capturedLiveZeroVk_fixed
     capturedLiveZeroVk_perm
