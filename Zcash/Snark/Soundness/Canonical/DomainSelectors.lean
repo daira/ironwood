@@ -50,7 +50,7 @@ theorem toPoly_rowSelectorPolynomial {n : ℕ}
 The nodal polynomial of an injectively enumerated size-`n` root-of-unity domain
 is the usual vanishing polynomial `Xⁿ - 1`.
 -/
-theorem domainNodal_eq_vanishing {n : ℕ} {omega : Fp}
+private theorem domainNodal_eq_vanishing {n : ℕ} {omega : Fp}
     (hn : 0 < n)
     (hrows : Function.Injective fun i : Fin n => omega ^ (i : ℕ))
     (hroot : omega ^ n = 1) :
@@ -73,7 +73,7 @@ theorem domainNodal_eq_vanishing {n : ℕ} {omega : Fp}
     simp [Polynomial.eval_sub, Polynomial.eval_pow, hpow]
 
 /-- The barycentric weight of row `i` in a root-of-unity domain is `ωⁱ / n`. -/
-theorem domainNodalWeight_eq {n : ℕ} {omega : Fp}
+private theorem domainNodalWeight_eq {n : ℕ} {omega : Fp}
     (hn : 0 < n)
     (hrows : Function.Injective fun i : Fin n => omega ^ (i : ℕ))
     (hroot : omega ^ n = 1)
