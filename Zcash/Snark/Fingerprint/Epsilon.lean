@@ -22,6 +22,12 @@ that buys:
   `(D + Σ totalDegree (denFactors vk)) / p`, `p = scalarFieldOrder ≈ 2²⁵⁴`. Either the point
   falls off the good event, or the agreement at the differing coordinate makes the nonzero
   difference polynomial vanish — Schwartz–Zippel.
+* `competing_coefficient_family_agreement_le_challengesOnly` — the same bound with the
+  proof-string slots pinned to an arbitrary assignment, counting over the challenge
+  coordinates alone (`goodEvent_merge_compl_card_le` prices the good event there at the same
+  cost — the factors are challenge-only). What the random-oracle premise alone buys at a
+  capture: coverage of every divergence whose discrepancy does not vanish identically at the
+  pinned slots.
 
 Statements are conditioned on `assemble? = some m` throughout — never the total `assemble`,
 whose zero-MSM fallback evaluates to the accept value (`Verifier/Assemble.lean`).
@@ -108,6 +114,31 @@ theorem goodEvent_compl_card_le {shape : Shape} {G : Type*} (vk : VerifyingKey s
     simp [GoodEvent]
   rw [hcongr]
   exact card_exists_eval_zero_le _ (denFactors_ne_zero vk hn)
+
+open Classical in
+/-- The good event's complement with the proof-string slots pinned, priced over the challenge
+coordinates alone — at the same cost as over the full space: the enumerated factors are
+challenge-only (`goodEvent_merge_iff`) and restriction does not raise degree
+(`restrictSlots_denFactors_totalDegree_sum_le`). -/
+theorem goodEvent_merge_compl_card_le {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (hn : 0 < vk.n)
+    (slotVals : {v : ScalarSlot shape // ¬ IsChallengeSlot v} → Fp) :
+    (#{g ∈ piFinset fun _ : {v : ScalarSlot shape // IsChallengeSlot v} =>
+        (univ : Finset Fp) | ¬ GoodEvent vk (Point.merge slotVals g)} : ℚ≥0)
+        / (scalarFieldOrder : ℚ≥0) ^ Fintype.card {v : ScalarSlot shape // IsChallengeSlot v}
+      ≤ ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0) / scalarFieldOrder := by
+  have hcongr : {g ∈ piFinset fun _ : {v : ScalarSlot shape // IsChallengeSlot v} =>
+        (univ : Finset Fp) | ¬ GoodEvent vk (Point.merge slotVals g)}
+      = {g ∈ piFinset fun _ : {v : ScalarSlot shape // IsChallengeSlot v} =>
+          (univ : Finset Fp) |
+          ∃ ψ ∈ (denFactors vk).map (restrictSlots slotVals), eval g ψ = 0} := by
+    refine Finset.filter_congr fun g _ => ?_
+    simp [goodEvent_merge_iff vk slotVals g]
+  rw [hcongr]
+  refine le_trans
+    (card_exists_eval_zero_le _ (restrictSlots_denFactors_ne_zero vk hn slotVals)) ?_
+  gcongr
+  exact_mod_cast restrictSlots_denFactors_totalDegree_sum_le vk slotVals
 
 /-- A rational representation of the assembled MSM's whole coefficient family on the good
 event: per coefficient position, a polynomial numerator over a denominator from the enumerated
@@ -197,6 +228,108 @@ theorem competing_coefficient_family_agreement_le {shape : Shape} {G : Type*}
           : ℚ≥0) / (scalarFieldOrder : ℚ≥0) ^ Fintype.card (ScalarSlot shape)
         + (#{f ∈ piFinset fun _ : ScalarSlot shape => (univ : Finset Fp) | eval f d = 0}
           : ℚ≥0) / (scalarFieldOrder : ℚ≥0) ^ Fintype.card (ScalarSlot shape) := by
+        push_cast
+        rw [add_div]
+    _ ≤ ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0) / scalarFieldOrder
+        + (d.totalDegree : ℚ≥0) / scalarFieldOrder := add_le_add hbad hzero
+    _ ≤ ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0) / scalarFieldOrder
+        + (D : ℚ≥0) / scalarFieldOrder := by
+        gcongr
+    _ = ((D : ℚ≥0) + (((denFactors vk).map totalDegree).sum : ℕ)) / scalarFieldOrder := by
+        rw [add_comm, add_div]
+
+open Classical in
+/-- **The ε theorem over the challenge coordinates alone.** Fix the proof-string slots to an
+arbitrary assignment `slotVals`; any competing numerator family of total degree ≤ `D` over the
+same denominators whose restriction to `slotVals` differs from Lean's at some coordinate agrees
+with the assembled MSM at a uniformly random challenge assignment with probability at most
+`(D + Σ totalDegree (denFactors vk)) / p` — the full product-space bound, because the good-event
+factors are challenge-only and restriction does not raise degree. The hypothesis is the
+*restricted* difference being nonzero — the honest coverage condition: a discrepancy vanishing
+identically at `slotVals` agrees with probability one over the challenges and is not covered. -/
+theorem competing_coefficient_family_agreement_le_challengesOnly {shape : Shape} {G : Type*}
+    [DecidableEq G] [Inhabited G]
+    {vk : VerifyingKey shape Fp G} {ic : Fin shape.numProofs → ℕ → G}
+    {base : ProofString shape Fp G} {L D Dden : ℕ}
+    (fam : RationalCoeffFamily vk ic base L D Dden) (hn : 0 < vk.n)
+    (slotVals : {v : ScalarSlot shape // ¬ IsChallengeSlot v} → Fp)
+    (num' : MsmCoord shape.k L → MvPolynomial (ScalarSlot shape) Fp)
+    (hdeg' : ∀ c, (num' c).totalDegree ≤ D)
+    (c₀ : MsmCoord shape.k L)
+    (hne : restrictSlots slotVals (num' c₀) ≠ restrictSlots slotVals (fam.num c₀)) :
+    (#{g ∈ piFinset fun _ : {v : ScalarSlot shape // IsChallengeSlot v} =>
+        (univ : Finset Fp) |
+        ∃ m : Msm shape.k Fp G,
+          assemble? vk ic (Point.toProofString (Point.merge slotVals g) base)
+              (Point.toChallenges (Point.merge slotVals g)) = some m
+            ∧ m.other.length = L
+            ∧ ∀ c : MsmCoord shape.k L,
+                m.coeffAt c * eval (Point.merge slotVals g) (fam.den c)
+                  = eval (Point.merge slotVals g) (num' c)} : ℚ≥0)
+        / (scalarFieldOrder : ℚ≥0) ^ Fintype.card {v : ScalarSlot shape // IsChallengeSlot v}
+      ≤ ((D : ℚ≥0) + (((denFactors vk).map totalDegree).sum : ℕ))
+          / scalarFieldOrder := by
+  set d : MvPolynomial {v : ScalarSlot shape // IsChallengeSlot v} Fp :=
+    restrictSlots slotVals (fam.num c₀) - restrictSlots slotVals (num' c₀) with hd
+  have hd0 : d ≠ 0 := sub_ne_zero.mpr (Ne.symm hne)
+  have hddeg : d.totalDegree ≤ D :=
+    le_trans (totalDegree_sub _ _) (max_le
+      (le_trans (restrictSlots_totalDegree_le _ _) (fam.num_totalDegree_le c₀))
+      (le_trans (restrictSlots_totalDegree_le _ _) (hdeg' c₀)))
+  have hsub : {g ∈ piFinset fun _ : {v : ScalarSlot shape // IsChallengeSlot v} =>
+        (univ : Finset Fp) |
+        ∃ m : Msm shape.k Fp G,
+          assemble? vk ic (Point.toProofString (Point.merge slotVals g) base)
+              (Point.toChallenges (Point.merge slotVals g)) = some m
+            ∧ m.other.length = L
+            ∧ ∀ c : MsmCoord shape.k L,
+                m.coeffAt c * eval (Point.merge slotVals g) (fam.den c)
+                  = eval (Point.merge slotVals g) (num' c)}
+      ⊆ {g ∈ piFinset fun _ : {v : ScalarSlot shape // IsChallengeSlot v} =>
+          (univ : Finset Fp) | ¬ GoodEvent vk (Point.merge slotVals g)}
+        ∪ {g ∈ piFinset fun _ : {v : ScalarSlot shape // IsChallengeSlot v} =>
+            (univ : Finset Fp) | eval g d = 0} := by
+    intro g hg
+    simp only [Finset.mem_filter, Finset.mem_union] at hg ⊢
+    obtain ⟨hmem, m, hm, _, hagree⟩ := hg
+    by_cases hgood : GoodEvent vk (Point.merge slotVals g)
+    · refine Or.inr ⟨hmem, ?_⟩
+      obtain ⟨m', hm', _, hrep⟩ := fam.represents (Point.merge slotVals g) hgood
+      have hmm : m = m' := Option.some.inj (hm ▸ hm')
+      have h1 := hrep c₀
+      have h2 := hagree c₀
+      rw [hmm] at h2
+      rw [hd, map_sub, eval_restrictSlots, eval_restrictSlots, sub_eq_zero, ← h1, ← h2]
+    · exact Or.inl ⟨hmem, hgood⟩
+  have hcard := le_trans (Finset.card_le_card hsub) (Finset.card_union_le _ _)
+  have hbad := goodEvent_merge_compl_card_le vk hn slotVals
+  have hzero := fingerprint_schwartz_zippel_index hd0
+  calc (#{g ∈ piFinset fun _ : {v : ScalarSlot shape // IsChallengeSlot v} =>
+        (univ : Finset Fp) |
+        ∃ m : Msm shape.k Fp G,
+          assemble? vk ic (Point.toProofString (Point.merge slotVals g) base)
+              (Point.toChallenges (Point.merge slotVals g)) = some m
+            ∧ m.other.length = L
+            ∧ ∀ c : MsmCoord shape.k L,
+                m.coeffAt c * eval (Point.merge slotVals g) (fam.den c)
+                  = eval (Point.merge slotVals g) (num' c)} : ℚ≥0)
+        / (scalarFieldOrder : ℚ≥0) ^ Fintype.card {v : ScalarSlot shape // IsChallengeSlot v}
+      ≤ ((#{g ∈ piFinset fun _ : {v : ScalarSlot shape // IsChallengeSlot v} =>
+            (univ : Finset Fp) | ¬ GoodEvent vk (Point.merge slotVals g)}
+          + #{g ∈ piFinset fun _ : {v : ScalarSlot shape // IsChallengeSlot v} =>
+              (univ : Finset Fp) | eval g d = 0}
+          : ℕ) : ℚ≥0)
+          / (scalarFieldOrder : ℚ≥0)
+              ^ Fintype.card {v : ScalarSlot shape // IsChallengeSlot v} := by
+        gcongr
+    _ = (#{g ∈ piFinset fun _ : {v : ScalarSlot shape // IsChallengeSlot v} =>
+            (univ : Finset Fp) | ¬ GoodEvent vk (Point.merge slotVals g)} : ℚ≥0)
+          / (scalarFieldOrder : ℚ≥0)
+              ^ Fintype.card {v : ScalarSlot shape // IsChallengeSlot v}
+        + (#{g ∈ piFinset fun _ : {v : ScalarSlot shape // IsChallengeSlot v} =>
+              (univ : Finset Fp) | eval g d = 0} : ℚ≥0)
+          / (scalarFieldOrder : ℚ≥0)
+              ^ Fintype.card {v : ScalarSlot shape // IsChallengeSlot v} := by
         push_cast
         rw [add_div]
     _ ≤ ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0) / scalarFieldOrder

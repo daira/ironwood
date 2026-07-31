@@ -235,6 +235,9 @@ Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_
 -- point itself, and any competing coefficient family of numerator degree ≤ 16456 over the
 -- walk's denominators that differs anywhere from Lean's agrees with the assembled MSM at a
 -- uniform sample-space point with probability at most (16456 + 2071)/p = 18527/p, p ≈ 2^254.
+-- The challenge-restricted headliner pins the proof-string slots to the captured scalars and
+-- prices the same 18527/p bound over the 22 challenge coordinates alone — what the
+-- random-oracle premise alone buys at this capture.
 assert_axioms Zcash.Snark.FixtureRandom2.vkSymbolicFacts +native(
   Zcash.Snark.FixtureRandom2.vkSymbolicFacts)
 assert_axioms Zcash.Snark.FixtureRandom2.vk_chunk_width_le +native(
@@ -248,6 +251,8 @@ assert_axioms Zcash.Snark.FixtureRandom2.otherLen_eq +native(
 assert_axioms Zcash.Snark.FixtureRandom2.denFactors_degree_sum_eq +native(
   Zcash.Snark.FixtureRandom2.denFactors_degree_sum_eq)
 assert_axioms Zcash.Snark.FixtureRandom2.card_scalarSlot
+assert_axioms Zcash.Snark.FixtureRandom2.capturedSlotVals
+assert_axioms Zcash.Snark.FixtureRandom2.card_challengeSlot
 assert_axioms Zcash.Snark.FixtureRandom2.coefficientFamily +native(
   Zcash.Snark.FixtureRandom2.vkSymbolicFacts,
   Zcash.Snark.FixtureRandom2.vk_chunk_width_le,
@@ -255,6 +260,12 @@ assert_axioms Zcash.Snark.FixtureRandom2.coefficientFamily +native(
 assert_axioms Zcash.Snark.FixtureRandom2.capturedPoint_goodEvent +native(
   Zcash.Snark.FixtureRandom2.capturedPoint_goodEvent)
 assert_axioms Zcash.Snark.FixtureRandom2.competing_family_agreement_le +native(
+  Zcash.Snark.FixtureRandom2.vkSymbolicFacts,
+  Zcash.Snark.FixtureRandom2.vk_chunk_width_le,
+  Zcash.Snark.FixtureRandom2.vk_chunks_length_eq,
+  Zcash.Snark.FixtureRandom2.msmDegreeBudget_eq,
+  Zcash.Snark.FixtureRandom2.denFactors_degree_sum_eq)
+assert_axioms Zcash.Snark.FixtureRandom2.competing_family_agreement_le_challengesOnly +native(
   Zcash.Snark.FixtureRandom2.vkSymbolicFacts,
   Zcash.Snark.FixtureRandom2.vk_chunk_width_le,
   Zcash.Snark.FixtureRandom2.vk_chunks_length_eq,
@@ -276,6 +287,23 @@ Zcash.Snark.FixtureRandom2.vk_chunk_width_le._native.native_decide.ax_1_1,
 Zcash.Snark.FixtureRandom2.vk_chunks_length_eq._native.native_decide.ax_1_1] -/
 #guard_msgs (whitespace := lax) in
 #print axioms Zcash.Snark.FixtureRandom2.competing_family_agreement_le
+
+/-- info: 'Zcash.Snark.FixtureRandom2.competing_family_agreement_le_challengesOnly' depends on
+axioms: [propext,
+Classical.choice,
+Quot.sound,
+Zcash.Snark.FixtureRandom2.denFactors_degree_sum_eq._native.native_decide.ax_1_1,
+Zcash.Snark.FixtureRandom2.msmDegreeBudget_eq._native.native_decide.ax_1_1,
+Zcash.Snark.FixtureRandom2.vkSymbolicFacts._native.native_decide.ax_1_1,
+Zcash.Snark.FixtureRandom2.vkSymbolicFacts._native.native_decide.ax_1_2,
+Zcash.Snark.FixtureRandom2.vkSymbolicFacts._native.native_decide.ax_1_3,
+Zcash.Snark.FixtureRandom2.vkSymbolicFacts._native.native_decide.ax_1_4,
+Zcash.Snark.FixtureRandom2.vkSymbolicFacts._native.native_decide.ax_1_5,
+Zcash.Snark.FixtureRandom2.vkSymbolicFacts._native.native_decide.ax_1_6,
+Zcash.Snark.FixtureRandom2.vk_chunk_width_le._native.native_decide.ax_1_1,
+Zcash.Snark.FixtureRandom2.vk_chunks_length_eq._native.native_decide.ax_1_1] -/
+#guard_msgs (whitespace := lax) in
+#print axioms Zcash.Snark.FixtureRandom2.competing_family_agreement_le_challengesOnly
 
 /-- info: 'Zcash.Snark.FixtureRandom2.capturedPoint_goodEvent' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.FixtureRandom2.capturedPoint_goodEvent._native.native_decide.ax_1_1] -/
 #guard_msgs (whitespace := lax) in

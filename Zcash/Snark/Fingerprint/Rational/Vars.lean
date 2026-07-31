@@ -24,6 +24,9 @@ uniform coordinate. This module gives that space a structured index:
   schedule by construction (`proofStringWellFormed_toProofString`).
 * `Point.ofInputs` — read an assignment off concrete inputs; the roundtrip lemmas rewrite
   fixture statements at captured `(ps, ch)` pairs into `Point` form.
+* `IsChallengeSlot` / `Point.merge` — the challenge/slot partition of the coordinates and the
+  merge of one assignment per side into a point: the frame in which the challenge-restricted
+  ε theorem fixes the proof-string slots and counts over the challenges alone.
 * `MsmCoord` / `Msm.coeffAt` — positional coordinates for the assembled MSM's coefficients: the
   index set of the coefficient families the ε theorem compares.
 -/
@@ -68,6 +71,21 @@ inductive ScalarSlot (shape : Shape) where
   | z
   | ipaRound (j : Fin shape.k)
 deriving DecidableEq, Fintype
+
+/-- `true` exactly on the twelve challenge coordinates — the constructors `Point.toChallenges`
+reads; `false` on the proof-string slot families `Point.toProofString` reads. -/
+def isChallengeSlot {shape : Shape} : ScalarSlot shape → Bool
+  | .theta | .beta | .gamma | .y | .x | .x1 | .x2 | .x3 | .x4 | .xi | .z | .ipaRound _ => true
+  | _ => false
+
+/-- The challenge side of the sample-space partition: a coordinate the verifier squeezes rather
+than reads off the proof string. The challenge-restricted ε theorem
+(`Fingerprint/Epsilon.lean`) fixes the slot side and counts over these coordinates alone. -/
+def IsChallengeSlot {shape : Shape} (v : ScalarSlot shape) : Prop :=
+  isChallengeSlot v = true
+
+instance {shape : Shape} : DecidablePred (IsChallengeSlot (shape := shape)) := fun v =>
+  inferInstanceAs (Decidable (isChallengeSlot v = true))
 
 /-- A point of the fingerprint sample space: an assignment of every scalar coordinate. -/
 abbrev Point (shape : Shape) := ScalarSlot shape → Fp
@@ -160,6 +178,50 @@ def Point.ofInputs {shape : Shape} {G : Type*} (ps : ProofString shape Fp G)
   | .xi => ch.xi
   | .z => ch.z
   | .ipaRound j => ch.ipaRound j
+
+/-- Merge a proof-string slot assignment with a challenge assignment into a full sample-space
+point: challenge coordinates read `g`, slot coordinates read `slotVals`. The
+challenge-restricted ε theorem counts merged points over `g` alone. -/
+def Point.merge {shape : Shape}
+    (slotVals : {v : ScalarSlot shape // ¬ IsChallengeSlot v} → Fp)
+    (g : {v : ScalarSlot shape // IsChallengeSlot v} → Fp) : Point shape := fun v =>
+  if h : IsChallengeSlot v then g ⟨v, h⟩ else slotVals ⟨v, h⟩
+
+/-- A merged point reads the challenge assignment at a challenge coordinate. -/
+theorem Point.merge_apply_pos {shape : Shape}
+    {slotVals : {v : ScalarSlot shape // ¬ IsChallengeSlot v} → Fp}
+    {g : {v : ScalarSlot shape // IsChallengeSlot v} → Fp} {v : ScalarSlot shape}
+    (h : IsChallengeSlot v) : Point.merge slotVals g v = g ⟨v, h⟩ :=
+  dif_pos h
+
+/-- A merged point reads the slot assignment at a proof-string slot coordinate. -/
+theorem Point.merge_apply_neg {shape : Shape}
+    {slotVals : {v : ScalarSlot shape // ¬ IsChallengeSlot v} → Fp}
+    {g : {v : ScalarSlot shape // IsChallengeSlot v} → Fp} {v : ScalarSlot shape}
+    (h : ¬ IsChallengeSlot v) : Point.merge slotVals g v = slotVals ⟨v, h⟩ :=
+  dif_neg h
+
+@[simp] theorem Point.merge_challenge {shape : Shape}
+    {slotVals : {v : ScalarSlot shape // ¬ IsChallengeSlot v} → Fp}
+    {g : {v : ScalarSlot shape // IsChallengeSlot v} → Fp}
+    (w : {v : ScalarSlot shape // IsChallengeSlot v}) :
+    Point.merge slotVals g w.val = g w := by
+  rw [Point.merge_apply_pos w.property]
+
+@[simp] theorem Point.merge_slot {shape : Shape}
+    {slotVals : {v : ScalarSlot shape // ¬ IsChallengeSlot v} → Fp}
+    {g : {v : ScalarSlot shape // IsChallengeSlot v} → Fp}
+    (w : {v : ScalarSlot shape // ¬ IsChallengeSlot v}) :
+    Point.merge slotVals g w.val = slotVals w := by
+  rw [Point.merge_apply_neg w.property]
+
+/-- Splitting a point along the partition and re-merging recovers it, so facts at a concrete
+point — a captured point's good-event membership, say — read verbatim in the merged frame. -/
+theorem Point.merge_restrict {shape : Shape} (pt : Point shape) :
+    Point.merge (fun v => pt v.val) (fun v => pt v.val) = pt := by
+  funext v
+  unfold Point.merge
+  split <;> rfl
 
 section ReadBack
 

@@ -198,4 +198,135 @@ theorem den_eval_ne_zero {shape : Shape} {G : Type*} {vk : VerifyingKey shape Fp
   | one => simp
   | mul a b _ _ ha hb => rw [map_mul]; exact mul_ne_zero ha hb
 
+/-- Substituting degree-≤ 1 polynomials for the variables does not raise total degree: a
+monomial of degree `Σᵥ d v` maps to `C r · Πᵥ (f v) ^ d v`, of total degree at most
+`Σᵥ d v · totalDegree (f v)`. The restriction step of the challenge-restricted ε theorem
+substitutes variables and constants, both of degree ≤ 1. -/
+theorem totalDegree_aeval_le_of_le_one {σ τ R : Type*} [CommSemiring R]
+    (f : σ → MvPolynomial τ R) (hf : ∀ v, (f v).totalDegree ≤ 1) (p : MvPolynomial σ R) :
+    (aeval f p).totalDegree ≤ p.totalDegree := by
+  conv_lhs => rw [p.as_sum]
+  rw [map_sum]
+  refine totalDegree_finsetSum_le fun d hd => le_trans ?_ (le_totalDegree hd)
+  rw [aeval_monomial]
+  refine le_trans (totalDegree_mul _ _) ?_
+  rw [algebraMap_eq, totalDegree_C, zero_add, Finsupp.prod]
+  refine le_trans (totalDegree_finsetProd _ _) ?_
+  rw [Finsupp.sum]
+  refine Finset.sum_le_sum fun w _ => ?_
+  calc (f w ^ d w).totalDegree ≤ d w * (f w).totalDegree := totalDegree_pow _ _
+    _ ≤ d w * 1 := Nat.mul_le_mul_left _ (hf w)
+    _ = d w := mul_one _
+
+/-- Restrict a sample-space polynomial along fixing the proof-string slots: slot variables
+become the constants `slotVals` prescribes, challenge variables become variables of the
+challenge subtype. Evaluation at a challenge assignment is evaluation of the original at the
+merged point (`eval_restrictSlots`), and total degree does not increase
+(`restrictSlots_totalDegree_le`). -/
+noncomputable def restrictSlots {shape : Shape}
+    (slotVals : {v : ScalarSlot shape // ¬ IsChallengeSlot v} → Fp) :
+    MvPolynomial (ScalarSlot shape) Fp
+      →ₐ[Fp] MvPolynomial {v : ScalarSlot shape // IsChallengeSlot v} Fp :=
+  aeval fun v => if h : IsChallengeSlot v then X ⟨v, h⟩ else C (slotVals ⟨v, h⟩)
+
+/-- A challenge variable restricts to the corresponding subtype variable. -/
+theorem restrictSlots_X {shape : Shape}
+    (slotVals : {v : ScalarSlot shape // ¬ IsChallengeSlot v} → Fp)
+    {v : ScalarSlot shape} (h : IsChallengeSlot v) :
+    restrictSlots slotVals (X v) = X ⟨v, h⟩ := by
+  simp only [restrictSlots, aeval_X, dif_pos h]
+
+/-- Evaluating a restricted polynomial at a challenge assignment evaluates the original at
+the merged point. -/
+theorem eval_restrictSlots {shape : Shape}
+    (slotVals : {v : ScalarSlot shape // ¬ IsChallengeSlot v} → Fp)
+    (g : {v : ScalarSlot shape // IsChallengeSlot v} → Fp)
+    (p : MvPolynomial (ScalarSlot shape) Fp) :
+    eval g (restrictSlots slotVals p) = eval (Point.merge slotVals g) p := by
+  induction p using MvPolynomial.induction_on with
+  | C a => simp [restrictSlots]
+  | add p q hp hq => simp only [map_add, hp, hq]
+  | mul_X p v hp =>
+    simp only [map_mul, restrictSlots, aeval_X, eval_X]
+    congr 1
+    by_cases h : IsChallengeSlot v
+    · rw [dif_pos h, eval_X, Point.merge_apply_pos h]
+    · rw [dif_neg h, eval_C, Point.merge_apply_neg h]
+
+/-- Restriction does not raise total degree: it substitutes subtype variables and constants,
+both of degree ≤ 1. -/
+theorem restrictSlots_totalDegree_le {shape : Shape}
+    (slotVals : {v : ScalarSlot shape // ¬ IsChallengeSlot v} → Fp)
+    (p : MvPolynomial (ScalarSlot shape) Fp) :
+    (restrictSlots slotVals p).totalDegree ≤ p.totalDegree := by
+  refine totalDegree_aeval_le_of_le_one _ (fun v => ?_) p
+  by_cases h : IsChallengeSlot v
+  · rw [dif_pos h]
+    exact le_of_eq (totalDegree_X _)
+  · rw [dif_neg h]
+    simp
+
+/-- Every restricted denominator factor is still nonzero: the factors are challenge-only, so
+the witnesses of `denFactors_ne_zero` constrain only challenge coordinates and survive the
+merge with any slot assignment. -/
+theorem restrictSlots_denFactors_ne_zero {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (hn : 0 < vk.n)
+    (slotVals : {v : ScalarSlot shape // ¬ IsChallengeSlot v} → Fp) :
+    ∀ ψ ∈ (denFactors vk).map (restrictSlots slotVals), ψ ≠ 0 := by
+  intro ψ hψ
+  obtain ⟨φ, hφ, rfl⟩ := List.mem_map.mp hψ
+  simp only [denFactors, List.mem_append, List.mem_cons, List.not_mem_nil, or_false,
+    List.mem_map, List.mem_finRange, true_and] at hφ
+  rcases hφ with (((rfl | rfl) | ⟨i, _, rfl⟩) | ⟨r, _, rfl⟩) | ⟨j, rfl⟩
+  · intro h
+    have := congrArg
+      (eval (fun _ => 0 : {v : ScalarSlot shape // IsChallengeSlot v} → Fp)) h
+    rw [eval_restrictSlots, map_zero] at this
+    simp [Point.merge_apply_pos (show IsChallengeSlot (ScalarSlot.x (shape := shape)) from rfl),
+      zero_pow hn.ne'] at this
+  · rw [restrictSlots_X slotVals (show IsChallengeSlot (ScalarSlot.x (shape := shape)) from rfl)]
+    exact X_ne_zero _
+  · intro h
+    have := congrArg (eval fun w : {v : ScalarSlot shape // IsChallengeSlot v} =>
+      if w.val = ScalarSlot.x then vk.omega ^ i + 1 else 0) h
+    rw [eval_restrictSlots, map_zero] at this
+    simp [Point.merge_apply_pos (show IsChallengeSlot (ScalarSlot.x (shape := shape)) from rfl)]
+      at this
+  · intro h
+    have := congrArg (eval fun w : {v : ScalarSlot shape // IsChallengeSlot v} =>
+      if w.val = ScalarSlot.x3 then 1 else 0) h
+    rw [eval_restrictSlots, map_zero] at this
+    simp [Point.merge_apply_pos (show IsChallengeSlot (ScalarSlot.x (shape := shape)) from rfl),
+      Point.merge_apply_pos (show IsChallengeSlot (ScalarSlot.x3 (shape := shape)) from rfl)]
+      at this
+  · rw [restrictSlots_X slotVals
+      (show IsChallengeSlot (ScalarSlot.ipaRound (shape := shape) j) from rfl)]
+    exact X_ne_zero _
+
+/-- Restriction does not raise any factor's degree, so the restricted list's summed
+Schwartz–Zippel price is bounded by the original's. -/
+theorem restrictSlots_denFactors_totalDegree_sum_le {shape : Shape} {G : Type*}
+    (vk : VerifyingKey shape Fp G)
+    (slotVals : {v : ScalarSlot shape // ¬ IsChallengeSlot v} → Fp) :
+    (((denFactors vk).map (restrictSlots slotVals)).map totalDegree).sum
+      ≤ ((denFactors vk).map totalDegree).sum := by
+  rw [List.map_map]
+  exact List.sum_le_sum fun φ _ => restrictSlots_totalDegree_le slotVals φ
+
+/-- The good event at a merged point is a challenge-side event: no restricted factor vanishes
+at the challenge assignment. -/
+theorem goodEvent_merge_iff {shape : Shape} {G : Type*} (vk : VerifyingKey shape Fp G)
+    (slotVals : {v : ScalarSlot shape // ¬ IsChallengeSlot v} → Fp)
+    (g : {v : ScalarSlot shape // IsChallengeSlot v} → Fp) :
+    GoodEvent vk (Point.merge slotVals g) ↔
+      ∀ ψ ∈ (denFactors vk).map (restrictSlots slotVals), eval g ψ ≠ 0 := by
+  constructor
+  · intro h ψ hψ
+    obtain ⟨φ, hφ, rfl⟩ := List.mem_map.mp hψ
+    rw [eval_restrictSlots]
+    exact h φ hφ
+  · intro h φ hφ
+    rw [← eval_restrictSlots slotVals g φ]
+    exact h _ (List.mem_map_of_mem hφ)
+
 end Zcash.Snark

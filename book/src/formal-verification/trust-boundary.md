@@ -185,10 +185,13 @@ with the assembled MSM at a uniform point with probability at most `(D + B) / p`
 point falls off the good event (`B = 2071`, the summed factor degrees:
 `2048 + 1 + 7 + 4 + 11`), or the nonzero difference polynomial vanishes
 (`D = msmDegreeBudget`, pinned per capture: `16452 / 16456 / 16460` at 1/2/3 actions, dominated
-by the `h`-piece coefficients `xnⁱ·x₁ʲ·x₄ˢ`). The per-capture headliners with literal numerals
-— ε = `18523 / 18527 / 18531` over `p`, about `2⁻²⁴⁰` — live beside the random fixtures
-(`Fixtures/*Random/Epsilon.lean`), censused with exact `native_decide` owner lists, and the
-good event provably contains each captured point (`capturedPoint_goodEvent`).
+by the `h`-piece coefficients `xnⁱ·x₁ʲ·x₄ˢ`). A challenge-restricted variant
+(`competing_coefficient_family_agreement_le_challengesOnly`) pins the proof-string slots to an
+arbitrary assignment and prices the same bound over the challenge coordinates alone — the
+uniformity subsection below explains why that layer matters. The per-capture headliners with
+literal numerals — ε = `18523 / 18527 / 18531` over `p`, about `2⁻²⁴⁰` — live beside the random
+fixtures (`Fixtures/*Random/Epsilon.lean`), censused with exact `native_decide` owner lists, and
+the good event provably contains each captured point (`capturedPoint_goodEvent`).
 
 The step connecting the observed matches to that positional event is a theorem, not prose:
 the per-family headliners bound a *positional* agreement event over `MsmCoord`, the boundary
@@ -210,7 +213,7 @@ stay prose:
 
 ### The uniformity premise
 
-The Lean theorem samples one uniform point of a product space: every proof-string scalar slot
+The full product-space theorem samples one uniform point: every proof-string scalar slot
 and every challenge is an independent uniform `F_p` value
 (`competing_coefficient_family_agreement_le` counts over the full function space). The
 captures are not sampled that way, in two respects: the challenges are Blake2b squeezes of
@@ -228,8 +231,14 @@ challenge-only, so a Schwartz–Zippel bound of the same shape and budgets price
 over the challenge randomness. What this covers: every divergence whose discrepancy does
 **not vanish identically at the fabricated scalars**. What it cannot cover: a discrepancy in
 the proof-slot coordinates alone that vanishes at `ps*` — over the remaining oracle
-randomness it agrees with probability one. (This challenge-restricted reading is prose; the
-landed theorem counts over the full product space and is not conditioned on `ps*`.)
+randomness it agrees with probability one. This challenge-restricted reading is a theorem:
+`competing_coefficient_family_agreement_le_challengesOnly`
+(`Zcash/Snark/Fingerprint/Epsilon.lean`) fixes the slot coordinates to an arbitrary
+assignment and prices the same `(D + B) / p` bound over the challenge coordinates alone, its
+hypothesis exactly the coverage condition above — the *restricted* discrepancy nonzero — and
+the per-family headliners (`competing_family_agreement_le_challengesOnly`,
+`Fixtures/*Random/Epsilon.lean`) instantiate it at the captured scalars
+(`capturedSlotVals`) with the same literal ε.
 
 **What the full product-space ε needs.** Reading the literal per-family ε over *all*
 coordinates additionally treats the seeded `ChaCha20Rng` expansion as a random function
@@ -386,9 +395,10 @@ A reviewer can verify the Rust↔Lean seam of the soundness stack by reading:
 
 1. the five `nonInteractiveFingerprint_matches_derived` theorems and their `TrustBoundary`
    censuses;
-2. the quantified match — `competing_coefficient_family_agreement_le` and the three
-   `Fixtures/*Random/Epsilon.lean` headliners with their literal ε — together with the
-   uniformity premise above;
+2. the quantified match — `competing_coefficient_family_agreement_le`, its
+   challenge-restricted variant `competing_coefficient_family_agreement_le_challengesOnly`,
+   and the three `Fixtures/*Random/Epsilon.lean` headliner pairs with their literal ε —
+   together with the uniformity premise above;
 3. the audit table above, row by row, checking each falsification mechanism exists in the
    tree;
 4. the seven premises above, checking each is as small as claimed —

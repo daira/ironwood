@@ -18,6 +18,11 @@ states the headline with numerals:
 > differs anywhere from Lean's agrees with the assembled MSM at a uniform point with
 > probability at most `(16460 + 2071) / p = 18531 / p`, `p = scalarFieldOrder ≈ 2²⁵⁴`.
 
+`competing_family_agreement_le_challengesOnly` restates the bound with the proof-string slots
+pinned to the captured scalars (`capturedSlotVals`), counting over the 22 challenge
+coordinates alone — what the random-oracle premise alone buys at this capture, covering every
+divergence whose restricted discrepancy does not vanish identically at the captured slots.
+
 `capturedPoint_goodEvent` corroborates non-vacuity: the good event contains the captured
 point itself — the real capture's challenges avoid every enumerated denominator factor.
 
@@ -65,6 +70,18 @@ set_option maxRecDepth 100000 in
 /-- The sample space has `49·numProofs + 74` scalar coordinates. -/
 theorem card_scalarSlot : Fintype.card (ScalarSlot shape) = 221 := by decide
 
+/-- The captured slot assignment: the captured proof string's scalar slots read through the
+sample-space frame, challenge coordinates dropped. The challenge-restricted headliner pins the
+proof-string slots here. -/
+def capturedSlotVals : {v : ScalarSlot shape // ¬ IsChallengeSlot v} → Fp :=
+  fun v => Point.ofInputs ps ch v.val
+
+set_option maxRecDepth 100000 in
+/-- The challenge block has 22 coordinates: eleven named challenges plus `k = 11` IPA
+rounds. -/
+theorem card_challengeSlot :
+    Fintype.card {v : ScalarSlot shape // IsChallengeSlot v} = 22 := by decide
+
 /-- The rational coefficient family of the deployed assembly at this capture: numerators of
 total degree ≤ 16460 over enumerated-factor denominators, one per MSM coordinate, agreeing
 with `assemble?` on the whole good event. -/
@@ -102,6 +119,46 @@ theorem competing_family_agreement_le
       ≤ (18531 : ℚ≥0) / scalarFieldOrder := by
   refine le_trans (competing_coefficient_family_agreement_le coefficientFamily
     vkSymbolicFacts.n_pos num' hdeg' c₀ hne) ?_
+  have hsum : ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0) ≤ ((2071 : ℕ) : ℚ≥0) := by
+    have h1 := denFactors_totalDegree_sum_le vk
+    have h2 := denFactors_degree_sum_eq
+    exact_mod_cast h2 ▸ h1
+  rw [msmDegreeBudget_eq]
+  gcongr ?_ / _
+  calc ((16460 : ℕ) : ℚ≥0) + ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0)
+      ≤ ((16460 : ℕ) : ℚ≥0) + ((2071 : ℕ) : ℚ≥0) := add_le_add le_rfl hsum
+    _ = (18531 : ℚ≥0) := by norm_num
+
+set_option maxHeartbeats 4000000 in
+open Classical in
+/-- **ε over the challenge coordinates alone at this capture.** With the proof-string slots
+pinned to the captured scalars, any competing numerator family of total degree ≤ 16460 over
+the walk's denominators whose restriction to the captured slots differs anywhere from Lean's
+agrees with the assembled MSM at a uniformly random challenge assignment with probability at
+most `18531 / p` — what the random-oracle premise alone buys at this capture. The
+restricted-difference hypothesis is the honest coverage condition: a discrepancy vanishing
+identically at the captured slots agrees with probability one over the challenges and is not
+covered. -/
+theorem competing_family_agreement_le_challengesOnly
+    (num' : MsmCoord shape.k (otherLen shape vk) → MvPolynomial (ScalarSlot shape) Fp)
+    (hdeg' : ∀ c, (num' c).totalDegree ≤ msmDegreeBudget shape vk)
+    (c₀ : MsmCoord shape.k (otherLen shape vk))
+    (hne : restrictSlots capturedSlotVals (num' c₀)
+        ≠ restrictSlots capturedSlotVals (coefficientFamily.num c₀)) :
+    (#{g ∈ piFinset fun _ : {v : ScalarSlot shape // IsChallengeSlot v} =>
+        (univ : Finset Fp) |
+        ∃ m : Msm shape.k Fp G,
+          assemble? vk derivedInstanceCommitment
+              (Point.toProofString (Point.merge capturedSlotVals g) ps)
+              (Point.toChallenges (Point.merge capturedSlotVals g)) = some m
+            ∧ m.other.length = otherLen shape vk
+            ∧ ∀ c : MsmCoord shape.k (otherLen shape vk),
+                m.coeffAt c * eval (Point.merge capturedSlotVals g) (coefficientFamily.den c)
+                  = eval (Point.merge capturedSlotVals g) (num' c)} : ℚ≥0)
+        / (scalarFieldOrder : ℚ≥0) ^ Fintype.card {v : ScalarSlot shape // IsChallengeSlot v}
+      ≤ (18531 : ℚ≥0) / scalarFieldOrder := by
+  refine le_trans (competing_coefficient_family_agreement_le_challengesOnly coefficientFamily
+    vkSymbolicFacts.n_pos capturedSlotVals num' hdeg' c₀ hne) ?_
   have hsum : ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0) ≤ ((2071 : ℕ) : ℚ≥0) := by
     have h1 := denFactors_totalDegree_sum_le vk
     have h2 := denFactors_degree_sum_eq

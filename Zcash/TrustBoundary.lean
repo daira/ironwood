@@ -927,7 +927,10 @@ assert_axioms Zcash.Snark.natDegree_combineConstraints_le
 -- string at every point; the good event's enumerated denominator factors are individually
 -- nonzero, jointly priced by per-factor Schwartz–Zippel, and nonvanishing under products; the ε
 -- theorem bounds a competing coefficient family's agreement with `assemble?` at a uniform
--- point by `(D + Σ totalDegree (denFactors vk)) / p`; and a `Perm` of pair lists with
+-- point by `(D + Σ totalDegree (denFactors vk)) / p`; the challenge-restricted variant pins
+-- the proof-string slots to an arbitrary assignment and prices the same bound over the
+-- challenge coordinates alone — the factors are challenge-only and restriction does not raise
+-- degree; and a `Perm` of pair lists with
 -- duplicate-free second components is realized by the base-matching index bijection — the
 -- `Perm`→positional bridge the per-capture `fingerprint_matches_positional` facts instantiate.
 assert_axioms Zcash.Snark.proofStringWellFormed_toProofString
@@ -938,7 +941,16 @@ assert_axioms Zcash.Snark.den_eval_ne_zero
 assert_axioms Zcash.Snark.fingerprint_schwartz_zippel_index
 assert_axioms Zcash.Snark.card_exists_eval_zero_le
 assert_axioms Zcash.Snark.goodEvent_compl_card_le
+assert_axioms Zcash.Snark.Point.merge_restrict
+assert_axioms Zcash.Snark.totalDegree_aeval_le_of_le_one
+assert_axioms Zcash.Snark.eval_restrictSlots
+assert_axioms Zcash.Snark.restrictSlots_totalDegree_le
+assert_axioms Zcash.Snark.restrictSlots_denFactors_ne_zero
+assert_axioms Zcash.Snark.restrictSlots_denFactors_totalDegree_sum_le
+assert_axioms Zcash.Snark.goodEvent_merge_iff
+assert_axioms Zcash.Snark.goodEvent_merge_compl_card_le
 assert_axioms Zcash.Snark.competing_coefficient_family_agreement_le
+assert_axioms Zcash.Snark.competing_coefficient_family_agreement_le_challengesOnly
 assert_axioms Zcash.Snark.perm_reindex_of_nodup_snd
 assert_axioms Zcash.Snark.msmMatch_other_reindex_of_nodup
 -- The query-side representation walk (`Fingerprint/Rational/QueryWalk`): the constraint list
