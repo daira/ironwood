@@ -503,7 +503,7 @@ hypothesis. That is what makes the tier of an endpoint's pin load-bearing rather
 
 * `assert_computable` endpoints are plain `def`s, so their relation coefficients are terms of their
   inputs and the witness below cannot discharge them. These genuinely exhibit an extractor.
-* `def` endpoints get only `assert_axioms`. Since the right summand of `… ⊕' relation`
+* `noncomputable def` endpoints get only `assert_axioms`. Since the right summand of `… ⊕' relation`
   is unconditionally inhabited, their *statements* do not force the acceptance hypotheses — only
   the proofs actually written do. The pin bounds the trusted base, not the extraction.
 

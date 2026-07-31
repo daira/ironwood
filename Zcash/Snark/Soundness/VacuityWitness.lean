@@ -23,7 +23,7 @@ tiers of census pin say sharply different things:
   terms of its inputs. `Classical.choice` cannot have supplied them — that is exactly what the
   plain-`def` check in `Zcash.Meta.AxiomCheck` rejects — and this theorem is no help in
   discharging it. Such an endpoint genuinely exhibits an extractor.
-* An endpoint that is a `def` carries no such guarantee. Because the right summand is
+* An endpoint that is a `noncomputable def` carries no such guarantee. Because the right summand is
   inhabited unconditionally, `PSum.inr (Classical.arbitrary _)` has its type; the acceptance
   hypotheses are not forced by the *statement*, only honoured by the proof that happens to be
   written. Its `assert_axioms` pin bounds the trusted base and says nothing about extraction.
