@@ -27,6 +27,10 @@ This module provides the match's logical content:
   establishes agreement, on each of the five captured proofs — three of them at random inputs.
 * `gScalars_card` — the structural cross-check: the assembled MSM carries `2 ^ k` URS-generator
   coefficients, matching the captured Orchard fingerprint's `2 ^ 11 = 2048`.
+* `perm_reindex_of_nodup_snd` / `msmMatch_other_reindex_of_nodup` — the `Perm`→positional
+  bridge: a match against an MSM with duplicate-free `other` bases pins every term positionally
+  through the base-matching re-indexing, a function of the base lists alone. Instantiated per
+  random capture as `fingerprint_matches_positional` (`Fixtures/*Random/Epsilon.lean`).
 
 ## The design target
 
@@ -37,9 +41,8 @@ exists to make the Lean development writable and is checked rather than trusted:
 error that admits a proof the deployed verifier accepts but the Lean model does not must break
 some fingerprint-match theorem, except with probability `≤ ε` over the randomness of the captured
 inputs and conditional on enumerated premises — premises that include the sampled-point
-distribution behind that probability (the captures' proof scalars come from fixed public seeds)
-and the currently-prose `Perm`→positional bridge, both recorded honestly in the Trust Boundary
-chapter. ε is priced at `assemble`'s own coefficients: on a
+distribution behind that probability (the captures' proof scalars come from fixed public seeds),
+recorded honestly in the Trust Boundary chapter. ε is priced at `assemble`'s own coefficients: on a
 good event of assignments every assembled coefficient is a rational function of the proof-string
 scalars and challenges with enumerated challenge-only denominators (`assembleCoeffFamily`,
 `Fingerprint/Rational/Capstone.lean`), and `competing_coefficient_family_agreement_le`
@@ -168,6 +171,55 @@ captured MSM (compare the `2 ^ k` g-scalars, the `w`/`u` scalars, and the term l
 instance {k : ℕ} {F G : Type*} [DecidableEq F] [DecidableEq G] (m₁ m₂ : Msm k F G) :
     Decidable (MsmMatch m₁ m₂) := by
   unfold MsmMatch; infer_instance
+
+/-- A `Perm` of pair lists with duplicate-free second components is realized by the unique
+base-matching index bijection: `σ` sends position `i` of `l₂` to the position of `l₂[i]`'s
+second component among `l₁`'s. `σ` is computed from the `Prod.snd` lists alone (the stated
+`idxOf` form), so where the second components are constants — the fixed commitment bases of a
+captured MSM — `σ` does not depend on the first components. This is the `Perm`→positional
+bridge consumed by `fingerprint_matches_positional` at the random captures
+(`Fixtures/*Random/Epsilon.lean`). -/
+theorem perm_reindex_of_nodup_snd {α β : Type*} [DecidableEq β]
+    {l₁ l₂ : List (α × β)} (hperm : l₁.Perm l₂) (hnd : (l₂.map Prod.snd).Nodup) :
+    ∃ σ : Fin l₂.length ≃ Fin l₁.length, ∀ i : Fin l₂.length,
+      (σ i : ℕ) = (l₁.map Prod.snd).idxOf l₂[i].2 ∧ l₁[(σ i : ℕ)] = l₂[i] := by
+  have hnd₁ : (l₁.map Prod.snd).Nodup := (hperm.map Prod.snd).nodup_iff.mpr hnd
+  -- the base-matching index is in range: every base of `l₂` occurs among `l₁`'s bases
+  have hlt : ∀ i : Fin l₂.length, (l₁.map Prod.snd).idxOf l₂[i].2 < l₁.length := by
+    intro i
+    have hmem : l₂[i].2 ∈ l₁.map Prod.snd :=
+      List.mem_map_of_mem (hperm.mem_iff.mpr (l₂.getElem_mem i.isLt))
+    simpa using List.idxOf_lt_length_of_mem hmem
+  let f : Fin l₂.length → Fin l₁.length := fun i => ⟨(l₁.map Prod.snd).idxOf l₂[i].2, hlt i⟩
+  -- `l₂[i]` occurs somewhere in `l₁`; base-Nodup forces that position to be the matched index
+  have hpair : ∀ i : Fin l₂.length, l₁[(f i : ℕ)] = l₂[i] := by
+    intro i
+    obtain ⟨j, hj, hj'⟩ := List.mem_iff_getElem.mp (hperm.mem_iff.mpr (l₂.getElem_mem i.isLt))
+    have hfj : (f i : ℕ) = j := by
+      have hjb : (l₁.map Prod.snd)[j]'(by simpa using hj) = l₂[i].2 := by
+        simpa using congrArg Prod.snd hj'
+      show (l₁.map Prod.snd).idxOf l₂[i].2 = j
+      rw [← hjb]
+      exact hnd₁.idxOf_getElem j (by simpa using hj)
+    exact (getElem_congr_idx hfj).trans hj'
+  have hinj : Function.Injective f := by
+    intro i i' hii
+    have h2 : l₂[(i : ℕ)] = l₂[(i' : ℕ)] :=
+      (hpair i).symm.trans ((getElem_congr_idx (congrArg Fin.val hii)).trans (hpair i'))
+    exact Fin.ext (hnd.of_map.getElem_inj_iff.mp h2)
+  exact ⟨Equiv.ofBijective f ((Fintype.bijective_iff_injective_and_card f).mpr
+      ⟨hinj, by simp [hperm.length_eq]⟩),
+    fun i => ⟨rfl, hpair i⟩⟩
+
+/-- `perm_reindex_of_nodup_snd` at a passing `MsmMatch`: when the matched-against MSM's `other`
+bases are duplicate-free, the match's `Perm` is realized by the base-matching index bijection,
+positionally. -/
+theorem msmMatch_other_reindex_of_nodup {k : ℕ} {F G : Type*} [DecidableEq G]
+    {m₁ m₂ : Msm k F G} (h : MsmMatch m₁ m₂) (hnd : (m₂.other.map Prod.snd).Nodup) :
+    ∃ σ : Fin m₂.other.length ≃ Fin m₁.other.length, ∀ j : Fin m₂.other.length,
+      (σ j : ℕ) = (m₁.other.map Prod.snd).idxOf m₂.other[j].2
+        ∧ m₁.other[(σ j : ℕ)] = m₂.other[j] :=
+  perm_reindex_of_nodup_snd h.2.2.2 hnd
 
 open MvPolynomial Finset Fintype in
 /-- Soundness of the random-evaluation match (Schwartz–Zippel): if a coefficient of the assembled

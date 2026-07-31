@@ -190,18 +190,18 @@ by the `h`-piece coefficients `xnⁱ·x₁ʲ·x₄ˢ`). The per-capture headline
 (`Fixtures/*Random/Epsilon.lean`), censused with exact `native_decide` owner lists, and the
 good event provably contains each captured point (`capturedPoint_goodEvent`).
 
-One step between the landed theorems is currently prose, recorded here rather than implied:
-the per-family headliners bound a *positional* agreement event over `MsmCoord`, while the
-observed boundary theorems state `MsmMatch`, whose commitment-term lists are compared up to
-`List.Perm` — and the headliners mention neither `capturedMsm` nor the match. Connecting a
-passing capture to the positionally-bounded event uses the re-indexing remark in
-`Fingerprint/Epsilon.lean`'s module doc, which holds here because the captured `other` bases
-are pairwise distinct (100/123/146 distinct bases at the three random captures, observed on
-the committed artifacts; the bases are constants of the sample space, so a `Perm` match is
-forced to the unique base-matching bijection) — but that is an observation, not a landed
-theorem. The mechanical follow-up: a per-family `Nodup` fact on the captured bases plus a
-bridge lemma. Until it lands, the ε statements bound the positional event, and a capture's
-membership in that event rests on this audited step. Two further premises stay prose:
+The step connecting the observed matches to that positional event is a theorem, not prose:
+the per-family headliners bound a *positional* agreement event over `MsmCoord`, the boundary
+theorems state `MsmMatch`, whose commitment-term lists are compared up to `List.Perm`, and
+`fingerprint_matches_positional` (`Fixtures/*Random/Epsilon.lean`) bridges the two. The
+captured `other` bases are pairwise distinct — 100/123/146 distinct bases at the three random
+captures, the per-family facts `capturedMsm_other_bases_nodup` — and the bases are constants
+of the sample space, so a `Perm` match is forced to the unique base-matching re-indexing,
+computed from the base lists alone (`perm_reindex_of_nodup_snd`, `Fingerprint/Match.lean`).
+The bridge concludes that the assembled MSM agrees with the captured one coordinate-wise:
+`assemble?` succeeds at the captured inputs, the `g`/`w`/`u` coefficients equal the captured
+ones, and each `other` term is pinned to its base-matched captured position. Two premises
+stay prose:
 
 - **Rust-side polynomiality.** That the deployed coefficients are the same rational family —
   the same enumerated challenge-only denominators, comparable numerator degree — is an audit of
@@ -269,8 +269,7 @@ What the sampled-point premise assumes, enumerated:
 
 For every artifact transcribed from halo2/orchard, the mechanism by which a soundness-relevant
 error breaks a check. Rows marked *prob. ≥ 1 − ε* are the probabilistic ones priced above —
-under the modality section's premises, including the sampled-point premise and the
-`Perm`→positional bridge recorded there.
+under the modality section's premises, including the sampled-point premise recorded there.
 
 | Transcribed artifact | Enters the fingerprint via | A soundness-relevant error causes | Checked by |
 |---|---|---|---|

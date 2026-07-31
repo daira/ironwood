@@ -57,6 +57,7 @@ import Zcash.Snark.Soundness.AGM.ZeroFamilyRoots
 import Zcash.Snark.Soundness.Composition.ZeroStraightLine
 import Zcash.Snark.Soundness.AGM.DirectConstraintFamily
 import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
+import Zcash.Snark.Fingerprint.Match
 import Zcash.Snark.Fingerprint.Epsilon
 import Zcash.Snark.Fingerprint.Rational.QueryWalk
 import Zcash.Snark.Fingerprint.Rational.QueryTable
@@ -922,11 +923,13 @@ assert_axioms Zcash.Snark.preX4SqueezePoint_inj
 -- compressed expressions — the combined bound the `x`-squeeze schedule's `epsilonX` prices.
 assert_axioms Zcash.Snark.natDegree_combineConstraints_le
 -- The quantified random match, generic half (`Fingerprint/Rational/{Vars,Event,Rep}`,
--- `Fingerprint/Epsilon`): the structured sample space rebuilds a well-formed proof string at
--- every point; the good event's enumerated denominator factors are individually nonzero,
--- jointly priced by per-factor Schwartz–Zippel, and nonvanishing under products; and the ε
+-- `Fingerprint/{Match,Epsilon}`): the structured sample space rebuilds a well-formed proof
+-- string at every point; the good event's enumerated denominator factors are individually
+-- nonzero, jointly priced by per-factor Schwartz–Zippel, and nonvanishing under products; the ε
 -- theorem bounds a competing coefficient family's agreement with `assemble?` at a uniform
--- point by `(D + Σ totalDegree (denFactors vk)) / p`.
+-- point by `(D + Σ totalDegree (denFactors vk)) / p`; and a `Perm` of pair lists with
+-- duplicate-free second components is realized by the base-matching index bijection — the
+-- `Perm`→positional bridge the per-capture `fingerprint_matches_positional` facts instantiate.
 assert_axioms Zcash.Snark.proofStringWellFormed_toProofString
 assert_axioms Zcash.Snark.toProofString_ofInputs
 assert_axioms Zcash.Snark.denFactors_ne_zero
@@ -936,6 +939,8 @@ assert_axioms Zcash.Snark.fingerprint_schwartz_zippel_index
 assert_axioms Zcash.Snark.card_exists_eval_zero_le
 assert_axioms Zcash.Snark.goodEvent_compl_card_le
 assert_axioms Zcash.Snark.competing_coefficient_family_agreement_le
+assert_axioms Zcash.Snark.perm_reindex_of_nodup_snd
+assert_axioms Zcash.Snark.msmMatch_other_reindex_of_nodup
 -- The query-side representation walk (`Fingerprint/Rational/QueryWalk`): the constraint list
 -- factors through fixed represented functions over the Lagrange denominator, its length is the
 -- shape-polynomial `constraintBudget`, and `expected_h_eval` is represented over the vanishing

@@ -280,3 +280,25 @@ Zcash.Snark.FixtureRandom.vk_chunks_length_eq._native.native_decide.ax_1_1] -/
 /-- info: 'Zcash.Snark.FixtureRandom.capturedPoint_goodEvent' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.FixtureRandom.capturedPoint_goodEvent._native.native_decide.ax_1_1] -/
 #guard_msgs (whitespace := lax) in
 #print axioms Zcash.Snark.FixtureRandom.capturedPoint_goodEvent
+
+-- The Perm→positional bridge at this capture (`Epsilon.lean`): the captured `other` bases are
+-- pairwise distinct, so the boundary match's `List.Perm` is realized by the fixed base-matching
+-- re-indexing and the assembled MSM agrees with the captured one coordinate-wise — the capture's
+-- membership in the positional agreement event priced above is a theorem, not audited prose.
+assert_axioms Zcash.Snark.FixtureRandom.capturedMsm_other_bases_nodup +native(
+  Zcash.Snark.FixtureRandom.capturedMsm_other_bases_nodup)
+assert_axioms Zcash.Snark.FixtureRandom.fingerprint_matches_positional +native(
+  Zcash.Snark.FixtureRandom.capturedMsm_other_bases_nodup,
+  Zcash.Snark.FixtureRandom.fingerprint_matches,
+  Zcash.Snark.FixtureRandom.otherLen_eq,
+  Zcash.Snark.FixtureRandom.valid_capture_assembles)
+
+/-- info: 'Zcash.Snark.FixtureRandom.fingerprint_matches_positional' depends on axioms: [propext,
+Classical.choice,
+Quot.sound,
+Zcash.Snark.FixtureRandom.capturedMsm_other_bases_nodup._native.native_decide.ax_1_1,
+Zcash.Snark.FixtureRandom.fingerprint_matches._native.native_decide.ax_1_1,
+Zcash.Snark.FixtureRandom.otherLen_eq._native.native_decide.ax_1_1,
+Zcash.Snark.FixtureRandom.valid_capture_assembles._native.native_decide.ax_1_1] -/
+#guard_msgs (whitespace := lax) in
+#print axioms Zcash.Snark.FixtureRandom.fingerprint_matches_positional

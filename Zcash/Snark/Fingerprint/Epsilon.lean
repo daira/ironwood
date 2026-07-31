@@ -31,10 +31,11 @@ fixed combinatorial object, so Lean's coordinate frame is point-independent, and
 compared coordinate-by-coordinate. `MsmMatch`'s `List.Perm` on the `other` terms exists to
 absorb append-order between two concrete assemblies; between *families* sharing base markers,
 a permutation is a fixed re-indexing of `MsmCoord` and changes neither degrees nor ε
-(precompose the competing family) — a remark, not a landed theorem: the per-capture base-`Nodup`
-facts and the bridge lemma that would force the unique base-matching bijection are tracked as
-follow-ups, with the captured `other` bases observed pairwise-distinct at all three random
-captures. A competing family over *different* denominators from the
+(precompose the competing family) — landed as `perm_reindex_of_nodup_snd`
+(`Fingerprint/Match.lean`): the captured `other` bases are pairwise distinct at all three
+random captures (`capturedMsm_other_bases_nodup`), so a passing match is forced to the unique
+base-matching bijection (`fingerprint_matches_positional`, `Fixtures/*Random/Epsilon.lean`).
+A competing family over *different* denominators from the
 same factor closure reduces to this statement by cross-multiplication at degree
 `≤ D + Dden` — the denominators are challenge-only and event-nonvanishing on both sides.
 -/

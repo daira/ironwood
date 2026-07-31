@@ -1,4 +1,5 @@
 import Zcash.Snark.Fixtures.SingleActionRandom.Fixture
+import Zcash.Snark.Fixtures.SingleActionRandom.Negative
 import Zcash.Snark.Fingerprint.Rational.Capstone
 import Zcash.Snark.Fingerprint.Epsilon
 
@@ -19,6 +20,12 @@ states the headline with numerals:
 
 `capturedPoint_goodEvent` corroborates non-vacuity: the good event contains the captured
 point itself — the real capture's challenges avoid every enumerated denominator factor.
+
+`fingerprint_matches_positional` bridges the boundary match into the event's positional frame:
+the captured `other` bases are pairwise distinct (`capturedMsm_other_bases_nodup`), so the
+match's `List.Perm` is realized by the fixed base-matching re-indexing
+(`perm_reindex_of_nodup_snd`) and the assembled MSM agrees with the captured one
+coordinate-wise.
 -/
 
 namespace Zcash.Snark.FixtureRandom
@@ -104,5 +111,42 @@ theorem competing_family_agreement_le
   calc ((16452 : ℕ) : ℚ≥0) + ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0)
       ≤ ((16452 : ℕ) : ℚ≥0) + ((2071 : ℕ) : ℚ≥0) := add_le_add le_rfl hsum
     _ = (18523 : ℚ≥0) := by norm_num
+
+/-- The captured `other` bases are pairwise distinct. The bases are constants of the ε sample
+space — group slots are not sampled — so a `List.Perm` match against `capturedMsm` is forced to
+the unique base-matching re-indexing (`perm_reindex_of_nodup_snd`). -/
+theorem capturedMsm_other_bases_nodup : (capturedMsm.other.map Prod.snd).Nodup := by
+  native_decide
+
+/-- **The `Perm`→positional bridge at this capture.** Lean's assembly at the captured inputs
+lands inside the positional frame of the agreement event above: `assemble?` succeeds, the
+`g`/`w`/`u` coefficients equal the captured ones, and the `other` block equals the captured one
+after the base-matching re-indexing `σ` — a function of the fixed base lists alone (the stated
+`idxOf` form), so a constant of the sample space. With `competing_family_agreement_le`, a
+competing family in the walk's class differing anywhere from Lean's passes this capture
+positionally only on the ≤ ε event. -/
+theorem fingerprint_matches_positional :
+    ∃ m : Msm shape.k Fp G,
+      assemble? vk derivedInstanceCommitment ps ch = some m
+        ∧ m.other.length = otherLen shape vk
+        ∧ capturedMsm.other.length = otherLen shape vk
+        ∧ m.gScalars = capturedMsm.gScalars
+        ∧ m.wScalar = capturedMsm.wScalar
+        ∧ m.uScalar = capturedMsm.uScalar
+        ∧ ∃ σ : Fin capturedMsm.other.length ≃ Fin m.other.length,
+            ∀ j : Fin capturedMsm.other.length,
+              (σ j : ℕ) = (m.other.map Prod.snd).idxOf capturedMsm.other[j].2
+                ∧ m.other[(σ j : ℕ)] = capturedMsm.other[j] := by
+  obtain ⟨m, hm⟩ := Option.isSome_iff_exists.mp valid_capture_assembles
+  have hassemble : assemble vk derivedInstanceCommitment ps ch = m := by
+    unfold assemble
+    rw [hm]
+    rfl
+  have hmatch : MsmMatch m capturedMsm := hassemble ▸ fingerprint_matches
+  have hcap : capturedMsm.other.length = otherLen shape vk := by
+    rw [otherLen_eq]
+    rfl
+  exact ⟨m, hm, hmatch.2.2.2.length_eq.trans hcap, hcap, hmatch.1, hmatch.2.1, hmatch.2.2.1,
+    msmMatch_other_reindex_of_nodup hmatch capturedMsm_other_bases_nodup⟩
 
 end Zcash.Snark.FixtureRandom
