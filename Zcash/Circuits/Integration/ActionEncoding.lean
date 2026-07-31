@@ -46,14 +46,14 @@ presentation.
 def actionTopLevelCircuitCorrectness
     (pp : ProofParams) (urs : URS G)
     (hk :
-      (actionCircuit.shape.withProofParams pp).k = urs.k)
+      actionCircuit.shape.k = urs.k)
     (instanceCommitment :
       Fin pp.numProofs →
         ℕ → G)
     (ps : ProofString
       (actionCircuit.shape.withProofParams pp) Fp G)
     (ch : Challenges
-      (actionCircuit.shape.withProofParams pp).k Fp)
+      actionCircuit.shape.k Fp)
     (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
     (batchOpenings :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
@@ -68,15 +68,18 @@ def actionTopLevelCircuitCorrectness
         a pU pW)
     (memberDecode : ∀ i (hi : i <
         deployedX4PairCount
+          (shape := actionCircuit.shape.withProofParams pp)
           (instanceCommitment := instanceCommitment)
           (actionCircuit.toVerifierKey urs) ps ch),
       OpenedMemberDecode
+        (shape := actionCircuit.shape.withProofParams pp)
         (instanceCommitment := instanceCommitment)
         urs hk (actionCircuit.toVerifierKey urs)
         ps ch batchOpenings i hi)
     (hpoly : CPoly)
     (relation :
       CanonicalMemberConstraintRelation
+        (shape := actionCircuit.shape.withProofParams pp)
         urs hk (actionCircuit.toVerifierKey urs)
         instanceCommitment ps ch pU pW a batchOpenings memberDecode
         (actionCircuit.toVerifierKey_blindingFactors_lt_n urs)

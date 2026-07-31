@@ -1073,7 +1073,7 @@ theorem adaptiveAcceptedPolynomial_eq_online_of_query
     (fixed : List (AlgebraicPoint (F := Fp) basis))
     (witness : DeployedBatchWitness family basis pnu)
     (hsrc : witness.fixedRepresentations = fixed)
-    (decode : DeployedAlgebraicDecode (ursOfAugmentedBasis shape.k basis) rfl
+    (decode : DeployedAlgebraicDecode shape (ursOfAugmentedBasis shape.k basis) rfl
       (family.vk basis) (family.instanceCommitment basis)
       pnu.1.proof.1 (wrappedPreIpaRecord pnu)
       (pnu.1.aMulti (wrappedPreIpaReads pnu))
@@ -1083,7 +1083,7 @@ theorem adaptiveAcceptedPolynomial_eq_online_of_query
     (hchar : deployedX4PairCount (family.vk basis) (family.instanceCommitment basis)
       pnu.1.proof.1
       (chRecord (wrappedPreIpaReads pnu) rounds) < Zcash.Arithmetic.scalarFieldOrder)
-    (haccepts : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl
+    (haccepts : DeployedAccepts shape (ursOfAugmentedBasis shape.k basis) rfl
       (family.vk basis) (family.instanceCommitment basis)
       pnu.1.proof.1 (chRecord (wrappedPreIpaReads pnu) rounds))
     (id : CommitmentId) (q : VerifierQuery shape.k Fp VestaG)
@@ -2065,7 +2065,7 @@ theorem acceptedPolynomial_eq_zero_of_no_query
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
     (pnu : WrappedAlgebraicOutput family basis)
     (rounds : Fin shape.k → Fp)
-    (decode : DeployedAlgebraicDecode (ursOfAugmentedBasis shape.k basis) rfl
+    (decode : DeployedAlgebraicDecode shape (ursOfAugmentedBasis shape.k basis) rfl
       (family.vk basis) (family.instanceCommitment basis)
       pnu.1.proof.1 (wrappedPreIpaRecord pnu)
       (pnu.1.aMulti (wrappedPreIpaReads pnu))
@@ -2074,7 +2074,7 @@ theorem acceptedPolynomial_eq_zero_of_no_query
     (hchar : deployedX4PairCount (family.vk basis) (family.instanceCommitment basis)
       pnu.1.proof.1 (chRecord (wrappedPreIpaReads pnu) rounds) <
         Zcash.Arithmetic.scalarFieldOrder)
-    (haccepts : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl
+    (haccepts : DeployedAccepts shape (ursOfAugmentedBasis shape.k basis) rfl
       (family.vk basis) (family.instanceCommitment basis)
       pnu.1.proof.1 (chRecord (wrappedPreIpaReads pnu) rounds))
     (id : CommitmentId)
@@ -2105,17 +2105,17 @@ theorem acceptedPolynomial_transport
     (hI : ic₁ = ic₂) (hvk : vk₁ = vk₂)
     {ps : ProofString shape Fp VestaG} {ch : Challenges shape.k Fp}
     {a : Fin (2 ^ shape.k) → Fp} {aU aW : Fp}
-    (decode : DeployedAlgebraicDecode (ursOfAugmentedBasis shape.k basis) rfl
+    (decode : DeployedAlgebraicDecode shape (ursOfAugmentedBasis shape.k basis) rfl
       vk₁ ic₁ ps ch a aU aW)
     (hchar : deployedX4PairCount vk₁ ic₁ ps ch <
       Zcash.Arithmetic.scalarFieldOrder)
-    (haccepts : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl
+    (haccepts : DeployedAccepts shape (ursOfAugmentedBasis shape.k basis) rfl
       vk₁ ic₁ ps ch) :
-    let decode' : DeployedAlgebraicDecode (ursOfAugmentedBasis shape.k basis) rfl
+    let decode' : DeployedAlgebraicDecode shape (ursOfAugmentedBasis shape.k basis) rfl
       vk₂ ic₂ ps ch a aU aW := hI ▸ hvk ▸ decode
     let hchar' : deployedX4PairCount vk₂ ic₂ ps ch <
       Zcash.Arithmetic.scalarFieldOrder := hI ▸ hvk ▸ hchar
-    let haccepts' : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl
+    let haccepts' : DeployedAccepts shape (ursOfAugmentedBasis shape.k basis) rfl
       vk₂ ic₂ ps ch := hI ▸ hvk ▸ haccepts
     CanonicalMemberConstraintRelation.acceptedPolynomial
         (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts =
@@ -2135,18 +2135,18 @@ theorem acceptedModel_transport
     (hI : ic₁ = ic₂) (hvk : vk₁ = vk₂)
     {ps : ProofString shape Fp VestaG} {ch : Challenges shape.k Fp}
     {a : Fin (2 ^ shape.k) → Fp} {aU aW : Fp}
-    (decode : DeployedAlgebraicDecode (ursOfAugmentedBasis shape.k basis) rfl
+    (decode : DeployedAlgebraicDecode shape (ursOfAugmentedBasis shape.k basis) rfl
       vk₁ ic₁ ps ch a aU aW)
     (hchar : deployedX4PairCount vk₁ ic₁ ps ch <
       Zcash.Arithmetic.scalarFieldOrder)
-    (haccepts : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl
+    (haccepts : DeployedAccepts shape (ursOfAugmentedBasis shape.k basis) rfl
       vk₁ ic₁ ps ch)
     (hblinding : vk₁.blindingFactors < vk₁.n) :
-    let decode' : DeployedAlgebraicDecode (ursOfAugmentedBasis shape.k basis) rfl
+    let decode' : DeployedAlgebraicDecode shape (ursOfAugmentedBasis shape.k basis) rfl
       vk₂ ic₂ ps ch a aU aW := hI ▸ hvk ▸ decode
     let hchar' : deployedX4PairCount vk₂ ic₂ ps ch <
       Zcash.Arithmetic.scalarFieldOrder := hI ▸ hvk ▸ hchar
-    let haccepts' : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl
+    let haccepts' : DeployedAccepts shape (ursOfAugmentedBasis shape.k basis) rfl
       vk₂ ic₂ ps ch := hI ▸ hvk ▸ haccepts
     let hblinding' : vk₂.blindingFactors < vk₂.n := hvk ▸ hblinding
     CanonicalMemberConstraintRelation.acceptedModel
@@ -2167,7 +2167,7 @@ theorem adaptiveDecodedMemberPoly_eq_online
     (pnu : WrappedAlgebraicOutput family.toFamily basis)
     (witness : DeployedBatchWitness family.toFamily basis pnu)
     (hsrc : witness.fixedRepresentations = family.fixedRepresentations basis)
-    (decode : DeployedAlgebraicDecode (ursOfAugmentedBasis shape.k basis) rfl
+    (decode : DeployedAlgebraicDecode shape (ursOfAugmentedBasis shape.k basis) rfl
       (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
       (wrappedPreIpaRecord pnu)
       (pnu.1.aMulti (wrappedPreIpaReads pnu))
@@ -2216,6 +2216,7 @@ theorem adaptiveAcceptedPolynomial_eq_actionStage
     (witness : DeployedBatchWitness family.toFamily basis pnu)
     (hsrc : witness.fixedRepresentations = family.fixedRepresentations basis)
     (decode : DeployedAlgebraicDecode
+      (actionCircuit.shape.withProofParams pp)
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
       (wrappedPreIpaRecord pnu)
@@ -2224,6 +2225,7 @@ theorem adaptiveAcceptedPolynomial_eq_actionStage
       (pnu.1.multiBlind (wrappedPreIpaReads pnu)))
     (hbatches : decode.batches = witness.batches)
     (haccepts : DeployedAccepts
+      (actionCircuit.shape.withProofParams pp)
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
       (chRecord (wrappedPreIpaReads pnu) (runRounds family.toFamily basis O)))
@@ -2339,6 +2341,7 @@ theorem adaptiveAcceptedPolynomial_eq_actionStage_nonterminal
     (witness : DeployedBatchWitness family.toFamily basis pnu)
     (hsrc : witness.fixedRepresentations = family.fixedRepresentations basis)
     (decode : DeployedAlgebraicDecode
+      (actionCircuit.shape.withProofParams pp)
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
       (wrappedPreIpaRecord pnu)
@@ -2347,6 +2350,7 @@ theorem adaptiveAcceptedPolynomial_eq_actionStage_nonterminal
       (pnu.1.multiBlind (wrappedPreIpaReads pnu)))
     (hbatches : decode.batches = witness.batches)
     (haccepts : DeployedAccepts
+      (actionCircuit.shape.withProofParams pp)
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
       (chRecord (wrappedPreIpaReads pnu) (runRounds family.toFamily basis O)))
@@ -2425,14 +2429,14 @@ theorem adaptiveAcceptedVanishing_eq_fullQuotient
     (hpnu : pnu = ActionTerminal.adaptiveActionRunOutput family basis O)
     (witness : DeployedBatchWitness family.toFamily basis pnu)
     (hsrc : witness.fixedRepresentations = family.fixedRepresentations basis)
-    (decode : DeployedAlgebraicDecode (ursOfAugmentedBasis shape.k basis) rfl
+    (decode : DeployedAlgebraicDecode shape (ursOfAugmentedBasis shape.k basis) rfl
       (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
       (wrappedPreIpaRecord pnu)
       (pnu.1.aMulti (wrappedPreIpaReads pnu))
       (pnu.1.multiU (wrappedPreIpaReads pnu))
       (pnu.1.multiBlind (wrappedPreIpaReads pnu)))
     (hbatches : decode.batches = witness.batches)
-    (haccepts : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl
+    (haccepts : DeployedAccepts shape (ursOfAugmentedBasis shape.k basis) rfl
       (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
       (chRecord (wrappedPreIpaReads pnu) rounds))
     (hchar : deployedX4PairCount (family.vk basis) (family.instanceCommitment basis)
@@ -2574,6 +2578,7 @@ theorem adaptiveActionExclusions_of_no_surface
       (ActionTerminal.adaptiveActionRunOutput family basis O))
     (hsrc : witness.fixedRepresentations = family.fixedRepresentations basis)
     (rawDecode : DeployedAlgebraicDecode
+      (actionCircuit.shape.withProofParams pp)
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (family.vk basis) (family.instanceCommitment basis)
       (ActionTerminal.adaptiveActionRunOutput family basis O).1.proof.1
@@ -3010,6 +3015,7 @@ theorem adaptiveActionAcceptedDifference_eval_eq_preX
       (ActionTerminal.adaptiveActionRunOutput family basis O))
     (hsrc : witness.fixedRepresentations = family.fixedRepresentations basis)
     (rawDecode : DeployedAlgebraicDecode
+      (actionCircuit.shape.withProofParams pp)
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (family.vk basis) (family.instanceCommitment basis)
       (ActionTerminal.adaptiveActionRunOutput family basis O).1.proof.1
@@ -3073,6 +3079,7 @@ theorem adaptiveActionAcceptedDifference_eval_eq_preX
     rw [hvk basis, hI basis]
     simpa only [pnu, ch, ActionTerminal.adaptiveActionRunRecord] using hchar
   have hacceptsFull : DeployedAccepts
+      (actionCircuit.shape.withProofParams pp)
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
       ch := by

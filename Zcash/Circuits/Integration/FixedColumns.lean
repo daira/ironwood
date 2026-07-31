@@ -723,9 +723,11 @@ variable
         a pU pW}
     {memberDecode : ∀ i (hi : i <
         deployedX4PairCount
+          (shape := shape)
           (instanceCommitment := instanceCommitment)
           vk ps ch),
       OpenedMemberDecode
+        (shape := shape)
         (instanceCommitment := instanceCommitment)
         urs hk vk ps ch batchOpenings i hi}
     {hblinding : vk.blindingFactors < vk.n}
@@ -921,16 +923,17 @@ def topLevelFixedConstraints_or_relation
     {top : TopLevelCircuit Fp Config PublicInput}
     {pp : ProofParams}
     {urs : URS G}
-    {hk : (top.shape.withProofParams pp).k = urs.k}
+    {hk : top.shape.k = urs.k}
     {vk : VerifyingKey top.shape Fp G}
     {instanceCommitment :
       Fin pp.numProofs → ℕ → G}
     {ps : ProofString (top.shape.withProofParams pp) Fp G}
-    {ch : Challenges (top.shape.withProofParams pp).k Fp}
+    {ch : Challenges top.shape.k Fp}
     {pU pW : Fp} {a : Fin (2 ^ urs.k) → Fp}
     {batchOpenings :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
         (x4BatchCommitments
+          (shape := top.shape.withProofParams pp)
           (instanceCommitment := instanceCommitment)
           urs hk vk ps ch)
         (x4BatchEvals
@@ -940,15 +943,18 @@ def topLevelFixedConstraints_or_relation
         a pU pW}
     {memberDecode : ∀ i (hi : i <
         deployedX4PairCount
+          (shape := top.shape.withProofParams pp)
           (instanceCommitment := instanceCommitment)
           vk ps ch),
       OpenedMemberDecode
+        (shape := top.shape.withProofParams pp)
         (instanceCommitment := instanceCommitment)
         urs hk vk ps ch batchOpenings i hi}
     {hblinding : vk.blindingFactors < vk.n}
     {y : Fp} {hpoly : CPoly}
     (relation :
       CanonicalMemberConstraintRelation
+        (shape := top.shape.withProofParams pp)
         urs hk vk instanceCommitment ps ch pU pW a
         batchOpenings memberDecode hblinding y hpoly vk.n)
     (hvk : vk = top.toVerifierKey urs)
@@ -1003,16 +1009,17 @@ def topLevelFixedEntryRead_or_relation
     {top : TopLevelCircuit Fp Config PublicInput}
     {pp : ProofParams}
     {urs : URS G}
-    {hk : (top.shape.withProofParams pp).k = urs.k}
+    {hk : top.shape.k = urs.k}
     {vk : VerifyingKey top.shape Fp G}
     {instanceCommitment :
       Fin pp.numProofs → ℕ → G}
     {ps : ProofString (top.shape.withProofParams pp) Fp G}
-    {ch : Challenges (top.shape.withProofParams pp).k Fp}
+    {ch : Challenges top.shape.k Fp}
     {pU pW : Fp} {a : Fin (2 ^ urs.k) → Fp}
     {batchOpenings :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
         (x4BatchCommitments
+          (shape := top.shape.withProofParams pp)
           (instanceCommitment := instanceCommitment)
           urs hk vk ps ch)
         (x4BatchEvals
@@ -1022,15 +1029,18 @@ def topLevelFixedEntryRead_or_relation
         a pU pW}
     {memberDecode : ∀ i (hi : i <
         deployedX4PairCount
+          (shape := top.shape.withProofParams pp)
           (instanceCommitment := instanceCommitment)
           vk ps ch),
       OpenedMemberDecode
+        (shape := top.shape.withProofParams pp)
         (instanceCommitment := instanceCommitment)
         urs hk vk ps ch batchOpenings i hi}
     {hblinding : vk.blindingFactors < vk.n}
     {y : Fp} {hpoly : CPoly}
     (relation :
       CanonicalMemberConstraintRelation
+        (shape := top.shape.withProofParams pp)
         urs hk vk instanceCommitment ps ch pU pW a
         batchOpenings memberDecode hblinding y hpoly vk.n)
     (hvk : vk = top.toVerifierKey urs)

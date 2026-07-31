@@ -65,8 +65,7 @@ def ofAcceptedCircuitSat
         urs hk (actionCircuit.toVerifierKey urs)
         ps ch batchOpenings i hi)
     (haccepts :
-      DeployedAccepts urs hk
-        (shape := actionCircuit.shape.withProofParams pp)
+      DeployedAccepts (actionCircuit.shape.withProofParams pp) urs hk
         (actionCircuit.toVerifierKey urs)
         (actionCircuit.instanceCommitment urs inputs) ps ch)
     (hpoly : CPoly)

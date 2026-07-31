@@ -279,6 +279,7 @@ theorem actionKnowledgeOutcome_isSome_of_good
       hI basis ▸ hvk basis ▸ success.accepts :=
     Subsingleton.elim _ _
   let successDecode : DeployedAlgebraicDecode
+      (actionCircuit.shape.withProofParams pp)
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
@@ -294,6 +295,7 @@ theorem actionKnowledgeOutcome_isSome_of_good
     hI basis ▸ hvk basis ▸
       success.witness.decode.reRound (runRounds family.toFamily basis O)
   let successAccepts : DeployedAccepts
+      (actionCircuit.shape.withProofParams pp)
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))

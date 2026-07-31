@@ -50,19 +50,20 @@ def topLevelStatements_or_relation_of_decode
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
-    (hk : (top.shape.withProofParams pp).k = urs.k)
+    (hk : top.shape.k = urs.k)
     (inputs : Fin pp.numProofs → PublicInput Fp)
     (ps : ProofString (top.shape.withProofParams pp) Fp G)
-    (ch : Challenges (top.shape.withProofParams pp).k Fp)
+    (ch : Challenges top.shape.k Fp)
     (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
-    (decode : DeployedAlgebraicDecode urs hk
+    (decode : DeployedAlgebraicDecode (top.shape.withProofParams pp) urs hk
       (top.toVerifierKey urs)
       (top.instanceCommitment urs inputs) ps ch a pU pW)
     (hchar : deployedX4PairCount
+      (shape := top.shape.withProofParams pp)
       (top.toVerifierKey urs)
       (top.instanceCommitment urs inputs) ps ch < scalarFieldOrder)
     (haccepts :
-      DeployedAccepts urs hk
+      DeployedAccepts (top.shape.withProofParams pp) urs hk
         (top.toVerifierKey urs)
         (top.instanceCommitment urs inputs) ps ch)
     (domainExponent_lt : top.domainExponent < 33)
@@ -139,8 +140,7 @@ def straightLineRunDecodeAt
     (hI : family.instanceCommitment basis = instanceCommitment)
     (hdecoded : family.straightLineConstraintDecoded static basis O) :
     let pnu := straightLineRunOutput family basis O
-    DeployedAlgebraicDecode
-      (ursOfAugmentedBasis shape.k basis) rfl
+    DeployedAlgebraicDecode shape (ursOfAugmentedBasis shape.k basis) rfl
       vk instanceCommitment
       pnu.1.proof.1
       (straightLineRunRecord family basis O)
@@ -164,8 +164,7 @@ theorem straightLineRunAcceptsAt
     (hI : family.instanceCommitment basis = instanceCommitment)
     (hdecoded : family.straightLineConstraintDecoded static basis O) :
     let pnu := straightLineRunOutput family basis O
-    DeployedAccepts
-      (ursOfAugmentedBasis shape.k basis) rfl
+    DeployedAccepts shape (ursOfAugmentedBasis shape.k basis) rfl
       vk instanceCommitment
       pnu.1.proof.1
       (straightLineRunRecord family basis O) :=

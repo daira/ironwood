@@ -545,6 +545,7 @@ def adaptiveActionCompleteTerminalWitnessOrRelationFinder
                 | some outcome => some outcome
                 | none =>
                     let decode : DeployedAlgebraicDecode
+                        (actionCircuit.shape.withProofParams pp)
                         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
                         (actionCircuit.toVerifierKey
                           (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
@@ -555,6 +556,7 @@ def adaptiveActionCompleteTerminalWitnessOrRelationFinder
                         (family.adaptiveAlgebraicDecode_of_deployedGoodRoots
                           basis O witness hroots.down hshifted).reRound rounds
                     let hacceptsAction : DeployedAccepts
+                        (actionCircuit.shape.withProofParams pp)
                         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
                         (actionCircuit.toVerifierKey
                           (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))

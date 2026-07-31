@@ -78,14 +78,14 @@ def action_bundleStatement_or_relation_of_decode
     (ps : ProofString (actionCircuit.shape.withProofParams pp) Fp G)
     (ch : Challenges (actionCircuit.shape.withProofParams pp).k Fp)
     (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
-    (decode : DeployedAlgebraicDecode urs hk
+    (decode : DeployedAlgebraicDecode (actionCircuit.shape.withProofParams pp) urs hk
       (actionCircuit.toVerifierKey urs)
       (actionCircuit.instanceCommitment urs inputs) ps ch a pU pW)
     (hchar : deployedX4PairCount
       (actionCircuit.toVerifierKey urs)
       (actionCircuit.instanceCommitment urs inputs) ps ch < scalarFieldOrder)
     (haccepts :
-      DeployedAccepts urs hk
+      DeployedAccepts (actionCircuit.shape.withProofParams pp) urs hk
         (actionCircuit.toVerifierKey urs)
         (actionCircuit.instanceCommitment urs inputs) ps ch)
     (hxgood :
@@ -157,13 +157,13 @@ def action_bundleStatement_or_relation_of_decode_circuitSat
     (ps : ProofString (actionCircuit.shape.withProofParams pp) Fp G)
     (ch : Challenges (actionCircuit.shape.withProofParams pp).k Fp)
     (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
-    (decode : DeployedAlgebraicDecode urs hk
+    (decode : DeployedAlgebraicDecode (actionCircuit.shape.withProofParams pp) urs hk
       (actionCircuit.toVerifierKey urs)
       (actionCircuit.instanceCommitment urs inputs) ps ch a pU pW)
     (hchar : deployedX4PairCount
       (actionCircuit.toVerifierKey urs)
       (actionCircuit.instanceCommitment urs inputs) ps ch < scalarFieldOrder)
-    (haccepts : DeployedAccepts urs hk
+    (haccepts : DeployedAccepts (actionCircuit.shape.withProofParams pp) urs hk
       (actionCircuit.toVerifierKey urs)
       (actionCircuit.instanceCommitment urs inputs) ps ch)
     (hpoly : CPoly)
@@ -211,13 +211,13 @@ def action_bundleWitness_or_relation_of_decode_circuitSat
     (ps : ProofString (actionCircuit.shape.withProofParams pp) Fp G)
     (ch : Challenges (actionCircuit.shape.withProofParams pp).k Fp)
     (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
-    (decode : DeployedAlgebraicDecode urs hk
+    (decode : DeployedAlgebraicDecode (actionCircuit.shape.withProofParams pp) urs hk
       (actionCircuit.toVerifierKey urs)
       (actionCircuit.instanceCommitment urs inputs) ps ch a pU pW)
     (hchar : deployedX4PairCount
       (actionCircuit.toVerifierKey urs)
       (actionCircuit.instanceCommitment urs inputs) ps ch < scalarFieldOrder)
-    (haccepts : DeployedAccepts urs hk
+    (haccepts : DeployedAccepts (actionCircuit.shape.withProofParams pp) urs hk
       (actionCircuit.toVerifierKey urs)
       (actionCircuit.instanceCommitment urs inputs) ps ch)
     (hpoly : CPoly)
@@ -275,6 +275,7 @@ def actionRunDecode
       actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
     (hdecoded : family.straightLineConstraintDecoded static basis O) :
     DeployedAlgebraicDecode
+      (actionCircuit.shape.withProofParams pp)
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
@@ -306,7 +307,8 @@ theorem actionRunAccepts
     (hI : family.instanceCommitment basis =
       actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
     (hdecoded : family.straightLineConstraintDecoded static basis O) :
-    DeployedAccepts (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
+    DeployedAccepts (actionCircuit.shape.withProofParams pp)
+      (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
       (actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
@@ -395,14 +397,14 @@ def actionTerminalWitnessOrRelationFinder
           (actionCircuit.shape.withProofParams pp).k basis ▸
             AugmentedRelationWitness.toAlgebraicRelationWitness relation))
     | some (PSum.inl success) =>
-        let decode : DeployedAlgebraicDecode urs rfl
+        let decode : DeployedAlgebraicDecode (actionCircuit.shape.withProofParams pp) urs rfl
             (actionCircuit.toVerifierKey urs)
             (actionCircuit.instanceCommitment urs inputs) pnu.1.proof.1 ch
             (pnu.1.aMulti (wrappedPreIpaReads pnu))
             (pnu.1.multiU (wrappedPreIpaReads pnu))
             (pnu.1.multiBlind (wrappedPreIpaReads pnu)) := hI basis ▸ hvk basis ▸
           success.witness.decode.reRound (runRounds family.toFamily basis O)
-        let haccepts : DeployedAccepts urs rfl
+        let haccepts : DeployedAccepts (actionCircuit.shape.withProofParams pp) urs rfl
             (actionCircuit.toVerifierKey urs)
             (actionCircuit.instanceCommitment urs inputs) pnu.1.proof.1 ch :=
           hI basis ▸ hvk basis ▸ success.accepts

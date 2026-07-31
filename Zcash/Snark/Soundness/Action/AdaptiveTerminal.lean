@@ -46,7 +46,7 @@ def adaptiveActionAccepts
     (O : BTranscript Fp VestaG
       (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp) : Prop :=
   let pnu := adaptiveActionRunOutput family basis O
-  DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl
+  DeployedAccepts shape (ursOfAugmentedBasis shape.k basis) rfl
     (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
     (adaptiveActionRunRecord family basis O)
 
@@ -57,7 +57,7 @@ def adaptiveActionAccepts?
     (O : BTranscript Fp VestaG
       (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp) :
     let pnu := adaptiveActionRunOutput family basis O
-    Option (PLift (DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl
+    Option (PLift (DeployedAccepts shape (ursOfAugmentedBasis shape.k basis) rfl
       (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
       (adaptiveActionRunRecord family basis O))) := by
   let pnu := adaptiveActionRunOutput family basis O
@@ -82,7 +82,7 @@ theorem adaptiveActionAccepts?_isSome_of
     (adaptiveActionAccepts? family basis O).isSome := by
   let pnu := adaptiveActionRunOutput family basis O
   let fullCh := adaptiveActionRunRecord family basis O
-  change DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl
+  change DeployedAccepts shape (ursOfAugmentedBasis shape.k basis) rfl
     (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1 fullCh at haccepts
   unfold DeployedAccepts at haccepts
   unfold adaptiveActionAccepts?
@@ -115,6 +115,7 @@ noncomputable def adaptiveActionRunDecode
     (hroots : family.AdaptiveAllRootGood basis O)
     (hshifted : family.AdaptiveShiftedValue basis O) :
     DeployedAlgebraicDecode
+      (actionCircuit.shape.withProofParams pp)
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
@@ -145,7 +146,8 @@ theorem adaptiveActionRunAccepts
     (hI : ∀ basis, family.instanceCommitment basis =
       actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
     (haccepts : adaptiveActionAccepts family basis O) :
-    DeployedAccepts (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
+    DeployedAccepts (actionCircuit.shape.withProofParams pp)
+      (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
       (actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
@@ -170,7 +172,7 @@ theorem adaptiveShiftedValue_of_accept_not_attack
   let pnu := adaptiveActionRunOutput family basis O
   let nu := wrappedPreIpaReads pnu
   let rounds := runRounds family.toFamily basis O
-  have hdeployed : DeployedAccepts (ursOfAugmentedBasis shape.k basis) rfl
+  have hdeployed : DeployedAccepts shape (ursOfAugmentedBasis shape.k basis) rfl
       (family.vk basis) (family.instanceCommitment basis) pnu.1.proof.1
       (chRecord nu rounds) := by
     simpa only [adaptiveActionAccepts, adaptiveActionRunRecord, pnu, nu, rounds] using haccept
@@ -208,6 +210,7 @@ def adaptiveActionWitnessOrRelationOfDecode?
       (adaptiveActionRunOutput family basis O).1.proof.1
       (adaptiveActionRunRecord family basis O) < scalarFieldOrder)
     (decode : DeployedAlgebraicDecode
+      (actionCircuit.shape.withProofParams pp)
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
@@ -221,6 +224,7 @@ def adaptiveActionWitnessOrRelationOfDecode?
       ((adaptiveActionRunOutput family basis O).1.multiBlind
         (wrappedPreIpaReads (adaptiveActionRunOutput family basis O))))
     (haccepts : DeployedAccepts
+      (actionCircuit.shape.withProofParams pp)
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
@@ -314,6 +318,7 @@ def adaptiveActionRelationOfDecode?
       (adaptiveActionRunOutput family basis O).1.proof.1
       (adaptiveActionRunRecord family basis O) < scalarFieldOrder)
     (decode : DeployedAlgebraicDecode
+      (actionCircuit.shape.withProofParams pp)
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
@@ -327,6 +332,7 @@ def adaptiveActionRelationOfDecode?
       ((adaptiveActionRunOutput family basis O).1.multiBlind
         (wrappedPreIpaReads (adaptiveActionRunOutput family basis O))))
     (haccepts : DeployedAccepts
+      (actionCircuit.shape.withProofParams pp)
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
@@ -380,6 +386,7 @@ theorem adaptiveActionWitnessOrRelationOfDecode?_isSome_of
       (adaptiveActionRunOutput family basis O).1.proof.1
       (adaptiveActionRunRecord family basis O) < scalarFieldOrder)
     (decode : DeployedAlgebraicDecode
+      (actionCircuit.shape.withProofParams pp)
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
@@ -393,6 +400,7 @@ theorem adaptiveActionWitnessOrRelationOfDecode?_isSome_of
       ((adaptiveActionRunOutput family basis O).1.multiBlind
         (wrappedPreIpaReads (adaptiveActionRunOutput family basis O))))
     (haccepts : DeployedAccepts
+      (actionCircuit.shape.withProofParams pp)
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
@@ -474,6 +482,7 @@ theorem adaptiveActionRelationOfDecode?_isSome_of
       (adaptiveActionRunOutput family basis O).1.proof.1
       (adaptiveActionRunRecord family basis O) < scalarFieldOrder)
     (decode : DeployedAlgebraicDecode
+      (actionCircuit.shape.withProofParams pp)
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
@@ -487,6 +496,7 @@ theorem adaptiveActionRelationOfDecode?_isSome_of
       ((adaptiveActionRunOutput family basis O).1.multiBlind
         (wrappedPreIpaReads (adaptiveActionRunOutput family basis O))))
     (haccepts : DeployedAccepts
+      (actionCircuit.shape.withProofParams pp)
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
@@ -578,6 +588,7 @@ def adaptiveActionTerminalRelationFinder
                   let hshifted := adaptiveShiftedValue_of_accept_not_attack
                     family basis O haccepts hz hattack
                   let decode : DeployedAlgebraicDecode
+                      (actionCircuit.shape.withProofParams pp)
                       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
                       (actionCircuit.toVerifierKey
                         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
@@ -588,6 +599,7 @@ def adaptiveActionTerminalRelationFinder
                       (family.adaptiveAlgebraicDecode_of_deployedGoodRoots
                         basis O witness hroots.down hshifted).reRound rounds
                   let hacceptsAction : DeployedAccepts
+                      (actionCircuit.shape.withProofParams pp)
                       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
                       (actionCircuit.toVerifierKey
                         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))

@@ -233,10 +233,10 @@ variable
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
-    (hk : (top.shape.withProofParams pp).k = urs.k)
+    (hk : top.shape.k = urs.k)
     (inputs : Fin pp.numProofs → PublicInput Fp)
     (ps : ProofString (top.shape.withProofParams pp) Fp G)
-    (ch : Challenges (top.shape.withProofParams pp).k Fp)
+    (ch : Challenges top.shape.k Fp)
     (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
     (batchOpenings :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
@@ -260,8 +260,7 @@ variable
         urs hk (top.toVerifierKey urs)
         ps ch batchOpenings i hi)
     (haccepts :
-      DeployedAccepts urs hk
-        (shape := top.shape.withProofParams pp)
+      DeployedAccepts (top.shape.withProofParams pp) urs hk
         (top.toVerifierKey urs)
         (top.instanceCommitment urs inputs) ps ch)
 
@@ -412,8 +411,7 @@ def topLevelStatements_or_relation_of_decodedMemberPolynomial_eq
         urs hk (top.toVerifierKey urs)
         ps ch batchOpenings i hi)
     (haccepts :
-      DeployedAccepts urs hk
-        (shape := top.shape.withProofParams pp)
+      DeployedAccepts (top.shape.withProofParams pp) urs hk
         (top.toVerifierKey urs)
         (top.instanceCommitment urs inputs) ps ch)
     (hpoly : CPoly)
