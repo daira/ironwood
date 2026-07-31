@@ -17,17 +17,19 @@ variable {F G : Type*}
 
 /-! ## Oracle-table reprogramming -/
 
-open Classical in
 /-- Change the oracle's answer at `t` to `c`, leaving all other answers unchanged. -/
-noncomputable def reprogram (O : List (TranscriptElt F G) → F) (t : List (TranscriptElt F G)) (c : F) :
+def reprogram [DecidableEq F] [DecidableEq G]
+    (O : List (TranscriptElt F G) → F) (t : List (TranscriptElt F G)) (c : F) :
     List (TranscriptElt F G) → F :=
   fun t' => if t' = t then c else O t'
 
-@[simp] theorem reprogram_self (O : List (TranscriptElt F G) → F) (t : List (TranscriptElt F G)) (c : F) :
+@[simp] theorem reprogram_self [DecidableEq F] [DecidableEq G]
+    (O : List (TranscriptElt F G) → F) (t : List (TranscriptElt F G)) (c : F) :
     reprogram O t c t = c := by
   simp [reprogram]
 
-theorem reprogram_ne {O : List (TranscriptElt F G) → F} {t t' : List (TranscriptElt F G)} {c : F}
+theorem reprogram_ne [DecidableEq F] [DecidableEq G]
+    {O : List (TranscriptElt F G) → F} {t t' : List (TranscriptElt F G)} {c : F}
     (h : t' ≠ t) : reprogram O t c t' = O t' := by
   simp [reprogram, h]
 

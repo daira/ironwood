@@ -59,7 +59,7 @@ theorem independentProductPMF_uniform {A B : Type*} [Fintype A] [Fintype B]
 
 section Reduction
 
-variable {ι : Type*} [Fintype ι] [DecidableEq ι] [Nonempty ι]
+variable {ι : Type*} [Fintype ι] [DecidableEq ι] [Nonempty ι] [DecidableEq F] [DecidableEq ρ]
   [Fintype F] [Fintype ρ] [Nonempty ρ] (B : G)
 
 variable (A : (b : ι → G) → ρ → Option (AlgebraicRelationWitness (F := F) b))
@@ -78,7 +78,7 @@ zero when none returns. -/
 def returnedCoeffsWithCoins (s : ι → F) (c : ρ) : ι → F :=
   (A (scalarBasis B s) c).elim 0 (fun r => r.coeffs)
 
-omit [DecidableEq ι] [Nonempty ι] [Fintype F] [Fintype ρ] [Nonempty ρ] in
+omit [DecidableEq ι] [Nonempty ι] [Fintype F] [Fintype ρ] [Nonempty ρ] [DecidableEq F] [DecidableEq ρ] in
 /-- `returnedCoeffsWithCoins` reads off the coefficients of the relation actually returned. -/
 theorem returnedCoeffsWithCoins_of_eq_some {s : ι → F} {c : ρ}
     {r : AlgebraicRelationWitness (F := F) (scalarBasis B s)}
@@ -91,7 +91,7 @@ returns. -/
 noncomputable def pivotSlotWithCoins (s : ι → F) (c : ρ) : ι :=
   (A (scalarBasis B s) c).elim (Classical.arbitrary ι) (fun r => r.exists_nonzero_coeff.choose)
 
-omit [DecidableEq ι] [Fintype F] [Fintype ρ] [Nonempty ρ] in
+omit [DecidableEq ι] [Fintype F] [Fintype ρ] [Nonempty ρ] [DecidableEq F] [DecidableEq ρ] in
 /-- The pivot slot's coefficient is nonzero whenever a relation returns. -/
 theorem returnedCoeffsWithCoins_pivotSlot_ne_zero {s : ι → F} {c : ρ}
     (hsome : (A (scalarBasis B s) c).isSome) :
@@ -107,14 +107,14 @@ def programmedRelSetWithCoins : Finset (F × (ι → F) × (ι → F) × ρ) :=
     (A (scalarBasis B (programmedLogs t.1 t.2.1 t.2.2.1)) t.2.2.2).isSome)
 
 /-- Winning coins: the returned relation's component against `y` is nonzero. -/
-noncomputable def textbookWinSetWithCoins : Finset (F × (ι → F) × (ι → F) × ρ) :=
+def textbookWinSetWithCoins : Finset (F × (ι → F) × (ι → F) × ρ) :=
   Finset.univ.filter (fun t =>
     (A (scalarBasis B (programmedLogs t.1 t.2.1 t.2.2.1)) t.2.2.2).isSome ∧
       (∑ i, returnedCoeffsWithCoins B A (programmedLogs t.1 t.2.1 t.2.2.1) t.2.2.2 i
           * t.2.2.1 i) ≠ 0)
 
 /-- Failing coins: the returned relation annihilates the challenge programming `y`. -/
-noncomputable def missSetWithCoins : Finset (F × (ι → F) × (ι → F) × ρ) :=
+def missSetWithCoins : Finset (F × (ι → F) × (ι → F) × ρ) :=
   Finset.univ.filter (fun t =>
     (A (scalarBasis B (programmedLogs t.1 t.2.1 t.2.2.1)) t.2.2.2).isSome ∧
       (∑ i, returnedCoeffsWithCoins B A (programmedLogs t.1 t.2.1 t.2.2.1) t.2.2.2 i
@@ -136,7 +136,7 @@ theorem programmedRelSetWithCoins_subset_win_union_miss :
       simp only [textbookWinSetWithCoins, Finset.mem_filter, Finset.mem_univ, true_and]
       exact ⟨ht, h0⟩)
 
-omit [Nonempty ι] [Nonempty ρ] in
+omit [Nonempty ι] [Nonempty ρ] [DecidableEq F] [DecidableEq ρ] in
 /-- Perfect simulation with extractor coins: for each honest outcome in the relation event, the
 programmed coins hitting it are exactly the free choices of `(z, y)`. -/
 theorem programmedRelSetWithCoins_card :
@@ -175,6 +175,7 @@ theorem programmedRelSetWithCoins_card :
     simp [programmedLogs]
 
 omit [Nonempty ρ] in
+omit [DecidableEq ρ] in
 /-- Annihilation costs at most a `1/|F|` slice of the coins: stash the challenge log in the
 returned relation's pivot slot of `y`, which the hyperplane equation recovers. -/
 theorem missSetWithCoins_card_le :
@@ -337,7 +338,7 @@ def truncatedRelationFinderCalls
   fun basis coins => min (calls basis coins) L
 
 omit [AddCommGroup G] [Fintype ι] [DecidableEq ι] [Nonempty ι] [Fintype F] [Fintype ρ]
-  [Nonempty ρ] in
+  [Nonempty ρ] [DecidableEq ρ] in
 /-- Truncation enforces the fixed call budget pointwise. -/
 theorem truncatedRelationFinderCalls_le
     (calls : (ι -> G) -> ρ -> Nat) (L : Nat) (basis : ι -> G) (coins : ρ) :
@@ -358,6 +359,7 @@ def TextbookDLWithCoinsTruncatedAdvantageLE
     (truncateRelationFinder A calls L) (truncatedRelationFinderCalls calls L) L bound
 
 omit [Nonempty ι] in
+omit [DecidableEq ρ] in
 /-- The call-budget component of the truncated DLOG premise is discharged by construction; its
 only computational assumption is the textbook-DLOG advantage of the truncated finder. -/
 theorem textbookDLWithCoinsTruncatedAdvantageLE_iff
@@ -398,7 +400,7 @@ theorem relSetWithCoins_subset_truncate_union_tail
     simp only [relationFinderCallTail, Finset.mem_filter, Finset.mem_univ, true_and]
     exact Nat.lt_of_not_ge hbudget
 
-omit [Nonempty ι] in
+omit [Nonempty ι] [DecidableEq F] [DecidableEq ρ] in
 /-- Finite Markov inequality for the modeled call count.  If its expectation is at most `R`, the
 probability of exceeding `L` calls is at most `R/(L+1)`. -/
 theorem relationFinderCallTail_prob_le
