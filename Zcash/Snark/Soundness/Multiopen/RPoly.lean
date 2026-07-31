@@ -25,9 +25,7 @@ namespace Zcash.Snark
 
 open Polynomial CompPoly
 
-/-- **Identity from samples.** Two polynomials whose difference has degree at most `d` and which
-agree at `d + 1` pairwise-distinct points are equal. -/
-theorem poly_eq_of_agree_on_family {d : ℕ} {P Q : Polynomial Fp}
+private theorem poly_eq_of_agree_on_familyP {d : ℕ} {P Q : Polynomial Fp}
     (hdeg : (P - Q).natDegree ≤ d)
     (ξ : Fin (d + 1) → Fp) (hξ : Function.Injective ξ)
     (heval : ∀ r, P.eval (ξ r) = Q.eval (ξ r)) : P = Q := by
@@ -38,14 +36,14 @@ theorem poly_eq_of_agree_on_family {d : ℕ} {P Q : Polynomial Fp}
     · simpa using Nat.lt_succ_of_le hdeg
   exact sub_eq_zero.mp h0
 
-/-- Identity from samples on the computable representation: `poly_eq_of_agree_on_family`
-read across `toPoly`. -/
-theorem cpoly_eq_of_agree_on_family {d : ℕ} {P Q : CPoly}
+/-- **Identity from samples.** Two polynomials whose difference has degree at most `d` and which
+agree at `d + 1` pairwise-distinct points are equal. -/
+theorem poly_eq_of_agree_on_family {d : ℕ} {P Q : CPoly}
     (hdeg : (P - Q).natDegree ≤ d)
     (ξ : Fin (d + 1) → Fp) (hξ : Function.Injective ξ)
     (heval : ∀ r, CPolynomial.eval (ξ r) P = CPolynomial.eval (ξ r) Q) : P = Q := by
   apply CPolynomial.toPoly_injective
-  refine poly_eq_of_agree_on_family ?_ ξ hξ (fun r => ?_)
+  refine poly_eq_of_agree_on_familyP ?_ ξ hξ (fun r => ?_)
   · rw [← CPolynomial.toPoly_sub, ← CPolynomial.natDegree_toPoly]
     exact hdeg
   · rw [← CPolynomial.eval_toPoly, ← CPolynomial.eval_toPoly]
@@ -218,7 +216,7 @@ theorem coeffs_zero_of_power_sum_vanishes {n : ℕ} (c : ℕ → Fp)
     simp only [Finset.mem_range] at hj
     rw [Polynomial.coeff_C_mul, Polynomial.coeff_X_pow, if_neg (by omega), mul_zero]
   have hP0 : P = 0 := by
-    refine poly_eq_of_agree_on_family (d := n - 1) (Q := 0) (by rw [sub_zero]; exact hdeg)
+    refine poly_eq_of_agree_on_familyP (d := n - 1) (Q := 0) (by rw [sub_zero]; exact hdeg)
       (fun r => ξ (Fin.cast hcast r)) (hξ.comp (Fin.cast_injective hcast)) (fun r => ?_)
     rw [Polynomial.eval_zero, hPdef, Polynomial.eval_finsetSum]
     simp only [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow, Polynomial.eval_X]

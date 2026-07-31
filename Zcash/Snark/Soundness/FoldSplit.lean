@@ -40,20 +40,6 @@ theorem foldPoly_concat (l : List Fp) (v : Fp) :
   rw [foldPoly, foldPoly, List.foldl_append]
   rfl
 
-theorem toPoly_foldPoly (l : List Fp) :
-    (foldPoly l).toPoly
-      = l.foldl (fun acc v => acc * Polynomial.X + Polynomial.C v) 0 := by
-  suffices h : ∀ (t : List Fp) (acc : CPoly),
-      (t.foldl (fun acc v => acc * X + C v) acc).toPoly
-        = t.foldl (fun acc v => acc * Polynomial.X + Polynomial.C v) acc.toPoly by
-    simpa using h l 0
-  intro t
-  induction t with
-  | nil => intro acc; rfl
-  | cons v t ih =>
-      intro acc
-      have hacc : (acc * X + C v).toPoly = acc.toPoly * Polynomial.X + Polynomial.C v := by simp
-      rw [List.foldl_cons, List.foldl_cons, ih, hacc]
 
 /-- Evaluating the fold polynomial at `y` is the verifier's fold. -/
 theorem eval_foldPoly (l : List Fp) (y : Fp) :
