@@ -280,8 +280,11 @@ def adaptiveActionWitnessOrRelationOfDecode?
                       (fun slot point hpoint =>
                         PSum.inl (decode.memberBinding hchar slot point hpoint))
                       (ActionPermutationDomain.routingCoherent_of_derived pp urs)
-                      (ActionPermutationDomain.rowsInjective pp urs)
-                      (ActionPermutationDomain.root pp urs) hnFp
+                      (TopLevelAssignment.toVerifierKey_domainRowsInjective
+                        pp urs ActionPermutationDomain.domainExponent_lt)
+                      (TopLevelAssignment.toVerifierKey_domainRoot
+                        pp urs ActionPermutationDomain.domainExponent_lt)
+                      hnFp
                       (by exact hxgoodProof.down) with
                   | PSum.inr relation =>
                       some (Sum.inr (augmentedBasis_ursOfAugmentedBasis
@@ -517,8 +520,7 @@ theorem adaptiveActionRelationOfDecode?_isSome_of
           model.sets model.chunks model.lookups model.beta model.gamma model.delta model.theta
           (adaptiveActionRunRecord family basis O).y model.chunkLen model.l0 model.lLast
           model.lBlind - polynomial .vanishingH *
-            (X ^ (actionCircuit.toVerifierKey pp
-              (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)).n - 1)))
+            (X ^ actionCircuit.n - 1)))
     (hgoodY :
       let model := CanonicalMemberConstraintRelation.acceptedModel
           (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
@@ -526,8 +528,7 @@ theorem adaptiveActionRelationOfDecode?_isSome_of
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)) haccepts
       ∀ j, (adaptiveActionRunRecord family basis O).y ∉
         szBadSet (foldSplitWitness model.constraints
-          (actionCircuit.toVerifierKey pp
-            (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)).n j))
+          actionCircuit.n j))
     (hpermutation : ResolverPermutationChallengeExclusions
       (actionCircuit.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))

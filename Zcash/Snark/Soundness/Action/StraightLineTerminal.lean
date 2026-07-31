@@ -172,14 +172,14 @@ def action_bundleStatement_or_relation_of_decode_circuitSat
         (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
         (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
         haccepts).CircuitSat ch.y hpoly
-          (actionCircuit.toVerifierKey pp urs).n a)
+          actionCircuit.n a)
     (hgoodY : ∀ j, ch.y ∉ szBadSet
       (foldSplitWitness
         (CanonicalMemberConstraintRelation.acceptedModel
           (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
           (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
           haccepts).constraints
-        (actionCircuit.toVerifierKey pp urs).n j))
+        actionCircuit.n j))
     (permutationExclusions : ResolverPermutationChallengeExclusions
       (actionCircuit.toVerifierKey pp urs) ch
       (CanonicalMemberConstraintRelation.acceptedPolynomial
@@ -226,14 +226,14 @@ def action_bundleWitness_or_relation_of_decode_circuitSat
         (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
         (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
         haccepts).CircuitSat ch.y hpoly
-          (actionCircuit.toVerifierKey pp urs).n a)
+          actionCircuit.n a)
     (hgoodY : ∀ j, ch.y ∉ szBadSet
       (foldSplitWitness
         (CanonicalMemberConstraintRelation.acceptedModel
           (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
           (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
           haccepts).constraints
-        (actionCircuit.toVerifierKey pp urs).n j))
+        actionCircuit.n j))
     (permutationExclusions : ResolverPermutationChallengeExclusions
       (actionCircuit.toVerifierKey pp urs) ch
       (CanonicalMemberConstraintRelation.acceptedPolynomial
@@ -451,8 +451,11 @@ def actionTerminalWitnessOrRelationFinder
                     (fun slot point hpoint =>
                       PSum.inl (decode.memberBinding (hchar basis O) slot point hpoint))
                     (ActionPermutationDomain.routingCoherent_of_derived pp urs)
-                    (ActionPermutationDomain.rowsInjective pp urs)
-                    (ActionPermutationDomain.root pp urs) hnFp
+                    (TopLevelAssignment.toVerifierKey_domainRowsInjective
+                      pp urs ActionPermutationDomain.domainExponent_lt)
+                    (TopLevelAssignment.toVerifierKey_domainRoot
+                      pp urs ActionPermutationDomain.domainExponent_lt)
+                    hnFp
                     (by exact hxgoodProof.down) with
                 | PSum.inr relation =>
                     some (Sum.inr (augmentedBasis_ursOfAugmentedBasis
