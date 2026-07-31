@@ -99,7 +99,7 @@ theorem foldPoly_eq_zero_iff (l : List Fp) : foldPoly l = 0 ↔ ∀ v ∈ l, v =
           have := congrArg (Polynomial.coeff · 0) hpoly
           simpa [Polynomial.coeff_add, Polynomial.coeff_C, Polynomial.mul_coeff_zero] using this
         have ht : foldPoly t = 0 := by
-          rw [hv, map_zero, _root_.add_zero] at hpoly
+          rw [hv, _root_.map_zero, _root_.add_zero] at hpoly
           rw [← toPoly_eq_zero_iff]
           exact (mul_eq_zero.mp hpoly).resolve_right Polynomial.X_ne_zero
         intro u hu
@@ -256,7 +256,7 @@ theorem foldPoly_sub {l₁ l₂ : List Fp} (hlen : l₁.length = l₂.length) :
           foldPoly_concat, List.zipWith_cons_cons, List.zipWith_nil_right, foldPoly_concat,
           ← ih hlen']
         apply toPoly_injective
-        simp only [toPoly_sub, toPoly_add, toPoly_mul, C_toPoly, X_toPoly, map_sub]
+        simp only [toPoly_sub, toPoly_add, toPoly_mul, C_toPoly, X_toPoly, _root_.map_sub]
         ring
 
 /-- **Decompression.** Equal folds at a `θ` outside the difference's roots force equal tuples. -/

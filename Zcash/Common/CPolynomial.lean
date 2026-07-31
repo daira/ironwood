@@ -130,6 +130,98 @@ theorem toPoly_injective [Semiring R] [BEq R] [LawfulBEq R] {p q : CPolynomial R
     (h : p.toPoly = q.toPoly) : p = q :=
   toPolyLinearEquiv.injective h
 
+/-- Coefficient extensionality, the computable counterpart of `Polynomial.ext`. -/
+theorem ext_coeff [Semiring R] [BEq R] [LawfulBEq R] {p q : CPolynomial R}
+    (h : ∀ n, p.coeff n = q.coeff n) : p = q :=
+  toPoly_injective (Polynomial.ext fun n => by rw [← coeff_toPoly, ← coeff_toPoly, h])
+
+/-! ## Functoriality in the coefficient ring
+
+CompPoly has no `map`: nothing pushes a ring hom through the coefficients, which is why every
+change of coefficient ring so far had to detour through `Polynomial.map`.  `map` below is that
+operation, computable — apply `f` entrywise and re-canonicalise, since a non-injective `f` can
+create trailing zeros. -/
+
+section Map
+
+variable {S : Type*}
+
+/-- Apply a ring hom to every coefficient. -/
+def map [Semiring R] [BEq R] [LawfulBEq R] [Semiring S] [BEq S] [LawfulBEq S]
+    (f : R →+* S) (p : CPolynomial R) : CPolynomial S :=
+  ofArray (p.val.map f)
+
+@[simp] theorem coeff_map [Semiring R] [BEq R] [LawfulBEq R] [Semiring S] [BEq S] [LawfulBEq S]
+    (f : R →+* S) (p : CPolynomial R) (n : ℕ) : (map f p).coeff n = f (p.coeff n) := by
+  rw [map, coeff_ofArray]
+  show (p.val.map f).getD n 0 = f (p.val.getD n 0)
+  by_cases h : n < p.val.size
+  · rw [Array.getD, Array.getD, dif_pos (by simpa using h), dif_pos h]
+    simp
+  · rw [Array.getD, Array.getD, dif_neg (by simpa using h), dif_neg h, map_zero]
+
+/-- `map` is Mathlib's `Polynomial.map` read across `toPoly`. -/
+theorem toPoly_map [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommSemiring S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S) (p : CPolynomial R) :
+    (map f p).toPoly = p.toPoly.map f := by
+  refine Polynomial.ext fun n => ?_
+  rw [← coeff_toPoly, Polynomial.coeff_map, ← coeff_toPoly, coeff_map]
+
+@[simp] theorem map_zero [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommSemiring S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S) :
+    map f (0 : CPolynomial R) = 0 :=
+  ext_coeff fun n => by rw [coeff_map, coeff_zero, coeff_zero, _root_.map_zero]
+
+@[simp] theorem map_C [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommSemiring S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S) (r : R) :
+    map f (C r) = C (f r) :=
+  ext_coeff fun n => by
+    rw [coeff_map, coeff_C, coeff_C]
+    split <;> simp
+
+@[simp] theorem map_X [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommSemiring S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S) :
+    map f (X : CPolynomial R) = X :=
+  toPoly_injective (by rw [toPoly_map, X_toPoly, Polynomial.map_X, X_toPoly])
+
+theorem map_add [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommSemiring S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S) (p q : CPolynomial R) :
+    map f (p + q) = map f p + map f q :=
+  ext_coeff fun n => by
+    rw [coeff_map, coeff_add, coeff_add, coeff_map, coeff_map, _root_.map_add]
+
+theorem map_mul [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommSemiring S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S) (p q : CPolynomial R) :
+    map f (p * q) = map f p * map f q :=
+  toPoly_injective (by rw [toPoly_map, toPoly_mul, Polynomial.map_mul, ← toPoly_map, ← toPoly_map,
+    ← toPoly_mul])
+
+/-- `map` bundled as a ring hom. -/
+def mapRingHom [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommSemiring S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S) :
+    CPolynomial R →+* CPolynomial S where
+  toFun := map f
+  map_one' := toPoly_injective (by rw [toPoly_map, toPoly_one, Polynomial.map_one, toPoly_one])
+  map_mul' := map_mul f
+  map_zero' := map_zero f
+  map_add' := map_add f
+
+@[simp] theorem coe_mapRingHom [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommSemiring S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S) :
+    (mapRingHom f : CPolynomial R → CPolynomial S) = map f := rfl
+
+theorem map_multiset_prod [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommSemiring S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S)
+    (m : Multiset (CPolynomial R)) : map f m.prod = (m.map (map f)).prod := by
+  simpa using _root_.map_multiset_prod (mapRingHom f) m
+
+theorem map_sub [CommRing R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommRing S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S) (p q : CPolynomial R) :
+    map f (p - q) = map f p - map f q := by
+  simpa using _root_.map_sub (mapRingHom f) p q
+
+end Map
+
 /-! ## Two indeterminates
 
 `CPolynomial (CPolynomial R)` is the computable `R[X][Y]`.  Its Mathlib image needs the outer
@@ -155,20 +247,20 @@ theorem nestedPoly_eq_ringHom (p : CPolynomial (CPolynomial R)) :
 
 theorem nestedPoly_add (p q : CPolynomial (CPolynomial R)) :
     nestedPoly (p + q) = nestedPoly p + nestedPoly q := by
-  simp only [nestedPoly_eq_ringHom, map_add]
+  simp only [nestedPoly_eq_ringHom, _root_.map_add]
 
 theorem nestedPoly_sub (p q : CPolynomial (CPolynomial R)) :
     nestedPoly (p - q) = nestedPoly p - nestedPoly q := by
-  simp only [nestedPoly_eq_ringHom, map_sub]
+  simp only [nestedPoly_eq_ringHom, _root_.map_sub]
 
 theorem nestedPoly_mul (p q : CPolynomial (CPolynomial R)) :
     nestedPoly (p * q) = nestedPoly p * nestedPoly q := by
-  simp only [nestedPoly_eq_ringHom, map_mul]
+  simp only [nestedPoly_eq_ringHom, _root_.map_mul]
 
 theorem nestedPoly_multiset_prod (m : Multiset (CPolynomial (CPolynomial R))) :
     nestedPoly m.prod = (m.map nestedPoly).prod := by
   simp only [nestedPoly_eq_ringHom]
-  exact map_multiset_prod nestedPolyRingHom m
+  exact _root_.map_multiset_prod nestedPolyRingHom m
 
 theorem nestedPoly_C (q : CPolynomial R) : nestedPoly (C q) = Polynomial.C q.toPoly := by
   rw [nestedPoly, C_toPoly, Polynomial.map_C]
@@ -211,11 +303,6 @@ theorem coeff_finsetSum {ι : Type*} [DecidableEq ι] [CommSemiring R] [BEq R] [
   induction s using Finset.induction_on with
   | empty => rw [Finset.sum_empty, Finset.sum_empty, coeff_zero]
   | insert a s ha ih => rw [Finset.sum_insert ha, Finset.sum_insert ha, coeff_add, ih]
-
-/-- Coefficient extensionality, the computable counterpart of `Polynomial.ext`. -/
-theorem ext_coeff [Semiring R] [BEq R] [LawfulBEq R] {p q : CPolynomial R}
-    (h : ∀ n, p.coeff n = q.coeff n) : p = q :=
-  toPoly_injective (Polynomial.ext fun n => by rw [← coeff_toPoly, ← coeff_toPoly, h])
 
 theorem coeff_eq_zero_of_natDegree_lt [Semiring R] [BEq R] [LawfulBEq R] {p : CPolynomial R}
     {n : ℕ} (h : p.natDegree < n) : p.coeff n = 0 := by

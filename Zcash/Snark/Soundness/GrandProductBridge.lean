@@ -73,9 +73,9 @@ theorem nestedPoly_pairProdDiff (sp tp : Multiset (Fp × Fp)) :
       F ((m.map (fun p => X + C (encPair p : CPoly))).prod)
         = (m.map (fun p => Polynomial.X + Polynomial.C (encPair p).toPoly)).prod := by
     intro m
-    rw [map_multiset_prod, Multiset.map_map]
+    rw [_root_.map_multiset_prod, Multiset.map_map]
     exact congrArg Multiset.prod (Multiset.map_congr rfl fun p _ => hfac p)
-  rw [pairProdDiff, hring, map_sub, hmap sp, hmap tp]
+  rw [pairProdDiff, hring, _root_.map_sub, hmap sp, hmap tp]
 
 /-- The `j`-th `γ` coefficient of the pair difference: an elementary symmetric polynomial in the
 `β`-linear pair encodings on each side, zero above that side's multiset size. -/
@@ -257,6 +257,23 @@ theorem toPoly_lookupProdDiffCoeff (a s inp tbl : Multiset Fp) (j : ℕ) :
 def lookupProdDiffGamma (a s inp tbl : Multiset Fp) (beta : Fp) : CPoly :=
   C (eval beta (a.map (fun u => X + C u)).prod) * (s.map (fun u => X + C u)).prod
     - C (eval beta (inp.map (fun u => X + C u)).prod) * (tbl.map (fun u => X + C u)).prod
+
+/-- Fixing `β` is exactly mapping the coefficient ring by evaluation at `β`. -/
+theorem lookupProdDiffGamma_eq_map (a s inp tbl : Multiset Fp) (beta : Fp) :
+    lookupProdDiffGamma a s inp tbl beta
+      = CompPoly.CPolynomial.map (evalRingHom beta) (lookupProdDiff a s inp tbl) := by
+  have hprod : ∀ m : Multiset Fp,
+      CompPoly.CPolynomial.map (evalRingHom beta) ((m.map (fun u => (X + C (C u) : CBiPoly))).prod)
+        = (m.map (fun u => X + C u)).prod := by
+    intro m
+    rw [CompPoly.CPolynomial.map_multiset_prod, Multiset.map_map]
+    refine congrArg Multiset.prod (Multiset.map_congr rfl fun u _ => ?_)
+    rw [Function.comp_apply, CompPoly.CPolynomial.map_add, CompPoly.CPolynomial.map_X,
+      CompPoly.CPolynomial.map_C, coe_evalRingHom, eval_C]
+  rw [lookupProdDiffGamma, lookupProdDiff, CompPoly.CPolynomial.map_sub,
+    CompPoly.CPolynomial.map_mul, CompPoly.CPolynomial.map_mul, CompPoly.CPolynomial.map_C,
+    CompPoly.CPolynomial.map_C, hprod s, hprod tbl, coe_evalRingHom]
+
 
 theorem toPoly_lookupProdDiffGamma (a s inp tbl : Multiset Fp) (beta : Fp) :
     (lookupProdDiffGamma a s inp tbl beta).toPoly =
