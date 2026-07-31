@@ -30,8 +30,9 @@ at all — the assertion then reads as covering one theorem while checking anoth
 CompElliptic has a sibling `CompElliptic/Meta/AxiomCheck.lean`, but the two have diverged: this
 version is a strict superset, adding the `+native(D₁, …)` owner list (upstream takes a bare
 `+native`, so it cannot state *which* certificate it trusts), the marker parsing and
-owner/module/range provenance checks, `checkFullyQualified`, the exact-set staleness check, and
-the negative regression suite. Ironwood re-checks every inherited axiom itself, so the census here
+owner/module/range provenance checks, `checkFullyQualified`, the exact-set staleness check, the
+`assert_computable` definition-safety check, and the negative regression suite. Ironwood re-checks
+every inherited axiom itself, so the census here
 does not depend on the upstream version's strength; porting this file upstream is tracked
 separately. Improvements made here should be considered for upstream, not assumed present there.
 -/
@@ -199,11 +200,11 @@ elab "assert_axioms " n:ident native:(nativeFlag)? : command => do
     throwError "{n} depends on unexpected axiom(s): {unexpected.toList}"
 
 /--
-`assert_computable foo` fails the build unless `foo` is a plain `def` — an actual
-definition, not marked `noncomputable` — depending on no axioms beyond `propext` / `Quot.sound`.
-This is the breaks-as-computed-data check: the data is genuinely computed, and with
-`Classical.choice` excluded it cannot have been conjured from mere propositional existence even
-in erased positions.
+`assert_computable foo` fails the build unless `foo` is a plain `def` — an actual definition,
+marked neither `unsafe`/`partial` nor `noncomputable` — depending on no axioms beyond
+`propext` / `Quot.sound`. This is the breaks-as-computed-data check: the data is genuinely
+computed, and with `Classical.choice` excluded it cannot have been conjured from mere
+propositional existence even in erased positions.
 
 `assert_computable foo +choice` additionally permits `Classical.choice`. Together with the
 plain-`def` check this asserts choice enters only through erased `Prop` fields: had it touched the
@@ -212,15 +213,25 @@ the named declarations' `native_decide` compiler-trust axioms.
 
 The plain-`def` check guards a gap in "computability is compiler-enforced": marking a reduction
 `noncomputable` later would still build, silently voiding the convention; this assertion catches
-it.
+it. The definition-safety check closes the same gap from the other side. An `unsafe` def is a
+`.defnInfo` like any other and is not `noncomputable`, so neither the kind check nor
+`isNoncomputable` sees it — yet `unsafe` lifts the termination check, so such a definition can
+inhabit its result type by bare self-reference (`unsafe def r : Break := r`) while computing
+nothing. The kernel does refuse to let a safe declaration depend on an unsafe one, which confines
+the forgery to a reduction no safe proof consumes; that is exactly the shape of a deliverable
+endpoint reduction, which is why the assertion checks safety itself rather than leaning on the
+kernel. `Zcash.Meta.Tests.AxiomCheck.ComputableSafety` pins the rejection.
 -/
 elab "assert_computable " n:ident choice:("+choice")? native:(nativeFlag)? : command => do
   let name ← liftCoreM <| realizeGlobalConstNoOverloadWithInfo n
   checkFullyQualified n name
   let env ← getEnv
-  let info ← liftCoreM <| getConstInfo name
-  unless info matches .defnInfo _ do
-    throwError "{n} is not a def"
+  let .defnInfo val ← liftCoreM <| getConstInfo name
+    | throwError "{n} is not a def"
+  match val.safety with
+  | .safe => pure ()
+  | .unsafe => throwError "{n} is marked unsafe"
+  | .partial => throwError "{n} is marked partial"
   if Lean.isNoncomputable env name then
     throwError "{n} is marked noncomputable"
   let axs ← collectAxioms name
