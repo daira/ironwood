@@ -49,17 +49,11 @@ private theorem coeff_prod_X_add_C_eq_zero {R : Type*} [CommRing R] [Nontrivial 
     obtain ⟨p, _, rfl⟩ := Multiset.mem_map.mp hf
     exact Polynomial.monic_X_add_C _
 
-/-- The `β`-linear encoding of a `(value, name)` pair. -/
-def encPairC (p : Fp × Fp) : CPoly := C p.1 + C p.2 * X
-
-@[simp] theorem toPoly_encPairC (p : Fp × Fp) : (encPairC p).toPoly = encPair p := by
-  simp [encPairC, encPair]
-
 /-- The difference of the two pair-encoded products, a polynomial in `γ` with coefficients in
 `Fp[β]`.  The outer indeterminate is `γ`, the inner one `β`. -/
 def pairProdDiff (sp tp : Multiset (Fp × Fp)) : CBiPoly :=
-  (sp.map (fun p => X + C (encPairC p))).prod
-    - (tp.map (fun p => X + C (encPairC p))).prod
+  (sp.map (fun p => X + C (encPair p : CPoly))).prod
+    - (tp.map (fun p => X + C (encPair p : CPoly))).prod
 
 /-- The nested Mathlib image of a computable bivariate: the outer `toPoly`, then the coefficient
 ring carried across the same isomorphism.  This is where `prod_pair_inj` lives. -/
@@ -68,20 +62,20 @@ noncomputable def nestedPoly (p : CBiPoly) : Polynomial (Polynomial Fp) :=
 
 theorem nestedPoly_pairProdDiff (sp tp : Multiset (Fp × Fp)) :
     nestedPoly (pairProdDiff sp tp) =
-      (sp.map (fun p => Polynomial.X + Polynomial.C (encPair p))).prod
-        - (tp.map (fun p => Polynomial.X + Polynomial.C (encPair p))).prod := by
+      (sp.map (fun p => Polynomial.X + Polynomial.C (encPair p).toPoly)).prod
+        - (tp.map (fun p => Polynomial.X + Polynomial.C (encPair p).toPoly)).prod := by
   set F : CBiPoly →+* Polynomial (Polynomial Fp) :=
     (Polynomial.mapRingHom (CPolynomial.ringEquiv (R := Fp)).toRingHom).comp
       (CPolynomial.ringEquiv (R := CPoly)).toRingHom with hF
   have hring : ∀ p : CBiPoly, nestedPoly p = F p := fun _ => rfl
   have hfac : ∀ p : Fp × Fp,
-      F (X + C (encPairC p)) = Polynomial.X + Polynomial.C (encPair p) := by
+      F (X + C (encPair p)) = Polynomial.X + Polynomial.C (encPair p).toPoly := by
     intro p
     rw [← hring]
-    simp [nestedPoly, encPairC, encPair, CPolynomial.ringEquiv]
+    simp [nestedPoly, encPair, encPair, CPolynomial.ringEquiv]
   have hmap : ∀ m : Multiset (Fp × Fp),
-      F ((m.map (fun p => X + C (encPairC p))).prod)
-        = (m.map (fun p => Polynomial.X + Polynomial.C (encPair p))).prod := by
+      F ((m.map (fun p => X + C (encPair p : CPoly))).prod)
+        = (m.map (fun p => Polynomial.X + Polynomial.C (encPair p).toPoly)).prod := by
     intro m
     rw [map_multiset_prod, Multiset.map_map]
     exact congrArg Multiset.prod (Multiset.map_congr rfl fun p _ => hfac p)
@@ -127,21 +121,21 @@ theorem coeff_nestedPoly (p : CBiPoly) (j : ℕ) :
 /-- The `j`-th `γ` coefficient of the pair difference: an elementary symmetric polynomial in the
 `β`-linear pair encodings on each side, zero above that side's multiset size. -/
 def pairProdDiffCoeff (sp tp : Multiset (Fp × Fp)) (j : ℕ) : CPoly :=
-  (if j ≤ Multiset.card sp then (sp.map encPairC).esymm (Multiset.card sp - j) else 0)
-    - (if j ≤ Multiset.card tp then (tp.map encPairC).esymm (Multiset.card tp - j) else 0)
+  (if j ≤ Multiset.card sp then (sp.map encPair).esymm (Multiset.card sp - j) else 0)
+    - (if j ≤ Multiset.card tp then (tp.map encPair).esymm (Multiset.card tp - j) else 0)
 
 theorem toPoly_pairProdDiffCoeff (sp tp : Multiset (Fp × Fp)) (j : ℕ) :
     (pairProdDiffCoeff sp tp j).toPoly = (nestedPoly (pairProdDiff sp tp)).coeff j := by
   rw [nestedPoly_pairProdDiff, pairProdDiffCoeff, toPoly_sub, Polynomial.coeff_sub]
   congr 1
   · split <;> rename_i hj
-    · rw [toPoly_multiset_esymm, Multiset.prod_X_add_C_coeff' sp encPair hj]
+    · rw [toPoly_multiset_esymm, Multiset.prod_X_add_C_coeff' sp (fun p => (encPair p).toPoly) hj]
       simp [Multiset.map_map]
-    · rw [toPoly_zero, coeff_prod_X_add_C_eq_zero sp encPair (not_le.mp hj)]
+    · rw [toPoly_zero, coeff_prod_X_add_C_eq_zero sp (fun p => (encPair p).toPoly) (not_le.mp hj)]
   · split <;> rename_i hj
-    · rw [toPoly_multiset_esymm, Multiset.prod_X_add_C_coeff' tp encPair hj]
+    · rw [toPoly_multiset_esymm, Multiset.prod_X_add_C_coeff' tp (fun p => (encPair p).toPoly) hj]
       simp [Multiset.map_map]
-    · rw [toPoly_zero, coeff_prod_X_add_C_eq_zero tp encPair (not_le.mp hj)]
+    · rw [toPoly_zero, coeff_prod_X_add_C_eq_zero tp (fun p => (encPair p).toPoly) (not_le.mp hj)]
 
 /-- The difference is nonzero whenever the multisets of pairs differ — this is `prod_pair_inj` read
 contrapositively, and it is what makes the `β` bad set below a genuine root set. -/
@@ -209,7 +203,7 @@ theorem multiset_pair_eq_of_map_eq {sp tp : Multiset (Fp × Fp)} {β : Fp}
   refine (not_mem_szBadSet.mp (hgoodβ j)) hjC ?_
   have hmapped : (nestedPoly (pairProdDiff sp tp)).map (Polynomial.evalRingHom β) = 0 := by
     have hconv : ∀ m : Multiset (Fp × Fp),
-        ((m.map (fun p => Polynomial.X + Polynomial.C (encPair p))).prod).map
+        ((m.map (fun p => Polynomial.X + Polynomial.C (encPair p).toPoly)).prod).map
             (Polynomial.evalRingHom β)
           = ((m.map (fun p => p.1 + p.2 * β)).map
               (fun u => Polynomial.X + Polynomial.C u)).prod := by

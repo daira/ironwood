@@ -136,7 +136,7 @@ theorem natDegree_coeff_pairProdDiff_le (sp tp : Multiset (Fp × Fp)) (j : ℕ) 
     ((nestedPoly (pairProdDiff sp tp)).coeff j).natDegree
       ≤ max (Multiset.card sp) (Multiset.card tp) := by
   have key : ∀ (m : Multiset (Fp × Fp)) (j : ℕ),
-      (((m.map (fun q => Polynomial.X + Polynomial.C (encPair q))).prod).coeff j).natDegree ≤ Multiset.card m := by
+      (((m.map (fun q => Polynomial.X + Polynomial.C (encPair q).toPoly)).prod).coeff j).natDegree ≤ Multiset.card m := by
     intro m
     induction m using Multiset.induction with
     | empty =>
@@ -154,10 +154,11 @@ theorem natDegree_coeff_pairProdDiff_le (sp tp : Multiset (Fp × Fp)) (j : ℕ) 
             exact le_trans (ih j') (by simp)
         · rw [Polynomial.coeff_C_mul]
           refine le_trans (Polynomial.natDegree_mul_le) ?_
-          have hencp : (encPair q).natDegree ≤ 1 := by
+          have hencp : (encPair q).toPoly.natDegree ≤ 1 := by
+            rw [toPoly_encPair]
             refine le_trans (Polynomial.natDegree_add_le _ _) (max_le (by simp) ?_)
             exact le_trans Polynomial.natDegree_mul_le (by simp)
-          calc (encPair q).natDegree + (((m.map (fun q => Polynomial.X + Polynomial.C (encPair q))).prod).coeff j).natDegree
+          calc (encPair q).toPoly.natDegree + (((m.map (fun q => Polynomial.X + Polynomial.C (encPair q).toPoly)).prod).coeff j).natDegree
               ≤ 1 + Multiset.card m := Nat.add_le_add hencp (ih j)
             _ = Multiset.card (q ::ₘ m) := by rw [Multiset.card_cons]; omega
   rw [nestedPoly_pairProdDiff, Polynomial.coeff_sub]
@@ -170,11 +171,12 @@ theorem pairProdDiff_coeff_eq_zero_of_le (sp tp : Multiset (Fp × Fp)) {j : ℕ}
     (hj : max (Multiset.card sp) (Multiset.card tp) < j) :
     (nestedPoly (pairProdDiff sp tp)).coeff j = 0 := by
   have key : ∀ (m : Multiset (Fp × Fp)), Multiset.card m < j →
-      ((m.map (fun q => Polynomial.X + Polynomial.C (encPair q))).prod).coeff j = 0 := by
+      ((m.map (fun q => Polynomial.X + Polynomial.C (encPair q).toPoly)).prod).coeff j = 0 := by
     intro m hm
     refine Polynomial.coeff_eq_zero_of_natDegree_lt (lt_of_le_of_lt ?_ hm)
     have hmap : ∀ m : Multiset (Fp × Fp),
-        m.map (fun q => Polynomial.X + Polynomial.C (encPair q)) = (m.map encPair).map (fun u => Polynomial.X + Polynomial.C u) := by
+        m.map (fun q => Polynomial.X + Polynomial.C (encPair q).toPoly)
+          = (m.map (fun q => (encPair q).toPoly)).map (fun u => Polynomial.X + Polynomial.C u) := by
       intro m; simp [Multiset.map_map]
     rw [hmap, natDegree_prod_X_add_u]
     simp

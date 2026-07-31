@@ -1,4 +1,5 @@
 import Mathlib.Tactic
+import CompPoly.Univariate.ToPoly
 
 /-!
 # The grand-product-to-multiset kernel (permutation & lookup soundness)
@@ -96,29 +97,41 @@ theorem card_eval_prod_eq_le {F : Type*} [Field F] [Fintype F] [DecidableEq F]
     _ = max (Multiset.card s) (Multiset.card t) := by
           rw [natDegree_prod_X_add_u s, natDegree_prod_X_add_u t]
 
-/-- Encode a pair `(v, n)` as the `F[β]`-element `v + n·β` (here `β = X` in `Polynomial F`).
+/-- Encode a pair `(v, n)` as the `F[β]`-element `v + n·β` (here `β = X`).
 Injective, since `v` and `n` are its degree-0 and degree-1 coefficients. -/
-noncomputable def encPair {F : Type*} [Field F] (p : F × F) : Polynomial F := C p.1 + C p.2 * X
+def encPair {F : Type*} [Field F] [BEq F] [LawfulBEq F] (p : F × F) : CompPoly.CPolynomial F :=
+  CompPoly.CPolynomial.C p.1 + CompPoly.CPolynomial.C p.2 * CompPoly.CPolynomial.X
 
-theorem encPair_injective {F : Type*} [Field F] : Function.Injective (encPair (F := F)) := by
+@[simp] theorem toPoly_encPair {F : Type*} [Field F] [BEq F] [LawfulBEq F] (p : F × F) :
+    (encPair p).toPoly = C p.1 + C p.2 * X := by
+  rw [encPair, CompPoly.CPolynomial.toPoly_add, CompPoly.CPolynomial.toPoly_mul,
+    CompPoly.CPolynomial.C_toPoly, CompPoly.CPolynomial.C_toPoly,
+    CompPoly.CPolynomial.X_toPoly]
+
+theorem encPair_injective {F : Type*} [Field F] [BEq F] [LawfulBEq F] :
+    Function.Injective (encPair (F := F)) := by
   intro p q hpq
+  have hpq' := congrArg CompPoly.CPolynomial.toPoly hpq
+  rw [toPoly_encPair, toPoly_encPair] at hpq'
   refine Prod.ext_iff.mpr ⟨?_, ?_⟩
-  · simpa [encPair, coeff_add, coeff_C, coeff_C_mul, coeff_X_zero] using
-      congrArg (Polynomial.coeff · 0) hpq
-  · simpa [encPair, coeff_add, coeff_C, coeff_C_mul, coeff_X_one] using
-      congrArg (Polynomial.coeff · 1) hpq
+  · simpa [coeff_add, coeff_C, coeff_C_mul, coeff_X_zero] using
+      congrArg (Polynomial.coeff · 0) hpq'
+  · simpa [coeff_add, coeff_C, coeff_C_mul, coeff_X_one] using
+      congrArg (Polynomial.coeff · 1) hpq'
 
 /-- **Multisets of pairs.** `∏ (vᵢ + nᵢ·β + γ) = ∏ (cⱼ + dⱼ·β + γ) ⟹ {(vᵢ,nᵢ)} = {(cⱼ,dⱼ)}`.
 The factor `vᵢ + nᵢ·β + γ` is `X + C (encPair (vᵢ,nᵢ))` over `R = F[β]` (variable `X = γ`), so this is
 just `prod_X_add_u_inj` over the domain `F[β]` followed by `encPair`-injectivity. This is the multiset
 identity the permutation argument needs (pairs of `(value, name)`, not just sums). -/
-theorem prod_pair_inj {F : Type*} [Field F] {sp tp : Multiset (F × F)}
-    (h : (sp.map (fun p => X + C (encPair p))).prod
-       = (tp.map (fun p => X + C (encPair p))).prod) : sp = tp := by
+theorem prod_pair_inj {F : Type*} [Field F] [BEq F] [LawfulBEq F] {sp tp : Multiset (F × F)}
+    (h : (sp.map (fun p => X + C (encPair p).toPoly)).prod
+       = (tp.map (fun p => X + C (encPair p).toPoly)).prod) : sp = tp := by
   have conv : ∀ (m : Multiset (F × F)),
-      (m.map (fun p => X + C (encPair p))).prod = ((m.map encPair).map (fun u => X + C u)).prod := by
+      (m.map (fun p => X + C (encPair p).toPoly)).prod
+        = ((m.map (fun p => (encPair p).toPoly)).map (fun u => X + C u)).prod := by
     intro m; simp only [Multiset.map_map, Function.comp_def]
   rw [conv sp, conv tp] at h
-  exact Multiset.map_injective encPair_injective (prod_X_add_u_inj h)
+  refine Multiset.map_injective (fun p q hpq => encPair_injective ?_) (prod_X_add_u_inj h)
+  exact CompPoly.CPolynomial.toPolyLinearEquiv.injective hpq
 
 end Zcash.Snark
