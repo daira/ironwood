@@ -33,12 +33,12 @@ basis polynomial.
 def instanceCommitmentKey
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G) :
-    LagrangeCommitmentKey urs (top.toVerifierKey pp urs).omega where
+    LagrangeCommitmentKey urs (top.toVerifierKey urs).omega where
   generators := fun i =>
     commit urs
       (polynomialCoefficients (2 ^ urs.k)
         (rowPolynomial
-          (top.toVerifierKey pp urs).omega
+          (top.toVerifierKey urs).omega
           (Pi.single i (1 : Fp))))
   generator_eq := fun _ => rfl
 
@@ -65,7 +65,7 @@ def instanceCommitmentForShape
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
     (inputs : Fin pp.numProofs → PublicInput Fp) :
-    Fin (pp.mergeDerived top).numProofs → ℕ → G :=
+    Fin (top.shape.withProofParams pp).numProofs → ℕ → G :=
   fun proofIndex =>
     top.instanceCommitment pp urs inputs
       (Fin.cast (pp.mergeDerived_numProofs top) proofIndex)
@@ -121,31 +121,31 @@ variable
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
-    (hk : (pp.mergeDerived top).k = urs.k)
+    (hk : (top.shape.withProofParams pp).k = urs.k)
     (inputs : Fin pp.numProofs → PublicInput Fp)
-    (ps : ProofString (pp.mergeDerived top) Fp G)
-    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (ps : ProofString (top.shape.withProofParams pp) Fp G)
+    (ch : Challenges (top.shape.withProofParams pp).k Fp)
     (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
     (batchOpenings :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
         (x4BatchCommitments
           (instanceCommitment := top.instanceCommitmentForShape pp urs inputs)
-          urs hk (top.toVerifierKey pp urs) ps ch)
+          urs hk (top.toVerifierKey urs) ps ch)
         (x4BatchEvals
           (instanceCommitment := top.instanceCommitmentForShape pp urs inputs)
-          (top.toVerifierKey pp urs) ps ch)
+          (top.toVerifierKey urs) ps ch)
         a pU pW)
     (memberDecode : ∀ i (hi : i <
         deployedX4PairCount
           (instanceCommitment := top.instanceCommitmentForShape pp urs inputs)
-          (top.toVerifierKey pp urs) ps ch),
+          (top.toVerifierKey urs) ps ch),
       OpenedMemberDecode
         (instanceCommitment := top.instanceCommitmentForShape pp urs inputs)
-        urs hk (top.toVerifierKey pp urs)
+        urs hk (top.toVerifierKey urs)
         ps ch batchOpenings i hi)
     (haccepts :
       DeployedAccepts urs hk
-        (top.toVerifierKey pp urs)
+        (top.toVerifierKey urs)
         (top.instanceCommitmentForShape pp urs inputs) ps ch)
 
 /--
@@ -168,7 +168,7 @@ def acceptedColumn_eq_rowPolynomial_or_relation
           (top.publicInputLayout.cells index).1) ⊕'
       NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   let column := (top.publicInputLayout.cells index).1
-  let verifierProofIndex : Fin (pp.mergeDerived top).numProofs :=
+  let verifierProofIndex : Fin (top.shape.withProofParams pp).numProofs :=
     Fin.cast (pp.mergeDerived_numProofs top).symm proofIndex
   have hk' : top.domainExponent = urs.k :=
     (pp.mergeDerived_k top).symm.trans hk
@@ -182,16 +182,16 @@ def acceptedColumn_eq_rowPolynomial_or_relation
       hrows (by simpa only [Fin.val_cast] using hij)
     exact Fin.ext (by
       simpa only [Fin.val_cast] using congrArg Fin.val hcast)
-  have hquery : ∃ q ∈ assembleQueries (top.toVerifierKey pp urs)
+  have hquery : ∃ q ∈ assembleQueries (top.toVerifierKey urs)
       (top.instanceCommitmentForShape pp urs inputs) ps ch,
       q.commId = .instanceCol proofIndex column.index := by
     obtain ⟨instanceRotation, hregistered⟩ :=
       top.exists_rotation_mem_instanceQueries_of_publicInputLayout_cell index
     simpa only [verifierProofIndex, Fin.val_cast] using
       (instanceQuery_of_layout
-        (top.toVerifierKey pp urs) (top.instanceCommitmentForShape pp urs inputs) ps ch
+        (top.toVerifierKey urs) (top.instanceCommitmentForShape pp urs inputs) ps ch
         verifierProofIndex column.index instanceRotation
-        (top.toVerifierKey_instanceQueryCount pp urs)
+        (top.toVerifierKey_instanceQueryCount urs)
         (top.mem_instanceQueryLayout_of_mem_constraintSystem
           column instanceRotation hregistered))
   have hbound :=

@@ -25,7 +25,7 @@ open Zcash.Arithmetic (scalarFieldOrder URS)
 open scoped ENNReal
 
 private theorem actionProofShape_eq_maxShape (numProofs : ℕ) :
-    (actionProofParamsFor numProofs).mergeDerived actionCircuit =
+    actionCircuit.shape.withProofParams (actionProofParamsFor numProofs) =
       Zcash.Snark.FixtureMax.shape numProofs := by
   rw [actionProofParamsFor_mergeDerived_eq]
   rfl
@@ -36,12 +36,12 @@ private theorem actionProofShape_eq_maxShape (numProofs : ℕ) :
 Action bundle statement at its supplied public inputs is false. -/
 def actionAcceptFalseStatementEvent
     (family : ComputedStraightLineDeployedFSFamily
-      (actionProofParams.mergeDerived actionCircuit))
+      (actionCircuit.shape.withProofParams actionProofParams))
     (inputs : Fin actionProofParams.numProofs →
       PublicInputs Fp) :
     Set ((AugmentedIndex actionCircuit.n → VestaG) ×
       (BTranscript Fp VestaG
-        (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
+        (preIpaLen (actionCircuit.shape.withProofParams actionProofParams) family.init.length 10
           + 3 * actionCircuit.domainExponent) → Fp)) :=
   family.straightLineConstraintSemanticFailureEvent
     (topLevelBundleStatementDecoded actionCircuit actionProofParams family inputs)
@@ -49,13 +49,13 @@ def actionAcceptFalseStatementEvent
 /-- Literal accepting-false-`BundleStatement` event at an arbitrary Action bundle size. -/
 def actionAcceptFalseStatementEventFor (numProofs : ℕ)
     (family : ComputedStraightLineDeployedFSFamily
-      ((actionProofParamsFor numProofs).mergeDerived actionCircuit))
+      (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)))
     (inputs : Fin (actionProofParamsFor numProofs).numProofs →
       PublicInputs Fp) :
     Set ((AugmentedIndex
       actionCircuit.n → VestaG) ×
       (BTranscript Fp VestaG
-        (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+        (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
           family.init.length 10 +
           3 * actionCircuit.domainExponent) → Fp)) :=
   family.straightLineConstraintSemanticFailureEvent
@@ -105,13 +105,13 @@ theorem derived_scalars :
     actionCircuit.verifierCS.permutationChunks =
       vk.permutationChunks := by
   have hcast := castVk_field shape_eq_mergeDerived
-    (actionCircuit.toVerifierKey actionProofParams capturedURS)
+    (actionCircuit.toVerifierKey capturedURS)
   simp only [actionCircuit.toVerifierKey_omega, actionCircuit.toVerifierKey_n,
     actionCircuit.toVerifierKey_gates, actionCircuit.toVerifierKey_instanceQueryLayout,
     actionCircuit.toVerifierKey_adviceQueryLayout, actionCircuit.toVerifierKey_fixedQueryLayout,
     actionCircuit.toVerifierKey_permutationChunks] at hcast
   have hvk : (shape_eq_mergeDerived ▸
-      actionCircuit.toVerifierKey actionProofParams capturedURS :
+      actionCircuit.toVerifierKey capturedURS :
       VerifyingKey shape Fp VestaG) = vk := vk_eq_toVerifierKey.symm
   exact ⟨hcast.1.trans (congrArg VerifyingKey.omega hvk),
     hcast.2.1.trans (congrArg VerifyingKey.n hvk),
@@ -135,11 +135,11 @@ theorem derived_lookups
     actionCircuit.verifierCS.lookupTableExprs l =
       vk.lookupTableExprs (Fin.cast action_numLookups_eq l) := by
   have hcast := castVk_lookup shape_eq_mergeDerived
-    (actionCircuit.toVerifierKey actionProofParams capturedURS) l
+    (actionCircuit.toVerifierKey capturedURS) l
   simp only [actionCircuit.toVerifierKey_lookupInputExprs,
     actionCircuit.toVerifierKey_lookupTableExprs] at hcast
   have hvk : (shape_eq_mergeDerived ▸
-      actionCircuit.toVerifierKey actionProofParams capturedURS :
+      actionCircuit.toVerifierKey capturedURS :
       VerifyingKey shape Fp VestaG) = vk := vk_eq_toVerifierKey.symm
   constructor
   · exact hcast.1.trans (by
@@ -177,8 +177,8 @@ private theorem md_counts :
 transferred through the derived key's scalar equalities. -/
 theorem staticChecks_of_derived
     (family : ComputedStraightLineDeployedFSFamily
-      (actionProofParams.mergeDerived actionCircuit))
-    (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey actionProofParams
+      (actionCircuit.shape.withProofParams actionProofParams))
+    (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey
       (ursOfAugmentedBasis actionCircuit.domainExponent basis)) :
     DeployedConstraintStaticChecks family.toRootFamily where
   adviceLength := fun basis => by
@@ -207,8 +207,8 @@ theorem staticChecks_of_derived
 transfer through the scalar equalities, and pinning is the family's own derived projection. -/
 noncomputable def schedule_of_derived
     (family : ComputedStraightLineDeployedFSFamily
-      (actionProofParams.mergeDerived actionCircuit))
-    (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey actionProofParams
+      (actionCircuit.shape.withProofParams actionProofParams))
+    (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey
       (ursOfAugmentedBasis actionCircuit.domainExponent basis)) :
     DeployedConstraintXSqueezeSchedule family.toRootFamily
       ((20470 : ℕ) / (Fintype.card Fp : ℝ≥0∞)) := by
@@ -276,9 +276,9 @@ private theorem md_counts_for (numProofs : ℕ) :
 /-- The captured static checks transported to an arbitrary Action bundle size. -/
 theorem staticChecks_of_derived_for (numProofs : ℕ)
     (family : ComputedStraightLineDeployedFSFamily
-      ((actionProofParamsFor numProofs).mergeDerived actionCircuit))
+      (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)))
     (hvk : ∀ basis, family.vk basis =
-      actionCircuit.toVerifierKey (actionProofParamsFor numProofs)
+      actionCircuit.toVerifierKey
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis)) :
     DeployedConstraintStaticChecks family.toRootFamily where
@@ -307,9 +307,9 @@ theorem staticChecks_of_derived_for (numProofs : ℕ)
 /-- The captured `x`-squeeze schedule transported to an arbitrary Action bundle size. -/
 noncomputable def schedule_of_derived_for (numProofs : ℕ)
     (family : ComputedStraightLineDeployedFSFamily
-      ((actionProofParamsFor numProofs).mergeDerived actionCircuit))
+      (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)))
     (hvk : ∀ basis, family.vk basis =
-      actionCircuit.toVerifierKey (actionProofParamsFor numProofs)
+      actionCircuit.toVerifierKey
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis)) :
     DeployedConstraintXSqueezeSchedule family.toRootFamily
@@ -367,11 +367,11 @@ theorem actionLookupInputArity_le :
   native_decide
 
 private theorem resolverPermutationCell_card_le
-    (pp : Keygen.ProofParams) (urs : URS VestaG)
+    (pp : ProofParams) (urs : URS VestaG)
     (poly : CommitmentId → CPoly)
     (p : Fin pp.numProofs) :
     Fintype.card
-        (ResolverPermutationCell (actionCircuit.toVerifierKey pp urs) poly p actionActiveRows) ≤
+        (ResolverPermutationCell (actionCircuit.toVerifierKey urs) poly p actionActiveRows) ≤
       2 ^ 16 := by
   rw [resolverPermutationCell_card]
   calc
@@ -400,11 +400,11 @@ private theorem resolverPermutationCell_card_le
 /-- The exact per-Action permutation-cell count.  Unlike the old `2^16` envelope, this
 tight value keeps the consensus-maximum β budget below `2^46`. -/
 theorem resolverPermutationCell_card_eq
-    (pp : Keygen.ProofParams) (urs : URS VestaG)
+    (pp : ProofParams) (urs : URS VestaG)
     (poly : CommitmentId → CPoly)
     (p : Fin pp.numProofs) :
     Fintype.card
-        (ResolverPermutationCell (actionCircuit.toVerifierKey pp urs) poly p actionActiveRows) =
+        (ResolverPermutationCell (actionCircuit.toVerifierKey urs) poly p actionActiveRows) =
       30630 := by
   rw [resolverPermutationCell_card]
   rw [pp.mergeDerived_numPermutationSets actionCircuit]
@@ -454,7 +454,7 @@ private theorem cap_theta_for (numProofs : ℕ) :
                 ≤ 2 ^ 12 * (2 ^ 11 * 4) :=
               Nat.mul_le_mul_right _ actionLookupActivationCount_le
             _ = 2 ^ 25 := by norm_num
-        simpa only [Keygen.ProofParams.mergeDerived, actionProofParamsFor,
+        simpa only [ProofParams.mergeDerived, actionProofParamsFor,
           Nat.cast_id, _root_.mul_assoc] using Nat.mul_le_mul_left numProofs hscaled
 
 /-- The tight β budget is `950835027` per Action, including permutation cells and all three
@@ -606,7 +606,7 @@ private theorem cap_theta :
                 ≤ 2 ^ 12 * (2 ^ 11 * 4) :=
               Nat.mul_le_mul_right _ actionLookupActivationCount_le
             _ = 2 ^ 25 := by norm_num
-        simpa only [Keygen.ProofParams.mergeDerived, actionProofParams, actionProofParamsFor,
+        simpa only [ProofParams.mergeDerived, actionProofParams, actionProofParamsFor,
           _root_.one_mul, Nat.cast_id] using hscaled
 
 private theorem cap_beta :
@@ -742,7 +742,7 @@ prover polynomial assignment. -/
 theorem adaptive_action_constraint_count_le
     (basis : AugmentedIndex actionCircuit.n → VestaG)
     (inputs : Fin actionProofParams.numProofs → PublicInputs Fp)
-    (ps : ProofString (actionProofParams.mergeDerived actionCircuit) Fp VestaG)
+    (ps : ProofString (actionCircuit.shape.withProofParams actionProofParams) Fp VestaG)
     (source : List (AlgebraicPoint (F := Fp) basis))
     (ch : Challenges actionCircuit.domainExponent Fp) :
     (adaptiveActionCommittedModel actionProofParams basis inputs ps source ch).constraints.length
@@ -788,7 +788,7 @@ theorem adaptive_action_constraint_count_le_for (numProofs : ℕ)
       actionCircuit.n → VestaG)
     (inputs : Fin (actionProofParamsFor numProofs).numProofs →
       PublicInputs Fp)
-    (ps : ProofString ((actionProofParamsFor numProofs).mergeDerived actionCircuit) Fp VestaG)
+    (ps : ProofString (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)) Fp VestaG)
     (source : List (AlgebraicPoint (F := Fp) basis))
     (ch : Challenges actionCircuit.domainExponent Fp) :
     (adaptiveActionCommittedModel (actionProofParamsFor numProofs) basis inputs ps source ch).constraints.length ≤
@@ -828,7 +828,7 @@ private theorem adaptive_action_x_degree_le_for (numProofs : ℕ)
       actionCircuit.n → VestaG)
     (inputs : Fin (actionProofParamsFor numProofs).numProofs →
       PublicInputs Fp)
-    (ps : ProofString ((actionProofParamsFor numProofs).mergeDerived actionCircuit) Fp VestaG)
+    (ps : ProofString (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)) Fp VestaG)
     (source : List (AlgebraicPoint (F := Fp) basis))
     (ch : Challenges actionCircuit.domainExponent Fp) :
     (adaptiveActionPreXDifference (actionProofParamsFor numProofs) basis inputs ps source ch).natDegree ≤
@@ -845,7 +845,7 @@ private theorem adaptive_action_x_degree_le_for (numProofs : ℕ)
     norm_num
   have hpoint : ∀ g : VestaG,
       (onlinePointPolynomial
-        (shape := (actionProofParamsFor numProofs).mergeDerived actionCircuit)
+        (shape := actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
         source g).natDegree ≤ 2047 := by
     intro g
     unfold onlinePointPolynomial
@@ -853,7 +853,7 @@ private theorem adaptive_action_x_degree_le_for (numProofs : ℕ)
       (n := 2 ^ actionCircuit.domainExponent)
       (by positivity)
       (onlinePointCoordinates
-        (shape := (actionProofParamsFor numProofs).mergeDerived actionCircuit)
+        (shape := actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
         source g).1
     have hsize :
         2 ^ actionCircuit.domainExponent = 2048 := by
@@ -861,7 +861,7 @@ private theorem adaptive_action_x_degree_le_for (numProofs : ℕ)
       norm_num
     calc
       (onlinePointPolynomial
-          (shape := (actionProofParamsFor numProofs).mergeDerived actionCircuit)
+          (shape := actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
           source g).natDegree ≤ 2 ^ actionCircuit.domainExponent - 1 :=
         Nat.le_sub_one_of_lt h
       _ = 2047 := by rw [hsize]
@@ -1072,7 +1072,7 @@ theorem actionSemanticModelFor_at_2pow123 {numProofs Q : ℕ}
 
 /-- The compressed straight-line remainder at an arbitrary Action count. -/
 noncomputable def actionCompressedStatisticalModelFor (numProofs Q : ℕ) : ENNReal :=
-  let shape := (actionProofParamsFor numProofs).mergeDerived actionCircuit
+  let shape := actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)
   (Q + 1 : ℕ) * (1 / Fintype.card Fp) +
     (Q + 1 : ℕ) * (actionCircuit.domainExponent * (2 / (Fintype.card Fp : ENNReal))) +
     (Q + (11 + actionCircuit.domainExponent) + 1 : ℕ) *
@@ -1087,7 +1087,7 @@ noncomputable def actionStatisticalModelFor (numProofs Q : ℕ) : ENNReal :=
 /-- The bare-adaptive remainder at an arbitrary Action count.  It has the same four
 bundle-linear semantic terms and one `x` term, but only one execution of the pinned-root surface. -/
 noncomputable def adaptiveActionStatisticalModelFor (numProofs Q : ℕ) : ENNReal :=
-  let shape := (actionProofParamsFor numProofs).mergeDerived actionCircuit
+  let shape := actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)
   (Q + 1 : ℕ) * (1 / Fintype.card Fp) +
     (Q + 1 : ℕ) * (actionCircuit.domainExponent * (2 / (Fintype.card Fp : ENNReal))) +
     (Q + 1 : ℕ) * algebraicRootBudget shape actionCircuit.domainExponent +
@@ -1099,7 +1099,7 @@ larger pinned-root coefficient and an additional compressed-constraint `x` term.
 private theorem adaptiveActionStatisticalModelFor_le_action (numProofs Q : ℕ) :
     adaptiveActionStatisticalModelFor numProofs Q ≤
       actionStatisticalModelFor numProofs Q := by
-  let shape := (actionProofParamsFor numProofs).mergeDerived actionCircuit
+  let shape := actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)
   have hcoeff : ((Q + 1 : ℕ) : ENNReal) ≤
       ((Q + (11 + actionCircuit.domainExponent) + 1 : ℕ) : ENNReal) := by
     exact Nat.cast_le.mpr (by omega)
@@ -1138,7 +1138,7 @@ private theorem actionCompressedStatisticalModelFor_le_consensus
     exact ActionPermutationDomain.domainExponent_eq
   have hroot :
       algebraicRootBudget
-          ((actionProofParamsFor numProofs).mergeDerived actionCircuit) 11 ≤
+          (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)) 11 ≤
         algebraicRootBudget
           (Zcash.Snark.FixtureMax.shape orchardConsensusMaxProofs) 11 := by
     rw [actionProofShape_eq_maxShape]
@@ -1209,7 +1209,7 @@ theorem action_semantic_terms_le {Q : ℕ} (hQ : Q ≤ 2 ^ 123) :
 /-- The deployed one-Action shape has a much smaller pinned-root numerator than the
 consensus-maximum bundle: `queryBudget = 96` and the six root families total `48808 / |Fp|`. -/
 theorem action_algebraicRootBudget_eq :
-    algebraicRootBudget (actionProofParams.mergeDerived actionCircuit)
+    algebraicRootBudget (actionCircuit.shape.withProofParams actionProofParams)
         actionCircuit.domainExponent =
       (48808 : ENNReal) / Fintype.card Fp := by
   rw [shape_eq_mergeDerived]
@@ -1223,7 +1223,7 @@ noncomputable def actionStatisticalModel (Q : Nat) : ENNReal :=
       (actionCircuit.domainExponent *
         (2 / (Fintype.card Fp : ENNReal))) +
     (Q + (11 + actionCircuit.domainExponent) + 1 : Nat) *
-      algebraicRootBudget (actionProofParams.mergeDerived actionCircuit)
+      algebraicRootBudget (actionCircuit.shape.withProofParams actionProofParams)
         actionCircuit.domainExponent +
     1 / Fintype.card Fp +
     (Q + 1 : Nat) * ((20470 : Nat) / (Fintype.card Fp : ENNReal)) +
@@ -1245,7 +1245,7 @@ noncomputable def adaptiveActionStatisticalModel (Q : Nat) : ENNReal :=
     actionCircuit.domainExponent *
       ((Q + 1 : Nat) * (2 / (Fintype.card Fp : ENNReal))) +
     (Q + 1 : Nat) * algebraicRootBudget
-      (actionProofParams.mergeDerived actionCircuit)
+      (actionCircuit.shape.withProofParams actionProofParams)
       actionCircuit.domainExponent +
     1 / Fintype.card Fp +
     (Q + 1 : Nat) *
@@ -1278,7 +1278,7 @@ theorem adaptiveActionStatisticalModel_le_action (Q : Nat) :
     exact ActionPermutationDomain.domainExponent_eq
   have hsplit : actionStatisticalModel Q =
       adaptiveActionStatisticalModel Q +
-        22 * algebraicRootBudget (actionProofParams.mergeDerived actionCircuit) 11 +
+        22 * algebraicRootBudget (actionCircuit.shape.withProofParams actionProofParams) 11 +
         (Q + 1 : Nat) * ((20470 : Nat) / (Fintype.card Fp : ENNReal)) := by
     rw [actionStatisticalModel, adaptiveActionStatisticalModel, hk]
     push_cast
@@ -1373,7 +1373,7 @@ theorem actionStatisticalModel_at_2pow123 {Q : Nat} (hQ : Q <= 2 ^ 123) :
 query envelope at the `2^123` adversary target. -/
 theorem action_dlog_queries_le_2pow126
     (family : ComputedStraightLineDeployedFSFamily
-      (actionProofParams.mergeDerived actionCircuit))
+      (actionCircuit.shape.withProofParams actionProofParams))
     (hQ : family.Q ≤ 2 ^ 123) :
     actionDlogRandomOracleQueries actionProofParams family ≤ 2 ^ 126 := by
   unfold actionDlogRandomOracleQueries
@@ -1409,15 +1409,15 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured
     (query : AugmentedIndex actionCircuit.n → T)
     (hquery : Function.Injective query)
     (family : ComputedStraightLineDeployedFSFamily
-      (actionProofParams.mergeDerived actionCircuit))
+      (actionCircuit.shape.withProofParams actionProofParams))
     (inputs : Fin actionProofParams.numProofs → PublicInputs Fp)
-    (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey actionProofParams
+    (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey
       (ursOfAugmentedBasis actionCircuit.domainExponent basis))
     (hI : ∀ basis, family.instanceCommitment basis =
       actionCircuit.instanceCommitment actionProofParams
         (ursOfAugmentedBasis actionCircuit.domainExponent basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
-      (actionCircuit.toVerifierKey actionProofParams
+      (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis actionCircuit.domainExponent basis))
       (actionCircuit.instanceCommitment actionProofParams
         (ursOfAugmentedBasis actionCircuit.domainExponent basis) inputs)
@@ -1429,7 +1429,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured
     (hXY : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
+          (preIpaLen (actionCircuit.shape.withProofParams actionProofParams) family.init.length 10
             + 3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelXYFailureEvent actionCircuit actionProofParams family
@@ -1437,7 +1437,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured
     (hBeta : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
+          (preIpaLen (actionCircuit.shape.withProofParams actionProofParams) family.init.length 10
             + 3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelBetaFailureEvent actionCircuit actionProofParams family
@@ -1445,7 +1445,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured
     (hGamma : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
+          (preIpaLen (actionCircuit.shape.withProofParams actionProofParams) family.init.length 10
             + 3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelGammaFailureEvent actionCircuit actionProofParams family
@@ -1453,7 +1453,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured
     (hTheta : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
+          (preIpaLen (actionCircuit.shape.withProofParams actionProofParams) family.init.length 10
             + 3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelThetaFailureEvent actionCircuit actionProofParams family
@@ -1461,7 +1461,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
+          (preIpaLen (actionCircuit.shape.withProofParams actionProofParams) family.init.length 10
             + 3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           actionAcceptFalseStatementEvent family inputs) ≤
@@ -1470,7 +1470,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured
             (actionCircuit.domainExponent *
               (2 / (Fintype.card Fp : ENNReal))) +
           (family.Q + (11 + actionCircuit.domainExponent) + 1 : Nat) *
-            algebraicRootBudget (actionProofParams.mergeDerived actionCircuit)
+            algebraicRootBudget (actionCircuit.shape.withProofParams actionProofParams)
               actionCircuit.domainExponent +
           (profile.advantage (actionDlogRandomOracleQueries actionProofParams family)
               (actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
@@ -1498,11 +1498,11 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured_for
       actionCircuit.n → T)
     (hquery : Function.Injective query)
     (family : ComputedStraightLineDeployedFSFamily
-      ((actionProofParamsFor numProofs).mergeDerived actionCircuit))
+      (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)))
     (inputs : Fin (actionProofParamsFor numProofs).numProofs →
       PublicInputs Fp)
     (hvk : ∀ basis, family.vk basis =
-      actionCircuit.toVerifierKey (actionProofParamsFor numProofs)
+      actionCircuit.toVerifierKey
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis))
     (hI : ∀ basis, family.instanceCommitment basis =
@@ -1510,7 +1510,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured_for
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
-      (actionCircuit.toVerifierKey (actionProofParamsFor numProofs)
+      (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis))
       (actionCircuit.instanceCommitment (actionProofParamsFor numProofs)
@@ -1524,7 +1524,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured_for
     (hXY : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+          (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
             family.init.length 10 +
             3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
@@ -1533,7 +1533,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured_for
     (hBeta : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+          (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
             family.init.length 10 +
             3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
@@ -1542,7 +1542,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured_for
     (hGamma : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+          (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
             family.init.length 10 +
             3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
@@ -1551,7 +1551,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured_for
     (hTheta : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+          (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
             family.init.length 10 +
             3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
@@ -1560,7 +1560,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured_for
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+          (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
             family.init.length 10 +
             3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
@@ -1572,7 +1572,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured_for
           (family.Q +
               (11 + actionCircuit.domainExponent) + 1 : Nat) *
             algebraicRootBudget
-              ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+              (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
               actionCircuit.domainExponent +
           (profile.advantage
               (actionDlogRandomOracleQueries (actionProofParamsFor numProofs) family)
@@ -1600,15 +1600,15 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive
     (query : AugmentedIndex actionCircuit.n → T)
     (hquery : Function.Injective query)
     (family : ComputedAdaptiveOnlineAGMFSFamily
-      (actionProofParams.mergeDerived actionCircuit))
+      (actionCircuit.shape.withProofParams actionProofParams))
     (inputs : Fin actionProofParams.numProofs → PublicInputs Fp)
-    (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey actionProofParams
+    (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey
       (ursOfAugmentedBasis actionCircuit.domainExponent basis))
     (hI : ∀ basis, family.instanceCommitment basis =
       actionCircuit.instanceCommitment actionProofParams
         (ursOfAugmentedBasis actionCircuit.domainExponent basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
-      (actionCircuit.toVerifierKey actionProofParams
+      (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis actionCircuit.domainExponent basis))
       (actionCircuit.instanceCommitment actionProofParams
         (ursOfAugmentedBasis actionCircuit.domainExponent basis) inputs)
@@ -1618,7 +1618,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
+          (preIpaLen (actionCircuit.shape.withProofParams actionProofParams) family.init.length 10
             + 3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
       ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
         adaptiveActionAcceptFalseStatementEvent actionProofParams family inputs) ≤
@@ -1626,7 +1626,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive
         (actionCircuit.domainExponent *
           ((family.Q + 1 : Nat) * (2 / (Fintype.card Fp : ENNReal))) +
         ((family.Q + 1 : Nat) *
-          algebraicRootBudget (actionProofParams.mergeDerived actionCircuit)
+          algebraicRootBudget (actionCircuit.shape.withProofParams actionProofParams)
             actionCircuit.domainExponent +
         ((profile.advantage (adaptiveActionDlogRandomOracleQueries actionProofParams family)
               (adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
@@ -1641,7 +1641,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive
       (basis : AugmentedIndex
         actionCircuit.n → VestaG)
       (n : Fin 5)
-      (ps : ProofString (actionProofParams.mergeDerived actionCircuit) Fp VestaG)
+      (ps : ProofString (actionCircuit.shape.withProofParams actionProofParams) Fp VestaG)
       (_hwf : PsWellFormed ps)
       (source : List (AlgebraicPoint (F := Fp) basis))
       (earlier : Fin (n : Nat) → Fp),
@@ -1720,11 +1720,11 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive_for
       actionCircuit.n → T)
     (hquery : Function.Injective query)
     (family : ComputedAdaptiveOnlineAGMFSFamily
-      ((actionProofParamsFor numProofs).mergeDerived actionCircuit))
+      (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)))
     (inputs : Fin (actionProofParamsFor numProofs).numProofs →
       PublicInputs Fp)
     (hvk : ∀ basis, family.vk basis =
-      actionCircuit.toVerifierKey (actionProofParamsFor numProofs)
+      actionCircuit.toVerifierKey
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis))
     (hI : ∀ basis, family.instanceCommitment basis =
@@ -1732,7 +1732,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive_for
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
-      (actionCircuit.toVerifierKey (actionProofParamsFor numProofs)
+      (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis))
       (actionCircuit.instanceCommitment (actionProofParamsFor numProofs)
@@ -1745,7 +1745,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive_for
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+          (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
             family.init.length 10 +
             3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
       ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
@@ -1756,7 +1756,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive_for
           ((family.Q + 1 : ℕ) * (2 / (Fintype.card Fp : ENNReal))) +
         ((family.Q + 1 : ℕ) *
           algebraicRootBudget
-            ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+            (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
             actionCircuit.domainExponent +
         ((profile.advantage
               (adaptiveActionDlogRandomOracleQueries (actionProofParamsFor numProofs) family)
@@ -1775,7 +1775,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive_for
         actionCircuit.n → VestaG)
       (i : Fin 5)
       (ps : ProofString
-        ((actionProofParamsFor numProofs).mergeDerived actionCircuit) Fp VestaG)
+        (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)) Fp VestaG)
       (_hwf : PsWellFormed ps)
       (source : List (AlgebraicPoint (F := Fp) basis))
       (earlier : Fin (i : ℕ) → Fp),
@@ -1858,7 +1858,7 @@ theorem orchard_adaptiveActionSurface_measure_le_for
       PublicInputs Fp)
     (i : Fin 5)
     (ps : ProofString
-      ((actionProofParamsFor numProofs).mergeDerived actionCircuit) Fp VestaG)
+      (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)) Fp VestaG)
     (_hwf : PsWellFormed ps)
     (source : List (AlgebraicPoint (F := Fp) basis))
     (earlier : Fin (i : ℕ) → Fp) :
@@ -1926,11 +1926,11 @@ theorem orchard_action_knowledgeFailure_prob_le_adaptive_for
       (2 ^ actionCircuit.domainExponent) → T)
     (hquery : Function.Injective query)
     (family : ComputedAdaptiveOnlineAGMFSFamily
-      ((actionProofParamsFor numProofs).mergeDerived actionCircuit))
+      (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)))
     (inputs : Fin (actionProofParamsFor numProofs).numProofs →
       PublicInputs Fp)
     (hvk : ∀ basis, family.vk basis =
-      actionCircuit.toVerifierKey (actionProofParamsFor numProofs)
+      actionCircuit.toVerifierKey
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis))
     (hI : ∀ basis, family.instanceCommitment basis =
@@ -1938,7 +1938,7 @@ theorem orchard_action_knowledgeFailure_prob_le_adaptive_for
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
-      (actionCircuit.toVerifierKey (actionProofParamsFor numProofs)
+      (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis))
       (actionCircuit.instanceCommitment (actionProofParamsFor numProofs)
@@ -1951,7 +1951,7 @@ theorem orchard_action_knowledgeFailure_prob_le_adaptive_for
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+          (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
             family.init.length 10 +
             3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
       ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
@@ -1962,7 +1962,7 @@ theorem orchard_action_knowledgeFailure_prob_le_adaptive_for
           ((family.Q + 1 : ℕ) * (2 / (Fintype.card Fp : ENNReal))) +
         ((family.Q + 1 : ℕ) *
           algebraicRootBudget
-            ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+            (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
             actionCircuit.domainExponent +
         ((profile.advantage
               (adaptiveActionDlogRandomOracleQueries (actionProofParamsFor numProofs) family)
@@ -1981,7 +1981,7 @@ theorem orchard_action_knowledgeFailure_prob_le_adaptive_for
         (2 ^ actionCircuit.domainExponent) → VestaG)
       (i : Fin 5)
       (ps : ProofString
-        ((actionProofParamsFor numProofs).mergeDerived actionCircuit) Fp VestaG)
+        (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)) Fp VestaG)
       (_hwf : PsWellFormed ps)
       (source : List (AlgebraicPoint (F := Fp) basis))
       (earlier : Fin (i : ℕ) → Fp),
@@ -2015,15 +2015,15 @@ theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generato
     (query : AugmentedIndex actionCircuit.n → T)
     (hquery : Function.Injective query)
     (family : ComputedAdaptiveOnlineAGMFSFamily
-      (actionProofParams.mergeDerived actionCircuit))
+      (actionCircuit.shape.withProofParams actionProofParams))
     (inputs : Fin actionProofParams.numProofs → PublicInputs Fp)
-    (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey actionProofParams
+    (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey
       (ursOfAugmentedBasis actionCircuit.domainExponent basis))
     (hI : ∀ basis, family.instanceCommitment basis =
       actionCircuit.instanceCommitment actionProofParams
         (ursOfAugmentedBasis actionCircuit.domainExponent basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
-      (actionCircuit.toVerifierKey actionProofParams
+      (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis actionCircuit.domainExponent basis))
       (actionCircuit.instanceCommitment actionProofParams
         (ursOfAugmentedBasis actionCircuit.domainExponent basis) inputs)
@@ -2034,7 +2034,7 @@ theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generato
     ((independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen (actionProofParams.mergeDerived actionCircuit) family.init.length 10
+          (preIpaLen (actionCircuit.shape.withProofParams actionProofParams) family.init.length 10
             + 3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           adaptiveActionAcceptFalseStatementEvent actionProofParams family inputs) ≤
@@ -2085,11 +2085,11 @@ theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generato
       actionCircuit.n → T)
     (hquery : Function.Injective query)
     (family : ComputedAdaptiveOnlineAGMFSFamily
-      ((actionProofParamsFor numProofs).mergeDerived actionCircuit))
+      (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)))
     (inputs : Fin (actionProofParamsFor numProofs).numProofs →
       PublicInputs Fp)
     (hvk : ∀ basis, family.vk basis =
-      actionCircuit.toVerifierKey (actionProofParamsFor numProofs)
+      actionCircuit.toVerifierKey
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis))
     (hI : ∀ basis, family.instanceCommitment basis =
@@ -2097,7 +2097,7 @@ theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generato
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
-      (actionCircuit.toVerifierKey (actionProofParamsFor numProofs)
+      (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis))
       (actionCircuit.instanceCommitment (actionProofParamsFor numProofs)
@@ -2110,7 +2110,7 @@ theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generato
     ((independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+          (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
             family.init.length 10 +
             3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
@@ -2127,7 +2127,7 @@ theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generato
       ∀ (actual : PMF
           ((↥(Set.range query) → VestaG) ×
             (BTranscript Fp VestaG
-              (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+              (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
                 family.init.length 10 +
                 3 * actionCircuit.domainExponent) → Fp)))
         (εBias : ENNReal),
@@ -2135,7 +2135,7 @@ theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generato
           (independentProductPMF (orchardGeneratorROSetup query)
             (PMF.uniformOfFintype
               (BTranscript Fp VestaG
-                (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+                (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
                   family.init.length 10 +
                   3 * actionCircuit.domainExponent) → Fp)))
           εBias →
@@ -2163,7 +2163,7 @@ theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generato
       (independentProductPMF (orchardGeneratorROSetup query)
         (PMF.uniformOfFintype
           (BTranscript Fp VestaG
-            (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+            (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
               family.init.length 10 +
               3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
           ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
@@ -2208,11 +2208,11 @@ theorem orchard_action_knowledgeFailure_adaptive_2pow123_workFactor_generatorRO_
       (2 ^ actionCircuit.domainExponent) → T)
     (hquery : Function.Injective query)
     (family : ComputedAdaptiveOnlineAGMFSFamily
-      ((actionProofParamsFor numProofs).mergeDerived actionCircuit))
+      (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)))
     (inputs : Fin (actionProofParamsFor numProofs).numProofs →
       PublicInputs Fp)
     (hvk : ∀ basis, family.vk basis =
-      actionCircuit.toVerifierKey (actionProofParamsFor numProofs)
+      actionCircuit.toVerifierKey
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis))
     (hI : ∀ basis, family.instanceCommitment basis =
@@ -2220,7 +2220,7 @@ theorem orchard_action_knowledgeFailure_adaptive_2pow123_workFactor_generatorRO_
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
-      (actionCircuit.toVerifierKey (actionProofParamsFor numProofs)
+      (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis))
       (actionCircuit.instanceCommitment (actionProofParamsFor numProofs)
@@ -2233,7 +2233,7 @@ theorem orchard_action_knowledgeFailure_adaptive_2pow123_workFactor_generatorRO_
     ((independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+          (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
             family.init.length 10 +
             3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
@@ -2250,7 +2250,7 @@ theorem orchard_action_knowledgeFailure_adaptive_2pow123_workFactor_generatorRO_
       ∀ (actual : PMF
           ((↥(Set.range query) → VestaG) ×
             (BTranscript Fp VestaG
-              (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+              (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
                 family.init.length 10 +
                 3 * actionCircuit.domainExponent) → Fp)))
         (εBias : ENNReal),
@@ -2258,7 +2258,7 @@ theorem orchard_action_knowledgeFailure_adaptive_2pow123_workFactor_generatorRO_
           (independentProductPMF (orchardGeneratorROSetup query)
             (PMF.uniformOfFintype
               (BTranscript Fp VestaG
-                (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+                (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
                   family.init.length 10 +
                   3 * actionCircuit.domainExponent) → Fp)))
           εBias →
@@ -2290,7 +2290,7 @@ theorem orchard_action_knowledgeFailure_adaptive_2pow123_workFactor_generatorRO_
       (independentProductPMF (orchardGeneratorROSetup query)
         (PMF.uniformOfFintype
           (BTranscript Fp VestaG
-            (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+            (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
               family.init.length 10 +
               3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
           ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
@@ -2333,15 +2333,15 @@ theorem orchard_action_acceptFalseStatement_prob_le_sequential
     (query : AugmentedIndex actionCircuit.n → T)
     (hquery : Function.Injective query)
     (prover : SequentialOnlineAGMProver
-      (actionProofParams.mergeDerived actionCircuit))
+      (actionCircuit.shape.withProofParams actionProofParams))
     (inputs : Fin actionProofParams.numProofs → PublicInputs Fp)
-    (hvk : ∀ basis, prover.toFamily.vk basis = actionCircuit.toVerifierKey actionProofParams
+    (hvk : ∀ basis, prover.toFamily.vk basis = actionCircuit.toVerifierKey
       (ursOfAugmentedBasis actionCircuit.domainExponent basis))
     (hI : ∀ basis, prover.toFamily.instanceCommitment basis =
       actionCircuit.instanceCommitment actionProofParams
         (ursOfAugmentedBasis actionCircuit.domainExponent basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
-      (actionCircuit.toVerifierKey actionProofParams
+      (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis actionCircuit.domainExponent basis))
       (actionCircuit.instanceCommitment actionProofParams
         (ursOfAugmentedBasis actionCircuit.domainExponent basis) inputs)
@@ -2355,7 +2355,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_sequential
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen (actionProofParams.mergeDerived actionCircuit) prover.toFamily.init.length 10
+          (preIpaLen (actionCircuit.shape.withProofParams actionProofParams) prover.toFamily.init.length 10
             + 3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           actionAcceptFalseStatementEvent prover.toFamily inputs) ≤
@@ -2364,7 +2364,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_sequential
             (actionCircuit.domainExponent *
               (2 / (Fintype.card Fp : ENNReal))) +
           (prover.toFamily.Q + (11 + actionCircuit.domainExponent) + 1 : Nat) *
-            algebraicRootBudget (actionProofParams.mergeDerived actionCircuit)
+            algebraicRootBudget (actionCircuit.shape.withProofParams actionProofParams)
               actionCircuit.domainExponent +
           (profile.advantage (actionDlogRandomOracleQueries actionProofParams prover.toFamily)
               (actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
@@ -2405,11 +2405,11 @@ theorem orchard_action_acceptFalseStatement_prob_le_sequential_for
       actionCircuit.n → T)
     (hquery : Function.Injective query)
     (prover : SequentialOnlineAGMProver
-      ((actionProofParamsFor numProofs).mergeDerived actionCircuit))
+      (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)))
     (inputs : Fin (actionProofParamsFor numProofs).numProofs →
       PublicInputs Fp)
     (hvk : ∀ basis, prover.toFamily.vk basis =
-      actionCircuit.toVerifierKey (actionProofParamsFor numProofs)
+      actionCircuit.toVerifierKey
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis))
     (hI : ∀ basis, prover.toFamily.instanceCommitment basis =
@@ -2417,7 +2417,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_sequential_for
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
-      (actionCircuit.toVerifierKey (actionProofParamsFor numProofs)
+      (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis))
       (actionCircuit.instanceCommitment (actionProofParamsFor numProofs)
@@ -2433,7 +2433,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_sequential_for
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+          (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
             prover.toFamily.init.length 10 +
             3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
@@ -2484,15 +2484,15 @@ theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO
     (query : AugmentedIndex actionCircuit.n → T)
     (hquery : Function.Injective query)
     (prover : SequentialOnlineAGMProver
-      (actionProofParams.mergeDerived actionCircuit))
+      (actionCircuit.shape.withProofParams actionProofParams))
     (inputs : Fin actionProofParams.numProofs → PublicInputs Fp)
-    (hvk : ∀ basis, prover.toFamily.vk basis = actionCircuit.toVerifierKey actionProofParams
+    (hvk : ∀ basis, prover.toFamily.vk basis = actionCircuit.toVerifierKey
       (ursOfAugmentedBasis actionCircuit.domainExponent basis))
     (hI : ∀ basis, prover.toFamily.instanceCommitment basis =
       actionCircuit.instanceCommitment actionProofParams
         (ursOfAugmentedBasis actionCircuit.domainExponent basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
-      (actionCircuit.toVerifierKey actionProofParams
+      (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis actionCircuit.domainExponent basis))
       (actionCircuit.instanceCommitment actionProofParams
         (ursOfAugmentedBasis actionCircuit.domainExponent basis) inputs)
@@ -2506,7 +2506,7 @@ theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO
     ((independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen (actionProofParams.mergeDerived actionCircuit) prover.toFamily.init.length 10
+          (preIpaLen (actionCircuit.shape.withProofParams actionProofParams) prover.toFamily.init.length 10
             + 3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           actionAcceptFalseStatementEvent prover.toFamily inputs) ≤
@@ -2536,7 +2536,7 @@ theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO
             (actionCircuit.domainExponent *
               (2 / (Fintype.card Fp : ENNReal))) +
           (prover.toFamily.Q + (11 + actionCircuit.domainExponent) + 1 : Nat) *
-            algebraicRootBudget (actionProofParams.mergeDerived actionCircuit)
+            algebraicRootBudget (actionCircuit.shape.withProofParams actionProofParams)
               actionCircuit.domainExponent +
           (profile.advantage (actionDlogRandomOracleQueries actionProofParams prover.toFamily)
               (actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
@@ -2572,11 +2572,11 @@ theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO_for
       actionCircuit.n → T)
     (hquery : Function.Injective query)
     (prover : SequentialOnlineAGMProver
-      ((actionProofParamsFor numProofs).mergeDerived actionCircuit))
+      (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)))
     (inputs : Fin (actionProofParamsFor numProofs).numProofs →
       PublicInputs Fp)
     (hvk : ∀ basis, prover.toFamily.vk basis =
-      actionCircuit.toVerifierKey (actionProofParamsFor numProofs)
+      actionCircuit.toVerifierKey
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis))
     (hI : ∀ basis, prover.toFamily.instanceCommitment basis =
@@ -2584,7 +2584,7 @@ theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO_for
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
-      (actionCircuit.toVerifierKey (actionProofParamsFor numProofs)
+      (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis
           actionCircuit.domainExponent basis))
       (actionCircuit.instanceCommitment (actionProofParamsFor numProofs)
@@ -2602,7 +2602,7 @@ theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO_for
     ((independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
-          (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+          (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
             prover.toFamily.init.length 10 +
             3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
@@ -2615,7 +2615,7 @@ theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO_for
       ∀ (actual : PMF
           ((↥(Set.range query) → VestaG) ×
             (BTranscript Fp VestaG
-              (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+              (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
                 prover.toFamily.init.length 10 +
                 3 * actionCircuit.domainExponent) → Fp)))
         (εBias : ENNReal),
@@ -2623,7 +2623,7 @@ theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO_for
           (independentProductPMF (orchardGeneratorROSetup query)
             (PMF.uniformOfFintype
               (BTranscript Fp VestaG
-                (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+                (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
                   prover.toFamily.init.length 10 +
                   3 * actionCircuit.domainExponent) → Fp)))
           εBias →
@@ -2650,7 +2650,7 @@ theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO_for
       (independentProductPMF (orchardGeneratorROSetup query)
         (PMF.uniformOfFintype
           (BTranscript Fp VestaG
-            (preIpaLen ((actionProofParamsFor numProofs).mergeDerived actionCircuit)
+            (preIpaLen (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
               prover.toFamily.init.length 10 +
               3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
           ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'

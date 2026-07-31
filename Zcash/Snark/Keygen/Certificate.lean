@@ -151,10 +151,10 @@ private instance bundleDecEq : DecidableEq (List G × List G × List G ×
     | refine @instDecidableEqProd _ _ ?_ ?_
     | infer_instance
 
-/-- A fieldwise equality across a `Shape` transport reconstructs equality of
+/-- A fieldwise equality across a `CircuitShape` transport reconstructs equality of
 the dependent verifying-key records. -/
 private theorem verifyingKey_eq_cast_of_fields
-    {s₁ s₂ : Shape} {F G : Type*}
+    {s₁ s₂ : CircuitShape} {F G : Type*}
     (hshape : s₁ = s₂)
     (left : VerifyingKey s₁ F G)
     (right : VerifyingKey s₂ F G)
@@ -177,7 +177,7 @@ private theorem verifyingKey_eq_cast_of_fields
         left.permutationCommonCommitment column =
           right.permutationCommonCommitment
             (Fin.cast
-              (congrArg Shape.numPermutationColumns hshape)
+              (congrArg CircuitShape.numPermutationColumns hshape)
               column))
     (permutationChunks :
       left.permutationChunks = right.permutationChunks)
@@ -185,12 +185,12 @@ private theorem verifyingKey_eq_cast_of_fields
       ∀ lookup,
         left.lookupInputExprs lookup =
           right.lookupInputExprs
-            (Fin.cast (congrArg Shape.numLookups hshape) lookup))
+            (Fin.cast (congrArg CircuitShape.numLookups hshape) lookup))
     (lookupTableExprs :
       ∀ lookup,
         left.lookupTableExprs lookup =
           right.lookupTableExprs
-            (Fin.cast (congrArg Shape.numLookups hshape) lookup)) :
+            (Fin.cast (congrArg CircuitShape.numLookups hshape) lookup)) :
     hshape ▸ left = right := by
   cases hshape
   have permutationCommonCommitment' :
@@ -242,7 +242,7 @@ theorem certificate :
        List.ofFn fun lookup : Fin shape.numLookups =>
           (actionPinned.lookupTableExprs.getD lookup.val []).map
             RichExpression.toExpr),
-      actionProofParams.mergeDerived actionCircuit)
+      actionCircuit.shape.withProofParams actionProofParams)
     = (capturedUrsGLagrange,
        capturedFixedCommitments,
        capturedPermutationCommonCommitments,
@@ -257,7 +257,7 @@ theorem certificate :
 /-- The fixture's `Shape` is the proof-shape parameters merged with the circuit-derived
 counts. -/
 theorem shape_eq_mergeDerived :
-    actionProofParams.mergeDerived actionCircuit = shape := by
+    actionCircuit.shape.withProofParams actionProofParams = shape := by
   have h := certificate
   simp only [Prod.mk.injEq] at h
   exact h.2.2.2.2.2.2.2.2
@@ -266,7 +266,7 @@ theorem shape_eq_mergeDerived :
 This is a definitional transport from the one expensive captured certificate, not a second keygen
 computation. -/
 theorem actionProofParamsFor_mergeDerived_eq (numProofs : ℕ) :
-    (actionProofParamsFor numProofs).mergeDerived actionCircuit =
+    actionCircuit.shape.withProofParams (actionProofParamsFor numProofs) =
       { Zcash.Snark.Fixture.shape with numProofs := numProofs } := by
   rw [← shape_eq_mergeDerived]
   rfl
@@ -355,13 +355,13 @@ theorem derivedPermutationCommonCommitments_eq :
   exact hpc
 
 set_option maxRecDepth 1000000 in
-/-- **`vk = actionCircuit.toVerifierKey actionProofParams capturedURS`**
+/-- **`vk = actionCircuit.toVerifierKey capturedURS`**
 — the captured Orchard Action verifying key IS the closed circuit's derived verifying
 key (transported along `shape_eq_mergeDerived`): every field, including the `Shape` in
 the type, comes from the circuit plus the URS and the two proof-shape counts. -/
 theorem vk_eq_toVerifierKey :
     vk = shape_eq_mergeDerived
-      ▸ actionCircuit.toVerifierKey actionProofParams capturedURS := by
+      ▸ actionCircuit.toVerifierKey capturedURS := by
   have h := certificate
   simp only [Prod.mk.injEq] at h
   obtain ⟨-, -, -, ⟨ho, hn, hb, hd, hc⟩, hg,

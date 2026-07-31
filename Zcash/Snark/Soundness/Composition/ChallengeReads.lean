@@ -316,7 +316,7 @@ theorem TopLevelLookup.thetaBudget_eq
     {G' : Type} [AddCommGroup G'] [Inhabited G']
     {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
     (top : Halo2.TopLevelCircuit Fp Config PublicInput)
-    (pp : Keygen.ProofParams) (urs : URS G')
+    (pp : ProofParams) (urs : URS G')
     (poly : CommitmentId → CPoly) :
     TopLevelLookup.thetaBudget top pp urs poly =
       ∑ index : TopLevelLookup.ActivationIndex top pp,
@@ -331,7 +331,7 @@ theorem TopLevelLookup.thetaBadSet_congr
     {G' : Type} [AddCommGroup G'] [Inhabited G']
     {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
     (top : Halo2.TopLevelCircuit Fp Config PublicInput)
-    (pp : Keygen.ProofParams) (urs : URS G')
+    (pp : ProofParams) (urs : URS G')
     {poly₁ poly₂ : CommitmentId → CPoly}
     (h : ∀ id, id.isColumnInput → poly₁ id = poly₂ id) :
     TopLevelLookup.thetaBadSet top pp urs poly₁ =
@@ -340,7 +340,7 @@ theorem TopLevelLookup.thetaBadSet_congr
   exact Finset.biUnion_congr rfl fun index _ =>
     congrArg (fun env => EnabledLookup.thetaBadSet top.placement env
         ((operationEnabledLookups top.operations 0).get index.2))
-      (resolverEnvironment_congr (top.toVerifierKey pp urs) index.1
+      (resolverEnvironment_congr (top.toVerifierKey urs) index.1
         (top.usableRowsAt top.domainExponent) h)
 
 end Zcash.Snark

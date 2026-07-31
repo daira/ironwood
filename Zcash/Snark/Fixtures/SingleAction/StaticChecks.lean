@@ -33,7 +33,7 @@ theorem vk_fixedQueryLayout_length : vk.fixedQueryLayout.length = 29 := rfl
 
 private theorem action_domainExponent_eq : actionCircuit.domainExponent = 11 := by
   have h := congrArg Shape.k Keygen.shape_eq_mergeDerived
-  simp only [Keygen.ProofParams.mergeDerived] at h
+  simp only [ProofParams.mergeDerived] at h
   simpa only [shape] using h
 
 private theorem vk_domain_eq :

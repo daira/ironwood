@@ -217,18 +217,21 @@ theorem topLevelPermutationColumnAddresses_eq
     {G : Type} [AddCommGroup G] [Inhabited G]
     {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
-    (pp : Keygen.ProofParams) (urs : URS G)
+    (urs : URS G)
     (hcoherent :
-      PermutationChunkRoutingCoherent (top.toVerifierKey pp urs)) :
+      PermutationChunkRoutingCoherent
+        (shape := top.shape) (top.toVerifierKey urs)) :
     top.verifierCS.permutationChunks.flatten.map
           (fun reference =>
-            permutationColumnAddress (top.toVerifierKey pp urs) reference.1) =
+            permutationColumnAddress
+              (shape := top.shape) (top.toVerifierKey urs) reference.1) =
       (Keygen.permColsOf top.constraintSystem).map
         Halo2.Layout.ColRef.toAny := by
   rw [verifierCS_permutationChunks_flatten]
   change
     List.map
-        (permutationColumnAddress (top.toVerifierKey pp urs) ∘ Prod.fst)
+        (permutationColumnAddress
+          (shape := top.shape) (top.toVerifierKey urs) ∘ Prod.fst)
         _ =
       _
   rw [← List.map_map, List.zipIdx_map_fst]
@@ -271,18 +274,18 @@ theorem topLevelPermutationColumnAddresses_eq
     indexed hindexedChunk
   have hreferenceCoherent :
       PermutationColumnRef.Coherent
-        (top.toVerifierKey pp urs) reference := by
+        (top.toVerifierKey urs) reference := by
     rw [← hindexedReference]
     exact hrouted.1
   have hdecoded :
-      permutationColumnAddress (top.toVerifierKey pp urs) reference =
+      permutationColumnAddress (top.toVerifierKey urs) reference =
         column :=
     permutationColumnAddress_queryReference
-      (top.toVerifierKey pp urs)
+      (top.toVerifierKey urs)
       top.adviceQueryLayout top.fixedQueryLayout top.instanceQueryLayout
-      (top.toVerifierKey_adviceQueryLayout pp urs)
-      (top.toVerifierKey_fixedQueryLayout pp urs)
-      (top.toVerifierKey_instanceQueryLayout pp urs)
+      (top.toVerifierKey_adviceQueryLayout urs)
+      (top.toVerifierKey_fixedQueryLayout urs)
+      (top.toVerifierKey_instanceQueryLayout urs)
       column hreferenceCoherent
   rcases column with ⟨kind, index⟩
   cases kind <;>

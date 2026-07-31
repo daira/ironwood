@@ -21,7 +21,7 @@ set_option maxHeartbeats 20000
 /-- Decode a verifier permutation query reference back to the concrete Clean
 column selected by its query-layout entry. -/
 def permutationColumnAddress
-    {shape : Shape} {F G : Type*}
+    {shape : CircuitShape} {F G : Type*}
     (vk : VerifyingKey shape F G) : ColumnRef → AnyColumn
   | .advice query =>
       ⟨.advice, (vk.adviceQueryLayout.getD query (0, 0)).1⟩

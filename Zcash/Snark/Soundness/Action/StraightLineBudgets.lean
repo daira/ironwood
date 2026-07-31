@@ -48,28 +48,28 @@ open scoped ENNReal
 local instance vestaInhabitedStraightLineActionBudgets : Inhabited VestaG := ⟨0⟩
 
 variable (pp : ProofParams)
-  (family : ComputedStraightLineDeployedFSFamily (pp.mergeDerived actionCircuit))
+  (family : ComputedStraightLineDeployedFSFamily (actionCircuit.shape.withProofParams pp))
   (static : DeployedConstraintStaticChecks family.toRootFamily)
   (inputs : Fin pp.numProofs → PublicInputs Fp)
   (hvk : ∀ basis, family.vk basis =
-    actionCircuit.toVerifierKey pp
-      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+    actionCircuit.toVerifierKey
+      (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
   (hI : ∀ basis, family.instanceCommitment basis =
     actionCircuit.instanceCommitmentForShape pp
-      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
   (hchar : ∀ basis O, deployedX4PairCount
-    (actionCircuit.toVerifierKey pp
-      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+    (actionCircuit.toVerifierKey
+      (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
     (actionCircuit.instanceCommitmentForShape pp
-      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
     (straightLineRunOutput family basis O).1.proof.1
     (straightLineRunRecord family basis O) < scalarFieldOrder)
 
 /-- The deployed Action key at one basis. -/
 abbrev vkAt
-    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG) :
-    VerifyingKey (pp.mergeDerived actionCircuit) Fp VestaG :=
-  actionCircuit.toVerifierKey pp (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)
+    (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG) :
+    VerifyingKey (actionCircuit.shape.withProofParams pp) Fp VestaG :=
+  actionCircuit.toVerifierKey (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis)
 
 /-- A challenge record carrying only `θ` and `β` — the fields a pre-`x` exclusion set reads. -/
 def semanticChRecord (theta beta : Fp) {k : ℕ} : Challenges k Fp :=
@@ -86,8 +86,8 @@ squeeze prefix. -/
 theorem straightLineRunRecord_read (basis : AugmentedIndex (2 ^ (pp.mergeDerived
       actionCircuit).k) → VestaG)
     (O : BTranscript Fp VestaG
-      (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
-        + 3 * (pp.mergeDerived actionCircuit).k) → Fp) (i : Fin 11) :
+      (preIpaLen (actionCircuit.shape.withProofParams pp) family.init.length 10
+        + 3 * (actionCircuit.shape.withProofParams pp).k) → Fp) (i : Fin 11) :
     wrappedPreIpaReads (straightLineRunOutput family basis O) i =
       O (algebraicFullPrefixesPre family.init ((family.adversary basis).run O) i) :=
   congrFun (straightLineRunReads_eq family basis O) i
@@ -106,12 +106,12 @@ theorem actionThetaFailureEvent_subset
     topLevelThetaFailureEvent actionCircuit pp family static inputs hvk hI hchar ⊆
       cut.surfaceEvent (fun basis s =>
         ↑(TopLevelLookup.thetaBadSet actionCircuit pp
-          (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) (view s))) := by
+          (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) (view s))) := by
   rintro ⟨basis, O⟩ ⟨h, hmem⟩
   dsimp only at hmem
   have hin := not_not.mp hmem
   rw [TopLevelLookup.thetaBadSet_congr actionCircuit pp
-    (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)
+    (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis)
     (fun id hid => hview basis O h id hid)] at hin
   have hproj : (straightLineRunRecord family basis O).theta =
       O (algebraicFullPrefixesPre family.init ((family.adversary basis).run O) 0) :=
@@ -121,7 +121,7 @@ theorem actionThetaFailureEvent_subset
 
 /-- The `θ` failure probability: `(Q + 1)` times the per-state `θ` set measure. -/
 theorem actionThetaFailureEvent_prob_le {T : Type*} [DecidableEq T]
-    (query : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → T)
+    (query : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → T)
     (cut : SequentialCut family.toComputedAlgebraicFSFamily 0)
     (view : cut.State → CommitmentId → CPoly)
     (hview : ∀ basis O (h : family.straightLineConstraintDecoded static basis O),
@@ -129,14 +129,14 @@ theorem actionThetaFailureEvent_prob_le {T : Type*} [DecidableEq T]
         topLevelRunPolynomial actionCircuit pp family static inputs hvk hI hchar basis O h id =
           view ((cut.pre basis).run O) id)
     {epsilon : ENNReal}
-    (hbad : ∀ (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (hbad : ∀ (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
       (s : cut.State), (PMF.uniformOfFintype Fp).toOuterMeasure
       ↑(TopLevelLookup.thetaBadSet actionCircuit pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) (view s)) ≤ epsilon) :
+        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) (view s)) ≤ epsilon) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype (BTranscript Fp VestaG
-        (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
-          + 3 * (pp.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
+        (preIpaLen (actionCircuit.shape.withProofParams pp) family.init.length 10
+          + 3 * (actionCircuit.shape.withProofParams pp).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelThetaFailureEvent actionCircuit pp family static inputs hvk hI hchar)
       ≤ (family.Q + 1 : ℕ) * epsilon := by
@@ -164,7 +164,7 @@ theorem actionBetaFailureEvent_subset
         ↑(allResolverPermutationBetaBadSet (vkAt pp basis) (view s) (actionCircuit.usableRowsAt actionCircuit.domainExponent)) ∪
         ↑(allResolverLookupBetaBadSet pp.numProofs (vkAt pp basis)
           (semanticChRecord (thetaOf s) 0
-            (k := (pp.mergeDerived actionCircuit).k)) (view s)
+            (k := (actionCircuit.shape.withProofParams pp).k)) (view s)
           (actionCircuit.n - actionCircuit.blindingFactors - 2))) := by
   rintro ⟨basis, O⟩ ⟨h, hmem⟩
   dsimp only at hmem
@@ -188,7 +188,7 @@ theorem actionBetaFailureEvent_subset
 /-- The `β` failure probability: `(Q + 1)` times the per-state measure of the union of the two
 `β` exclusion sets. -/
 theorem actionBetaFailureEvent_prob_le {T : Type*} [DecidableEq T]
-    (query : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → T)
+    (query : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → T)
     (cut : SequentialCut family.toComputedAlgebraicFSFamily 1)
     (view : cut.State → CommitmentId → CPoly)
     (thetaOf : cut.State → Fp)
@@ -199,17 +199,17 @@ theorem actionBetaFailureEvent_prob_le {T : Type*} [DecidableEq T]
     (htheta : ∀ basis O, (straightLineRunRecord family basis O).theta =
       thetaOf ((cut.pre basis).run O))
     {epsilon : ENNReal}
-    (hbad : ∀ (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (hbad : ∀ (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
       (s : cut.State), (PMF.uniformOfFintype Fp).toOuterMeasure
       (↑(allResolverPermutationBetaBadSet (vkAt pp basis) (view s) (actionCircuit.usableRowsAt actionCircuit.domainExponent)) ∪
         ↑(allResolverLookupBetaBadSet pp.numProofs (vkAt pp basis)
           (semanticChRecord (thetaOf s) 0
-            (k := (pp.mergeDerived actionCircuit).k)) (view s)
+            (k := (actionCircuit.shape.withProofParams pp).k)) (view s)
           (actionCircuit.n - actionCircuit.blindingFactors - 2))) ≤ epsilon) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype (BTranscript Fp VestaG
-        (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
-          + 3 * (pp.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
+        (preIpaLen (actionCircuit.shape.withProofParams pp) family.init.length 10
+          + 3 * (actionCircuit.shape.withProofParams pp).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelBetaFailureEvent actionCircuit pp family static inputs hvk hI hchar)
       ≤ (family.Q + 1 : ℕ) * epsilon := by
@@ -240,7 +240,7 @@ theorem actionGammaFailureEvent_subset
           (semanticChRecord (thetaOf s) (betaOf s)) (view s) (actionCircuit.usableRowsAt actionCircuit.domainExponent)) ∪
         ↑(allResolverLookupGammaBadSet pp.numProofs (vkAt pp basis)
           (semanticChRecord (thetaOf s) (betaOf s)
-            (k := (pp.mergeDerived actionCircuit).k)) (view s)
+            (k := (actionCircuit.shape.withProofParams pp).k)) (view s)
           (actionCircuit.n - actionCircuit.blindingFactors - 2))) := by
   rintro ⟨basis, O⟩ ⟨h, hmem⟩
   dsimp only at hmem
@@ -266,7 +266,7 @@ theorem actionGammaFailureEvent_subset
 /-- The `γ` failure probability: `(Q + 1)` times the per-state measure of the union of the two
 `γ` exclusion sets. -/
 theorem actionGammaFailureEvent_prob_le {T : Type*} [DecidableEq T]
-    (query : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → T)
+    (query : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → T)
     (cut : SequentialCut family.toComputedAlgebraicFSFamily 2)
     (view : cut.State → CommitmentId → CPoly)
     (thetaOf betaOf : cut.State → Fp)
@@ -279,18 +279,18 @@ theorem actionGammaFailureEvent_prob_le {T : Type*} [DecidableEq T]
     (hbeta : ∀ basis O, (straightLineRunRecord family basis O).beta =
       betaOf ((cut.pre basis).run O))
     {epsilon : ENNReal}
-    (hbad : ∀ (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (hbad : ∀ (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
       (s : cut.State), (PMF.uniformOfFintype Fp).toOuterMeasure
       (↑(allResolverPermutationGammaBadSet (vkAt pp basis)
           (semanticChRecord (thetaOf s) (betaOf s)) (view s) (actionCircuit.usableRowsAt actionCircuit.domainExponent)) ∪
         ↑(allResolverLookupGammaBadSet pp.numProofs (vkAt pp basis)
           (semanticChRecord (thetaOf s) (betaOf s)
-            (k := (pp.mergeDerived actionCircuit).k)) (view s)
+            (k := (actionCircuit.shape.withProofParams pp).k)) (view s)
           (actionCircuit.n - actionCircuit.blindingFactors - 2))) ≤ epsilon) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype (BTranscript Fp VestaG
-        (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
-          + 3 * (pp.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
+        (preIpaLen (actionCircuit.shape.withProofParams pp) family.init.length 10
+          + 3 * (actionCircuit.shape.withProofParams pp).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelGammaFailureEvent actionCircuit pp family static inputs hvk hI hchar)
       ≤ (family.Q + 1 : ℕ) * epsilon := by
@@ -353,7 +353,7 @@ theorem actionXYFailureEvent_subset
 
 /-- The fused `x`/`y` failure probability: each half pays its own state surface price. -/
 theorem actionXYFailureEvent_prob_le {T : Type*} [DecidableEq T]
-    (query : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → T)
+    (query : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → T)
     (cutY : SequentialCut family.toComputedAlgebraicFSFamily 3)
     (cutX : SequentialCut family.toComputedAlgebraicFSFamily 4)
     (modelY : cutY.State → ConstraintPolyModel pp.numProofs)
@@ -372,7 +372,7 @@ theorem actionXYFailureEvent_prob_le {T : Type*} [DecidableEq T]
           CommitmentId.vanishingH =
         vanishingOf ((cutX.pre basis).run O))
     {epsilonX epsilonY : ENNReal}
-    (hbadX : ∀ (_basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (hbadX : ∀ (_basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
       (s : cutX.State), (PMF.uniformOfFintype Fp).toOuterMeasure
       ↑(szBadSet (combineConstraints (modelX s).fixedCols (modelX s).adviceCols
         (modelX s).instanceCols (modelX s).gates (modelX s).sets (modelX s).chunks
@@ -380,14 +380,14 @@ theorem actionXYFailureEvent_prob_le {T : Type*} [DecidableEq T]
         (modelX s).theta (yOf s) (modelX s).chunkLen (modelX s).l0 (modelX s).lLast
         (modelX s).lBlind -
         vanishingOf s * (X ^ actionCircuit.n - 1))) ≤ epsilonX)
-    (hbadY : ∀ (_basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (hbadY : ∀ (_basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
       (s : cutY.State), (PMF.uniformOfFintype Fp).toOuterMeasure
       (⋃ j, ↑(szBadSet (foldSplitWitness (modelY s).constraints actionCircuit.n j))) ≤
         epsilonY) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype (BTranscript Fp VestaG
-        (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
-          + 3 * (pp.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
+        (preIpaLen (actionCircuit.shape.withProofParams pp) family.init.length 10
+          + 3 * (actionCircuit.shape.withProofParams pp).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelXYFailureEvent actionCircuit pp family static inputs hvk hI hchar)
       ≤ (family.Q + 1 : ℕ) * epsilonX + (family.Q + 1 : ℕ) * epsilonY := by
@@ -409,26 +409,26 @@ Schwartz–Zippel exclusion, priced by `uniformChallenge_szBadSet` at its fold d
 
 /-- The per-state `θ` measure: the row-by-arity budget over the field size. -/
 theorem actionThetaBadSet_measure_le
-    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
     (poly : CommitmentId → CPoly) :
     (PMF.uniformOfFintype Fp).toOuterMeasure
       ↑(TopLevelLookup.thetaBadSet actionCircuit pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) poly) ≤
+        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) poly) ≤
       (TopLevelLookup.thetaBudget actionCircuit pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) poly : ℝ≥0∞) /
+        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) poly : ℝ≥0∞) /
         (Fintype.card Fp : ℝ≥0∞) :=
   TopLevelLookup.uniformChallenge_thetaBadSet
     poly
 
 /-- The per-state `β` measure: permutation cells plus lookup pair counts. -/
 theorem actionBetaBadSets_measure_le
-    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
     (theta : Fp) (poly : CommitmentId → CPoly) :
     (PMF.uniformOfFintype Fp).toOuterMeasure
       (↑(allResolverPermutationBetaBadSet (vkAt pp basis) poly (actionCircuit.usableRowsAt actionCircuit.domainExponent)) ∪
         ↑(allResolverLookupBetaBadSet pp.numProofs (vkAt pp basis)
           (semanticChRecord theta 0
-            (k := (pp.mergeDerived actionCircuit).k)) poly
+            (k := (actionCircuit.shape.withProofParams pp).k)) poly
           (actionCircuit.n - actionCircuit.blindingFactors - 2))) ≤
       ((∑ p : Fin pp.numProofs,
         (Fintype.card (ResolverPermutationCell (vkAt pp basis) poly p (actionCircuit.usableRowsAt actionCircuit.domainExponent)) + 1) *
@@ -444,19 +444,19 @@ theorem actionBetaBadSets_measure_le
       (allResolverPermutationBetaBadSet_measure_le (vkAt pp basis) poly (actionCircuit.usableRowsAt actionCircuit.domainExponent))
       (allResolverLookupBetaBadSet_measure_le pp.numProofs (vkAt pp basis)
         (semanticChRecord theta 0
-          (k := (pp.mergeDerived actionCircuit).k)) poly
+          (k := (actionCircuit.shape.withProofParams pp).k)) poly
         (actionCircuit.n - actionCircuit.blindingFactors - 2)))
 
 /-- The per-state `γ` measure: doubled permutation cells plus lookup pair counts. -/
 theorem actionGammaBadSets_measure_le
-    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
     (theta beta : Fp) (poly : CommitmentId → CPoly) :
     (PMF.uniformOfFintype Fp).toOuterMeasure
       (↑(allResolverPermutationGammaBadSet (vkAt pp basis)
           (semanticChRecord theta beta) poly (actionCircuit.usableRowsAt actionCircuit.domainExponent)) ∪
         ↑(allResolverLookupGammaBadSet pp.numProofs (vkAt pp basis)
           (semanticChRecord theta beta
-            (k := (pp.mergeDerived actionCircuit).k)) poly
+            (k := (actionCircuit.shape.withProofParams pp).k)) poly
           (actionCircuit.n - actionCircuit.blindingFactors - 2))) ≤
       ((∑ p : Fin pp.numProofs,
         2 * Fintype.card (ResolverPermutationCell (vkAt pp basis) poly p (actionCircuit.usableRowsAt actionCircuit.domainExponent)) :
@@ -470,7 +470,7 @@ theorem actionGammaBadSets_measure_le
         (semanticChRecord theta beta) poly (actionCircuit.usableRowsAt actionCircuit.domainExponent))
       (allResolverLookupGammaBadSet_measure_le pp.numProofs (vkAt pp basis)
         (semanticChRecord theta beta
-          (k := (pp.mergeDerived actionCircuit).k))
+          (k := (actionCircuit.shape.withProofParams pp).k))
         poly (actionCircuit.n - actionCircuit.blindingFactors - 2)))
 
 /-- The per-state `y` measure: `n` times the constraint count over the field size. -/
@@ -684,17 +684,17 @@ def ActionSequentialExecution.toCuts {Dx L : ℕ}
 /-- The `θ` premise from the bundle: `(Q + 1) · Nθ / |Fp|`, `Nθ` capping the row-by-arity
 budget. -/
 theorem ActionSequentialCuts.theta_prob_le {T : Type*} [DecidableEq T]
-    (query : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → T)
+    (query : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → T)
     {Dx L : ℕ} (cuts : ActionSequentialCuts pp family static inputs hvk hI hchar Dx L)
     {Ntheta : ℕ}
-    (hbudget : ∀ (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (hbudget : ∀ (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
       (poly : CommitmentId → CPoly),
       TopLevelLookup.thetaBudget actionCircuit pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) poly ≤ Ntheta) :
+        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) poly ≤ Ntheta) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype (BTranscript Fp VestaG
-        (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
-          + 3 * (pp.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
+        (preIpaLen (actionCircuit.shape.withProofParams pp) family.init.length 10
+          + 3 * (actionCircuit.shape.withProofParams pp).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelThetaFailureEvent actionCircuit pp family static inputs hvk hI hchar)
       ≤ (family.Q + 1 : ℕ) * ((Ntheta : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) := by
@@ -707,10 +707,10 @@ theorem ActionSequentialCuts.theta_prob_le {T : Type*} [DecidableEq T]
 /-- The `β` premise from the bundle: `(Q + 1) · Nβ / |Fp|`, `Nβ` capping cells plus lookup
 pairs. -/
 theorem ActionSequentialCuts.beta_prob_le {T : Type*} [DecidableEq T]
-    (query : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → T)
+    (query : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → T)
     {Dx L : ℕ} (cuts : ActionSequentialCuts pp family static inputs hvk hI hchar Dx L)
     {Nbeta : ℕ}
-    (hcap : ∀ (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (hcap : ∀ (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
       (poly : CommitmentId → CPoly),
       (∑ p : Fin pp.numProofs,
         (Fintype.card (ResolverPermutationCell (vkAt pp basis) poly p (actionCircuit.usableRowsAt actionCircuit.domainExponent)) + 1) *
@@ -721,8 +721,8 @@ theorem ActionSequentialCuts.beta_prob_le {T : Type*} [DecidableEq T]
           (actionCircuit.n - actionCircuit.blindingFactors - 2 + 1)) ≤ Nbeta) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype (BTranscript Fp VestaG
-        (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
-          + 3 * (pp.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
+        (preIpaLen (actionCircuit.shape.withProofParams pp) family.init.length 10
+          + 3 * (actionCircuit.shape.withProofParams pp).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelBetaFailureEvent actionCircuit pp family static inputs hvk hI hchar)
       ≤ (family.Q + 1 : ℕ) * ((Nbeta : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) := by
@@ -736,10 +736,10 @@ theorem ActionSequentialCuts.beta_prob_le {T : Type*} [DecidableEq T]
 /-- The `γ` premise from the bundle: `(Q + 1) · Nγ / |Fp|`, `Nγ` capping doubled cells plus
 lookup pairs. -/
 theorem ActionSequentialCuts.gamma_prob_le {T : Type*} [DecidableEq T]
-    (query : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → T)
+    (query : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → T)
     {Dx L : ℕ} (cuts : ActionSequentialCuts pp family static inputs hvk hI hchar Dx L)
     {Ngamma : ℕ}
-    (hcap : ∀ (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (hcap : ∀ (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
       (poly : CommitmentId → CPoly),
       (∑ p : Fin pp.numProofs,
         2 * Fintype.card (ResolverPermutationCell (vkAt pp basis) poly p (actionCircuit.usableRowsAt actionCircuit.domainExponent))) +
@@ -747,8 +747,8 @@ theorem ActionSequentialCuts.gamma_prob_le {T : Type*} [DecidableEq T]
         (2 * (actionCircuit.n - actionCircuit.blindingFactors - 2 + 1)) ≤ Ngamma) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype (BTranscript Fp VestaG
-        (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
-          + 3 * (pp.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
+        (preIpaLen (actionCircuit.shape.withProofParams pp) family.init.length 10
+          + 3 * (actionCircuit.shape.withProofParams pp).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelGammaFailureEvent actionCircuit pp family static inputs hvk hI hchar)
       ≤ (family.Q + 1 : ℕ) * ((Ngamma : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) := by
@@ -764,15 +764,15 @@ theorem ActionSequentialCuts.gamma_prob_le {T : Type*} [DecidableEq T]
 /-- The fused `x`/`y` premise from the bundle: `(Q + 1) · Dx / |Fp| + (Q + 1) · Ny / |Fp|`,
 `Dx` the fold degree cap and `Ny` capping `n · L`. -/
 theorem ActionSequentialCuts.xy_prob_le {T : Type*} [DecidableEq T]
-    (query : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → T)
+    (query : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → T)
     {Dx L : ℕ} (cuts : ActionSequentialCuts pp family static inputs hvk hI hchar Dx L)
     {Ny : ℕ}
     (hn : actionCircuit.n ≠ 0)
     (hyn : actionCircuit.n * L ≤ Ny) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype (BTranscript Fp VestaG
-        (preIpaLen (pp.mergeDerived actionCircuit) family.init.length 10
-          + 3 * (pp.mergeDerived actionCircuit).k) → Fp))).toOuterMeasure
+        (preIpaLen (actionCircuit.shape.withProofParams pp) family.init.length 10
+          + 3 * (actionCircuit.shape.withProofParams pp).k) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelXYFailureEvent actionCircuit pp family static inputs hvk hI hchar)
       ≤ (family.Q + 1 : ℕ) * ((Dx : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +

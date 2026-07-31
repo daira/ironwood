@@ -44,40 +44,40 @@ interface.  It does not mention the Action statement or its public-input
 presentation.
 -/
 def actionTopLevelCircuitCorrectness
-    (pp : Keygen.ProofParams) (urs : URS G)
+    (pp : ProofParams) (urs : URS G)
     (hk :
-      (pp.mergeDerived actionCircuit).k = urs.k)
+      (actionCircuit.shape.withProofParams pp).k = urs.k)
     (instanceCommitment :
       Fin pp.numProofs →
         ℕ → G)
     (ps : ProofString
-      (pp.mergeDerived actionCircuit) Fp G)
+      (actionCircuit.shape.withProofParams pp) Fp G)
     (ch : Challenges
-      (pp.mergeDerived actionCircuit).k Fp)
+      (actionCircuit.shape.withProofParams pp).k Fp)
     (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
     (batchOpenings :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
         (x4BatchCommitments
           (instanceCommitment := instanceCommitment)
-          urs hk (actionCircuit.toVerifierKey pp urs) ps ch)
+          urs hk (actionCircuit.toVerifierKey urs) ps ch)
         (x4BatchEvals
           (instanceCommitment := instanceCommitment)
-          (actionCircuit.toVerifierKey pp urs) ps ch)
+          (actionCircuit.toVerifierKey urs) ps ch)
         a pU pW)
     (memberDecode : ∀ i (hi : i <
         deployedX4PairCount
           (instanceCommitment := instanceCommitment)
-          (actionCircuit.toVerifierKey pp urs) ps ch),
+          (actionCircuit.toVerifierKey urs) ps ch),
       OpenedMemberDecode
         (instanceCommitment := instanceCommitment)
-        urs hk (actionCircuit.toVerifierKey pp urs)
+        urs hk (actionCircuit.toVerifierKey urs)
         ps ch batchOpenings i hi)
     (hpoly : CPoly)
     (relation :
       CanonicalMemberConstraintRelation
-        urs hk (actionCircuit.toVerifierKey pp urs)
+        urs hk (actionCircuit.toVerifierKey urs)
         instanceCommitment ps ch pU pW a batchOpenings memberDecode
-        (actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
+        (actionCircuit.toVerifierKey_blindingFactors_lt_n urs)
         ch.y hpoly
         actionCircuit.n)
     (hgoodY : ∀ j,
@@ -86,7 +86,7 @@ def actionTopLevelCircuitCorrectness
           actionCircuit.n j))
     (permutationExclusions :
       ResolverPermutationChallengeExclusions
-        (actionCircuit.toVerifierKey pp urs)
+        (actionCircuit.toVerifierKey urs)
         ch relation.polynomial actionActiveRows)
     (lookupExclusions :
       TopLevelLookup.ChallengeExclusions
@@ -123,7 +123,7 @@ def actionTopLevelCircuitCorrectness
         actionCircuit.fixedRows
         actionCircuit.fixedRows_length
         fixedCoherence.key fixedCoherence.commitment
-        (actionCircuit.toVerifierKey_fixedQueryCount pp urs)
+        (actionCircuit.toVerifierKey_fixedQueryCount urs)
         fixedCoherence.queryLayout
         fixedCoherence.queryLayoutBounded hfixedRows)
       fun hbinding => ?_
@@ -210,9 +210,9 @@ def actionTopLevelCircuitCorrectness
                   obtain ⟨rotation, hlayout⟩ :=
                     fixedCoherence.queryLayout column hcolumn
                   exact fixedQuery_of_layout
-                    (actionCircuit.toVerifierKey pp urs)
+                    (actionCircuit.toVerifierKey urs)
                     instanceCommitment ps ch column rotation
-                    (actionCircuit.toVerifierKey_fixedQueryCount pp urs) hlayout))
+                    (actionCircuit.toVerifierKey_fixedQueryCount urs) hlayout))
             proofIndex hrow hexact
         exact hvalues
 

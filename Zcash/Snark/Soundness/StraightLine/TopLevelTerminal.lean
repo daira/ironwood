@@ -50,31 +50,31 @@ def topLevelStatements_or_relation_of_decode
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
-    (hk : (pp.mergeDerived top).k = urs.k)
+    (hk : (top.shape.withProofParams pp).k = urs.k)
     (inputs : Fin pp.numProofs → PublicInput Fp)
-    (ps : ProofString (pp.mergeDerived top) Fp G)
-    (ch : Challenges (pp.mergeDerived top).k Fp)
+    (ps : ProofString (top.shape.withProofParams pp) Fp G)
+    (ch : Challenges (top.shape.withProofParams pp).k Fp)
     (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
     (decode : DeployedAlgebraicDecode urs hk
-      (top.toVerifierKey pp urs)
+      (top.toVerifierKey urs)
       (top.instanceCommitmentForShape pp urs inputs) ps ch a pU pW)
     (hchar : deployedX4PairCount
-      (top.toVerifierKey pp urs)
+      (top.toVerifierKey urs)
       (top.instanceCommitmentForShape pp urs inputs) ps ch < scalarFieldOrder)
     (haccepts :
       DeployedAccepts urs hk
-        (top.toVerifierKey pp urs)
+        (top.toVerifierKey urs)
         (top.instanceCommitmentForShape pp urs inputs) ps ch)
     (domainExponent_lt : top.domainExponent < 33)
     (permutationRouting :
-      PermutationChunkRoutingCoherent (top.toVerifierKey pp urs))
+      PermutationChunkRoutingCoherent (top.toVerifierKey urs))
     (hxgood :
       let memberDecode := fun i hi => decode.toMemberDecode hchar i hi
       let model :=
         CanonicalMemberConstraintRelation.acceptedModel
           (memberDecode := memberDecode)
           (hblinding :=
-            top.toVerifierKey_blindingFactors_lt_n pp urs)
+            top.toVerifierKey_blindingFactors_lt_n urs)
           haccepts
       ch.x ∉ szBadSet
         (combineConstraints
@@ -92,7 +92,7 @@ def topLevelStatements_or_relation_of_decode
           (CanonicalMemberConstraintRelation.acceptedModel
             (memberDecode := memberDecode)
             (hblinding :=
-              top.toVerifierKey_blindingFactors_lt_n pp urs)
+              top.toVerifierKey_blindingFactors_lt_n urs)
             haccepts).constraints
           top.n j))
     {cell : Type} [DecidableEq cell] [Fintype cell]
@@ -101,7 +101,7 @@ def topLevelStatements_or_relation_of_decode
       (CanonicalMemberConstraintRelation.acceptedModel
         (memberDecode := memberDecode)
         (hblinding :=
-          top.toVerifierKey_blindingFactors_lt_n pp urs)
+          top.toVerifierKey_blindingFactors_lt_n urs)
         haccepts).CircuitSat
           ch.y
           (CanonicalMemberConstraintRelation.acceptedPolynomial

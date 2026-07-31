@@ -29,7 +29,7 @@ Construct the complete Action copy witness for one proof from the accepted
 canonical relation, or retain the shared augmented-commitment relation branch.
 -/
 def actionCopyReplayWitness_or_relation
-    (pp : Keygen.ProofParams) (urs : URS G)
+    (pp : ProofParams) (urs : URS G)
     (hk : actionCircuit.domainExponent = urs.k)
     {instanceCommitment :
       Fin pp.numProofs → ℕ → G}
@@ -40,23 +40,23 @@ def actionCopyReplayWitness_or_relation
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
         (x4BatchCommitments
           (instanceCommitment := instanceCommitment)
-          urs hk (actionVk pp urs) ps ch)
+          urs hk (actionCircuit.toVerifierKey urs) ps ch)
         (x4BatchEvals
           (instanceCommitment := instanceCommitment)
-          (actionVk pp urs) ps ch)
+          (actionCircuit.toVerifierKey urs) ps ch)
         a pU pW}
     {memberDecode : ∀ i (hi : i <
         deployedX4PairCount
           (instanceCommitment := instanceCommitment)
-          (actionVk pp urs) ps ch),
+          (actionCircuit.toVerifierKey urs) ps ch),
       OpenedMemberDecode
         (instanceCommitment := instanceCommitment)
-        urs hk (actionVk pp urs) ps ch batchOpenings i hi}
+        urs hk (actionCircuit.toVerifierKey urs) ps ch batchOpenings i hi}
     {y : Fp} {hpoly : CPoly}
     (relation : CanonicalMemberConstraintRelation
-      urs hk (actionVk pp urs) instanceCommitment ps ch pU pW a
+      urs hk (actionCircuit.toVerifierKey urs) instanceCommitment ps ch pU pW a
       batchOpenings memberDecode
-        (actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
+        (actionCircuit.toVerifierKey_blindingFactors_lt_n urs)
         y hpoly actionCircuit.n)
     (hgoodY : ∀ j,
       y ∉ szBadSet
@@ -65,11 +65,11 @@ def actionCopyReplayWitness_or_relation
     (fixedCoherence :
       TopLevelFixedCoherence actionCircuit urs)
     (exclusions : ResolverPermutationChallengeExclusions
-      (actionVk pp urs) ch relation.polynomial actionActiveRows)
+      (actionCircuit.toVerifierKey urs) ch relation.polynomial actionActiveRows)
     (proofIndex : Fin pp.numProofs) :
     CopyReplayWitness actionCircuit.placement
         (resolverEnvironment
-          (actionVk pp urs) relation.polynomial proofIndex
+          (actionCircuit.toVerifierKey urs) relation.polynomial proofIndex
             actionActiveRows)
         (actionCircuit.operations)
         (FlatCell actionNumPermCols actionDomainSize)
@@ -80,7 +80,7 @@ def actionCopyReplayWitness_or_relation
   have hsatisfaction :=
     relation.constraintSatisfaction hn hgoodY
   have hdomain : ResolverPermutationDomain
-      (actionVk pp urs)
+      (actionCircuit.toVerifierKey urs)
       relation.model.l0 relation.model.lLast relation.model.lBlind
       actionCircuit.n actionActiveRows := by
     simpa only [actionActiveRows, TopLevelCircuit.usableRowsAt] using
@@ -107,7 +107,7 @@ def actionCopyReplayWitness_or_relation
         (column, row, value) ∈
             topLevelRequiredFixedEntries actionCircuit →
           (resolverEnvironment
-            (actionVk pp urs) relation.polynomial proofIndex
+            (actionCircuit.toVerifierKey urs) relation.polynomial proofIndex
               actionActiveRows).fixed
               ⟨column⟩ (row : ℤ) = (value : Fp) ⊕'
             NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
@@ -122,7 +122,7 @@ def actionCopyReplayWitness_or_relation
     exact
       actionCopyReplayWitness_ofPairValues_or_bad
         (resolverEnvironment
-          (actionVk pp urs) relation.polynomial proofIndex
+          (actionCircuit.toVerifierKey urs) relation.polynomial proofIndex
             actionActiveRows)
         (fun pair hpair => PSum.inl (hpairval pair hpair))
         hfixedRead

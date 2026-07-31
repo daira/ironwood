@@ -43,7 +43,7 @@ def permutationColumnCommitmentId {shape : Shape} {F G : Type*}
 
 /-- A permutation value-column reference is usable at the unrotated challenge `x`: its evaluation
 index and query-layout entry are in range, and that layout entry has rotation zero. -/
-def PermutationColumnRef.Coherent {shape : Shape} {F G : Type*}
+def PermutationColumnRef.Coherent {shape : CircuitShape} {F G : Type*}
     (vk : VerifyingKey shape F G) : ColumnRef → Prop
   | .advice i =>
       i < shape.numAdviceQueries ∧ i < vk.adviceQueryLayout.length ∧
@@ -56,7 +56,7 @@ def PermutationColumnRef.Coherent {shape : Shape} {F G : Type*}
         (vk.instanceQueryLayout.getD i (0, 0)).2 = 0
 
 /-- VK coherence needed to route every `(value, σ-name)` pair in every permutation chunk. -/
-def PermutationChunkRoutingCoherent {shape : Shape} {F G : Type*}
+def PermutationChunkRoutingCoherent {shape : CircuitShape} {F G : Type*}
     (vk : VerifyingKey shape F G) : Prop :=
   ∀ chunk ∈ vk.permutationChunks, ∀ ref ∈ chunk,
     PermutationColumnRef.Coherent vk ref.1 ∧ ref.2 < shape.numPermutationColumns
