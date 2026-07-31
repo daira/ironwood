@@ -43,6 +43,7 @@ carries the whole challenge-pricing story.
 namespace Zcash.Snark
 
 open Halo2 Polynomial Finset CompPoly
+open CompPoly.CPolynomial (nestedPoly)
 open scoped ENNReal
 
 /-- **The shared union bound.** Finitely many root-set events, each of degree at most `d`, together
@@ -178,7 +179,7 @@ theorem pairProdDiff_coeff_eq_zero_of_le (sp tp : Multiset (Fp × Fp)) {j : ℕ}
         m.map (fun q => Polynomial.X + Polynomial.C (encPair q).toPoly)
           = (m.map (fun q => (encPair q).toPoly)).map (fun u => Polynomial.X + Polynomial.C u) := by
       intro m; simp [Multiset.map_map]
-    rw [hmap, natDegree_prod_X_add_u]
+    rw [hmap, natDegree_prod_X_add_uPoly]
     simp
   rw [nestedPoly_pairProdDiff, Polynomial.coeff_sub,
     key sp (lt_of_le_of_lt (le_max_left _ _) hj), key tp (lt_of_le_of_lt (le_max_right _ _) hj),
@@ -223,11 +224,11 @@ theorem natDegree_lookupProdDiff_le (a s inp tbl : Multiset Fp) :
   · refine le_trans (Polynomial.natDegree_C_mul_le _ _) ?_
     exact le_trans (by
       simpa [Multiset.map_map] using
-        (natDegree_prod_X_add_u (s.map Polynomial.C)).le) (le_max_left _ _)
+        (natDegree_prod_X_add_uPoly (s.map Polynomial.C)).le) (le_max_left _ _)
   · refine le_trans (Polynomial.natDegree_C_mul_le _ _) ?_
     exact le_trans (by
       simpa [Multiset.map_map] using
-        (natDegree_prod_X_add_u (tbl.map Polynomial.C)).le) (le_max_right _ _)
+        (natDegree_prod_X_add_uPoly (tbl.map Polynomial.C)).le) (le_max_right _ _)
 
 /-- Out-of-range `γ` coefficients of the lookup product difference vanish. -/
 theorem lookupProdDiff_coeff_eq_zero_of_le (a s inp tbl : Multiset Fp) {j : ℕ}
@@ -270,7 +271,7 @@ theorem natDegree_coeff_lookupProdDiff_le
       ((a.map (fun u => Polynomial.X + Polynomial.C u)).prod).natDegree
           + (((s.map (fun u => Polynomial.X
               + Polynomial.C (Polynomial.C u))).prod).coeff j).natDegree
-        ≤ Multiset.card a + 0 := Nat.add_le_add (by rw [natDegree_prod_X_add_u])
+        ≤ Multiset.card a + 0 := Nat.add_le_add (by rw [natDegree_prod_X_add_uPoly])
           (tableCoeff s j)
       _ = Multiset.card a := Nat.add_zero _
       _ ≤ max (Multiset.card a) (Multiset.card inp) := le_max_left _ _
@@ -278,7 +279,7 @@ theorem natDegree_coeff_lookupProdDiff_le
     calc
       ((inp.map (fun u => X + C u)).prod).natDegree
           + (((tbl.map (fun u => X + C (C u))).prod).coeff j).natDegree
-        ≤ Multiset.card inp + 0 := Nat.add_le_add (by rw [natDegree_prod_X_add_u])
+        ≤ Multiset.card inp + 0 := Nat.add_le_add (by rw [natDegree_prod_X_add_uPoly])
           (tableCoeff tbl j)
       _ = Multiset.card inp := Nat.add_zero _
       _ ≤ max (Multiset.card a) (Multiset.card inp) := le_max_right _ _
@@ -764,7 +765,7 @@ theorem escape_measure_le (vs : Multiset Fp) :
           _ ≤ Multiset.card vs := by
               rw [CPolynomial.natDegree_toPoly, CPolynomial.toPoly_multiset_prod,
                 Multiset.map_map]
-              simpa [Function.comp_def] using (natDegree_prod_X_add_u (R := Fp) vs).le
+              simpa [Function.comp_def] using (natDegree_prod_X_add_uPoly (R := Fp) vs).le
 
 /-- **The `θ` surface priced.** The pairwise decompression condition over `N` rows of arity at most
 `r` costs at most `N²·r / p`. -/

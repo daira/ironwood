@@ -130,6 +130,72 @@ theorem toPoly_injective [Semiring R] [BEq R] [LawfulBEq R] {p q : CPolynomial R
     (h : p.toPoly = q.toPoly) : p = q :=
   toPolyLinearEquiv.injective h
 
+/-! ## Two indeterminates
+
+`CPolynomial (CPolynomial R)` is the computable `R[X][Y]`.  Its Mathlib image needs the outer
+`toPoly` *and* the coefficient ring carried across the same isomorphism; `nestedPoly` is that
+composite, and it is a ring hom because both halves are. -/
+
+section Nested
+
+variable [CommRing R] [BEq R] [LawfulBEq R] [Nontrivial R]
+
+/-- The nested Mathlib image: outer `toPoly`, then the coefficient ring mapped. -/
+noncomputable def nestedPoly (p : CPolynomial (CPolynomial R)) : Polynomial (Polynomial R) :=
+  (toPoly p).map (ringEquiv (R := R))
+
+/-- `nestedPoly` as a ring hom — the composite of two ring isomorphisms. -/
+noncomputable def nestedPolyRingHom :
+    CPolynomial (CPolynomial R) →+* Polynomial (Polynomial R) :=
+  (Polynomial.mapRingHom (ringEquiv (R := R)).toRingHom).comp
+    (ringEquiv (R := CPolynomial R)).toRingHom
+
+theorem nestedPoly_eq_ringHom (p : CPolynomial (CPolynomial R)) :
+    nestedPoly p = nestedPolyRingHom p := rfl
+
+theorem nestedPoly_add (p q : CPolynomial (CPolynomial R)) :
+    nestedPoly (p + q) = nestedPoly p + nestedPoly q := by
+  simp only [nestedPoly_eq_ringHom, map_add]
+
+theorem nestedPoly_sub (p q : CPolynomial (CPolynomial R)) :
+    nestedPoly (p - q) = nestedPoly p - nestedPoly q := by
+  simp only [nestedPoly_eq_ringHom, map_sub]
+
+theorem nestedPoly_mul (p q : CPolynomial (CPolynomial R)) :
+    nestedPoly (p * q) = nestedPoly p * nestedPoly q := by
+  simp only [nestedPoly_eq_ringHom, map_mul]
+
+theorem nestedPoly_multiset_prod (m : Multiset (CPolynomial (CPolynomial R))) :
+    nestedPoly m.prod = (m.map nestedPoly).prod := by
+  simp only [nestedPoly_eq_ringHom]
+  exact map_multiset_prod nestedPolyRingHom m
+
+theorem nestedPoly_C (q : CPolynomial R) : nestedPoly (C q) = Polynomial.C q.toPoly := by
+  rw [nestedPoly, C_toPoly, Polynomial.map_C]
+  rfl
+
+theorem nestedPoly_X : nestedPoly (X : CPolynomial (CPolynomial R)) = Polynomial.X := by
+  rw [nestedPoly, X_toPoly, Polynomial.map_X]
+
+/-- The outer coefficient commutes with the nested image. -/
+theorem coeff_nestedPoly (p : CPolynomial (CPolynomial R)) (j : ℕ) :
+    (nestedPoly p).coeff j = (coeff p j).toPoly := by
+  rw [nestedPoly, Polynomial.coeff_map, ← coeff_toPoly]
+  rfl
+
+theorem nestedPoly_injective {p q : CPolynomial (CPolynomial R)}
+    (h : nestedPoly p = nestedPoly q) : p = q :=
+  toPoly_injective (Polynomial.map_injective _ (ringEquiv (R := R)).injective h)
+
+@[simp] theorem nestedPoly_zero : nestedPoly (0 : CPolynomial (CPolynomial R)) = 0 := by
+  rw [nestedPoly, toPoly_zero, Polynomial.map_zero]
+
+theorem nestedPoly_eq_zero_iff {p : CPolynomial (CPolynomial R)} :
+    nestedPoly p = 0 ↔ p = 0 :=
+  ⟨fun h => nestedPoly_injective (by rwa [nestedPoly_zero]), fun h => by rw [h, nestedPoly_zero]⟩
+
+end Nested
+
 /-! ## Coefficients -/
 
 theorem coeff_finsetSum {ι : Type*} [DecidableEq ι] [CommSemiring R] [BEq R] [LawfulBEq R]
@@ -139,6 +205,11 @@ theorem coeff_finsetSum {ι : Type*} [DecidableEq ι] [CommSemiring R] [BEq R] [
   induction s using Finset.induction_on with
   | empty => rw [Finset.sum_empty, Finset.sum_empty, coeff_zero]
   | insert a s ha ih => rw [Finset.sum_insert ha, Finset.sum_insert ha, coeff_add, ih]
+
+/-- Coefficient extensionality, the computable counterpart of `Polynomial.ext`. -/
+theorem ext_coeff [Semiring R] [BEq R] [LawfulBEq R] {p q : CPolynomial R}
+    (h : ∀ n, p.coeff n = q.coeff n) : p = q :=
+  toPoly_injective (Polynomial.ext fun n => by rw [← coeff_toPoly, ← coeff_toPoly, h])
 
 theorem coeff_eq_zero_of_natDegree_lt [Semiring R] [BEq R] [LawfulBEq R] {p : CPolynomial R}
     {n : ℕ} (h : p.natDegree < n) : p.coeff n = 0 := by
