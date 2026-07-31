@@ -132,8 +132,8 @@ theorem toPoly_resolverLookupProductDifferenceCoeff
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u j : ℕ) :
-    (resolverLookupProductDifferenceCoeff vk ch poly p l u j).toPoly =
-      (nestedPoly (resolverLookupProductDifference vk ch poly p l u)).coeff j := by
+    resolverLookupProductDifferenceCoeff vk ch poly p l u j =
+      coeff (resolverLookupProductDifference vk ch poly p l u) j := by
   rw [resolverLookupProductDifferenceCoeff, resolverLookupProductDifference]
   apply toPoly_lookupProdDiffCoeff
 

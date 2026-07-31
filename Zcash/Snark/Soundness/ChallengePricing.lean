@@ -43,7 +43,8 @@ carries the whole challenge-pricing story.
 namespace Zcash.Snark
 
 open Halo2 Polynomial Finset CompPoly
-open CompPoly.CPolynomial (nestedPoly)
+open CompPoly.CPolynomial (nestedPoly coeff_nestedPoly natDegree_nestedPoly natDegree_toPoly
+  toPoly_eq_zero_iff)
 open scoped ENNReal
 
 /-- **The shared union bound.** Finitely many root-set events, each of degree at most `d`, together
@@ -134,8 +135,9 @@ theorem perm_gamma_failure_measure_le (sp tp : Multiset (Fp × Fp)) (beta : Fp) 
 /-- Each coefficient of the pair-product difference has degree at most the cell count: the factors
 `X + C (encPair q)` carry `β`-degree at most one each. -/
 theorem natDegree_coeff_pairProdDiff_le (sp tp : Multiset (Fp × Fp)) (j : ℕ) :
-    ((nestedPoly (pairProdDiff sp tp)).coeff j).natDegree
+    (CPolynomial.coeff (pairProdDiff sp tp) j).natDegree
       ≤ max (Multiset.card sp) (Multiset.card tp) := by
+  rw [natDegree_toPoly, ← coeff_nestedPoly]
   have key : ∀ (m : Multiset (Fp × Fp)) (j : ℕ),
       (((m.map (fun q => Polynomial.X + Polynomial.C (encPair q).toPoly)).prod).coeff j).natDegree ≤ Multiset.card m := by
     intro m
@@ -170,7 +172,8 @@ theorem natDegree_coeff_pairProdDiff_le (sp tp : Multiset (Fp × Fp)) (j : ℕ) 
 /-- Out-of-range coefficients of the pair-product difference vanish. -/
 theorem pairProdDiff_coeff_eq_zero_of_le (sp tp : Multiset (Fp × Fp)) {j : ℕ}
     (hj : max (Multiset.card sp) (Multiset.card tp) < j) :
-    (nestedPoly (pairProdDiff sp tp)).coeff j = 0 := by
+    CPolynomial.coeff (pairProdDiff sp tp) j = 0 := by
+  rw [← toPoly_eq_zero_iff, ← coeff_nestedPoly]
   have key : ∀ (m : Multiset (Fp × Fp)), Multiset.card m < j →
       ((m.map (fun q => Polynomial.X + Polynomial.C (encPair q).toPoly)).prod).coeff j = 0 := by
     intro m hm
@@ -202,7 +205,7 @@ theorem perm_beta_failure_measure_le (sp tp : Multiset (Fp × Fp)) :
       rcases lt_or_ge j (d + 1) with hlt | hge
       · exact ⟨j, hlt, hj⟩
       · rw [show pairProdDiffCoeff sp tp j = 0 from by
-              rw [← CPolynomial.toPoly_eq_zero_iff, toPoly_pairProdDiffCoeff]
+              rw [toPoly_pairProdDiffCoeff]
               exact pairProdDiff_coeff_eq_zero_of_le sp tp (by omega)] at hj
         simp [szBadSet] at hj
     · rintro ⟨j, _, hj⟩
@@ -210,15 +213,16 @@ theorem perm_beta_failure_measure_le (sp tp : Multiset (Fp × Fp)) :
   rw [hset]
   refine le_trans (uniformChallenge_szBadSet_iUnion_le (range (d + 1)) _ d
     fun j _ => by
-      rw [CPolynomial.natDegree_toPoly, toPoly_pairProdDiffCoeff]
+      rw [toPoly_pairProdDiffCoeff]
       exact natDegree_coeff_pairProdDiff_le sp tp j) ?_
   simp
 
 /-- The lookup product difference has `γ`-degree bounded by the larger table column. The two input
 columns occur only in its coefficients. -/
 theorem natDegree_lookupProdDiff_le (a s inp tbl : Multiset Fp) :
-    (nestedPoly (lookupProdDiff a s inp tbl)).natDegree ≤
+    (lookupProdDiff a s inp tbl).natDegree ≤
       max (Multiset.card s) (Multiset.card tbl) := by
+  rw [← natDegree_nestedPoly]
   rw [nestedPoly_lookupProdDiff]
   refine le_trans (Polynomial.natDegree_sub_le _ _) (max_le ?_ ?_)
   · refine le_trans (Polynomial.natDegree_C_mul_le _ _) ?_
@@ -233,16 +237,18 @@ theorem natDegree_lookupProdDiff_le (a s inp tbl : Multiset Fp) :
 /-- Out-of-range `γ` coefficients of the lookup product difference vanish. -/
 theorem lookupProdDiff_coeff_eq_zero_of_le (a s inp tbl : Multiset Fp) {j : ℕ}
     (hj : max (Multiset.card s) (Multiset.card tbl) < j) :
-    (nestedPoly (lookupProdDiff a s inp tbl)).coeff j = 0 :=
-  Polynomial.coeff_eq_zero_of_natDegree_lt
-    (lt_of_le_of_lt (natDegree_lookupProdDiff_le a s inp tbl) hj)
+    CPolynomial.coeff (lookupProdDiff a s inp tbl) j = 0 := by
+  rw [← toPoly_eq_zero_iff, ← coeff_nestedPoly]
+  exact Polynomial.coeff_eq_zero_of_natDegree_lt
+    (lt_of_le_of_lt (by rw [natDegree_nestedPoly]; exact natDegree_lookupProdDiff_le a s inp tbl) hj)
 
 /-- Every `γ` coefficient of the lookup product difference has `β`-degree bounded by the larger
 input column. The table factors have coefficients that are constant in `β`. -/
 theorem natDegree_coeff_lookupProdDiff_le
     (a s inp tbl : Multiset Fp) (j : ℕ) :
-    ((nestedPoly (lookupProdDiff a s inp tbl)).coeff j).natDegree ≤
+    (CPolynomial.coeff (lookupProdDiff a s inp tbl) j).natDegree ≤
       max (Multiset.card a) (Multiset.card inp) := by
+  rw [natDegree_toPoly, ← coeff_nestedPoly]
   have tableCoeff : ∀ (m : Multiset Fp) (j : ℕ),
       (((m.map (fun u => Polynomial.X
           + Polynomial.C (Polynomial.C u))).prod).coeff j).natDegree ≤ 0 := by
@@ -296,7 +302,9 @@ theorem lookup_gamma_failure_measure_le
   gcongr
   refine le_trans (szBadSet_card_le _) ?_
   rw [CPolynomial.natDegree_toPoly, toPoly_lookupProdDiffGamma]
-  exact le_trans Polynomial.natDegree_map_le (natDegree_lookupProdDiff_le a s inp tbl)
+  refine le_trans Polynomial.natDegree_map_le ?_
+  rw [natDegree_nestedPoly]
+  exact natDegree_lookupProdDiff_le a s inp tbl
 
 /-- **The lookup `β` surface priced.** There is one root set for each potentially nonzero
 `γ` coefficient, and each such coefficient has degree at most the larger input-column size. -/
@@ -318,7 +326,7 @@ theorem lookup_beta_failure_measure_le (a s inp tbl : Multiset Fp) :
       rcases lt_or_ge j (ds + 1) with hlt | hge
       · exact ⟨j, hlt, hj⟩
       · rw [show lookupProdDiffCoeff a s inp tbl j = 0 from by
-              rw [← CPolynomial.toPoly_eq_zero_iff, toPoly_lookupProdDiffCoeff]
+              rw [toPoly_lookupProdDiffCoeff]
               exact lookupProdDiff_coeff_eq_zero_of_le a s inp tbl (by omega)] at hj
         simp [szBadSet] at hj
     · rintro ⟨j, _, hj⟩
@@ -326,7 +334,7 @@ theorem lookup_beta_failure_measure_le (a s inp tbl : Multiset Fp) :
   rw [hset]
   refine le_trans (uniformChallenge_szBadSet_iUnion_le (range (ds + 1)) _ da
     fun j _ => ?_) ?_
-  · rw [CPolynomial.natDegree_toPoly, toPoly_lookupProdDiffCoeff]
+  · rw [toPoly_lookupProdDiffCoeff]
     simpa [hda] using natDegree_coeff_lookupProdDiff_le a s inp tbl j
   · simp [hds, hda]
 
@@ -375,7 +383,7 @@ theorem ResolverLookupGoodChallenges.ofBadSets
       exact Finset.mem_union_left _ (Finset.mem_biUnion.mpr
         ⟨j, Finset.mem_range.mpr hj, hmem⟩)
     · have hzero : resolverLookupProductDifferenceCoeff vk ch poly p l u j = 0 := by
-        rw [← CPolynomial.toPoly_eq_zero_iff, toPoly_resolverLookupProductDifferenceCoeff]
+        rw [toPoly_resolverLookupProductDifferenceCoeff]
         apply lookupProdDiff_coeff_eq_zero_of_le
         simpa [resolverLookupProductDifference] using (show u + 1 < j by omega)
       simp [hzero, szBadSet]
@@ -400,6 +408,7 @@ theorem resolverLookupGammaBadSet_card_le
     rw [CPolynomial.natDegree_toPoly, toPoly_resolverLookupProductDifferenceGamma]
     exact
       (le_trans Polynomial.natDegree_map_le (by
+        rw [natDegree_nestedPoly]
         simpa [resolverLookupProductDifference] using
           natDegree_lookupProdDiff_le
             (Finset.univ.val.map
@@ -459,7 +468,7 @@ theorem resolverLookupBetaBadSet_card_le
         ≤ u + 1 := by
     intro j
     refine le_trans (szBadSet_card_le _) ?_
-    rw [CPolynomial.natDegree_toPoly, toPoly_resolverLookupProductDifferenceCoeff]
+    rw [toPoly_resolverLookupProductDifferenceCoeff]
     exact (by
       simpa [resolverLookupProductDifference] using
         natDegree_coeff_lookupProdDiff_le
@@ -579,8 +588,7 @@ def resolverLookupGoodChallenges?
                   · exact (hbetaProof ⟨j, hj⟩).down
                   · have hzero :
                         resolverLookupProductDifferenceCoeff vk ch poly p l u j = 0 := by
-                      rw [← CPolynomial.toPoly_eq_zero_iff,
-                        toPoly_resolverLookupProductDifferenceCoeff]
+                      rw [toPoly_resolverLookupProductDifferenceCoeff]
                       apply lookupProdDiff_coeff_eq_zero_of_le
                       simpa [resolverLookupProductDifference] using
                         (show u + 1 < j by omega)
@@ -928,7 +936,7 @@ theorem ResolverPermutationGoodChallenges.ofBadSets
           (chunkRowValue vk.omega (ResolverPermutationPairs vk poly p))
           (chunkRowName vk.omega vk.delta vk.chunkLen)
       have hzero : pairProdDiffCoeff source target j = 0 := by
-        rw [← CPolynomial.toPoly_eq_zero_iff, toPoly_pairProdDiffCoeff]
+        rw [toPoly_pairProdDiffCoeff]
         apply pairProdDiff_coeff_eq_zero_of_le
         simp only [hsource, htarget, max_self]
         omega
@@ -1052,7 +1060,7 @@ def resolverPermutationGoodChallenges?
                   · exact (hbetaProof ⟨j, hj⟩).down
                   ·
                     have hzero : pairProdDiffCoeff source target j = 0 := by
-                      rw [← CPolynomial.toPoly_eq_zero_iff, toPoly_pairProdDiffCoeff]
+                      rw [toPoly_pairProdDiffCoeff]
                       apply pairProdDiff_coeff_eq_zero_of_le
                       simp only [hsource, htarget, max_self]
                       omega
@@ -1240,7 +1248,7 @@ theorem resolverPermutationBetaBadSet_card_le
   have hcoeff : ∀ j, (szBadSet (pairProdDiffCoeff source target j)).card ≤ d := by
     intro j
     refine le_trans (szBadSet_card_le _) ?_
-    rw [CPolynomial.natDegree_toPoly, toPoly_pairProdDiffCoeff]
+    rw [toPoly_pairProdDiffCoeff]
     simpa [hsource, htarget] using natDegree_coeff_pairProdDiff_le source target j
   rw [resolverPermutationBetaBadSet]
   calc

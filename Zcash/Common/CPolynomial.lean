@@ -183,6 +183,12 @@ theorem coeff_nestedPoly (p : CPolynomial (CPolynomial R)) (j : ℕ) :
   rw [nestedPoly, Polynomial.coeff_map, ← coeff_toPoly]
   rfl
 
+/-- The nested image has the same outer degree: both halves are isomorphisms. -/
+theorem natDegree_nestedPoly (p : CPolynomial (CPolynomial R)) :
+    (nestedPoly p).natDegree = p.natDegree := by
+  rw [nestedPoly, Polynomial.natDegree_map_eq_of_injective
+    (ringEquiv (R := R)).injective, natDegree_toPoly]
+
 theorem nestedPoly_injective {p q : CPolynomial (CPolynomial R)}
     (h : nestedPoly p = nestedPoly q) : p = q :=
   toPoly_injective (Polynomial.map_injective _ (ringEquiv (R := R)).injective h)

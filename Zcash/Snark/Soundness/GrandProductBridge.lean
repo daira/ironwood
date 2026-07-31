@@ -84,8 +84,10 @@ def pairProdDiffCoeff (sp tp : Multiset (Fp × Fp)) (j : ℕ) : CPoly :=
     - (if j ≤ Multiset.card tp then (tp.map encPair).esymm (Multiset.card tp - j) else 0)
 
 theorem toPoly_pairProdDiffCoeff (sp tp : Multiset (Fp × Fp)) (j : ℕ) :
-    (pairProdDiffCoeff sp tp j).toPoly = (nestedPoly (pairProdDiff sp tp)).coeff j := by
-  rw [nestedPoly_pairProdDiff, pairProdDiffCoeff, toPoly_sub, Polynomial.coeff_sub]
+    pairProdDiffCoeff sp tp j = CPolynomial.coeff (pairProdDiff sp tp) j := by
+  refine toPoly_injective ?_
+  rw [← coeff_nestedPoly, nestedPoly_pairProdDiff, pairProdDiffCoeff, toPoly_sub,
+    Polynomial.coeff_sub]
   congr 1
   · split <;> rename_i hj
     · rw [toPoly_multiset_esymm, Multiset.prod_X_add_C_coeff' sp (fun p => (encPair p).toPoly) hj]
@@ -143,8 +145,7 @@ theorem multiset_pair_eq_of_map_eq {sp tp : Multiset (Fp × Fp)} {β : Fp}
     by_contra hall
     exact hD (ext_coeff fun j => by simpa using not_exists.mp hall j)
   have hjC : pairProdDiffCoeff sp tp j ≠ 0 := by
-    rw [Ne, ← toPoly_eq_zero_iff, toPoly_pairProdDiffCoeff, coeff_nestedPoly,
-      toPoly_eq_zero_iff]
+    rw [toPoly_pairProdDiffCoeff]
     exact hj
   refine (not_mem_szBadSet.mp (hgoodβ j)) hjC ?_
   have hmapped : (nestedPoly (pairProdDiff sp tp)).map (Polynomial.evalRingHom β) = 0 := by
@@ -159,7 +160,7 @@ theorem multiset_pair_eq_of_map_eq {sp tp : Multiset (Fp × Fp)} {β : Fp}
       simp [encPair, Polynomial.map_add, Polynomial.map_mul]
     rw [nestedPoly_pairProdDiff, Polynomial.map_sub, hconv sp, hconv tp, h, sub_self]
   have hcoeff := congrArg (fun q => Polynomial.coeff q j) hmapped
-  rw [eval_toPoly, toPoly_pairProdDiffCoeff]
+  rw [eval_toPoly, toPoly_pairProdDiffCoeff, ← coeff_nestedPoly]
   simpa [Polynomial.coeff_map] using hcoeff
 
 /-- **The bridge.** The verifier's product identity at the sampled challenges gives the multiset of
@@ -226,8 +227,10 @@ def lookupProdDiffCoeff (a s inp tbl : Multiset Fp) (j : ℕ) : CPoly :=
       * (if j ≤ Multiset.card tbl then (tbl.map C).esymm (Multiset.card tbl - j) else 0)
 
 theorem toPoly_lookupProdDiffCoeff (a s inp tbl : Multiset Fp) (j : ℕ) :
-    (lookupProdDiffCoeff a s inp tbl j).toPoly
-      = (nestedPoly (lookupProdDiff a s inp tbl)).coeff j := by
+    lookupProdDiffCoeff a s inp tbl j
+      = CPolynomial.coeff (lookupProdDiff a s inp tbl) j := by
+  refine toPoly_injective ?_
+  rw [← coeff_nestedPoly]
   rw [lookupProdDiffCoeff, toPoly_sub, toPoly_mul, toPoly_mul, toPoly_multiset_prod,
     toPoly_multiset_prod, nestedPoly_lookupProdDiff, Polynomial.coeff_sub,
     Polynomial.coeff_C_mul, Polynomial.coeff_C_mul]
@@ -305,17 +308,15 @@ theorem lookup_multisets_of_prod_eval_eq {a s inp tbl : Multiset Fp} {β γ : Fp
     rw [Ne, ← toPoly_eq_zero_iff, toPoly_lookupProdDiffGamma]
     exact hne
   by_contra hne
-  obtain ⟨j, hj⟩ : ∃ j, (nestedPoly (lookupProdDiff a s inp tbl)).coeff j ≠ 0 := by
+  obtain ⟨j, hj⟩ : ∃ j, CPolynomial.coeff (lookupProdDiff a s inp tbl) j ≠ 0 := by
     by_contra hall
-    exact hne (nestedPoly_injective (by
-      simpa [nestedPoly_zero] using Polynomial.ext fun j => by
-        simpa using not_exists.mp hall j))
+    exact hne (ext_coeff fun j => by simpa using not_exists.mp hall j)
   have hjC : lookupProdDiffCoeff a s inp tbl j ≠ 0 := by
-    rw [Ne, ← toPoly_eq_zero_iff, toPoly_lookupProdDiffCoeff]
+    rw [toPoly_lookupProdDiffCoeff]
     exact hj
   refine (not_mem_szBadSet.mp (hgoodβ j)) hjC ?_
   have hcoeff := congrArg (fun q => Polynomial.coeff q j) hmap
-  rw [eval_toPoly, toPoly_lookupProdDiffCoeff]
+  rw [eval_toPoly, toPoly_lookupProdDiffCoeff, ← coeff_nestedPoly]
   simpa [Polynomial.coeff_map] using hcoeff
 
 /-- **The lookup product separates the columns.** The `γ`-leading coefficient of each side is that
