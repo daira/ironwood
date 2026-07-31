@@ -38,17 +38,6 @@ namespace Zcash.Snark
 
 open CompPoly CompPoly.CPolynomial
 
-/-- A monic product of `card` linear factors has no coefficients above `card`. -/
-private theorem coeff_prod_X_add_C_eq_zero {R : Type*} [CommRing R] [Nontrivial R]
-    {σ : Type*} (m : Multiset σ) (r : σ → R) {j : ℕ} (hj : Multiset.card m < j) :
-    ((m.map (fun p => Polynomial.X + Polynomial.C (r p))).prod).coeff j = 0 := by
-  refine Polynomial.coeff_eq_zero_of_natDegree_lt (lt_of_le_of_lt (le_of_eq ?_) hj)
-  rw [Polynomial.natDegree_multiset_prod_of_monic]
-  · simp [Multiset.map_map]
-  · intro f hf
-    obtain ⟨p, _, rfl⟩ := Multiset.mem_map.mp hf
-    exact Polynomial.monic_X_add_C _
-
 /-- The difference of the two pair-encoded products, a polynomial in `γ` with coefficients in
 `Fp[β]`.  The outer indeterminate is `γ`, the inner one `β`. -/
 def pairProdDiff (sp tp : Multiset (Fp × Fp)) : CBiPoly :=
@@ -108,13 +97,6 @@ theorem pairProdDiff_ne_zero {sp tp : Multiset (Fp × Fp)} (h : sp ≠ tp) :
 /-- The difference of the two `γ`-products once `β` is fixed. -/
 def linProdDiff (s t : Multiset Fp) : CPoly :=
   (s.map (fun u => X + C u)).prod - (t.map (fun u => X + C u)).prod
-
-theorem toPoly_linProdDiff (s t : Multiset Fp) :
-    (linProdDiff s t).toPoly =
-      (s.map (fun u => Polynomial.X + Polynomial.C u)).prod
-        - (t.map (fun u => Polynomial.X + Polynomial.C u)).prod := by
-  rw [linProdDiff, toPoly_sub, toPoly_multiset_prod, toPoly_multiset_prod]
-  simp [Multiset.map_map]
 
 /-- **The `γ` step.** A challenge outside the difference's roots turns the verifier's field product
 identity into equality of the multisets of `value + β·name`. -/
