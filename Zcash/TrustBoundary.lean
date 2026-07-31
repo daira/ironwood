@@ -930,7 +930,9 @@ assert_axioms Zcash.Snark.natDegree_combineConstraints_le
 -- point by `(D + Σ totalDegree (denFactors vk)) / p`; the challenge-restricted variant pins
 -- the proof-string slots to an arbitrary assignment and prices the same bound over the
 -- challenge coordinates alone — the factors are challenge-only and restriction does not raise
--- degree; and a `Perm` of pair lists with
+-- degree; the cross-denominator variants admit a competing family with its own denominators
+-- from the enumerated factor closure, cross-multiplied (`RationalCoeffFamily.mulDen`) to the
+-- summed budget `D + Dden`; and a `Perm` of pair lists with
 -- duplicate-free second components is realized by the base-matching index bijection — the
 -- `Perm`→positional bridge the per-capture `fingerprint_matches_positional` facts instantiate.
 assert_axioms Zcash.Snark.proofStringWellFormed_toProofString
@@ -951,6 +953,9 @@ assert_axioms Zcash.Snark.goodEvent_merge_iff
 assert_axioms Zcash.Snark.goodEvent_merge_compl_card_le
 assert_axioms Zcash.Snark.competing_coefficient_family_agreement_le
 assert_axioms Zcash.Snark.competing_coefficient_family_agreement_le_challengesOnly
+assert_axioms Zcash.Snark.RationalCoeffFamily.mulDen
+assert_axioms Zcash.Snark.competing_coefficient_family_agreement_le_denClosure
+assert_axioms Zcash.Snark.competing_coefficient_family_agreement_le_challengesOnly_denClosure
 assert_axioms Zcash.Snark.perm_reindex_of_nodup_snd
 assert_axioms Zcash.Snark.msmMatch_other_reindex_of_nodup
 -- The query-side representation walk (`Fingerprint/Rational/QueryWalk`): the constraint list

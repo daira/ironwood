@@ -188,7 +188,11 @@ point falls off the good event (`B = 2071`, the summed factor degrees:
 by the `h`-piece coefficients `xnⁱ·x₁ʲ·x₄ˢ`). A challenge-restricted variant
 (`competing_coefficient_family_agreement_le_challengesOnly`) pins the proof-string slots to an
 arbitrary assignment and prices the same bound over the challenge coordinates alone — the
-uniformity subsection below explains why that layer matters. The per-capture headliners with
+uniformity subsection below explains why that layer matters. Cross-denominator variants
+(`competing_coefficient_family_agreement_le_denClosure` and its challenge-restricted
+companion) admit a competing family bringing its *own* denominators from the enumerated
+factor closure, cross-multiplied to the summed budget `(D + Dden + B) / p`, `Dden = 2077`
+pinned per capture — ε′ = `20600 / 20604 / 20608`. The per-capture headliners with
 literal numerals — ε = `18523 / 18527 / 18531` over `p`, about `2⁻²⁴⁰` — live beside the random
 fixtures (`Fixtures/*Random/Epsilon.lean`), censused with exact `native_decide` owner lists, and
 the good event provably contains each captured point (`capturedPoint_goodEvent`).
@@ -206,9 +210,12 @@ The bridge concludes that the assembled MSM agrees with the captured one coordin
 ones, and each `other` term is pinned to its base-matched captured position. Two premises
 stay prose:
 
-- **Rust-side polynomiality.** That the deployed coefficients are the same rational family —
-  the same enumerated challenge-only denominators, comparable numerator degree — is an audit of
-  the Rust source; necessarily, since that side has no Lean text.
+- **Rust-side polynomiality.** That the deployed coefficients form a rational family in the
+  walk's class — numerators within the degree budget, denominators from the enumerated
+  challenge-only factor closure within the denominator budget — is an audit of the Rust
+  source; necessarily, since that side has no Lean text. Per-coordinate denominator agreement
+  is not assumed: the cross-denominator theorems price a family bringing its own denominators
+  at the summed budget (`competing_coefficient_family_agreement_le_denClosure`).
 - **Uniformity.** The subsection below.
 
 ### The uniformity premise
@@ -238,7 +245,8 @@ assignment and prices the same `(D + B) / p` bound over the challenge coordinate
 hypothesis exactly the coverage condition above — the *restricted* discrepancy nonzero — and
 the per-family headliners (`competing_family_agreement_le_challengesOnly`,
 `Fixtures/*Random/Epsilon.lean`) instantiate it at the captured scalars
-(`capturedSlotVals`) with the same literal ε.
+(`capturedSlotVals`) with the same literal ε; their cross-denominator companions carry the
+same layer at the summed budget.
 
 **What the full product-space ε needs.** Reading the literal per-family ε over *all*
 coordinates additionally treats the seeded `ChaCha20Rng` expansion as a random function
@@ -397,7 +405,9 @@ A reviewer can verify the Rust↔Lean seam of the soundness stack by reading:
    censuses;
 2. the quantified match — `competing_coefficient_family_agreement_le`, its
    challenge-restricted variant `competing_coefficient_family_agreement_le_challengesOnly`,
-   and the three `Fixtures/*Random/Epsilon.lean` headliner pairs with their literal ε —
+   the cross-denominator pair `competing_coefficient_family_agreement_le_denClosure` /
+   `competing_coefficient_family_agreement_le_challengesOnly_denClosure`, and the three
+   `Fixtures/*Random/Epsilon.lean` headliner quadruples with their literal ε —
    together with the uniformity premise above;
 3. the audit table above, row by row, checking each falsification mechanism exists in the
    tree;

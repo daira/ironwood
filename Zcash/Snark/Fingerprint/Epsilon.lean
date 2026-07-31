@@ -28,6 +28,11 @@ that buys:
   cost — the factors are challenge-only). What the random-oracle premise alone buys at a
   capture: coverage of every divergence whose discrepancy does not vanish identically at the
   pinned slots.
+* `competing_coefficient_family_agreement_le_denClosure` and its challenge-restricted
+  companion — the same two bounds for a competing family bringing its *own* denominators from
+  the enumerated factor closure, at the summed budget:
+  `(D + Dden + Σ totalDegree (denFactors vk)) / p`. Cross-multiplication
+  (`RationalCoeffFamily.mulDen`) clears both sides and delegates to the two theorems above.
 
 Statements are conditioned on `assemble? = some m` throughout — never the total `assemble`,
 whose zero-MSM fallback evaluates to the accept value (`Verifier/Assemble.lean`).
@@ -42,8 +47,11 @@ a permutation is a fixed re-indexing of `MsmCoord` and changes neither degrees n
 random captures (`capturedMsm_other_bases_nodup`), so a passing match is forced to the unique
 base-matching bijection (`fingerprint_matches_positional`, `Fixtures/*Random/Epsilon.lean`).
 A competing family over *different* denominators from the
-same factor closure reduces to this statement by cross-multiplication at degree
-`≤ D + Dden` — the denominators are challenge-only and event-nonvanishing on both sides.
+same factor closure is covered by the cross-denominator theorems: `RationalCoeffFamily.mulDen`
+multiplies Lean's family through by the competing denominators — the cleared identities
+survive multiplication, so no nonvanishing is consumed — and the same argument reprices at the
+summed numerator budget `D + Dden`. The coverage hypothesis becomes the cross-multiplied
+discrepancy (see `competing_coefficient_family_agreement_le_denClosure`).
 -/
 
 namespace Zcash.Snark
@@ -159,6 +167,33 @@ structure RationalCoeffFamily {shape : Shape} {G : Type*} [DecidableEq G] [Inhab
       assemble? vk ic (Point.toProofString pt base) (Point.toChallenges pt) = some m
         ∧ m.other.length = L
         ∧ ∀ c : MsmCoord shape.k L, m.coeffAt c * eval pt (den c) = eval pt (num c)
+
+/-- Multiply a family through by an extra denominator: numerator and denominator at each
+coordinate pick up `den' c`, the budgets add, and the cleared identities `coeff · den = num`
+survive the multiplication — no nonvanishing is consumed. The reduction step behind the
+cross-denominator ε theorems below. -/
+noncomputable def RationalCoeffFamily.mulDen {shape : Shape} {G : Type*}
+    [DecidableEq G] [Inhabited G]
+    {vk : VerifyingKey shape Fp G} {ic : Fin shape.numProofs → ℕ → G}
+    {base : ProofString shape Fp G} {L D Dden Dden' : ℕ}
+    (fam : RationalCoeffFamily vk ic base L D Dden)
+    (den' : MsmCoord shape.k L → MvPolynomial (ScalarSlot shape) Fp)
+    (hmem : ∀ c, den' c ∈ Submonoid.closure {φ | φ ∈ denFactors vk})
+    (hdeg : ∀ c, (den' c).totalDegree ≤ Dden') :
+    RationalCoeffFamily vk ic base L (D + Dden') (Dden + Dden') where
+  num c := fam.num c * den' c
+  den c := fam.den c * den' c
+  den_mem c := mul_mem (fam.den_mem c) (hmem c)
+  num_totalDegree_le c :=
+    le_trans (totalDegree_mul _ _) (add_le_add (fam.num_totalDegree_le c) (hdeg c))
+  den_totalDegree_le c :=
+    le_trans (totalDegree_mul _ _) (add_le_add (fam.den_totalDegree_le c) (hdeg c))
+  represents pt hgood := by
+    obtain ⟨m, hm, hlen, hrep⟩ := fam.represents pt hgood
+    refine ⟨m, hm, hlen, fun c => ?_⟩
+    show m.coeffAt c * eval pt (fam.den c * den' c) = eval pt (fam.num c * den' c)
+    rw [map_mul, map_mul, ← hrep c]
+    ring
 
 open Classical in
 /-- **The ε theorem, generic form.** Any competing numerator family of total degree ≤ `D` over
@@ -339,5 +374,173 @@ theorem competing_coefficient_family_agreement_le_challengesOnly {shape : Shape}
         gcongr
     _ = ((D : ℚ≥0) + (((denFactors vk).map totalDegree).sum : ℕ)) / scalarFieldOrder := by
         rw [add_comm, add_div]
+
+open Classical in
+/-- **The ε theorem across denominators.** A competing rational family — numerators of total
+degree ≤ `D`, denominators of total degree ≤ `Dden` from the enumerated factor closure — agrees
+with the assembled MSM at a uniformly random sample-space point with probability at most
+`(D + Dden + Σ totalDegree (denFactors vk)) / p`. The hypothesis is the cross-multiplied
+discrepancy `num' c₀ * fam.den c₀ ≠ fam.num c₀ * den' c₀` — disagreement of the rational
+functions themselves, both denominators being nonzero polynomials. `mulDen` clears the
+denominators and `competing_coefficient_family_agreement_le` reprices at budget `D + Dden`. -/
+theorem competing_coefficient_family_agreement_le_denClosure {shape : Shape} {G : Type*}
+    [DecidableEq G] [Inhabited G]
+    {vk : VerifyingKey shape Fp G} {ic : Fin shape.numProofs → ℕ → G}
+    {base : ProofString shape Fp G} {L D Dden : ℕ}
+    (fam : RationalCoeffFamily vk ic base L D Dden) (hn : 0 < vk.n)
+    (num' den' : MsmCoord shape.k L → MvPolynomial (ScalarSlot shape) Fp)
+    (hmem' : ∀ c, den' c ∈ Submonoid.closure {φ | φ ∈ denFactors vk})
+    (hdeg' : ∀ c, (num' c).totalDegree ≤ D)
+    (hdegden' : ∀ c, (den' c).totalDegree ≤ Dden)
+    (c₀ : MsmCoord shape.k L) (hne : num' c₀ * fam.den c₀ ≠ fam.num c₀ * den' c₀) :
+    (#{f ∈ piFinset fun _ : ScalarSlot shape => (univ : Finset Fp) |
+        ∃ m : Msm shape.k Fp G,
+          assemble? vk ic (Point.toProofString f base) (Point.toChallenges f) = some m
+            ∧ m.other.length = L
+            ∧ ∀ c : MsmCoord shape.k L, m.coeffAt c * eval f (den' c) = eval f (num' c)}
+        : ℚ≥0)
+        / (scalarFieldOrder : ℚ≥0) ^ Fintype.card (ScalarSlot shape)
+      ≤ ((D : ℚ≥0) + Dden + (((denFactors vk).map totalDegree).sum : ℕ))
+          / scalarFieldOrder := by
+  have hdeg'' : ∀ c, (num' c * fam.den c).totalDegree ≤ D + Dden := fun c =>
+    le_trans (totalDegree_mul _ _) (add_le_add (hdeg' c) (fam.den_totalDegree_le c))
+  have hsub : {f ∈ piFinset fun _ : ScalarSlot shape => (univ : Finset Fp) |
+        ∃ m : Msm shape.k Fp G,
+          assemble? vk ic (Point.toProofString f base) (Point.toChallenges f) = some m
+            ∧ m.other.length = L
+            ∧ ∀ c : MsmCoord shape.k L, m.coeffAt c * eval f (den' c) = eval f (num' c)}
+      ⊆ {f ∈ piFinset fun _ : ScalarSlot shape => (univ : Finset Fp) |
+          ∃ m : Msm shape.k Fp G,
+            assemble? vk ic (Point.toProofString f base) (Point.toChallenges f) = some m
+              ∧ m.other.length = L
+              ∧ ∀ c : MsmCoord shape.k L,
+                  m.coeffAt c * eval f ((fam.mulDen den' hmem' hdegden').den c)
+                    = eval f (num' c * fam.den c)} := by
+    intro f hf
+    simp only [Finset.mem_filter] at hf ⊢
+    obtain ⟨hmem, m, hm, hlen, hagree⟩ := hf
+    refine ⟨hmem, m, hm, hlen, fun c => ?_⟩
+    show m.coeffAt c * eval f (fam.den c * den' c) = eval f (num' c * fam.den c)
+    rw [map_mul, map_mul, ← hagree c]
+    ring
+  have hcard := Finset.card_le_card hsub
+  calc (#{f ∈ piFinset fun _ : ScalarSlot shape => (univ : Finset Fp) |
+        ∃ m : Msm shape.k Fp G,
+          assemble? vk ic (Point.toProofString f base) (Point.toChallenges f) = some m
+            ∧ m.other.length = L
+            ∧ ∀ c : MsmCoord shape.k L, m.coeffAt c * eval f (den' c) = eval f (num' c)}
+        : ℚ≥0)
+        / (scalarFieldOrder : ℚ≥0) ^ Fintype.card (ScalarSlot shape)
+      ≤ (#{f ∈ piFinset fun _ : ScalarSlot shape => (univ : Finset Fp) |
+          ∃ m : Msm shape.k Fp G,
+            assemble? vk ic (Point.toProofString f base) (Point.toChallenges f) = some m
+              ∧ m.other.length = L
+              ∧ ∀ c : MsmCoord shape.k L,
+                  m.coeffAt c * eval f ((fam.mulDen den' hmem' hdegden').den c)
+                    = eval f (num' c * fam.den c)} : ℚ≥0)
+          / (scalarFieldOrder : ℚ≥0) ^ Fintype.card (ScalarSlot shape) := by
+        gcongr
+    _ ≤ (((D + Dden : ℕ) : ℚ≥0) + (((denFactors vk).map totalDegree).sum : ℕ))
+          / scalarFieldOrder :=
+        competing_coefficient_family_agreement_le (fam.mulDen den' hmem' hdegden') hn
+          (fun c => num' c * fam.den c) hdeg'' c₀ hne
+    _ = ((D : ℚ≥0) + Dden + (((denFactors vk).map totalDegree).sum : ℕ))
+          / scalarFieldOrder := by
+        rw [Nat.cast_add]
+
+open Classical in
+/-- **The ε theorem across denominators, over the challenge coordinates alone.** The
+cross-denominator bound with the proof-string slots pinned to an arbitrary assignment,
+counting over the challenge coordinates: the same
+`(D + Dden + Σ totalDegree (denFactors vk)) / p`. The hypothesis is the *restricted*
+cross-multiplied discrepancy at `slotVals` — the honest coverage condition of
+`competing_coefficient_family_agreement_le_challengesOnly` in the cross-multiplied shape of
+`competing_coefficient_family_agreement_le_denClosure`. Same reduction through `mulDen`. -/
+theorem competing_coefficient_family_agreement_le_challengesOnly_denClosure {shape : Shape}
+    {G : Type*} [DecidableEq G] [Inhabited G]
+    {vk : VerifyingKey shape Fp G} {ic : Fin shape.numProofs → ℕ → G}
+    {base : ProofString shape Fp G} {L D Dden : ℕ}
+    (fam : RationalCoeffFamily vk ic base L D Dden) (hn : 0 < vk.n)
+    (slotVals : {v : ScalarSlot shape // ¬ IsChallengeSlot v} → Fp)
+    (num' den' : MsmCoord shape.k L → MvPolynomial (ScalarSlot shape) Fp)
+    (hmem' : ∀ c, den' c ∈ Submonoid.closure {φ | φ ∈ denFactors vk})
+    (hdeg' : ∀ c, (num' c).totalDegree ≤ D)
+    (hdegden' : ∀ c, (den' c).totalDegree ≤ Dden)
+    (c₀ : MsmCoord shape.k L)
+    (hne : restrictSlots slotVals (num' c₀ * fam.den c₀)
+        ≠ restrictSlots slotVals (fam.num c₀ * den' c₀)) :
+    (#{g ∈ piFinset fun _ : {v : ScalarSlot shape // IsChallengeSlot v} =>
+        (univ : Finset Fp) |
+        ∃ m : Msm shape.k Fp G,
+          assemble? vk ic (Point.toProofString (Point.merge slotVals g) base)
+              (Point.toChallenges (Point.merge slotVals g)) = some m
+            ∧ m.other.length = L
+            ∧ ∀ c : MsmCoord shape.k L,
+                m.coeffAt c * eval (Point.merge slotVals g) (den' c)
+                  = eval (Point.merge slotVals g) (num' c)} : ℚ≥0)
+        / (scalarFieldOrder : ℚ≥0) ^ Fintype.card {v : ScalarSlot shape // IsChallengeSlot v}
+      ≤ ((D : ℚ≥0) + Dden + (((denFactors vk).map totalDegree).sum : ℕ))
+          / scalarFieldOrder := by
+  have hdeg'' : ∀ c, (num' c * fam.den c).totalDegree ≤ D + Dden := fun c =>
+    le_trans (totalDegree_mul _ _) (add_le_add (hdeg' c) (fam.den_totalDegree_le c))
+  have hsub : {g ∈ piFinset fun _ : {v : ScalarSlot shape // IsChallengeSlot v} =>
+        (univ : Finset Fp) |
+        ∃ m : Msm shape.k Fp G,
+          assemble? vk ic (Point.toProofString (Point.merge slotVals g) base)
+              (Point.toChallenges (Point.merge slotVals g)) = some m
+            ∧ m.other.length = L
+            ∧ ∀ c : MsmCoord shape.k L,
+                m.coeffAt c * eval (Point.merge slotVals g) (den' c)
+                  = eval (Point.merge slotVals g) (num' c)}
+      ⊆ {g ∈ piFinset fun _ : {v : ScalarSlot shape // IsChallengeSlot v} =>
+          (univ : Finset Fp) |
+          ∃ m : Msm shape.k Fp G,
+            assemble? vk ic (Point.toProofString (Point.merge slotVals g) base)
+                (Point.toChallenges (Point.merge slotVals g)) = some m
+              ∧ m.other.length = L
+              ∧ ∀ c : MsmCoord shape.k L,
+                  m.coeffAt c
+                      * eval (Point.merge slotVals g) ((fam.mulDen den' hmem' hdegden').den c)
+                    = eval (Point.merge slotVals g) (num' c * fam.den c)} := by
+    intro g hg
+    simp only [Finset.mem_filter] at hg ⊢
+    obtain ⟨hmem, m, hm, hlen, hagree⟩ := hg
+    refine ⟨hmem, m, hm, hlen, fun c => ?_⟩
+    show m.coeffAt c * eval (Point.merge slotVals g) (fam.den c * den' c)
+        = eval (Point.merge slotVals g) (num' c * fam.den c)
+    rw [map_mul, map_mul, ← hagree c]
+    ring
+  have hcard := Finset.card_le_card hsub
+  calc (#{g ∈ piFinset fun _ : {v : ScalarSlot shape // IsChallengeSlot v} =>
+        (univ : Finset Fp) |
+        ∃ m : Msm shape.k Fp G,
+          assemble? vk ic (Point.toProofString (Point.merge slotVals g) base)
+              (Point.toChallenges (Point.merge slotVals g)) = some m
+            ∧ m.other.length = L
+            ∧ ∀ c : MsmCoord shape.k L,
+                m.coeffAt c * eval (Point.merge slotVals g) (den' c)
+                  = eval (Point.merge slotVals g) (num' c)} : ℚ≥0)
+        / (scalarFieldOrder : ℚ≥0) ^ Fintype.card {v : ScalarSlot shape // IsChallengeSlot v}
+      ≤ (#{g ∈ piFinset fun _ : {v : ScalarSlot shape // IsChallengeSlot v} =>
+          (univ : Finset Fp) |
+          ∃ m : Msm shape.k Fp G,
+            assemble? vk ic (Point.toProofString (Point.merge slotVals g) base)
+                (Point.toChallenges (Point.merge slotVals g)) = some m
+              ∧ m.other.length = L
+              ∧ ∀ c : MsmCoord shape.k L,
+                  m.coeffAt c
+                      * eval (Point.merge slotVals g) ((fam.mulDen den' hmem' hdegden').den c)
+                    = eval (Point.merge slotVals g) (num' c * fam.den c)} : ℚ≥0)
+          / (scalarFieldOrder : ℚ≥0)
+              ^ Fintype.card {v : ScalarSlot shape // IsChallengeSlot v} := by
+        gcongr
+    _ ≤ (((D + Dden : ℕ) : ℚ≥0) + (((denFactors vk).map totalDegree).sum : ℕ))
+          / scalarFieldOrder :=
+        competing_coefficient_family_agreement_le_challengesOnly
+          (fam.mulDen den' hmem' hdegden') hn slotVals
+          (fun c => num' c * fam.den c) hdeg'' c₀ hne
+    _ = ((D : ℚ≥0) + Dden + (((denFactors vk).map totalDegree).sum : ℕ))
+          / scalarFieldOrder := by
+        rw [Nat.cast_add]
 
 end Zcash.Snark

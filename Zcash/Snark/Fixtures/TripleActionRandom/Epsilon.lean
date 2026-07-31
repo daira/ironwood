@@ -23,6 +23,10 @@ pinned to the captured scalars (`capturedSlotVals`), counting over the 22 challe
 coordinates alone — what the random-oracle premise alone buys at this capture, covering every
 divergence whose restricted discrepancy does not vanish identically at the captured slots.
 
+`competing_family_agreement_le_denClosure` and its challenge-restricted companion extend both
+bounds to a competing family bringing its own denominators from the enumerated factor closure,
+cross-multiplied at the summed budget: `(16460 + 2077 + 2071) / p = 20608 / p`.
+
 `capturedPoint_goodEvent` corroborates non-vacuity: the good event contains the captured
 point itself — the real capture's challenges avoid every enumerated denominator factor.
 
@@ -56,6 +60,9 @@ theorem vk_chunks_length_eq : vk.permutationChunks.length = shape.numPermutation
 
 /-- The walk's numerator-degree cap at the captured key. -/
 theorem msmDegreeBudget_eq : msmDegreeBudget shape vk = 16460 := by native_decide
+
+/-- The walk's denominator-degree cap at the captured key. -/
+theorem msmDenBudget_eq : msmDenBudget shape vk = 2077 := by native_decide
 
 /-- The assembled `other` term count at the captured key. -/
 theorem otherLen_eq : otherLen shape vk = 146 := by native_decide
@@ -168,6 +175,86 @@ theorem competing_family_agreement_le_challengesOnly
   calc ((16460 : ℕ) : ℚ≥0) + ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0)
       ≤ ((16460 : ℕ) : ℚ≥0) + ((2071 : ℕ) : ℚ≥0) := add_le_add le_rfl hsum
     _ = (18531 : ℚ≥0) := by norm_num
+
+set_option maxHeartbeats 4000000 in
+open Classical in
+/-- **ε across denominators at this capture.** Any competing rational family — numerators of
+total degree ≤ 16460, denominators of total degree ≤ 2077 from the enumerated factor closure —
+whose cross-multiplied discrepancy with Lean's family is nonzero at some coordinate agrees with
+the assembled MSM at a uniformly random sample-space point with probability at most
+`(16460 + 2077 + 2071) / p = 20608 / p`. -/
+theorem competing_family_agreement_le_denClosure
+    (num' den' : MsmCoord shape.k (otherLen shape vk) → MvPolynomial (ScalarSlot shape) Fp)
+    (hmem' : ∀ c, den' c ∈ Submonoid.closure {φ | φ ∈ denFactors vk})
+    (hdeg' : ∀ c, (num' c).totalDegree ≤ msmDegreeBudget shape vk)
+    (hdegden' : ∀ c, (den' c).totalDegree ≤ msmDenBudget shape vk)
+    (c₀ : MsmCoord shape.k (otherLen shape vk))
+    (hne : num' c₀ * coefficientFamily.den c₀ ≠ coefficientFamily.num c₀ * den' c₀) :
+    (#{f ∈ piFinset fun _ : ScalarSlot shape => (univ : Finset Fp) |
+        ∃ m : Msm shape.k Fp G,
+          assemble? vk derivedInstanceCommitment (Point.toProofString f ps)
+              (Point.toChallenges f) = some m
+            ∧ m.other.length = otherLen shape vk
+            ∧ ∀ c : MsmCoord shape.k (otherLen shape vk),
+                m.coeffAt c * eval f (den' c) = eval f (num' c)} : ℚ≥0)
+        / (scalarFieldOrder : ℚ≥0) ^ Fintype.card (ScalarSlot shape)
+      ≤ (20608 : ℚ≥0) / scalarFieldOrder := by
+  refine le_trans (competing_coefficient_family_agreement_le_denClosure coefficientFamily
+    vkSymbolicFacts.n_pos num' den' hmem' hdeg' hdegden' c₀ hne) ?_
+  have hsum : ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0) ≤ ((2071 : ℕ) : ℚ≥0) := by
+    have h1 := denFactors_totalDegree_sum_le vk
+    have h2 := denFactors_degree_sum_eq
+    exact_mod_cast h2 ▸ h1
+  rw [msmDegreeBudget_eq, msmDenBudget_eq]
+  gcongr ?_ / _
+  calc ((16460 : ℕ) : ℚ≥0) + ((2077 : ℕ) : ℚ≥0)
+        + ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0)
+      ≤ ((16460 : ℕ) : ℚ≥0) + ((2077 : ℕ) : ℚ≥0) + ((2071 : ℕ) : ℚ≥0) :=
+        add_le_add le_rfl hsum
+    _ = (20608 : ℚ≥0) := by norm_num
+
+set_option maxHeartbeats 4000000 in
+open Classical in
+/-- **ε across denominators over the challenge coordinates alone at this capture.** With the
+proof-string slots pinned to the captured scalars, a competing rational family within the
+16460/2077 budgets agrees with the assembled MSM at a uniformly random challenge assignment
+with probability at most `20608 / p`, provided its cross-multiplied discrepancy with Lean's
+family does not vanish identically at the captured slots — the cross-denominator form of what
+the random-oracle premise alone buys at this capture. -/
+theorem competing_family_agreement_le_challengesOnly_denClosure
+    (num' den' : MsmCoord shape.k (otherLen shape vk) → MvPolynomial (ScalarSlot shape) Fp)
+    (hmem' : ∀ c, den' c ∈ Submonoid.closure {φ | φ ∈ denFactors vk})
+    (hdeg' : ∀ c, (num' c).totalDegree ≤ msmDegreeBudget shape vk)
+    (hdegden' : ∀ c, (den' c).totalDegree ≤ msmDenBudget shape vk)
+    (c₀ : MsmCoord shape.k (otherLen shape vk))
+    (hne : restrictSlots capturedSlotVals (num' c₀ * coefficientFamily.den c₀)
+        ≠ restrictSlots capturedSlotVals (coefficientFamily.num c₀ * den' c₀)) :
+    (#{g ∈ piFinset fun _ : {v : ScalarSlot shape // IsChallengeSlot v} =>
+        (univ : Finset Fp) |
+        ∃ m : Msm shape.k Fp G,
+          assemble? vk derivedInstanceCommitment
+              (Point.toProofString (Point.merge capturedSlotVals g) ps)
+              (Point.toChallenges (Point.merge capturedSlotVals g)) = some m
+            ∧ m.other.length = otherLen shape vk
+            ∧ ∀ c : MsmCoord shape.k (otherLen shape vk),
+                m.coeffAt c * eval (Point.merge capturedSlotVals g) (den' c)
+                  = eval (Point.merge capturedSlotVals g) (num' c)} : ℚ≥0)
+        / (scalarFieldOrder : ℚ≥0) ^ Fintype.card {v : ScalarSlot shape // IsChallengeSlot v}
+      ≤ (20608 : ℚ≥0) / scalarFieldOrder := by
+  refine le_trans (competing_coefficient_family_agreement_le_challengesOnly_denClosure
+    coefficientFamily vkSymbolicFacts.n_pos capturedSlotVals num' den' hmem' hdeg' hdegden'
+    c₀ hne) ?_
+  have hsum : ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0) ≤ ((2071 : ℕ) : ℚ≥0) := by
+    have h1 := denFactors_totalDegree_sum_le vk
+    have h2 := denFactors_degree_sum_eq
+    exact_mod_cast h2 ▸ h1
+  rw [msmDegreeBudget_eq, msmDenBudget_eq]
+  gcongr ?_ / _
+  calc ((16460 : ℕ) : ℚ≥0) + ((2077 : ℕ) : ℚ≥0)
+        + ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0)
+      ≤ ((16460 : ℕ) : ℚ≥0) + ((2077 : ℕ) : ℚ≥0) + ((2071 : ℕ) : ℚ≥0) :=
+        add_le_add le_rfl hsum
+    _ = (20608 : ℚ≥0) := by norm_num
 
 /-- The captured `other` bases are pairwise distinct. The bases are constants of the ε sample
 space — group slots are not sampled — so a `List.Perm` match against `capturedMsm` is forced to
