@@ -13,8 +13,7 @@ bounded degree agreeing on enough distinct points are equal — samples force id
 identities transfer to the polynomial).
 
 The polynomial theory here is Mathlib's, not reinvented: `lagrangePoly` is `Lagrange.interpolate`,
-`lagrangePoly_eval_node` is `Lagrange.eval_interpolate_at_node`, and `poly_eq_of_agree_on_family`
-repackages `Polynomial.eq_zero_of_natDegree_lt_card_of_eval_eq_zero`. Only the fold bridge is local:
+`lagrangePoly_eval_node` is `Lagrange.eval_interpolate_at_node`. Only the fold bridge is local:
 the deployed check runs a hand-rolled `foldl` (`lagrangeEval`), and `foldl_range_add_eq_sum`,
 `foldl_range_guardProd_eq_prod`, and `guardProd_eq_prod_erase` rewrite it into the `Finset`
 sum/product Mathlib evaluates the interpolant to. CompPoly mirrors the same Mathlib defs, so
@@ -25,29 +24,16 @@ namespace Zcash.Snark
 
 open Polynomial CompPoly
 
-private theorem poly_eq_of_agree_on_familyP {d : ℕ} {P Q : Polynomial Fp}
-    (hdeg : (P - Q).natDegree ≤ d)
-    (ξ : Fin (d + 1) → Fp) (hξ : Function.Injective ξ)
-    (heval : ∀ r, P.eval (ξ r) = Q.eval (ξ r)) : P = Q := by
-  have h0 : P - Q = 0 := by
-    apply Polynomial.eq_zero_of_natDegree_lt_card_of_eval_eq_zero _ hξ
-    · intro r
-      simp [heval r]
-    · simpa using Nat.lt_succ_of_le hdeg
-  exact sub_eq_zero.mp h0
-
 /-- **Identity from samples.** Two polynomials whose difference has degree at most `d` and which
 agree at `d + 1` pairwise-distinct points are equal. -/
 theorem poly_eq_of_agree_on_family {d : ℕ} {P Q : CPoly}
     (hdeg : (P - Q).natDegree ≤ d)
     (ξ : Fin (d + 1) → Fp) (hξ : Function.Injective ξ)
     (heval : ∀ r, CPolynomial.eval (ξ r) P = CPolynomial.eval (ξ r) Q) : P = Q := by
-  apply CPolynomial.toPoly_injective
-  refine poly_eq_of_agree_on_familyP ?_ ξ hξ (fun r => ?_)
-  · rw [← CPolynomial.toPoly_sub, ← CPolynomial.natDegree_toPoly]
-    exact hdeg
-  · rw [← CPolynomial.eval_toPoly, ← CPolynomial.eval_toPoly]
-    exact heval r
+  refine sub_eq_zero.mp (CompPoly.CPolynomial.eq_zero_of_natDegree_lt_card_of_eval_eq_zero
+    _ hξ (fun r => ?_) ?_)
+  · rw [CompPoly.CPolynomial.eval_sub, heval r, sub_self]
+  · simpa using Nat.lt_succ_of_le hdeg
 
 /-- The `foldl`-accumulated sum over `List.range` is the finite sum — the outer fold of the
 deployed combined evaluation. -/
@@ -216,9 +202,11 @@ theorem coeffs_zero_of_power_sum_vanishes {n : ℕ} (c : ℕ → Fp)
     simp only [Finset.mem_range] at hj
     rw [Polynomial.coeff_C_mul, Polynomial.coeff_X_pow, if_neg (by omega), mul_zero]
   have hP0 : P = 0 := by
-    refine poly_eq_of_agree_on_familyP (d := n - 1) (Q := 0) (by rw [sub_zero]; exact hdeg)
-      (fun r => ξ (Fin.cast hcast r)) (hξ.comp (Fin.cast_injective hcast)) (fun r => ?_)
-    rw [Polynomial.eval_zero, hPdef, Polynomial.eval_finsetSum]
+    refine Polynomial.eq_zero_of_natDegree_lt_card_of_eval_eq_zero P
+      (f := fun r : Fin (n - 1 + 1) => ξ (Fin.cast hcast r))
+      (hξ.comp (Fin.cast_injective hcast)) (fun r => ?_)
+      (by simpa using Nat.lt_succ_of_le hdeg)
+    rw [hPdef, Polynomial.eval_finsetSum]
     simp only [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow, Polynomial.eval_X]
     rw [← hvanish (Fin.cast hcast r)]
     exact Finset.sum_congr rfl (fun j _ => by ring)

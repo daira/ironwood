@@ -314,6 +314,19 @@ theorem coeff_X_pow [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (k n :
     ((X : CPolynomial R) ^ k).coeff n = if n = k then 1 else 0 := by
   rw [coeff_toPoly, toPoly_pow, X_toPoly, Polynomial.coeff_X_pow]
 
+/-- **Identity from samples.** A polynomial of degree below the number of pairwise-distinct sample
+points at which it vanishes is zero.  Mathlib's `eq_zero_of_natDegree_lt_card_of_eval_eq_zero` on
+the computable representation. -/
+theorem eq_zero_of_natDegree_lt_card_of_eval_eq_zero [CommRing R] [IsDomain R] [BEq R]
+    [LawfulBEq R] [Nontrivial R] (p : CPolynomial R) {ι : Type*} [Fintype ι] {f : ι → R}
+    (hf : Function.Injective f) (heval : ∀ i, p.eval (f i) = 0)
+    (hcard : p.natDegree < Fintype.card ι) : p = 0 := by
+  refine toPoly_injective ?_
+  rw [toPoly_zero]
+  refine Polynomial.eq_zero_of_natDegree_lt_card_of_eval_eq_zero _ hf (fun i => ?_) ?_
+  · rw [← eval_toPoly]; exact heval i
+  · rwa [← natDegree_toPoly]
+
 /-! ## Degree of multiset sums, products and elementary symmetric functions -/
 
 section MultisetDegree
