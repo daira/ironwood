@@ -1,4 +1,5 @@
 import Zcash.Snark.Fixtures.MultiAction.Fixture
+import Zcash.Circuits.Integration.ActionPermutationDomainCompute
 
 /-!
 # Shape and VK faithfulness checks for the multi-action capture
@@ -12,11 +13,21 @@ query layouts, expression indices, and captured transcript prefix agree with the
 
 In particular this catches the totalization hazards called out in `Verifier.Assemble`: an
 out-of-range query index would otherwise route through `finFn`/`finFnG` and alias `0`/`default`.
+
+Counts and per-entry ranges are not enough for the permutation argument, whose chunk *layout* also
+carries meaning: `permutation_chunk_layout_regular` adds the width and index-coverage conditions
+`permChunkExpression`'s coset offset depends on, and `vk_chunkLen_and_chunks_derived` pins the chunk
+width and the chunking to `actionCircuit` rather than to the capture's own numbers — the multi-action
+analog of `Fixtures.SingleAction.VkMatch.vk_permutationChunks_derived`, which reaches the capture
+here via the circuit-derived layout instead of a second keygen certificate. Both are kernel-checked
+over the literal layout; only the circuit side they compare against carries `native_decide`, so
+neither widens this module's compiler trust.
 -/
 
 namespace Zcash.Snark.Fixture2
 
 open Zcash.Snark
+open Zcash.Circuits.Action (actionCircuit)
 
 def capturedInstanceCommitmentPrefix : List (TranscriptElt Fp G) :=
   (List.ofFn (fun p : Fin shape.numProofs =>
@@ -102,6 +113,43 @@ theorem permutation_chunks_match_shape :
     vk.permutationChunks.length = shape.numPermutationSets
       ∧ (vk.permutationChunks.map List.length).sum = shape.numPermutationColumns := by
   native_decide
+
+/-- The chunking is *regular*: every chunk but the last is exactly `vk.chunkLen` columns wide, the
+last is a nonempty remainder, the chunk count is the induced `⌈columns / chunkLen⌉`, and the
+flattened common-eval indices are `0, 1, …, numPermutationColumns - 1` in order.
+
+This is what `permChunkExpression`'s coset offset needs. That offset is `β·x·δ^(c · chunkLen)` and
+the `j`-th factor within chunk `c` multiplies it by `δ^j`, so chunk `c` continues its predecessors'
+coset only when chunk `c` really does start at column `c · chunkLen` — i.e. only when every earlier
+chunk is exactly `chunkLen` wide. Independently, `cr.2` selects which `permutationCommonEvals` (the
+σ evaluations) enters each column's factor, so a duplicated or omitted index would silently rewire
+the argument. Neither `permutation_chunks_match_shape` (count and total) nor
+`permutationChunksRefsInRange` (per-entry range) excludes uneven widths or a non-bijective index
+assignment; this does, and together the four conjuncts leave the layout no freedom beyond
+`vk.chunkLen` itself, which `vk_chunkLen_and_chunks_derived` pins to the circuit. -/
+theorem permutation_chunk_layout_regular :
+    (∀ chunk ∈ vk.permutationChunks.dropLast, chunk.length = vk.chunkLen)
+      ∧ (∀ chunk ∈ vk.permutationChunks, 0 < chunk.length ∧ chunk.length ≤ vk.chunkLen)
+      ∧ vk.permutationChunks.length
+          = (shape.numPermutationColumns + vk.chunkLen - 1) / vk.chunkLen
+      ∧ vk.permutationChunks.flatten.map Prod.snd
+          = List.range shape.numPermutationColumns := by
+  decide
+
+/-- The chunk width and the chunking itself are the *circuit's*, not free parameters of the capture.
+`ActionPermutationDomain.columnCount_chunkLen_eq` and `chunks_eq` compute both from `actionCircuit`,
+where the chunks are the recorded permutation columns paired with their σ index by `zipIdx` and cut
+by `List.toChunks chunkLen` — so regularity and index coverage hold there by construction. A
+regeneration that changed either fails here instead of passing the shape counts above. -/
+theorem vk_chunkLen_and_chunks_derived :
+    vk.chunkLen = actionCircuit.chunkLen
+      ∧ vk.permutationChunks = actionCircuit.verifierCS.permutationChunks := by
+  refine ⟨?_, ?_⟩
+  · rw [show actionCircuit.chunkLen = 7 from
+      congrArg Prod.snd ActionPermutationDomain.columnCount_chunkLen_eq]
+    rfl
+  · rw [ActionPermutationDomain.chunks_eq]
+    rfl
 
 theorem vk_domain_size_matches_shape :
     vk.n = 2 ^ shape.k := by
