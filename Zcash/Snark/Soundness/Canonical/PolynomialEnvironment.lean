@@ -71,18 +71,12 @@ theorem rowPolynomial_natDegree_lt {n : ℕ}
     (hrows : Function.Injective fun i : Fin n => omega ^ (i : ℕ))
     (hn : 0 < n) :
     (rowPolynomial omega values).natDegree < n := by
-  rw [natDegree_toPoly]
-  have hdegree :
-      (rowPolynomial omega values).toPoly.degree < (n : WithBot ℕ) := by
-    have hinterpolate := Lagrange.degree_interpolate_lt
-      (s := (Finset.univ : Finset (Fin n)))
-      (v := fun i : Fin n => omega ^ (i : ℕ))
-      (r := values) hrows.injOn
-    simpa [toPoly_rowPolynomial, Finset.card_univ, Fintype.card_fin] using hinterpolate
-  by_cases hzero : (rowPolynomial omega values).toPoly = 0
-  · rw [hzero, Polynomial.natDegree_zero]
-    exact hn
-  · exact (Polynomial.natDegree_lt_iff_degree_lt hzero).mpr hdegree
+  refine natDegree_lt_of_degree_toPoly_lt hn ?_
+  have hinterpolate := Lagrange.degree_interpolate_lt
+    (s := (Finset.univ : Finset (Fin n)))
+    (v := fun i : Fin n => omega ^ (i : ℕ))
+    (r := values) hrows.injOn
+  simpa [toPoly_rowPolynomial, Finset.card_univ, Fintype.card_fin] using hinterpolate
 
 /-- Zero-pad a finite public-instance column to the evaluation-domain size. -/
 def zeroPaddedRows {n : ℕ} (values : List Fp) : Fin n → Fp :=

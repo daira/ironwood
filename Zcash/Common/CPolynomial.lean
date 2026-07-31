@@ -157,6 +157,17 @@ theorem natDegree_sum_le_of_forall_le {ι : Type*} [DecidableEq ι] [CommSemirin
   rw [← natDegree_toPoly]
   exact h i hi
 
+/-- A `WithBot ℕ` degree bound on the Mathlib image gives the `natDegree` bound, the zero
+polynomial included.  Interpolation bounds arrive in this shape from `Lagrange.degree_interpolate_lt`
+and are wanted in the other. -/
+theorem natDegree_lt_of_degree_toPoly_lt [Semiring R] [BEq R] [LawfulBEq R] {p : CPolynomial R}
+    {n : ℕ} (hn : 0 < n) (h : p.toPoly.degree < (n : WithBot ℕ)) : p.natDegree < n := by
+  rw [natDegree_toPoly]
+  by_cases hzero : p.toPoly = 0
+  · rw [hzero, Polynomial.natDegree_zero]
+    exact hn
+  · exact (Polynomial.natDegree_lt_iff_degree_lt hzero).mpr h
+
 theorem natDegree_le_iff_coeff_eq_zero [Semiring R] [BEq R] [LawfulBEq R]
     {p : CPolynomial R} {n : ℕ} :
     p.natDegree ≤ n ↔ ∀ m : ℕ, n < m → p.coeff m = 0 := by
