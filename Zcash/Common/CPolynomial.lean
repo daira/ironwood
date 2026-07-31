@@ -1,5 +1,6 @@
 import Zcash.Arithmetic
 import Mathlib.RingTheory.MvPolynomial.Symmetric.Defs
+import Mathlib.RingTheory.Polynomial.Vieta
 import CompPoly.Univariate.ToPoly
 import CompPoly.Univariate.Linear
 import CompPoly.Univariate.Roots.Enumeration
@@ -312,6 +313,44 @@ theorem coeff_eq_zero_of_natDegree_lt [Semiring R] [BEq R] [LawfulBEq R] {p : CP
 theorem coeff_X_pow [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (k n : ℕ) :
     ((X : CPolynomial R) ^ k).coeff n = if n = k then 1 else 0 := by
   rw [coeff_toPoly, toPoly_pow, X_toPoly, Polynomial.coeff_X_pow]
+
+/-! ## Products of monic linear factors
+
+Vieta and the degree of `∏ (X + uᵢ)`, on the computable representation.  Both are Mathlib's
+statements read across `toPoly`; CompPoly has neither. -/
+
+section MonicLinearProduct
+
+variable [CommRing R] [BEq R] [LawfulBEq R] [Nontrivial R]
+
+private theorem toPoly_prod_X_add_C (m : Multiset R) :
+    ((m.map (fun u => X + C u)).prod).toPoly
+      = (m.map (fun u => Polynomial.X + Polynomial.C u)).prod := by
+  rw [toPoly_multiset_prod, Multiset.map_map]
+  exact congrArg Multiset.prod (Multiset.map_congr rfl fun u _ => by simp)
+
+/-- A product of `card m` monic linear factors has degree `card m`. -/
+theorem natDegree_prod_X_add_C (m : Multiset R) :
+    ((m.map (fun u => X + C u)).prod).natDegree = Multiset.card m := by
+  rw [natDegree_toPoly, toPoly_prod_X_add_C]
+  rw [Polynomial.natDegree_multiset_prod_of_monic (h := fun f hf => by
+    obtain ⟨u, _, rfl⟩ := Multiset.mem_map.mp hf
+    exact Polynomial.monic_X_add_C u)]
+  simp [Multiset.map_map]
+
+/-- Such a product has no coefficients above its degree. -/
+theorem coeff_prod_X_add_C_eq_zero (m : Multiset R) {j : ℕ} (hj : Multiset.card m < j) :
+    ((m.map (fun u => X + C u)).prod).coeff j = 0 :=
+  coeff_eq_zero_of_natDegree_lt (by rw [natDegree_prod_X_add_C]; exact hj)
+
+/-- **Vieta.** Below the degree, the `j`-th coefficient is an elementary symmetric polynomial in
+the roots' negatives — here the shifts `uᵢ` themselves, since the factors are `X + uᵢ`. -/
+theorem coeff_prod_X_add_C (m : Multiset R) {j : ℕ} (hj : j ≤ Multiset.card m) :
+    ((m.map (fun u => X + C u)).prod).coeff j = m.esymm (Multiset.card m - j) := by
+  rw [coeff_toPoly, toPoly_prod_X_add_C]
+  exact Multiset.prod_X_add_C_coeff m hj
+
+end MonicLinearProduct
 
 theorem natDegree_sum_le_of_forall_le {ι : Type*} [DecidableEq ι] [CommSemiring R] [BEq R]
     [LawfulBEq R] [Nontrivial R] (s : Finset ι) (f : ι → CPolynomial R) {n : ℕ}
