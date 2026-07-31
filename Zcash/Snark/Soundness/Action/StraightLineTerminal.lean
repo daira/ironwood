@@ -1,6 +1,8 @@
-import Zcash.Snark.Soundness.Action.Terminal
+import Zcash.Circuits.Integration.ActionCorrectness
+import Zcash.Circuits.Integration.ActionPermutationDomain
 import Zcash.Snark.Soundness.AGM.DecodeToOpened
 import Zcash.Snark.Soundness.Composition.StraightLineDecodeSupply
+import Zcash.Snark.Soundness.StraightLine.TopLevelTerminal
 
 /-!
 # The rewind-free decode at the Action terminal
@@ -85,13 +87,66 @@ def action_bundleStatement_or_relation_of_decode
     (haccepts :
       DeployedAccepts urs hk
         (actionCircuit.toVerifierKey pp urs)
-        (actionCircuit.instanceCommitment pp urs inputs) ps ch) :=
-  action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq
-    pp urs hk inputs ps ch pU pW a
-    (decode.toOpenedBatch hchar)
-    (fun i hi => decode.toMemberDecode hchar i hi)
-    haccepts _ rfl
-    (fun slot point hpoint => PSum.inl (decode.memberBinding hchar slot point hpoint))
+        (actionCircuit.instanceCommitment pp urs inputs) ps ch)
+    (hxgood :
+      let memberDecode := fun i hi => decode.toMemberDecode hchar i hi
+      let model :=
+        CanonicalMemberConstraintRelation.acceptedModel
+          (memberDecode := memberDecode)
+          (hblinding :=
+            actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
+          haccepts
+      ch.x ∉ szBadSet
+        (combineConstraints
+          model.fixedCols model.adviceCols model.instanceCols model.gates
+          model.sets model.chunks model.lookups
+          model.beta model.gamma model.delta model.theta ch.y
+          model.chunkLen model.l0 model.lLast model.lBlind -
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := memberDecode) haccepts) .vanishingH *
+          (X ^ actionCircuit.n - 1)))
+    (hgoodY :
+      let memberDecode := fun i hi => decode.toMemberDecode hchar i hi
+      ∀ j, ch.y ∉ szBadSet
+        (foldSplitWitness
+          (CanonicalMemberConstraintRelation.acceptedModel
+            (memberDecode := memberDecode)
+            (hblinding :=
+              actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
+            haccepts).constraints
+          actionCircuit.n j))
+    (permutationExclusions :
+      ResolverPermutationChallengeExclusions
+        (actionCircuit.toVerifierKey pp urs) ch
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts)
+        actionActiveRows)
+    (lookupExclusions :
+      TopLevelLookup.ChallengeExclusions
+        actionCircuit pp urs ch
+        (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts)) :
+    BundleStatement inputs ⊕'
+      NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
+  let memberDecode := fun i hi => decode.toMemberDecode hchar i hi
+  let polynomial :=
+    CanonicalMemberConstraintRelation.acceptedPolynomial
+      (memberDecode := memberDecode) haccepts
+  exact topLevelStatements_or_relation_of_decode
+    actionCircuit pp urs hk inputs ps ch pU pW a decode hchar haccepts
+    ActionPermutationDomain.domainExponent_lt
+    (ActionPermutationDomain.routingCoherent_of_derived pp urs)
+    hxgood hgoodY
+    (fun hsatisfied =>
+      ActionCorrectness.ofAcceptedCircuitSat
+        pp urs hk inputs ps ch pU pW a
+        (decode.toOpenedBatch hchar) memberDecode haccepts
+        (polynomial .vanishingH)
+        (by
+          simpa only [actionCircuit.toVerifierKey_n] using hsatisfied)
+        (by
+          simpa only [actionCircuit.toVerifierKey_n] using hgoodY)
+        permutationExclusions lookupExclusions)
 
 /-- The Action endpoint when a pre-`x` constraint identity has already supplied canonical circuit
 satisfaction.  This avoids re-testing the `x`-dependent reassembled quotient polynomial. -/
