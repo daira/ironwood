@@ -822,9 +822,9 @@ assert_computable Zcash.Snark.decodedPolynomialResolver_opens_or_relation +choic
 -- no free semantic callback, decoder, or selected-column feed.
 assert_axioms Zcash.Snark.topLevelBundleStatement_or_bad_of_constraintSatisfaction +native(
   CompElliptic.Fields.Pasta.pallasBase)
-assert_axioms Zcash.Snark.topLevelStatements_or_relation_of_circuitSat +native(
+assert_computable Zcash.Snark.topLevelStatements_or_relation_of_circuitSat +choice +native(
   CompElliptic.Fields.Pasta.pallasBase)
-assert_axioms Zcash.Snark.topLevelStatements_or_relation_of_decodedMemberPolynomial_eq +native(
+assert_computable Zcash.Snark.topLevelStatements_or_relation_of_decodedMemberPolynomial_eq +choice +native(
   CompElliptic.Fields.Pasta.pallasBase)
 -- The last links: the point check lifted to the polynomial identity, the permutation taken to be the
 -- one keygen builds from the circuit's copy constraints, the cells of every chunk covered at once,
@@ -1351,12 +1351,12 @@ assert_axioms Zcash.Snark.algebraicFullPrefixesPre_ne_at +native(CompElliptic.Cu
 assert_axioms Zcash.Snark.decodePoints_injective
 assert_axioms Zcash.Snark.decodePoints_zero
 -- Circuit-generic straight-line decode terminal.
-assert_axioms Zcash.Snark.topLevelStatements_or_relation_of_decode +native(
+assert_computable Zcash.Snark.topLevelStatements_or_relation_of_decode +choice +native(
   CompElliptic.Fields.Pasta.pallasBase)
 -- The rewind-free decode reaching #99's Action terminal
 -- (`Soundness.Action.StraightLineTerminal`): one accepting execution, no rewind, with
 -- only the challenge exclusions left as premises.
-assert_axioms Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_decode +native(
+assert_computable Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_decode +choice +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionConstantValueFailures_eq_nil,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil, Zcash.Snark.actionCopyAddressFailures_eq_nil,
@@ -1384,7 +1384,7 @@ assert_axioms Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_d
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 -- The same terminal, reached from the straight-line constraint event: the family supplies the
 -- decode from its own accepting run.
-assert_axioms Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_straightLineDecoded +native(
+assert_computable Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_straightLineDecoded +choice +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
@@ -1508,7 +1508,7 @@ assert_axioms Zcash.Snark.topLevelTerminalRelationFinderCovers +native(
 -- (`Soundness.Action.Terminal`): the base terminal the routes below delegate to.
 -- The verifying key is not a parameter and no free semantic proposition remains, so this is
 -- where `BundleStatement` first appears as the conclusion rather than an assumed `hencodes`.
-assert_axioms Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq +native(
+assert_computable Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq +choice +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
@@ -1534,7 +1534,7 @@ assert_axioms Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_d
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 -- The same rewind-free route, entered one step later: the caller supplies constraint
 -- satisfaction directly instead of the decoded-member polynomial equality.
-assert_axioms Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_decode_circuitSat +native(
+assert_computable Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_decode_circuitSat +choice +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
