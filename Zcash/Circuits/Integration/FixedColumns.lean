@@ -717,6 +717,7 @@ variable
           (instanceCommitment := instanceCommitment)
           urs hk vk ps ch)
         (x4BatchEvals
+          (shape := shape)
           (instanceCommitment := instanceCommitment)
           vk ps ch)
         a pU pW}
@@ -933,6 +934,7 @@ def topLevelFixedConstraints_or_relation
           (instanceCommitment := instanceCommitment)
           urs hk vk ps ch)
         (x4BatchEvals
+          (shape := top.shape.withProofParams pp)
           (instanceCommitment := instanceCommitment)
           vk ps ch)
         a pU pW}
@@ -986,6 +988,7 @@ def topLevelFixedConstraints_or_relation
         obtain ⟨rotation, hlayout⟩ :=
           coherence.queryLayout column hcolumn
         exact fixedQuery_of_layout
+          (shape := top.shape.withProofParams pp)
           (top.toVerifierKey urs) instanceCommitment ps ch
           column rotation (top.toVerifierKey_fixedQueryCount urs) hlayout)
 
@@ -1013,6 +1016,7 @@ def topLevelFixedEntryRead_or_relation
           (instanceCommitment := instanceCommitment)
           urs hk vk ps ch)
         (x4BatchEvals
+          (shape := top.shape.withProofParams pp)
           (instanceCommitment := instanceCommitment)
           vk ps ch)
         a pU pW}
@@ -1063,6 +1067,7 @@ def topLevelFixedEntryRead_or_relation
         obtain ⟨rotation, hlayout⟩ :=
           coherence.queryLayout fixedColumn hcolumn
         exact fixedQuery_of_layout
+          (shape := top.shape.withProofParams pp)
           (top.toVerifierKey urs) instanceCommitment ps ch
           fixedColumn rotation (top.toVerifierKey_fixedQueryCount urs) hlayout)
   · exact hentry

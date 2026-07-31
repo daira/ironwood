@@ -111,7 +111,8 @@ structure CanonicalMemberConstraintRelation
       decodedPolynomialResolver
         (instanceCommitment := instanceCommitment)
         urs hk vk ps ch memberDecode route
-    let model := vk.constraintModel ch poly hblinding
+    let model := vk.constraintModel
+      (numProofs := shape.numProofs) ch poly hblinding
     model.CircuitSat y hpoly deg a
 
 namespace CanonicalMemberConstraintRelation
@@ -218,7 +219,7 @@ def acceptedModel
     (haccepts :
       DeployedAccepts urs hk vk instanceCommitment ps ch) :
     ConstraintPolyModel shape.numProofs :=
-  vk.constraintModel ch
+  vk.constraintModel (numProofs := shape.numProofs) ch
     (acceptedPolynomial
       (memberDecode := memberDecode) haccepts)
     hblinding
@@ -247,7 +248,7 @@ def ofAcceptedCircuitSat
       noDuplicateQueries := routing.2
       satisfiesCircuit := ?_ }
   change
-    (vk.constraintModel ch
+    (vk.constraintModel (numProofs := shape.numProofs) ch
       (decodedPolynomialResolver
         (instanceCommitment := instanceCommitment)
         urs hk vk ps ch memberDecode
@@ -287,7 +288,8 @@ def model
       urs hk vk instanceCommitment ps ch pU pW a
       batchOpenings memberDecode hblinding y hpoly deg) :
     ConstraintPolyModel shape.numProofs :=
-  vk.constraintModel ch relation.polynomial hblinding
+  vk.constraintModel (numProofs := shape.numProofs)
+    ch relation.polynomial hblinding
 
 /--
 A good folding challenge splits the canonical bundle-wide identity into the exact

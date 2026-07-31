@@ -39,21 +39,26 @@ def actionCopyReplayWitness_or_relation
     {batchOpenings :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
         (x4BatchCommitments
+          (shape := actionShape pp)
           (instanceCommitment := instanceCommitment)
           urs hk (actionCircuit.toVerifierKey urs) ps ch)
         (x4BatchEvals
+          (shape := actionShape pp)
           (instanceCommitment := instanceCommitment)
           (actionCircuit.toVerifierKey urs) ps ch)
         a pU pW}
     {memberDecode : ∀ i (hi : i <
         deployedX4PairCount
+          (shape := actionShape pp)
           (instanceCommitment := instanceCommitment)
           (actionCircuit.toVerifierKey urs) ps ch),
       OpenedMemberDecode
+        (shape := actionShape pp)
         (instanceCommitment := instanceCommitment)
         urs hk (actionCircuit.toVerifierKey urs) ps ch batchOpenings i hi}
     {y : Fp} {hpoly : CPoly}
     (relation : CanonicalMemberConstraintRelation
+      (shape := actionShape pp)
       urs hk (actionCircuit.toVerifierKey urs) instanceCommitment ps ch pU pW a
       batchOpenings memberDecode
         (actionCircuit.toVerifierKey_blindingFactors_lt_n urs)
@@ -65,7 +70,7 @@ def actionCopyReplayWitness_or_relation
     (fixedCoherence :
       TopLevelFixedCoherence actionCircuit urs)
     (exclusions : ResolverPermutationChallengeExclusions
-      (actionCircuit.toVerifierKey urs) ch relation.polynomial actionActiveRows)
+      pp.numProofs (actionCircuit.toVerifierKey urs) ch relation.polynomial actionActiveRows)
     (proofIndex : Fin pp.numProofs) :
     CopyReplayWitness actionCircuit.placement
         (resolverEnvironment

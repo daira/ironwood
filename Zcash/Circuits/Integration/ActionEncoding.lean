@@ -58,9 +58,11 @@ def actionTopLevelCircuitCorrectness
     (batchOpenings :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
         (x4BatchCommitments
+          (shape := actionCircuit.shape.withProofParams pp)
           (instanceCommitment := instanceCommitment)
           urs hk (actionCircuit.toVerifierKey urs) ps ch)
         (x4BatchEvals
+          (shape := actionCircuit.shape.withProofParams pp)
           (instanceCommitment := instanceCommitment)
           (actionCircuit.toVerifierKey urs) ps ch)
         a pU pW)
@@ -86,7 +88,7 @@ def actionTopLevelCircuitCorrectness
           actionCircuit.n j))
     (permutationExclusions :
       ResolverPermutationChallengeExclusions
-        (actionCircuit.toVerifierKey urs)
+        pp.numProofs (actionCircuit.toVerifierKey urs)
         ch relation.polynomial actionActiveRows)
     (lookupExclusions :
       TopLevelLookup.ChallengeExclusions
@@ -103,7 +105,7 @@ def actionTopLevelCircuitCorrectness
       actionCircuit.n = 2 ^ urs.k := by
     rw [actionCircuit.n_eq_two_pow_domainExponent]
     exact congrArg (2 ^ ·)
-      ((pp.mergeDerived_k actionCircuit).symm.trans hk)
+      ((actionCircuit.shape.withProofParams_k pp).trans hk)
   have hfixedRows : Function.Injective
       fun i : Fin (2 ^ urs.k) =>
         actionCircuit.omega ^
@@ -210,6 +212,7 @@ def actionTopLevelCircuitCorrectness
                   obtain ⟨rotation, hlayout⟩ :=
                     fixedCoherence.queryLayout column hcolumn
                   exact fixedQuery_of_layout
+                    (shape := actionCircuit.shape.withProofParams pp)
                     (actionCircuit.toVerifierKey urs)
                     instanceCommitment ps ch column rotation
                     (actionCircuit.toVerifierKey_fixedQueryCount urs) hlayout))

@@ -50,6 +50,51 @@ def CircuitShape.withProofParams (shape : CircuitShape) (pp : ProofParams) : Sha
     (shape.withProofParams pp).toCircuitShape = shape := by
   simp only [CircuitShape.withProofParams]
 
+@[simp] theorem CircuitShape.withProofParams_k
+    (shape : CircuitShape) (pp : ProofParams) :
+    (shape.withProofParams pp).k = shape.k := by
+  simp only [CircuitShape.withProofParams]
+
+@[simp] theorem CircuitShape.withProofParams_numAdviceColumns
+    (shape : CircuitShape) (pp : ProofParams) :
+    (shape.withProofParams pp).numAdviceColumns = shape.numAdviceColumns := by
+  simp only [CircuitShape.withProofParams]
+
+@[simp] theorem CircuitShape.withProofParams_numLookups
+    (shape : CircuitShape) (pp : ProofParams) :
+    (shape.withProofParams pp).numLookups = shape.numLookups := by
+  simp only [CircuitShape.withProofParams]
+
+@[simp] theorem CircuitShape.withProofParams_numPermutationSets
+    (shape : CircuitShape) (pp : ProofParams) :
+    (shape.withProofParams pp).numPermutationSets = shape.numPermutationSets := by
+  simp only [CircuitShape.withProofParams]
+
+@[simp] theorem CircuitShape.withProofParams_numPermutationColumns
+    (shape : CircuitShape) (pp : ProofParams) :
+    (shape.withProofParams pp).numPermutationColumns = shape.numPermutationColumns := by
+  simp only [CircuitShape.withProofParams]
+
+@[simp] theorem CircuitShape.withProofParams_numQuotientPieces
+    (shape : CircuitShape) (pp : ProofParams) :
+    (shape.withProofParams pp).numQuotientPieces = shape.numQuotientPieces := by
+  simp only [CircuitShape.withProofParams]
+
+@[simp] theorem CircuitShape.withProofParams_numInstanceQueries
+    (shape : CircuitShape) (pp : ProofParams) :
+    (shape.withProofParams pp).numInstanceQueries = shape.numInstanceQueries := by
+  simp only [CircuitShape.withProofParams]
+
+@[simp] theorem CircuitShape.withProofParams_numAdviceQueries
+    (shape : CircuitShape) (pp : ProofParams) :
+    (shape.withProofParams pp).numAdviceQueries = shape.numAdviceQueries := by
+  simp only [CircuitShape.withProofParams]
+
+@[simp] theorem CircuitShape.withProofParams_numFixedQueries
+    (shape : CircuitShape) (pp : ProofParams) :
+    (shape.withProofParams pp).numFixedQueries = shape.numFixedQueries := by
+  simp only [CircuitShape.withProofParams]
+
 @[simp] theorem CircuitShape.withProofParams_numProofs
     (shape : CircuitShape) (pp : ProofParams) :
     (shape.withProofParams pp).numProofs = pp.numProofs := by

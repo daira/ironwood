@@ -173,7 +173,7 @@ theorem verifierCS_permutationChunks_flatten
 /-- A coherent compiled query reference decodes to the concrete column from
 which the compiler created it. -/
 theorem permutationColumnAddress_queryReference
-    {shape : Shape} {F G : Type}
+    {shape : CircuitShape} {F G : Type}
     (vk : VerifyingKey shape F G)
     (adviceQueryLayout fixedQueryLayout instanceQueryLayout :
       List (ℕ × ℤ))
@@ -219,19 +219,16 @@ theorem topLevelPermutationColumnAddresses_eq
     (top : TopLevelCircuit Fp Config PublicInput)
     (urs : URS G)
     (hcoherent :
-      PermutationChunkRoutingCoherent
-        (shape := top.shape) (top.toVerifierKey urs)) :
+      PermutationChunkRoutingCoherent (top.toVerifierKey urs)) :
     top.verifierCS.permutationChunks.flatten.map
           (fun reference =>
-            permutationColumnAddress
-              (shape := top.shape) (top.toVerifierKey urs) reference.1) =
+            permutationColumnAddress (top.toVerifierKey urs) reference.1) =
       (Keygen.permColsOf top.constraintSystem).map
         Halo2.Layout.ColRef.toAny := by
   rw [verifierCS_permutationChunks_flatten]
   change
     List.map
-        (permutationColumnAddress
-          (shape := top.shape) (top.toVerifierKey urs) ∘ Prod.fst)
+        (permutationColumnAddress (top.toVerifierKey urs) ∘ Prod.fst)
         _ =
       _
   rw [← List.map_map, List.zipIdx_map_fst]

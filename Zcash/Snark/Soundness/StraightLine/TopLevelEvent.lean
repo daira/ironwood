@@ -29,13 +29,12 @@ noncomputable abbrev topLevelRunModel
       top.toVerifierKey
         (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
-      top.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
+      top.instanceCommitment (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
+      (shape := top.shape.withProofParams pp)
       (top.toVerifierKey
         (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis))
-      (top.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
+      (top.instanceCommitment (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
       (straightLineRunOutput family basis O).1.proof.1
       (straightLineRunRecord family basis O) < scalarFieldOrder)
     (basis : AugmentedIndex (2 ^ (top.shape.withProofParams pp).k) → VestaG)
@@ -45,19 +44,17 @@ noncomputable abbrev topLevelRunModel
     (h : family.straightLineConstraintDecoded static basis O) :=
   CanonicalMemberConstraintRelation.acceptedModel
     (memberDecode := fun i hi =>
-      (straightLineRunDecodeAt family static basis O
+      (straightLineRunDecodeAt (shape := top.shape.withProofParams pp) family static basis O
         (top.toVerifierKey
           (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis))
-        (top.instanceCommitmentForShape pp
-          (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
+        (top.instanceCommitment (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
         (hvk basis) (hI basis) h).toMemberDecode (hchar basis O) i hi)
     (hblinding := top.toVerifierKey_blindingFactors_lt_n
       (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis))
-    (straightLineRunAcceptsAt family static basis O
+    (straightLineRunAcceptsAt (shape := top.shape.withProofParams pp) family static basis O
       (top.toVerifierKey
         (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis))
-      (top.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
+      (top.instanceCommitment (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
       (hvk basis) (hI basis) h)
 
 /-- The canonical accepted member polynomial at a straight-line run's own decode. -/
@@ -73,13 +70,12 @@ noncomputable abbrev topLevelRunPolynomial
       top.toVerifierKey
         (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
-      top.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
+      top.instanceCommitment (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
+      (shape := top.shape.withProofParams pp)
       (top.toVerifierKey
         (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis))
-      (top.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
+      (top.instanceCommitment (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
       (straightLineRunOutput family basis O).1.proof.1
       (straightLineRunRecord family basis O) < scalarFieldOrder)
     (basis : AugmentedIndex (2 ^ (top.shape.withProofParams pp).k) → VestaG)
@@ -89,17 +85,15 @@ noncomputable abbrev topLevelRunPolynomial
     (h : family.straightLineConstraintDecoded static basis O) :=
   CanonicalMemberConstraintRelation.acceptedPolynomial
     (memberDecode := fun i hi =>
-      (straightLineRunDecodeAt family static basis O
+      (straightLineRunDecodeAt (shape := top.shape.withProofParams pp) family static basis O
         (top.toVerifierKey
           (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis))
-        (top.instanceCommitmentForShape pp
-          (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
+        (top.instanceCommitment (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
         (hvk basis) (hI basis) h).toMemberDecode (hchar basis O) i hi)
-    (straightLineRunAcceptsAt family static basis O
+    (straightLineRunAcceptsAt (shape := top.shape.withProofParams pp) family static basis O
       (top.toVerifierKey
         (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis))
-      (top.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
+      (top.instanceCommitment (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
       (hvk basis) (hI basis) h)
 
 section ChallengeFailureEvents
@@ -116,13 +110,12 @@ variable
       top.toVerifierKey
         (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
-      top.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
+      top.instanceCommitment (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
+      (shape := top.shape.withProofParams pp)
       (top.toVerifierKey
         (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis))
-      (top.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
+      (top.instanceCommitment (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
       (straightLineRunOutput family basis O).1.proof.1
       (straightLineRunRecord family basis O) < scalarFieldOrder)
 
@@ -162,7 +155,7 @@ noncomputable def topLevelBetaFailureEvent :
   {q | ∃ h : family.straightLineConstraintDecoded static q.1 q.2,
     ¬(((straightLineRunRecord family q.1 q.2).beta ∉
         allResolverPermutationBetaBadSet
-          (top.toVerifierKey
+          pp.numProofs (top.toVerifierKey
             (ursOfAugmentedBasis (top.shape.withProofParams pp).k q.1))
           (topLevelRunPolynomial top pp family static inputs hvk hI hchar
             q.1 q.2 h)
@@ -189,7 +182,7 @@ noncomputable def topLevelGammaFailureEvent :
   {q | ∃ h : family.straightLineConstraintDecoded static q.1 q.2,
     ¬(((straightLineRunRecord family q.1 q.2).gamma ∉
         allResolverPermutationGammaBadSet
-          (top.toVerifierKey
+          pp.numProofs (top.toVerifierKey
             (ursOfAugmentedBasis (top.shape.withProofParams pp).k q.1))
           (straightLineRunRecord family q.1 q.2)
           (topLevelRunPolynomial top pp family static inputs hvk hI hchar
@@ -240,13 +233,12 @@ def topLevelTerminalRelationFinderCovers
       top.toVerifierKey
         (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
-      top.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
+      top.instanceCommitment (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
+      (shape := top.shape.withProofParams pp)
       (top.toVerifierKey
         (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis))
-      (top.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
+      (top.instanceCommitment (ursOfAugmentedBasis (top.shape.withProofParams pp).k basis) inputs)
       (straightLineRunOutput family basis O).1.proof.1
       (straightLineRunRecord family basis O) < scalarFieldOrder)
     (finder :

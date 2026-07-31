@@ -34,7 +34,7 @@ variable
 /-- A synthesis-enabled lookup routed to its configured lookup index. -/
 structure EnabledLookup.TopLevelRoute
     (top : TopLevelCircuit Fp Config PublicInput)
-    (pp : ProofParams) (lookup : EnabledLookup Fp) where
+    (lookup : EnabledLookup Fp) where
   index : Fin top.lookupCount
   argument :
     top.constraintSystem.lookups[index.val] = lookup.argument
@@ -47,7 +47,7 @@ def EnabledLookup.topLevelRoute
     (lookup : EnabledLookup Fp)
     (henabled :
       lookup ∈ operationEnabledLookups (top.operations) 0) :
-    lookup.TopLevelRoute top pp := by
+    lookup.TopLevelRoute top := by
   have hargument :
       lookup.argument ∈ top.constraintSystem.lookups :=
     OperationsKeygenCoherent.lookup top.keygenCoherent henabled
@@ -59,7 +59,7 @@ def EnabledLookup.topLevelRoute
   refine
     { index := ⟨index, ?_⟩
       argument := hget }
-  simpa [ProofParams.mergeDerived] using hindex
+  simpa only [TopLevelCircuit.lookupCount] using hindex
 
 /--
 Every extracted lookup activation lies inside the top-level circuit's keygen row
@@ -341,8 +341,7 @@ theorem projectedValues
         (resolverEnvironment
           (top.toVerifierKey urs) poly proofIndex
           (top.usableRowsAt top.domainExponent))) :
-    let route := lookup.topLevelRoute
-      (top := top) (pp := pp) henabled
+    let route := lookup.topLevelRoute (top := top) henabled
     let environment :=
       resolverEnvironment
         (top.toVerifierKey urs) poly proofIndex
@@ -383,7 +382,7 @@ theorem projectedValues
         lookup.tableValues environment row) := by
   dsimp only
   let route :=
-    lookup.topLevelRoute (top := top) (pp := pp) henabled
+    lookup.topLevelRoute (top := top) henabled
   have hrouteMem :
       top.constraintSystem.lookups[route.index.val] ∈
         top.constraintSystem.lookups :=
@@ -481,8 +480,7 @@ theorem projectedPolynomialValues
         (resolverEnvironment
           (top.toVerifierKey urs) poly proofIndex
           (top.usableRowsAt top.domainExponent))) :
-    let route := lookup.topLevelRoute
-      (top := top) (pp := pp) henabled
+    let route := lookup.topLevelRoute (top := top) henabled
     let environment :=
       resolverEnvironment
         (top.toVerifierKey urs) poly proofIndex
@@ -501,7 +499,7 @@ theorem projectedPolynomialValues
           (lookup.tableValues environment row)) := by
   dsimp only
   let route :=
-    lookup.topLevelRoute (top := top) (pp := pp) henabled
+    lookup.topLevelRoute (top := top) henabled
   have projected :=
     projectedValues gateCoherence poly proofIndex
       lookup henabled selectors
@@ -560,8 +558,7 @@ def deployedWitness
       top.placement lookup.region + lookup.row <
         top.usableRowsAt top.domainExponent)
     (resolverGood :
-      let route := lookup.topLevelRoute
-        (top := top) (pp := pp) henabled
+      let route := lookup.topLevelRoute (top := top) henabled
       ResolverLookupGoodChallenges
         (top.toVerifierKey urs) ch poly proofIndex route.index
         (top.n -
@@ -581,7 +578,7 @@ def deployedWitness
     resolverEnvironment vk poly proofIndex
       (top.usableRowsAt top.domainExponent)
   let route :=
-    lookup.topLevelRoute (top := top) (pp := pp) henabled
+    lookup.topLevelRoute (top := top) henabled
   let u := vk.n - vk.blindingFactors - 2
   have hn : vk.n = top.n := by
     simpa only [vk] using top.toVerifierKey_n urs
@@ -646,9 +643,9 @@ def deployedWitness
     simpa only [hn] using satisfaction
   have satisfaction' :
       ConstraintSatisfaction
-        (constraintModelOfResolver vk ch poly
-          (permutationSetsOfResolver vk poly)
-          (permutationChunksOfResolver vk poly)
+        (constraintModelOfResolver (numProofs := pp.numProofs) vk ch poly
+          (permutationSetsOfResolver (numProofs := pp.numProofs) vk poly)
+          (permutationChunksOfResolver (numProofs := pp.numProofs) vk poly)
           canonical.1 canonical.2.1 canonical.2.2) vk.n := by
     rw [top.constraintModel_eq_constraintModelOfResolver] at satisfactionAtVk
     simpa only [vk, canonical] using satisfactionAtVk
@@ -664,8 +661,8 @@ def deployedWitness
             (u + 1) tableRow := by
     exact satisfaction'.resolverLookupSubset
       vk ch poly
-      (permutationSetsOfResolver vk poly)
-      (permutationChunksOfResolver vk poly)
+      (permutationSetsOfResolver (numProofs := pp.numProofs) vk poly)
+      (permutationChunksOfResolver (numProofs := pp.numProofs) vk poly)
       canonical.1 canonical.2.1 canonical.2.2 proofIndex route.index
       domain (by simpa only [hu] using resolverGood)
   simpa only [vk, environment] using
@@ -714,8 +711,7 @@ structure WitnessConditions
         lookup ∈ operationEnabledLookups (top.operations) 0),
     ResolverLookupGoodChallenges
       (top.toVerifierKey urs) ch poly proofIndex
-      (lookup.topLevelRoute
-        (top := top) (pp := pp) henabled).index
+      (lookup.topLevelRoute (top := top) henabled).index
       (top.n -
         top.blindingFactors - 2)
   thetaGood : ∀ lookup
@@ -930,8 +926,7 @@ def WitnessConditions.ofChallengeExclusions
       (top.n -
         top.blindingFactors - 2)
       exclusions.gamma exclusions.beta proofIndex
-      (lookup.topLevelRoute
-        (top := top) (pp := pp) henabled).index
+      (lookup.topLevelRoute (top := top) henabled).index
   · intro lookup henabled
     obtain ⟨index, hindex, hlookup⟩ :=
       List.mem_iff_getElem.mp henabled

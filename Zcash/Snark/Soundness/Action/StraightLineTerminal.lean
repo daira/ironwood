@@ -80,14 +80,14 @@ def action_bundleStatement_or_relation_of_decode
     (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
     (decode : DeployedAlgebraicDecode urs hk
       (actionCircuit.toVerifierKey urs)
-      (actionCircuit.instanceCommitmentForShape pp urs inputs) ps ch a pU pW)
+      (actionCircuit.instanceCommitment urs inputs) ps ch a pU pW)
     (hchar : deployedX4PairCount
       (actionCircuit.toVerifierKey urs)
-      (actionCircuit.instanceCommitmentForShape pp urs inputs) ps ch < scalarFieldOrder)
+      (actionCircuit.instanceCommitment urs inputs) ps ch < scalarFieldOrder)
     (haccepts :
       DeployedAccepts urs hk
         (actionCircuit.toVerifierKey urs)
-        (actionCircuit.instanceCommitmentForShape pp urs inputs) ps ch)
+        (actionCircuit.instanceCommitment urs inputs) ps ch)
     (hxgood :
       let memberDecode := fun i hi => decode.toMemberDecode hchar i hi
       let model :=
@@ -117,7 +117,7 @@ def action_bundleStatement_or_relation_of_decode
           actionCircuit.n j))
     (permutationExclusions :
       ResolverPermutationChallengeExclusions
-        (actionCircuit.toVerifierKey urs) ch
+        pp.numProofs (actionCircuit.toVerifierKey urs) ch
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts)
         actionActiveRows)
@@ -159,13 +159,13 @@ def action_bundleStatement_or_relation_of_decode_circuitSat
     (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
     (decode : DeployedAlgebraicDecode urs hk
       (actionCircuit.toVerifierKey urs)
-      (actionCircuit.instanceCommitmentForShape pp urs inputs) ps ch a pU pW)
+      (actionCircuit.instanceCommitment urs inputs) ps ch a pU pW)
     (hchar : deployedX4PairCount
       (actionCircuit.toVerifierKey urs)
-      (actionCircuit.instanceCommitmentForShape pp urs inputs) ps ch < scalarFieldOrder)
+      (actionCircuit.instanceCommitment urs inputs) ps ch < scalarFieldOrder)
     (haccepts : DeployedAccepts urs hk
       (actionCircuit.toVerifierKey urs)
-      (actionCircuit.instanceCommitmentForShape pp urs inputs) ps ch)
+      (actionCircuit.instanceCommitment urs inputs) ps ch)
     (hpoly : CPoly)
     (hsatisfied :
       (CanonicalMemberConstraintRelation.acceptedModel
@@ -181,7 +181,7 @@ def action_bundleStatement_or_relation_of_decode_circuitSat
           haccepts).constraints
         actionCircuit.n j))
     (permutationExclusions : ResolverPermutationChallengeExclusions
-      (actionCircuit.toVerifierKey urs) ch
+      pp.numProofs (actionCircuit.toVerifierKey urs) ch
       (CanonicalMemberConstraintRelation.acceptedPolynomial
         (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts)
       actionActiveRows)
@@ -213,13 +213,13 @@ def action_bundleWitness_or_relation_of_decode_circuitSat
     (pU pW : Fp) (a : Fin (2 ^ urs.k) → Fp)
     (decode : DeployedAlgebraicDecode urs hk
       (actionCircuit.toVerifierKey urs)
-      (actionCircuit.instanceCommitmentForShape pp urs inputs) ps ch a pU pW)
+      (actionCircuit.instanceCommitment urs inputs) ps ch a pU pW)
     (hchar : deployedX4PairCount
       (actionCircuit.toVerifierKey urs)
-      (actionCircuit.instanceCommitmentForShape pp urs inputs) ps ch < scalarFieldOrder)
+      (actionCircuit.instanceCommitment urs inputs) ps ch < scalarFieldOrder)
     (haccepts : DeployedAccepts urs hk
       (actionCircuit.toVerifierKey urs)
-      (actionCircuit.instanceCommitmentForShape pp urs inputs) ps ch)
+      (actionCircuit.instanceCommitment urs inputs) ps ch)
     (hpoly : CPoly)
     (hsatisfied :
       (CanonicalMemberConstraintRelation.acceptedModel
@@ -235,7 +235,7 @@ def action_bundleWitness_or_relation_of_decode_circuitSat
           haccepts).constraints
         actionCircuit.n j))
     (permutationExclusions : ResolverPermutationChallengeExclusions
-      (actionCircuit.toVerifierKey urs) ch
+      pp.numProofs (actionCircuit.toVerifierKey urs) ch
       (CanonicalMemberConstraintRelation.acceptedPolynomial
         (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts)
       actionActiveRows)
@@ -272,15 +272,13 @@ def actionRunDecode
       actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
     (hI : family.instanceCommitment basis =
-      actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
     (hdecoded : family.straightLineConstraintDecoded static basis O) :
     DeployedAlgebraicDecode
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
-      (actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      (actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
       (straightLineRunOutput family basis O).1.proof.1
       (straightLineRunRecord family basis O)
       ((straightLineRunOutput family basis O).1.aMulti
@@ -306,14 +304,12 @@ theorem actionRunAccepts
       actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
     (hI : family.instanceCommitment basis =
-      actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
     (hdecoded : family.straightLineConstraintDecoded static basis O) :
     DeployedAccepts (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
-      (actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      (actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
       (straightLineRunOutput family basis O).1.proof.1
       (straightLineRunRecord family basis O) :=
   hI ▸ hvk ▸ straightLineAccepts_of_decoded family static basis O hdecoded
@@ -340,14 +336,12 @@ def action_bundleStatement_or_relation_of_straightLineDecoded
       actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
     (hI : family.instanceCommitment basis =
-      actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
     (hdecoded : family.straightLineConstraintDecoded static basis O)
     (hchar : deployedX4PairCount
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
-      (actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      (actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
       (straightLineRunOutput family basis O).1.proof.1
       (straightLineRunRecord family basis O) < scalarFieldOrder) :=
   action_bundleStatement_or_relation_of_decode pp
@@ -375,13 +369,11 @@ def actionTerminalWitnessOrRelationFinder
       actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
-      actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
-      (actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      (actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
       ((wrappedAdversary family.toFamily basis).run O).1.proof.1
       (chRecord
         (wrappedPreIpaReads ((wrappedAdversary family.toFamily basis).run O))
@@ -405,14 +397,14 @@ def actionTerminalWitnessOrRelationFinder
     | some (PSum.inl success) =>
         let decode : DeployedAlgebraicDecode urs rfl
             (actionCircuit.toVerifierKey urs)
-            (actionCircuit.instanceCommitmentForShape pp urs inputs) pnu.1.proof.1 ch
+            (actionCircuit.instanceCommitment urs inputs) pnu.1.proof.1 ch
             (pnu.1.aMulti (wrappedPreIpaReads pnu))
             (pnu.1.multiU (wrappedPreIpaReads pnu))
             (pnu.1.multiBlind (wrappedPreIpaReads pnu)) := hI basis ▸ hvk basis ▸
           success.witness.decode.reRound (runRounds family.toFamily basis O)
         let haccepts : DeployedAccepts urs rfl
             (actionCircuit.toVerifierKey urs)
-            (actionCircuit.instanceCommitmentForShape pp urs inputs) pnu.1.proof.1 ch :=
+            (actionCircuit.instanceCommitment urs inputs) pnu.1.proof.1 ch :=
           hI basis ▸ hvk basis ▸ success.accepts
         let model := CanonicalMemberConstraintRelation.acceptedModel
           (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi)
@@ -431,7 +423,7 @@ def actionTerminalWitnessOrRelationFinder
               actionCircuit.n hn ch.y with
           | some hgoodYProof =>
             match hpermutation : resolverPermutationChallengeExclusions?
-                (actionCircuit.toVerifierKey urs) ch polynomial actionActiveRows with
+                pp.numProofs (actionCircuit.toVerifierKey urs) ch polynomial actionActiveRows with
             | some hpermutationProof =>
               match hlookup : TopLevelLookup.topLevelLookupChallengeExclusions?
                 actionCircuit pp urs ch polynomial with
@@ -442,7 +434,7 @@ def actionTerminalWitnessOrRelationFinder
                     ActionPermutationDomain.domainExponent_lt
                 match acceptedModel_circuitSat_or_relation_of_decodedMemberPolynomial_eq
                     urs rfl (actionCircuit.toVerifierKey urs)
-                    (actionCircuit.instanceCommitmentForShape pp urs inputs) pnu.1.proof.1 ch
+                    (actionCircuit.instanceCommitment urs inputs) pnu.1.proof.1 ch
                     (fun i hi => decode.toMemberDecode (hchar basis O) i hi) haccepts hblinding
                     (polynomial .vanishingH) rfl
                     (actionCircuit.toVerifierKey_fixedQueryCount urs)
@@ -489,13 +481,11 @@ def actionTerminalRelationFinder
       actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
-      actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
-      (actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      (actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
       ((wrappedAdversary family.toFamily basis).run O).1.proof.1
       (chRecord
         (wrappedPreIpaReads ((wrappedAdversary family.toFamily basis).run O))
@@ -519,13 +509,11 @@ def actionKnowledgeOutcome
       actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
-      actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
-      (actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      (actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
       ((wrappedAdversary family.toFamily basis).run O).1.proof.1
       (chRecord
         (wrappedPreIpaReads ((wrappedAdversary family.toFamily basis).run O))
@@ -550,13 +538,11 @@ def actionKnowledgeExtractor
       actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
-      actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
-      (actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      (actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
       ((wrappedAdversary family.toFamily basis).run O).1.proof.1
       (chRecord
         (wrappedPreIpaReads ((wrappedAdversary family.toFamily basis).run O))
@@ -581,13 +567,11 @@ def actionRelationFinder
       actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
-      actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
-      (actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      (actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
       ((wrappedAdversary family.toFamily basis).run O).1.proof.1
       (chRecord
         (wrappedPreIpaReads ((wrappedAdversary family.toFamily basis).run O))
@@ -612,13 +596,11 @@ theorem actionKnowledgeExtractor_eq_some_of_outcome_eq_inl
       actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
-      actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
-      (actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      (actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
       ((wrappedAdversary family.toFamily basis).run O).1.proof.1
       (chRecord
         (wrappedPreIpaReads ((wrappedAdversary family.toFamily basis).run O))
@@ -640,13 +622,11 @@ theorem actionRelationFinder_eq_some_of_outcome_eq_inr
       actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
-      actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
     (hchar : ∀ basis O, deployedX4PairCount
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
-      (actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      (actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
       ((wrappedAdversary family.toFamily basis).run O).1.proof.1
       (chRecord
         (wrappedPreIpaReads ((wrappedAdversary family.toFamily basis).run O))

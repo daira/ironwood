@@ -252,27 +252,33 @@ def actionResolverPermutationCycle_or_relation
     {batchOpenings :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
         (x4BatchCommitments
+          (shape := actionShape pp)
           (instanceCommitment := instanceCommitment)
           urs hk (actionCircuit.toVerifierKey urs) ps ch)
         (x4BatchEvals
+          (shape := actionShape pp)
           (instanceCommitment := instanceCommitment)
           (actionCircuit.toVerifierKey urs) ps ch)
         a pU pW}
     {memberDecode : ∀ i (hi : i <
         deployedX4PairCount
+          (shape := actionShape pp)
           (instanceCommitment := instanceCommitment)
           (actionCircuit.toVerifierKey urs) ps ch),
       OpenedMemberDecode
+        (shape := actionShape pp)
         (instanceCommitment := instanceCommitment)
         urs hk (actionCircuit.toVerifierKey urs) ps ch batchOpenings i hi}
     {y : Fp} {hpoly : CPoly} {deg : ℕ}
     (relation : CanonicalMemberConstraintRelation
+      (shape := actionShape pp)
       urs hk (actionCircuit.toVerifierKey urs) instanceCommitment ps ch pU pW a
       batchOpenings memberDecode
         (actionCircuit.toVerifierKey_blindingFactors_lt_n urs)
         y hpoly deg)
     (proofIndex : Fin pp.numProofs) :
     {cycle : ResolverPermutationCycle
+        (shape := actionCircuit.shape) (numProofs := pp.numProofs)
         (actionCircuit.toVerifierKey urs) relation.polynomial proofIndex actionActiveRows //
       cycle.sigma =
         actionActiveSigma pp urs relation.polynomial proofIndex}
@@ -315,9 +321,11 @@ def actionResolverPermutationCycle_or_relation
       ((Zcash.Snark.actionChunkFlatten
         pp urs relation.polynomial proofIndex
         ⟨chunk, ⟨0, Zcash.Snark.actionDomainSize_pos⟩, column⟩).2).isLt
-    simpa only [Zcash.Snark.actionNumPermCols,
-      Zcash.Snark.actionPermCols, Keygen.permColsOf,
-      ProofParams.mergeDerived, List.length_map] using hlt
+    have hcolumns : actionCircuit.permutationColumnCount = 15 :=
+      congrArg Prod.fst
+        ActionPermutationDomain.columnCount_chunkLen_eq
+    rw [hcolumns]
+    simpa only [Zcash.Snark.actionNumPermCols_eq] using hlt
   let common : Fin actionCircuit.permutationColumnCount :=
     ⟨entry.2, hcommon⟩
   have homega :
@@ -382,12 +390,13 @@ def actionResolverPermutationCycle_or_relation
   have hidx :
       ((vk.permutationChunks.getD chunk [])[column]).2 =
         (common : ℕ) := by
-    change
+    calc
       ((vk.permutationChunks.getD chunk [])[column]).2 =
-        ((vk.permutationChunks.getD chunk []).getD
-          column ((.advice 0), 0)).2
-    rw [List.getD_eq_getElem _ _ hj]
-    rfl
+          ((vk.permutationChunks.getD chunk []).getD
+            column ((.advice 0), 0)).2 :=
+        congrArg Prod.snd (List.getD_eq_getElem _ _ hj).symm
+      _ = entry.2 := by simp only [entry]
+      _ = (common : ℕ) := by simp only [common]
   have hidentified :=
     relation.resolverPermutationPairs_snd_eq_keygenSigmaColumn_or_relation_of_size
       proofIndex chunk column hj common hidx key

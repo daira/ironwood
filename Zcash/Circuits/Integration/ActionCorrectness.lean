@@ -46,24 +46,29 @@ def ofAcceptedCircuitSat
     (batchOpenings :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
         (x4BatchCommitments
-          (instanceCommitment := actionCircuit.instanceCommitmentForShape pp urs inputs)
+          (shape := actionCircuit.shape.withProofParams pp)
+          (instanceCommitment := actionCircuit.instanceCommitment urs inputs)
           urs hk (actionCircuit.toVerifierKey urs) ps ch)
         (x4BatchEvals
-          (instanceCommitment := actionCircuit.instanceCommitmentForShape pp urs inputs)
+          (shape := actionCircuit.shape.withProofParams pp)
+          (instanceCommitment := actionCircuit.instanceCommitment urs inputs)
           (actionCircuit.toVerifierKey urs) ps ch)
         a pU pW)
     (memberDecode : ∀ i (hi : i <
         deployedX4PairCount
-          (instanceCommitment := actionCircuit.instanceCommitmentForShape pp urs inputs)
+          (shape := actionCircuit.shape.withProofParams pp)
+          (instanceCommitment := actionCircuit.instanceCommitment urs inputs)
           (actionCircuit.toVerifierKey urs) ps ch),
       OpenedMemberDecode
-        (instanceCommitment := actionCircuit.instanceCommitmentForShape pp urs inputs)
+        (shape := actionCircuit.shape.withProofParams pp)
+        (instanceCommitment := actionCircuit.instanceCommitment urs inputs)
         urs hk (actionCircuit.toVerifierKey urs)
         ps ch batchOpenings i hi)
     (haccepts :
       DeployedAccepts urs hk
+        (shape := actionCircuit.shape.withProofParams pp)
         (actionCircuit.toVerifierKey urs)
-        (actionCircuit.instanceCommitmentForShape pp urs inputs) ps ch)
+        (actionCircuit.instanceCommitment urs inputs) ps ch)
     (hpoly : CPoly)
     (hsatisfied :
       (CanonicalMemberConstraintRelation.acceptedModel
@@ -84,7 +89,7 @@ def ofAcceptedCircuitSat
           actionCircuit.n j))
     (permutationExclusions :
       ResolverPermutationChallengeExclusions
-        (actionCircuit.toVerifierKey urs)
+        pp.numProofs (actionCircuit.toVerifierKey urs)
         ch
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := memberDecode) haccepts)
@@ -110,7 +115,7 @@ def ofAcceptedCircuitSat
     rfl
   have hcorrect :=
     Zcash.Snark.actionTopLevelCircuitCorrectness
-      pp urs hk (actionCircuit.instanceCommitmentForShape pp urs inputs) ps ch pU pW a
+      pp urs hk (actionCircuit.instanceCommitment urs inputs) ps ch pU pW a
       batchOpenings memberDecode hpoly relation
       (by
         simpa only [

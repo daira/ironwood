@@ -207,6 +207,7 @@ def ofOpenings
     canonicalLagrangePolynomials vk.omega hblinding
   have hselectorEvaluations :=
     VerifyingKey.constraintModel_selectorEvaluations
+      (numProofs := shape.numProofs)
       vk ch polynomial hblinding hrows hroot hnFp hxDomain
   refine
     { fixed := ?_

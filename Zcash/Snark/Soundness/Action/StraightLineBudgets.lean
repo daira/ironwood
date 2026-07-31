@@ -28,9 +28,9 @@ namespace Zcash.Snark
 
 /-- The permutation cell count is `m` rows per chunk pair — a layout count: the pair list is a
 `map` over the key's own `permutationChunks`. -/
-theorem resolverPermutationCell_card {shape : Shape} {G : Type*}
+theorem resolverPermutationCell_card {shape : CircuitShape} {numProofs : ℕ} {G : Type*}
     (vk : VerifyingKey shape Fp G) (poly : CommitmentId → CPoly)
-    (p : Fin shape.numProofs) (m : ℕ) :
+    (p : Fin numProofs) (m : ℕ) :
     Fintype.card (ResolverPermutationCell vk poly p m) =
       ∑ c : Fin shape.numPermutationSets,
         m * (vk.permutationChunks.getD c []).length := by
@@ -55,20 +55,18 @@ variable (pp : ProofParams)
     actionCircuit.toVerifierKey
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
   (hI : ∀ basis, family.instanceCommitment basis =
-    actionCircuit.instanceCommitmentForShape pp
-      (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+    actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
   (hchar : ∀ basis O, deployedX4PairCount
     (actionCircuit.toVerifierKey
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
-    (actionCircuit.instanceCommitmentForShape pp
-      (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+    (actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
     (straightLineRunOutput family basis O).1.proof.1
     (straightLineRunRecord family basis O) < scalarFieldOrder)
 
 /-- The deployed Action key at one basis. -/
 abbrev vkAt
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG) :
-    VerifyingKey (actionCircuit.shape.withProofParams pp) Fp VestaG :=
+    VerifyingKey actionCircuit.shape Fp VestaG :=
   actionCircuit.toVerifierKey (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis)
 
 /-- A challenge record carrying only `θ` and `β` — the fields a pre-`x` exclusion set reads. -/
@@ -83,8 +81,8 @@ def semanticChRecord (theta beta : Fp) {k : ℕ} : Challenges k Fp :=
 
 /-- The run record's challenge at squeeze index `i` is the oracle's answer at the index-`i`
 squeeze prefix. -/
-theorem straightLineRunRecord_read (basis : AugmentedIndex (2 ^ (pp.mergeDerived
-      actionCircuit).k) → VestaG)
+theorem straightLineRunRecord_read
+    (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
     (O : BTranscript Fp VestaG
       (preIpaLen (actionCircuit.shape.withProofParams pp) family.init.length 10
         + 3 * (actionCircuit.shape.withProofParams pp).k) → Fp) (i : Fin 11) :
@@ -161,7 +159,8 @@ theorem actionBetaFailureEvent_subset
       thetaOf ((cut.pre basis).run O)) :
     topLevelBetaFailureEvent actionCircuit pp family static inputs hvk hI hchar ⊆
       cut.surfaceEvent (fun basis s =>
-        ↑(allResolverPermutationBetaBadSet (vkAt pp basis) (view s) (actionCircuit.usableRowsAt actionCircuit.domainExponent)) ∪
+        ↑(allResolverPermutationBetaBadSet pp.numProofs (vkAt pp basis) (view s)
+          (actionCircuit.usableRowsAt actionCircuit.domainExponent)) ∪
         ↑(allResolverLookupBetaBadSet pp.numProofs (vkAt pp basis)
           (semanticChRecord (thetaOf s) 0
             (k := (actionCircuit.shape.withProofParams pp).k)) (view s)
@@ -173,7 +172,8 @@ theorem actionBetaFailureEvent_subset
     straightLineRunRecord_read pp family basis O 1
   rcases not_and_or.mp hmem with hperm | hlook
   · have hin := not_not.mp hperm
-    rw [allResolverPermutationBetaBadSet_congr (vkAt pp basis) (actionCircuit.usableRowsAt actionCircuit.domainExponent)
+    rw [allResolverPermutationBetaBadSet_congr pp.numProofs (vkAt pp basis)
+      (actionCircuit.usableRowsAt actionCircuit.domainExponent)
       (fun id hid => hview basis O h id (Or.inl hid)), hproj] at hin
     exact Set.mem_union_left _ (Finset.mem_coe.mpr hin)
   · have hin := not_not.mp hlook
@@ -201,7 +201,8 @@ theorem actionBetaFailureEvent_prob_le {T : Type*} [DecidableEq T]
     {epsilon : ENNReal}
     (hbad : ∀ (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
       (s : cut.State), (PMF.uniformOfFintype Fp).toOuterMeasure
-      (↑(allResolverPermutationBetaBadSet (vkAt pp basis) (view s) (actionCircuit.usableRowsAt actionCircuit.domainExponent)) ∪
+      (↑(allResolverPermutationBetaBadSet pp.numProofs (vkAt pp basis) (view s)
+        (actionCircuit.usableRowsAt actionCircuit.domainExponent)) ∪
         ↑(allResolverLookupBetaBadSet pp.numProofs (vkAt pp basis)
           (semanticChRecord (thetaOf s) 0
             (k := (actionCircuit.shape.withProofParams pp).k)) (view s)
@@ -236,7 +237,7 @@ theorem actionGammaFailureEvent_subset
       betaOf ((cut.pre basis).run O)) :
     topLevelGammaFailureEvent actionCircuit pp family static inputs hvk hI hchar ⊆
       cut.surfaceEvent (fun basis s =>
-        ↑(allResolverPermutationGammaBadSet (vkAt pp basis)
+        ↑(allResolverPermutationGammaBadSet pp.numProofs (vkAt pp basis)
           (semanticChRecord (thetaOf s) (betaOf s)) (view s) (actionCircuit.usableRowsAt actionCircuit.domainExponent)) ∪
         ↑(allResolverLookupGammaBadSet pp.numProofs (vkAt pp basis)
           (semanticChRecord (thetaOf s) (betaOf s)
@@ -249,7 +250,8 @@ theorem actionGammaFailureEvent_subset
     straightLineRunRecord_read pp family basis O 2
   rcases not_and_or.mp hmem with hperm | hlook
   · have hin := not_not.mp hperm
-    rw [allResolverPermutationGammaBadSet_congr (vkAt pp basis) (actionCircuit.usableRowsAt actionCircuit.domainExponent)
+    rw [allResolverPermutationGammaBadSet_congr pp.numProofs (vkAt pp basis)
+      (actionCircuit.usableRowsAt actionCircuit.domainExponent)
       ((hbeta basis O).trans (semanticChRecord_beta _ _).symm)
       (fun id hid => hview basis O h id (Or.inl hid)), hproj] at hin
     exact Set.mem_union_left _ (Finset.mem_coe.mpr hin)
@@ -281,7 +283,7 @@ theorem actionGammaFailureEvent_prob_le {T : Type*} [DecidableEq T]
     {epsilon : ENNReal}
     (hbad : ∀ (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
       (s : cut.State), (PMF.uniformOfFintype Fp).toOuterMeasure
-      (↑(allResolverPermutationGammaBadSet (vkAt pp basis)
+      (↑(allResolverPermutationGammaBadSet pp.numProofs (vkAt pp basis)
           (semanticChRecord (thetaOf s) (betaOf s)) (view s) (actionCircuit.usableRowsAt actionCircuit.domainExponent)) ∪
         ↑(allResolverLookupGammaBadSet pp.numProofs (vkAt pp basis)
           (semanticChRecord (thetaOf s) (betaOf s)
@@ -425,14 +427,19 @@ theorem actionBetaBadSets_measure_le
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
     (theta : Fp) (poly : CommitmentId → CPoly) :
     (PMF.uniformOfFintype Fp).toOuterMeasure
-      (↑(allResolverPermutationBetaBadSet (vkAt pp basis) poly (actionCircuit.usableRowsAt actionCircuit.domainExponent)) ∪
+      (↑(allResolverPermutationBetaBadSet pp.numProofs (vkAt pp basis) poly
+        (actionCircuit.usableRowsAt actionCircuit.domainExponent)) ∪
         ↑(allResolverLookupBetaBadSet pp.numProofs (vkAt pp basis)
           (semanticChRecord theta 0
             (k := (actionCircuit.shape.withProofParams pp).k)) poly
           (actionCircuit.n - actionCircuit.blindingFactors - 2))) ≤
       ((∑ p : Fin pp.numProofs,
-        (Fintype.card (ResolverPermutationCell (vkAt pp basis) poly p (actionCircuit.usableRowsAt actionCircuit.domainExponent)) + 1) *
-          Fintype.card (ResolverPermutationCell (vkAt pp basis) poly p (actionCircuit.usableRowsAt actionCircuit.domainExponent)) :
+        (Fintype.card (ResolverPermutationCell (shape := actionCircuit.shape)
+          (numProofs := pp.numProofs) (vkAt pp basis) poly p
+          (actionCircuit.usableRowsAt actionCircuit.domainExponent)) + 1) *
+          Fintype.card (ResolverPermutationCell (shape := actionCircuit.shape)
+            (numProofs := pp.numProofs) (vkAt pp basis) poly p
+            (actionCircuit.usableRowsAt actionCircuit.domainExponent)) :
             ℕ) : ℝ≥0∞) / Fintype.card Fp +
       ((pp.numProofs * actionCircuit.lookupCount *
         ((actionCircuit.n - actionCircuit.blindingFactors - 2 + 2) *
@@ -441,7 +448,8 @@ theorem actionBetaBadSets_measure_le
         Fintype.card Fp :=
   le_trans (measure_union_le _ _)
     (add_le_add
-      (allResolverPermutationBetaBadSet_measure_le (vkAt pp basis) poly (actionCircuit.usableRowsAt actionCircuit.domainExponent))
+      (allResolverPermutationBetaBadSet_measure_le pp.numProofs (vkAt pp basis) poly
+        (actionCircuit.usableRowsAt actionCircuit.domainExponent))
       (allResolverLookupBetaBadSet_measure_le pp.numProofs (vkAt pp basis)
         (semanticChRecord theta 0
           (k := (actionCircuit.shape.withProofParams pp).k)) poly
@@ -452,22 +460,26 @@ theorem actionGammaBadSets_measure_le
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
     (theta beta : Fp) (poly : CommitmentId → CPoly) :
     (PMF.uniformOfFintype Fp).toOuterMeasure
-      (↑(allResolverPermutationGammaBadSet (vkAt pp basis)
-          (semanticChRecord theta beta) poly (actionCircuit.usableRowsAt actionCircuit.domainExponent)) ∪
+      (↑(allResolverPermutationGammaBadSet pp.numProofs (vkAt pp basis)
+          (semanticChRecord theta beta (k := actionCircuit.domainExponent)) poly
+          (actionCircuit.usableRowsAt actionCircuit.domainExponent)) ∪
         ↑(allResolverLookupGammaBadSet pp.numProofs (vkAt pp basis)
           (semanticChRecord theta beta
             (k := (actionCircuit.shape.withProofParams pp).k)) poly
           (actionCircuit.n - actionCircuit.blindingFactors - 2))) ≤
       ((∑ p : Fin pp.numProofs,
-        2 * Fintype.card (ResolverPermutationCell (vkAt pp basis) poly p (actionCircuit.usableRowsAt actionCircuit.domainExponent)) :
+        2 * Fintype.card (ResolverPermutationCell (shape := actionCircuit.shape)
+          (numProofs := pp.numProofs) (vkAt pp basis) poly p
+          (actionCircuit.usableRowsAt actionCircuit.domainExponent)) :
           ℕ) : ℝ≥0∞) / Fintype.card Fp +
       ((pp.numProofs * actionCircuit.lookupCount *
         (2 * (actionCircuit.n - actionCircuit.blindingFactors - 2 + 1)) : ℕ) : ℝ≥0∞) /
         Fintype.card Fp :=
   le_trans (measure_union_le _ _)
     (add_le_add
-      (allResolverPermutationGammaBadSet_measure_le (vkAt pp basis)
-        (semanticChRecord theta beta) poly (actionCircuit.usableRowsAt actionCircuit.domainExponent))
+      (allResolverPermutationGammaBadSet_measure_le pp.numProofs (vkAt pp basis)
+        (semanticChRecord theta beta (k := actionCircuit.domainExponent)) poly
+        (actionCircuit.usableRowsAt actionCircuit.domainExponent))
       (allResolverLookupGammaBadSet_measure_le pp.numProofs (vkAt pp basis)
         (semanticChRecord theta beta
           (k := (actionCircuit.shape.withProofParams pp).k))
@@ -713,8 +725,12 @@ theorem ActionSequentialCuts.beta_prob_le {T : Type*} [DecidableEq T]
     (hcap : ∀ (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
       (poly : CommitmentId → CPoly),
       (∑ p : Fin pp.numProofs,
-        (Fintype.card (ResolverPermutationCell (vkAt pp basis) poly p (actionCircuit.usableRowsAt actionCircuit.domainExponent)) + 1) *
-          Fintype.card (ResolverPermutationCell (vkAt pp basis) poly p (actionCircuit.usableRowsAt actionCircuit.domainExponent))) +
+        (Fintype.card (ResolverPermutationCell (shape := actionCircuit.shape)
+          (numProofs := pp.numProofs) (vkAt pp basis) poly p
+          (actionCircuit.usableRowsAt actionCircuit.domainExponent)) + 1) *
+          Fintype.card (ResolverPermutationCell (shape := actionCircuit.shape)
+            (numProofs := pp.numProofs) (vkAt pp basis) poly p
+            (actionCircuit.usableRowsAt actionCircuit.domainExponent))) +
       pp.numProofs * actionCircuit.lookupCount *
         ((actionCircuit.n - actionCircuit.blindingFactors - 2 + 2) *
             (actionCircuit.n - actionCircuit.blindingFactors - 2 + 1) +
@@ -742,7 +758,9 @@ theorem ActionSequentialCuts.gamma_prob_le {T : Type*} [DecidableEq T]
     (hcap : ∀ (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
       (poly : CommitmentId → CPoly),
       (∑ p : Fin pp.numProofs,
-        2 * Fintype.card (ResolverPermutationCell (vkAt pp basis) poly p (actionCircuit.usableRowsAt actionCircuit.domainExponent))) +
+        2 * Fintype.card (ResolverPermutationCell (shape := actionCircuit.shape)
+          (numProofs := pp.numProofs) (vkAt pp basis) poly p
+          (actionCircuit.usableRowsAt actionCircuit.domainExponent))) +
       pp.numProofs * actionCircuit.lookupCount *
         (2 * (actionCircuit.n - actionCircuit.blindingFactors - 2 + 1)) ≤ Ngamma) :
     (independentProductPMF (orchardGeneratorROSetup query)

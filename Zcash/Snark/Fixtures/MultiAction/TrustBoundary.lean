@@ -155,18 +155,6 @@ assert_axioms Zcash.Snark.Fixture.actionAcceptFalseStatementEvent +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Fixture.derived_blinding +native(
-  CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.Keygen.certificate,
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
-  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
-  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.Fixture.action_semantic_count_le
 assert_axioms Zcash.Snark.Fixture.two_pow_254_le_card
 assert_axioms Zcash.Snark.Fixture.action_semantic_terms_le
@@ -196,7 +184,7 @@ assert_axioms Zcash.Snark.Fixture.derived_lookups +native(
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.Fixture.staticChecks_of_derived +native(
   CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.Keygen.certificate,
+  Zcash.Snark.ActionPermutationDomain.domainExponent_lt,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,

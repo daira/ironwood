@@ -260,18 +260,20 @@ def constraintModelOfResolver
   lLast := lLast
   lBlind := lBlind
 
-@[simp] theorem constraintModelOfResolver_lookups {shape : Shape} {G : Type*}
+@[simp] theorem constraintModelOfResolver_lookups
+    {shape : CircuitShape} {numProofs : ℕ} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → CPoly)
-    (sets : Fin shape.numProofs → List (PermSetEval (CPoly)))
-    (chunks : Fin shape.numProofs →
+    (sets : Fin numProofs → List (PermSetEval (CPoly)))
+    (chunks : Fin numProofs →
       List (PermSetEval (CPoly) × List (CPoly × CPoly)))
-    (l0 lLast lBlind : CPoly) (p : Fin shape.numProofs) :
+    (l0 lLast lBlind : CPoly) (p : Fin numProofs) :
     (constraintModelOfResolver vk ch poly sets chunks l0 lLast lBlind).lookups p
       = lookupEntriesOfResolver vk poly p := rfl
 
 /-- The selected coherent lookup entry occurs in the resolver-built lookup list. -/
-theorem lookupEntry_mem_lookupEntriesOfResolver {shape : Shape} {G : Type*}
+theorem lookupEntry_mem_lookupEntriesOfResolver
+    {shape : CircuitShape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (poly : CommitmentId → CPoly)
     (p : ℕ) (l : Fin shape.numLookups) :
     (lookupEvalPolys vk.omega
@@ -286,7 +288,7 @@ theorem lookupEntry_mem_lookupEntriesOfResolver {shape : Shape} {G : Type*}
 membership fact passed to `ConstraintSatisfaction.lookupStart`, `lookupEnd`,
 `lookupProductStep`, `lookupRunStart`, and `lookupRunStep`. -/
 theorem lookupEntry_mem_constraintModelOfResolver
-    {shape : Shape} {numProofs k : ℕ} {G : Type*}
+    {shape : CircuitShape} {numProofs k : ℕ} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges k Fp)
     (poly : CommitmentId → CPoly)
     (sets : Fin numProofs → List (PermSetEval CPoly))
@@ -473,7 +475,7 @@ theorem eval_constraintModelOfResolver_lookups_of_assembleQueries
 /-- Full family satisfaction specialized to one resolver-built lookup gives exactly the five
 coherent divisibility facts consumed by `deployed_lookup_subset`. -/
 theorem ConstraintSatisfaction.lookupConstraintsDvdOfResolver
-    {shape : Shape} {numProofs k : ℕ} {G : Type*} {n : ℕ}
+    {shape : CircuitShape} {numProofs k : ℕ} {G : Type*} {n : ℕ}
     (vk : VerifyingKey shape Fp G) (ch : Challenges k Fp)
     (poly : CommitmentId → CPoly)
     (sets : Fin numProofs → List (PermSetEval CPoly))

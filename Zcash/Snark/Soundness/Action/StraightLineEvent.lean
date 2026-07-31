@@ -56,13 +56,11 @@ variable
     actionCircuit.toVerifierKey
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
   (hI : ∀ basis, family.instanceCommitment basis =
-    actionCircuit.instanceCommitmentForShape pp
-      (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+    actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
   (hchar : ∀ basis O, deployedX4PairCount
     (actionCircuit.toVerifierKey
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
-    (actionCircuit.instanceCommitmentForShape pp
-      (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+    (actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
     (straightLineRunOutput family basis O).1.proof.1
     (straightLineRunRecord family basis O) < scalarFieldOrder)
 
@@ -150,7 +148,7 @@ def actionBetaFailureEvent :
           + 3 * (actionCircuit.shape.withProofParams pp).k) → Fp)) :=
   {q | ∃ h : family.straightLineConstraintDecoded static q.1 q.2,
     ¬(((straightLineRunRecord family q.1 q.2).beta ∉ allResolverPermutationBetaBadSet
-        (actionCircuit.toVerifierKey
+        pp.numProofs (actionCircuit.toVerifierKey
           (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k q.1))
         (actionRunPolynomial pp family static inputs hvk hI hchar q.1 q.2 h)
         actionActiveRows) ∧
@@ -171,7 +169,7 @@ def actionGammaFailureEvent :
           + 3 * (actionCircuit.shape.withProofParams pp).k) → Fp)) :=
   {q | ∃ h : family.straightLineConstraintDecoded static q.1 q.2,
     ¬(((straightLineRunRecord family q.1 q.2).gamma ∉ allResolverPermutationGammaBadSet
-        (actionCircuit.toVerifierKey
+        pp.numProofs (actionCircuit.toVerifierKey
           (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k q.1))
         (straightLineRunRecord family q.1 q.2)
         (actionRunPolynomial pp family static inputs hvk hI hchar q.1 q.2 h)
@@ -284,8 +282,7 @@ theorem actionKnowledgeOutcome_isSome_of_good
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
-      (actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      (actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
       (straightLineRunOutput family basis O).1.proof.1
       (straightLineRunRecord family basis O)
       ((straightLineRunOutput family basis O).1.aMulti
@@ -300,8 +297,7 @@ theorem actionKnowledgeOutcome_isSome_of_good
       (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
       (actionCircuit.toVerifierKey
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
-      (actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
+      (actionCircuit.instanceCommitment (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
       (straightLineRunOutput family basis O).1.proof.1
       (straightLineRunRecord family basis O) :=
     hI basis ▸ hvk basis ▸ success.accepts
@@ -366,14 +362,14 @@ theorem actionKnowledgeOutcome_isSome_of_good
       split
       · rename_i hgoodYProof _
         have hpermutation' : ResolverPermutationChallengeExclusions
-                (actionCircuit.toVerifierKey
+                pp.numProofs (actionCircuit.toVerifierKey
                   (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
                 (straightLineRunRecord family basis O)
                 (actionRunPolynomial pp family static inputs hvk hI hchar
                   basis O hdecoded) actionActiveRows := ⟨hgamma.1, hbeta.1⟩
         rw [hpolyEq] at hpermutation'
         have hpermutationSome := resolverPermutationChallengeExclusions?_isSome_of
-          _ _ _ _ hpermutation'
+          pp.numProofs _ _ _ _ hpermutation'
         split
         · have hlookup' : TopLevelLookup.ChallengeExclusions
                   actionCircuit pp
@@ -930,7 +926,7 @@ theorem actionBetaFailureEvent_subset_surface
       (Fin 1 → Fp) → Set Fp)
     (hcompat : ∀ basis O (h : family.straightLineConstraintDecoded static basis O),
       ↑(allResolverPermutationBetaBadSet
-          (actionCircuit.toVerifierKey
+          pp.numProofs (actionCircuit.toVerifierKey
             (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
           (actionRunPolynomial pp family static inputs hvk hI hchar basis O h)
           actionActiveRows ∪
@@ -969,7 +965,7 @@ theorem actionGammaFailureEvent_subset_surface
       (Fin 2 → Fp) → Set Fp)
     (hcompat : ∀ basis O (h : family.straightLineConstraintDecoded static basis O),
       ↑(allResolverPermutationGammaBadSet
-          (actionCircuit.toVerifierKey
+          pp.numProofs (actionCircuit.toVerifierKey
             (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
           (straightLineRunRecord family basis O)
           (actionRunPolynomial pp family static inputs hvk hI hchar basis O h)

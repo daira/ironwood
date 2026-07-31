@@ -32,7 +32,7 @@ basis polynomial.
 -/
 def instanceCommitmentKey
     (top : TopLevelCircuit Fp Config PublicInput)
-    (pp : ProofParams) (urs : URS G) :
+    (urs : URS G) :
     LagrangeCommitmentKey urs (top.toVerifierKey urs).omega where
   generators := fun i =>
     commit urs
@@ -48,27 +48,12 @@ layout. It supports arbitrary proof multiplicity and any number of instance colu
 -/
 def instanceCommitment
     (top : TopLevelCircuit Fp Config PublicInput)
-    (pp : ProofParams) (urs : URS G)
-    (inputs : Fin pp.numProofs → PublicInput Fp) :
-    Fin pp.numProofs → ℕ → G :=
+    (urs : URS G) {numProofs : ℕ}
+    (inputs : Fin numProofs → PublicInput Fp) :
+    Fin numProofs → ℕ → G :=
   fun proofIndex column =>
-    (top.instanceCommitmentKey pp urs).commitInstance
+    (top.instanceCommitmentKey urs).commitInstance
       (top.publicInputRows (inputs proofIndex) ⟨column⟩) 1
-
-/--
-The same commitment family, reindexed by the verifier proof shape.
-
-`ProofParams.mergeDerived` preserves `numProofs`; making that transport explicit
-keeps verifier terms from unfolding the rest of the circuit-derived shape.
--/
-def instanceCommitmentForShape
-    (top : TopLevelCircuit Fp Config PublicInput)
-    (pp : ProofParams) (urs : URS G)
-    (inputs : Fin pp.numProofs → PublicInput Fp) :
-    Fin (top.shape.withProofParams pp).numProofs → ℕ → G :=
-  fun proofIndex =>
-    top.instanceCommitment pp urs inputs
-      (Fin.cast (pp.mergeDerived_numProofs top) proofIndex)
 
 omit [DecidableEq G] in
 @[simp] theorem instanceCommitment_column
@@ -76,8 +61,8 @@ omit [DecidableEq G] in
     (pp : ProofParams) (urs : URS G)
     (inputs : Fin pp.numProofs → PublicInput Fp)
     (proofIndex : Fin pp.numProofs) (column : Column .instance) :
-    top.instanceCommitment pp urs inputs proofIndex column.index =
-      (top.instanceCommitmentKey pp urs).commitInstance
+    top.instanceCommitment urs inputs proofIndex column.index =
+      (top.instanceCommitmentKey urs).commitInstance
         (top.publicInputRows (inputs proofIndex) column) 1 :=
   by
     simp [instanceCommitment]
@@ -94,7 +79,7 @@ theorem instanceCommitment_column_eq_commit
     (pp : ProofParams) (urs : URS G)
     (inputs : Fin pp.numProofs → PublicInput Fp)
     (proofIndex : Fin pp.numProofs) (column : Column .instance) :
-    top.instanceCommitment pp urs inputs proofIndex column.index =
+    top.instanceCommitment urs inputs proofIndex column.index =
       commit urs
           (instanceCoefficients (2 ^ urs.k)
             top.omega
@@ -129,24 +114,29 @@ variable
     (batchOpenings :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
         (x4BatchCommitments
-          (instanceCommitment := top.instanceCommitmentForShape pp urs inputs)
+          (shape := top.shape.withProofParams pp)
+          (instanceCommitment := top.instanceCommitment urs inputs)
           urs hk (top.toVerifierKey urs) ps ch)
         (x4BatchEvals
-          (instanceCommitment := top.instanceCommitmentForShape pp urs inputs)
+          (shape := top.shape.withProofParams pp)
+          (instanceCommitment := top.instanceCommitment urs inputs)
           (top.toVerifierKey urs) ps ch)
         a pU pW)
     (memberDecode : ∀ i (hi : i <
         deployedX4PairCount
-          (instanceCommitment := top.instanceCommitmentForShape pp urs inputs)
+          (shape := top.shape.withProofParams pp)
+          (instanceCommitment := top.instanceCommitment urs inputs)
           (top.toVerifierKey urs) ps ch),
       OpenedMemberDecode
-        (instanceCommitment := top.instanceCommitmentForShape pp urs inputs)
+        (shape := top.shape.withProofParams pp)
+        (instanceCommitment := top.instanceCommitment urs inputs)
         urs hk (top.toVerifierKey urs)
         ps ch batchOpenings i hi)
     (haccepts :
       DeployedAccepts urs hk
+        (shape := top.shape.withProofParams pp)
         (top.toVerifierKey urs)
-        (top.instanceCommitmentForShape pp urs inputs) ps ch)
+        (top.instanceCommitment urs inputs) ps ch)
 
 /--
 Verifier acceptance binds one cell's circuit-derived instance column to its
@@ -159,6 +149,7 @@ def acceptedColumn_eq_rowPolynomial_or_relation
       fun i : Fin (2 ^ top.domainExponent) =>
         top.omega ^ (i : ℕ)) :
     CanonicalMemberConstraintRelation.acceptedPolynomial
+          (shape := top.shape.withProofParams pp)
           (memberDecode := memberDecode) haccepts
         (.instanceCol proofIndex
           (top.publicInputLayout.cells index).1.index) =
@@ -168,10 +159,8 @@ def acceptedColumn_eq_rowPolynomial_or_relation
           (top.publicInputLayout.cells index).1) ⊕'
       NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   let column := (top.publicInputLayout.cells index).1
-  let verifierProofIndex : Fin (top.shape.withProofParams pp).numProofs :=
-    Fin.cast (pp.mergeDerived_numProofs top).symm proofIndex
   have hk' : top.domainExponent = urs.k :=
-    (pp.mergeDerived_k top).symm.trans hk
+    top.shape_k.symm.trans hk
   have hn : 2 ^ urs.k = 2 ^ top.domainExponent :=
     congrArg (2 ^ ·) hk'.symm
   have hrows' : Function.Injective
@@ -182,35 +171,35 @@ def acceptedColumn_eq_rowPolynomial_or_relation
       hrows (by simpa only [Fin.val_cast] using hij)
     exact Fin.ext (by
       simpa only [Fin.val_cast] using congrArg Fin.val hcast)
-  have hquery : ∃ q ∈ assembleQueries (top.toVerifierKey urs)
-      (top.instanceCommitmentForShape pp urs inputs) ps ch,
+  have hquery : ∃ q ∈ assembleQueries
+      (shape := top.shape.withProofParams pp) (top.toVerifierKey urs)
+      (top.instanceCommitment urs inputs) ps ch,
       q.commId = .instanceCol proofIndex column.index := by
     obtain ⟨instanceRotation, hregistered⟩ :=
       top.exists_rotation_mem_instanceQueries_of_publicInputLayout_cell index
-    simpa only [verifierProofIndex, Fin.val_cast] using
-      (instanceQuery_of_layout
-        (top.toVerifierKey urs) (top.instanceCommitmentForShape pp urs inputs) ps ch
-        verifierProofIndex column.index instanceRotation
+    exact instanceQuery_of_layout
+        (shape := top.shape.withProofParams pp)
+        (top.toVerifierKey urs) (top.instanceCommitment urs inputs) ps ch
+        proofIndex column.index instanceRotation
         (top.toVerifierKey_instanceQueryCount urs)
         (top.mem_instanceQueryLayout_of_mem_constraintSystem
-          column instanceRotation hregistered))
+          column instanceRotation hregistered)
   have hbound :=
     CanonicalMemberConstraintRelation.acceptedInstanceColumn_eq_rowPolynomial_or_relation
+      (shape := top.shape.withProofParams pp)
       (pU := pU) (pW := pW) (a := a)
       (batchOpenings := batchOpenings)
       (memberDecode := memberDecode)
-      haccepts verifierProofIndex column.index
-      (top.instanceCommitmentKey pp urs)
+      haccepts proofIndex column.index
+      (top.instanceCommitmentKey urs)
       (top.publicInputRows (inputs proofIndex) column) 1
       (top.instanceCommitment_column pp urs inputs proofIndex column)
       (by simpa only [top.toVerifierKey_omega] using hrows')
       hquery
   refine bindOrRelationWitness hbound fun heq => ?_
-  have hn' : 2 ^ urs.k = top.n := by
-    rw [← hk, pp.mergeDerived_k, top.n_eq_two_pow_domainExponent]
-  rw [show (verifierProofIndex : ℕ) = proofIndex by
-        simp only [verifierProofIndex, Fin.val_cast],
-      hn', top.toVerifierKey_omega] at heq
+  have hn' : 2 ^ urs.k = top.n :=
+    hn.trans top.n_eq_two_pow_domainExponent.symm
+  rw [hn', top.toVerifierKey_omega] at heq
   exact heq
 
 assert_no_sorry
@@ -227,6 +216,7 @@ def publicInputEncoding_or_relation
           pp.numProofs proofIndex :=
         { polynomial :=
             CanonicalMemberConstraintRelation.acceptedPolynomial
+              (shape := top.shape.withProofParams pp)
               (memberDecode := memberDecode) haccepts };
       assignment.PublicInputEncoding (inputs proofIndex)) ⊕'
       NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
@@ -234,6 +224,7 @@ def publicInputEncoding_or_relation
       pp.numProofs proofIndex :=
     { polynomial :=
         CanonicalMemberConstraintRelation.acceptedPolynomial
+          (shape := top.shape.withProofParams pp)
           (memberDecode := memberDecode) haccepts }
   change assignment.PublicInputEncoding (inputs proofIndex) ⊕'
     NontrivialRelation (F := Fp) urs.g urs.u urs.w
@@ -266,11 +257,13 @@ def statements_or_relation_of_accepted_topLevelBundleStatement
     (htop :
       TopLevelBundleStatement top pp
         (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (shape := top.shape.withProofParams pp)
           (memberDecode := memberDecode) haccepts)) :
     (∀ proofIndex, top.Statement (inputs proofIndex)) ⊕'
       NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   let poly :=
     CanonicalMemberConstraintRelation.acceptedPolynomial
+      (shape := top.shape.withProofParams pp)
       (memberDecode := memberDecode) haccepts
   change TopLevelBundleStatement top pp poly at htop
   refine bindOrRelationWitness
@@ -294,11 +287,13 @@ def witnesses_or_relation_of_accepted_topLevelBundleWitness
     (domainExponent_lt : top.domainExponent < 33)
     (witness : TopLevelBundleWitness top pp
       (CanonicalMemberConstraintRelation.acceptedPolynomial
+        (shape := top.shape.withProofParams pp)
         (memberDecode := memberDecode) haccepts)) :
     TopLevelExternalBundleWitness top inputs ⊕'
       NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
   let poly :=
     CanonicalMemberConstraintRelation.acceptedPolynomial
+      (shape := top.shape.withProofParams pp)
       (memberDecode := memberDecode) haccepts
   change TopLevelBundleWitness top pp poly at witness
   refine bindOrRelationWitness

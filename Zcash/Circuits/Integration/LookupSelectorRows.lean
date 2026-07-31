@@ -384,13 +384,13 @@ instance EnabledLookup.inputSelectorLeafRowsExactDecidable
 
 omit [AddCommGroup G] [Module Fp G] [DecidableEq G] [Inhabited G] in
 private theorem resolverFixedRead_of_rowPolynomial
-    {shape : Shape} (urs : URS G)
+    {shape : CircuitShape} {numProofs : ℕ} (urs : URS G)
     (vk : VerifyingKey shape Fp G)
     (poly : CommitmentId → CPoly)
     (rows : ℕ → List Fp)
     (hrows : Function.Injective
       fun i : Fin (2 ^ urs.k) => vk.omega ^ (i : ℕ))
-    (proofIndex : Fin shape.numProofs) (usableRows column row : ℕ)
+    (proofIndex : Fin numProofs) (usableRows column row : ℕ)
     (hrow : row < 2 ^ urs.k)
     (hpolynomial :
       poly (.fixedCol column) =

@@ -241,24 +241,29 @@ variable
     (batchOpenings :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
         (x4BatchCommitments
-          (instanceCommitment := top.instanceCommitmentForShape pp urs inputs)
+          (shape := top.shape.withProofParams pp)
+          (instanceCommitment := top.instanceCommitment urs inputs)
           urs hk (top.toVerifierKey urs) ps ch)
         (x4BatchEvals
-          (instanceCommitment := top.instanceCommitmentForShape pp urs inputs)
+          (shape := top.shape.withProofParams pp)
+          (instanceCommitment := top.instanceCommitment urs inputs)
           (top.toVerifierKey urs) ps ch)
         a pU pW)
     (memberDecode : ∀ i (hi : i <
         deployedX4PairCount
-          (instanceCommitment := top.instanceCommitmentForShape pp urs inputs)
+          (shape := top.shape.withProofParams pp)
+          (instanceCommitment := top.instanceCommitment urs inputs)
           (top.toVerifierKey urs) ps ch),
       OpenedMemberDecode
-        (instanceCommitment := top.instanceCommitmentForShape pp urs inputs)
+        (shape := top.shape.withProofParams pp)
+        (instanceCommitment := top.instanceCommitment urs inputs)
         urs hk (top.toVerifierKey urs)
         ps ch batchOpenings i hi)
     (haccepts :
       DeployedAccepts urs hk
+        (shape := top.shape.withProofParams pp)
         (top.toVerifierKey urs)
-        (top.instanceCommitmentForShape pp urs inputs) ps ch)
+        (top.instanceCommitment urs inputs) ps ch)
 
 /--
 Satisfaction of the canonical model selected by an accepting verifier run,
@@ -269,6 +274,7 @@ def topLevelWitnesses_or_relation_of_circuitSat
     (hpoly : CPoly)
     (hsatisfied :
       (CanonicalMemberConstraintRelation.acceptedModel
+        (shape := top.shape.withProofParams pp)
         (memberDecode := memberDecode)
         (hblinding :=
           top.toVerifierKey_blindingFactors_lt_n urs) haccepts).CircuitSat
@@ -277,6 +283,7 @@ def topLevelWitnesses_or_relation_of_circuitSat
       ch.y ∉ szBadSet
         (foldSplitWitness
           (CanonicalMemberConstraintRelation.acceptedModel
+            (shape := top.shape.withProofParams pp)
             (memberDecode := memberDecode)
             (hblinding :=
               top.toVerifierKey_blindingFactors_lt_n urs)
@@ -286,6 +293,7 @@ def topLevelWitnesses_or_relation_of_circuitSat
     (correctness :
       TopLevelCircuitCorrectness top pp urs ch
         (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (shape := top.shape.withProofParams pp)
           (memberDecode := memberDecode) haccepts)
         cell
         (NontrivialRelation (F := Fp) urs.g urs.u urs.w)) :
@@ -297,6 +305,7 @@ def topLevelWitnesses_or_relation_of_circuitSat
   have hpolynomial :
       relation.polynomial =
         CanonicalMemberConstraintRelation.acceptedPolynomial
+          (shape := top.shape.withProofParams pp)
           (memberDecode := memberDecode) haccepts := by
     rfl
   have hn :
@@ -328,6 +337,7 @@ def topLevelStatements_or_relation_of_circuitSat
     (hpoly : CPoly)
     (hsatisfied :
       (CanonicalMemberConstraintRelation.acceptedModel
+        (shape := top.shape.withProofParams pp)
         (memberDecode := memberDecode)
         (hblinding :=
           top.toVerifierKey_blindingFactors_lt_n urs) haccepts).CircuitSat
@@ -336,6 +346,7 @@ def topLevelStatements_or_relation_of_circuitSat
       ch.y ∉ szBadSet
         (foldSplitWitness
           (CanonicalMemberConstraintRelation.acceptedModel
+            (shape := top.shape.withProofParams pp)
             (memberDecode := memberDecode)
             (hblinding :=
               top.toVerifierKey_blindingFactors_lt_n urs)
@@ -345,6 +356,7 @@ def topLevelStatements_or_relation_of_circuitSat
     (correctness :
       TopLevelCircuitCorrectness top pp urs ch
         (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (shape := top.shape.withProofParams pp)
           (memberDecode := memberDecode) haccepts)
         cell
         (NontrivialRelation (F := Fp) urs.g urs.u urs.w)) :
@@ -381,43 +393,53 @@ def topLevelStatements_or_relation_of_decodedMemberPolynomial_eq
     (batchOpenings :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
         (x4BatchCommitments
-          (instanceCommitment := top.instanceCommitmentForShape pp urs inputs)
+          (shape := top.shape.withProofParams pp)
+          (instanceCommitment := top.instanceCommitment urs inputs)
           urs hk (top.toVerifierKey urs) ps ch)
         (x4BatchEvals
-          (instanceCommitment := top.instanceCommitmentForShape pp urs inputs)
+          (shape := top.shape.withProofParams pp)
+          (instanceCommitment := top.instanceCommitment urs inputs)
           (top.toVerifierKey urs) ps ch)
         a pU pW)
     (memberDecode : ∀ i (hi : i <
         deployedX4PairCount
-          (instanceCommitment := top.instanceCommitmentForShape pp urs inputs)
+          (shape := top.shape.withProofParams pp)
+          (instanceCommitment := top.instanceCommitment urs inputs)
           (top.toVerifierKey urs) ps ch),
       OpenedMemberDecode
-        (instanceCommitment := top.instanceCommitmentForShape pp urs inputs)
+        (shape := top.shape.withProofParams pp)
+        (instanceCommitment := top.instanceCommitment urs inputs)
         urs hk (top.toVerifierKey urs)
         ps ch batchOpenings i hi)
     (haccepts :
       DeployedAccepts urs hk
+        (shape := top.shape.withProofParams pp)
         (top.toVerifierKey urs)
-        (top.instanceCommitmentForShape pp urs inputs) ps ch)
+        (top.instanceCommitment urs inputs) ps ch)
     (hpoly : CPoly)
     (hquot :
       hpoly =
         CanonicalMemberConstraintRelation.acceptedPolynomial
+          (shape := top.shape.withProofParams pp)
           (memberDecode := memberDecode) haccepts .vanishingH)
     (hbind : ∀
       (slot : DeployedMemberSlot
-        (instanceCommitment := top.instanceCommitmentForShape pp urs inputs)
+        (shape := top.shape.withProofParams pp)
+        (instanceCommitment := top.instanceCommitment urs inputs)
         (top.toVerifierKey urs) ps ch)
       (point : Fp),
       point ∈ deployedSetPts
-          (instanceCommitment := top.instanceCommitmentForShape pp urs inputs)
+          (shape := top.shape.withProofParams pp)
+          (instanceCommitment := top.instanceCommitment urs inputs)
           (top.toVerifierKey urs) ps ch slot.setIndex →
       (decodedMemberPolynomial
-        (instanceCommitment := top.instanceCommitmentForShape pp urs inputs)
+        (shape := top.shape.withProofParams pp)
+        (instanceCommitment := top.instanceCommitment urs inputs)
         urs hk (top.toVerifierKey urs)
         ps ch memberDecode slot).eval point =
           deployedMemberClaim
-            (instanceCommitment := top.instanceCommitmentForShape pp urs inputs)
+            (shape := top.shape.withProofParams pp)
+            (instanceCommitment := top.instanceCommitment urs inputs)
             (top.toVerifierKey urs) ps ch slot point ⊕'
         NontrivialRelation (F := Fp) urs.g urs.u urs.w)
     (domainExponent_lt : top.domainExponent < 33)
@@ -426,6 +448,7 @@ def topLevelStatements_or_relation_of_decodedMemberPolynomial_eq
     (hxgood :
       let model :=
         CanonicalMemberConstraintRelation.acceptedModel
+          (shape := top.shape.withProofParams pp)
           (memberDecode := memberDecode)
           (hblinding :=
             top.toVerifierKey_blindingFactors_lt_n urs)
@@ -441,6 +464,7 @@ def topLevelStatements_or_relation_of_decodedMemberPolynomial_eq
       ch.y ∉ szBadSet
         (foldSplitWitness
           (CanonicalMemberConstraintRelation.acceptedModel
+            (shape := top.shape.withProofParams pp)
             (memberDecode := memberDecode)
             (hblinding :=
               top.toVerifierKey_blindingFactors_lt_n urs)
@@ -449,6 +473,7 @@ def topLevelStatements_or_relation_of_decodedMemberPolynomial_eq
     {cell : Type} [DecidableEq cell] [Fintype cell]
     (correctness :
         (CanonicalMemberConstraintRelation.acceptedModel
+          (shape := top.shape.withProofParams pp)
           (memberDecode := memberDecode)
           (hblinding :=
             top.toVerifierKey_blindingFactors_lt_n urs)
@@ -456,6 +481,7 @@ def topLevelStatements_or_relation_of_decodedMemberPolynomial_eq
             ch.y hpoly top.n a →
       TopLevelCircuitCorrectness top pp urs ch
         (CanonicalMemberConstraintRelation.acceptedPolynomial
+          (shape := top.shape.withProofParams pp)
           (memberDecode := memberDecode) haccepts)
         cell
         (NontrivialRelation (F := Fp) urs.g urs.u urs.w)) :
@@ -481,7 +507,7 @@ def topLevelStatements_or_relation_of_decodedMemberPolynomial_eq
   rcases
       acceptedModel_circuitSat_or_relation_of_decodedMemberPolynomial_eq
         urs hk (top.toVerifierKey urs)
-        (top.instanceCommitmentForShape pp urs inputs) ps ch memberDecode
+        (top.instanceCommitment urs inputs) ps ch memberDecode
         haccepts (top.toVerifierKey_blindingFactors_lt_n urs)
         hpoly hquot
         (top.toVerifierKey_fixedQueryCount urs)
