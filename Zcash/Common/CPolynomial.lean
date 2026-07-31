@@ -411,6 +411,20 @@ theorem coeff_prod_X_add_C (m : Multiset R) {j : ℕ} (hj : j ≤ Multiset.card 
   rw [coeff_toPoly, toPoly_prod_X_add_C]
   exact Multiset.prod_X_add_C_coeff m hj
 
+/-- The leading coefficient of a product of monic linear factors is `1`. -/
+theorem leadingCoeff_prod_X_add_C (m : Multiset R) :
+    ((m.map (fun u => X + C u)).prod).leadingCoeff = 1 := by
+  rw [leadingCoeff_eq_coeff_natDegree, natDegree_prod_X_add_C]
+  rw [coeff_prod_X_add_C _ (le_refl _), Nat.sub_self]
+  simp [Multiset.esymm]
+
+/-- Such a product is nonzero: it is monic. -/
+theorem prod_X_add_C_ne_zero (m : Multiset R) :
+    (m.map (fun u => X + C u)).prod ≠ 0 := fun h => by
+  have h1 := leadingCoeff_prod_X_add_C m
+  rw [h, leadingCoeff_eq_coeff_natDegree, coeff_zero] at h1
+  exact zero_ne_one h1
+
 end MonicLinearProduct
 
 theorem natDegree_sum_le_of_forall_le {ι : Type*} [DecidableEq ι] [CommSemiring R] [BEq R]
@@ -653,6 +667,34 @@ theorem natDegree_comp_C_mul_X [Field R] [DecidableEq R] [BEq R] [LawfulBEq R]
     rw [natDegree_toPoly, toPoly_mul, C_toPoly, X_toPoly, Polynomial.natDegree_C_mul hw,
       Polynomial.natDegree_X]
   rw [natDegree_comp, hq, Nat.mul_one]
+
+/-- `CPolynomial R` is a domain whenever `R` is: it is ring-isomorphic to `Polynomial R`, which
+Mathlib knows is one.  Without this the roots theory below cannot be instantiated at a coefficient
+ring that is itself a polynomial ring, which is exactly what the bivariate arguments need. -/
+noncomputable instance instIsDomain [CommRing R] [IsDomain R] [BEq R] [LawfulBEq R] :
+    IsDomain (CPolynomial R) :=
+  (ringEquiv (R := R)).toMulEquiv.isDomain (Polynomial R)
+
+/-- Over a domain the leading coefficient is multiplicative. -/
+theorem leadingCoeff_mul [CommRing R] [IsDomain R] [BEq R] [LawfulBEq R] (p q : CPolynomial R) :
+    (p * q).leadingCoeff = p.leadingCoeff * q.leadingCoeff := by
+  rw [leadingCoeff_toPoly, leadingCoeff_toPoly, leadingCoeff_toPoly, toPoly_mul,
+    Polynomial.leadingCoeff_mul]
+
+/-- The leading coefficient of a constant is itself. -/
+theorem leadingCoeff_C [CommRing R] [BEq R] [LawfulBEq R] [Nontrivial R] (r : R) :
+    (C r : CPolynomial R).leadingCoeff = r := by
+  rw [leadingCoeff_toPoly, C_toPoly, Polynomial.leadingCoeff_C]
+
+theorem C_injective [CommRing R] [BEq R] [LawfulBEq R] [Nontrivial R] :
+    Function.Injective (C : R → CPolynomial R) := fun a b hab => by
+  have := congrArg toPoly hab
+  rw [C_toPoly, C_toPoly] at this
+  exact Polynomial.C_injective this
+
+theorem C_eq_zero_iff [CommRing R] [BEq R] [LawfulBEq R] [Nontrivial R] {r : R} :
+    (C r : CPolynomial R) = 0 ↔ r = 0 := by
+  rw [← toPoly_eq_zero_iff, C_toPoly, Polynomial.C_eq_zero]
 
 /-! ## Roots with multiplicity
 

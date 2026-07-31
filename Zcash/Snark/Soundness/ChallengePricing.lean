@@ -767,10 +767,8 @@ theorem escape_measure_le (vs : Multiset Fp) :
         gcongr
         calc (szBadSet ((vs.map (fun v => CPolynomial.X + CPolynomial.C v)).prod)).card
             ≤ ((vs.map (fun v => CPolynomial.X + CPolynomial.C v)).prod).natDegree := szBadSet_card_le _
-          _ ≤ Multiset.card vs := by
-              rw [CPolynomial.natDegree_toPoly, CPolynomial.toPoly_multiset_prod,
-                Multiset.map_map]
-              simpa [Function.comp_def] using (natDegree_prod_X_add_uPoly (R := Fp) vs).le
+          _ ≤ Multiset.card vs :=
+              (CompPoly.CPolynomial.natDegree_prod_X_add_C vs).le
 
 /-- **The `θ` surface priced.** The pairwise decompression condition over `N` rows of arity at most
 `r` costs at most `N²·r / p`. -/
