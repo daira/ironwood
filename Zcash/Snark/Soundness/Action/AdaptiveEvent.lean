@@ -105,7 +105,7 @@ def adaptiveActionPreXIdentityWitnessOrRelationFinder
             family.fixedRepresentations basis) ch id := by
       intro id hvanishing hrandom
       have havailable : adaptiveActionCommitmentActive
-          (actionCircuit.shape.withProofParams pp) (ActionTerminal.vkAt pp basis) id →
+          (actionCircuit.shape.withProofParams pp) (ActionTerminal.vkAt basis) id →
           adaptiveActionCommitmentAvailable (4 : Fin 5) id := by
         intro hactive
         cases id <;> simp_all [adaptiveActionCommitmentAvailable]
@@ -182,6 +182,8 @@ def adaptiveActionPreXIdentityWitnessOrRelationFinder
             (hI basis) (hvk basis) fullDecode hcharRaw haccepts hblinding
           have hpolyTransport := ComputedAdaptiveOnlineAGMFSFamily.acceptedPolynomial_transport
             (hI basis) (hvk basis) fullDecode hcharRaw haccepts
+          have hvkAt : family.vk basis = ActionTerminal.vkAt basis := by
+            simpa only [ActionTerminal.vkAt, CircuitShape.withProofParams_k] using hvk basis
           have hnTransport : (family.vk basis).n = actionCircuit.n := by
             rw [hvk basis]
             exact actionCircuit.toVerifierKey_n
@@ -200,10 +202,10 @@ def adaptiveActionPreXIdentityWitnessOrRelationFinder
               adaptiveActionRunRecord, adaptiveActionRunAccepts, ← hmodelTransport,
               ← hnTransport] using hgoodYProof.down j
           have hpermutationAction : ResolverPermutationChallengeExclusions
-              pp.numProofs (ActionTerminal.vkAt pp basis) ch actionPoly actionActiveRows := by
+              pp.numProofs (ActionTerminal.vkAt basis) ch actionPoly actionActiveRows := by
             simpa only [actionPoly, decode, hacceptsAction, pnu, ch,
               adaptiveActionRunRecord, adaptiveActionRunAccepts, ← hpolyTransport,
-              ← hvk basis] using hpermutationProof.down
+              ← hvkAt] using hpermutationProof.down
           have hlookupAction :
               TopLevelLookup.ChallengeExclusions actionCircuit pp
                 (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) ch actionPoly := by
@@ -300,7 +302,7 @@ theorem adaptiveActionPreXIdentityWitnessOrRelationFinder_isSome_of
         (family.adaptiveAlgebraicDecode_of_deployedGoodRoots
           basis O witness hroots hshifted).reRound (runRounds family.toFamily basis O)
       let hacceptsAction := adaptiveActionRunAccepts pp family basis O inputs hvk hI haccepts
-      ResolverPermutationChallengeExclusions pp.numProofs (ActionTerminal.vkAt pp basis)
+      ResolverPermutationChallengeExclusions pp.numProofs (ActionTerminal.vkAt basis)
         (adaptiveActionRunRecord family basis O)
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi)
@@ -434,7 +436,7 @@ theorem adaptiveActionPreXIdentityRelationFinder_isSome_of
         (family.adaptiveAlgebraicDecode_of_deployedGoodRoots
           basis O witness hroots hshifted).reRound (runRounds family.toFamily basis O)
       let hacceptsAction := adaptiveActionRunAccepts pp family basis O inputs hvk hI haccepts
-      ResolverPermutationChallengeExclusions pp.numProofs (ActionTerminal.vkAt pp basis)
+      ResolverPermutationChallengeExclusions pp.numProofs (ActionTerminal.vkAt basis)
         (adaptiveActionRunRecord family basis O)
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi)
@@ -641,7 +643,7 @@ theorem adaptiveActionCompleteTerminalWitnessOrRelationFinder_isSome_of
         (family.adaptiveAlgebraicDecode_of_deployedGoodRoots
           basis O witness hroots hshifted).reRound (runRounds family.toFamily basis O)
       let hacceptsAction := adaptiveActionRunAccepts pp family basis O inputs hvk hI haccepts
-      ResolverPermutationChallengeExclusions pp.numProofs (ActionTerminal.vkAt pp basis)
+      ResolverPermutationChallengeExclusions pp.numProofs (ActionTerminal.vkAt basis)
         (adaptiveActionRunRecord family basis O)
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi)
@@ -804,7 +806,7 @@ theorem adaptiveActionCompleteTerminalRelationFinder_isSome_of
         (family.adaptiveAlgebraicDecode_of_deployedGoodRoots
           basis O witness hroots hshifted).reRound (runRounds family.toFamily basis O)
       let hacceptsAction := adaptiveActionRunAccepts pp family basis O inputs hvk hI haccepts
-      ResolverPermutationChallengeExclusions pp.numProofs (ActionTerminal.vkAt pp basis)
+      ResolverPermutationChallengeExclusions pp.numProofs (ActionTerminal.vkAt basis)
         (adaptiveActionRunRecord family basis O)
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi)

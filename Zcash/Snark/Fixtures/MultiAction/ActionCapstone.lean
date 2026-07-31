@@ -477,9 +477,9 @@ private theorem cap_beta_for (numProofs : ℕ) :
       (poly : CommitmentId → CPoly),
       (∑ p : Fin (actionProofParamsFor numProofs).numProofs,
         (Fintype.card (ResolverPermutationCell
-            (vkAt (actionProofParamsFor numProofs) basis) poly p actionActiveRows) + 1) *
+            (vkAt basis) poly p actionActiveRows) + 1) *
           Fintype.card (ResolverPermutationCell
-            (vkAt (actionProofParamsFor numProofs) basis) poly p actionActiveRows)) +
+            (vkAt basis) poly p actionActiveRows)) +
       (actionProofParamsFor numProofs).numProofs *
         actionCircuit.lookupCount *
         ((actionCircuit.n -
@@ -493,7 +493,7 @@ private theorem cap_beta_for (numProofs : ℕ) :
   let pp := actionProofParamsFor numProofs
   let urs := ursOfAugmentedBasis actionCircuit.domainExponent basis
   have hcell : ∀ p : Fin pp.numProofs,
-      Fintype.card (ResolverPermutationCell (vkAt pp basis) poly p actionActiveRows) =
+      Fintype.card (ResolverPermutationCell (vkAt basis) poly p actionActiveRows) =
         30630 := by
     intro p
     exact resolverPermutationCell_card_eq pp urs poly p
@@ -504,8 +504,8 @@ private theorem cap_beta_for (numProofs : ℕ) :
     omega
   change
     (∑ p : Fin pp.numProofs,
-      (Fintype.card (ResolverPermutationCell (vkAt pp basis) poly p actionActiveRows) + 1) *
-        Fintype.card (ResolverPermutationCell (vkAt pp basis) poly p actionActiveRows)) +
+      (Fintype.card (ResolverPermutationCell (vkAt basis) poly p actionActiveRows) + 1) *
+        Fintype.card (ResolverPermutationCell (vkAt basis) poly p actionActiveRows)) +
       pp.numProofs *
         actionCircuit.lookupCount *
         ((actionCircuit.n - actionCircuit.blindingFactors - 2 + 2) *
@@ -538,7 +538,7 @@ private theorem cap_gamma_for (numProofs : ℕ) :
       (poly : CommitmentId → CPoly),
       (∑ p : Fin (actionProofParamsFor numProofs).numProofs,
         2 * Fintype.card (ResolverPermutationCell
-          (vkAt (actionProofParamsFor numProofs) basis) poly p actionActiveRows)) +
+          (vkAt basis) poly p actionActiveRows)) +
       (actionProofParamsFor numProofs).numProofs *
         actionCircuit.lookupCount *
         (2 * (actionCircuit.n -
@@ -548,7 +548,7 @@ private theorem cap_gamma_for (numProofs : ℕ) :
   let pp := actionProofParamsFor numProofs
   let urs := ursOfAugmentedBasis actionCircuit.domainExponent basis
   have hcell : ∀ p : Fin pp.numProofs,
-      Fintype.card (ResolverPermutationCell (vkAt pp basis) poly p actionActiveRows) =
+      Fintype.card (ResolverPermutationCell (vkAt basis) poly p actionActiveRows) =
         30630 := by
     intro p
     exact resolverPermutationCell_card_eq pp urs poly p
@@ -559,7 +559,7 @@ private theorem cap_gamma_for (numProofs : ℕ) :
     omega
   change
     (∑ p : Fin pp.numProofs,
-      2 * Fintype.card (ResolverPermutationCell (vkAt pp basis) poly p actionActiveRows)) +
+      2 * Fintype.card (ResolverPermutationCell (vkAt basis) poly p actionActiveRows)) +
       pp.numProofs *
         actionCircuit.lookupCount *
         (2 * (actionCircuit.n - actionCircuit.blindingFactors - 2 + 1)) ≤
@@ -625,9 +625,9 @@ private theorem cap_beta :
     ∀ (basis : AugmentedIndex actionCircuit.n → VestaG)
       (poly : CommitmentId → CPoly),
       (∑ p : Fin actionProofParams.numProofs,
-        (Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
+        (Fintype.card (ResolverPermutationCell (vkAt basis) poly p
             actionActiveRows) + 1) *
-          Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
+          Fintype.card (ResolverPermutationCell (vkAt basis) poly p
             actionActiveRows)) +
       actionProofParams.numProofs *
         actionCircuit.lookupCount *
@@ -641,7 +641,7 @@ private theorem cap_beta :
   let urs := ursOfAugmentedBasis
     actionCircuit.domainExponent basis
   have hcell : ∀ p : Fin actionProofParams.numProofs,
-      Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
+      Fintype.card (ResolverPermutationCell (vkAt basis) poly p
         actionActiveRows) ≤ 2 ^ 16 := by
     intro p
     exact resolverPermutationCell_card_le actionProofParams urs poly p
@@ -653,9 +653,9 @@ private theorem cap_beta :
     omega
   calc
     (∑ p : Fin actionProofParams.numProofs,
-        (Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
+        (Fintype.card (ResolverPermutationCell (vkAt basis) poly p
             actionActiveRows) + 1) *
-          Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
+          Fintype.card (ResolverPermutationCell (vkAt basis) poly p
             actionActiveRows)) +
         actionProofParams.numProofs *
           actionCircuit.lookupCount *
@@ -681,7 +681,7 @@ private theorem cap_gamma :
     ∀ (basis : AugmentedIndex actionCircuit.n → VestaG)
       (poly : CommitmentId → CPoly),
       (∑ p : Fin actionProofParams.numProofs,
-        2 * Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
+        2 * Fintype.card (ResolverPermutationCell (vkAt basis) poly p
           actionActiveRows)) +
       actionProofParams.numProofs *
         actionCircuit.lookupCount *
@@ -691,7 +691,7 @@ private theorem cap_gamma :
   let urs := ursOfAugmentedBasis
     actionCircuit.domainExponent basis
   have hcell : ∀ p : Fin actionProofParams.numProofs,
-      Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
+      Fintype.card (ResolverPermutationCell (vkAt basis) poly p
         actionActiveRows) ≤ 2 ^ 16 := by
     intro p
     exact resolverPermutationCell_card_le actionProofParams urs poly p
@@ -703,7 +703,7 @@ private theorem cap_gamma :
     omega
   calc
     (∑ p : Fin actionProofParams.numProofs,
-        2 * Fintype.card (ResolverPermutationCell (vkAt actionProofParams basis) poly p
+        2 * Fintype.card (ResolverPermutationCell (vkAt basis) poly p
           actionActiveRows)) +
         actionProofParams.numProofs *
           actionCircuit.lookupCount *
@@ -847,7 +847,7 @@ private theorem adaptive_action_x_degree_le_for (numProofs : ℕ)
     (ch : Challenges actionCircuit.domainExponent Fp) :
     (adaptiveActionPreXDifference (actionProofParamsFor numProofs) basis inputs ps source ch).natDegree ≤
       20470 := by
-  let avk := ActionTerminal.vkAt (actionProofParamsFor numProofs) basis
+  let avk := ActionTerminal.vkAt basis
   let ic := actionCircuit.instanceCommitment (ursOfAugmentedBasis
       actionCircuit.domainExponent basis) inputs
   let poly := adaptiveActionCommitmentPolynomial
