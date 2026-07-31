@@ -594,6 +594,10 @@ def evalRingHom [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (x : R) :
 theorem coe_evalRingHom [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (x : R) :
     ⇑(evalRingHom x) = eval x := rfl
 
+theorem eval_multiset_prod [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    (m : Multiset (CPolynomial R)) (x : R) : (m.prod).eval x = (m.map (eval x)).prod := by
+  simpa using _root_.map_multiset_prod (evalRingHom x) m
+
 /-! ## Composition
 
 CompPoly has `eval₂` but no `comp`.  With the constant embedding bundled, composition is `eval₂`
@@ -650,7 +654,61 @@ theorem natDegree_comp_C_mul_X [Field R] [DecidableEq R] [BEq R] [LawfulBEq R]
       Polynomial.natDegree_X]
   rw [natDegree_comp, hq, Nat.mul_one]
 
-/-! ## Roots
+/-! ## Roots with multiplicity
+
+Mathlib's `Polynomial.roots` — the multiset of roots counted with multiplicity, obtained by
+repeated factorisation over a domain.  It is `noncomputable` there and stays so here; multiplicity
+over an abstract domain is not something one runs.  These are thin wrappers, so the factorisation
+theory applies to the computable representation without a detour through `toPoly` at every use. -/
+
+section Roots
+
+variable [CommRing R] [IsDomain R] [BEq R] [LawfulBEq R]
+
+/-- The roots of a computable polynomial, with multiplicity. -/
+noncomputable def roots (p : CPolynomial R) : Multiset R := p.toPoly.roots
+
+omit [BEq R] [LawfulBEq R] in
+@[simp] theorem roots_toPoly (p : CPolynomial R) : p.toPoly.roots = p.roots := rfl
+
+omit [BEq R] [LawfulBEq R] in
+@[simp] theorem roots_zero : roots (0 : CPolynomial R) = 0 := by
+  rw [roots, toPoly_zero, Polynomial.roots_zero]
+
+theorem mem_roots {p : CPolynomial R} (hp : p ≠ 0) {x : R} :
+    x ∈ p.roots ↔ p.eval x = 0 := by
+  rw [roots, Polynomial.mem_roots (by rwa [Ne, toPoly_eq_zero_iff]), Polynomial.IsRoot,
+    ← eval_toPoly]
+
+/-- At most `natDegree` roots, with multiplicity. -/
+theorem card_roots_le (p : CPolynomial R) : Multiset.card p.roots ≤ p.natDegree := by
+  rw [roots, natDegree_toPoly]
+  exact Polynomial.card_roots' _
+
+/-- The roots of `∏ (X - aᵢ)` are the `aᵢ`. -/
+theorem roots_multiset_prod_X_sub_C (m : Multiset R) :
+    ((m.map (fun a => X - C a)).prod).roots = m := by
+  rw [roots, toPoly_multiset_prod, Multiset.map_map]
+  have hfac : m.map ((fun p => toPoly p) ∘ fun a => X - C a)
+      = m.map (fun a => Polynomial.X - Polynomial.C a) :=
+    Multiset.map_congr rfl fun a _ => by simp
+  rw [hfac, Polynomial.roots_multiset_prod_X_sub_C]
+
+/-- The roots of `∏ (X + uᵢ)` are the negated shifts. -/
+theorem roots_prod_X_add_C (m : Multiset R) :
+    ((m.map (fun u => X + C u)).prod).roots = m.map (fun u => -u) := by
+  have hrw : m.map (fun u => X + C u)
+      = (m.map (fun u => -u)).map (fun a => X - C a) := by
+    rw [Multiset.map_map]
+    refine Multiset.map_congr rfl fun u _ => ?_
+    rw [Function.comp_apply]
+    refine toPoly_injective ?_
+    rw [toPoly_sub, toPoly_add, C_toPoly, C_toPoly, Polynomial.C_neg, sub_neg_eq_add]
+  rw [hrw, roots_multiset_prod_X_sub_C]
+
+end Roots
+
+/-! ## Distinct roots over an enumerated field
 
 `Polynomial.roots` is a `Multiset` obtained by repeated factorisation and is `noncomputable`.  Over
 an enumerable field the set of *distinct* roots is a filter over the enumeration, so it can be a

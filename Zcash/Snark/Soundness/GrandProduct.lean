@@ -36,20 +36,6 @@ private theorem map_X_add_u_eqPoly {R : Type*} [CommRing R] (m : Multiset R) :
   rw [Multiset.map_map]
   exact Multiset.map_congr rfl (fun u _ => by simp [Function.comp, sub_neg_eq_add])
 
-/-- The roots of `∏ (X + uᵢ)` are the negated elements `{-uᵢ}` (over a domain). -/
-private theorem roots_prod_X_add_uPoly {R : Type*} [CommRing R] [IsDomain R] (m : Multiset R) :
-    (m.map (fun u => X + C u)).prod.roots = m.map (fun u => -u) := by
-  rw [map_X_add_u_eqPoly, roots_multiset_prod_X_sub_C]
-
-/-- Evaluating the polynomial product at `β` gives the field product of the shifted factors:
-`(∏ (X + uᵢ)).eval β = ∏ (β + uᵢ)`. The bridge from the polynomial world (where `prod_X_add_u_inj`
-lives) to the verifier's field-element products. -/
-private theorem eval_prod_X_add_uPoly {R : Type*} [CommRing R] (m : Multiset R) (β : R) :
-    ((m.map (fun u => X + C u)).prod).eval β = (m.map (fun x => β + x)).prod := by
-  rw [eval_multiset_prod, Multiset.map_map]
-  exact congrArg Multiset.prod
-    (Multiset.map_congr rfl (fun u _ => by simp [Function.comp, eval_add, eval_X, eval_C]))
-
 /-- `∏ (X + uᵢ)` has degree `|m|` (a product of `|m|` monic linear factors). -/
 theorem natDegree_prod_X_add_uPoly {R : Type*} [CommRing R] [IsDomain R] (m : Multiset R) :
     ((m.map (fun u => X + C u)).prod).natDegree = Multiset.card m := by
@@ -62,41 +48,11 @@ product is determined by its roots, here `{-uᵢ}`, and negation is injective. -
 theorem prod_X_add_u_injPoly {R : Type*} [CommRing R] [IsDomain R] {s t : Multiset R}
     (h : (s.map (fun u => X + C u)).prod = (t.map (fun u => X + C u)).prod) : s = t := by
   have heq : s.map (fun u => -u) = t.map (fun u => -u) := by
-    rw [← roots_prod_X_add_uPoly s, ← roots_prod_X_add_uPoly t, h]
+    rw [← Polynomial.roots_multiset_prod_X_sub_C (s.map (fun u => -u)),
+      ← Polynomial.roots_multiset_prod_X_sub_C (t.map (fun u => -u)),
+      ← map_X_add_u_eqPoly, ← map_X_add_u_eqPoly, h]
   exact Multiset.map_injective neg_injective heq
 
-/-- **Univariate Schwartz–Zippel at a point.** For `s ≠ t` over a finite field, the challenges `β`
-at which the shifted-factor products `∏ (xᵢ + β)` agree form a "bad set" of size `≤ max |s| |t|` —
-the roots of the (nonzero, by `prod_X_add_u_inj`) difference polynomial. That is, product-equality
-at a random `β` forces the multiset identity except on a negligible bad set. -/
-theorem card_eval_prod_eq_le {F : Type*} [Field F] [Fintype F] [DecidableEq F]
-    {s t : Multiset F} (hst : s ≠ t) :
-    (Finset.univ.filter
-      (fun β => (s.map (fun x => β + x)).prod = (t.map (fun x => β + x)).prod)).card
-      ≤ max (Multiset.card s) (Multiset.card t) := by
-  -- the difference polynomial is nonzero, since `s ≠ t` (`prod_X_add_u_inj` contrapositive)
-  have hD : (s.map (fun u => X + C u)).prod - (t.map (fun u => X + C u)).prod ≠ 0 :=
-    fun h0 => hst (prod_X_add_u_injPoly (sub_eq_zero.mp h0))
-  calc (Finset.univ.filter
-          (fun β => (s.map (fun x => β + x)).prod = (t.map (fun x => β + x)).prod)).card
-      ≤ ((s.map (fun u => X + C u)).prod
-          - (t.map (fun u => X + C u)).prod).roots.toFinset.card := by
-        -- every "bad" β is a root of the difference polynomial
-        apply Finset.card_le_card
-        intro β hβ
-        simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hβ
-        rw [Multiset.mem_toFinset, mem_roots']
-        refine ⟨hD, ?_⟩
-        show ((s.map (fun u => X + C u)).prod - (t.map (fun u => X + C u)).prod).eval β = 0
-        rw [eval_sub, eval_prod_X_add_uPoly s β, eval_prod_X_add_uPoly t β, hβ, sub_self]
-    _ ≤ Multiset.card ((s.map (fun u => X + C u)).prod
-          - (t.map (fun u => X + C u)).prod).roots := Multiset.toFinset_card_le _
-    _ ≤ ((s.map (fun u => X + C u)).prod - (t.map (fun u => X + C u)).prod).natDegree :=
-          card_roots' _
-    _ ≤ max ((s.map (fun u => X + C u)).prod).natDegree
-            ((t.map (fun u => X + C u)).prod).natDegree := natDegree_sub_le _ _
-    _ = max (Multiset.card s) (Multiset.card t) := by
-          rw [natDegree_prod_X_add_uPoly s, natDegree_prod_X_add_uPoly t]
 
 /-- Encode a pair `(v, n)` as the `F[β]`-element `v + n·β` (here `β = X`).
 Injective, since `v` and `n` are its degree-0 and degree-1 coefficients. -/
@@ -159,8 +115,9 @@ private theorem toPoly_cprod_X_add_u (m : Multiset R) :
 /-- Evaluating a product of linear factors is the product of the shifted points. -/
 theorem eval_cprod_X_add_u (m : Multiset R) (β : R) :
     eval β (m.map (fun u => X + C u)).prod = (m.map (fun x => β + x)).prod := by
-  rw [eval_toPoly, toPoly_cprod_X_add_u]
-  exact eval_prod_X_add_uPoly m β
+  rw [eval_multiset_prod, Multiset.map_map]
+  exact congrArg Multiset.prod (Multiset.map_congr rfl fun u _ => by
+    rw [Function.comp_apply, eval_add, eval_X, eval_C])
 
 /-- `∏ (X + uᵢ)` has degree `|m|`. -/
 theorem natDegree_cprod_X_add_u (m : Multiset R) :
@@ -169,11 +126,12 @@ theorem natDegree_cprod_X_add_u (m : Multiset R) :
   exact natDegree_prod_X_add_uPoly m
 
 /-- **Multiset-from-product.** Equal products of the monic linear factors `X + uᵢ` force equal
-multisets — the kernel behind both permutation and lookup soundness. -/
+multisets — the kernel behind both permutation and lookup soundness.  Over a domain a product is
+determined by its roots, here the negated shifts, and negation is injective. -/
 theorem prod_cX_add_u_inj {s t : Multiset R}
     (h : (s.map (fun u => X + C u)).prod = (t.map (fun u => X + C u)).prod) : s = t := by
-  refine prod_X_add_u_injPoly ?_
-  rw [← toPoly_cprod_X_add_u, ← toPoly_cprod_X_add_u, h]
+  refine Multiset.map_injective neg_injective ?_
+  rw [← roots_prod_X_add_C s, ← roots_prod_X_add_C t, h]
 
 /-- **The lookup split.** The two lookup products live over separate indeterminates, so equality
 forces both column multisets to agree: the leading coefficient in the outer variable is each side's
@@ -219,6 +177,40 @@ theorem prod_split_inj {F : Type*} [Field F] [BEq F] [LawfulBEq F] {a s inp tbl 
     intro m; simp [Multiset.map_map]
   refine Multiset.map_injective (Polynomial.C_injective (R := F)) (prod_X_add_u_injPoly ?_)
   rw [hmap s, hmap tbl]; exact hQ
+
+/-- **Univariate Schwartz–Zippel at a point.** For `s ≠ t` over a finite field, the challenges `β`
+at which the shifted-factor products `∏ (xᵢ + β)` agree form a "bad set" of size `≤ max |s| |t|` —
+the roots of the (nonzero, by `prod_cX_add_u_inj`) difference polynomial. That is, product-equality
+at a random `β` forces the multiset identity except on a negligible bad set. -/
+theorem card_eval_prod_eq_le {F : Type*} [Field F] [Fintype F] [DecidableEq F] [BEq F] [LawfulBEq F]
+    {s t : Multiset F} (hst : s ≠ t) :
+    (Finset.univ.filter
+      (fun β => (s.map (fun x => β + x)).prod = (t.map (fun x => β + x)).prod)).card
+      ≤ max (Multiset.card s) (Multiset.card t) := by
+  classical
+  set D : CompPoly.CPolynomial F :=
+    (s.map (fun u => CompPoly.CPolynomial.X + CompPoly.CPolynomial.C u)).prod
+      - (t.map (fun u => CompPoly.CPolynomial.X + CompPoly.CPolynomial.C u)).prod with hDdef
+  -- the difference is nonzero, since `s ≠ t` (`prod_cX_add_u_inj` contrapositive)
+  have hD : D ≠ 0 := fun h0 => hst (prod_cX_add_u_inj (sub_eq_zero.mp h0))
+  calc (Finset.univ.filter
+          (fun β => (s.map (fun x => β + x)).prod = (t.map (fun x => β + x)).prod)).card
+      ≤ D.roots.toFinset.card := by
+        -- every "bad" β is a root of the difference
+        apply Finset.card_le_card
+        intro β hβ
+        simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hβ
+        rw [Multiset.mem_toFinset, CompPoly.CPolynomial.mem_roots hD, hDdef,
+          CompPoly.CPolynomial.eval_sub, eval_cprod_X_add_u s β, eval_cprod_X_add_u t β, hβ,
+          sub_self]
+    _ ≤ Multiset.card D.roots := Multiset.toFinset_card_le _
+    _ ≤ D.natDegree := CompPoly.CPolynomial.card_roots_le _
+    _ ≤ max ((s.map (fun u => CompPoly.CPolynomial.X + CompPoly.CPolynomial.C u)).prod).natDegree
+            ((t.map (fun u =>
+              CompPoly.CPolynomial.X + CompPoly.CPolynomial.C u)).prod).natDegree :=
+          CompPoly.CPolynomial.natDegree_sub_le _ _
+    _ = max (Multiset.card s) (Multiset.card t) := by
+          rw [natDegree_cprod_X_add_u s, natDegree_cprod_X_add_u t]
 
 /-- **Multisets of pairs.** The same, for factors carrying `(value, name)` pairs, run over the
 computable coefficient ring `CPolynomial F`. -/
