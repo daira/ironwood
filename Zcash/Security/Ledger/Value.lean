@@ -10,12 +10,12 @@ set_option linter.unusedSectionVars false
 
 The transaction-balance premiss —the witnessed net value matches the declared
 `vBalance`, or a break of the abstract type `VB` is exhibited— is discharged here
-against the binding-signature layer, with `VB` concretely the nontrivial `(V, R)`
+against the binding-signature layer, with `VB` concretely the nontrivial `(Vbase, Rbase)`
 discrete-log relation.
 
 `ValueShape` is the Pedersen shape of the value commitment over the scalar field
-`ZMod r`: `ValueCommit_rcv(v) = v • V + rcv • R` for fixed independent bases `V` and
-`R` (𝒱^Orchard and ℛ^Orchard at the intended instantiation). The shape is that of the
+`ZMod r`: `ValueCommit_rcv(v) = v • Vbase + rcv • Rbase` for fixed independent bases `Vbase` and
+`Rbase` (𝒱^Orchard and ℛ^Orchard at the intended instantiation). The shape is that of the
 deployed construction, but the bases stay abstract — the concrete Pallas
 instantiation (Sinsemilla-derived bases, RedDSA on Pallas) is deferred, per the
 abstract-route plan. On a statement-satisfying transaction the model's
@@ -31,7 +31,7 @@ statement's value ranges, validity's action count and `vBalance` range, and one
 numeric hypothesis `(maxActions + 1) * valueBound ≤ r` (deployed:
 `(maxActions + 1) · 2^64 ≪ r ≈ 2^254`). A *total* extraction hypothesis — every
 verifying `bvk` comes with its scalar — would carry no computational content: in a
-cyclic group every `bvk` is some multiple of `R`, so the total form holds for a
+cyclic group every `bvk` is some multiple of `Rbase`, so the total form holds for a
 choose-the-witness extractor that no one can run. That is why the extractor is a
 bare function and its failures are events with a named probability `κ` (#22, with
 #107/#67 tracking the surrounding glue).
@@ -48,13 +48,13 @@ variable {P : Primitives (ZMod r) G IVK NK RHO PSI MHASH MENC MSG SIG}
 variable {kv : KeyBindingInterface KW G IVK NK}
 
 /-- The Pedersen shape of the value commitment, over the scalar field `ZMod r`:
-`ValueCommit_rcv(v) = v • V + rcv • R` for fixed independent bases `V` and `R`
+`ValueCommit_rcv(v) = v • Vbase + rcv • Rbase` for fixed independent bases `Vbase` and `Rbase`
 (𝒱^Orchard and ℛ^Orchard at the intended instantiation). -/
 structure ValueShape (P : Primitives (ZMod r) G IVK NK RHO PSI MHASH MENC MSG SIG) where
-  V : G
-  R : G
+  Vbase : G
+  Rbase : G
   commit_eq : ∀ (v : ℤ) (rcv : ZMod r),
-    P.valueCommit v rcv = (v : ZMod r) • V + rcv • R
+    P.valueCommit v rcv = (v : ZMod r) • Vbase + rcv • Rbase
 
 /-- A transaction's witnessed integer bundle: per action, the net value it releases
 and its commitment randomness. -/
@@ -72,14 +72,14 @@ theorem bvk_eq (S : ValueShape P)
     {tx : Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P.depth}
     (hsat : ∀ a ∈ tx.actions, ActionSatisfied P kv a.inst a.w) :
     tx.bvk P
-      = bindingVK S.V S.R (castBundle (txBundle tx)) [] (tx.vBalance : ZMod r) := by
+      = bindingVK S.Vbase S.Rbase (castBundle (txBundle tx)) [] (tx.vBalance : ZMod r) := by
   have hsum : (tx.actions.map fun a => a.inst.cv_net).sum
-      = ((castBundle (txBundle tx)).map fun p => valueCommit S.V S.R p.1 p.2).sum := by
+      = ((castBundle (txBundle tx)).map fun p => valueCommit S.Vbase S.Rbase p.1 p.2).sum := by
     simp only [castBundle, txBundle, List.map_map]
     refine congrArg List.sum (List.map_congr_left fun a ha => ?_)
     rw [Function.comp_apply, Function.comp_apply, (hsat a ha).cv_net_eq, S.commit_eq]
     rfl
-  have hvb : P.valueCommit tx.vBalance 0 = (tx.vBalance : ZMod r) • S.V := by
+  have hvb : P.valueCommit tx.vBalance 0 = (tx.vBalance : ZMod r) • S.Vbase := by
     rw [S.commit_eq]
     simp
   rw [Tx.bvk, bindingVK, hsum, hvb]

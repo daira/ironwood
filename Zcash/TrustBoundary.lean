@@ -446,7 +446,7 @@ The transaction-balance premiss discharge with a fallible extractor: the extract
 is an arbitrary function, its failures are exhibited `RedDSA.ExtractionFailure`
 data, and the Balance capstones bound the violation by `εdlr + κ`, per prefix and at
 all prefixes with no factor of `k`. The premiss lands in the binding-signature
-layer's nontrivial `(V, R)` relation via `ofBundleIntImbalance`, with the
+layer's nontrivial `(Vbase, Rbase)` relation via `ofBundleIntImbalance`, with the
 no-overflow bound discharged from the statement's value ranges, validity's
 action-count and `vBalance` range rules, and the named numeric hypothesis
 `(maxActions + 1) * valueBound ≤ r`. The Orchard instantiation names the same bounds

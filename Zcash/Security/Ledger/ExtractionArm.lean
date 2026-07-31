@@ -10,18 +10,18 @@ import Zcash.Security.RedDSA.Basic
 The transaction-balance premiss discharge, in extractor-plus-knowledge-error form:
 the extractor is an arbitrary *function*, its failures are *exhibited*, and the
 capstones bound the violation probability by `εdlr + κ` — equivalently, a violation
-yields a computed `(V, R)` relation with probability at least `Pr[violation] − κ`.
+yields a computed `(Vbase, Rbase)` relation with probability at least `Pr[violation] − κ`.
 A total extraction hypothesis would be classically satisfiable and carry no
 computational content (see the module doc of `Zcash.Security.Ledger.Value`).
 
 * `BindingSigShape` pins `Primitives.bindingVerify` to an abstract RedDSA scheme
-  based at the randomness base `R` (`Zcash.Security.RedDSA.Basic`) — the spec's
+  based at the randomness base `Rbase` (`Zcash.Security.RedDSA.Basic`) — the spec's
   demand that a binding signature "prove knowledge of the discrete logarithm of the
   validating key with respect to the base ℛ" (§5.4.7.2) is then a statement about
   this scheme.
 * `ValueShape.premissOrBreakFallible` decides the per-transaction net-value equation
   and, on failure, runs the extractor: *either* it pins `bvk` and the witnessed
-  bundle computes the nontrivial `(V, R)` relation, *or* the transaction's verifying
+  bundle computes the nontrivial `(Vbase, Rbase)` relation, *or* the transaction's verifying
   binding signature is an exhibited `RedDSA.ExtractionFailure` — the knowledge-error
   event, as data.
 * `balanceConservation_measure_le_kerr` / `shieldedBalanceCap_measure_le_kerr`
@@ -53,21 +53,21 @@ variable {kv : KeyBindingInterface KW G IVK NK}
 variable {issuance : ℕ → ℕ} {maxActions : ℕ}
 
 /-- The RedDSA shape of the binding-signature primitive: an abstract scheme based at
-the value-commitment randomness base `R` whose verification equation is what
+the value-commitment randomness base `Rbase` whose verification equation is what
 `bindingVerify` computes, with `toSig` decoding the model's opaque signature type.
 The signature-side counterpart of the same shape's `ValueShape` commitment side. -/
 structure BindingSigShape (P : Primitives (ZMod r) G IVK NK RHO PSI MHASH MENC MSG SIG)
     (S : ValueShape P) where
   sch : RedDSA.Scheme (ZMod r) G MSG
   toSig : SIG → RedDSA.Sig (ZMod r) G
-  base_eq : sch.base = S.R
+  base_eq : sch.base = S.Rbase
   verify_iff : ∀ (bvk : G) (m : MSG) (σ : SIG),
     P.bindingVerify bvk m σ ↔ sch.Verify bvk m (toSig σ)
 
 /-- **The transaction-balance premiss discharge, with a fallible extractor.** Decide
 the per-transaction net-value equation. On failure, run the extractor `E` on the
-transaction's verifying binding signature. If `E` pins `bvk = [bsk] R`, the witnessed
-bundle computes the nontrivial `(V, R)` relation, with the no-overflow bound `hr`.
+transaction's verifying binding signature. If `E` pins `bvk = [bsk] Rbase`, the witnessed
+bundle computes the nontrivial `(Vbase, Rbase)` relation, with the no-overflow bound `hr`.
 Otherwise the failure is exhibited as a `RedDSA.ExtractionFailure`: a verifying
 signature whose key the extractor misses — the event that the knowledge error `κ`
 bounds. Nothing is assumed of `E`. -/
@@ -80,11 +80,11 @@ def ValueShape.premissOrBreakFallible [DecidableEq G]
     (E : RedDSA.Extractor (ZMod r) G MSG)
     (tx : Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P.depth) (htx : tx ∈ ledger) :
     (txNetValue tx = tx.vBalance)
-      ⊕' (BindingSignature.NontrivialRelation (F := ZMod r) S.V S.R
+      ⊕' (BindingSignature.NontrivialRelation (F := ZMod r) S.Vbase S.Rbase
           ⊕' RedDSA.ExtractionFailure B.sch E) :=
   if heq : txNetValue tx = tx.vBalance then .inl heq
-  else if hex : tx.bvk P = E (tx.bvk P) tx.sighash (B.toSig tx.bindingSig) • S.R then
-    .inr (.inl (NontrivialRelation.ofBundleIntImbalance S.V S.R (txBundle tx) [] tx.vBalance
+  else if hex : tx.bvk P = E (tx.bvk P) tx.sighash (B.toSig tx.bindingSig) • S.Rbase then
+    .inr (.inl (NontrivialRelation.ofBundleIntImbalance S.Vbase S.Rbase (txBundle tx) [] tx.vBalance
       (E (tx.bvk P) tx.sighash (B.toSig tx.bindingSig))
       (by
         simp only [List.map_nil, List.sum_nil, sub_zero, txBundle_fst_sum]
@@ -120,13 +120,13 @@ def txBalancePremissFallible (S : ValueShape P) (B : BindingSigShape P S)
     (ω : ValidAnnotated P kv issuance maxActions)
     (tx : Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P.depth) (htx : tx ∈ ω.1) :
     (txNetValue tx = tx.vBalance)
-      ⊕' (BindingSignature.NontrivialRelation (F := ZMod r) S.V S.R
+      ⊕' (BindingSignature.NontrivialRelation (F := ZMod r) S.Vbase S.Rbase
           ⊕' RedDSA.ExtractionFailure B.sch E) :=
   S.premissOrBreakFallible B ω.2 hr E tx htx
 
 variable (kv) in
 /-- The relation arm: the samples on which the conservation reduction computes a
-nontrivial `(V, R)` relation. Bounded onward by DL hardness (via the AGM layer's
+nontrivial `(Vbase, Rbase)` relation. Bounded onward by DL hardness (via the AGM layer's
 relation-to-DL handoff); its named bound is the `εdlr` slot. -/
 def valueRelationEvent (S : ValueShape P) (B : BindingSigShape P S)
     (hr : (maxActions + 1) * P.valueBound ≤ r)
@@ -174,7 +174,7 @@ theorem txBalanceBreakEvent_fallible_subset (S : ValueShape P) (B : BindingSigSh
 /-- **Value conservation in extractor-plus-knowledge-error form.** For any adversary
 and any extractor `E`, the probability that the value ledger fails to balance is at
 most `εdlr + κ`: the relation arm's bound plus the knowledge error. Read
-contrapositively, a violation computes a nontrivial `(V, R)` relation with
+contrapositively, a violation computes a nontrivial `(Vbase, Rbase)` relation with
 probability at least `Pr[violation] − κ` — the extraction succeeds up to the
 knowledge error, which is the form a forking discharge of `κ` composes with. -/
 theorem balanceConservation_measure_le_kerr
@@ -212,7 +212,7 @@ theorem shieldedBalanceCap_measure_le_kerr
 
 variable (kv) in
 /-- The all-prefixes relation arm: at some prefix `i < k`, the conservation reduction
-computes a nontrivial `(V, R)` relation. -/
+computes a nontrivial `(Vbase, Rbase)` relation. -/
 def valueRelationEventBefore (S : ValueShape P) (B : BindingSigShape P S)
     (hr : (maxActions + 1) * P.valueBound ≤ r)
     (E : RedDSA.Extractor (ZMod r) G MSG) (k : ℕ) :

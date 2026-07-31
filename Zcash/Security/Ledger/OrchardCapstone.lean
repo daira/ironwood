@@ -36,7 +36,7 @@ extractor-plus-knowledge-error form replaces it with named bounds further down t
 reduction: with the binding-signature primitives pinned to a RedDSA shape,
 `orchardBalanceConservationBefore_measure_le_kerr` and
 `orchardBalanceIntegrity_measure_le_kerr` bound the same events by `εdlr + κ`, a
-`(V, R)` discrete-log-relation advantage plus the extractor's knowledge error
+`(Vbase, Rbase)` discrete-log-relation advantage plus the extractor's knowledge error
 (#107 tracks the remaining glue).
 -/
 
@@ -354,7 +354,7 @@ theorem orchardSpendAuthority_measure_le
 /-- **Orchard value conservation with a fallible extractor.** For any adversary, any
 Pedersen shape `S` and RedDSA shape `B` of the binding-signature primitives, and any
 candidate extractor `E`, the probability that the ledger fails to balance at some
-prefix `i < k` is at most `εdlr + κ`: the `(V, R)` discrete-log-relation advantage
+prefix `i < k` is at most `εdlr + κ`: the `(Vbase, Rbase)` discrete-log-relation advantage
 plus the knowledge error, with no factor of `k`. The no-overflow premiss bounds the
 net value against the Pallas scalar order `r_ℙ`. Nothing is assumed of the extractor:
 its failures are exhibited on the extraction-failure arm. -/
@@ -376,7 +376,7 @@ theorem orchardBalanceConservationBefore_measure_le_kerr
 /-- **Orchard Balance integrity in extractor-plus-knowledge-error form.** Balance
 integrity holds at every prefix `i < k`, except with probability at most
 `ε_sinsemilladlr + εdlr + κ`: the Sinsemilla discrete-log-relation advantage covers
-the non-negativity side, and the conservation side is covered by the `(V, R)`
+the non-negativity side, and the conservation side is covered by the `(Vbase, Rbase)`
 discrete-log-relation advantage plus the extractor's knowledge error, in place of
 `orchardBalanceIntegrity_measure_le`'s named `ε_bindsig`. -/
 theorem orchardBalanceIntegrity_measure_le_kerr

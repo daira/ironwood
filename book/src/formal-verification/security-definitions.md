@@ -23,7 +23,7 @@ So each definition sits on a three-layer stack:
   Layer-A break (`NontrivialRelation.ofImbalance`, `Merkle.collisionOfWrongLeaf`,
   `noteCommitBreakOfNe`). Deterministic; no hardness assumption.
 - **Layer C — probability.** The bound that producing the break is hard: the birthday bound
-  `q(q-1)/|F|`, or the discrete-log advantage. The only layer that consumes an assumption.
+  `q(q-1)/|𝔽|`, or the discrete-log advantage. The only layer that consumes an assumption.
 
 ## One connected picture
 
@@ -54,7 +54,7 @@ flowchart TD
     ROM[("Random oracle")]
   end
 
-  BS --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/BindingSignature/Balance.lean'>non-balancing<br/>bundle computes</a>"| NDLR["NontrivialRelation<br/>(V,R) discrete-log<br/>relation"]
+  BS --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/BindingSignature/Balance.lean'>non-balancing<br/>bundle computes</a>"| NDLR["NontrivialRelation<br/>(<span class='katex'><span class='mord mathcal'>V</span></span>,&nbsp;<span class='katex'><span class='mord mathcal'>R</span></span>) discrete-log<br/>relation"]
   BS --> STMT["Witness or replay<br/>evidence<br/>ActionSatisfied<br/>§4.17.4"]
   NCB --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Statement.lean'>wrong note<br/>opening computes</a>"| NCBK["NoteCommitBreak"]
   NCB --> STMT
@@ -75,7 +75,7 @@ flowchart TD
   KS --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Circuits/Integration/AdaptiveActionEvent.lean'>online AGM +<br/>independent<br/>hash-to-curve bases</a>"| DL
   KS -->|"<a target='_blank' href='https://github.com/zcash/ironwood/tree/main/Zcash/Snark/Soundness/FiatShamir'>Fiat–Shamir<br/>heuristic</a>"| ROM
   MC --> SDLR
-  CUS --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Common/Birthday.lean'>birthday counting<br/>q(q-1)/|F|,<br/>no assumption</a>"| ROM
+  CUS --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Common/Birthday.lean'>birthday counting<br/>q(q-1)/|𝔽|,<br/>no assumption</a>"| ROM
   NFC -->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Nullifier.lean'>distinct-note openings<br/>compute</a>"| SDLR
   SAF --> RDSA["RedDSA unforgeability,<br/>±-randomized keys"]
   RDSA -->|"re-rand reduction<br/><a target='_blank' href='https://eprint.iacr.org/2015/395'>[FKMSSS2016]</a> +<br/>forking extraction"| DL
@@ -185,7 +185,7 @@ circuit soundness proof.
 <section>
 <div class="grp">Binding-signature balance — value preservation</div>
 <div class="g"><div class="g-head"><span class="term">balance</span><span class="anchor">Security.BindingSignature.Balance</span></div><div class="def">No transaction creates or destroys value (spec §4.13 Sapling / §4.14 Orchard). Value commitments are <code>cv v rcv = v • V + rcv • R</code>; a bundle's binding verification key collects to <code>bvk = A • V + B • R</code> with <code>A</code> the net value imbalance. The property is <em>not</em> "no discrete-log relation between <code>V</code> and <code>R</code> exists" — one always does in a prime-order group — but the reduction below.</div></div>
-<div class="g"><div class="g-head"><span class="term">NontrivialRelation</span><span class="anchor">BindingSignature.NontrivialRelation · .ofImbalance</span></div><div class="def">The break, as computed data: a nontrivial <code>F</code>-linear relation between the value base <code>V</code> and randomness base <code>R</code>. <code>ofImbalance</code> (and the bundle forms <code>ofBundleModImbalance</code>, <code>ofOrchardImbalance</code>, <code>ofSaplingImbalance</code>) computes one from a non-balancing verifying bundle, with no cryptographic hypothesis — equivalently the discrete log <code>dlog_R V</code> (<code>imbalance_yields_discrete_log</code>).</div></div>
+<div class="g"><div class="g-head"><span class="term">NontrivialRelation</span><span class="anchor">BindingSignature.NontrivialRelation · .ofImbalance</span></div><div class="def">The break, as computed data: a nontrivial <code>F</code>-linear relation between the value base <code>Vbase</code> and randomness base <code>Rbase</code>. <code>ofImbalance</code> (and the bundle forms <code>ofBundleModImbalance</code>, <code>ofOrchardImbalance</code>, <code>ofSaplingImbalance</code>) computes one from a non-balancing verifying bundle, with no cryptographic hypothesis — equivalently the discrete log <code>dlog_Rbase Vbase</code> (<code>imbalance_yields_discrete_log</code>).</div></div>
 <div class="g"><div class="g-head"><span class="term">integer no-overflow lift</span><span class="anchor">intBalance_eq_zero_of_lt · orchard_natAbs_lt · sapling_natAbs_lt</span></div><div class="def">Lifts field balance (<code>A = 0</code> in <code>ZMod r</code>) to integer balance: with per-action 64-bit value ranges and a bounded action count, <code>|A| &lt; r</code>, so the residue being zero forces the integer to be zero. Discharged per pool from the value-type subranges.</div></div>
 <div class="g"><div class="g-head"><span class="term">reduces to DL</span><span class="anchor">Snark.Soundness.AGM.BindingSignature</span></div><div class="def">Turns the computed Orchard/Sapling relations into plain discrete-log solutions: <em>if you can unbalance, you can solve DL</em>. DLR and DL are tightly equivalent (Jaeger–Tessaro, <a href="https://eprint.iacr.org/2020/1213">2020/1213</a>, Lemma 3), so this assumes no more than DL hardness, given the independence of the hash-to-curve bases.</div></div>
 </section>
@@ -216,7 +216,7 @@ circuit soundness proof.
 <section>
 <div class="grp">Shared foundation · Zcash/Security/Common</div>
 <div class="g"><div class="g-head"><span class="term">collision vocabulary</span><span class="anchor">Security.RandomOracle.Collision · CollisionUpToSign</span></div><div class="def">Layer-A break events for the classical ROM: a <code>Collision</code> is two distinct queries with equal outputs; a <code>CollisionUpToSign</code> (<code>a =± b</code>) is the shape produced by arguments passing through the <code>Extract</code> coordinate extractor, whose fibres are <code>{P, −P}</code>. Key binding bottoms out here, as does the nullifier (Faerie-Gold) argument for the Recovery Statement; the deployed nullifier argument bottoms out in the Sinsemilla discrete-log relation instead.</div></div>
-<div class="g"><div class="g-head"><span class="term">birthday bound</span><span class="anchor">Security.Birthday.birthday_closed_form</span></div><div class="def">The Layer-C probability: the shifted <code>±</code>-collision event over <code>q</code> uniform oracle outputs has probability at most <code>q(q-1)/|F|</code>, by union-bounding the per-pair fraction <code>2/|F|</code>. Counted in the random-oracle model with no hardness assumption; proven as a probability statement over the uniform oracle table (#73).</div></div>
+<div class="g"><div class="g-head"><span class="term">birthday bound</span><span class="anchor">Security.Birthday.birthday_closed_form</span></div><div class="def">The Layer-C probability: the shifted <code>±</code>-collision event over <code>q</code> uniform oracle outputs has probability at most <code>q(q-1)/|𝔽|</code>, by union-bounding the per-pair fraction <code>2/|𝔽|</code>. Counted in the random-oracle model with no hardness assumption; proven as a probability statement over the uniform oracle table (#73).</div></div>
 </section>
 
 </div>
