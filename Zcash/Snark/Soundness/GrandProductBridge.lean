@@ -148,20 +148,25 @@ theorem multiset_pair_eq_of_map_eq {sp tp : Multiset (Fp × Fp)} {β : Fp}
     rw [toPoly_pairProdDiffCoeff]
     exact hj
   refine (not_mem_szBadSet.mp (hgoodβ j)) hjC ?_
-  have hmapped : (nestedPoly (pairProdDiff sp tp)).map (Polynomial.evalRingHom β) = 0 := by
+  -- Fixing `β` is a coefficient map, and it kills the difference: both sides become the same
+  -- product of linear factors once the `value + β·name` multisets agree.
+  have hmapped : CompPoly.CPolynomial.map (evalRingHom β) (pairProdDiff sp tp) = 0 := by
     have hconv : ∀ m : Multiset (Fp × Fp),
-        ((m.map (fun p => Polynomial.X + Polynomial.C (encPair p).toPoly)).prod).map
-            (Polynomial.evalRingHom β)
-          = ((m.map (fun p => p.1 + p.2 * β)).map
-              (fun u => Polynomial.X + Polynomial.C u)).prod := by
+        CompPoly.CPolynomial.map (evalRingHom β)
+            ((m.map (fun p => (X + C (encPair p) : CBiPoly))).prod)
+          = ((m.map (fun p => p.1 + p.2 * β)).map (fun u => X + C u)).prod := by
       intro m
-      rw [Polynomial.map_multiset_prod, Multiset.map_map, Multiset.map_map]
+      rw [CompPoly.CPolynomial.map_multiset_prod, Multiset.map_map, Multiset.map_map]
       refine congrArg Multiset.prod (Multiset.map_congr rfl fun p _ => ?_)
-      simp [encPair, Polynomial.map_add, Polynomial.map_mul]
-    rw [nestedPoly_pairProdDiff, Polynomial.map_sub, hconv sp, hconv tp, h, sub_self]
-  have hcoeff := congrArg (fun q => Polynomial.coeff q j) hmapped
-  rw [eval_toPoly, toPoly_pairProdDiffCoeff, ← coeff_nestedPoly]
-  simpa [Polynomial.coeff_map] using hcoeff
+      rw [Function.comp_apply, Function.comp_apply, CompPoly.CPolynomial.map_add,
+        CompPoly.CPolynomial.map_X, CompPoly.CPolynomial.map_C, coe_evalRingHom, encPair,
+        eval_add, eval_C, eval_mul, eval_C, eval_X]
+    rw [pairProdDiff, CompPoly.CPolynomial.map_sub, hconv sp, hconv tp, h, sub_self]
+  have hcoeff : CPolynomial.coeff (CompPoly.CPolynomial.map (evalRingHom β) (pairProdDiff sp tp)) j
+      = CPolynomial.coeff (0 : CPoly) j := by rw [hmapped]
+  rw [CompPoly.CPolynomial.coeff_map, coe_evalRingHom, coeff_zero] at hcoeff
+  rw [toPoly_pairProdDiffCoeff]
+  exact hcoeff
 
 /-- **The bridge.** The verifier's product identity at the sampled challenges gives the multiset of
 `(value, name)` pairs, provided both challenges avoid their bad sets. This is what the permutation
