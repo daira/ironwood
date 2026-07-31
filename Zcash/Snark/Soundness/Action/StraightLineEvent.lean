@@ -56,12 +56,12 @@ variable
     actionCircuit.toVerifierKey pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
   (hI : ∀ basis, family.instanceCommitment basis =
-    actionCircuit.instanceCommitment pp
+    actionCircuit.instanceCommitmentForShape pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
   (hchar : ∀ basis O, deployedX4PairCount
     (actionCircuit.toVerifierKey pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-    (actionCircuit.instanceCommitment pp
+    (actionCircuit.instanceCommitmentForShape pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
     (straightLineRunOutput family basis O).1.proof.1
     (straightLineRunRecord family basis O) < scalarFieldOrder)
@@ -284,7 +284,7 @@ theorem actionKnowledgeOutcome_isSome_of_good
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) rfl
       (actionCircuit.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-      (actionCircuit.instanceCommitment pp
+      (actionCircuit.instanceCommitmentForShape pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
       (straightLineRunOutput family basis O).1.proof.1
       (straightLineRunRecord family basis O)
@@ -300,7 +300,7 @@ theorem actionKnowledgeOutcome_isSome_of_good
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) rfl
       (actionCircuit.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-      (actionCircuit.instanceCommitment pp
+      (actionCircuit.instanceCommitmentForShape pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
       (straightLineRunOutput family basis O).1.proof.1
       (straightLineRunRecord family basis O) :=

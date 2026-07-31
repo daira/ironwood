@@ -46,24 +46,24 @@ def ofAcceptedCircuitSat
     (batchOpenings :
       OpenedBatchOpenings urs (evalVector urs.k ch.x3)
         (x4BatchCommitments
-          (instanceCommitment := actionCircuit.instanceCommitment pp urs inputs)
+          (instanceCommitment := actionCircuit.instanceCommitmentForShape pp urs inputs)
           urs hk (actionCircuit.toVerifierKey pp urs) ps ch)
         (x4BatchEvals
-          (instanceCommitment := actionCircuit.instanceCommitment pp urs inputs)
+          (instanceCommitment := actionCircuit.instanceCommitmentForShape pp urs inputs)
           (actionCircuit.toVerifierKey pp urs) ps ch)
         a pU pW)
     (memberDecode : ∀ i (hi : i <
         deployedX4PairCount
-          (instanceCommitment := actionCircuit.instanceCommitment pp urs inputs)
+          (instanceCommitment := actionCircuit.instanceCommitmentForShape pp urs inputs)
           (actionCircuit.toVerifierKey pp urs) ps ch),
       OpenedMemberDecode
-        (instanceCommitment := actionCircuit.instanceCommitment pp urs inputs)
+        (instanceCommitment := actionCircuit.instanceCommitmentForShape pp urs inputs)
         urs hk (actionCircuit.toVerifierKey pp urs)
         ps ch batchOpenings i hi)
     (haccepts :
       DeployedAccepts urs hk
         (actionCircuit.toVerifierKey pp urs)
-        (actionCircuit.instanceCommitment pp urs inputs) ps ch)
+        (actionCircuit.instanceCommitmentForShape pp urs inputs) ps ch)
     (hpoly : CPoly)
     (hsatisfied :
       (CanonicalMemberConstraintRelation.acceptedModel
@@ -110,7 +110,7 @@ def ofAcceptedCircuitSat
     rfl
   have hcorrect :=
     Zcash.Snark.actionTopLevelCircuitCorrectness
-      pp urs hk (actionCircuit.instanceCommitment pp urs inputs) ps ch pU pW a
+      pp urs hk (actionCircuit.instanceCommitmentForShape pp urs inputs) ps ch pU pW a
       batchOpenings memberDecode hpoly relation
       (by
         simpa only [

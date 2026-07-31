@@ -55,12 +55,12 @@ variable (pp : ProofParams)
     actionCircuit.toVerifierKey pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
   (hI : ∀ basis, family.instanceCommitment basis =
-    actionCircuit.instanceCommitment pp
+    actionCircuit.instanceCommitmentForShape pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
   (hchar : ∀ basis O, deployedX4PairCount
     (actionCircuit.toVerifierKey pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-    (actionCircuit.instanceCommitment pp
+    (actionCircuit.instanceCommitmentForShape pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
     (straightLineRunOutput family basis O).1.proof.1
     (straightLineRunRecord family basis O) < scalarFieldOrder)
@@ -520,10 +520,7 @@ structure ActionXSnapshot (np : ℕ) where
   y : Fp
   vanishing : CPoly
 
-/-- One phased sequential Action execution.  Each phase is an actual `OracleComp` stopped before
-its squeeze and returns precisely the snapshot later used by the exclusion-set proof.  The
-agreement fields connect those emitted snapshots to the final decoded run; the cut and every
-view function are generated projections. -/
+/-- Five stopped computations whose snapshots agree with the final decoded run. -/
 structure ActionSequentialExecution (Dx L : ℕ) where
   thetaPhase : SequentialPhase family.toComputedAlgebraicFSFamily 0 ActionThetaSnapshot
   betaPhase : SequentialPhase family.toComputedAlgebraicFSFamily 1 ActionBetaSnapshot

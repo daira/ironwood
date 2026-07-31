@@ -27,12 +27,12 @@ variable (pp : ProofParams)
   (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey pp
     (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
   (hI : ∀ basis, family.instanceCommitment basis =
-    actionCircuit.instanceCommitment pp
+    actionCircuit.instanceCommitmentForShape pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
   (hchar : ∀ basis O, deployedX4PairCount
     (actionCircuit.toVerifierKey pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-    (actionCircuit.instanceCommitment pp
+    (actionCircuit.instanceCommitmentForShape pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
     (adaptiveActionRunOutput family basis O).1.proof.1
     (adaptiveActionRunRecord family basis O) < scalarFieldOrder)
@@ -90,7 +90,7 @@ def adaptiveActionPreXIdentityWitnessOrRelationFinder
         (show deployedX4PairCount
           (actionCircuit.toVerifierKey pp
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-          (actionCircuit.instanceCommitment pp
+          (actionCircuit.instanceCommitmentForShape pp
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
           (adaptiveActionRunOutput family basis O).1.proof.1
           (adaptiveActionRunRecord family basis O) < scalarFieldOrder from hchar basis O)
@@ -543,7 +543,7 @@ def adaptiveActionCompleteTerminalWitnessOrRelationFinder
                         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) rfl
                         (actionCircuit.toVerifierKey pp
                           (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-                        (actionCircuit.instanceCommitment pp
+                        (actionCircuit.instanceCommitmentForShape pp
                           (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
                         pnu.1.proof.1 (chRecord nu rounds)
                         (pnu.1.aMulti nu) (pnu.1.multiU nu) (pnu.1.multiBlind nu) :=
@@ -554,7 +554,7 @@ def adaptiveActionCompleteTerminalWitnessOrRelationFinder
                         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) rfl
                         (actionCircuit.toVerifierKey pp
                           (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-                        (actionCircuit.instanceCommitment pp
+                        (actionCircuit.instanceCommitmentForShape pp
                           (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
                         pnu.1.proof.1 (chRecord nu rounds) :=
                       adaptiveActionRunAccepts pp family basis O inputs hvk hI haccepts

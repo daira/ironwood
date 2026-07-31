@@ -396,11 +396,11 @@ theorem adaptiveActionActive_query
     (id : CommitmentId)
     (hactive : adaptiveActionCommitmentActive (ActionTerminal.vkAt pp basis) id) :
     ∃ q ∈ assembleQueries (ActionTerminal.vkAt pp basis)
-        (actionCircuit.instanceCommitment pp
+        (actionCircuit.instanceCommitmentForShape pp
           (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs) ps ch,
       q.commId = id := by
   let vk := ActionTerminal.vkAt pp basis
-  let ic := actionCircuit.instanceCommitment pp
+  let ic := actionCircuit.instanceCommitmentForShape pp
     (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs
   have hadviceCount :=
     actionCircuit.toVerifierKey_adviceQueryCount pp
@@ -470,12 +470,12 @@ theorem adaptiveActionQuery_active_or_terminal
     (ch : Challenges (pp.mergeDerived actionCircuit).k Fp)
     (q : VerifierQuery (pp.mergeDerived actionCircuit).k Fp VestaG)
     (hq : q ∈ assembleQueries (ActionTerminal.vkAt pp basis)
-      (actionCircuit.instanceCommitment pp
+      (actionCircuit.instanceCommitmentForShape pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs) ps ch) :
     adaptiveActionCommitmentActive (ActionTerminal.vkAt pp basis) q.commId ∨
       q.commId = .vanishingH ∨ q.commId = .randomPoly := by
   let vk := ActionTerminal.vkAt pp basis
-  let ic := actionCircuit.instanceCommitment pp
+  let ic := actionCircuit.instanceCommitmentForShape pp
     (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs
   change q ∈ assembleQueries vk ic ps ch at hq
   simp only [assembleQueries, List.mem_append] at hq
@@ -564,7 +564,7 @@ theorem adaptiveActionActive_point_mem_stage
     (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
-      actionCircuit.instanceCommitment pp
+      actionCircuit.instanceCommitmentForShape pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
     (n : Fin 5) (id : CommitmentId)
     (hactive : adaptiveActionCommitmentActive (ActionTerminal.vkAt pp basis) id)
@@ -573,7 +573,7 @@ theorem adaptiveActionActive_point_mem_stage
     let ch := ActionTerminal.adaptiveActionRunRecord family basis O
     ∃ P,
       assembledCommitment (ActionTerminal.vkAt pp basis)
-          (actionCircuit.instanceCommitment pp
+          (actionCircuit.instanceCommitmentForShape pp
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
           data.algebraicProof.erase ch id = .point P ∧
         ∃ ap ∈ data.algebraicProof.actionRepresentationsBefore n ++
@@ -582,7 +582,7 @@ theorem adaptiveActionActive_point_mem_stage
   simp only
   let data := (family.adversary basis).run O
   let urs := ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis
-  let ic := actionCircuit.instanceCommitment pp urs inputs
+  let ic := actionCircuit.instanceCommitmentForShape pp urs inputs
   cases id with
   | instanceCol p column =>
       rcases hactive with ⟨hp, rotation, hlayout⟩
@@ -595,7 +595,7 @@ theorem adaptiveActionActive_point_mem_stage
       refine ⟨ic ⟨p, hp⟩ column, ?_, ap, ?_, ?_⟩
       · simp [assembledCommitment, hp, ic, urs]
       · exact List.mem_append.mpr (Or.inr hap)
-      · change ap.point = actionCircuit.instanceCommitment pp
+      · change ap.point = actionCircuit.instanceCommitmentForShape pp
           (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs ⟨p, hp⟩ column
         rw [← hI basis]
         exact hpoint
@@ -707,7 +707,7 @@ noncomputable def adaptiveActionCommitmentPolynomial
     (ch : Challenges (pp.mergeDerived actionCircuit).k Fp) :
     CommitmentId → CPoly :=
   adaptiveActionCommitmentPolynomialOf (ActionTerminal.vkAt pp basis)
-    (actionCircuit.instanceCommitment pp
+    (actionCircuit.instanceCommitmentForShape pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
     ps source ch
 
@@ -723,7 +723,7 @@ theorem adaptiveActionCommitmentPolynomialOf_action
     (source : List (AlgebraicPoint (F := Fp) basis))
     (ch : Challenges (pp.mergeDerived actionCircuit).k Fp)
     (hvk : vk = ActionTerminal.vkAt pp basis)
-    (hI : ic = actionCircuit.instanceCommitment pp
+    (hI : ic = actionCircuit.instanceCommitmentForShape pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs) :
     adaptiveActionCommitmentPolynomialOf vk ic ps source ch =
       adaptiveActionCommitmentPolynomial pp basis inputs ps source ch := by
@@ -771,7 +771,7 @@ noncomputable def adaptiveActionCommittedModel
     (ch : Challenges (pp.mergeDerived actionCircuit).k Fp) :
     ConstraintPolyModel (pp.mergeDerived actionCircuit).numProofs :=
   adaptiveActionCommittedModelOf (ActionTerminal.vkAt pp basis)
-    (actionCircuit.instanceCommitment pp
+    (actionCircuit.instanceCommitmentForShape pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
     ps source ch (actionCircuit.toVerifierKey_blindingFactors_lt_n pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
@@ -803,7 +803,7 @@ noncomputable def adaptiveActionPreXDifference
     (source : List (AlgebraicPoint (F := Fp) basis))
     (ch : Challenges (pp.mergeDerived actionCircuit).k Fp) : CPoly :=
   adaptiveActionPreXDifferenceOf (ActionTerminal.vkAt pp basis)
-    (actionCircuit.instanceCommitment pp
+    (actionCircuit.instanceCommitmentForShape pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
     ps source ch (actionCircuit.toVerifierKey_blindingFactors_lt_n pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
@@ -821,7 +821,7 @@ theorem adaptiveActionPreXDifferenceOf_action
     (ch : Challenges (pp.mergeDerived actionCircuit).k Fp)
     (hblinding : vk.blindingFactors < vk.n)
     (hvk : vk = ActionTerminal.vkAt pp basis)
-    (hI : ic = actionCircuit.instanceCommitment pp
+    (hI : ic = actionCircuit.instanceCommitmentForShape pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs) :
     adaptiveActionPreXDifferenceOf vk ic ps source ch hblinding =
       adaptiveActionPreXDifference pp basis inputs ps source ch := by
@@ -864,7 +864,7 @@ theorem adaptiveActionPreXDifference_eq
         committedPreXQuotient vk (fun i => onlinePointPolynomial source (ps.hPieces i)) *
           (X ^ vk.n - 1) := by
   exact adaptiveActionPreXDifferenceOf_eq (ActionTerminal.vkAt pp basis)
-    (actionCircuit.instanceCommitment pp
+    (actionCircuit.instanceCommitmentForShape pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
     ps source ch (actionCircuit.toVerifierKey_blindingFactors_lt_n pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
@@ -884,11 +884,11 @@ theorem adaptiveActionCommittedModel_challenge_congr
       adaptiveActionCommittedModel pp basis inputs ps source ch₂ := by
   unfold adaptiveActionCommittedModel adaptiveActionCommittedModelOf
   have hpoly : adaptiveActionCommitmentPolynomialOf (ActionTerminal.vkAt pp basis)
-      (actionCircuit.instanceCommitment pp
+      (actionCircuit.instanceCommitmentForShape pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
       ps source ch₁ =
     adaptiveActionCommitmentPolynomialOf (ActionTerminal.vkAt pp basis)
-      (actionCircuit.instanceCommitment pp
+      (actionCircuit.instanceCommitmentForShape pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
       ps source ch₂ := by
     funext id
@@ -1332,11 +1332,11 @@ theorem adaptiveActionSurfaceAt_congr
         adaptiveActionCommittedModel pp basis inputs ps source ch =
           adaptiveActionCommittedModel pp basis inputs ps' source ch := by
       change adaptiveActionCommitmentPolynomialOf (ActionTerminal.vkAt pp basis)
-          (actionCircuit.instanceCommitment pp
+          (actionCircuit.instanceCommitmentForShape pp
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
           ps source ch =
         adaptiveActionCommitmentPolynomialOf (ActionTerminal.vkAt pp basis)
-          (actionCircuit.instanceCommitment pp
+          (actionCircuit.instanceCommitmentForShape pp
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
           ps' source ch at hpoly
       unfold adaptiveActionCommittedModel adaptiveActionCommittedModelOf
@@ -1353,11 +1353,11 @@ theorem adaptiveActionSurfaceAt_congr
         adaptiveActionCommittedModel pp basis inputs ps source ch =
           adaptiveActionCommittedModel pp basis inputs ps' source ch := by
       change adaptiveActionCommitmentPolynomialOf (ActionTerminal.vkAt pp basis)
-          (actionCircuit.instanceCommitment pp
+          (actionCircuit.instanceCommitmentForShape pp
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
           ps source ch =
         adaptiveActionCommitmentPolynomialOf (ActionTerminal.vkAt pp basis)
-          (actionCircuit.instanceCommitment pp
+          (actionCircuit.instanceCommitmentForShape pp
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
           ps' source ch at hpoly
       unfold adaptiveActionCommittedModel adaptiveActionCommittedModelOf
@@ -2116,7 +2116,7 @@ theorem adaptiveAcceptedPolynomial_eq_actionStage
     (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
-      actionCircuit.instanceCommitment pp
+      actionCircuit.instanceCommitmentForShape pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
     (hnone : family.adaptiveActionRepresentationRelationFinder basis O = none)
     (n : Fin 5) (id : CommitmentId)
@@ -2175,7 +2175,7 @@ theorem adaptiveAcceptedPolynomial_eq_actionStage
         data.algebraicProof.erase :=
     congrArg (fun output => output.proof.1) hp
   have hpointAction : assembledCommitment (ActionTerminal.vkAt pp basis)
-      (actionCircuit.instanceCommitment pp
+      (actionCircuit.instanceCommitmentForShape pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
       (ActionTerminal.adaptiveActionRunOutput family basis O).1.proof.1
       (ActionTerminal.adaptiveActionRunRecord family basis O) id = .point P := by
@@ -2193,14 +2193,14 @@ theorem adaptiveAcceptedPolynomial_eq_actionStage
           (ActionTerminal.adaptiveActionRunOutput family basis O).1.proof.1
           (ActionTerminal.adaptiveActionRunRecord family basis O) hqRaw).symm
       _ = assembledCommitment (ActionTerminal.vkAt pp basis)
-          (actionCircuit.instanceCommitment pp
+          (actionCircuit.instanceCommitmentForShape pp
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
           (ActionTerminal.adaptiveActionRunOutput family basis O).1.proof.1
           (ActionTerminal.adaptiveActionRunRecord family basis O) id := by
         rw [← hqid]
         exact assembleQueries_commitment_eq_assembled
           (ActionTerminal.vkAt pp basis)
-          (actionCircuit.instanceCommitment pp
+          (actionCircuit.instanceCommitmentForShape pp
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
           (ActionTerminal.adaptiveActionRunOutput family basis O).1.proof.1
           (ActionTerminal.adaptiveActionRunRecord family basis O) hq
@@ -2235,7 +2235,7 @@ theorem adaptiveAcceptedPolynomial_eq_actionStage_nonterminal
     (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
-      actionCircuit.instanceCommitment pp
+      actionCircuit.instanceCommitmentForShape pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
     (hnone : family.adaptiveActionRepresentationRelationFinder basis O = none)
     (n : Fin 5) (id : CommitmentId)
@@ -2282,14 +2282,14 @@ theorem adaptiveAcceptedPolynomial_eq_actionStage_nonterminal
         q.commId ≠ id := by
       intro q hq hqid
       have hqAction : q ∈ assembleQueries (ActionTerminal.vkAt pp basis)
-          (actionCircuit.instanceCommitment pp
+          (actionCircuit.instanceCommitmentForShape pp
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
           pnu.1.proof.1
           (chRecord (wrappedPreIpaReads pnu) (runRounds family.toFamily basis O)) := by
         change q ∈ assembleQueries
           (actionCircuit.toVerifierKey pp
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-          (actionCircuit.instanceCommitment pp
+          (actionCircuit.instanceCommitmentForShape pp
             (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
           pnu.1.proof.1
           (chRecord (wrappedPreIpaReads pnu) (runRounds family.toFamily basis O))
@@ -2480,7 +2480,7 @@ theorem adaptiveActionExclusions_of_no_surface
     (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
-      actionCircuit.instanceCommitment pp
+      actionCircuit.instanceCommitmentForShape pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
     (hprovenance : family.adaptiveActionRepresentationRelationFinder basis O = none)
     (witness : DeployedBatchWitness family.toFamily basis
@@ -2502,7 +2502,7 @@ theorem adaptiveActionExclusions_of_no_surface
     (hchar : deployedX4PairCount
       (actionCircuit.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-      (actionCircuit.instanceCommitment pp
+      (actionCircuit.instanceCommitmentForShape pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
       (ActionTerminal.adaptiveActionRunOutput family basis O).1.proof.1
       (wrappedPreIpaRecord (ActionTerminal.adaptiveActionRunOutput family basis O)) <
@@ -2911,7 +2911,7 @@ theorem adaptiveActionAcceptedDifference_eval_eq_preX
     (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey pp
       (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
     (hI : ∀ basis, family.instanceCommitment basis =
-      actionCircuit.instanceCommitment pp
+      actionCircuit.instanceCommitmentForShape pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
     (hprovenance : family.adaptiveActionRepresentationRelationFinder basis O = none)
     (witness : DeployedBatchWitness family.toFamily basis
@@ -2933,7 +2933,7 @@ theorem adaptiveActionAcceptedDifference_eval_eq_preX
     (hchar : deployedX4PairCount
       (actionCircuit.toVerifierKey pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-      (actionCircuit.instanceCommitment pp
+      (actionCircuit.instanceCommitmentForShape pp
         (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
       (ActionTerminal.adaptiveActionRunOutput family basis O).1.proof.1
       (wrappedPreIpaRecord (ActionTerminal.adaptiveActionRunOutput family basis O)) <
