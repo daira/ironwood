@@ -137,37 +137,39 @@ theorem perm_gamma_failure_measure_le (sp tp : Multiset (Fp × Fp)) (beta : Fp) 
 theorem natDegree_coeff_pairProdDiff_le (sp tp : Multiset (Fp × Fp)) (j : ℕ) :
     (CPolynomial.coeff (pairProdDiff sp tp) j).natDegree
       ≤ max (Multiset.card sp) (Multiset.card tp) := by
-  rw [natDegree_toPoly, ← coeff_nestedPoly]
-  have key : ∀ (m : Multiset (Fp × Fp)) (j : ℕ),
-      (((m.map (fun q => Polynomial.X + Polynomial.C (encPair q).toPoly)).prod).coeff j).natDegree ≤ Multiset.card m := by
+  have hencp : ∀ (m : Multiset (Fp × Fp)) (p : CPoly), p ∈ m.map encPair → p.natDegree ≤ 1 := by
+    rintro m _ hp
+    obtain ⟨q, _, rfl⟩ := Multiset.mem_map.mp hp
+    rw [encPair]
+    refine le_trans (CompPoly.CPolynomial.natDegree_add_le _ _) (max_le ?_ ?_)
+    · rw [CompPoly.CPolynomial.natDegree_C]
+      exact Nat.zero_le 1
+    · refine le_trans CompPoly.CPolynomial.natDegree_mul_le ?_
+      rw [CompPoly.CPolynomial.natDegree_C]
+      exact le_trans (Nat.add_le_add_left CompPoly.CPolynomial.natDegree_X_le 0) (by omega)
+  -- Each `γ` coefficient is an elementary symmetric function of the `β`-linear encodings, so its
+  -- degree is at most one per factor taken.
+  have key : ∀ m : Multiset (Fp × Fp),
+      CompPoly.CPolynomial.natDegree
+          (CPolynomial.coeff ((m.map (fun p => (CompPoly.CPolynomial.X + CompPoly.CPolynomial.C (encPair p) : CBiPoly))).prod) j)
+        ≤ Multiset.card m := by
     intro m
-    induction m using Multiset.induction with
-    | empty =>
-        intro j
-        rcases eq_or_ne j 0 with rfl | hj
-        · simp
-        · simp [Polynomial.coeff_one, hj]
-    | cons q m ih =>
-        intro j
-        rw [Multiset.map_cons, Multiset.prod_cons, _root_.add_mul, Polynomial.coeff_add]
-        refine le_trans (Polynomial.natDegree_add_le _ _) (max_le ?_ ?_)
-        · rcases j with _ | j'
-          · simp [Polynomial.mul_coeff_zero, Polynomial.coeff_X_zero]
-          · rw [Polynomial.coeff_X_mul]
-            exact le_trans (ih j') (by simp)
-        · rw [Polynomial.coeff_C_mul]
-          refine le_trans (Polynomial.natDegree_mul_le) ?_
-          have hencp : (encPair q).toPoly.natDegree ≤ 1 := by
-            rw [toPoly_encPair]
-            refine le_trans (Polynomial.natDegree_add_le _ _) (max_le (by simp) ?_)
-            exact le_trans Polynomial.natDegree_mul_le (by simp)
-          calc (encPair q).toPoly.natDegree + (((m.map (fun q => Polynomial.X + Polynomial.C (encPair q).toPoly)).prod).coeff j).natDegree
-              ≤ 1 + Multiset.card m := Nat.add_le_add hencp (ih j)
-            _ = Multiset.card (q ::ₘ m) := by rw [Multiset.card_cons]; omega
-  rw [nestedPoly_pairProdDiff, Polynomial.coeff_sub]
-  refine le_trans (Polynomial.natDegree_sub_le _ _) (max_le ?_ ?_)
-  · exact le_trans (key sp j) (le_max_left _ _)
-  · exact le_trans (key tp j) (le_max_right _ _)
+    have hmap : m.map (fun p => (CompPoly.CPolynomial.X + CompPoly.CPolynomial.C (encPair p) : CBiPoly))
+        = (m.map encPair).map (fun u => CompPoly.CPolynomial.X + CompPoly.CPolynomial.C u) := by
+      rw [Multiset.map_map]; rfl
+    rw [hmap]
+    rcases le_or_gt j (Multiset.card (m.map encPair)) with hj | hj
+    · rw [CompPoly.CPolynomial.coeff_prod_X_add_C _ hj]
+      refine le_trans (CompPoly.CPolynomial.natDegree_esymm_le (hencp m) _) ?_
+      rw [Multiset.card_map] at hj ⊢
+      omega
+    · rw [CompPoly.CPolynomial.coeff_prod_X_add_C_eq_zero _ hj]
+      exact le_trans (le_of_eq CompPoly.CPolynomial.natDegree_zero) (Nat.zero_le _)
+  rw [pairProdDiff, CompPoly.CPolynomial.coeff_sub]
+  refine le_trans (CompPoly.CPolynomial.natDegree_sub_le _ _) (max_le ?_ ?_)
+  · exact le_trans (key sp) (le_max_left _ _)
+  · exact le_trans (key tp) (le_max_right _ _)
+
 
 /-- Out-of-range coefficients of the pair-product difference vanish. -/
 theorem pairProdDiff_coeff_eq_zero_of_le (sp tp : Multiset (Fp × Fp)) {j : ℕ}

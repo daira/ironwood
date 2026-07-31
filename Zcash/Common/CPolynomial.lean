@@ -314,6 +314,54 @@ theorem coeff_X_pow [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (k n :
     ((X : CPolynomial R) ^ k).coeff n = if n = k then 1 else 0 := by
   rw [coeff_toPoly, toPoly_pow, X_toPoly, Polynomial.coeff_X_pow]
 
+/-! ## Degree of multiset sums, products and elementary symmetric functions -/
+
+section MultisetDegree
+
+variable [CommRing R] [BEq R] [LawfulBEq R] [Nontrivial R]
+
+theorem natDegree_multiset_prod_le (m : Multiset (CPolynomial R)) :
+    m.prod.natDegree ≤ (m.map natDegree).sum := by
+  rw [natDegree_toPoly, toPoly_multiset_prod]
+  refine le_trans (Polynomial.natDegree_multiset_prod_le _) (le_of_eq ?_)
+  rw [Multiset.map_map]
+  exact congrArg Multiset.sum (Multiset.map_congr rfl fun p _ => (natDegree_toPoly p).symm)
+
+theorem natDegree_multiset_prod_le_of_forall_le {m : Multiset (CPolynomial R)} {d : ℕ}
+    (h : ∀ p ∈ m, p.natDegree ≤ d) : m.prod.natDegree ≤ Multiset.card m * d := by
+  refine le_trans (natDegree_multiset_prod_le m) ?_
+  calc (m.map natDegree).sum
+      ≤ (m.map fun _ => d).sum :=
+        Multiset.sum_map_le_sum_map _ _ (fun p hp => h p hp)
+    _ = Multiset.card m * d := by simp [Multiset.sum_replicate, Multiset.map_const']
+
+omit [Nontrivial R] in
+theorem natDegree_multiset_sum_le_of_forall_le [DecidableEq R] {m : Multiset (CPolynomial R)}
+    {d : ℕ} (h : ∀ p ∈ m, p.natDegree ≤ d) : m.sum.natDegree ≤ d := by
+  induction m using Multiset.induction with
+  | empty =>
+      rw [Multiset.sum_zero, natDegree_toPoly, toPoly_zero, Polynomial.natDegree_zero]
+      exact Nat.zero_le d
+  | cons p m ih =>
+      rw [Multiset.sum_cons]
+      refine le_trans (natDegree_add_le _ _) (max_le (h p (Multiset.mem_cons_self _ _)) ?_)
+      exact ih fun q hq => h q (Multiset.mem_cons_of_mem hq)
+
+/-- The `k`-th elementary symmetric function of polynomials of degree at most `d` has degree at
+most `k * d`: it is a sum of products of `k` of them. -/
+theorem natDegree_esymm_le {m : Multiset (CPolynomial R)} {d : ℕ}
+    (h : ∀ p ∈ m, p.natDegree ≤ d) (k : ℕ) : (m.esymm k).natDegree ≤ k * d := by
+  classical
+  refine natDegree_multiset_sum_le_of_forall_le fun q hq => ?_
+  obtain ⟨t, ht, rfl⟩ := Multiset.mem_map.mp hq
+  have hcard : Multiset.card t = k := (Multiset.mem_powersetCard.mp ht).2
+  have hle : t.prod.natDegree ≤ Multiset.card t * d :=
+    natDegree_multiset_prod_le_of_forall_le fun p hp =>
+      h p (Multiset.mem_of_le (Multiset.mem_powersetCard.mp ht).1 hp)
+  rwa [hcard] at hle
+
+end MultisetDegree
+
 /-! ## Products of monic linear factors
 
 Vieta and the degree of `∏ (X + uᵢ)`, on the computable representation.  Both are Mathlib's
