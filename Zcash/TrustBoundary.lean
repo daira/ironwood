@@ -12,6 +12,8 @@ import Zcash.Security.Ledger.Capstone
 import Zcash.Security.Ledger.Nullifier
 import Zcash.Security.Ledger.Value
 import Zcash.Security.Ledger.KeyBindingArm
+import Zcash.Security.Ledger.ExtractionArm
+import Zcash.Security.RedDSA.Basic
 import Zcash.Security.Common.Birthday
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
@@ -435,6 +437,37 @@ assert_axioms Zcash.Security.Ledger.Bridge.orchardSpendAuthority_measure_le +nat
   Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+
+/-! ## RedDSA
+
+The abstract scheme behind the signature obligations. Completeness and the
+re-randomization axioms are theorems. The extraction failure is computable data,
+per breaks-as-computed-data. -/
+
+assert_axioms Zcash.Security.RedDSA.randomizePrivate_add_neg
+assert_axioms Zcash.Security.RedDSA.randomizePrivate_zero
+assert_axioms Zcash.Security.RedDSA.Scheme.randomizePublic_zero
+assert_axioms Zcash.Security.RedDSA.Scheme.derivePublic_randomizePrivate
+assert_axioms Zcash.Security.RedDSA.Scheme.derivePublic_add
+assert_axioms Zcash.Security.RedDSA.Scheme.derivePublic_injective
+assert_axioms Zcash.Security.RedDSA.Scheme.verify_sign
+assert_axioms Zcash.Security.RedDSA.Scheme.verify_sign_randomized
+
+/-! ## The transaction-balance premiss in extractor-plus-knowledge-error form
+
+The fallible-extractor restatement of the transaction-balance premiss discharge: the extractor is
+an arbitrary function, its failures are exhibited `RedDSA.ExtractionFailure` data,
+and the Balance capstones bound the violation by `εdlr + κ`, per prefix and at all
+prefixes with no factor of `k`. `+choice` is the erased-positions tier. -/
+
+assert_computable Zcash.Security.Ledger.Model.ValueShape.premissOrBreakFallible +choice
+assert_computable Zcash.Security.Ledger.Model.txBalancePremissFallible +choice
+assert_axioms Zcash.Security.Ledger.Model.extractFailEvent_failure
+assert_axioms Zcash.Security.Ledger.Model.txBalanceBreakEvent_fallible_subset
+assert_axioms Zcash.Security.Ledger.Model.balanceConservation_measure_le_kerr
+assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCap_measure_le_kerr
+assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_measure_le_kerr
+assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCapBefore_measure_le_kerr
 
 /-! ## The key-binding arms' ε, discharged
 
