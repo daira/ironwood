@@ -704,12 +704,12 @@ def adaptiveFallbackIpaSurface
     (adaptiveIpaRoundRecord (shape := shape) family.init j t O)
 
 /-- Irreducible names keep the large dependent bad-set bodies out of theorem unification. -/
-@[irreducible] noncomputable def adaptiveIpaQueriedBad
+@[irreducible] def adaptiveIpaQueriedBad
     (family : ComputedAdaptiveOnlineAGMFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (j : Fin shape.k) :=
   adaptiveQueriedIpaSurface family basis j
 
-@[irreducible] noncomputable def adaptiveIpaFallbackBad
+@[irreducible] def adaptiveIpaFallbackBad
     (family : ComputedAdaptiveOnlineAGMFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (j : Fin shape.k) :=
   adaptiveFallbackIpaSurface family basis j
