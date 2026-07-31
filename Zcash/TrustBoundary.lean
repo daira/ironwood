@@ -75,6 +75,14 @@ Two commands from `Zcash.Meta.AxiomCheck`, per the breaks-as-computed-data disci
   conjured from mere propositional existence.
 * **Theorems** get `assert_axioms`, an upper bound at the standard tier
   (`propext` / `Classical.choice` / `Quot.sound`). Both commands reject `sorryAx`.
+
+Both commands are built on `Lean.collectAxioms`, which walks a declaration's transitive
+*dependencies*. Coverage therefore flows downwards only: a declaration that nothing censused
+depends on is checked by nothing, however prominent it is. Deliverable endpoints are exactly the
+top-level leaves, so they must be pinned *directly* — never left to inherit coverage from some
+dependent, which would vanish the moment that dependent is refactored.
+`scripts/check_endpoint_census.sh` enforces this in CI for the capstone naming families, and
+lists them; extend its patterns when a new endpoint family appears.
 -/
 
 /-! ## Key binding — computed break reductions -/
@@ -209,7 +217,7 @@ assert_computable Zcash.Security.Ledger.Model.balanceSubsetOrBreak +choice
 
 /-! ## Balance integrity
 
-`+choice` on the two endpoints is again the erased-positions tier: choice arrives with
+`+choice` on the three endpoints is again the erased-positions tier: choice arrives with
 the `ring`/`omega` proof terms in their `Prop` fields, never the data path. -/
 
 assert_computable Zcash.Security.Ledger.Model.txNetValue
@@ -247,9 +255,9 @@ argument's terminal. `+choice` is the erased-positions tier: choice arrives with
 
 assert_computable Zcash.Security.Ledger.Model.NontrivialRelation.ofNullifierCollision +choice
 
-/-! ## The value-premiss discharge
+/-! ## The transaction-balance premiss discharge
 
-Computed reductions at the Pedersen value-commitment shape: the Balance-value
+Computed reductions at the Pedersen value-commitment shape: the transaction-balance
 premiss lands in the binding-signature layer's nontrivial `(V, R)` relation via
 `ofBundleIntImbalance`, with the no-overflow bound discharged from the statement's
 value ranges, validity's action-count and `vBalance` range rules, and the named
@@ -305,7 +313,7 @@ assert_axioms Zcash.Security.Ledger.Model.balanceIntegrityPerTx_measure_le
 assert_axioms Zcash.Security.Ledger.Model.balanceIntegrity_measure_le
 assert_axioms Zcash.Security.Ledger.Model.spendAuthority_measure_le
 
-/-! ## The deployed discrete-log-relation discharges
+/-! ## The Orchard-protocol discrete-log-relation discharges
 
 Each Orchard-protocol Balance-subset break arm reduces to a nontrivial discrete-log
 relation among the fixed Sinsemilla bases, and `orchardBalanceSubsetOrRelation` routes
@@ -472,6 +480,15 @@ key-binding and ledger sections above, expresses them through the `Zcash.Meta.Ax
   (`+choice`); the relation coefficients are direct terms of the inputs, so the break data cannot
   have been conjured from mere propositional existence. Vesta-instantiated producers additionally
   inherit CompElliptic's `native_decide` curve point-count axiom (`+native`).
+
+  Note that CompElliptic's witnesses are *not* the bulk of what `+native` covers library-wide.
+  Exactly three owners across the whole census are CompElliptic's: the two curve point counts
+  (`Pallas.q_nsmul_Gpt`, `Vesta.p_nsmul_Gpt`) and the Tonelli–Shanks root-of-unity data
+  (`Fields.Pasta.pallasBase`, whose certificate sits in a structure-field auto-param). Every other
+  owner — the six fixed-base window tables, the Action gate-coherence and permutation-domain facts,
+  the captured fixture claims, the keygen certificate — is this repository's own. Compiler trust
+  here is overwhelmingly first-party, not an inherited leaf; each `+native(...)` list names
+  precisely which certificates its entry rests on.
 * **Theorems** — the probability-layer bounds, the knowledge-soundness and binding endpoints across
   all adversary models, the DL capstones, and the run-time/query-charge lemmas — get
   `assert_axioms`, bounding the trusted base at the standard tier (`propext` / `Classical.choice` /
@@ -775,22 +792,9 @@ assert_axioms Zcash.Snark.escape_measure_le
 assert_axioms Zcash.Snark.theta_failure_measure_le
 /-! ### Break-branch machinery — computed
 
-The circuit-integration stack carries its binding break as computed `NontrivialRelation` data
-rather than as the `∃`-closed proposition that is unconditionally true at the concrete curve.
-The declarations below are the part of that stack which is genuinely computable, so they are
-pinned at the `assert_computable` tier: a plain `def`, never marked `noncomputable`. Pinning
-them is what stops the discipline regressing silently — a break that stopped being computed
-would still typecheck, and `assert_axioms` alone would not notice.
-
-The combinators are at the strict tier: they introduce no choice at all. The adapters below
-them take `+choice`, which the plain-`def` check turns into the assertion that choice enters
-only through erased `Prop` certificate fields.
-
-The probabilistic events and capstone theorems are *not* here: their sets, measures, and
-specification-level root sets are intentionally noncomputable and are pinned with `assert_axioms`.
-The finders that those theorems charge are here.  They compute with polynomial coefficients and
-point evaluations, while root-set membership occurs only in erased certificates, as in
-`decodedQuotientEqReassembledOrRelationWitness`. -/
+These checks pin each charged relation finder as a plain executable `def`. `+choice` is allowed
+only through erased proof fields. Noncomputable events and probability theorems are censused
+separately with `assert_axioms`. -/
 
 assert_computable Zcash.Snark.bindOrRelationWitness
 assert_computable Zcash.Snark.finForallOrRelationWitness
@@ -814,8 +818,8 @@ assert_computable Zcash.Snark.FullCircuitBridge.satisfaction_or_bad +choice
 assert_computable Zcash.Snark.FullCircuitBridge.constraints_or_bad +choice
 assert_computable Zcash.Snark.decodedPolynomialResolver_opens_or_relation +choice
 
--- The deterministic top-level terminal consumes canonical `CircuitSat` without a free semantic
--- callback, decoder, or selected-column feed.
+-- The accepted-route terminal converts canonical `CircuitSat` into the circuit's statements with
+-- no free semantic callback, decoder, or selected-column feed.
 assert_axioms Zcash.Snark.topLevelBundleStatement_or_bad_of_constraintSatisfaction +native(
   CompElliptic.Fields.Pasta.pallasBase)
 assert_axioms Zcash.Snark.topLevelStatements_or_relation_of_circuitSat +native(
@@ -1168,8 +1172,7 @@ assert_axioms Zcash.Snark.allResolverLookupBetaBadSet_congr
 assert_axioms Zcash.Snark.allResolverLookupGammaBadSet_congr
 assert_axioms Zcash.Snark.resolverEnvironment_congr
 assert_axioms Zcash.Snark.TopLevelLookup.thetaBadSet_congr
--- The bundled sequential adversary (#128 F8): cuts and views at the five squeeze indices,
--- the per-challenge corollaries, and the counted endpoint with its ceiling arithmetic (F7).
+-- Census the bundled sequential adversary and its resource arithmetic.
 assert_axioms Zcash.Snark.resolverPermutationCell_card
 assert_axioms Zcash.Snark.TopLevelLookup.thetaBudget_eq
 assert_axioms Zcash.Snark.ActionTerminal.ActionSequentialCuts +native(
@@ -1347,11 +1350,12 @@ assert_axioms Zcash.Snark.algebraicFullPrefixesPre_ne_at +native(CompElliptic.Cu
 -- presented as the opened-batch object and member decodes the Action terminal consumes.
 assert_axioms Zcash.Snark.decodePoints_injective
 assert_axioms Zcash.Snark.decodePoints_zero
--- The rewind-free decode reaching the generic top-level terminal: one accepting
--- execution, no rewind, with only the circuit correctness package and challenge
--- exclusions left as premises.
+-- Circuit-generic straight-line decode terminal.
 assert_axioms Zcash.Snark.topLevelStatements_or_relation_of_decode +native(
   CompElliptic.Fields.Pasta.pallasBase)
+-- The rewind-free decode reaching #99's Action terminal
+-- (`Soundness.Action.StraightLineTerminal`): one accepting execution, no rewind, with
+-- only the challenge exclusions left as premises.
 assert_axioms Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_decode +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionConstantValueFailures_eq_nil,
@@ -1432,7 +1436,7 @@ assert_computable Zcash.Snark.ActionTerminal.actionTerminalWitnessOrRelationFind
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
--- The adaptive route to the same terminal (`Circuits.Integration.AdaptiveActionTerminal`):
+-- The adaptive route to the same terminal (`Soundness.Action.AdaptiveTerminal`):
 -- the decode comes from an adaptively-chosen online-AGM family rather than a fixed schedule.
 assert_axioms Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_adaptiveDecode +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
@@ -1458,18 +1462,16 @@ assert_axioms Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_a
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
--- The exact Action lane: literal false-`BundleStatement` runs are contained in the compressed
--- event, four per-challenge exclusion events, and the executable relation-finder event. The
--- ordinary and knowledge endpoints price that computed relation as a DLOG break
--- (`Soundness.Action.StraightLineEvent`).
--- The generic transports below identify a straight-line run's verifier artifacts with a top-level
--- circuit's derived artifacts. The semantic predicates and relation event are likewise independent
--- of the concrete circuit.
+-- Circuit-generic straight-line terminal transports and semantic events.
 assert_axioms Zcash.Snark.DeployedAlgebraicDecode.reRound
 assert_axioms Zcash.Snark.straightLineAccepts_of_decoded +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.straightLineRunDecodeAt +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- The exact Action lane: literal false-`BundleStatement` runs are contained in the compressed
+-- event, four per-challenge exclusion events, and the executable relation-finder event. The
+-- ordinary and knowledge endpoints price that computed relation as a DLOG break
+-- (`Soundness.Action.StraightLineEvent`).
 assert_axioms Zcash.Snark.ActionTerminal.actionRunDecode +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
@@ -1502,6 +1504,10 @@ assert_axioms Zcash.Snark.topLevelThetaFailureEvent +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.topLevelTerminalRelationFinderCovers +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- The accepted decoded-member node binding reaching the concrete Action bundle statement
+-- (`Soundness.Action.Terminal`): the base terminal the routes below delegate to.
+-- The verifying key is not a parameter and no free semantic proposition remains, so this is
+-- where `BundleStatement` first appears as the conclusion rather than an assumed `hencodes`.
 assert_axioms Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_decodedMemberPolynomial_eq +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
@@ -1526,6 +1532,8 @@ assert_axioms Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_d
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+-- The same rewind-free route, entered one step later: the caller supplies constraint
+-- satisfaction directly instead of the decoded-member polynomial equality.
 assert_axioms Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_decode_circuitSat +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
@@ -1694,6 +1702,9 @@ assert_axioms Zcash.Snark.snarkConstraintsSemanticDeployed_prob_le_of_compressed
 -- appears. Representations remain ghost extractor data, outside the Halo2 proof and verifier.
 assert_axioms Zcash.Snark.StraightLineIpaOnlineTrace.toSqueezeInvariance +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.AlgebraicWfProof.straightLineIpaZeroOrRelation +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- The one-run IPA dichotomy and the two root-event forms derived from it. All three hand back
+-- the relation as coefficients over the public basis, so they carry the computable pin: the
+-- coordinates are terms of the transcript, not an inhabitant chosen from an existence proof.
 assert_computable Zcash.Snark.AlgebraicWfProof.straightLineBindingAttackZRootOrRelation +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.AlgebraicWfProof.straightLineBindingAttackZIndexedRootOrRelation +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.ComputedStraightLineIpaFSFamily.straightLineIpaRelationFinder +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
@@ -1702,11 +1713,7 @@ assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineC
 assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDecodeOfOutcome? +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintOutcome? +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintSuccess? +choice +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
--- The headline adaptive reduction depends on this combined provenance/IPA/terminal finder being
--- executable, so guard that property independently of the endpoint's axiom census.
--- Its provenance stages evaluate once, retain their annotation log, and perform every stage-local
--- lookup over that data. The pointwise log bound and eight-slot arithmetic are pinned alongside
--- executable finder closure so the advertised adaptive resource interpretation cannot drift.
+-- Census the executable cached adaptive finder and its resource bounds.
 assert_axioms Zcash.Snark.ActionTerminal.adaptiveActionCachedProvenanceLog_length_le +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
@@ -1901,12 +1908,20 @@ assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.five_bit_overhead
 
 /-! ## The Action circuit — the halo2-native soundness trust surface
 
-The circuit-layer soundness theorems live at the `native_decide` tier: they consume
-`native_decide` certificates only — the six fixed-base window tables, small `interval_cases`
-facts, and CompElliptic's Pallas point-count witness (`pallas_natCard`). These assertions pin
-exactly that budget for the generic soundness theorems and for the fully-instantiated deployed
-bundle — a `sorry` or any further axiom reached anywhere in the Action stack fails the build
-here. -/
+The circuit-layer soundness theorems live at the `native_decide` tier, and the generic and
+instantiated tiers carry *different* budgets — the assertions below are the authority, not this
+prose:
+
+* The generic theorems (`Circuit.soundness`, `Circuit.soundnessPost`) reach three owners: the
+  Pallas point-count witness `Pallas.q_nsmul_Gpt` and the two `windowScalar_ne_zero` facts. (The
+  `y = 0` exclusion `Pallas.neg_five_not_isCube`, declared in `Zcash/Circuits/Specs/Pallas.lean`
+  inside CompElliptic's namespace, is a kernel proof and carries no certificate.)
+* The six fixed-base window-table certificates (`Certs.*Cert_check`) enter only at the
+  fully-instantiated `orchardActionCircuit`, where the deployed bases are supplied.
+
+Note `pallas_natCard` is a *theorem* here (`Specs/Pallas.lean`), not an axiom owner: it delegates
+to CompElliptic's `card_eq`, whose compiler-trust leaf is `q_nsmul_Gpt`. A `sorry` or any further
+axiom reached anywhere in the Action stack fails the build here. -/
 
 assert_axioms Zcash.Circuits.Action.Circuit.soundness +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
@@ -2048,6 +2063,18 @@ substitution in all downstream compiled code, but the axioms of the lemma's own
 proof are not propagated into downstream `native_decide` axiom tracking (
 [lean4#7463](https://github.com/leanprover/lean4/issues/7463)), so a csimp lemma
 whose proof smuggled `sorryAx` or a project axiom would be invisible to every
-consumer's census entry. Checking the lemma itself closes that hole. -/
+consumer's census entry. Checking the lemma itself closes that hole.
+
+What the substitution changes about *evaluation* is worth stating explicitly, since the census
+records axioms rather than runtimes: `evalNat_eq_evalNatFast` redirects every compiled call site —
+including the fixtures' `native_decide` auxiliaries — to `pippengerFastPar`, whose ~32 windows are
+evaluated through `List.parMap`, i.e. `Task.spawn`/`Task.get` on the real thread pool. That widens
+the *compiled surface* the fixture certificates run over (windowed Pippenger plus the task runtime,
+rather than a naive double-and-add ladder), all of it already inside the `native_decide` trust
+boundary — `Task.spawn`/`Task.get` are `@[extern]`, while the kernel sees the reference bodies and
+`List.parMap_eq_map` closes by `rfl`. Because each task computes a pure, independently determined
+value, a scheduling fault can hang or crash the build but cannot silently change a result; a wrong
+answer requires a memory-safety defect, the same class every `native_decide` already trusts. See
+`Zcash/Common/ParMap.lean` and `Zcash/Arithmetic/FastMsm.lean`. -/
 
 assert_axioms Zcash.Arithmetic.Msm.evalNat_eq_evalNatFast
