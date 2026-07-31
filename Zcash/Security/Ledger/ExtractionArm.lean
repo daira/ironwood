@@ -7,14 +7,12 @@ import Zcash.Security.RedDSA.Basic
 /-!
 # The transaction-balance premiss with a fallible extractor
 
-`ValueShape.premissOrBreak` consumes RedDSA extractability as a total hypothesis —
-every verifying binding signature comes with `bvk = [bsk] R` — which is classically
-satisfiable and carries no computational content (see the module doc of
-`Zcash.Security.Ledger.Value`). This module restates the discharge in
-extractor-plus-knowledge-error form: the extractor is an arbitrary *function*, its
-failures are *exhibited*, and the capstones bound the violation probability by
-`εdlr + κ` — equivalently, a violation yields a computed `(V, R)` relation with
-probability at least `Pr[violation] − κ`.
+The transaction-balance premiss discharge, in extractor-plus-knowledge-error form:
+the extractor is an arbitrary *function*, its failures are *exhibited*, and the
+capstones bound the violation probability by `εdlr + κ` — equivalently, a violation
+yields a computed `(V, R)` relation with probability at least `Pr[violation] − κ`.
+A total extraction hypothesis would be classically satisfiable and carry no
+computational content (see the module doc of `Zcash.Security.Ledger.Value`).
 
 * `BindingSigShape` pins `Primitives.bindingVerify` to an abstract RedDSA scheme
   based at the randomness base `R` (`Zcash.Security.RedDSA.Basic`) — the spec's
@@ -69,11 +67,10 @@ structure BindingSigShape (P : Primitives (ZMod r) G IVK NK RHO PSI MHASH MENC M
 /-- **The transaction-balance premiss discharge, with a fallible extractor.** Decide
 the per-transaction net-value equation. On failure, run the extractor `E` on the
 transaction's verifying binding signature. If `E` pins `bvk = [bsk] R`, the witnessed
-bundle computes the nontrivial `(V, R)` relation, as in `premissOrBreak` and with the
-same no-overflow bound. Otherwise the failure is exhibited as a
-`RedDSA.ExtractionFailure`: a verifying signature whose key the extractor misses —
-the event that the knowledge error `κ` bounds. Unlike `premissOrBreak`'s total
-`hextract`, nothing here is assumed of `E`. -/
+bundle computes the nontrivial `(V, R)` relation, with the no-overflow bound `hr`.
+Otherwise the failure is exhibited as a `RedDSA.ExtractionFailure`: a verifying
+signature whose key the extractor misses — the event that the knowledge error `κ`
+bounds. Nothing is assumed of `E`. -/
 def ValueShape.premissOrBreakFallible [DecidableEq G]
     {ledger : Ledger KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P.depth}
     (S : ValueShape P) (B : BindingSigShape P S)

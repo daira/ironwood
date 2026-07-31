@@ -23,24 +23,18 @@ binding verification key `Tx.bvk` — the sum of the actions' `cv_net`s minus a
 zero-randomness commitment to `vBalance` — is then the binding-signature layer's
 `bindingVK` of the witnessed bundle (`bvk_eq`, via `cv_net_eq`).
 
-`ValueShape.premissOrBreak` produces the premiss: it decides the net-value equation, and on
-failure computes the relation with `NontrivialRelation.ofBundleIntImbalance`. Its
-no-overflow bound comes from the statement's value ranges, validity's action count and
-`vBalance` range, and one numeric hypothesis `(maxActions + 1) * valueBound ≤ r`
-(deployed: `(maxActions + 1) · 2^64 ≪ r ≈ 2^254`). The extraction input — `bvk` is a
-known multiple of `R` — is the function-typed named form of RedDSA extractability
-(`extractBsk`/`hextract`), applied to validity's binding-signature conjunct. The total
-form carries no computational content on its own: in a cyclic group every `bvk` is some
-multiple of `R`, so a total `hextract` holds for a choose-the-witness `extractBsk` no one
-can run. It stands in for the forking extractor with a knowledge error — an `extractBsk`
-efficient against a binding-signature forger, delivering the relation only with the
-extractor's success probability. Proving it by forking is #22's scope (#107/#67 track the
-restructuring into the knowledge-error form).
-
-`ValueShape.conservationOrBreak` and `ValueShape.capOrBreak` compose the premiss into
-the balance-conservation and shielded-balance-cap capstones: the ledger failing to
-balance (or the shielded pool exceeding the minted issuance) computes a nontrivial
-`(V, R)` relation.
+The premiss discharge itself lives in `Zcash.Security.Ledger.ExtractionArm`:
+`ValueShape.premissOrBreakFallible` decides the net-value equation and, on failure,
+computes the relation with `NontrivialRelation.ofBundleIntImbalance`, with the
+extractor's failures exhibited as data. Its no-overflow bound comes from the
+statement's value ranges, validity's action count and `vBalance` range, and one
+numeric hypothesis `(maxActions + 1) * valueBound ≤ r` (deployed:
+`(maxActions + 1) · 2^64 ≪ r ≈ 2^254`). A *total* extraction hypothesis — every
+verifying `bvk` comes with its scalar — would carry no computational content: in a
+cyclic group every `bvk` is some multiple of `R`, so the total form holds for a
+choose-the-witness extractor that no one can run. That is why the extractor is a
+bare function and its failures are events with a named probability `κ` (#22, with
+#107/#67 tracking the surrounding glue).
 -/
 
 namespace Zcash.Security.Ledger.Model
@@ -120,75 +114,5 @@ theorem txNetValue_natAbs_le
         _ = (a :: t).length * P.valueBound := by
             simp only [List.length_cons]
             ring
-
-/-- **The transaction-balance premiss discharge.** Decide the per-transaction
-net-value equation; on failure, compute the nontrivial `(V, R)` relation from the
-witnessed bundle. The no-overflow bound is discharged from the statement's value
-ranges and validity's action-count and `vBalance` range rules; the extraction input
-applies the named RedDSA-extractability form (`extractBsk`/`hextract`) to validity's
-binding-signature conjunct. `hextract` is a placeholder, not a theorem: as a total
-hypothesis it is classically satisfiable, computational only relative to an efficient
-`extractBsk` (see the module doc). -/
-def ValueShape.premissOrBreak {issuance : ℕ → ℕ} {maxActions : ℕ}
-    {ledger : Ledger KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P.depth}
-    (S : ValueShape P)
-    (hval : ValidLedger P kv issuance maxActions ledger)
-    (hr : (maxActions + 1) * P.valueBound ≤ r)
-    (extractBsk : G → MSG → SIG → ZMod r)
-    (hextract : ∀ bvk msg sig, P.bindingVerify bvk msg sig
-      → bvk = extractBsk bvk msg sig • S.R)
-    (tx : Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P.depth) (htx : tx ∈ ledger) :
-    (txNetValue tx = tx.vBalance) ⊕' BindingSignature.NontrivialRelation (F := ZMod r) S.V S.R :=
-  if heq : txNetValue tx = tx.vBalance then .inl heq
-  else
-    .inr (NontrivialRelation.ofBundleIntImbalance S.V S.R (txBundle tx) [] tx.vBalance
-      (extractBsk (tx.bvk P) tx.sighash tx.bindingSig)
-      (by
-        simp only [List.map_nil, List.sum_nil, sub_zero, txBundle_fst_sum]
-        exact sub_ne_zero.mpr heq)
-      (by
-        simp only [List.map_nil, List.sum_nil, sub_zero, txBundle_fst_sum]
-        have h1 := txNetValue_natAbs_le (P := P) (kv := kv) (hval.satisfied tx htx)
-        have h2 := hval.vbalance_bound tx htx
-        have hb : tx.actions.length * P.valueBound ≤ maxActions * P.valueBound :=
-          Nat.mul_le_mul_right _ (hval.action_bound tx htx)
-        calc (txNetValue tx - tx.vBalance).natAbs
-            ≤ (txNetValue tx).natAbs + tx.vBalance.natAbs := Int.natAbs_sub_le _ _
-          _ < maxActions * P.valueBound + P.valueBound :=
-              Nat.add_lt_add_of_le_of_lt (le_trans h1 hb) h2
-          _ = (maxActions + 1) * P.valueBound := by ring
-          _ ≤ r := hr)
-      ((bvk_eq S (hval.satisfied tx htx)).symm.trans
-        (hextract _ _ _ (hval.binding_verified tx htx))))
-
-/-- **Balance conservation at the Pedersen shape.** The ledger failing to balance
-computes a nontrivial `(V, R)` relation. -/
-def ValueShape.conservationOrBreak {issuance : ℕ → ℕ} {maxActions : ℕ}
-    {ledger : Ledger KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P.depth}
-    (S : ValueShape P)
-    (hval : ValidLedger P kv issuance maxActions ledger)
-    (hr : (maxActions + 1) * P.valueBound ≤ r)
-    (extractBsk : G → MSG → SIG → ZMod r)
-    (hextract : ∀ bvk msg sig, P.bindingVerify bvk msg sig
-      → bvk = extractBsk bvk msg sig • S.R) (i : ℕ) :
-    (shieldedPoolBalance ledger i + transparentPoolBalance issuance ledger i
-        = issuanceTotal issuance ledger i)
-      ⊕' BindingSignature.NontrivialRelation (F := ZMod r) S.V S.R :=
-  balanceConservationOrBreak (S.premissOrBreak hval hr extractBsk hextract) i
-
-/-- **Shielded balance cap at the Pedersen shape.** The shielded pool exceeding the
-minted issuance computes a nontrivial `(V, R)` relation — the conservation-and-cap
-chain composed, with the abstract `VB` instantiated at the shape level. -/
-def ValueShape.capOrBreak {issuance : ℕ → ℕ} {maxActions : ℕ}
-    {ledger : Ledger KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P.depth}
-    (S : ValueShape P)
-    (hval : ValidLedger P kv issuance maxActions ledger)
-    (hr : (maxActions + 1) * P.valueBound ≤ r)
-    (extractBsk : G → MSG → SIG → ZMod r)
-    (hextract : ∀ bvk msg sig, P.bindingVerify bvk msg sig
-      → bvk = extractBsk bvk msg sig • S.R) (i : ℕ) :
-    (shieldedPoolBalance ledger i ≤ issuanceTotal issuance ledger i)
-      ⊕' BindingSignature.NontrivialRelation (F := ZMod r) S.V S.R :=
-  shieldedBalanceCapOrBreak hval (S.premissOrBreak hval hr extractBsk hextract) i
 
 end Zcash.Security.Ledger.Model

@@ -258,19 +258,6 @@ argument's terminal. `+choice` is the erased-positions tier: choice arrives with
 
 assert_computable Zcash.Security.Ledger.Model.NontrivialRelation.ofNullifierCollision +choice
 
-/-! ## The transaction-balance premiss discharge
-
-Computed reductions at the Pedersen value-commitment shape: the transaction-balance
-premiss lands in the binding-signature layer's nontrivial `(V, R)` relation via
-`ofBundleIntImbalance`, with the no-overflow bound discharged from the statement's
-value ranges, validity's action-count and `vBalance` range rules, and the named
-numeric hypothesis `(maxActions + 1) * valueBound ≤ r`. `+choice` is the
-erased-positions tier. -/
-
-assert_computable Zcash.Security.Ledger.Model.ValueShape.premissOrBreak +choice
-assert_computable Zcash.Security.Ledger.Model.ValueShape.conservationOrBreak +choice
-assert_computable Zcash.Security.Ledger.Model.ValueShape.capOrBreak +choice
-
 /-! ## Spend Authority
 
 The per-action core and the valid-ledger capstone are computable reductions; the
@@ -455,12 +442,16 @@ assert_axioms Zcash.Security.RedDSA.Scheme.verify_sign_randomized
 
 /-! ## The transaction-balance premiss in extractor-plus-knowledge-error form
 
-The fallible-extractor restatement of the transaction-balance premiss discharge: the extractor is
-an arbitrary function, its failures are exhibited `RedDSA.ExtractionFailure` data,
-and the Balance capstones bound the violation by `εdlr + κ`, per prefix and at all
-prefixes with no factor of `k`. The Orchard instantiation names the same bounds at
-the Orchard-protocol primitives, deepening the integrity bound's `ε_bindsig` cut to
-`εdlr + κ`. `+choice` is the erased-positions tier. -/
+The transaction-balance premiss discharge with a fallible extractor: the extractor
+is an arbitrary function, its failures are exhibited `RedDSA.ExtractionFailure`
+data, and the Balance capstones bound the violation by `εdlr + κ`, per prefix and at
+all prefixes with no factor of `k`. The premiss lands in the binding-signature
+layer's nontrivial `(V, R)` relation via `ofBundleIntImbalance`, with the
+no-overflow bound discharged from the statement's value ranges, validity's
+action-count and `vBalance` range rules, and the named numeric hypothesis
+`(maxActions + 1) * valueBound ≤ r`. The Orchard instantiation names the same bounds
+at the Orchard-protocol primitives; the integrity bound takes `εdlr + κ` in place of
+the opaque `ε_bindsig`. `+choice` is the erased-positions tier. -/
 
 assert_computable Zcash.Security.Ledger.Model.ValueShape.premissOrBreakFallible +choice
 assert_computable Zcash.Security.Ledger.Model.txBalancePremissFallible +choice

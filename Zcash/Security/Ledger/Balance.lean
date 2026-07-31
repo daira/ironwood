@@ -421,13 +421,13 @@ net value matches its declared `vBalance`, or a balance break of the caller's ty
 is exhibited. The intended deployed discharge is the binding-signature machinery
 (`NontrivialRelation.ofBundleIntImbalance` with the statement's value ranges and the
 action-count bound), with a nontrivial discrete-log relation as the break. That glue
-is formalized —`ValueShape.premissOrBreak` in `Value.lean`, against
-`ValidLedger.binding_verified`— but only relative to the named `extractBsk`/`hextract`
-extractability hypothesis. That hypothesis is a placeholder rather than a theorem: as
-a total hypothesis it is classically satisfiable, and it carries computational force
-only for an efficient `extractBsk` (see `Value.lean`'s module doc).
+is formalized —`ValueShape.premissOrBreakFallible` in `ExtractionArm.lean`, against
+`ValidLedger.binding_verified`— with the extractor a bare function and its failures
+exhibited as data, bounded by the named knowledge error `κ` (see `Value.lean`'s
+module doc for why a total extraction hypothesis would carry no computational
+content).
 
-Modulo that hypothesis, and given the transparent pool balance never goes negative
+Modulo that named bound, and given the transparent pool balance never goes negative
 (`ValidLedger.transparent_nonneg`), a corollary is that the shielded pool holds at
 most what was minted. -/
 
