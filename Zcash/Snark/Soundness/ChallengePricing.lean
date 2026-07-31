@@ -214,9 +214,9 @@ theorem perm_beta_failure_measure_le (sp tp : Multiset (Fp × Fp)) :
 /-- The lookup product difference has `γ`-degree bounded by the larger table column. The two input
 columns occur only in its coefficients. -/
 theorem natDegree_lookupProdDiff_le (a s inp tbl : Multiset Fp) :
-    (lookupProdDiff a s inp tbl).natDegree ≤
+    (nestedPoly (lookupProdDiff a s inp tbl)).natDegree ≤
       max (Multiset.card s) (Multiset.card tbl) := by
-  rw [lookupProdDiff]
+  rw [nestedPoly_lookupProdDiff]
   refine le_trans (Polynomial.natDegree_sub_le _ _) (max_le ?_ ?_)
   · refine le_trans (Polynomial.natDegree_C_mul_le _ _) ?_
     exact le_trans (by
@@ -230,7 +230,7 @@ theorem natDegree_lookupProdDiff_le (a s inp tbl : Multiset Fp) :
 /-- Out-of-range `γ` coefficients of the lookup product difference vanish. -/
 theorem lookupProdDiff_coeff_eq_zero_of_le (a s inp tbl : Multiset Fp) {j : ℕ}
     (hj : max (Multiset.card s) (Multiset.card tbl) < j) :
-    (lookupProdDiff a s inp tbl).coeff j = 0 :=
+    (nestedPoly (lookupProdDiff a s inp tbl)).coeff j = 0 :=
   Polynomial.coeff_eq_zero_of_natDegree_lt
     (lt_of_le_of_lt (natDegree_lookupProdDiff_le a s inp tbl) hj)
 
@@ -238,10 +238,11 @@ theorem lookupProdDiff_coeff_eq_zero_of_le (a s inp tbl : Multiset Fp) {j : ℕ}
 input column. The table factors have coefficients that are constant in `β`. -/
 theorem natDegree_coeff_lookupProdDiff_le
     (a s inp tbl : Multiset Fp) (j : ℕ) :
-    ((lookupProdDiff a s inp tbl).coeff j).natDegree ≤
+    ((nestedPoly (lookupProdDiff a s inp tbl)).coeff j).natDegree ≤
       max (Multiset.card a) (Multiset.card inp) := by
   have tableCoeff : ∀ (m : Multiset Fp) (j : ℕ),
-      (((m.map (fun u => X + C (C u))).prod).coeff j).natDegree ≤ 0 := by
+      (((m.map (fun u => Polynomial.X
+          + Polynomial.C (Polynomial.C u))).prod).coeff j).natDegree ≤ 0 := by
     intro m
     induction m using Multiset.induction with
     | empty =>
@@ -259,13 +260,14 @@ theorem natDegree_coeff_lookupProdDiff_le
             exact ih j
         · rw [Polynomial.coeff_C_mul]
           exact le_trans (Polynomial.natDegree_C_mul_le _ _) (ih j)
-  rw [lookupProdDiff, Polynomial.coeff_sub, Polynomial.coeff_C_mul,
+  rw [nestedPoly_lookupProdDiff, Polynomial.coeff_sub, Polynomial.coeff_C_mul,
     Polynomial.coeff_C_mul]
   refine le_trans (Polynomial.natDegree_sub_le _ _) (max_le ?_ ?_)
   · refine le_trans Polynomial.natDegree_mul_le ?_
     calc
-      ((a.map (fun u => X + C u)).prod).natDegree
-          + (((s.map (fun u => X + C (C u))).prod).coeff j).natDegree
+      ((a.map (fun u => Polynomial.X + Polynomial.C u)).prod).natDegree
+          + (((s.map (fun u => Polynomial.X
+              + Polynomial.C (Polynomial.C u))).prod).coeff j).natDegree
         ≤ Multiset.card a + 0 := Nat.add_le_add (by rw [natDegree_prod_X_add_u])
           (tableCoeff s j)
       _ = Multiset.card a := Nat.add_zero _

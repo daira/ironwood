@@ -59,12 +59,12 @@ theorem ResolverLookupDomain.ofCanonicalSelectors
 
 /-- The product-difference polynomial whose roots are excluded at the selected lookup's `γ`
 squeeze.  It is fixed after `β`. -/
-noncomputable def resolverLookupProductDifference
+def resolverLookupProductDifference
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) :
-    Polynomial (Polynomial Fp) :=
+    CBiPoly :=
   lookupProdDiff
     (Finset.univ.val.map
       (lookupColumnRows vk.omega (poly (.lookupPermInput p l)) (u + 1)))
@@ -103,7 +103,8 @@ theorem toPoly_resolverLookupProductDifferenceGamma
     (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) :
     (resolverLookupProductDifferenceGamma vk ch poly p l u).toPoly =
-      (resolverLookupProductDifference vk ch poly p l u).map (Polynomial.evalRingHom ch.beta) := by
+      (nestedPoly (resolverLookupProductDifference vk ch poly p l u)).map
+        (Polynomial.evalRingHom ch.beta) := by
   rw [resolverLookupProductDifferenceGamma, resolverLookupProductDifference,
     toPoly_lookupProdDiffGamma]
 
@@ -132,7 +133,7 @@ theorem toPoly_resolverLookupProductDifferenceCoeff
     (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u j : ℕ) :
     (resolverLookupProductDifferenceCoeff vk ch poly p l u j).toPoly =
-      (resolverLookupProductDifference vk ch poly p l u).coeff j := by
+      (nestedPoly (resolverLookupProductDifference vk ch poly p l u)).coeff j := by
   rw [resolverLookupProductDifferenceCoeff, resolverLookupProductDifference]
   apply toPoly_lookupProdDiffCoeff
 
