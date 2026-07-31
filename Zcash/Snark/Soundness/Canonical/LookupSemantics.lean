@@ -102,11 +102,11 @@ theorem toPoly_resolverLookupProductDifferenceGamma
     (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
     (poly : CommitmentId → CPoly)
     (p : Fin shape.numProofs) (l : Fin shape.numLookups) (u : ℕ) :
-    (resolverLookupProductDifferenceGamma vk ch poly p l u).toPoly =
-      (nestedPoly (resolverLookupProductDifference vk ch poly p l u)).map
-        (Polynomial.evalRingHom ch.beta) := by
+    resolverLookupProductDifferenceGamma vk ch poly p l u =
+      CompPoly.CPolynomial.map (evalRingHom ch.beta)
+        (resolverLookupProductDifference vk ch poly p l u) := by
   rw [resolverLookupProductDifferenceGamma, resolverLookupProductDifference,
-    toPoly_lookupProdDiffGamma]
+    lookupProdDiffGamma_eq_map]
 
 /-- One `γ` coefficient of the selected lookup difference, computed directly over `Fp`. -/
 def resolverLookupProductDifferenceCoeff

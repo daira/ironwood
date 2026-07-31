@@ -27,11 +27,11 @@ This module is that bridge, and it costs two Schwartz–Zippel steps, one per ch
 Both bad sets are root sets of nonzero polynomials of degree at most the multiset sizes, so each is
 counted by `szBadSet_card_le` exactly like the vanishing check's.
 
-The nested `Polynomial (Polynomial Fp)` differences (`pairProdDiff`, `lookupProdDiff`) carry `β` and
-`γ` as separate indeterminates and exist only to be reasoned about. What the bad sets range over is
-their coefficient families, which are computable: a `γ` coefficient is an elementary symmetric
-polynomial in the `β`-linear encodings, guarded to zero above the multiset size where the monic
-product has no coefficients left.
+The differences `pairProdDiff` and `lookupProdDiff` are bivariate, carrying `β` and `γ` as separate
+indeterminates: the outer variable is `γ`, the coefficients are polynomials in `β`. A `γ`
+coefficient is an elementary symmetric function of the `β`-linear encodings (Vieta), zero above the
+multiset size where the monic product has no coefficients left. Fixing `β` is mapping the
+coefficient ring by evaluation at `β`.
 -/
 
 namespace Zcash.Snark
@@ -44,27 +44,6 @@ def pairProdDiff (sp tp : Multiset (Fp × Fp)) : CBiPoly :=
   (sp.map (fun p => X + C (encPair p : CPoly))).prod
     - (tp.map (fun p => X + C (encPair p : CPoly))).prod
 
-
-theorem nestedPoly_pairProdDiff (sp tp : Multiset (Fp × Fp)) :
-    nestedPoly (pairProdDiff sp tp) =
-      (sp.map (fun p => Polynomial.X + Polynomial.C (encPair p).toPoly)).prod
-        - (tp.map (fun p => Polynomial.X + Polynomial.C (encPair p).toPoly)).prod := by
-  set F : CBiPoly →+* Polynomial (Polynomial Fp) :=
-    (Polynomial.mapRingHom (CPolynomial.ringEquiv (R := Fp)).toRingHom).comp
-      (CPolynomial.ringEquiv (R := CPoly)).toRingHom with hF
-  have hring : ∀ p : CBiPoly, nestedPoly p = F p := fun _ => rfl
-  have hfac : ∀ p : Fp × Fp,
-      F (X + C (encPair p)) = Polynomial.X + Polynomial.C (encPair p).toPoly := by
-    intro p
-    rw [← hring]
-    simp [nestedPoly, encPair, encPair, CPolynomial.ringEquiv]
-  have hmap : ∀ m : Multiset (Fp × Fp),
-      F ((m.map (fun p => X + C (encPair p : CPoly))).prod)
-        = (m.map (fun p => Polynomial.X + Polynomial.C (encPair p).toPoly)).prod := by
-    intro m
-    rw [_root_.map_multiset_prod, Multiset.map_map]
-    exact congrArg Multiset.prod (Multiset.map_congr rfl fun p _ => hfac p)
-  rw [pairProdDiff, hring, _root_.map_sub, hmap sp, hmap tp]
 
 /-- The `j`-th `γ` coefficient of the pair difference: an elementary symmetric polynomial in the
 `β`-linear pair encodings on each side, zero above that side's multiset size. -/
@@ -185,27 +164,6 @@ def lookupProdDiff (a s inp tbl : Multiset Fp) : CBiPoly :=
   C (a.map (fun u => X + C u)).prod * (s.map (fun u => X + C (C u))).prod
     - C (inp.map (fun u => X + C u)).prod * (tbl.map (fun u => X + C (C u))).prod
 
-theorem nestedPoly_lookupProdDiff (a s inp tbl : Multiset Fp) :
-    nestedPoly (lookupProdDiff a s inp tbl) =
-      Polynomial.C (a.map (fun u => Polynomial.X + Polynomial.C u)).prod
-          * (s.map (fun u => Polynomial.X + Polynomial.C (Polynomial.C u))).prod
-        - Polynomial.C (inp.map (fun u => Polynomial.X + Polynomial.C u)).prod
-          * (tbl.map (fun u => Polynomial.X + Polynomial.C (Polynomial.C u))).prod := by
-  have hlin : ∀ m : Multiset Fp,
-      nestedPoly (C (m.map (fun u => X + C u)).prod)
-        = Polynomial.C (m.map (fun u => Polynomial.X + Polynomial.C u)).prod := by
-    intro m
-    rw [nestedPoly_C, toPoly_multiset_prod, Multiset.map_map]
-    simp
-  have hnest : ∀ m : Multiset Fp,
-      nestedPoly ((m.map (fun u => (X + C (C u) : CBiPoly))).prod)
-        = (m.map (fun u => Polynomial.X + Polynomial.C (Polynomial.C u))).prod := by
-    intro m
-    rw [nestedPoly_multiset_prod, Multiset.map_map]
-    refine congrArg Multiset.prod (Multiset.map_congr rfl fun u _ => ?_)
-    rw [Function.comp_apply, nestedPoly_add, nestedPoly_X, nestedPoly_C, C_toPoly]
-  rw [lookupProdDiff, nestedPoly_sub, nestedPoly_mul, nestedPoly_mul, hlin a, hlin inp,
-    hnest s, hnest tbl]
 
 /-- A `γ` coefficient of the lookup difference, without constructing a nested polynomial. -/
 def lookupProdDiffCoeff (a s inp tbl : Multiset Fp) (j : ℕ) : CPoly :=
@@ -253,27 +211,6 @@ theorem lookupProdDiffGamma_eq_map (a s inp tbl : Multiset Fp) (beta : Fp) :
     CompPoly.CPolynomial.map_C, hprod s, hprod tbl, coe_evalRingHom]
 
 
-theorem toPoly_lookupProdDiffGamma (a s inp tbl : Multiset Fp) (beta : Fp) :
-    (lookupProdDiffGamma a s inp tbl beta).toPoly =
-      (nestedPoly (lookupProdDiff a s inp tbl)).map (Polynomial.evalRingHom beta) := by
-  have hconv : ∀ m : Multiset Fp,
-      ((m.map (fun u => Polynomial.X + Polynomial.C (Polynomial.C u))).prod).map
-          (Polynomial.evalRingHom beta) =
-        (m.map (fun u => Polynomial.X + Polynomial.C u)).prod := by
-    intro m
-    rw [Polynomial.map_multiset_prod, Multiset.map_map]
-    refine congrArg Multiset.prod (Multiset.map_congr rfl fun u _ => ?_)
-    simp [Polynomial.map_add]
-  have hfac : ∀ m : Multiset Fp,
-      (m.map (fun u => X + C u)).map CPolynomial.toPoly
-        = m.map (fun u => Polynomial.X + Polynomial.C u) := by
-    intro m; simp [Multiset.map_map]
-  rw [lookupProdDiffGamma, toPoly_sub, toPoly_mul, toPoly_mul, C_toPoly, C_toPoly,
-    toPoly_multiset_prod, toPoly_multiset_prod, hfac, hfac, nestedPoly_lookupProdDiff,
-    Polynomial.map_sub, Polynomial.map_mul, Polynomial.map_mul, hconv s, hconv tbl,
-    Polynomial.map_C, Polynomial.map_C]
-  rw [eval_toPoly, eval_toPoly, toPoly_multiset_prod, toPoly_multiset_prod, hfac, hfac]
-  rfl
 
 /-- Evaluating the lookup difference at the sampled challenges is the verifier's own product
 comparison. -/
@@ -297,11 +234,10 @@ theorem lookup_multisets_of_prod_eval_eq {a s inp tbl : Multiset Fp} {β γ : Fp
     lookupProdDiff a s inp tbl = 0 := by
   have hev : eval γ (lookupProdDiffGamma a s inp tbl β) = 0 := by
     rw [eval_lookupProdDiff, h, sub_self]
-  have hmap : (nestedPoly (lookupProdDiff a s inp tbl)).map (Polynomial.evalRingHom β) = 0 := by
+  have hmap : CompPoly.CPolynomial.map (evalRingHom β) (lookupProdDiff a s inp tbl) = 0 := by
     by_contra hne
     refine (not_mem_szBadSet.mp hgoodγ) ?_ hev
-    rw [Ne, ← toPoly_eq_zero_iff, toPoly_lookupProdDiffGamma]
-    exact hne
+    rwa [Ne, lookupProdDiffGamma_eq_map]
   by_contra hne
   obtain ⟨j, hj⟩ : ∃ j, CPolynomial.coeff (lookupProdDiff a s inp tbl) j ≠ 0 := by
     by_contra hall
@@ -310,9 +246,12 @@ theorem lookup_multisets_of_prod_eval_eq {a s inp tbl : Multiset Fp} {β γ : Fp
     rw [toPoly_lookupProdDiffCoeff]
     exact hj
   refine (not_mem_szBadSet.mp (hgoodβ j)) hjC ?_
-  have hcoeff := congrArg (fun q => Polynomial.coeff q j) hmap
-  rw [eval_toPoly, toPoly_lookupProdDiffCoeff, ← coeff_nestedPoly]
-  simpa [Polynomial.coeff_map] using hcoeff
+  have hcoeff : CPolynomial.coeff
+      (CompPoly.CPolynomial.map (evalRingHom β) (lookupProdDiff a s inp tbl)) j
+      = CPolynomial.coeff (0 : CPoly) j := by rw [hmap]
+  rw [CompPoly.CPolynomial.coeff_map, coe_evalRingHom, coeff_zero] at hcoeff
+  rw [toPoly_lookupProdDiffCoeff]
+  exact hcoeff
 
 /-- **The lookup product separates the columns.** The `γ`-leading coefficient of each side is that
 side's `β`-product, so the difference vanishing forces the input columns to match and then, after

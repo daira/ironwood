@@ -427,6 +427,13 @@ theorem natDegree_le_iff_coeff_eq_zero [Semiring R] [BEq R] [LawfulBEq R]
 
 /-! ## Degree arithmetic -/
 
+/-- Mapping the coefficients cannot raise the degree. -/
+theorem natDegree_map_le {S : Type*} [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommSemiring S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S) (p : CPolynomial R) :
+    (map f p).natDegree ≤ p.natDegree :=
+  natDegree_le_iff_coeff_eq_zero.mpr fun n hn => by
+    rw [coeff_map, coeff_eq_zero_of_natDegree_lt hn, _root_.map_zero]
+
 theorem natDegree_sub_le [Ring R] [BEq R] [LawfulBEq R] (p q : CPolynomial R) :
     (p - q).natDegree ≤ max p.natDegree q.natDegree := by
   rw [natDegree_toPoly, natDegree_toPoly, natDegree_toPoly, toPoly_sub]

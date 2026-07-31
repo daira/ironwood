@@ -43,8 +43,7 @@ carries the whole challenge-pricing story.
 namespace Zcash.Snark
 
 open Halo2 Polynomial Finset CompPoly
-open CompPoly.CPolynomial (nestedPoly coeff_nestedPoly natDegree_nestedPoly natDegree_toPoly
-  toPoly_eq_zero_iff)
+open CompPoly.CPolynomial (natDegree_toPoly toPoly_eq_zero_iff)
 open scoped ENNReal
 
 /-- **The shared union bound.** Finitely many root-set events, each of degree at most `d`, together
@@ -175,20 +174,20 @@ theorem natDegree_coeff_pairProdDiff_le (sp tp : Multiset (Fp × Fp)) (j : ℕ) 
 theorem pairProdDiff_coeff_eq_zero_of_le (sp tp : Multiset (Fp × Fp)) {j : ℕ}
     (hj : max (Multiset.card sp) (Multiset.card tp) < j) :
     CPolynomial.coeff (pairProdDiff sp tp) j = 0 := by
-  rw [← toPoly_eq_zero_iff, ← coeff_nestedPoly]
-  have key : ∀ (m : Multiset (Fp × Fp)), Multiset.card m < j →
-      ((m.map (fun q => Polynomial.X + Polynomial.C (encPair q).toPoly)).prod).coeff j = 0 := by
+  have key : ∀ m : Multiset (Fp × Fp), Multiset.card m < j →
+      CPolynomial.coeff ((m.map (fun p =>
+        (CompPoly.CPolynomial.X + CompPoly.CPolynomial.C (encPair p) : CBiPoly))).prod) j = 0 := by
     intro m hm
-    refine Polynomial.coeff_eq_zero_of_natDegree_lt (lt_of_le_of_lt ?_ hm)
-    have hmap : ∀ m : Multiset (Fp × Fp),
-        m.map (fun q => Polynomial.X + Polynomial.C (encPair q).toPoly)
-          = (m.map (fun q => (encPair q).toPoly)).map (fun u => Polynomial.X + Polynomial.C u) := by
-      intro m; simp [Multiset.map_map]
-    rw [hmap, natDegree_prod_X_add_uPoly]
-    simp
-  rw [nestedPoly_pairProdDiff, Polynomial.coeff_sub,
+    have hmap : m.map (fun p =>
+        (CompPoly.CPolynomial.X + CompPoly.CPolynomial.C (encPair p) : CBiPoly))
+        = (m.map encPair).map (fun u => CompPoly.CPolynomial.X + CompPoly.CPolynomial.C u) := by
+      rw [Multiset.map_map]; rfl
+    rw [hmap]
+    exact CompPoly.CPolynomial.coeff_prod_X_add_C_eq_zero _ (by simpa using hm)
+  rw [pairProdDiff, CompPoly.CPolynomial.coeff_sub,
     key sp (lt_of_le_of_lt (le_max_left _ _) hj), key tp (lt_of_le_of_lt (le_max_right _ _) hj),
     sub_self]
+
 
 /-- **The permutation `β` surface priced.** Some coefficient of the pair-product difference roots
 `β` — at most `(|cells| + 1) · |cells| / p`. -/
@@ -224,25 +223,31 @@ columns occur only in its coefficients. -/
 theorem natDegree_lookupProdDiff_le (a s inp tbl : Multiset Fp) :
     (lookupProdDiff a s inp tbl).natDegree ≤
       max (Multiset.card s) (Multiset.card tbl) := by
-  rw [← natDegree_nestedPoly]
-  rw [nestedPoly_lookupProdDiff]
-  refine le_trans (Polynomial.natDegree_sub_le _ _) (max_le ?_ ?_)
-  · refine le_trans (Polynomial.natDegree_C_mul_le _ _) ?_
-    exact le_trans (by
-      simpa [Multiset.map_map] using
-        (natDegree_prod_X_add_uPoly (s.map Polynomial.C)).le) (le_max_left _ _)
-  · refine le_trans (Polynomial.natDegree_C_mul_le _ _) ?_
-    exact le_trans (by
-      simpa [Multiset.map_map] using
-        (natDegree_prod_X_add_uPoly (tbl.map Polynomial.C)).le) (le_max_right _ _)
+  have key : ∀ m : Multiset Fp,
+      CompPoly.CPolynomial.natDegree ((m.map (fun u =>
+        (CompPoly.CPolynomial.X + CompPoly.CPolynomial.C (CompPoly.CPolynomial.C u)
+          : CBiPoly))).prod) = Multiset.card m := by
+    intro m
+    have hmap : m.map (fun u => (CompPoly.CPolynomial.X
+        + CompPoly.CPolynomial.C (CompPoly.CPolynomial.C u) : CBiPoly))
+        = (m.map CompPoly.CPolynomial.C).map
+            (fun u => CompPoly.CPolynomial.X + CompPoly.CPolynomial.C u) := by
+      rw [Multiset.map_map]; rfl
+    rw [hmap, CompPoly.CPolynomial.natDegree_prod_X_add_C, Multiset.card_map]
+  rw [lookupProdDiff]
+  refine le_trans (CompPoly.CPolynomial.natDegree_sub_le _ _) (max_le ?_ ?_)
+  · exact le_trans (CompPoly.CPolynomial.natDegree_C_mul_le _ _)
+      (le_trans (le_of_eq (key s)) (le_max_left _ _))
+  · exact le_trans (CompPoly.CPolynomial.natDegree_C_mul_le _ _)
+      (le_trans (le_of_eq (key tbl)) (le_max_right _ _))
+
 
 /-- Out-of-range `γ` coefficients of the lookup product difference vanish. -/
 theorem lookupProdDiff_coeff_eq_zero_of_le (a s inp tbl : Multiset Fp) {j : ℕ}
     (hj : max (Multiset.card s) (Multiset.card tbl) < j) :
     CPolynomial.coeff (lookupProdDiff a s inp tbl) j = 0 := by
-  rw [← toPoly_eq_zero_iff, ← coeff_nestedPoly]
-  exact Polynomial.coeff_eq_zero_of_natDegree_lt
-    (lt_of_le_of_lt (by rw [natDegree_nestedPoly]; exact natDegree_lookupProdDiff_le a s inp tbl) hj)
+  exact CompPoly.CPolynomial.coeff_eq_zero_of_natDegree_lt
+    (lt_of_le_of_lt (natDegree_lookupProdDiff_le a s inp tbl) hj)
 
 /-- Every `γ` coefficient of the lookup product difference has `β`-degree bounded by the larger
 input column. The table factors have coefficients that are constant in `β`. -/
@@ -250,47 +255,39 @@ theorem natDegree_coeff_lookupProdDiff_le
     (a s inp tbl : Multiset Fp) (j : ℕ) :
     (CPolynomial.coeff (lookupProdDiff a s inp tbl) j).natDegree ≤
       max (Multiset.card a) (Multiset.card inp) := by
-  rw [natDegree_toPoly, ← coeff_nestedPoly]
-  have tableCoeff : ∀ (m : Multiset Fp) (j : ℕ),
-      (((m.map (fun u => Polynomial.X
-          + Polynomial.C (Polynomial.C u))).prod).coeff j).natDegree ≤ 0 := by
+  -- The table factors are constant in `β`, so every one of their `γ` coefficients is too.
+  have tableCoeff : ∀ m : Multiset Fp,
+      CompPoly.CPolynomial.natDegree (CPolynomial.coeff ((m.map (fun u =>
+        (CompPoly.CPolynomial.X + CompPoly.CPolynomial.C (CompPoly.CPolynomial.C u)
+          : CBiPoly))).prod) j) ≤ 0 := by
     intro m
-    induction m using Multiset.induction with
-    | empty =>
-        intro j
-        rcases eq_or_ne j 0 with rfl | hj
-        · simp
-        · simp [Polynomial.coeff_one, hj]
-    | cons u m ih =>
-        intro j
-        rw [Multiset.map_cons, Multiset.prod_cons, add_mul, Polynomial.coeff_add]
-        refine le_trans (Polynomial.natDegree_add_le _ _) (max_le ?_ ?_)
-        · rcases j with _ | j
-          · simp [Polynomial.mul_coeff_zero, Polynomial.coeff_X_zero]
-          · rw [Polynomial.coeff_X_mul]
-            exact ih j
-        · rw [Polynomial.coeff_C_mul]
-          exact le_trans (Polynomial.natDegree_C_mul_le _ _) (ih j)
-  rw [nestedPoly_lookupProdDiff, Polynomial.coeff_sub, Polynomial.coeff_C_mul,
-    Polynomial.coeff_C_mul]
-  refine le_trans (Polynomial.natDegree_sub_le _ _) (max_le ?_ ?_)
-  · refine le_trans Polynomial.natDegree_mul_le ?_
-    calc
-      ((a.map (fun u => Polynomial.X + Polynomial.C u)).prod).natDegree
-          + (((s.map (fun u => Polynomial.X
-              + Polynomial.C (Polynomial.C u))).prod).coeff j).natDegree
-        ≤ Multiset.card a + 0 := Nat.add_le_add (by rw [natDegree_prod_X_add_uPoly])
-          (tableCoeff s j)
-      _ = Multiset.card a := Nat.add_zero _
-      _ ≤ max (Multiset.card a) (Multiset.card inp) := le_max_left _ _
-  · refine le_trans Polynomial.natDegree_mul_le ?_
-    calc
-      ((inp.map (fun u => X + C u)).prod).natDegree
-          + (((tbl.map (fun u => X + C (C u))).prod).coeff j).natDegree
-        ≤ Multiset.card inp + 0 := Nat.add_le_add (by rw [natDegree_prod_X_add_uPoly])
-          (tableCoeff tbl j)
-      _ = Multiset.card inp := Nat.add_zero _
-      _ ≤ max (Multiset.card a) (Multiset.card inp) := le_max_right _ _
+    have hmap : m.map (fun u => (CompPoly.CPolynomial.X
+        + CompPoly.CPolynomial.C (CompPoly.CPolynomial.C u) : CBiPoly))
+        = (m.map CompPoly.CPolynomial.C).map
+            (fun u => CompPoly.CPolynomial.X + CompPoly.CPolynomial.C u) := by
+      rw [Multiset.map_map]; rfl
+    rw [hmap]
+    rcases le_or_gt j (Multiset.card (m.map (CompPoly.CPolynomial.C : Fp → CPoly))) with hj | hj
+    · rw [CompPoly.CPolynomial.coeff_prod_X_add_C _ hj]
+      refine le_trans (CompPoly.CPolynomial.natDegree_esymm_le (d := 0) ?_ _) (by omega)
+      rintro _ hp
+      obtain ⟨u, _, rfl⟩ := Multiset.mem_map.mp hp
+      exact le_of_eq (CompPoly.CPolynomial.natDegree_C u)
+    · rw [CompPoly.CPolynomial.coeff_prod_X_add_C_eq_zero _ hj]
+      exact le_of_eq CompPoly.CPolynomial.natDegree_zero
+  have hlin : ∀ m : Multiset Fp,
+      CompPoly.CPolynomial.natDegree ((m.map (fun u =>
+        CompPoly.CPolynomial.X + CompPoly.CPolynomial.C u)).prod) = Multiset.card m :=
+    fun m => CompPoly.CPolynomial.natDegree_prod_X_add_C m
+  rw [lookupProdDiff, CompPoly.CPolynomial.coeff_sub, CompPoly.CPolynomial.coeff_C_mul,
+    CompPoly.CPolynomial.coeff_C_mul]
+  refine le_trans (CompPoly.CPolynomial.natDegree_sub_le _ _) (max_le ?_ ?_)
+  · refine le_trans CompPoly.CPolynomial.natDegree_mul_le ?_
+    exact le_trans (Nat.add_le_add (le_of_eq (hlin a)) (tableCoeff s))
+      (by simp)
+  · refine le_trans CompPoly.CPolynomial.natDegree_mul_le ?_
+    exact le_trans (Nat.add_le_add (le_of_eq (hlin inp)) (tableCoeff tbl))
+      (by simp)
 
 /-- **The lookup `γ` surface priced.** Once `β` is fixed, the lookup product difference has one
 root per table row at most. -/
@@ -303,10 +300,9 @@ theorem lookup_gamma_failure_measure_le
   rw [uniformChallenge_badSet]
   gcongr
   refine le_trans (szBadSet_card_le _) ?_
-  rw [CPolynomial.natDegree_toPoly, toPoly_lookupProdDiffGamma]
-  refine le_trans Polynomial.natDegree_map_le ?_
-  rw [natDegree_nestedPoly]
-  exact natDegree_lookupProdDiff_le a s inp tbl
+  rw [lookupProdDiffGamma_eq_map]
+  exact le_trans (CompPoly.CPolynomial.natDegree_map_le _ _)
+    (natDegree_lookupProdDiff_le a s inp tbl)
 
 /-- **The lookup `β` surface priced.** There is one root set for each potentially nonzero
 `γ` coefficient, and each such coefficient has degree at most the larger input-column size. -/
@@ -407,22 +403,21 @@ theorem resolverLookupGammaBadSet_card_le
   have hroot :
       (szBadSet (resolverLookupProductDifferenceGamma vk ch poly p l u)).card ≤ u + 1 := by
     refine le_trans (szBadSet_card_le _) ?_
-    rw [CPolynomial.natDegree_toPoly, toPoly_resolverLookupProductDifferenceGamma]
-    exact
-      (le_trans Polynomial.natDegree_map_le (by
-        rw [natDegree_nestedPoly]
-        simpa [resolverLookupProductDifference] using
-          natDegree_lookupProdDiff_le
-            (Finset.univ.val.map
-              (lookupColumnRows vk.omega (poly (.lookupPermInput p l)) (u + 1)))
-            (Finset.univ.val.map
-              (lookupColumnRows vk.omega (poly (.lookupPermTable p l)) (u + 1)))
-            (Finset.univ.val.map
-              (lookupColumnRows vk.omega
-                (lookupInputPolyOfResolver vk ch poly p l) (u + 1)))
-            (Finset.univ.val.map
-              (lookupColumnRows vk.omega
-                (lookupTablePolyOfResolver vk ch poly p l) (u + 1)))))
+    rw [toPoly_resolverLookupProductDifferenceGamma]
+    refine le_trans (CompPoly.CPolynomial.natDegree_map_le _ _) ?_
+    rw [resolverLookupProductDifference]
+    simpa using
+      natDegree_lookupProdDiff_le
+        (Finset.univ.val.map
+          (lookupColumnRows vk.omega (poly (.lookupPermInput p l)) (u + 1)))
+        (Finset.univ.val.map
+          (lookupColumnRows vk.omega (poly (.lookupPermTable p l)) (u + 1)))
+        (Finset.univ.val.map
+          (lookupColumnRows vk.omega
+            (lookupInputPolyOfResolver vk ch poly p l) (u + 1)))
+        (Finset.univ.val.map
+          (lookupColumnRows vk.omega
+            (lookupTablePolyOfResolver vk ch poly p l) (u + 1)))
   have hzero :
       (lookupColumnZeroBadSet vk.omega
         (lookupTablePolyOfResolver vk ch poly p l) (u + 1)).card ≤ u + 1 := by
