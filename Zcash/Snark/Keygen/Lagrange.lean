@@ -33,16 +33,18 @@ open CompElliptic.Curves.Pasta
 /-- The interpolated Kronecker column IS the closed form: both have degree below the
 node count and agree on every node. -/
 theorem rowPolynomial_single_eq_closed (k : ℕ) (hk : k ≤ 32) (i : Fin (2 ^ k)) :
-    (rowPolynomial (omegaOf k) (Pi.single i (1 : Fp))).toPoly = lagrangeBasisClosed k i := by
+    rowPolynomial (omegaOf k) (Pi.single i (1 : Fp)) = lagrangeBasisClosed k i := by
   classical
+  apply CompPoly.CPolynomial.toPoly_injective
   symm
   rw [toPoly_rowPolynomial]
   apply Lagrange.eq_interpolate_of_eval_eq _ (omegaOf_powers_injective k hk).injOn
   · rw [Finset.card_univ, Fintype.card_fin]
-    exact lt_of_le_of_lt Polynomial.degree_le_natDegree
-      (by exact_mod_cast lagrangeBasisClosed_natDegree_lt k i)
+    refine lt_of_le_of_lt Polynomial.degree_le_natDegree ?_
+    rw [← CompPoly.CPolynomial.natDegree_toPoly]
+    exact_mod_cast lagrangeBasisClosed_natDegree_lt k i
   · intro j _
-    rw [lagrangeBasisClosed_eval k hk i j, Pi.single_apply]
+    rw [← CompPoly.CPolynomial.eval_toPoly, lagrangeBasisClosed_eval k hk i j, Pi.single_apply]
 
 /-- The Lagrange commitment key's required coefficient vector, in computable closed
 form: `ℓ_i`'s `t`-th coefficient is `n⁻¹ · ω^{-i·t}`. -/
@@ -50,8 +52,7 @@ theorem polynomialCoefficients_single_closed (k : ℕ) (hk : k ≤ 32)
     (i t : Fin (2 ^ k)) :
     polynomialCoefficients (2 ^ k) (rowPolynomial (omegaOf k) (Pi.single i (1 : Fp))) t =
       (2 ^ k : Fp)⁻¹ * (omegaOf k)⁻¹ ^ ((i : ℕ) * (t : ℕ)) := by
-  rw [polynomialCoefficients, CompPoly.CPolynomial.coeff_toPoly,
-    rowPolynomial_single_eq_closed k hk i]
+  rw [polynomialCoefficients, rowPolynomial_single_eq_closed k hk i]
   exact lagrangeBasisClosed_coeff k i t
 
 theorem permPolysOf_length (k : ℕ) (cs : Halo2.ConstraintSystem Fp)
