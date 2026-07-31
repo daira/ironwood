@@ -72,7 +72,7 @@ development. Anchors point to a module + name under `Zcash/`.
 </section>
 
 <section>
-<div class="grp">Capstones &amp; hypotheses</div>
+<div class="grp">Capstones</div>
 <div class="g"><div class="g-head"><span class="term">capstones</span><span class="anchor">Fixtures/MultiAction/ActionCapstone.lean</span></div><div class="def">The top-level results a route ends at. The consensus-generic adaptive Action knowledge capstone runs one cached executable terminal, returns Type-valued private witnesses or relation data, and bounds acceptance when witness extraction fails by profiled DLOG advantage plus the statistical remainder. The ordinary false-statement and sequential endpoints remain useful corollaries and presentation-specific variants.</div></div>
 <div class="g"><div class="g-head"><span class="term">knowledge-failure event</span><span class="anchor">AdaptiveActionEvent.adaptiveActionKnowledgeFailureEvent</span></div><div class="def">The event that the deployed Action verifier accepts but the executable extractor does not return private witnesses for the entire bundle. The capstone bounds this event directly.</div></div>
 <div class="g"><div class="g-head"><span class="term">semantic residuals</span><span class="anchor">AdaptiveActionEvent.adaptiveActionSemanticResidualEvent</span></div><div class="def">The explicitly priced <code>y</code>, <code>β</code>, <code>γ</code>, and <code>θ</code> challenge surfaces needed to promote the compressed constraint identity to row-level gate, permutation, and lookup semantics.</div></div>

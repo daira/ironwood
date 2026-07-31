@@ -188,41 +188,26 @@ The captured `vk`'s scalar fields are computable from the circuit: `omega`/`n` f
 advice queries, `delta` a pasta constant, `chunkLen` from the ported `cs.degree()`,
 and `permutationChunks` the recorded permutation columns chunked by it. -/
 
-/-- ONE bundled `native_decide` for the scalars and the permutation chunks (separate
-theorems would re-evaluate the shared selector-map/projection work once each; the
-nesting `((…), chunks)` rather than a flat 6-tuple is what instance synthesis accepts). -/
-private theorem bundle_scalars :
-    ((vk.omega, vk.n, vk.blindingFactors, vk.delta, vk.chunkLen), vk.permutationChunks)
-      = ((omegaOf actionK, 2 ^ actionK, actionCS.blindingFactors, deltaFp,
-            actionCS.chunkLen),
-          Keygen.permutationChunksOf actionSelMap actionCS) := by
-  native_decide
-
 theorem vk_scalars_and_chunks_derived :
     ((vk.omega, vk.n, vk.blindingFactors, vk.delta, vk.chunkLen), vk.permutationChunks)
-      = ((omegaOf actionCircuit.domainExponent,
-            2 ^ actionCircuit.domainExponent,
-            actionCircuit.constraintSystem.blindingFactors, deltaFp,
-            actionCircuit.constraintSystem.chunkLen),
-          Keygen.permutationChunksOf actionCircuit.selectorMap
-            actionCircuit.constraintSystem) := by
-  have h := bundle_scalars
-  simpa only [actionSelMap, actionK, actionCS] using h
+      = ((actionCircuit.omega, actionCircuit.n,
+            actionCircuit.blindingFactors, deltaFp, actionCircuit.chunkLen),
+          actionCircuit.verifierCS.permutationChunks) := by
+  native_decide
 
 theorem vk_scalars_derived :
     (vk.omega, vk.n, vk.blindingFactors, vk.delta, vk.chunkLen)
-      = (omegaOf actionCircuit.domainExponent,
-          2 ^ actionCircuit.domainExponent,
-          actionCircuit.constraintSystem.blindingFactors, deltaFp,
-          actionCircuit.constraintSystem.chunkLen) := by
+      = (actionCircuit.omega,
+          actionCircuit.n,
+          actionCircuit.blindingFactors, deltaFp,
+          actionCircuit.chunkLen) := by
   have h := vk_scalars_and_chunks_derived
   simp only [Prod.mk.injEq] at h ⊢
   exact h.1
 
 theorem vk_permutationChunks_derived :
     vk.permutationChunks
-      = Keygen.permutationChunksOf actionCircuit.selectorMap
-        actionCircuit.constraintSystem := by
+      = actionCircuit.verifierCS.permutationChunks := by
   have h := vk_scalars_and_chunks_derived
   simp only [Prod.mk.injEq] at h
   exact h.2

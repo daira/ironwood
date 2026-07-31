@@ -114,7 +114,7 @@ def adviceQueryFeedOfResolver
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
     (poly : CommitmentId → CPoly)
-    (p : Fin shape.numProofs) : ℕ → CPoly :=
+    (p : ℕ) : ℕ → CPoly :=
   resolverQueryFeed (n := shape.numAdviceQueries)
     vk.omega vk.adviceQueryLayout fun column => poly (.adviceCol p column)
 
@@ -123,7 +123,7 @@ def instanceQueryFeedOfResolver
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
     (poly : CommitmentId → CPoly)
-    (p : Fin shape.numProofs) : ℕ → CPoly :=
+    (p : ℕ) : ℕ → CPoly :=
   resolverQueryFeed (n := shape.numInstanceQueries)
     vk.omega vk.instanceQueryLayout fun column => poly (.instanceCol p column)
 
@@ -173,7 +173,7 @@ theorem mem_assembleQueries_of_mem_subProofLookupQueries
 rotations is definitional through `lookupEvalPolys`. -/
 def lookupEntriesOfResolver {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (poly : CommitmentId → CPoly)
-    (p : Fin shape.numProofs) :
+    (p : ℕ) :
     List (LookupEval (CPoly) × List (Expr Fp) × List (Expr Fp)) :=
   List.ofFn fun l =>
     (lookupEvalPolys vk.omega
@@ -184,10 +184,10 @@ def lookupEntriesOfResolver {shape : Shape} {G : Type*}
      vk.lookupTableExprs l)
 
 /-- The selected lookup's compressed input polynomial under the resolver-backed column feeds. -/
-def lookupInputPolyOfResolver {shape : Shape} {G : Type*}
-    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+def lookupInputPolyOfResolver {shape : Shape} {k : ℕ} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges k Fp)
     (poly : CommitmentId → CPoly)
-    (p : Fin shape.numProofs) (l : Fin shape.numLookups) : CPoly :=
+    (p : ℕ) (l : Fin shape.numLookups) : CPoly :=
   compressExprs
     (fixedQueryFeedOfResolver vk poly)
     (adviceQueryFeedOfResolver vk poly p)
@@ -195,10 +195,10 @@ def lookupInputPolyOfResolver {shape : Shape} {G : Type*}
     (C ch.theta)
     ((vk.lookupInputExprs l).map (Expr.map C))
 
-theorem lookupInputPolyOfResolver_eq {shape : Shape} {G : Type*}
-    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+theorem lookupInputPolyOfResolver_eq {shape : Shape} {k : ℕ} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges k Fp)
     (poly : CommitmentId → CPoly)
-    (p : Fin shape.numProofs) (l : Fin shape.numLookups) :
+    (p : ℕ) (l : Fin shape.numLookups) :
     lookupInputPolyOfResolver vk ch poly p l =
       compressExprs
         (fixedQueryFeedOfResolver vk poly)
@@ -207,10 +207,10 @@ theorem lookupInputPolyOfResolver_eq {shape : Shape} {G : Type*}
         (C ch.theta) ((vk.lookupInputExprs l).map (Expr.map C)) := rfl
 
 /-- The selected lookup's compressed table polynomial under the same resolver-backed feeds. -/
-def lookupTablePolyOfResolver {shape : Shape} {G : Type*}
-    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+def lookupTablePolyOfResolver {shape : Shape} {k : ℕ} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges k Fp)
     (poly : CommitmentId → CPoly)
-    (p : Fin shape.numProofs) (l : Fin shape.numLookups) : CPoly :=
+    (p : ℕ) (l : Fin shape.numLookups) : CPoly :=
   compressExprs
     (fixedQueryFeedOfResolver vk poly)
     (adviceQueryFeedOfResolver vk poly p)
@@ -218,10 +218,10 @@ def lookupTablePolyOfResolver {shape : Shape} {G : Type*}
     (C ch.theta)
     ((vk.lookupTableExprs l).map (Expr.map C))
 
-theorem lookupTablePolyOfResolver_eq {shape : Shape} {G : Type*}
-    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+theorem lookupTablePolyOfResolver_eq {shape : Shape} {k : ℕ} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges k Fp)
     (poly : CommitmentId → CPoly)
-    (p : Fin shape.numProofs) (l : Fin shape.numLookups) :
+    (p : ℕ) (l : Fin shape.numLookups) :
     lookupTablePolyOfResolver vk ch poly p l =
       compressExprs
         (fixedQueryFeedOfResolver vk poly)
@@ -232,21 +232,25 @@ theorem lookupTablePolyOfResolver_eq {shape : Shape} {G : Type*}
 /-- A full constraint model whose column polynomials and lookup arguments are resolved by stable
 commitment identities.  The permutation sets/chunks remain parameters until their analogous
 canonical routing layer is installed. -/
-def constraintModelOfResolver {shape : Shape} {G : Type*}
-    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+def constraintModelOfResolver
+    {shape : Shape} {numProofs k : ℕ} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges k Fp)
     (poly : CommitmentId → CPoly)
-    (sets : Fin shape.numProofs → List (PermSetEval (CPoly)))
-    (chunks : Fin shape.numProofs →
-      List (PermSetEval (CPoly) × List (CPoly × CPoly)))
+    (sets : Fin numProofs → List (PermSetEval CPoly))
+    (chunks : Fin numProofs →
+      List (PermSetEval CPoly × List (CPoly × CPoly)))
     (l0 lLast lBlind : CPoly) :
-    ConstraintPolyModel shape.numProofs where
+    ConstraintPolyModel numProofs where
   fixedCols := fixedQueryFeedOfResolver vk poly
-  adviceCols := adviceQueryFeedOfResolver vk poly
-  instanceCols := instanceQueryFeedOfResolver vk poly
+  adviceCols := fun proofIndex =>
+    adviceQueryFeedOfResolver vk poly proofIndex
+  instanceCols := fun proofIndex =>
+    instanceQueryFeedOfResolver vk poly proofIndex
   gates := vk.gates
   sets := sets
   chunks := chunks
-  lookups := lookupEntriesOfResolver vk poly
+  lookups := fun proofIndex =>
+    lookupEntriesOfResolver vk poly proofIndex
   beta := ch.beta
   gamma := ch.gamma
   delta := vk.delta
@@ -269,7 +273,7 @@ def constraintModelOfResolver {shape : Shape} {G : Type*}
 /-- The selected coherent lookup entry occurs in the resolver-built lookup list. -/
 theorem lookupEntry_mem_lookupEntriesOfResolver {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G) (poly : CommitmentId → CPoly)
-    (p : Fin shape.numProofs) (l : Fin shape.numLookups) :
+    (p : ℕ) (l : Fin shape.numLookups) :
     (lookupEvalPolys vk.omega
         (poly (.lookupProduct p l))
         (poly (.lookupPermInput p l))
@@ -281,14 +285,15 @@ theorem lookupEntry_mem_lookupEntriesOfResolver {shape : Shape} {G : Type*}
 /-- The same selected entry, exposed directly through the full resolver-built model.  This is the
 membership fact passed to `ConstraintSatisfaction.lookupStart`, `lookupEnd`,
 `lookupProductStep`, `lookupRunStart`, and `lookupRunStep`. -/
-theorem lookupEntry_mem_constraintModelOfResolver {shape : Shape} {G : Type*}
-    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+theorem lookupEntry_mem_constraintModelOfResolver
+    {shape : Shape} {numProofs k : ℕ} {G : Type*}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges k Fp)
     (poly : CommitmentId → CPoly)
-    (sets : Fin shape.numProofs → List (PermSetEval (CPoly)))
-    (chunks : Fin shape.numProofs →
-      List (PermSetEval (CPoly) × List (CPoly × CPoly)))
+    (sets : Fin numProofs → List (PermSetEval CPoly))
+    (chunks : Fin numProofs →
+      List (PermSetEval CPoly × List (CPoly × CPoly)))
     (l0 lLast lBlind : CPoly)
-    (p : Fin shape.numProofs) (l : Fin shape.numLookups) :
+    (p : Fin numProofs) (l : Fin shape.numLookups) :
     (lookupEvalPolys vk.omega
         (poly (.lookupProduct p l))
         (poly (.lookupPermInput p l))
@@ -468,16 +473,16 @@ theorem eval_constraintModelOfResolver_lookups_of_assembleQueries
 /-- Full family satisfaction specialized to one resolver-built lookup gives exactly the five
 coherent divisibility facts consumed by `deployed_lookup_subset`. -/
 theorem ConstraintSatisfaction.lookupConstraintsDvdOfResolver
-    {shape : Shape} {G : Type*} {n : ℕ}
-    (vk : VerifyingKey shape Fp G) (ch : Challenges shape.k Fp)
+    {shape : Shape} {numProofs k : ℕ} {G : Type*} {n : ℕ}
+    (vk : VerifyingKey shape Fp G) (ch : Challenges k Fp)
     (poly : CommitmentId → CPoly)
-    (sets : Fin shape.numProofs → List (PermSetEval (CPoly)))
-    (chunks : Fin shape.numProofs →
-      List (PermSetEval (CPoly) × List (CPoly × CPoly)))
+    (sets : Fin numProofs → List (PermSetEval CPoly))
+    (chunks : Fin numProofs →
+      List (PermSetEval CPoly × List (CPoly × CPoly)))
     (l0 lLast lBlind : CPoly)
     (h : ConstraintSatisfaction
       (constraintModelOfResolver vk ch poly sets chunks l0 lLast lBlind) n)
-    (p : Fin shape.numProofs) (l : Fin shape.numLookups) :
+    (p : Fin numProofs) (l : Fin shape.numLookups) :
     LookupConstraintsDvd n vk.omega ch.beta ch.gamma
       (poly (.lookupProduct p l))
       (poly (.lookupPermInput p l))

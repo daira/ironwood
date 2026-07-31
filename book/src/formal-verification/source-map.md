@@ -168,10 +168,11 @@ multiset identity), `Permutation`, `PermutationConstruction`, `PermutationRows`,
 `CommitFold`; the executable extraction route itself lives in `AGM/StraightLineIpa`. `InstanceBinding` closes the public-instance gap: a decoded instance column is the
 polynomial halo2 committed from its `instances` argument, or a `(g, U, W)` relation is computed.
 `ZeroData` supplies the zero-data multiopen keystone the constant prover families
-are built on. `Vesta` pins the abstract group to the actual Vesta curve. `TopLevelTerminal` turns
-canonical constraint satisfaction into the Spec of an arbitrary top-level circuit.
-`StraightLineActionTerminal` and `StraightLineActionEvent` connect the one-run computed decode to
-the concrete Action statement and carry a failure as explicit relation data.
+are built on. `Vesta` pins the abstract group to the actual Vesta curve.
+`TopLevelTerminal` connects canonical constraint satisfaction to the Spec of an
+arbitrary top-level circuit using that circuit's derived verifier key and public
+inputs. `Action/StraightLineTerminal` and `Action/StraightLineEvent` connect the one-run computed
+decode to the concrete Action statement and carry a failure as explicit relation data.
 
 Six subtrees carry the heavier machinery:
 
@@ -206,10 +207,10 @@ Six subtrees carry the heavier machinery:
   instance commitments to the extractor's monomial coefficient vectors (`InstanceCommitment`), and
   instantiates the permutation and lookup arguments at routed decoded polynomials
   (`PermutationInstantiation`, `PermutationSemantics`, `LookupInstantiation`, `LookupSemantics`,
-  `LookupRows`), ending at `Terminal` and its Vesta adapter.
+  `LookupRows`), ending at `Terminal`.
 - **`Composition/`** — joining the two halves the architecture keeps apart and bounding the
   probability loss the join costs. `Bridge`
-  identifies the algebraic extraction's aggregate witness with the deployed decoded capstone's
+  identifies the algebraic extraction's aggregate witness with the deployed decoded terminal's
   opened commitment.
   `DeployedAcceptance` and `DeployedRuntime` name the deployed decision on one oracle table;
   `DeployedRootContainment` and

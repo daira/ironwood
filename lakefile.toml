@@ -10,7 +10,7 @@ autoImplicit = false
 [[require]]
 name = "Clean"
 git = "https://github.com/Verified-zkEVM/clean"
-rev = "d196ac9e"
+rev = "6e6328d7"
 
 [[require]]
 name = "CompElliptic"
@@ -42,7 +42,12 @@ globs = ["Zcash.Meta.Tests.+"]
 # This dedicated target keeps the fixtures out of `lake build Zcash` for local dev, while plain
 # `lake build` (the default targets -- what CI runs) compiles them, so the empirical checks are
 # exercised alongside the parametric verifier obligations in `Zcash`. New modules under `Fixtures/`
-# are picked up by the glob automatically.
+# are picked up by the glob automatically. Through their imports the capstone entries pull in the
+# verifying-key COMMITMENT certificate chain `Keygen/Certificate`.
+#
+# `Keygen/Certificate` and `Keygen/InstanceCapture` (the ironwood#86 join of the captured
+# instance commitments to the circuit-derived family) are pinned explicitly: InstanceCapture has
+# no importer, and Certificate is otherwise reachable only through the capstone entries' imports.
 [[lean_lib]]
 name = "FixtureCheck"
 globs = [
