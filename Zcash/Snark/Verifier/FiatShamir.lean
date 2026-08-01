@@ -70,6 +70,50 @@ def absorbLookup {F G : Type*} (e : LookupEval F) : List (TranscriptElt F G) :=
   [.scalar e.productEval, .scalar e.productNextEval, .scalar e.permutedInputEval,
    .scalar e.permutedInputInvEval, .scalar e.permutedTableEval]
 
+/-- Public-instance commitments in Halo2's deployed proof-major, column-major absorb order. -/
+def absorbInstanceCommitments {shape : Shape} {F G : Type*}
+    (instanceCommitment : Fin shape.numProofs → ℕ → G) : List (TranscriptElt F G) :=
+  (List.ofFn fun p : Fin shape.numProofs =>
+    List.ofFn fun column : Fin shape.numInstanceColumns =>
+      TranscriptElt.point (instanceCommitment p column)).flatten
+
+/-- The complete verifier-controlled Fiat--Shamir prefix: the VK transcript representation followed
+by every configured public-instance commitment. -/
+def initialTranscript {shape : Shape} {F G : Type*} (vkTranscriptRepr : F)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G) : List (TranscriptElt F G) :=
+  TranscriptElt.scalar vkTranscriptRepr :: absorbInstanceCommitments instanceCommitment
+
+@[simp] theorem initialTranscript_head? {shape : Shape} {F G : Type*}
+    (vkTranscriptRepr : F) (instanceCommitment : Fin shape.numProofs → ℕ → G) :
+    (initialTranscript vkTranscriptRepr instanceCommitment).head? =
+      some (TranscriptElt.scalar vkTranscriptRepr) := by
+  rfl
+
+@[simp] theorem initialTranscript_drop_one {shape : Shape} {F G : Type*}
+    (vkTranscriptRepr : F) (instanceCommitment : Fin shape.numProofs → ℕ → G) :
+    (initialTranscript vkTranscriptRepr instanceCommitment).drop 1 =
+      absorbInstanceCommitments instanceCommitment := by
+  rfl
+
+@[simp] theorem absorbInstanceCommitments_length {shape : Shape} {F G : Type*}
+    (instanceCommitment : Fin shape.numProofs → ℕ → G) :
+    (absorbInstanceCommitments (F := F) instanceCommitment).length =
+      shape.numProofs * shape.numInstanceColumns := by
+  simp [absorbInstanceCommitments, List.length_flatten, List.sum_ofFn]
+
+@[simp] theorem initialTranscript_length {shape : Shape} {F G : Type*}
+    (vkTranscriptRepr : F) (instanceCommitment : Fin shape.numProofs → ℕ → G) :
+    (initialTranscript vkTranscriptRepr instanceCommitment).length =
+      1 + shape.numProofs * shape.numInstanceColumns := by
+  simp [initialTranscript, Nat.add_comm]
+
+theorem instanceCommitment_mem_initialTranscript {shape : Shape} {F G : Type*}
+    (vkTranscriptRepr : F) (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (p : Fin shape.numProofs) (column : Fin shape.numInstanceColumns) :
+    TranscriptElt.point (instanceCommitment p column) ∈
+      initialTranscript vkTranscriptRepr instanceCommitment := by
+  simp [initialTranscript, absorbInstanceCommitments]
+
 /-- Derive the verifier's challenges in halo2's deployed absorb/squeeze order.
 
 Each squeeze first appends `TranscriptElt.challenge`; the result is not re-absorbed. `init` contains
@@ -122,6 +166,14 @@ def deriveChallenges {shape : Shape} {F G : Type*} [Zero F] (fs : FiatShamir F G
     x1 := x1, x2 := x2, x3 := x3, x4 := x4, xi := xi, z := z,
     ipaRound := fun j => ipaRes.2.getD j.val 0 }
 
+/-- Derive challenges from the canonical verifier-controlled prefix.  This is the statement-bound
+entry point; `deriveChallenges` remains the low-level schedule over an explicit prefix. -/
+def deriveChallengesForStatement {shape : Shape} {F G : Type*} [Zero F]
+    (fs : FiatShamir F G) (vkTranscriptRepr : F)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) : Challenges shape.k F :=
+  deriveChallenges fs (initialTranscript vkTranscriptRepr instanceCommitment) ps
+
 /-- The deployed verifier's fingerprint MSM: `assemble` at the Fiat–Shamir challenges.
 
 The random-oracle assumption is what transfers interactive soundness to this non-interactive MSM. -/
@@ -130,5 +182,14 @@ def nonInteractiveFingerprint {shape : Shape} {F G : Type*} [Field F] [Decidable
     (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape F G) : Msm shape.k F G :=
   assemble vk instanceCommitment ps (deriveChallenges fs init ps)
+
+/-- The deployed verifier fingerprint with the VK and public statement bound into Fiat--Shamir. -/
+def nonInteractiveFingerprintForStatement {shape : Shape} {F G : Type*}
+    [Field F] [DecidableEq F] [DecidableEq G] [Inhabited G]
+    (fs : FiatShamir F G) (vkTranscriptRepr : F) (vk : VerifyingKey shape F G)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) : Msm shape.k F G :=
+  assemble vk instanceCommitment ps
+    (deriveChallengesForStatement fs vkTranscriptRepr instanceCommitment ps)
 
 end Zcash.Snark

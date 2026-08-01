@@ -62,12 +62,26 @@ def capturedFs : FiatShamir Fp G := {
 theorem deriveChallenges_matches_captured_schedule :
     deriveChallenges capturedFs capturedInit ps = ch := by native_decide
 
+/-- The captured verifier prefix is exactly the canonical VK-and-instance prefix. -/
+theorem capturedInit_eq_initialTranscript :
+    capturedInit =
+      initialTranscript capturedVkTranscriptRepr derivedInstanceCommitment := by
+  native_decide
+
+/-- The statement-bound entry point reaches the captured challenge schedule. -/
+theorem deriveChallengesForStatement_matches_captured_schedule :
+    deriveChallengesForStatement capturedFs capturedVkTranscriptRepr
+      derivedInstanceCommitment ps = ch := by
+  rw [deriveChallengesForStatement, ← capturedInit_eq_initialTranscript]
+  exact deriveChallenges_matches_captured_schedule
+
 /-- The Fiat–Shamir-derived fingerprint matches the captured single-action MSM under the concrete
 captured schedule oracle above. -/
 theorem nonInteractiveFingerprint_matches :
-    MsmMatch (nonInteractiveFingerprint capturedFs capturedInit vk derivedInstanceCommitment ps) capturedMsm := by
-  unfold nonInteractiveFingerprint
-  rw [deriveChallenges_matches_captured_schedule]
+    MsmMatch (nonInteractiveFingerprintForStatement capturedFs capturedVkTranscriptRepr
+      vk derivedInstanceCommitment ps) capturedMsm := by
+  unfold nonInteractiveFingerprintForStatement
+  rw [deriveChallengesForStatement_matches_captured_schedule]
   exact fingerprint_matches
 
 end Zcash.Snark.Fixture
