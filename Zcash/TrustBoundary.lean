@@ -94,8 +94,10 @@ Both commands are built on `Lean.collectAxioms`, which walks a declaration's tra
 depends on is checked by nothing, however prominent it is. Deliverable endpoints are exactly the
 top-level leaves, so they must be pinned *directly* — never left to inherit coverage from some
 dependent, which would vanish the moment that dependent is refactored.
-`scripts/check_endpoint_census.sh` enforces this in CI for the capstone naming families, and
-lists them; extend its patterns when a new endpoint family appears.
+`scripts/check_endpoint_census.sh` enforces this in CI for the capstone naming families. A new
+public endpoint must either belong to one of the listed protocol families or end in the semantic
+suffix `_error_bound`, `_finite_security`, or `_capstone`; the latter keeps new protocol families
+covered without another prefix-specific regex edit.
 -/
 
 /-! ## Key binding — computed break reductions -/

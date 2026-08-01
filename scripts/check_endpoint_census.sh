@@ -23,19 +23,24 @@
 # write (`Zcash.Meta.AxiomCheck.checkFullyQualified`).
 #
 # Scope: this guards against accidental omissions, NOT adversarial code. A declaration whose
-# name does not match a pattern is not an endpoint as far as this check is concerned; keeping
-# the patterns in step with the capstone naming convention is a review responsibility. The
-# declaration's name must be on the same line as its `theorem`/`def` keyword. Run from the
-# repository root; exits non-zero on violation.
+# name does not match a pattern is not an endpoint as far as this check is concerned. New endpoint
+# families must either extend the protocol-family alternatives below or use one of the semantic
+# suffixes `_error_bound`, `_finite_security`, or `_capstone`. The declaration's name must be on
+# the same line as its `theorem`/`def` keyword. Run from the repository root; exits non-zero on
+# violation.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# A declaration is a deliverable endpoint when its base name matches this pattern. These are the
-# capstone families: the verifier-soundness rungs (`orchard_verifier_*`), the composed Action
-# probability endpoints (`orchard_action_*`), the captured knowledge-error endpoints
-# (`orchard_deployed_*`), the concrete-statement terminals (`*bundleStatement_or_relation*`), and
-# the profiled work-factor packages (`*workFactor*`), whose consensus-maximum forms are named for
-# the shape rather than for a capstone family and so match none of the prefixes above.
+# A declaration is a deliverable endpoint when its base name matches this pattern. The leading
+# alternatives retain the established endpoint families: the verifier-soundness rungs
+# (`orchard_verifier_*`), the composed Action probability endpoints (`orchard_action_*`), the
+# captured knowledge-error endpoints (`orchard_deployed_*`), the concrete-statement terminals
+# (`*bundleStatement_or_relation*`), and the profiled work-factor packages (`*workFactor*`), whose
+# consensus-maximum forms are named for the shape rather than for a capstone family and so match
+# none of the prefixes above. The final alternative is deliberately protocol-independent: the
+# standardized semantic suffixes keep a new capstone family inside the census without requiring
+# another prefix to be added here. `_capstone` is the explicit suffix for endpoints that are
+# neither an error formula nor a concrete finite-security statement.
 #
 # The Rust-to-Lean boundary contributes three more families, all leaves in the same sense: the
 # per-family statements of record (`nonInteractiveFingerprint_matches_derived*`), the quantified
@@ -47,7 +52,7 @@ cd "$(dirname "$0")/.."
 # `orchard_verifier_*` currently matches nothing: those rungs were retired with the legacy rewind
 # paths. It is retained as a guard, so a reintroduced name in that family is demanded rather than
 # silently unpinned.
-ENDPOINT_RE="^(orchard_verifier_|orchard_action_|orchard_deployed_|competing_|nonInteractiveFingerprint_matches_derived)|bundleStatement_or_relation|workFactor|fingerprint_matches_positional"
+ENDPOINT_RE='(^orchard_(verifier|action|deployed)_)|(^competing_)|(^nonInteractiveFingerprint_matches_derived)|(bundleStatement_or_relation)|(workFactor)|(fingerprint_matches_positional)|(_(error_bound|finite_security|capstone)$)'
 
 # Sources scanned for endpoint declarations. `Zcash/Meta/Tests/` is excluded: it holds forged
 # adversarial declarations that exercise the rejection paths of the census macros themselves.
