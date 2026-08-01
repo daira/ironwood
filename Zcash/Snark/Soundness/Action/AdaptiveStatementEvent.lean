@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.Action.AdaptiveStatementSemantic
+import Zcash.Snark.Soundness.Action.AdaptiveStatementComplete
 
 /-!
 # Adaptive-statement Action event composition
@@ -39,6 +39,7 @@ noncomputable def relationFinder {pp : ProofParams}
        family.semanticRepresentationRelationFinder basis O,
        family.semanticSourceMismatchRelationFinder basis O,
        family.statementQuotientRelationFinder basis O,
+       family.identityRelationFinder hchar basis O,
        family.terminalRelationFinder hchar basis O]
 
 /-- No result from the combined finder means every coordinate-provenance subfinder was empty. -/
@@ -74,6 +75,22 @@ theorem relationFinder_none_terminal {pp : ProofParams}
     (O : family.Coins)
     (hnone : family.relationFinder hchar basis O = none) :
     family.terminalRelationFinder hchar basis O = none := by
+  have hall := (ComputedAdaptiveOnlineAGMFSFamily.firstAdaptiveRelation?_eq_none_iff _).1
+    (by simpa only [relationFinder] using hnone)
+  apply hall
+  simp
+
+/-- No result from the combined finder also excludes the zero pre-`x` identity branch. -/
+theorem relationFinder_none_identity {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins)
+    (hnone : family.relationFinder hchar basis O = none) :
+    family.identityRelationFinder hchar basis O = none := by
   have hall := (ComputedAdaptiveOnlineAGMFSFamily.firstAdaptiveRelation?_eq_none_iff _).1
     (by simpa only [relationFinder] using hnone)
   apply hall

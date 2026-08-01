@@ -2463,6 +2463,37 @@ theorem outputRootBad_actual {pp : ProofParams}
   rw [statementEarlierPrefix_preIpaPoint]
   rfl
 
+/-- At an actual selected-statement pre-IPA point, the semantic fallback reads precisely the
+earlier verifier challenges. -/
+theorem outputSemanticBad_actual {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) (n : Fin 5) :
+    let n11 : Fin 11 := Fin.castLE (by omega) n
+    outputSemanticBad family basis n (family.runOutput basis O)
+        (family.preIpaPoint basis n11 (family.runOutput basis O)) O =
+      outputSemanticSurface family basis n (family.runOutput basis O)
+        (fun i => family.runPreIpaReads basis O
+          (i.castLE (le_of_lt n11.isLt))) := by
+  simp only
+  let n11 : Fin 11 := Fin.castLE (by omega) n
+  unfold outputSemanticBad
+  have hlen : (family.preIpaPoint basis n11 (family.runOutput basis O)).val.length =
+      preIpaLen (AdaptiveActionStatementShape pp)
+        (adaptiveStatementInitLength (AdaptiveActionStatementShape pp)) n11 := by
+    simpa [preIpaPoint, AdaptiveActionStatementOutput.prefixesPre,
+      adaptiveStatementInitLength] using
+      (preIpaSqueezePoints_length_eq
+        ((family.runOutput basis O).init (family.vkTranscriptRepr basis))
+        (family.runOutput basis O).toAlgebraicWfProof.proof.1
+        (family.runOutput basis O).toAlgebraicWfProof.proof.2 n11)
+  rw [if_pos hlen]
+  apply congrArg (outputSemanticSurface family basis n (family.runOutput basis O))
+  funext i
+  unfold runPreIpaReads
+  rw [statementEarlierPrefix_preIpaPoint]
+  rfl
+
 /-- The selected statement's `x₁` surface is the normalized decoder set. -/
 theorem outputRootSurface_five {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
