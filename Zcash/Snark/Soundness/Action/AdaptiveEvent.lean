@@ -946,23 +946,25 @@ theorem adaptiveActionCachedProvenanceLog_length_le
     ((family.adversary basis).runWithAnnotations O).2.length ≤ family.Q :=
   family.runWithAnnotations_log_length_le basis O
 
-/-- Conservative random-oracle work for the adaptive combined finder after provenance caching.
-Every independently charged traversal slot includes its own `Q`-query run allowance and its own
-designated `11 + k` transcript reads. -/
-def adaptiveActionDlogRandomOracleQueries : Nat :=
+/-- The conservative numeric oracle-query cost of the adaptive combined finder after provenance
+caching.  Every independently charged traversal slot includes its own `Q`-query run allowance and
+its own designated `11 + k` transcript reads.  This definition is the cost; resource theorems
+separately prove ceilings on it. -/
+def adaptiveActionDlogOracleQueryCost : Nat :=
   adaptiveActionDlogTraversalSlots * family.Q +
     adaptiveActionDlogTraversalSlots * (11 + actionCircuit.domainExponent)
 
-/-- The knowledge extractor is the other projection of the same cached outcome, so it has the
-same random-oracle envelope and does not add a ninth adversary traversal. -/
-def adaptiveActionKnowledgeExtractorRandomOracleQueries : Nat :=
-  adaptiveActionDlogRandomOracleQueries pp family
+/-- The knowledge extractor's numeric oracle-query cost.  It is the other projection of the same
+cached outcome, so it has the same envelope and does not add a ninth adversary traversal. -/
+def adaptiveActionKnowledgeExtractorOracleQueryCost : Nat :=
+  adaptiveActionDlogOracleQueryCost pp family
 
-@[simp] theorem adaptiveActionKnowledgeExtractorRandomOracleQueries_eq :
-    adaptiveActionKnowledgeExtractorRandomOracleQueries pp family =
-      adaptiveActionDlogRandomOracleQueries pp family := rfl
+@[simp] theorem adaptiveActionKnowledgeExtractorOracleQueryCost_eq :
+    adaptiveActionKnowledgeExtractorOracleQueryCost pp family =
+      adaptiveActionDlogOracleQueryCost pp family := rfl
 
-/-- Group-work envelope of the adaptive combined finder. -/
+/-- The adaptive combined finder's numeric group-work cost.  Resource theorems separately prove
+ceilings on it. -/
 def adaptiveActionDlogGroupWork (proverGroupWork reductionGroupWork : Nat) : Nat :=
   8 * proverGroupWork + reductionGroupWork
 
@@ -986,7 +988,7 @@ structure AdaptiveActionDlogProfile (B : VestaG) where
     advantage q g ≤ advantage q' g'
   hardness : TextbookDLWithCoinsAdvantageLE B
     (adaptiveActionRelationFinder pp family inputs hvk hI hchar)
-    (advantage (adaptiveActionDlogRandomOracleQueries pp family)
+    (advantage (adaptiveActionDlogOracleQueryCost pp family)
       (adaptiveActionDlogGroupWork proverGroupWork reductionGroupWork))
 
 /-- Concrete resource profile for the bare adaptive route.  Unlike the sequential six-call
@@ -1004,12 +1006,12 @@ structure AdaptiveActionDirectDlogProfile (B : VestaG) (T : Nat)
 theorem AdaptiveActionDirectDlogProfile.solverCost_le
     {B : VestaG} {T : Nat}
     (profile : AdaptiveActionDirectDlogProfile pp family inputs hvk hI hchar B T) :
-    adaptiveActionDlogRandomOracleQueries pp family ≤ 16 * T ∧
+    adaptiveActionDlogOracleQueryCost pp family ≤ 16 * T ∧
       adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
         16 * T ∧
       ∀ basis O, 2 * adaptiveActionDirectDecodeOps pp family basis O ≤ T := by
   constructor
-  · unfold adaptiveActionDlogRandomOracleQueries
+  · unfold adaptiveActionDlogOracleQueryCost
     rw [adaptiveActionDlogTraversalSlots_eq_eight]
     have hT := profile.scheduleOverheadBound
     calc
@@ -1033,11 +1035,11 @@ traversals, represented group work, and direct deployed-root decoding. -/
 theorem AdaptiveActionDirectDlogProfile.knowledgeExtractorCost_le
     {B : VestaG} {T : Nat}
     (profile : AdaptiveActionDirectDlogProfile pp family inputs hvk hI hchar B T) :
-    adaptiveActionKnowledgeExtractorRandomOracleQueries pp family ≤ 16 * T ∧
+    adaptiveActionKnowledgeExtractorOracleQueryCost pp family ≤ 16 * T ∧
       adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
         16 * T ∧
       ∀ basis O, 2 * adaptiveActionDirectDecodeOps pp family basis O ≤ T := by
-  simpa only [adaptiveActionKnowledgeExtractorRandomOracleQueries_eq] using profile.solverCost_le
+  simpa only [adaptiveActionKnowledgeExtractorOracleQueryCost_eq] using profile.solverCost_le
 
 /-- An empty combined finder excludes every stage-local Action provenance mismatch. -/
 theorem adaptiveActionRelationFinder_none_actionProvenance
@@ -1099,7 +1101,12 @@ theorem adaptiveActionRelationFinder_none_straightLine
       rw [houtcome] at hnone
       contradiction
 
-/-- Explicit relation-producing runs of the combined adaptive Action finder. -/
+/-! The `...Event` definitions below are sets of experiment outcomes.  Their corresponding
+`..._probability_bound` theorems later in this file prove upper bounds on the probability of those
+sets; the event and its bound are separate declarations. -/
+
+/-- The event consisting of explicit relation-producing runs of the combined adaptive Action
+finder. -/
 def adaptiveActionRelationEvent :
     Set ((AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG) ×
       (BTranscript Fp VestaG
@@ -1107,8 +1114,8 @@ def adaptiveActionRelationEvent :
           + 3 * (actionCircuit.shape.withProofParams pp).k) → Fp)) :=
   {q | (adaptiveActionRelationFinder pp family inputs hvk hI hchar q.1 q.2).isSome}
 
-/-- The separately priced adaptive `z = 0` slice. -/
-def adaptiveActionZeroEvent :
+/-- The zero-challenge event: the separately priced set of adaptive runs with `z = 0`. -/
+def adaptiveActionZeroChallengeEvent :
     Set ((AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG) ×
       (BTranscript Fp VestaG
         (preIpaLen (actionCircuit.shape.withProofParams pp) family.init.length 10
@@ -1141,7 +1148,7 @@ def adaptiveActionSemanticResidualEvent :
         (preIpaLen (actionCircuit.shape.withProofParams pp) family.init.length 10
           + 3 * (actionCircuit.shape.withProofParams pp).k) → Fp)) :=
   adaptiveActionAcceptFalseStatementEvent pp family inputs \
-    (adaptiveActionZeroEvent pp family ∪
+    (adaptiveActionZeroChallengeEvent pp family ∪
       (adaptiveActionIpaEvent pp family ∪
         (adaptiveActionRootEvent pp family ∪
           adaptiveActionRelationEvent pp family inputs hvk hI hchar)))
@@ -1150,13 +1157,13 @@ def adaptiveActionSemanticResidualEvent :
 surfaces, the single computed relation event, and the remaining five semantic squeezes. -/
 theorem adaptiveActionAcceptFalseStatementEvent_subset :
     adaptiveActionAcceptFalseStatementEvent pp family inputs ⊆
-      adaptiveActionZeroEvent pp family ∪
+      adaptiveActionZeroChallengeEvent pp family ∪
         (adaptiveActionIpaEvent pp family ∪
           (adaptiveActionRootEvent pp family ∪
             (adaptiveActionRelationEvent pp family inputs hvk hI hchar ∪
               adaptiveActionSemanticResidualEvent pp family inputs hvk hI hchar))) := by
   intro q hq
-  by_cases hz : q ∈ adaptiveActionZeroEvent pp family
+  by_cases hz : q ∈ adaptiveActionZeroChallengeEvent pp family
   · exact Or.inl hz
   by_cases hipa : q ∈ adaptiveActionIpaEvent pp family
   · exact Or.inr (Or.inl hipa)
@@ -1176,7 +1183,7 @@ theorem adaptiveActionKnowledgeExtractor_isSome_of_no_events
       (preIpaLen (actionCircuit.shape.withProofParams pp) family.init.length 10
         + 3 * (actionCircuit.shape.withProofParams pp).k) → Fp)
     (haccepts : adaptiveActionAccepts family basis O)
-    (hzeroEvent : (basis, O) ∉ adaptiveActionZeroEvent pp family)
+    (hzeroEvent : (basis, O) ∉ adaptiveActionZeroChallengeEvent pp family)
     (hipaEvent : (basis, O) ∉ adaptiveActionIpaEvent pp family)
     (hrootEvent : (basis, O) ∉ adaptiveActionRootEvent pp family)
     (hrelationEvent : (basis, O) ∉
@@ -1327,20 +1334,20 @@ def adaptiveActionKnowledgeResidualEvent :
         (preIpaLen (actionCircuit.shape.withProofParams pp) family.init.length 10
           + 3 * (actionCircuit.shape.withProofParams pp).k) → Fp)) :=
   adaptiveActionKnowledgeFailureEvent pp family inputs hvk hI hchar \
-    (adaptiveActionZeroEvent pp family ∪
+    (adaptiveActionZeroChallengeEvent pp family ∪
       (adaptiveActionIpaEvent pp family ∪
         (adaptiveActionRootEvent pp family ∪
           adaptiveActionRelationEvent pp family inputs hvk hI hchar)))
 
 theorem adaptiveActionKnowledgeFailureEvent_subset :
     adaptiveActionKnowledgeFailureEvent pp family inputs hvk hI hchar ⊆
-      adaptiveActionZeroEvent pp family ∪
+      adaptiveActionZeroChallengeEvent pp family ∪
         (adaptiveActionIpaEvent pp family ∪
           (adaptiveActionRootEvent pp family ∪
             (adaptiveActionRelationEvent pp family inputs hvk hI hchar ∪
               adaptiveActionKnowledgeResidualEvent pp family inputs hvk hI hchar))) := by
   intro q hq
-  by_cases hz : q ∈ adaptiveActionZeroEvent pp family
+  by_cases hz : q ∈ adaptiveActionZeroChallengeEvent pp family
   · exact Or.inl hz
   by_cases hipa : q ∈ adaptiveActionIpaEvent pp family
   · exact Or.inr (Or.inl hipa)
@@ -1435,8 +1442,9 @@ theorem adaptiveActionEvent_prob_eq_of_uniformURS
       ((fun p => (scalarBasis B p.1, p.2)) ⁻¹' event) := hmeasure
     _ = _ := by rw [independentProductPMF_uniform]
 
-/-- The combined executable adaptive Action finder has the standard textbook-DLOG reduction. -/
-theorem adaptiveActionRelation_prob_le_of_textbookDL
+/-- Probability bound for the relation event, obtained from the standard textbook-DLOG
+reduction. -/
+theorem adaptiveActionRelation_probability_bound_of_textbookDL
     (B : VestaG) {bound : ENNReal}
     (hDL : TextbookDLWithCoinsAdvantageLE B
       (adaptiveActionRelationFinder pp family inputs hvk hI hchar) bound) :
@@ -1452,28 +1460,29 @@ theorem adaptiveActionRelation_prob_le_of_textbookDL
     (relationWithCoins_prob_le_of_textbookDL B
       (adaptiveActionRelationFinder pp family inputs hvk hI hchar) hDL)
 
-/-- The adaptive Action zero slice has the ordinary one-field query-loss price. -/
-theorem adaptiveActionZero_prob_le (B : VestaG) :
+/-- Probability bound for the zero-challenge event.  Its ordinary one-field query-loss price is
+`(Q + 1) / |Fp|`. -/
+theorem adaptiveActionZeroChallenge_probability_bound (B : VestaG) :
     (PMF.uniformOfFintype
       ((AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → Fp) ×
         (BTranscript Fp VestaG
           (preIpaLen (actionCircuit.shape.withProofParams pp) family.init.length 10
             + 3 * (actionCircuit.shape.withProofParams pp).k) → Fp))).toOuterMeasure
-      ((fun q => (scalarBasis B q.1, q.2)) ⁻¹' adaptiveActionZeroEvent pp family) ≤
+      ((fun q => (scalarBasis B q.1, q.2)) ⁻¹' adaptiveActionZeroChallengeEvent pp family) ≤
       (family.Q + 1 : Nat) * (1 / Fintype.card Fp) := by
   apply uniformOfFintype_prod_fiber_bound_right
-    (fun logs => {O | (scalarBasis B logs, O) ∈ adaptiveActionZeroEvent pp family})
+    (fun logs => {O | (scalarBasis B logs, O) ∈ adaptiveActionZeroChallengeEvent pp family})
   intro logs
   let basis := scalarBasis B logs
   have hzero := fsAdvantageFull_zero_slice_le (family.toFamily.adversary basis)
     (fun _ _ _ => True) (algebraicFullPrefixesPre family.init)
     (algebraicFullPrefixes family.init) 10 (family.toFamily.queryBound basis)
-  simpa only [adaptiveActionZeroEvent, Set.mem_setOf_eq, basis, fsWinsFull, true_and,
+  simpa only [adaptiveActionZeroChallengeEvent, Set.mem_setOf_eq, basis, fsWinsFull, true_and,
     adaptiveActionRunOutput, wrappedPreIpaReads_run, runReads] using hzero
 
-/-- All adaptive IPA surfaces, averaged over the sampled basis, retain their direct squeeze
-price. -/
-theorem adaptiveActionIpa_prob_le (B : VestaG) :
+/-- Probability bound for the adaptive IPA event.  All its surfaces, averaged over the sampled
+basis, retain their direct squeeze price. -/
+theorem adaptiveActionIpa_probability_bound (B : VestaG) :
     (PMF.uniformOfFintype
       ((AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → Fp) ×
         (BTranscript Fp VestaG
@@ -1488,9 +1497,9 @@ theorem adaptiveActionIpa_prob_le (B : VestaG) :
   intro logs
   exact family.adaptiveIpaBadWithoutRelation_all_measure_le (scalarBasis B logs)
 
-/-- All six deployed-root surfaces, averaged over the sampled basis, retain their direct adaptive
-squeeze price. -/
-theorem adaptiveActionRoot_prob_le (B : VestaG) :
+/-- Probability bound for the adaptive root event.  All six deployed-root surfaces, averaged over
+the sampled basis, retain their direct adaptive squeeze price. -/
+theorem adaptiveActionRoot_probability_bound (B : VestaG) :
     (PMF.uniformOfFintype
       ((AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → Fp) ×
         (BTranscript Fp VestaG
@@ -1506,9 +1515,9 @@ theorem adaptiveActionRoot_prob_le (B : VestaG) :
   intro logs
   exact family.adaptiveRootBadWithoutRelation_all_measure_le (scalarBasis B logs)
 
-/-- The adaptive semantic residual is priced directly by the five annotation-aware Action
-surfaces, averaged over the sampled AGM basis. -/
-theorem adaptiveActionSemanticResidual_prob_le
+/-- Probability bound for the adaptive semantic-residual event, priced directly by the five
+annotation-aware Action surfaces and averaged over the sampled AGM basis. -/
+theorem adaptiveActionSemanticResidual_probability_bound
     (B : VestaG) (epsilon : Fin 5 → ENNReal)
     (hsurface : ∀
       (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
@@ -1536,7 +1545,9 @@ theorem adaptiveActionSemanticResidual_prob_le
   exact family.adaptiveActionBadWithoutRelation_all_measure_le pp inputs
     (scalarBasis B logs) epsilon (hsurface (scalarBasis B logs))
 
-theorem adaptiveActionKnowledgeResidual_prob_le
+/-- Probability bound for the adaptive knowledge-residual event, using the same five
+annotation-aware Action surfaces. -/
+theorem adaptiveActionKnowledgeResidual_probability_bound
     (B : VestaG) (epsilon : Fin 5 → ENNReal)
     (hsurface : ∀
       (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
@@ -1565,9 +1576,10 @@ theorem adaptiveActionKnowledgeResidual_prob_le
   exact family.adaptiveActionBadWithoutRelation_all_measure_le pp inputs
     (scalarBasis B logs) epsilon (hsurface (scalarBasis B logs))
 
-/-- End-to-end adaptive Action knowledge soundness.  Failure of the executable private-witness
-extractor is charged to the same cached relation reduction and five statistical surfaces. -/
-theorem adaptiveActionKnowledgeFailure_prob_le
+/-- Probability bound for the adaptive Action knowledge-failure event.  Failure of the executable
+private-witness extractor is charged to the same cached relation reduction and five statistical
+surfaces. -/
+theorem adaptiveActionKnowledgeFailure_probability_bound
     (B : VestaG) (epsilon : Fin 5 → ENNReal)
     (profile : AdaptiveActionDlogProfile pp family inputs hvk hI hchar B)
     (hsurface : ∀
@@ -1592,7 +1604,7 @@ theorem adaptiveActionKnowledgeFailure_prob_le
         ((family.Q + 1 : Nat) *
           algebraicRootBudget (actionCircuit.shape.withProofParams pp)
             (actionCircuit.shape.withProofParams pp).k +
-        ((profile.advantage (adaptiveActionDlogRandomOracleQueries pp family)
+        ((profile.advantage (adaptiveActionDlogOracleQueryCost pp family)
             (adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
             1 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * ∑ n : Fin 5, epsilon n))) := by
@@ -1601,21 +1613,21 @@ theorem adaptiveActionKnowledgeFailure_prob_le
       (adaptiveActionKnowledgeFailureEvent_subset pp family inputs hvk hI hchar))) ?_
   simp only [Set.preimage_union]
   refine le_trans (MeasureTheory.measure_union_le _ _) ?_
-  refine add_le_add (adaptiveActionZero_prob_le pp family B) ?_
+  refine add_le_add (adaptiveActionZeroChallenge_probability_bound pp family B) ?_
   refine le_trans (MeasureTheory.measure_union_le _ _) ?_
-  refine add_le_add (adaptiveActionIpa_prob_le pp family B) ?_
+  refine add_le_add (adaptiveActionIpa_probability_bound pp family B) ?_
   refine le_trans (MeasureTheory.measure_union_le _ _) ?_
-  refine add_le_add (adaptiveActionRoot_prob_le pp family B) ?_
+  refine add_le_add (adaptiveActionRoot_probability_bound pp family B) ?_
   refine le_trans (MeasureTheory.measure_union_le _ _) ?_
   exact add_le_add
-    (adaptiveActionRelation_prob_le_of_textbookDL pp family inputs hvk hI hchar B
+    (adaptiveActionRelation_probability_bound_of_textbookDL pp family inputs hvk hI hchar B
       profile.hardness)
-    (adaptiveActionKnowledgeResidual_prob_le pp family inputs hvk hI hchar B epsilon hsurface)
+    (adaptiveActionKnowledgeResidual_probability_bound pp family inputs hvk hI hchar B epsilon hsurface)
 
-/-- Probability composition for the bare adaptive family.  Every algebraic branch is closed by
-the executable combined finder and the remaining semantic term is derived from the five explicit
-Action squeeze surfaces. -/
-theorem adaptiveActionAcceptFalseStatement_prob_le
+/-- Probability bound for the bare adaptive false-statement event.  Every algebraic branch is
+closed by the executable combined finder and the remaining semantic term is derived from the five
+explicit Action squeeze surfaces. -/
+theorem adaptiveActionAcceptFalseStatement_probability_bound
     (B : VestaG) (epsilon : Fin 5 → ENNReal)
     (profile : AdaptiveActionDlogProfile pp family inputs hvk hI hchar B)
     (hsurface : ∀
@@ -1640,7 +1652,7 @@ theorem adaptiveActionAcceptFalseStatement_prob_le
         ((family.Q + 1 : Nat) *
           algebraicRootBudget (actionCircuit.shape.withProofParams pp)
             actionCircuit.domainExponent +
-        ((profile.advantage (adaptiveActionDlogRandomOracleQueries pp family)
+        ((profile.advantage (adaptiveActionDlogOracleQueryCost pp family)
             (adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
             1 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * ∑ n : Fin 5, epsilon n))) := by
@@ -1648,16 +1660,16 @@ theorem adaptiveActionAcceptFalseStatement_prob_le
     (Set.preimage_mono
       (adaptiveActionAcceptFalseStatementEvent_subset pp family inputs hvk hI hchar))) ?_
   refine le_trans (MeasureTheory.measure_union_le _ _) ?_
-  refine add_le_add (adaptiveActionZero_prob_le pp family B) ?_
+  refine add_le_add (adaptiveActionZeroChallenge_probability_bound pp family B) ?_
   refine le_trans (MeasureTheory.measure_union_le _ _) ?_
-  refine add_le_add (adaptiveActionIpa_prob_le pp family B) ?_
+  refine add_le_add (adaptiveActionIpa_probability_bound pp family B) ?_
   refine le_trans (MeasureTheory.measure_union_le _ _) ?_
-  refine add_le_add (adaptiveActionRoot_prob_le pp family B) ?_
+  refine add_le_add (adaptiveActionRoot_probability_bound pp family B) ?_
   refine le_trans (MeasureTheory.measure_union_le _ _) ?_
   exact add_le_add
-    (adaptiveActionRelation_prob_le_of_textbookDL pp family inputs hvk hI hchar B
+    (adaptiveActionRelation_probability_bound_of_textbookDL pp family inputs hvk hI hchar B
       profile.hardness)
-    (adaptiveActionSemanticResidual_prob_le pp family inputs hvk hI hchar B epsilon hsurface)
+    (adaptiveActionSemanticResidual_probability_bound pp family inputs hvk hI hchar B epsilon hsurface)
 
 end ActionTerminal
 

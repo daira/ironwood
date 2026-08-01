@@ -374,7 +374,7 @@ assert_axioms Zcash.Snark.Fixture2.orchard_deployed_knowledge_error_captured_str
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- Census the captured and consensus-generic Action capstones with their fixtures.
-assert_axioms Zcash.Snark.Fixture.actionAcceptFalseStatementEvent +native(
+assert_axioms Zcash.Snark.Fixture.capturedActionAcceptFalseStatementEvent +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
@@ -411,7 +411,7 @@ assert_axioms Zcash.Snark.Fixture.derived_lookups +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Fixture.staticChecks_of_derived +native(
+assert_axioms Zcash.Snark.Fixture.capturedActionStaticChecks +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionGateCoherence.domainExponent_lt,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,

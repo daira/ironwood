@@ -33,9 +33,10 @@ private theorem actionProofShape_eq_maxShape (numProofs : ℕ) :
 
 /-! ## Exact false-statement events -/
 
-/-- **The exact public Action-soundness event.**  The deployed verifier accepts while the Orchard
-Action bundle statement at its supplied public inputs is false. -/
-def actionAcceptFalseStatementEvent
+/-- **The captured Action-soundness event.**  This definition is the set of captured-shape
+experiment outcomes on which the deployed verifier accepts while the Orchard Action statement at
+its supplied public inputs is false; the capstone theorem separately bounds its probability. -/
+def capturedActionAcceptFalseStatementEvent
     (family : ComputedStraightLineDeployedFSFamily
       (actionCircuit.shape.withProofParams actionProofParams))
     (inputs : Fin actionProofParams.numProofs →
@@ -47,8 +48,10 @@ def actionAcceptFalseStatementEvent
   family.straightLineConstraintSemanticFailureEvent
     (topLevelBundleStatementDecoded actionCircuit actionProofParams family inputs)
 
-/-- Literal accepting-false-`BundleStatement` event at an arbitrary Action bundle size. -/
-def actionAcceptFalseStatementEventFor (numProofs : ℕ)
+/-- The generic accepting-false-`BundleStatement` event at arbitrary `numProofs`.  This definition
+is the outcome set; the corresponding soundness theorem separately supplies its probability
+bound. -/
+def actionAcceptFalseStatementEvent (numProofs : ℕ)
     (family : ComputedStraightLineDeployedFSFamily
       (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)))
     (inputs : Fin (actionProofParamsFor numProofs).numProofs →
@@ -186,9 +189,10 @@ private theorem action_domainExponent_eq :
     actionCircuit.domainExponent = 11 := by
   simpa [shape] using md_counts.1
 
-/-- **The captured static checks at the derived key** (issue #128 F3): the five decided facts,
-transferred through the derived key's scalar equalities. -/
-theorem staticChecks_of_derived
+/-- **The captured static checks at the derived key** (issue #128 F3): the concrete specialization
+of `actionStaticChecks`, with the five decided facts transferred through the captured key's scalar
+equalities. -/
+theorem capturedActionStaticChecks
     (family : ComputedStraightLineDeployedFSFamily
       (actionCircuit.shape.withProofParams actionProofParams))
     (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey
@@ -287,8 +291,9 @@ private theorem md_counts_for (numProofs : ℕ) :
           actionCircuit.shape_numQuotientPieces] using
         congrArg (fun proofShape : Shape => proofShape.numQuotientPieces) h⟩
 
-/-- The captured static checks transported to an arbitrary Action bundle size. -/
-theorem staticChecks_of_derived_for (numProofs : ℕ)
+/-- The canonical Action static checks, quantified over arbitrary `numProofs`.  The captured-key
+specialization is stated separately as `capturedActionStaticChecks`. -/
+theorem actionStaticChecks (numProofs : ℕ)
     (family : ComputedStraightLineDeployedFSFamily
       (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)))
     (hvk : ∀ basis, family.vk basis =
@@ -735,9 +740,10 @@ private theorem derived_n_yn_for (numProofs : ℕ) {L : ℕ}
       rw [show (2 : ℕ) ^ 23 = 2 ^ 11 * 2 ^ 12 by norm_num]
       omega
 
-/-- The adaptive Action model has the same captured, shape-determined constraint count for every
-prover polynomial assignment. -/
-theorem adaptive_action_constraint_count_le
+/-- Bound on the captured Action constraint count: the model has at most `2^12` constraints for
+every prover polynomial assignment.  `actionConstraintCount_bound` is the generic
+`numProofs`-dependent form. -/
+theorem capturedActionConstraintCount_bound
     (basis : AugmentedIndex actionCircuit.n → VestaG)
     (inputs : Fin actionProofParams.numProofs → PublicInputs Fp)
     (ps : ProofString (actionCircuit.shape.withProofParams actionProofParams) Fp VestaG)
@@ -783,7 +789,10 @@ private theorem action_length_flatten_ofFn_le {α : Type*} {n : ℕ}
     exact hf i
   · rw [List.length_map, List.length_ofFn, smul_eq_mul]
 
-theorem adaptive_action_constraint_count_le_for (numProofs : ℕ)
+/-- Bound on the Action constraint count at arbitrary `numProofs`: the constraint list grows by at
+most `2^12` entries per proof.  The captured specialization is stated separately as
+`capturedActionConstraintCount_bound`. -/
+theorem actionConstraintCount_bound (numProofs : ℕ)
     (basis : AugmentedIndex
       actionCircuit.n → VestaG)
     (inputs : Fin (actionProofParamsFor numProofs).numProofs →
@@ -1370,14 +1379,14 @@ theorem actionStatisticalModel_at_2pow123 {Q : Nat} (hQ : Q <= 2 ^ 123) :
         ENNReal.inv_mul_cancel (by norm_num) (by norm_num), _root_.one_mul]
       norm_num
 
-/-- The combined constraint-plus-Action finder stays within the same conservative three-bit
-query envelope at the `2^123` adversary target. -/
-theorem action_dlog_queries_le_2pow126
+/-- Bound on `actionDlogOracleQueryCost`: if the adversary query cost is at most `2^123`, the
+combined constraint-plus-Action solver's oracle-query cost is at most `2^126`. -/
+theorem actionDlogOracleQueryCost_bound
     (family : ComputedStraightLineDeployedFSFamily
       (actionCircuit.shape.withProofParams actionProofParams))
     (hQ : family.Q ≤ 2 ^ 123) :
-    actionDlogRandomOracleQueries actionProofParams family ≤ 2 ^ 126 := by
-  unfold actionDlogRandomOracleQueries
+    actionDlogOracleQueryCost actionProofParams family ≤ 2 ^ 126 := by
+  unfold actionDlogOracleQueryCost
   have hk : actionCircuit.domainExponent = 11 := by
     exact action_domainExponent_eq
   rw [hk]
@@ -1386,9 +1395,9 @@ theorem action_dlog_queries_le_2pow126
     _ ≤ 8 * 2 ^ 123 := by norm_num
     _ = 2 ^ 126 := by norm_num
 
-/-- If prover and terminal-reduction group work each fit the `2^123` target, the combined
-six-call finder fits the matching `2^126` DLOG-solver envelope. -/
-theorem action_dlog_groupWork_le_2pow126
+/-- Bound on `actionDlogGroupWork`: if prover and terminal-reduction group work each fit the
+`2^123` target, the combined six-call solver fits the matching `2^126` envelope. -/
+theorem actionDlogGroupWork_bound
     {proverGroupWork reductionGroupWork : Nat}
     (hprover : proverGroupWork ≤ 2 ^ 123)
     (hreduction : reductionGroupWork ≤ 2 ^ 123) :
@@ -1426,7 +1435,7 @@ theorem orchard_action_captured_soundness_error_bound
       (straightLineRunOutput family basis O).1.proof.1
       (straightLineRunRecord family basis O) < scalarFieldOrder)
     (profile : StraightLineActionDlogProfile actionProofParams family
-      (staticChecks_of_derived family hvk) inputs hvk hI hchar B)
+      (capturedActionStaticChecks family hvk) inputs hvk hI hchar B)
     {xyBound betaBound gammaBound thetaBound : ENNReal}
     (hXY : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
@@ -1435,7 +1444,7 @@ theorem orchard_action_captured_soundness_error_bound
             + 3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelXYFailureEvent actionCircuit actionProofParams family
-            (staticChecks_of_derived family hvk) inputs hvk hI hchar) ≤ xyBound)
+            (capturedActionStaticChecks family hvk) inputs hvk hI hchar) ≤ xyBound)
     (hBeta : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
@@ -1443,7 +1452,7 @@ theorem orchard_action_captured_soundness_error_bound
             + 3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelBetaFailureEvent actionCircuit actionProofParams family
-            (staticChecks_of_derived family hvk) inputs hvk hI hchar) ≤ betaBound)
+            (capturedActionStaticChecks family hvk) inputs hvk hI hchar) ≤ betaBound)
     (hGamma : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
@@ -1451,7 +1460,7 @@ theorem orchard_action_captured_soundness_error_bound
             + 3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelGammaFailureEvent actionCircuit actionProofParams family
-            (staticChecks_of_derived family hvk) inputs hvk hI hchar) ≤ gammaBound)
+            (capturedActionStaticChecks family hvk) inputs hvk hI hchar) ≤ gammaBound)
     (hTheta : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
@@ -1459,14 +1468,14 @@ theorem orchard_action_captured_soundness_error_bound
             + 3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelThetaFailureEvent actionCircuit actionProofParams family
-            (staticChecks_of_derived family hvk) inputs hvk hI hchar) ≤ thetaBound) :
+            (capturedActionStaticChecks family hvk) inputs hvk hI hchar) ≤ thetaBound) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
           (preIpaLen (actionCircuit.shape.withProofParams actionProofParams) family.init.length 10
             + 3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionAcceptFalseStatementEvent family inputs) ≤
+          capturedActionAcceptFalseStatementEvent family inputs) ≤
       ((family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
           (family.Q + 1 : Nat) *
             (actionCircuit.domainExponent *
@@ -1474,19 +1483,19 @@ theorem orchard_action_captured_soundness_error_bound
           (family.Q + (11 + actionCircuit.domainExponent) + 1 : Nat) *
             algebraicRootBudget (actionCircuit.shape.withProofParams actionProofParams)
               actionCircuit.domainExponent +
-          (profile.advantage (actionDlogRandomOracleQueries actionProofParams family)
+          (profile.advantage (actionDlogOracleQueryCost actionProofParams family)
               (actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
             1 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * ((20470 : Nat) / (Fintype.card Fp : ENNReal))) +
         (xyBound + (betaBound + (gammaBound + thetaBound))) :=
   actionBundleStatementFailure_prob_le_of_base_union_bound actionProofParams family
-    (staticChecks_of_derived family hvk) inputs hvk hI hchar query
-    (actionRelationFinder actionProofParams family (staticChecks_of_derived family hvk)
+    (capturedActionStaticChecks family hvk) inputs hvk hI hchar query
+    (actionRelationFinder actionProofParams family (capturedActionStaticChecks family hvk)
       inputs hvk hI hchar)
     (actionRelationFinder_covers actionProofParams family
-      (staticChecks_of_derived family hvk) inputs hvk hI hchar)
+      (capturedActionStaticChecks family hvk) inputs hvk hI hchar)
     (actionBaseUnion_prob_le_of_dlogProfile actionProofParams family
-      (staticChecks_of_derived family hvk) inputs hvk hI hchar B hB query hquery
+      (capturedActionStaticChecks family hvk) inputs hvk hI hchar B hB query hquery
       (schedule_of_derived family hvk) profile)
     hXY hBeta hGamma hTheta
 
@@ -1520,7 +1529,7 @@ theorem orchard_action_captured_bundle_soundness_error_bound
       (straightLineRunOutput family basis O).1.proof.1
       (straightLineRunRecord family basis O) < scalarFieldOrder)
     (profile : StraightLineActionDlogProfile (actionProofParamsFor numProofs) family
-      (staticChecks_of_derived_for numProofs family hvk) inputs hvk hI hchar B)
+      (actionStaticChecks numProofs family hvk) inputs hvk hI hchar B)
     {xyBound betaBound gammaBound thetaBound : ENNReal}
     (hXY : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
@@ -1530,7 +1539,7 @@ theorem orchard_action_captured_bundle_soundness_error_bound
             3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelXYFailureEvent actionCircuit (actionProofParamsFor numProofs) family
-            (staticChecks_of_derived_for numProofs family hvk) inputs hvk hI hchar) ≤ xyBound)
+            (actionStaticChecks numProofs family hvk) inputs hvk hI hchar) ≤ xyBound)
     (hBeta : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
@@ -1539,7 +1548,7 @@ theorem orchard_action_captured_bundle_soundness_error_bound
             3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelBetaFailureEvent actionCircuit (actionProofParamsFor numProofs) family
-            (staticChecks_of_derived_for numProofs family hvk) inputs hvk hI hchar) ≤ betaBound)
+            (actionStaticChecks numProofs family hvk) inputs hvk hI hchar) ≤ betaBound)
     (hGamma : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
@@ -1548,7 +1557,7 @@ theorem orchard_action_captured_bundle_soundness_error_bound
             3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelGammaFailureEvent actionCircuit (actionProofParamsFor numProofs) family
-            (staticChecks_of_derived_for numProofs family hvk) inputs hvk hI hchar) ≤ gammaBound)
+            (actionStaticChecks numProofs family hvk) inputs hvk hI hchar) ≤ gammaBound)
     (hTheta : (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
@@ -1557,7 +1566,7 @@ theorem orchard_action_captured_bundle_soundness_error_bound
             3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelThetaFailureEvent actionCircuit (actionProofParamsFor numProofs) family
-            (staticChecks_of_derived_for numProofs family hvk) inputs hvk hI hchar) ≤ thetaBound) :
+            (actionStaticChecks numProofs family hvk) inputs hvk hI hchar) ≤ thetaBound) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
@@ -1565,7 +1574,7 @@ theorem orchard_action_captured_bundle_soundness_error_bound
             family.init.length 10 +
             3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionAcceptFalseStatementEventFor numProofs family inputs) ≤
+          actionAcceptFalseStatementEvent numProofs family inputs) ≤
       ((family.Q + 1 : Nat) * (1 / Fintype.card Fp) +
           (family.Q + 1 : Nat) *
             (actionCircuit.domainExponent *
@@ -1576,20 +1585,20 @@ theorem orchard_action_captured_bundle_soundness_error_bound
               (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
               actionCircuit.domainExponent +
           (profile.advantage
-              (actionDlogRandomOracleQueries (actionProofParamsFor numProofs) family)
+              (actionDlogOracleQueryCost (actionProofParamsFor numProofs) family)
               (actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
             1 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * ((20470 : Nat) / (Fintype.card Fp : ENNReal))) +
         (xyBound + (betaBound + (gammaBound + thetaBound))) :=
   actionBundleStatementFailure_prob_le_of_base_union_bound
     (actionProofParamsFor numProofs) family
-    (staticChecks_of_derived_for numProofs family hvk) inputs hvk hI hchar query
+    (actionStaticChecks numProofs family hvk) inputs hvk hI hchar query
     (actionRelationFinder (actionProofParamsFor numProofs) family
-      (staticChecks_of_derived_for numProofs family hvk) inputs hvk hI hchar)
+      (actionStaticChecks numProofs family hvk) inputs hvk hI hchar)
     (actionRelationFinder_covers (actionProofParamsFor numProofs) family
-      (staticChecks_of_derived_for numProofs family hvk) inputs hvk hI hchar)
+      (actionStaticChecks numProofs family hvk) inputs hvk hI hchar)
     (actionBaseUnion_prob_le_of_dlogProfile (actionProofParamsFor numProofs) family
-      (staticChecks_of_derived_for numProofs family hvk) inputs hvk hI hchar B hB query hquery
+      (actionStaticChecks numProofs family hvk) inputs hvk hI hchar B hB query hquery
       (schedule_of_derived_for numProofs family hvk) profile)
     hXY hBeta hGamma hTheta
 
@@ -1630,7 +1639,7 @@ theorem orchard_action_adaptive_soundness_error_bound
         ((family.Q + 1 : Nat) *
           algebraicRootBudget (actionCircuit.shape.withProofParams actionProofParams)
             actionCircuit.domainExponent +
-        ((profile.advantage (adaptiveActionDlogRandomOracleQueries actionProofParams family)
+        ((profile.advantage (adaptiveActionDlogOracleQueryCost actionProofParams family)
               (adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
             1 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * ∑ n : Fin 5,
@@ -1688,7 +1697,7 @@ theorem orchard_action_adaptive_soundness_error_bound
       dsimp only [epsilon]
       gcongr
       exact_mod_cast derived_n_yn
-        (adaptive_action_constraint_count_le basis inputs ps source
+        (capturedActionConstraintCount_bound basis inputs ps source
           (chRecord (fun i => if h : (i : Nat) < 3 then earlier ⟨i, h⟩ else 0)
             (fun _ => 0)))
     · have h := adaptiveActionXSurface_measure_le
@@ -1710,7 +1719,7 @@ theorem orchard_action_adaptive_soundness_error_bound
     _ = _ := hevent
     _ ≤ _ := by
       simpa only [epsilon] using
-        (adaptiveActionAcceptFalseStatement_prob_le actionProofParams family inputs hvk hI hchar
+        (adaptiveActionAcceptFalseStatement_probability_bound actionProofParams family inputs hvk hI hchar
           B epsilon profile hsurface)
 
 /-- Bare adaptive Action composition for every bundle size.  The five surface bounds are derived
@@ -1760,7 +1769,7 @@ theorem orchard_action_adaptive_bundle_soundness_error_bound
             (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
             actionCircuit.domainExponent +
         ((profile.advantage
-              (adaptiveActionDlogRandomOracleQueries (actionProofParamsFor numProofs) family)
+              (adaptiveActionDlogOracleQueryCost (actionProofParamsFor numProofs) family)
               (adaptiveActionDlogGroupWork
                 profile.proverGroupWork profile.reductionGroupWork) +
             1 / Fintype.card Fp) +
@@ -1825,7 +1834,7 @@ theorem orchard_action_adaptive_bundle_soundness_error_bound
       dsimp only [epsilon]
       gcongr
       exact_mod_cast derived_n_yn_for numProofs
-        (adaptive_action_constraint_count_le_for numProofs basis inputs ps source
+        (actionConstraintCount_bound numProofs basis inputs ps source
           (chRecord (fun j => if hj : (j : ℕ) < 3 then earlier ⟨j, hj⟩ else 0)
             (fun _ => 0)))
     · have h := adaptiveActionXSurface_measure_le
@@ -1847,11 +1856,12 @@ theorem orchard_action_adaptive_bundle_soundness_error_bound
     _ = _ := hevent
     _ ≤ _ := by
       simpa only [epsilon] using
-        (adaptiveActionAcceptFalseStatement_prob_le (actionProofParamsFor numProofs)
+        (adaptiveActionAcceptFalseStatement_probability_bound (actionProofParamsFor numProofs)
           family inputs hvk hI hchar B epsilon profile hsurface)
 
-/-- Captured five-surface bound shared by ordinary and knowledge soundness. -/
-theorem orchard_adaptiveActionSurface_measure_le_for
+/-- Probability bound for each of the five adaptive Action surfaces at arbitrary `numProofs`,
+shared by ordinary and knowledge soundness. -/
+theorem adaptiveActionSurface_probability_bound
     (numProofs : ℕ)
     (basis : AugmentedIndex
       (2 ^ actionCircuit.domainExponent) → VestaG)
@@ -1905,7 +1915,7 @@ theorem orchard_adaptiveActionSurface_measure_le_for
     refine le_trans h ?_
     gcongr
     exact_mod_cast derived_n_yn_for numProofs
-      (adaptive_action_constraint_count_le_for numProofs basis inputs ps source
+      (actionConstraintCount_bound numProofs basis inputs ps source
         (chRecord (fun j => if hj : (j : ℕ) < 3 then earlier ⟨j, hj⟩ else 0)
           (fun _ => 0)))
   · have h := adaptiveActionXSurface_measure_le
@@ -1965,7 +1975,7 @@ theorem orchard_action_adaptive_bundle_knowledge_error_bound
             (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
             actionCircuit.domainExponent +
         ((profile.advantage
-              (adaptiveActionDlogRandomOracleQueries (actionProofParamsFor numProofs) family)
+              (adaptiveActionDlogOracleQueryCost (actionProofParamsFor numProofs) family)
               (adaptiveActionDlogGroupWork
                 profile.proverGroupWork profile.reductionGroupWork) +
             1 / Fintype.card Fp) +
@@ -1989,7 +1999,7 @@ theorem orchard_action_adaptive_bundle_knowledge_error_bound
           (adaptiveActionSurfaceAt (actionProofParamsFor numProofs)
             basis inputs i ps source earlier) ≤ epsilon i := by
     intro basis i ps hwf source earlier
-    exact orchard_adaptiveActionSurface_measure_le_for
+    exact adaptiveActionSurface_probability_bound
       numProofs basis inputs i ps hwf source earlier
   have hevent := adaptiveActionEvent_prob_eq_of_uniformURS
     (actionProofParamsFor numProofs) family
@@ -2002,7 +2012,7 @@ theorem orchard_action_adaptive_bundle_knowledge_error_bound
     _ = _ := hevent
     _ ≤ _ := by
       simpa only [epsilon] using
-        (adaptiveActionKnowledgeFailure_prob_le (actionProofParamsFor numProofs)
+        (adaptiveActionKnowledgeFailure_probability_bound (actionProofParamsFor numProofs)
           family inputs hvk hI hchar B epsilon profile
           hsurface)
 
@@ -2040,16 +2050,16 @@ theorem orchard_action_adaptive_soundness_finite_security
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           adaptiveActionAcceptFalseStatementEvent actionProofParams family inputs) ≤
       profile.advantage (2 ^ 127) (2 ^ 127) + 1 / (2 ^ 84 : ENNReal)) ∧
-      adaptiveActionDlogRandomOracleQueries actionProofParams family ≤ 2 ^ 127 ∧
+      adaptiveActionDlogOracleQueryCost actionProofParams family ≤ 2 ^ 127 ∧
       adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
         2 ^ 127 ∧
       ∀ basis O, 2 * adaptiveActionDirectDecodeOps actionProofParams family basis O ≤
         2 ^ 123 := by
   have hcost := profile.solverCost_le
-  have hqueries : adaptiveActionDlogRandomOracleQueries actionProofParams family ≤
+  have hqueries : adaptiveActionDlogOracleQueryCost actionProofParams family ≤
       2 ^ 127 := by
     calc
-      adaptiveActionDlogRandomOracleQueries actionProofParams family ≤ 16 * 2 ^ 123 :=
+      adaptiveActionDlogOracleQueryCost actionProofParams family ≤ 16 * 2 ^ 123 :=
         hcost.1
       _ = 2 ^ 127 := by norm_num
   have hgroup :
@@ -2066,7 +2076,7 @@ theorem orchard_action_adaptive_soundness_finite_security
   rw [adaptiveActionSemanticSum_eq]
   calc
     _ =
-        profile.advantage (adaptiveActionDlogRandomOracleQueries actionProofParams family)
+        profile.advantage (adaptiveActionDlogOracleQueryCost actionProofParams family)
             (adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
           adaptiveActionStatisticalModel family.Q := by
       unfold adaptiveActionStatisticalModel
@@ -2117,7 +2127,7 @@ theorem orchard_action_adaptive_bundle_soundness_finite_security
           adaptiveActionAcceptFalseStatementEvent
             (actionProofParamsFor numProofs) family inputs) ≤
       profile.advantage (2 ^ 127) (2 ^ 127) + 1 / (2 ^ 83 : ENNReal)) ∧
-      adaptiveActionDlogRandomOracleQueries (actionProofParamsFor numProofs) family ≤
+      adaptiveActionDlogOracleQueryCost (actionProofParamsFor numProofs) family ≤
         2 ^ 127 ∧
       adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
         2 ^ 127 ∧
@@ -2146,10 +2156,10 @@ theorem orchard_action_adaptive_bundle_soundness_finite_security
           (profile.advantage (2 ^ 127) (2 ^ 127) + 1 / (2 ^ 83 : ENNReal)) + εBias := by
   have hcost := profile.solverCost_le
   have hqueries :
-      adaptiveActionDlogRandomOracleQueries (actionProofParamsFor numProofs) family ≤
+      adaptiveActionDlogOracleQueryCost (actionProofParamsFor numProofs) family ≤
         2 ^ 127 := by
     calc
-      adaptiveActionDlogRandomOracleQueries (actionProofParamsFor numProofs) family ≤
+      adaptiveActionDlogOracleQueryCost (actionProofParamsFor numProofs) family ≤
           16 * 2 ^ 123 := hcost.1
       _ = 2 ^ 127 := by norm_num
   have hgroup :
@@ -2239,7 +2249,7 @@ theorem orchard_action_adaptive_bundle_knowledge_soundness_finite_security
           adaptiveActionKnowledgeFailureEvent
             (actionProofParamsFor numProofs) family inputs hvk hI hchar) ≤
       profile.advantage (2 ^ 127) (2 ^ 127) + 1 / (2 ^ 83 : ENNReal)) ∧
-      adaptiveActionKnowledgeExtractorRandomOracleQueries
+      adaptiveActionKnowledgeExtractorOracleQueryCost
           (actionProofParamsFor numProofs) family ≤ 2 ^ 127 ∧
       adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
         2 ^ 127 ∧
@@ -2268,16 +2278,16 @@ theorem orchard_action_adaptive_bundle_knowledge_soundness_finite_security
           (profile.advantage (2 ^ 127) (2 ^ 127) + 1 / (2 ^ 83 : ENNReal)) + εBias := by
   have hcost := profile.knowledgeExtractorCost_le
   have hqueries :
-      adaptiveActionKnowledgeExtractorRandomOracleQueries
+      adaptiveActionKnowledgeExtractorOracleQueryCost
           (actionProofParamsFor numProofs) family ≤ 2 ^ 127 := by
     calc
-      adaptiveActionKnowledgeExtractorRandomOracleQueries
+      adaptiveActionKnowledgeExtractorOracleQueryCost
           (actionProofParamsFor numProofs) family ≤ 16 * 2 ^ 123 := hcost.1
       _ = 2 ^ 127 := by norm_num
   have hqueriesDlog :
-      adaptiveActionDlogRandomOracleQueries (actionProofParamsFor numProofs) family ≤
+      adaptiveActionDlogOracleQueryCost (actionProofParamsFor numProofs) family ≤
         2 ^ 127 := by
-    simpa only [adaptiveActionKnowledgeExtractorRandomOracleQueries_eq] using hqueries
+    simpa only [adaptiveActionKnowledgeExtractorOracleQueryCost_eq] using hqueries
   have hgroup :
       adaptiveActionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
         2 ^ 127 := by
@@ -2347,17 +2357,17 @@ theorem orchard_action_sequential_soundness_error_bound
       (straightLineRunOutput prover.toFamily basis O).1.proof.1
       (straightLineRunRecord prover.toFamily basis O) < scalarFieldOrder)
     (profile : StraightLineActionDlogProfile actionProofParams prover.toFamily
-      (staticChecks_of_derived prover.toFamily hvk) inputs hvk hI hchar B)
+      (capturedActionStaticChecks prover.toFamily hvk) inputs hvk hI hchar B)
     {L : Nat} (hL : L ≤ 2 ^ 12)
     (execution : ActionSequentialExecution actionProofParams prover.toFamily
-      (staticChecks_of_derived prover.toFamily hvk) inputs hvk hI hchar 20470 L) :
+      (capturedActionStaticChecks prover.toFamily hvk) inputs hvk hI hchar 20470 L) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
           (preIpaLen (actionCircuit.shape.withProofParams actionProofParams) prover.toFamily.init.length 10
             + 3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionAcceptFalseStatementEvent prover.toFamily inputs) ≤
+          capturedActionAcceptFalseStatementEvent prover.toFamily inputs) ≤
       ((prover.toFamily.Q + 1 : Nat) * (1 / Fintype.card Fp) +
           (prover.toFamily.Q + 1 : Nat) *
             (actionCircuit.domainExponent *
@@ -2365,7 +2375,7 @@ theorem orchard_action_sequential_soundness_error_bound
           (prover.toFamily.Q + (11 + actionCircuit.domainExponent) + 1 : Nat) *
             algebraicRootBudget (actionCircuit.shape.withProofParams actionProofParams)
               actionCircuit.domainExponent +
-          (profile.advantage (actionDlogRandomOracleQueries actionProofParams prover.toFamily)
+          (profile.advantage (actionDlogOracleQueryCost actionProofParams prover.toFamily)
               (actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
             1 / Fintype.card Fp) +
           (prover.toFamily.Q + 1 : Nat) * ((20470 : Nat) / (Fintype.card Fp : ENNReal))) +
@@ -2382,16 +2392,16 @@ theorem orchard_action_sequential_soundness_error_bound
   orchard_action_captured_soundness_error_bound B hB query hquery prover.toFamily inputs hvk hI
     hchar profile
     (execution.toCuts.xy_prob_le actionProofParams prover.toFamily
-      (staticChecks_of_derived prover.toFamily hvk) inputs
+      (capturedActionStaticChecks prover.toFamily hvk) inputs
       hvk hI hchar query derived_n_ne_zero (derived_n_yn hL))
     (execution.toCuts.beta_prob_le actionProofParams prover.toFamily
-      (staticChecks_of_derived prover.toFamily hvk) inputs
+      (capturedActionStaticChecks prover.toFamily hvk) inputs
       hvk hI hchar query cap_beta)
     (execution.toCuts.gamma_prob_le actionProofParams prover.toFamily
-      (staticChecks_of_derived prover.toFamily hvk) inputs
+      (capturedActionStaticChecks prover.toFamily hvk) inputs
       hvk hI hchar query cap_gamma)
     (execution.toCuts.theta_prob_le actionProofParams prover.toFamily
-      (staticChecks_of_derived prover.toFamily hvk) inputs
+      (capturedActionStaticChecks prover.toFamily hvk) inputs
       hvk hI hchar query cap_theta)
 
 /-- Sequential exact-Action capstone for every bundle size.  All semantic surfaces are discharged
@@ -2424,10 +2434,10 @@ theorem orchard_action_sequential_bundle_soundness_error_bound
       (straightLineRunOutput prover.toFamily basis O).1.proof.1
       (straightLineRunRecord prover.toFamily basis O) < scalarFieldOrder)
     (profile : StraightLineActionDlogProfile (actionProofParamsFor numProofs) prover.toFamily
-      (staticChecks_of_derived_for numProofs prover.toFamily hvk) inputs hvk hI hchar B)
+      (actionStaticChecks numProofs prover.toFamily hvk) inputs hvk hI hchar B)
     {L : ℕ} (hL : L ≤ numProofs * 2 ^ 12)
     (execution : ActionSequentialExecution (actionProofParamsFor numProofs) prover.toFamily
-      (staticChecks_of_derived_for numProofs prover.toFamily hvk) inputs hvk hI hchar 20470 L) :
+      (actionStaticChecks numProofs prover.toFamily hvk) inputs hvk hI hchar 20470 L) :
     (independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
@@ -2435,12 +2445,12 @@ theorem orchard_action_sequential_bundle_soundness_error_bound
             prover.toFamily.init.length 10 +
             3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionAcceptFalseStatementEventFor numProofs prover.toFamily inputs) ≤
+          actionAcceptFalseStatementEvent numProofs prover.toFamily inputs) ≤
       profile.advantage
-          (actionDlogRandomOracleQueries (actionProofParamsFor numProofs) prover.toFamily)
+          (actionDlogOracleQueryCost (actionProofParamsFor numProofs) prover.toFamily)
           (actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
         actionStatisticalModelFor numProofs prover.toFamily.Q := by
-  let static := staticChecks_of_derived_for numProofs prover.toFamily hvk
+  let static := actionStaticChecks numProofs prover.toFamily hvk
   refine le_trans
     (orchard_action_captured_bundle_soundness_error_bound numProofs B hB query hquery
       prover.toFamily inputs hvk hI hchar profile
@@ -2498,26 +2508,26 @@ theorem orchard_action_sequential_soundness_finite_security
       (straightLineRunOutput prover.toFamily basis O).1.proof.1
       (straightLineRunRecord prover.toFamily basis O) < scalarFieldOrder)
     (profile : StraightLineActionDirectDlogProfile actionProofParams prover.toFamily
-      (staticChecks_of_derived prover.toFamily hvk) inputs hvk hI hchar B (2 ^ 123))
+      (capturedActionStaticChecks prover.toFamily hvk) inputs hvk hI hchar B (2 ^ 123))
     {L : Nat} (hL : L ≤ 2 ^ 12)
     (execution : ActionSequentialExecution actionProofParams prover.toFamily
-      (staticChecks_of_derived prover.toFamily hvk) inputs hvk hI hchar 20470 L) :
+      (capturedActionStaticChecks prover.toFamily hvk) inputs hvk hI hchar 20470 L) :
     ((independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
           (preIpaLen (actionCircuit.shape.withProofParams actionProofParams) prover.toFamily.init.length 10
             + 3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionAcceptFalseStatementEvent prover.toFamily inputs) ≤
+          capturedActionAcceptFalseStatementEvent prover.toFamily inputs) ≤
       profile.advantage (2 ^ 126) (2 ^ 126) + 1 / (2 ^ 84 : ENNReal)) ∧
-      actionDlogRandomOracleQueries actionProofParams prover.toFamily ≤ 2 ^ 126 ∧
+      actionDlogOracleQueryCost actionProofParams prover.toFamily ≤ 2 ^ 126 ∧
       actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤ 2 ^ 126 ∧
       ∀ basis O, 2 * prover.toFamily.straightLineDirectDecodeOps basis O ≤ 2 ^ 123 := by
   have hcost := profile.solverCost_le
-  have hqueries : actionDlogRandomOracleQueries actionProofParams prover.toFamily ≤
+  have hqueries : actionDlogOracleQueryCost actionProofParams prover.toFamily ≤
       2 ^ 126 := by
     calc
-      actionDlogRandomOracleQueries actionProofParams prover.toFamily ≤ 8 * 2 ^ 123 := hcost.1
+      actionDlogOracleQueryCost actionProofParams prover.toFamily ≤ 8 * 2 ^ 123 := hcost.1
       _ = 2 ^ 126 := by norm_num
   have hgroup : actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
       2 ^ 126 := by
@@ -2537,7 +2547,7 @@ theorem orchard_action_sequential_soundness_finite_security
           (prover.toFamily.Q + (11 + actionCircuit.domainExponent) + 1 : Nat) *
             algebraicRootBudget (actionCircuit.shape.withProofParams actionProofParams)
               actionCircuit.domainExponent +
-          (profile.advantage (actionDlogRandomOracleQueries actionProofParams prover.toFamily)
+          (profile.advantage (actionDlogOracleQueryCost actionProofParams prover.toFamily)
               (actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
             1 / Fintype.card Fp) +
           (prover.toFamily.Q + 1 : Nat) * ((20470 : Nat) /
@@ -2552,7 +2562,7 @@ theorem orchard_action_sequential_soundness_finite_security
                 (Fintype.card Fp : ENNReal)) +
               (prover.toFamily.Q + 1 : Nat) * (((2 ^ 25 : Nat) : ENNReal) /
                 (Fintype.card Fp : ENNReal))))) =
-        profile.advantage (actionDlogRandomOracleQueries actionProofParams prover.toFamily)
+        profile.advantage (actionDlogOracleQueryCost actionProofParams prover.toFamily)
             (actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
           actionStatisticalModel prover.toFamily.Q := by
       unfold actionStatisticalModel
@@ -2592,11 +2602,11 @@ theorem orchard_action_sequential_bundle_soundness_finite_security
       (straightLineRunRecord prover.toFamily basis O) < scalarFieldOrder)
     (profile : StraightLineActionDirectDlogProfile
       (actionProofParamsFor numProofs) prover.toFamily
-      (staticChecks_of_derived_for numProofs prover.toFamily hvk) inputs hvk hI hchar B
+      (actionStaticChecks numProofs prover.toFamily hvk) inputs hvk hI hchar B
       (2 ^ 123))
     {L : ℕ} (hL : L ≤ numProofs * 2 ^ 12)
     (execution : ActionSequentialExecution (actionProofParamsFor numProofs) prover.toFamily
-      (staticChecks_of_derived_for numProofs prover.toFamily hvk) inputs hvk hI hchar 20470 L) :
+      (actionStaticChecks numProofs prover.toFamily hvk) inputs hvk hI hchar 20470 L) :
     ((independentProductPMF (orchardGeneratorROSetup query)
       (PMF.uniformOfFintype
         (BTranscript Fp VestaG
@@ -2604,9 +2614,9 @@ theorem orchard_action_sequential_bundle_soundness_finite_security
             prover.toFamily.init.length 10 +
             3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-          actionAcceptFalseStatementEventFor numProofs prover.toFamily inputs) ≤
+          actionAcceptFalseStatementEvent numProofs prover.toFamily inputs) ≤
       profile.advantage (2 ^ 126) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal)) ∧
-      actionDlogRandomOracleQueries (actionProofParamsFor numProofs) prover.toFamily ≤
+      actionDlogOracleQueryCost (actionProofParamsFor numProofs) prover.toFamily ≤
         2 ^ 126 ∧
       actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤ 2 ^ 126 ∧
       (∀ basis O, 2 * prover.toFamily.straightLineDirectDecodeOps basis O ≤ 2 ^ 123) ∧
@@ -2627,14 +2637,14 @@ theorem orchard_action_sequential_bundle_soundness_finite_security
           εBias →
         actual.toOuterMeasure
             ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-              actionAcceptFalseStatementEventFor numProofs prover.toFamily inputs) ≤
+              actionAcceptFalseStatementEvent numProofs prover.toFamily inputs) ≤
           (profile.advantage (2 ^ 126) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal)) + εBias := by
   have hcost := profile.solverCost_le
   have hqueries :
-      actionDlogRandomOracleQueries (actionProofParamsFor numProofs) prover.toFamily ≤
+      actionDlogOracleQueryCost (actionProofParamsFor numProofs) prover.toFamily ≤
         2 ^ 126 := by
     calc
-      actionDlogRandomOracleQueries (actionProofParamsFor numProofs) prover.toFamily ≤
+      actionDlogOracleQueryCost (actionProofParamsFor numProofs) prover.toFamily ≤
           8 * 2 ^ 123 := hcost.1
       _ = 2 ^ 126 := by norm_num
   have hgroup :
@@ -2652,7 +2662,7 @@ theorem orchard_action_sequential_bundle_soundness_finite_security
               prover.toFamily.init.length 10 +
               3 * actionCircuit.domainExponent) → Fp))).toOuterMeasure
           ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-            actionAcceptFalseStatementEventFor numProofs prover.toFamily inputs) ≤
+            actionAcceptFalseStatementEvent numProofs prover.toFamily inputs) ≤
         profile.advantage (2 ^ 126) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal) := by
     refine le_trans
       (orchard_action_sequential_bundle_soundness_error_bound numProofs B hB query hquery

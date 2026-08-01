@@ -472,22 +472,24 @@ theorem actionRelationFinderCalls_le_six
   have hcalls := family.straightLineConstraintRelationFinderCalls_le_four basis O
   omega
 
-/-- Random-oracle work of the combined constraint-plus-Action solver.  All six represented prover
-runs include their own `11+k` designated transcript reads; no cache-sharing convention is assumed.
--/
-def actionDlogRandomOracleQueries : Nat :=
+/-- The numeric random-oracle query cost of the combined constraint-plus-Action solver.  All six
+represented prover runs include their own `11+k` designated transcript reads; no cache-sharing
+convention is assumed.  This definition is the cost; fixture theorems separately prove ceilings
+on it. -/
+def actionDlogOracleQueryCost : Nat :=
   6 * family.Q + 6 * (11 + actionCircuit.domainExponent)
 
-/-- The sequential witness extractor is the other projection of the same six-call outcome. -/
-def actionKnowledgeExtractorRandomOracleQueries : Nat :=
-  actionDlogRandomOracleQueries pp family
+/-- The sequential witness extractor's numeric oracle-query cost.  It is the other projection of
+the same six-call outcome. -/
+def actionKnowledgeExtractorOracleQueryCost : Nat :=
+  actionDlogOracleQueryCost pp family
 
-@[simp] theorem actionKnowledgeExtractorRandomOracleQueries_eq :
-    actionKnowledgeExtractorRandomOracleQueries pp family =
-      actionDlogRandomOracleQueries pp family := rfl
+@[simp] theorem actionKnowledgeExtractorOracleQueryCost_eq :
+    actionKnowledgeExtractorOracleQueryCost pp family =
+      actionDlogOracleQueryCost pp family := rfl
 
-/-- Group-work envelope of the combined solver.  Terminal comparison work is included in the
-explicit reduction component. -/
+/-- The combined solver's numeric group-work cost.  Terminal comparison work is included in the
+explicit reduction component; fixture theorems separately prove ceilings on this cost. -/
 def actionDlogGroupWork (proverGroupWork reductionGroupWork : Nat) : Nat :=
   6 * proverGroupWork + reductionGroupWork
 
@@ -500,7 +502,7 @@ structure StraightLineActionDlogProfile (B : VestaG) where
     advantage q g ≤ advantage q' g'
   hardness : TextbookDLWithCoinsAdvantageLE B
     (actionRelationFinder pp family static inputs hvk hI hchar)
-    (advantage (actionDlogRandomOracleQueries pp family)
+    (advantage (actionDlogOracleQueryCost pp family)
       (actionDlogGroupWork proverGroupWork reductionGroupWork))
 
 /-- Direct-route profile covering prover, postprocessing, and both possible decoder executions. -/
@@ -519,12 +521,13 @@ theorem StraightLineActionDirectDlogProfile.solverCost_le
     {B : VestaG} {T : Nat}
     (profile : StraightLineActionDirectDlogProfile pp family static inputs
       hvk hI hchar B T) :
-    actionDlogRandomOracleQueries pp family <= 8 * T /\
+    actionDlogOracleQueryCost pp family <= 8 * T /\
       actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork <= 8 * T /\
       forall basis O, 2 * family.straightLineDirectDecodeOps basis O <= T := by
   constructor
-  · unfold actionDlogRandomOracleQueries
-    have hT := profile.scheduleOverheadBound
+  · unfold actionDlogOracleQueryCost
+    rw [ActionPermutationDomain.domainExponent_eq]
+    have hT := profile.targetAtLeastSixtySix
     calc
       6 * family.Q + 6 * (11 + actionCircuit.domainExponent) <=
           6 * T + 6 * (11 + actionCircuit.domainExponent) := by
@@ -547,10 +550,10 @@ theorem StraightLineActionDirectDlogProfile.knowledgeExtractorCost_le
     {B : VestaG} {T : Nat}
     (profile : StraightLineActionDirectDlogProfile pp family static inputs
       hvk hI hchar B T) :
-    actionKnowledgeExtractorRandomOracleQueries pp family <= 8 * T /\
+    actionKnowledgeExtractorOracleQueryCost pp family <= 8 * T /\
       actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork <= 8 * T /\
       forall basis O, 2 * family.straightLineDirectDecodeOps basis O <= T := by
-  simpa only [actionKnowledgeExtractorRandomOracleQueries_eq] using profile.solverCost_le
+  simpa only [actionKnowledgeExtractorOracleQueryCost_eq] using profile.solverCost_le
 
 /-- The combined finder exactly extends the old constraint finder on every successful old branch.
 -/
@@ -599,7 +602,7 @@ theorem actionBaseUnion_prob_le_of_dlogProfile
         (family.Q + (11 + (actionCircuit.shape.withProofParams pp).k) + 1 : Nat) *
           algebraicRootBudget (actionCircuit.shape.withProofParams pp)
             (actionCircuit.shape.withProofParams pp).k +
-        (profile.advantage (actionDlogRandomOracleQueries pp family)
+        (profile.advantage (actionDlogOracleQueryCost pp family)
             (actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
           1 / Fintype.card Fp) +
         (family.Q + 1 : Nat) * epsilonX := by
