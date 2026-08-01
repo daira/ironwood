@@ -108,22 +108,6 @@ theorem toPoly_multiset_prod [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial 
     (m : Multiset (CPolynomial R)) : m.prod.toPoly = (m.map toPoly).prod :=
   map_multiset_prod (ringEquiv : CPolynomial R ≃+* Polynomial R) m
 
-/-- `toPoly` of a multiset sum. -/
-theorem toPoly_multiset_sum [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
-    (m : Multiset (CPolynomial R)) : m.sum.toPoly = (m.map toPoly).sum :=
-  map_multiset_sum (ringEquiv : CPolynomial R ≃+* Polynomial R) m
-
-/-- `toPoly` of an elementary symmetric polynomial in a multiset of polynomials.  `Multiset.esymm`
-is a sum of products, so it commutes with any ring hom. -/
-theorem toPoly_multiset_esymm [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
-    (m : Multiset (CPolynomial R)) (n : ℕ) :
-    (m.esymm n).toPoly = (m.map toPoly).esymm n := by
-  simp only [Multiset.esymm, Multiset.powersetCard_map, Multiset.map_map, Function.comp_def]
-  refine (map_multiset_sum (ringEquiv : CPolynomial R ≃+* Polynomial R) _).trans ?_
-  rw [Multiset.map_map]
-  refine congrArg Multiset.sum (Multiset.map_congr rfl fun t _ => ?_)
-  exact map_multiset_prod (ringEquiv : CPolynomial R ≃+* Polynomial R) t
-
 /-- `toPoly` is injective.  CompPoly states this as `toPolyLinearEquiv.injective`, whose hypothesis
 is phrased through the bundled coercion; this restates it directly on `toPoly` so callers do not
 need a `change` at every use. -/
@@ -404,11 +388,6 @@ theorem natDegree_X_pow_le [Semiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (n 
   rw [natDegree_toPoly, toPoly_pow, X_toPoly]
   simp
 
-theorem natDegree_one_le [Semiring R] [BEq R] [LawfulBEq R] [Nontrivial R] :
-    (1 : CPolynomial R).natDegree ≤ 0 := by
-  rw [natDegree_toPoly, toPoly_one]
-  simp
-
 @[simp]
 theorem natDegree_zero [Semiring R] [BEq R] [LawfulBEq R] :
     (0 : CPolynomial R).natDegree = 0 := by
@@ -518,10 +497,6 @@ theorem C_pow [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (a : R) (n :
   apply toPoly_injective; simp [toPoly_pow]
 
 attribute [simp] natDegree_C
-
-@[simp]
-theorem coe_CRingHom [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] :
-    ⇑(CRingHom : R →+* CPolynomial R) = C := rfl
 
 /-- Evaluation at `x` as a ring hom. -/
 def evalRingHom [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (x : R) :
@@ -637,9 +612,6 @@ variable [CommRing R] [IsDomain R] [BEq R] [LawfulBEq R]
 
 /-- The roots of a computable polynomial, with multiplicity. -/
 noncomputable def roots (p : CPolynomial R) : Multiset R := p.toPoly.roots
-
-omit [BEq R] [LawfulBEq R] in
-@[simp] theorem roots_toPoly (p : CPolynomial R) : p.toPoly.roots = p.roots := rfl
 
 omit [BEq R] [LawfulBEq R] in
 @[simp] theorem roots_zero : roots (0 : CPolynomial R) = 0 := by
