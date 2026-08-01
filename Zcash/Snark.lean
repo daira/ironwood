@@ -151,3 +151,5 @@ import Zcash.Snark.Soundness.Action.AdaptiveStatementAccounting
 import Zcash.Snark.Soundness.Action.AdaptiveStatementTerminal
 import Zcash.Snark.Soundness.Action.AdaptiveStatementEvent
 import Zcash.Snark.Soundness.Action.AdaptiveStatementCapstone
+import Zcash.Snark.Soundness.Action.AdaptiveStatementKnowledge
+import Zcash.Snark.Soundness.Action.AdaptiveStatementProfile

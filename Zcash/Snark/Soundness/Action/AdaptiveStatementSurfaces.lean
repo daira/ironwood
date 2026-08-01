@@ -1673,6 +1673,147 @@ noncomputable def adaptiveActionSurfaceAtOf {pp : ProofParams}
     ↑(szBadSet (adaptiveActionPreXDifferenceOf vk instanceCommitment ps source ch
       (actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)))
 
+/-! ## Pointwise prices for explicit instance commitments -/
+
+/-- The `theta` surface price depends on the lookup layout, not the values of the explicit
+instance commitments. -/
+theorem adaptiveActionThetaSurfaceAtOf_measure_le {pp : ProofParams}
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (instanceCommitment :
+      Fin (AdaptiveActionStatementShape pp).numProofs → Nat → VestaG)
+    (ps : ProofString (AdaptiveActionStatementShape pp) Fp VestaG)
+    (source : List (AlgebraicPoint (F := Fp) basis)) (earlier : Fin 0 → Fp) :
+    uniformChallenge.toOuterMeasure
+        (adaptiveActionSurfaceAtOf basis instanceCommitment 0 ps source earlier) ≤
+      (TopLevelLookup.thetaBudget actionCircuit pp
+        (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)
+        (adaptiveActionCommitmentPolynomialOf (adaptiveActionStatementVk pp basis)
+          instanceCommitment ps source (chRecord (fun _ => 0) (fun _ => 0))) : ENNReal) /
+        Fintype.card Fp := by
+  simpa [adaptiveActionSurfaceAtOf] using
+    (ActionTerminal.actionThetaBadSet_measure_le pp basis
+      (adaptiveActionCommitmentPolynomialOf (adaptiveActionStatementVk pp basis)
+        instanceCommitment ps source (chRecord (fun _ => 0) (fun _ => 0))))
+
+/-- The `beta` surface has the ordinary permutation/lookup price for every explicit instance
+commitment function. -/
+theorem adaptiveActionBetaSurfaceAtOf_measure_le {pp : ProofParams}
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (instanceCommitment :
+      Fin (AdaptiveActionStatementShape pp).numProofs → Nat → VestaG)
+    (ps : ProofString (AdaptiveActionStatementShape pp) Fp VestaG)
+    (source : List (AlgebraicPoint (F := Fp) basis)) (earlier : Fin 1 → Fp) :
+    let ch : Challenges (AdaptiveActionStatementShape pp).k Fp :=
+      chRecord (fun i => if h : (i : Nat) < 1 then earlier ⟨i, h⟩ else 0) (fun _ => 0)
+    let poly := adaptiveActionCommitmentPolynomialOf (adaptiveActionStatementVk pp basis)
+      instanceCommitment ps source ch
+    uniformChallenge.toOuterMeasure
+        (adaptiveActionSurfaceAtOf basis instanceCommitment 1 ps source earlier) ≤
+      ((∑ p : Fin pp.numProofs,
+        (Fintype.card (ResolverPermutationCell (adaptiveActionStatementVk pp basis) poly p
+          actionActiveRows) + 1) *
+          Fintype.card (ResolverPermutationCell (adaptiveActionStatementVk pp basis) poly p
+            actionActiveRows) : Nat) : ENNReal) / Fintype.card Fp +
+      ((pp.numProofs * actionCircuit.lookupCount *
+        ((actionCircuit.n - actionCircuit.blindingFactors - 2 + 2) *
+          (actionCircuit.n - actionCircuit.blindingFactors - 2 + 1) +
+          (actionCircuit.n - actionCircuit.blindingFactors - 2 + 1)) : Nat) : ENNReal) /
+        Fintype.card Fp := by
+  dsimp only
+  simpa [adaptiveActionSurfaceAtOf, actionActiveRows,
+    ProofParams.mergeDerived_numProofs,
+    ProofParams.mergeDerived_numLookups] using
+    (ActionTerminal.actionBetaBadSets_measure_le pp basis (earlier 0)
+      (adaptiveActionCommitmentPolynomialOf (adaptiveActionStatementVk pp basis)
+        instanceCommitment ps source
+        (chRecord (fun i => if h : (i : Nat) < 1 then earlier ⟨i, h⟩ else 0)
+          (fun _ => 0))))
+
+/-- The `gamma` surface likewise has a value-independent permutation/lookup price. -/
+theorem adaptiveActionGammaSurfaceAtOf_measure_le {pp : ProofParams}
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (instanceCommitment :
+      Fin (AdaptiveActionStatementShape pp).numProofs → Nat → VestaG)
+    (ps : ProofString (AdaptiveActionStatementShape pp) Fp VestaG)
+    (source : List (AlgebraicPoint (F := Fp) basis)) (earlier : Fin 2 → Fp) :
+    let ch : Challenges (AdaptiveActionStatementShape pp).k Fp :=
+      chRecord (fun i => if h : (i : Nat) < 2 then earlier ⟨i, h⟩ else 0) (fun _ => 0)
+    let poly := adaptiveActionCommitmentPolynomialOf (adaptiveActionStatementVk pp basis)
+      instanceCommitment ps source ch
+    uniformChallenge.toOuterMeasure
+        (adaptiveActionSurfaceAtOf basis instanceCommitment 2 ps source earlier) ≤
+      ((∑ p : Fin pp.numProofs,
+        2 * Fintype.card (ResolverPermutationCell
+          (adaptiveActionStatementVk pp basis) poly p actionActiveRows) : Nat) : ENNReal) /
+          Fintype.card Fp +
+      ((pp.numProofs * actionCircuit.lookupCount *
+        (2 * (actionCircuit.n - actionCircuit.blindingFactors - 2 + 1)) : Nat) : ENNReal) /
+          Fintype.card Fp := by
+  dsimp only
+  simpa [adaptiveActionSurfaceAtOf, actionActiveRows,
+    ProofParams.mergeDerived_numProofs,
+    ProofParams.mergeDerived_numLookups] using
+    (ActionTerminal.actionGammaBadSets_measure_le pp basis (earlier 0)
+      (earlier ⟨1, by omega⟩)
+      (adaptiveActionCommitmentPolynomialOf (adaptiveActionStatementVk pp basis)
+        instanceCommitment ps source
+        (chRecord (fun i => if h : (i : Nat) < 2 then earlier ⟨i, h⟩ else 0)
+          (fun _ => 0))))
+
+/-- The `y` surface depends only on the explicit committed model's constraint count. -/
+theorem adaptiveActionYSurfaceAtOf_measure_le {pp : ProofParams}
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (instanceCommitment :
+      Fin (AdaptiveActionStatementShape pp).numProofs → Nat → VestaG)
+    (ps : ProofString (AdaptiveActionStatementShape pp) Fp VestaG)
+    (source : List (AlgebraicPoint (F := Fp) basis)) (earlier : Fin 3 → Fp)
+    (hn : actionCircuit.n ≠ 0) :
+    let ch : Challenges (AdaptiveActionStatementShape pp).k Fp :=
+      chRecord (fun i => if h : (i : Nat) < 3 then earlier ⟨i, h⟩ else 0) (fun _ => 0)
+    let model := adaptiveActionCommittedModelOf (adaptiveActionStatementVk pp basis)
+      instanceCommitment ps source ch
+      (actionCircuit.toVerifierKey_blindingFactors_lt_n pp
+        (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis))
+    uniformChallenge.toOuterMeasure
+        (adaptiveActionSurfaceAtOf basis instanceCommitment 3 ps source earlier) ≤
+      ((actionCircuit.n * model.constraints.length : Nat) : ENNReal) /
+        Fintype.card Fp := by
+  dsimp only
+  simpa [adaptiveActionSurfaceAtOf] using
+    (ActionTerminal.actionYBadSet_measure_le
+      (adaptiveActionCommittedModelOf (adaptiveActionStatementVk pp basis)
+        instanceCommitment ps source
+        (chRecord (fun i => if h : (i : Nat) < 3 then earlier ⟨i, h⟩ else 0)
+          (fun _ => 0))
+        (actionCircuit.toVerifierKey_blindingFactors_lt_n pp
+          (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis))).constraints hn)
+
+/-- The `x` surface is the Schwartz--Zippel set of the explicit pre-`x` difference. -/
+theorem adaptiveActionXSurfaceAtOf_measure_le {pp : ProofParams}
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (instanceCommitment :
+      Fin (AdaptiveActionStatementShape pp).numProofs → Nat → VestaG)
+    (ps : ProofString (AdaptiveActionStatementShape pp) Fp VestaG)
+    (source : List (AlgebraicPoint (F := Fp) basis)) (earlier : Fin 4 → Fp) :
+    let ch : Challenges (AdaptiveActionStatementShape pp).k Fp :=
+      chRecord (fun i => if h : (i : Nat) < 4 then earlier ⟨i, h⟩ else 0) (fun _ => 0)
+    let difference := adaptiveActionPreXDifferenceOf (adaptiveActionStatementVk pp basis)
+      instanceCommitment ps source ch
+      (actionCircuit.toVerifierKey_blindingFactors_lt_n pp
+        (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis))
+    uniformChallenge.toOuterMeasure
+        (adaptiveActionSurfaceAtOf basis instanceCommitment 4 ps source earlier) ≤
+      (difference.natDegree : ENNReal) / Fintype.card Fp := by
+  dsimp only
+  simpa [adaptiveActionSurfaceAtOf] using
+    (uniformChallenge_szBadSet
+      (adaptiveActionPreXDifferenceOf (adaptiveActionStatementVk pp basis)
+        instanceCommitment ps source
+        (chRecord (fun i => if h : (i : Nat) < 4 then earlier ⟨i, h⟩ else 0)
+          (fun _ => 0))
+        (actionCircuit.toVerifierKey_blindingFactors_lt_n pp
+          (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis))))
+
 /-- The explicit-instance surface specializes to the existing Action surface. -/
 theorem adaptiveActionSurfaceAtOf_action {pp : ProofParams}
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
