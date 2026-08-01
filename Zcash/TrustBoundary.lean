@@ -1407,7 +1407,7 @@ assert_axioms Zcash.Snark.ActionTerminal.ActionSequentialCuts +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.ActionTerminal.ActionSequentialCuts.theta_prob_le +native(
+assert_axioms Zcash.Snark.ActionTerminal.ActionSequentialCuts.theta_probability_bound +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
@@ -1417,7 +1417,7 @@ assert_axioms Zcash.Snark.ActionTerminal.ActionSequentialCuts.theta_prob_le +nat
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.ActionTerminal.ActionSequentialCuts.beta_prob_le +native(
+assert_axioms Zcash.Snark.ActionTerminal.ActionSequentialCuts.beta_probability_bound +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
@@ -1427,7 +1427,7 @@ assert_axioms Zcash.Snark.ActionTerminal.ActionSequentialCuts.beta_prob_le +nati
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.ActionTerminal.ActionSequentialCuts.gamma_prob_le +native(
+assert_axioms Zcash.Snark.ActionTerminal.ActionSequentialCuts.gamma_probability_bound +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
@@ -1437,7 +1437,7 @@ assert_axioms Zcash.Snark.ActionTerminal.ActionSequentialCuts.gamma_prob_le +nat
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.ActionTerminal.ActionSequentialCuts.xy_prob_le +native(
+assert_axioms Zcash.Snark.ActionTerminal.ActionSequentialCuts.xy_probability_bound +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,

@@ -423,7 +423,7 @@ assert_axioms Zcash.Snark.Fixture.capturedActionStaticChecks +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Fixture.schedule_of_derived +native(
+assert_axioms Zcash.Snark.Fixture.capturedActionXSqueezeSchedule +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Fixture.vk_chunk_width_le, Zcash.Snark.Fixture.vk_gates_degree_le,
   Zcash.Snark.Fixture.vk_lookup_input_degree_le, Zcash.Snark.Fixture.vk_lookup_table_degree_le,

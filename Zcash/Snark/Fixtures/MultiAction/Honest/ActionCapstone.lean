@@ -156,7 +156,7 @@ theorem derived_lookups
 /-! ## The captured checks and schedule at the derived shape -/
 
 /-- The derived shape's count fields are the captured ones. -/
-private theorem md_counts :
+private theorem capturedActionDerivedShapeCounts :
     actionCircuit.domainExponent = shape.k ∧
     actionCircuit.adviceQueryCount =
       shape.numAdviceQueries ∧
@@ -222,7 +222,7 @@ theorem capturedActionStaticChecks
 
 /-- **The captured `x`-squeeze schedule at the derived key** (issue #128 F3): the degree caps
 transfer through the scalar equalities, and pinning is the family's own derived projection. -/
-def schedule_of_derived
+def capturedActionXSqueezeSchedule
     (family : ComputedStraightLineDeployedFSFamily
       (actionCircuit.shape.withProofParams actionProofParams))
     (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey
@@ -230,7 +230,7 @@ def schedule_of_derived
     DeployedConstraintXSqueezeSchedule family.toRootFamily
       ((20470 : ℕ) / (Fintype.card Fp : ℝ≥0∞)) := by
   have hk : actionCircuit.n - 1 = 2047 := by
-    rw [actionCircuit.n_eq_two_pow_domainExponent, md_counts.1]
+    rw [actionCircuit.n_eq_two_pow_domainExponent, capturedActionDerivedShapeCounts.1]
     norm_num [shape]
   have h := deployedConstraintXSqueezeSchedule_of_pinned family.toRootFamily
     (B := 2047) (W := 7) (Dc := 8188) (D := 20470) (Dq := 20470)
@@ -257,14 +257,14 @@ def schedule_of_derived
       rw [hvk basis, actionCircuit.toVerifierKey_n,
         CircuitShape.withProofParams_numQuotientPieces,
         actionCircuit.shape_numQuotientPieces,
-        md_counts.2.2.2.2, ← hk,
-        actionCircuit.n_eq_two_pow_domainExponent, md_counts.1]
+        capturedActionDerivedShapeCounts.2.2.2.2, ← hk,
+        actionCircuit.n_eq_two_pow_domainExponent, capturedActionDerivedShapeCounts.1]
       exact vk_quotient_tail_le)
     (by norm_num) (by norm_num) (by norm_num) (by norm_num)
     family.constraintXTrace.toPinning
   simpa using h
 
-private theorem md_counts_for (numProofs : ℕ) :
+private theorem actionDerivedShapeCounts (numProofs : ℕ) :
     actionCircuit.domainExponent = shape.k ∧
     actionCircuit.adviceQueryCount =
       shape.numAdviceQueries ∧
@@ -324,7 +324,7 @@ theorem actionStaticChecks (numProofs : ℕ)
       ActionPermutationDomain.domainExponent_lt
 
 /-- The captured `x`-squeeze schedule transported to an arbitrary Action bundle size. -/
-def schedule_of_derived_for (numProofs : ℕ)
+def actionXSqueezeSchedule (numProofs : ℕ)
     (family : ComputedStraightLineDeployedFSFamily
       (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)))
     (hvk : ∀ basis, family.vk basis =
@@ -336,7 +336,7 @@ def schedule_of_derived_for (numProofs : ℕ)
   have hk : actionCircuit.n - 1 =
       2047 := by
     rw [actionCircuit.n_eq_two_pow_domainExponent,
-      (md_counts_for numProofs).1]
+      (actionDerivedShapeCounts numProofs).1]
     norm_num [shape]
   have h := deployedConstraintXSqueezeSchedule_of_pinned family.toRootFamily
     (B := 2047) (W := 7) (Dc := 8188) (D := 20470) (Dq := 20470)
@@ -363,9 +363,9 @@ def schedule_of_derived_for (numProofs : ℕ)
       rw [hvk basis, actionCircuit.toVerifierKey_n,
         CircuitShape.withProofParams_numQuotientPieces,
         actionCircuit.shape_numQuotientPieces,
-        (md_counts_for numProofs).2.2.2.2, ← hk,
+        (actionDerivedShapeCounts numProofs).2.2.2.2, ← hk,
         actionCircuit.n_eq_two_pow_domainExponent,
-        (md_counts_for numProofs).1]
+        (actionDerivedShapeCounts numProofs).1]
       exact vk_quotient_tail_le)
     (by norm_num) (by norm_num) (by norm_num) (by norm_num)
     family.constraintXTrace.toPinning
@@ -417,7 +417,7 @@ private theorem resolverPermutationCell_card_le
   norm_num
 
 /-- The θ budget is linear in the number of Actions. -/
-private theorem cap_theta_for (numProofs : ℕ) :
+private theorem actionThetaBudget (numProofs : ℕ) :
     ∀ (basis : AugmentedIndex
         actionCircuit.n → VestaG)
       (poly : CommitmentId → CPoly),
@@ -462,7 +462,7 @@ private theorem cap_theta_for (numProofs : ℕ) :
 
 /-- The tight β budget is `950835027` per Action, including permutation cells and all three
 lookup arguments. -/
-private theorem cap_beta_for (numProofs : ℕ) :
+private theorem actionBetaBudget (numProofs : ℕ) :
     ∀ (basis : AugmentedIndex
         actionCircuit.n → VestaG)
       (poly : CommitmentId → CPoly),
@@ -523,7 +523,7 @@ private theorem cap_beta_for (numProofs : ℕ) :
       omega
 
 /-- The tight γ budget is `73554` per Action. -/
-private theorem cap_gamma_for (numProofs : ℕ) :
+private theorem actionGammaBudget (numProofs : ℕ) :
     ∀ (basis : AugmentedIndex
         actionCircuit.n → VestaG)
       (poly : CommitmentId → CPoly),
@@ -572,7 +572,7 @@ private theorem cap_gamma_for (numProofs : ℕ) :
         Nat.cast_id]
       omega
 
-private theorem cap_theta :
+private theorem capturedActionThetaBudget :
     ∀ (basis : AugmentedIndex actionCircuit.n → VestaG)
       (poly : CommitmentId → CPoly),
       TopLevelLookup.thetaBudget actionCircuit actionProofParams
@@ -612,7 +612,7 @@ private theorem cap_theta :
         simpa only [CircuitShape.withProofParams, actionProofParams, actionProofParamsFor,
           _root_.one_mul, Nat.cast_id] using hscaled
 
-private theorem cap_beta :
+private theorem capturedActionBetaBudget :
     ∀ (basis : AugmentedIndex actionCircuit.n → VestaG)
       (poly : CommitmentId → CPoly),
       (∑ p : Fin actionProofParams.numProofs,
@@ -668,7 +668,7 @@ private theorem cap_beta :
       rw [action_numLookups_eq]
       norm_num [actionProofParams, actionProofParamsFor, shape]
 
-private theorem cap_gamma :
+private theorem capturedActionGammaBudget :
     ∀ (basis : AugmentedIndex actionCircuit.n → VestaG)
       (poly : CommitmentId → CPoly),
       (∑ p : Fin actionProofParams.numProofs,
@@ -716,7 +716,7 @@ private theorem derived_n_ne_zero :
     actionCircuit.n ≠ 0 :=
   actionCircuit.n_ne_zero
 
-private theorem derived_n_yn {L : ℕ} (hL : L ≤ 2 ^ 12) :
+private theorem capturedActionYBudget {L : ℕ} (hL : L ≤ 2 ^ 12) :
     actionCircuit.n * L ≤ 2 ^ 23 := by
   have hn : actionCircuit.n = 2 ^ 11 := by
     rw [actionCircuit.n_eq_two_pow_domainExponent,
@@ -726,7 +726,7 @@ private theorem derived_n_yn {L : ℕ} (hL : L ≤ 2 ^ 12) :
     _ = 2 ^ 23 := by norm_num
 
 /-- The `y` fold cap is linear in the bundle size once its constraint list is. -/
-private theorem derived_n_yn_for (numProofs : ℕ) {L : ℕ}
+private theorem actionYBudget (numProofs : ℕ) {L : ℕ}
     (hL : L ≤ numProofs * 2 ^ 12) :
     actionCircuit.n * L ≤
       numProofs * 2 ^ 23 := by
@@ -832,7 +832,7 @@ theorem actionConstraintCount_bound (numProofs : ℕ)
 
 /-- The adaptive pre-`x` polynomial is assembled from coordinate vectors of degree below the
 captured basis size, so the existing captured degree walk applies without a trace premise. -/
-private theorem adaptive_action_x_degree_le_for (numProofs : ℕ)
+private theorem adaptiveActionXDegree_bound (numProofs : ℕ)
     (basis : AugmentedIndex
       actionCircuit.n → VestaG)
     (inputs : Fin (actionProofParamsFor numProofs).numProofs →
@@ -1013,7 +1013,7 @@ private theorem adaptive_action_x_degree_le_for (numProofs : ℕ)
           derived_scalars.2.1,
         CircuitShape.withProofParams_numQuotientPieces,
         actionCircuit.shape_numQuotientPieces,
-        (md_counts_for numProofs).2.2.2.2]
+        (actionDerivedShapeCounts numProofs).2.2.2.2]
       have hshape : 2 ^ shape.k - 1 = 2047 := by
         norm_num [shape]
       simpa only [hshape] using vk_quotient_tail_le
@@ -1496,7 +1496,7 @@ theorem orchard_action_captured_soundness_error_bound
       (capturedActionStaticChecks family hvk) inputs hvk hI hchar)
     (actionBaseUnion_probability_bound_of_dlogProfile actionProofParams family
       (capturedActionStaticChecks family hvk) inputs hvk hI hchar B hB query hquery
-      (schedule_of_derived family hvk) profile)
+      (capturedActionXSqueezeSchedule family hvk) profile)
     hXY hBeta hGamma hTheta
 
 /-- The exact captured Action reduction at an arbitrary bundle size.  The captured certificate
@@ -1599,7 +1599,7 @@ theorem orchard_action_captured_bundle_soundness_error_bound
       (actionStaticChecks numProofs family hvk) inputs hvk hI hchar)
     (actionBaseUnion_probability_bound_of_dlogProfile (actionProofParamsFor numProofs) family
       (actionStaticChecks numProofs family hvk) inputs hvk hI hchar B hB query hquery
-      (schedule_of_derived_for numProofs family hvk) profile)
+      (actionXSqueezeSchedule numProofs family hvk) profile)
     hXY hBeta hGamma hTheta
 
 /-- Captured false-statement bound for a bare adaptive online-AGM family, with one profiled finder
@@ -1665,7 +1665,7 @@ theorem orchard_action_adaptive_soundness_error_bound
         (adaptiveActionThetaSurface_probability_bound actionProofParams basis inputs ps source earlier) ?_
       dsimp only [epsilon]
       gcongr
-      exact_mod_cast cap_theta basis
+      exact_mod_cast capturedActionThetaBudget basis
         (adaptiveActionCommitmentPolynomial actionProofParams basis inputs ps source
           (chRecord (fun _ => 0) (fun _ => 0)))
     · have h := adaptiveActionBetaSurface_probability_bound
@@ -1675,7 +1675,7 @@ theorem orchard_action_adaptive_soundness_error_bound
       dsimp only [epsilon]
       rw [ENNReal.div_add_div_same]
       gcongr
-      exact_mod_cast cap_beta basis
+      exact_mod_cast capturedActionBetaBudget basis
         (adaptiveActionCommitmentPolynomial actionProofParams basis inputs ps source
           (chRecord (fun i => if h : (i : Nat) < 1 then earlier ⟨i, h⟩ else 0)
             (fun _ => 0)))
@@ -1686,7 +1686,7 @@ theorem orchard_action_adaptive_soundness_error_bound
       dsimp only [epsilon]
       rw [ENNReal.div_add_div_same]
       gcongr
-      exact_mod_cast cap_gamma basis
+      exact_mod_cast capturedActionGammaBudget basis
         (adaptiveActionCommitmentPolynomial actionProofParams basis inputs ps source
           (chRecord (fun i => if h : (i : Nat) < 2 then earlier ⟨i, h⟩ else 0)
             (fun _ => 0)))
@@ -1696,7 +1696,7 @@ theorem orchard_action_adaptive_soundness_error_bound
       refine le_trans h ?_
       dsimp only [epsilon]
       gcongr
-      exact_mod_cast derived_n_yn
+      exact_mod_cast capturedActionYBudget
         (capturedActionConstraintCount_bound basis inputs ps source
           (chRecord (fun i => if h : (i : Nat) < 3 then earlier ⟨i, h⟩ else 0)
             (fun _ => 0)))
@@ -1707,7 +1707,7 @@ theorem orchard_action_adaptive_soundness_error_bound
       dsimp only [epsilon]
       gcongr
       simpa only [Zcash.Snark.Keygen.actionProofParamsFor_one] using
-        (adaptive_action_x_degree_le_for 1 basis inputs ps source
+        (adaptiveActionXDegree_bound 1 basis inputs ps source
           (chRecord (fun i => if h : (i : Nat) < 4 then earlier ⟨i, h⟩ else 0)
             (fun _ => 0)))
   have hevent := adaptiveActionEvent_prob_eq_of_uniformURS actionProofParams family
@@ -1799,7 +1799,7 @@ theorem orchard_action_adaptive_bundle_soundness_error_bound
           basis inputs ps source earlier) ?_
       dsimp only [epsilon]
       gcongr
-      exact_mod_cast cap_theta_for numProofs basis
+      exact_mod_cast actionThetaBudget numProofs basis
         (adaptiveActionCommitmentPolynomial (actionProofParamsFor numProofs)
           basis inputs ps source (chRecord (fun _ => 0) (fun _ => 0)))
     · have h := adaptiveActionBetaSurface_probability_bound
@@ -1809,7 +1809,7 @@ theorem orchard_action_adaptive_bundle_soundness_error_bound
       dsimp only [epsilon]
       rw [ENNReal.div_add_div_same]
       gcongr
-      exact_mod_cast cap_beta_for numProofs basis
+      exact_mod_cast actionBetaBudget numProofs basis
         (adaptiveActionCommitmentPolynomial (actionProofParamsFor numProofs)
           basis inputs ps source
           (chRecord (fun j => if hj : (j : ℕ) < 1 then earlier ⟨j, hj⟩ else 0)
@@ -1821,7 +1821,7 @@ theorem orchard_action_adaptive_bundle_soundness_error_bound
       dsimp only [epsilon]
       rw [ENNReal.div_add_div_same]
       gcongr
-      exact_mod_cast cap_gamma_for numProofs basis
+      exact_mod_cast actionGammaBudget numProofs basis
         (adaptiveActionCommitmentPolynomial (actionProofParamsFor numProofs)
           basis inputs ps source
           (chRecord (fun j => if hj : (j : ℕ) < 2 then earlier ⟨j, hj⟩ else 0)
@@ -1833,7 +1833,7 @@ theorem orchard_action_adaptive_bundle_soundness_error_bound
       refine le_trans h ?_
       dsimp only [epsilon]
       gcongr
-      exact_mod_cast derived_n_yn_for numProofs
+      exact_mod_cast actionYBudget numProofs
         (actionConstraintCount_bound numProofs basis inputs ps source
           (chRecord (fun j => if hj : (j : ℕ) < 3 then earlier ⟨j, hj⟩ else 0)
             (fun _ => 0)))
@@ -1843,7 +1843,7 @@ theorem orchard_action_adaptive_bundle_soundness_error_bound
       refine le_trans h ?_
       dsimp only [epsilon]
       gcongr
-      exact_mod_cast adaptive_action_x_degree_le_for numProofs basis inputs ps source
+      exact_mod_cast adaptiveActionXDegree_bound numProofs basis inputs ps source
         (chRecord (fun j => if hj : (j : ℕ) < 4 then earlier ⟨j, hj⟩ else 0)
           (fun _ => 0))
   have hevent := adaptiveActionEvent_prob_eq_of_uniformURS
@@ -1883,7 +1883,7 @@ theorem adaptiveActionSurface_probability_bound
       (adaptiveActionThetaSurface_probability_bound (actionProofParamsFor numProofs)
         basis inputs ps source earlier) ?_
     gcongr
-    exact_mod_cast cap_theta_for numProofs basis
+    exact_mod_cast actionThetaBudget numProofs basis
       (adaptiveActionCommitmentPolynomial (actionProofParamsFor numProofs)
         basis inputs ps source (chRecord (fun _ => 0) (fun _ => 0)))
   · have h := adaptiveActionBetaSurface_probability_bound
@@ -1892,7 +1892,7 @@ theorem adaptiveActionSurface_probability_bound
     refine le_trans h ?_
     rw [ENNReal.div_add_div_same]
     gcongr
-    exact_mod_cast cap_beta_for numProofs basis
+    exact_mod_cast actionBetaBudget numProofs basis
       (adaptiveActionCommitmentPolynomial (actionProofParamsFor numProofs)
         basis inputs ps source
         (chRecord (fun j => if hj : (j : ℕ) < 1 then earlier ⟨j, hj⟩ else 0)
@@ -1903,7 +1903,7 @@ theorem adaptiveActionSurface_probability_bound
     refine le_trans h ?_
     rw [ENNReal.div_add_div_same]
     gcongr
-    exact_mod_cast cap_gamma_for numProofs basis
+    exact_mod_cast actionGammaBudget numProofs basis
       (adaptiveActionCommitmentPolynomial (actionProofParamsFor numProofs)
         basis inputs ps source
         (chRecord (fun j => if hj : (j : ℕ) < 2 then earlier ⟨j, hj⟩ else 0)
@@ -1914,7 +1914,7 @@ theorem adaptiveActionSurface_probability_bound
     dsimp only at h
     refine le_trans h ?_
     gcongr
-    exact_mod_cast derived_n_yn_for numProofs
+    exact_mod_cast actionYBudget numProofs
       (actionConstraintCount_bound numProofs basis inputs ps source
         (chRecord (fun j => if hj : (j : ℕ) < 3 then earlier ⟨j, hj⟩ else 0)
           (fun _ => 0)))
@@ -1923,7 +1923,7 @@ theorem adaptiveActionSurface_probability_bound
     dsimp only at h
     refine le_trans h ?_
     gcongr
-    exact_mod_cast adaptive_action_x_degree_le_for numProofs basis inputs ps source
+    exact_mod_cast adaptiveActionXDegree_bound numProofs basis inputs ps source
       (chRecord (fun j => if hj : (j : ℕ) < 4 then earlier ⟨j, hj⟩ else 0)
         (fun _ => 0))
 
@@ -2391,18 +2391,18 @@ theorem orchard_action_sequential_soundness_error_bound
                 (Fintype.card Fp : ENNReal))))) :=
   orchard_action_captured_soundness_error_bound B hB query hquery prover.toFamily inputs hvk hI
     hchar profile
-    (execution.toCuts.xy_prob_le actionProofParams prover.toFamily
+    (execution.toCuts.xy_probability_bound actionProofParams prover.toFamily
       (capturedActionStaticChecks prover.toFamily hvk) inputs
-      hvk hI hchar query derived_n_ne_zero (derived_n_yn hL))
-    (execution.toCuts.beta_prob_le actionProofParams prover.toFamily
+      hvk hI hchar query derived_n_ne_zero (capturedActionYBudget hL))
+    (execution.toCuts.beta_probability_bound actionProofParams prover.toFamily
       (capturedActionStaticChecks prover.toFamily hvk) inputs
-      hvk hI hchar query cap_beta)
-    (execution.toCuts.gamma_prob_le actionProofParams prover.toFamily
+      hvk hI hchar query capturedActionBetaBudget)
+    (execution.toCuts.gamma_probability_bound actionProofParams prover.toFamily
       (capturedActionStaticChecks prover.toFamily hvk) inputs
-      hvk hI hchar query cap_gamma)
-    (execution.toCuts.theta_prob_le actionProofParams prover.toFamily
+      hvk hI hchar query capturedActionGammaBudget)
+    (execution.toCuts.theta_probability_bound actionProofParams prover.toFamily
       (capturedActionStaticChecks prover.toFamily hvk) inputs
-      hvk hI hchar query cap_theta)
+      hvk hI hchar query capturedActionThetaBudget)
 
 /-- Sequential exact-Action capstone for every bundle size.  All semantic surfaces are discharged
 with tight linear caps, and the result is packaged as one DLOG advantage plus the complete
@@ -2466,15 +2466,15 @@ theorem orchard_action_sequential_bundle_soundness_error_bound
       (thetaBound := (prover.toFamily.Q + 1 : ℕ) *
         ((numProofs * 2 ^ 25 : ℕ) / (Fintype.card Fp : ENNReal)))
       ?_ ?_ ?_ ?_) ?_
-  · exact execution.toCuts.xy_prob_le (actionProofParamsFor numProofs) prover.toFamily
+  · exact execution.toCuts.xy_probability_bound (actionProofParamsFor numProofs) prover.toFamily
       static inputs hvk hI hchar query derived_n_ne_zero
-      (derived_n_yn_for numProofs hL)
-  · exact execution.toCuts.beta_prob_le (actionProofParamsFor numProofs) prover.toFamily
-      static inputs hvk hI hchar query (cap_beta_for numProofs)
-  · exact execution.toCuts.gamma_prob_le (actionProofParamsFor numProofs) prover.toFamily
-      static inputs hvk hI hchar query (cap_gamma_for numProofs)
-  · exact execution.toCuts.theta_prob_le (actionProofParamsFor numProofs) prover.toFamily
-      static inputs hvk hI hchar query (cap_theta_for numProofs)
+      (actionYBudget numProofs hL)
+  · exact execution.toCuts.beta_probability_bound (actionProofParamsFor numProofs) prover.toFamily
+      static inputs hvk hI hchar query (actionBetaBudget numProofs)
+  · exact execution.toCuts.gamma_probability_bound (actionProofParamsFor numProofs) prover.toFamily
+      static inputs hvk hI hchar query (actionGammaBudget numProofs)
+  · exact execution.toCuts.theta_probability_bound (actionProofParamsFor numProofs) prover.toFamily
+      static inputs hvk hI hchar query (actionThetaBudget numProofs)
   · unfold actionStatisticalModelFor actionCompressedStatisticalModelFor
       actionSemanticModelFor
     dsimp only

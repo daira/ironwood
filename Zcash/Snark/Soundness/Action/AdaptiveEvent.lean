@@ -1542,7 +1542,7 @@ theorem adaptiveActionSemanticResidual_probability_bound
     (fun logs => {O | ∃ n : Fin 5,
       O ∈ family.adaptiveActionBadWithoutRelation pp inputs (scalarBasis B logs) n})
   intro logs
-  exact family.adaptiveActionBadWithoutRelation_all_measure_le pp inputs
+  exact family.adaptiveActionBadWithoutRelationUnion_probability_bound pp inputs
     (scalarBasis B logs) epsilon (hsurface (scalarBasis B logs))
 
 /-- Probability bound for the adaptive knowledge-residual event, using the same five
@@ -1573,7 +1573,7 @@ theorem adaptiveActionKnowledgeResidual_probability_bound
     (fun logs => {O | ∃ n : Fin 5,
       O ∈ family.adaptiveActionBadWithoutRelation pp inputs (scalarBasis B logs) n})
   intro logs
-  exact family.adaptiveActionBadWithoutRelation_all_measure_le pp inputs
+  exact family.adaptiveActionBadWithoutRelationUnion_probability_bound pp inputs
     (scalarBasis B logs) epsilon (hsurface (scalarBasis B logs))
 
 /-- Probability bound for the adaptive Action knowledge-failure event.  Failure of the executable

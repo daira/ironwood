@@ -3477,8 +3477,9 @@ theorem ComputedAdaptiveOnlineAGMFSFamily.mem_adaptiveActionBadWithoutRelation_i
   simp only [hprovenance, and_true]
   constructor <;> intro h <;> simpa only using h
 
-/-- The actual Action semantic event inherits the annotation-aware first-query price. -/
-theorem ComputedAdaptiveOnlineAGMFSFamily.adaptiveActionBadWithoutRelation_measure_le
+/-- Probability bound for the actual Action semantic event, inheriting the annotation-aware
+first-query price. -/
+theorem ComputedAdaptiveOnlineAGMFSFamily.adaptiveActionBadWithoutRelation_probability_bound
     (pp : ProofParams)
     (family : ComputedAdaptiveOnlineAGMFSFamily (actionCircuit.shape.withProofParams pp))
     (inputs : Fin pp.numProofs → PublicInputs Fp)
@@ -3499,9 +3500,9 @@ theorem ComputedAdaptiveOnlineAGMFSFamily.adaptiveActionBadWithoutRelation_measu
   simpa only [ComputedAdaptiveOnlineAGMFSFamily.adaptiveActionBadWithoutRelation] using
     family.adaptiveFinalActionBadWithoutRelation_table_le pp inputs basis n hsurface
 
-/-- The union of the five actual Action semantic events is bounded by the sum of their uniform
-per-stage surface prices. -/
-theorem ComputedAdaptiveOnlineAGMFSFamily.adaptiveActionBadWithoutRelation_all_measure_le
+/-- Probability bound for the union of the five actual Action semantic events, using the sum of
+their uniform per-stage surface prices. -/
+theorem ComputedAdaptiveOnlineAGMFSFamily.adaptiveActionBadWithoutRelationUnion_probability_bound
     (pp : ProofParams)
     (family : ComputedAdaptiveOnlineAGMFSFamily (actionCircuit.shape.withProofParams pp))
     (inputs : Fin pp.numProofs → PublicInputs Fp)
@@ -3535,7 +3536,7 @@ theorem ComputedAdaptiveOnlineAGMFSFamily.adaptiveActionBadWithoutRelation_all_m
           (family.adaptiveActionBadWithoutRelation pp inputs basis n) ≤
       ∑ n : Fin 5, (family.Q + 1 : Nat) * epsilon n := by
         gcongr with n
-        exact family.adaptiveActionBadWithoutRelation_measure_le pp inputs basis n
+        exact family.adaptiveActionBadWithoutRelation_probability_bound pp inputs basis n
           (hsurface n)
     _ = (family.Q + 1 : Nat) * ∑ n : Fin 5, epsilon n := by
       rw [Finset.mul_sum]

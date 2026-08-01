@@ -699,9 +699,9 @@ def ActionSequentialExecution.toCuts {Dx L : ℕ}
   hvanishing := execution.hxVanishing
   xdeg := execution.xdeg
 
-/-- The `θ` premise from the bundle: `(Q + 1) · Nθ / |Fp|`, `Nθ` capping the row-by-arity
-budget. -/
-theorem ActionSequentialCuts.theta_prob_le {T : Type*} [DecidableEq T]
+/-- Probability bound for the bundle's `θ` event: `(Q + 1) · Nθ / |Fp|`, with `Nθ` capping the
+row-by-arity budget. -/
+theorem ActionSequentialCuts.theta_probability_bound {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ actionCircuit.shape.k) → T)
     {Dx L : ℕ} (cuts : ActionSequentialCuts pp family static inputs hvk hI hchar Dx L)
     {Ntheta : ℕ}
@@ -722,9 +722,9 @@ theorem ActionSequentialCuts.theta_prob_le {T : Type*} [DecidableEq T]
   gcongr
   exact_mod_cast hbudget basis (cuts.view0 s)
 
-/-- The `β` premise from the bundle: `(Q + 1) · Nβ / |Fp|`, `Nβ` capping cells plus lookup
-pairs. -/
-theorem ActionSequentialCuts.beta_prob_le {T : Type*} [DecidableEq T]
+/-- Probability bound for the bundle's `β` event: `(Q + 1) · Nβ / |Fp|`, with `Nβ` capping cells
+plus lookup pairs. -/
+theorem ActionSequentialCuts.beta_probability_bound {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ actionCircuit.shape.k) → T)
     {Dx L : ℕ} (cuts : ActionSequentialCuts pp family static inputs hvk hI hchar Dx L)
     {Nbeta : ℕ}
@@ -755,9 +755,9 @@ theorem ActionSequentialCuts.beta_prob_le {T : Type*} [DecidableEq T]
   gcongr
   exact_mod_cast hcap basis (cuts.view1 s)
 
-/-- The `γ` premise from the bundle: `(Q + 1) · Nγ / |Fp|`, `Nγ` capping doubled cells plus
-lookup pairs. -/
-theorem ActionSequentialCuts.gamma_prob_le {T : Type*} [DecidableEq T]
+/-- Probability bound for the bundle's `γ` event: `(Q + 1) · Nγ / |Fp|`, with `Nγ` capping
+doubled cells plus lookup pairs. -/
+theorem ActionSequentialCuts.gamma_probability_bound {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ actionCircuit.shape.k) → T)
     {Dx L : ℕ} (cuts : ActionSequentialCuts pp family static inputs hvk hI hchar Dx L)
     {Ngamma : ℕ}
@@ -785,9 +785,10 @@ theorem ActionSequentialCuts.gamma_prob_le {T : Type*} [DecidableEq T]
   gcongr
   exact_mod_cast hcap basis (cuts.view2 s)
 
-/-- The fused `x`/`y` premise from the bundle: `(Q + 1) · Dx / |Fp| + (Q + 1) · Ny / |Fp|`,
-`Dx` the fold degree cap and `Ny` capping `n · L`. -/
-theorem ActionSequentialCuts.xy_prob_le {T : Type*} [DecidableEq T]
+/-- Probability bound for the bundle's fused `x`/`y` event:
+`(Q + 1) · Dx / |Fp| + (Q + 1) · Ny / |Fp|`, with `Dx` the fold-degree cap and `Ny` capping
+`n · L`. -/
+theorem ActionSequentialCuts.xy_probability_bound {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ actionCircuit.shape.k) → T)
     {Dx L : ℕ} (cuts : ActionSequentialCuts pp family static inputs hvk hI hchar Dx L)
     {Ny : ℕ}
