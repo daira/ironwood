@@ -25,8 +25,10 @@ Delete these computations once those compiler theorems construct the same facts.
 namespace Zcash.Snark
 
 open Zcash.Arithmetic (derivedUrsGLagrange derivedUrsGLagrange_length omegaOf)
+
 open Halo2
 open Zcash.Circuits.Action (actionCircuit)
+
 namespace ActionFixedCoherence
 
 open Zcash.Snark.Keygen

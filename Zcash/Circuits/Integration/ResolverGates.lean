@@ -16,7 +16,9 @@ polynomial resolver.
 namespace Zcash.Snark
 
 open Zcash.Arithmetic (scalarFieldOrder)
+
 open Halo2 CompPoly.CPolynomial
+
 set_option maxHeartbeats 20000
 
 /-- Every selector-compression entry uses a valid, scalar-field-distinct root. -/
