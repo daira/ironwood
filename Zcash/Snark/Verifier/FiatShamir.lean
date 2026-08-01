@@ -174,6 +174,49 @@ def deriveChallengesForStatement {shape : Shape} {F G : Type*} [Zero F]
     (ps : ProofString shape F G) : Challenges shape.k F :=
   deriveChallenges fs (initialTranscript vkTranscriptRepr instanceCommitment) ps
 
+/-- The exact transcript presented to the first squeeze by the statement-bound verifier. -/
+def preThetaTranscriptForStatement {shape : Shape} {F G : Type*}
+    (vkTranscriptRepr : F) (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) : List (TranscriptElt F G) :=
+  initialTranscript vkTranscriptRepr instanceCommitment ++
+    absorbPoints2 ps.adviceCommitments ++ [.challenge]
+
+@[simp] theorem deriveChallengesForStatement_theta {shape : Shape} {F G : Type*} [Zero F]
+    (fs : FiatShamir F G) (vkTranscriptRepr : F)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) :
+    (deriveChallengesForStatement fs vkTranscriptRepr instanceCommitment ps).theta =
+      fs.squeeze (preThetaTranscriptForStatement vkTranscriptRepr instanceCommitment ps) := by
+  rfl
+
+theorem vkTranscriptRepr_mem_preThetaTranscriptForStatement
+    {shape : Shape} {F G : Type*} (vkTranscriptRepr : F)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) :
+    TranscriptElt.scalar vkTranscriptRepr ∈
+      preThetaTranscriptForStatement vkTranscriptRepr instanceCommitment ps := by
+  simp [preThetaTranscriptForStatement, initialTranscript]
+
+theorem instanceCommitment_mem_preThetaTranscriptForStatement
+    {shape : Shape} {F G : Type*} (vkTranscriptRepr : F)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) (p : Fin shape.numProofs)
+    (column : Fin shape.numInstanceColumns) :
+    TranscriptElt.point (instanceCommitment p column) ∈
+      preThetaTranscriptForStatement vkTranscriptRepr instanceCommitment ps := by
+  apply List.mem_append_left
+  apply List.mem_append_left
+  exact instanceCommitment_mem_initialTranscript vkTranscriptRepr instanceCommitment p column
+
+theorem adviceCommitment_mem_preThetaTranscriptForStatement
+    {shape : Shape} {F G : Type*} (vkTranscriptRepr : F)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) (p : Fin shape.numProofs)
+    (column : Fin shape.numAdviceColumns) :
+    TranscriptElt.point (ps.adviceCommitments p column) ∈
+      preThetaTranscriptForStatement vkTranscriptRepr instanceCommitment ps := by
+  simp [preThetaTranscriptForStatement, absorbPoints2, absorbPoints]
+
 /-- The deployed verifier's fingerprint MSM: `assemble` at the Fiat–Shamir challenges.
 
 The random-oracle assumption is what transfers interactive soundness to this non-interactive MSM. -/

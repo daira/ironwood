@@ -1,5 +1,6 @@
 import Zcash.Snark.Fixtures.MultiAction.Fixture
 import Zcash.Snark.Fixtures.ScheduleMarker
+import Zcash.Snark.Verifier.Deployed
 
 /-!
 # Fiat–Shamir schedule check for the multi-action capture
@@ -76,6 +77,19 @@ theorem deriveChallengesForStatement_matches_captured_schedule :
       derivedInstanceCommitment ps = ch := by
   rw [deriveChallengesForStatement, ← capturedInit_eq_initialTranscript]
   exact deriveChallenges_matches_captured_schedule
+
+/-- The captured flattened public columns, restored to the verifier's proof/column nesting. -/
+def capturedRawInstances : RawInstances shape Fp :=
+  fun p => List.ofFn fun column : Fin shape.numInstanceColumns =>
+    capturedPublicInstances.getD
+      (p.val * capturedNumInstanceColumns + column.val) []
+
+/-- The composed rejecting verifier reproduces checked assembly at the captured challenges. -/
+theorem assembleNonInteractiveInstances?_matches_captured :
+    assembleNonInteractiveInstances? capturedFs capturedVkTranscriptRepr vk
+      capturedRawInstances commitLagrange ps =
+        assemble? vk derivedInstanceCommitment ps ch := by
+  native_decide
 
 /-- The Fiat–Shamir-derived fingerprint matches the captured multi-action MSM under the concrete captured
 schedule oracle above. -/
