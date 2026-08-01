@@ -254,6 +254,69 @@ def prefixes {pp : ProofParams}
       output.toAlgebraicWfProof j
     ⟨t.val, by simpa using t.prop⟩
 
+/-- Taking a pre-IPA-length prefix of an actual IPA point recovers the corresponding pre-IPA
+point in the common adaptive-statement domain. -/
+theorem prefixes_take_pre {pp : ProofParams}
+    {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
+    {fixedRepresentations : List (AlgebraicPoint (F := Fp) basis)}
+    (vkTranscriptRepr : Fp)
+    (output : AdaptiveActionStatementOutput pp basis fixedRepresentations)
+    (j : Fin (AdaptiveActionStatementShape pp).k) (n : Fin 11) :
+    (output.prefixes vkTranscriptRepr j).val.take
+        (preIpaLen (AdaptiveActionStatementShape pp)
+          (adaptiveStatementInitLength (AdaptiveActionStatementShape pp)) n) =
+      (output.prefixesPre vkTranscriptRepr n).val := by
+  change (roundTranscriptFin
+      (preIpaTranscript (output.init vkTranscriptRepr)
+        output.toAlgebraicWfProof.proof.1)
+      output.toAlgebraicWfProof.proof.1.ipaRounds j).take
+        (preIpaLen (AdaptiveActionStatementShape pp)
+          (adaptiveStatementInitLength (AdaptiveActionStatementShape pp)) n) =
+    preIpaSqueezePoints (output.init vkTranscriptRepr)
+      output.toAlgebraicWfProof.proof.1 n
+  have hpre : preIpaSqueezePoints (output.init vkTranscriptRepr)
+      output.toAlgebraicWfProof.proof.1 n <+:
+    roundTranscriptFin
+      (preIpaTranscript (output.init vkTranscriptRepr)
+        output.toAlgebraicWfProof.proof.1)
+      output.toAlgebraicWfProof.proof.1.ipaRounds j :=
+    (preIpaSqueezePoints_prefix (output.init vkTranscriptRepr)
+      output.toAlgebraicWfProof.proof.1 n).trans (by
+        rw [roundTranscriptFin]
+        exact List.prefix_append _ _)
+  have htake := List.prefix_iff_eq_take.mp hpre
+  rw [preIpaSqueezePoints_length_eq (output.init vkTranscriptRepr)
+    output.toAlgebraicWfProof.proof.1 output.proofData.wellFormed] at htake
+  simpa using htake.symm
+
+/-- Taking a strict earlier-round length from an actual IPA point recovers that earlier point. -/
+theorem prefixes_take_round {pp : ProofParams}
+    {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
+    {fixedRepresentations : List (AlgebraicPoint (F := Fp) basis)}
+    (vkTranscriptRepr : Fp)
+    (output : AdaptiveActionStatementOutput pp basis fixedRepresentations)
+    (j i : Fin (AdaptiveActionStatementShape pp).k) (hij : i.val < j.val) :
+    (output.prefixes vkTranscriptRepr j).val.take
+        (preIpaLen (AdaptiveActionStatementShape pp)
+          (adaptiveStatementInitLength (AdaptiveActionStatementShape pp)) 10 +
+            3 * (i.val + 1)) =
+      (output.prefixes vkTranscriptRepr i).val := by
+  change (roundTranscriptFin
+      (preIpaTranscript (output.init vkTranscriptRepr)
+        output.toAlgebraicWfProof.proof.1)
+      output.toAlgebraicWfProof.proof.1.ipaRounds j).take
+        (preIpaLen (AdaptiveActionStatementShape pp)
+          (adaptiveStatementInitLength (AdaptiveActionStatementShape pp)) 10 +
+            3 * (i.val + 1)) =
+    roundTranscriptFin
+      (preIpaTranscript (output.init vkTranscriptRepr)
+        output.toAlgebraicWfProof.proof.1)
+      output.toAlgebraicWfProof.proof.1.ipaRounds i
+  rw [← output.init_length]
+  rw [← preIpaTranscript_length_eq (output.init vkTranscriptRepr)
+    output.toAlgebraicWfProof.proof.1 output.proofData.wellFormed]
+  exact roundTranscriptFin_take _ _ hij.le
+
 /-- The first oracle query is exactly VK, instances, advice commitments, then the challenge marker. -/
 theorem prefixesPre_zero_val {pp : ProofParams}
     {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}

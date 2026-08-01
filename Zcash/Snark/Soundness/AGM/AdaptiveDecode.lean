@@ -1871,6 +1871,33 @@ private theorem adaptiveMembersCovered_prefix10
     AdaptiveMembersCovered vk instanceCommitment (adaptiveRootPrefixProof 10 ps) source := by
   simpa only [adaptiveRootPrefixProof] using hfull
 
+/-- The explicit `x₁` stage surface of represented proof data is its normalized decoder set. -/
+theorem OnlineMemberProofData.adaptiveRootSurface_five
+    {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    {vk : VerifyingKey shape Fp VestaG}
+    {instanceCommitment : Fin shape.numProofs → Nat → VestaG}
+    {fixed : List (AlgebraicPoint (F := Fp) basis)}
+    (data : OnlineMemberProofData (vk := vk) (instanceCommitment := instanceCommitment)
+      basis fixed)
+    (earlier : Fin 5 → Fp) :
+    adaptiveRootSurfaceAt vk instanceCommitment 5
+        (adaptiveRootPrefixProof 5 data.algebraicProof.erase)
+        (data.algebraicProof.representationsBefore 5 ++ fixed) earlier =
+      adaptiveX1AllRootSet vk instanceCommitment data.algebraicProof.erase
+        (data.algebraicProof.preX1AssemblySource fixed)
+        data.adaptivePreX1MembersCovered (adaptiveEarlierRecord 5 earlier) := by
+  unfold adaptiveRootSurfaceAt
+  dsimp only
+  rw [data.adaptiveRootMemberSource_eq_preX1 5 (by norm_num)]
+  let hprefix := adaptiveMembersCovered_prefix5 vk instanceCommitment
+    data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
+    data.adaptivePreX1MembersCovered
+  rw [dif_pos hprefix]
+  norm_num
+  exact adaptiveX1AllRootSet_prefix5 vk instanceCommitment data.algebraicProof.erase
+    (data.algebraicProof.preX1AssemblySource fixed) hprefix
+    data.adaptivePreX1MembersCovered (adaptiveEarlierRecord 5 earlier)
+
 /-- The actual fresh fallback at `x₁` is the normalized decoder surface. -/
 theorem OnlineMemberProofData.adaptiveFallbackRootSurface_five
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
@@ -1900,6 +1927,33 @@ theorem OnlineMemberProofData.adaptiveFallbackRootSurface_five
     (data.algebraicProof.preX1AssemblySource (family.fixedRepresentations basis))
     hprefix data.adaptivePreX1MembersCovered (adaptiveEarlierRecord 5 earlier)
 
+/-- The explicit `x₂` stage surface of represented proof data is its normalized decoder set. -/
+theorem OnlineMemberProofData.adaptiveRootSurface_six
+    {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    {vk : VerifyingKey shape Fp VestaG}
+    {instanceCommitment : Fin shape.numProofs → Nat → VestaG}
+    {fixed : List (AlgebraicPoint (F := Fp) basis)}
+    (data : OnlineMemberProofData (vk := vk) (instanceCommitment := instanceCommitment)
+      basis fixed)
+    (earlier : Fin 6 → Fp) :
+    adaptiveRootSurfaceAt vk instanceCommitment 6
+        (adaptiveRootPrefixProof 6 data.algebraicProof.erase)
+        (data.algebraicProof.representationsBefore 6 ++ fixed) earlier =
+      adaptiveX2RootSet vk instanceCommitment data.algebraicProof.erase
+        (data.algebraicProof.preX1AssemblySource fixed)
+        data.adaptivePreX1MembersCovered (adaptiveEarlierRecord 6 earlier) := by
+  unfold adaptiveRootSurfaceAt
+  dsimp only
+  rw [data.adaptiveRootMemberSource_eq_preX1 6 (by norm_num)]
+  let hprefix := adaptiveMembersCovered_prefix6 vk instanceCommitment
+    data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
+    data.adaptivePreX1MembersCovered
+  rw [dif_pos hprefix]
+  norm_num
+  exact adaptiveX2RootSet_prefix6 vk instanceCommitment data.algebraicProof.erase
+    (data.algebraicProof.preX1AssemblySource fixed) hprefix
+    data.adaptivePreX1MembersCovered (adaptiveEarlierRecord 6 earlier)
+
 /-- The actual fresh fallback at `x₂` is the normalized decoder surface. -/
 theorem OnlineMemberProofData.adaptiveFallbackRootSurface_six
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
@@ -1928,6 +1982,44 @@ theorem OnlineMemberProofData.adaptiveFallbackRootSurface_six
     (family.instanceCommitment basis) data.algebraicProof.erase
     (data.algebraicProof.preX1AssemblySource (family.fixedRepresentations basis))
     hprefix data.adaptivePreX1MembersCovered (adaptiveEarlierRecord 6 earlier)
+
+/-- The explicit `x₃` stage surface of represented proof data is its normalized decoder set. -/
+theorem OnlineMemberProofData.adaptiveRootSurface_seven
+    {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    {vk : VerifyingKey shape Fp VestaG}
+    {instanceCommitment : Fin shape.numProofs → Nat → VestaG}
+    {fixed : List (AlgebraicPoint (F := Fp) basis)}
+    (data : OnlineMemberProofData (vk := vk) (instanceCommitment := instanceCommitment)
+      basis fixed)
+    (earlier : Fin 7 → Fp) :
+    adaptiveRootSurfaceAt vk instanceCommitment 7
+        (adaptiveRootPrefixProof 7 data.algebraicProof.erase)
+        (data.algebraicProof.representationsBefore 7 ++ fixed) earlier =
+      adaptiveX3RootSet vk instanceCommitment data.algebraicProof.erase
+        (data.algebraicProof.preX1AssemblySource fixed)
+        [data.algebraicProof.multiopenQPrime] data.adaptivePreX1MembersCovered
+        ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩
+        (adaptiveEarlierRecord 7 earlier) := by
+  unfold adaptiveRootSurfaceAt
+  dsimp only
+  rw [data.adaptiveRootMemberSource_eq_preX1 7 (by norm_num),
+    data.adaptiveRootQSource_eq 7 (by norm_num)]
+  let hprefix := adaptiveMembersCovered_prefix7 vk instanceCommitment
+    data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
+    data.adaptivePreX1MembersCovered
+  let qFull : CommitmentRefCovered [data.algebraicProof.multiopenQPrime]
+      (.point data.algebraicProof.erase.multiopenQPrime) :=
+    ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩
+  let qPrefix : CommitmentRefCovered [data.algebraicProof.multiopenQPrime]
+      (.point (adaptiveRootPrefixProof 7 data.algebraicProof.erase).multiopenQPrime) := by
+    simpa only [adaptiveRootPrefixProof] using qFull
+  rw [dif_pos hprefix]
+  norm_num
+  rw [dif_pos qPrefix]
+  exact adaptiveX3RootSet_prefix7 vk instanceCommitment data.algebraicProof.erase
+    (data.algebraicProof.preX1AssemblySource fixed)
+    [data.algebraicProof.multiopenQPrime] hprefix data.adaptivePreX1MembersCovered
+    qPrefix qFull (adaptiveEarlierRecord 7 earlier)
 
 /-- The actual fresh fallback at `x₃` is the normalized decoder surface. -/
 theorem OnlineMemberProofData.adaptiveFallbackRootSurface_seven
@@ -1969,6 +2061,44 @@ theorem OnlineMemberProofData.adaptiveFallbackRootSurface_seven
     [data.algebraicProof.multiopenQPrime] hprefix data.adaptivePreX1MembersCovered
     qPrefix qFull (adaptiveEarlierRecord 7 earlier)
 
+/-- The explicit `x₄` stage surface of represented proof data is its normalized decoder set. -/
+theorem OnlineMemberProofData.adaptiveRootSurface_eight
+    {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    {vk : VerifyingKey shape Fp VestaG}
+    {instanceCommitment : Fin shape.numProofs → Nat → VestaG}
+    {fixed : List (AlgebraicPoint (F := Fp) basis)}
+    (data : OnlineMemberProofData (vk := vk) (instanceCommitment := instanceCommitment)
+      basis fixed)
+    (earlier : Fin 8 → Fp) :
+    adaptiveRootSurfaceAt vk instanceCommitment 8
+        (adaptiveRootPrefixProof 8 data.algebraicProof.erase)
+        (data.algebraicProof.representationsBefore 8 ++ fixed) earlier =
+      adaptiveX4RootSet vk instanceCommitment data.algebraicProof.erase
+        (data.algebraicProof.preX1AssemblySource fixed)
+        [data.algebraicProof.multiopenQPrime] data.adaptivePreX1MembersCovered
+        ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩
+        (adaptiveEarlierRecord 8 earlier) := by
+  unfold adaptiveRootSurfaceAt
+  dsimp only
+  rw [data.adaptiveRootMemberSource_eq_preX1 8 (by norm_num),
+    data.adaptiveRootQSource_eq 8 (by norm_num)]
+  let hprefix := adaptiveMembersCovered_prefix8 vk instanceCommitment
+    data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
+    data.adaptivePreX1MembersCovered
+  let qFull : CommitmentRefCovered [data.algebraicProof.multiopenQPrime]
+      (.point data.algebraicProof.erase.multiopenQPrime) :=
+    ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩
+  let qPrefix : CommitmentRefCovered [data.algebraicProof.multiopenQPrime]
+      (.point (adaptiveRootPrefixProof 8 data.algebraicProof.erase).multiopenQPrime) := by
+    simpa only [adaptiveRootPrefixProof] using qFull
+  rw [dif_pos hprefix]
+  norm_num
+  rw [dif_pos qPrefix]
+  exact adaptiveX4RootSet_prefix8 vk instanceCommitment data.algebraicProof.erase
+    (data.algebraicProof.preX1AssemblySource fixed)
+    [data.algebraicProof.multiopenQPrime] hprefix data.adaptivePreX1MembersCovered
+    qPrefix qFull (adaptiveEarlierRecord 8 earlier)
+
 /-- The actual fresh fallback at `x₄` is the normalized decoder surface. -/
 theorem OnlineMemberProofData.adaptiveFallbackRootSurface_eight
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
@@ -2008,6 +2138,54 @@ theorem OnlineMemberProofData.adaptiveFallbackRootSurface_eight
     (data.algebraicProof.preX1AssemblySource (family.fixedRepresentations basis))
     [data.algebraicProof.multiopenQPrime] hprefix data.adaptivePreX1MembersCovered
     qPrefix qFull (adaptiveEarlierRecord 8 earlier)
+
+/-- The explicit `ξ` stage surface of represented proof data is its normalized decoder set. -/
+theorem OnlineMemberProofData.adaptiveRootSurface_nine
+    {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    {vk : VerifyingKey shape Fp VestaG}
+    {instanceCommitment : Fin shape.numProofs → Nat → VestaG}
+    {fixed : List (AlgebraicPoint (F := Fp) basis)}
+    (data : OnlineMemberProofData (vk := vk) (instanceCommitment := instanceCommitment)
+      basis fixed)
+    (earlier : Fin 9 → Fp) :
+    adaptiveRootSurfaceAt vk instanceCommitment 9
+        (adaptiveRootPrefixProof 9 data.algebraicProof.erase)
+        (data.algebraicProof.representationsBefore 9 ++ fixed) earlier =
+      adaptiveXiRootSet vk instanceCommitment data.algebraicProof.erase
+        (data.algebraicProof.preX1AssemblySource fixed)
+        [data.algebraicProof.multiopenQPrime] [data.algebraicProof.ipaS]
+        data.adaptivePreX1MembersCovered
+        ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩
+        ⟨data.algebraicProof.ipaS, by simp, rfl⟩
+        (adaptiveEarlierRecord 9 earlier) := by
+  unfold adaptiveRootSurfaceAt
+  dsimp only
+  rw [data.adaptiveRootMemberSource_eq_preX1 9 (by norm_num),
+    data.adaptiveRootQSource_eq 9 (by norm_num),
+    data.adaptiveRootSSource_eq 9 (by norm_num)]
+  let hprefix := adaptiveMembersCovered_prefix9 vk instanceCommitment
+    data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
+    data.adaptivePreX1MembersCovered
+  let qFull : CommitmentRefCovered [data.algebraicProof.multiopenQPrime]
+      (.point data.algebraicProof.erase.multiopenQPrime) :=
+    ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩
+  let qPrefix : CommitmentRefCovered [data.algebraicProof.multiopenQPrime]
+      (.point (adaptiveRootPrefixProof 9 data.algebraicProof.erase).multiopenQPrime) := by
+    simpa only [adaptiveRootPrefixProof] using qFull
+  let sFull : CommitmentRefCovered [data.algebraicProof.ipaS]
+      (.point data.algebraicProof.erase.ipaS) :=
+    ⟨data.algebraicProof.ipaS, by simp, rfl⟩
+  let sPrefix : CommitmentRefCovered [data.algebraicProof.ipaS]
+      (.point (adaptiveRootPrefixProof 9 data.algebraicProof.erase).ipaS) := by
+    simpa only [adaptiveRootPrefixProof] using sFull
+  rw [dif_pos hprefix]
+  norm_num
+  rw [dif_pos qPrefix, dif_pos sPrefix]
+  exact adaptiveXiRootSet_prefix9 vk instanceCommitment data.algebraicProof.erase
+    (data.algebraicProof.preX1AssemblySource fixed)
+    [data.algebraicProof.multiopenQPrime] [data.algebraicProof.ipaS]
+    hprefix data.adaptivePreX1MembersCovered qPrefix qFull sPrefix sFull
+    (adaptiveEarlierRecord 9 earlier)
 
 /-- The actual fresh fallback at `ξ` is the normalized decoder surface. -/
 theorem OnlineMemberProofData.adaptiveFallbackRootSurface_nine
@@ -2058,6 +2236,54 @@ theorem OnlineMemberProofData.adaptiveFallbackRootSurface_nine
     [data.algebraicProof.multiopenQPrime] [data.algebraicProof.ipaS]
     hprefix data.adaptivePreX1MembersCovered qPrefix qFull sPrefix sFull
     (adaptiveEarlierRecord 9 earlier)
+
+/-- The explicit `z` stage surface of represented proof data is its normalized decoder set. -/
+theorem OnlineMemberProofData.adaptiveRootSurface_ten
+    {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    {vk : VerifyingKey shape Fp VestaG}
+    {instanceCommitment : Fin shape.numProofs → Nat → VestaG}
+    {fixed : List (AlgebraicPoint (F := Fp) basis)}
+    (data : OnlineMemberProofData (vk := vk) (instanceCommitment := instanceCommitment)
+      basis fixed)
+    (earlier : Fin 10 → Fp) :
+    adaptiveRootSurfaceAt vk instanceCommitment 10
+        (adaptiveRootPrefixProof 10 data.algebraicProof.erase)
+        (data.algebraicProof.representationsBefore 10 ++ fixed) earlier =
+      adaptiveZRootSet vk instanceCommitment data.algebraicProof.erase
+        (data.algebraicProof.preX1AssemblySource fixed)
+        [data.algebraicProof.multiopenQPrime] [data.algebraicProof.ipaS]
+        data.adaptivePreX1MembersCovered
+        ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩
+        ⟨data.algebraicProof.ipaS, by simp, rfl⟩
+        (adaptiveEarlierRecord 10 earlier) := by
+  unfold adaptiveRootSurfaceAt
+  dsimp only
+  rw [data.adaptiveRootMemberSource_eq_preX1 10 (by norm_num),
+    data.adaptiveRootQSource_eq 10 (by norm_num),
+    data.adaptiveRootSSource_eq 10 (by norm_num)]
+  let hprefix := adaptiveMembersCovered_prefix10 vk instanceCommitment
+    data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
+    data.adaptivePreX1MembersCovered
+  let qFull : CommitmentRefCovered [data.algebraicProof.multiopenQPrime]
+      (.point data.algebraicProof.erase.multiopenQPrime) :=
+    ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩
+  let qPrefix : CommitmentRefCovered [data.algebraicProof.multiopenQPrime]
+      (.point (adaptiveRootPrefixProof 10 data.algebraicProof.erase).multiopenQPrime) := by
+    simpa only [adaptiveRootPrefixProof] using qFull
+  let sFull : CommitmentRefCovered [data.algebraicProof.ipaS]
+      (.point data.algebraicProof.erase.ipaS) :=
+    ⟨data.algebraicProof.ipaS, by simp, rfl⟩
+  let sPrefix : CommitmentRefCovered [data.algebraicProof.ipaS]
+      (.point (adaptiveRootPrefixProof 10 data.algebraicProof.erase).ipaS) := by
+    simpa only [adaptiveRootPrefixProof] using sFull
+  rw [dif_pos hprefix]
+  norm_num
+  rw [dif_pos qPrefix, dif_pos sPrefix]
+  exact adaptiveZRootSet_prefix10 vk instanceCommitment data.algebraicProof.erase
+    (data.algebraicProof.preX1AssemblySource fixed)
+    [data.algebraicProof.multiopenQPrime] [data.algebraicProof.ipaS]
+    hprefix data.adaptivePreX1MembersCovered qPrefix qFull sPrefix sFull
+    (adaptiveEarlierRecord 10 earlier)
 
 /-- The actual fresh fallback at `z` is the normalized decoder surface. -/
 theorem OnlineMemberProofData.adaptiveFallbackRootSurface_ten
@@ -2429,7 +2655,7 @@ private theorem adaptiveX1RootPolynomial_strictPrefix
   simp only [deployedSetQueries_strictPrefix5]
   rfl
 
-private theorem adaptiveX1AllRootSet_strictPrefix
+theorem adaptiveX1AllRootSet_strictPrefix
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (vk : VerifyingKey shape Fp VestaG)
     (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
@@ -2643,7 +2869,7 @@ private theorem deployedAlgebraicSetInterpolants_strictPrefix6
   unfold deployedAlgebraicSetInterpolants
   rw [hsets]
 
-private theorem adaptiveX2RootSet_strictPrefix
+theorem adaptiveX2RootSet_strictPrefix
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (vk : VerifyingKey shape Fp VestaG)
     (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
@@ -2674,7 +2900,7 @@ private theorem adaptiveX2RootSet_strictPrefix
   rw [hpoly, hall]
 
 set_option maxHeartbeats 800000 in
-private theorem adaptiveX3RootSet_strictPrefix
+theorem adaptiveX3RootSet_strictPrefix
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (vk : VerifyingKey shape Fp VestaG)
     (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
@@ -2689,7 +2915,7 @@ private theorem adaptiveX3RootSet_strictPrefix
   rfl
 
 set_option maxHeartbeats 800000 in
-private theorem adaptiveX4RootSet_strictPrefix
+theorem adaptiveX4RootSet_strictPrefix
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (vk : VerifyingKey shape Fp VestaG)
     (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
@@ -2704,7 +2930,7 @@ private theorem adaptiveX4RootSet_strictPrefix
   rfl
 
 set_option maxHeartbeats 800000 in
-private theorem adaptiveXiRootSet_strictPrefix
+theorem adaptiveXiRootSet_strictPrefix
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (vk : VerifyingKey shape Fp VestaG)
     (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
@@ -2720,7 +2946,7 @@ private theorem adaptiveXiRootSet_strictPrefix
   rfl
 
 set_option maxHeartbeats 800000 in
-private theorem adaptiveZRootSet_strictPrefix
+theorem adaptiveZRootSet_strictPrefix
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (vk : VerifyingKey shape Fp VestaG)
     (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
