@@ -69,10 +69,10 @@ Two commands from `Zcash.Meta.AxiomCheck`, per the breaks-as-computed-data disci
 `Zcash.Security.RandomOracle`):
 
 * **Computed break reductions** get `assert_computable`: the declaration is a plain `def` — not a
-  theorem, not marked `noncomputable` — with axioms bounded by `propext` / `Quot.sound`.
-  `+choice` additionally permits `Classical.choice`; with the plain-`def` check this asserts
-  choice enters only through erased `Prop` certificate fields, so the break data cannot have been
-  conjured from mere propositional existence.
+  theorem, marked neither `unsafe`/`partial` nor `noncomputable` — with axioms bounded by
+  `propext` / `Quot.sound`. `+choice` additionally permits `Classical.choice`; with the
+  plain-`def` check this asserts choice enters only through erased `Prop` certificate fields, so
+  the break data cannot have been conjured from mere propositional existence.
 * **Theorems** get `assert_axioms`, an upper bound at the standard tier
   (`propext` / `Classical.choice` / `Quot.sound`). Both commands reject `sorryAx`.
 

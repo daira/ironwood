@@ -625,6 +625,18 @@ assert_axioms Zcash.Snark.Fixture2.straightLineInterface_nonempty_at_captured_sh
 assert_axioms Zcash.Snark.Fixture2.adaptiveInterface_nonempty_at_captured_shape +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
+-- The consensus-maximum work-factor packages (`Zcash.Snark.FixtureMax`, reached through
+-- `ActionCapstone`'s import of `StraightLineMaxShapeBounds`). These are the profiled endpoints the
+-- book's proof journey cites by name, and they are top-level leaves: nothing censused depends on
+-- them, so without these entries nothing bounds their trusted base. Unlike the captured-key
+-- knowledge-error endpoints, they take the static checks and the `x`-squeeze schedule as
+-- hypotheses rather than discharging them from the capture, so they reach no fixture native
+-- certificate — only the Vesta point count, through the `Fp`-module structure on the curve.
+assert_axioms Zcash.Snark.FixtureMax.straightLine_consensus_2pow123_workFactor_generatorRO +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.FixtureMax.straightLine_consensus_2pow122_workFactor_generatorRO +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+
 -- `whitespace := lax` collapses all whitespace, so the pin is insensitive to how
 -- `#print axioms` line-wraps the list (a formatting artifact of the axiom-name lengths).
 /-- info: 'Zcash.Snark.Fixture2.fingerprint_matches' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.Fixture2.fingerprint_matches._native.native_decide.ax_1_1] -/

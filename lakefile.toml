@@ -1,7 +1,7 @@
 name = "Zcash"
 version = "0.1.0"
 keywords = ["cryptography", "math", "protocols"]
-defaultTargets = ["Zcash", "FixtureCheck", "CircuitCheck", "MetaCheck"]
+defaultTargets = ["Zcash", "FixtureCheck", "CircuitCheck", "MetaCheck", "SecurityCheck"]
 
 [leanOptions]
 pp.unicode.fun = true # pretty-prints `fun a ↦ b`
@@ -67,3 +67,15 @@ globs = [
 [[lean_lib]]
 name = "CircuitCheck"
 globs = ["Zcash.Circuits.Tests.+"]
+
+# `Zcash/Security/Ledger/BridgeTests.lean` — the regression checks guarding the protocol
+# distinctions a type-correct refinement can silently erase (signed value semantics, scalar
+# randomization, raw Merkle encodings, the dummy-spend guard, the three-valued cross-address flag).
+# Same reason as `MetaCheck`: a check module is where a smoke lemma stated too strongly, or an
+# axiom added to reproduce a bug, is least likely to draw review, so it does not belong in the
+# production `Zcash` import graph that downstream users get. It is not reached from `Zcash.Security`
+# (nothing outside the file references its declarations), and its own `assert_axioms` entries pin
+# its trusted base either way; this target keeps the default build running them.
+[[lean_lib]]
+name = "SecurityCheck"
+globs = ["Zcash.Security.Ledger.BridgeTests"]
