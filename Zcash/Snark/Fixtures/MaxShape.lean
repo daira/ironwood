@@ -26,6 +26,7 @@ def shape (n : ℕ) : Shape := {
   numPermutationSets := 3,
   numPermutationColumns := 15,
   numQuotientPieces := 8,
+  numInstanceColumns := 1,
   numInstanceQueries := 1,
   numAdviceQueries := 25,
   numFixedQueries := 29,

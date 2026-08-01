@@ -19,6 +19,7 @@ structure CircuitShape where
   numPermutationSets : ℕ
   numPermutationColumns : ℕ
   numQuotientPieces : ℕ
+  numInstanceColumns : ℕ
   numInstanceQueries : ℕ
   numAdviceQueries : ℕ
   numFixedQueries : ℕ
@@ -78,6 +79,11 @@ def CircuitShape.withProofParams (shape : CircuitShape) (pp : ProofParams) : Sha
 @[simp] theorem CircuitShape.withProofParams_numQuotientPieces
     (shape : CircuitShape) (pp : ProofParams) :
     (shape.withProofParams pp).numQuotientPieces = shape.numQuotientPieces := by
+  simp only [CircuitShape.withProofParams]
+
+@[simp] theorem CircuitShape.withProofParams_numInstanceColumns
+    (shape : CircuitShape) (pp : ProofParams) :
+    (shape.withProofParams pp).numInstanceColumns = shape.numInstanceColumns := by
   simp only [CircuitShape.withProofParams]
 
 @[simp] theorem CircuitShape.withProofParams_numInstanceQueries

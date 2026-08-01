@@ -32,6 +32,7 @@ import Zcash.Snark.Verifier.Checks
 import Zcash.Snark.Verifier.Queries
 import Zcash.Snark.Verifier.Expressions
 import Zcash.Snark.Verifier.Assemble
+import Zcash.Snark.Verifier.Instances
 import Zcash.Snark.Verifier.FiatShamir
 import Zcash.Snark.Verifier.Parametric
 import Zcash.Snark.Fingerprint.Match
