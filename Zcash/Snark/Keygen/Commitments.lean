@@ -55,12 +55,14 @@ def fixedCommitmentsSeqWith (commit : List Fp → G)
   rows.map commit
 
 omit [AddCommGroup G] [Inhabited G] in
+/-- Sequential and parallel fixed-row commitment helpers return the same list. -/
 theorem fixedCommitmentsSeqWith_eq (commit : List Fp → G)
     (rows : List (List Fp)) :
     fixedCommitmentsSeqWith commit rows = fixedCommitmentsWith commit rows := by
   simp only [fixedCommitmentsSeqWith, fixedCommitmentsWith, List.parMap_eq_map]
 
 omit [AddCommGroup G] [Inhabited G] in
+/-- Pointwise-equal committers give equal sequential fixed commitments. -/
 theorem fixedCommitmentsSeqWith_congr {f g : List Fp → G}
     (rows : List (List Fp))
     (h : ∀ row ∈ rows, f row = g row) :
@@ -97,10 +99,12 @@ map form, see `omegaPowersArr`). -/
 def deltaPowersArr (delta : Fp) (m : ℕ) : Array Fp :=
   (Array.range m).map (delta ^ ·)
 
+/-- In-range lookup returns the corresponding power of `omega`. -/
 @[simp] theorem omegaPowersArr_getElem! (omega : Fp) {n j : ℕ} (hj : j < n) :
     (omegaPowersArr omega n)[j]! = omega ^ j := by
   simp [omegaPowersArr, hj]
 
+/-- In-range lookup returns the corresponding power of `delta`. -/
 @[simp] theorem deltaPowersArr_getElem! (delta : Fp) {m j : ℕ} (hj : j < m) :
     (deltaPowersArr delta m)[j]! = delta ^ j := by
   simp [deltaPowersArr, hj]
@@ -136,6 +140,7 @@ def permutationCommitmentsSeqWith (commit : List Fp → G) (k : ℕ)
   (permPolysOf k cs ops).map commit
 
 omit [AddCommGroup G] [Inhabited G] in
+/-- Sequential and parallel permutation commitment helpers return the same list. -/
 theorem permutationCommitmentsSeqWith_eq (commit : List Fp → G) (k : ℕ)
     (cs : ConstraintSystem Fp) (ops : Operations Fp) :
     permutationCommitmentsSeqWith commit k cs ops

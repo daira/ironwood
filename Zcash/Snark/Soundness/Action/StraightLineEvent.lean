@@ -462,6 +462,7 @@ def actionRelationFinderCalls
         + 3 * (actionCircuit.shape.withProofParams pp).k) → Fp) : Nat :=
   family.straightLineConstraintRelationFinderCalls basis O + 2
 
+/-- The combined constraint and Action relation finder uses at most six represented runs. -/
 theorem actionRelationFinderCalls_le_six
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
     (O : BTranscript Fp VestaG
@@ -484,6 +485,7 @@ the same six-call outcome. -/
 def actionKnowledgeExtractorOracleQueryCost : Nat :=
   actionDlogOracleQueryCost pp family
 
+/-- The knowledge extractor shares the combined finder's oracle-query cost. -/
 @[simp] theorem actionKnowledgeExtractorOracleQueryCost_eq :
     actionKnowledgeExtractorOracleQueryCost pp family =
       actionDlogOracleQueryCost pp family := rfl
@@ -617,10 +619,7 @@ theorem actionBaseUnion_probability_bound_of_dlogProfile
     (actionRelationFinder_extends_constraint pp family static inputs hvk hI hchar)
     schedule profile.hardness
 
-/-- **Exact Action-statement containment.**  Outside the compressed decode failure and the four
-challenge surfaces, a false Action statement forces the good-run terminal onto its relation
-branch.  A covering computed finder therefore turns that branch into the explicit event priced
-by DLOG. -/
+/-- Outside decode and semantic failures, false acceptance forces the terminal relation branch. -/
 theorem actionBundleStatementUpgradeContained
     (finder :
       (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG) →
@@ -648,9 +647,7 @@ theorem actionBundleStatementUpgradeContained
   refine Or.inr (Or.inr (Or.inr (Or.inr ?_)))
   exact hcovers q.1 q.2 hdecoded hXY hBeta hGamma hTheta hfalse
 
-/-- Literal accepting-false-Action runs are covered by the *single* base union (compressed decode
-failure or the combined relation finder) plus the four semantic challenge surfaces.  The finder
-event is not added again after the compressed bound. -/
+/-- False Action-statement acceptance lies in one base union plus four semantic surfaces. -/
 theorem actionBundleStatementFailure_subset_union
     (finder :
       (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG) →

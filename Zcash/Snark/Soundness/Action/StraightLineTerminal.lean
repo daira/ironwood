@@ -54,6 +54,7 @@ def foldSplitAvoidance?
       else not_mem_szBadSet.mpr fun hne =>
         False.elim (hne (foldSplitWitness_zero_of_le hn (Nat.le_of_not_gt hj)))⟩
 
+/-- Complete fold-split avoidance makes the executable check succeed. -/
 theorem foldSplitAvoidance?_isSome_of
     (cs : List (CPoly)) (n : Nat) (hn : n ≠ 0) (y : Fp)
     (hgood : ∀ j, y ∉ szBadSet (foldSplitWitness cs n j)) :

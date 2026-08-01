@@ -73,9 +73,11 @@ abbrev vkAt
 def semanticChRecord (theta beta : Fp) {k : ℕ} : Challenges k Fp :=
   chRecord (fun i => if i = 0 then theta else if i = 1 then beta else 0) (fun _ => 0)
 
+/-- `semanticChRecord` preserves its `theta` input. -/
 @[simp] theorem semanticChRecord_theta (theta beta : Fp) {k : ℕ} :
     (semanticChRecord theta beta (k := k)).theta = theta := rfl
 
+/-- `semanticChRecord` preserves its `beta` input. -/
 @[simp] theorem semanticChRecord_beta (theta beta : Fp) {k : ℕ} :
     (semanticChRecord theta beta (k := k)).beta = beta := rfl
 
@@ -145,9 +147,7 @@ theorem actionThetaFailure_probability_bound {T : Type*} [DecidableEq T]
 
 /-! ## `β` (squeeze index 1) -/
 
-/-- **The `β` failure event is a state surface.**  The permutation `β` set reads the permutation
-input slots; the lookup `β` set reads the lookup input slots and, of the record, only `θ` —
-squeezed one index earlier, so the state supplies it. -/
+/-- The `β` failure event lies in its permutation and lookup state surfaces. -/
 theorem actionBetaFailureEvent_subset
     (cut : SequentialCut family.toComputedAlgebraicFSFamily 1)
     (view : cut.State → CommitmentId → CPoly)
@@ -304,10 +304,7 @@ theorem actionGammaFailure_probability_bound {T : Type*} [DecidableEq T]
 
 /-! ## `x` and `y` (squeeze indices 4 and 3) -/
 
-/-- **The fused `x`/`y` failure event splits into two state surfaces.**  The `y` fold set reads
-the accepted model's constraints — every input committed before `y` — and the `x` set reads the
-model, `y` itself, and the vanishing commitment, all committed before `x`.  The index-3 and
-index-4 views supply them. -/
+/-- The fused `x`/`y` failure event lies in the union of its two state surfaces. -/
 theorem actionXYFailureEvent_subset
     (cutY : SequentialCut family.toComputedAlgebraicFSFamily 3)
     (cutX : SequentialCut family.toComputedAlgebraicFSFamily 4)

@@ -96,51 +96,61 @@ def shape (top : TopLevelCircuit Fp Config PublicInput) : CircuitShape :=
     numAdviceQueries := top.adviceQueryCount
     numFixedQueries := top.fixedQueryCount }
 
+/-- The shape reads its domain exponent off the circuit. -/
 @[simp] theorem shape_k
     (top : TopLevelCircuit Fp Config PublicInput) :
     top.shape.k = top.domainExponent := by
   simp only [shape]
 
+/-- The shape reads its advice-column count off the circuit. -/
 @[simp] theorem shape_numAdviceColumns
     (top : TopLevelCircuit Fp Config PublicInput) :
     top.shape.numAdviceColumns = top.adviceColumnCount := by
   simp only [shape]
 
+/-- The shape reads its lookup count off the circuit. -/
 @[simp] theorem shape_numLookups
     (top : TopLevelCircuit Fp Config PublicInput) :
     top.shape.numLookups = top.lookupCount := by
   simp only [shape]
 
+/-- The shape reads its permutation-set count off the circuit. -/
 @[simp] theorem shape_numPermutationSets
     (top : TopLevelCircuit Fp Config PublicInput) :
     top.shape.numPermutationSets = top.permutationSetCount := by
   simp only [shape]
 
+/-- The shape reads its permutation-column count off the circuit. -/
 @[simp] theorem shape_numPermutationColumns
     (top : TopLevelCircuit Fp Config PublicInput) :
     top.shape.numPermutationColumns = top.permutationColumnCount := by
   simp only [shape]
 
+/-- The shape reads its quotient-piece count off the circuit. -/
 @[simp] theorem shape_numQuotientPieces
     (top : TopLevelCircuit Fp Config PublicInput) :
     top.shape.numQuotientPieces = top.quotientPieceCount := by
   simp only [shape]
 
+/-- The shape reads its instance-column count off the circuit's constraint system. -/
 @[simp] theorem shape_numInstanceColumns
     (top : TopLevelCircuit Fp Config PublicInput) :
     top.shape.numInstanceColumns = top.constraintSystem.numInstanceColumns := by
   simp only [shape]
 
+/-- The shape reads its instance-query count off the circuit. -/
 @[simp] theorem shape_numInstanceQueries
     (top : TopLevelCircuit Fp Config PublicInput) :
     top.shape.numInstanceQueries = top.instanceQueryCount := by
   simp only [shape]
 
+/-- The shape reads its advice-query count off the circuit. -/
 @[simp] theorem shape_numAdviceQueries
     (top : TopLevelCircuit Fp Config PublicInput) :
     top.shape.numAdviceQueries = top.adviceQueryCount := by
   simp only [shape]
 
+/-- The shape reads its fixed-query count off the circuit. -/
 @[simp] theorem shape_numFixedQueries
     (top : TopLevelCircuit Fp Config PublicInput) :
     top.shape.numFixedQueries = top.fixedQueryCount := by

@@ -247,6 +247,7 @@ def adaptiveActionPreXIdentityRelationFinder
   | some (Sum.inr relation) => some relation
   | _ => none
 
+/-- On a false statement, a successful pre-`x` terminal outcome contains relation data. -/
 theorem adaptiveActionPreXIdentityRelationFinder_isSome_of_witnessOrRelation
     (basis) (O) (hprovenance) (witness) (hsrc) (hroots) (hshifted) (haccepts)
     (hcomplete : (adaptiveActionPreXIdentityWitnessOrRelationFinder pp family inputs hvk hI
@@ -508,6 +509,8 @@ theorem adaptiveActionRootOutcomeWithSource_eq_inl
     subst witness'
     congr
 
+/-- The adaptive terminal read as data: the Action bundle witness, or an algebraic relation,
+for the runs whose representation-relation finder came up empty (`hprovenance`). -/
 def adaptiveActionCompleteTerminalWitnessOrRelationFinder
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
     (O : BTranscript Fp VestaG
@@ -583,6 +586,7 @@ def adaptiveActionCompleteTerminalRelationFinder
   | some (Sum.inr relation) => some relation
   | _ => none
 
+/-- On a false statement, a successful complete terminal outcome contains relation data. -/
 theorem adaptiveActionCompleteTerminalRelationFinder_isSome_of_witnessOrRelation
     (basis) (O) (hprovenance)
     (hcomplete : (adaptiveActionCompleteTerminalWitnessOrRelationFinder pp family inputs
@@ -847,6 +851,7 @@ def adaptiveActionKnowledgeOutcome :
         | none => adaptiveActionCompleteTerminalWitnessOrRelationFinder pp family inputs
             hvk hI hchar basis O hprovenance
 
+/-- If both earlier relation finders fail, the knowledge outcome is the complete terminal result. -/
 theorem adaptiveActionKnowledgeOutcome_eq_complete_of_none
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
     (O : BTranscript Fp VestaG
@@ -911,6 +916,7 @@ cached pre-IPA provenance, cached IPA provenance, IPA binding, and deployed root
 terminal fallback. -/
 def adaptiveActionDlogTraversalSlots : Nat := 2 + 4 + 2
 
+/-- The adaptive combined finder charges eight traversal slots. -/
 @[simp] theorem adaptiveActionDlogTraversalSlots_eq_eight :
     adaptiveActionDlogTraversalSlots = 8 := rfl
 
@@ -959,6 +965,7 @@ cached outcome, so it has the same envelope and does not add a ninth adversary t
 def adaptiveActionKnowledgeExtractorOracleQueryCost : Nat :=
   adaptiveActionDlogOracleQueryCost pp family
 
+/-- The knowledge extractor shares the combined finder's oracle-query cost. -/
 @[simp] theorem adaptiveActionKnowledgeExtractorOracleQueryCost_eq :
     adaptiveActionKnowledgeExtractorOracleQueryCost pp family =
       adaptiveActionDlogOracleQueryCost pp family := rfl
@@ -1328,6 +1335,8 @@ def adaptiveActionKnowledgeFailureEvent :
   {q | adaptiveActionAccepts family q.1 q.2 ∧
     adaptiveActionKnowledgeExtractor pp family inputs hvk hI hchar q.1 q.2 = none}
 
+/-- The knowledge-extraction failures left once the separately priced `z = 0`, IPA, root, and
+relation events are removed. -/
 def adaptiveActionKnowledgeResidualEvent :
     Set ((AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG) ×
       (BTranscript Fp VestaG
@@ -1339,6 +1348,7 @@ def adaptiveActionKnowledgeResidualEvent :
         (adaptiveActionRootEvent pp family ∪
           adaptiveActionRelationEvent pp family inputs hvk hI hchar)))
 
+/-- Knowledge failure lies in a structural event or the remaining semantic event. -/
 theorem adaptiveActionKnowledgeFailureEvent_subset :
     adaptiveActionKnowledgeFailureEvent pp family inputs hvk hI hchar ⊆
       adaptiveActionZeroChallengeEvent pp family ∪
@@ -1359,6 +1369,7 @@ theorem adaptiveActionKnowledgeFailureEvent_subset :
     simp only [Set.mem_union, not_or]
     exact ⟨hz, hipa, hroot, hrelation⟩
 
+/-- Residual knowledge failure lies in one of the five adaptive semantic surfaces. -/
 theorem adaptiveActionKnowledgeResidualEvent_subset_surfaces :
     adaptiveActionKnowledgeResidualEvent pp family inputs hvk hI hchar ⊆
       {q | ∃ n : Fin 5, q.2 ∈ family.adaptiveActionBadWithoutRelation pp inputs q.1 n} := by
@@ -1624,9 +1635,7 @@ theorem adaptiveActionKnowledgeFailure_probability_bound
       profile.hardness)
     (adaptiveActionKnowledgeResidual_probability_bound pp family inputs hvk hI hchar B epsilon hsurface)
 
-/-- Probability bound for the bare adaptive false-statement event.  Every algebraic branch is
-closed by the executable combined finder and the remaining semantic term is derived from the five
-explicit Action squeeze surfaces. -/
+/-- Probability bound for adaptive false-statement acceptance from the finder and five surfaces. -/
 theorem adaptiveActionAcceptFalseStatement_probability_bound
     (B : VestaG) (epsilon : Fin 5 → ENNReal)
     (profile : AdaptiveActionDlogProfile pp family inputs hvk hI hchar B)

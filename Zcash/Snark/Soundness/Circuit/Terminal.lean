@@ -27,6 +27,7 @@ open Halo2 CompPoly.CPolynomial
 
 universe u v w
 
+/-- The terminal outcome: the bundle statement, or the shared exceptional event `Bad`. -/
 def TopLevelTerminalOutcome
     {Config : Type} {PublicInput : TypeMap}
     [ProvableType PublicInput]
@@ -46,12 +47,14 @@ def TopLevelWitnessTerminalOutcome
     (Bad : Type) : Type :=
   TopLevelBundleWitness top pp poly ⊕' Bad
 
+/-- Chain one `⊕' Bad` outcome into the next step, carrying a `Bad` through unchanged. -/
 private def bindOutcome {A : Sort u} {B : Sort v} {R : Sort w}
     (outcome : A ⊕' R) (next : A → B ⊕' R) : B ⊕' R :=
   match outcome with
   | .inl value => next value
   | .inr bad => .inr bad
 
+/-- The component terminal giving each proof's circuit statement. -/
 def topLevelBundleStatement_or_bad_of_components
     {G : Type} [AddCommGroup G] [Inhabited G]
     {Config : Type} {PublicInput : TypeMap}

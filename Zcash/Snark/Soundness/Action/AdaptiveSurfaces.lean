@@ -45,6 +45,7 @@ def AlgebraicProofString.actionRepresentationsBefore
   else if (n : Nat) = 3 then advice ++ lookupPermuted ++ products
   else advice ++ lookupPermuted ++ products ++ List.ofFn aps.hPieces
 
+/-- Advice commitments precede every semantic squeeze. -/
 theorem AlgebraicProofString.adviceCommitment_mem_actionRepresentationsBefore
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (aps : AlgebraicProofString shape basis) (n : Fin 5)
@@ -62,6 +63,7 @@ theorem AlgebraicProofString.adviceCommitment_mem_actionRepresentationsBefore
       tauto
     · split <;> simp only [List.mem_append] <;> tauto
 
+/-- The permuted lookup inputs precede every squeeze from the second on (`1 ≤ n`). -/
 theorem AlgebraicProofString.lookupPermutedInput_mem_actionRepresentationsBefore
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (aps : AlgebraicProofString shape basis) (n : Fin 5)
@@ -80,6 +82,7 @@ theorem AlgebraicProofString.lookupPermutedInput_mem_actionRepresentationsBefore
       tauto
     · split <;> simp only [List.mem_append] <;> tauto
 
+/-- The permuted lookup tables precede every squeeze from the second on (`1 ≤ n`). -/
 theorem AlgebraicProofString.lookupPermutedTable_mem_actionRepresentationsBefore
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (aps : AlgebraicProofString shape basis) (n : Fin 5)
@@ -98,6 +101,7 @@ theorem AlgebraicProofString.lookupPermutedTable_mem_actionRepresentationsBefore
       tauto
     · split <;> simp only [List.mem_append] <;> tauto
 
+/-- The permutation product commitments precede every squeeze from the fourth on (`3 ≤ n`). -/
 theorem AlgebraicProofString.permutationProduct_mem_actionRepresentationsBefore
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (aps : AlgebraicProofString shape basis) (n : Fin 5)
@@ -115,6 +119,7 @@ theorem AlgebraicProofString.permutationProduct_mem_actionRepresentationsBefore
     · omega
     · split <;> simp only [List.mem_append, List.mem_singleton] <;> tauto
 
+/-- The lookup product commitments precede every squeeze from the fourth on (`3 ≤ n`). -/
 theorem AlgebraicProofString.lookupProduct_mem_actionRepresentationsBefore
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (aps : AlgebraicProofString shape basis) (n : Fin 5)
@@ -149,6 +154,7 @@ def ProofString.actionCommitmentPointsBefore {G : Type*}
   else if (n : Nat) = 3 then advice ++ lookupPermuted ++ products
   else advice ++ lookupPermuted ++ products ++ List.ofFn ps.hPieces
 
+/-- Erasing stage representations yields the corresponding commitment-point prefix. -/
 @[simp] theorem AlgebraicProofString.actionRepresentationsBefore_points
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (aps : AlgebraicProofString shape basis) (n : Fin 5) :
@@ -439,6 +445,7 @@ def adaptiveActionLayoutContainsColumn
     (layout : List (Nat × Int)) (column : Nat) : Bool :=
   layout.any fun entry => entry.1 == column
 
+/-- The executable layout check succeeds exactly when the column occurs at some rotation. -/
 theorem adaptiveActionLayoutContainsColumn_iff
     (layout : List (Nat × Int)) (column : Nat) :
     adaptiveActionLayoutContainsColumn layout column = true ↔
@@ -864,6 +871,7 @@ def adaptiveActionCommittedModelOf
   vk.constraintModel ch
     (adaptiveActionCommitmentPolynomialOf vk ic ps source ch) hblinding
 
+/-- `adaptiveActionCommittedModelOf` at the deployed Action verifying key. -/
 def adaptiveActionCommittedModel
     (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
@@ -928,6 +936,7 @@ theorem adaptiveActionPreXDifferenceOf_action
   subst ic
   rfl
 
+/-- The executable pre-`x` difference unfolds to the committed constraint identity. -/
 theorem adaptiveActionPreXDifferenceOf_eq
     {shape : Shape}
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
@@ -1271,6 +1280,7 @@ theorem actionCommitmentPointsBefore_eq_of_prefix
   · obtain ⟨ha, hi, ht, hp, hl, hr, hh⟩ := preXSqueezePoint_inj init hprefix
     simp [ProofString.actionCommitmentPointsBefore, ha, hi, ht, hp, hl, hr, hh]
 
+/-- Equal sources and advice commitments agree on every active column input. -/
 theorem adaptiveActionCommitmentPolynomial_column_eq
     (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
@@ -1289,6 +1299,7 @@ theorem adaptiveActionCommitmentPolynomial_column_eq
       adaptiveActionCommitmentPolynomialOf,
       adaptiveActionPointPolynomial, assembledCommitment]
 
+/-- Equal pre-lookup data agree on every active lookup input. -/
 theorem adaptiveActionCommitmentPolynomial_lookup_eq
     (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
@@ -1309,6 +1320,7 @@ theorem adaptiveActionCommitmentPolynomial_lookup_eq
       adaptiveActionCommitmentPolynomialOf,
       adaptiveActionPointPolynomial, assembledCommitment]
 
+/-- Equal sources and advice commitments agree on every permutation input. -/
 theorem adaptiveActionCommitmentPolynomial_permutation_eq
     (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
@@ -1327,6 +1339,7 @@ theorem adaptiveActionCommitmentPolynomial_permutation_eq
       adaptiveActionCommitmentPolynomialOf,
       adaptiveActionPointPolynomial, assembledCommitment]
 
+/-- The pre-`y` proof fields determine the complete Action commitment resolver. -/
 theorem adaptiveActionCommitmentPolynomial_eq_of_preY_fields
     (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
@@ -1590,6 +1603,7 @@ theorem adaptiveActionXSurface_probability_bound
         (chRecord (fun i => if h : (i : Nat) < 4 then earlier ⟨i, h⟩ else 0)
           (fun _ => 0))))
 
+/-- The pre-`x` difference is independent of challenges after `y`. -/
 theorem adaptiveActionPreXDifference_challenge_congr
     (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
@@ -1770,6 +1784,7 @@ def adaptiveActionRepresentationRelationAtFromAnnotations?
       exact data.algebraicProof.actionRepresentationsBefore_covered
         family.init data.wellFormed n ap hap)
 
+/-- Cached annotations and direct oracle replay produce the same stage relation result. -/
 @[simp] theorem adaptiveActionRepresentationRelationAtFromAnnotations?_annotations
     (family : ComputedAdaptiveOnlineAGMFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
@@ -3267,9 +3282,7 @@ theorem OnlineMemberProofData.adaptiveFinalActionBad_eq_surface
   unfold adaptiveFallbackActionSurface
   congr 1
 
-/-- Every Action semantic squeeze of a bare malicious adaptive online-AGM adversary is priced at
-its first actual annotated query (or the fresh verifier fallback), unless the executable Action
-provenance finder has already produced a DLOG relation. -/
+/-- Prices each Action semantic squeeze at its first query unless provenance yields a relation. -/
 theorem ComputedAdaptiveOnlineAGMFSFamily.adaptiveFinalActionBadWithoutRelation_table_le
     (pp : ProofParams)
     (family : ComputedAdaptiveOnlineAGMFSFamily (actionCircuit.shape.withProofParams pp))

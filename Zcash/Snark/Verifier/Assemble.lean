@@ -506,12 +506,7 @@ def assembleFinalMsm {shape : Shape} {F G : Type*} [Field F] (ps : ProofString s
   ipaFold ch.x3 opened.2 ps.ipaC ps.ipaF ch.xi ch.z (List.ofFn ch.ipaRound) ps.ipaS
     (List.ofFn ps.ipaRounds) opened.1
 
-/-- **The assembled fingerprint MSM evaluates to the verifier's IPA verification equation.**
-Composing `eval_ipaFold` over `assembleFinalMsm = ipaFold … (assembleOpening …).1`: the deployed
-MSM's evaluation is the multiopen commitment opened by the IPA, term for term (the closed form is
-the statement) — so the deployed accept (`… = 0`) is this verification equation. The URS is built
-from `g, w, u`, so its `k` is `shape.k` definitionally — no transport needed. This puts
-`eval_ipaFold` on the soundness path. -/
+/-- Evaluating the final fingerprint MSM yields the verifier's IPA verification equation. -/
 theorem eval_assembleFinalMsm {shape : Shape} {F G : Type*} [Field F] [AddCommGroup G] [Module F G]
     (g : Fin (2 ^ shape.k) → G) (w u : G) (ps : ProofString shape F G) (ch : Challenges shape.k F)
     (grouped : MultiopenGrouped shape.k F G) :
@@ -573,9 +568,7 @@ def constructIntermediateSets {k : ℕ} {F G : Type*} [DecidableEq F] [Decidable
   let setPoints : List (List F) := setList.map fun s => s.filterMap fun i => points[i]?
   { sets := sets, ids := ids, points := setPoints }
 
-/-- The grouping's `ids` and `sets` views are positionally aligned: per point set they are two
-projections of the same routed member list (halo2's `CommitmentData` entries routed to that set),
-so their lengths agree — `ids[i][m]` names the slot identity of the member `sets[i][m]`. -/
+/-- Grouped `ids` and `sets` are aligned projections with equal per-set lengths. -/
 theorem constructIntermediateSets_sets_ids_aligned {k : ℕ} {F G : Type*} [DecidableEq F]
     [DecidableEq G] (queries : List (VerifierQuery k F G)) (i : ℕ) :
     ((constructIntermediateSets queries).ids.getD i []).length
@@ -654,12 +647,7 @@ theorem getElem?_findIdx_self {α : Type*} [DecidableEq α] {l : List α} {x : �
   simp only [decide_eq_true_eq] at hval
   rw [hval]
 
-/-- **Point routing (F4 core).** Every query's point lands in the point list of the set its
-commitment slot is routed to: if `q ∈ queries` and `q.commId` names member `m` of point set `si`
-(`ids[si][m] = q.commId`), then `q.point` appears in set `si`'s points. The point companion of
-`constructIntermediateSets_ref_mem` — a query routed into a set by its slot identity has its opening
-point among that set's points, since the set's points are exactly the point-indices of the members
-routed there. -/
+/-- A routed query's opening point occurs in its grouped point set. -/
 theorem constructIntermediateSets_point_mem {k : ℕ} {F G : Type*} [DecidableEq F] [DecidableEq G]
     (queries : List (VerifierQuery k F G))
     {q : VerifierQuery k F G} (hq : q ∈ queries) {si m : ℕ} {d₀ : CommitmentId}
@@ -724,10 +712,7 @@ theorem nodup_dedup_foldl {α β : Type*} [DecidableEq β] (l : List α) (f : α
       · rw [if_neg hmem]
         exact List.Nodup.append h (List.nodup_singleton _) (List.disjoint_singleton.mpr hmem)
 
-/-- **Each deployed point set's point list has no duplicates.** The grouping's `points` field lists
-each point set's points; every such list is a `filterMap` of a duplicate-free index set over the
-internal distinct-points list (itself `Nodup` by the first-appearance fold), extracting distinct
-entries, so it is `Nodup`. -/
+/-- Each grouped point set contains no duplicate points. -/
 theorem constructIntermediateSets_points_nodup {k : ℕ} {F G : Type*} [DecidableEq F] [DecidableEq G]
     (queries : List (VerifierQuery k F G)) (idx : ℕ) :
     ((constructIntermediateSets queries).points.getD idx []).Nodup := by
@@ -790,11 +775,7 @@ private theorem length_filterMap_eq_of_forall_isSome {α β γ : Type*}
       exact congrArg Nat.succ (ih (fun x hx => hf x (List.mem_cons_of_mem _ hx))
         (fun x hx => hg x (List.mem_cons_of_mem _ hx)))
 
-/-- **Each routed member claims one evaluation per set point.** A grouped member's evaluation list
-and its set's point list are `filterMap`s over the same duplicate-free point-index set, and both
-extractions are everywhere defined — every index in the set is in range of the internal points
-list, and every index got there from some query of the member's slot, so the `find?` succeeds. So
-the lengths agree: the member claims exactly one evaluation at each of its set's points. -/
+/-- Each grouped member supplies one evaluation per point in its set. -/
 theorem constructIntermediateSets_eval_length {k : ℕ} {F G : Type*} [DecidableEq F] [DecidableEq G]
     (queries : List (VerifierQuery k F G)) (i : ℕ) :
     ∀ qc ∈ (constructIntermediateSets queries).sets.getD i [],
@@ -1090,12 +1071,7 @@ theorem cisData_unique_entry {k : ℕ} {F G : Type*} [DecidableEq F]
     rw [List.filterMap_cons, hfind]; rfl
   rw [hfm]
 
-/-- **Unique-slot routing.** A query whose slot identity no other query carries is routed by the
-grouping to a member of exactly one point set: that set's point list is the singleton of the
-query's opening point, the member's recorded identity is the query's slot, and the member's
-recorded evaluation list is the singleton of the query's claimed evaluation — for the vanishing
-slot, the verifier-computed `expectedHEval`. The grouping-side eval-faithfulness fact the `hfold`
-derivation consumes. -/
+/-- A uniquely identified query is routed with its point and claimed evaluation. -/
 theorem constructIntermediateSets_unique_comm_routed {k : ℕ} {F G : Type*} [DecidableEq F]
     [DecidableEq G] (queries : List (VerifierQuery k F G)) {q : VerifierQuery k F G}
     (hq : q ∈ queries) (huniq : ∀ q' ∈ queries, q'.commId = q.commId → q' = q) :
@@ -1171,6 +1147,7 @@ Every builder tags its queries with its own `CommitmentId` constructor family; o
 query is the unique carrier of its slot in `assembleQueries` — the uniqueness
 `constructIntermediateSets_unique_comm_routed` needs to route it unambiguously. -/
 
+/-- Every column query uses an identifier produced by `mkId`. -/
 theorem columnQueries_commId_form {k : ℕ} {F G : Type*} [Field F] {omega x : F}
     {comm : ℕ → G} {mkId : ℕ → CommitmentId} {layout : List (ℕ × ℤ)} {evals : List F}
     {q : VerifierQuery k F G} (hq : q ∈ columnQueries omega x comm mkId layout evals) :
@@ -1179,6 +1156,7 @@ theorem columnQueries_commId_form {k : ℕ} {F G : Type*} [Field F] {omega x : F
   obtain ⟨e, _, rfl⟩ := hq
   exact ⟨e.1.1, rfl⟩
 
+/-- Every common-permutation query uses an identifier produced by `mkId`. -/
 theorem permutationCommonQueries_commId_form {k : ℕ} {F G : Type*} [Field F] {x : F}
     {mkId : ℕ → CommitmentId} {commsEvals : List (G × F)} {q : VerifierQuery k F G}
     (hq : q ∈ permutationCommonQueries x mkId commsEvals) : ∃ n, q.commId = mkId n := by
@@ -1186,6 +1164,7 @@ theorem permutationCommonQueries_commId_form {k : ℕ} {F G : Type*} [Field F] {
   obtain ⟨e, _, rfl⟩ := hq
   exact ⟨e.2, rfl⟩
 
+/-- Every permutation query uses an identifier produced by `mkId`. -/
 theorem permutationQueries_commId_form {k : ℕ} {F G : Type*} [Field F]
     {x xNext xLast : F} {mkId : ℕ → CommitmentId} {sets : List (G × PermSetEval F)}
     {q : VerifierQuery k F G} (hq : q ∈ permutationQueries x xNext xLast mkId sets) :
@@ -1201,6 +1180,7 @@ theorem permutationQueries_commId_form {k : ℕ} {F G : Type*} [Field F]
     obtain ⟨le, _, rfl⟩ := by simpa using hq
     exact ⟨s.2, rfl⟩
 
+/-- Every lookup query uses a product, input, or table identifier. -/
 theorem lookupQueries_commId_form {k : ℕ} {F G : Type*} [Field F] {x xInv xNext : F}
     {mkProduct mkInput mkTable : ℕ → CommitmentId}
     {lookups : List (LookupCommitments G × LookupEval F)} {q : VerifierQuery k F G}
@@ -1443,9 +1423,7 @@ def constructIntermediateSets? {k : ℕ} {F G : Type*} [DecidableEq F] [Decidabl
     (queries : List (VerifierQuery k F G)) : Option (MultiopenGrouped k F G) :=
   if hasDuplicateCommitmentPoint queries then none else some (constructIntermediateSets queries)
 
-/-- **Faithful query routing.** On the verifier's non-duplicate path, every flat query is routed to
-a concrete grouped member with the same commitment identity; its point occurs in the group's point
-list, and the member's claimed value at that point is exactly the flat query's claimed evaluation. -/
+/-- The non-duplicate path routes every query with its slot, point, and claimed evaluation. -/
 theorem constructIntermediateSets_query_routed {k : ℕ} {F G : Type*}
     [DecidableEq F] [DecidableEq G] [Zero F] [Zero G]
     (queries : List (VerifierQuery k F G)) {q : VerifierQuery k F G}
@@ -1712,11 +1690,7 @@ def multiopenPointsAvoidX3 {k : ℕ} {F G : Type*} [DecidableEq F] (x3 : F)
     (grouped : MultiopenGrouped k F G) : Bool :=
   grouped.points.all fun pts => pts.all fun point => decide (x3 ≠ point)
 
-/-- **Multiopen panic hits a negligible proportion of challenges.** The IPA challenges `x₃` that trigger
-the deployed `(x₃ - point).invert().unwrap()` crash (the `multiopenPointsAvoidX3 = false` case) are
-exactly the opened points, so at most the opened-point count across the derived point sets. Over `F_p`
-that is a `≤ #points / p` fraction (`|F_p| = p ≈ 2²⁵⁴`, `card_Fp`), negligible since the point count is
-polynomial in the circuit size. -/
+/-- At most one bad `x₃` per opened point can trigger multiopen inversion failure. -/
 theorem card_multiopenPanic_le {k : ℕ} {F G : Type*} [DecidableEq F] [Fintype F]
     (grouped : MultiopenGrouped k F G) :
     (Finset.univ.filter (fun x3 : F => multiopenPointsAvoidX3 x3 grouped = false)).card
@@ -1735,10 +1709,7 @@ theorem card_multiopenPanic_le {k : ℕ} {F G : Type*} [DecidableEq F] [Fintype 
   rw [hAvoid] at hx3
   exact Bool.noConfusion hx3
 
-/-- **Vanishing panic hits a negligible proportion of challenges.** The evaluation challenges `x` with
-`xⁿ = 1` trigger the deployed `(xⁿ - 1).invert().unwrap()` crash (guarded as `none` in `assemble?`); they
-are the `n`-th roots of unity, at most `n` of them (`n = vk.n`, the domain size). Over `F_p` that is a
-`≤ n / p` fraction, negligible for `p ≈ 2²⁵⁴`. -/
+/-- At most `n` field elements satisfy `x^n = 1` and trigger vanishing inversion failure. -/
 theorem card_vanishingPanic_le {F : Type*} [Field F] [Fintype F] [DecidableEq F] {n : ℕ}
     (hn : 0 < n) :
     (Finset.univ.filter (fun x : F => x ^ n = 1)).card ≤ n := by
@@ -1841,6 +1812,7 @@ def assemble {shape : Shape} {F G : Type*} [Field F] [DecidableEq F] [DecidableE
     Msm shape.k F G :=
   (assemble? vk instanceCommitment ps ch).getD (Msm.zero shape.k F G)
 
+/-- An injective total option map preserves source positions through `filterMap`. -/
 private theorem filterMap_idxOf_of_forall_isSome {α β : Type*} [DecidableEq α] [DecidableEq β]
     {f : α → Option β} :
     ∀ (l : List α), (∀ x ∈ l, (f x).isSome) →
@@ -1894,12 +1866,7 @@ private theorem filterMap_getD_idxOf_of_forall_isSome {α β : Type*} [Decidable
         simpa using ih (fun x hx => hsome x (List.mem_cons_of_mem _ hx)) hjt hgj
 
 open Classical in
-/-- **General slot routing.** Every query is routed by the grouping to a member of one point set:
-the member's recorded identity is the query's slot, the query's point appears among the set's
-points, and the member's recorded evaluation at that point's position is the query's claimed
-evaluation — under `hdet`, one claimed evaluation per slot and point. The many-point companion of
-`constructIntermediateSets_unique_comm_routed`, and the eval-faithfulness fact the constraint
-feed bindings read. -/
+/-- Every query is routed while preserving its commitment, point, and claimed evaluation. -/
 
 theorem constructIntermediateSets_comm_routed {k : ℕ} {F G : Type*} [DecidableEq F]
     [DecidableEq G] (queries : List (VerifierQuery k F G)) {q : VerifierQuery k F G}
@@ -2331,10 +2298,7 @@ theorem constructIntermediateSets_comm_routed_all {k : ℕ} {F G : Type*} [Decid
   exact ⟨route.setIndex, route.setIndex_lt, route.memberIndex, route.memberIndex_lt,
     route.id_eq, route.commitment_eq, route.all_queries⟩
 
-/-- **Aligned member commitment.** If every flat query carries the canonical reference named by
-its slot identity, then every in-range grouped member carries that same canonical reference named
-by its aligned `ids` entry.  This is the grouping invariant needed to reroute decoded members to
-pre-challenge chosen openings. -/
+/-- Under canonical slot resolution, each grouped member carries the commitment named by its ID. -/
 
 theorem constructIntermediateSets_member_commitment_eq_of_id
     {k : ℕ} {F G : Type*} [DecidableEq F] [DecidableEq G]
@@ -2408,6 +2372,7 @@ evaluation is the proof string's own claim — so the lemmas below restate membe
 class with the evaluation included: the column families, the permutation products at their three
 rotations, the five lookup openings, and the common permutation columns. -/
 
+/-- Every aligned layout and evaluation entry appears as its corresponding column query. -/
 theorem columnQueries_layout_mem_eval {k' : ℕ} {F G' : Type*} [Field F] (omega x : F)
     (commitment : ℕ → G') (mkId : ℕ → CommitmentId) (layout : List (ℕ × ℤ)) (evals : List F)
     {j : ℕ} (hjl : j < layout.length) (hje : j < evals.length) :
@@ -2802,6 +2767,7 @@ Every builder tags its queries with its own `CommitmentId` constructor family; o
 query is the unique carrier of its slot in `assembleQueries` — the uniqueness
 `constructIntermediateSets_unique_comm_routed` needs to route it unambiguously. -/
 
+/-- Without duplicate slot-point pairs, equal slots and points identify the same query. -/
 theorem eq_of_not_hasDuplicateCommitmentPoint {k : ℕ} {F G : Type*} [DecidableEq F] :
     ∀ {qs : List (VerifierQuery k F G)}, hasDuplicateCommitmentPoint qs = false →
       ∀ {q}, q ∈ qs → ∀ {q'}, q' ∈ qs → q'.commId = q.commId → q'.point = q.point → q' = q := by

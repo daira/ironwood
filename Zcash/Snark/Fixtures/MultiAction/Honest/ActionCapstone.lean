@@ -25,6 +25,7 @@ open Zcash.Circuits Zcash.Circuits.Action
 open Zcash.Arithmetic (scalarFieldOrder URS)
 open scoped ENNReal
 
+/-- Merging Action proof parameters yields the matching fixture shape. -/
 private theorem actionProofShape_eq_maxShape (numProofs : ℕ) :
     actionCircuit.shape.withProofParams (actionProofParamsFor numProofs) =
       Zcash.Snark.FixtureMax.shape numProofs := by
@@ -125,6 +126,7 @@ theorem derived_scalars :
     hcast.2.2.2.2.2.1.trans (congrArg VerifyingKey.fixedQueryLayout hvk),
     hcast.2.2.2.2.2.2.trans (congrArg VerifyingKey.permutationChunks hvk)⟩
 
+/-- The Action circuit and captured shape have the same lookup count. -/
 private theorem action_numLookups_eq :
     actionCircuit.lookupCount =
       shape.numLookups := by
@@ -264,6 +266,7 @@ def capturedActionXSqueezeSchedule
     family.constraintXTrace.toPinning
   simpa using h
 
+/-- Shape-independent Action circuit counts agree with the derived fixture fields. -/
 private theorem actionDerivedShapeCounts (numProofs : ℕ) :
     actionCircuit.domainExponent = shape.k ∧
     actionCircuit.adviceQueryCount =
@@ -377,10 +380,12 @@ Captured counting caps transfer to the derived key and discharge every sequentia
 budget.
 -/
 
+/-- The Action circuit enables at most `2^12` lookup activations. -/
 theorem actionLookupActivationCount_le :
     (operationEnabledLookups actionCircuit.operations 0).length ≤ 2 ^ 12 := by
   native_decide
 
+/-- Every enabled Action lookup has at most four inputs. -/
 theorem actionLookupInputArity_le :
     ∀ i : Fin (operationEnabledLookups actionCircuit.operations 0).length,
       ((operationEnabledLookups actionCircuit.operations 0).get i).argument.inputs.length ≤ 4 := by
@@ -406,6 +411,7 @@ theorem resolverPermutationCell_card_eq
   clear p poly urs pp
   native_decide
 
+/-- Each Action permutation-cell resolver has at most `2^16` entries. -/
 private theorem resolverPermutationCell_card_le
     (pp : ProofParams) (urs : URS VestaG)
     (poly : CommitmentId → CPoly)
@@ -572,6 +578,7 @@ private theorem actionGammaBudget (numProofs : ℕ) :
         Nat.cast_id]
       omega
 
+/-- The captured `θ` surface budget is at most `2^25`. -/
 private theorem capturedActionThetaBudget :
     ∀ (basis : AugmentedIndex actionCircuit.n → VestaG)
       (poly : CommitmentId → CPoly),
@@ -612,6 +619,7 @@ private theorem capturedActionThetaBudget :
         simpa only [CircuitShape.withProofParams, actionProofParams, actionProofParamsFor,
           _root_.one_mul, Nat.cast_id] using hscaled
 
+/-- The captured `β` surface budget is at most `2^35`. -/
 private theorem capturedActionBetaBudget :
     ∀ (basis : AugmentedIndex actionCircuit.n → VestaG)
       (poly : CommitmentId → CPoly),
@@ -668,6 +676,7 @@ private theorem capturedActionBetaBudget :
       rw [action_numLookups_eq]
       norm_num [actionProofParams, actionProofParamsFor, shape]
 
+/-- The captured `γ` surface budget is at most `2^21`. -/
 private theorem capturedActionGammaBudget :
     ∀ (basis : AugmentedIndex actionCircuit.n → VestaG)
       (poly : CommitmentId → CPoly),
@@ -712,10 +721,12 @@ private theorem capturedActionGammaBudget :
       rw [action_numLookups_eq]
       norm_num [actionProofParams, actionProofParamsFor, shape]
 
+/-- The Action evaluation domain is nonempty. -/
 private theorem derived_n_ne_zero :
     actionCircuit.n ≠ 0 :=
   actionCircuit.n_ne_zero
 
+/-- A captured `2^12` constraint cap yields the `2^23` `y` budget. -/
 private theorem capturedActionYBudget {L : ℕ} (hL : L ≤ 2 ^ 12) :
     actionCircuit.n * L ≤ 2 ^ 23 := by
   have hn : actionCircuit.n = 2 ^ 11 := by
@@ -1139,6 +1150,7 @@ private theorem adaptiveActionStatisticalModelFor_le_action (numProofs Q : ℕ) 
     _ ≤ _ := add_le_add_left
       (le_add_of_nonneg_right (show 0 ≤ x from bot_le)) s
 
+/-- Valid bundles at `Q ≤ 2^123` fit the consensus compressed-statistical model. -/
 private theorem actionCompressedStatisticalModelFor_le_consensus
     {numProofs Q : ℕ} (hn : numProofs ≤ orchardConsensusMaxProofs)
     (hQ : Q ≤ 2 ^ 123) :
@@ -1265,6 +1277,7 @@ noncomputable def adaptiveActionStatisticalModel (Q : Nat) : ENNReal :=
           (((2 ^ 23 : Nat) : ENNReal) / Fintype.card Fp +
             (20470 : ENNReal) / Fintype.card Fp)))
 
+/-- The five adaptive semantic-surface terms expand to the stated sum. -/
 theorem adaptiveActionSemanticSum_eq :
     (∑ n : Fin 5,
       ((![2 ^ 25, 2 ^ 35, 2 ^ 21, 2 ^ 23, 20470] n : Nat) : ENNReal) /
@@ -1296,9 +1309,7 @@ theorem adaptiveActionStatisticalModel_le_action (Q : Nat) :
   rw [hsplit]
   exact le_add_right (le_add_right le_rfl)
 
-/-- At `Q <= 2^123`, the compressed remainder and all five Action semantic tails together fit
-inside `2^-84`.  The semantic numerator is at most `2^160`; the remaining Action-shape terms are
-below `2^140`, leaving a wide margin against the 254-bit scalar field. -/
+/-- At `Q <= 2^123`, the compressed and five semantic remainders fit within `2^-84`. -/
 theorem actionStatisticalModel_at_2pow123 {Q : Nat} (hQ : Q <= 2 ^ 123) :
     actionStatisticalModel Q <= 1 / (2 ^ 84 : ENNReal) := by
   have hbase :
@@ -1410,10 +1421,7 @@ theorem actionDlogGroupWork_bound
 
 /-! ## Exact false-Action-statement endpoints -/
 
-/-- **The exact captured Action soundness bound.**  Its left-hand event is literal deployed
-acceptance with a false `BundleStatement`.  The combined profile prices IPA, unbatching, quotient,
-and Action-terminal relation branches once.  This is the compositional error formula used by the
-finite-security capstone. -/
+/-- Compositional captured-Action soundness formula instantiated by the finite-security capstone. -/
 theorem orchard_action_captured_soundness_error_bound
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -1499,10 +1507,7 @@ theorem orchard_action_captured_soundness_error_bound
       (capturedActionXSqueezeSchedule family hvk) profile)
     hXY hBeta hGamma hTheta
 
-/-- The exact captured Action reduction at an arbitrary bundle size.  The captured certificate
-supplies only circuit-owned data; `numProofs` remains visible in the statement and in all four
-semantic budgets.  This is the compositional error formula used by the bundle finite-security
-capstone. -/
+/-- Compositional captured-Action soundness formula for arbitrary bundle size. -/
 theorem orchard_action_captured_bundle_soundness_error_bound
     (numProofs : ℕ) {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -1602,9 +1607,7 @@ theorem orchard_action_captured_bundle_soundness_error_bound
       (actionXSqueezeSchedule numProofs family hvk) profile)
     hXY hBeta hGamma hTheta
 
-/-- Captured false-statement bound for a bare adaptive online-AGM family, with one profiled finder
-and five annotation-aware semantic surfaces.  This is the compositional error formula used by the
-finite-security capstone. -/
+/-- Compositional adaptive Action soundness formula with one finder and five semantic surfaces. -/
 theorem orchard_action_adaptive_soundness_error_bound
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -1722,9 +1725,7 @@ theorem orchard_action_adaptive_soundness_error_bound
         (adaptiveActionAcceptFalseStatement_probability_bound actionProofParams family inputs hvk hI hchar
           B epsilon profile hsurface)
 
-/-- Bare adaptive Action composition for every bundle size.  The five surface bounds are derived
-from the captured circuit data and scale only where the verifier processes one item per Action.
-This is the compositional error formula used by the bundle finite-security capstone. -/
+/-- Compositional adaptive Action soundness formula for arbitrary bundle size. -/
 theorem orchard_action_adaptive_bundle_soundness_error_bound
     (numProofs : ℕ) {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -1927,10 +1928,7 @@ theorem adaptiveActionSurface_probability_bound
       (chRecord (fun j => if hj : (j : ℕ) < 4 then earlier ⟨j, hj⟩ else 0)
         (fun _ => 0))
 
-/-- **Consensus-generic adaptive Action knowledge soundness.**  The event is literal acceptance
-with failure of the executable private-witness extractor, not merely a false existential
-statement.  This is the compositional error formula used by the knowledge-soundness
-finite-security capstone. -/
+/-- Compositional adaptive Action knowledge bound for executable private-witness extraction. -/
 theorem orchard_action_adaptive_bundle_knowledge_error_bound
     (numProofs : ℕ) {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -2016,10 +2014,8 @@ theorem orchard_action_adaptive_bundle_knowledge_error_bound
           family inputs hvk hI hchar B epsilon profile
           hsurface)
 
-/-- **Concrete bare-adaptive Action capstone.**  At `Q <= 2^123`, the complete adaptive finder
-fits a conservative `2^127` random-oracle/group-work envelope (eight uncached represented runs),
-while the direct-coordinate decoder fits `2^123`.  The statistical remainder remains `2^-84`.
-This is the concrete resource-accounted finite-security capstone. -/
+/-- Resource-accounted adaptive Action capstone at `Q ≤ 2^123`, with finder work at `2^127`,
+decoder work at `2^123`, and statistical error at `2^-84`. -/
 theorem orchard_action_adaptive_soundness_finite_security
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -2086,9 +2082,8 @@ theorem orchard_action_adaptive_soundness_finite_security
         (le_trans (adaptiveActionStatisticalModel_le_action family.Q)
           (actionStatisticalModel_at_2pow123 profile.queryBound))
 
-/-- Consensus-generic adaptive capstone: `2^123` direct work, `2^127` DLOG resources, `2^-83`
-statistical remainder, and explicit transcript bias.  This is the concrete resource-accounted
-finite-security capstone for bundles. -/
+/-- Resource-accounted adaptive bundle capstone with `2^127` DLOG work and `2^-83` statistical
+error. -/
 theorem orchard_action_adaptive_bundle_soundness_finite_security
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
@@ -2404,10 +2399,8 @@ theorem orchard_action_sequential_soundness_error_bound
       (capturedActionStaticChecks prover.toFamily hvk) inputs
       hvk hI hchar query capturedActionThetaBudget)
 
-/-- Sequential exact-Action capstone for every bundle size.  All semantic surfaces are discharged
-with tight linear caps, and the result is packaged as one DLOG advantage plus the complete
-`numProofs`-indexed statistical model.  This is the compositional error formula used by the bundle
-finite-security capstone. -/
+/-- Compositional sequential Action soundness formula for arbitrary bundle size, instantiated by
+the bundle finite-security capstone. -/
 theorem orchard_action_sequential_bundle_soundness_error_bound
     (numProofs : ℕ) {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -2483,10 +2476,8 @@ theorem orchard_action_sequential_bundle_soundness_error_bound
     ring_nf
     apply le_rfl
 
-/-- **Concrete exact-Action finite-security capstone.**  The query ceiling is carried by the direct
-profile, all six prover runs and terminal postprocessing are charged once to the combined DLOG
-solver, and the compressed plus semantic statistical remainder is composed into `2^-84`.  This is
-the concrete resource-accounted finite-security capstone. -/
+/-- Resource-accounted sequential Action capstone with six-run DLOG work and `2^-84` statistical
+error. -/
 theorem orchard_action_sequential_soundness_finite_security
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -2571,9 +2562,8 @@ theorem orchard_action_sequential_soundness_finite_security
       add_le_add (profile.advantage_mono hqueries hgroup)
         (actionStatisticalModel_at_2pow123 profile.queryBound)
 
-/-- Consensus-generic sequential capstone: `2^123` work reduces to `2^126` DLOG resources with a
-`2^-83` statistical remainder and explicit transcript bias.  This is the concrete
-resource-accounted finite-security capstone for bundles. -/
+/-- Resource-accounted sequential bundle capstone with `2^126` DLOG work and `2^-83` statistical
+error. -/
 theorem orchard_action_sequential_bundle_soundness_finite_security
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
