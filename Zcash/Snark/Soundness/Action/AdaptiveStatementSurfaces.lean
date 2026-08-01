@@ -432,7 +432,6 @@ def DecodedStatementPrePrefix.rootPoints {pp : ProofParams} {n : Fin 11}
 
 /-- Every decoded root-source point occurs in the exact annotated query transcript. -/
 theorem DecodedStatementPrePrefix.rootPoints_covered {pp : ProofParams}
-    {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
     {n : Fin 11} (h5n : 5 ≤ (n : Nat))
     {t : AdaptiveActionStatementTranscript pp}
     (decoded : DecodedStatementPrePrefix pp n t) :
@@ -468,7 +467,7 @@ def decodedRootQuerySource {pp : ProofParams}
     (label : AlgebraicTranscriptQuery (F := Fp) basis t) :
     List (AlgebraicPoint (F := Fp) basis) :=
   label.representationsForPoints decoded.rootPoints
-    (decoded.rootPoints_covered (basis := basis) h5n) ++
+    (decoded.rootPoints_covered h5n) ++
       family.fixedRepresentations basis
 
 /-- Erasing final root-target coordinates gives the ordinary proof points followed by the
@@ -552,7 +551,7 @@ theorem decodedRootQuerySource_eq_of_pinned {pp : ProofParams}
     algebraicPointList_eq_of_maps_eq
       (pinned.query.representationsFor_points final pinned.covered)
       pinned.coefficients_eq
-  let decodedCovered := decoded.rootPoints_covered (basis := basis) h5n
+  let decodedCovered := decoded.rootPoints_covered h5n
   let finalCoveredPoints : ∀ P ∈ final.map AlgebraicPoint.point,
       P ∈ transcriptGroupPoints
         (family.preIpaPoint basis n output).val := by
@@ -583,7 +582,6 @@ def DecodedStatementIpaPrefix.ipaPoints {pp : ProofParams}
 
 /-- Every decoded IPA source point occurs in the exact annotated round query. -/
 theorem DecodedStatementIpaPrefix.ipaPoints_covered {pp : ProofParams}
-    {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
     {j : Fin (AdaptiveActionStatementShape pp).k}
     {t : AdaptiveActionStatementTranscript pp}
     (decoded : DecodedStatementIpaPrefix pp j t) :
@@ -627,7 +625,7 @@ def decodedIpaQueryRepresentation {pp : ProofParams}
     (query : AlgebraicTranscriptQuery (F := Fp) basis t)
     (P : VestaG) (hP : P ∈ decoded.ipaPoints) :
     AlgebraicPoint (F := Fp) basis :=
-  query.representationOfPoint P (decoded.ipaPoints_covered (basis := basis) P hP)
+  query.representationOfPoint P (decoded.ipaPoints_covered P hP)
 
 /-- Explicit coordinates fixed by the first annotation of one adaptive-statement IPA query. -/
 def decodedIpaQueryCoordinates {pp : ProofParams}
@@ -641,13 +639,13 @@ def decodedIpaQueryCoordinates {pp : ProofParams}
   multiopenSource :=
     query.representationsForPoints decoded.proof.1.preX1CommitmentPoints (by
       intro P hP
-      exact decoded.ipaPoints_covered (basis := basis) P (by
+      exact decoded.ipaPoints_covered P (by
         apply List.mem_append_left
         exact decoded.proof.1.preX1CommitmentPoints_mem_beforeRound j P hP)) ++
       query.representationsForPoints
         (statementInstancePoints decoded.instanceCommitment) (by
           intro P hP
-          exact decoded.ipaPoints_covered (basis := basis) P (List.mem_append_right _ hP)) ++
+          exact decoded.ipaPoints_covered P (List.mem_append_right _ hP)) ++
       family.fixedRepresentations basis ++
       [decodedIpaQueryRepresentation basis decoded query decoded.proof.1.multiopenQPrime
         (List.mem_append_left _ (decoded.proof.1.multiopenQPrime_mem_beforeRound j))]
@@ -770,14 +768,14 @@ theorem decodedIpaQueryCoordinates_eq_of_pinned {pp : ProofParams}
   have hpreSelected : pinned.query.representationsForPoints
       decoded.proof.1.preX1CommitmentPoints (by
         intro P hP
-        exact decoded.ipaPoints_covered (basis := basis) P (by
+        exact decoded.ipaPoints_covered P (by
           apply List.mem_append_left
           exact decoded.proof.1.preX1CommitmentPoints_mem_beforeRound j P hP)) =
       output.proofData.algebraicProof.preX1Points := by
     let decodedCovered : ∀ P ∈ decoded.proof.1.preX1CommitmentPoints,
         P ∈ transcriptGroupPoints (family.ipaPoint basis j output).val := by
       intro P hP
-      exact decoded.ipaPoints_covered (basis := basis) P (by
+      exact decoded.ipaPoints_covered P (by
         apply List.mem_append_left
         exact decoded.proof.1.preX1CommitmentPoints_mem_beforeRound j P hP)
     let finalCovered : ∀ P ∈
@@ -797,12 +795,12 @@ theorem decodedIpaQueryCoordinates_eq_of_pinned {pp : ProofParams}
   have hinstanceSelected : pinned.query.representationsForPoints
       (statementInstancePoints decoded.instanceCommitment) (by
         intro P hP
-        exact decoded.ipaPoints_covered (basis := basis) P (List.mem_append_right _ hP)) =
+        exact decoded.ipaPoints_covered P (List.mem_append_right _ hP)) =
       adaptiveStatementInstanceRepresentationList output.instanceRepresentations := by
     let decodedCovered : ∀ P ∈ statementInstancePoints decoded.instanceCommitment,
         P ∈ transcriptGroupPoints (family.ipaPoint basis j output).val := by
       intro P hP
-      exact decoded.ipaPoints_covered (basis := basis) P (List.mem_append_right _ hP)
+      exact decoded.ipaPoints_covered P (List.mem_append_right _ hP)
     let finalCovered : ∀ P ∈
         (adaptiveStatementInstanceRepresentationList output.instanceRepresentations).map
           AlgebraicPoint.point,
@@ -1448,7 +1446,6 @@ def DecodedStatementPrePrefix.semanticPoints {pp : ProofParams}
     statementInstancePoints decoded.instanceCommitment
 
 theorem DecodedStatementPrePrefix.semanticPoints_covered {pp : ProofParams}
-    {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
     {n : Fin 5} {t : AdaptiveActionStatementTranscript pp}
     (decoded : DecodedStatementPrePrefix pp (Fin.castLE (by omega) n) t) :
     ∀ P ∈ decoded.semanticPoints, P ∈ transcriptGroupPoints t.val := by
@@ -1480,7 +1477,7 @@ def decodedSemanticQuerySource {pp : ProofParams}
     (label : AlgebraicTranscriptQuery (F := Fp) basis t) :
     List (AlgebraicPoint (F := Fp) basis) :=
   label.representationsForPoints decoded.semanticPoints
-      (decoded.semanticPoints_covered (basis := basis)) ++
+      decoded.semanticPoints_covered ++
     family.fixedRepresentations basis
 
 /-- Erasing the final semantic annotation target gives the stage proof points followed by the
@@ -1620,7 +1617,7 @@ theorem decodedSemanticQuerySource_eq_of_pinned {pp : ProofParams}
     algebraicPointList_eq_of_maps_eq
       (pinned.query.representationsFor_points final pinned.covered)
       pinned.coefficients_eq
-  let decodedCovered := decoded.semanticPoints_covered (basis := basis)
+  let decodedCovered := decoded.semanticPoints_covered
   let finalCovered : ∀ P ∈ final.map AlgebraicPoint.point,
       P ∈ transcriptGroupPoints
         (family.preIpaPoint basis n11 output).val := by
