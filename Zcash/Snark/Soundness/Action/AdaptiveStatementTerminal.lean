@@ -55,21 +55,108 @@ def runIpaReads {pp : ProofParams}
     (O : family.Coins) : Fin (AdaptiveActionStatementShape pp).k → Fp :=
   fun j => O ((family.runOutput basis O).prefixes (family.vkTranscriptRepr basis) j)
 
-set_option maxHeartbeats 1600000 in
+/-- The selected proof's exact direct `x₄` online-coordinate source. -/
+abbrev batchX4Source {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) :=
+  deployedX4ColumnRepresentationsOfCovered
+    (family.runProof basis O)
+    (adaptiveStatementInstanceRepresentationList
+        (family.runOutput basis O).instanceRepresentations ++
+      family.fixedRepresentations basis)
+    (family.runOutput basis O).proofData.membersCovered
+    (family.runPreIpaReads basis O)
+
+/-- The direct unbatcher's successful branch, retaining the online-coordinate equalities needed
+to identify both the six root surfaces and the later semantic resolver with the selected proof.
+Unlike `DeployedBatchWitness`, this record is indexed directly by the adaptive statement output,
+so its instance commitment may vary with the oracle table. -/
+structure BatchWitness {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) where
+  batches : DeployedAlgebraicBatches
+    (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
+    (adaptiveActionStatementVk pp basis)
+    (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+    (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)
+    ((family.runProof basis O).aMulti (family.runPreIpaReads basis O))
+    ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
+    ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O))
+  x4Coeffs : batches.x4.coeffs = (family.batchX4Source basis O).coeffs
+  x4U : batches.x4.uComp = (family.batchX4Source basis O).uComp
+  x4W : batches.x4.wComp = (family.batchX4Source basis O).wComp
+  memberCoeffs : ∀ i
+      (hi : i < deployedX4PairCount (adaptiveActionStatementVk pp basis)
+        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+        (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)),
+    (batches.x1 i hi).coeffs =
+      (deployedMemberRepresentationsOfCovered (family.runProof basis O)
+        (adaptiveStatementInstanceRepresentationList
+            (family.runOutput basis O).instanceRepresentations ++
+          family.fixedRepresentations basis)
+        (family.runOutput basis O).proofData.membersCovered
+        (family.runPreIpaReads basis O) i hi).coeffs
+  memberU : ∀ i
+      (hi : i < deployedX4PairCount (adaptiveActionStatementVk pp basis)
+        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+        (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)),
+    (batches.x1 i hi).uComp =
+      (deployedMemberRepresentationsOfCovered (family.runProof basis O)
+        (adaptiveStatementInstanceRepresentationList
+            (family.runOutput basis O).instanceRepresentations ++
+          family.fixedRepresentations basis)
+        (family.runOutput basis O).proofData.membersCovered
+        (family.runPreIpaReads basis O) i hi).uComp
+  memberW : ∀ i
+      (hi : i < deployedX4PairCount (adaptiveActionStatementVk pp basis)
+        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+        (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)),
+    (batches.x1 i hi).wComp =
+      (deployedMemberRepresentationsOfCovered (family.runProof basis O)
+        (adaptiveStatementInstanceRepresentationList
+            (family.runOutput basis O).instanceRepresentations ++
+          family.fixedRepresentations basis)
+        (family.runOutput basis O).proofData.membersCovered
+        (family.runPreIpaReads basis O) i hi).wComp
+
+/-- The retained direct `x₄` columns reconstruct the selected proof's canonical aggregate. -/
+theorem BatchWitness.x4Source_reconstruct {pp : ProofParams}
+    {family : ComputedAdaptiveActionStatementFSFamily pp}
+    {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
+    {O : family.Coins} (witness : family.BatchWitness basis O) :
+    (∑ j : Fin (deployedX4PairCount (adaptiveActionStatementVk pp basis)
+        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+        (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O) + 1),
+      (family.runPreIpaRecord basis O).x4 ^ (j : Nat) •
+        (family.batchX4Source basis O).coeffs j) =
+      (family.runProof basis O).aMulti (family.runPreIpaReads basis O) := by
+  rw [← witness.x4Coeffs]
+  exact witness.batches.x4.reconstruct.symm
+
+/-- The same retained columns reconstruct the aggregate `u` coordinate. -/
+theorem BatchWitness.x4Source_reconstructU {pp : ProofParams}
+    {family : ComputedAdaptiveActionStatementFSFamily pp}
+    {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
+    {O : family.Coins} (witness : family.BatchWitness basis O) :
+    (∑ j : Fin (deployedX4PairCount (adaptiveActionStatementVk pp basis)
+        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+        (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O) + 1),
+      (family.runPreIpaRecord basis O).x4 ^ (j : Nat) *
+        (family.batchX4Source basis O).uComp j) =
+      (family.runProof basis O).multiU (family.runPreIpaReads basis O) := by
+  rw [← witness.x4U]
+  exact witness.batches.x4.reconstructU.symm
+
+set_option maxHeartbeats 3200000 in
 /-- Construct the direct deployed batches for the selected statement, or expose the first
 nontrivial AGM relation encountered while unbatching. -/
 def batchOutcome {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins) :
-    DeployedAlgebraicBatches
-        (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
-        (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-        (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)
-        ((family.runProof basis O).aMulti (family.runPreIpaReads basis O))
-        ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-        ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O)) ⊕'
+    family.BatchWitness basis O ⊕'
       AugmentedRelationWitness (F := Fp)
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis).g
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis).u
@@ -92,42 +179,42 @@ def batchOutcome {pp : ProofParams}
             output.proofData.membersCovered nu x4Batch i i.isLt) with
       | PSum.inr relation => PSum.inr relation
       | PSum.inl results => PSum.inl
-          { x4 := x4Batch
-            x1 := fun i hi => (results ⟨i, hi⟩).batch }
+          { batches :=
+              { x4 := x4Batch
+                x1 := fun i hi => (results ⟨i, hi⟩).batch }
+            x4Coeffs := x4Result.coeffs_eq
+            x4U := x4Result.uComp_eq
+            x4W := x4Result.wComp_eq
+            memberCoeffs := fun i hi => (results ⟨i, hi⟩).coeffs_eq
+            memberU := fun i hi => (results ⟨i, hi⟩).uComp_eq
+            memberW := fun i hi => (results ⟨i, hi⟩).wComp_eq }
 
 /-- The six direct root exclusions for one successfully constructed batch set. -/
 structure BatchGoodRoots {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins)
-    (batches : DeployedAlgebraicBatches
-      (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
-      (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)
-      ((family.runProof basis O).aMulti (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O))) : Prop where
+    (witness : family.BatchWitness basis O) : Prop where
   x1 : (family.runPreIpaRecord basis O).x1 ∉ deployedX1AllRootSet
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
     (adaptiveActionStatementVk pp basis)
     (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O) batches
+    (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O) witness.batches
   x2 : (family.runPreIpaRecord basis O).x2 ∉ deployedX2RootSet
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
     (adaptiveActionStatementVk pp basis)
     (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O) batches
+    (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O) witness.batches
   x3 : (family.runPreIpaRecord basis O).x3 ∉ deployedX3RootSet
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
     (adaptiveActionStatementVk pp basis)
     (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O) batches
+    (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O) witness.batches
   x4 : (family.runPreIpaRecord basis O).x4 ∉ deployedX4RootSet
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
     (adaptiveActionStatementVk pp basis)
     (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O) batches
+    (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O) witness.batches
   xi : (family.runPreIpaRecord basis O).xi ∉ szBadSet (ipaShiftXiPolynomial
     (commitGen (evalVector (AdaptiveActionStatementShape pp).k
         (family.runPreIpaRecord basis O).x3)
@@ -177,15 +264,8 @@ def decodeOfBatchGoodRoots {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins)
-    (batches : DeployedAlgebraicBatches
-      (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
-      (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)
-      ((family.runProof basis O).aMulti (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O)))
-    (hgood : family.BatchGoodRoots basis O batches)
+    (witness : family.BatchWitness basis O)
+    (hgood : family.BatchGoodRoots basis O witness)
     (hshifted : family.ShiftedValue basis O) :
     DeployedAlgebraicDecode
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
@@ -207,12 +287,12 @@ def decodeOfBatchGoodRoots {pp : ProofParams}
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
     (adaptiveActionStatementVk pp basis)
     (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1 ch batches hgood.x1
+      (family.runProof basis O).proof.1 ch witness.batches hgood.x1
   exact (deployedAlgebraicDecode_of_good_roots
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
     (adaptiveActionStatementVk pp basis)
     (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1 ch batches hvalue hgood.x4 hgood.x3 hgood.x2 hgood1).reRound
+    (family.runProof basis O).proof.1 ch witness.batches hvalue hgood.x4 hgood.x3 hgood.x2 hgood1).reRound
       (family.runIpaReads basis O)
 
 /-- Executable deployed-acceptance certificate for the selected statement and proof. -/
@@ -240,15 +320,8 @@ def batchGoodRoots? {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins)
-    (batches : DeployedAlgebraicBatches
-      (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
-      (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)
-      ((family.runProof basis O).aMulti (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O))) :
-    Option (PLift (family.BatchGoodRoots basis O batches)) :=
+    (witness : family.BatchWitness basis O) :
+    Option (PLift (family.BatchGoodRoots basis O witness)) :=
   let ch := family.runPreIpaRecord basis O
   let urs := ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis
   let delta := commitGen (evalVector (AdaptiveActionStatementShape pp).k ch.x3)
@@ -260,25 +333,25 @@ def batchGoodRoots? {pp : ProofParams}
     (family.runProof basis O).s
   match deployedX1RootAvoidance? urs rfl (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 ch batches with
+      (family.runProof basis O).proof.1 ch witness.batches with
   | none => none
   | some hx1 =>
       match deployedX2RootAvoidance? urs rfl (adaptiveActionStatementVk pp basis)
           (adaptiveActionStatementInstanceCommitment pp basis
             (family.runOutput basis O).inputs)
-          (family.runProof basis O).proof.1 ch batches with
+          (family.runProof basis O).proof.1 ch witness.batches with
       | none => none
       | some hx2 =>
           match deployedX3RootAvoidance? urs rfl (adaptiveActionStatementVk pp basis)
               (adaptiveActionStatementInstanceCommitment pp basis
                 (family.runOutput basis O).inputs)
-              (family.runProof basis O).proof.1 ch batches with
+              (family.runProof basis O).proof.1 ch witness.batches with
           | none => none
           | some hx3 =>
               match deployedX4RootAvoidance? urs rfl (adaptiveActionStatementVk pp basis)
                   (adaptiveActionStatementInstanceCommitment pp basis
                     (family.runOutput basis O).inputs)
-                  (family.runProof basis O).proof.1 ch batches with
+                  (family.runProof basis O).proof.1 ch witness.batches with
               | none => none
               | some hx4 =>
                   match deployedXiRootAvoidance? delta sEval ch.xi with
@@ -480,15 +553,15 @@ noncomputable def terminalRelationFinder {pp : ProofParams}
             match family.batchOutcome basis O with
             | PSum.inr relation =>
                 some (ComputedStraightLineIpaFSFamily.straightLineCanonicalRelation relation)
-            | PSum.inl batches =>
-                match family.batchGoodRoots? basis O batches with
+            | PSum.inl witness =>
+                match family.batchGoodRoots? basis O witness with
                 | none => none
                 | some hroots =>
                     let hshifted := family.shiftedValue_of_accept_not_attack
                       basis O haccepts hz hattack
                     let run : family.DecodedRun basis O :=
                       { hchar := hchar basis O
-                        decode := family.decodeOfBatchGoodRoots basis O batches
+                        decode := family.decodeOfBatchGoodRoots basis O witness
                           hroots.down hshifted
                         accepts := haccepts }
                     family.semanticRelation? basis O run
