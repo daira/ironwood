@@ -146,3 +146,7 @@ import Zcash.Snark.Soundness.StraightLine.Terminal
 import Zcash.Snark.Soundness.StraightLine.Event
 import Zcash.Snark.Soundness.Action.StraightLineTerminal
 import Zcash.Snark.Soundness.Action.StraightLineEvent
+import Zcash.Snark.Soundness.Action.AdaptiveStatementModel
+import Zcash.Snark.Soundness.Action.AdaptiveStatementAccounting
+import Zcash.Snark.Soundness.Action.AdaptiveStatementTerminal
+import Zcash.Snark.Soundness.Action.AdaptiveStatementEvent
