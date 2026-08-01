@@ -671,7 +671,7 @@ theorem natDegree_comp_C_mul_X [Field R] [DecidableEq R] [BEq R] [LawfulBEq R]
 /-- `CPolynomial R` is a domain whenever `R` is: it is ring-isomorphic to `Polynomial R`, which
 Mathlib knows is one.  Without this the roots theory below cannot be instantiated at a coefficient
 ring that is itself a polynomial ring, which is exactly what the bivariate arguments need. -/
-noncomputable instance instIsDomain [CommRing R] [IsDomain R] [BEq R] [LawfulBEq R] :
+instance instIsDomain [CommRing R] [IsDomain R] [BEq R] [LawfulBEq R] :
     IsDomain (CPolynomial R) :=
   (ringEquiv (R := R)).toMulEquiv.isDomain (Polynomial R)
 
