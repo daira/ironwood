@@ -345,4 +345,36 @@ theorem PinnedConstraintSystem.derive_lookup_eval
   rw [hfixtureInputs', hfixtureTables']
   exact And.intro hinputs htables
 
+/-- Project one lookup directly through a top-level circuit's owned compilation. -/
+theorem _root_.Halo2.TopLevelCircuit.lookup_eval
+    {F : Type} [FiniteField F]
+    {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
+    (top : TopLevelCircuit F Config PublicInput)
+    (fixed advice instanceFeed : ℕ → F) (valuation : Query → F)
+    (lookup : Fin top.lookupCount)
+    (hinputCoverage :
+      ∀ expression ∈ top.constraintSystem.lookups[lookup.val].inputs,
+        expression.selectorsCovered
+          (fun selector => (top.selectorMap.lookup selector).isSome) = true)
+    (htableCoverage :
+      ∀ expression ∈ top.constraintSystem.lookups[lookup.val].tables,
+        expression.selectorsCovered
+          (fun selector => (top.selectorMap.lookup selector).isSome) = true)
+    (hinterprets :
+      Interprets (pinnedQueryState top.pinnedCS)
+        fixed advice instanceFeed valuation) :
+    ((top.pinnedCS.lookupInputExprs.getD lookup.val []).map
+        (RichExpression.eval fixed advice instanceFeed) =
+      top.constraintSystem.lookups[lookup.val].inputs.map
+        (Expression.eval
+          (substValuation top.selectorMap.lookup valuation))) ∧
+    ((top.pinnedCS.lookupTableExprs.getD lookup.val []).map
+        (RichExpression.eval fixed advice instanceFeed) =
+      top.constraintSystem.lookups[lookup.val].tables.map
+        (Expression.eval
+          (substValuation top.selectorMap.lookup valuation))) := by
+  exact PinnedConstraintSystem.derive_lookup_eval
+    top.constraintSystem top.selectorMap fixed advice instanceFeed valuation
+    lookup.val lookup.isLt hinputCoverage htableCoverage hinterprets
+
 end Zcash.Snark

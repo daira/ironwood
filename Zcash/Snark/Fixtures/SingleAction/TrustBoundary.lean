@@ -41,11 +41,9 @@ assert_axioms Zcash.Snark.Fixture.vk_advice_layout_length
 assert_axioms Zcash.Snark.Fixture.vk_instance_layout_length
 assert_axioms Zcash.Snark.Fixture.vk_fixed_layout_length
 assert_axioms Zcash.Snark.Fixture.vk_omega_order +native(
-  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Keygen.certificate,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
-  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
@@ -116,8 +114,7 @@ assert_axioms Zcash.Snark.Keygen.shape_eq_mergeDerived +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Keygen.vk_eq_derived +native(
-  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
+assert_axioms Zcash.Snark.Keygen.vk_eq_toVerifierKey +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Keygen.certificate,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,

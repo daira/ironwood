@@ -119,7 +119,7 @@ def resolverGatePolynomial
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
     (poly : CommitmentId → CPoly)
-    (proofIndex : Fin shape.numProofs)
+    (proofIndex : ℕ)
     (gateIndex : Fin vk.gates.length) : CPoly :=
   (vk.gates[gateIndex].map C).eval
     (fixedQueryFeedOfResolver vk poly)
@@ -130,7 +130,7 @@ theorem resolverGatePolynomial_eq
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
     (poly : CommitmentId → CPoly)
-    (proofIndex : Fin shape.numProofs)
+    (proofIndex : ℕ)
     (gateIndex : Fin vk.gates.length) :
     resolverGatePolynomial vk poly proofIndex gateIndex =
       (vk.gates[gateIndex].map C).eval
@@ -155,7 +155,7 @@ theorem resolverGatePolynomial_eval
     {shape : Shape} {G : Type*}
     (vk : VerifyingKey shape Fp G)
     (poly : CommitmentId → CPoly)
-    (proofIndex : Fin shape.numProofs)
+    (proofIndex : ℕ)
     (gateIndex : Fin vk.gates.length) (x : Fp) :
     (resolverGatePolynomial vk poly proofIndex gateIndex).eval x =
       vk.gates[gateIndex].eval
@@ -174,16 +174,15 @@ theorem resolverGatePolynomial_eval
 
 /-- The selected lifted VK gate occurs in the resolver model's gate family. -/
 theorem resolverGatePolynomial_mem
-    {shape : Shape} {G : Type*}
+    {shape : Shape} {numProofs k : ℕ} {G : Type*}
     (vk : VerifyingKey shape Fp G)
-    (ch : Challenges shape.k Fp)
+    (ch : Challenges k Fp)
     (poly : CommitmentId → CPoly)
-    (sets : Fin shape.numProofs → List (PermSetEval (CPoly)))
-    (chunks : Fin shape.numProofs →
-      List (PermSetEval (CPoly) ×
-        List (CPoly × CPoly)))
+    (sets : Fin numProofs → List (PermSetEval CPoly))
+    (chunks : Fin numProofs →
+      List (PermSetEval CPoly × List (CPoly × CPoly)))
     (l0 lLast lBlind : CPoly)
-    (proofIndex : Fin shape.numProofs)
+    (proofIndex : Fin numProofs)
     (gateIndex : Fin vk.gates.length) :
     resolverGatePolynomial vk poly proofIndex gateIndex ∈
       (constraintModelOfResolver vk ch poly sets chunks
@@ -207,47 +206,45 @@ The premises are exactly the static representation boundary:
 No circuit, placement algorithm, or concrete verification key is selected here.
 -/
 def enabledGatePolynomialWitnessOfResolver
-    {shape : Shape} {G : Type*}
+    {shape : Shape} {numProofs k : ℕ} {G : Type*}
     (vk : VerifyingKey shape Fp G)
     (cs : ConstraintSystem Fp) (map : SelCompressMap)
-    (ch : Challenges shape.k Fp)
+    (ch : Challenges k Fp)
     (poly : CommitmentId → CPoly)
-    (sets : Fin shape.numProofs → List (PermSetEval (CPoly)))
-    (chunks : Fin shape.numProofs →
-      List (PermSetEval (CPoly) ×
-        List (CPoly × CPoly)))
+    (sets : Fin numProofs → List (PermSetEval CPoly))
+    (chunks : Fin numProofs →
+      List (PermSetEval CPoly × List (CPoly × CPoly)))
     (l0 lLast lBlind : CPoly)
-    (proofIndex : Fin shape.numProofs)
+    (proofIndex : Fin numProofs)
     (place : RegionIndex → ℕ) (usableRows : ℕ)
     (enabled : EnabledGate Fp) (constraint : Constraint Fp)
     (hgate : enabled.gate ∈ cs.gates)
     (hconstraint : constraint ∈ enabled.gate.constraints)
-    (hgates : vk.gates =
-      (PinnedConstraintSystem.derive cs map).gates.map
-        RichExpression.toExpr)
-    (hcoverage : ∀ expression ∈ flatGates cs,
-      expression.selectorsCovered
-        (fun index => (map.lookup index).isSome) = true)
+    (hgateLength :
+      vk.gates.length = (flatGates cs).length)
     (compressed : SelCompress)
     (hcompressed :
       map.lookup enabled.gate.selector.index = some compressed)
-    (hinterpret : Interprets
-      (eraseGates
-        ((flatGates cs).map (substSelectorMap map.lookup))
-        (queryWalkInit map cs)).2
-      (fun query =>
-        (fixedQueryFeedOfResolver vk poly query).eval
-          (vk.omega ^ (place enabled.region + enabled.row)))
-      (fun query =>
-        (adviceQueryFeedOfResolver vk poly proofIndex query).eval
-          (vk.omega ^ (place enabled.region + enabled.row)))
-      (fun query =>
-        (instanceQueryFeedOfResolver vk poly proofIndex query).eval
-          (vk.omega ^ (place enabled.region + enabled.row)))
-      (Query.eval
-        (resolverEnvironment vk poly proofIndex usableRows)
-        (fun _ => 0)
-        (place enabled.region + enabled.row)))
+    (hgatesEval : ∀ index
+      (hverifier : index < vk.gates.length)
+      (hsource : index < (flatGates cs).length),
+      Expr.eval
+          (fun query =>
+            (fixedQueryFeedOfResolver vk poly query).eval
+              (vk.omega ^ (place enabled.region + enabled.row)))
+          (fun query =>
+            (adviceQueryFeedOfResolver vk poly proofIndex query).eval
+              (vk.omega ^ (place enabled.region + enabled.row)))
+          (fun query =>
+            (instanceQueryFeedOfResolver vk poly proofIndex query).eval
+              (vk.omega ^ (place enabled.region + enabled.row)))
+          vk.gates[index] =
+        Expression.eval (substValuation map.lookup
+          (Query.eval
+            (resolverEnvironment vk poly proofIndex usableRows)
+            (fun _ => 0)
+            (place enabled.region + enabled.row)))
+          (flatGates cs)[index])
     (hscale :
       (selReplacement compressed).eval
         (Query.eval
@@ -269,12 +266,6 @@ def enabledGatePolynomialWitnessOfResolver
     List.idxOf_lt_length_iff.mpr hflat
   have hsource : (flatGates cs)[gateIndex] = constraint.poly :=
     List.getElem_idxOf hgateIndex
-  have hgateLength :
-      vk.gates.length = (flatGates cs).length := by
-    have hlength := congrArg List.length hgates
-    rw [List.length_map,
-      PinnedConstraintSystem.derive_gates_length] at hlength
-    exact hlength
   have hgateIndexVk : gateIndex < vk.gates.length := by
     omega
   let index : Fin vk.gates.length := ⟨gateIndex, hgateIndexVk⟩
@@ -296,19 +287,8 @@ def enabledGatePolynomialWitnessOfResolver
       resolverGatePolynomial vk poly proofIndex index from rfl]
       at hzero
     rw [resolverGatePolynomial_eval] at hzero
-    have hderived := vk.gates_eval_of_gates_eq
-      cs map hgates
-      (fun query =>
-        (fixedQueryFeedOfResolver vk poly query).eval
-          (vk.omega ^ (place enabled.region + enabled.row)))
-      (fun query =>
-        (adviceQueryFeedOfResolver vk poly proofIndex query).eval
-          (vk.omega ^ (place enabled.region + enabled.row)))
-      (fun query =>
-        (instanceQueryFeedOfResolver vk poly proofIndex query).eval
-          (vk.omega ^ (place enabled.region + enabled.row)))
-      valuation hcoverage hinterpret
-      gateIndex hgateIndexVk hgateIndex
+    have hderived :=
+      hgatesEval gateIndex hgateIndexVk hgateIndex
     rw [hsource] at hderived
     apply Expression.eval_substSelectorMap_zero_imp_queryEval_zero
       map.lookup valuation

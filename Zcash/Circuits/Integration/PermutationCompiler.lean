@@ -144,22 +144,26 @@ theorem decodedChunkAddress_eq_sourceColumn
 /-- The verifier query reference assigned by the permutation compiler to one
 concrete column. -/
 def permutationQueryReference
-    (projected : CsFixture Fp) : AnyColumn → ColumnRef
+    (adviceQueryLayout fixedQueryLayout instanceQueryLayout :
+      List (ℕ × ℤ)) :
+    AnyColumn → ColumnRef
   | ⟨.advice, index⟩ =>
-      .advice (projected.adviceQueryLayout.findIdx (· = (index, 0)))
+      .advice (adviceQueryLayout.findIdx (· = (index, 0)))
   | ⟨.fixed, index⟩ =>
-      .fixed (projected.fixedQueryLayout.findIdx (· = (index, 0)))
+      .fixed (fixedQueryLayout.findIdx (· = (index, 0)))
   | ⟨.instance, index⟩ =>
-      .instance (projected.instanceQueryLayout.findIdx (· = (index, 0)))
+      .instance (instanceQueryLayout.findIdx (· = (index, 0)))
 
-/-- The compiler's variable-width chunking preserves its indexed reference
+/-- The verifier CS's variable-width chunking preserves its indexed reference
 stream exactly. -/
-theorem permutationChunksOf_flatten
-    (map : SelCompressMap) (cs : ConstraintSystem Fp) :
-    (Keygen.permutationChunksOf map cs).flatten =
-      (cs.permutationColumns.map
-        (permutationQueryReference (projectCS map cs))).zipIdx := by
-  unfold Keygen.permutationChunksOf
+theorem verifierCS_permutationChunks_flatten
+    {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
+    (top : TopLevelCircuit Fp Config PublicInput) :
+    top.verifierCS.permutationChunks.flatten =
+      (top.permutationColumns.map
+        (permutationQueryReference top.adviceQueryLayout
+          top.fixedQueryLayout top.instanceQueryLayout)).zipIdx := by
+  unfold TopLevelCircuit.verifierCS
   rw [listToChunks_flatten]
   congr 2
   funext column
@@ -170,38 +174,39 @@ theorem permutationChunksOf_flatten
 which the compiler created it. -/
 theorem permutationColumnAddress_queryReference
     {shape : Shape} {F G : Type}
-    (vk : VerifyingKey shape F G) (projected : CsFixture Fp)
-    (hadvice :
-      vk.adviceQueryLayout = projected.adviceQueryLayout)
-    (hfixed :
-      vk.fixedQueryLayout = projected.fixedQueryLayout)
-    (hinstance :
-      vk.instanceQueryLayout = projected.instanceQueryLayout)
+    (vk : VerifyingKey shape F G)
+    (adviceQueryLayout fixedQueryLayout instanceQueryLayout :
+      List (ℕ × ℤ))
+    (hadvice : vk.adviceQueryLayout = adviceQueryLayout)
+    (hfixed : vk.fixedQueryLayout = fixedQueryLayout)
+    (hinstance : vk.instanceQueryLayout = instanceQueryLayout)
     (column : AnyColumn)
     (hcoherent :
       PermutationColumnRef.Coherent vk
-        (permutationQueryReference projected column)) :
+        (permutationQueryReference adviceQueryLayout fixedQueryLayout
+          instanceQueryLayout column)) :
     permutationColumnAddress vk
-        (permutationQueryReference projected column) = column := by
+        (permutationQueryReference adviceQueryLayout fixedQueryLayout
+          instanceQueryLayout column) = column := by
   rcases column with ⟨kind, index⟩
   cases kind with
   | advice =>
       rcases hcoherent with ⟨-, hin, -⟩
       simp only [permutationQueryReference, permutationColumnAddress]
       rw [hadvice] at hin ⊢
-      rw [getD_findIdx_eq_target projected.adviceQueryLayout
+      rw [getD_findIdx_eq_target adviceQueryLayout
         (index, 0) (0, 0) hin]
   | fixed =>
       rcases hcoherent with ⟨-, hin, -⟩
       simp only [permutationQueryReference, permutationColumnAddress]
       rw [hfixed] at hin ⊢
-      rw [getD_findIdx_eq_target projected.fixedQueryLayout
+      rw [getD_findIdx_eq_target fixedQueryLayout
         (index, 0) (0, 0) hin]
   | «instance» =>
       rcases hcoherent with ⟨-, hin, -⟩
       simp only [permutationQueryReference, permutationColumnAddress]
       rw [hinstance] at hin ⊢
-      rw [getD_findIdx_eq_target projected.instanceQueryLayout
+      rw [getD_findIdx_eq_target instanceQueryLayout
         (index, 0) (0, 0) hin]
 
 /--
@@ -215,13 +220,12 @@ theorem topLevelPermutationColumnAddresses_eq
     (pp : Keygen.ProofParams) (urs : URS G)
     (hcoherent :
       PermutationChunkRoutingCoherent (top.toVerifierKey pp urs)) :
-    (Keygen.permutationChunksOf
-        top.selectorMap top.constraintSystem).flatten.map
+    top.verifierCS.permutationChunks.flatten.map
           (fun reference =>
             permutationColumnAddress (top.toVerifierKey pp urs) reference.1) =
       (Keygen.permColsOf top.constraintSystem).map
         Halo2.Layout.ColRef.toAny := by
-  rw [permutationChunksOf_flatten]
+  rw [verifierCS_permutationChunks_flatten]
   change
     List.map
         (permutationColumnAddress (top.toVerifierKey pp urs) ∘ Prod.fst)
@@ -232,44 +236,39 @@ theorem topLevelPermutationColumnAddresses_eq
   apply List.map_congr_left
   intro column hcolumn
   simp only [Function.comp_apply]
-  let projected :=
-    projectCS top.selectorMap top.constraintSystem
+  let referenceOf :=
+    permutationQueryReference top.adviceQueryLayout
+      top.fixedQueryLayout top.instanceQueryLayout
   let reference :=
-    permutationQueryReference projected column
+    referenceOf column
   have hreference :
       reference ∈
-        top.constraintSystem.permutationColumns.map
-          (permutationQueryReference projected) :=
+        top.permutationColumns.map
+          referenceOf :=
     List.mem_map.mpr ⟨column, hcolumn, rfl⟩
   have hindexed :
       ∃ indexed ∈
-          (top.constraintSystem.permutationColumns.map
-            (permutationQueryReference projected)).zipIdx,
+          (top.permutationColumns.map
+            referenceOf).zipIdx,
         indexed.1 = reference := by
     have hfst :
         reference ∈
-          ((top.constraintSystem.permutationColumns.map
-            (permutationQueryReference projected)).zipIdx).map Prod.fst := by
+          ((top.permutationColumns.map
+            referenceOf).zipIdx).map Prod.fst := by
       rw [List.zipIdx_map_fst]
       exact hreference
     simpa only using List.mem_map.mp hfst
   obtain ⟨indexed, hindexed, hindexedReference⟩ := hindexed
   have hindexedFlat :
       indexed ∈
-        (Keygen.permutationChunksOf
-          top.selectorMap top.constraintSystem).flatten := by
-    rw [permutationChunksOf_flatten]
-    simpa only [projected] using hindexed
+        top.verifierCS.permutationChunks.flatten := by
+    rw [verifierCS_permutationChunks_flatten]
+    simpa only [referenceOf] using hindexed
   obtain ⟨chunk, hchunk, hindexedChunk⟩ :=
     List.mem_flatten.mp hindexedFlat
-  have hvkChunks :
-      (top.toVerifierKey pp urs).permutationChunks =
-        Keygen.permutationChunksOf
-          top.selectorMap top.constraintSystem := by
-    rfl
   have hrouted := hcoherent chunk (by
-    rw [hvkChunks]
-    exact hchunk) indexed hindexedChunk
+    simpa only [top.toVerifierKey_permutationChunks] using hchunk)
+    indexed hindexedChunk
   have hreferenceCoherent :
       PermutationColumnRef.Coherent
         (top.toVerifierKey pp urs) reference := by
@@ -279,14 +278,15 @@ theorem topLevelPermutationColumnAddresses_eq
       permutationColumnAddress (top.toVerifierKey pp urs) reference =
         column :=
     permutationColumnAddress_queryReference
-      (top.toVerifierKey pp urs) projected
-      (top.toVerifierKey_adviceQueryLayout_derived pp urs)
-      (top.toVerifierKey_fixedQueryLayout_derived pp urs)
-      (top.toVerifierKey_instanceQueryLayout_derived pp urs)
+      (top.toVerifierKey pp urs)
+      top.adviceQueryLayout top.fixedQueryLayout top.instanceQueryLayout
+      (top.toVerifierKey_adviceQueryLayout pp urs)
+      (top.toVerifierKey_fixedQueryLayout pp urs)
+      (top.toVerifierKey_instanceQueryLayout pp urs)
       column hreferenceCoherent
   rcases column with ⟨kind, index⟩
   cases kind <;>
-    simpa [reference, projected, permutationQueryReference,
+    simpa [reference, referenceOf, permutationQueryReference,
       Halo2.Layout.ColRef.toAny] using hdecoded
 
 end Zcash.Snark

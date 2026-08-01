@@ -81,43 +81,17 @@ private theorem gateSelectorsAllocated :
       Circuits.ActionGateCoherence.configureProgram_eq.symm))
     Circuits.ActionGateCoherence.configureProgram_gateSelectorsAllocated
 
-private theorem adviceQueryCount
-    {G : Type} [AddCommGroup G] [Inhabited G]
-    (pp : ProofParams) (urs : URS G) :
-    (actionCircuit.toVerifierKey pp urs).adviceQueryLayout.length =
-      (pp.mergeDerived actionCircuit).numAdviceQueries :=
-  actionCircuit.toVerifierKey_adviceQueryCount pp urs
-
-private theorem fixedQueryCount
-    {G : Type} [AddCommGroup G] [Inhabited G]
-    (pp : ProofParams) (urs : URS G) :
-    (actionCircuit.toVerifierKey pp urs).fixedQueryLayout.length =
-      (pp.mergeDerived actionCircuit).numFixedQueries :=
-  actionCircuit.toVerifierKey_fixedQueryCount pp urs
-
-private theorem instanceQueryCount
-    {G : Type} [AddCommGroup G] [Inhabited G]
-    (pp : ProofParams) (urs : URS G) :
-    (actionCircuit.toVerifierKey pp urs).instanceQueryLayout.length =
-      (pp.mergeDerived actionCircuit).numInstanceQueries :=
-  actionCircuit.toVerifierKey_instanceQueryCount pp urs
-
 /--
 The deployed Orchard Action circuit satisfies the complete static gate boundary
 against its own derived verifying key.
 -/
-theorem topLevelGateCoherence
-    {G : Type} [AddCommGroup G] [Inhabited G]
-    (pp : ProofParams) (urs : URS G) :
-    TopLevelGateCoherence actionCircuit pp urs where
+theorem topLevel :
+    TopLevelGateCoherence actionCircuit where
   gateSelectorsAllocated := gateSelectorsAllocated
-  adviceQueryCount := adviceQueryCount pp urs
-  fixedQueryCount := fixedQueryCount pp urs
-  instanceQueryCount := instanceQueryCount pp urs
   domainExponent_lt := domainExponent_lt
   selectorDegree := selectorDegree
 
-assert_no_sorry topLevelGateCoherence
+assert_no_sorry topLevel
 
 end ActionGateCoherence
 

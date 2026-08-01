@@ -70,7 +70,7 @@ theorem realizes :
     ∀ column row value,
       (column, row, value) ∈
           topLevelRequiredFixedEntries actionCircuit →
-        row < 2 ^ actionCircuit.domainExponent ∧
+        row < actionCircuit.n ∧
           column <
             actionCircuit.pinnedCS.numFixedColumns ∧
           (actionCircuit.fixedRows.getD column []).getD row 0 =
@@ -91,33 +91,23 @@ The remaining `hgenerators` premise is about the supplied URS, not the Action
 circuit layout.
 -/
 def ofKeygen
-    (pp : ProofParams) (urs : URS G)
+    (urs : URS G)
     (hk : actionCircuit.domainExponent = urs.k)
     (hlen : (derivedUrsGLagrange urs).length = 2 ^ urs.k)
     (hgenerators : ∀ i : Fin (2 ^ urs.k),
       (derivedUrsGLagrange urs).getD (i : ℕ) 0 =
         commit urs (polynomialCoefficients (2 ^ urs.k)
           (rowPolynomial
-            (actionCircuit.toVerifierKey pp urs).omega
+            actionCircuit.omega
             (Pi.single i (1 : Fp))))) :
-    TopLevelFixedCoherence actionCircuit pp urs :=
+    TopLevelFixedCoherence actionCircuit urs :=
   TopLevelFixedCoherence.ofKeygen
-    actionCircuit pp urs hk hlen hgenerators
+    actionCircuit urs hk hlen hgenerators
     (by
       intro column hcolumn
-      rw [actionCircuit.toVerifierKey_fixedQueryLayout_derived]
-      change ∃ rotation,
-        (column, rotation) ∈
-          ActionPermutationDomain.derivedPinnedCS.fixedQueryLayout
-      rw [ActionPermutationDomain.fixedQueryLayout_eq]
       exact queryLayout column hcolumn)
     (by
       intro column rotation hentry
-      rw [actionCircuit.toVerifierKey_fixedQueryLayout_derived] at hentry
-      change
-        (column, rotation) ∈
-          ActionPermutationDomain.derivedPinnedCS.fixedQueryLayout at hentry
-      rw [ActionPermutationDomain.fixedQueryLayout_eq] at hentry
       exact queryLayoutBounded column rotation hentry)
     (by
       intro column row value hentry
@@ -129,20 +119,16 @@ Lagrange-basis FFT specification. The only remaining computations are the
 prominently interim layout failure lists above.
 -/
 def ofDerived
-    (pp : ProofParams) (urs : URS G)
+    (urs : URS G)
     (hk : actionCircuit.domainExponent = urs.k) :
-    TopLevelFixedCoherence actionCircuit pp urs := by
+    TopLevelFixedCoherence actionCircuit urs := by
   have hkUrs : urs.k ≤ 32 := by
     rw [← hk]
     exact Nat.le_of_lt_succ ActionPermutationDomain.domainExponent_lt
   have homega :
-      (actionCircuit.toVerifierKey pp urs).omega =
-        omegaOf urs.k := by
-    change
-      omegaOf actionCircuit.domainExponent =
-        omegaOf urs.k
-    rw [hk]
-  apply ofKeygen pp urs hk (derivedUrsGLagrange_length urs)
+      actionCircuit.omega = omegaOf urs.k := by
+    simp only [TopLevelCircuit.omega, hk]
+  apply ofKeygen urs hk (derivedUrsGLagrange_length urs)
   intro i
   simpa only [homega] using
     Keygen.ofPrefix_setup_of_closed urs hkUrs

@@ -1,12 +1,13 @@
 import Zcash.Meta.AxiomCheck
 
 /-!
-# Regression tests for native-axiom provenance
+# Regression tests for `Zcash.Meta.AxiomCheck`
 
-The negative cases deliberately impersonate Lean's `native_decide` auxiliaries: most declare an
-axiom named like an auxiliary, and one instead names a *theorem* so that its own genuine auxiliary
-imitates the marker path. They live in this test-only library so the production `Zcash` library
-never imports them.
+Two rejection families. The native-axiom provenance cases deliberately impersonate Lean's
+`native_decide` auxiliaries: most declare an axiom named like an auxiliary, and one instead names a
+*theorem* so that its own genuine auxiliary imitates the marker path. The `assert_computable` cases
+pin the declaration checks that stand behind "the reduction data is genuinely computed". Both live
+in this test-only library so the production `Zcash` library never imports them.
 -/
 
 namespace Zcash.Meta.Tests.AxiomCheck
@@ -156,5 +157,39 @@ assert_axioms Zcash.Meta.Tests.AxiomCheck.AliasedOwner.target +native(
   Zcash.Meta.Tests.AxiomCheck.AliasedOwner.owner.native_decide.smuggled)
 
 end AliasedOwner
+
+namespace ComputableSafety
+
+/-! The `assert_computable` declaration checks. `unsafe` lifts the termination check, so the
+reduction below inhabits `False` by bare self-reference while computing nothing — and it is a
+`.defnInfo` that is not `noncomputable`, so the kind and computability checks both pass it. Only
+the definition-safety check rejects it. The kernel independently refuses to let a safe declaration
+depend on an unsafe one, so what the check has to catch is a reduction no safe proof consumes:
+precisely a deliverable endpoint, which the census pins directly for that same reason. -/
+
+unsafe def unsafeReduction : False := unsafeReduction
+
+/-- error: Zcash.Meta.Tests.AxiomCheck.ComputableSafety.unsafeReduction is marked unsafe -/
+#guard_msgs (whitespace := lax) in
+assert_computable Zcash.Meta.Tests.AxiomCheck.ComputableSafety.unsafeReduction
+
+/-! `partial def` elaborates to an `opaque` constant carrying an unsafe implementation, so it is
+rejected one check earlier — as not a `def` at all. Pinned so a toolchain that instead emits a
+`.defnInfo` with `partial` safety is caught by the safety check rather than passing silently. -/
+
+partial def partialReduction (n : Nat) : Nat :=
+  if n = 0 then 0 else partialReduction (n - 1)
+
+/-- error: Zcash.Meta.Tests.AxiomCheck.ComputableSafety.partialReduction is not a def -/
+#guard_msgs (whitespace := lax) in
+assert_computable Zcash.Meta.Tests.AxiomCheck.ComputableSafety.partialReduction
+
+/-! The positive case, so the rejections above are not passing vacuously. -/
+
+def safeReduction (n : Nat) : Nat := n + 1
+
+assert_computable Zcash.Meta.Tests.AxiomCheck.ComputableSafety.safeReduction
+
+end ComputableSafety
 
 end Zcash.Meta.Tests.AxiomCheck

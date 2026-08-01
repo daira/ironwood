@@ -57,8 +57,6 @@ The lookup bridge is split deliberately:
   from any top-level circuit's public-input layout and binds accepted instance
   polynomials back to the supplied public inputs, for arbitrary column and proof
   counts.
-* `TopLevelAcceptedModel.lean` composes canonical circuit satisfaction, generic
-  circuit correctness, and public-instance binding into the circuit's statements.
 * `ActionCorrectness.lean` contains only the genuinely Action-specific
   construction of `TopLevelCircuitCorrectness`.
 * `ActionTerminal.lean` retains the accepted-node-binding specialization. It
@@ -70,10 +68,8 @@ The lookup bridge is split deliberately:
   No Clean type is introduced into
   `Zcash/Snark/Soundness/Canonical/Terminal.lean`.
 
-The generic semantic terminal lives outside this boundary.
-`Snark/Soundness/TopLevelTerminal` turns canonical constraint satisfaction plus
-`TopLevelCircuitCorrectness` into the circuit-owned statement for every proof. The
-deployed Action route reaches it through `StraightLineActionTerminal.lean` and
-`StraightLineActionEvent.lean`, carrying every relation branch as explicit computed
-data; it has no free semantic proposition, encoding callback, decoder, or
-column-feed choice.
+The circuit-generic terminal lives outside this boundary.
+`Snark/Soundness/TopLevelTerminal` turns canonical constraint satisfaction and
+`TopLevelCircuitCorrectness` into the circuit-owned statements at the public inputs supplied to the
+verifier. The Action-specific terminal and event modules under `Snark/Soundness/Action` reach it
+without a free semantic proposition, encoding callback, decoder, or column-feed choice.
