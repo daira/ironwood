@@ -40,7 +40,6 @@ theorem foldPoly_concat (l : List Fp) (v : Fp) :
   rw [foldPoly, foldPoly, List.foldl_append]
   rfl
 
-
 /-- Evaluating the fold polynomial at `y` is the verifier's fold. -/
 theorem eval_foldPoly (l : List Fp) (y : Fp) :
     (foldPoly l).eval y = l.foldl (fun acc v => acc * y + v) 0 := by

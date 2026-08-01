@@ -17,6 +17,7 @@ to the supplied public inputs, for any `TopLevelCircuit`.
 namespace Halo2.TopLevelCircuit
 
 open Zcash Zcash.Snark Zcash.Snark.Keygen
+
 variable {G : Type} [AddCommGroup G] [Module Fp G]
   [DecidableEq G] [Inhabited G]
 
@@ -110,6 +111,7 @@ end Halo2.TopLevelCircuit
 namespace Zcash.Snark
 
 open Halo2 Keygen
+
 namespace TopLevelInstanceCommitment
 
 variable

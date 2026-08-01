@@ -32,6 +32,7 @@ open Zcash.Circuits.Action (actionCircuit)
 namespace ActionFixedCoherence
 
 open Zcash.Snark.Keygen
+
 /--
 **INTERIM:** every Action fixed column currently requested by
 `TopLevelFixedCoherence` occurs in its compiler-derived fixed-query layout.

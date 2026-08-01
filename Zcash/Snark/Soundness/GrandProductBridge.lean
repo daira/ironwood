@@ -44,7 +44,6 @@ def pairProdDiff (sp tp : Multiset (Fp × Fp)) : CBiPoly :=
   (sp.map (fun p => X + C (encPair p : CPoly))).prod
     - (tp.map (fun p => X + C (encPair p : CPoly))).prod
 
-
 /-- The `j`-th `γ` coefficient of the pair difference: an elementary symmetric polynomial in the
 `β`-linear pair encodings on each side, zero above that side's multiset size. -/
 def pairProdDiffCoeff (sp tp : Multiset (Fp × Fp)) (j : ℕ) : CPoly :=
@@ -65,7 +64,6 @@ theorem toPoly_pairProdDiffCoeff (sp tp : Multiset (Fp × Fp)) (j : ℕ) :
     · rw [CompPoly.CPolynomial.coeff_prod_X_add_C _ (by simpa using hj), Multiset.card_map]
     · exact CompPoly.CPolynomial.coeff_prod_X_add_C_eq_zero _ (by simpa using not_le.mp hj)
   rw [pairProdDiffCoeff, pairProdDiff, coeff_sub, key sp, key tp]
-
 
 /-- The difference is nonzero whenever the multisets of pairs differ — this is `prod_pair_inj` read
 contrapositively, and it is what makes the `β` bad set below a genuine root set. -/
@@ -164,7 +162,6 @@ def lookupProdDiff (a s inp tbl : Multiset Fp) : CBiPoly :=
   C (a.map (fun u => X + C u)).prod * (s.map (fun u => X + C (C u))).prod
     - C (inp.map (fun u => X + C u)).prod * (tbl.map (fun u => X + C (C u))).prod
 
-
 /-- A `γ` coefficient of the lookup difference, without constructing a nested polynomial. -/
 def lookupProdDiffCoeff (a s inp tbl : Multiset Fp) (j : ℕ) : CPoly :=
   (a.map (fun u => X + C u)).prod
@@ -188,7 +185,6 @@ theorem toPoly_lookupProdDiffCoeff (a s inp tbl : Multiset Fp) (j : ℕ) :
     · exact CompPoly.CPolynomial.coeff_prod_X_add_C_eq_zero _ (by simpa using not_le.mp hj)
   rw [lookupProdDiffCoeff, lookupProdDiff, coeff_sub, coeff_C_mul, coeff_C_mul, key s, key tbl]
 
-
 /-- The lookup difference after fixing `β`, as a polynomial in `γ`. -/
 def lookupProdDiffGamma (a s inp tbl : Multiset Fp) (beta : Fp) : CPoly :=
   C (eval beta (a.map (fun u => X + C u)).prod) * (s.map (fun u => X + C u)).prod
@@ -209,8 +205,6 @@ theorem lookupProdDiffGamma_eq_map (a s inp tbl : Multiset Fp) (beta : Fp) :
   rw [lookupProdDiffGamma, lookupProdDiff, CompPoly.CPolynomial.map_sub,
     CompPoly.CPolynomial.map_mul, CompPoly.CPolynomial.map_mul, CompPoly.CPolynomial.map_C,
     CompPoly.CPolynomial.map_C, hprod s, hprod tbl, coe_evalRingHom]
-
-
 
 /-- Evaluating the lookup difference at the sampled challenges is the verifier's own product
 comparison. -/
@@ -259,7 +253,6 @@ cancelling, the table columns. -/
 theorem lookup_multisets_of_diff_eq_zero {a s inp tbl : Multiset Fp}
     (h : lookupProdDiff a s inp tbl = 0) : a = inp ∧ s = tbl :=
   prod_split_inj (sub_eq_zero.mp (by rwa [lookupProdDiff] at h))
-
 
 /-! ## The permutation argument, from the row recurrence to the copy constraints
 

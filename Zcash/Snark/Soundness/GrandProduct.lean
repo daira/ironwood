@@ -29,7 +29,6 @@ rules, and (for lookup) the permuted-column structure — build on this in `Perm
 
 namespace Zcash.Snark
 
-
 /-- Encode a pair `(v, n)` as the `F[β]`-element `v + n·β` (here `β = X`).
 Injective, since `v` and `n` are its degree-0 and degree-1 coefficients. -/
 def encPair {F : Type*} [Field F] [BEq F] [LawfulBEq F] (p : F × F) : CompPoly.CPolynomial F :=
@@ -52,7 +51,6 @@ theorem encPair_injective {F : Type*} [Field F] [BEq F] [LawfulBEq F] :
       CompPoly.CPolynomial.coeff_mul_X_succ, CompPoly.CPolynomial.coeff_mul_X_succ,
       CompPoly.CPolynomial.coeff_C, CompPoly.CPolynomial.coeff_C] at h
     simpa using h
-
 
 end Zcash.Snark
 

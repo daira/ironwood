@@ -78,7 +78,8 @@ zero when none returns. -/
 def returnedCoeffsWithCoins (s : ι → F) (c : ρ) : ι → F :=
   (A (scalarBasis B s) c).elim 0 (fun r => r.coeffs)
 
-omit [DecidableEq ι] [Nonempty ι] [Fintype F] [Fintype ρ] [Nonempty ρ] [DecidableEq F] [DecidableEq ρ] in
+omit [DecidableEq ι] [Nonempty ι] [Fintype F] [Fintype ρ] [Nonempty ρ] [DecidableEq F]
+  [DecidableEq ρ] in
 /-- `returnedCoeffsWithCoins` reads off the coefficients of the relation actually returned. -/
 theorem returnedCoeffsWithCoins_of_eq_some {s : ι → F} {c : ρ}
     {r : AlgebraicRelationWitness (F := F) (scalarBasis B s)}

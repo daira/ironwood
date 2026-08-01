@@ -12,6 +12,7 @@ value claimed by the deployed proof string at every routed node.
 namespace Zcash.Snark
 
 open Classical
+
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 
 attribute [local irreducible] deployedSetQueries deployedX4PairCount x4BatchCommitments

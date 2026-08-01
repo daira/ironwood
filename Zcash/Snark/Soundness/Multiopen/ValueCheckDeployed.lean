@@ -17,7 +17,6 @@ chain consumes.
 
 namespace Zcash.Snark
 
-
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 
 /-- The points of deployed point set `j`, as a finite set. -/

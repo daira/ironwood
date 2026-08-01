@@ -150,10 +150,12 @@ theorem natDegree_coeff_pairProdDiff_le (sp tp : Multiset (Fp × Fp)) (j : ℕ) 
   -- degree is at most one per factor taken.
   have key : ∀ m : Multiset (Fp × Fp),
       CompPoly.CPolynomial.natDegree
-          (CPolynomial.coeff ((m.map (fun p => (CompPoly.CPolynomial.X + CompPoly.CPolynomial.C (encPair p) : CBiPoly))).prod) j)
+          (CPolynomial.coeff ((m.map (fun p =>
+            (CompPoly.CPolynomial.X + CompPoly.CPolynomial.C (encPair p) : CBiPoly))).prod) j)
         ≤ Multiset.card m := by
     intro m
-    have hmap : m.map (fun p => (CompPoly.CPolynomial.X + CompPoly.CPolynomial.C (encPair p) : CBiPoly))
+    have hmap : m.map (fun p =>
+        (CompPoly.CPolynomial.X + CompPoly.CPolynomial.C (encPair p) : CBiPoly))
         = (m.map encPair).map (fun u => CompPoly.CPolynomial.X + CompPoly.CPolynomial.C u) := by
       rw [Multiset.map_map]; rfl
     rw [hmap]
@@ -168,7 +170,6 @@ theorem natDegree_coeff_pairProdDiff_le (sp tp : Multiset (Fp × Fp)) (j : ℕ) 
   refine le_trans (CompPoly.CPolynomial.natDegree_sub_le _ _) (max_le ?_ ?_)
   · exact le_trans (key sp) (le_max_left _ _)
   · exact le_trans (key tp) (le_max_right _ _)
-
 
 /-- Out-of-range coefficients of the pair-product difference vanish. -/
 theorem pairProdDiff_coeff_eq_zero_of_le (sp tp : Multiset (Fp × Fp)) {j : ℕ}
@@ -187,7 +188,6 @@ theorem pairProdDiff_coeff_eq_zero_of_le (sp tp : Multiset (Fp × Fp)) {j : ℕ}
   rw [pairProdDiff, CompPoly.CPolynomial.coeff_sub,
     key sp (lt_of_le_of_lt (le_max_left _ _) hj), key tp (lt_of_le_of_lt (le_max_right _ _) hj),
     sub_self]
-
 
 /-- **The permutation `β` surface priced.** Some coefficient of the pair-product difference roots
 `β` — at most `(|cells| + 1) · |cells| / p`. -/
@@ -240,7 +240,6 @@ theorem natDegree_lookupProdDiff_le (a s inp tbl : Multiset Fp) :
       (le_trans (le_of_eq (key s)) (le_max_left _ _))
   · exact le_trans (CompPoly.CPolynomial.natDegree_C_mul_le _ _)
       (le_trans (le_of_eq (key tbl)) (le_max_right _ _))
-
 
 /-- Out-of-range `γ` coefficients of the lookup product difference vanish. -/
 theorem lookupProdDiff_coeff_eq_zero_of_le (a s inp tbl : Multiset Fp) {j : ℕ}
