@@ -472,7 +472,10 @@ noncomputable def terminalRelationFinder {pp : ProofParams}
               (adaptiveActionStatementInstanceCommitment pp basis
                 (family.runOutput basis O).inputs)
               proof nu rounds then
-            none
+            match proof.straightLineBindingAttackZIndexedRootOrRelation nu rounds hattack with
+            | PSum.inl _ => none
+            | PSum.inr relation =>
+                some (ComputedStraightLineIpaFSFamily.straightLineCanonicalRelation relation)
           else
             match family.batchOutcome basis O with
             | PSum.inr relation =>

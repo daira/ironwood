@@ -77,6 +77,30 @@ def preIpaSqueezePoints {shape : Shape} (init : List (TranscriptElt Fp G))
   ![sqPt0 init ps, sqPt1 init ps, sqPt2 init ps, sqPt3 init ps, sqPt4 init ps, sqPt5 init ps,
     sqPt6 init ps, sqPt7 init ps, sqPt8 init ps, sqPt9 init ps, sqPt10 init ps]
 
+/-- The verifier-controlled initial transcript is a prefix of every deployed squeeze point. -/
+theorem initial_prefix_preIpaSqueezePoints {shape : Shape}
+    (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G) (n : Fin 11) :
+    init <+: preIpaSqueezePoints init ps n := by
+  fin_cases n <;>
+    simp [preIpaSqueezePoints, sqPt0, sqPt1, sqPt2, sqPt3, sqPt4, sqPt5,
+      sqPt6, sqPt7, sqPt8, sqPt9, sqPt10]
+
+/-- Equal squeeze points with equally long verifier prefixes contain the same verifier prefix. -/
+theorem initial_eq_of_preIpaSqueezePoints_eq {shape : Shape}
+    (init init' : List (TranscriptElt Fp G))
+    (ps ps' : ProofString shape Fp G) (n : Fin 11)
+    (hlen : init.length = init'.length)
+    (hpoint : preIpaSqueezePoints init ps n = preIpaSqueezePoints init' ps' n) :
+    init = init' := by
+  have hleft := List.prefix_iff_eq_take.mp
+    (initial_prefix_preIpaSqueezePoints init ps n)
+  have hright := List.prefix_iff_eq_take.mp
+    (initial_prefix_preIpaSqueezePoints init' ps' n)
+  calc
+    init = (preIpaSqueezePoints init ps n).take init.length := hleft
+    _ = (preIpaSqueezePoints init' ps' n).take init'.length := by rw [hpoint, hlen]
+    _ = init' := hright.symm
+
 /-- Advice commitments are present before the first semantic squeeze `theta`. -/
 theorem adviceCommitment_mem_preIpaSqueezePoints_zero {shape : Shape}
     (init : List (TranscriptElt Fp G)) (ps : ProofString shape Fp G)
