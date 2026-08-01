@@ -1,4 +1,5 @@
 import Zcash.Snark.Fixtures.SingleAction.Fixture
+import Zcash.Snark.Fixtures.SingleAction.FiatShamir
 import Zcash.Snark.Fixtures.SingleAction.StaticChecks
 import Zcash.Meta.AxiomCheck
 import Mathlib.Util.AssertNoSorry
@@ -68,6 +69,20 @@ assert_axioms Zcash.Snark.Fixture.capturedPointCoordinatesValid_eq_true +native(
   Zcash.Snark.Fixture.capturedPointCoordinatesValid_eq_true)
 assert_axioms Zcash.Snark.Fixture.capturedInit_startsWith_vkTranscriptRepr +native(
   Zcash.Snark.Fixture.capturedInit_startsWith_vkTranscriptRepr)
+-- The statement-bound path must reproduce the captured VK/instance prefix, challenge schedule,
+-- rejection-aware assembly, and final fingerprint.
+assert_axioms Zcash.Snark.Fixture.capturedInit_eq_initialTranscript +native(
+  Zcash.Snark.Fixture.capturedInit_eq_initialTranscript)
+assert_axioms Zcash.Snark.Fixture.deriveChallengesForStatement_matches_captured_schedule +native(
+  Zcash.Snark.Fixture.capturedInit_eq_initialTranscript,
+  Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule)
+assert_computable Zcash.Snark.Fixture.capturedRawInstances +choice
+assert_axioms Zcash.Snark.Fixture.assembleNonInteractiveInstances?_matches_captured +native(
+  Zcash.Snark.Fixture.assembleNonInteractiveInstances?_matches_captured)
+assert_axioms Zcash.Snark.Fixture.nonInteractiveFingerprint_matches +native(
+  Zcash.Snark.Fixture.capturedInit_eq_initialTranscript,
+  Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule,
+  Zcash.Snark.Fixture.fingerprint_matches)
 assert_axioms Zcash.Snark.Fixture.capturedMsm_eval_eq_zero +native(
   Zcash.Snark.Fixture.capturedMsm_eval_eq_zero)
 assert_axioms Zcash.Snark.Fixture.assembledMsm_eval_eq_zero +native(

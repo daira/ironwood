@@ -114,6 +114,78 @@ theorem instanceCommitment_mem_initialTranscript {shape : Shape} {F G : Type*}
       initialTranscript vkTranscriptRepr instanceCommitment := by
   simp [initialTranscript, absorbInstanceCommitments]
 
+/-- Equality of canonical verifier prefixes pins every configured instance commitment. -/
+theorem instanceCommitment_eq_of_initialTranscript_eq
+    {shape : Shape} {F G : Type*}
+    (vkTranscriptRepr vkTranscriptRepr' : F)
+    (instanceCommitment instanceCommitment' : Fin shape.numProofs → ℕ → G)
+    (hinit : initialTranscript vkTranscriptRepr instanceCommitment =
+      initialTranscript vkTranscriptRepr' instanceCommitment')
+    (p : Fin shape.numProofs) (column : Fin shape.numInstanceColumns) :
+    instanceCommitment p column = instanceCommitment' p column := by
+  have hflatten : absorbInstanceCommitments (F := F) instanceCommitment =
+      absorbInstanceCommitments instanceCommitment' := by
+    exact List.cons.inj hinit |>.2
+  have chunks_injective : ∀ (xs ys : List (List (TranscriptElt F G))),
+      xs.length = ys.length →
+      (∀ row ∈ xs, row.length = shape.numInstanceColumns) →
+      (∀ row ∈ ys, row.length = shape.numInstanceColumns) →
+      xs.flatten = ys.flatten → xs = ys := by
+    intro xs
+    induction xs with
+    | nil =>
+        intro ys hlen _ _ _
+        simpa using hlen.symm
+    | cons x xs ih =>
+        intro ys hlen hx hy hflat
+        cases ys with
+        | nil => simp at hlen
+        | cons y ys =>
+            have hxyLength : x.length = y.length := by
+              rw [hx x (by simp), hy y (by simp)]
+            have htotalLength := congrArg List.length hflat
+            have htailFlattenLength : xs.flatten.length = ys.flatten.length := by
+              simp only [List.flatten_cons, List.length_append] at htotalLength
+              omega
+            have hparts := List.append_inj' hflat htailFlattenLength
+            have htailLength : xs.length = ys.length := by simpa using hlen
+            have htail : xs = ys := ih ys htailLength
+              (by intro row hrow; exact hx row (by simp [hrow]))
+              (by intro row hrow; exact hy row (by simp [hrow])) hparts.2
+            exact congrArg₂ List.cons hparts.1 htail
+  let rows := List.ofFn fun p : Fin shape.numProofs =>
+    List.ofFn fun column : Fin shape.numInstanceColumns =>
+      TranscriptElt.point (F := F) (instanceCommitment p column)
+  let rows' := List.ofFn fun p : Fin shape.numProofs =>
+    List.ofFn fun column : Fin shape.numInstanceColumns =>
+      TranscriptElt.point (F := F) (instanceCommitment' p column)
+  have hrows : rows = rows' := by
+    apply chunks_injective rows rows'
+    · simp [rows, rows']
+    · intro row hrow
+      obtain ⟨i, rfl⟩ := List.mem_ofFn.mp (show row ∈ rows from hrow)
+      simp
+    · intro row hrow
+      obtain ⟨i, rfl⟩ := List.mem_ofFn.mp (show row ∈ rows' from hrow)
+      simp
+    · simpa only [absorbInstanceCommitments, rows, rows'] using hflatten
+  have hrowFunctions :
+      (fun p : Fin shape.numProofs =>
+        List.ofFn fun column : Fin shape.numInstanceColumns =>
+          TranscriptElt.point (F := F) (instanceCommitment p column)) =
+      (fun p : Fin shape.numProofs =>
+        List.ofFn fun column : Fin shape.numInstanceColumns =>
+          TranscriptElt.point (F := F) (instanceCommitment' p column)) :=
+    List.ofFn_injective hrows
+  have hcolumnsAt := congrFun hrowFunctions p
+  have hcolumnFunctions :
+      (fun column : Fin shape.numInstanceColumns =>
+        TranscriptElt.point (F := F) (instanceCommitment p column)) =
+      (fun column : Fin shape.numInstanceColumns =>
+        TranscriptElt.point (F := F) (instanceCommitment' p column)) :=
+    List.ofFn_injective hcolumnsAt
+  simpa using TranscriptElt.point.inj (congrFun hcolumnFunctions column)
+
 /-- Derive the verifier's challenges in halo2's deployed absorb/squeeze order.
 
 Each squeeze first appends `TranscriptElt.challenge`; the result is not re-absorbed. `init` contains
