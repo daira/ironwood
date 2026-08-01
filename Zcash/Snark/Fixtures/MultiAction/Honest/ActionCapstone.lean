@@ -1403,8 +1403,9 @@ theorem action_dlog_groupWork_le_2pow126
 
 /-- **The exact captured Action soundness bound.**  Its left-hand event is literal deployed
 acceptance with a false `BundleStatement`.  The combined profile prices IPA, unbatching, quotient,
-and Action-terminal relation branches once. -/
-theorem orchard_action_acceptFalseStatement_prob_le_captured
+and Action-terminal relation branches once.  This is the compositional error formula used by the
+finite-security capstone. -/
+theorem orchard_action_captured_soundness_error_bound
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex actionCircuit.n → T)
@@ -1491,8 +1492,9 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured
 
 /-- The exact captured Action reduction at an arbitrary bundle size.  The captured certificate
 supplies only circuit-owned data; `numProofs` remains visible in the statement and in all four
-semantic budgets. -/
-theorem orchard_action_acceptFalseStatement_prob_le_captured_for
+semantic budgets.  This is the compositional error formula used by the bundle finite-security
+capstone. -/
+theorem orchard_action_captured_bundle_soundness_error_bound
     (numProofs : ℕ) {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex
@@ -1592,8 +1594,9 @@ theorem orchard_action_acceptFalseStatement_prob_le_captured_for
     hXY hBeta hGamma hTheta
 
 /-- Captured false-statement bound for a bare adaptive online-AGM family, with one profiled finder
-and five annotation-aware semantic surfaces. -/
-theorem orchard_action_acceptFalseStatement_prob_le_adaptive
+and five annotation-aware semantic surfaces.  This is the compositional error formula used by the
+finite-security capstone. -/
+theorem orchard_action_adaptive_soundness_error_bound
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex actionCircuit.n → T)
@@ -1711,8 +1714,9 @@ theorem orchard_action_acceptFalseStatement_prob_le_adaptive
           B epsilon profile hsurface)
 
 /-- Bare adaptive Action composition for every bundle size.  The five surface bounds are derived
-from the captured circuit data and scale only where the verifier processes one item per Action. -/
-theorem orchard_action_acceptFalseStatement_prob_le_adaptive_for
+from the captured circuit data and scale only where the verifier processes one item per Action.
+This is the compositional error formula used by the bundle finite-security capstone. -/
+theorem orchard_action_adaptive_bundle_soundness_error_bound
     (numProofs : ℕ) {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex
@@ -1915,8 +1919,9 @@ theorem orchard_adaptiveActionSurface_measure_le_for
 
 /-- **Consensus-generic adaptive Action knowledge soundness.**  The event is literal acceptance
 with failure of the executable private-witness extractor, not merely a false existential
-statement. -/
-theorem orchard_action_knowledgeFailure_prob_le_adaptive_for
+statement.  This is the compositional error formula used by the knowledge-soundness
+finite-security capstone. -/
+theorem orchard_action_adaptive_bundle_knowledge_error_bound
     (numProofs : ℕ) {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex
@@ -2003,8 +2008,9 @@ theorem orchard_action_knowledgeFailure_prob_le_adaptive_for
 
 /-- **Concrete bare-adaptive Action capstone.**  At `Q <= 2^123`, the complete adaptive finder
 fits a conservative `2^127` random-oracle/group-work envelope (eight uncached represented runs),
-while the direct-coordinate decoder fits `2^123`.  The statistical remainder remains `2^-84`. -/
-theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generatorRO
+while the direct-coordinate decoder fits `2^123`.  The statistical remainder remains `2^-84`.
+This is the concrete resource-accounted finite-security capstone. -/
+theorem orchard_action_adaptive_soundness_finite_security
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex actionCircuit.n → T)
@@ -2055,7 +2061,7 @@ theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generato
       _ = 2 ^ 127 := by norm_num
   refine ⟨?_, hqueries, hgroup, hcost.2.2⟩
   refine le_trans
-    (orchard_action_acceptFalseStatement_prob_le_adaptive B hB query hquery family inputs
+    (orchard_action_adaptive_soundness_error_bound B hB query hquery family inputs
       hvk hI hchar profile.toAdaptiveActionDlogProfile) ?_
   rw [adaptiveActionSemanticSum_eq]
   calc
@@ -2071,8 +2077,9 @@ theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generato
           (actionStatisticalModel_at_2pow123 profile.queryBound))
 
 /-- Consensus-generic adaptive capstone: `2^123` direct work, `2^127` DLOG resources, `2^-83`
-statistical remainder, and explicit transcript bias. -/
-theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generatorRO_for
+statistical remainder, and explicit transcript bias.  This is the concrete resource-accounted
+finite-security capstone for bundles. -/
+theorem orchard_action_adaptive_bundle_soundness_finite_security
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -2164,7 +2171,7 @@ theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generato
               (actionProofParamsFor numProofs) family inputs) ≤
         profile.advantage (2 ^ 127) (2 ^ 127) + 1 / (2 ^ 83 : ENNReal) := by
     refine le_trans
-      (orchard_action_acceptFalseStatement_prob_le_adaptive_for numProofs B hB query hquery
+      (orchard_action_adaptive_bundle_soundness_error_bound numProofs B hB query hquery
         family inputs hvk hI hchar profile.toAdaptiveActionDlogProfile) ?_
     refine le_trans ?_
       (add_le_add (profile.advantage_mono hqueries hgroup)
@@ -2192,8 +2199,9 @@ theorem orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generato
   exact event_measure_le_of_bias hbias _ hprob
 
 /-- Consensus-generic knowledge capstone: extractor failure is bounded by one profiled Vesta-DLOG
-advantage plus `2^-83`. -/
-theorem orchard_action_knowledgeFailure_adaptive_2pow123_workFactor_generatorRO_for
+advantage plus `2^-83`.  This is the concrete resource-accounted finite-security capstone for
+knowledge soundness. -/
+theorem orchard_action_adaptive_bundle_knowledge_soundness_finite_security
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -2289,7 +2297,7 @@ theorem orchard_action_knowledgeFailure_adaptive_2pow123_workFactor_generatorRO_
               (actionProofParamsFor numProofs) family inputs hvk hI hchar) ≤
         profile.advantage (2 ^ 127) (2 ^ 127) + 1 / (2 ^ 83 : ENNReal) := by
     refine le_trans
-      (orchard_action_knowledgeFailure_prob_le_adaptive_for numProofs B hB query hquery
+      (orchard_action_adaptive_bundle_knowledge_error_bound numProofs B hB query hquery
         family inputs hvk hI hchar profile.toAdaptiveActionDlogProfile) ?_
     refine le_trans ?_
       (add_le_add (profile.advantage_mono hqueriesDlog hgroup)
@@ -2316,9 +2324,9 @@ theorem orchard_action_knowledgeFailure_adaptive_2pow123_workFactor_generatorRO_
   intro actual εBias hbias
   exact event_measure_le_of_bias hbias _ hprob
 
-/-- Sequential false-statement capstone generated from executable root, IPA, constraint-`x`, and
-Action phases. -/
-theorem orchard_action_acceptFalseStatement_prob_le_sequential
+/-- Sequential false-statement bound generated from executable root, IPA, constraint-`x`, and
+Action phases.  This is the compositional error formula used by the finite-security capstone. -/
+theorem orchard_action_sequential_soundness_error_bound
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex actionCircuit.n → T)
@@ -2371,7 +2379,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_sequential
                 (Fintype.card Fp : ENNReal)) +
               (prover.toFamily.Q + 1 : Nat) * (((2 ^ 25 : Nat) : ENNReal) /
                 (Fintype.card Fp : ENNReal))))) :=
-  orchard_action_acceptFalseStatement_prob_le_captured B hB query hquery prover.toFamily inputs hvk hI
+  orchard_action_captured_soundness_error_bound B hB query hquery prover.toFamily inputs hvk hI
     hchar profile
     (execution.toCuts.xy_prob_le actionProofParams prover.toFamily
       (staticChecks_of_derived prover.toFamily hvk) inputs
@@ -2388,8 +2396,9 @@ theorem orchard_action_acceptFalseStatement_prob_le_sequential
 
 /-- Sequential exact-Action capstone for every bundle size.  All semantic surfaces are discharged
 with tight linear caps, and the result is packaged as one DLOG advantage plus the complete
-`numProofs`-indexed statistical model. -/
-theorem orchard_action_acceptFalseStatement_prob_le_sequential_for
+`numProofs`-indexed statistical model.  This is the compositional error formula used by the bundle
+finite-security capstone. -/
+theorem orchard_action_sequential_bundle_soundness_error_bound
     (numProofs : ℕ) {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex
@@ -2433,7 +2442,7 @@ theorem orchard_action_acceptFalseStatement_prob_le_sequential_for
         actionStatisticalModelFor numProofs prover.toFamily.Q := by
   let static := staticChecks_of_derived_for numProofs prover.toFamily hvk
   refine le_trans
-    (orchard_action_acceptFalseStatement_prob_le_captured_for numProofs B hB query hquery
+    (orchard_action_captured_bundle_soundness_error_bound numProofs B hB query hquery
       prover.toFamily inputs hvk hI hchar profile
       (xyBound :=
         (prover.toFamily.Q + 1 : ℕ) *
@@ -2464,10 +2473,11 @@ theorem orchard_action_acceptFalseStatement_prob_le_sequential_for
     ring_nf
     apply le_rfl
 
-/-- **Concrete exact-Action work-factor endpoint.**  The query ceiling is carried by the direct
+/-- **Concrete exact-Action finite-security capstone.**  The query ceiling is carried by the direct
 profile, all six prover runs and terminal postprocessing are charged once to the combined DLOG
-solver, and the compressed plus semantic statistical remainder is composed into `2^-84`. -/
-theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO
+solver, and the compressed plus semantic statistical remainder is composed into `2^-84`.  This is
+the concrete resource-accounted finite-security capstone. -/
+theorem orchard_action_sequential_soundness_finite_security
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex actionCircuit.n → T)
@@ -2517,7 +2527,7 @@ theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO
       _ = 2 ^ 126 := by norm_num
   refine ⟨?_, hqueries, hgroup, hcost.2.2⟩
   refine le_trans
-    (orchard_action_acceptFalseStatement_prob_le_sequential B hB query hquery prover inputs
+    (orchard_action_sequential_soundness_error_bound B hB query hquery prover inputs
       hvk hI hchar profile.toStraightLineActionDlogProfile hL execution) ?_
   calc
     ((prover.toFamily.Q + 1 : Nat) * (1 / Fintype.card Fp) +
@@ -2552,8 +2562,9 @@ theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO
         (actionStatisticalModel_at_2pow123 profile.queryBound)
 
 /-- Consensus-generic sequential capstone: `2^123` work reduces to `2^126` DLOG resources with a
-`2^-83` statistical remainder and explicit transcript bias. -/
-theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO_for
+`2^-83` statistical remainder and explicit transcript bias.  This is the concrete
+resource-accounted finite-security capstone for bundles. -/
+theorem orchard_action_sequential_bundle_soundness_finite_security
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -2644,7 +2655,7 @@ theorem orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO_for
             actionAcceptFalseStatementEventFor numProofs prover.toFamily inputs) ≤
         profile.advantage (2 ^ 126) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal) := by
     refine le_trans
-      (orchard_action_acceptFalseStatement_prob_le_sequential_for numProofs B hB query hquery
+      (orchard_action_sequential_bundle_soundness_error_bound numProofs B hB query hquery
         prover inputs hvk hI hchar profile.toStraightLineActionDlogProfile hL execution) ?_
     exact add_le_add (profile.advantage_mono hqueries hgroup)
       (actionStatisticalModelFor_at_2pow123 hn profile.queryBound)

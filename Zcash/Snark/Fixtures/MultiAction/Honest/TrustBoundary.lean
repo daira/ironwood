@@ -437,7 +437,7 @@ assert_axioms Zcash.Snark.Fixture.schedule_of_derived +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_prob_le_captured +native(
+assert_axioms Zcash.Snark.Fixture.orchard_action_captured_soundness_error_bound +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
@@ -465,7 +465,7 @@ assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_prob_le_ca
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 -- The consensus-generic form of the same bound, over every proof multiplicity at or below the
 -- Orchard maximum rather than the captured one.
-assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_prob_le_captured_for +native(
+assert_axioms Zcash.Snark.Fixture.orchard_action_captured_bundle_soundness_error_bound +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
@@ -489,7 +489,7 @@ assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_prob_le_ca
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_prob_le_sequential +native(
+assert_axioms Zcash.Snark.Fixture.orchard_action_sequential_soundness_error_bound +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
@@ -519,7 +519,7 @@ assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_prob_le_se
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 -- Its consensus-generic form.
-assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_prob_le_sequential_for +native(
+assert_axioms Zcash.Snark.Fixture.orchard_action_sequential_bundle_soundness_error_bound +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
@@ -546,7 +546,7 @@ assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_prob_le_se
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 -- Consensus-generic endpoints with concrete resources and transcript bias.
-assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO_for +native(
+assert_axioms Zcash.Snark.Fixture.orchard_action_sequential_bundle_soundness_finite_security +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
@@ -576,7 +576,7 @@ assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_2pow123_wo
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 -- The single-multiplicity form of the same work-factor endpoint.
-assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_2pow123_workFactor_generatorRO +native(
+assert_axioms Zcash.Snark.Fixture.orchard_action_sequential_soundness_finite_security +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
@@ -602,7 +602,7 @@ assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_2pow123_wo
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generatorRO_for +native(
+assert_axioms Zcash.Snark.Fixture.orchard_action_adaptive_bundle_soundness_finite_security +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
@@ -630,7 +630,7 @@ assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_adaptive_2
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Fixture.orchard_action_knowledgeFailure_adaptive_2pow123_workFactor_generatorRO_for +native(
+assert_axioms Zcash.Snark.Fixture.orchard_action_adaptive_bundle_knowledge_soundness_finite_security +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
@@ -659,7 +659,7 @@ assert_axioms Zcash.Snark.Fixture.orchard_action_knowledgeFailure_adaptive_2pow1
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 -- The unpriced-resource form of the adaptive knowledge-failure bound.
-assert_axioms Zcash.Snark.Fixture.orchard_action_knowledgeFailure_prob_le_adaptive_for +native(
+assert_axioms Zcash.Snark.Fixture.orchard_action_adaptive_bundle_knowledge_error_bound +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
@@ -687,7 +687,7 @@ assert_axioms Zcash.Snark.Fixture.orchard_action_knowledgeFailure_prob_le_adapti
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 -- Census the public single-Action compatibility endpoints.
-assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_prob_le_adaptive +native(
+assert_axioms Zcash.Snark.Fixture.orchard_action_adaptive_soundness_error_bound +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
@@ -716,7 +716,7 @@ assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_prob_le_ad
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 -- Its consensus-generic form.
-assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_prob_le_adaptive_for +native(
+assert_axioms Zcash.Snark.Fixture.orchard_action_adaptive_bundle_soundness_error_bound +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
@@ -743,7 +743,7 @@ assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_prob_le_ad
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Fixture.orchard_action_acceptFalseStatement_adaptive_2pow123_workFactor_generatorRO +native(
+assert_axioms Zcash.Snark.Fixture.orchard_action_adaptive_soundness_finite_security +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
