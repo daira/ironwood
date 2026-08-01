@@ -576,9 +576,9 @@ theorem actionRelationFinder_extends_constraint
       rw [hout]
       rfl
 
-/-- Generator-random-oracle bound for compressed failure union the complete Action relation event.
-The combined DLOG advantage occurs once. -/
-theorem actionBaseUnion_prob_le_of_dlogProfile
+/-- Generator-random-oracle probability bound for the union of compressed failure and the complete
+Action relation event.  The combined DLOG advantage occurs once. -/
+theorem actionBaseUnion_probability_bound_of_dlogProfile
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → T)
@@ -680,8 +680,9 @@ theorem actionBundleStatementFailure_subset_union
     · exact Or.inl (Or.inr hrelation)
   · exact Or.inl (Or.inl ⟨haccept, hdecoded⟩)
 
-/-- Exact Action probability composition with the combined relation event priced once. -/
-theorem actionBundleStatementFailure_prob_le_of_base_union_bound
+/-- Probability bound for exact Action-statement failure from a supplied base-union bound, with
+the combined relation event priced once. -/
+theorem actionBundleStatementFailure_probability_bound_of_baseUnionBound
     {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → T)
     (finder :
@@ -738,9 +739,9 @@ theorem actionBundleStatementFailure_prob_le_of_base_union_bound
   refine le_trans (MeasureTheory.measure_union_le _ _) ?_
   exact add_le_add hGamma hTheta
 
-/-- End-to-end straight-line Action knowledge soundness, factored through the same profiled base
-union and four semantic challenge bounds as the ordinary-soundness endpoint. -/
-theorem actionKnowledgeFailure_prob_le_of_base_union_bound
+/-- Probability bound for end-to-end straight-line Action knowledge failure, factored through the
+same profiled base-union and four semantic challenge bounds as the ordinary-soundness endpoint. -/
+theorem actionKnowledgeFailure_probability_bound_of_baseUnionBound
     {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → T)
     {baseBound xyBound betaBound gammaBound thetaBound : ENNReal}
@@ -790,9 +791,9 @@ theorem actionKnowledgeFailure_prob_le_of_base_union_bound
   refine le_trans (MeasureTheory.measure_union_le _ _) ?_
   exact add_le_add hGamma hTheta
 
-/-- Bounds literal false-statement acceptance, leaving the computed relation event to a DLOG
-profile. -/
-theorem actionBundleStatementFailure_prob_le_of_compressed_bound
+/-- Probability bound for literal false-statement acceptance from a supplied compressed bound,
+leaving the computed relation event to a DLOG profile. -/
+theorem actionBundleStatementFailure_probability_bound_of_compressedBound
     {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → T)
     (finder :

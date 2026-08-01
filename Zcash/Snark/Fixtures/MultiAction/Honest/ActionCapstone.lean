@@ -1488,13 +1488,13 @@ theorem orchard_action_captured_soundness_error_bound
             1 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * ((20470 : Nat) / (Fintype.card Fp : ENNReal))) +
         (xyBound + (betaBound + (gammaBound + thetaBound))) :=
-  actionBundleStatementFailure_prob_le_of_base_union_bound actionProofParams family
+  actionBundleStatementFailure_probability_bound_of_baseUnionBound actionProofParams family
     (capturedActionStaticChecks family hvk) inputs hvk hI hchar query
     (actionRelationFinder actionProofParams family (capturedActionStaticChecks family hvk)
       inputs hvk hI hchar)
     (actionRelationFinder_covers actionProofParams family
       (capturedActionStaticChecks family hvk) inputs hvk hI hchar)
-    (actionBaseUnion_prob_le_of_dlogProfile actionProofParams family
+    (actionBaseUnion_probability_bound_of_dlogProfile actionProofParams family
       (capturedActionStaticChecks family hvk) inputs hvk hI hchar B hB query hquery
       (schedule_of_derived family hvk) profile)
     hXY hBeta hGamma hTheta
@@ -1590,14 +1590,14 @@ theorem orchard_action_captured_bundle_soundness_error_bound
             1 / Fintype.card Fp) +
           (family.Q + 1 : Nat) * ((20470 : Nat) / (Fintype.card Fp : ENNReal))) +
         (xyBound + (betaBound + (gammaBound + thetaBound))) :=
-  actionBundleStatementFailure_prob_le_of_base_union_bound
+  actionBundleStatementFailure_probability_bound_of_baseUnionBound
     (actionProofParamsFor numProofs) family
     (actionStaticChecks numProofs family hvk) inputs hvk hI hchar query
     (actionRelationFinder (actionProofParamsFor numProofs) family
       (actionStaticChecks numProofs family hvk) inputs hvk hI hchar)
     (actionRelationFinder_covers (actionProofParamsFor numProofs) family
       (actionStaticChecks numProofs family hvk) inputs hvk hI hchar)
-    (actionBaseUnion_prob_le_of_dlogProfile (actionProofParamsFor numProofs) family
+    (actionBaseUnion_probability_bound_of_dlogProfile (actionProofParamsFor numProofs) family
       (actionStaticChecks numProofs family hvk) inputs hvk hI hchar B hB query hquery
       (schedule_of_derived_for numProofs family hvk) profile)
     hXY hBeta hGamma hTheta
@@ -1662,13 +1662,13 @@ theorem orchard_action_adaptive_soundness_error_bound
     intro basis n ps _hwf source earlier
     fin_cases n
     · refine le_trans
-        (adaptiveActionThetaSurface_measure_le actionProofParams basis inputs ps source earlier) ?_
+        (adaptiveActionThetaSurface_probability_bound actionProofParams basis inputs ps source earlier) ?_
       dsimp only [epsilon]
       gcongr
       exact_mod_cast cap_theta basis
         (adaptiveActionCommitmentPolynomial actionProofParams basis inputs ps source
           (chRecord (fun _ => 0) (fun _ => 0)))
-    · have h := adaptiveActionBetaSurface_measure_le
+    · have h := adaptiveActionBetaSurface_probability_bound
         actionProofParams basis inputs ps source earlier
       dsimp only at h
       refine le_trans h ?_
@@ -1679,7 +1679,7 @@ theorem orchard_action_adaptive_soundness_error_bound
         (adaptiveActionCommitmentPolynomial actionProofParams basis inputs ps source
           (chRecord (fun i => if h : (i : Nat) < 1 then earlier ⟨i, h⟩ else 0)
             (fun _ => 0)))
-    · have h := adaptiveActionGammaSurface_measure_le
+    · have h := adaptiveActionGammaSurface_probability_bound
         actionProofParams basis inputs ps source earlier
       dsimp only at h
       refine le_trans h ?_
@@ -1690,7 +1690,7 @@ theorem orchard_action_adaptive_soundness_error_bound
         (adaptiveActionCommitmentPolynomial actionProofParams basis inputs ps source
           (chRecord (fun i => if h : (i : Nat) < 2 then earlier ⟨i, h⟩ else 0)
             (fun _ => 0)))
-    · have h := adaptiveActionYSurface_measure_le
+    · have h := adaptiveActionYSurface_probability_bound
         actionProofParams basis inputs ps source earlier derived_n_ne_zero
       dsimp only at h
       refine le_trans h ?_
@@ -1700,7 +1700,7 @@ theorem orchard_action_adaptive_soundness_error_bound
         (capturedActionConstraintCount_bound basis inputs ps source
           (chRecord (fun i => if h : (i : Nat) < 3 then earlier ⟨i, h⟩ else 0)
             (fun _ => 0)))
-    · have h := adaptiveActionXSurface_measure_le
+    · have h := adaptiveActionXSurface_probability_bound
         actionProofParams basis inputs ps source earlier
       dsimp only at h
       refine le_trans h ?_
@@ -1795,14 +1795,14 @@ theorem orchard_action_adaptive_bundle_soundness_error_bound
     intro basis i ps _hwf source earlier
     fin_cases i
     · refine le_trans
-        (adaptiveActionThetaSurface_measure_le (actionProofParamsFor numProofs)
+        (adaptiveActionThetaSurface_probability_bound (actionProofParamsFor numProofs)
           basis inputs ps source earlier) ?_
       dsimp only [epsilon]
       gcongr
       exact_mod_cast cap_theta_for numProofs basis
         (adaptiveActionCommitmentPolynomial (actionProofParamsFor numProofs)
           basis inputs ps source (chRecord (fun _ => 0) (fun _ => 0)))
-    · have h := adaptiveActionBetaSurface_measure_le
+    · have h := adaptiveActionBetaSurface_probability_bound
         (actionProofParamsFor numProofs) basis inputs ps source earlier
       dsimp only at h
       refine le_trans h ?_
@@ -1814,7 +1814,7 @@ theorem orchard_action_adaptive_bundle_soundness_error_bound
           basis inputs ps source
           (chRecord (fun j => if hj : (j : ℕ) < 1 then earlier ⟨j, hj⟩ else 0)
             (fun _ => 0)))
-    · have h := adaptiveActionGammaSurface_measure_le
+    · have h := adaptiveActionGammaSurface_probability_bound
         (actionProofParamsFor numProofs) basis inputs ps source earlier
       dsimp only at h
       refine le_trans h ?_
@@ -1826,7 +1826,7 @@ theorem orchard_action_adaptive_bundle_soundness_error_bound
           basis inputs ps source
           (chRecord (fun j => if hj : (j : ℕ) < 2 then earlier ⟨j, hj⟩ else 0)
             (fun _ => 0)))
-    · have h := adaptiveActionYSurface_measure_le
+    · have h := adaptiveActionYSurface_probability_bound
         (actionProofParamsFor numProofs) basis inputs ps source earlier
         derived_n_ne_zero
       dsimp only at h
@@ -1837,7 +1837,7 @@ theorem orchard_action_adaptive_bundle_soundness_error_bound
         (actionConstraintCount_bound numProofs basis inputs ps source
           (chRecord (fun j => if hj : (j : ℕ) < 3 then earlier ⟨j, hj⟩ else 0)
             (fun _ => 0)))
-    · have h := adaptiveActionXSurface_measure_le
+    · have h := adaptiveActionXSurface_probability_bound
         (actionProofParamsFor numProofs) basis inputs ps source earlier
       dsimp only at h
       refine le_trans h ?_
@@ -1880,13 +1880,13 @@ theorem adaptiveActionSurface_probability_bound
           numProofs * 2 ^ 23, 20470] i : ℕ) : ENNReal) / Fintype.card Fp := by
   fin_cases i
   · refine le_trans
-      (adaptiveActionThetaSurface_measure_le (actionProofParamsFor numProofs)
+      (adaptiveActionThetaSurface_probability_bound (actionProofParamsFor numProofs)
         basis inputs ps source earlier) ?_
     gcongr
     exact_mod_cast cap_theta_for numProofs basis
       (adaptiveActionCommitmentPolynomial (actionProofParamsFor numProofs)
         basis inputs ps source (chRecord (fun _ => 0) (fun _ => 0)))
-  · have h := adaptiveActionBetaSurface_measure_le
+  · have h := adaptiveActionBetaSurface_probability_bound
       (actionProofParamsFor numProofs) basis inputs ps source earlier
     dsimp only at h
     refine le_trans h ?_
@@ -1897,7 +1897,7 @@ theorem adaptiveActionSurface_probability_bound
         basis inputs ps source
         (chRecord (fun j => if hj : (j : ℕ) < 1 then earlier ⟨j, hj⟩ else 0)
           (fun _ => 0)))
-  · have h := adaptiveActionGammaSurface_measure_le
+  · have h := adaptiveActionGammaSurface_probability_bound
       (actionProofParamsFor numProofs) basis inputs ps source earlier
     dsimp only at h
     refine le_trans h ?_
@@ -1908,7 +1908,7 @@ theorem adaptiveActionSurface_probability_bound
         basis inputs ps source
         (chRecord (fun j => if hj : (j : ℕ) < 2 then earlier ⟨j, hj⟩ else 0)
           (fun _ => 0)))
-  · have h := adaptiveActionYSurface_measure_le
+  · have h := adaptiveActionYSurface_probability_bound
       (actionProofParamsFor numProofs) basis inputs ps source earlier
       derived_n_ne_zero
     dsimp only at h
@@ -1918,7 +1918,7 @@ theorem adaptiveActionSurface_probability_bound
       (actionConstraintCount_bound numProofs basis inputs ps source
         (chRecord (fun j => if hj : (j : ℕ) < 3 then earlier ⟨j, hj⟩ else 0)
           (fun _ => 0)))
-  · have h := adaptiveActionXSurface_measure_le
+  · have h := adaptiveActionXSurface_probability_bound
       (actionProofParamsFor numProofs) basis inputs ps source earlier
     dsimp only at h
     refine le_trans h ?_

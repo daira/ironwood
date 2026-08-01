@@ -1467,8 +1467,9 @@ theorem adaptiveActionSurfaceAt_congr
 
 /-! ## Pointwise prices of the five Action surfaces -/
 
-/-- The adaptive `theta` surface has the ordinary top-level lookup budget. -/
-theorem adaptiveActionThetaSurface_measure_le
+/-- Probability bound for the adaptive `theta` surface, using the ordinary top-level lookup
+budget. -/
+theorem adaptiveActionThetaSurface_probability_bound
     (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
     (inputs : Fin pp.numProofs → PublicInputs Fp)
@@ -1482,13 +1483,13 @@ theorem adaptiveActionThetaSurface_measure_le
           (chRecord (fun _ => 0) (fun _ => 0))) : ENNReal) /
         Fintype.card Fp := by
   simpa [adaptiveActionSurfaceAt] using
-    (ActionTerminal.actionThetaBadSet_measure_le pp basis
+    (ActionTerminal.actionThetaBadSet_probability_bound pp basis
       (adaptiveActionCommitmentPolynomial pp basis inputs ps source
         (chRecord (fun _ => 0) (fun _ => 0))))
 
-/-- The adaptive `beta` surface is priced by the same permutation/lookup counts as the staged
-Action remainder. -/
-theorem adaptiveActionBetaSurface_measure_le
+/-- Probability bound for the adaptive `beta` surface, priced by the same permutation/lookup
+counts as the staged Action remainder. -/
+theorem adaptiveActionBetaSurface_probability_bound
     (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
     (inputs : Fin pp.numProofs → PublicInputs Fp)
@@ -1514,13 +1515,14 @@ theorem adaptiveActionBetaSurface_measure_le
         Fintype.card Fp := by
   dsimp only
   simpa [adaptiveActionSurfaceAt, actionActiveRows] using
-    (ActionTerminal.actionBetaBadSets_measure_le pp basis (earlier 0)
+    (ActionTerminal.actionBetaBadSets_probability_bound pp basis (earlier 0)
       (adaptiveActionCommitmentPolynomial pp basis inputs ps source
         (chRecord (fun i => if h : (i : Nat) < 1 then earlier ⟨i, h⟩ else 0)
           (fun _ => 0))))
 
-/-- The adaptive `gamma` surface is priced by the same doubled permutation/lookup count. -/
-theorem adaptiveActionGammaSurface_measure_le
+/-- Probability bound for the adaptive `gamma` surface, priced by the same doubled
+permutation/lookup count. -/
+theorem adaptiveActionGammaSurface_probability_bound
     (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
     (inputs : Fin pp.numProofs → PublicInputs Fp)
@@ -1540,13 +1542,13 @@ theorem adaptiveActionGammaSurface_measure_le
         Fintype.card Fp := by
   dsimp only
   simpa [adaptiveActionSurfaceAt, actionActiveRows] using
-    (ActionTerminal.actionGammaBadSets_measure_le pp basis (earlier 0) (earlier ⟨1, by omega⟩)
+    (ActionTerminal.actionGammaBadSets_probability_bound pp basis (earlier 0) (earlier ⟨1, by omega⟩)
       (adaptiveActionCommitmentPolynomial pp basis inputs ps source
         (chRecord (fun i => if h : (i : Nat) < 2 then earlier ⟨i, h⟩ else 0)
           (fun _ => 0))))
 
-/-- The adaptive `y` surface is the standard fold-split union. -/
-theorem adaptiveActionYSurface_measure_le
+/-- Probability bound for the adaptive `y` surface, the standard fold-split union. -/
+theorem adaptiveActionYSurface_probability_bound
     (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
     (inputs : Fin pp.numProofs → PublicInputs Fp)
@@ -1562,14 +1564,14 @@ theorem adaptiveActionYSurface_measure_le
         Fintype.card Fp := by
   dsimp only
   simpa [adaptiveActionSurfaceAt] using
-    (ActionTerminal.actionYBadSet_measure_le
+    (ActionTerminal.actionYBadSet_probability_bound
       (adaptiveActionCommittedModel pp basis inputs ps source
         (chRecord (fun i => if h : (i : Nat) < 3 then earlier ⟨i, h⟩ else 0)
           (fun _ => 0))).constraints hn)
 
-/-- The adaptive `x` surface is one Schwartz--Zippel set at the explicit canonical pre-`x`
-constraint difference. -/
-theorem adaptiveActionXSurface_measure_le
+/-- Probability bound for the adaptive `x` surface: one Schwartz--Zippel set at the explicit
+canonical pre-`x` constraint difference. -/
+theorem adaptiveActionXSurface_probability_bound
     (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
     (inputs : Fin pp.numProofs → PublicInputs Fp)
