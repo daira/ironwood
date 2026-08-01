@@ -1,5 +1,4 @@
-import Zcash.Snark.Soundness.Action.AdaptiveStatementTerminal
-import Zcash.Snark.Soundness.AGM.AdaptiveComposition
+import Zcash.Snark.Soundness.Action.AdaptiveStatementSurfaces
 
 /-!
 # Adaptive-statement Action event composition
@@ -95,6 +94,52 @@ def statisticalResidualEvent {pp : ProofParams}
     Set ((AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) × family.Coins) :=
   family.acceptFalseStatementEvent \ family.relationEvent hchar
 
+/-! ## Concrete statistical surface events -/
+
+/-- The selected statement's `z = 0` slice. -/
+def zeroEvent {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp) :
+    Set ((AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) × family.Coins) :=
+  {q | family.runPreIpaReads q.1 q.2 10 = 0}
+
+/-- The union of the selected statement's round-local IPA discrepancy roots. -/
+def ipaEvent {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp) :
+    Set ((AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) × family.Coins) :=
+  {q | ∃ j : Fin (AdaptiveActionStatementShape pp).k,
+    let output := family.runOutput q.1 q.2
+    let t := family.ipaPoint q.1 j output
+    q.2 t ∈ outputIpaFallbackBad family q.1 j output t q.2 ∧
+      family.ipaRepresentationRelationFinder q.1 q.2 = none}
+
+/-- The union of the six selected-statement deployed-root surfaces. -/
+def rootEvent {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp) :
+    Set ((AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) × family.Coins) :=
+  {q | ∃ i : Fin 6,
+    let n := deployedRootChallengeIndex i
+    let output := family.runOutput q.1 q.2
+    let t := family.preIpaPoint q.1 n output
+    q.2 t ∈ outputRootBad family q.1 n output t q.2 ∧
+      family.preIpaRepresentationRelationFinder q.1 q.2 = none}
+
+/-- The union of the five selected-statement Action semantic surfaces. -/
+def semanticEvent {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp) :
+    Set ((AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) × family.Coins) :=
+  {q | ∃ n : Fin 5,
+    let n11 : Fin 11 := Fin.castLE (by omega) n
+    let output := family.runOutput q.1 q.2
+    let t := family.preIpaPoint q.1 n11 output
+    q.2 t ∈ outputSemanticBad family q.1 n output t q.2 ∧
+      family.semanticRepresentationRelationFinder q.1 q.2 = none}
+
+/-- Every directly priced statistical failure for one adaptive selected statement. -/
+def statisticalSurfaceEvent {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp) :
+    Set ((AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) × family.Coins) :=
+  family.zeroEvent ∪ (family.ipaEvent ∪ (family.rootEvent ∪ family.semanticEvent))
+
 /-- The adaptive false-statement event is exhausted by the relation event and its literal
 statistical residual. -/
 theorem acceptFalseStatementEvent_subset {pp : ProofParams}
@@ -109,6 +154,281 @@ theorem acceptFalseStatementEvent_subset {pp : ProofParams}
   by_cases hrelation : q ∈ family.relationEvent hchar
   · exact Or.inl hrelation
   · exact Or.inr ⟨hq, hrelation⟩
+
+/-! ## Surface pricing -/
+
+/-- The selected-statement zero slice keeps the ordinary one-field query price. -/
+theorem zeroEvent_table_le {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) :
+    (PMF.uniformOfFintype family.Coins).toOuterMeasure
+      {O | family.runPreIpaReads basis O 10 = 0} ≤
+        (family.Q + 1 : Nat) * (1 / Fintype.card Fp) := by
+  have hzero := fsAdvantageFull_zero_slice_le (family.adversary basis).erase
+    (fun _ _ _ => True)
+    (fun (output : AdaptiveActionStatementOutput pp basis
+        (family.fixedRepresentations basis)) i =>
+      output.prefixesPre (family.vkTranscriptRepr basis) i)
+    (fun (output : AdaptiveActionStatementOutput pp basis
+        (family.fixedRepresentations basis)) j =>
+      output.prefixes (family.vkTranscriptRepr basis) j)
+    10 (family.queryBound basis)
+  simpa only [fsWinsFull, true_and, runPreIpaReads, runOutput] using hzero
+
+/-- Union the round-local IPA prices without another adaptive-query loss. -/
+theorem ipaEvent_table_le {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) :
+    (PMF.uniformOfFintype family.Coins).toOuterMeasure
+      {O | ∃ j : Fin (AdaptiveActionStatementShape pp).k,
+        let output := family.runOutput basis O
+        let t := family.ipaPoint basis j output
+        O t ∈ outputIpaFallbackBad family basis j output t O ∧
+          family.ipaRepresentationRelationFinder basis O = none} ≤
+      (AdaptiveActionStatementShape pp).k *
+        ((family.Q + 1 : Nat) * (2 / (Fintype.card Fp : ENNReal))) := by
+  have hsub : {O | ∃ j : Fin (AdaptiveActionStatementShape pp).k,
+      let output := family.runOutput basis O
+      let t := family.ipaPoint basis j output
+      O t ∈ outputIpaFallbackBad family basis j output t O ∧
+        family.ipaRepresentationRelationFinder basis O = none} ⊆
+      ⋃ j : Fin (AdaptiveActionStatementShape pp).k,
+        {O | let output := family.runOutput basis O
+          let t := family.ipaPoint basis j output
+          O t ∈ outputIpaFallbackBad family basis j output t O ∧
+            family.ipaRepresentationRelationFinder basis O = none} := by
+    rintro O ⟨j, hj⟩
+    exact Set.mem_iUnion.mpr ⟨j, hj⟩
+  refine le_trans (MeasureTheory.measure_mono hsub) ?_
+  refine le_trans (MeasureTheory.measure_iUnion_le _) ?_
+  rw [tsum_fintype]
+  calc
+    ∑ j : Fin (AdaptiveActionStatementShape pp).k,
+        (PMF.uniformOfFintype family.Coins).toOuterMeasure
+          {O | let output := family.runOutput basis O
+            let t := family.ipaPoint basis j output
+            O t ∈ outputIpaFallbackBad family basis j output t O ∧
+              family.ipaRepresentationRelationFinder basis O = none} ≤
+      ∑ _j : Fin (AdaptiveActionStatementShape pp).k,
+        ((family.Q + 1 : Nat) * (2 / (Fintype.card Fp : ENNReal))) := by
+          gcongr with j
+          exact family.ipaBadWithoutRelation_table_le basis j
+    _ = _ := by simp
+
+/-- Union the six deployed-root prices into the existing shape-level root budget. -/
+theorem rootEvent_table_le {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) :
+    (PMF.uniformOfFintype family.Coins).toOuterMeasure
+      {O | ∃ i : Fin 6,
+        let n := deployedRootChallengeIndex i
+        let output := family.runOutput basis O
+        let t := family.preIpaPoint basis n output
+        O t ∈ outputRootBad family basis n output t O ∧
+          family.preIpaRepresentationRelationFinder basis O = none} ≤
+      (family.Q + 1 : Nat) * algebraicRootBudget
+        (AdaptiveActionStatementShape pp) (AdaptiveActionStatementShape pp).k := by
+  have hsub : {O | ∃ i : Fin 6,
+      let n := deployedRootChallengeIndex i
+      let output := family.runOutput basis O
+      let t := family.preIpaPoint basis n output
+      O t ∈ outputRootBad family basis n output t O ∧
+        family.preIpaRepresentationRelationFinder basis O = none} ⊆
+      ⋃ i : Fin 6, {O |
+        let n := deployedRootChallengeIndex i
+        let output := family.runOutput basis O
+        let t := family.preIpaPoint basis n output
+        O t ∈ outputRootBad family basis n output t O ∧
+          family.preIpaRepresentationRelationFinder basis O = none} := by
+    rintro O ⟨i, hi⟩
+    exact Set.mem_iUnion.mpr ⟨i, hi⟩
+  refine le_trans (MeasureTheory.measure_mono hsub) ?_
+  refine le_trans (MeasureTheory.measure_iUnion_le _) ?_
+  rw [tsum_fintype]
+  calc
+    ∑ i : Fin 6, (PMF.uniformOfFintype family.Coins).toOuterMeasure
+        {O | let n := deployedRootChallengeIndex i
+          let output := family.runOutput basis O
+          let t := family.preIpaPoint basis n output
+          O t ∈ outputRootBad family basis n output t O ∧
+            family.preIpaRepresentationRelationFinder basis O = none} ≤
+      ∑ i : Fin 6, (family.Q + 1 : Nat) *
+        deployedRootEventBudget (AdaptiveActionStatementShape pp) i := by
+          gcongr with i
+          let n := deployedRootChallengeIndex i
+          have h5n : 5 ≤ (n : Nat) := by
+            fin_cases i <;> norm_num [n, deployedRootChallengeIndex]
+          simpa only [n, adaptiveRootEventIndex_deployedRootChallengeIndex] using
+            (family.rootBadWithoutRelation_table_le basis n h5n)
+    _ = (family.Q + 1 : Nat) * ∑ i : Fin 6,
+        deployedRootEventBudget (AdaptiveActionStatementShape pp) i := by
+          rw [Finset.mul_sum]
+    _ ≤ _ := by
+      gcongr
+      exact deployedRootEventBudget_sum_le (AdaptiveActionStatementShape pp)
+
+/-- Union the five semantic surfaces under their existing pointwise bounds. -/
+theorem semanticEvent_table_le {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (epsilon : Fin 5 → ENNReal)
+    (hsurface : ∀ (n : Fin 5)
+      (instanceCommitment :
+        Fin (AdaptiveActionStatementShape pp).numProofs → Nat → VestaG)
+      (ps : ProofString (AdaptiveActionStatementShape pp) Fp VestaG)
+      (source : List (AlgebraicPoint (F := Fp) basis))
+      (earlier : Fin (n : Nat) → Fp),
+      uniformChallenge.toOuterMeasure
+        (adaptiveActionSurfaceAtOf basis instanceCommitment n ps source earlier) ≤ epsilon n) :
+    (PMF.uniformOfFintype family.Coins).toOuterMeasure
+      {O | ∃ n : Fin 5,
+        let n11 : Fin 11 := Fin.castLE (by omega) n
+        let output := family.runOutput basis O
+        let t := family.preIpaPoint basis n11 output
+        O t ∈ outputSemanticBad family basis n output t O ∧
+          family.semanticRepresentationRelationFinder basis O = none} ≤
+      (family.Q + 1 : Nat) * ∑ n : Fin 5, epsilon n := by
+  have hsub : {O | ∃ n : Fin 5,
+      let n11 : Fin 11 := Fin.castLE (by omega) n
+      let output := family.runOutput basis O
+      let t := family.preIpaPoint basis n11 output
+      O t ∈ outputSemanticBad family basis n output t O ∧
+        family.semanticRepresentationRelationFinder basis O = none} ⊆
+      ⋃ n : Fin 5, {O |
+        let n11 : Fin 11 := Fin.castLE (by omega) n
+        let output := family.runOutput basis O
+        let t := family.preIpaPoint basis n11 output
+        O t ∈ outputSemanticBad family basis n output t O ∧
+          family.semanticRepresentationRelationFinder basis O = none} := by
+    rintro O ⟨n, hn⟩
+    exact Set.mem_iUnion.mpr ⟨n, hn⟩
+  refine le_trans (MeasureTheory.measure_mono hsub) ?_
+  refine le_trans (MeasureTheory.measure_iUnion_le _) ?_
+  rw [tsum_fintype]
+  calc
+    ∑ n : Fin 5, (PMF.uniformOfFintype family.Coins).toOuterMeasure
+        {O | let n11 : Fin 11 := Fin.castLE (by omega) n
+          let output := family.runOutput basis O
+          let t := family.preIpaPoint basis n11 output
+          O t ∈ outputSemanticBad family basis n output t O ∧
+            family.semanticRepresentationRelationFinder basis O = none} ≤
+      ∑ n : Fin 5, (family.Q + 1 : Nat) * epsilon n := by
+        gcongr with n
+        exact family.semanticBadWithoutRelation_table_le basis n (hsurface n)
+    _ = _ := by rw [Finset.mul_sum]
+
+/-- The complete statistical surface union has one shared `(Q + 1)` loss. -/
+theorem statisticalSurfaceEvent_prob_le {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (B : VestaG) (epsilon : Fin 5 → ENNReal)
+    (hsurface : ∀
+      (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+      (n : Fin 5)
+      (instanceCommitment :
+        Fin (AdaptiveActionStatementShape pp).numProofs → Nat → VestaG)
+      (ps : ProofString (AdaptiveActionStatementShape pp) Fp VestaG)
+      (source : List (AlgebraicPoint (F := Fp) basis))
+      (earlier : Fin (n : Nat) → Fp),
+      uniformChallenge.toOuterMeasure
+        (adaptiveActionSurfaceAtOf basis instanceCommitment n ps source earlier) ≤ epsilon n) :
+    (PMF.uniformOfFintype
+      ((AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) ×
+        family.Coins)).toOuterMeasure
+      ((fun q => (scalarBasis B q.1, q.2)) ⁻¹' family.statisticalSurfaceEvent) ≤
+      (family.Q + 1 : Nat) *
+        (1 / Fintype.card Fp +
+          (AdaptiveActionStatementShape pp).k *
+            (2 / (Fintype.card Fp : ENNReal)) +
+          algebraicRootBudget (AdaptiveActionStatementShape pp)
+            (AdaptiveActionStatementShape pp).k +
+          ∑ n : Fin 5, epsilon n) := by
+  have hzero :
+      (PMF.uniformOfFintype
+        ((AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) ×
+          family.Coins)).toOuterMeasure
+        ((fun q => (scalarBasis B q.1, q.2)) ⁻¹' family.zeroEvent) ≤
+        (family.Q + 1 : Nat) * (1 / Fintype.card Fp) := by
+    apply uniformOfFintype_prod_fiber_bound_right
+      (fun logs => {O | (scalarBasis B logs, O) ∈ family.zeroEvent})
+    intro logs
+    exact family.zeroEvent_table_le (scalarBasis B logs)
+  have hipa :
+      (PMF.uniformOfFintype
+        ((AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) ×
+          family.Coins)).toOuterMeasure
+        ((fun q => (scalarBasis B q.1, q.2)) ⁻¹' family.ipaEvent) ≤
+        (AdaptiveActionStatementShape pp).k *
+          ((family.Q + 1 : Nat) * (2 / (Fintype.card Fp : ENNReal))) := by
+    apply uniformOfFintype_prod_fiber_bound_right
+      (fun logs => {O | (scalarBasis B logs, O) ∈ family.ipaEvent})
+    intro logs
+    exact family.ipaEvent_table_le (scalarBasis B logs)
+  have hroot :
+      (PMF.uniformOfFintype
+        ((AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) ×
+          family.Coins)).toOuterMeasure
+        ((fun q => (scalarBasis B q.1, q.2)) ⁻¹' family.rootEvent) ≤
+        (family.Q + 1 : Nat) * algebraicRootBudget
+          (AdaptiveActionStatementShape pp) (AdaptiveActionStatementShape pp).k := by
+    apply uniformOfFintype_prod_fiber_bound_right
+      (fun logs => {O | (scalarBasis B logs, O) ∈ family.rootEvent})
+    intro logs
+    exact family.rootEvent_table_le (scalarBasis B logs)
+  have hsemantic :
+      (PMF.uniformOfFintype
+        ((AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) ×
+          family.Coins)).toOuterMeasure
+        ((fun q => (scalarBasis B q.1, q.2)) ⁻¹' family.semanticEvent) ≤
+        (family.Q + 1 : Nat) * ∑ n : Fin 5, epsilon n := by
+    apply uniformOfFintype_prod_fiber_bound_right
+      (fun logs => {O | (scalarBasis B logs, O) ∈ family.semanticEvent})
+    intro logs
+    exact family.semanticEvent_table_le (scalarBasis B logs) epsilon
+      (hsurface (scalarBasis B logs))
+  unfold statisticalSurfaceEvent
+  simp only [Set.preimage_union]
+  refine le_trans (MeasureTheory.measure_union_le _ _) ?_
+  refine le_trans (add_le_add hzero (MeasureTheory.measure_union_le _ _)) ?_
+  refine le_trans (add_le_add_right (add_le_add hipa
+    (MeasureTheory.measure_union_le _ _)) _) ?_
+  refine le_trans (add_le_add_right (add_le_add_right (add_le_add hroot hsemantic) _) _) ?_
+  ring_nf
+  exact le_rfl
+
+/-- Once the deterministic terminal bridge places the literal residual in the concrete surface
+union, its probability is fully discharged by the table bounds above. -/
+theorem statisticalResidualEvent_prob_le_of_surface_cover {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (B : VestaG) (epsilon : Fin 5 → ENNReal)
+    (hsurface : ∀
+      (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+      (n : Fin 5)
+      (instanceCommitment :
+        Fin (AdaptiveActionStatementShape pp).numProofs → Nat → VestaG)
+      (ps : ProofString (AdaptiveActionStatementShape pp) Fp VestaG)
+      (source : List (AlgebraicPoint (F := Fp) basis))
+      (earlier : Fin (n : Nat) → Fp),
+      uniformChallenge.toOuterMeasure
+        (adaptiveActionSurfaceAtOf basis instanceCommitment n ps source earlier) ≤ epsilon n)
+    (hcover : family.statisticalResidualEvent hchar ⊆ family.statisticalSurfaceEvent) :
+    (PMF.uniformOfFintype
+      ((AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) ×
+        family.Coins)).toOuterMeasure
+      ((fun q => (scalarBasis B q.1, q.2)) ⁻¹'
+        family.statisticalResidualEvent hchar) ≤
+      (family.Q + 1 : Nat) *
+        (1 / Fintype.card Fp +
+          (AdaptiveActionStatementShape pp).k *
+            (2 / (Fintype.card Fp : ENNReal)) +
+          algebraicRootBudget (AdaptiveActionStatementShape pp)
+            (AdaptiveActionStatementShape pp).k +
+          ∑ n : Fin 5, epsilon n) := by
+  refine le_trans (MeasureTheory.measure_mono (Set.preimage_mono hcover)) ?_
+  exact family.statisticalSurfaceEvent_prob_le B epsilon hsurface
 
 /-- The combined adaptive-statement finder has the standard textbook-DLOG reduction. -/
 theorem relation_prob_le_of_textbookDL {pp : ProofParams}
@@ -177,6 +497,44 @@ theorem acceptFalseStatement_prob_le_of_query_accounting {pp : ProofParams}
         family.acceptFalseStatementEvent) ≤
       (dlBound + 1 / Fintype.card Fp) + (family.Q + 1 : Nat) * epsilon :=
   family.acceptFalseStatement_prob_le hchar B hDL hresidual
+
+/-- Adaptive-statement false-statement soundness with every statistical surface instantiated.
+The deterministic surface-cover premise is separated so its terminal proof remains auditable. -/
+theorem acceptFalseStatement_prob_le_of_surface_cover {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (B : VestaG) {dlBound : ENNReal} (epsilon : Fin 5 → ENNReal)
+    (hDL : TextbookDLWithCoinsAdvantageLE B (family.relationFinder hchar) dlBound)
+    (hsurface : ∀
+      (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+      (n : Fin 5)
+      (instanceCommitment :
+        Fin (AdaptiveActionStatementShape pp).numProofs → Nat → VestaG)
+      (ps : ProofString (AdaptiveActionStatementShape pp) Fp VestaG)
+      (source : List (AlgebraicPoint (F := Fp) basis))
+      (earlier : Fin (n : Nat) → Fp),
+      uniformChallenge.toOuterMeasure
+        (adaptiveActionSurfaceAtOf basis instanceCommitment n ps source earlier) ≤ epsilon n)
+    (hcover : family.statisticalResidualEvent hchar ⊆ family.statisticalSurfaceEvent) :
+    (PMF.uniformOfFintype
+      ((AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) ×
+        family.Coins)).toOuterMeasure
+      ((fun q => (scalarBasis B q.1, q.2)) ⁻¹'
+        family.acceptFalseStatementEvent) ≤
+      (dlBound + 1 / Fintype.card Fp) +
+        (family.Q + 1 : Nat) *
+          (1 / Fintype.card Fp +
+            (AdaptiveActionStatementShape pp).k *
+              (2 / (Fintype.card Fp : ENNReal)) +
+            algebraicRootBudget (AdaptiveActionStatementShape pp)
+              (AdaptiveActionStatementShape pp).k +
+            ∑ n : Fin 5, epsilon n) := by
+  apply family.acceptFalseStatement_prob_le hchar B hDL
+  exact family.statisticalResidualEvent_prob_le_of_surface_cover hchar B epsilon
+    hsurface hcover
 
 end ComputedAdaptiveActionStatementFSFamily
 

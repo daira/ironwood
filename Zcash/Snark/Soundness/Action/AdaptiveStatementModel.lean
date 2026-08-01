@@ -27,6 +27,50 @@ local instance adaptiveStatementVestaInhabited : Inhabited VestaG := ⟨0⟩
 abbrev AdaptiveActionStatementShape (pp : ProofParams) : Shape :=
   pp.mergeDerived actionCircuit
 
+/-- The deployed Action circuit has exactly one configured instance column. -/
+theorem adaptiveActionStatement_numInstanceColumns (pp : ProofParams) :
+    (AdaptiveActionStatementShape pp).numInstanceColumns = 1 := by
+  rw [pp.mergeDerived_numInstanceColumns actionCircuit]
+  native_decide
+
+/-- Every unconfigured Action instance column serializes only zero rows. -/
+theorem adaptiveActionPublicInputRows_ne_zero (input : PublicInputs Fp)
+    {column : ℕ} (hcolumn : column ≠ 0) :
+    ∀ i, (actionCircuit.publicInputRows input ⟨column⟩).getD i 0 = 0 := by
+  have hzero : ∀ x ∈ actionCircuit.publicInputRows input ⟨column⟩, x = (0 : Fp) := by
+    intro x hx
+    rw [show actionCircuit.publicInputRows input ⟨column⟩ =
+        (List.range PublicInputs.layout.usedRows).map (fun row =>
+          (toElements input).toList.getD
+            (PublicInputs.layout.cellList.idxOf ((⟨column⟩ : Column .instance), row)) 0)
+        from rfl] at hx
+    obtain ⟨row, -, rfl⟩ := List.mem_map.mp hx
+    rw [List.idxOf_eq_length (by
+      simp only [PublicInputs.layout, PublicInputLayout.cellList]
+      simp
+      intro _ hindex
+      exact hcolumn hindex.symm)]
+    have hlen : (toElements input).toList.length ≤
+        PublicInputs.layout.cellList.length := by
+      simp only [PublicInputLayout.cellList_length, Vector.length_toList]
+      exact le_refl _
+    exact List.getD_eq_default _ _ hlen
+  intro i
+  rcases lt_or_ge i (actionCircuit.publicInputRows input ⟨column⟩).length with h | h
+  · rw [List.getD_eq_getElem _ _ h]
+    exact hzero _ (List.getElem_mem h)
+  · exact List.getD_eq_default _ _ h
+
+/-- A zero public-instance column commits only to its blinding generator, for any verifier URS. -/
+theorem adaptiveCommitInstance_of_rows_zero {G : Type*} [AddCommGroup G] [Module Fp G]
+    {urs : URS G} {omega : Fp} (key : LagrangeCommitmentKey urs omega)
+    {values : List Fp} (hzero : ∀ i, values.getD i 0 = 0) (blind : Fp) :
+    key.commitInstance values blind = blind • urs.w := by
+  rw [LagrangeCommitmentKey.commitInstance, LagrangeCommitmentKey.commitRows,
+    show zeroPaddedRows (n := 2 ^ urs.k) values = 0 from funext fun i => hzero (i : ℕ)]
+  rw [show commitGen key.generators (0 : Fin (2 ^ urs.k) → Fp) = 0 by
+    simp [commitGen], zero_add]
+
 /-- The canonical Action verifying key at one AGM basis. -/
 abbrev adaptiveActionStatementVk (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) :
@@ -41,6 +85,46 @@ abbrev adaptiveActionStatementInstanceCommitment (pp : ProofParams)
     Fin (AdaptiveActionStatementShape pp).numProofs → ℕ → VestaG :=
   actionCircuit.instanceCommitmentForShape pp
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) inputs
+
+/-- Normalize the total verifier function outside the configured Action instance-column range.
+Those indices are never absorbed or queried; using the URS blind generator matches the commitment
+of Action's all-zero unconfigured columns. -/
+def boundedAdaptiveStatementInstanceCommitment (pp : ProofParams)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (instanceCommitment :
+      Fin (AdaptiveActionStatementShape pp).numProofs → ℕ → VestaG) :
+    Fin (AdaptiveActionStatementShape pp).numProofs → ℕ → VestaG :=
+  fun p column =>
+    if column < (AdaptiveActionStatementShape pp).numInstanceColumns then
+      instanceCommitment p column
+    else (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis).w
+
+/-- The Action circuit's derived commitment family is already equal to its bounded normalization. -/
+theorem adaptiveActionStatementInstanceCommitment_eq_bounded (pp : ProofParams)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (inputs : Fin pp.numProofs → PublicInputs Fp) :
+    adaptiveActionStatementInstanceCommitment pp basis inputs =
+      boundedAdaptiveStatementInstanceCommitment pp basis
+        (adaptiveActionStatementInstanceCommitment pp basis inputs) := by
+  funext p column
+  unfold boundedAdaptiveStatementInstanceCommitment
+  by_cases hcolumn : column < (AdaptiveActionStatementShape pp).numInstanceColumns
+  · rw [if_pos hcolumn]
+  · rw [if_neg hcolumn]
+    have hne : column ≠ 0 := by
+      intro hzero
+      subst column
+      apply hcolumn
+      rw [adaptiveActionStatement_numInstanceColumns]
+      omega
+    change (actionCircuit.instanceCommitmentKey pp
+        (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)).commitInstance
+          (actionCircuit.publicInputRows
+            (inputs (Fin.cast (pp.mergeDerived_numProofs actionCircuit) p)) ⟨column⟩) 1 =
+      (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis).w
+    rw [adaptiveCommitInstance_of_rows_zero _
+      (adaptiveActionPublicInputRows_ne_zero _ hne)]
+    simp
 
 /-- Canonical initial-transcript length, independent of the selected statement's values. -/
 def adaptiveStatementInitLength (shape : Shape) : ℕ :=
