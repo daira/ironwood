@@ -21,8 +21,9 @@ local instance adaptiveStatementEventVestaInhabited : Inhabited VestaG := ⟨0�
 
 namespace ComputedAdaptiveActionStatementFSFamily
 
-/-- One combined relation finder: first bind the selected instance coordinates at `theta`, then
-run the decoded Action terminal. -/
+/-- One combined relation finder: bind the selected instance coordinates, compare every proof
+coordinate with the annotation at the squeeze where it is used, then run the decoded Action
+terminal.  All algebraic mismatch branches therefore share one textbook-DLOG reduction. -/
 noncomputable def relationFinder {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
@@ -32,9 +33,47 @@ noncomputable def relationFinder {pp : ProofParams}
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) →
     family.Coins → Option (AlgebraicRelationWitness (F := Fp) basis) :=
   fun basis O =>
-    match family.instanceRepresentationRelationFinder basis O with
-    | some relation => some relation
-    | none => family.terminalRelationFinder hchar basis O
+    ComputedAdaptiveOnlineAGMFSFamily.firstAdaptiveRelation?
+      [family.instanceRepresentationRelationFinder basis O,
+       family.preIpaRepresentationRelationFinder basis O,
+       family.ipaRepresentationRelationFinder basis O,
+       family.semanticRepresentationRelationFinder basis O,
+       family.terminalRelationFinder hchar basis O]
+
+/-- No result from the combined finder means every coordinate-provenance subfinder was empty. -/
+theorem relationFinder_none_provenance {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins)
+    (hnone : family.relationFinder hchar basis O = none) :
+    family.instanceRepresentationRelationFinder basis O = none ∧
+      family.preIpaRepresentationRelationFinder basis O = none ∧
+      family.ipaRepresentationRelationFinder basis O = none ∧
+      family.semanticRepresentationRelationFinder basis O = none := by
+  have hall := (ComputedAdaptiveOnlineAGMFSFamily.firstAdaptiveRelation?_eq_none_iff _).1
+    (by simpa only [relationFinder] using hnone)
+  simp only [List.mem_cons, forall_eq_or_imp] at hall
+  exact ⟨hall.1, hall.2.1, hall.2.2.1, hall.2.2.2.1⟩
+
+/-- No result from the combined finder also means the pointwise terminal returned no relation. -/
+theorem relationFinder_none_terminal {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins)
+    (hnone : family.relationFinder hchar basis O = none) :
+    family.terminalRelationFinder hchar basis O = none := by
+  have hall := (ComputedAdaptiveOnlineAGMFSFamily.firstAdaptiveRelation?_eq_none_iff _).1
+    (by simpa only [relationFinder] using hnone)
+  apply hall
+  simp
 
 /-- The exact DLOG-reduction event of the combined adaptive-statement finder. -/
 def relationEvent {pp : ProofParams}

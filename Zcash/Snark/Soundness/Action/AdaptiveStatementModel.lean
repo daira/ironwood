@@ -60,6 +60,43 @@ def adaptiveStatementInstanceRepresentationList {shape : Shape}
       AlgebraicPoint (F := Fp) basis) : List (AlgebraicPoint (F := Fp) basis) :=
   (List.ofFn fun p => List.ofFn fun column => representations p column).flatten
 
+/-- The canonical augmented-basis coordinates of one selected public-instance commitment.
+Unlike an adversary-supplied representation, these coefficients are computed from the actual
+public-input rows and the verifier's default instance blind. -/
+def canonicalAdaptiveStatementInstanceRepresentation (pp : ProofParams)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (inputs : Fin pp.numProofs → PublicInputs Fp)
+    (p : Fin (AdaptiveActionStatementShape pp).numProofs)
+    (column : Fin (AdaptiveActionStatementShape pp).numInstanceColumns) :
+    AlgebraicPoint (F := Fp) basis :=
+  let urs := ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis
+  let proofIndex : Fin pp.numProofs :=
+    Fin.cast (pp.mergeDerived_numProofs actionCircuit) p
+  let instanceColumn : Column .instance := ⟨column⟩
+  let coeffs := instanceCoefficients (2 ^ urs.k) actionCircuit.omega
+    (actionCircuit.publicInputRows (inputs proofIndex) instanceColumn)
+  { point := adaptiveActionStatementInstanceCommitment pp basis inputs p column
+    repr :=
+      { coeffs := augmentedCoeffs coeffs 0 1
+        hEq := by
+          calc
+            representationEval basis (augmentedCoeffs coeffs 0 1) =
+                representationEval (augmentedBasis urs.g urs.u urs.w)
+                  (augmentedCoeffs coeffs 0 1) := by
+              exact congrArg (fun b => representationEval b (augmentedCoeffs coeffs 0 1))
+                (augmentedBasis_ursOfAugmentedBasis
+                  (AdaptiveActionStatementShape pp).k basis).symm
+            _ = commitGen urs.g coeffs + 0 • urs.u + 1 • urs.w :=
+              representationEval_augmentedBasis urs.g urs.u urs.w coeffs 0 1
+            _ = commit urs coeffs + urs.w := by
+              simp only [zero_smul, add_zero, one_smul, commit]
+              rfl
+            _ = adaptiveActionStatementInstanceCommitment pp basis inputs p column := by
+              change commit urs coeffs + urs.w =
+                actionCircuit.instanceCommitment pp urs inputs proofIndex instanceColumn.index
+              exact (actionCircuit.instanceCommitment_column_eq_commit
+                pp urs inputs proofIndex instanceColumn).symm } }
+
 /-- An online-AGM output that selects both the Action public statement and its proof. -/
 structure AdaptiveActionStatementOutput (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
@@ -215,6 +252,45 @@ theorem instanceRepresentations_coveredAtTheta {pp : ProofParams}
   rw [← hcolumn, output.instanceRepresented p column]
   exact mem_transcriptGroupPoints_of_mem_point
     (output.instanceCommitment_mem_prefixesPre_zero vkTranscriptRepr p column)
+
+/-- Final instance representations remain covered at every later pre-IPA squeeze. -/
+theorem instanceRepresentations_coveredPre {pp : ProofParams}
+    {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
+    {fixedRepresentations : List (AlgebraicPoint (F := Fp) basis)}
+    (vkTranscriptRepr : Fp)
+    (output : AdaptiveActionStatementOutput pp basis fixedRepresentations)
+    (n : Fin 11) :
+    ∀ ap ∈ adaptiveStatementInstanceRepresentationList output.instanceRepresentations,
+      ap.point ∈ transcriptGroupPoints (output.prefixesPre vkTranscriptRepr n).val := by
+  intro ap hap
+  have hzero := output.instanceRepresentations_coveredAtTheta vkTranscriptRepr ap hap
+  apply (transcriptGroupPoints_prefix ?_).mem hzero
+  exact preIpaSqueezePoints_prefix_of_le
+    (output.init vkTranscriptRepr) output.toAlgebraicWfProof.proof.1
+    output.toAlgebraicWfProof.proof.2 0 n (by omega)
+
+/-- Final instance representations also remain covered throughout the IPA round chain. -/
+theorem instanceRepresentations_coveredRound {pp : ProofParams}
+    {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
+    {fixedRepresentations : List (AlgebraicPoint (F := Fp) basis)}
+    (vkTranscriptRepr : Fp)
+    (output : AdaptiveActionStatementOutput pp basis fixedRepresentations)
+    (j : Fin (AdaptiveActionStatementShape pp).k) :
+    ∀ ap ∈ adaptiveStatementInstanceRepresentationList output.instanceRepresentations,
+      ap.point ∈ transcriptGroupPoints (output.prefixes vkTranscriptRepr j).val := by
+  intro ap hap
+  have hzero := output.instanceRepresentations_coveredAtTheta vkTranscriptRepr ap hap
+  apply (transcriptGroupPoints_prefix ?_).mem hzero
+  change preIpaSqueezePoints (output.init vkTranscriptRepr)
+      output.toAlgebraicWfProof.proof.1 0 <+:
+    roundTranscriptFin
+      (preIpaTranscript (output.init vkTranscriptRepr)
+        output.toAlgebraicWfProof.proof.1)
+      output.toAlgebraicWfProof.proof.1.ipaRounds j
+  exact (preIpaSqueezePoints_prefix
+    (output.init vkTranscriptRepr) output.toAlgebraicWfProof.proof.1 0).trans (by
+      unfold roundTranscriptFin
+      exact List.prefix_append _ _)
 
 /-- Every proof-controlled advice commitment follows the statement prefix and precedes `theta`. -/
 theorem adviceCommitment_mem_prefixesPre_zero {pp : ProofParams}
