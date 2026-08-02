@@ -112,10 +112,10 @@ emits every distinct affine coordinate, validates it on `Vesta.curve`, and suppl
 Halo2 URS. On the honest captures `capturedMsm_eval_eq_zero` computes the captured MSM to the
 identity and `assembledMsm_eval_eq_zero` transfers that result to Lean's assembly — the
 non-vacuity witness that no match-only capture can provide. All five fixtures regenerate
-byte-for-byte from pinned public sources: the honest families in CI
-(`.github/workflows/fixtures.yml`), all five via the pinned capture branches and
-`scripts/regenerate-fingerprint-fixtures.sh` (pins, seeds, and rationale in
-`fixture-provenance-notes.md`).
+byte-for-byte from the pinned public capture branches via
+`scripts/regenerate-fingerprint-fixtures.sh`, run in CI
+(`.github/workflows/fixtures.yml`); pins, seeds, and rationale in
+`fixture-provenance-notes.md`.
 
 What is trusted rather than checked stays enumerated — one line each here, the full prose in the
 book's Trust Boundary chapter:

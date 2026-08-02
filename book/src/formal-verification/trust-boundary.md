@@ -151,7 +151,7 @@ flowchart TD
     PINS --> DRIVERS
     BRANCH --> DRIVERS
     DRIVERS --> FIX --> THM --> CENSUS
-    FIX -. "regenerate &amp; diff, byte-for-byte:<br/>fixtures.yml (honest, CI) ·<br/>regenerate-fingerprint-fixtures.sh (all five)" .-> PINS
+    FIX -. "regenerate &amp; diff, byte-for-byte:<br/>regenerate-fingerprint-fixtures.sh<br/>(all five, run in CI: fixtures.yml)" .-> PINS
   end
   subgraph CS["Circuit-side dumps — lineage unrecorded"]
     INST["instrumented checkouts<br/>(commits UNKNOWN)"]
@@ -372,18 +372,19 @@ and small.
 
 ## Reproducibility: the two pipelines in detail
 
-**Verifier-fingerprint captures** (`Zcash/Snark/Fixtures/`) are fully pinned. The honest
-families regenerate in CI from pinned public sources (`.github/workflows/fixtures.yml`,
-orchard 0.15.3 / halo2_proofs 0.3.4, locked transitively). All five families regenerate via
-the public `fingerprint-random-capture` branches of ebfull/halo2 and ebfull/orchard
-(match-only exporter; fabricate→replay random-capture drivers — each branch exactly one
-commit atop the corresponding release pin, with a crates.io checksum-equivalence argument)
-and `scripts/regenerate-fingerprint-fixtures.sh`, which clones the branches at the pinned
-commits, asserts the one-commit-atop-the-pin provenance, runs all five capture drivers, and
+**Verifier-fingerprint captures** (`Zcash/Snark/Fixtures/`) are fully pinned. All five
+families regenerate via the public `fingerprint-random-capture` branches of ebfull/halo2
+and ebfull/orchard (match-only exporter and `numInstanceColumns` shape emission;
+fabricate→replay random-capture drivers — the Halo2 pin the public zcash/halo2#924 head
+descended from its release pin, the Orchard branch exactly one commit atop its release
+pin, with a crates.io checksum-equivalence argument at the Halo2 release base)
+and `scripts/regenerate-fingerprint-fixtures.sh`, which CI runs
+(`.github/workflows/fixtures.yml`): it clones the branches at the pinned
+commits, asserts both release lineages, runs all five capture drivers, and
 enforces every committed artifact — five `Fixture.lean` files and three `proof-bytes.hex`
-siblings — byte-for-byte. The script also proves the capture tooling does not disturb the
-honest pipeline: the honest fixtures regenerate byte-identically under the capture-branch
-toolchain. Pins, seeds, rationale, and the one known caveat (fabricated points have
+siblings — byte-for-byte. Regeneration of the honest pair from the released
+halo2_proofs alone resumes once a release ships the exporter changes their committed
+bytes now carry. Pins, seeds, rationale, and the one known caveat (fabricated points have
 discrete logs known to the generator — harmless for non-accepting, coefficient-only
 captures, recorded for honesty) are documented in `fixture-provenance-notes.md`.
 

@@ -36,8 +36,9 @@ rather than inventing pins.
   behind a feature flag), record the exact commits in `PROVENANCE.md`, and add a CI
   job that regenerates the JSON fixtures from those pins and diffs them against the
   checked-in bytes — the circuit-side analogue of what `fixtures.yml` already does
-  for the `Zcash/Snark/Fixtures/` verifier-fingerprint captures (pinned
-  orchard 0.15.3 / halo2_proofs 0.3.4 via the `verifier-fingerprint` feature).
+  for the `Zcash/Snark/Fixtures/` verifier-fingerprint captures (pinned public
+  capture branches via `scripts/regenerate-fingerprint-fixtures.sh` and the
+  `verifier-fingerprint` feature).
 - For the base (pre-NU 6.3) circuit, a stronger check is available: verify the
   dumped constraint system against the actual mainnet Orchard verifying key — a
   fixed public artifact — tying the chain to the deployed network rather than to
@@ -45,14 +46,12 @@ rather than inventing pins.
 
 **The verifier-fingerprint pipeline is separate and fully pinned.** Everything above
 concerns the *circuit-side* dumps in `Zcash/Circuits/Fixtures/`. The verifier-fingerprint
-captures in `Zcash/Snark/Fixtures/` have none of the missing-lineage problem: the honest
-families regenerate in CI from pinned public sources (`fixtures.yml`), and the random
-match-only families — committed under
+captures in `Zcash/Snark/Fixtures/` have none of the missing-lineage problem: all five
+families — the honest pair and the random match-only families committed under
 `Zcash/Snark/Fixtures/{SingleActionRandom,MultiActionRandom,TripleActionRandom}/`, each with
 its raw `proof-bytes.hex` sibling — regenerate from the public capture branches described
-below via `scripts/regenerate-fingerprint-fixtures.sh`, which also re-checks the honest
-families byte-for-byte under the capture-branch toolchain and enforces the committed random
-artifacts byte-for-byte. The place of both pipelines in the overall trust story is the
+below via `scripts/regenerate-fingerprint-fixtures.sh`, which CI runs (`fixtures.yml`) to
+enforce every committed artifact byte-for-byte. The place of both pipelines in the overall trust story is the
 book's Trust Boundary chapter (`book/src/formal-verification/trust-boundary.md`).
 
 ## The random-capture branches
@@ -180,8 +179,8 @@ halo2_proofs = { path = "<capture-branch halo2>/halo2_proofs" }
 ```
 
 to orchard's `Cargo.toml`, and run `cargo update --package halo2_proofs` once. That lockfile
-update is the single divergence from the CI regeneration environment (`fixtures.yml` builds
-`--locked` against crates.io): it switches halo2_proofs 0.3.4's source from the registry to
+update is the single divergence from orchard's committed `Cargo.lock` (which pins
+halo2_proofs 0.3.4 from crates.io): it switches that one package's source from the registry to
 the branch's path — the version and the entire transitive dependency set are unchanged,
 which the regeneration script asserts by requiring the `Cargo.lock` delta to be exactly the
 removal of that package's `source`/`checksum` lines. Every subsequent cargo invocation runs

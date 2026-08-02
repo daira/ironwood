@@ -42,7 +42,7 @@ this circuit-VK dump pipeline.
 
 Because the dump instrumentation is intentionally unpublished, these fixtures are **not**
 reproducible from pinned public sources the way the `Zcash/Snark/Fixtures/` verifier
-fingerprint captures are (those regenerate in CI from a pinned orchard release —
+fingerprint captures are (those regenerate in CI from pinned public sources —
 `.github/workflows/fixtures.yml`). What certifies them instead is the pair of guards under
 [Content pinning](#content-pinning): the SHA-256 pin in `SHA256SUMS` (a CI `sha256sum -c`
 drift/tamper guard) and the `CircuitCheck` reconstruction (`TestVk*`), which asserts the
