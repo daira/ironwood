@@ -198,38 +198,40 @@ extracted private witnesses or explicit relation data.  This semantic core is in
 the statement and proof were selected. -/
 def actionWitnessOrRelationOfDecode?
     (pp : ProofParams)
-    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
     (inputs : Fin pp.numProofs → PublicInputs Fp)
-    (ps : ProofString (pp.mergeDerived actionCircuit) Fp VestaG)
-    (a : Fin (2 ^ (pp.mergeDerived actionCircuit).k) → Fp)
+    (ps : ProofString (actionCircuit.shape.withProofParams pp) Fp VestaG)
+    (a : Fin (2 ^ (actionCircuit.shape.withProofParams pp).k) → Fp)
     (pU pW : Fp)
-    (ch : Challenges (pp.mergeDerived actionCircuit).k Fp)
+    (ch : Challenges (actionCircuit.shape.withProofParams pp).k Fp)
     (hchar : deployedX4PairCount
-      (actionCircuit.toVerifierKey pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-      (actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      (actionCircuit.toVerifierKey
+        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
+      (actionCircuit.instanceCommitment
+        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
       ps ch < scalarFieldOrder)
     (decode : DeployedAlgebraicDecode
-      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) rfl
-      (actionCircuit.toVerifierKey pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-      (actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      (actionCircuit.shape.withProofParams pp)
+      (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
+      (actionCircuit.toVerifierKey
+        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
+      (actionCircuit.instanceCommitment
+        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
       ps ch a pU pW)
     (haccepts : DeployedAccepts
-      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) rfl
-      (actionCircuit.toVerifierKey pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-      (actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      (actionCircuit.shape.withProofParams pp)
+      (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
+      (actionCircuit.toVerifierKey
+        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
+      (actionCircuit.instanceCommitment
+        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
       ps ch) :
     Option (ActionBundleWitness inputs ⊕
       AlgebraicRelationWitness (F := Fp) basis) :=
-  let urs := ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis
+  let urs := ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis
   let model := CanonicalMemberConstraintRelation.acceptedModel
     (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
-    (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs) haccepts
+    (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n urs) haccepts
   let polynomial := CanonicalMemberConstraintRelation.acceptedPolynomial
     (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts
   match hxgood : szBadSetAvoidance?
@@ -246,37 +248,37 @@ def actionWitnessOrRelationOfDecode?
       | none => none
       | some hgoodYProof =>
           match hpermutation : resolverPermutationChallengeExclusions?
-              (actionCircuit.toVerifierKey pp urs) ch polynomial actionActiveRows with
+              pp.numProofs (actionCircuit.toVerifierKey urs) ch polynomial actionActiveRows with
           | none => none
           | some hpermutationProof =>
               match hlookup : TopLevelLookup.topLevelLookupChallengeExclusions?
                   actionCircuit pp urs ch polynomial with
               | none => none
               | some hlookupProof =>
-                  let hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs
+                  let hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n urs
                   let hnFp : (actionCircuit.n : Fp) ≠ 0 :=
                     TopLevelAssignment.domainSizeCastNeZero
                       ActionPermutationDomain.domainExponent_lt
                   match acceptedModel_circuitSat_or_relation_of_decodedMemberPolynomial_eq
-                      urs rfl (actionCircuit.toVerifierKey pp urs)
-                      (actionCircuit.instanceCommitmentForShape pp urs inputs) ps ch
+                      urs rfl (actionCircuit.toVerifierKey urs)
+                      (actionCircuit.instanceCommitment urs inputs) ps ch
                       (fun i hi => decode.toMemberDecode hchar i hi) haccepts hblinding
                       (polynomial .vanishingH) rfl
-                      (actionCircuit.toVerifierKey_fixedQueryCount pp urs)
-                      (actionCircuit.toVerifierKey_adviceQueryCount pp urs)
-                      (actionCircuit.toVerifierKey_instanceQueryCount pp urs)
+                      (actionCircuit.toVerifierKey_fixedQueryCount urs)
+                      (actionCircuit.toVerifierKey_adviceQueryCount urs)
+                      (actionCircuit.toVerifierKey_instanceQueryCount urs)
                       (fun slot point hpoint =>
                         PSum.inl (decode.memberBinding hchar slot point hpoint))
-                      (ActionPermutationDomain.routingCoherent_of_derived pp urs)
+                      (ActionPermutationDomain.routingCoherent_of_derived urs)
                       (TopLevelAssignment.toVerifierKey_domainRowsInjective
-                        pp urs ActionPermutationDomain.domainExponent_lt)
+                        urs ActionPermutationDomain.domainExponent_lt)
                       (TopLevelAssignment.toVerifierKey_domainRoot
-                        pp urs ActionPermutationDomain.domainExponent_lt)
+                        urs ActionPermutationDomain.domainExponent_lt)
                       hnFp
                       (by exact hxgoodProof.down) with
                   | PSum.inr relation =>
                       some (Sum.inr (augmentedBasis_ursOfAugmentedBasis
-                        (pp.mergeDerived actionCircuit).k basis ▸
+                        (actionCircuit.shape.withProofParams pp).k basis ▸
                           AugmentedRelationWitness.toAlgebraicRelationWitness relation))
                   | PSum.inl hsatisfied =>
                       match action_bundleWitness_or_relation_of_decode_circuitSat pp urs rfl
@@ -287,7 +289,7 @@ def actionWitnessOrRelationOfDecode?
                       | PSum.inl witness => some (Sum.inl witness)
                       | PSum.inr relation =>
                           some (Sum.inr (augmentedBasis_ursOfAugmentedBasis
-                            (pp.mergeDerived actionCircuit).k basis ▸
+                            (actionCircuit.shape.withProofParams pp).k basis ▸
                               AugmentedRelationWitness.toAlgebraicRelationWitness relation))
 
 /-- Compatibility wrapper for the fixed-statement adaptive-online family. -/
@@ -409,37 +411,39 @@ theorem adaptiveActionRelationOfDecode?_isSome_of_witnessOrRelation
 /-- The pointwise semantic terminal is complete whenever all of its finite exclusions hold. -/
 theorem actionWitnessOrRelationOfDecode?_isSome_of
     (pp : ProofParams)
-    (basis : AugmentedIndex (2 ^ (pp.mergeDerived actionCircuit).k) → VestaG)
+    (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
     (inputs : Fin pp.numProofs → PublicInputs Fp)
-    (ps : ProofString (pp.mergeDerived actionCircuit) Fp VestaG)
-    (a : Fin (2 ^ (pp.mergeDerived actionCircuit).k) → Fp)
+    (ps : ProofString (actionCircuit.shape.withProofParams pp) Fp VestaG)
+    (a : Fin (2 ^ (actionCircuit.shape.withProofParams pp).k) → Fp)
     (pU pW : Fp)
-    (ch : Challenges (pp.mergeDerived actionCircuit).k Fp)
+    (ch : Challenges (actionCircuit.shape.withProofParams pp).k Fp)
     (hchar : deployedX4PairCount
-      (actionCircuit.toVerifierKey pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-      (actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      (actionCircuit.toVerifierKey
+        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
+      (actionCircuit.instanceCommitment
+        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
       ps ch < scalarFieldOrder)
     (decode : DeployedAlgebraicDecode
-      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) rfl
-      (actionCircuit.toVerifierKey pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-      (actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      (actionCircuit.shape.withProofParams pp)
+      (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
+      (actionCircuit.toVerifierKey
+        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
+      (actionCircuit.instanceCommitment
+        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
       ps ch a pU pW)
     (haccepts : DeployedAccepts
-      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) rfl
-      (actionCircuit.toVerifierKey pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
-      (actionCircuit.instanceCommitmentForShape pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) inputs)
+      (actionCircuit.shape.withProofParams pp)
+      (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) rfl
+      (actionCircuit.toVerifierKey
+        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
+      (actionCircuit.instanceCommitment
+        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) inputs)
       ps ch)
     (hxgood :
       let model := CanonicalMemberConstraintRelation.acceptedModel
           (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
-          (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp
-            (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)) haccepts
+          (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
+            (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis)) haccepts
       let polynomial := CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts
       ch.x ∉ szBadSet
@@ -450,33 +454,33 @@ theorem actionWitnessOrRelationOfDecode?_isSome_of
     (hgoodY :
       let model := CanonicalMemberConstraintRelation.acceptedModel
           (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
-          (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp
-            (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)) haccepts
+          (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
+            (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis)) haccepts
       ∀ j, ch.y ∉ szBadSet (foldSplitWitness model.constraints actionCircuit.n j))
-    (hpermutation : ResolverPermutationChallengeExclusions
-      (actionCircuit.toVerifierKey pp
-        (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis))
+    (hpermutation : ResolverPermutationChallengeExclusions pp.numProofs
+      (actionCircuit.toVerifierKey
+        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis))
       ch
       (CanonicalMemberConstraintRelation.acceptedPolynomial
         (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts)
       actionActiveRows)
     (hlookup : TopLevelLookup.ChallengeExclusions actionCircuit pp
-      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis) ch
+      (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis) ch
       (CanonicalMemberConstraintRelation.acceptedPolynomial
         (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts)) :
     (actionWitnessOrRelationOfDecode?
       pp basis inputs ps a pU pW ch hchar decode haccepts).isSome := by
   let model := CanonicalMemberConstraintRelation.acceptedModel
     (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
-    (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp
-      (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)) haccepts
+    (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
+      (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis)) haccepts
   dsimp only at hxgood hgoodY
   have hxSome := (szBadSetAvoidance?_isSome_iff _ _).2 hxgood
   have hn : actionCircuit.n ≠ 0 := actionCircuit.n_ne_zero
   have hySome := foldSplitAvoidance?_isSome_of model.constraints _ hn _ hgoodY
-  have hpSome := resolverPermutationChallengeExclusions?_isSome_of _ _ _ _ hpermutation
+  have hpSome := resolverPermutationChallengeExclusions?_isSome_of _ _ _ _ _ hpermutation
   have hlSome := TopLevelLookup.topLevelLookupChallengeExclusions?_isSome_of
-    actionCircuit pp (ursOfAugmentedBasis (pp.mergeDerived actionCircuit).k basis)
+    actionCircuit pp (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis)
       _ _ hlookup
   obtain ⟨hxProof, hxEq⟩ := Option.isSome_iff_exists.mp hxSome
   obtain ⟨hyProof, hyEq⟩ := Option.isSome_iff_exists.mp hySome

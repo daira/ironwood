@@ -267,7 +267,7 @@ theorem adaptiveStatementActive_point_mem_stage {pp : ProofParams}
       refine ⟨(adaptiveActionStatementVk pp basis).permutationCommonCommitment ⟨c, hc⟩,
         ?_, ap, List.mem_append.mpr (Or.inr hap), hpoint⟩
       simp [assembledCommitment, finFnG, hc,
-        ProofParams.mergeDerived_numPermutationColumns]
+        CircuitShape.withProofParams_numPermutationColumns]
   | vanishingH => exact False.elim hactive
   | randomPoly => exact False.elim hactive
 
@@ -599,7 +599,7 @@ theorem statementExclusions_of_no_surface {pp : ProofParams}
     let decode := rawDecode.reRound (family.runIpaReads basis O)
     let actionModel := CanonicalMemberConstraintRelation.acceptedModel
       (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
-      (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp
+      (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)) haccepts
     let actionPoly := CanonicalMemberConstraintRelation.acceptedPolynomial
       (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts
@@ -623,7 +623,7 @@ theorem statementExclusions_of_no_surface {pp : ProofParams}
   let decode := rawDecode.reRound (family.runIpaReads basis O)
   let actionModel := CanonicalMemberConstraintRelation.acceptedModel
     (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
-    (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp
+    (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)) haccepts
   let actionPoly := CanonicalMemberConstraintRelation.acceptedPolynomial
     (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts
@@ -711,7 +711,7 @@ theorem statementExclusions_of_no_surface {pp : ProofParams}
     funext i
     simp [betaNu]
   have hbetaSurface : nu 1 ∉
-      (↑(allResolverPermutationBetaBadSet (adaptiveActionStatementVk pp basis)
+      (↑(allResolverPermutationBetaBadSet pp.numProofs (adaptiveActionStatementVk pp basis)
           (adaptiveActionCommitmentPolynomial pp basis inputs data.algebraicProof.erase
             (stageSource 1) betaCh) actionActiveRows) : Set Fp) ∪
         (↑(allResolverLookupBetaBadSet
@@ -724,7 +724,7 @@ theorem statementExclusions_of_no_surface {pp : ProofParams}
             actionCircuit.blindingFactors - 2)) : Set Fp) := by
     simpa [adaptiveActionSurfaceAt, betaNu, betaCh] using hs1
   have hbetaStage : nu 1 ∉
-      (↑(allResolverPermutationBetaBadSet (adaptiveActionStatementVk pp basis)
+      (↑(allResolverPermutationBetaBadSet pp.numProofs (adaptiveActionStatementVk pp basis)
           (stagePoly 1) actionActiveRows) : Set Fp) ∪
         (↑(allResolverLookupBetaBadSet
           pp.numProofs (adaptiveActionStatementVk pp basis)
@@ -735,12 +735,12 @@ theorem statementExclusions_of_no_surface {pp : ProofParams}
     rw [hbetaCh] at hbetaSurface
     simpa [stagePoly, stageCh] using hbetaSurface
   rw [Set.mem_union, not_or] at hbetaStage
-  have hbetaPermSet := allResolverPermutationBetaBadSet_congr
+  have hbetaPermSet := allResolverPermutationBetaBadSet_congr pp.numProofs
     (adaptiveActionStatementVk pp basis) actionActiveRows
       (poly₁ := actionPoly) (poly₂ := stagePoly 1) (fun id hid =>
       hpolySurface 1 id (hpermutationAvailable 1 (by omega) id hid)
           (hnonterminal id (Or.inr (Or.inl hid))))
-  have hbetaPerm : ch.beta ∉ allResolverPermutationBetaBadSet
+  have hbetaPerm : ch.beta ∉ allResolverPermutationBetaBadSet pp.numProofs
       (adaptiveActionStatementVk pp basis) actionPoly actionActiveRows := by
     rw [hbetaPermSet]
     simpa only [hbetaRead] using hbetaStage.1
@@ -774,7 +774,7 @@ theorem statementExclusions_of_no_surface {pp : ProofParams}
     funext i
     simp [gammaNu]
   have hgammaSurface : nu 2 ∉
-      (↑(allResolverPermutationGammaBadSet (adaptiveActionStatementVk pp basis)
+      (↑(allResolverPermutationGammaBadSet pp.numProofs (adaptiveActionStatementVk pp basis)
           (ActionTerminal.semanticChRecord gammaCh.theta gammaCh.beta
             (k := (AdaptiveActionStatementShape pp).k))
           (adaptiveActionCommitmentPolynomial pp basis inputs data.algebraicProof.erase
@@ -789,7 +789,7 @@ theorem statementExclusions_of_no_surface {pp : ProofParams}
             actionCircuit.blindingFactors - 2)) : Set Fp) := by
     simpa [adaptiveActionSurfaceAt, gammaNu, gammaCh] using hs2
   have hgammaStage : nu 2 ∉
-      (↑(allResolverPermutationGammaBadSet (adaptiveActionStatementVk pp basis)
+      (↑(allResolverPermutationGammaBadSet pp.numProofs (adaptiveActionStatementVk pp basis)
           (ActionTerminal.semanticChRecord (nu 0) (nu 1)
             (k := (AdaptiveActionStatementShape pp).k)) (stagePoly 2)
           actionActiveRows) : Set Fp) ∪
@@ -802,7 +802,7 @@ theorem statementExclusions_of_no_surface {pp : ProofParams}
     rw [hgammaCh] at hgammaSurface
     simpa [stagePoly, stageCh] using hgammaSurface
   rw [Set.mem_union, not_or] at hgammaStage
-  have hgammaPermSet := allResolverPermutationGammaBadSet_congr
+  have hgammaPermSet := allResolverPermutationGammaBadSet_congr pp.numProofs
     (adaptiveActionStatementVk pp basis) actionActiveRows
       (ch₁ := ch) (ch₂ := ActionTerminal.semanticChRecord (nu 0) (nu 1)
         (k := (AdaptiveActionStatementShape pp).k))
@@ -810,7 +810,7 @@ theorem statementExclusions_of_no_surface {pp : ProofParams}
       (poly₁ := actionPoly) (poly₂ := stagePoly 2) (fun id hid =>
         hpolySurface 2 id (hpermutationAvailable 2 (by omega) id hid)
           (hnonterminal id (Or.inr (Or.inl hid))))
-  have hgammaPerm : ch.gamma ∉ allResolverPermutationGammaBadSet
+  have hgammaPerm : ch.gamma ∉ allResolverPermutationGammaBadSet pp.numProofs
       (adaptiveActionStatementVk pp basis) ch actionPoly actionActiveRows := by
     rw [hgammaPermSet]
     simpa only [hgammaRead] using hgammaStage.1
@@ -1126,7 +1126,7 @@ theorem statementAcceptedDifference_eval_eq_preX {pp : ProofParams}
     let decode := rawDecode.reRound (family.runIpaReads basis O)
     let actionModel := CanonicalMemberConstraintRelation.acceptedModel
       (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
-      (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp
+      (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)) haccepts
     let actionPoly := CanonicalMemberConstraintRelation.acceptedPolynomial
       (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts
@@ -1149,7 +1149,7 @@ theorem statementAcceptedDifference_eval_eq_preX {pp : ProofParams}
   let decode := rawDecode.reRound (family.runIpaReads basis O)
   let actionModel := CanonicalMemberConstraintRelation.acceptedModel
     (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
-    (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp
+    (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)) haccepts
   let actionPoly := CanonicalMemberConstraintRelation.acceptedPolynomial
     (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts

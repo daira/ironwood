@@ -175,7 +175,7 @@ noncomputable def preXIdentityOutcome? {pp : ProofParams}
     let decode := rawDecode.reRound (family.runIpaReads basis O)
     let model := CanonicalMemberConstraintRelation.acceptedModel
       (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
-      (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp
+      (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)) haccepts
     let polynomial := CanonicalMemberConstraintRelation.acceptedPolynomial
       (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts
@@ -355,7 +355,7 @@ theorem preXIdentityOutcome_isSome_of {pp : ProofParams}
       let decode := rawDecode.reRound (family.runIpaReads basis O)
       let model := CanonicalMemberConstraintRelation.acceptedModel
         (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
-        (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp
+        (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
           (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)) haccepts
       ∀ j, (family.runRecord basis O).y ∉
         szBadSet (foldSplitWitness model.constraints actionCircuit.n j))
@@ -378,7 +378,7 @@ theorem preXIdentityOutcome_isSome_of {pp : ProofParams}
   let decode := rawDecode.reRound (family.runIpaReads basis O)
   let model := CanonicalMemberConstraintRelation.acceptedModel
     (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
-    (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp
+    (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)) haccepts
   let polynomial := CanonicalMemberConstraintRelation.acceptedPolynomial
     (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts

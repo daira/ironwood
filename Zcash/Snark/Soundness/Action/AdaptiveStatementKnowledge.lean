@@ -300,7 +300,7 @@ theorem knowledgeExtractor_isSome_of_no_events {pp : ProofParams}
         let decode := rawDecode.reRound (family.runIpaReads basis O)
         let model := CanonicalMemberConstraintRelation.acceptedModel
           (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi)
-          (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp
+          (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
             (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)) haccepts
         let polynomial := CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi) haccepts
