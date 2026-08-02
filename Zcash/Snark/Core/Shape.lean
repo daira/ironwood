@@ -19,7 +19,9 @@ structure CircuitShape where
   numPermutationSets : ℕ
   numPermutationColumns : ℕ
   numQuotientPieces : ℕ
-  numInstanceColumns : ℕ
+  -- TODO: Remove this compatibility default once a released halo2 fixture exporter
+  -- emits `numInstanceColumns` explicitly in generated `Shape` values.
+  numInstanceColumns : ℕ := 1
   numInstanceQueries : ℕ
   numAdviceQueries : ℕ
   numFixedQueries : ℕ

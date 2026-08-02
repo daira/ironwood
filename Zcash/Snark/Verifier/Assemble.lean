@@ -231,6 +231,23 @@ theorem assembleQueries_congr_instanceCommitment
   rw [columnQueries_congr_commitment]
   exact h p
 
+/-- If the VK's instance-query layout stays inside the configured instance-column range, agreement
+on that finite range suffices for identical complete query lists. -/
+theorem assembleQueries_congr_instanceCommitment_of_layout_bounded
+    {shape : Shape} {F G : Type*} [Field F] [Inhabited G]
+    (vk : VerifyingKey shape F G)
+    (instanceCommitment instanceCommitment' : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) (ch : Challenges shape.k F)
+    (hCommitment : ∀ p column, column < shape.numInstanceColumns →
+      instanceCommitment p column = instanceCommitment' p column)
+    (hLayout : ∀ column rotation, (column, rotation) ∈ vk.instanceQueryLayout →
+      column < shape.numInstanceColumns) :
+    assembleQueries vk instanceCommitment ps ch =
+      assembleQueries vk instanceCommitment' ps ch := by
+  apply assembleQueries_congr_instanceCommitment vk instanceCommitment instanceCommitment' ps ch
+  intro p column rotation hmem
+  exact hCommitment p column (hLayout column rotation hmem)
+
 /-- An assembled query carrying an instance-column identity uses that statement-derived commitment. -/
 theorem assembleQueries_instance_commitment
     {shape : Shape} {F G : Type*} [Field F] [Inhabited G]
@@ -1840,6 +1857,22 @@ theorem assemble?_congr_instanceCommitment
     assemble? vk instanceCommitment ps ch = assemble? vk instanceCommitment' ps ch := by
   unfold assemble?
   rw [assembleQueries_congr_instanceCommitment vk instanceCommitment instanceCommitment' ps ch h]
+
+/-- If the VK's instance-query layout is in range, the checked assembler depends only on the
+configured finite rectangle of instance commitments. -/
+theorem assemble?_congr_instanceCommitment_of_layout_bounded
+    {shape : Shape} {F G : Type*} [Field F] [DecidableEq F] [DecidableEq G] [Inhabited G]
+    (vk : VerifyingKey shape F G)
+    (instanceCommitment instanceCommitment' : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) (ch : Challenges shape.k F)
+    (hCommitment : ∀ p column, column < shape.numInstanceColumns →
+      instanceCommitment p column = instanceCommitment' p column)
+    (hLayout : ∀ column rotation, (column, rotation) ∈ vk.instanceQueryLayout →
+      column < shape.numInstanceColumns) :
+    assemble? vk instanceCommitment ps ch = assemble? vk instanceCommitment' ps ch := by
+  apply assemble?_congr_instanceCommitment vk instanceCommitment instanceCommitment' ps ch
+  intro p column rotation hmem
+  exact hCommitment p column (hLayout column rotation hmem)
 
 /-- The full verifier MSM, total form: build the opening queries, derive the multiopen grouping
 (`constructIntermediateSets`), then assemble (`assembleFinalMsm`) — the deployed fingerprint as a

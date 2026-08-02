@@ -93,7 +93,7 @@ theorem absorbInstanceCommitments_congr
   funext column
   rw [h p column]
 
-/-- The complete verifier-controlled Fiat--Shamir prefix: the VK transcript representation followed
+/-- The complete verifier-controlled Fiat–Shamir prefix: the VK transcript representation followed
 by every configured public-instance commitment. -/
 def initialTranscript {shape : Shape} {F G : Type*} (vkTranscriptRepr : F)
     (instanceCommitment : Fin shape.numProofs → ℕ → G) : List (TranscriptElt F G) :=
@@ -140,6 +140,19 @@ theorem instanceCommitment_mem_initialTranscript {shape : Shape} {F G : Type*}
     TranscriptElt.point (instanceCommitment p column) ∈
       initialTranscript vkTranscriptRepr instanceCommitment := by
   simp [initialTranscript, absorbInstanceCommitments]
+
+/-- Equality of canonical verifier prefixes pins the verifying-key transcript representation. -/
+theorem vkTranscriptRepr_eq_of_initialTranscript_eq
+    {shape : Shape} {F G : Type*}
+    (vkTranscriptRepr vkTranscriptRepr' : F)
+    (instanceCommitment instanceCommitment' : Fin shape.numProofs → ℕ → G)
+    (hinit : initialTranscript vkTranscriptRepr instanceCommitment =
+      initialTranscript vkTranscriptRepr' instanceCommitment') :
+    vkTranscriptRepr = vkTranscriptRepr' := by
+  have hscalar : TranscriptElt.scalar vkTranscriptRepr =
+      TranscriptElt.scalar vkTranscriptRepr' :=
+    (List.cons.inj hinit).1
+  injection hscalar
 
 /-- Equality of canonical verifier prefixes pins every configured instance commitment. -/
 theorem instanceCommitment_eq_of_initialTranscript_eq
@@ -338,7 +351,7 @@ def nonInteractiveFingerprint {shape : Shape} {F G : Type*} [Field F] [Decidable
     (ps : ProofString shape F G) : Msm shape.k F G :=
   assemble vk instanceCommitment ps (deriveChallenges fs init ps)
 
-/-- The deployed verifier fingerprint with the VK and public statement bound into Fiat--Shamir. -/
+/-- The deployed verifier fingerprint with the VK and public statement bound into Fiat–Shamir. -/
 def nonInteractiveFingerprintForStatement {shape : Shape} {F G : Type*}
     [Field F] [DecidableEq F] [DecidableEq G] [Inhabited G]
     (fs : FiatShamir F G) (vkTranscriptRepr : F) (vk : VerifyingKey shape F G)
