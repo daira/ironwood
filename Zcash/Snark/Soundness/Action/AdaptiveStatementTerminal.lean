@@ -267,7 +267,7 @@ def decodeOfBatchGoodRoots {pp : ProofParams}
     (witness : family.BatchWitness basis O)
     (hgood : family.BatchGoodRoots basis O witness)
     (hshifted : family.ShiftedValue basis O) :
-    DeployedAlgebraicDecode
+    DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -385,7 +385,7 @@ theorem shiftedValue_of_accept_not_attack {pp : ProofParams}
   let proof := family.runProof basis O
   let nu := family.runPreIpaReads basis O
   let rounds := family.runIpaReads basis O
-  have hdeployed : DeployedAccepts
+  have hdeployed : DeployedAccepts (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -420,7 +420,7 @@ structure DecodedRun {pp : ProofParams}
   hchar : deployedX4PairCount (adaptiveActionStatementVk pp basis)
     (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
     (family.runProof basis O).proof.1 (family.runRecord basis O) < scalarFieldOrder
-  decode : DeployedAlgebraicDecode
+  decode : DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
     (adaptiveActionStatementVk pp basis)
     (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -438,7 +438,7 @@ structure SemanticExclusions {pp : ProofParams}
   xGood :
     let model := CanonicalMemberConstraintRelation.acceptedModel
       (memberDecode := fun i hi => run.decode.toMemberDecode run.hchar i hi)
-      (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp
+      (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)) run.accepts
     let polynomial := CanonicalMemberConstraintRelation.acceptedPolynomial
       (memberDecode := fun i hi => run.decode.toMemberDecode run.hchar i hi) run.accepts
@@ -450,11 +450,11 @@ structure SemanticExclusions {pp : ProofParams}
   yGood :
     let model := CanonicalMemberConstraintRelation.acceptedModel
       (memberDecode := fun i hi => run.decode.toMemberDecode run.hchar i hi)
-      (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n pp
+      (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)) run.accepts
     ∀ j, (family.runRecord basis O).y ∉
       szBadSet (foldSplitWitness model.constraints actionCircuit.n j)
-  permutation : ResolverPermutationChallengeExclusions
+  permutation : ResolverPermutationChallengeExclusions pp.numProofs
     (adaptiveActionStatementVk pp basis) (family.runRecord basis O)
     (CanonicalMemberConstraintRelation.acceptedPolynomial
       (memberDecode := fun i hi => run.decode.toMemberDecode run.hchar i hi) run.accepts)

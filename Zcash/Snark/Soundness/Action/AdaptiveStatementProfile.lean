@@ -188,7 +188,7 @@ theorem AdaptiveStatementCachedDirectDlogProfile.solverCost_le {pp : ProofParams
       ∀ basis O, 2 * adaptiveStatementDirectDecodeOps family basis O ≤ T := by
   constructor
   · unfold adaptiveStatementCachedDlogRandomOracleQueries
-    rw [ProofParams.mergeDerived_k, ActionPermutationDomain.domainExponent_eq]
+    rw [CircuitShape.withProofParams_k, ActionPermutationDomain.domainExponent_eq]
     calc
       family.Q + (11 + 11) ≤ T + 22 :=
         Nat.add_le_add_right profile.queryBound 22
@@ -287,7 +287,7 @@ theorem AdaptiveStatementDirectDlogProfile.solverCost_le {pp : ProofParams}
   constructor
   · unfold adaptiveStatementDlogRandomOracleQueries
     rw [adaptiveStatementDlogTraversalSlots_eq_eight]
-    rw [ProofParams.mergeDerived_k, ActionPermutationDomain.domainExponent_eq]
+    rw [CircuitShape.withProofParams_k, ActionPermutationDomain.domainExponent_eq]
     have hT := profile.targetAtLeastTwentyTwo
     calc
       8 * family.Q + 8 * (11 + 11) ≤ 8 * T + 8 * (11 + 11) := by

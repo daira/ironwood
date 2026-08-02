@@ -25,12 +25,12 @@ local instance adaptiveStatementVestaInhabited : Inhabited VestaG := ⟨0⟩
 
 /-- The Action verifier shape used by an adaptive-statement experiment. -/
 abbrev AdaptiveActionStatementShape (pp : ProofParams) : Shape :=
-  pp.mergeDerived actionCircuit
+  actionCircuit.shape.withProofParams pp
 
 /-- The deployed Action circuit has exactly one configured instance column. -/
 theorem adaptiveActionStatement_numInstanceColumns (pp : ProofParams) :
     (AdaptiveActionStatementShape pp).numInstanceColumns = 1 := by
-  rw [pp.mergeDerived_numInstanceColumns actionCircuit]
+  rw [actionCircuit.shape.withProofParams_numInstanceColumns pp]
   native_decide
 
 /-- Every unconfigured Action instance column serializes only zero rows. -/
@@ -75,7 +75,7 @@ theorem adaptiveCommitInstance_of_rows_zero {G : Type*} [AddCommGroup G] [Module
 abbrev adaptiveActionStatementVk (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) :
     VerifyingKey (AdaptiveActionStatementShape pp) Fp VestaG :=
-  actionCircuit.toVerifierKey pp
+  actionCircuit.toVerifierKey
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)
 
 /-- Public inputs determine the complete instance-commitment family used by the verifier. -/
@@ -83,7 +83,7 @@ abbrev adaptiveActionStatementInstanceCommitment (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (inputs : Fin pp.numProofs → PublicInputs Fp) :
     Fin (AdaptiveActionStatementShape pp).numProofs → ℕ → VestaG :=
-  actionCircuit.instanceCommitmentForShape pp
+  actionCircuit.instanceCommitment
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) inputs
 
 /-- Normalize the total verifier function outside the configured Action instance-column range.
@@ -117,10 +117,10 @@ theorem adaptiveActionStatementInstanceCommitment_eq_bounded (pp : ProofParams)
       apply hcolumn
       rw [adaptiveActionStatement_numInstanceColumns]
       omega
-    change (actionCircuit.instanceCommitmentKey pp
+    change (actionCircuit.instanceCommitmentKey
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)).commitInstance
           (actionCircuit.publicInputRows
-            (inputs (Fin.cast (pp.mergeDerived_numProofs actionCircuit) p)) ⟨column⟩) 1 =
+            (inputs (Fin.cast (actionCircuit.shape.withProofParams_numProofs pp) p)) ⟨column⟩) 1 =
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis).w
     rw [adaptiveCommitInstance_of_rows_zero _
       (adaptiveActionPublicInputRows_ne_zero _ hne)]
@@ -155,7 +155,7 @@ def canonicalAdaptiveStatementInstanceRepresentation (pp : ProofParams)
     AlgebraicPoint (F := Fp) basis :=
   let urs := ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis
   let proofIndex : Fin pp.numProofs :=
-    Fin.cast (pp.mergeDerived_numProofs actionCircuit) p
+    Fin.cast (actionCircuit.shape.withProofParams_numProofs pp) p
   let instanceColumn : Column .instance := ⟨column⟩
   let coeffs := instanceCoefficients (2 ^ urs.k) actionCircuit.omega
     (actionCircuit.publicInputRows (inputs proofIndex) instanceColumn)
@@ -177,7 +177,7 @@ def canonicalAdaptiveStatementInstanceRepresentation (pp : ProofParams)
               rfl
             _ = adaptiveActionStatementInstanceCommitment pp basis inputs p column := by
               change commit urs coeffs + urs.w =
-                actionCircuit.instanceCommitment pp urs inputs proofIndex instanceColumn.index
+                actionCircuit.instanceCommitment urs inputs proofIndex instanceColumn.index
               exact (actionCircuit.instanceCommitment_column_eq_commit
                 pp urs inputs proofIndex instanceColumn).symm } }
 
@@ -535,7 +535,7 @@ def accepts {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins) : Prop :=
   let output := family.runOutput basis O
-  DeployedAccepts
+  DeployedAccepts (AdaptiveActionStatementShape pp)
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
     (adaptiveActionStatementVk pp basis)
     (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
