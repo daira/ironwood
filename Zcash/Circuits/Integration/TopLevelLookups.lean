@@ -737,7 +737,7 @@ The exact bundle-wide `θ` collision surface for a top-level circuit. A single
 transcript challenge is shared by every proof and every enabled lookup activation,
 so the event must be unioned across both indices.
 -/
-noncomputable def thetaBadSet
+def thetaBadSet
     (top : TopLevelCircuit Fp Config PublicInput)
     (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → CPoly) : Finset Fp :=

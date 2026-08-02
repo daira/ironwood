@@ -14,7 +14,7 @@ Final statement and instance-commitment composition remain circuit-generic.
 
 namespace Zcash.Snark
 
-open Halo2 Polynomial Keygen
+open Halo2 Keygen
 open Zcash.Circuits
 open Zcash.Circuits.Action
 

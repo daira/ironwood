@@ -17,7 +17,7 @@ open Zcash.Arithmetic (scalarFieldOrder)
 local instance topLevelStraightLineEventInhabitedVesta : Inhabited VestaG := ⟨0⟩
 
 /-- The canonical constraint model accepted at a straight-line run's own decode. -/
-noncomputable abbrev topLevelRunModel
+abbrev topLevelRunModel
     {Config : Type} {PublicInput : TypeMap}
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
@@ -58,7 +58,7 @@ noncomputable abbrev topLevelRunModel
       (hvk basis) (hI basis) h)
 
 /-- The canonical accepted member polynomial at a straight-line run's own decode. -/
-noncomputable abbrev topLevelRunPolynomial
+abbrev topLevelRunPolynomial
     {Config : Type} {PublicInput : TypeMap}
     [ProvableType PublicInput]
     (top : TopLevelCircuit Fp Config PublicInput)
@@ -120,7 +120,7 @@ variable
       (straightLineRunRecord family basis O) < scalarFieldOrder)
 
 /-- Runs whose `x` or `y` challenge lands in a top-level terminal exclusion set. -/
-noncomputable def topLevelXYFailureEvent :
+def topLevelXYFailureEvent :
     Set ((AugmentedIndex (2 ^ top.shape.k) → VestaG) ×
       (BTranscript Fp VestaG
         (preIpaLen (top.shape.withProofParams pp) family.init.length 10
@@ -147,7 +147,7 @@ noncomputable def topLevelXYFailureEvent :
             (ursOfAugmentedBasis top.shape.k q.1)).n j))}
 
 /-- Runs whose `β` challenge lands in a permutation or lookup exclusion set. -/
-noncomputable def topLevelBetaFailureEvent :
+def topLevelBetaFailureEvent :
     Set ((AugmentedIndex (2 ^ top.shape.k) → VestaG) ×
       (BTranscript Fp VestaG
         (preIpaLen (top.shape.withProofParams pp) family.init.length 10
@@ -174,7 +174,7 @@ noncomputable def topLevelBetaFailureEvent :
               (ursOfAugmentedBasis top.shape.k q.1)).blindingFactors - 2))}
 
 /-- Runs whose `γ` challenge lands in a permutation or lookup exclusion set. -/
-noncomputable def topLevelGammaFailureEvent :
+def topLevelGammaFailureEvent :
     Set ((AugmentedIndex (2 ^ top.shape.k) → VestaG) ×
       (BTranscript Fp VestaG
         (preIpaLen (top.shape.withProofParams pp) family.init.length 10
@@ -202,7 +202,7 @@ noncomputable def topLevelGammaFailureEvent :
               (ursOfAugmentedBasis top.shape.k q.1)).blindingFactors - 2))}
 
 /-- Runs whose `θ` challenge lands in a top-level lookup exclusion set. -/
-noncomputable def topLevelThetaFailureEvent :
+def topLevelThetaFailureEvent :
     Set ((AugmentedIndex (2 ^ top.shape.k) → VestaG) ×
       (BTranscript Fp VestaG
         (preIpaLen (top.shape.withProofParams pp) family.init.length 10

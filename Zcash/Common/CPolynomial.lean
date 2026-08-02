@@ -1,5 +1,6 @@
 import Zcash.Arithmetic
 import Mathlib.RingTheory.MvPolynomial.Symmetric.Defs
+import Mathlib.RingTheory.Polynomial.Vieta
 import CompPoly.Univariate.ToPoly
 import CompPoly.Univariate.Linear
 import CompPoly.Univariate.Roots.Enumeration
@@ -107,28 +108,104 @@ theorem toPoly_multiset_prod [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial 
     (m : Multiset (CPolynomial R)) : m.prod.toPoly = (m.map toPoly).prod :=
   map_multiset_prod (ringEquiv : CPolynomial R ≃+* Polynomial R) m
 
-/-- `toPoly` of a multiset sum. -/
-theorem toPoly_multiset_sum [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
-    (m : Multiset (CPolynomial R)) : m.sum.toPoly = (m.map toPoly).sum :=
-  map_multiset_sum (ringEquiv : CPolynomial R ≃+* Polynomial R) m
-
-/-- `toPoly` of an elementary symmetric polynomial in a multiset of polynomials.  `Multiset.esymm`
-is a sum of products, so it commutes with any ring hom. -/
-theorem toPoly_multiset_esymm [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
-    (m : Multiset (CPolynomial R)) (n : ℕ) :
-    (m.esymm n).toPoly = (m.map toPoly).esymm n := by
-  simp only [Multiset.esymm, Multiset.powersetCard_map, Multiset.map_map, Function.comp_def]
-  refine (map_multiset_sum (ringEquiv : CPolynomial R ≃+* Polynomial R) _).trans ?_
-  rw [Multiset.map_map]
-  refine congrArg Multiset.sum (Multiset.map_congr rfl fun t _ => ?_)
-  exact map_multiset_prod (ringEquiv : CPolynomial R ≃+* Polynomial R) t
-
 /-- `toPoly` is injective.  CompPoly states this as `toPolyLinearEquiv.injective`, whose hypothesis
 is phrased through the bundled coercion; this restates it directly on `toPoly` so callers do not
 need a `change` at every use. -/
 theorem toPoly_injective [Semiring R] [BEq R] [LawfulBEq R] {p q : CPolynomial R}
     (h : p.toPoly = q.toPoly) : p = q :=
   toPolyLinearEquiv.injective h
+
+/-- Coefficient extensionality, the computable counterpart of `Polynomial.ext`. -/
+theorem ext_coeff [Semiring R] [BEq R] [LawfulBEq R] {p q : CPolynomial R}
+    (h : ∀ n, p.coeff n = q.coeff n) : p = q :=
+  toPoly_injective (Polynomial.ext fun n => by rw [← coeff_toPoly, ← coeff_toPoly, h])
+
+/-! ## Functoriality in the coefficient ring
+
+CompPoly has no `map`: nothing pushes a ring hom through the coefficients, which is why every
+change of coefficient ring so far had to detour through `Polynomial.map`.  `map` below is that
+operation, computable — apply `f` entrywise and re-canonicalise, since a non-injective `f` can
+create trailing zeros. -/
+
+section Map
+
+variable {S : Type*}
+
+/-- Apply a ring hom to every coefficient. -/
+def map [Semiring R] [BEq R] [LawfulBEq R] [Semiring S] [BEq S] [LawfulBEq S]
+    (f : R →+* S) (p : CPolynomial R) : CPolynomial S :=
+  ofArray (p.val.map f)
+
+@[simp] theorem coeff_map [Semiring R] [BEq R] [LawfulBEq R] [Semiring S] [BEq S] [LawfulBEq S]
+    (f : R →+* S) (p : CPolynomial R) (n : ℕ) : (map f p).coeff n = f (p.coeff n) := by
+  rw [map, coeff_ofArray]
+  show (p.val.map f).getD n 0 = f (p.val.getD n 0)
+  by_cases h : n < p.val.size
+  · rw [Array.getD, Array.getD, dif_pos (by simpa using h), dif_pos h]
+    simp
+  · rw [Array.getD, Array.getD, dif_neg (by simpa using h), dif_neg h, map_zero]
+
+/-- `map` is Mathlib's `Polynomial.map` read across `toPoly`. -/
+theorem toPoly_map [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommSemiring S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S) (p : CPolynomial R) :
+    (map f p).toPoly = p.toPoly.map f := by
+  refine Polynomial.ext fun n => ?_
+  rw [← coeff_toPoly, Polynomial.coeff_map, ← coeff_toPoly, coeff_map]
+
+@[simp] theorem map_zero [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommSemiring S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S) :
+    map f (0 : CPolynomial R) = 0 :=
+  ext_coeff fun n => by rw [coeff_map, coeff_zero, coeff_zero, _root_.map_zero]
+
+@[simp] theorem map_C [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommSemiring S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S) (r : R) :
+    map f (C r) = C (f r) :=
+  ext_coeff fun n => by
+    rw [coeff_map, coeff_C, coeff_C]
+    split <;> simp
+
+@[simp] theorem map_X [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommSemiring S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S) :
+    map f (X : CPolynomial R) = X :=
+  toPoly_injective (by rw [toPoly_map, X_toPoly, Polynomial.map_X, X_toPoly])
+
+theorem map_add [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommSemiring S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S) (p q : CPolynomial R) :
+    map f (p + q) = map f p + map f q :=
+  ext_coeff fun n => by
+    rw [coeff_map, coeff_add, coeff_add, coeff_map, coeff_map, _root_.map_add]
+
+theorem map_mul [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommSemiring S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S) (p q : CPolynomial R) :
+    map f (p * q) = map f p * map f q :=
+  toPoly_injective (by rw [toPoly_map, toPoly_mul, Polynomial.map_mul, ← toPoly_map, ← toPoly_map,
+    ← toPoly_mul])
+
+/-- `map` bundled as a ring hom. -/
+def mapRingHom [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommSemiring S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S) :
+    CPolynomial R →+* CPolynomial S where
+  toFun := map f
+  map_one' := toPoly_injective (by rw [toPoly_map, toPoly_one, Polynomial.map_one, toPoly_one])
+  map_mul' := map_mul f
+  map_zero' := map_zero f
+  map_add' := map_add f
+
+@[simp] theorem coe_mapRingHom [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommSemiring S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S) :
+    (mapRingHom f : CPolynomial R → CPolynomial S) = map f := rfl
+
+theorem map_multiset_prod [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommSemiring S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S)
+    (m : Multiset (CPolynomial R)) : map f m.prod = (m.map (map f)).prod := by
+  simpa using _root_.map_multiset_prod (mapRingHom f) m
+
+theorem map_sub [CommRing R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommRing S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S) (p q : CPolynomial R) :
+    map f (p - q) = map f p - map f q := by
+  simpa using _root_.map_sub (mapRingHom f) p q
+
+end Map
 
 /-! ## Coefficients -/
 
@@ -149,6 +226,119 @@ theorem coeff_X_pow [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (k n :
     ((X : CPolynomial R) ^ k).coeff n = if n = k then 1 else 0 := by
   rw [coeff_toPoly, toPoly_pow, X_toPoly, Polynomial.coeff_X_pow]
 
+/-- **Identity from samples.** A polynomial of degree below the number of pairwise-distinct sample
+points at which it vanishes is zero.  Mathlib's `eq_zero_of_natDegree_lt_card_of_eval_eq_zero` on
+the computable representation. -/
+theorem eq_zero_of_natDegree_lt_card_of_eval_eq_zero [CommRing R] [IsDomain R] [BEq R]
+    [LawfulBEq R] [Nontrivial R] (p : CPolynomial R) {ι : Type*} [Fintype ι] {f : ι → R}
+    (hf : Function.Injective f) (heval : ∀ i, p.eval (f i) = 0)
+    (hcard : p.natDegree < Fintype.card ι) : p = 0 := by
+  refine toPoly_injective ?_
+  rw [toPoly_zero]
+  refine Polynomial.eq_zero_of_natDegree_lt_card_of_eval_eq_zero _ hf (fun i => ?_) ?_
+  · rw [← eval_toPoly]; exact heval i
+  · rwa [← natDegree_toPoly]
+
+/-! ## Degree of multiset sums, products and elementary symmetric functions -/
+
+section MultisetDegree
+
+variable [CommRing R] [BEq R] [LawfulBEq R] [Nontrivial R]
+
+theorem natDegree_multiset_prod_le (m : Multiset (CPolynomial R)) :
+    m.prod.natDegree ≤ (m.map natDegree).sum := by
+  rw [natDegree_toPoly, toPoly_multiset_prod]
+  refine le_trans (Polynomial.natDegree_multiset_prod_le _) (le_of_eq ?_)
+  rw [Multiset.map_map]
+  exact congrArg Multiset.sum (Multiset.map_congr rfl fun p _ => (natDegree_toPoly p).symm)
+
+theorem natDegree_multiset_prod_le_of_forall_le {m : Multiset (CPolynomial R)} {d : ℕ}
+    (h : ∀ p ∈ m, p.natDegree ≤ d) : m.prod.natDegree ≤ Multiset.card m * d := by
+  refine le_trans (natDegree_multiset_prod_le m) ?_
+  calc (m.map natDegree).sum
+      ≤ (m.map fun _ => d).sum :=
+        Multiset.sum_map_le_sum_map _ _ (fun p hp => h p hp)
+    _ = Multiset.card m * d := by simp [Multiset.sum_replicate, Multiset.map_const']
+
+omit [Nontrivial R] in
+theorem natDegree_multiset_sum_le_of_forall_le [DecidableEq R] {m : Multiset (CPolynomial R)}
+    {d : ℕ} (h : ∀ p ∈ m, p.natDegree ≤ d) : m.sum.natDegree ≤ d := by
+  induction m using Multiset.induction with
+  | empty =>
+      rw [Multiset.sum_zero, natDegree_toPoly, toPoly_zero, Polynomial.natDegree_zero]
+      exact Nat.zero_le d
+  | cons p m ih =>
+      rw [Multiset.sum_cons]
+      refine le_trans (natDegree_add_le _ _) (max_le (h p (Multiset.mem_cons_self _ _)) ?_)
+      exact ih fun q hq => h q (Multiset.mem_cons_of_mem hq)
+
+/-- The `k`-th elementary symmetric function of polynomials of degree at most `d` has degree at
+most `k * d`: it is a sum of products of `k` of them. -/
+theorem natDegree_esymm_le {m : Multiset (CPolynomial R)} {d : ℕ}
+    (h : ∀ p ∈ m, p.natDegree ≤ d) (k : ℕ) : (m.esymm k).natDegree ≤ k * d := by
+  classical
+  refine natDegree_multiset_sum_le_of_forall_le fun q hq => ?_
+  obtain ⟨t, ht, rfl⟩ := Multiset.mem_map.mp hq
+  have hcard : Multiset.card t = k := (Multiset.mem_powersetCard.mp ht).2
+  have hle : t.prod.natDegree ≤ Multiset.card t * d :=
+    natDegree_multiset_prod_le_of_forall_le fun p hp =>
+      h p (Multiset.mem_of_le (Multiset.mem_powersetCard.mp ht).1 hp)
+  rwa [hcard] at hle
+
+end MultisetDegree
+
+/-! ## Products of monic linear factors
+
+Vieta and the degree of `∏ (X + uᵢ)`, on the computable representation.  Both are Mathlib's
+statements read across `toPoly`; CompPoly has neither. -/
+
+section MonicLinearProduct
+
+variable [CommRing R] [BEq R] [LawfulBEq R] [Nontrivial R]
+
+private theorem toPoly_prod_X_add_C (m : Multiset R) :
+    ((m.map (fun u => X + C u)).prod).toPoly
+      = (m.map (fun u => Polynomial.X + Polynomial.C u)).prod := by
+  rw [toPoly_multiset_prod, Multiset.map_map]
+  exact congrArg Multiset.prod (Multiset.map_congr rfl fun u _ => by simp)
+
+/-- A product of `card m` monic linear factors has degree `card m`. -/
+theorem natDegree_prod_X_add_C (m : Multiset R) :
+    ((m.map (fun u => X + C u)).prod).natDegree = Multiset.card m := by
+  rw [natDegree_toPoly, toPoly_prod_X_add_C]
+  rw [Polynomial.natDegree_multiset_prod_of_monic (h := fun f hf => by
+    obtain ⟨u, _, rfl⟩ := Multiset.mem_map.mp hf
+    exact Polynomial.monic_X_add_C u)]
+  simp [Multiset.map_map]
+
+/-- Such a product has no coefficients above its degree. -/
+theorem coeff_prod_X_add_C_eq_zero (m : Multiset R) {j : ℕ} (hj : Multiset.card m < j) :
+    ((m.map (fun u => X + C u)).prod).coeff j = 0 :=
+  coeff_eq_zero_of_natDegree_lt (by rw [natDegree_prod_X_add_C]; exact hj)
+
+/-- **Vieta.** Below the degree, the `j`-th coefficient is an elementary symmetric polynomial in
+the roots' negatives — here the shifts `uᵢ` themselves, since the factors are `X + uᵢ`. -/
+theorem coeff_prod_X_add_C (m : Multiset R) {j : ℕ} (hj : j ≤ Multiset.card m) :
+    ((m.map (fun u => X + C u)).prod).coeff j = m.esymm (Multiset.card m - j) := by
+  rw [coeff_toPoly, toPoly_prod_X_add_C]
+  exact Multiset.prod_X_add_C_coeff m hj
+
+/-- The leading coefficient of a product of monic linear factors is `1`. -/
+theorem leadingCoeff_prod_X_add_C (m : Multiset R) :
+    ((m.map (fun u => X + C u)).prod).leadingCoeff = 1 := by
+  rw [leadingCoeff_eq_coeff_natDegree, natDegree_prod_X_add_C]
+  rw [coeff_prod_X_add_C _ (le_refl _), Nat.sub_self]
+  simp [Multiset.esymm]
+
+/-- Such a product is nonzero: it is monic. -/
+theorem prod_X_add_C_ne_zero (m : Multiset R) :
+    (m.map (fun u => X + C u)).prod ≠ 0 := fun h => by
+  have h1 := leadingCoeff_prod_X_add_C m
+  rw [h, leadingCoeff_eq_coeff_natDegree, coeff_zero] at h1
+  exact zero_ne_one h1
+
+end MonicLinearProduct
+
 theorem natDegree_sum_le_of_forall_le {ι : Type*} [DecidableEq ι] [CommSemiring R] [BEq R]
     [LawfulBEq R] [Nontrivial R] (s : Finset ι) (f : ι → CPolynomial R) {n : ℕ}
     (h : ∀ i ∈ s, (f i).natDegree ≤ n) : (∑ i ∈ s, f i).natDegree ≤ n := by
@@ -157,6 +347,17 @@ theorem natDegree_sum_le_of_forall_le {ι : Type*} [DecidableEq ι] [CommSemirin
   rw [← natDegree_toPoly]
   exact h i hi
 
+/-- A `WithBot ℕ` degree bound on the Mathlib image gives the `natDegree` bound, the zero
+polynomial included.  Interpolation bounds arrive in this shape from
+`Lagrange.degree_interpolate_lt` and are wanted in the other. -/
+theorem natDegree_lt_of_degree_toPoly_lt [Semiring R] [BEq R] [LawfulBEq R] {p : CPolynomial R}
+    {n : ℕ} (hn : 0 < n) (h : p.toPoly.degree < (n : WithBot ℕ)) : p.natDegree < n := by
+  rw [natDegree_toPoly]
+  by_cases hzero : p.toPoly = 0
+  · rw [hzero, Polynomial.natDegree_zero]
+    exact hn
+  · exact (Polynomial.natDegree_lt_iff_degree_lt hzero).mpr h
+
 theorem natDegree_le_iff_coeff_eq_zero [Semiring R] [BEq R] [LawfulBEq R]
     {p : CPolynomial R} {n : ℕ} :
     p.natDegree ≤ n ↔ ∀ m : ℕ, n < m → p.coeff m = 0 := by
@@ -164,6 +365,13 @@ theorem natDegree_le_iff_coeff_eq_zero [Semiring R] [BEq R] [LawfulBEq R]
   exact forall_congr' fun m => forall_congr' fun _ => by rw [coeff_toPoly]
 
 /-! ## Degree arithmetic -/
+
+/-- Mapping the coefficients cannot raise the degree. -/
+theorem natDegree_map_le {S : Type*} [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    [CommSemiring S] [BEq S] [LawfulBEq S] [Nontrivial S] (f : R →+* S) (p : CPolynomial R) :
+    (map f p).natDegree ≤ p.natDegree :=
+  natDegree_le_iff_coeff_eq_zero.mpr fun n hn => by
+    rw [coeff_map, coeff_eq_zero_of_natDegree_lt hn, _root_.map_zero]
 
 theorem natDegree_sub_le [Ring R] [BEq R] [LawfulBEq R] (p q : CPolynomial R) :
     (p - q).natDegree ≤ max p.natDegree q.natDegree := by
@@ -178,11 +386,6 @@ theorem natDegree_mul_le [Semiring R] [BEq R] [LawfulBEq R] {p q : CPolynomial R
 theorem natDegree_X_pow_le [Semiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (n : ℕ) :
     ((X : CPolynomial R) ^ n).natDegree ≤ n := by
   rw [natDegree_toPoly, toPoly_pow, X_toPoly]
-  simp
-
-theorem natDegree_one_le [Semiring R] [BEq R] [LawfulBEq R] [Nontrivial R] :
-    (1 : CPolynomial R).natDegree ≤ 0 := by
-  rw [natDegree_toPoly, toPoly_one]
   simp
 
 @[simp]
@@ -295,10 +498,6 @@ theorem C_pow [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (a : R) (n :
 
 attribute [simp] natDegree_C
 
-@[simp]
-theorem coe_CRingHom [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] :
-    ⇑(CRingHom : R →+* CPolynomial R) = C := rfl
-
 /-- Evaluation at `x` as a ring hom. -/
 def evalRingHom [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (x : R) :
     CPolynomial R →+* R where
@@ -311,6 +510,10 @@ def evalRingHom [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (x : R) :
 @[simp]
 theorem coe_evalRingHom [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R] (x : R) :
     ⇑(evalRingHom x) = eval x := rfl
+
+theorem eval_multiset_prod [CommSemiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
+    (m : Multiset (CPolynomial R)) (x : R) : (m.prod).eval x = (m.map (eval x)).prod := by
+  simpa using _root_.map_multiset_prod (evalRingHom x) m
 
 /-! ## Composition
 
@@ -368,7 +571,86 @@ theorem natDegree_comp_C_mul_X [Field R] [DecidableEq R] [BEq R] [LawfulBEq R]
       Polynomial.natDegree_X]
   rw [natDegree_comp, hq, Nat.mul_one]
 
-/-! ## Roots
+/-- `CPolynomial R` is a domain whenever `R` is: it is ring-isomorphic to `Polynomial R`, which
+Mathlib knows is one.  Without this the roots theory below cannot be instantiated at a coefficient
+ring that is itself a polynomial ring, which is exactly what the bivariate arguments need. -/
+instance instIsDomain [CommRing R] [IsDomain R] [BEq R] [LawfulBEq R] :
+    IsDomain (CPolynomial R) :=
+  (ringEquiv (R := R)).toMulEquiv.isDomain (Polynomial R)
+
+/-- Over a domain the leading coefficient is multiplicative. -/
+theorem leadingCoeff_mul [CommRing R] [IsDomain R] [BEq R] [LawfulBEq R] (p q : CPolynomial R) :
+    (p * q).leadingCoeff = p.leadingCoeff * q.leadingCoeff := by
+  rw [leadingCoeff_toPoly, leadingCoeff_toPoly, leadingCoeff_toPoly, toPoly_mul,
+    Polynomial.leadingCoeff_mul]
+
+/-- The leading coefficient of a constant is itself. -/
+theorem leadingCoeff_C [CommRing R] [BEq R] [LawfulBEq R] [Nontrivial R] (r : R) :
+    (C r : CPolynomial R).leadingCoeff = r := by
+  rw [leadingCoeff_toPoly, C_toPoly, Polynomial.leadingCoeff_C]
+
+theorem C_injective [CommRing R] [BEq R] [LawfulBEq R] [Nontrivial R] :
+    Function.Injective (C : R → CPolynomial R) := fun a b hab => by
+  have := congrArg toPoly hab
+  rw [C_toPoly, C_toPoly] at this
+  exact Polynomial.C_injective this
+
+theorem C_eq_zero_iff [CommRing R] [BEq R] [LawfulBEq R] [Nontrivial R] {r : R} :
+    (C r : CPolynomial R) = 0 ↔ r = 0 := by
+  rw [← toPoly_eq_zero_iff, C_toPoly, Polynomial.C_eq_zero]
+
+/-! ## Roots with multiplicity
+
+Mathlib's `Polynomial.roots` — the multiset of roots counted with multiplicity, obtained by
+repeated factorisation over a domain.  It is `noncomputable` there and stays so here; multiplicity
+over an abstract domain is not something one runs.  These are thin wrappers, so the factorisation
+theory applies to the computable representation without a detour through `toPoly` at every use. -/
+
+section Roots
+
+variable [CommRing R] [IsDomain R] [BEq R] [LawfulBEq R]
+
+/-- The roots of a computable polynomial, with multiplicity. -/
+noncomputable def roots (p : CPolynomial R) : Multiset R := p.toPoly.roots
+
+omit [BEq R] [LawfulBEq R] in
+@[simp] theorem roots_zero : roots (0 : CPolynomial R) = 0 := by
+  rw [roots, toPoly_zero, Polynomial.roots_zero]
+
+theorem mem_roots {p : CPolynomial R} (hp : p ≠ 0) {x : R} :
+    x ∈ p.roots ↔ p.eval x = 0 := by
+  rw [roots, Polynomial.mem_roots (by rwa [Ne, toPoly_eq_zero_iff]), Polynomial.IsRoot,
+    ← eval_toPoly]
+
+/-- At most `natDegree` roots, with multiplicity. -/
+theorem card_roots_le (p : CPolynomial R) : Multiset.card p.roots ≤ p.natDegree := by
+  rw [roots, natDegree_toPoly]
+  exact Polynomial.card_roots' _
+
+/-- The roots of `∏ (X - aᵢ)` are the `aᵢ`. -/
+theorem roots_multiset_prod_X_sub_C (m : Multiset R) :
+    ((m.map (fun a => X - C a)).prod).roots = m := by
+  rw [roots, toPoly_multiset_prod, Multiset.map_map]
+  have hfac : m.map ((fun p => toPoly p) ∘ fun a => X - C a)
+      = m.map (fun a => Polynomial.X - Polynomial.C a) :=
+    Multiset.map_congr rfl fun a _ => by simp
+  rw [hfac, Polynomial.roots_multiset_prod_X_sub_C]
+
+/-- The roots of `∏ (X + uᵢ)` are the negated shifts. -/
+theorem roots_prod_X_add_C (m : Multiset R) :
+    ((m.map (fun u => X + C u)).prod).roots = m.map (fun u => -u) := by
+  have hrw : m.map (fun u => X + C u)
+      = (m.map (fun u => -u)).map (fun a => X - C a) := by
+    rw [Multiset.map_map]
+    refine Multiset.map_congr rfl fun u _ => ?_
+    rw [Function.comp_apply]
+    refine toPoly_injective ?_
+    rw [toPoly_sub, toPoly_add, C_toPoly, C_toPoly, Polynomial.C_neg, sub_neg_eq_add]
+  rw [hrw, roots_multiset_prod_X_sub_C]
+
+end Roots
+
+/-! ## Distinct roots over an enumerated field
 
 `Polynomial.roots` is a `Multiset` obtained by repeated factorisation and is `noncomputable`.  Over
 an enumerable field the set of *distinct* roots is a filter over the enumeration, so it can be a
@@ -432,6 +714,12 @@ open Zcash.Arithmetic (scalarFieldOrder)
 
 /-- The computable polynomial ring over the scalar field. -/
 abbrev CPoly := CPolynomial Fp
+
+/-- Two indeterminates over the scalar field, `Fp[β][γ]`: the outer variable is `γ`, the
+coefficients are polynomials in `β`.  An `abbrev`, so the univariate API applies to the outer
+layer unchanged — CompPoly's own `CBivariate` is a `def` whose `coeff`, `toPoly`, `X` and `C`
+shadow the univariate ones. -/
+abbrev CBiPoly := CPolynomial CPoly
 
 /-- `Fp` enumerated by its residues. -/
 def fpEnumeration : CPolynomial.Roots.FiniteField.FieldEnumeration Fp where

@@ -45,7 +45,7 @@ theorem adaptiveEarlierPrefix_ne
 /-- A semantic bad set decoded from `t` and the answers at all earlier deployed prefixes.  Queries
 of any other transcript length receive the empty set, which makes the definition safe for every
 unrelated query an arbitrary adversary may issue. -/
-noncomputable def adaptivePrefixBad (init : List (TranscriptElt Fp VestaG)) (n : Fin 11)
+def adaptivePrefixBad (init : List (TranscriptElt Fp VestaG)) (n : Fin 11)
     (badF : BTranscript Fp VestaG
       (preIpaLen shape init.length 10 + 3 * shape.k) →
       (Fin (n : ℕ) → Fp) → Set Fp)
@@ -98,7 +98,7 @@ theorem adaptivePrefixBad_measure_le (init : List (TranscriptElt Fp VestaG)) (n 
 
 /-- A prefix bad set computed from the AGM annotation fixed before the selected oracle answer.
 Queries at unrelated transcript lengths receive the empty set. -/
-noncomputable def adaptiveLabeledPrefixBad
+def adaptiveLabeledPrefixBad
     (init : List (TranscriptElt Fp VestaG))
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (n : Fin 11)
     (badF : (t : BTranscript Fp VestaG

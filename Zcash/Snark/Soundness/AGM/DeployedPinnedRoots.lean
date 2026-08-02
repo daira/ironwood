@@ -20,8 +20,7 @@ sufficient condition rather than the interface.
 namespace Zcash.Snark
 
 open Zcash.Arithmetic (card_Fp scalarFieldOrder)
-
-open Classical Polynomial
+open Classical
 open scoped ENNReal
 
 local instance vestaInhabitedDeployedPinnedRoots : Inhabited VestaG := ⟨0⟩
@@ -147,7 +146,7 @@ def deployedRootChallengeIndex (i : Fin 6) : Fin 11 :=
   else if i.val = 3 then 7 else if i.val = 4 then 6 else 5
 
 /-- The oracle point of one deployed root event. -/
-noncomputable def deployedRootPoint (family : ComputedAlgebraicFSFamily shape)
+def deployedRootPoint (family : ComputedAlgebraicFSFamily shape)
     {basis : AugmentedIndex (2 ^ shape.k) -> VestaG}
     (pnu : WrappedAlgebraicOutput family basis) (i : Fin 6) :=
   algebraicFullPrefixesPre family.init pnu.1 (deployedRootChallengeIndex i)
@@ -179,7 +178,7 @@ noncomputable def deployedRootEventBudget (shape : Shape)
 
 /-- The exact bad-root set for one event.  A relation outcome needs no bad-root charge because it
 is already a successful algebraic extraction. -/
-noncomputable def deployedRootBad (family : ComputedAlgebraicFSFamily shape)
+def deployedRootBad (family : ComputedAlgebraicFSFamily shape)
     (outcome : DeployedRootOutcomeProvider family)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)
     (_pnu : WrappedAlgebraicOutput family basis)

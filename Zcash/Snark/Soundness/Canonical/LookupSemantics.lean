@@ -59,12 +59,12 @@ theorem ResolverLookupDomain.ofCanonicalSelectors
 
 /-- The product-difference polynomial whose roots are excluded at the selected lookup's `γ`
 squeeze.  It is fixed after `β`. -/
-noncomputable def resolverLookupProductDifference
+def resolverLookupProductDifference
     {shape : CircuitShape} {k : ℕ} {G : Type*}
     (vk : VerifyingKey shape Fp G) (ch : Challenges k Fp)
     (poly : CommitmentId → CPoly)
     (p : ℕ) (l : Fin shape.numLookups) (u : ℕ) :
-    Polynomial (Polynomial Fp) :=
+    CBiPoly :=
   lookupProdDiff
     (Finset.univ.val.map
       (lookupColumnRows vk.omega (poly (.lookupPermInput p l)) (u + 1)))
@@ -102,10 +102,11 @@ theorem toPoly_resolverLookupProductDifferenceGamma
     (vk : VerifyingKey shape Fp G) (ch : Challenges k Fp)
     (poly : CommitmentId → CPoly)
     (p : ℕ) (l : Fin shape.numLookups) (u : ℕ) :
-    (resolverLookupProductDifferenceGamma vk ch poly p l u).toPoly =
-      (resolverLookupProductDifference vk ch poly p l u).map (Polynomial.evalRingHom ch.beta) := by
+    resolverLookupProductDifferenceGamma vk ch poly p l u =
+      CompPoly.CPolynomial.map (evalRingHom ch.beta)
+        (resolverLookupProductDifference vk ch poly p l u) := by
   rw [resolverLookupProductDifferenceGamma, resolverLookupProductDifference,
-    toPoly_lookupProdDiffGamma]
+    lookupProdDiffGamma_eq_map]
 
 /-- One `γ` coefficient of the selected lookup difference, computed directly over `Fp`. -/
 def resolverLookupProductDifferenceCoeff
@@ -131,8 +132,8 @@ theorem toPoly_resolverLookupProductDifferenceCoeff
     (vk : VerifyingKey shape Fp G) (ch : Challenges k Fp)
     (poly : CommitmentId → CPoly)
     (p : ℕ) (l : Fin shape.numLookups) (u j : ℕ) :
-    (resolverLookupProductDifferenceCoeff vk ch poly p l u j).toPoly =
-      (resolverLookupProductDifference vk ch poly p l u).coeff j := by
+    resolverLookupProductDifferenceCoeff vk ch poly p l u j =
+      coeff (resolverLookupProductDifference vk ch poly p l u) j := by
   rw [resolverLookupProductDifferenceCoeff, resolverLookupProductDifference]
   apply toPoly_lookupProdDiffCoeff
 

@@ -11,7 +11,7 @@ value claimed by the deployed proof string at every routed node.
 
 namespace Zcash.Snark
 
-open Classical Polynomial
+open Classical
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 

@@ -1,4 +1,5 @@
 import Mathlib.Tactic
+import CompPoly.Bivariate.ToPoly
 import Zcash.Snark.Soundness.GrandProduct
 import Zcash.Snark.Soundness.RunningProduct
 import Zcash.Snark.Soundness.Permutation
@@ -26,85 +27,53 @@ This module is that bridge, and it costs two Schwartz–Zippel steps, one per ch
 Both bad sets are root sets of nonzero polynomials of degree at most the multiset sizes, so each is
 counted by `szBadSet_card_le` exactly like the vanishing check's.
 
-The nested `Polynomial (Polynomial Fp)` differences (`pairProdDiff`, `lookupProdDiff`) carry `β` and
-`γ` as separate indeterminates and exist only to be reasoned about. What the bad sets range over is
-their coefficient families, which are computable: a `γ` coefficient is an elementary symmetric
-polynomial in the `β`-linear encodings, guarded to zero above the multiset size where the monic
-product has no coefficients left.
+The differences `pairProdDiff` and `lookupProdDiff` are bivariate, carrying `β` and `γ` as separate
+indeterminates: the outer variable is `γ`, the coefficients are polynomials in `β`. A `γ`
+coefficient is an elementary symmetric function of the `β`-linear encodings (Vieta), zero above the
+multiset size where the monic product has no coefficients left. Fixing `β` is mapping the
+coefficient ring by evaluation at `β`.
 -/
 
 namespace Zcash.Snark
 
 open CompPoly CompPoly.CPolynomial
 
-/-- A monic product of `card` linear factors has no coefficients above `card`. -/
-private theorem coeff_prod_X_add_C_eq_zero {R : Type*} [CommRing R] [Nontrivial R]
-    {σ : Type*} (m : Multiset σ) (r : σ → R) {j : ℕ} (hj : Multiset.card m < j) :
-    ((m.map (fun p => Polynomial.X + Polynomial.C (r p))).prod).coeff j = 0 := by
-  refine Polynomial.coeff_eq_zero_of_natDegree_lt (lt_of_le_of_lt (le_of_eq ?_) hj)
-  rw [Polynomial.natDegree_multiset_prod_of_monic]
-  · simp [Multiset.map_map]
-  · intro f hf
-    obtain ⟨p, _, rfl⟩ := Multiset.mem_map.mp hf
-    exact Polynomial.monic_X_add_C _
-
-/-- The `β`-linear encoding of a `(value, name)` pair. -/
-def encPairC (p : Fp × Fp) : CPoly := C p.1 + C p.2 * X
-
-@[simp] theorem toPoly_encPairC (p : Fp × Fp) : (encPairC p).toPoly = encPair p := by
-  simp [encPairC, encPair]
-
 /-- The difference of the two pair-encoded products, a polynomial in `γ` with coefficients in
-`Fp[β]`. -/
-noncomputable def pairProdDiff (sp tp : Multiset (Fp × Fp)) : Polynomial (Polynomial Fp) :=
-  (sp.map (fun p => Polynomial.X + Polynomial.C (encPair p))).prod
-    - (tp.map (fun p => Polynomial.X + Polynomial.C (encPair p))).prod
+`Fp[β]`.  The outer indeterminate is `γ`, the inner one `β`. -/
+def pairProdDiff (sp tp : Multiset (Fp × Fp)) : CBiPoly :=
+  (sp.map (fun p => X + C (encPair p : CPoly))).prod
+    - (tp.map (fun p => X + C (encPair p : CPoly))).prod
 
 /-- The `j`-th `γ` coefficient of the pair difference: an elementary symmetric polynomial in the
 `β`-linear pair encodings on each side, zero above that side's multiset size. -/
 def pairProdDiffCoeff (sp tp : Multiset (Fp × Fp)) (j : ℕ) : CPoly :=
-  (if j ≤ Multiset.card sp then (sp.map encPairC).esymm (Multiset.card sp - j) else 0)
-    - (if j ≤ Multiset.card tp then (tp.map encPairC).esymm (Multiset.card tp - j) else 0)
+  (if j ≤ Multiset.card sp then (sp.map encPair).esymm (Multiset.card sp - j) else 0)
+    - (if j ≤ Multiset.card tp then (tp.map encPair).esymm (Multiset.card tp - j) else 0)
 
 theorem toPoly_pairProdDiffCoeff (sp tp : Multiset (Fp × Fp)) (j : ℕ) :
-    (pairProdDiffCoeff sp tp j).toPoly = (pairProdDiff sp tp).coeff j := by
-  rw [pairProdDiffCoeff, toPoly_sub, pairProdDiff, Polynomial.coeff_sub]
-  congr 1
-  · split <;> rename_i hj
-    · rw [toPoly_multiset_esymm, Multiset.prod_X_add_C_coeff' sp encPair hj]
-      simp [Multiset.map_map]
-    · rw [toPoly_zero, coeff_prod_X_add_C_eq_zero sp encPair (not_le.mp hj)]
-  · split <;> rename_i hj
-    · rw [toPoly_multiset_esymm, Multiset.prod_X_add_C_coeff' tp encPair hj]
-      simp [Multiset.map_map]
-    · rw [toPoly_zero, coeff_prod_X_add_C_eq_zero tp encPair (not_le.mp hj)]
+    pairProdDiffCoeff sp tp j = CPolynomial.coeff (pairProdDiff sp tp) j := by
+  have key : ∀ m : Multiset (Fp × Fp),
+      CPolynomial.coeff ((m.map (fun p => (X + C (encPair p) : CBiPoly))).prod) j
+        = if j ≤ Multiset.card m then (m.map encPair).esymm (Multiset.card m - j) else 0 := by
+    intro m
+    have hmap : m.map (fun p => (X + C (encPair p) : CBiPoly))
+        = (m.map encPair).map (fun u => X + C u) := by
+      rw [Multiset.map_map]; rfl
+    rw [hmap]
+    split <;> rename_i hj
+    · rw [CompPoly.CPolynomial.coeff_prod_X_add_C _ (by simpa using hj), Multiset.card_map]
+    · exact CompPoly.CPolynomial.coeff_prod_X_add_C_eq_zero _ (by simpa using not_le.mp hj)
+  rw [pairProdDiffCoeff, pairProdDiff, coeff_sub, key sp, key tp]
 
 /-- The difference is nonzero whenever the multisets of pairs differ — this is `prod_pair_inj` read
 contrapositively, and it is what makes the `β` bad set below a genuine root set. -/
 theorem pairProdDiff_ne_zero {sp tp : Multiset (Fp × Fp)} (h : sp ≠ tp) :
     pairProdDiff sp tp ≠ 0 :=
-  fun h0 => h (prod_pair_inj (sub_eq_zero.mp h0))
+  fun h0 => h (prod_cpair_inj (sub_eq_zero.mp h0))
 
 /-- The difference of the two `γ`-products once `β` is fixed. -/
 def linProdDiff (s t : Multiset Fp) : CPoly :=
   (s.map (fun u => X + C u)).prod - (t.map (fun u => X + C u)).prod
-
-theorem toPoly_linProdDiff (s t : Multiset Fp) :
-    (linProdDiff s t).toPoly =
-      (s.map (fun u => Polynomial.X + Polynomial.C u)).prod
-        - (t.map (fun u => Polynomial.X + Polynomial.C u)).prod := by
-  rw [linProdDiff, toPoly_sub, toPoly_multiset_prod, toPoly_multiset_prod]
-  simp [Multiset.map_map]
-
-/-- Evaluating a product of linear factors is the product of the shifted points. -/
-theorem eval_cprod_X_add_u (m : Multiset Fp) (x : Fp) :
-    eval x (m.map (fun u => X + C u)).prod = (m.map (fun u => x + u)).prod := by
-  rw [eval_toPoly, toPoly_multiset_prod]
-  have hfac : (m.map (fun u => X + C u)).map CPolynomial.toPoly
-      = m.map (fun u => Polynomial.X + Polynomial.C u) := by
-    simp [Multiset.map_map]
-  rw [hfac]
-  exact eval_prod_X_add_u m x
 
 /-- **The `γ` step.** A challenge outside the difference's roots turns the verifier's field product
 identity into equality of the multisets of `value + β·name`. -/
@@ -117,15 +86,12 @@ theorem map_eq_of_prod_eval_eq {sp tp : Multiset (Fp × Fp)} {β γ : Fp}
   set s := sp.map (fun p => p.1 + p.2 * β) with hs
   set t := tp.map (fun p => p.1 + p.2 * β) with ht
   by_contra hne
-  have hD : linProdDiff s t ≠ 0 := by
-    rw [Ne, ← toPoly_eq_zero_iff, toPoly_linProdDiff]
-    intro h0
-    exact hne (prod_X_add_u_inj (sub_eq_zero.mp h0))
+  have hD : linProdDiff s t ≠ 0 := fun h0 =>
+    hne (prod_cX_add_u_inj (sub_eq_zero.mp h0))
   refine (not_mem_szBadSet.mp hgoodγ) hD ?_
   have hsv : (s.map (fun x => γ + x)).prod = (t.map (fun x => γ + x)).prod := by
     simpa [hs, ht, Multiset.map_map, Function.comp_def] using h
-  rw [eval_toPoly, toPoly_linProdDiff, Polynomial.eval_sub, eval_prod_X_add_u s γ,
-    eval_prod_X_add_u t γ, hsv, sub_self]
+  rw [linProdDiff, eval_sub, eval_cprod_X_add_u s γ, eval_cprod_X_add_u t γ, hsv, sub_self]
 
 /-- **The `β` step.** A challenge outside the roots of every coefficient of `pairProdDiff` turns
 equality of the `value + β·name` multisets into equality of the `(value, name)` pairs. -/
@@ -135,27 +101,32 @@ theorem multiset_pair_eq_of_map_eq {sp tp : Multiset (Fp × Fp)} {β : Fp}
     sp = tp := by
   by_contra hne
   have hD : pairProdDiff sp tp ≠ 0 := pairProdDiff_ne_zero hne
-  obtain ⟨j, hj⟩ : ∃ j, (pairProdDiff sp tp).coeff j ≠ 0 := by
+  obtain ⟨j, hj⟩ : ∃ j, CPolynomial.coeff (pairProdDiff sp tp) j ≠ 0 := by
     by_contra hall
-    exact hD (Polynomial.ext fun j => by simpa using not_exists.mp hall j)
+    exact hD (ext_coeff fun j => by simpa using not_exists.mp hall j)
   have hjC : pairProdDiffCoeff sp tp j ≠ 0 := by
-    rw [Ne, ← toPoly_eq_zero_iff, toPoly_pairProdDiffCoeff]
+    rw [toPoly_pairProdDiffCoeff]
     exact hj
   refine (not_mem_szBadSet.mp (hgoodβ j)) hjC ?_
-  have hmapped : (pairProdDiff sp tp).map (Polynomial.evalRingHom β) = 0 := by
+  -- Fixing `β` is a coefficient map, and it kills the difference: both sides become the same
+  -- product of linear factors once the `value + β·name` multisets agree.
+  have hmapped : CompPoly.CPolynomial.map (evalRingHom β) (pairProdDiff sp tp) = 0 := by
     have hconv : ∀ m : Multiset (Fp × Fp),
-        ((m.map (fun p => Polynomial.X + Polynomial.C (encPair p))).prod).map
-            (Polynomial.evalRingHom β)
-          = ((m.map (fun p => p.1 + p.2 * β)).map
-              (fun u => Polynomial.X + Polynomial.C u)).prod := by
+        CompPoly.CPolynomial.map (evalRingHom β)
+            ((m.map (fun p => (X + C (encPair p) : CBiPoly))).prod)
+          = ((m.map (fun p => p.1 + p.2 * β)).map (fun u => X + C u)).prod := by
       intro m
-      rw [Polynomial.map_multiset_prod, Multiset.map_map, Multiset.map_map]
+      rw [CompPoly.CPolynomial.map_multiset_prod, Multiset.map_map, Multiset.map_map]
       refine congrArg Multiset.prod (Multiset.map_congr rfl fun p _ => ?_)
-      simp [encPair, Polynomial.map_add, Polynomial.map_mul]
-    rw [pairProdDiff, Polynomial.map_sub, hconv sp, hconv tp, h, sub_self]
-  have hcoeff := congrArg (fun q => Polynomial.coeff q j) hmapped
-  rw [eval_toPoly, toPoly_pairProdDiffCoeff]
-  simpa [Polynomial.coeff_map] using hcoeff
+      rw [Function.comp_apply, Function.comp_apply, CompPoly.CPolynomial.map_add,
+        CompPoly.CPolynomial.map_X, CompPoly.CPolynomial.map_C, coe_evalRingHom, encPair,
+        eval_add, eval_C, eval_mul, eval_C, eval_X]
+    rw [pairProdDiff, CompPoly.CPolynomial.map_sub, hconv sp, hconv tp, h, sub_self]
+  have hcoeff : CPolynomial.coeff (CompPoly.CPolynomial.map (evalRingHom β) (pairProdDiff sp tp)) j
+      = CPolynomial.coeff (0 : CPoly) j := by rw [hmapped]
+  rw [CompPoly.CPolynomial.coeff_map, coe_evalRingHom, coeff_zero] at hcoeff
+  rw [toPoly_pairProdDiffCoeff]
+  exact hcoeff
 
 /-- **The bridge.** The verifier's product identity at the sampled challenges gives the multiset of
 `(value, name)` pairs, provided both challenges avoid their bad sets. This is what the permutation
@@ -173,9 +144,9 @@ theorem multiset_pair_eq_of_prod_eval_eq {sp tp : Multiset (Fp × Fp)} {β γ : 
 theorem szBadSet_linProdDiff_card_le (s t : Multiset Fp) :
     (szBadSet (linProdDiff s t)).card ≤ max (Multiset.card s) (Multiset.card t) := by
   refine (szBadSet_card_le _).trans ?_
-  rw [natDegree_toPoly, toPoly_linProdDiff]
-  refine (Polynomial.natDegree_sub_le _ _).trans ?_
-  rw [natDegree_prod_X_add_u s, natDegree_prod_X_add_u t]
+  rw [linProdDiff]
+  refine (natDegree_sub_le _ _).trans ?_
+  rw [natDegree_cprod_X_add_u s, natDegree_cprod_X_add_u t]
 
 /-! ## The lookup argument's product
 
@@ -187,11 +158,9 @@ columns. -/
 
 /-- The difference of the two lookup products, in `γ` over `Fp[β]`. The input columns enter as
 constants in `γ`; the table columns as the linear factors. -/
-noncomputable def lookupProdDiff (a s inp tbl : Multiset Fp) : Polynomial (Polynomial Fp) :=
-  Polynomial.C (a.map (fun u => Polynomial.X + Polynomial.C u)).prod
-      * (s.map (fun u => Polynomial.X + Polynomial.C (Polynomial.C u))).prod
-    - Polynomial.C (inp.map (fun u => Polynomial.X + Polynomial.C u)).prod
-      * (tbl.map (fun u => Polynomial.X + Polynomial.C (Polynomial.C u))).prod
+def lookupProdDiff (a s inp tbl : Multiset Fp) : CBiPoly :=
+  C (a.map (fun u => X + C u)).prod * (s.map (fun u => X + C (C u))).prod
+    - C (inp.map (fun u => X + C u)).prod * (tbl.map (fun u => X + C (C u))).prod
 
 /-- A `γ` coefficient of the lookup difference, without constructing a nested polynomial. -/
 def lookupProdDiffCoeff (a s inp tbl : Multiset Fp) (j : ℕ) : CPoly :=
@@ -201,55 +170,41 @@ def lookupProdDiffCoeff (a s inp tbl : Multiset Fp) (j : ℕ) : CPoly :=
       * (if j ≤ Multiset.card tbl then (tbl.map C).esymm (Multiset.card tbl - j) else 0)
 
 theorem toPoly_lookupProdDiffCoeff (a s inp tbl : Multiset Fp) (j : ℕ) :
-    (lookupProdDiffCoeff a s inp tbl j).toPoly = (lookupProdDiff a s inp tbl).coeff j := by
-  rw [lookupProdDiffCoeff, toPoly_sub, toPoly_mul, toPoly_mul, toPoly_multiset_prod,
-    toPoly_multiset_prod, lookupProdDiff, Polynomial.coeff_sub, Polynomial.coeff_C_mul,
-    Polynomial.coeff_C_mul]
-  have hfac : ∀ m : Multiset Fp,
-      (m.map (fun u => X + C u)).map CPolynomial.toPoly
-        = m.map (fun u => Polynomial.X + Polynomial.C u) := by
-    intro m; simp [Multiset.map_map]
-  rw [hfac, hfac]
-  congr 1
-  · split <;> rename_i hj
-    · rw [toPoly_multiset_esymm,
-        Multiset.prod_X_add_C_coeff' s (fun u => Polynomial.C u) hj]
-      simp [Multiset.map_map]
-    · rw [toPoly_zero,
-        coeff_prod_X_add_C_eq_zero s (fun u => Polynomial.C u) (not_le.mp hj), MulZeroClass.mul_zero]
-  · split <;> rename_i hj
-    · rw [toPoly_multiset_esymm,
-        Multiset.prod_X_add_C_coeff' tbl (fun u => Polynomial.C u) hj]
-      simp [Multiset.map_map]
-    · rw [toPoly_zero,
-        coeff_prod_X_add_C_eq_zero tbl (fun u => Polynomial.C u) (not_le.mp hj), MulZeroClass.mul_zero]
+    lookupProdDiffCoeff a s inp tbl j
+      = CPolynomial.coeff (lookupProdDiff a s inp tbl) j := by
+  have key : ∀ m : Multiset Fp,
+      CPolynomial.coeff ((m.map (fun u => (X + C (C u) : CBiPoly))).prod) j
+        = if j ≤ Multiset.card m then (m.map C).esymm (Multiset.card m - j) else 0 := by
+    intro m
+    have hmap : m.map (fun u => (X + C (C u) : CBiPoly))
+        = (m.map C).map (fun u => X + C u) := by
+      rw [Multiset.map_map]; rfl
+    rw [hmap]
+    split <;> rename_i hj
+    · rw [CompPoly.CPolynomial.coeff_prod_X_add_C _ (by simpa using hj), Multiset.card_map]
+    · exact CompPoly.CPolynomial.coeff_prod_X_add_C_eq_zero _ (by simpa using not_le.mp hj)
+  rw [lookupProdDiffCoeff, lookupProdDiff, coeff_sub, coeff_C_mul, coeff_C_mul, key s, key tbl]
 
 /-- The lookup difference after fixing `β`, as a polynomial in `γ`. -/
 def lookupProdDiffGamma (a s inp tbl : Multiset Fp) (beta : Fp) : CPoly :=
   C (eval beta (a.map (fun u => X + C u)).prod) * (s.map (fun u => X + C u)).prod
     - C (eval beta (inp.map (fun u => X + C u)).prod) * (tbl.map (fun u => X + C u)).prod
 
-theorem toPoly_lookupProdDiffGamma (a s inp tbl : Multiset Fp) (beta : Fp) :
-    (lookupProdDiffGamma a s inp tbl beta).toPoly =
-      (lookupProdDiff a s inp tbl).map (Polynomial.evalRingHom beta) := by
-  have hconv : ∀ m : Multiset Fp,
-      ((m.map (fun u => Polynomial.X + Polynomial.C (Polynomial.C u))).prod).map
-          (Polynomial.evalRingHom beta) =
-        (m.map (fun u => Polynomial.X + Polynomial.C u)).prod := by
+/-- Fixing `β` is exactly mapping the coefficient ring by evaluation at `β`. -/
+theorem lookupProdDiffGamma_eq_map (a s inp tbl : Multiset Fp) (beta : Fp) :
+    lookupProdDiffGamma a s inp tbl beta
+      = CompPoly.CPolynomial.map (evalRingHom beta) (lookupProdDiff a s inp tbl) := by
+  have hprod : ∀ m : Multiset Fp,
+      CompPoly.CPolynomial.map (evalRingHom beta) ((m.map (fun u => (X + C (C u) : CBiPoly))).prod)
+        = (m.map (fun u => X + C u)).prod := by
     intro m
-    rw [Polynomial.map_multiset_prod, Multiset.map_map]
+    rw [CompPoly.CPolynomial.map_multiset_prod, Multiset.map_map]
     refine congrArg Multiset.prod (Multiset.map_congr rfl fun u _ => ?_)
-    simp [Polynomial.map_add]
-  have hfac : ∀ m : Multiset Fp,
-      (m.map (fun u => X + C u)).map CPolynomial.toPoly
-        = m.map (fun u => Polynomial.X + Polynomial.C u) := by
-    intro m; simp [Multiset.map_map]
-  rw [lookupProdDiffGamma, toPoly_sub, toPoly_mul, toPoly_mul, C_toPoly, C_toPoly,
-    toPoly_multiset_prod, toPoly_multiset_prod, hfac, hfac, lookupProdDiff,
-    Polynomial.map_sub, Polynomial.map_mul, Polynomial.map_mul, hconv s, hconv tbl,
-    Polynomial.map_C, Polynomial.map_C]
-  rw [eval_toPoly, eval_toPoly, toPoly_multiset_prod, toPoly_multiset_prod, hfac, hfac]
-  rfl
+    rw [Function.comp_apply, CompPoly.CPolynomial.map_add, CompPoly.CPolynomial.map_X,
+      CompPoly.CPolynomial.map_C, coe_evalRingHom, eval_C]
+  rw [lookupProdDiffGamma, lookupProdDiff, CompPoly.CPolynomial.map_sub,
+    CompPoly.CPolynomial.map_mul, CompPoly.CPolynomial.map_mul, CompPoly.CPolynomial.map_C,
+    CompPoly.CPolynomial.map_C, hprod s, hprod tbl, coe_evalRingHom]
 
 /-- Evaluating the lookup difference at the sampled challenges is the verifier's own product
 comparison. -/
@@ -273,59 +228,31 @@ theorem lookup_multisets_of_prod_eval_eq {a s inp tbl : Multiset Fp} {β γ : Fp
     lookupProdDiff a s inp tbl = 0 := by
   have hev : eval γ (lookupProdDiffGamma a s inp tbl β) = 0 := by
     rw [eval_lookupProdDiff, h, sub_self]
-  have hmap : (lookupProdDiff a s inp tbl).map (Polynomial.evalRingHom β) = 0 := by
+  have hmap : CompPoly.CPolynomial.map (evalRingHom β) (lookupProdDiff a s inp tbl) = 0 := by
     by_contra hne
     refine (not_mem_szBadSet.mp hgoodγ) ?_ hev
-    rw [Ne, ← toPoly_eq_zero_iff, toPoly_lookupProdDiffGamma]
-    exact hne
+    rwa [Ne, lookupProdDiffGamma_eq_map]
   by_contra hne
-  obtain ⟨j, hj⟩ : ∃ j, (lookupProdDiff a s inp tbl).coeff j ≠ 0 := by
+  obtain ⟨j, hj⟩ : ∃ j, CPolynomial.coeff (lookupProdDiff a s inp tbl) j ≠ 0 := by
     by_contra hall
-    exact hne (Polynomial.ext fun j => by simpa using not_exists.mp hall j)
+    exact hne (ext_coeff fun j => by simpa using not_exists.mp hall j)
   have hjC : lookupProdDiffCoeff a s inp tbl j ≠ 0 := by
-    rw [Ne, ← toPoly_eq_zero_iff, toPoly_lookupProdDiffCoeff]
+    rw [toPoly_lookupProdDiffCoeff]
     exact hj
   refine (not_mem_szBadSet.mp (hgoodβ j)) hjC ?_
-  have hcoeff := congrArg (fun q => Polynomial.coeff q j) hmap
-  rw [eval_toPoly, toPoly_lookupProdDiffCoeff]
-  simpa [Polynomial.coeff_map] using hcoeff
+  have hcoeff : CPolynomial.coeff
+      (CompPoly.CPolynomial.map (evalRingHom β) (lookupProdDiff a s inp tbl)) j
+      = CPolynomial.coeff (0 : CPoly) j := by rw [hmap]
+  rw [CompPoly.CPolynomial.coeff_map, coe_evalRingHom, coeff_zero] at hcoeff
+  rw [toPoly_lookupProdDiffCoeff]
+  exact hcoeff
 
 /-- **The lookup product separates the columns.** The `γ`-leading coefficient of each side is that
 side's `β`-product, so the difference vanishing forces the input columns to match and then, after
 cancelling, the table columns. -/
 theorem lookup_multisets_of_diff_eq_zero {a s inp tbl : Multiset Fp}
-    (h : lookupProdDiff a s inp tbl = 0) : a = inp ∧ s = tbl := by
-  have hmonic : ∀ m : Multiset Fp,
-      (m.map (fun u => Polynomial.X + Polynomial.C (Polynomial.C u))).prod.Monic := fun m =>
-    Polynomial.monic_multiset_prod_of_monic _ _ fun u _ => Polynomial.monic_X_add_C _
-  have hne : ∀ m : Multiset Fp,
-      (m.map (fun u => Polynomial.X + Polynomial.C u)).prod ≠ 0 := fun m =>
-    (Polynomial.monic_multiset_prod_of_monic _ _ fun u _ => Polynomial.monic_X_add_C u).ne_zero
-  have heq : Polynomial.C (a.map (fun u => Polynomial.X + Polynomial.C u)).prod
-        * (s.map (fun u => Polynomial.X + Polynomial.C (Polynomial.C u))).prod
-      = Polynomial.C (inp.map (fun u => Polynomial.X + Polynomial.C u)).prod
-        * (tbl.map (fun u => Polynomial.X + Polynomial.C (Polynomial.C u))).prod :=
-    sub_eq_zero.mp h
-  have hlead := congrArg Polynomial.leadingCoeff heq
-  rw [Polynomial.leadingCoeff_mul, Polynomial.leadingCoeff_mul, Polynomial.leadingCoeff_C,
-    Polynomial.leadingCoeff_C, (hmonic s).leadingCoeff, (hmonic tbl).leadingCoeff,
-    _root_.mul_one, _root_.mul_one] at hlead
-  refine ⟨prod_X_add_u_inj hlead, ?_⟩
-  rw [hlead] at heq
-  have hCne : (Polynomial.C (inp.map (fun u => Polynomial.X + Polynomial.C u)).prod :
-      Polynomial (Polynomial Fp)) ≠ 0 :=
-    Polynomial.C_ne_zero.mpr (hne inp)
-  have hQ := mul_left_cancel₀ hCne heq
-  have hmap : (s.map Polynomial.C).map (fun v => Polynomial.X + Polynomial.C v)
-      = s.map (fun u => Polynomial.X + Polynomial.C (Polynomial.C u)) := by
-    simp [Multiset.map_map]
-  have hmapt : (tbl.map Polynomial.C).map (fun v => Polynomial.X + Polynomial.C v)
-      = tbl.map (fun u => Polynomial.X + Polynomial.C (Polynomial.C u)) := by
-    simp [Multiset.map_map]
-  have hstep : (((s.map Polynomial.C)).map (fun v => Polynomial.X + Polynomial.C v)).prod
-      = (((tbl.map Polynomial.C)).map (fun v => Polynomial.X + Polynomial.C v)).prod := by
-    rw [hmap, hmapt]; exact hQ
-  exact Multiset.map_injective (Polynomial.C_injective (R := Fp)) (prod_X_add_u_inj hstep)
+    (h : lookupProdDiff a s inp tbl = 0) : a = inp ∧ s = tbl :=
+  prod_split_inj (sub_eq_zero.mp (by rwa [lookupProdDiff] at h))
 
 /-! ## The permutation argument, from the row recurrence to the copy constraints
 

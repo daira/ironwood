@@ -1,5 +1,6 @@
 import Mathlib.Algebra.Field.GeomSum
 import Zcash.Arithmetic.Domain
+import Zcash.Common.CPolynomial
 
 /-!
 # The closed form of the Lagrange basis over the evaluation domain
@@ -16,22 +17,24 @@ which is where the verifier-side vocabulary lives.
 
 namespace Zcash.Arithmetic
 
-open Polynomial
+open CompPoly.CPolynomial (C X coeff coeff_C_mul coeff_finsetSum coeff_X_pow eval eval_mul
+  eval_C eval_finsetSum eval_pow eval_X natDegree natDegree_C_mul_le natDegree_X_pow_le
+  natDegree_sum_le_of_forall_le)
 open CompElliptic.Curves.Pasta
 /-- `ℓ_i` in closed coefficient form: `n⁻¹ · Σ_{t < n} ω^{-i·t} Xᵗ`. -/
-noncomputable def lagrangeBasisClosed (k : ℕ) (i : Fin (2 ^ k)) : Polynomial Fp :=
-  ((2 ^ k : Fp))⁻¹ • ∑ t : Fin (2 ^ k),
-    Polynomial.C ((omegaOf k)⁻¹ ^ ((i : ℕ) * (t : ℕ))) * Polynomial.X ^ (t : ℕ)
+def lagrangeBasisClosed (k : ℕ) (i : Fin (2 ^ k)) : Zcash.CPoly :=
+  C ((2 ^ k : Fp))⁻¹ * ∑ t : Fin (2 ^ k),
+    C ((omegaOf k)⁻¹ ^ ((i : ℕ) * (t : ℕ))) * X ^ (t : ℕ)
 
 theorem lagrangeBasisClosed_coeff (k : ℕ) (i : Fin (2 ^ k)) (t : Fin (2 ^ k)) :
     (lagrangeBasisClosed k i).coeff (t : ℕ) =
       (2 ^ k : Fp)⁻¹ * (omegaOf k)⁻¹ ^ ((i : ℕ) * (t : ℕ)) := by
   classical
-  rw [lagrangeBasisClosed, Polynomial.coeff_smul, Polynomial.finsetSum_coeff]
+  rw [lagrangeBasisClosed, coeff_C_mul, coeff_finsetSum]
   rw [Finset.sum_eq_single t]
-  · simp
+  · rw [coeff_C_mul, coeff_X_pow, if_pos rfl, mul_one]
   · intro b _ hbt
-    rw [Polynomial.coeff_C_mul, Polynomial.coeff_X_pow]
+    rw [coeff_C_mul, coeff_X_pow]
     simp only [mul_ite, mul_one, mul_zero, ite_eq_right_iff]
     intro hb
     exact absurd (Fin.ext hb.symm) hbt
@@ -41,18 +44,15 @@ theorem lagrangeBasisClosed_coeff (k : ℕ) (i : Fin (2 ^ k)) (t : Fin (2 ^ k)) 
 theorem lagrangeBasisClosed_natDegree_lt (k : ℕ) (i : Fin (2 ^ k)) :
     (lagrangeBasisClosed k i).natDegree < 2 ^ k := by
   classical
-  have hdeg : (lagrangeBasisClosed k i).degree < (2 ^ k : ℕ) := by
+  -- Every summand is `C _ * X^t` with `t ≤ 2^k - 1`, and multiplying by a constant cannot raise
+  -- the degree, so the whole polynomial sits below the domain size.
+  have hle : (lagrangeBasisClosed k i).natDegree ≤ 2 ^ k - 1 := by
     rw [lagrangeBasisClosed]
-    refine lt_of_le_of_lt (Polynomial.degree_smul_le _ _) ?_
-    refine lt_of_le_of_lt (Polynomial.degree_sum_le _ _) ?_
-    rw [Finset.sup_lt_iff (by exact_mod_cast WithBot.bot_lt_coe _)]
-    intro t _
-    exact lt_of_le_of_lt (Polynomial.degree_C_mul_X_pow_le _ _)
-      (by exact_mod_cast WithBot.coe_lt_coe.mpr t.isLt)
-  by_cases hzero : lagrangeBasisClosed k i = 0
-  · rw [hzero, Polynomial.natDegree_zero]
-    exact Nat.two_pow_pos k
-  · exact (Polynomial.natDegree_lt_iff_degree_lt hzero).mpr hdeg
+    refine le_trans (natDegree_C_mul_le _ _) ?_
+    refine natDegree_sum_le_of_forall_le _ _ fun t _ => ?_
+    exact le_trans (natDegree_C_mul_le _ _)
+      (le_trans (natDegree_X_pow_le _) (Nat.le_sub_one_of_lt t.isLt))
+  exact lt_of_le_of_lt hle (Nat.sub_lt (Nat.two_pow_pos k) Nat.one_pos)
 
 /-- The closed form evaluates to the Kronecker delta on the domain: at `ω^j` the sum is
 geometric in `ω^j·ω^{-i}`, which is `n` at `j = i` and a vanishing nontrivial-root sum
@@ -66,12 +66,10 @@ theorem lagrangeBasisClosed_eval (k : ℕ) (hk : k ≤ 32) (i j : Fin (2 ^ k)) :
   set zeta : Fp := omegaOf k ^ (j : ℕ) * ((omegaOf k)⁻¹) ^ (i : ℕ) with hzeta
   have heval : (lagrangeBasisClosed k i).eval (omegaOf k ^ (j : ℕ)) =
       (2 ^ k : Fp)⁻¹ * ∑ t : Fin (2 ^ k), zeta ^ (t : ℕ) := by
-    rw [lagrangeBasisClosed, Polynomial.eval_smul, Polynomial.eval_finsetSum,
-      smul_eq_mul]
+    rw [lagrangeBasisClosed, eval_mul, eval_C, eval_finsetSum]
     congr 1
     refine Finset.sum_congr rfl fun t _ => ?_
-    rw [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow, Polynomial.eval_X,
-      hzeta, mul_pow]
+    rw [eval_mul, eval_C, eval_pow, eval_X, hzeta, mul_pow]
     ring
   rw [heval]
   by_cases hij : j = i

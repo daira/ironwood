@@ -22,7 +22,7 @@ open scoped ENNReal
 
 /-- **The `x`-squeeze schedule at the captured key.** The degree caps are discharged from the
 captured verifying key, so `epsilonX` is the concrete `20470 / |𝔽|`. -/
-noncomputable def deployedConstraintXSqueezeSchedule_captured
+def deployedConstraintXSqueezeSchedule_captured
     (family : ComputedDeployedConstraintFSFamily shape)
     (hvk : ∀ basis, CapturedVerifierKeyProfile (family.vk basis)) :
     DeployedConstraintXSqueezeSchedule family.toRootFamily

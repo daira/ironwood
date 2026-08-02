@@ -75,7 +75,7 @@ theorem capturedUrsGLagrange_prefix :
 /-- The captured Lagrange commitment key: the exported prefix, completed by the canonical monomial
 commitment beyond it. Every `LagrangeCommitmentKey capturedURS (omegaOf capturedURS.k)` equals this
 one (`LagrangeCommitmentKey.instSubsingleton`). -/
-noncomputable def capturedLagrangeKey :
+def capturedLagrangeKey :
     LagrangeCommitmentKey capturedURS (omegaOf capturedURS.k) :=
   LagrangeCommitmentKey.ofPrefix capturedURS (omegaOf capturedURS.k)
     capturedUrsGLagrange capturedUrsGLagrange_prefix

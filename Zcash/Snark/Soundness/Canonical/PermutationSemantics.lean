@@ -282,7 +282,6 @@ theorem keygenSigmaColumn_natDegree_lt
     (hrows : Function.Injective fun i : Fin m => omega ^ (i : ℕ))
     (hm : 0 < m) (chunk : Fin nc) (column : Fin (width chunk)) :
     (keygenSigmaColumn omega delta chunkLen sigma chunk column).natDegree < m := by
-  rw [natDegree_toPoly]
   have hd :
       (keygenSigmaColumn omega delta chunkLen sigma chunk column).toPoly.degree
         < (m : ℕ) := by
@@ -297,10 +296,7 @@ theorem keygenSigmaColumn_natDegree_lt
       hrows.injOn
     simpa [keygenSigmaColumn, CPolynomial.CLagrange.cinterpolate_eq_interpolate,
       Finset.card_univ, Fintype.card_fin] using h
-  by_cases hzero : (keygenSigmaColumn omega delta chunkLen sigma chunk column).toPoly = 0
-  · rw [hzero, Polynomial.natDegree_zero]
-    exact hm
-  · exact (Polynomial.natDegree_lt_iff_degree_lt hzero).mpr hd
+  exact natDegree_lt_of_degree_toPoly_lt hm hd
 
 /-- The polynomial pairs, indexed by permutation chunk, selected from one resolver-backed proof. -/
 abbrev ResolverPermutationPairs

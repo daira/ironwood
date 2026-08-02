@@ -9,14 +9,13 @@ hyperplane. Finder efficiency and finite-resource DLOG hardness remain premises.
 -/
 
 open scoped ENNReal
-open Classical
 
 namespace Zcash.Snark
 
 variable {F G : Type*} [Field F] [AddCommGroup G] [Module F G]
 
 section Reduction
-variable {ι : Type*} [Fintype ι] [DecidableEq ι] [Nonempty ι] [Fintype F] (B : G)
+variable {ι : Type*} [Fintype ι] [DecidableEq ι] [Nonempty ι] [Fintype F] [DecidableEq F] (B : G)
 
 /-- The public basis whose slot `i` is `s i • B`. -/
 def scalarBasis (s : ι → F) : ι → G := fun i => s i • B
@@ -36,7 +35,7 @@ def programmedEmbedding (z : F) (x y : ι → F) :
 variable (A : (b : ι → G) → Option (AlgebraicRelationWitness (F := F) b))
 
 /-- Relation-finding event: on the presented basis, `A` returns a (nontrivial) relation. -/
-noncomputable def relSet : Finset (ι → F) :=
+def relSet : Finset (ι → F) :=
   Finset.univ.filter (fun s => (A (scalarBasis B s)).isSome)
 
 /-! ### The programmed experiment
@@ -48,7 +47,7 @@ the presented logs `programmedLogs z x y`. -/
 def returnedCoeffs (s : ι → F) : ι → F :=
   (A (scalarBasis B s)).elim 0 (fun r => r.coeffs)
 
-omit [DecidableEq ι] [Nonempty ι] [Fintype F] in
+omit [DecidableEq ι] [Nonempty ι] [Fintype F] [DecidableEq F] in
 /-- `returnedCoeffs` reads off the coefficients of the relation actually returned. -/
 theorem returnedCoeffs_of_eq_some {s : ι → F}
     {r : AlgebraicRelationWitness (F := F) (scalarBasis B s)}
@@ -56,12 +55,18 @@ theorem returnedCoeffs_of_eq_some {s : ι → F}
     returnedCoeffs B A s = r.coeffs := by
   simp [returnedCoeffs, hr]
 
+-- Genuinely noncomputable, in both halves: `Classical.arbitrary` is the only way to produce an
+-- element of a type that is merely `Nonempty`, and `Exists.choose` the only way to read a slot out
+-- of `exists_nonzero_coeff`. Neither is repairable by enumeration here — `Finset.toList` is itself
+-- noncomputable (`Multiset.toList` goes through `Quot.out`), so `[Fintype ι]` supplies no list to
+-- search. Making it computable would mean strengthening the interface to carry an explicit
+-- enumeration, which the index type of an AGM basis has no reason to.
 /-- A pivot slot where the returned relation has nonzero coefficient; arbitrary when none
 returns. -/
 noncomputable def pivotSlot (s : ι → F) : ι :=
   (A (scalarBasis B s)).elim (Classical.arbitrary ι) (fun r => r.exists_nonzero_coeff.choose)
 
-omit [DecidableEq ι] [Fintype F] in
+omit [DecidableEq ι] [Fintype F] [DecidableEq F] in
 /-- The pivot slot's coefficient is nonzero whenever a relation returns. -/
 theorem returnedCoeffs_pivotSlot_ne_zero {s : ι → F}
     (hsome : (A (scalarBasis B s)).isSome) :
@@ -72,19 +77,19 @@ theorem returnedCoeffs_pivotSlot_ne_zero {s : ι → F}
   exact r.exists_nonzero_coeff.choose_spec
 
 /-- Programmed coins on which `A` returns a relation. -/
-noncomputable def programmedRelSet : Finset (F × (ι → F) × (ι → F)) :=
+def programmedRelSet : Finset (F × (ι → F) × (ι → F)) :=
   Finset.univ.filter (fun t =>
     (A (scalarBasis B (programmedLogs t.1 t.2.1 t.2.2))).isSome)
 
 /-- Winning coins: the returned relation's component against `y` is nonzero, so
 `discreteLogOfChallenge_of_relation` computes the discrete log of `z • B`. -/
-noncomputable def winSet : Finset (F × (ι → F) × (ι → F)) :=
+def winSet : Finset (F × (ι → F) × (ι → F)) :=
   Finset.univ.filter (fun t =>
     (A (scalarBasis B (programmedLogs t.1 t.2.1 t.2.2))).isSome ∧
       (∑ i, returnedCoeffs B A (programmedLogs t.1 t.2.1 t.2.2) i * t.2.2 i) ≠ 0)
 
 /-- Failing coins: the returned relation annihilates the challenge programming `y`. -/
-noncomputable def missSet : Finset (F × (ι → F) × (ι → F)) :=
+def missSet : Finset (F × (ι → F) × (ι → F)) :=
   Finset.univ.filter (fun t =>
     (A (scalarBasis B (programmedLogs t.1 t.2.1 t.2.2))).isSome ∧
       (∑ i, returnedCoeffs B A (programmedLogs t.1 t.2.1 t.2.2) i * t.2.2 i) = 0)
@@ -104,7 +109,7 @@ theorem programmedRelSet_subset_win_union_miss :
       simp only [winSet, Finset.mem_filter, Finset.mem_univ, true_and]
       exact ⟨ht, h0⟩)
 
-omit [Nonempty ι] in
+omit [Nonempty ι] [DecidableEq F] in
 /-- Perfect simulation: for each honest log vector in the relation event, the programmed coins
 hitting it are exactly the free choices of `(z, y)`. -/
 theorem programmedRelSet_card :

@@ -31,7 +31,7 @@ open Zcash.Circuits.Action (actionCircuit)
 
 namespace ActionFixedCoherence
 
-open Zcash.Snark.Keygen Polynomial
+open Zcash.Snark.Keygen
 
 /--
 **INTERIM:** every Action fixed column currently requested by

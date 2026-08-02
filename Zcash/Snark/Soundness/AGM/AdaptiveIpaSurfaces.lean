@@ -280,7 +280,7 @@ def adaptiveIpaInitialDiscrepancy
     (multiU + nu 9 * coordinates.s.coeffs AugmentedIndex.u)
 
 /-- The quadratic fixed before one IPA squeeze, computed only from explicit prefix coordinates. -/
-noncomputable def adaptiveIpaRootPolynomial
+def adaptiveIpaRootPolynomial
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (vk : VerifyingKey shape Fp VestaG)
     (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
@@ -631,7 +631,7 @@ theorem adaptiveIpaRoundRecord_update_self
 def adaptiveIpaCanonicalProof (ps : ProofString shape Fp VestaG) :
     ProofString shape Fp VestaG := spliceIpa ps 0 0 0
 
-noncomputable def adaptiveQueriedIpaSurfaceCore
+def adaptiveQueriedIpaSurfaceCore
     (family : ComputedAdaptiveOnlineAGMFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (j : Fin shape.k)
     (t : BTranscript Fp VestaG
@@ -655,7 +655,7 @@ noncomputable def adaptiveQueriedIpaSurfaceCore
         else ∅
   else ∅
 
-noncomputable def adaptiveFallbackIpaSurfaceCore
+def adaptiveFallbackIpaSurfaceCore
     (family : ComputedAdaptiveOnlineAGMFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (j : Fin shape.k)
     (data : OnlineMemberProofData (vk := family.vk basis)
@@ -677,7 +677,7 @@ noncomputable def adaptiveFallbackIpaSurfaceCore
     else ∅
   else ∅
 
-noncomputable def adaptiveQueriedIpaSurface
+def adaptiveQueriedIpaSurface
     (family : ComputedAdaptiveOnlineAGMFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (j : Fin shape.k)
     (t : BTranscript Fp VestaG
@@ -689,7 +689,7 @@ noncomputable def adaptiveQueriedIpaSurface
     (adaptiveIpaPreRecord (shape := shape) family.init t O)
     (adaptiveIpaRoundRecord (shape := shape) family.init j t O)
 
-noncomputable def adaptiveFallbackIpaSurface
+def adaptiveFallbackIpaSurface
     (family : ComputedAdaptiveOnlineAGMFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (j : Fin shape.k)
     (data : OnlineMemberProofData (vk := family.vk basis)
@@ -704,12 +704,12 @@ noncomputable def adaptiveFallbackIpaSurface
     (adaptiveIpaRoundRecord (shape := shape) family.init j t O)
 
 /-- Irreducible names keep the large dependent bad-set bodies out of theorem unification. -/
-@[irreducible] noncomputable def adaptiveIpaQueriedBad
+@[irreducible] def adaptiveIpaQueriedBad
     (family : ComputedAdaptiveOnlineAGMFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (j : Fin shape.k) :=
   adaptiveQueriedIpaSurface family basis j
 
-@[irreducible] noncomputable def adaptiveIpaFallbackBad
+@[irreducible] def adaptiveIpaFallbackBad
     (family : ComputedAdaptiveOnlineAGMFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (j : Fin shape.k) :=
   adaptiveFallbackIpaSurface family basis j

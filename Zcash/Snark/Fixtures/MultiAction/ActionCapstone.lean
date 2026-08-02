@@ -214,7 +214,7 @@ theorem staticChecks_of_derived
 
 /-- **The captured `x`-squeeze schedule at the derived key** (issue #128 F3): the degree caps
 transfer through the scalar equalities, and pinning is the family's own derived projection. -/
-noncomputable def schedule_of_derived
+def schedule_of_derived
     (family : ComputedStraightLineDeployedFSFamily
       (actionCircuit.shape.withProofParams actionProofParams))
     (hvk : ∀ basis, family.vk basis = actionCircuit.toVerifierKey
@@ -315,7 +315,7 @@ theorem staticChecks_of_derived_for (numProofs : ℕ)
       ActionPermutationDomain.domainExponent_lt
 
 /-- The captured `x`-squeeze schedule transported to an arbitrary Action bundle size. -/
-noncomputable def schedule_of_derived_for (numProofs : ℕ)
+def schedule_of_derived_for (numProofs : ℕ)
     (family : ComputedStraightLineDeployedFSFamily
       (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)))
     (hvk : ∀ basis, family.vk basis =

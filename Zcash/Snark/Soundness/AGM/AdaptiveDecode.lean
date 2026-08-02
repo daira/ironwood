@@ -3068,7 +3068,7 @@ structure AdaptiveRootSetMatchesWitness
   z : AdaptiveZRootSetMatchesWitness data pnu witness nu
 
 /-- None of the six actual adaptive deployed-root events occurs on this oracle run. -/
-noncomputable def ComputedAdaptiveOnlineAGMFSFamily.AdaptiveAllRootGood
+def ComputedAdaptiveOnlineAGMFSFamily.AdaptiveAllRootGood
     (family : ComputedAdaptiveOnlineAGMFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
     (O : BTranscript Fp VestaG
@@ -3571,7 +3571,7 @@ def ComputedAdaptiveOnlineAGMFSFamily.adaptiveAlgebraicDecode_of_deployedGoodRoo
 set_option maxHeartbeats 800000 in
 /-- Avoiding the six actual adaptive root events turns the successful executable batch outcome and
 the shifted verifier equality into the existing deployed algebraic decode. -/
-noncomputable def ComputedAdaptiveOnlineAGMFSFamily.adaptiveAlgebraicDecode_of_goodRoots
+def ComputedAdaptiveOnlineAGMFSFamily.adaptiveAlgebraicDecode_of_goodRoots
     (family : ComputedAdaptiveOnlineAGMFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
     (O : BTranscript Fp VestaG

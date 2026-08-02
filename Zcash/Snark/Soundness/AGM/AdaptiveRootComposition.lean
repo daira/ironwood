@@ -63,7 +63,7 @@ def adaptiveRootSSource
 /-- One query-time deployed root surface.  Missing structural coverage yields the empty set;
 the actual verifier prefix supplies coverage below, while the empty branch keeps the pointwise
 price valid for every unrelated malicious query of the same length. -/
-noncomputable def adaptiveRootSurfaceAt
+def adaptiveRootSurfaceAt
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (vk : VerifyingKey shape Fp VestaG)
     (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
@@ -408,7 +408,7 @@ theorem adaptiveQuerySource_eq_of_pinned
   exact congrArg (fun source => source ++ family.fixedRepresentations basis) hselected
 
 /-- Decode one arbitrary query point and use its full pre-answer AGM annotation. -/
-noncomputable def adaptiveQueriedRootSurface
+def adaptiveQueriedRootSurface
     (family : ComputedAdaptiveOnlineAGMFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (n : Fin 11)
     (h5n : 5 ≤ (n : Nat))
@@ -442,7 +442,7 @@ theorem adaptiveQueriedRootSurface_measure_le
   · exact adaptiveRootSurfaceAt_measure_le _ _ n h5n _ _ earlier
 
 /-- Fresh-query fallback reconstructed from the final proof's own online representations. -/
-noncomputable def adaptiveFallbackRootSurface
+def adaptiveFallbackRootSurface
     (family : ComputedAdaptiveOnlineAGMFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (n : Fin 11)
     (data : OnlineMemberProofData (vk := family.vk basis)
@@ -654,7 +654,7 @@ theorem OnlineMemberProofData.adaptiveRootSSource_eq
 
 /-- The final-output root event, decoded through the same strict-prefix wrapper used by the
 arbitrary adaptive squeeze theorem. -/
-noncomputable def adaptiveFinalRootBad
+def adaptiveFinalRootBad
     (family : ComputedAdaptiveOnlineAGMFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (n : Fin 11)
     (data : OnlineMemberProofData (vk := family.vk basis)

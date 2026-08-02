@@ -96,7 +96,7 @@ theorem adaptiveActionAccepts?_isSome_of
     simp [haccepts]
 
 /-- The adaptive root decoder, re-rounded and transported to the Action circuit artifacts. -/
-noncomputable def adaptiveActionRunDecode
+def adaptiveActionRunDecode
     (pp : ProofParams)
     (family : ComputedAdaptiveOnlineAGMFSFamily (actionCircuit.shape.withProofParams pp))
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
@@ -613,7 +613,7 @@ def adaptiveActionTerminalRelationFinder
 
 /-- The existing Action terminal reached from one arbitrary adaptive online-AGM run.  The result
 is the literal bundle statement or explicit augmented-basis relation data. -/
-noncomputable def action_bundleStatement_or_relation_of_adaptiveDecode
+def action_bundleStatement_or_relation_of_adaptiveDecode
     (pp : ProofParams)
     (family : ComputedAdaptiveOnlineAGMFSFamily (actionCircuit.shape.withProofParams pp))
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
