@@ -20,7 +20,8 @@ local instance vestaInhabitedPinnedRootWitness : Inhabited VestaG := ⟨0⟩
 /-- The degenerate shape of the witness family: no proofs, no queries, a one-element basis. -/
 def witnessShape : Shape :=
   { k := 0, numProofs := 0, numAdviceColumns := 0, numLookups := 0, numPermutationSets := 0,
-    numPermutationColumns := 0, numQuotientPieces := 0, numInstanceQueries := 0,
+    numPermutationColumns := 0, numQuotientPieces := 0, numInstanceColumns := 0,
+    numInstanceQueries := 0,
     numAdviceQueries := 0, numFixedQueries := 0, numPointSets := 0 }
 
 /-- The zero verifying key at the witness shape. -/

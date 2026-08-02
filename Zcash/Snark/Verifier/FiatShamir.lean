@@ -70,6 +70,162 @@ def absorbLookup {F G : Type*} (e : LookupEval F) : List (TranscriptElt F G) :=
   [.scalar e.productEval, .scalar e.productNextEval, .scalar e.permutedInputEval,
    .scalar e.permutedInputInvEval, .scalar e.permutedTableEval]
 
+/-- Public-instance commitments in Halo2's deployed proof-major, column-major absorb order. -/
+def absorbInstanceCommitments {shape : Shape} {F G : Type*}
+    (instanceCommitment : Fin shape.numProofs → ℕ → G) : List (TranscriptElt F G) :=
+  (List.ofFn fun p : Fin shape.numProofs =>
+    List.ofFn fun column : Fin shape.numInstanceColumns =>
+      TranscriptElt.point (instanceCommitment p column)).flatten
+
+/-- Instance-commitment absorption depends only on the configured proof/column rectangle. -/
+theorem absorbInstanceCommitments_congr
+    {shape : Shape} {F G : Type*}
+    (instanceCommitment instanceCommitment' : Fin shape.numProofs → ℕ → G)
+    (h : ∀ p (column : Fin shape.numInstanceColumns),
+      instanceCommitment p column = instanceCommitment' p column) :
+    absorbInstanceCommitments (F := F) instanceCommitment =
+      absorbInstanceCommitments instanceCommitment' := by
+  unfold absorbInstanceCommitments
+  apply congrArg List.flatten
+  apply congrArg List.ofFn
+  funext p
+  apply congrArg List.ofFn
+  funext column
+  rw [h p column]
+
+/-- The complete verifier-controlled Fiat–Shamir prefix: the VK transcript representation followed
+by every configured public-instance commitment. -/
+def initialTranscript {shape : Shape} {F G : Type*} (vkTranscriptRepr : F)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G) : List (TranscriptElt F G) :=
+  TranscriptElt.scalar vkTranscriptRepr :: absorbInstanceCommitments instanceCommitment
+
+/-- The canonical prefix is extensional over its configured instance commitments. -/
+theorem initialTranscript_congr
+    {shape : Shape} {F G : Type*} (vkTranscriptRepr : F)
+    (instanceCommitment instanceCommitment' : Fin shape.numProofs → ℕ → G)
+    (h : ∀ p (column : Fin shape.numInstanceColumns),
+      instanceCommitment p column = instanceCommitment' p column) :
+    initialTranscript vkTranscriptRepr instanceCommitment =
+      initialTranscript vkTranscriptRepr instanceCommitment' := by
+  simp only [initialTranscript, List.cons.injEq, true_and]
+  exact absorbInstanceCommitments_congr instanceCommitment instanceCommitment' h
+
+@[simp] theorem initialTranscript_head? {shape : Shape} {F G : Type*}
+    (vkTranscriptRepr : F) (instanceCommitment : Fin shape.numProofs → ℕ → G) :
+    (initialTranscript vkTranscriptRepr instanceCommitment).head? =
+      some (TranscriptElt.scalar vkTranscriptRepr) := by
+  rfl
+
+@[simp] theorem initialTranscript_drop_one {shape : Shape} {F G : Type*}
+    (vkTranscriptRepr : F) (instanceCommitment : Fin shape.numProofs → ℕ → G) :
+    (initialTranscript vkTranscriptRepr instanceCommitment).drop 1 =
+      absorbInstanceCommitments instanceCommitment := by
+  rfl
+
+@[simp] theorem absorbInstanceCommitments_length {shape : Shape} {F G : Type*}
+    (instanceCommitment : Fin shape.numProofs → ℕ → G) :
+    (absorbInstanceCommitments (F := F) instanceCommitment).length =
+      shape.numProofs * shape.numInstanceColumns := by
+  simp [absorbInstanceCommitments, List.length_flatten, List.sum_ofFn]
+
+@[simp] theorem initialTranscript_length {shape : Shape} {F G : Type*}
+    (vkTranscriptRepr : F) (instanceCommitment : Fin shape.numProofs → ℕ → G) :
+    (initialTranscript vkTranscriptRepr instanceCommitment).length =
+      1 + shape.numProofs * shape.numInstanceColumns := by
+  simp [initialTranscript, Nat.add_comm]
+
+theorem instanceCommitment_mem_initialTranscript {shape : Shape} {F G : Type*}
+    (vkTranscriptRepr : F) (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (p : Fin shape.numProofs) (column : Fin shape.numInstanceColumns) :
+    TranscriptElt.point (instanceCommitment p column) ∈
+      initialTranscript vkTranscriptRepr instanceCommitment := by
+  simp [initialTranscript, absorbInstanceCommitments]
+
+/-- Equality of canonical verifier prefixes pins the verifying-key transcript representation. -/
+theorem vkTranscriptRepr_eq_of_initialTranscript_eq
+    {shape : Shape} {F G : Type*}
+    (vkTranscriptRepr vkTranscriptRepr' : F)
+    (instanceCommitment instanceCommitment' : Fin shape.numProofs → ℕ → G)
+    (hinit : initialTranscript vkTranscriptRepr instanceCommitment =
+      initialTranscript vkTranscriptRepr' instanceCommitment') :
+    vkTranscriptRepr = vkTranscriptRepr' := by
+  have hscalar : TranscriptElt.scalar vkTranscriptRepr =
+      TranscriptElt.scalar vkTranscriptRepr' :=
+    (List.cons.inj hinit).1
+  injection hscalar
+
+/-- Equality of canonical verifier prefixes pins every configured instance commitment. -/
+theorem instanceCommitment_eq_of_initialTranscript_eq
+    {shape : Shape} {F G : Type*}
+    (vkTranscriptRepr vkTranscriptRepr' : F)
+    (instanceCommitment instanceCommitment' : Fin shape.numProofs → ℕ → G)
+    (hinit : initialTranscript vkTranscriptRepr instanceCommitment =
+      initialTranscript vkTranscriptRepr' instanceCommitment')
+    (p : Fin shape.numProofs) (column : Fin shape.numInstanceColumns) :
+    instanceCommitment p column = instanceCommitment' p column := by
+  have hflatten : absorbInstanceCommitments (F := F) instanceCommitment =
+      absorbInstanceCommitments instanceCommitment' := by
+    exact List.cons.inj hinit |>.2
+  have chunks_injective : ∀ (xs ys : List (List (TranscriptElt F G))),
+      xs.length = ys.length →
+      (∀ row ∈ xs, row.length = shape.numInstanceColumns) →
+      (∀ row ∈ ys, row.length = shape.numInstanceColumns) →
+      xs.flatten = ys.flatten → xs = ys := by
+    intro xs
+    induction xs with
+    | nil =>
+        intro ys hlen _ _ _
+        simpa using hlen.symm
+    | cons x xs ih =>
+        intro ys hlen hx hy hflat
+        cases ys with
+        | nil => simp at hlen
+        | cons y ys =>
+            have hxyLength : x.length = y.length := by
+              rw [hx x (by simp), hy y (by simp)]
+            have htotalLength := congrArg List.length hflat
+            have htailFlattenLength : xs.flatten.length = ys.flatten.length := by
+              simp only [List.flatten_cons, List.length_append] at htotalLength
+              omega
+            have hparts := List.append_inj' hflat htailFlattenLength
+            have htailLength : xs.length = ys.length := by simpa using hlen
+            have htail : xs = ys := ih ys htailLength
+              (by intro row hrow; exact hx row (by simp [hrow]))
+              (by intro row hrow; exact hy row (by simp [hrow])) hparts.2
+            exact congrArg₂ List.cons hparts.1 htail
+  let rows := List.ofFn fun p : Fin shape.numProofs =>
+    List.ofFn fun column : Fin shape.numInstanceColumns =>
+      TranscriptElt.point (F := F) (instanceCommitment p column)
+  let rows' := List.ofFn fun p : Fin shape.numProofs =>
+    List.ofFn fun column : Fin shape.numInstanceColumns =>
+      TranscriptElt.point (F := F) (instanceCommitment' p column)
+  have hrows : rows = rows' := by
+    apply chunks_injective rows rows'
+    · simp [rows, rows']
+    · intro row hrow
+      obtain ⟨i, rfl⟩ := List.mem_ofFn.mp (show row ∈ rows from hrow)
+      simp
+    · intro row hrow
+      obtain ⟨i, rfl⟩ := List.mem_ofFn.mp (show row ∈ rows' from hrow)
+      simp
+    · simpa only [absorbInstanceCommitments, rows, rows'] using hflatten
+  have hrowFunctions :
+      (fun p : Fin shape.numProofs =>
+        List.ofFn fun column : Fin shape.numInstanceColumns =>
+          TranscriptElt.point (F := F) (instanceCommitment p column)) =
+      (fun p : Fin shape.numProofs =>
+        List.ofFn fun column : Fin shape.numInstanceColumns =>
+          TranscriptElt.point (F := F) (instanceCommitment' p column)) :=
+    List.ofFn_injective hrows
+  have hcolumnsAt := congrFun hrowFunctions p
+  have hcolumnFunctions :
+      (fun column : Fin shape.numInstanceColumns =>
+        TranscriptElt.point (F := F) (instanceCommitment p column)) =
+      (fun column : Fin shape.numInstanceColumns =>
+        TranscriptElt.point (F := F) (instanceCommitment' p column)) :=
+    List.ofFn_injective hcolumnsAt
+  simpa using TranscriptElt.point.inj (congrFun hcolumnFunctions column)
+
 /-- Derive the verifier's challenges in halo2's deployed absorb/squeeze order.
 
 Each squeeze first appends `TranscriptElt.challenge`; the result is not re-absorbed. `init` contains
@@ -122,6 +278,70 @@ def deriveChallenges {shape : Shape} {F G : Type*} [Zero F] (fs : FiatShamir F G
     x1 := x1, x2 := x2, x3 := x3, x4 := x4, xi := xi, z := z,
     ipaRound := fun j => ipaRes.2.getD j.val 0 }
 
+/-- Derive challenges from the canonical verifier-controlled prefix.  This is the statement-bound
+entry point; `deriveChallenges` remains the low-level schedule over an explicit prefix. -/
+def deriveChallengesForStatement {shape : Shape} {F G : Type*} [Zero F]
+    (fs : FiatShamir F G) (vkTranscriptRepr : F)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) : Challenges shape.k F :=
+  deriveChallenges fs (initialTranscript vkTranscriptRepr instanceCommitment) ps
+
+/-- Statement-bound challenge derivation is extensional over the configured instance commitments. -/
+theorem deriveChallengesForStatement_congr
+    {shape : Shape} {F G : Type*} [Zero F]
+    (fs : FiatShamir F G) (vkTranscriptRepr : F)
+    (instanceCommitment instanceCommitment' : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G)
+    (h : ∀ p (column : Fin shape.numInstanceColumns),
+      instanceCommitment p column = instanceCommitment' p column) :
+    deriveChallengesForStatement fs vkTranscriptRepr instanceCommitment ps =
+      deriveChallengesForStatement fs vkTranscriptRepr instanceCommitment' ps := by
+  unfold deriveChallengesForStatement
+  rw [initialTranscript_congr vkTranscriptRepr instanceCommitment instanceCommitment' h]
+
+/-- The exact transcript presented to the first squeeze by the statement-bound verifier. -/
+def preThetaTranscriptForStatement {shape : Shape} {F G : Type*}
+    (vkTranscriptRepr : F) (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) : List (TranscriptElt F G) :=
+  initialTranscript vkTranscriptRepr instanceCommitment ++
+    absorbPoints2 ps.adviceCommitments ++ [.challenge]
+
+@[simp] theorem deriveChallengesForStatement_theta {shape : Shape} {F G : Type*} [Zero F]
+    (fs : FiatShamir F G) (vkTranscriptRepr : F)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) :
+    (deriveChallengesForStatement fs vkTranscriptRepr instanceCommitment ps).theta =
+      fs.squeeze (preThetaTranscriptForStatement vkTranscriptRepr instanceCommitment ps) := by
+  rfl
+
+theorem vkTranscriptRepr_mem_preThetaTranscriptForStatement
+    {shape : Shape} {F G : Type*} (vkTranscriptRepr : F)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) :
+    TranscriptElt.scalar vkTranscriptRepr ∈
+      preThetaTranscriptForStatement vkTranscriptRepr instanceCommitment ps := by
+  simp [preThetaTranscriptForStatement, initialTranscript]
+
+theorem instanceCommitment_mem_preThetaTranscriptForStatement
+    {shape : Shape} {F G : Type*} (vkTranscriptRepr : F)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) (p : Fin shape.numProofs)
+    (column : Fin shape.numInstanceColumns) :
+    TranscriptElt.point (instanceCommitment p column) ∈
+      preThetaTranscriptForStatement vkTranscriptRepr instanceCommitment ps := by
+  apply List.mem_append_left
+  apply List.mem_append_left
+  exact instanceCommitment_mem_initialTranscript vkTranscriptRepr instanceCommitment p column
+
+theorem adviceCommitment_mem_preThetaTranscriptForStatement
+    {shape : Shape} {F G : Type*} (vkTranscriptRepr : F)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) (p : Fin shape.numProofs)
+    (column : Fin shape.numAdviceColumns) :
+    TranscriptElt.point (ps.adviceCommitments p column) ∈
+      preThetaTranscriptForStatement vkTranscriptRepr instanceCommitment ps := by
+  simp [preThetaTranscriptForStatement, absorbPoints2, absorbPoints]
+
 /-- The deployed verifier's fingerprint MSM: `assemble` at the Fiat–Shamir challenges.
 
 The random-oracle assumption is what transfers interactive soundness to this non-interactive MSM. -/
@@ -130,5 +350,14 @@ def nonInteractiveFingerprint {shape : Shape} {F G : Type*} [Field F] [Decidable
     (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape F G) : Msm shape.k F G :=
   assemble vk instanceCommitment ps (deriveChallenges fs init ps)
+
+/-- The deployed verifier fingerprint with the VK and public statement bound into Fiat–Shamir. -/
+def nonInteractiveFingerprintForStatement {shape : Shape} {F G : Type*}
+    [Field F] [DecidableEq F] [DecidableEq G] [Inhabited G]
+    (fs : FiatShamir F G) (vkTranscriptRepr : F) (vk : VerifyingKey shape F G)
+    (instanceCommitment : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) : Msm shape.k F G :=
+  assemble vk instanceCommitment ps
+    (deriveChallengesForStatement fs vkTranscriptRepr instanceCommitment ps)
 
 end Zcash.Snark

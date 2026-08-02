@@ -46,6 +46,7 @@ import Zcash.Snark.Soundness.AGM.DecodeToOpened
 import Zcash.Snark.Soundness.Action.StraightLineTerminal
 import Zcash.Snark.Soundness.Action.StraightLineEvent
 import Zcash.Snark.Soundness.Action.AdaptiveEvent
+import Zcash.Snark.Verifier.Deployed
 import Zcash.Snark.Soundness.Composition.SemanticChallengeRemainder
 import Zcash.Snark.Soundness.Composition.StraightLineDecodeSupply
 import Zcash.Snark.Soundness.Composition.SequentialLift
@@ -2050,3 +2051,34 @@ answer requires a memory-safety defect, the same class every `native_decide` alr
 `Zcash/Common/ParMap.lean` and `Zcash/Arithmetic/FastMsm.lean`. -/
 
 assert_axioms Zcash.Arithmetic.Msm.evalNat_eq_evalNatFast
+
+/-! ## Statement-bound Fiat–Shamir
+
+These entries keep the protocol hardening inside the checked surface. The executable entries must
+remain ordinary definitions; the theorem entries pin the entire transitive axiom base of statement
+binding and malformed-instance rejection. The module documentation in
+`Zcash.Snark.Verifier.Deployed` records the opaque-key-representation and commitment-level limits of
+that binding claim. -/
+
+assert_computable Zcash.Snark.absorbInstanceCommitments
+assert_axioms Zcash.Snark.absorbInstanceCommitments_congr
+assert_computable Zcash.Snark.initialTranscript
+assert_axioms Zcash.Snark.initialTranscript_congr
+assert_computable Zcash.Snark.deriveChallengesForStatement
+assert_axioms Zcash.Snark.deriveChallengesForStatement_congr
+assert_computable Zcash.Snark.preThetaTranscriptForStatement
+assert_computable Zcash.Snark.validateInstances?
+assert_computable Zcash.Snark.assembleInstances? +choice
+assert_computable Zcash.Snark.assembleNonInteractiveInstances? +choice
+assert_axioms Zcash.Snark.columnQueries_congr_commitment
+assert_axioms Zcash.Snark.assembleQueries_congr_instanceCommitment
+assert_axioms Zcash.Snark.assembleQueries_congr_instanceCommitment_of_layout_bounded
+assert_axioms Zcash.Snark.assemble?_congr_instanceCommitment
+assert_axioms Zcash.Snark.assemble?_congr_instanceCommitment_of_layout_bounded
+assert_axioms Zcash.Snark.vkTranscriptRepr_eq_of_initialTranscript_eq
+assert_axioms Zcash.Snark.instanceCommitment_eq_of_initialTranscript_eq
+assert_axioms Zcash.Snark.vkTranscriptRepr_mem_preThetaTranscriptForStatement
+assert_axioms Zcash.Snark.instanceCommitment_mem_preThetaTranscriptForStatement
+assert_axioms Zcash.Snark.adviceCommitment_mem_preThetaTranscriptForStatement
+assert_axioms Zcash.Snark.assembleNonInteractiveInstances?_eq_none_of_wrong_column_count
+assert_axioms Zcash.Snark.assembleNonInteractiveInstances?_eq_none_of_oversized_column

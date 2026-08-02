@@ -248,6 +248,7 @@ def shape (top : TopLevelCircuit Fp Config PublicInput) : CircuitShape :=
     numPermutationSets := top.permutationSetCount
     numPermutationColumns := top.permutationColumnCount
     numQuotientPieces := top.quotientPieceCount
+    numInstanceColumns := top.constraintSystem.numInstanceColumns
     numInstanceQueries := top.instanceQueryCount
     numAdviceQueries := top.adviceQueryCount
     numFixedQueries := top.fixedQueryCount }
@@ -280,6 +281,11 @@ def shape (top : TopLevelCircuit Fp Config PublicInput) : CircuitShape :=
 @[simp] theorem shape_numQuotientPieces
     (top : TopLevelCircuit Fp Config PublicInput) :
     top.shape.numQuotientPieces = top.quotientPieceCount := by
+  simp only [shape]
+
+@[simp] theorem shape_numInstanceColumns
+    (top : TopLevelCircuit Fp Config PublicInput) :
+    top.shape.numInstanceColumns = top.constraintSystem.numInstanceColumns := by
   simp only [shape]
 
 @[simp] theorem shape_numInstanceQueries
