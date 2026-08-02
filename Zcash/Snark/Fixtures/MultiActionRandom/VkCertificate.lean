@@ -9,36 +9,32 @@ import Mathlib.Util.AssertNoSorry
 The captured verifying key of the random two-action capture equals the key derived end-to-end
 from the ported `configure`/keygen at the captured URS — transported from the single-action
 keygen certificate (`Keygen/Certificate.lean`) along the cross-capture point equalities of
-`Fixtures/PostNu63Random.lean`, never re-evaluating keygen. The transport is the
-`Fixtures/MultiAction/VkCertificate.lean` proof verbatim: both keys mention the proof count only
-in `Fin`-domain types, so every field equality of the single-action certificate restates
-verbatim at this capture's shape.
+`Fixtures/PostNu63Random.lean`, never re-evaluating keygen. Verifying keys are indexed only by
+the circuit-owned shape, so the proof count does not enter this transport.
 -/
 
 namespace Zcash.Snark.FixtureRandom2
 
 open Zcash.Snark
-open Zcash.Snark.Keygen (derivedActionVk fixedCommitmentsOf permutationCommitmentsOf)
 open Zcash.Snark.PostNu63Fixture
+open Zcash.Circuits.Action (actionCircuit)
 
-set_option maxRecDepth 1000000 in
-/-- **The captured random two-action verifying key is fully derived.** The cross-capture URS
-equality rewrites the goal to the honest single-action URS; opening both records with the same
-definitional `simp only` set as the single-action proof makes the field spellings coincide, and
-each field is discharged by the corresponding component of the single-action certificate, with
-the two commitment families rewritten along the cross-capture point equalities. -/
-theorem vk_eq_derived : vk = derivedActionVk shape capturedURS := by
+/-- The Action circuit shape is the circuit-owned part of this capture's proof shape. -/
+theorem actionCircuitShape_eq : actionCircuit.shape = shape.toCircuitShape :=
+  Keygen.actionCircuitShape_eq_fixtureCircuitShape
+
+/-- The Action circuit's derived key at this capture's URS, transported to the fixture shape. -/
+def derivedVk : VerifyingKey shape Fp G :=
+  actionCircuitShape_eq ▸ actionCircuit.toVerifierKey capturedURS
+
+/-- **The captured random two-action verifying key is fully derived.** -/
+theorem vk_eq_derived : vk = derivedVk := by
+  unfold derivedVk
   rw [randomMulti_uses_same_urs]
-  have h := Zcash.Snark.Keygen.vk_eq_derived
-  unfold Zcash.Snark.Fixture.vk at h
-  unfold vk
-  simp only [derivedActionVk, Halo2.TopLevelCircuit.verifierKeyAt,
-    VerifyingKey.ofOperations, fixedCommitmentsOf, permutationCommitmentsOf] at h ⊢
-  rw [VerifyingKey.mk.injEq] at h ⊢
-  obtain ⟨ho, hn, hb, hd, hc, hg, hiq, haq, hfq, hfcf, hpcf, hpch, hli, hlt⟩ := h
-  refine ⟨ho, hn, hb, hd, hc, hg, hiq, haq, hfq, ?_, ?_, hpch, hli, hlt⟩
-  · rw [randomMulti_uses_same_fixedCommitments]; exact hfcf
-  · rw [randomMulti_uses_same_permutationCommonCommitments]; exact hpcf
+  have hshape : actionCircuitShape_eq = Keygen.actionCircuitShape_eq_fixtureCircuitShape :=
+    Subsingleton.elim _ _
+  rw [hshape]
+  exact randomMulti_uses_same_vk.trans Keygen.vk_eq_toVerifierKey
 
 assert_no_sorry vk_eq_derived
 

@@ -842,7 +842,6 @@ assert_axioms Zcash.Snark.PostNu63Fixture.captures_use_same_urs +native(
 -- end-to-end derivation. Owners are the single-action certificate's plus the cross-capture
 -- point equalities — no second keygen evaluation.
 assert_axioms Zcash.Snark.Fixture2.vk_eq_derived +native(
-  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Keygen.certificate,
   Zcash.Snark.PostNu63Fixture.captures_use_same_ursG,
@@ -859,19 +858,7 @@ assert_axioms Zcash.Snark.Fixture2.vk_eq_derived +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Fixture2.actionProofParamsFor_two_mergeDerived +native(
-  Zcash.Snark.Keygen.certificate,
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
-  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
-  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.Fixture2.vk_eq_toVerifierKey +native(
-  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Keygen.certificate,
   Zcash.Snark.PostNu63Fixture.captures_use_same_ursG,
@@ -892,7 +879,7 @@ assert_axioms Zcash.Snark.Fixture2.vk_eq_toVerifierKey +native(
 -- The Fiat–Shamir schedule checks, the composed fingerprint, and the boundary statement at the
 -- Lean-derived key (`Boundary.lean`). The oracle/schedule data and the composed-statement
 -- functions are flagless — compiler trust may enter only through the named claims — except
--- `derivedActionVk`, whose circuit argument itself carries the natively-certified fixed-base
+-- `derivedVk`, whose circuit argument itself carries the natively-certified fixed-base
 -- facts.
 assert_axioms Zcash.Snark.Fixture2.capturedChallengeValues_eq_expected +native(
   Zcash.Snark.Fixture2.capturedChallengeValues_eq_expected)
@@ -906,12 +893,14 @@ assert_axioms Zcash.Snark.Fixture2.deriveChallenges_matches_captured_schedule +n
   Zcash.Snark.Fixture2.deriveChallenges_matches_captured_schedule)
 assert_axioms Zcash.Snark.Fixture2.nonInteractiveFingerprint_matches +native(
   Zcash.Snark.Fixture2.deriveChallenges_matches_captured_schedule,
-  Zcash.Snark.Fixture2.fingerprint_matches)
+  Zcash.Snark.Fixture2.fingerprint_matches,
+  Zcash.Snark.Fixture2.instance_commitments_derived)
 assert_axioms Zcash.Snark.Fixture2.capturedFs
 assert_axioms Zcash.Snark.Fixture2.capturedInit
 assert_axioms Zcash.Snark.deriveChallenges
 assert_axioms Zcash.Snark.nonInteractiveFingerprint
-assert_axioms Zcash.Snark.Keygen.derivedActionVk +native(
+assert_axioms Zcash.Snark.Fixture2.derivedVk +native(
+  Zcash.Snark.Keygen.certificate,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
@@ -922,7 +911,6 @@ assert_axioms Zcash.Snark.Keygen.derivedActionVk +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.Fixture2.nonInteractiveFingerprint_matches_derived +native(
-  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Keygen.certificate,
   Zcash.Snark.PostNu63Fixture.captures_use_same_ursG,
@@ -940,7 +928,8 @@ assert_axioms Zcash.Snark.Fixture2.nonInteractiveFingerprint_matches_derived +na
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero,
   Zcash.Snark.Fixture2.deriveChallenges_matches_captured_schedule,
-  Zcash.Snark.Fixture2.fingerprint_matches)
+  Zcash.Snark.Fixture2.fingerprint_matches,
+  Zcash.Snark.Fixture2.instance_commitments_derived)
 
 -- The captured key's zero-family test with eleven live IPA rounds
 -- (`MultiAction/CapturedZeroFamily`): this exercises the interface at the captured scalar
@@ -1008,11 +997,11 @@ assert_axioms Zcash.Snark.FixtureMax.straightLine_consensus_2pow122_workFactor_g
 /-- info: 'Zcash.Snark.Fixture2.nonInteractiveFingerprint_matches_derived' depends on axioms: [propext,
 Classical.choice,
 Quot.sound,
-Zcash.Arithmetic.omegaOf_eq_certifiedRootPow._native.native_decide.ax_1_1,
 CompElliptic.Fields.Pasta.pallasBase._native.native_decide.ax_1,
 CompElliptic.Fields.Pasta.pallasBase._native.native_decide.ax_2,
 Zcash.Snark.Fixture2.deriveChallenges_matches_captured_schedule._native.native_decide.ax_1_1,
 Zcash.Snark.Fixture2.fingerprint_matches._native.native_decide.ax_1_1,
+Zcash.Snark.Fixture2.instance_commitments_derived._native.native_decide.ax_1_1,
 Zcash.Snark.Keygen.certificate._native.native_decide.ax_1_1,
 Zcash.Snark.PostNu63Fixture.captures_use_same_fixedCommitments._native.native_decide.ax_1_1,
 Zcash.Snark.PostNu63Fixture.captures_use_same_permutationCommonCommitments._native.native_decide.ax_1_1,

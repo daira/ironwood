@@ -68,6 +68,27 @@ theorem randomSingle_uses_same_urs : FixtureRandom.capturedURS = Fixture.capture
   simp only [FixtureRandom.capturedURS, Fixture.capturedURS, randomSingle_uses_same_ursG,
     randomSingle_uses_same_wu.1, randomSingle_uses_same_wu.2]
 
+theorem randomSingle_uses_same_vk : FixtureRandom.vk = Fixture.vk := by
+  apply verifyingKey_eq_of_fields
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · funext i
+    simp only [FixtureRandom.vk, Fixture.vk]
+    rw [randomSingle_uses_same_fixedCommitments]
+  · funext i
+    simp only [FixtureRandom.vk, Fixture.vk]
+    rw [randomSingle_uses_same_permutationCommonCommitments]
+  · rfl
+  · rfl
+  · rfl
+
 /-! ## The random two-action capture -/
 
 theorem randomMulti_uses_postNu63 : FixtureRandom2.capturedCircuitId = "PostNu6_3" := by
@@ -101,6 +122,27 @@ theorem randomMulti_uses_same_permutationCommonCommitments :
 theorem randomMulti_uses_same_urs : FixtureRandom2.capturedURS = Fixture.capturedURS := by
   simp only [FixtureRandom2.capturedURS, Fixture.capturedURS, randomMulti_uses_same_ursG,
     randomMulti_uses_same_wu.1, randomMulti_uses_same_wu.2]
+
+theorem randomMulti_uses_same_vk : FixtureRandom2.vk = Fixture.vk := by
+  apply verifyingKey_eq_of_fields
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · funext i
+    simp only [FixtureRandom2.vk, Fixture.vk]
+    rw [randomMulti_uses_same_fixedCommitments]
+  · funext i
+    simp only [FixtureRandom2.vk, Fixture.vk]
+    rw [randomMulti_uses_same_permutationCommonCommitments]
+  · rfl
+  · rfl
+  · rfl
 
 /-! ## The random three-action capture -/
 
@@ -136,6 +178,27 @@ theorem randomTriple_uses_same_urs : FixtureRandom3.capturedURS = Fixture.captur
   simp only [FixtureRandom3.capturedURS, Fixture.capturedURS, randomTriple_uses_same_ursG,
     randomTriple_uses_same_wu.1, randomTriple_uses_same_wu.2]
 
+theorem randomTriple_uses_same_vk : FixtureRandom3.vk = Fixture.vk := by
+  apply verifyingKey_eq_of_fields
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · funext i
+    simp only [FixtureRandom3.vk, Fixture.vk]
+    rw [randomTriple_uses_same_fixedCommitments]
+  · funext i
+    simp only [FixtureRandom3.vk, Fixture.vk]
+    rw [randomTriple_uses_same_permutationCommonCommitments]
+  · rfl
+  · rfl
+  · rfl
+
 -- Trust-boundary guards: fail the `FixtureCheck` build if any provenance theorem above comes to
 -- rest on a `sorry` reached through some dependency (the checks are `native_decide`, so a hole
 -- would otherwise only surface as a warning). Mirrors `Fixtures/PostNu63.lean`.
@@ -147,6 +210,7 @@ assert_no_sorry randomSingle_uses_same_ursGLagrange
 assert_no_sorry randomSingle_uses_same_fixedCommitments
 assert_no_sorry randomSingle_uses_same_permutationCommonCommitments
 assert_no_sorry randomSingle_uses_same_urs
+assert_no_sorry randomSingle_uses_same_vk
 assert_no_sorry randomMulti_uses_postNu63
 assert_no_sorry randomMulti_uses_canonicalVk
 assert_no_sorry randomMulti_uses_same_ursG
@@ -155,6 +219,7 @@ assert_no_sorry randomMulti_uses_same_ursGLagrange
 assert_no_sorry randomMulti_uses_same_fixedCommitments
 assert_no_sorry randomMulti_uses_same_permutationCommonCommitments
 assert_no_sorry randomMulti_uses_same_urs
+assert_no_sorry randomMulti_uses_same_vk
 assert_no_sorry randomTriple_uses_postNu63
 assert_no_sorry randomTriple_uses_canonicalVk
 assert_no_sorry randomTriple_uses_same_ursG
@@ -163,5 +228,6 @@ assert_no_sorry randomTriple_uses_same_ursGLagrange
 assert_no_sorry randomTriple_uses_same_fixedCommitments
 assert_no_sorry randomTriple_uses_same_permutationCommonCommitments
 assert_no_sorry randomTriple_uses_same_urs
+assert_no_sorry randomTriple_uses_same_vk
 
 end Zcash.Snark.PostNu63Fixture

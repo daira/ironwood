@@ -32,9 +32,9 @@ open Zcash.Snark
 theorem nonInteractiveFingerprint_matches_derived :
     MsmMatch
       (nonInteractiveFingerprint capturedFs capturedInit
-        (Keygen.derivedActionVk shape capturedURS) derivedInstanceCommitment ps)
+        derivedVk derivedInstanceCommitment ps)
       capturedMsm := by
-  have h : vk = Keygen.derivedActionVk shape capturedURS := vk_eq_derived
+  have h : vk = derivedVk := vk_eq_derived
   rw [← h]
   exact nonInteractiveFingerprint_matches
 

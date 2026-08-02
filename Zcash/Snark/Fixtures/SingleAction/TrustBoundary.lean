@@ -334,7 +334,7 @@ assert_axioms Zcash.Snark.Keygen.vk_eq_toVerifierKey +native(
 -- The Fiat–Shamir schedule checks, the composed fingerprint, and the boundary statements at the
 -- Lean-derived key (`Boundary.lean`). The oracle/schedule data and the composed-statement
 -- functions are flagless — compiler trust may enter only through the named claims — except
--- `derivedActionVk`, whose circuit argument itself carries the natively-certified fixed-base
+-- `derivedVk`, whose circuit argument itself carries the natively-certified fixed-base
 -- facts.
 assert_axioms Zcash.Snark.Fixture.capturedChallengeValues_eq_expected +native(
   Zcash.Snark.Fixture.capturedChallengeValues_eq_expected)
@@ -348,12 +348,14 @@ assert_axioms Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule +na
   Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule)
 assert_axioms Zcash.Snark.Fixture.nonInteractiveFingerprint_matches +native(
   Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule,
-  Zcash.Snark.Fixture.fingerprint_matches)
+  Zcash.Snark.Fixture.fingerprint_matches,
+  Zcash.Snark.Fixture.instance_commitments_derived)
 assert_axioms Zcash.Snark.Fixture.capturedFs
 assert_axioms Zcash.Snark.Fixture.capturedInit
 assert_axioms Zcash.Snark.deriveChallenges
 assert_axioms Zcash.Snark.nonInteractiveFingerprint
-assert_axioms Zcash.Snark.Keygen.derivedActionVk +native(
+assert_axioms Zcash.Snark.Fixture.derivedVk +native(
+  Zcash.Snark.Keygen.certificate,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
@@ -364,7 +366,6 @@ assert_axioms Zcash.Snark.Keygen.derivedActionVk +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.Fixture.nonInteractiveFingerprint_matches_derived +native(
-  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Keygen.certificate,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
@@ -378,9 +379,9 @@ assert_axioms Zcash.Snark.Fixture.nonInteractiveFingerprint_matches_derived +nat
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero,
   Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule,
-  Zcash.Snark.Fixture.fingerprint_matches)
+  Zcash.Snark.Fixture.fingerprint_matches,
+  Zcash.Snark.Fixture.instance_commitments_derived)
 assert_axioms Zcash.Snark.Fixture.nonInteractiveFingerprint_matches_derived_inputs +native(
-  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Keygen.certificate,
   Zcash.Snark.Keygen.instanceCommitment_capturedActionInputs,
@@ -396,7 +397,8 @@ assert_axioms Zcash.Snark.Fixture.nonInteractiveFingerprint_matches_derived_inpu
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero,
   Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule,
-  Zcash.Snark.Fixture.fingerprint_matches)
+  Zcash.Snark.Fixture.fingerprint_matches,
+  Zcash.Snark.Fixture.instance_commitments_derived)
 
 -- `whitespace := lax` collapses all whitespace, so the pin is insensitive to how
 -- `#print axioms` line-wraps the list (a formatting artifact of the axiom-name lengths).
@@ -419,11 +421,11 @@ assert_axioms Zcash.Snark.Fixture.nonInteractiveFingerprint_matches_derived_inpu
 /-- info: 'Zcash.Snark.Fixture.nonInteractiveFingerprint_matches_derived' depends on axioms: [propext,
 Classical.choice,
 Quot.sound,
-Zcash.Arithmetic.omegaOf_eq_certifiedRootPow._native.native_decide.ax_1_1,
 CompElliptic.Fields.Pasta.pallasBase._native.native_decide.ax_1,
 CompElliptic.Fields.Pasta.pallasBase._native.native_decide.ax_2,
 Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule._native.native_decide.ax_1_1,
 Zcash.Snark.Fixture.fingerprint_matches._native.native_decide.ax_1_1,
+Zcash.Snark.Fixture.instance_commitments_derived._native.native_decide.ax_1_1,
 Zcash.Snark.Keygen.certificate._native.native_decide.ax_1_1,
 CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt._native.native_decide.ax_1_1,
 CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt._native.native_decide.ax_1_1,

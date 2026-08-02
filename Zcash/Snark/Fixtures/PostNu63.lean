@@ -21,6 +21,30 @@ is transported from the single-action one along them.
 
 namespace Zcash.Snark.PostNu63Fixture
 
+/-- Fieldwise extensionality for two verifying keys at the same circuit shape. -/
+theorem verifyingKey_eq_of_fields
+    {shape : CircuitShape} {F G : Type*}
+    (left right : VerifyingKey shape F G)
+    (omega : left.omega = right.omega)
+    (n : left.n = right.n)
+    (blindingFactors : left.blindingFactors = right.blindingFactors)
+    (delta : left.delta = right.delta)
+    (chunkLen : left.chunkLen = right.chunkLen)
+    (gates : left.gates = right.gates)
+    (instanceQueryLayout : left.instanceQueryLayout = right.instanceQueryLayout)
+    (adviceQueryLayout : left.adviceQueryLayout = right.adviceQueryLayout)
+    (fixedQueryLayout : left.fixedQueryLayout = right.fixedQueryLayout)
+    (fixedCommitment : left.fixedCommitment = right.fixedCommitment)
+    (permutationCommonCommitment :
+      left.permutationCommonCommitment = right.permutationCommonCommitment)
+    (permutationChunks : left.permutationChunks = right.permutationChunks)
+    (lookupInputExprs : left.lookupInputExprs = right.lookupInputExprs)
+    (lookupTableExprs : left.lookupTableExprs = right.lookupTableExprs) :
+    left = right := by
+  cases left
+  cases right
+  simp_all
+
 /-- Halo2's transcript representation of the canonical Post-NU6.3 pinned verifying key. -/
 def canonicalVkTranscriptRepr : Fp :=
   (8223501628842095769 : Fp)
@@ -89,6 +113,29 @@ theorem captures_use_same_urs : Fixture2.capturedURS = Fixture.capturedURS := by
   simp only [Fixture2.capturedURS, Fixture.capturedURS, captures_use_same_ursG,
     captures_use_same_wu.1, captures_use_same_wu.2]
 
+/-- The two captures carry the same circuit-fixed verifying key. Proof count is no longer a VK
+parameter; the only non-definitional fields are the commitment families pinned above. -/
+theorem captures_use_same_vk : Fixture2.vk = Fixture.vk := by
+  apply verifyingKey_eq_of_fields
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · funext i
+    simp only [Fixture2.vk, Fixture.vk]
+    rw [captures_use_same_fixedCommitments]
+  · funext i
+    simp only [Fixture2.vk, Fixture.vk]
+    rw [captures_use_same_permutationCommonCommitments]
+  · rfl
+  · rfl
+  · rfl
+
 -- Trust-boundary guards: fail the `FixtureCheck` build if any provenance theorem above comes to
 -- rest on a `sorry` reached through some dependency (the checks are `native_decide`, so a hole
 -- would otherwise only surface as a warning). Mirrors the `SingleAction`/`MultiAction` boundaries.
@@ -103,5 +150,6 @@ assert_no_sorry captures_use_same_ursGLagrange
 assert_no_sorry captures_use_same_fixedCommitments
 assert_no_sorry captures_use_same_permutationCommonCommitments
 assert_no_sorry captures_use_same_urs
+assert_no_sorry captures_use_same_vk
 
 end Zcash.Snark.PostNu63Fixture

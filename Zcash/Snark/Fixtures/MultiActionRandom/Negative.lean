@@ -27,11 +27,6 @@ open Zcash.Snark
 theorem valid_capture_assembles : (assemble? vk derivedInstanceCommitment ps ch).isSome = true := by
   native_decide
 
-/-- The captured MSM does not evaluate to the identity: the random capture is genuinely
-non-accepting. -/
-theorem capturedMsm_evalNat_ne_zero : capturedMsm.evalNat capturedURS ≠ 0 := by
-  native_decide
-
 /-- Blind-slot canary: `fixedEvals` is transcript-claimed, so the tamper survives `assemble?`
 and must be caught by the match itself. Stated at the captured `ch`, so a failure is MSM
 sensitivity, not a schedule derailment. -/

@@ -62,8 +62,8 @@ any batching layer prices on top of the per-proof artifact without adding transc
 The statements of record are the `nonInteractiveFingerprint_matches_derived` theorems — one per
 capture family, in the five `Fixtures/*/Boundary.lean` modules: the challenges
 are derived by Lean's schedule model (`deriveChallenges`), and the verifying key is spelled as
-`derivedActionVk` — its end-to-end derivation from the ported `configure`/keygen at the captured
-URS (`Keygen/Certificate.lean`, transported to the other families by their
+`derivedVk` — its end-to-end derivation from the ported `configure`/keygen at the captured URS
+(`Keygen/Certificate.lean`, transported to the other families by their
 `VkCertificate.lean` modules). This ties the σ- and fixed-column polynomial content
 into the boundary: the compared bases are deterministic URS commitments of Lean's own keygen
 output, so a transcription error in that content moves a base point and fails the match — an

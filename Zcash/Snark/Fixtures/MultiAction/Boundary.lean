@@ -26,10 +26,10 @@ open Zcash.Snark
 (`vk_eq_derived`) rewrites the dumped key out of `nonInteractiveFingerprint_matches`. -/
 theorem nonInteractiveFingerprint_matches_derived :
     MsmMatch
-      (nonInteractiveFingerprint capturedFs capturedInit
-        (Keygen.derivedActionVk shape capturedURS) derivedInstanceCommitment ps)
+      (nonInteractiveFingerprintForStatement capturedFs capturedVkTranscriptRepr
+        derivedVk derivedInstanceCommitment ps)
       capturedMsm := by
-  have h : vk = Keygen.derivedActionVk shape capturedURS := vk_eq_derived
+  have h : vk = derivedVk := vk_eq_derived
   rw [← h]
   exact nonInteractiveFingerprint_matches
 

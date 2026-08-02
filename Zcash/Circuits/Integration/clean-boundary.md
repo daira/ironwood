@@ -84,7 +84,7 @@ boundary mentions `RichExpression` at all.
    `Fast/ParMap` (fully generic) → `Common/`. `Common/ExprRich` → into the boundary.
 3. `Snark/Fixtures/SingleAction/{PinnedCsMatch,VkMatch}` — restate over the interface
    (`Certificate.lean` already demonstrates the style: it speaks only `vk`,
-   `derivedActionVk`, and `TopLevelCircuit` methods).
+   `derivedVk`, and `TopLevelCircuit` methods).
 4. The cross-language satisfaction seam (`Operation*`, `TopLevel*`, `Resolver*`,
    the Clean-facing part of `PolynomialEnvironment`, coherence files, …) moves under
    `Zcash/Circuits/Integration/`, capped by the interface satisfaction theorem. Clean

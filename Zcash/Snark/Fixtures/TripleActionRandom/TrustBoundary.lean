@@ -17,9 +17,9 @@ dependency graph, with `+native` naming exactly the declarations that may spend 
 
 Two differences from the honest siblings, both consequences of the capture being match-only:
 
-* The census has no MSM-identity evaluations. Their place is taken by
-  `capturedMsm_evalNat_ne_zero`, which pins the capture as genuinely non-accepting, censused with
-  the other aliveness guards of `Negative.lean`.
+* The census has no MSM-identity evaluations. Their place is taken by the generated fixture's
+  `capturedMsm_evalNat_ne_zero`, which pins the capture as genuinely non-accepting and is censused
+  with the other aliveness guards from `Negative.lean`.
 * The shape/VK faithfulness checks (`Faithfulness.lean`) are censused here, so every theorem of
   this family sits under a build-time axiom bound.
 -/
@@ -36,9 +36,9 @@ assert_axioms Zcash.Snark.FixtureRandom3.fingerprint_matches +native(
 assert_axioms Zcash.Arithmetic.Msm.evalNat
 assert_axioms Zcash.Snark.assemble
 
--- The aliveness guards (`Negative.lean`): a match-only capture has no accepting evaluation, so
--- these pin what keeps it alive — the model accepts the random point, the captured MSM is not
--- the identity, and the match still detects a blind-slot tamper at this point.
+-- The aliveness guards (the generated fixture plus `Negative.lean`): a match-only capture has no
+-- accepting evaluation, so these pin what keeps it alive — the model accepts the random point,
+-- the captured MSM is not the identity, and the match still detects a blind-slot tamper here.
 assert_axioms Zcash.Snark.FixtureRandom3.valid_capture_assembles +native(
   Zcash.Snark.FixtureRandom3.valid_capture_assembles)
 assert_axioms Zcash.Snark.FixtureRandom3.capturedMsm_evalNat_ne_zero +native(
@@ -101,7 +101,6 @@ assert_axioms Zcash.Snark.PostNu63Fixture.randomTriple_uses_same_urs +native(
 -- its end-to-end derivation. Owners are the single-action certificate's plus the cross-capture
 -- point equalities — no second keygen evaluation.
 assert_axioms Zcash.Snark.FixtureRandom3.vk_eq_derived +native(
-  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Keygen.certificate,
   Zcash.Snark.PostNu63Fixture.randomTriple_uses_same_ursG,
@@ -122,7 +121,7 @@ assert_axioms Zcash.Snark.FixtureRandom3.vk_eq_derived +native(
 -- The Fiat–Shamir schedule checks, the composed fingerprint, and the boundary statement at the
 -- Lean-derived key (`Boundary.lean`). The oracle/schedule data and the composed-statement
 -- functions are flagless — compiler trust may enter only through the named claims — except
--- `derivedActionVk`, whose circuit argument itself carries the natively-certified fixed-base
+-- `derivedVk`, whose circuit argument itself carries the natively-certified fixed-base
 -- facts.
 assert_axioms Zcash.Snark.FixtureRandom3.capturedChallengeValues_eq_expected +native(
   Zcash.Snark.FixtureRandom3.capturedChallengeValues_eq_expected)
@@ -141,7 +140,8 @@ assert_axioms Zcash.Snark.FixtureRandom3.capturedFs
 assert_axioms Zcash.Snark.FixtureRandom3.capturedInit
 assert_axioms Zcash.Snark.deriveChallenges
 assert_axioms Zcash.Snark.nonInteractiveFingerprint
-assert_axioms Zcash.Snark.Keygen.derivedActionVk +native(
+assert_axioms Zcash.Snark.FixtureRandom3.derivedVk +native(
+  Zcash.Snark.Keygen.certificate,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
@@ -152,7 +152,6 @@ assert_axioms Zcash.Snark.Keygen.derivedActionVk +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.FixtureRandom3.nonInteractiveFingerprint_matches_derived +native(
-  Zcash.Arithmetic.omegaOf_eq_certifiedRootPow,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Keygen.certificate,
   Zcash.Snark.PostNu63Fixture.randomTriple_uses_same_ursG,
@@ -193,7 +192,6 @@ assert_axioms Zcash.Snark.FixtureRandom3.nonInteractiveFingerprint_matches_deriv
 /-- info: 'Zcash.Snark.FixtureRandom3.nonInteractiveFingerprint_matches_derived' depends on axioms: [propext,
 Classical.choice,
 Quot.sound,
-Zcash.Arithmetic.omegaOf_eq_certifiedRootPow._native.native_decide.ax_1_1,
 CompElliptic.Fields.Pasta.pallasBase._native.native_decide.ax_1,
 CompElliptic.Fields.Pasta.pallasBase._native.native_decide.ax_2,
 Zcash.Snark.FixtureRandom3.deriveChallenges_matches_captured_schedule._native.native_decide.ax_1_1,

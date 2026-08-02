@@ -240,7 +240,7 @@ theorem instanceCommitment_eq_capturedInstanceCommitments
       capturedInstanceCommitments.getD
         (proofIndex.val * capturedNumInstanceColumns + column) 0 := by
   have hzero : column = 0 := by
-    simpa only [capturedNumInstanceColumns, Nat.lt_one_iff] using hcolumn
+    simpa only [capturedNumInstanceColumns, Fixture.shape, Nat.lt_one_iff] using hcolumn
   subst hzero
   rw [instanceCommitment_capturedActionInputs, ← instance_commitments_derived]
   fin_cases proofIndex

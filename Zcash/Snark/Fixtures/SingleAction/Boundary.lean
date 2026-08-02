@@ -22,14 +22,20 @@ namespace Zcash.Snark.Fixture
 open Zcash.Snark
 open Zcash.Circuits.Action (actionCircuit)
 
+/-- The Action circuit's derived key at the captured URS, transported to the fixture shape. -/
+def derivedVk : VerifyingKey shape Fp G :=
+  Keygen.actionCircuitShape_eq_fixtureCircuitShape ▸ actionCircuit.toVerifierKey capturedURS
+
 /-- **The fingerprint match at the derived verifying key.** The keygen certificate
-(`Keygen.vk_eq_derived`) rewrites the dumped key out of `nonInteractiveFingerprint_matches`. -/
+(`Keygen.vk_eq_toVerifierKey`) rewrites the dumped key out of
+`nonInteractiveFingerprint_matches`. -/
 theorem nonInteractiveFingerprint_matches_derived :
     MsmMatch
-      (nonInteractiveFingerprint capturedFs capturedInit
-        (Keygen.derivedActionVk shape capturedURS) derivedInstanceCommitment ps)
+      (nonInteractiveFingerprintForStatement capturedFs capturedVkTranscriptRepr
+        derivedVk derivedInstanceCommitment ps)
       capturedMsm := by
-  have h : vk = Keygen.derivedActionVk shape capturedURS := Keygen.vk_eq_derived
+  unfold derivedVk
+  have h := Keygen.vk_eq_toVerifierKey
   rw [← h]
   exact nonInteractiveFingerprint_matches
 
@@ -38,10 +44,9 @@ circuit's commitment of the captured public inputs (`Keygen.instanceCommitment_c
 so both group-element families on the Lean side are derivations, not dump entries. -/
 theorem nonInteractiveFingerprint_matches_derived_inputs :
     MsmMatch
-      (nonInteractiveFingerprint capturedFs capturedInit
-        (Keygen.derivedActionVk shape capturedURS)
-        (actionCircuit.instanceCommitment Keygen.actionProofParams capturedURS
-          Keygen.capturedActionInputs) ps)
+      (nonInteractiveFingerprintForStatement capturedFs capturedVkTranscriptRepr
+        derivedVk
+        (actionCircuit.instanceCommitment capturedURS Keygen.capturedActionInputs) ps)
       capturedMsm := by
   rw [Keygen.instanceCommitment_capturedActionInputs]
   exact nonInteractiveFingerprint_matches_derived
