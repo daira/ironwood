@@ -28,13 +28,8 @@ namespace ActionPermutationDomain
 
 variable {G : Type} [AddCommGroup G] [Inhabited G]
 
-abbrev actionShape (pp : Keygen.ProofParams) : Shape :=
-  pp.mergeDerived actionCircuit
-
-abbrev actionVk (pp : Keygen.ProofParams) (urs : URS G) :
-    VerifyingKey (actionShape pp) Zcash.Circuits.Fp G :=
-  Halo2.TopLevelCircuit.toVerifierKey
-    actionCircuit pp urs
+abbrev actionShape (pp : ProofParams) : Shape :=
+  actionCircuit.shape.withProofParams pp
 
 /-- The Action circuit's verifier permutation chunks are `[7, 7, 1]`, with
 the exact query-layout and common-column indices. -/
@@ -111,14 +106,14 @@ theorem chunkLength_le :
 
 /-- Resolver pairing preserves each concrete VK chunk's width. -/
 theorem resolverPairsLength_le
-    (pp : Keygen.ProofParams) (urs : URS G)
+    (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → CPoly)
     (p : Fin pp.numProofs) :
     ∀ i, i < actionCircuit.permutationSetCount →
-      (ResolverPermutationPairs (actionVk pp urs) poly p i).length ≤
+      (ResolverPermutationPairs (actionCircuit.toVerifierKey urs) poly p i).length ≤
         actionCircuit.chunkLen := by
   intro i hi
-  simpa only [actionVk, actionCircuit.toVerifierKey_permutationChunks,
+  simpa only [actionCircuit.toVerifierKey_permutationChunks,
     actionCircuit.toVerifierKey_chunkLen,
     ResolverPermutationPairs, permutationChunkPairsOfResolver,
     List.length_map] using
@@ -128,20 +123,20 @@ set_option maxRecDepth 100000 in
 /-- Every chunk value reference selects an in-range rotation-zero query-layout
 entry, and every common-permutation index is in range. -/
 theorem routingCoherent_of_derived
-    (pp : Keygen.ProofParams) (urs : URS G) :
-    PermutationChunkRoutingCoherent (actionVk pp urs) := by
+    (urs : URS G) :
+    PermutationChunkRoutingCoherent (actionCircuit.toVerifierKey urs) := by
   have hadviceLayout :
-      (actionVk pp urs).adviceQueryLayout =
+      (actionCircuit.toVerifierKey urs).adviceQueryLayout =
         actionCircuit.adviceQueryLayout :=
-    actionCircuit.toVerifierKey_adviceQueryLayout pp urs
+    actionCircuit.toVerifierKey_adviceQueryLayout urs
   have hfixedLayout :
-      (actionVk pp urs).fixedQueryLayout =
+      (actionCircuit.toVerifierKey urs).fixedQueryLayout =
         actionCircuit.fixedQueryLayout :=
-    actionCircuit.toVerifierKey_fixedQueryLayout pp urs
+    actionCircuit.toVerifierKey_fixedQueryLayout urs
   have hinstanceLayout :
-      (actionVk pp urs).instanceQueryLayout =
+      (actionCircuit.toVerifierKey urs).instanceQueryLayout =
         actionCircuit.instanceQueryLayout :=
-    actionCircuit.toVerifierKey_instanceQueryLayout pp urs
+    actionCircuit.toVerifierKey_instanceQueryLayout urs
   rintro chunk hchunk ⟨ref, common⟩ href
   have hroute := routingCoherent chunk hchunk (ref, common) href
   rcases hroute with ⟨hrefCoherent, hcommon⟩
@@ -150,54 +145,51 @@ theorem routingCoherent_of_derived
     | advice i =>
         rcases hrefCoherent with ⟨hi, hrotation⟩
         change PermutationColumnRef.Coherent
-          (actionVk pp urs) (.advice i)
+          (actionCircuit.toVerifierKey urs) (.advice i)
         simp only [PermutationColumnRef.Coherent]
         refine ⟨?_, ?_, ?_⟩
-        · simpa only [actionShape,
-            Keygen.ProofParams.mergeDerived_numAdviceQueries,
+        · simpa only [actionCircuit.shape_numAdviceQueries,
             TopLevelCircuit.adviceQueryCount] using hi
         · simpa only [hadviceLayout] using hi
         · simpa only [hadviceLayout] using hrotation
     | fixed i =>
         rcases hrefCoherent with ⟨hi, hrotation⟩
         change PermutationColumnRef.Coherent
-          (actionVk pp urs) (.fixed i)
+          (actionCircuit.toVerifierKey urs) (.fixed i)
         simp only [PermutationColumnRef.Coherent]
         refine ⟨?_, ?_, ?_⟩
-        · simpa only [actionShape,
-            Keygen.ProofParams.mergeDerived_numFixedQueries,
+        · simpa only [actionCircuit.shape_numFixedQueries,
             TopLevelCircuit.fixedQueryCount] using hi
         · simpa only [hfixedLayout] using hi
         · simpa only [hfixedLayout] using hrotation
     | «instance» i =>
         rcases hrefCoherent with ⟨hi, hrotation⟩
         change PermutationColumnRef.Coherent
-          (actionVk pp urs) (.instance i)
+          (actionCircuit.toVerifierKey urs) (.instance i)
         simp only [PermutationColumnRef.Coherent]
         refine ⟨?_, ?_, ?_⟩
-        · simpa only [actionShape,
-            Keygen.ProofParams.mergeDerived_numInstanceQueries,
+        · simpa only [actionCircuit.shape_numInstanceQueries,
             TopLevelCircuit.instanceQueryCount] using hi
         · simpa only [hinstanceLayout] using hi
         · simpa only [hinstanceLayout] using hrotation
-  · simpa [actionShape, Keygen.ProofParams.mergeDerived] using hcommon
+  · simpa only [actionCircuit.shape_numPermutationColumns] using hcommon
 
 /--
 Flattening the derived verifier chunks and decoding their query references
 recovers the compiler's original permutation-column order.
 -/
 theorem permutationColumnAddresses_eq
-    (pp : Keygen.ProofParams) (urs : URS G) :
+    (urs : URS G) :
     (actionCircuit.verifierCS.permutationChunks.flatten.map
         (fun reference =>
-          permutationColumnAddress (actionVk pp urs) reference.1)) =
+          permutationColumnAddress (actionCircuit.toVerifierKey urs) reference.1)) =
       (Keygen.permColsOf
         actionCircuit.constraintSystem).map
           Halo2.Layout.ColRef.toAny := by
   simpa only [actionCircuit.toVerifierKey_permutationChunks] using
     topLevelPermutationColumnAddresses_eq
-      actionCircuit pp urs
-        (routingCoherent_of_derived pp urs)
+      actionCircuit urs
+        (routingCoherent_of_derived urs)
 
 /-! ## Pasta permutation-name cosets -/
 
@@ -271,18 +263,18 @@ theorem activeRows_le :
 generic permutation-domain record. In particular its `lastRotation` field is
 the verifier's `omega^(-(blindingFactors + 1))` rotation. -/
 theorem domain
-    (pp : Keygen.ProofParams) (urs : URS G)
+    (pp : ProofParams) (urs : URS G)
     (ch : Challenges actionCircuit.domainExponent Fp)
     (poly : CommitmentId → CPoly) :
     let model :=
       actionCircuit.constraintModel pp urs ch poly
-    ResolverPermutationDomain (actionVk pp urs)
+    ResolverPermutationDomain (actionCircuit.toVerifierKey urs)
       model.l0 model.lLast model.lBlind
       actionCircuit.n
       activeRows := by
   exact ResolverPermutationDomain.ofCanonicalConstraintModel
-    (actionVk pp urs) ch poly
-      (actionCircuit.toVerifierKey_blindingFactors_lt_n pp urs)
+    (actionCircuit.toVerifierKey urs) ch poly
+      (actionCircuit.toVerifierKey_blindingFactors_lt_n urs)
       (TopLevelAssignment.domainRowsInjective
         (top := actionCircuit) domainExponent_lt)
       (TopLevelAssignment.domainRoot
@@ -294,17 +286,17 @@ set_option maxRecDepth 100000 in
 evaluation domain. This is the `hnames` premise retained by
 `ResolverPermutationCycle.ofKeygenColumns`. -/
 theorem namesInjective
-    (pp : Keygen.ProofParams) (urs : URS G)
+    (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → CPoly)
     (p : Fin pp.numProofs)
     {activeRows : ℕ} (hactive : activeRows ≤ actionCircuit.n) :
     Function.Injective fun c :
-        ResolverPermutationCell (actionVk pp urs) poly p activeRows =>
+        ResolverPermutationCell (actionCircuit.toVerifierKey urs) poly p activeRows =>
       chunkRowName actionCircuit.omega Zcash.Arithmetic.deltaFp
         actionCircuit.chunkLen c.1 c.2.1 c.2.2 := by
   have hfull :
       Function.Injective fun c :
-          ResolverPermutationCell (actionVk pp urs) poly p
+          ResolverPermutationCell (actionCircuit.toVerifierKey urs) poly p
             actionCircuit.n =>
         chunkRowName actionCircuit.omega Zcash.Arithmetic.deltaFp
           actionCircuit.chunkLen c.1 c.2.1 c.2.2 := by
@@ -352,7 +344,7 @@ theorem namesInjective
   have hwiden := widenPermutationChunkCell_injective
     (nc := actionCircuit.permutationSetCount)
     (width := fun i =>
-      (ResolverPermutationPairs (actionVk pp urs) poly p i).length)
+      (ResolverPermutationPairs (actionCircuit.toVerifierKey urs) poly p i).length)
     hactive
   have hwname :
       chunkRowName actionCircuit.omega Zcash.Arithmetic.deltaFp
@@ -373,39 +365,39 @@ theorem namesInjective
 /-- Assemble the semantic cycle at any active-row prefix preserved by the
 replayed full permutation. -/
 def cycleOfKeygenColumnsAt
-    (pp : Keygen.ProofParams) (urs : URS G)
+    (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → CPoly)
     (p : Fin pp.numProofs)
     {m : ℕ}
     (hactive : m ≤ actionCircuit.n)
     (fullSigma : Equiv.Perm
-      (ResolverPermutationCell (actionVk pp urs) poly p
+      (ResolverPermutationCell (actionCircuit.toVerifierKey urs) poly p
         actionCircuit.n))
     (sigma : Equiv.Perm
-      (ResolverPermutationCell (actionVk pp urs) poly p
+      (ResolverPermutationCell (actionCircuit.toVerifierKey urs) poly p
         m))
     (hcolumns : ∀
       (chunk : Fin actionCircuit.permutationSetCount)
       (column : Fin
-        (ResolverPermutationPairs (actionVk pp urs) poly p chunk).length),
+        (ResolverPermutationPairs (actionCircuit.toVerifierKey urs) poly p chunk).length),
       (ResolverPermutationPairs
-          (actionVk pp urs) poly p chunk)[column].2 =
+          (actionCircuit.toVerifierKey urs) poly p chunk)[column].2 =
         keygenSigmaColumn
           actionCircuit.omega Zcash.Arithmetic.deltaFp
           actionCircuit.chunkLen fullSigma chunk column)
     (hrestrict : ∀ c :
-        ResolverPermutationCell (actionVk pp urs) poly p m,
+        ResolverPermutationCell (actionCircuit.toVerifierKey urs) poly p m,
       widenPermutationChunkCell hactive (sigma c) =
         fullSigma
           (widenPermutationChunkCell hactive c)) :
-    ResolverPermutationCycle (actionVk pp urs) poly p m :=
+    ResolverPermutationCycle (actionCircuit.toVerifierKey urs) poly p m :=
   by
-    simpa only [actionVk, actionCircuit.toVerifierKey_n,
+    simpa only [actionCircuit.toVerifierKey_n,
       actionCircuit.toVerifierKey_omega,
       actionCircuit.toVerifierKey_delta,
       actionCircuit.toVerifierKey_chunkLen] using
       ResolverPermutationCycle.ofKeygenColumns
-        (actionVk pp urs) poly p hactive fullSigma sigma
+        (actionCircuit.toVerifierKey urs) poly p hactive fullSigma sigma
           (TopLevelAssignment.domainRowsInjective
             (top := actionCircuit) domainExponent_lt)
           hcolumns hrestrict
@@ -413,31 +405,31 @@ def cycleOfKeygenColumnsAt
 
 /-- Assemble the semantic cycle at the verifier-derived active-row boundary. -/
 def cycleOfKeygenColumns
-    (pp : Keygen.ProofParams) (urs : URS G)
+    (pp : ProofParams) (urs : URS G)
     (poly : CommitmentId → CPoly)
     (p : Fin pp.numProofs)
     (fullSigma : Equiv.Perm
-      (ResolverPermutationCell (actionVk pp urs) poly p
+      (ResolverPermutationCell (actionCircuit.toVerifierKey urs) poly p
         actionCircuit.n))
     (sigma : Equiv.Perm
-      (ResolverPermutationCell (actionVk pp urs) poly p
+      (ResolverPermutationCell (actionCircuit.toVerifierKey urs) poly p
         activeRows))
     (hcolumns : ∀
       (chunk : Fin actionCircuit.permutationSetCount)
       (column : Fin
-        (ResolverPermutationPairs (actionVk pp urs) poly p chunk).length),
+        (ResolverPermutationPairs (actionCircuit.toVerifierKey urs) poly p chunk).length),
       (ResolverPermutationPairs
-          (actionVk pp urs) poly p chunk)[column].2 =
+          (actionCircuit.toVerifierKey urs) poly p chunk)[column].2 =
         keygenSigmaColumn
           actionCircuit.omega Zcash.Arithmetic.deltaFp
           actionCircuit.chunkLen fullSigma chunk column)
     (hrestrict : ∀ c :
-        ResolverPermutationCell (actionVk pp urs) poly p
+        ResolverPermutationCell (actionCircuit.toVerifierKey urs) poly p
           activeRows,
       widenPermutationChunkCell activeRows_le (sigma c) =
         fullSigma
           (widenPermutationChunkCell activeRows_le c)) :
-    ResolverPermutationCycle (actionVk pp urs) poly p
+    ResolverPermutationCycle (actionCircuit.toVerifierKey urs) poly p
       activeRows :=
   cycleOfKeygenColumnsAt pp urs poly p activeRows_le
     fullSigma sigma hcolumns hrestrict
