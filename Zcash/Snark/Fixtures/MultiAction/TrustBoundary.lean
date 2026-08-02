@@ -44,15 +44,21 @@ assert_axioms Zcash.Snark.Fixture2.capturedInit_startsWith_vkTranscriptRepr +nat
 -- The statement-bound path must reproduce the captured VK/instance prefix, challenge schedule,
 -- rejection-aware assembly, and final fingerprint.
 assert_axioms Zcash.Snark.Fixture2.capturedInit_eq_initialTranscript +native(
-  Zcash.Snark.Fixture2.capturedInit_eq_initialTranscript)
+  Zcash.Snark.Fixture2.instance_commitments_derived)
 assert_axioms Zcash.Snark.Fixture2.deriveChallengesForStatement_matches_captured_schedule +native(
-  Zcash.Snark.Fixture2.capturedInit_eq_initialTranscript,
+  Zcash.Snark.Fixture2.instance_commitments_derived,
   Zcash.Snark.Fixture2.deriveChallenges_matches_captured_schedule)
 assert_computable Zcash.Snark.Fixture2.capturedRawInstances +choice
+assert_axioms Zcash.Snark.Fixture2.capturedRawInstances_have_expected_column_count
+assert_axioms Zcash.Snark.Fixture2.capturedRawInstances_columns_fit
+assert_axioms Zcash.Snark.Fixture2.capturedRawInstances_commitments_eq
+assert_axioms Zcash.Snark.Fixture2.capturedInstanceQueryLayout_eq
+assert_axioms Zcash.Snark.Fixture2.capturedRawInstances_commitments_eq_on_layout
 assert_axioms Zcash.Snark.Fixture2.assembleNonInteractiveInstances?_matches_captured +native(
-  Zcash.Snark.Fixture2.assembleNonInteractiveInstances?_matches_captured)
+  Zcash.Snark.Fixture2.instance_commitments_derived,
+  Zcash.Snark.Fixture2.deriveChallenges_matches_captured_schedule)
 assert_axioms Zcash.Snark.Fixture2.nonInteractiveFingerprint_matches +native(
-  Zcash.Snark.Fixture2.capturedInit_eq_initialTranscript,
+  Zcash.Snark.Fixture2.instance_commitments_derived,
   Zcash.Snark.Fixture2.deriveChallenges_matches_captured_schedule,
   Zcash.Snark.Fixture2.fingerprint_matches)
 assert_axioms Zcash.Snark.Fixture2.fingerprint_matches +native(

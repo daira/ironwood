@@ -46,6 +46,20 @@ def columnQueries {k : ℕ} {F G : Type*} [Field F] (omega x : F) (commitment : 
     { point := rotateOmega omega x e.1.2, commitment := .point (commitment e.1.1), eval := e.2,
       commId := mkId e.1.1 }
 
+/-- `columnQueries` depends on a commitment family only at columns named by its layout. -/
+theorem columnQueries_congr_commitment
+    {k : ℕ} {F G : Type*} [Field F]
+    (omega x : F) (commitment commitment' : ℕ → G) (mkId : ℕ → CommitmentId)
+    (layout : List (ℕ × ℤ)) (evals : List F)
+    (h : ∀ column rotation, (column, rotation) ∈ layout →
+      commitment column = commitment' column) :
+    columnQueries (k := k) omega x commitment mkId layout evals =
+      columnQueries omega x commitment' mkId layout evals := by
+  unfold columnQueries
+  apply List.map_congr_left
+  intro entry hentry
+  rw [h entry.1.1 entry.1.2 (List.of_mem_zip hentry).1]
+
 /--
 The query at an in-range layout/evaluation index occurs in `columnQueries`.
 

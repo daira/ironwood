@@ -77,11 +77,38 @@ def absorbInstanceCommitments {shape : Shape} {F G : Type*}
     List.ofFn fun column : Fin shape.numInstanceColumns =>
       TranscriptElt.point (instanceCommitment p column)).flatten
 
+/-- Instance-commitment absorption depends only on the configured proof/column rectangle. -/
+theorem absorbInstanceCommitments_congr
+    {shape : Shape} {F G : Type*}
+    (instanceCommitment instanceCommitment' : Fin shape.numProofs → ℕ → G)
+    (h : ∀ p (column : Fin shape.numInstanceColumns),
+      instanceCommitment p column = instanceCommitment' p column) :
+    absorbInstanceCommitments (F := F) instanceCommitment =
+      absorbInstanceCommitments instanceCommitment' := by
+  unfold absorbInstanceCommitments
+  apply congrArg List.flatten
+  apply congrArg List.ofFn
+  funext p
+  apply congrArg List.ofFn
+  funext column
+  rw [h p column]
+
 /-- The complete verifier-controlled Fiat--Shamir prefix: the VK transcript representation followed
 by every configured public-instance commitment. -/
 def initialTranscript {shape : Shape} {F G : Type*} (vkTranscriptRepr : F)
     (instanceCommitment : Fin shape.numProofs → ℕ → G) : List (TranscriptElt F G) :=
   TranscriptElt.scalar vkTranscriptRepr :: absorbInstanceCommitments instanceCommitment
+
+/-- The canonical prefix is extensional over its configured instance commitments. -/
+theorem initialTranscript_congr
+    {shape : Shape} {F G : Type*} (vkTranscriptRepr : F)
+    (instanceCommitment instanceCommitment' : Fin shape.numProofs → ℕ → G)
+    (h : ∀ p (column : Fin shape.numInstanceColumns),
+      instanceCommitment p column = instanceCommitment' p column) :
+    initialTranscript vkTranscriptRepr instanceCommitment =
+      initialTranscript vkTranscriptRepr instanceCommitment' := by
+  simp only [initialTranscript, List.cons.injEq, true_and]
+  exact absorbInstanceCommitments_congr instanceCommitment instanceCommitment' h
 
 @[simp] theorem initialTranscript_head? {shape : Shape} {F G : Type*}
     (vkTranscriptRepr : F) (instanceCommitment : Fin shape.numProofs → ℕ → G) :
@@ -245,6 +272,19 @@ def deriveChallengesForStatement {shape : Shape} {F G : Type*} [Zero F]
     (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape F G) : Challenges shape.k F :=
   deriveChallenges fs (initialTranscript vkTranscriptRepr instanceCommitment) ps
+
+/-- Statement-bound challenge derivation is extensional over the configured instance commitments. -/
+theorem deriveChallengesForStatement_congr
+    {shape : Shape} {F G : Type*} [Zero F]
+    (fs : FiatShamir F G) (vkTranscriptRepr : F)
+    (instanceCommitment instanceCommitment' : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G)
+    (h : ∀ p (column : Fin shape.numInstanceColumns),
+      instanceCommitment p column = instanceCommitment' p column) :
+    deriveChallengesForStatement fs vkTranscriptRepr instanceCommitment ps =
+      deriveChallengesForStatement fs vkTranscriptRepr instanceCommitment' ps := by
+  unfold deriveChallengesForStatement
+  rw [initialTranscript_congr vkTranscriptRepr instanceCommitment instanceCommitment' h]
 
 /-- The exact transcript presented to the first squeeze by the statement-bound verifier. -/
 def preThetaTranscriptForStatement {shape : Shape} {F G : Type*}

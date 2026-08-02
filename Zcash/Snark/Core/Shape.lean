@@ -19,7 +19,7 @@ structure CircuitShape where
   numPermutationSets : ℕ
   numPermutationColumns : ℕ
   numQuotientPieces : ℕ
-  numInstanceColumns : ℕ := 1
+  numInstanceColumns : ℕ
   numInstanceQueries : ℕ
   numAdviceQueries : ℕ
   numFixedQueries : ℕ

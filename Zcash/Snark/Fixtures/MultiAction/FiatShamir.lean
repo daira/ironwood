@@ -69,7 +69,15 @@ theorem deriveChallenges_matches_captured_schedule :
 theorem capturedInit_eq_initialTranscript :
     capturedInit =
       initialTranscript capturedVkTranscriptRepr derivedInstanceCommitment := by
-  native_decide
+  change
+    TranscriptElt.scalar capturedVkTranscriptRepr ::
+        List.map (TranscriptElt.point (F := Fp)) capturedInstanceCommitments =
+      TranscriptElt.scalar capturedVkTranscriptRepr ::
+        absorbInstanceCommitments derivedInstanceCommitment
+  apply congrArg (fun tail => TranscriptElt.scalar capturedVkTranscriptRepr :: tail)
+  rw [← instance_commitments_derived]
+  set_option maxRecDepth 10000 in
+    rfl
 
 /-- The statement-bound entry point reaches the captured challenge schedule. -/
 theorem deriveChallengesForStatement_matches_captured_schedule :
@@ -84,12 +92,63 @@ def capturedRawInstances : RawInstances shape Fp :=
     capturedPublicInstances.getD
       (p.val * capturedNumInstanceColumns + column.val) []
 
+/-- The captured raw instance family has the circuit-pinned column count. -/
+theorem capturedRawInstances_have_expected_column_count :
+    InstancesHaveExpectedColumnCount capturedRawInstances := by
+  intro p
+  simp [capturedRawInstances]
+
+/-- Every captured public-instance column fits in the verifier's usable row prefix. -/
+theorem capturedRawInstances_columns_fit :
+    InstanceColumnsFit vk capturedRawInstances := by
+  intro p column
+  fin_cases p <;> fin_cases column <;>
+    norm_num [capturedRawInstances, instanceUsableRows, vk, shape, capturedNumInstanceColumns,
+      capturedPublicInstances]
+
+/-- Committing the validated raw columns recovers every configured captured commitment. -/
+theorem capturedRawInstances_commitments_eq
+    (p : Fin shape.numProofs) (column : Fin shape.numInstanceColumns) :
+    commitLagrange ((capturedRawInstances p).getD column []) =
+      derivedInstanceCommitment p column := by
+  fin_cases p <;> fin_cases column <;>
+    simp [capturedRawInstances, derivedInstanceCommitment, shape, capturedNumInstanceColumns]
+
+/-- The captured VK opens only the configured instance column. -/
+theorem capturedInstanceQueryLayout_eq : vk.instanceQueryLayout = [(0, 0)] := by
+  rfl
+
+/-- The validated and captured commitment families agree everywhere the captured VK reads them. -/
+theorem capturedRawInstances_commitments_eq_on_layout :
+    ∀ p column rotation, (column, rotation) ∈ vk.instanceQueryLayout →
+      commitLagrange ((capturedRawInstances p).getD column []) =
+        derivedInstanceCommitment p column := by
+  intro p column rotation hmem
+  rw [capturedInstanceQueryLayout_eq, List.mem_singleton] at hmem
+  injection hmem with hcolumn _
+  subst column
+  exact capturedRawInstances_commitments_eq p ⟨0, by simp [shape]⟩
+
 /-- The composed rejecting verifier reproduces checked assembly at the captured challenges. -/
 theorem assembleNonInteractiveInstances?_matches_captured :
     assembleNonInteractiveInstances? capturedFs capturedVkTranscriptRepr vk
       capturedRawInstances commitLagrange ps =
         assemble? vk derivedInstanceCommitment ps ch := by
-  native_decide
+  simp only [assembleNonInteractiveInstances?, validateInstances?,
+    capturedRawInstances_have_expected_column_count, capturedRawInstances_columns_fit,
+    ↓reduceDIte]
+  change
+    assemble? vk
+        (fun p column => commitLagrange ((capturedRawInstances p).getD column [])) ps
+        (deriveChallengesForStatement capturedFs capturedVkTranscriptRepr
+          (fun p column => commitLagrange ((capturedRawInstances p).getD column [])) ps) =
+      assemble? vk derivedInstanceCommitment ps ch
+  rw [deriveChallengesForStatement_congr capturedFs capturedVkTranscriptRepr
+      (fun p column => commitLagrange ((capturedRawInstances p).getD column []))
+      derivedInstanceCommitment ps capturedRawInstances_commitments_eq,
+    deriveChallengesForStatement_matches_captured_schedule]
+  exact assemble?_congr_instanceCommitment vk _ _ ps ch
+    capturedRawInstances_commitments_eq_on_layout
 
 /-- The Fiat–Shamir-derived fingerprint matches the captured multi-action MSM under the concrete captured
 schedule oracle above. -/

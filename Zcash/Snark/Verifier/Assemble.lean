@@ -210,6 +210,27 @@ def assembleQueries {shape : Shape} {F G : Type*} [Field F] [Inhabited G] (vk : 
   let vanishingQ := vanishingQueries x hComm eHEval ps.vanishingRandom ps.vanishingRandomEval
   perProof ++ fixedQ ++ permCommonQ ++ vanishingQ
 
+/-- The complete query list depends on instance commitments only at columns named by the VK's
+instance-query layout. -/
+theorem assembleQueries_congr_instanceCommitment
+    {shape : Shape} {F G : Type*} [Field F] [Inhabited G]
+    (vk : VerifyingKey shape F G)
+    (instanceCommitment instanceCommitment' : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) (ch : Challenges shape.k F)
+    (h : ∀ p column rotation, (column, rotation) ∈ vk.instanceQueryLayout →
+      instanceCommitment p column = instanceCommitment' p column) :
+    assembleQueries vk instanceCommitment ps ch =
+      assembleQueries vk instanceCommitment' ps ch := by
+  simp only [assembleQueries]
+  congr 1
+  congr 1
+  congr 1
+  apply congrArg List.flatten
+  apply congrArg List.ofFn
+  funext p
+  rw [columnQueries_congr_commitment]
+  exact h p
+
 /-- An assembled query carrying an instance-column identity uses that statement-derived commitment. -/
 theorem assembleQueries_instance_commitment
     {shape : Shape} {F G : Type*} [Field F] [Inhabited G]
@@ -1806,6 +1827,19 @@ def assemble? {shape : Shape} {F G : Type*} [Field F] [DecidableEq F] [Decidable
       | none => none
   else
     none
+
+/-- The checked assembler depends on instance commitments only at columns named by the VK's
+instance-query layout. -/
+theorem assemble?_congr_instanceCommitment
+    {shape : Shape} {F G : Type*} [Field F] [DecidableEq F] [DecidableEq G] [Inhabited G]
+    (vk : VerifyingKey shape F G)
+    (instanceCommitment instanceCommitment' : Fin shape.numProofs → ℕ → G)
+    (ps : ProofString shape F G) (ch : Challenges shape.k F)
+    (h : ∀ p column rotation, (column, rotation) ∈ vk.instanceQueryLayout →
+      instanceCommitment p column = instanceCommitment' p column) :
+    assemble? vk instanceCommitment ps ch = assemble? vk instanceCommitment' ps ch := by
+  unfold assemble?
+  rw [assembleQueries_congr_instanceCommitment vk instanceCommitment instanceCommitment' ps ch h]
 
 /-- The full verifier MSM, total form: build the opening queries, derive the multiopen grouping
 (`constructIntermediateSets`), then assemble (`assembleFinalMsm`) — the deployed fingerprint as a

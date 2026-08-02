@@ -2059,12 +2059,18 @@ remain ordinary definitions; the theorem entries pin the entire transitive axiom
 binding and malformed-instance rejection. -/
 
 assert_computable Zcash.Snark.absorbInstanceCommitments
+assert_axioms Zcash.Snark.absorbInstanceCommitments_congr
 assert_computable Zcash.Snark.initialTranscript
+assert_axioms Zcash.Snark.initialTranscript_congr
 assert_computable Zcash.Snark.deriveChallengesForStatement
+assert_axioms Zcash.Snark.deriveChallengesForStatement_congr
 assert_computable Zcash.Snark.preThetaTranscriptForStatement
 assert_computable Zcash.Snark.validateInstances?
 assert_computable Zcash.Snark.assembleInstances? +choice
 assert_computable Zcash.Snark.assembleNonInteractiveInstances? +choice
+assert_axioms Zcash.Snark.columnQueries_congr_commitment
+assert_axioms Zcash.Snark.assembleQueries_congr_instanceCommitment
+assert_axioms Zcash.Snark.assemble?_congr_instanceCommitment
 assert_axioms Zcash.Snark.instanceCommitment_eq_of_initialTranscript_eq
 assert_axioms Zcash.Snark.vkTranscriptRepr_mem_preThetaTranscriptForStatement
 assert_axioms Zcash.Snark.instanceCommitment_mem_preThetaTranscriptForStatement
