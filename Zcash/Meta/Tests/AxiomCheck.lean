@@ -192,4 +192,25 @@ assert_computable Zcash.Meta.Tests.AxiomCheck.ComputableSafety.safeReduction
 
 end ComputableSafety
 
+namespace UnneededChoice
+
+/-! An over-broad `+choice` is rejected: the flag on a reduction that never reaches
+`Classical.choice` would silently over-state the trusted base, mirroring how a stale
+`+native` owner list is rejected. The choice-free reduction is the positive case's shape. -/
+
+def choiceFreeReduction (n : Nat) : Nat := n + 1
+
+/-- error: Zcash.Meta.Tests.AxiomCheck.UnneededChoice.choiceFreeReduction does not depend on Classical.choice; drop the '+choice' flag -/
+#guard_msgs (whitespace := lax) in
+assert_computable Zcash.Meta.Tests.AxiomCheck.UnneededChoice.choiceFreeReduction +choice
+
+/-! The genuine-`+choice` positive case: choice entering through an erased `Prop` field. -/
+
+def choiceUsingReduction (n : Nat) : { m : Nat // ∃ k, m = n + k } :=
+  ⟨n + 1, Classical.choice ⟨⟨1, rfl⟩⟩⟩
+
+assert_computable Zcash.Meta.Tests.AxiomCheck.UnneededChoice.choiceUsingReduction +choice
+
+end UnneededChoice
+
 end Zcash.Meta.Tests.AxiomCheck

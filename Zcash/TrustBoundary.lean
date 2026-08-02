@@ -547,7 +547,7 @@ assert_computable Zcash.Snark.relationWitnessOfCollision +choice
 assert_computable Zcash.Snark.discreteLogOfAugmentedRelationAtChallenge +choice
 assert_computable Zcash.Snark.separateOrRelationWitness +choice
 assert_computable Zcash.Snark.algebraicPowerBatchWithSourceOrRelation +choice
-assert_computable Zcash.Snark.finForallOrRelationWitness +choice
+assert_computable Zcash.Snark.finForallOrRelationWitness
 assert_computable Zcash.Snark.constructIntermediateSets_comm_route +choice
 assert_computable Zcash.Snark.deployed_slot_route_of_checks +choice
 assert_computable Zcash.Snark.deployedRouteSelectorOfSpecs +choice
