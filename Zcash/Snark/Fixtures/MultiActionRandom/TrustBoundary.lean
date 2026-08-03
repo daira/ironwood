@@ -133,13 +133,25 @@ assert_axioms Zcash.Snark.FixtureRandom2.capturedScheduleIncludesInit_eq_true +n
   Zcash.Snark.FixtureRandom2.capturedScheduleIncludesInit_eq_true)
 assert_axioms Zcash.Snark.FixtureRandom2.deriveChallenges_matches_captured_schedule +native(
   Zcash.Snark.FixtureRandom2.deriveChallenges_matches_captured_schedule)
+-- The statement-bound path must reproduce the captured VK/instance prefix and, through it, the
+-- challenge schedule: `initialTranscript`'s own shape is checked against the capture rather than
+-- entering the boundary as the opaque dumped `capturedInit`.
+assert_axioms Zcash.Snark.FixtureRandom2.capturedInit_eq_initialTranscript +native(
+  Zcash.Snark.FixtureRandom2.instance_commitments_derived)
+assert_axioms Zcash.Snark.FixtureRandom2.deriveChallengesForStatement_matches_captured_schedule +native(
+  Zcash.Snark.FixtureRandom2.instance_commitments_derived,
+  Zcash.Snark.FixtureRandom2.deriveChallenges_matches_captured_schedule)
 assert_axioms Zcash.Snark.FixtureRandom2.nonInteractiveFingerprint_matches +native(
+  Zcash.Snark.FixtureRandom2.instance_commitments_derived,
   Zcash.Snark.FixtureRandom2.deriveChallenges_matches_captured_schedule,
   Zcash.Snark.FixtureRandom2.fingerprint_matches)
 assert_axioms Zcash.Snark.FixtureRandom2.capturedFs
 assert_axioms Zcash.Snark.FixtureRandom2.capturedInit
 assert_axioms Zcash.Snark.deriveChallenges
 assert_axioms Zcash.Snark.nonInteractiveFingerprint
+assert_axioms Zcash.Snark.initialTranscript
+assert_axioms Zcash.Snark.deriveChallengesForStatement
+assert_axioms Zcash.Snark.nonInteractiveFingerprintForStatement
 assert_axioms Zcash.Snark.FixtureRandom2.derivedVk +native(
   Zcash.Snark.Keygen.certificate,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
@@ -168,6 +180,7 @@ assert_axioms Zcash.Snark.FixtureRandom2.nonInteractiveFingerprint_matches_deriv
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero,
+  Zcash.Snark.FixtureRandom2.instance_commitments_derived,
   Zcash.Snark.FixtureRandom2.deriveChallenges_matches_captured_schedule,
   Zcash.Snark.FixtureRandom2.fingerprint_matches)
 
@@ -196,6 +209,7 @@ CompElliptic.Fields.Pasta.pallasBase._native.native_decide.ax_1,
 CompElliptic.Fields.Pasta.pallasBase._native.native_decide.ax_2,
 Zcash.Snark.FixtureRandom2.deriveChallenges_matches_captured_schedule._native.native_decide.ax_1_1,
 Zcash.Snark.FixtureRandom2.fingerprint_matches._native.native_decide.ax_1_1,
+Zcash.Snark.FixtureRandom2.instance_commitments_derived._native.native_decide.ax_1_1,
 Zcash.Snark.Keygen.certificate._native.native_decide.ax_1_1,
 Zcash.Snark.PostNu63Fixture.randomMulti_uses_same_fixedCommitments._native.native_decide.ax_1_1,
 Zcash.Snark.PostNu63Fixture.randomMulti_uses_same_permutationCommonCommitments._native.native_decide.ax_1_1,

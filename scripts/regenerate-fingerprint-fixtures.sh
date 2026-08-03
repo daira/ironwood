@@ -1,51 +1,43 @@
 #!/usr/bin/env bash
-# Regenerate every verifier-fingerprint fixture family from pinned public sources, and
+# Regenerate every verifier-fingerprint fixture family from pinned public releases, and
 # diff the results against the committed artifacts.
 #
 # The honest families (SingleAction, MultiAction) are captures of accepting runs of the
-# deployed verifier; the random match-only families are produced by the same pipeline
-# *plus* the capture tooling on the public Halo2 and Orchard branches (a match-only
-# exporter mode in halo2_proofs, its fixture-claim/self-certification follow-ups and
-# `numInstanceColumns` shape emission, and fabricate→replay random-capture drivers in
-# orchard). The Halo2 pin is the exact public PR #924 head descended from its release
-# pin; the Orchard head is exactly one commit atop its release pin. Both lineages are
-# asserted below. CI runs this script (fixtures.yml), enforcing both claims at once:
+# deployed verifier; the random match-only families come from the same pipeline plus the
+# capture tooling — a match-only exporter mode and `numInstanceColumns` shape emission in
+# halo2_proofs (zcash/halo2#924), and fabricate→replay random-capture drivers in orchard
+# (zcash/orchard#541). Both are upstream and released: the tooling ships in halo2_proofs
+# 0.3.5 and orchard 0.15.5, so the single pin below is a release tag of zcash/orchard and
+# nothing here depends on a fork or an unreleased branch. Orchard's own committed
+# Cargo.lock resolves halo2_proofs 0.3.5 from crates.io by checksum, so every cargo
+# invocation runs --locked against the published crate; the capture tooling is reached
+# through orchard's `verifier-fingerprint` feature, which forwards to halo2_proofs'
+# `unstable-verifier-fingerprint`. CI runs this script (fixtures.yml), enforcing that all
+# five families are byte-reproducible from released sources alone.
 #
-#   1. the honest fixtures are byte-reproducible under the capture-branch toolchain —
-#      their committed bytes carry the branch exporter's `numInstanceColumns` shape
-#      emission, so regeneration from the released halo2_proofs alone resumes once a
-#      release ships it; and
-#   2. the random fixtures are reproducible from pinned public sources alone.
-#
-# Sources are cloned from the public forks at the pinned commits; set HALO2_SRC and/or
-# ORCHARD_SRC to local checkout paths to clone from those instead (fully offline).
-# Set REGEN_WORK_DIR to keep/reuse the build tree across runs (much faster); it is
-# reset hard to the pinned commits each run. All five families are committed, so every
-# generated artifact is diffed byte-for-byte; a generated artifact with no committed
-# counterpart (a future not-yet-ingested shape) is copied to REGEN_OUT_DIR (default
-# scripts/generated/, gitignored).
-#
-# Orchard's committed Cargo.lock pins halo2_proofs 0.3.4 from crates.io, so the
-# capture branch's halo2_proofs is wired in via a [patch.crates-io] path override plus
-# `cargo update
-# --package halo2_proofs`. The script asserts the resulting lockfile delta is *exactly*
-# the removal of that one package's registry source+checksum lines (version and the
-# entire transitive dependency set unchanged); every subsequent cargo invocation runs
-# --locked. See fixture-provenance-notes.md.
+# Sources are cloned from the public repository at the pinned release; set ORCHARD_SRC to
+# a local checkout path to clone from that instead (fully offline). Set REGEN_WORK_DIR to
+# keep/reuse the build tree across runs (much faster); it is reset hard to the pinned
+# commit each run. All five families are committed, so every generated artifact is diffed
+# byte-for-byte; a generated artifact with no committed counterpart (a future
+# not-yet-ingested shape) is copied to REGEN_OUT_DIR (default scripts/generated/,
+# gitignored). See fixture-provenance-notes.md.
 #
 # Run from anywhere; exits non-zero on any violation.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# The capture-tooling branch heads and the release commits their lineage is asserted
-# against. CI (fixtures.yml) runs this script, so these pins are the CI pins.
-HALO2_COMMIT=091e54786009f23c49a0531cbb980b8d05f7099f   # zcash/halo2#924 head
-ORCHARD_COMMIT=cec7031f4cf1cd1e38d8e2961b569fd47676a9f5 # ebfull/orchard fingerprint-random-capture
-HALO2_BASE_COMMIT=c12e83c4854aaa841bfd2ebc2451936a15a1cfb3   # zcash/halo2 release/halo2_proofs-0.3.4
-ORCHARD_BASE_COMMIT=ae3511076ec8ecb39ffc02d9cdaf19c441c5b53d # zcash/orchard tag 0.15.3
-HALO2_URL=${HALO2_SRC:-https://github.com/ebfull/halo2.git}
-ORCHARD_URL=${ORCHARD_SRC:-https://github.com/ebfull/orchard.git}
-HALO2_LOCK_CHECKSUM=5f63a999d9223fa9d3b9db3031fedc316e6039a0ae0f67394408b16ef670c69f
+# The pinned Orchard release carrying the capture drivers, and the tag its commit must
+# be. CI (fixtures.yml) runs this script, so this is the CI pin. Asserting the tag rather
+# than trusting the commit alone is what makes "released, not a branch head" checkable:
+# a branch commit that merely descends from a release would fail this.
+ORCHARD_COMMIT=29d1d55db62153dcaeef8ef631c8991c53ed1248 # zcash/orchard tag 0.15.5
+ORCHARD_TAG=0.15.5
+ORCHARD_URL=${ORCHARD_SRC:-https://github.com/zcash/orchard.git}
+# The released halo2_proofs the pinned Orchard lockfile must resolve, by version and
+# crates.io checksum: the exporter's provenance, asserted rather than assumed.
+HALO2_PROOFS_VERSION=0.3.5
+HALO2_PROOFS_LOCK_CHECKSUM=f5aca1c66059a919227dec97444a11a4350d2f9c820ca48690988f0aa0e81cbf
 
 REPO_ROOT=$PWD
 OUT_DIR=${REGEN_OUT_DIR:-scripts/generated}
@@ -58,68 +50,56 @@ else
   trap 'rm -rf "$WORK_DIR"' EXIT
 fi
 
-# Clone (or reuse) a source tree and force it to exactly the pinned capture-branch
-# commit, asserting either release ancestry or an exact one-commit lineage.
-# `git clean` keeps target/ so a reused REGEN_WORK_DIR stays warm.
-prepare_source() {
-  local name=$1 url=$2 commit=$3 base=$4 lineage=$5
-  local dest="$WORK_DIR/$name"
+# Clone (or reuse) the Orchard source tree and force it to exactly the pinned release
+# commit, asserting that the commit is the release tag rather than merely descended from
+# one. `git clean` keeps target/ so a reused REGEN_WORK_DIR stays warm.
+prepare_orchard() {
+  local dest="$WORK_DIR/orchard"
   if [[ ! -d "$dest/.git" ]]; then
-    echo "Cloning $name from $url"
-    git clone --quiet "$url" "$dest"
+    echo "Cloning orchard from $ORCHARD_URL"
+    git clone --quiet "$ORCHARD_URL" "$dest"
   fi
-  if ! git -C "$dest" cat-file -e "${commit}^{commit}" 2>/dev/null; then
-    git -C "$dest" fetch --quiet origin
+  if ! git -C "$dest" cat-file -e "${ORCHARD_COMMIT}^{commit}" 2>/dev/null; then
+    git -C "$dest" fetch --quiet --tags origin
   fi
-  git -C "$dest" checkout --quiet --detach "$commit"
-  git -C "$dest" reset --hard --quiet "$commit"
+  git -C "$dest" checkout --quiet --detach "$ORCHARD_COMMIT"
+  git -C "$dest" reset --hard --quiet "$ORCHARD_COMMIT"
   git -C "$dest" clean -fdxq --exclude=target
-  if [[ "$(git -C "$dest" rev-parse HEAD)" != "$commit" ]]; then
-    echo "VIOLATION: $name is not at pinned commit $commit" >&2
+  if [[ "$(git -C "$dest" rev-parse HEAD)" != "$ORCHARD_COMMIT" ]]; then
+    echo "VIOLATION: orchard is not at pinned commit $ORCHARD_COMMIT" >&2
     exit 1
   fi
-  case "$lineage" in
-    descendant)
-      if ! git -C "$dest" merge-base --is-ancestor "$base" HEAD; then
-        echo "VIOLATION: $name capture commit does not descend from release pin $base" >&2
-        exit 1
-      fi
-      ;;
-    one-commit)
-      if [[ "$(git -C "$dest" rev-parse HEAD^)" != "$base" ]]; then
-        echo "VIOLATION: $name capture commit is not exactly one commit atop its release pin $base" >&2
-        exit 1
-      fi
-      ;;
-    *)
-      echo "VIOLATION: unknown lineage check '$lineage' for $name" >&2
-      exit 1
-      ;;
-  esac
+  local tagged
+  tagged=$(git -C "$dest" rev-parse --verify --quiet "refs/tags/$ORCHARD_TAG^{commit}" || true)
+  if [[ "$tagged" != "$ORCHARD_COMMIT" ]]; then
+    echo "VIOLATION: pinned commit is not the orchard $ORCHARD_TAG release tag" >&2
+    echo "  tag $ORCHARD_TAG -> ${tagged:-<absent>}" >&2
+    echo "  pinned commit    -> $ORCHARD_COMMIT" >&2
+    exit 1
+  fi
   if [[ -n "$(git -C "$dest" status --porcelain)" ]]; then
-    echo "VIOLATION: $name working tree is not clean at the pinned commit" >&2
+    echo "VIOLATION: orchard working tree is not clean at the pinned release" >&2
     exit 1
   fi
+  echo "orchard is at the $ORCHARD_TAG release tag ($ORCHARD_COMMIT)."
 }
 
-prepare_source halo2 "$HALO2_URL" "$HALO2_COMMIT" "$HALO2_BASE_COMMIT" descendant
-prepare_source orchard "$ORCHARD_URL" "$ORCHARD_COMMIT" "$ORCHARD_BASE_COMMIT" one-commit
+prepare_orchard
 
-# Wire the capture branch's halo2_proofs into orchard (see the header comment) and
-# assert the lockfile delta is exactly the one package's registry source+checksum
-# removal.
-printf '\n[patch.crates-io]\nhalo2_proofs = { path = "../halo2/halo2_proofs" }\n' \
-  >> "$WORK_DIR/orchard/Cargo.toml"
-(cd "$WORK_DIR/orchard" && cargo update --quiet --package halo2_proofs)
-lock_delta=$(git -C "$WORK_DIR/orchard" diff -U0 -- Cargo.lock | grep -E '^[+-][^+-]' || true)
-expected_delta='-source = "registry+https://github.com/rust-lang/crates.io-index"
--checksum = "'"$HALO2_LOCK_CHECKSUM"'"'
-if [[ "$lock_delta" != "$expected_delta" ]]; then
-  echo "VIOLATION: unexpected Cargo.lock delta after the halo2_proofs path override:" >&2
-  git -C "$WORK_DIR/orchard" diff -- Cargo.lock >&2
+# Assert the pinned release's own lockfile resolves the released halo2_proofs from
+# crates.io by checksum -- the exporter's provenance. No patching: the lockfile is used
+# as published, and every cargo invocation below runs --locked against it.
+lock_entry=$(grep -A3 '^name = "halo2_proofs"$' "$WORK_DIR/orchard/Cargo.lock")
+expected_entry='name = "halo2_proofs"
+version = "'"$HALO2_PROOFS_VERSION"'"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "'"$HALO2_PROOFS_LOCK_CHECKSUM"'"'
+if [[ "$lock_entry" != "$expected_entry" ]]; then
+  echo "VIOLATION: orchard's lockfile does not resolve the expected released halo2_proofs:" >&2
+  echo "$lock_entry" >&2
   exit 1
 fi
-echo "Cargo.lock delta is exactly the halo2_proofs registry source+checksum removal."
+echo "Cargo.lock resolves halo2_proofs $HALO2_PROOFS_VERSION from crates.io by checksum."
 
 # Install orchard's pinned toolchain (mirrors fixtures.yml), then run every capture
 # driver in one pass. The unanchored filter matches the two honest and three random
@@ -144,9 +124,8 @@ mkdir -p "$WORK_DIR/out"
 
 # generated-file : committed-path : requirement
 # "required": the committed file must exist and match byte-for-byte. Every committed
-# family is required — for the honest pair a mismatch means the capture tooling
-# disturbed the pipeline or the pins drifted; for the random families it means the
-# committed artifact drifted or went missing. "optional" (currently unused) is for
+# family is required — a mismatch means the committed artifact drifted from what the
+# pinned release regenerates, or went missing. "optional" (currently unused) is for
 # generated artifacts with no committed counterpart yet — a future not-yet-ingested
 # shape — which are stashed in $OUT_DIR instead of failing.
 pairs=(

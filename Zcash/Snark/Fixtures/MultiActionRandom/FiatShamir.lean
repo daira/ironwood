@@ -65,12 +65,38 @@ def capturedFs : FiatShamir Fp G := {
 theorem deriveChallenges_matches_captured_schedule :
     deriveChallenges capturedFs capturedInit ps = ch := by native_decide
 
+/-- The captured verifier prefix is exactly the canonical VK-and-instance prefix. Without this
+the dumped `capturedInit` would enter the boundary statement as an opaque constant, leaving
+`initialTranscript`'s own shape — the VK scalar, then the instance commitments in deployed
+proof-major, column-major order — unchecked against the capture. -/
+theorem capturedInit_eq_initialTranscript :
+    capturedInit =
+      initialTranscript capturedVkTranscriptRepr derivedInstanceCommitment := by
+  change
+    TranscriptElt.scalar capturedVkTranscriptRepr ::
+        List.map (TranscriptElt.point (F := Fp)) capturedInstanceCommitments =
+      TranscriptElt.scalar capturedVkTranscriptRepr ::
+        absorbInstanceCommitments derivedInstanceCommitment
+  apply congrArg (fun tail => TranscriptElt.scalar capturedVkTranscriptRepr :: tail)
+  rw [← instance_commitments_derived]
+  set_option maxRecDepth 10000 in
+    rfl
+
+/-- The statement-bound entry point reaches the captured challenge schedule. -/
+theorem deriveChallengesForStatement_matches_captured_schedule :
+    deriveChallengesForStatement capturedFs capturedVkTranscriptRepr
+      derivedInstanceCommitment ps = ch := by
+  rw [deriveChallengesForStatement, ← capturedInit_eq_initialTranscript]
+  exact deriveChallenges_matches_captured_schedule
+
 /-- The Fiat–Shamir-derived fingerprint matches the captured random two-action MSM under the
-concrete captured schedule oracle above. -/
+concrete captured schedule oracle above, with the VK and public statement bound into Fiat–Shamir
+as the honest families state it. -/
 theorem nonInteractiveFingerprint_matches :
-    MsmMatch (nonInteractiveFingerprint capturedFs capturedInit vk derivedInstanceCommitment ps) capturedMsm := by
-  unfold nonInteractiveFingerprint
-  rw [deriveChallenges_matches_captured_schedule]
+    MsmMatch (nonInteractiveFingerprintForStatement capturedFs capturedVkTranscriptRepr
+      vk derivedInstanceCommitment ps) capturedMsm := by
+  unfold nonInteractiveFingerprintForStatement
+  rw [deriveChallengesForStatement_matches_captured_schedule]
   exact fingerprint_matches
 
 end Zcash.Snark.FixtureRandom2

@@ -4,17 +4,19 @@ import Zcash.Snark.Fixtures.MultiActionRandom.FiatShamir
 # Aliveness guards for the random two-action capture
 
 A match-only capture witnesses coefficient agreement without the accepting evaluation the honest
-families carry, so it needs its own guards against being silently dead:
+families carry, so it needs its own guards against being silently dead. Two live here:
 
 - `valid_capture_assembles` — the model does not spuriously reject the random point. The trust
   boundary's transfer direction needs the model's accept set to contain the deployed one, and
   this witnesses the straight-line premise of `Core.ProofString` at a generic input.
-- `capturedMsm_evalNat_ne_zero` — the capture is genuinely non-accepting, so a mislabeled honest
-  capture or dead export plumbing cannot pass for it.
 - one blind-slot tamper canary — the match has bite at this point: bumping a `fixedEvals` slot
   still assembles but no longer matches. The full per-slot sensitivity sweep lives in the honest
   families (`Fixtures/{SingleAction,MultiAction}/Negative/Sweep.lean`), whose slot-naming
   regression coverage a random capture does not replace.
+
+The third guard is generated rather than written here: `capturedMsm_evalNat_ne_zero`
+(`Fixture.lean`) pins the capture as genuinely non-accepting, so a mislabeled honest capture or
+dead export plumbing cannot pass for it. `TrustBoundary.lean` censuses it with the two above.
 
 The rejection-path negatives of the honest families are deliberately absent: they exercise the
 model's rejection set, which is challenge/VK-dependent and already covered there.

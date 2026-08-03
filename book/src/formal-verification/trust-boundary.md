@@ -45,8 +45,13 @@ Three scoping rules give the invariant its precise shape:
 Zcash blocks commit the Orchard proofs and the public inputs they were verified against, so
 the invariant above serves a specific security target:
 
-> If the deployed verifier has a soundness bug that is ever exploited, the exploiting proofs
-> can be identified retroactively from chain data.
+> If the deployed verifier has a soundness bug **the Lean model does not share**, and it is
+> ever exploited, the exploiting proofs can be identified retroactively from chain data.
+
+The qualifier is the whole of what an audit against a model can promise, and it is load-bearing:
+a bug faithfully carried into the model issues certificates rather than flags, and is confronted
+— if at all — by leg 1's obligations, not by this procedure. The paragraph on defect classes
+below sorts the cases.
 
 The identification procedure is an audit: for every committed bundle, decode the proof bytes,
 re-derive the challenges with the schedule model, and evaluate `DeployedAccepts` at the
@@ -142,14 +147,14 @@ one place compiler trust enters is visible and diffable (see
 %%{init: {"flowchart": {"nodeSpacing": 24, "rankSpacing": 42, "padding": 6, "diagramPadding": 4, "subGraphTitleMargin": {"top": 4, "bottom": 14}}, "themeCSS": ".cluster-label { font-weight: 700; font-family: raleway, sans-serif; }"}}%%
 flowchart TD
   subgraph FP["Verifier-fingerprint pipeline — fully pinned"]
-    PINS["pinned public sources<br/>orchard 0.15.3 · halo2_proofs 0.3.4"]
-    BRANCH["pinned capture branches<br/>ebfull/halo2 · ebfull/orchard<br/>(random families only)"]
+    PINS["pinned public release<br/>orchard 0.15.5 tag"]
+    CRATE["resolved by its lockfile<br/>halo2_proofs 0.3.5 (crates.io)"]
     DRIVERS["capture drivers<br/>2 honest + 3 random"]
     FIX["committed captures<br/>Zcash/Snark/Fixtures/*/Fixture.lean<br/>+ proof-bytes.hex"]
     THM["boundary theorems<br/>nonInteractiveFingerprint_matches_derived"]
     CENSUS["TrustBoundary censuses<br/>pinned axiom sets"]
+    PINS --> CRATE --> DRIVERS
     PINS --> DRIVERS
-    BRANCH --> DRIVERS
     DRIVERS --> FIX --> THM --> CENSUS
     FIX -. "regenerate &amp; diff, byte-for-byte:<br/>regenerate-fingerprint-fixtures.sh<br/>(all five, run in CI: fixtures.yml)" .-> PINS
   end
@@ -202,13 +207,12 @@ the per-family headliners bound a *positional* agreement event over `MsmCoord`, 
 theorems state `MsmMatch`, whose commitment-term lists are compared up to `List.Perm`, and
 `fingerprint_matches_positional` (`Fixtures/*Random/Epsilon.lean`) bridges the two. The
 captured `other` bases are pairwise distinct — 100/123/146 distinct bases at the three random
-captures, the per-family facts `capturedMsm_other_bases_nodup` — and the bases are constants
-of the sample space, so a `Perm` match is forced to the unique base-matching re-indexing,
-computed from the base lists alone (`perm_reindex_of_nodup_snd`, `Fingerprint/Match.lean`).
-The bridge concludes that the assembled MSM agrees with the captured one coordinate-wise:
-`assemble?` succeeds at the captured inputs, the `g`/`w`/`u` coefficients equal the captured
-ones, and each `other` term is pinned to its base-matched captured position. Two premises
-stay prose:
+captures, the per-family facts `capturedMsm_other_bases_nodup` — so a `Perm` match is forced to
+the unique base-matching re-indexing, computed from the two base lists alone
+(`perm_reindex_of_nodup_snd`, `Fingerprint/Match.lean`). The bridge concludes that the
+assembled MSM agrees with the captured one coordinate-wise: `assemble?` succeeds at the
+captured inputs, the `g`/`w`/`u` coefficients equal the captured ones, and each `other` term is
+pinned to its base-matched captured position. Three premises stay prose:
 
 - **Rust-side polynomiality.** That the deployed coefficients form a rational family in the
   walk's class — numerators within the degree budget, denominators from the enumerated
@@ -216,6 +220,19 @@ stay prose:
   source; necessarily, since that side has no Lean text. Per-coordinate denominator agreement
   is not assumed: the cross-denominator theorems price a family bringing its own denominators
   at the summed budget (`competing_coefficient_family_agreement_le_denClosure`).
+- **Positional-frame stability.** The re-indexing σ that the bridge produces is read off the
+  assembled base list *at the captured point*. For the composition to name a single competing
+  family — coordinate `c` meaning the same deployed slot everywhere the ε theorem counts — the
+  assembled base stream must be the same list at every point of the good event. It is: the
+  individual bases are group-valued slots, which the sample space does not vary, and the
+  arrangement is fixed by the grouping, which the good event pins to the reference table. But
+  only the *coefficient* stream has this written down as a theorem
+  (`assembleAt_other_map_fst`, `Rational/Capstone.lean`, with `assembleAt_other_length` for the
+  length); the base-stream analogue — an `otherBases` mirror and
+  `assembleAt_other_map_snd` — is not yet proven, so it is enumerated here rather than
+  claimed. Every combinator the `other` list passes through (`accumulateCommitment`,
+  `Msm.scale`, `appendTerm`, `combineBlocks`, `ipaFold`) carries bases through untouched, which
+  is what makes the missing theorem a mirror of the existing one rather than new mathematics.
 - **Uniformity.** The subsection below.
 
 ### The uniformity premise
@@ -344,7 +361,7 @@ and small.
    exporter re-derives instance commitments and asserts slot-reconstruction and term-count
    consistency. Trust = the few-line diff, reviewed.
 2. **Rejection paths and branch structure.** Which inputs *reach* the MSM is invisible to any
-   evaluation set. The audited claim: the halo2 0.3.4 accept path is straight-line in proof
+   evaluation set. The audited claim: the halo2 0.3.5 accept path is straight-line in proof
    values post-decode (`Zcash/Snark/Core/ProofString.lean`); the two panic sites are
    challenge-degenerate with Lean-side cardinality bounds; multiopen grouping keys on slots
    and opening points, not proof values. The random captures running to completion corroborate
@@ -372,21 +389,20 @@ and small.
 
 ## Reproducibility: the two pipelines in detail
 
-**Verifier-fingerprint captures** (`Zcash/Snark/Fixtures/`) are fully pinned. All five
-families regenerate via the public `fingerprint-random-capture` branches of ebfull/halo2
-and ebfull/orchard (match-only exporter and `numInstanceColumns` shape emission;
-fabricate→replay random-capture drivers — the Halo2 pin the public zcash/halo2#924 head
-descended from its release pin, the Orchard branch exactly one commit atop its release
-pin, with a crates.io checksum-equivalence argument at the Halo2 release base)
-and `scripts/regenerate-fingerprint-fixtures.sh`, which CI runs
-(`.github/workflows/fixtures.yml`): it clones the branches at the pinned
-commits, asserts both release lineages, runs all five capture drivers, and
-enforces every committed artifact — five `Fixture.lean` files and three `proof-bytes.hex`
-siblings — byte-for-byte. Regeneration of the honest pair from the released
-halo2_proofs alone resumes once a release ships the exporter changes their committed
-bytes now carry. Pins, seeds, rationale, and the one known caveat (fabricated points have
-discrete logs known to the generator — harmless for non-accepting, coefficient-only
-captures, recorded for honesty) are documented in `fixture-provenance-notes.md`.
+**Verifier-fingerprint captures** (`Zcash/Snark/Fixtures/`) are fully pinned, to *released*
+sources: all five families regenerate from the `zcash/orchard` 0.15.5 release tag, whose
+published lockfile resolves `halo2_proofs` 0.3.5 from crates.io by checksum. The capture
+tooling is upstream and released — the match-only exporter and `numInstanceColumns` shape
+emission in halo2_proofs 0.3.5 (zcash/halo2#924), the fabricate→replay random-capture drivers
+in orchard 0.15.5 (zcash/orchard#541) — so no fork, unreleased branch, or `[patch.crates-io]`
+override enters the pipeline. `scripts/regenerate-fingerprint-fixtures.sh` is the mechanism and
+CI runs it (`.github/workflows/fixtures.yml`): it clones the pinned release, asserts that the
+pinned commit *is* the release tag and that the lockfile resolves the expected published
+halo2_proofs, runs all five capture drivers `--locked`, and enforces every committed artifact —
+five `Fixture.lean` files and three `proof-bytes.hex` siblings — byte-for-byte. Pins, seeds,
+rationale, and the one known caveat (fabricated points have discrete logs known to the
+generator — harmless for non-accepting, coefficient-only captures, recorded for honesty) are
+documented in `fixture-provenance-notes.md`.
 
 **Circuit-side dumps** (`Zcash/Circuits/Fixtures/`) are the separate pipeline: constraint
 system, layout, and selector-map dumps produced by one-off instrumented checkouts whose

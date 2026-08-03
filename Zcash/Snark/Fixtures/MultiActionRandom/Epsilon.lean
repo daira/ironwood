@@ -256,19 +256,26 @@ theorem competing_family_agreement_le_challengesOnly_denClosure
         add_le_add le_rfl hsum
     _ = (20604 : ℚ≥0) := by norm_num
 
-/-- The captured `other` bases are pairwise distinct. The bases are constants of the ε sample
-space — group slots are not sampled — so a `List.Perm` match against `capturedMsm` is forced to
-the unique base-matching re-indexing (`perm_reindex_of_nodup_snd`). -/
+/-- The captured `other` bases are pairwise distinct, so a `List.Perm` match against
+`capturedMsm` is forced to the unique base-matching re-indexing
+(`perm_reindex_of_nodup_snd`), computed from the two base lists alone. -/
 theorem capturedMsm_other_bases_nodup : (capturedMsm.other.map Prod.snd).Nodup := by
   native_decide
 
 /-- **The `Perm`→positional bridge at this capture.** Lean's assembly at the captured inputs
 lands inside the positional frame of the agreement event above: `assemble?` succeeds, the
 `g`/`w`/`u` coefficients equal the captured ones, and the `other` block equals the captured one
-after the base-matching re-indexing `σ` — a function of the fixed base lists alone (the stated
-`idxOf` form), so a constant of the sample space. With `competing_family_agreement_le`, a
-competing family in the walk's class differing anywhere from Lean's passes this capture
-positionally only on the ≤ ε event. -/
+after the base-matching re-indexing `σ`, in the stated `idxOf` form. With
+`competing_family_agreement_le`, a competing family in the walk's class differing anywhere from
+Lean's passes this capture positionally only on the ≤ ε event.
+
+Scope note: `σ` is read off the assembled base list *at the captured point*. Naming one
+competing family — coordinate `c` meaning the same deployed slot wherever the ε theorem counts
+— additionally needs the assembled base stream to be the same list across the whole good event.
+That holds for the reason the individual bases are constants (group slots are not sampled) and
+the arrangement is the good event's fixed grouping, but only the coefficient stream has it as a
+theorem (`assembleAt_other_map_fst`); the base-stream mirror is not yet proven and is
+enumerated as the positional-frame-stability premise in the trust chapter. -/
 theorem fingerprint_matches_positional :
     ∃ m : Msm shape.k Fp G,
       assemble? vk derivedInstanceCommitment ps ch = some m
