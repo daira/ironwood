@@ -2,7 +2,7 @@ import Mathlib.Tactic
 import Mathlib.Probability.Distributions.Uniform
 import Zcash.Security.Ledger.Capstone
 import Zcash.Security.Ledger.Value
-import Zcash.Security.RedDSA.Basic
+import Zcash.Security.RedDSA.Extraction
 
 /-!
 # The transaction-balance premiss with a fallible extractor

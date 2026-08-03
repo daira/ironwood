@@ -14,6 +14,7 @@ import Zcash.Security.Ledger.Value
 import Zcash.Security.Ledger.KeyBindingArm
 import Zcash.Security.Ledger.ExtractionArm
 import Zcash.Security.RedDSA.Basic
+import Zcash.Security.RedDSA.Extraction
 import Zcash.Security.Common.Birthday
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
@@ -439,6 +440,23 @@ assert_axioms Zcash.Security.RedDSA.Scheme.derivePublic_add
 assert_axioms Zcash.Security.RedDSA.Scheme.derivePublic_injective
 assert_axioms Zcash.Security.RedDSA.Scheme.verify_sign
 assert_axioms Zcash.Security.RedDSA.Scheme.verify_sign_randomized
+
+/-! ## RedDSA extractability: the binding-signature discharge
+
+The deterministic core of the binding-signature extraction (#22): substituting a verifying
+binding signature's representations over the public basis into the Schnorr verification
+equation assembles coefficients whose evaluation is zero; whenever some coefficient is
+nonzero, they are an `AlgebraicRelationWitness` (`bindingSig_relation_of_nontrivial`), and
+away from the one bad challenge of the representation's pivot slot, one is
+(`QueryRep.assembled_ne_zero_of_ne_badChallenge`). The knowledge-error block below composes
+this with the labeled squeeze and the relation-to-discrete-log reduction. -/
+
+assert_computable Zcash.Security.RedDSA.QueryRep.assembled
+assert_computable Zcash.Security.RedDSA.QueryRep.pivot
+assert_computable Zcash.Security.RedDSA.QueryRep.badChallenge
+assert_axioms Zcash.Security.RedDSA.QueryRep.representationEval_key_of_pivot_eq_none
+assert_axioms Zcash.Security.RedDSA.QueryRep.assembled_ne_zero_of_ne_badChallenge
+assert_computable Zcash.Security.RedDSA.bindingSig_relation_of_nontrivial +choice
 
 /-! ## The transaction-balance premiss in extractor-plus-knowledge-error form
 

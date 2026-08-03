@@ -31,25 +31,8 @@ The concrete instantiation must carry both.
   binding-signature sum bvk = [Σ rcv] ℛ rests on).
 * Completeness (`verify_sign`, `verify_sign_randomized`) — the formalized verification
   equation is the one honest signers satisfy, under original and re-randomized keys.
-* `ExtractionFailure` — the event that κ bounds, as data: a verifying signature on
-  which a candidate extractor does not return the key's discrete log. The spec's
-  demand on `BindingSig` is exactly a knowledge property ("a signature must prove
-  knowledge of the discrete logarithm of the validating key with respect to the base
-  ℛ", §5.4.7.2); carrying the failure as data keeps its probability a bound on an
-  exhibited event, not a total extraction hypothesis (which is classically satisfiable
-  in a cyclic group — see the module doc of `Zcash.Security.Ledger.Value`).
-  Extraction is general to any use of RedDSA, and it is a different axis from
-  unforgeability. Nothing here fixes an honest key: the extractor must succeed at any
-  adversary-chosen vk. An adversary who produces a verifying signature *without*
-  knowing the key lands exactly in the extraction-failure event, so that attack's
-  probability is the κ carried by the consuming capstones. The balance argument
-  consumes only this knowledge property: bvk is determined by the adversary's own
-  bundle, so there is no honest binding signer to protect. (At this instantiation
-  the arbitrary-key and honest-key settings are close: sk + α at uniform α is
-  distributed as a fresh key, so a reduction can randomize the key, run a
-  key-recovery adversary, and undo the randomization — `randomizePrivate_add_neg`.
-  That rests on the connection between public and private keys in a prime-order
-  group; it is not definitionally true for signature schemes in general.)
+The extraction notions — a candidate extractor and its failures as data, the event that κ
+bounds — live in `Zcash.Security.RedDSA.Extraction` beside the deterministic extraction core.
 
 ## Discharge routes (none chosen here)
 
@@ -177,26 +160,6 @@ theorem randomizePrivate_zero (sk : F) : randomizePrivate 0 sk = sk := add_zero 
 theorem Scheme.randomizePublic_zero (sch : Scheme F G MSG) (vk : G) :
     sch.randomizePublic 0 vk = vk := by
   simp [randomizePublic]
-
-/-! ### Extraction failure, as data -/
-
-/-- A candidate knowledge extractor: from a verifying (vk, m, σ) it should return
-dlog_{𝒫_𝔾} vk. Total as a function; where it fails is exactly the event the
-knowledge error bounds. -/
-abbrev Extractor (F G MSG : Type*) := G → MSG → Sig F G → F
-
-/-- An extraction failure, as data: a verifying signature on which the extractor does
-not return the discrete log of vk. The knowledge obligation on BindingSig — "a
-signature must prove knowledge of the discrete logarithm of the validating key with
-respect to the base ℛ" (spec §5.4.7.2) — is the named bound κ on the probability
-that an adversary exhibits this event; the known discharge routes are in the module
-doc. -/
-structure ExtractionFailure (sch : Scheme F G MSG) (E : Extractor F G MSG) where
-  vk : G
-  m : MSG
-  σ : Sig F G
-  verifies : sch.Verify vk m σ
-  ne : vk ≠ E vk m σ • sch.base
 
 end Module
 

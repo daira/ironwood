@@ -27,6 +27,7 @@ import Zcash.Security.Ledger.OrchardCapstone
 import Zcash.Security.Common.RandomOracle
 import Zcash.Security.Common.Birthday
 import Zcash.Security.RedDSA.Basic
+import Zcash.Security.RedDSA.Extraction
 import Zcash.Security.KeyBinding.Basic
 import Zcash.Security.KeyBinding.Instance
 import Zcash.Security.KeyBinding.Probability
