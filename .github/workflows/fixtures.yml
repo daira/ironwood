@@ -84,7 +84,7 @@ jobs:
       # The script clones the pinned Orchard release, asserts the commit is the release
       # tag and that its published lockfile resolves halo2_proofs 0.3.5 from crates.io by
       # checksum, installs Orchard's pinned toolchain (`rustup show` against its
-      # `rust-toolchain.toml`), regenerates all five families plus the proof-byte
+      # `rust-toolchain.toml`), regenerates all four families plus the proof-byte
       # siblings, and diffs every committed artifact byte-for-byte, exiting non-zero on
       # any mismatch. Uncached: the job only runs when the path filter above fires.
       - name: Regenerate every fixture family from the pinned Orchard release

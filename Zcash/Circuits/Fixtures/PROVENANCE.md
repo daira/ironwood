@@ -105,7 +105,7 @@ the circuit-in-development, and that is what was dumped.
 forks were never published and their commit hashes never recorded, so the generation
 cannot currently be re-run to confirm the checked-in bytes correspond to
 orchard 0.14.0 / the ironwood branch as claimed. Those claims exist only as prose in
-test docstrings. `PROVENANCE.md` therefore marks the fork commits **UNKNOWN**
+test docstrings. This file therefore marks the fork commits **UNKNOWN**
 rather than inventing pins.
 
 **What limits the damage.** Two independent corroborations:
@@ -123,7 +123,7 @@ rather than inventing pins.
 **Follow-ups.**
 
 - Publish the instrumented halo2/orchard branches (or upstream the dump tooling
-  behind a feature flag), record the exact commits in `PROVENANCE.md`, and add a CI
+  behind a feature flag), record the exact commits here, and add a CI
   job that regenerates the JSON fixtures from those pins and diffs them against the
   checked-in bytes — the circuit-side analogue of what `fixtures.yml` already does
   for the `Zcash/Snark/Fixtures/` verifier-fingerprint captures (see

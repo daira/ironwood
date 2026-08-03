@@ -13,7 +13,7 @@
 # invocation runs --locked against the published crate; the capture tooling is reached
 # through orchard's `verifier-fingerprint` feature, which forwards to halo2_proofs'
 # `unstable-verifier-fingerprint`. CI runs this script (fixtures.yml), enforcing that all
-# five families are byte-reproducible from released sources alone.
+# four families are byte-reproducible from released sources alone.
 #
 # Sources are cloned from the public repository at the pinned release; set ORCHARD_SRC to
 # a local checkout path to clone from that instead (fully offline). Set REGEN_WORK_DIR to
