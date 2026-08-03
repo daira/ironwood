@@ -51,8 +51,6 @@ assert_axioms Zcash.Snark.FixtureRandom.tampered_fixed_eval_fingerprint_mismatch
 -- The shape/VK faithfulness checks (`Faithfulness.lean`): the captured lists, layouts,
 -- expression indices, and transcript prefix agree with the generated `shape`, guarding the
 -- `finFn`/`finFnG` totalization hazards.
-assert_axioms Zcash.Snark.FixtureRandom.capturedInit_has_vk_scalar_and_instance_commitments +native(
-  Zcash.Snark.FixtureRandom.capturedInit_has_vk_scalar_and_instance_commitments)
 assert_axioms Zcash.Snark.FixtureRandom.captured_list_lengths_match_shape +native(
   Zcash.Snark.FixtureRandom.captured_list_lengths_match_shape)
 assert_axioms Zcash.Snark.FixtureRandom.query_layout_columns_in_range +native(

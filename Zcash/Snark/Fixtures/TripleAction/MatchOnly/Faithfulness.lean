@@ -5,35 +5,20 @@ import Zcash.Snark.Fixtures.TripleAction.MatchOnly.Fixture
 
 The length/range/init checks of `Fixtures/MultiAction/Honest/Faithfulness.lean`, at the random
 three-action capture: the named captured lists, typed accessors, query layouts, expression
-indices, and captured transcript prefix agree with the generated `shape`. In particular this
+indices agree with the generated `shape`. In particular this
 catches the totalization hazards called out in `Verifier.Assemble`: an out-of-range query index
 would otherwise route through `finFn`/`finFnG` and alias `0`/`default`.
 
 The verifying key itself is certified derived in this family's `VkCertificate.lean`, transported
 from the single-action keygen certificate along the cross-capture point equalities of
 `Fixtures/PostNu63Random.lean`; the checks here are drift-naming diagnostics rather than the
-boundary.
+boundary. The captured transcript prefix is checked in `FiatShamir.lean`, where
+`capturedInit_eq_initialTranscript` pins it to `initialTranscript` outright.
 -/
 
 namespace Zcash.Snark.FixtureRandom3
 
 open Zcash.Snark
-
-def capturedInstanceCommitmentPrefix : List (TranscriptElt Fp G) :=
-  (List.ofFn (fun p : Fin shape.numProofs =>
-    (List.ofFn (fun i : Fin capturedNumInstanceColumns =>
-      TranscriptElt.point (derivedInstanceCommitment p i.val))))).flatten
-
-def capturedInitStartsWithScalar : Bool :=
-  match capturedInit with
-  | TranscriptElt.scalar _ :: _ => true
-  | _ => false
-
-theorem capturedInit_has_vk_scalar_and_instance_commitments :
-    capturedInitStartsWithScalar = true
-      ∧ capturedInit.drop 1 = capturedInstanceCommitmentPrefix
-      ∧ capturedInit.length = 1 + capturedInstanceCommitmentPrefix.length := by
-  native_decide
 
 theorem captured_list_lengths_match_shape :
     -- Fixed commitments are per *column* and fixed evals per *query*; the counts coincide (29) for

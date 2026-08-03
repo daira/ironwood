@@ -12,8 +12,9 @@ dumped VK equals the one derived from the ported `configure`/keygen, with per-fi
 The Orchard capture re-runs key generation, compares that exact key against the checked-in
 canonical Post-NU6.3 `PinnedVerificationKey`, and passes the same key to verification and the fixture
 dumper; `Fixtures.PostNu63` pins the emitted transcript representation in Lean. These checks verify
-that the named captured lists, typed accessors, query layouts, expression indices, and captured
-transcript prefix agree with the generated `shape`.
+that the named captured lists, typed accessors, query layouts, and expression indices agree with
+the generated `shape`; `FiatShamir.lean` pins the captured transcript prefix to
+`initialTranscript` outright.
 
 In particular this catches the totalization hazards called out in `Verifier.Assemble`: an
 out-of-range query index would otherwise route through `finFn`/`finFnG` and alias `0`/`default`.
@@ -32,22 +33,6 @@ namespace Zcash.Snark.Fixture2
 
 open Zcash.Snark
 open Zcash.Circuits.Action (actionCircuit)
-
-def capturedInstanceCommitmentPrefix : List (TranscriptElt Fp G) :=
-  (List.ofFn (fun p : Fin shape.numProofs =>
-    (List.ofFn (fun i : Fin capturedNumInstanceColumns =>
-      TranscriptElt.point (derivedInstanceCommitment p i.val))))).flatten
-
-def capturedInitStartsWithScalar : Bool :=
-  match capturedInit with
-  | TranscriptElt.scalar _ :: _ => true
-  | _ => false
-
-theorem capturedInit_has_vk_scalar_and_instance_commitments :
-    capturedInitStartsWithScalar = true
-      ∧ capturedInit.drop 1 = capturedInstanceCommitmentPrefix
-      ∧ capturedInit.length = 1 + capturedInstanceCommitmentPrefix.length := by
-  native_decide
 
 theorem captured_list_lengths_match_shape :
     -- Fixed commitments are per *column* and fixed evals per *query*; the counts coincide (29) for
