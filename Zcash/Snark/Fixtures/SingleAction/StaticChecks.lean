@@ -20,7 +20,7 @@ key's 193 gate expressions.  These are definitional facts about the captured dat
 
 theorem vk_n_eq : vk.n = 2048 := rfl
 
-set_option maxRecDepth 1000000 in
+set_option maxRecDepth 100000 in
 theorem vk_gates_length : vk.gates.length = 193 := rfl
 
 theorem vk_permutationChunks_length : vk.permutationChunks.length = 3 := rfl

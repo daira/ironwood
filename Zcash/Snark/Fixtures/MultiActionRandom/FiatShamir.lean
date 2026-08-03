@@ -79,8 +79,7 @@ theorem capturedInit_eq_initialTranscript :
         absorbInstanceCommitments derivedInstanceCommitment
   apply congrArg (fun tail => TranscriptElt.scalar capturedVkTranscriptRepr :: tail)
   rw [← instance_commitments_derived]
-  set_option maxRecDepth 10000 in
-    rfl
+  rfl
 
 /-- The statement-bound entry point reaches the captured challenge schedule. -/
 theorem deriveChallengesForStatement_matches_captured_schedule :

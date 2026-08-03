@@ -26,10 +26,16 @@ orientation is in the [source map](source-map.md).
 
 Three scoping rules give the invariant its precise shape:
 
-- **One-way correctness.** Only *deployed-accepts ⊆ model-accepts* is soundness-relevant. The
-  model's accept set is `assemble? = some m ∧ m.eval urs = 0` — rejection is `none`, never a
-  zero MSM. A transcription error that makes the deployed verifier reject proofs the model
-  accepts is out of scope; completeness is not a goal.
+- **One-way correctness — a scope for this comparison, not a stance on completeness.** Only
+  *deployed-accepts ⊆ model-accepts* is soundness-relevant at this boundary. The model's accept
+  set is `assemble? = some m ∧ m.eval urs = 0` — rejection is `none`, never a zero MSM. A
+  transcription error in the other direction costs benign flags rather than unsoundness, so the
+  fixture comparison does not chase it. Completeness itself *is* a goal of the development:
+  Spendability rests on it, and it is what keeps soundness meaningful, since a verifier free to
+  reject every proof is trivially sound. Completeness of the deployed prover cannot be settled
+  without also proving its witness generator correct, but completeness of the Lean model can be,
+  and that yields witness existence — so a witness-generator bug is one that can be fixed
+  without changing the circuit.
 - **The verifying key is inside the boundary.** Lean *reconstructs* the VK from the ported
   `configure`/keygen, and the match compares the reconstruction against captured data. A
   soundness-relevant port error moves an MSM base point or coefficient and the match fails.

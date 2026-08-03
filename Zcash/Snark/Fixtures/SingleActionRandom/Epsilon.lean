@@ -83,7 +83,6 @@ proof-string slots here. -/
 def capturedSlotVals : {v : ScalarSlot shape // ¬ IsChallengeSlot v} → Fp :=
   fun v => Point.ofInputs ps ch v.val
 
-set_option maxRecDepth 100000 in
 /-- The challenge block has 22 coordinates: eleven named challenges plus `k = 11` IPA
 rounds. -/
 theorem card_challengeSlot :
@@ -98,14 +97,12 @@ noncomputable def coefficientFamily :
   assembleCoeffFamily vk derivedInstanceCommitment ps vkSymbolicFacts vk_chunk_width_le
     vk_chunks_length_eq (by decide)
 
-set_option maxHeartbeats 1600000 in
 /-- The good event contains the captured point itself: the real capture's challenges avoid
 every enumerated denominator factor, so the match-only fixture sits inside the event the ε
 theorem prices — the quantified statement is not vacuous at this capture. -/
 theorem capturedPoint_goodEvent : GoodEvent vk (Point.ofInputs ps ch) :=
   (goodEvent_iff vk _).mpr (by native_decide)
 
-set_option maxHeartbeats 4000000 in
 open Classical in
 /-- **ε for the random match at this capture.** Any competing numerator family of total degree
 ≤ 16452 over the walk's denominators that differs from Lean's at any coordinate agrees with
@@ -136,7 +133,6 @@ theorem competing_family_agreement_le
       ≤ ((16452 : ℕ) : ℚ≥0) + ((2071 : ℕ) : ℚ≥0) := add_le_add le_rfl hsum
     _ = (18523 : ℚ≥0) := by norm_num
 
-set_option maxHeartbeats 4000000 in
 open Classical in
 /-- **ε over the challenge coordinates alone at this capture.** With the proof-string slots
 pinned to the captured scalars, any competing numerator family of total degree ≤ 16452 over
@@ -176,7 +172,6 @@ theorem competing_family_agreement_le_challengesOnly
       ≤ ((16452 : ℕ) : ℚ≥0) + ((2071 : ℕ) : ℚ≥0) := add_le_add le_rfl hsum
     _ = (18523 : ℚ≥0) := by norm_num
 
-set_option maxHeartbeats 4000000 in
 open Classical in
 /-- **ε across denominators at this capture.** Any competing rational family — numerators of
 total degree ≤ 16452, denominators of total degree ≤ 2077 from the enumerated factor closure —
@@ -213,7 +208,6 @@ theorem competing_family_agreement_le_denClosure
         add_le_add le_rfl hsum
     _ = (20600 : ℚ≥0) := by norm_num
 
-set_option maxHeartbeats 4000000 in
 open Classical in
 /-- **ε across denominators over the challenge coordinates alone at this capture.** With the
 proof-string slots pinned to the captured scalars, a competing rational family within the

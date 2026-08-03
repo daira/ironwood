@@ -52,7 +52,9 @@ uniformity premise behind "a uniformly random point", the remaining premises, an
 mapping each transcribed artifact to the theorem that falsifies it live in the book's Trust
 Boundary chapter
 (`book/src/formal-verification/trust-boundary.md`). Only that direction
-(deployed-accepts ⊆ model-accepts) is soundness-relevant; completeness is not a goal. The
+(deployed-accepts ⊆ model-accepts) is soundness-relevant *here*, which scopes this comparison
+rather than stating a position on completeness: completeness is a goal of the development, and
+the chapter's first scoping rule says where it is pursued instead. The
 boundary artifact is per-proof: halo2's optional `BatchVerifier` — random-linear-combination
 batching of separate proof blobs — sits outside the single-bundle verifier formalized here, and
 any batching layer prices on top of the per-proof artifact without adding transcription surface.
