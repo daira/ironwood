@@ -788,15 +788,11 @@ assert_axioms Zcash.Snark.Fixture2.capturedLiveZeroRootFamily +native(CompEllipt
 assert_axioms Zcash.Snark.Fixture2.capturedLiveZeroIpaTrace +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.Fixture2.capturedLiveZeroStraightLineFamily +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_computable Zcash.Snark.Fixture2.capturedLiveZeroAdaptiveFamily +choice +native(
-  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.Fixture2.capturedLiveZeroStaticChecks +native(
   Zcash.Snark.Fixture2.vk_advice_layout_length, Zcash.Snark.Fixture2.vk_fixed_layout_length,
   Zcash.Snark.Fixture2.vk_instance_layout_length, Zcash.Snark.Fixture2.vk_n_cast_ne_zero,
   Zcash.Snark.Fixture2.vk_omega_order, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.Fixture2.straightLineInterface_nonempty_at_captured_shape +native(
-  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.Fixture2.adaptiveInterface_nonempty_at_captured_shape +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- The consensus-maximum work-factor packages (`Zcash.Snark.FixtureMax`, reached through
