@@ -607,8 +607,8 @@ theorem statementExclusions_of_no_surface {pp : ProofParams}
         data.algebraicProof.erase source ch) ∧
       (∀ j, ch.y ∉ szBadSet (foldSplitWitness actionModel.constraints
         actionCircuit.n j)) ∧
-      ResolverPermutationChallengeExclusions (adaptiveActionStatementVk pp basis) ch
-        actionPoly actionActiveRows ∧
+      ResolverPermutationChallengeExclusions pp.numProofs (adaptiveActionStatementVk pp basis)
+        ch actionPoly actionActiveRows ∧
       TopLevelLookup.ChallengeExclusions actionCircuit pp
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) ch actionPoly := by
   simp only
