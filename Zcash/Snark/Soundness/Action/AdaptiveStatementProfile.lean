@@ -3,9 +3,10 @@ import Zcash.Snark.Soundness.Action.AdaptiveStatementKnowledge
 /-!
 # Adaptive-statement finite-security profile
 
-This module records both the conservative eight-traversal and cached single-execution prices for
-the adaptive-statement relation finder and witness extractor, records the direct-decode work
-premise, and transfers events across the Orchard generator random-oracle setup.
+This module records the conservative eight-traversal price for the adaptive-statement relation
+finder and knowledge-failure theorem, records the direct-decode work premise, and transfers events
+across the Orchard generator random-oracle setup.  The implementation does not retain one global
+adversary execution across the complete eight-stage finder.
 -/
 
 namespace Zcash.Snark
@@ -17,31 +18,6 @@ open scoped ENNReal
 local instance adaptiveStatementProfileVestaInhabited : Inhabited VestaG := ⟨0⟩
 
 namespace ComputedAdaptiveActionStatementFSFamily
-
-/-- The one retained adaptive execution used by the cached finite-security profile. -/
-def cachedExecution {pp : ProofParams}
-    (family : ComputedAdaptiveActionStatementFSFamily pp)
-    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) :=
-  (family.adversary basis).runWithAnnotations O
-
-/-- The retained execution has exactly the jointly selected statement/proof used everywhere in
-the soundness event. -/
-@[simp] theorem cachedExecution_output_eq {pp : ProofParams}
-    (family : ComputedAdaptiveActionStatementFSFamily pp)
-    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) :
-    (family.cachedExecution basis O).1 = family.runOutput basis O := by
-  simp [cachedExecution, runOutput]
-
-/-- The retained execution's second projection is the annotation log consumed by cached
-provenance lookup. -/
-@[simp] theorem cachedExecution_annotations_eq {pp : ProofParams}
-    (family : ComputedAdaptiveActionStatementFSFamily pp)
-    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) :
-    (family.cachedExecution basis O).2 = (family.adversary basis).annotations O := by
-  simp [cachedExecution]
 
 /-- Independently charged traversals of the eight-stage combined relation finder. -/
 def adaptiveStatementDlogTraversalSlots : Nat := 8
@@ -85,15 +61,6 @@ theorem relationFinderCalls_le_traversalSlots {pp : ProofParams}
   split <;> try omega
   split <;> omega
 
-/-- The retained output/annotation log is bounded by the adversary's query budget. -/
-theorem cachedProvenanceLog_length_le {pp : ProofParams}
-    (family : ComputedAdaptiveActionStatementFSFamily pp)
-    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) :
-    (family.cachedExecution basis O).2.length ≤ family.Q :=
-  LabeledOracleComp.runWithAnnotations_log_length_le
-    (family.adversary basis) (family.queryBound basis) O
-
 /-- Direct-coordinate work of the actual selected-statement deployed-root decode. -/
 def adaptiveStatementDirectDecodeOps {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
@@ -107,126 +74,13 @@ def adaptiveStatementDirectDecodeOps {pp : ProofParams}
       (adaptiveStatementInstanceRepresentationList output.instanceRepresentations ++
         family.fixedRepresentations basis)).length
 
-/-! ## Cached single-run profile
-
-The executable adaptive-statement family has one `runWithAnnotations` execution.  Its output is
-the jointly selected statement/proof and its retained annotation log supports all subsequent
-provenance lookups without consulting the random oracle again.  The older traversal profile below
-remains available as a conservative compatibility convention; the cached profile charges the
-actual shared execution once and places every relation check in the explicit post-processing
-budget.
--/
-
-/-- Random-oracle work of the cached relation finder: one adversary execution followed by the
-canonical eleven pre-IPA and `k` IPA challenge-table reads. -/
-def adaptiveStatementCachedDlogRandomOracleQueries {pp : ProofParams}
-    (family : ComputedAdaptiveActionStatementFSFamily pp) : Nat :=
-  family.Q + (11 + (AdaptiveActionStatementShape pp).k)
-
-/-- Witness extraction projects the same cached complete outcome and adds no oracle traversal. -/
-def adaptiveStatementCachedKnowledgeExtractorRandomOracleQueries {pp : ProofParams}
-    (family : ComputedAdaptiveActionStatementFSFamily pp) : Nat :=
-  adaptiveStatementCachedDlogRandomOracleQueries family
-
-@[simp] theorem adaptiveStatementCachedKnowledgeExtractorRandomOracleQueries_eq
-    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) :
-    adaptiveStatementCachedKnowledgeExtractorRandomOracleQueries family =
-      adaptiveStatementCachedDlogRandomOracleQueries family := rfl
-
-/-- Group work of one represented adversary execution plus all cached relation post-processing. -/
-def adaptiveStatementCachedDlogGroupWork
-    (proverGroupWork reductionGroupWork : Nat) : Nat :=
-  proverGroupWork + reductionGroupWork
-
-/-- Finite-security premise for the one-run cached adaptive-statement relation finder.  The
-`reductionGroupWork` component includes every provenance scan, semantic comparison, decode, and
-programmed-basis post-processing operation after the retained adversary execution. -/
-structure AdaptiveStatementCachedDlogProfile {pp : ProofParams}
-    (family : ComputedAdaptiveActionStatementFSFamily pp)
-    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runRecord basis O) <
-        Zcash.Arithmetic.scalarFieldOrder)
-    (B : VestaG) where
-  proverGroupWork : Nat
-  reductionGroupWork : Nat
-  advantage : Nat → Nat → ENNReal
-  advantage_mono : ∀ {q q' g g'}, q ≤ q' → g ≤ g' →
-    advantage q g ≤ advantage q' g'
-  hardness : TextbookDLWithCoinsAdvantageLE B (family.relationFinder hchar)
-    (advantage (adaptiveStatementCachedDlogRandomOracleQueries family)
-      (adaptiveStatementCachedDlogGroupWork proverGroupWork reductionGroupWork))
-
-/-- Concrete cached work profile for adaptive-statement soundness and knowledge soundness. -/
-structure AdaptiveStatementCachedDirectDlogProfile {pp : ProofParams}
-    (family : ComputedAdaptiveActionStatementFSFamily pp)
-    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runRecord basis O) <
-        Zcash.Arithmetic.scalarFieldOrder)
-    (B : VestaG) (T : Nat) extends AdaptiveStatementCachedDlogProfile family hchar B where
-  targetAtLeastTwentyTwo : 22 ≤ T
-  queryBound : family.Q ≤ T
-  proverWorkBound : toAdaptiveStatementCachedDlogProfile.proverGroupWork ≤ T
-  reductionWorkBound : toAdaptiveStatementCachedDlogProfile.reductionGroupWork ≤ T
-  directDecodeWorkBound : ∀ basis O,
-    2 * adaptiveStatementDirectDecodeOps family basis O ≤ T
-
-/-- One cached adaptive execution and its complete post-processing fit a twofold resource
-envelope. -/
-theorem AdaptiveStatementCachedDirectDlogProfile.solverCost_le {pp : ProofParams}
-    {family : ComputedAdaptiveActionStatementFSFamily pp}
-    {hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runRecord basis O) <
-        Zcash.Arithmetic.scalarFieldOrder}
-    {B : VestaG} {T : Nat}
-    (profile : AdaptiveStatementCachedDirectDlogProfile family hchar B T) :
-    adaptiveStatementCachedDlogRandomOracleQueries family ≤ 2 * T ∧
-      adaptiveStatementCachedDlogGroupWork profile.proverGroupWork
-          profile.reductionGroupWork ≤ 2 * T ∧
-      ∀ basis O, 2 * adaptiveStatementDirectDecodeOps family basis O ≤ T := by
-  constructor
-  · unfold adaptiveStatementCachedDlogRandomOracleQueries
-    rw [CircuitShape.withProofParams_k, ActionPermutationDomain.domainExponent_eq]
-    calc
-      family.Q + (11 + 11) ≤ T + 22 :=
-        Nat.add_le_add_right profile.queryBound 22
-      _ ≤ 2 * T := by
-        have hT := profile.targetAtLeastTwentyTwo
-        omega
-  constructor
-  · unfold adaptiveStatementCachedDlogGroupWork
-    calc
-      profile.proverGroupWork + profile.reductionGroupWork ≤ T + T :=
-        Nat.add_le_add profile.proverWorkBound profile.reductionWorkBound
-      _ = 2 * T := by omega
-  · exact profile.directDecodeWorkBound
-
-/-- The witness projection reuses the same cached execution and complete post-processing. -/
-theorem AdaptiveStatementCachedDirectDlogProfile.knowledgeExtractorCost_le
-    {pp : ProofParams}
-    {family : ComputedAdaptiveActionStatementFSFamily pp}
-    {hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runRecord basis O) <
-        Zcash.Arithmetic.scalarFieldOrder}
-    {B : VestaG} {T : Nat}
-    (profile : AdaptiveStatementCachedDirectDlogProfile family hchar B T) :
-    adaptiveStatementCachedKnowledgeExtractorRandomOracleQueries family ≤ 2 * T ∧
-      adaptiveStatementCachedDlogGroupWork profile.proverGroupWork
-          profile.reductionGroupWork ≤ 2 * T ∧
-      ∀ basis O, 2 * adaptiveStatementDirectDecodeOps family basis O ≤ T := by
-  simpa only [adaptiveStatementCachedKnowledgeExtractorRandomOracleQueries_eq] using
-    profile.solverCost_le
-
-/-- Conservative random-oracle work for the combined finder after output/annotation caching. -/
+/-- Conservative random-oracle work for the combined finder, charging all eight stages. -/
 def adaptiveStatementDlogRandomOracleQueries {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp) : Nat :=
   adaptiveStatementDlogTraversalSlots * family.Q +
     adaptiveStatementDlogTraversalSlots * (11 + (AdaptiveActionStatementShape pp).k)
 
-/-- Witness extraction is the other projection of the same cached complete outcome. -/
+/-- The knowledge-failure profile uses the same conservative relation-finder query charge. -/
 def adaptiveStatementKnowledgeExtractorRandomOracleQueries {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp) : Nat :=
   adaptiveStatementDlogRandomOracleQueries family
