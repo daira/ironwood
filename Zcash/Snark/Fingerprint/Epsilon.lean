@@ -9,49 +9,47 @@ The generic half of the quantified match's ε theorem. The representation walk
 (`Fingerprint/Rational/`) delivers, per capture family, a `RationalCoeffFamily`: polynomial
 numerators over enumerated challenge-only denominators for every coefficient position of the
 assembled MSM, agreeing with `assemble?`'s output on the good event. This module prices what
-that buys:
+that buys.
+
+## The bounds
 
 * `card_exists_eval_zero_le` — a list of nonzero polynomials vanishes somewhere on at most the
-  sum of its Schwartz–Zippel prices (union bound over the list).
+  sum of its Schwartz–Zippel prices.
 * `goodEvent_compl_card_le` — the good event's complement costs at most
-  `Σ totalDegree (denFactors vk) / p` (`denFactors_totalDegree_sum_le` turns this into the
-  literal `(n + 1 + |lagrangeRotations| + |queryRotations| + k) / p`).
-* `competing_coefficient_family_agreement_le` — **the ε theorem**: any competing numerator
-  family of total degree ≤ `D` over the same denominators that differs from Lean's anywhere
-  agrees with the assembled MSM at a uniformly random point with probability at most
+  `Σ totalDegree (denFactors vk) / p`, which `denFactors_totalDegree_sum_le` reads as
+  `(n + 1 + |lagrangeRotations| + |queryRotations| + k) / p`.
+* `competing_coefficient_family_agreement_le` — **the ε theorem**: a competing numerator family
+  of total degree ≤ `D` over the same denominators, differing from Lean's anywhere, agrees with
+  the assembled MSM at a uniform point with probability at most
   `(D + Σ totalDegree (denFactors vk)) / p`, `p = scalarFieldOrder ≈ 2²⁵⁴`. Either the point
-  falls off the good event, or the agreement at the differing coordinate makes the nonzero
-  difference polynomial vanish — Schwartz–Zippel.
+  falls off the good event, or the nonzero difference polynomial vanishes.
 * `competing_coefficient_family_agreement_le_challengesOnly` — the same bound with the
-  proof-string slots pinned to an arbitrary assignment, counting over the challenge
-  coordinates alone (`goodEvent_merge_compl_card_le` prices the good event there at the same
-  cost — the factors are challenge-only). What the random-oracle premise alone buys at a
-  capture: coverage of every divergence whose discrepancy does not vanish identically at the
-  pinned slots.
+  proof-string slots pinned to an arbitrary assignment, counted over the challenge coordinates
+  alone. This is what the random-oracle premise alone buys at a capture: coverage of every
+  divergence whose discrepancy does not vanish identically at the pinned slots.
 * `competing_coefficient_family_agreement_le_denClosure` and its challenge-restricted
-  companion — the same two bounds for a competing family bringing its *own* denominators from
-  the enumerated factor closure, at the summed budget:
-  `(D + Dden + Σ totalDegree (denFactors vk)) / p`. Cross-multiplication
-  (`RationalCoeffFamily.mulDen`) clears both sides and delegates to the two theorems above.
+  companion — both bounds for a family bringing its *own* denominators from the enumerated
+  factor closure, at the summed budget `(D + Dden + Σ totalDegree (denFactors vk)) / p`.
+  `RationalCoeffFamily.mulDen` cross-multiplies to clear both sides; the cleared identities
+  survive multiplication, so no nonvanishing is consumed.
+
+## The frame the comparison lives in
+
+The comparison is positional over `MsmCoord`. On the good event the multiopen grouping is one
+fixed combinatorial object, so the coefficient list and its length are fixed
+(`assembleAt_other_map_fst`, `assembleAt_other_length`) and families are compared coordinate by
+coordinate. `MsmMatch` compares the `other` terms up to `List.Perm`, which absorbs append order
+between two concrete assemblies. `perm_reindex_of_nodup_snd` (`Fingerprint/Match.lean`) turns a
+passing match into a re-indexing, unique because the captured bases are pairwise distinct
+(`capturedMsm_other_bases_nodup`, `fingerprint_matches_positional`), and precomposing the
+competing family with a fixed re-indexing changes neither degrees nor ε. That the re-indexing
+*is* fixed across the good event is the trust chapter's positional-frame-stability premise, not
+a theorem here.
+
+## Scope
 
 Statements are conditioned on `assemble? = some m` throughout — never the total `assemble`,
 whose zero-MSM fallback evaluates to the accept value (`Verifier/Assemble.lean`).
-
-The comparison is positional over `MsmCoord`: on the good event the multiopen grouping is a
-fixed combinatorial object, so Lean's coordinate frame is point-independent, and a family is
-compared coordinate-by-coordinate. `MsmMatch`'s `List.Perm` on the `other` terms exists to
-absorb append-order between two concrete assemblies; between *families* sharing base markers,
-a permutation is a fixed re-indexing of `MsmCoord` and changes neither degrees nor ε
-(precompose the competing family) — landed as `perm_reindex_of_nodup_snd`
-(`Fingerprint/Match.lean`): the captured `other` bases are pairwise distinct at all three
-random captures (`capturedMsm_other_bases_nodup`), so a passing match is forced to the unique
-base-matching bijection (`fingerprint_matches_positional`, `Fixtures/*Random/Epsilon.lean`).
-A competing family over *different* denominators from the
-same factor closure is covered by the cross-denominator theorems: `RationalCoeffFamily.mulDen`
-multiplies Lean's family through by the competing denominators — the cleared identities
-survive multiplication, so no nonvanishing is consumed — and the same argument reprices at the
-summed numerator budget `D + Dden`. The coverage hypothesis becomes the cross-multiplied
-discrepancy (see `competing_coefficient_family_agreement_le_denClosure`).
 -/
 
 namespace Zcash.Snark
