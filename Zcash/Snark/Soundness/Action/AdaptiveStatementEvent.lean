@@ -1,4 +1,5 @@
 import Zcash.Snark.Soundness.Action.AdaptiveStatementComplete
+import Zcash.Snark.Soundness.Action.AdaptiveStatementProvenance
 
 /-!
 # Adaptive-statement Action event composition
@@ -20,10 +21,10 @@ local instance adaptiveStatementEventVestaInhabited : Inhabited VestaG := ⟨0�
 
 namespace ComputedAdaptiveActionStatementFSFamily
 
-/-- One combined relation finder: bind the selected instance coordinates, compare every proof
-coordinate with the annotation at the squeeze where it is used, then run the decoded Action
-terminal.  All algebraic mismatch branches therefore share one textbook-DLOG reduction. -/
-noncomputable def relationFinder {pp : ProofParams}
+/-- One combined relation finder: one retained execution performs every provenance/source check,
+then quotient agreement, the pre-`x` identity branch, and the decoded Action terminal are checked
+in order.  All algebraic mismatch branches therefore share one textbook-DLOG reduction. -/
+def relationFinder {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -33,11 +34,7 @@ noncomputable def relationFinder {pp : ProofParams}
     family.Coins → Option (AlgebraicRelationWitness (F := Fp) basis) :=
   fun basis O =>
     ComputedAdaptiveOnlineAGMFSFamily.firstAdaptiveRelation?
-      [family.instanceRepresentationRelationFinder basis O,
-       family.preIpaRepresentationRelationFinder basis O,
-       family.ipaRepresentationRelationFinder basis O,
-       family.semanticRepresentationRelationFinder basis O,
-       family.semanticSourceMismatchRelationFinder basis O,
+      [family.provenanceRelationFinder basis O,
        family.statementQuotientRelationFinder basis O,
        family.identityRelationFinder hchar basis O,
        family.terminalRelationFinder hchar basis O]
@@ -61,8 +58,10 @@ theorem relationFinder_none_provenance {pp : ProofParams}
   have hall := (ComputedAdaptiveOnlineAGMFSFamily.firstAdaptiveRelation?_eq_none_iff _).1
     (by simpa only [relationFinder] using hnone)
   simp only [List.mem_cons, forall_eq_or_imp] at hall
-  exact ⟨hall.1, hall.2.1, hall.2.2.1, hall.2.2.2.1, hall.2.2.2.2.1,
-    hall.2.2.2.2.2.1⟩
+  have hprovenance :=
+    (family.provenanceRelationFinder_eq_none_iff basis O).1 hall.1
+  exact ⟨hprovenance.1, hprovenance.2.1, hprovenance.2.2.1,
+    hprovenance.2.2.2.1, hprovenance.2.2.2.2, hall.2.1⟩
 
 /-- No result from the combined finder also means the pointwise terminal returned no relation. -/
 theorem relationFinder_none_terminal {pp : ProofParams}

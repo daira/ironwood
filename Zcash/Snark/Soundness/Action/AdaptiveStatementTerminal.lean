@@ -524,7 +524,7 @@ theorem semanticRelation?_isSome_of_false {pp : ProofParams}
 
 /-- The computed relation finder for one adaptive-statement run.  Acceptance, batch construction,
 root checks, decoding, and semantic checks all use the statement selected in that same run. -/
-noncomputable def terminalRelationFinder {pp : ProofParams}
+def terminalRelationFinder {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)

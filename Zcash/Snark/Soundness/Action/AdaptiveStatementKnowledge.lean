@@ -3,10 +3,9 @@ import Zcash.Snark.Soundness.Action.AdaptiveStatementCapstone
 /-!
 # Adaptive-statement Action knowledge soundness
 
-This module defines the complete selected-statement witness projection and proves that failure of
-that projection is covered by the same combined relation finder and statistical surfaces as
-adaptive-statement false-statement soundness.  The projection is currently noncomputable; these
-theorems do not by themselves supply an executable extractor.
+This module defines the complete executable selected-statement witness projection and proves that
+failure of that projection is covered by the same combined relation finder and statistical
+surfaces as adaptive-statement false-statement soundness.
 -/
 
 namespace Zcash.Snark
@@ -23,7 +22,7 @@ namespace ComputedAdaptiveActionStatementFSFamily
 
 /-- Post-relation-finder selected-statement outcome.  Keeping the empty-finder proof as an
 explicit argument avoids reducing through a dependent match when proving extractor success. -/
-noncomputable def knowledgeOutcomeCore {pp : ProofParams}
+def adaptiveStatementKnowledgeOutcomeCore {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -92,7 +91,7 @@ noncomputable def knowledgeOutcomeCore {pp : ProofParams}
     else none
 
 /-- Complete selected-statement outcome, retaining either extracted witnesses or relation data. -/
-noncomputable def knowledgeOutcome {pp : ProofParams}
+def adaptiveStatementKnowledgeOutcome {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -103,9 +102,9 @@ noncomputable def knowledgeOutcome {pp : ProofParams}
       AlgebraicRelationWitness (F := Fp) basis) :=
   match hrelation : family.relationFinder hchar basis O with
   | some relation => some (Sum.inr relation)
-  | none => family.knowledgeOutcomeCore hchar basis O hrelation
+  | none => family.adaptiveStatementKnowledgeOutcomeCore hchar basis O hrelation
 
-@[simp] theorem knowledgeOutcome_eq_core_of_none {pp : ProofParams}
+@[simp] theorem adaptiveStatementKnowledgeOutcome_eq_core_of_none {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -113,9 +112,9 @@ noncomputable def knowledgeOutcome {pp : ProofParams}
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins)
     (hrelation : family.relationFinder hchar basis O = none) :
-    family.knowledgeOutcome hchar basis O =
-      family.knowledgeOutcomeCore hchar basis O hrelation := by
-  unfold knowledgeOutcome
+    family.adaptiveStatementKnowledgeOutcome hchar basis O =
+      family.adaptiveStatementKnowledgeOutcomeCore hchar basis O hrelation := by
+  unfold adaptiveStatementKnowledgeOutcome
   split
   · rename_i relation heq
     rw [hrelation] at heq
@@ -123,7 +122,7 @@ noncomputable def knowledgeOutcome {pp : ProofParams}
   · congr
 
 /-- Witness-only projection of the complete selected-statement outcome. -/
-noncomputable def knowledgeExtractor {pp : ProofParams}
+def adaptiveStatementKnowledgeExtractor {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -131,22 +130,23 @@ noncomputable def knowledgeExtractor {pp : ProofParams}
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins) :
     Option (ActionTerminal.ActionBundleWitness (family.runOutput basis O).inputs) :=
-  match family.knowledgeOutcome hchar basis O with
+  match family.adaptiveStatementKnowledgeOutcome hchar basis O with
   | some (Sum.inl witness) => some witness
   | _ => none
 
-/-- Acceptance for a selected statement with failure of the noncomputable witness projection. -/
-def knowledgeFailureEvent {pp : ProofParams}
+/-- Acceptance for a selected statement with failure of the executable witness projection. -/
+def adaptiveStatementKnowledgeFailureEvent {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
       (family.runProof basis O).proof.1 (family.runRecord basis O) < scalarFieldOrder) :
     Set ((AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) × family.Coins) :=
-  {q | family.accepts q.1 q.2 ∧ family.knowledgeExtractor hchar q.1 q.2 = none}
+  {q | family.accepts q.1 q.2 ∧
+    family.adaptiveStatementKnowledgeExtractor hchar q.1 q.2 = none}
 
 set_option maxRecDepth 10000 in
 set_option maxHeartbeats 5000000 in
-theorem knowledgeExtractor_isSome_of_no_events {pp : ProofParams}
+theorem adaptiveStatementKnowledgeExtractor_isSome_of_no_events {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -159,7 +159,7 @@ theorem knowledgeExtractor_isSome_of_no_events {pp : ProofParams}
     (hipaEvent : (basis, O) ∉ family.ipaEvent)
     (hrootEvent : (basis, O) ∉ family.rootEvent)
     (hsemanticEvent : (basis, O) ∉ family.semanticEvent) :
-    (family.knowledgeExtractor hchar basis O).isSome := by
+    (family.adaptiveStatementKnowledgeExtractor hchar basis O).isSome := by
   change ¬(family.relationFinder hchar basis O).isSome at hrelationEvent
   have hfinderNone := Option.not_isSome_iff_eq_none.mp hrelationEvent
   have hprovenance := family.relationFinder_none_provenance hchar basis O hfinderNone
@@ -278,9 +278,10 @@ theorem knowledgeExtractor_isSome_of_no_events {pp : ProofParams}
             rw [hidentityNone] at hfinderSome
             contradiction
         | inl extracted =>
-            unfold knowledgeExtractor
-            rw [family.knowledgeOutcome_eq_core_of_none hchar basis O hfinderNone]
-            unfold knowledgeOutcomeCore
+            unfold adaptiveStatementKnowledgeExtractor
+            rw [family.adaptiveStatementKnowledgeOutcome_eq_core_of_none
+              hchar basis O hfinderNone]
+            unfold adaptiveStatementKnowledgeOutcomeCore
             rw [hacceptsEq]
             dsimp only
             rw [dif_pos hz, dif_neg hattack, hout]
@@ -340,9 +341,10 @@ theorem knowledgeExtractor_isSome_of_no_events {pp : ProofParams}
             rw [hterminalNone] at hterminalSome
             contradiction
         | inl extracted =>
-            unfold knowledgeExtractor
-            rw [family.knowledgeOutcome_eq_core_of_none hchar basis O hfinderNone]
-            unfold knowledgeOutcomeCore
+            unfold adaptiveStatementKnowledgeExtractor
+            rw [family.adaptiveStatementKnowledgeOutcome_eq_core_of_none
+              hchar basis O hfinderNone]
+            unfold adaptiveStatementKnowledgeOutcomeCore
             rw [hacceptsEq]
             dsimp only
             rw [dif_pos hz, dif_neg hattack, hout]
@@ -357,12 +359,12 @@ theorem knowledgeExtractor_isSome_of_no_events {pp : ProofParams}
 
 /-- Extractor failure is covered by the combined relation event and the same four statistical
 surface families used by adaptive-statement false-statement soundness. -/
-theorem knowledgeFailureEvent_subset {pp : ProofParams}
+theorem adaptiveStatementKnowledgeFailureEvent_subset {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
       (family.runProof basis O).proof.1 (family.runRecord basis O) < scalarFieldOrder) :
-    family.knowledgeFailureEvent hchar ⊆
+    family.adaptiveStatementKnowledgeFailureEvent hchar ⊆
       family.relationEvent hchar ∪ family.statisticalSurfaceEvent := by
   rintro ⟨basis, O⟩ ⟨haccepts, hextractorNone⟩
   by_cases hrelation : (basis, O) ∈ family.relationEvent hchar
@@ -370,7 +372,8 @@ theorem knowledgeFailureEvent_subset {pp : ProofParams}
   · right
     by_contra hsurface
     simp only [statisticalSurfaceEvent, Set.mem_union, not_or] at hsurface
-    have hextracted := family.knowledgeExtractor_isSome_of_no_events hchar basis O
+    have hextracted := family.adaptiveStatementKnowledgeExtractor_isSome_of_no_events
+      hchar basis O
       haccepts hrelation hsurface.1 hsurface.2.1 hsurface.2.2.1 hsurface.2.2.2
     rw [hextractorNone] at hextracted
     contradiction
@@ -378,7 +381,7 @@ theorem knowledgeFailureEvent_subset {pp : ProofParams}
 /-- Adaptive-statement knowledge soundness for the defined witness projection.  The probability
 argument introduces no second statistical query factor; resource accounting for the combined
 relation finder is supplied separately by the conservative finite-security profile. -/
-theorem knowledgeFailure_prob_le_adaptive {pp : ProofParams}
+theorem adaptiveStatementKnowledgeFailure_prob_le {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -399,7 +402,7 @@ theorem knowledgeFailure_prob_le_adaptive {pp : ProofParams}
       ((AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) ×
         family.Coins)).toOuterMeasure
       ((fun q => (scalarBasis B q.1, q.2)) ⁻¹'
-        family.knowledgeFailureEvent hchar) ≤
+        family.adaptiveStatementKnowledgeFailureEvent hchar) ≤
       (dlBound + 1 / Fintype.card Fp) +
         (family.Q + 1 : Nat) *
           (1 / Fintype.card Fp +
@@ -409,7 +412,7 @@ theorem knowledgeFailure_prob_le_adaptive {pp : ProofParams}
               (AdaptiveActionStatementShape pp).k +
             ∑ n : Fin 5, epsilon n) := by
   refine le_trans (MeasureTheory.measure_mono (Set.preimage_mono
-    (family.knowledgeFailureEvent_subset hchar))) ?_
+    (family.adaptiveStatementKnowledgeFailureEvent_subset hchar))) ?_
   rw [Set.preimage_union]
   refine le_trans (MeasureTheory.measure_union_le _ _) ?_
   exact add_le_add (family.relation_prob_le_of_textbookDL hchar B hDL)

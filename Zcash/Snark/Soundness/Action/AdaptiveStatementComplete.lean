@@ -133,7 +133,7 @@ theorem batchGoodRoots?_isSome_of {pp : ProofParams}
 
 set_option maxHeartbeats 2400000 in
 /-- The identically-zero pre-`x` branch yields an Action witness or an explicit relation. -/
-noncomputable def preXIdentityOutcome? {pp : ProofParams}
+def preXIdentityOutcome? {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins)
@@ -268,7 +268,7 @@ noncomputable def preXIdentityOutcome? {pp : ProofParams}
     exact none
 
 /-- Relation-only projection of the pre-`x` identity outcome. -/
-noncomputable def preXIdentityRelation? {pp : ProofParams}
+def preXIdentityRelation? {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins)
@@ -402,7 +402,7 @@ theorem preXIdentityOutcome_isSome_of {pp : ProofParams}
   split <;> rfl
 
 /-- Execute just the identically-zero pre-`x` relation branch for one selected statement. -/
-noncomputable def identityRelationFinder {pp : ProofParams}
+def identityRelationFinder {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
