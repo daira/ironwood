@@ -15,6 +15,7 @@ import Zcash.Security.Ledger.KeyBindingArm
 import Zcash.Security.Ledger.ExtractionArm
 import Zcash.Security.RedDSA.Basic
 import Zcash.Security.RedDSA.Extraction
+import Zcash.Security.RedDSA.KnowledgeError
 import Zcash.Security.Common.Birthday
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
@@ -457,6 +458,34 @@ assert_computable Zcash.Security.RedDSA.QueryRep.badChallenge
 assert_axioms Zcash.Security.RedDSA.QueryRep.representationEval_key_of_pivot_eq_none
 assert_axioms Zcash.Security.RedDSA.QueryRep.assembled_ne_zero_of_ne_badChallenge
 assert_computable Zcash.Security.RedDSA.bindingSig_relation_of_nontrivial +choice
+
+/-! ## The binding-signature knowledge error
+
+The κ-discharge (#22): over the challenge oracle's whole table and the logs of the `m`
+presented bases, a labeled algebraic adversary within query budget `qH` produces a
+verifying binding signature whose effective representation has a pivot with probability at
+most `(qH + 1)/|F| + ε_DL + 1/|F|` (`kappaEvent_measure_le`) — the straight-line AGM+ROM
+extraction of Fuchsbauer–Plouviez–Seurin, in the key-only setting. Challenge queries carry
+the adversary's representations as labels the oracle never sees; the representation in
+effect at the output's query point is the first annotation there, or the announced output
+representation when the run never queried the point — the squeeze's fallback branch, which
+plays the game's own final challenge query. The relation finder replaying the adversary is
+computable, and is the discrete-log adversary that the named `ε_DL` hypothesis constrains.
+Degeneracy needs no side condition: at base `0` the hypothesis itself forces
+`ε ≥ 1 − 1/|F|` (`textbookDLAdvantageLE_base_zero`). -/
+
+assert_computable Zcash.Security.RedDSA.dischargeOut
+assert_computable Zcash.Security.RedDSA.dischargeChallenge
+assert_computable Zcash.Security.RedDSA.effectiveRep
+assert_computable Zcash.Security.RedDSA.relFinder +choice
+assert_axioms Zcash.Security.RedDSA.kappa_le_of_arms
+assert_axioms Zcash.Security.RedDSA.kappaEvent_subset
+assert_axioms Zcash.Security.RedDSA.badFiber_measure_le
+assert_axioms Zcash.Security.RedDSA.relFiber_subset_relSet
+assert_axioms Zcash.Security.RedDSA.relFiber_measure_le
+assert_axioms Zcash.Security.RedDSA.kappaEvent_measure_le
+assert_computable Zcash.Security.RedDSA.zeroBasisRelationFinder +choice
+assert_axioms Zcash.Security.RedDSA.textbookDLAdvantageLE_base_zero
 
 /-! ## The transaction-balance premiss in extractor-plus-knowledge-error form
 
