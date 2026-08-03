@@ -140,6 +140,43 @@ proof. The dashed edge marks that justification, which crosses the `hencodes` ga
 satisfaction implies the intended high-level statement". The latter is the subject of the
 circuit soundness proof.
 
+## Fixed bases and the reference-string heuristic
+
+Several reductions above bottom out at discrete log by treating a set of group elements as
+*independent* — for example the value-commitment bases $\mathcal{V}$ and $\mathcal{R}$, the
+Sinsemilla generators, and the proof system's inner-product reference string. Independence
+is what turns "find a nontrivial relation among these elements" into the discrete-log game:
+the reduction models each base as a random multiple of one generator and embeds its
+discrete-log challenge into that randomness.
+
+In the deployed protocol, though, these bases are *fixed*. Each is produced once, by
+hashing public strings to the curve, and the resulting outputs are baked into the protocol
+as a Uniform Reference String. The gap between the two is the standard gap for protocols
+with a URS. We prove security for the family of protocols that sample the bases at
+random, over the distribution of that randomness. Then we argue heuristically that the
+deployed protocol, which fixes them via hash-to-curve, inherits it — provided that the
+hash-to-curve scheme admits no attack more efficient than the generic ones bounded by the
+proven reductions. The same heuristic underlies every use of hash-to-curve for fixed bases
+here, of which the value and note commitments, the Merkle hash, and the proof system's
+reference string are examples.
+
+This heuristic comes with an important caveat: an adversary has the protocol's *entire
+lifetime* to attack that one specific reference string. A bound that holds for random
+bases does not preclude an attack tuned to the deployed bases, and the cost of finding
+one is amortized over every transaction ever made against them. That is a known,
+acknowledged limitation of this development.
+
+This sharpens the potential threat from quantum computers or other discrete-log attacks:
+a single discrete-log computation is catastrophic to the protocol as a whole, rather than
+localized to a specific user or key. Against these fixed bases, **one** discrete-log
+computation is sufficient to break binding/knowledge-soundness properties for the
+entire protocol, not just for a single transaction or user. That includes Balance
+properties, Spendability, and Spend authority, although not privacy. Migrating away
+from reliance on discrete-log binding/knowledge-soundness is therefore a whole-protocol
+concern, not a per-transaction one. See
+[ZIP 2005](https://zips.z.cash/zip-2005#effectsofdiscrete-logarithm-breakingattacksbeforetheswitchtotherecoveryprotocol)
+for further discussion.
+
 ## The definitions
 
 <style>
