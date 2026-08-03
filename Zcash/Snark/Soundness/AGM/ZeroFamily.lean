@@ -466,40 +466,6 @@ def zeroOnlineMemberFamily
       canonical := fun basis _O => zeroWfProof_canonical basis vkS hfixed hperm }
   membersCovered := fun basis _O => zeroFamily_membersCovered basis vkS hfixed hperm
 
-/-- The represented zero proof packaged in the data form required by an adaptive online-AGM
-adversary.  In particular, assembly coverage and deployed-member coverage are supplied together,
-before the canonical multiopen coordinates are derived. -/
-def zeroOnlineMemberProofData
-    (basis : AugmentedIndex (2 ^ shape.k) → VestaG)
-    (hfixed : ∀ i, vkS.fixedCommitment i = 0)
-    (hperm : ∀ i, vkS.permutationCommonCommitment i = 0) :
-    OnlineMemberProofData (vk := vkS) (instanceCommitment := fun _ _ => 0)
-      basis [zeroAlgebraicPoint basis] where
-  algebraicProof := zeroAlgebraicProofString basis
-  wellFormed := zeroProofString_wellFormed
-  assemblyCovered := zeroMultiopenAssemblyCovered basis vkS hfixed hperm
-  membersCovered := zeroFamily_membersCovered basis vkS hfixed hperm
-
-/-- Query-free adaptive family whose instance, fixed, and permutation representations share the
-explicit zero algebraic point. -/
-def zeroAdaptiveOnlineMemberFamily
-    (hfixed : ∀ i, vkS.fixedCommitment i = 0)
-    (hperm : ∀ i, vkS.permutationCommonCommitment i = 0) :
-    ComputedAdaptiveOnlineAGMFSFamily shape where
-  init := []
-  vk := fun _ => vkS
-  instanceCommitment := fun _ _ _ => 0
-  fixedRepresentations := fun basis => [zeroAlgebraicPoint basis]
-  instanceRepresented := fun basis _ _ _ =>
-    ⟨zeroAlgebraicPoint basis, by simp, rfl⟩
-  fixedRepresented := fun basis i _ =>
-    ⟨zeroAlgebraicPoint basis, by simp, (hfixed i).symm⟩
-  permutationCommonRepresented := fun basis i =>
-    ⟨zeroAlgebraicPoint basis, by simp, (hperm i).symm⟩
-  adversary := fun basis => .pure (zeroOnlineMemberProofData vkS basis hfixed hperm)
-  Q := 0
-  queryBound := fun _ => .pure _ 0
-
 end Assembly
 
 end Zcash.Snark

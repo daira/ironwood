@@ -109,6 +109,9 @@ structure AdaptiveStatementDlogProfile {pp : ProofParams}
       (family.runProof basis O).proof.1 (family.runRecord basis O) <
         Zcash.Arithmetic.scalarFieldOrder)
     (B : VestaG) where
+  -- TODO: Replace these caller-supplied counters with certified cost semantics: require a
+  -- costed adversary (or per-run work certificate) tying `proverGroupWork` to one execution,
+  -- and instrument the relation-finder/MSM path to derive `reductionGroupWork` from the code.
   proverGroupWork : Nat
   reductionGroupWork : Nat
   advantage : Nat → Nat → ENNReal
