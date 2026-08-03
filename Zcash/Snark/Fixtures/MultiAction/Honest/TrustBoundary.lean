@@ -40,8 +40,8 @@ surface.
 The retained AGM capstones include the straight-line endpoint and the adaptive-statement knowledge
 endpoints.  Their representations are ghost extractor data: they are neither transmitted nor
 checked by the Halo2 verifier.  Accordingly the endpoints are AGM-and-random-oracle results under
-the supplied finite-security Vesta DLOG profiles; the cached adaptive profile explicitly retains
-one adversary execution and charges all later work to its post-processing budget.
+the supplied finite-security Vesta DLOG profiles.  The adaptive-statement profile conservatively
+charges all eight stages of the combined relation finder.
 -/
 
 assert_axioms Zcash.Snark.Fixture2.capturedPointCoordinatesValid_eq_true +native(
@@ -517,7 +517,7 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptive_bundle_knowledge_soun
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 -- Adaptive-statement knowledge soundness binds the statement-selected instance prefix before
--- `theta`; the cached endpoint additionally pins the one-run finite-security profile.
+-- `theta` and conservatively charges every stage of the combined finder.
 assert_axioms Zcash.Snark.Fixture.orchard_action_knowledgeFailure_prob_le_adaptiveStatement_for +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
@@ -552,75 +552,7 @@ assert_axioms Zcash.Snark.Fixture.orchard_action_knowledgeFailure_prob_le_adapti
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Fixture.orchard_action_knowledgeFailure_prob_le_adaptiveStatement_cached_for +native(
-  Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
-  Zcash.Snark.actionMissingConstantAllocations_eq_nil, Zcash.Snark.actionNumPermCols_eq,
-  Zcash.Snark.actionNumPermCols_pos, Zcash.Snark.adaptiveActionStatement_numInstanceColumns,
-  CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
-  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
-  Zcash.Snark.ActionGateCoherence.domainExponent_lt, Zcash.Snark.ActionGateCoherence.gateData_eq,
-  Zcash.Snark.ActionGateCoherence.selectorDegree,
-  Zcash.Snark.ActionPermutationDomain.adviceQueryLayout_columns_lt,
-  Zcash.Snark.ActionPermutationDomain.chunks_eq,
-  Zcash.Snark.ActionPermutationDomain.columnCount_chunkLen_eq,
-  Zcash.Snark.ActionPermutationDomain.deltaPowers_injective,
-  Zcash.Snark.ActionPermutationDomain.domainExponent_eq,
-  Zcash.Snark.ActionPermutationDomain.domainExponent_lt,
-  Zcash.Snark.ActionPermutationDomain.routingCoherent,
-  Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.adaptiveStatementInstanceLayout_column_lt,
-  Zcash.Snark.Fixture.actionLookupActivationCount_le,
-  Zcash.Snark.Fixture.actionLookupInputArity_le,
-  Zcash.Snark.Fixture.resolverPermutationCell_card_eq,
-  Zcash.Snark.Fixture.vk_chunk_width_le, Zcash.Snark.Fixture.vk_gates_degree_le,
-  Zcash.Snark.Fixture.vk_lookup_input_degree_le, Zcash.Snark.Fixture.vk_lookup_table_degree_le,
-  Zcash.Snark.Keygen.certificate,
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
-  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
-  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.Fixture.orchard_action_knowledgeFailure_adaptiveStatement_2pow123_workFactor_generatorRO_for +native(
-  Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
-  Zcash.Snark.actionMissingConstantAllocations_eq_nil, Zcash.Snark.actionNumPermCols_eq,
-  Zcash.Snark.actionNumPermCols_pos, Zcash.Snark.adaptiveActionStatement_numInstanceColumns,
-  CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
-  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
-  Zcash.Snark.ActionGateCoherence.domainExponent_lt, Zcash.Snark.ActionGateCoherence.gateData_eq,
-  Zcash.Snark.ActionGateCoherence.selectorDegree,
-  Zcash.Snark.ActionPermutationDomain.adviceQueryLayout_columns_lt,
-  Zcash.Snark.ActionPermutationDomain.chunks_eq,
-  Zcash.Snark.ActionPermutationDomain.columnCount_chunkLen_eq,
-  Zcash.Snark.ActionPermutationDomain.deltaPowers_injective,
-  Zcash.Snark.ActionPermutationDomain.domainExponent_eq,
-  Zcash.Snark.ActionPermutationDomain.domainExponent_lt,
-  Zcash.Snark.ActionPermutationDomain.routingCoherent,
-  Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.adaptiveStatementInstanceLayout_column_lt,
-  Zcash.Snark.Fixture.actionLookupActivationCount_le,
-  Zcash.Snark.Fixture.actionLookupInputArity_le,
-  Zcash.Snark.Fixture.resolverPermutationCell_card_eq,
-  Zcash.Snark.Fixture.vk_chunk_width_le, Zcash.Snark.Fixture.vk_gates_degree_le,
-  Zcash.Snark.Fixture.vk_lookup_input_degree_le, Zcash.Snark.Fixture.vk_lookup_table_degree_le,
-  Zcash.Snark.Keygen.certificate,
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
-  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
-  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Fixture.orchard_action_knowledgeFailure_adaptiveStatement_cached_2pow123_workFactor_generatorRO_for +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionConstantValueFailures_eq_nil, Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,

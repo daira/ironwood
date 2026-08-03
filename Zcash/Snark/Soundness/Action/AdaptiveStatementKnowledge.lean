@@ -3,9 +3,10 @@ import Zcash.Snark.Soundness.Action.AdaptiveStatementCapstone
 /-!
 # Adaptive-statement Action knowledge soundness
 
-This module constructs the complete selected-statement witness extractor and proves that
-extractor failure is covered by the same combined relation finder and statistical surfaces as
-adaptive-statement false-statement soundness.
+This module defines the complete selected-statement witness projection and proves that failure of
+that projection is covered by the same combined relation finder and statistical surfaces as
+adaptive-statement false-statement soundness.  The projection is currently noncomputable; these
+theorems do not by themselves supply an executable extractor.
 -/
 
 namespace Zcash.Snark
@@ -134,7 +135,7 @@ noncomputable def knowledgeExtractor {pp : ProofParams}
   | some (Sum.inl witness) => some witness
   | _ => none
 
-/-- Acceptance for a selected statement with failure of the executable witness extractor. -/
+/-- Acceptance for a selected statement with failure of the noncomputable witness projection. -/
 def knowledgeFailureEvent {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
@@ -374,8 +375,9 @@ theorem knowledgeFailureEvent_subset {pp : ProofParams}
     rw [hextractorNone] at hextracted
     contradiction
 
-/-- Adaptive-statement knowledge soundness.  The extractor is the witness projection of the
-same cached outcome as the relation finder, so it introduces no additional query factor. -/
+/-- Adaptive-statement knowledge soundness for the defined witness projection.  The probability
+argument introduces no second statistical query factor; resource accounting for the combined
+relation finder is supplied separately by the conservative finite-security profile. -/
 theorem knowledgeFailure_prob_le_adaptive {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
@@ -415,4 +417,3 @@ theorem knowledgeFailure_prob_le_adaptive {pp : ProofParams}
 
 end ComputedAdaptiveActionStatementFSFamily
 end Zcash.Snark
-
