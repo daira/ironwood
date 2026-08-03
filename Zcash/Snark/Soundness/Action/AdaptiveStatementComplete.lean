@@ -243,7 +243,7 @@ noncomputable def preXIdentityOutcome? {pp : ProofParams}
     | none => none
     | some hgoodYProof =>
       match hpermutation : resolverPermutationChallengeExclusions?
-          (adaptiveActionStatementVk pp basis) ch polynomial actionActiveRows with
+          pp.numProofs (adaptiveActionStatementVk pp basis) ch polynomial actionActiveRows with
       | none => none
       | some hpermutationProof =>
         match hlookup : TopLevelLookup.topLevelLookupChallengeExclusions?
@@ -361,7 +361,7 @@ theorem preXIdentityOutcome_isSome_of {pp : ProofParams}
         szBadSet (foldSplitWitness model.constraints actionCircuit.n j))
     (hpermutation :
       let decode := rawDecode.reRound (family.runIpaReads basis O)
-      ResolverPermutationChallengeExclusions (adaptiveActionStatementVk pp basis)
+      ResolverPermutationChallengeExclusions pp.numProofs (adaptiveActionStatementVk pp basis)
         (family.runRecord basis O)
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts)
@@ -387,7 +387,7 @@ theorem preXIdentityOutcome_isSome_of {pp : ProofParams}
     change 2 ^ actionCircuit.domainExponent ≠ 0
     positivity
   have hySome := foldSplitAvoidance?_isSome_of model.constraints _ hn _ hgoodY
-  have hpSome := resolverPermutationChallengeExclusions?_isSome_of _ _ _ _ hpermutation
+  have hpSome := resolverPermutationChallengeExclusions?_isSome_of _ _ _ _ _ hpermutation
   have hlSome := TopLevelLookup.topLevelLookupChallengeExclusions?_isSome_of
     actionCircuit pp (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)
       _ _ hlookup
