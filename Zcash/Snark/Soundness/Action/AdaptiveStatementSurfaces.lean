@@ -1999,6 +1999,7 @@ theorem outputSemanticBad_measure_le {pp : ProofParams}
   · simp
 
 /-- One adaptive selected-statement semantic squeeze uses the existing `(Q + 1)` query price. -/
+set_option maxHeartbeats 8000000 in
 theorem semanticBadWithoutRelation_table_le {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
@@ -2417,6 +2418,7 @@ theorem outputRootBad_measure_le {pp : ProofParams}
     (fun _ earlier => outputRootSurface_measure_le family basis n h5n output earlier) t O
 
 /-- Each actual adaptive-statement root event retains the direct `(Q + 1)` squeeze price. -/
+set_option maxHeartbeats 8000000 in
 theorem rootBadWithoutRelation_table_le {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)

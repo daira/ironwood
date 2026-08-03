@@ -3,10 +3,10 @@ import Zcash.Snark.Soundness.Action.AdaptiveStatementKnowledge
 /-!
 # Adaptive-statement finite-security profile
 
-This module records the conservative eight-traversal price for the adaptive-statement relation
-finder and knowledge-failure theorem, records the direct-decode work premise, and transfers events
-across the Orchard generator random-oracle setup.  The implementation does not retain one global
-adversary execution across the complete eight-stage finder.
+This module records the four-stage price for the executable adaptive-statement relation finder and
+knowledge-failure theorem, records the direct-decode work premise, and transfers events across the
+Orchard generator random-oracle setup.  One retained execution covers every provenance and source
+comparison before the quotient, identity, and terminal stages.
 -/
 
 namespace Zcash.Snark
@@ -19,14 +19,14 @@ local instance adaptiveStatementProfileVestaInhabited : Inhabited VestaG := ⟨0
 
 namespace ComputedAdaptiveActionStatementFSFamily
 
-/-- Independently charged traversals of the eight-stage combined relation finder. -/
-def adaptiveStatementDlogTraversalSlots : Nat := 8
+/-- Independently charged traversals of the four-stage combined relation finder. -/
+def adaptiveStatementDlogTraversalSlots : Nat := 4
 
-@[simp] theorem adaptiveStatementDlogTraversalSlots_eq_eight :
-    adaptiveStatementDlogTraversalSlots = 8 := rfl
+@[simp] theorem adaptiveStatementDlogTraversalSlots_eq_four :
+    adaptiveStatementDlogTraversalSlots = 4 := rfl
 
-/-- Pointwise traversal count of the short-circuiting eight-stage finder. -/
-noncomputable def relationFinderCalls {pp : ProofParams}
+/-- Pointwise traversal count of the short-circuiting four-stage finder. -/
+def relationFinderCalls {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -34,14 +34,10 @@ noncomputable def relationFinderCalls {pp : ProofParams}
         Zcash.Arithmetic.scalarFieldOrder)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins) : Nat :=
-  if (family.instanceRepresentationRelationFinder basis O).isSome then 1
-  else if (family.preIpaRepresentationRelationFinder basis O).isSome then 2
-  else if (family.ipaRepresentationRelationFinder basis O).isSome then 3
-  else if (family.semanticRepresentationRelationFinder basis O).isSome then 4
-  else if (family.semanticSourceMismatchRelationFinder basis O).isSome then 5
-  else if (family.statementQuotientRelationFinder basis O).isSome then 6
-  else if (family.identityRelationFinder hchar basis O).isSome then 7
-  else 8
+  if (family.provenanceRelationFinder basis O).isSome then 1
+  else if (family.statementQuotientRelationFinder basis O).isSome then 2
+  else if (family.identityRelationFinder hchar basis O).isSome then 3
+  else 4
 
 theorem relationFinderCalls_le_traversalSlots {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
@@ -53,10 +49,6 @@ theorem relationFinderCalls_le_traversalSlots {pp : ProofParams}
     (O : family.Coins) :
     family.relationFinderCalls hchar basis O ≤ adaptiveStatementDlogTraversalSlots := by
   unfold relationFinderCalls adaptiveStatementDlogTraversalSlots
-  split <;> try omega
-  split <;> try omega
-  split <;> try omega
-  split <;> try omega
   split <;> try omega
   split <;> try omega
   split <;> omega
@@ -74,25 +66,40 @@ def adaptiveStatementDirectDecodeOps {pp : ProofParams}
       (adaptiveStatementInstanceRepresentationList output.instanceRepresentations ++
         family.fixedRepresentations basis)).length
 
-/-- Conservative random-oracle work for the combined finder, charging all eight stages. -/
+/-- Conservative random-oracle work for the combined finder, charging all four stages. -/
 def adaptiveStatementDlogRandomOracleQueries {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp) : Nat :=
   adaptiveStatementDlogTraversalSlots * family.Q +
     adaptiveStatementDlogTraversalSlots * (11 + (AdaptiveActionStatementShape pp).k)
 
-/-- The knowledge-failure profile uses the same conservative relation-finder query charge. -/
+/-- Knowledge extraction reruns the complete terminal once after the four-stage relation finder
+returns no relation, for a total of five independently charged traversals. -/
+def adaptiveStatementKnowledgeExtractorTraversalSlots : Nat := 5
+
+/-- Random-oracle work of the executable witness extractor. -/
 def adaptiveStatementKnowledgeExtractorRandomOracleQueries {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp) : Nat :=
-  adaptiveStatementDlogRandomOracleQueries family
+  adaptiveStatementKnowledgeExtractorTraversalSlots * family.Q +
+    adaptiveStatementKnowledgeExtractorTraversalSlots *
+      (11 + (AdaptiveActionStatementShape pp).k)
 
-@[simp] theorem adaptiveStatementKnowledgeExtractorRandomOracleQueries_eq {pp : ProofParams}
+theorem adaptiveStatementDlogRandomOracleQueries_le_knowledgeExtractor {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp) :
-    adaptiveStatementKnowledgeExtractorRandomOracleQueries family =
-      adaptiveStatementDlogRandomOracleQueries family := rfl
+    adaptiveStatementDlogRandomOracleQueries family ≤
+      adaptiveStatementKnowledgeExtractorRandomOracleQueries family := by
+  unfold adaptiveStatementDlogRandomOracleQueries
+    adaptiveStatementKnowledgeExtractorRandomOracleQueries
+    adaptiveStatementKnowledgeExtractorTraversalSlots adaptiveStatementDlogTraversalSlots
+  omega
 
-/-- Group-work envelope for the eight charged traversals and one relation reduction. -/
+/-- Group-work envelope for the four charged traversals and one relation reduction. -/
 def adaptiveStatementDlogGroupWork (proverGroupWork reductionGroupWork : Nat) : Nat :=
-  8 * proverGroupWork + reductionGroupWork
+  4 * proverGroupWork + reductionGroupWork
+
+/-- Group-work envelope of witness extraction's five traversals and relation post-processing. -/
+def adaptiveStatementKnowledgeExtractorGroupWork
+    (proverGroupWork reductionGroupWork : Nat) : Nat :=
+  5 * proverGroupWork + reductionGroupWork
 
 /-- Finite-security premise for the complete adaptive-statement relation finder. -/
 structure AdaptiveStatementDlogProfile {pp : ProofParams}
@@ -119,7 +126,7 @@ structure AdaptiveStatementDirectDlogProfile {pp : ProofParams}
       (family.runProof basis O).proof.1 (family.runRecord basis O) <
         Zcash.Arithmetic.scalarFieldOrder)
     (B : VestaG) (T : Nat) extends AdaptiveStatementDlogProfile family hchar B where
-  targetAtLeastTwentyTwo : 22 ≤ T
+  targetAtLeastThirtySeven : 37 ≤ T
   queryBound : family.Q ≤ T
   proverWorkBound : toAdaptiveStatementDlogProfile.proverGroupWork ≤ T
   reductionWorkBound : toAdaptiveStatementDlogProfile.reductionGroupWork ≤ T
@@ -134,28 +141,28 @@ theorem AdaptiveStatementDirectDlogProfile.solverCost_le {pp : ProofParams}
         Zcash.Arithmetic.scalarFieldOrder}
     {B : VestaG} {T : Nat}
     (profile : AdaptiveStatementDirectDlogProfile family hchar B T) :
-    adaptiveStatementDlogRandomOracleQueries family ≤ 16 * T ∧
+    adaptiveStatementDlogRandomOracleQueries family ≤ 8 * T ∧
       adaptiveStatementDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
-        16 * T ∧
+        8 * T ∧
       ∀ basis O, 2 * adaptiveStatementDirectDecodeOps family basis O ≤ T := by
   constructor
   · unfold adaptiveStatementDlogRandomOracleQueries
-    rw [adaptiveStatementDlogTraversalSlots_eq_eight]
+    rw [adaptiveStatementDlogTraversalSlots_eq_four]
     rw [CircuitShape.withProofParams_k, ActionPermutationDomain.domainExponent_eq]
-    have hT := profile.targetAtLeastTwentyTwo
+    have hT : 22 ≤ T := by omega
     calc
-      8 * family.Q + 8 * (11 + 11) ≤ 8 * T + 8 * (11 + 11) := by
+      4 * family.Q + 4 * (11 + 11) ≤ 4 * T + 4 * (11 + 11) := by
         gcongr
         exact profile.queryBound
-      _ ≤ 16 * T := by omega
+      _ ≤ 8 * T := by omega
   constructor
   · unfold adaptiveStatementDlogGroupWork
     calc
-      8 * profile.proverGroupWork + profile.reductionGroupWork ≤ 8 * T + T := by
+      4 * profile.proverGroupWork + profile.reductionGroupWork ≤ 4 * T + T := by
         gcongr
         · exact profile.proverWorkBound
         · exact profile.reductionWorkBound
-      _ ≤ 16 * T := by omega
+      _ ≤ 8 * T := by omega
   · exact profile.directDecodeWorkBound
 
 theorem AdaptiveStatementDirectDlogProfile.knowledgeExtractorCost_le {pp : ProofParams}
@@ -166,12 +173,29 @@ theorem AdaptiveStatementDirectDlogProfile.knowledgeExtractorCost_le {pp : Proof
         Zcash.Arithmetic.scalarFieldOrder}
     {B : VestaG} {T : Nat}
     (profile : AdaptiveStatementDirectDlogProfile family hchar B T) :
-    adaptiveStatementKnowledgeExtractorRandomOracleQueries family ≤ 16 * T ∧
-      adaptiveStatementDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
-        16 * T ∧
+    adaptiveStatementKnowledgeExtractorRandomOracleQueries family ≤ 8 * T ∧
+      adaptiveStatementKnowledgeExtractorGroupWork profile.proverGroupWork
+          profile.reductionGroupWork ≤
+        8 * T ∧
       ∀ basis O, 2 * adaptiveStatementDirectDecodeOps family basis O ≤ T := by
-  simpa only [adaptiveStatementKnowledgeExtractorRandomOracleQueries_eq] using
-    profile.solverCost_le
+  constructor
+  · unfold adaptiveStatementKnowledgeExtractorRandomOracleQueries
+      adaptiveStatementKnowledgeExtractorTraversalSlots
+    rw [CircuitShape.withProofParams_k, ActionPermutationDomain.domainExponent_eq]
+    calc
+      5 * family.Q + 5 * (11 + 11) ≤ 5 * T + 5 * (11 + 11) := by
+        gcongr
+        exact profile.queryBound
+      _ ≤ 8 * T := by omega
+  constructor
+  · unfold adaptiveStatementKnowledgeExtractorGroupWork
+    calc
+      5 * profile.proverGroupWork + profile.reductionGroupWork ≤ 5 * T + T := by
+        gcongr
+        · exact profile.proverWorkBound
+        · exact profile.reductionWorkBound
+      _ ≤ 8 * T := by omega
+  · exact profile.directDecodeWorkBound
 
 /-- Transfer any adaptive-statement event across a uniform-URS basis identification. -/
 theorem event_prob_eq_of_uniformURS {pp : ProofParams}
