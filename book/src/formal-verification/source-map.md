@@ -176,7 +176,7 @@ captures — the deployed verifier run on random proof strings, deliberately non
 the same schedule checks and `Faithfulness`, a `VkCertificate` transporting the single-action
 keygen certificate along `PostNu63Random`'s point equalities, its `Boundary` statement of record,
 aliveness guards in `Negative` (the model assembles at the random point, the capture is genuinely
-non-accepting, and one tamper canary), and its own `TrustBoundary` census. What the five families
+non-accepting, and one tamper canary), and its own `TrustBoundary` census. What the four families
 jointly check is the [Trust Boundary](trust-boundary.md) chapter.
 
 ### `Soundness/` — the soundness argument

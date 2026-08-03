@@ -100,7 +100,7 @@ the kernel's GMP-backed bignum arithmetic. The principal such facts in this repo
 five derived-form fingerprint boundary theorems `nonInteractiveFingerprint_matches_derived`
 (the generated per-capture `fingerprint_matches` are their raw forms): numeric checks that the
 Lean verifier's assembled multi-scalar multiplication equals the Rust verifier's on each
-captured proof — two honest, three at random inputs. The CompElliptic dependency applies the same discipline to its concrete
+captured proof — two honest, two at random inputs. The CompElliptic dependency applies the same discipline to its concrete
 curve-arithmetic facts (cardinalities, primality certificates). Such facts are independently
 re-checkable (another implementation, or hand computation, would compute the same result),
 so a miscompiled or buggy oracle could in principle be caught by disagreement.

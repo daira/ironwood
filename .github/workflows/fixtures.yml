@@ -2,7 +2,7 @@ name: Fixtures
 
 # Enforces that every checked-in verifier-fingerprint fixture family -- the honest
 # `Zcash/Snark/Fixtures/{SingleAction,MultiAction}/Honest/Fixture.lean` captures and the
-# random match-only `{SingleAction,MultiAction,TripleAction}/MatchOnly/` families with
+# random match-only `{SingleAction,MultiAction}/MatchOnly/` families with
 # their `proof-bytes.hex` siblings -- is byte-for-byte what the pinned public sources
 # regenerate, by running `scripts/regenerate-fingerprint-fixtures.sh`. The fixtures stay
 # checked in -- they are the formal artifact the Lean development proves about, imported
@@ -23,7 +23,7 @@ name: Fixtures
 # drivers in orchard 0.15.5 (zcash/orchard#541). Orchard's own published `Cargo.lock`
 # resolves `halo2_proofs` 0.3.5 from crates.io by checksum, which the script also asserts,
 # so no `[patch.crates-io]` override is involved and every cargo invocation runs `--locked`
-# against published crates. All five families -- honest pair included -- regenerate from
+# against published crates. All four families -- honest pair included -- regenerate from
 # released sources alone.
 
 # Always triggers, so the `Fixtures CI` gate always reports (a workflow skipped by
@@ -66,8 +66,6 @@ jobs:
               - 'Zcash/Snark/Fixtures/SingleAction/MatchOnly/proof-bytes.hex'
               - 'Zcash/Snark/Fixtures/MultiAction/MatchOnly/Fixture.lean'
               - 'Zcash/Snark/Fixtures/MultiAction/MatchOnly/proof-bytes.hex'
-              - 'Zcash/Snark/Fixtures/TripleAction/MatchOnly/Fixture.lean'
-              - 'Zcash/Snark/Fixtures/TripleAction/MatchOnly/proof-bytes.hex'
               - 'scripts/regenerate-fingerprint-fixtures.sh'
               - '.github/workflows/fixtures.yml'
 

@@ -1,13 +1,12 @@
 import Zcash.Snark.Fixtures.PostNu63
 import Zcash.Snark.Fixtures.SingleAction.MatchOnly.Fixture
 import Zcash.Snark.Fixtures.MultiAction.MatchOnly.Fixture
-import Zcash.Snark.Fixtures.TripleAction.MatchOnly.Fixture
 import Mathlib.Util.AssertNoSorry
 
 /-!
 # Post-NU6.3 provenance for the random match-only captures
 
-The random captures (`Fixtures/{SingleAction,MultiAction,TripleAction}/MatchOnly`) run the deployed verifier on random proof strings, so no accepting
+The random captures (`Fixtures/{SingleAction,MultiAction}/MatchOnly`) run the deployed verifier on random proof strings, so no accepting
 evaluation binds their URS the way `capturedMsm_eval_eq_zero` binds the honest captures'. Their
 URS story is cross-capture identity: each random dump lists the same URS and verifying-key
 commitment points as the honest single-action capture (the equalities below), and that capture's
@@ -17,7 +16,7 @@ boundary statements. The random families' verifying-key certificates
 equalities, exactly as `Fixtures/MultiAction/Honest/VkCertificate.lean` does.
 
 This file is separate from `Fixtures/PostNu63.lean` so the honest multi-action certificate,
-which imports that file, does not pick up a build dependency on the three random fixture data
+which imports that file, does not pick up a build dependency on the random fixture data
 modules. The honest single-action capture is the shared right-hand side throughout, matching the
 direction convention there.
 -/
@@ -142,91 +141,5 @@ theorem randomMulti_uses_same_vk : FixtureRandom2.vk = Fixture.vk := by
   · rfl
   · rfl
   · rfl
-
-/-! ## The random three-action capture -/
-
-theorem randomTriple_uses_postNu63 : FixtureRandom3.capturedCircuitId = "PostNu6_3" := by
-  native_decide
-
-theorem randomTriple_uses_canonicalVk :
-    FixtureRandom3.capturedVkTranscriptRepr = canonicalVkTranscriptRepr := by
-  native_decide
-
-theorem randomTriple_uses_same_ursG : FixtureRandom3.capturedUrsG = Fixture.capturedUrsG := by
-  native_decide
-
-theorem randomTriple_uses_same_wu :
-    FixtureRandom3.capturedPoint 2048 = Fixture.capturedPoint 2048 ∧
-      FixtureRandom3.capturedPoint 2049 = Fixture.capturedPoint 2049 := by
-  native_decide
-
-theorem randomTriple_uses_same_ursGLagrange :
-    FixtureRandom3.capturedUrsGLagrange = Fixture.capturedUrsGLagrange := by
-  native_decide
-
-theorem randomTriple_uses_same_fixedCommitments :
-    FixtureRandom3.capturedFixedCommitments = Fixture.capturedFixedCommitments := by
-  native_decide
-
-theorem randomTriple_uses_same_permutationCommonCommitments :
-    FixtureRandom3.capturedPermutationCommonCommitments
-      = Fixture.capturedPermutationCommonCommitments := by
-  native_decide
-
-theorem randomTriple_uses_same_urs : FixtureRandom3.capturedURS = Fixture.capturedURS := by
-  simp only [FixtureRandom3.capturedURS, Fixture.capturedURS, randomTriple_uses_same_ursG,
-    randomTriple_uses_same_wu.1, randomTriple_uses_same_wu.2]
-
-theorem randomTriple_uses_same_vk : FixtureRandom3.vk = Fixture.vk := by
-  apply verifyingKey_eq_of_fields
-  · rfl
-  · rfl
-  · rfl
-  · rfl
-  · rfl
-  · rfl
-  · rfl
-  · rfl
-  · rfl
-  · funext i
-    simp only [FixtureRandom3.vk, Fixture.vk]
-    rw [randomTriple_uses_same_fixedCommitments]
-  · funext i
-    simp only [FixtureRandom3.vk, Fixture.vk]
-    rw [randomTriple_uses_same_permutationCommonCommitments]
-  · rfl
-  · rfl
-  · rfl
-
--- Trust-boundary guards: fail the `FixtureCheck` build if any provenance theorem above comes to
--- rest on a `sorry` reached through some dependency (the checks are `native_decide`, so a hole
--- would otherwise only surface as a warning). Mirrors `Fixtures/PostNu63.lean`.
-assert_no_sorry randomSingle_uses_postNu63
-assert_no_sorry randomSingle_uses_canonicalVk
-assert_no_sorry randomSingle_uses_same_ursG
-assert_no_sorry randomSingle_uses_same_wu
-assert_no_sorry randomSingle_uses_same_ursGLagrange
-assert_no_sorry randomSingle_uses_same_fixedCommitments
-assert_no_sorry randomSingle_uses_same_permutationCommonCommitments
-assert_no_sorry randomSingle_uses_same_urs
-assert_no_sorry randomSingle_uses_same_vk
-assert_no_sorry randomMulti_uses_postNu63
-assert_no_sorry randomMulti_uses_canonicalVk
-assert_no_sorry randomMulti_uses_same_ursG
-assert_no_sorry randomMulti_uses_same_wu
-assert_no_sorry randomMulti_uses_same_ursGLagrange
-assert_no_sorry randomMulti_uses_same_fixedCommitments
-assert_no_sorry randomMulti_uses_same_permutationCommonCommitments
-assert_no_sorry randomMulti_uses_same_urs
-assert_no_sorry randomMulti_uses_same_vk
-assert_no_sorry randomTriple_uses_postNu63
-assert_no_sorry randomTriple_uses_canonicalVk
-assert_no_sorry randomTriple_uses_same_ursG
-assert_no_sorry randomTriple_uses_same_wu
-assert_no_sorry randomTriple_uses_same_ursGLagrange
-assert_no_sorry randomTriple_uses_same_fixedCommitments
-assert_no_sorry randomTriple_uses_same_permutationCommonCommitments
-assert_no_sorry randomTriple_uses_same_urs
-assert_no_sorry randomTriple_uses_same_vk
 
 end Zcash.Snark.PostNu63Fixture

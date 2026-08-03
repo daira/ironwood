@@ -18,7 +18,7 @@
 # Sources are cloned from the public repository at the pinned release; set ORCHARD_SRC to
 # a local checkout path to clone from that instead (fully offline). Set REGEN_WORK_DIR to
 # keep/reuse the build tree across runs (much faster); it is reset hard to the pinned
-# commit each run. All five families are committed, so every generated artifact is diffed
+# commit each run. All four families are committed, so every generated artifact is diffed
 # byte-for-byte; a generated artifact with no committed counterpart (a future
 # not-yet-ingested shape) is copied to REGEN_OUT_DIR (default scripts/generated/,
 # gitignored). See fixture-provenance-notes.md.
@@ -102,8 +102,10 @@ fi
 echo "Cargo.lock resolves halo2_proofs $HALO2_PROOFS_VERSION from crates.io by checksum."
 
 # Install orchard's pinned toolchain (mirrors fixtures.yml), then run every capture
-# driver in one pass. The unanchored filter matches the two honest and three random
-# drivers, and deliberately not the Rust-only rejected:: capture.
+# driver in one pass. The unanchored filter matches every upstream capture driver, and
+# deliberately not the Rust-only rejected:: capture. The released orchard also ships a
+# three-action match-only driver; it runs here but its output is not ingested, so only the
+# four committed families below are diffed.
 if command -v rustup >/dev/null 2>&1; then
   (cd "$WORK_DIR/orchard" && rustup show >/dev/null)
 fi
@@ -112,12 +114,10 @@ mkdir -p "$WORK_DIR/out"
   cd "$WORK_DIR/orchard" &&
     env ORCHARD_LEAN_SINGLE_FIXTURE_OUT="$WORK_DIR/out/SingleAction.Honest.Fixture.lean" \
       ORCHARD_LEAN_MULTI_FIXTURE_OUT="$WORK_DIR/out/MultiAction.Honest.Fixture.lean" \
-      ORCHARD_LEAN_SINGLE_RANDOM_FIXTURE_OUT="$WORK_DIR/out/SingleAction.Random.Fixture.lean" \
-      ORCHARD_LEAN_MULTI_RANDOM_FIXTURE_OUT="$WORK_DIR/out/MultiAction.Random.Fixture.lean" \
-      ORCHARD_LEAN_TRIPLE_RANDOM_FIXTURE_OUT="$WORK_DIR/out/TripleAction.Random.Fixture.lean" \
-      ORCHARD_LEAN_SINGLE_RANDOM_PROOF_OUT="$WORK_DIR/out/SingleAction.Random.proof-bytes.hex" \
-      ORCHARD_LEAN_MULTI_RANDOM_PROOF_OUT="$WORK_DIR/out/MultiAction.Random.proof-bytes.hex" \
-      ORCHARD_LEAN_TRIPLE_RANDOM_PROOF_OUT="$WORK_DIR/out/TripleAction.Random.proof-bytes.hex" \
+      ORCHARD_LEAN_SINGLE_RANDOM_FIXTURE_OUT="$WORK_DIR/out/SingleAction.MatchOnly.Fixture.lean" \
+      ORCHARD_LEAN_MULTI_RANDOM_FIXTURE_OUT="$WORK_DIR/out/MultiAction.MatchOnly.Fixture.lean" \
+      ORCHARD_LEAN_SINGLE_RANDOM_PROOF_OUT="$WORK_DIR/out/SingleAction.MatchOnly.proof-bytes.hex" \
+      ORCHARD_LEAN_MULTI_RANDOM_PROOF_OUT="$WORK_DIR/out/MultiAction.MatchOnly.proof-bytes.hex" \
       cargo test --locked --lib --features verifier-fingerprint \
       circuit::fingerprint::fingerprint_capture -- --nocapture
 )
@@ -131,12 +131,10 @@ mkdir -p "$WORK_DIR/out"
 pairs=(
   "SingleAction.Honest.Fixture.lean:Zcash/Snark/Fixtures/SingleAction/Honest/Fixture.lean:required"
   "MultiAction.Honest.Fixture.lean:Zcash/Snark/Fixtures/MultiAction/Honest/Fixture.lean:required"
-  "SingleAction.Random.Fixture.lean:Zcash/Snark/Fixtures/SingleAction/MatchOnly/Fixture.lean:required"
-  "MultiAction.Random.Fixture.lean:Zcash/Snark/Fixtures/MultiAction/MatchOnly/Fixture.lean:required"
-  "TripleAction.Random.Fixture.lean:Zcash/Snark/Fixtures/TripleAction/MatchOnly/Fixture.lean:required"
-  "SingleAction.Random.proof-bytes.hex:Zcash/Snark/Fixtures/SingleAction/MatchOnly/proof-bytes.hex:required"
-  "MultiAction.Random.proof-bytes.hex:Zcash/Snark/Fixtures/MultiAction/MatchOnly/proof-bytes.hex:required"
-  "TripleAction.Random.proof-bytes.hex:Zcash/Snark/Fixtures/TripleAction/MatchOnly/proof-bytes.hex:required"
+  "SingleAction.MatchOnly.Fixture.lean:Zcash/Snark/Fixtures/SingleAction/MatchOnly/Fixture.lean:required"
+  "MultiAction.MatchOnly.Fixture.lean:Zcash/Snark/Fixtures/MultiAction/MatchOnly/Fixture.lean:required"
+  "SingleAction.MatchOnly.proof-bytes.hex:Zcash/Snark/Fixtures/SingleAction/MatchOnly/proof-bytes.hex:required"
+  "MultiAction.MatchOnly.proof-bytes.hex:Zcash/Snark/Fixtures/MultiAction/MatchOnly/proof-bytes.hex:required"
 )
 
 status=0

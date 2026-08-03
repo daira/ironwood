@@ -116,7 +116,6 @@ The statement of record is per-family and per-proof: the
 | `MultiAction/Honest` | 2 | `0x4d` (`M`) | yes | `Fixture2` |
 | `SingleAction/MatchOnly` | 1 | `0x52` (`R`) | no — match-only | `FixtureRandom` |
 | `MultiAction/MatchOnly` | 2 | `0x72` (`r`) | no — match-only | `FixtureRandom2` |
-| `TripleAction/MatchOnly` | 3 | `0x33` (`3`) | no — match-only | `FixtureRandom3` |
 
 Each theorem states: Lean's `assemble`, run at challenges derived by Lean's own Fiat–Shamir
 schedule model (`deriveChallenges`) and at the verifying key spelled as its end-to-end
@@ -162,7 +161,7 @@ flowchart TD
     PINS --> CRATE --> DRIVERS
     PINS --> DRIVERS
     DRIVERS --> FIX --> THM --> CENSUS
-    FIX -. "regenerate &amp; diff, byte-for-byte:<br/>regenerate-fingerprint-fixtures.sh<br/>(all five, run in CI: fixtures.yml)" .-> PINS
+    FIX -. "regenerate &amp; diff, byte-for-byte:<br/>regenerate-fingerprint-fixtures.sh<br/>(all four, run in CI: fixtures.yml)" .-> PINS
   end
   subgraph CS["Circuit-side dumps — lineage unrecorded"]
     INST["instrumented checkouts<br/>(commits UNKNOWN)"]
@@ -195,7 +194,7 @@ of the same degree budget over the same denominators that differs from Lean's *a
 with the assembled MSM at a uniform point with probability at most `(D + B) / p` — either the
 point falls off the good event (`B = 2071`, the summed factor degrees:
 `2048 + 1 + 7 + 4 + 11`), or the nonzero difference polynomial vanishes
-(`D = msmDegreeBudget`, pinned per capture: `16452 / 16456 / 16460` at 1/2/3 actions, dominated
+(`D = msmDegreeBudget`, pinned per capture: `16452 / 16456` at one and two actions, dominated
 by the `h`-piece coefficients `xnⁱ·x₁ʲ·x₄ˢ`). A challenge-restricted variant
 (`competing_coefficient_family_agreement_le_challengesOnly`) pins the proof-string slots to an
 arbitrary assignment and prices the same bound over the challenge coordinates alone — the
@@ -203,8 +202,8 @@ uniformity subsection below explains why that layer matters. Cross-denominator v
 (`competing_coefficient_family_agreement_le_denClosure` and its challenge-restricted
 companion) admit a competing family bringing its *own* denominators from the enumerated
 factor closure, cross-multiplied to the summed budget `(D + Dden + B) / p`, `Dden = 2077`
-pinned per capture — ε′ = `20600 / 20604 / 20608`. The per-capture headliners with
-literal numerals — ε = `18523 / 18527 / 18531` over `p`, about `2⁻²⁴⁰` — live beside the random
+pinned per capture — ε′ = `20600 / 20604`. The per-capture headliners with
+literal numerals — ε = `18523 / 18527` over `p`, about `2⁻²⁴⁰` — live beside the random
 fixtures (`Fixtures/*/MatchOnly/Epsilon.lean`), censused with exact `native_decide` owner lists, and
 the good event provably contains each captured point (`capturedPoint_goodEvent`).
 
@@ -212,7 +211,7 @@ The step connecting the observed matches to that positional event is a theorem, 
 the per-family headliners bound a *positional* agreement event over `MsmCoord`, the boundary
 theorems state `MsmMatch`, whose commitment-term lists are compared up to `List.Perm`, and
 `fingerprint_matches_positional` (`Fixtures/*/MatchOnly/Epsilon.lean`) bridges the two. The
-captured `other` bases are pairwise distinct — 100/123/146 distinct bases at the three random
+captured `other` bases are pairwise distinct — 100 and 123 distinct bases at the two match-only
 captures, the per-family facts `capturedMsm_other_bases_nodup` — so a `Perm` match is forced to
 the unique base-matching re-indexing, computed from the two base lists alone
 (`perm_reindex_of_nodup_snd`, `Fingerprint/Match.lean`). The bridge concludes that the
@@ -313,16 +312,16 @@ under the modality section's premises, including the sampled-point premise recor
 
 | Transcribed artifact | Enters the fingerprint via | A soundness-relevant error causes | Checked by |
 |---|---|---|---|
-| Gate expressions (`configure` port) | coefficients at a random point | coefficient mismatch, prob. ≥ 1 − ε | the three random `Boundary.lean` theorems, priced by `Fixtures/*/MatchOnly/Epsilon.lean`; `Keygen/Certificate.lean`; `SingleAction/Honest/VkMatch.lean` |
+| Gate expressions (`configure` port) | coefficients at a random point | coefficient mismatch, prob. ≥ 1 − ε | the two match-only `Boundary.lean` theorems, priced by `Fixtures/*/MatchOnly/Epsilon.lean`; `Keygen/Certificate.lean`; `SingleAction/Honest/VkMatch.lean` |
 | σ / fixed-column content (keygen port) | Lean-derived commitments as MSM bases | base-point mismatch (a deliberate collision must solve discrete log) | `vk_eq_derived` + each family's `VkCertificate.lean` |
 | Query layouts, permutation chunks, lookup expressions | term structure and coefficients | term-list / coefficient mismatch | random `fingerprint_matches`; per-slot naming by the honest `Negative/Sweep.lean` |
 | Proof-slot sourcing (`fixedEvals`, `permutationCommonEvals`, `instanceEvals`) | random slot values in coefficients | coefficient mismatch, prob. ≥ 1 − ε | the random families (their reason to exist), priced by `Fixtures/*/MatchOnly/Epsilon.lean`; blind-slot tampers in both sweeps |
-| Witness-dependent slots (advice/lookup evals, commitments, `ipaC`/`ipaF`, …) | pinned by every capture | mismatch; the sweeps name the broken slot | all five `fingerprint_matches`; the per-slot sweeps |
+| Witness-dependent slots (advice/lookup evals, commitments, `ipaC`/`ipaF`, …) | pinned by every capture | mismatch; the sweeps name the broken slot | all four `fingerprint_matches`; the per-slot sweeps |
 | Fiat–Shamir schedule model (`deriveChallenges`) | folded into the composed statement | oracle miss (`missingChallenge_not_captured`) or wrong distinct challenge (`capturedChallengeValues_nodup`) → mismatch | the five `nonInteractiveFingerprint_matches_derived` |
 | Captured challenge values | the real verifier computed the captured MSM from its real challenges | recorder drift mismatches the MSM | cross-tied by every match (this row's documentation is this table) |
 | Instance-commitment derivation (`commit_lagrange` port) | derived bases; transcript-init prefix | base-point / prefix mismatch | `instance_commitments_derived` per family; `…_derived_inputs`; `Keygen/InstanceCapture.lean` |
 | Monomial URS + Lagrange-prefix dump | basis of every Lean-derived commitment | base-point mismatch against the real verifier's URS | the derived matches; cross-capture record equality (`PostNu63.lean`, `PostNu63Random.lean`); honest `capturedMsm_eval_eq_zero` as corroboration |
-| Model rejection set (`assemble? = none` paths) | containment in deployed non-accepting paths | a spuriously-rejecting model fails `valid_capture_assembles` at a generic point | `valid_capture_assembles` in all five families; the panic-set cardinality lemmas (`card_vanishingPanic_le`, `card_multiopenPanic_le`) |
+| Model rejection set (`assemble? = none` paths) | containment in deployed non-accepting paths | a spuriously-rejecting model fails `valid_capture_assembles` at a generic point | `valid_capture_assembles` in all four families; the panic-set cardinality lemmas (`card_vanishingPanic_le`, `card_multiopenPanic_le`) |
 
 ## What the honest captures are for
 
@@ -396,7 +395,7 @@ and small.
 ## Reproducibility: the two pipelines in detail
 
 **Verifier-fingerprint captures** (`Zcash/Snark/Fixtures/`) are fully pinned, to *released*
-sources: all five families regenerate from the `zcash/orchard` 0.15.5 release tag, whose
+sources: all four families regenerate from the `zcash/orchard` 0.15.5 release tag, whose
 published lockfile resolves `halo2_proofs` 0.3.5 from crates.io by checksum. The capture
 tooling is upstream and released — the match-only exporter and `numInstanceColumns` shape
 emission in halo2_proofs 0.3.5 (zcash/halo2#924), the fabricate→replay random-capture drivers
@@ -404,8 +403,8 @@ in orchard 0.15.5 (zcash/orchard#541) — so no fork, unreleased branch, or `[pa
 override enters the pipeline. `scripts/regenerate-fingerprint-fixtures.sh` is the mechanism and
 CI runs it (`.github/workflows/fixtures.yml`): it clones the pinned release, asserts that the
 pinned commit *is* the release tag and that the lockfile resolves the expected published
-halo2_proofs, runs all five capture drivers `--locked`, and enforces every committed artifact —
-five `Fixture.lean` files and three `proof-bytes.hex` siblings — byte-for-byte. Pins, seeds,
+halo2_proofs, runs all four capture drivers `--locked`, and enforces every committed artifact —
+four `Fixture.lean` files and two `proof-bytes.hex` siblings — byte-for-byte. Pins, seeds,
 rationale, and the one known caveat (fabricated points have discrete logs known to the
 generator — harmless for non-accepting, coefficient-only captures, recorded for honesty) are
 documented in `fixture-provenance-notes.md`.

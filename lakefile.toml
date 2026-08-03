@@ -36,7 +36,7 @@ globs = ["Zcash.Meta.Tests.+"]
 
 # Everything under `Zcash/Snark/Fixtures/` is instance-level: the generated Rust<->Lean captures
 # (per-capture subdirectories -- the honest `SingleAction`/`MultiAction` and the random match-only
-# `SingleAction/MatchOnly`, `MultiAction/MatchOnly`, `TripleAction/MatchOnly` -- holding the fixture data plus its
+# `SingleAction/MatchOnly` and `MultiAction/MatchOnly` -- holding the fixture data plus its
 # Fiat-Shamir schedule, faithfulness, and negative checks) and the hand-written consensus-max shape
 # instantiation (`MaxShape`). The `Zcash` library deliberately does not import them (the captures are
 # large, generated, and slow); `Zcash/Snark/Fingerprint/` keeps the reusable match/soundness theory.
