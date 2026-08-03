@@ -173,8 +173,8 @@ turning the fingerprint match into
 build-time obligations; `SingleAction/Honest/VkMatch` computes the capture's constraint-system fields equal
 to the ones derived end to end from the ported `configure`. The multi-action capture additionally
 carries the shape/VK **faithfulness** checks, the adversarial **negative** fixtures, the degree,
-schedule and static-check modules, the two knowledge-error endpoints (compressed-identity and
-straight-line), and `CapturedZeroFamily` — the shape-generic zero prover instantiated at the
+schedule and static-check modules, the exact straight-line false-statement endpoint and the
+adaptive-statement knowledge-failure endpoint with its `2^123` work-factor instantiation, and `CapturedZeroFamily` — the shape-generic zero prover instantiated at the
 captured key's own scalar data, so the staged IPA trace carries eleven live rounds.
 
 Each family's `Random/` subfolder holds the random match-only
@@ -211,6 +211,18 @@ are built on. `Vesta` pins the abstract group to the actual Vesta curve.
 arbitrary top-level circuit using that circuit's derived verifier key and public
 inputs. `Action/StraightLineTerminal` and `Action/StraightLineEvent` connect the one-run computed
 decode to the concrete Action statement and carry a failure as explicit relation data.
+`Action/AdaptiveStatement*` is the adaptive-statement stack, the strongest Action notion: one
+online-AGM adversary returns the public inputs and proof together. `AdaptiveStatementModel`
+defines the game and binds the verifying key and selected instance commitments before `theta`;
+`Accounting`, `Terminal`, and `Surfaces` decode arbitrary statement prefixes and price the
+root, IPA, and semantic surfaces under the single `(Q + 1)` query factor; `Provenance`,
+`Semantic`, and `Complete` identify the selected statement's decoded polynomials with the
+executable resolver stages; `Event` unions the priced events and `Capstone` discharges the
+statistical residual against them; `Knowledge` ends at the executable knowledge extractor and
+its failure bound; and `Profile` prices the whole reduction at the `2^123` computational work
+target. The shared `AdaptiveSurfaces` and `AdaptiveTerminal` supply the per-commitment
+activity predicates, challenge surfaces, and pointwise semantic terminal both Action routes
+consume.
 
 Six subtrees carry the heavier machinery:
 
@@ -234,7 +246,10 @@ Six subtrees carry the heavier machinery:
   the opened-batch interfaces (`SyntheticOpened`, `DeployedSyntheticOpened`,
   `DecodeToOpened`). `StraightLineIpa` and `StraightLinePinnedRoots` classify one accepting
   algebraic transcript as a clean opening, an explicit relation, or a squeeze-pinned bad-challenge
-  event, from a single execution with no rewinding; `StraightLineFiniteSecurity` records group
+  event, from a single execution with no rewinding; `AdaptiveOnline`, `AdaptiveDecode`,
+  `AdaptiveIpaSurfaces`, and `AdaptiveComposition` extend the same rewind-free machinery to
+  adversaries that choose their statement online, decoding accepting prefixes and pricing the
+  per-round IPA surfaces; `StraightLineFiniteSecurity` records group
   work, random-oracle queries and direct-decode field work as distinct quantities and asserts no
   generic-group DLOG formula. `ZeroFamily` and `ZeroFamilyRoots` are the constant zero-data prover
   at an arbitrary shape, whose multiopen obligation reduces to `0 = 0`.
