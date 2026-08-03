@@ -14,9 +14,9 @@ families carry, so it needs its own guards against being silently dead. Two live
   families (`Fixtures/{SingleAction,MultiAction}/Negative/Sweep.lean`), whose slot-naming
   regression coverage a random capture does not replace.
 
-The third guard is generated rather than written here: `capturedMsm_evalNat_ne_zero`
-(`Fixture.lean`) pins the capture as genuinely non-accepting, so a mislabeled honest capture or
-dead export plumbing cannot pass for it. `TrustBoundary.lean` censuses it with the two above.
+The third is generated: `capturedMsm_evalNat_ne_zero` (`Fixture.lean`) pins the capture as
+genuinely non-accepting, so a mislabeled honest capture or dead plumbing cannot pass for it.
+`TrustBoundary.lean` censuses it with the two above.
 
 The rejection-path negatives of the honest families are deliberately absent: they exercise the
 model's rejection set, which is challenge/VK-dependent and already covered there.

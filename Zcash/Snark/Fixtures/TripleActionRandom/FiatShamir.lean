@@ -65,11 +65,8 @@ def capturedFs : FiatShamir Fp G := {
 theorem deriveChallenges_matches_captured_schedule :
     deriveChallenges capturedFs capturedInit ps = ch := by native_decide
 
-/-- The captured verifier prefix is exactly the canonical VK-and-instance prefix. Without this
-the dumped `capturedInit` would enter the boundary statement as an opaque constant, leaving
-`initialTranscript`'s own shape — the VK scalar, then the instance commitments in deployed
-proof-major, column-major order — unchecked against the capture. This family is the only one
-that checks it at three sub-proofs; the honest pair reaches one and two. -/
+/-- The captured verifier prefix is exactly the canonical VK-and-instance prefix,
+here at three sub-proofs — the honest pair reaches one and two. -/
 theorem capturedInit_eq_initialTranscript :
     capturedInit =
       initialTranscript capturedVkTranscriptRepr derivedInstanceCommitment := by
@@ -89,9 +86,8 @@ theorem deriveChallengesForStatement_matches_captured_schedule :
   rw [deriveChallengesForStatement, ← capturedInit_eq_initialTranscript]
   exact deriveChallenges_matches_captured_schedule
 
-/-- The Fiat–Shamir-derived fingerprint matches the captured random three-action MSM under the
-concrete captured schedule oracle above, with the VK and public statement bound into Fiat–Shamir
-as the honest families state it. -/
+/-- The Fiat–Shamir-derived fingerprint matches the captured random three-action MSM, with the VK
+and public statement bound into Fiat–Shamir as the honest families state it. -/
 theorem nonInteractiveFingerprint_matches :
     MsmMatch (nonInteractiveFingerprintForStatement capturedFs capturedVkTranscriptRepr
       vk derivedInstanceCommitment ps) capturedMsm := by

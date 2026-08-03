@@ -263,13 +263,10 @@ after the base-matching re-indexing `σ`, in the stated `idxOf` form. With
 `competing_family_agreement_le`, a competing family in the walk's class differing anywhere from
 Lean's passes this capture positionally only on the ≤ ε event.
 
-Scope note: `σ` is read off the assembled base list *at the captured point*. Naming one
-competing family — coordinate `c` meaning the same deployed slot wherever the ε theorem counts
-— additionally needs the assembled base stream to be the same list across the whole good event.
-That holds for the reason the individual bases are constants (group slots are not sampled) and
-the arrangement is the good event's fixed grouping, but only the coefficient stream has it as a
-theorem (`assembleAt_other_map_fst`); the base-stream mirror is not yet proven and is
-enumerated as the positional-frame-stability premise in the trust chapter. -/
+`σ` is read off the assembled base list at the captured point, so naming one competing family
+also needs that base list to be the same across the good event — the trust chapter's
+positional-frame-stability premise, unproven while only the coefficient stream has
+`assembleAt_other_map_fst`. -/
 theorem fingerprint_matches_positional :
     ∃ m : Msm shape.k Fp G,
       assemble? vk derivedInstanceCommitment ps ch = some m

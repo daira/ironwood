@@ -10,9 +10,9 @@ fingerprint — `assemble` at the challenges Lean's Fiat–Shamir schedule model
 captured oracle — matches the captured MSM, with the verifying key spelled as its end-to-end
 derivation from the ported `configure`/keygen at the captured URS (`VkCertificate.lean`). The
 dumped verifying-key record no longer enters the comparison, the captured challenges are
-derived rather than taken as given, and the Fiat-Shamir prefix they are derived from is
-`initialTranscript` applied to the derived artifacts, not the dumped `capturedInit`
-(`capturedInit_eq_initialTranscript` discharges the two against each other).
+derived rather than taken as given — from `initialTranscript` at those derived artifacts, not
+from the dumped `capturedInit`, which `capturedInit_eq_initialTranscript` shows are the same
+prefix.
 
 Because the proof string is random, this is the statement the whole random family exists for:
 the slots whose honest values are recomputable — `fixedEvals`, `permutationCommonEvals`,
@@ -30,9 +30,8 @@ namespace Zcash.Snark.FixtureRandom3
 open Zcash.Snark
 
 /-- **The fingerprint match at the derived verifying key.** The transported certificate
-(`vk_eq_derived`) rewrites the dumped key out of `nonInteractiveFingerprint_matches`. The
-Fiat-Shamir prefix is the statement-bound one, built by `initialTranscript` from the same
-derived key representation and instance commitments rather than read from the dump. -/
+(`vk_eq_derived`) rewrites the dumped key out of `nonInteractiveFingerprint_matches`, and the
+Fiat–Shamir prefix is the statement-bound one. -/
 theorem nonInteractiveFingerprint_matches_derived :
     MsmMatch
       (nonInteractiveFingerprintForStatement capturedFs capturedVkTranscriptRepr
