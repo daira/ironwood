@@ -1,4 +1,4 @@
-import Zcash.Snark.Fixtures.SingleAction.MatchOnly.Fixture
+import Zcash.Snark.Fixtures.SingleAction.Random.Fixture
 import Zcash.Snark.Fixtures.Shared.ScheduleMarker
 
 /-!

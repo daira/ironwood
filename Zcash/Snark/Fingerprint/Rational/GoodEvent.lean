@@ -1,12 +1,12 @@
 import Mathlib.Tactic
 import Mathlib.Algebra.MvPolynomial.SchwartzZippel
-import Zcash.Snark.Fingerprint.Rational.Vars
+import Zcash.Snark.Fingerprint.SampleSpace
 
 /-!
 # The good event: the enumerated denominator factors
 
 The assembled MSM's coefficients are rational functions of the sample-space coordinates
-(`Fingerprint/Rational/Vars.lean`), and every division the pipeline performs is by a
+(`Fingerprint/SampleSpace.lean`), and every division the pipeline performs is by a
 **challenge-only** value drawn from one enumerated factor list:
 
 | factor | source |

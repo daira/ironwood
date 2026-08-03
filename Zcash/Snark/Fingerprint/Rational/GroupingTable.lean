@@ -1,6 +1,6 @@
 import Mathlib.Tactic
 import Zcash.Snark.Verifier.GroupingRef
-import Zcash.Snark.Fingerprint.Rational.Event
+import Zcash.Snark.Fingerprint.Rational.GoodEvent
 
 /-!
 # The reference table of `assembleQueries`

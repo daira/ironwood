@@ -132,7 +132,7 @@ modules and are enforced by `FixtureCheck`. The obligations use two commands fro
 
 The boundaries kept as literal pins are the five fixture censuses —
 `Zcash.Snark.Fixtures.SingleAction.Honest.TrustBoundary`, `…MultiAction.TrustBoundary`, and the
-`…/MatchOnly` siblings — which belong to
+`…/Random` siblings — which belong to
 the `FixtureCheck` target (kept out of `lake build Zcash` because the captures are large and slow).
 Each states its tier with `assert_axioms` like the rest of the development, and *additionally*
 retains `#guard_msgs`-pinned `#print axioms` checks on `fingerprint_matches` and the derived

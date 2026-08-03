@@ -1,8 +1,8 @@
-import Zcash.Snark.Fixtures.MultiAction.MatchOnly.Fixture
-import Zcash.Snark.Fixtures.MultiAction.MatchOnly.Faithfulness
-import Zcash.Snark.Fixtures.MultiAction.MatchOnly.Negative
-import Zcash.Snark.Fixtures.MultiAction.MatchOnly.Boundary
-import Zcash.Snark.Fixtures.MultiAction.MatchOnly.Epsilon
+import Zcash.Snark.Fixtures.MultiAction.Random.Fixture
+import Zcash.Snark.Fixtures.MultiAction.Random.Faithfulness
+import Zcash.Snark.Fixtures.MultiAction.Random.Negative
+import Zcash.Snark.Fixtures.MultiAction.Random.Boundary
+import Zcash.Snark.Fixtures.MultiAction.Random.Epsilon
 import Zcash.Snark.Fixtures.PostNu63Random
 import Zcash.Meta.AxiomCheck
 

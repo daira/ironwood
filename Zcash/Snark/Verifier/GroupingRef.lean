@@ -21,7 +21,7 @@ its first-appearance class index and every payload replaced by its flat position
 * `hasDuplicateCommitmentPoint_ref` — the duplicate-query rejection is likewise reference-level.
 
 The coefficient walk consumes these with the closed-form reference table of `assembleQueries`
-(`Fingerprint/Rational/QueryTable.lean`): on the good event the reference is a fixed
+(`Fingerprint/Rational/GroupingTable.lean`): on the good event the reference is a fixed
 verifying-key constant, so the grouping of every good sample point is one combinatorial object
 and the assembled coefficients become rational functions of the point.
 
@@ -47,7 +47,7 @@ instance {k : ℕ} {F G : Type*} [Zero F] [Inhabited G] : Inhabited (VerifierQue
 
 /-- First-appearance deduplication: keep each value's first occurrence, in order. The grouping's
 distinct-point list (`cisPts`) and distinct-index-set list (`cisSetList`) are both instances, as
-is the rotation-class table of `Fingerprint/Rational/QueryTable.lean`. (Mathlib's `List.dedup`
+is the rotation-class table of `Fingerprint/Rational/GroupingTable.lean`. (Mathlib's `List.dedup`
 keeps *last* occurrences, so it does not fit.) -/
 def dedupFold {α : Type*} [DecidableEq α] (l : List α) : List α :=
   l.foldl (fun acc x => if x ∈ acc then acc else acc ++ [x]) []

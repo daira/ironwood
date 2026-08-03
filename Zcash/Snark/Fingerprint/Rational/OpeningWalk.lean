@@ -1,6 +1,6 @@
 import Mathlib.Tactic
-import Zcash.Snark.Fingerprint.Rational.QueryWalk
-import Zcash.Snark.Fingerprint.Rational.QueryTable
+import Zcash.Snark.Fingerprint.Rational.ConstraintWalk
+import Zcash.Snark.Fingerprint.Rational.GroupingTable
 
 /-!
 # The opening-value walk
@@ -15,7 +15,7 @@ the sets by `x₂`, and folds the claimed `u`-values by `x₄` against the runni
 The walk splits plumbing from representation:
 
 * **Reified data.** On the good event the grouping is the fixed reference table
-  (`Fingerprint/Rational/QueryTable.lean`), so the per-set member evaluation index lists
+  (`Fingerprint/Rational/GroupingTable.lean`), so the per-set member evaluation index lists
   (`refMemberEvalIdx`) and rotation classes (`classRotsL`) are verifying-key constants, and the
   whole value computation factors through them (`openingValue_eq`): the only point dependence
   left is the claimed-evaluation stream (`queryEvalAt`) and the challenge coordinates.

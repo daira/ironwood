@@ -1,10 +1,10 @@
-import Zcash.Snark.Fixtures.MultiAction.MatchOnly.Fixture
-import Zcash.Snark.Fixtures.MultiAction.MatchOnly.Negative
+import Zcash.Snark.Fixtures.SingleAction.Random.Fixture
+import Zcash.Snark.Fixtures.SingleAction.Random.Negative
 import Zcash.Snark.Fingerprint.Rational.Capstone
 import Zcash.Snark.Fingerprint.Epsilon
 
 /-!
-# ε at the random multi-action capture
+# ε at the random single-action capture
 
 The quantified match, instantiated at this capture's verifying key: the walk capstone
 (`assembleCoeffFamily`) packages every coefficient of the assembled MSM as a polynomial
@@ -14,9 +14,9 @@ uniformly random sample-space point. This module discharges the capstone's verif
 hypotheses at the captured key (`native_decide`), pins the degree and coordinate literals, and
 states the headline with numerals:
 
-> any competing numerator family of total degree ≤ 16456 over the walk's denominators that
+> any competing numerator family of total degree ≤ 16452 over the walk's denominators that
 > differs anywhere from Lean's agrees with the assembled MSM at a uniform point with
-> probability at most `(16456 + 2071) / p = 18527 / p`, `p = scalarFieldOrder ≈ 2²⁵⁴`.
+> probability at most `(16452 + 2071) / p = 18523 / p`, `p = scalarFieldOrder ≈ 2²⁵⁴`.
 
 `competing_family_agreement_le_challengesOnly` restates the bound with the proof-string slots
 pinned to the captured scalars (`capturedSlotVals`), counting over the 22 challenge
@@ -25,7 +25,7 @@ divergence whose restricted discrepancy does not vanish identically at the captu
 
 `competing_family_agreement_le_denClosure` and its challenge-restricted companion extend both
 bounds to a competing family bringing its own denominators from the enumerated factor closure,
-cross-multiplied at the summed budget: `(16456 + 2077 + 2071) / p = 20604 / p`.
+cross-multiplied at the summed budget: `(16452 + 2077 + 2071) / p = 20600 / p`.
 
 `capturedPoint_goodEvent` corroborates non-vacuity: the good event contains the captured
 point itself — the real capture's challenges avoid every enumerated denominator factor.
@@ -37,7 +37,7 @@ match's `List.Perm` is realized by the fixed base-matching re-indexing
 coordinate-wise.
 -/
 
-namespace Zcash.Snark.FixtureRandom2
+namespace Zcash.Snark.FixtureRandom
 
 open Zcash.Snark
 open Zcash.Arithmetic (Msm scalarFieldOrder)
@@ -59,13 +59,13 @@ theorem vk_chunks_length_eq : vk.permutationChunks.length = shape.numPermutation
   native_decide
 
 /-- The walk's numerator-degree cap at the captured key. -/
-theorem msmDegreeBudget_eq : msmDegreeBudget shape vk = 16456 := by native_decide
+theorem msmDegreeBudget_eq : msmDegreeBudget shape vk = 16452 := by native_decide
 
 /-- The walk's denominator-degree cap at the captured key. -/
 theorem msmDenBudget_eq : msmDenBudget shape vk = 2077 := by native_decide
 
 /-- The assembled `other` term count at the captured key. -/
-theorem otherLen_eq : otherLen shape vk = 123 := by native_decide
+theorem otherLen_eq : otherLen shape vk = 100 := by native_decide
 
 /-- The summed Schwartz–Zippel price of the enumerated denominator factors at the captured
 key: `n + 1 + |lagrangeRotations| + |queryRotations| + k = 2048 + 1 + 7 + 4 + 11`. -/
@@ -75,7 +75,7 @@ theorem denFactors_degree_sum_eq :
 
 set_option maxRecDepth 100000 in
 /-- The sample space has `49·numProofs + 74` scalar coordinates. -/
-theorem card_scalarSlot : Fintype.card (ScalarSlot shape) = 172 := by decide
+theorem card_scalarSlot : Fintype.card (ScalarSlot shape) = 123 := by decide
 
 /-- The captured slot assignment: the captured proof string's scalar slots read through the
 sample-space frame, challenge coordinates dropped. The challenge-restricted headliner pins the
@@ -89,7 +89,7 @@ theorem card_challengeSlot :
     Fintype.card {v : ScalarSlot shape // IsChallengeSlot v} = 22 := by decide
 
 /-- The rational coefficient family of the deployed assembly at this capture: numerators of
-total degree ≤ 16456 over enumerated-factor denominators, one per MSM coordinate, agreeing
+total degree ≤ 16452 over enumerated-factor denominators, one per MSM coordinate, agreeing
 with `assemble?` on the whole good event. -/
 noncomputable def coefficientFamily :
     RationalCoeffFamily vk derivedInstanceCommitment ps (otherLen shape vk)
@@ -105,9 +105,9 @@ theorem capturedPoint_goodEvent : GoodEvent vk (Point.ofInputs ps ch) :=
 
 open Classical in
 /-- **ε for the random match at this capture.** Any competing numerator family of total degree
-≤ 16456 over the walk's denominators that differs from Lean's at any coordinate agrees with
+≤ 16452 over the walk's denominators that differs from Lean's at any coordinate agrees with
 the assembled MSM at a uniformly random sample-space point with probability at most
-`18527 / p`, `p = scalarFieldOrder ≈ 2²⁵⁴`. -/
+`18523 / p`, `p = scalarFieldOrder ≈ 2²⁵⁴`. -/
 theorem competing_family_agreement_le
     (num' : MsmCoord shape.k (otherLen shape vk) → MvPolynomial (ScalarSlot shape) Fp)
     (hdeg' : ∀ c, (num' c).totalDegree ≤ msmDegreeBudget shape vk)
@@ -120,7 +120,7 @@ theorem competing_family_agreement_le
             ∧ ∀ c : MsmCoord shape.k (otherLen shape vk),
                 m.coeffAt c * eval f (coefficientFamily.den c) = eval f (num' c)} : ℚ≥0)
         / (scalarFieldOrder : ℚ≥0) ^ Fintype.card (ScalarSlot shape)
-      ≤ (18527 : ℚ≥0) / scalarFieldOrder := by
+      ≤ (18523 : ℚ≥0) / scalarFieldOrder := by
   refine le_trans (competing_coefficient_family_agreement_le coefficientFamily
     vkSymbolicFacts.n_pos num' hdeg' c₀ hne) ?_
   have hsum : ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0) ≤ ((2071 : ℕ) : ℚ≥0) := by
@@ -129,16 +129,16 @@ theorem competing_family_agreement_le
     exact_mod_cast h2 ▸ h1
   rw [msmDegreeBudget_eq]
   gcongr ?_ / _
-  calc ((16456 : ℕ) : ℚ≥0) + ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0)
-      ≤ ((16456 : ℕ) : ℚ≥0) + ((2071 : ℕ) : ℚ≥0) := add_le_add le_rfl hsum
-    _ = (18527 : ℚ≥0) := by norm_num
+  calc ((16452 : ℕ) : ℚ≥0) + ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0)
+      ≤ ((16452 : ℕ) : ℚ≥0) + ((2071 : ℕ) : ℚ≥0) := add_le_add le_rfl hsum
+    _ = (18523 : ℚ≥0) := by norm_num
 
 open Classical in
 /-- **ε over the challenge coordinates alone at this capture.** With the proof-string slots
-pinned to the captured scalars, any competing numerator family of total degree ≤ 16456 over
+pinned to the captured scalars, any competing numerator family of total degree ≤ 16452 over
 the walk's denominators whose restriction to the captured slots differs anywhere from Lean's
 agrees with the assembled MSM at a uniformly random challenge assignment with probability at
-most `18527 / p` — what the random-oracle premise alone buys at this capture. The
+most `18523 / p` — what the random-oracle premise alone buys at this capture. The
 restricted-difference hypothesis is the honest coverage condition: a discrepancy vanishing
 identically at the captured slots agrees with probability one over the challenges and is not
 covered. -/
@@ -159,7 +159,7 @@ theorem competing_family_agreement_le_challengesOnly
                 m.coeffAt c * eval (Point.merge capturedSlotVals g) (coefficientFamily.den c)
                   = eval (Point.merge capturedSlotVals g) (num' c)} : ℚ≥0)
         / (scalarFieldOrder : ℚ≥0) ^ Fintype.card {v : ScalarSlot shape // IsChallengeSlot v}
-      ≤ (18527 : ℚ≥0) / scalarFieldOrder := by
+      ≤ (18523 : ℚ≥0) / scalarFieldOrder := by
   refine le_trans (competing_coefficient_family_agreement_le_challengesOnly coefficientFamily
     vkSymbolicFacts.n_pos capturedSlotVals num' hdeg' c₀ hne) ?_
   have hsum : ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0) ≤ ((2071 : ℕ) : ℚ≥0) := by
@@ -168,16 +168,16 @@ theorem competing_family_agreement_le_challengesOnly
     exact_mod_cast h2 ▸ h1
   rw [msmDegreeBudget_eq]
   gcongr ?_ / _
-  calc ((16456 : ℕ) : ℚ≥0) + ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0)
-      ≤ ((16456 : ℕ) : ℚ≥0) + ((2071 : ℕ) : ℚ≥0) := add_le_add le_rfl hsum
-    _ = (18527 : ℚ≥0) := by norm_num
+  calc ((16452 : ℕ) : ℚ≥0) + ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0)
+      ≤ ((16452 : ℕ) : ℚ≥0) + ((2071 : ℕ) : ℚ≥0) := add_le_add le_rfl hsum
+    _ = (18523 : ℚ≥0) := by norm_num
 
 open Classical in
 /-- **ε across denominators at this capture.** Any competing rational family — numerators of
-total degree ≤ 16456, denominators of total degree ≤ 2077 from the enumerated factor closure —
+total degree ≤ 16452, denominators of total degree ≤ 2077 from the enumerated factor closure —
 whose cross-multiplied discrepancy with Lean's family is nonzero at some coordinate agrees with
 the assembled MSM at a uniformly random sample-space point with probability at most
-`(16456 + 2077 + 2071) / p = 20604 / p`. -/
+`(16452 + 2077 + 2071) / p = 20600 / p`. -/
 theorem competing_family_agreement_le_denClosure
     (num' den' : MsmCoord shape.k (otherLen shape vk) → MvPolynomial (ScalarSlot shape) Fp)
     (hmem' : ∀ c, den' c ∈ Submonoid.closure {φ | φ ∈ denFactors vk})
@@ -193,7 +193,7 @@ theorem competing_family_agreement_le_denClosure
             ∧ ∀ c : MsmCoord shape.k (otherLen shape vk),
                 m.coeffAt c * eval f (den' c) = eval f (num' c)} : ℚ≥0)
         / (scalarFieldOrder : ℚ≥0) ^ Fintype.card (ScalarSlot shape)
-      ≤ (20604 : ℚ≥0) / scalarFieldOrder := by
+      ≤ (20600 : ℚ≥0) / scalarFieldOrder := by
   refine le_trans (competing_coefficient_family_agreement_le_denClosure coefficientFamily
     vkSymbolicFacts.n_pos num' den' hmem' hdeg' hdegden' c₀ hne) ?_
   have hsum : ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0) ≤ ((2071 : ℕ) : ℚ≥0) := by
@@ -202,17 +202,17 @@ theorem competing_family_agreement_le_denClosure
     exact_mod_cast h2 ▸ h1
   rw [msmDegreeBudget_eq, msmDenBudget_eq]
   gcongr ?_ / _
-  calc ((16456 : ℕ) : ℚ≥0) + ((2077 : ℕ) : ℚ≥0)
+  calc ((16452 : ℕ) : ℚ≥0) + ((2077 : ℕ) : ℚ≥0)
         + ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0)
-      ≤ ((16456 : ℕ) : ℚ≥0) + ((2077 : ℕ) : ℚ≥0) + ((2071 : ℕ) : ℚ≥0) :=
+      ≤ ((16452 : ℕ) : ℚ≥0) + ((2077 : ℕ) : ℚ≥0) + ((2071 : ℕ) : ℚ≥0) :=
         add_le_add le_rfl hsum
-    _ = (20604 : ℚ≥0) := by norm_num
+    _ = (20600 : ℚ≥0) := by norm_num
 
 open Classical in
 /-- **ε across denominators over the challenge coordinates alone at this capture.** With the
 proof-string slots pinned to the captured scalars, a competing rational family within the
-16456/2077 budgets agrees with the assembled MSM at a uniformly random challenge assignment
-with probability at most `20604 / p`, provided its cross-multiplied discrepancy with Lean's
+16452/2077 budgets agrees with the assembled MSM at a uniformly random challenge assignment
+with probability at most `20600 / p`, provided its cross-multiplied discrepancy with Lean's
 family does not vanish identically at the captured slots — the cross-denominator form of what
 the random-oracle premise alone buys at this capture. -/
 theorem competing_family_agreement_le_challengesOnly_denClosure
@@ -234,7 +234,7 @@ theorem competing_family_agreement_le_challengesOnly_denClosure
                 m.coeffAt c * eval (Point.merge capturedSlotVals g) (den' c)
                   = eval (Point.merge capturedSlotVals g) (num' c)} : ℚ≥0)
         / (scalarFieldOrder : ℚ≥0) ^ Fintype.card {v : ScalarSlot shape // IsChallengeSlot v}
-      ≤ (20604 : ℚ≥0) / scalarFieldOrder := by
+      ≤ (20600 : ℚ≥0) / scalarFieldOrder := by
   refine le_trans (competing_coefficient_family_agreement_le_challengesOnly_denClosure
     coefficientFamily vkSymbolicFacts.n_pos capturedSlotVals num' den' hmem' hdeg' hdegden'
     c₀ hne) ?_
@@ -244,11 +244,11 @@ theorem competing_family_agreement_le_challengesOnly_denClosure
     exact_mod_cast h2 ▸ h1
   rw [msmDegreeBudget_eq, msmDenBudget_eq]
   gcongr ?_ / _
-  calc ((16456 : ℕ) : ℚ≥0) + ((2077 : ℕ) : ℚ≥0)
+  calc ((16452 : ℕ) : ℚ≥0) + ((2077 : ℕ) : ℚ≥0)
         + ((((denFactors vk).map totalDegree).sum : ℕ) : ℚ≥0)
-      ≤ ((16456 : ℕ) : ℚ≥0) + ((2077 : ℕ) : ℚ≥0) + ((2071 : ℕ) : ℚ≥0) :=
+      ≤ ((16452 : ℕ) : ℚ≥0) + ((2077 : ℕ) : ℚ≥0) + ((2071 : ℕ) : ℚ≥0) :=
         add_le_add le_rfl hsum
-    _ = (20604 : ℚ≥0) := by norm_num
+    _ = (20600 : ℚ≥0) := by norm_num
 
 /-- The captured `other` bases are pairwise distinct, so a `List.Perm` match against
 `capturedMsm` is forced to the unique base-matching re-indexing
@@ -291,4 +291,4 @@ theorem fingerprint_matches_positional :
   exact ⟨m, hm, hmatch.2.2.2.length_eq.trans hcap, hcap, hmatch.1, hmatch.2.1, hmatch.2.2.1,
     msmMatch_other_reindex_of_nodup hmatch capturedMsm_other_bases_nodup⟩
 
-end Zcash.Snark.FixtureRandom2
+end Zcash.Snark.FixtureRandom

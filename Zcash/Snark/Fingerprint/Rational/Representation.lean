@@ -1,5 +1,5 @@
 import Mathlib.Tactic
-import Zcash.Snark.Fingerprint.Rational.Event
+import Zcash.Snark.Fingerprint.Rational.GoodEvent
 
 /-!
 # Rational representations on the good event

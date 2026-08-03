@@ -1,5 +1,5 @@
 import Mathlib.Tactic
-import Zcash.Snark.Fingerprint.Rational.Rep
+import Zcash.Snark.Fingerprint.Rational.Representation
 import Zcash.Snark.Soundness.DegreeWalk
 
 /-!

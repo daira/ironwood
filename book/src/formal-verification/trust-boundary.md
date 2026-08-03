@@ -114,8 +114,8 @@ The statement of record is per-family and per-proof: the
 |---|---|---|---|---|
 | `SingleAction/Honest` | 1 | `0x53` (`S`) | yes | `Fixture` (plus the `…_derived_inputs` form) |
 | `MultiAction/Honest` | 2 | `0x4d` (`M`) | yes | `Fixture2` |
-| `SingleAction/MatchOnly` | 1 | `0x52` (`R`) | no — match-only | `FixtureRandom` |
-| `MultiAction/MatchOnly` | 2 | `0x72` (`r`) | no — match-only | `FixtureRandom2` |
+| `SingleAction/Random` | 1 | `0x52` (`R`) | no — match-only | `FixtureRandom` |
+| `MultiAction/Random` | 2 | `0x72` (`r`) | no — match-only | `FixtureRandom2` |
 
 Each theorem states: Lean's `assemble`, run at challenges derived by Lean's own Fiat–Shamir
 schedule model (`deriveChallenges`) and at the verifying key spelled as its end-to-end
@@ -204,13 +204,13 @@ companion) admit a competing family bringing its *own* denominators from the enu
 factor closure, cross-multiplied to the summed budget `(D + Dden + B) / p`, `Dden = 2077`
 pinned per capture — ε′ = `20600 / 20604`. The per-capture headliners with
 literal numerals — ε = `18523 / 18527` over `p`, about `2⁻²⁴⁰` — live beside the random
-fixtures (`Fixtures/*/MatchOnly/Epsilon.lean`), censused with exact `native_decide` owner lists, and
+fixtures (`Fixtures/*/Random/Epsilon.lean`), censused with exact `native_decide` owner lists, and
 the good event provably contains each captured point (`capturedPoint_goodEvent`).
 
 The step connecting the observed matches to that positional event is a theorem, not prose:
 the per-family headliners bound a *positional* agreement event over `MsmCoord`, the boundary
 theorems state `MsmMatch`, whose commitment-term lists are compared up to `List.Perm`, and
-`fingerprint_matches_positional` (`Fixtures/*/MatchOnly/Epsilon.lean`) bridges the two. The
+`fingerprint_matches_positional` (`Fixtures/*/Random/Epsilon.lean`) bridges the two. The
 captured `other` bases are pairwise distinct — 100 and 123 distinct bases at the two match-only
 captures, the per-family facts `capturedMsm_other_bases_nodup` — so a `Perm` match is forced to
 the unique base-matching re-indexing, computed from the two base lists alone
@@ -247,7 +247,7 @@ and every challenge is an independent uniform `F_p` value
 (`competing_coefficient_family_agreement_le` counts over the full function space). The
 captures are not sampled that way, in two respects: the challenges are Blake2b squeezes of
 the proof string, `ch = FS(ps)`, and the proof-string scalars are the output of `ChaCha20Rng`
-at *fixed, public* seeds (the table in `fixture-provenance-notes.md`) — constants, not random
+at *fixed, public* seeds (the table in `Zcash/Snark/Fixtures/PROVENANCE.md`) — constants, not random
 variables. Honesty requires splitting the claim in two.
 
 **What the random-oracle premise alone buys.** Model each squeeze as a call to a random
@@ -266,7 +266,7 @@ randomness it agrees with probability one. This challenge-restricted reading is 
 assignment and prices the same `(D + B) / p` bound over the challenge coordinates alone, its
 hypothesis exactly the coverage condition above — the *restricted* discrepancy nonzero — and
 the per-family headliners (`competing_family_agreement_le_challengesOnly`,
-`Fixtures/*/MatchOnly/Epsilon.lean`) instantiate it at the captured scalars
+`Fixtures/*/Random/Epsilon.lean`) instantiate it at the captured scalars
 (`capturedSlotVals`) with the same literal ε; their cross-denominator companions carry the
 same layer at the summed budget.
 
@@ -280,7 +280,7 @@ wanted: freeze both implementations, draw one seed from a future public randomne
 and regenerate (~17 s, no prover runs) — a fixed discrepancy vanishing at the expansion of a
 random seed is then a ChaCha distinguisher, and the stated error becomes ε plus the PRG
 advantage plus the sampler's reduction distances. Recorded as a follow-up in
-`fixture-provenance-notes.md`.
+`Zcash/Snark/Fixtures/PROVENANCE.md`.
 
 The group-valued slots need no distributional assumption at all: the theorem holds for every
 fixed assignment of them, so conditioning on the captured commitments is sound — with the
@@ -292,7 +292,7 @@ What the sampled-point premise assumes, enumerated:
 
 1. the seeded-expansion idealization above — fixed public `ChaCha20Rng` outputs (seeds chosen
    before any of this Lean development existed; the seed table in
-   `fixture-provenance-notes.md`) standing in for uniform proof-string scalars, including the
+   `Zcash/Snark/Fixtures/PROVENANCE.md`) standing in for uniform proof-string scalars, including the
    generator's canonical-sampling step; heuristic, with beacon regeneration as the
    reduction-backed alternative;
 2. Blake2b behaves as a random function chosen independently of the code under test — code
@@ -312,10 +312,10 @@ under the modality section's premises, including the sampled-point premise recor
 
 | Transcribed artifact | Enters the fingerprint via | A soundness-relevant error causes | Checked by |
 |---|---|---|---|
-| Gate expressions (`configure` port) | coefficients at a random point | coefficient mismatch, prob. ≥ 1 − ε | the two match-only `Boundary.lean` theorems, priced by `Fixtures/*/MatchOnly/Epsilon.lean`; `Keygen/Certificate.lean`; `SingleAction/Honest/VkMatch.lean` |
+| Gate expressions (`configure` port) | coefficients at a random point | coefficient mismatch, prob. ≥ 1 − ε | the two match-only `Boundary.lean` theorems, priced by `Fixtures/*/Random/Epsilon.lean`; `Keygen/Certificate.lean`; `SingleAction/Honest/VkMatch.lean` |
 | σ / fixed-column content (keygen port) | Lean-derived commitments as MSM bases | base-point mismatch (a deliberate collision must solve discrete log) | `vk_eq_derived` + each family's `VkCertificate.lean` |
 | Query layouts, permutation chunks, lookup expressions | term structure and coefficients | term-list / coefficient mismatch | random `fingerprint_matches`; per-slot naming by the honest `Negative/Sweep.lean` |
-| Proof-slot sourcing (`fixedEvals`, `permutationCommonEvals`, `instanceEvals`) | random slot values in coefficients | coefficient mismatch, prob. ≥ 1 − ε | the random families (their reason to exist), priced by `Fixtures/*/MatchOnly/Epsilon.lean`; blind-slot tampers in both sweeps |
+| Proof-slot sourcing (`fixedEvals`, `permutationCommonEvals`, `instanceEvals`) | random slot values in coefficients | coefficient mismatch, prob. ≥ 1 − ε | the random families (their reason to exist), priced by `Fixtures/*/Random/Epsilon.lean`; blind-slot tampers in both sweeps |
 | Witness-dependent slots (advice/lookup evals, commitments, `ipaC`/`ipaF`, …) | pinned by every capture | mismatch; the sweeps name the broken slot | all four `fingerprint_matches`; the per-slot sweeps |
 | Fiat–Shamir schedule model (`deriveChallenges`) | folded into the composed statement | oracle miss (`missingChallenge_not_captured`) or wrong distinct challenge (`capturedChallengeValues_nodup`) → mismatch | the five `nonInteractiveFingerprint_matches_derived` |
 | Captured challenge values | the real verifier computed the captured MSM from its real challenges | recorder drift mismatches the MSM | cross-tied by every match (this row's documentation is this table) |
@@ -407,7 +407,7 @@ halo2_proofs, runs all four capture drivers `--locked`, and enforces every commi
 four `Fixture.lean` files and two `proof-bytes.hex` siblings — byte-for-byte. Pins, seeds,
 rationale, and the one known caveat (fabricated points have discrete logs known to the
 generator — harmless for non-accepting, coefficient-only captures, recorded for honesty) are
-documented in `fixture-provenance-notes.md`.
+documented in `Zcash/Snark/Fixtures/PROVENANCE.md`.
 
 **Circuit-side dumps** (`Zcash/Circuits/Fixtures/`) are the separate pipeline: constraint
 system, layout, and selector-map dumps produced by one-off instrumented checkouts whose
@@ -417,7 +417,7 @@ rather than inventing pins. What certifies them instead: every JSON fixture is S
 constraint system from the independently hand-ported `configure` — a fabricated or drifted
 dump would have to agree with an independent port across 193 gate polynomials, ~3,000 ordered
 copy constraints, and ~17k fixed cells. Follow-ups (publishing the instrumented branches, a
-mainnet-VK cross-check for the base circuit) are tracked in `fixture-provenance-notes.md`.
+mainnet-VK cross-check for the base circuit) are tracked in `Zcash/Snark/Fixtures/PROVENANCE.md`.
 
 ## The reviewer's checklist
 
@@ -429,7 +429,7 @@ A reviewer can verify the Rust↔Lean seam of the soundness stack by reading:
    challenge-restricted variant `competing_coefficient_family_agreement_le_challengesOnly`,
    the cross-denominator pair `competing_coefficient_family_agreement_le_denClosure` /
    `competing_coefficient_family_agreement_le_challengesOnly_denClosure`, and the three
-   `Fixtures/*/MatchOnly/Epsilon.lean` headliner quadruples with their literal ε —
+   `Fixtures/*/Random/Epsilon.lean` headliner quadruples with their literal ε —
    together with the uniformity premise above;
 3. the audit table above, row by row, checking each falsification mechanism exists in the
    tree;

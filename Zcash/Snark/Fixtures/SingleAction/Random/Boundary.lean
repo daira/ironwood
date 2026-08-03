@@ -1,5 +1,5 @@
-import Zcash.Snark.Fixtures.SingleAction.MatchOnly.FiatShamir
-import Zcash.Snark.Fixtures.SingleAction.MatchOnly.VkCertificate
+import Zcash.Snark.Fixtures.SingleAction.Random.FiatShamir
+import Zcash.Snark.Fixtures.SingleAction.Random.VkCertificate
 import Mathlib.Util.AssertNoSorry
 
 /-!

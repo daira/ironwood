@@ -2,7 +2,7 @@ name: Fixtures
 
 # Enforces that every checked-in verifier-fingerprint fixture family -- the honest
 # `Zcash/Snark/Fixtures/{SingleAction,MultiAction}/Honest/Fixture.lean` captures and the
-# random match-only `{SingleAction,MultiAction}/MatchOnly/` families with
+# random match-only `{SingleAction,MultiAction}/Random/` families with
 # their `proof-bytes.hex` siblings -- is byte-for-byte what the pinned public sources
 # regenerate, by running `scripts/regenerate-fingerprint-fixtures.sh`. The fixtures stay
 # checked in -- they are the formal artifact the Lean development proves about, imported
@@ -62,10 +62,10 @@ jobs:
             fixtures:
               - 'Zcash/Snark/Fixtures/SingleAction/Honest/Fixture.lean'
               - 'Zcash/Snark/Fixtures/MultiAction/Honest/Fixture.lean'
-              - 'Zcash/Snark/Fixtures/SingleAction/MatchOnly/Fixture.lean'
-              - 'Zcash/Snark/Fixtures/SingleAction/MatchOnly/proof-bytes.hex'
-              - 'Zcash/Snark/Fixtures/MultiAction/MatchOnly/Fixture.lean'
-              - 'Zcash/Snark/Fixtures/MultiAction/MatchOnly/proof-bytes.hex'
+              - 'Zcash/Snark/Fixtures/SingleAction/Random/Fixture.lean'
+              - 'Zcash/Snark/Fixtures/SingleAction/Random/proof-bytes.hex'
+              - 'Zcash/Snark/Fixtures/MultiAction/Random/Fixture.lean'
+              - 'Zcash/Snark/Fixtures/MultiAction/Random/proof-bytes.hex'
               - 'scripts/regenerate-fingerprint-fixtures.sh'
               - '.github/workflows/fixtures.yml'
 

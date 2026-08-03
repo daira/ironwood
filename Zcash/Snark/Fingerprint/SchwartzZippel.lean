@@ -10,7 +10,7 @@ polynomials in the proof scalars and challenges agree at a uniformly random poin
 probability. This module pins that probability down by specialising Mathlib's Schwartz–Zippel lemma to
 the verifier's field `F_p`, over `Fin n` and over an arbitrary finite variable index
 (`fingerprint_schwartz_zippel_index` — the form the structured sample space of
-`Fingerprint/Rational/Vars.lean` consumes). The *realized* fingerprint in this development is the
+`Fingerprint/SampleSpace.lean` consumes). The *realized* fingerprint in this development is the
 decidable coefficient comparison, `Zcash.Snark.Fingerprint.Match`; the random-evaluation variant is
 instantiated at `assemble`'s realized coefficients in `Zcash.Snark.Fingerprint.Epsilon`.
 
@@ -38,7 +38,7 @@ theorem fingerprint_schwartz_zippel {n : ℕ} {p : MvPolynomial (Fin n) Fp} (hp 
   simpa only [Finset.card_univ, card_Fp] using h
 
 /-- `fingerprint_schwartz_zippel` over an arbitrary finite variable index — the form the
-structured sample space (`ScalarSlot`, `Fingerprint/Rational/Vars.lean`) consumes. Transported
+structured sample space (`ScalarSlot`, `Fingerprint/SampleSpace.lean`) consumes. Transported
 along `Fintype.equivFin` by `MvPolynomial.rename`, which preserves nonzeroness and total
 degree. -/
 theorem fingerprint_schwartz_zippel_index {σ : Type*} [Fintype σ] [DecidableEq σ]

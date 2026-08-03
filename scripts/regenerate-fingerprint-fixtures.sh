@@ -21,7 +21,7 @@
 # commit each run. All four families are committed, so every generated artifact is diffed
 # byte-for-byte; a generated artifact with no committed counterpart (a future
 # not-yet-ingested shape) is copied to REGEN_OUT_DIR (default scripts/generated/,
-# gitignored). See fixture-provenance-notes.md.
+# gitignored). See Zcash/Snark/Fixtures/PROVENANCE.md.
 #
 # Run from anywhere; exits non-zero on any violation.
 set -euo pipefail
@@ -114,10 +114,10 @@ mkdir -p "$WORK_DIR/out"
   cd "$WORK_DIR/orchard" &&
     env ORCHARD_LEAN_SINGLE_FIXTURE_OUT="$WORK_DIR/out/SingleAction.Honest.Fixture.lean" \
       ORCHARD_LEAN_MULTI_FIXTURE_OUT="$WORK_DIR/out/MultiAction.Honest.Fixture.lean" \
-      ORCHARD_LEAN_SINGLE_RANDOM_FIXTURE_OUT="$WORK_DIR/out/SingleAction.MatchOnly.Fixture.lean" \
-      ORCHARD_LEAN_MULTI_RANDOM_FIXTURE_OUT="$WORK_DIR/out/MultiAction.MatchOnly.Fixture.lean" \
-      ORCHARD_LEAN_SINGLE_RANDOM_PROOF_OUT="$WORK_DIR/out/SingleAction.MatchOnly.proof-bytes.hex" \
-      ORCHARD_LEAN_MULTI_RANDOM_PROOF_OUT="$WORK_DIR/out/MultiAction.MatchOnly.proof-bytes.hex" \
+      ORCHARD_LEAN_SINGLE_RANDOM_FIXTURE_OUT="$WORK_DIR/out/SingleAction.Random.Fixture.lean" \
+      ORCHARD_LEAN_MULTI_RANDOM_FIXTURE_OUT="$WORK_DIR/out/MultiAction.Random.Fixture.lean" \
+      ORCHARD_LEAN_SINGLE_RANDOM_PROOF_OUT="$WORK_DIR/out/SingleAction.Random.proof-bytes.hex" \
+      ORCHARD_LEAN_MULTI_RANDOM_PROOF_OUT="$WORK_DIR/out/MultiAction.Random.proof-bytes.hex" \
       cargo test --locked --lib --features verifier-fingerprint \
       circuit::fingerprint::fingerprint_capture -- --nocapture
 )
@@ -131,10 +131,10 @@ mkdir -p "$WORK_DIR/out"
 pairs=(
   "SingleAction.Honest.Fixture.lean:Zcash/Snark/Fixtures/SingleAction/Honest/Fixture.lean:required"
   "MultiAction.Honest.Fixture.lean:Zcash/Snark/Fixtures/MultiAction/Honest/Fixture.lean:required"
-  "SingleAction.MatchOnly.Fixture.lean:Zcash/Snark/Fixtures/SingleAction/MatchOnly/Fixture.lean:required"
-  "MultiAction.MatchOnly.Fixture.lean:Zcash/Snark/Fixtures/MultiAction/MatchOnly/Fixture.lean:required"
-  "SingleAction.MatchOnly.proof-bytes.hex:Zcash/Snark/Fixtures/SingleAction/MatchOnly/proof-bytes.hex:required"
-  "MultiAction.MatchOnly.proof-bytes.hex:Zcash/Snark/Fixtures/MultiAction/MatchOnly/proof-bytes.hex:required"
+  "SingleAction.Random.Fixture.lean:Zcash/Snark/Fixtures/SingleAction/Random/Fixture.lean:required"
+  "MultiAction.Random.Fixture.lean:Zcash/Snark/Fixtures/MultiAction/Random/Fixture.lean:required"
+  "SingleAction.Random.proof-bytes.hex:Zcash/Snark/Fixtures/SingleAction/Random/proof-bytes.hex:required"
+  "MultiAction.Random.proof-bytes.hex:Zcash/Snark/Fixtures/MultiAction/Random/proof-bytes.hex:required"
 )
 
 status=0

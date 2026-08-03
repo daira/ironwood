@@ -1,5 +1,5 @@
 import Mathlib.Tactic
-import Zcash.Snark.Fingerprint.Rational.QueryWalk
+import Zcash.Snark.Fingerprint.Rational.ConstraintWalk
 import Zcash.Snark.Soundness.Deployed.Fold
 import Zcash.Snark.Soundness.FiatShamir.Assembly
 

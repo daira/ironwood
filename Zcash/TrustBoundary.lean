@@ -59,8 +59,8 @@ import Zcash.Snark.Soundness.AGM.DirectConstraintFamily
 import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
 import Zcash.Snark.Fingerprint.Match
 import Zcash.Snark.Fingerprint.Epsilon
-import Zcash.Snark.Fingerprint.Rational.QueryWalk
-import Zcash.Snark.Fingerprint.Rational.QueryTable
+import Zcash.Snark.Fingerprint.Rational.ConstraintWalk
+import Zcash.Snark.Fingerprint.Rational.GroupingTable
 import Zcash.Snark.Fingerprint.Rational.IpaWalk
 import Zcash.Snark.Fingerprint.Rational.OpeningWalk
 import Zcash.Snark.Fingerprint.Rational.Capstone

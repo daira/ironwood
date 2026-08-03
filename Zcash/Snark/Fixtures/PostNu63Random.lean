@@ -1,18 +1,18 @@
 import Zcash.Snark.Fixtures.PostNu63
-import Zcash.Snark.Fixtures.SingleAction.MatchOnly.Fixture
-import Zcash.Snark.Fixtures.MultiAction.MatchOnly.Fixture
+import Zcash.Snark.Fixtures.SingleAction.Random.Fixture
+import Zcash.Snark.Fixtures.MultiAction.Random.Fixture
 import Mathlib.Util.AssertNoSorry
 
 /-!
 # Post-NU6.3 provenance for the random match-only captures
 
-The random captures (`Fixtures/{SingleAction,MultiAction}/MatchOnly`) run the deployed verifier on random proof strings, so no accepting
+The random captures (`Fixtures/{SingleAction,MultiAction}/Random`) run the deployed verifier on random proof strings, so no accepting
 evaluation binds their URS the way `capturedMsm_eval_eq_zero` binds the honest captures'. Their
 URS story is cross-capture identity: each random dump lists the same URS and verifying-key
 commitment points as the honest single-action capture (the equalities below), and that capture's
 URS is in turn bound by its accepting evaluation and by the Lean-derived commitments of the
 boundary statements. The random families' verifying-key certificates
-(`Fixtures/*/MatchOnly/VkCertificate.lean`) transport the single-action keygen certificate along these
+(`Fixtures/*/Random/VkCertificate.lean`) transport the single-action keygen certificate along these
 equalities, exactly as `Fixtures/MultiAction/Honest/VkCertificate.lean` does.
 
 This file is separate from `Fixtures/PostNu63.lean` so the honest multi-action certificate,
@@ -61,7 +61,7 @@ theorem randomSingle_uses_same_permutationCommonCommitments :
   native_decide
 
 /-- The random single-action capture carries the honest single-action URS record;
-`Fixtures/SingleAction/MatchOnly/VkCertificate.lean` rewrites along this equality. -/
+`Fixtures/SingleAction/Random/VkCertificate.lean` rewrites along this equality. -/
 theorem randomSingle_uses_same_urs : FixtureRandom.capturedURS = Fixture.capturedURS := by
   simp only [FixtureRandom.capturedURS, Fixture.capturedURS, randomSingle_uses_same_ursG,
     randomSingle_uses_same_wu.1, randomSingle_uses_same_wu.2]

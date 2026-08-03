@@ -1,4 +1,4 @@
-import Zcash.Snark.Fixtures.MultiAction.MatchOnly.FiatShamir
+import Zcash.Snark.Fixtures.MultiAction.Random.FiatShamir
 
 /-!
 # Aliveness guards for the random two-action capture
