@@ -18,7 +18,7 @@ operations never touch this path, so field operations and data traversal are the
 The bounds are stated at the actual per-run quantities (`deployedX4PairCount`,
 `deployedSetQueries`) and discharged shape-polynomially by `deployedX4PairCount_le_numPointSets`
 and `deployedSetQueries_length_le`.  No term depends on `|F|`, and the captured-shape corollaries
-in `Fixtures.MaxShapeBounds` evaluate the bound to a count linear in the action count.
+in `Soundness.Composition.OrchardConsensusBounds` evaluate the bound to a count linear in the action count.
 -/
 
 namespace Zcash.Snark

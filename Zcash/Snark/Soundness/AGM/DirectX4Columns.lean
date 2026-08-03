@@ -264,7 +264,7 @@ returns explicit relation coefficients.
 The explicit polynomial total-cost model for this postprocessing — field operations and data
 traversal, separate from the black-box adversary call count — is
 `Composition.DirectPathCost.deployedDirectDecodeOps` with its shape-polynomial bound
-`deployedDirectDecodeOps_le` and the captured-shape evaluations in `Fixtures.MaxShapeBounds`.
+`deployedDirectDecodeOps_le` and the captured-shape evaluations in `Soundness.Composition.OrchardConsensusBounds`.
 -/
 
 /-- The coverage certificate transported to the wrapped run. -/

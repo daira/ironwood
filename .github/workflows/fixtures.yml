@@ -1,8 +1,8 @@
 name: Fixtures
 
 # Enforces that every checked-in verifier-fingerprint fixture family -- the honest
-# `Zcash/Snark/Fixtures/{SingleAction,MultiAction}/Fixture.lean` captures and the random
-# match-only `{SingleActionRandom,MultiActionRandom,TripleActionRandom}` families with
+# `Zcash/Snark/Fixtures/{SingleAction,MultiAction}/Honest/Fixture.lean` captures and the
+# random match-only `{SingleAction,MultiAction,TripleAction}/MatchOnly/` families with
 # their `proof-bytes.hex` siblings -- is byte-for-byte what the pinned public sources
 # regenerate, by running `scripts/regenerate-fingerprint-fixtures.sh`. The fixtures stay
 # checked in -- they are the formal artifact the Lean development proves about, imported
@@ -60,14 +60,14 @@ jobs:
         with:
           filters: |
             fixtures:
-              - 'Zcash/Snark/Fixtures/SingleAction/Fixture.lean'
-              - 'Zcash/Snark/Fixtures/MultiAction/Fixture.lean'
-              - 'Zcash/Snark/Fixtures/SingleActionRandom/Fixture.lean'
-              - 'Zcash/Snark/Fixtures/SingleActionRandom/proof-bytes.hex'
-              - 'Zcash/Snark/Fixtures/MultiActionRandom/Fixture.lean'
-              - 'Zcash/Snark/Fixtures/MultiActionRandom/proof-bytes.hex'
-              - 'Zcash/Snark/Fixtures/TripleActionRandom/Fixture.lean'
-              - 'Zcash/Snark/Fixtures/TripleActionRandom/proof-bytes.hex'
+              - 'Zcash/Snark/Fixtures/SingleAction/Honest/Fixture.lean'
+              - 'Zcash/Snark/Fixtures/MultiAction/Honest/Fixture.lean'
+              - 'Zcash/Snark/Fixtures/SingleAction/MatchOnly/Fixture.lean'
+              - 'Zcash/Snark/Fixtures/SingleAction/MatchOnly/proof-bytes.hex'
+              - 'Zcash/Snark/Fixtures/MultiAction/MatchOnly/Fixture.lean'
+              - 'Zcash/Snark/Fixtures/MultiAction/MatchOnly/proof-bytes.hex'
+              - 'Zcash/Snark/Fixtures/TripleAction/MatchOnly/Fixture.lean'
+              - 'Zcash/Snark/Fixtures/TripleAction/MatchOnly/proof-bytes.hex'
               - 'scripts/regenerate-fingerprint-fixtures.sh'
               - '.github/workflows/fixtures.yml'
 

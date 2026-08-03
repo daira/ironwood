@@ -108,15 +108,15 @@ derived-form statements close on the key side and enumerate on the Fiat–Shamir
 
 The statement of record is per-family and per-proof: the
 `nonInteractiveFingerprint_matches_derived` theorems, one in each family's
-`Zcash/Snark/Fixtures/*/Boundary.lean`.
+`Zcash/Snark/Fixtures/*/*/Boundary.lean`.
 
 | Family | Actions | Seed | Accepting run? | Statement of record (namespace) |
 |---|---|---|---|---|
-| `SingleAction` | 1 | `0x53` (`S`) | yes | `Fixture` (plus the `…_derived_inputs` form) |
-| `MultiAction` | 2 | `0x4d` (`M`) | yes | `Fixture2` |
-| `SingleActionRandom` | 1 | `0x52` (`R`) | no — match-only | `FixtureRandom` |
-| `MultiActionRandom` | 2 | `0x72` (`r`) | no — match-only | `FixtureRandom2` |
-| `TripleActionRandom` | 3 | `0x33` (`3`) | no — match-only | `FixtureRandom3` |
+| `SingleAction/Honest` | 1 | `0x53` (`S`) | yes | `Fixture` (plus the `…_derived_inputs` form) |
+| `MultiAction/Honest` | 2 | `0x4d` (`M`) | yes | `Fixture2` |
+| `SingleAction/MatchOnly` | 1 | `0x52` (`R`) | no — match-only | `FixtureRandom` |
+| `MultiAction/MatchOnly` | 2 | `0x72` (`r`) | no — match-only | `FixtureRandom2` |
+| `TripleAction/MatchOnly` | 3 | `0x33` (`3`) | no — match-only | `FixtureRandom3` |
 
 Each theorem states: Lean's `assemble`, run at challenges derived by Lean's own Fiat–Shamir
 schedule model (`deriveChallenges`) and at the verifying key spelled as its end-to-end
@@ -156,7 +156,7 @@ flowchart TD
     PINS["pinned public release<br/>orchard 0.15.5 tag"]
     CRATE["resolved by its lockfile<br/>halo2_proofs 0.3.5 (crates.io)"]
     DRIVERS["capture drivers<br/>2 honest + 3 random"]
-    FIX["committed captures<br/>Zcash/Snark/Fixtures/*/Fixture.lean<br/>+ proof-bytes.hex"]
+    FIX["committed captures<br/>Zcash/Snark/Fixtures/*/*/Fixture.lean<br/>+ proof-bytes.hex"]
     THM["boundary theorems<br/>nonInteractiveFingerprint_matches_derived"]
     CENSUS["TrustBoundary censuses<br/>pinned axiom sets"]
     PINS --> CRATE --> DRIVERS
@@ -205,13 +205,13 @@ companion) admit a competing family bringing its *own* denominators from the enu
 factor closure, cross-multiplied to the summed budget `(D + Dden + B) / p`, `Dden = 2077`
 pinned per capture — ε′ = `20600 / 20604 / 20608`. The per-capture headliners with
 literal numerals — ε = `18523 / 18527 / 18531` over `p`, about `2⁻²⁴⁰` — live beside the random
-fixtures (`Fixtures/*Random/Epsilon.lean`), censused with exact `native_decide` owner lists, and
+fixtures (`Fixtures/*/MatchOnly/Epsilon.lean`), censused with exact `native_decide` owner lists, and
 the good event provably contains each captured point (`capturedPoint_goodEvent`).
 
 The step connecting the observed matches to that positional event is a theorem, not prose:
 the per-family headliners bound a *positional* agreement event over `MsmCoord`, the boundary
 theorems state `MsmMatch`, whose commitment-term lists are compared up to `List.Perm`, and
-`fingerprint_matches_positional` (`Fixtures/*Random/Epsilon.lean`) bridges the two. The
+`fingerprint_matches_positional` (`Fixtures/*/MatchOnly/Epsilon.lean`) bridges the two. The
 captured `other` bases are pairwise distinct — 100/123/146 distinct bases at the three random
 captures, the per-family facts `capturedMsm_other_bases_nodup` — so a `Perm` match is forced to
 the unique base-matching re-indexing, computed from the two base lists alone
@@ -267,7 +267,7 @@ randomness it agrees with probability one. This challenge-restricted reading is 
 assignment and prices the same `(D + B) / p` bound over the challenge coordinates alone, its
 hypothesis exactly the coverage condition above — the *restricted* discrepancy nonzero — and
 the per-family headliners (`competing_family_agreement_le_challengesOnly`,
-`Fixtures/*Random/Epsilon.lean`) instantiate it at the captured scalars
+`Fixtures/*/MatchOnly/Epsilon.lean`) instantiate it at the captured scalars
 (`capturedSlotVals`) with the same literal ε; their cross-denominator companions carry the
 same layer at the summed budget.
 
@@ -313,10 +313,10 @@ under the modality section's premises, including the sampled-point premise recor
 
 | Transcribed artifact | Enters the fingerprint via | A soundness-relevant error causes | Checked by |
 |---|---|---|---|
-| Gate expressions (`configure` port) | coefficients at a random point | coefficient mismatch, prob. ≥ 1 − ε | the three random `Boundary.lean` theorems, priced by `Fixtures/*Random/Epsilon.lean`; `Keygen/Certificate.lean`; `SingleAction/VkMatch.lean` |
+| Gate expressions (`configure` port) | coefficients at a random point | coefficient mismatch, prob. ≥ 1 − ε | the three random `Boundary.lean` theorems, priced by `Fixtures/*/MatchOnly/Epsilon.lean`; `Keygen/Certificate.lean`; `SingleAction/Honest/VkMatch.lean` |
 | σ / fixed-column content (keygen port) | Lean-derived commitments as MSM bases | base-point mismatch (a deliberate collision must solve discrete log) | `vk_eq_derived` + each family's `VkCertificate.lean` |
 | Query layouts, permutation chunks, lookup expressions | term structure and coefficients | term-list / coefficient mismatch | random `fingerprint_matches`; per-slot naming by the honest `Negative/Sweep.lean` |
-| Proof-slot sourcing (`fixedEvals`, `permutationCommonEvals`, `instanceEvals`) | random slot values in coefficients | coefficient mismatch, prob. ≥ 1 − ε | the random families (their reason to exist), priced by `Fixtures/*Random/Epsilon.lean`; blind-slot tampers in both sweeps |
+| Proof-slot sourcing (`fixedEvals`, `permutationCommonEvals`, `instanceEvals`) | random slot values in coefficients | coefficient mismatch, prob. ≥ 1 − ε | the random families (their reason to exist), priced by `Fixtures/*/MatchOnly/Epsilon.lean`; blind-slot tampers in both sweeps |
 | Witness-dependent slots (advice/lookup evals, commitments, `ipaC`/`ipaF`, …) | pinned by every capture | mismatch; the sweeps name the broken slot | all five `fingerprint_matches`; the per-slot sweeps |
 | Fiat–Shamir schedule model (`deriveChallenges`) | folded into the composed statement | oracle miss (`missingChallenge_not_captured`) or wrong distinct challenge (`capturedChallengeValues_nodup`) → mismatch | the five `nonInteractiveFingerprint_matches_derived` |
 | Captured challenge values | the real verifier computed the captured MSM from its real challenges | recorder drift mismatches the MSM | cross-tied by every match (this row's documentation is this table) |
@@ -336,7 +336,7 @@ three things a match-only capture cannot provide:
    families witness the complement: `capturedMsm_evalNat_ne_zero` proves each match-only
    capture is genuinely non-accepting, so a mislabeled honest capture or dead plumbing cannot
    pass silently.)
-2. **The deployed capstone lane.** `Fixtures/MultiAction/ActionCapstone.lean` and the
+2. **The deployed capstone lane.** `Fixtures/MultiAction/Honest/ActionCapstone.lean` and the
    multi-action endpoints (`CapturedZeroFamily.lean`, `StraightLineKnowledgeError.lean`) consume
    the honest capture's `vk`/`shape`/`capturedURS` together with the keygen certificate;
    `DeployedAccepts` enters as a hypothesis. No soundness module consumes the zero-evaluation
@@ -430,7 +430,7 @@ A reviewer can verify the Rust↔Lean seam of the soundness stack by reading:
    challenge-restricted variant `competing_coefficient_family_agreement_le_challengesOnly`,
    the cross-denominator pair `competing_coefficient_family_agreement_le_denClosure` /
    `competing_coefficient_family_agreement_le_challengesOnly_denClosure`, and the three
-   `Fixtures/*Random/Epsilon.lean` headliner quadruples with their literal ε —
+   `Fixtures/*/MatchOnly/Epsilon.lean` headliner quadruples with their literal ε —
    together with the uniformity premise above;
 3. the audit table above, row by row, checking each falsification mechanism exists in the
    tree;

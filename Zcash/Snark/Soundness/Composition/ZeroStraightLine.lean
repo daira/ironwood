@@ -20,7 +20,7 @@ The instance-free hypothesis is a simplification, not a boundary.  With issue #1
 constraint-`x` event, `zeroConstStraightLineDeployedFamily` below discharges every obligation at
 any shape: the constant-walk IPA trace leaves the multiopen value free, and the constraint-`x`
 stage prices the explicit zero-data difference from the four folding squeezes alone.
-`Fixtures.MultiAction.CapturedZeroFamily` instantiates it with both sub-proofs live.
+`Fixtures.MultiAction.Honest.CapturedZeroFamily` instantiates it with both sub-proofs live.
 -/
 
 namespace Zcash.Snark

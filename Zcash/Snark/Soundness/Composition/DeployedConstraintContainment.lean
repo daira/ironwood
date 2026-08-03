@@ -247,12 +247,12 @@ Both pinning equations used by the capstone are derived projections of its two t
 /-
 Inhabited twice.  `Composition.StraightLineWitness` does it at the degenerate witness shape;
 `Composition.ZeroStraightLine` does it over the shape-generic zero prover, and
-`Fixtures.MultiAction.CapturedZeroFamily` instantiates that at the captured key's own scalar
+`Fixtures.MultiAction.Honest.CapturedZeroFamily` instantiates that at the captured key's own scalar
 metadata, layouts and domain — so the six staged root events run against captured query layouts
 and the staged IPA trace carries eleven live rounds rather than quantifying over `Fin 0`.
 
 The zero prover inhabits this interface at the full captured shape
-(`Fixtures.MultiAction.CapturedZeroFamily`): with
+(`Fixtures.MultiAction.Honest.CapturedZeroFamily`): with
 sub-proofs the pre-`x` difference is a nonzero polynomial, and the stage prices its root set
 from the four folding squeezes alone.
 -/

@@ -52,11 +52,11 @@ def ColumnRef.resolve {F : Type*} (cr : ColumnRef) (instanceEvals adviceEvals fi
 
 -- VK provenance: this circuit-independent assembler deliberately receives a `VerifyingKey` as
 -- input, populated from the halo2 `dump_vesta_lean_fixture` capture
--- (`Fixtures/SingleAction/Fixture.lean`) — but it is not trusted verbatim:
+-- (`Fixtures/SingleAction/Honest/Fixture.lean`) — but it is not trusted verbatim:
 -- `Keygen/Certificate.lean` proves the dumped key equals the one derived end-to-end from the
 -- ported `configure`/keygen (`vk_eq_toVerifierKey`, transported to the multi-action key in
--- `Fixtures/MultiAction/VkCertificate.lean`), and the boundary statements consume the derived
--- key (`Fixtures/*/Boundary.lean`). The URS dump is checked in turn by the derived commitments
+-- `Fixtures/MultiAction/Honest/VkCertificate.lean`), and the boundary statements consume the derived
+-- key (`Fixtures/*/*/Boundary.lean`). The URS dump is checked in turn by the derived commitments
 -- and the captured bases (see `Fingerprint/Match.lean`). Distinct from the output-side
 -- semantic-adequacy gap (see `Soundness/Main.lean`).
 /-- The verifying-key–level circuit structure the assembly needs, mirroring halo2's `VerifyingKey`

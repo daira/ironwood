@@ -82,7 +82,7 @@ boundary mentions `RichExpression` at all.
 2. `Zcash/Snark/VkCommit/` → rename `Snark/Keygen/` (mirroring Clean's `Halo2/Keygen`,
    same concept on the group side); this is a designated boundary module family.
    `Fast/ParMap` (fully generic) → `Common/`. `Common/ExprRich` → into the boundary.
-3. `Snark/Fixtures/SingleAction/{PinnedCsMatch,VkMatch}` — restate over the interface
+3. `Snark/Fixtures/SingleAction/Honest/{PinnedCsMatch,VkMatch}` — restate over the interface
    (`Certificate.lean` already demonstrates the style: it speaks only `vk`,
    `derivedVk`, and `TopLevelCircuit` methods).
 4. The cross-language satisfaction seam (`Operation*`, `TopLevel*`, `Resolver*`,

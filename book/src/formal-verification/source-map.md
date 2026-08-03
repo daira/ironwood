@@ -171,7 +171,7 @@ schedule and static-check modules, the two knowledge-error endpoints (compressed
 straight-line), and `CapturedZeroFamily` — the shape-generic zero prover instantiated at the
 captured key's own scalar data, so the staged IPA trace carries eleven live rounds.
 
-`SingleActionRandom/`, `MultiActionRandom/`, and `TripleActionRandom/` hold the random match-only
+Each family's `Random/` subfolder holds the random match-only
 captures — the deployed verifier run on random proof strings, deliberately non-accepting. Each has
 the same schedule checks and `Faithfulness`, a `VkCertificate` transporting the single-action
 keygen certificate along `PostNu63Random`'s point equalities, its `Boundary` statement of record,

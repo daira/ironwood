@@ -1,5 +1,5 @@
-import Zcash.Snark.Fixtures.SingleAction.Fixture
-import Zcash.Snark.Fixtures.MultiAction.Fixture
+import Zcash.Snark.Fixtures.SingleAction.Honest.Fixture
+import Zcash.Snark.Fixtures.MultiAction.Honest.Fixture
 import Mathlib.Util.AssertNoSorry
 
 /-!
@@ -15,7 +15,7 @@ here makes fixture drift visible in this repository, while the Rust regeneration
 to the full canonical pinned key.
 
 The point-level equalities below identify the two captures' URS and verifying-key commitment
-points; the multi-action verifying-key certificate (`Fixtures/MultiAction/VkCertificate.lean`)
+points; the multi-action verifying-key certificate (`Fixtures/MultiAction/Honest/VkCertificate.lean`)
 is transported from the single-action one along them.
 -/
 
@@ -108,7 +108,7 @@ theorem captures_use_same_permutationCommonCommitments :
   native_decide
 
 /-- The two captures carry one and the same URS record; the multi-action verifying-key
-certificate (`Fixtures/MultiAction/VkCertificate.lean`) rewrites along this equality. -/
+certificate (`Fixtures/MultiAction/Honest/VkCertificate.lean`) rewrites along this equality. -/
 theorem captures_use_same_urs : Fixture2.capturedURS = Fixture.capturedURS := by
   simp only [Fixture2.capturedURS, Fixture.capturedURS, captures_use_same_ursG,
     captures_use_same_wu.1, captures_use_same_wu.2]
