@@ -20,6 +20,7 @@ import Zcash.Security.Ledger.Nullifier
 import Zcash.Security.Ledger.Value
 import Zcash.Security.Ledger.KeyBindingArm
 import Zcash.Security.Ledger.ExtractionArm
+import Zcash.Security.Ledger.ExtractionKappaArm
 import Zcash.Security.Ledger.KeyBindingDLR
 import Zcash.Security.Ledger.NoteCommitDLR
 import Zcash.Security.Ledger.MerkleDLR

@@ -13,6 +13,7 @@ import Zcash.Security.Ledger.Nullifier
 import Zcash.Security.Ledger.Value
 import Zcash.Security.Ledger.KeyBindingArm
 import Zcash.Security.Ledger.ExtractionArm
+import Zcash.Security.Ledger.ExtractionKappaArm
 import Zcash.Security.RedDSA.Basic
 import Zcash.Security.RedDSA.Extraction
 import Zcash.Security.RedDSA.KnowledgeError
@@ -546,6 +547,34 @@ assert_computable Zcash.Security.Ledger.Model.kwAt
 assert_axioms Zcash.Security.Ledger.Model.spendAuthorityOrBreak_pair
 assert_axioms Zcash.Security.Ledger.Model.balanceSubset_keyBindingArm_measure_le
 assert_axioms Zcash.Security.Ledger.Model.spendAuthority_keyBindingArm_measure_le
+
+/-! ## The extraction-failure arm's κ, discharged in the oracle model
+
+The conservation reduction's extraction-failure arm, bounded in the challenge-oracle
+model: `(qH + 2)/|F| + ε_DL` for any `qH`-query-bounded labeled algebraic ledger
+adversary, from the knowledge-error bound at an unchanged query count. The extractor
+(`kappaExtractor`) reads the `key` coefficient at the ℛ slot off the representation in
+effect at the signature's query point. The composite machine recovers the failing
+transaction and its announced representation oracle-free (`failTxOfAnn`, identified with
+the reduction's own selection by the localization theorems) and returns its signature
+data; the all-prefixes form costs no factor of `k`, because every prefix's failure arm
+breaks at the ledger's first imbalanced transaction. -/
+
+assert_computable Zcash.Security.Ledger.Model.kappaPrimitivesAt +choice
+assert_computable Zcash.Security.Ledger.Model.kappaShapeAt +choice
+assert_computable Zcash.Security.Ledger.Model.kappaBindingAt +choice
+assert_computable Zcash.Security.Ledger.Model.kappaExtractor +choice
+assert_computable Zcash.Security.Ledger.Model.bvkAt +choice
+assert_computable Zcash.Security.Ledger.Model.failTxOfAnn
+assert_computable Zcash.Security.Ledger.Model.kappaOut +choice
+assert_computable Zcash.Security.Ledger.Model.kappaComposite +choice
+assert_axioms Zcash.Security.Ledger.Model.bvkAt_eq
+assert_axioms Zcash.Security.Ledger.Model.kappaComposite_queryBound
+assert_computable Zcash.Security.Ledger.Model.allConservedOrBreak_extractFail +choice
+assert_computable Zcash.Security.Ledger.Model.balanceConservationOrBreak_extractFail +choice
+assert_axioms Zcash.Security.Ledger.Model.extractFail_mem_kappaEvent
+assert_axioms Zcash.Security.Ledger.Model.balanceConservation_extractFailArm_measure_le
+assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_extractFailArm_measure_le
 
 /-! ## Binding-signature relation reductions
 
