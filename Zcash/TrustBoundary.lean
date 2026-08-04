@@ -96,8 +96,8 @@ top-level leaves, so they must be pinned *directly* — never left to inherit co
 dependent, which would vanish the moment that dependent is refactored.
 `scripts/check_endpoint_census.sh` enforces this in CI for the capstone naming families. A new
 public endpoint must either belong to one of the listed protocol families or end in the semantic
-suffix `_error_bound`, `_finite_security`, or `_capstone`; the latter keeps new protocol families
-covered without another prefix-specific regex edit.
+suffix `_error_bound`, `_finite_security`, `_measure_le`, or `_capstone`; the last keeps new
+protocol families covered without another prefix-specific regex edit.
 -/
 
 /-! ## Key binding — computed break reductions -/
@@ -2265,3 +2265,72 @@ assert_axioms Zcash.Snark.instanceCommitment_mem_preThetaTranscriptForStatement
 assert_axioms Zcash.Snark.adviceCommitment_mem_preThetaTranscriptForStatement
 assert_axioms Zcash.Snark.assembleNonInteractiveInstances?_eq_none_of_wrong_column_count
 assert_axioms Zcash.Snark.assembleNonInteractiveInstances?_eq_none_of_oversized_column
+
+-- Probability-bound leaves matched by the `_measure_le` suffix. These are surface and
+-- root-set measures inside the AGM and pricing layers rather than protocol capstones, and
+-- their trusted base is already bounded through the endpoints that consume them; the pins
+-- are what the suffix rule demands, not an independent claim.
+
+-- AGM/AdaptiveIpaSurfaces.lean
+assert_axioms Zcash.Snark.adaptiveFallbackIpaSurfaceCore_measure_le
+assert_axioms Zcash.Snark.adaptiveFallbackIpaSurface_measure_le
+assert_axioms Zcash.Snark.adaptiveIpaFallbackBad_measure_le
+assert_axioms Zcash.Snark.adaptiveIpaQueriedBad_measure_le
+assert_axioms Zcash.Snark.adaptiveIpaRootPolynomial_measure_le
+assert_axioms Zcash.Snark.adaptiveQueriedIpaSurfaceCore_measure_le
+assert_axioms Zcash.Snark.adaptiveQueriedIpaSurface_measure_le
+
+-- AGM/AdaptiveOnline.lean
+assert_axioms Zcash.Snark.LabeledOracleComp.finalBadWithoutRelation_measure_le
+assert_axioms Zcash.Snark.LabeledOracleComp.firstLabelOrFallbackBad_measure_le
+
+-- AGM/AdaptiveRootComposition.lean
+assert_axioms Zcash.Snark.adaptiveFallbackRootSurface_measure_le
+assert_axioms Zcash.Snark.adaptiveQueriedRootSurface_measure_le
+assert_axioms Zcash.Snark.adaptiveRootSurfaceAt_measure_le
+
+-- AGM/AdaptiveRootSurfaces.lean
+assert_axioms Zcash.Snark.adaptiveX1AllRootSet_measure_le
+assert_axioms Zcash.Snark.adaptiveX2RootSet_measure_le
+assert_axioms Zcash.Snark.adaptiveX3RootSet_measure_le
+assert_axioms Zcash.Snark.adaptiveX4RootSet_measure_le
+assert_axioms Zcash.Snark.adaptiveXiRootSet_measure_le
+assert_axioms Zcash.Snark.adaptiveZRootSet_measure_le
+
+-- AGM/AdaptiveSurfaces.lean
+assert_axioms Zcash.Snark.adaptiveLabeledPrefixBad_measure_le
+assert_axioms Zcash.Snark.adaptivePrefixBad_measure_le
+
+-- AGM/DeployedRootSets.lean
+assert_axioms Zcash.Snark.deployedX1AllRootSet_measure_le
+assert_axioms Zcash.Snark.deployedX1RootSet_measure_le
+assert_axioms Zcash.Snark.deployedX2RootSet_measure_le
+assert_axioms Zcash.Snark.deployedX3RootSet_measure_le
+assert_axioms Zcash.Snark.deployedX4RootSet_measure_le
+
+-- AGM/ShiftRecovery.lean
+assert_axioms Zcash.Snark.ipaShiftXi_badSet_measure_le
+assert_axioms Zcash.Snark.ipaShiftZ_badSet_measure_le
+
+-- AGM/StraightLineIpa.lean
+assert_axioms Zcash.Snark.ipaDiscrepancyBadSet_measure_le
+
+-- AGM/StraightLinePinnedRoots.lean
+assert_axioms Zcash.Snark.ComputedStraightLineIpaFSFamily.pinnedIpaRoots_landing_measure_le
+assert_axioms Zcash.Snark.ComputedStraightLineIpaFSFamily.straightLineIpaRootBad_measure_le
+
+-- AGM/ValueUnbatch.lean
+assert_axioms Zcash.Snark.clearedQuotientErrorPolynomial_badSet_measure_le
+assert_axioms Zcash.Snark.memberBindingErrorPolynomial_badSet_measure_le
+assert_axioms Zcash.Snark.nodeBindingErrorPolynomial_badSet_measure_le
+assert_axioms Zcash.Snark.powerErrorPolynomial_badSet_measure_le
+
+-- FiatShamir/Adversary/OracleComp.lean
+assert_axioms Zcash.Snark.escapesDuringC_measure_le
+
+-- Pricing/ChallengePricing.lean
+assert_axioms Zcash.Snark.lookup_beta_failure_measure_le
+assert_axioms Zcash.Snark.lookup_gamma_failure_measure_le
+
+-- Pricing/UniformMeasure.lean
+assert_axioms Zcash.Snark.sum_point_mem_measure_le

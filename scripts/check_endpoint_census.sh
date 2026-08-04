@@ -38,8 +38,11 @@ cd "$(dirname "$0")/.."
 # (`*bundleStatement_or_relation*`), and the profiled work-factor packages (`*workFactor*`). The
 # final alternative is deliberately protocol-independent: the standardized semantic suffixes keep a
 # new capstone family inside the census without requiring another prefix to be added here.
-# `_capstone` is the explicit suffix for endpoints that are neither an error formula nor a concrete
-# finite-security statement.
+# `_measure_le` is the older spelling for a probability bound, kept matching so a capstone that
+# still carries it is demanded rather than silently unpinned; it also matches surface and root-set
+# measures inside the AGM and pricing layers, which are pinned for that reason rather than as
+# independent claims. `_capstone` is the explicit suffix for endpoints that are neither an error
+# formula nor a concrete finite-security statement.
 #
 # The Rust-to-Lean boundary contributes three more families, all leaves in the same sense: the
 # per-family statements of record (`nonInteractiveFingerprint_matches_derived*`), the quantified
@@ -52,7 +55,7 @@ cd "$(dirname "$0")/.."
 # either family is demanded rather than silently unpinned: `orchard_verifier_*`, whose rungs were
 # retired with the legacy rewind paths, and `*workFactor*`, whose consensus-maximum packages were
 # renamed onto the `orchard_deployed_*` prefix and the `_finite_security` suffix.
-ENDPOINT_RE='(^orchard_(verifier|action|deployed)_)|(^competing_)|(^nonInteractiveFingerprint_matches_derived)|(bundleStatement_or_relation)|(workFactor)|(fingerprint_matches_positional)|(_(error_bound|finite_security|capstone)$)'
+ENDPOINT_RE='(^orchard_(verifier|action|deployed)_)|(^competing_)|(^nonInteractiveFingerprint_matches_derived)|(bundleStatement_or_relation)|(workFactor)|(fingerprint_matches_positional)|(_(error_bound|finite_security|measure_le|capstone)$)'
 
 # Sources scanned for endpoint declarations. `Zcash/Meta/Tests/` is excluded: it holds forged
 # adversarial declarations that exercise the rejection paths of the census macros themselves.
