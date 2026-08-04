@@ -131,7 +131,7 @@ private theorem configured_closesEnvironment
 The deployed proof-carrying Orchard Action circuit: unit synthesis input/output,
 explicit public inputs, and no unfulfilled environment contract at its boundary.
 -/
-def actionCircuit : TopLevelCircuit Fp Config PublicInputs where
+def Internal.actionCircuitImpl : TopLevelCircuit Fp Config PublicInputs where
   formalCircuit :=
     circuit Specs.Sinsemilla.orchardGenerators orchardBases
   publicInputLayout := PublicInputs.layout
@@ -165,6 +165,72 @@ def actionCircuit : TopLevelCircuit Fp Config PublicInputs where
         (configure Specs.Sinsemilla.orchardGenerators {}).1 () 0 env)
   assumptions_eq := rfl
   closesEnvironment := configured_closesEnvironment
+
+/-- The concrete Action implementation and its opening equation, kept behind an
+opaque reduction barrier. Runtime evaluation still computes the implementation;
+proofs cross the boundary only through the API below. -/
+private opaque actionCircuitPacked :
+    { top : TopLevelCircuit Fp Config PublicInputs //
+      top = Internal.actionCircuitImpl } :=
+  ⟨Internal.actionCircuitImpl, rfl⟩
+
+/-- The deployed Orchard Action circuit, opaque to definitional equality. -/
+def actionCircuit : TopLevelCircuit Fp Config PublicInputs :=
+  actionCircuitPacked.val
+
+/-- Controlled implementation opening for the Action integration layer. This is
+deliberately not a simp lemma. -/
+theorem Internal.actionCircuit_eq_impl :
+    actionCircuit = Internal.actionCircuitImpl :=
+  actionCircuitPacked.property
+
+/-- Action public inputs are serialized according to their canonical layout. -/
+theorem actionCircuit_publicInputRows
+    (input : PublicInputs Fp) (column : Column .instance) :
+    actionCircuit.publicInputRows input column =
+      PublicInputs.layout.rows input column := by
+  rw [Internal.actionCircuit_eq_impl]
+  rfl
+
+/-- The primary Action instance column is exactly the public-input element vector. -/
+theorem actionCircuit_publicInputRows_zero (input : PublicInputs Fp) :
+    actionCircuit.publicInputRows input ⟨0⟩ = (toElements input).toList := by
+  rw [actionCircuit_publicInputRows]
+  cases input
+  rfl
+
+/-- Every undeclared Action instance column serializes as zero rows. -/
+theorem actionCircuit_publicInputRows_ne_zero
+    (input : PublicInputs Fp) {column : ℕ} (hcolumn : column ≠ 0) :
+    ∀ i, (actionCircuit.publicInputRows input ⟨column⟩).getD i 0 = 0 := by
+  have hzero : ∀ x ∈ actionCircuit.publicInputRows input ⟨column⟩, x = (0 : Fp) := by
+    intro x hx
+    rw [actionCircuit_publicInputRows, PublicInputLayout.rows] at hx
+    obtain ⟨row, -, rfl⟩ := List.mem_map.mp hx
+    rw [List.idxOf_eq_length (by
+      simp only [PublicInputs.layout, PublicInputLayout.cellList]
+      simp
+      intro _ hindex
+      exact hcolumn hindex.symm)]
+    have hlen : (toElements input).toList.length ≤ PublicInputs.layout.cellList.length := by
+      simp only [PublicInputLayout.cellList_length, Vector.length_toList]
+      exact le_refl _
+    exact List.getD_eq_default _ _ hlen
+  intro i
+  rcases lt_or_ge i (actionCircuit.publicInputRows input ⟨column⟩).length with h | h
+  · rw [List.getD_eq_getElem _ _ h]
+    exact hzero _ (List.getElem_mem h)
+  · exact List.getD_eq_default _ _ h
+
+/-- The opaque Action circuit's external statement is the Orchard Action spec
+for some private witness. -/
+theorem actionCircuit_statement_iff (input : PublicInputs Fp) :
+    actionCircuit.Statement input ↔
+      ∃ privateWitness : PrivateWitness,
+        SpecPost Specs.Sinsemilla.orchardGenerators orchardBases
+          () () (combine input privateWitness) := by
+  rw [Internal.actionCircuit_eq_impl]
+  rfl
 
 /-- The semantic conclusion for every Action proved in one Halo 2 bundle. -/
 def BundleStatement {numProofs : ℕ}
