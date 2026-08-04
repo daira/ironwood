@@ -121,9 +121,10 @@ scripts/regenerate-fingerprint-fixtures.sh
 
 clones `zcash/orchard` at the pinned release commit (set `ORCHARD_SRC` to a local checkout
 path for a fully offline run), asserts that the commit is the `0.15.5` tag and that the
-committed `Cargo.lock` resolves `halo2_proofs` 0.3.5 from crates.io by checksum, runs all four
-capture drivers in one pass, and diffs every generated artifact against the committed one. All
-five fixture families are committed under `Zcash/Snark/Fixtures/`, so
+committed `Cargo.lock` resolves `halo2_proofs` 0.3.5 from crates.io by checksum, runs the upstream
+capture drivers in one pass (five tests — the released orchard also ships a three-action
+driver, whose output is not ingested), and diffs every generated artifact against the
+committed one. All four fixture families are committed under `Zcash/Snark/Fixtures/`, so
 every diff pair is enforced byte-for-byte; a generated artifact with no committed
 counterpart yet (a future not-yet-ingested shape) would be stashed in `scripts/generated/`
 (gitignored; override with `REGEN_OUT_DIR`). Set `REGEN_WORK_DIR` to reuse the build tree

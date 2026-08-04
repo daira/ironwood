@@ -1,7 +1,7 @@
 import Zcash.Snark
 
 /-!
-# Verifier-shape fixture: the captured Orchard shape at any action count
+# The captured Orchard verifier shape at any action count
 
 This specializes `Verifier.Parametric` to the captured Orchard column and query dimensions while
 leaving the action count `n` free. The verifying key, proof, and challenges remain arbitrary.

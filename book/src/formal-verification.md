@@ -97,7 +97,7 @@ research document linked above records the observed Lake behaviour behind this r
 **Concrete, closed facts with no free variables** may additionally use `native_decide`
 (which discharges a goal by running compiled native code, adding a compiler-trust axiom) and
 the kernel's GMP-backed bignum arithmetic. The principal such facts in this repository are the
-five derived-form fingerprint boundary theorems `nonInteractiveFingerprint_matches_derived`
+four derived-form fingerprint boundary theorems `nonInteractiveFingerprint_matches_derived`
 (the generated per-capture `fingerprint_matches` are their raw forms): numeric checks that the
 Lean verifier's assembled multi-scalar multiplication equals the Rust verifier's on each
 captured proof — two honest, two at random inputs. The CompElliptic dependency applies the same discipline to its concrete
@@ -130,9 +130,9 @@ modules and are enforced by `FixtureCheck`. The obligations use two commands fro
   direct terms of the inputs, so the break data cannot have been conjured from mere propositional
   existence. `+native` covers the Vesta producers.
 
-The boundaries kept as literal pins are the five fixture censuses —
-`Zcash.Snark.Fixtures.SingleAction.Honest.TrustBoundary`, `…MultiAction.TrustBoundary`, and the
-`…/Random` siblings — which belong to
+The boundaries kept as literal pins are the four fixture censuses —
+`Zcash.Snark.Fixtures.SingleAction.Honest.TrustBoundary`, `…MultiAction.Honest.TrustBoundary`,
+and their two `…Random.TrustBoundary` siblings — which belong to
 the `FixtureCheck` target (kept out of `lake build Zcash` because the captures are large and slow).
 Each states its tier with `assert_axioms` like the rest of the development, and *additionally*
 retains `#guard_msgs`-pinned `#print axioms` checks on `fingerprint_matches` and the derived

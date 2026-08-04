@@ -18,7 +18,7 @@ open Zcash.Arithmetic (card_Fp scalarFieldOrder)
 open Zcash.Snark
 open scoped ENNReal
 
-local instance vestaInhabitedMaxShapeBounds : Inhabited VestaG := ⟨0⟩
+local instance vestaInhabitedOrchardConsensusBounds : Inhabited VestaG := ⟨0⟩
 
 /-- Cross-multiplication for finite positive natural denominators, packaged for the concrete
 arithmetic below. -/

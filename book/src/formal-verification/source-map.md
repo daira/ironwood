@@ -96,6 +96,12 @@ The pure function that assembles the fingerprint MSM in the exact order of halo2
 - `Expressions` recomputes the vanishing argument's `expected_h_eval`.
 - `Ipa` is the inner-product-argument opening (`compute_s` / `compute_b`).
 - `FiatShamir` models halo2's Blake2b challenge schedule as an abstract `squeeze`.
+- `AssembleSpec` says what the rejecting `assemble?` returns when it does not reject — exactly
+  the total assembly's value — the operational interface both the fingerprint walk and the
+  deployed soundness layer consume.
+- `OrchardShape` specializes the verifier shape to the captured Orchard column and query
+  dimensions while leaving the action count free; every consensus-valid action count
+  instantiates it.
 - `Parametric` proves the assembly and schedule traverse every sub-proof for an arbitrary proof
   count; every consensus-valid Orchard action count is one such count. At zero, this describes the
   transaction-level absence of an Orchard bundle, not a verifier call with an empty bundle. Actual
@@ -131,13 +137,15 @@ random-evaluation bound: a fingerprint agrees with a random evaluation only with
 probability. Outer batching of separate proof blobs by Halo2's optional `BatchVerifier` is
 outside this formalization's scope.
 
+`SampleSpace` encodes the proof-string scalars and challenges as one product sample space
+(`ScalarSlot`, with the deployed read schedule's `lastEval` shape baked into the type).
 `Rational/` instantiates the Schwartz–Zippel bound at `assemble`'s own coefficients — the
-quantified random match. `Vars` encodes the proof-string scalars and challenges as one product
-sample space (`ScalarSlot`, with the deployed read schedule's `lastEval` shape baked into the
-type); `Event` enumerates the challenge-only denominator factors whose joint nonvanishing is
-the good event; `Rep` is the representation toolkit (cleared `num/den` identities on the
-event, with challenge folds costing one degree unit per element); `QueryWalk`, `QueryTable`
-(with `Verifier/GroupingRef`), `OpeningWalk`, `IpaWalk`, and `Capstone` walk the whole
+quantified random match. `GoodEvent` enumerates the challenge-only denominator factors whose
+joint nonvanishing is the good event; `Representation` is the representation toolkit (cleared
+`num/den` identities on the event, with challenge folds costing one degree unit per element);
+`Family` holds `RationalCoeffFamily`, the object the walk constructs and the ε theorem
+consumes. `ConstraintWalk`, `GroupingTable` (with `Verifier/GroupingRef`), `OpeningWalk`,
+`IpaWalk`, `OtherCoefficients`, and `Capstone` walk the whole
 assembly — grouping stability through a fixed reference table, the opening value, the IPA
 scalars, and the positional `other` coefficient stream — into `assembleCoeffFamily`: every
 MSM coefficient as a polynomial numerator over enumerated denominators with one degree budget.
@@ -149,22 +157,20 @@ with per-capture literals in the random families' `Epsilon` modules.
 
 Concrete Orchard captures that exercise the assembly end-to-end and make the Rust/Lean boundary
 less silent. This subtree is the `FixtureCheck` lake target, kept out of `lake build Zcash` (the
-captures are large, generated, and slow) but built by CI. `MaxShape` specializes the verifier shape
-to the captured column and query dimensions while leaving the action count free, and
-`MaxShapeBounds` and
-`StraightLineMaxShapeBounds` evaluate the composite bounds at that shape and at the consensus
-maximum; `ScheduleMarker` re-encodes captured Fiat–Shamir schedules into the model's marker form;
-`TamperSweep` is the shared mutation vocabulary of the per-slot negative sweeps; `PostNu63` pins
+captures are large, generated, and slow) but built by CI.
+`Shared/ScheduleMarker` re-encodes captured Fiat–Shamir schedules into the model's marker form;
+`Shared/TamperSweep` is the shared mutation vocabulary of the per-slot negative sweeps; `PostNu63` pins
 the canonical post-NU 6.3 verifying key and URS so fixture drift is visible here, and
 `PostNu63Random` extends the same point equalities to the random captures — kept separate so the
 honest lane does not depend on compiling the random data modules. (The join between the captured
 instance commitments and the circuit-derived family lives in `Keygen/InstanceCapture`.)
 
-`SingleAction/` and `MultiAction/` hold the captured honest single- and multi-action proofs, each
+`SingleAction/Honest/` and `MultiAction/Honest/` hold the captured honest single- and
+multi-action proofs, each
 with its **Fiat–Shamir** schedule check, its `Boundary` statement of record at the Lean-derived
 key and schedule, its per-slot tamper sweep (`Negative/Sweep`), and its checked `TrustBoundary`
 turning the fingerprint match into
-build-time obligations; `SingleAction/VkMatch` computes the capture's constraint-system fields equal
+build-time obligations; `SingleAction/Honest/VkMatch` computes the capture's constraint-system fields equal
 to the ones derived end to end from the ported `configure`. The multi-action capture additionally
 carries the shape/VK **faithfulness** checks, the adversarial **negative** fixtures, the degree,
 schedule and static-check modules, the two knowledge-error endpoints (compressed-identity and
@@ -250,7 +256,9 @@ Six subtrees carry the heavier machinery:
   has no fourth root. `Quotient` reconstructs a genuinely pre-`x` quotient, `PrefixedSqueeze` and
   `ScheduleBudget` bound the probability loss at the `x` squeeze, and `ActionBudget` and
   `AlgebraicRootBudget` cap the
-  action-dependent counts at the consensus maximum. The straight-line route is
+  action-dependent counts at the consensus maximum, with `OrchardConsensusBounds` (and its
+  straight-line sibling under `AGM/`) evaluating the composite bounds at the captured Orchard
+  shape up to that maximum. The straight-line route is
   `StraightLineDeployed` (the primary deployed path), `StraightLineConstraint`,
   `StraightLineDecodeSupply`, and the two inhabitants of its interface — `StraightLineWitness` at
   the degenerate shape and `ZeroStraightLine` with eleven live IPA rounds.

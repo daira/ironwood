@@ -922,8 +922,9 @@ assert_axioms Zcash.Snark.preX4SqueezePoint_inj
 -- explicit cap — gates by `Expr.degreeBound`, permutation chunks by width, lookups by their
 -- compressed expressions — the combined bound the `x`-squeeze schedule's `epsilonX` prices.
 assert_axioms Zcash.Snark.natDegree_combineConstraints_le
--- The quantified random match, generic half (`Fingerprint/Rational/{Vars,Event,Rep}`,
--- `Fingerprint/{Match,Epsilon}`): the structured sample space rebuilds a well-formed proof
+-- The quantified random match, generic half (`Fingerprint/SampleSpace`,
+-- `Fingerprint/Rational/{GoodEvent,Representation,Family}`, `Fingerprint/{Match,Epsilon}`): the
+-- structured sample space rebuilds a well-formed proof
 -- string at every point; the good event's enumerated denominator factors are individually
 -- nonzero, jointly priced by per-factor Schwartz–Zippel, and nonvanishing under products; the ε
 -- theorem bounds a competing coefficient family's agreement with `assemble?` at a uniform
@@ -958,14 +959,14 @@ assert_axioms Zcash.Snark.competing_coefficient_family_agreement_le_denClosure
 assert_axioms Zcash.Snark.competing_coefficient_family_agreement_le_challengesOnly_denClosure
 assert_axioms Zcash.Snark.perm_reindex_of_nodup_snd
 assert_axioms Zcash.Snark.msmMatch_other_reindex_of_nodup
--- The query-side representation walk (`Fingerprint/Rational/QueryWalk`): the constraint list
+-- The query-side representation walk (`Fingerprint/Rational/ConstraintWalk`): the constraint list
 -- factors through fixed represented functions over the Lagrange denominator, its length is the
 -- shape-polynomial `constraintBudget`, and `expected_h_eval` is represented over the vanishing
 -- denominator at the `hEvalBudget` degree cap.
 assert_axioms Zcash.Snark.allExpressions_listRep
 assert_axioms Zcash.Snark.allExpressions_length
 assert_axioms Zcash.Snark.expectedHEval_rep
--- Grouping stability (`Verifier/GroupingRef`, `Fingerprint/Rational/QueryTable`): the multiopen
+-- Grouping stability (`Verifier/GroupingRef`, `Fingerprint/Rational/GroupingTable`): the multiopen
 -- grouping is natural in a provenance-preserving reference relabeling (hypothesis-free), the
 -- reference of the assembled queries is one fixed table on the good event, and `assemble?`
 -- returns `some` at every good point — all five gates discharged.

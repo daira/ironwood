@@ -965,7 +965,7 @@ assert_axioms Zcash.Snark.Fixture2.adaptiveInterface_nonempty_at_captured_shape 
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- The consensus-maximum work-factor packages (`Zcash.Snark.FixtureMax`, reached through
--- `ActionCapstone`'s import of `StraightLineMaxShapeBounds`). These are the profiled endpoints the
+-- `ActionCapstone`'s import of `StraightLineOrchardConsensusBounds`). These are the profiled endpoints the
 -- book's proof journey cites by name, and they are top-level leaves: nothing censused depends on
 -- them, so without these entries nothing bounds their trusted base. Unlike the captured-key
 -- knowledge-error endpoints, they take the static checks and the `x`-squeeze schedule as

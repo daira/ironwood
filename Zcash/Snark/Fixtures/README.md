@@ -10,13 +10,15 @@ Families are organised by action count, then by what the capture is:
 
 ```
 Fixtures/
-├── Shared/            ScheduleMarker, TamperSweep — family-independent helpers
+├── Shared/              ScheduleMarker, TamperSweep — family-independent helpers
+├── PostNu63.lean        cross-capture VK/URS equalities for the honest captures
+├── PostNu63Random.lean  the same equalities extended to the random captures
 ├── SingleAction/
-│   ├── Honest/        1 action, accepting run
-│   └── Random/        1 action, random proof string
+│   ├── Honest/          1 action, accepting run
+│   └── Random/          1 action, random proof string
 └── MultiAction/
-    ├── Honest/        2 actions, accepting run
-    └── Random/        2 actions, random proof string
+    ├── Honest/          2 actions, accepting run
+    └── Random/          2 actions, random proof string
 ```
 
 **Honest** captures run the verifier on a real proof, so the MSM evaluates to the identity.
