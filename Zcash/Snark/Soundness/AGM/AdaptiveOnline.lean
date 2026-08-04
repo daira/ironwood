@@ -1252,6 +1252,24 @@ abbrev toFamily (family : ComputedAdaptiveOnlineAGMFSFamily shape) :
 @[simp] theorem toFamily_Q (family : ComputedAdaptiveOnlineAGMFSFamily shape) :
     family.toFamily.Q = family.Q := rfl
 
+/-- Return the first relation produced by a finite list of executable checks.  This shared
+accounting helper is independent of any particular adaptive reduction. -/
+def firstAdaptiveRelation? {basis : AugmentedIndex (2 ^ shape.k) → VestaG} :
+    List (Option (AlgebraicRelationWitness (F := Fp) basis)) →
+      Option (AlgebraicRelationWitness (F := Fp) basis)
+  | [] => none
+  | some relation :: _ => some relation
+  | none :: rest => firstAdaptiveRelation? rest
+
+@[simp] theorem firstAdaptiveRelation?_eq_none_iff
+    {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    (checks : List (Option (AlgebraicRelationWitness (F := Fp) basis))) :
+    firstAdaptiveRelation? checks = none ↔ ∀ check ∈ checks, check = none := by
+  induction checks with
+  | nil => simp [firstAdaptiveRelation?]
+  | cons check rest ih =>
+      cases check <;> simp [firstAdaptiveRelation?, ih]
+
 end ComputedAdaptiveOnlineAGMFSFamily
 
 end Zcash.Snark

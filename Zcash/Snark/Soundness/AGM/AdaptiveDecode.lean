@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.AGM.AdaptiveComposition
+import Zcash.Snark.Soundness.AGM.AdaptiveRootCore
 import Zcash.Snark.Soundness.AGM.OnlineConstraint
 
 /-!

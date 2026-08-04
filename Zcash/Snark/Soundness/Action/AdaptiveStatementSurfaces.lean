@@ -1,5 +1,5 @@
 import Zcash.Snark.Soundness.Action.AdaptiveStatementTerminal
-import Zcash.Snark.Soundness.AGM.AdaptiveComposition
+import Zcash.Snark.Soundness.AGM.AdaptiveIpaSurfaces
 
 /-!
 # Statistical surfaces for adaptive Action statements

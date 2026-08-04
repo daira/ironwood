@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.AGM.AdaptiveRootComposition
+import Zcash.Snark.Soundness.AGM.AdaptiveRootCore
 
 /-!
 # IPA-round surfaces for arbitrary adaptive online-AGM adversaries
@@ -279,6 +279,65 @@ def adaptiveIpaInitialDiscrepancy
       nu 9 * innerProduct coordinates.s.gPart (evalVector shape.k (nu 7))) -
     (multiU + nu 9 * coordinates.s.coeffs AugmentedIndex.u)
 
+/-- Replacing only the IPA suffix leaves the pre-IPA assembly MSM unchanged. -/
+theorem multiopenMsm_spliceIpa
+    (vk : VerifyingKey shape Fp VestaG)
+    (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
+    (ps : ProofString shape Fp VestaG)
+    (rounds : Fin shape.k → VestaG × VestaG) (c f : Fp)
+    (ch : Challenges shape.k Fp) :
+    multiopenMsm vk instanceCommitment (spliceIpa ps rounds c f) ch =
+      multiopenMsm vk instanceCommitment ps ch := by
+  rfl
+
+/-- Rebuilding representations from the same covering source is unchanged by a suffix splice. -/
+theorem representedMultiopenOfCoveredList_spliceIpa_reps
+    {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    (vk : VerifyingKey shape Fp VestaG)
+    (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
+    (ps : ProofString shape Fp VestaG)
+    (rounds : Fin shape.k → VestaG × VestaG) (c f : Fp)
+    (source : List (AlgebraicPoint (F := Fp) basis))
+    (hcover : ∀ nu : Fin 11 → Fp, ∀ pr,
+      pr ∈ (multiopenMsm vk instanceCommitment ps
+        (chRecord nu (fun _ => 0))).other → ∃ ap ∈ source, ap.point = pr.2)
+    (hcover' : ∀ nu : Fin 11 → Fp, ∀ pr,
+      pr ∈ (multiopenMsm vk instanceCommitment (spliceIpa ps rounds c f)
+        (chRecord nu (fun _ => 0))).other → ∃ ap ∈ source, ap.point = pr.2)
+    (nu : Fin 11 → Fp) :
+    (RepresentedMultiopen.ofCoveredList vk instanceCommitment (spliceIpa ps rounds c f)
+        nu source (hcover' nu)).reps =
+      (RepresentedMultiopen.ofCoveredList vk instanceCommitment ps
+        nu source (hcover nu)).reps := by
+  unfold RepresentedMultiopen.ofCoveredList
+  simp only [multiopenMsm_spliceIpa]
+
+/-- The explicit initial discrepancy likewise ignores the replaced IPA suffix. -/
+theorem adaptiveIpaInitialDiscrepancy_spliceIpa
+    {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    (vk : VerifyingKey shape Fp VestaG)
+    (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
+    (ps : ProofString shape Fp VestaG)
+    (rounds : Fin shape.k → VestaG × VestaG) (c f : Fp)
+    (coordinates : AdaptiveIpaCoordinateData basis)
+    (hcover : ∀ nu : Fin 11 → Fp, ∀ pr,
+      pr ∈ (multiopenMsm vk instanceCommitment ps
+        (chRecord nu (fun _ => 0))).other →
+        ∃ ap ∈ coordinates.multiopenSource, ap.point = pr.2)
+    (hcover' : ∀ nu : Fin 11 → Fp, ∀ pr,
+      pr ∈ (multiopenMsm vk instanceCommitment (spliceIpa ps rounds c f)
+        (chRecord nu (fun _ => 0))).other →
+        ∃ ap ∈ coordinates.multiopenSource, ap.point = pr.2)
+    (nu : Fin 11 → Fp) :
+    adaptiveIpaInitialDiscrepancy vk instanceCommitment (spliceIpa ps rounds c f)
+        coordinates hcover' nu =
+      adaptiveIpaInitialDiscrepancy vk instanceCommitment ps coordinates hcover nu := by
+  have hreps := representedMultiopenOfCoveredList_spliceIpa_reps
+    vk instanceCommitment ps rounds c f coordinates.multiopenSource hcover hcover' nu
+  unfold adaptiveIpaInitialDiscrepancy
+  simp only [multiopenMsm_spliceIpa, multiopenValue_spliceIpa]
+  rw [hreps]
+
 /-- The quadratic fixed before one IPA squeeze, computed only from explicit prefix coordinates. -/
 def adaptiveIpaRootPolynomial
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
@@ -297,6 +356,30 @@ def adaptiveIpaRootPolynomial
     ((List.ofFn coordinates.rounds).map
       (representedRoundDiscrepancy (evalVector shape.k (nu 7)) (nu 10)))
     (List.ofFn chi) j.val
+
+/-- The round polynomial depends on the explicit coordinates, not on replaced proof-suffix
+fields. -/
+theorem adaptiveIpaRootPolynomial_spliceIpa
+    {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    (vk : VerifyingKey shape Fp VestaG)
+    (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
+    (ps : ProofString shape Fp VestaG)
+    (rounds : Fin shape.k → VestaG × VestaG) (c f : Fp)
+    (coordinates : AdaptiveIpaCoordinateData basis)
+    (hcover : ∀ nu : Fin 11 → Fp, ∀ pr,
+      pr ∈ (multiopenMsm vk instanceCommitment ps
+        (chRecord nu (fun _ => 0))).other →
+        ∃ ap ∈ coordinates.multiopenSource, ap.point = pr.2)
+    (hcover' : ∀ nu : Fin 11 → Fp, ∀ pr,
+      pr ∈ (multiopenMsm vk instanceCommitment (spliceIpa ps rounds c f)
+        (chRecord nu (fun _ => 0))).other →
+        ∃ ap ∈ coordinates.multiopenSource, ap.point = pr.2)
+    (nu : Fin 11 → Fp) (chi : Fin shape.k → Fp) (j : Fin shape.k) :
+    adaptiveIpaRootPolynomial vk instanceCommitment (spliceIpa ps rounds c f)
+        coordinates hcover' nu chi j =
+      adaptiveIpaRootPolynomial vk instanceCommitment ps coordinates hcover nu chi j := by
+  unfold adaptiveIpaRootPolynomial
+  rw [adaptiveIpaInitialDiscrepancy_spliceIpa]
 
 /-- The discrepancy polynomial at index `j` reads only the first `j+1` round entries. -/
 theorem ipaDiscrepancyPolynomialAt_eq_of_rounds_take_eq
@@ -333,6 +416,63 @@ theorem ipaDiscrepancyPolynomialAt_eq_of_rounds_take_eq
               | cons challenge challenges =>
                   exact ih (ipaDiscrepancyStep initial round challenge) rounds rounds'
                     challenges htail
+
+/-- The polynomial fixed before round `j` reads only challenges strictly before `j`. -/
+theorem ipaDiscrepancyPolynomialAt_eq_of_challenges_take_eq
+    (initial : Fp) (rounds : List (Fp × Fp)) (challenges challenges' : List Fp) (j : Nat)
+    (hlength : challenges.length = challenges'.length)
+    (hchallenges : challenges.take j = challenges'.take j) :
+    ipaDiscrepancyPolynomialAt initial rounds challenges j =
+      ipaDiscrepancyPolynomialAt initial rounds challenges' j := by
+  induction j generalizing initial rounds challenges challenges' with
+  | zero =>
+      cases rounds <;> cases challenges <;> cases challenges' <;>
+        simp_all [ipaDiscrepancyPolynomialAt]
+  | succ j ih =>
+      cases rounds with
+      | nil => rfl
+      | cons round rounds =>
+          cases challenges with
+          | nil =>
+              cases challenges' with
+              | nil => rfl
+              | cons challenge' challenges' => simp at hlength
+          | cons challenge challenges =>
+              cases challenges' with
+              | nil => simp at hlength
+              | cons challenge' challenges' =>
+                  have hparts : challenge = challenge' ∧
+                      challenges.take j = challenges'.take j := by
+                    simpa only [List.take_succ_cons, List.cons.injEq] using hchallenges
+                  rcases hparts with ⟨hhead, htail⟩
+                  subst challenge'
+                  exact ih (ipaDiscrepancyStep initial round challenge) rounds
+                    challenges challenges' (by simpa using hlength) htail
+
+/-- Pointwise agreement before `j` is enough to identify the round-`j` quadratic. -/
+theorem adaptiveIpaRootPolynomial_eq_of_chi_before
+    {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    (vk : VerifyingKey shape Fp VestaG)
+    (instanceCommitment : Fin shape.numProofs → Nat → VestaG)
+    (ps : ProofString shape Fp VestaG)
+    (coordinates : AdaptiveIpaCoordinateData basis)
+    (hcover : ∀ nu : Fin 11 → Fp, ∀ pr,
+      pr ∈ (multiopenMsm vk instanceCommitment ps
+        (chRecord nu (fun _ => 0))).other →
+        ∃ ap ∈ coordinates.multiopenSource, ap.point = pr.2)
+    (nu : Fin 11 → Fp) (chi chi' : Fin shape.k → Fp) (j : Fin shape.k)
+    (hchi : ∀ i : Fin shape.k, i.val < j.val → chi i = chi' i) :
+    adaptiveIpaRootPolynomial vk instanceCommitment ps coordinates hcover nu chi j =
+      adaptiveIpaRootPolynomial vk instanceCommitment ps coordinates hcover nu chi' j := by
+  unfold adaptiveIpaRootPolynomial
+  apply ipaDiscrepancyPolynomialAt_eq_of_challenges_take_eq
+  · simp
+  apply List.ext_getElem
+  · simp
+  · intro i hi hi'
+    simp only [List.getElem_take, List.getElem_ofFn]
+    have hij : i < j.val := by simpa using hi'
+    exact hchi ⟨i, lt_trans hij j.isLt⟩ (by simpa using hi)
 
 /-- Zeroing coordinates emitted strictly after round `j` leaves its root polynomial unchanged. -/
 theorem adaptiveIpaRootPolynomial_prefix
@@ -1111,121 +1251,6 @@ theorem LabeledOracleComp.mem_firstLabelOrFallbackBad_of_findLabel_eq_some
     A bad fallback t O label hfind]
   exact hx
 
-def ComputedAdaptiveOnlineAGMFSFamily.adaptiveFinalIpaPoint
-    (family : ComputedAdaptiveOnlineAGMFSFamily shape)
-    (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (j : Fin shape.k)
-    (O : BTranscript Fp VestaG
-      (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp) :=
-  algebraicFullPrefixes family.init ((family.adversary basis).run O).toAlgebraicWfProof j
-
-theorem ComputedAdaptiveOnlineAGMFSFamily.adaptiveFinalIpaCover_none
-    (family : ComputedAdaptiveOnlineAGMFSFamily shape)
-    (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (j : Fin shape.k)
-    (O : BTranscript Fp VestaG
-      (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp)
-    (hbad : O (family.adaptiveFinalIpaPoint basis j O) ∈
-      adaptiveIpaFallbackBad family basis j ((family.adversary basis).run O)
-        (family.adaptiveFinalIpaPoint basis j O) O)
-    (hfind : (family.adversary basis).findLabel O
-      (family.adaptiveFinalIpaPoint basis j O) = none) :
-    O (family.adaptiveFinalIpaPoint basis j O) ∈
-      LabeledOracleComp.firstLabelOrFallbackBad (family.adversary basis)
-        (adaptiveIpaQueriedBad family basis j)
-        (adaptiveIpaFallbackBad family basis j)
-        (family.adaptiveFinalIpaPoint basis j O) O := by
-  exact LabeledOracleComp.mem_firstLabelOrFallbackBad_of_findLabel_eq_none
-    (family.adversary basis) (adaptiveIpaQueriedBad family basis j)
-    (adaptiveIpaFallbackBad family basis j) (family.adaptiveFinalIpaPoint basis j O)
-    O (O (family.adaptiveFinalIpaPoint basis j O)) hfind hbad
-
-theorem ComputedAdaptiveOnlineAGMFSFamily.adaptiveFinalIpaCover
-    (family : ComputedAdaptiveOnlineAGMFSFamily shape)
-    (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (j : Fin shape.k)
-    (O : BTranscript Fp VestaG
-      (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp)
-    (hbad : O (family.adaptiveFinalIpaPoint basis j O) ∈
-      adaptiveIpaFallbackBad family basis j ((family.adversary basis).run O)
-        (family.adaptiveFinalIpaPoint basis j O) O)
-    (hnone : family.adaptiveIpaRepresentationRelationFinder basis O = none) :
-    O (family.adaptiveFinalIpaPoint basis j O) ∈
-      LabeledOracleComp.firstLabelOrFallbackBad (family.adversary basis)
-      (adaptiveIpaQueriedBad family basis j)
-      (adaptiveIpaFallbackBad family basis j)
-      (family.adaptiveFinalIpaPoint basis j O) O := by
-  let data := (family.adversary basis).run O
-  let t := family.adaptiveFinalIpaPoint basis j O
-  change O t ∈ LabeledOracleComp.firstLabelOrFallbackBad (family.adversary basis)
-    (adaptiveIpaQueriedBad family basis j)
-    (adaptiveIpaFallbackBad family basis j) t O
-  cases hfind : (family.adversary basis).findLabel O t with
-  | none =>
-      exact family.adaptiveFinalIpaCover_none basis j O hbad hfind
-  | some label =>
-      rw [LabeledOracleComp.firstLabelOrFallbackBad_eq_bad_of_findLabel_eq_some
-        _ _ _ _ _ _ hfind]
-      have hat := family.adaptiveIpaRepresentationRelationFinder_none_at
-        basis O hnone j
-      have hlocal : selectedQueryRepresentationRelation? t (family.adversary basis) O
-          (data.algebraicProof.representationsBeforeRound j) (by
-            intro ap hap
-            change ap.point ∈ transcriptGroupPoints
-              (roundTranscriptFin (preIpaTranscript family.init data.algebraicProof.erase)
-                data.algebraicProof.erase.ipaRounds j)
-            exact data.algebraicProof.representationsBeforeRound_covered family.init
-              data.wellFormed j ap hap) = none := by
-        simpa only [ComputedAdaptiveOnlineAGMFSFamily.adaptiveIpaRepresentationRelationAt?]
-          using hat
-      have hprov := selectedQueryRepresentationRelation?_eq_none t
-        (family.adversary basis) O (data.algebraicProof.representationsBeforeRound j) _ hlocal
-      cases hprov with
-      | inl hfresh => simp [hfind] at hfresh
-      | inr pinned =>
-          have hlabel : pinned.query = label :=
-            Option.some.inj (pinned.found.symm.trans hfind)
-          subst label
-          have hdecode := decodeIpaPrefix?_isSome family.init j
-            data.toAlgebraicWfProof.proof
-          change (decodeIpaPrefix? (shape := shape) family.init j t).isSome at hdecode
-          cases hdec : decodeIpaPrefix? (shape := shape) family.init j t with
-          | none => simp [hdec] at hdecode
-          | some decoded =>
-              change O (algebraicFullPrefixes family.init
-                  ((family.adversary basis).run O).toAlgebraicWfProof j) ∈
-                adaptiveIpaQueriedBad family basis j
-                  (algebraicFullPrefixes family.init
-                    ((family.adversary basis).run O).toAlgebraicWfProof j)
-                  pinned.query O
-              rw [adaptiveIpaBad_eq_of_pinned family basis O j decoded hdec pinned]
-              simpa only [ComputedAdaptiveOnlineAGMFSFamily.adaptiveFinalIpaPoint]
-                using hbad
-
-/-- **Arbitrary-adaptive IPA squeeze bound.**  One deployed round of every bounded malicious
-online-AGM adversary is charged at its first actual annotated query, or at the verifier's fresh
-fallback query, unless the executable round-provenance finder has produced a DLOG relation. -/
-theorem ComputedAdaptiveOnlineAGMFSFamily.adaptiveFinalIpaBadWithoutRelation_table_le
-    (family : ComputedAdaptiveOnlineAGMFSFamily shape)
-    (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (j : Fin shape.k) :
-    (PMF.uniformOfFintype (BTranscript Fp VestaG
-      (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp)).toOuterMeasure
-      {O | let data := (family.adversary basis).run O
-        let t := algebraicFullPrefixes family.init data.toAlgebraicWfProof j
-        O t ∈ adaptiveIpaFallbackBad family basis j data t O ∧
-          family.adaptiveIpaRepresentationRelationFinder basis O = none} ≤
-      (family.Q + 1 : Nat) * (2 / (Fintype.card Fp : ENNReal)) := by
-  apply LabeledOracleComp.finalBadWithoutRelation_measure_le
-    (family.adversary basis)
-    (fun data => algebraicFullPrefixes family.init data.toAlgebraicWfProof j)
-    (fun data t O => adaptiveIpaFallbackBad family basis j data t O)
-    (family.adaptiveIpaRepresentationRelationFinder basis)
-    (adaptiveIpaQueriedBad family basis j)
-    (adaptiveIpaFallbackBad family basis j)
-  · exact family.adaptiveFinalIpaCover basis j
-  · exact adaptiveIpaQueriedBad_update_self family basis j
-  · exact adaptiveIpaFallbackBad_update_self family basis j
-  · exact adaptiveIpaQueriedBad_measure_le family basis j
-  · exact adaptiveIpaFallbackBad_measure_le family basis j
-  · exact family.queryBound basis
-
 /-- The explicit formula agrees with the existing straight-line polynomial on final online data. -/
 theorem OnlineMemberProofData.adaptiveIpaRootPolynomial_eq
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
@@ -1241,5 +1266,24 @@ theorem OnlineMemberProofData.adaptiveIpaRootPolynomial_eq
   unfold adaptiveIpaRootPolynomial AlgebraicWfProof.straightLineIpaRootPolynomial
   rw [data.toAlgebraicWfProof.straightLineInitialDiscrepancy_eq nu]
   rfl
+
+/-- Canonicalizing the unused IPA suffix does not change the initial straight-line data. -/
+theorem OnlineMemberProofData.adaptiveIpaCanonicalRootPolynomial_eq
+    {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
+    {vk : VerifyingKey shape Fp VestaG}
+    {instanceCommitment : Fin shape.numProofs → Nat → VestaG}
+    {fixed : List (AlgebraicPoint (F := Fp) basis)}
+    (data : OnlineMemberProofData (vk := vk) (instanceCommitment := instanceCommitment)
+      basis fixed)
+    (nu : Fin 11 → Fp) (chi : Fin shape.k → Fp) (j : Fin shape.k) :
+    adaptiveIpaRootPolynomial vk instanceCommitment
+        (adaptiveIpaCanonicalProof data.algebraicProof.erase)
+        data.adaptiveIpaCoordinates (by
+          intro rho pr hpr
+          exact data.assemblyCovered rho pr hpr) nu chi j =
+      data.toAlgebraicWfProof.straightLineIpaRootPolynomial nu chi j := by
+  unfold adaptiveIpaCanonicalProof
+  rw [adaptiveIpaRootPolynomial_spliceIpa]
+  exact data.adaptiveIpaRootPolynomial_eq nu chi j
 
 end Zcash.Snark

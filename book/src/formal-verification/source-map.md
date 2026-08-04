@@ -246,10 +246,10 @@ Six subtrees carry the heavier machinery:
   the opened-batch interfaces (`SyntheticOpened`, `DeployedSyntheticOpened`,
   `DecodeToOpened`). `StraightLineIpa` and `StraightLinePinnedRoots` classify one accepting
   algebraic transcript as a clean opening, an explicit relation, or a squeeze-pinned bad-challenge
-  event, from a single execution with no rewinding; `AdaptiveOnline`, `AdaptiveDecode`,
-  `AdaptiveIpaSurfaces`, and `AdaptiveComposition` extend the same rewind-free machinery to
-  adversaries that choose their statement online, decoding accepting prefixes and pricing the
-  per-round IPA surfaces; `StraightLineFiniteSecurity` records group
+  event, from a single execution with no rewinding; `AdaptiveOnline`, `AdaptiveRootCore`,
+  `AdaptiveDecode`, `AdaptiveIpaSurfaces`, and the `AdaptiveStatement*` modules extend the same
+  rewind-free machinery to adversaries that choose their statement online, decoding accepting
+  prefixes and pricing the per-round IPA surfaces; `StraightLineFiniteSecurity` records group
   work, random-oracle queries and direct-decode field work as distinct quantities and asserts no
   generic-group DLOG formula. `ZeroFamily` and `ZeroFamilyRoots` are the constant zero-data prover
   at an arbitrary shape, whose multiopen obligation reduces to `0 = 0`.

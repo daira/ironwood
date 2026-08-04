@@ -232,26 +232,6 @@ theorem straightLineConstraintSemanticFailure_prob_le_of_generatorRO_dlogProfile
 
 /-! ## Work-factor arithmetic -/
 
-/-- A four-call reduction with at most twenty-eight adversary-work units of postprocessing has at
-most a five-bit multiplicative overhead.  The `28` is an explicit profile obligation, not an
-unstated claim about the implementation. -/
-theorem straightLineDlogGroupWork_le_32_mul
-    {T proverGroupWork reductionGroupWork : Nat}
-    (hprover : proverGroupWork <= T)
-    (hreduction : reductionGroupWork <= 28 * T) :
-    straightLineDlogGroupWork proverGroupWork reductionGroupWork <= 32 * T := by
-  unfold straightLineDlogGroupWork
-  omega
-
-/-- At the consensus IPA depth, the random-oracle side also fits the same five-bit overhead once
-the work target is at least four. -/
-theorem straightLineDlogRandomOracleQueries_le_32_mul
-    (family : ComputedStraightLineDeployedFSFamily shape) {T : Nat}
-    (hk : shape.k = 11) (hT : 4 <= T) (hQ : family.Q <= T) :
-    family.straightLineDlogRandomOracleQueries <= 32 * T := by
-  unfold straightLineDlogRandomOracleQueries
-  omega
-
 /-- At the consensus IPA depth, the exact query formula needs only three overhead bits once the
 work target is at least twenty-two: `4*Q + 88 <= 8*T`. -/
 theorem straightLineDlogRandomOracleQueries_le_eight_mul
@@ -323,48 +303,6 @@ theorem StraightLineDirectDlogProfile.solverCost_le
       straightLineDlogGroupWork_le_eight_mul
         profile.proverWorkBound profile.reductionWorkBound,
       profile.directDecodeWorkBound⟩
-
-/-- Compatibility profile for a caller-supplied five-bit envelope.  This is not the primary
-deployed interpretation: its `reductionWorkBound` is deliberately abstract, whereas
-`StraightLineDirectDlogProfile` separately accounts for reduction group work and carries the
-two-execution direct-decode cost. -/
-structure StraightLineFiveBitDlogProfile (B : VestaG)
-    (family : ComputedStraightLineDeployedFSFamily shape) (T : Nat)
-    extends StraightLineConstraintDlogProfile B family where
-  ipaDepth : shape.k = 11
-  targetAtLeastFour : 4 <= T
-  queryBound : family.Q <= T
-  proverWorkBound : toStraightLineConstraintDlogProfile.proverGroupWork <= T
-  reductionWorkBound :
-    toStraightLineConstraintDlogProfile.reductionGroupWork <= 28 * T
-
-/-- Both separately recorded solver resources fit the five-bit overhead promised by the profile.
--/
-theorem StraightLineFiveBitDlogProfile.solverCost_le
-    {B : VestaG} {family : ComputedStraightLineDeployedFSFamily shape} {T : Nat}
-    (profile : StraightLineFiveBitDlogProfile B family T) :
-    family.straightLineDlogRandomOracleQueries <= 32 * T ∧
-      straightLineDlogGroupWork profile.proverGroupWork profile.reductionGroupWork <= 32 * T := by
-  constructor
-  · exact family.straightLineDlogRandomOracleQueries_le_32_mul
-      profile.ipaDepth profile.targetAtLeastFour profile.queryBound
-  · exact straightLineDlogGroupWork_le_32_mul
-      profile.proverWorkBound profile.reductionWorkBound
-
-/-- Exact arithmetic behind the conservative work-factor wording: five bits of total reduction
-overhead map a `2^122` adversary budget to a `2^127` DLOG-solver budget. -/
-theorem five_bit_overhead_at_2pow122 :
-    32 * 2 ^ 122 = 2 ^ 127 := by norm_num
-
-/-- At the concrete target, a five-bit profile bounds both solver resources by `2^127`. -/
-theorem StraightLineFiveBitDlogProfile.solverCost_at_2pow122
-    {B : VestaG} {family : ComputedStraightLineDeployedFSFamily shape}
-    (profile : StraightLineFiveBitDlogProfile B family (2 ^ 122)) :
-    family.straightLineDlogRandomOracleQueries <= 2 ^ 127 ∧
-      straightLineDlogGroupWork profile.proverGroupWork profile.reductionGroupWork <= 2 ^ 127 := by
-  have h := profile.solverCost_le
-  rw [five_bit_overhead_at_2pow122] at h
-  exact h
 
 end ComputedStraightLineDeployedFSFamily
 

@@ -1,6 +1,6 @@
 import Zcash.Snark.Soundness.Action.AdaptiveStatementModel
 import Zcash.Snark.Soundness.Action.AdaptiveSurfaces
-import Zcash.Snark.Soundness.AGM.AdaptiveStraightLine
+import Zcash.Snark.Soundness.AGM.AdaptiveOnline
 
 /-!
 # Adaptive-statement query accounting

@@ -1,10 +1,12 @@
-import Zcash.Snark.Soundness.AGM.AdaptiveStraightLine
+import Zcash.Snark.Soundness.AGM.AdaptiveSurfaces
+import Zcash.Snark.Soundness.AGM.DirectX4Columns
+import Zcash.Snark.Soundness.AGM.StraightLinePinnedRoots
 
 /-!
 # Direct root surfaces for arbitrary adaptive online-AGM adversaries
 
 Each root surface is rebuilt from the ordinary prefix and its first-query AGM coordinates.
-`AdaptiveStraightLine` handles later representation mismatches.
+Later representation mismatches are handled by the active adaptive-statement accounting path.
 -/
 
 namespace Zcash.Snark
