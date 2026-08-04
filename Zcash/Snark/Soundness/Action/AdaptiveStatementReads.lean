@@ -142,9 +142,13 @@ theorem runRecord_eq_of_agree {O O' : family.Coins}
 The provenance stage consults the table only through the retained execution, so its locality is
 one rewrite.  Acceptance locality transports through the primitive-rewritten proposition: the
 `some` payload of `accepts?` is itself the acceptance proof, so the `isSome` verdicts agree
-whenever the record and statement do.  The quotient, identity, and terminal stages read the same
-primitives through dependent proof-carrying constructions; their locality lemmas follow the same
-two patterns and are the tracked remaining step of this certificate. -/
+whenever the record and statement do.  The quotient, identity, and terminal stages apply their
+sub-computations to the table itself, so their locality needs the same view-factoring the
+provenance module already performs (`FromAnnotations`): restate each stage over the retained
+execution and the two challenge-read vectors, with the table-level form definitionally the
+factored form at the run view.  That factoring is the tracked remaining step of this
+certificate; until it lands, the read-set bound certifies what the finder may consult, and the
+stages above certify the two proof patterns the remainder reuses. -/
 
 /-- Agreement on the read set reproduces the provenance stage. -/
 theorem provenanceRelationFinder_eq_of_agree {O O' : family.Coins}
