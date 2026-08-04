@@ -104,8 +104,28 @@ abbrev adaptiveStatementKnowledgeOutcomeCore {pp : ProofParams}
     (family.semanticStageFacts_of_sourceFinder_none basis O
       (family.relationFinder_none_provenance hchar basis O hrelation).2.2.2.2.1)
 
+/-- Complete selected-statement outcome over one run view: relation data when the supplied
+finder result carries it, otherwise the post-finder outcome core. -/
+def adaptiveStatementKnowledgeOutcomeV {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis)
+    (hcharV : deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) <
+        scalarFieldOrder)
+    (finderResult : Option (AlgebraicRelationWitness (F := Fp) basis))
+    (hfacts : finderResult = none → family.SemanticStageFacts basis view) :
+    Option (ActionTerminal.ActionBundleWitness view.output.inputs ⊕
+      AlgebraicRelationWitness (F := Fp) basis) :=
+  match finderResult, hfacts with
+  | some relation, _ => some (Sum.inr relation)
+  | none, hfacts =>
+      family.adaptiveStatementKnowledgeOutcomeCoreV basis view hcharV (hfacts rfl)
+
 /-- Complete selected-statement outcome, retaining either extracted witnesses or relation data. -/
-def adaptiveStatementKnowledgeOutcome {pp : ProofParams}
+abbrev adaptiveStatementKnowledgeOutcome {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -114,9 +134,30 @@ def adaptiveStatementKnowledgeOutcome {pp : ProofParams}
     (O : family.Coins) :
     Option (ActionTerminal.ActionBundleWitness (family.runOutput basis O).inputs ⊕
       AlgebraicRelationWitness (F := Fp) basis) :=
-  match hrelation : family.relationFinder hchar basis O with
-  | some relation => some (Sum.inr relation)
-  | none => family.adaptiveStatementKnowledgeOutcomeCore hchar basis O hrelation
+  family.adaptiveStatementKnowledgeOutcomeV basis (runView family basis O)
+    (by simpa only [runView_output, runView_pre, runView_rounds,
+      family.runRecord_eq_chRecord] using hchar basis O)
+    (family.relationFinder hchar basis O)
+    (fun hrelation => family.semanticStageFacts_of_sourceFinder_none basis O
+      (family.relationFinder_none_provenance hchar basis O hrelation).2.2.2.2.1)
+
+/-- With an empty finder result the outcome is the core, for any certified facts. -/
+theorem adaptiveStatementKnowledgeOutcomeV_eq_core_of_none {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis)
+    (hcharV : deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) <
+        scalarFieldOrder)
+    {finderResult : Option (AlgebraicRelationWitness (F := Fp) basis)}
+    (hfacts : finderResult = none → family.SemanticStageFacts basis view)
+    (hrelation : finderResult = none) :
+    family.adaptiveStatementKnowledgeOutcomeV basis view hcharV finderResult hfacts =
+      family.adaptiveStatementKnowledgeOutcomeCoreV basis view hcharV (hfacts hrelation) := by
+  subst hrelation
+  rfl
 
 @[simp] theorem adaptiveStatementKnowledgeOutcome_eq_core_of_none {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
@@ -127,16 +168,29 @@ def adaptiveStatementKnowledgeOutcome {pp : ProofParams}
     (O : family.Coins)
     (hrelation : family.relationFinder hchar basis O = none) :
     family.adaptiveStatementKnowledgeOutcome hchar basis O =
-      family.adaptiveStatementKnowledgeOutcomeCore hchar basis O hrelation := by
-  unfold adaptiveStatementKnowledgeOutcome
-  split
-  · rename_i relation heq
-    rw [hrelation] at heq
-    contradiction
-  · congr
+      family.adaptiveStatementKnowledgeOutcomeCore hchar basis O hrelation :=
+  family.adaptiveStatementKnowledgeOutcomeV_eq_core_of_none basis (runView family basis O)
+    _ _ hrelation
+
+/-- Witness-only projection of the complete outcome over one run view. -/
+def adaptiveStatementKnowledgeExtractorV {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis)
+    (hcharV : deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) <
+        scalarFieldOrder)
+    (finderResult : Option (AlgebraicRelationWitness (F := Fp) basis))
+    (hfacts : finderResult = none → family.SemanticStageFacts basis view) :
+    Option (ActionTerminal.ActionBundleWitness view.output.inputs) :=
+  match family.adaptiveStatementKnowledgeOutcomeV basis view hcharV finderResult hfacts with
+  | some (Sum.inl witness) => some witness
+  | _ => none
 
 /-- Witness-only projection of the complete selected-statement outcome. -/
-def adaptiveStatementKnowledgeExtractor {pp : ProofParams}
+abbrev adaptiveStatementKnowledgeExtractor {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -144,9 +198,12 @@ def adaptiveStatementKnowledgeExtractor {pp : ProofParams}
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins) :
     Option (ActionTerminal.ActionBundleWitness (family.runOutput basis O).inputs) :=
-  match family.adaptiveStatementKnowledgeOutcome hchar basis O with
-  | some (Sum.inl witness) => some witness
-  | _ => none
+  family.adaptiveStatementKnowledgeExtractorV basis (runView family basis O)
+    (by simpa only [runView_output, runView_pre, runView_rounds,
+      family.runRecord_eq_chRecord] using hchar basis O)
+    (family.relationFinder hchar basis O)
+    (fun hrelation => family.semanticStageFacts_of_sourceFinder_none basis O
+      (family.relationFinder_none_provenance hchar basis O hrelation).2.2.2.2.1)
 
 /-- Acceptance for a selected statement with failure of the executable witness projection. -/
 def adaptiveStatementKnowledgeFailureEvent {pp : ProofParams}
@@ -301,10 +358,10 @@ theorem adaptiveStatementKnowledgeExtractor_isSome_of_no_events {pp : ProofParam
             rw [hidentityNone] at hfinderSome
             simp at hfinderSome
         | inl extracted =>
-            unfold adaptiveStatementKnowledgeExtractor
-            rw [family.adaptiveStatementKnowledgeOutcome_eq_core_of_none
-              hchar basis O hfinderNone]
-            unfold adaptiveStatementKnowledgeOutcomeCore adaptiveStatementKnowledgeOutcomeCoreV
+            unfold adaptiveStatementKnowledgeExtractor adaptiveStatementKnowledgeExtractorV
+            rw [family.adaptiveStatementKnowledgeOutcomeV_eq_core_of_none
+              basis (runView family basis O) _ _ hfinderNone]
+            unfold adaptiveStatementKnowledgeOutcomeCoreV
             rw [hacceptsEq]
             dsimp only
             rw [dif_pos hz, dif_neg hattack, hout]
@@ -368,10 +425,10 @@ theorem adaptiveStatementKnowledgeExtractor_isSome_of_no_events {pp : ProofParam
             rw [hterminalNone] at hterminalSome
             simp at hterminalSome
         | inl extracted =>
-            unfold adaptiveStatementKnowledgeExtractor
-            rw [family.adaptiveStatementKnowledgeOutcome_eq_core_of_none
-              hchar basis O hfinderNone]
-            unfold adaptiveStatementKnowledgeOutcomeCore adaptiveStatementKnowledgeOutcomeCoreV
+            unfold adaptiveStatementKnowledgeExtractor adaptiveStatementKnowledgeExtractorV
+            rw [family.adaptiveStatementKnowledgeOutcomeV_eq_core_of_none
+              basis (runView family basis O) _ _ hfinderNone]
+            unfold adaptiveStatementKnowledgeOutcomeCoreV
             rw [hacceptsEq]
             dsimp only
             rw [dif_pos hz, dif_neg hattack, hout]

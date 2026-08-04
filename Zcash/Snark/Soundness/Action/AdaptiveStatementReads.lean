@@ -20,6 +20,8 @@ namespace Zcash.Snark
 
 open Zcash.Arithmetic (scalarFieldOrder)
 
+local instance adaptiveStatementReadsVestaInhabited : Inhabited VestaG := ⟨0⟩
+
 namespace ComputedAdaptiveActionStatementFSFamily
 
 variable {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp)
@@ -139,18 +141,13 @@ theorem runRecord_eq_of_agree {O O' : family.Coins}
 
 /-! ## Locality of the finder stages
 
+The whole stage chain is indexed by the run view — the selected output and the two
+challenge-read vectors — with the table-indexed forms recovered as abbreviations at `runView`.
 The provenance stage consults the table only through the retained execution, so its locality is
-one rewrite.  Acceptance locality transports through the primitive-rewritten proposition: the
-`some` payload of `accepts?` is itself the acceptance proof, so the `isSome` verdicts agree
-whenever the record and statement do.  The quotient, identity, and terminal stages apply their
-sub-computations to the table itself, and their witness types (`BatchWitness`, `DecodedRun`) are
-nominal structures indexed by the table, so a parallel view-typed pipeline can never be
-definitionally equal to them.  The close is therefore index generalization: re-index those
-structures and the stage chain by the run view below — the selected output and the two
-challenge-read vectors — and recover today's table-indexed forms as abbreviations at
-`runView`, making every stage view-level by construction and full finder locality one rewrite
-of `runView_eq_of_agree`.  Until that refactor lands, the read-set bound certifies what the
-finder may consult, and the stages above certify the transport patterns it reuses. -/
+one rewrite, and every other stage is a view-level function whose remaining arguments are the
+source-mismatch verdict and proposition-valued certificates.  Full finder and extractor
+locality therefore reduce to `runView_eq_of_agree` plus one congruence per stage, closed by
+proof irrelevance. -/
 
 /-- Agreement on the read set reproduces the whole run view. -/
 theorem runView_eq_of_agree {O O' : family.Coins}
@@ -186,6 +183,138 @@ theorem accepts?_isSome_eq_of_agree {O O' : family.Coins}
   · intro hsome
     exact family.accepts?_isSome_of basis O'
       (hiff.mpr ((family.accepts? basis O).get hsome).down)
+
+/-- Agreement on the read set reproduces the source-mismatch verdict. -/
+theorem semanticSourceMismatchRelationFinder_eq_of_agree {O O' : family.Coins}
+    (h : ∀ t ∈ family.relationFinderReads basis O, O' t = O t) :
+    family.semanticSourceMismatchRelationFinder basis O' =
+      family.semanticSourceMismatchRelationFinder basis O := by
+  rw [← family.semanticSourceMismatchRelationFinderOfOutput_eq basis O',
+    ← family.semanticSourceMismatchRelationFinderOfOutput_eq basis O,
+    runOutput_eq_of_agree h]
+
+/-- Agreement on the read set reproduces the quotient stage. -/
+theorem statementQuotientRelationFinder_eq_of_agree {O O' : family.Coins}
+    (h : ∀ t ∈ family.relationFinderReads basis O, O' t = O t) :
+    family.statementQuotientRelationFinder basis O' =
+      family.statementQuotientRelationFinder basis O :=
+  congrArg (family.statementQuotientRelationFinderV basis) (runView_eq_of_agree h)
+
+/-- Equal views and finder inputs give equal identity-branch results; the certificate
+arguments are propositions and never steer the computation. -/
+theorem identityRelationFinderV_congr {view view' : RunView pp family basis}
+    (hview : view' = view)
+    {source source' : Option (AlgebraicRelationWitness (F := Fp) basis)}
+    (hsource : source' = source)
+    (hchar' : deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis view'.output.inputs)
+      view'.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view'.pre view'.rounds) <
+        scalarFieldOrder)
+    (hchar : deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) <
+        scalarFieldOrder)
+    (hfacts' : source' = none → family.SemanticStageFacts basis view')
+    (hfacts : source = none → family.SemanticStageFacts basis view) :
+    family.identityRelationFinderV basis view' hchar' source' hfacts' =
+      family.identityRelationFinderV basis view hchar source hfacts := by
+  subst hview
+  subst hsource
+  rfl
+
+/-- Agreement on the read set reproduces the identity branch. -/
+theorem identityRelationFinder_eq_of_agree
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) < scalarFieldOrder)
+    {O O' : family.Coins}
+    (h : ∀ t ∈ family.relationFinderReads basis O, O' t = O t) :
+    family.identityRelationFinder hchar basis O' =
+      family.identityRelationFinder hchar basis O :=
+  family.identityRelationFinderV_congr (runView_eq_of_agree h)
+    (semanticSourceMismatchRelationFinder_eq_of_agree h) _ _ _ _
+
+/-- Equal views give equal terminal results, for any character certificates. -/
+theorem terminalRelationFinderV_congr {view view' : RunView pp family basis}
+    (hview : view' = view)
+    (hchar' : deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis view'.output.inputs)
+      view'.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view'.pre view'.rounds) <
+        scalarFieldOrder)
+    (hchar : deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) <
+        scalarFieldOrder) :
+    family.terminalRelationFinderV basis view' hchar' =
+      family.terminalRelationFinderV basis view hchar := by
+  subst hview
+  rfl
+
+/-- Agreement on the read set reproduces the decoded Action terminal. -/
+theorem terminalRelationFinder_eq_of_agree
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) < scalarFieldOrder)
+    {O O' : family.Coins}
+    (h : ∀ t ∈ family.relationFinderReads basis O, O' t = O t) :
+    family.terminalRelationFinder hchar basis O' =
+      family.terminalRelationFinder hchar basis O :=
+  family.terminalRelationFinderV_congr (runView_eq_of_agree h) _ _
+
+/-- **Complete finder locality.**  Agreement on the certified read set reproduces the combined
+relation finder: every stage consults the table only through the run view, the retained
+execution, and the source-mismatch verdict, each of which the read set determines. -/
+theorem relationFinder_eq_of_agree
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) < scalarFieldOrder)
+    {O O' : family.Coins}
+    (h : ∀ t ∈ family.relationFinderReads basis O, O' t = O t) :
+    family.relationFinder hchar basis O' = family.relationFinder hchar basis O := by
+  unfold relationFinder
+  rw [provenanceRelationFinder_eq_of_agree h,
+    statementQuotientRelationFinder_eq_of_agree h,
+    identityRelationFinder_eq_of_agree hchar h,
+    terminalRelationFinder_eq_of_agree hchar h]
+
+/-- Equal views and finder results give the same extraction verdict. -/
+theorem adaptiveStatementKnowledgeExtractorV_isSome_congr
+    {view view' : RunView pp family basis} (hview : view' = view)
+    {fr fr' : Option (AlgebraicRelationWitness (F := Fp) basis)} (hfr : fr' = fr)
+    (hchar' : deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis view'.output.inputs)
+      view'.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view'.pre view'.rounds) <
+        scalarFieldOrder)
+    (hchar : deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) <
+        scalarFieldOrder)
+    (hfacts' : fr' = none → family.SemanticStageFacts basis view')
+    (hfacts : fr = none → family.SemanticStageFacts basis view) :
+    (family.adaptiveStatementKnowledgeExtractorV basis view' hchar' fr' hfacts').isSome =
+      (family.adaptiveStatementKnowledgeExtractorV basis view hchar fr hfacts).isSome := by
+  subst hview
+  subst hfr
+  rfl
+
+/-- **Complete extractor locality.**  Agreement on the certified read set reproduces the
+knowledge extractor's verdict. -/
+theorem adaptiveStatementKnowledgeExtractor_isSome_eq_of_agree
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) < scalarFieldOrder)
+    {O O' : family.Coins}
+    (h : ∀ t ∈ family.relationFinderReads basis O, O' t = O t) :
+    (family.adaptiveStatementKnowledgeExtractor hchar basis O').isSome =
+      (family.adaptiveStatementKnowledgeExtractor hchar basis O).isSome :=
+  family.adaptiveStatementKnowledgeExtractorV_isSome_congr (runView_eq_of_agree h)
+    (relationFinder_eq_of_agree hchar h) _ _ _ _
 
 end ComputedAdaptiveActionStatementFSFamily
 
