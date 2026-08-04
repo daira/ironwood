@@ -22,10 +22,11 @@ open Zcash.Circuits Zcash.Circuits.Action
 open Zcash.Arithmetic (scalarFieldOrder URS)
 open scoped ENNReal
 
-/-! ## The sequential endpoint: every semantic budget discharged and counted
+/-! ## Every semantic budget discharged and counted
 
-Captured counting caps transfer to the derived key and discharge every sequential semantic
-budget.
+Captured counting caps transfer to the derived key and discharge every semantic budget. The
+statistical model assembled here reserves the larger pinned-root coefficient and an extra
+compressed-constraint `x` term, so it upper-bounds the bare-adaptive remainder.
 -/
 
 /-- The Action circuit enables at most `2^12` lookup activations. -/
