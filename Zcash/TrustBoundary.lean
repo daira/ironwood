@@ -984,8 +984,7 @@ assert_axioms Zcash.Snark.deployedAccepts_of_assembles_of_zeroBases
 -- native owners are the Action circuit's own certificates, reached through the record's type.
 assert_axioms Zcash.Snark.ActionDeploymentInstantiation +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyColumnBounds,
   Zcash.Snark.actionMissingConstantAllocations_eq_nil,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
@@ -1751,8 +1750,8 @@ assert_computable Zcash.Snark.topLevelStatements_or_relation_of_decode +choice +
 -- only the challenge exclusions left as premises.
 assert_computable Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_decode +choice +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionCopyActiveRowFailures_eq_nil, Zcash.Snark.actionCopyAddressFailures_eq_nil,
-  Zcash.Snark.actionCopyBounds, Zcash.Snark.actionMissingConstantAllocations_eq_nil,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil,
+  Zcash.Snark.actionCopyColumnBounds, Zcash.Snark.actionMissingConstantAllocations_eq_nil,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
   Zcash.Snark.ActionConstraintBounds.domainExponent_lt,
@@ -1771,8 +1770,7 @@ assert_computable Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_
 -- decode from its own accepting run.
 assert_computable Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_straightLineDecoded +choice +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyColumnBounds,
   Zcash.Snark.actionMissingConstantAllocations_eq_nil,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
@@ -1794,8 +1792,7 @@ assert_computable Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_
 -- observable, so it carries the computable pin rather than only an axiom bound.
 assert_computable Zcash.Snark.ActionTerminal.actionTerminalWitnessOrRelationFinder +choice +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyColumnBounds,
   Zcash.Snark.actionMissingConstantAllocations_eq_nil,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
@@ -1858,8 +1855,7 @@ assert_axioms Zcash.Snark.topLevelTerminalRelationFinderCovers +native(
 -- what the capstones imply.
 assert_axioms Zcash.Snark.ActionTerminal.acceptFalseStatement_subset_knowledgeFailure +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyColumnBounds,
   Zcash.Snark.actionMissingConstantAllocations_eq_nil,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
@@ -1877,8 +1873,7 @@ assert_axioms Zcash.Snark.ActionTerminal.acceptFalseStatement_subset_knowledgeFa
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.acceptFalseStatement_subset_knowledgeFailure +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyColumnBounds,
   Zcash.Snark.actionMissingConstantAllocations_eq_nil,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
@@ -1900,8 +1895,7 @@ assert_axioms Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.acceptFalseSta
 -- satisfaction directly instead of the decoded-member polynomial equality.
 assert_computable Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_decode_circuitSat +choice +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyColumnBounds,
   Zcash.Snark.actionMissingConstantAllocations_eq_nil,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
@@ -2075,8 +2069,7 @@ assert_computable Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineC
 -- Census the executable cached adaptive finder and its resource bounds.
 assert_computable Zcash.Snark.ActionTerminal.actionRelationFinder +choice +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyColumnBounds,
   Zcash.Snark.actionMissingConstantAllocations_eq_nil,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
@@ -2094,8 +2087,7 @@ assert_computable Zcash.Snark.ActionTerminal.actionRelationFinder +choice +nativ
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_computable Zcash.Snark.ActionTerminal.actionKnowledgeExtractor +choice +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyColumnBounds,
   Zcash.Snark.actionMissingConstantAllocations_eq_nil,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
@@ -2115,8 +2107,7 @@ assert_computable Zcash.Snark.ActionTerminal.actionKnowledgeExtractor +choice +n
 -- executable.
 assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.relationFinderWithCalls +choice +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyColumnBounds,
   Zcash.Snark.actionMissingConstantAllocations_eq_nil,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
@@ -2136,8 +2127,7 @@ assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.relationFi
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.relationFinder +choice +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyColumnBounds,
   Zcash.Snark.actionMissingConstantAllocations_eq_nil,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
@@ -2157,8 +2147,7 @@ assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.relationFi
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.adaptiveStatementKnowledgeOutcomeCoreV +choice +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyColumnBounds,
   Zcash.Snark.actionMissingConstantAllocations_eq_nil,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
@@ -2176,8 +2165,7 @@ assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.adaptiveSt
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.adaptiveStatementKnowledgeOutcomeV +choice +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyColumnBounds,
   Zcash.Snark.actionMissingConstantAllocations_eq_nil,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
@@ -2195,8 +2183,7 @@ assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.adaptiveSt
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.adaptiveStatementKnowledgeExtractorV +choice +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyColumnBounds,
   Zcash.Snark.actionMissingConstantAllocations_eq_nil,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
@@ -2214,8 +2201,7 @@ assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.adaptiveSt
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.adaptiveStatementKnowledgeExtractor +choice +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyColumnBounds,
   Zcash.Snark.actionMissingConstantAllocations_eq_nil,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
@@ -2276,8 +2262,7 @@ assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConst
 assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintSemanticFailure_prob_le_of_generatorRO_dlogProfile +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.ActionTerminal.actionKnowledgeFailure_probability_bound_of_baseUnionBound +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyColumnBounds,
   Zcash.Snark.actionMissingConstantAllocations_eq_nil,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
@@ -2600,7 +2585,7 @@ assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineRootZ
 assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDeployedRoots_prob_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintBadX_prob_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.statisticalSurfaceEvent_prob_le +native(Zcash.Snark.ActionPermutationDomain.numInstanceColumns_eq, CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt, Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero, Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check, Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.adaptiveStatementKnowledgeFailure_prob_le +native(Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit, Zcash.Snark.actionCopyActiveRowFailures_eq_nil, Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds, Zcash.Snark.actionMissingConstantAllocations_eq_nil, CompElliptic.Fields.Pasta.pallasBase, Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil, Zcash.Snark.ActionConstraintBounds.domainExponent_lt, Zcash.Snark.ActionConstraintBounds.selectorDegree, Zcash.Snark.ActionPermutationDomain.instanceQueryLayout_columns_lt, Zcash.Snark.ActionPermutationDomain.numInstanceColumns_eq, Zcash.Snark.ActionPermutationDomain.permutationColumnCount_eq, CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt, Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero, Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check, Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_axioms Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.adaptiveStatementKnowledgeFailure_prob_le +native(Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit, Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyColumnBounds, Zcash.Snark.actionMissingConstantAllocations_eq_nil, CompElliptic.Fields.Pasta.pallasBase, Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil, Zcash.Snark.ActionConstraintBounds.domainExponent_lt, Zcash.Snark.ActionConstraintBounds.selectorDegree, Zcash.Snark.ActionPermutationDomain.instanceQueryLayout_columns_lt, Zcash.Snark.ActionPermutationDomain.numInstanceColumns_eq, Zcash.Snark.ActionPermutationDomain.permutationColumnCount_eq, CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt, Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero, Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check, Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 
 /-! ## Pre- and post-NU6.3 circuit separation
 
