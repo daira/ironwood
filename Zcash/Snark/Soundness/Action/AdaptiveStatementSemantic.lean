@@ -30,90 +30,90 @@ theorem adaptiveStatementInstanceLayout_column_lt {pp : ProofParams}
   have hall := ActionPermutationDomain.instanceQueryLayout_columns_lt
   exact hall (column, rotation) hmem'
 
-theorem BatchWitness.acceptedPolynomial_eq_online_of_query {pp : ProofParams}
+theorem BatchWitnessV.acceptedPolynomial_eq_online_of_query {pp : ProofParams}
     {family : ComputedAdaptiveActionStatementFSFamily pp}
     {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
-    {O : family.Coins}
-    (witness : family.BatchWitness basis O)
+    {view : RunView pp family basis}
+    (witness : family.BatchWitnessV basis view)
     (decode : DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)
-      ((family.runProof basis O).aMulti (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O)))
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0))
+      (view.output.toAlgebraicWfProof.aMulti view.pre)
+      (view.output.toAlgebraicWfProof.multiU view.pre)
+      (view.output.toAlgebraicWfProof.multiBlind view.pre))
     (hbatches : decode.batches = witness.batches)
     (hchar : deployedX4PairCount (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1
-        (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)) <
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1
+        (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) <
         Zcash.Arithmetic.scalarFieldOrder)
     (haccepts : DeployedAccepts (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1
-      (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)))
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds))
     (id : CommitmentId)
     (q : VerifierQuery (AdaptiveActionStatementShape pp).k Fp VestaG)
     (hq : q ∈ assembleQueries (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1
-        (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)))
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1
+        (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds))
     (hqid : q.commId = id) (P : VestaG)
     (hpoint : assembledCommitment (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1
-        (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)) id = .point P) :
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1
+        (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) id = .point P) :
     CanonicalMemberConstraintRelation.acceptedPolynomial
         (memberDecode := fun i hi =>
-          (decode.reRound (family.runIpaReads basis O)).toMemberDecode hchar i hi)
+          (decode.reRound view.rounds).toMemberDecode hchar i hi)
         haccepts id =
       onlinePointPolynomial
-        ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource
+        (view.output.proofData.algebraicProof.preX1AssemblySource
           (adaptiveStatementInstanceRepresentationList
-              (family.runOutput basis O).instanceRepresentations ++
+              view.output.instanceRepresentations ++
             family.fixedRepresentations basis)) P := by
   let routing := canonicalRoutingConditions_of_accepts
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
     (adaptiveActionStatementVk pp basis)
-    (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1
-    (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)) haccepts
+    (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+    view.output.toAlgebraicWfProof.proof.1
+    (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) haccepts
   have routed := assembledQueryMemberRoute_faithful
     (instanceCommitment := adaptiveActionStatementInstanceCommitment pp basis
-      (family.runOutput basis O).inputs)
-    (adaptiveActionStatementVk pp basis) (family.runProof basis O).proof.1
-    (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O))
+      view.output.inputs)
+    (adaptiveActionStatementVk pp basis) view.output.toAlgebraicWfProof.proof.1
+    (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds)
     routing.1 routing.2 q hq
   have hmemberPoint : ((deployedSetQueries (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1
-      (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O))
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds)
       routed.slot.setIndex).getD (routed.slot.memberIndex : Nat) (.point 0, [])).1 =
         .point P := by
     rw [deployed_member_commitment_eq_assembled
         (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-        (family.runProof basis O).proof.1
-        (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O))
+        (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+        view.output.toAlgebraicWfProof.proof.1
+        (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds)
         routed.slot.setIndex routed.slot.memberIndex CommitmentId.vanishingH
         (assembledQueryMemberRoute_id
           (instanceCommitment := adaptiveActionStatementInstanceCommitment pp basis
-            (family.runOutput basis O).inputs)
-          (adaptiveActionStatementVk pp basis) (family.runProof basis O).proof.1
-          (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O))
+            view.output.inputs)
+          (adaptiveActionStatementVk pp basis) view.output.toAlgebraicWfProof.proof.1
+          (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds)
           routing.1 routing.2 id routed.slot
           (by simpa only [CanonicalMemberConstraintRelation.acceptedRoute, routing, ← hqid]
             using routed.route_eq)) (.point 0, [])]
     exact hpoint
-  have hmember : (decode.reRound (family.runIpaReads basis O)).memberPoly
+  have hmember : (decode.reRound view.rounds).memberPoly
         routed.slot.setIndex routed.slot.setIndex_lt routed.slot.memberIndex =
       onlinePointPolynomial
-        ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource
+        (view.output.proofData.algebraicProof.preX1AssemblySource
           (adaptiveStatementInstanceRepresentationList
-              (family.runOutput basis O).instanceRepresentations ++
+              view.output.instanceRepresentations ++
             family.fixedRepresentations basis)) P := by
     change decode.memberPoly routed.slot.setIndex routed.slot.setIndex_lt
       routed.slot.memberIndex = _
@@ -123,21 +123,21 @@ theorem BatchWitness.acceptedPolynomial_eq_online_of_query {pp : ProofParams}
       routed.slot.memberIndex]
     exact congrArg coeffsToPoly
       (deployedMemberRepresentationsOfCovered_coeffs_point
-        (family.runProof basis O)
+        view.output.toAlgebraicWfProof
         (adaptiveStatementInstanceRepresentationList
-            (family.runOutput basis O).instanceRepresentations ++
+            view.output.instanceRepresentations ++
           family.fixedRepresentations basis)
-        (family.runOutput basis O).proofData.membersCovered
-        (family.runPreIpaReads basis O)
+        view.output.proofData.membersCovered
+        view.pre
         routed.slot.setIndex routed.slot.setIndex_lt routed.slot.memberIndex P hmemberPoint)
   have hroute : (CanonicalMemberConstraintRelation.acceptedRoute
       (G := VestaG) (shape := AdaptiveActionStatementShape pp)
       (urs := ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)
       (hk := rfl) (vk := adaptiveActionStatementVk pp basis)
       (instanceCommitment := adaptiveActionStatementInstanceCommitment pp basis
-        (family.runOutput basis O).inputs)
-      (ps := (family.runProof basis O).proof.1)
-      (ch := chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O))
+        view.output.inputs)
+      (ps := view.output.toAlgebraicWfProof.proof.1)
+      (ch := chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds)
       haccepts) id = some routed.slot := by
     simpa only [CanonicalMemberConstraintRelation.acceptedRoute, routing, ← hqid] using
       routed.route_eq
@@ -323,7 +323,7 @@ theorem adaptiveStatementAcceptedPolynomial_eq_stage {pp : ProofParams}
     (family.runRecord basis O) id hactive
   obtain ⟨P, hpoint, ap, hap, hapPoint⟩ :=
     adaptiveStatementActive_point_mem_stage family basis O n id hactive havailable
-  have hfull := BatchWitness.acceptedPolynomial_eq_online_of_query witness
+  have hfull := BatchWitnessV.acceptedPolynomial_eq_online_of_query witness
     decode hbatches hchar
     haccepts id q (by
       simpa only [family.runRecord_eq_chRecord] using hq) hqid P (by
