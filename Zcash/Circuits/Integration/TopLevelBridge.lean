@@ -99,7 +99,7 @@ Lift per-proof full bridges to a bundle of circuit-owned statements while
 preserving one shared exceptional event.
 
 This is the generic finite-family join used by the Action adapter: the proof does
-not inspect the circuit statement and does not introduce an `hencodes` predicate.
+not inspect the circuit statement and introduces no encoding predicate of its own.
 -/
 def bundleTopLevelSoundness_or_bad
     (top : TopLevelCircuit Fp Config PublicInput)

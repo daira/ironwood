@@ -21,11 +21,12 @@ open Zcash.Arithmetic (Msm)
 
 variable {G : Type*} [AddCommGroup G] [Module Fp G]
 
--- Tracked semantic-adequacy gap: `S` is a free `Prop` and `hencodes` an assumed hypothesis, so
--- the chain stops at "the extracted witness satisfies the gates" (`SnarkRelation`) and never
--- reaches "…therefore a valid Orchard action" (note well-formed, value balanced, nullifier
+-- Tracked semantic-adequacy gap: `S` is a free `Prop`, and the Clean/Ironwood representation
+-- work is exposed as the named component conditions of `TopLevelCircuitCorrectness` rather than
+-- proved, so the chain stops at "the extracted witness satisfies the gates" (`SnarkRelation`) and
+-- never reaches "…therefore a valid Orchard action" (note well-formed, value balanced, nullifier
 -- correctly derived, spend authorized). Closing the generic form means instantiating `S` to the
--- concrete Orchard statement and proving `hencodes`. The deployed Action key is separately derived
+-- concrete Orchard statement and discharging those conditions. The deployed Action key is derived
 -- and certified against the capture by `Keygen/Certificate.lean`; only the capture's Rust provenance
 -- remains an input-side boundary. The semantic bridge described here remains open.
 def DeployedAccepts [DecidableEq G] [Inhabited G] (shape : Shape) (urs : URS G)
