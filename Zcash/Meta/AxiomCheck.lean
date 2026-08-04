@@ -211,6 +211,9 @@ plain-`def` check this asserts choice enters only through erased `Prop` fields: 
 data, the definition could not have compiled as a plain `def`. `+native(D₁, ...)` likewise permits
 the named declarations' `native_decide` compiler-trust axioms.
 
+Declaring `+choice` when `foo` does not actually reach `Classical.choice` fails the build (drop the
+flag), as an over-broad `+native` does: the census states exactly the trust assumed, nothing more.
+
 The plain-`def` check guards a gap in "computability is compiler-enforced": marking a reduction
 `noncomputable` later would still build, silently voiding the convention; this assertion catches
 it. The definition-safety check closes the same gap from the other side. An `unsafe` def is a
@@ -236,6 +239,8 @@ elab "assert_computable " n:ident choice:("+choice")? native:(nativeFlag)? : com
     throwError "{n} is marked noncomputable"
   let axs ← collectAxioms name
   let allowChoice := choice.isSome
+  if allowChoice && !axs.contains ``Classical.choice then
+    throwError "{n} does not depend on Classical.choice; drop the '+choice' flag"
   let allowed ← resolveNativeAnnotation native
   checkNativeAllowance n axs allowed
   let unexpected := axs.filter fun ax =>

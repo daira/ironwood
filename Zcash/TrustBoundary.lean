@@ -12,6 +12,11 @@ import Zcash.Security.Ledger.Capstone
 import Zcash.Security.Ledger.Nullifier
 import Zcash.Security.Ledger.Value
 import Zcash.Security.Ledger.KeyBindingArm
+import Zcash.Security.Ledger.ExtractionArm
+import Zcash.Security.Ledger.ExtractionKappaArm
+import Zcash.Security.RedDSA.Basic
+import Zcash.Security.RedDSA.Extraction
+import Zcash.Security.RedDSA.KnowledgeError
 import Zcash.Security.Common.Birthday
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
@@ -256,19 +261,6 @@ argument's terminal. `+choice` is the erased-positions tier: choice arrives with
 
 assert_computable Zcash.Security.Ledger.Model.NontrivialRelation.ofNullifierCollision +choice
 
-/-! ## The transaction-balance premiss discharge
-
-Computed reductions at the Pedersen value-commitment shape: the transaction-balance
-premiss lands in the binding-signature layer's nontrivial `(V, R)` relation via
-`ofBundleIntImbalance`, with the no-overflow bound discharged from the statement's
-value ranges, validity's action-count and `vBalance` range rules, and the named
-numeric hypothesis `(maxActions + 1) * valueBound ≤ r`. `+choice` is the
-erased-positions tier. -/
-
-assert_computable Zcash.Security.Ledger.Model.ValueShape.premissOrBreak +choice
-assert_computable Zcash.Security.Ledger.Model.ValueShape.conservationOrBreak +choice
-assert_computable Zcash.Security.Ledger.Model.ValueShape.capOrBreak +choice
-
 /-! ## Spend Authority
 
 The per-action core and the valid-ledger capstone are computable reductions; the
@@ -436,6 +428,106 @@ assert_axioms Zcash.Security.Ledger.Bridge.orchardSpendAuthority_measure_le +nat
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
 
+/-! ## RedDSA
+
+The abstract scheme behind the signature obligations. Completeness and the
+re-randomization axioms are theorems. The extraction failure is computable data,
+per breaks-as-computed-data. -/
+
+assert_axioms Zcash.Security.RedDSA.randomizePrivate_add_neg
+assert_axioms Zcash.Security.RedDSA.randomizePrivate_zero
+assert_axioms Zcash.Security.RedDSA.Scheme.randomizePublic_zero
+assert_axioms Zcash.Security.RedDSA.Scheme.derivePublic_randomizePrivate
+assert_axioms Zcash.Security.RedDSA.Scheme.derivePublic_add
+assert_axioms Zcash.Security.RedDSA.Scheme.derivePublic_injective
+assert_axioms Zcash.Security.RedDSA.Scheme.verify_sign
+assert_axioms Zcash.Security.RedDSA.Scheme.verify_sign_randomized
+
+/-! ## RedDSA extractability: the binding-signature discharge
+
+The deterministic core of the binding-signature extraction (#22): substituting a verifying
+binding signature's representations over the public basis into the Schnorr verification
+equation assembles coefficients whose evaluation is zero; whenever some coefficient is
+nonzero, they are an `AlgebraicRelationWitness` (`bindingSig_relation_of_nontrivial`), and
+away from the one bad challenge of the representation's pivot slot, one is
+(`QueryRep.assembled_ne_zero_of_ne_badChallenge`). The knowledge-error block below composes
+this with the labeled squeeze and the relation-to-discrete-log reduction. -/
+
+assert_computable Zcash.Security.RedDSA.QueryRep.assembled
+assert_computable Zcash.Security.RedDSA.QueryRep.pivot
+assert_computable Zcash.Security.RedDSA.QueryRep.badChallenge
+assert_axioms Zcash.Security.RedDSA.QueryRep.representationEval_key_of_pivot_eq_none
+assert_axioms Zcash.Security.RedDSA.QueryRep.assembled_ne_zero_of_ne_badChallenge
+assert_computable Zcash.Security.RedDSA.bindingSig_relation_of_nontrivial +choice
+
+/-! ## The binding-signature knowledge error
+
+The κ-discharge (#22): over the challenge oracle's whole table and the logs of the `m`
+presented bases, a labeled algebraic adversary within query budget `qH` produces a
+verifying binding signature whose effective representation has a pivot with probability at
+most `(qH + 1)/|F| + ε_DL + 1/|F|` (`kappaEvent_measure_le`) — the straight-line AGM+ROM
+extraction of Fuchsbauer–Plouviez–Seurin, in the key-only setting. Challenge queries carry
+the adversary's representations as labels the oracle never sees; the representation in
+effect at the output's query point is the first annotation there, or the announced output
+representation when the run never queried the point — the squeeze's fallback branch, which
+plays the game's own final challenge query. The relation finder replaying the adversary is
+computable, and is the discrete-log adversary that the named `ε_DL` hypothesis constrains.
+Degeneracy needs no side condition: at base `0` the hypothesis itself forces
+`ε ≥ 1 − 1/|F|` (`textbookDLAdvantageLE_base_zero`). -/
+
+assert_computable Zcash.Security.RedDSA.dischargeOut
+assert_computable Zcash.Security.RedDSA.dischargeChallenge
+assert_computable Zcash.Security.RedDSA.effectiveRep
+assert_computable Zcash.Security.RedDSA.relFinder +choice
+assert_axioms Zcash.Security.RedDSA.kappa_le_of_arms
+assert_axioms Zcash.Security.RedDSA.kappaEvent_subset
+assert_axioms Zcash.Security.RedDSA.badFiber_measure_le
+assert_axioms Zcash.Security.RedDSA.relFiber_subset_relSet
+assert_axioms Zcash.Security.RedDSA.relFiber_measure_le
+assert_axioms Zcash.Security.RedDSA.kappaEvent_measure_le
+assert_computable Zcash.Security.RedDSA.zeroBasisRelationFinder +choice
+assert_axioms Zcash.Security.RedDSA.textbookDLAdvantageLE_base_zero
+
+/-! ## The transaction-balance premiss in extractor-plus-knowledge-error form
+
+The transaction-balance premiss discharge with a fallible extractor: the extractor
+is an arbitrary function, its failures are exhibited `RedDSA.ExtractionFailure`
+data, and the Balance capstones bound the violation by `εdlr + κ`, per prefix and at
+all prefixes with no factor of `k`. The premiss lands in the binding-signature
+layer's nontrivial `(Vbase, Rbase)` relation via `ofBundleIntImbalance`, with the
+no-overflow bound discharged from the statement's value ranges, validity's
+action-count and `vBalance` range rules, and the named numeric hypothesis
+`(maxActions + 1) * valueBound ≤ r`. The Orchard instantiation names the same bounds
+at the Orchard-protocol primitives; the integrity bound takes `εdlr + κ` in place of
+the opaque `ε_bindsig`. `+choice` is the erased-positions tier. -/
+
+assert_computable Zcash.Security.Ledger.Model.ValueShape.premissOrBreakFallible +choice
+assert_computable Zcash.Security.Ledger.Model.txBalancePremissFallible +choice
+assert_axioms Zcash.Security.Ledger.Model.extractFailEvent_failure
+assert_axioms Zcash.Security.Ledger.Model.txBalanceBreakEvent_fallible_subset
+assert_axioms Zcash.Security.Ledger.Model.balanceConservation_measure_le_kerr
+assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCap_measure_le_kerr
+assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_measure_le_kerr
+assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCapBefore_measure_le_kerr
+assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceConservationBefore_measure_le_kerr +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceIntegrity_measure_le_kerr +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+
 /-! ## The key-binding arms' ε, discharged
 
 The Balance-subset and Spend Authority key-binding arms' probability in the
@@ -455,6 +547,34 @@ assert_computable Zcash.Security.Ledger.Model.kwAt
 assert_axioms Zcash.Security.Ledger.Model.spendAuthorityOrBreak_pair
 assert_axioms Zcash.Security.Ledger.Model.balanceSubset_keyBindingArm_measure_le
 assert_axioms Zcash.Security.Ledger.Model.spendAuthority_keyBindingArm_measure_le
+
+/-! ## The extraction-failure arm's κ, discharged in the oracle model
+
+The conservation reduction's extraction-failure arm, bounded in the challenge-oracle
+model: `(qH + 2)/|F| + ε_DL` for any `qH`-query-bounded labeled algebraic ledger
+adversary, from the knowledge-error bound at an unchanged query count. The extractor
+(`kappaExtractor`) reads the `key` coefficient at the ℛ slot off the representation in
+effect at the signature's query point. The composite machine recovers the failing
+transaction and its announced representation oracle-free (`failTxOfAnn`, identified with
+the reduction's own selection by the localization theorems) and returns its signature
+data; the all-prefixes form costs no factor of `k`, because every prefix's failure arm
+breaks at the ledger's first imbalanced transaction. -/
+
+assert_computable Zcash.Security.Ledger.Model.kappaPrimitivesAt +choice
+assert_computable Zcash.Security.Ledger.Model.kappaShapeAt +choice
+assert_computable Zcash.Security.Ledger.Model.kappaBindingAt +choice
+assert_computable Zcash.Security.Ledger.Model.kappaExtractor +choice
+assert_computable Zcash.Security.Ledger.Model.bvkAt +choice
+assert_computable Zcash.Security.Ledger.Model.failTxOfAnn
+assert_computable Zcash.Security.Ledger.Model.kappaOut +choice
+assert_computable Zcash.Security.Ledger.Model.kappaComposite +choice
+assert_axioms Zcash.Security.Ledger.Model.bvkAt_eq
+assert_axioms Zcash.Security.Ledger.Model.kappaComposite_queryBound
+assert_computable Zcash.Security.Ledger.Model.allConservedOrBreak_extractFail +choice
+assert_computable Zcash.Security.Ledger.Model.balanceConservationOrBreak_extractFail +choice
+assert_axioms Zcash.Security.Ledger.Model.extractFail_mem_kappaEvent
+assert_axioms Zcash.Security.Ledger.Model.balanceConservation_extractFailArm_measure_le
+assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_extractFailArm_measure_le
 
 /-! ## Binding-signature relation reductions
 
@@ -547,7 +667,7 @@ assert_computable Zcash.Snark.relationWitnessOfCollision +choice
 assert_computable Zcash.Snark.discreteLogOfAugmentedRelationAtChallenge +choice
 assert_computable Zcash.Snark.separateOrRelationWitness +choice
 assert_computable Zcash.Snark.algebraicPowerBatchWithSourceOrRelation +choice
-assert_computable Zcash.Snark.finForallOrRelationWitness +choice
+assert_computable Zcash.Snark.finForallOrRelationWitness
 assert_computable Zcash.Snark.constructIntermediateSets_comm_route +choice
 assert_computable Zcash.Snark.deployed_slot_route_of_checks +choice
 assert_computable Zcash.Snark.deployedRouteSelectorOfSpecs +choice

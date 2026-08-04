@@ -182,6 +182,17 @@ theorem runWithAnnotations_log_length_le
         simp [findLabel, queries, erase, OracleComp.queries]
       · simpa [findLabel, h, queries, erase, OracleComp.queries, Ne.symm h] using ih (O q)
 
+/-- Post-processing the output with a pure continuation leaves the first labels alone. -/
+@[simp] theorem findLabel_bind_pure {β : Type*} [DecidableEq T]
+    (A : LabeledOracleComp T F Label α) (f : α → β) (O : T → F) (t : T) :
+    (A.bind fun a => pure (f a)).findLabel O t = A.findLabel O t := by
+  induction A with
+  | pure a => rfl
+  | query q label k ih =>
+      by_cases h : q = t
+      · simp [bind, findLabel, h]
+      · simp [bind, findLabel, h, ih (O q)]
+
 /-- If no query-time annotation exists at `t`, reprogramming `t` cannot change the result. -/
 theorem run_update_of_findLabel_eq_none [DecidableEq T]
     (A : LabeledOracleComp T F Label α) (O : T → F) (t : T) (v : F)

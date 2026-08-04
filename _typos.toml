@@ -33,3 +33,4 @@ henc = "henc"  # hypothesis identifier (`henc`) in Circuits/Integration/ActionCo
 padd = "padd"  # projective point addition (`padd`) in Vendor/CompPoly/ScalarFftDefs
 Hom = "Hom"  # `RingHom`, `evalRingHom` — Mathlib's homomorphism naming
 advices = "advices"
+colinear = "colinear"  # deliberate English spelling; we are not writing Latin
