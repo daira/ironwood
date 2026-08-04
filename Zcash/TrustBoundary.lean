@@ -890,7 +890,7 @@ assert_axioms Zcash.Snark.fsWinsFull_mapDomain_measure_eq
 assert_axioms Zcash.Snark.fsWinsFull_splitDomain
 assert_axioms Zcash.Snark.fsWinsFull_unbounded_measure_le
 assert_axioms Zcash.Snark.truncateTranscript
-assert_computable Zcash.Security.BindingSignature.NontrivialRelation.toAlgebraicRelationWitness +choice
+assert_computable Zcash.Security.BindingSignature.NontrivialRelation.toAlgebraicRelationWitnessAt +choice
 assert_computable Zcash.Security.BindingSignature.NontrivialRelation.toDiscreteLog +choice
 assert_axioms Zcash.Security.BindingSignature.orchardImbalanceToDiscreteLog
 assert_axioms Zcash.Security.BindingSignature.saplingImbalanceToDiscreteLog

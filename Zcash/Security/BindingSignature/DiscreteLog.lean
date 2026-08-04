@@ -19,42 +19,35 @@ namespace Zcash.Security.BindingSignature
 
 variable {F M : Type*} [Field F] [AddCommGroup M] [Module F M]
 
-/-- The two public bases used by the binding-signature relation. -/
-def bindingSignatureBasis (Vbase Rbase : M) : Fin 2 → M
-  | 0 => Vbase
-  | 1 => Rbase
-
-/-- The two coefficients of a binding-signature relation. -/
-def bindingSignatureCoeffs (α β : F) : Fin 2 → F
-  | 0 => α
-  | 1 => β
-
-theorem representationEval_bindingSignatureBasis (Vbase Rbase : M) (α β : F) :
-    representationEval (bindingSignatureBasis Vbase Rbase) (bindingSignatureCoeffs α β)
-      = α • Vbase + β • Rbase := by
-  simp [representationEval, bindingSignatureBasis, bindingSignatureCoeffs, Fin.sum_univ_two]
-
-/-- Convert a binding-signature relation to the generic relation type over a public basis. -/
-def NontrivialRelation.toAlgebraicRelationWitness (Vbase Rbase : M)
-    (r : NontrivialRelation (F := F) Vbase Rbase) :
-    AlgebraicRelationWitness (F := F) (bindingSignatureBasis Vbase Rbase) :=
-  { coeffs := bindingSignatureCoeffs r.α r.β
-    nontrivial := by
-      intro hzero
-      have hα : r.α = 0 := by
-        have h := congrFun hzero 0
-        simpa [bindingSignatureCoeffs] using h
-      have hβ : r.β = 0 := by
-        have h := congrFun hzero 1
-        simpa [bindingSignatureCoeffs] using h
-      rcases r.nontrivial with ha | hαβ
-      · exact ha (Subsingleton.elim _ _)
-      · rcases hαβ with hα' | hβ'
-        · exact hα' hα
-        · exact hβ' hβ
-    relation := by
-      rw [representationEval_bindingSignatureBasis]
-      simpa [Zcash.commitGen] using r.relation }
+/-- Convert a binding-signature relation to the generic relation type over a basis that
+carries `Vbase` and `Rbase` at two distinct slots. The relation's coefficients are placed at
+those slots and vanish elsewhere. -/
+def NontrivialRelation.toAlgebraicRelationWitnessAt {m : ℕ} {Vbase Rbase : M}
+    (rel : NontrivialRelation (F := F) Vbase Rbase)
+    (basis : Fin m → M) (v_idx r_idx : Fin m) (hne : v_idx ≠ r_idx)
+    (hV : basis v_idx = Vbase) (hR : basis r_idx = Rbase) :
+    AlgebraicRelationWitness (F := F) basis where
+  coeffs := fun i => (if i = v_idx then rel.α else 0) + (if i = r_idx then rel.β else 0)
+  nontrivial := by
+    intro hzero
+    have hα : rel.α = 0 := by
+      have h := congrFun hzero v_idx
+      simpa [hne] using h
+    have hβ : rel.β = 0 := by
+      have h := congrFun hzero r_idx
+      simpa [Ne.symm hne] using h
+    rcases rel.nontrivial with ha | hα' | hβ'
+    · exact ha (Subsingleton.elim _ _)
+    · exact hα' hα
+    · exact hβ' hβ
+  relation := by
+    have hsplit : representationEval basis
+        (fun i => (if i = v_idx then rel.α else 0) + (if i = r_idx then rel.β else 0))
+        = rel.α • basis v_idx + rel.β • basis r_idx := by
+      simp only [representationEval, add_smul, ite_smul, zero_smul,
+        Finset.sum_add_distrib, Finset.sum_ite_eq', Finset.mem_univ, if_true]
+    rw [hsplit, hV, hR]
+    simpa using rel.relation
 
 /-- Compute the discrete log of `Vbase` base `Rbase` from a two-base relation, assuming `Rbase ≠ 0`. -/
 def NontrivialRelation.toDiscreteLog [DecidableEq F] (Vbase Rbase : M)
