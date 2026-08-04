@@ -33,11 +33,12 @@ heuristic `c = H(R, bvk, sighash)` is drawn after the representations are fixed,
 the bad challenge with probability at most `1/|𝔽_{r_ℙ}|` per query. A guessing argument over
 the query budget accounts for it, and the relation feeds the existing
 `relation_prob_le_of_textbookDL` reduction to discrete log. Those two steps are the intended
-completion of #22; this file is the deterministic relation extraction they consume.
+completion of the κ-discharge; this file is the deterministic relation extraction they
+consume.
 
 The straight-line extraction technique is the one Fuchsbauer, Plouviez, and Seurin use for
 Schnorr (eprint 2019/877, section 3, Theorem 1). The SURK-CMA unforgeability game and its
-reduction (#121) remain unmodelled, but assuming that the reduction can follow the same
+reduction remain unmodelled, but assuming that the reduction can follow the same
 approach as FPS Theorem 1, it likely will be able to use the same extraction with a signing
 oracle added. The relation feeds a reduction that models the public bases as independent
 random group elements; the reference-string heuristic that carries this to the deployed fixed

@@ -147,7 +147,7 @@ theorem action_domainExponent_eq :
     actionCircuit.domainExponent = 11 := by
   simpa [shape] using md_counts.1
 
-/-- **The captured static checks at the derived key** (issue #128 F3): the concrete specialization
+/-- **The captured static checks at the derived key**: the concrete specialization
 of `actionStaticChecks`, with the five decided facts transferred through the captured key's scalar
 equalities. -/
 theorem capturedActionStaticChecks
@@ -178,7 +178,7 @@ theorem capturedActionStaticChecks
     exact TopLevelAssignment.domainSizeCastNeZero
       ActionPermutationDomain.domainExponent_lt
 
-/-- **The captured `x`-squeeze schedule at the derived key** (issue #128 F3): the degree caps
+/-- **The captured `x`-squeeze schedule at the derived key**: the degree caps
 transfer through the scalar equalities, and pinning is the family's own derived projection. -/
 def capturedActionXSqueezeSchedule
     (family : ComputedStraightLineDeployedFSFamily

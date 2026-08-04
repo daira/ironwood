@@ -2004,7 +2004,7 @@ private theorem input_eval_node_prover (env : Placed ProverEnvironment Fp)
 
 /-- Rust `MerklePath::calculate_root` (`merkle.rs`): the 32-layer serial fold of
 `Layer.circuit` (layer `i` at `l = i`), fed by the per-layer sibling/position-bit witness
-programs. Its spec is the extraction-friendly `ExactMerklePathData` chain (zcash/ironwood#97):
+programs. Its spec is the extraction-friendly `ExactMerklePathData` chain:
 the literal 255-bit child encodings and swap bits of every layer, with each layer's hash
 in the guarded ⊥-model. Escapes are not turned into break statements here — the security
 layer recomputes them from the exported encodings. -/

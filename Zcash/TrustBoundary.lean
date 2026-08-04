@@ -454,7 +454,7 @@ assert_axioms Zcash.Security.RedDSA.Scheme.verify_sign_randomized
 
 /-! ## RedDSA extractability: the binding-signature discharge
 
-The deterministic core of the binding-signature extraction (#22): substituting a verifying
+The deterministic core of the binding-signature extraction: substituting a verifying
 binding signature's representations over the public basis into the Schnorr verification
 equation assembles coefficients whose evaluation is zero; whenever some coefficient is
 nonzero, they are an `AlgebraicRelationWitness` (`bindingSig_relation_of_nontrivial`), and
@@ -471,7 +471,7 @@ assert_computable Zcash.Security.RedDSA.bindingSig_relation_of_nontrivial +choic
 
 /-! ## The binding-signature knowledge error
 
-The κ-discharge (#22): over the challenge oracle's whole table and the logs of the `m`
+The κ-discharge: over the challenge oracle's whole table and the logs of the `m`
 presented bases, a labeled algebraic adversary within query budget `qH` produces a
 verifying binding signature whose effective representation has a pivot with probability at
 most `(qH + 1)/|F| + ε_DL + 1/|F|` (`kappaEvent_measure_le`) — the straight-line AGM+ROM
@@ -1181,7 +1181,7 @@ assert_axioms Zcash.Snark.witnessDeployedRootFamily +native(
 -- polynomial, so the constraint-`x` stage is a read-free executable computation, and the
 -- degenerate shape's IPA trace is round-free.
 assert_axioms Zcash.Snark.deployedConstraintDifferencePreX_witness +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
--- The total pre-x constraint event of issue #127: the difference from the family's own
+-- The total pre-x constraint event: the difference from the family's own
 -- source, the unguarded bad set, and the zero prover's any-shape constraint-x stage.
 assert_axioms Zcash.Snark.deployedConstraintDifferencePreX +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
@@ -1195,7 +1195,7 @@ assert_axioms Zcash.Snark.zeroConstraintDifference_explicit +native(
 assert_axioms Zcash.Snark.zeroConstConstraintXTrace +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.zeroConstStraightLineDeployedFamily +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
--- Adversary coverage (#127 C8): the sequential online-AGM prover model and its lifting to
+-- Adversary coverage: the sequential online-AGM prover model and its lifting to
 -- the staged family; the total difference reads only the pre-x view.
 assert_axioms Zcash.Snark.committedPreXConstraintDifference_ps_congr
 assert_axioms Zcash.Snark.committedPreXConstraintDifference_challenge_congr
@@ -1208,12 +1208,12 @@ assert_axioms Zcash.Snark.SequentialPreXProver.lift +native(CompElliptic.Curves.
 assert_axioms Zcash.Snark.SequentialPreXProver.lift_adversary +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.SequentialPreXProver.lift_Q +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
--- Uniform sequential cuts (#128 F6, first brick): prefix-determinism at every squeeze index
+-- Uniform sequential cuts, the first brick: prefix-determinism at every squeeze index
 -- is derived from the prover's execution order, never assumed.
 assert_axioms Zcash.Snark.OracleComp.run_congr_of_agree
 assert_axioms Zcash.Snark.SequentialCut.toPrefixDeterminedAt +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
--- State surfaces (#128 F6): a semantic exclusion set read off the cut state costs
+-- State surfaces: a semantic exclusion set read off the cut state costs
 -- `(Q + 1) * epsilon`, with stability derived from the cut's execution order.
 assert_axioms Zcash.Snark.SequentialCut.state_stable +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
@@ -1223,7 +1223,7 @@ assert_axioms Zcash.Snark.SequentialCut.surfaceEvent_basis_le +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.SequentialCut.surfaceEvent_prob_le +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
--- The state-surface discharge (#128 F6): each Action semantic failure event contained in
+-- The state-surface discharge: each Action semantic failure event contained in
 -- its cut state surface and priced at `(Q + 1) * epsilon`, views supplying every read.
 assert_axioms Zcash.Snark.ActionTerminal.vkAt +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
@@ -1328,7 +1328,7 @@ assert_axioms Zcash.Snark.ActionTerminal.actionXYFailure_probability_bound +nati
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
--- Per-state probability bounds (#128 F7): each surface premise reduced to the staged counts.
+-- Per-state probability bounds: each surface premise reduced to the staged counts.
 assert_axioms Zcash.Snark.ActionTerminal.actionThetaBadSet_probability_bound +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
@@ -1369,7 +1369,7 @@ assert_axioms Zcash.Snark.ActionTerminal.actionYBadSet_probability_bound +native
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
--- Challenge reads (#128 F6): what each semantic exclusion set consumes — congruences over
+-- Challenge reads: what each semantic exclusion set consumes — congruences over
 -- polynomial maps agreeing on the named slot classes and over the named earlier challenges.
 assert_axioms Zcash.Snark.CommitmentId.isColumnInput
 assert_axioms Zcash.Snark.CommitmentId.isPermutationInput
@@ -1575,7 +1575,7 @@ assert_axioms Zcash.Snark.decodePoints_zero
 -- Circuit-generic straight-line decode terminal.
 assert_computable Zcash.Snark.topLevelStatements_or_relation_of_decode +choice +native(
   CompElliptic.Fields.Pasta.pallasBase)
--- The rewind-free decode reaching #99's Action terminal
+-- The rewind-free decode reaching the Action terminal
 -- (`Soundness.Action.StraightLineTerminal`): one accepting execution, no rewind, with
 -- only the challenge exclusions left as premises.
 assert_computable Zcash.Snark.ActionTerminal.action_bundleStatement_or_relation_of_decode +choice +native(

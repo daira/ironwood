@@ -5,7 +5,7 @@ import Zcash.Snark.Soundness.AGM.AdaptiveOnline
 /-!
 # The binding-signature knowledge error: κ ≤ (qH+1)/|F| + (ε_DL + 1/|F|)
 
-The κ-discharge for the extraction arm (#22), composing the deterministic core
+The κ-discharge for the extraction arm, composing the deterministic core
 (`bindingSig_relation_of_nontrivial`) with the labeled adaptive squeeze
 (`finalBadWithoutRelation_measure_le`) and the relation-to-discrete-log reduction
 (`relation_prob_le_of_textbookDL`). The argument is the straight-line AGM+ROM extraction of

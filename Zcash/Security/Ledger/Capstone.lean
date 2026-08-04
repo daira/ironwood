@@ -36,7 +36,7 @@ probability is then bounded by a named ε hypothesis. The key-binding arm's ε i
 discharged in `KeyBindingArm.lean` against the key-binding layer's probability bound
 (`toInterface_break_measure_le`), for a ledger adversary in the oracle model.
 Connecting that bound to this layer's named-ε slot — an oracle machine against a `PMF`
-over valid annotated ledgers — is still open (#155), as are the Merkle and
+over valid annotated ledgers — is still open, as are the Merkle and
 note-commitment arms (against Sinsemilla/DLR hardness).
 -/
 

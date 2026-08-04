@@ -12,10 +12,10 @@ from the public inputs, as halo2's `verify_proof` computes them from its `instan
 captured artifacts, meanwhile, are exercised
 against the fixture's own family `CapturedSingle.derivedInstanceCommitment` (the Fiat–Shamir fingerprint,
 `assemble?`, the negative tests), which `instance_commitments_derived` pins to the captured points
-`capturedInstanceCommitments` (ironwood#65/#85).
+`capturedInstanceCommitments`.
 
 Nothing joined those two families, so the circuit model could not be instantiated at the captured
-proof — the last open seam in sound handling of public instances (ironwood#86). This module closes it.
+proof — the last open seam in sound handling of public instances. This module closes it.
 
 Two steps, and the first carries the weight:
 
@@ -202,7 +202,7 @@ theorem actionCircuit_omega_captured :
 `verify_proof` computes them from `instances`. At the captured public inputs that family is
 `CapturedSingle.derivedInstanceCommitment`, the family the captured artifacts are exercised against.
 
-This is the join that was missing (ironwood#86): the circuit model and capture now speak of the same
+This is the join that was missing: the circuit model and capture now speak of the same
 group elements. -/
 theorem instanceCommitment_capturedActionInputs :
     actionCircuit.instanceCommitment capturedURS capturedActionInputs =
@@ -230,7 +230,7 @@ theorem instanceCommitment_capturedActionInputs :
     simp
 
 /-- **The circuit model's family is the captured commitment points.** Composing the seam with the
-capture's own derivation (`instance_commitments_derived`, ironwood#65/#85): at the captured public
+capture's own derivation (`instance_commitments_derived`): at the captured public
 inputs, the circuit-derived commitments are exactly the points the deployed verifier used. -/
 theorem instanceCommitment_eq_capturedInstanceCommitments
     (proofIndex : Fin CapturedSingle.shape.numProofs) {column : ℕ}

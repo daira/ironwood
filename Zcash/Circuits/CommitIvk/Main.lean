@@ -25,7 +25,7 @@ The full `Commit^ivk` flow, region-for-region:
    `CommitIvk` composite, called as a unit (contiguous in Rust).
 
 The output is the extracted `x`-coordinate (`ivk`). `Spec` is the breaks-as-data
-`Commit^ivk` relation at the extracted `rivk` window scalar (zcash/ironwood#45).
+`Commit^ivk` relation at the extracted `rivk` window scalar.
 -/
 
 namespace Zcash.Circuits.CommitIvk.Main

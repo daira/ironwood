@@ -144,7 +144,7 @@ def capturedLiveZeroIpaTrace :
   zeroConstStraightLineIpaTrace capturedLiveZeroVk capturedLiveZeroVk_fixed
     capturedLiveZeroVk_perm
 
-/-- **The full straight-line family with both sub-proofs live** (issue #127 C10): every interface
+/-- **The full straight-line family with both sub-proofs live**: every interface
 obligation discharged at the captured key's scalar data over `numProofs = 2`, `k = 11`.  Smoke
 test only. -/
 def capturedLiveZeroStraightLineFamily :
@@ -170,7 +170,7 @@ theorem capturedLiveZeroStaticChecks :
   characteristic := fun _basis => vk_n_cast_ne_zero
 
 /-- **The straight-line interface is inhabited at the full captured shape** — the non-vacuity
-smoke test of issue #127. -/
+smoke test of the total pre-`x` constraint event. -/
 theorem straightLineInterface_nonempty_at_captured_shape :
     Nonempty (ComputedStraightLineDeployedFSFamily shape) :=
   ⟨capturedLiveZeroStraightLineFamily⟩

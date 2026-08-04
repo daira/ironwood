@@ -38,7 +38,7 @@ syntactic scan of the verifier sources cannot.
 
 `instance_commitments_derived` and `capturedPublicInstances_within_lagrange` are pinned alongside
 `fingerprint_matches`: they carry the *derivation* of the instance commitments from the captured public
-inputs (ironwood#65), which is the trust this fixture buys in place of taking the commitments as opaque
+inputs, which is the trust this fixture buys in place of taking the commitments as opaque
 captured points. The derivation's supporting data and functions (`capturedUrsGLagrange`,
 `capturedPublicInstances`, `commitLagrange`, `derivedInstanceCommitment`) are bounded too, so the
 `native_decide` claims cannot be narrowed by quietly widening what they range over.

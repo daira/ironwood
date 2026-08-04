@@ -678,7 +678,7 @@ theorem adaptiveActionXDegree_bound (numProofs : ℕ)
       simpa only [hshape] using vk_quotient_tail_le
 
 
-/-- **The semantic counts at the query ceiling** (issue #128 F7): at `Q ≤ 2^123` the five
+/-- **The semantic counts at the query ceiling**: at `Q ≤ 2^123` the five
 counted caps total at most `2^160`. -/
 theorem action_semantic_count_le {Q : ℕ} (hQ : Q ≤ 2 ^ 123) :
     (Q + 1) * 20470 + (Q + 1) * 2 ^ 23 + ((Q + 1) * 2 ^ 35 +
@@ -849,7 +849,7 @@ theorem actionStatisticalModelFor_at_2pow123 {numProofs Q : ℕ}
       apply (ENNReal.div_le_iff (by norm_num) (by norm_num)).2
       norm_num [← pow_succ]
 
-/-- **The five semantic terms collapse to one count over the field** (issue #128 F7): the
+/-- **The five semantic terms collapse to one count over the field**: the
 endpoint's added tail is at most `2^160 / |Fp|`, with the count proven at the ceiling and no
 absorption assumed. -/
 theorem action_semantic_terms_le {Q : ℕ} (hQ : Q ≤ 2 ^ 123) :

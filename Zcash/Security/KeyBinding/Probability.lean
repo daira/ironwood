@@ -60,7 +60,7 @@ an `OracleComp` from the Fiat–Shamir layer):
   tables drawn independently, the tables uniformly; same `(Q+4)·(Q+3)/|RIVK|` bound.
 
 The remaining modelling steps toward the full ZIP 2005 key-binding theorem are tracked in
-issue #68.
+a separately tracked issue.
 -/
 
 namespace Zcash.Security.KeyBinding

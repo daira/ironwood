@@ -13,13 +13,13 @@ probability that the output ledger is valid *and* the reduction lands in the arm
 `(qH+1)/|F| + (ε_DL + 1/|F|) = (qH+2)/|F| + ε_DL` (from `kappaEvent_measure_le`). As with
 the key-binding arm, the bound is joint with validity; the capstones' named κ ranges over an
 abstract `PMF (ValidAnnotated …)`, and the experiment-to-`PMF` connection is the
-joint-experiment composition (#107).
+joint-experiment composition.
 
 The sample is a challenge table `O` and the logs `s` of the `m` presented bases. The value
 commitment and the binding verification are instantiated at sampled slots, as a record
 update of the fixed primitives (`kappaPrimitivesAt`), so the ledger type does not depend on
-the sample; the other primitives deliberately stay fixed (#31 tracks separating the
-value/signature fields from `Primitives`). The challenge hash reads the table at
+the sample; the other primitives deliberately stay fixed. Separating the value and
+signature fields from `Primitives` is tracked separately. The challenge hash reads the table at
 `queryOf R bvk m`, intended to be an injective encoding — collisions only constrain the
 algebraic hypotheses, shrinking the covered adversary class.
 

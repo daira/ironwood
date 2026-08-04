@@ -10,8 +10,8 @@ hash stated in the specification's guarded ⊥-model (`HashGuarded`, the literal
 
 - value-commitment integrity, nullifier integrity, spend authority (total);
 - diversified-address integrity, old/new note-commitment integrity (guarded);
-- Merkle path validity as the exact raw-encoding chain (`ExactMerklePathData`,
-  zcash/ironwood#97) and the four `q_orchard` value checks (knowledge-sound at the
+- Merkle path validity as the exact raw-encoding chain (`ExactMerklePathData`)
+  and the four `q_orchard` value checks (knowledge-sound at the
   extracted root cell).
 
 The exported statement contains no or-break disjunctions: escapes of the witnessed
@@ -340,7 +340,7 @@ def SpecBase (G : Generators) (B : Bases) (wit : ActionData) : Prop :=
     (noteScalars wit.gdNew wit.pkdNew wit.vNew wit.nfOld wit.psiNew).chunks
     (fun bp => wit.cmx = (bp + wit.rcmNew.2 • B.noteCommitR).x) ∧
   -- Merkle path validity, tied through the `q_orchard` anchor check: the exact
-  -- raw-encoding chain of the witnessed path cells (zcash/ironwood#97), each layer's
+  -- raw-encoding chain of the witnessed path cells, each layer's
   -- hash in the guarded ⊥-model.
   (∃ root : Fp,
     Sinsemilla.Merkle.ExactMerklePathData G B.merkleQ 0 32 wit.cmOld.x root
