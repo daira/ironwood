@@ -29,7 +29,7 @@
     },
     "adaptiveStatementStack": {
       "label": "PR #167 executable adaptive-statement head",
-      "ref": "26a1e02956af563c1f5c94627602a3badd4046c0",
+      "ref": "ebcfe6ede61b61b097da465dee6c32b00a7b66f3",
       "fetch": "pull/167/head"
     }
   },
@@ -431,7 +431,7 @@
         },
         {
           "symbol": "orchard_action_knowledgeFailure_adaptiveStatement_2pow123_workFactor_generatorRO_for",
-          "path": "Zcash/Snark/Fixtures/MultiAction/ActionCapstone.lean",
+          "path": "Zcash/Snark/Fixtures/MultiAction/Honest/ActionCapstone.lean",
           "source": "adaptiveStatementStack"
         },
         {
