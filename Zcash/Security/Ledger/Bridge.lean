@@ -649,9 +649,11 @@ the classifier: either the witness's own queries compute an exhibited break, or
 every query is defined and each guarded clause of `ActionSpec` lands in its
 successful branch. -/
 theorem successes_or_break {wit : ActionData}
-    (h : ActionSpec wit) :
+    (h : ActionSpec (PublicInputs.ofActionData wit)
+      (PrivateWitness.ofActionData wit)) :
     (CommitIvkSuccess wit ∧ NoteCommitOldSuccess wit ∧ NoteCommitNewSuccess wit ∧
       MerkleSuccess wit) ∨ ActionBreak wit := by
+  have h := (actionSpec_ofActionData_iff_specPost wit).mp h
   cases hcl : classifyAction wit with
   | some br => exact Or.inr (actionBreak_of_classify hcl)
   | none =>
@@ -666,7 +668,8 @@ theorem successes_or_break {wit : ActionData}
 guarded clauses reduce to their successful openings.  The exact-Merkle export
 subsequently turns the final component into a ledger `Merkle.Path`. -/
 theorem successes_of_noBreak {wit : ActionData}
-    (h : ActionSpec wit)
+    (h : ActionSpec (PublicInputs.ofActionData wit)
+      (PrivateWitness.ofActionData wit))
     (hno : ¬ ActionBreak wit) :
     CommitIvkSuccess wit ∧ NoteCommitOldSuccess wit ∧ NoteCommitNewSuccess wit ∧
       MerkleSuccess wit :=
@@ -780,17 +783,25 @@ Sinsemilla escapes or a fully satisfied concrete Orchard ledger action.  The led
 alternative additionally reports the spend/output enable gates as a side fact
 (`EnableFlagsSatisfied`), with their exact circuit semantics. -/
 theorem actionSpec_to_ledger (verify bverify : PallasGroup → MSG → SIG → Prop)
-    {wit : ActionData}
-    (h : ActionSpec wit) :
-    ActionBreak wit ∨
-      ∃ inst w, PublicProjection wit inst ∧
+    (input : PublicInputs Fp) (privateWitness : PrivateWitness)
+    (h : ActionSpec input privateWitness) :
+    ActionBreak (combine input privateWitness) ∨
+      ∃ inst w, PublicProjection (combine input privateWitness) inst ∧
         ActionSatisfied (Pool.primitives verify bverify) Pool.keyBinding inst w ∧
-        CrossAddressSatisfied wit w ∧
-        EnableFlagsSatisfied wit w := by
-  rcases successes_or_break h with hs | hbreak
+        CrossAddressSatisfied (combine input privateWitness) w ∧
+        EnableFlagsSatisfied (combine input privateWitness) w := by
+  let wit := combine input privateWitness
+  have hwit : combine input privateWitness = wit := rfl
+  rw [hwit]
+  have hData : ActionSpec (PublicInputs.ofActionData wit)
+      (PrivateWitness.ofActionData wit) := by
+    simpa only [wit, PublicInputs.ofActionData, PrivateWitness.ofActionData,
+      combine] using h
+  have hPost := (actionSpec_ofActionData_iff_specPost wit).mp hData
+  rcases successes_or_break hData with hs | hbreak
   · rcases hs with ⟨hivk, hold, hnew, hmerkle⟩
     rcases hmerkle with ⟨root, hpath, hhash, hanchor⟩
-    rcases h.1 with ⟨hcmOld, hgdOld, hakP, hpkdOld, hgdNew, hpkdNew,
+    rcases hPost.1 with ⟨hcmOld, hgdOld, hakP, hpkdOld, hgdNew, hpkdNew,
       hvOld, hvNew, hvc, hnf, hrk, -, -, -, -, hvalue, hes, heo⟩
     rcases hvc with ⟨hmag, hcv⟩
     rcases hold with ⟨bold, hbold, hcmOldEq⟩
@@ -901,7 +912,7 @@ theorem actionSpec_to_ledger (verify bverify : PallasGroup → MSG → SIG → P
       · exact hvNew
       · rfl
     · intro henabled
-      rcases h.2 henabled with ⟨hgd, hpkd⟩
+      rcases hPost.2 henabled with ⟨hgd, hpkd⟩
       change
         PallasGroup.ofPoint wit.gdOld (.inl hgdOld) =
             PallasGroup.ofPoint wit.gdNew (.inl hgdNew) ∧

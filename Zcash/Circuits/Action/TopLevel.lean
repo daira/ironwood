@@ -138,11 +138,10 @@ def Internal.actionCircuitImpl : TopLevelCircuit Fp Config PublicInputs where
   extractPrivate := fun cfg env =>
     PrivateWitness.ofActionData (extractPost cfg () 0 env)
   combine := combine
-  Spec := fun inputs privateWitness =>
-    ActionSpec (combine inputs privateWitness)
+  Spec := ActionSpec
   spec_iff := by
     intros
-    exact actionSpec_iff_specPost _
+    exact actionSpec_iff_specPost _ _
   extract_factorization := by
     dsimp
     intro env
@@ -230,7 +229,7 @@ private theorem actionCircuit_spec_iff_of_eq
     (top : TopLevelCircuit Fp Config PublicInputs)
     (htop : top = Internal.actionCircuitImpl)
     (input : PublicInputs Fp) (privateWitness : PrivateWitness) :
-    ActionSpec (combine input privateWitness) ↔
+    ActionSpec input privateWitness ↔
       top.Spec input
         (cast ((congrArg (fun circuit => circuit.PrivateWitness) htop).trans (by rfl)).symm
           privateWitness) := by
@@ -241,7 +240,7 @@ private theorem actionCircuit_spec_iff_of_eq
 transporting the public private-witness type across the circuit boundary. -/
 theorem actionCircuit_spec_iff
     (input : PublicInputs Fp) (privateWitness : PrivateWitness) :
-    ActionSpec (combine input privateWitness) ↔
+    ActionSpec input privateWitness ↔
       actionCircuit.Spec input
         (actionCircuit_privateWitness_eq.symm ▸ privateWitness) := by
   exact actionCircuit_spec_iff_of_eq actionCircuit
