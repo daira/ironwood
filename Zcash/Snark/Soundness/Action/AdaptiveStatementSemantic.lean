@@ -278,122 +278,167 @@ theorem adaptiveStatementActive_point_mem_stage {pp : ProofParams}
   | vanishingH => exact False.elim hactive
   | randomPoly => exact False.elim hactive
 
-/-- On an accepted selected-statement decode, every active commitment available at a semantic
-stage resolves to that stage's AGM polynomial. -/
-theorem adaptiveStatementAcceptedPolynomial_eq_stage {pp : ProofParams}
+/-- View-level semantic-stage facts an empty source-mismatch finder certifies: every active
+commitment available at stage `n` resolves to a stage representation point, and the full
+assembly polynomial agrees with each stage polynomial at those points. -/
+structure SemanticStageFacts {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis) : Prop where
+  point_mem : ∀ (n : Fin 5) (id : CommitmentId),
+    adaptiveActionCommitmentActive (AdaptiveActionStatementShape pp)
+      (adaptiveActionStatementVk pp basis) id →
+    adaptiveActionCommitmentAvailable n id →
+    ∃ P, assembledCommitment (adaptiveActionStatementVk pp basis)
+        (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+        view.output.toAlgebraicWfProof.proof.1
+        (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) id =
+          .point P ∧
+      ∃ ap ∈ semanticRepresentationTarget view.output n ++
+        family.fixedRepresentations basis, ap.point = P
+  stage_eq : ∀ (n : Fin 5) (P : VestaG),
+    (∃ ap ∈ semanticRepresentationTarget view.output n ++
+      family.fixedRepresentations basis, ap.point = P) →
+    onlinePointPolynomial
+        (view.output.proofData.algebraicProof.preX1AssemblySource
+          (adaptiveStatementInstanceRepresentationList
+              view.output.instanceRepresentations ++
+            family.fixedRepresentations basis)) P =
+      onlinePointPolynomial
+        (semanticRepresentationTarget view.output n ++
+          family.fixedRepresentations basis) P
+
+/-- An empty source-mismatch finder certifies the stage facts at the selected run's view. -/
+theorem semanticStageFacts_of_sourceFinder_none {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins)
-    (hsource : family.semanticSourceMismatchRelationFinder basis O = none)
+    (hsource : family.semanticSourceMismatchRelationFinder basis O = none) :
+    family.SemanticStageFacts basis (runView family basis O) := by
+  constructor
+  · intro n id hactive havailable
+    simpa only [runView_output, runView_pre, runView_rounds,
+      family.runRecord_eq_chRecord] using
+      adaptiveStatementActive_point_mem_stage family basis O n id hactive havailable
+  · intro n P hmem
+    simpa only [runView_output] using
+      family.semanticStagePolynomial_eq_full basis O hsource n P
+        (by simpa only [runView_output] using hmem)
+
+
+/-- On an accepted selected-statement decode, every active commitment available at a semantic
+stage resolves to that stage's AGM polynomial. -/
+theorem adaptiveStatementAcceptedPolynomialV_eq_stage {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis)
     (n : Fin 5) (id : CommitmentId)
     (hactive : adaptiveActionCommitmentActive (AdaptiveActionStatementShape pp) (adaptiveActionStatementVk pp basis) id)
     (havailable : adaptiveActionCommitmentAvailable n id)
-    (witness : family.BatchWitness basis O)
+    (witness : family.BatchWitnessV basis view)
     (decode : DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)
-      ((family.runProof basis O).aMulti (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O)))
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0))
+      (view.output.toAlgebraicWfProof.aMulti view.pre)
+      (view.output.toAlgebraicWfProof.multiU view.pre)
+      (view.output.toAlgebraicWfProof.multiBlind view.pre))
     (hbatches : decode.batches = witness.batches)
     (hchar : deployedX4PairCount (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1
-        (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)) <
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1
+        (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) <
         Zcash.Arithmetic.scalarFieldOrder)
     (haccepts : DeployedAccepts (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1
-      (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O))) :
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds))
+    (hfacts : family.SemanticStageFacts basis view) :
     CanonicalMemberConstraintRelation.acceptedPolynomial
         (memberDecode := fun i hi =>
-          (decode.reRound (family.runIpaReads basis O)).toMemberDecode hchar i hi)
+          (decode.reRound view.rounds).toMemberDecode hchar i hi)
         haccepts id =
-      adaptiveActionCommitmentPolynomial pp basis (family.runOutput basis O).inputs
-        (family.runProof basis O).proof.1
-        (semanticRepresentationTarget (family.runOutput basis O) n ++
+      adaptiveActionCommitmentPolynomial pp basis view.output.inputs
+        view.output.toAlgebraicWfProof.proof.1
+        (semanticRepresentationTarget view.output n ++
           family.fixedRepresentations basis)
-        (family.runRecord basis O) id := by
+        (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) id := by
   obtain ⟨q, hq, hqid⟩ := adaptiveActionActive_query pp basis
-    (family.runOutput basis O).inputs (family.runProof basis O).proof.1
-    (family.runRecord basis O) id hactive
-  obtain ⟨P, hpoint, ap, hap, hapPoint⟩ :=
-    adaptiveStatementActive_point_mem_stage family basis O n id hactive havailable
+    view.output.inputs view.output.toAlgebraicWfProof.proof.1
+    (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) id hactive
+  obtain ⟨P, hpoint, hmem⟩ := hfacts.point_mem n id hactive havailable
   have hfull := BatchWitnessV.acceptedPolynomial_eq_online_of_query witness
-    decode hbatches hchar
-    haccepts id q (by
-      simpa only [family.runRecord_eq_chRecord] using hq) hqid P (by
-        simpa only [family.runRecord_eq_chRecord] using hpoint)
-  have hstage := family.semanticStagePolynomial_eq_full basis O hsource n P
-    ⟨ap, hap, hapPoint⟩
+    decode hbatches hchar haccepts id q hq hqid P hpoint
+  have hstageP := hfacts.stage_eq n P hmem
   unfold adaptiveActionCommitmentPolynomial adaptiveActionCommitmentPolynomialOf
   rw [if_pos (show adaptiveActionCommitmentActive
       (actionCircuit.shape.withProofParams pp) (ActionTerminal.vkAt basis) id from hactive),
     show assembledCommitment (ActionTerminal.vkAt basis)
       (actionCircuit.instanceCommitment
         (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis)
-        (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runRecord basis O) id =
+        view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) id =
       CommitmentRef.point P from hpoint]
-  exact hfull.trans hstage
+  exact hfull.trans hstageP
 
 /-- Every selected-statement nonterminal slot agrees with the exact semantic-stage resolver;
 inactive slots are absent from the accepting query list and therefore resolve to zero. -/
-theorem adaptiveStatementAcceptedPolynomial_eq_stage_nonterminal {pp : ProofParams}
+theorem adaptiveStatementAcceptedPolynomialV_eq_stage_nonterminal {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins)
-    (hsource : family.semanticSourceMismatchRelationFinder basis O = none)
+    (view : RunView pp family basis)
     (n : Fin 5) (id : CommitmentId)
     (havailable : adaptiveActionCommitmentActive (AdaptiveActionStatementShape pp) (adaptiveActionStatementVk pp basis) id →
       adaptiveActionCommitmentAvailable n id)
     (hterminal : id ≠ .vanishingH ∧ id ≠ .randomPoly)
-    (witness : family.BatchWitness basis O)
+    (witness : family.BatchWitnessV basis view)
     (decode : DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)
-      ((family.runProof basis O).aMulti (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O)))
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0))
+      ((view.output.toAlgebraicWfProof).aMulti (view.pre))
+      ((view.output.toAlgebraicWfProof).multiU (view.pre))
+      ((view.output.toAlgebraicWfProof).multiBlind (view.pre)))
     (hbatches : decode.batches = witness.batches)
     (hchar : deployedX4PairCount (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1
-        (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)) <
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1
+        (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) <
         Zcash.Arithmetic.scalarFieldOrder)
     (haccepts : DeployedAccepts (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1
-      (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O))) :
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds))
+    (hfacts : family.SemanticStageFacts basis view) :
     CanonicalMemberConstraintRelation.acceptedPolynomial
         (memberDecode := fun i hi =>
-          (decode.reRound (family.runIpaReads basis O)).toMemberDecode hchar i hi)
+          (decode.reRound (view.rounds)).toMemberDecode hchar i hi)
         haccepts id =
-      adaptiveActionCommitmentPolynomial pp basis (family.runOutput basis O).inputs
-        (family.runProof basis O).proof.1
-        (semanticRepresentationTarget (family.runOutput basis O) n ++
+      adaptiveActionCommitmentPolynomial pp basis (view.output).inputs
+        (view.output.toAlgebraicWfProof).proof.1
+        (semanticRepresentationTarget (view.output) n ++
           family.fixedRepresentations basis)
-        (family.runRecord basis O) id := by
+        (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) id := by
   by_cases hactive : adaptiveActionCommitmentActive (AdaptiveActionStatementShape pp) (adaptiveActionStatementVk pp basis) id
-  · exact adaptiveStatementAcceptedPolynomial_eq_stage family basis O hsource n id
-      hactive (havailable hactive) witness decode hbatches hchar haccepts
+  · exact adaptiveStatementAcceptedPolynomialV_eq_stage family basis view n id
+      hactive (havailable hactive) witness decode hbatches hchar haccepts hfacts
   · have habsent : ∀ q ∈ assembleQueries (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-        (family.runProof basis O).proof.1
-        (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)),
+        (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+        (view.output.toAlgebraicWfProof).proof.1
+        (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds),
         q.commId ≠ id := by
       intro q hq hqid
       have hkind := adaptiveActionQuery_active_or_terminal pp basis
-        (family.runOutput basis O).inputs (family.runProof basis O).proof.1
-        (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)) q hq
+        (view.output).inputs (view.output.toAlgebraicWfProof).proof.1
+        (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) q hq
       rw [hqid] at hkind
       rcases hkind with hactive' | hvanishing | hrandom
       · exact hactive hactive'
@@ -410,7 +455,7 @@ theorem adaptiveStatementAcceptedPolynomial_eq_stage_nonterminal {pp : ProofPara
         exact False.elim (habsent q hq hqid)
     have hzero : CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := fun i hi =>
-            (decode.reRound (family.runIpaReads basis O)).toMemberDecode hchar i hi)
+            (decode.reRound (view.rounds)).toMemberDecode hchar i hi)
           haccepts id = 0 := by
       unfold CanonicalMemberConstraintRelation.acceptedPolynomial decodedPolynomialResolver
       rw [hroute]
@@ -420,16 +465,16 @@ theorem adaptiveStatementAcceptedPolynomial_eq_stage_nonterminal {pp : ProofPara
     exact hzero
 
 /-- Compare the selected quotient MSM coordinates with the explicit quotient-piece power sum. -/
-def statementQuotientAgreementOrRelation {pp : ProofParams}
+def statementQuotientAgreementOrRelationV {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) :
-    let output := family.runOutput basis O
-    let proof := family.runProof basis O
+    (view : RunView pp family basis) :
+    let output := view.output
+    let proof := view.output.toAlgebraicWfProof
     let fixed := adaptiveStatementInstanceRepresentationList output.instanceRepresentations ++
       family.fixedRepresentations basis
     let source := proof.algebraicProof.preX1AssemblySource fixed
-    let xn := (family.runPreIpaRecord basis O).x ^ (adaptiveActionStatementVk pp basis).n
+    let xn := (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)).x ^ (adaptiveActionStatementVk pp basis).n
     let msm := vanishingHCommitment (AdaptiveActionStatementShape pp).k xn
       (List.ofFn proof.proof.1.hPieces)
     let hcovered : CommitmentRefCovered source (.msm msm) := by
@@ -469,12 +514,12 @@ def statementQuotientAgreementOrRelation {pp : ProofParams}
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis).u
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis).w := by
   dsimp only
-  let output := family.runOutput basis O
-  let proof := family.runProof basis O
+  let output := view.output
+  let proof := view.output.toAlgebraicWfProof
   let fixed := adaptiveStatementInstanceRepresentationList output.instanceRepresentations ++
     family.fixedRepresentations basis
   let source := proof.algebraicProof.preX1AssemblySource fixed
-  let xn := (family.runPreIpaRecord basis O).x ^ (adaptiveActionStatementVk pp basis).n
+  let xn := (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)).x ^ (adaptiveActionStatementVk pp basis).n
   let msm := vanishingHCommitment (AdaptiveActionStatementShape pp).k xn
     (List.ofFn proof.proof.1.hPieces)
   let hcovered : CommitmentRefCovered source (.msm msm) := by
@@ -552,65 +597,86 @@ def statementQuotientAgreementOrRelation {pp : ProofParams}
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis).w
     represented.coeffs pieceCoeffs represented.uComp pieceU represented.wComp pieceW hcollision
 
-/-- Project relation data from the selected quotient-coordinate comparison. -/
-def statementQuotientRelationFinder {pp : ProofParams}
+/-- Selected quotient-coordinate comparison at one table. -/
+abbrev statementQuotientAgreementOrRelation {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) : Option (AlgebraicRelationWitness (F := Fp) basis) :=
-  match family.statementQuotientAgreementOrRelation basis O with
+    (O : family.Coins) :=
+  family.statementQuotientAgreementOrRelationV basis (runView family basis O)
+
+/-- Project relation data from the selected quotient-coordinate comparison. -/
+def statementQuotientRelationFinderV {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis) : Option (AlgebraicRelationWitness (F := Fp) basis) :=
+  match family.statementQuotientAgreementOrRelationV basis view with
   | PSum.inl _ => none
   | PSum.inr relation =>
       some (augmentedBasis_ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis ▸
         relation.toAlgebraicRelationWitness)
 
-/-- An empty quotient relation projection leaves the coordinate-agreement branch. -/
-theorem statementQuotientAgreement_of_finder_none {pp : ProofParams}
+/-- Quotient relation projection at one table. -/
+abbrev statementQuotientRelationFinder {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins)
-    (hnone : family.statementQuotientRelationFinder basis O = none) :
+    (O : family.Coins) : Option (AlgebraicRelationWitness (F := Fp) basis) :=
+  family.statementQuotientRelationFinderV basis (runView family basis O)
+
+/-- An empty quotient relation projection leaves the coordinate-agreement branch. -/
+theorem statementQuotientAgreementV_of_finder_none {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis)
+    (hnone : family.statementQuotientRelationFinderV basis view = none) :
     ∃ agreement,
-      family.statementQuotientAgreementOrRelation basis O = PSum.inl agreement := by
-  unfold statementQuotientRelationFinder at hnone
-  cases hout : family.statementQuotientAgreementOrRelation basis O with
+      family.statementQuotientAgreementOrRelationV basis view = PSum.inl agreement := by
+  unfold statementQuotientRelationFinderV at hnone
+  cases hout : family.statementQuotientAgreementOrRelationV basis view with
   | inl agreement => exact ⟨agreement, rfl⟩
   | inr relation => simp [hout] at hnone
 
-theorem statementExclusions_of_no_surface {pp : ProofParams}
+/-- Off the semantic surface, the sampled challenges avoid every stage bad set: the `x`
+difference, the `y` fold, and the permutation and lookup resolver exclusions. -/
+theorem statementExclusionsV_of_no_surface {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins)
-    (hsource : family.semanticSourceMismatchRelationFinder basis O = none)
-    (witness : family.BatchWitness basis O)
+    (view : RunView pp family basis)
+    (hfacts : family.SemanticStageFacts basis view)
+    (witness : family.BatchWitnessV basis view)
     (rawDecode : DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)
-      ((family.runProof basis O).aMulti (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O)))
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0))
+      ((view.output.toAlgebraicWfProof).aMulti (view.pre))
+      ((view.output.toAlgebraicWfProof).multiU (view.pre))
+      ((view.output.toAlgebraicWfProof).multiBlind (view.pre)))
     (hbatches : rawDecode.batches = witness.batches)
-    (haccepts : family.accepts basis O)
+    (haccepts : DeployedAccepts (AdaptiveActionStatementShape pp)
+      (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
+      (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds))
     (hchar : deployedX4PairCount (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) <
         Zcash.Arithmetic.scalarFieldOrder)
     (hsurface : ∀ n : Fin 5,
       let n11 : Fin 11 := Fin.castLE (by omega) n
-      let nu := family.runPreIpaReads basis O
-      nu n11 ∉ adaptiveActionSurfaceAt pp basis (family.runOutput basis O).inputs n
-        (family.runProof basis O).proof.1
-        (semanticRepresentationTarget (family.runOutput basis O) n ++
+      let nu := view.pre
+      nu n11 ∉ adaptiveActionSurfaceAt pp basis (view.output).inputs n
+        (view.output.toAlgebraicWfProof).proof.1
+        (semanticRepresentationTarget (view.output) n ++
           family.fixedRepresentations basis)
         (fun i => nu (i.castLE (le_of_lt n11.isLt)))) :
-    let ch := family.runRecord basis O
-    let output := family.runOutput basis O
+    let ch := chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds
+    let output := view.output
     let data := output.proofData
     let source := data.algebraicProof.preX1AssemblySource
       (adaptiveStatementInstanceRepresentationList output.instanceRepresentations ++
         family.fixedRepresentations basis)
-    let decode := rawDecode.reRound (family.runIpaReads basis O)
+    let decode := rawDecode.reRound (view.rounds)
     let actionModel := CanonicalMemberConstraintRelation.acceptedModel
       (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
       (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
@@ -626,15 +692,15 @@ theorem statementExclusions_of_no_surface {pp : ProofParams}
       TopLevelLookup.ChallengeExclusions actionCircuit pp
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) ch actionPoly := by
   simp only
-  let ch := family.runRecord basis O
-  let output := family.runOutput basis O
+  let ch := chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds
+  let output := view.output
   let data := output.proofData
   let inputs := output.inputs
-  let nu := family.runPreIpaReads basis O
+  let nu := view.pre
   let fixed := adaptiveStatementInstanceRepresentationList output.instanceRepresentations ++
     family.fixedRepresentations basis
   let source := data.algebraicProof.preX1AssemblySource fixed
-  let decode := rawDecode.reRound (family.runIpaReads basis O)
+  let decode := rawDecode.reRound (view.rounds)
   let actionModel := CanonicalMemberConstraintRelation.acceptedModel
     (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
     (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
@@ -659,10 +725,9 @@ theorem statementExclusions_of_no_surface {pp : ProofParams}
       (hterminal : id ≠ .vanishingH ∧ id ≠ .randomPoly) :
       actionPoly id = adaptiveActionCommitmentPolynomial pp basis inputs
         data.algebraicProof.erase (stageSource n) ch id := by
-    have hraw := adaptiveStatementAcceptedPolynomial_eq_stage_nonterminal
-      family basis O hsource n id havailable hterminal witness rawDecode hbatches
-      (by simpa only [family.runRecord_eq_chRecord] using hchar)
-      (by simpa only [family.runRecord_eq_chRecord] using haccepts)
+    have hraw := adaptiveStatementAcceptedPolynomialV_eq_stage_nonterminal
+      family basis view n id havailable hterminal witness rawDecode hbatches hchar
+      haccepts hfacts
     simpa only [actionPoly, decode, inputs, data, output, stageSource, ch] using hraw
   have hpolySurface (n : Fin 5) (id : CommitmentId)
       (havailable : adaptiveActionCommitmentActive (AdaptiveActionStatementShape pp) (adaptiveActionStatementVk pp basis) id →
@@ -964,55 +1029,55 @@ theorem statementExclusions_of_no_surface {pp : ProofParams}
 
 /-- Outside the selected quotient-coordinate relation branch, the accepted vanishing member is
 the quotient polynomial reassembled from the selected proof's explicit piece coordinates. -/
-theorem statementAcceptedVanishing_eq_fullQuotient {pp : ProofParams}
+theorem statementAcceptedVanishingV_eq_fullQuotient {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins)
-    (hnone : family.statementQuotientRelationFinder basis O = none)
-    (witness : family.BatchWitness basis O)
+    (view : RunView pp family basis)
+    (hnone : family.statementQuotientRelationFinderV basis view = none)
+    (witness : family.BatchWitnessV basis view)
     (decode : DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)
-      ((family.runProof basis O).aMulti (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O)))
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0))
+      ((view.output.toAlgebraicWfProof).aMulti (view.pre))
+      ((view.output.toAlgebraicWfProof).multiU (view.pre))
+      ((view.output.toAlgebraicWfProof).multiBlind (view.pre)))
     (hbatches : decode.batches = witness.batches)
     (haccepts : DeployedAccepts (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1
-      (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)))
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds))
     (hchar : deployedX4PairCount (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1
-        (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)) <
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1
+        (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) <
         Zcash.Arithmetic.scalarFieldOrder) :
     (CanonicalMemberConstraintRelation.acceptedPolynomial
         (memberDecode := fun i hi =>
-          (decode.reRound (family.runIpaReads basis O)).toMemberDecode hchar i hi)
-        haccepts .vanishingH).eval (family.runRecord basis O).x =
+          (decode.reRound (view.rounds)).toMemberDecode hchar i hi)
+        haccepts .vanishingH).eval (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds).x =
       (committedPreXQuotient (adaptiveActionStatementVk pp basis)
         (fun i => onlinePointPolynomial
-          ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource
+          ((view.output).proofData.algebraicProof.preX1AssemblySource
             (adaptiveStatementInstanceRepresentationList
-                (family.runOutput basis O).instanceRepresentations ++
+                (view.output).instanceRepresentations ++
               family.fixedRepresentations basis))
-          ((family.runOutput basis O).proofData.algebraicProof.hPieces i).point)).eval
-            (family.runRecord basis O).x := by
-  let output := family.runOutput basis O
-  let proof := family.runProof basis O
+          ((view.output).proofData.algebraicProof.hPieces i).point)).eval
+            (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds).x := by
+  let output := view.output
+  let proof := view.output.toAlgebraicWfProof
   let fixed := adaptiveStatementInstanceRepresentationList output.instanceRepresentations ++
     family.fixedRepresentations basis
-  let ch := chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)
+  let ch := chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds
   let source := proof.algebraicProof.preX1AssemblySource fixed
   let xn := ch.x ^ (adaptiveActionStatementVk pp basis).n
   let msm := vanishingHCommitment (AdaptiveActionStatementShape pp).k xn
     (List.ofFn proof.proof.1.hPieces)
   obtain ⟨agreement, hagreement⟩ :=
-    family.statementQuotientAgreement_of_finder_none basis O hnone
+    family.statementQuotientAgreementV_of_finder_none basis view hnone
   have hcovered : CommitmentRefCovered source (.msm msm) := by
     intro pr hpr
     have hpoint : pr.2 ∈ msm.otherPoints := by
@@ -1042,8 +1107,8 @@ theorem statementAcceptedVanishing_eq_fullQuotient {pp : ProofParams}
   have hcoeff : represented.coeffs =
       ∑ i : Fin (AdaptiveActionStatementShape pp).numQuotientPieces,
         xn ^ (i : Nat) • pieces.coeffs i := by
-    simpa [statementQuotientAgreementOrRelation, output, proof, fixed, source, xn,
-      msm, hcovered, represented, pieces, runPreIpaRecord, ch] using agreement.1
+    simpa [statementQuotientAgreementOrRelationV, output, proof, fixed, source, xn,
+      msm, hcovered, represented, pieces, chRecord, ch] using agreement.1
   obtain ⟨q, hq, hqid, -, -⟩ := vanishing_query_mem_assembleQueries
     (adaptiveActionStatementVk pp basis)
     (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
@@ -1077,7 +1142,7 @@ theorem statementAcceptedVanishing_eq_fullQuotient {pp : ProofParams}
       (.point 0, [])]
     rfl
   have hmemberComponents := deployedMemberRepresentationsOfCovered_components proof fixed
-    output.proofData.membersCovered (family.runPreIpaReads basis O)
+    output.proofData.membersCovered (view.pre)
     routed.slot.setIndex routed.slot.setIndex_lt routed.slot.memberIndex (.msm msm)
     hmemberCommit hcovered
   have hdecodedCoeffRaw : (decode.batches.x1 routed.slot.setIndex
@@ -1085,12 +1150,12 @@ theorem statementAcceptedVanishing_eq_fullQuotient {pp : ProofParams}
     rw [hbatches, congrFun (witness.memberCoeffs routed.slot.setIndex
       routed.slot.setIndex_lt) routed.slot.memberIndex]
     exact hmemberComponents.1
-  have hdecodedCoeff : ((decode.reRound (family.runIpaReads basis O)).batches.x1
+  have hdecodedCoeff : ((decode.reRound (view.rounds)).batches.x1
       routed.slot.setIndex routed.slot.setIndex_lt).coeffs routed.slot.memberIndex =
         represented.coeffs := hdecodedCoeffRaw
   unfold CanonicalMemberConstraintRelation.acceptedPolynomial decodedPolynomialResolver
   rw [hroute]
-  change (coeffsToPoly (((decode.reRound (family.runIpaReads basis O)).batches.x1
+  change (coeffsToPoly (((decode.reRound (view.rounds)).batches.x1
     routed.slot.setIndex routed.slot.setIndex_lt).coeffs routed.slot.memberIndex)).eval ch.x = _
   rw [hdecodedCoeff, hcoeff, coeffsToPoly_scaledSum]
   calc
@@ -1110,34 +1175,39 @@ theorem statementAcceptedVanishing_eq_fullQuotient {pp : ProofParams}
 
 /-- The accepted selected-statement quotient check and fixed pre-`x` difference agree at the
 sampled `x` outside the quotient-coordinate relation branch. -/
-theorem statementAcceptedDifference_eval_eq_preX {pp : ProofParams}
+theorem statementAcceptedDifferenceV_eval_eq_preX {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins)
-    (hsource : family.semanticSourceMismatchRelationFinder basis O = none)
-    (hquotient : family.statementQuotientRelationFinder basis O = none)
-    (witness : family.BatchWitness basis O)
+    (view : RunView pp family basis)
+    (hfacts : family.SemanticStageFacts basis view)
+    (hquotient : family.statementQuotientRelationFinderV basis view = none)
+    (witness : family.BatchWitnessV basis view)
     (rawDecode : DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)
-      ((family.runProof basis O).aMulti (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O)))
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0))
+      ((view.output.toAlgebraicWfProof).aMulti (view.pre))
+      ((view.output.toAlgebraicWfProof).multiU (view.pre))
+      ((view.output.toAlgebraicWfProof).multiBlind (view.pre)))
     (hbatches : rawDecode.batches = witness.batches)
-    (haccepts : family.accepts basis O)
+    (haccepts : DeployedAccepts (AdaptiveActionStatementShape pp)
+      (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
+      (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds))
     (hchar : deployedX4PairCount (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) <
         Zcash.Arithmetic.scalarFieldOrder) :
-    let ch := family.runRecord basis O
-    let output := family.runOutput basis O
+    let ch := chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds
+    let output := view.output
     let data := output.proofData
     let fixed := adaptiveStatementInstanceRepresentationList output.instanceRepresentations ++
       family.fixedRepresentations basis
     let source := data.algebraicProof.preX1AssemblySource fixed
-    let decode := rawDecode.reRound (family.runIpaReads basis O)
+    let decode := rawDecode.reRound (view.rounds)
     let actionModel := CanonicalMemberConstraintRelation.acceptedModel
       (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
       (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
@@ -1152,40 +1222,27 @@ theorem statementAcceptedDifference_eval_eq_preX {pp : ProofParams}
     (adaptiveActionPreXDifference pp basis output.inputs data.algebraicProof.erase source ch).eval
       ch.x := by
   simp only
-  let ch := family.runRecord basis O
-  let output := family.runOutput basis O
+  let ch := chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds
+  let output := view.output
   let data := output.proofData
   let inputs := output.inputs
   let fixed := adaptiveStatementInstanceRepresentationList output.instanceRepresentations ++
     family.fixedRepresentations basis
   let source := data.algebraicProof.preX1AssemblySource fixed
   let piecePoly := fun i => onlinePointPolynomial source (data.algebraicProof.hPieces i).point
-  let decode := rawDecode.reRound (family.runIpaReads basis O)
+  let decode := rawDecode.reRound (view.rounds)
   let actionModel := CanonicalMemberConstraintRelation.acceptedModel
     (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
     (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)) haccepts
   let actionPoly := CanonicalMemberConstraintRelation.acceptedPolynomial
     (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts
-  have hcharFull : deployedX4PairCount (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-      (family.runProof basis O).proof.1
-      (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)) <
-        Zcash.Arithmetic.scalarFieldOrder := by
-    simpa only [output, family.runRecord_eq_chRecord] using hchar
-  have hacceptsFull : DeployedAccepts (AdaptiveActionStatementShape pp)
-      (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
-      (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-      (family.runProof basis O).proof.1
-      (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)) := by
-    simpa only [output, family.runRecord_eq_chRecord] using haccepts
-  have hvanishingRaw := statementAcceptedVanishing_eq_fullQuotient family basis O
-    hquotient witness rawDecode hbatches hacceptsFull hcharFull
+  have hvanishingRaw := statementAcceptedVanishingV_eq_fullQuotient family basis view
+    hquotient witness rawDecode hbatches haccepts hchar
   have hvanishing : (actionPoly .vanishingH).eval ch.x =
       (committedPreXQuotient (adaptiveActionStatementVk pp basis) piecePoly).eval ch.x := by
-    simpa only [actionPoly, decode, ch, output, data, fixed, source, piecePoly,
-      family.runRecord_eq_chRecord] using hvanishingRaw
+    simpa only [actionPoly, decode, ch, output, data, fixed, source,
+      piecePoly] using hvanishingRaw
   have hpolyStage : ∀ id, id ≠ .vanishingH → id ≠ .randomPoly →
       actionPoly id = adaptiveActionCommitmentPolynomial pp basis inputs
         data.algebraicProof.erase
@@ -1196,11 +1253,10 @@ theorem statementAcceptedDifference_eval_eq_preX {pp : ProofParams}
         adaptiveActionCommitmentAvailable (4 : Fin 5) id := by
       intro hactive
       cases id <;> simp_all [adaptiveActionCommitmentAvailable]
-    have hraw := adaptiveStatementAcceptedPolynomial_eq_stage_nonterminal
-      family basis O hsource (4 : Fin 5) id havailable ⟨hvanishingId, hrandom⟩
-      witness rawDecode hbatches hcharFull hacceptsFull
-    simpa only [actionPoly, decode, inputs, data, output, ch,
-      family.runRecord_eq_chRecord] using hraw
+    have hraw := adaptiveStatementAcceptedPolynomialV_eq_stage_nonterminal
+      family basis view (4 : Fin 5) id havailable ⟨hvanishingId, hrandom⟩
+      witness rawDecode hbatches hchar haccepts hfacts
+    simpa only [actionPoly, decode, inputs, data, output, ch] using hraw
   have hmodelStage : actionModel = adaptiveActionCommittedModel pp basis inputs
       data.algebraicProof.erase
       (semanticRepresentationTarget output (4 : Fin 5) ++
