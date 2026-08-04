@@ -1,7 +1,6 @@
 import Clean.Halo2.TopLevel
 import Zcash.Circuits.Action.PublicInput
-import Zcash.Circuits.Action.RealBases
-import Zcash.Circuits.Action.Bundle
+import Zcash.Circuits.Action.Spec
 
 /-!
 # The deployed Orchard Action as a closed top-level circuit
@@ -140,11 +139,10 @@ def Internal.actionCircuitImpl : TopLevelCircuit Fp Config PublicInputs where
     PrivateWitness.ofActionData (extractPost cfg () 0 env)
   combine := combine
   Spec := fun inputs privateWitness =>
-    SpecPost Specs.Sinsemilla.orchardGenerators orchardBases
-      () () (combine inputs privateWitness)
+    ActionSpec (combine inputs privateWitness)
   spec_iff := by
     intros
-    rfl
+    exact actionSpec_iff_specPost _
   extract_factorization := by
     dsimp
     intro env
@@ -232,8 +230,7 @@ private theorem actionCircuit_spec_iff_of_eq
     (top : TopLevelCircuit Fp Config PublicInputs)
     (htop : top = Internal.actionCircuitImpl)
     (input : PublicInputs Fp) (privateWitness : PrivateWitness) :
-    SpecPost Specs.Sinsemilla.orchardGenerators orchardBases
-        () () (combine input privateWitness) ↔
+    ActionSpec (combine input privateWitness) ↔
       top.Spec input
         (cast ((congrArg (fun circuit => circuit.PrivateWitness) htop).trans (by rfl)).symm
           privateWitness) := by
@@ -244,8 +241,7 @@ private theorem actionCircuit_spec_iff_of_eq
 transporting the public private-witness type across the circuit boundary. -/
 theorem actionCircuit_spec_iff
     (input : PublicInputs Fp) (privateWitness : PrivateWitness) :
-    SpecPost Specs.Sinsemilla.orchardGenerators orchardBases
-        () () (combine input privateWitness) ↔
+    ActionSpec (combine input privateWitness) ↔
       actionCircuit.Spec input
         (actionCircuit_privateWitness_eq.symm ▸ privateWitness) := by
   exact actionCircuit_spec_iff_of_eq actionCircuit

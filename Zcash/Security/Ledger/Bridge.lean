@@ -1,5 +1,4 @@
-import Zcash.Circuits.Action.Bundle
-import Zcash.Circuits.Action.RealBases
+import Zcash.Circuits.Action.Spec
 import Zcash.Circuits.Specs.Pallas
 import Zcash.Security.Ledger.Pool
 
@@ -479,7 +478,7 @@ theorem classify_none_defined {wit : ActionData} (h : classifyAction wit = none)
 
 /-- **The Prop-level break and the computed classifier cannot diverge, at the consumer
 boundary either**: an exhibited `ActionBreak` holds exactly when the classifier reports
-an escape.  A consumer landing in the break arm of `specPost_to_ledger` can
+an escape.  A consumer landing in the break arm of `actionSpec_to_ledger` can
 therefore pass to `classifyAction`'s (and hence `classifyRelation`'s) computed data
 without reconstructing the glue: forward, each break constructor's
 `hashToPointB … = .inr` equation contradicts the defined hashes of a `none` verdict;
@@ -647,10 +646,10 @@ def MerkleSuccess (wit : ActionData) : Prop :=
 
 /-- Split all four exceptional sites in the circuit statement at once, by running
 the classifier: either the witness's own queries compute an exhibited break, or
-every query is defined and each guarded clause of `SpecPost` lands in its
+every query is defined and each guarded clause of `ActionSpec` lands in its
 successful branch. -/
 theorem successes_or_break {wit : ActionData}
-    (h : SpecPost orchardGenerators orchardBases () () wit) :
+    (h : ActionSpec wit) :
     (CommitIvkSuccess wit ∧ NoteCommitOldSuccess wit ∧ NoteCommitNewSuccess wit ∧
       MerkleSuccess wit) ∨ ActionBreak wit := by
   cases hcl : classifyAction wit with
@@ -667,7 +666,7 @@ theorem successes_or_break {wit : ActionData}
 guarded clauses reduce to their successful openings.  The exact-Merkle export
 subsequently turns the final component into a ledger `Merkle.Path`. -/
 theorem successes_of_noBreak {wit : ActionData}
-    (h : SpecPost orchardGenerators orchardBases () () wit)
+    (h : ActionSpec wit)
     (hno : ¬ ActionBreak wit) :
     CommitIvkSuccess wit ∧ NoteCommitOldSuccess wit ∧ NoteCommitNewSuccess wit ∧
       MerkleSuccess wit :=
@@ -780,9 +779,9 @@ theorem merkle_path_of_exact {wit : ActionData} {root : Fp}
 Sinsemilla escapes or a fully satisfied concrete Orchard ledger action.  The ledger
 alternative additionally reports the spend/output enable gates as a side fact
 (`EnableFlagsSatisfied`), with their exact circuit semantics. -/
-theorem specPost_to_ledger (verify bverify : PallasGroup → MSG → SIG → Prop)
+theorem actionSpec_to_ledger (verify bverify : PallasGroup → MSG → SIG → Prop)
     {wit : ActionData}
-    (h : SpecPost orchardGenerators orchardBases () () wit) :
+    (h : ActionSpec wit) :
     ActionBreak wit ∨
       ∃ inst w, PublicProjection wit inst ∧
         ActionSatisfied (Pool.primitives verify bverify) Pool.keyBinding inst w ∧

@@ -2106,11 +2106,11 @@ of the witness is defined. `actionBreak_iff_classify_isSome` packages both direc
 consumer-boundary equivalence. Same budget as the circuit layer above: standard tier plus
 `native_decide` certificates (including the Pallas point-count witness).
 
-`specPost_to_ledger` is the bridge's whole consumer surface: composition with circuit
+`actionSpec_to_ledger` is the bridge's whole consumer surface: composition with circuit
 satisfaction lives on the Circuits side, where the `Constraints` predicate it would consume
 is actually produced. -/
 
-assert_axioms Zcash.Security.Ledger.Bridge.specPost_to_ledger +native(
+assert_axioms Zcash.Security.Ledger.Bridge.actionSpec_to_ledger +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
