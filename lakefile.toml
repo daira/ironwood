@@ -43,8 +43,11 @@ globs = ["Zcash.Meta.Tests.+"]
 # This dedicated target keeps the fixtures out of `lake build Zcash` for local dev, while plain
 # `lake build` (the default targets -- what CI runs) compiles them, so the empirical checks are
 # exercised alongside the parametric verifier obligations in `Zcash`. New modules under `Fixtures/`
-# are picked up by the glob automatically. Through their imports the capstone entries pull in the
-# verifying-key COMMITMENT certificate chain `Keygen/Certificate`.
+# and `Capstones/` are picked up by the globs automatically. `Capstones/` holds the advertised
+# endpoints; they are instance-level for the same reason -- they are stated at the captured Action
+# parameters and reach the captures through their imports, which is also how they pull in the
+# verifying-key COMMITMENT certificate chain `Keygen/Certificate`. The glob is explicit rather than
+# left to the census file's imports, so an endpoint stays built even if nothing pins it.
 #
 # `Keygen/Certificate` and `Keygen/InstanceCapture` (the ironwood#86 join of the captured
 # instance commitments to the circuit-derived family) are pinned explicitly: InstanceCapture has
@@ -53,6 +56,7 @@ globs = ["Zcash.Meta.Tests.+"]
 name = "FixtureCheck"
 globs = [
   "Zcash.Snark.Fixtures.+",
+  "Zcash.Snark.Capstones.+",
   "Zcash.Snark.Keygen.Certificate",
   "Zcash.Snark.Keygen.InstanceCapture",
 ]

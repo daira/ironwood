@@ -292,6 +292,16 @@ Six subtrees carry the heavier machinery:
   `CanonicalRelation` route the decoded members into the canonical constraint model, which is the
   semantic handoff to the formal circuit.
 
+### `Capstones/` — the advertised endpoints
+
+Where the development's deliverables are stated, at the deployed Action parameters. `Action` holds
+the ordinary- and knowledge-soundness endpoints for every consensus-valid bundle size, in their
+compositional error-formula and resource-accounted finite-security forms; `KnowledgeError` holds
+the captured straight-line knowledge-error endpoints; and `StraightLineConsensus` evaluates the
+straight-line bound at the consensus maximum and states the two work-factor packages. Every
+endpoint here is a top-level leaf that nothing else depends on, which is exactly why each one must
+be named directly in a `TrustBoundary.lean` census entry — see `scripts/check_endpoint_census.sh`.
+
 ## Circuit layer — `Zcash/Circuits/`
 
 A port of the Orchard Action circuit onto [Clean](https://github.com/Verified-zkEVM/clean)'s

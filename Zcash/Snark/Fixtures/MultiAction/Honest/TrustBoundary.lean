@@ -7,7 +7,7 @@ import Zcash.Snark.Fixtures.MultiAction.Honest.Negative
 import Zcash.Snark.Fixtures.MultiAction.Honest.Negative.Sweep
 import Zcash.Snark.Fixtures.MultiAction.Honest.StraightLineKnowledgeError
 import Zcash.Snark.Fixtures.MultiAction.Honest.CapturedZeroFamily
-import Zcash.Snark.Fixtures.MultiAction.Honest.ActionCapstone
+import Zcash.Snark.Capstones.Action
 import Zcash.Snark.Fixtures.MultiAction.Honest.Boundary
 import Zcash.Snark.Fixtures.PostNu63
 import Zcash.Meta.AxiomCheck
