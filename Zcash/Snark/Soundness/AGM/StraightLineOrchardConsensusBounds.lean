@@ -216,7 +216,7 @@ bound is therefore
 This records a conservative **123-bit protocol work-factor target**, not 126-bit end-to-end
 security.  With Vesta itself estimated at about 126 bits, the present three-bit resource loss
 cannot justify a 126-bit protocol claim. -/
-theorem straightLine_consensus_2pow123_workFactor_generatorRO
+theorem orchard_deployed_straightline_consensus_2pow123_generatorRO_finite_security
     {T' : Type*} [DecidableEq T']
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ (shape orchardConsensusMaxProofs).k) -> T')
@@ -261,7 +261,7 @@ theorem straightLine_consensus_2pow123_workFactor_generatorRO
 /-- Compatibility package for the older caller-supplied five-bit envelope.  The primary direct
 endpoint above removes the free reduction-group-work allowance and states the tighter, honest
 123-bit protocol work target. -/
-theorem straightLine_consensus_2pow122_workFactor_generatorRO
+theorem orchard_deployed_straightline_consensus_2pow122_generatorRO_finite_security
     {T' : Type*} [DecidableEq T']
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ (shape orchardConsensusMaxProofs).k) -> T')

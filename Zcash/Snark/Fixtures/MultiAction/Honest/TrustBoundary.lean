@@ -328,7 +328,7 @@ assert_axioms Zcash.Snark.CapturedMulti.deployedConstraintXSqueezeSchedule_captu
 -- capstone with the static checks and degree caps discharged, so the bad-`x` term is the concrete
 -- `(Q + 1) · 20470 / |𝔽|` and the multiopen term is the additive root budget.  Semantic circuit
 -- satisfaction additionally uses the four-budget promotion in the core trust census.
-assert_axioms Zcash.Snark.Capstone.orchard_deployed_knowledge_error_captured_straightLine +native(
+assert_axioms Zcash.Snark.Capstone.orchard_deployed_straightline_captured_knowledge_error_bound +native(
   Zcash.Snark.CapturedMulti.shape_k_pred_le,
   Zcash.Snark.CapturedMulti.vk_advice_layout_length,
   Zcash.Snark.CapturedMulti.vk_chunk_width_le,
@@ -342,7 +342,7 @@ assert_axioms Zcash.Snark.Capstone.orchard_deployed_knowledge_error_captured_str
   Zcash.Snark.CapturedMulti.vk_omega_order,
   Zcash.Snark.CapturedMulti.vk_quotient_tail_le,
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.Capstone.orchard_deployed_knowledge_error_captured_straightLine_generatorRO +native(
+assert_axioms Zcash.Snark.Capstone.orchard_deployed_straightline_captured_generatorRO_knowledge_error_bound +native(
   Zcash.Snark.CapturedMulti.shape_k_pred_le,
   Zcash.Snark.CapturedMulti.vk_advice_layout_length,
   Zcash.Snark.CapturedMulti.vk_chunk_width_le,
@@ -358,7 +358,7 @@ assert_axioms Zcash.Snark.Capstone.orchard_deployed_knowledge_error_captured_str
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 -- The same bound on the interpolation-free route: the deployed constraint family is built by
 -- `ofCovered` from the two fresh-query traces, with no field-capacity premise or interpolation.
-assert_axioms Zcash.Snark.Capstone.orchard_deployed_knowledge_error_captured_straightLine_direct_generatorRO +native(
+assert_axioms Zcash.Snark.Capstone.orchard_deployed_straightline_captured_direct_generatorRO_knowledge_error_bound +native(
   Zcash.Snark.CapturedMulti.shape_k_pred_le,
   Zcash.Snark.CapturedMulti.vk_advice_layout_length,
   Zcash.Snark.CapturedMulti.vk_chunk_width_le,
@@ -934,9 +934,9 @@ assert_axioms Zcash.Snark.CapturedMulti.adaptiveInterface_nonempty_at_captured_s
 -- knowledge-error endpoints, they take the static checks and the `x`-squeeze schedule as
 -- hypotheses rather than discharging them from the capture, so they reach no fixture native
 -- certificate — only the Vesta point count, through the `Fp`-module structure on the curve.
-assert_axioms Zcash.Snark.Capstone.straightLine_consensus_2pow123_workFactor_generatorRO +native(
+assert_axioms Zcash.Snark.Capstone.orchard_deployed_straightline_consensus_2pow123_generatorRO_finite_security +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.Capstone.straightLine_consensus_2pow122_workFactor_generatorRO +native(
+assert_axioms Zcash.Snark.Capstone.orchard_deployed_straightline_consensus_2pow122_generatorRO_finite_security +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- `whitespace := lax` collapses all whitespace, so the pin is insensitive to how

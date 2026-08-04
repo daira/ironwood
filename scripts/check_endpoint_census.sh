@@ -35,12 +35,11 @@ cd "$(dirname "$0")/.."
 # alternatives retain the established endpoint families: the verifier-soundness rungs
 # (`orchard_verifier_*`), the composed Action probability endpoints (`orchard_action_*`), the
 # captured knowledge-error endpoints (`orchard_deployed_*`), the concrete-statement terminals
-# (`*bundleStatement_or_relation*`), and the profiled work-factor packages (`*workFactor*`), whose
-# consensus-maximum forms are named for the shape rather than for a capstone family and so match
-# none of the prefixes above. The final alternative is deliberately protocol-independent: the
-# standardized semantic suffixes keep a new capstone family inside the census without requiring
-# another prefix to be added here. `_capstone` is the explicit suffix for endpoints that are
-# neither an error formula nor a concrete finite-security statement.
+# (`*bundleStatement_or_relation*`), and the profiled work-factor packages (`*workFactor*`). The
+# final alternative is deliberately protocol-independent: the standardized semantic suffixes keep a
+# new capstone family inside the census without requiring another prefix to be added here.
+# `_capstone` is the explicit suffix for endpoints that are neither an error formula nor a concrete
+# finite-security statement.
 #
 # The Rust-to-Lean boundary contributes three more families, all leaves in the same sense: the
 # per-family statements of record (`nonInteractiveFingerprint_matches_derived*`), the quantified
@@ -49,9 +48,10 @@ cd "$(dirname "$0")/.."
 # `competing_family_agreement_le*` headliners beside each random fixture), and the `Perm`→positional
 # bridges (`fingerprint_matches_positional`) that join the two.
 #
-# `orchard_verifier_*` currently matches nothing: those rungs were retired with the legacy rewind
-# paths. It is retained as a guard, so a reintroduced name in that family is demanded rather than
-# silently unpinned.
+# Two alternatives currently match nothing and are retained as guards, so a reintroduced name in
+# either family is demanded rather than silently unpinned: `orchard_verifier_*`, whose rungs were
+# retired with the legacy rewind paths, and `*workFactor*`, whose consensus-maximum packages were
+# renamed onto the `orchard_deployed_*` prefix and the `_finite_security` suffix.
 ENDPOINT_RE='(^orchard_(verifier|action|deployed)_)|(^competing_)|(^nonInteractiveFingerprint_matches_derived)|(bundleStatement_or_relation)|(workFactor)|(fingerprint_matches_positional)|(_(error_bound|finite_security|capstone)$)'
 
 # Sources scanned for endpoint declarations. `Zcash/Meta/Tests/` is excluded: it holds forged
