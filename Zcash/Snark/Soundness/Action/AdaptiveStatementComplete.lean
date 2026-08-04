@@ -20,39 +20,49 @@ local instance adaptiveStatementCompleteVestaInhabited : Inhabited VestaG := ⟨
 namespace ComputedAdaptiveActionStatementFSFamily
 
 /-- Good direct roots and the shifted equality decode the selected proof at the pre-IPA record. -/
-def rawDecodeOfBatchGoodRoots {pp : ProofParams}
+def rawDecodeOfBatchGoodRootsV {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins)
-    (witness : family.BatchWitness basis O)
-    (hgood : family.BatchGoodRoots basis O witness)
-    (hshifted : family.ShiftedValue basis O) :
+    (view : RunView pp family basis)
+    (witness : family.BatchWitnessV basis view)
+    (hgood : family.BatchGoodRootsV basis view witness)
+    (hshifted : family.ShiftedValueV basis view) :
     DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)
-      ((family.runProof basis O).aMulti (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O)) := by
-  let ch := family.runPreIpaRecord basis O
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0))
+      ((view.output.toAlgebraicWfProof).aMulti (view.pre))
+      ((view.output.toAlgebraicWfProof).multiU (view.pre))
+      ((view.output.toAlgebraicWfProof).multiBlind (view.pre)) := by
+  let ch := chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)
   have hvalue : commitGen (evalVector (AdaptiveActionStatementShape pp).k ch.x3)
-      ((family.runProof basis O).aMulti (family.runPreIpaReads basis O)) =
+      ((view.output.toAlgebraicWfProof).aMulti (view.pre)) =
       multiopenValue (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-        (family.runProof basis O).proof.1 ch :=
+        (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+        (view.output.toAlgebraicWfProof).proof.1 ch :=
     rawValue_of_shiftedValue_of_good _ _ _ _ _ _ _
       hshifted.1 hshifted.2 hgood.xi hgood.z
   have hgood1 := not_mem_deployedX1RootSet_of_not_mem_all
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
     (adaptiveActionStatementVk pp basis)
-    (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 ch witness.batches hgood.x1
+    (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1 ch witness.batches hgood.x1
   exact deployedAlgebraicDecode_of_good_roots
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
     (adaptiveActionStatementVk pp basis)
-    (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1 ch witness.batches hvalue hgood.x4 hgood.x3 hgood.x2 hgood1
+    (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+    (view.output.toAlgebraicWfProof).proof.1 ch witness.batches hvalue hgood.x4 hgood.x3 hgood.x2 hgood1
+
+/-- Good direct roots and the shifted equality decode the selected proof at one table. -/
+abbrev rawDecodeOfBatchGoodRoots {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins)
+    (witness : family.BatchWitness basis O)
+    (hgood : family.BatchGoodRoots basis O witness)
+    (hshifted : family.ShiftedValue basis O) :=
+  family.rawDecodeOfBatchGoodRootsV basis (runView family basis O) witness hgood hshifted
 
 theorem decodeOfBatchGoodRoots_eq_reRound {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
@@ -65,18 +75,13 @@ theorem decodeOfBatchGoodRoots_eq_reRound {pp : ProofParams}
         (family.runIpaReads basis O) := by
   rfl
 
-theorem accepts?_isSome_of {pp : ProofParams}
+theorem accepts?V_isSome_of {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) (haccepts : family.accepts basis O) :
-    (family.accepts? basis O).isSome := by
-  change DeployedAccepts (AdaptiveActionStatementShape pp)
-    (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
-    (adaptiveActionStatementVk pp basis)
-    (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1 (family.runRecord basis O) at haccepts
-  unfold DeployedAccepts at haccepts
-  unfold accepts?
+    (view : RunView pp family basis) (haccepts : family.acceptsV basis view) :
+    (family.accepts?V basis view).isSome := by
+  unfold acceptsV DeployedAccepts at haccepts
+  unfold accepts?V
   split
   · rename_i hassemble
     rw [hassemble] at haccepts
@@ -85,85 +90,102 @@ theorem accepts?_isSome_of {pp : ProofParams}
     rw [hassemble] at haccepts
     simp [haccepts]
 
-theorem batchGoodRoots?_isSome_of {pp : ProofParams}
+theorem accepts?_isSome_of {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) (witness : family.BatchWitness basis O)
-    (hgood : family.BatchGoodRoots basis O witness) :
-    (family.batchGoodRoots? basis O witness).isSome := by
-  let ch := family.runPreIpaRecord basis O
+    (O : family.Coins) (haccepts : family.accepts basis O) :
+    (family.accepts? basis O).isSome :=
+  family.accepts?V_isSome_of basis (runView family basis O) (by
+    simpa only [acceptsV, accepts, runView_output, runView_pre, runView_rounds,
+      family.runRecord_eq_chRecord] using haccepts)
+
+theorem batchGoodRoots?V_isSome_of {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis) (witness : family.BatchWitnessV basis view)
+    (hgood : family.BatchGoodRootsV basis view witness) :
+    (family.batchGoodRoots?V basis view witness).isSome := by
+  let ch := chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)
   let urs := ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis
   let delta := commitGen (evalVector (AdaptiveActionStatementShape pp).k ch.x3)
-      ((family.runProof basis O).aMulti (family.runPreIpaReads basis O)) -
+      ((view.output.toAlgebraicWfProof).aMulti (view.pre)) -
     multiopenValue (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 ch
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1 ch
   let sEval := commitGen (evalVector (AdaptiveActionStatementShape pp).k ch.x3)
-    (family.runProof basis O).s
+    (view.output.toAlgebraicWfProof).s
   have hx1Some := deployedX1RootAvoidance?_isSome_of urs rfl
     (adaptiveActionStatementVk pp basis)
-    (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1 ch witness.batches hgood.x1
+    (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+    (view.output.toAlgebraicWfProof).proof.1 ch witness.batches hgood.x1
   have hx2Some := deployedX2RootAvoidance?_isSome_of urs rfl
     (adaptiveActionStatementVk pp basis)
-    (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1 ch witness.batches hgood.x2
+    (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+    (view.output.toAlgebraicWfProof).proof.1 ch witness.batches hgood.x2
   have hx3Some := deployedX3RootAvoidance?_isSome_of urs rfl
     (adaptiveActionStatementVk pp basis)
-    (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1 ch witness.batches hgood.x3
+    (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+    (view.output.toAlgebraicWfProof).proof.1 ch witness.batches hgood.x3
   have hx4Some := deployedX4RootAvoidance?_isSome_of urs rfl
     (adaptiveActionStatementVk pp basis)
-    (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1 ch witness.batches hgood.x4
+    (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+    (view.output.toAlgebraicWfProof).proof.1 ch witness.batches hgood.x4
   have hxiSome := deployedXiRootAvoidance?_isSome_of delta sEval ch.xi hgood.xi
   have hzSome := deployedZRootAvoidance?_isSome_of delta
-    ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-    (family.runProof basis O).sU sEval ch.xi ch.z hgood.z
+    ((view.output.toAlgebraicWfProof).multiU (view.pre))
+    (view.output.toAlgebraicWfProof).sU sEval ch.xi ch.z hgood.z
   obtain ⟨hx1, hhx1⟩ := Option.isSome_iff_exists.mp hx1Some
   obtain ⟨hx2, hhx2⟩ := Option.isSome_iff_exists.mp hx2Some
   obtain ⟨hx3, hhx3⟩ := Option.isSome_iff_exists.mp hx3Some
   obtain ⟨hx4, hhx4⟩ := Option.isSome_iff_exists.mp hx4Some
   obtain ⟨hxi, hhxi⟩ := Option.isSome_iff_exists.mp hxiSome
   obtain ⟨hz, hhz⟩ := Option.isSome_iff_exists.mp hzSome
-  unfold batchGoodRoots?
+  unfold batchGoodRoots?V
   dsimp only
   rw [hhx1, hhx2, hhx3, hhx4, hhxi, hhz]
   rfl
 
-/-- The identically-zero pre-`x` branch yields an Action witness or an explicit relation. -/
-def preXIdentityOutcome? {pp : ProofParams}
+theorem batchGoodRoots?_isSome_of {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins)
-    (hsource : family.semanticSourceMismatchRelationFinder basis O = none)
-    (witness : family.BatchWitness basis O)
+    (O : family.Coins) (witness : family.BatchWitness basis O)
+    (hgood : family.BatchGoodRoots basis O witness) :
+    (family.batchGoodRoots? basis O witness).isSome :=
+  family.batchGoodRoots?V_isSome_of basis (runView family basis O) witness hgood
+
+/-- The identically-zero pre-`x` branch yields an Action witness or an explicit relation. -/
+def preXIdentityOutcome?V {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis)
+    (hfacts : family.SemanticStageFacts basis view)
+    (witness : family.BatchWitnessV basis view)
     (rawDecode : DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)
-      ((family.runProof basis O).aMulti (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O)))
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0))
+      ((view.output.toAlgebraicWfProof).aMulti (view.pre))
+      ((view.output.toAlgebraicWfProof).multiU (view.pre))
+      ((view.output.toAlgebraicWfProof).multiBlind (view.pre)))
     (hbatches : rawDecode.batches = witness.batches)
     (haccepts : DeployedAccepts (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1
-      (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)))
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds))
     (hchar : deployedX4PairCount (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1
-      (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)) <
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) <
         scalarFieldOrder) :
-    Option (ActionTerminal.ActionBundleWitness (family.runOutput basis O).inputs ⊕
+    Option (ActionTerminal.ActionBundleWitness (view.output).inputs ⊕
       AlgebraicRelationWitness (F := Fp) basis) := by
-  let output := family.runOutput basis O
+  let output := view.output
   let data := output.proofData
-  let proof := family.runProof basis O
-  let ch := family.runRecord basis O
+  let proof := view.output.toAlgebraicWfProof
+  let ch := chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds
   let fixed := adaptiveStatementInstanceRepresentationList output.instanceRepresentations ++
     family.fixedRepresentations basis
   let source := data.algebraicProof.preX1AssemblySource fixed
@@ -171,7 +193,7 @@ def preXIdentityOutcome? {pp : ProofParams}
   let difference := adaptiveActionPreXDifference pp basis output.inputs
     data.algebraicProof.erase source ch
   if hsupport : difference = 0 then
-    let decode := rawDecode.reRound (family.runIpaReads basis O)
+    let decode := rawDecode.reRound (view.rounds)
     let model := CanonicalMemberConstraintRelation.acceptedModel
       (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
       (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
@@ -189,11 +211,10 @@ def preXIdentityOutcome? {pp : ProofParams}
           adaptiveActionCommitmentAvailable (4 : Fin 5) id := by
         intro hactive
         cases id <;> simp_all [adaptiveActionCommitmentAvailable]
-      have hraw := adaptiveStatementAcceptedPolynomial_eq_stage_nonterminal
-        family basis O hsource (4 : Fin 5) id havailable ⟨hvanishing, hrandom⟩
-        witness rawDecode hbatches hchar haccepts
-      simpa only [polynomial, decode, output, data, ch,
-        family.runRecord_eq_chRecord] using hraw
+      have hraw := adaptiveStatementAcceptedPolynomialV_eq_stage_nonterminal
+        family basis view (4 : Fin 5) id havailable ⟨hvanishing, hrandom⟩
+        witness rawDecode hbatches hchar haccepts hfacts
+      simpa only [polynomial, decode, output, data, ch] using hraw
     have hmodelStage : model = adaptiveActionCommittedModel pp basis output.inputs
         data.algebraicProof.erase
         (semanticRepresentationTarget output (4 : Fin 5) ++
@@ -229,11 +250,11 @@ def preXIdentityOutcome? {pp : ProofParams}
         simpa only [preXPoly, piecePoly, adaptiveActionStatementVk] using hzero)
     have hsatisfiedRaw : model.CircuitSat ch.y preXPoly
         (adaptiveActionStatementVk pp basis).n
-        (proof.aMulti (family.runPreIpaReads basis O)) := by
+        (proof.aMulti (view.pre)) := by
       rw [hmodel]
-      simpa only [proof, runProof, output] using hidentity
+      simpa only [proof, output] using hidentity
     have hsatisfied : model.CircuitSat ch.y preXPoly actionCircuit.n
-        (proof.aMulti (family.runPreIpaReads basis O)) := by
+        (proof.aMulti (view.pre)) := by
       simpa only [adaptiveActionStatementVk, actionCircuit.toVerifierKey_n] using hsatisfiedRaw
     let hn : actionCircuit.n ≠ 0 := by
       change 2 ^ actionCircuit.domainExponent ≠ 0
@@ -253,9 +274,9 @@ def preXIdentityOutcome? {pp : ProofParams}
           match ActionTerminal.action_bundleWitness_or_relation_of_decode_circuitSat pp
               (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl output.inputs
               proof.proof.1 ch
-              (proof.multiU (family.runPreIpaReads basis O))
-              (proof.multiBlind (family.runPreIpaReads basis O))
-              (proof.aMulti (family.runPreIpaReads basis O)) decode hchar haccepts
+              (proof.multiU (view.pre))
+              (proof.multiBlind (view.pre))
+              (proof.aMulti (view.pre)) decode hchar haccepts
               preXPoly hsatisfied hgoodYProof.down hpermutationProof.down
               hlookupProof.down with
           | PSum.inl extracted => some (Sum.inl extracted)
@@ -267,113 +288,113 @@ def preXIdentityOutcome? {pp : ProofParams}
     exact none
 
 /-- Relation-only projection of the pre-`x` identity outcome. -/
-def preXIdentityRelation? {pp : ProofParams}
+def preXIdentityRelation?V {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins)
-    (hsource : family.semanticSourceMismatchRelationFinder basis O = none)
-    (witness : family.BatchWitness basis O)
+    (view : RunView pp family basis)
+    (hfacts : family.SemanticStageFacts basis view)
+    (witness : family.BatchWitnessV basis view)
     (rawDecode : DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)
-      ((family.runProof basis O).aMulti (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O)))
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0))
+      ((view.output.toAlgebraicWfProof).aMulti (view.pre))
+      ((view.output.toAlgebraicWfProof).multiU (view.pre))
+      ((view.output.toAlgebraicWfProof).multiBlind (view.pre)))
     (hbatches : rawDecode.batches = witness.batches)
     (haccepts : DeployedAccepts (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1
-      (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)))
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds))
     (hchar : deployedX4PairCount (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1
-      (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)) <
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) <
         scalarFieldOrder) : Option (AlgebraicRelationWitness (F := Fp) basis) :=
-  match family.preXIdentityOutcome? basis O hsource witness rawDecode hbatches
+  match family.preXIdentityOutcome?V basis view hfacts witness rawDecode hbatches
       haccepts hchar with
   | some (Sum.inr relation) => some relation
   | _ => none
 
-theorem preXIdentityRelation_isSome_of_outcome {pp : ProofParams}
+theorem preXIdentityRelationV_isSome_of_outcome {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins)
-    (hsource) (witness) (rawDecode) (hbatches) (haccepts) (hchar)
-    (hcomplete : (family.preXIdentityOutcome? basis O hsource witness rawDecode
+    (view : RunView pp family basis)
+    (hfacts) (witness) (rawDecode) (hbatches) (haccepts) (hchar)
+    (hcomplete : (family.preXIdentityOutcome?V basis view hfacts witness rawDecode
       hbatches haccepts hchar).isSome)
-    (hfalse : ¬BundleStatement (family.runOutput basis O).inputs) :
-    (family.preXIdentityRelation? basis O hsource witness rawDecode hbatches
+    (hfalse : ¬BundleStatement view.output.inputs) :
+    (family.preXIdentityRelation?V basis view hfacts witness rawDecode hbatches
       haccepts hchar).isSome := by
   obtain ⟨outcome, houtcome⟩ := Option.isSome_iff_exists.mp hcomplete
   cases outcome with
   | inl extracted => exact False.elim (hfalse extracted.statement)
   | inr relation =>
-      unfold preXIdentityRelation?
+      unfold preXIdentityRelation?V
       rw [houtcome]
       rfl
 
-theorem preXIdentityOutcome_isSome_of {pp : ProofParams}
+theorem preXIdentityOutcomeV_isSome_of {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins)
-    (hsource : family.semanticSourceMismatchRelationFinder basis O = none)
-    (witness : family.BatchWitness basis O)
+    (view : RunView pp family basis)
+    (hfacts : family.SemanticStageFacts basis view)
+    (witness : family.BatchWitnessV basis view)
     (rawDecode : DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)
-      ((family.runProof basis O).aMulti (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O)))
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0))
+      ((view.output.toAlgebraicWfProof).aMulti (view.pre))
+      ((view.output.toAlgebraicWfProof).multiU (view.pre))
+      ((view.output.toAlgebraicWfProof).multiBlind (view.pre)))
     (hbatches : rawDecode.batches = witness.batches)
     (haccepts : DeployedAccepts (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1
-      (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)))
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds))
     (hchar : deployedX4PairCount (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1
-      (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)) <
+      (adaptiveActionStatementInstanceCommitment pp basis (view.output).inputs)
+      (view.output.toAlgebraicWfProof).proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) <
         scalarFieldOrder)
     (hsupport :
-      let output := family.runOutput basis O
+      let output := view.output
       let source := output.proofData.algebraicProof.preX1AssemblySource
         (adaptiveStatementInstanceRepresentationList output.instanceRepresentations ++
           family.fixedRepresentations basis)
       adaptiveActionPreXDifference pp basis output.inputs
-        output.proofData.algebraicProof.erase source (family.runRecord basis O) = 0)
+        output.proofData.algebraicProof.erase source (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) = 0)
     (hgoodY :
-      let decode := rawDecode.reRound (family.runIpaReads basis O)
+      let decode := rawDecode.reRound (view.rounds)
       let model := CanonicalMemberConstraintRelation.acceptedModel
         (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
         (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
           (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)) haccepts
-      ∀ j, (family.runRecord basis O).y ∉
+      ∀ j, (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds).y ∉
         szBadSet (foldSplitWitness model.constraints actionCircuit.n j))
     (hpermutation :
-      let decode := rawDecode.reRound (family.runIpaReads basis O)
+      let decode := rawDecode.reRound (view.rounds)
       ResolverPermutationChallengeExclusions pp.numProofs (adaptiveActionStatementVk pp basis)
-        (family.runRecord basis O)
+        (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds)
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts)
         actionActiveRows)
     (hlookup :
-      let decode := rawDecode.reRound (family.runIpaReads basis O)
+      let decode := rawDecode.reRound (view.rounds)
       TopLevelLookup.ChallengeExclusions actionCircuit pp
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)
-        (family.runRecord basis O)
+        (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds)
         (CanonicalMemberConstraintRelation.acceptedPolynomial
           (memberDecode := fun i hi => decode.toMemberDecode hchar i hi) haccepts)) :
-    (family.preXIdentityOutcome? basis O hsource witness rawDecode hbatches
+    (family.preXIdentityOutcome?V basis view hfacts witness rawDecode hbatches
       haccepts hchar).isSome := by
-  let decode := rawDecode.reRound (family.runIpaReads basis O)
+  let decode := rawDecode.reRound (view.rounds)
   let model := CanonicalMemberConstraintRelation.acceptedModel
     (memberDecode := fun i hi => decode.toMemberDecode hchar i hi)
     (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
@@ -392,7 +413,7 @@ theorem preXIdentityOutcome_isSome_of {pp : ProofParams}
   obtain ⟨hgoodYProof, hgoodYEq⟩ := Option.isSome_iff_exists.mp hySome
   obtain ⟨hpermutationProof, hpermutationEq⟩ := Option.isSome_iff_exists.mp hpSome
   obtain ⟨hlookupProof, hlookupEq⟩ := Option.isSome_iff_exists.mp hlSome
-  unfold preXIdentityOutcome?
+  unfold preXIdentityOutcome?V
   rw [dif_pos hsupport]
   dsimp only
   rw [hgoodYEq, hpermutationEq, hlookupEq]
@@ -451,8 +472,9 @@ def identityRelationFinder {pp : ProofParams}
                           proof.proof.1 (chRecord nu rounds) < scalarFieldOrder := by
                         simpa only [family.runRecord_eq_chRecord, proof, nu, rounds] using
                           hchar basis O
-                      family.preXIdentityRelation? basis O hsource witness rawDecode rfl
-                        hacceptsFull hcharFull
+                      family.preXIdentityRelation?V basis (runView family basis O)
+                        (family.semanticStageFacts_of_sourceFinder_none basis O hsource)
+                        witness rawDecode rfl hacceptsFull hcharFull
           else none
 
 theorem identityRelationFinder_none_source {pp : ProofParams}
@@ -503,8 +525,9 @@ theorem identityRelationFinder_isSome_of {pp : ProofParams}
           (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)) <
             scalarFieldOrder := by
         simpa only [family.runRecord_eq_chRecord] using hchar basis O
-      (family.preXIdentityRelation? basis O hsource witness rawDecode rfl
-        hacceptsFull hcharFull).isSome) :
+      (family.preXIdentityRelation?V basis (runView family basis O)
+        (family.semanticStageFacts_of_sourceFinder_none basis O hsource)
+        witness rawDecode rfl hacceptsFull hcharFull).isSome) :
     (family.identityRelationFinder hchar basis O).isSome := by
   let hshifted := family.shiftedValue_of_accept_not_attack basis O haccepts hz hattack
   let rawDecode := family.rawDecodeOfBatchGoodRoots basis O witness hroots hshifted
@@ -543,6 +566,49 @@ theorem identityRelationFinder_isSome_of {pp : ProofParams}
 
 /-- The existing nonzero semantic terminal returns relation data once its computed semantic
 projection does. -/
+theorem terminalRelationFinderV_isSome_of {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis)
+    (hcharV : deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) <
+        scalarFieldOrder)
+    (witness : family.BatchWitnessV basis view)
+    (hout : family.batchOutcomeV basis view = PSum.inl witness)
+    (hroots : family.BatchGoodRootsV basis view witness)
+    (haccepts : family.acceptsV basis view)
+    (hz : view.pre 10 ≠ 0)
+    (hattack : ¬fullAlgebraicBindingAttackZ basis
+      (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof view.pre view.rounds)
+    (hsemantic :
+      let hshifted := family.shiftedValueV_of_accept_not_attack
+        basis view haccepts hz hattack
+      let run : family.DecodedRunV basis view :=
+        { hchar := hcharV
+          decode := family.decodeOfBatchGoodRootsV basis view witness hroots hshifted
+          accepts := haccepts }
+      (family.semanticRelation?V basis view run).isSome) :
+    (family.terminalRelationFinderV basis view hcharV).isSome := by
+  have hacceptsSome := family.accepts?V_isSome_of basis view haccepts
+  obtain ⟨hacceptsProof, hacceptsEq⟩ := Option.isSome_iff_exists.mp hacceptsSome
+  have hrootsSome := family.batchGoodRoots?V_isSome_of basis view witness hroots
+  obtain ⟨hrootsProof, hrootsEq⟩ := Option.isSome_iff_exists.mp hrootsSome
+  obtain ⟨relation, hrelationEq⟩ := Option.isSome_iff_exists.mp hsemantic
+  unfold terminalRelationFinderV
+  rw [hacceptsEq]
+  dsimp only
+  rw [dif_pos hz, dif_neg hattack, hout]
+  dsimp only
+  rw [hrootsEq]
+  dsimp only
+  rw [hrelationEq]
+  rfl
+
+/-- The nonzero semantic terminal projection at one table. -/
 theorem terminalRelationFinder_isSome_of {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
@@ -568,26 +634,12 @@ theorem terminalRelationFinder_isSome_of {pp : ProofParams}
           decode := family.decodeOfBatchGoodRoots basis O witness hroots hshifted
           accepts := haccepts }
       (family.semanticRelation? basis O run).isSome) :
-    (family.terminalRelationFinder hchar basis O).isSome := by
-  let hshifted := family.shiftedValue_of_accept_not_attack basis O haccepts hz hattack
-  let run : family.DecodedRun basis O :=
-    { hchar := hchar basis O
-      decode := family.decodeOfBatchGoodRoots basis O witness hroots hshifted
-      accepts := haccepts }
-  have hacceptsSome := family.accepts?_isSome_of basis O haccepts
-  obtain ⟨hacceptsProof, hacceptsEq⟩ := Option.isSome_iff_exists.mp hacceptsSome
-  have hrootsSome := family.batchGoodRoots?_isSome_of basis O witness hroots
-  obtain ⟨hrootsProof, hrootsEq⟩ := Option.isSome_iff_exists.mp hrootsSome
-  obtain ⟨relation, hrelationEq⟩ := Option.isSome_iff_exists.mp hsemantic
-  unfold terminalRelationFinder
-  rw [hacceptsEq]
-  dsimp only
-  rw [dif_pos hz, dif_neg hattack, hout]
-  dsimp only
-  rw [hrootsEq]
-  dsimp only
-  rw [hrelationEq]
-  rfl
+    (family.terminalRelationFinder hchar basis O).isSome :=
+  family.terminalRelationFinderV_isSome_of basis (runView family basis O) (hchar basis O)
+    witness hout hroots
+    (by simpa only [acceptsV, accepts, runView_output, runView_pre, runView_rounds,
+      family.runRecord_eq_chRecord] using haccepts)
+    hz hattack hsemantic
 
 end ComputedAdaptiveActionStatementFSFamily
 end Zcash.Snark
