@@ -17,10 +17,10 @@ kept in later modules so the existing fixed-statement capstones remain unchanged
 
 ## Intended instantiation
 
-`vkTranscriptRepr` is the family's declared verifying-key digest: the game binds whatever scalar
-the family absorbs at transcript position zero, so the theorems quantify over every digest.  The
-deployed instantiation supplies the actual key digest, which is what makes the pre-`theta`
-binding meaningful protocol-side.
+`vkHash` is the family's key-digest function: the game binds `vkHash` of the canonical key at
+transcript position zero, so the theorems quantify over every digest function.  The deployed
+instantiation supplies the actual digest; binding across distinct keys is exactly injectivity of
+`vkHash`, assumed at `vk_eq_of_initialTranscript_eq_of_injective` and nowhere else.
 
 ## Trust boundary
 
@@ -475,8 +475,13 @@ end AdaptiveActionStatementOutput
 
 /-- A basis-indexed online-AGM adversary that chooses its public statement and proof together. -/
 structure ComputedAdaptiveActionStatementFSFamily (pp : ProofParams) where
-  vkTranscriptRepr :
-    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) → Fp
+  /-- The key digest absorbed at transcript position zero, as a function of the verifying key.
+  A parameter rather than a fixed scalar so the binding obligation is structural: fixtures may
+  instantiate a constant digest (and get faithfulness but no binding), while the security layer
+  assumes injectivity at `vk_eq_of_initialTranscript_eq_of_injective`. -/
+  vkHash :
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) →
+      VerifyingKey (AdaptiveActionStatementShape pp) Fp VestaG → Fp
   fixedRepresentations :
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) →
       List (AlgebraicPoint (F := Fp) basis)
@@ -497,6 +502,13 @@ structure ComputedAdaptiveActionStatementFSFamily (pp : ProofParams) where
   queryBound : ∀ basis, (adversary basis).QueryBound Q
 
 namespace ComputedAdaptiveActionStatementFSFamily
+
+/-- The digest scalar the family absorbs for the canonical key at one basis.  Every transcript
+definition reads the digest through this abbreviation, so the digest parameterization is a
+one-field change. -/
+abbrev vkTranscriptRepr {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) : Fp :=
+  family.vkHash basis (adaptiveActionStatementVk pp basis)
 
 /-- One adaptive-statement random-oracle table. -/
 abbrev Coins {pp : ProofParams} (_family : ComputedAdaptiveActionStatementFSFamily pp) :=
