@@ -1,4 +1,5 @@
 import Zcash.Snark.Soundness.Action.AdaptiveStatementKnowledge
+import Zcash.Snark.Soundness.Composition.AssembleGroupCost
 
 /-!
 # Adaptive-statement finite-security profile
@@ -101,33 +102,58 @@ def adaptiveStatementKnowledgeExtractorGroupWork
     (proverGroupWork reductionGroupWork : Nat) : Nat :=
   5 * proverGroupWork + reductionGroupWork
 
-/-- Shape-derived group-operation floor for the reduction's own work: programming one
-augmented-basis slot per index (`scalarBasis`, `2 ^ k + 2` scalar multiplications) plus one
-verifier-assembly evaluation per extractor traversal, each bounded by one group operation per
-assembled query term and augmented slot (`assembleQueries_length_le` bounds the term count by
-`queryBudget`).  An instrumented per-run count needs a size lemma for the assembled MSM itself;
-until it lands this formula is the certified floor the declared counter must cover. -/
+/-- Shape-derived group-operation envelope for the reduction's own work: programming one
+augmented-basis slot per index (`scalarBasis`, `2 ^ k + 2` scalar multiplications) plus, per
+extractor traversal, one acceptance-assembly evaluation (`assembleGroupOpsBudget`) and one
+stage-local commitment evaluation over the basis.  `adaptiveStatementReductionGroupOpsAt_le`
+grounds the formula in the executed operations. -/
 def adaptiveStatementReductionGroupOps (pp : ProofParams) : Nat :=
   (2 ^ (AdaptiveActionStatementShape pp).k + 2) +
     adaptiveStatementKnowledgeExtractorTraversalSlots *
-      (queryBudget (AdaptiveActionStatementShape pp) +
+      (assembleGroupOpsBudget (AdaptiveActionStatementShape pp) +
         (2 ^ (AdaptiveActionStatementShape pp).k + 2))
+
+/-- Per-run group-operation count of the reduction: the basis programming plus, per charged
+traversal, the acceptance-assembly evaluation at the selected statement and one stage-local
+commitment evaluation. -/
+def adaptiveStatementReductionGroupOpsAt {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) : Nat :=
+  (2 ^ (AdaptiveActionStatementShape pp).k + 2) +
+    adaptiveStatementKnowledgeExtractorTraversalSlots *
+      (deployedAssembleGroupOps (adaptiveActionStatementVk pp basis)
+        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+        (family.runProof basis O).proof.1 (family.runRecord basis O) +
+        (2 ^ (AdaptiveActionStatementShape pp).k + 2))
+
+/-- **The executed reduction group operations fit the shape formula, at every table.** -/
+theorem adaptiveStatementReductionGroupOpsAt_le {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) :
+    adaptiveStatementReductionGroupOpsAt family basis O ≤
+      adaptiveStatementReductionGroupOps pp := by
+  unfold adaptiveStatementReductionGroupOpsAt adaptiveStatementReductionGroupOps
+  have h := deployedAssembleGroupOps_le (adaptiveActionStatementVk pp basis)
+    (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+    (family.runProof basis O).proof.1 (family.runRecord basis O)
+  exact Nat.add_le_add_left (Nat.mul_le_mul_left _ (Nat.add_le_add_right h _)) _
 
 /-- Finite-security premise for the complete adaptive-statement relation finder.
 
-The three resource kinds have different provenance.  Random-oracle queries are certified against
+Only the adversary's own time remains declared.  Random-oracle queries are certified against
 the code: `relationFinderReads` is the concrete table-point set the finder can consult,
-`relationFinderReads_card_le` bounds it by `Q + (11 + k)`, and the formula here dominates it
-(`relationFinderReads_card_le_dlogQueries`); the locality lemmas beside them
-(`cachedExecution_eq_of_agree` through `accepts?_isSome_eq_of_agree`) prove the retained
-execution, the challenge reads, the provenance stage, and the acceptance verdict read nothing
-outside that set, with the quotient, identity, and terminal stages awaiting the provenance-style view-factoring recorded in `AdaptiveStatementReads`.  The
-finder's field-operation footprint is certified per run by `directDecodeWorkBound` on the direct
-profile.  `proverGroupWork` is a declared adversary resource — the concrete-security premise
+`relationFinderReads_card_le` bounds it by `Q + (11 + k)`, the formula here dominates it
+(`relationFinderReads_card_le_dlogQueries`), and the locality theorems in
+`AdaptiveStatementReads` prove the complete finder and extractor read nothing outside that set.
+The reduction's own footprint is certified per run: field operations by `directDecodeWorkBound`
+on the direct profile, group operations by `adaptiveStatementReductionGroupOpsAt_le` — the
+count at the actual assembled MSM never exceeds the derived
+`adaptiveStatementReductionGroupOps`, which the hardness premise consumes directly.
+`proverGroupWork` is the one declared adversary resource — the concrete-security premise
 playing the role of the paper model's time `t`; deriving it needs group operations reified in
-the adversary type.  `reductionGroupWork` is declared but floored by the
-shape-derived `adaptiveStatementReductionGroupOps`: basis programming plus one bounded assembly
-evaluation per traversal, with the per-run instrumented count the named tightening step. -/
+the adversary type. -/
 structure AdaptiveStatementDlogProfile {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
@@ -136,15 +162,13 @@ structure AdaptiveStatementDlogProfile {pp : ProofParams}
         Zcash.Arithmetic.scalarFieldOrder)
     (B : VestaG) where
   proverGroupWork : Nat
-  reductionGroupWork : Nat
-  reductionOpsCovered :
-    adaptiveStatementReductionGroupOps pp ≤ reductionGroupWork
   advantage : Nat → Nat → ENNReal
   advantage_mono : ∀ {q q' g g'}, q ≤ q' → g ≤ g' →
     advantage q g ≤ advantage q' g'
   hardness : TextbookDLWithCoinsAdvantageLE B (family.relationFinder hchar)
     (advantage (adaptiveStatementDlogRandomOracleQueries family)
-      (adaptiveStatementDlogGroupWork proverGroupWork reductionGroupWork))
+      (adaptiveStatementDlogGroupWork proverGroupWork
+        (adaptiveStatementReductionGroupOps pp)))
 
 /-- Concrete work profile for adaptive-statement soundness and knowledge soundness. -/
 structure AdaptiveStatementDirectDlogProfile {pp : ProofParams}
@@ -157,7 +181,7 @@ structure AdaptiveStatementDirectDlogProfile {pp : ProofParams}
   targetAtLeastThirtySeven : 37 ≤ T
   queryBound : family.Q ≤ T
   proverWorkBound : toAdaptiveStatementDlogProfile.proverGroupWork ≤ T
-  reductionWorkBound : toAdaptiveStatementDlogProfile.reductionGroupWork ≤ T
+  reductionWorkBound : adaptiveStatementReductionGroupOps pp ≤ T
   directDecodeWorkBound : ∀ basis O,
     2 * adaptiveStatementDirectDecodeOps family basis O ≤ T
 
@@ -170,7 +194,8 @@ theorem AdaptiveStatementDirectDlogProfile.solverCost_le {pp : ProofParams}
     {B : VestaG} {T : Nat}
     (profile : AdaptiveStatementDirectDlogProfile family hchar B T) :
     adaptiveStatementDlogRandomOracleQueries family ≤ 8 * T ∧
-      adaptiveStatementDlogGroupWork profile.proverGroupWork profile.reductionGroupWork ≤
+      adaptiveStatementDlogGroupWork profile.proverGroupWork
+          (adaptiveStatementReductionGroupOps pp) ≤
         8 * T ∧
       ∀ basis O, 2 * adaptiveStatementDirectDecodeOps family basis O ≤ T := by
   constructor
@@ -187,7 +212,7 @@ theorem AdaptiveStatementDirectDlogProfile.solverCost_le {pp : ProofParams}
   constructor
   · unfold adaptiveStatementDlogGroupWork
     calc
-      4 * profile.proverGroupWork + profile.reductionGroupWork ≤ 4 * T + T := by
+      4 * profile.proverGroupWork + adaptiveStatementReductionGroupOps pp ≤ 4 * T + T := by
         gcongr
         · exact profile.proverWorkBound
         · exact profile.reductionWorkBound
@@ -204,7 +229,7 @@ theorem AdaptiveStatementDirectDlogProfile.knowledgeExtractorCost_le {pp : Proof
     (profile : AdaptiveStatementDirectDlogProfile family hchar B T) :
     adaptiveStatementKnowledgeExtractorRandomOracleQueries family ≤ 8 * T ∧
       adaptiveStatementKnowledgeExtractorGroupWork profile.proverGroupWork
-          profile.reductionGroupWork ≤
+          (adaptiveStatementReductionGroupOps pp) ≤
         8 * T ∧
       ∀ basis O, 2 * adaptiveStatementDirectDecodeOps family basis O ≤ T := by
   constructor
@@ -221,7 +246,7 @@ theorem AdaptiveStatementDirectDlogProfile.knowledgeExtractorCost_le {pp : Proof
   constructor
   · unfold adaptiveStatementKnowledgeExtractorGroupWork
     calc
-      5 * profile.proverGroupWork + profile.reductionGroupWork ≤ 5 * T + T := by
+      5 * profile.proverGroupWork + adaptiveStatementReductionGroupOps pp ≤ 5 * T + T := by
         gcongr
         · exact profile.proverWorkBound
         · exact profile.reductionWorkBound
