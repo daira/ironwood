@@ -42,19 +42,19 @@ error that admits a proof the deployed verifier accepts but the Lean model does 
 some fingerprint-match theorem, except with probability `≤ ε` over the randomness of the captured
 inputs and conditional on enumerated premises — premises that include the sampled-point
 distribution behind that probability (the captures' proof scalars come from fixed public seeds),
-recorded honestly in the Trust Boundary chapter. ε is priced at `assemble`'s own coefficients: on a
+recorded honestly in the enumeration below. ε is priced at `assemble`'s own coefficients: on a
 good event of assignments every assembled coefficient is a rational function of the proof-string
 scalars and challenges with enumerated challenge-only denominators (`assembleCoeffFamily`,
 `Fingerprint/Rational/Capstone.lean`), and `competing_coefficient_family_agreement_le`
 (`Fingerprint/Epsilon.lean`) makes ε = `(D + B) / p` a theorem about these functions — `D` the
 coefficient-family degree budget, `B` the summed denominator-factor degrees, `p ≈ 2²⁵⁴`. The
-uniformity premise behind "a uniformly random point", the remaining premises, and the audit table
-mapping each transcribed artifact to the theorem that falsifies it live in the book's Trust
-Boundary chapter
-(`book/src/formal-verification/trust-boundary.md`). Only that direction
+uniformity premise behind "a uniformly random point" is carried formally by the
+challenge-restricted variant `competing_coefficient_family_agreement_le_challengesOnly`, and the
+per-capture headliners with their literal ε live beside the random fixtures
+(`Fixtures/*/Random/Epsilon.lean`). Only that direction
 (deployed-accepts ⊆ model-accepts) is soundness-relevant *here*, which scopes this comparison
-rather than stating a position on completeness: completeness is a goal of the development, and
-the chapter's first scoping rule says where it is pursued instead. The
+rather than stating a position on completeness: completeness is a goal of the development,
+pursued for the Lean model, where it yields witness existence. The
 boundary artifact is per-proof: halo2's optional `BatchVerifier` — random-linear-combination
 batching of separate proof blobs — sits outside the single-bundle verifier formalized here, and
 any batching layer prices on top of the per-proof artifact without adding transcription surface.
@@ -122,8 +122,8 @@ byte-for-byte from the pinned `zcash/orchard` 0.15.5 release via
 (`.github/workflows/fixtures.yml`); pins, seeds, and rationale in
 `Fixtures/PROVENANCE.md`.
 
-What is trusted rather than checked stays enumerated — one line each here, the full prose in the
-book's Trust Boundary chapter:
+What is trusted rather than checked stays enumerated here — seven premises no fixture design can
+absorb, the obligation being to keep them enumerated, audited, and small:
 
 * capture faithfulness — the exporter is the deployed strategy minus the final `eval()`, a
   few-line reviewed diff;

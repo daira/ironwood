@@ -1,9 +1,9 @@
 # Verifier-fingerprint capture provenance
 
 What the captures under `Zcash/Snark/Fixtures/` are, where they come from, and how to
-reproduce them. The layout itself is described in `README.md`; the place these captures hold in
-the overall trust story is the book's Trust Boundary chapter
-(`book/src/formal-verification/trust-boundary.md`). For the unrelated circuit-side dumps see
+reproduce them. The layout itself is described in `README.md`; what these captures check is each
+family's `Boundary.lean` statement of record,
+`nonInteractiveFingerprint_matches_derived`. For the unrelated circuit-side dumps see
 `Zcash/Circuits/Fixtures/PROVENANCE.md` — the two pipelines share no artifact and no tooling.
 
 Unlike those dumps, these captures have no missing-lineage problem: all four families — the

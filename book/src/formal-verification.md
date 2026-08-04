@@ -144,9 +144,11 @@ because for a captured fingerprint match the exact axiom set *is* the claim, the
 default targets, and each `fingerprint_matches`'s `native_decide` compiles and runs
 the verifier, so anything `noncomputable` on the assembled-verifier path fails the build.
 
-What the fixture captures actually *check* — the boundary artifact, the audit table mapping each
-transcribed artifact to the theorem that falsifies it, and the enumerated premises that remain
-outside — is the [Trust Boundary](formal-verification/trust-boundary.md) chapter.
+What the fixture captures actually *check* is the statement of record in each family's
+`Boundary.lean` — `nonInteractiveFingerprint_matches_derived` — with the quantified match and its
+ε in `Snark/Fingerprint/Epsilon.lean` and the per-capture headliners in
+`Fixtures/*/Random/Epsilon.lean`. Capture lineage, seeds, and the reproducibility pipeline are in
+`Zcash/Snark/Fixtures/PROVENANCE.md`.
 
 Coined terms and shorthand for the development, including the two conventions above, are
 collected in the [glossary](formal-verification/glossary.md).
