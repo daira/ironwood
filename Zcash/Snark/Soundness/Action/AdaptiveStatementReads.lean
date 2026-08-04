@@ -143,12 +143,39 @@ The provenance stage consults the table only through the retained execution, so 
 one rewrite.  Acceptance locality transports through the primitive-rewritten proposition: the
 `some` payload of `accepts?` is itself the acceptance proof, so the `isSome` verdicts agree
 whenever the record and statement do.  The quotient, identity, and terminal stages apply their
-sub-computations to the table itself, so their locality needs the same view-factoring the
-provenance module already performs (`FromAnnotations`): restate each stage over the retained
-execution and the two challenge-read vectors, with the table-level form definitionally the
-factored form at the run view.  That factoring is the tracked remaining step of this
-certificate; until it lands, the read-set bound certifies what the finder may consult, and the
-stages above certify the two proof patterns the remainder reuses. -/
+sub-computations to the table itself, and their witness types (`BatchWitness`, `DecodedRun`) are
+nominal structures indexed by the table, so a parallel view-typed pipeline can never be
+definitionally equal to them.  The close is therefore index generalization: re-index those
+structures and the stage chain by the run view below — the selected output and the two
+challenge-read vectors — and recover today's table-indexed forms as abbreviations at
+`runView`, making every stage view-level by construction and full finder locality one rewrite
+of `runView_eq_of_agree`.  Until that refactor lands, the read-set bound certifies what the
+finder may consult, and the stages above certify the transport patterns it reuses. -/
+
+/-- Everything the finder stages read from one execution: the selected output, the annotation
+log, and the two canonical challenge-read vectors.  The index-generalization close re-indexes
+the stage chain by this view. -/
+structure RunView (pp : ProofParams) (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) where
+  output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)
+  log : AnnotationLog basis
+  pre : Fin 11 → Fp
+  rounds : Fin (AdaptiveActionStatementShape pp).k → Fp
+
+/-- The run view of one table. -/
+def runView (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) : RunView pp family basis :=
+  ⟨family.runOutput basis O, (family.adversary basis).annotations O,
+    family.runPreIpaReads basis O, family.runIpaReads basis O⟩
+
+/-- Agreement on the read set reproduces the whole run view. -/
+theorem runView_eq_of_agree {O O' : family.Coins}
+    (h : ∀ t ∈ family.relationFinderReads basis O, O' t = O t) :
+    runView family basis O' = runView family basis O := by
+  unfold runView
+  rw [runOutput_eq_of_agree h, annotations_eq_of_agree h, runPreIpaReads_eq_of_agree h,
+    runIpaReads_eq_of_agree h]
 
 /-- Agreement on the read set reproduces the provenance stage. -/
 theorem provenanceRelationFinder_eq_of_agree {O O' : family.Coins}

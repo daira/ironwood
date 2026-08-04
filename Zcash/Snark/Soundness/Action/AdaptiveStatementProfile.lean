@@ -101,6 +101,18 @@ def adaptiveStatementKnowledgeExtractorGroupWork
     (proverGroupWork reductionGroupWork : Nat) : Nat :=
   5 * proverGroupWork + reductionGroupWork
 
+/-- Shape-derived group-operation floor for the reduction's own work: programming one
+augmented-basis slot per index (`scalarBasis`, `2 ^ k + 2` scalar multiplications) plus one
+verifier-assembly evaluation per extractor traversal, each bounded by one group operation per
+assembled query term and augmented slot (`assembleQueries_length_le` bounds the term count by
+`queryBudget`).  An instrumented per-run count needs a size lemma for the assembled MSM itself;
+until it lands this formula is the certified floor the declared counter must cover. -/
+def adaptiveStatementReductionGroupOps (pp : ProofParams) : Nat :=
+  (2 ^ (AdaptiveActionStatementShape pp).k + 2) +
+    adaptiveStatementKnowledgeExtractorTraversalSlots *
+      (queryBudget (AdaptiveActionStatementShape pp) +
+        (2 ^ (AdaptiveActionStatementShape pp).k + 2))
+
 /-- Finite-security premise for the complete adaptive-statement relation finder.
 
 The three resource kinds have different provenance.  Random-oracle queries are certified against
@@ -113,9 +125,9 @@ outside that set, with the quotient, identity, and terminal stages awaiting the 
 finder's field-operation footprint is certified per run by `directDecodeWorkBound` on the direct
 profile.  `proverGroupWork` is a declared adversary resource — the concrete-security premise
 playing the role of the paper model's time `t`; deriving it needs group operations reified in
-the adversary type.  `reductionGroupWork` is declared but floored:
-`reductionProgrammingCovered` keeps it at least the textbook-DLOG embedding's own basis
-programming, one scalar multiplication per augmented slot. -/
+the adversary type.  `reductionGroupWork` is declared but floored by the
+shape-derived `adaptiveStatementReductionGroupOps`: basis programming plus one bounded assembly
+evaluation per traversal, with the per-run instrumented count the named tightening step. -/
 structure AdaptiveStatementDlogProfile {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
@@ -125,8 +137,8 @@ structure AdaptiveStatementDlogProfile {pp : ProofParams}
     (B : VestaG) where
   proverGroupWork : Nat
   reductionGroupWork : Nat
-  reductionProgrammingCovered :
-    2 ^ (AdaptiveActionStatementShape pp).k + 2 ≤ reductionGroupWork
+  reductionOpsCovered :
+    adaptiveStatementReductionGroupOps pp ≤ reductionGroupWork
   advantage : Nat → Nat → ENNReal
   advantage_mono : ∀ {q q' g g'}, q ≤ q' → g ≤ g' →
     advantage q g ≤ advantage q' g'
