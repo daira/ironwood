@@ -31,13 +31,12 @@ theorem adaptiveStatementInstanceLayout_column_lt {pp : ProofParams}
     native_decide
   exact hall (column, rotation) hmem'
 
-set_option maxHeartbeats 1200000 in
 theorem BatchWitness.acceptedPolynomial_eq_online_of_query {pp : ProofParams}
     {family : ComputedAdaptiveActionStatementFSFamily pp}
     {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
     {O : family.Coins}
     (witness : family.BatchWitness basis O)
-    (decode : DeployedAlgebraicDecode
+    (decode : DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -51,7 +50,7 @@ theorem BatchWitness.acceptedPolynomial_eq_online_of_query {pp : ProofParams}
       (family.runProof basis O).proof.1
         (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)) <
         Zcash.Arithmetic.scalarFieldOrder)
-    (haccepts : DeployedAccepts
+    (haccepts : DeployedAccepts (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -153,7 +152,7 @@ theorem adaptiveStatementActive_point_mem_stage {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins) (n : Fin 5) (id : CommitmentId)
-    (hactive : adaptiveActionCommitmentActive (adaptiveActionStatementVk pp basis) id)
+    (hactive : adaptiveActionCommitmentActive (AdaptiveActionStatementShape pp) (adaptiveActionStatementVk pp basis) id)
     (havailable : adaptiveActionCommitmentAvailable n id) :
     ∃ P,
       assembledCommitment (adaptiveActionStatementVk pp basis)
@@ -175,7 +174,7 @@ theorem adaptiveStatementActive_point_mem_stage {pp : ProofParams}
         ⟨column, hcolumn⟩
       let ap := output.instanceRepresentations ⟨p, hp⟩ columnFin
       refine ⟨ic ⟨p, hp⟩ column, ?_, ap, ?_, ?_⟩
-      · simp [assembledCommitment, hp, ic, output]
+      · rw [assembledCommitment, dif_pos hp]
       · apply List.mem_append.mpr
         apply Or.inl
         unfold semanticRepresentationTarget
@@ -191,15 +190,17 @@ theorem adaptiveStatementActive_point_mem_stage {pp : ProofParams}
       rcases hactive with ⟨hp, hcolumn, rotation, hlayout⟩
       let ap := data.algebraicProof.adviceCommitments ⟨p, hp⟩ ⟨column, hcolumn⟩
       refine ⟨ap.point, ?_, ap, ?_, rfl⟩
-      · simp [assembledCommitment, hp, finFnG, hcolumn, ap, data, output, runProof]
+      · rw [assembledCommitment, dif_pos hp]
+        rw [finFnG, dif_pos hcolumn]
+        simp only [ap, data, output, runProof]
         rfl
       · apply List.mem_append.mpr
         apply Or.inl
         unfold semanticRepresentationTarget
         apply List.mem_append.mpr
         apply Or.inl
-        fin_cases n <;>
-          simp [AlgebraicProofString.actionRepresentationsBefore, ap, data, output]
+        exact data.algebraicProof.adviceCommitment_mem_actionRepresentationsBefore
+          n ⟨p, hp⟩ ⟨column, hcolumn⟩
   | fixedCol column =>
       rcases hactive with ⟨rotation, hlayout⟩
       obtain ⟨ap, hap, hpoint⟩ := family.fixedRepresented basis column ⟨rotation, hlayout⟩
@@ -209,65 +210,72 @@ theorem adaptiveStatementActive_point_mem_stage {pp : ProofParams}
       rcases hactive with ⟨hp, hs⟩
       let ap := data.algebraicProof.permutationProduct ⟨p, hp⟩ ⟨s, hs⟩
       refine ⟨ap.point, ?_, ap, ?_, rfl⟩
-      · simp [assembledCommitment, hp, finFnG, hs, ap, data, output, runProof]
+      · rw [assembledCommitment, dif_pos hp]
+        rw [finFnG, dif_pos hs]
+        simp only [ap, data, output, runProof]
         rfl
       · apply List.mem_append.mpr
         apply Or.inl
         unfold semanticRepresentationTarget
         apply List.mem_append.mpr
         apply Or.inl
-        fin_cases n <;>
-          simp [adaptiveActionCommitmentAvailable] at havailable <;>
-          simp [AlgebraicProofString.actionRepresentationsBefore, ap, data, output]
+        exact data.algebraicProof.permutationProduct_mem_actionRepresentationsBefore
+          n ⟨p, hp⟩ ⟨s, hs⟩
+          (by simpa [adaptiveActionCommitmentAvailable] using havailable)
   | lookupProduct p l =>
       rcases hactive with ⟨hp, hl⟩
       let ap := data.algebraicProof.lookupProduct ⟨p, hp⟩ ⟨l, hl⟩
       refine ⟨ap.point, ?_, ap, ?_, rfl⟩
-      · simp [assembledCommitment, hp, finFnG, hl, ap, data, output, runProof]
+      · rw [assembledCommitment, dif_pos hp]
+        rw [finFnG, dif_pos hl]
+        simp only [ap, data, output, runProof]
         rfl
       · apply List.mem_append.mpr
         apply Or.inl
         unfold semanticRepresentationTarget
         apply List.mem_append.mpr
         apply Or.inl
-        fin_cases n <;>
-          simp [adaptiveActionCommitmentAvailable] at havailable <;>
-          simp [AlgebraicProofString.actionRepresentationsBefore, ap, data, output]
+        exact data.algebraicProof.lookupProduct_mem_actionRepresentationsBefore
+          n ⟨p, hp⟩ ⟨l, hl⟩
+          (by simpa [adaptiveActionCommitmentAvailable] using havailable)
   | lookupPermInput p l =>
       rcases hactive with ⟨hp, hl⟩
       let ap := data.algebraicProof.lookupPermutedInput ⟨p, hp⟩ ⟨l, hl⟩
       refine ⟨ap.point, ?_, ap, ?_, rfl⟩
-      · simp [assembledCommitment, hp, finFnG, hl, ap, data, output, runProof]
+      · rw [assembledCommitment, dif_pos hp]
+        rw [finFnG, dif_pos hl]
+        simp only [ap, data, output, runProof]
         rfl
       · apply List.mem_append.mpr
         apply Or.inl
         unfold semanticRepresentationTarget
         apply List.mem_append.mpr
         apply Or.inl
-        fin_cases n <;>
-          simp [adaptiveActionCommitmentAvailable] at havailable <;>
-          simp [AlgebraicProofString.actionRepresentationsBefore, ap, data, output]
+        exact data.algebraicProof.lookupPermutedInput_mem_actionRepresentationsBefore
+          n ⟨p, hp⟩ ⟨l, hl⟩
+          (by simpa [adaptiveActionCommitmentAvailable] using havailable)
   | lookupPermTable p l =>
       rcases hactive with ⟨hp, hl⟩
       let ap := data.algebraicProof.lookupPermutedTable ⟨p, hp⟩ ⟨l, hl⟩
       refine ⟨ap.point, ?_, ap, ?_, rfl⟩
-      · simp [assembledCommitment, hp, finFnG, hl, ap, data, output, runProof]
+      · rw [assembledCommitment, dif_pos hp]
+        rw [finFnG, dif_pos hl]
+        simp only [ap, data, output, runProof]
         rfl
       · apply List.mem_append.mpr
         apply Or.inl
         unfold semanticRepresentationTarget
         apply List.mem_append.mpr
         apply Or.inl
-        fin_cases n <;>
-          simp [adaptiveActionCommitmentAvailable] at havailable <;>
-          simp [AlgebraicProofString.actionRepresentationsBefore, ap, data, output]
+        exact data.algebraicProof.lookupPermutedTable_mem_actionRepresentationsBefore
+          n ⟨p, hp⟩ ⟨l, hl⟩
+          (by simpa [adaptiveActionCommitmentAvailable] using havailable)
   | permCommon c =>
       have hc : c < actionCircuit.permutationColumnCount := hactive
       obtain ⟨ap, hap, hpoint⟩ := family.permutationCommonRepresented basis ⟨c, hc⟩
       refine ⟨(adaptiveActionStatementVk pp basis).permutationCommonCommitment ⟨c, hc⟩,
         ?_, ap, List.mem_append.mpr (Or.inr hap), hpoint⟩
-      simp [assembledCommitment, finFnG, hc,
-        CircuitShape.withProofParams_numPermutationColumns]
+      simp [assembledCommitment, finFnG, hc]
   | vanishingH => exact False.elim hactive
   | randomPoly => exact False.elim hactive
 
@@ -279,10 +287,10 @@ theorem adaptiveStatementAcceptedPolynomial_eq_stage {pp : ProofParams}
     (O : family.Coins)
     (hsource : family.semanticSourceMismatchRelationFinder basis O = none)
     (n : Fin 5) (id : CommitmentId)
-    (hactive : adaptiveActionCommitmentActive (adaptiveActionStatementVk pp basis) id)
+    (hactive : adaptiveActionCommitmentActive (AdaptiveActionStatementShape pp) (adaptiveActionStatementVk pp basis) id)
     (havailable : adaptiveActionCommitmentAvailable n id)
     (witness : family.BatchWitness basis O)
-    (decode : DeployedAlgebraicDecode
+    (decode : DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -296,7 +304,7 @@ theorem adaptiveStatementAcceptedPolynomial_eq_stage {pp : ProofParams}
       (family.runProof basis O).proof.1
         (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)) <
         Zcash.Arithmetic.scalarFieldOrder)
-    (haccepts : DeployedAccepts
+    (haccepts : DeployedAccepts (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -324,7 +332,14 @@ theorem adaptiveStatementAcceptedPolynomial_eq_stage {pp : ProofParams}
   have hstage := family.semanticStagePolynomial_eq_full basis O hsource n P
     ⟨ap, hap, hapPoint⟩
   unfold adaptiveActionCommitmentPolynomial adaptiveActionCommitmentPolynomialOf
-  rw [if_pos hactive, hpoint]
+  rw [if_pos (show adaptiveActionCommitmentActive
+      (actionCircuit.shape.withProofParams pp) (ActionTerminal.vkAt basis) id from hactive),
+    show assembledCommitment (ActionTerminal.vkAt basis)
+      (actionCircuit.instanceCommitment
+        (ursOfAugmentedBasis (actionCircuit.shape.withProofParams pp).k basis)
+        (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) id =
+      CommitmentRef.point P from hpoint]
   exact hfull.trans hstage
 
 /-- Every selected-statement nonterminal slot agrees with the exact semantic-stage resolver;
@@ -335,11 +350,11 @@ theorem adaptiveStatementAcceptedPolynomial_eq_stage_nonterminal {pp : ProofPara
     (O : family.Coins)
     (hsource : family.semanticSourceMismatchRelationFinder basis O = none)
     (n : Fin 5) (id : CommitmentId)
-    (havailable : adaptiveActionCommitmentActive (adaptiveActionStatementVk pp basis) id →
+    (havailable : adaptiveActionCommitmentActive (AdaptiveActionStatementShape pp) (adaptiveActionStatementVk pp basis) id →
       adaptiveActionCommitmentAvailable n id)
     (hterminal : id ≠ .vanishingH ∧ id ≠ .randomPoly)
     (witness : family.BatchWitness basis O)
-    (decode : DeployedAlgebraicDecode
+    (decode : DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -353,7 +368,7 @@ theorem adaptiveStatementAcceptedPolynomial_eq_stage_nonterminal {pp : ProofPara
       (family.runProof basis O).proof.1
         (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)) <
         Zcash.Arithmetic.scalarFieldOrder)
-    (haccepts : DeployedAccepts
+    (haccepts : DeployedAccepts (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -368,7 +383,7 @@ theorem adaptiveStatementAcceptedPolynomial_eq_stage_nonterminal {pp : ProofPara
         (semanticRepresentationTarget (family.runOutput basis O) n ++
           family.fixedRepresentations basis)
         (family.runRecord basis O) id := by
-  by_cases hactive : adaptiveActionCommitmentActive (adaptiveActionStatementVk pp basis) id
+  by_cases hactive : adaptiveActionCommitmentActive (AdaptiveActionStatementShape pp) (adaptiveActionStatementVk pp basis) id
   · exact adaptiveStatementAcceptedPolynomial_eq_stage family basis O hsource n id
       hactive (havailable hactive) witness decode hbatches hchar haccepts
   · have habsent : ∀ q ∈ assembleQueries (adaptiveActionStatementVk pp basis)
@@ -401,7 +416,8 @@ theorem adaptiveStatementAcceptedPolynomial_eq_stage_nonterminal {pp : ProofPara
       unfold CanonicalMemberConstraintRelation.acceptedPolynomial decodedPolynomialResolver
       rw [hroute]
     unfold adaptiveActionCommitmentPolynomial adaptiveActionCommitmentPolynomialOf
-    rw [if_neg hactive]
+    rw [if_neg (show ¬adaptiveActionCommitmentActive
+      (actionCircuit.shape.withProofParams pp) (ActionTerminal.vkAt basis) id from hactive)]
     exact hzero
 
 /-- Compare the selected quotient MSM coordinates with the explicit quotient-piece power sum. -/
@@ -561,14 +577,13 @@ theorem statementQuotientAgreement_of_finder_none {pp : ProofParams}
   | inl agreement => exact ⟨agreement, rfl⟩
   | inr relation => simp [hout] at hnone
 
-set_option maxHeartbeats 4000000 in
 theorem statementExclusions_of_no_surface {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins)
     (hsource : family.semanticSourceMismatchRelationFinder basis O = none)
     (witness : family.BatchWitness basis O)
-    (rawDecode : DeployedAlgebraicDecode
+    (rawDecode : DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -640,7 +655,7 @@ theorem statementExclusions_of_no_surface {pp : ProofParams}
   have hyRead : ch.y = nu 3 := by rfl
   have hxRead : ch.x = nu 4 := by rfl
   have hpolyStage (n : Fin 5) (id : CommitmentId)
-      (havailable : adaptiveActionCommitmentActive (adaptiveActionStatementVk pp basis) id →
+      (havailable : adaptiveActionCommitmentActive (AdaptiveActionStatementShape pp) (adaptiveActionStatementVk pp basis) id →
         adaptiveActionCommitmentAvailable n id)
       (hterminal : id ≠ .vanishingH ∧ id ≠ .randomPoly) :
       actionPoly id = adaptiveActionCommitmentPolynomial pp basis inputs
@@ -651,7 +666,7 @@ theorem statementExclusions_of_no_surface {pp : ProofParams}
       (by simpa only [family.runRecord_eq_chRecord] using haccepts)
     simpa only [actionPoly, decode, inputs, data, output, stageSource, ch] using hraw
   have hpolySurface (n : Fin 5) (id : CommitmentId)
-      (havailable : adaptiveActionCommitmentActive (adaptiveActionStatementVk pp basis) id →
+      (havailable : adaptiveActionCommitmentActive (AdaptiveActionStatementShape pp) (adaptiveActionStatementVk pp basis) id →
         adaptiveActionCommitmentAvailable n id)
       (hterminal : id ≠ .vanishingH ∧ id ≠ .randomPoly) :
       actionPoly id = stagePoly n id := by
@@ -659,21 +674,21 @@ theorem statementExclusions_of_no_surface {pp : ProofParams}
       (adaptiveActionCommitmentPolynomial_challenge_congr pp basis inputs
         data.algebraicProof.erase (stageSource n) ch (stageCh n) id hterminal.1)
   have hcolumnAvailable (id : CommitmentId) (hid : id.isColumnInput) :
-      adaptiveActionCommitmentActive (adaptiveActionStatementVk pp basis) id →
+      adaptiveActionCommitmentActive (AdaptiveActionStatementShape pp) (adaptiveActionStatementVk pp basis) id →
         adaptiveActionCommitmentAvailable (0 : Fin 5) id := by
     intro hactive
     cases id <;>
       simp [CommitmentId.isColumnInput, adaptiveActionCommitmentAvailable] at hid ⊢
   have hpermutationAvailable (n : Fin 5) (hn1 : 1 ≤ (n : Nat))
       (id : CommitmentId) (hid : id.isPermutationInput) :
-      adaptiveActionCommitmentActive (adaptiveActionStatementVk pp basis) id →
+      adaptiveActionCommitmentActive (AdaptiveActionStatementShape pp) (adaptiveActionStatementVk pp basis) id →
         adaptiveActionCommitmentAvailable n id := by
     intro hactive
     cases id <;>
       simp [CommitmentId.isPermutationInput, adaptiveActionCommitmentAvailable] at hid ⊢
   have hlookupAvailable (n : Fin 5) (hn1 : 1 ≤ (n : Nat))
       (id : CommitmentId) (hid : id.isLookupInput) :
-      adaptiveActionCommitmentActive (adaptiveActionStatementVk pp basis) id →
+      adaptiveActionCommitmentActive (AdaptiveActionStatementShape pp) (adaptiveActionStatementVk pp basis) id →
         adaptiveActionCommitmentAvailable n id := by
     intro hactive
     cases id <;>
@@ -833,7 +848,7 @@ theorem statementExclusions_of_no_surface {pp : ProofParams}
     simpa only [hgammaRead] using hgammaStage.2
   have hallAvailable (n : Fin 5) (hn3 : 3 ≤ (n : Nat)) (id : CommitmentId)
       (hvanishing : id ≠ .vanishingH) (hrandom : id ≠ .randomPoly) :
-      adaptiveActionCommitmentActive (adaptiveActionStatementVk pp basis) id →
+      adaptiveActionCommitmentActive (AdaptiveActionStatementShape pp) (adaptiveActionStatementVk pp basis) id →
         adaptiveActionCommitmentAvailable n id := by
     intro hactive
     have hn1 : 1 ≤ (n : Nat) := Nat.le_trans (by decide) hn3
@@ -845,7 +860,7 @@ theorem statementExclusions_of_no_surface {pp : ProofParams}
     have hfull : actionModel = adaptiveActionCommittedModel pp basis inputs
         data.algebraicProof.erase (stageSource n) ch := by
       unfold actionModel adaptiveActionCommittedModel
-      exact VerifyingKey.constraintModel_congr_nonterminal
+      exact VerifyingKey.constraintModel_congr_nonterminal _
         (adaptiveActionStatementVk pp basis) ch _ _ _ (fun id hv hr =>
           hpolyStage n id (hallAvailable n hn3 id hv hr) ⟨hv, hr⟩)
     have h0n : (0 : Nat) < (n : Nat) := lt_of_lt_of_le (by decide) hn3
@@ -956,7 +971,7 @@ theorem statementAcceptedVanishing_eq_fullQuotient {pp : ProofParams}
     (O : family.Coins)
     (hnone : family.statementQuotientRelationFinder basis O = none)
     (witness : family.BatchWitness basis O)
-    (decode : DeployedAlgebraicDecode
+    (decode : DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -965,7 +980,7 @@ theorem statementAcceptedVanishing_eq_fullQuotient {pp : ProofParams}
       ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
       ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O)))
     (hbatches : decode.batches = witness.batches)
-    (haccepts : DeployedAccepts
+    (haccepts : DeployedAccepts (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -1103,7 +1118,7 @@ theorem statementAcceptedDifference_eval_eq_preX {pp : ProofParams}
     (hsource : family.semanticSourceMismatchRelationFinder basis O = none)
     (hquotient : family.statementQuotientRelationFinder basis O = none)
     (witness : family.BatchWitness basis O)
-    (rawDecode : DeployedAlgebraicDecode
+    (rawDecode : DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -1159,7 +1174,7 @@ theorem statementAcceptedDifference_eval_eq_preX {pp : ProofParams}
       (chRecord (family.runPreIpaReads basis O) (family.runIpaReads basis O)) <
         Zcash.Arithmetic.scalarFieldOrder := by
     simpa only [output, family.runRecord_eq_chRecord] using hchar
-  have hacceptsFull : DeployedAccepts
+  have hacceptsFull : DeployedAccepts (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
@@ -1178,7 +1193,7 @@ theorem statementAcceptedDifference_eval_eq_preX {pp : ProofParams}
         (semanticRepresentationTarget output (4 : Fin 5) ++
           family.fixedRepresentations basis) ch id := by
     intro id hvanishingId hrandom
-    have havailable : adaptiveActionCommitmentActive (adaptiveActionStatementVk pp basis) id →
+    have havailable : adaptiveActionCommitmentActive (AdaptiveActionStatementShape pp) (adaptiveActionStatementVk pp basis) id →
         adaptiveActionCommitmentAvailable (4 : Fin 5) id := by
       intro hactive
       cases id <;> simp_all [adaptiveActionCommitmentAvailable]
@@ -1192,7 +1207,7 @@ theorem statementAcceptedDifference_eval_eq_preX {pp : ProofParams}
       (semanticRepresentationTarget output (4 : Fin 5) ++
         family.fixedRepresentations basis) ch := by
     unfold actionModel adaptiveActionCommittedModel adaptiveActionCommittedModelOf
-    exact VerifyingKey.constraintModel_congr_nonterminal
+    exact VerifyingKey.constraintModel_congr_nonterminal _
       (adaptiveActionStatementVk pp basis) ch _ _ _ hpolyStage
   have hsource4 : semanticRepresentationTarget output (4 : Fin 5) ++
       family.fixedRepresentations basis = source := by
@@ -1221,6 +1236,7 @@ theorem statementAcceptedDifference_eval_eq_preX {pp : ProofParams}
   rw [adaptiveActionPreXDifference_eq]
   simp only [eval_sub, eval_mul, adaptiveActionStatementVk,
     actionCircuit.toVerifierKey_n]
+  rfl
 
 
 end ComputedAdaptiveActionStatementFSFamily

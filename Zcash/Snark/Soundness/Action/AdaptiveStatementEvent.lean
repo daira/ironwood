@@ -163,7 +163,6 @@ def statisticalSurfaceEvent {pp : ProofParams}
 
 /-! ## Deterministic surface exhaustion -/
 
-set_option maxHeartbeats 800000 in
 theorem BatchWitness.goodRoots_of_not_rootEvent {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
@@ -172,174 +171,193 @@ theorem BatchWitness.goodRoots_of_not_rootEvent {pp : ProofParams}
     (hroot : (basis, O) ∉ family.rootEvent)
     (hpre : family.preIpaRepresentationRelationFinder basis O = none) :
     family.BatchGoodRoots basis O witness := by
-  let output := family.runOutput basis O
-  let data := output.proofData
-  let fixed := adaptiveStatementInstanceRepresentationList output.instanceRepresentations ++
-    family.fixedRepresentations basis
-  let nu := family.runPreIpaReads basis O
   have hsets := witness.rootSets_eq
   constructor
   · intro hx1
     apply hroot
     refine ⟨(5 : Fin 6), ?_⟩
-    change O (family.preIpaPoint basis 5 output) ∈
-        outputRootBad family basis 5 output (family.preIpaPoint basis 5 output) O ∧ _
+    change O (family.preIpaPoint basis 5 (family.runOutput basis O)) ∈
+        outputRootBad family basis 5 (family.runOutput basis O) (family.preIpaPoint basis 5 (family.runOutput basis O)) O ∧ _
     refine ⟨?_, hpre⟩
-    rw [show output = family.runOutput basis O by rfl, outputRootBad_actual,
+    rw [outputRootBad_actual,
       outputRootSurface_five]
-    change nu 5 ∈ adaptiveX1AllRootSet (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-      data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
-      data.adaptivePreX1MembersCovered (adaptiveStrictPrefixRecord 5 nu)
+    change (family.runPreIpaReads basis O) 5 ∈ adaptiveX1AllRootSet (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runOutput basis O).proofData.algebraicProof.erase ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource (adaptiveStatementInstanceRepresentationList
+      (family.runOutput basis O).instanceRepresentations ++
+      family.fixedRepresentations basis))
+      (family.runOutput basis O).proofData.adaptivePreX1MembersCovered (adaptiveStrictPrefixRecord 5 (family.runPreIpaReads basis O))
     rw [adaptiveX1AllRootSet_strictPrefix]
     rw [show adaptiveX1AllRootSet (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-        data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
-        data.adaptivePreX1MembersCovered nu =
+        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+        (family.runOutput basis O).proofData.algebraicProof.erase ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource (adaptiveStatementInstanceRepresentationList
+      (family.runOutput basis O).instanceRepresentations ++
+      family.fixedRepresentations basis))
+        (family.runOutput basis O).proofData.adaptivePreX1MembersCovered (family.runPreIpaReads basis O) =
       deployedX1AllRootSet
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
         (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-        data.algebraicProof.erase (chRecord nu (fun _ => 0)) witness.batches from hsets.1]
-    simpa [output, data, nu, runPreIpaRecord] using hx1
+        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+        (family.runOutput basis O).proofData.algebraicProof.erase (chRecord (family.runPreIpaReads basis O) (fun _ => 0)) witness.batches from hsets.1]
+    simpa [runPreIpaRecord] using hx1
   · intro hx2
     apply hroot
     refine ⟨(4 : Fin 6), ?_⟩
-    change O (family.preIpaPoint basis 6 output) ∈
-        outputRootBad family basis 6 output (family.preIpaPoint basis 6 output) O ∧ _
+    change O (family.preIpaPoint basis 6 (family.runOutput basis O)) ∈
+        outputRootBad family basis 6 (family.runOutput basis O) (family.preIpaPoint basis 6 (family.runOutput basis O)) O ∧ _
     refine ⟨?_, hpre⟩
-    rw [show output = family.runOutput basis O by rfl, outputRootBad_actual,
+    rw [outputRootBad_actual,
       outputRootSurface_six]
-    change nu 6 ∈ adaptiveX2RootSet (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-      data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
-      data.adaptivePreX1MembersCovered (adaptiveStrictPrefixRecord 6 nu)
+    change (family.runPreIpaReads basis O) 6 ∈ adaptiveX2RootSet (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runOutput basis O).proofData.algebraicProof.erase ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource (adaptiveStatementInstanceRepresentationList
+      (family.runOutput basis O).instanceRepresentations ++
+      family.fixedRepresentations basis))
+      (family.runOutput basis O).proofData.adaptivePreX1MembersCovered (adaptiveStrictPrefixRecord 6 (family.runPreIpaReads basis O))
     rw [adaptiveX2RootSet_strictPrefix]
     rw [show adaptiveX2RootSet (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-        data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
-        data.adaptivePreX1MembersCovered nu =
+        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+        (family.runOutput basis O).proofData.algebraicProof.erase ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource (adaptiveStatementInstanceRepresentationList
+      (family.runOutput basis O).instanceRepresentations ++
+      family.fixedRepresentations basis))
+        (family.runOutput basis O).proofData.adaptivePreX1MembersCovered (family.runPreIpaReads basis O) =
       deployedX2RootSet
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
         (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-        data.algebraicProof.erase (chRecord nu (fun _ => 0)) witness.batches from hsets.2.1]
-    simpa [output, data, nu, runPreIpaRecord] using hx2
+        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+        (family.runOutput basis O).proofData.algebraicProof.erase (chRecord (family.runPreIpaReads basis O) (fun _ => 0)) witness.batches from hsets.2.1]
+    simpa [runPreIpaRecord] using hx2
   · intro hx3
     apply hroot
     refine ⟨(3 : Fin 6), ?_⟩
-    change O (family.preIpaPoint basis 7 output) ∈
-        outputRootBad family basis 7 output (family.preIpaPoint basis 7 output) O ∧ _
+    change O (family.preIpaPoint basis 7 (family.runOutput basis O)) ∈
+        outputRootBad family basis 7 (family.runOutput basis O) (family.preIpaPoint basis 7 (family.runOutput basis O)) O ∧ _
     refine ⟨?_, hpre⟩
-    rw [show output = family.runOutput basis O by rfl, outputRootBad_actual,
+    rw [outputRootBad_actual,
       outputRootSurface_seven]
-    change nu 7 ∈ adaptiveX3RootSet (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-      data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
-      [data.algebraicProof.multiopenQPrime] data.adaptivePreX1MembersCovered
-      ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩ (adaptiveStrictPrefixRecord 7 nu)
+    change (family.runPreIpaReads basis O) 7 ∈ adaptiveX3RootSet (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runOutput basis O).proofData.algebraicProof.erase ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource (adaptiveStatementInstanceRepresentationList
+      (family.runOutput basis O).instanceRepresentations ++
+      family.fixedRepresentations basis))
+      [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime] (family.runOutput basis O).proofData.adaptivePreX1MembersCovered
+      ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩ (adaptiveStrictPrefixRecord 7 (family.runPreIpaReads basis O))
     rw [adaptiveX3RootSet_strictPrefix]
     rw [show adaptiveX3RootSet (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-        data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
-        [data.algebraicProof.multiopenQPrime] data.adaptivePreX1MembersCovered
-        ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩ nu =
+        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+        (family.runOutput basis O).proofData.algebraicProof.erase ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource (adaptiveStatementInstanceRepresentationList
+      (family.runOutput basis O).instanceRepresentations ++
+      family.fixedRepresentations basis))
+        [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime] (family.runOutput basis O).proofData.adaptivePreX1MembersCovered
+        ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩ (family.runPreIpaReads basis O) =
       deployedX3RootSet
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
         (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-        data.algebraicProof.erase (chRecord nu (fun _ => 0)) witness.batches from hsets.2.2.1]
-    simpa [output, data, nu, runPreIpaRecord] using hx3
+        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+        (family.runOutput basis O).proofData.algebraicProof.erase (chRecord (family.runPreIpaReads basis O) (fun _ => 0)) witness.batches from hsets.2.2.1]
+    simpa [runPreIpaRecord] using hx3
   · intro hx4
     apply hroot
     refine ⟨(2 : Fin 6), ?_⟩
-    change O (family.preIpaPoint basis 8 output) ∈
-        outputRootBad family basis 8 output (family.preIpaPoint basis 8 output) O ∧ _
+    change O (family.preIpaPoint basis 8 (family.runOutput basis O)) ∈
+        outputRootBad family basis 8 (family.runOutput basis O) (family.preIpaPoint basis 8 (family.runOutput basis O)) O ∧ _
     refine ⟨?_, hpre⟩
-    rw [show output = family.runOutput basis O by rfl, outputRootBad_actual,
+    rw [outputRootBad_actual,
       outputRootSurface_eight]
-    change nu 8 ∈ adaptiveX4RootSet (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-      data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
-      [data.algebraicProof.multiopenQPrime] data.adaptivePreX1MembersCovered
-      ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩ (adaptiveStrictPrefixRecord 8 nu)
+    change (family.runPreIpaReads basis O) 8 ∈ adaptiveX4RootSet (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runOutput basis O).proofData.algebraicProof.erase ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource (adaptiveStatementInstanceRepresentationList
+      (family.runOutput basis O).instanceRepresentations ++
+      family.fixedRepresentations basis))
+      [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime] (family.runOutput basis O).proofData.adaptivePreX1MembersCovered
+      ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩ (adaptiveStrictPrefixRecord 8 (family.runPreIpaReads basis O))
     rw [adaptiveX4RootSet_strictPrefix]
     rw [show adaptiveX4RootSet (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-        data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
-        [data.algebraicProof.multiopenQPrime] data.adaptivePreX1MembersCovered
-        ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩ nu =
+        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+        (family.runOutput basis O).proofData.algebraicProof.erase ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource (adaptiveStatementInstanceRepresentationList
+      (family.runOutput basis O).instanceRepresentations ++
+      family.fixedRepresentations basis))
+        [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime] (family.runOutput basis O).proofData.adaptivePreX1MembersCovered
+        ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩ (family.runPreIpaReads basis O) =
       deployedX4RootSet
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
         (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-        data.algebraicProof.erase (chRecord nu (fun _ => 0)) witness.batches from hsets.2.2.2.1]
-    simpa [output, data, nu, runPreIpaRecord] using hx4
+        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+        (family.runOutput basis O).proofData.algebraicProof.erase (chRecord (family.runPreIpaReads basis O) (fun _ => 0)) witness.batches from hsets.2.2.2.1]
+    simpa [runPreIpaRecord] using hx4
   · intro hxi
     apply hroot
     refine ⟨(0 : Fin 6), ?_⟩
-    change O (family.preIpaPoint basis 9 output) ∈
-        outputRootBad family basis 9 output (family.preIpaPoint basis 9 output) O ∧ _
+    change O (family.preIpaPoint basis 9 (family.runOutput basis O)) ∈
+        outputRootBad family basis 9 (family.runOutput basis O) (family.preIpaPoint basis 9 (family.runOutput basis O)) O ∧ _
     refine ⟨?_, hpre⟩
-    rw [show output = family.runOutput basis O by rfl, outputRootBad_actual,
+    rw [outputRootBad_actual,
       outputRootSurface_nine]
-    change nu 9 ∈ adaptiveXiRootSet (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-      data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
-      [data.algebraicProof.multiopenQPrime] [data.algebraicProof.ipaS]
-      data.adaptivePreX1MembersCovered
-      ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩
-      ⟨data.algebraicProof.ipaS, by simp, rfl⟩ (adaptiveStrictPrefixRecord 9 nu)
+    change (family.runPreIpaReads basis O) 9 ∈ adaptiveXiRootSet (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runOutput basis O).proofData.algebraicProof.erase ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource (adaptiveStatementInstanceRepresentationList
+      (family.runOutput basis O).instanceRepresentations ++
+      family.fixedRepresentations basis))
+      [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime] [(family.runOutput basis O).proofData.algebraicProof.ipaS]
+      (family.runOutput basis O).proofData.adaptivePreX1MembersCovered
+      ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩
+      ⟨(family.runOutput basis O).proofData.algebraicProof.ipaS, by simp, rfl⟩ (adaptiveStrictPrefixRecord 9 (family.runPreIpaReads basis O))
     rw [adaptiveXiRootSet_strictPrefix]
     rw [show adaptiveXiRootSet (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-        data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
-        [data.algebraicProof.multiopenQPrime] [data.algebraicProof.ipaS]
-        data.adaptivePreX1MembersCovered
-        ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩
-        ⟨data.algebraicProof.ipaS, by simp, rfl⟩ nu =
+        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+        (family.runOutput basis O).proofData.algebraicProof.erase ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource (adaptiveStatementInstanceRepresentationList
+      (family.runOutput basis O).instanceRepresentations ++
+      family.fixedRepresentations basis))
+        [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime] [(family.runOutput basis O).proofData.algebraicProof.ipaS]
+        (family.runOutput basis O).proofData.adaptivePreX1MembersCovered
+        ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩
+        ⟨(family.runOutput basis O).proofData.algebraicProof.ipaS, by simp, rfl⟩ (family.runPreIpaReads basis O) =
       szBadSet (ipaShiftXiPolynomial
-        (commitGen (evalVector (AdaptiveActionStatementShape pp).k (nu 7))
-            (data.toAlgebraicWfProof.aMulti nu) -
+        (commitGen (evalVector (AdaptiveActionStatementShape pp).k ((family.runPreIpaReads basis O) 7))
+            ((family.runOutput basis O).proofData.toAlgebraicWfProof.aMulti (family.runPreIpaReads basis O)) -
           multiopenValue (adaptiveActionStatementVk pp basis)
-            (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-            data.algebraicProof.erase (chRecord nu (fun _ => 0)))
-        (commitGen (evalVector (AdaptiveActionStatementShape pp).k (nu 7))
-          data.toAlgebraicWfProof.s)) from hsets.2.2.2.2.1]
-    simpa [output, data, nu, runPreIpaRecord, runProof] using hxi
+            (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+            (family.runOutput basis O).proofData.algebraicProof.erase (chRecord (family.runPreIpaReads basis O) (fun _ => 0)))
+        (commitGen (evalVector (AdaptiveActionStatementShape pp).k ((family.runPreIpaReads basis O) 7))
+          (family.runOutput basis O).proofData.toAlgebraicWfProof.s)) from hsets.2.2.2.2.1]
+    simpa [runPreIpaRecord, runProof] using hxi
   · intro hz
     apply hroot
     refine ⟨(1 : Fin 6), ?_⟩
-    change O (family.preIpaPoint basis 10 output) ∈
-        outputRootBad family basis 10 output (family.preIpaPoint basis 10 output) O ∧ _
+    change O (family.preIpaPoint basis 10 (family.runOutput basis O)) ∈
+        outputRootBad family basis 10 (family.runOutput basis O) (family.preIpaPoint basis 10 (family.runOutput basis O)) O ∧ _
     refine ⟨?_, hpre⟩
-    rw [show output = family.runOutput basis O by rfl, outputRootBad_actual,
+    rw [outputRootBad_actual,
       outputRootSurface_ten]
-    change nu 10 ∈ adaptiveZRootSet (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-      data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
-      [data.algebraicProof.multiopenQPrime] [data.algebraicProof.ipaS]
-      data.adaptivePreX1MembersCovered
-      ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩
-      ⟨data.algebraicProof.ipaS, by simp, rfl⟩ (adaptiveStrictPrefixRecord 10 nu)
+    change (family.runPreIpaReads basis O) 10 ∈ adaptiveZRootSet (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runOutput basis O).proofData.algebraicProof.erase ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource (adaptiveStatementInstanceRepresentationList
+      (family.runOutput basis O).instanceRepresentations ++
+      family.fixedRepresentations basis))
+      [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime] [(family.runOutput basis O).proofData.algebraicProof.ipaS]
+      (family.runOutput basis O).proofData.adaptivePreX1MembersCovered
+      ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩
+      ⟨(family.runOutput basis O).proofData.algebraicProof.ipaS, by simp, rfl⟩ (adaptiveStrictPrefixRecord 10 (family.runPreIpaReads basis O))
     rw [adaptiveZRootSet_strictPrefix]
     rw [show adaptiveZRootSet (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-        data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
-        [data.algebraicProof.multiopenQPrime] [data.algebraicProof.ipaS]
-        data.adaptivePreX1MembersCovered
-        ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩
-        ⟨data.algebraicProof.ipaS, by simp, rfl⟩ nu =
+        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+        (family.runOutput basis O).proofData.algebraicProof.erase ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource (adaptiveStatementInstanceRepresentationList
+      (family.runOutput basis O).instanceRepresentations ++
+      family.fixedRepresentations basis))
+        [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime] [(family.runOutput basis O).proofData.algebraicProof.ipaS]
+        (family.runOutput basis O).proofData.adaptivePreX1MembersCovered
+        ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩
+        ⟨(family.runOutput basis O).proofData.algebraicProof.ipaS, by simp, rfl⟩ (family.runPreIpaReads basis O) =
       szBadSet (ipaShiftZPolynomial
-        (commitGen (evalVector (AdaptiveActionStatementShape pp).k (nu 7))
-            (data.toAlgebraicWfProof.aMulti nu) -
+        (commitGen (evalVector (AdaptiveActionStatementShape pp).k ((family.runPreIpaReads basis O) 7))
+            ((family.runOutput basis O).proofData.toAlgebraicWfProof.aMulti (family.runPreIpaReads basis O)) -
           multiopenValue (adaptiveActionStatementVk pp basis)
-            (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-            data.algebraicProof.erase (chRecord nu (fun _ => 0)))
-        (data.toAlgebraicWfProof.multiU nu) data.toAlgebraicWfProof.sU
-        (commitGen (evalVector (AdaptiveActionStatementShape pp).k (nu 7))
-          data.toAlgebraicWfProof.s) (nu 9)) from hsets.2.2.2.2.2]
-    simpa [output, data, nu, runPreIpaRecord, runProof] using hz
+            (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+            (family.runOutput basis O).proofData.algebraicProof.erase (chRecord (family.runPreIpaReads basis O) (fun _ => 0)))
+        ((family.runOutput basis O).proofData.toAlgebraicWfProof.multiU (family.runPreIpaReads basis O)) (family.runOutput basis O).proofData.toAlgebraicWfProof.sU
+        (commitGen (evalVector (AdaptiveActionStatementShape pp).k ((family.runPreIpaReads basis O) 7))
+          (family.runOutput basis O).proofData.toAlgebraicWfProof.s) ((family.runPreIpaReads basis O) 9)) from hsets.2.2.2.2.2]
+    simpa [runPreIpaRecord, runProof] using hz
 
 
 /-- The adaptive false-statement event is exhausted by the relation event and its literal

@@ -149,9 +149,12 @@ theorem BatchWitness.x4Source_reconstructU {pp : ProofParams}
   rw [← witness.x4U]
   exact witness.batches.x4.reconstructU.symm
 
-set_option maxHeartbeats 3200000 in
 /-- Construct the direct deployed batches for the selected statement, or expose the first
-nontrivial AGM relation encountered while unbatching. -/
+nontrivial AGM relation encountered while unbatching.
+
+The body repeats the `family.run*` selectors instead of `let`-binding them: the `letToHave`
+elaboration pass re-analyzes each local `let` against the full batch record, which used to
+exhaust the default heartbeat budget here. -/
 def batchOutcome {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
@@ -161,26 +164,28 @@ def batchOutcome {pp : ProofParams}
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis).g
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis).u
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis).w :=
-  let output := family.runOutput basis O
-  let proof := family.runProof basis O
-  let nu := family.runPreIpaReads basis O
-  let fixed := adaptiveStatementInstanceRepresentationList output.instanceRepresentations ++
-    family.fixedRepresentations basis
-  match deployedX4BatchOfCoveredWithSourceOrRelation proof fixed
-      output.proofData.membersCovered nu with
+  match deployedX4BatchOfCoveredWithSourceOrRelation (family.runProof basis O)
+      (adaptiveStatementInstanceRepresentationList
+          (family.runOutput basis O).instanceRepresentations ++
+        family.fixedRepresentations basis)
+      (family.runOutput basis O).proofData.membersCovered (family.runPreIpaReads basis O) with
   | PSum.inr relation => PSum.inr relation
   | PSum.inl x4Result =>
-      let x4Batch := x4Result.batch
       match finForallOrRelationWitness (fun i :
           Fin (deployedX4PairCount (adaptiveActionStatementVk pp basis)
-            (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-            proof.proof.1 (family.runPreIpaRecord basis O)) =>
-          deployedX1BatchOfCoveredWithSourceOrRelation proof fixed
-            output.proofData.membersCovered nu x4Batch i i.isLt) with
+            (adaptiveActionStatementInstanceCommitment pp basis
+              (family.runOutput basis O).inputs)
+            (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)) =>
+          deployedX1BatchOfCoveredWithSourceOrRelation (family.runProof basis O)
+            (adaptiveStatementInstanceRepresentationList
+                (family.runOutput basis O).instanceRepresentations ++
+              family.fixedRepresentations basis)
+            (family.runOutput basis O).proofData.membersCovered
+            (family.runPreIpaReads basis O) x4Result.batch i i.isLt) with
       | PSum.inr relation => PSum.inr relation
       | PSum.inl results => PSum.inl
           { batches :=
-              { x4 := x4Batch
+              { x4 := x4Result.batch
                 x1 := fun i hi => (results ⟨i, hi⟩).batch }
             x4Coeffs := x4Result.coeffs_eq
             x4U := x4Result.uComp_eq
@@ -257,7 +262,6 @@ def ShiftedValue {pp : ProofParams}
         ch.xi * commitGen (evalVector (AdaptiveActionStatementShape pp).k ch.x3)
           (family.runProof basis O).s
 
-set_option maxHeartbeats 800000 in
 /-- Good direct roots and the shifted verifier equality decode the selected proof, then transport
 the decode across the actual IPA-round challenges. -/
 def decodeOfBatchGoodRoots {pp : ProofParams}
@@ -369,7 +373,11 @@ def batchGoodRoots? {pp : ProofParams}
                           xi := by simpa only using hxi.down
                           z := by simpa only using hz.down }⟩
 
-set_option maxHeartbeats 800000 in
+/-- Over the scalar field, a generator combination is the inner product with its coefficients. -/
+private theorem commitGen_eq_innerProduct {n : ℕ} (g a : Fin n → Fp) :
+    commitGen g a = innerProduct a g :=
+  Finset.sum_congr rfl fun _ _ => smul_eq_mul _ _
+
 /-- Acceptance and absence of the guarded IPA binding attack imply the shifted decoder equality. -/
 theorem shiftedValue_of_accept_not_attack {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
@@ -409,8 +417,8 @@ theorem shiftedValue_of_accept_not_attack {pp : ProofParams}
     exact hnot ⟨⟨hacceptFull, hmismatch⟩, hz⟩
   constructor
   · simpa only [ShiftedValue, runPreIpaRecord, chRecord, nu, proof] using hz
-  · simpa only [ShiftedValue, runPreIpaRecord, chRecord, nu, proof, commitGen,
-      innerProduct] using heq
+  · simpa only [ShiftedValue, runPreIpaRecord, chRecord, nu, proof,
+      commitGen_eq_innerProduct] using heq
 
 /-- Decode and acceptance evidence for the exact statement selected by one run. -/
 structure DecodedRun {pp : ProofParams}

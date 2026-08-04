@@ -21,7 +21,6 @@ local instance adaptiveStatementCapstoneVestaInhabited : Inhabited VestaG := ⟨
 namespace ComputedAdaptiveActionStatementFSFamily
 
 set_option maxRecDepth 10000 in
-set_option maxHeartbeats 5000000 in
 theorem statisticalResidualEvent_subset_surfaceEvent {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
@@ -68,7 +67,7 @@ theorem statisticalResidualEvent_subset_surfaceEvent {pp : ProofParams}
         dsimp only at hterminalNone
         rw [dif_pos (by simpa only [nu] using hz), dif_pos hattack, hsplit] at hterminalNone
         simp at hterminalNone
-  let hshifted := family.shiftedValue_of_accept_not_attack basis O haccepts hz hattack
+  have hshifted := family.shiftedValue_of_accept_not_attack basis O haccepts hz hattack
   cases hout : family.batchOutcome basis O with
   | inr relation =>
       have hacceptsSome := family.accepts?_isSome_of basis O haccepts
@@ -83,7 +82,7 @@ theorem statisticalResidualEvent_subset_surfaceEvent {pp : ProofParams}
         hprovenance.2.1
       let rawDecode := family.rawDecodeOfBatchGoodRoots basis O witness hroots hshifted
       have hbatches : rawDecode.batches = witness.batches := by rfl
-      have hacceptsFull : DeployedAccepts
+      have hacceptsFull : DeployedAccepts (AdaptiveActionStatementShape pp)
           (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
           (adaptiveActionStatementVk pp basis)
           (adaptiveActionStatementInstanceCommitment pp basis
@@ -139,7 +138,7 @@ theorem statisticalResidualEvent_subset_surfaceEvent {pp : ProofParams}
         have hfinderSome := family.identityRelationFinder_isSome_of hchar basis O
           hprovenance.2.2.2.2.1 witness hout hroots haccepts hz hattack hrelationSome
         rw [hidentityNone] at hfinderSome
-        contradiction
+        simp at hfinderSome
       · have heval := family.statementAcceptedDifference_eval_eq_preX basis O
           hprovenance.2.2.2.2.1 hprovenance.2.2.2.2.2 witness rawDecode hbatches
           haccepts (hchar basis O)
@@ -180,7 +179,7 @@ theorem statisticalResidualEvent_subset_surfaceEvent {pp : ProofParams}
         have hterminalSome := family.terminalRelationFinder_isSome_of hchar basis O witness
           hout hroots haccepts hz hattack (by simpa only [run] using hsemanticSome)
         rw [hterminalNone] at hterminalSome
-        contradiction
+        simp at hterminalSome
 
 /-- Adaptive-statement false-statement soundness with the deterministic residual discharged.
 Statement selection introduces no second random-oracle-query loss: all statistical surfaces are
