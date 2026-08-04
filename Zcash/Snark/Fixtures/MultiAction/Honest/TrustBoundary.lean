@@ -411,6 +411,28 @@ assert_axioms Zcash.Snark.Capstone.derived_lookups +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+-- The shared five-surface probability bound the two Action endpoints are built from. It is a
+-- per-challenge measure rather than a protocol capstone; the pin is what the `_probability_bound`
+-- suffix rule demands, not an independent claim.
+assert_axioms Zcash.Snark.Capstone.adaptiveActionSurface_probability_bound +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.ActionGateCoherence.domainExponent_lt,
+  Zcash.Snark.Capstone.actionLookupActivationCount_le,
+  Zcash.Snark.Capstone.actionLookupInputArity_le,
+  Zcash.Snark.Capstone.resolverPermutationCell_card_eq,
+  Zcash.Snark.Fixture.vk_chunk_width_le, Zcash.Snark.Fixture.vk_gates_degree_le,
+  Zcash.Snark.Fixture.vk_lookup_input_degree_le, Zcash.Snark.Fixture.vk_lookup_table_degree_le,
+  Zcash.Snark.Keygen.certificate,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+
 assert_axioms Zcash.Snark.Capstone.capturedActionStaticChecks +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionGateCoherence.domainExponent_lt,
