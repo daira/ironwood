@@ -158,6 +158,42 @@ theorem findLabelInAnnotations_annotations [DecidableEq T]
       · rfl
       · exact ih (O q)
 
+/-- A labeled computation's result, query log, and annotations depend only on the table's
+values at its own queries.  This is the locality fact behind every oracle-access certificate:
+agreement on the query log reproduces the entire run. -/
+theorem run_queries_annotations_eq_of_agree {A : LabeledOracleComp T F Label α} :
+    ∀ {O O' : T → F}, (∀ t ∈ A.queries O, O' t = O t) →
+      A.run O' = A.run O ∧ A.queries O' = A.queries O ∧
+        A.annotations O' = A.annotations O := by
+  induction A with
+  | pure a => exact fun _ => ⟨rfl, rfl, rfl⟩
+  | query t label k ih =>
+      intro O O' h
+      have hmemHead : t ∈ (LabeledOracleComp.query t label k).queries O := by
+        simp [queries, erase, OracleComp.queries]
+      have ht : O' t = O t := h t hmemHead
+      have htail := ih (O t) (O := O) (O' := O') (fun s hs => h s (by
+        simp only [queries, erase, OracleComp.queries, List.mem_cons]
+        exact Or.inr (by simpa [queries, erase] using hs)))
+      refine ⟨?_, ?_, ?_⟩
+      · show ((k (O' t)).erase).run O' = ((k (O t)).erase).run O
+        rw [ht]
+        exact htail.1
+      · show t :: ((k (O' t)).erase).queries O' = t :: ((k (O t)).erase).queries O
+        rw [ht]
+        exact congrArg _ htail.2.1
+      · show ⟨t, label⟩ :: (k (O' t)).annotations O' = ⟨t, label⟩ :: (k (O t)).annotations O
+        rw [ht]
+        exact congrArg _ htail.2.2
+
+/-- Locality of the single-traversal execution: agreement on the query log reproduces the
+retained output and annotation log together. -/
+theorem runWithAnnotations_eq_of_agree {A : LabeledOracleComp T F Label α} {O O' : T → F}
+    (h : ∀ t ∈ A.queries O, O' t = O t) :
+    A.runWithAnnotations O' = A.runWithAnnotations O := by
+  have hall := run_queries_annotations_eq_of_agree (A := A) h
+  ext1 <;> simp [runWithAnnotations_fst, runWithAnnotations_snd, hall.1, hall.2.2]
+
 /-- The retained log contains exactly the ordinary query path. -/
 theorem annotations_length_eq_queries
     (A : LabeledOracleComp T F Label α) (O : T → F) :

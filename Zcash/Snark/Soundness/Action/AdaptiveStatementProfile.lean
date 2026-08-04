@@ -103,13 +103,18 @@ def adaptiveStatementKnowledgeExtractorGroupWork
 
 /-- Finite-security premise for the complete adaptive-statement relation finder.
 
-The three resource kinds have different provenance.  Random-oracle queries are derived from the
-code (`adaptiveStatementDlogRandomOracleQueries` counts the finder's traversals of the `Q`-bounded
-adversary and its canonical reads), and the finder's field-operation footprint is certified per
-run by `directDecodeWorkBound` on the direct profile.  `proverGroupWork` is a declared adversary
-resource — the concrete-security premise playing the role of the paper model's time `t`; deriving
-it needs group operations reified in the adversary type.  `reductionGroupWork` is declared but
-floored: `reductionProgrammingCovered` keeps it at least the textbook-DLOG embedding's own basis
+The three resource kinds have different provenance.  Random-oracle queries are certified against
+the code: `relationFinderReads` is the concrete table-point set the finder can consult,
+`relationFinderReads_card_le` bounds it by `Q + (11 + k)`, and the formula here dominates it
+(`relationFinderReads_card_le_dlogQueries`); the locality lemmas beside them
+(`cachedExecution_eq_of_agree` through `accepts?_isSome_eq_of_agree`) prove the retained
+execution, the challenge reads, the provenance stage, and the acceptance verdict read nothing
+outside that set, with the quotient, identity, and terminal stages the tracked remainder.  The
+finder's field-operation footprint is certified per run by `directDecodeWorkBound` on the direct
+profile.  `proverGroupWork` is a declared adversary resource — the concrete-security premise
+playing the role of the paper model's time `t`; deriving it needs group operations reified in
+the adversary type.  `reductionGroupWork` is declared but floored:
+`reductionProgrammingCovered` keeps it at least the textbook-DLOG embedding's own basis
 programming, one scalar multiplication per augmented slot. -/
 structure AdaptiveStatementDlogProfile {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
