@@ -1,5 +1,4 @@
 import Zcash.Snark.Soundness.Canonical.LookupInstantiation
-import Zcash.Snark.Soundness.Pricing.GoodChallenge
 import Zcash.Snark.Soundness.Canonical.DomainSelectors
 
 /-!

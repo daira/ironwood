@@ -1,4 +1,5 @@
-import Zcash.Snark.Soundness.Composition.Bridge
+import Zcash.Common.CPolynomial
+import Zcash.Snark.Soundness.Multiopen.Deployed
 import Zcash.Snark.Verifier.QueryCommitment
 
 /-!

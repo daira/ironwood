@@ -12,7 +12,7 @@ are the verifier's randomness, free `F_p` variables the soundness argument (Schw
 special soundness) quantifies over. How the deployed verifier derives them — Fiat–Shamir over a
 Blake2b hash of the proof so far — is modeled at the typed level by `deriveChallenges` in
 `Verifier/FiatShamir.lean` (the absorb/squeeze schedule over transcript elements), while
-`Soundness.FiatShamir.Oracle` and `Soundness.FiatShamir.Execution` model its
+`Soundness.Oracle.Model` and `Soundness.FiatShamir.Execution` model its
 random-oracle execution and query accounting; the fixtures
 check the schedule model against the captured schedule and fold it into the fingerprint
 (`deriveChallenges_matches_captured_schedule`, `nonInteractiveFingerprint_matches`). What stays

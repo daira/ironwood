@@ -92,7 +92,7 @@ import Zcash.Snark.Soundness.Deployed.Verification
 -- The reusable Fiat–Shamir oracle kernel and its represented adversary model: random-oracle
 -- lemmas, deployed transcript ordering, closed-form IPA assembly, and the bounded
 -- querying-adversary reduction.
-import Zcash.Snark.Soundness.FiatShamir.Oracle
+import Zcash.Snark.Soundness.Oracle.Model
 import Zcash.Snark.Soundness.FiatShamir.Assembly
 import Zcash.Snark.Soundness.FiatShamir.Ordering
 import Zcash.Snark.Soundness.FiatShamir.Execution

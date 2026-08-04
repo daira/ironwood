@@ -1,6 +1,6 @@
 import Mathlib.Tactic
 import Zcash.Snark.Soundness.Constraint.Constraints
-import Zcash.Snark.Soundness.FiatShamir.Oracle
+import Zcash.Snark.Soundness.Oracle.Model
 
 /-!
 # Schwartz–Zippel good-challenge exclusions from challenge uniformity
