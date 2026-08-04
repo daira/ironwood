@@ -14,6 +14,7 @@ import Zcash.Security.Ledger.Value
 import Zcash.Security.Ledger.KeyBindingArm
 import Zcash.Security.Ledger.ExtractionArm
 import Zcash.Security.Ledger.ExtractionKappaArm
+import Zcash.Security.Ledger.ValueRelationArm
 import Zcash.Security.RedDSA.Basic
 import Zcash.Security.RedDSA.Extraction
 import Zcash.Security.RedDSA.KnowledgeError
@@ -733,6 +734,22 @@ assert_computable Zcash.Security.Ledger.Model.balanceConservationOrBreak_extract
 assert_axioms Zcash.Security.Ledger.Model.extractFail_mem_kappaEvent
 assert_axioms Zcash.Security.Ledger.Model.balanceConservation_extractFailArm_measure_le
 assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_extractFailArm_measure_le
+
+/-! ## The conservation relation arm, discharged in the oracle model
+
+The conservation reduction's relation arm, bounded in the challenge-oracle model:
+`ε_DL + 1/|F|` for any labeled ledger adversary, with no query-budget term — the arm's
+witness is oracle-free data. The finder (`valueRelFinder`) rebuilds the reduction's
+relation behind decidable guards and lands it in the generic AGM witness type at the two
+value-commitment slots (`toAlgebraicRelationWitnessAt`); the selection is computed data
+(`ValueRelationSelection`), and the all-prefixes form costs no factor of `k`. -/
+
+assert_computable Zcash.Security.Ledger.Model.valueRelFinder +choice
+assert_computable Zcash.Security.Ledger.Model.allConservedOrBreak_valueRelation +choice
+assert_computable Zcash.Security.Ledger.Model.balanceConservationOrBreak_valueRelation +choice
+assert_axioms Zcash.Security.Ledger.Model.valueRelation_finder_isSome
+assert_axioms Zcash.Security.Ledger.Model.balanceConservation_valueRelationArm_measure_le
+assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_valueRelationArm_measure_le
 
 /-! ## Binding-signature relation reductions
 
