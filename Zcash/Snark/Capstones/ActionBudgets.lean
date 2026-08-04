@@ -13,7 +13,7 @@ namespace Zcash.Snark.Capstone
 -- The captured facts these endpoints are stated at.
 open Zcash.Snark.Fixture
 
-open Zcash.Snark CompPoly.CPolynomial
+open Zcash.Snark ComputedAdaptiveActionStatementFSFamily CompPoly.CPolynomial
 open Zcash.Snark.ActionTerminal
 open Zcash.Snark.Keygen (actionProofParams actionProofParamsFor
   actionCircuitShape_eq_fixtureCircuitShape actionShapeFor_eq_fixtureShape
@@ -1068,4 +1068,353 @@ theorem actionDlogGroupWork_bound
     _ ≤ 8 * 2 ^ 123 := by norm_num
     _ = 2 ^ 126 := by norm_num
 
+
+/-! ## Adaptive-statement budgets
+
+The counting caps, degree bound, surface measure and statistical model the adaptive-statement
+endpoints evaluate, where the adversary chooses the statement and proof together.
+-/
+
+
+/-- The same constraint-count bound holds for every explicit instance-commitment function; the
+count depends only on the Action verifier layout. -/
+theorem adaptive_action_constraint_count_of_le_for (numProofs : ℕ)
+    (basis : AugmentedIndex actionCircuit.n → VestaG)
+    (instanceCommitment :
+      Fin (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)).numProofs →
+        Nat → VestaG)
+    (ps : ProofString (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)) Fp VestaG)
+    (source : List (AlgebraicPoint (F := Fp) basis))
+    (ch : Challenges actionCircuit.domainExponent Fp) :
+    (adaptiveActionCommittedModelOf
+      (ActionTerminal.vkAt basis)
+      instanceCommitment ps source ch
+      (actionCircuit.toVerifierKey_blindingFactors_lt_n
+        (ursOfAugmentedBasis actionCircuit.domainExponent basis))).constraints.length ≤
+      numProofs * 2 ^ 12 := by
+  unfold ConstraintPolyModel.constraints
+  apply action_length_flatten_ofFn_le
+  intro p
+  unfold adaptiveActionCommittedModelOf VerifyingKey.constraintModel constraintModelOfResolver
+    ConstraintPolyModel.subProofConstraints ConstraintPolyModel.gateConstraints
+    ConstraintPolyModel.permutationConstraints ConstraintPolyModel.lookupConstraints
+  simp only [permutationExpressions, lookupExpressions,
+    permutationChunksOfResolver_length, lookupEntriesOfResolver]
+  rw [actionCircuit.toVerifierKey_gates,
+    actionCircuit.toVerifierKey_permutationChunks,
+    derived_scalars.2.2.1, derived_scalars.2.2.2.2.2.2]
+  have hsets := congrArg (fun proofShape : Shape => proofShape.numPermutationSets)
+    (actionShapeFor_eq_fixtureShape numProofs)
+  have hlookups := congrArg (fun proofShape : Shape => proofShape.numLookups)
+    (actionShapeFor_eq_fixtureShape numProofs)
+  norm_num [shape] at hsets hlookups
+  simp [hsets, hlookups, permutationSetsOfResolver, permutationChunksOfResolver]
+  have hm : min vk.permutationChunks.length
+      (min 3 actionCircuit.verifierCS.permutationChunks.length) ≤
+        vk.permutationChunks.length := Nat.min_le_left _ _
+  have hc : vk.gates.length + (vk.permutationChunks.length + 19) ≤ 2 ^ 12 := by
+    rw [vk_gates_length, vk_permutationChunks_length]
+    norm_num
+  omega
+
+/-- The adaptive pre-`x` polynomial is assembled from coordinate vectors of degree below the
+captured basis size, so the existing captured degree walk applies without a trace premise. -/
+private theorem adaptive_action_x_degree_of_le_for (numProofs : ℕ)
+    (basis : AugmentedIndex
+      actionCircuit.n → VestaG)
+    (instanceCommitment :
+      Fin (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)).numProofs →
+        Nat → VestaG)
+    (ps : ProofString (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)) Fp VestaG)
+    (source : List (AlgebraicPoint (F := Fp) basis))
+    (ch : Challenges actionCircuit.domainExponent Fp) :
+    (adaptiveActionPreXDifferenceOf
+      (ActionTerminal.vkAt basis)
+      instanceCommitment ps source ch
+      (actionCircuit.toVerifierKey_blindingFactors_lt_n
+        (ursOfAugmentedBasis actionCircuit.domainExponent basis))).natDegree ≤ 20470 := by
+  let avk := ActionTerminal.vkAt basis
+  let ic := instanceCommitment
+  let poly := adaptiveActionCommitmentPolynomialOf avk ic ps source ch
+  have hk : actionCircuit.n - 1 = 2047 := by
+    rw [actionCircuit.n_eq_two_pow_domainExponent,
+      action_domainExponent_eq]
+    norm_num
+  have hpoint : ∀ g : VestaG,
+      (onlinePointPolynomial
+        (shape := actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
+        source g).natDegree ≤ 2047 := by
+    intro g
+    unfold onlinePointPolynomial
+    have h := coeffsToPoly_natDegree_lt
+      (n := 2 ^ actionCircuit.domainExponent)
+      (by positivity)
+      (onlinePointCoordinates
+        (shape := actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
+        source g).1
+    have hsize :
+        2 ^ actionCircuit.domainExponent = 2048 := by
+      rw [action_domainExponent_eq]
+      norm_num
+    calc
+      (onlinePointPolynomial
+          (shape := actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
+          source g).natDegree ≤ 2 ^ actionCircuit.domainExponent - 1 :=
+        Nat.le_sub_one_of_lt h
+      _ = 2047 := by rw [hsize]
+  have hpoly : ∀ id, (poly id).natDegree ≤ 2047 := by
+    intro id
+    unfold poly adaptiveActionCommitmentPolynomialOf adaptiveActionPointPolynomial
+    split
+    · split
+      · exact hpoint _
+      · simp
+    · simp
+  have hresolver : ∀ {n : ℕ} (omega : Fp) (layout : List (ℕ × ℤ))
+      (column : ℕ → CPoly),
+      (∀ i, (column i).natDegree ≤ 2047) →
+      ∀ i, (resolverQueryFeed (n := n) omega layout column i).natDegree ≤ 2047 := by
+    intro n omega layout column hcolumn i
+    unfold resolverQueryFeed
+    split
+    · exact natDegree_comp_rotateData_le _ _ (hcolumn _)
+    · simp
+  have hfixed : ∀ i, (fixedQueryFeedOfResolver avk poly i).natDegree ≤ 2047 :=
+    hresolver avk.omega avk.fixedQueryLayout _ (fun _ => hpoly _)
+  have hadvice : ∀ p i, (adviceQueryFeedOfResolver avk poly p i).natDegree ≤ 2047 :=
+    fun p => hresolver avk.omega avk.adviceQueryLayout _ (fun _ => hpoly _)
+  have hinstance : ∀ p i, (instanceQueryFeedOfResolver avk poly p i).natDegree ≤ 2047 :=
+    fun p => hresolver avk.omega avk.instanceQueryLayout _ (fun _ => hpoly _)
+  have hpermutationColumn :
+      ∀ p : Fin (actionProofParamsFor numProofs).numProofs, ∀ cr,
+      (permutationColumnPolynomialOfResolver avk poly p cr).natDegree ≤ 2047 := by
+    intro p cr
+    rcases cr with i | i | i <;>
+      simp only [permutationColumnPolynomialOfResolver, ColumnRef.resolve] <;>
+      unfold finFn <;> split
+    all_goals
+      first
+      | exact hpoly _
+      | simp
+  have hnB : actionCircuit.n - 1 ≤ 2047 := by
+    rw [derived_scalars.2.1]
+    exact vk_n_pred_le
+  have hrows : Function.Injective fun i : Fin actionCircuit.n =>
+      actionCircuit.omega ^ (i : ℕ) :=
+    TopLevelAssignment.domainRowsInjective
+      ActionPermutationDomain.domainExponent_lt
+  have hblindingVk : avk.blindingFactors < avk.n :=
+    actionCircuit.toVerifierKey_blindingFactors_lt_n
+      (ursOfAugmentedBasis
+        actionCircuit.domainExponent basis)
+  have hn : 0 < actionCircuit.n :=
+    Nat.pos_of_ne_zero actionCircuit.n_ne_zero
+  have hlookups : ∀ p, ∀ lk ∈ lookupEntriesOfResolver avk poly p,
+      (lk.1.productEval.natDegree ≤ 2047 ∧ lk.1.productNextEval.natDegree ≤ 2047 ∧
+        lk.1.permutedInputEval.natDegree ≤ 2047 ∧
+        lk.1.permutedInputInvEval.natDegree ≤ 2047 ∧
+        lk.1.permutedTableEval.natDegree ≤ 2047) ∧
+      (∀ e ∈ lk.2.1, e.degreeBound * 2047 ≤ 8188) ∧
+      ∀ e ∈ lk.2.2, e.degreeBound * 2047 ≤ 8188 := by
+    intro p lk hlk
+    obtain ⟨l, rfl⟩ := List.mem_ofFn.mp hlk
+    refine ⟨⟨hpoly _, natDegree_comp_rotateData_le _ _ (hpoly _), hpoly _,
+      natDegree_comp_rotateData_le _ _ (hpoly _), hpoly _⟩, ?_, ?_⟩
+    · dsimp only [avk]
+      rw [ActionTerminal.vkAt, actionCircuit.toVerifierKey_lookupInputExprs,
+        (derived_lookups l).1]
+      exact vk_lookup_input_degree_le _
+    · dsimp only [avk]
+      rw [ActionTerminal.vkAt, actionCircuit.toVerifierKey_lookupTableExprs,
+        (derived_lookups l).2]
+      exact vk_lookup_table_degree_le _
+  have hmodel : adaptiveActionCommittedModelOf avk ic ps source ch hblindingVk =
+      avk.constraintModel ch poly hblindingVk := by
+    rfl
+  rw [adaptiveActionPreXDifferenceOf_eq]
+  rw [hmodel]
+  refine le_trans (natDegree_sub_le _ _) (max_le ?_ ?_)
+  · apply natDegree_combineConstraints_le (B := 2047) (W := 7)
+      (Dc := 8188) (D := 20470)
+    · norm_num
+    · simpa only [VerifyingKey.constraintModel_fixedCols] using hfixed
+    · intro p i
+      simpa only [VerifyingKey.constraintModel_adviceCols] using hadvice p i
+    · intro p i
+      simpa only [VerifyingKey.constraintModel_instanceCols] using hinstance p i
+    · have hgates : ∀ e ∈ actionCircuit.verifierCS.gates,
+          e.degreeBound * 2047 ≤ 20470 := by
+        rw [derived_scalars.2.2.1]
+        exact vk_gates_degree_le
+      simpa only [VerifyingKey.constraintModel_gates, avk,
+        ActionTerminal.vkAt, actionCircuit.toVerifierKey_gates] using hgates
+    · intro p s hs
+      change s ∈ permutationSetsOfResolver avk poly p at hs
+      obtain ⟨j, rfl⟩ := List.mem_ofFn.mp hs
+      dsimp only [permutationSetOfResolver]
+      refine ⟨hpoly _, ?_⟩
+      split
+      · simp
+      · exact natDegree_comp_rotateData_le _ _ (hpoly _)
+    · intro p c hc
+      change c ∈ permutationChunksOfResolver avk poly p at hc
+      obtain ⟨sc, hsc, rfl⟩ := List.mem_map.mp hc
+      obtain ⟨s1, s2⟩ := sc
+      obtain ⟨hs1, hs2⟩ := List.of_mem_zip hsc
+      dsimp only
+      refine ⟨?_, ?_, ?_⟩
+      · obtain ⟨j, rfl⟩ := List.mem_ofFn.mp hs1
+        exact ⟨hpoly _, natDegree_comp_rotateData_le _ _ (hpoly _)⟩
+      · dsimp only [avk] at hs2
+        rw [ActionTerminal.vkAt, actionCircuit.toVerifierKey_permutationChunks,
+          derived_scalars.2.2.2.2.2.2] at hs2
+        simpa using vk_chunk_width_le _ hs2
+      · intro pr hpr
+        obtain ⟨cr, -, hpr'⟩ := List.mem_map.mp hpr
+        rw [← hpr']
+        exact ⟨hpermutationColumn _ _, hpoly _⟩
+    · intro p
+      simpa only [VerifyingKey.constraintModel_lookups] using hlookups p
+    · simpa only [avk, ActionTerminal.vkAt,
+        actionCircuit.toVerifierKey_omega] using
+        le_trans (Nat.le_pred_of_lt (by
+          simpa [rowSelectorPolynomial] using rowPolynomial_natDegree_lt hrows hn)) hnB
+    · simpa only [avk, ActionTerminal.vkAt,
+        actionCircuit.toVerifierKey_omega] using
+        le_trans (Nat.le_pred_of_lt (by
+          simpa [rowSelectorPolynomial] using rowPolynomial_natDegree_lt hrows hn)) hnB
+    · simpa only [avk, ActionTerminal.vkAt,
+        actionCircuit.toVerifierKey_omega] using
+        le_trans (Nat.le_pred_of_lt (by
+          simpa [blindSelectorPolynomial] using rowPolynomial_natDegree_lt hrows hn)) hnB
+    · norm_num
+    · norm_num
+    · norm_num
+    · norm_num
+  · rw [committedPreXQuotient_eq]
+    refine le_trans (natDegree_preXQuotient_mul_le (Bq := 2047) _ _ ?_) ?_
+    · intro j
+      exact hpoint _
+    · dsimp only [avk]
+      rw [ActionTerminal.vkAt, actionCircuit.toVerifierKey_n,
+          derived_scalars.2.1,
+        CircuitShape.withProofParams_numQuotientPieces,
+        actionCircuit.shape_numQuotientPieces,
+        (actionDerivedShapeCounts numProofs).2.2.2.2]
+      have hshape : 2 ^ shape.k - 1 = 2047 := by
+        norm_num [shape]
+      simpa only [hshape] using vk_quotient_tail_le
+
+/-- The five captured surface bounds for the explicit instance commitments selected by an
+adaptive statement. Commitment values change coefficients, not the proved degrees or resolver
+cardinalities. -/
+theorem orchard_adaptiveActionStatementSurface_measure_le_for
+    (numProofs : ℕ)
+    (basis : AugmentedIndex (2 ^ actionCircuit.domainExponent) → VestaG)
+    (instanceCommitment :
+      Fin (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)).numProofs →
+        Nat → VestaG)
+    (i : Fin 5)
+    (ps : ProofString
+      (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)) Fp VestaG)
+    (source : List (AlgebraicPoint (F := Fp) basis))
+    (earlier : Fin (i : ℕ) → Fp) :
+    uniformChallenge.toOuterMeasure
+        (adaptiveActionSurfaceAtOf basis instanceCommitment i ps source earlier) ≤
+      ((![numProofs * 2 ^ 25, numProofs * 950835027, numProofs * 73554,
+          numProofs * 2 ^ 23, 20470] i : ℕ) : ENNReal) / Fintype.card Fp := by
+  fin_cases i
+  · refine le_trans
+      (adaptiveActionThetaSurfaceAtOf_measure_le basis instanceCommitment ps source earlier) ?_
+    gcongr
+    exact_mod_cast actionThetaBudget numProofs basis
+      (adaptiveActionCommitmentPolynomialOf
+        (adaptiveActionStatementVk (actionProofParamsFor numProofs) basis)
+        instanceCommitment ps source (chRecord (fun _ => 0) (fun _ => 0)))
+  · have h := adaptiveActionBetaSurfaceAtOf_measure_le
+      basis instanceCommitment ps source earlier
+    dsimp only at h
+    refine le_trans h ?_
+    rw [ENNReal.div_add_div_same]
+    gcongr
+    exact_mod_cast actionBetaBudget numProofs basis
+      (adaptiveActionCommitmentPolynomialOf
+        (adaptiveActionStatementVk (actionProofParamsFor numProofs) basis)
+        instanceCommitment ps source
+        (chRecord (fun j => if hj : (j : ℕ) < 1 then earlier ⟨j, hj⟩ else 0)
+          (fun _ => 0)))
+  · have h := adaptiveActionGammaSurfaceAtOf_measure_le
+      basis instanceCommitment ps source earlier
+    dsimp only at h
+    refine le_trans h ?_
+    rw [ENNReal.div_add_div_same]
+    gcongr
+    exact_mod_cast actionGammaBudget numProofs basis
+      (adaptiveActionCommitmentPolynomialOf
+        (adaptiveActionStatementVk (actionProofParamsFor numProofs) basis)
+        instanceCommitment ps source
+        (chRecord (fun j => if hj : (j : ℕ) < 2 then earlier ⟨j, hj⟩ else 0)
+          (fun _ => 0)))
+  · have h := adaptiveActionYSurfaceAtOf_measure_le
+      basis instanceCommitment ps source earlier derived_n_ne_zero
+    dsimp only at h
+    refine le_trans h ?_
+    gcongr
+    exact_mod_cast actionYBudget numProofs
+      (adaptive_action_constraint_count_of_le_for numProofs basis instanceCommitment ps source
+        (chRecord (fun j => if hj : (j : ℕ) < 3 then earlier ⟨j, hj⟩ else 0)
+          (fun _ => 0)))
+  · have h := adaptiveActionXSurfaceAtOf_measure_le
+      basis instanceCommitment ps source earlier
+    dsimp only at h
+    refine le_trans h ?_
+    gcongr
+    exact_mod_cast adaptive_action_x_degree_of_le_for numProofs basis instanceCommitment ps source
+      (chRecord (fun j => if hj : (j : ℕ) < 4 then earlier ⟨j, hj⟩ else 0)
+        (fun _ => 0))
+
+/-- The adaptive-statement remainder at an arbitrary Action count. It has the same four
+bundle-linear semantic terms and one `x` term, but only one execution of the pinned-root surface. -/
+noncomputable def adaptiveStatementStatisticalModelFor (numProofs Q : ℕ) : ENNReal :=
+  let shape := actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)
+  (Q + 1 : ℕ) * (1 / Fintype.card Fp) +
+    (Q + 1 : ℕ) * (actionCircuit.domainExponent * (2 / (Fintype.card Fp : ENNReal))) +
+    (Q + 1 : ℕ) * algebraicRootBudget shape actionCircuit.domainExponent +
+    1 / Fintype.card Fp +
+    actionSemanticModelFor numProofs Q
+
+/-- The sequential statistical model safely upper-bounds the adaptive-statement one: it reserves the
+larger pinned-root coefficient and an additional compressed-constraint `x` term. -/
+theorem adaptiveStatementStatisticalModelFor_le_action (numProofs Q : ℕ) :
+    adaptiveStatementStatisticalModelFor numProofs Q ≤
+      actionStatisticalModelFor numProofs Q := by
+  let shape := actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)
+  have hcoeff : ((Q + 1 : ℕ) : ENNReal) ≤
+      ((Q + (11 + actionCircuit.domainExponent) + 1 : ℕ) : ENNReal) := by
+    exact Nat.cast_le.mpr (by omega)
+  have hroot :
+      (Q + 1 : ℕ) * algebraicRootBudget shape actionCircuit.domainExponent ≤
+        (Q + (11 + actionCircuit.domainExponent) + 1 : ℕ) *
+          algebraicRootBudget shape actionCircuit.domainExponent := by
+    exact mul_le_mul_left hcoeff (algebraicRootBudget shape actionCircuit.domainExponent)
+  unfold adaptiveStatementStatisticalModelFor actionStatisticalModelFor
+    actionCompressedStatisticalModelFor
+  dsimp only
+  let a : ENNReal :=
+    (Q + 1 : ℕ) * (1 / Fintype.card Fp) +
+      (Q + 1 : ℕ) *
+        (actionCircuit.domainExponent * (2 / (Fintype.card Fp : ENNReal)))
+  let e : ENNReal := 1 / Fintype.card Fp
+  let x : ENNReal :=
+    (Q + 1 : ℕ) * ((20470 : ℕ) / (Fintype.card Fp : ENNReal))
+  let s : ENNReal := actionSemanticModelFor numProofs Q
+  change a + (Q + 1 : ℕ) * algebraicRootBudget shape actionCircuit.domainExponent + e + s ≤
+    a + (Q + (11 + actionCircuit.domainExponent) + 1 : ℕ) *
+      algebraicRootBudget shape actionCircuit.domainExponent + e + x + s
+  calc
+    _ ≤ a + (Q + (11 + actionCircuit.domainExponent) + 1 : ℕ) *
+          algebraicRootBudget shape actionCircuit.domainExponent + e + s :=
+      add_le_add_left (add_le_add_left (add_le_add_right hroot a) e) s
+    _ ≤ _ := add_le_add_left
+      (le_add_of_nonneg_right (show 0 ≤ x from bot_le)) s
 end Zcash.Snark.Capstone
