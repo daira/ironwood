@@ -14,7 +14,7 @@ compresses at `degreeBound ≤ 4`, so the single literal `D = Dq = 20470` domina
 the bad-set term is `(Q + 1) · 20470 / |𝔽|`.
 -/
 
-namespace Zcash.Snark.CapturedMulti
+namespace Zcash.Snark.Fixture2
 
 open Zcash.Snark
 
@@ -50,4 +50,4 @@ theorem vk_n_pred_le : vk.n - 1 ≤ 2047 := by
 theorem shape_k_pred_le : 2 ^ shape.k - 1 ≤ 2047 := by
   native_decide
 
-end Zcash.Snark.CapturedMulti
+end Zcash.Snark.Fixture2

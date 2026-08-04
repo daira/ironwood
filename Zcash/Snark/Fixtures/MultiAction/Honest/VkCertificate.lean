@@ -14,7 +14,7 @@ definitional: the two dumps carry one and the same URS and verifying-key commitm
 proof count does not enter this transport.
 -/
 
-namespace Zcash.Snark.CapturedMulti
+namespace Zcash.Snark.Fixture2
 
 open Zcash.Snark
 open Zcash.Snark.PostNu63Fixture
@@ -43,4 +43,4 @@ theorem vk_eq_toVerifierKey : vk = derivedVk := vk_eq_derived
 assert_no_sorry vk_eq_derived
 assert_no_sorry vk_eq_toVerifierKey
 
-end Zcash.Snark.CapturedMulti
+end Zcash.Snark.Fixture2

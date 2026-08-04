@@ -25,48 +25,48 @@ namespace Zcash.Snark.PostNu63Fixture
 
 /-! ## The random single-action capture -/
 
-theorem randomSingle_uses_postNu63 : CapturedSingleRandom.capturedCircuitId = "PostNu6_3" := by
+theorem randomSingle_uses_postNu63 : FixtureRandom.capturedCircuitId = "PostNu6_3" := by
   native_decide
 
 theorem randomSingle_uses_canonicalVk :
-    CapturedSingleRandom.capturedVkTranscriptRepr = canonicalVkTranscriptRepr := by
+    FixtureRandom.capturedVkTranscriptRepr = canonicalVkTranscriptRepr := by
   native_decide
 
 /-- The random single-action capture lists the same `2 ^ 11` URS generators as the honest
 single-action capture. -/
-theorem randomSingle_uses_same_ursG : CapturedSingleRandom.capturedUrsG = CapturedSingle.capturedUrsG := by
+theorem randomSingle_uses_same_ursG : FixtureRandom.capturedUrsG = Fixture.capturedUrsG := by
   native_decide
 
 /-- The same `w` and `u` URS points (point-table entries `2048` and `2049`). -/
 theorem randomSingle_uses_same_wu :
-    CapturedSingleRandom.capturedPoint 2048 = CapturedSingle.capturedPoint 2048 ∧
-      CapturedSingleRandom.capturedPoint 2049 = CapturedSingle.capturedPoint 2049 := by
+    FixtureRandom.capturedPoint 2048 = Fixture.capturedPoint 2048 ∧
+      FixtureRandom.capturedPoint 2049 = Fixture.capturedPoint 2049 := by
   native_decide
 
 /-- The same ten Lagrange-basis points. -/
 theorem randomSingle_uses_same_ursGLagrange :
-    CapturedSingleRandom.capturedUrsGLagrange = CapturedSingle.capturedUrsGLagrange := by
+    FixtureRandom.capturedUrsGLagrange = Fixture.capturedUrsGLagrange := by
   native_decide
 
 /-- The same 29 fixed-column commitments. -/
 theorem randomSingle_uses_same_fixedCommitments :
-    CapturedSingleRandom.capturedFixedCommitments = CapturedSingle.capturedFixedCommitments := by
+    FixtureRandom.capturedFixedCommitments = Fixture.capturedFixedCommitments := by
   native_decide
 
 /-- The same 15 permutation commitments, compared by point value: the point-table indices shift
 with the instance-commitment count, so a shared table prefix is not available. -/
 theorem randomSingle_uses_same_permutationCommonCommitments :
-    CapturedSingleRandom.capturedPermutationCommonCommitments
-      = CapturedSingle.capturedPermutationCommonCommitments := by
+    FixtureRandom.capturedPermutationCommonCommitments
+      = Fixture.capturedPermutationCommonCommitments := by
   native_decide
 
 /-- The random single-action capture carries the honest single-action URS record;
 `Fixtures/SingleAction/Random/VkCertificate.lean` rewrites along this equality. -/
-theorem randomSingle_uses_same_urs : CapturedSingleRandom.capturedURS = CapturedSingle.capturedURS := by
-  simp only [CapturedSingleRandom.capturedURS, CapturedSingle.capturedURS, randomSingle_uses_same_ursG,
+theorem randomSingle_uses_same_urs : FixtureRandom.capturedURS = Fixture.capturedURS := by
+  simp only [FixtureRandom.capturedURS, Fixture.capturedURS, randomSingle_uses_same_ursG,
     randomSingle_uses_same_wu.1, randomSingle_uses_same_wu.2]
 
-theorem randomSingle_uses_same_vk : CapturedSingleRandom.vk = CapturedSingle.vk := by
+theorem randomSingle_uses_same_vk : FixtureRandom.vk = Fixture.vk := by
   apply verifyingKey_eq_of_fields
   · rfl
   · rfl
@@ -78,10 +78,10 @@ theorem randomSingle_uses_same_vk : CapturedSingleRandom.vk = CapturedSingle.vk 
   · rfl
   · rfl
   · funext i
-    simp only [CapturedSingleRandom.vk, CapturedSingle.vk]
+    simp only [FixtureRandom.vk, Fixture.vk]
     rw [randomSingle_uses_same_fixedCommitments]
   · funext i
-    simp only [CapturedSingleRandom.vk, CapturedSingle.vk]
+    simp only [FixtureRandom.vk, Fixture.vk]
     rw [randomSingle_uses_same_permutationCommonCommitments]
   · rfl
   · rfl
@@ -89,39 +89,39 @@ theorem randomSingle_uses_same_vk : CapturedSingleRandom.vk = CapturedSingle.vk 
 
 /-! ## The random two-action capture -/
 
-theorem randomMulti_uses_postNu63 : CapturedMultiRandom.capturedCircuitId = "PostNu6_3" := by
+theorem randomMulti_uses_postNu63 : FixtureRandom2.capturedCircuitId = "PostNu6_3" := by
   native_decide
 
 theorem randomMulti_uses_canonicalVk :
-    CapturedMultiRandom.capturedVkTranscriptRepr = canonicalVkTranscriptRepr := by
+    FixtureRandom2.capturedVkTranscriptRepr = canonicalVkTranscriptRepr := by
   native_decide
 
-theorem randomMulti_uses_same_ursG : CapturedMultiRandom.capturedUrsG = CapturedSingle.capturedUrsG := by
+theorem randomMulti_uses_same_ursG : FixtureRandom2.capturedUrsG = Fixture.capturedUrsG := by
   native_decide
 
 theorem randomMulti_uses_same_wu :
-    CapturedMultiRandom.capturedPoint 2048 = CapturedSingle.capturedPoint 2048 ∧
-      CapturedMultiRandom.capturedPoint 2049 = CapturedSingle.capturedPoint 2049 := by
+    FixtureRandom2.capturedPoint 2048 = Fixture.capturedPoint 2048 ∧
+      FixtureRandom2.capturedPoint 2049 = Fixture.capturedPoint 2049 := by
   native_decide
 
 theorem randomMulti_uses_same_ursGLagrange :
-    CapturedMultiRandom.capturedUrsGLagrange = CapturedSingle.capturedUrsGLagrange := by
+    FixtureRandom2.capturedUrsGLagrange = Fixture.capturedUrsGLagrange := by
   native_decide
 
 theorem randomMulti_uses_same_fixedCommitments :
-    CapturedMultiRandom.capturedFixedCommitments = CapturedSingle.capturedFixedCommitments := by
+    FixtureRandom2.capturedFixedCommitments = Fixture.capturedFixedCommitments := by
   native_decide
 
 theorem randomMulti_uses_same_permutationCommonCommitments :
-    CapturedMultiRandom.capturedPermutationCommonCommitments
-      = CapturedSingle.capturedPermutationCommonCommitments := by
+    FixtureRandom2.capturedPermutationCommonCommitments
+      = Fixture.capturedPermutationCommonCommitments := by
   native_decide
 
-theorem randomMulti_uses_same_urs : CapturedMultiRandom.capturedURS = CapturedSingle.capturedURS := by
-  simp only [CapturedMultiRandom.capturedURS, CapturedSingle.capturedURS, randomMulti_uses_same_ursG,
+theorem randomMulti_uses_same_urs : FixtureRandom2.capturedURS = Fixture.capturedURS := by
+  simp only [FixtureRandom2.capturedURS, Fixture.capturedURS, randomMulti_uses_same_ursG,
     randomMulti_uses_same_wu.1, randomMulti_uses_same_wu.2]
 
-theorem randomMulti_uses_same_vk : CapturedMultiRandom.vk = CapturedSingle.vk := by
+theorem randomMulti_uses_same_vk : FixtureRandom2.vk = Fixture.vk := by
   apply verifyingKey_eq_of_fields
   · rfl
   · rfl
@@ -133,10 +133,10 @@ theorem randomMulti_uses_same_vk : CapturedMultiRandom.vk = CapturedSingle.vk :=
   · rfl
   · rfl
   · funext i
-    simp only [CapturedMultiRandom.vk, CapturedSingle.vk]
+    simp only [FixtureRandom2.vk, Fixture.vk]
     rw [randomMulti_uses_same_fixedCommitments]
   · funext i
-    simp only [CapturedMultiRandom.vk, CapturedSingle.vk]
+    simp only [FixtureRandom2.vk, Fixture.vk]
     rw [randomMulti_uses_same_permutationCommonCommitments]
   · rfl
   · rfl

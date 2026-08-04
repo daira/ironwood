@@ -17,7 +17,7 @@ Both theorems rewrite certificate equalities into the captured match — stating
 at derived artifacts costs no new evaluation.
 -/
 
-namespace Zcash.Snark.CapturedSingle
+namespace Zcash.Snark.Fixture
 
 open Zcash.Snark
 open Zcash.Circuits.Action (actionCircuit)
@@ -54,4 +54,4 @@ theorem nonInteractiveFingerprint_matches_derived_inputs :
 assert_no_sorry nonInteractiveFingerprint_matches_derived
 assert_no_sorry nonInteractiveFingerprint_matches_derived_inputs
 
-end Zcash.Snark.CapturedSingle
+end Zcash.Snark.Fixture

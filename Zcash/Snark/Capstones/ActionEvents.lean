@@ -18,7 +18,7 @@ this module only says which runs they are.
 namespace Zcash.Snark.Capstone
 
 -- The captured facts these endpoints are stated at.
-open Zcash.Snark.CapturedSingle
+open Zcash.Snark.Fixture
 
 open Zcash.Snark CompPoly.CPolynomial
 open Zcash.Snark.ActionTerminal
@@ -33,7 +33,7 @@ open scoped ENNReal
 /-- Merging Action proof parameters yields the matching fixture shape. -/
 theorem actionProofShape_eq_maxShape (numProofs : ℕ) :
     actionCircuit.shape.withProofParams (actionProofParamsFor numProofs) =
-      Zcash.Snark.CapturedShape.shape numProofs := by
+      Zcash.Snark.FixtureMax.shape numProofs := by
   rw [actionShapeFor_eq_fixtureShape]
   rfl
 

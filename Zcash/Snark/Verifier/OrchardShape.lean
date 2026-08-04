@@ -11,7 +11,7 @@ This is not a Rust capture or an MSM match. The single- and multi-action fixture
 instantiates this shape.
 -/
 
-namespace Zcash.Snark.CapturedShape
+namespace Zcash.Snark.FixtureMax
 
 open Zcash.Snark
 
@@ -148,4 +148,4 @@ theorem commId_disjoint_at_captured_shape (n : ℕ) (vk : VerifyingKey (shape n)
         q.commId ≠ q'.commId :=
   subProofOpeningQueries_commId_disjoint vk instanceCommitment ps x xInv xNext xLast hpp
 
-end Zcash.Snark.CapturedShape
+end Zcash.Snark.FixtureMax

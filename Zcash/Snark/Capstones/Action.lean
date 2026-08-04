@@ -11,7 +11,7 @@ every consensus-valid Action bundle size. Each is censused directly in
 namespace Zcash.Snark.Capstone
 
 -- The captured facts these endpoints are stated at.
-open Zcash.Snark.CapturedSingle
+open Zcash.Snark.Fixture
 
 open Zcash.Snark CompPoly.CPolynomial
 open Zcash.Snark.ActionTerminal

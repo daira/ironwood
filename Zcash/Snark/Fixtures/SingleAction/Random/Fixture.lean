@@ -8,7 +8,7 @@ import Zcash.Snark
 
 set_option maxRecDepth 1000000
 
-namespace Zcash.Snark.CapturedSingleRandom
+namespace Zcash.Snark.FixtureRandom
 
 open Zcash.Snark
 open CompElliptic.CurveForms.ShortWeierstrass
@@ -203,4 +203,4 @@ genuinely non-accepting, so a mislabeled accepting capture or dead export plumbi
 cannot pass for it. -/
 theorem capturedMsm_evalNat_ne_zero : capturedMsm.evalNat capturedURS ≠ 0 := by native_decide
 
-end Zcash.Snark.CapturedSingleRandom
+end Zcash.Snark.FixtureRandom

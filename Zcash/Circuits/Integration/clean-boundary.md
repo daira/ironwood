@@ -143,8 +143,8 @@ when reusable, upstream in Clean itself. Pure ironwood soundness stays in
 
 ### Deployed specializations stay with soundness
 
-A theorem that relies on the large captured VK artifacts—`CapturedSingle.shape`,
-`CapturedSingle.vk`, `capturedURS`, or the certificate equating those values with
+A theorem that relies on the large captured VK artifacts—`Fixture.shape`,
+`Fixture.vk`, `capturedURS`, or the certificate equating those values with
 circuit-derived keygen output—belongs under `Zcash/Snark/Soundness/Deployed/`, not in
 this directory. Such a theorem may import the boundary's public circuit-derived
 terminal, but it should not re-establish Clean semantics itself. Conversely,

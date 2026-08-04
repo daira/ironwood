@@ -30,7 +30,7 @@ open Zcash.Arithmetic (commitInvDftNatWith commitInvDftNatWith_eq commitNatPre d
   take_derivedUrsGLagrange_natPre)
 
 open Zcash.Snark
-open Zcash.Snark.CapturedSingle
+open Zcash.Snark.Fixture
 open Halo2
 open Zcash.Circuits.Action (actionCircuit)
 open CompElliptic.Curves.Pasta
@@ -244,7 +244,7 @@ This is a definitional transport from the one expensive captured certificate, no
 computation. -/
 theorem actionShapeFor_eq_fixtureShape (numProofs : ℕ) :
     actionCircuit.shape.withProofParams (actionProofParamsFor numProofs) =
-      { Zcash.Snark.CapturedSingle.shape with numProofs := numProofs } := by
+      { Zcash.Snark.Fixture.shape with numProofs := numProofs } := by
   rw [← actionShape_eq_fixtureShape]
   simp only [CircuitShape.withProofParams, actionProofParamsFor, actionProofParams]
 
@@ -369,11 +369,11 @@ theorem vk_eq_toVerifierKey :
   · funext column
     rw [actionCircuit.toVerifierKey_fixedCommitment,
       derivedFixedCommitments_eq]
-    simp only [CapturedSingle.vk]
+    simp only [Fixture.vk]
   · intro column
     rw [actionCircuit.toVerifierKey_permutationCommonCommitment,
       derivedPermutationCommonCommitments_eq]
-    simp only [CapturedSingle.vk, Fin.val_cast]
+    simp only [Fixture.vk, Fin.val_cast]
   · rw [actionCircuit.toVerifierKey_permutationChunks,
       ← actionPermutationChunks_eq_verifierCS]
     exact hpch

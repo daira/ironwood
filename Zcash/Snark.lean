@@ -18,12 +18,14 @@
 --   acceptance predicate (`Soundness/Main.lean`), instantiated at Vesta
 --   (`Soundness/Deployed/Vesta.lean`).
 -- * `Fixtures/` — concrete Orchard captures and the boundary checks they license, split by
---   capture kind and one namespace per artifact: `CapturedSingle` and `CapturedMulti` for the
---   honest captures, `CapturedSingleRandom` and `CapturedMultiRandom` for the match-only ones,
---   and `CapturedShape` for that shape at any action count.
--- * `Capstones/` — the advertised endpoints, all in `Capstone`, stated at the captured Action
---   parameters. Each is a top-level leaf nothing else depends on, so each must be named directly
---   in a census entry (`scripts/check_endpoint_census.sh`).
+--   capture kind. The namespaces (`Fixture`, `Fixture2`, `FixtureRandom`, `FixtureRandom2`) are
+--   emitted by halo2's `dump_vesta_lean_fixture` and cannot be renamed here: the fixture CI
+--   regenerates each `Fixture.lean` and diffs it. `FixtureMax` is the shape at any action count.
+-- * `Capstones/` — the deployed Action circuit's advertised statements, all in `Capstone`:
+--   `ActionEvents` -> `ActionChecks` -> `ActionBudgets` -> `Action`, ending at twelve endpoints
+--   that nothing else depends on. The verifier-level endpoints are elsewhere, with the layer
+--   that proves them: the straight-line knowledge errors beside their capture, the
+--   consensus work factors in `Soundness/AGM/`.
 --
 -- Import modules here that should be built as part of the library.
 

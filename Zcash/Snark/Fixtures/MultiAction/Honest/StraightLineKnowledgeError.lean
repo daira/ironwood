@@ -8,10 +8,8 @@ import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
 This is the deployed AGM endpoint, stated through the fixed-call straight-line relation finder.
 -/
 
-namespace Zcash.Snark.Capstone
+namespace Zcash.Snark.Fixture2
 
--- The captured facts these endpoints are stated at.
-open Zcash.Snark.CapturedMulti
 
 open Zcash.Snark
 open Zcash.Snark.ComputedStraightLineDeployedFSFamily (straightLineDlogGroupWork)
@@ -127,4 +125,4 @@ theorem orchard_deployed_straightline_captured_direct_generatorRO_knowledge_erro
     (ComputedStraightLineDeployedFSFamily.ofCovered online rootTrace ipaTrace xTrace)
     hvk profile
 
-end Zcash.Snark.Capstone
+end Zcash.Snark.Fixture2

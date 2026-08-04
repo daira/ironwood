@@ -16,7 +16,7 @@ two sub-proofs; those negatives have no content at one proof (`Fin.rev` is the i
 `Fin 1`) and are deliberately absent here.
 -/
 
-namespace Zcash.Snark.CapturedSingle
+namespace Zcash.Snark.Fixture
 
 open Zcash.Snark
 open Zcash.Arithmetic (Msm)
@@ -166,4 +166,4 @@ theorem tampered_instance_eval_fingerprint_mismatch :
     ¬ MsmMatch (assemble vk derivedInstanceCommitment psTamperedInstanceEval ch) capturedMsm := by
   native_decide
 
-end Zcash.Snark.CapturedSingle
+end Zcash.Snark.Fixture

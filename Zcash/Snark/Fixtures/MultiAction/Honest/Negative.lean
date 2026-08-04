@@ -12,7 +12,7 @@ positive checks: the fingerprint match (`MsmMatch`) and the captured Fiat–Sham
 (`deriveChallenges_matches_captured_schedule`).
 -/
 
-namespace Zcash.Snark.CapturedMulti
+namespace Zcash.Snark.Fixture2
 
 open Zcash.Snark
 open Zcash.Arithmetic (Msm)
@@ -196,4 +196,4 @@ theorem tampered_instance_eval_fingerprint_mismatch :
     ¬ MsmMatch (assemble vk derivedInstanceCommitment psTamperedInstanceEval ch) capturedMsm := by
   native_decide
 
-end Zcash.Snark.CapturedMulti
+end Zcash.Snark.Fixture2

@@ -25,7 +25,7 @@ commitment of the captured public inputs, pinned to the captured points by
 `Keygen/InstanceCapture.lean` analogue.
 -/
 
-namespace Zcash.Snark.CapturedSingleRandom
+namespace Zcash.Snark.FixtureRandom
 
 open Zcash.Snark
 
@@ -43,4 +43,4 @@ theorem nonInteractiveFingerprint_matches_derived :
 
 assert_no_sorry nonInteractiveFingerprint_matches_derived
 
-end Zcash.Snark.CapturedSingleRandom
+end Zcash.Snark.FixtureRandom

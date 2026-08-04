@@ -14,7 +14,7 @@ folds the schedule into the MSM match; `Boundary.lean` restates that match at th
 verifying key as the family's statement of record.
 -/
 
-namespace Zcash.Snark.CapturedSingleRandom
+namespace Zcash.Snark.FixtureRandom
 
 open Zcash.Snark
 
@@ -93,4 +93,4 @@ theorem nonInteractiveFingerprint_matches :
   rw [deriveChallengesForStatement_matches_captured_schedule]
   exact fingerprint_matches
 
-end Zcash.Snark.CapturedSingleRandom
+end Zcash.Snark.FixtureRandom

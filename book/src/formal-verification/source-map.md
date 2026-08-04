@@ -294,13 +294,18 @@ Six subtrees carry the heavier machinery:
 
 ### `Capstones/` — the advertised endpoints
 
-Where the development's deliverables are stated, at the deployed Action parameters. `Action` holds
-the ordinary- and knowledge-soundness endpoints for every consensus-valid bundle size, in their
-compositional error-formula and resource-accounted finite-security forms; `KnowledgeError` holds
-the captured straight-line knowledge-error endpoints; and `StraightLineConsensus` evaluates the
-straight-line bound at the consensus maximum and states the two work-factor packages. Every
-endpoint here is a top-level leaf that nothing else depends on, which is exactly why each one must
-be named directly in a `TrustBoundary.lean` census entry — see `scripts/check_endpoint_census.sh`.
+Where the deployed Action circuit's own statements are stated. `ActionEvents` says which runs the
+endpoints are about, `ActionChecks` carries the captured key's scalars and static checks,
+`ActionBudgets` discharges the semantic surfaces, and `Action` states the twelve endpoints — the
+ordinary- and knowledge-soundness bounds for every consensus-valid bundle size, in compositional
+error-formula and resource-accounted finite-security forms.
+
+Endpoints about the *verifier's algebra* rather than the circuit statement live with the layer that
+proves them: the captured straight-line knowledge errors in
+`Fixtures/MultiAction/Honest/StraightLineKnowledgeError`, and the consensus-maximum work factors in
+`Soundness/AGM/StraightLineOrchardConsensusBounds`. Every endpoint, wherever it sits, is a
+top-level leaf that nothing else depends on, which is why each must be named directly in a
+`TrustBoundary.lean` census entry — see `scripts/check_endpoint_census.sh`.
 
 ## Circuit layer — `Zcash/Circuits/`
 

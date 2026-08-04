@@ -39,7 +39,7 @@ land on the MSM side rather than a rejection path, where `¬ MsmMatch` would hol
 the zero-MSM fallback.
 -/
 
-namespace Zcash.Snark.CapturedMulti
+namespace Zcash.Snark.Fixture2
 
 open Zcash.Snark
 
@@ -589,4 +589,4 @@ theorem sweep_public_input_mismatch :
     ¬ MsmMatch (assemble vk derivedInstanceCommitmentTampered ps ch) capturedMsm := by
   native_decide
 
-end Zcash.Snark.CapturedMulti
+end Zcash.Snark.Fixture2

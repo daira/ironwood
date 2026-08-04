@@ -8,7 +8,7 @@ import Mathlib.Util.AssertNoSorry
 
 The Action model commits public inputs the way halo2's `verify_proof` does, through
 `actionCircuit.instanceCommitment capturedURS inputs`; the captured artifacts are exercised
-against the fixture's own `CapturedSingle.derivedInstanceCommitment`. This module joins the two, so
+against the fixture's own `Fixture.derivedInstanceCommitment`. This module joins the two, so
 the circuit model can be instantiated at the captured proof.
 
 **The bases agree.** `commitLagrange_eq_commitInstance` identifies halo2's Lagrange-generator
@@ -26,7 +26,7 @@ namespace Zcash.Snark.Keygen
 
 open Zcash.Arithmetic (derivedUrsGLagrange omegaOf)
 open Zcash.Snark
-open Zcash.Snark.CapturedSingle
+open Zcash.Snark.Fixture
 open Halo2
 open Zcash.Circuits.Action
 
@@ -112,7 +112,7 @@ theorem commitInstance_of_rows_zero {omega : Fp}
 /-- **The captured public inputs, read back as the Action circuit's public-input record.** The
 capture stores one flat column of ten field elements per proof
 (`capturedPublicInstances`); the circuit's `PublicInputs` names those ten rows. -/
-def capturedActionInputs : Fin CapturedSingle.shape.numProofs → PublicInputs Fp := fun proofIndex =>
+def capturedActionInputs : Fin Fixture.shape.numProofs → PublicInputs Fp := fun proofIndex =>
   let column := capturedPublicInstances.getD (proofIndex.val * capturedNumInstanceColumns) []
   { anchor := column.getD 0 0
     cvX := column.getD 1 0
@@ -164,7 +164,7 @@ theorem publicInputRows_ne_zero (input : PublicInputs Fp) {column : ℕ} (hcolum
 
 /-- **The captured column is the circuit's serialization of the captured record.** Ten field
 elements, checked against the capture. -/
-theorem publicInputRows_capturedActionInputs (proofIndex : Fin CapturedSingle.shape.numProofs) :
+theorem publicInputRows_capturedActionInputs (proofIndex : Fin Fixture.shape.numProofs) :
     actionCircuit.publicInputRows (capturedActionInputs proofIndex) ⟨0⟩ =
       capturedPublicInstances.getD (proofIndex.val * capturedNumInstanceColumns) [] := by
   rw [publicInputRows_zero]
@@ -190,13 +190,13 @@ theorem actionCircuit_omega_captured :
 /-- **The circuit-derived public-instance family is the fixture's.**
 `actionCircuit.instanceCommitment` computes commitments from the public inputs the way halo2's
 `verify_proof` computes them from `instances`. At the captured public inputs that family is
-`CapturedSingle.derivedInstanceCommitment`, the family the captured artifacts are exercised against.
+`Fixture.derivedInstanceCommitment`, the family the captured artifacts are exercised against.
 
 This is the join: the circuit model and capture speak of the same
 group elements. -/
 theorem instanceCommitment_capturedActionInputs :
     actionCircuit.instanceCommitment capturedURS capturedActionInputs =
-      CapturedSingle.derivedInstanceCommitment := by
+      Fixture.derivedInstanceCommitment := by
   funext proofIndex column
   show (actionCircuit.instanceCommitmentKey capturedURS).commitInstance
       (actionCircuit.publicInputRows (capturedActionInputs proofIndex) ⟨column⟩) 1 =
@@ -223,21 +223,21 @@ theorem instanceCommitment_capturedActionInputs :
 capture's own derivation (`instance_commitments_derived`): at the captured public
 inputs, the circuit-derived commitments are exactly the points the deployed verifier used. -/
 theorem instanceCommitment_eq_capturedInstanceCommitments
-    (proofIndex : Fin CapturedSingle.shape.numProofs) {column : ℕ}
+    (proofIndex : Fin Fixture.shape.numProofs) {column : ℕ}
     (hcolumn : column < capturedNumInstanceColumns) :
     actionCircuit.instanceCommitment capturedURS capturedActionInputs
         proofIndex column =
       capturedInstanceCommitments.getD
         (proofIndex.val * capturedNumInstanceColumns + column) 0 := by
   have hzero : column = 0 := by
-    simpa only [capturedNumInstanceColumns, CapturedSingle.shape, Nat.lt_one_iff] using hcolumn
+    simpa only [capturedNumInstanceColumns, Fixture.shape, Nat.lt_one_iff] using hcolumn
   subst hzero
   rw [instanceCommitment_capturedActionInputs, ← instance_commitments_derived]
   fin_cases proofIndex
   have hlt : 0 < capturedPublicInstances.length := by
     simp only [capturedPublicInstances, List.length_cons]
     omega
-  simp only [CapturedSingle.derivedInstanceCommitment, List.getD_eq_getElem?_getD, List.getElem?_map,
+  simp only [Fixture.derivedInstanceCommitment, List.getD_eq_getElem?_getD, List.getElem?_map,
     Nat.zero_mul, Nat.add_zero]
   rw [List.getElem?_eq_getElem hlt]
   rfl

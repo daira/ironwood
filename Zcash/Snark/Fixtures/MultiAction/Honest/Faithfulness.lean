@@ -30,7 +30,7 @@ over the literal layout; only the circuit side they compare against carries `nat
 neither widens this module's compiler trust.
 -/
 
-namespace Zcash.Snark.CapturedMulti
+namespace Zcash.Snark.Fixture2
 
 open Zcash.Snark
 open Zcash.Circuits.Action (actionCircuit)
@@ -183,4 +183,4 @@ theorem vk_domain_size_matches_shape :
     vk.n = 2 ^ shape.k := by
   native_decide
 
-end Zcash.Snark.CapturedMulti
+end Zcash.Snark.Fixture2

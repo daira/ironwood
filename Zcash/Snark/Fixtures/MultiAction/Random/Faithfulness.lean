@@ -16,7 +16,7 @@ boundary. The captured transcript prefix is checked in `FiatShamir.lean`, where
 `capturedInit_eq_initialTranscript` pins it to `initialTranscript` outright.
 -/
 
-namespace Zcash.Snark.CapturedMultiRandom
+namespace Zcash.Snark.FixtureRandom2
 
 open Zcash.Snark
 
@@ -93,4 +93,4 @@ theorem vk_domain_size_matches_shape :
     vk.n = 2 ^ shape.k := by
   native_decide
 
-end Zcash.Snark.CapturedMultiRandom
+end Zcash.Snark.FixtureRandom2

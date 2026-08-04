@@ -10,10 +10,8 @@ tight three-bit query/group-work interpretation, with a caller-supplied five-bit
 kept as a compatibility theorem.
 -/
 
-namespace Zcash.Snark.Capstone
+namespace Zcash.Snark.FixtureMax
 
--- The captured facts these endpoints are stated at.
-open Zcash.Snark.CapturedShape
 
 open Zcash.Arithmetic (card_Fp scalarFieldOrder)
 open Zcash.Snark
@@ -302,4 +300,4 @@ theorem consensus_five_bit_overhead_at_2pow122 :
     32 * 2 ^ 122 = 2 ^ 127 :=
   ComputedStraightLineDeployedFSFamily.five_bit_overhead_at_2pow122
 
-end Zcash.Snark.Capstone
+end Zcash.Snark.FixtureMax

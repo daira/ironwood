@@ -16,7 +16,7 @@ challenges, not transcript bytes. General IPA ordering and sub-proof traversal a
 this remains a concrete full-schedule regression.
 -/
 
-namespace Zcash.Snark.CapturedMulti
+namespace Zcash.Snark.Fixture2
 
 open Zcash.Snark
 
@@ -159,4 +159,4 @@ theorem nonInteractiveFingerprint_matches :
   rw [deriveChallengesForStatement_matches_captured_schedule]
   exact fingerprint_matches
 
-end Zcash.Snark.CapturedMulti
+end Zcash.Snark.Fixture2

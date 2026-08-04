@@ -24,7 +24,7 @@ Like the fingerprint match, these are `native_decide` facts about one capture, n
 theorems.
 -/
 
-namespace Zcash.Snark.CapturedSingle
+namespace Zcash.Snark.Fixture
 
 open Zcash.Arithmetic (deltaFp omegaOf)
 
@@ -204,4 +204,4 @@ assert_no_sorry action_queriedCells_wellFormed
 assert_no_sorry actionK_eq
 assert_no_sorry vk_scalars_and_chunks_derived
 
-end Zcash.Snark.CapturedSingle
+end Zcash.Snark.Fixture

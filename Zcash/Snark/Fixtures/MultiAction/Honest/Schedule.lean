@@ -15,7 +15,7 @@ Exact leave-one-`x` invariance comes from the family's staged trace; later unbat
 stay free.
 -/
 
-namespace Zcash.Snark.CapturedMulti
+namespace Zcash.Snark.Fixture2
 
 open Zcash.Snark
 open scoped ENNReal
@@ -40,4 +40,4 @@ def deployedConstraintXSqueezeSchedule_captured
     (by norm_num) (by norm_num) (by norm_num) (by norm_num) family.pinnedX
   simpa using h
 
-end Zcash.Snark.CapturedMulti
+end Zcash.Snark.Fixture2

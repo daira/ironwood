@@ -11,7 +11,7 @@ endpoints evaluate.
 namespace Zcash.Snark.Capstone
 
 -- The captured facts these endpoints are stated at.
-open Zcash.Snark.CapturedSingle
+open Zcash.Snark.Fixture
 
 open Zcash.Snark CompPoly.CPolynomial
 open Zcash.Snark.ActionTerminal
@@ -803,19 +803,19 @@ private theorem actionCompressedStatisticalModelFor_le_consensus
     {numProofs Q : ℕ} (hn : numProofs ≤ orchardConsensusMaxProofs)
     (hQ : Q ≤ 2 ^ 123) :
     actionCompressedStatisticalModelFor numProofs Q ≤
-      Zcash.Snark.Capstone.consensusStraightLineStatisticalModel (2 ^ 123) := by
+      Zcash.Snark.FixtureMax.consensusStraightLineStatisticalModel (2 ^ 123) := by
   have hk : actionCircuit.domainExponent = 11 := by
     exact action_domainExponent_eq
   have hroot :
       algebraicRootBudget
           (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)) 11 ≤
         algebraicRootBudget
-          (Zcash.Snark.CapturedShape.shape orchardConsensusMaxProofs) 11 := by
+          (Zcash.Snark.FixtureMax.shape orchardConsensusMaxProofs) 11 := by
     rw [actionProofShape_eq_maxShape]
-    exact Zcash.Snark.CapturedShape.algebraicRootBudget_at_captured_shape_le_consensus_max hn
+    exact Zcash.Snark.FixtureMax.algebraicRootBudget_at_captured_shape_le_consensus_max hn
   rw [actionCompressedStatisticalModelFor,
-    Zcash.Snark.Capstone.consensusStraightLineStatisticalModel,
-    Zcash.Snark.CapturedShape.consensusPinnedRootMultiopenModel,
+    Zcash.Snark.FixtureMax.consensusStraightLineStatisticalModel,
+    Zcash.Snark.FixtureMax.consensusPinnedRootMultiopenModel,
     hk]
   gcongr
   all_goals first | exact hroot | assumption_mod_cast | norm_num
@@ -829,13 +829,13 @@ theorem actionStatisticalModelFor_at_2pow123 {numProofs Q : ℕ}
     actionStatisticalModelFor numProofs Q =
         actionCompressedStatisticalModelFor numProofs Q +
           actionSemanticModelFor numProofs Q := rfl
-    _ ≤ Zcash.Snark.Capstone.consensusStraightLineStatisticalModel (2 ^ 123) +
+    _ ≤ Zcash.Snark.FixtureMax.consensusStraightLineStatisticalModel (2 ^ 123) +
         1 / (2 ^ 84 : ENNReal) :=
       add_le_add (actionCompressedStatisticalModelFor_le_consensus hn hQ)
         (actionSemanticModelFor_at_2pow123 hn hQ)
     _ ≤ 1 / (2 ^ 84 : ENNReal) + 1 / (2 ^ 84 : ENNReal) := by
       gcongr
-      exact Zcash.Snark.Capstone.consensusStraightLineStatisticalModel_at_2pow123
+      exact Zcash.Snark.FixtureMax.consensusStraightLineStatisticalModel_at_2pow123
     _ ≤ 1 / (2 ^ 83 : ENNReal) := by
       rw [ENNReal.div_add_div_same]
       apply (ENNReal.le_div_iff_mul_le (Or.inl (by norm_num))

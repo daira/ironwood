@@ -3,7 +3,7 @@ import Zcash.Snark
 
 set_option maxRecDepth 1000000
 
-namespace Zcash.Snark.CapturedSingle
+namespace Zcash.Snark.Fixture
 
 open Zcash.Snark
 open CompElliptic.CurveForms.ShortWeierstrass
@@ -201,4 +201,4 @@ theorem assembledMsm_eval_eq_zero : (assemble vk derivedInstanceCommitment ps ch
   rw [msmMatch_evalNat capturedURS fingerprint_matches]
   exact capturedMsm_eval_eq_zero
 
-end Zcash.Snark.CapturedSingle
+end Zcash.Snark.Fixture
