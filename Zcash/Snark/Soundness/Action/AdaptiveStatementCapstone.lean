@@ -34,22 +34,22 @@ theorem statisticalResidualEvent_subset_surfaceEvent {pp : ProofParams}
   have hprovenance := family.relationFinder_none_provenance hchar basis O hfinderNone
   have hterminalNone := family.relationFinder_none_terminal hchar basis O hfinderNone
   have hidentityNone := family.relationFinder_none_identity hchar basis O hfinderNone
+  have hfacts := family.semanticStageFacts_of_sourceFinder_none basis O
+    hprovenance.2.2.2.2.1
   by_contra hsurfaceEvent
   simp only [statisticalSurfaceEvent, Set.mem_union, not_or] at hsurfaceEvent
   rcases hsurfaceEvent with ⟨hzeroEvent, hipaEvent, hrootEvent, hsemanticEvent⟩
-  have hz : family.runPreIpaReads basis O 10 ≠ 0 := by
-    intro hz
-    exact hzeroEvent hz
-  let proof := family.runProof basis O
-  let nu := family.runPreIpaReads basis O
-  let rounds := family.runIpaReads basis O
+  have hz : (runView family basis O).pre 10 ≠ 0 := fun h => hzeroEvent h
   have hattack : ¬fullAlgebraicBindingAttackZ basis
       (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      proof nu rounds := by
+      (adaptiveActionStatementInstanceCommitment pp basis
+        (runView family basis O).output.inputs)
+      (runView family basis O).output.toAlgebraicWfProof
+      (runView family basis O).pre (runView family basis O).rounds := by
     intro hattack
-    cases hsplit : proof.straightLineBindingAttackZIndexedRootOrRelation
-        nu rounds hattack with
+    cases hsplit : (runView family basis
+        O).output.toAlgebraicWfProof.straightLineBindingAttackZIndexedRootOrRelation
+        (runView family basis O).pre (runView family basis O).rounds hattack with
     | inl root =>
         obtain ⟨j, hj⟩ := root
         apply hipaEvent
@@ -58,24 +58,29 @@ theorem statisticalResidualEvent_subset_surfaceEvent {pp : ProofParams}
             outputIpaFallbackBad family basis j (family.runOutput basis O)
               (family.ipaPoint basis j (family.runOutput basis O)) O ∧ _
         rw [outputIpaFallbackBad_actual]
-        exact ⟨by simpa only [proof, nu, rounds] using hj, hprovenance.2.2.1⟩
+        refine ⟨?_, hprovenance.2.2.1⟩
+        simpa only [runView_output, runView_pre, runView_rounds] using hj
     | inr relation =>
-        have hacceptsSome := family.accepts?_isSome_of basis O haccepts
+        have hacceptsSome := family.accepts?V_isSome_of basis (runView family basis O)
+          (by simpa only [acceptsV, accepts, runView_output, runView_pre, runView_rounds,
+            family.runRecord_eq_chRecord] using haccepts)
         obtain ⟨hacceptsProof, hacceptsEq⟩ := Option.isSome_iff_exists.mp hacceptsSome
-        unfold terminalRelationFinder at hterminalNone
+        unfold terminalRelationFinder terminalRelationFinderV at hterminalNone
         rw [hacceptsEq] at hterminalNone
         dsimp only at hterminalNone
-        rw [dif_pos (by simpa only [nu] using hz), dif_pos hattack, hsplit] at hterminalNone
+        rw [dif_pos hz, dif_pos hattack, hsplit] at hterminalNone
         simp at hterminalNone
   have hshifted := family.shiftedValue_of_accept_not_attack basis O haccepts hz hattack
-  cases hout : family.batchOutcome basis O with
+  cases hout : family.batchOutcomeV basis (runView family basis O) with
   | inr relation =>
-      have hacceptsSome := family.accepts?_isSome_of basis O haccepts
+      have hacceptsSome := family.accepts?V_isSome_of basis (runView family basis O)
+          (by simpa only [acceptsV, accepts, runView_output, runView_pre, runView_rounds,
+            family.runRecord_eq_chRecord] using haccepts)
       obtain ⟨hacceptsProof, hacceptsEq⟩ := Option.isSome_iff_exists.mp hacceptsSome
-      unfold terminalRelationFinder at hterminalNone
+      unfold terminalRelationFinder terminalRelationFinderV at hterminalNone
       rw [hacceptsEq] at hterminalNone
       dsimp only at hterminalNone
-      rw [dif_pos (by simpa only [nu] using hz), dif_neg hattack, hout] at hterminalNone
+      rw [dif_pos hz, dif_neg hattack, hout] at hterminalNone
       simp at hterminalNone
   | inl witness =>
       have hroots := witness.goodRoots_of_not_rootEvent family basis O hrootEvent
@@ -118,58 +123,65 @@ theorem statisticalResidualEvent_subset_surfaceEvent {pp : ProofParams}
         rw [outputSemanticBad_actual]
         simpa only [outputSemanticSurface, adaptiveActionSurfaceAtOf_action,
           n11] using hbad
-      have hexclusions := family.statementExclusions_of_no_surface basis O
-        hprovenance.2.2.2.2.1 witness rawDecode hbatches haccepts (hchar basis O) hsurface
-      let output := family.runOutput basis O
+      have hexclusions := family.statementExclusionsV_of_no_surface basis
+        (runView family basis O) hfacts witness rawDecode hbatches hacceptsFull
+        hcharFull hsurface
+      let output := (runView family basis O).output
       let data := output.proofData
       let fixed := adaptiveStatementInstanceRepresentationList output.instanceRepresentations ++
         family.fixedRepresentations basis
       let source := data.algebraicProof.preX1AssemblySource fixed
       let difference := adaptiveActionPreXDifference pp basis output.inputs
-        data.algebraicProof.erase source (family.runRecord basis O)
+        data.algebraicProof.erase source
+        (chRecord (k := (AdaptiveActionStatementShape pp).k)
+          (runView family basis O).pre (runView family basis O).rounds)
       by_cases hsupport : difference = 0
-      · have houtcomeSome := family.preXIdentityOutcome_isSome_of basis O
-          hprovenance.2.2.2.2.1 witness rawDecode hbatches hacceptsFull hcharFull
+      · have houtcomeSome := family.preXIdentityOutcomeV_isSome_of basis
+          (runView family basis O) hfacts witness rawDecode hbatches hacceptsFull hcharFull
           (by simpa only [difference, source, fixed, data, output] using hsupport)
           hexclusions.2.1 hexclusions.2.2.1 hexclusions.2.2.2
-        have hrelationSome := family.preXIdentityRelation_isSome_of_outcome basis O
-          hprovenance.2.2.2.2.1 witness rawDecode hbatches hacceptsFull hcharFull
+        have hrelationSome := family.preXIdentityRelationV_isSome_of_outcome basis
+          (runView family basis O) hfacts witness rawDecode hbatches hacceptsFull hcharFull
           houtcomeSome hfalse
         have hfinderSome := family.identityRelationFinder_isSome_of hchar basis O
           hprovenance.2.2.2.2.1 witness hout hroots haccepts hz hattack hrelationSome
         rw [hidentityNone] at hfinderSome
         simp at hfinderSome
-      · have heval := family.statementAcceptedDifference_eval_eq_preX basis O
-          hprovenance.2.2.2.2.1 hprovenance.2.2.2.2.2 witness rawDecode hbatches
-          haccepts (hchar basis O)
+      · have heval := family.statementAcceptedDifferenceV_eval_eq_preX basis
+          (runView family basis O) hfacts hprovenance.2.2.2.2.2 witness rawDecode hbatches
+          hacceptsFull hcharFull
         dsimp only at heval
-        have hpreEval : difference.eval (family.runRecord basis O).x ≠ 0 :=
+        have hpreEval : difference.eval
+            (chRecord (k := (AdaptiveActionStatementShape pp).k)
+              (runView family basis O).pre (runView family basis O).rounds).x ≠ 0 :=
           (not_mem_szBadSet.mp (by
             simpa only [difference, source, fixed, data, output] using hexclusions.1)) hsupport
-        let decode := rawDecode.reRound (family.runIpaReads basis O)
+        let chV := chRecord (k := (AdaptiveActionStatementShape pp).k)
+          (runView family basis O).pre (runView family basis O).rounds
+        let decode := rawDecode.reRound (runView family basis O).rounds
         let model := CanonicalMemberConstraintRelation.acceptedModel
-          (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi)
+          (memberDecode := fun i hi => decode.toMemberDecode hcharFull i hi)
           (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
-            (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)) haccepts
+            (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)) hacceptsFull
         let polynomial := CanonicalMemberConstraintRelation.acceptedPolynomial
-          (memberDecode := fun i hi => decode.toMemberDecode (hchar basis O) i hi) haccepts
-        have hactionGood : (family.runRecord basis O).x ∉ szBadSet
+          (memberDecode := fun i hi => decode.toMemberDecode hcharFull i hi) hacceptsFull
+        have hactionGood : chV.x ∉ szBadSet
             (combineConstraints model.fixedCols model.adviceCols model.instanceCols model.gates
               model.sets model.chunks model.lookups model.beta model.gamma model.delta model.theta
-              (family.runRecord basis O).y model.chunkLen model.l0 model.lLast model.lBlind -
+              chV.y model.chunkLen model.l0 model.lLast model.lBlind -
                 polynomial .vanishingH * (X ^ actionCircuit.n - 1)) := by
           apply not_mem_szBadSet.mpr
           intro _
           rw [heval]
-          simpa only [difference, source, fixed, data, output] using hpreEval
+          simpa only [difference, source, fixed, data, output, chV] using hpreEval
         let run : family.DecodedRun basis O :=
           { hchar := hchar basis O
             decode := family.decodeOfBatchGoodRoots basis O witness hroots hshifted
             accepts := haccepts }
         have hdecode : run.decode = decode := by
-          simp only [run, decode, decodeOfBatchGoodRoots_eq_reRound, rawDecode]
+          simp only [run, decode, decodeOfBatchGoodRoots_eq_reRound, rawDecode, runView_rounds]
         let good : family.SemanticExclusions basis O run :=
-          { xGood := by simpa only [run, hdecode, model, polynomial] using hactionGood
+          { xGood := by simpa only [run, hdecode, model, polynomial, chV] using hactionGood
             yGood := by simpa only [run, hdecode, model, polynomial] using hexclusions.2.1
             permutation := by
               simpa only [run, hdecode, model, polynomial] using hexclusions.2.2.1
