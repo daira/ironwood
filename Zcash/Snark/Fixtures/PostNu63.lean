@@ -52,18 +52,18 @@ def canonicalVkTranscriptRepr : Fp :=
     + (3243000079158773602 : Fp) * (2 : Fp) ^ 128
     + (370130488735545691 : Fp) * (2 : Fp) ^ 192
 
-theorem singleAction_uses_postNu63 : Fixture.capturedCircuitId = "PostNu6_3" := by
+theorem singleAction_uses_postNu63 : CapturedSingle.capturedCircuitId = "PostNu6_3" := by
   native_decide
 
-theorem multiAction_uses_postNu63 : Fixture2.capturedCircuitId = "PostNu6_3" := by
+theorem multiAction_uses_postNu63 : CapturedMulti.capturedCircuitId = "PostNu6_3" := by
   native_decide
 
 theorem singleAction_uses_canonicalVk :
-    Fixture.capturedVkTranscriptRepr = canonicalVkTranscriptRepr := by
+    CapturedSingle.capturedVkTranscriptRepr = canonicalVkTranscriptRepr := by
   native_decide
 
 theorem multiAction_uses_canonicalVk :
-    Fixture2.capturedVkTranscriptRepr = canonicalVkTranscriptRepr := by
+    CapturedMulti.capturedVkTranscriptRepr = canonicalVkTranscriptRepr := by
   native_decide
 
 /-- Both captures use the same deterministic Halo2 URS (`g`, then `w` and `u` occupy the first
@@ -74,48 +74,48 @@ both lists are emitted by the same generator, so an equally wrong URS in both wo
 independent binding is elsewhere — `capturedMsm_eval_eq_zero` computes the MSM against this exact URS
 and would fail with overwhelming probability for a URS that was not Halo2's deterministic one. -/
 theorem captures_use_same_urs_coordinates :
-    Fixture.capturedPointCoordinates.take (2 ^ 11 + 2)
-      = Fixture2.capturedPointCoordinates.take (2 ^ 11 + 2) := by
+    CapturedSingle.capturedPointCoordinates.take (2 ^ 11 + 2)
+      = CapturedMulti.capturedPointCoordinates.take (2 ^ 11 + 2) := by
   native_decide
 
 /-- The two captures list the same `2 ^ 11` URS generators. -/
-theorem captures_use_same_ursG : Fixture2.capturedUrsG = Fixture.capturedUrsG := by
+theorem captures_use_same_ursG : CapturedMulti.capturedUrsG = CapturedSingle.capturedUrsG := by
   native_decide
 
 /-- The two captures list the same `w` and `u` URS points (point-table entries `2048`
 and `2049`). -/
 theorem captures_use_same_wu :
-    Fixture2.capturedPoint 2048 = Fixture.capturedPoint 2048 ∧
-      Fixture2.capturedPoint 2049 = Fixture.capturedPoint 2049 := by
+    CapturedMulti.capturedPoint 2048 = CapturedSingle.capturedPoint 2048 ∧
+      CapturedMulti.capturedPoint 2049 = CapturedSingle.capturedPoint 2049 := by
   native_decide
 
 /-- The two captures list the same ten Lagrange-basis points. -/
 theorem captures_use_same_ursGLagrange :
-    Fixture2.capturedUrsGLagrange = Fixture.capturedUrsGLagrange := by
+    CapturedMulti.capturedUrsGLagrange = CapturedSingle.capturedUrsGLagrange := by
   native_decide
 
 /-- The two captures list the same 29 fixed-column commitments. -/
 theorem captures_use_same_fixedCommitments :
-    Fixture2.capturedFixedCommitments = Fixture.capturedFixedCommitments := by
+    CapturedMulti.capturedFixedCommitments = CapturedSingle.capturedFixedCommitments := by
   native_decide
 
 /-- The two captures list the same 15 permutation commitments. Their point-table indices are
 shifted by the extra instance commitment, so this check compares the point values, not a shared
 table prefix. -/
 theorem captures_use_same_permutationCommonCommitments :
-    Fixture2.capturedPermutationCommonCommitments
-      = Fixture.capturedPermutationCommonCommitments := by
+    CapturedMulti.capturedPermutationCommonCommitments
+      = CapturedSingle.capturedPermutationCommonCommitments := by
   native_decide
 
 /-- The two captures carry one and the same URS record; the multi-action verifying-key
 certificate (`Fixtures/MultiAction/Honest/VkCertificate.lean`) rewrites along this equality. -/
-theorem captures_use_same_urs : Fixture2.capturedURS = Fixture.capturedURS := by
-  simp only [Fixture2.capturedURS, Fixture.capturedURS, captures_use_same_ursG,
+theorem captures_use_same_urs : CapturedMulti.capturedURS = CapturedSingle.capturedURS := by
+  simp only [CapturedMulti.capturedURS, CapturedSingle.capturedURS, captures_use_same_ursG,
     captures_use_same_wu.1, captures_use_same_wu.2]
 
 /-- The two captures carry the same circuit-fixed verifying key. Proof count is no longer a VK
 parameter; the only non-definitional fields are the commitment families pinned above. -/
-theorem captures_use_same_vk : Fixture2.vk = Fixture.vk := by
+theorem captures_use_same_vk : CapturedMulti.vk = CapturedSingle.vk := by
   apply verifyingKey_eq_of_fields
   · rfl
   · rfl
@@ -127,10 +127,10 @@ theorem captures_use_same_vk : Fixture2.vk = Fixture.vk := by
   · rfl
   · rfl
   · funext i
-    simp only [Fixture2.vk, Fixture.vk]
+    simp only [CapturedMulti.vk, CapturedSingle.vk]
     rw [captures_use_same_fixedCommitments]
   · funext i
-    simp only [Fixture2.vk, Fixture.vk]
+    simp only [CapturedMulti.vk, CapturedSingle.vk]
     rw [captures_use_same_permutationCommonCommitments]
   · rfl
   · rfl

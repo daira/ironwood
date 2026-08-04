@@ -38,7 +38,7 @@ about one concrete capture, never general theorems (see `TrustBoundary` in this
 directory for the discipline).
 -/
 
-namespace Zcash.Snark.Fixture
+namespace Zcash.Snark.CapturedSingle
 
 open Zcash.Arithmetic (deltaFp omegaOf)
 
@@ -218,4 +218,4 @@ assert_no_sorry action_queriedCells_wellFormed
 assert_no_sorry actionK_eq
 assert_no_sorry vk_scalars_and_chunks_derived
 
-end Zcash.Snark.Fixture
+end Zcash.Snark.CapturedSingle

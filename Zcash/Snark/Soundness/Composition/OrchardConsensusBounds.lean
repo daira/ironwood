@@ -11,7 +11,7 @@ dimensions while leaving the adversary query count explicit.  The resulting term
 there is no continuation threshold or fourth-root conversion in this path.
 -/
 
-namespace Zcash.Snark.FixtureMax
+namespace Zcash.Snark.CapturedShape
 
 open Zcash.Arithmetic (card_Fp scalarFieldOrder)
 
@@ -125,4 +125,4 @@ theorem consensusPinnedRootMultiopenModel_at_2pow122 :
     (by norm_num [scalarFieldOrder, CompElliptic.Fields.Pasta.PALLAS_BASE_CARD]) using 1 <;>
     norm_num
 
-end Zcash.Snark.FixtureMax
+end Zcash.Snark.CapturedShape

@@ -15,7 +15,7 @@ input, and `nonInteractiveFingerprint_matches` folds the schedule into the MSM m
 of record.
 -/
 
-namespace Zcash.Snark.FixtureRandom2
+namespace Zcash.Snark.CapturedMultiRandom
 
 open Zcash.Snark
 
@@ -94,4 +94,4 @@ theorem nonInteractiveFingerprint_matches :
   rw [deriveChallengesForStatement_matches_captured_schedule]
   exact fingerprint_matches
 
-end Zcash.Snark.FixtureRandom2
+end Zcash.Snark.CapturedMultiRandom

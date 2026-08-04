@@ -4,7 +4,7 @@ import Zcash.Arithmetic.Msm
 # Compatibility shim: `Msm` under `Zcash.Snark`
 
 The generated fixture captures spell the fingerprint MSM bare (`Msm shape.k Fp G`) while
-declaring inside `namespace Zcash.Snark.Fixture`, so the enclosing-namespace walk needs the name
+declaring inside `namespace Zcash.Snark.CapturedSingle`, so the enclosing-namespace walk needs the name
 to exist at `Zcash.Snark`. It lives in `Zcash.Arithmetic.Msm` and is not common enough to earn
 root vocabulary the way `Fp` and `URS` do, so this one alias carries it. Delete this file when
 the captures are next regenerated; no editable module depends on it.

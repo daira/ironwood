@@ -22,7 +22,7 @@ The rejection-path negatives of the honest families are deliberately absent: the
 model's rejection set, which is challenge/VK-dependent and already covered there.
 -/
 
-namespace Zcash.Snark.FixtureRandom
+namespace Zcash.Snark.CapturedSingleRandom
 
 open Zcash.Snark
 
@@ -48,4 +48,4 @@ theorem tampered_fixed_eval_fingerprint_mismatch :
     ¬ MsmMatch (assemble vk derivedInstanceCommitment psTamperedFixedEval ch) capturedMsm := by
   native_decide
 
-end Zcash.Snark.FixtureRandom
+end Zcash.Snark.CapturedSingleRandom

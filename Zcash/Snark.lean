@@ -17,11 +17,13 @@
 --   `AGM/`, `StraightLine/`, and `Composition/` carry extraction and composition from the
 --   acceptance predicate (`Soundness/Main.lean`), instantiated at Vesta
 --   (`Soundness/Deployed/Vesta.lean`).
--- * `Fixtures/` — concrete Orchard captures and the boundary checks they license: the captured
---   single-Action key and multi-Action bundle, their static checks, and the shape specializations.
--- * `Capstones/` — the advertised endpoints, stated at the deployed Action parameters. Each is a
---   top-level leaf nothing else depends on, so each must be named directly in a census entry
---   (`scripts/check_endpoint_census.sh`).
+-- * `Fixtures/` — concrete Orchard captures and the boundary checks they license, one namespace
+--   per captured artifact: `CapturedKey` (the single-Action verifying key and its static checks),
+--   `CapturedBundle` (the multi-Action bundle proof), and `CapturedShape` (that shape at any
+--   action count).
+-- * `Capstones/` — the advertised endpoints, all in `Capstone`, stated at the captured Action
+--   parameters. Each is a top-level leaf nothing else depends on, so each must be named directly
+--   in a census entry (`scripts/check_endpoint_census.sh`).
 --
 -- Import modules here that should be built as part of the library.
 

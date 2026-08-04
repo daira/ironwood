@@ -7,7 +7,7 @@ import Zcash.Snark.Soundness.Composition.ZeroStraightLine
 This interface fixture runs the zero prover against captured scalar/layout data at `k = 11`.
 Commitments remain zero because sampled AGM bases need not represent captured points.
 -/
-namespace Zcash.Snark.Fixture2
+namespace Zcash.Snark.CapturedMulti
 
 open Zcash.Snark
 
@@ -181,4 +181,4 @@ theorem adaptiveInterface_nonempty_at_captured_shape :
     Nonempty (ComputedAdaptiveOnlineAGMFSFamily shape) :=
   ⟨capturedLiveZeroAdaptiveFamily⟩
 
-end Zcash.Snark.Fixture2
+end Zcash.Snark.CapturedMulti

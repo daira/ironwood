@@ -9,7 +9,7 @@ These captured facts validate the one-Action query layouts, domain, and `x`-sque
 `D = Dq = 20470`.
 -/
 
-namespace Zcash.Snark.Fixture
+namespace Zcash.Snark.CapturedSingle
 
 open Zcash.Snark
 open Zcash.Arithmetic
@@ -109,4 +109,4 @@ theorem vk_n_pred_le : vk.n - 1 ≤ 2047 := by
 theorem shape_k_pred_le : 2 ^ shape.k - 1 ≤ 2047 := by
   norm_num [shape]
 
-end Zcash.Snark.Fixture
+end Zcash.Snark.CapturedSingle

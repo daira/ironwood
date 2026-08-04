@@ -1,0 +1,167 @@
+import Zcash.Snark.Fixtures.SingleAction.Fixture
+import Zcash.Snark.Fixtures.SingleAction.FiatShamir
+import Zcash.Snark.Fixtures.SingleAction.StaticChecks
+import Zcash.Meta.AxiomCheck
+import Mathlib.Util.AssertNoSorry
+
+/-!
+# Checked trust boundary of the concrete fingerprint fixture
+
+This module is built by CI (it belongs to the `FixtureCheck` lake target) and turns the trust boundary of
+the concrete captured fingerprint into *checked*, build-time obligations. Besides the
+coefficient-and-point match, the generated fixture validates every Vesta coordinate, binds the captured
+transcript prefix to the canonical VK representation emitted by Rust, and computes both the captured and
+Lean-assembled MSMs to the Vesta identity.
+
+Both checks below follow Lean's elaborated dependency graph (via `Lean.collectAxioms`), so they see holes
+anywhere in the transitive closure — including the `Soundness/` proof layer and Mathlib — which a
+syntactic scan of the verifier sources cannot.
+
+* `assert_axioms` (from `Zcash.Meta.AxiomCheck`) — bounds the trusted base at the standard tier and so
+  rejects `sorryAx` and any unexpected axiom, walking the whole dependency graph. Applied to every
+  captured fixture (`+native` for the `native_decide` ones) and to `assemble` (the verifier assembly it
+  runs).
+* `#print axioms` pinned by `#guard_msgs` — freezes the exact axiom set each captured claim rests on, so
+  a newly introduced axiom changes the set and fails the build. The
+  pinned sets record `..._native.native_decide.ax_1_1`, the compiler-trust axiom that
+  `native_decide` generates for each theorem (this Lean version emits a per-declaration native axiom rather
+  than the global `Lean.ofReduceBool`): pinning it documents that the one place compiler trust enters is
+  this concrete numeric fixture, never a general theorem. The other three (`propext`, `Classical.choice`,
+  `Quot.sound`) are the standard classical-logic axioms every Mathlib development uses.
+
+`instance_commitments_derived` and `capturedPublicInstances_within_lagrange` are pinned alongside
+`fingerprint_matches`: they carry the *derivation* of the instance commitments from the captured public
+inputs (ironwood#65), which is the trust this fixture buys in place of taking the commitments as opaque
+captured points. The derivation's supporting data and functions (`capturedUrsGLagrange`,
+`capturedPublicInstances`, `commitLagrange`, `derivedInstanceCommitment`) are bounded too, so the
+`native_decide` claims cannot be narrowed by quietly widening what they range over.
+-/
+
+-- Census the captured single-Action fixtures, including permitted native-code trust.
+assert_axioms Zcash.Snark.CapturedSingle.vk_advice_layout_length
+assert_axioms Zcash.Snark.CapturedSingle.vk_instance_layout_length
+assert_axioms Zcash.Snark.CapturedSingle.vk_fixed_layout_length
+assert_axioms Zcash.Snark.CapturedSingle.vk_omega_order +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.Keygen.certificate,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_axioms Zcash.Snark.CapturedSingle.vk_n_cast_ne_zero
+assert_axioms Zcash.Snark.CapturedSingle.vk_gates_degree_le +native(Zcash.Snark.CapturedSingle.vk_gates_degree_le)
+assert_axioms Zcash.Snark.CapturedSingle.vk_chunk_width_le +native(Zcash.Snark.CapturedSingle.vk_chunk_width_le)
+assert_axioms Zcash.Snark.CapturedSingle.vk_lookup_input_degree_le +native(
+  Zcash.Snark.CapturedSingle.vk_lookup_input_degree_le)
+assert_axioms Zcash.Snark.CapturedSingle.vk_lookup_table_degree_le +native(
+  Zcash.Snark.CapturedSingle.vk_lookup_table_degree_le)
+assert_axioms Zcash.Snark.CapturedSingle.vk_quotient_tail_le
+assert_axioms Zcash.Snark.CapturedSingle.vk_n_pred_le
+assert_axioms Zcash.Snark.CapturedSingle.shape_k_pred_le
+assert_axioms Zcash.Snark.CapturedSingle.fingerprint_matches +native(
+  Zcash.Snark.CapturedSingle.fingerprint_matches)
+assert_axioms Zcash.Snark.CapturedSingle.capturedPointCoordinatesValid_eq_true +native(
+  Zcash.Snark.CapturedSingle.capturedPointCoordinatesValid_eq_true)
+assert_axioms Zcash.Snark.CapturedSingle.capturedInit_startsWith_vkTranscriptRepr +native(
+  Zcash.Snark.CapturedSingle.capturedInit_startsWith_vkTranscriptRepr)
+-- The statement-bound path must reproduce the captured VK/instance prefix, challenge schedule,
+-- rejection-aware assembly, and final fingerprint.
+assert_axioms Zcash.Snark.CapturedSingle.capturedInit_eq_initialTranscript +native(
+  Zcash.Snark.CapturedSingle.instance_commitments_derived)
+assert_axioms Zcash.Snark.CapturedSingle.deriveChallengesForStatement_matches_captured_schedule +native(
+  Zcash.Snark.CapturedSingle.instance_commitments_derived,
+  Zcash.Snark.CapturedSingle.deriveChallenges_matches_captured_schedule)
+assert_computable Zcash.Snark.CapturedSingle.capturedRawInstances +choice
+assert_axioms Zcash.Snark.CapturedSingle.capturedRawInstances_have_expected_column_count
+assert_axioms Zcash.Snark.CapturedSingle.capturedRawInstances_columns_fit
+assert_axioms Zcash.Snark.CapturedSingle.capturedRawInstances_commitments_eq
+assert_axioms Zcash.Snark.CapturedSingle.capturedInstanceQueryLayout_eq
+assert_axioms Zcash.Snark.CapturedSingle.capturedRawInstances_commitments_eq_on_layout
+assert_axioms Zcash.Snark.CapturedSingle.assembleNonInteractiveInstances?_matches_captured +native(
+  Zcash.Snark.CapturedSingle.instance_commitments_derived,
+  Zcash.Snark.CapturedSingle.deriveChallenges_matches_captured_schedule)
+assert_axioms Zcash.Snark.CapturedSingle.nonInteractiveFingerprint_matches +native(
+  Zcash.Snark.CapturedSingle.instance_commitments_derived,
+  Zcash.Snark.CapturedSingle.deriveChallenges_matches_captured_schedule,
+  Zcash.Snark.CapturedSingle.fingerprint_matches)
+assert_axioms Zcash.Snark.CapturedSingle.capturedMsm_eval_eq_zero +native(
+  Zcash.Snark.CapturedSingle.capturedMsm_eval_eq_zero)
+assert_axioms Zcash.Snark.CapturedSingle.assembledMsm_eval_eq_zero +native(
+  Zcash.Snark.CapturedSingle.capturedMsm_eval_eq_zero,
+  Zcash.Snark.CapturedSingle.fingerprint_matches)
+assert_axioms Zcash.Arithmetic.Msm.evalNat
+assert_axioms Zcash.Snark.assemble
+
+-- The instance-commitment derivation: the two captured claims, plus the data and functions they
+-- range over. The latter are flagless — they are ordinary definitions, so compiler trust must not
+-- reach them; only the two claims about them may spend it.
+assert_axioms Zcash.Snark.CapturedSingle.instance_commitments_derived +native(
+  Zcash.Snark.CapturedSingle.instance_commitments_derived)
+assert_axioms Zcash.Snark.CapturedSingle.capturedPublicInstances_within_lagrange +native(
+  Zcash.Snark.CapturedSingle.capturedPublicInstances_within_lagrange)
+assert_axioms Zcash.Snark.CapturedSingle.capturedUrsGLagrange
+assert_axioms Zcash.Snark.CapturedSingle.capturedPublicInstances
+assert_axioms Zcash.Snark.CapturedSingle.commitLagrange
+assert_axioms Zcash.Snark.CapturedSingle.derivedInstanceCommitment
+
+-- The keygen certificate and the deployed capstone live in the fixture lane because importing
+-- them into the library-wide census would pull the large captured artifacts into `lake build
+-- Zcash`. The certificate and its projections name the closed VK comparison together with every
+-- concrete circuit fact on which that comparison depends.
+assert_axioms Zcash.Snark.Keygen.certificate +native(
+  Zcash.Snark.Keygen.certificate,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_axioms Zcash.Snark.Keygen.actionShape_eq_fixtureShape +native(
+  Zcash.Snark.Keygen.certificate,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_axioms Zcash.Snark.Keygen.vk_eq_toVerifierKey +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.Keygen.certificate,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+-- `whitespace := lax` collapses all whitespace, so the pin is insensitive to how
+-- `#print axioms` line-wraps the list (a formatting artifact of the axiom-name lengths).
+/-- info: 'Zcash.Snark.CapturedSingle.fingerprint_matches' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.CapturedSingle.fingerprint_matches._native.native_decide.ax_1_1] -/
+#guard_msgs (whitespace := lax) in
+#print axioms Zcash.Snark.CapturedSingle.fingerprint_matches
+
+/-- info: 'Zcash.Snark.CapturedSingle.capturedMsm_eval_eq_zero' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.CapturedSingle.capturedMsm_eval_eq_zero._native.native_decide.ax_1_1] -/
+#guard_msgs (whitespace := lax) in
+#print axioms Zcash.Snark.CapturedSingle.capturedMsm_eval_eq_zero
+
+/-- info: 'Zcash.Snark.CapturedSingle.instance_commitments_derived' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.CapturedSingle.instance_commitments_derived._native.native_decide.ax_1_1] -/
+#guard_msgs (whitespace := lax) in
+#print axioms Zcash.Snark.CapturedSingle.instance_commitments_derived
+
+/-- info: 'Zcash.Snark.CapturedSingle.capturedPublicInstances_within_lagrange' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.CapturedSingle.capturedPublicInstances_within_lagrange._native.native_decide.ax_1_1] -/
+#guard_msgs (whitespace := lax) in
+#print axioms Zcash.Snark.CapturedSingle.capturedPublicInstances_within_lagrange

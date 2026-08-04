@@ -14,7 +14,7 @@ over the sampled basis, so demanding literal equality with the fixture's fixed V
 leave the premise uninhabited for some bases.
 -/
 
-namespace Zcash.Snark.Fixture2
+namespace Zcash.Snark.CapturedMulti
 
 open Zcash.Snark
 
@@ -80,4 +80,4 @@ theorem deployedConstraintStaticChecks_of_captured
       rw [(hvk basis).n]
       exact vk_n_cast_ne_zero }
 
-end Zcash.Snark.Fixture2
+end Zcash.Snark.CapturedMulti

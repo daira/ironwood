@@ -45,10 +45,10 @@ captured points. The derivation's supporting data and functions (`capturedUrsGLa
 -/
 
 -- Census the captured single-Action fixtures, including permitted native-code trust.
-assert_axioms Zcash.Snark.Fixture.vk_advice_layout_length
-assert_axioms Zcash.Snark.Fixture.vk_instance_layout_length
-assert_axioms Zcash.Snark.Fixture.vk_fixed_layout_length
-assert_axioms Zcash.Snark.Fixture.vk_omega_order +native(
+assert_axioms Zcash.Snark.CapturedSingle.vk_advice_layout_length
+assert_axioms Zcash.Snark.CapturedSingle.vk_instance_layout_length
+assert_axioms Zcash.Snark.CapturedSingle.vk_fixed_layout_length
+assert_axioms Zcash.Snark.CapturedSingle.vk_omega_order +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Keygen.certificate,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
@@ -60,47 +60,47 @@ assert_axioms Zcash.Snark.Fixture.vk_omega_order +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Fixture.vk_n_cast_ne_zero
-assert_axioms Zcash.Snark.Fixture.vk_gates_degree_le +native(Zcash.Snark.Fixture.vk_gates_degree_le)
-assert_axioms Zcash.Snark.Fixture.vk_chunk_width_le +native(Zcash.Snark.Fixture.vk_chunk_width_le)
-assert_axioms Zcash.Snark.Fixture.vk_lookup_input_degree_le +native(
-  Zcash.Snark.Fixture.vk_lookup_input_degree_le)
-assert_axioms Zcash.Snark.Fixture.vk_lookup_table_degree_le +native(
-  Zcash.Snark.Fixture.vk_lookup_table_degree_le)
-assert_axioms Zcash.Snark.Fixture.vk_quotient_tail_le
-assert_axioms Zcash.Snark.Fixture.vk_n_pred_le
-assert_axioms Zcash.Snark.Fixture.shape_k_pred_le
-assert_axioms Zcash.Snark.Fixture.fingerprint_matches +native(
-  Zcash.Snark.Fixture.fingerprint_matches)
-assert_axioms Zcash.Snark.Fixture.capturedPointCoordinatesValid_eq_true +native(
-  Zcash.Snark.Fixture.capturedPointCoordinatesValid_eq_true)
-assert_axioms Zcash.Snark.Fixture.capturedInit_startsWith_vkTranscriptRepr +native(
-  Zcash.Snark.Fixture.capturedInit_startsWith_vkTranscriptRepr)
+assert_axioms Zcash.Snark.CapturedSingle.vk_n_cast_ne_zero
+assert_axioms Zcash.Snark.CapturedSingle.vk_gates_degree_le +native(Zcash.Snark.CapturedSingle.vk_gates_degree_le)
+assert_axioms Zcash.Snark.CapturedSingle.vk_chunk_width_le +native(Zcash.Snark.CapturedSingle.vk_chunk_width_le)
+assert_axioms Zcash.Snark.CapturedSingle.vk_lookup_input_degree_le +native(
+  Zcash.Snark.CapturedSingle.vk_lookup_input_degree_le)
+assert_axioms Zcash.Snark.CapturedSingle.vk_lookup_table_degree_le +native(
+  Zcash.Snark.CapturedSingle.vk_lookup_table_degree_le)
+assert_axioms Zcash.Snark.CapturedSingle.vk_quotient_tail_le
+assert_axioms Zcash.Snark.CapturedSingle.vk_n_pred_le
+assert_axioms Zcash.Snark.CapturedSingle.shape_k_pred_le
+assert_axioms Zcash.Snark.CapturedSingle.fingerprint_matches +native(
+  Zcash.Snark.CapturedSingle.fingerprint_matches)
+assert_axioms Zcash.Snark.CapturedSingle.capturedPointCoordinatesValid_eq_true +native(
+  Zcash.Snark.CapturedSingle.capturedPointCoordinatesValid_eq_true)
+assert_axioms Zcash.Snark.CapturedSingle.capturedInit_startsWith_vkTranscriptRepr +native(
+  Zcash.Snark.CapturedSingle.capturedInit_startsWith_vkTranscriptRepr)
 -- The statement-bound path must reproduce the captured VK/instance prefix, challenge schedule,
 -- rejection-aware assembly, and final fingerprint.
-assert_axioms Zcash.Snark.Fixture.capturedInit_eq_initialTranscript +native(
-  Zcash.Snark.Fixture.instance_commitments_derived)
-assert_axioms Zcash.Snark.Fixture.deriveChallengesForStatement_matches_captured_schedule +native(
-  Zcash.Snark.Fixture.instance_commitments_derived,
-  Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule)
-assert_computable Zcash.Snark.Fixture.capturedRawInstances +choice
-assert_axioms Zcash.Snark.Fixture.capturedRawInstances_have_expected_column_count
-assert_axioms Zcash.Snark.Fixture.capturedRawInstances_columns_fit
-assert_axioms Zcash.Snark.Fixture.capturedRawInstances_commitments_eq
-assert_axioms Zcash.Snark.Fixture.capturedInstanceQueryLayout_eq
-assert_axioms Zcash.Snark.Fixture.capturedRawInstances_commitments_eq_on_layout
-assert_axioms Zcash.Snark.Fixture.assembleNonInteractiveInstances?_matches_captured +native(
-  Zcash.Snark.Fixture.instance_commitments_derived,
-  Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule)
-assert_axioms Zcash.Snark.Fixture.nonInteractiveFingerprint_matches +native(
-  Zcash.Snark.Fixture.instance_commitments_derived,
-  Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule,
-  Zcash.Snark.Fixture.fingerprint_matches)
-assert_axioms Zcash.Snark.Fixture.capturedMsm_eval_eq_zero +native(
-  Zcash.Snark.Fixture.capturedMsm_eval_eq_zero)
-assert_axioms Zcash.Snark.Fixture.assembledMsm_eval_eq_zero +native(
-  Zcash.Snark.Fixture.capturedMsm_eval_eq_zero,
-  Zcash.Snark.Fixture.fingerprint_matches)
+assert_axioms Zcash.Snark.CapturedSingle.capturedInit_eq_initialTranscript +native(
+  Zcash.Snark.CapturedSingle.instance_commitments_derived)
+assert_axioms Zcash.Snark.CapturedSingle.deriveChallengesForStatement_matches_captured_schedule +native(
+  Zcash.Snark.CapturedSingle.instance_commitments_derived,
+  Zcash.Snark.CapturedSingle.deriveChallenges_matches_captured_schedule)
+assert_computable Zcash.Snark.CapturedSingle.capturedRawInstances +choice
+assert_axioms Zcash.Snark.CapturedSingle.capturedRawInstances_have_expected_column_count
+assert_axioms Zcash.Snark.CapturedSingle.capturedRawInstances_columns_fit
+assert_axioms Zcash.Snark.CapturedSingle.capturedRawInstances_commitments_eq
+assert_axioms Zcash.Snark.CapturedSingle.capturedInstanceQueryLayout_eq
+assert_axioms Zcash.Snark.CapturedSingle.capturedRawInstances_commitments_eq_on_layout
+assert_axioms Zcash.Snark.CapturedSingle.assembleNonInteractiveInstances?_matches_captured +native(
+  Zcash.Snark.CapturedSingle.instance_commitments_derived,
+  Zcash.Snark.CapturedSingle.deriveChallenges_matches_captured_schedule)
+assert_axioms Zcash.Snark.CapturedSingle.nonInteractiveFingerprint_matches +native(
+  Zcash.Snark.CapturedSingle.instance_commitments_derived,
+  Zcash.Snark.CapturedSingle.deriveChallenges_matches_captured_schedule,
+  Zcash.Snark.CapturedSingle.fingerprint_matches)
+assert_axioms Zcash.Snark.CapturedSingle.capturedMsm_eval_eq_zero +native(
+  Zcash.Snark.CapturedSingle.capturedMsm_eval_eq_zero)
+assert_axioms Zcash.Snark.CapturedSingle.assembledMsm_eval_eq_zero +native(
+  Zcash.Snark.CapturedSingle.capturedMsm_eval_eq_zero,
+  Zcash.Snark.CapturedSingle.fingerprint_matches)
 assert_axioms Zcash.Arithmetic.Msm.evalNat
 assert_axioms Zcash.Snark.assemble
 
@@ -108,38 +108,38 @@ assert_axioms Zcash.Snark.assemble
 -- sensitivity, and per-slot tamper sensitivity of the fingerprint match — including the blind
 -- slots, whose honest values are recomputable from the key, publics, and challenges, so only
 -- tamper sensitivity detects a sourcing error in `assemble` on honest captures.
-assert_axioms Zcash.Snark.Fixture.valid_capture_assembles +native(
-  Zcash.Snark.Fixture.valid_capture_assembles)
-assert_axioms Zcash.Snark.Fixture.unexpected_last_permutation_eval_rejected +native(
-  Zcash.Snark.Fixture.unexpected_last_permutation_eval_rejected)
-assert_axioms Zcash.Snark.Fixture.missing_nonlast_permutation_eval_rejected +native(
-  Zcash.Snark.Fixture.missing_nonlast_permutation_eval_rejected)
-assert_axioms Zcash.Snark.Fixture.x_power_one_rejected +native(
-  Zcash.Snark.Fixture.x_power_one_rejected)
-assert_axioms Zcash.Snark.Fixture.x3_collision_rejected +native(
-  Zcash.Snark.Fixture.x3_collision_rejected)
-assert_axioms Zcash.Snark.Fixture.duplicate_advice_query_rejected +native(
-  Zcash.Snark.Fixture.duplicate_advice_query_rejected)
-assert_axioms Zcash.Snark.Fixture.tampered_advice_eval_assembles +native(
-  Zcash.Snark.Fixture.tampered_advice_eval_assembles)
-assert_axioms Zcash.Snark.Fixture.tampered_advice_eval_fingerprint_mismatch +native(
-  Zcash.Snark.Fixture.tampered_advice_eval_fingerprint_mismatch)
-assert_axioms Zcash.Snark.Fixture.malformed_u_count_rejected +native(
-  Zcash.Snark.Fixture.malformed_u_count_rejected)
-assert_axioms Zcash.Snark.Fixture.swapped_lookup_permuted_breaks_schedule +native(
-  Zcash.Snark.Fixture.swapped_lookup_permuted_breaks_schedule)
-assert_axioms Zcash.Snark.Fixture.tampered_fixed_eval_assembles +native(
-  Zcash.Snark.Fixture.tampered_fixed_eval_assembles)
-assert_axioms Zcash.Snark.Fixture.tampered_fixed_eval_fingerprint_mismatch +native(
-  Zcash.Snark.Fixture.tampered_fixed_eval_fingerprint_mismatch)
-assert_axioms Zcash.Snark.Fixture.tampered_permutation_common_eval_assembles +native(
-  Zcash.Snark.Fixture.tampered_permutation_common_eval_assembles)
-assert_axioms Zcash.Snark.Fixture.tampered_permutation_common_eval_fingerprint_mismatch +native(
-  Zcash.Snark.Fixture.tampered_permutation_common_eval_fingerprint_mismatch)
-assert_axioms Zcash.Snark.Fixture.tampered_instance_eval_assembles +native(
-  Zcash.Snark.Fixture.tampered_instance_eval_assembles)
-assert_axioms Zcash.Snark.Fixture.tampered_instance_eval_fingerprint_mismatch +native(
-  Zcash.Snark.Fixture.tampered_instance_eval_fingerprint_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.valid_capture_assembles +native(
+  Zcash.Snark.CapturedSingle.valid_capture_assembles)
+assert_axioms Zcash.Snark.CapturedSingle.unexpected_last_permutation_eval_rejected +native(
+  Zcash.Snark.CapturedSingle.unexpected_last_permutation_eval_rejected)
+assert_axioms Zcash.Snark.CapturedSingle.missing_nonlast_permutation_eval_rejected +native(
+  Zcash.Snark.CapturedSingle.missing_nonlast_permutation_eval_rejected)
+assert_axioms Zcash.Snark.CapturedSingle.x_power_one_rejected +native(
+  Zcash.Snark.CapturedSingle.x_power_one_rejected)
+assert_axioms Zcash.Snark.CapturedSingle.x3_collision_rejected +native(
+  Zcash.Snark.CapturedSingle.x3_collision_rejected)
+assert_axioms Zcash.Snark.CapturedSingle.duplicate_advice_query_rejected +native(
+  Zcash.Snark.CapturedSingle.duplicate_advice_query_rejected)
+assert_axioms Zcash.Snark.CapturedSingle.tampered_advice_eval_assembles +native(
+  Zcash.Snark.CapturedSingle.tampered_advice_eval_assembles)
+assert_axioms Zcash.Snark.CapturedSingle.tampered_advice_eval_fingerprint_mismatch +native(
+  Zcash.Snark.CapturedSingle.tampered_advice_eval_fingerprint_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.malformed_u_count_rejected +native(
+  Zcash.Snark.CapturedSingle.malformed_u_count_rejected)
+assert_axioms Zcash.Snark.CapturedSingle.swapped_lookup_permuted_breaks_schedule +native(
+  Zcash.Snark.CapturedSingle.swapped_lookup_permuted_breaks_schedule)
+assert_axioms Zcash.Snark.CapturedSingle.tampered_fixed_eval_assembles +native(
+  Zcash.Snark.CapturedSingle.tampered_fixed_eval_assembles)
+assert_axioms Zcash.Snark.CapturedSingle.tampered_fixed_eval_fingerprint_mismatch +native(
+  Zcash.Snark.CapturedSingle.tampered_fixed_eval_fingerprint_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.tampered_permutation_common_eval_assembles +native(
+  Zcash.Snark.CapturedSingle.tampered_permutation_common_eval_assembles)
+assert_axioms Zcash.Snark.CapturedSingle.tampered_permutation_common_eval_fingerprint_mismatch +native(
+  Zcash.Snark.CapturedSingle.tampered_permutation_common_eval_fingerprint_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.tampered_instance_eval_assembles +native(
+  Zcash.Snark.CapturedSingle.tampered_instance_eval_assembles)
+assert_axioms Zcash.Snark.CapturedSingle.tampered_instance_eval_fingerprint_mismatch +native(
+  Zcash.Snark.CapturedSingle.tampered_instance_eval_fingerprint_mismatch)
 
 -- The sensitivity sweep (`SingleAction/Negative/Sweep.lean`): one fingerprint-mismatch theorem per
 -- `ProofString` field/axis and subfield, per challenge, and for the public inputs — complete
@@ -147,150 +147,150 @@ assert_axioms Zcash.Snark.Fixture.tampered_instance_eval_fingerprint_mismatch +n
 -- pairs pinning the only rejection-capable challenge tampers (`x`, `x3`) to the MSM side.
 -- The shared `mapAt`/`mapAt2` combinators the tampers range over are ordinary definitions,
 -- censused flagless so compiler trust cannot reach them.
-assert_axioms Zcash.Snark.Fixture.sweep_advice_commitments_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_advice_commitments_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_advice_commitments_last_column_mismatch +native(
-  Zcash.Snark.Fixture.sweep_advice_commitments_last_column_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_lookup_permuted_input_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_lookup_permuted_input_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_lookup_permuted_input_last_lookup_mismatch +native(
-  Zcash.Snark.Fixture.sweep_lookup_permuted_input_last_lookup_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_lookup_permuted_table_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_lookup_permuted_table_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_lookup_permuted_table_last_lookup_mismatch +native(
-  Zcash.Snark.Fixture.sweep_lookup_permuted_table_last_lookup_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_permutation_product_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_permutation_product_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_permutation_product_last_set_mismatch +native(
-  Zcash.Snark.Fixture.sweep_permutation_product_last_set_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_lookup_product_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_lookup_product_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_lookup_product_last_lookup_mismatch +native(
-  Zcash.Snark.Fixture.sweep_lookup_product_last_lookup_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_vanishing_random_mismatch +native(
-  Zcash.Snark.Fixture.sweep_vanishing_random_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_h_pieces_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_h_pieces_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_h_pieces_last_piece_mismatch +native(
-  Zcash.Snark.Fixture.sweep_h_pieces_last_piece_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_instance_evals_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_instance_evals_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_advice_evals_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_advice_evals_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_advice_evals_last_query_mismatch +native(
-  Zcash.Snark.Fixture.sweep_advice_evals_last_query_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_fixed_evals_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_fixed_evals_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_fixed_evals_last_query_mismatch +native(
-  Zcash.Snark.Fixture.sweep_fixed_evals_last_query_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_vanishing_random_eval_mismatch +native(
-  Zcash.Snark.Fixture.sweep_vanishing_random_eval_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_permutation_common_evals_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_permutation_common_evals_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_permutation_common_evals_last_column_mismatch +native(
-  Zcash.Snark.Fixture.sweep_permutation_common_evals_last_column_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_permutation_set_evals_eval_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_permutation_set_evals_eval_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_permutation_set_evals_eval_last_set_mismatch +native(
-  Zcash.Snark.Fixture.sweep_permutation_set_evals_eval_last_set_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_permutation_set_evals_next_eval_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_permutation_set_evals_next_eval_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_permutation_set_evals_last_eval_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_permutation_set_evals_last_eval_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_lookup_evals_product_eval_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_lookup_evals_product_eval_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_lookup_evals_product_eval_last_lookup_mismatch +native(
-  Zcash.Snark.Fixture.sweep_lookup_evals_product_eval_last_lookup_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_lookup_evals_product_next_eval_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_lookup_evals_product_next_eval_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_lookup_evals_permuted_input_eval_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_lookup_evals_permuted_input_eval_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_lookup_evals_permuted_input_inv_eval_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_lookup_evals_permuted_input_inv_eval_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_lookup_evals_permuted_table_eval_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_lookup_evals_permuted_table_eval_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_multiopen_q_prime_mismatch +native(
-  Zcash.Snark.Fixture.sweep_multiopen_q_prime_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_multiopen_u_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_multiopen_u_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_multiopen_u_last_point_set_mismatch +native(
-  Zcash.Snark.Fixture.sweep_multiopen_u_last_point_set_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_ipa_s_mismatch +native(
-  Zcash.Snark.Fixture.sweep_ipa_s_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_ipa_rounds_l_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_ipa_rounds_l_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_ipa_rounds_l_last_round_mismatch +native(
-  Zcash.Snark.Fixture.sweep_ipa_rounds_l_last_round_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_ipa_rounds_r_first_mismatch +native(
-  Zcash.Snark.Fixture.sweep_ipa_rounds_r_first_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_ipa_c_mismatch +native(
-  Zcash.Snark.Fixture.sweep_ipa_c_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_ipa_f_mismatch +native(
-  Zcash.Snark.Fixture.sweep_ipa_f_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_theta_mismatch +native(
-  Zcash.Snark.Fixture.sweep_theta_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_beta_mismatch +native(
-  Zcash.Snark.Fixture.sweep_beta_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_gamma_mismatch +native(
-  Zcash.Snark.Fixture.sweep_gamma_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_y_mismatch +native(
-  Zcash.Snark.Fixture.sweep_y_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_x_assembles +native(
-  Zcash.Snark.Fixture.sweep_x_assembles)
-assert_axioms Zcash.Snark.Fixture.sweep_x_mismatch +native(
-  Zcash.Snark.Fixture.sweep_x_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_x1_mismatch +native(
-  Zcash.Snark.Fixture.sweep_x1_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_x2_mismatch +native(
-  Zcash.Snark.Fixture.sweep_x2_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_x3_assembles +native(
-  Zcash.Snark.Fixture.sweep_x3_assembles)
-assert_axioms Zcash.Snark.Fixture.sweep_x3_mismatch +native(
-  Zcash.Snark.Fixture.sweep_x3_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_x4_mismatch +native(
-  Zcash.Snark.Fixture.sweep_x4_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_xi_mismatch +native(
-  Zcash.Snark.Fixture.sweep_xi_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_z_mismatch +native(
-  Zcash.Snark.Fixture.sweep_z_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_ipa_round_0_mismatch +native(
-  Zcash.Snark.Fixture.sweep_ipa_round_0_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_ipa_round_1_mismatch +native(
-  Zcash.Snark.Fixture.sweep_ipa_round_1_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_ipa_round_2_mismatch +native(
-  Zcash.Snark.Fixture.sweep_ipa_round_2_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_ipa_round_3_mismatch +native(
-  Zcash.Snark.Fixture.sweep_ipa_round_3_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_ipa_round_4_mismatch +native(
-  Zcash.Snark.Fixture.sweep_ipa_round_4_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_ipa_round_5_mismatch +native(
-  Zcash.Snark.Fixture.sweep_ipa_round_5_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_ipa_round_6_mismatch +native(
-  Zcash.Snark.Fixture.sweep_ipa_round_6_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_ipa_round_7_mismatch +native(
-  Zcash.Snark.Fixture.sweep_ipa_round_7_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_ipa_round_8_mismatch +native(
-  Zcash.Snark.Fixture.sweep_ipa_round_8_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_ipa_round_9_mismatch +native(
-  Zcash.Snark.Fixture.sweep_ipa_round_9_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_ipa_round_10_mismatch +native(
-  Zcash.Snark.Fixture.sweep_ipa_round_10_mismatch)
-assert_axioms Zcash.Snark.Fixture.sweep_public_input_mismatch +native(
-  Zcash.Snark.Fixture.sweep_public_input_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_advice_commitments_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_advice_commitments_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_advice_commitments_last_column_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_advice_commitments_last_column_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_lookup_permuted_input_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_lookup_permuted_input_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_lookup_permuted_input_last_lookup_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_lookup_permuted_input_last_lookup_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_lookup_permuted_table_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_lookup_permuted_table_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_lookup_permuted_table_last_lookup_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_lookup_permuted_table_last_lookup_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_permutation_product_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_permutation_product_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_permutation_product_last_set_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_permutation_product_last_set_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_lookup_product_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_lookup_product_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_lookup_product_last_lookup_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_lookup_product_last_lookup_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_vanishing_random_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_vanishing_random_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_h_pieces_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_h_pieces_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_h_pieces_last_piece_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_h_pieces_last_piece_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_instance_evals_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_instance_evals_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_advice_evals_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_advice_evals_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_advice_evals_last_query_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_advice_evals_last_query_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_fixed_evals_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_fixed_evals_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_fixed_evals_last_query_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_fixed_evals_last_query_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_vanishing_random_eval_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_vanishing_random_eval_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_permutation_common_evals_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_permutation_common_evals_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_permutation_common_evals_last_column_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_permutation_common_evals_last_column_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_permutation_set_evals_eval_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_permutation_set_evals_eval_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_permutation_set_evals_eval_last_set_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_permutation_set_evals_eval_last_set_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_permutation_set_evals_next_eval_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_permutation_set_evals_next_eval_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_permutation_set_evals_last_eval_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_permutation_set_evals_last_eval_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_lookup_evals_product_eval_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_lookup_evals_product_eval_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_lookup_evals_product_eval_last_lookup_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_lookup_evals_product_eval_last_lookup_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_lookup_evals_product_next_eval_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_lookup_evals_product_next_eval_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_lookup_evals_permuted_input_eval_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_lookup_evals_permuted_input_eval_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_lookup_evals_permuted_input_inv_eval_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_lookup_evals_permuted_input_inv_eval_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_lookup_evals_permuted_table_eval_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_lookup_evals_permuted_table_eval_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_multiopen_q_prime_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_multiopen_q_prime_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_multiopen_u_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_multiopen_u_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_multiopen_u_last_point_set_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_multiopen_u_last_point_set_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_ipa_s_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_ipa_s_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_ipa_rounds_l_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_ipa_rounds_l_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_ipa_rounds_l_last_round_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_ipa_rounds_l_last_round_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_ipa_rounds_r_first_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_ipa_rounds_r_first_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_ipa_c_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_ipa_c_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_ipa_f_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_ipa_f_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_theta_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_theta_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_beta_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_beta_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_gamma_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_gamma_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_y_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_y_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_x_assembles +native(
+  Zcash.Snark.CapturedSingle.sweep_x_assembles)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_x_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_x_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_x1_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_x1_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_x2_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_x2_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_x3_assembles +native(
+  Zcash.Snark.CapturedSingle.sweep_x3_assembles)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_x3_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_x3_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_x4_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_x4_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_xi_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_xi_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_z_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_z_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_ipa_round_0_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_ipa_round_0_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_ipa_round_1_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_ipa_round_1_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_ipa_round_2_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_ipa_round_2_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_ipa_round_3_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_ipa_round_3_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_ipa_round_4_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_ipa_round_4_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_ipa_round_5_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_ipa_round_5_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_ipa_round_6_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_ipa_round_6_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_ipa_round_7_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_ipa_round_7_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_ipa_round_8_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_ipa_round_8_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_ipa_round_9_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_ipa_round_9_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_ipa_round_10_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_ipa_round_10_mismatch)
+assert_axioms Zcash.Snark.CapturedSingle.sweep_public_input_mismatch +native(
+  Zcash.Snark.CapturedSingle.sweep_public_input_mismatch)
 assert_axioms Zcash.Snark.mapAt
 assert_axioms Zcash.Snark.mapAt2
 
 -- The instance-commitment derivation: the two captured claims, plus the data and functions they
 -- range over. The latter are flagless — they are ordinary definitions, so compiler trust must not
 -- reach them; only the two claims about them may spend it.
-assert_axioms Zcash.Snark.Fixture.instance_commitments_derived +native(
-  Zcash.Snark.Fixture.instance_commitments_derived)
-assert_axioms Zcash.Snark.Fixture.capturedPublicInstances_within_lagrange +native(
-  Zcash.Snark.Fixture.capturedPublicInstances_within_lagrange)
-assert_axioms Zcash.Snark.Fixture.capturedUrsGLagrange
-assert_axioms Zcash.Snark.Fixture.capturedPublicInstances
-assert_axioms Zcash.Snark.Fixture.commitLagrange
-assert_axioms Zcash.Snark.Fixture.derivedInstanceCommitment
+assert_axioms Zcash.Snark.CapturedSingle.instance_commitments_derived +native(
+  Zcash.Snark.CapturedSingle.instance_commitments_derived)
+assert_axioms Zcash.Snark.CapturedSingle.capturedPublicInstances_within_lagrange +native(
+  Zcash.Snark.CapturedSingle.capturedPublicInstances_within_lagrange)
+assert_axioms Zcash.Snark.CapturedSingle.capturedUrsGLagrange
+assert_axioms Zcash.Snark.CapturedSingle.capturedPublicInstances
+assert_axioms Zcash.Snark.CapturedSingle.commitLagrange
+assert_axioms Zcash.Snark.CapturedSingle.derivedInstanceCommitment
 
 -- The keygen certificate and the deployed capstone live in the fixture lane because importing
 -- them into the library-wide census would pull the large captured artifacts into `lake build
@@ -336,25 +336,25 @@ assert_axioms Zcash.Snark.Keygen.vk_eq_toVerifierKey +native(
 -- functions are flagless — compiler trust may enter only through the named claims — except
 -- `derivedVk`, whose circuit argument itself carries the natively-certified fixed-base
 -- facts.
-assert_axioms Zcash.Snark.Fixture.capturedChallengeValues_eq_expected +native(
-  Zcash.Snark.Fixture.capturedChallengeValues_eq_expected)
-assert_axioms Zcash.Snark.Fixture.missingChallenge_not_captured +native(
-  Zcash.Snark.Fixture.missingChallenge_not_captured)
-assert_axioms Zcash.Snark.Fixture.capturedChallengeValues_nodup +native(
-  Zcash.Snark.Fixture.capturedChallengeValues_nodup)
-assert_axioms Zcash.Snark.Fixture.capturedScheduleIncludesInit_eq_true +native(
-  Zcash.Snark.Fixture.capturedScheduleIncludesInit_eq_true)
-assert_axioms Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule +native(
-  Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule)
-assert_axioms Zcash.Snark.Fixture.nonInteractiveFingerprint_matches +native(
-  Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule,
-  Zcash.Snark.Fixture.fingerprint_matches,
-  Zcash.Snark.Fixture.instance_commitments_derived)
-assert_axioms Zcash.Snark.Fixture.capturedFs
-assert_axioms Zcash.Snark.Fixture.capturedInit
+assert_axioms Zcash.Snark.CapturedSingle.capturedChallengeValues_eq_expected +native(
+  Zcash.Snark.CapturedSingle.capturedChallengeValues_eq_expected)
+assert_axioms Zcash.Snark.CapturedSingle.missingChallenge_not_captured +native(
+  Zcash.Snark.CapturedSingle.missingChallenge_not_captured)
+assert_axioms Zcash.Snark.CapturedSingle.capturedChallengeValues_nodup +native(
+  Zcash.Snark.CapturedSingle.capturedChallengeValues_nodup)
+assert_axioms Zcash.Snark.CapturedSingle.capturedScheduleIncludesInit_eq_true +native(
+  Zcash.Snark.CapturedSingle.capturedScheduleIncludesInit_eq_true)
+assert_axioms Zcash.Snark.CapturedSingle.deriveChallenges_matches_captured_schedule +native(
+  Zcash.Snark.CapturedSingle.deriveChallenges_matches_captured_schedule)
+assert_axioms Zcash.Snark.CapturedSingle.nonInteractiveFingerprint_matches +native(
+  Zcash.Snark.CapturedSingle.deriveChallenges_matches_captured_schedule,
+  Zcash.Snark.CapturedSingle.fingerprint_matches,
+  Zcash.Snark.CapturedSingle.instance_commitments_derived)
+assert_axioms Zcash.Snark.CapturedSingle.capturedFs
+assert_axioms Zcash.Snark.CapturedSingle.capturedInit
 assert_axioms Zcash.Snark.deriveChallenges
 assert_axioms Zcash.Snark.nonInteractiveFingerprint
-assert_axioms Zcash.Snark.Fixture.derivedVk +native(
+assert_axioms Zcash.Snark.CapturedSingle.derivedVk +native(
   Zcash.Snark.Keygen.certificate,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
@@ -365,7 +365,7 @@ assert_axioms Zcash.Snark.Fixture.derivedVk +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Fixture.nonInteractiveFingerprint_matches_derived +native(
+assert_axioms Zcash.Snark.CapturedSingle.nonInteractiveFingerprint_matches_derived +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Keygen.certificate,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
@@ -378,10 +378,10 @@ assert_axioms Zcash.Snark.Fixture.nonInteractiveFingerprint_matches_derived +nat
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero,
-  Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule,
-  Zcash.Snark.Fixture.fingerprint_matches,
-  Zcash.Snark.Fixture.instance_commitments_derived)
-assert_axioms Zcash.Snark.Fixture.nonInteractiveFingerprint_matches_derived_inputs +native(
+  Zcash.Snark.CapturedSingle.deriveChallenges_matches_captured_schedule,
+  Zcash.Snark.CapturedSingle.fingerprint_matches,
+  Zcash.Snark.CapturedSingle.instance_commitments_derived)
+assert_axioms Zcash.Snark.CapturedSingle.nonInteractiveFingerprint_matches_derived_inputs +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Keygen.certificate,
   Zcash.Snark.Keygen.instanceCommitment_capturedActionInputs,
@@ -396,36 +396,36 @@ assert_axioms Zcash.Snark.Fixture.nonInteractiveFingerprint_matches_derived_inpu
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero,
-  Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule,
-  Zcash.Snark.Fixture.fingerprint_matches,
-  Zcash.Snark.Fixture.instance_commitments_derived)
+  Zcash.Snark.CapturedSingle.deriveChallenges_matches_captured_schedule,
+  Zcash.Snark.CapturedSingle.fingerprint_matches,
+  Zcash.Snark.CapturedSingle.instance_commitments_derived)
 
 -- `whitespace := lax` collapses all whitespace, so the pin is insensitive to how
 -- `#print axioms` line-wraps the list (a formatting artifact of the axiom-name lengths).
-/-- info: 'Zcash.Snark.Fixture.fingerprint_matches' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.Fixture.fingerprint_matches._native.native_decide.ax_1_1] -/
+/-- info: 'Zcash.Snark.CapturedSingle.fingerprint_matches' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.CapturedSingle.fingerprint_matches._native.native_decide.ax_1_1] -/
 #guard_msgs (whitespace := lax) in
-#print axioms Zcash.Snark.Fixture.fingerprint_matches
+#print axioms Zcash.Snark.CapturedSingle.fingerprint_matches
 
-/-- info: 'Zcash.Snark.Fixture.capturedMsm_eval_eq_zero' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.Fixture.capturedMsm_eval_eq_zero._native.native_decide.ax_1_1] -/
+/-- info: 'Zcash.Snark.CapturedSingle.capturedMsm_eval_eq_zero' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.CapturedSingle.capturedMsm_eval_eq_zero._native.native_decide.ax_1_1] -/
 #guard_msgs (whitespace := lax) in
-#print axioms Zcash.Snark.Fixture.capturedMsm_eval_eq_zero
+#print axioms Zcash.Snark.CapturedSingle.capturedMsm_eval_eq_zero
 
-/-- info: 'Zcash.Snark.Fixture.instance_commitments_derived' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.Fixture.instance_commitments_derived._native.native_decide.ax_1_1] -/
+/-- info: 'Zcash.Snark.CapturedSingle.instance_commitments_derived' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.CapturedSingle.instance_commitments_derived._native.native_decide.ax_1_1] -/
 #guard_msgs (whitespace := lax) in
-#print axioms Zcash.Snark.Fixture.instance_commitments_derived
+#print axioms Zcash.Snark.CapturedSingle.instance_commitments_derived
 
-/-- info: 'Zcash.Snark.Fixture.capturedPublicInstances_within_lagrange' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.Fixture.capturedPublicInstances_within_lagrange._native.native_decide.ax_1_1] -/
+/-- info: 'Zcash.Snark.CapturedSingle.capturedPublicInstances_within_lagrange' depends on axioms: [propext, Classical.choice, Quot.sound, Zcash.Snark.CapturedSingle.capturedPublicInstances_within_lagrange._native.native_decide.ax_1_1] -/
 #guard_msgs (whitespace := lax) in
-#print axioms Zcash.Snark.Fixture.capturedPublicInstances_within_lagrange
+#print axioms Zcash.Snark.CapturedSingle.capturedPublicInstances_within_lagrange
 
-/-- info: 'Zcash.Snark.Fixture.nonInteractiveFingerprint_matches_derived' depends on axioms: [propext,
+/-- info: 'Zcash.Snark.CapturedSingle.nonInteractiveFingerprint_matches_derived' depends on axioms: [propext,
 Classical.choice,
 Quot.sound,
 CompElliptic.Fields.Pasta.pallasBase._native.native_decide.ax_1,
 CompElliptic.Fields.Pasta.pallasBase._native.native_decide.ax_2,
-Zcash.Snark.Fixture.deriveChallenges_matches_captured_schedule._native.native_decide.ax_1_1,
-Zcash.Snark.Fixture.fingerprint_matches._native.native_decide.ax_1_1,
-Zcash.Snark.Fixture.instance_commitments_derived._native.native_decide.ax_1_1,
+Zcash.Snark.CapturedSingle.deriveChallenges_matches_captured_schedule._native.native_decide.ax_1_1,
+Zcash.Snark.CapturedSingle.fingerprint_matches._native.native_decide.ax_1_1,
+Zcash.Snark.CapturedSingle.instance_commitments_derived._native.native_decide.ax_1_1,
 Zcash.Snark.Keygen.certificate._native.native_decide.ax_1_1,
 CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt._native.native_decide.ax_1_1,
 CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt._native.native_decide.ax_1_1,
@@ -452,4 +452,4 @@ Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_
 Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_7,
 Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero._native.native_decide.ax_1_8] -/
 #guard_msgs (whitespace := lax) in
-#print axioms Zcash.Snark.Fixture.nonInteractiveFingerprint_matches_derived
+#print axioms Zcash.Snark.CapturedSingle.nonInteractiveFingerprint_matches_derived

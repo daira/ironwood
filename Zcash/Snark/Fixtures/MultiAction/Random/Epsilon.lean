@@ -37,7 +37,7 @@ match's `List.Perm` is realized by the fixed base-matching re-indexing
 coordinate-wise.
 -/
 
-namespace Zcash.Snark.FixtureRandom2
+namespace Zcash.Snark.CapturedMultiRandom
 
 open Zcash.Snark
 open Zcash.Arithmetic (Msm scalarFieldOrder)
@@ -291,4 +291,4 @@ theorem fingerprint_matches_positional :
   exact ⟨m, hm, hmatch.2.2.2.length_eq.trans hcap, hcap, hmatch.1, hmatch.2.1, hmatch.2.2.1,
     msmMatch_other_reindex_of_nodup hmatch capturedMsm_other_bases_nodup⟩
 
-end Zcash.Snark.FixtureRandom2
+end Zcash.Snark.CapturedMultiRandom

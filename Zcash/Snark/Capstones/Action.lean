@@ -14,7 +14,10 @@ Captured checks and executable terminals yield ordinary- and knowledge-soundness
 consensus-valid Action bundle size.
 -/
 
-namespace Zcash.Snark.Fixture
+namespace Zcash.Snark.Capstone
+
+-- The captured facts these endpoints are stated at.
+open Zcash.Snark.CapturedSingle
 
 open Zcash.Snark CompPoly.CPolynomial
 open Zcash.Snark.ActionTerminal
@@ -28,7 +31,7 @@ open scoped ENNReal
 /-- Merging Action proof parameters yields the matching fixture shape. -/
 private theorem actionProofShape_eq_maxShape (numProofs : ℕ) :
     actionCircuit.shape.withProofParams (actionProofParamsFor numProofs) =
-      Zcash.Snark.FixtureMax.shape numProofs := by
+      Zcash.Snark.CapturedShape.shape numProofs := by
   rw [actionShapeFor_eq_fixtureShape]
   rfl
 
@@ -1155,19 +1158,19 @@ private theorem actionCompressedStatisticalModelFor_le_consensus
     {numProofs Q : ℕ} (hn : numProofs ≤ orchardConsensusMaxProofs)
     (hQ : Q ≤ 2 ^ 123) :
     actionCompressedStatisticalModelFor numProofs Q ≤
-      Zcash.Snark.FixtureMax.consensusStraightLineStatisticalModel (2 ^ 123) := by
+      Zcash.Snark.Capstone.consensusStraightLineStatisticalModel (2 ^ 123) := by
   have hk : actionCircuit.domainExponent = 11 := by
     exact action_domainExponent_eq
   have hroot :
       algebraicRootBudget
           (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)) 11 ≤
         algebraicRootBudget
-          (Zcash.Snark.FixtureMax.shape orchardConsensusMaxProofs) 11 := by
+          (Zcash.Snark.CapturedShape.shape orchardConsensusMaxProofs) 11 := by
     rw [actionProofShape_eq_maxShape]
-    exact Zcash.Snark.FixtureMax.algebraicRootBudget_at_captured_shape_le_consensus_max hn
+    exact Zcash.Snark.CapturedShape.algebraicRootBudget_at_captured_shape_le_consensus_max hn
   rw [actionCompressedStatisticalModelFor,
-    Zcash.Snark.FixtureMax.consensusStraightLineStatisticalModel,
-    Zcash.Snark.FixtureMax.consensusPinnedRootMultiopenModel,
+    Zcash.Snark.Capstone.consensusStraightLineStatisticalModel,
+    Zcash.Snark.CapturedShape.consensusPinnedRootMultiopenModel,
     hk]
   gcongr
   all_goals first | exact hroot | assumption_mod_cast | norm_num
@@ -1181,13 +1184,13 @@ theorem actionStatisticalModelFor_at_2pow123 {numProofs Q : ℕ}
     actionStatisticalModelFor numProofs Q =
         actionCompressedStatisticalModelFor numProofs Q +
           actionSemanticModelFor numProofs Q := rfl
-    _ ≤ Zcash.Snark.FixtureMax.consensusStraightLineStatisticalModel (2 ^ 123) +
+    _ ≤ Zcash.Snark.Capstone.consensusStraightLineStatisticalModel (2 ^ 123) +
         1 / (2 ^ 84 : ENNReal) :=
       add_le_add (actionCompressedStatisticalModelFor_le_consensus hn hQ)
         (actionSemanticModelFor_at_2pow123 hn hQ)
     _ ≤ 1 / (2 ^ 84 : ENNReal) + 1 / (2 ^ 84 : ENNReal) := by
       gcongr
-      exact Zcash.Snark.FixtureMax.consensusStraightLineStatisticalModel_at_2pow123
+      exact Zcash.Snark.Capstone.consensusStraightLineStatisticalModel_at_2pow123
     _ ≤ 1 / (2 ^ 83 : ENNReal) := by
       rw [ENNReal.div_add_div_same]
       apply (ENNReal.le_div_iff_mul_le (Or.inl (by norm_num))
@@ -2665,4 +2668,4 @@ theorem orchard_action_sequential_bundle_soundness_finite_security
   intro actual εBias hbias
   exact event_measure_le_of_bias hbias _ hprob
 
-end Zcash.Snark.Fixture
+end Zcash.Snark.Capstone

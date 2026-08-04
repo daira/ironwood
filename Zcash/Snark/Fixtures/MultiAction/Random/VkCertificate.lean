@@ -13,7 +13,7 @@ keygen certificate (`Keygen/Certificate.lean`) along the cross-capture point equ
 the circuit-owned shape, so the proof count does not enter this transport.
 -/
 
-namespace Zcash.Snark.FixtureRandom2
+namespace Zcash.Snark.CapturedMultiRandom
 
 open Zcash.Snark
 open Zcash.Snark.PostNu63Fixture
@@ -38,4 +38,4 @@ theorem vk_eq_derived : vk = derivedVk := by
 
 assert_no_sorry vk_eq_derived
 
-end Zcash.Snark.FixtureRandom2
+end Zcash.Snark.CapturedMultiRandom

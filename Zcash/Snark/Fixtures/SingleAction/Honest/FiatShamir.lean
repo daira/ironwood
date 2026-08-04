@@ -14,7 +14,7 @@ The Rust capture supplies trusted typed data, events, and challenges, not transc
 ordering is proved elsewhere; the multi-action fixture checks per-proof interleaving.
 -/
 
-namespace Zcash.Snark.Fixture
+namespace Zcash.Snark.CapturedSingle
 
 open Zcash.Snark
 
@@ -159,4 +159,4 @@ theorem nonInteractiveFingerprint_matches :
   rw [deriveChallengesForStatement_matches_captured_schedule]
   exact fingerprint_matches
 
-end Zcash.Snark.Fixture
+end Zcash.Snark.CapturedSingle
