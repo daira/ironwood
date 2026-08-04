@@ -78,7 +78,7 @@ def MultiopenAssemblyCovered (vk : VerifyingKey shape Fp VestaG)
 
 /-- Construct the aggregate coordinates by looking up every appended MSM point in the fixed
 representation source.  This removes the unconstrained choice of `aMulti`: its dependence on
-`x1,...,x4` is now exactly the verifier's public MSM scalar dependence. -/
+`x1,...,x4` is exactly the verifier's public MSM scalar dependence. -/
 def AlgebraicWfProof.ofOnlineMultiopenRepresented
     {vk : VerifyingKey shape Fp VestaG}
     {instanceCommitment : Fin shape.numProofs -> Nat -> VestaG}

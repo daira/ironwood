@@ -11,28 +11,24 @@ import Zcash.Common.RelationWitness
 /-!
 # Pricing the new challenge surfaces
 
-The permutation and lookup chain conditions on more challenges than the quotient check's `x`: the
-fold split conditions on `y`, the multiset bridge on `β` and `γ`, the tuple decompression on `θ`,
-and every telescoped result carries a vanishing-factor escape branch. Each is a root-set event, and
-this module prices them all the same way `hgood` is priced — a uniform-challenge measure bound per
-event, from `uniformChallenge_badSet` and a root count.
+The permutation and lookup chains condition on more challenges than the quotient check's `x`: the
+fold split on `y`, the multiset bridge on `β` and `γ`, the tuple decompression on `θ`, and every
+telescoped result carries a vanishing-factor escape. Each is a root-set event, priced the way
+`hgood` is — a uniform-challenge measure bound from `uniformChallenge_badSet` and a root count.
 
-* `uniformChallenge_szBadSet_iUnion_le` — the shared union bound: finitely many root sets, each of
-  degree at most `d`, cost at most `N·d / p` together.
-* `goodY_failure_measure_le` — the fold split's `y` surface.
-* `perm_gamma/beta_failure_measure_le` — the permutation bridge's two surfaces.
-* `lookup_gamma/beta_failure_measure_le` — the lookup product bridge's two surfaces.
-* `escape_measure_le` — a vanishing-factor branch, as the root set of the product of its factors.
-* `theta_failure_measure_le` — the decompression's pairwise `θ` surface.
+* `uniformChallenge_szBadSet_iUnion_le` — the shared union bound: `N` root sets of degree at most
+  `d` cost `N·d / p` together.
+* `goodY_failure_measure_le`, `perm_gamma/beta_failure_measure_le`,
+  `lookup_gamma/beta_failure_measure_le`, `theta_failure_measure_le` — the individual surfaces.
+* `escape_measure_le` — a vanishing-factor branch, as the root set of its factors' product.
 
-Sequential conditioning across the squeezes is the same coupling hook `hgood` carries — the data
-each root set is built from is pinned in the transcript before its challenge is squeezed (θ after
-the advice commitments, β and γ after θ, y after the lookup commitments, x last) — documented with
-the deployed constraint decoder's `hfold`/`hgood` surfaces and not re-derived here.
+Sequential conditioning across the squeezes is the coupling `hgood` already carries: each root
+set's data is pinned in the transcript before its challenge is squeezed (`θ` after the advice
+commitments, `β` and `γ` after `θ`, `y` after the lookup commitments, `x` last). It is documented
+with the deployed constraint decoder's surfaces, not re-derived here.
 
-The final section collects the bundle-wide resolver *permutation* prices — the `β` and `γ` surfaces
-for every proof's copy argument — alongside the generic and lookup surfaces above, so a single module
-carries the whole challenge-pricing story.
+The final section adds the bundle-wide resolver permutation prices, so one module carries the
+whole challenge-pricing story.
 -/
 
 -- The semantic terminal API consumes four explicit bad-event bounds, one for each surface below.

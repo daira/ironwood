@@ -5,17 +5,14 @@ import Zcash.Snark.Soundness.Multiopen.Deployed
 /-!
 # The routed vanishing-slot fold, carrying its break as data
 
-Upstream replaced the budgeted capstone lane wholesale with the rewind-free AGM route and deleted
-`Soundness.VestaBudget` with it. Two declarations from that file are still consumed by the
-canonical quotient terminal and have no upstream counterpart in this shape: main's
-`AGM.DeployedConstraintSupply.hfold_of_constraint_polys_of_xn_ne_direct` is *relation-free* —
-there the break branch is discharged ahead of the fold by the AGM decode rather than threaded
-through it as `hbindAll`, so it is not a drop-in for a caller that does thread it.
+Two fold declarations consumed by the canonical quotient terminal, threading the break branch
+through the fold as `hbindAll` and carrying it as `⊕' NontrivialRelation` rather than the vacuous
+`∨ HasNontrivialRelation`.
 
-They are kept here unchanged apart from carrying `⊕' NontrivialRelation` in place of the vacuous
-`∨ HasNontrivialRelation`, so the terminal keeps building across the merge. Retiring this module
-in favour of the AGM route is follow-up work; it is a change to how the terminal obtains its
-premises, not a repair to this fold.
+`AGM.DeployedConstraintSupply.hfold_of_constraint_polys_of_xn_ne_direct` is the relation-free
+counterpart: it discharges the break branch ahead of the fold, in the AGM decode, so it is not a
+drop-in for a caller that threads one. Moving the terminal onto that route is a change to how it
+obtains its premises, not a repair to this fold.
 -/
 
 namespace Zcash.Snark

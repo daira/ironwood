@@ -140,13 +140,15 @@ further point exclusions. Other transcript surfaces and adaptive query loss are 
 their composition modules. -/
 
 open scoped ENNReal in
-/-- **The composed exclusion budget.** A uniform challenge avoids *both* the Schwartz–Zippel bad set
-of the constraint difference `C` *and* a finite set `extra` of additional excluded points — the
-`z = 0` and `ξ`-recovery singletons, and any further per-hypothesis point exclusions — except on a
-set of measure at most `(natDegree C + |extra|) / p`. The several `d / p` and `1 / p` budgets over
-one fresh `Fp` squeeze, combined by subadditivity into a single bound: a run avoiding all of them at
-once is priced once. (`extra` is an arbitrary finite set, so any collection of point exclusions
-composes; challenge surfaces over other squeeze domains are priced separately.) -/
+/-- **The composed exclusion budget.** A uniform challenge avoids *both* the Schwartz–Zippel bad
+set of the constraint difference `C` *and* a finite set `extra` of further excluded points, except
+on a set of measure at most `(natDegree C + |extra|) / p`. `extra` holds the `z = 0` and
+`ξ`-recovery singletons and any per-hypothesis point exclusions.
+
+This is the several `d / p` and `1 / p` budgets over one fresh `Fp` squeeze, combined by
+subadditivity: a run avoiding all of them at once is priced once. Any collection of point
+exclusions composes, since `extra` is an arbitrary finite set. Challenge surfaces over other
+squeeze domains are priced separately. -/
 theorem uniformChallenge_szBadSet_union (C : CPoly) (extra : Finset Fp) :
     uniformChallenge.toOuterMeasure ((szBadSet C ∪ extra : Finset Fp))
       ≤ ((C.natDegree + extra.card : ℕ) : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞) := by

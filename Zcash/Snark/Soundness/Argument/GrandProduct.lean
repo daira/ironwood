@@ -5,26 +5,23 @@ import Zcash.Common.CPolynomial
 /-!
 # The grand-product-to-multiset kernel (permutation & lookup soundness)
 
-The shared algebraic core that both halo2's permutation and lookup *argument* soundness reduce to.
-Both arguments enforce their relation by a **grand product of factors linear in the challenges**, and
-the soundness step is the same: such a product, equal at the random challenge, forces the underlying
-multiset identity.
+Both halo2 arguments enforce their relation by a **grand product of factors linear in the
+challenges**, and both reduce to the same soundness step: such a product, equal at the random
+challenge, forces the underlying multiset identity. This file isolates that step. It rests on the
+roots theory `CPolynomial` wraps from Mathlib, but nothing here is stated or proved through
+`Polynomial`.
 
-This file isolates that core. It rests on the roots theory `CPolynomial` wraps from Mathlib — a
-product over a domain is determined by its roots — but nothing here is stated or proved through
-`Polynomial`:
+* `prod_cX_add_u_inj` — equal products of the monic linear factors `X + uᵢ` force equal multisets
+  `{uᵢ}`: a product is determined by its roots.
+* `card_eval_prod_eq_le` — univariate Schwartz–Zippel: for distinct multisets, the challenges
+  where the field products collide form a bad set of size `≤ max |s| |t|`.
+* `prod_cpair_inj` — the same for factors carrying `(value, name)` pairs, by running the first
+  lemma over `R = F[β]`. The permutation argument needs this; the lookup argument instead uses
+  `prod_cX_add_u_inj` twice, with independent `β` and `γ`.
 
-* `prod_cX_add_u_inj` (**products can represent multisets**): equal products of the monic linear
-  factors `X + uᵢ` force equal multisets `{uᵢ}` — a product is determined by its roots.
-* `card_eval_prod_eq_le` (**univariate Schwartz–Zippel at a point**): for distinct multisets, the
-  challenges where the field products collide form a bad set of size `≤ max |s| |t|`.
-* `prod_cpair_inj` (**products can represent multisets of pairs**): the same for factors carrying
-  `(value, name)` pairs, by running the first lemma over `R = F[β]` — what the permutation
-  argument needs; the lookup argument uses `prod_cX_add_u_inj` twice with independent `β`, `γ`.
-
-The per-argument wrappers — telescoping the running product over the domain, the boundary / blinding-row
-rules, and (for lookup) the permuted-column structure — build on this in `Permutation.lean` /
-`Lookup.lean`, where the structural steps are proven and the telescoping step remains open.
+The per-argument wrappers — telescoping the running product, the boundary and blinding-row rules,
+and the lookup permuted-column structure — build on this in `Permutation.lean` and `Lookup.lean`,
+where the structural steps are proven and telescoping remains open.
 -/
 
 namespace Zcash.Snark

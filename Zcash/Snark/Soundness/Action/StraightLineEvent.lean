@@ -557,7 +557,8 @@ theorem StraightLineActionDirectDlogProfile.knowledgeExtractorCost_le
       forall basis O, 2 * family.straightLineDirectDecodeOps basis O <= T := by
   simpa only [actionKnowledgeExtractorOracleQueryCost_eq] using profile.solverCost_le
 
-/-- The combined finder exactly extends the old constraint finder on every successful old branch.
+/-- The combined finder exactly extends the constraint finder on every branch where that finder
+succeeds.
 -/
 theorem actionRelationFinder_extends_constraint
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)

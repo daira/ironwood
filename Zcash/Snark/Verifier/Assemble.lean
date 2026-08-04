@@ -11,25 +11,22 @@ import Zcash.Snark.Verifier.Key
 /-!
 # Assembling the fingerprint MSM
 
-This module composes the verified building blocks into the verifier's MSM assembly, in the exact order
-of halo2 `plonk/verifier.rs`. It is the Lean image of the interactive verifier: a pure function of the
-proof string, the challenges, and the verifying-key–level circuit structure.
+The Lean image of the interactive verifier: a pure function of the proof string, the challenges,
+and the verifying-key–level circuit structure, composed in the exact order of halo2
+`plonk/verifier.rs`. Three stages:
 
-The assembly factors into three stages:
+* `assembleQueries` — recompute the vanishing `h` commitment and `expected_h_eval`, then build the
+  ordered opening-query list (per sub-proof: instance, advice, permutation, lookups; then shared:
+  fixed, permutation-common, vanishing).
+* `constructIntermediateSets` — group that flat list into per-point-set commitment and evaluation
+  data. VK-fixed bookkeeping, re-derived in Lean rather than supplied, and exercised by the
+  `native_decide` fingerprint match.
+* `assembleFinalMsm` — the multiopen `x₁` compression and `x₄` collapse, then the IPA fold,
+  producing the final MSM.
 
-* `assembleQueries` (the upstream) — recompute the vanishing `h` commitment and `expected_h_eval`, then
-  build the full ordered list of opening queries (per sub-proof: instance, advice, permutation, lookups;
-  then shared: fixed, permutation-common, vanishing).
-* `constructIntermediateSets` — group the flat query list into per-point-set commitment and
-  evaluation data: VK-fixed bookkeeping, re-derived in Lean rather than supplied, and exercised
-  by the `native_decide` fingerprint match.
-* `assembleFinalMsm` (the downstream) — takes the `MultiopenGrouped`, then the multiopen `x₁` compression
-  and `x₄` collapse, then the IPA fold, producing the final MSM.
-
-The verifying-key data (`VerifyingKey`) — gate polynomials, query layouts, fixed/permutation
-commitments, the permutation column/eval chunking, lookup expressions — is circuit-fixed and supplied as
-input; the instance commitments are statement-derived (the verifier computes them from the public
-instances) and bundled here for the assembly.
+`VerifyingKey` is circuit-fixed and supplied as input. The instance commitments are
+statement-derived — the verifier computes them from the public instances — and bundled here for
+the assembly.
 -/
 
 namespace Zcash.Snark

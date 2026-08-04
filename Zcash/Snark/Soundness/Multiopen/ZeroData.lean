@@ -327,10 +327,10 @@ theorem multiopenCombine_fst_zeroData [Field F] [Zero G] (x4 : F) {qPrime : G}
 
 /-! ## The keystone -/
 
-/-- **The assembled multiopen MSM of zero data is zero-data, at every shape.**  A verifying key
-whose two group-valued commitment families are zero, zero instance commitments, and the zero proof
-string assemble — through whatever scalar layouts the key carries — an MSM whose basis scalars
-vanish and whose every appended point is the zero point. -/
+/-- **The assembled multiopen MSM of zero data is zero-data, at every shape.** Take a verifying
+key whose two group-valued commitment families are zero, zero instance commitments, and the zero
+proof string. They assemble an MSM whose basis scalars vanish and whose every appended point is
+the zero point, through whatever scalar layouts the key carries. -/
 theorem assembledMsm_zeroData {shape : Shape} [Field F] [DecidableEq F]
     [DecidableEq G] [Inhabited G] [Zero G]
     (hdefault : (default : G) = 0)

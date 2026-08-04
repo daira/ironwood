@@ -506,8 +506,8 @@ theorem actionYBadSet_probability_bound
 
 The public adversary model supplies executable phases whose *outputs* are the data emitted before
 each semantic squeeze.  `ActionSequentialExecution.toCuts` below generates the five cuts and all
-state views.  `ActionSequentialCuts` remains only the internal product consumed by the four
-counting lemmas; it is no longer an input to the public capstone.
+state views.  `ActionSequentialCuts` is the internal product consumed by the four counting
+lemmas, not an input to the public capstone.
 -/
 
 /-- Data emitted before `θ`: the represented query-column polynomials. -/

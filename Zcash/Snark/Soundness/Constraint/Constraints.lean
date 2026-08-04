@@ -433,13 +433,15 @@ theorem eval_combineConstraints_deployed {shape : Shape} {G : Type*}
   simp only [funext hfixed, funext fun p => funext (hadvice p), funext fun p => funext (hinstance p),
     funext hsets, funext hchunks, funext hlookups]
 
-/-- **Gate transport (in-Lean).** If the fed columns evaluate at `x` to the claimed values
-(`hfixed`/`hadvice`/`hinstance` — the node binding, once `rotatedFeed`'s `ω^rot` is folded in) and the
-`y`-fold of the gates over those claimed values is the committed quotient's contribution
-`hpoly(x)·(xⁿ − 1)` (`hfold` — halo2's `expectedHEval` identity), then the verifier's quotient check
-holds. This is the step that turns the multiopen value check's node binding into `hquot`; nothing here
-is a trust surface — `hfold` is definitional in `expectedHEval` once the gate structure is the
-deployed one. -/
+/-- **Gate transport (in-Lean).** The verifier's quotient check holds given two things: the fed
+columns evaluate at `x` to the claimed values (`hfixed`/`hadvice`/`hinstance`, the node binding
+once `rotatedFeed`'s `ω^rot` is folded in), and the `y`-fold of the gates over those claimed values
+is the committed quotient's contribution `hpoly(x)·(xⁿ − 1)` (`hfold`, halo2's `expectedHEval`
+identity).
+
+This is the step that turns the multiopen value check's node binding into `hquot`. It is not a
+trust surface: `hfold` is definitional in `expectedHEval` once the gate structure is the deployed
+one. -/
 theorem quotientCheck_of_claimed {ng : ℕ}
     (fixedCols adviceCols instanceCols : ℕ → CPoly) (y : Fp) (gates : Fin ng → Expr Fp)
     (hpoly : CPoly) (deg : ℕ) (x : Fp)

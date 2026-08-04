@@ -6,8 +6,8 @@ import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
 
 The DLOG advantage remains an explicit finite-security profile.  This file evaluates the
 information-theoretic terms, connects the implemented direct-coordinate cost, and records the
-tight three-bit query/group-work interpretation.  The older caller-supplied five-bit
-envelope remains only as a compatibility theorem.
+tight three-bit query/group-work interpretation, with a caller-supplied five-bit envelope
+kept as a compatibility theorem.
 -/
 
 namespace Zcash.Snark.Capstone

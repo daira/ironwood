@@ -9,29 +9,23 @@ import Zcash.Snark.Soundness.Constraint.Constraints
 /-!
 # From the verifier's product check to the multiset identity
 
-`GrandProduct` proves that a product of linear factors determines a multiset — but over polynomials,
-with `β` and `γ` as indeterminates. The verifier does not check a polynomial identity. It checks one
-field element, the product evaluated at the two challenges it actually sampled.
+`GrandProduct` proves that a product of linear factors determines a multiset, but over
+polynomials with `β` and `γ` as indeterminates. The verifier checks one field element instead:
+that product at the two challenges it sampled. This module bridges the two, at one
+Schwartz–Zippel step per challenge.
 
-This module is that bridge, and it costs two Schwartz–Zippel steps, one per challenge:
-
-* `map_eq_of_prod_eval_eq` — a good `γ` turns the field product identity into equality of the
-  multisets of `value + β·name`. The bad set is the roots of the difference in `γ`.
+* `map_eq_of_prod_eval_eq` — a good `γ` turns the field identity into equality of the multisets
+  of `value + β·name`.
 * `multiset_pair_eq_of_map_eq` — a good `β` turns that into equality of the multisets of
-  `(value, name)` *pairs*. The bad set is the roots of one coefficient of `pairProdDiff`, the
-  difference `prod_pair_inj` shows is nonzero whenever the pairs differ.
-* `multiset_pair_eq_of_prod_eval_eq` — the two composed, which is what the permutation argument
-  consumes: a product identity at the sampled challenges gives the multiset of pairs that
-  `perm_copy_constraints` turns into the copy constraints.
+  `(value, name)` pairs, through the nonzero `pairProdDiff` of `prod_pair_inj`.
+* `multiset_pair_eq_of_prod_eval_eq` — the composition the permutation argument consumes.
 
-Both bad sets are root sets of nonzero polynomials of degree at most the multiset sizes, so each is
-counted by `szBadSet_card_le` exactly like the vanishing check's.
+Both bad sets are root sets of nonzero polynomials of degree at most the multiset sizes, so
+`szBadSet_card_le` counts them exactly as for the vanishing check.
 
-The differences `pairProdDiff` and `lookupProdDiff` are bivariate, carrying `β` and `γ` as separate
-indeterminates: the outer variable is `γ`, the coefficients are polynomials in `β`. A `γ`
-coefficient is an elementary symmetric function of the `β`-linear encodings (Vieta), zero above the
-multiset size where the monic product has no coefficients left. Fixing `β` is mapping the
-coefficient ring by evaluation at `β`.
+`pairProdDiff` and `lookupProdDiff` are bivariate, `γ` outer with coefficients in `β`: a `γ`
+coefficient is an elementary symmetric function of the `β`-linear encodings (Vieta), zero above
+the multiset size. Fixing `β` maps the coefficient ring by evaluation.
 -/
 
 namespace Zcash.Snark

@@ -5,22 +5,20 @@ import Zcash.Snark.Soundness.Composition.StraightLineWitness
 # The straight-line deployed interface, inhabited with live IPA rounds
 
 `zeroStraightLineDeployedFamily` inhabits the straight-line deployed interface over the
-shape-generic zero prover, with the IPA-round obligations live: at `k = 11` the staged trace
-carries eleven rounds, each discharged by `straightLineIpaRootPolynomial_of_zero_coordinates`
-rather than by an empty index type.  `Composition.StraightLineWitness` inhabits the same
-interface at the witness shape, where `k = 0` empties those obligations.
+shape-generic zero prover with the IPA-round obligations live: at `k = 11` the staged trace carries
+eleven rounds, each discharged by `straightLineIpaRootPolynomial_of_zero_coordinates` rather than by
+an empty index type. `Composition.StraightLineWitness` inhabits the same interface at `k = 0`, where
+those obligations are empty.
 
-Two hypotheses carry it.  The key's two group-valued commitment families are zero, which is what
-the zero prover's assembly needs.  And the shape is instance-free, which is what discharges the
-constraint layer: with no sub-proofs the folded constraint list is empty and the decoded quotient
-pieces have zero coordinates, so the pre-`x` constraint difference is the zero polynomial and the
-constraint-`x` root set is empty on every table.
+Two hypotheses carry it. The key's two group-valued commitment families are zero, which the zero
+prover's assembly needs. And the shape is instance-free, which discharges the constraint layer: with
+no sub-proofs the folded constraint list is empty and the decoded quotient pieces have zero
+coordinates, so the pre-`x` constraint difference is the zero polynomial and the constraint-`x` root
+set is empty on every table.
 
-The instance-free hypothesis is a simplification, not a boundary.  With the total
-constraint-`x` event, `zeroConstStraightLineDeployedFamily` below discharges every obligation at
-any shape: the constant-walk IPA trace leaves the multiopen value free, and the constraint-`x`
-stage prices the explicit zero-data difference from the four folding squeezes alone.
-`Fixtures.MultiAction.Honest.CapturedZeroFamily` instantiates it with both sub-proofs live.
+Instance-freeness is a simplification, not a boundary. `zeroConstStraightLineDeployedFamily` below
+discharges every obligation at any shape, and `Fixtures.MultiAction.Honest.CapturedZeroFamily` instantiates
+it with both sub-proofs live.
 -/
 
 namespace Zcash.Snark
