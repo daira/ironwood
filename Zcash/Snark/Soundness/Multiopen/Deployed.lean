@@ -6,30 +6,22 @@ import Zcash.Snark.Soundness.Multiopen.Compat
 /-!
 # The deployed multiopen statement is a flat power batch in the `x₄` collapse
 
-The decoded-column layer (`Soundness.Multiopen.Decode`) consumes batched openings in flat power form —
-`P = Σⱼ ξʲ • Cⱼ` and `v = Σⱼ ξʲ • eⱼ` at distinct batching challenges `ξ` — and until now that form was a
-*model boundary*: the flat-batch family carried the power shape of the deployed statement as
-the assumptions `hP`/`hv`. This module discharges them against the deployed verifier. As a function of the
-`x₄` squeeze, the pinned `deployedCommitment`/`multiopenValue` *are* flat power batches
-(`deployedCommitment_x4_batch`/`multiopenValue_x4_batch`), and the coefficient families are read off the
-fingerprinted `constructIntermediateSets` grouping (`x4BatchCommitments`/`x4BatchEvals`):
+`Soundness.Multiopen.Decode` consumes batched openings in flat power form — `P = Σⱼ ξʲ • Cⱼ` and
+`v = Σⱼ ξʲ • eⱼ` at distinct `ξ` — which the flat-batch family carries as the assumptions
+`hP`/`hv`. This module discharges them: as a function of the `x₄` squeeze the pinned
+`deployedCommitment` and `multiopenValue` *are* flat power batches
+(`deployedCommitment_x4_batch`, `multiopenValue_x4_batch`), with coefficients read off the
+fingerprinted `constructIntermediateSets` grouping.
 
-* power `ξ^j` for `j <` the pair count carries an `x₁`-compressed point-set aggregate `qᵢ` and its claimed
-  set evaluation `uᵢ` — in *reverse* processing order, because the deployed collapse folds
-  `acc ↦ ξ·acc + next` so the last set processed carries `ξ⁰`;
-* the top power carries the prover's quotient commitment `q′` and the recomputed base evaluation
-  `msm_eval` (`deployedBaseEval`).
+Power `ξ^j` below the pair count carries an `x₁`-compressed aggregate `qᵢ` and its claimed set
+evaluation `uᵢ`, in *reverse* processing order: the collapse folds `acc ↦ ξ·acc + next`, so the
+last set processed carries `ξ⁰`. The top power carries the prover's quotient commitment `q′` and
+the recomputed `deployedBaseEval`.
 
-So the batch the decode consumes is the deployed grouping itself — per the fingerprint-equivalence principle the decode
-*consumes* the fingerprint-validated `constructIntermediateSets` output rather than re-modeling the
-batching as an independent flat power series; no separate "flat model = deployed" obligation is left at
-the `x₄` level. The batch "columns" at this level are the multiopen aggregates (`qᵢ`, `q′`), not the
-circuit columns: unbatching *within* a point set is the `x₁` layer, one level down.
-
-The AGM decode route closes the chain down to the actual member commitments with explicit
-`AlgebraicPowerBatch` data, then presents those coordinates through `OpenedBatchOpenings` and
-`OpenedMemberDecode`. This module supplies only the deterministic verifier algebra and grouping
-identities used by that route; it contains no accept-measure or rewind-run extraction API.
+So the decode consumes the deployed grouping itself, leaving no separate "flat model = deployed"
+obligation at the `x₄` level. The batch columns here are the multiopen aggregates, not circuit
+columns; unbatching within a point set is the `x₁` layer, one level down. This module supplies
+only deterministic verifier algebra — no accept-measure or rewind-extraction API.
 -/
 
 namespace Zcash.Snark

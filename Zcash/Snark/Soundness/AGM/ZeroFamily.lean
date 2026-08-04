@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.ZeroData
+import Zcash.Snark.Soundness.Multiopen.ZeroData
 import Zcash.Snark.Soundness.AGM.AdaptiveOnline
 import Zcash.Snark.Soundness.AGM.PinnedRootWitness
 import Zcash.Snark.Soundness.AGM.DirectX4Columns

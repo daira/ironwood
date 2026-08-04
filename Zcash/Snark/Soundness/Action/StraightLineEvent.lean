@@ -462,6 +462,7 @@ def actionRelationFinderCalls
         + 3 * (actionCircuit.shape.withProofParams pp).k) → Fp) : Nat :=
   family.straightLineConstraintRelationFinderCalls basis O + 2
 
+/-- The combined constraint and Action relation finder uses at most six represented runs. -/
 theorem actionRelationFinderCalls_le_six
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
     (O : BTranscript Fp VestaG
@@ -472,22 +473,25 @@ theorem actionRelationFinderCalls_le_six
   have hcalls := family.straightLineConstraintRelationFinderCalls_le_four basis O
   omega
 
-/-- Random-oracle work of the combined constraint-plus-Action solver.  All six represented prover
-runs include their own `11+k` designated transcript reads; no cache-sharing convention is assumed.
--/
-def actionDlogRandomOracleQueries : Nat :=
+/-- The numeric random-oracle query cost of the combined constraint-plus-Action solver.  All six
+represented prover runs include their own `11+k` designated transcript reads; no cache-sharing
+convention is assumed.  This definition is the cost; fixture theorems separately prove ceilings
+on it. -/
+def actionDlogOracleQueryCost : Nat :=
   6 * family.Q + 6 * (11 + actionCircuit.domainExponent)
 
-/-- The sequential witness extractor is the other projection of the same six-call outcome. -/
-def actionKnowledgeExtractorRandomOracleQueries : Nat :=
-  actionDlogRandomOracleQueries pp family
+/-- The sequential witness extractor's numeric oracle-query cost.  It is the other projection of
+the same six-call outcome. -/
+def actionKnowledgeExtractorOracleQueryCost : Nat :=
+  actionDlogOracleQueryCost pp family
 
-@[simp] theorem actionKnowledgeExtractorRandomOracleQueries_eq :
-    actionKnowledgeExtractorRandomOracleQueries pp family =
-      actionDlogRandomOracleQueries pp family := rfl
+/-- The knowledge extractor shares the combined finder's oracle-query cost. -/
+@[simp] theorem actionKnowledgeExtractorOracleQueryCost_eq :
+    actionKnowledgeExtractorOracleQueryCost pp family =
+      actionDlogOracleQueryCost pp family := rfl
 
-/-- Group-work envelope of the combined solver.  Terminal comparison work is included in the
-explicit reduction component. -/
+/-- The combined solver's numeric group-work cost.  Terminal comparison work is included in the
+explicit reduction component; fixture theorems separately prove ceilings on this cost. -/
 def actionDlogGroupWork (proverGroupWork reductionGroupWork : Nat) : Nat :=
   6 * proverGroupWork + reductionGroupWork
 
@@ -500,7 +504,7 @@ structure StraightLineActionDlogProfile (B : VestaG) where
     advantage q g ≤ advantage q' g'
   hardness : TextbookDLWithCoinsAdvantageLE B
     (actionRelationFinder pp family static inputs hvk hI hchar)
-    (advantage (actionDlogRandomOracleQueries pp family)
+    (advantage (actionDlogOracleQueryCost pp family)
       (actionDlogGroupWork proverGroupWork reductionGroupWork))
 
 /-- Direct-route profile covering prover, postprocessing, and both possible decoder executions. -/
@@ -519,11 +523,11 @@ theorem StraightLineActionDirectDlogProfile.solverCost_le
     {B : VestaG} {T : Nat}
     (profile : StraightLineActionDirectDlogProfile pp family static inputs
       hvk hI hchar B T) :
-    actionDlogRandomOracleQueries pp family <= 8 * T /\
+    actionDlogOracleQueryCost pp family <= 8 * T /\
       actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork <= 8 * T /\
       forall basis O, 2 * family.straightLineDirectDecodeOps basis O <= T := by
   constructor
-  · unfold actionDlogRandomOracleQueries
+  · unfold actionDlogOracleQueryCost
     have hT := profile.scheduleOverheadBound
     calc
       6 * family.Q + 6 * (11 + actionCircuit.domainExponent) <=
@@ -547,12 +551,13 @@ theorem StraightLineActionDirectDlogProfile.knowledgeExtractorCost_le
     {B : VestaG} {T : Nat}
     (profile : StraightLineActionDirectDlogProfile pp family static inputs
       hvk hI hchar B T) :
-    actionKnowledgeExtractorRandomOracleQueries pp family <= 8 * T /\
+    actionKnowledgeExtractorOracleQueryCost pp family <= 8 * T /\
       actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork <= 8 * T /\
       forall basis O, 2 * family.straightLineDirectDecodeOps basis O <= T := by
-  simpa only [actionKnowledgeExtractorRandomOracleQueries_eq] using profile.solverCost_le
+  simpa only [actionKnowledgeExtractorOracleQueryCost_eq] using profile.solverCost_le
 
-/-- The combined finder exactly extends the old constraint finder on every successful old branch.
+/-- The combined finder exactly extends the constraint finder on every branch where that finder
+succeeds.
 -/
 theorem actionRelationFinder_extends_constraint
     (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG)
@@ -573,9 +578,9 @@ theorem actionRelationFinder_extends_constraint
       rw [hout]
       rfl
 
-/-- Generator-random-oracle bound for compressed failure union the complete Action relation event.
-The combined DLOG advantage occurs once. -/
-theorem actionBaseUnion_prob_le_of_dlogProfile
+/-- Generator-random-oracle probability bound for the union of compressed failure and the complete
+Action relation event.  The combined DLOG advantage occurs once. -/
+theorem actionBaseUnion_probability_bound_of_dlogProfile
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → T)
@@ -599,7 +604,7 @@ theorem actionBaseUnion_prob_le_of_dlogProfile
         (family.Q + (11 + (actionCircuit.shape.withProofParams pp).k) + 1 : Nat) *
           algebraicRootBudget (actionCircuit.shape.withProofParams pp)
             (actionCircuit.shape.withProofParams pp).k +
-        (profile.advantage (actionDlogRandomOracleQueries pp family)
+        (profile.advantage (actionDlogOracleQueryCost pp family)
             (actionDlogGroupWork profile.proverGroupWork profile.reductionGroupWork) +
           1 / Fintype.card Fp) +
         (family.Q + 1 : Nat) * epsilonX := by
@@ -614,10 +619,7 @@ theorem actionBaseUnion_prob_le_of_dlogProfile
     (actionRelationFinder_extends_constraint pp family static inputs hvk hI hchar)
     schedule profile.hardness
 
-/-- **Exact Action-statement containment.**  Outside the compressed decode failure and the four
-challenge surfaces, a false Action statement forces the good-run terminal onto its relation
-branch.  A covering computed finder therefore turns that branch into the explicit event priced
-by DLOG. -/
+/-- Outside decode and semantic failures, false acceptance forces the terminal relation branch. -/
 theorem actionBundleStatementUpgradeContained
     (finder :
       (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG) →
@@ -645,9 +647,7 @@ theorem actionBundleStatementUpgradeContained
   refine Or.inr (Or.inr (Or.inr (Or.inr ?_)))
   exact hcovers q.1 q.2 hdecoded hXY hBeta hGamma hTheta hfalse
 
-/-- Literal accepting-false-Action runs are covered by the *single* base union (compressed decode
-failure or the combined relation finder) plus the four semantic challenge surfaces.  The finder
-event is not added again after the compressed bound. -/
+/-- False Action-statement acceptance lies in one base union plus four semantic surfaces. -/
 theorem actionBundleStatementFailure_subset_union
     (finder :
       (basis : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → VestaG) →
@@ -677,8 +677,9 @@ theorem actionBundleStatementFailure_subset_union
     · exact Or.inl (Or.inr hrelation)
   · exact Or.inl (Or.inl ⟨haccept, hdecoded⟩)
 
-/-- Exact Action probability composition with the combined relation event priced once. -/
-theorem actionBundleStatementFailure_prob_le_of_base_union_bound
+/-- Probability bound for exact Action-statement failure from a supplied base-union bound, with
+the combined relation event priced once. -/
+theorem actionBundleStatementFailure_probability_bound_of_baseUnionBound
     {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → T)
     (finder :
@@ -735,9 +736,9 @@ theorem actionBundleStatementFailure_prob_le_of_base_union_bound
   refine le_trans (MeasureTheory.measure_union_le _ _) ?_
   exact add_le_add hGamma hTheta
 
-/-- End-to-end straight-line Action knowledge soundness, factored through the same profiled base
-union and four semantic challenge bounds as the ordinary-soundness endpoint. -/
-theorem actionKnowledgeFailure_prob_le_of_base_union_bound
+/-- Probability bound for end-to-end straight-line Action knowledge failure, factored through the
+same profiled base-union and four semantic challenge bounds as the ordinary-soundness endpoint. -/
+theorem actionKnowledgeFailure_probability_bound_of_baseUnionBound
     {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → T)
     {baseBound xyBound betaBound gammaBound thetaBound : ENNReal}
@@ -787,9 +788,9 @@ theorem actionKnowledgeFailure_prob_le_of_base_union_bound
   refine le_trans (MeasureTheory.measure_union_le _ _) ?_
   exact add_le_add hGamma hTheta
 
-/-- Bounds literal false-statement acceptance, leaving the computed relation event to a DLOG
-profile. -/
-theorem actionBundleStatementFailure_prob_le_of_compressed_bound
+/-- Probability bound for literal false-statement acceptance from a supplied compressed bound,
+leaving the computed relation event to a DLOG profile. -/
+theorem actionBundleStatementFailure_probability_bound_of_compressedBound
     {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ (actionCircuit.shape.withProofParams pp).k) → T)
     (finder :

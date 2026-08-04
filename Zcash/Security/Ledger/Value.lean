@@ -33,8 +33,8 @@ numeric hypothesis `(maxActions + 1) * valueBound ≤ r` (deployed:
 verifying `bvk` comes with its scalar — would carry no computational content: in a
 cyclic group every `bvk` is some multiple of `Rbase`, so the total form holds for a
 choose-the-witness extractor that no one can run. That is why the extractor is a
-bare function and its failures are events with a named probability `κ` (#22, with
-#107/#67 tracking the surrounding glue).
+bare function and its failures are events with a named probability `κ`, discharged in
+`RedDSA/KnowledgeError` (#107 tracks the surrounding glue).
 -/
 
 namespace Zcash.Security.Ledger.Model

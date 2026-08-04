@@ -1,6 +1,6 @@
 import Mathlib.Data.List.GetD
-import Zcash.Snark.Soundness.IpaSoundness
-import Zcash.Snark.Soundness.Consistency
+import Zcash.Snark.Soundness.Ipa.IpaSoundness
+import Zcash.Snark.Soundness.Ipa.Consistency
 import Zcash.Snark.Verifier.Ipa
 
 /-!

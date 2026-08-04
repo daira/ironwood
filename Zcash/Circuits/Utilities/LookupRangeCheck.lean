@@ -149,7 +149,7 @@ def TableLoaded (K : ℕ) (cfg : Config K) (env : Environment Fp) : Prop :=
   (∀ r : ℕ, r < env.usableRows → (env.fixed cfg.tableIdx.inner (r : ℤ)).val < 2 ^ K) ∧
   (∀ r : ℕ, r < 2 ^ K → env.fixed cfg.tableIdx.inner (r : ℤ) = (r : Fp))
 
-/-- **Membership-consumption helper** (C2a #5). Turn a lookup-membership existential (the
+/-- **Membership-consumption helper**. Turn a lookup-membership existential (the
 `enableLookup` constraint's `∃ tableRow < usableRows, value = env.fixed tableIdx tableRow`) plus
 the `TableLoaded` usable-rows bound (`TableLoaded`'s second conjunct — `hTableLt`) into the value
 bound `value.val < 2^K`, in one application. This is the "two `obtain`s + application, same shape

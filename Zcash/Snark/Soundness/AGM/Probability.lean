@@ -1,5 +1,5 @@
 import Zcash.Snark.Soundness.AGM.Adapter
-import Zcash.Snark.Soundness.UniformMeasure
+import Zcash.Snark.Soundness.Pricing.UniformMeasure
 
 /-!
 # From relation probability to DL probability

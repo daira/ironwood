@@ -2,7 +2,7 @@ import Zcash.Circuits.Integration.ActionCorrectness
 import Zcash.Circuits.Integration.ActionPermutationDomain
 import Zcash.Snark.Soundness.AGM.DecodeToOpened
 import Zcash.Snark.Soundness.Composition.StraightLineDecodeSupply
-import Zcash.Snark.Soundness.StraightLine.TopLevelTerminal
+import Zcash.Snark.Soundness.StraightLine.Terminal
 
 /-!
 # The rewind-free decode at the Action terminal
@@ -54,6 +54,7 @@ def foldSplitAvoidance?
       else not_mem_szBadSet.mpr fun hne =>
         False.elim (hne (foldSplitWitness_zero_of_le hn (Nat.le_of_not_gt hj)))⟩
 
+/-- Complete fold-split avoidance makes the executable check succeed. -/
 theorem foldSplitAvoidance?_isSome_of
     (cs : List (CPoly)) (n : Nat) (hn : n ≠ 0) (y : Fp)
     (hgood : ∀ j, y ∉ szBadSet (foldSplitWitness cs n j)) :

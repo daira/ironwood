@@ -1,7 +1,7 @@
 import Mathlib.Tactic
-import Zcash.Snark.Soundness.Constraints
-import Zcash.Snark.Soundness.FoldSplit
-import Zcash.Snark.Soundness.KnowledgeSoundness
+import Zcash.Snark.Soundness.Constraint.Constraints
+import Zcash.Snark.Soundness.Constraint.FoldSplit
+import Zcash.Snark.Soundness.Relation.KnowledgeSoundness
 
 /-!
 # The full polynomial constraint system, by argument

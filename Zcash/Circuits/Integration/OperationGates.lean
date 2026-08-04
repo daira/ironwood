@@ -1,7 +1,7 @@
 import Zcash.Circuits.Integration.CircuitSatisfaction
 import Zcash.Snark.Soundness.Canonical.ConstraintSatisfaction
 import Clean.Halo2.Keygen.GateProjection
-import Zcash.Snark.Soundness.PermutationRows
+import Zcash.Snark.Soundness.Argument.PermutationRows
 
 /-!
 # Enabled operation gates

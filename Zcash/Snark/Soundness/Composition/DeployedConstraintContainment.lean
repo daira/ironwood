@@ -33,7 +33,7 @@ structure DeployedConstraintStaticChecks (family : ComputedDeployedRootFSFamily 
   omegaOrder : forall basis, (family.vk basis).omega ^ (family.vk basis).n = 1
   characteristic : forall basis, (((family.vk basis).n : Nat) : Fp) ≠ 0
 
-/-- **The total pre-`x` constraint difference** (issue #127): built from the run's own pre-`x`
+/-- **The total pre-`x` constraint difference**: built from the run's own pre-`x`
 representation source over the family's retained list.  It mentions no root witness, batch
 witness, decode, or outcome branch, so it is defined on every run — honest, cheating, or
 degenerate. -/
@@ -146,13 +146,13 @@ def deployedConstraintDecodedOfRoot
       PSum.inl witness
 
 /-- The concrete pre-`x` failure event: the run's `x` answer lands in the total constraint
-difference's root set.  No decode or witness guard (issue #127). -/
+difference's root set.  No decode or witness guard. -/
 def deployedConstraintBadXEvent (family : ComputedDeployedRootFSFamily shape) :
     Set ((AugmentedIndex (2 ^ shape.k) -> VestaG) × family.toFamily.Coins) :=
   {p | (wrappedPreIpaRecord (deployedRootRunOutput family p.1 p.2)).x ∈
     szBadSet (deployedConstraintDifferencePreX family p.1 p.2)}
 
-/-- **The total constraint-difference root set of one oracle table** (issue #127): `szBadSet` of
+/-- **The total constraint-difference root set of one oracle table**: `szBadSet` of
 the total pre-`x` difference, with no existential or success guard. -/
 def deployedConstraintXBadSet (family : ComputedDeployedRootFSFamily shape)
     (basis : AugmentedIndex (2 ^ shape.k) -> VestaG)

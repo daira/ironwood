@@ -6,86 +6,32 @@ import Zcash.Snark.Verifier.Checks
 import Zcash.Snark.Verifier.Queries
 import Zcash.Snark.Verifier.Expressions
 import Zcash.Snark.Verifier.Ipa
+import Zcash.Snark.Verifier.Key
 
 /-!
 # Assembling the fingerprint MSM
 
-This module composes the verified building blocks into the verifier's MSM assembly, in the exact order
-of halo2 `plonk/verifier.rs`. It is the Lean image of the interactive verifier: a pure function of the
-proof string, the challenges, and the verifying-key–level circuit structure.
+The Lean image of the interactive verifier: a pure function of the proof string, the challenges,
+and the verifying-key–level circuit structure, composed in the exact order of halo2
+`plonk/verifier.rs`. Three stages:
 
-The assembly factors into three stages:
+* `assembleQueries` — recompute the vanishing `h` commitment and `expected_h_eval`, then build the
+  ordered opening-query list (per sub-proof: instance, advice, permutation, lookups; then shared:
+  fixed, permutation-common, vanishing).
+* `constructIntermediateSets` — group that flat list into per-point-set commitment and evaluation
+  data. VK-fixed bookkeeping, re-derived in Lean rather than supplied, and exercised by the
+  `native_decide` fingerprint match.
+* `assembleFinalMsm` — the multiopen `x₁` compression and `x₄` collapse, then the IPA fold,
+  producing the final MSM.
 
-* `assembleQueries` (the upstream) — recompute the vanishing `h` commitment and `expected_h_eval`, then
-  build the full ordered list of opening queries (per sub-proof: instance, advice, permutation, lookups;
-  then shared: fixed, permutation-common, vanishing).
-* `constructIntermediateSets` — group the flat query list into per-point-set commitment and
-  evaluation data: VK-fixed bookkeeping, re-derived in Lean rather than supplied, and exercised
-  by the `native_decide` fingerprint match.
-* `assembleFinalMsm` (the downstream) — takes the `MultiopenGrouped`, then the multiopen `x₁` compression
-  and `x₄` collapse, then the IPA fold, producing the final MSM.
-
-The verifying-key data (`VerifyingKey`) — gate polynomials, query layouts, fixed/permutation
-commitments, the permutation column/eval chunking, lookup expressions — is circuit-fixed and supplied as
-input; the instance commitments are statement-derived (the verifier computes them from the public
-instances) and bundled here for the assembly.
+`VerifyingKey` is circuit-fixed and supplied as input. The instance commitments are
+statement-derived — the verifier computes them from the public instances — and bundled here for
+the assembly.
 -/
 
 namespace Zcash.Snark
 
 open Zcash.Arithmetic (Msm Msm.zero)
-
-/-- A permutation column's evaluation reference (halo2 `get_any_query_index` + `column_type`): the
-column's value is the advice / fixed / instance evaluation at the given query index. -/
-inductive ColumnRef where
-  | advice : ℕ → ColumnRef
-  | fixed : ℕ → ColumnRef
-  | instance : ℕ → ColumnRef
-deriving DecidableEq, Repr
-
-/-- Resolve a permutation column reference to its claimed evaluation. -/
-def ColumnRef.resolve {F : Type*} (cr : ColumnRef) (instanceEvals adviceEvals fixedEvals : ℕ → F) : F :=
-  match cr with
-  | .advice i => adviceEvals i
-  | .fixed i => fixedEvals i
-  | .instance i => instanceEvals i
-
--- VK provenance: this circuit-independent assembler deliberately receives a `VerifyingKey` as
--- input, populated from the halo2 `dump_vesta_lean_fixture` capture
--- (`Fixtures/SingleAction/Honest/Fixture.lean`) — but it is not trusted verbatim:
--- `Keygen/Certificate.lean` proves the dumped key equals the one derived end-to-end from the
--- ported `configure`/keygen (`vk_eq_toVerifierKey`, transported to the multi-action key in
--- `Fixtures/MultiAction/Honest/VkCertificate.lean`), and the boundary statements consume the derived
--- key (`Fixtures/*/*/Boundary.lean`). The URS dump is checked in turn by the derived commitments
--- and the captured bases (see `Fingerprint/Match.lean`). Distinct from the output-side
--- semantic-adequacy gap (see `Soundness/Main.lean`).
-/-- The verifying-key–level circuit structure the assembly needs, mirroring halo2's `VerifyingKey`
-field-for-field: **circuit-fixed data only**. `omega` is the domain generator and `n = 2 ^ k` the
-domain size; `blindingFactors`, `delta`, `chunkLen` are the permutation-argument constants. `gates`
-are the custom-gate polynomials; `instance/advice/fixedQueryLayout` are the `(column, rotation)`
-query lists; `fixedCommitment` and `permutationCommonCommitment` resolve column indices to
-commitments; `permutationChunks` groups the permutation columns (with their common-eval indices) per
-set; and `lookupInput/TableExprs` are the per-lookup input/table expressions.
-
-The instance commitment is deliberately **not** a field: like halo2's `verify_proof`, the verifier
-computes it per proof from the public instances (`commit_lagrange`) rather than reading it from the
-VK, and supplies it to the assembly as a separate argument (`instanceCommitment` of
-`assembleQueries`/`assemble`). This keeps the VK a faithful image of the pinned Rust key. -/
-structure VerifyingKey (shape : CircuitShape) (F G : Type*) where
-  omega : F
-  n : ℕ
-  blindingFactors : ℕ
-  delta : F
-  chunkLen : ℕ
-  gates : List (Expr F)
-  instanceQueryLayout : List (ℕ × ℤ)
-  adviceQueryLayout : List (ℕ × ℤ)
-  fixedQueryLayout : List (ℕ × ℤ)
-  fixedCommitment : ℕ → G
-  permutationCommonCommitment : Fin shape.numPermutationColumns → G
-  permutationChunks : List (List (ColumnRef × ℕ))
-  lookupInputExprs : Fin shape.numLookups → List (Expr F)
-  lookupTableExprs : Fin shape.numLookups → List (Expr F)
 
 /-- View a `Fin n`-indexed family as a total `ℕ`-indexed function, `0` outside range (the query indices
 the verifier uses are always in range). -/
@@ -557,12 +503,7 @@ def assembleFinalMsm {shape : Shape} {F G : Type*} [Field F] (ps : ProofString s
   ipaFold ch.x3 opened.2 ps.ipaC ps.ipaF ch.xi ch.z (List.ofFn ch.ipaRound) ps.ipaS
     (List.ofFn ps.ipaRounds) opened.1
 
-/-- **The assembled fingerprint MSM evaluates to the verifier's IPA verification equation.**
-Composing `eval_ipaFold` over `assembleFinalMsm = ipaFold … (assembleOpening …).1`: the deployed
-MSM's evaluation is the multiopen commitment opened by the IPA, term for term (the closed form is
-the statement) — so the deployed accept (`… = 0`) is this verification equation. The URS is built
-from `g, w, u`, so its `k` is `shape.k` definitionally — no transport needed. This puts
-`eval_ipaFold` on the soundness path. -/
+/-- Evaluating the final fingerprint MSM yields the verifier's IPA verification equation. -/
 theorem eval_assembleFinalMsm {shape : Shape} {F G : Type*} [Field F] [AddCommGroup G] [Module F G]
     (g : Fin (2 ^ shape.k) → G) (w u : G) (ps : ProofString shape F G) (ch : Challenges shape.k F)
     (grouped : MultiopenGrouped shape.k F G) :
@@ -624,9 +565,7 @@ def constructIntermediateSets {k : ℕ} {F G : Type*} [DecidableEq F] [Decidable
   let setPoints : List (List F) := setList.map fun s => s.filterMap fun i => points[i]?
   { sets := sets, ids := ids, points := setPoints }
 
-/-- The grouping's `ids` and `sets` views are positionally aligned: per point set they are two
-projections of the same routed member list (halo2's `CommitmentData` entries routed to that set),
-so their lengths agree — `ids[i][m]` names the slot identity of the member `sets[i][m]`. -/
+/-- Grouped `ids` and `sets` are aligned projections with equal per-set lengths. -/
 theorem constructIntermediateSets_sets_ids_aligned {k : ℕ} {F G : Type*} [DecidableEq F]
     [DecidableEq G] (queries : List (VerifierQuery k F G)) (i : ℕ) :
     ((constructIntermediateSets queries).ids.getD i []).length
@@ -705,12 +644,7 @@ theorem getElem?_findIdx_self {α : Type*} [DecidableEq α] {l : List α} {x : �
   simp only [decide_eq_true_eq] at hval
   rw [hval]
 
-/-- **Point routing (F4 core).** Every query's point lands in the point list of the set its
-commitment slot is routed to: if `q ∈ queries` and `q.commId` names member `m` of point set `si`
-(`ids[si][m] = q.commId`), then `q.point` appears in set `si`'s points. The point companion of
-`constructIntermediateSets_ref_mem` — a query routed into a set by its slot identity has its opening
-point among that set's points, since the set's points are exactly the point-indices of the members
-routed there. -/
+/-- A routed query's opening point occurs in its grouped point set. -/
 theorem constructIntermediateSets_point_mem {k : ℕ} {F G : Type*} [DecidableEq F] [DecidableEq G]
     (queries : List (VerifierQuery k F G))
     {q : VerifierQuery k F G} (hq : q ∈ queries) {si m : ℕ} {d₀ : CommitmentId}
@@ -775,10 +709,7 @@ theorem nodup_dedup_foldl {α β : Type*} [DecidableEq β] (l : List α) (f : α
       · rw [if_neg hmem]
         exact List.Nodup.append h (List.nodup_singleton _) (List.disjoint_singleton.mpr hmem)
 
-/-- **Each deployed point set's point list has no duplicates.** The grouping's `points` field lists
-each point set's points; every such list is a `filterMap` of a duplicate-free index set over the
-internal distinct-points list (itself `Nodup` by the first-appearance fold), extracting distinct
-entries, so it is `Nodup`. -/
+/-- Each grouped point set contains no duplicate points. -/
 theorem constructIntermediateSets_points_nodup {k : ℕ} {F G : Type*} [DecidableEq F] [DecidableEq G]
     (queries : List (VerifierQuery k F G)) (idx : ℕ) :
     ((constructIntermediateSets queries).points.getD idx []).Nodup := by
@@ -841,11 +772,7 @@ private theorem length_filterMap_eq_of_forall_isSome {α β γ : Type*}
       exact congrArg Nat.succ (ih (fun x hx => hf x (List.mem_cons_of_mem _ hx))
         (fun x hx => hg x (List.mem_cons_of_mem _ hx)))
 
-/-- **Each routed member claims one evaluation per set point.** A grouped member's evaluation list
-and its set's point list are `filterMap`s over the same duplicate-free point-index set, and both
-extractions are everywhere defined — every index in the set is in range of the internal points
-list, and every index got there from some query of the member's slot, so the `find?` succeeds. So
-the lengths agree: the member claims exactly one evaluation at each of its set's points. -/
+/-- Each grouped member supplies one evaluation per point in its set. -/
 theorem constructIntermediateSets_eval_length {k : ℕ} {F G : Type*} [DecidableEq F] [DecidableEq G]
     (queries : List (VerifierQuery k F G)) (i : ℕ) :
     ∀ qc ∈ (constructIntermediateSets queries).sets.getD i [],
@@ -1141,12 +1068,7 @@ theorem cisData_unique_entry {k : ℕ} {F G : Type*} [DecidableEq F]
     rw [List.filterMap_cons, hfind]; rfl
   rw [hfm]
 
-/-- **Unique-slot routing.** A query whose slot identity no other query carries is routed by the
-grouping to a member of exactly one point set: that set's point list is the singleton of the
-query's opening point, the member's recorded identity is the query's slot, and the member's
-recorded evaluation list is the singleton of the query's claimed evaluation — for the vanishing
-slot, the verifier-computed `expectedHEval`. The grouping-side eval-faithfulness fact the `hfold`
-derivation consumes. -/
+/-- A uniquely identified query is routed with its point and claimed evaluation. -/
 theorem constructIntermediateSets_unique_comm_routed {k : ℕ} {F G : Type*} [DecidableEq F]
     [DecidableEq G] (queries : List (VerifierQuery k F G)) {q : VerifierQuery k F G}
     (hq : q ∈ queries) (huniq : ∀ q' ∈ queries, q'.commId = q.commId → q' = q) :
@@ -1222,6 +1144,7 @@ Every builder tags its queries with its own `CommitmentId` constructor family; o
 query is the unique carrier of its slot in `assembleQueries` — the uniqueness
 `constructIntermediateSets_unique_comm_routed` needs to route it unambiguously. -/
 
+/-- Every column query uses an identifier produced by `mkId`. -/
 theorem columnQueries_commId_form {k : ℕ} {F G : Type*} [Field F] {omega x : F}
     {comm : ℕ → G} {mkId : ℕ → CommitmentId} {layout : List (ℕ × ℤ)} {evals : List F}
     {q : VerifierQuery k F G} (hq : q ∈ columnQueries omega x comm mkId layout evals) :
@@ -1230,6 +1153,7 @@ theorem columnQueries_commId_form {k : ℕ} {F G : Type*} [Field F] {omega x : F
   obtain ⟨e, _, rfl⟩ := hq
   exact ⟨e.1.1, rfl⟩
 
+/-- Every common-permutation query uses an identifier produced by `mkId`. -/
 theorem permutationCommonQueries_commId_form {k : ℕ} {F G : Type*} [Field F] {x : F}
     {mkId : ℕ → CommitmentId} {commsEvals : List (G × F)} {q : VerifierQuery k F G}
     (hq : q ∈ permutationCommonQueries x mkId commsEvals) : ∃ n, q.commId = mkId n := by
@@ -1237,6 +1161,7 @@ theorem permutationCommonQueries_commId_form {k : ℕ} {F G : Type*} [Field F] {
   obtain ⟨e, _, rfl⟩ := hq
   exact ⟨e.2, rfl⟩
 
+/-- Every permutation query uses an identifier produced by `mkId`. -/
 theorem permutationQueries_commId_form {k : ℕ} {F G : Type*} [Field F]
     {x xNext xLast : F} {mkId : ℕ → CommitmentId} {sets : List (G × PermSetEval F)}
     {q : VerifierQuery k F G} (hq : q ∈ permutationQueries x xNext xLast mkId sets) :
@@ -1252,6 +1177,7 @@ theorem permutationQueries_commId_form {k : ℕ} {F G : Type*} [Field F]
     obtain ⟨le, _, rfl⟩ := by simpa using hq
     exact ⟨s.2, rfl⟩
 
+/-- Every lookup query uses a product, input, or table identifier. -/
 theorem lookupQueries_commId_form {k : ℕ} {F G : Type*} [Field F] {x xInv xNext : F}
     {mkProduct mkInput mkTable : ℕ → CommitmentId}
     {lookups : List (LookupCommitments G × LookupEval F)} {q : VerifierQuery k F G}
@@ -1494,9 +1420,7 @@ def constructIntermediateSets? {k : ℕ} {F G : Type*} [DecidableEq F] [Decidabl
     (queries : List (VerifierQuery k F G)) : Option (MultiopenGrouped k F G) :=
   if hasDuplicateCommitmentPoint queries then none else some (constructIntermediateSets queries)
 
-/-- **Faithful query routing.** On the verifier's non-duplicate path, every flat query is routed to
-a concrete grouped member with the same commitment identity; its point occurs in the group's point
-list, and the member's claimed value at that point is exactly the flat query's claimed evaluation. -/
+/-- The non-duplicate path routes every query with its slot, point, and claimed evaluation. -/
 theorem constructIntermediateSets_query_routed {k : ℕ} {F G : Type*}
     [DecidableEq F] [DecidableEq G] [Zero F] [Zero G]
     (queries : List (VerifierQuery k F G)) {q : VerifierQuery k F G}
@@ -1763,11 +1687,7 @@ def multiopenPointsAvoidX3 {k : ℕ} {F G : Type*} [DecidableEq F] (x3 : F)
     (grouped : MultiopenGrouped k F G) : Bool :=
   grouped.points.all fun pts => pts.all fun point => decide (x3 ≠ point)
 
-/-- **Multiopen panic hits a negligible proportion of challenges.** The IPA challenges `x₃` that trigger
-the deployed `(x₃ - point).invert().unwrap()` crash (the `multiopenPointsAvoidX3 = false` case) are
-exactly the opened points, so at most the opened-point count across the derived point sets. Over `F_p`
-that is a `≤ #points / p` fraction (`|F_p| = p ≈ 2²⁵⁴`, `card_Fp`), negligible since the point count is
-polynomial in the circuit size. -/
+/-- At most one bad `x₃` per opened point can trigger multiopen inversion failure. -/
 theorem card_multiopenPanic_le {k : ℕ} {F G : Type*} [DecidableEq F] [Fintype F]
     (grouped : MultiopenGrouped k F G) :
     (Finset.univ.filter (fun x3 : F => multiopenPointsAvoidX3 x3 grouped = false)).card
@@ -1786,10 +1706,7 @@ theorem card_multiopenPanic_le {k : ℕ} {F G : Type*} [DecidableEq F] [Fintype 
   rw [hAvoid] at hx3
   exact Bool.noConfusion hx3
 
-/-- **Vanishing panic hits a negligible proportion of challenges.** The evaluation challenges `x` with
-`xⁿ = 1` trigger the deployed `(xⁿ - 1).invert().unwrap()` crash (guarded as `none` in `assemble?`); they
-are the `n`-th roots of unity, at most `n` of them (`n = vk.n`, the domain size). Over `F_p` that is a
-`≤ n / p` fraction, negligible for `p ≈ 2²⁵⁴`. -/
+/-- At most `n` field elements satisfy `x^n = 1` and trigger vanishing inversion failure. -/
 theorem card_vanishingPanic_le {F : Type*} [Field F] [Fintype F] [DecidableEq F] {n : ℕ}
     (hn : 0 < n) :
     (Finset.univ.filter (fun x : F => x ^ n = 1)).card ≤ n := by
@@ -1892,6 +1809,7 @@ def assemble {shape : Shape} {F G : Type*} [Field F] [DecidableEq F] [DecidableE
     Msm shape.k F G :=
   (assemble? vk instanceCommitment ps ch).getD (Msm.zero shape.k F G)
 
+/-- An injective total option map preserves source positions through `filterMap`. -/
 private theorem filterMap_idxOf_of_forall_isSome {α β : Type*} [DecidableEq α] [DecidableEq β]
     {f : α → Option β} :
     ∀ (l : List α), (∀ x ∈ l, (f x).isSome) →
@@ -1921,7 +1839,6 @@ private theorem filterMap_idxOf_of_forall_isSome {α β : Type*} [DecidableEq α
 
 /-- An everywhere-defined `filterMap` read at a source element's first position gives that
 element's image. -/
-
 private theorem filterMap_getD_idxOf_of_forall_isSome {α β : Type*} [DecidableEq α] (d : β)
     {g : α → Option β} :
     ∀ (l : List α), (∀ x ∈ l, (g x).isSome) →
@@ -1945,13 +1862,7 @@ private theorem filterMap_getD_idxOf_of_forall_isSome {α β : Type*} [Decidable
         simpa using ih (fun x hx => hsome x (List.mem_cons_of_mem _ hx)) hjt hgj
 
 open Classical in
-/-- **General slot routing.** Every query is routed by the grouping to a member of one point set:
-the member's recorded identity is the query's slot, the query's point appears among the set's
-points, and the member's recorded evaluation at that point's position is the query's claimed
-evaluation — under `hdet`, one claimed evaluation per slot and point. The many-point companion of
-`constructIntermediateSets_unique_comm_routed`, and the eval-faithfulness fact the constraint
-feed bindings read. -/
-
+/-- Every query is routed while preserving its commitment, point, and claimed evaluation. -/
 theorem constructIntermediateSets_comm_routed {k : ℕ} {F G : Type*} [DecidableEq F]
     [DecidableEq G] (queries : List (VerifierQuery k F G)) {q : VerifierQuery k F G}
     (hq : q ∈ queries)
@@ -2382,11 +2293,7 @@ theorem constructIntermediateSets_comm_routed_all {k : ℕ} {F G : Type*} [Decid
   exact ⟨route.setIndex, route.setIndex_lt, route.memberIndex, route.memberIndex_lt,
     route.id_eq, route.commitment_eq, route.all_queries⟩
 
-/-- **Aligned member commitment.** If every flat query carries the canonical reference named by
-its slot identity, then every in-range grouped member carries that same canonical reference named
-by its aligned `ids` entry.  This is the grouping invariant needed to reroute decoded members to
-pre-challenge chosen openings. -/
-
+/-- Under canonical slot resolution, each grouped member carries the commitment named by its ID. -/
 theorem constructIntermediateSets_member_commitment_eq_of_id
     {k : ℕ} {F G : Type*} [DecidableEq F] [DecidableEq G]
     (queries : List (VerifierQuery k F G))
@@ -2459,6 +2366,7 @@ evaluation is the proof string's own claim — so the lemmas below restate membe
 class with the evaluation included: the column families, the permutation products at their three
 rotations, the five lookup openings, and the common permutation columns. -/
 
+/-- Every aligned layout and evaluation entry appears as its corresponding column query. -/
 theorem columnQueries_layout_mem_eval {k' : ℕ} {F G' : Type*} [Field F] (omega x : F)
     (commitment : ℕ → G') (mkId : ℕ → CommitmentId) (layout : List (ℕ × ℤ)) (evals : List F)
     {j : ℕ} (hjl : j < layout.length) (hje : j < evals.length) :
@@ -2478,7 +2386,6 @@ theorem columnQueries_layout_mem_eval {k' : ℕ} {F G' : Type*} [Field F] (omega
 
 /-- Each in-range fixed layout entry contributes a deployed opening query: slot `fixedCol`, the
 rotated point, and the proof string's claimed fixed evaluation. -/
-
 theorem fixed_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F] [Inhabited G]
     (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G) (ch : Challenges shape.k F)
     {j : ℕ} (hjl : j < vk.fixedQueryLayout.length) (hje : j < shape.numFixedQueries) :
@@ -2497,7 +2404,6 @@ theorem fixed_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F] 
       finFn, dif_pos hje]
 
 /-- Advice-query membership in `assembleQueries`, with the claimed evaluation. -/
-
 theorem advice_query_mem_assembleQueries_eval {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs)
@@ -2520,7 +2426,6 @@ theorem advice_query_mem_assembleQueries_eval {shape : Shape} {F G : Type*} [Fie
       finFn, dif_pos hje]
 
 /-- Instance-query membership in `assembleQueries`, with the claimed evaluation. -/
-
 theorem instance_query_mem_assembleQueries_eval {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs)
@@ -2544,7 +2449,6 @@ theorem instance_query_mem_assembleQueries_eval {shape : Shape} {F G : Type*} [F
 
 /-- A per-proof builder's query is an `assembleQueries` query: the permutation section of
 sub-proof `pi`. -/
-
 private theorem mem_assembleQueries_of_mem_perm {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs) {q : VerifierQuery shape.k F G}
@@ -2560,7 +2464,6 @@ private theorem mem_assembleQueries_of_mem_perm {shape : Shape} {F G : Type*} [F
   exact List.mem_append.mpr (Or.inl (List.mem_append.mpr (Or.inr hq)))
 
 /-- The lookup section of sub-proof `pi`, as `mem_assembleQueries_of_mem_perm`. -/
-
 private theorem mem_assembleQueries_of_mem_lookup {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs) {q : VerifierQuery shape.k F G}
@@ -2577,7 +2480,6 @@ private theorem mem_assembleQueries_of_mem_lookup {shape : Shape} {F G : Type*} 
   exact List.mem_append.mpr (Or.inr hq)
 
 /-- The permutation product of set `s` is opened at `ch.x` claiming its `eval`. -/
-
 theorem perm_product_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs)
@@ -2605,7 +2507,6 @@ theorem perm_product_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Fi
     simp [List.getElem_zip, hsets, List.getElem_ofFn]
 
 /-- The permutation product of set `s` is opened at `ω · ch.x` claiming its `nextEval`. -/
-
 theorem perm_product_next_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs)
@@ -2634,7 +2535,6 @@ theorem perm_product_next_query_mem_assembleQueries {shape : Shape} {F G : Type*
 
 /-- For every set except the last whose `lastEval` is claimed, the permutation product is also
 opened at `ω^{-(blind+1)} · ch.x` claiming that value (halo2's `rev().skip(1)` walk). -/
-
 theorem perm_product_last_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs)
@@ -2676,7 +2576,6 @@ theorem perm_product_last_query_mem_assembleQueries {shape : Shape} {F G : Type*
     rw [hE2']
 
 /-- The lookup product of lookup `l` is opened at `ch.x` claiming its `productEval`. -/
-
 theorem lookup_product_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs) (l : Fin shape.numLookups) :
@@ -2703,7 +2602,6 @@ theorem lookup_product_query_mem_assembleQueries {shape : Shape} {F G : Type*} [
     simp [List.getElem_zip, hlks, List.getElem_ofFn]
 
 /-- The lookup product of lookup `l` is opened at `ω · ch.x` claiming its `productNextEval`. -/
-
 theorem lookup_product_next_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs) (l : Fin shape.numLookups) :
@@ -2732,7 +2630,6 @@ theorem lookup_product_next_query_mem_assembleQueries {shape : Shape} {F G : Typ
     simp [List.getElem_zip, hlks, List.getElem_ofFn]
 
 /-- The permuted input of lookup `l` is opened at `ch.x` claiming its `permutedInputEval`. -/
-
 theorem lookup_permInput_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs) (l : Fin shape.numLookups) :
@@ -2761,7 +2658,6 @@ theorem lookup_permInput_query_mem_assembleQueries {shape : Shape} {F G : Type*}
 
 /-- The permuted input of lookup `l` is opened at `ω⁻¹ · ch.x` claiming its
 `permutedInputInvEval`. -/
-
 theorem lookup_permInput_inv_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs) (l : Fin shape.numLookups) :
@@ -2790,7 +2686,6 @@ theorem lookup_permInput_inv_query_mem_assembleQueries {shape : Shape} {F G : Ty
     simp [List.getElem_zip, hlks, List.getElem_ofFn]
 
 /-- The permuted table of lookup `l` is opened at `ch.x` claiming its `permutedTableEval`. -/
-
 theorem lookup_permTable_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs) (l : Fin shape.numLookups) :
@@ -2818,7 +2713,6 @@ theorem lookup_permTable_query_mem_assembleQueries {shape : Shape} {F G : Type*}
     simp [List.getElem_zip, hlks, List.getElem_ofFn]
 
 /-- The common permutation column `c` is opened at `ch.x` claiming its common evaluation. -/
-
 theorem permCommon_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (c : Fin shape.numPermutationColumns) :
@@ -2853,6 +2747,7 @@ Every builder tags its queries with its own `CommitmentId` constructor family; o
 query is the unique carrier of its slot in `assembleQueries` — the uniqueness
 `constructIntermediateSets_unique_comm_routed` needs to route it unambiguously. -/
 
+/-- Without duplicate slot-point pairs, equal slots and points identify the same query. -/
 theorem eq_of_not_hasDuplicateCommitmentPoint {k : ℕ} {F G : Type*} [DecidableEq F] :
     ∀ {qs : List (VerifierQuery k F G)}, hasDuplicateCommitmentPoint qs = false →
       ∀ {q}, q ∈ qs → ∀ {q'}, q' ∈ qs → q'.commId = q.commId → q'.point = q.point → q' = q := by

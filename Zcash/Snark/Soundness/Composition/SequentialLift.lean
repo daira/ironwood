@@ -4,7 +4,7 @@ import Zcash.Snark.Soundness.Composition.PrefixedSqueeze
 /-!
 # Sequential online-AGM provers lift to the staged family
 
-The adversary-coverage theorem of issue #127: any Fiat–Shamir prover presented in its own
+The adversary-coverage theorem: any Fiat–Shamir prover presented in its own
 execution order — a pre-`x` phase, one query at its `x` squeeze point, a continuation — admits
 the staged constraint-`x` chronology, so it lifts to the full staged family with its run
 function, and hence its outputs, acceptance probability, and query bound, unchanged.
@@ -16,7 +16,7 @@ the lifting proves the total constraint difference is computable from the view b
 difference reads nothing the prover has not yet emitted.
 
 The root and IPA traces are intrinsic to the family the lift extends; the lift adds the one
-chronology layer issue #127 changed.
+chronology layer this rests on.
 -/
 
 namespace Zcash.Snark
@@ -310,7 +310,7 @@ def toConstraintXTrace (sp : SequentialPreXProver family) :
   agrees := fun basis O => sp.constraintXStage_agrees basis O
   fresh := fun basis O => sp.constraintXStage_fresh basis O
 
-/-- **Adversary coverage** (issue #127 C8).  A sequential online-AGM prover over a deployed root
+/-- **Adversary coverage**.  A sequential online-AGM prover over a deployed root
 family lifts to the full staged family: the root and IPA chronologies are intrinsic to the
 inputs, and the constraint-`x` chronology is derived from the prover's own execution order.
 The family's adversary, query budget, and hence outputs and acceptance probability are the

@@ -18,8 +18,8 @@ joint-experiment composition (#107).
 The sample is a challenge table `O` and the logs `s` of the `m` presented bases. The value
 commitment and the binding verification are instantiated at sampled slots, as a record
 update of the fixed primitives (`kappaPrimitivesAt`), so the ledger type does not depend on
-the sample; the other primitives deliberately stay fixed (#31 tracks separating the
-value/signature fields from `Primitives`). The challenge hash reads the table at
+the sample; the other primitives deliberately stay fixed, and the value and signature fields
+are not separated out of `Primitives`. The challenge hash reads the table at
 `queryOf R bvk m`, intended to be an injective encoding — collisions only constrain the
 algebraic hypotheses, shrinking the covered adversary class.
 

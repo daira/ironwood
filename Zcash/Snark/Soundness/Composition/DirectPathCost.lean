@@ -10,10 +10,11 @@ field-independent polynomial bound on the arithmetic the decode performs, in the
 style of `deployedConstraintRelationFinderCalls`.
 
 Per `x₄` batch column, including the final `q′` column, the model charges one traversal of the
-column's member list — each member paying a covered-source lookup of at most `sourceLen` steps, a
-challenge-power update, a scalar multiply-add on each of the `2^k` generator coordinates, and the
-`u`/`w` multiply-adds — plus one fold-and-compare over the column's `2^k + 2` coordinates.  Group
-operations never touch this path, so field operations and data traversal are the whole cost.
+column's member list, plus one fold-and-compare over the column's `2^k + 2` coordinates. Each
+member pays a covered-source lookup of at most `sourceLen` steps, a challenge-power update, a
+scalar multiply-add on each of the `2^k` generator coordinates, and the `u`/`w` multiply-adds.
+Group operations never touch this path, so field operations and data traversal are the whole
+cost.
 
 The bounds are stated at the actual per-run quantities (`deployedX4PairCount`,
 `deployedSetQueries`) and discharged shape-polynomially by `deployedX4PairCount_le_numPointSets`

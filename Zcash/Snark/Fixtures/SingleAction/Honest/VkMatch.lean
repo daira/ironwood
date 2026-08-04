@@ -8,34 +8,20 @@ import Mathlib.Util.AssertNoSorry
 /-!
 # VK equality: the capture is the derived Action circuit
 
-The captured verifying key's constraint-system fields — gates, the three query
-layouts, the permutation columns and chunks, the lookup expression families, and the
-domain/permutation scalars — are computed equal to the ones derived end to end from
-the ported `Action.Circuit.configure` (`TopLevelCircuit.pinnedCS` and friends: the
-configure-recorded query registration, the synthesize mirror → V1 floor-planner
-placement → `compress_selectors` selector map, and the derived minimal domain
-exponent). The derivation has no fixture inputs left; the Rust-dumped `actionSelMap`
-survives only as a cross-check in `TestSelMapDerivation`.
+The captured verifying key's constraint-system fields — gates, the three query layouts, the
+permutation columns and chunks, the lookup families, the domain and permutation scalars — are
+computed equal to those derived from the ported `Action.Circuit.configure`. No fixture input is
+left in the derivation, and `configure` records the query-registration order itself, so a wrong
+per-gate list shifts the layouts and fails here.
 
-The pinned comparison is stated as a record-update equality
-(`capturedPinnedView = actionPinnedCs`): the derived pinned record with every
-CAPTURED family overridden by the capture's value. The upstream fixture exporter does
-not emit the pinned-CS metadata (`numFixedColumns`, `numAdviceColumns`,
-`numSelectors`, `constants`, `minimumDegree`), so those five fields carry over from
-the derived record and are not independently cross-checked here — their load-bearing
-consequences are pinned elsewhere: wrong counts or constants change the derived fixed
-columns and fail the commitment certificate (`Keygen/Certificate.lean`), and
-`chunkLen` (the one consequence of `minimumDegree` the verifier uses) is compared
-directly below. Per-field theorems split the same equality so a regeneration drift
-names the diverging field.
+The equality is a record update (`capturedPinnedView = actionPinnedCs`) because the exporter
+omits five pinned-CS metadata fields (`numFixedColumns`, `numAdviceColumns`, `numSelectors`,
+`constants`, `minimumDegree`). Those carry over uncompared, but their consequences are pinned
+elsewhere: wrong counts or constants fail the commitment certificate (`Keygen/Certificate.lean`),
+and `chunkLen` is compared directly below. Per-field theorems name the diverging field on drift.
 
-The query-registration order is recorded by `configure` itself (Clean's
-configure-time query registration: each gate's `queriedCells` in Rust closure order),
-so the equality certifies the circuit's own recorded order against the capture — no
-fixed-point caveat: a wrong per-gate list shifts the derived layouts and fails here.
-Compiler-trust boundary: like the fingerprint match, these are `native_decide` facts
-about one concrete capture, never general theorems (see `TrustBoundary` in this
-directory for the discipline).
+Like the fingerprint match, these are `native_decide` facts about one capture, never general
+theorems.
 -/
 
 namespace Zcash.Snark.Fixture

@@ -8,9 +8,9 @@ import CompElliptic.Curves.PastaOrder
 
 The keygen bilinearity theorem (`commitLagrangeSpec_derivedUrsGLagrange`) needs the verifier
 group to be an `Fp`-module: `ZMod.val`-smuls only compose across the DFT because `p • P = 0`.
-`Zcash.Snark.Soundness.Vesta` installs exactly that instance (`vestaFpModule`) for the deployed
-curve, but its import closure is the whole soundness development, which the concrete keygen
-certificate has no reason to load.
+`Zcash.Snark.Soundness.Decoded.Vesta` installs exactly that instance (`vestaFpModule`) for the
+deployed curve, but its import closure is the whole soundness development, which the concrete
+keygen certificate has no reason to load.
 
 This module supplies the same structure for `Fast.Projective.G` from CompElliptic's pinned
 point count alone, and deliberately **not** as an `instance`: the theorems it feeds have

@@ -69,7 +69,7 @@ The lookup bridge is split deliberately:
   `Zcash/Snark/Soundness/Canonical/Terminal.lean`.
 
 The circuit-generic terminal lives outside this boundary.
-`Snark/Soundness/TopLevelTerminal` turns canonical constraint satisfaction and
+`Snark/Soundness/Circuit/Terminal` turns canonical constraint satisfaction and
 `TopLevelCircuitCorrectness` into the circuit-owned statements at the public inputs supplied to the
 verifier. The Action-specific terminal and event modules under `Snark/Soundness/Action` reach it
 without a free semantic proposition, encoding callback, decoder, or column-feed choice.

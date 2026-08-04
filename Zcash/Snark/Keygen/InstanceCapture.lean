@@ -6,30 +6,20 @@ import Mathlib.Util.AssertNoSorry
 /-!
 # The captured instance commitments are the circuit-derived ones
 
-The Action model uses the *circuit-derived* public-instance family
-`actionCircuit.instanceCommitment capturedURS inputs` — commitments computed
-from the public inputs, as halo2's `verify_proof` computes them from its `instances` argument. The
-captured artifacts, meanwhile, are exercised
-against the fixture's own family `Fixture.derivedInstanceCommitment` (the Fiat–Shamir fingerprint,
-`assemble?`, the negative tests), which `instance_commitments_derived` pins to the captured points
-`capturedInstanceCommitments` (ironwood#65/#85).
+The Action model commits public inputs the way halo2's `verify_proof` does, through
+`actionCircuit.instanceCommitment capturedURS inputs`; the captured artifacts are exercised
+against the fixture's own `Fixture.derivedInstanceCommitment`. This module joins the two, so
+the circuit model can be instantiated at the captured proof.
 
-Nothing joined those two families, so the circuit model could not be instantiated at the captured
-proof — the last open seam in sound handling of public instances (ironwood#86). This module closes it.
+**The bases agree.** `commitLagrange_eq_commitInstance` identifies halo2's Lagrange-generator
+commitment with the extractor's monomial URS at `capturedURS`. It needs no new fixture check: the
+captured Lagrange prefix is certified by `derivedUrsGLagrange_prefix_eq`, and
+`LagrangeCommitmentKey` is a subsingleton, so the key a statement names is the key the
+certificate discharges.
 
-Two steps, and the first carries the weight:
-
-* **The bases agree.** Halo2 commits public inputs against the Lagrange generators
-  (`Fixture.commitLagrange`, `Params::commit_lagrange` under `Blind::default () = 1`), while the
-  extractor works against the monomial URS. `commitLagrange_eq_commitInstance` identifies the
-  captured computation with the abstract `LagrangeCommitmentKey.commitInstance` at `capturedURS`.
-  It needs no new fixture check: the captured Lagrange prefix is already certified against the
-  monomial derivation by `derivedUrsGLagrange_prefix_eq`, and `LagrangeCommitmentKey` is a
-  subsingleton, so the key a downstream statement names is the key the certificate discharges.
-* **The rows agree.** `capturedActionInputs` reads the captured public instances back as the
-  circuit's own `PublicInputs` record, and `publicInputRows_capturedActionInputs` checks that the
-  circuit's public-input serialization reproduces the captured column. That check is the only
-  `native_decide` here, and it is a statement about ten field elements.
+**The rows agree.** `publicInputRows_capturedActionInputs` checks that the circuit's public-input
+serialization reproduces the captured column — the only `native_decide` here, over ten field
+elements.
 -/
 
 namespace Zcash.Snark.Keygen
@@ -202,7 +192,7 @@ theorem actionCircuit_omega_captured :
 `verify_proof` computes them from `instances`. At the captured public inputs that family is
 `Fixture.derivedInstanceCommitment`, the family the captured artifacts are exercised against.
 
-This is the join that was missing (ironwood#86): the circuit model and capture now speak of the same
+This is the join: the circuit model and capture speak of the same
 group elements. -/
 theorem instanceCommitment_capturedActionInputs :
     actionCircuit.instanceCommitment capturedURS capturedActionInputs =
@@ -230,7 +220,7 @@ theorem instanceCommitment_capturedActionInputs :
     simp
 
 /-- **The circuit model's family is the captured commitment points.** Composing the seam with the
-capture's own derivation (`instance_commitments_derived`, ironwood#65/#85): at the captured public
+capture's own derivation (`instance_commitments_derived`): at the captured public
 inputs, the circuit-derived commitments are exactly the points the deployed verifier used. -/
 theorem instanceCommitment_eq_capturedInstanceCommitments
     (proofIndex : Fin Fixture.shape.numProofs) {column : ℕ}

@@ -1,6 +1,6 @@
 import Mathlib.Tactic
-import Zcash.Snark.Soundness.IpaSoundness
-import Zcash.Snark.Soundness.KnowledgeSoundness
+import Zcash.Snark.Soundness.Ipa.IpaSoundness
+import Zcash.Snark.Soundness.Relation.KnowledgeSoundness
 import Zcash.Snark.Verifier.Assemble
 
 /-!

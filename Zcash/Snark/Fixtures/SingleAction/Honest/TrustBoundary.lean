@@ -17,7 +17,7 @@ transcript prefix to the canonical VK representation emitted by Rust, and comput
 Lean-assembled MSMs to the Vesta identity. Those identity evaluations are the family's non-vacuity
 witness — a real accepting run of the pinned deployed verifier, which the random match-only captures
 cannot provide — and the family's `vk`/`shape`/URS feed the deployed capstone lane
-(`Fixtures/MultiAction/Honest/ActionCapstone.lean` with the `Circuits/Integration` terminals); the invariant
+(`Capstones/Action.lean` with the `Circuits/Integration` terminals); the invariant
 itself rides on the derived boundary statements (see `Fingerprint/Match.lean`).
 
 Both checks below follow Lean's elaborated dependency graph (via `Lean.collectAxioms`), so they see holes
@@ -38,7 +38,7 @@ syntactic scan of the verifier sources cannot.
 
 `instance_commitments_derived` and `capturedPublicInstances_within_lagrange` are pinned alongside
 `fingerprint_matches`: they carry the *derivation* of the instance commitments from the captured public
-inputs (ironwood#65), which is the trust this fixture buys in place of taking the commitments as opaque
+inputs, which is the trust this fixture buys in place of taking the commitments as opaque
 captured points. The derivation's supporting data and functions (`capturedUrsGLagrange`,
 `capturedPublicInstances`, `commitLagrange`, `derivedInstanceCommitment`) are bounded too, so the
 `native_decide` claims cannot be narrowed by quietly widening what they range over.

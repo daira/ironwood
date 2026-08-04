@@ -20,7 +20,7 @@ import Mathlib.Util.AssertNoSorry
 This module packages the representation laws needed to instantiate generic
 top-level-circuit correctness for the Orchard Action circuit. Public-input encoding
 is handled by the generic assignment layer. The generic terminal theorem remains in
-`Zcash.Snark.Soundness.TopLevelTerminal`.
+`Zcash.Snark.Soundness.Circuit.Terminal`.
 -/
 
 namespace Zcash.Snark

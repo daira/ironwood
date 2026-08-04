@@ -1,5 +1,5 @@
 import Zcash.Snark.Soundness.FiatShamir.Execution
-import Zcash.Snark.Soundness.UniformMeasure
+import Zcash.Snark.Soundness.Pricing.UniformMeasure
 
 /-!
 # The oracle-querying Fiat–Shamir adversary

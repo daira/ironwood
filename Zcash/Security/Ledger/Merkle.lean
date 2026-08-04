@@ -5,8 +5,8 @@ import Zcash.Security.Common.RandomOracle
 # Fixed-depth Merkle trees over a partial tree hash
 
 This module holds the ledger layer's Merkle machinery, over the raw-encoding partial
-compression interface (`MerklePrimitives`, adopted from the circuit-bridge work in #98 so
-that the two layers share one model). The interface is faithful to the deployed hash in
+compression interface (`MerklePrimitives`, adopted from the circuit-bridge work so that
+the two layers share one model). The interface is faithful to the deployed hash in
 two ways that the concrete collision bound needs:
 
 * **Inputs are raw encodings.** The compression consumes child *encodings* of type `E`,
@@ -135,7 +135,7 @@ theorem Path.compress_isSome {P : MerklePrimitives B E} {leaf root : B}
 /-! ## The guarded (⊥-model) path
 
 The circuit layer exports its Merkle contract in the specification's literal ⊥-model
-(zcash/ironwood#98): selected-child equations are unconditional, while a compression
+: selected-child equations are unconditional, while a compression
 equation fires only when the compression is defined — escapes are unconstrained.
 `GuardedPath` is that statement in this module's own vocabulary (`node`,
 `selectedChild`), so the circuit bridge assembles a strict `Path` by pairing the

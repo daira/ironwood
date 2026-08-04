@@ -10,6 +10,7 @@ This is the deployed AGM endpoint, stated through the fixed-call straight-line r
 
 namespace Zcash.Snark.Fixture2
 
+
 open Zcash.Snark
 open Zcash.Snark.ComputedStraightLineDeployedFSFamily (straightLineDlogGroupWork)
 open scoped ENNReal
@@ -23,7 +24,7 @@ The captured premise pins scalar metadata, layouts, and expressions only — no 
 commitment equality across sampled AGM bases.  The only computational term is the explicit
 finite-security Vesta DLOG profile.  Row-level semantics require the four additional budgets of
 `straightLineConstraintSemanticFailure_prob_le_of_generatorRO_dlogProfile`. -/
-theorem orchard_deployed_knowledge_error_captured_straightLine
+theorem orchard_deployed_straightline_captured_knowledge_error_bound
     (B : VestaG)
     (family : ComputedStraightLineDeployedFSFamily shape)
     (hvk : forall basis, CapturedVerifierKeyProfile (family.vk basis))
@@ -51,7 +52,7 @@ theorem orchard_deployed_knowledge_error_captured_straightLine
 /-- Generator-random-oracle form of the captured straight-line **compressed-identity** endpoint;
 row-level semantics are the four-budget promotion
 `straightLineConstraintSemanticFailure_prob_le_of_generatorRO_dlogProfile`. -/
-theorem orchard_deployed_knowledge_error_captured_straightLine_generatorRO
+theorem orchard_deployed_straightline_captured_generatorRO_knowledge_error_bound
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ shape.k) -> T) (hquery : Function.Injective query)
@@ -84,7 +85,7 @@ caller to supply an already assembled `ComputedStraightLineDeployedFSFamily`.  I
 representation-carrying online prover model produced by `ComputedOnlineMemberFSFamily.ofProofData`
 and combines its deployed-root, IPA-round, and constraint-`x` traces with `ofCovered`.  The
 captured fixture supplies the verifier's scalar/layout profile; no new proof fixture is needed. -/
-theorem orchard_deployed_knowledge_error_captured_straightLine_direct_generatorRO
+theorem orchard_deployed_straightline_captured_direct_generatorRO_knowledge_error_bound
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ shape.k) -> T) (hquery : Function.Injective query)
@@ -119,7 +120,7 @@ theorem orchard_deployed_knowledge_error_captured_straightLine_direct_generatorR
         (family.Q + 1 : Nat) *
           ((20470 : Nat) / (Fintype.card Fp : ENNReal)) := by
   dsimp only
-  exact orchard_deployed_knowledge_error_captured_straightLine_generatorRO
+  exact orchard_deployed_straightline_captured_generatorRO_knowledge_error_bound
     B hB query hquery
     (ComputedStraightLineDeployedFSFamily.ofCovered online rootTrace ipaTrace xTrace)
     hvk profile

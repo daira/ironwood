@@ -7,43 +7,20 @@ import Mathlib.Util.AssertNoSorry
 /-!
 # Concrete certificate for the derived Action verifying key
 
-This module contains the expensive concrete computation, separately from the reusable
-derivation data: ONE bundled `native_decide` comparing every field of the derived
-verifying key against the capture — the Lagrange-prefix cross-check and the two
-commitment families (the group-side cost), plus the scalar/gate/layout fields and the
-derived `Shape` (CS-scale).
+One bundled `native_decide` compares every field of the derived verifying key against the
+capture. The `FixtureCheck` target builds it; ordinary clients need only the generic keygen
+pipeline.
 
-EVALUATION-SHARING DISCIPLINE (each rule was measured, the hard way):
-* The commitment passes use the SEQUENTIAL cores (`fixedCommitmentsSeqWith`/
-  `permutationCommitmentsSeqWith`): nullary-definition sharing does NOT survive a
-  `parMap` task fan-out in this evaluation tier — the 44 column tasks each captured
-  the unforced shared-basis thunk and re-ran the whole basis derivation (44 × ~4 min =
-  the CPU-hours regression this replaces). Let-binding the basis inside the decided
-  proposition shares correctly at evaluation but blows the elaborator's fixed budget
-  at proof-term finalization; the sequential map costs only ~26 s (scatter committer,
-  0.6 s/column) and keeps both evaluation and finalization on known-good mechanisms.
-* There is NO GROUP FFT. `commitLagrangeSpec_derivedUrsGLagrange` (MSM bilinearity applied
-  to `bestFftG_dft`) moves the inverse transform off the curve and onto the coefficients:
-  each column is inverse-DFT'd as SCALARS and then committed against the MONOMIAL URS. The
-  scalar transform is the same `bestFftG` at `G := Fp`, evaluated directly — `ZMod`
-  multiplication dispatches to GMP, so it needs no kernel; the 2048-point group FFT it
-  replaces was measured at 206.8 s of the module's former 258 s. The 10-generator
-Lagrange prefix the
-  bundle cross-checks is likewise 10 monomial MSMs of the closed coefficient rows
-  (`take_derivedUrsGLagrange_natPre`), not a prefix of an FFT output — otherwise the
-  group FFT would still be forced.
-* The basis and the per-column committer run through the MONTGOMERY LANE
-  (`msmNatPre` / `commitInvDftNatWith`): the dictionary-free `Nat` kernel
-  (`Zcash.Arithmetic.NatKernel`) — projective points as canonical-`ℕ` triples whose field
-  steps dispatch to GMP under the interpreter, proven equal to the statement-surface
-  functions via the kernel simulation theorem (`msm_spec`). No `precompileModules`
-  lane and no plugin loading anywhere: this module evaluates entirely in the interpreter.
+Three evaluation choices are load-bearing, each measured against a slower alternative:
 
-  The monomial basis as `ℕ` triples (`monomialBasis`) is nullary and shared by every MSM
-  in the bundle — the sharing discipline below is unchanged.
-
-The `FixtureCheck` target builds this module; ordinary clients only need the
-generic keygen pipeline.
+* Sequential commitment cores, not `parMap`: nullary sharing does not survive a task fan-out
+  here, so every column task re-ran the whole basis derivation. Let-binding the basis instead
+  shares correctly but blows the elaborator's budget at proof-term finalization.
+* No group FFT. `commitLagrangeSpec_derivedUrsGLagrange` inverse-DFTs each column as scalars
+  and commits against the monomial URS. The Lagrange prefix is 10 monomial MSMs
+  (`take_derivedUrsGLagrange_natPre`), not an FFT prefix, which would force the transform back.
+* The `Nat` kernel lane (`msmNatPre`, `commitInvDftNatWith`), proven equal to the statement
+  surface by `msm_spec`. Everything evaluates in the interpreter.
 -/
 
 namespace Zcash.Snark.Keygen

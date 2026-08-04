@@ -1,10 +1,10 @@
-import Zcash.Snark.Soundness.CommitFold
+import Zcash.Snark.Soundness.Ipa.CommitFold
 import Zcash.Common.DiscreteLogRelation
 
 /-!
 # Binding as a discrete-log-relation reduction over the augmented generators
 
-`Zcash.Snark.Soundness.CommitFold` models commitment binding at the URS generators `g` as a
+`Zcash.Snark.Soundness.Ipa.CommitFold` models commitment binding at the URS generators `g` as a
 reduction to discrete-log-relation (DLR) hardness (`relation_of_collision`,
 `commitmentBinding_iff_no_relation`). The deployed verifier additionally folds the inner-product
 generator `U` and the blinding generator `W` into one group equation, so soundness there needs

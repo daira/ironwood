@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.Vesta
+import Zcash.Snark.Soundness.Decoded.Vesta
 import Zcash.Snark.Soundness.AGM.ProbabilityVesta
 import Zcash.Snark.Soundness.AGM.ProbabilityCoins
 import Zcash.Snark.Soundness.FiatShamir.Adversary.PreIpa

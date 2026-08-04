@@ -169,7 +169,13 @@ def validate_timeline(errors, data, node_set):
                 fail(errors, f"{stage_id} references unknown source: {source_id}")
             else:
                 text = source_text(errors, sources[source_id], source_path)
-                if text is not None and symbol not in text:
+                # Whole-identifier, not substring: `assemble` must not be satisfied by
+                # `assembleQueries`, so a symbol renamed into a longer name is still caught.
+                # Lean identifiers admit `_`, `'`, `!`, `?` and dotted namespaces, so the
+                # boundaries exclude those rather than relying on `\b`.
+                if text is not None and not re.search(
+                    r"(?<![A-Za-z0-9_.'])" + re.escape(symbol) + r"(?![A-Za-z0-9_'])", text
+                ):
                     fail(errors, f"{stage_id} symbol not found in {source_path}: {symbol}")
         for pr_id in stage["prs"]:
             referenced_prs.add(pr_id)

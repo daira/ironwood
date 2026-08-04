@@ -58,7 +58,7 @@ private theorem relationOption_separateOrRelationWitness_congr {n : Nat}
   cases he
   rfl
 
-/-- **The total pre-`x` representation source** (issue #127): the run's pre-`x₁` assembly
+/-- **The total pre-`x` representation source**: the run's pre-`x₁` assembly
 commitments over the family's own retained representation list.  No witness, decode, or outcome
 is consulted, so the source — and everything the constraint layer builds from it — is defined on
 every run. -/

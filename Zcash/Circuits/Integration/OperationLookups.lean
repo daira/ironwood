@@ -1,6 +1,6 @@
 import Zcash.Circuits.Integration.CircuitSatisfaction
-import Zcash.Snark.Soundness.FoldSplit
-import Zcash.Snark.Soundness.GoodChallenge
+import Zcash.Snark.Soundness.Constraint.FoldSplit
+import Zcash.Snark.Soundness.Pricing.GoodChallenge
 import Zcash.Snark.Soundness.Canonical.LookupRows
 import Clean.Halo2.Keygen.FloorPlanner
 import Zcash.Common.RelationWitness

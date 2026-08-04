@@ -1,5 +1,5 @@
 import Zcash.Snark.Soundness.Action.StraightLineEvent
-import Zcash.Snark.Soundness.StraightLine.TopLevelEvent
+import Zcash.Snark.Soundness.StraightLine.Event
 import Zcash.Snark.Soundness.Composition.SequentialLift
 import Zcash.Snark.Soundness.Composition.ChallengeReads
 import Zcash.Snark.Soundness.Composition.SemanticChallengeRemainder
@@ -73,9 +73,11 @@ abbrev vkAt
 def semanticChRecord (theta beta : Fp) {k : ℕ} : Challenges k Fp :=
   chRecord (fun i => if i = 0 then theta else if i = 1 then beta else 0) (fun _ => 0)
 
+/-- `semanticChRecord` preserves its `theta` input. -/
 @[simp] theorem semanticChRecord_theta (theta beta : Fp) {k : ℕ} :
     (semanticChRecord theta beta (k := k)).theta = theta := rfl
 
+/-- `semanticChRecord` preserves its `beta` input. -/
 @[simp] theorem semanticChRecord_beta (theta beta : Fp) {k : ℕ} :
     (semanticChRecord theta beta (k := k)).beta = beta := rfl
 
@@ -117,8 +119,9 @@ theorem actionThetaFailureEvent_subset
   rw [hproj] at hin
   exact Finset.mem_coe.mpr hin
 
-/-- The `θ` failure probability: `(Q + 1)` times the per-state `θ` set measure. -/
-theorem actionThetaFailureEvent_prob_le {T : Type*} [DecidableEq T]
+/-- Probability bound for the `θ` failure event: `(Q + 1)` times the per-state `θ` set
+probability. -/
+theorem actionThetaFailure_probability_bound {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ actionCircuit.shape.k) → T)
     (cut : SequentialCut family.toComputedAlgebraicFSFamily 0)
     (view : cut.State → CommitmentId → CPoly)
@@ -144,9 +147,7 @@ theorem actionThetaFailureEvent_prob_le {T : Type*} [DecidableEq T]
 
 /-! ## `β` (squeeze index 1) -/
 
-/-- **The `β` failure event is a state surface.**  The permutation `β` set reads the permutation
-input slots; the lookup `β` set reads the lookup input slots and, of the record, only `θ` —
-squeezed one index earlier, so the state supplies it. -/
+/-- The `β` failure event lies in its permutation and lookup state surfaces. -/
 theorem actionBetaFailureEvent_subset
     (cut : SequentialCut family.toComputedAlgebraicFSFamily 1)
     (view : cut.State → CommitmentId → CPoly)
@@ -185,9 +186,9 @@ theorem actionBetaFailureEvent_subset
       (fun id hid => hview basis O h id (Or.inr hid)), hproj] at hin
     exact Set.mem_union_right _ (Finset.mem_coe.mpr hin)
 
-/-- The `β` failure probability: `(Q + 1)` times the per-state measure of the union of the two
-`β` exclusion sets. -/
-theorem actionBetaFailureEvent_prob_le {T : Type*} [DecidableEq T]
+/-- Probability bound for the `β` failure event: `(Q + 1)` times the per-state probability of the
+union of the two `β` exclusion sets. -/
+theorem actionBetaFailure_probability_bound {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ actionCircuit.shape.k) → T)
     (cut : SequentialCut family.toComputedAlgebraicFSFamily 1)
     (view : cut.State → CommitmentId → CPoly)
@@ -265,9 +266,9 @@ theorem actionGammaFailureEvent_subset
       (fun id hid => hview basis O h id (Or.inr hid)), hproj] at hin
     exact Set.mem_union_right _ (Finset.mem_coe.mpr hin)
 
-/-- The `γ` failure probability: `(Q + 1)` times the per-state measure of the union of the two
-`γ` exclusion sets. -/
-theorem actionGammaFailureEvent_prob_le {T : Type*} [DecidableEq T]
+/-- Probability bound for the `γ` failure event: `(Q + 1)` times the per-state probability of the
+union of the two `γ` exclusion sets. -/
+theorem actionGammaFailure_probability_bound {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ actionCircuit.shape.k) → T)
     (cut : SequentialCut family.toComputedAlgebraicFSFamily 2)
     (view : cut.State → CommitmentId → CPoly)
@@ -303,10 +304,7 @@ theorem actionGammaFailureEvent_prob_le {T : Type*} [DecidableEq T]
 
 /-! ## `x` and `y` (squeeze indices 4 and 3) -/
 
-/-- **The fused `x`/`y` failure event splits into two state surfaces.**  The `y` fold set reads
-the accepted model's constraints — every input committed before `y` — and the `x` set reads the
-model, `y` itself, and the vanishing commitment, all committed before `x`.  The index-3 and
-index-4 views supply them. -/
+/-- The fused `x`/`y` failure event lies in the union of its two state surfaces. -/
 theorem actionXYFailureEvent_subset
     (cutY : SequentialCut family.toComputedAlgebraicFSFamily 3)
     (cutX : SequentialCut family.toComputedAlgebraicFSFamily 4)
@@ -353,8 +351,9 @@ theorem actionXYFailureEvent_subset
     rw [hmodelY basis O h, hprojY] at hin
     exact Set.mem_union_right _ (Set.mem_iUnion.mpr ⟨j, Finset.mem_coe.mpr hin⟩)
 
-/-- The fused `x`/`y` failure probability: each half pays its own state surface price. -/
-theorem actionXYFailureEvent_prob_le {T : Type*} [DecidableEq T]
+/-- Probability bound for the fused `x`/`y` failure event: each half pays its own state-surface
+price. -/
+theorem actionXYFailure_probability_bound {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ actionCircuit.shape.k) → T)
     (cutY : SequentialCut family.toComputedAlgebraicFSFamily 3)
     (cutX : SequentialCut family.toComputedAlgebraicFSFamily 4)
@@ -401,7 +400,7 @@ theorem actionXYFailureEvent_prob_le {T : Type*} [DecidableEq T]
   · exact cutX.surfaceEvent_prob_le query _ hbadX
   · exact cutY.surfaceEvent_prob_le query _ hbadY
 
-/-! ## Per-state measures
+/-! ## Per-state probability bounds
 
 Each surface's `hbad` premise is a counting statement at one state.  The counts are the staged
 remainder's: the row-by-arity budget for `θ`, cell counts for the permutation sets, `(u + 1)`
@@ -409,8 +408,9 @@ polynomials of the lookup sets, and `n` times the constraint count for `y`.  The
 Schwartz–Zippel exclusion, priced by `uniformChallenge_szBadSet` at its fold degree.
 -/
 
-/-- The per-state `θ` measure: the row-by-arity budget over the field size. -/
-theorem actionThetaBadSet_measure_le
+/-- Probability bound for the per-state `θ` bad set: the row-by-arity budget over the field
+size. -/
+theorem actionThetaBadSet_probability_bound
     (basis : AugmentedIndex (2 ^ actionCircuit.shape.k) → VestaG)
     (poly : CommitmentId → CPoly) :
     (PMF.uniformOfFintype Fp).toOuterMeasure
@@ -422,8 +422,9 @@ theorem actionThetaBadSet_measure_le
   TopLevelLookup.uniformChallenge_thetaBadSet
     poly
 
-/-- The per-state `β` measure: permutation cells plus lookup pair counts. -/
-theorem actionBetaBadSets_measure_le
+/-- Probability bound for the per-state `β` bad sets: permutation cells plus lookup pair
+counts. -/
+theorem actionBetaBadSets_probability_bound
     (basis : AugmentedIndex (2 ^ actionCircuit.shape.k) → VestaG)
     (theta : Fp) (poly : CommitmentId → CPoly) :
     (PMF.uniformOfFintype Fp).toOuterMeasure
@@ -455,8 +456,9 @@ theorem actionBetaBadSets_measure_le
           (k := actionCircuit.shape.k)) poly
         (actionCircuit.n - actionCircuit.blindingFactors - 2)))
 
-/-- The per-state `γ` measure: doubled permutation cells plus lookup pair counts. -/
-theorem actionGammaBadSets_measure_le
+/-- Probability bound for the per-state `γ` bad sets: doubled permutation cells plus lookup pair
+counts. -/
+theorem actionGammaBadSets_probability_bound
     (basis : AugmentedIndex (2 ^ actionCircuit.shape.k) → VestaG)
     (theta beta : Fp) (poly : CommitmentId → CPoly) :
     (PMF.uniformOfFintype Fp).toOuterMeasure
@@ -485,8 +487,9 @@ theorem actionGammaBadSets_measure_le
           (k := actionCircuit.shape.k))
         poly (actionCircuit.n - actionCircuit.blindingFactors - 2)))
 
-/-- The per-state `y` measure: `n` times the constraint count over the field size. -/
-theorem actionYBadSet_measure_le
+/-- Probability bound for the per-state `y` bad set: `n` times the constraint count over the field
+size. -/
+theorem actionYBadSet_probability_bound
     (constraints : List (CPoly)) (hn : actionCircuit.n ≠ 0) :
     (PMF.uniformOfFintype Fp).toOuterMeasure
       (⋃ j, ↑(szBadSet (foldSplitWitness constraints actionCircuit.n j))) ≤
@@ -503,20 +506,22 @@ theorem actionYBadSet_measure_le
 
 The public adversary model supplies executable phases whose *outputs* are the data emitted before
 each semantic squeeze.  `ActionSequentialExecution.toCuts` below generates the five cuts and all
-state views.  `ActionSequentialCuts` remains only the internal product consumed by the four
-counting lemmas; it is no longer an input to the public capstone.
+state views.  `ActionSequentialCuts` is the internal product consumed by the four counting
+lemmas, not an input to the public capstone.
 -/
 
 /-- Data emitted before `θ`: the represented query-column polynomials. -/
 structure ActionThetaSnapshot where
   polynomial : CommitmentId → CPoly
 
-/-- Data emitted before `β`: the relevant represented polynomials and the earlier `θ` answer. -/
+/-- Data emitted before `β`: the represented query-column polynomials and the earlier `θ`
+answer. -/
 structure ActionBetaSnapshot where
   polynomial : CommitmentId → CPoly
   theta : Fp
 
-/-- Data emitted before `γ`: the relevant represented polynomials and earlier challenge answers. -/
+/-- Data emitted before `γ`: the represented query-column polynomials and the earlier `θ` and `β`
+answers. -/
 structure ActionGammaSnapshot where
   polynomial : CommitmentId → CPoly
   theta : Fp
@@ -693,9 +698,9 @@ def ActionSequentialExecution.toCuts {Dx L : ℕ}
   hvanishing := execution.hxVanishing
   xdeg := execution.xdeg
 
-/-- The `θ` premise from the bundle: `(Q + 1) · Nθ / |Fp|`, `Nθ` capping the row-by-arity
-budget. -/
-theorem ActionSequentialCuts.theta_prob_le {T : Type*} [DecidableEq T]
+/-- Probability bound for the bundle's `θ` event: `(Q + 1) · Nθ / |Fp|`, with `Nθ` capping the
+row-by-arity budget. -/
+theorem ActionSequentialCuts.theta_probability_bound {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ actionCircuit.shape.k) → T)
     {Dx L : ℕ} (cuts : ActionSequentialCuts pp family static inputs hvk hI hchar Dx L)
     {Ntheta : ℕ}
@@ -710,15 +715,15 @@ theorem ActionSequentialCuts.theta_prob_le {T : Type*} [DecidableEq T]
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelThetaFailureEvent actionCircuit pp family static inputs hvk hI hchar)
       ≤ (family.Q + 1 : ℕ) * ((Ntheta : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) := by
-  refine actionThetaFailureEvent_prob_le pp family static inputs hvk hI hchar query
+  refine actionThetaFailure_probability_bound pp family static inputs hvk hI hchar query
     cuts.cut0 cuts.view0 cuts.hview0 (fun basis s => ?_)
-  refine le_trans (actionThetaBadSet_measure_le pp basis (cuts.view0 s)) ?_
+  refine le_trans (actionThetaBadSet_probability_bound pp basis (cuts.view0 s)) ?_
   gcongr
   exact_mod_cast hbudget basis (cuts.view0 s)
 
-/-- The `β` premise from the bundle: `(Q + 1) · Nβ / |Fp|`, `Nβ` capping cells plus lookup
-pairs. -/
-theorem ActionSequentialCuts.beta_prob_le {T : Type*} [DecidableEq T]
+/-- Probability bound for the bundle's `β` event: `(Q + 1) · Nβ / |Fp|`, with `Nβ` capping cells
+plus lookup pairs. -/
+theorem ActionSequentialCuts.beta_probability_bound {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ actionCircuit.shape.k) → T)
     {Dx L : ℕ} (cuts : ActionSequentialCuts pp family static inputs hvk hI hchar Dx L)
     {Nbeta : ℕ}
@@ -742,16 +747,16 @@ theorem ActionSequentialCuts.beta_prob_le {T : Type*} [DecidableEq T]
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelBetaFailureEvent actionCircuit pp family static inputs hvk hI hchar)
       ≤ (family.Q + 1 : ℕ) * ((Nbeta : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) := by
-  refine actionBetaFailureEvent_prob_le pp family static inputs hvk hI hchar query
+  refine actionBetaFailure_probability_bound pp family static inputs hvk hI hchar query
     cuts.cut1 cuts.view1 cuts.theta1 cuts.hview1 cuts.htheta1 (fun basis s => ?_)
-  refine le_trans (actionBetaBadSets_measure_le pp basis (cuts.theta1 s) (cuts.view1 s)) ?_
+  refine le_trans (actionBetaBadSets_probability_bound pp basis (cuts.theta1 s) (cuts.view1 s)) ?_
   rw [ENNReal.div_add_div_same, ← Nat.cast_add]
   gcongr
   exact_mod_cast hcap basis (cuts.view1 s)
 
-/-- The `γ` premise from the bundle: `(Q + 1) · Nγ / |Fp|`, `Nγ` capping doubled cells plus
-lookup pairs. -/
-theorem ActionSequentialCuts.gamma_prob_le {T : Type*} [DecidableEq T]
+/-- Probability bound for the bundle's `γ` event: `(Q + 1) · Nγ / |Fp|`, with `Nγ` capping
+doubled cells plus lookup pairs. -/
+theorem ActionSequentialCuts.gamma_probability_bound {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ actionCircuit.shape.k) → T)
     {Dx L : ℕ} (cuts : ActionSequentialCuts pp family static inputs hvk hI hchar Dx L)
     {Ngamma : ℕ}
@@ -770,18 +775,19 @@ theorem ActionSequentialCuts.gamma_prob_le {T : Type*} [DecidableEq T]
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           topLevelGammaFailureEvent actionCircuit pp family static inputs hvk hI hchar)
       ≤ (family.Q + 1 : ℕ) * ((Ngamma : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) := by
-  refine actionGammaFailureEvent_prob_le pp family static inputs hvk hI hchar query
+  refine actionGammaFailure_probability_bound pp family static inputs hvk hI hchar query
     cuts.cut2 cuts.view2 cuts.theta2 cuts.beta2 cuts.hview2 cuts.htheta2 cuts.hbeta2
     (fun basis s => ?_)
-  refine le_trans (actionGammaBadSets_measure_le pp basis (cuts.theta2 s) (cuts.beta2 s)
+  refine le_trans (actionGammaBadSets_probability_bound pp basis (cuts.theta2 s) (cuts.beta2 s)
     (cuts.view2 s)) ?_
   rw [ENNReal.div_add_div_same, ← Nat.cast_add]
   gcongr
   exact_mod_cast hcap basis (cuts.view2 s)
 
-/-- The fused `x`/`y` premise from the bundle: `(Q + 1) · Dx / |Fp| + (Q + 1) · Ny / |Fp|`,
-`Dx` the fold degree cap and `Ny` capping `n · L`. -/
-theorem ActionSequentialCuts.xy_prob_le {T : Type*} [DecidableEq T]
+/-- Probability bound for the bundle's fused `x`/`y` event:
+`(Q + 1) · Dx / |Fp| + (Q + 1) · Ny / |Fp|`, with `Dx` the fold-degree cap and `Ny` capping
+`n · L`. -/
+theorem ActionSequentialCuts.xy_probability_bound {T : Type*} [DecidableEq T]
     (query : AugmentedIndex (2 ^ actionCircuit.shape.k) → T)
     {Dx L : ℕ} (cuts : ActionSequentialCuts pp family static inputs hvk hI hchar Dx L)
     {Ny : ℕ}
@@ -795,14 +801,14 @@ theorem ActionSequentialCuts.xy_prob_le {T : Type*} [DecidableEq T]
           topLevelXYFailureEvent actionCircuit pp family static inputs hvk hI hchar)
       ≤ (family.Q + 1 : ℕ) * ((Dx : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) +
         (family.Q + 1 : ℕ) * ((Ny : ℝ≥0∞) / (Fintype.card Fp : ℝ≥0∞)) := by
-  refine actionXYFailureEvent_prob_le pp family static inputs hvk hI hchar query
+  refine actionXYFailure_probability_bound pp family static inputs hvk hI hchar query
     cuts.cut3 cuts.cut4 cuts.modelY cuts.modelX cuts.yOf cuts.vanishingOf
     cuts.hmodelY cuts.hmodelX cuts.hy cuts.hvanishing
     (fun basis s => ?_) (fun basis s => ?_)
   · refine le_trans (uniformChallenge_szBadSet _) ?_
     gcongr
     exact_mod_cast cuts.xdeg s
-  · refine le_trans (actionYBadSet_measure_le ((cuts.modelY s).constraints)
+  · refine le_trans (actionYBadSet_probability_bound ((cuts.modelY s).constraints)
       hn) ?_
     gcongr
     exact_mod_cast le_trans

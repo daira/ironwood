@@ -1,6 +1,6 @@
 import Zcash.Snark.Soundness.AGM.DeployedSyntheticOpened
 import Zcash.Snark.Soundness.AGM.DeployedValueUnbatch
-import Zcash.Snark.Soundness.ChallengePricing
+import Zcash.Snark.Soundness.Pricing.ChallengePricing
 import Zcash.Snark.Soundness.Composition.AlgebraicRootBudget
 
 /-!

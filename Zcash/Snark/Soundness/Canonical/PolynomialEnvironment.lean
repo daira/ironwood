@@ -1,5 +1,5 @@
 import Mathlib.LinearAlgebra.Lagrange
-import Zcash.Snark.Soundness.Constraints
+import Zcash.Snark.Soundness.Constraint.Constraints
 
 /-!
 # Canonical row polynomials on the `ω` domain

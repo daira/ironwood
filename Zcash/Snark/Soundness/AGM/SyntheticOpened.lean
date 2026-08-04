@@ -7,7 +7,7 @@ import Zcash.Snark.Soundness.Multiopen.Opened
 Represented columns form power combinations at any distinct interpolation points locally, so this
 file packages them as a *synthetic* `OpenedBatchOpenings` — algebraic calculations, not accepting
 transcripts.  Its canonical Vandermonde decode returns the original AGM coordinates exactly, so
-deterministic downstream constraints are reused without the old rewind loss.
+deterministic downstream constraints are reused without a rewind loss.
 -/
 
 namespace Zcash.Snark
