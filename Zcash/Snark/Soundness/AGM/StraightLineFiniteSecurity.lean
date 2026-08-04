@@ -28,8 +28,7 @@ consensus target.
 
 None of these figures is an achieved end-to-end security level.  The advantage is left symbolic, so
 the statements hold whatever it is; the number records only the accounting scale the reduction was
-evaluated at, which is a design target for the underlying curve rather than a proven bound on the
-protocol.
+evaluated at, not a proven bound on the protocol.
 -/
 
 namespace Zcash.Snark

@@ -328,7 +328,9 @@ bit below the `2^123` stated here — so the advantage is being requested slight
 group can offer.
 
 The advantage is left symbolic, so the statement holds regardless.  The figure records the
-accounting scale the reduction was evaluated at, not a proven end-to-end bound on the protocol. -/
+accounting scale the reduction was evaluated at, not a proven end-to-end bound on the protocol.
+The four-bit overhead is a loose bound on the eight represented runs rather than an inherent cost;
+tightening it, and the adversary budget that follows from it, is tracked in #172. -/
 theorem orchard_action_adaptive_bundle_soundness_finite_security
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
@@ -456,16 +458,13 @@ The `2^127` figure is where the reduction's overhead lands, not a security level
 the adversary's own budget; the adaptive finder's eight uncached represented runs cost four bits on
 top of it (`16 * 2^123 = 2^127`), and that product is what the DLOG advantage is supplied at.
 
-Vesta's own ceiling sits below that.  For `n` group operations over `G` with automorphism group of
-size `m` (`m = 6` for Pasta), Pollard rho succeeds with probability at most
-`m · n · (n − 1) / (2 · |G|)`; at `|G| ≥ 2^254` that puts `n` a little above `2^126`.  Against a
-four-bit overhead the ceiling-respecting adversary budget is therefore `2^126 / 2^4 = 2^122`, one
-bit below the `2^123` stated here — so the advantage is being requested slightly above what the
-group can offer.
+Vesta's own ceiling sits below that at about `2^126` — see the discussion for
+`orchard_action_adaptive_bundle_soundness_finite_security` above.  Against a four-bit overhead the
+ceiling-respecting adversary budget is therefore `2^126 / 2^4 = 2^122`, one bit below the `2^123`
+stated here — so the advantage is being requested slightly above what the group can offer.
 
 The advantage is left symbolic, so the statement holds regardless.  The figure records the
-accounting scale the reduction was evaluated at, which is a design target for the underlying curve
-rather than a proven end-to-end bound on the protocol. -/
+accounting scale the reduction was evaluated at, not a proven end-to-end bound on the protocol. -/
 theorem orchard_action_adaptive_bundle_knowledge_soundness_finite_security
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
