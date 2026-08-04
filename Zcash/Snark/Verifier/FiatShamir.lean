@@ -154,11 +154,10 @@ theorem vkTranscriptRepr_eq_of_initialTranscript_eq
     (List.cons.inj hinit).1
   injection hscalar
 
-/-- With an injective key digest, equal canonical prefixes pin the verifying key itself.  The
-digest is a parameter precisely so this obligation is structural: the captured fixtures
-instantiate it as a constant function and therefore receive no binding conclusion — they are
-faithfulness checks against one capture — while the security development assumes injectivity
-here and only here. -/
+/-- Generic mathematical implication from injectivity: equal canonical prefixes pin the verifying
+key.  This utility is not a cryptographic hash assumption used by the adaptive-statement theorem.
+Concrete cross-key binding is instead supplied by collision resistance of the deployed key hash;
+captured fixtures may use a constant representation and receive only single-key faithfulness. -/
 theorem vk_eq_of_initialTranscript_eq_of_injective
     {shape : Shape} {F G : Type*}
     (vkHash : VerifyingKey shape F G → F) (hinj : Function.Injective vkHash)

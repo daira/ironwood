@@ -292,36 +292,6 @@ def semanticRepresentationRelationFinderFromAnnotations {pp : ProofParams}
   simp [semanticRepresentationRelationFinderFromAnnotations,
     semanticRepresentationRelationFinder]
 
-/-- Compare one semantic stage with the complete pre-`x` source of a retained output. -/
-def semanticSourceMismatchAtOfOutput? {pp : ProofParams}
-    (family : ComputedAdaptiveActionStatementFSFamily pp)
-    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis))
-    (n : Fin 5) : Option (AlgebraicRelationWitness (F := Fp) basis) :=
-  representationSourceMismatchFinder
-    (output.proofData.algebraicProof.preX1AssemblySource
-      (adaptiveStatementInstanceRepresentationList output.instanceRepresentations ++
-        family.fixedRepresentations basis))
-    (semanticRepresentationTarget output n ++ family.fixedRepresentations basis)
-
-/-- One retained output performs all five complete-source comparisons. -/
-def semanticSourceMismatchRelationFinderOfOutput {pp : ProofParams}
-    (family : ComputedAdaptiveActionStatementFSFamily pp)
-    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)) :
-    Option (AlgebraicRelationWitness (F := Fp) basis) :=
-  ComputedAdaptiveOnlineAGMFSFamily.firstAdaptiveRelation?
-    (List.ofFn fun n => family.semanticSourceMismatchAtOfOutput? basis output n)
-
-/-- The retained-output source aggregate equals the original repeated-traversal aggregate. -/
-@[simp] theorem semanticSourceMismatchRelationFinderOfOutput_eq {pp : ProofParams}
-    (family : ComputedAdaptiveActionStatementFSFamily pp)
-    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) :
-    family.semanticSourceMismatchRelationFinderOfOutput basis (family.runOutput basis O) =
-      family.semanticSourceMismatchRelationFinder basis O := by
-  rfl
-
 /-- One retained adaptive execution covers instance binding, all pre-IPA and IPA annotations, all
 five semantic annotations, and all five complete-source comparisons. -/
 def provenanceRelationFinder {pp : ProofParams}

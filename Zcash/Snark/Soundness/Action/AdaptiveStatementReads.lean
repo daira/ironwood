@@ -9,11 +9,10 @@ The traversal formulas `adaptiveStatementDlogRandomOracleQueries` and
 connects them to the executable code.  `relationFinderReads` is the concrete set of table points
 the combined relation finder can consult — the adversary's own query log plus the selected
 statement's canonical challenge prefixes.  `relationFinderReads_card_le` bounds its size by
-`Q + (11 + k)`, and the locality theorems prove the finder and the knowledge extractor read
-nothing else: two tables agreeing on the read set produce the same relation result and the same
-extraction verdict.  The traversal formulas then dominate the certified count
-(`relationFinderReads_card_le_dlogQueries` and its extractor counterpart), which is the missing
-link between the resource arithmetic and the code it prices.
+`Q + (11 + k)`; run views materialize the two finite challenge vectors; and
+`relationFinderWithCalls` returns a stage count with the executable result.  The pointwise
+theorems below multiply the one-traversal support bound by that returned count.  Locality then
+proves that two tables agreeing on this support produce the same relation and extraction verdict.
 -/
 
 namespace Zcash.Snark
@@ -54,6 +53,45 @@ theorem relationFinderReads_card_le (O : family.Coins) :
         (AdaptiveActionStatementShape pp).k :=
     le_trans Finset.card_image_le (by simp)
   omega
+
+/-- The support of every charged finder traversal fits the table-specific query envelope returned
+by the same short-circuiting execution. -/
+theorem relationFinderReads_card_mul_calls_le_queriesAt
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) < scalarFieldOrder)
+    (O : family.Coins) :
+    family.relationFinderCalls hchar basis O *
+        (family.relationFinderReads basis O).card ≤
+      adaptiveStatementDlogRandomOracleQueriesAt family hchar basis O := by
+  calc
+    family.relationFinderCalls hchar basis O *
+        (family.relationFinderReads basis O).card ≤
+      family.relationFinderCalls hchar basis O *
+        (family.Q + (11 + (AdaptiveActionStatementShape pp).k)) :=
+          Nat.mul_le_mul_left _ (family.relationFinderReads_card_le basis O)
+    _ = adaptiveStatementDlogRandomOracleQueriesAt family hchar basis O := by
+      rw [Nat.mul_add]
+      rfl
+
+/-- The extractor charges the counted finder traversals plus its one retained post-finder view. -/
+theorem relationFinderReads_card_mul_extractorCalls_le_queriesAt
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) < scalarFieldOrder)
+    (O : family.Coins) :
+    (family.relationFinderCalls hchar basis O + 1) *
+        (family.relationFinderReads basis O).card ≤
+      adaptiveStatementKnowledgeExtractorRandomOracleQueriesAt family hchar basis O := by
+  calc
+    (family.relationFinderCalls hchar basis O + 1) *
+        (family.relationFinderReads basis O).card ≤
+      (family.relationFinderCalls hchar basis O + 1) *
+        (family.Q + (11 + (AdaptiveActionStatementShape pp).k)) :=
+          Nat.mul_le_mul_left _ (family.relationFinderReads_card_le basis O)
+    _ = adaptiveStatementKnowledgeExtractorRandomOracleQueriesAt family hchar basis O := by
+      rw [Nat.mul_add]
+      rfl
 
 /-- The certified count is below the conservative four-traversal solver formula. -/
 theorem relationFinderReads_card_le_dlogQueries (O : family.Coins) :
@@ -110,6 +148,7 @@ theorem runPreIpaReads_eq_of_agree {O O' : family.Coins}
     family.runPreIpaReads basis O' = family.runPreIpaReads basis O := by
   have houtput := runOutput_eq_of_agree h
   funext i
+  rw [runPreIpaReads_apply, runPreIpaReads_apply]
   show O' ((family.runOutput basis O').prefixesPre (family.vkTranscriptRepr basis) i) =
     O ((family.runOutput basis O).prefixesPre (family.vkTranscriptRepr basis) i)
   rw [houtput]
@@ -124,6 +163,7 @@ theorem runIpaReads_eq_of_agree {O O' : family.Coins}
     family.runIpaReads basis O' = family.runIpaReads basis O := by
   have houtput := runOutput_eq_of_agree h
   funext j
+  rw [runIpaReads_apply, runIpaReads_apply]
   show O' ((family.runOutput basis O').prefixes (family.vkTranscriptRepr basis) j) =
     O ((family.runOutput basis O).prefixes (family.vkTranscriptRepr basis) j)
   rw [houtput]
@@ -154,7 +194,22 @@ theorem runView_eq_of_agree {O O' : family.Coins}
     (h : ∀ t ∈ family.relationFinderReads basis O, O' t = O t) :
     runView family basis O' = runView family basis O := by
   unfold runView
-  rw [runOutput_eq_of_agree h, runPreIpaReads_eq_of_agree h, runIpaReads_eq_of_agree h]
+  rw [runOutput_eq_of_agree h]
+  dsimp only
+  rw [RunView.mk.injEq]
+  refine ⟨rfl, ?_, ?_⟩
+  · funext i
+    simp only [preIpaReadVectorOfOutput, challengeReadVector_get]
+    exact h _ (by
+      unfold relationFinderReads
+      exact Finset.mem_union_left _ (Finset.mem_union_right _
+        (Finset.mem_image.mpr ⟨i, Finset.mem_univ i, rfl⟩)))
+  · funext j
+    simp only [ipaReadVectorOfOutput, challengeReadVector_get]
+    exact h _ (by
+      unfold relationFinderReads
+      exact Finset.mem_union_right _
+        (Finset.mem_image.mpr ⟨j, Finset.mem_univ j, rfl⟩))
 
 /-- Agreement on the read set reproduces the provenance stage. -/
 theorem provenanceRelationFinder_eq_of_agree {O O' : family.Coins}
@@ -275,7 +330,8 @@ theorem relationFinder_eq_of_agree
     {O O' : family.Coins}
     (h : ∀ t ∈ family.relationFinderReads basis O, O' t = O t) :
     family.relationFinder hchar basis O' = family.relationFinder hchar basis O := by
-  unfold relationFinder
+  rw [family.relationFinder_eq_stages hchar basis O',
+    family.relationFinder_eq_stages hchar basis O]
   rw [provenanceRelationFinder_eq_of_agree h,
     statementQuotientRelationFinder_eq_of_agree h,
     identityRelationFinder_eq_of_agree hchar h,

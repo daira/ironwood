@@ -257,7 +257,8 @@ theorem adaptiveStatementKnowledgeExtractor_isSome_of_no_events {pp : ProofParam
               (family.ipaPoint basis j (family.runOutput basis O)) O ∧ _
         rw [outputIpaFallbackBad_actual]
         refine ⟨?_, hprovenance.2.2.1⟩
-        simpa only [runView_output, runView_pre, runView_rounds] using hj
+        simpa only [runView_output, runView_pre, runView_rounds,
+          runIpaReads_apply, ipaPoint] using hj
     | inr relation =>
         have hacceptsSome := family.accepts?V_isSome_of basis (runView family basis O)
           (by simpa only [acceptsV, accepts, runView_output, runView_pre, runView_rounds,
@@ -320,7 +321,7 @@ theorem adaptiveStatementKnowledgeExtractor_isSome_of_no_events {pp : ProofParam
         refine ⟨?_, hprovenance.2.2.2.1⟩
         rw [outputSemanticBad_actual]
         simpa only [outputSemanticSurface, adaptiveActionSurfaceAtOf_action,
-          n11] using hbad
+          runPreIpaReads_apply, preIpaPoint, n11] using hbad
       have hexclusions := family.statementExclusionsV_of_no_surface basis
         (runView family basis O) hfacts witness rawDecode hbatches hacceptsFull
         hcharFull hsurface

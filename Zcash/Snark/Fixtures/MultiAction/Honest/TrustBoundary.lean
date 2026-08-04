@@ -41,7 +41,9 @@ The retained AGM capstones include the straight-line endpoint and the adaptive-s
 endpoints.  Their representations are ghost extractor data: they are neither transmitted nor
 checked by the Halo2 verifier.  Accordingly the endpoints are AGM-and-random-oracle results under
 the supplied finite-security Vesta DLOG profiles.  The adaptive-statement profile conservatively
-charges all eight stages of the combined relation finder.
+charges its four short-circuiting finder stages and one additional extraction traversal.  The
+adversary's group work and the complete reduction postprocessing work remain explicit bounded
+profile inputs; only the named assembly/basis sub-budget is operationally derived here.
 -/
 
 assert_axioms Zcash.Snark.Fixture2.capturedPointCoordinatesValid_eq_true +native(
