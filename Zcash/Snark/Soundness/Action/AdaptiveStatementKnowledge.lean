@@ -55,11 +55,11 @@ def adaptiveStatementKnowledgeOutcomeCore {pp : ProofParams}
           match family.batchGoodRoots? basis O witness with
           | none => none
           | some hroots =>
-            let hshifted := family.shiftedValue_of_accept_not_attack
+            have hshifted := family.shiftedValue_of_accept_not_attack
               basis O haccepts hz hattack
             let rawDecode := family.rawDecodeOfBatchGoodRoots basis O witness
               hroots.down hshifted
-            let hacceptsFull : DeployedAccepts
+            let hacceptsFull : DeployedAccepts (AdaptiveActionStatementShape pp)
                 (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
                 (adaptiveActionStatementVk pp basis)
                 (adaptiveActionStatementInstanceCommitment pp basis
@@ -145,7 +145,6 @@ def adaptiveStatementKnowledgeFailureEvent {pp : ProofParams}
     family.adaptiveStatementKnowledgeExtractor hchar q.1 q.2 = none}
 
 set_option maxRecDepth 10000 in
-set_option maxHeartbeats 5000000 in
 theorem adaptiveStatementKnowledgeExtractor_isSome_of_no_events {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
@@ -210,7 +209,7 @@ theorem adaptiveStatementKnowledgeExtractor_isSome_of_no_events {pp : ProofParam
         hprovenance.2.1
       let rawDecode := family.rawDecodeOfBatchGoodRoots basis O witness hroots hshifted
       have hbatches : rawDecode.batches = witness.batches := by rfl
-      have hacceptsFull : DeployedAccepts
+      have hacceptsFull : DeployedAccepts (AdaptiveActionStatementShape pp)
           (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
           (adaptiveActionStatementVk pp basis)
           (adaptiveActionStatementInstanceCommitment pp basis
@@ -276,7 +275,7 @@ theorem adaptiveStatementKnowledgeExtractor_isSome_of_no_events {pp : ProofParam
             have hfinderSome := family.identityRelationFinder_isSome_of hchar basis O
               hprovenance.2.2.2.2.1 witness hout hroots haccepts hz hattack hrelationSome
             rw [hidentityNone] at hfinderSome
-            contradiction
+            simp at hfinderSome
         | inl extracted =>
             unfold adaptiveStatementKnowledgeExtractor
             rw [family.adaptiveStatementKnowledgeOutcome_eq_core_of_none
@@ -339,7 +338,7 @@ theorem adaptiveStatementKnowledgeExtractor_isSome_of_no_events {pp : ProofParam
             have hterminalSome := family.terminalRelationFinder_isSome_of hchar basis O witness
               hout hroots haccepts hz hattack (by simpa only [run] using hsemanticSome)
             rw [hterminalNone] at hterminalSome
-            contradiction
+            simp at hterminalSome
         | inl extracted =>
             unfold adaptiveStatementKnowledgeExtractor
             rw [family.adaptiveStatementKnowledgeOutcome_eq_core_of_none

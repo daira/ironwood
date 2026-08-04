@@ -20,8 +20,6 @@ open scoped ENNReal
 
 local instance adaptiveStatementSurfacesVestaInhabited : Inhabited VestaG := ⟨0⟩
 
-set_option maxHeartbeats 4000000
-
 namespace ComputedAdaptiveActionStatementFSFamily
 
 private theorem eq_of_prefixes_of_eq {A : Type*} {left right wholeLeft wholeRight : List A}
@@ -683,7 +681,6 @@ theorem ipaRepresentationTarget_points {pp : ProofParams}
   funext column
   exact output.instanceRepresented p column
 
-set_option maxHeartbeats 1600000 in
 /-- If the IPA provenance finder returned no relation, coordinates decoded from the first actual
 round annotation are exactly the final coordinates visible through that query. -/
 theorem decodedIpaQueryCoordinates_eq_of_pinned {pp : ProofParams}
@@ -1097,7 +1094,6 @@ abbrev finalIpaPoint {pp : ProofParams}
     AdaptiveActionStatementTranscript pp :=
   family.ipaPoint basis j ((family.adversary basis).run O)
 
-set_option maxHeartbeats 1600000 in
 /-- A pinned first round annotation makes the decoded quadratic literally the final-output
 quadratic. -/
 theorem decodedIpaSurface_eq_output_of_pinned {pp : ProofParams}
@@ -1353,7 +1349,6 @@ theorem ipaBadFallback_cover {pp : ProofParams}
     (outputIpaFallbackBad family basis j) t O (O t) hfind hbad
 
 set_option linter.constructorNameAsVariable false in
-set_option maxHeartbeats 800000 in
 /-- The final adaptive IPA point is covered by either its first query annotation or the fresh
 output fallback, unless the retained coordinates already expose an AGM relation. -/
 theorem ipaBadWithoutRelation_cover {pp : ProofParams}
@@ -1408,7 +1403,6 @@ theorem ipaBadWithoutRelation_cover {pp : ProofParams}
             generalize (outputIpaFallbackBad family basis j) = fallback at hbad ⊢
             exact hbad
 
-set_option maxHeartbeats 800000 in
 /-- Each adaptive-statement IPA round retains the existing quadratic `(Q + 1)` price. -/
 theorem ipaBadWithoutRelation_table_le {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
@@ -1998,8 +1992,54 @@ theorem outputSemanticBad_measure_le {pp : ProofParams}
   · exact hsurface _ _ _ _
   · simp
 
+/-- A pinned annotation puts the final semantic surface inside the query-time decoded set. -/
+private theorem mem_queriedSemanticBad_of_pinned {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) (n : Fin 5)
+    (pinned : SelectedQueryRepresentationPinned
+      (family.preIpaPoint basis (Fin.castLE (by omega) n) (family.runOutput basis O))
+      (family.adversary basis) O
+      (semanticRepresentationTarget (family.runOutput basis O) n))
+    (hbad : O (family.preIpaPoint basis (Fin.castLE (by omega) n) (family.runOutput basis O)) ∈
+      outputSemanticBad family basis n (family.runOutput basis O)
+        (family.preIpaPoint basis (Fin.castLE (by omega) n) (family.runOutput basis O)) O) :
+    O (family.preIpaPoint basis (Fin.castLE (by omega) n) (family.runOutput basis O)) ∈
+      queriedSemanticBad family basis n
+        (family.preIpaPoint basis (Fin.castLE (by omega) n) (family.runOutput basis O))
+        pinned.query O := by
+  have hdecode := family.decodeStatementPrePrefix?_isSome basis O (Fin.castLE (by omega) n)
+  change (decodeStatementPrePrefix? (Fin.castLE (by omega) n)
+    (family.preIpaPoint basis (Fin.castLE (by omega) n) (family.runOutput basis O))).isSome
+    at hdecode
+  cases hdec : decodeStatementPrePrefix? (Fin.castLE (by omega) n)
+      (family.preIpaPoint basis (Fin.castLE (by omega) n) (family.runOutput basis O)) with
+  | none => simp [hdec] at hdecode
+  | some decoded =>
+      unfold queriedSemanticBad
+      dsimp only
+      rw [hdec]
+      dsimp only
+      have hlen : (family.preIpaPoint basis (Fin.castLE (by omega) n)
+          (family.runOutput basis O)).val.length =
+          preIpaLen (AdaptiveActionStatementShape pp)
+            (adaptiveStatementInitLength (AdaptiveActionStatementShape pp))
+            (Fin.castLE (by omega) n) := by
+        simpa [ComputedAdaptiveActionStatementFSFamily.preIpaPoint,
+          AdaptiveActionStatementOutput.prefixesPre,
+          adaptiveStatementInitLength] using
+          (preIpaSqueezePoints_length_eq
+            ((family.runOutput basis O).init (family.vkTranscriptRepr basis))
+            (family.runOutput basis O).toAlgebraicWfProof.proof.1
+            (family.runOutput basis O).toAlgebraicWfProof.proof.2 (Fin.castLE (by omega) n))
+      rw [if_pos hlen]
+      rw [decodedSemanticSurface_eq_output_of_pinned family basis O n decoded pinned]
+      unfold outputSemanticBad at hbad
+      dsimp only at hbad
+      split at hbad
+      all_goals exact hbad
+
 /-- One adaptive selected-statement semantic squeeze uses the existing `(Q + 1)` query price. -/
-set_option maxHeartbeats 8000000 in
 theorem semanticBadWithoutRelation_table_le {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
@@ -2028,64 +2068,28 @@ theorem semanticBadWithoutRelation_table_le {pp : ProofParams}
   · intro O
     dsimp only
     intro hbad hnone
-    let output := family.runOutput basis O
-    let t := family.preIpaPoint basis n11 output
-    change O t ∈ LabeledOracleComp.firstLabelOrFallbackBad (family.adversary basis)
-      (queriedSemanticBad family basis n) (outputSemanticBad family basis n) t O
+    change O (family.preIpaPoint basis (Fin.castLE (by omega) n) (family.runOutput basis O)) ∈
+      LabeledOracleComp.firstLabelOrFallbackBad (family.adversary basis)
+        (queriedSemanticBad family basis n) (outputSemanticBad family basis n)
+        (family.preIpaPoint basis (Fin.castLE (by omega) n) (family.runOutput basis O)) O
     unfold LabeledOracleComp.firstLabelOrFallbackBad
-    cases hfind : (family.adversary basis).findLabel O t with
-    | none => simpa [hfind, output, t, n11] using hbad
+    cases hfind : (family.adversary basis).findLabel O
+        (family.preIpaPoint basis (Fin.castLE (by omega) n) (family.runOutput basis O)) with
+    | none => simpa [hfind] using hbad
     | some label =>
         have hat := family.semanticRepresentationRelationFinder_none_at basis O hnone n
-        have hprov := selectedQueryRepresentationRelation?_eq_none t
-          (family.adversary basis) O (semanticRepresentationTarget output n) _ hat
+        have hprov := selectedQueryRepresentationRelation?_eq_none
+          (family.preIpaPoint basis (Fin.castLE (by omega) n) (family.runOutput basis O))
+          (family.adversary basis) O
+          (semanticRepresentationTarget (family.runOutput basis O) n) _ hat
         cases hprov with
         | inl hfresh => simp [hfind] at hfresh
         | inr pinned =>
             have hlabel : pinned.query = label :=
               Option.some.inj (pinned.found.symm.trans hfind)
             subst label
-            change O t ∈ queriedSemanticBad family basis n t pinned.query O
-            have hdecode := family.decodeStatementPrePrefix?_isSome basis O n11
-            change (decodeStatementPrePrefix? n11 t).isSome at hdecode
-            cases hdec : decodeStatementPrePrefix? n11 t with
-            | none => simp [hdec] at hdecode
-            | some decoded =>
-                unfold queriedSemanticBad
-                dsimp only
-                rw [hdec]
-                dsimp only
-                have hlen : t.val.length = preIpaLen (AdaptiveActionStatementShape pp)
-                    (adaptiveStatementInitLength (AdaptiveActionStatementShape pp)) n11 := by
-                  simpa [t, output, ComputedAdaptiveActionStatementFSFamily.preIpaPoint,
-                    AdaptiveActionStatementOutput.prefixesPre,
-                    adaptiveStatementInitLength] using
-                    (preIpaSqueezePoints_length_eq
-                      (output.init (family.vkTranscriptRepr basis))
-                      output.toAlgebraicWfProof.proof.1
-                      output.toAlgebraicWfProof.proof.2 n11)
-                rw [if_pos hlen]
-                have hbad' : O t ∈ outputSemanticSurface family basis n output
-                    (fun i => O (statementEarlierPrefix t
-                      (i.castLE (le_of_lt n11.isLt)))) := by
-                  unfold outputSemanticBad at hbad
-                  dsimp only at hbad
-                  have hlenOutput :
-                      (family.preIpaPoint basis n11 (family.runOutput basis O)).val.length =
-                        preIpaLen (AdaptiveActionStatementShape pp)
-                          (adaptiveStatementInitLength (AdaptiveActionStatementShape pp)) n11 := by
-                    simpa [output, t] using hlen
-                  have hlenAdversary :
-                      (family.preIpaPoint basis n11
-                        ((family.adversary basis).run O)).val.length =
-                        preIpaLen (AdaptiveActionStatementShape pp)
-                          (adaptiveStatementInitLength (AdaptiveActionStatementShape pp)) n11 := by
-                    simpa [ComputedAdaptiveActionStatementFSFamily.runOutput] using hlenOutput
-                  rw [if_pos hlenAdversary] at hbad
-                  simpa [output, t] using hbad
-                rw [decodedSemanticSurface_eq_output_of_pinned
-                  family basis O n decoded pinned]
-                exact hbad'
+            exact mem_queriedSemanticBad_of_pinned family basis O n pinned
+              (by simpa using hbad)
   · exact fun t label O v => queriedSemanticBad_update_self
       family basis n t label O v
   · exact fun output t O v => outputSemanticBad_update_self
@@ -2137,6 +2141,129 @@ noncomputable def outputRootSurface {pp : ProofParams}
     (adaptiveActionStatementInstanceCommitment pp basis output.inputs) n
     (adaptiveRootPrefixProof n output.toAlgebraicWfProof.proof.1)
     (preIpaRepresentationTarget output n ++ family.fixedRepresentations basis) earlier
+
+/-- The witness `x₄` coefficient columns, rewritten to the adaptive representation walk. -/
+private theorem batchWitness_x4Coeffs_adaptive {pp : ProofParams}
+    {family : ComputedAdaptiveActionStatementFSFamily pp}
+    {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
+    {O : family.Coins} (witness : family.BatchWitness basis O)
+    (qCovered : CommitmentRefCovered
+      [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime]
+      (.point (family.runOutput basis O).proofData.algebraicProof.erase.multiopenQPrime)) :
+    witness.batches.x4.coeffs =
+      (adaptiveX4ColumnRepresentations (adaptiveActionStatementVk pp basis)
+        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+        (family.runOutput basis O).proofData.algebraicProof.erase
+        ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource
+          (adaptiveStatementInstanceRepresentationList
+              (family.runOutput basis O).instanceRepresentations ++
+            family.fixedRepresentations basis))
+        [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime]
+        (family.runOutput basis O).proofData.adaptivePreX1MembersCovered qCovered
+        (family.runPreIpaReads basis O)).coeffs :=
+  witness.x4Coeffs.trans
+    (((family.runOutput basis O).proofData.adaptiveX4Columns_eq_deployed
+      (family.runPreIpaReads basis O)).1.symm)
+
+/-- The witness `x₄` augmented `u` columns, rewritten to the adaptive representation walk. -/
+private theorem batchWitness_x4U_adaptive {pp : ProofParams}
+    {family : ComputedAdaptiveActionStatementFSFamily pp}
+    {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
+    {O : family.Coins} (witness : family.BatchWitness basis O)
+    (qCovered : CommitmentRefCovered
+      [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime]
+      (.point (family.runOutput basis O).proofData.algebraicProof.erase.multiopenQPrime)) :
+    witness.batches.x4.uComp =
+      (adaptiveX4ColumnRepresentations (adaptiveActionStatementVk pp basis)
+        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+        (family.runOutput basis O).proofData.algebraicProof.erase
+        ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource
+          (adaptiveStatementInstanceRepresentationList
+              (family.runOutput basis O).instanceRepresentations ++
+            family.fixedRepresentations basis))
+        [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime]
+        (family.runOutput basis O).proofData.adaptivePreX1MembersCovered qCovered
+        (family.runPreIpaReads basis O)).uComp :=
+  witness.x4U.trans
+    (((family.runOutput basis O).proofData.adaptiveX4Columns_eq_deployed
+      (family.runPreIpaReads basis O)).2.1.symm)
+
+/-- The witness member columns, rewritten to the adaptive representation walk. -/
+private theorem batchWitness_members_adaptive {pp : ProofParams}
+    {family : ComputedAdaptiveActionStatementFSFamily pp}
+    {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
+    {O : family.Coins} (witness : family.BatchWitness basis O) :
+    ∀ i (hi : i < deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runOutput basis O).proofData.algebraicProof.erase
+      (chRecord (family.runPreIpaReads basis O) (fun _ => 0))),
+      (witness.batches.x1 i hi).coeffs =
+        (adaptiveMemberRepresentations (adaptiveActionStatementVk pp basis)
+          (adaptiveActionStatementInstanceCommitment pp basis
+            (family.runOutput basis O).inputs)
+          (family.runOutput basis O).proofData.algebraicProof.erase
+          ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource
+            (adaptiveStatementInstanceRepresentationList
+                (family.runOutput basis O).instanceRepresentations ++
+              family.fixedRepresentations basis))
+          (family.runOutput basis O).proofData.adaptivePreX1MembersCovered
+          (family.runPreIpaReads basis O) i hi).coeffs := by
+  intro i hi
+  exact (witness.memberCoeffs i hi).trans
+    (((family.runOutput basis O).proofData.adaptiveMemberRepresentations_eq_deployed
+      (family.runPreIpaReads basis O) i hi).1.symm)
+
+/-- The adaptive aggregate reconstructs the selected proof's canonical aggregate. -/
+private theorem batchWitness_aggregate_adaptive {pp : ProofParams}
+    {family : ComputedAdaptiveActionStatementFSFamily pp}
+    {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
+    {O : family.Coins} (witness : family.BatchWitness basis O)
+    (qCovered : CommitmentRefCovered
+      [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime]
+      (.point (family.runOutput basis O).proofData.algebraicProof.erase.multiopenQPrime)) :
+    adaptiveAggregateG (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runOutput basis O).proofData.algebraicProof.erase
+      ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource
+        (adaptiveStatementInstanceRepresentationList
+            (family.runOutput basis O).instanceRepresentations ++
+          family.fixedRepresentations basis))
+      [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime]
+      (family.runOutput basis O).proofData.adaptivePreX1MembersCovered qCovered
+      (family.runPreIpaReads basis O) =
+        (family.runOutput basis O).proofData.toAlgebraicWfProof.aMulti
+          (family.runPreIpaReads basis O) := by
+  unfold adaptiveAggregateG
+  dsimp only
+  rw [((family.runOutput basis O).proofData.adaptiveX4Columns_eq_deployed
+    (family.runPreIpaReads basis O)).1]
+  exact witness.x4Source_reconstruct
+
+/-- The adaptive aggregate `u` coordinate reconstructs the selected proof's. -/
+private theorem batchWitness_aggregateU_adaptive {pp : ProofParams}
+    {family : ComputedAdaptiveActionStatementFSFamily pp}
+    {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
+    {O : family.Coins} (witness : family.BatchWitness basis O)
+    (qCovered : CommitmentRefCovered
+      [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime]
+      (.point (family.runOutput basis O).proofData.algebraicProof.erase.multiopenQPrime)) :
+    adaptiveAggregateU (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runOutput basis O).proofData.algebraicProof.erase
+      ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource
+        (adaptiveStatementInstanceRepresentationList
+            (family.runOutput basis O).instanceRepresentations ++
+          family.fixedRepresentations basis))
+      [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime]
+      (family.runOutput basis O).proofData.adaptivePreX1MembersCovered qCovered
+      (family.runPreIpaReads basis O) =
+        (family.runOutput basis O).proofData.toAlgebraicWfProof.multiU
+          (family.runPreIpaReads basis O) := by
+  unfold adaptiveAggregateU
+  dsimp only
+  rw [((family.runOutput basis O).proofData.adaptiveX4Columns_eq_deployed
+    (family.runPreIpaReads basis O)).2.1]
+  exact witness.x4Source_reconstructU
 
 /-- The direct batch witness identifies all six normalized online root sets with the executable
 root checks used by the adaptive-statement terminal. -/
@@ -2215,69 +2342,26 @@ theorem BatchWitness.rootSets_eq {pp : ProofParams}
         (commitGen (evalVector (AdaptiveActionStatementShape pp).k (nu 7))
           data.toAlgebraicWfProof.s) (nu 9)) := by
   dsimp only
-  let output := family.runOutput basis O
-  let data := output.proofData
-  let fixed := adaptiveStatementInstanceRepresentationList output.instanceRepresentations ++
-    family.fixedRepresentations basis
-  let nu := family.runPreIpaReads basis O
-  let qCovered : CommitmentRefCovered [data.algebraicProof.multiopenQPrime]
-      (.point data.algebraicProof.erase.multiopenQPrime) :=
-    ⟨data.algebraicProof.multiopenQPrime, by simp, rfl⟩
-  let sCovered : CommitmentRefCovered [data.algebraicProof.ipaS]
-      (.point data.algebraicProof.erase.ipaS) :=
-    ⟨data.algebraicProof.ipaS, by simp, rfl⟩
-  have hcols := data.adaptiveX4Columns_eq_deployed nu
-  have hcoeffs : witness.batches.x4.coeffs =
-      (adaptiveX4ColumnRepresentations (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-        data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
-        [data.algebraicProof.multiopenQPrime] data.adaptivePreX1MembersCovered qCovered
-        nu).coeffs :=
-    witness.x4Coeffs.trans (by simpa [output, data, fixed, nu] using hcols.1.symm)
-  have hu : witness.batches.x4.uComp =
-      (adaptiveX4ColumnRepresentations (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-        data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
-        [data.algebraicProof.multiopenQPrime] data.adaptivePreX1MembersCovered qCovered
-        nu).uComp :=
-    witness.x4U.trans (by simpa [output, data, fixed, nu] using hcols.2.1.symm)
-  have hmembers : ∀ i (hi : i < deployedX4PairCount
-      (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-      data.algebraicProof.erase (chRecord nu (fun _ => 0))),
-      (witness.batches.x1 i hi).coeffs =
-        (adaptiveMemberRepresentations (adaptiveActionStatementVk pp basis)
-          (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-          data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
-          data.adaptivePreX1MembersCovered nu i hi).coeffs := by
-    intro i hi
-    exact (witness.memberCoeffs i hi).trans
-      ((data.adaptiveMemberRepresentations_eq_deployed nu i hi).1.symm)
-  have haggregate : adaptiveAggregateG (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-      data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
-      [data.algebraicProof.multiopenQPrime] data.adaptivePreX1MembersCovered qCovered nu =
-        data.toAlgebraicWfProof.aMulti nu := by
-    unfold adaptiveAggregateG
-    dsimp only
-    rw [hcols.1]
-    exact witness.x4Source_reconstruct
-  have haggregateU : adaptiveAggregateU (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-      data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
-      [data.algebraicProof.multiopenQPrime] data.adaptivePreX1MembersCovered qCovered nu =
-        data.toAlgebraicWfProof.multiU nu := by
-    unfold adaptiveAggregateU
-    dsimp only
-    rw [hcols.2.1]
-    exact witness.x4Source_reconstructU
-  refine ⟨data.adaptiveX1AllRootSet_eq_deployed nu witness.batches hmembers, ?_⟩
-  refine ⟨data.adaptiveX2RootSet_eq_deployed nu qCovered witness.batches hcoeffs, ?_⟩
-  refine ⟨data.adaptiveX3RootSet_eq_deployed nu qCovered witness.batches hcoeffs, ?_⟩
-  refine ⟨data.adaptiveX4RootSet_eq_deployed nu qCovered witness.batches hcoeffs, ?_⟩
-  have hshift := data.adaptiveShiftRootSets_eq nu qCovered sCovered
-    witness.batches.x4 hcoeffs hu haggregate haggregateU
+  refine ⟨(family.runOutput basis O).proofData.adaptiveX1AllRootSet_eq_deployed
+    (family.runPreIpaReads basis O) witness.batches (batchWitness_members_adaptive witness), ?_⟩
+  refine ⟨(family.runOutput basis O).proofData.adaptiveX2RootSet_eq_deployed
+    (family.runPreIpaReads basis O) ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩ witness.batches
+    (batchWitness_x4Coeffs_adaptive witness ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩), ?_⟩
+  refine ⟨(family.runOutput basis O).proofData.adaptiveX3RootSet_eq_deployed
+    (family.runPreIpaReads basis O) ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩ witness.batches
+    (batchWitness_x4Coeffs_adaptive witness ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩), ?_⟩
+  refine ⟨(family.runOutput basis O).proofData.adaptiveX4RootSet_eq_deployed
+    (family.runPreIpaReads basis O) ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩ witness.batches
+    (batchWitness_x4Coeffs_adaptive witness ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩), ?_⟩
+  have hshift := (family.runOutput basis O).proofData.adaptiveShiftRootSets_eq
+    (family.runPreIpaReads basis O)
+    ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩
+    ⟨(family.runOutput basis O).proofData.algebraicProof.ipaS, by simp, rfl⟩
+    witness.batches.x4 (batchWitness_x4Coeffs_adaptive witness ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩)
+    (batchWitness_x4U_adaptive witness ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩) (batchWitness_aggregate_adaptive witness ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩)
+    (batchWitness_aggregateU_adaptive witness ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩)
   exact ⟨hshift.1, hshift.2⟩
+
 
 /-- Every final-output root surface has the same pointwise budget. -/
 theorem outputRootSurface_measure_le {pp : ProofParams}
@@ -2417,8 +2501,48 @@ theorem outputRootBad_measure_le {pp : ProofParams}
   exact statementPrefixBad_measure_le n _
     (fun _ earlier => outputRootSurface_measure_le family basis n h5n output earlier) t O
 
+/-- A pinned annotation puts the final root surface inside the query-time decoded set. -/
+private theorem mem_queriedRootBad_of_pinned {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) (n : Fin 11) (h5n : 5 ≤ (n : Nat))
+    (pinned : SelectedQueryRepresentationPinned
+      (family.preIpaPoint basis n (family.runOutput basis O))
+      (family.adversary basis) O
+      (preIpaRepresentationTarget (family.runOutput basis O) n))
+    (hbad : O (family.preIpaPoint basis n (family.runOutput basis O)) ∈
+      outputRootBad family basis n (family.runOutput basis O)
+        (family.preIpaPoint basis n (family.runOutput basis O)) O) :
+    O (family.preIpaPoint basis n (family.runOutput basis O)) ∈
+      queriedRootBad family basis n h5n
+        (family.preIpaPoint basis n (family.runOutput basis O)) pinned.query O := by
+  have hdecode := family.decodeStatementPrePrefix?_isSome basis O n
+  change (decodeStatementPrePrefix? n
+    (family.preIpaPoint basis n (family.runOutput basis O))).isSome at hdecode
+  cases hdec : decodeStatementPrePrefix? n
+      (family.preIpaPoint basis n (family.runOutput basis O)) with
+  | none => simp [hdec] at hdecode
+  | some decoded =>
+      unfold queriedRootBad
+      rw [hdec]
+      dsimp only
+      have hlen : (family.preIpaPoint basis n (family.runOutput basis O)).val.length =
+          preIpaLen (AdaptiveActionStatementShape pp)
+            (adaptiveStatementInitLength (AdaptiveActionStatementShape pp)) n := by
+        simpa [ComputedAdaptiveActionStatementFSFamily.preIpaPoint,
+          AdaptiveActionStatementOutput.prefixesPre,
+          adaptiveStatementInitLength] using
+          (preIpaSqueezePoints_length_eq
+            ((family.runOutput basis O).init (family.vkTranscriptRepr basis))
+            (family.runOutput basis O).toAlgebraicWfProof.proof.1
+            (family.runOutput basis O).toAlgebraicWfProof.proof.2 n)
+      rw [if_pos hlen]
+      rw [decodedRootSurface_eq_output_of_pinned family basis O n h5n decoded pinned]
+      unfold outputRootBad statementPrefixBad at hbad
+      split at hbad
+      all_goals exact hbad
+
 /-- Each actual adaptive-statement root event retains the direct `(Q + 1)` squeeze price. -/
-set_option maxHeartbeats 8000000 in
 theorem rootBadWithoutRelation_table_le {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
@@ -2439,62 +2563,28 @@ theorem rootBadWithoutRelation_table_le {pp : ProofParams}
   · intro O
     dsimp only
     intro hbad hnone
-    let output := family.runOutput basis O
-    let t := family.preIpaPoint basis n output
-    change O t ∈ LabeledOracleComp.firstLabelOrFallbackBad (family.adversary basis)
-      (queriedRootBad family basis n h5n) (outputRootBad family basis n) t O
+    change O (family.preIpaPoint basis n (family.runOutput basis O)) ∈
+      LabeledOracleComp.firstLabelOrFallbackBad (family.adversary basis)
+        (queriedRootBad family basis n h5n) (outputRootBad family basis n)
+        (family.preIpaPoint basis n (family.runOutput basis O)) O
     unfold LabeledOracleComp.firstLabelOrFallbackBad
-    cases hfind : (family.adversary basis).findLabel O t with
-    | none => simpa [hfind, output, t] using hbad
+    cases hfind : (family.adversary basis).findLabel O
+        (family.preIpaPoint basis n (family.runOutput basis O)) with
+    | none => simpa [hfind] using hbad
     | some label =>
         have hat := family.preIpaRepresentationRelationFinder_none_at basis O hnone n h5n
-        have hprov := selectedQueryRepresentationRelation?_eq_none t
-          (family.adversary basis) O (preIpaRepresentationTarget output n) _ hat
+        have hprov := selectedQueryRepresentationRelation?_eq_none
+          (family.preIpaPoint basis n (family.runOutput basis O))
+          (family.adversary basis) O
+          (preIpaRepresentationTarget (family.runOutput basis O) n) _ hat
         cases hprov with
         | inl hfresh => simp [hfind] at hfresh
         | inr pinned =>
             have hlabel : pinned.query = label :=
               Option.some.inj (pinned.found.symm.trans hfind)
             subst label
-            change O t ∈ queriedRootBad family basis n h5n t pinned.query O
-            have hdecode := family.decodeStatementPrePrefix?_isSome basis O n
-            change (decodeStatementPrePrefix? n t).isSome at hdecode
-            cases hdec : decodeStatementPrePrefix? n t with
-            | none => simp [hdec] at hdecode
-            | some decoded =>
-                unfold queriedRootBad
-                rw [hdec]
-                dsimp only
-                have hlen : t.val.length = preIpaLen (AdaptiveActionStatementShape pp)
-                    (adaptiveStatementInitLength (AdaptiveActionStatementShape pp)) n := by
-                  simpa [t, output, ComputedAdaptiveActionStatementFSFamily.preIpaPoint,
-                    AdaptiveActionStatementOutput.prefixesPre,
-                    adaptiveStatementInitLength] using
-                    (preIpaSqueezePoints_length_eq
-                      (output.init (family.vkTranscriptRepr basis))
-                      output.toAlgebraicWfProof.proof.1
-                      output.toAlgebraicWfProof.proof.2 n)
-                rw [if_pos hlen]
-                have hbad' : O t ∈ outputRootSurface family basis n output
-                    (fun i => O (statementEarlierPrefix t
-                      (i.castLE (le_of_lt n.isLt)))) := by
-                  unfold outputRootBad statementPrefixBad at hbad
-                  have hlenOutput :
-                      (family.preIpaPoint basis n (family.runOutput basis O)).val.length =
-                        preIpaLen (AdaptiveActionStatementShape pp)
-                          (adaptiveStatementInitLength (AdaptiveActionStatementShape pp)) n := by
-                    simpa [output, t] using hlen
-                  have hlenAdversary :
-                      (family.preIpaPoint basis n
-                        ((family.adversary basis).run O)).val.length =
-                        preIpaLen (AdaptiveActionStatementShape pp)
-                          (adaptiveStatementInitLength (AdaptiveActionStatementShape pp)) n := by
-                    simpa [ComputedAdaptiveActionStatementFSFamily.runOutput] using hlenOutput
-                  rw [if_pos hlenAdversary] at hbad
-                  simpa [output, t] using hbad
-                rw [decodedRootSurface_eq_output_of_pinned
-                  family basis O n h5n decoded pinned]
-                exact hbad'
+            exact mem_queriedRootBad_of_pinned family basis O n h5n pinned
+              (by simpa using hbad)
   · exact fun t label O v => queriedRootBad_update_self
       family basis n h5n t label O v
   · exact fun output t O v => outputRootBad_update_self
@@ -2506,7 +2596,81 @@ theorem rootBadWithoutRelation_table_le {pp : ProofParams}
 
 /-! ## Actual selected-statement surface identities -/
 
-set_option maxHeartbeats 400000 in
+/-- The full-coordinate assembly coverage supplied by the adversary's output. -/
+private theorem outputIpaAssemblyCovered {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)) :
+    ∀ nu : Fin 11 → Fp, ∀ pr,
+      pr ∈ (multiopenMsm (adaptiveActionStatementVk pp basis)
+        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
+        (adaptiveIpaCanonicalProof output.proofData.algebraicProof.erase)
+        (chRecord nu (fun _ => 0))).other →
+        ∃ ap ∈ output.proofData.adaptiveIpaCoordinates.multiopenSource, ap.point = pr.2 :=
+  fun rho pr hpr => output.proofData.assemblyCovered rho pr hpr
+
+/-- The decoded prefix-coordinate polynomial is its full-assembly form. -/
+private theorem outputIpaPolynomial_prefix_step {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (j : Fin (AdaptiveActionStatementShape pp).k)
+    (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis))
+    (nu : Fin 11 → Fp) (chi' : Fin (AdaptiveActionStatementShape pp).k → Fp)
+    (hcover : ∀ nu : Fin 11 → Fp, ∀ pr,
+      pr ∈ (multiopenMsm (adaptiveActionStatementVk pp basis)
+        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
+        (adaptiveIpaCanonicalProof output.proofData.algebraicProof.erase)
+        (chRecord nu (fun _ => 0))).other →
+        ∃ ap ∈ (output.proofData.adaptiveIpaCoordinates.prefix basis j).multiopenSource,
+          ap.point = pr.2) :
+    adaptiveIpaRootPolynomial (adaptiveActionStatementVk pp basis)
+        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
+        (adaptiveIpaCanonicalProof output.proofData.algebraicProof.erase)
+        (output.proofData.adaptiveIpaCoordinates.prefix basis j) hcover nu chi' j =
+      adaptiveIpaRootPolynomial (adaptiveActionStatementVk pp basis)
+        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
+        (adaptiveIpaCanonicalProof output.proofData.algebraicProof.erase)
+        output.proofData.adaptiveIpaCoordinates
+        (outputIpaAssemblyCovered family basis output) nu chi' j :=
+  adaptiveIpaRootPolynomial_prefix _ _ _ _ _ _ _ j
+
+/-- The polynomial reads only rounds below `j`: any record agreeing there yields it unchanged. -/
+private theorem outputIpaPolynomial_chi_step {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (j : Fin (AdaptiveActionStatementShape pp).k)
+    (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis))
+    (nu : Fin 11 → Fp)
+    (chi' chi : Fin (AdaptiveActionStatementShape pp).k → Fp)
+    (hchi : ∀ i, i.val < j.val → chi' i = chi i) :
+    adaptiveIpaRootPolynomial (adaptiveActionStatementVk pp basis)
+        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
+        (adaptiveIpaCanonicalProof output.proofData.algebraicProof.erase)
+        output.proofData.adaptiveIpaCoordinates
+        (outputIpaAssemblyCovered family basis output) nu chi' j =
+      adaptiveIpaRootPolynomial (adaptiveActionStatementVk pp basis)
+        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
+        (adaptiveIpaCanonicalProof output.proofData.algebraicProof.erase)
+        output.proofData.adaptiveIpaCoordinates
+        (outputIpaAssemblyCovered family basis output) nu chi j := by
+  apply adaptiveIpaRootPolynomial_eq_of_chi_before
+  exact hchi
+
+/-- The canonical full-assembly polynomial is the straight-line quadratic. -/
+private theorem outputIpaPolynomial_canonical_step {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (j : Fin (AdaptiveActionStatementShape pp).k)
+    (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis))
+    (nu : Fin 11 → Fp) (chi : Fin (AdaptiveActionStatementShape pp).k → Fp) :
+    adaptiveIpaRootPolynomial (adaptiveActionStatementVk pp basis)
+        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
+        (adaptiveIpaCanonicalProof output.proofData.algebraicProof.erase)
+        output.proofData.adaptiveIpaCoordinates
+        (outputIpaAssemblyCovered family basis output) nu chi j =
+      output.toAlgebraicWfProof.straightLineIpaRootPolynomial nu chi j :=
+  output.proofData.adaptiveIpaCanonicalRootPolynomial_eq nu chi j
+
 /-- The final-output IPA surface is its straight-line quadratic whenever the supplied round
 record agrees below the current round. -/
 theorem outputIpaSurface_eq_straightLine {pp : ProofParams}
@@ -2523,29 +2687,10 @@ theorem outputIpaSurface_eq_straightLine {pp : ProofParams}
   unfold outputIpaSurface
   dsimp only
   rw [dif_pos hcover]
-  apply congrArg (fun polynomial : CPoly => (szBadSet polynomial : Set Fp))
-  calc
-    adaptiveIpaRootPolynomial (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-        (adaptiveIpaCanonicalProof output.proofData.algebraicProof.erase)
-        (output.proofData.adaptiveIpaCoordinates.prefix basis j) hcover nu chi' j =
-      adaptiveIpaRootPolynomial (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-        (adaptiveIpaCanonicalProof output.proofData.algebraicProof.erase)
-        output.proofData.adaptiveIpaCoordinates (by
-          intro rho pr hpr
-          exact output.proofData.assemblyCovered rho pr hpr) nu chi' j :=
-        adaptiveIpaRootPolynomial_prefix _ _ _ _ _ _ _ j
-    _ = adaptiveIpaRootPolynomial (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
-        (adaptiveIpaCanonicalProof output.proofData.algebraicProof.erase)
-        output.proofData.adaptiveIpaCoordinates (by
-          intro rho pr hpr
-          exact output.proofData.assemblyCovered rho pr hpr) nu chi j := by
-      apply adaptiveIpaRootPolynomial_eq_of_chi_before
-      exact hchi
-    _ = output.toAlgebraicWfProof.straightLineIpaRootPolynomial nu chi j :=
-      output.proofData.adaptiveIpaCanonicalRootPolynomial_eq nu chi j
+  exact congrArg (fun polynomial : CPoly => (szBadSet polynomial : Set Fp))
+    ((outputIpaPolynomial_prefix_step family basis j output nu chi' hcover).trans
+      ((outputIpaPolynomial_chi_step family basis j output nu chi' chi hchi).trans
+        (outputIpaPolynomial_canonical_step family basis j output nu chi)))
 
 /-- At the selected statement's actual round point, the fallback is exactly the
 straight-line IPA quadratic root set. -/

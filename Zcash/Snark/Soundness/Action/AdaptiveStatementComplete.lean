@@ -27,7 +27,7 @@ def rawDecodeOfBatchGoodRoots {pp : ProofParams}
     (witness : family.BatchWitness basis O)
     (hgood : family.BatchGoodRoots basis O witness)
     (hshifted : family.ShiftedValue basis O) :
-    DeployedAlgebraicDecode
+    DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -70,7 +70,7 @@ theorem accepts?_isSome_of {pp : ProofParams}
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins) (haccepts : family.accepts basis O) :
     (family.accepts? basis O).isSome := by
-  change DeployedAccepts
+  change DeployedAccepts (AdaptiveActionStatementShape pp)
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
     (adaptiveActionStatementVk pp basis)
     (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -131,7 +131,6 @@ theorem batchGoodRoots?_isSome_of {pp : ProofParams}
   rw [hhx1, hhx2, hhx3, hhx4, hhxi, hhz]
   rfl
 
-set_option maxHeartbeats 2400000 in
 /-- The identically-zero pre-`x` branch yields an Action witness or an explicit relation. -/
 def preXIdentityOutcome? {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
@@ -139,7 +138,7 @@ def preXIdentityOutcome? {pp : ProofParams}
     (O : family.Coins)
     (hsource : family.semanticSourceMismatchRelationFinder basis O = none)
     (witness : family.BatchWitness basis O)
-    (rawDecode : DeployedAlgebraicDecode
+    (rawDecode : DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -148,7 +147,7 @@ def preXIdentityOutcome? {pp : ProofParams}
       ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
       ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O)))
     (hbatches : rawDecode.batches = witness.batches)
-    (haccepts : DeployedAccepts
+    (haccepts : DeployedAccepts (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -186,7 +185,7 @@ def preXIdentityOutcome? {pp : ProofParams}
           (semanticRepresentationTarget output (4 : Fin 5) ++
             family.fixedRepresentations basis) ch id := by
       intro id hvanishing hrandom
-      have havailable : adaptiveActionCommitmentActive (adaptiveActionStatementVk pp basis) id →
+      have havailable : adaptiveActionCommitmentActive (AdaptiveActionStatementShape pp) (adaptiveActionStatementVk pp basis) id →
           adaptiveActionCommitmentAvailable (4 : Fin 5) id := by
         intro hactive
         cases id <;> simp_all [adaptiveActionCommitmentAvailable]
@@ -200,7 +199,7 @@ def preXIdentityOutcome? {pp : ProofParams}
         (semanticRepresentationTarget output (4 : Fin 5) ++
           family.fixedRepresentations basis) ch := by
       unfold model adaptiveActionCommittedModel adaptiveActionCommittedModelOf
-      exact VerifyingKey.constraintModel_congr_nonterminal
+      exact VerifyingKey.constraintModel_congr_nonterminal _
         (adaptiveActionStatementVk pp basis) ch _ _ _ hpolyStage
     have hsource4 : semanticRepresentationTarget output (4 : Fin 5) ++
         family.fixedRepresentations basis = source := by
@@ -274,7 +273,7 @@ def preXIdentityRelation? {pp : ProofParams}
     (O : family.Coins)
     (hsource : family.semanticSourceMismatchRelationFinder basis O = none)
     (witness : family.BatchWitness basis O)
-    (rawDecode : DeployedAlgebraicDecode
+    (rawDecode : DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -283,7 +282,7 @@ def preXIdentityRelation? {pp : ProofParams}
       ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
       ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O)))
     (hbatches : rawDecode.batches = witness.batches)
-    (haccepts : DeployedAccepts
+    (haccepts : DeployedAccepts (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -317,14 +316,13 @@ theorem preXIdentityRelation_isSome_of_outcome {pp : ProofParams}
       rw [houtcome]
       rfl
 
-set_option maxHeartbeats 1600000 in
 theorem preXIdentityOutcome_isSome_of {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins)
     (hsource : family.semanticSourceMismatchRelationFinder basis O = none)
     (witness : family.BatchWitness basis O)
-    (rawDecode : DeployedAlgebraicDecode
+    (rawDecode : DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -333,7 +331,7 @@ theorem preXIdentityOutcome_isSome_of {pp : ProofParams}
       ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
       ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O)))
     (hbatches : rawDecode.batches = witness.batches)
-    (haccepts : DeployedAccepts
+    (haccepts : DeployedAccepts (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
@@ -439,7 +437,7 @@ def identityRelationFinder {pp : ProofParams}
                         basis O haccepts hz hattack
                       let rawDecode := family.rawDecodeOfBatchGoodRoots basis O witness
                         hroots.down hshifted
-                      let hacceptsFull : DeployedAccepts
+                      let hacceptsFull : DeployedAccepts (AdaptiveActionStatementShape pp)
                           (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
                           (adaptiveActionStatementVk pp basis)
                           (adaptiveActionStatementInstanceCommitment pp basis
@@ -490,7 +488,7 @@ theorem identityRelationFinder_isSome_of {pp : ProofParams}
       let hshifted := family.shiftedValue_of_accept_not_attack
         basis O haccepts hz hattack
       let rawDecode := family.rawDecodeOfBatchGoodRoots basis O witness hroots hshifted
-      let hacceptsFull : DeployedAccepts
+      let hacceptsFull : DeployedAccepts (AdaptiveActionStatementShape pp)
           (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
           (adaptiveActionStatementVk pp basis)
           (adaptiveActionStatementInstanceCommitment pp basis
@@ -510,7 +508,7 @@ theorem identityRelationFinder_isSome_of {pp : ProofParams}
     (family.identityRelationFinder hchar basis O).isSome := by
   let hshifted := family.shiftedValue_of_accept_not_attack basis O haccepts hz hattack
   let rawDecode := family.rawDecodeOfBatchGoodRoots basis O witness hroots hshifted
-  let hacceptsFull : DeployedAccepts
+  let hacceptsFull : DeployedAccepts (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)

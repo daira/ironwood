@@ -115,8 +115,11 @@ def instanceRepresentationRelationFinderFromAnnotations {pp : ProofParams}
     family.instanceRepresentationRelationFinderFromAnnotations basis
         ((family.adversary basis).annotations O) (family.runOutput basis O) =
       family.instanceRepresentationRelationFinder basis O := by
-  simp [instanceRepresentationRelationFinderFromAnnotations,
-    instanceRepresentationRelationFinder]
+  unfold instanceRepresentationRelationFinderFromAnnotations
+    instanceRepresentationRelationFinder
+  rw [canonicalInstanceRepresentationRelationFinderOfOutput_runOutput,
+    queryInstanceRepresentationRelationFinderFromAnnotations_annotations]
+  split <;> rename_i heq <;> rw [heq]
 
 /-- Cached-log form of one pre-IPA provenance comparison. -/
 def preIpaRepresentationRelationAtFromAnnotations? {pp : ProofParams}
