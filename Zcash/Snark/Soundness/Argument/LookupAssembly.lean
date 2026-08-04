@@ -1,7 +1,7 @@
 import Mathlib.Tactic
-import Zcash.Snark.Soundness.Lookup
-import Zcash.Snark.Soundness.GrandProductBridge
-import Zcash.Snark.Soundness.PermutationRows
+import Zcash.Snark.Soundness.Argument.Lookup
+import Zcash.Snark.Soundness.Argument.GrandProductBridge
+import Zcash.Snark.Soundness.Argument.PermutationRows
 
 /-!
 # The lookup argument, assembled

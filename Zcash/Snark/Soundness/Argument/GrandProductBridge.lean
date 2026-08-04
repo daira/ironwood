@@ -1,10 +1,10 @@
 import Mathlib.Tactic
 import CompPoly.Bivariate.ToPoly
-import Zcash.Snark.Soundness.GrandProduct
-import Zcash.Snark.Soundness.RunningProduct
-import Zcash.Snark.Soundness.Permutation
-import Zcash.Snark.Soundness.PermutationConstruction
-import Zcash.Snark.Soundness.Constraints
+import Zcash.Snark.Soundness.Argument.GrandProduct
+import Zcash.Snark.Soundness.Argument.RunningProduct
+import Zcash.Snark.Soundness.Argument.Permutation
+import Zcash.Snark.Soundness.Argument.PermutationConstruction
+import Zcash.Snark.Soundness.Constraint.Constraints
 
 /-!
 # From the verifier's product check to the multiset identity

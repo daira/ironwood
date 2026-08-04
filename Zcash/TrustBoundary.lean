@@ -21,9 +21,9 @@ import Zcash.Security.Common.Birthday
 import Zcash.Security.BindingSignature.Orchard
 import Zcash.Security.BindingSignature.Sapling
 import Zcash.Meta.AxiomCheck
-import Zcash.Snark.Soundness.CommitFold
-import Zcash.Snark.Soundness.Vesta
-import Zcash.Snark.Soundness.VacuityWitness
+import Zcash.Snark.Soundness.Ipa.CommitFold
+import Zcash.Snark.Soundness.Decoded.Vesta
+import Zcash.Snark.Soundness.Decoded.VacuityWitness
 import Zcash.Snark.Soundness.AGM.BindingSignature
 import Zcash.Snark.Soundness.AGM.DeployedConstraintSupply
 import Zcash.Snark.Soundness.AGM.ProbabilityVesta
@@ -32,17 +32,17 @@ import Zcash.Snark.Soundness.Composition.Bridge
 import Zcash.Snark.Soundness.Composition.DeployedConstraintContainment
 import Zcash.Snark.Soundness.Composition.DeployedRootContainment
 import Zcash.Snark.Soundness.Composition.PrefixedSqueeze
-import Zcash.Snark.Soundness.FoldSplit
-import Zcash.Snark.Soundness.GrandProductBridge
-import Zcash.Snark.Soundness.LookupAssembly
-import Zcash.Snark.Soundness.PermutationRows
-import Zcash.Snark.Soundness.ConstraintRelations
-import Zcash.Snark.Soundness.ChallengePricing
+import Zcash.Snark.Soundness.Constraint.FoldSplit
+import Zcash.Snark.Soundness.Argument.GrandProductBridge
+import Zcash.Snark.Soundness.Argument.LookupAssembly
+import Zcash.Snark.Soundness.Argument.PermutationRows
+import Zcash.Snark.Soundness.Relation.ConstraintRelations
+import Zcash.Snark.Soundness.Pricing.ChallengePricing
 import Zcash.Security.Ledger.KeyBindingDLR
 import Zcash.Security.Ledger.NoteCommitDLR
 import Zcash.Security.Ledger.MerkleDLR
 import Zcash.Security.Ledger.OrchardCapstone
-import Zcash.Snark.Soundness.DegreeWalk
+import Zcash.Snark.Soundness.Pricing.DegreeWalk
 import Zcash.Snark.Soundness.Composition.ScheduleBudget
 import Zcash.Snark.Soundness.AGM.PinnedRootWitness
 import Zcash.Snark.Soundness.Composition.StraightLineWitness
@@ -627,8 +627,8 @@ key-binding and ledger sections above, expresses them through the `Zcash.Meta.Ax
 
 /-! ### Why the two tiers differ: the vacuity witness
 
-`Zcash.Snark.Soundness.VacuityWitness` proves that a nontrivial relation among *arbitrary* Vesta
-generators exists from the group order alone — no transcript, no verifying key, no acceptance
+`Zcash.Snark.Soundness.Decoded.VacuityWitness` proves that a nontrivial relation among *arbitrary*
+Vesta generators exists from the group order alone — no transcript, no verifying key, no acceptance
 hypothesis. That is what makes the tier of an endpoint's pin load-bearing rather than cosmetic:
 
 * `assert_computable` endpoints are plain `def`s, so their relation coefficients are terms of their

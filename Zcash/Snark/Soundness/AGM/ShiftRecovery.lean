@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.GoodChallenge
+import Zcash.Snark.Soundness.Pricing.GoodChallenge
 
 /-!
 # Recovering the unshifted multiopen value

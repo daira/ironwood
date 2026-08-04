@@ -1,11 +1,11 @@
-import Zcash.Snark.Soundness.Halves
-import Zcash.Snark.Soundness.CommitFold
+import Zcash.Snark.Soundness.Ipa.Halves
+import Zcash.Snark.Soundness.Ipa.CommitFold
 
 /-!
 # Folded IPA generators
 
 `foldGens` is one IPA round's generator fold in the extractor's convention (`gLo + u⁻¹ • gHi`), used by
-the IPA soundness layer (`Zcash.Snark.Soundness.IpaSoundness`).
+the IPA soundness layer (`Zcash.Snark.Soundness.Ipa.IpaSoundness`).
 -/
 
 namespace Zcash.Snark

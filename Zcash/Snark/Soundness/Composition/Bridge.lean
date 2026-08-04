@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.Vesta
+import Zcash.Snark.Soundness.Decoded.Vesta
 import Zcash.Snark.Soundness.FiatShamir.Adversary.Algebraic
 
 /-!

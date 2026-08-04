@@ -1,5 +1,5 @@
 import Zcash.Common.RelationWitness
-import Zcash.Snark.Soundness.ConstraintCore
+import Zcash.Snark.Soundness.Constraint.ConstraintCore
 import Zcash.Snark.Soundness.Multiopen.Deployed
 
 /-!

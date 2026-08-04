@@ -1,5 +1,5 @@
 import Zcash.Snark.Fixtures.MultiAction.Honest.Fixture
-import Zcash.Snark.Soundness.DegreeWalk
+import Zcash.Snark.Soundness.Pricing.DegreeWalk
 
 /-!
 # The captured verifying key's degree budget

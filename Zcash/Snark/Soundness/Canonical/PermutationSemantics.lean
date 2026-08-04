@@ -1,6 +1,6 @@
 import Zcash.Snark.Soundness.Canonical.PermutationInstantiation
-import Zcash.Snark.Soundness.PermutationConstruction
-import Zcash.Snark.Soundness.GoodChallenge
+import Zcash.Snark.Soundness.Argument.PermutationConstruction
+import Zcash.Snark.Soundness.Pricing.GoodChallenge
 import Zcash.Snark.Soundness.Canonical.DomainSelectors
 
 /-!

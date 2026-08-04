@@ -1,6 +1,6 @@
 import Mathlib.Tactic
 import Zcash.Snark.Soundness.Main
-import Zcash.Snark.Soundness.UniformMeasure
+import Zcash.Snark.Soundness.Pricing.UniformMeasure
 import Zcash.Snark.Soundness.Multiopen.Decode
 
 /-!

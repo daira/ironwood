@@ -1,7 +1,7 @@
 import Mathlib.Tactic
-import Zcash.Snark.Soundness.KnowledgeSoundness
-import Zcash.Snark.Soundness.PermutationRows
-import Zcash.Snark.Soundness.LookupAssembly
+import Zcash.Snark.Soundness.Relation.KnowledgeSoundness
+import Zcash.Snark.Soundness.Argument.PermutationRows
+import Zcash.Snark.Soundness.Argument.LookupAssembly
 
 /-!
 # What the capstone's satisfaction predicate actually says

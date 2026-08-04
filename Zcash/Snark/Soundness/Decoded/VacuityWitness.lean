@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.Vesta
+import Zcash.Snark.Soundness.Decoded.Vesta
 
 /-!
 # Why the break must travel as data: the vacuity witness at Vesta

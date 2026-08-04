@@ -1,6 +1,6 @@
 import Zcash.Snark.Keygen.Certificate
 import Zcash.Snark.Soundness.Composition.DeployedConstraintContainment
-import Zcash.Snark.Soundness.DegreeWalk
+import Zcash.Snark.Soundness.Pricing.DegreeWalk
 
 /-!
 # The single-Action captured key's static checks and degree budget

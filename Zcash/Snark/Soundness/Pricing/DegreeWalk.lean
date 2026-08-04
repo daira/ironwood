@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.Constraints
+import Zcash.Snark.Soundness.Constraint.Constraints
 
 /-!
 # Degree accounting for the combined constraint polynomial

@@ -10,9 +10,13 @@
 --   Lean function (queries, expressions, multiopen, IPA fold, Fiat–Shamir schedule).
 -- * `Fingerprint/` — the faithfulness cross-check: the captured-fixture match (`native_decide`,
 --   loaded in the auto-generated `Fixture.lean`) plus the Schwartz–Zippel bound.
--- * `Soundness/` — the soundness argument: straight-line and adaptive AGM extraction, binding as a
---   DLR reduction, the constraint layer, the permutation/lookup kernels, and the composition
---   (`Soundness/Main.lean`), instantiated at Vesta (`Soundness/Vesta.lean`).
+-- * `Soundness/` — the soundness argument, in dependency layers. `Ipa/` (opening relation and the
+--   round fold) and `Constraint/` (the vanishing check) are two independent roots; `Argument/`
+--   proves the permutation and lookup arguments over `Constraint/`; `Pricing/` measures the
+--   challenge bad sets and `Relation/` says what constraint satisfaction buys. Above those,
+--   `AGM/`, `StraightLine/`, and `Composition/` carry extraction and composition from the
+--   acceptance predicate (`Soundness/Main.lean`), instantiated at Vesta
+--   (`Soundness/Deployed/Vesta.lean`).
 --
 -- Import modules here that should be built as part of the library.
 
@@ -49,24 +53,24 @@ import Zcash.Snark.Fingerprint.Rational.IpaWalk
 import Zcash.Snark.Fingerprint.Rational.OpeningWalk
 import Zcash.Snark.Fingerprint.Rational.Capstone
 import Zcash.Snark.Fingerprint.Epsilon
-import Zcash.Snark.Soundness.GrandProduct
-import Zcash.Snark.Soundness.Lookup
-import Zcash.Snark.Soundness.Permutation
-import Zcash.Snark.Soundness.PermutationConstruction
-import Zcash.Snark.Soundness.RunningProduct
-import Zcash.Snark.Soundness.GrandProductBridge
-import Zcash.Snark.Soundness.LookupAssembly
-import Zcash.Snark.Soundness.PermutationRows
-import Zcash.Snark.Soundness.ConstraintRelations
-import Zcash.Snark.Soundness.ChallengePricing
-import Zcash.Snark.Soundness.InnerProduct
-import Zcash.Snark.Soundness.Halves
-import Zcash.Snark.Soundness.Constraints
-import Zcash.Snark.Soundness.FoldSplit
-import Zcash.Snark.Soundness.CommitFold
-import Zcash.Snark.Soundness.Consistency
-import Zcash.Snark.Soundness.KnowledgeSoundness
-import Zcash.Snark.Soundness.IpaSoundness
+import Zcash.Snark.Soundness.Argument.GrandProduct
+import Zcash.Snark.Soundness.Argument.Lookup
+import Zcash.Snark.Soundness.Argument.Permutation
+import Zcash.Snark.Soundness.Argument.PermutationConstruction
+import Zcash.Snark.Soundness.Argument.RunningProduct
+import Zcash.Snark.Soundness.Argument.GrandProductBridge
+import Zcash.Snark.Soundness.Argument.LookupAssembly
+import Zcash.Snark.Soundness.Argument.PermutationRows
+import Zcash.Snark.Soundness.Relation.ConstraintRelations
+import Zcash.Snark.Soundness.Pricing.ChallengePricing
+import Zcash.Snark.Soundness.Ipa.InnerProduct
+import Zcash.Snark.Soundness.Ipa.Halves
+import Zcash.Snark.Soundness.Constraint.Constraints
+import Zcash.Snark.Soundness.Constraint.FoldSplit
+import Zcash.Snark.Soundness.Ipa.CommitFold
+import Zcash.Snark.Soundness.Ipa.Consistency
+import Zcash.Snark.Soundness.Relation.KnowledgeSoundness
+import Zcash.Snark.Soundness.Ipa.IpaSoundness
 -- Verifier-native semantic models used by the Clean integration boundary.  These
 -- belong to the core SNARK library even when no capstone imports them incidentally.
 import Zcash.Snark.Soundness.Canonical.ConstraintSatisfaction
@@ -76,14 +80,20 @@ import Zcash.Snark.Soundness.Canonical.InstanceCommitment
 import Zcash.Snark.Soundness.Deployed.Binding
 import Zcash.Snark.Soundness.Deployed.Fold
 import Zcash.Snark.Soundness.Deployed.Verification
--- The reusable Fiat–Shamir oracle kernel and its represented adversary model.
-import Zcash.Snark.Soundness.FiatShamir
+-- The reusable Fiat–Shamir oracle kernel and its represented adversary model: random-oracle
+-- lemmas, deployed transcript ordering, closed-form IPA assembly, and the bounded
+-- querying-adversary reduction.
+import Zcash.Snark.Soundness.FiatShamir.Oracle
+import Zcash.Snark.Soundness.FiatShamir.Assembly
+import Zcash.Snark.Soundness.FiatShamir.Ordering
+import Zcash.Snark.Soundness.FiatShamir.Execution
+import Zcash.Snark.Soundness.FiatShamir.Adversary
 import Zcash.Snark.Soundness.Main
 -- Multiopen decode reconstruction: bind the IPA witness to real verifier columns recovered from
 -- the represented `x₄` power batch (`Multiopen.Decode`, `Multiopen.Deployed`), the MSM evaluation
 -- spine (`Multiopen.Compat`), and the explicit opened/member interfaces (`Multiopen.Opened`).
 -- Schwartz–Zippel good-challenge budgets and production (kills `hgood` at the `_xgood` rungs).
-import Zcash.Snark.Soundness.GoodChallenge
+import Zcash.Snark.Soundness.Pricing.GoodChallenge
 import Zcash.Snark.Soundness.Multiopen.Decode
 import Zcash.Snark.Soundness.Multiopen.Compat
 import Zcash.Snark.Soundness.Multiopen.Deployed
@@ -92,7 +102,7 @@ import Zcash.Snark.Soundness.Multiopen.RPoly
 import Zcash.Snark.Soundness.Multiopen.CanonicalRelation
 import Zcash.Snark.Soundness.Canonical.Terminal
 import Zcash.Snark.Soundness.Circuit.Terminal
-import Zcash.Snark.Soundness.Vesta
+import Zcash.Snark.Soundness.Decoded.Vesta
 -- AGM binding reduction: consume computed deployed relations through the programmed-basis
 -- discrete-log adapter and representation-carrying algebraic-prover model.
 import Zcash.Snark.Soundness.AGM.Adapter

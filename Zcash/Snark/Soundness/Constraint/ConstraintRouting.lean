@@ -1,5 +1,5 @@
-import Zcash.Snark.Soundness.ConstraintCore
-import Zcash.Snark.Soundness.Constraints
+import Zcash.Snark.Soundness.Constraint.ConstraintCore
+import Zcash.Snark.Soundness.Constraint.Constraints
 import Zcash.Snark.Verifier.QueryCommitment
 
 /-!

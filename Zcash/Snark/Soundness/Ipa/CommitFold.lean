@@ -1,5 +1,5 @@
 import Mathlib.Tactic
-import Zcash.Snark.Soundness.InnerProduct
+import Zcash.Snark.Soundness.Ipa.InnerProduct
 import Zcash.Common.DiscreteLogRelation
 
 /-!

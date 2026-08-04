@@ -1,5 +1,5 @@
 import Zcash.Snark.Soundness.Composition.DeployedConstraintContainment
-import Zcash.Snark.Soundness.DegreeWalk
+import Zcash.Snark.Soundness.Pricing.DegreeWalk
 
 /-!
 # Pricing the deployed `x`-squeeze schedule

@@ -1,8 +1,8 @@
 import Mathlib.Tactic
-import Zcash.Snark.Soundness.GoodChallenge
-import Zcash.Snark.Soundness.FoldSplit
-import Zcash.Snark.Soundness.GrandProductBridge
-import Zcash.Snark.Soundness.LookupAssembly
+import Zcash.Snark.Soundness.Pricing.GoodChallenge
+import Zcash.Snark.Soundness.Constraint.FoldSplit
+import Zcash.Snark.Soundness.Argument.GrandProductBridge
+import Zcash.Snark.Soundness.Argument.LookupAssembly
 import Zcash.Snark.Soundness.Canonical.LookupSemantics
 import Zcash.Snark.Soundness.Canonical.PermutationSemantics
 import Zcash.Circuits.Integration.OperationLookups

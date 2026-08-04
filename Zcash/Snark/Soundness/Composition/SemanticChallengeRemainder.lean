@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.ChallengePricing
+import Zcash.Snark.Soundness.Pricing.ChallengePricing
 import Zcash.Snark.Soundness.Composition.PrefixedSqueeze
 import Zcash.Snark.Soundness.Composition.StraightLineConstraint
 

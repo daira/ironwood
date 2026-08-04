@@ -1,5 +1,5 @@
 import Mathlib.Tactic
-import Zcash.Snark.Soundness.GrandProduct
+import Zcash.Snark.Soundness.Argument.GrandProduct
 
 /-!
 # Permutation argument soundness

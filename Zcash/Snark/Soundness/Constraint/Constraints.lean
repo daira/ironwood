@@ -110,7 +110,7 @@ theorem szBadSetAvoidance?_isSome_iff (C : CPoly) (x : Fp) :
 
 /-- **Root counting: the bad set is small.** One Schwartz–Zippel use site over `F_p` excludes at
 most `natDegree C` challenges — the `d` of the `d / p` budget (`uniformChallenge_szBadSet` in
-`Zcash.Snark.Soundness.GoodChallenge`). -/
+`Zcash.Snark.Soundness.Pricing.GoodChallenge`). -/
 theorem szBadSet_card_le (C : CPoly) : (szBadSet C).card ≤ C.natDegree :=
   card_roots_le C
 
@@ -128,7 +128,7 @@ theorem szBadSet_quotient_card_le (numerator h : CPoly) (n : ℕ) :
 
 /-- When the identity fails, the accepting challenges are exactly the bad set: the verifier's check
 passes at `x` iff `x` is a root of the constraint difference. This is the set `quotientCheck_sound`
-counts and `Zcash.Snark.Soundness.GoodChallenge` measures. -/
+counts and `Zcash.Snark.Soundness.Pricing.GoodChallenge` measures. -/
 theorem quotientCheck_filter_eq_szBadSet (numerator h : CPoly) (n : ℕ)
     (hne : numerator ≠ h * (X ^ n - 1)) :
     (univ.filter fun x => quotientCheck numerator h n x)

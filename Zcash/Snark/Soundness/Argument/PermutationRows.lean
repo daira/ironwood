@@ -1,5 +1,5 @@
-import Zcash.Snark.Soundness.FoldSplit
-import Zcash.Snark.Soundness.GrandProductBridge
+import Zcash.Snark.Soundness.Constraint.FoldSplit
+import Zcash.Snark.Soundness.Argument.GrandProductBridge
 
 /-!
 # The verifier's permutation constraints, read row by row

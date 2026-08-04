@@ -1,7 +1,7 @@
 import Mathlib.Tactic
-import Zcash.Snark.Soundness.InnerProduct
-import Zcash.Snark.Soundness.Constraints
-import Zcash.Snark.Soundness.CommitFold
+import Zcash.Snark.Soundness.Ipa.InnerProduct
+import Zcash.Snark.Soundness.Constraint.Constraints
+import Zcash.Snark.Soundness.Ipa.CommitFold
 
 /-!
 # Knowledge-soundness relation

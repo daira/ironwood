@@ -1,6 +1,6 @@
 import Zcash.Common.RelationWitness
 import Zcash.Snark.Soundness.Multiopen.ConstraintResolver
-import Zcash.Snark.Soundness.PermutationRows
+import Zcash.Snark.Soundness.Argument.PermutationRows
 
 /-!
 # Instantiating permutation constraints with routed decoded polynomials

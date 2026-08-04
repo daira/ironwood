@@ -1,5 +1,5 @@
 import Mathlib.Tactic
-import Zcash.Snark.Soundness.Permutation
+import Zcash.Snark.Soundness.Argument.Permutation
 
 /-!
 # Correctness of the halo2 permutation construction

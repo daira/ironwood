@@ -1,6 +1,6 @@
 import Mathlib.Tactic
-import Zcash.Snark.Soundness.CommitFold
-import Zcash.Snark.Soundness.Halves
+import Zcash.Snark.Soundness.Ipa.CommitFold
+import Zcash.Snark.Soundness.Ipa.Halves
 
 /-!
 # Commitment-vector and batch algebra

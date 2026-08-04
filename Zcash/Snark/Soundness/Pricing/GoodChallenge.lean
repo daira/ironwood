@@ -1,5 +1,5 @@
 import Mathlib.Tactic
-import Zcash.Snark.Soundness.Constraints
+import Zcash.Snark.Soundness.Constraint.Constraints
 import Zcash.Snark.Soundness.FiatShamir.Oracle
 
 /-!

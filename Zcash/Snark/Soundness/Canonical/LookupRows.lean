@@ -1,8 +1,8 @@
 import Mathlib.Tactic
 import Zcash.Snark.Soundness.Canonical.ConstraintSatisfaction
-import Zcash.Snark.Soundness.LookupAssembly
-import Zcash.Snark.Soundness.PermutationRows
-import Zcash.Snark.Soundness.GoodChallenge
+import Zcash.Snark.Soundness.Argument.LookupAssembly
+import Zcash.Snark.Soundness.Argument.PermutationRows
+import Zcash.Snark.Soundness.Pricing.GoodChallenge
 
 /-!
 # The verifier's lookup constraints, read row by row

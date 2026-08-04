@@ -1,5 +1,5 @@
 import Zcash.Snark.Soundness.Canonical.InstanceCommitment
-import Zcash.Snark.Soundness.InnerProduct
+import Zcash.Snark.Soundness.Ipa.InnerProduct
 import Zcash.Snark.Keygen.Pipeline
 import Zcash.Arithmetic.LagrangeBasis
 import Zcash.Arithmetic.InvDft
@@ -17,7 +17,7 @@ full-list key.
 `derivedUrsGLagrange_generator_eq` closes the loop from the other side: the `i`-th entry of
 the derived Lagrange basis (the scaled inverse group-FFT of the monomial URS) is the monomial
 commitment to that same closed row. It lives here rather than beside the FFT specification
-because `commit` is verifier-side vocabulary (`Soundness/InnerProduct.lean`) and the
+because `commit` is verifier-side vocabulary (`Soundness/Ipa/InnerProduct.lean`) and the
 arithmetic tier does not import it.
 -/
 

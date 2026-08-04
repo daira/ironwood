@@ -1,5 +1,5 @@
 import Mathlib.Tactic
-import Zcash.Snark.Soundness.Constraints
+import Zcash.Snark.Soundness.Constraint.Constraints
 
 /-!
 # Splitting the combined constraint check back into its parts
