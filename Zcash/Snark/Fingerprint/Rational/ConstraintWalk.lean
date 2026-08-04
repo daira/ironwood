@@ -1,6 +1,6 @@
 import Mathlib.Tactic
 import Zcash.Snark.Fingerprint.Rational.Representation
-import Zcash.Snark.Soundness.DegreeWalk
+import Zcash.Snark.Soundness.Pricing.DegreeWalk
 
 /-!
 # The representation walk, query side: Lagrange basis, constraints, `expectedHEval`
