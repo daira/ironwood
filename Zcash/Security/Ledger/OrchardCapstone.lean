@@ -37,7 +37,7 @@ reduction: with the binding-signature primitives pinned to a RedDSA shape,
 `orchardBalanceConservationBefore_measure_le_kerr` and
 `orchardBalanceIntegrity_measure_le_kerr` bound the same events by `εdlr + κ`, a
 `(Vbase, Rbase)` discrete-log-relation advantage plus the extractor's knowledge error
-The remaining glue is still open.
+(#107 tracks the remaining glue).
 -/
 
 namespace Zcash.Security.Ledger.Bridge
@@ -193,7 +193,7 @@ minted issuance — except with probability at most `ε_nonneg + ε_bindsig`. Di
 `orchardShieldedBalanceNonNegative_succ_measure_le`, giving `ε_sinsemilladlr`: no
 value is spent that was never created, except with the discrete-log-relation
 advantage. `ε_bindsig` is a named hypothesis on the conservation event; its intended
-binding-signature discharge is still open. -/
+binding-signature discharge is tracked in #107. -/
 theorem orchardBalanceIntegrityPerTx_measure_le
     (A : PMF (OrchardAnnotated verify bverify issuance maxActions)) (i : ℕ)
     {ε_nonneg ε_bindsig : ℝ≥0∞}
@@ -245,7 +245,7 @@ prefix violations are not independent: the reduction sends every step's break to
 relation among the same fixed Sinsemilla bases, so a break at any step lands in the
 one event `orchardRelationEventUpTo`, a single discrete-log-relation advantage
 independent of `k`. The conservation side collapses the same way onto the one
-all-prefixes conservation event, whose named bound is `ε_bindsig`. -/
+all-prefixes conservation event, whose named bound is `ε_bindsig` (#107). -/
 theorem orchardBalanceIntegrity_measure_le
     (A : PMF (OrchardAnnotated verify bverify issuance maxActions)) (k : ℕ)
     {ε_sinsemilladlr ε_bindsig : ℝ≥0∞}
@@ -299,7 +299,7 @@ def orchardSpendAuthorityOrRelation
 signing history `Signed`: the samples on which the reduction, run on an Action
 spending a note addressed to `wV` over an unsigned sighash, computes a nontrivial
 discrete-log relation at the `CommitIvk` bases. The firing Action is selected
-existentially; still open is the oracle-machine layer that connects the ε named on
+existentially; #155 tracks the oracle-machine layer that connects the ε named on
 this event to an adversary experiment and recovers the Action from the adversary's
 announced indices. -/
 def orchardSpendAuthorityRelationEvent (wV : KeyBinding.Pool.Witness Fq PallasGroup Fp)

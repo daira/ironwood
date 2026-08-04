@@ -59,8 +59,8 @@ an `OracleComp` from the Fiat–Shamir layer):
   probability space: adversary private randomness (any distribution) and the five oracle
   tables drawn independently, the tables uniformly; same `(Q+4)·(Q+3)/|RIVK|` bound.
 
-The remaining modelling steps toward the full ZIP 2005 key-binding theorem are tracked in
-a separately tracked issue.
+The remaining modelling steps toward the full ZIP 2005 key-binding theorem are not yet
+formalized.
 -/
 
 namespace Zcash.Security.KeyBinding

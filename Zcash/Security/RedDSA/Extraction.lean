@@ -38,7 +38,7 @@ consume.
 
 The straight-line extraction technique is the one Fuchsbauer, Plouviez, and Seurin use for
 Schnorr (eprint 2019/877, section 3, Theorem 1). The SURK-CMA unforgeability game and its
-reduction remain unmodelled, but assuming that the reduction can follow the same
+reduction (#121) remain unmodelled, but assuming that the reduction can follow the same
 approach as FPS Theorem 1, it likely will be able to use the same extraction with a signing
 oracle added. The relation feeds a reduction that models the public bases as independent
 random group elements; the reference-string heuristic that carries this to the deployed fixed
