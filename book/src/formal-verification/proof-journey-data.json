@@ -431,7 +431,7 @@
         },
         {
           "symbol": "orchard_action_knowledgeFailure_adaptiveStatement_2pow123_workFactor_generatorRO_for",
-          "path": "Zcash/Snark/Fixtures/MultiAction/Honest/ActionCapstone.lean",
+          "path": "Zcash/Snark/Capstones/Action.lean",
           "source": "adaptiveStatementStack"
         },
         {

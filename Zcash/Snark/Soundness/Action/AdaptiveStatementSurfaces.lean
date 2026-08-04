@@ -1708,7 +1708,7 @@ theorem adaptiveActionThetaSurfaceAtOf_measure_le {pp : ProofParams}
           instanceCommitment ps source (chRecord (fun _ => 0) (fun _ => 0))) : ENNReal) /
         Fintype.card Fp := by
   simpa [adaptiveActionSurfaceAtOf] using
-    (ActionTerminal.actionThetaBadSet_measure_le pp basis
+    (ActionTerminal.actionThetaBadSet_probability_bound pp basis
       (adaptiveActionCommitmentPolynomialOf (adaptiveActionStatementVk pp basis)
         instanceCommitment ps source (chRecord (fun _ => 0) (fun _ => 0))))
 
@@ -1740,7 +1740,7 @@ theorem adaptiveActionBetaSurfaceAtOf_measure_le {pp : ProofParams}
   simpa [adaptiveActionSurfaceAtOf, actionActiveRows,
     CircuitShape.withProofParams_numProofs,
     CircuitShape.withProofParams_numLookups] using
-    (ActionTerminal.actionBetaBadSets_measure_le pp basis (earlier 0)
+    (ActionTerminal.actionBetaBadSets_probability_bound pp basis (earlier 0)
       (adaptiveActionCommitmentPolynomialOf (adaptiveActionStatementVk pp basis)
         instanceCommitment ps source
         (chRecord (fun i => if h : (i : Nat) < 1 then earlier ⟨i, h⟩ else 0)
@@ -1770,7 +1770,7 @@ theorem adaptiveActionGammaSurfaceAtOf_measure_le {pp : ProofParams}
   simpa [adaptiveActionSurfaceAtOf, actionActiveRows,
     CircuitShape.withProofParams_numProofs,
     CircuitShape.withProofParams_numLookups] using
-    (ActionTerminal.actionGammaBadSets_measure_le pp basis (earlier 0)
+    (ActionTerminal.actionGammaBadSets_probability_bound pp basis (earlier 0)
       (earlier ⟨1, by omega⟩)
       (adaptiveActionCommitmentPolynomialOf (adaptiveActionStatementVk pp basis)
         instanceCommitment ps source
@@ -1797,7 +1797,7 @@ theorem adaptiveActionYSurfaceAtOf_measure_le {pp : ProofParams}
         Fintype.card Fp := by
   dsimp only
   simpa [adaptiveActionSurfaceAtOf] using
-    (ActionTerminal.actionYBadSet_measure_le
+    (ActionTerminal.actionYBadSet_probability_bound
       (adaptiveActionCommittedModelOf (adaptiveActionStatementVk pp basis)
         instanceCommitment ps source
         (chRecord (fun i => if h : (i : Nat) < 3 then earlier ⟨i, h⟩ else 0)
