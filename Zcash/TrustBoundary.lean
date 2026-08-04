@@ -645,6 +645,7 @@ assert_axioms Zcash.Security.RedDSA.badFiber_measure_le
 assert_axioms Zcash.Security.RedDSA.relFiber_subset_relSet
 assert_axioms Zcash.Security.RedDSA.relFiber_measure_le
 assert_axioms Zcash.Security.RedDSA.kappaEvent_measure_le
+assert_axioms Zcash.Security.RedDSA.kappaEvent_measure_le_of_coins
 assert_computable Zcash.Security.RedDSA.zeroBasisRelationFinder +choice
 assert_axioms Zcash.Security.RedDSA.textbookDLAdvantageLE_base_zero
 
