@@ -9,13 +9,27 @@ module records random-oracle queries, group work, and the actual direct-coordina
 as distinct quantities.  It does not assert a generic-group DLOG success formula.  A caller
 supplies the finite-security Vesta DLOG advantage for the resulting concrete solver cost.
 
-The solver budgets below are work-factor targets, not security levels.  A five-bit overhead takes a
-`2^122` adversary budget to `2^127`, which is above Vesta's own discrete-log security of at most
-`2^126` group operations, so an advantage supplied at that scale is being supplied above the group's
-ceiling.  For `n` group operations over `G` with automorphism group of size `m` (`m = 6` for Pasta),
-Pollard rho succeeds with probability at most `m · n · (n − 1) / (2 · |G|)`.
-`Composition.OrchardConsensusBounds` works the resulting one-bit loss through at the consensus
-target.
+The solver budgets below are work-factor targets, not security levels, and the target is fixed by
+the reduction rather than chosen to meet a security goal.  `T` is the adversary's own budget; the
+reduction multiplies it by its resource overhead to reach the DLOG solver's cost, so the largest
+`T` worth stating is the one whose solver cost lands at the group's own ceiling.
+
+That ceiling is where the `2^126` comes from.  For `n` group operations over `G` with automorphism
+group of size `m` (`m = 6` for Pasta), Pollard rho succeeds with probability at most
+`m · n · (n − 1) / (2 · |G|)`; solving for probability one at Vesta's `|G| ≥ 2^254` puts `n` a
+little above `2^126`.  Dividing the ceiling by the overhead gives the target the reduction can
+actually carry: `2^126 / 2^3 = 2^123` for the three-bit direct route, and `2^126 / 2^5 = 2^121`
+for the five-bit route recorded here.
+
+The five-bit profile is stated at `2^122` rather than `2^121`, so its solver cost is `2^127` — one
+bit above the ceiling, meaning an advantage supplied at that scale is being supplied above what the
+group can offer.  `AGM.StraightLineOrchardConsensusBounds` works that one-bit loss through at the
+consensus target.
+
+None of these figures is an achieved end-to-end security level.  The advantage is left symbolic, so
+the statements hold whatever it is; the number records only the accounting scale the reduction was
+evaluated at, which is a design target for the underlying curve rather than a proven bound on the
+protocol.
 -/
 
 namespace Zcash.Snark

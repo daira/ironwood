@@ -228,7 +228,7 @@ theorem adaptiveActionSurface_probability_bound
         (fun _ => 0))
 
 /-- Compositional adaptive Action knowledge bound for executable private-witness extraction. -/
-theorem orchard_action_adaptive_bundle_knowledge_error_bound
+theorem orchard_action_adaptive_bundle_knowledge_soundness_error_bound
     (numProofs : ℕ) {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex
@@ -316,11 +316,20 @@ theorem orchard_action_adaptive_bundle_knowledge_error_bound
 /-- Resource-accounted adaptive bundle capstone with `2^127` DLOG work and `2^-83` statistical
 error.
 
-The profile is evaluated at `2^127` queries and group work, which is *above* Vesta's own discrete-log
-security of at most `2^126` group operations.  The advantage is left symbolic, so the statement holds
-regardless; but the resource figure records a work-factor target and cannot be read as a security
-level.  For `n` group operations over `G` with automorphism group of size `m` (`m = 6` for Pasta),
-Pollard rho succeeds with probability at most `m · n · (n − 1) / (2 · |G|)`. -/
+The `2^127` figure is where the reduction's overhead lands, not a security level.  `Q <= 2^123` is
+the adversary's own budget; the adaptive finder's eight uncached represented runs cost four bits on
+top of it (`16 * 2^123 = 2^127`), and that product is what the DLOG advantage is supplied at.
+
+Vesta's own ceiling sits below that.  For `n` group operations over `G` with automorphism group of
+size `m` (`m = 6` for Pasta), Pollard rho succeeds with probability at most
+`m · n · (n − 1) / (2 · |G|)`; at `|G| ≥ 2^254` that puts `n` a little above `2^126`.  Against a
+four-bit overhead the ceiling-respecting adversary budget is therefore `2^126 / 2^4 = 2^122`, one
+bit below the `2^123` stated here — so the advantage is being requested slightly above what the
+group can offer.
+
+The advantage is left symbolic, so the statement holds regardless.  The figure records the
+accounting scale the reduction was evaluated at, which is a design target for the underlying curve
+rather than a proven end-to-end bound on the protocol. -/
 theorem orchard_action_adaptive_bundle_soundness_finite_security
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
@@ -444,11 +453,20 @@ theorem orchard_action_adaptive_bundle_soundness_finite_security
 advantage plus `2^-83`.  This is the concrete resource-accounted finite-security capstone for
 knowledge soundness.
 
-The profile is evaluated at `2^127` queries and group work, which is *above* Vesta's own discrete-log
-security of at most `2^126` group operations.  The advantage is left symbolic, so the statement holds
-regardless; but the resource figure records a work-factor target and cannot be read as a security
-level.  For `n` group operations over `G` with automorphism group of size `m` (`m = 6` for Pasta),
-Pollard rho succeeds with probability at most `m · n · (n − 1) / (2 · |G|)`. -/
+The `2^127` figure is where the reduction's overhead lands, not a security level.  `Q <= 2^123` is
+the adversary's own budget; the adaptive finder's eight uncached represented runs cost four bits on
+top of it (`16 * 2^123 = 2^127`), and that product is what the DLOG advantage is supplied at.
+
+Vesta's own ceiling sits below that.  For `n` group operations over `G` with automorphism group of
+size `m` (`m = 6` for Pasta), Pollard rho succeeds with probability at most
+`m · n · (n − 1) / (2 · |G|)`; at `|G| ≥ 2^254` that puts `n` a little above `2^126`.  Against a
+four-bit overhead the ceiling-respecting adversary budget is therefore `2^126 / 2^4 = 2^122`, one
+bit below the `2^123` stated here — so the advantage is being requested slightly above what the
+group can offer.
+
+The advantage is left symbolic, so the statement holds regardless.  The figure records the
+accounting scale the reduction was evaluated at, which is a design target for the underlying curve
+rather than a proven end-to-end bound on the protocol. -/
 theorem orchard_action_adaptive_bundle_knowledge_soundness_finite_security
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
@@ -545,7 +563,7 @@ theorem orchard_action_adaptive_bundle_knowledge_soundness_finite_security
               (actionProofParamsFor numProofs) family inputs hvk hI hchar) ≤
         profile.advantage (2 ^ 127) (2 ^ 127) + 1 / (2 ^ 83 : ENNReal) := by
     refine le_trans
-      (orchard_action_adaptive_bundle_knowledge_error_bound numProofs B hB query hquery
+      (orchard_action_adaptive_bundle_knowledge_soundness_error_bound numProofs B hB query hquery
         family inputs hvk hI hchar profile.toAdaptiveActionDlogProfile) ?_
     refine le_trans ?_
       (add_le_add (profile.advantage_mono hqueriesDlog hgroup)

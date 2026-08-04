@@ -517,7 +517,7 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptive_bundle_knowledge_soun
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 -- The unpriced-resource form of the adaptive knowledge-failure bound.
-assert_axioms Zcash.Snark.Capstone.orchard_action_adaptive_bundle_knowledge_error_bound +native(
+assert_axioms Zcash.Snark.Capstone.orchard_action_adaptive_bundle_knowledge_soundness_error_bound +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
