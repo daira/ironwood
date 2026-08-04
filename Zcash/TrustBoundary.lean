@@ -2272,33 +2272,33 @@ assert_axioms Zcash.Snark.assembleNonInteractiveInstances?_eq_none_of_oversized_
 -- are what the suffix rule demands, not an independent claim.
 
 -- AGM/AdaptiveIpaSurfaces.lean
-assert_axioms Zcash.Snark.adaptiveFallbackIpaSurfaceCore_measure_le
-assert_axioms Zcash.Snark.adaptiveFallbackIpaSurface_measure_le
-assert_axioms Zcash.Snark.adaptiveIpaFallbackBad_measure_le
-assert_axioms Zcash.Snark.adaptiveIpaQueriedBad_measure_le
-assert_axioms Zcash.Snark.adaptiveIpaRootPolynomial_measure_le
-assert_axioms Zcash.Snark.adaptiveQueriedIpaSurfaceCore_measure_le
-assert_axioms Zcash.Snark.adaptiveQueriedIpaSurface_measure_le
+assert_axioms Zcash.Snark.adaptiveFallbackIpaSurfaceCore_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveFallbackIpaSurface_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveIpaFallbackBad_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveIpaQueriedBad_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveIpaRootPolynomial_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveQueriedIpaSurfaceCore_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveQueriedIpaSurface_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- AGM/AdaptiveOnline.lean
 assert_axioms Zcash.Snark.LabeledOracleComp.finalBadWithoutRelation_measure_le
 assert_axioms Zcash.Snark.LabeledOracleComp.firstLabelOrFallbackBad_measure_le
 
 -- AGM/AdaptiveRootComposition.lean
-assert_axioms Zcash.Snark.adaptiveFallbackRootSurface_measure_le
-assert_axioms Zcash.Snark.adaptiveQueriedRootSurface_measure_le
-assert_axioms Zcash.Snark.adaptiveRootSurfaceAt_measure_le
+assert_axioms Zcash.Snark.adaptiveFallbackRootSurface_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveQueriedRootSurface_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveRootSurfaceAt_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- AGM/AdaptiveRootSurfaces.lean
-assert_axioms Zcash.Snark.adaptiveX1AllRootSet_measure_le
-assert_axioms Zcash.Snark.adaptiveX2RootSet_measure_le
-assert_axioms Zcash.Snark.adaptiveX3RootSet_measure_le
-assert_axioms Zcash.Snark.adaptiveX4RootSet_measure_le
-assert_axioms Zcash.Snark.adaptiveXiRootSet_measure_le
-assert_axioms Zcash.Snark.adaptiveZRootSet_measure_le
+assert_axioms Zcash.Snark.adaptiveX1AllRootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveX2RootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveX3RootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveX4RootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveXiRootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveZRootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- AGM/AdaptiveSurfaces.lean
-assert_axioms Zcash.Snark.adaptiveLabeledPrefixBad_measure_le
+assert_axioms Zcash.Snark.adaptiveLabeledPrefixBad_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.adaptivePrefixBad_measure_le
 
 -- AGM/DeployedRootSets.lean
@@ -2316,8 +2316,8 @@ assert_axioms Zcash.Snark.ipaShiftZ_badSet_measure_le
 assert_axioms Zcash.Snark.ipaDiscrepancyBadSet_measure_le
 
 -- AGM/StraightLinePinnedRoots.lean
-assert_axioms Zcash.Snark.ComputedStraightLineIpaFSFamily.pinnedIpaRoots_landing_measure_le
-assert_axioms Zcash.Snark.ComputedStraightLineIpaFSFamily.straightLineIpaRootBad_measure_le
+assert_axioms Zcash.Snark.ComputedStraightLineIpaFSFamily.pinnedIpaRoots_landing_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineIpaFSFamily.straightLineIpaRootBad_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- AGM/ValueUnbatch.lean
 assert_axioms Zcash.Snark.clearedQuotientErrorPolynomial_badSet_measure_le

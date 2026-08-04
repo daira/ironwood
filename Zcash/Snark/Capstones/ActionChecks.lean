@@ -145,7 +145,7 @@ private theorem capturedActionDerivedShapeCounts :
 
 theorem action_domainExponent_eq :
     actionCircuit.domainExponent = 11 := by
-  simpa [shape] using md_counts.1
+  simpa [shape] using capturedActionDerivedShapeCounts.1
 
 /-- **The captured static checks at the derived key**: the concrete specialization
 of `actionStaticChecks`, with the five decided facts transferred through the captured key's scalar

@@ -528,8 +528,7 @@ theorem StraightLineActionDirectDlogProfile.solverCost_le
       forall basis O, 2 * family.straightLineDirectDecodeOps basis O <= T := by
   constructor
   · unfold actionDlogOracleQueryCost
-    rw [ActionPermutationDomain.domainExponent_eq]
-    have hT := profile.targetAtLeastSixtySix
+    have hT := profile.scheduleOverheadBound
     calc
       6 * family.Q + 6 * (11 + actionCircuit.domainExponent) <=
           6 * T + 6 * (11 + actionCircuit.domainExponent) := by
