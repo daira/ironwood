@@ -1839,7 +1839,6 @@ private theorem filterMap_idxOf_of_forall_isSome {α β : Type*} [DecidableEq α
 
 /-- An everywhere-defined `filterMap` read at a source element's first position gives that
 element's image. -/
-
 private theorem filterMap_getD_idxOf_of_forall_isSome {α β : Type*} [DecidableEq α] (d : β)
     {g : α → Option β} :
     ∀ (l : List α), (∀ x ∈ l, (g x).isSome) →
@@ -1864,7 +1863,6 @@ private theorem filterMap_getD_idxOf_of_forall_isSome {α β : Type*} [Decidable
 
 open Classical in
 /-- Every query is routed while preserving its commitment, point, and claimed evaluation. -/
-
 theorem constructIntermediateSets_comm_routed {k : ℕ} {F G : Type*} [DecidableEq F]
     [DecidableEq G] (queries : List (VerifierQuery k F G)) {q : VerifierQuery k F G}
     (hq : q ∈ queries)
@@ -2296,7 +2294,6 @@ theorem constructIntermediateSets_comm_routed_all {k : ℕ} {F G : Type*} [Decid
     route.id_eq, route.commitment_eq, route.all_queries⟩
 
 /-- Under canonical slot resolution, each grouped member carries the commitment named by its ID. -/
-
 theorem constructIntermediateSets_member_commitment_eq_of_id
     {k : ℕ} {F G : Type*} [DecidableEq F] [DecidableEq G]
     (queries : List (VerifierQuery k F G))
@@ -2389,7 +2386,6 @@ theorem columnQueries_layout_mem_eval {k' : ℕ} {F G' : Type*} [Field F] (omega
 
 /-- Each in-range fixed layout entry contributes a deployed opening query: slot `fixedCol`, the
 rotated point, and the proof string's claimed fixed evaluation. -/
-
 theorem fixed_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F] [Inhabited G]
     (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G) (ch : Challenges shape.k F)
     {j : ℕ} (hjl : j < vk.fixedQueryLayout.length) (hje : j < shape.numFixedQueries) :
@@ -2408,7 +2404,6 @@ theorem fixed_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F] 
       finFn, dif_pos hje]
 
 /-- Advice-query membership in `assembleQueries`, with the claimed evaluation. -/
-
 theorem advice_query_mem_assembleQueries_eval {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs)
@@ -2431,7 +2426,6 @@ theorem advice_query_mem_assembleQueries_eval {shape : Shape} {F G : Type*} [Fie
       finFn, dif_pos hje]
 
 /-- Instance-query membership in `assembleQueries`, with the claimed evaluation. -/
-
 theorem instance_query_mem_assembleQueries_eval {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs)
@@ -2455,7 +2449,6 @@ theorem instance_query_mem_assembleQueries_eval {shape : Shape} {F G : Type*} [F
 
 /-- A per-proof builder's query is an `assembleQueries` query: the permutation section of
 sub-proof `pi`. -/
-
 private theorem mem_assembleQueries_of_mem_perm {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs) {q : VerifierQuery shape.k F G}
@@ -2471,7 +2464,6 @@ private theorem mem_assembleQueries_of_mem_perm {shape : Shape} {F G : Type*} [F
   exact List.mem_append.mpr (Or.inl (List.mem_append.mpr (Or.inr hq)))
 
 /-- The lookup section of sub-proof `pi`, as `mem_assembleQueries_of_mem_perm`. -/
-
 private theorem mem_assembleQueries_of_mem_lookup {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs) {q : VerifierQuery shape.k F G}
@@ -2488,7 +2480,6 @@ private theorem mem_assembleQueries_of_mem_lookup {shape : Shape} {F G : Type*} 
   exact List.mem_append.mpr (Or.inr hq)
 
 /-- The permutation product of set `s` is opened at `ch.x` claiming its `eval`. -/
-
 theorem perm_product_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs)
@@ -2516,7 +2507,6 @@ theorem perm_product_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Fi
     simp [List.getElem_zip, hsets, List.getElem_ofFn]
 
 /-- The permutation product of set `s` is opened at `ω · ch.x` claiming its `nextEval`. -/
-
 theorem perm_product_next_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs)
@@ -2545,7 +2535,6 @@ theorem perm_product_next_query_mem_assembleQueries {shape : Shape} {F G : Type*
 
 /-- For every set except the last whose `lastEval` is claimed, the permutation product is also
 opened at `ω^{-(blind+1)} · ch.x` claiming that value (halo2's `rev().skip(1)` walk). -/
-
 theorem perm_product_last_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs)
@@ -2587,7 +2576,6 @@ theorem perm_product_last_query_mem_assembleQueries {shape : Shape} {F G : Type*
     rw [hE2']
 
 /-- The lookup product of lookup `l` is opened at `ch.x` claiming its `productEval`. -/
-
 theorem lookup_product_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs) (l : Fin shape.numLookups) :
@@ -2614,7 +2602,6 @@ theorem lookup_product_query_mem_assembleQueries {shape : Shape} {F G : Type*} [
     simp [List.getElem_zip, hlks, List.getElem_ofFn]
 
 /-- The lookup product of lookup `l` is opened at `ω · ch.x` claiming its `productNextEval`. -/
-
 theorem lookup_product_next_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs) (l : Fin shape.numLookups) :
@@ -2643,7 +2630,6 @@ theorem lookup_product_next_query_mem_assembleQueries {shape : Shape} {F G : Typ
     simp [List.getElem_zip, hlks, List.getElem_ofFn]
 
 /-- The permuted input of lookup `l` is opened at `ch.x` claiming its `permutedInputEval`. -/
-
 theorem lookup_permInput_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs) (l : Fin shape.numLookups) :
@@ -2672,7 +2658,6 @@ theorem lookup_permInput_query_mem_assembleQueries {shape : Shape} {F G : Type*}
 
 /-- The permuted input of lookup `l` is opened at `ω⁻¹ · ch.x` claiming its
 `permutedInputInvEval`. -/
-
 theorem lookup_permInput_inv_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs) (l : Fin shape.numLookups) :
@@ -2701,7 +2686,6 @@ theorem lookup_permInput_inv_query_mem_assembleQueries {shape : Shape} {F G : Ty
     simp [List.getElem_zip, hlks, List.getElem_ofFn]
 
 /-- The permuted table of lookup `l` is opened at `ch.x` claiming its `permutedTableEval`. -/
-
 theorem lookup_permTable_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (pi : Fin shape.numProofs) (l : Fin shape.numLookups) :
@@ -2729,7 +2713,6 @@ theorem lookup_permTable_query_mem_assembleQueries {shape : Shape} {F G : Type*}
     simp [List.getElem_zip, hlks, List.getElem_ofFn]
 
 /-- The common permutation column `c` is opened at `ch.x` claiming its common evaluation. -/
-
 theorem permCommon_query_mem_assembleQueries {shape : Shape} {F G : Type*} [Field F]
     [Inhabited G] (vk : VerifyingKey shape F G) (instanceCommitment : Fin shape.numProofs → Nat → G) (ps : ProofString shape F G)
     (ch : Challenges shape.k F) (c : Fin shape.numPermutationColumns) :

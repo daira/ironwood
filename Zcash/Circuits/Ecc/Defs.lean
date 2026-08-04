@@ -31,7 +31,6 @@ end Zcash.Circuits
 namespace Zcash.Circuits.Ecc
 
 /-- Shared helpers for the scalar-multiplication gates. -/
-
 def ternary {K : Type} [Zero K] [One K] [Add K] [Sub K] [Mul K]
     (choice ifTrue ifFalse : K) : K :=
   choice * ifTrue + (1 - choice) * ifFalse

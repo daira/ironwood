@@ -8,6 +8,14 @@ The probability capstone and the work-factor interpretation are deliberately sep
 module records random-oracle queries, group work, and the actual direct-coordinate field/data work
 as distinct quantities.  It does not assert a generic-group DLOG success formula.  A caller
 supplies the finite-security Vesta DLOG advantage for the resulting concrete solver cost.
+
+The solver budgets below are work-factor targets, not security levels.  A five-bit overhead takes a
+`2^122` adversary budget to `2^127`, which is above Vesta's own discrete-log security of at most
+`2^126` group operations, so an advantage supplied at that scale is being supplied above the group's
+ceiling.  For `n` group operations over `G` with automorphism group of size `m` (`m = 6` for Pasta),
+Pollard rho succeeds with probability at most `m · n · (n − 1) / (2 · |G|)`.
+`Composition.OrchardConsensusBounds` works the resulting one-bit loss through at the consensus
+target.
 -/
 
 namespace Zcash.Snark
