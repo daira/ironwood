@@ -109,7 +109,7 @@ the code: `relationFinderReads` is the concrete table-point set the finder can c
 (`relationFinderReads_card_le_dlogQueries`); the locality lemmas beside them
 (`cachedExecution_eq_of_agree` through `accepts?_isSome_eq_of_agree`) prove the retained
 execution, the challenge reads, the provenance stage, and the acceptance verdict read nothing
-outside that set, with the quotient, identity, and terminal stages the tracked remainder.  The
+outside that set, with the quotient, identity, and terminal stages awaiting the provenance-style view-factoring recorded in `AdaptiveStatementReads`.  The
 finder's field-operation footprint is certified per run by `directDecodeWorkBound` on the direct
 profile.  `proverGroupWork` is a declared adversary resource — the concrete-security premise
 playing the role of the paper model's time `t`; deriving it needs group operations reified in
