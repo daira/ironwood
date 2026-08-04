@@ -33,6 +33,17 @@ theorem permutationColumnCount_eq :
       15 := by
   native_decide
 
+/-- The Action circuit configures exactly one instance column. -/
+theorem numInstanceColumns_eq :
+    actionCircuit.constraintSystem.numInstanceColumns = 1 := by
+  native_decide
+
+/-- Every instance query in the Action circuit's pinned layout names the single
+configured instance column. -/
+theorem instanceQueryLayout_columns_lt :
+    ∀ entry ∈ actionCircuit.instanceQueryLayout, entry.1 < 1 := by
+  native_decide
+
 def ColumnRefCoherent : ColumnRef → Prop
   | .advice i =>
       i < actionCircuit.adviceQueryLayout.length ∧

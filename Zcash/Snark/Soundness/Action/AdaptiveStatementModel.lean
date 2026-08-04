@@ -1,4 +1,5 @@
 import Zcash.Circuits.Integration.ActionCorrectness
+import Zcash.Circuits.Integration.ActionPermutationDomainCompute
 import Zcash.Snark.Soundness.AGM.AdaptiveOnline
 import Zcash.Snark.Verifier.Deployed
 
@@ -30,8 +31,9 @@ abbrev AdaptiveActionStatementShape (pp : ProofParams) : Shape :=
 /-- The deployed Action circuit has exactly one configured instance column. -/
 theorem adaptiveActionStatement_numInstanceColumns (pp : ProofParams) :
     (AdaptiveActionStatementShape pp).numInstanceColumns = 1 := by
-  rw [actionCircuit.shape.withProofParams_numInstanceColumns pp]
-  native_decide
+  rw [actionCircuit.shape.withProofParams_numInstanceColumns pp,
+    actionCircuit.shape_numInstanceColumns]
+  exact ActionPermutationDomain.numInstanceColumns_eq
 
 /-- Every unconfigured Action instance column serializes only zero rows. -/
 theorem adaptiveActionPublicInputRows_ne_zero (input : PublicInputs Fp)
