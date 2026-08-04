@@ -152,30 +152,12 @@ challenge-read vectors — and recover today's table-indexed forms as abbreviati
 of `runView_eq_of_agree`.  Until that refactor lands, the read-set bound certifies what the
 finder may consult, and the stages above certify the transport patterns it reuses. -/
 
-/-- Everything the finder stages read from one execution: the selected output, the annotation
-log, and the two canonical challenge-read vectors.  The index-generalization close re-indexes
-the stage chain by this view. -/
-structure RunView (pp : ProofParams) (family : ComputedAdaptiveActionStatementFSFamily pp)
-    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) where
-  output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)
-  log : AnnotationLog basis
-  pre : Fin 11 → Fp
-  rounds : Fin (AdaptiveActionStatementShape pp).k → Fp
-
-/-- The run view of one table. -/
-def runView (family : ComputedAdaptiveActionStatementFSFamily pp)
-    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) : RunView pp family basis :=
-  ⟨family.runOutput basis O, (family.adversary basis).annotations O,
-    family.runPreIpaReads basis O, family.runIpaReads basis O⟩
-
 /-- Agreement on the read set reproduces the whole run view. -/
 theorem runView_eq_of_agree {O O' : family.Coins}
     (h : ∀ t ∈ family.relationFinderReads basis O, O' t = O t) :
     runView family basis O' = runView family basis O := by
   unfold runView
-  rw [runOutput_eq_of_agree h, annotations_eq_of_agree h, runPreIpaReads_eq_of_agree h,
-    runIpaReads_eq_of_agree h]
+  rw [runOutput_eq_of_agree h, runPreIpaReads_eq_of_agree h, runIpaReads_eq_of_agree h]
 
 /-- Agreement on the read set reproduces the provenance stage. -/
 theorem provenanceRelationFinder_eq_of_agree {O O' : family.Coins}

@@ -163,7 +163,7 @@ def statisticalSurfaceEvent {pp : ProofParams}
 
 /-! ## Deterministic surface exhaustion -/
 
-theorem BatchWitness.goodRoots_of_not_rootEvent {pp : ProofParams}
+theorem BatchWitnessV.goodRoots_of_not_rootEvent {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins)

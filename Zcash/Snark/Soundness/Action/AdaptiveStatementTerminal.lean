@@ -55,97 +55,143 @@ def runIpaReads {pp : ProofParams}
     (O : family.Coins) : Fin (AdaptiveActionStatementShape pp).k → Fp :=
   fun j => O ((family.runOutput basis O).prefixes (family.vkTranscriptRepr basis) j)
 
+/-- Everything the finder stages read from one execution: the selected output, the annotation
+log, and the two canonical challenge-read vectors.  The stage chain below is indexed by this
+view, with the table-indexed forms recovered as abbreviations at `runView`; full finder locality
+is then one rewrite of the view. -/
+structure RunView (pp : ProofParams) (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) where
+  output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)
+  pre : Fin 11 → Fp
+  rounds : Fin (AdaptiveActionStatementShape pp).k → Fp
+
+/-- The run view of one table. -/
+def runView {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) : RunView pp family basis :=
+  ⟨family.runOutput basis O, family.runPreIpaReads basis O, family.runIpaReads basis O⟩
+
+@[simp] theorem runView_output {pp : ProofParams}
+    {family : ComputedAdaptiveActionStatementFSFamily pp}
+    {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
+    (O : family.Coins) :
+    (runView family basis O).output = family.runOutput basis O := rfl
+@[simp] theorem runView_pre {pp : ProofParams}
+    {family : ComputedAdaptiveActionStatementFSFamily pp}
+    {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
+    (O : family.Coins) :
+    (runView family basis O).pre = family.runPreIpaReads basis O := rfl
+@[simp] theorem runView_rounds {pp : ProofParams}
+    {family : ComputedAdaptiveActionStatementFSFamily pp}
+    {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
+    (O : family.Coins) :
+    (runView family basis O).rounds = family.runIpaReads basis O := rfl
+
+/-- The selected proof's exact direct `x₄` online-coordinate source, over one run view. -/
+abbrev batchX4SourceV {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis) :=
+  deployedX4ColumnRepresentationsOfCovered
+    view.output.toAlgebraicWfProof
+    (adaptiveStatementInstanceRepresentationList
+        view.output.instanceRepresentations ++
+      family.fixedRepresentations basis)
+    view.output.proofData.membersCovered
+    view.pre
+
 /-- The selected proof's exact direct `x₄` online-coordinate source. -/
 abbrev batchX4Source {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins) :=
-  deployedX4ColumnRepresentationsOfCovered
-    (family.runProof basis O)
-    (adaptiveStatementInstanceRepresentationList
-        (family.runOutput basis O).instanceRepresentations ++
-      family.fixedRepresentations basis)
-    (family.runOutput basis O).proofData.membersCovered
-    (family.runPreIpaReads basis O)
+  family.batchX4SourceV basis (runView family basis O)
 
 /-- The direct unbatcher's successful branch, retaining the online-coordinate equalities needed
 to identify both the six root surfaces and the later semantic resolver with the selected proof.
 Unlike `DeployedBatchWitness`, this record is indexed directly by the adaptive statement output,
 so its instance commitment may vary with the oracle table. -/
-structure BatchWitness {pp : ProofParams}
+structure BatchWitnessV {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) where
+    (view : RunView pp family basis) where
   batches : DeployedAlgebraicBatches
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
     (adaptiveActionStatementVk pp basis)
-    (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)
-    ((family.runProof basis O).aMulti (family.runPreIpaReads basis O))
-    ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-    ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O))
-  x4Coeffs : batches.x4.coeffs = (family.batchX4Source basis O).coeffs
-  x4U : batches.x4.uComp = (family.batchX4Source basis O).uComp
-  x4W : batches.x4.wComp = (family.batchX4Source basis O).wComp
+    (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+    view.output.toAlgebraicWfProof.proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0))
+    (view.output.toAlgebraicWfProof.aMulti view.pre)
+    (view.output.toAlgebraicWfProof.multiU view.pre)
+    (view.output.toAlgebraicWfProof.multiBlind view.pre)
+  x4Coeffs : batches.x4.coeffs = (family.batchX4SourceV basis view).coeffs
+  x4U : batches.x4.uComp = (family.batchX4SourceV basis view).uComp
+  x4W : batches.x4.wComp = (family.batchX4SourceV basis view).wComp
   memberCoeffs : ∀ i
       (hi : i < deployedX4PairCount (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-        (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)),
+        (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+        view.output.toAlgebraicWfProof.proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0))),
     (batches.x1 i hi).coeffs =
-      (deployedMemberRepresentationsOfCovered (family.runProof basis O)
+      (deployedMemberRepresentationsOfCovered view.output.toAlgebraicWfProof
         (adaptiveStatementInstanceRepresentationList
-            (family.runOutput basis O).instanceRepresentations ++
+            view.output.instanceRepresentations ++
           family.fixedRepresentations basis)
-        (family.runOutput basis O).proofData.membersCovered
-        (family.runPreIpaReads basis O) i hi).coeffs
+        view.output.proofData.membersCovered
+        view.pre i hi).coeffs
   memberU : ∀ i
       (hi : i < deployedX4PairCount (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-        (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)),
+        (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+        view.output.toAlgebraicWfProof.proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0))),
     (batches.x1 i hi).uComp =
-      (deployedMemberRepresentationsOfCovered (family.runProof basis O)
+      (deployedMemberRepresentationsOfCovered view.output.toAlgebraicWfProof
         (adaptiveStatementInstanceRepresentationList
-            (family.runOutput basis O).instanceRepresentations ++
+            view.output.instanceRepresentations ++
           family.fixedRepresentations basis)
-        (family.runOutput basis O).proofData.membersCovered
-        (family.runPreIpaReads basis O) i hi).uComp
+        view.output.proofData.membersCovered
+        view.pre i hi).uComp
   memberW : ∀ i
       (hi : i < deployedX4PairCount (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-        (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)),
+        (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+        view.output.toAlgebraicWfProof.proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0))),
     (batches.x1 i hi).wComp =
-      (deployedMemberRepresentationsOfCovered (family.runProof basis O)
+      (deployedMemberRepresentationsOfCovered view.output.toAlgebraicWfProof
         (adaptiveStatementInstanceRepresentationList
-            (family.runOutput basis O).instanceRepresentations ++
+            view.output.instanceRepresentations ++
           family.fixedRepresentations basis)
-        (family.runOutput basis O).proofData.membersCovered
-        (family.runPreIpaReads basis O) i hi).wComp
+        view.output.proofData.membersCovered
+        view.pre i hi).wComp
+
+/-- The direct unbatcher's successful branch at one table. -/
+abbrev BatchWitness {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) :=
+  family.BatchWitnessV basis (runView family basis O)
 
 /-- The retained direct `x₄` columns reconstruct the selected proof's canonical aggregate. -/
-theorem BatchWitness.x4Source_reconstruct {pp : ProofParams}
+theorem BatchWitnessV.x4Source_reconstruct {pp : ProofParams}
     {family : ComputedAdaptiveActionStatementFSFamily pp}
     {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
-    {O : family.Coins} (witness : family.BatchWitness basis O) :
+    {view : RunView pp family basis} (witness : family.BatchWitnessV basis view) :
     (∑ j : Fin (deployedX4PairCount (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-        (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O) + 1),
-      (family.runPreIpaRecord basis O).x4 ^ (j : Nat) •
-        (family.batchX4Source basis O).coeffs j) =
-      (family.runProof basis O).aMulti (family.runPreIpaReads basis O) := by
+        (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+        view.output.toAlgebraicWfProof.proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)) + 1),
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)).x4 ^ (j : Nat) •
+        (family.batchX4SourceV basis view).coeffs j) =
+      view.output.toAlgebraicWfProof.aMulti view.pre := by
   rw [← witness.x4Coeffs]
   exact witness.batches.x4.reconstruct.symm
 
 /-- The same retained columns reconstruct the aggregate `u` coordinate. -/
-theorem BatchWitness.x4Source_reconstructU {pp : ProofParams}
+theorem BatchWitnessV.x4Source_reconstructU {pp : ProofParams}
     {family : ComputedAdaptiveActionStatementFSFamily pp}
     {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
-    {O : family.Coins} (witness : family.BatchWitness basis O) :
+    {view : RunView pp family basis} (witness : family.BatchWitnessV basis view) :
     (∑ j : Fin (deployedX4PairCount (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-        (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O) + 1),
-      (family.runPreIpaRecord basis O).x4 ^ (j : Nat) *
-        (family.batchX4Source basis O).uComp j) =
-      (family.runProof basis O).multiU (family.runPreIpaReads basis O) := by
+        (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+        view.output.toAlgebraicWfProof.proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)) + 1),
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)).x4 ^ (j : Nat) *
+        (family.batchX4SourceV basis view).uComp j) =
+      view.output.toAlgebraicWfProof.multiU view.pre := by
   rw [← witness.x4U]
   exact witness.batches.x4.reconstructU.symm
 
@@ -155,33 +201,33 @@ nontrivial AGM relation encountered while unbatching.
 The body repeats the `family.run*` selectors instead of `let`-binding them: the `letToHave`
 elaboration pass re-analyzes each local `let` against the full batch record, which used to
 exhaust the default heartbeat budget here. -/
-def batchOutcome {pp : ProofParams}
+def batchOutcomeV {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) :
-    family.BatchWitness basis O ⊕'
+    (view : RunView pp family basis) :
+    family.BatchWitnessV basis view ⊕'
       AugmentedRelationWitness (F := Fp)
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis).g
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis).u
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis).w :=
-  match deployedX4BatchOfCoveredWithSourceOrRelation (family.runProof basis O)
+  match deployedX4BatchOfCoveredWithSourceOrRelation view.output.toAlgebraicWfProof
       (adaptiveStatementInstanceRepresentationList
-          (family.runOutput basis O).instanceRepresentations ++
+          view.output.instanceRepresentations ++
         family.fixedRepresentations basis)
-      (family.runOutput basis O).proofData.membersCovered (family.runPreIpaReads basis O) with
+      view.output.proofData.membersCovered view.pre with
   | PSum.inr relation => PSum.inr relation
   | PSum.inl x4Result =>
       match finForallOrRelationWitness (fun i :
           Fin (deployedX4PairCount (adaptiveActionStatementVk pp basis)
             (adaptiveActionStatementInstanceCommitment pp basis
-              (family.runOutput basis O).inputs)
-            (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O)) =>
-          deployedX1BatchOfCoveredWithSourceOrRelation (family.runProof basis O)
+              view.output.inputs)
+            view.output.toAlgebraicWfProof.proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0))) =>
+          deployedX1BatchOfCoveredWithSourceOrRelation view.output.toAlgebraicWfProof
             (adaptiveStatementInstanceRepresentationList
-                (family.runOutput basis O).instanceRepresentations ++
+                view.output.instanceRepresentations ++
               family.fixedRepresentations basis)
-            (family.runOutput basis O).proofData.membersCovered
-            (family.runPreIpaReads basis O) x4Result.batch i i.isLt) with
+            view.output.proofData.membersCovered
+            view.pre x4Result.batch i i.isLt) with
       | PSum.inr relation => PSum.inr relation
       | PSum.inl results => PSum.inl
           { batches :=
@@ -194,176 +240,227 @@ def batchOutcome {pp : ProofParams}
             memberU := fun i hi => (results ⟨i, hi⟩).uComp_eq
             memberW := fun i hi => (results ⟨i, hi⟩).wComp_eq }
 
+/-- Construct the direct deployed batches at one table. -/
+abbrev batchOutcome {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) :=
+  family.batchOutcomeV basis (runView family basis O)
+
+
 /-- The six direct root exclusions for one successfully constructed batch set. -/
-structure BatchGoodRoots {pp : ProofParams}
+structure BatchGoodRootsV {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis)
+    (witness : family.BatchWitnessV basis view) : Prop where
+  x1 : (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)).x1 ∉ deployedX1AllRootSet
+    (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
+    (adaptiveActionStatementVk pp basis)
+    (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+    view.output.toAlgebraicWfProof.proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)) witness.batches
+  x2 : (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)).x2 ∉ deployedX2RootSet
+    (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
+    (adaptiveActionStatementVk pp basis)
+    (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+    view.output.toAlgebraicWfProof.proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)) witness.batches
+  x3 : (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)).x3 ∉ deployedX3RootSet
+    (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
+    (adaptiveActionStatementVk pp basis)
+    (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+    view.output.toAlgebraicWfProof.proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)) witness.batches
+  x4 : (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)).x4 ∉ deployedX4RootSet
+    (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
+    (adaptiveActionStatementVk pp basis)
+    (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+    view.output.toAlgebraicWfProof.proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)) witness.batches
+  xi : (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)).xi ∉ szBadSet (ipaShiftXiPolynomial
+    (commitGen (evalVector (AdaptiveActionStatementShape pp).k
+        (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)).x3)
+      (view.output.toAlgebraicWfProof.aMulti view.pre) -
+        multiopenValue (adaptiveActionStatementVk pp basis)
+          (adaptiveActionStatementInstanceCommitment pp basis
+            view.output.inputs)
+          view.output.toAlgebraicWfProof.proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)))
+    (commitGen (evalVector (AdaptiveActionStatementShape pp).k
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)).x3) view.output.toAlgebraicWfProof.s))
+  z : (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)).z ∉ szBadSet (ipaShiftZPolynomial
+    (commitGen (evalVector (AdaptiveActionStatementShape pp).k
+        (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)).x3)
+      (view.output.toAlgebraicWfProof.aMulti view.pre) -
+        multiopenValue (adaptiveActionStatementVk pp basis)
+          (adaptiveActionStatementInstanceCommitment pp basis
+            view.output.inputs)
+          view.output.toAlgebraicWfProof.proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)))
+    (view.output.toAlgebraicWfProof.multiU view.pre)
+    view.output.toAlgebraicWfProof.sU
+    (commitGen (evalVector (AdaptiveActionStatementShape pp).k
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)).x3) view.output.toAlgebraicWfProof.s)
+    (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)).xi)
+
+/-- The six direct root exclusions at one table. -/
+abbrev BatchGoodRoots {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins)
-    (witness : family.BatchWitness basis O) : Prop where
-  x1 : (family.runPreIpaRecord basis O).x1 ∉ deployedX1AllRootSet
-    (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
-    (adaptiveActionStatementVk pp basis)
-    (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O) witness.batches
-  x2 : (family.runPreIpaRecord basis O).x2 ∉ deployedX2RootSet
-    (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
-    (adaptiveActionStatementVk pp basis)
-    (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O) witness.batches
-  x3 : (family.runPreIpaRecord basis O).x3 ∉ deployedX3RootSet
-    (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
-    (adaptiveActionStatementVk pp basis)
-    (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O) witness.batches
-  x4 : (family.runPreIpaRecord basis O).x4 ∉ deployedX4RootSet
-    (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
-    (adaptiveActionStatementVk pp basis)
-    (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O) witness.batches
-  xi : (family.runPreIpaRecord basis O).xi ∉ szBadSet (ipaShiftXiPolynomial
-    (commitGen (evalVector (AdaptiveActionStatementShape pp).k
-        (family.runPreIpaRecord basis O).x3)
-      ((family.runProof basis O).aMulti (family.runPreIpaReads basis O)) -
-        multiopenValue (adaptiveActionStatementVk pp basis)
-          (adaptiveActionStatementInstanceCommitment pp basis
-            (family.runOutput basis O).inputs)
-          (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O))
-    (commitGen (evalVector (AdaptiveActionStatementShape pp).k
-      (family.runPreIpaRecord basis O).x3) (family.runProof basis O).s))
-  z : (family.runPreIpaRecord basis O).z ∉ szBadSet (ipaShiftZPolynomial
-    (commitGen (evalVector (AdaptiveActionStatementShape pp).k
-        (family.runPreIpaRecord basis O).x3)
-      ((family.runProof basis O).aMulti (family.runPreIpaReads basis O)) -
-        multiopenValue (adaptiveActionStatementVk pp basis)
-          (adaptiveActionStatementInstanceCommitment pp basis
-            (family.runOutput basis O).inputs)
-          (family.runProof basis O).proof.1 (family.runPreIpaRecord basis O))
-    ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-    (family.runProof basis O).sU
-    (commitGen (evalVector (AdaptiveActionStatementShape pp).k
-      (family.runPreIpaRecord basis O).x3) (family.runProof basis O).s)
-    (family.runPreIpaRecord basis O).xi)
+    (witness : family.BatchWitness basis O) : Prop :=
+  family.BatchGoodRootsV basis (runView family basis O) witness
 
 /-- The shifted aggregate equality obtained from acceptance outside the IPA binding event. -/
-def ShiftedValue {pp : ProofParams}
+def ShiftedValueV {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis) : Prop :=
+  let ch := chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)
+  ch.z ≠ 0 ∧
+    commitGen (evalVector (AdaptiveActionStatementShape pp).k ch.x3)
+        (view.output.toAlgebraicWfProof.aMulti view.pre) =
+      multiopenValue (adaptiveActionStatementVk pp basis)
+          (adaptiveActionStatementInstanceCommitment pp basis
+            view.output.inputs)
+          view.output.toAlgebraicWfProof.proof.1 ch +
+        ch.z⁻¹ * (view.output.toAlgebraicWfProof.multiU view.pre +
+          ch.xi * view.output.toAlgebraicWfProof.sU) -
+        ch.xi * commitGen (evalVector (AdaptiveActionStatementShape pp).k ch.x3)
+          view.output.toAlgebraicWfProof.s
+
+/-- The shifted aggregate equality at one table. -/
+abbrev ShiftedValue {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins) : Prop :=
-  let ch := family.runPreIpaRecord basis O
-  ch.z ≠ 0 ∧
-    commitGen (evalVector (AdaptiveActionStatementShape pp).k ch.x3)
-        ((family.runProof basis O).aMulti (family.runPreIpaReads basis O)) =
-      multiopenValue (adaptiveActionStatementVk pp basis)
-          (adaptiveActionStatementInstanceCommitment pp basis
-            (family.runOutput basis O).inputs)
-          (family.runProof basis O).proof.1 ch +
-        ch.z⁻¹ * ((family.runProof basis O).multiU (family.runPreIpaReads basis O) +
-          ch.xi * (family.runProof basis O).sU) -
-        ch.xi * commitGen (evalVector (AdaptiveActionStatementShape pp).k ch.x3)
-          (family.runProof basis O).s
+  family.ShiftedValueV basis (runView family basis O)
 
 /-- Good direct roots and the shifted verifier equality decode the selected proof, then transport
 the decode across the actual IPA-round challenges. -/
-def decodeOfBatchGoodRoots {pp : ProofParams}
+def decodeOfBatchGoodRootsV {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins)
-    (witness : family.BatchWitness basis O)
-    (hgood : family.BatchGoodRoots basis O witness)
-    (hshifted : family.ShiftedValue basis O) :
+    (view : RunView pp family basis)
+    (witness : family.BatchWitnessV basis view)
+    (hgood : family.BatchGoodRootsV basis view witness)
+    (hshifted : family.ShiftedValueV basis view) :
     DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
       (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runRecord basis O)
-      ((family.runProof basis O).aMulti (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-      ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O)) := by
-  let ch := family.runPreIpaRecord basis O
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds)
+      (view.output.toAlgebraicWfProof.aMulti view.pre)
+      (view.output.toAlgebraicWfProof.multiU view.pre)
+      (view.output.toAlgebraicWfProof.multiBlind view.pre) := by
+  let ch := chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)
   have hvalue : commitGen (evalVector (AdaptiveActionStatementShape pp).k ch.x3)
-      ((family.runProof basis O).aMulti (family.runPreIpaReads basis O)) =
+      (view.output.toAlgebraicWfProof.aMulti view.pre) =
       multiopenValue (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-        (family.runProof basis O).proof.1 ch :=
+        (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+        view.output.toAlgebraicWfProof.proof.1 ch :=
     rawValue_of_shiftedValue_of_good _ _ _ _ _ _ _
       hshifted.1 hshifted.2 hgood.xi hgood.z
   have hgood1 := not_mem_deployedX1RootSet_of_not_mem_all
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
     (adaptiveActionStatementVk pp basis)
-    (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 ch witness.batches hgood.x1
+    (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1 ch witness.batches hgood.x1
   exact (deployedAlgebraicDecode_of_good_roots
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
     (adaptiveActionStatementVk pp basis)
-    (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1 ch witness.batches hvalue hgood.x4 hgood.x3 hgood.x2 hgood1).reRound
-      (family.runIpaReads basis O)
+    (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+    view.output.toAlgebraicWfProof.proof.1 ch witness.batches hvalue hgood.x4 hgood.x3 hgood.x2 hgood1).reRound
+      view.rounds
 
-/-- Executable deployed-acceptance certificate for the selected statement and proof. -/
-def accepts? {pp : ProofParams}
+/-- Good direct roots and the shifted equality decode the selected proof at one table. -/
+abbrev decodeOfBatchGoodRoots {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) : Option (PLift (family.accepts basis O)) :=
+    (O : family.Coins)
+    (witness : family.BatchWitness basis O)
+    (hgood : family.BatchGoodRoots basis O witness)
+    (hshifted : family.ShiftedValue basis O) :=
+  family.decodeOfBatchGoodRootsV basis (runView family basis O) witness hgood hshifted
+
+/-- Checked Halo2 acceptance over one run view. -/
+def acceptsV {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis) : Prop :=
+  DeployedAccepts (AdaptiveActionStatementShape pp)
+    (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
+    (adaptiveActionStatementVk pp basis)
+    (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+    view.output.toAlgebraicWfProof.proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds)
+
+/-- Executable deployed-acceptance certificate for the selected statement and proof. -/
+def accepts?V {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis) : Option (PLift (family.acceptsV basis view)) :=
   match hassemble : assemble? (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runRecord basis O) with
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) with
   | none => none
   | some msm =>
       if hzero : msm.eval
           (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) = 0 then
         some ⟨by
-          unfold accepts
-          dsimp only
+          unfold acceptsV
           unfold DeployedAccepts
           rw [hassemble]
           exact hzero⟩
       else none
 
-/-- Run all six finite deployed-root checks for one selected batch set. -/
-def batchGoodRoots? {pp : ProofParams}
+/-- Executable deployed-acceptance certificate at one table. -/
+abbrev accepts? {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins)
-    (witness : family.BatchWitness basis O) :
-    Option (PLift (family.BatchGoodRoots basis O witness)) :=
-  let ch := family.runPreIpaRecord basis O
+    (O : family.Coins) : Option (PLift (family.accepts basis O)) :=
+  family.accepts?V basis (runView family basis O)
+
+
+/-- Run all six finite deployed-root checks for one selected batch set. -/
+def batchGoodRoots?V {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis)
+    (witness : family.BatchWitnessV basis view) :
+    Option (PLift (family.BatchGoodRootsV basis view witness)) :=
+  let ch := chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre (fun _ => 0)
   let urs := ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis
   let delta := commitGen (evalVector (AdaptiveActionStatementShape pp).k ch.x3)
-      ((family.runProof basis O).aMulti (family.runPreIpaReads basis O)) -
+      (view.output.toAlgebraicWfProof.aMulti view.pre) -
     multiopenValue (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 ch
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1 ch
   let sEval := commitGen (evalVector (AdaptiveActionStatementShape pp).k ch.x3)
-    (family.runProof basis O).s
+    view.output.toAlgebraicWfProof.s
   match deployedX1RootAvoidance? urs rfl (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 ch witness.batches with
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1 ch witness.batches with
   | none => none
   | some hx1 =>
       match deployedX2RootAvoidance? urs rfl (adaptiveActionStatementVk pp basis)
           (adaptiveActionStatementInstanceCommitment pp basis
-            (family.runOutput basis O).inputs)
-          (family.runProof basis O).proof.1 ch witness.batches with
+            view.output.inputs)
+          view.output.toAlgebraicWfProof.proof.1 ch witness.batches with
       | none => none
       | some hx2 =>
           match deployedX3RootAvoidance? urs rfl (adaptiveActionStatementVk pp basis)
               (adaptiveActionStatementInstanceCommitment pp basis
-                (family.runOutput basis O).inputs)
-              (family.runProof basis O).proof.1 ch witness.batches with
+                view.output.inputs)
+              view.output.toAlgebraicWfProof.proof.1 ch witness.batches with
           | none => none
           | some hx3 =>
               match deployedX4RootAvoidance? urs rfl (adaptiveActionStatementVk pp basis)
                   (adaptiveActionStatementInstanceCommitment pp basis
-                    (family.runOutput basis O).inputs)
-                  (family.runProof basis O).proof.1 ch witness.batches with
+                    view.output.inputs)
+                  view.output.toAlgebraicWfProof.proof.1 ch witness.batches with
               | none => none
               | some hx4 =>
                   match deployedXiRootAvoidance? delta sEval ch.xi with
                   | none => none
                   | some hxi =>
                       match deployedZRootAvoidance? delta
-                          ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-                          (family.runProof basis O).sU sEval ch.xi ch.z with
+                          (view.output.toAlgebraicWfProof.multiU view.pre)
+                          view.output.toAlgebraicWfProof.sU sEval ch.xi ch.z with
                       | none => none
                       | some hz => some ⟨{
                           x1 := by simpa only using hx1.down
@@ -373,12 +470,64 @@ def batchGoodRoots? {pp : ProofParams}
                           xi := by simpa only using hxi.down
                           z := by simpa only using hz.down }⟩
 
+/-- Run all six finite deployed-root checks at one table. -/
+abbrev batchGoodRoots? {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins)
+    (witness : family.BatchWitness basis O) :
+    Option (PLift (family.BatchGoodRoots basis O witness)) :=
+  family.batchGoodRoots?V basis (runView family basis O) witness
+
+
 /-- Over the scalar field, a generator combination is the inner product with its coefficients. -/
 private theorem commitGen_eq_innerProduct {n : ℕ} (g a : Fin n → Fp) :
     commitGen g a = innerProduct a g :=
   Finset.sum_congr rfl fun _ _ => smul_eq_mul _ _
 
 /-- Acceptance and absence of the guarded IPA binding attack imply the shifted decoder equality. -/
+theorem shiftedValueV_of_accept_not_attack {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis)
+    (haccept : family.acceptsV basis view)
+    (hz : view.pre 10 ≠ 0)
+    (hnot : ¬fullAlgebraicBindingAttackZ basis (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof view.pre
+      view.rounds) :
+    family.ShiftedValueV basis view := by
+  let proof := view.output.toAlgebraicWfProof
+  let nu := view.pre
+  let rounds := view.rounds
+  have hdeployed : DeployedAccepts (AdaptiveActionStatementShape pp)
+      (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
+      (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      proof.proof.1 (chRecord nu rounds) := by
+    simpa only [acceptsV, nu, rounds, proof] using haccept
+  have hacceptFull : fullAlgebraicAccept basis (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      proof nu rounds :=
+    fullAlgebraicAccept_of_deployed basis (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      proof nu rounds hdeployed
+  have heq : innerProduct (proof.aMulti nu)
+      (evalVector (AdaptiveActionStatementShape pp).k (nu 7)) =
+      multiopenValue (adaptiveActionStatementVk pp basis)
+        (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+        proof.proof.1 (chRecord nu (fun _ => 0)) +
+      (nu 10)⁻¹ * (proof.multiU nu + nu 9 * proof.sU) -
+        nu 9 * innerProduct proof.s
+          (evalVector (AdaptiveActionStatementShape pp).k (nu 7)) := by
+    by_contra hmismatch
+    exact hnot ⟨⟨hacceptFull, hmismatch⟩, hz⟩
+  constructor
+  · simpa only [ShiftedValueV, runPreIpaRecord, chRecord, nu, proof] using hz
+  · simpa only [ShiftedValueV, runPreIpaRecord, chRecord, nu, proof,
+      commitGen_eq_innerProduct] using heq
+
+/-- Acceptance and no guarded IPA attack give the shifted equality, at one table. -/
 theorem shiftedValue_of_accept_not_attack {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
@@ -389,60 +538,41 @@ theorem shiftedValue_of_accept_not_attack {pp : ProofParams}
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
       (family.runProof basis O) (family.runPreIpaReads basis O)
       (family.runIpaReads basis O)) :
-    family.ShiftedValue basis O := by
-  let proof := family.runProof basis O
-  let nu := family.runPreIpaReads basis O
-  let rounds := family.runIpaReads basis O
-  have hdeployed : DeployedAccepts (AdaptiveActionStatementShape pp)
-      (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
-      (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      proof.proof.1 (chRecord nu rounds) := by
-    simpa only [accepts, runRecord, nu, rounds, proof] using haccept
-  have hacceptFull : fullAlgebraicAccept basis (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      proof nu rounds :=
-    fullAlgebraicAccept_of_deployed basis (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      proof nu rounds hdeployed
-  have heq : innerProduct (proof.aMulti nu)
-      (evalVector (AdaptiveActionStatementShape pp).k (nu 7)) =
-      multiopenValue (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-        proof.proof.1 (chRecord nu (fun _ => 0)) +
-      (nu 10)⁻¹ * (proof.multiU nu + nu 9 * proof.sU) -
-        nu 9 * innerProduct proof.s
-          (evalVector (AdaptiveActionStatementShape pp).k (nu 7)) := by
-    by_contra hmismatch
-    exact hnot ⟨⟨hacceptFull, hmismatch⟩, hz⟩
-  constructor
-  · simpa only [ShiftedValue, runPreIpaRecord, chRecord, nu, proof] using hz
-  · simpa only [ShiftedValue, runPreIpaRecord, chRecord, nu, proof,
-      commitGen_eq_innerProduct] using heq
+    family.ShiftedValue basis O :=
+  family.shiftedValueV_of_accept_not_attack basis (runView family basis O) haccept hz hnot
+
 
 /-- Decode and acceptance evidence for the exact statement selected by one run. -/
-structure DecodedRun {pp : ProofParams}
+structure DecodedRunV {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) where
+    (view : RunView pp family basis) where
   hchar : deployedX4PairCount (adaptiveActionStatementVk pp basis)
-    (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1 (family.runRecord basis O) < scalarFieldOrder
+    (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+    view.output.toAlgebraicWfProof.proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) < scalarFieldOrder
   decode : DeployedAlgebraicDecode (AdaptiveActionStatementShape pp)
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
     (adaptiveActionStatementVk pp basis)
-    (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-    (family.runProof basis O).proof.1 (family.runRecord basis O)
-    ((family.runProof basis O).aMulti (family.runPreIpaReads basis O))
-    ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-    ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O))
-  accepts : family.accepts basis O
+    (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+    view.output.toAlgebraicWfProof.proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds)
+    (view.output.toAlgebraicWfProof.aMulti view.pre)
+    (view.output.toAlgebraicWfProof.multiU view.pre)
+    (view.output.toAlgebraicWfProof.multiBlind view.pre)
+  accepts : family.acceptsV basis view
 
-/-- The four finite semantic exclusions consumed by the shared Action terminal. -/
-structure SemanticExclusions {pp : ProofParams}
+/-- Decode and acceptance evidence at one table. -/
+abbrev DecodedRun {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) (run : family.DecodedRun basis O) where
+    (O : family.Coins) :=
+  family.DecodedRunV basis (runView family basis O)
+
+
+/-- The four finite semantic exclusions consumed by the shared Action terminal. -/
+structure SemanticExclusionsV {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis) (run : family.DecodedRunV basis view) where
   xGood :
     let model := CanonicalMemberConstraintRelation.acceptedModel
       (memberDecode := fun i hi => run.decode.toMemberDecode run.hchar i hi)
@@ -450,130 +580,187 @@ structure SemanticExclusions {pp : ProofParams}
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)) run.accepts
     let polynomial := CanonicalMemberConstraintRelation.acceptedPolynomial
       (memberDecode := fun i hi => run.decode.toMemberDecode run.hchar i hi) run.accepts
-    (family.runRecord basis O).x ∉ szBadSet
+    (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds).x ∉ szBadSet
       (combineConstraints model.fixedCols model.adviceCols model.instanceCols model.gates
         model.sets model.chunks model.lookups model.beta model.gamma model.delta model.theta
-        (family.runRecord basis O).y model.chunkLen model.l0 model.lLast model.lBlind -
+        (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds).y model.chunkLen model.l0 model.lLast model.lBlind -
           polynomial .vanishingH * (X ^ actionCircuit.n - 1))
   yGood :
     let model := CanonicalMemberConstraintRelation.acceptedModel
       (memberDecode := fun i hi => run.decode.toMemberDecode run.hchar i hi)
       (hblinding := actionCircuit.toVerifierKey_blindingFactors_lt_n
         (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)) run.accepts
-    ∀ j, (family.runRecord basis O).y ∉
+    ∀ j, (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds).y ∉
       szBadSet (foldSplitWitness model.constraints actionCircuit.n j)
   permutation : ResolverPermutationChallengeExclusions pp.numProofs
-    (adaptiveActionStatementVk pp basis) (family.runRecord basis O)
+    (adaptiveActionStatementVk pp basis) (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds)
     (CanonicalMemberConstraintRelation.acceptedPolynomial
       (memberDecode := fun i hi => run.decode.toMemberDecode run.hchar i hi) run.accepts)
     actionActiveRows
   lookup : TopLevelLookup.ChallengeExclusions actionCircuit pp
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)
-    (family.runRecord basis O)
+    (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds)
     (CanonicalMemberConstraintRelation.acceptedPolynomial
       (memberDecode := fun i hi => run.decode.toMemberDecode run.hchar i hi) run.accepts)
 
-/-- Execute the semantic terminal at the adversary-selected statement. -/
-def semanticOutcome? {pp : ProofParams}
+/-- The four finite semantic exclusions at one table. -/
+abbrev SemanticExclusions {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) (run : family.DecodedRun basis O) :
-    Option (ActionTerminal.ActionBundleWitness (family.runOutput basis O).inputs ⊕
+    (O : family.Coins) (run : family.DecodedRun basis O) :=
+  family.SemanticExclusionsV basis (runView family basis O) run
+
+
+/-- Execute the semantic terminal at the adversary-selected statement. -/
+def semanticOutcome?V {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis) (run : family.DecodedRunV basis view) :
+    Option (ActionTerminal.ActionBundleWitness view.output.inputs ⊕
       AlgebraicRelationWitness (F := Fp) basis) :=
   ActionTerminal.actionWitnessOrRelationOfDecode? pp basis
-    (family.runOutput basis O).inputs (family.runProof basis O).proof.1
-    ((family.runProof basis O).aMulti (family.runPreIpaReads basis O))
-    ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-    ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O))
-    (family.runRecord basis O) run.hchar run.decode run.accepts
+    view.output.inputs view.output.toAlgebraicWfProof.proof.1
+    (view.output.toAlgebraicWfProof.aMulti view.pre)
+    (view.output.toAlgebraicWfProof.multiU view.pre)
+    (view.output.toAlgebraicWfProof.multiBlind view.pre)
+    (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) run.hchar run.decode run.accepts
 
-/-- Project explicit relation data from the pointwise semantic outcome. -/
-def semanticRelation? {pp : ProofParams}
+/-- Semantic outcome at one table. -/
+abbrev semanticOutcome? {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) (run : family.DecodedRun basis O) :
+    (O : family.Coins) (run : family.DecodedRun basis O) :=
+  family.semanticOutcome?V basis (runView family basis O) run
+
+
+/-- Project explicit relation data from the pointwise semantic outcome. -/
+def semanticRelation?V {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis) (run : family.DecodedRunV basis view) :
     Option (AlgebraicRelationWitness (F := Fp) basis) :=
-  match family.semanticOutcome? basis O run with
+  match family.semanticOutcome?V basis view run with
   | some (Sum.inr relation) => some relation
   | _ => none
 
 set_option maxRecDepth 10000 in
-/-- Successful semantic exclusions produce witness data or relation data for the selected inputs. -/
+/-- Semantic relation projection at one table. -/
+abbrev semanticRelation? {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) (run : family.DecodedRun basis O) :=
+  family.semanticRelation?V basis (runView family basis O) run
+
+
+/-- Successful semantic exclusions produce witness data or relation data, over one run view. -/
+theorem semanticOutcome?V_isSome_of {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis) (run : family.DecodedRunV basis view)
+    (good : family.SemanticExclusionsV basis view run) :
+    (family.semanticOutcome?V basis view run).isSome := by
+  exact ActionTerminal.actionWitnessOrRelationOfDecode?_isSome_of pp basis
+    view.output.inputs view.output.toAlgebraicWfProof.proof.1
+    (view.output.toAlgebraicWfProof.aMulti view.pre)
+    (view.output.toAlgebraicWfProof.multiU view.pre)
+    (view.output.toAlgebraicWfProof.multiBlind view.pre)
+    (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds)
+    run.hchar run.decode run.accepts
+    good.xGood good.yGood good.permutation good.lookup
+
+/-- Successful semantic exclusions produce witness data or relation data, at one table. -/
 theorem semanticOutcome?_isSome_of {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins) (run : family.DecodedRun basis O)
     (good : family.SemanticExclusions basis O run) :
-    (family.semanticOutcome? basis O run).isSome := by
-  exact ActionTerminal.actionWitnessOrRelationOfDecode?_isSome_of pp basis
-    (family.runOutput basis O).inputs (family.runProof basis O).proof.1
-    ((family.runProof basis O).aMulti (family.runPreIpaReads basis O))
-    ((family.runProof basis O).multiU (family.runPreIpaReads basis O))
-    ((family.runProof basis O).multiBlind (family.runPreIpaReads basis O))
-    (family.runRecord basis O) run.hchar run.decode run.accepts
-    good.xGood good.yGood good.permutation good.lookup
+    (family.semanticOutcome? basis O run).isSome :=
+  family.semanticOutcome?V_isSome_of basis (runView family basis O) run good
 
-/-- On a false selected statement, a complete semantic outcome cannot be the witness branch. -/
+/-- On a false selected statement, the outcome cannot be the witness branch, over one view. -/
+theorem semanticRelation?V_isSome_of_false {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis) (run : family.DecodedRunV basis view)
+    (good : family.SemanticExclusionsV basis view run)
+    (hfalse : ¬BundleStatement view.output.inputs) :
+    (family.semanticRelation?V basis view run).isSome := by
+  obtain ⟨outcome, houtcome⟩ := Option.isSome_iff_exists.mp
+    (family.semanticOutcome?V_isSome_of basis view run good)
+  cases outcome with
+  | inl witness => exact False.elim (hfalse witness.statement)
+  | inr relation =>
+      unfold semanticRelation?V
+      rw [houtcome]
+      rfl
+
+/-- On a false selected statement, the outcome cannot be the witness branch, at one table. -/
 theorem semanticRelation?_isSome_of_false {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins) (run : family.DecodedRun basis O)
     (good : family.SemanticExclusions basis O run)
     (hfalse : ¬BundleStatement (family.runOutput basis O).inputs) :
-    (family.semanticRelation? basis O run).isSome := by
-  obtain ⟨outcome, houtcome⟩ := Option.isSome_iff_exists.mp
-    (family.semanticOutcome?_isSome_of basis O run good)
-  cases outcome with
-  | inl witness => exact False.elim (hfalse witness.statement)
-  | inr relation =>
-      unfold semanticRelation?
-      rw [houtcome]
-      rfl
+    (family.semanticRelation? basis O run).isSome :=
+  family.semanticRelation?V_isSome_of_false basis (runView family basis O) run good hfalse
 
 /-- The computed relation finder for one adaptive-statement run.  Acceptance, batch construction,
 root checks, decoding, and semantic checks all use the statement selected in that same run. -/
-def terminalRelationFinder {pp : ProofParams}
+def terminalRelationFinderV {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
-    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runRecord basis O) < scalarFieldOrder) :
-    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) →
-    family.Coins → Option (AlgebraicRelationWitness (F := Fp) basis) :=
-  fun basis O =>
-    let proof := family.runProof basis O
-    let nu := family.runPreIpaReads basis O
-    let rounds := family.runIpaReads basis O
-    match family.accepts? basis O with
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (view : RunView pp family basis)
+    (hcharV : deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) <
+        scalarFieldOrder) :
+    Option (AlgebraicRelationWitness (F := Fp) basis) :=
+    let proof := view.output.toAlgebraicWfProof
+    let nu := view.pre
+    let rounds := view.rounds
+    match family.accepts?V basis view with
     | none => none
     | some hacceptsProof =>
-        let haccepts : family.accepts basis O := hacceptsProof.down
+        let haccepts : family.acceptsV basis view := hacceptsProof.down
         if hz : nu 10 ≠ 0 then
           if hattack : fullAlgebraicBindingAttackZ basis
               (adaptiveActionStatementVk pp basis)
               (adaptiveActionStatementInstanceCommitment pp basis
-                (family.runOutput basis O).inputs)
+                view.output.inputs)
               proof nu rounds then
             match proof.straightLineBindingAttackZIndexedRootOrRelation nu rounds hattack with
             | PSum.inl _ => none
             | PSum.inr relation =>
                 some (ComputedStraightLineIpaFSFamily.straightLineCanonicalRelation relation)
           else
-            match family.batchOutcome basis O with
+            match family.batchOutcomeV basis view with
             | PSum.inr relation =>
                 some (ComputedStraightLineIpaFSFamily.straightLineCanonicalRelation relation)
             | PSum.inl witness =>
-                match family.batchGoodRoots? basis O witness with
+                match family.batchGoodRoots?V basis view witness with
                 | none => none
                 | some hroots =>
-                    let hshifted := family.shiftedValue_of_accept_not_attack
-                      basis O haccepts hz hattack
-                    let run : family.DecodedRun basis O :=
-                      { hchar := hchar basis O
-                        decode := family.decodeOfBatchGoodRoots basis O witness
+                    let hshifted := family.shiftedValueV_of_accept_not_attack
+                      basis view haccepts hz hattack
+                    let run : family.DecodedRunV basis view :=
+                      { hchar := hcharV
+                        decode := family.decodeOfBatchGoodRootsV basis view witness
                           hroots.down hshifted
                         accepts := haccepts }
-                    family.semanticRelation? basis O run
+                    family.semanticRelation?V basis view run
         else none
+
+
+/-- Terminal relation finder at one table. -/
+abbrev terminalRelationFinder {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) < scalarFieldOrder) :
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) →
+    family.Coins → Option (AlgebraicRelationWitness (F := Fp) basis) :=
+  fun basis O => family.terminalRelationFinderV basis (runView family basis O) (hchar basis O)
 
 end ComputedAdaptiveActionStatementFSFamily
 
