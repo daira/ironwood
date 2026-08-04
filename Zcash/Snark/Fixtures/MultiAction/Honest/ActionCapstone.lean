@@ -1309,7 +1309,7 @@ theorem adaptiveActionStatisticalModel_le_action (Q : Nat) :
   rw [hsplit]
   exact le_add_right (le_add_right le_rfl)
 
-/-- At `Q <= 2^123`, the compressed and five semantic remainders fit within `2^-84`. -/
+/-- At `Q ≤ 2^123`, the compressed and five semantic remainders fit within `2^-84`. -/
 theorem actionStatisticalModel_at_2pow123 {Q : Nat} (hQ : Q <= 2 ^ 123) :
     actionStatisticalModel Q <= 1 / (2 ^ 84 : ENNReal) := by
   have hbase :
@@ -1421,7 +1421,8 @@ theorem actionDlogGroupWork_bound
 
 /-! ## Exact false-Action-statement endpoints -/
 
-/-- Compositional captured-Action soundness formula instantiated by the finite-security capstone. -/
+/-- Compositional captured-Action soundness formula, taking the four surface bounds as
+hypotheses.  The sequential capstones discharge them from their sequential cuts. -/
 theorem orchard_action_captured_soundness_error_bound
     {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -1507,7 +1508,8 @@ theorem orchard_action_captured_soundness_error_bound
       (capturedActionXSqueezeSchedule family hvk) profile)
     hXY hBeta hGamma hTheta
 
-/-- Compositional captured-Action soundness formula for arbitrary bundle size. -/
+/-- The same formula at arbitrary bundle size, again taking the four surface bounds as
+hypotheses. -/
 theorem orchard_action_captured_bundle_soundness_error_bound
     (numProofs : ℕ) {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)

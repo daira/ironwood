@@ -47,7 +47,7 @@ def TopLevelWitnessTerminalOutcome
     (Bad : Type) : Type :=
   TopLevelBundleWitness top pp poly ⊕' Bad
 
-/-- Chain one `⊕' Bad` outcome into the next step, carrying a `Bad` through unchanged. -/
+/-- Chain one `⊕' Bad` outcome into its continuation, carrying a `Bad` through unchanged. -/
 private def bindOutcome {A : Sort u} {B : Sort v} {R : Sort w}
     (outcome : A ⊕' R) (next : A → B ⊕' R) : B ⊕' R :=
   match outcome with

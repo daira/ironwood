@@ -514,12 +514,14 @@ counting lemmas; it is no longer an input to the public capstone.
 structure ActionThetaSnapshot where
   polynomial : CommitmentId → CPoly
 
-/-- Data emitted before `β`: the relevant represented polynomials and the earlier `θ` answer. -/
+/-- Data emitted before `β`: the represented query-column polynomials and the earlier `θ`
+answer. -/
 structure ActionBetaSnapshot where
   polynomial : CommitmentId → CPoly
   theta : Fp
 
-/-- Data emitted before `γ`: the relevant represented polynomials and earlier challenge answers. -/
+/-- Data emitted before `γ`: the represented query-column polynomials and the earlier `θ` and `β`
+answers. -/
 structure ActionGammaSnapshot where
   polynomial : CommitmentId → CPoly
   theta : Fp
