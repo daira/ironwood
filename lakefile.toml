@@ -35,9 +35,10 @@ name = "MetaCheck"
 globs = ["Zcash.Meta.Tests.+"]
 
 # Everything under `Zcash/Snark/Fixtures/` is instance-level: the generated Rust<->Lean captures
-# (per-capture subdirectories like `SingleAction`/`MultiAction`, holding the fixture data plus its
-# Fiat-Shamir schedule, faithfulness, and negative checks) and the hand-written consensus-max shape
-# instantiation (`MaxShape`). The `Zcash` library deliberately does not import them (the captures are
+# (per-capture subdirectories -- `SingleAction/Honest`, `MultiAction/Honest`, and their match-only
+# `Random` siblings -- holding the fixture data plus its Fiat–Shamir schedule, faithfulness, and
+# negative checks) plus the shared helpers (`Shared/`) and the cross-capture provenance modules
+# (`PostNu63`, `PostNu63Random`). The `Zcash` library deliberately does not import them (the captures are
 # large, generated, and slow); `Zcash/Snark/Fingerprint/` keeps the reusable match/soundness theory.
 # This dedicated target keeps the fixtures out of `lake build Zcash` for local dev, while plain
 # `lake build` (the default targets -- what CI runs) compiles them, so the empirical checks are

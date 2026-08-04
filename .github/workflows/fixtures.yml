@@ -1,27 +1,35 @@
 name: Fixtures
 
-# Enforces that the checked-in Post-NU6.3 verifier fixtures
-# (`Zcash/Snark/Fixtures/{SingleAction,MultiAction}/Fixture.lean`) are byte-for-byte
-# what the pinned upstream Rust capture regenerates. The fixtures stay checked in --
-# they are the formal artifact the Lean development proves about, imported by the
-# `FixtureCheck` target and required for a self-contained `lake build` -- and this
-# workflow closes the "trust that a human ran the capture correctly" gap by
-# regenerating them in CI and diffing. See zcash/ironwood#54.
+# Enforces that every checked-in verifier-fingerprint fixture family -- the honest
+# `Zcash/Snark/Fixtures/{SingleAction,MultiAction}/Honest/Fixture.lean` captures and the
+# random match-only `{SingleAction,MultiAction}/Random/` families with
+# their `proof-bytes.hex` siblings -- is byte-for-byte what the pinned public sources
+# regenerate, by running `scripts/regenerate-fingerprint-fixtures.sh`. The fixtures stay
+# checked in -- they are the formal artifact the Lean development proves about, imported
+# by the `FixtureCheck` target and required for a self-contained `lake build` -- and this
+# workflow closes the "trust that a human ran the capture correctly" gap by regenerating
+# them in CI and diffing. See zcash/ironwood#54.
 #
-# Determinism: the capture uses fixed ChaCha20 seeds and the exporter orders points by
+# Determinism: the captures use fixed ChaCha20 seeds and the exporter orders points by
 # a coordinate-key `BTreeSet` (not HashMap iteration order), and field/curve arithmetic
 # is platform-independent, so regeneration is bit-reproducible -- a diff means the
 # fixtures genuinely drifted from the pinned upstream, not run-to-run noise.
 #
-# Pins: `ORCHARD_REF` below is the upstream `zcash/orchard` 0.15.3 release tag
-# (zcash/orchard#538 instance-commitment derivation capture); its capture harness
-# resolves the released `halo2_proofs` 0.3.4 from crates.io, whose
-# `dump_vesta_lean_fixture` emitted the checked-in fixtures. No fork pins.
+# Pins: single-sourced in `scripts/regenerate-fingerprint-fixtures.sh`, and there is exactly
+# one -- the `zcash/orchard` 0.15.5 release tag, which the script asserts is the tag rather
+# than a commit merely descended from it. No forks and no unreleased branches: the capture
+# tooling is upstream and released, the match-only exporter and `numInstanceColumns` shape
+# emission in `halo2_proofs` 0.3.5 (zcash/halo2#924) and the fabricate->replay random-capture
+# drivers in orchard 0.15.5 (zcash/orchard#541). Orchard's own published `Cargo.lock`
+# resolves `halo2_proofs` 0.3.5 from crates.io by checksum, which the script also asserts,
+# so no `[patch.crates-io]` override is involved and every cargo invocation runs `--locked`
+# against published crates. All four families -- honest pair included -- regenerate from
+# released sources alone.
 
 # Always triggers, so the `Fixtures CI` gate always reports (a workflow skipped by
 # `on.paths` would leave a required check pending). The heavy regeneration is instead
 # gated on a path filter computed inside the run, so it only builds Rust when the
-# fixtures or the pins (this workflow) actually change.
+# fixtures or the pins (the regeneration script, or this workflow) actually change.
 on:
   push:
     branches: [main]
@@ -32,12 +40,6 @@ concurrency:
   cancel-in-progress: true
 
 permissions: {}
-
-env:
-  # Orchard release 0.15.3 (zcash/orchard#538 instance-commitment derivation capture),
-  # pinned by the release tag's commit SHA.
-  ORCHARD_REPO: zcash/orchard
-  ORCHARD_REF: 13e119a360c4034d23b7de08d15432748f65b9b9
 
 jobs:
   changes:
@@ -51,15 +53,20 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           persist-credentials: false
-      # Regeneration is expensive (a real k=11 Orchard proof + verify), so only run it
-      # when a captured fixture or the pins in this workflow change.
+      # Regeneration is expensive (real k=11 Orchard proofs + verifier runs), so only run
+      # it when a committed capture artifact or the pins change.
       - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3.0.3
         id: filter
         with:
           filters: |
             fixtures:
-              - 'Zcash/Snark/Fixtures/SingleAction/Fixture.lean'
-              - 'Zcash/Snark/Fixtures/MultiAction/Fixture.lean'
+              - 'Zcash/Snark/Fixtures/SingleAction/Honest/Fixture.lean'
+              - 'Zcash/Snark/Fixtures/MultiAction/Honest/Fixture.lean'
+              - 'Zcash/Snark/Fixtures/SingleAction/Random/Fixture.lean'
+              - 'Zcash/Snark/Fixtures/SingleAction/Random/proof-bytes.hex'
+              - 'Zcash/Snark/Fixtures/MultiAction/Random/Fixture.lean'
+              - 'Zcash/Snark/Fixtures/MultiAction/Random/proof-bytes.hex'
+              - 'scripts/regenerate-fingerprint-fixtures.sh'
               - '.github/workflows/fixtures.yml'
 
   verify:
@@ -73,43 +80,15 @@ jobs:
       - name: Check out Ironwood (the fixtures under test)
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          path: ironwood
           persist-credentials: false
-      - name: Check out the pinned Orchard capture crate
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          repository: ${{ env.ORCHARD_REPO }}
-          ref: ${{ env.ORCHARD_REF }}
-          path: orchard-capture
-          persist-credentials: false
-      # `orchard-capture/rust-toolchain.toml` pins the channel; `rustup show` installs it
-      # so the rust-cache key and the build agree on the toolchain.
-      - name: Install the pinned Rust toolchain
-        working-directory: orchard-capture
-        run: rustup show
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-        with:
-          workspaces: orchard-capture
-      # Emits both fixture modules directly over the checked-in copies. `halo2_proofs`
-      # resolves to the released 0.3.4 from crates.io, so no Halo2 checkout is needed. The
-      # filter matches both accepting captures (`fingerprint_capture` and
-      # `fingerprint_capture_two_actions`) and not the Rust-only rejection tests.
-      - name: Regenerate the fixtures from the pinned capture
-        working-directory: orchard-capture
-        env:
-          ORCHARD_LEAN_SINGLE_FIXTURE_OUT: ${{ github.workspace }}/ironwood/Zcash/Snark/Fixtures/SingleAction/Fixture.lean
-          ORCHARD_LEAN_MULTI_FIXTURE_OUT: ${{ github.workspace }}/ironwood/Zcash/Snark/Fixtures/MultiAction/Fixture.lean
-        run: cargo test --lib --features verifier-fingerprint circuit::fingerprint::fingerprint_capture -- --nocapture
-      - name: Enforce the checked-in fixtures match the regenerated capture
-        working-directory: ironwood
-        run: |
-          if ! git diff --exit-code -- \
-              Zcash/Snark/Fixtures/SingleAction/Fixture.lean \
-              Zcash/Snark/Fixtures/MultiAction/Fixture.lean; then
-            echo "::error::Checked-in fixtures differ from the pinned Orchard/Halo2 capture. Regenerate them (see the capture commands in Zcash/Snark/Fixtures and orchard src/circuit/fingerprint/mod.rs) and commit the result."
-            exit 1
-          fi
-          echo "Checked-in fixtures match the pinned capture."
+      # The script clones the pinned Orchard release, asserts the commit is the release
+      # tag and that its published lockfile resolves halo2_proofs 0.3.5 from crates.io by
+      # checksum, installs Orchard's pinned toolchain (`rustup show` against its
+      # `rust-toolchain.toml`), regenerates all four families plus the proof-byte
+      # siblings, and diffs every committed artifact byte-for-byte, exiting non-zero on
+      # any mismatch. Uncached: the job only runs when the path filter above fires.
+      - name: Regenerate every fixture family from the pinned Orchard release
+        run: ./scripts/regenerate-fingerprint-fixtures.sh
 
   fixtures-ci:
     # The single stable check to mark as a required status check. It always runs, so it

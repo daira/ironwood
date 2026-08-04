@@ -37,10 +37,17 @@ cd "$(dirname "$0")/.."
 # the profiled work-factor packages (`*workFactor*`), whose consensus-maximum forms are named for
 # the shape rather than for a capstone family and so match none of the prefixes above.
 #
+# The Rust-to-Lean boundary contributes three more families, all leaves in the same sense: the
+# per-family statements of record (`nonInteractiveFingerprint_matches_derived*`), the quantified
+# match's generic and per-capture epsilon bounds (`competing_*`, covering both
+# `competing_coefficient_family_agreement_le*` in `Zcash.Snark` and the
+# `competing_family_agreement_le*` headliners beside each random fixture), and the `Perm`→positional
+# bridges (`fingerprint_matches_positional`) that join the two.
+#
 # `orchard_verifier_*` currently matches nothing: those rungs were retired with the legacy rewind
 # paths. It is retained as a guard, so a reintroduced name in that family is demanded rather than
 # silently unpinned.
-ENDPOINT_RE="^(orchard_verifier_|orchard_action_|orchard_deployed_)|bundleStatement_or_relation|workFactor"
+ENDPOINT_RE="^(orchard_verifier_|orchard_action_|orchard_deployed_|competing_|nonInteractiveFingerprint_matches_derived)|bundleStatement_or_relation|workFactor|fingerprint_matches_positional"
 
 # Sources scanned for endpoint declarations. `Zcash/Meta/Tests/` is excluded: it holds forged
 # adversarial declarations that exercise the rejection paths of the census macros themselves.

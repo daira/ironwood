@@ -18,7 +18,7 @@ interfaces layered above it:
 That second point is this witness's limit: the interface is consistent and its constraint-`x`
 stage concrete, but the IPA-round stages quantify over `Fin 0` and so go unexercised.
 `Composition.ZeroStraightLine` is the model with live rounds, instantiated at captured key data by
-`Fixtures.MultiAction.CapturedZeroFamily`, and it consumes the zero-coordinate keystone at the end
+`Fixtures.MultiAction.Honest.CapturedZeroFamily`, and it consumes the zero-coordinate keystone at the end
 of this module.
 -/
 

@@ -62,6 +62,13 @@ import Zcash.Snark.Soundness.AGM.ZeroFamilyRoots
 import Zcash.Snark.Soundness.Composition.ZeroStraightLine
 import Zcash.Snark.Soundness.AGM.DirectConstraintFamily
 import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
+import Zcash.Snark.Fingerprint.Match
+import Zcash.Snark.Fingerprint.Epsilon
+import Zcash.Snark.Fingerprint.Rational.ConstraintWalk
+import Zcash.Snark.Fingerprint.Rational.GroupingTable
+import Zcash.Snark.Fingerprint.Rational.IpaWalk
+import Zcash.Snark.Fingerprint.Rational.OpeningWalk
+import Zcash.Snark.Fingerprint.Rational.Capstone
 import Mathlib.Util.AssertNoSorry
 
 /-!
@@ -1035,6 +1042,98 @@ assert_axioms Zcash.Snark.preX4SqueezePoint_inj
 -- explicit cap — gates by `Expr.degreeBound`, permutation chunks by width, lookups by their
 -- compressed expressions — the combined bound the `x`-squeeze schedule's `epsilonX` prices.
 assert_axioms Zcash.Snark.natDegree_combineConstraints_le
+-- The quantified random match, generic half (`Fingerprint/SampleSpace`,
+-- `Fingerprint/Rational/{GoodEvent,Representation,Family}`, `Fingerprint/{Match,Epsilon}`): the
+-- structured sample space rebuilds a well-formed proof
+-- string at every point; the good event's enumerated denominator factors are individually
+-- nonzero, jointly priced by per-factor Schwartz–Zippel, and nonvanishing under products; the ε
+-- theorem bounds a competing coefficient family's agreement with `assemble?` at a uniform
+-- point by `(D + Σ totalDegree (denFactors vk)) / p`; the challenge-restricted variant pins
+-- the proof-string slots to an arbitrary assignment and prices the same bound over the
+-- challenge coordinates alone — the factors are challenge-only and restriction does not raise
+-- degree; the cross-denominator variants admit a competing family with its own denominators
+-- from the enumerated factor closure, cross-multiplied (`RationalCoeffFamily.mulDen`) to the
+-- summed budget `D + Dden`; and a `Perm` of pair lists with
+-- duplicate-free second components is realized by the base-matching index bijection — the
+-- `Perm`→positional bridge the per-capture `fingerprint_matches_positional` facts instantiate.
+assert_axioms Zcash.Snark.proofStringWellFormed_toProofString
+assert_axioms Zcash.Snark.toProofString_ofInputs
+assert_axioms Zcash.Snark.denFactors_ne_zero
+assert_axioms Zcash.Snark.denFactors_totalDegree_sum_le
+assert_axioms Zcash.Snark.den_eval_ne_zero
+assert_axioms Zcash.Snark.fingerprint_schwartz_zippel_index
+assert_axioms Zcash.Snark.card_exists_eval_zero_le
+assert_axioms Zcash.Snark.goodEvent_compl_card_le
+assert_axioms Zcash.Snark.Point.merge_restrict
+assert_axioms Zcash.Snark.totalDegree_aeval_le_of_le_one
+assert_axioms Zcash.Snark.eval_restrictSlots
+assert_axioms Zcash.Snark.restrictSlots_totalDegree_le
+assert_axioms Zcash.Snark.restrictSlots_denFactors_ne_zero
+assert_axioms Zcash.Snark.restrictSlots_denFactors_totalDegree_sum_le
+assert_axioms Zcash.Snark.goodEvent_merge_iff
+assert_axioms Zcash.Snark.goodEvent_merge_compl_card_le
+assert_axioms Zcash.Snark.competing_coefficient_family_agreement_le
+assert_axioms Zcash.Snark.competing_coefficient_family_agreement_le_challengesOnly
+assert_axioms Zcash.Snark.RationalCoeffFamily.mulDen
+assert_axioms Zcash.Snark.competing_coefficient_family_agreement_le_denClosure
+assert_axioms Zcash.Snark.competing_coefficient_family_agreement_le_challengesOnly_denClosure
+assert_axioms Zcash.Snark.perm_reindex_of_nodup_snd
+assert_axioms Zcash.Snark.msmMatch_other_reindex_of_nodup
+-- The query-side representation walk (`Fingerprint/Rational/ConstraintWalk`): the constraint list
+-- factors through fixed represented functions over the Lagrange denominator, its length is the
+-- shape-polynomial `constraintBudget`, and `expected_h_eval` is represented over the vanishing
+-- denominator at the `hEvalBudget` degree cap.
+assert_axioms Zcash.Snark.allExpressions_listRep
+assert_axioms Zcash.Snark.allExpressions_length
+assert_axioms Zcash.Snark.expectedHEval_rep
+-- Grouping stability (`Verifier/GroupingRef`, `Fingerprint/Rational/GroupingTable`): the multiopen
+-- grouping is natural in a provenance-preserving reference relabeling (hypothesis-free), the
+-- reference of the assembled queries is one fixed table on the good event, and `assemble?`
+-- returns `some` at every good point — all five gates discharged.
+assert_axioms Zcash.Snark.constructIntermediateSets_ref_ids
+assert_axioms Zcash.Snark.constructIntermediateSets_ref_points
+assert_axioms Zcash.Snark.constructIntermediateSets_ref_sets
+assert_axioms Zcash.Snark.hasDuplicateCommitmentPoint_ref
+assert_axioms Zcash.Snark.refQueries_eq_refTable
+assert_axioms Zcash.Snark.grouped_ids_eq
+assert_axioms Zcash.Snark.grouped_points_eq
+assert_axioms Zcash.Snark.grouped_sets_eq
+assert_axioms Zcash.Snark.assembleAt_some
+-- The IPA scalar walk (`Fingerprint/Rational/IpaWalk`): the deployed grouping's members carry
+-- zero scalar blocks (hypothesis-free), so the assembled `w`/`u`/`g` scalars take their closed
+-- IPA forms, each represented — `computeB` at `2^k + k + 1`, the `computeS` entries at `1 + k`,
+-- and every `g`-coordinate given a representation of the opening value.
+assert_axioms Zcash.Snark.assembleQueries_grouped_gwuZero
+assert_axioms Zcash.Snark.assembleFinalMsm_wScalar_of_gwuZero
+assert_axioms Zcash.Snark.assembleFinalMsm_uScalar_of_gwuZero
+assert_axioms Zcash.Snark.assembleFinalMsm_gScalars_of_gwuZero
+assert_axioms Zcash.Snark.computeB_rep
+assert_axioms Zcash.Snark.computeS_getD_rep
+assert_axioms Zcash.Snark.wScalar_rep
+assert_axioms Zcash.Snark.uScalar_rep
+assert_axioms Zcash.Snark.gScalars_coord_rep
+-- The opening walk (`Fingerprint/Rational/OpeningWalk`): the claimed-evaluation stream factors
+-- through fixed represented functions, the barycentric interpolant and per-set quotients clear
+-- into the enumerated factors, and the multiopen opening value — exactly as `assembleFinalMsm`
+-- invokes it — is represented over `openDen` at the `vBudget` cap on the good event.
+assert_axioms Zcash.Snark.assembleQueries_map_eval
+assert_axioms Zcash.Snark.queryEval_rep
+assert_axioms Zcash.Snark.lagrangeEval_rep
+assert_axioms Zcash.Snark.openingValue_eq
+assert_axioms Zcash.Snark.openingValue_rep
+-- The walk capstone (`Fingerprint/Rational/Capstone`): the assembled `other` coefficient
+-- stream equals one fixed positional function list on the good event, every coordinate's
+-- coefficient is represented at the `msmDegreeBudget`/`msmDenBudget` caps, and the whole
+-- family packages into the `RationalCoeffFamily` the ε theorem consumes — from
+-- `VkSymbolicFacts` plus the three walk hypotheses alone.
+assert_axioms Zcash.Snark.assembleQueries_commitment_char
+assert_axioms Zcash.Snark.ipaFold_other
+assert_axioms Zcash.Snark.assembleAt_other_map_fst
+assert_axioms Zcash.Snark.assembleAt_other_length
+assert_axioms Zcash.Snark.otherCoeffFns_rep
+assert_axioms Zcash.Snark.coordFn_rep
+assert_axioms Zcash.Snark.coordFn_agrees
+assert_axioms Zcash.Snark.assembleCoeffFamily
 -- The schedule, priced (`Composition.ScheduleBudget`): the committed carriers stay under the
 -- walk's caps, root witnesses at one table share the family's own outcome, and the schedule
 -- constructor discharges `measure_le` outright.
