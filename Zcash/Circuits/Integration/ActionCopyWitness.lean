@@ -20,6 +20,8 @@ namespace Zcash.Snark
 open Halo2 Halo2.Layout Zcash.Circuits Zcash.Circuits.Action
 open Keygen
 
+set_option maxRecDepth 100000
+
 /-- Action's permutation columns, in verifying-key order. -/
 def actionPermCols : List ColRef :=
   permColsOf actionCircuit.constraintSystem
@@ -47,7 +49,13 @@ def actionActiveRows : ℕ :=
     actionCircuit.domainExponent
 
 theorem actionNumPermCols_pos : 0 < actionNumPermCols := by
-  native_decide
+  rw [actionNumPermCols, actionPermCols, Keygen.permColsOf,
+    List.length_map]
+  have hcolumns :
+      actionCircuit.constraintSystem.permutationColumns.length = 15 := by
+    simpa only [TopLevelCircuit.permutationColumnCount] using
+      ActionPermutationDomain.permutationColumnCount_eq
+  omega
 
 theorem actionDomainSize_pos : 0 < actionDomainSize :=
   Nat.two_pow_pos _
@@ -109,37 +117,15 @@ theorem actionReplayPreservesActive
     exact actionCopyRowsActive pair hpair
   · exact hcell
 
-set_option maxRecDepth 100000 in
-/-- The Action permutation argument has three chunks. -/
-theorem actionNumPermutationSets_eq
-    : actionCircuit.permutationSetCount = 3 := by
-  change
-    (actionCircuit.permutationColumnCount +
-        actionCircuit.chunkLen - 1) /
-      actionCircuit.chunkLen = 3
-  have hdata := ActionPermutationDomain.columnCount_chunkLen_eq
-  have hcolumns :
-      actionCircuit.permutationColumnCount =
-        15 :=
-    congrArg Prod.fst hdata
-  have hchunkLen :
-      actionCircuit.chunkLen = 7 :=
-    congrArg Prod.snd hdata
-  rw [hcolumns, hchunkLen]
+/-- The replay's flat column count is the circuit-derived permutation-column count. -/
+theorem actionNumPermCols_eq_derived :
+    actionNumPermCols =
+      actionCircuit.permutationColumnCount := by
+  simp [actionNumPermCols, actionPermCols, Keygen.permColsOf,
+    TopLevelCircuit.permutationColumnCount,
+    TopLevelCircuit.permutationColumns]
 
-/-- The Action permutation argument has 15 columns. -/
-theorem actionNumPermCols_eq : actionNumPermCols = 15 := by
-  native_decide
-
-set_option maxRecDepth 100000 in
-/-- The Action permutation chunk width is seven. -/
-theorem actionChunkLen_eq :
-    actionCircuit.chunkLen = 7 :=
-  congrArg Prod.snd
-    ActionPermutationDomain.columnCount_chunkLen_eq
-
-set_option maxRecDepth 100000 in
-/-- Resolver-backed Action permutation chunks have the exact `[7,7,1]` widths. -/
+/-- Resolver-backed Action permutation chunks have the compiler-derived width. -/
 theorem actionResolverChunkWidth
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G)
@@ -156,21 +142,39 @@ theorem actionResolverChunkWidth
           (chunk : ℕ) *
             actionCircuit.chunkLen) := by
   simp only [ResolverPermutationPairs,
-    permutationChunkPairsOfResolver, List.length_map,
-    actionCircuit.toVerifierKey_permutationChunks]
-  rw [ActionPermutationDomain.permutationChunks_eq,
-    actionChunkLen_eq, actionNumPermCols_eq]
-  have hchunk : (chunk : ℕ) < 3 := by
-    simpa only [actionNumPermutationSets_eq] using chunk.isLt
-  have hcases :
-      (chunk : ℕ) = 0 ∨ (chunk : ℕ) = 1 ∨ (chunk : ℕ) = 2 := by
-    omega
-  rcases hcases with hzero | hone | htwo
-  · simp [hzero]
-  · simp [hone]
-  · simp [htwo]
+    permutationChunkPairsOfResolver, List.length_map]
+  have hi :
+      (chunk : ℕ) <
+        actionCircuit.verifierCS.permutationChunks.length := by
+    rw [verifierCS_permutationChunks_length]
+    exact chunk.isLt
+  change
+    (actionCircuit.verifierCS.permutationChunks.getD chunk []).length =
+      min actionCircuit.chunkLen
+        (actionNumPermCols -
+          (chunk : ℕ) *
+            actionCircuit.chunkLen)
+  rw [actionNumPermCols_eq_derived]
+  exact verifierCS_permutationChunks_getD_length actionCircuit chunk hi
 
-/-- Flatten the derived `[7,7,1]` Action chunks to `(row, global column)`. -/
+/-- The circuit-derived Action permutation chunk width is positive. -/
+theorem actionChunkLen_pos
+    : 0 < actionCircuit.chunkLen :=
+  constraintSystem_chunkLen_pos
+    actionCircuit.constraintSystem
+
+/-- The derived chunk family has enough total slots for every Action
+permutation column. -/
+theorem actionPermutationChunks_cover
+    : actionNumPermCols ≤
+      actionCircuit.permutationSetCount * actionCircuit.chunkLen := by
+  rw [actionNumPermCols_eq_derived]
+  have hcover :=
+    permutationColumns_length_le_chunks_mul actionCircuit
+  rw [verifierCS_permutationChunks_length] at hcover
+  exact hcover
+
+/-- Flatten the compiler-derived Action chunks to `(row, global column)`. -/
 def actionChunkFlatten
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G)
@@ -190,11 +194,8 @@ def actionChunkFlatten
       (ResolverPermutationPairs
         (actionCircuit.toVerifierKey urs)
         poly proofIndex chunk).length)
-    (by rw [actionChunkLen_eq]; decide)
-    (by
-      rw [actionNumPermCols_eq, actionNumPermutationSets_eq,
-        actionChunkLen_eq]
-      decide)
+    actionChunkLen_pos
+    actionPermutationChunks_cover
     (actionResolverChunkWidth pp urs poly proofIndex)
 
 /-- The full-domain Action keygen permutation in resolver chunk coordinates. -/
@@ -382,7 +383,8 @@ theorem actionActiveChunkCell_columnAddress
         (actionPermCols.map ColRef.toAny).length := by
     simpa only [List.length_map] using flat.1.isLt
   have hcoordinate :
-      (cell.1 : ℕ) * 7 + (cell.2.2 : ℕ) = (flat.1 : ℕ) := by
+      (cell.1 : ℕ) * vk.chunkLen + (cell.2.2 : ℕ) =
+        (flat.1 : ℕ) := by
     have hflatten :=
       actionActiveChunkCell_flatten
         pp urs poly proofIndex flat hrow
@@ -390,32 +392,18 @@ theorem actionActiveChunkCell_columnAddress
       congrArg (fun coordinate => (coordinate.2 : ℕ)) hflatten
     simpa only [actionChunkFlatten,
       _root_.Zcash.Snark.Layout.Asm.chunkFlatten,
-      actionChunkLen_eq, cell] using hsecond
+      cell, vk] using hsecond
   have hindex :
       (vk.permutationChunks.take cell.1).flatten.length +
           (cell.2.2 : ℕ) =
         (flat.1 : ℕ) := by
-    have hcellChunk : (cell.1 : ℕ) < 3 := by
-      simpa only [cell, actionCircuit.shape_numPermutationSets,
-        actionNumPermutationSets_eq] using cell.1.isLt
-    have hcases :
-        (cell.1 : ℕ) = 0 ∨ (cell.1 : ℕ) = 1 ∨
-          (cell.1 : ℕ) = 2 := by
-      omega
-    rw [hvkChunks, ActionPermutationDomain.permutationChunks_eq]
-    rcases hcases with hzero | hone | htwo
-    · simp only [hzero, List.take_zero, List.flatten_nil,
-        List.length_nil, Nat.zero_add]
-      simpa only [hzero, Nat.zero_mul, Nat.zero_add] using hcoordinate
-    · simp only [hone, List.take_succ_cons, List.take_zero,
-        List.flatten_cons, List.flatten_nil, List.append_nil,
-        List.length_cons, List.length_nil, Nat.reduceAdd]
-      simpa only [hone, Nat.one_mul] using hcoordinate
-    · simp only [htwo, List.take_succ_cons, List.take_zero,
-        List.flatten_cons, List.flatten_nil, List.append_nil,
-        List.length_append, List.length_cons, List.length_nil,
-        Nat.reduceAdd]
-      simpa only [htwo, Nat.reduceMul] using hcoordinate
+    have hprefix :
+        (vk.permutationChunks.take cell.1).flatten.length =
+          (cell.1 : ℕ) * vk.chunkLen := by
+      exact actionCircuit.toVerifierKey_permutationChunks_take_flatten_length
+        urs cell.1 hchunk
+    rw [hprefix]
+    exact hcoordinate
   have hdecoded := decodedChunkAddress_eq_sourceColumn
     (fun reference =>
       permutationColumnAddress vk reference.1)
@@ -765,12 +753,6 @@ def actionConstantAllocations :
   (operationConstSites (actionCircuit.operations)).zip
     actionConsts
 
-/-- Positional constant allocations whose stored natural value disagrees with the site. -/
-def actionConstantValueFailures :
-    List ((Cell × Fp) × (ℕ × ℕ × ℕ)) :=
-  actionConstantAllocations.filter fun allocation =>
-    decide (allocation.2.1 ≠ allocation.1.2.val)
-
 /-- Decode a raw Action permutation coordinate back to its concrete column and row. -/
 def actionRawCellAddress (coordinate : ℕ × ℕ) : AnyColumn × ℕ :=
   let cell := mkActionCell coordinate
@@ -808,11 +790,6 @@ theorem actionConstantSites_fit :
       actionConsts.length := by
   native_decide
 
-/-- The positional V1 allocation stores the value of every Action constant site. -/
-theorem actionConstantValueFailures_eq_nil :
-    actionConstantValueFailures = [] := by
-  native_decide
-
 /-- Every allocated Action constant cell survives permutation-coordinate encoding. -/
 theorem actionConstantCellAddressFailures_eq_nil :
     actionConstantCellAddressFailures = [] := by
@@ -823,12 +800,24 @@ theorem actionConstantAllocation_value
     {site : Cell × Fp} {entry : ℕ × ℕ × ℕ}
     (hallocation : (site, entry) ∈ actionConstantAllocations) :
     entry.1 = site.2.val := by
-  by_contra hne
-  have hfailure : (site, entry) ∈ actionConstantValueFailures := by
-    rw [actionConstantValueFailures, List.mem_filter]
-    exact ⟨hallocation, decide_eq_true hne⟩
-  rw [actionConstantValueFailures_eq_nil] at hfailure
-  simp at hfailure
+  have hfit :
+      (operationConstSites
+          (actionCircuit.operations)).length ≤
+        (FloorPlanner.V1.constantAssignments
+          (actionCircuit.operations)
+          (actionCircuit.constraintSystem.constants.map
+            (fun column => column.index))).length := by
+    simpa only [actionConsts, Keygen.constantCopyEntries,
+      List.length_map] using
+      actionConstantSites_fit
+  apply constantAllocation_value
+    (ops := actionCircuit.operations)
+    (constantColumns :=
+      actionCircuit.constraintSystem.constants.map
+        (fun column => column.index))
+    hfit
+  simpa only [actionConstantAllocations, actionConsts,
+    Keygen.constantCopyEntries] using hallocation
 
 /-- An allocated Action constant cell has the expected concrete address. -/
 theorem actionConstantCellAddress

@@ -1,5 +1,6 @@
 import Zcash.Snark.Fixtures.MultiAction.Honest.Fixture
 import Zcash.Circuits.Integration.ActionPermutationDomainCompute
+import Zcash.Snark.Keygen.Certificate
 
 /-!
 # Shape and VK faithfulness checks for the multi-action capture
@@ -33,6 +34,23 @@ namespace Zcash.Snark.Fixture2
 
 open Zcash.Snark
 open Zcash.Circuits.Action (actionCircuit)
+
+/-- Permutation-chunk projection commutes with transport between circuit shapes. -/
+private theorem castVk_permutationChunks
+    {s₁ s₂ : CircuitShape} (h : s₁ = s₂)
+    (key : VerifyingKey s₁ Fp G) :
+    key.permutationChunks =
+      (h ▸ key : VerifyingKey s₂ Fp G).permutationChunks := by
+  cases h
+  rfl
+
+/-- Chunk-width projection commutes with transport between circuit shapes. -/
+private theorem castVk_chunkLen
+    {s₁ s₂ : CircuitShape} (h : s₁ = s₂)
+    (key : VerifyingKey s₁ Fp G) :
+    key.chunkLen = (h ▸ key : VerifyingKey s₂ Fp G).chunkLen := by
+  cases h
+  rfl
 
 theorem captured_list_lengths_match_shape :
     -- Fixed commitments are per *column* and fixed evals per *query*; the counts coincide (29) for
@@ -126,19 +144,40 @@ theorem permutation_chunk_layout_regular :
   decide
 
 /-- The chunk width and the chunking itself are the *circuit's*, not free parameters of the capture.
-`ActionPermutationDomain.columnCount_chunkLen_eq` and `chunks_eq` compute both from `actionCircuit`,
-where the chunks are the recorded permutation columns paired with their σ index by `zipIdx` and cut
-by `List.toChunks chunkLen` — so regularity and index coverage hold there by construction. A
-regeneration that changed either fails here instead of passing the shape counts above. -/
+The derived chunks are the recorded permutation columns paired with their σ index by `zipIdx` and
+cut by `List.toChunks chunkLen`. A regeneration that changed either fails here instead of passing
+the shape counts above. -/
 theorem vk_chunkLen_and_chunks_derived :
     vk.chunkLen = actionCircuit.chunkLen
       ∧ vk.permutationChunks = actionCircuit.verifierCS.permutationChunks := by
   refine ⟨?_, ?_⟩
-  · rw [show actionCircuit.chunkLen = 7 from
-      congrArg Prod.snd ActionPermutationDomain.columnCount_chunkLen_eq]
-    rfl
-  · rw [ActionPermutationDomain.chunks_eq]
-    rfl
+  · have hchunkLen := congrArg VerifyingKey.chunkLen
+        Zcash.Snark.Keygen.vk_eq_toVerifierKey
+    have hcast := castVk_chunkLen
+      Zcash.Snark.Keygen.actionCircuitShape_eq_fixtureCircuitShape
+      (actionCircuit.toVerifierKey Zcash.Snark.Fixture.capturedURS)
+    have hsingle :
+        Zcash.Snark.Fixture.vk.chunkLen = actionCircuit.chunkLen := by
+      simpa only [actionCircuit.toVerifierKey_chunkLen] using
+        hchunkLen.trans hcast.symm
+    have hfixtures : vk.chunkLen = Zcash.Snark.Fixture.vk.chunkLen := by
+      decide
+    exact hfixtures.trans hsingle
+  · have hchunks := congrArg VerifyingKey.permutationChunks
+        Zcash.Snark.Keygen.vk_eq_toVerifierKey
+    have hcast := castVk_permutationChunks
+      Zcash.Snark.Keygen.actionCircuitShape_eq_fixtureCircuitShape
+      (actionCircuit.toVerifierKey Zcash.Snark.Fixture.capturedURS)
+    have hsingle :
+        Zcash.Snark.Fixture.vk.permutationChunks =
+          actionCircuit.verifierCS.permutationChunks := by
+      simpa only [actionCircuit.toVerifierKey_permutationChunks] using
+        hchunks.trans hcast.symm
+    have hfixtures :
+        vk.permutationChunks =
+          Zcash.Snark.Fixture.vk.permutationChunks := by
+      decide
+    exact hfixtures.trans hsingle
 
 theorem vk_domain_size_matches_shape :
     vk.n = 2 ^ shape.k := by
