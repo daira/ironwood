@@ -29,7 +29,7 @@ malformed instance shapes, derive their commitments, bind the VK and all instanc
 Fiat–Shamir, derive challenges, and finally run the checked MSM assembler. -/
 def assembleNonInteractiveInstances? {shape : Shape} {F G : Type*}
     [Field F] [DecidableEq F] [DecidableEq G] [Inhabited G]
-    (fs : FiatShamir F G) (vkTranscriptRepr : F) (vk : VerifyingKey shape F G)
+    (fs : FiatShamir F G) (vkHash : VerifyingKey shape F G → F) (vk : VerifyingKey shape F G)
     (instances : RawInstances shape F) (commitColumn : List F → G)
     (ps : ProofString shape F G) : Option (Msm shape.k F G) :=
   match validateInstances? vk instances with
@@ -37,27 +37,27 @@ def assembleNonInteractiveInstances? {shape : Shape} {F G : Type*}
   | some valid =>
       let instanceCommitment := valid.commitments commitColumn
       assemble? vk instanceCommitment ps
-        (deriveChallengesForStatement fs vkTranscriptRepr instanceCommitment ps)
+        (deriveChallengesForStatement fs (vkHash vk) instanceCommitment ps)
 
 theorem assembleNonInteractiveInstances?_eq_none_of_wrong_column_count
     {shape : Shape} {F G : Type*}
     [Field F] [DecidableEq F] [DecidableEq G] [Inhabited G]
-    (fs : FiatShamir F G) (vkTranscriptRepr : F) (vk : VerifyingKey shape F G)
+    (fs : FiatShamir F G) (vkHash : VerifyingKey shape F G → F) (vk : VerifyingKey shape F G)
     (instances : RawInstances shape F) (commitColumn : List F → G)
     (ps : ProofString shape F G)
     (hcount : ¬ InstancesHaveExpectedColumnCount instances) :
-    assembleNonInteractiveInstances? fs vkTranscriptRepr vk instances commitColumn ps = none := by
+    assembleNonInteractiveInstances? fs vkHash vk instances commitColumn ps = none := by
   simp [assembleNonInteractiveInstances?, validateInstances?, hcount]
 
 theorem assembleNonInteractiveInstances?_eq_none_of_oversized_column
     {shape : Shape} {F G : Type*}
     [Field F] [DecidableEq F] [DecidableEq G] [Inhabited G]
-    (fs : FiatShamir F G) (vkTranscriptRepr : F) (vk : VerifyingKey shape F G)
+    (fs : FiatShamir F G) (vkHash : VerifyingKey shape F G → F) (vk : VerifyingKey shape F G)
     (instances : RawInstances shape F) (commitColumn : List F → G)
     (ps : ProofString shape F G)
     (hcount : InstancesHaveExpectedColumnCount instances)
     (hfit : ¬ InstanceColumnsFit vk instances) :
-    assembleNonInteractiveInstances? fs vkTranscriptRepr vk instances commitColumn ps = none := by
+    assembleNonInteractiveInstances? fs vkHash vk instances commitColumn ps = none := by
   simp [assembleNonInteractiveInstances?, validateInstances?, hcount, hfit]
 
 end Zcash.Snark

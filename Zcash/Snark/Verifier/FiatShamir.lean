@@ -154,6 +154,22 @@ theorem vkTranscriptRepr_eq_of_initialTranscript_eq
     (List.cons.inj hinit).1
   injection hscalar
 
+/-- With an injective key digest, equal canonical prefixes pin the verifying key itself.  The
+digest is a parameter precisely so this obligation is structural: the captured fixtures
+instantiate it as a constant function and therefore receive no binding conclusion — they are
+faithfulness checks against one capture — while the security development assumes injectivity
+here and only here. -/
+theorem vk_eq_of_initialTranscript_eq_of_injective
+    {shape : Shape} {F G : Type*}
+    (vkHash : VerifyingKey shape F G → F) (hinj : Function.Injective vkHash)
+    (vk vk' : VerifyingKey shape F G)
+    (instanceCommitment instanceCommitment' : Fin shape.numProofs → ℕ → G)
+    (hinit : initialTranscript (vkHash vk) instanceCommitment =
+      initialTranscript (vkHash vk') instanceCommitment') :
+    vk = vk' :=
+  hinj (vkTranscriptRepr_eq_of_initialTranscript_eq
+    (vkHash vk) (vkHash vk') instanceCommitment instanceCommitment' hinit)
+
 /-- Equality of canonical verifier prefixes pins every configured instance commitment. -/
 theorem instanceCommitment_eq_of_initialTranscript_eq
     {shape : Shape} {F G : Type*}
@@ -354,10 +370,10 @@ def nonInteractiveFingerprint {shape : Shape} {F G : Type*} [Field F] [Decidable
 /-- The deployed verifier fingerprint with the VK and public statement bound into Fiat–Shamir. -/
 def nonInteractiveFingerprintForStatement {shape : Shape} {F G : Type*}
     [Field F] [DecidableEq F] [DecidableEq G] [Inhabited G]
-    (fs : FiatShamir F G) (vkTranscriptRepr : F) (vk : VerifyingKey shape F G)
+    (fs : FiatShamir F G) (vkHash : VerifyingKey shape F G → F) (vk : VerifyingKey shape F G)
     (instanceCommitment : Fin shape.numProofs → ℕ → G)
     (ps : ProofString shape F G) : Msm shape.k F G :=
   assemble vk instanceCommitment ps
-    (deriveChallengesForStatement fs vkTranscriptRepr instanceCommitment ps)
+    (deriveChallengesForStatement fs (vkHash vk) instanceCommitment ps)
 
 end Zcash.Snark

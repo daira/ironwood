@@ -87,7 +87,7 @@ theorem deriveChallengesForStatement_matches_captured_schedule :
 /-- The Fiat–Shamir-derived fingerprint matches the captured random single-action MSM, with the VK
 and public statement bound into Fiat–Shamir as the honest families state it. -/
 theorem nonInteractiveFingerprint_matches :
-    MsmMatch (nonInteractiveFingerprintForStatement capturedFs capturedVkTranscriptRepr
+    MsmMatch (nonInteractiveFingerprintForStatement capturedFs (fun _ => capturedVkTranscriptRepr)
       vk derivedInstanceCommitment ps) capturedMsm := by
   unfold nonInteractiveFingerprintForStatement
   rw [deriveChallengesForStatement_matches_captured_schedule]
