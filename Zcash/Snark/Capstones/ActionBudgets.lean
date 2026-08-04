@@ -678,7 +678,6 @@ theorem adaptiveActionXDegree_bound (numProofs : ℕ)
         norm_num [shape]
       simpa only [hshape] using vk_quotient_tail_le
 
-
 /-- **The semantic counts at the query ceiling**: at `Q ≤ 2^123` the five
 counted caps total at most `2^160`. -/
 theorem action_semantic_count_le {Q : ℕ} (hQ : Q ≤ 2 ^ 123) :
@@ -753,51 +752,6 @@ noncomputable def actionCompressedStatisticalModelFor (numProofs Q : ℕ) : ENNR
 /-- Complete non-DLOG remainder for an `numProofs`-Action bundle. -/
 noncomputable def actionStatisticalModelFor (numProofs Q : ℕ) : ENNReal :=
   actionCompressedStatisticalModelFor numProofs Q + actionSemanticModelFor numProofs Q
-
-/-- The bare-adaptive remainder at an arbitrary Action count.  It has the same four
-bundle-linear semantic terms and one `x` term, but only one execution of the pinned-root surface. -/
-noncomputable def adaptiveActionStatisticalModelFor (numProofs Q : ℕ) : ENNReal :=
-  let shape := actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)
-  (Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-    (Q + 1 : ℕ) * (actionCircuit.domainExponent * (2 / (Fintype.card Fp : ENNReal))) +
-    (Q + 1 : ℕ) * algebraicRootBudget shape actionCircuit.domainExponent +
-    1 / Fintype.card Fp +
-    actionSemanticModelFor numProofs Q
-
-/-- The sequential statistical model safely upper-bounds the bare-adaptive one: it reserves the
-larger pinned-root coefficient and an additional compressed-constraint `x` term. -/
-theorem adaptiveActionStatisticalModelFor_le_action (numProofs Q : ℕ) :
-    adaptiveActionStatisticalModelFor numProofs Q ≤
-      actionStatisticalModelFor numProofs Q := by
-  let shape := actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)
-  have hcoeff : ((Q + 1 : ℕ) : ENNReal) ≤
-      ((Q + (11 + actionCircuit.domainExponent) + 1 : ℕ) : ENNReal) := by
-    exact Nat.cast_le.mpr (by omega)
-  have hroot :
-      (Q + 1 : ℕ) * algebraicRootBudget shape actionCircuit.domainExponent ≤
-        (Q + (11 + actionCircuit.domainExponent) + 1 : ℕ) *
-          algebraicRootBudget shape actionCircuit.domainExponent := by
-    exact mul_le_mul_left hcoeff (algebraicRootBudget shape actionCircuit.domainExponent)
-  unfold adaptiveActionStatisticalModelFor actionStatisticalModelFor
-    actionCompressedStatisticalModelFor
-  dsimp only
-  let a : ENNReal :=
-    (Q + 1 : ℕ) * (1 / Fintype.card Fp) +
-      (Q + 1 : ℕ) *
-        (actionCircuit.domainExponent * (2 / (Fintype.card Fp : ENNReal)))
-  let e : ENNReal := 1 / Fintype.card Fp
-  let x : ENNReal :=
-    (Q + 1 : ℕ) * ((20470 : ℕ) / (Fintype.card Fp : ENNReal))
-  let s : ENNReal := actionSemanticModelFor numProofs Q
-  change a + (Q + 1 : ℕ) * algebraicRootBudget shape actionCircuit.domainExponent + e + s ≤
-    a + (Q + (11 + actionCircuit.domainExponent) + 1 : ℕ) *
-      algebraicRootBudget shape actionCircuit.domainExponent + e + x + s
-  calc
-    _ ≤ a + (Q + (11 + actionCircuit.domainExponent) + 1 : ℕ) *
-          algebraicRootBudget shape actionCircuit.domainExponent + e + s :=
-      add_le_add_left (add_le_add_left (add_le_add_right hroot a) e) s
-    _ ≤ _ := add_le_add_left
-      (le_add_of_nonneg_right (show 0 ≤ x from bot_le)) s
 
 /-- Valid bundles at `Q ≤ 2^123` fit the consensus compressed-statistical model. -/
 private theorem actionCompressedStatisticalModelFor_le_consensus
@@ -909,55 +863,6 @@ noncomputable def actionStatisticalModel (Q : Nat) : ENNReal :=
           (Q + 1 : Nat) * (((2 ^ 25 : Nat) : ENNReal) /
             (Fintype.card Fp : ENNReal)))))
 
-/-- The non-DLOG remainder on the bare adaptive route.  Its deployed-root walk uses the original
-run only; the larger sequential model below is therefore a conservative upper bound. -/
-noncomputable def adaptiveActionStatisticalModel (Q : Nat) : ENNReal :=
-  (Q + 1 : Nat) * (1 / Fintype.card Fp) +
-    actionCircuit.domainExponent *
-      ((Q + 1 : Nat) * (2 / (Fintype.card Fp : ENNReal))) +
-    (Q + 1 : Nat) * algebraicRootBudget
-      (actionCircuit.shape.withProofParams actionProofParams)
-      actionCircuit.domainExponent +
-    1 / Fintype.card Fp +
-    (Q + 1 : Nat) *
-      ((((2 ^ 25 : Nat) : ENNReal) / Fintype.card Fp +
-        ((2 ^ 35 : Nat) : ENNReal) / Fintype.card Fp) +
-        (((2 ^ 21 : Nat) : ENNReal) / Fintype.card Fp +
-          (((2 ^ 23 : Nat) : ENNReal) / Fintype.card Fp +
-            (20470 : ENNReal) / Fintype.card Fp)))
-
-/-- The five adaptive semantic-surface terms expand to the stated sum. -/
-theorem adaptiveActionSemanticSum_eq :
-    (∑ n : Fin 5,
-      ((![2 ^ 25, 2 ^ 35, 2 ^ 21, 2 ^ 23, 20470] n : Nat) : ENNReal) /
-        Fintype.card Fp) =
-      ((((2 ^ 25 : Nat) : ENNReal) / Fintype.card Fp +
-        ((2 ^ 35 : Nat) : ENNReal) / Fintype.card Fp) +
-        (((2 ^ 21 : Nat) : ENNReal) / Fintype.card Fp +
-          (((2 ^ 23 : Nat) : ENNReal) / Fintype.card Fp +
-            (20470 : ENNReal) / Fintype.card Fp))) := by
-  rw [Fin.sum_univ_succ, Fin.sum_univ_succ, Fin.sum_univ_succ, Fin.sum_univ_succ,
-    Fin.sum_univ_one]
-  norm_num [Matrix.cons_val_zero, Matrix.cons_val_one, Matrix.cons_val_two,
-    Matrix.cons_val_succ]
-  ring
-
-/-- The sequential statistical model conservatively contains the adaptive remainder. -/
-theorem adaptiveActionStatisticalModel_le_action (Q : Nat) :
-    adaptiveActionStatisticalModel Q ≤ actionStatisticalModel Q := by
-  have hk : actionCircuit.domainExponent = 11 := by
-    change actionCircuit.domainExponent = 11
-    exact action_domainExponent_eq
-  have hsplit : actionStatisticalModel Q =
-      adaptiveActionStatisticalModel Q +
-        22 * algebraicRootBudget (actionCircuit.shape.withProofParams actionProofParams) 11 +
-        (Q + 1 : Nat) * ((20470 : Nat) / (Fintype.card Fp : ENNReal)) := by
-    rw [actionStatisticalModel, adaptiveActionStatisticalModel, hk]
-    push_cast
-    ring
-  rw [hsplit]
-  exact le_add_right (le_add_right le_rfl)
-
 /-- At `Q ≤ 2^123`, the compressed and five semantic remainders fit within `2^-84`. -/
 theorem actionStatisticalModel_at_2pow123 {Q : Nat} (hQ : Q <= 2 ^ 123) :
     actionStatisticalModel Q <= 1 / (2 ^ 84 : ENNReal) := by
@@ -1068,13 +973,11 @@ theorem actionDlogGroupWork_bound
     _ ≤ 8 * 2 ^ 123 := by norm_num
     _ = 2 ^ 126 := by norm_num
 
-
 /-! ## Adaptive-statement budgets
 
 The counting caps, degree bound, surface measure and statistical model the adaptive-statement
 endpoints evaluate, where the adversary chooses the statement and proof together.
 -/
-
 
 /-- The same constraint-count bound holds for every explicit instance-commitment function; the
 count depends only on the Action verifier layout. -/
