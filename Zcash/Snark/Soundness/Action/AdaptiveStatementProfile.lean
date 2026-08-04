@@ -64,6 +64,14 @@ def adaptiveStatementDirectDecodeOps {pp : ProofParams}
       (adaptiveStatementInstanceRepresentationList output.instanceRepresentations ++
         family.fixedRepresentations basis)).length
 
+/-- The relation finder may construct the direct batches in both its identity and terminal
+stages. -/
+def adaptiveStatementDlogDirectDecodeSlots : Nat := 2
+
+/-- If the relation finder returns no relation, knowledge extraction constructs the same direct
+batches once more to return the selected-statement witness. -/
+def adaptiveStatementKnowledgeExtractorDirectDecodeSlots : Nat := 3
+
 /-- Conservative random-oracle work for the combined finder, charging all four stages. -/
 def adaptiveStatementDlogRandomOracleQueries {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp) : Nat :=
@@ -237,13 +245,16 @@ structure AdaptiveStatementDirectDlogProfile {pp : ProofParams}
       (family.runProof basis O).proof.1 (family.runRecord basis O) <
         Zcash.Arithmetic.scalarFieldOrder)
     (B : VestaG) (T : Nat) extends AdaptiveStatementDlogProfile family hchar B where
-  targetAtLeastThirtySeven : 37 ≤ T
+  /-- This threshold proves the query envelope from the circuit-derived supported-domain bound
+  `domainExponent < 33`; no captured `domainExponent = 11` certificate is required. -/
+  targetAtLeastSeventyTwo : 72 ≤ T
   queryBound : family.Q ≤ T
   proverWorkBound : toAdaptiveStatementDlogProfile.proverGroupWork ≤ T
   reductionWorkBound : toAdaptiveStatementDlogProfile.reductionGroupWork ≤ T
   costedAssemblyWorkBound : adaptiveStatementCostedGroupOpsBudget pp ≤ T
   directDecodeWorkBound : ∀ basis O,
-    2 * adaptiveStatementDirectDecodeOps family basis O ≤ T
+    adaptiveStatementKnowledgeExtractorDirectDecodeSlots *
+      adaptiveStatementDirectDecodeOps family basis O ≤ T
 
 theorem AdaptiveStatementDirectDlogProfile.solverCost_le {pp : ProofParams}
     {family : ComputedAdaptiveActionStatementFSFamily pp}
@@ -257,15 +268,17 @@ theorem AdaptiveStatementDirectDlogProfile.solverCost_le {pp : ProofParams}
       adaptiveStatementDlogGroupWork profile.proverGroupWork
           profile.reductionGroupWork ≤
         8 * T ∧
-      ∀ basis O, 2 * adaptiveStatementDirectDecodeOps family basis O ≤ T := by
+      ∀ basis O, adaptiveStatementDlogDirectDecodeSlots *
+        adaptiveStatementDirectDecodeOps family basis O ≤ T := by
   constructor
   · unfold adaptiveStatementDlogRandomOracleQueries
     rw [adaptiveStatementDlogTraversalSlots_eq_four]
-    rw [CircuitShape.withProofParams_k, actionCircuit.shape_k,
-      ActionPermutationDomain.domainExponent_eq]
-    have hT := profile.targetAtLeastThirtySeven
+    rw [CircuitShape.withProofParams_k, actionCircuit.shape_k]
+    have hk := ActionPermutationDomain.domainExponent_lt
+    have hT := profile.targetAtLeastSeventyTwo
     calc
-      4 * family.Q + 4 * (11 + 11) ≤ 4 * T + 4 * (11 + 11) := by
+      4 * family.Q + 4 * (11 + actionCircuit.domainExponent) ≤
+          4 * T + 4 * (11 + actionCircuit.domainExponent) := by
         gcongr
         exact profile.queryBound
       _ ≤ 8 * T := by omega
@@ -277,7 +290,11 @@ theorem AdaptiveStatementDirectDlogProfile.solverCost_le {pp : ProofParams}
         · exact profile.proverWorkBound
         · exact profile.reductionWorkBound
       _ ≤ 8 * T := by omega
-  · exact profile.directDecodeWorkBound
+  · intro basis O
+    have h := profile.directDecodeWorkBound basis O
+    unfold adaptiveStatementKnowledgeExtractorDirectDecodeSlots at h
+    unfold adaptiveStatementDlogDirectDecodeSlots
+    omega
 
 theorem AdaptiveStatementDirectDlogProfile.knowledgeExtractorCost_le {pp : ProofParams}
     {family : ComputedAdaptiveActionStatementFSFamily pp}
@@ -291,15 +308,17 @@ theorem AdaptiveStatementDirectDlogProfile.knowledgeExtractorCost_le {pp : Proof
       adaptiveStatementKnowledgeExtractorGroupWork profile.proverGroupWork
           profile.reductionGroupWork ≤
         8 * T ∧
-      ∀ basis O, 2 * adaptiveStatementDirectDecodeOps family basis O ≤ T := by
+      ∀ basis O, adaptiveStatementKnowledgeExtractorDirectDecodeSlots *
+        adaptiveStatementDirectDecodeOps family basis O ≤ T := by
   constructor
   · unfold adaptiveStatementKnowledgeExtractorRandomOracleQueries
       adaptiveStatementKnowledgeExtractorTraversalSlots
-    rw [CircuitShape.withProofParams_k, actionCircuit.shape_k,
-      ActionPermutationDomain.domainExponent_eq]
-    have hT := profile.targetAtLeastThirtySeven
+    rw [CircuitShape.withProofParams_k, actionCircuit.shape_k]
+    have hk := ActionPermutationDomain.domainExponent_lt
+    have hT := profile.targetAtLeastSeventyTwo
     calc
-      5 * family.Q + 5 * (11 + 11) ≤ 5 * T + 5 * (11 + 11) := by
+      5 * family.Q + 5 * (11 + actionCircuit.domainExponent) ≤
+          5 * T + 5 * (11 + actionCircuit.domainExponent) := by
         gcongr
         exact profile.queryBound
       _ ≤ 8 * T := by omega
