@@ -15,6 +15,7 @@ import Zcash.Security.Ledger.KeyBindingArm
 import Zcash.Security.Ledger.ExtractionArm
 import Zcash.Security.Ledger.ExtractionKappaArm
 import Zcash.Security.Ledger.ValueRelationArm
+import Zcash.Security.Ledger.ConservationExperiment
 import Zcash.Security.RedDSA.Basic
 import Zcash.Security.RedDSA.Extraction
 import Zcash.Security.RedDSA.KnowledgeError
@@ -751,6 +752,20 @@ assert_computable Zcash.Security.Ledger.Model.balanceConservationOrBreak_valueRe
 assert_axioms Zcash.Security.Ledger.Model.valueRelation_finder_isSome
 assert_axioms Zcash.Security.Ledger.Model.balanceConservation_valueRelationArm_measure_le
 assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_valueRelationArm_measure_le
+
+/-! ## The conservation experiment
+
+Both conservation arms in one sample space: over the adversary's coins, the challenge
+table, and the basis logs, a valid output ledger violates conservation (or the cap) at
+some prefix with probability at most `(ε_rel + 1/|F|) + ((qH+2)/|F| + ε_κ)`
+(`balanceConservationBefore_measure_le_experiment`,
+`shieldedBalanceCapBefore_measure_le_experiment`). The discrete-log hypotheses are single
+bounds for coin-consuming finders, per adversary coin — no supremum over challenge tables
+remains in the experiment. -/
+
+assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_extractFailArm_measure_le_of_coins
+assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_measure_le_experiment
+assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCapBefore_measure_le_experiment
 
 /-! ## Binding-signature relation reductions
 
