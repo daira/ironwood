@@ -328,8 +328,7 @@ bit below the `2^123` stated here — so the advantage is being requested slight
 group can offer.
 
 The advantage is left symbolic, so the statement holds regardless.  The figure records the
-accounting scale the reduction was evaluated at, which is a design target for the underlying curve
-rather than a proven end-to-end bound on the protocol. -/
+accounting scale the reduction was evaluated at, not a proven end-to-end bound on the protocol. -/
 theorem orchard_action_adaptive_bundle_soundness_finite_security
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
