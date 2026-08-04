@@ -184,6 +184,12 @@ theorem Internal.actionCircuit_eq_impl :
     actionCircuit = Internal.actionCircuitImpl :=
   actionCircuitPacked.property
 
+/-- The opaque circuit's private-witness field is the public Action witness type. -/
+theorem actionCircuit_privateWitness_eq :
+    actionCircuit.PrivateWitness = PrivateWitness := by
+  rw [Internal.actionCircuit_eq_impl]
+  rfl
+
 /-- Action public inputs are serialized according to their canonical layout. -/
 theorem actionCircuit_publicInputRows
     (input : PublicInputs Fp) (column : Column .instance) :
@@ -222,15 +228,28 @@ theorem actionCircuit_publicInputRows_ne_zero
     exact hzero _ (List.getElem_mem h)
   · exact List.getD_eq_default _ _ h
 
-/-- The opaque Action circuit's external statement is the Orchard Action spec
-for some private witness. -/
-theorem actionCircuit_statement_iff (input : PublicInputs Fp) :
-    actionCircuit.Statement input ↔
-      ∃ privateWitness : PrivateWitness,
-        SpecPost Specs.Sinsemilla.orchardGenerators orchardBases
-          () () (combine input privateWitness) := by
-  rw [Internal.actionCircuit_eq_impl]
+private theorem actionCircuit_spec_iff_of_eq
+    (top : TopLevelCircuit Fp Config PublicInputs)
+    (htop : top = Internal.actionCircuitImpl)
+    (input : PublicInputs Fp) (privateWitness : PrivateWitness) :
+    SpecPost Specs.Sinsemilla.orchardGenerators orchardBases
+        () () (combine input privateWitness) ↔
+      top.Spec input
+        (cast ((congrArg (fun circuit => circuit.PrivateWitness) htop).trans (by rfl)).symm
+          privateWitness) := by
+  cases htop
   rfl
+
+/-- The Orchard Action spec is the opaque circuit's internal spec after
+transporting the public private-witness type across the circuit boundary. -/
+theorem actionCircuit_spec_iff
+    (input : PublicInputs Fp) (privateWitness : PrivateWitness) :
+    SpecPost Specs.Sinsemilla.orchardGenerators orchardBases
+        () () (combine input privateWitness) ↔
+      actionCircuit.Spec input
+        (actionCircuit_privateWitness_eq.symm ▸ privateWitness) := by
+  exact actionCircuit_spec_iff_of_eq actionCircuit
+    Internal.actionCircuit_eq_impl input privateWitness
 
 /-- The semantic conclusion for every Action proved in one Halo 2 bundle. -/
 def BundleStatement {numProofs : ℕ}
