@@ -21,9 +21,63 @@ local instance adaptiveStatementEventVestaInhabited : Inhabited VestaG := ⟨0�
 
 namespace ComputedAdaptiveActionStatementFSFamily
 
-/-- One combined relation finder: one retained execution performs every provenance/source check,
-then quotient agreement, the pre-`x` identity branch, and the decoded Action terminal are checked
-in order.  All algebraic mismatch branches therefore share one textbook-DLOG reduction. -/
+/-- The identity stage after a completed provenance pass.  The empty provenance result already
+certifies that the source-mismatch finder is empty, so this form does not rerun that finder. -/
+def identityRelationFinderAfterProvenanceNone {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) (hprovenance : family.provenanceRelationFinder basis O = none) :
+    Option (AlgebraicRelationWitness (F := Fp) basis) :=
+  let view := runView family basis O
+  family.identityRelationFinderV basis view
+    (by simpa only [runView_output, runView_pre, runView_rounds,
+      family.runRecord_eq_chRecord] using hchar basis O)
+    none
+    (fun _ => family.semanticStageFacts_of_sourceFinder_none basis O
+      ((family.provenanceRelationFinder_eq_none_iff basis O).1 hprovenance).2.2.2.2)
+
+@[simp] theorem identityRelationFinderAfterProvenanceNone_eq {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) (hprovenance : family.provenanceRelationFinder basis O = none) :
+    family.identityRelationFinderAfterProvenanceNone hchar basis O hprovenance =
+      family.identityRelationFinder hchar basis O := by
+  have hsource :=
+    ((family.provenanceRelationFinder_eq_none_iff basis O).1 hprovenance).2.2.2.2
+  unfold identityRelationFinderAfterProvenanceNone identityRelationFinder
+  simp only [hsource]
+
+/-- One combined relation finder paired with its exact stage-traversal count.  Its nested matches
+are operationally short-circuiting:
+provenance, quotient agreement, the pre-`x` identity branch, and the decoded Action terminal each
+run at most once, and later stages are skipped after the first relation. -/
+def relationFinderWithCalls {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) : Option (AlgebraicRelationWitness (F := Fp) basis) × Nat :=
+  match hprovenance : family.provenanceRelationFinder basis O with
+    | some relation => (some relation, 1)
+    | none =>
+        match family.statementQuotientRelationFinder basis O with
+        | some relation => (some relation, 2)
+        | none =>
+            match family.identityRelationFinderAfterProvenanceNone hchar basis O hprovenance with
+            | some relation => (some relation, 3)
+            | none => (family.terminalRelationFinder hchar basis O, 4)
+
+/-- Executable relation projection. -/
 def relationFinder {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
@@ -32,12 +86,47 @@ def relationFinder {pp : ProofParams}
         Zcash.Arithmetic.scalarFieldOrder) :
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) →
     family.Coins → Option (AlgebraicRelationWitness (F := Fp) basis) :=
-  fun basis O =>
-    ComputedAdaptiveOnlineAGMFSFamily.firstAdaptiveRelation?
-      [family.provenanceRelationFinder basis O,
-       family.statementQuotientRelationFinder basis O,
-       family.identityRelationFinder hchar basis O,
-       family.terminalRelationFinder hchar basis O]
+  fun basis O => (family.relationFinderWithCalls hchar basis O).1
+
+@[simp] theorem relationFinderWithCalls_fst {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) :
+    (family.relationFinderWithCalls hchar basis O).1 =
+      family.relationFinder hchar basis O := rfl
+
+/-- The short-circuiting implementation is extensionally the original four-check stage list. -/
+theorem relationFinder_eq_stages {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) :
+    family.relationFinder hchar basis O =
+      ComputedAdaptiveOnlineAGMFSFamily.firstAdaptiveRelation?
+        [family.provenanceRelationFinder basis O,
+         family.statementQuotientRelationFinder basis O,
+         family.identityRelationFinder hchar basis O,
+         family.terminalRelationFinder hchar basis O] := by
+  unfold relationFinder relationFinderWithCalls
+  split <;> rename_i hprovenance
+  · simp [hprovenance, ComputedAdaptiveOnlineAGMFSFamily.firstAdaptiveRelation?]
+  · simp only [family.identityRelationFinderAfterProvenanceNone_eq]
+    split <;> rename_i hquotient
+    · simp [hprovenance, hquotient,
+        ComputedAdaptiveOnlineAGMFSFamily.firstAdaptiveRelation?]
+    · split <;> rename_i hidentity
+      · simp [hprovenance, hquotient, hidentity,
+          ComputedAdaptiveOnlineAGMFSFamily.firstAdaptiveRelation?]
+      · cases hterminal : family.terminalRelationFinder hchar basis O <;>
+          simp [hprovenance, hquotient, hidentity,
+            ComputedAdaptiveOnlineAGMFSFamily.firstAdaptiveRelation?]
 
 /-- No result from the combined finder means every coordinate-provenance subfinder was empty. -/
 theorem relationFinder_none_provenance {pp : ProofParams}
@@ -56,7 +145,7 @@ theorem relationFinder_none_provenance {pp : ProofParams}
       family.semanticSourceMismatchRelationFinder basis O = none ∧
       family.statementQuotientRelationFinder basis O = none := by
   have hall := (ComputedAdaptiveOnlineAGMFSFamily.firstAdaptiveRelation?_eq_none_iff _).1
-    (by simpa only [relationFinder] using hnone)
+    (by simpa only [family.relationFinder_eq_stages hchar basis O] using hnone)
   simp only [List.mem_cons, forall_eq_or_imp] at hall
   have hprovenance :=
     (family.provenanceRelationFinder_eq_none_iff basis O).1 hall.1
@@ -75,7 +164,7 @@ theorem relationFinder_none_terminal {pp : ProofParams}
     (hnone : family.relationFinder hchar basis O = none) :
     family.terminalRelationFinder hchar basis O = none := by
   have hall := (ComputedAdaptiveOnlineAGMFSFamily.firstAdaptiveRelation?_eq_none_iff _).1
-    (by simpa only [relationFinder] using hnone)
+    (by simpa only [family.relationFinder_eq_stages hchar basis O] using hnone)
   apply hall
   simp
 
@@ -91,7 +180,7 @@ theorem relationFinder_none_identity {pp : ProofParams}
     (hnone : family.relationFinder hchar basis O = none) :
     family.identityRelationFinder hchar basis O = none := by
   have hall := (ComputedAdaptiveOnlineAGMFSFamily.firstAdaptiveRelation?_eq_none_iff _).1
-    (by simpa only [relationFinder] using hnone)
+    (by simpa only [family.relationFinder_eq_stages hchar basis O] using hnone)
   apply hall
   simp
 
@@ -172,7 +261,7 @@ theorem BatchWitnessV.goodRoots_of_not_rootEvent {pp : ProofParams}
     (hpre : family.preIpaRepresentationRelationFinder basis O = none) :
     family.BatchGoodRoots basis O witness := by
   have hsets := witness.rootSets_eq
-  simp only [runView_output, runView_pre, runView_rounds] at hsets
+  simp only [runView_output, runView_pre] at hsets
   constructor
   · intro hx1
     apply hroot

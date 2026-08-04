@@ -30,15 +30,39 @@ abbrev runProof {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFa
 def runPreIpaReads {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins) : Fin 11 → Fp :=
-  fun i => O ((family.runOutput basis O).prefixesPre (family.vkTranscriptRepr basis) i)
+  let output := family.runOutput basis O
+  family.preIpaReadsOfOutput basis O output
+
+@[simp] theorem runPreIpaReads_apply {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) (i : Fin 11) :
+    family.runPreIpaReads basis O i =
+      O ((family.runOutput basis O).prefixesPre (family.vkTranscriptRepr basis) i) := by
+  simp [runPreIpaReads, preIpaReadsOfOutput, preIpaReadVectorOfOutput]
+
+/-- The IPA-round answers used to transport a pre-IPA decode to the full verifier record. -/
+def runIpaReads {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) : Fin (AdaptiveActionStatementShape pp).k → Fp :=
+  let output := family.runOutput basis O
+  family.ipaReadsOfOutput basis O output
+
+@[simp] theorem runIpaReads_apply {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) (j : Fin (AdaptiveActionStatementShape pp).k) :
+    family.runIpaReads basis O j =
+      O ((family.runOutput basis O).prefixes (family.vkTranscriptRepr basis) j) := by
+  simp [runIpaReads, ipaReadsOfOutput, ipaReadVectorOfOutput]
 
 @[simp] theorem runRecord_eq_chRecord {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins) :
     family.runRecord basis O = chRecord (family.runPreIpaReads basis O)
-      (fun j => O ((family.runOutput basis O).prefixes
-        (family.vkTranscriptRepr basis) j)) := by
+      (family.runIpaReads basis O) := by
   rfl
 
 /-- The pre-IPA challenge record used by the direct multiopen decoder. -/
@@ -48,28 +72,24 @@ def runPreIpaRecord {pp : ProofParams}
     (O : family.Coins) : Challenges (AdaptiveActionStatementShape pp).k Fp :=
   chRecord (family.runPreIpaReads basis O) (fun _ => 0)
 
-/-- The IPA-round answers used to transport a pre-IPA decode to the full verifier record. -/
-def runIpaReads {pp : ProofParams}
-    (family : ComputedAdaptiveActionStatementFSFamily pp)
-    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) : Fin (AdaptiveActionStatementShape pp).k → Fp :=
-  fun j => O ((family.runOutput basis O).prefixes (family.vkTranscriptRepr basis) j)
-
-/-- Everything the finder stages read from one execution: the selected output, the annotation
-log, and the two canonical challenge-read vectors.  The stage chain below is indexed by this
-view, with the table-indexed forms recovered as abbreviations at `runView`; full finder locality
-is then one rewrite of the view. -/
+/-- Everything the non-provenance finder stages read from one execution: the selected output and
+the two materialized canonical challenge vectors.  Provenance separately retains the annotation
+log alongside the same kind of output cache. -/
 structure RunView (pp : ProofParams) (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) where
   output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)
   pre : Fin 11 → Fp
   rounds : Fin (AdaptiveActionStatementShape pp).k → Fp
 
-/-- The run view of one table. -/
+/-- The run view of one table.  The adversary runs once, then every canonical challenge is read
+once and retained behind its finite lookup function. -/
 def runView {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins) : RunView pp family basis :=
-  ⟨family.runOutput basis O, family.runPreIpaReads basis O, family.runIpaReads basis O⟩
+  let output := family.runOutput basis O
+  let pre := family.preIpaReadVectorOfOutput basis O output
+  let rounds := family.ipaReadVectorOfOutput basis O output
+  ⟨output, (fun i => pre.get i), (fun j => rounds.get j)⟩
 
 @[simp] theorem runView_output {pp : ProofParams}
     {family : ComputedAdaptiveActionStatementFSFamily pp}

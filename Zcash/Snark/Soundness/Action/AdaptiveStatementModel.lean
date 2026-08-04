@@ -17,10 +17,11 @@ kept in later modules so the existing fixed-statement capstones remain unchanged
 
 ## Intended instantiation
 
-`vkHash` is the family's key-digest function: the game binds `vkHash` of the canonical key at
-transcript position zero, so the theorems quantify over every digest function.  The deployed
-instantiation supplies the actual digest; binding across distinct keys is exactly injectivity of
-`vkHash`, assumed at `vk_eq_of_initialTranscript_eq_of_injective` and nowhere else.
+`vkHash` supplies the opaque transcript representation of the fixed canonical key at position
+zero.  The theorems quantify over every such function, including a constant fixture digest, and do
+not claim cross-key binding.  A deployed claim that distinct verifying keys cannot share this
+representation requires collision resistance of the concrete key hash below this abstraction
+boundary; global mathematical injectivity is neither assumed nor needed by this game.
 
 ## Trust boundary
 
@@ -476,9 +477,9 @@ end AdaptiveActionStatementOutput
 /-- A basis-indexed online-AGM adversary that chooses its public statement and proof together. -/
 structure ComputedAdaptiveActionStatementFSFamily (pp : ProofParams) where
   /-- The key digest absorbed at transcript position zero, as a function of the verifying key.
-  A parameter rather than a fixed scalar so the binding obligation is structural: fixtures may
-  instantiate a constant digest (and get faithfulness but no binding), while the security layer
-  assumes injectivity at `vk_eq_of_initialTranscript_eq_of_injective`. -/
+  The game always applies it to its canonical basis-dependent key.  Fixtures may instantiate a
+  constant digest for faithfulness checks; cross-key collision resistance is an external deployed
+  assumption, not a premise of the adaptive-statement theorem. -/
   vkHash :
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) →
       VerifyingKey (AdaptiveActionStatementShape pp) Fp VestaG → Fp
@@ -521,14 +522,65 @@ def runOutput {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFami
     AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis) :=
   (family.adversary basis).run O
 
-/-- Read every challenge from the canonical prefixes determined by the output statement and proof. -/
+/-- Materialize a finite family of challenge reads.  Reduction entry points retain this vector
+before exposing its lookup function, which makes the one-read-per-index cost visible in generated
+code rather than relying on compiler sharing of a function-valued `let`. -/
+def challengeReadVector {n : Nat} (read : Fin n → Fp) : Vector Fp n :=
+  Vector.ofFn read
+
+@[simp] theorem challengeReadVector_get {n : Nat} (read : Fin n → Fp) (i : Fin n) :
+    (challengeReadVector read).get i = read i := by
+  simp [challengeReadVector]
+
+/-- Materialized pre-IPA challenge vector for one retained output. -/
+def preIpaReadVectorOfOutput {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins)
+    (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)) :
+    Vector Fp 11 :=
+  challengeReadVector fun i =>
+    O (output.prefixesPre (family.vkTranscriptRepr basis) i)
+
+/-- Materialized IPA-round challenge vector for one retained output. -/
+def ipaReadVectorOfOutput {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins)
+    (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)) :
+    Vector Fp (AdaptiveActionStatementShape pp).k :=
+  challengeReadVector fun j =>
+    O (output.prefixes (family.vkTranscriptRepr basis) j)
+
+/-- Extensional lookup view of the pre-IPA challenge vector.  Executable caches retain the vector
+itself before exposing this lookup behavior. -/
+def preIpaReadsOfOutput {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins)
+    (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)) :
+    Fin 11 → Fp :=
+  fun i => (family.preIpaReadVectorOfOutput basis O output).get i
+
+/-- Extensional lookup view of the IPA-round challenge vector. -/
+def ipaReadsOfOutput {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins)
+    (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)) :
+    Fin (AdaptiveActionStatementShape pp).k → Fp :=
+  fun j => (family.ipaReadVectorOfOutput basis O output).get j
+
+/-- Read every challenge once from the canonical prefixes determined by the retained output. -/
 def runRecord {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins) : Challenges (AdaptiveActionStatementShape pp).k Fp :=
   let output := family.runOutput basis O
+  let pre := family.preIpaReadVectorOfOutput basis O output
+  let rounds := family.ipaReadVectorOfOutput basis O output
   chRecord
-    (fun i => O (output.prefixesPre (family.vkTranscriptRepr basis) i))
-    (fun j => O (output.prefixes (family.vkTranscriptRepr basis) j))
+    (fun i => pre.get i)
+    (fun j => rounds.get j)
 
 /-- The table-read record is exactly the canonical statement-bound Fiat--Shamir execution. -/
 theorem runRecord_eq_roChallenges {pp : ProofParams}
@@ -558,7 +610,14 @@ theorem runRecord_eq_roChallenges {pp : ProofParams}
     exact (output.prefixes (family.vkTranscriptRepr basis) j).prop
   have h := roChallenges_extendO_eq_chRecord O init ps hpre hround
   rw [h]
-  rfl
+  unfold runRecord
+  apply congrArg₂ chRecord
+  · funext i
+    simp [preIpaReadVectorOfOutput]
+    rfl
+  · funext j
+    simp [ipaReadVectorOfOutput]
+    rfl
 
 /-- Checked Halo2 acceptance for the adversary-selected public statement and proof. -/
 def accepts {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp)

@@ -993,6 +993,7 @@ theorem statementIpaPreRecord_ipaPoint {pp : ProofParams}
       family.runPreIpaReads basis O := by
   funext n
   unfold statementIpaPreRecord runPreIpaReads
+  simp only [preIpaReadsOfOutput, preIpaReadVectorOfOutput, challengeReadVector_get]
   apply congrArg O
   apply Subtype.ext
   simpa only [statementEarlierPrefix, ipaPoint] using
@@ -1010,6 +1011,7 @@ theorem statementIpaRoundRecord_ipaPoint_before {pp : ProofParams}
       family.runIpaReads basis O i := by
   unfold statementIpaRoundRecord runIpaReads
   rw [dif_pos hij]
+  simp only [ipaReadsOfOutput, ipaReadVectorOfOutput, challengeReadVector_get]
   apply congrArg O
   apply Subtype.ext
   simpa only [statementEarlierRoundPrefix, ipaPoint] using
@@ -1497,28 +1499,52 @@ theorem semanticRepresentationTarget_points {pp : ProofParams}
   funext column
   exact output.instanceRepresented p column
 
-/-- Compare every semantic-stage coordinate with deterministic first lookup in the complete
-pre-`x` source.  This catches duplicate-point coordinate collisions that are not tied to a
-random-oracle annotation. -/
-def semanticSourceMismatchAt? {pp : ProofParams}
+/-- Compare one semantic stage with the complete pre-`x` source of a retained output. -/
+def semanticSourceMismatchAtOfOutput? {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) (n : Fin 5) :
+    (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis))
+    (n : Fin 5) :
     Option (AlgebraicRelationWitness (F := Fp) basis) :=
-  let output := family.runOutput basis O
   representationSourceMismatchFinder
     (output.proofData.algebraicProof.preX1AssemblySource
       (adaptiveStatementInstanceRepresentationList output.instanceRepresentations ++
         family.fixedRepresentations basis))
     (semanticRepresentationTarget output n ++ family.fixedRepresentations basis)
 
-/-- One finite finder covers all five complete-source versus stage-source comparisons. -/
+/-- Table-indexed form of one complete-source comparison. -/
+def semanticSourceMismatchAt? {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) (n : Fin 5) :
+    Option (AlgebraicRelationWitness (F := Fp) basis) :=
+  let output := family.runOutput basis O
+  family.semanticSourceMismatchAtOfOutput? basis output n
+
+/-- One retained output performs all five complete-source comparisons. -/
+def semanticSourceMismatchRelationFinderOfOutput {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)) :
+    Option (AlgebraicRelationWitness (F := Fp) basis) :=
+  ComputedAdaptiveOnlineAGMFSFamily.firstAdaptiveRelation?
+    (List.ofFn fun n => family.semanticSourceMismatchAtOfOutput? basis output n)
+
+/-- One finite finder covers all five comparisons using a single retained adversary output. -/
 def semanticSourceMismatchRelationFinder {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins) : Option (AlgebraicRelationWitness (F := Fp) basis) :=
-  ComputedAdaptiveOnlineAGMFSFamily.firstAdaptiveRelation?
-    (List.ofFn fun n => family.semanticSourceMismatchAt? basis O n)
+  let output := family.runOutput basis O
+  family.semanticSourceMismatchRelationFinderOfOutput basis output
+
+@[simp] theorem semanticSourceMismatchRelationFinderOfOutput_eq {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) :
+    family.semanticSourceMismatchRelationFinderOfOutput basis (family.runOutput basis O) =
+      family.semanticSourceMismatchRelationFinder basis O := by
+  rfl
 
 /-- No aggregate source-collision relation means every semantic-stage comparison is empty. -/
 theorem semanticSourceMismatchRelationFinder_none_at {pp : ProofParams}
@@ -2746,6 +2772,9 @@ theorem outputRootBad_actual {pp : ProofParams}
   funext i
   unfold runPreIpaReads
   rw [statementEarlierPrefix_preIpaPoint]
+  simp only [preIpaReadsOfOutput, preIpaReadVectorOfOutput, challengeReadVector_get]
+  apply congrArg O
+  apply Subtype.ext
   rfl
 
 /-- At an actual selected-statement pre-IPA point, the semantic fallback reads precisely the
@@ -2777,6 +2806,9 @@ theorem outputSemanticBad_actual {pp : ProofParams}
   funext i
   unfold runPreIpaReads
   rw [statementEarlierPrefix_preIpaPoint]
+  simp only [preIpaReadsOfOutput, preIpaReadVectorOfOutput, challengeReadVector_get]
+  apply congrArg O
+  apply Subtype.ext
   rfl
 
 /-- The selected statement's `x₁` surface is the normalized decoder set. -/
