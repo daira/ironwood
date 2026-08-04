@@ -228,23 +228,20 @@ theorem actionCircuit_publicInputRows_ne_zero
 private theorem actionCircuit_spec_iff_of_eq
     (top : TopLevelCircuit Fp Config PublicInputs)
     (htop : top = Internal.actionCircuitImpl)
-    (input : PublicInputs Fp) (privateWitness : PrivateWitness) :
-    ActionSpec input privateWitness ↔
-      top.Spec input
-        (cast ((congrArg (fun circuit => circuit.PrivateWitness) htop).trans (by rfl)).symm
-          privateWitness) := by
+    (input : PublicInputs Fp) (wit : PrivateWitness) :
+    ActionSpec input wit ↔
+      top.Spec input (cast (htop ▸ rfl) wit) := by
   cases htop
   rfl
 
 /-- The Orchard Action spec is the opaque circuit's internal spec after
 transporting the public private-witness type across the circuit boundary. -/
 theorem actionCircuit_spec_iff
-    (input : PublicInputs Fp) (privateWitness : PrivateWitness) :
-    ActionSpec input privateWitness ↔
-      actionCircuit.Spec input
-        (actionCircuit_privateWitness_eq.symm ▸ privateWitness) := by
+    (input : PublicInputs Fp) (wit : PrivateWitness) :
+    ActionSpec input wit ↔
+      actionCircuit.Spec input (actionCircuit_privateWitness_eq.symm ▸ wit) := by
   exact actionCircuit_spec_iff_of_eq actionCircuit
-    Internal.actionCircuit_eq_impl input privateWitness
+    Internal.actionCircuit_eq_impl input wit
 
 /-- The semantic conclusion for every Action proved in one Halo 2 bundle. -/
 def BundleStatement {numProofs : ℕ}

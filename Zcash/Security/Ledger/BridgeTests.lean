@@ -168,14 +168,14 @@ theorem path_iff_guarded_smoke
 /-- The circuit-level postcondition refines directly to the ledger action alternative. -/
 theorem actionSpec_bridge_smoke {MSG SIG : Type*}
     (verify bverify : PallasGroup → MSG → SIG → Prop)
-    (input : PublicInputs Fp) (privateWitness : PrivateWitness)
-    (h : ActionSpec input privateWitness) :
-    ActionBreak (combine input privateWitness) ∨
-      ∃ inst w, PublicProjection (combine input privateWitness) inst ∧
+    (input : PublicInputs Fp) (wit : PrivateWitness)
+    (h : ActionSpec input wit) :
+    ActionBreak (combine input wit) ∨
+      ∃ inst w, PublicProjection (combine input wit) inst ∧
         ActionSatisfied (Pool.primitives verify bverify) Pool.keyBinding inst w ∧
-        CrossAddressSatisfied (combine input privateWitness) w ∧
-        EnableFlagsSatisfied (combine input privateWitness) w :=
-  actionSpec_to_ledger verify bverify input privateWitness h
+        CrossAddressSatisfied (combine input wit) w ∧
+        EnableFlagsSatisfied (combine input wit) w :=
+  actionSpec_to_ledger verify bverify input wit h
 
 open Zcash.Meta
 
