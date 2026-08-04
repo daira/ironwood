@@ -14,6 +14,22 @@ adversary's output.
 
 This file defines the game and its load-bearing pre-`theta` invariant.  Probability composition is
 kept in later modules so the existing fixed-statement capstones remain unchanged.
+
+## Intended instantiation
+
+`vkTranscriptRepr` is the family's declared verifying-key digest: the game binds whatever scalar
+the family absorbs at transcript position zero, so the theorems quantify over every digest.  The
+deployed instantiation supplies the actual key digest, which is what makes the pre-`theta`
+binding meaningful protocol-side.
+
+## Trust boundary
+
+These are online-AGM, random-oracle results.  Representation coverage — `OnlineMemberProofData`
+with `fixedRepresented` and `permutationCommonRepresented` — is part of the adversary type; the
+AGM basis is heuristically instantiated by fixed hash-to-curve generators (the book's
+security-definitions page); the Lean verifier is identified with deployed Halo 2 by the
+fingerprint fixtures; and the bridge from extracted circuit witnesses to the abstract ledger
+relation is tracked separately (the glossary's high-level-relation entry).
 -/
 
 namespace Zcash.Snark

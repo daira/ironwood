@@ -101,7 +101,16 @@ def adaptiveStatementKnowledgeExtractorGroupWork
     (proverGroupWork reductionGroupWork : Nat) : Nat :=
   5 * proverGroupWork + reductionGroupWork
 
-/-- Finite-security premise for the complete adaptive-statement relation finder. -/
+/-- Finite-security premise for the complete adaptive-statement relation finder.
+
+The three resource kinds have different provenance.  Random-oracle queries are derived from the
+code (`adaptiveStatementDlogRandomOracleQueries` counts the finder's traversals of the `Q`-bounded
+adversary and its canonical reads), and the finder's field-operation footprint is certified per
+run by `directDecodeWorkBound` on the direct profile.  `proverGroupWork` is a declared adversary
+resource — the concrete-security premise playing the role of the paper model's time `t`; deriving
+it needs group operations reified in the adversary type.  `reductionGroupWork` is declared but
+floored: `reductionProgrammingCovered` keeps it at least the textbook-DLOG embedding's own basis
+programming, one scalar multiplication per augmented slot. -/
 structure AdaptiveStatementDlogProfile {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
@@ -109,11 +118,10 @@ structure AdaptiveStatementDlogProfile {pp : ProofParams}
       (family.runProof basis O).proof.1 (family.runRecord basis O) <
         Zcash.Arithmetic.scalarFieldOrder)
     (B : VestaG) where
-  -- TODO: Replace these caller-supplied counters with certified cost semantics: require a
-  -- costed adversary (or per-run work certificate) tying `proverGroupWork` to one execution,
-  -- and instrument the relation-finder/MSM path to derive `reductionGroupWork` from the code.
   proverGroupWork : Nat
   reductionGroupWork : Nat
+  reductionProgrammingCovered :
+    2 ^ (AdaptiveActionStatementShape pp).k + 2 ≤ reductionGroupWork
   advantage : Nat → Nat → ENNReal
   advantage_mono : ∀ {q q' g g'}, q ≤ q' → g ≤ g' →
     advantage q g ≤ advantage q' g'
