@@ -2146,136 +2146,136 @@ noncomputable def outputRootSurface {pp : ProofParams}
 private theorem batchWitness_x4Coeffs_adaptive {pp : ProofParams}
     {family : ComputedAdaptiveActionStatementFSFamily pp}
     {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
-    {O : family.Coins} (witness : family.BatchWitness basis O)
+    {view : RunView pp family basis} (witness : family.BatchWitnessV basis view)
     (qCovered : CommitmentRefCovered
-      [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime]
-      (.point (family.runOutput basis O).proofData.algebraicProof.erase.multiopenQPrime)) :
+      [view.output.proofData.algebraicProof.multiopenQPrime]
+      (.point view.output.proofData.algebraicProof.erase.multiopenQPrime)) :
     witness.batches.x4.coeffs =
       (adaptiveX4ColumnRepresentations (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-        (family.runOutput basis O).proofData.algebraicProof.erase
-        ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource
+        (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+        view.output.proofData.algebraicProof.erase
+        (view.output.proofData.algebraicProof.preX1AssemblySource
           (adaptiveStatementInstanceRepresentationList
-              (family.runOutput basis O).instanceRepresentations ++
+              view.output.instanceRepresentations ++
             family.fixedRepresentations basis))
-        [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime]
-        (family.runOutput basis O).proofData.adaptivePreX1MembersCovered qCovered
-        (family.runPreIpaReads basis O)).coeffs :=
+        [view.output.proofData.algebraicProof.multiopenQPrime]
+        view.output.proofData.adaptivePreX1MembersCovered qCovered
+        view.pre).coeffs :=
   witness.x4Coeffs.trans
-    (((family.runOutput basis O).proofData.adaptiveX4Columns_eq_deployed
-      (family.runPreIpaReads basis O)).1.symm)
+    ((view.output.proofData.adaptiveX4Columns_eq_deployed
+      view.pre).1.symm)
 
 /-- The witness `x₄` augmented `u` columns, rewritten to the adaptive representation walk. -/
 private theorem batchWitness_x4U_adaptive {pp : ProofParams}
     {family : ComputedAdaptiveActionStatementFSFamily pp}
     {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
-    {O : family.Coins} (witness : family.BatchWitness basis O)
+    {view : RunView pp family basis} (witness : family.BatchWitnessV basis view)
     (qCovered : CommitmentRefCovered
-      [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime]
-      (.point (family.runOutput basis O).proofData.algebraicProof.erase.multiopenQPrime)) :
+      [view.output.proofData.algebraicProof.multiopenQPrime]
+      (.point view.output.proofData.algebraicProof.erase.multiopenQPrime)) :
     witness.batches.x4.uComp =
       (adaptiveX4ColumnRepresentations (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-        (family.runOutput basis O).proofData.algebraicProof.erase
-        ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource
+        (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+        view.output.proofData.algebraicProof.erase
+        (view.output.proofData.algebraicProof.preX1AssemblySource
           (adaptiveStatementInstanceRepresentationList
-              (family.runOutput basis O).instanceRepresentations ++
+              view.output.instanceRepresentations ++
             family.fixedRepresentations basis))
-        [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime]
-        (family.runOutput basis O).proofData.adaptivePreX1MembersCovered qCovered
-        (family.runPreIpaReads basis O)).uComp :=
+        [view.output.proofData.algebraicProof.multiopenQPrime]
+        view.output.proofData.adaptivePreX1MembersCovered qCovered
+        view.pre).uComp :=
   witness.x4U.trans
-    (((family.runOutput basis O).proofData.adaptiveX4Columns_eq_deployed
-      (family.runPreIpaReads basis O)).2.1.symm)
+    ((view.output.proofData.adaptiveX4Columns_eq_deployed
+      view.pre).2.1.symm)
 
 /-- The witness member columns, rewritten to the adaptive representation walk. -/
 private theorem batchWitness_members_adaptive {pp : ProofParams}
     {family : ComputedAdaptiveActionStatementFSFamily pp}
     {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
-    {O : family.Coins} (witness : family.BatchWitness basis O) :
+    {view : RunView pp family basis} (witness : family.BatchWitnessV basis view) :
     ∀ i (hi : i < deployedX4PairCount (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runOutput basis O).proofData.algebraicProof.erase
-      (chRecord (family.runPreIpaReads basis O) (fun _ => 0))),
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.proofData.algebraicProof.erase
+      (chRecord view.pre (fun _ => 0))),
       (witness.batches.x1 i hi).coeffs =
         (adaptiveMemberRepresentations (adaptiveActionStatementVk pp basis)
           (adaptiveActionStatementInstanceCommitment pp basis
-            (family.runOutput basis O).inputs)
-          (family.runOutput basis O).proofData.algebraicProof.erase
-          ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource
+            view.output.inputs)
+          view.output.proofData.algebraicProof.erase
+          (view.output.proofData.algebraicProof.preX1AssemblySource
             (adaptiveStatementInstanceRepresentationList
-                (family.runOutput basis O).instanceRepresentations ++
+                view.output.instanceRepresentations ++
               family.fixedRepresentations basis))
-          (family.runOutput basis O).proofData.adaptivePreX1MembersCovered
-          (family.runPreIpaReads basis O) i hi).coeffs := by
+          view.output.proofData.adaptivePreX1MembersCovered
+          view.pre i hi).coeffs := by
   intro i hi
   exact (witness.memberCoeffs i hi).trans
-    (((family.runOutput basis O).proofData.adaptiveMemberRepresentations_eq_deployed
-      (family.runPreIpaReads basis O) i hi).1.symm)
+    ((view.output.proofData.adaptiveMemberRepresentations_eq_deployed
+      view.pre i hi).1.symm)
 
 /-- The adaptive aggregate reconstructs the selected proof's canonical aggregate. -/
 private theorem batchWitness_aggregate_adaptive {pp : ProofParams}
     {family : ComputedAdaptiveActionStatementFSFamily pp}
     {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
-    {O : family.Coins} (witness : family.BatchWitness basis O)
+    {view : RunView pp family basis} (witness : family.BatchWitnessV basis view)
     (qCovered : CommitmentRefCovered
-      [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime]
-      (.point (family.runOutput basis O).proofData.algebraicProof.erase.multiopenQPrime)) :
+      [view.output.proofData.algebraicProof.multiopenQPrime]
+      (.point view.output.proofData.algebraicProof.erase.multiopenQPrime)) :
     adaptiveAggregateG (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runOutput basis O).proofData.algebraicProof.erase
-      ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.proofData.algebraicProof.erase
+      (view.output.proofData.algebraicProof.preX1AssemblySource
         (adaptiveStatementInstanceRepresentationList
-            (family.runOutput basis O).instanceRepresentations ++
+            view.output.instanceRepresentations ++
           family.fixedRepresentations basis))
-      [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime]
-      (family.runOutput basis O).proofData.adaptivePreX1MembersCovered qCovered
-      (family.runPreIpaReads basis O) =
-        (family.runOutput basis O).proofData.toAlgebraicWfProof.aMulti
-          (family.runPreIpaReads basis O) := by
+      [view.output.proofData.algebraicProof.multiopenQPrime]
+      view.output.proofData.adaptivePreX1MembersCovered qCovered
+      view.pre =
+        view.output.proofData.toAlgebraicWfProof.aMulti
+          view.pre := by
   unfold adaptiveAggregateG
   dsimp only
-  rw [((family.runOutput basis O).proofData.adaptiveX4Columns_eq_deployed
-    (family.runPreIpaReads basis O)).1]
+  rw [(view.output.proofData.adaptiveX4Columns_eq_deployed
+    view.pre).1]
   exact witness.x4Source_reconstruct
 
 /-- The adaptive aggregate `u` coordinate reconstructs the selected proof's. -/
 private theorem batchWitness_aggregateU_adaptive {pp : ProofParams}
     {family : ComputedAdaptiveActionStatementFSFamily pp}
     {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
-    {O : family.Coins} (witness : family.BatchWitness basis O)
+    {view : RunView pp family basis} (witness : family.BatchWitnessV basis view)
     (qCovered : CommitmentRefCovered
-      [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime]
-      (.point (family.runOutput basis O).proofData.algebraicProof.erase.multiopenQPrime)) :
+      [view.output.proofData.algebraicProof.multiopenQPrime]
+      (.point view.output.proofData.algebraicProof.erase.multiopenQPrime)) :
     adaptiveAggregateU (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runOutput basis O).proofData.algebraicProof.erase
-      ((family.runOutput basis O).proofData.algebraicProof.preX1AssemblySource
+      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      view.output.proofData.algebraicProof.erase
+      (view.output.proofData.algebraicProof.preX1AssemblySource
         (adaptiveStatementInstanceRepresentationList
-            (family.runOutput basis O).instanceRepresentations ++
+            view.output.instanceRepresentations ++
           family.fixedRepresentations basis))
-      [(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime]
-      (family.runOutput basis O).proofData.adaptivePreX1MembersCovered qCovered
-      (family.runPreIpaReads basis O) =
-        (family.runOutput basis O).proofData.toAlgebraicWfProof.multiU
-          (family.runPreIpaReads basis O) := by
+      [view.output.proofData.algebraicProof.multiopenQPrime]
+      view.output.proofData.adaptivePreX1MembersCovered qCovered
+      view.pre =
+        view.output.proofData.toAlgebraicWfProof.multiU
+          view.pre := by
   unfold adaptiveAggregateU
   dsimp only
-  rw [((family.runOutput basis O).proofData.adaptiveX4Columns_eq_deployed
-    (family.runPreIpaReads basis O)).2.1]
+  rw [(view.output.proofData.adaptiveX4Columns_eq_deployed
+    view.pre).2.1]
   exact witness.x4Source_reconstructU
 
 /-- The direct batch witness identifies all six normalized online root sets with the executable
 root checks used by the adaptive-statement terminal. -/
-theorem BatchWitness.rootSets_eq {pp : ProofParams}
+theorem BatchWitnessV.rootSets_eq {pp : ProofParams}
     {family : ComputedAdaptiveActionStatementFSFamily pp}
     {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
-    {O : family.Coins} (witness : family.BatchWitness basis O) :
-    let output := family.runOutput basis O
+    {view : RunView pp family basis} (witness : family.BatchWitnessV basis view) :
+    let output := view.output
     let data := output.proofData
     let fixed := adaptiveStatementInstanceRepresentationList output.instanceRepresentations ++
       family.fixedRepresentations basis
-    let nu := family.runPreIpaReads basis O
+    let nu := view.pre
     adaptiveX1AllRootSet (adaptiveActionStatementVk pp basis)
         (adaptiveActionStatementInstanceCommitment pp basis output.inputs)
         data.algebraicProof.erase (data.algebraicProof.preX1AssemblySource fixed)
@@ -2342,24 +2342,24 @@ theorem BatchWitness.rootSets_eq {pp : ProofParams}
         (commitGen (evalVector (AdaptiveActionStatementShape pp).k (nu 7))
           data.toAlgebraicWfProof.s) (nu 9)) := by
   dsimp only
-  refine ⟨(family.runOutput basis O).proofData.adaptiveX1AllRootSet_eq_deployed
-    (family.runPreIpaReads basis O) witness.batches (batchWitness_members_adaptive witness), ?_⟩
-  refine ⟨(family.runOutput basis O).proofData.adaptiveX2RootSet_eq_deployed
-    (family.runPreIpaReads basis O) ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩ witness.batches
-    (batchWitness_x4Coeffs_adaptive witness ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩), ?_⟩
-  refine ⟨(family.runOutput basis O).proofData.adaptiveX3RootSet_eq_deployed
-    (family.runPreIpaReads basis O) ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩ witness.batches
-    (batchWitness_x4Coeffs_adaptive witness ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩), ?_⟩
-  refine ⟨(family.runOutput basis O).proofData.adaptiveX4RootSet_eq_deployed
-    (family.runPreIpaReads basis O) ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩ witness.batches
-    (batchWitness_x4Coeffs_adaptive witness ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩), ?_⟩
-  have hshift := (family.runOutput basis O).proofData.adaptiveShiftRootSets_eq
-    (family.runPreIpaReads basis O)
-    ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩
-    ⟨(family.runOutput basis O).proofData.algebraicProof.ipaS, by simp, rfl⟩
-    witness.batches.x4 (batchWitness_x4Coeffs_adaptive witness ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩)
-    (batchWitness_x4U_adaptive witness ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩) (batchWitness_aggregate_adaptive witness ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩)
-    (batchWitness_aggregateU_adaptive witness ⟨(family.runOutput basis O).proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩)
+  refine ⟨view.output.proofData.adaptiveX1AllRootSet_eq_deployed
+    view.pre witness.batches (batchWitness_members_adaptive witness), ?_⟩
+  refine ⟨view.output.proofData.adaptiveX2RootSet_eq_deployed
+    view.pre ⟨view.output.proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩ witness.batches
+    (batchWitness_x4Coeffs_adaptive witness ⟨view.output.proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩), ?_⟩
+  refine ⟨view.output.proofData.adaptiveX3RootSet_eq_deployed
+    view.pre ⟨view.output.proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩ witness.batches
+    (batchWitness_x4Coeffs_adaptive witness ⟨view.output.proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩), ?_⟩
+  refine ⟨view.output.proofData.adaptiveX4RootSet_eq_deployed
+    view.pre ⟨view.output.proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩ witness.batches
+    (batchWitness_x4Coeffs_adaptive witness ⟨view.output.proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩), ?_⟩
+  have hshift := view.output.proofData.adaptiveShiftRootSets_eq
+    view.pre
+    ⟨view.output.proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩
+    ⟨view.output.proofData.algebraicProof.ipaS, by simp, rfl⟩
+    witness.batches.x4 (batchWitness_x4Coeffs_adaptive witness ⟨view.output.proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩)
+    (batchWitness_x4U_adaptive witness ⟨view.output.proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩) (batchWitness_aggregate_adaptive witness ⟨view.output.proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩)
+    (batchWitness_aggregateU_adaptive witness ⟨view.output.proofData.algebraicProof.multiopenQPrime, by simp, rfl⟩)
   exact ⟨hshift.1, hshift.2⟩
 
 
