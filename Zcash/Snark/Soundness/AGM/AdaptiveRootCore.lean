@@ -1,10 +1,11 @@
 import Zcash.Snark.Soundness.AGM.AdaptiveRootSurfaces
 
 /-!
-# Pricing deployed roots for a bare adaptive online AGM
+# Deterministic deployed-root core for adaptive online AGM
 
-The six deployed root surfaces use first-query annotations, with final-proof data only for fresh
-fallbacks.
+This module contains the root surfaces, canonical prefix normalization, structural coverage, and
+final-proof fallback event consumed by the active chosen-statement decoder.  It carries no retired
+fixed-statement finder or probability composition.
 -/
 
 namespace Zcash.Snark
@@ -14,7 +15,7 @@ open scoped ENNReal
 
 set_option maxRecDepth 10000
 
-local instance vestaInhabitedAdaptiveRootComposition : Inhabited VestaG := ⟨0⟩
+local instance vestaInhabitedAdaptiveRootCore : Inhabited VestaG := ⟨0⟩
 
 variable {shape : Shape}
 
@@ -32,6 +33,11 @@ def adaptiveRootEventIndex (n : Fin 11) : Fin 6 :=
   else if (n : Nat) = 8 then 2
   else if (n : Nat) = 9 then 0
   else 1
+
+/-- The adaptive index translation is inverse to the deployed six-root ordering. -/
+@[simp] theorem adaptiveRootEventIndex_deployedRootChallengeIndex (i : Fin 6) :
+    adaptiveRootEventIndex (deployedRootChallengeIndex i) = i := by
+  fin_cases i <;> rfl
 
 /-- Recover the strict pre-`x₁` representation source from an aligned stage source.  The staged
 prover points occupy the prefix; verifier-fixed representations occupy the suffix. -/
@@ -326,121 +332,6 @@ squeeze. -/
   fin_cases n <;>
     simp [adaptiveRootPrefixProof, ProofString.preX1CommitmentPoints]
 
-/-- If the executable provenance check returned no relation and the prefix was queried, the
-stage-local query source is literally the final stage source. -/
-theorem adaptiveQuerySource_eq_of_pinned
-    (family : ComputedAdaptiveOnlineAGMFSFamily shape)
-    (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (n : Fin 11)
-    (h5n : 5 ≤ (n : Nat))
-    (O : BTranscript Fp VestaG
-      (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp)
-    (decoded : DecodedPreIpaPrefix (shape := shape) family.init n
-      ((algebraicFullPrefixesPre family.init
-        ((family.adversary basis).run O).toAlgebraicWfProof) n))
-    (pinned : SelectedQueryRepresentationPinned
-      ((algebraicFullPrefixesPre family.init
-        ((family.adversary basis).run O).toAlgebraicWfProof) n)
-      (family.adversary basis) O
-      (((family.adversary basis).run O).algebraicProof.representationsBefore n)) :
-    adaptiveQuerySource family.init basis n h5n decoded pinned.query
-        (family.fixedRepresentations basis) =
-      ((family.adversary basis).run O).algebraicProof.representationsBefore n ++
-        family.fixedRepresentations basis := by
-  let data := (family.adversary basis).run O
-  let final := data.algebraicProof.representationsBefore n
-  have hprefixBounded : fullPrefixesPre family.init decoded.proof n =
-      fullPrefixesPre family.init data.toAlgebraicWfProof.proof n := decoded.point_eq
-  have hprefix : preIpaSqueezePoints family.init decoded.proof.1 n =
-      preIpaSqueezePoints family.init data.algebraicProof.erase n :=
-    congrArg Subtype.val hprefixBounded
-  have hcanonical := adaptiveRootPrefixProof_congr family.init n h5n
-    decoded.proof.1 data.algebraicProof.erase decoded.proof.2 data.wellFormed hprefix
-  have hordinary : decoded.proof.1.commitmentPointsBefore n =
-      data.algebraicProof.erase.commitmentPointsBefore n := by
-    calc
-      decoded.proof.1.commitmentPointsBefore n =
-          (adaptiveRootPrefixProof n decoded.proof.1).commitmentPointsBefore n := by simp
-      _ = (adaptiveRootPrefixProof n data.algebraicProof.erase).commitmentPointsBefore n :=
-        congrArg (fun ps => ps.commitmentPointsBefore n) hcanonical
-      _ = data.algebraicProof.erase.commitmentPointsBefore n := by simp
-  have hselected : pinned.query.representationsFor final pinned.covered = final :=
-    algebraicPointList_eq_of_maps_eq
-      (pinned.query.representationsFor_points final pinned.covered)
-      pinned.coefficients_eq
-  let decodedCovered : ∀ P ∈ decoded.proof.1.commitmentPointsBefore n,
-      P ∈ transcriptGroupPoints
-        (algebraicFullPrefixesPre family.init data.toAlgebraicWfProof n).val := by
-    intro P hP
-    rw [← decoded.point_eq]
-    exact decoded.proof.1.commitmentPointsBefore_covered family.init decoded.proof.2
-      n h5n P hP
-  unfold adaptiveQuerySource
-  change pinned.query.representationsForPoints
-      (decoded.proof.1.commitmentPointsBefore n) decodedCovered ++
-        family.fixedRepresentations basis = _
-  have hordinaryFinal : decoded.proof.1.commitmentPointsBefore n =
-      final.map AlgebraicPoint.point :=
-    hordinary.trans (data.algebraicProof.representationsBefore_points n).symm
-  let finalCoveredPoints : ∀ P ∈ final.map AlgebraicPoint.point,
-      P ∈ transcriptGroupPoints
-        (algebraicFullPrefixesPre family.init data.toAlgebraicWfProof n).val := by
-    intro P hP
-    obtain ⟨ap, hap, rfl⟩ := List.mem_map.mp hP
-    exact pinned.covered ap hap
-  have representationsForPoints_congr
-      (points points' : List VestaG)
-      (hcovered : ∀ P ∈ points, P ∈ transcriptGroupPoints
-        (algebraicFullPrefixesPre family.init data.toAlgebraicWfProof n).val)
-      (hcovered' : ∀ P ∈ points', P ∈ transcriptGroupPoints
-        (algebraicFullPrefixesPre family.init data.toAlgebraicWfProof n).val)
-      (hpoints : points = points') :
-      pinned.query.representationsForPoints points hcovered =
-        pinned.query.representationsForPoints points' hcovered' := by
-    subst points'
-    rfl
-  have hqueryPoints : pinned.query.representationsForPoints
-      (decoded.proof.1.commitmentPointsBefore n) decodedCovered =
-      pinned.query.representationsForPoints
-        (final.map AlgebraicPoint.point) finalCoveredPoints := by
-    exact representationsForPoints_congr _ _ decodedCovered finalCoveredPoints hordinaryFinal
-  rw [hqueryPoints,
-    ← pinned.query.representationsFor_eq_representationsForPoints final pinned.covered]
-  exact congrArg (fun source => source ++ family.fixedRepresentations basis) hselected
-
-/-- Decode one arbitrary query point and use its full pre-answer AGM annotation. -/
-def adaptiveQueriedRootSurface
-    (family : ComputedAdaptiveOnlineAGMFSFamily shape)
-    (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (n : Fin 11)
-    (h5n : 5 ≤ (n : Nat))
-    (t : BTranscript Fp VestaG
-      (preIpaLen shape family.init.length 10 + 3 * shape.k))
-    (label : AlgebraicTranscriptQuery (F := Fp) basis t)
-    (earlier : Fin (n : Nat) → Fp) : Set Fp :=
-  match decodePreIpaPrefix? (shape := shape) family.init n t with
-  | none => ∅
-  | some decoded =>
-      adaptiveRootSurfaceAt (family.vk basis) (family.instanceCommitment basis) n
-        (adaptiveRootPrefixProof n decoded.proof.1)
-        (adaptiveQuerySource family.init basis n h5n decoded label
-          (family.fixedRepresentations basis)) earlier
-
-/-- The queried decoder inherits the pointwise direct-route price. -/
-theorem adaptiveQueriedRootSurface_measure_le
-    (family : ComputedAdaptiveOnlineAGMFSFamily shape)
-    (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (n : Fin 11)
-    (h5n : 5 ≤ (n : Nat))
-    (t : BTranscript Fp VestaG
-      (preIpaLen shape family.init.length 10 + 3 * shape.k))
-    (label : AlgebraicTranscriptQuery (F := Fp) basis t)
-    (earlier : Fin (n : Nat) → Fp) :
-    uniformChallenge.toOuterMeasure
-        (adaptiveQueriedRootSurface family basis n h5n t label earlier) ≤
-      deployedRootEventBudget shape (adaptiveRootEventIndex n) := by
-  rw [adaptiveQueriedRootSurface]
-  split
-  · simp
-  · exact adaptiveRootSurfaceAt_measure_le _ _ n h5n _ _ earlier
-
 /-- Fresh-query fallback reconstructed from the final proof's own online representations. -/
 def adaptiveFallbackRootSurface
     (family : ComputedAdaptiveOnlineAGMFSFamily shape)
@@ -454,21 +345,6 @@ def adaptiveFallbackRootSurface
   adaptiveRootSurfaceAt (family.vk basis) (family.instanceCommitment basis) n
     (adaptiveRootPrefixProof n data.algebraicProof.erase)
     (data.algebraicProof.representationsBefore n ++ family.fixedRepresentations basis) earlier
-
-theorem adaptiveFallbackRootSurface_measure_le
-    (family : ComputedAdaptiveOnlineAGMFSFamily shape)
-    (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (n : Fin 11)
-    (h5n : 5 ≤ (n : Nat))
-    (data : OnlineMemberProofData (vk := family.vk basis)
-      (instanceCommitment := family.instanceCommitment basis) basis
-      (family.fixedRepresentations basis))
-    (t : BTranscript Fp VestaG
-      (preIpaLen shape family.init.length 10 + 3 * shape.k))
-    (earlier : Fin (n : Nat) → Fp) :
-    uniformChallenge.toOuterMeasure
-        (adaptiveFallbackRootSurface family basis n data t earlier) ≤
-      deployedRootEventBudget shape (adaptiveRootEventIndex n) :=
-  adaptiveRootSurfaceAt_measure_le _ _ n h5n _ _ earlier
 
 /-! ## Structural coverage of the actual fallback -/
 
@@ -650,7 +526,7 @@ theorem OnlineMemberProofData.adaptiveRootSSource_eq
   all_goals try norm_num at h9n
   all_goals simp [AlgebraicProofString.representationsBefore]
 
-/-! ## Arbitrary-adaptive pricing of one deployed root -/
+/-! ## Final-proof fallback event -/
 
 /-- The final-output root event, decoded through the same strict-prefix wrapper used by the
 arbitrary adaptive squeeze theorem. -/
@@ -666,96 +542,5 @@ def adaptiveFinalRootBad
       (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp) : Set Fp :=
   adaptivePrefixBad (shape := shape) family.init n
     (adaptiveFallbackRootSurface family basis n data) t O
-
-/-- Every deployed root of a bare malicious adaptive online-AGM adversary is priced at its first
-actual annotated query (or the fresh verifier fallback), unless the executable provenance finder
-has already produced a DLOG relation.  No phase, cut, or honest schedule is an input. -/
-theorem ComputedAdaptiveOnlineAGMFSFamily.adaptiveFinalRootBadWithoutRelation_table_le
-    (family : ComputedAdaptiveOnlineAGMFSFamily shape)
-    (basis : AugmentedIndex (2 ^ shape.k) → VestaG) (n : Fin 11)
-    (h5n : 5 ≤ (n : Nat)) :
-    (PMF.uniformOfFintype (BTranscript Fp VestaG
-      (preIpaLen shape family.init.length 10 + 3 * shape.k) → Fp)).toOuterMeasure
-      {O | let data := (family.adversary basis).run O
-        let t := (algebraicFullPrefixesPre family.init data.toAlgebraicWfProof) n
-        O t ∈ adaptiveFinalRootBad family basis n data t O ∧
-          family.adaptivePreIpaRepresentationRelationFinder basis O = none} ≤
-      (family.Q + 1 : Nat) *
-        deployedRootEventBudget shape (adaptiveRootEventIndex n) := by
-  apply family.adaptiveFinalPrefixBadWithoutRelation_table_le basis n
-    (adaptiveFinalRootBad family basis n)
-    (family.adaptivePreIpaRepresentationRelationFinder basis)
-    (adaptiveQueriedRootSurface family basis n h5n)
-    (adaptiveFallbackRootSurface family basis n)
-  · intro O
-    dsimp only
-    intro hbad hnone
-    let data := (family.adversary basis).run O
-    let t := (algebraicFullPrefixesPre family.init data.toAlgebraicWfProof) n
-    change O t ∈ adaptiveFinalRootBad family basis n data t O at hbad
-    change O t ∈ LabeledOracleComp.firstLabelOrFallbackBad (family.adversary basis)
-      (fun t label O => adaptiveLabeledPrefixBad (shape := shape)
-        family.init basis n (adaptiveQueriedRootSurface family basis n h5n) t label O)
-      (fun data t O => adaptivePrefixBad (shape := shape) family.init n
-        (adaptiveFallbackRootSurface family basis n data) t O) t O
-    have hlen : t.val.length = preIpaLen shape family.init.length n := by
-      exact preIpaSqueezePoints_length_eq family.init data.algebraicProof.erase
-        data.wellFormed n
-    unfold LabeledOracleComp.firstLabelOrFallbackBad
-    cases hfind : (family.adversary basis).findLabel O t with
-    | none =>
-        simpa only [adaptiveFinalRootBad] using hbad
-    | some label =>
-        have hat := family.adaptivePreIpaRepresentationRelationFinder_none_at
-          basis O hnone n h5n
-        have hlocal : selectedQueryRepresentationRelation? t (family.adversary basis) O
-            (data.algebraicProof.representationsBefore n) (by
-              intro ap hap
-              change ap.point ∈ transcriptGroupPoints
-                (preIpaSqueezePoints family.init data.algebraicProof.erase n)
-              exact data.algebraicProof.representationsBefore_covered family.init
-                data.wellFormed n h5n ap hap) = none := by
-          simpa only [ComputedAdaptiveOnlineAGMFSFamily.adaptivePreIpaRepresentationRelationAt?]
-            using hat
-        have hprov := selectedQueryRepresentationRelation?_eq_none t
-          (family.adversary basis) O (data.algebraicProof.representationsBefore n) _ hlocal
-        cases hprov with
-        | inl hfresh => simp [hfind] at hfresh
-        | inr pinned =>
-            have hlabel : pinned.query = label := by
-              exact Option.some.inj (pinned.found.symm.trans hfind)
-            subst label
-            have hdecode := decodePreIpaPrefix?_isSome family.init n
-              data.toAlgebraicWfProof.proof
-            change (decodePreIpaPrefix? (shape := shape) family.init n t).isSome at hdecode
-            cases hdec : decodePreIpaPrefix? (shape := shape) family.init n t with
-            | none => simp [hdec] at hdecode
-            | some decoded =>
-                have hsource := adaptiveQuerySource_eq_of_pinned family basis n h5n O
-                  decoded pinned
-                have hprefixBounded : fullPrefixesPre family.init decoded.proof n =
-                    fullPrefixesPre family.init data.toAlgebraicWfProof.proof n :=
-                  decoded.point_eq
-                have hprefix : preIpaSqueezePoints family.init decoded.proof.1 n =
-                    preIpaSqueezePoints family.init data.algebraicProof.erase n :=
-                  congrArg Subtype.val hprefixBounded
-                have hcanonical := adaptiveRootPrefixProof_congr family.init n h5n
-                  decoded.proof.1 data.algebraicProof.erase decoded.proof.2 data.wellFormed hprefix
-                unfold adaptiveFinalRootBad adaptivePrefixBad at hbad
-                simp only [if_pos hlen] at hbad
-                unfold adaptiveLabeledPrefixBad
-                simp only [if_pos hlen]
-                have hsurface : adaptiveQueriedRootSurface family basis n h5n t
-                    pinned.query (fun i => O (adaptiveEarlierPrefix (shape := shape)
-                      family.init t (i.castLE (le_of_lt n.isLt)))) =
-                    adaptiveFallbackRootSurface family basis n data t
-                      (fun i => O (adaptiveEarlierPrefix (shape := shape)
-                        family.init t (i.castLE (le_of_lt n.isLt)))) := by
-                  simp only [adaptiveQueriedRootSurface, hdec]
-                  unfold adaptiveFallbackRootSurface
-                  rw [hsource, hcanonical]
-                rwa [hsurface]
-  · exact adaptiveQueriedRootSurface_measure_le family basis n h5n
-  · exact adaptiveFallbackRootSurface_measure_le family basis n h5n
 
 end Zcash.Snark
