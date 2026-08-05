@@ -10,9 +10,9 @@ trust.
 ## Breaks as computed data
 
 The security arguments are reduction-style: a theorem shows that a violation of a protocol
-property *exhibits* a concrete break of an underlying primitive — a discrete-log relation, a
-hash collision, a commitment-opening collision. Hardness assumptions are consumed only at
-the computational layer, against the exhibited break.
+property *exhibits* a concrete break of an underlying primitive — for example a
+discrete-log relation, a hash collision, or a commitment-opening collision. Hardness
+assumptions are consumed only at the computational layer, against the exhibited break.
 
 Care is needed in how "exhibits" is stated. In a prime-order group, a nontrivial
 discrete-log relation between any two elements always *exists*; for any compressing hash,

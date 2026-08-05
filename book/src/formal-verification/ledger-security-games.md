@@ -1,10 +1,12 @@
 # Ledger Security Games
 
-The [proof map](proof-map.md) traces *verifier soundness* — the deployed Halo 2 verifier
+The [proof map](proof-map.md) traces *verifier knowledge soundness* — the deployed Halo 2 verifier
 under `Zcash/Snark/`. This page is its companion for the other half of the development: the
-protocol **security properties** under `Zcash/Security/` — binding-signature *balance*, *key
-binding*, and the *ledger-model security games* — and how each one connects, by reduction,
-to an exhibited break of a primitive and to the verifier-soundness proof.
+protocol **security properties** under `Zcash/Security/`. It covers:
+* the top-level capstones — the *ledger-model security games* of *Balance integrity*, *Spendability*, and *Spend authority*;
+* how each capstone connects, by reduction via intermediate security properties such as
+  *binding-signature balance*, *key binding*, and *verifier knowledge soundness*, to an
+  exhibited break of a cryptographic primitive in a specified adversary model.
 
 Every argument here follows the *breaks as computed data* convention and the three-layer
 stack described in [Security Models](security-definitions.md).
@@ -12,7 +14,7 @@ stack described in [Security Models](security-definitions.md).
 ## One connected picture
 
 ```mermaid
-%%{init: {"flowchart": {"nodeSpacing": 20, "rankSpacing": 50, "padding": 6, "diagramPadding": 4, "subGraphTitleMargin": {"top": 4, "bottom": 18}}, "themeCSS": ".cluster-label { font-weight: 700; font-size: 1.1em; font-family: raleway, sans-serif; }"}}%%
+%%{init: {"flowchart": {"nodeSpacing": 20, "rankSpacing": 50, "padding": 6, "diagramPadding": 4, "subGraphTitleMargin": {"top": 4, "bottom": 18}}, "themeCSS": ".cluster-label { font-weight: 700; font-size: 1.1em; font-family: raleway, sans-serif; } marker { overflow: visible !important; } marker path { transform-box: fill-box !important; transform-origin: center !important; transform: scale(1.25) !important; }"}}%%
 flowchart TD
   subgraph GAMES["Ledger capstones"]
     BAL["Balance integrity<br/>orchardBalanceIntegrity_measure_le"]
@@ -57,11 +59,11 @@ flowchart TD
   STMT -. "<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/Composition/Bridge.lean'>justified by<br/>the extractor;<br/>circuit-correctness<br/>conditions</a>" .-> KS["Knowledge soundness:<br/>accepting proof yields<br/>witness or break data"]
   NCBK --> SDLR["Sinsemilla<br/>discrete-log<br/>relation"]
 
-  KERR -->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/RedDSA/Extraction.lean'>good challenge<br/>computes</a>"| NDLR
-  KERR --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/RedDSA/KnowledgeError.lean'>challenge hash as random<br/>oracle; query-time labels<br/>pin the bad challenge (AGM)</a>"| ROM
+  KERR ==>|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/RedDSA/Extraction.lean'>good challenge<br/>computes</a>"| NDLR
+  KERR --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/RedDSA/KnowledgeError.lean'>challenge hash as random<br/>oracle; query-time labels<br/>pin the bad challenge</a>"| ROM
   NDLR -->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/AGM/BindingSignature.lean'>independent<br/>hash-to-curve bases</a>"| DL
   SDLR -->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/AGM/BindingSignature.lean'>independent<br/>hash-to-curve bases</a>"| DL
-  KS --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/Action/AdaptiveStatementKnowledge.lean'>online AGM +<br/>independent<br/>hash-to-curve bases</a>"| DL
+  KS ===>|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/Action/AdaptiveStatementKnowledge.lean'>independent<br/>hash-to-curve bases</a>"| DL
   KS -->|"<a target='_blank' href='https://github.com/zcash/ironwood/tree/main/Zcash/Snark/Soundness/FiatShamir'>Fiat–Shamir<br/>heuristic</a>"| ROM
   MC --> SDLR
   CUS --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Common/Birthday.lean'>birthday counting<br/>q(q-1)/|𝔽|,<br/>no assumption</a>"| ROM
@@ -101,14 +103,18 @@ flowchart TD
   class NCB,BS,KB,MERK,NFB,STMT,NDLR,CUS,NCBK,MC,NFC,SAF,SDLR,KERR checked
   class RDSA hyp
   class DL,ROM assumed
+  %% linkStyle selects edges by definition order above; recount when adding or removing edges
+  linkStyle 26,30 stroke:#8250df,stroke-width:4px
 ```
 
 <p>
-<span style="color:#1a7f37">■</span> fully proven — nothing here yet<br/>
-<span style="color:#0969da">■</span> stated and machine-checked in Lean, over abstract primitives<br/>
-<span style="color:#9a6700">■</span> partly machine-checked; remainder tracked (discharging the capstones' named ε's end to end: composing the per-arm oracle-model discharges into one experiment, RedDSA unforgeability; knowledge soundness's circuit-correctness conditions)<br/>
-<span style="color:#cf222e">■</span> named hypothesis; formalization deferred<br/>
-<span style="color:#57606a">■</span> assumption or heuristic model; terminal by design
+<span style="color:#8250df; font-weight: 700; font-size: 1.9rem">➞</span> thick purple edge: a reduction in the online-AGM — both endpoint games are algebraic<br/>
+<span style="font-size: 1.9rem">➝</span> thin black edge: depends on (a reduction, assumption, or model)<br/>
+<span style="color:#1a7f37"> ■ </span> fully proven — nothing here yet<br/>
+<span style="color:#0969da"> ■ </span> stated and machine-checked in Lean, over abstract primitives<br/>
+<span style="color:#9a6700"> ■ </span> partly machine-checked; remainder tracked (discharging the capstones' named ε's end to end: composing the per-arm oracle-model discharges into one experiment, RedDSA unforgeability; knowledge soundness's circuit-correctness conditions)<br/>
+<span style="color:#cf222e"> ■ </span> named hypothesis; formalization deferred<br/>
+<span style="color:#57606a"> ■ </span> assumption or heuristic model; terminal by design<br/>
 </p>
 
 This picture is a deliberate approximation, and is likely to change as the formalization
@@ -124,9 +130,15 @@ no signing oracle to simulate, because the signature extracted from is the adver
 own.
 
 Every solid arrow reads "rests on"; where an edge carries a label, the label names the
-computed break object flowing along it, or the adversary model or side condition under which
-the reduction holds (the AGM restriction, base independence from hash-to-curve, the birthday
-count). The games are the top-level capstones. The ledger model requires the adversary to
+computed break object flowing along it, or the side condition under which the reduction
+holds (base independence from hash-to-curve, the birthday count). Thick purple arrows
+mark reductions stated for algebraic adversaries: both the source and the target of such an
+edge are interpreted as games against online-AGM adversaries, so the model scopes the
+whole reduction rather than being one more assumption it rests on — see
+[Security Models](security-definitions.md#the-algebraic-adversary-restriction). The
+random-oracle node remains a terminal because some error terms genuinely bottom out
+there: they are counting arguments over the oracle table, with no computational
+assumption. The games are the top-level capstones. The ledger model requires the adversary to
 supply, along with any accepting proof, a **witness or replay evidence** for the Action
 statement (`ActionSatisfied`) — in the replay case the ledger oracle can produce the
 previously supplied witness. Each component argument consumes the statement's satisfaction
