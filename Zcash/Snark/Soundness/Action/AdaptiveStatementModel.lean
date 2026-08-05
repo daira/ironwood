@@ -28,7 +28,7 @@ boundary; global mathematical injectivity is neither assumed nor needed by this 
 These are online-AGM, random-oracle results.  Representation coverage — `OnlineMemberProofData`
 with `fixedRepresented` and `permutationCommonRepresented` — is part of the adversary type; the
 AGM basis is heuristically instantiated by fixed hash-to-curve generators (the book's
-security-definitions page); the Lean verifier is identified with deployed Halo 2 by the
+Security Models page); the Lean verifier is identified with deployed Halo 2 by the
 fingerprint fixtures; and the bridge from extracted circuit witnesses to the abstract ledger
 relation is tracked separately (the glossary's high-level-relation entry).
 -/

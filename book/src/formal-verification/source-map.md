@@ -3,7 +3,8 @@
 A directory-by-directory index of the Lean development under [`Zcash/`](https://github.com/zcash/ironwood/tree/main/Zcash):
 what each subtree contains and where to start reading. It is the source-tree companion
 to the [proof map](proof-map.md) (which traces how the results connect), the
-[security definitions](security-definitions.md) (which state the properties being proven),
+[ledger security games](ledger-security-games.md) (which state the properties being proven),
+the [security models](security-definitions.md) page (which describes the methodology),
 and the [glossary](glossary.md) (which defines the coined terms).
 
 The development has four tiers. **`Zcash/Arithmetic/`** holds the objects the other three are
