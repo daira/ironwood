@@ -1,5 +1,4 @@
-import Zcash.Circuits.Action.Bundle
-import Zcash.Circuits.Action.RealBases
+import Zcash.Circuits.Action.Spec
 import Zcash.Circuits.Specs.Pallas
 import Zcash.Security.Ledger.Pool
 
@@ -479,7 +478,7 @@ theorem classify_none_defined {wit : ActionData} (h : classifyAction wit = none)
 
 /-- **The Prop-level break and the computed classifier cannot diverge, at the consumer
 boundary either**: an exhibited `ActionBreak` holds exactly when the classifier reports
-an escape.  A consumer landing in the break arm of `specPost_to_ledger` can
+an escape.  A consumer landing in the break arm of `actionSpec_to_ledger` can
 therefore pass to `classifyAction`'s (and hence `classifyRelation`'s) computed data
 without reconstructing the glue: forward, each break constructor's
 `hashToPointB … = .inr` equation contradicts the defined hashes of a `none` verdict;
@@ -647,12 +646,14 @@ def MerkleSuccess (wit : ActionData) : Prop :=
 
 /-- Split all four exceptional sites in the circuit statement at once, by running
 the classifier: either the witness's own queries compute an exhibited break, or
-every query is defined and each guarded clause of `SpecPost` lands in its
+every query is defined and each guarded clause of `ActionSpec` lands in its
 successful branch. -/
 theorem successes_or_break {wit : ActionData}
-    (h : SpecPost orchardGenerators orchardBases () () wit) :
+    (h : ActionSpec (PublicInputs.ofActionData wit)
+      (PrivateWitness.ofActionData wit)) :
     (CommitIvkSuccess wit ∧ NoteCommitOldSuccess wit ∧ NoteCommitNewSuccess wit ∧
       MerkleSuccess wit) ∨ ActionBreak wit := by
+  have h := (actionSpec_ofActionData_iff_specPost wit).mp h
   cases hcl : classifyAction wit with
   | some br => exact Or.inr (actionBreak_of_classify hcl)
   | none =>
@@ -667,7 +668,8 @@ theorem successes_or_break {wit : ActionData}
 guarded clauses reduce to their successful openings.  The exact-Merkle export
 subsequently turns the final component into a ledger `Merkle.Path`. -/
 theorem successes_of_noBreak {wit : ActionData}
-    (h : SpecPost orchardGenerators orchardBases () () wit)
+    (h : ActionSpec (PublicInputs.ofActionData wit)
+      (PrivateWitness.ofActionData wit))
     (hno : ¬ ActionBreak wit) :
     CommitIvkSuccess wit ∧ NoteCommitOldSuccess wit ∧ NoteCommitNewSuccess wit ∧
       MerkleSuccess wit :=
@@ -780,74 +782,82 @@ theorem merkle_path_of_exact {wit : ActionData} {root : Fp}
 Sinsemilla escapes or a fully satisfied concrete Orchard ledger action.  The ledger
 alternative additionally reports the spend/output enable gates as a side fact
 (`EnableFlagsSatisfied`), with their exact circuit semantics. -/
-theorem specPost_to_ledger (verify bverify : PallasGroup → MSG → SIG → Prop)
-    {wit : ActionData}
-    (h : SpecPost orchardGenerators orchardBases () () wit) :
-    ActionBreak wit ∨
-      ∃ inst w, PublicProjection wit inst ∧
+theorem actionSpec_to_ledger (verify bverify : PallasGroup → MSG → SIG → Prop)
+    (input : PublicInputs Fp) (wit : PrivateWitness)
+    (h : ActionSpec input wit) :
+    ActionBreak (combine input wit) ∨
+      ∃ inst w, PublicProjection (combine input wit) inst ∧
         ActionSatisfied (Pool.primitives verify bverify) Pool.keyBinding inst w ∧
-        CrossAddressSatisfied wit w ∧
-        EnableFlagsSatisfied wit w := by
-  rcases successes_or_break h with hs | hbreak
+        CrossAddressSatisfied (combine input wit) w ∧
+        EnableFlagsSatisfied (combine input wit) w := by
+  let wit' := combine input wit
+  have hwit : combine input wit = wit' := rfl
+  rw [hwit]
+  have hData : ActionSpec (PublicInputs.ofActionData wit')
+      (PrivateWitness.ofActionData wit') := by
+    simpa only [wit', PublicInputs.ofActionData, PrivateWitness.ofActionData,
+      combine] using h
+  have hPost := (actionSpec_ofActionData_iff_specPost wit').mp hData
+  rcases successes_or_break hData with hs | hbreak
   · rcases hs with ⟨hivk, hold, hnew, hmerkle⟩
     rcases hmerkle with ⟨root, hpath, hhash, hanchor⟩
-    rcases h.1 with ⟨hcmOld, hgdOld, hakP, hpkdOld, hgdNew, hpkdNew,
+    rcases hPost.1 with ⟨hcmOld, hgdOld, hakP, hpkdOld, hgdNew, hpkdNew,
       hvOld, hvNew, hvc, hnf, hrk, -, -, -, -, hvalue, hes, heo⟩
     rcases hvc with ⟨hmag, hcv⟩
     rcases hold with ⟨bold, hbold, hcmOldEq⟩
     rcases commitIvkSuccess_to_ledger hgdOld hakP hpkdOld hivk with
       ⟨ivk, kw, hkb, hivne, hkwivk, hkwNk, hkwAk, hpkdLedger⟩
-    have hkwNk' : kw.nk = wit.nk := hkwNk
+    have hkwNk' : kw.nk = wit'.nk := hkwNk
     rcases noteCommitNewSuccess_to_ledger verify bverify hgdNew hpkdNew hnew with
       ⟨cmNewP, hcmNewP, hcmNewX, hcommitNew⟩
-    have hcmOldEq' : wit.cmOld =
-        bold + wit.rcmOld.2.val • Ecc.MulFixed.Certs.noteCommitR.point := by
+    have hcmOldEq' : wit'.cmOld =
+        bold + wit'.rcmOld.2.val • Ecc.MulFixed.Certs.noteCommitR.point := by
       simpa [orchardBases, Ecc.MulFixed.FixedBase.scalarMul] using hcmOldEq
-    have hnf' : wit.nfOld =
-        (wit.cmOld +
-          ((Poseidon.Hash.ConstantLength.value #v[wit.nk, wit.rhoOld] +
-            wit.psiOld).val : Fq).val •
+    have hnf' : wit'.nfOld =
+        (wit'.cmOld +
+          ((Poseidon.Hash.ConstantLength.value #v[wit'.nk, wit'.rhoOld] +
+            wit'.psiOld).val : Fq).val •
             Ecc.MulFixed.Certs.nullifierK.point).x := by
       simpa [orchardBases, Ecc.MulFixed.FixedBase.scalarMul] using hnf
-    have hcommitOld : Pool.noteCommit wit.rcmOld.2
-        { gd := PallasGroup.ofPoint wit.gdOld (.inl hgdOld),
-          pkd := PallasGroup.ofPoint wit.pkdOld (.inl hpkdOld),
-          v := wit.vOld.val, ρ := wit.rhoOld, ψ := wit.psiOld } =
-        some (PallasGroup.ofPoint wit.cmOld hcmOld) :=
+    have hcommitOld : Pool.noteCommit wit'.rcmOld.2
+        { gd := PallasGroup.ofPoint wit'.gdOld (.inl hgdOld),
+          pkd := PallasGroup.ofPoint wit'.pkdOld (.inl hpkdOld),
+          v := wit'.vOld.val, ρ := wit'.rhoOld, ψ := wit'.psiOld } =
+        some (PallasGroup.ofPoint wit'.cmOld hcmOld) :=
       noteCommit_of_action_hash hgdOld hpkdOld hcmOld hbold hcmOldEq'
     let path : Fin 32 → Pool.Encoding × Pool.Encoding := fun i =>
-      (⟨wit.leftEncoding i, by
+      (⟨wit'.leftEncoding i, by
           rcases hpath with ⟨_, _, _, hsteps⟩
           simpa only [merkleLeftEncoding_fin] using (hsteps i i.isLt).1⟩,
-       ⟨wit.rightEncoding i, by
+       ⟨wit'.rightEncoding i, by
           rcases hpath with ⟨_, _, _, hsteps⟩
           simpa only [merkleRightEncoding_fin] using (hsteps i i.isLt).2.1⟩)
     let inst : ActionInstance PallasGroup Fp Fp :=
-      { rt := wit.anchor,
-        nf_old := wit.nfOld,
-        rk := (Pool.primitives verify bverify).randomizePublic wit.alpha.2
-          (PallasGroup.ofPoint wit.akP (.inl hakP)),
+      { rt := wit'.anchor,
+        nf_old := wit'.nfOld,
+        rk := (Pool.primitives verify bverify).randomizePublic wit'.alpha.2
+          (PallasGroup.ofPoint wit'.akP (.inl hakP)),
         cv_net := (Pool.primitives verify bverify).valueCommit
-          ((wit.vOld.val : ℤ) - (wit.vNew.val : ℤ)) wit.rcv.2,
-        cmx_new := wit.cmx }
+          ((wit'.vOld.val : ℤ) - (wit'.vNew.val : ℤ)) wit'.rcv.2,
+        cmx_new := wit'.cmx }
     let w : LedgerWitness :=
       { path := path,
-        side := wit.merkleSide,
+        side := wit'.merkleSide,
         note_old :=
-          { gd := PallasGroup.ofPoint wit.gdOld (.inl hgdOld),
-            pkd := PallasGroup.ofPoint wit.pkdOld (.inl hpkdOld),
-            v := wit.vOld.val, ρ := wit.rhoOld, ψ := wit.psiOld },
+          { gd := PallasGroup.ofPoint wit'.gdOld (.inl hgdOld),
+            pkd := PallasGroup.ofPoint wit'.pkdOld (.inl hpkdOld),
+            v := wit'.vOld.val, ρ := wit'.rhoOld, ψ := wit'.psiOld },
         note_new :=
-          { gd := PallasGroup.ofPoint wit.gdNew (.inl hgdNew),
-            pkd := PallasGroup.ofPoint wit.pkdNew (.inl hpkdNew),
-            v := wit.vNew.val, ρ := wit.nfOld, ψ := wit.psiNew },
-        cm_old := PallasGroup.ofPoint wit.cmOld hcmOld,
+          { gd := PallasGroup.ofPoint wit'.gdNew (.inl hgdNew),
+            pkd := PallasGroup.ofPoint wit'.pkdNew (.inl hpkdNew),
+            v := wit'.vNew.val, ρ := wit'.nfOld, ψ := wit'.psiNew },
+        cm_old := PallasGroup.ofPoint wit'.cmOld hcmOld,
         cm_new := PallasGroup.ofPoint cmNewP hcmNewP,
         kw := kw,
-        α := wit.alpha.2,
-        rcv := wit.rcv.2,
-        rcm_old := wit.rcmOld.2,
-        rcm_new := wit.rcmNew.2 }
+        α := wit'.alpha.2,
+        rcv := wit'.rcv.2,
+        rcm_old := wit'.rcmOld.2,
+        rcm_new := wit'.rcmNew.2 }
     refine Or.inr ⟨inst, w, ?_, ?_, ?_, ?_⟩
     · refine ⟨rfl, rfl, ?_, ?_, rfl⟩
       · simpa [inst] using public_rk_eq_randomizePublic verify bverify hakP hrk
@@ -869,13 +879,13 @@ theorem specPost_to_ledger (verify bverify : PallasGroup → MSG → SIG → Pro
           cv_net_eq := ?_ }
       · simpa [w] using hcommitOld
       · intro hv
-        have hv' : wit.vOld ≠ 0 := by
+        have hv' : wit'.vOld ≠ 0 := by
           intro hz
           apply hv
           dsimp [w]
           simp [hz]
-        have hroot : root = wit.anchor := by
-          have hz : root - wit.anchor = 0 :=
+        have hroot : root = wit'.anchor := by
+          have hz : root - wit'.anchor = 0 :=
             (mul_eq_zero.mp hanchor).resolve_left hv'
           exact sub_eq_zero.mp hz
         have hp := merkle_path_of_exact hpath hhash
@@ -885,39 +895,39 @@ theorem specPost_to_ledger (verify bverify : PallasGroup → MSG → SIG → Pro
       · simpa [w] using hkb
       · simpa [w, Pool.primitives, hkwivk] using hpkdLedger
       · intro hzero
-        have hpzero : wit.gdOld = 0 := by
+        have hpzero : wit'.gdOld = 0 := by
           have hz := congrArg PallasGroup.toPoint hzero
           simpa [w] using hz
         exact Point.ne_zero_of_onCurve hgdOld hpzero
-      · change (Pool.primitives verify bverify).randomizePublic wit.alpha.2
-            (PallasGroup.ofPoint wit.akP (.inl hakP)) =
-          (Pool.primitives verify bverify).randomizePublic wit.alpha.2
+      · change (Pool.primitives verify bverify).randomizePublic wit'.alpha.2
+            (PallasGroup.ofPoint wit'.akP (.inl hakP)) =
+          (Pool.primitives verify bverify).randomizePublic wit'.alpha.2
             (Pool.keyBinding.akP kw)
         rw [hkwAk]
       · simpa [w] using hcommitNew
-      · change wit.cmx = cmNewP.x
+      · change wit'.cmx = cmNewP.x
         exact hcmNewX.symm
       · rfl
       · exact hvOld
       · exact hvNew
       · rfl
     · intro henabled
-      rcases h.2 henabled with ⟨hgd, hpkd⟩
+      rcases hPost.2 henabled with ⟨hgd, hpkd⟩
       change
-        PallasGroup.ofPoint wit.gdOld (.inl hgdOld) =
-            PallasGroup.ofPoint wit.gdNew (.inl hgdNew) ∧
-          PallasGroup.ofPoint wit.pkdOld (.inl hpkdOld) =
-            PallasGroup.ofPoint wit.pkdNew (.inl hpkdNew)
+        PallasGroup.ofPoint wit'.gdOld (.inl hgdOld) =
+            PallasGroup.ofPoint wit'.gdNew (.inl hgdNew) ∧
+          PallasGroup.ofPoint wit'.pkdOld (.inl hpkdOld) =
+            PallasGroup.ofPoint wit'.pkdNew (.inl hpkdNew)
       exact ⟨lift_eq_of_point_eq (.inl hgdOld) (.inl hgdNew) hgd,
         lift_eq_of_point_eq (.inl hpkdOld) (.inl hpkdNew) hpkd⟩
     · refine ⟨fun hv => ?_, fun hv => ?_⟩
-      · have hvOld0 : wit.vOld ≠ 0 := by
+      · have hvOld0 : wit'.vOld ≠ 0 := by
           intro hz
           apply hv
           dsimp [w]
           simp [hz]
         exact (sub_eq_zero.mp ((mul_eq_zero.mp hes).resolve_left hvOld0)).symm
-      · have hvNew0 : wit.vNew ≠ 0 := by
+      · have hvNew0 : wit'.vNew ≠ 0 := by
           intro hz
           apply hv
           dsimp [w]
